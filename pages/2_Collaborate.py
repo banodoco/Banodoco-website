@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(page_title="Banodoco")
+# st.set_page_config(page_title="Banodoco")
 
 hide_img_fs = '''
 <style>
