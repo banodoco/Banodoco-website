@@ -110,4 +110,4 @@ st.markdown("***")
 
 st.subheader("Join our Discord to learn about our releases, get early access to our beta, and to collaborate with other artists")
 st.write("Join our Discord to get the latest updates and to collaborate with other artists")
-st.markdown("[Join Discord](https://discord.gg/kkjkeEaVpZ)   |   [Apply To Test](https://form.typeform.com/to/vR2VNXJV)")
+cta()

@@ -40,6 +40,6 @@ galleryb1, galleryb2 = st.columns([1, 1])
 with galleryb1:
   st.markdown("#### Go all the way")
   st.write("Produced: March 2023")
-  st.video("https://youtu.be/M2AK22oZH6kg")
+  st.video("https://www.youtube.com/watch?v=M2AK22oZH6k")
   st.info("Made with: Banodoco v 0.2")
   st.markdown("***")
