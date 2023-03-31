@@ -6,7 +6,7 @@ st.set_page_config(page_title="Banodoco")
 hide_img_fs = '''
 <style>
 button[title="View fullscreen"]{
-    visibility: hidden;}
+    display: none;}
 </style>
 '''
 
