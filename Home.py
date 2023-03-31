@@ -21,6 +21,8 @@ with header1:
   st.write("It's designed for those who want precision - with an approach and tools designed to give artists enough control over various AI models to create exactly what's in their imagination.")
   cta()
 with header2:
+  st.write("")
+  st.write("")
   st.image("https://i.ibb.co/6wsn9j6/Untitled-design-2023-02-24-T160623-805.png",width=300)
 
 st.markdown("***")
@@ -29,9 +31,9 @@ st.subheader("Coherent and beautiful video to video transformations")
 st.write("We believe that the best way for a human to tell AI what video they want to create is with a video of their own that it transforms. Banodoco allows users to control and direct AI with pipelines that combine multiple models to achieve coherent transformations of characters, scenes, and styles.")
 comparison1, comparison2 = st.columns(2)
 with comparison1:
-  st.image("https://banodoco.s3.amazonaws.com/input_images/input.gif", caption="Before")
+  st.image("https://banodoco.s3.amazonaws.com/input_images/input.gif", caption="Before",width=300)
 with comparison2:
-  st.image("https://banodoco.s3.amazonaws.com/input_images/output.gif", caption="After")         
+  st.image("https://banodoco.s3.amazonaws.com/input_images/output.gif", caption="After",width=300)      
 st.info("Video prompts > word prompts. An image is worth a thousand words and a video contains 30 images per second!")
 
 st.markdown("***")
@@ -72,7 +74,7 @@ with feature1:
   
 
 with feature2:
-  st.image(feature_image)
+  st.image(feature_image, width=300)
 with feature3:
   st.info(feature_text)
   
@@ -87,7 +89,7 @@ with a1:
 
    
 with a2:
-  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078456600781652069/peteromallet_minimalistic_illustration_of_people_building_scaff_a97eb34a-7ab1-4cae-a02e-b229ff5bcb66.png")
+  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078456600781652069/peteromallet_minimalistic_illustration_of_people_building_scaff_a97eb34a-7ab1-4cae-a02e-b229ff5bcb66.png",width=300)
 
 b1, b2 = st.columns([1, 1])
 with b1:
@@ -96,7 +98,7 @@ with b1:
   st.markdown('<a href="/Philosophy_&_Roadmap" target="_self">Learn about what we\'re looking for</a>', unsafe_allow_html=True)
   
 with b2:
-  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078451803718438942/peteromallet_minimalistic_illustration_meaning_a_long_journey_R_5dd02f2f-1583-4f39-8eae-6348ac68062a.png")
+  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078451803718438942/peteromallet_minimalistic_illustration_meaning_a_long_journey_R_5dd02f2f-1583-4f39-8eae-6348ac68062a.png",width=300)
 
 c1, c2 = st.columns([1, 1])
 with c1:
@@ -104,7 +106,7 @@ with c1:
   st.write("While it's a little bit sparse now, we'll share the best creations made by artists using Banodoco.")
   st.markdown('<a href="/Gallery" target="_self">Visit Gallery</a>', unsafe_allow_html=True) 
 with c2:
-  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078456680829960232/peteromallet_minimalistic_illustration_of_people_at_a_gallery_l_0992827a-34bf-4de1-b83d-52cc59c67d50.png")
+  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078456680829960232/peteromallet_minimalistic_illustration_of_people_at_a_gallery_l_0992827a-34bf-4de1-b83d-52cc59c67d50.png",width=300)
 
 st.markdown("***")
 
