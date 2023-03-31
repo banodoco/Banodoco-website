@@ -1,30 +1,23 @@
 import streamlit as st
 
-hide_img_fs = '''
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from Home import cta
+
+hide_img = '''
 <style>
 button[title="View fullscreen"]{
     display: none;}
 </style>
 '''
+st.markdown(hide_img, unsafe_allow_html=True)
 
-st.markdown(hide_img_fs, unsafe_allow_html=True)
-
-
-st.set_page_config(page_title="Banodoco")
-
-def cta():
-  st.markdown("[Visit Test App](https://ba-no-do-co.streamlit.app/)  | [Beta Test](https://github.com/peter942/banodoco) |   [Join Discord](https://discord.gg/kkjkeEaVpZ)") 
-
-with st.sidebar:
-  st.write("")    
-
+with st.sidebar:      
   cta()    
-  st.sidebar.markdown("*Public release: March 2023*")
-
-
   
 st.title("Gallery")
-
 
 
 
