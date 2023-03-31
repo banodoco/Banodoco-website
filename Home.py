@@ -3,6 +3,15 @@ import streamlit as st
 
 st.set_page_config(page_title="Banodoco")
 
+hide_img_fs = '''
+<style>
+button[title="View fullscreen"]{
+    visibility: hidden;}
+</style>
+'''
+
+st.markdown(hide_img_fs, unsafe_allow_html=True)
+
 
 def cta():
   st.markdown("[Visit Test App](https://ba-no-do-co.streamlit.app/)  | [Beta Test](https://github.com/peter942/banodoco) |   [Join Discord](https://discord.gg/kkjkeEaVpZ)") 
