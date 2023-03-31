@@ -43,7 +43,6 @@ with gallerya2:
   st.video("https://youtu.be/X_BLuno7C84")
   st.info("Made with: Banodoco v 0.1")
   st.markdown("***")
-
   
 galleryb1, galleryb2 = st.columns([1, 1])
 

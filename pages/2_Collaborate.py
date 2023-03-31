@@ -44,7 +44,7 @@ with st.expander("Build out automated scenery/backdrop panning tool (Python)"):
 with st.expander("Refine and optimise structure and speed of app (Python)"):
   st.write("I'm a software development noob and I'm sure there are a lot of ways to improve the structure and speed of the app. I'm looking for someone to help me with this.")
   st.markdown("Are you interested? Just send an email to me [here](mailto:peter@omalley.io?subject=Help%20with%20Banodoco%20Backdrop%20Optimisation%20project&body=Hi%2C%20my%20name%20is%0D%0A%0D%0ASomething%20I've%20done%20before...%0D%0A%0D%0AI'm%20interested%20because...%0D%0A%0D%0ATag%3A%20BanodocoPythonOptimiser) and I'll get back if it seems like a good fit")
-with st.expander("Other stuff you think of (???"):
+with st.expander("Other stuff you think of (???)"):
   st.write("Maybe you can think of something else that would be useful to the project. If so, let me know!")
   st.markdown("Are you interested? Just send an email to me [here](mailto:peter@omalley.io?subject=Help%20with%20%3F%3F%3F&body=Hi%2C%20my%20name%20is%0D%0A%0D%0ASomething%20I've%20done%20before...%0D%0A%0D%0AI'm%20interested%20because...%0D%0A%0D%0ATag%3A%20BanodocoQuestionMark) and I'll get back if it seems like a good fit")
 
