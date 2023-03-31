@@ -1,5 +1,15 @@
 import streamlit as st
 
+hide_img_fs = '''
+<style>
+button[title="View fullscreen"]{
+    display: none;}
+</style>
+'''
+
+st.markdown(hide_img_fs, unsafe_allow_html=True)
+
+
 st.set_page_config(page_title="Banodoco")
 
 def cta():
