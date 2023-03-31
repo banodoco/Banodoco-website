@@ -87,7 +87,7 @@ with a1:
 
    
 with a2:
-  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078456600781652069/peteromallet_minimalistic_illustration_of_people_building_scaff_a97eb34a-7ab1-4cae-a02e-b229ff5bcb66.png", use_column_width='always')
+  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078456600781652069/peteromallet_minimalistic_illustration_of_people_building_scaff_a97eb34a-7ab1-4cae-a02e-b229ff5bcb66.png")
 
 b1, b2 = st.columns([1, 1])
 with b1:
@@ -96,7 +96,7 @@ with b1:
   st.markdown('<a href="/Philosophy_&_Roadmap" target="_self">Learn about what we\'re looking for</a>', unsafe_allow_html=True)
   
 with b2:
-  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078451803718438942/peteromallet_minimalistic_illustration_meaning_a_long_journey_R_5dd02f2f-1583-4f39-8eae-6348ac68062a.png", use_column_width='always')
+  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078451803718438942/peteromallet_minimalistic_illustration_meaning_a_long_journey_R_5dd02f2f-1583-4f39-8eae-6348ac68062a.png")
 
 c1, c2 = st.columns([1, 1])
 with c1:
@@ -104,7 +104,7 @@ with c1:
   st.write("While it's a little bit sparse now, we'll share the best creations made by artists using Banodoco.")
   st.markdown('<a href="/Gallery" target="_self">Visit Gallery</a>', unsafe_allow_html=True) 
 with c2:
-  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078456680829960232/peteromallet_minimalistic_illustration_of_people_at_a_gallery_l_0992827a-34bf-4de1-b83d-52cc59c67d50.png", use_column_width='always')
+  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078456680829960232/peteromallet_minimalistic_illustration_of_people_at_a_gallery_l_0992827a-34bf-4de1-b83d-52cc59c67d50.png")
 
 st.markdown("***")
 
