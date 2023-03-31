@@ -21,7 +21,7 @@ with header1:
   st.write("It's designed for those who want precision - with an approach and tools designed to give artists enough control over various AI models to create exactly what's in their imagination.")
   cta()
 with header2:
-  st.image("https://i.ibb.co/6wsn9j6/Untitled-design-2023-02-24-T160623-805.png")
+  st.image("https://i.ibb.co/6wsn9j6/Untitled-design-2023-02-24-T160623-805.png",width=350)
 
 st.markdown("***")
 
