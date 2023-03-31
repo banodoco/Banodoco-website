@@ -16,7 +16,7 @@ with st.sidebar:
 
 header1, header2 = st.columns(2)
 with header1:
-  st.header("An open-source tool for creating moving paintings with AI")
+  st.header("An open-source tool for crafting moving paintings with AI")
   st.write("Banodoco is a free, open-source animation tool that aims to allow anyone to use AI to create beautiful videos of anything they can imagine.")
   st.write("It's designed for those who want precision - with an approach and tools designed to give artists enough control over various AI models to create exactly what's in their imagination.")
   cta()
