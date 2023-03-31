@@ -1,0 +1,38 @@
+import streamlit as st
+
+st.set_page_config(page_title="Banodoco")
+
+def cta():
+  st.markdown("[Visit Test App](https://ba-no-do-co.streamlit.app/)  | [Beta Test](https://github.com/peter942/banodoco) |   [Join Discord](https://discord.gg/kkjkeEaVpZ)") 
+
+with st.sidebar:
+  st.write("")    
+
+  cta()    
+  st.sidebar.markdown("*Public release: March 2023*")
+
+
+  
+st.title("Gallery")
+
+
+
+
+gallery1, gallery2 = st.columns([1, 1])
+
+with gallery1:
+  st.markdown("#### The sound of the tires in the snow #2")
+  st.write("Produced: Febuary 2023")
+  st.video("https://youtu.be/vWWBiDjwKkg")
+  st.info("Made with: Banodoco v 0.2")
+  st.markdown("***")
+
+with gallery2:
+  st.markdown("#### The sound of the tires in the snow #1")
+  st.write("Produced: Decemeber 2022")
+  st.video("https://youtu.be/X_BLuno7C84")
+  st.info("Made with: Banodoco v 0.1")
+  st.markdown("***")
+
+  
+  
