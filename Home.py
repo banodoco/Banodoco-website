@@ -1,6 +1,4 @@
 import streamlit as st
-import webbrowser
-
 
 
 st.set_page_config(page_title="Banodoco")
