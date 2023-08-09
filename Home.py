@@ -1,7 +1,36 @@
 import streamlit as st
 
 
-st.set_page_config(page_title="Banodoco")
+def interpolation_element():
+
+  def display_interpolation(column, title, input_image1, input_image2, result_image, result_caption):
+      with column:
+          st.info(title)
+
+          subinterpolate1, subinterpolate2 = st.columns(2)
+          with subinterpolate1:
+              st.image(input_image1, caption="Starting point", use_column_width='always')
+          with subinterpolate2:
+              st.image(input_image2, caption="Ending point", use_column_width='always')
+          st.image(result_image, caption=result_caption, use_column_width='always')
+
+
+  interpolate1, interpolate2 = st.columns(2)
+
+  display_interpolation(interpolate1, 
+                        '**Creative Interpolation**: create new video and motion between key frames', 
+                        "images/creative_interpolation_input_1.png", 
+                        "images/creative_interpolation_input_2.png", 
+                        "images/creative_interpolation_result.gif", 
+                        "Example from Meta's Make-A-Video")
+
+  display_interpolation(interpolate2, 
+                        '**Linear Interpolation**: morph directly from one key frame to the next', 
+                        "images/linear_interpolation_input_1.png", 
+                        "images/linear_interpolation_input_2.png", 
+                        "images/linear_interpolation_result.gif", 
+                        "Example from Google's FiLM Interpolation")
+st.set_page_config(page_title="Banodoco - Home")
 
 hide_img = '''
 <style>
@@ -13,113 +42,109 @@ st.markdown(hide_img, unsafe_allow_html=True)
 
 
 def cta():  
-  st.markdown("[Visit Test App](https://ba-no-do-co.streamlit.app/)  | [Beta Test](https://github.com/peter942/banodoco) |   [Join Discord](https://discord.gg/kkjkeEaVpZ)") 
-
+  st.markdown("[Join Discord](https://discord.gg/kkjkeEaVpZ) | [Visit Github](https://github.com/banodoco/) |  [Get in touch](mailto:peter@omalley.io)")
+  st.caption("Version 1: launching March 2024")
 
 
 with st.sidebar:
   st.write("")    
-
-  cta()    
-  st.sidebar.markdown("*Public release: March 2023*")
-
+  cta()        
+  st.markdown("***")
+  st.write("")
 
 header1, header2 = st.columns(2)
 with header1:
-  st.header("An open-source tool for crafting moving paintings with AI")
-  st.write("Banodoco is a free, open-source animation tool that aims to allow anyone to use AI to create beautiful videos of anything they can imagine.")
-  st.write("It's designed for those who want precision - with an approach and tools designed to give artists enough control over various AI models to create exactly what's in their imagination.")
+    
+  st.header("Tools & models for crafting beautiful videos with AI")
+  st.write("We're building an open-source tool and models designed to give artists (like you!) enough control over AI that they can create videos of anything they can imagine.")
+  st.write("We want to make the best AI creative tool, and to do so in an open-source-native manner, creating alongside OSS contributors and allowing anyone to build on top of and extend our work.")
+  
   cta()
+  
 with header2:
+
   st.write("")
   st.write("")
-  st.image("https://i.ibb.co/6wsn9j6/Untitled-design-2023-02-24-T160623-805.png",use_column_width='always')
+  st.write("")
+  st.image("images/header_image.png",use_column_width='always')
 
 st.markdown("***")
 
-st.subheader("Coherent and beautiful video to video transformations")
-st.write("We believe that the best way for a human to tell AI what video they want to create is with a video of their own that it transforms. Banodoco allows users to control and direct AI with pipelines that combine multiple models to achieve coherent transformations of characters, scenes, and styles.")
-comparison1, comparison2 = st.columns(2)
-with comparison1:
-  st.image("https://banodoco.s3.amazonaws.com/input_images/input.gif", caption="Before",use_column_width='always')
-with comparison2:
-  st.image("https://banodoco.s3.amazonaws.com/input_images/output.gif", caption="After",use_column_width='always')      
-st.info("Video prompts > word prompts. An image is worth a thousand words and a video contains 30 images per second!")
+st.subheader("Guide your creation key-frame by key-frame")
+st.markdown('Our <a href="/Steerable_Motion" target="_self"> Steerable Motion</a> model allows artists to guide videos, key frame by key frame - creating the main images that guide a video. This allows for a fast, iterative process and a high-degree of control.', unsafe_allow_html=True)
 
-st.markdown("***")
 
-st.subheader("AI native tools for crafting and refining your creation")
-st.write("Banodoco is designed to be an AI native tool - with all of our features leveraged by AI to make your life easier. We aim to provide you with the tools to create beautiful videos with the least amount of effort possible.")
-feature1, feature2, feature3 = st.columns([1,3,1])
+feature1, feature2 = st.columns([1,5])
+
 with feature1:  
-  if st.button("Timing Adjustment"):
-    st.session_state['feature'] = 'timing'   
-    st.experimental_rerun()
-  if st.button("Key Frame Editing"):
-    st.session_state['feature'] = 'frame'      
-    st.experimental_rerun()
-  if st.button("Scene transformation"):
-    st.session_state['feature'] = 'backdrop'      
-    st.experimental_rerun()
-  if st.button("Custom Pipelines"):
-    st.session_state['feature'] = 'pipelines'      
-    st.experimental_rerun()
-  st.markdown("*And much more...*")
 
+  st.write("")
+  st.write("")
+  if st.button("Example #1"):
+    st.session_state['feature'] = 'example_1'   
+    st.experimental_rerun()
+  if st.button("Example #2"):
+    st.session_state['feature'] = 'example_2'   
+    st.experimental_rerun()
+  if st.button("Example #3"):
+    st.session_state['feature'] = 'example_3'   
+    st.experimental_rerun()
+  
   if 'feature' not in st.session_state:
-    st.session_state['feature'] = 'pipelines'
-
-  if st.session_state['feature'] == 'pipelines':
-    feature_image = "https://banodoco.s3.amazonaws.com/input_images/Untitled+design+-+2023-02-26T150703.582.png"
-    feature_text = "Use & build custom pipelines combining multiple models to achieve the exact effect you want"
-  elif st.session_state['feature'] == 'timing':
-    feature_image = "https://i.ibb.co/GHxJkd4/Untitled-design-2023-02-23-T220706-388.png"
-    feature_text = "Adjust and tweak the timing to achieve your desired effect"
-  elif st.session_state['feature'] == 'frame':
-    feature_image = "https://i.ibb.co/0QNyK7K/Untitled-design-2023-02-23-T221038-734.png"
-    feature_text = "Edit individual key frames with a variety of models until they're perfect"
-  elif st.session_state['feature'] == 'backdrop':
-    feature_image = "https://banodoco.s3.amazonaws.com/input_images/Untitled+design+-+2023-02-26T151015.293.png"
-    feature_text = "Transform the backdrop of your video with a variety of models"
+    st.session_state['feature'] = 'example_1'    
+  if st.session_state['feature'] == 'example_1':
+    feature_image = "images/example_1.png"    
+  elif st.session_state['feature'] == 'example_2':
+    feature_image = "images/example_2.png"    
+  else:
+    feature_image = "images/example_3.png"
   
-
 with feature2:
-  st.image(feature_image, width=300)
-with feature3:
-  st.info(feature_text)
-  
+  st.image(feature_image, use_column_width=True)
+
+
 st.markdown("***")
+
+
+st.subheader("Bring key frames to life with interpolation models")
+st.write("Once you've defined key frames, we'll provide a variety of models to bring them to life - either directly interpolating from one to the next, or creating new video between frames.")
+
+interpolation_element()
+
+
+st.markdown("***")
+
+
+approach1, approach2 = st.columns([1.15, 1])
+
+with approach1:
+  st.write("")
+  st.subheader("An approach for artists who want control and a satisfying creative experience")
+  st.markdown("**Controllable**: artists will be able to define the motion down to a tee - think of the control a director like Kubrick or  Tarantino needs over their work  to create something that represents their imagination precisely.")  
+  st.markdown("**Fast**: key frames will appear at image-diffusion speed -  making for a satisfying creative process - they can rapidly  test, iterate upon, and edit each element of the video with as much precision as they like.")  
+  st.markdown("**Extendable**: artists will be able to create videos of any  length, and animate them in a variety of ways, and  use LoRAs to follow any visual style or animation style. Our approach is infinitely extendable.")
+
+with approach2:  
+  st.image('images/kubrick.png')
+
+
+st.markdown("***")
+
 
 a1, a2 = st.columns([1, 1])
-with a1:
-  st.write("")
-  st.subheader("Become a core contributor")
-  st.write("We're looking for high-agency, talented individuals who want to contribute to the project.")
-  st.markdown('<a href="/Collaborate" target="_self">Learn about what we\'re looking for</a>', unsafe_allow_html=True)
+with a1:  
+  st.subheader("Our philosophy")
+  st.image("images/philosophy_image.png",use_column_width='always')
+  st.write("Optimising for control and a satisfying creative process - and open-source to our core. ")
+  st.markdown('<a href="/Our_philosophy" target="_self">Learn about our philosophy</a>', unsafe_allow_html=True)
+       
+with a2:    
+  st.subheader("Roadmap & collaboration")
+  st.image("images/roadmap_image.png",use_column_width='always')
+  st.write("We're looking for talented, high-agency individuals who want to contribute in return for equity.")
+  st.markdown('<a href="/Roadmap_&_collaboration" target="_self">Learn about our roadmap</a>', unsafe_allow_html=True)
 
-   
-with a2:
-  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078456600781652069/peteromallet_minimalistic_illustration_of_people_building_scaff_a97eb34a-7ab1-4cae-a02e-b229ff5bcb66.png",use_column_width='always')
-
-b1, b2 = st.columns([1, 1])
-with b1:
-  st.subheader("Philosophy & roadmap")
-  st.write("We're building an open-source tool that will enable people to make whatever they can imagine!")
-  st.markdown('<a href="/Philosophy_&_Roadmap" target="_self">Learn about what we\'re looking for</a>', unsafe_allow_html=True)
   
-with b2:
-  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078451803718438942/peteromallet_minimalistic_illustration_meaning_a_long_journey_R_5dd02f2f-1583-4f39-8eae-6348ac68062a.png",use_column_width='always')
 
-c1, c2 = st.columns([1, 1])
-with c1:
-  st.subheader("Visit our gallery")
-  st.write("While it's a little bit sparse now, we'll share the best creations made by artists using Banodoco.")
-  st.markdown('<a href="/Gallery" target="_self">Visit Gallery</a>', unsafe_allow_html=True) 
-with c2:
-  st.image("https://media.discordapp.net/attachments/1017188259102724146/1078456680829960232/peteromallet_minimalistic_illustration_of_people_at_a_gallery_l_0992827a-34bf-4de1-b83d-52cc59c67d50.png",use_column_width='always')
 
-st.markdown("***")
 
-st.subheader("Join our Discord to learn about our releases, get early access to our beta, and to collaborate with other artists")
-st.write("Join our Discord to get the latest updates and to collaborate with other artists")
-cta()
