@@ -35,12 +35,12 @@ with footer2:
   
   st.write("")
   
-  st.image("images/the_lads.png", use_column_width='always')
+  st.image("https://banodoco.s3.amazonaws.com/images/the_lads.png", use_column_width='always')
 
 st.markdown("***")
 
 st.subheader("Our philosophy: optimising for control and a satisfying creative process")
-st.image("images/philosophy_1.png",use_column_width='always')
+st.image("https://banodoco.s3.amazonaws.com/images/philosophy_1.png",use_column_width='always')
 st.write("For an artistic tool to be great, people need to be able to guide the output to match their imagination exactly and to do so in a fun, satisfying manner. ")
 st.write("A good analogy for the level of control needed is a hands-on movie director like Kubrick - planning every detail, standing behind the camera, and refining each element in post-production. While every medium has its constraints, a high-degree of control given these limitations allows  artists to guide the output to the point that it can be an authentic expression of what they envision.")
 st.write("Additionally, it needs to be a satisfying creative process - it has to be fun and engaging so they stay engaged as they experiment and iterate towards the final result. ")
@@ -49,7 +49,7 @@ st.write("Over the next decade, there will be many methods to produce aesthetica
 st.markdown("***")
 
 st.subheader("How we plan to deliver this")
-st.image("images/philosophy_2.png",use_column_width='always')
+st.image("https://banodoco.s3.amazonaws.com/images/philosophy_2.png",use_column_width='always')
 st.write("Our plan is to focus on helping people craft videos key-frame by key-frame - creating and manipulating the images that guide a video. Users will interact with our product using their voice or text - they'll describe what they want to happen and key frames will appear in seconds. We’ll abstract away the complexity of selecting models, writing prompts, and defining settings: people will specify what they want to happen and an LLM will create and edit key frames based on their request.")
 st.write("Once they’ve defined the key frames of the project, they’ll be able to interpolate through them and apply effects - for example, to align mouth movements with audio. For the sake of speed & efficiency, the more computation-heavy video-based transformations won’t be run until after key frames have been defined.")
 st.write("In addition to leveraging existing open models, we’ll create a variety of models optimised for specific purposes - our main model for version one we’ll call Steerable Motion. Steerable Motion will allow users to create motion-based key frames from a single image - for example, they’ll be able to say “make her smile and look away”, and it will generate the key frames showing this movement in seconds.")
@@ -60,7 +60,7 @@ st.markdown('<a href="/Roadmap_&_collaboration" target="_self">You can learn abo
 st.markdown("***")
 
 st.subheader("Why & how we're building in an 'open-source native' manner")
-st.image("images/open_source_native.png")
+st.image("https://banodoco.s3.amazonaws.com/images/open_source_native.png")
 
 st.markdown("##### How we'll build it:")
 st.markdown("- We’ll develop models in collaboration with the open-source community, creating incentives for them to explore certain areas and unlock specific capabilities.")

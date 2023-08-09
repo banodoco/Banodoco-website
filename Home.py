@@ -19,16 +19,16 @@ def interpolation_element():
 
   display_interpolation(interpolate1, 
                         '**Creative Interpolation**: create new video and motion between key frames', 
-                        "images/creative_interpolation_input_1.png", 
-                        "images/creative_interpolation_input_2.png", 
-                        "images/creative_interpolation_result.gif", 
+                        "https://banodoco.s3.amazonaws.com/images/creative_interpolation_input_1.png", 
+                        "https://banodoco.s3.amazonaws.com/images/creative_interpolation_input_2.png", 
+                        "https://banodoco.s3.amazonaws.com/images/creative_interpolation_result.gif", 
                         "Example from Meta's Make-A-Video")
 
   display_interpolation(interpolate2, 
                         '**Linear Interpolation**: morph directly from one key frame to the next', 
-                        "images/linear_interpolation_input_1.png", 
-                        "images/linear_interpolation_input_2.png", 
-                        "images/linear_interpolation_result.gif", 
+                        "https://banodoco.s3.amazonaws.com/images/linear_interpolation_input_1.png", 
+                        "https://banodoco.s3.amazonaws.com/images/linear_interpolation_input_2.png", 
+                        "https://banodoco.s3.amazonaws.com/images/linear_interpolation_result.gif", 
                         "Example from Google's FiLM Interpolation")
 st.set_page_config(page_title="Banodoco - Home")
 
@@ -66,7 +66,7 @@ with header2:
   st.write("")
   st.write("")
   st.write("")
-  st.image("images/header_image.png",use_column_width='always')
+  st.image("https://banodoco.s3.amazonaws.com/images/header_image.png",use_column_width='always')
 
 st.markdown("***")
 
@@ -93,11 +93,11 @@ with feature1:
   if 'feature' not in st.session_state:
     st.session_state['feature'] = 'example_1'    
   if st.session_state['feature'] == 'example_1':
-    feature_image = "images/example_1.png"    
+    feature_image = "https://banodoco.s3.amazonaws.com/images/example_1.png"    
   elif st.session_state['feature'] == 'example_2':
-    feature_image = "images/example_2.png"    
+    feature_image = "https://banodoco.s3.amazonaws.com/images/example_2.png"    
   else:
-    feature_image = "images/example_3.png"
+    feature_image = "https://banodoco.s3.amazonaws.com/images/example_3.png"
   
 with feature2:
   st.image(feature_image, use_column_width=True)
@@ -125,7 +125,7 @@ with approach1:
   st.markdown("**Extendable**: artists will be able to create videos of any  length, and animate them in a variety of ways, and  use LoRAs to follow any visual style or animation style. Our approach is infinitely extendable.")
 
 with approach2:  
-  st.image('images/kubrick.png')
+  st.image('https://banodoco.s3.amazonaws.com/images/kubrick.png')
 
 
 st.markdown("***")
@@ -134,13 +134,13 @@ st.markdown("***")
 a1, a2 = st.columns([1, 1])
 with a1:  
   st.subheader("Our philosophy")
-  st.image("images/philosophy_image.png",use_column_width='always')
+  st.image("https://banodoco.s3.amazonaws.com/images/philosophy_image.png",use_column_width='always')
   st.write("Optimising for control and a satisfying creative process - and open-source to our core. ")
   st.markdown('<a href="/Our_philosophy" target="_self">Learn about our philosophy</a>', unsafe_allow_html=True)
        
 with a2:    
   st.subheader("Roadmap & collaboration")
-  st.image("images/roadmap_image.png",use_column_width='always')
+  st.image("https://banodoco.s3.amazonaws.com/images/roadmap_image.png",use_column_width='always')
   st.write("We're looking for talented, high-agency individuals who want to contribute in return for equity.")
   st.markdown('<a href="/Roadmap_&_collaboration" target="_self">Learn about our roadmap</a>', unsafe_allow_html=True)
 

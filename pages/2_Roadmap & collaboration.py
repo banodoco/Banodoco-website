@@ -45,7 +45,7 @@ st.write("Users will interact with the **Steering User Interface** - with the **
 
 st.write("You can see an overview of how they might interact in the diagram below - I suggest you read from left to right, starting from the user instruction text in and following the arrows to the bottom and then back up to the text:")
 
-st.image("images/flowchart.png")
+st.image("https://banodoco.s3.amazonaws.com/images/flowchart.png")
 
 st.markdown("***")
 
