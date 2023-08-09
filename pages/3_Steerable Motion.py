@@ -24,7 +24,7 @@ with st.sidebar:
 
 st.header("Steerable Motion - a model for controlling AI video generation")
 
-st.success("Want to contribute towards building an open-source model that will allow artists to craft AI videos precisely? You can see collaboration opportunities at the bottom.")
+st.success("Want to contribute towards building an open-source model that will allow artists to craft AI videos precisely? You can see collaboration opportunities at the bottom or join our Discord [here](https://discord.gg/nV5kF49VeY).")
 
 st.write("Steerable Motion is a model for creating motion key frames from an image based on user instructions. Our goal is that a user can say what they want to happen 'after' an image, and Steerable Motion creates images showing what happens by evolving the input image.")
 st.write("To do this, we're training a model (early versions below) on motion key frames - pairs of images -  alongside a description of the difference between them.")
