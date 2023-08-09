@@ -40,7 +40,6 @@ button[title="View fullscreen"]{
 '''
 st.markdown(hide_img, unsafe_allow_html=True)
 
-
 def cta():  
   st.markdown("[Join Discord](https://discord.gg/eKQm3uHKx2) | [Visit Github](https://github.com/banodoco/) |  [Get in touch](mailto:peter@omalley.io)")
   st.caption("Version 1: launching March 2024")

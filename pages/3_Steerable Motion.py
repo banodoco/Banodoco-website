@@ -15,8 +15,6 @@ button[title="View fullscreen"]{
 '''
 # st.markdown(hide_img, unsafe_allow_html=True)
 
-
-
 with st.sidebar:
   st.write("")    
   cta()    
@@ -38,7 +36,10 @@ st.write("These images can then be used to 'guide' a video generation - using cl
 interpolation_element()
 st.write("The goal is to give artists for a high-degree of control over videos - with them defining the main movements as precisely as they like - and a fun, fast, interactive creative process - with the ability to see and iterate upon elements in seconds. Our approach aims to work for minor changes (facial expression changes, etc.) and major ones (large movements, perspective changes) while maintaining consistency - in order to give artists as precise or as broad control as they desire.")
 
+
 st.markdown("***")
+
+
 st.markdown("### Our approach for v.1.0: fine-tuning Stable Diffusion on motion data")
 st.write("For version 1, we plan to fine-tune Stable Diffusion on key frame pairs, alongside a description of the change between them.")
 st.write("From architecture, to collecting training data, there are a wide variety of different ways to approach various elements of this. In order to unlock the best possible approach, we plan to build this model in public in collaboration with the open source community - creating incentives and inspiration for open-source engineers and fine-tuners to work with us to crack elements of it.")
@@ -49,6 +50,7 @@ st.write("For 0.1, I wanted to validate the fundamental approach. To do this, I 
 st.write("For the sake of speed, I focused on a single character - the assumption is that, with a large, diverse training set, the approach will generalise - as similar approaches like [InstructPix2Pix](https://www.timothybrooks.com/instruct-pix2pix/) have.")
 st.write("The initial validation worked - I could generate small movements (facial expressions) and medium movements (body movements).")
 st.write("You can see examples of the output here:")
+
 outputcol1,outputcol2 = st.columns([1,1])
 with outputcol1:
   st.image('https://banodoco.s3.amazonaws.com/images/steerable-motion-output_1.webp')
@@ -56,9 +58,9 @@ with outputcol2:
   st.image('https://banodoco.s3.amazonaws.com/images/steerable-motion-output_2.webp')
 
 st.markdown("--")
+
 st.markdown("##### v.0.1 -> 0.3 scaling data-collection, experimenting with different architectures, seeking generalisation, switching to a fine-tune & figuring out instructions:")
 st.info("**IN PROGRESS - August -> September 2023**: see collaboration opportunities below.")
-
 st.write("As a next step, we'll seek to scale data-collection in order to demonstrate generalisation, and make the output more coherent.")
 st.write("My feeling is that high-quality data is very important so we’ll need to figure out how to curate that at a large scale - probably by building a system that leverages BLIP2, Segment Anywhere, and others, as well as by leveraging existing video datasets. I’ve built an early version of this tool **here**.")
 st.write("Additionally, we'll experiment with a range of data types and instructions and switch to training on top of a good general base like Realistic Vision. We'll also experiment with different architectures and approaches.")
@@ -81,9 +83,11 @@ st.markdown("--")
 st.markdown("##### v.1.0 onwards")
 st.write("The architecture and approach for Steerable Motion will evolve significantly for the next versions - probably with our own base model.")
 
-st.markdown("***")
-st.markdown("### Collaboration Opportunities:")
 
+st.markdown("***")
+
+
+st.markdown("### Collaboration Opportunities:")
 st.write("We're seeking open-source collaborators who want to assist:")
 st.markdown("- Explore different architectures/approaches")
 st.markdown("- Explore approaches to prompting")
@@ -92,6 +96,5 @@ st.markdown("- Explore repurposing different data-sets")
 st.markdown("- Explore approaches to create multi-key frame stability - training on 2 input frames, etc.")
 st.markdown("- Getting the approach working with SDXL")
 st.markdown("- Other stuff you may think of")
-
 st.markdown("If you're interested in helping out in large or small ways, you can find more details on our Discord [here](https://discord.gg/nV5kF49VeY).")
 st.write("While we're bootstrapped right now, we're allocating up to 0.5% of equity per month for the next 6 months for open-source contributors who contribute significantly.")
