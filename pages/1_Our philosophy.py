@@ -84,8 +84,12 @@ st.markdown("- **To attract world-class inspired talent:** I think that there ar
 st.markdown("- **To inspire a variety of researchers to go deep into important problems:** Channeling this excitement in a direction aligned with our goals will allow ‘us’ to do far more, far more creatively than any closed-source team could.")
 st.markdown("- **To build our company in a way that makes sense in a post-AI world:** we believe that - as companies can increasingly solve problems with AI that would’ve been solved with people - it’ll make sense to keep the core team as small as possible, and build with open source and project based talent, in order to implement AI solutions to problems - rather than people-based solutions.")
 st.markdown("- **To build the best possible product:** I believe that this approach will allow us to build the best possible product - and that this will be the best way to build a great company.")
-
 st.markdown('<a href="/Roadmap_&_collaboration" target="_self">You can learn about collaboration opportunities here -></a>', unsafe_allow_html=True)
+st.write("")
+st.write("")
 
+
+st.markdown("##### A healthy open source ecoystem is one in which all the participants support, reward and integrate with those earlier in the invention/adoption curve")
+st.image("https://banodoco.s3.amazonaws.com/images/open_source_ecosystem.png",use_column_width='always')
 
 footer()
