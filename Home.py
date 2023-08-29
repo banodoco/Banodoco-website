@@ -55,7 +55,7 @@ header1, header2 = st.columns(2)
 with header1:
     
   st.header("Tools & models for crafting masterpieces")
-  st.write("We're building an open-source tool and models designed to give artists (like you!) enough control over AI that they can create videos of anything they can imagine.")
+  st.write("We're building open-source tools and models designed to give artists (like you!) the control over AI they need to create videos of anything they can imagine")
   st.write("We want to make the best AI creative tool, and to do so in an open-source-native manner, creating alongside OSS contributors and allowing anyone to build on top of and extend our work.")
   
   cta()
@@ -145,7 +145,7 @@ st.markdown("***")
 
 
 st.subheader("Bring key frames to life with Animatediff & other models for interpolation & Img2Vid")
-st.markdown('We\'re building on top of <a href="/Animatediff" target="_self">Animatediff</a> and other models to bring your videos to life - you can either directly interpolate from one to the next, or creating new video between frames.', unsafe_allow_html=True)
+st.markdown('We\'re building on top of <a href="/Animatediff" target="_self">Animatediff</a> and other models to bring your videos to life - you can either directly interpolate from one to the next, or create new motion between frames.', unsafe_allow_html=True)
 
 interpolation_element()
 
@@ -159,8 +159,8 @@ with approach1:
   st.write("")
   st.subheader("An approach for artists who want control and a satisfying creative experience")
   st.markdown("**Controllable**: artists will be able to define the motion down to a tee - think of the control a director like Kubrick or  Tarantino needs over their work  to create something that represents their imagination precisely.")  
-  st.markdown("**Fast**: key frames will appear at image-diffusion speed -  making for a satisfying creative process - they can rapidly  test, iterate upon, and edit each element of the video with as much precision as they like.")  
-  st.markdown("**Extendable**: artists will be able to create videos of any  length, and animate them in a variety of ways, and  use LoRAs to follow any visual style or animation style. Our approach is infinitely extendable.")
+  st.markdown("**Fast**: key frames will appear at image-diffusion speed. This ensures a satisfying creative process, allowing artists to rapidly test, iterate, and edit each video element with precision.")
+  st.markdown("**Extendable**: artists can create videos of any length, animate them in a variety of ways, and use LoRAs or fine-tuned models to adopt any visual or animation style.")
 
 with approach2:  
   st.image('https://banodoco.s3.amazonaws.com/images/kubrick.webp')
@@ -173,7 +173,7 @@ a1, a2 = st.columns([1, 1])
 with a1:  
   st.subheader("Our philosophy")
   st.image("https://banodoco.s3.amazonaws.com/images/philosophy_image.webp",use_column_width='always')
-  st.write("Optimising for control and a satisfying creative process - and open-source to our core. ")
+  st.write("We're optimising for control and a satisfying creative process - and open-source to our core. ")
   st.markdown('<a href="/Our_philosophy" target="_self">Learn about our philosophy</a>', unsafe_allow_html=True)
        
 with a2:    

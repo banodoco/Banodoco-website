@@ -6,6 +6,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from Home import cta,footer
 
+st.set_page_config(page_title="Banodoco - Gallery")
 
 hide_img = '''
 <style>
