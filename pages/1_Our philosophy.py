@@ -4,7 +4,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from Home import cta
+from Home import cta, footer
 
 hide_img = '''
 <style>
@@ -83,5 +83,7 @@ st.markdown("- **To inspire a variety of researchers to go deep into important p
 st.markdown("- **To build our company in a way that makes sense in a post-AI world:** I believe that - as companies can increasingly solve problems with AI that would’ve been solved with people - it’ll make sense to keep the core team as small as possible, and build with open source and project based talent, in order to implement AI solutions to problems - rather than people-based solutions.")
 st.markdown("- **To build the best possible product:** I believe that this approach will allow us to build the best possible product - and that this will be the best way to build a great company.")
 
-
 st.markdown('<a href="/Roadmap_&_collaboration" target="_self">You can learn about collaboration opportunities here -></a>', unsafe_allow_html=True)
+
+
+footer()

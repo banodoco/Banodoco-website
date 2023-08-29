@@ -4,7 +4,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from Home import cta
+from Home import cta, footer
 
 with st.sidebar:
   st.write("")    
@@ -23,12 +23,11 @@ ul.stMarkdown ul, ul.stMarkdown li {
 ''', unsafe_allow_html=True)
 
 
-
 st.markdown("The three building blocks of delivering this are below:")
 
 st.markdown("##### 1. Transformation Models")
 st.markdown("- **Steerable Motion:** a model that creates key frames for the main movement of a video from a base image")
-st.markdown("- **Interpolation Models:** models that fill the gap between these key frames, to create a full motion effect")
+st.markdown("- **Animatediff:** to act as both an interpolation model and image2video model")
 st.markdown("- **Supplementary Models:** models to achieve a range of image and video creations and transformations")
 st.markdown("##### 2. Creative Assistant Model")
 st.write("An LLM and routing system that understands user requests and directs them to a range of transformation models")
@@ -59,16 +58,16 @@ st.write("- Help get this running on local GPUs: we're using Replicate's [COG](h
 st.markdown("--")
 
 st.markdown("##### July -> February: Work towards Steerable Motion v. 1.0")
-st.write("You can read more about Steerable Motion and collaboration opportunities **here**.")
+st.markdown('You can read more about Steerable Motion and collaboration opportunities <a href="/Steerable_Motion" target="_self">here</a>.', unsafe_allow_html=True)
 
 st.markdown("--")
 
-st.markdown("##### October -> March: Work towards Img+Img2Vid Models for Creative Interpolation")
-st.write("We will aim to provide a number of interpolation models in our first version. Depending on a number of factors, we may train our own model - but worst case, we will seek to adapt and fine-tune existing text2vid models for this purpose.")
+st.markdown("##### August -> March: Work towards Optimising & Refining Animatediff Models for Creative Interpolation and Img2Vid")
+st.write("For our first version, we'll be building primarily on top of Animatediff. We'll be refining it for our use-cases in collaboration with the community, and probably training a larger and more capable version of it.")
 st.markdown("**Collaboration opportunities:**")
 st.write("- ML Engineers/Architect: to help explore approaches to training our own models.")
 st.write("- Fine-tuners: to figure out how to optimise existing models.")
-
+st.markdown('You can read more about our plans for Animatediff and collaboration opportunities <a href="/Animatediff" target="_self">here</a>.', unsafe_allow_html=True)
 st.markdown("--")
 
 st.markdown("##### September -> March: Build Towards Creative Assistant LLM v. 1.0")
@@ -94,3 +93,5 @@ st.write("If you're interested at this stage, I would encourage you to only do t
 st.write("If you contribute significantly, you will get equity (pre-agreed in advance) that will be worth a significant amount if we're successful. As a result, we will ask you to take your work seriously if you do contribute significantly. This is a reasonably large project with a large number of moving parts - those who contribute components will have others depending on their work.")
 st.write("When we raise funding, we plan to compensate significant contributors, in addition to bringing on-board full-time, long-term collaborators. If you're interested in any of the above projects, please **join our Discord [here](https://discord.gg/eKQm3uHKx2)** to see more details.")
 
+
+footer()
