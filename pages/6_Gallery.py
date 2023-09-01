@@ -69,7 +69,7 @@ gallery_items = [
     },
     {
         "title":"Without Humanity - feat. David AI-ttenborough",
-        "produced":"June 2022",
+        "produced":"June 2023",
         "video_link":"https://www.youtube.com/watch?v=PNFjIJdNipQ",
         "software_version":"0.3"
 
