@@ -1,0 +1,76 @@
+{
+    "taskDefinitionArn": "arn:aws:ecs:ap-south-1:861629679241:task-definition/frontend-banodoco-website-task:1",
+    "containerDefinitions": [
+        {
+            "name": "frontend-banodoco-website",
+            "image": "861629679241.dkr.ecr.ap-south-1.amazonaws.com/banodoco-website:latest",
+            "cpu": 512,
+            "memory": 2048,
+            "portMappings": [
+                {
+                    "containerPort": 5500,
+                    "hostPort": 5500,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/frontend/banodoco-website",
+                    "awslogs-region": "ap-south-1",
+                    "awslogs-stream-prefix": "frontend/banodoco-website"
+                }
+            }
+        }
+    ],
+    "family": "frontend-banodoco-website-task",
+    "taskRoleArn": "arn:aws:iam::861629679241:role/ecs-task-role",
+    "executionRoleArn": "arn:aws:iam::861629679241:role/ecs-task-execution-role",
+    "networkMode": "awsvpc",
+    "revision": 1,
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.task-iam-role"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
+        }
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2",
+        "FARGATE"
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "512",
+    "memory": "2048",
+    "registeredAt": "2023-09-01T13:31:01.669Z",
+    "registeredBy": "arn:aws:iam::861629679241:user/tf-admin",
+    "tags": []
+}
