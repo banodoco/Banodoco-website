@@ -25,7 +25,7 @@ st.header("Banodoco Ownership - Explanation, Disclaimers & FAQ")
 
 
 
-st.write("Our goal is to make Banodoco into a great business that can support/spur the development of OSS art models - by creating a product make earns money & is an extremely attractive investment to those who believe in our mission and open source.")
+st.write("Our goal is to make Banodoco into a great business that can support/spur the development of OSS art models - by creating a product that earns money & is an extremely attractive investment to those who believe in our mission and open source.")
 st.write("To do this, we're training a model (early versions below) on motion key frames - pairs of images -  alongside a description of the difference between them.")
 st.write("Most startups give out 90% to founders and 10% to early employees, and then often give another equity allocation for later employees:")
 st.image('https://banodoco.s3.amazonaws.com/images/typical_startup_equity.webp')
