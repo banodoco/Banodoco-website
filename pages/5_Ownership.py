@@ -48,10 +48,27 @@ st.markdown("**3) Figuring this out will be an ever-evolving process - and we wi
 st.markdown("I believe that this fundamental approach makes sense but figuring out how to actually implement it will take time. We’ll also make mistakes along the way.")
 
 st.markdown("**4) How the ‘ownership’ will be structured is unclear & lots of stuff is TBD**")
-st.markdown("For example, it may not literally be ownership, but possible an agreement that the grantee can buy equity from us at a price of 0.01c when the equity becomes valuable. However, whatever way it’s structure my goal is that it means that the realisable gains from it are exactly proportional to the percentage of ownership - say if the company is values at $1b, and you have 1% equity, that will be worth exactly 1% of that (pre-tax of course).")
+st.markdown("For example, it may not literally be ownership, but possible an agreement that the grantee can buy equity from us at a price of 0.01c when the equity becomes valuable. However, whatever way it’s structure my goal is that it means that the realisable gains from it are exactly proportional to the percentage of ownership - say if the company is values at 1b USD, and you have 1% equity, that will be worth exactly 1% of that (pre-tax of course).")
 
 st.markdown("**5) Ownership will get diluted as we take on investment, or allocate more equity for contributors**")
-st.markdown("Say, for example, we get an investment of $5m at a $50m valuation. That means that the ownership pool for contributors (including me) will be diluted. In the case of the above example, it would mean that what was once 0.1% of the whole entity, would now be 0.091%. However, this would be offset by the actual value increasing as the percentage decreases. We may also allocate more ownership to contributors - which would have the same effect. While things may change, I can only promise that every change that impacts owners will impact me equally.")
+st.markdown("Say, for example, we get an investment of 5m USD on a 50m USD valuation. That means that the ownership pool for contributors (including me) will be diluted. In the case of the above example, it would mean that what was once 0.1% of the whole entity, would now be 0.091%. However, this would be offset by the actual value increasing as the percentage decreases. We may also allocate more ownership to contributors - which would have the same effect. While things may change, I can only promise that every change that impacts owners will impact me equally.")
+
+
+st.header("Ownership grants to date:")
+
+import pandas as pd
+
+data = {
+    'Month': ['November, 2022', 'December, 2022', 'January, 2023', 'February, 2023', 'March, 2023', 'April, 2023', 'May, 2023', 'June, 2023', 'July, 2023', 'August, 2023', 'September, 2023'],
+    'Ownership Grants': ['POM', 'POM', 'POM', 'POM', 'POM', 'POM', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'itsB34STW4RS; Kosinkadink; PBPBPB; Cubey; lone_samurai; neggles; toyxyz; POM', 'group']
+}
+
+df = pd.DataFrame(data)[::-1].reset_index(drop=True)
+
+st.write("As per the above, each month, 1% of the company will be split equally between contributors. The below table shows the contributors who split grants each month:")
+st.dataframe(df,use_container_width=True, hide_index=True)
+
+st.info("Note: POM likely give a significant portion of his equity to new contributors who have been working on their projects for some time and wish to merge efforts.  These changes will be reflected here.")
 
 st.header("FAQ:")
 
