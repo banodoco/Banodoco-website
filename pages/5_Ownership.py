@@ -87,6 +87,9 @@ st.markdown("It could in theory be possible to have some kind of crypto approach
 st.markdown("**“What about tax?”**")
 st.markdown("We’ll try to set it up in a way that tax is only due upon actual realised gains - meaning, you’d only pay based on actual money you make.")
 
+st.markdown("**“What happens if the company is sold before the equity is allocated?”**")
+st.markdown("Firstly, our intention is to build this into a self-sustaining entity. However, if we do get purchased by another company, equity will be distributed proportionally based on the allocations made to date. For example, if someone holds 1% of the equity and 33.3% of the total equity has been allocated, they would receive 3% of the purchase price.")
+
 st.markdown("**“I have another question”**")
 st.markdown("DM me on [our Discord](https://discord.com/invite/eKQm3uHKx2)!")
 
