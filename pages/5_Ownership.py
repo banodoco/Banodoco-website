@@ -59,8 +59,9 @@ st.header("Ownership grants to date:")
 import pandas as pd
 
 data = {
-    'Month': ['November, 2022', 'December, 2022', 'January, 2023', 'February, 2023', 'March, 2023', 'April, 2023', 'May, 2023', 'June, 2023', 'July, 2023', 'August, 2023', 'September, 2023', 'October, 2023'],
-    'Ownership Grants': ['POM', 'POM', 'POM', 'POM', 'POM', 'POM', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'itsB34STW4RS; Kosinkadink; PBPBPB; Cubey; lone_samurai; neggles; toyxyz; POM', 'Inner_Reflections_AI; Kaïros; Kosinkadink; manshoety; Antzu ☕; lone_samurai; Draken; jfischoff; RedStrawberries; itsB34STW4RS; Fizzledorf; Consumption','kijai; piblarg; drex15704080; fictiverse; fannovel16; citizenplain; kosinkadink; jfischoff; lone_samurai; fizzledorf; anime_is_real; fabdream; cainisable; redstrawberries; manshoety; drakenza; consumption_']
+    'Month': ['November, 2022', 'December, 2022', 'January, 2023', 'February, 2023', 'March, 2023', 'April, 2023', 'May, 2023', 'June, 2023', 'July, 2023', 'August, 2023', 'September, 2023', 'October, 2023', 'November, 2023'],
+    'Ownership Grants': ['POM', 'POM', 'POM', 'POM', 'POM', 'POM', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'itsB34STW4RS; Kosinkadink; PBPBPB; Cubey; lone_samurai; neggles; toyxyz; POM', 'Inner_Reflections_AI; Kaïros; Kosinkadink; manshoety; Antzu ☕; lone_samurai; Draken; jfischoff; RedStrawberries; itsB34STW4RS; Fizzledorf; Consumption','kijai; piblarg; drex15704080; fictiverse; fannovel16; citizenplain; kosinkadink; jfischoff; lone_samurai; fizzledorf; anime_is_real; fabdream; cainisable; redstrawberries; manshoety; drakenza; consumption_', 'Kijai; toyxyz; Ceyuan Yang/Animatediff team x2; Siraj; comfy; Fannovel16; melmass; Fictiverse; Fizzledorf; Inner_Reflections_AI; Kosinkadink; Impactframes. s; matt3o; Simian Luo; jboogx.creative; Nathan Shipley; lone_samurai; anime_is_real; Dr.Lt.Data']
+
 }
 
 df = pd.DataFrame(data)[::-1].reset_index(drop=True)

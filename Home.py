@@ -37,7 +37,6 @@ st.markdown(hide_img, unsafe_allow_html=True)
 
 def cta():  
   st.markdown("[Join Discord](https://discord.gg/eKQm3uHKx2) | [Visit Github](https://github.com/banodoco/) |  [Get in touch](mailto:peter@omalley.io)")
-  st.caption("Beta Versions: May 2023 -> March 2024; Version 1: launching March 2024")
 
 def footer():
   st.markdown("***")  
@@ -50,11 +49,20 @@ with st.sidebar:
   cta()        
   st.markdown("***")
   st.write("")
+st.markdown("## Create with the best of open source AI art")
+title_alignment="""
+<style>
+## Create with the best of open source AI art {
+text-align: center
+}
+</style>
+"""
+st.markdown(title_alignment, unsafe_allow_html=True)
 
 header1, header2 = st.columns(2)
 with header1:
-    
-  st.header("Tools & models for crafting masterpieces")
+  
+  st.header("Create with the best of open source AI art")
   st.write("We're building open-source tools and models designed to give artists (like you!) the control over AI they need to create videos of anything they can imagine")
   st.write("We want to make the best AI creative tool, and to do so in an open-source-native manner, creating alongside OSS contributors and allowing anyone to build on top of and extend our work.")
   
