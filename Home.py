@@ -54,13 +54,12 @@ with st.sidebar:
 header1, header2 = st.columns(2)
 with header1:
 
-  st.write("")
-  st.write("")
-  st.write("")
-  st.write("")
-  st.header("Create with the best of open source AI art")
+  st.write("")  
+  st.write("")  
+  st.write("")  
+  st.header("For those who want to harness the chaos of open source AI art")
   st.write("With our community, we want to create tools that help artists harness the chaos of open source AI.")
-  st.write("We believe that AI can allow people to create any video they can imagine - but to unlock this potential, we must empower a community of tool-builders, who in turn empower artists.")
+  st.write("We believe that AI can allow people to create any video they can imagine - but, to unlock this potential, we must empower a community of tool-builders, who in turn empower artists.")
   
   cta()
   

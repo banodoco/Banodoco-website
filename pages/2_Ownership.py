@@ -6,8 +6,6 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from Home import cta,interpolation_element,footer
 
-
-st.set_page_config(page_title="Banodoco - Ownership")
 hide_img = '''
 <style>
 button[title="View fullscreen"]{
