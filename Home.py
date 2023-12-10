@@ -36,7 +36,7 @@ st.markdown(hide_img, unsafe_allow_html=True)
 
 
 def cta():  
-  st.markdown("[Join Discord](https://discord.gg/eKQm3uHKx2) | [Visit Github](https://github.com/banodoco/) |  [Get in touch](mailto:peter@omalley.io)")
+  st.markdown("[Join our Discord](https://discord.gg/eKQm3uHKx2) | [Visit Github](https://github.com/banodoco/) |  [Get in touch](mailto:peter@omalley.io)")
 
 def footer():
   st.markdown("***")  
@@ -49,22 +49,18 @@ with st.sidebar:
   cta()        
   st.markdown("***")
   st.write("")
-st.markdown("## Create with the best of open source AI art")
-title_alignment="""
-<style>
-## Create with the best of open source AI art {
-text-align: center
-}
-</style>
-"""
-st.markdown(title_alignment, unsafe_allow_html=True)
+
 
 header1, header2 = st.columns(2)
 with header1:
-  
+
+  st.write("")
+  st.write("")
+  st.write("")
+  st.write("")
   st.header("Create with the best of open source AI art")
-  st.write("We're building open-source tools and models designed to give artists (like you!) the control over AI they need to create videos of anything they can imagine")
-  st.write("We want to make the best AI creative tool, and to do so in an open-source-native manner, creating alongside OSS contributors and allowing anyone to build on top of and extend our work.")
+  st.write("With our community, we want to create tools that help artists harness the chaos of open source AI.")
+  st.write("We believe that AI can allow people to create any video they can imagine - but to unlock this potential, we must empower a community of tool-builders, who in turn empower artists.")
   
   cta()
   
@@ -75,104 +71,6 @@ with header2:
   st.write("")
   st.image("https://banodoco.s3.amazonaws.com/images/header_image.webp",use_column_width='always')
 
-st.markdown("***")
-
-st.subheader("Guide your creation key-frame by key-frame")
-tab1, tab2, tab3 = st.tabs(["Steerable Motion", "Img2Img Transformations","Image Generations"])
-with tab1:
-  st.markdown('Our <a href="/Steerable_Motion" target="_self"> Steerable Motion</a> model allows artists to guide videos, key frame by key frame - creating the main images that guide a video. This allows for a fast, iterative process and a high-degree of control.', unsafe_allow_html=True)
-
-  feature1, feature2 = st.columns([1,5])
-
-  with feature1:  
-
-    st.write("")
-    st.write("")
-    if st.button("Example #1"):
-      st.session_state['feature'] = 'example_1'   
-      st.experimental_rerun()
-    if st.button("Example #2"):
-      st.session_state['feature'] = 'example_2'   
-      st.experimental_rerun()
-    if st.button("Example #3"):
-      st.session_state['feature'] = 'example_3'   
-      st.experimental_rerun()
-    
-    if 'feature' not in st.session_state:
-      st.session_state['feature'] = 'example_1'    
-    if st.session_state['feature'] == 'example_1':
-      feature_image = "https://banodoco.s3.amazonaws.com/images/example_1.webp"    
-    elif st.session_state['feature'] == 'example_2':
-      feature_image = "https://banodoco.s3.amazonaws.com/images/example_2.webp"    
-    else:
-      feature_image = "https://banodoco.s3.amazonaws.com/images/example_3.webp"
-    
-  with feature2:
-    st.image(feature_image, use_column_width=True)
-
-with tab2:
-  img2img1, img2img2, img2img3, img2img4  = st.columns([1.5, 0.6, 1, 1])
-  
-  with img2img1:
-    st.image("https://banodoco.s3.amazonaws.com/images/img2img_1.webp", use_column_width='always')
-  with img2img2:
-    st.success('''**Evolves Into ->**''')
-  with img2img3:
-    st.image("https://banodoco.s3.amazonaws.com/images/img2img_2.webp", use_column_width='always')
-    st.image("https://banodoco.s3.amazonaws.com/images/img2img_3.webp", use_column_width='always')
-  with img2img4:
-    st.image("https://banodoco.s3.amazonaws.com/images/img2img_4.webp", use_column_width='always')
-    st.image("https://banodoco.s3.amazonaws.com/images/img2img_5.webp", use_column_width='always')
-  
-
-
-with tab3:
-  col1, col2 = st.columns([1, 1])
-  with col1:
-    st.error("Fine-tune models on unique characters & styles")
-    finetune1, finetune2 = st.columns([1, 1])
-    with finetune1:
-      st.image("https://banodoco.s3.amazonaws.com/images/fine-tune_1.webp", use_column_width='always')
-      st.image("https://banodoco.s3.amazonaws.com/images/fine-tune_2.webp", use_column_width='always')
-    with finetune2:
-      st.image("https://banodoco.s3.amazonaws.com/images/fine-tune_3.webp", use_column_width='always')
-      st.image("https://banodoco.s3.amazonaws.com/images/fine-tune_4.webp", use_column_width='always')
-
-  with col2:
-    st.error("Choose from dozens of models from the community")
-    community1, community2 = st.columns([1, 1])
-    with community1:
-      st.image("https://banodoco.s3.amazonaws.com/images/community_models_1.webp", use_column_width='always')
-      st.image("https://banodoco.s3.amazonaws.com/images/community_models_2.webp", use_column_width='always')
-    with community2:
-      st.image("https://banodoco.s3.amazonaws.com/images/community_models_3.webp", use_column_width='always')
-      st.image("https://banodoco.s3.amazonaws.com/images/community_models_4.webp", use_column_width='always')
-
-
-st.markdown("***")
-
-
-st.subheader("Bring key frames to life with Animatediff & other models for interpolation & Img2Vid")
-st.markdown('We\'re building on top of <a href="/Animatediff" target="_self">Animatediff</a> and other models to bring your videos to life - you can either directly interpolate from one to the next, or create new motion between frames.', unsafe_allow_html=True)
-
-interpolation_element()
-
-
-st.markdown("***")
-
-
-approach1, approach2 = st.columns([1.15, 1])
-
-with approach1:
-  st.write("")
-  st.subheader("An approach for artists who want control and a satisfying creative experience")
-  st.markdown("**Controllable**: artists will be able to define the motion down to a tee - think of the control a director like Kubrick or  Tarantino needs over their work  to create something that represents their imagination precisely.")  
-  st.markdown("**Fast**: key frames will appear at image-diffusion speed. This ensures a satisfying creative process, allowing artists to rapidly test, iterate, and edit each video element with precision.")
-  st.markdown("**Extendable**: artists can create videos of any length, animate them in a variety of ways, and use LoRAs or fine-tuned models to adopt any visual or animation style.")
-
-with approach2:  
-  st.image('https://banodoco.s3.amazonaws.com/images/kubrick.webp')
-
 
 st.markdown("***")
 
@@ -181,14 +79,14 @@ a1, a2 = st.columns([1, 1])
 with a1:  
   st.subheader("Our philosophy")
   st.image("https://banodoco.s3.amazonaws.com/images/philosophy_image.webp",use_column_width='always')
-  st.write("We're optimising for control and a satisfying creative process - and open-source to our core. ")
+  st.write("We believe the way to maximise the quality of AI art is to empower open source tool-builders, who in turn empower artists.")
   st.markdown('<a href="/Our_philosophy" target="_self">Learn about our philosophy</a>', unsafe_allow_html=True)
        
 with a2:    
-  st.subheader("Roadmap & collaboration")
+  st.subheader("Our ownership")
   st.image("https://banodoco.s3.amazonaws.com/images/roadmap_image.webp",use_column_width='always')
-  st.write("We're looking for talented, high-agency individuals who want to contribute in return for equity.")
-  st.markdown('<a href="/Roadmap_&_collaboration" target="_self">Learn about our roadmap</a>', unsafe_allow_html=True)
+  st.write("We're sharing 100% of our ownership (aside from investment dilution) with people who contribute to OS projects that are aligned with our mission.")
+  st.markdown('<a href="/Ownership" target="_self">Learn about our ownership</a>', unsafe_allow_html=True)
 
 
 footer()
