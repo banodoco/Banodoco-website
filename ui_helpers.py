@@ -1,7 +1,7 @@
 import streamlit as st
 
 def cta():  
-  st.markdown("[Join our Discord](https://discord.gg/eKQm3uHKx2) | [Visit Github](https://github.com/banodoco/) |  [Get in touch](mailto:peter@omalley.io)")
+  st.markdown("[Join Discord](https://discord.gg/eKQm3uHKx2) | [Visit Github](https://github.com/banodoco/)")
 
 def footer():
   st.markdown("***")  
