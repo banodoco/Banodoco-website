@@ -1,7 +1,11 @@
 import streamlit as st
-from ui_helpers import footer, hide_fullscreen_button
+from ui_helpers import footer, hide_fullscreen_button, cta
 
 hide_fullscreen_button()
+
+with st.sidebar:
+  st.write("")    
+  cta()      
 
 st.title("Gallery")
 

@@ -8,7 +8,6 @@ hide_fullscreen_button()
 with st.sidebar:
   st.write("")    
   cta()        
-  st.markdown("***")  
 
 header1, header2 = st.columns(2)
 with header1:
