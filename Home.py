@@ -27,7 +27,7 @@ with a1:
   st.subheader("Our philosophy")
   st.image("https://banodoco.s3.amazonaws.com/images/philosophy_image.webp",use_column_width='always')
   st.write("We believe the way to maximise the quality of AI art is to empower open source tool-builders, who in turn empower artists.")
-  st.markdown('<a href="/Our_philosophy" target="_self">Learn about our philosophy</a>', unsafe_allow_html=True)
+  st.markdown('<a href="/Philosophy" target="_self">Learn about our philosophy</a>', unsafe_allow_html=True)
        
 with a2:    
   st.subheader("Our ownership")
