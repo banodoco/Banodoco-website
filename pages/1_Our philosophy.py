@@ -28,6 +28,7 @@ st.write("At the cutting edge, there are talented, passionate people experimenti
 st.write("We believe that empowering this community to create tools that any artist can easily use is how to harness the chaotic potential of open source AI. To do this, our plan is create a tool builder and infrastucure that allows them to easily build tools that bring their discoveries and perspectives on how to leverage AI to the world.")
 st.write("In doing this, we want to create an economic system that rewards people who contribute at every level, sharing both the revenue that these tools earn and ownership in our company with those who drive the ecosystem forward in various ways.")
 st.write("Our ultimate goal is help the open source AI art ecosystem thrive and, in doing so, help the world understand both the beauty of AI and the power of open source:")
+st.write("")
 st.image("https://banodoco.s3.amazonaws.com/healthy-ecosystem.png",use_column_width='always')
 
 footer()
