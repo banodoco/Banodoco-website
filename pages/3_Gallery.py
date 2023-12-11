@@ -1,23 +1,8 @@
 import streamlit as st
+from ui_helpers import footer, hide_fullscreen_button
 
-import sys
-import os
+hide_fullscreen_button()
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from Home import cta,footer
-
-
-hide_img = '''
-<style>
-button[title="View fullscreen"]{
-    display: none;}
-</style>
-'''
-st.markdown(hide_img, unsafe_allow_html=True)
-
-with st.sidebar:      
-  cta()    
-  
 st.title("Gallery")
 
 st.write("You can see videos made with earlier versions of Banodoco below.")
@@ -79,6 +64,5 @@ gallery_items = [
 display_gallery_row(gallery_items[0], gallery_items[4])
 display_gallery_row(gallery_items[2], gallery_items[3])
 display_gallery_row(gallery_items[1])
-
 
 footer()

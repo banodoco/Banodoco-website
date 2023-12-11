@@ -1,27 +1,14 @@
 import streamlit as st
+import pandas as pd
+from ui_helpers import cta, footer, hide_fullscreen_button
 
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from Home import cta,interpolation_element,footer
-
-hide_img = '''
-<style>
-button[title="View fullscreen"]{
-    display: none;}
-</style>
-'''
-# st.markdown(hide_img, unsafe_allow_html=True)
+hide_fullscreen_button()
 
 with st.sidebar:
   st.write("")    
   cta()    
   
-
 st.header("Banodoco Ownership - Explanation, Disclaimers & FAQ")
-
-
 
 st.write("Our goal is to make Banodoco into a great business that can support/spur the development of OSS art models - by creating a product that earns money & is an extremely attractive investment to those who believe in our mission and open source.")
 st.write("Most startups give out 90% to founders and 10% to early employees, and then often give another equity allocation for later employees:")
@@ -32,7 +19,6 @@ st.image('https://banodoco.s3.amazonaws.com/images/open_source_native.webp')
 
 st.write("Practically, as per the illustration, this means that we’ll split 1% per month between people who contribute to the core goals.")
 st.write("How who gets what will evolve constantly as we figure out the best approach - more on this below, but first disclaimers.")
-
 
 st.header("Disclaimers:")
 
@@ -54,7 +40,7 @@ st.markdown("Say, for example, we get an investment of 5m USD on a 50m USD valua
 
 st.header("Ownership grants to date:")
 
-import pandas as pd
+
 
 data = {
     'Month': ['November, 2022', 'December, 2022', 'January, 2023', 'February, 2023', 'March, 2023', 'April, 2023', 'May, 2023', 'June, 2023', 'July, 2023', 'August, 2023', 'September, 2023', 'October, 2023', 'November, 2023'],
@@ -91,6 +77,5 @@ st.markdown("Firstly, our intention is to build this into a self-sustaining enti
 
 st.markdown("**“I have another question”**")
 st.markdown("DM me on [our Discord](https://discord.com/invite/eKQm3uHKx2)!")
-
 
 footer()
