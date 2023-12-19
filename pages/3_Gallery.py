@@ -7,16 +7,13 @@ with st.sidebar:
   st.write("")    
   cta()      
 
-st.title("Gallery")
-
-st.write("You can see videos made with earlier versions of Banodoco below.")
+st.header("Videos made with earlier versions of our tool:")
 
 # Define the function to display each item.
 def display_gallery_item(title, produced, video_link, software_version):
-    st.markdown(f"#### {title}")
-    st.write(f"Produced: {produced}")
-    st.video(video_link)
-    st.info(f"Made with: Banodoco v {software_version}")
+    st.info(f"##### {title}")
+    st.caption(f"*Produced **{produced}** with **Banodoco v {software_version}***")
+    st.video(video_link)    
     st.markdown("***")
 
 # Define the function to create rows and call the display function.

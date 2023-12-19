@@ -5,7 +5,7 @@ def cta():
 
 def footer():
   st.markdown("***")  
-  cta()
+  # cta()
 
 def hide_fullscreen_button():
     hide_img = '''
