@@ -20,7 +20,7 @@ st.image('https://banodoco.s3.amazonaws.com/images/open_source_native.webp')
 st.write("Practically, as per the illustration, this means that we’ll split 1% per month between people who contribute open source work that's aligned with our core goals.")
 st.write("How this is distributed will constantly evolve as we figure out the best model - but we hope to arrive at a consistent approach over the first 2 years that is fair and inspires the right kind of contributions.")
 
-st.header("Disclaimers:")
+st.markdown("### Disclaimers:")
 
 st.markdown("**1) We’re not even officially incorporated yet and there won’t be legal documentation for a while**")
 st.markdown("Our plan is to raise money early next year and use this to hire fancy lawyers who help us figure out how to implement this - before then, it’ll be a gentleman’s agreement.")
@@ -38,11 +38,11 @@ st.markdown("**5) Ownership will get diluted as we take on investment, or as we 
 st.markdown("Say, for example, we get an investment of 5m USD at a 50m USD valuation. That means that the ownership pool for contributors (including me) will be diluted. In the case of the above example, it would mean that what was once 0.1% of the whole entity, would now be 0.091%. However, this would mostly be offset by the actual value increasing as the percentage decreases. We may also allocate more ownership to contributors - which would have the same effect. While things may change, I can only promise that every change that impacts owners will impact me equally.")
 
 
-st.header("Ownership grants to date:")
+st.markdown("### Ownership grants to date:")
 
 data = {
-    'Month': ['November, 2022', 'December, 2022', 'January, 2023', 'February, 2023', 'March, 2023', 'April, 2023', 'May, 2023', 'June, 2023', 'July, 2023', 'August, 2023', 'September, 2023', 'October, 2023', 'November, 2023'],
-    'Ownership Grants': ['POM', 'POM', 'POM', 'POM', 'POM', 'POM', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'itsB34STW4RS; Kosinkadink; PBPBPB; Cubey; lone_samurai; neggles; toyxyz; POM', 'Inner_Reflections_AI; Kaïros; Kosinkadink; manshoety; Antzu ☕; lone_samurai; Draken; jfischoff; RedStrawberries; itsB34STW4RS; Fizzledorf; Consumption','kijai; piblarg; drex15704080; fictiverse; fannovel16; citizenplain; kosinkadink; jfischoff; lone_samurai; fizzledorf; anime_is_real; fabdream; cainisable; redstrawberries; manshoety; drakenza; consumption_', 'Kijai; toyxyz; Ceyuan Yang/Animatediff team x2; Siraj; comfy; Fannovel16; melmass; Fictiverse; Fizzledorf; Inner_Reflections_AI; Kosinkadink; Impactframes. s; matt3o; Simian Luo; jboogx.creative; Nathan Shipley; lone_samurai; anime_is_real; Dr.Lt.Data']
+    'Month': ['November, 2022', 'December, 2022', 'January, 2023', 'February, 2023', 'March, 2023', 'April, 2023', 'May, 2023', 'June, 2023', 'July, 2023', 'August, 2023', 'September, 2023', 'October, 2023', 'November, 2023', 'December, 2023'],
+    'Ownership Grants': ['POM', 'POM', 'POM', 'POM', 'POM', 'POM', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'itsB34STW4RS; Kosinkadink; PBPBPB; Cubey; lone_samurai; neggles; toyxyz; POM', 'Inner_Reflections_AI; Kaïros; Kosinkadink; manshoety; Antzu ☕; lone_samurai; Draken; jfischoff; RedStrawberries; itsB34STW4RS; Fizzledorf; Consumption','kijai; piblarg; drex15704080; fictiverse; fannovel16; citizenplain; kosinkadink; jfischoff; lone_samurai; fizzledorf; anime_is_real; fabdream; cainisable; redstrawberries; manshoety; drakenza; consumption_', 'Kijai; toyxyz; Ceyuan Yang/Animatediff team x2; Siraj; comfy; Fannovel16; melmass; Fictiverse; Fizzledorf; Inner_Reflections_AI; Kosinkadink; Impactframes. s; matt3o; Simian Luo; jboogx.creative; Nathan Shipley; lone_samurai; anime_is_real; Dr.Lt.Data','cerspense; matt3o; redstrawberries; lone_samurai; kijai; visualfrisson; piblarg; kosinkadink; thibaudz; drakenza; angry.penguin; jahwffrey; imcybearpunk; felixturner; toyxyz; harrowed; fictiverse; fannovel16; siraj; impactframes; syntaxdiffusion; jboogx.creative; citizenplain; nebsh; benjamin.paine; ai.god']
 
 }
 
@@ -51,9 +51,18 @@ df = pd.DataFrame(data)[::-1].reset_index(drop=True)
 st.write("As per the above, each month, 1% of the company will be split equally between contributors. The below table shows the contributors who split grants each month:")
 st.dataframe(df,use_container_width=True, hide_index=True)
 
-st.info("Note: POM will likely give a significant portion of his equity to new contributors who have been working on their projects for some time and wish to merge efforts.  These changes will be reflected here.")
+st.markdown("### Additional transfers to date:")
+st.markdown("In addition to the above, holders, in particular POM may transfer equity to contributors at their discretion. This is subject to approval by POM. The below table shows the transfers to date:")
+data = {
+    'From': ['POM'],
+    'To': ['Ceyuan Yang'],
+    'Amount': ['0.25%'],
+    'Date': ['December, 2023']
+}
+st.dataframe(pd.DataFrame(data),use_container_width=True, hide_index=True)
 
-st.header("FAQ:")
+
+st.markdown("### FAQ:")
 
 st.markdown("**“Why should I trust you?”**")
 st.markdown("I think that this is a very fair question. - I could in theory go back on this when the company is valuable. In fact, there are loads of ways people screw others in all kinds of equity arrangements. While I do hope to get wealthy enough to not have to worry about money, that's not strictly my goal - in fact, my goal is to do stuff like this for the rest of my life and doing anything that would make me untrustworthy in the eyes of the types of people I want to collaborate with would be stupid and short-sighted.")
@@ -69,6 +78,9 @@ st.markdown("While I dislke a lot of the association crypto currently has, it co
 
 st.markdown("**“What about tax?”**")
 st.markdown("We’ll try to set it up in a way that tax is only due upon actual gains actually being realised - meaning, you’d only pay based on actual money you make. Again, I'll need to hire fancy lawyers and accountants to figure this out so have no clue what this means right now.")
+
+st.markdown("**“What if I don't want it?”**")
+st.markdown("If you don't want it, your equity will be redistributed to other contributors.")
 
 st.markdown("**“What happens if the company is sold before the equity is allocated?”**")
 st.markdown("Firstly, our intention is to build this into a self-sustaining entity for the long-term. However, if we do get purchased by another company, equity will be distributed proportionally based on the allocations made to date. For example, if someone holds 1% of the equity and 33.3% of the total equity has been allocated, they would receive 3% of the purchase price.")
