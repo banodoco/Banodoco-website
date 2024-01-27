@@ -67,3 +67,4 @@ display_gallery_row(gallery_items[2], gallery_items[3])
 display_gallery_row(gallery_items[1])
 
 footer()
+cta()
