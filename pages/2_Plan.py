@@ -10,6 +10,19 @@ with st.sidebar:
   
 st.header("A plan to help the open source AI art ecosystem thrive and build a tiny piece of the 2nd Renaissance")
 
+with st.expander("tl;dr:"):
+  st.write("""
+  One of the largest problems in the AI art space is that those who bring the inventions of open source to the world tend to be closed-source companies.  This means that people expend extraordinary effort inventing, discovering and building - and companies come along and commercialise this without sharing anything meaningful back with the ecosystem.
+
+Below, I'm proposing is a specific effort that I believe can help solve this problem - for us to build infrastructure and tooling that makes it ridiculously easy for anyone to craft a beautiful cross-platform art tool that combines many workflows in unique ways. I think - powered by AI - it'll make building and shipping a great and unique consumer tool as easy as making a Comfy workflow - not __extremely__ easy but not inaccessibly difficult either. These can be for personal use - optimised for your own art creation process - or marketed to the public. I think if done well, it'll result in thousands of weird and unique tools that no individuals company could imagine - based on the ideas and art of the unique people in this community!
+
+For a variety of reasons laid out in the document, I think it can help channel the chaos of open source and bring so much more of the stuff people discover to the world. I believe that the commercial side of things can be designed and executed in a fair and fully transparent manner - in a way that everyone in the community can understand and get behind. And, if our collected efforts build something significant, everyone who contributed significantly will share in [our ownership](https://banodoco.ai/Ownership) in the valuable company that results.
+
+Doing this exceptionally well will be extraordinarily difficult and, like any ambitious effort, it's objectively unlikely to succeed.  However, I believe it can succeed and, if it does, it'll be because of the collected effort of talented people in this community - people who dedicate a portion of their lives to working on open source projects, and with me specifically on this - building their piece of it. If you want to help, please DM me [on Discord](https://discord.gg/eKQm3uHKx2).
+"""
+
+  )
+
 st.write("""
 A while back, I started the Banodoco Discord with the idea of bringing together people who are as intensely excited about open source AI video as I am.
 
@@ -20,7 +33,7 @@ Observing this scene in action, I realised that what we had was a micro-represen
 If you've spent any time in our Discord, you've probably seen something like this diagram I've shared trying to explain this:
 """)
 
-st.image('assets/ecosystem.png')
+st.image('https://banodoco.s3.amazonaws.com/plan/ecosystem.png')
 
 st.write("""
 While I think our representation of this micro-ecosystem performs quite well in many ways, open source ecosystems can also be dysfunctional for a variety of reasons. 
@@ -28,7 +41,7 @@ While I think our representation of this micro-ecosystem performs quite well in 
 For example, the people in them might move in wildly incoherent directions,  they frequently make things that are useless to others, or they might just not share what they make for others to use. Many others who appreciate the output of the ecosystem just don't contribute because they have no inspiraton or incentive compelling them to.
 """)
 
-st.image('assets/broken-ecosystem.png')
+st.image('https://banodoco.s3.amazonaws.com/plan/broken-ecosystem.png')
 
 st.write("""
 There can be external factors that cause ecosystems to perform poorly - for example, people might be demoralised due to closed-source companies making money from their work while they don’t, or other companies may pay participants to do work that remains closed-source.
@@ -36,7 +49,7 @@ There can be external factors that cause ecosystems to perform poorly - for exam
 Additionally, over the coming years, there may be external factors in the world pushing AI as a whole towards being less and less open:
 """)
 
-st.image('assets/external-impact.png')
+st.image('https://banodoco.s3.amazonaws.com/plan/external-impact.png')
 
 st.write("""
 A confluence of these factors - and closed models becoming significantly better than open ones - may make the ecosystem flounder. As a result, it may become a demoralising, uninspiring place for people to spend effort, which will result in fewer people contributing to various parts.
@@ -47,7 +60,7 @@ A thriving ecosystem will attract talent, resources, and energy, and, as a resul
 This will lead to more artists feeling empowered by the tools they have and more beautiful AI art being created. To me, this feels overwhelmingly positive  - we should want a thriving AI art ecosystem and aspire to build towards one!
 """)
 
-st.image('assets/floundering-vs-thriving.png')
+st.image('https://banodoco.s3.amazonaws.com/plan/floundering-vs-thriving.png')
 
 st.markdown("### What are the components of a thriving ecosystem?")
 st.write("""
@@ -74,7 +87,7 @@ If it’s successful in this group, that’s when things get disjointed: a close
 This is problematic for several reasons. First, the companies who implement them obviously make a lot of money from these innovations, while the original creators and ecosystem that supported them don’t get anything. Money that could allow the inventors to spend more more time doing open source work, and that could fund the ecosystem as a whole, goes to closed-source companies to invest in more closed-source technologies.
 """)
 
-st.image('assets/booooooooo.png')
+st.image('https://banodoco.s3.amazonaws.com/plan/booooooooo.png')
 
 st.write("""
 However, it’s not just about money - it’s also about all the amazing things that don’t make it to the world because of this filter. Someone from at a tech company who’s disconnected from the art and technology will typically only bring the most conventional approaches to the market in the most sanitised ways - meaning many amazing, weird, and unique approaches don't make it into the hands of people who could do extraordinary work with them. 
@@ -97,7 +110,7 @@ Additionally, there would be infrastructure that would enable them to not only c
 
 """)
 
-st.image('assets/using-tool-builder.png')
+st.image('https://banodoco.s3.amazonaws.com/plan/using-tool-builder.png')
 
 st.write("""
 Behind the scenes, an AI-powered tool-builder might constitute of at least 5 major parts:
@@ -146,7 +159,7 @@ I believe that this can be designed in such a way that it supports a thriving op
 """
 )
 
-st.image("assets/flourishing.png")
+st.image("https://banodoco.s3.amazonaws.com/plan/flourishing.png")
 
 st.markdown("### And this business will be owned by people who contributed over the years")
 
@@ -156,7 +169,7 @@ If this ecosystem has tens of thousands of apps, with many finding their own uni
 In most startups, the founders owns 90% and they split 10% between employees:
 """)
 
-st.image("assets/typical_startup_equity.png")
+st.image("https://banodoco.s3.amazonaws.com/plan/typical_startup_equity.png")
 
 st.write("""
 However, if you believe as we do that we’re in a space that will constantly change for the next decade and that this evolution will be driven by open source ingenuity, this approach doesn’t reflect where the value is created.
@@ -164,7 +177,7 @@ However, if you believe as we do that we’re in a space that will constantly ch
 Instead, we're choosing a structure that aims to incentivise and inspire open source ingenuity in a cohesive direction throughout a far longer period - by sharing 100% of our equity - aside from investment dilution - with contributors over the first 8.5 years:
 """)
 
-st.image("assets/open_source_native.png")
+st.image("https://banodoco.s3.amazonaws.com/plan/open_source_native.png")
 
 st.write("""
 
@@ -194,7 +207,7 @@ I believe that if we succeed to the fullest extent we can positively impact open
 
 """)
 
-st.image("assets/2nd-renaissance.jpeg")
+st.image("https://banodoco.s3.amazonaws.com/plan/2nd-renaissance.jpeg")
 
 st.markdown("### A thriving ecosystem is the product of people building it - and the talent and support of lots of brilliant people will be required to build this piece")
 
@@ -211,7 +224,7 @@ Over the coming weeks and months, I'll be building a small crew who are curious 
 
 """)
 
-st.image("assets/apes-together.gif")
+st.image("https://banodoco.s3.amazonaws.com/plan/apes-together.gif")
 
 footer()
 cta()
