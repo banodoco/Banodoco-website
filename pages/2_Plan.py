@@ -181,9 +181,11 @@ st.image("https://banodoco.s3.amazonaws.com/plan/open_source_native.png")
 
 st.write("""
 
-Practically, as per the illustration, this means that we’ll split 1% per month between people who contribute open source work that's aligned with our core goals. For legal reasons, this will probably not be structured as literal ownership in the entity - rather, the goal will be that realised gains are paid out proportionally to contributors' ownership amount. For example, say, if the company is valued at 1b USD, and you have 0.1% equity, that will be worth exactly $1m before cost of fund distribution and tax.
+Practically, as per the illustration, this means that we’ll split 1% per month between people who contribute open source work that's aligned with our core goals. For legal reasons, this will probably not be structured as literal ownership in the entity - rather, the goal will be that realised gains are paid out proportionally to contributors' ownership amount. For example, say, if the company is valued at 1b USD, and you have 0.1% equity, that will be worth exactly 1m USD before cost of fund distribution and tax.
 
-To achieve this, we'll likely have an entity that owns the "founder's" stock on behalf of the community and distributes realised gains at pre-agreed points - with investors investing into the LLC that the foundation starts with owning. This will allow us to raise investment and distribute gains in a way that's fair and transparent to everyone in the community:
+To achieve this, we'll likely have an entity that owns the "founder's" stock on behalf of the community and distributes realised gains at pre-agreed points - with investors investing into the LLC that the foundation starts with owning entirely. This will allow us to be an attractive investment due to having a conventional underlying corporate structure, while allowing us distribute gains via the foundation in a way that's fair and transparent to everyone in the community.
+
+While the actual implementation of this is uncertain, below is an example of what it might look like:
 """)
 st.image("https://banodoco.s3.amazonaws.com/plan/structure.png")
 st.write("""
@@ -192,7 +194,7 @@ st.write("""
 
 This will mean - if we’re successful -  thousands of people who’ve contributed at various stages will share in the reward - thousands of people who’ll hopefully reinvest some of their money in the ecosystem to help it flourish further.
 
-It should also mean that we can bring some level of cohesion to the ecosystem - while the chaos of the ecosystem is its greatest strength, having incentivises aligned with participants may allow us to channel this chaos in some ways.
+It should also mean that we can bring some level of cohesion to the ecosystem - while the chaos of the ecosystem is its greatest strength, having incentivises aligned with participants may allow us to channel this chaos in many ways.
 
 """)
 
@@ -244,7 +246,7 @@ with st.expander("How will the equity/ownership of the company be structured?"):
   st.write("There are many companies that have similar structures with foundation owners - for example, IKEA is owned by the Ingka Foundation, Novo Nordisk is controlled by Novo Nordisk Foundation, while OpenAI is owned by a 501(c) non-profit.")
   st.write("With a foundation owning 100% of pre-dillution shares, I believe it will be possible to design and implement an approach to distribution of secondary-sale proceeds that works seamlessly. However, implementing this will require extensive legal and tax advice that we will invest in post-funding. Our ultimate goal is that it can be both an attractive investment and a fair and transparent structure that everyone in the community can easily understand and get behind.")
 with st.expander("Won't the equity approach result in a lot of people only getting a tiny amount of equity?"):
-  st.write("Proportionally, this is true - most people will have a fraction of a percent. However, our goal with this is to build a very big business - meaning that even a tiny fraction of a percent will be worth a lot of money. For example, if we're valued at 1b USD, 0.1 percent of equity will be worth $1m before cost of fund distribution and tax. If we're valued at 10b USD, 0.1 percent will be worth 10m USD. While _objectively_ unlikely, shooting for that or more is our goal and, if we're successful, that would be pretty significant for most people. If we're not, life goes on.")
+  st.write("Proportionally, this is true - most people will have a fraction of a percent. However, our goal with this is to build a very big business - meaning that even a tiny fraction of a percent will be worth a lot of money. For example, if we're valued at 1b USD, 0.1 percent of equity will be worth 1m USD before cost of fund distribution and tax. If we're valued at 10b USD, 0.1 percent will be worth 10m USD. While _objectively_ unlikely, shooting for that or more is our goal and, if we're successful, that would be pretty significant for most people. If we're not, life goes on.")
 with st.expander("Will you train models?"):
   st.write("While we will use every open model possible as our approach is model-agnostic, we will of course train models where it makes sense to do so and openly release them - there are many gaps in the ecosystem that need to be filled, and many areas where poorly-licenced or old models need to be replaced with truly open models that are competitive with closed ones.")
 with st.expander("Will you openly release everything you build?"):
