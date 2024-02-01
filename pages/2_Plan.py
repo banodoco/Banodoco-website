@@ -161,7 +161,7 @@ I believe that this can be designed in such a way that it supports a thriving op
 
 st.image("https://banodoco.s3.amazonaws.com/plan/flourishing.png")
 
-st.markdown("### And this business will be owned by people who contributed over the years")
+st.markdown("### And if the business is successful, everyone who contributed significantly will share in the reward")
 
 st.write("""
 If this ecosystem has tens of thousands of apps, with many finding their own unique audience, and each making revenue from people who pay to run the GPUs in the cloud, this would mean that the  business behind these app becomes significantly valuable.
@@ -172,16 +172,16 @@ In most startups, the founders owns 90% and they split 10% between employees:
 st.image("https://banodoco.s3.amazonaws.com/plan/typical_startup_equity.png")
 
 st.write("""
-However, if you believe as we do that we’re in a space that will constantly change for the next decade and that this evolution will be driven by open source ingenuity, this approach doesn’t reflect where the value is created.
+However, if you believe as we do that we’re in a space that will constantly change for the next decade and that this evolution will be driven by open source ingenuity, this incentive structure doesn’t reflect where the value will be created.
 
-Instead, we're choosing a structure that aims to incentivise and inspire open source ingenuity in a cohesive direction throughout a far longer period - by sharing 100% of our equity - aside from investment dilution - with contributors over the first 8.5 years:
+Instead, we're choosing a structure that aims to incentivise and inspire open source ingenuity in a cohesive direction throughout a far longer period - by sharing the realised value of 100% of our equity - aside from investment dilution - with contributors over the first 8.5 years:
 """)
 
 st.image("https://banodoco.s3.amazonaws.com/plan/open_source_native.png")
 
 st.write("""
 
-Practically, as per the illustration, this means that we’ll split 1% per month between people who contribute open source work that's aligned with our core goals. You can read more about this and our grants to date [here](https://banodoco.ai/Ownership).
+Practically, as per the illustration, this means that we’ll split 1% per month between people who contribute open source work that's aligned with our core goals. For legal reasons, this will probably not be structured as literal ownership in the entity - rather, the goal will be that realised gains are paid out proportionally to contributors' ownership amount. For example, say, if the company is valued at 1b USD, and you have 0.1% equity, that will be worth exactly $1m before cost of fund distribution and tax. You can read more about this and our grants to date [here](https://banodoco.ai/Ownership).
 
 This will mean - if we’re successful -  thousands of people who’ve contributed at various stages will share in the reward - thousands of people who’ll hopefully reinvest some of their money in the ecosystem to help it flourish further.
 
@@ -225,6 +225,40 @@ Over the coming weeks and months, I'll be building a small crew who are curious 
 """)
 
 st.image("https://banodoco.s3.amazonaws.com/plan/apes-together.gif")
+
+st.markdown("### Previously Asked Questions:")
+
+
+with st.expander("Why not do [[some other thing]] instead?"):
+  st.write("There are many ways to help the ecosystem - this is just one that I think could be very impactful. If you have a better idea, please go and do it and I'll be glad to support you! If you think you might do it as part of this, please DM me [on Discord](https://discord.gg/eKQm3uHKx2).")
+with st.expander("How will the equity/ownership of the company be structured?"):
+  st.write("This remains to be seen - however, it'll likely be a company that people invest in, that is then partially owned by a foundation or entity that owns the equity on behalf of the community with an agreement to distribute realised gains at pre-determined points. However, structuring this well will require lots of expensive legal advice. As mentioned, our goal is that this is both an attractive investment and a fair and transparent structure that everyone in the community can understand and get behind. We believe that this is possible.")
+with st.expander("Won't the equity approach result in a lot of people only getting a tiny amount of equity?"):
+  st.write("Proportionally, this is true - most people will have a fraction of a percent. However, our goal with this is to build a very big business - meaning that even a tiny fraction of a percent will be worth a lot of money. For example, if we're valued at 1b USD, 0.1 percent of equity will be worth $1m before cost of fund distribution and tax. If we're valued at 10b USD, 0.1 percent will be worth 10m USD. While _objectively_ unlikely, shooting for that or more is our goal and, if we're successful, that would be pretty significant for most people. If we're not, life goes on.")
+with st.expander("Will you train models?"):
+  st.write("While we will use every open model possible as our approach is model-agnostic, we will of course train models where it makes sense to do so and openly release them - there are many gaps in the ecosystem that need to be filled, and many areas where poorly-licenced or old models need to be replaced with truly open models that are competitive with closed ones.")
+with st.expander("Will you openly release everything you build?"):
+  st.write("Yes, we will release everything that can be useful to others. Our approach benefits from openess - the more successful the ecosystem, the more successful we'll be.")
+with st.expander("How will the equity be distributed?"):
+  st.write("Again, this remains to  be seen - however, we'll probably have some legal abstraction such that when the value on equity is realised we'll give owners a possibility to 'sell' theirs - for example, if we do a secondary sale of shares, or we IPO - the value of the equity will be distributed proportionally to the equity holders through some entity that 'owns' the company. This will likely be a trust or foundation of some kind that owns the shares in the corporation that investors invest in.")
+with st.expander("If all your tools are open, why won't someone just copy them and make money?"):
+  st.write("By all means they can. However, our goal will be to have inference as cheap as possible - meaning there will be limited scope for such bottom feeders to make money. Our tools will also be made and promoted by artists - I think people will typically want to support them and us given this and the art the tool-creator makes will be the unbeatable marketing for the tool.")
+with st.expander("What about [[thing that may become a problem if we're wildly succcessful in several years]]?"):
+  st.write("Building a company is a commitment to endlessly solve problems for decades. Some it may sense to worry about right now, many it makes sense to worry about as they become problems. Thankfully, if we're wildly successful, we'll have the resources to deal with many problems. If we're not, it won't be a problem.")
+with st.expander("Won't the approach to equity be complicated/scare away many investors?"):
+  st.write("It will definitely be complicated and will also definitely scare off the overwhelming majority of investors - especially for the first 1-2 years. To overcome this, we'll need to be obviously exceptional in terms of our execution and direction and make far more progress than more conventional companies need to - if we can put things into the world that helps others see pieces of the vision, I believe that it'll be extremely attractive to those who understand what we're doing, understand how significant it can be, and are aligned with it. We don't need to appeal to everyone or every investor - just those who reach this conclusion.")
+with st.expander("What about what [[other open initiative/company]] are doing?"):
+  st.write("We're in the most positive sum space in the world - in this space, no one needs to fail for others to succeed - the more ambitious open source efforts, the better!")
+with st.expander("Won't this attract people who are just doing it for the money like crypto did?"):
+  st.write("Of coure, adding money and incentives blurs the lines of motivation. However, if this does get people rich, it will be the ultimate 'get rich slow' scheme - and will likely as a result only attract people who beleive in the idea and open source enough to commit to that. People who are looking for easy/short-term wins will find better outlets.")
+with st.expander("How will you decide what projects to undertake and fund?"):
+  st.write("This remains to be seen but it will be some combination of central planning and community voting. I think it's important that we have a clear vision and direction but also that things are structured such that the community can drive the direction in a meaningful way. It's unclear right now what this will look like.")
+with st.expander("Is it not a bit obnoxious to think we can build a piece of the '2nd Renaissance?'"):
+  st.write("That's more of a statement than a question but I did say a _tiny_ piece!")
+with st.expander("Could you please try to explain this with an art project instead of writing?"):
+  st.write("I'm working on it! (note: this question was asked by me)")
+with st.expander("I have another question"):
+  st.write("Please DM me (POM) on [Discord](https://discord.gg/eKQm3uHKx2) and I'll add the reply here for others to see if need be.")
 
 footer()
 cta()
