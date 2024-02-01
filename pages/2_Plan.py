@@ -181,7 +181,14 @@ st.image("https://banodoco.s3.amazonaws.com/plan/open_source_native.png")
 
 st.write("""
 
-Practically, as per the illustration, this means that we’ll split 1% per month between people who contribute open source work that's aligned with our core goals. For legal reasons, this will probably not be structured as literal ownership in the entity - rather, the goal will be that realised gains are paid out proportionally to contributors' ownership amount. For example, say, if the company is valued at 1b USD, and you have 0.1% equity, that will be worth exactly $1m before cost of fund distribution and tax. You can read more about this and our grants to date [here](https://banodoco.ai/Ownership).
+Practically, as per the illustration, this means that we’ll split 1% per month between people who contribute open source work that's aligned with our core goals. For legal reasons, this will probably not be structured as literal ownership in the entity - rather, the goal will be that realised gains are paid out proportionally to contributors' ownership amount. For example, say, if the company is valued at 1b USD, and you have 0.1% equity, that will be worth exactly $1m before cost of fund distribution and tax.
+
+To achieve this, we'll likely have an entity that owns the "founder's" stock on behalf of the community and distributes realised gains at pre-agreed points - with investors investing into the LLC that the foundation starts with owning. This will allow us to raise investment and distribute gains in a way that's fair and transparent to everyone in the community:
+""")
+st.image("https://banodoco.s3.amazonaws.com/plan/structure.png")
+st.write("""
+
+ You can read more about this and our grants to date [here](https://banodoco.ai/Ownership).
 
 This will mean - if we’re successful -  thousands of people who’ve contributed at various stages will share in the reward - thousands of people who’ll hopefully reinvest some of their money in the ecosystem to help it flourish further.
 
