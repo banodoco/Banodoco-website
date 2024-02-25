@@ -67,8 +67,9 @@ st.markdown("### FAQ:")
 st.markdown("**“Why should I trust you?”**")
 st.markdown("I think that this is a very fair question. - I could in theory go back on this when the company is valuable. In fact, there are loads of ways people screw others in all kinds of equity arrangements. While I do hope to get wealthy enough to not have to worry about money, that's not strictly my goal - in fact, my goal is to do stuff like this for the rest of my life and doing anything that would make me untrustworthy in the eyes of the types of people I want to collaborate with would be stupid and short-sighted.")
 
-st.markdown("**“Does this mean that people who get equity will control the company?”**")
-st.markdown("Honestly, I don’t know about this yet - my perception is that most DAOs and efforts at distributed control have been very chaotic. It could make sense long-term to have a “Benevolent dictator for life” set-up with checks and balances, or something like a distributed rule. Right now, I don’t know but am slightly biasing towards this. I only ask you to trust me not to be stupid and short-sighted.")
+st.markdown("**How will the company be structured legally?”**")
+st.write("This remains to be confirmed - however, it'll likely be a company that people invest in, that is then partially owned by a foundation on behalf of the community - with an agreement to distribute realised gains at pre-determined points:")
+st.image("https://banodoco.s3.amazonaws.com/plan/structure.png")
 
 st.markdown("**“If the equity becomes valuable, how will I be able to sell it?”**")
 st.markdown("This is TBC but many private startups like SpaceX offer equity holders the opportunity to sell at pre-determined times and we’ll probably do something similar. What we don't want is for our equity to become like a token that's speculatively bought and sold, so will put constraints to avoid this - probably time-bound.")
