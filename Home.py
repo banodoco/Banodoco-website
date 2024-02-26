@@ -48,8 +48,8 @@ with a1:
 
 
 with a2:    
-  st.subheader("https://banodoco.s3.amazonaws.com/4.png")
-  st.image("assets/4.png",use_column_width='always')
+  st.subheader("Our ownership")
+  st.image("https://banodoco.s3.amazonaws.com/4.png",use_column_width='always')
   st.write("We're sharing 100% of our ownership (aside from investment dilution) with people who contribute to OS projects that are aligned with our mission.")
   st.markdown('<a href="/Ownership" target="_self">Learn about our ownership</a>', unsafe_allow_html=True)
 
