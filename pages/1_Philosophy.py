@@ -32,7 +32,8 @@ st.write("We believe that the capabilities of thousands of these tools - each th
 st.write("In doing this, we want to create an economic system that rewards people who contribute at every level, sharing both the revenue that these tools earn and ownership in our company with those who drive the ecosystem forward in various ways.")
 st.write("Our ultimate goal is help the open source AI art ecosystem thrive and, by contributing to a thriving ecosystem, help the world understand both the beauty of AI and the power of open source:")
 st.write("")
-st.image("https://banodoco.s3.amazonaws.com/healthy-ecosystem.png",use_column_width='always')
+st.image("https://banodoco.s3.amazonaws.com/plan/ecosystem.png",use_column_width='always')
+st.markdown("You can read more about our plan [here](https://banodoco.ai/Plan).")
 
 footer()
 cta()
