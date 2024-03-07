@@ -13,8 +13,8 @@ header1, header2 = st.columns(2)
 with header1:
   st.write("")
   
-  st.header("For those who want to harness the chaos of open source AI art")
-  st.write("We believe that AI has the potential to allow billions to experience creative fulfilment this century. However, in order to reach this potential, artistic control is key - it's the difference between something feeling like it was made by you vs. made by AI. To unlock the multitude of control types and artistic flows possible with AI, we want to build tooling and infrastructure to empower a community of tool-builders, who in-turn empower a world of budding artists.")  
+  st.header("For those who wish to harness the chaos of open source AI art")
+  st.write("We believe that AI has the potential to allow billions to experience creative fulfilment this century. However, in order to reach this potential, artistic control is key - it's the difference between something feeling like it was made by you rather than for you. To unlock the multitude of control types and artistic flows possible with AI, we want to build tooling and infrastructure to empower a community of tool-builders, who in-turn empower a world of budding artists.")  
   cta()
   
 with header2:
@@ -51,7 +51,7 @@ with a1:
 with a2:    
   st.subheader("Our ownership")
   st.image("https://banodoco.s3.amazonaws.com/1.png",use_column_width='always')
-  st.write("We're sharing the returns on 100% of our ownership (pre-investment dilution) with people who contribute to OS projects that are aligned with our mission. ")
+  st.write("We're sharing the returns on 100% of our ownership (pre-investment dilution) with people who contribute to open source projects that are aligned with our mission. ")
   st.markdown('<a href="/Ownership" target="_self">Learn about our ownership</a>', unsafe_allow_html=True)
 
 
