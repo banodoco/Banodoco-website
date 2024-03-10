@@ -260,7 +260,9 @@ Once successful, we hope to feature more and more techniques from the community 
 
 We plan to share a majority of the revenue for Dough with people who contributed work that made it possible - this will hopefully increase enthusiasm and energy for developing tools and techniques further.
 
-We will relentlessly improve Dough until it's an extraordinary tool - and we believe that it will grow more and more popular. This attention will drive significant investor interest - which will result in us accumulating resources to make larger bets.
+We also plan to use some of the revenue to incentivise art projects - through art competitions - and open source contributions - to help people understand how much can be achieved by the community.
+
+We will also relentlessly improve Dough until it's an extraordinary tool - and we believe that it will grow more and more popular. This traction will drive significant investor interest - which will result in us accumulating resources to make larger bets.
 
 With these resources, our plan will be to build a world-class core team, build towards the next-generation tool described above, train open models that empower the community, and create incentives to drive the community to make high-effort open source contributions and create extraordinary art.
 '''
