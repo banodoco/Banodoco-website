@@ -238,6 +238,33 @@ st.image("https://banodoco.s3.amazonaws.com/plan/apes-together.gif")
 st.markdown("### Previously Asked Questions:")
 
 
+with st.expander("How are you building towards this?", expanded=True):
+  st.markdown('''
+  
+  Firstly, we've been building the Banodoco community - this community has been a hub for people who are driving the technical and artistic development of Animatediff - basically, it's a wonderful place where artists and builders of various types learn from, inspire, and collaborate with one another.
+
+The people who hang out here have been driving the development that made [Steerable Motion](https://github.com/banodoco/steerable-motion) possible - a technique we're pioneering for driving animations with batches of images. This technique has been getting increasing interest from artists - however, it's been difficult to use due to being locked up in ComfyUI - a developer-oriented un-user-friendly UX.
+
+To deliver Steerable Motion to the masses, we've been building [Dough](https://github.com/banodoco/dough) - an animation tool that's designed for artists who wish to have precise control over their work. We believe that this tool will allow people to create extraordinary work and, as a result, will be popular with consumers - especially non-technical people who want to take a step-up from their Midjourney creating.
+
+  
+  ''')
+
+with st.expander("What are you doing next 3 months?", expanded=True):
+  '''
+  We believe that our community - using both the tools we've been building, and ones the community have been pioneering - will create increasingly extraordinary art that gets more and more mainstream attention. 
+
+We believe that this will drive interest in the scene we've been building, and Dough in particular - and that Dough will grow to be commercially successful. 
+
+Once successful, we hope to feature more and more techniques from the community in the tool - and make them accessible to more people.
+
+We plan to share a majority of the revenue for Dough with people who contributed work that made it possible - this will hopefully increase enthusiasm and energy for developing tools and techniques further.
+
+We will relentlessly improve Dough until it's an extraordinary tool - and we believe that it will grow more and more popular. This attention will drive significant investor interest - which will result in us accumulating resources to make larger bets.
+
+With these resources, our plan will be to build a world-class core team, build towards the next-generation tool described above, train open models that empower the community, and create incentives to drive the community to make high-effort open source contributions and create extraordinary art.
+'''
+
 with st.expander("Why not do [[some other thing]] instead?"):
   st.write("There are many ways to help the ecosystem - this is just one that I think could be very impactful. If you have a better idea, please go and do it and I'll be glad to support you! If you think you might do it as part of this, please DM me [on Discord](https://discord.gg/eKQm3uHKx2).")
 with st.expander("How will the equity/ownership of the company be structured?"):
