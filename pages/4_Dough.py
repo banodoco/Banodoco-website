@@ -31,7 +31,7 @@ vertical1, vertical2, vertical3 = st.columns([1,1,1])
 
 with vertical1:
     st.video("https://banodoco.s3.amazonaws.com/dough-website/vertical-3.mp4", format='mp4', start_time=0)
-    st.link_button(url="https://www.youtube.com/watch?v=ETfiUYij5UE", label="By Flipping Sigmas", use_container_width=True)
+    st.link_button(url="https://www.youtube.com/channel/UCDiYNmEMOtJ4bvLrzepHIDg", label="By Flipping Sigmas", use_container_width=True)
 
 
 with vertical2:

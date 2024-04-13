@@ -5,7 +5,7 @@ def cta():
 
 def footer():
   st.markdown("***") 
-  st.markdown("Made with 🦾 by on Discord")
+  st.markdown("Made with 🦾 on Discord")
   # cta()
 
 def hide_fullscreen_button():
