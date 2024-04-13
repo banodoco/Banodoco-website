@@ -36,4 +36,3 @@ st.image("https://banodoco.s3.amazonaws.com/plan/ecosystem.png",use_column_width
 st.markdown("You can read more about our plan [here](https://banodoco.ai/Plan).")
 
 footer()
-cta()

@@ -4,7 +4,8 @@ def cta():
   st.markdown("[Join Discord](https://discord.gg/eKQm3uHKx2) | [Visit Github](https://github.com/banodoco/)")
 
 def footer():
-  st.markdown("***")  
+  st.markdown("***") 
+  st.markdown("Made with 🦾 by on Discord")
   # cta()
 
 def hide_fullscreen_button():

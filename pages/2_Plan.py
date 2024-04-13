@@ -304,4 +304,3 @@ with st.expander("I have another question"):
   st.write("Please DM me (POM) on [Discord](https://discord.gg/eKQm3uHKx2) and I'll add the reply here for others to see if need be.")
 
 footer()
-cta()

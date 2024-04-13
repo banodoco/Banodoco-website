@@ -36,7 +36,7 @@ with b2:
   st.subheader("Try Dough")
   st.image("https://banodoco.s3.amazonaws.com/2.png",use_column_width='always')
   st.write("Dough is our first tool, built on top of our [Steerable Motion node](https://github.com/banodoco/steerable-motion). It's meant to serve as one example of how powerful a tool that that combines different workflows can be.")
-  st.markdown('<a href="https://github.com/banodoco/dough" target="_self">Learn about Dough</a>', unsafe_allow_html=True)
+  st.markdown('<a href="/Dough" target="_self">Learn about Dough</a>', unsafe_allow_html=True)
 
 st.markdown("***")
 a1, a2 = st.columns([1, 1])
