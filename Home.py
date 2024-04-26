@@ -29,7 +29,7 @@ with b1:
 
   st.subheader("Our plan")
   st.image("https://banodoco.s3.amazonaws.com/3.png",use_column_width='always')
-  st.write("Our plan is to create a platform and infrastructure that allows open source explorers to easily craft tools that bring their discoveries, insights, and artistic flows to the world.")
+  st.write("AI will relentless evolve this century - our plan to to create a tools, culture, infrastructure, and incentives that allow open source-bsaed tools to relentlessly evolve with it.")  
   st.markdown('<a href="/Plan" target="_self">Learn about our plan</a>', unsafe_allow_html=True)
 
 with b2:
@@ -40,19 +40,20 @@ with b2:
 
 st.markdown("***")
 a1, a2 = st.columns([1, 1])
-with a1:  
+
+with a1:    
+  st.subheader("Our ownership")
+  st.image("https://banodoco.s3.amazonaws.com/1.png",use_column_width='always')
+  st.write("We're sharing the returns on 100% of our ownership (pre-investment dilution) with people who contribute to open source projects that are aligned with our mission. ")
+  st.markdown('<a href="/Ownership" target="_self">Learn about our ownership</a>', unsafe_allow_html=True)
+
+with a2:  
 
   st.subheader("Our philosophy")
   st.image("https://banodoco.s3.amazonaws.com/4.png",use_column_width='always')
   
   st.write("We believe that empowering a community of tool-builders with infrastructure, tools, inspiration and incentives is the best way to unlock the potential of open source AI.")
   st.markdown('<a href="/Philosophy" target="_self">Learn about our philosophy</a>', unsafe_allow_html=True)         
-
-with a2:    
-  st.subheader("Our ownership")
-  st.image("https://banodoco.s3.amazonaws.com/1.png",use_column_width='always')
-  st.write("We're sharing the returns on 100% of our ownership (pre-investment dilution) with people who contribute to open source projects that are aligned with our mission. ")
-  st.markdown('<a href="/Ownership" target="_self">Learn about our ownership</a>', unsafe_allow_html=True)
 
 
 footer()
