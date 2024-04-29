@@ -1,7 +1,12 @@
 import streamlit as st
-from ui_helpers import footer
+from ui_helpers import cta, footer, hide_fullscreen_button
 
-st.set_page_config(page_title="Dough", page_icon="🎨", layout="centered", initial_sidebar_state="auto", menu_items=None)
+hide_fullscreen_button()
+
+with st.sidebar:
+  st.write("")    
+  cta()        
+
 
 h1,h2 = st.columns([1,1.5])
 with h1:
@@ -43,10 +48,6 @@ with square3:
     
     st.link_button(url="https://twitter.com/peteromallet", label="By POM", use_container_width=True)
 
-
-
-
-
 rectangle1, rectangle2  = st.columns([1,1])
 
 with rectangle1:
@@ -74,11 +75,6 @@ with vertical3:
     st.link_button(url="https://www.instagram.com/superbeasts.ai", label="By Superbeasts", use_container_width=True)
 
 
-
-
-
-
-
 st.markdown("***")
 st.markdown('#### Get started with Dough')
 
@@ -95,7 +91,7 @@ with bottom1:
     - **Controls:** Full
     ''')    
     st.markdown('<a href="https://github.com/banodoco/dough?tab=readme-ov-file#setup-instructions" target="_self">Find setup instructions here</a>', unsafe_allow_html=True)
-    st.caption("Note: Dough is built on top of Steerable Motion, which you can also run amd extend [in ComfyUI](https://github.com/banodoco/steerable-motion).")
+    st.caption("Dough is built on top of Steerable Motion, which you can also run and build on top of [in ComfyUI](https://github.com/banodoco/steerable-motion).")
 with bottom2:
     st.success("##### Everyone else")
     st.image("https://banodoco.s3.amazonaws.com/everyone_else.webp", use_column_width=True)
@@ -107,7 +103,7 @@ with bottom2:
     - **Controls:** Intermediate
     ''')    
     st.markdown('<a href="https://discord.gg/7ykePRSufT" target="_self">Join our Discord to get started</a>', unsafe_allow_html=True)
-    st.caption("Note: We plan on limiting the number of users - if the link isn't working, come back early next week to get access.")
+    st.caption("We're limiting the number of new users each week - if the link isn't working, come back early next week to get access.")
 
 st.markdown("***")
 

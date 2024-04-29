@@ -1,7 +1,7 @@
 import streamlit as st
 from ui_helpers import cta, footer, hide_fullscreen_button
 
-st.set_page_config(page_title="Banodoco - Home")
+st.set_page_config(page_title="Banodoco",page_icon="🎨")
 
 hide_fullscreen_button()
 
