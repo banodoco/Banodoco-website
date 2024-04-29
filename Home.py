@@ -49,11 +49,11 @@ with a1:
 
 with a2:  
 
-  st.subheader("Our philosophy")
+  st.subheader("Our community")
   st.image("https://banodoco.s3.amazonaws.com/4.png",use_column_width='always')
   
-  st.write("We believe that empowering a community of tool-builders with infrastructure, tools, inspiration and incentives is the best way to unlock the potential of open source AI.")
-  st.markdown('<a href="/Philosophy" target="_self">Learn about our philosophy</a>', unsafe_allow_html=True)         
+  st.write("We're nurturing an environment where talented, passionate engineers, inventors and artists openly discover, build and learn together, and are rewarded for doing so.")
+  st.markdown('<a href="/Community" target="_self">Learn about our community</a>', unsafe_allow_html=True)         
 
 
 footer()

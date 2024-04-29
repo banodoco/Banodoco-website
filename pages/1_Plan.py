@@ -10,23 +10,52 @@ with st.sidebar:
   
 st.header("A plan to help the open source AI art ecosystem thrive and build a tiny piece of the 2nd Renaissance")
 
-with st.expander("tl;dr:"):
-  st.write("""
-  One of the largest problems in the AI art space is that those who bring the inventions of open source to the world tend to be closed-source companies.  This means that talented people expend extraordinary effort inventing, discovering and building - and companies come along and commercialise this without sharing anything meaningful back with the ecosystem that made what they do possible.
 
-Below, I'm proposing is a specific effort that I believe can help solve this problem - for us to build infrastructure and tooling that makes it ridiculously easy for anyone to craft a beautiful cross-platform art tool that combines many workflows in unique ways. I think - powered by AI - it'll make building and shipping a great and unique consumer tool as easy as making a Comfy workflow - not __extremely__ easy but not inaccessibly difficult either. These can be for personal use - optimised for your own art creation process - or marketed to the public. If done well, it'll result in thousands of weird and unique tools that no company employee could imagine - based on the ideas and art of the unique people in this community!
+st.markdown("### Introduction, tl;dr, and founding beliefs")
 
-For a variety of reasons laid out in the document, I think it can help channel the chaos of open source and bring so much more of the stuff people discover to the world. I believe that the commercial side of things can be designed and executed in a fair and fully transparent manner - in a way that everyone in the community can understand and get behind. And, if our collected efforts build something significant, everyone who contributed significantly will share in [ownership](https://banodoco.ai/Ownership) in the valuable company that results.
 
-Doing this exceptionally well will be extraordinarily difficult and, like any ambitious effort, it's objectively unlikely to succeed.  However, I believe it is possible and, if it does succeed, it'll be because of the collected effort of talented people in this community - people who dedicate a portion of their lives to working on open source projects, and with me specifically on this. If you want to help, please DM me [on Discord](https://discord.gg/eKQm3uHKx2).
-"""
+st.markdown("""
 
-  )
+Right now, we're in the novelty stage of AI art - people play with fun little tools that do magical things, but they mostly have no real purpose behind their usage. While novelty always fades,  there is a purpose people will increasingly pursue and value - the same one people have always found in artistic tools: creative expression. 
 
+As work and labour have historically been automated, humans have tended to spend more time on higher-abstraction, more creative endeavours. We believe that this centuries-old trend will accelerate - both economically and personally, the value of and interest in human creative expression will dramatically increase.
+
+This means that, rather than novelty, more and more people will increasingly strive towards pursuing the essence of creative expression: sharing something from one's imagination in a form the world can understand and appreciate. 
+
+In order to do this, one of the most important aspects is control - that an artist can make their output an authentic representation of what they envision. This is why there are thousands of different types of paintbrushes, and why Quentin Tarantino always stands directly behind the camera while shooting a movie.
+
+With this in mind, our goal is to build infrastructure and nurture an ecosystem that produces the best creative tools for allowing people to control AI art models with precision. 
+
+
+
+Our first tool is <a href="/Dough" target="_self">Dough</a>, a local app and Discord bot for steering videos using batches of images. It's powered by [Steerable Motion](https://github.com/banodoco/steerable-motion), a technique we're pioneering for driving animations with batches of images.
+
+This tool and its capabilities are the product of extensive effort from hundreds of people in our community over the past 9 months - building on top of and extending the capabilities of Animatediff, an open source video model.
+
+Dough, and the community effort that made it possible, are meant to serve as an example of our longer-term mission - to empower the open source community to build on top of and commercialise open models by enabling them to easily craft powerful art tools.
+
+This will enable thousands of tools that combine workflows and models in all kinds of unique ways to flourish - created by different artists and focused on many control methods and niches. 
+
+We also believe that in facilitating this ecosystem, we can lead people towards an economic model that is as fair as possible to all the participants - sharing revenue, and ownership with those who contribute and drive the ecosystem at various stages - with Banodoco, the entity empowering it, equipped with resources to invest in better open models and infrastructure.
+
+Our approach is founded on 5 beliefs:
+
+1. We believe that creativity is so multifaceted and AI is so chaotic, that a centralised approach to tool-building will only serve a small niche - and will typically converge on replicating existing creative industries rather than inventing new ones. A decentralised approach - like ours with Animatediff - can unlock the potential of thousands of new niches of art and creativity.
+2. We believe that this is a space that will relentlessly evolve this century - constantly changing as the models and platforms do - and that our community-driven approach will allow us to constantly evolve with it. 
+3. We believe that being fully open in every way - including by sharing <a href="/Ownership" target="_self">our ownership</a> with the community - will help us build enough trust and support that we can rally open-source enthusiasm behind our efforts. This cohesive effort will result in us evolving far faster and in more artistically-compelling directions than closed-source approaches.
+4. We believe that this relentless evolution, our powerful suit of tools, and the goodwill generated by our approach will attract the best artists, who will in turn create the most iconic art using our tools - which will put us in the centre of this space.
+5. We believe that, in doing so, we can build one of the iconic AI art company that's extremely attractive to investors and can attract significant resources - becoming an economic engine for the open ecosystem. In doing so, we can increase the odds that this era is known as a time when humans and AI flourished together - a "2nd Renaissance", rather than a cold, mechanical "Age of AI". 
+
+""", unsafe_allow_html=True)
+
+st.markdown("### History of Banodoco and potential of the open source ecosystem")
 st.write("""
-A while back, I started the Banodoco Discord with the idea of bringing together people who are as intensely excited about open source AI video as I am.
 
-Over the past 6 months, it's grown and become a hub for open source video efforts, with the people there at the cutting-edge of building infrastructure, training open models, and creating ambitious art - all while collaborating and learning from each other. I'm biased but I think it's a really exciting and beautiful place - a litle slice of utopia - and probably the best place in the world to be if you're interested in the cutting edge of open source AI video. 
+I spent the past 18 months working on open source AI video - my original goal had been to make a video for [my favourite poem](https://x.com/pom_I_moq/status/1784547394824110121) but this led me down a deep and weird rabbit hole that consumed months most of my waking hours.
+
+I was working alone for the first 9 months, but in July of 2023, I started the Banodoco Discord  to bring together people who were equally obsessed. A new model, Animatediff, had just been released, and I saw an opportunity to rally community efforts behind it - so I took to Reddit and Twitter [to explain its potential from my perspective](https://tiny-galleon-600.notion.site/Is-Animatediff-Stable-Diffusion-for-video-c0457b197d3045e09738754609e1dc6d?pvs=4), and began to bring together people who were also interested in working with it.
+
+Since then, it's grown and become a hub for open source video efforts, with the people there at the cutting-edge of building infrastructure, training open models, and creating ambitious art - all while collaborating openly and learning from one another. I'm biased but I think it's a really exciting and beautiful place - a litle slice of utopia - and probably the best outlet in the world to be if you're interested in the cutting edge of open source AI video. 
 
 Observing this scene in action, I realised that what we had was a micro-representation of the larger open source AI ecosystem. Looking at AI ecosystems from an external perspective, you could be forgiven for thinking that those who train the models are the only essential component but spending time in our community shows how much this perspective misses - anything good that comes from open source AI art ecosystem is the product of a whole ecosystem working together - from model creators, to experimenters, to infrastructure builders - to ultimately deliver artistic tools and art.
 
@@ -245,10 +274,10 @@ with st.expander("How are you building towards this?", expanded=True):
 
 The people who hang out here have been driving the development that made [Steerable Motion](https://github.com/banodoco/steerable-motion) possible - a technique we're pioneering for driving animations with batches of images. This technique has been getting increasing interest from artists - however, it's been difficult to use due to being locked up in ComfyUI - a developer-oriented un-user-friendly UX.
 
-To deliver Steerable Motion to the masses, we've been building [Dough](https://github.com/banodoco/dough) - an animation tool that's designed for artists who wish to have precise control over their work. We believe that this tool will allow people to create extraordinary work and, as a result, will be popular with consumers - especially non-technical people who want to take a step-up from their Midjourney creating.
+To deliver Steerable Motion to the masses, we've been building <a href="/Dough" target="_self">Dough</a> an animation tool that's designed for artists who wish to have precise control over their work. We believe that this tool will allow people to create extraordinary work and, as a result, will be popular with consumers - especially non-technical people who want to take a step-up from their Midjourney creating.
 
   
-  ''')
+  ''', unsafe_allow_html=True)
 
 with st.expander("What are you doing next 3 months?", expanded=True):
   '''

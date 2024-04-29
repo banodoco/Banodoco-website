@@ -95,6 +95,7 @@ with bottom1:
     - **Controls:** Full
     ''')    
     st.markdown('<a href="https://github.com/banodoco/dough?tab=readme-ov-file#setup-instructions" target="_self">Find setup instructions here</a>', unsafe_allow_html=True)
+    st.caption("Note: Dough is built on top of Steerable Motion, which you can also run amd extend [in ComfyUI](https://github.com/banodoco/steerable-motion).")
 with bottom2:
     st.success("##### Everyone else")
     st.image("https://banodoco.s3.amazonaws.com/everyone_else.webp", use_column_width=True)
@@ -105,7 +106,8 @@ with bottom2:
     - **Difficulty:** Very easy
     - **Controls:** Intermediate
     ''')    
-    st.markdown('<a href="https://discord.gg/3ywJYcs66K" target="_self">Join our Discord to get started</a>', unsafe_allow_html=True)
+    st.markdown('<a href="https://discord.gg/7ykePRSufT" target="_self">Join our Discord to get started</a>', unsafe_allow_html=True)
+    st.caption("Note: We plan on limiting the number of users - if the link isn't working, come back early next week to get access.")
 
 st.markdown("***")
 
