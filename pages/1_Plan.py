@@ -20,9 +20,6 @@ with st.expander("tl;dr", expanded=True):
 
   Our long-term mission is to drive the open source AI art ecosystem and build an economic engine for it - by creating an entity that profits off of it thriving. We believe that if we can create an economic system that benefits from and incentivises openness, this ecosystem will grow - and we can build an extremely successful business that everyone who contributed significantly [will own a part of](https://banodoco.ai/Ownership).
 
-  We're raising 1m USD at a 10m USD valuation to validate this and begin to build towards our long-term vision.
-
-
   ''')
 
 st.markdown("### Introduction and founding beliefs")
