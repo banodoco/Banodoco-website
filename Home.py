@@ -26,17 +26,18 @@ st.markdown("***")
 b1, b2 = st.columns([1, 1])
 
 with b1:
+  st.subheader("Try Dough")
+  st.image("https://banodoco.s3.amazonaws.com/2.png",use_column_width='always')
+  st.write("Dough is our first tool, built on top of our [Steerable Motion node](https://github.com/banodoco/steerable-motion). It's meant to serve as one example of how powerful a tool that that combines different workflows can be.")
+  st.markdown('<a href="/Dough" target="_self">Learn about Dough</a>', unsafe_allow_html=True)
+
+with b2:
 
   st.subheader("Our plan")
   st.image("https://banodoco.s3.amazonaws.com/3.png",use_column_width='always')
   st.write("AI will relentless evolve this century - our plan to to create a tools, culture, infrastructure, and incentives that allow open source-bsaed tools to relentlessly evolve with it.")  
   st.markdown('<a href="/Plan" target="_self">Learn about our plan</a>', unsafe_allow_html=True)
 
-with b2:
-  st.subheader("Try Dough")
-  st.image("https://banodoco.s3.amazonaws.com/2.png",use_column_width='always')
-  st.write("Dough is our first tool, built on top of our [Steerable Motion node](https://github.com/banodoco/steerable-motion). It's meant to serve as one example of how powerful a tool that that combines different workflows can be.")
-  st.markdown('<a href="/Dough" target="_self">Learn about Dough</a>', unsafe_allow_html=True)
 
 st.markdown("***")
 a1, a2 = st.columns([1, 1])
