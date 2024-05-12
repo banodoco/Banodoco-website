@@ -14,7 +14,7 @@ with st.expander("tl;dr", expanded=True):
   st.info('''  
   Our goal with Banodoco is to create a tool-builder and infrastructure that allows anyone to easily craft, ship and monetise artistic tools that combine workflows, models, and creative flows in a multitude of unique ways. We believe that we can help nurture an ecosystem that produces thousands of extraordinary tools, each targeted at different groups and subcultures.
 
-  However, that's a broad expansive, vision that will require significant resources to pursue, so we aim to demonstrate it with our first tool, [Dough](https://banodoco.ai/Dough). Dough is a local app and Discord bot for steering videos using batches of images. It's powered by [Steerable Motion](https://github.com/banodoco/steerable-motion), a technique we pioneered for driving animations with batches of images.
+  However, that's a broad expansive, vision that will require significant resources to pursue, so we aim to demonstrate it with our first tool, [Dough](https://banodoco.ai/Dough). Dough is a local app and Discord bot for steering videos using batches of images, and we will also have a web app soon. It's powered by [Steerable Motion](https://github.com/banodoco/steerable-motion), a technique we pioneered for driving animations with batches of images.
 
   These tools and capabilities are the product of extensive effort from hundreds of people in our community over the past nine months - building on top of and extending the capabilities of [Animatediff](https://animatediff.github.io/), an open source video model.
 
@@ -22,53 +22,66 @@ with st.expander("tl;dr", expanded=True):
 
   ''')
 
-st.markdown("### Introduction and founding beliefs")
-
-
-st.markdown("""
-
-Right now, we're in the novelty stage of AI art - people play with fun little tools that do magical things, but they mostly have no real purpose behind their usage. While novelty always fades,  there is a purpose people will increasingly pursue and value - the same one people have always found in artistic tools: creative expression. 
-
-As work and labour have historically been automated, humans have tended to spend more time on higher-abstraction, more creative endeavours. We believe that this centuries-old trend will accelerate - both economically and personally, the value of and interest in human creative expression will dramatically increase.
-
-This means that, rather than novelty, more and more people will increasingly strive towards pursuing the essence of creative expression: sharing something from one's imagination in a form the world can understand and appreciate. 
-
-In order to do this, one of the most important aspects is control - that an artist can make their output an authentic representation of what they envision. This is why there are thousands of different types of paintbrushes, and why Quentin Tarantino always stands directly behind the camera while shooting a movie.
-
-With this in mind, our goal is to build infrastructure and nurture an ecosystem that produces the best creative tools for allowing people to control AI art models with precision. 
 
 
 
-Our first tool is <a href="/Dough" target="_self">Dough</a>, a local app and Discord bot for steering videos using batches of images. It's powered by [Steerable Motion](https://github.com/banodoco/steerable-motion), a technique we're pioneering for driving animations with batches of images.
 
-This tool and its capabilities are the product of extensive effort from hundreds of people in our community over the past 9 months - building on top of and extending the capabilities of Animatediff, an open source video model.
 
-Dough, and the community effort that made it possible, are meant to serve as an example of our longer-term mission - to empower the open source community to build on top of and commercialise open models by enabling them to easily craft powerful art tools.
-
-This will enable thousands of tools that combine workflows and models in all kinds of unique ways to flourish - created by different artists and focused on many control methods and niches. 
-
-We also believe that in facilitating this ecosystem, we can lead people towards an economic model that is as fair as possible to all the participants - sharing revenue, and ownership with those who contribute and drive the ecosystem at various stages - with Banodoco, the entity empowering it, equipped with resources to invest in better open models and infrastructure.
-
-Our approach is founded on 5 beliefs:
-
-1. We believe that creativity is so multifaceted and AI is so chaotic, that a centralised approach to tool-building will only serve a small niche - and will typically converge on replicating existing creative industries rather than inventing new ones. A decentralised approach - like ours with Animatediff - can unlock the potential of thousands of new niches of art and creativity.
-2. We believe that this is a space that will relentlessly evolve this century - constantly changing as the models and platforms do - and that our community-driven approach will allow us to constantly evolve with it. 
-3. We believe that being fully open in every way - including by sharing <a href="/Ownership" target="_self">our ownership</a> with the community - will help us build enough trust and support that we can rally open-source enthusiasm behind our efforts. This cohesive effort will result in us evolving far faster and in more artistically-compelling directions than closed-source approaches.
-4. We believe that this relentless evolution, our powerful suit of tools, and the goodwill generated by our approach will attract the best artists, who will in turn create the most iconic art using our tools - which will put us in the centre of this space.
-5. We believe that, in doing so, we can build one of the iconic AI art company - and, due to it making money and being extremely attractive to investors, become an economic engine for the open ecosystem. In doing so, we can increase the odds that this era is known as a time when humans and AI flourished together - a "2nd Renaissance", rather than a cold, mechanical "Age of AI". 
-
-""", unsafe_allow_html=True)
-
-st.markdown("### History of Banodoco, and potential of the open source ecosystem")
+st.markdown("### History of Animatediff, Banodoco, and potential of the open source ecosystem")
 st.write("""
 
-I spent the past 18 months working on open source AI video - my original goal had been to make a video for [my favourite poem](https://x.com/pom_I_moq/status/1784547394824110121) but this led me down a deep and weird rabbit hole that consumed months most of my waking hours for a long time.
+I spent the past 18 months working on open source AI video - my original goal had been to make a video for [my favourite poem](https://x.com/pom_I_moq/status/1784547394824110121) but this led me down a deep and weird rabbit hole that consumed most of my waking hours since them.        
 
-I was working alone for the first 9 months, but in July of 2023, I started the Banodoco Discord  to bring together people who were equally obsessed. A new model, Animatediff, had just been released, and I saw an opportunity to rally community efforts behind it - so I took to Reddit and Twitter [to explain its potential from my perspective](https://tiny-galleon-600.notion.site/Is-Animatediff-Stable-Diffusion-for-video-c0457b197d3045e09738754609e1dc6d?pvs=4), and began to bring together people who were also interested in working with it.
+For the first 9 months, I was working alone, trying to learn what art was from the ground up and how to wrangle AI models to make it. I was making progress but it was slow and I held back by the lack of community work in video.         
+         
+However, in July of 2023, a new video model, Animatediff, was released. Though it could create just 16 frames by default with no ability to control the motion, it was built on top of Stable Diffusion 1.5 and could run on local GPUs - which meant that the community would be able to extend it.
+         """)
 
-Since then, our community has grown and become a hub for open source video efforts, with the people there at the cutting-edge of building infrastructure, training open models, and creating ambitious art - all while collaborating openly and learning from one another. I'm biased but I think it's a really exciting and beautiful place - a litle slice of utopia - and probably the best outlet in the world to be if you're interested in the cutting edge of open source AI video. 
 
-Observing this scene in action, I realised that what we had was a micro-representation of the larger open source AI ecosystem. Looking at AI ecosystems from an external perspective, you could be forgiven for thinking that those who train the models are the only essential component but spending time in our community shows how much this perspective misses - anything good that comes from open source AI art ecosystem is the product of a whole ecosystem working together - from model creators, to experimenters, to infrastructure builders - to ultimately deliver artistic tools and art.
+
+
+st.write("""
+I took to Reddit and Twitter [to explain its potential from my perspective](https://tiny-galleon-600.notion.site/Is-Animatediff-Stable-Diffusion-for-video-c0457b197d3045e09738754609e1dc6d?pvs=4), and began to bring together most of the people who were building on top of it.
+         
+Since then, our community has grown and become a hub for open source video efforts, with the people there at the cutting-edge of building infrastructure, training open models, and creating ambitious art - all while collaborating openly and learning from one another. 
+         
+As an example of the progress, here's what the model could do by default when it was released:""")
+         
+st.video('https://banodoco.s3.amazonaws.com/plan/animatediff.mp4')    
+
+st.write("""
+
+While here was an early effort at using it for interpolation - travelling between images - just one area of progress:
+         
+""")
+
+st.video('https://banodoco.s3.amazonaws.com/plan/early_interpolation_progress.mp4')    
+
+st.write("""
+While here's progress in interpolation after 4 months - the product of effort, insights and support from a bunch of people:
+         """)
+
+
+st.video('https://banodoco.s3.amazonaws.com/plan/4_months_interpolation_progress.mp4')    
+
+st.write("""
+         
+And here's progress after 10 months - while this is a slightly updated version of the model, it can still only do 16 frames - this progress is mostly due to people figuring out stuff on top of it and combining it with other models:
+         
+         """)
+         
+st.video('https://banodoco.s3.amazonaws.com/plan/final_interpolation_progress.mp4')    
+
+
+st.write("""
+         
+
+It's been extraordinary to watch this unfold in real-time - to see work, insights, and art lead to the output of the community becoming better and better. And this is just one example - there are many other areas. You can read more about this progress [here](https://tiny-galleon-600.notion.site/Animatediff-Progress-1) and visit our [our Twitter account](https://twitter.com/banodoco) to see some of the art the community has been creating.""")
+         
+         
+st.write("""
+         
+         Observing it all in action, I realised that what we had was a micro-representation of the larger open source AI ecosystem. Looking at AI ecosystems from an external perspective, you could be forgiven for thinking that those who train the models are the only essential component but spending time in our community shows how much this perspective misses - anything good that comes from open source AI art ecosystem is the product of a whole ecosystem working together - from model creators, to experimenters, to infrastructure builders - to ultimately deliver artistic tools and art.
 
 If you've spent any time in our Discord, you've probably seen something like this diagram I've shared trying to explain this:
 """)
@@ -273,7 +286,7 @@ Over the coming weeks and months, I'll be building a small crew who are curious 
 
 """)
 
-st.image("https://banodoco.s3.amazonaws.com/plan/apes-together.gif")
+st.image("https://banodoco.s3.amazonaws.com/plan/apes-together.gif",use_column_width=True)
 
 st.markdown("### Previously Asked Questions:")
 
@@ -306,8 +319,12 @@ We will also relentlessly improve Dough until it's an extraordinary tool - and w
 
 With these resources, our plan will be to build a world-class core team, build towards the next-generation tool described above, train open models that empower the community, and create incentives to drive the community to make high-effort open source contributions and create extraordinary art.
 '''
+with st.expander("Can I invest?",):
+  st.write("We're raising 1m USD and a 10m USD valuation - if you're interested in investing, please DM me [on Discord](https://discord.gg/eKQm3uHKx2). We're only accepting money from individuals and small funds at this stage. We'll raise a larger institutional round once we've made more progress.")
 with st.expander("Won't someone just copy this plan?"):
-  st.write("By all means they can but the kind of person who would copy someone else's plan is probably not to type to do it extraordinarily well - and this will be extraordinarily difficult to do well.")
+  st.write("""They could and other companies have a history of [ripping of our work](https://x.com/pom_I_moq/status/1788675646069277008). However, for this plan to work it requires the support of thousands of artsits and open source people - who will build and market tools on top of our infrastructure based on the work of the ecosystem. 
+           
+  We believe that these people will much prefer to build on top of us, given doing so will give them and others who made their work possible [significant ownership](https://banodoco.ai/Ownership) in our company.""")
 with st.expander("Why not do [[some other thing]] instead?"):
   st.write("There are many ways to help the ecosystem - this is just one that I think could be very impactful and can capture a lot of economic value. If you have a better idea, please go and do it and I'll be glad to support you! If you think you might do it as part of this, please DM me [on Discord](https://discord.gg/eKQm3uHKx2).")
 with st.expander("How will the equity/ownership of the company be structured?"):
@@ -343,3 +360,5 @@ with st.expander("I have another question"):
   st.write("Please DM me (POM) on [Discord](https://discord.gg/eKQm3uHKx2) and I'll add the reply here for others to see if need be.")
 
 footer()
+
+
