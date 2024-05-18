@@ -178,6 +178,7 @@ Behind the scenes, an AI-powered tool-builder might consist of at least 5 major 
 Compared to a traditional drag and drop no-code builder, this would be infinitely flexible - instead of being constrained to the UX elements a builder offers, people could in theory manipulate the tool in all kinds of ways - while advanced users could dive directly into the code.  Combined, these would constitute a ‘successor approach’ to no-code tools like Webflow or Bubble.
 """)
 
+
 st.markdown("### If executed exceptionally well, this tool-builder would allow thousands of people to create weird & unique tools - and these would constantly evolve as AI does")
 
 st.write("""
@@ -252,6 +253,23 @@ It should also mean that we can bring some level of cohesion to the ecosystem - 
 
 """)
 
+
+st.markdown("### Our approach can help us leverage the power of openness to accelerate the AI art ecosystem")
+
+st.write("""Being closed has many strengths - for example, people use secrecy and exclusive access to achieve an advantage. There are also many downsides to being open - for example, others can simply take the product of months - as has happened [to us](https://x.com/pom_I_moq/status/1788675646069277008)!
+         
+That said, I believe that there are also many strengths to being radically open - and that leveraging these strengths can give us a unique advantage. For example:
+         
+- We can leverage the creativity of thousands of people of relentlessly improve and evolve our tools and models - and people will be incentivised to help thanks our ownership model and bounties. Our community-driven approach will allow us to drive the ecosystem.
+- The thousands of tool-builders in our ecosystem will be incentivised to create tools that are open and interoperable - this will make it easier for others to build on top of their work and for the ecosystem to grow.
+- The best artists will generally want to use our tools because they'll be created by artists and have more control - essentail for artists - given they leverage the open ecosystem. The art made with our tools will then therefore be the best and act as the best marketing imaginable.
+- People will generally want us to succeed and see our success as being good for the world - given our philosophy and approach, and public sentiment towards open source AI vs. closed AI. This - and sharing our ownership - will allow us to attract better talent and artists.
+
+I believe that these strengths - if leveraged well - can not only make up for the downsides of being open, allow us and the ecosystem we represent to flourish!
+         
+""")
+
+
 st.markdown("### What does it mean to build a tiny piece of the 2nd Renaissance?")
 
 st.write("""
@@ -276,13 +294,13 @@ st.markdown("### A thriving ecosystem is the product of people building it - and
 
 st.write("""
 
-Finally, I'll say that thriving ecosystems don't just happen: they're the product of talented, dedicated people deciding on a direction and spending a huge amount of effort over a long period building towards it.
+Finally, I'll say that thriving ecosystems don't just happen: they're the product of talented, dedicated people deciding on a direction and spending enormous effort over a long period building them.
 
-Sparking this in the early days will require a small group of people who come to be extremely dedicated to this vision and want to bring it to life because they see it as being good for the ecosystem and, hopefully, good for the world.  I know that I alone will not be able to get anywhere close to pulling this off - I'll need lots of support from many individuals and the support of the broader ecosystem. If you’re reading this, that may include you.
-
-This won't be a thankless effort - I hope to raise significant funding to support this effort and pay people who contribute - but that is ambiguous right now and it will also be a long and difficult road in any case.
-
-Over the coming weeks and months, I'll be building a small crew who are curious about figuring out what exactly this might look like and how we could pull it off. If you would like to potentially help - even if you're not sure exactly how! - please DM me [on Discord](https://discord.gg/eKQm3uHKx2).
+If those of us who believe in open source can coordinate around specific efforts, I believe that we can improve the future in a meaningful way - while building an extremely successful business. 
+         
+Capitalism makes the world go round - it's what determined what people work on and who has resources to do what. We can get it working in Open Source AI art's favour.
+         
+If you want to support this effort, please get in touch with me [on Discord](https://discord.gg/eKQm3uHKx2).
 
 """)
 
@@ -327,6 +345,14 @@ with st.expander("Won't someone just copy this plan?"):
   We believe that these people will much prefer to build on top of us, given doing so will give them and others who made their work possible [significant ownership](https://banodoco.ai/Ownership) in our company.""")
 with st.expander("Why not do [[some other thing]] instead?"):
   st.write("There are many ways to help the ecosystem - this is just one that I think could be very impactful and can capture a lot of economic value. If you have a better idea, please go and do it and I'll be glad to support you! If you think you might do it as part of this, please DM me [on Discord](https://discord.gg/eKQm3uHKx2).")
+with st.expander("Who is behind this?"):
+  st.write('''This is written by Peter O'Malley, or POM. I do a little bit of everything. You can find me on Twitter [here](https://twitter.com/pom_I_moq/), Github [here](https://github.com/peteromallet), see some of my art [here](https://www.youtube.com/@misterpeterface) and read some writing [here](https://schlupfloch.xyz/). Previously, I worked with a few successful startups, and started a startup that achieved initial success but ultimately failed - you can read more about that [here](https://www.schlupfloch.xyz/explaining-advisables-failure/). I work with lone_samurai or [Piyush Kumar](https://x.com/thisispiyushK), a great engineer who's been building the infrastructure for our tools while I work on the front-end.
+           
+We also work alongside many others in the community who've been building the tools and art that have made this possible. 
+           
+Our hope is to build a full-time and fluid team over the coming months to build towards the vision above.''')
+  
+
 with st.expander("How will the equity/ownership of the company be structured?"):
   st.write("This remains to be confirmed - however, it'll likely be a normal company that's partially owned by a foundation on behalf of the community - with an agreement to distribute realised gains at pre-determined points:")
   st.image("https://banodoco.s3.amazonaws.com/plan/structure.png")
@@ -348,6 +374,7 @@ with st.expander("Won't the approach to equity be complicated/scare away many in
   st.write("It will definitely be complicated and will also definitely scare off the overwhelming majority of investors - especially for the first 1-2 years. To overcome this, we'll need to be obviously exceptional in terms of our execution and direction and make far more progress than more conventional companies need to - if we can put things into the world that helps others see pieces of the vision, I believe that it'll be extremely attractive to those who understand what we're doing, understand how significant it can be, and are aligned with it. We don't need to appeal to everyone or every investor - just those who reach this conclusion.")
 with st.expander("What about what [[other open initiative/company]] are doing?"):
   st.write("We're in the most positive sum space in the world - in this space, no one needs to fail for others to succeed - the more ambitious open source efforts, the better!")
+
 with st.expander("Won't this attract people who are just doing it for the money like crypto did?"):
   st.write("Adding money and incentives blurs the lines of motivation. However, if this does get people rich, it will be the ultimate 'get rich slow' scheme - and will likely as a result only attract people who believe in the idea and open source enough to commit to that. People who are looking for easy/short-term wins will find better outlets.")
 with st.expander("How will you decide what projects to undertake and fund?"):
@@ -356,6 +383,14 @@ with st.expander("Is it not a bit obnoxious to think we can build a piece of the
   st.write("That's more of a statement than a question but I did say a _tiny_ piece!")
 with st.expander("Could you please try to explain this with an art project instead of writing?"):
   st.write("I'm working on it! (note: this question was asked by me)")
+with st.expander("Where does the name Banodoco come from?"):
+  st.markdown("Banodoco is named after the 4 painters who assisted Michelangelo in the creation of the Sistine Chapel:")
+  st.markdown("- <span style='color:red'>Ba</span>stiano da Sangallo",unsafe_allow_html=True)
+  st.markdown("- Giulia<span style='color:blue'>no</span> Bugiardini",unsafe_allow_html=True)
+  st.markdown("- Agnolo di <span style='color:green'>Do</span>nnino",unsafe_allow_html=True)
+  st.markdown("- Jacopo del Tedes<span style='color:purple'>co</span>",unsafe_allow_html=True)
+  st.markdown("We aim to build an ecosystem and tooling that equip everyone with equivalent master-level artistic assistance!")
+
 with st.expander("I have another question"):
   st.write("Please DM me (POM) on [Discord](https://discord.gg/eKQm3uHKx2) and I'll add the reply here for others to see if need be.")
 
