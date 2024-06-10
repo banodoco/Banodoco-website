@@ -346,11 +346,11 @@ with st.expander("Won't someone just copy this plan?"):
 with st.expander("Why not do [[some other thing]] instead?"):
   st.write("There are many ways to help the ecosystem - this is just one that I think could be very impactful and can capture a lot of economic value. If you have a better idea, please go and do it and I'll be glad to support you! If you think you might do it as part of this, please DM me [on Discord](https://discord.gg/eKQm3uHKx2).")
 with st.expander("Who is behind this?"):
-  st.write('''This is written by Peter O'Malley, or POM. I do a little bit of everything. You can find me on Twitter [here](https://twitter.com/pom_I_moq/), Github [here](https://github.com/peteromallet), see some of my art [here](https://www.youtube.com/@misterpeterface) and read some writing [here](https://schlupfloch.xyz/). Previously, I worked with a few successful startups, and started a startup that achieved initial success but ultimately failed - you can read more about that [here](https://www.schlupfloch.xyz/explaining-advisables-failure/). I work with lone_samurai or [Piyush Kumar](https://x.com/thisispiyushK), a great engineer who's been building the infrastructure for our tools while I work on the front-end.
+  st.write('''This is written by Peter O'Malley, or POM. I do a little bit of everything. You can find me on Twitter [here](https://twitter.com/pom_I_moq/), Github [here](https://github.com/peteromallet), see some of my art [here](https://www.youtube.com/@misterpeterface). Previously, I worked with a few successful startups, and started a startup that achieved initial success but ultimately failed - you can read more about that [here](https://www.schlupfloch.xyz/explaining-advisables-failure/). I work with lone_samurai or [Piyush Kumar](https://x.com/thisispiyushK), another founder and engineer who's been building the infrastructure for our tools while I work on the front-end.
            
-We also work alongside many others in the community who've been building the tools and art that have made this possible. 
-           
-Our hope is to build a full-time and fluid team over the coming months to build towards the vision above.''')
+In addition to this, we will work with and support people who build open infrastructure on top of the ecosystem like [Matt30](https://github.com/cubiq) and [Kosinkadink](https://github.com/kosinkadink), and share bounties for others to complete tasks that help the ecosystem and are aligned with our goals.
+                     
+Our plan is to build a core team who's working towards the main goal (we're seeking a [front-end developer](https://x.com/pom_I_moq/status/1789420417850978559) right now if you're interested), alongside a fluid team on specific projects. If you're interested in working with us, please DM me [on Discord](https://discord.gg/eKQm3uHKx2).''')
   
 
 with st.expander("How will the equity/ownership of the company be structured?"):

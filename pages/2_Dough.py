@@ -80,7 +80,7 @@ st.markdown('#### Get started with Dough')
 
 bottom1, bottom2 = st.columns([1,1])
 
-with bottom1:
+with bottom2:
     st.info("##### Advanced users")
     st.image("https://banodoco.s3.amazonaws.com/advanced_users.webp", use_column_width=True)
     st.info("###### Advanced users with powerful computers can use Dough for free using our local app.")
@@ -92,12 +92,12 @@ with bottom1:
     ''')    
     st.markdown('<a href="https://github.com/banodoco/dough?tab=readme-ov-file#setup-instructions" target="_self">Find setup instructions here</a>', unsafe_allow_html=True)
     st.caption("Dough is built on top of Steerable Motion, which you can also run and build on top of [in ComfyUI](https://github.com/banodoco/steerable-motion).")
-with bottom2:
-    st.success("##### Everyone else")
+with bottom1:
+    st.success("##### Simple & easy")
     st.image("https://banodoco.s3.amazonaws.com/everyone_else.webp", use_column_width=True)
-    st.success("###### For everyone else, we have a Discord bot that works on any device - even your phone!")
+    st.success("###### We have an extremely powerful Discord bot that works on any device - even your phone!")
     st.markdown('''
-    - **Cost:** Our costs + 40%
+    - **Cost:** Our costs + 60%
     - **Requirements:** Any computer or phone
     - **Difficulty:** Very easy
     - **Controls:** Intermediate
