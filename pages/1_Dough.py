@@ -33,6 +33,34 @@ with h2:
 st.markdown("***")
 
 st.markdown('#### Some weird, beautiful, and interesting things people have made with Dough and [Steerable Motion](https://github.com/banodoco/steerable-motion), the technology behind it')
+
+
+vertical1, vertical2, vertical3 = st.columns([1,1,1])
+
+with vertical1:
+    st.video("https://banodoco.s3.amazonaws.com/plan/fabdream_resized_cropped.mp4", format='mp4', start_time=0)
+    st.link_button(url="https://www.instagram.com/fabdream.ai/?hl=en", label="By Fabdream", use_container_width=True)
+
+
+with vertical2:
+    st.video("https://banodoco.s3.amazonaws.com/dough-website/vertical-2.mp4", format='mp4', start_time=0)
+    st.link_button(url="https://www.instagram.com/midjourney.man/", label="By Midjourney Man", use_container_width=True)
+
+with vertical3:
+    st.video("https://banodoco.s3.amazonaws.com/plan/chris_exe.mov", format='mp4', start_time=0)
+    st.link_button(url="https://www.instagram.com/syntaxdiffusion/", label="By syntaxdiffusion", use_container_width=True)
+
+rectangle1, rectangle2  = st.columns([1,1])
+with rectangle1:
+    st.video("https://banodoco.s3.amazonaws.com/dough-website/horizontal-1.mp4", format='mp4', start_time=0)
+    st.link_button(url="https://twitter.com/I_Han_naH_I", label="By Hannah Submarine", use_container_width=True)
+
+with rectangle2:
+    st.video("https://banodoco.s3.amazonaws.com/plan/byarloo.mp4", format='mp4', start_time=0)
+    st.link_button(url="https://www.instagram.com/byarlooo/", label="By ARLO", use_container_width=True)
+
+    
+
 square1, square2, square3 = st.columns([1,1,1])
 
 
@@ -52,31 +80,8 @@ with square3:
     
     st.link_button(url="https://twitter.com/peteromallet", label="By POM", use_container_width=True)
 
-rectangle1, rectangle2  = st.columns([1,1])
-
-with rectangle1:
-    st.video("https://banodoco.s3.amazonaws.com/dough-website/horizontal-1.mp4", format='mp4', start_time=0)
-    st.link_button(url="https://twitter.com/I_Han_naH_I", label="By Hannah Submarine", use_container_width=True)
-
-with rectangle2:
-    st.video("https://banodoco.s3.amazonaws.com/plan/byarloo.mp4", format='mp4', start_time=0)
-    st.link_button(url="https://www.instagram.com/byarlooo/", label="By ARLO", use_container_width=True)
-
-    
-vertical1, vertical2, vertical3 = st.columns([1,1,1])
-
-with vertical1:
-    st.video("https://banodoco.s3.amazonaws.com/dough-website/vertical-3.mp4", format='mp4', start_time=0)
-    st.link_button(url="https://www.youtube.com/channel/UCDiYNmEMOtJ4bvLrzepHIDg", label="By Flipping Sigmas", use_container_width=True)
 
 
-with vertical2:
-    st.video("https://banodoco.s3.amazonaws.com/dough-website/vertical-2.mp4", format='mp4', start_time=0)
-    st.link_button(url="https://www.instagram.com/midjourney.man/", label="By Midjourney Man", use_container_width=True)
-
-with vertical3:
-    st.video("https://banodoco.s3.amazonaws.com/plan/chris_exe.mov", format='mp4', start_time=0)
-    st.link_button(url="https://www.instagram.com/syntaxdiffusion/", label="By syntaxdiffusion", use_container_width=True)
 
 
 st.markdown("***")
