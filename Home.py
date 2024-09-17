@@ -35,7 +35,7 @@ with b2:
 
   st.subheader("Our plan")
   st.image("https://banodoco.s3.amazonaws.com/3.png",use_column_width='always')
-  st.write("AI will relentless evolve this century - our plan to to create a tools, culture, infrastructure, and incentives that allow open source-bsaed tools to relentlessly evolve with it.")  
+  st.write("AI will relentless evolve this century - our plan is to create tools, culture, infrastructure, and incentives that allow open source-based tools to relentlessly evolve with it.")  
   st.markdown('<a href="/Plan" target="_self">Learn about our plan</a>', unsafe_allow_html=True)
 
 
