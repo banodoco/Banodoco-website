@@ -38,21 +38,15 @@ with b2:
   st.write("AI will relentless evolve this century - our plan to to create a tools, culture, infrastructure, and incentives that allow open source-bsaed tools to relentlessly evolve with it.")  
   st.markdown('<a href="/Plan" target="_self">Learn about our plan</a>', unsafe_allow_html=True)
 
-
 st.markdown("***")
+
 a1, a2 = st.columns([1, 1])
-
-with a1:    
-  st.subheader("Our ownership")
-  st.image("https://banodoco.s3.amazonaws.com/1.png",use_column_width='always')
-  st.write("We're sharing the returns on 100% of our ownership (pre-investment dilution) with people who contribute to open source projects that are aligned with our mission. ")
-  st.markdown('<a href="/Ownership" target="_self">Learn about our ownership</a>', unsafe_allow_html=True)
-
-with a2:  
-
-  st.subheader("Our community")
-  st.image("https://banodoco.s3.amazonaws.com/4.png",use_column_width='always')
+with a2:
   
+  st.image("https://banodoco.s3.amazonaws.com/4.png",use_column_width='always')
+
+with a1:
+  st.subheader("Our community")
   st.write("We're nurturing an environment where talented, passionate engineers, inventors and artists openly discover, build and learn together, and are rewarded for doing so.")
   st.markdown('<a href="/Community" target="_self">Learn about our community</a>', unsafe_allow_html=True)         
 
