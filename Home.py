@@ -14,7 +14,7 @@ with header1:
   st.write("")
   
   st.header("For those who wish to harness the chaos of open source AI art")
-  st.write("We believe that AI has the potential to allow billions to experience creative fulfilment this century. However, in order to reach this potential, artistic control is key - it's the difference between something feeling like it was made by you rather than for you. To unlock the multitude of control types and artistic flows possible with AI, we want to build tooling and infrastructure to empower a community of tool-builders, who in-turn empower a world of budding artists.")  
+  st.write("We believe that AI has the potential to allow billions to experience creative fulfilment this century. However, in order to reach this potential, artistic control is key - it's the difference between something feeling like it was made by you, rather than for you. To unlock the multitude of control types and artistic flows possible with AI, we want to build tooling and infrastructure to empower a community of tool-builders, who in-turn empower a world of budding artists.")  
   cta()
   
 with header2:
@@ -28,26 +28,28 @@ b1, b2 = st.columns([1, 1])
 with b1:
   st.subheader("Try Dough")
   st.image("https://banodoco.s3.amazonaws.com/2.png",use_column_width='always')
-  st.write("Dough is our first tool, built on top of our [Steerable Motion node](https://github.com/banodoco/steerable-motion). It's meant to serve as one example of how powerful a tool that that combines different workflows can be.")
+  st.write("Dough is our first tool, built on top of our [Steerable Motion node](https://github.com/banodoco/steerable-motion). It's meant to serve as one example of how powerful a tool that combines different workflows can be.")
   st.markdown('<a href="/Dough" target="_self">Learn about Dough</a>', unsafe_allow_html=True)
+  st.markdown("***")
 
 with b2:
 
   st.subheader("Our plan")
   st.image("https://banodoco.s3.amazonaws.com/3.png",use_column_width='always')
-  st.write("AI will relentless evolve this century - our plan to to create a tools, culture, infrastructure, and incentives that allow open source-bsaed tools to relentlessly evolve with it.")  
+  st.write("AI will relentlessly evolve this century - our plan is to create tools, culture, infrastructure, and incentives to help open source-based tools to evolve with it.")  
   st.markdown('<a href="/Plan" target="_self">Learn about our plan</a>', unsafe_allow_html=True)
+  st.markdown("***")
 
-st.markdown("***")
 
+st.subheader("Our community")
 a1, a2 = st.columns([1, 1])
-with a2:
+with a1:
   
   st.image("https://banodoco.s3.amazonaws.com/4.png",use_column_width='always')
 
-with a1:
-  st.subheader("Our community")
-  st.write("We're nurturing an environment where talented, passionate engineers, inventors and artists openly discover, build and learn together, and are rewarded for doing so.")
+with a2:
+  
+  st.write("We're nurturing an environment where talented, passionate engineers, inventors, and artists openly discover, build and learn together, and are rewarded for doing so.")
   st.markdown('<a href="/Community" target="_self">Learn about our community</a>', unsafe_allow_html=True)         
 
 
