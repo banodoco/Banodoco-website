@@ -26,11 +26,10 @@ st.markdown("***")
 b1, b2 = st.columns([1, 1])
 
 with b1:
-  st.subheader("Try Dough")
-  st.image("https://banodoco.s3.amazonaws.com/2.png",use_column_width='always')
-  st.write("Dough is our first tool, built on top of our [Steerable Motion node](https://github.com/banodoco/steerable-motion). It's meant to serve as one example of how powerful a tool that combines different workflows can be.")
-  st.markdown('<a href="/Dough" target="_self">Learn about Dough</a>', unsafe_allow_html=True)
-  st.markdown("***")
+  st.subheader("Our community")
+  st.image("https://banodoco.s3.amazonaws.com/4.png",use_column_width='always')
+  st.write("We're nurturing an environment where talented, passionate engineers, inventors, and artists openly discover, build and learn together, and are rewarded for doing so.")
+  st.markdown('<a href="/Community" target="_self">Learn about our community</a>', unsafe_allow_html=True)         
 
 with b2:
 
@@ -41,16 +40,6 @@ with b2:
   st.markdown("***")
 
 
-st.subheader("Our community")
-a1, a2 = st.columns([1, 1])
-with a1:
-  
-  st.image("https://banodoco.s3.amazonaws.com/4.png",use_column_width='always')
-
-with a2:
-  
-  st.write("We're nurturing an environment where talented, passionate engineers, inventors, and artists openly discover, build and learn together, and are rewarded for doing so.")
-  st.markdown('<a href="/Community" target="_self">Learn about our community</a>', unsafe_allow_html=True)         
 
 
 footer()

@@ -46,9 +46,60 @@ st.markdown("Say, for example, we get an investment of 5m USD at a 50m USD valua
 st.markdown("### Ownership grants to date:")
 
 data = {
-    'Month': ['November, 2022', 'December, 2022', 'January, 2023', 'February, 2023', 'March, 2023', 'April, 2023', 'May, 2023', 'June, 2023', 'July, 2023', 'August, 2023', 'September, 2023', 'October, 2023', 'November, 2023', 'December, 2023','January, 2024','February, 2024', 'March, 2024','April, 2024', 'May, 2024', 'June, 2024'],
-    'Ownership Grants': ['POM', 'POM', 'POM', 'POM', 'POM', 'POM', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'POM; Lone_Samurai', 'itsB34STW4RS; Kosinkadink; PBPBPB; Cubey; lone_samurai; neggles; toyxyz; POM', 'Inner_Reflections_AI; Kaïros; Kosinkadink; manshoety; Antzu ☕; lone_samurai; Draken; jfischoff; RedStrawberries; itsB34STW4RS; Fizzledorf; Consumption','kijai; piblarg; drex15704080; fictiverse; fannovel16; citizenplain; kosinkadink; jfischoff; lone_samurai; fizzledorf; anime_is_real; fabdream; cainisable; redstrawberries; manshoety; drakenza; consumption_', 'Kijai; toyxyz; Ceyuan Yang/Animatediff team x2; Siraj; comfy; Fannovel16; melmass; Fictiverse; Fizzledorf; Inner_Reflections_AI; Kosinkadink; Impactframes. s; matt3o; Simian Luo; jboogx.creative; Nathan Shipley; lone_samurai; anime_is_real; Dr.Lt.Data','cerspense; matt3o; redstrawberries; lone_samurai; kijai; visualfrisson; piblarg; kosinkadink; thibaudz; drakenza; angry.penguin; jahwffrey; imcybearpunk; felixturner; toyxyz; harrowed; fictiverse; fannovel16; siraj; impactframes; syntaxdiffusion; jboogx.creative; citizenplain; nebsh; benjamin.paine; ai.god', 'Kijai; Mr Example; NebSH; matt30; Lone Samurai; Polyanna; Kosinkadink; RedStrawberries; Jeru; anime_is_real; Adam; roman_anderson; draken; BennyKok; Inner Reflections; toyxyz; Twist; DataVoid; Semi; Dr Lt Data; Andro-Meda; crishhh98; Marcus Aurelius','matt3o; lone_samurai; kosinkadink; kijai; consumption; mcxi; datarevised; bennykok; extrafuzzy; exponentialml; cerspense; piblarg; pxlpshr; fannovel16; itsb34stw4rs; drex15704080; visualfrisson; mrdravcan; ursium; huemin; fabian3000; enigmatic_e; drakenza; dkamacho; cseti007; citizenplain','CORE: lone_samurai;POM;BadCRC | INFRASTRUCTURE: Kosinkadink;matt3o;Kijai;Fannovel16;Ostris | KNOWLEDGE SHARERS: Purz;Stephan Tual;amli;anó;jboogx.creative;Andro.Meta;Klinter;Kytra;Koba.eth;Cseti;nopeburger;Re_diffusion;cyncratic;enigmatic_e;Benjaminimal;cerspense;toyxyz;Impactframes. | ART: neofuturist;Adam;Chris.exe;The Shadow (NYC);yvann;BOLDTRON;The Dor Brothers;itsB34STW4RS;BlueDangerX;traxxas25;jeru;Pollyanna;Hannah Submarine;makeitrad;mrboofy;siraev.vis;MidJourney.Man;Fill;A.I.Warper;Ghost;NebSH;siraev.vis;MH;Pajaritaflora...MaryAnn;Material_Rabbit','CORE: lone_samurai;POM;Ian_G;Pollyanna | INFRASTRUCTURE: mel;Kijai;Kosinkadink;Juxtapoz;matt3o;Fannovel16;Joviex | KNOWLEDGE SHARERS: SuperBeasts.AI (Brad);yuvraj;Purz;Adam;melih;toyxyz;Cseti;Gasia 🌷;Impactframes.;DREX;yo9o;Question;Isaac;neofuturist;brbbbq;Piligrim;anó;𝕽𝖊𝖑𝖎𝖈;VK;A.I.Warper;Klinter;nosecretsai | ARTISTS: PTMarks;The Dor Brothers;makeitrad;VisualFrisson;Infinite Vibes;Zlikwid;jboogx.creative;cerspense;Hannah Submarine;A.eye_101;NebSH;anime_is_real;Arkitecc;jags;MidJourney.Man;Scruntee;Udart (Vibeke);Pajaritaflora...MaryAnn;Material_Rabbit;Flipping Sigmas;enigmatic_e;RainbowPilot;traxxas25;Teslanaut;Jas;yvann;jeru;Chris.exe;T2;mgfxer','INFRASTRUCTURE: matt3o:wasasquatch:kosinkadink:kijai:melmass:artchan:jimblug | KNOWLEDGE SHARERS: mgfxer:pollyannain4d:fakeitorleaveit:lovis.io:xander6270:neofuturist:drex15704080:iemesowum:jackg:trenthunter:cyncratic:byronimo:machinedelusions:.tarkan:purzbeats | ARTISTS: arc37us:midjourney.man:zlikwid:hypereikon:ingierlingsson:jboogx.creative:palpapalpa:felixturner:honestabe37:timhannan:cseti007:tonon:tobowers:nftnik:inductor.ai:tkpandaman:0xmacbeth:emmacatnip:iskarioto:johndopamine:_nic_h:chinese_dream:jasblack:minelauvart:aleksej623:material_rabbit:byarlooo:wyzborrero:huwhitememes:earthstorm:baronvonnift33 | CORE: ian_101:.lone_samurai:yuvraj108c:pom_i_moq','CORE: lone_samurai:yuvraj:pom:Austin Mroz:Ian_G | ARTISTS: Hannah Submarine:MidJourney.Man:Chris.exe:sorrymary:kajukabla:Teslanaut:ByArlooo:Material_Rabbit:enigmatic_e:jeru:fabdream | INFRASTRUCTURE: Kosinkadink:matt3o:Kijai:Juxtapoz:jags:TwoPikachus | KNOWLEDGE/TOOLS: Flipping Sigmas:Cseti:mgfxer:A.eye_101:huemin:Jack G:Yvann:Kewk:Jerry Davos:Klinter:cyncratic:Inner_Reflections_AI']
-
+    'Month': [
+        'November, 2022',
+        'December, 2022', 
+        'January, 2023',
+        'February, 2023',
+        'March, 2023',
+        'April, 2023',
+        'May, 2023',
+        'June, 2023',
+        'July, 2023',
+        'August, 2023',
+        'September, 2023',
+        'October, 2023',
+        'November, 2023',
+        'December, 2023',
+        'January, 2024',
+        'February, 2024',
+        'March, 2024',
+        'April, 2024',
+        'May, 2024',
+        'June, 2024',
+        'July, 2024',
+        'August, 2024',
+        'September, 2024',
+        'October, 2024',
+        'November, 2024'
+    ],
+    'Ownership Grants': [
+        'POM',
+        'POM',
+        'POM',
+        'POM',
+        'POM',
+        'POM',
+        'POM; Lone_Samurai',
+        'POM; Lone_Samurai',
+        'POM; Lone_Samurai',
+        'itsB34STW4RS; Kosinkadink; PBPBPB; Cubey; lone_samurai; neggles; toyxyz; POM',
+        'Inner_Reflections_AI; Kaïros; Kosinkadink; manshoety; Antzu ☕; lone_samurai; Draken; jfischoff; RedStrawberries; itsB34STW4RS; Fizzledorf; Consumption',
+        'kijai; piblarg; drex15704080; fictiverse; fannovel16; citizenplain; kosinkadink; jfischoff; lone_samurai; fizzledorf; anime_is_real; fabdream; cainisable; redstrawberries; manshoety; drakenza; consumption_',
+        'Kijai; toyxyz; Ceyuan Yang/Animatediff team x2; Siraj; comfy; Fannovel16; melmass; Fictiverse; Fizzledorf; Inner_Reflections_AI; Kosinkadink; Impactframes. s; matt3o; Simian Luo; jboogx.creative; Nathan Shipley; lone_samurai; anime_is_real; Dr.Lt.Data',
+        'cerspense; matt3o; redstrawberries; lone_samurai; kijai; visualfrisson; piblarg; kosinkadink; thibaudz; drakenza; angry.penguin; jahwffrey; imcybearpunk; felixturner; toyxyz; harrowed; fictiverse; fannovel16; siraj; impactframes; syntaxdiffusion; jboogx.creative; citizenplain; nebsh; benjamin.paine; ai.god',
+        'Kijai; Mr Example; NebSH; matt30; Lone Samurai; Polyanna; Kosinkadink; RedStrawberries; Jeru; anime_is_real; Adam; roman_anderson; draken; BennyKok; Inner Reflections; toyxyz; Twist; DataVoid; Semi; Dr Lt Data; Andro-Meda; crishhh98; Marcus Aurelius',
+        'matt3o; lone_samurai; kosinkadink; kijai; consumption; mcxi; datarevised; bennykok; extrafuzzy; exponentialml; cerspense; piblarg; pxlpshr; fannovel16; itsb34stw4rs; drex15704080; visualfrisson; mrdravcan; ursium; huemin; fabian3000; enigmatic_e; drakenza; dkamacho; cseti007; citizenplain',
+        'CORE: lone_samurai;POM;BadCRC | INFRASTRUCTURE: Kosinkadink;matt3o;Kijai;Fannovel16;Ostris | KNOWLEDGE SHARERS: Purz;Stephan Tual;amli;anó;jboogx.creative;Andro.Meta;Klinter;Kytra;Koba.eth;Cseti;nopeburger;Re_diffusion;cyncratic;enigmatic_e;Benjaminimal;cerspense;toyxyz;Impactframes. | ART: neofuturist;Adam;Chris.exe;The Shadow (NYC);yvann;BOLDTRON;The Dor Brothers;itsB34STW4RS;BlueDangerX;traxxas25;jeru;Pollyanna;Hannah Submarine;makeitrad;mrboofy;siraev.vis;MidJourney.Man;Fill;A.I.Warper;Ghost;NebSH;siraev.vis;MH;Pajaritaflora...MaryAnn;Material_Rabbit',
+        'CORE: lone_samurai;POM;Ian_G;Pollyanna | INFRASTRUCTURE: mel;Kijai;Kosinkadink;Juxtapoz;matt3o;Fannovel16;Joviex | KNOWLEDGE SHARERS: SuperBeasts.AI (Brad);yuvraj;Purz;Adam;melih;toyxyz;Cseti;Gasia 🌷;Impactframes.;DREX;yo9o;Question;Isaac;neofuturist;brbbbq;Piligrim;anó;𝕽𝖊𝖑𝖎𝖈;VK;A.I.Warper;Klinter;nosecretsai | ARTISTS: PTMarks;The Dor Brothers;makeitrad;VisualFrisson;Infinite Vibes;Zlikwid;jboogx.creative;cerspense;Hannah Submarine;A.eye_101;NebSH;anime_is_real;Arkitecc;jags;MidJourney.Man;Scruntee;Udart (Vibeke);Pajaritaflora...MaryAnn;Material_Rabbit;Flipping Sigmas;enigmatic_e;RainbowPilot;traxxas25;Teslanaut;Jas;yvann;jeru;Chris.exe;T2;mgfxer',
+        'INFRASTRUCTURE: matt3o:wasasquatch:kosinkadink:kijai:melmass:artchan:jimblug | KNOWLEDGE SHARERS: mgfxer:pollyannain4d:fakeitorleaveit:lovis.io:xander6270:neofuturist:drex15704080:iemesowum:jackg:trenthunter:cyncratic:byronimo:machinedelusions:.tarkan:purzbeats | ARTISTS: arc37us:midjourney.man:zlikwid:hypereikon:ingierlingsson:jboogx.creative:palpapalpa:felixturner:honestabe37:timhannan:cseti007:tonon:tobowers:nftnik:inductor.ai:tkpandaman:0xmacbeth:emmacatnip:iskarioto:johndopamine:_nic_h:chinese_dream:jasblack:minelauvart:aleksej623:material_rabbit:byarlooo:wyzborrero:huwhitememes:earthstorm:baronvonnift33 | CORE: ian_101:.lone_samurai:yuvraj108c:pom_i_moq',
+        'CORE: lone_samurai:yuvraj:pom:Austin Mroz:Ian_G | ARTISTS: Hannah Submarine:MidJourney.Man:Chris.exe:sorrymary:kajukabla:Teslanaut:ByArlooo:Material_Rabbit:enigmatic_e:jeru:fabdream | INFRASTRUCTURE: Kosinkadink:matt3o:Kijai:Juxtapoz:jags:TwoPikachus | KNOWLEDGE/TOOLS: Flipping Sigmas:Cseti:mgfxer:A.eye_101:huemin:Jack G:Yvann:Kewk:Jerry Davos:Klinter:cyncratic:Inner_Reflections_AI',
+        'CORE: Ian_G:lone_samurai:Austin Mroz:pom | ARTISTS: fabdream:Hannah Submarine:realsammyt:oumoumad:Teslanaut | INFRASTRUCTURE: Kijai:mel:Kosinkadink:matt3o | KNOWLEDGE/TOOLS: akatz:mgfxer:cyncratic:toyxyz:Klinter:atom.p:Jas:fai:Cseti:neofuturist:𝖊𝖑𝖎𝖈:Kewkッ:Inner_Reflections_AI:Flipping Sigmas:NebSH',
+        'CORE: pom:lone_samurai:melih:Ian_G | ARTISTS: Infinite Vibes:Martin_H:Flipping Sigmas:enigmatic_e:ButchersBrain:fabdream:Hannah Submarine:RenderStorm:Zlikwid | INFRASTRUCTURE: Ostris:Kosinkadink:Juxtapoz:Kijai:RedStrawberries:matt3o | KNOWLEDGE/TOOLS: ryanontheinside:fai:Cseti:cyncratic:Inner_Reflections_AI:Akumetsu971:MidJourney.Man:neofuturist:xander:akatz:[Ai]ndmix:jeru:cyncratic:toyxyz:Nathan Shipley:Klinter:mel:A.I.Warper',
+        'CORE: pom:lone_samurai:Ian_G | ARTISTS: fabdream:Hannah Submarine:anó:The Dor Brothers:Flipping Sigmas | INFRASTRUCTURE: ryanontheinside:Kijai:matt3o:Nate - LK Dev:Daxton Caylor:akatz | KNOWLEDGE/TOOLS: Yvann:Nate - LK Dev:Kytra:jboogx.creative:Ethanfel:brbbbq:Cseti:Draken:ezMan:Zlikwid:toyxyz:VK:cyncratic',
+        'CORE: matt3o:lone_samurai:melih:pom | INFRASTRUCTURE: Kijai:Juxtapoz:Kosinkadink | KNOWLEDGE/TOOLS: akatz:Cseti:Purz:A.I.Warper:Klinter:Yvann:lilien:ryanontheinside:toyxyz:lovis.io | ARTISTS: Zuko:NebSH:MidJourney.Man:HunterS.Freud:anó:VisualFrisson:cerspense:sagansagansagans:habibigonemad:The Dor Brothers:RemyCoup:solus_fx:Udart:Hannah Submarine:Chris.exe:Ghost',
+        'CORE: matt3o:pom | INFRASTRUCTURE: Kijai:lone_samurai:2kpr:Juxtapoz:Kosinkadink | KNOWLEDGE/TOOLS: Organoids:atom.p:Yvann:lilien:avataraim:ryanontheinside:VK:HeadOfOliver:Mickmumpitz:Cseti:Zuko:Nathan Shipley:DREX:mel:Latent Spacer | ARTISTS: Cristartisty:kentskooking:Hannah Submarine:Nablah:MidJourney.Man:Chris.exe:AndyXR:jboogx.creative:solus_fx:Udart:NebSH:mrboofy:happy.j:Purz:Minelauvart:VisualFrisson'
+    ]
 }
 
 df = pd.DataFrame(data)[::-1].reset_index(drop=True)
@@ -60,10 +111,10 @@ st.dataframe(df,use_container_width=True, hide_index=True)
 st.markdown("### Additional transfers to date:")
 st.markdown("In addition to the above, holders, in particular POM may transfer equity to contributors at their discretion. This is subject to approval by POM. The below table shows the transfers to date:")
 data = {
-    'From': ['POM', 'POM'],
-    'To': ['Ceyuan Yang', 'ComfyAnonymous'],
-    'Amount': ['0.25%', '0.575%'],
-    'Date': ['December, 2023', 'June, 2024']
+    'From': ['POM', 'POM', 'POM'],
+    'To': ['Ceyuan Yang', 'ComfyAnonymous', 'Matt3o'],
+    'Amount': ['0.25%', '0.575%', '3.3625%'],
+    'Date': ['December, 2023', 'June, 2024', 'November, 2024']
 }
 st.dataframe(pd.DataFrame(data),use_container_width=True, hide_index=True)
 
