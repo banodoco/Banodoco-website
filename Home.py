@@ -37,7 +37,7 @@ with b2:
   st.image("https://banodoco.s3.amazonaws.com/3.png",use_column_width='always')
   st.write("AI will relentlessly evolve this century - our plan is to create tools, culture, infrastructure, and incentives to help open source-based tools to evolve with it.")  
   st.markdown('<a href="/Plan" target="_self">Learn about our plan</a>', unsafe_allow_html=True)
-  st.markdown("***")
+  
 
 
 

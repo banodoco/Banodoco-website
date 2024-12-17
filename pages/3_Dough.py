@@ -8,7 +8,7 @@ with st.sidebar:
   cta()        
 
 
-h1,h2 = st.columns([1,1.5])
+h1,h2 = st.columns([1.25,1])
 with h1:
     st.markdown("## :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")     
     st.markdown("#### A tool for making videos using images")
@@ -16,10 +16,7 @@ with h1:
     
     st.markdown("If you have a powerful computer, you can run Dough locally for free. If you don't, you can use our Discord bot for a small fee.")
     st.markdown('[Get started with Dough](#get-started-with-dough)')
-with h2:
-    st.markdown("")
-    st.markdown("")    
-    st.markdown("")    
+with h2:    
     st.markdown("")    
     st.write("")
     st.write("")
