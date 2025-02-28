@@ -45,6 +45,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize scroll state on page load
     handleScroll();
     
+    // Handle meme card expansion on mobile
+    const memeCard = document.querySelector('.meme-card');
+    if (memeCard) {
+        memeCard.addEventListener('click', function() {
+            // Check if we're on mobile (using the same breakpoint as in CSS)
+            if (window.innerWidth <= 768) {
+                this.classList.toggle('expanded-mobile');
+                
+                // If we're closing the card, scroll to it to ensure it's visible
+                if (!this.classList.contains('expanded-mobile')) {
+                    const cardRect = this.getBoundingClientRect();
+                    if (cardRect.top < 0) {
+                        this.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+            }
+        });
+        
+        // Close the meme card when clicking outside of it
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth <= 768 && !memeCard.contains(event.target) && memeCard.classList.contains('expanded-mobile')) {
+                memeCard.classList.remove('expanded-mobile');
+            }
+        });
+    }
+    
     if (pomLetters) {
         // Add a subtle bounce effect when hovering over the letters
         const letters = pomLetters.querySelectorAll('.letter');

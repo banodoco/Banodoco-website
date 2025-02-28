@@ -412,6 +412,8 @@ body::before, body::after {
         white-space: normal;
         width: 90%;
         padding: 0.3rem 0.8rem;
+        max-width: 280px; /* Add max-width to prevent excessive width */
+        margin: 0 auto; /* Center the element */
     }
     
     #pom-letters.active .letter {
@@ -470,6 +472,21 @@ body::before, body::after {
     .square-image-container.mobile-active .image-hover-text {
         transform: translateY(0) !important;
         opacity: 0.9;
+    }
+}
+
+/* Extra small devices (phones, 480px and down) */
+@media (max-width: 480px) {
+    #pom-letters .name-reveal {
+        width: 85%;
+        max-width: 250px;
+        font-size: 1.3rem;
+        padding: 0.3rem 0.6rem;
+    }
+    
+    .letter {
+        font-size: 2.5rem;
+        margin: 0 0.2rem;
     }
 }
 
@@ -538,6 +555,8 @@ body::before, body::after {
     border-radius: 30px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     border: 1px solid #eaeaea;
+    max-width: 90%; /* Ensure it doesn't exceed container width */
+    box-sizing: border-box; /* Include padding in width calculation */
 }
 
 /* Hover effect for the POM letters */
@@ -1100,21 +1119,39 @@ body::before, body::after {
     }
     
     .meme-hover-container {
-        opacity: 1;
-        height: auto;
-        margin-top: 15px;
-        margin-bottom: 15px;
+        opacity: 0;
+        height: 0;
+        margin-top: 0;
+        margin-bottom: 0;
         position: static;
-        visibility: visible;
+        visibility: hidden;
     }
     
     .meme-image {
-        opacity: 1;
-        transform: none;
+        opacity: 0;
+        transform: translateY(10px);
         margin-bottom: 10px;
     }
     
     .meme-card .image-container {
+        display: block;
+    }
+    
+    /* Show memes when the card has the expanded-mobile class */
+    .meme-card.expanded-mobile .meme-hover-container {
+        opacity: 1;
+        height: auto;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        visibility: visible;
+    }
+    
+    .meme-card.expanded-mobile .meme-image {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .meme-card.expanded-mobile .image-container {
         display: none;
     }
 }
