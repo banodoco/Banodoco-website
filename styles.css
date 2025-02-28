@@ -175,6 +175,7 @@ body::before, body::after {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 2rem;
     margin-top: 2rem;
+    align-items: start; /* Prevent cards from stretching vertically */
 }
 
 /* Card Styles */
@@ -184,16 +185,24 @@ body::before, body::after {
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     padding: 1.5rem;
-    transition: all 0.3s ease;
+    transition: all 0.3s ease, height 0.3s ease;
     overflow: hidden;
     cursor: pointer;
     display: flex;
-    flex-direction: column; /* Ensure proper vertical layout */
-    height: auto; /* Allow natural height */
-    box-sizing: border-box; /* Include padding in height calculation */
+    flex-direction: column;
+    height: 400px; /* Fixed height for unexpanded cards */
+    box-sizing: border-box;
 }
 
-.card:hover {
+.card.expanded {
+    height: auto;
+    overflow: visible;
+    z-index: 10;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.card:not(.expanded):hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
 }
@@ -215,16 +224,16 @@ body::before, body::after {
 
 /* Text content with consistent height */
 .text-content {
-    max-height: 4.5em; /* Exactly 3 lines with 1.5 line height */
+    max-height: 4.5em;
     overflow: hidden;
-    transition: max-height 0.5s ease;
+    transition: max-height 0.3s ease;
     position: relative;
-    margin-bottom: 0; /* Remove bottom margin to reduce buffer */
-    padding-bottom: 0; /* Remove padding to reduce buffer */
+    margin-bottom: 0;
+    padding-bottom: 0;
 }
 
-.card:hover .text-content {
-    max-height: none; /* Allow unlimited height on hover for all card types */
+.card.expanded .text-content {
+    max-height: none;
 }
 
 .text-content p {
@@ -238,12 +247,13 @@ body::before, body::after {
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-height: 4.5em; /* Match the parent container */
+    max-height: 4.5em;
 }
 
-.card:hover .text-content p {
-    -webkit-line-clamp: unset; /* Remove line clamp on hover for all card types */
+.card.expanded .text-content p {
+    -webkit-line-clamp: unset;
     color: #333;
+    max-height: none;
 }
 
 /* Smooth hover expansion for image container - MAIN IMPLEMENTATION */
@@ -251,12 +261,16 @@ body::before, body::after {
     position: relative;
     width: 100%;
     height: 0;
-    padding-bottom: 50%; /* 2:1 aspect ratio */
+    padding-bottom: 50%;
     margin-bottom: 1.5rem;
     overflow: hidden;
     border-radius: 8px;
     background-color: #f5f5f5;
-    transition: padding-bottom 0.5s ease;
+    transition: padding-bottom 0.3s ease;
+}
+
+.card.expanded .image-container {
+    padding-bottom: 65%;
 }
 
 .image-container img {
@@ -688,11 +702,11 @@ body::before, body::after {
     margin-bottom: 1.5rem;
     overflow: hidden;
     border-radius: 4px;
-    transition: padding-bottom 0.5s ease; /* Increased duration for smoother transition */
+    transition: padding-bottom 0.3s ease;
 }
 
-.video-card:hover .video-container {
-    padding-bottom: 100%; /* Change to square 1:1 aspect ratio on hover */
+.card.expanded.video-card .video-container {
+    padding-bottom: 100%;
 }
 
 .video-card .video-thumbnail {
@@ -754,16 +768,13 @@ body::before, body::after {
     height: 100%;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease 0.5s, visibility 0.3s ease 0.5s; /* Delayed appearance on hover */
+    transition: opacity 0.3s ease, visibility 0.3s ease;
     z-index: 2;
 }
 
-.video-card:hover .video-embed {
+.card.expanded.video-card .video-embed {
     opacity: 1;
     visibility: visible;
-    width: 100%;
-    height: 100%;
-    transition-delay: 0.5s; /* Delay equal to the container transition duration */
 }
 
 /* Add specific non-hover transitions for immediate reversion */
@@ -900,19 +911,19 @@ body::before, body::after {
 .link {
     display: flex;
     align-items: center;
-    margin-top: 0.5rem; /* Small margin to separate from text */
-    padding-top: 0.5rem; /* Keep minimal padding */
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
     color: #555;
     font-weight: 400;
     font-size: 0.9rem;
     opacity: 0;
     transform: translateY(10px);
     transition: opacity 0.3s ease, transform 0.3s ease;
-    position: relative; /* Change from absolute to relative */
-    width: 100%; /* Full width */
+    position: relative;
+    width: 100%;
 }
 
-.card:hover .link {
+.card.expanded .link {
     opacity: 1;
     transform: translateY(0);
 }
@@ -1018,17 +1029,17 @@ body::before, body::after {
 /* Meme Card Styles */
 .meme-card {
     position: relative;
-    height: auto;
-    min-height: 300px; /* Set a minimum height to prevent layout shifts */
+    height: 400px;
+    min-height: auto;
     transition: all 0.3s ease;
+    overflow: hidden;
+    width: 100%;
 }
 
-.meme-card .image-container {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    height: 0;
-    padding-bottom: 50%; /* 2:1 aspect ratio */
+.meme-card.expanded {
+    height: auto;
+    overflow: visible;
+    z-index: 10;
 }
 
 .meme-hover-container {
@@ -1039,29 +1050,20 @@ body::before, body::after {
     opacity: 0;
     height: 0;
     overflow: hidden;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.4s ease, height 0.3s ease;
     margin-top: 0;
     margin-bottom: 0;
-    position: absolute;
-    left: 1.5rem;
-    right: 1.5rem;
     visibility: hidden;
+    width: 100%; /* Constrain width */
 }
 
-.meme-card:hover .meme-hover-container {
+.card.expanded .meme-hover-container {
     opacity: 1;
     height: auto;
     margin-top: 15px;
     margin-bottom: 15px;
     position: static;
     visibility: visible;
-}
-
-.meme-card:hover .image-container {
-    opacity: 0;
-    height: 0;
-    padding-bottom: 0;
-    margin-bottom: 0;
 }
 
 .meme-image {
@@ -1073,85 +1075,40 @@ body::before, body::after {
     transition: all 0.3s ease;
     transform: translateY(10px);
     opacity: 0;
-}
-
-.meme-card:hover .meme-image {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-.meme-card:hover .meme-image:nth-child(1) {
-    transition-delay: 0.1s;
-}
-
-.meme-card:hover .meme-image:nth-child(2) {
-    transition-delay: 0.2s;
-}
-
-.meme-image:last-child {
-    margin-bottom: 0;
+    max-width: 100%; /* Ensure images don't exceed container width */
 }
 
 .meme-image img {
     width: 100%;
+    height: auto;
     display: block;
-    transition: transform 0.3s ease;
-    max-width: 100%;
-}
-
-.meme-image:hover img {
-    transform: scale(1.05);
-}
-
-.meme-caption {
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 5px 10px;
-    font-size: 0.8rem;
-    text-align: center;
-    margin: 0;
+    border-radius: 8px;
+    max-width: 100%; /* Ensure images don't exceed container width */
 }
 
 /* Mobile styles for meme card */
 @media (max-width: 768px) {
     .meme-card {
-        min-height: auto; /* Allow natural height on mobile */
+        height: 400px;
+        width: 100%;
+    }
+    
+    .meme-card.expanded {
+        height: auto;
     }
     
     .meme-hover-container {
-        opacity: 0;
-        height: 0;
-        margin-top: 0;
-        margin-bottom: 0;
-        position: static;
-        visibility: hidden;
+        width: 100%;
     }
     
     .meme-image {
-        opacity: 0;
-        transform: translateY(10px);
+        width: 100%;
+        max-width: 100%;
         margin-bottom: 10px;
     }
-    
-    .meme-card .image-container {
-        display: block;
-    }
-    
-    /* Show memes when the card has the expanded-mobile class */
-    .meme-card.expanded-mobile .meme-hover-container {
-        opacity: 1;
-        height: auto;
-        margin-top: 15px;
-        margin-bottom: 15px;
-        visibility: visible;
-    }
-    
-    .meme-card.expanded-mobile .meme-image {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    
-    .meme-card.expanded-mobile .image-container {
-        display: none;
-    }
+}
+
+/* Hide the initial image container when the meme card is expanded */
+.meme-card.expanded .image-container {
+    display: none;
 }

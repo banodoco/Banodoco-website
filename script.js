@@ -1,5 +1,8 @@
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Feather icons
+    feather.replace();
+
     // Handle POM letters name reveal
     const pomLetters = document.getElementById('pom-letters');
     
@@ -45,31 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize scroll state on page load
     handleScroll();
     
-    // Handle meme card expansion on mobile
-    const memeCard = document.querySelector('.meme-card');
-    if (memeCard) {
-        memeCard.addEventListener('click', function() {
-            // Check if we're on mobile (using the same breakpoint as in CSS)
-            if (window.innerWidth <= 768) {
-                this.classList.toggle('expanded-mobile');
-                
-                // If we're closing the card, scroll to it to ensure it's visible
-                if (!this.classList.contains('expanded-mobile')) {
-                    const cardRect = this.getBoundingClientRect();
-                    if (cardRect.top < 0) {
-                        this.scrollIntoView({ behavior: 'smooth' });
-                    }
-                }
-            }
-        });
-        
-        // Close the meme card when clicking outside of it
-        document.addEventListener('click', function(event) {
-            if (window.innerWidth <= 768 && !memeCard.contains(event.target) && memeCard.classList.contains('expanded-mobile')) {
-                memeCard.classList.remove('expanded-mobile');
-            }
-        });
-    }
+    // Handle meme card expansion - removed old implementation as it's now handled by the general card expansion system
     
     if (pomLetters) {
         // Add a subtle bounce effect when hovering over the letters
@@ -77,13 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Click interaction
         pomLetters.addEventListener('click', () => {
-            // Stop any existing animations
-            letters.forEach(letter => {
-                letter.style.animation = 'none';
-            });
-            
-            // Add the active class for the reveal
-            pomLetters.classList.add('active');
+            pomLetters.classList.toggle('active');
         });
         
         // Add mouseout event to hide the name reveal when hovering away
@@ -157,65 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Check if the paragraph is truncated
             if (p.scrollHeight > p.clientHeight) {
                 p.classList.add('truncated');
-                
-                // Find the parent card
-                const card = p.closest('.card');
-                
-                // Find or create text-content container
-                let textContent = p.closest('.text-content');
-                
-                // If there's no text-content wrapper, wrap the paragraph
-                if (!textContent && card) {
-                    // Only wrap if not already wrapped
-                    if (p.parentNode === card) {
-                        // Create a text-content wrapper
-                        textContent = document.createElement('div');
-                        textContent.className = 'text-content';
-                        
-                        // Replace the paragraph with the wrapper containing the paragraph
-                        p.parentNode.insertBefore(textContent, p);
-                        textContent.appendChild(p);
-                    }
-                }
-                
-                if (textContent && card) {
-                    // Store the full height for use on hover
-                    const fullHeight = p.scrollHeight;
-                    textContent.setAttribute('data-full-height', fullHeight + 'px');
-                    
-                    // Add hover event listener if not already added
-                    if (!card.hasAttribute('data-hover-handler')) {
-                        card.setAttribute('data-hover-handler', 'true');
-                        
-                        card.addEventListener('mouseenter', () => {
-                            // Set the text content to expand
-                            textContent.style.maxHeight = textContent.getAttribute('data-full-height');
-                            p.style.webkitLineClamp = 'unset';
-                            p.style.maxHeight = 'none';
-                            
-                            // Show the link with a natural flow
-                            const link = card.querySelector('.link');
-                            if (link) {
-                                link.style.opacity = '1';
-                                link.style.transform = 'translateY(0)';
-                            }
-                        });
-                        
-                        card.addEventListener('mouseleave', () => {
-                            // Reset text content
-                            textContent.style.maxHeight = '';
-                            p.style.webkitLineClamp = '';
-                            p.style.maxHeight = '';
-                            
-                            // Hide the link
-                            const link = card.querySelector('.link');
-                            if (link) {
-                                link.style.opacity = '';
-                                link.style.transform = '';
-                            }
-                        });
-                    }
-                }
             } else {
                 p.classList.remove('truncated');
             }
@@ -288,11 +202,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Set initial iframe src without autoplay
         iframe.src = videoSrc;
         
-        // On hover, update iframe src to include autoplay
+        // On hover, update iframe src to include autoplay only if the card is fully expanded
         card.addEventListener('mouseenter', () => {
-            iframe.src = videoSrc.includes('?') 
-                ? videoSrc.replace('autoplay=0', 'autoplay=1') 
-                : videoSrc + '?autoplay=1';
+            if (card.classList.contains('expanded')) {
+                iframe.src = videoSrc.includes('?') 
+                    ? videoSrc.replace('autoplay=0', 'autoplay=1') 
+                    : videoSrc + '?autoplay=1';
+            }
         });
         
         // On mouse leave, reset iframe src to stop video
@@ -314,98 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.querySelector('.video-embed').style.visibility = 'visible';
             });
         }
-    });
-
-    // Get all cards with links
-    const cardsWithLinks = document.querySelectorAll('.card');
-    
-    // Add click event for mobile users
-    cardsWithLinks.forEach(card => {
-        card.addEventListener('click', () => {
-            // Toggle expanded state
-            card.classList.toggle('expanded-mobile');
-            
-            // Handle link visibility for mobile expanded state
-            const link = card.querySelector('.link');
-            if (link) {
-                if (card.classList.contains('expanded-mobile')) {
-                    link.style.opacity = '1';
-                    link.style.transform = 'translateY(0)';
-                } else {
-                    link.style.opacity = '';
-                    link.style.transform = '';
-                }
-            }
-            
-            // Handle GIF images for mobile expanded state
-            if (card.classList.contains('expanded-mobile')) {
-                const staticImages = card.querySelectorAll('.static-image');
-                const gifImages = card.querySelectorAll('.gif-image');
-                
-                staticImages.forEach(img => {
-                    img.style.opacity = '0';
-                });
-                
-                gifImages.forEach(img => {
-                    img.style.opacity = '1';
-                });
-            } else {
-                const staticImages = card.querySelectorAll('.static-image');
-                const gifImages = card.querySelectorAll('.gif-image');
-                
-                staticImages.forEach(img => {
-                    img.style.opacity = '1';
-                });
-                
-                gifImages.forEach(img => {
-                    img.style.opacity = '0';
-                });
-            }
-        });
-        
-        // Add hover events as fallback for color transition
-        card.addEventListener('mouseenter', () => {
-            const images = card.querySelectorAll('.tile-image:not(.gif-image)');
-            images.forEach(img => {
-                img.style.filter = 'grayscale(0%)';
-            });
-            
-            // Handle GIF images
-            const staticImages = card.querySelectorAll('.static-image');
-            const gifImages = card.querySelectorAll('.gif-image');
-            
-            staticImages.forEach(img => {
-                img.style.opacity = '0';
-            });
-            
-            gifImages.forEach(img => {
-                img.style.opacity = '1';
-            });
-        });
-        
-        // Add mouseleave event to de-expand cards when hovering away
-        card.addEventListener('mouseleave', () => {
-            // Remove expanded state when hovering away, even if clicked
-            card.classList.remove('expanded-mobile');
-            
-            // Reset images
-            const images = card.querySelectorAll('.tile-image:not(.gif-image)');
-            images.forEach(img => {
-                img.style.filter = 'grayscale(0%)';
-            });
-            
-            // Handle GIF images
-            const staticImages = card.querySelectorAll('.static-image');
-            const gifImages = card.querySelectorAll('.gif-image');
-            
-            staticImages.forEach(img => {
-                img.style.opacity = '1';
-            });
-            
-            gifImages.forEach(img => {
-                img.style.opacity = '0';
-            });
-        });
     });
 
     // Handle square image containers for mobile and hover
@@ -448,31 +272,93 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Optional: Add masonry-like layout with animation
-    function resizeGridItem(item) {
-        // Remove the min-height setting that's causing excessive buffer
-        // Only set a minimum height if absolutely necessary
-        const contentHeight = item.querySelector('.text-content')?.scrollHeight || 0;
-        const imageHeight = item.querySelector('.image-container')?.scrollHeight || 0;
-        const titleHeight = item.querySelector('h3')?.scrollHeight || 0;
-        
-        // Clear any previously set min-height
-        item.style.minHeight = '';
-        
-        // Only set a very minimal height if the content is extremely short
-        if (contentHeight + imageHeight + titleHeight < 150) {
-            item.style.minHeight = '300px';
-        }
-    }
-
-    function resizeAllGridItems() {
-        const allItems = document.querySelectorAll('.card');
-        allItems.forEach(item => {
-            resizeGridItem(item);
+    // Card expansion behavior
+    const cards = document.querySelectorAll('.card');
+    
+    cards.forEach(card => {
+        // Mouse enter - expand card
+        card.addEventListener('mouseenter', () => {
+            // First collapse all cards
+            cards.forEach(c => c.classList.remove('expanded'));
+            // Then expand the hovered card
+            card.classList.add('expanded');
+            
+            // Special handling for meme cards
+            if (card.classList.contains('meme-card')) {
+                const memeImages = card.querySelectorAll('.meme-image');
+                memeImages.forEach((img, index) => {
+                    img.style.transitionDelay = `${0.1 * (index + 1)}s`;
+                    img.style.transform = 'translateY(0)';
+                    img.style.opacity = '1';
+                });
+            }
         });
-    }
 
-    // Initial resize
-    window.addEventListener('load', resizeAllGridItems);
-    window.addEventListener('resize', resizeAllGridItems);
+        // Mouse leave - collapse card
+        card.addEventListener('mouseleave', () => {
+            card.classList.remove('expanded');
+            
+            // Special handling for meme cards
+            if (card.classList.contains('meme-card')) {
+                const memeImages = card.querySelectorAll('.meme-image');
+                memeImages.forEach(img => {
+                    img.style.transitionDelay = '0s';
+                    img.style.transform = 'translateY(10px)';
+                    img.style.opacity = '0';
+                });
+            }
+        });
+
+        // Mobile touch support
+        card.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                e.stopPropagation();
+                if (card.classList.contains('expanded')) {
+                    card.classList.remove('expanded');
+                    
+                    // Special handling for meme cards on mobile
+                    if (card.classList.contains('meme-card')) {
+                        const memeImages = card.querySelectorAll('.meme-image');
+                        memeImages.forEach(img => {
+                            img.style.transform = 'translateY(10px)';
+                            img.style.opacity = '0';
+                        });
+                    }
+                } else {
+                    // Collapse all other cards first
+                    cards.forEach(c => c.classList.remove('expanded'));
+                    // Expand the clicked card
+                    card.classList.add('expanded');
+                    
+                    // Special handling for meme cards on mobile
+                    if (card.classList.contains('meme-card')) {
+                        const memeImages = card.querySelectorAll('.meme-image');
+                        memeImages.forEach((img, index) => {
+                            img.style.transitionDelay = `${0.1 * (index + 1)}s`;
+                            img.style.transform = 'translateY(0)';
+                            img.style.opacity = '1';
+                        });
+                    }
+                }
+            }
+        });
+    });
+
+    // Collapse all cards when clicking outside on mobile
+    document.body.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            cards.forEach(card => {
+                card.classList.remove('expanded');
+                
+                // Reset meme images
+                if (card.classList.contains('meme-card')) {
+                    const memeImages = card.querySelectorAll('.meme-image');
+                    memeImages.forEach(img => {
+                        img.style.transform = 'translateY(10px)';
+                        img.style.opacity = '0';
+                    });
+                }
+            });
+        }
+    });
 }); 
