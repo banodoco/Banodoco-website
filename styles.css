@@ -1,0 +1,1120 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+body {
+    background-color: #ffffff;
+    min-height: 100vh;
+    padding: 2rem 4rem 4rem 4rem;
+    color: #333;
+    position: relative;
+}
+
+.inner-border {
+    position: fixed;
+    top: 20px;
+    left: 40px;
+    right: 40px;
+    bottom: 40px;
+    z-index: -1;
+    border: 1px solid #eaeaea;
+    pointer-events: none;
+}
+
+/* Top Border */
+.pom-border-top {
+    position: fixed;
+    top: -30px; /* Start off-screen */
+    left: 0;
+    right: 0;
+    height: 30px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 1px;
+    pointer-events: none;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: top 0.3s ease; /* Add smooth transition */
+}
+
+/* Class to show the top border when scrolled */
+.pom-border-top.visible {
+    top: 10px; /* Move to visible position when this class is added */
+}
+
+/* Bottom Border */
+.pom-border-bottom {
+    position: fixed;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    height: 30px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+    transform: rotate(180deg);
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 1px;
+    pointer-events: none;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: bottom 0.3s ease; /* Add smooth transition */
+}
+
+/* Class to hide the bottom border when scrolled to bottom */
+.pom-border-bottom.hidden {
+    bottom: -30px; /* Move off-screen when this class is added */
+}
+
+/* Left Border */
+.pom-border-left {
+    position: fixed;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    height: 30px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    white-space: nowrap;
+    transform-origin: bottom left;
+    transform: rotate(270deg) translateX(-100%);
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 1px;
+    pointer-events: none;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100vh;
+    padding-bottom: 10px;
+}
+
+/* Right Border */
+.pom-border-right {
+    position: fixed;
+    right: 10px;
+    top: 0;
+    bottom: 0;
+    height: 30px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    white-space: nowrap;
+    transform-origin: bottom right;
+    transform: rotate(90deg) translateX(100%);
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 1px;
+    pointer-events: none;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100vh;
+    padding-bottom: 10px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Remove these conflicting styles */
+body::before, body::after {
+    display: none;
+}
+
+/* Category Filter */
+.category-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 2rem 0;
+    justify-content: center;
+}
+
+.filter-btn {
+    background: none;
+    border: 1px solid #eaeaea;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+    border-color: #ccc;
+    background-color: #f9f9f9;
+}
+
+.filter-btn.active {
+    background-color: #333;
+    color: #fff;
+    border-color: #333;
+}
+
+/* Dashboard Grid */
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+/* Card Styles */
+.card {
+    position: relative;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column; /* Ensure proper vertical layout */
+    height: auto; /* Allow natural height */
+    box-sizing: border-box; /* Include padding in height calculation */
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* Story Tile Specific */
+.story-tile .tile-image {
+    display: none; /* Hide the direct image */
+}
+
+/* Year styling */
+.year {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #888;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05rem;
+}
+
+/* Text content with consistent height */
+.text-content {
+    max-height: 4.5em; /* Exactly 3 lines with 1.5 line height */
+    overflow: hidden;
+    transition: max-height 0.5s ease;
+    position: relative;
+    margin-bottom: 0; /* Remove bottom margin to reduce buffer */
+    padding-bottom: 0; /* Remove padding to reduce buffer */
+}
+
+.card:hover .text-content {
+    max-height: none; /* Allow unlimited height on hover for all card types */
+}
+
+.text-content p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #555;
+    transition: all 0.3s ease;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: 4.5em; /* Match the parent container */
+}
+
+.card:hover .text-content p {
+    -webkit-line-clamp: unset; /* Remove line clamp on hover for all card types */
+    color: #333;
+}
+
+/* Smooth hover expansion for image container - MAIN IMPLEMENTATION */
+.image-container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 50%; /* 2:1 aspect ratio */
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+    transition: padding-bottom 0.5s ease;
+}
+
+.image-container img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: all 0.5s ease;
+    filter: grayscale(20%);
+}
+
+/* Hover effects for all card types */
+.card:hover .image-container {
+    padding-bottom: 56%; /* Just slightly taller to accommodate the image */
+}
+
+.card:hover .image-container img {
+    filter: grayscale(0%);
+    /* Keep object-fit as cover to prevent the shrinking effect */
+    object-fit: cover;
+    /* Add scale to make the image appear larger instead */
+    transform: scale(1.05);
+}
+
+/* For the Training Data for AI card with the tall image */
+.card[data-position="16"]:hover .image-container {
+    padding-bottom: 65%; /* Slightly taller for this specific image */
+}
+
+/* Custom zoom effect for Steerable Motion card - zoom to the right */
+.card[data-position="4"] .hover-gif img {
+    transform-origin: 80% center; /* Shift the transform origin further to the right (was right center) */
+    transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.card[data-position="4"]:hover .hover-gif img {
+    transform: scale(1.6); /* Increase zoom level (was 1.3) */
+}
+
+/* Hover GIF styling */
+.hover-gif {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 2;
+}
+
+.project-tile:hover .hover-gif {
+    opacity: 1;
+}
+
+.hover-gif img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+/* Make the static image disappear when hovering */
+.project-tile:hover .image-container img.static-image {
+    opacity: 0;
+}
+
+/* Work Tile Specific */
+.work-tile .year {
+    background-color: #f0f0f0;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+}
+
+.work-tile h3 {
+    margin-top: 0.5rem;
+}
+
+.work-tile p {
+    margin-top: 0.5rem;
+}
+
+/* Mobile-specific expanded state for touch devices - will be removed on mouseleave */
+.story-tile.expanded-mobile .text-content {
+    max-height: 500px;
+}
+
+.story-tile.expanded-mobile .text-content p {
+    -webkit-line-clamp: unset;
+}
+
+.card.expanded-mobile .link {
+    opacity: 1;
+}
+
+.card.expanded-mobile .tile-image {
+    filter: grayscale(0%);
+}
+
+/* For square images at the top on mobile */
+.square-image-container.expanded-mobile .square-image {
+    filter: grayscale(0%);
+    transform: scale(1.05);
+}
+
+.square-image-container.expanded-mobile .image-hover-text {
+    opacity: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    /* General mobile adjustments */
+    body {
+        padding: 2rem 1rem;
+    }
+    
+    .inner-border {
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+    }
+    
+    /* Dashboard layout */
+    .dashboard {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    /* POM letters */
+    .large-letters {
+        flex-direction: row;
+        justify-content: center;
+        width: 100%;
+        margin-bottom: 1.5rem;
+    }
+    
+    .letter {
+        font-size: 3rem;
+        margin: 0 0.25rem;
+    }
+    
+    .name-reveal {
+        font-size: 1.5rem;
+    }
+    
+    #pom-letters .name-reveal {
+        white-space: normal;
+        width: 90%;
+        padding: 0.3rem 0.8rem;
+    }
+    
+    #pom-letters.active .letter {
+        transform: translateY(-10px) rotate(10deg);
+    }
+    
+    #pom-letters.active .letter:nth-child(2) {
+        transform: translateY(-10px) rotate(-5deg);
+    }
+    
+    #pom-letters.active .letter:nth-child(3) {
+        transform: translateY(-10px) rotate(15deg);
+    }
+    
+    /* Square images */
+    .square-images-wrapper {
+        padding: 0;
+        margin-bottom: 2rem;
+        width: 100% !important;
+    }
+    
+    .square-images {
+        display: flex !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .square-image-container {
+        width: 32% !important;
+        padding-bottom: 32% !important;
+        box-shadow: none !important;
+        display: block !important;
+        position: relative !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    .square-image {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+    }
+    
+    .image-hover-text {
+        font-size: 0.8rem;
+        padding: 0.3rem;
+        transform: translateY(100%) !important;
+        opacity: 0;
+    }
+    
+    /* Add a class for when the image is clicked on mobile */
+    .square-image-container.mobile-active .image-hover-text {
+        transform: translateY(0) !important;
+        opacity: 0.9;
+    }
+}
+
+/* Square Images Wrapper */
+.square-images-wrapper {
+    margin-bottom: 2rem;
+    width: 100%;
+}
+
+/* Large Letters */
+.large-letters {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Add a subtle pulse animation to the letters on hover */
+@keyframes letter-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.letter {
+    font-size: 6rem;
+    font-weight: 900;
+    color: #333;
+    margin: 0 0.5rem;
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    position: relative;
+    z-index: 2;
+}
+
+.large-letters:hover .letter {
+    animation: letter-pulse 1.5s infinite;
+}
+
+.large-letters:hover .letter:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.large-letters:hover .letter:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+/* Name reveal styling */
+.name-reveal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    z-index: 1;
+    text-align: center;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 0.5rem 1.5rem;
+    border-radius: 30px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border: 1px solid #eaeaea;
+}
+
+/* Hover effect for the POM letters */
+#pom-letters:hover:not(.active) .letter {
+    animation: letter-pulse 1.5s infinite;
+}
+
+#pom-letters:hover:not(.active) .letter:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+#pom-letters:hover:not(.active) .letter:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+/* Click effect for the POM letters */
+#pom-letters.active .letter {
+    animation: none !important;
+    transform: translateY(-20px) rotate(10deg);
+    opacity: 0.3;
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+#pom-letters.active .letter:nth-child(2) {
+    transform: translateY(-20px) rotate(-5deg);
+}
+
+#pom-letters.active .letter:nth-child(3) {
+    transform: translateY(-20px) rotate(15deg);
+}
+
+/* Name reveal animation */
+@keyframes name-reveal {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+    40% { transform: translate(-50%, -50%) scale(0.9); opacity: 1; }
+    60% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+    80% { transform: translate(-50%, -50%) scale(0.98); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* Ensure name is only visible when active */
+#pom-letters .name-reveal {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+#pom-letters.active .name-reveal {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    animation: name-reveal 0.8s ease-out forwards;
+}
+
+/* Square Images Section */
+.square-images {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.square-image-container {
+    position: relative;
+    width: 32%;
+    height: 0;
+    padding-bottom: 32%; /* Creates a square aspect ratio */
+    overflow: visible; /* Changed from hidden to visible */
+    box-shadow: 0 0 0 1px #eaeaea;
+}
+
+.square-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(0%);
+    transition: all 0.3s ease;
+}
+
+.square-image-container:hover .square-image {
+    filter: grayscale(0%);
+    transform: scale(1.05);
+}
+
+.image-hover-text {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: rgba(255, 255, 255, 0.85);
+    color: #333;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    text-align: center;
+    transform: translateY(100%);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    overflow: visible;
+    word-wrap: break-word;
+    max-height: none;
+    z-index: 10;
+    white-space: normal;
+    line-height: 1.4;
+}
+
+.square-image-container:hover .image-hover-text {
+    transform: translateY(0);
+    opacity: 1;
+    height: auto;
+    min-height: fit-content;
+}
+
+/* Remove these conflicting styles */
+.container::before, .container::after {
+    display: none;
+}
+
+/* Video Card Styles */
+.video-card .video-container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 50%; /* 2:1 aspect ratio to match other cards */
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    border-radius: 4px;
+    transition: padding-bottom 0.5s ease; /* Increased duration for smoother transition */
+}
+
+.video-card:hover .video-container {
+    padding-bottom: 100%; /* Change to square 1:1 aspect ratio on hover */
+}
+
+.video-card .video-thumbnail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(10%);
+    transition: all 0.5s ease, opacity 0.3s ease 0.5s; /* Delayed fade out on hover */
+    opacity: 1; /* Explicitly set default opacity */
+}
+
+.video-card:hover .video-thumbnail {
+    filter: grayscale(0%);
+    transform: scale(1.05);
+    opacity: 0; /* Hide thumbnail when video appears */
+}
+
+.video-card .video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.2);
+    transition: all 0.5s ease, opacity 0.3s ease 0.5s; /* Delayed fade out on hover */
+    opacity: 1; /* Explicitly set default opacity */
+    z-index: 1;
+}
+
+.video-card:hover .video-overlay {
+    background-color: rgba(0, 0, 0, 0.4);
+    opacity: 0; /* Hide overlay when video appears */
+}
+
+.video-card .play-icon {
+    color: white;
+    width: 64px;
+    height: 64px;
+    opacity: 0.8;
+    transition: all 0.5s ease; /* Match transition duration with container */
+}
+
+.video-card:hover .play-icon {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.video-card .video-embed {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease 0.5s, visibility 0.3s ease 0.5s; /* Delayed appearance on hover */
+    z-index: 2;
+}
+
+.video-card:hover .video-embed {
+    opacity: 1;
+    visibility: visible;
+    width: 100%;
+    height: 100%;
+    transition-delay: 0.5s; /* Delay equal to the container transition duration */
+}
+
+/* Add specific non-hover transitions for immediate reversion */
+.video-card:not(:hover) .video-thumbnail,
+.video-card:not(:hover) .video-overlay {
+    transition: all 0.5s ease, opacity 0s; /* Immediate opacity change on hover end */
+    opacity: 1;
+}
+
+.video-card:not(:hover) .video-embed {
+    transition: opacity 0s, visibility 0s; /* Immediate disappearance on hover end */
+    opacity: 0;
+    visibility: hidden;
+}
+
+.video-card:not(:hover) .video-container {
+    transition: padding-bottom 0.5s ease; /* Keep smooth transition for container size */
+}
+
+.video-card .video-embed iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    transition: all 0.5s ease; /* Add transition for smooth expansion */
+}
+
+/* Image container for cards with static/GIF images */
+.image-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 1.5rem;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.image-container .tile-image {
+    width: 100%;
+    display: block;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.image-container .static-image {
+    filter: grayscale(80%);
+    z-index: 1;
+}
+
+.image-container .gif-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    z-index: 2;
+}
+
+.card:hover .image-container .static-image {
+    filter: grayscale(0%);
+    opacity: 0;
+}
+
+.card:hover .image-container .gif-image {
+    opacity: 1;
+}
+
+.card.expanded-mobile .image-container .static-image {
+    filter: grayscale(0%);
+    opacity: 0;
+}
+
+.card.expanded-mobile .image-container .gif-image {
+    opacity: 1;
+}
+
+/* Social Media Links */
+.social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin: 3rem 0 1rem;
+    padding-top: 2rem;
+    border-top: 1px solid #eaeaea;
+}
+
+.social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    border: 1px solid #eaeaea;
+    border-radius: 50%;
+    color: #555;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    background-color: #ffffff;
+    width: 40px;
+    height: 40px;
+}
+
+.social-link:hover {
+    border-color: #ddd;
+    transform: translateY(-3px) rotate(5deg);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    color: #000;
+}
+
+.social-link i {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2;
+    transition: transform 0.3s ease;
+}
+
+.social-link:hover i {
+    transform: translateY(-3px);
+}
+
+/* Life Tile Specific */
+.life-tile .tile-image {
+    display: none; /* Hide the direct image */
+}
+
+/* Ensure card titles have consistent height */
+.life-tile h3, .work-tile h3, .project-tile h3, .story-tile h3 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem; /* Reduced from 0.75rem to reduce buffer */
+    color: #333;
+    min-height: 2.5rem; /* Ensure consistent height for titles */
+    display: flex;
+    align-items: center;
+}
+
+/* Ensure link is at the bottom with proper styling */
+.link {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem; /* Small margin to separate from text */
+    padding-top: 0.5rem; /* Keep minimal padding */
+    color: #555;
+    font-weight: 400;
+    font-size: 0.9rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    position: relative; /* Change from absolute to relative */
+    width: 100%; /* Full width */
+}
+
+.card:hover .link {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Ensure proper spacing for expanded cards */
+.card:hover .text-content {
+    margin-bottom: 0.5rem; /* Add margin when expanded */
+}
+
+/* Ensure link disappears when not hovering */
+.card .link {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.link:hover {
+    /* Removed color change */
+}
+
+.link span {
+    margin-right: 0.5rem;
+}
+
+.year-link {
+    color: #555;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.year-link:hover {
+    color: #000;
+}
+
+.icon {
+    color: #555;
+    margin-bottom: 1.25rem;
+    width: 24px;
+    height: 24px;
+    stroke-width: 1.5;
+}
+
+/* Life, Work, Project Tile Styles with consistent text heights */
+.life-tile p, .work-tile p, .project-tile p, .story-tile p, .card p {
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: 4.5em; /* 3 lines × 1.5 line-height */
+    transition: all 0.3s ease;
+    margin-bottom: 0; /* Remove bottom margin to reduce buffer */
+    padding-bottom: 0; /* Remove padding since link is now relative */
+}
+
+/* Style for links within paragraphs */
+.card p a {
+    color: #555; /* Match the paragraph text color */
+    text-decoration: underline;
+    transition: none; /* Prevent color transition */
+}
+
+.card p a:hover {
+    color: #555; /* Keep the same color on hover */
+}
+
+/* Ensure all cards have consistent hover behavior */
+.card:hover p {
+    -webkit-line-clamp: unset; /* Remove line clamp on hover for all card types */
+    color: #333;
+}
+
+/* Ensure all cards have consistent expansion behavior on mobile */
+.life-tile.expanded-mobile p, .work-tile.expanded-mobile p, .project-tile.expanded-mobile p, .story-tile.expanded-mobile p, .card.expanded-mobile p {
+    -webkit-line-clamp: unset; /* Remove line clamp when expanded on mobile */
+    max-height: none; /* Remove max height when expanded on mobile */
+}
+
+/* Project Tile Specific - ensure proper text content styling */
+.project-tile .text-content {
+    max-height: 4.5em; /* Exactly 3 lines with 1.5 line height */
+    overflow: hidden;
+    transition: max-height 0.5s ease;
+    position: relative;
+    margin-bottom: 0; /* Remove bottom margin to reduce buffer */
+    padding-bottom: 0; /* Remove padding to reduce buffer */
+}
+
+/* Project Tile Specific */
+.project-tile .tile-image {
+    display: none; /* Hide the direct image */
+}
+
+/* Ensure expanded mobile cards have proper spacing */
+.card.expanded-mobile .text-content {
+    margin-bottom: 0.5rem; /* Add margin when expanded on mobile */
+    max-height: none; /* Remove max height when expanded on mobile */
+}
+
+/* Meme Card Styles */
+.meme-card {
+    position: relative;
+    height: auto;
+    min-height: 300px; /* Set a minimum height to prevent layout shifts */
+    transition: all 0.3s ease;
+}
+
+.meme-card .image-container {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    height: 0;
+    padding-bottom: 50%; /* 2:1 aspect ratio */
+}
+
+.meme-hover-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: opacity 0.4s ease;
+    margin-top: 0;
+    margin-bottom: 0;
+    position: absolute;
+    left: 1.5rem;
+    right: 1.5rem;
+    visibility: hidden;
+}
+
+.meme-card:hover .meme-hover-container {
+    opacity: 1;
+    height: auto;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    position: static;
+    visibility: visible;
+}
+
+.meme-card:hover .image-container {
+    opacity: 0;
+    height: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.meme-image {
+    width: 100%;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    transform: translateY(10px);
+    opacity: 0;
+}
+
+.meme-card:hover .meme-image {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.meme-card:hover .meme-image:nth-child(1) {
+    transition-delay: 0.1s;
+}
+
+.meme-card:hover .meme-image:nth-child(2) {
+    transition-delay: 0.2s;
+}
+
+.meme-image:last-child {
+    margin-bottom: 0;
+}
+
+.meme-image img {
+    width: 100%;
+    display: block;
+    transition: transform 0.3s ease;
+    max-width: 100%;
+}
+
+.meme-image:hover img {
+    transform: scale(1.05);
+}
+
+.meme-caption {
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    text-align: center;
+    margin: 0;
+}
+
+/* Mobile styles for meme card */
+@media (max-width: 768px) {
+    .meme-card {
+        min-height: auto; /* Allow natural height on mobile */
+    }
+    
+    .meme-hover-container {
+        opacity: 1;
+        height: auto;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        position: static;
+        visibility: visible;
+    }
+    
+    .meme-image {
+        opacity: 1;
+        transform: none;
+        margin-bottom: 10px;
+    }
+    
+    .meme-card .image-container {
+        display: none;
+    }
+}
