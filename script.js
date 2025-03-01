@@ -3,6 +3,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Feather icons
     feather.replace();
 
+    // Preload the Steerable Motion GIF
+    const steerableMotionGifUrl = 'https://banodoco.s3.us-east-1.amazonaws.com/Untitled+(1152+x+512+px)+(1).gif';
+    const preloadGif = new Image();
+    preloadGif.src = steerableMotionGifUrl;
+    
+    // Ensure GIF is properly preloaded
+    preloadGif.onload = () => {
+        // Once preloaded, find the actual GIF in the DOM and ensure it's using the preloaded version
+        const steerableMotionCard = document.querySelector('.card[data-position="2"]');
+        if (steerableMotionCard) {
+            const hoverGif = steerableMotionCard.querySelector('.hover-gif img');
+            if (hoverGif) {
+                // Force the browser to use the preloaded version
+                hoverGif.src = steerableMotionGifUrl + '?preloaded=true';
+            }
+        }
+    };
+
     // Handle POM letters name reveal
     const pomLetters = document.getElementById('pom-letters');
     
@@ -176,6 +194,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize hover text visibility
     window.addEventListener('load', ensureHoverTextVisibility);
 
+    // Handle hover-gif visibility for project tiles
+    const projectTiles = document.querySelectorAll('.project-tile');
+    projectTiles.forEach(tile => {
+        const hoverGif = tile.querySelector('.hover-gif');
+        if (hoverGif) {
+            const gifImg = hoverGif.querySelector('img');
+            const originalSrc = gifImg ? gifImg.src : '';
+            
+            // Show hover-gif on mouseenter
+            tile.addEventListener('mouseenter', () => {
+                hoverGif.style.opacity = '1';
+            });
+            
+            // Hide hover-gif and reset GIF on mouseleave
+            tile.addEventListener('mouseleave', () => {
+                hoverGif.style.opacity = '0';
+                
+                // Reset the GIF by removing and re-adding the src
+                if (gifImg && originalSrc) {
+                    // Use setTimeout to ensure the opacity transition completes first
+                    setTimeout(() => {
+                        gifImg.src = '';
+                        // Force browser reflow
+                        void gifImg.offsetWidth;
+                        gifImg.src = originalSrc;
+                    }, 500); // Wait for opacity transition to complete
+                }
+            });
+        }
+    });
+
     // Sort cards based on data-position attribute
     function sortCardsByPosition() {
         const dashboard = document.querySelector('.dashboard');
@@ -223,6 +272,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Add helper function to reset all video cards except the current one
+    function resetOtherVideoCards(currentCard) {
+        const allVideoCards = document.querySelectorAll('.video-card');
+        allVideoCards.forEach(card => {
+            if (card !== currentCard) {
+                const videoEmbed = card.querySelector('.video-embed');
+                const videoOverlay = card.querySelector('.video-overlay');
+                if (videoEmbed) {
+                    while (videoEmbed.firstChild) {
+                        videoEmbed.removeChild(videoEmbed.firstChild);
+                    }
+                    videoEmbed.style.opacity = '0';
+                    videoEmbed.style.visibility = 'hidden';
+                }
+                if (videoOverlay) {
+                    videoOverlay.style.opacity = '1';
+                    videoOverlay.style.visibility = 'visible';
+                }
+            }
+        });
+    }
+
     // Handle video cards
     const videoCards = document.querySelectorAll('.video-card');
     
@@ -251,9 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (videoOverlay) {
             videoOverlay.addEventListener('click', (e) => {
                 e.stopPropagation(); // Prevent card expansion
-                
-                // Reset all other video cards first
-                resetAllVideoCards();
+                // Reset all other video cards except current one
+                resetOtherVideoCards(card);
                 
                 // Create a new iframe with the stored attributes
                 const iframeData = videoSources.get(card);
@@ -287,6 +357,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+
+        // Update mouseleave event to immediately hide and remove the video
+        card.addEventListener('mouseleave', () => {
+            if (window.innerWidth > 768) { // only apply for desktop
+                const videoEmbed = card.querySelector('.video-embed');
+                const videoOverlay = card.querySelector('.video-overlay');
+                
+                // Immediately hide the video embed and show the overlay
+                if (videoEmbed) {
+                    videoEmbed.style.opacity = '0';
+                    videoEmbed.style.visibility = 'hidden';
+                    
+                    // Remove the iframe immediately to stop the video
+                    while (videoEmbed.firstChild) {
+                        videoEmbed.removeChild(videoEmbed.firstChild);
+                    }
+                }
+                
+                if (videoOverlay) {
+                    videoOverlay.style.opacity = '1';
+                    videoOverlay.style.visibility = 'visible';
+                }
+            }
+        });
+
+        card.addEventListener('mouseenter', () => {
+            const videoEmbed = card.querySelector('.video-embed');
+            const videoOverlay = card.querySelector('.video-overlay');
+            
+            if (videoEmbed) {
+                // If the video embed has an iframe (video was playing), show it again
+                if (videoEmbed.children.length > 0) {
+                    videoEmbed.style.opacity = '1';
+                    videoEmbed.style.visibility = 'visible';
+                    
+                    if (videoOverlay) {
+                        videoOverlay.style.opacity = '0';
+                        videoOverlay.style.visibility = 'hidden';
+                    }
+                } else {
+                    // Otherwise, ensure the overlay is visible
+                    videoEmbed.style.opacity = '0';
+                    videoEmbed.style.visibility = 'hidden';
+                    
+                    if (videoOverlay) {
+                        videoOverlay.style.opacity = '1';
+                        videoOverlay.style.visibility = 'visible';
+                    }
+                }
+            }
+        });
     });
 
     // Handle square image containers for mobile and hover
@@ -517,6 +638,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.style.width = '';
                     card.style.zIndex = '';
                     card.style.transform = ''; // Reset transform as well
+                    
+                    // Reset GIF if this is the Steerable Motion card
+                    if (card.getAttribute('data-position') === '2') {
+                        const gifImg = card.querySelector('.hover-gif img');
+                        if (gifImg) {
+                            const originalSrc = gifImg.src;
+                            setTimeout(() => {
+                                gifImg.src = '';
+                                void gifImg.offsetWidth;
+                                gifImg.src = originalSrc;
+                            }, 500);
+                        }
+                    }
                     
                     // Reset meme card if needed
                     if (card.classList.contains('meme-card')) {

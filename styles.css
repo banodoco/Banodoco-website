@@ -312,12 +312,12 @@ body::before, body::after {
 }
 
 /* Custom zoom effect for Steerable Motion card - zoom to the right */
-.card[data-position="4"] .hover-gif img {
+.card[data-position="2"] .hover-gif img {
     transform-origin: 80% center; /* Shift the transform origin further to the right (was right center) */
     transition: transform 0.5s ease, opacity 0.5s ease;
 }
 
-.card[data-position="4"]:hover .hover-gif img {
+.card[data-position="2"]:hover .hover-gif img {
     transform: scale(1.6); /* Increase zoom level (was 1.3) */
 }
 
@@ -350,6 +350,22 @@ body::before, body::after {
 /* Make the static image disappear when hovering */
 .project-tile:hover .image-container img.static-image {
     opacity: 0;
+}
+
+/* Specific style for Steerable Motion card */
+.card[data-position="2"]:hover .hover-gif {
+    opacity: 1 !important; /* Use !important to override any inline styles */
+}
+
+/* Ensure GIF resets properly by hiding it completely when not hovered */
+.card[data-position="2"]:not(:hover) .hover-gif {
+    opacity: 0 !important;
+    visibility: visible; /* Keep visible to ensure it loads */
+}
+
+/* Ensure GIF plays properly on mobile when expanded */
+.card[data-position="2"].expanded .hover-gif {
+    opacity: 1 !important;
 }
 
 /* Work Tile Specific */
@@ -745,8 +761,9 @@ body::before, body::after {
 
 .video-card:hover .video-thumbnail {
     filter: grayscale(0%);
-    transform: scale(1.05);
-    opacity: 0; /* Hide thumbnail when video appears */
+    /* Remove the transform scaling to avoid mid-state */
+    transform: none;
+    opacity: 1;
 }
 
 .video-card .video-overlay {
@@ -766,7 +783,7 @@ body::before, body::after {
 
 .video-card:hover .video-overlay {
     background-color: rgba(0, 0, 0, 0.4);
-    opacity: 0; /* Hide overlay when video appears */
+    opacity: 1; /* Remain visible on hover */
 }
 
 .video-card .play-icon {
@@ -794,26 +811,16 @@ body::before, body::after {
     z-index: 2;
 }
 
-.card.expanded.video-card .video-embed {
+.card.expanded.video-card:hover .video-embed {
     opacity: 1;
     visibility: visible;
 }
 
-/* Add specific non-hover transitions for immediate reversion */
-.video-card:not(:hover) .video-thumbnail,
-.video-card:not(:hover) .video-overlay {
-    transition: all 0.5s ease, opacity 0s; /* Immediate opacity change on hover end */
-    opacity: 1;
-}
-
+/* Ensure video embed is hidden when not hovered, forcing its hidden state */
 .video-card:not(:hover) .video-embed {
-    transition: opacity 0s, visibility 0s; /* Immediate disappearance on hover end */
-    opacity: 0;
-    visibility: hidden;
-}
-
-.video-card:not(:hover) .video-container {
-    transition: padding-bottom 0.5s ease; /* Keep smooth transition for container size */
+    transition: opacity 0s, visibility 0s;
+    opacity: 0 !important;
+    visibility: hidden !important;
 }
 
 .video-card .video-embed iframe {
