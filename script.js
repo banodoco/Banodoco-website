@@ -276,25 +276,81 @@ document.addEventListener('DOMContentLoaded', () => {
     const cards = document.querySelectorAll('.card');
     
     cards.forEach(card => {
-        card.addEventListener('click', () => {
-            const isExpanded = card.classList.contains('expanded');
-            
-            // Close any other expanded card
-            cards.forEach(c => c.classList.remove('expanded'));
-            
-            // If the clicked card was not already expanded, expand it
-            if (!isExpanded) {
+        // Hover-based expansion for desktop
+        card.addEventListener('mouseenter', () => {
+            if (window.innerWidth > 768) {
+                cards.forEach(c => c.classList.remove('expanded'));
                 card.classList.add('expanded');
+                
+                // Special handling for meme cards on desktop hover
+                if (card.classList.contains('meme-card')) {
+                    const memeImages = card.querySelectorAll('.meme-image');
+                    memeImages.forEach((img, index) => {
+                        img.style.transitionDelay = `${0.1 * (index + 1)}s`;
+                        img.style.transform = 'translateY(0)';
+                        img.style.opacity = '1';
+                    });
+                }
+            }
+        });
+
+        card.addEventListener('mouseleave', () => {
+            if (window.innerWidth > 768) {
+                card.classList.remove('expanded');
+                
+                // Special handling for meme cards on desktop hover out
+                if (card.classList.contains('meme-card')) {
+                    const memeImages = card.querySelectorAll('.meme-image');
+                    memeImages.forEach(img => {
+                        img.style.transitionDelay = '0s';
+                        img.style.transform = 'translateY(10px)';
+                        img.style.opacity = '0';
+                    });
+                }
+            }
+        });
+
+        // Click-based expansion for mobile
+        card.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                const isExpanded = card.classList.contains('expanded');
+                cards.forEach(c => {
+                    c.classList.remove('expanded');
+                    
+                    // Reset all meme cards when closing
+                    if (c.classList.contains('meme-card')) {
+                        const memeImages = c.querySelectorAll('.meme-image');
+                        memeImages.forEach(img => {
+                            img.style.transform = 'translateY(10px)';
+                            img.style.opacity = '0';
+                        });
+                    }
+                });
+                
+                if (!isExpanded) {
+                    card.classList.add('expanded');
+                    
+                    // Special handling for meme cards on mobile click
+                    if (card.classList.contains('meme-card')) {
+                        const memeImages = card.querySelectorAll('.meme-image');
+                        memeImages.forEach((img, index) => {
+                            img.style.transitionDelay = `${0.1 * (index + 1)}s`;
+                            img.style.transform = 'translateY(0)';
+                            img.style.opacity = '1';
+                        });
+                    }
+                }
             }
         });
     });
 
     // Collapse all cards when clicking outside on mobile
-    document.body.addEventListener('click', () => {
-        if (window.innerWidth <= 768) {
+    document.body.addEventListener('click', (e) => {
+        // Only collapse if click did not occur inside a card
+        if (window.innerWidth <= 768 && !e.target.closest('.card')) {
             cards.forEach(card => {
                 card.classList.remove('expanded');
-                
+
                 // Reset meme images
                 if (card.classList.contains('meme-card')) {
                     const memeImages = card.querySelectorAll('.meme-image');

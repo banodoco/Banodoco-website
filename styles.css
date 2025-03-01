@@ -45,6 +45,9 @@ body {
     justify-content: center;
     align-items: center;
     transition: top 0.3s ease; /* Add smooth transition */
+    background-color: rgba(255, 255, 255, 0.4); /* More transparent background */
+    backdrop-filter: blur(2px); /* Add subtle blur for feathered effect */
+    box-shadow: 0 0 15px 15px rgba(255, 255, 255, 0.4); /* Feathered edges */
 }
 
 /* Class to show the top border when scrolled */
@@ -74,6 +77,9 @@ body {
     justify-content: center;
     align-items: center;
     transition: bottom 0.3s ease; /* Add smooth transition */
+    background-color: rgba(255, 255, 255, 0.4); /* More transparent background */
+    backdrop-filter: blur(2px); /* Add subtle blur for feathered effect */
+    box-shadow: 0 0 15px 15px rgba(255, 255, 255, 0.4); /* Feathered edges */
 }
 
 /* Class to hide the bottom border when scrolled to bottom */
@@ -1063,6 +1069,7 @@ body::before, body::after {
     margin-bottom: 0;
     visibility: hidden;
     width: 100%; /* Constrain width */
+    position: absolute; /* Take out of normal flow when not expanded */
 }
 
 .card.expanded .meme-hover-container {
@@ -1070,7 +1077,7 @@ body::before, body::after {
     height: auto;
     margin-top: 15px;
     margin-bottom: 15px;
-    position: static;
+    position: static; /* Return to normal flow when expanded */
     visibility: visible;
 }
 
@@ -1115,16 +1122,22 @@ body::before, body::after {
 /* Mobile styles for meme card */
 @media (max-width: 768px) {
     .meme-card {
-        height: 400px;
+        height: 340px; /* Match the standard card height */
         width: 100%;
     }
     
     .meme-card.expanded {
         height: auto;
+        padding-bottom: 1rem; /* Add some padding at the bottom */
     }
     
     .meme-hover-container {
         width: 100%;
+        position: absolute; /* Keep out of flow on mobile */
+    }
+    
+    .card.expanded .meme-hover-container {
+        position: static; /* Return to flow when expanded */
     }
     
     .meme-image {
@@ -1158,4 +1171,96 @@ body::before, body::after {
     -webkit-line-clamp: unset;
     max-height: none;
     overflow: visible;
+}
+
+/* Error page styles */
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 80vh;
+    text-align: center;
+}
+
+.error-container .letters {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    background-color: rgba(255, 255, 255, 0.4); /* More transparent background */
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    box-shadow: 0 0 20px 10px rgba(255, 255, 255, 0.3); /* Feathered edges */
+    backdrop-filter: blur(2px); /* Add subtle blur for feathered effect */
+}
+
+.error-container .letter {
+    font-size: 6rem;
+    font-weight: 900;
+    color: #333;
+    margin: 0 0.5rem;
+    position: relative;
+}
+
+.error-container .animated-p {
+    position: relative;
+}
+
+.error-container .face {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 40%;
+}
+
+.error-container .eye {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #333;
+    border-radius: 50%;
+    top: 20%;
+}
+
+.error-container .left-eye {
+    left: 25%;
+}
+
+.error-container .right-eye {
+    right: 25%;
+}
+
+.error-container .mouth {
+    position: absolute;
+    width: 20px;
+    height: 10px;
+    border-bottom: 3px solid #333;
+    border-radius: 50%;
+    bottom: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.error-container h2 {
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+
+.error-container .home-link {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background-color: #333;
+    color: white;
+    text-decoration: none;
+    border-radius: 30px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.error-container .home-link:hover {
+    background-color: #555;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
