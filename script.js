@@ -603,6 +603,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Click-based expansion for mobile
         card.addEventListener('click', (e) => {
             if (window.innerWidth <= 768) {
+                // Special handling for Steerable Motion card
+                const isSteerableMotionCard = card.getAttribute('data-position') === '2';
+                
                 // Reset all video cards when clicking on any card
                 resetAllVideoCards();
                 
@@ -652,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.style.transform = ''; // Reset transform as well
                     
                     // Reset GIF if this is the Steerable Motion card
-                    if (card.getAttribute('data-position') === '2') {
+                    if (isSteerableMotionCard) {
                         const gifImg = card.querySelector('.hover-gif img');
                         if (gifImg) {
                             const originalSrc = gifImg.src;
@@ -673,6 +676,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
                 } else {
+                    // For Steerable Motion card, force expansion and show GIF immediately
+                    if (isSteerableMotionCard) {
+                        const hoverGif = card.querySelector('.hover-gif');
+                        if (hoverGif) {
+                            hoverGif.style.opacity = '1';
+                            hoverGif.style.pointerEvents = 'none';
+                        }
+                    }
+                    
                     // Use the new expansion handler
                     handleCardExpansion(card);
                     
@@ -746,93 +758,59 @@ document.addEventListener('DOMContentLoaded', () => {
         const style = document.createElement('style');
         style.textContent = `
             @media (max-width: 768px) {
+                .project-tile .hover-gif, .project-tile .hover-gif * {
+                    pointer-events: none !important;
+                }
                 .project-tile .hover-gif {
                     transition: opacity 0.3s ease;
                 }
-                
                 .project-tile.expanded .hover-gif {
                     opacity: 1;
                 }
             }
         `;
         document.head.appendChild(style);
-    }
-
-    // Add a general handler for all hover-gif elements in the document
-    document.querySelectorAll('.hover-gif').forEach(hoverGif => {
-        // Add click handler for the hover-gif container
-        hoverGif.addEventListener('click', (e) => {
-            if (window.innerWidth <= 768) {
-                e.stopPropagation(); // Stop immediate propagation
-                
-                // Get the parent card
-                const card = hoverGif.closest('.card');
-                if (card) {
-                    const isExpanded = card.classList.contains('expanded');
-                    
-                    // Reset all cards first
-                    cards.forEach(c => {
-                        if (c !== card) {
-                            c.classList.remove('expanded');
-                            handleHoverGifForMobile(c, false);
-                            
-                            // Reset any fixed positioning
-                            c.style.position = '';
-                            c.style.top = '';
-                            c.style.left = '';
-                            c.style.width = '';
-                            c.style.zIndex = '';
-                            c.style.transform = '';
-                        }
-                    });
-                    
-                    // If not already expanded, expand the card
-                    if (!isExpanded) {
-                        handleCardExpansion(card);
-                        handleHoverGifForMobile(card, true);
-                    }
-                }
-            }
-        });
         
-        // Also add a click handler for any img inside the hover-gif
-        const gifImg = hoverGif.querySelector('img');
-        if (gifImg) {
-            gifImg.addEventListener('click', (e) => {
-                if (window.innerWidth <= 768) {
-                    e.stopPropagation(); // Stop immediate propagation
-                    
-                    // Get the parent card
-                    const card = hoverGif.closest('.card');
-                    if (card) {
-                        const isExpanded = card.classList.contains('expanded');
+        // Special handling for Steerable Motion card on mobile
+        const steerableMotionCard = document.querySelector('.card[data-position="2"]');
+        if (steerableMotionCard) {
+            console.log('Found Steerable Motion card, applying special mobile handling');
+            
+            // Force the hover-gif to be non-interactive
+            const hoverGif = steerableMotionCard.querySelector('.hover-gif');
+            if (hoverGif) {
+                // Clone and replace the hover-gif to remove any attached event listeners
+                const newHoverGif = hoverGif.cloneNode(true);
+                hoverGif.parentNode.replaceChild(newHoverGif, hoverGif);
+                
+                // Ensure pointer events are disabled
+                newHoverGif.style.pointerEvents = 'none';
+                
+                // Make sure all children also have pointer events disabled
+                newHoverGif.querySelectorAll('*').forEach(el => {
+                    el.style.pointerEvents = 'none';
+                });
+                
+                // Add a click handler to the card that immediately expands it
+                steerableMotionCard.addEventListener('touchstart', function(e) {
+                    console.log('Steerable Motion card touchstart event fired');
+                    if (!steerableMotionCard.classList.contains('expanded')) {
+                        // Prevent default to avoid any conflicts
+                        e.preventDefault();
                         
-                        // Reset all cards first
-                        cards.forEach(c => {
-                            if (c !== card) {
-                                c.classList.remove('expanded');
-                                handleHoverGifForMobile(c, false);
-                                
-                                // Reset any fixed positioning
-                                c.style.position = '';
-                                c.style.top = '';
-                                c.style.left = '';
-                                c.style.width = '';
-                                c.style.zIndex = '';
-                                c.style.transform = '';
-                            }
-                        });
-                        
-                        // If not already expanded, expand the card
-                        if (!isExpanded) {
-                            handleCardExpansion(card);
-                            handleHoverGifForMobile(card, true);
-                        }
+                        // Trigger the click event programmatically
+                        setTimeout(() => {
+                            steerableMotionCard.click();
+                        }, 10);
                     }
-                }
-            });
+                }, {passive: false});
+            }
         }
-    });
+    } else {
+        document.querySelectorAll('.hover-gif').forEach(hoverGif => {
+            hoverGif.style.pointerEvents = 'auto';
+        });
+    }
 
     // Ensure GIF is properly preloaded
     preloadGif.onload = () => {
