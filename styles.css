@@ -190,28 +190,26 @@ body::before, body::after {
     background-color: #fff;
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    padding: 1rem; /* further reduced padding */
-    transition: all 0.3s ease;
-    overflow: hidden;
+    padding: 1rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: visible;
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    height: 340px; /* further reduced height */
+    height: auto;
+    min-height: 340px;
     box-sizing: border-box;
-    will-change: height, transform; /* Optimize for animations */
+    will-change: transform;
 }
 
 .card.expanded {
-    height: auto;
-    overflow: visible;
+    transform: scale(1.02);
     z-index: 10;
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    padding-bottom: 2rem; /* Increased padding for more buffer */
-    transition: all 0.3s ease; /* Ensure transition is applied when expanding */
 }
 
 .card:not(.expanded):hover {
-    transform: translateY(-5px);
+    transform: scale(1.02);
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
 }
 
@@ -232,17 +230,16 @@ body::before, body::after {
 
 /* Text content with consistent height */
 .text-content {
-    max-height: 4em; /* slightly reduced max-height */
-    overflow: hidden;
-    transition: max-height 0.3s ease;
     position: relative;
     margin-bottom: 0;
     padding-bottom: 0;
+    opacity: 0.85;
+    transition: opacity 0.3s ease;
 }
 
-.card.expanded .text-content {
-    max-height: none;
-    overflow: visible;
+.card.expanded .text-content,
+.card:hover .text-content {
+    opacity: 1;
 }
 
 .text-content p {
@@ -433,14 +430,13 @@ body::before, body::after {
     
     /* Card width adjustment for mobile */
     .card {
-        width: 100%; /* Ensure cards take full width of their grid cell */
-        max-width: 350px; /* But limit maximum width */
+        transform-origin: center center;
+        min-height: 300px;
     }
     
-    /* Card expansion on mobile */
     .card.expanded {
-        width: 100%; /* Ensure expanded cards take full width */
-        max-width: 350px; /* But limit maximum width */
+        transform: scale(1.03);
+        position: relative;
     }
     
     /* POM letters */
