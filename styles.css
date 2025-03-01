@@ -191,22 +191,23 @@ body::before, body::after {
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     padding: 1rem; /* further reduced padding */
-    transition: all 0.3s ease, height 0.3s ease;
+    transition: all 0.3s ease;
     overflow: hidden;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     height: 340px; /* further reduced height */
     box-sizing: border-box;
+    will-change: height, transform; /* Optimize for animations */
 }
 
 .card.expanded {
     height: auto;
     overflow: visible;
     z-index: 10;
-    transform: translateY(-5px);
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     padding-bottom: 2rem; /* Increased padding for more buffer */
+    transition: all 0.3s ease; /* Ensure transition is applied when expanding */
 }
 
 .card:not(.expanded):hover {
@@ -411,6 +412,19 @@ body::before, body::after {
     .dashboard {
         grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
         gap: 1.5rem;
+        justify-items: center; /* Center cards horizontally */
+    }
+    
+    /* Card width adjustment for mobile */
+    .card {
+        width: 100%; /* Ensure cards take full width of their grid cell */
+        max-width: 350px; /* But limit maximum width */
+    }
+    
+    /* Card expansion on mobile */
+    .card.expanded {
+        width: 100%; /* Ensure expanded cards take full width */
+        max-width: 350px; /* But limit maximum width */
     }
     
     /* POM letters */
@@ -904,15 +918,12 @@ body::before, body::after {
     display: none; /* Hide the direct image */
 }
 
-/* Ensure card titles have consistent height */
+/* Edit for card headline styling: increasing bottom margin */
 .life-tile h3, .work-tile h3, .project-tile h3, .story-tile h3 {
     font-size: 1.1rem;
     font-weight: 500;
-    margin-bottom: 0.25rem; /* further reduced margin */
     color: #333;
-    min-height: 2.2rem; /* slightly reduced min-height */
-    display: flex;
-    align-items: center;
+    margin-bottom: 0.75rem; /* increased spacing below headline for better separation */
 }
 
 /* Ensure link is at the bottom with proper styling */

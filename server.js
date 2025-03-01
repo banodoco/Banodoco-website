@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = 3001;
+// Use 0.0.0.0 to listen on all network interfaces (needed for external access)
+const HOST = '0.0.0.0';
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -49,7 +51,8 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log(`Server running at http://localhost:${PORT}/`);
+  console.log(`To access from other devices on your network, use your computer's IP address: http://YOUR_IP_ADDRESS:${PORT}/`);
   console.log('Press Ctrl+C to stop the server');
 }); 

@@ -109,6 +109,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.static-image').forEach(img => {
             img.style.opacity = '1';
         });
+        
+        // Reset hover-gifs
+        document.querySelectorAll('.hover-gif').forEach(gif => {
+            gif.style.opacity = '0';
+        });
     }
     
     // Handle links with data-href attributes
@@ -192,45 +197,94 @@ document.addEventListener('DOMContentLoaded', () => {
     // Call sort function on load
     sortCardsByPosition();
 
+    // Store original iframe sources for each video card
+    const videoSources = new Map();
+
+    // Function to reset all video cards
+    function resetAllVideoCards() {
+        document.querySelectorAll('.video-card').forEach(card => {
+            const videoEmbed = card.querySelector('.video-embed');
+            const videoOverlay = card.querySelector('.video-overlay');
+            
+            // Remove any existing iframe
+            while (videoEmbed.firstChild) {
+                videoEmbed.removeChild(videoEmbed.firstChild);
+            }
+            
+            // Show the overlay
+            if (videoOverlay) {
+                videoOverlay.style.opacity = '1';
+                videoOverlay.style.visibility = 'visible';
+            }
+            
+            // Hide the embed container
+            videoEmbed.style.opacity = '0';
+            videoEmbed.style.visibility = 'hidden';
+        });
+    }
+
     // Handle video cards
     const videoCards = document.querySelectorAll('.video-card');
     
     videoCards.forEach(card => {
-        const iframe = card.querySelector('iframe');
-        const videoSrc = iframe.src;
+        const videoEmbed = card.querySelector('.video-embed');
+        const iframe = videoEmbed.querySelector('iframe');
         
-        // Set initial iframe src without autoplay
-        iframe.src = videoSrc;
-        
-        // On hover, update iframe src to include autoplay only if the card is fully expanded
-        card.addEventListener('mouseenter', () => {
-            if (card.classList.contains('expanded')) {
-                iframe.src = videoSrc.includes('?') 
-                    ? videoSrc.replace('autoplay=0', 'autoplay=1') 
-                    : videoSrc + '?autoplay=1';
-            }
-        });
-        
-        // On mouse leave, reset iframe src to stop video
-        card.addEventListener('mouseleave', () => {
-            iframe.src = videoSrc;
-        });
+        // Store the original iframe source
+        if (iframe) {
+            videoSources.set(card, {
+                src: iframe.src,
+                width: iframe.width,
+                height: iframe.height,
+                title: iframe.title,
+                frameborder: iframe.getAttribute('frameborder'),
+                allow: iframe.getAttribute('allow'),
+                allowfullscreen: iframe.hasAttribute('allowfullscreen')
+            });
+            
+            // Remove the iframe initially
+            videoEmbed.removeChild(iframe);
+        }
         
         // For mobile, handle click on the video overlay
         const videoOverlay = card.querySelector('.video-overlay');
         if (videoOverlay) {
             videoOverlay.addEventListener('click', (e) => {
-                // Only stop propagation on non-mobile devices
-                if (window.innerWidth > 768) {
-                    e.stopPropagation();
+                e.stopPropagation(); // Prevent card expansion
+                
+                // Reset all other video cards first
+                resetAllVideoCards();
+                
+                // Create a new iframe with the stored attributes
+                const iframeData = videoSources.get(card);
+                if (iframeData) {
+                    const newIframe = document.createElement('iframe');
+                    newIframe.src = iframeData.src + (iframeData.src.includes('?') ? '&' : '?') + 'autoplay=1';
+                    newIframe.width = iframeData.width;
+                    newIframe.height = iframeData.height;
+                    newIframe.title = iframeData.title;
+                    
+                    if (iframeData.frameborder) {
+                        newIframe.setAttribute('frameborder', iframeData.frameborder);
+                    }
+                    
+                    if (iframeData.allow) {
+                        newIframe.setAttribute('allow', iframeData.allow);
+                    }
+                    
+                    if (iframeData.allowfullscreen) {
+                        newIframe.setAttribute('allowfullscreen', '');
+                    }
+                    
+                    // Add the new iframe to the embed container
+                    videoEmbed.appendChild(newIframe);
+                    
+                    // Hide the overlay and show the embed
+                    videoOverlay.style.opacity = '0';
+                    videoOverlay.style.visibility = 'hidden';
+                    videoEmbed.style.opacity = '1';
+                    videoEmbed.style.visibility = 'visible';
                 }
-                iframe.src = videoSrc.includes('?') 
-                    ? videoSrc.replace('autoplay=0', 'autoplay=1') 
-                    : videoSrc + '?autoplay=1';
-                videoOverlay.style.opacity = '0';
-                videoOverlay.style.visibility = 'hidden';
-                card.querySelector('.video-embed').style.opacity = '1';
-                card.querySelector('.video-embed').style.visibility = 'visible';
             });
         }
     });
@@ -278,6 +332,106 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle card expansion logic
     const cards = document.querySelectorAll('.card');
     
+    // Add a touchstart event listener to the document to ensure touch events are properly initialized
+    document.addEventListener('touchstart', function() {
+        // This is just to ensure touch events are properly registered
+    }, {passive: true});
+    
+    // Function to handle hover-gif for mobile
+    function handleHoverGifForMobile(card, isExpanded) {
+        const hoverGif = card.querySelector('.hover-gif');
+        if (hoverGif) {
+            if (isExpanded) {
+                // Show the hover-gif when card is expanded on mobile
+                hoverGif.style.opacity = '1';
+            } else {
+                // Hide the hover-gif when card is collapsed on mobile
+                hoverGif.style.opacity = '0';
+            }
+        }
+    }
+    
+    // Function to get card position relative to viewport
+    function getCardPosition(card) {
+        const rect = card.getBoundingClientRect();
+        return {
+            top: rect.top,
+            left: rect.left,
+            cardHeight: rect.height,
+            viewportHeight: window.innerHeight
+        };
+    }
+    
+    // Function to scroll to maintain card position after expansion
+    function maintainCardPosition(card, originalPosition) {
+        // Get the new position after expansion
+        const newRect = card.getBoundingClientRect();
+        
+        // Calculate how much the card has moved
+        const deltaY = newRect.top - originalPosition.top;
+        
+        // Only scroll if there's a significant shift
+        if (Math.abs(deltaY) > 10) {
+            // Smooth scroll to adjust for the shift
+            window.scrollBy({
+                top: deltaY,
+                behavior: 'smooth'
+            });
+        }
+    }
+    
+    // Simplified approach for card expansion that prevents diagonal movement
+    function handleCardExpansion(card) {
+        // Get the current position before any changes
+        const rect = card.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Add expanded class first
+        card.classList.add('expanded');
+        
+        // Wait longer for the expanded class to fully take effect
+        // This helps prevent the diagonal movement by ensuring the expansion is complete
+        setTimeout(() => {
+            // Get the expanded dimensions
+            const expandedRect = card.getBoundingClientRect();
+            
+            // Calculate the center of the viewport
+            const viewportHeight = window.innerHeight;
+            const viewportCenterY = viewportHeight / 2;
+            
+            // Calculate where the center of the card is relative to the viewport
+            const cardCenterY = expandedRect.top + (expandedRect.height / 2);
+            
+            // Calculate how much we need to scroll to center the card
+            const scrollOffset = cardCenterY - viewportCenterY;
+            
+            // Only scroll if the card isn't already centered (with some tolerance)
+            if (Math.abs(scrollOffset) > 20) {
+                // Calculate the new scroll position
+                const newScrollTop = scrollTop + scrollOffset;
+                
+                // Get the document height
+                const documentHeight = Math.max(
+                    document.body.scrollHeight,
+                    document.body.offsetHeight,
+                    document.documentElement.clientHeight,
+                    document.documentElement.scrollHeight,
+                    document.documentElement.offsetHeight
+                );
+                
+                // Ensure we don't scroll beyond the document boundaries
+                const maxScrollTop = documentHeight - window.innerHeight;
+                const targetScrollTop = Math.max(0, Math.min(newScrollTop, maxScrollTop));
+                
+                // Scroll to center the card vertically
+                window.scrollTo({
+                    top: targetScrollTop,
+                    behavior: 'smooth'
+                });
+            }
+        }, 300); // Increased from 50ms to 300ms to ensure expansion is complete
+    }
+    
     cards.forEach(card => {
         // Hover-based expansion for desktop
         card.addEventListener('mouseenter', () => {
@@ -316,9 +470,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Click-based expansion for mobile
         card.addEventListener('click', (e) => {
             if (window.innerWidth <= 768) {
+                // Reset all video cards when clicking on any card
+                resetAllVideoCards();
+                
                 const isExpanded = card.classList.contains('expanded');
+                
+                // Reset all cards first
                 cards.forEach(c => {
+                    // Skip the current card if it's expanded (we'll handle it separately)
+                    if (c === card && isExpanded) {
+                        return;
+                    }
+                    
                     c.classList.remove('expanded');
+                    
+                    // Reset hover-gif for all cards
+                    handleHoverGifForMobile(c, false);
                     
                     // Reset all meme cards when closing
                     if (c.classList.contains('meme-card')) {
@@ -328,10 +495,43 @@ document.addEventListener('DOMContentLoaded', () => {
                             img.style.opacity = '0';
                         });
                     }
+                    
+                    // Reset any fixed positioning that might have been applied
+                    c.style.position = '';
+                    c.style.top = '';
+                    c.style.left = '';
+                    c.style.width = '';
+                    c.style.zIndex = '';
+                    c.style.transform = ''; // Reset transform as well
                 });
                 
-                if (!isExpanded) {
-                    card.classList.add('expanded');
+                if (isExpanded) {
+                    // If the card is already expanded, just collapse it
+                    card.classList.remove('expanded');
+                    handleHoverGifForMobile(card, false);
+                    
+                    // Reset any fixed positioning
+                    card.style.position = '';
+                    card.style.top = '';
+                    card.style.left = '';
+                    card.style.width = '';
+                    card.style.zIndex = '';
+                    card.style.transform = ''; // Reset transform as well
+                    
+                    // Reset meme card if needed
+                    if (card.classList.contains('meme-card')) {
+                        const memeImages = card.querySelectorAll('.meme-image');
+                        memeImages.forEach(img => {
+                            img.style.transform = 'translateY(10px)';
+                            img.style.opacity = '0';
+                        });
+                    }
+                } else {
+                    // Use the new expansion handler
+                    handleCardExpansion(card);
+                    
+                    // Handle hover-gif for this card
+                    handleHoverGifForMobile(card, true);
                     
                     // Special handling for meme cards on mobile click
                     if (card.classList.contains('meme-card')) {
@@ -345,14 +545,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+        
+        // Add touchend event for mobile to ensure touch events are properly handled
+        card.addEventListener('touchend', (e) => {
+            // This is just to ensure touch events are properly registered
+            // The actual logic is handled in the click event
+        }, {passive: true});
     });
 
-    // Collapse all cards when clicking outside on mobile
+    // Update the body click handler to reset any fixed positioning
     document.body.addEventListener('click', (e) => {
         // Only collapse if click did not occur inside a card
         if (window.innerWidth <= 768 && !e.target.closest('.card')) {
+            // Reset all video cards when clicking outside
+            resetAllVideoCards();
+            
             cards.forEach(card => {
                 card.classList.remove('expanded');
+                
+                // Reset hover-gif for all cards
+                handleHoverGifForMobile(card, false);
 
                 // Reset meme images
                 if (card.classList.contains('meme-card')) {
@@ -362,7 +574,41 @@ document.addEventListener('DOMContentLoaded', () => {
                         img.style.opacity = '0';
                     });
                 }
+                
+                // Reset any fixed positioning
+                card.style.position = '';
+                card.style.top = '';
+                card.style.left = '';
+                card.style.width = '';
+                card.style.zIndex = '';
+                card.style.transform = ''; // Reset transform as well
             });
         }
     });
+    
+    // Add a touchend event listener to the document body to ensure touch events are properly handled
+    document.body.addEventListener('touchend', (e) => {
+        // This is just to ensure touch events are properly registered
+        // The actual logic is handled in the click event
+    }, {passive: true});
+    
+    // Reset all video cards on page load
+    resetAllVideoCards();
+    
+    // Add specific CSS for mobile hover-gif handling
+    if (window.innerWidth <= 768) {
+        const style = document.createElement('style');
+        style.textContent = `
+            @media (max-width: 768px) {
+                .project-tile .hover-gif {
+                    transition: opacity 0.3s ease;
+                }
+                
+                .project-tile.expanded .hover-gif {
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }); 
