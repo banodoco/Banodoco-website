@@ -8,19 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const preloadGif = new Image();
     preloadGif.src = steerableMotionGifUrl;
     
-    // Ensure GIF is properly preloaded
-    preloadGif.onload = () => {
-        // Once preloaded, find the actual GIF in the DOM and ensure it's using the preloaded version
-        const steerableMotionCard = document.querySelector('.card[data-position="2"]');
-        if (steerableMotionCard) {
-            const hoverGif = steerableMotionCard.querySelector('.hover-gif img');
-            if (hoverGif) {
-                // Force the browser to use the preloaded version
-                hoverGif.src = steerableMotionGifUrl + '?preloaded=true';
-            }
-        }
-    };
-
     // Handle POM letters name reveal
     const pomLetters = document.getElementById('pom-letters');
     
@@ -354,6 +341,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     videoOverlay.style.visibility = 'hidden';
                     videoEmbed.style.opacity = '1';
                     videoEmbed.style.visibility = 'visible';
+                    
+                    // For mobile, also expand the card when clicking on the video
+                    if (window.innerWidth <= 768) {
+                        // Reset all cards first
+                        cards.forEach(c => {
+                            if (c !== card) {
+                                c.classList.remove('expanded');
+                                handleHoverGifForMobile(c, false);
+                                
+                                // Reset any fixed positioning
+                                c.style.position = '';
+                                c.style.top = '';
+                                c.style.left = '';
+                                c.style.width = '';
+                                c.style.zIndex = '';
+                                c.style.transform = '';
+                            }
+                        });
+                        
+                        // Expand this card
+                        if (!card.classList.contains('expanded')) {
+                            handleCardExpansion(card);
+                            handleHoverGifForMobile(card, true);
+                        }
+                    }
                 }
             });
         }
@@ -745,4 +757,93 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         document.head.appendChild(style);
     }
+
+    // Add a general handler for all hover-gif elements in the document
+    document.querySelectorAll('.hover-gif').forEach(hoverGif => {
+        // Add click handler for the hover-gif container
+        hoverGif.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                e.stopPropagation(); // Stop immediate propagation
+                
+                // Get the parent card
+                const card = hoverGif.closest('.card');
+                if (card) {
+                    const isExpanded = card.classList.contains('expanded');
+                    
+                    // Reset all cards first
+                    cards.forEach(c => {
+                        if (c !== card) {
+                            c.classList.remove('expanded');
+                            handleHoverGifForMobile(c, false);
+                            
+                            // Reset any fixed positioning
+                            c.style.position = '';
+                            c.style.top = '';
+                            c.style.left = '';
+                            c.style.width = '';
+                            c.style.zIndex = '';
+                            c.style.transform = '';
+                        }
+                    });
+                    
+                    // If not already expanded, expand the card
+                    if (!isExpanded) {
+                        handleCardExpansion(card);
+                        handleHoverGifForMobile(card, true);
+                    }
+                }
+            }
+        });
+        
+        // Also add a click handler for any img inside the hover-gif
+        const gifImg = hoverGif.querySelector('img');
+        if (gifImg) {
+            gifImg.addEventListener('click', (e) => {
+                if (window.innerWidth <= 768) {
+                    e.stopPropagation(); // Stop immediate propagation
+                    
+                    // Get the parent card
+                    const card = hoverGif.closest('.card');
+                    if (card) {
+                        const isExpanded = card.classList.contains('expanded');
+                        
+                        // Reset all cards first
+                        cards.forEach(c => {
+                            if (c !== card) {
+                                c.classList.remove('expanded');
+                                handleHoverGifForMobile(c, false);
+                                
+                                // Reset any fixed positioning
+                                c.style.position = '';
+                                c.style.top = '';
+                                c.style.left = '';
+                                c.style.width = '';
+                                c.style.zIndex = '';
+                                c.style.transform = '';
+                            }
+                        });
+                        
+                        // If not already expanded, expand the card
+                        if (!isExpanded) {
+                            handleCardExpansion(card);
+                            handleHoverGifForMobile(card, true);
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    // Ensure GIF is properly preloaded
+    preloadGif.onload = () => {
+        // Once preloaded, find the actual GIF in the DOM and ensure it's using the preloaded version
+        const steerableMotionCard = document.querySelector('.card[data-position="2"]');
+        if (steerableMotionCard) {
+            const hoverGif = steerableMotionCard.querySelector('.hover-gif img');
+            if (hoverGif) {
+                // Force the browser to use the preloaded version
+                hoverGif.src = steerableMotionGifUrl + '?preloaded=true';
+            }
+        }
+    };
 }); 
