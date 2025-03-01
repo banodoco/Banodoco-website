@@ -272,74 +272,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Card expansion behavior
+    // Handle card expansion logic
     const cards = document.querySelectorAll('.card');
     
     cards.forEach(card => {
-        // Mouse enter - expand card
-        card.addEventListener('mouseenter', () => {
-            // First collapse all cards
+        card.addEventListener('click', () => {
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close any other expanded card
             cards.forEach(c => c.classList.remove('expanded'));
-            // Then expand the hovered card
-            card.classList.add('expanded');
             
-            // Special handling for meme cards
-            if (card.classList.contains('meme-card')) {
-                const memeImages = card.querySelectorAll('.meme-image');
-                memeImages.forEach((img, index) => {
-                    img.style.transitionDelay = `${0.1 * (index + 1)}s`;
-                    img.style.transform = 'translateY(0)';
-                    img.style.opacity = '1';
-                });
-            }
-        });
-
-        // Mouse leave - collapse card
-        card.addEventListener('mouseleave', () => {
-            card.classList.remove('expanded');
-            
-            // Special handling for meme cards
-            if (card.classList.contains('meme-card')) {
-                const memeImages = card.querySelectorAll('.meme-image');
-                memeImages.forEach(img => {
-                    img.style.transitionDelay = '0s';
-                    img.style.transform = 'translateY(10px)';
-                    img.style.opacity = '0';
-                });
-            }
-        });
-
-        // Mobile touch support
-        card.addEventListener('click', (e) => {
-            if (window.innerWidth <= 768) {
-                e.stopPropagation();
-                if (card.classList.contains('expanded')) {
-                    card.classList.remove('expanded');
-                    
-                    // Special handling for meme cards on mobile
-                    if (card.classList.contains('meme-card')) {
-                        const memeImages = card.querySelectorAll('.meme-image');
-                        memeImages.forEach(img => {
-                            img.style.transform = 'translateY(10px)';
-                            img.style.opacity = '0';
-                        });
-                    }
-                } else {
-                    // Collapse all other cards first
-                    cards.forEach(c => c.classList.remove('expanded'));
-                    // Expand the clicked card
-                    card.classList.add('expanded');
-                    
-                    // Special handling for meme cards on mobile
-                    if (card.classList.contains('meme-card')) {
-                        const memeImages = card.querySelectorAll('.meme-image');
-                        memeImages.forEach((img, index) => {
-                            img.style.transitionDelay = `${0.1 * (index + 1)}s`;
-                            img.style.transform = 'translateY(0)';
-                            img.style.opacity = '1';
-                        });
-                    }
-                }
+            // If the clicked card was not already expanded, expand it
+            if (!isExpanded) {
+                card.classList.add('expanded');
             }
         });
     });
