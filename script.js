@@ -220,7 +220,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const videoOverlay = card.querySelector('.video-overlay');
         if (videoOverlay) {
             videoOverlay.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent card expansion
+                // Only stop propagation on non-mobile devices
+                if (window.innerWidth > 768) {
+                    e.stopPropagation();
+                }
                 iframe.src = videoSrc.includes('?') 
                     ? videoSrc.replace('autoplay=0', 'autoplay=1') 
                     : videoSrc + '?autoplay=1';
