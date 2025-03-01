@@ -200,6 +200,7 @@ body::before, body::after {
     z-index: 10;
     transform: translateY(-5px);
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    padding-bottom: 2rem; /* Increased padding for more buffer */
 }
 
 .card:not(.expanded):hover {

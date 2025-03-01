@@ -4,41 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - Page Not Found</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: #f9fafb;
-            color: #1f2937;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            padding: 20px;
-            text-align: center;
-        }
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        p {
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-        }
-        a {
-            color: #3b82f6;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/feather-icons"></script>
 </head>
 <body>
-    <h1>404</h1>
-    <p>Oops! The page you're looking for doesn't exist.</p>
-    <a href="/">Go back to homepage</a>
+    <div class="error-container">
+        <div class="letters">
+            <div class="letter animated-p">
+                P
+                <div class="face">
+                    <div class="eye left-eye"></div>
+                    <div class="eye right-eye"></div>
+                    <div class="mouth"></div>
+                </div>
+            </div>
+            <div class="letter">O</div>
+            <div class="letter">M</div>
+        </div>
+        <h2>Oops! Looks like this page went missing...</h2>
+        <a href="index.html" class="home-link">Go back home</a>
+    </div>
+
+    <script>
+        feather.replace();
+    </script>
+    <script src="script.js"></script>
 </body>
 </html> 
