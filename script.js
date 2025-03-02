@@ -30,15 +30,18 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         
         // Show the top border when scrolled down past the threshold
-        if (scrollTop > scrollThreshold) {
-            topBorder.classList.add('visible');
-        } else {
+        // Hide it when at the very top of the page
+        if (scrollTop <= 0) {
+            // At the very top of the page
             topBorder.classList.remove('visible');
+        } else if (scrollTop > scrollThreshold) {
+            // Scrolled down past the threshold
+            topBorder.classList.add('visible');
         }
         
         // Hide the bottom border when near the bottom of the page
-        // We use a small offset (50px) to hide it slightly before reaching the absolute bottom
-        if (scrollTop + windowHeight > documentHeight - 50) {
+        // We use a larger offset (100px) to hide it before reaching the absolute bottom
+        if (scrollTop + windowHeight >= documentHeight - 100) {
             bottomBorder.classList.add('hidden');
         } else {
             bottomBorder.classList.remove('hidden');
@@ -56,34 +59,125 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle meme card expansion - removed old implementation as it's now handled by the general card expansion system
     
     if (pomLetters) {
-        // Add a subtle bounce effect when hovering over the letters
+        // Get all the letters
         const letters = pomLetters.querySelectorAll('.letter');
+        let lastClickTime = Date.now();
+        let inactivityTimer = null;
+        let nameResetTimer = null; // Timer for resetting name back to POM
+        let allLettersClicked = false;
+        let anyLetterClicked = false;
         
-        // Click interaction
-        pomLetters.addEventListener('click', () => {
-            pomLetters.classList.toggle('active');
-        });
-        
-        // Add mouseout event to hide the name reveal when hovering away
-        pomLetters.addEventListener('mouseleave', () => {
-            // Remove active class to hide the name
-            pomLetters.classList.remove('active');
+        // Function to check if all letters have been clicked
+        function checkAllLettersClicked() {
+            allLettersClicked = Array.from(letters).every(letter => letter.classList.contains('clicked'));
             
-            // Reset letter animations
-            setTimeout(() => {
+            if (allLettersClicked) {
+                // If all letters are clicked, activate the name reveal
+                clearTimeout(inactivityTimer); // Clear any existing timer
+                
+                // Stop all vibrations
                 letters.forEach(letter => {
                     letter.style.animation = '';
                 });
-            }, 300);
+                
+                setTimeout(() => {
+                    pomLetters.classList.add('active');
+                    
+                    // Set timer to reset back to POM after 5 seconds
+                    clearTimeout(nameResetTimer);
+                    nameResetTimer = setTimeout(() => {
+                        resetLetters();
+                    }, 5000); // 5 seconds
+                }, 300);
+                
+                return true;
+            }
+            
+            return false;
+        }
+        
+        // Function to reset the letters
+        function resetLetters() {
+            letters.forEach(letter => {
+                letter.classList.remove('clicked');
+                letter.style.animation = '';
+            });
+            pomLetters.classList.remove('active');
+            allLettersClicked = false;
+            anyLetterClicked = false;
+            
+            clearTimeout(inactivityTimer);
+            clearTimeout(nameResetTimer);
+        }
+        
+        // Function to start vibrating all letters
+        function startVibratingLetters() {
+            letters.forEach(letter => {
+                // Only vibrate letters that have been clicked
+                if (letter.classList.contains('clicked')) {
+                    letter.style.animation = 'letter-vibrate 0.5s infinite';
+                }
+            });
+            
+            // Set a timer to stop vibration after 10 seconds
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                if (!allLettersClicked) {
+                    // Stop vibration but keep the clicked state
+                    letters.forEach(letter => {
+                        if (letter.classList.contains('clicked')) {
+                            letter.style.animation = 'letter-clicked-pulse 2s infinite';
+                        }
+                    });
+                }
+            }, 10000); // 10 seconds
+        }
+        
+        // Add click event to each individual letter
+        letters.forEach((letter, index) => {
+            letter.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent the event from bubbling up
+                
+                // If letter is not already clicked, mark it as clicked
+                if (!letter.classList.contains('clicked')) {
+                    letter.classList.add('clicked');
+                    anyLetterClicked = true;
+                    
+                    // Start vibrating all clicked letters
+                    startVibratingLetters();
+                    
+                    // Check if all letters are now clicked
+                    if (checkAllLettersClicked()) {
+                        // If all letters are clicked, stop the vibration
+                        letters.forEach(letter => {
+                            letter.style.animation = '';
+                        });
+                    }
+                }
+            });
         });
         
-        // Add mouseover event to restore animations when hovering again
+        // Add click event to the container to reset if clicking outside letters
+        pomLetters.addEventListener('click', (e) => {
+            // Only trigger if clicking directly on the container (not on a letter)
+            if (e.target === pomLetters) {
+                resetLetters();
+            }
+        });
+        
+        // Add mouseout event to reset when hovering away
+        pomLetters.addEventListener('mouseleave', () => {
+            // Only reset if not all letters have been clicked yet
+            if (!allLettersClicked) {
+                resetLetters();
+            }
+        });
+        
+        // Add mouseover event to ensure animations continue
         pomLetters.addEventListener('mouseenter', () => {
-            // Restore pulse animations if not active
-            if (!pomLetters.classList.contains('active')) {
-                letters.forEach((letter, index) => {
-                    letter.style.animation = `letter-pulse 1.5s infinite ${index * 0.2}s`;
-                });
+            // If any letter has been clicked but not all, ensure clicked letters are vibrating
+            if (anyLetterClicked && !allLettersClicked && !pomLetters.classList.contains('active')) {
+                startVibratingLetters();
             }
         });
     }
@@ -513,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Simplified approach for card expansion that prevents diagonal movement
+    // Function to handle card expansion that prevents diagonal movement
     function handleCardExpansion(card) {
         // Get the current position before any changes
         const rect = card.getBoundingClientRect();
@@ -565,6 +659,138 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300); // Increased from 50ms to 300ms to ensure expansion is complete
     }
     
+    // Function to handle mobile card interaction
+    function handleMobileCardInteraction(card, e) {
+        // Prevent default behavior to avoid any conflicts
+        e.preventDefault();
+        
+        // Special handling for Steerable Motion card
+        const isSteerableMotionCard = card.getAttribute('data-position') === '2';
+        
+        // Reset all video cards when interacting with any card
+        resetAllVideoCards();
+        
+        const isExpanded = card.classList.contains('expanded');
+        
+        // Reset all cards first
+        cards.forEach(c => {
+            // Skip the current card if it's expanded (we'll handle it separately)
+            if (c === card && isExpanded) {
+                return;
+            }
+            
+            c.classList.remove('expanded');
+            
+            // Reset hover-gif for all cards
+            handleHoverGifForMobile(c, false);
+            
+            // Reset all meme cards when closing
+            if (c.classList.contains('meme-card')) {
+                const memeImages = c.querySelectorAll('.meme-image');
+                memeImages.forEach(img => {
+                    img.style.transform = 'translateY(10px)';
+                    img.style.opacity = '0';
+                });
+            }
+            
+            // Reset any fixed positioning that might have been applied
+            c.style.position = '';
+            c.style.top = '';
+            c.style.left = '';
+            c.style.width = '';
+            c.style.zIndex = '';
+            c.style.transform = ''; // Reset transform as well
+            
+            // Ensure links are hidden when card is unexpanded
+            const link = c.querySelector('.link');
+            if (link) {
+                link.style.opacity = '0';
+                link.style.transform = 'translateY(10px)';
+                link.style.pointerEvents = 'none';
+                link.style.display = 'none'; // Ensure link is not displayed
+            }
+        });
+        
+        if (isExpanded) {
+            // If the card is already expanded, just collapse it
+            card.classList.remove('expanded');
+            handleHoverGifForMobile(card, false);
+            
+            // Reset any fixed positioning
+            card.style.position = '';
+            card.style.top = '';
+            card.style.left = '';
+            card.style.width = '';
+            card.style.zIndex = '';
+            card.style.transform = ''; // Reset transform as well
+            
+            // Ensure link is hidden when card is unexpanded
+            const link = card.querySelector('.link');
+            if (link) {
+                link.style.opacity = '0';
+                link.style.transform = 'translateY(10px)';
+                link.style.pointerEvents = 'none';
+                link.style.display = 'none'; // Ensure link is not displayed
+            }
+            
+            // Reset GIF if this is the Steerable Motion card
+            if (isSteerableMotionCard) {
+                const gifImg = card.querySelector('.hover-gif img');
+                if (gifImg) {
+                    const originalSrc = gifImg.src;
+                    setTimeout(() => {
+                        gifImg.src = '';
+                        void gifImg.offsetWidth;
+                        gifImg.src = originalSrc;
+                    }, 500);
+                }
+            }
+            
+            // Reset meme card if needed
+            if (card.classList.contains('meme-card')) {
+                const memeImages = card.querySelectorAll('.meme-image');
+                memeImages.forEach(img => {
+                    img.style.transform = 'translateY(10px)';
+                    img.style.opacity = '0';
+                });
+            }
+        } else {
+            // For Steerable Motion card, force expansion and show GIF immediately
+            if (isSteerableMotionCard) {
+                const hoverGif = card.querySelector('.hover-gif');
+                if (hoverGif) {
+                    hoverGif.style.opacity = '1';
+                    hoverGif.style.pointerEvents = 'none';
+                }
+            }
+            
+            // Use the new expansion handler
+            handleCardExpansion(card);
+            
+            // Handle hover-gif for this card
+            handleHoverGifForMobile(card, true);
+            
+            // Make link visible when card is expanded
+            const link = card.querySelector('.link');
+            if (link) {
+                link.style.opacity = '1';
+                link.style.transform = 'translateY(0)';
+                link.style.pointerEvents = 'auto';
+                link.style.display = 'inline-block'; // Ensure link is displayed
+            }
+            
+            // Special handling for meme cards on mobile click
+            if (card.classList.contains('meme-card')) {
+                const memeImages = card.querySelectorAll('.meme-image');
+                memeImages.forEach((img, index) => {
+                    img.style.transitionDelay = `${0.1 * (index + 1)}s`;
+                    img.style.transform = 'translateY(0)';
+                    img.style.opacity = '1';
+                });
+            }
+        }
+    }
+
     cards.forEach(card => {
         // Hover-based expansion for desktop
         card.addEventListener('mouseenter', () => {
@@ -600,118 +826,51 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Click-based expansion for mobile
-        card.addEventListener('click', (e) => {
-            if (window.innerWidth <= 768) {
-                // Special handling for Steerable Motion card
-                const isSteerableMotionCard = card.getAttribute('data-position') === '2';
-                
-                // Reset all video cards when clicking on any card
-                resetAllVideoCards();
-                
-                const isExpanded = card.classList.contains('expanded');
-                
-                // Reset all cards first
-                cards.forEach(c => {
-                    // Skip the current card if it's expanded (we'll handle it separately)
-                    if (c === card && isExpanded) {
-                        return;
-                    }
+        // Mobile interaction handling - use touchstart as the primary event
+        if ('ontouchstart' in window) {
+            // For touch devices, use touchstart for more responsive interaction
+            card.addEventListener('touchstart', function(e) {
+                if (window.innerWidth <= 768) {
+                    // Store touch start position to detect if it's a tap or scroll
+                    const touchStartY = e.touches[0].clientY;
                     
-                    c.classList.remove('expanded');
-                    
-                    // Reset hover-gif for all cards
-                    handleHoverGifForMobile(c, false);
-                    
-                    // Reset all meme cards when closing
-                    if (c.classList.contains('meme-card')) {
-                        const memeImages = c.querySelectorAll('.meme-image');
-                        memeImages.forEach(img => {
-                            img.style.transform = 'translateY(10px)';
-                            img.style.opacity = '0';
-                        });
-                    }
-                    
-                    // Reset any fixed positioning that might have been applied
-                    c.style.position = '';
-                    c.style.top = '';
-                    c.style.left = '';
-                    c.style.width = '';
-                    c.style.zIndex = '';
-                    c.style.transform = ''; // Reset transform as well
-                });
-                
-                if (isExpanded) {
-                    // If the card is already expanded, just collapse it
-                    card.classList.remove('expanded');
-                    handleHoverGifForMobile(card, false);
-                    
-                    // Reset any fixed positioning
-                    card.style.position = '';
-                    card.style.top = '';
-                    card.style.left = '';
-                    card.style.width = '';
-                    card.style.zIndex = '';
-                    card.style.transform = ''; // Reset transform as well
-                    
-                    // Reset GIF if this is the Steerable Motion card
-                    if (isSteerableMotionCard) {
-                        const gifImg = card.querySelector('.hover-gif img');
-                        if (gifImg) {
-                            const originalSrc = gifImg.src;
-                            setTimeout(() => {
-                                gifImg.src = '';
-                                void gifImg.offsetWidth;
-                                gifImg.src = originalSrc;
-                            }, 500);
+                    // Add touchend listener to check if it's a tap
+                    const touchEndHandler = function(endEvent) {
+                        // Remove this listener after it's used
+                        card.removeEventListener('touchend', touchEndHandler);
+                        
+                        // Calculate touch movement
+                        const touchEndY = endEvent.changedTouches[0].clientY;
+                        const touchDiff = Math.abs(touchEndY - touchStartY);
+                        
+                        // If movement is small enough, consider it a tap
+                        if (touchDiff < 10) {
+                            handleMobileCardInteraction(card, endEvent);
                         }
-                    }
+                    };
                     
-                    // Reset meme card if needed
-                    if (card.classList.contains('meme-card')) {
-                        const memeImages = card.querySelectorAll('.meme-image');
-                        memeImages.forEach(img => {
-                            img.style.transform = 'translateY(10px)';
-                            img.style.opacity = '0';
-                        });
-                    }
-                } else {
-                    // For Steerable Motion card, force expansion and show GIF immediately
-                    if (isSteerableMotionCard) {
-                        const hoverGif = card.querySelector('.hover-gif');
-                        if (hoverGif) {
-                            hoverGif.style.opacity = '1';
-                            hoverGif.style.pointerEvents = 'none';
-                        }
-                    }
-                    
-                    // Use the new expansion handler
-                    handleCardExpansion(card);
-                    
-                    // Handle hover-gif for this card
-                    handleHoverGifForMobile(card, true);
-                    
-                    // Special handling for meme cards on mobile click
-                    if (card.classList.contains('meme-card')) {
-                        const memeImages = card.querySelectorAll('.meme-image');
-                        memeImages.forEach((img, index) => {
-                            img.style.transitionDelay = `${0.1 * (index + 1)}s`;
-                            img.style.transform = 'translateY(0)';
-                            img.style.opacity = '1';
-                        });
-                    }
+                    // Add temporary touchend listener
+                    card.addEventListener('touchend', touchEndHandler);
                 }
-            }
-        });
-        
-        // Add touchend event for mobile to ensure touch events are properly handled
-        card.addEventListener('touchend', (e) => {
-            // This is just to ensure touch events are properly registered
-            // The actual logic is handled in the click event
-        }, {passive: true});
+            }, {passive: true});
+            
+            // Prevent click events from firing twice on touch devices
+            card.addEventListener('click', function(e) {
+                if (window.innerWidth <= 768 && e.pointerType !== 'mouse') {
+                    e.preventDefault();
+                }
+            });
+        } else {
+            // Fallback to click for non-touch devices
+            card.addEventListener('click', function(e) {
+                if (window.innerWidth <= 768) {
+                    handleMobileCardInteraction(card, e);
+                }
+            });
+        }
     });
 
-    // Update the body click handler to reset any fixed positioning
+    // Update the body click/touch handler to reset any fixed positioning
     document.body.addEventListener('click', (e) => {
         // Only collapse if click did not occur inside a card
         if (window.innerWidth <= 768 && !e.target.closest('.card')) {
@@ -740,6 +899,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.style.width = '';
                 card.style.zIndex = '';
                 card.style.transform = ''; // Reset transform as well
+                
+                // Hide links when clicking outside cards
+                const link = card.querySelector('.link');
+                if (link) {
+                    link.style.opacity = '0';
+                    link.style.transform = 'translateY(10px)';
+                    link.style.pointerEvents = 'none';
+                    link.style.display = 'none'; // Ensure link is not displayed
+                }
             });
         }
     });
@@ -753,25 +921,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset all video cards on page load
     resetAllVideoCards();
     
-    // Add specific CSS for mobile hover-gif handling
+    // Special handling for Steerable Motion card on mobile
     if (window.innerWidth <= 768) {
-        const style = document.createElement('style');
-        style.textContent = `
-            @media (max-width: 768px) {
-                .project-tile .hover-gif, .project-tile .hover-gif * {
-                    pointer-events: none !important;
-                }
-                .project-tile .hover-gif {
-                    transition: opacity 0.3s ease;
-                }
-                .project-tile.expanded .hover-gif {
-                    opacity: 1;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Special handling for Steerable Motion card on mobile
         const steerableMotionCard = document.querySelector('.card[data-position="2"]');
         if (steerableMotionCard) {
             console.log('Found Steerable Motion card, applying special mobile handling');
@@ -779,31 +930,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Force the hover-gif to be non-interactive
             const hoverGif = steerableMotionCard.querySelector('.hover-gif');
             if (hoverGif) {
-                // Clone and replace the hover-gif to remove any attached event listeners
-                const newHoverGif = hoverGif.cloneNode(true);
-                hoverGif.parentNode.replaceChild(newHoverGif, hoverGif);
-                
                 // Ensure pointer events are disabled
-                newHoverGif.style.pointerEvents = 'none';
+                hoverGif.style.pointerEvents = 'none';
                 
                 // Make sure all children also have pointer events disabled
-                newHoverGif.querySelectorAll('*').forEach(el => {
+                hoverGif.querySelectorAll('*').forEach(el => {
                     el.style.pointerEvents = 'none';
                 });
-                
-                // Add a click handler to the card that immediately expands it
-                steerableMotionCard.addEventListener('touchstart', function(e) {
-                    console.log('Steerable Motion card touchstart event fired');
-                    if (!steerableMotionCard.classList.contains('expanded')) {
-                        // Prevent default to avoid any conflicts
-                        e.preventDefault();
-                        
-                        // Trigger the click event programmatically
-                        setTimeout(() => {
-                            steerableMotionCard.click();
-                        }, 10);
-                    }
-                }, {passive: false});
             }
         }
     } else {
@@ -824,4 +957,150 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
+
+    // Function to set equal heights for cards in the same row
+    function setEqualCardHeights() {
+        if (window.innerWidth > 768) {
+            // First, remove any previously set row classes
+            document.querySelectorAll('.card').forEach(card => {
+                const classes = [...card.classList];
+                classes.forEach(cls => {
+                    if (cls.startsWith('card-row-')) {
+                        card.classList.remove(cls);
+                    }
+                });
+                // Reset inline height
+                card.style.height = '';
+            });
+
+            // Get all unexpanded cards
+            const cards = document.querySelectorAll('.card:not(.expanded)');
+            let rows = {};
+            let rowCounter = 0;
+
+            // Group cards by their top offset (row)
+            cards.forEach(card => {
+                const topOffset = Math.round(card.getBoundingClientRect().top);
+                if (!rows[topOffset]) {
+                    rows[topOffset] = {
+                        cards: [],
+                        rowIndex: rowCounter++
+                    };
+                }
+                rows[topOffset].cards.push(card);
+            });
+
+            // For each row, find the tallest card and set a CSS custom property
+            Object.values(rows).forEach(row => {
+                const rowClass = `card-row-${row.rowIndex}`;
+                const maxHeight = Math.max(...row.cards.map(card => {
+                    // Temporarily remove any height constraints
+                    const originalHeight = card.style.height;
+                    card.style.height = 'auto';
+                    const height = card.offsetHeight;
+                    card.style.height = originalHeight;
+                    return height;
+                }));
+
+                // Add row class to each card and set the row height
+                row.cards.forEach(card => {
+                    card.classList.add(rowClass);
+                    card.style.setProperty('--row-height', `${maxHeight}px`);
+                });
+            });
+
+            // Add a style element if it doesn't exist
+            let styleEl = document.getElementById('equal-height-styles');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'equal-height-styles';
+                document.head.appendChild(styleEl);
+            }
+
+            // Create CSS rules for each row
+            let css = '';
+            for (let i = 0; i < rowCounter; i++) {
+                css += `.card-row-${i}:not(.expanded) { height: var(--row-height) !important; }\n`;
+            }
+            styleEl.textContent = css;
+        } else {
+            // Reset heights on mobile
+            document.querySelectorAll('.card').forEach(card => {
+                card.style.height = '';
+                card.style.removeProperty('--row-height');
+            });
+            
+            // Remove the style element
+            const styleEl = document.getElementById('equal-height-styles');
+            if (styleEl) {
+                styleEl.textContent = '';
+            }
+        }
+
+        // At the end of setEqualCardHeights function, smoothly fade in the dashboard
+        const dashboard = document.querySelector('.dashboard');
+        if (dashboard && !dashboard.classList.contains('visible')) {
+            dashboard.classList.add('visible');
+        }
+    }
+
+    // Call on load and resize only
+    window.addEventListener('load', setEqualCardHeights);
+    window.addEventListener('resize', debounce(setEqualCardHeights, 250));
+
+    // Simple debounce function to prevent excessive recalculations
+    function debounce(func, wait) {
+        let timeout;
+        return function() {
+            const context = this;
+            const args = arguments;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), wait);
+        };
+    }
+
+    // Add hover effect for POM borders to transform to PETEROMALLEY
+    const pomBorders = document.querySelectorAll('.pom-border-top, .pom-border-bottom');
+    
+    pomBorders.forEach(border => {
+        // Make borders interactive
+        border.style.pointerEvents = 'auto';
+        
+        // Get all letter elements in sequence
+        const letterElements = border.querySelectorAll('.letter-p, .letter-o, .letter-m');
+        
+        // Map each POM sequence to PETEROMALLEY
+        // P -> P, O -> E, M -> T, P -> E, O -> R, M -> O, P -> M, O -> A, M -> L, P -> L, O -> E, M -> Y
+        
+        letterElements.forEach((letter, index) => {
+            const position = index % 12; // PETEROMALLEY has 12 letters
+            let originalText = letter.textContent;
+            let transformedText;
+            
+            switch(position) {
+                case 0: transformedText = 'P'; break;  // P -> P
+                case 1: transformedText = 'E'; break;  // O -> E
+                case 2: transformedText = 'T'; break;  // M -> T
+                case 3: transformedText = 'E'; break;  // P -> E
+                case 4: transformedText = 'R'; break;  // O -> R
+                case 5: transformedText = 'O'; break;  // M -> O
+                case 6: transformedText = 'M'; break;  // P -> M
+                case 7: transformedText = 'A'; break;  // O -> A
+                case 8: transformedText = 'L'; break;  // M -> L
+                case 9: transformedText = 'L'; break;  // P -> L
+                case 10: transformedText = 'E'; break; // O -> E
+                case 11: transformedText = 'Y'; break; // M -> Y
+            }
+            
+            letter.addEventListener('mouseenter', () => {
+                letter.textContent = transformedText;
+                letter.classList.add('transformed');
+            });
+            
+            letter.addEventListener('mouseleave', () => {
+                letter.textContent = originalText;
+                letter.classList.remove('transformed');
+            });
+        });
+    });
 }); 

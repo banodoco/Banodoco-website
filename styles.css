@@ -2,7 +2,6 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Space Mono', 'Roboto Mono', monospace;
 }
 
 body {
@@ -16,6 +15,7 @@ body {
     color: #333;
     position: relative;
     line-height: 1.6;
+    font-family: 'Space Mono', 'Roboto Mono', monospace;
 }
 
 .inner-border {
@@ -31,66 +31,155 @@ body {
 }
 
 /* Top Border */
+.pom-border-top, .pom-border-bottom {
+    position: fixed;
+    left: 0;
+    width: 100vw;
+    background-color: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(2px);
+    box-shadow: 0 0 15px 15px rgba(255, 255, 255, 0.4);
+    color: #333;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 24px;
+    padding: 0.5rem 0;
+    z-index: 1000;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: center;
+    letter-spacing: 1px;
+    height: 40px; /* Set explicit height for better positioning */
+    transition: background-color 0.3s ease;
+    pointer-events: auto; /* Make sure the border is interactive */
+}
+
+/* Add hover effect for POM borders */
+.pom-border-top:hover, .pom-border-bottom:hover {
+    background-color: rgba(255, 255, 255, 0.6);
+    cursor: default;
+}
+
+/* Style for individual letters */
+.letter-p, .letter-o, .letter-m {
+    display: inline-block;
+    transition: transform 0.2s ease, color 0.2s ease, text-shadow 0.2s ease;
+    cursor: default;
+    position: relative;
+    padding: 0 1px;
+}
+
+/* Add subtle hover effect to indicate interactivity */
+.letter-p:hover, .letter-o:hover, .letter-m:hover {
+    transform: translateY(-2px);
+}
+
+/* Transformed letter styles */
+.letter-p.transformed, .letter-o.transformed, .letter-m.transformed {
+    transform: translateY(-2px) scale(1.1);
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+}
+
+/* Different colors for each letter type in the PETEROMALLEY sequence */
+.letter-p.transformed, .letter-o.transformed, .letter-m.transformed {
+    color: #0066cc; /* Default blue */
+}
+
+/* Create a rainbow effect across PETEROMALLEY */
+.pom-border-top .letter-p:nth-of-type(12n+1).transformed,
+.pom-border-bottom .letter-p:nth-of-type(12n+1).transformed {
+    color: #FF5252; /* P - Red */
+}
+
+.pom-border-top .letter-o:nth-of-type(12n+1).transformed,
+.pom-border-bottom .letter-o:nth-of-type(12n+1).transformed {
+    color: #FF9800; /* E - Orange */
+}
+
+.pom-border-top .letter-m:nth-of-type(12n+1).transformed,
+.pom-border-bottom .letter-m:nth-of-type(12n+1).transformed {
+    color: #FFEB3B; /* T - Yellow */
+}
+
+.pom-border-top .letter-p:nth-of-type(12n+2).transformed,
+.pom-border-bottom .letter-p:nth-of-type(12n+2).transformed {
+    color: #4CAF50; /* E - Green */
+}
+
+.pom-border-top .letter-o:nth-of-type(12n+2).transformed,
+.pom-border-bottom .letter-o:nth-of-type(12n+2).transformed {
+    color: #2196F3; /* R - Blue */
+}
+
+.pom-border-top .letter-m:nth-of-type(12n+2).transformed,
+.pom-border-bottom .letter-m:nth-of-type(12n+2).transformed {
+    color: #3F51B5; /* O - Indigo */
+}
+
+.pom-border-top .letter-p:nth-of-type(12n+3).transformed,
+.pom-border-bottom .letter-p:nth-of-type(12n+3).transformed {
+    color: #9C27B0; /* M - Purple */
+}
+
+.pom-border-top .letter-o:nth-of-type(12n+3).transformed,
+.pom-border-bottom .letter-o:nth-of-type(12n+3).transformed {
+    color: #E91E63; /* A - Pink */
+}
+
+.pom-border-top .letter-m:nth-of-type(12n+3).transformed,
+.pom-border-bottom .letter-m:nth-of-type(12n+3).transformed {
+    color: #009688; /* L - Teal */
+}
+
+.pom-border-top .letter-p:nth-of-type(12n+4).transformed,
+.pom-border-bottom .letter-p:nth-of-type(12n+4).transformed {
+    color: #795548; /* L - Brown */
+}
+
+.pom-border-top .letter-o:nth-of-type(12n+4).transformed,
+.pom-border-bottom .letter-o:nth-of-type(12n+4).transformed {
+    color: #607D8B; /* E - Blue Grey */
+}
+
+.pom-border-top .letter-m:nth-of-type(12n+4).transformed,
+.pom-border-bottom .letter-m:nth-of-type(12n+4).transformed {
+    color: #FF4081; /* Y - Pink Accent */
+}
+
+/* Remove the marquee animation */
+.pom-border-top > div,
+.pom-border-bottom > div {
+    display: inline-block;
+    padding: 0;
+    width: 100%;
+}
+
+/* Remove the keyframes animation */
+@keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(0); }
+}
+
 .pom-border-top {
-    position: fixed;
-    top: -30px; /* Start off-screen */
-    left: 0;
-    right: 0;
-    height: 30px;
-    font-size: 24px;
-    font-weight: 700;
-    color: #333;
-    text-align: center;
-    overflow: hidden;
-    white-space: nowrap;
-    font-family: 'Space Grotesk', 'Helvetica Neue', sans-serif;
-    letter-spacing: 1px;
-    pointer-events: none;
-    z-index: 1000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: top 0.3s ease; /* Add smooth transition */
-    background-color: rgba(255, 255, 255, 0.4); /* More transparent background */
-    backdrop-filter: blur(2px); /* Add subtle blur for feathered effect */
-    box-shadow: 0 0 15px 15px rgba(255, 255, 255, 0.4); /* Feathered edges */
+    top: -50px; /* Start further off-screen */
+    transition: top 0.3s ease;
 }
 
-/* Class to show the top border when scrolled */
 .pom-border-top.visible {
-    top: 10px; /* Move to visible position when this class is added */
+    top: 0; /* Move to visible position when this class is added */
 }
 
-/* Bottom Border */
 .pom-border-bottom {
-    position: fixed;
-    bottom: 10px;
-    left: 0;
-    right: 0;
-    height: 30px;
-    font-size: 24px;
-    font-weight: 700;
-    color: #333;
-    text-align: center;
-    overflow: hidden;
-    white-space: nowrap;
-    transform: rotate(180deg);
-    font-family: 'Helvetica Neue', sans-serif;
-    letter-spacing: 1px;
-    pointer-events: none;
-    z-index: 1000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: bottom 0.3s ease; /* Add smooth transition */
-    background-color: rgba(255, 255, 255, 0.4); /* More transparent background */
-    backdrop-filter: blur(2px); /* Add subtle blur for feathered effect */
-    box-shadow: 0 0 15px 15px rgba(255, 255, 255, 0.4); /* Feathered edges */
+    bottom: -50px; /* Start off-screen by default */
+    transition: bottom 0.3s ease;
 }
 
-/* Class to hide the bottom border when scrolled to bottom */
 .pom-border-bottom.hidden {
-    bottom: -30px; /* Move off-screen when this class is added */
+    bottom: -50px; /* Move off-screen when this class is added */
+}
+
+.pom-border-bottom:not(.hidden) {
+    bottom: 10px; /* Position when visible */
 }
 
 /* Left Border */
@@ -106,7 +195,6 @@ body {
     white-space: nowrap;
     transform-origin: bottom left;
     transform: rotate(270deg) translateX(-100%);
-    font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 1px;
     pointer-events: none;
     z-index: 1000;
@@ -130,7 +218,6 @@ body {
     white-space: nowrap;
     transform-origin: bottom right;
     transform: rotate(90deg) translateX(100%);
-    font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 1px;
     pointer-events: none;
     z-index: 1000;
@@ -186,7 +273,7 @@ body::before, body::after {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 2rem;
-    margin-top: 2rem;
+    margin-top: 1rem;
     align-items: start; /* Prevent cards from stretching vertically */
     position: relative;
     padding: 1rem;
@@ -356,7 +443,7 @@ body::before, body::after {
 }
 
 .text-content p {
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Space Mono', 'Roboto Mono', monospace;
     font-size: 0.9rem;
     line-height: 1.6;
     margin-bottom: 0.5rem; /* Reduced from 1rem */
@@ -541,123 +628,118 @@ body::before, body::after {
     opacity: 1;
 }
 
-/* Responsive adjustments */
+/* Mobile Responsive Styles */
 @media (max-width: 768px) {
-    /* General mobile adjustments */
     body {
-        padding: 2rem 1rem;
+        padding: 1rem;
     }
-    
+
     .inner-border {
-        top: 20px;
-        left: 20px;
-        right: 20px;
-        bottom: 20px;
+        top: 0.5rem;
+        right: 0.5rem;
+        bottom: 0.5rem;
+        left: 0.5rem;
     }
-    
-    /* Dashboard layout */
+
     .dashboard {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-template-columns: 1fr;
         gap: 1.5rem;
-        justify-items: center; /* Center cards horizontally */
     }
-    
-    /* Card width adjustment for mobile */
+
     .card {
-        transform-origin: center center;
-        min-height: 300px;
+        min-height: 250px;
+        padding: 1.25rem 1.25rem 0.75rem 1.25rem;
     }
-    
+
+    .card:not(.expanded) {
+        padding-bottom: 0.5rem;
+    }
+
     .card.expanded {
-        transform: scale(1.03);
-        position: relative;
+        transform: scale(1.02);
+        z-index: 10;
+        padding-bottom: 0.75rem;
     }
-    
-    /* POM letters */
+
     .large-letters {
-        flex-direction: row;
-        justify-content: center;
-        width: 100%;
         margin-bottom: 1.5rem;
     }
-    
+
     .letter {
-        font-size: 3rem;
-        margin: 0 0.25rem;
+        font-size: 4rem;
+        margin: 0 0.05rem;
     }
     
+    #pom-letters .letter:first-child {
+        margin-right: -0.03rem;
+    }
+    
+    #pom-letters .letter:nth-child(2) {
+        margin-left: -0.03rem;
+        margin-right: 0.05rem;
+    }
+
     .name-reveal {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
     }
-    
+
     #pom-letters .name-reveal {
-        white-space: normal;
-        width: 90%;
-        padding: 0.3rem 0.8rem;
-        max-width: 280px; /* Add max-width to prevent excessive width */
-        margin: 0 auto; /* Center the element */
+        width: 100%;
+        text-align: center;
     }
-    
+
+    .letter.clicked {
+        color: #000;
+        text-shadow: 2px 2px 0px rgba(0,0,0,0.15);
+    }
+
     #pom-letters.active .letter {
-        transform: translateY(-10px) rotate(10deg);
+        transform: translateY(-15px) rotate(10deg);
     }
-    
+
     #pom-letters.active .letter:nth-child(2) {
-        transform: translateY(-10px) rotate(-5deg);
+        transform: translateY(-15px) rotate(-5deg);
     }
-    
+
     #pom-letters.active .letter:nth-child(3) {
-        transform: translateY(-10px) rotate(15deg);
+        transform: translateY(-15px) rotate(15deg);
     }
-    
-    /* Square images */
-    .square-images-wrapper {
-        padding: 0;
-        margin-bottom: 2rem;
-        width: 100% !important;
+
+    #pom-letters.active .name-reveal {
+        font-size: 1.2rem;
     }
-    
+
+    /* Keep square images in a row */
     .square-images {
-        display: flex !important;
-        justify-content: space-between !important;
-        width: 100% !important;
-        max-width: 100% !important;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0 1rem;
     }
-    
+
     .square-image-container {
-        width: 32% !important;
-        padding-bottom: 32% !important;
-        box-shadow: none !important;
-        display: block !important;
-        position: relative !important;
-        height: 0 !important;
-        overflow: hidden !important;
+        width: 32%;
+        max-width: none;
+        margin: 0;
     }
-    
-    .square-image {
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: cover !important;
-    }
-    
+
     .image-hover-text {
-        font-size: 0.8rem;
-        padding: 0.3rem;
-        transform: translateY(100%) !important;
         opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.3s ease;
+        text-align: center;
+        padding: 0.5rem;
+        font-size: 0.8rem;
     }
-    
-    /* Add a class for when the image is clicked on mobile */
+
     .square-image-container.mobile-active .image-hover-text {
-        transform: translateY(0) !important;
-        opacity: 0.9;
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* Extra small devices (phones, 480px and down) */
 @media (max-width: 480px) {
     #pom-letters .name-reveal {
         width: 85%;
@@ -668,14 +750,35 @@ body::before, body::after {
     
     .letter {
         font-size: 2.5rem;
-        margin: 0 0.2rem;
+        margin: 0 0.05rem;
+    }
+    
+    #pom-letters .letter:first-child {
+        margin-right: -0.02rem;
+    }
+    
+    #pom-letters .letter:nth-child(2) {
+        margin-left: -0.02rem;
+        margin-right: 0.05rem;
+    }
+
+    /* Keep square images in a row */
+    .square-images {
+        gap: 0.25rem;
+        padding: 0 0.5rem;
+    }
+
+    .square-image-container {
+        width: 32%;
     }
 }
 
 /* Square Images Wrapper */
 .square-images-wrapper {
-    margin-bottom: 2rem;
+    margin: 1rem auto 2rem auto;
+    text-align: center;
     width: 100%;
+    max-width: 1200px;
 }
 
 /* Large Letters */
@@ -683,7 +786,7 @@ body::before, body::after {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     position: relative;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -696,28 +799,64 @@ body::before, body::after {
     100% { transform: scale(1); }
 }
 
+/* Add a vibration animation for when letters are clicked */
+@keyframes letter-vibrate {
+    0% { transform: translate(0) rotate(0); }
+    10% { transform: translate(-4px, 3px) rotate(-3deg); }
+    20% { transform: translate(4px, -3px) rotate(3deg); }
+    30% { transform: translate(-4px, -2px) rotate(-2deg); }
+    40% { transform: translate(4px, 2px) rotate(2deg); }
+    50% { transform: translate(-3px, -1px) rotate(-1deg); }
+    60% { transform: translate(3px, 1px) rotate(1deg); }
+    70% { transform: translate(-3px, 2px) rotate(-2deg); }
+    80% { transform: translate(3px, -2px) rotate(2deg); }
+    90% { transform: translate(-2px, 1px) rotate(-1deg); }
+    100% { transform: translate(0) rotate(0); }
+}
+
+/* Add a subtle pulse animation for clicked letters */
+@keyframes letter-clicked-pulse {
+    0% { transform: scale(1); color: #333; text-shadow: 2px 2px 0px rgba(0,0,0,0.05); }
+    50% { transform: scale(1.12); color: #000; text-shadow: 3px 3px 0px rgba(0,0,0,0.15); }
+    100% { transform: scale(1); color: #333; text-shadow: 2px 2px 0px rgba(0,0,0,0.05); }
+}
+
 .letter {
-    font-family: 'Space Grotesk', 'Helvetica Neue', sans-serif;
+    /* removed font-family to inherit from body */
     font-size: 5rem;
     font-weight: 700;
     color: #333;
-    margin: 0 0.2rem;
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    margin: 0 0.1rem; /* Reduced from 0.2rem to 0.1rem */
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     text-shadow: 2px 2px 0px rgba(0,0,0,0.05);
     position: relative;
     display: inline-block;
+    cursor: pointer; /* Add cursor pointer to indicate clickability */
 }
 
-.large-letters:hover .letter {
-    animation: letter-pulse 1.5s infinite;
+/* Style for clicked letters */
+.letter.clicked {
+    color: #000;
+    text-shadow: 3px 3px 0px rgba(0,0,0,0.1);
 }
 
-.large-letters:hover .letter:nth-child(2) {
-    animation-delay: 0.2s;
+/* Hover effect for letters */
+.letter:hover:not(.clicked) {
+    transform: translateY(-3px);
+    color: #000;
+    text-shadow: 3px 3px 0px rgba(0,0,0,0.1);
 }
 
-.large-letters:hover .letter:nth-child(3) {
-    animation-delay: 0.4s;
+.large-letters:hover .letter:not(.clicked) {
+    animation: none; /* Remove the pulse animation on hover */
+}
+
+.large-letters:hover .letter:nth-child(2):not(.clicked) {
+    animation-delay: 0s; /* Reset animation delay */
+}
+
+.large-letters:hover .letter:nth-child(3):not(.clicked) {
+    animation-delay: 0s; /* Reset animation delay */
 }
 
 .large-letters .letter::after {
@@ -731,36 +870,25 @@ body::before, body::after {
     transform: scaleX(0);
     transform-origin: center;
     transition: transform 0.4s ease;
+    display: none; /* Hide the shadow effect */
 }
 
 .large-letters:hover .letter::after {
     transform: scaleX(1);
-}
-
-/* Name reveal styling */
-.name-reveal {
-    position: absolute;
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    font-size: 1.5rem;
-    font-weight: 400;
-    color: #555;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.5s ease;
-    letter-spacing: 0.05em;
+    display: none; /* Hide the shadow effect */
 }
 
 /* Hover effect for the POM letters */
-#pom-letters:hover:not(.active) .letter {
-    animation: letter-pulse 1.5s infinite;
+#pom-letters:hover:not(.active) .letter:not(.clicked) {
+    animation: none; /* Remove the pulse animation */
 }
 
-#pom-letters:hover:not(.active) .letter:nth-child(2) {
-    animation-delay: 0.2s;
+#pom-letters:hover:not(.active) .letter:nth-child(2):not(.clicked) {
+    animation-delay: 0s;
 }
 
-#pom-letters:hover:not(.active) .letter:nth-child(3) {
-    animation-delay: 0.4s;
+#pom-letters:hover:not(.active) .letter:nth-child(3):not(.clicked) {
+    animation-delay: 0s;
 }
 
 /* Click effect for the POM letters */
@@ -795,47 +923,43 @@ body::before, body::after {
     transform: translate(-50%, -50%) scale(0);
     transition: opacity 0.2s ease, transform 0.2s ease;
     pointer-events: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    text-align: center;
+    width: 100%;
 }
 
 #pom-letters.active .name-reveal {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
-    animation: name-reveal 0.8s ease-out forwards;
+    animation: name-reveal 0.8s ease forwards;
 }
 
 /* Square Images Section */
 .square-images {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: nowrap;
+    margin: 2rem auto 1rem auto;
     width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
 }
 
 .square-image-container {
+    flex: 1;
+    max-width: 200px;
     position: relative;
-    width: 32%;
-    height: 0;
-    padding-bottom: 32%; /* Creates a square aspect ratio */
-    overflow: visible; /* Changed from hidden to visible */
-    box-shadow: 0 0 0 1px #eaeaea;
+    aspect-ratio: 1;
+    overflow: hidden;
 }
 
 .square-image {
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    filter: grayscale(0%);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    filter: saturate(0.9);
-}
-
-.square-image-container:hover .square-image {
-    filter: saturate(1.1);
-    transform: scale(1.03);
+    transition: transform 0.3s ease;
 }
 
 .image-hover-text {
@@ -1067,7 +1191,6 @@ body::before, body::after {
 
 /* Edit for card headline styling: increasing bottom margin */
 .life-tile h3, .work-tile h3, .project-tile h3, .story-tile h3 {
-    font-family: 'Space Grotesk', 'Helvetica Neue', sans-serif;
     font-weight: 600;
     margin-bottom: 0.5rem;
     letter-spacing: -0.02em;
@@ -1089,7 +1212,7 @@ body::before, body::after {
     display: inline-block;
     margin-top: 0.5rem;
     margin-bottom: 0;
-    font-family: 'Space Mono', monospace;
+    font-family: inherit;
     font-size: 0.85rem;
     color: #555;
     text-decoration: none;
@@ -1101,6 +1224,8 @@ body::before, body::after {
     transform: translateY(10px);
     pointer-events: none;
     position: relative; /* Add position relative */
+    will-change: opacity, transform; /* Optimize for animations */
+    display: none; /* Hide by default */
 }
 
 .link span {
@@ -1123,6 +1248,16 @@ body::before, body::after {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
+    display: inline-block; /* Show when expanded or hovered */
+}
+
+/* Ensure links are properly hidden when card is unexpanded */
+.card:not(.expanded):not(:hover) .link {
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: all 0.2s ease;
+    display: none; /* Hide when not expanded or hovered */
 }
 
 /* Remove any horizontal dividers that might be causing the line */
@@ -1499,10 +1634,25 @@ body::before, body::after {
     transform: scaleX(0);
     transform-origin: center;
     transition: transform 0.4s ease;
+    display: none; /* Hide the shadow effect */
 }
 
 .large-letters:hover .letter::after {
     transform: scaleX(1);
+    display: none; /* Hide the shadow effect */
+}
+
+/* Name reveal styling */
+.name-reveal {
+    position: absolute;
+    font-family: 'Space Mono', 'Roboto Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: #555;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.5s ease;
+    letter-spacing: 0.05em;
 }
 
 /* End of file */
@@ -1569,4 +1719,60 @@ body::before, body::after {
     border: none !important;
     background: none !important;
     box-shadow: none !important;
+}
+
+/* Extra vertical spacing for links in story tiles */
+.card.story-tile .link {
+    line-height: 1.8;
+}
+
+/* Add specific letter spacing adjustments */
+#pom-letters .letter:first-child {
+    margin-right: -0.05rem; /* Negative margin to bring P and O closer */
+}
+
+#pom-letters .letter:nth-child(2) {
+    margin-left: -0.05rem; /* Negative margin to bring P and O closer */
+    margin-right: 0.1rem; /* Keep normal spacing between O and M */
+}
+
+/* Adjust spacing between P and O in the banner text */
+.pom-border-top .letter-p,
+.pom-border-bottom .letter-p {
+    margin-right: -0.05rem;
+    display: inline-block;
+}
+
+.pom-border-top .letter-o,
+.pom-border-bottom .letter-o {
+    margin-left: -0.05rem;
+    display: inline-block;
+}
+
+/* Bottom Border */
+.pom-border-bottom {
+    bottom: 10px;
+    transition: bottom 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .square-images {
+        gap: 0.5rem;
+        padding: 0 1rem;
+    }
+
+    .square-image-container {
+        max-width: 33%;
+    }
+}
+
+@media (max-width: 480px) {
+    .square-images-wrapper {
+        margin: 1rem auto;
+    }
+
+    .square-images {
+        gap: 0.25rem;
+        padding: 0 0.5rem;
+    }
 }
