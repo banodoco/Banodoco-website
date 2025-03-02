@@ -277,6 +277,7 @@ body::before, body::after {
     align-items: start; /* Prevent cards from stretching vertically */
     position: relative;
     padding: 1rem;
+    padding-bottom: 0; /* Remove bottom padding */
     border-radius: 8px;
     background-color: rgba(255, 255, 255, 0.5);
     backdrop-filter: blur(5px);
@@ -304,8 +305,8 @@ body::before, body::after {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    padding: 1.5rem 1.5rem 1rem 1.5rem; /* Reduced bottom padding */
-    margin-bottom: 1.5rem;
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+    margin-bottom: 0; /* Remove bottom margin from cards */
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     overflow: hidden;
     cursor: pointer;
@@ -642,13 +643,12 @@ body::before, body::after {
     }
 
     .dashboard {
-        grid-template-columns: 1fr;
         gap: 1.5rem;
+        padding: 1rem 1rem 0 1rem; /* Remove bottom padding on mobile */
     }
 
     .card {
-        min-height: 250px;
-        padding: 1.25rem 1.25rem 0.75rem 1.25rem;
+        margin-bottom: 0; /* Ensure no margin on mobile */
     }
 
     .card:not(.expanded) {
@@ -738,6 +738,10 @@ body::before, body::after {
         opacity: 1;
         transform: translateY(0);
     }
+
+    .social-links {
+        margin: 1.5rem 0 1rem; /* Reduced margins on mobile */
+    }
 }
 
 @media (max-width: 480px) {
@@ -770,6 +774,15 @@ body::before, body::after {
 
     .square-image-container {
         width: 32%;
+    }
+
+    .dashboard {
+        gap: 1rem;
+        padding: 0.5rem 0.5rem 0 0.5rem; /* Further reduced padding on smaller screens */
+    }
+
+    .social-links {
+        margin: 1rem 0 0.5rem; /* Further reduced margins on smaller screens */
     }
 }
 
@@ -1146,7 +1159,7 @@ body::before, body::after {
     display: flex;
     justify-content: center;
     gap: 1.5rem;
-    margin: 3rem 0 1rem;
+    margin: 2rem 0 1rem; /* Reduced top margin */
     padding-top: 2rem;
     border-top: 1px solid #eaeaea;
 }
