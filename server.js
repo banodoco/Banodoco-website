@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3001;
+const PORT = 3002;
 // Use 0.0.0.0 to listen on all network interfaces (needed for external access)
 const HOST = '0.0.0.0';
 
@@ -55,4 +55,23 @@ server.listen(PORT, HOST, () => {
   console.log(`Server running at http://localhost:${PORT}/`);
   console.log(`To access from other devices on your network, use your computer's IP address: http://YOUR_IP_ADDRESS:${PORT}/`);
   console.log('Press Ctrl+C to stop the server');
-}); 
+});
+
+// Handle graceful shutdown
+const gracefulShutdown = () => {
+  console.log('\nShutting down server...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+  
+  // Force close after timeout
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 3000);
+};
+
+// Listen for termination signals
+process.on('SIGINT', gracefulShutdown); // Ctrl+C
+process.on('SIGTERM', gracefulShutdown); // kill command 
