@@ -163,6 +163,7 @@ body {
 .pom-border-top {
     top: -50px; /* Start further off-screen */
     transition: top 0.3s ease;
+    margin-bottom: 30px; /* Added margin below to match spacing */
 }
 
 .pom-border-top.visible {
@@ -172,6 +173,7 @@ body {
 .pom-border-bottom {
     bottom: -50px; /* Start off-screen by default */
     transition: bottom 0.3s ease;
+    margin-top: 30px; /* Added margin above to match spacing */
 }
 
 .pom-border-bottom.hidden {
@@ -279,34 +281,17 @@ body::before, body::after {
     padding: 1rem;
     padding-bottom: 0; /* Remove bottom padding */
     border-radius: 8px;
-    background-color: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(5px);
+    background-color: rgba(255, 255, 255, 0.8); /* Increased opacity */
 }
 
-.dashboard::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-        radial-gradient(circle at 1px 1px, rgba(200, 200, 220, 0.2) 1px, transparent 1px);
-    background-size: 20px 20px;
-    border-radius: 8px;
-    z-index: -1;
-    opacity: 0.5;
-    pointer-events: none;
-}
-
-/* Card Styles */
+/* Remove backdrop-filter from dashboard and add it to individual cards instead */
 .card {
     position: relative;
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    background: rgba(255, 255, 255, 0.95); /* More opaque background */
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     padding: 1.5rem 1.5rem 1rem 1.5rem;
-    margin-bottom: 0; /* Remove bottom margin from cards */
+    margin-bottom: 0;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     overflow: hidden;
     cursor: pointer;
@@ -788,7 +773,7 @@ body::before, body::after {
 
 /* Square Images Wrapper */
 .square-images-wrapper {
-    margin: 1rem auto 2rem auto;
+    margin: 0.5rem auto 2rem auto;
     text-align: center;
     width: 100%;
     max-width: 1200px;
@@ -799,7 +784,7 @@ body::before, body::after {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin: 0.5rem 0 1.5rem 0;
     position: relative;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -956,7 +941,7 @@ body::before, body::after {
     align-items: center;
     gap: 1rem;
     flex-wrap: nowrap;
-    margin: 2rem auto 1rem auto;
+    margin: 1rem auto 2rem auto;
     width: 100%;
 }
 
@@ -1788,4 +1773,56 @@ body::before, body::after {
         gap: 0.25rem;
         padding: 0 0.5rem;
     }
+}
+
+/* Ensure links are crisp and clear */
+.link {
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    z-index: 2;
+}
+
+/* Adjacent letters transformed: reveal color change and new letter display without growing */
+.letter.adjacent.transformed {
+    transform: scale(1) !important;
+}
+
+/* Ensure adjacent letters in POMPOM border do not grow */
+.pom-border-top span.adjacent.transformed,
+.pom-border-bottom span.adjacent.transformed {
+    transform: scale(1) !important;
+    transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease;
+}
+
+/* Add smooth transition and subtle glow effect for border letters */
+.pom-border-top span,
+.pom-border-bottom span {
+    display: inline-block;
+    transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease, opacity 0.15s ease;
+}
+
+.pom-border-top span.transformed,
+.pom-border-bottom span.transformed {
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease, opacity 0.3s ease;
+}
+
+/* Deactivation animation */
+.pom-border-top span.deactivating,
+.pom-border-bottom span.deactivating {
+    transform: scale(0.95);
+    opacity: 0.8;
+    transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+}
+
+.transformed.adjacent {
+    transform: scale(1) !important;
+    transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease, opacity 0.3s ease;
+}
+
+.deactivating.adjacent {
+    transform: scale(1);
+    opacity: 0.8;
+    transition: transform 0.15s ease-out, opacity 0.15s ease-out;
 }

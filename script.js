@@ -180,6 +180,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 startVibratingLetters();
             }
         });
+
+        // Adding hover behavior for adjacent letters in #pom-letters
+        letters.forEach(letter => {
+            letter.addEventListener('mouseenter', () => {
+                // Add transformed class only to hovered letter
+                letter.classList.add('transformed');
+                // Add only 'adjacent' class to previous letter if exists
+                const prev = letter.previousElementSibling;
+                if (prev && prev.classList.contains('letter')) {
+                    prev.classList.add('adjacent');
+                }
+                // Add only 'adjacent' class to next letter if exists
+                const next = letter.nextElementSibling;
+                if (next && next.classList.contains('letter')) {
+                    next.classList.add('adjacent');
+                }
+            });
+            letter.addEventListener('mouseleave', () => {
+                // Remove transformed from hovered letter
+                letter.classList.remove('transformed');
+                // Remove only 'adjacent' class from previous letter if exists
+                const prev = letter.previousElementSibling;
+                if (prev && prev.classList.contains('letter')) {
+                    prev.classList.remove('adjacent');
+                }
+                // Remove only 'adjacent' class from next letter if exists
+                const next = letter.nextElementSibling;
+                if (next && next.classList.contains('letter')) {
+                    next.classList.remove('adjacent');
+                }
+            });
+        });
+
+        letters[2].addEventListener('click', () => {
+            letters[2].classList.add('clicked');
+            startVibratingLetters();
+
+            setTimeout(() => {
+                letters.forEach(letter => {
+                    letter.style.animation = '';
+                });
+                proceedWithTransformation();
+            }, 1500);
+        });
     }
     
     // Reset all image filters on page load
@@ -1059,48 +1103,146 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Add hover effect for POM borders to transform to PETEROMALLEY
-    const pomBorders = document.querySelectorAll('.pom-border-top, .pom-border-bottom');
-    
-    pomBorders.forEach(border => {
-        // Make borders interactive
-        border.style.pointerEvents = 'auto';
-        
-        // Get all letter elements in sequence
-        const letterElements = border.querySelectorAll('.letter-p, .letter-o, .letter-m');
-        
-        // Map each POM sequence to PETEROMALLEY
-        // P -> P, O -> E, M -> T, P -> E, O -> R, M -> O, P -> M, O -> A, M -> L, P -> L, O -> E, M -> Y
-        
-        letterElements.forEach((letter, index) => {
-            const position = index % 12; // PETEROMALLEY has 12 letters
-            let originalText = letter.textContent;
-            let transformedText;
-            
-            switch(position) {
-                case 0: transformedText = 'P'; break;  // P -> P
-                case 1: transformedText = 'E'; break;  // O -> E
-                case 2: transformedText = 'T'; break;  // M -> T
-                case 3: transformedText = 'E'; break;  // P -> E
-                case 4: transformedText = 'R'; break;  // O -> R
-                case 5: transformedText = 'O'; break;  // M -> O
-                case 6: transformedText = 'M'; break;  // P -> M
-                case 7: transformedText = 'A'; break;  // O -> A
-                case 8: transformedText = 'L'; break;  // M -> L
-                case 9: transformedText = 'L'; break;  // P -> L
-                case 10: transformedText = 'E'; break; // O -> E
-                case 11: transformedText = 'Y'; break; // M -> Y
+    // Initialize original text for border letters so we can revert later
+    const borderLetters = document.querySelectorAll('.pom-border-top span, .pom-border-bottom span');
+    borderLetters.forEach(letter => {
+        letter.dataset.originalText = letter.textContent;
+    });
+
+    // Define transformation mapping and helper functions
+    const mapping = ['P','E','T','E','R','O','M','A','L','L','E','Y'];
+    // Define pastel rainbow colors: pastel red, pastel orange, pastel yellow, pastel green, pastel blue, pastel indigo, pastel violet
+    const rainbowColors = ['#FF6961', '#FFB347', '#FDFD96', '#77DD77', '#AEC6CF', '#C1CDFF', '#CDA4DE'];
+
+    function transformLetter(letter) {
+        const parent = letter.parentElement;
+        // Get the index of this letter within its parent
+        const index = Array.prototype.indexOf.call(parent.children, letter);
+        letter.textContent = mapping[index % mapping.length];
+        // Assign pastel rainbow colors in order
+        letter.style.color = rainbowColors[index % rainbowColors.length];
+    }
+
+    function revertLetter(letter) {
+        if(letter.dataset.originalText) {
+            letter.textContent = letter.dataset.originalText;
+            letter.style.color = '';
+        }
+    }
+
+    // Adding hover behavior with immediate deactivation for desktop
+    borderLetters.forEach(letter => {
+        let revertTimeout;
+
+        letter.addEventListener('mouseenter', (e) => {
+            clearTimeout(revertTimeout);
+            letter.classList.remove('deactivating');
+            letter.classList.add('transformed');
+            transformLetter(letter);
+
+            const prev = letter.previousElementSibling;
+            if (prev && prev.tagName.toLowerCase() === 'span') {
+                prev.classList.remove('deactivating');
+                prev.classList.add('transformed', 'adjacent');
+                transformLetter(prev);
             }
-            
-            letter.addEventListener('mouseenter', () => {
-                letter.textContent = transformedText;
-                letter.classList.add('transformed');
-            });
-            
-            letter.addEventListener('mouseleave', () => {
-                letter.textContent = originalText;
-                letter.classList.remove('transformed');
-            });
+
+            const next = letter.nextElementSibling;
+            if (next && next.tagName.toLowerCase() === 'span') {
+                next.classList.remove('deactivating');
+                next.classList.add('transformed', 'adjacent');
+                transformLetter(next);
+            }
+        });
+
+        letter.addEventListener('mouseleave', (e) => {
+            clearTimeout(revertTimeout);
+            // Wait 1.5 seconds before starting deactivation
+            revertTimeout = setTimeout(() => {
+                letter.classList.add('deactivating');
+                
+                const prev = letter.previousElementSibling;
+                if (prev && prev.tagName.toLowerCase() === 'span') {
+                    prev.classList.add('deactivating');
+                }
+                
+                const next = letter.nextElementSibling;
+                if (next && next.tagName.toLowerCase() === 'span') {
+                    next.classList.add('deactivating');
+                }
+
+                // Complete reversion after animation
+                setTimeout(() => {
+                    letter.classList.remove('transformed', 'deactivating');
+                    revertLetter(letter);
+
+                    if (prev && prev.tagName.toLowerCase() === 'span') {
+                        prev.classList.remove('transformed', 'adjacent', 'deactivating');
+                        revertLetter(prev);
+                    }
+
+                    if (next && next.tagName.toLowerCase() === 'span') {
+                        next.classList.remove('transformed', 'adjacent', 'deactivating');
+                        revertLetter(next);
+                    }
+                }, 150);
+            }, 1500); // Wait 1.5 seconds before deactivating
+        });
+    });
+
+    // Adding touch behavior for mobile devices with immediate deactivation
+    borderLetters.forEach(letter => {
+        let revertTimeout;
+
+        letter.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            clearTimeout(revertTimeout);
+            letter.classList.remove('deactivating');
+            letter.classList.add('transformed');
+            transformLetter(letter);
+
+            const prev = letter.previousElementSibling;
+            if (prev && prev.tagName.toLowerCase() === 'span') {
+                prev.classList.remove('deactivating');
+                prev.classList.add('transformed', 'adjacent');
+                transformLetter(prev);
+            }
+
+            const next = letter.nextElementSibling;
+            if (next && next.tagName.toLowerCase() === 'span') {
+                next.classList.remove('deactivating');
+                next.classList.add('transformed', 'adjacent');
+                transformLetter(next);
+            }
+
+            // Start deactivation sequence after 3 seconds total (1.5s peak + 1.5s fade)
+            revertTimeout = setTimeout(() => {
+                letter.classList.add('deactivating');
+                
+                if (prev && prev.tagName.toLowerCase() === 'span') {
+                    prev.classList.add('deactivating');
+                }
+                
+                if (next && next.tagName.toLowerCase() === 'span') {
+                    next.classList.add('deactivating');
+                }
+
+                // Complete reversion after animation
+                setTimeout(() => {
+                    letter.classList.remove('transformed', 'deactivating');
+                    revertLetter(letter);
+
+                    if (prev && prev.tagName.toLowerCase() === 'span') {
+                        prev.classList.remove('transformed', 'adjacent', 'deactivating');
+                        revertLetter(prev);
+                    }
+
+                    if (next && next.tagName.toLowerCase() === 'span') {
+                        next.classList.remove('transformed', 'adjacent', 'deactivating');
+                        revertLetter(next);
+                    }
+                }, 150);
+            }, 1500); // Changed from 3000 to 1500 to match desktop behavior
         });
     });
 }); 
