@@ -558,16 +558,7 @@ body::before, body::after {
 }
 
 .image-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.1) 100%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
+    display: none !important;
 }
 
 .card:hover .image-container::after {
@@ -1268,53 +1259,6 @@ body::before, body::after {
     transition: all 0.5s ease; /* Add transition for smooth expansion */
 }
 
-/* Image container for cards with static/GIF images */
-.image-container {
-    position: relative;
-    width: 100%;
-    margin-bottom: 1.5rem;
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.image-container .tile-image {
-    width: 100%;
-    display: block;
-    border-radius: 2px;
-    transition: all 0.3s ease;
-}
-
-.image-container .static-image {
-    filter: grayscale(80%);
-    z-index: 1;
-}
-
-.image-container .gif-image {
-    position: absolute;
-    top: 0;
-    left: 0;
-    opacity: 0;
-    z-index: 2;
-}
-
-.card:hover .image-container .static-image {
-    filter: grayscale(0%);
-    opacity: 0;
-}
-
-.card:hover .image-container .gif-image {
-    opacity: 1;
-}
-
-.card.expanded-mobile .image-container .static-image {
-    filter: grayscale(0%);
-    opacity: 0;
-}
-
-.card.expanded-mobile .image-container .gif-image {
-    opacity: 1;
-}
-
 /* Social Media Links */
 .social-links {
     position: relative;
@@ -1442,38 +1386,7 @@ body::before, body::after {
     display: none;
 }
 
-/* Remove duplicate year-link styling - already defined earlier in the file */
-/* 
-.year-link {
-    position: relative;
-    color: #555;
-    transition: color 0.2s ease;
-    border-bottom: none;
-    padding-bottom: 1px;
-}
-
-.year-link::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -2px;
-    height: 1px;
-    background-color: #999;
-    transition: all 0.2s ease;
-    transform: scaleX(1);
-}
-
-.year-link:hover {
-    color: #000;
-}
-
-.year-link:hover::after {
-    background-color: #333;
-    transform: scaleX(0.7);
-}
-*/
-
+/* Icon styles */
 .icon {
     color: #555;
     margin-bottom: 1.25rem;
@@ -1803,4 +1716,9 @@ body::before, body::after {
 .card[data-position="4"]:not(.expanded) .text-content {
     max-height: none;
     overflow: visible;
+}
+
+/* Additional override to prevent .image-container::after from appearing on hover */
+.card:hover .image-container::after {
+    display: none !important;
 }
