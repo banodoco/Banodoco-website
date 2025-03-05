@@ -274,7 +274,7 @@
                         <i data-feather="play-circle" class="play-icon"></i>
                     </div>
                     <div class="video-embed">
-                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/4AgXLXE5QIo?si=7jKSVkEww1M7T7f7&origin=http://localhost:3002" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/4AgXLXE5QIo?si=7jKSVkEww1M7T7f7&origin=http://localhost:3002" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen playsinline></iframe>
                     </div>
                 </div>
                 <h3>The sound of the tires in the snow</h3>
@@ -430,5 +430,32 @@
         // Initialize Feather icons
         feather.replace();
     </script>
+    <script>
+        // Attach click and touch events on video container to start playback on mobile
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelectorAll('.video-container').forEach(container => {
+            container.addEventListener('click', function(e) {
+               const videoEmbed = container.querySelector('.video-embed');
+               const thumbnail = container.querySelector('.video-thumbnail');
+               const overlay = container.querySelector('.video-overlay');
+               if(videoEmbed && thumbnail && overlay) {
+                 videoEmbed.style.display = 'block';
+                 thumbnail.style.display = 'none';
+                 overlay.style.display = 'none';
+                 const iframe = videoEmbed.querySelector('iframe');
+                 let src = iframe.getAttribute('src');
+                 if (src.indexOf('autoplay=1') === -1) {
+                   src += (src.indexOf('?') === -1 ? '?' : '&') + 'autoplay=1';
+                   iframe.setAttribute('src', src);
+                 }
+               }
+            });
+            container.addEventListener('touchstart', function(e) {
+               container.click();
+            });
+          });
+        });
+    </script>
+    <!-- End video-container playback script -->
 </body>
 </html> 
