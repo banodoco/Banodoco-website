@@ -543,12 +543,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.innerWidth > 768) { // only apply for desktop
                 const videoEmbed = card.querySelector('.video-embed');
                 const videoOverlay = card.querySelector('.video-overlay');
+                const thumbnail = card.querySelector('.video-thumbnail');
                 
                 // Immediately hide the video embed and show the overlay
                 if (videoEmbed) {
                     videoEmbed.style.opacity = '0';
                     videoEmbed.style.visibility = 'hidden';
-                    
                     // Remove the iframe immediately to stop the video
                     while (videoEmbed.firstChild) {
                         videoEmbed.removeChild(videoEmbed.firstChild);
@@ -558,6 +558,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (videoOverlay) {
                     videoOverlay.style.opacity = '1';
                     videoOverlay.style.visibility = 'visible';
+                }
+                
+                // Restore the thumbnail if it exists
+                if (thumbnail) {
+                    thumbnail.style.display = '';
+                    thumbnail.style.opacity = '1';
+                    thumbnail.style.visibility = 'visible';
                 }
             }
         });
@@ -1289,7 +1296,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         revertLetter(next);
                     }
                 }, 150);
-            }, 1500); // Wait 1.5 seconds before deactivating
+            }, 1500);
         });
     });
 
