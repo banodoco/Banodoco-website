@@ -4,6 +4,11 @@ const initialBud = document.getElementById('initialBud');
 const wateringContainer = document.querySelector('.watering-container');
 const waterDrops = document.querySelector('.water-drops');
 
+// Add a class with slower transition when needed
+function addSlowerTransition() {
+    wateringContainer.style.transition = 'transform 2.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1s ease';
+}
+
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -43,6 +48,12 @@ const MAX_TREES = 100; // Maximum number of trees allowed
 wateringContainer.addEventListener('click', () => {
     if (!animationStarted) {
         animationStarted = true;
+        
+        // Disable hover animation by adding a class
+        wateringContainer.classList.add('no-hover');
+        
+        // Apply slower transition before adding the pouring class
+        addSlowerTransition();
         
         // Add pouring class to start the watering animation
         wateringContainer.classList.add('pouring');

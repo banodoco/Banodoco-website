@@ -27,6 +27,10 @@
         /* Add transition property to social-links for smooth margin changes */
         .social-links {
             transition: margin-bottom 1.5s ease-in-out;
+            margin-top: 20px; /* Increased margin-top to create more space */
+            position: relative; /* Ensure position context for absolute elements */
+            border-top: none; /* Remove the border-top that was causing the line */
+            padding-top: 0; /* Remove padding-top since we don't have a border anymore */
         }
         
         .watering-container {
@@ -37,9 +41,26 @@
             cursor: pointer;
             z-index: 1000;
             transform-origin: 80% 100%;
-            transition: transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1s ease;
+            transition: transform 2.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1s ease;
             width: 50px;
             height: 50px;
+        }
+
+        /* Add hover animation for watering can */
+        .watering-container:hover {
+            animation: shake 0.8s ease-in-out infinite;
+        }
+
+        /* Disable hover animation when no-hover class is present */
+        .watering-container.no-hover:hover {
+            animation: none;
+        }
+
+        /* Keyframes for the shaking animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(-50%) rotate(0deg); }
+            25% { transform: translateX(-50%) rotate(-5deg); }
+            75% { transform: translateX(-50%) rotate(5deg); }
         }
 
         .watering-can {
@@ -186,6 +207,7 @@
 
         .watering-container.pouring {
             transform: translateX(-60%) rotate(30deg);
+            animation: none; /* Stop the shaking animation when pouring */
         }
 
         .watering-container.pouring .water-drops {
@@ -312,7 +334,7 @@
     <div class="inner-border"></div>
     <div class="pom-border-top">
         <div>
-            <span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span>
+            <span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span>
         </div>
     </div>
     <div class="pom-border-bottom">
@@ -408,7 +430,7 @@
                     </div>
                 </div>
                 <h3>Steerable Motion</h3>
-                <p>I created the first streamlined method for controlling video diffusion models using key frames. It was built on top of the work of <a href="https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved">Kosinkadink</a>, <a href="https://github.com/cubiq/ComfyUI_IPAdapter_plus">Matt3o</a>, and the Animatediff and Stable Diffusion 1.5 ecosystems.</p>
+                <p>I created the first streamlined method for controlling video diffusion models using key frames. It was built on top of the work of <a href="https://github.com/cubiq/ComfyUI_IPAdapter_plus">Matt3o</a>, <a href="https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved">Kosinkadink</a>, and the Animatediff and Stable Diffusion 1.5 ecosystems.</p>
                 <div class="link">
                     <span>
                         <a href="https://github.com/peteromallet/steerable-motion" class="year-link">View on GitHub</a>
@@ -427,7 +449,7 @@
                 </div>
                 <div class="link">
                     <span>
-                        <a href="https://www.schlupfloch.xyz/consider-pretending-that-the-2nd-renaissance-is-about-to-start-and-that-you-can-be-a-part-of-it/" class="year-link">Read an article</a>
+                        <a href="https://www.schlupfloch.xyz/consider-pretending-that-the-2nd-renaissance-is-about-to-start-and-that-you-can-be-a-part-of-it/" class="year-link">Read an article about this</a>
                     </span>
                 </div>
             </div>
@@ -443,7 +465,7 @@
                 </div>
                 <div class="link">
                     <span>
-                        <a href="https://banodoco.ai/Plan" class="year-link">Read the plan</a>
+                        <a href="https://banodoco.ai/Plan" class="year-link">Understand the plan</a>
                     </span>
                 </div>
             </div>
@@ -459,7 +481,7 @@
                 </div>
                 <div class="link">
                     <span>
-                        <a href="https://www.schlupfloch.xyz/" class="year-link">Read more</a>
+                        <a href="https://www.schlupfloch.xyz/" class="year-link">Visit blog</a>
                     </span>
                 </div>
             </div>
