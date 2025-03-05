@@ -5,26 +5,37 @@
 }
 
 body {
-    background-color: #ffffff;
+    position: relative;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #fbf8ef;
+    overflow-x: hidden;
     background-image: 
         linear-gradient(to right, rgba(240, 240, 245, 0.3) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(240, 240, 245, 0.3) 1px, transparent 1px);
     background-size: 20px 20px;
-    min-height: 100vh;
-    padding: 2rem 4rem 4rem 4rem;
+    padding: 0 4rem 2rem 4rem;
     color: #333;
-    position: relative;
     line-height: 1.6;
     font-family: 'Space Mono', 'Roboto Mono', monospace;
 }
 
+.container {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-top: 2rem;
+    padding-bottom: 1.5rem;
+}
+
 .inner-border {
     position: fixed;
+    z-index: 2;
     top: 20px;
     left: 40px;
     right: 40px;
     bottom: 40px;
-    z-index: -1;
     border: 1px solid rgba(200, 200, 220, 0.5);
     box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.03);
     pointer-events: none;
@@ -33,6 +44,7 @@ body {
 /* Top Border */
 .pom-border-top, .pom-border-bottom {
     position: fixed;
+    z-index: 1000;
     left: 0;
     width: 100vw;
     background-color: rgba(255, 255, 255, 0.4);
@@ -43,13 +55,12 @@ body {
     font-weight: bold;
     font-size: 24px;
     padding: 0.5rem 0;
-    z-index: 1000;
     overflow: hidden;
     white-space: nowrap;
     text-align: center;
     letter-spacing: 1px;
     height: 40px; /* Set explicit height for better positioning */
-    transition: background-color 0.3s ease;
+    transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1); /* Smoother easing function */
     pointer-events: auto; /* Make sure the border is interactive */
 }
 
@@ -162,26 +173,52 @@ body {
 
 .pom-border-top {
     top: -50px; /* Start further off-screen */
-    transition: top 0.3s ease;
+    transition: top 0.5s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.5s ease;
     margin-bottom: 30px; /* Added margin below to match spacing */
+    opacity: 0;
+}
+
+.pom-border-top.fading {
+    top: -25px; /* Partially visible during transition */
+    opacity: 0.5;
 }
 
 .pom-border-top.visible {
     top: 0; /* Move to visible position when this class is added */
+    opacity: 1;
 }
 
 .pom-border-bottom {
     bottom: -50px; /* Start off-screen by default */
-    transition: bottom 0.3s ease;
+    transition: all 0.8s cubic-bezier(0.25, 0.1, 0.25, 1); /* Slower, smoother transition */
     margin-top: 30px; /* Added margin above to match spacing */
+    opacity: 0;
+}
+
+/* Four stages of visibility for a more gradual transition */
+.pom-border-bottom:not(.hidden):not(.fading):not(.fading-medium):not(.fading-light) {
+    bottom: 10px; /* Position when fully visible */
+    opacity: 1;
+}
+
+.pom-border-bottom.fading {
+    bottom: 8px; /* Slightly lower position */
+    opacity: 0.85; /* First stage of fading */
+}
+
+.pom-border-bottom.fading-medium {
+    bottom: 5px; /* Lower position */
+    opacity: 0.6; /* Second stage of fading */
+}
+
+.pom-border-bottom.fading-light {
+    bottom: 0px; /* Even lower position */
+    opacity: 0.3; /* Third stage of fading */
 }
 
 .pom-border-bottom.hidden {
     bottom: -50px; /* Move off-screen when this class is added */
-}
-
-.pom-border-bottom:not(.hidden) {
-    bottom: 10px; /* Position when visible */
+    opacity: 0; /* Fully transparent */
 }
 
 /* Left Border */
@@ -230,11 +267,6 @@ body {
     padding-bottom: 10px;
 }
 
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
 /* Remove these conflicting styles */
 body::before, body::after {
     display: none;
@@ -281,13 +313,14 @@ body::before, body::after {
     padding: 1rem;
     padding-bottom: 0; /* Remove bottom padding */
     border-radius: 8px;
-    background-color: rgba(255, 255, 255, 0.8); /* Increased opacity */
+    background-color: transparent; /* Changed from rgba(255, 255, 255, 0.8) to transparent */
+    grid-auto-rows: min-content; /* Ensure rows only take the height they need */
 }
 
 /* Remove backdrop-filter from dashboard and add it to individual cards instead */
 .card {
     position: relative;
-    background: rgba(255, 255, 255, 0.95); /* More opaque background */
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     padding: 1.5rem 1.5rem 1rem 1.5rem;
@@ -297,11 +330,55 @@ body::before, body::after {
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    height: auto;
-    min-height: 340px;
+    height: 340px;
     box-sizing: border-box;
     will-change: transform;
     border: 1px solid rgba(200, 200, 220, 0.3);
+    z-index: 1;
+}
+
+/* Remove the conflicting blur effect */
+.card::after {
+    content: none; /* Disable the existing card::after rule */
+}
+
+/* Create a clean fade effect without blur at the bottom of unexpanded cards */
+.card:not(.expanded)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 5em; /* Maintain the height for gradual fade */
+    background: linear-gradient(to top, 
+                rgba(255,255,255,1) 0%, 
+                rgba(255,255,255,1) 15%, 
+                rgba(255,255,255,1) 25%,
+                rgba(255,255,255,0.98) 35%,
+                rgba(255,255,255,0.95) 45%,
+                rgba(255,255,255,0.9) 55%,
+                rgba(255,255,255,0.7) 65%, 
+                rgba(255,255,255,0.5) 75%,
+                rgba(255,255,255,0.3) 85%,
+                rgba(255,255,255,0.1) 95%,
+                rgba(255,255,255,0) 100%);
+    pointer-events: none;
+    z-index: 10;
+    transform: translateY(0); /* No offset to ensure full coverage at bottom */
+    backdrop-filter: none;
+}
+
+/* Strengthen the solid white layer at the bottom */
+.card:not(.expanded)::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2.5em; /* Increased height for more solid coverage */
+    background: white; /* Solid white at the bottom */
+    pointer-events: none;
+    z-index: 9;
 }
 
 /* Remove all borders from link elements */
@@ -386,14 +463,19 @@ body::before, body::after {
 }
 
 .card.expanded {
+    height: auto;
+    overflow: visible;
     transform: scale(1.02);
     z-index: 10;
     box-shadow: 0 6px 15px rgba(0,0,0,0.1);
     border-bottom-color: rgba(200, 200, 220, 0.3);
+    display: flex;
+    flex-direction: column;
 }
 
 .card:not(.expanded):hover {
     transform: scale(1.02);
+    z-index: 5; /* Higher than base but lower than expanded */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     border-color: rgba(200, 200, 220, 0.5);
 }
@@ -421,9 +503,17 @@ body::before, body::after {
     opacity: 0.85;
     transition: opacity 0.3s ease;
     border-bottom: none !important;
+    overflow: hidden;
 }
 
-.card.expanded .text-content,
+.card.expanded .text-content {
+    opacity: 1;
+    overflow: visible;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
 .card:hover .text-content {
     opacity: 1;
 }
@@ -448,6 +538,8 @@ body::before, body::after {
     -webkit-line-clamp: unset;
     font-size: 0.9rem;
     margin-bottom: 0.5rem;
+    flex-grow: 1;
+    max-height: none;
 }
 
 /* Smooth hover expansion for image container - MAIN IMPLEMENTATION */
@@ -617,11 +709,11 @@ body::before, body::after {
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
     body {
-        padding: 1rem;
+        padding: 0.25rem 1rem 1rem 1rem; /* Minimized top padding */
     }
 
     .inner-border {
-        top: 0.5rem;
+        top: 0.1rem; /* Minimized top spacing */
         right: 0.5rem;
         bottom: 0.5rem;
         left: 0.5rem;
@@ -629,15 +721,17 @@ body::before, body::after {
 
     .dashboard {
         gap: 1.5rem;
-        padding: 1rem 1rem 0 1rem; /* Remove bottom padding on mobile */
+        padding: 0.25rem 1rem 0 1rem; /* Minimized top padding */
+        margin-top: 0; /* Removed top margin completely */
+        grid-auto-rows: min-content; /* Ensure rows only take the height they need */
     }
 
     .card {
         margin-bottom: 0; /* Ensure no margin on mobile */
+        z-index: 1; /* Base z-index for all cards */
     }
 
     .card:not(.expanded) {
-        padding-bottom: 0.5rem;
     }
 
     .card.expanded {
@@ -647,11 +741,12 @@ body::before, body::after {
     }
 
     .large-letters {
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.5rem; /* Minimized bottom margin */
+        margin-top: 0; /* Removed top margin */
     }
 
     .letter {
-        font-size: 4rem;
+        font-size: 3.5rem; /* Reduced font size to save vertical space */
         margin: 0 0.05rem;
     }
     
@@ -725,7 +820,60 @@ body::before, body::after {
     }
 
     .social-links {
-        margin: 1.5rem 0 1rem; /* Reduced margins on mobile */
+        margin: 1rem 0 0.75rem; /* Further reduced margins on mobile */
+        padding-top: 1rem; /* Reduced top padding */
+    }
+    
+    /* Adjust POM border positions for mobile */
+    .pom-border-top {
+        top: 0 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+    }
+    
+    .pom-border-top.fading {
+        top: -15px !important; /* Smaller offset for mobile */
+        opacity: 0.5;
+    }
+    
+    .pom-border-top.visible {
+        opacity: 1;
+    }
+    
+    .pom-border-bottom:not(.hidden) {
+        bottom: 0; /* Ensure it's at the very bottom */
+    }
+    
+    .pom-border-bottom.fading {
+        bottom: -5px !important; /* Smaller offset for mobile */
+        opacity: 0.85;
+    }
+    
+    .pom-border-bottom.fading-medium {
+        bottom: -10px !important; /* Smaller offset for mobile */
+        opacity: 0.6;
+    }
+    
+    .pom-border-bottom.fading-light {
+        bottom: -20px !important; /* Smaller offset for mobile */
+        opacity: 0.3;
+    }
+    
+    .pom-border-bottom.hidden {
+        bottom: -30px !important; /* Smaller offset for mobile */
+        opacity: 0;
+    }
+
+    .square-images-wrapper {
+        margin-top: 0; /* Removed top margin */
+        margin-bottom: 0.25rem; /* Minimized bottom margin */
+    }
+
+    /* In the mobile media query for max-width 768px, remove extra space above the POM border */
+    .pom-border-top {
+        margin-top: 0;
+        padding-top: 0;
     }
 }
 
@@ -738,7 +886,7 @@ body::before, body::after {
     }
     
     .letter {
-        font-size: 2.5rem;
+        font-size: 2rem; /* Further reduced font size */
         margin: 0 0.05rem;
     }
     
@@ -763,17 +911,45 @@ body::before, body::after {
 
     .dashboard {
         gap: 1rem;
-        padding: 0.5rem 0.5rem 0 0.5rem; /* Further reduced padding on smaller screens */
+        padding: 0 0.5rem 0 0.5rem; /* Removed top padding completely */
+        margin-top: 0; /* Removed top margin completely */
     }
 
     .social-links {
-        margin: 1rem 0 0.5rem; /* Further reduced margins on smaller screens */
+        margin: 0.75rem 0 0.5rem; /* Further reduced margins on smaller screens */
+        padding-top: 0.75rem; /* Reduced top padding for smaller screens */
+    }
+    
+    body {
+        padding: 0 0.75rem 0.75rem 0.75rem; /* Removed top padding completely */
+    }
+    
+    .square-images-wrapper {
+        margin-top: 0; /* Removed top margin */
+        margin-bottom: 0.25rem; /* Minimized bottom margin */
+    }
+    
+    .large-letters {
+        margin-top: 0; /* Removed top margin */
+        margin-bottom: 0.25rem; /* Further minimized bottom margin */
+    }
+
+    .pom-border-top {
+        top: 0 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    /* Reduce name reveal spacing */
+    #pom-letters .name-reveal {
+        padding: 0.2rem 0.5rem; /* Reduced padding */
     }
 }
 
 /* Square Images Wrapper */
 .square-images-wrapper {
-    margin: 0.5rem auto 2rem auto;
+    margin: 0 auto 2rem auto;
     text-align: center;
     width: 100%;
     max-width: 1200px;
@@ -784,7 +960,7 @@ body::before, body::after {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 0.5rem 0 1.5rem 0;
+    margin: 0 0 1.5rem 0;
     position: relative;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -1141,10 +1317,12 @@ body::before, body::after {
 
 /* Social Media Links */
 .social-links {
+    position: relative;
+    z-index: 2;
     display: flex;
     justify-content: center;
     gap: 1.5rem;
-    margin: 2rem 0 1rem; /* Reduced top margin */
+    margin: 2rem 0 4rem; /* Increased bottom margin to add more space below watering can and plant */
     padding-top: 2rem;
     border-top: 1px solid #eaeaea;
 }
@@ -1503,326 +1681,126 @@ body::before, body::after {
     transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-/* Fix for text truncation in expanded cards: ensure all <p> elements fully display text when the card is expanded */
-.card.expanded p {
-    -webkit-line-clamp: unset;
-    max-height: none;
-    overflow: visible;
-    margin-bottom: 0.5rem; /* Consistent margin */
-    font-size: 0.9rem; /* Changed from 0.95rem to 0.9rem to match unexpanded state */
+/* Fixed height for unexpanded cards */
+.card:not(.expanded) {
+    min-height: 400px;
+    max-height: 400px;
+    height: 400px;
+    overflow: hidden;
+    position: relative; /* Needed for the gradient overlay */
 }
 
-/* Ensure expanded cards have proper spacing for links */
-.card.expanded .link {
-    margin-top: 0.25rem; /* Slightly reduced margin for better spacing */
-    margin-bottom: 0; /* No bottom margin */
-    border-bottom-color: transparent; /* No visible border by default */
-}
-
-.card.expanded .link:hover {
-    border-bottom-color: #999; /* Show border on hover */
-}
-
-/* Error page styles */
-.error-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 80vh;
-    text-align: center;
-}
-
-.error-container .letters {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 2rem;
-    background-color: rgba(255, 255, 255, 0.4); /* More transparent background */
-    padding: 1rem 2rem;
-    border-radius: 10px;
-    box-shadow: 0 0 20px 10px rgba(255, 255, 255, 0.3); /* Feathered edges */
-    backdrop-filter: blur(2px); /* Add subtle blur for feathered effect */
-}
-
-.error-container .letter {
-    font-size: 6rem;
-    font-weight: 900;
-    color: #333;
-    margin: 0 0.5rem;
-    position: relative;
-}
-
-.error-container .animated-p {
-    position: relative;
-}
-
-.error-container .face {
-    position: absolute;
-    top: 30%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60%;
-    height: 40%;
-}
-
-.error-container .eye {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    background-color: #333;
-    border-radius: 50%;
-    top: 20%;
-}
-
-.error-container .left-eye {
-    left: 25%;
-}
-
-.error-container .right-eye {
-    right: 25%;
-}
-
-.error-container .mouth {
-    position: absolute;
-    width: 20px;
-    height: 10px;
-    border-bottom: 3px solid #333;
-    border-radius: 50%;
-    bottom: 20%;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.error-container h2 {
-    margin-bottom: 1.5rem;
-    color: #333;
-}
-
-.error-container .home-link {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    background-color: #333;
-    color: white;
-    text-decoration: none;
-    border-radius: 30px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.error-container .home-link:hover {
-    background-color: #555;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-/* Enhance the POM letters with more artistic styling */
-.large-letters .letter {
-    position: relative;
-    display: inline-block;
-}
-
-.large-letters .letter::after {
+/* Create an extremely gradual blur overlay */
+.card:not(.expanded)::after {
     content: '';
     position: absolute;
-    bottom: -5px;
+    bottom: 0;
     left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, transparent 0%, #6b7280 50%, transparent 100%);
-    transform: scaleX(0);
-    transform-origin: center;
-    transition: transform 0.4s ease;
-    display: none; /* Hide the shadow effect */
+    right: 0;
+    height: 4em; /* Increased for an even more gradual fade */
+    background: linear-gradient(to top, 
+                rgba(255,255,255,1) 10%, 
+                rgba(255,255,255,0.98) 15%,
+                rgba(255,255,255,0.96) 20%,
+                rgba(255,255,255,0.94) 25%,
+                rgba(255,255,255,0.92) 30%,
+                rgba(255,255,255,0.9) 35%,
+                rgba(255,255,255,0.85) 40%,
+                rgba(255,255,255,0.8) 45%,
+                rgba(255,255,255,0.75) 50%,
+                rgba(255,255,255,0.7) 55%, 
+                rgba(255,255,255,0.65) 60%,
+                rgba(255,255,255,0.6) 65%,
+                rgba(255,255,255,0.5) 70%,
+                rgba(255,255,255,0.4) 75%,
+                rgba(255,255,255,0.3) 80%,
+                rgba(255,255,255,0.2) 85%,
+                rgba(255,255,255,0.1) 90%,
+                rgba(255,255,255,0.05) 95%,
+                rgba(255,255,255,0) 100%);
+    pointer-events: none;
+    z-index: 5;
+    transform: translateY(1em); /* Push the gradient down even more */
 }
 
-.large-letters:hover .letter::after {
-    transform: scaleX(1);
-    display: none; /* Hide the shadow effect */
+/* For expanded cards, ensure that no text clamping or truncation is applied */
+.card.expanded p,
+.card.expanded .text-content p {
+    -webkit-line-clamp: unset !important;
+    max-height: none !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    display: block !important;
 }
 
-/* Name reveal styling */
-.name-reveal {
-    position: absolute;
-    font-family: 'Space Mono', 'Roboto Mono', monospace;
-    font-size: 1.5rem;
-    font-weight: 400;
-    color: #555;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.5s ease;
-    letter-spacing: 0.05em;
+/* Override text truncation for paragraphs directly under unexpanded cards */
+.card:not(.expanded) > p {
+    -webkit-line-clamp: unset !important;
+    max-height: none !important;
+    display: block !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    -webkit-box-orient: unset !important;
+    -webkit-box: unset !important;
 }
 
-/* End of file */
-
-/* Fix for the horizontal line at the bottom of cards */
-.card .link span {
-    display: inline-block;
-    border-top: none !important;
-    border-bottom: none !important;
+/* Override text truncation for text content paragraphs in unexpanded cards */
+.card:not(.expanded) .text-content p {
+    -webkit-line-clamp: unset !important;
+    max-height: none !important;
+    display: block !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    -webkit-box-orient: unset !important;
+    -webkit-box: unset !important;
 }
 
-.card .link span::before,
-.card .link span::after {
+/* Remove the individual text content blur effects */
+.card:not(.expanded) > p::after,
+.card:not(.expanded) .text-content::after {
     display: none !important;
 }
 
-/* Target the separator between links - reduce the spacing */
-.card .link span a + a,
-.card .link span a + span,
-.card .link span span + a {
+/* Fix for the "Consider attempting to accelerate the 2nd Renaissance" card */
+.card[data-position="4"]:not(.expanded) {
     position: relative;
-    margin-left: 0.25rem; /* Reduced from 0.5rem to 0.25rem */
+    overflow: hidden;
 }
 
-/* Ensure all links in cards have proper underlines */
-.card .link a {
-    position: relative;
-    border-bottom: none; /* Remove the border-bottom */
-    padding-bottom: 1px;
-    transition: all 0.2s ease;
-}
-
-.card .link a::after {
+.card[data-position="4"]:not(.expanded)::after {
     content: '';
     position: absolute;
+    bottom: 0;
     left: 0;
     right: 0;
-    bottom: -2px;
-    height: 1px;
-    background-color: #999; /* Darker by default */
-    transition: all 0.2s ease;
-    transform: scaleX(1); /* Full width by default */
+    height: 7em; /* Increased height for a more gradual fade */
+    background: linear-gradient(to top, 
+                rgba(255,255,255,1) 5%, 
+                rgba(255,255,255,0.98) 10%,
+                rgba(255,255,255,0.96) 15%,
+                rgba(255,255,255,0.94) 20%,
+                rgba(255,255,255,0.92) 25%,
+                rgba(255,255,255,0.9) 30%,
+                rgba(255,255,255,0.85) 35%,
+                rgba(255,255,255,0.8) 40%,
+                rgba(255,255,255,0.75) 45%,
+                rgba(255,255,255,0.7) 50%, 
+                rgba(255,255,255,0.65) 55%,
+                rgba(255,255,255,0.6) 60%,
+                rgba(255,255,255,0.5) 65%,
+                rgba(255,255,255,0.4) 70%,
+                rgba(255,255,255,0.3) 75%,
+                rgba(255,255,255,0.2) 80%,
+                rgba(255,255,255,0.1) 85%,
+                rgba(255,255,255,0.05) 90%,
+                rgba(255,255,255,0) 100%);
+    pointer-events: none;
+    z-index: 10; /* Higher z-index to ensure it appears above other elements */
+    transform: translateY(1em); /* Push the gradient down to start fading out later */
 }
 
-.card .link a:hover {
-    color: #000;
-    border-bottom: none; /* Remove the border-bottom */
-    padding-bottom: 0px; /* Slightly raise the text on hover */
-}
-
-.card .link a:hover::after {
-    background-color: #000; /* Darker on hover */
-    transform: scaleX(1.05); /* Slightly wider on hover */
-    height: 1.5px; /* Slightly thicker on hover */
-}
-
-/* Ensure the card bottom has no extra styling */
-.card {
-    border-bottom: 1px solid rgba(200, 200, 220, 0.3) !important;
-}
-
-/* Remove any potential border from the link container */
-.card .link {
-    border: none !important;
-    background: none !important;
-    box-shadow: none !important;
-}
-
-/* Extra vertical spacing for links in story tiles */
-.card.story-tile .link {
-    line-height: 1.8;
-}
-
-/* Add specific letter spacing adjustments */
-#pom-letters .letter:first-child {
-    margin-right: -0.05rem; /* Negative margin to bring P and O closer */
-}
-
-#pom-letters .letter:nth-child(2) {
-    margin-left: -0.05rem; /* Negative margin to bring P and O closer */
-    margin-right: 0.1rem; /* Keep normal spacing between O and M */
-}
-
-/* Adjust spacing between P and O in the banner text */
-.pom-border-top .letter-p,
-.pom-border-bottom .letter-p {
-    margin-right: -0.05rem;
-    display: inline-block;
-}
-
-.pom-border-top .letter-o,
-.pom-border-bottom .letter-o {
-    margin-left: -0.05rem;
-    display: inline-block;
-}
-
-/* Bottom Border */
-.pom-border-bottom {
-    bottom: 10px;
-    transition: bottom 0.3s ease;
-}
-
-@media (max-width: 768px) {
-    .square-images {
-        gap: 0.5rem;
-        padding: 0 1rem;
-    }
-
-    .square-image-container {
-        max-width: 33%;
-    }
-}
-
-@media (max-width: 480px) {
-    .square-images-wrapper {
-        margin: 1rem auto;
-    }
-
-    .square-images {
-        gap: 0.25rem;
-        padding: 0 0.5rem;
-    }
-}
-
-/* Ensure links are crisp and clear */
-.link {
-    background-color: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    z-index: 2;
-}
-
-/* Adjacent letters transformed: reveal color change and new letter display without growing */
-.letter.adjacent.transformed {
-    transform: scale(1) !important;
-}
-
-/* Ensure adjacent letters in POMPOM border do not grow */
-.pom-border-top span.adjacent.transformed,
-.pom-border-bottom span.adjacent.transformed {
-    transform: scale(1) !important;
-    transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease;
-}
-
-/* Add smooth transition and subtle glow effect for border letters */
-.pom-border-top span,
-.pom-border-bottom span {
-    display: inline-block;
-    transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease, opacity 0.15s ease;
-}
-
-.pom-border-top span.transformed,
-.pom-border-bottom span.transformed {
-    text-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease, opacity 0.3s ease;
-}
-
-/* Deactivation animation */
-.pom-border-top span.deactivating,
-.pom-border-bottom span.deactivating {
-    transform: scale(0.95);
-    opacity: 0.8;
-    transition: transform 0.15s ease-out, opacity 0.15s ease-out;
-}
-
-.transformed.adjacent {
-    transform: scale(1) !important;
-    transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease, opacity 0.3s ease;
-}
-
-.deactivating.adjacent {
-    transform: scale(1);
-    opacity: 0.8;
-    transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+/* Ensure the text content in this specific card doesn't get clipped */
+.card[data-position="4"]:not(.expanded) .text-content {
+    max-height: none;
+    overflow: visible;
 }

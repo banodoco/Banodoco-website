@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const topBorder = document.querySelector('.pom-border-top');
     const bottomBorder = document.querySelector('.pom-border-bottom');
     let lastScrollTop = 0;
-    const scrollThreshold = 50; // Reduced from 100 to 50 pixels
+    const scrollThreshold = 20; // Reduced threshold to show top border sooner
+    const bottomThreshold = 150; // Increased threshold to keep bottom border visible longer
     
     // Function to handle scroll events
     function handleScroll() {
@@ -30,22 +31,43 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         
         // Show the top border when scrolled down past the threshold
-        // Hide it when at the very top of the page
+        // Hide it when at the very top of the page with a smoother transition
         if (scrollTop <= 0) {
             // At the very top of the page
             topBorder.classList.remove('visible');
-        } else if (scrollTop > scrollThreshold) {
+            topBorder.classList.remove('fading');
+        } else if (scrollTop < scrollThreshold) {
+            // In the transition zone - add fading class
+            topBorder.classList.remove('visible');
+            topBorder.classList.add('fading');
+        } else {
             // Scrolled down past the threshold
             topBorder.classList.add('visible');
+            topBorder.classList.remove('fading');
         }
         
-        // Hide the bottom border when near the bottom of the page
-        // We use a larger offset (100px) to hide it before reaching the absolute bottom
-        if (scrollTop + windowHeight >= documentHeight - 100) {
+        // Create a more gradual transition for the bottom border
+        // Calculate how close we are to the bottom as a percentage
+        const distanceToBottom = documentHeight - (scrollTop + windowHeight);
+        const bottomThresholdFull = 200; // Increased from 150 for a longer transition zone
+        
+        // Remove all classes first
+        bottomBorder.classList.remove('hidden', 'fading', 'fading-light', 'fading-medium');
+        
+        if (distanceToBottom <= 0) {
+            // At the very bottom - fully hidden
             bottomBorder.classList.add('hidden');
-        } else {
-            bottomBorder.classList.remove('hidden');
+        } else if (distanceToBottom < bottomThresholdFull * 0.25) {
+            // Very close to bottom - almost hidden
+            bottomBorder.classList.add('fading-light');
+        } else if (distanceToBottom < bottomThresholdFull * 0.5) {
+            // Moderately close to bottom - medium visibility
+            bottomBorder.classList.add('fading-medium');
+        } else if (distanceToBottom < bottomThresholdFull) {
+            // Approaching bottom - starting to fade
+            bottomBorder.classList.add('fading');
         }
+        // Otherwise it's fully visible with no classes added
         
         lastScrollTop = scrollTop;
     }
@@ -115,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
             letters.forEach(letter => {
                 // Only vibrate letters that have been clicked
                 if (letter.classList.contains('clicked')) {
-                    letter.style.animation = 'letter-vibrate 0.5s infinite';
+                    letter.style.animation = 'letter-vibrate 1s infinite';
                 }
             });
             
