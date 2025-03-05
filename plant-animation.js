@@ -97,7 +97,7 @@ wateringContainer.addEventListener('click', () => {
                             socialLinks.style.transition = 'margin-bottom 1.5s ease-in-out';
                             // After a small delay to ensure transition is applied
                             setTimeout(() => {
-                                socialLinks.style.marginBottom = '1rem'; // Reduce bottom margin smoothly
+                                socialLinks.style.marginBottom = '0.45rem'; // Reduced space from 1.5rem to 1rem
                             }, 50);
                         }
                     }, 1000); // 1 second delay before removing dead space
@@ -130,14 +130,16 @@ class Branch {
         } else if (!this.finished && this.depth > 0) {
             const branchesCount = Math.floor(Math.random() * 2) + 2;
             for (let i = 0; i < branchesCount; i++) {
-                const newAngle = this.angle + (Math.random() * 60 - 30);
-                const newLength = this.length * (0.9 + Math.random() * 0.2);
-                const newWidth = this.branchWidth * 0.75;
-                branches.push(new Branch(
-                    this.startX + Math.sin(this.angle * Math.PI / 180) * -this.length,
-                    this.startY + Math.cos(this.angle * Math.PI / 180) * -this.length,
-                    newLength, newAngle, newWidth, this.depth - 1
-                ));
+                setTimeout(() => {
+                    const newAngle = this.angle + (Math.random() * 60 - 30);
+                    const newLength = this.length * (0.9 + Math.random() * 0.2);
+                    const newWidth = this.branchWidth * 0.75;
+                    branches.push(new Branch(
+                        this.startX + Math.sin(this.angle * Math.PI / 180) * -this.length,
+                        this.startY + Math.cos(this.angle * Math.PI / 180) * -this.length,
+                        newLength, newAngle, newWidth, this.depth - 1
+                    ));
+                }, Math.random() * 600 + 200); // delay randomly between 200ms and 800ms
             }
             this.finished = true;
         }
@@ -182,7 +184,18 @@ class Branch {
             const flowerY = this.startY + Math.cos(this.angle * Math.PI / 180) * -this.length * this.flowerPosition;
             ctx.fillStyle = this.flowerColor;
             ctx.beginPath();
-            ctx.arc(flowerX, flowerY, 3 + 3 * this.floweringProgress, 0, Math.PI * 2);
+            
+            // Calculate flower size based on three stages
+            let flowerSize;
+            if (this.floweringProgress < 0.33) {
+                flowerSize = 1.5 + (1.5 * (this.floweringProgress / 0.33));
+            } else if (this.floweringProgress < 0.66) {
+                flowerSize = 3 + (1.5 * ((this.floweringProgress - 0.33) / 0.33));
+            } else {
+                flowerSize = 4.5 + (1.5 * ((this.floweringProgress - 0.66) / 0.34));
+            }
+            
+            ctx.arc(flowerX, flowerY, flowerSize, 0, Math.PI * 2);
             ctx.fill();
         }
     }
