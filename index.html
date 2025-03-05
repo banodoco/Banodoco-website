@@ -196,6 +196,114 @@
         .watering-container.fade-out {
             opacity: 0;
         }
+
+        /* COMPLETELY REWRITTEN VIDEO STYLES */
+        /* Base video container styles */
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 50%; /* 2:1 aspect ratio */
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            border-radius: 4px;
+            transition: padding-bottom 0.3s ease;
+        }
+
+        /* Video thumbnail styles */
+        .video-thumbnail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.3s ease;
+            z-index: 1;
+        }
+
+        /* Video overlay styles */
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        /* Play icon styles */
+        .play-icon {
+            color: white;
+            width: 64px;
+            height: 64px;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
+        /* Video embed container */
+        .video-embed {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 3; /* Higher than thumbnail and overlay */
+        }
+
+        /* When video is revealed */
+        .video-embed.revealed,
+        .video-embed[style*="visibility: visible"] {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        /* Hide thumbnail and overlay when video is playing */
+        .video-embed.revealed ~ .video-thumbnail,
+        .video-embed.revealed ~ .video-overlay,
+        .video-embed[style*="visibility: visible"] ~ .video-thumbnail,
+        .video-embed[style*="visibility: visible"] ~ .video-overlay {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            display: none !important;
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            .card.expanded .video-container {
+                padding-bottom: 75%; /* Taller aspect ratio on mobile */
+            }
+            
+            /* Ensure thumbnail is hidden when card is expanded */
+            .card.expanded .video-thumbnail {
+                opacity: 0 !important;
+                visibility: hidden !important;
+                display: none !important;
+            }
+            
+            /* Ensure overlay is hidden when card is expanded */
+            .card.expanded .video-overlay {
+                opacity: 0 !important;
+                visibility: hidden !important;
+                display: none !important;
+            }
+            
+            /* Ensure video is visible when card is expanded */
+            .card.expanded .video-embed {
+                opacity: 1 !important;
+                visibility: visible !important;
+                display: block !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -204,12 +312,12 @@
     <div class="inner-border"></div>
     <div class="pom-border-top">
         <div>
-            <span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span>
+            <span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span>
         </div>
     </div>
     <div class="pom-border-bottom">
         <div>
-            <span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span>
+            <span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span><span class="letter-p">P</span><span class="letter-o">O</span><span class="letter-m">M</span>
         </div>
     </div>
     
@@ -426,32 +534,79 @@
     </div>
     <script src="script.js"></script>
     <script src="plant-animation.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         // Initialize Feather icons
         feather.replace();
     </script>
     <script>
-        // Attach click and touch events on video container to start playback on mobile
         document.addEventListener('DOMContentLoaded', function() {
           document.querySelectorAll('.video-container').forEach(container => {
             container.addEventListener('click', function(e) {
-               const videoEmbed = container.querySelector('.video-embed');
-               const thumbnail = container.querySelector('.video-thumbnail');
-               const overlay = container.querySelector('.video-overlay');
-               if(videoEmbed && thumbnail && overlay) {
-                 videoEmbed.style.display = 'block';
-                 thumbnail.style.display = 'none';
-                 overlay.style.display = 'none';
-                 const iframe = videoEmbed.querySelector('iframe');
-                 let src = iframe.getAttribute('src');
-                 if (src.indexOf('autoplay=1') === -1) {
-                   src += (src.indexOf('?') === -1 ? '?' : '&') + 'autoplay=1';
-                   iframe.setAttribute('src', src);
-                 }
-               }
-            });
-            container.addEventListener('touchstart', function(e) {
-               container.click();
+              const videoEmbed = container.querySelector('.video-embed');
+              const thumbnail = container.querySelector('.video-thumbnail');
+              const overlay = container.querySelector('.video-overlay');
+              
+              if (videoEmbed && thumbnail && overlay) {
+                if (!container.classList.contains('expanded')) {
+                  // First click - expand and show iframe
+                  container.classList.add('expanded');
+
+                  // Do not set inline style; rely on CSS: .video-container.expanded .video-thumbnail {display: none !important;}
+
+                  // Clear any existing content and add the revealed class
+                  videoEmbed.innerHTML = '';
+                  videoEmbed.classList.add('revealed');
+                  
+                  // Create a dedicated div for YouTube player
+                  const playerDiv = document.createElement('div');
+                  playerDiv.style.width = '100%';
+                  playerDiv.style.height = '100%';
+                  videoEmbed.appendChild(playerDiv);
+                  
+                  function createPlayer() {
+                    container._player = new YT.Player(playerDiv, {
+                      videoId: "4AgXLXE5QIo",
+                      width: '100%',
+                      height: '100%',
+                      playerVars: { 
+                        autoplay: 1, // Auto play on first click
+                        mute: 0,
+                        playsinline: 1,
+                        enablejsapi: 1,
+                        origin: window.location.origin
+                      },
+                      events: {
+                        onReady: function(event) {
+                          // Player is ready, play the video
+                          event.target.playVideo();
+                        }
+                      }
+                    });
+                  }
+                  
+                  if (window.YT && window.YT.Player) {
+                    createPlayer();
+                  } else {
+                    var interval = setInterval(function() {
+                      if (window.YT && window.YT.Player) {
+                        clearInterval(interval);
+                        createPlayer();
+                      }
+                    }, 100);
+                  }
+                } else {
+                  // Container already expanded, play/pause the video
+                  if (container._player && typeof container._player.getPlayerState === 'function') {
+                    const state = container._player.getPlayerState();
+                    if (state === YT.PlayerState.PLAYING) {
+                      container._player.pauseVideo();
+                    } else {
+                      container._player.playVideo();
+                    }
+                  }
+                }
+              }
             });
           });
         });

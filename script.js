@@ -502,6 +502,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     videoEmbed.style.opacity = '1';
                     videoEmbed.style.visibility = 'visible';
                     
+                    // Explicitly hide the thumbnail
+                    const thumbnail = card.querySelector('.video-thumbnail');
+                    if (thumbnail) {
+                        thumbnail.style.opacity = '0';
+                        thumbnail.style.visibility = 'hidden';
+                        thumbnail.style.display = 'none';
+                    }
+                    
                     // For mobile, also expand the card when clicking on the video
                     if (window.innerWidth <= 768) {
                         // Reset all cards first
@@ -853,6 +861,79 @@ document.addEventListener('DOMContentLoaded', () => {
                     img.style.transform = 'translateY(0)';
                     img.style.opacity = '1';
                 });
+            }
+        }
+
+        // NEW: For video cards (except the special Steerable Motion card already handled), simulate a click on the video-overlay to hide it
+        if (card.classList.contains('video-card') && !card.getAttribute('data-position').includes('2')) {
+            const videoOverlay = card.querySelector('.video-overlay');
+            const videoEmbed = card.querySelector('.video-embed');
+            const thumbnail = card.querySelector('.video-thumbnail');
+            
+            // First ensure the card is expanded
+            card.classList.add('expanded');
+            
+            // Then handle the video elements
+            if (videoOverlay) {
+                videoOverlay.style.opacity = '0';
+                videoOverlay.style.visibility = 'hidden';
+                videoOverlay.style.display = 'none';
+            }
+            
+            if (thumbnail) {
+                thumbnail.style.opacity = '0';
+                thumbnail.style.visibility = 'hidden';
+                thumbnail.style.display = 'none';
+            }
+            
+            if (videoEmbed) {
+                // Clear any existing content
+                videoEmbed.innerHTML = '';
+                videoEmbed.classList.add('revealed');
+                
+                // Create a dedicated div for YouTube player
+                const playerDiv = document.createElement('div');
+                playerDiv.style.width = '100%';
+                playerDiv.style.height = '100%';
+                videoEmbed.appendChild(playerDiv);
+                
+                // Make the video embed visible
+                videoEmbed.style.opacity = '1';
+                videoEmbed.style.visibility = 'visible';
+                videoEmbed.style.display = 'block';
+                
+                // Create the YouTube player
+                const createPlayer = function() {
+                    card._player = new YT.Player(playerDiv, {
+                        videoId: "4AgXLXE5QIo",
+                        width: '100%',
+                        height: '100%',
+                        playerVars: { 
+                            autoplay: 1,
+                            mute: 0,
+                            playsinline: 1,
+                            enablejsapi: 1,
+                            origin: window.location.origin
+                        },
+                        events: {
+                            onReady: function(event) {
+                                event.target.playVideo();
+                            }
+                        }
+                    });
+                };
+                
+                // Create the player if YouTube API is ready, otherwise wait
+                if (window.YT && window.YT.Player) {
+                    createPlayer();
+                } else {
+                    var interval = setInterval(function() {
+                        if (window.YT && window.YT.Player) {
+                            clearInterval(interval);
+                            createPlayer();
+                        }
+                    }, 100);
+                }
             }
         }
     }
