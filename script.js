@@ -748,9 +748,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Special handling for Steerable Motion card
         const isSteerableMotionCard = card.getAttribute('data-position') === '2';
         
-        // Reset all video cards when interacting with any card
-        resetAllVideoCards();
-        
         const isExpanded = card.classList.contains('expanded');
         
         // Reset all cards first
@@ -774,6 +771,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             
+            // For video cards, restore the thumbnail and overlay
+            if (c.classList.contains('video-card')) {
+                const videoEmbed = c.querySelector('.video-embed');
+                const videoOverlay = c.querySelector('.video-overlay');
+                const thumbnail = c.querySelector('.video-thumbnail');
+                
+                // Clear video embed
+                if (videoEmbed) {
+                    videoEmbed.innerHTML = '';
+                    videoEmbed.style.opacity = '0';
+                    videoEmbed.style.visibility = 'hidden';
+                    videoEmbed.style.display = 'none';
+                }
+                
+                // Restore overlay
+                if (videoOverlay) {
+                    videoOverlay.style.opacity = '1';
+                    videoOverlay.style.visibility = 'visible';
+                    videoOverlay.style.display = 'flex';
+                }
+                
+                // Restore thumbnail
+                if (thumbnail) {
+                    thumbnail.style.opacity = '1';
+                    thumbnail.style.visibility = 'visible';
+                    thumbnail.style.display = 'block';
+                }
+            }
+            
             // Reset any fixed positioning that might have been applied
             c.style.position = '';
             c.style.top = '';
@@ -788,7 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 link.style.opacity = '0';
                 link.style.transform = 'translateY(10px)';
                 link.style.pointerEvents = 'none';
-                link.style.display = 'none'; // Ensure link is not displayed
+                link.style.display = 'none';
             }
         });
         
