@@ -236,7 +236,9 @@ class Seed {
 }
 
 function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Instead of clearing the canvas to transparent which may default to black, fill it with a background color
+    ctx.fillStyle = '#fbf8ef'; // match the body background color
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     branches.forEach(branch => branch.update());
     seeds.forEach(seed => seed.update());
     requestAnimationFrame(animate);

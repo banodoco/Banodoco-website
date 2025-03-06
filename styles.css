@@ -31,7 +31,7 @@ body {
 
 .inner-border {
     position: fixed;
-    z-index: 2;
+    z-index: 0;
     top: 20px;
     left: 40px;
     right: 40px;
@@ -58,7 +58,7 @@ body {
     overflow: hidden;
     white-space: nowrap;
     text-align: center;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     height: 40px; /* Set explicit height for better positioning */
     transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1); /* Smoother easing function */
     pointer-events: auto; /* Make sure the border is interactive */
@@ -76,7 +76,7 @@ body {
     transition: transform 0.2s ease, color 0.2s ease, text-shadow 0.2s ease;
     cursor: default;
     position: relative;
-    padding: 0 1px;
+    padding: 0 0.5px;  /* Added small padding */
 }
 
 /* Add subtle hover effect to indicate interactivity */
@@ -320,6 +320,7 @@ body::before, body::after {
 /* Remove backdrop-filter from dashboard and add it to individual cards instead */
 .card {
     position: relative;
+    z-index: 2;
     background: rgba(255, 255, 255, 0.9);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
@@ -334,7 +335,6 @@ body::before, body::after {
     box-sizing: border-box;
     will-change: transform;
     border: 1px solid rgba(200, 200, 220, 0.3);
-    z-index: 1;
 }
 
 /* Remove the conflicting blur effect */
@@ -475,7 +475,7 @@ body::before, body::after {
 
 .card:not(.expanded):hover {
     transform: scale(1.02);
-    z-index: 5; /* Higher than base but lower than expanded */
+    z-index: 5;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     border-color: rgba(200, 200, 220, 0.5);
 }
@@ -991,7 +991,7 @@ body::before, body::after {
     font-size: 5rem;
     font-weight: 700;
     color: #333;
-    margin: 0 0.1rem; /* Reduced from 0.2rem to 0.1rem */
+    margin: 0 0.05rem; /* Reduced from 0.1rem */
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     text-shadow: 2px 2px 0px rgba(0,0,0,0.05);
     position: relative;
@@ -1721,4 +1721,19 @@ body::before, body::after {
 /* Additional override to prevent .image-container::after from appearing on hover */
 .card:hover .image-container::after {
     display: none !important;
+}
+
+/* Adjust spacing between P and O specifically */
+.pom-border-top .letter-p + .letter-o,
+.pom-border-bottom .letter-p + .letter-o {
+    margin-left: -1px; /* Reduced from -2px to create slightly more space */
+}
+
+/* For the main title */
+.large-letters .letter:nth-child(1) {
+    margin-right: -0.1rem;
+}
+
+.large-letters .letter:nth-child(2) {
+    margin-left: -0.1rem;
 }
