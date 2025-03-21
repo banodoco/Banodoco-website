@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Common Header</title>
+  <style>
+    /* Header-specific styles */
+    .site-header {
+      display: flex;
+      align-items: center;
+      padding: 1rem 0;
+    }
+    
+    .site-header img {
+      width: 40px;
+      height: auto;
+      margin-right: 0.5rem;
+      margin-left: -30px;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .site-header .site-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+    }
+    
+    .site-header .site-title span {
+      display: inline-block;
+      letter-spacing: normal;
+    }
+
+    /* Brand styling */
+    .brand-highlight, .brand-no, .brand-do, .brand-co {
+      color: #333;
+      transition: color 2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    
+    .brand-highlight:after, .brand-no:after, .brand-do:after, .brand-co:after {
+      display: none;
+    }
+    
+    .brand-highlight:hover { color: #5353a5; }
+    .brand-no:hover { color: #53a553; }
+    .brand-do:hover { color: #a55353; }
+    .brand-co:hover { color: #a5a553; }
+  </style>
+</head>
+<body>
+  <!-- Header Template -->
+  <div class="site-header">
+    <a href="index.html" style="display: flex; align-items: center; text-decoration: none;">
+      <img src="b-t.png" alt="Logo">
+      <span class="site-title">
+        <span class="brand-highlight">Ba</span><span class="brand-no">no</span><span class="brand-do">do</span><span class="brand-co">co</span>
+      </span>
+    </a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Three.js Ecosystem Example</title>
+  <!-- Load Three.js -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.151.3/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.151.3/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    window.THREE = THREE;
+    window.OrbitControls = OrbitControls;
+  </script>
+
+  <style>
+    body, html {
+      margin: 0; 
+      padding: 0; 
+      font-family: sans-serif;
+      overflow: hidden; /* We'll have a full-page canvas */
+      background-color: #f5f5f5;
+    }
+    #three-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    /* Control panel in top-center */
+    #control-panel {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      padding: 8px 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+      align-items: center;
+    }
+    #control-panel label {
+      font-size: 0.85rem;
+    }
+    #control-panel select, #control-panel input {
+      padding: 2px 4px;
+      font-size: 0.85rem;
+    }
+    #control-panel button {
+      background: #2196f3;
+      border: none;
+      color: white;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #control-panel button:hover {
+      background: #1976d2;
+    }
+
+    /* Instructions in top-left */
+    #instructions {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #fff;
+      padding: 8px;
+      border-radius: 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+      font-size: 0.8rem;
+      line-height: 1.4;
+      z-index: 10;
+    }
+
+    /* Reset button in bottom-right */
+    #reset-button {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: #2196f3;
+      border: none;
+      color: white;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+      z-index: 10;
+    }
+    #reset-button:hover {
+      background: #1976d2;
+    }
+
+    /* Popup messages */
+    .popup-message {
+      position: absolute;
+      padding: 4px 8px;
+      background: #fff;
+      border: 2px solid #ff9800;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.8rem;
+      pointer-events: none; /* ignore clicks */
+      transform: translate(-50%, -50%);
+      white-space: nowrap;
+    }
+
+    /* Node labels */
+    .node-label {
+      position: absolute;
+      transform: translateX(-50%);
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-align: center;
+      pointer-events: none; /* ignore clicks */
+      white-space: nowrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      z-index: 20;
+    }
+
+    /* Legend styles */
+    #legend {
+      position: fixed;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.8);
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-family: sans-serif;
+      font-size: 0.9rem;
+      z-index: 100;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .legend-line {
+      width: 40px;
+      height: 6px;
+      margin-right: 8px;
+      border-radius: 3px;
+    }
+    .legend-line.inspire {
+      background: #FF9800;
+    }
+    .legend-line.equip {
+      background: linear-gradient(to right, #4285F4 0%, #4285F4 20%, #9C27B0 20%, #9C27B0 40%, #F44336 40%, #F44336 60%, #00BCD4 60%, #00BCD4 80%, #4CAF50 80%, #4CAF50 100%);
+    }
+    /* End added legend styles */
+  </style>
+</head>
+<body>
+
+<div id="three-container">
+  <!-- Control Panel -->
+  <div id="control-panel">
+    <label for="node-select">Node:</label>
+    <select id="node-select">
+      <option value="all">All Nodes</option>
+    </select>
+
+    <label for="dots-input">Dots:</label>
+    <input type="number" id="dots-input" min="1" max="20" value="1" style="width:50px;" />
+    
+    <button id="add-dots-button">Add Dots</button>
+  </div>
+
+  <!-- Instructions at top-left -->
+  <div id="instructions">
+    <p>• Click on any node to add orbiting dots</p>
+    <p>• Click on any connection to strengthen it</p>
+    <p>• Use controls at top to add multiple dots</p>
+  </div>
+
+  <!-- Reset button at bottom-right -->
+  <button id="reset-button">Reset</button>
+</div>
+
+<script>
+(() => {
+  /******************************************************
+   * 0. Data structures
+   ******************************************************/
+  let animationFrame = 0; 
+  let sections = [
+    { id: 'modelTinkerers',     name: 'Model Tinkerers',       dots: 10, x: 0,   y: -200 },
+    { id: 'mlArchitects',       name: 'ML Architects',         dots: 10, x: 300, y: -50 },
+    { id: 'artists',            name: 'Artists',               dots: 10, x: 200, y: 200 },
+    { id: 'artToolBuilders',    name: 'Art Tool Builders',     dots: 10, x: -50, y: 300 },
+    { id: 'experimenters',      name: 'Experimenters',         dots: 10, x: -250,y: 150 },
+    { id: 'infrastructureBuilders', name: 'Infrastructure Builders', dots: 10, x: -300,y: -50 }
+  ];
+
+  let connections = [
+    // Red connections (inform & inspire)
+    { from: 'artists', to: 'modelTinkerers', type: 'red', label: 'Inform & inspire', thickness: 1 },
+    { from: 'artists', to: 'mlArchitects',   type: 'red', label: 'Inform & inspire', thickness: 1 },
+    { from: 'artists', to: 'artToolBuilders',type: 'red', label: 'Inform & inspire', thickness: 1 },
+    { from: 'artists', to: 'experimenters',  type: 'red', label: 'Inform & inspire', thickness: 1 },
+    { from: 'artists', to: 'infrastructureBuilders', type: 'red', label: 'Inform & inspire', thickness: 1 },
+    // Extra
+    { from: 'mlArchitects', to: 'modelTinkerers', type: 'red', label: 'Make stuff for', thickness: 1 },
+    { from: 'modelTinkerers', to: 'infrastructureBuilders', type: 'red', label: 'Make stuff for', thickness: 1 },
+    // Green connections
+    { from: 'infrastructureBuilders', to: 'experimenters', type: 'green', label: 'Make stuff for', thickness: 1 },
+    { from: 'experimenters', to: 'artToolBuilders', type: 'green', label: 'Make stuff for', thickness: 1 },
+    { from: 'artToolBuilders', to: 'artists', type: 'green', label: 'Make stuff for', thickness: 1 }
+  ];
+
+  // Orbital dot offsets
+  let dotOffsets = {};
+
+  // Arrays for pulses, flying dots, expansions, popups
+  let pulseDots = [];
+  let flyingDots = [];
+  let popupTexts = [];
+  let nodeExpansions = [];
+
+  // For the top control panel
+  let selectedNode = 'all';
+  let dotsToAdd = 1;
+
+  // Predefine color scheme
+  const sectionColors = {
+    'modelTinkerers':       '#4285F4',
+    'mlArchitects':         '#9C27B0',
+    'artists':              '#FF9800',
+    'artToolBuilders':      '#F44336',
+    'experimenters':        '#00BCD4',
+    'infrastructureBuilders':'#4CAF50'
+  };
+
+  /******************************************************
+   * 1. Create Three.js scene, camera, renderer
+   ******************************************************/
+  let scene, camera, renderer, controls, raycaster, mouse;
+  const threeContainer = document.getElementById('three-container');
+
+  function initThree() {
+    const width = threeContainer.clientWidth;
+    const height = threeContainer.clientHeight;
+
+    scene = new THREE.Scene();
+    scene.background = null;  // Make scene background transparent
+
+    const aspect = width / height;
+    const viewSize = 500;
+    camera = new THREE.OrthographicCamera(
+      -viewSize * aspect,
+       viewSize * aspect,
+       viewSize,
+      -viewSize,
+      -1000,
+       1000
+    );
+    camera.position.set(0, 0, 10);
+    camera.lookAt(0,0,0);
+
+    renderer = new THREE.WebGLRenderer({ 
+      antialias: true,
+      alpha: true  // Enable alpha
+    });
+    renderer.setSize(width, height);
+    renderer.setClearColor(0x000000, 0);  // Set clear color to transparent
+    renderer.sortObjects = true;
+    threeContainer.appendChild(renderer.domElement);
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableRotate = false;
+    controls.enablePan = true;
+    controls.enableZoom = true;
+    controls.addEventListener('change', renderNodeLabels);
+
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+
+    window.addEventListener('resize', onWindowResize);
+    renderer.domElement.addEventListener('pointerdown', onPointerDown);
+  }
+
+  function onWindowResize() {
+    const width = threeContainer.clientWidth;
+    const height = threeContainer.clientHeight;
+    const aspect = width / height;
+    camera.left = -500 * aspect;
+    camera.right = 500 * aspect;
+    camera.top = 500;
+    camera.bottom = -500;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+    renderNodeLabels();
+  }
+
+  /******************************************************
+   * 2. Node and connection meshes
+   ******************************************************/
+  let nodeMeshes = [];
+  let connectionMeshes = [];
+
+  function rebuildSceneObjects() {
+    nodeMeshes.forEach(obj => scene.remove(obj.mesh));
+    connectionMeshes.forEach(obj => scene.remove(obj.mesh));
+    nodeMeshes = [];
+    connectionMeshes = [];
+
+    // Connections
+    connections.forEach((conn, idx) => {
+      const fromS = sections.find(s => s.id === conn.from);
+      const toS   = sections.find(s => s.id === conn.to);
+      if (!fromS || !toS) return;
+
+      const points = [
+        new THREE.Vector3(fromS.x, fromS.y, 0),
+        new THREE.Vector3(toS.x, toS.y, 0)
+      ];
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+      const material = new THREE.LineBasicMaterial({
+        color: sectionColors[conn.from] || '#2196F3',
+        linewidth: conn.thickness,
+        opacity: 0.7,
+        transparent: true
+      });
+      const line = new THREE.Line(geometry, material);
+      line.position.z = 0;
+      line.renderOrder = 1;
+      scene.add(line);
+      connectionMeshes.push({ mesh: line, connIndex: idx });
+    });
+
+    // Nodes
+    sections.forEach(sec => {
+      const radius = 15;
+      const geometry = new THREE.CircleGeometry(radius, 32);
+      const material = new THREE.MeshBasicMaterial({
+        color: sectionColors[sec.id],
+        transparent: true
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(sec.x, sec.y, 1);
+      mesh.renderOrder = 10;
+      mesh.userData = { type: 'sectionNode', sectionId: sec.id };
+      scene.add(mesh);
+      nodeMeshes.push({ id: sec.id, mesh, sectionId: sec.id });
+    });
+  }
+
+  /******************************************************
+   * 3. Orbiting dots
+   ******************************************************/
+  let orbitingDotMeshes = {};
+
+  function buildOrbitingDots() {
+    // Remove old
+    Object.values(orbitingDotMeshes).forEach(array => {
+      array.forEach(mesh => scene.remove(mesh));
+    });
+    orbitingDotMeshes = {};
+
+    sections.forEach(section => {
+      orbitingDotMeshes[section.id] = [];
+      for (let i = 0; i < section.dots; i++) {
+        const geometry = new THREE.CircleGeometry(4, 16);
+        const material = new THREE.MeshBasicMaterial({
+          color: sectionColors[section.id],
+          opacity: 0, // start invisible and fade in
+          transparent: true
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.renderOrder = 5;
+        scene.add(mesh);
+        mesh.userData.fadeCreated = Date.now();
+        orbitingDotMeshes[section.id].push(mesh);
+      }
+    });
+  }
+
+  function updateOrbitingDotsForSection(section) {
+    if (!orbitingDotMeshes[section.id]) {
+      orbitingDotMeshes[section.id] = [];
+    }
+    const currentCount = orbitingDotMeshes[section.id].length;
+    const desiredCount = section.dots;
+    const diff = desiredCount - currentCount;
+    if (diff > 0) {
+      for (let i = 0; i < diff; i++) {
+        const geometry = new THREE.CircleGeometry(4, 16);
+        const material = new THREE.MeshBasicMaterial({
+          color: sectionColors[section.id],
+          opacity: 0, // start invisible and fade in
+          transparent: true
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.renderOrder = 5;
+        scene.add(mesh);
+        mesh.userData.fadeCreated = Date.now();
+        orbitingDotMeshes[section.id].push(mesh);
+      }
+    }
+  }
+
+  let orbitRebuildTimeout = null;
+  function scheduleOrbitingDotsRebuild() {
+    if (orbitRebuildTimeout) clearTimeout(orbitRebuildTimeout);
+    orbitRebuildTimeout = setTimeout(() => {
+      buildOrbitingDots();
+      orbitRebuildTimeout = null;
+    }, 100);
+  }
+
+  /******************************************************
+   * 4. Pulses (lines that travel between nodes)
+   *    Rebuilding pulse lines each frame
+   ******************************************************/
+  let pulseLineMeshes = [];
+  function rebuildPulseLines() {
+    pulseLineMeshes.forEach(m => scene.remove(m));
+    pulseLineMeshes = [];
+    pulseDots.forEach(pulse => {
+      const seg = calculatePulseSegment(pulse);
+      if (!seg.valid) return;
+      const dx = seg.x2 - seg.x1;
+      const dy = seg.y2 - seg.y1;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      const normX = dx / length;
+      const normY = dy / length;
+      const perpX = -normY;
+      const perpY = normX;
+      // Compute base thickness and scale it by pulse progress to start smaller
+      const baseThickness = pulse.thickness * 1.2;
+      const currentThickness = baseThickness * (0.5 + 0.5 * pulse.progress);
+
+      const vertices = [
+        seg.x1 + perpX * currentThickness, seg.y1 + perpY * currentThickness, 0,
+        seg.x1 - perpX * currentThickness, seg.y1 - perpY * currentThickness, 0,
+        seg.x2 + perpX * currentThickness, seg.y2 + perpY * currentThickness, 0,
+        seg.x2 + perpX * currentThickness, seg.y2 + perpY * currentThickness, 0,
+        seg.x1 - perpX * currentThickness, seg.y1 - perpY * currentThickness, 0,
+        seg.x2 - perpX * currentThickness, seg.y2 - perpY * currentThickness, 0
+      ];
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      const material = new THREE.MeshBasicMaterial({
+        color: pulse.color,
+        opacity: 0.8,
+        transparent: true,
+        side: THREE.DoubleSide
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.renderOrder = 2;
+      scene.add(mesh);
+      pulseLineMeshes.push(mesh);
+
+      const glowThickness = currentThickness * 1.5;
+      const glowVertices = [
+        seg.x1 + perpX * glowThickness, seg.y1 + perpY * glowThickness, 0,
+        seg.x1 - perpX * glowThickness, seg.y1 - perpY * glowThickness, 0,
+        seg.x2 + perpX * glowThickness, seg.y2 + perpY * glowThickness, 0,
+        seg.x2 + perpX * glowThickness, seg.y2 + perpY * glowThickness, 0,
+        seg.x1 - perpX * glowThickness, seg.y1 - perpY * glowThickness, 0,
+        seg.x2 - perpX * glowThickness, seg.y2 - perpY * glowThickness, 0
+      ];
+      const glowGeometry = new THREE.BufferGeometry();
+      glowGeometry.setAttribute('position', new THREE.Float32BufferAttribute(glowVertices, 3));
+      const glowMaterial = new THREE.MeshBasicMaterial({
+        color: pulse.color,
+        opacity: 0.2,
+        transparent: true,
+        side: THREE.DoubleSide
+      });
+      const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+      glowMesh.renderOrder = 2;
+      scene.add(glowMesh);
+      pulseLineMeshes.push(glowMesh);
+    });
+  }
+
+  /******************************************************
+   * 5. Flying dots (small circles traveling in)
+   *    Refactored to create meshes once & update them
+   ******************************************************/
+  // Each flying dot has: { mesh, ... }
+  function createFlyingDotMesh(dot) {
+    const geometry = new THREE.CircleGeometry(5, 16);
+    const material = new THREE.MeshBasicMaterial({
+      color: sectionColors[dot.section] || '#999',
+      transparent: true
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.renderOrder = 5;
+    scene.add(mesh);
+
+    dot.mesh = mesh;
+    updateFlyingDotMesh(dot);
+  }
+
+  function updateFlyingDotMesh(dot) {
+    if (!dot.mesh) return;
+    const pos = calculateFlyingDotPosition(dot);
+    dot.mesh.position.set(pos.x, pos.y, 0.5);
+  }
+
+  function removeFlyingDotMesh(dot) {
+    if (dot.mesh) {
+      scene.remove(dot.mesh);
+      dot.mesh = null;
+    }
+  }
+
+  /******************************************************
+   * 6. Node expansions
+   *    We create each expansion mesh once, then update
+   ******************************************************/
+  // Each expansion: { mesh, ... }
+  function createNodeExpansion(sectionId, color, pulseThickness) {
+    const section = sections.find(s => s.id === sectionId);
+    if (!section) return;
+
+    const expansionId = `expansion-${Date.now()}`;
+    const duration = 1000;
+    const baseScale = 1.5;
+    let additional = 0;
+    if (pulseThickness !== undefined) {
+      additional = (pulseThickness - 1) * 0.5;
+    }
+    const expansionData = {
+      id: expansionId,
+      x: section.x,
+      y: section.y,
+      color: color,
+      startTime: Date.now(),
+      duration: duration,
+      maxScale: baseScale + additional,
+      expansionRatio: 0.3,
+      mesh: null
+    };
+
+    // Create a circle mesh once
+    const geometry = new THREE.CircleGeometry(15, 32);
+    const material = new THREE.MeshBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0.7
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(section.x, section.y, 0.8);
+    mesh.renderOrder = 8;
+    scene.add(mesh);
+
+    expansionData.mesh = mesh;
+    nodeExpansions.push(expansionData);
+
+    setTimeout(() => {
+      nodeExpansions = nodeExpansions.filter(exp => exp.id !== expansionId);
+      scene.remove(mesh);
+    }, duration);
+  }
+
+  function updateNodeExpansion(expansion) {
+    const now = Date.now();
+    const elapsed = now - expansion.startTime;
+    const progress = Math.min(1, elapsed / expansion.duration);
+
+    // Easing
+    const easeOutBack = t => {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    };
+
+    const expansionRatio = expansion.expansionRatio || 0.5;
+    const startingScale = 0.5; // start smaller
+    let scale;
+    if (progress < expansionRatio) {
+      const expandProgress = progress / expansionRatio;
+      scale = startingScale + (expansion.maxScale - startingScale) * easeOutBack(expandProgress);
+    } else {
+      const shrinkProgress = (progress - expansionRatio) / (1 - expansionRatio);
+      scale = startingScale + (expansion.maxScale - startingScale) * (1 - shrinkProgress * shrinkProgress);
+    }
+
+    // Update geometry scale
+    if (expansion.mesh) {
+      expansion.mesh.scale.set(scale, scale, 1);
+      const fade = 0.7 * (1 - progress);
+      expansion.mesh.material.opacity = fade;
+    }
+  }
+
+  /******************************************************
+   * 7. Spawning pulses & intervals
+   ******************************************************/
+  function setupPulseSpawning() {
+    function createPulses() {
+      const totalDots = sections.reduce((sum, s) => sum + s.dots, 0);
+      let connectionLimit;
+      if (totalDots > 100) {
+        connectionLimit = 3;
+      } else if (totalDots > 50) {
+        connectionLimit = 6;
+      } else {
+        connectionLimit = connections.length;
+      }
+
+      const shuffled = [...connections].sort(() => Math.random() - 0.5);
+      const selectedConnections = shuffled.slice(0, connectionLimit);
+
+      const newPulses = selectedConnections.map((conn, idx) => {
+        const fromSection = sections.find(s => s.id === conn.from);
+        const toSection   = sections.find(s => s.id === conn.to);
+        if (!fromSection || !toSection) return null;
+
+        const dotCount = fromSection.dots;
+        const pulseDuration = Math.max(3000 - (dotCount - 10) * 75, 1500);
+        const thicknessBoost = Math.min(2 + Math.floor((dotCount - 10) / 4), 5);
+
+        return {
+          id: `pulse-${idx}-${Date.now()}`,
+          startX: fromSection.x,
+          startY: fromSection.y,
+          endX: toSection.x,
+          endY: toSection.y,
+          color: sectionColors[conn.from] || '#2196F3',
+          progress: 0,
+          thickness: conn.thickness + thicknessBoost,
+          duration: pulseDuration,
+          sourceNodeDots: dotCount
+        };
+      }).filter(Boolean);
+
+      const maxPulses = totalDots > 100 ? 10 : (totalDots > 50 ? 20 : 40);
+      pulseDots = [...pulseDots, ...newPulses].slice(-maxPulses);
+      // For each new pulse, schedule removal after its duration
+      newPulses.forEach(pulse => {
+        setTimeout(() => {
+          pulseDots = pulseDots.filter(p => p.id !== pulse.id);
+        }, pulse.duration);
+      });
+    }
+
+    function getPulseInterval() {
+      const totalDots = sections.reduce((sum, s) => sum + s.dots, 0);
+      const avgDotCount = totalDots / sections.length;
+      let interval = Math.max(2000 - (avgDotCount - 10) * 60, 800);
+      if (totalDots > 100) interval = 2500;
+      if (totalDots > 150) interval = 3000;
+      return interval;
+    }
+
+    createPulses();
+    setInterval(createPulses, getPulseInterval());
+  }
+
+  // Move pulse progress every 50 ms
+  setInterval(() => {
+    pulseDots = pulseDots.map(pulse => {
+      const baseIncrement = 0.02;
+      const speedFactor = 3000 / (pulse.duration || 3000);
+      const increment = baseIncrement * speedFactor;
+      return { ...pulse, progress: Math.min(1, pulse.progress + increment) };
+    });
+  }, 50);
+
+  // We don't need to update flying dot progress anymore since we're using timestamps
+  // The position is calculated based on the current time in calculateFlyingDotPosition
+
+  /******************************************************
+   * 8. Dot offsets for orbits
+   ******************************************************/
+  function initializeDotOffsets() {
+    const newOffsets = {};
+    sections.forEach(section => {
+      for (let i = 0; i < section.dots; i++) {
+        const id = `${section.id}-${i}`;
+        if (!dotOffsets[id]) {
+          // Speed values set halfway between previous values
+          const baseSpeed = 0.0005; // halfway between 0.001 and 0.0001
+          const speedVariation = 0.0002; // halfway between 0.0004 and 0.00004
+          newOffsets[id] = {
+            distance: 20 + (i % 3) * 15,
+            speed: baseSpeed + (i % 5) * speedVariation,
+            phase: (i / section.dots) * Math.PI * 2,
+            direction: i % 2 === 0 ? 1 : -1,
+            startTime: Date.now() // Default start time for dots that don't have one
+          };
+        }
+      }
+    });
+    dotOffsets = { ...dotOffsets, ...newOffsets };
+  }
+
+  /******************************************************
+   * 9. Geometry helpers
+   ******************************************************/
+  function calculatePulseSegment(pulse) {
+    const dx = pulse.endX - pulse.startX;
+    const dy = pulse.endY - pulse.startY;
+    const lineLength = Math.sqrt(dx*dx + dy*dy);
+
+    const segmentPercentage = Math.min(
+      0.15 + ((pulse.sourceNodeDots - 10) * 0.01),
+      0.35
+    );
+    const segmentLength = lineLength * segmentPercentage;
+    const totalProgress = pulse.progress * (lineLength + segmentLength);
+    const startSegment = Math.max(0, totalProgress - segmentLength);
+    const endSegment = Math.min(lineLength, totalProgress);
+
+    if (startSegment >= lineLength || endSegment <= 0) {
+      return { valid: false };
+    }
+
+    // Trigger node expansion if the pulse reaches target, passing pulse.thickness
+    if (endSegment >= lineLength && !pulse.hasTriggeredExpansion) {
+      const targetSection = sections.find(s => s.x === pulse.endX && s.y === pulse.endY);
+      if (targetSection) {
+        createNodeExpansion(targetSection.id, pulse.color, pulse.thickness);
+        pulse.hasTriggeredExpansion = true;
+      }
+    }
+
+    const ratio1 = startSegment / lineLength;
+    const ratio2 = endSegment / lineLength;
+    const x1 = pulse.startX + dx * ratio1;
+    const y1 = pulse.startY + dy * ratio1;
+    const x2 = pulse.startX + dx * ratio2;
+    const y2 = pulse.startY + dy * ratio2;
+
+    return { valid: true, x1, y1, x2, y2 };
+  }
+
+  function calculateFlyingDotPosition(dot) {
+    const easeOut = t => 1 - Math.pow(1 - t, 3);
+    
+    // Calculate progress based on timestamps
+    const now = Date.now();
+    const totalDuration = dot.arrivalTime - dot.startTime;
+    const elapsed = now - dot.startTime;
+    const progress = Math.min(1, Math.max(0, elapsed / totalDuration));
+    
+    const p = easeOut(progress);
+    return {
+      x: dot.startX + (dot.targetX - dot.startX) * p,
+      y: dot.startY + (dot.targetY - dot.startY) * p
+    };
+  }
+
+  function calcOrbitalDot(section, i) {
+    const id = `${section.id}-${i}`;
+    const offset = dotOffsets[id] || {
+      distance: 20 + (i % 3) * 15,
+      speed: 0.001 + (i % 5) * 0.0004,
+      phase: (i / section.dots) * Math.PI * 2,
+      direction: i % 2 === 0 ? 1 : -1,
+      startTime: Date.now() // Default start time for dots that don't have one
+    };
+
+    // Use timestamp-based angle calculation
+    const now = Date.now();
+    const elapsedTime = now - (offset.startTime || now);
+    const angle = (elapsedTime * offset.speed * offset.direction) + offset.phase;
+    
+    const xPos = Math.cos(angle) * offset.distance;
+    const yPos = Math.sin(angle) * offset.distance;
+
+    return {
+      x: section.x + xPos,
+      y: section.y + yPos
+    };
+  }
+
+  /******************************************************
+   * 10. User interactions
+   ******************************************************/
+  function handleConnectionClick(connIndex, eventX, eventY) {
+    connections[connIndex].thickness += 0.5;
+    const conn = connections[connIndex];
+    const fromSec = sections.find(s => s.id === conn.from);
+    const toSec   = sections.find(s => s.id === conn.to);
+
+    const messages = [
+      'Connection strengthened!',
+      `${fromSec?.name} → ${toSec?.name}`,
+      'Relationship growing!',
+      'Building bridges!',
+      'Stronger together!'
+    ];
+    const msg = messages[Math.floor(Math.random() * messages.length)];
+
+    const newPopup = {
+      id: Date.now(),
+      x: eventX,
+      y: eventY,
+      text: msg
+    };
+    popupTexts.push(newPopup);
+
+    setTimeout(() => {
+      popupTexts = popupTexts.filter(p => p.id !== newPopup.id);
+    }, 2000);
+
+    rebuildSceneObjects(); // reflect new thickness
+  }
+
+  function handleSectionClick(sectionId, fixedArrivalTime) {
+    const targetSection = sections.find(s => s.id === sectionId);
+    if (!targetSection) return;
+
+    const newDotIndex = targetSection.dots;
+    const distanceOptions = [20, 35, 50, 65];
+    const distance = distanceOptions[Math.floor(Math.random() * distanceOptions.length)];
+    const speed = 0.001 + Math.random() * 0.001;
+    const direction = Math.random() > 0.5 ? 1 : -1;
+    
+    // Use timestamps instead of frame counts
+    const flightDuration = 1000; // ms
+    const now = Date.now();
+    
+    // Use the provided arrival time if available, otherwise calculate it
+    const arrivalTime = fixedArrivalTime || (now + flightDuration);
+    
+    // Pick a random landing angle
+    const landingAngle = Math.random() * Math.PI * 2;
+    
+    // Calculate the phase so that at arrival time, the dot's orbital angle becomes landingAngle
+    // That is, landingAngle = ((arrivalTime - now) * speed * direction) + phase
+    // So we set:
+    const phase = landingAngle - ((arrivalTime - now) * speed * direction);
+    
+    // Calculate the landing position based on this angle
+    const landingX = targetSection.x + Math.cos(landingAngle) * distance;
+    const landingY = targetSection.y + Math.sin(landingAngle) * distance;
+
+    const newDotId = `${sectionId}-${newDotIndex}`;
+    // Store the correct phase and the start time for time-based animation
+    dotOffsets[newDotId] = { 
+      distance, 
+      speed, 
+      phase, 
+      direction,
+      startTime: now // Store the start time for time-based animation
+    };
+
+    // Create a flying dot from far away
+    const startAngle = Math.random() * Math.PI * 2;
+    const startDistance = 500;
+    const startX = targetSection.x + Math.cos(startAngle) * startDistance;
+    const startY = targetSection.y + Math.sin(startAngle) * startDistance;
+
+    const newFlyingDot = {
+      id: `flying-${Date.now()}`,
+      startX,
+      startY,
+      targetX: landingX,
+      targetY: landingY,
+      progress: 0,
+      section: sectionId,
+      startTime: now,
+      arrivalTime: arrivalTime,
+      mesh: null
+    };
+    flyingDots.push(newFlyingDot);
+    createFlyingDotMesh(newFlyingDot);
+
+    targetSection.dots += 1; // increment immediately to ensure unique dot index
+
+    setTimeout(() => {
+      // Dot arrives
+      flyingDots = flyingDots.filter(d => d.id !== newFlyingDot.id);
+      removeFlyingDotMesh(newFlyingDot);
+      // Reset the new dot's timing so that it starts orbiting from its landing position
+      dotOffsets[newDotId].startTime = arrivalTime;
+      dotOffsets[newDotId].phase = landingAngle;
+      updateOrbitingDotsForSection(targetSection);
+    }, flightDuration);
+  }
+
+  function handleAddDots() {
+    const inputEl = document.getElementById('dots-input');
+    const val = parseInt(inputEl.value, 10);
+    dotsToAdd = isNaN(val) ? 1 : Math.min(20, Math.max(1, val));
+
+    // Calculate a consistent arrival time for all dots in this batch
+    const flightDuration = 1000; // ms
+    const now = Date.now();
+    const batchArrivalTime = now + flightDuration;
+
+    if (selectedNode === 'all') {
+      const batchSize = 3;
+      sections.forEach((section, sectionIndex) => {
+        const numBatches = Math.ceil(dotsToAdd / batchSize);
+        for (let b = 0; b < numBatches; b++) {
+          const countThisBatch = Math.min(batchSize, dotsToAdd - b * batchSize);
+          // Calculate a specific arrival time for this batch that accounts for the delay
+          const batchDelay = sectionIndex * 300 + b * 500;
+          const batchSpecificArrivalTime = batchArrivalTime + batchDelay;
+          
+          setTimeout(() => {
+            for (let i = 0; i < countThisBatch; i++) {
+              handleSectionClick(section.id, batchSpecificArrivalTime);
+            }
+          }, batchDelay);
+        }
+      });
+    } else {
+      const batchSize = 5;
+      const numBatches = Math.ceil(dotsToAdd / batchSize);
+      for (let b = 0; b < numBatches; b++) {
+        const countThisBatch = Math.min(batchSize, dotsToAdd - b * batchSize);
+        const batchDelay = b * 500;
+        const batchSpecificArrivalTime = batchArrivalTime + batchDelay;
+        
+        setTimeout(() => {
+          for (let i = 0; i < countThisBatch; i++) {
+            // No additional delay between dots in the same batch
+            handleSectionClick(selectedNode, batchSpecificArrivalTime);
+          }
+        }, batchDelay);
+      }
+    }
+  }
+
+  function handleReset() {
+    sections = [
+      { id: 'modelTinkerers', name: 'Model Tinkerers', dots: 10, x: 0, y: -200 },
+      { id: 'mlArchitects', name: 'ML Architects', dots: 10, x: 300, y: -50 },
+      { id: 'artists', name: 'Artists', dots: 10, x: 200, y: 200 },
+      { id: 'artToolBuilders', name: 'Art Tool Builders', dots: 10, x: -50, y: 300 },
+      { id: 'experimenters', name: 'Experimenters', dots: 10, x: -250, y: 150 },
+      { id: 'infrastructureBuilders', name: 'Infrastructure Builders', dots: 10, x: -300, y: -50 }
+    ];
+    connections = connections.map(c => ({ ...c, thickness: 1 }));
+    flyingDots.forEach(removeFlyingDotMesh);
+    flyingDots = [];
+    popupTexts = [];
+    pulseDots.forEach(removePulseMeshes);
+    pulseDots = [];
+    dotOffsets = {};
+
+    initializeDotOffsets();
+    rebuildSceneObjects();
+    scheduleOrbitingDotsRebuild();
+  }
+
+  function onPointerDown(event) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    mouse.set(x, y);
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    if (!intersects.length) return;
+
+    const first = intersects[0].object;
+
+    if (first.userData && first.userData.type === 'sectionNode') {
+      handleSectionClick(first.userData.sectionId);
+      return;
+    }
+
+    const lineRef = connectionMeshes.find(obj => obj.mesh === first);
+    if (lineRef) {
+      const clickPos = intersects[0].point;
+      handleConnectionClick(
+        lineRef.connIndex,
+        clickPos.x,
+        clickPos.y
+      );
+    }
+  }
+
+  /******************************************************
+   * 11. Animate loop
+   ******************************************************/
+  function animate() {
+    requestAnimationFrame(animate);
+    animationFrame++;
+
+    // Orbiting dots
+    Object.keys(orbitingDotMeshes).forEach(sectionId => {
+      const section = sections.find(s => s.id === sectionId);
+      if (!section) return;
+      orbitingDotMeshes[sectionId].forEach((mesh, i) => {
+        const { x, y } = calcOrbitalDot(section, i);
+        mesh.position.set(x, y, 0.5);
+        if (mesh.userData.fadeCreated) {
+          const fadeDuration = 200; // fade in time in ms
+          const elapsed = Date.now() - mesh.userData.fadeCreated;
+          if (elapsed < fadeDuration) {
+            mesh.material.opacity = 0.7 * (elapsed / fadeDuration);
+          } else {
+            mesh.material.opacity = 0.7;
+            delete mesh.userData.fadeCreated;
+          }
+        }
+      });
+    });
+
+    // Update pulses
+    rebuildPulseLines();
+
+    // Update flying dots
+    flyingDots.forEach(updateFlyingDotMesh);
+
+    // Update expansions
+    nodeExpansions.forEach(updateNodeExpansion);
+
+    controls.update();
+    renderer.render(scene, camera);
+
+    renderPopups();
+    renderNodeLabels();
+  }
+
+  function renderPopups() {
+    document.querySelectorAll('.popup-message').forEach(el => el.remove());
+    popupTexts.forEach(popup => {
+      const vec = new THREE.Vector3(popup.x, popup.y, 0);
+      vec.project(camera);
+
+      const halfWidth = renderer.domElement.width / 2;
+      const halfHeight = renderer.domElement.height / 2;
+      const screenX = (vec.x * halfWidth) + halfWidth;
+      const screenY = (-vec.y * halfHeight) + halfHeight;
+
+      const div = document.createElement('div');
+      div.className = 'popup-message';
+      div.style.left = screenX + 'px';
+      div.style.top = screenY + 'px';
+      div.textContent = popup.text;
+      document.body.appendChild(div);
+    });
+  }
+
+  function renderNodeLabels() {
+    document.querySelectorAll('.node-label').forEach(el => el.remove());
+    sections.forEach(section => {
+      const vec = new THREE.Vector3(section.x, section.y, 1);
+      vec.project(camera);
+
+      const halfWidth = renderer.domElement.width / 2;
+      const halfHeight = renderer.domElement.height / 2;
+      const screenX = (vec.x * halfWidth) + halfWidth;
+      const screenY = (-vec.y * halfHeight) + halfHeight;
+
+      const label = document.createElement('div');
+      label.className = 'node-label';
+      label.textContent = section.name;
+      label.style.left = screenX + 'px';
+      label.style.top = (screenY + 25) + 'px';
+      document.body.appendChild(label);
+    });
+  }
+
+  /******************************************************
+   * 12. On page load
+   ******************************************************/
+  document.addEventListener('DOMContentLoaded', () => {
+    initThree();
+
+    const nodeSelect = document.getElementById('node-select');
+    Array.from(nodeSelect.options).forEach(opt => {
+      if (opt.value !== 'all') nodeSelect.remove(opt);
+    });
+    sections.forEach(sec => {
+      const opt = document.createElement('option');
+      opt.value = sec.id;
+      opt.textContent = sec.name;
+      nodeSelect.appendChild(opt);
+    });
+    nodeSelect.addEventListener('change', e => {
+      selectedNode = e.target.value;
+    });
+
+    const dotsInput = document.getElementById('dots-input');
+    dotsInput.addEventListener('change', e => {
+      const val = parseInt(e.target.value, 10);
+      dotsToAdd = (isNaN(val) ? 1 : Math.min(20, Math.max(1, val)));
+      dotsInput.value = dotsToAdd;
+    });
+
+    const addButton = document.getElementById('add-dots-button');
+    addButton.addEventListener('click', handleAddDots);
+
+    const resetButton = document.getElementById('reset-button');
+    resetButton.addEventListener('click', handleReset);
+
+    initializeDotOffsets();
+    setupPulseSpawning();
+    rebuildSceneObjects();
+    scheduleOrbitingDotsRebuild();
+
+    animate();
+  });
+})();
+</script>
+
+<!-- Legend -->
+<div id="legend">
+  <div class="legend-item">
+    <div class="legend-line inspire"></div>
+    <div class="legend-label">Inspire</div>
+  </div>
+  <div class="legend-item">
+    <div class="legend-line equip"></div>
+    <div class="legend-label">Equip</div>
+  </div>
+</div>
+</body>
+</html>

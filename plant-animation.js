@@ -4,6 +4,9 @@ const initialBud = document.getElementById('initialBud');
 const wateringContainer = document.querySelector('.watering-container');
 const waterDrops = document.querySelector('.water-drops');
 
+// Ensure initialBud has full opacity at the start
+initialBud.style.opacity = '1';
+
 // Add a class with slower transition when needed
 function addSlowerTransition() {
     wateringContainer.style.transition = 'transform 2.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1s ease';
@@ -15,28 +18,15 @@ function resizeCanvas() {
 }
 
 resizeCanvas();
+let baseSize = { width: canvas.width, height: canvas.height };
+
 window.addEventListener('resize', () => {
-    const oldWidth = canvas.width;
-    const oldHeight = canvas.height;
-    
     resizeCanvas();
-    
-    // Scale factor for repositioning elements
-    const scaleX = canvas.width / oldWidth;
-    const scaleY = canvas.height / oldHeight;
-    
-    // Adjust positions of existing branches
-    branches.forEach(branch => {
-        branch.startX *= scaleX;
-        branch.grown *= scaleX;
-        branch.startY *= scaleY;
-    });
-    
-    // Adjust positions of existing seeds
-    seeds.forEach(seed => {
-        seed.x *= scaleX;
-        seed.y *= scaleY;
-    });
+    // If animation hasn't started, update the baseline; once started, keep baseSize fixed
+    if (!animationStarted) {
+        baseSize = { width: canvas.width, height: canvas.height };
+    }
+    // Removed scaling of branches and seeds
 });
 
 let branches = [];
@@ -57,6 +47,10 @@ wateringContainer.addEventListener('click', () => {
         
         // Add pouring class to start the watering animation
         wateringContainer.classList.add('pouring');
+        
+        // Start fading out the initial bud immediately when watering starts
+        initialBud.style.transition = 'opacity 2.5s ease-in-out';
+        initialBud.style.opacity = '0';
         
         // Start at the bud's position
         const budRect = initialBud.getBoundingClientRect();
@@ -167,25 +161,25 @@ class Branch {
     }
 
     draw() {
-        ctx.lineWidth = this.branchWidth;
+        const scaleX = canvas.width / baseSize.width;
+        const scaleY = canvas.height / baseSize.height;
+        ctx.lineWidth = this.branchWidth * ((scaleX + scaleY) / 2);
         ctx.strokeStyle = '#8fb996';
         ctx.beginPath();
-        ctx.moveTo(this.startX, this.startY);
-        ctx.lineTo(
-            this.startX + Math.sin(this.angle * Math.PI / 180) * -this.grown,
-            this.startY + Math.cos(this.angle * Math.PI / 180) * -this.grown
-        );
+        const effectiveStartX = this.startX * scaleX;
+        const effectiveStartY = this.startY * scaleY;
+        const effectiveTipX = effectiveStartX + Math.sin(this.angle * Math.PI / 180) * -this.grown * scaleX;
+        const effectiveTipY = effectiveStartY + Math.cos(this.angle * Math.PI / 180) * -this.grown * scaleY;
+        ctx.moveTo(effectiveStartX, effectiveStartY);
+        ctx.lineTo(effectiveTipX, effectiveTipY);
         ctx.stroke();
 
         // Only draw flowers when floweringProgress is greater than 0
         if (this.floweringProgress > 0) {
-            // Use the flower position to determine where the flower appears
             const flowerX = this.startX + Math.sin(this.angle * Math.PI / 180) * -this.length * this.flowerPosition;
             const flowerY = this.startY + Math.cos(this.angle * Math.PI / 180) * -this.length * this.flowerPosition;
-            ctx.fillStyle = this.flowerColor;
-            ctx.beginPath();
-            
-            // Calculate flower size based on three stages
+            const effectiveFlowerX = flowerX * scaleX;
+            const effectiveFlowerY = flowerY * scaleY;
             let flowerSize;
             if (this.floweringProgress < 0.33) {
                 flowerSize = 1.5 + (1.5 * (this.floweringProgress / 0.33));
@@ -194,8 +188,10 @@ class Branch {
             } else {
                 flowerSize = 4.5 + (1.5 * ((this.floweringProgress - 0.66) / 0.34));
             }
-            
-            ctx.arc(flowerX, flowerY, flowerSize, 0, Math.PI * 2);
+            ctx.fillStyle = this.flowerColor;
+            ctx.beginPath();
+            const effectiveFlowerSize = flowerSize * ((scaleX + scaleY) / 2);
+            ctx.arc(effectiveFlowerX, effectiveFlowerY, effectiveFlowerSize, 0, Math.PI * 2);
             ctx.fill();
         }
     }
@@ -228,9 +224,12 @@ class Seed {
     }
 
     draw() {
+        const seedScaleX = canvas.width / baseSize.width;
+        const seedScaleY = canvas.height / baseSize.height;
+        const avgScale = (seedScaleX + seedScaleY) / 2;
         ctx.fillStyle = '#c9a07a';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2);
+        ctx.arc(this.x * seedScaleX, this.y * seedScaleY, 1.5 * avgScale, 0, Math.PI * 2);
         ctx.fill();
     }
 }
