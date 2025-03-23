@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Banodoco</title>
+    <script>
+        // Determine base URL based on environment
+        const BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? '' 
+            : '/banodoco-new-website';
+        
+        // Function to get asset URL
+        function getAssetUrl(path) {
+            return BASE_URL + path;
+        }
+    </script>
     <script type="importmap">
     {
       "imports": {
@@ -11,19 +22,48 @@
       }
     }
     </script>
-    <link rel="icon" href="/assets/images/b-t.png" type="image/png">
-    <link rel="shortcut icon" href="/assets/images/b-t.png" type="image/png">
+    <link rel="icon" href="" type="image/png" id="favicon">
+    <link rel="shortcut icon" href="" type="image/png" id="shortcut-icon">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles/components/styles.css">
-    <link rel="stylesheet" href="/styles/components/header.css">
-    <link rel="stylesheet" href="/styles/components/footer.css">
+    <link rel="stylesheet" href="" id="styles-css">
+    <link rel="stylesheet" href="" id="header-css">
+    <link rel="stylesheet" href="" id="footer-css">
     <!-- Feather Icons (similar to Lucide) -->
     <script src="https://unpkg.com/feather-icons"></script>
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script>
+        // Set dynamic URLs after BASE_URL is defined
+        window.addEventListener('DOMContentLoaded', (event) => {
+            document.getElementById('favicon').href = getAssetUrl('/assets/images/b-t.png');
+            document.getElementById('shortcut-icon').href = getAssetUrl('/assets/images/b-t.png');
+            document.getElementById('styles-css').href = getAssetUrl('/styles/components/styles.css');
+            document.getElementById('header-css').href = getAssetUrl('/styles/components/header.css');
+            document.getElementById('footer-css').href = getAssetUrl('/styles/components/footer.css');
+            
+            // Update logo src
+            document.querySelector('.site-header img').src = getAssetUrl('/assets/images/b-t.png');
+            
+            // Update script sources
+            const scripts = {
+                'icons-js': '/js/components/icons.js',
+                'script-js': '/js/components/script.js',
+                'plant-animation-js': '/js/components/plant-animation.js',
+                'ecosystem-js': '/js/components/ecosystem.js',
+                'grid-animations-js': '/js/components/grid-animations.js'
+            };
+            
+            Object.entries(scripts).forEach(([id, path]) => {
+                const script = document.createElement('script');
+                script.src = getAssetUrl(path);
+                if (id === 'ecosystem-js') script.type = 'module';
+                document.body.appendChild(script);
+            });
+        });
+    </script>
     <style>
         #plantCanvas {
             position: fixed;
@@ -1207,7 +1247,7 @@
       <!-- Site Header -->
       <div class="site-header">
         <a href="./" style="display: flex; align-items: center; text-decoration: none;">
-            <img src="/assets/images/b-t.png" alt="Logo">
+            <img src="" alt="Logo">
             <span class="site-title">
                 <span class="brand-highlight">Ba</span><span class="brand-no">no</span><span class="brand-do">do</span><span class="brand-co">co</span>
             </span>
@@ -1367,11 +1407,5 @@
         </div>
       </div>
     </div>
-    <script src="/js/components/icons.js"></script>
-    <script src="/js/components/script.js"></script>
-    <script src="/js/components/plant-animation.js"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="/js/components/ecosystem.js" type="module"></script>
-    <script src="/js/components/grid-animations.js"></script>
 </body>
 </html> 

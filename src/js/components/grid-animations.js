@@ -1,3 +1,8 @@
+// Determine base URL based on environment
+const BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+  ? '' 
+  : '/banodoco-new-website';
+
 // Global cache for preloaded images
 const imageCache = {
   community: new Map(),
@@ -26,7 +31,7 @@ function preloadImage(src, cacheType) {
 async function preloadCommunityImages() {
   const promises = [];
   for (let i = 0; i < 66; i++) {
-    promises.push(preloadImage(`/assets/numbered/${i}.png`, 'community'));
+    promises.push(preloadImage(`${BASE_URL}/assets/numbered/${i}.png`, 'community'));
   }
   return Promise.all(promises);
 }
@@ -128,13 +133,9 @@ async function initializeCommunityGrid() {
   const loadingOverlay = showLoadingState(communityContainer);
 
   try {
-    // Preload all community images first
     await preloadCommunityImages();
-
-    // Track currently displayed community images to prevent duplicates
     const communityDisplayed = new Set();
 
-    // Create community grid with numbered images
     for (let i = 0; i < 16; i++) {
       let randomIndex = Math.floor(Math.random() * 66);
       while (communityDisplayed.has(randomIndex)) {
@@ -143,7 +144,7 @@ async function initializeCommunityGrid() {
       communityDisplayed.add(randomIndex);
       
       const img = document.createElement('img');
-      img.src = '/assets/numbered/' + randomIndex + '.png';
+      img.src = `${BASE_URL}/assets/numbered/${randomIndex}.png`;
       img.dataset.originalIndex = randomIndex;
       img.style.width = '100%';
       img.style.height = '100%';
@@ -151,7 +152,6 @@ async function initializeCommunityGrid() {
       img.style.display = 'block';
       img.style.transition = 'filter 0.3s ease';
 
-      // Add event listeners
       addCommunityImageEventListeners(img, communityDisplayed);
       communityContainer.appendChild(img);
     }
@@ -197,13 +197,13 @@ function getUniqueCommunityImage(img, communityDisplayed) {
 function addCommunityImageEventListeners(img, communityDisplayed) {
   img.addEventListener('mouseenter', function() {
     let newIndex = getUniqueCommunityImage(img, communityDisplayed);
-    img.src = '/assets/numbered/' + newIndex + '.png';
+    img.src = `${BASE_URL}/assets/numbered/${newIndex}.png`;
     img.style.filter = 'brightness(1.2)';
     
     if (!img.flickerInterval) {
       img.flickerInterval = setInterval(function() {
         let newIndex = getUniqueCommunityImage(img, communityDisplayed);
-        img.src = '/assets/numbered/' + newIndex + '.png';
+        img.src = `${BASE_URL}/assets/numbered/${newIndex}.png`;
       }, 100);
     }
   });
@@ -226,7 +226,7 @@ function addCommunityImageEventListeners(img, communityDisplayed) {
     
     img.flickerInterval = setInterval(function() {
       let newIndex = getUniqueCommunityImage(img, communityDisplayed);
-      img.src = '/assets/numbered/' + newIndex + '.png';
+      img.src = `${BASE_URL}/assets/numbered/${newIndex}.png`;
     }, 100);
     
     setTimeout(function() {
@@ -241,8 +241,11 @@ function addCommunityImageEventListeners(img, communityDisplayed) {
 // Initialize ownership grid
 async function initializeOwnershipGrid() {
   try {
-    const response = await fetch('/data/profile_pics_list.json');
-    const imageFiles = await response.json();
+    const response = await fetch(`${BASE_URL}/data/profile_pics_list.json`);
+    const imagePaths = await response.json();
+    
+    // Add BASE_URL to all image paths in the list
+    const imageFiles = imagePaths.map(path => `${BASE_URL}${path}`);
     
     const container = document.querySelector('.ownership-images-grid');
     if (!container) return;
