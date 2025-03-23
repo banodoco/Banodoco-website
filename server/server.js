@@ -41,15 +41,30 @@ const server = http.createServer((req, res) => {
     // Remove leading slash if present and any query parameters
     const urlPath = req.url.split('?')[0].replace(/^\//, '');
     
-    // First try the built files
-    filePath = path.join(ROOT_DIR, urlPath);
+    // Try different possible locations in order
+    const possiblePaths = [
+      path.join(ROOT_DIR, urlPath),
+      path.join(SRC_DIR, urlPath),
+      path.join(ROOT_DIR, 'src', urlPath),
+      path.join(ROOT_DIR, urlPath.toLowerCase())
+    ];
     
-    // If file doesn't exist in root, try src directory
-    if (!fs.existsSync(filePath)) {
-      const srcPath = path.join(ROOT_DIR, 'src', urlPath);
-      if (fs.existsSync(srcPath)) {
-        filePath = srcPath;
-      }
+    // Find the first path that exists
+    filePath = possiblePaths.find(p => fs.existsSync(p));
+    
+    // If no path exists, try serving from pages directory
+    if (!filePath && urlPath.startsWith('pages/')) {
+      const pagePath = urlPath.replace('pages/', '');
+      const possiblePagePaths = [
+        path.join(ROOT_DIR, 'src', 'pages', pagePath),
+        path.join(ROOT_DIR, 'pages', pagePath)
+      ];
+      filePath = possiblePagePaths.find(p => fs.existsSync(p));
+    }
+    
+    // If still no path exists, default to the requested path in root
+    if (!filePath) {
+      filePath = possiblePaths[0];
     }
   }
   
@@ -59,9 +74,17 @@ const server = http.createServer((req, res) => {
   fs.readFile(filePath, (err, content) => {
     if (err) {
       if (err.code === 'ENOENT') {
-        // Page not found
-        res.writeHead(404, { 'Content-Type': 'text/html' });
-        res.end('Page not found', 'utf-8');
+        // Try to serve 404.html from pages directory
+        const notFoundPath = path.join(ROOT_DIR, 'pages', '404.html');
+        fs.readFile(notFoundPath, (err404, content404) => {
+          if (err404) {
+            res.writeHead(404, { 'Content-Type': 'text/html' });
+            res.end('Page not found', 'utf-8');
+          } else {
+            res.writeHead(404, { 'Content-Type': 'text/html' });
+            res.end(content404, 'utf-8');
+          }
+        });
       } else {
         // Server error
         res.writeHead(500);
@@ -97,5 +120,5 @@ const gracefulShutdown = () => {
 };
 
 // Listen for termination signals
-process.on('SIGINT', gracefulShutdown); // Ctrl+C
-process.on('SIGTERM', gracefulShutdown); // kill command 
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown); 
