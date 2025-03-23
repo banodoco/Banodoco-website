@@ -1,16 +1,19 @@
 {
   "name": "banodoco-website",
   "version": "1.0.0",
-  "description": "Banodoco Website",
+  "description": "Banodoco website",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "dev": "nodemon server/server.js"
+    "build": "node build.js",
+    "dev": "npm run build && npm start"
   },
   "dependencies": {
     "express": "^4.18.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"
-  }
+  },
+  "author": "",
+  "license": "ISC"
 } 

@@ -21,6 +21,7 @@ const MIME_TYPES = {
 
 // Define base directories
 const ROOT_DIR = path.join(__dirname, '..');
+const SRC_DIR = path.join(__dirname, '..', 'src');
 const PAGES_DIR = path.join(__dirname, '..', 'src', 'pages');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const COMPONENTS_DIR = path.join(__dirname, '..', 'src', 'components');
@@ -32,28 +33,23 @@ const DATA_DIR = path.join(__dirname, '..', 'src', 'data');
 const server = http.createServer((req, res) => {
   console.log(`Request for ${req.url}`);
   
-  // Handle the root path and main pages
+  // Handle the root path
   let filePath;
   if (req.url === '/') {
     filePath = path.join(ROOT_DIR, 'index.html');
-  } else if (req.url.toLowerCase() === '/ownership') {
-    filePath = path.join(PAGES_DIR, 'ownership.html');
   } else {
-    // Handle other static files based on their location
-    const urlPath = req.url.split('?')[0]; // Remove query parameters
-    if (urlPath.startsWith('/assets/')) {
-      filePath = path.join(ASSETS_DIR, urlPath.replace('/assets/', ''));
-    } else if (urlPath.startsWith('/js/')) {
-      filePath = path.join(JS_DIR, urlPath.replace('/js/', ''));
-    } else if (urlPath.startsWith('/styles/')) {
-      filePath = path.join(STYLES_DIR, urlPath.replace('/styles/', ''));
-    } else if (urlPath.startsWith('/components/')) {
-      filePath = path.join(COMPONENTS_DIR, urlPath.replace('/components/', ''));
-    } else if (urlPath.startsWith('/data/')) {
-      filePath = path.join(DATA_DIR, urlPath.replace('/data/', ''));
-    } else {
-      // Check in public directory for other files
-      filePath = path.join(PUBLIC_DIR, urlPath);
+    // Remove leading slash if present and any query parameters
+    const urlPath = req.url.split('?')[0].replace(/^\//, '');
+    
+    // First try the built files
+    filePath = path.join(ROOT_DIR, urlPath);
+    
+    // If file doesn't exist in root, try src directory
+    if (!fs.existsSync(filePath)) {
+      const srcPath = path.join(ROOT_DIR, 'src', urlPath);
+      if (fs.existsSync(srcPath)) {
+        filePath = srcPath;
+      }
     }
   }
   
@@ -64,10 +60,8 @@ const server = http.createServer((req, res) => {
     if (err) {
       if (err.code === 'ENOENT') {
         // Page not found
-        fs.readFile(path.join(PAGES_DIR, '404.html'), (err, content) => {
-          res.writeHead(404, { 'Content-Type': 'text/html' });
-          res.end(content || 'Page not found', 'utf-8');
-        });
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end('Page not found', 'utf-8');
       } else {
         // Server error
         res.writeHead(500);
