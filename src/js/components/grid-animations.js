@@ -26,7 +26,7 @@ function preloadImage(src, cacheType) {
 async function preloadCommunityImages() {
   const promises = [];
   for (let i = 0; i < 66; i++) {
-    promises.push(preloadImage(`./assets/numbered/${i}.png`, 'community'));
+    promises.push(preloadImage(`/assets/numbered/${i}.png`, 'community'));
   }
   return Promise.all(promises);
 }
@@ -143,7 +143,7 @@ async function initializeCommunityGrid() {
       communityDisplayed.add(randomIndex);
       
       const img = document.createElement('img');
-      img.src = './assets/numbered/' + randomIndex + '.png';
+      img.src = '/assets/numbered/' + randomIndex + '.png';
       img.dataset.originalIndex = randomIndex;
       img.style.width = '100%';
       img.style.height = '100%';
@@ -197,13 +197,13 @@ function getUniqueCommunityImage(img, communityDisplayed) {
 function addCommunityImageEventListeners(img, communityDisplayed) {
   img.addEventListener('mouseenter', function() {
     let newIndex = getUniqueCommunityImage(img, communityDisplayed);
-    img.src = './assets/numbered/' + newIndex + '.png';
+    img.src = '/assets/numbered/' + newIndex + '.png';
     img.style.filter = 'brightness(1.2)';
     
     if (!img.flickerInterval) {
       img.flickerInterval = setInterval(function() {
         let newIndex = getUniqueCommunityImage(img, communityDisplayed);
-        img.src = './assets/numbered/' + newIndex + '.png';
+        img.src = '/assets/numbered/' + newIndex + '.png';
       }, 100);
     }
   });
@@ -226,7 +226,7 @@ function addCommunityImageEventListeners(img, communityDisplayed) {
     
     img.flickerInterval = setInterval(function() {
       let newIndex = getUniqueCommunityImage(img, communityDisplayed);
-      img.src = './assets/numbered/' + newIndex + '.png';
+      img.src = '/assets/numbered/' + newIndex + '.png';
     }, 100);
     
     setTimeout(function() {
@@ -241,7 +241,7 @@ function addCommunityImageEventListeners(img, communityDisplayed) {
 // Initialize ownership grid
 async function initializeOwnershipGrid() {
   try {
-    const response = await fetch('./data/profile_pics_list.json');
+    const response = await fetch('/data/profile_pics_list.json');
     const imageFiles = await response.json();
     
     const container = document.querySelector('.ownership-images-grid');
