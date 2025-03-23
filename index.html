@@ -11,15 +11,15 @@
       }
     }
     </script>
-    <link rel="icon" href="b-t.png" type="image/png">
-    <link rel="shortcut icon" href="b-t.png" type="image/png">
+    <link rel="icon" href="./assets/images/b-t.png" type="image/png">
+    <link rel="shortcut icon" href="./assets/images/b-t.png" type="image/png">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="header.css">
-    <link rel="stylesheet" href="footer.css">
+    <link rel="stylesheet" href="./styles/components/styles.css">
+    <link rel="stylesheet" href="./styles/components/header.css">
+    <link rel="stylesheet" href="./styles/components/footer.css">
     <!-- Feather Icons (similar to Lucide) -->
     <script src="https://unpkg.com/feather-icons"></script>
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
@@ -825,7 +825,7 @@
           z-index: 1;
         }
 
-        /* Filename display on hover */
+        /* Filename display on hover - now hidden for ownership grid */
         .filename-display {
             position: absolute;
             top: -20%;
@@ -844,6 +844,7 @@
             white-space: nowrap;
             z-index: 10;
             overflow: visible;
+            display: none; /* Hide filename display completely */
         }
 
         /* Updated media query for smaller screens */
@@ -1205,12 +1206,12 @@
     <div class="container" style="position: relative;">
       <!-- Site Header -->
       <div class="site-header">
-        <div style="display: flex; align-items: center;">
-          <img src="b-t.png" alt="Logo">
-          <span class="site-title">
-            <span class="brand-highlight">Ba</span><span class="brand-no">no</span><span class="brand-do">do</span><span class="brand-co">co</span>
-          </span>
-        </div>
+        <a href="./" style="display: flex; align-items: center; text-decoration: none;">
+            <img src="./assets/images/b-t.png" alt="Logo">
+            <span class="site-title">
+                <span class="brand-highlight">Ba</span><span class="brand-no">no</span><span class="brand-do">do</span><span class="brand-co">co</span>
+            </span>
+        </a>
       </div>
 
       <!-- Improved Hero Section with integrated content -->
@@ -1218,24 +1219,10 @@
           <div class="two-column" style="margin-top: 3rem; align-items: center;">
               <div class="text-column" style="margin-top: -35px; flex: 1.2; max-width: 600px;">
                   <h1 class="hero-title" style="text-align: left; margin-left: 0; max-width: 100%;">Tools and resources to help the open source AI art ecosystem thrive</h1>
-                  <p style="margin-bottom: 2rem;">We're building tools, a culture and an economic foundation that ainss to enable and reward open collaboration in the AI art ecosystem.</p>
+                  <p style="margin-bottom: 2rem;">We're building tools, a culture and an economic foundation that that to enable and reward open collaboration in the AI art ecosystem. More coming soon.</p>
               </div>
               <div class="ecosystem-visualization" style="flex-grow: 1.5; min-width: 500px; margin-left: -50px; margin-top: -80px;">
-                <div id="three-container">
-                  <!-- Control Panel -->
-                  <div id="control-panel">
-                    <label for="node-select">Node:</label>
-                    <select id="node-select">
-                      <option value="all">All Nodes</option>
-                    </select>
 
-                    <label for="dots-input">Dots:</label>
-                    <input type="number" id="dots-input" min="1" max="20" value="1" style="width:50px;" />
-                    
-                    <button id="add-dots-button">Add Dots</button>
-                  </div>
-
-                </div>
                 <!-- Legend inserted in top left of visualization -->
                 <div id="legend">
                   <div class="legend-item">
@@ -1252,20 +1239,19 @@
       </div>
       
       <!-- Divider -->
-      <hr class="section-divider">
+      <!-- <hr class="section-divider"> -->
       
       <!-- Mellon Section -->
-      <div class="content-section">
-          <h2>Mellon aims to empower the community to build tools that bring the community's work to the world</h2>
+      <!-- <div class="content-section">
+          <h2>Coming soon: Mellon aims to bring the capabalities that the open source AI art ecosystem produces to the world</h2>
           
           <div class="two-column">
               <div class="text-column">
-                  <p style="margin-bottom: 1rem;">Mellon is a playground where people can build tools, implement workflows, and combine the output of the open source ecosystem.</p>
-                  <p style="margin-bottom: 2rem;">Our goal is to make it easy for people to build their own workshop of artistic tools, that they can then share with the world.</p>
+                                    
+                  <p style="margin-bottom: 2rem;">Every day, new capabilities are added to the ecosystem across Diffusers, ComfyUI, and random repos. With Mellon, our goal is to make these capabilities accessible - with a user experience that's easy to understand and use.</p>
+                  <p style="margin-bottom: 1rem;">We believe that a tool that's designed with artistic expression in mind that the community can build on top of will hugely expand access to open source AI, therefore extending the creative potential of the ecosystem.</p>
                   <div class="links" style="display: flex; gap: 1rem; align-items: center;">
-                      <a href="#" style="color: inherit;">Visit Website</a>
-                      <span style="color: #666;">|</span>
-                      <a href="#" style="color: inherit;">Visit Github</a>
+                      <a href="#" style="color: inherit;">Visit Github</a>                                            
                   </div>
               </div>
               <div class="image-column">
@@ -1274,7 +1260,7 @@
                   </div>
               </div>
           </div>
-      </div>
+      </div> -->
       
       <!-- Divider -->
       <hr class="section-divider">
@@ -1315,191 +1301,8 @@
               <div class="ownership-images-grid" style="display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; margin: 1rem 0;"></div>
               <h3>We're sharing 100% of our company's ownership with people who help the open source ecosystem thrive</h3>
               <div class="text-content">
-                <p>We believe that it's only fair that a company built on the open source ecosystem should be owned by the community that built it. Each month, we share 1% of our company's ownership.</p>
+                <p>We believe that it's only fair that a company built on the open source ecosystem should be owned by the community that built it. Aside from investor dilution, open source contributors will own all of our company.</p>
             </div>
-              <script>
-                (function(){
-                  // Function to create SVG with pastel color
-                  function createPastelSvg(container) {
-                    const hue = Math.floor(Math.random() * 360);
-                    const saturation = 65 + Math.random() * 15;
-                    const lightness = 80 + Math.random() * 10;
-                    const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-                    
-                    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                    svg.setAttribute("width", "100%");
-                    svg.setAttribute("height", "100%");
-                    svg.setAttribute("viewBox", "0 0 20 20");
-                    svg.style.display = "block";
-                    svg.style.cursor = "pointer"; // Add cursor pointer to indicate interactivity
-                    
-                    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                    rect.setAttribute("width", "20");
-                    rect.setAttribute("height", "20");
-                    rect.setAttribute("fill", color);
-                    
-                    svg.appendChild(rect);
-                    container.appendChild(svg);
-                  }
-
-                  // Function to check if all images are fixed and, if so, display the overlay
-                  function checkIfAllFixed() {
-                    const images = communityContainer.querySelectorAll('img');
-                    const allFixed = Array.from(images).every(img => img.fixed);
-                    if (allFixed) {
-                      if (!communityContainer.querySelector('.congrats-overlay')) {
-                        const overlay = document.createElement('div');
-                        overlay.className = 'congrats-overlay';
-                        overlay.textContent = "Congratulations! You have too much time on your hands. Perhaps that time would be better spent contributing to open source?";
-                        overlay.style.position = 'absolute';
-                        overlay.style.top = '0';
-                        overlay.style.left = '0';
-                        overlay.style.width = '100%';
-                        overlay.style.height = '100%';
-                        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-                        overlay.style.color = '#fff';
-                        overlay.style.display = 'flex';
-                        overlay.style.alignItems = 'center';
-                        overlay.style.justifyContent = 'center';
-                        overlay.style.textAlign = 'center';
-                        overlay.style.padding = '1rem';
-                        overlay.style.zIndex = '1000';
-                        communityContainer.style.position = 'relative';
-                        communityContainer.appendChild(overlay);
-                      }
-                    }
-                  }
-
-                  // Create community grid (8x2 = 16 larger squares)
-                  const communityContainer = document.querySelector('.community-images-grid');
-
-                  // Create community grid with numbered images
-                  for (let i = 0; i < 16; i++) {
-                    let randomIndex = Math.floor(Math.random() * 66);
-                    const img = document.createElement('img');
-                    img.src = 'numbered/' + randomIndex + '.png';
-                    img.style.width = '100%';
-                    img.style.height = '100%';
-                    img.style.objectFit = 'cover';
-                    img.style.display = 'block';
-
-                    // Update the mouseenter event for community images
-                    img.addEventListener('mouseenter', function(){
-                      let newIndex = Math.floor(Math.random() * 66);
-                      img.src = 'numbered/' + newIndex + '.png';
-                      
-                      if (!img.flickerInterval) {
-                        img.flickerInterval = setInterval(function(){
-                          let newIndex = Math.floor(Math.random() * 66);
-                          img.src = 'numbered/' + newIndex + '.png';
-                        }, 100);
-                      }
-                    });
-                    img.addEventListener('mouseleave', function(){
-                      if (img.flickerInterval) {
-                        clearInterval(img.flickerInterval);
-                        img.flickerInterval = null;
-                      }
-                    });
-
-                    // Add click event for 3-second scramble
-                    img.addEventListener('click', function(){
-                      if (img.flickerInterval) {
-                        clearInterval(img.flickerInterval);
-                        img.flickerInterval = null;
-                      }
-                      
-                      // Start rapid scramble
-                      img.flickerInterval = setInterval(function(){
-                        let newIndex = Math.floor(Math.random() * 66);
-                        img.src = 'numbered/' + newIndex + '.png';
-                      }, 100);
-                      
-                      // Stop after 3 seconds
-                      setTimeout(function() {
-                        if (img.flickerInterval) {
-                          clearInterval(img.flickerInterval);
-                          img.flickerInterval = null;
-                        }
-                      }, 3000);
-                    });
-
-                    communityContainer.appendChild(img);
-                  }
-
-                  // Load the profile pics list from JSON for the ownership grid
-                  fetch('profile_pics_list.json')
-                    .then(response => response.json())
-                    .then(imageFiles => {
-                      // Create ownership grid (20x5 = 100 squares)
-                      const container = document.querySelector('.ownership-images-grid');
-                      // Track used indices to avoid duplicates
-                      const usedIndices = new Set();
-
-                      for (let i = 0; i < 100; i++) {
-                        // Get a random index that hasn't been used yet
-                        let randomIndex;
-                        do {
-                          randomIndex = Math.floor(Math.random() * imageFiles.length);
-                        } while (usedIndices.has(randomIndex));
-                        
-                        // Add this index to the used set
-                        usedIndices.add(randomIndex);
-                        
-                        // Create image element
-                        const img = document.createElement('img');
-                        img.src = imageFiles[randomIndex];
-                        img.style.width = '100%';
-                        img.style.height = '100%';
-                        img.style.objectFit = 'cover';
-                        img.style.display = 'block';
-                        img.style.transition = 'filter 0.3s ease';
-
-                        // Create a wrapper div for positioning the filename display
-                        const wrapper = document.createElement('div');
-                        wrapper.style.position = 'relative';
-                        wrapper.style.width = '100%';
-                        wrapper.style.height = '100%';
-
-                        // Create filename display element
-                        const filenameDisplay = document.createElement('div');
-                        filenameDisplay.className = 'filename-display';
-                        // Extract filename without extension
-                        const filename = imageFiles[randomIndex].split('/').pop().split('.')[0];
-                        filenameDisplay.textContent = filename;
-
-                        // Add brightness effect and show filename on hover
-                        wrapper.addEventListener('mouseenter', function() {
-                          img.style.filter = 'brightness(1.2)';
-                          filenameDisplay.style.opacity = '1';
-                        });
-                        wrapper.addEventListener('mouseleave', function() {
-                          img.style.filter = 'brightness(1)';
-                          filenameDisplay.style.opacity = '0';
-                        });
-
-                        // Append elements
-                        wrapper.appendChild(img);
-                        wrapper.appendChild(filenameDisplay);
-                        container.appendChild(wrapper);
-                        
-                        // If we've used all possible indices, reset the set
-                        // This handles the case where there are fewer than 100 images
-                        if (usedIndices.size >= imageFiles.length && i < 99) {
-                          usedIndices.clear();
-                        }
-                      }
-                    })
-                    .catch(error => {
-                      console.error('Error loading profile pics list:', error);
-                      // Fallback to SVGs for ownership grid if JSON fails to load
-                      const container = document.querySelector('.ownership-images-grid');
-                      for (let i = 0; i < 100; i++) {
-                        createPastelSvg(container);
-                      }
-                    });
-                })();
-              </script>
               <div class="links" style="margin-top: 1rem;">
                   <a href="/Ownership" style="color: inherit;">Learn how it works</a>
               </div>
@@ -1518,7 +1321,7 @@
             <a href="https://www.schlupfloch.xyz/consider-pretending-that-the-2nd-renaissance-is-about-to-start-and-that-you-can-be-a-part-of-it/" style="color: inherit;">Read about this idea</a>
           </div>
         </div>
-        <div class="image-column" style="width: 40%;">
+        <div class="image-column" style="width: 40%; margin-top: 10px;">
             <div class="styled-image-box">
                 <img src="https://www.schlupfloch.xyz/content/images/size/w2000/2025/02/Group-2--14--4c552dc74e6827a2.png" alt="Open Source Ecosystem">
             </div>
@@ -1564,18 +1367,11 @@
         </div>
       </div>
     </div>
-    <script>
-        // Initialize Feather icons
-        feather.replace();
-    </script>
-    <script src="script.js"></script>
-    <script src="plant-animation.js"></script>
+    <script src="js/components/icons.js"></script>
+    <script src="js/components/script.js"></script>
+    <script src="js/components/plant-animation.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script>
-      // document.addEventListener('DOMContentLoaded', function() {
-      //   ReactDOM.render(React.createElement(NetworkVisualization), document.getElementById('network-container'));
-      // });
-    </script>
-    <script src="ecosystem.js" type="module"></script>
+    <script src="js/components/ecosystem.js" type="module"></script>
+    <script src="js/components/grid-animations.js"></script>
 </body>
 </html> 

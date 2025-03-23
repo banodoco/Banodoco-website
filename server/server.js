@@ -19,13 +19,42 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon',
 };
 
+// Define base directories
+const ROOT_DIR = path.join(__dirname, '..');
+const PAGES_DIR = path.join(__dirname, '..', 'src', 'pages');
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+const COMPONENTS_DIR = path.join(__dirname, '..', 'src', 'components');
+const STYLES_DIR = path.join(__dirname, '..', 'src', 'styles');
+const JS_DIR = path.join(__dirname, '..', 'src', 'js');
+const ASSETS_DIR = path.join(__dirname, '..', 'src', 'assets');
+const DATA_DIR = path.join(__dirname, '..', 'src', 'data');
+
 const server = http.createServer((req, res) => {
   console.log(`Request for ${req.url}`);
   
-  // Handle the root path
-  let filePath = req.url === '/' ? './index.html' : '.' + req.url;
-  if (req.url.toLowerCase() === '/ownership') {
-    filePath = './ownership.html';
+  // Handle the root path and main pages
+  let filePath;
+  if (req.url === '/') {
+    filePath = path.join(ROOT_DIR, 'index.html');
+  } else if (req.url.toLowerCase() === '/ownership') {
+    filePath = path.join(PAGES_DIR, 'ownership.html');
+  } else {
+    // Handle other static files based on their location
+    const urlPath = req.url.split('?')[0]; // Remove query parameters
+    if (urlPath.startsWith('/assets/')) {
+      filePath = path.join(ASSETS_DIR, urlPath.replace('/assets/', ''));
+    } else if (urlPath.startsWith('/js/')) {
+      filePath = path.join(JS_DIR, urlPath.replace('/js/', ''));
+    } else if (urlPath.startsWith('/styles/')) {
+      filePath = path.join(STYLES_DIR, urlPath.replace('/styles/', ''));
+    } else if (urlPath.startsWith('/components/')) {
+      filePath = path.join(COMPONENTS_DIR, urlPath.replace('/components/', ''));
+    } else if (urlPath.startsWith('/data/')) {
+      filePath = path.join(DATA_DIR, urlPath.replace('/data/', ''));
+    } else {
+      // Check in public directory for other files
+      filePath = path.join(PUBLIC_DIR, urlPath);
+    }
   }
   
   const extname = path.extname(filePath);
@@ -35,7 +64,7 @@ const server = http.createServer((req, res) => {
     if (err) {
       if (err.code === 'ENOENT') {
         // Page not found
-        fs.readFile('./404.html', (err, content) => {
+        fs.readFile(path.join(PAGES_DIR, '404.html'), (err, content) => {
           res.writeHead(404, { 'Content-Type': 'text/html' });
           res.end(content || 'Page not found', 'utf-8');
         });

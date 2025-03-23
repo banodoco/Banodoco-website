@@ -1,5 +1,5 @@
 /**
- * Self-contained Three.js ecosystem simulation (Improved Version).
+ * Self-contained Three.js ecosystem simulation (Improved Version with Console Logs).
  *
  * Usage in your HTML:
  *
@@ -23,12 +23,21 @@ export function runEcosystem(appendToEl = document.body) {
   // ---------------------------------------------------------------------
   // 0a. Basic Config Constants
   // ---------------------------------------------------------------------
-  const VIEW_SIZE = 385;        // Used for Orthographic camera dimensions
+  const VIEW_SIZE = 385;          // Used for Orthographic camera dimensions
   const DOT_FADE_DURATION = 200;  // How quickly new orbiting dots fade in
   const MAX_DOTS_PER_CLICK = 20;  // Max dots user can add at once from the UI
 
   // (Optional) If you want to later clean up intervals, store them:
   let intervals = [];
+
+  // Function to generate UUID v4
+  function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0, 
+            v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
 
   // ---------------------------------------------------------------------
   // 0b. Container Setup
@@ -181,45 +190,6 @@ export function runEcosystem(appendToEl = document.body) {
     .legend-line.equip {
       background: linear-gradient(to right, #4285F4 0%, #4285F4 20%, #9C27B0 20%, #9C27B0 40%, #F44336 40%, #F44336 60%, #00BCD4 60%, #00BCD4 80%, #4CAF50 80%, #4CAF50 100%);
     }
-    #people-counter {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      background: rgba(255,255,255,0.8);
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-family: sans-serif;
-      font-size: 0.9rem;
-      z-index: 200;
-    }
-    .counter-row {
-      margin-bottom: 8px;
-    }
-    .counter-row h4 {
-      margin: 0 0 4px 0;
-      font-size: 0.9rem;
-    }
-    .silhouette-container {
-      display: flex;
-      flex-wrap: wrap;
-      max-width: 200px;
-    }
-    .silhouette {
-      width: 12px;
-      height: 20px;
-      margin-right: 3px;
-      margin-bottom: 3px;
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-    }
-    .silhouette.artist {
-      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 20"><path d="M6,1 C7.65,1 9,2.35 9,4 C9,5.65 7.65,7 6,7 C4.35,7 3,5.65 3,4 C3,2.35 4.35,1 6,1 Z M6,9 C9.31,9 12,10.34 12,12 L12,13 L0,13 L0,12 C0,10.34 2.69,9 6,9 Z" fill="%23FF9800"/></svg>');
-    }
-    .silhouette.inspired {
-      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 20"><path d="M6,1 C7.65,1 9,2.35 9,4 C9,5.65 7.65,7 6,7 C4.35,7 3,5.65 3,4 C3,2.35 4.35,1 6,1 Z M6,9 C9.31,9 12,10.34 12,12 L12,13 L0,13 L0,12 C0,10.34 2.69,9 6,9 Z" fill="%234285F4"/></svg>');
-    }
   `;
   const style = document.createElement('style');
   style.textContent = styleContent;
@@ -232,12 +202,12 @@ export function runEcosystem(appendToEl = document.body) {
 
   // "Sections" are the main node/hub data
   let sections = [
-    { id: 'modelTinkerers',       name: 'Fine-Tuners & Trainers',      dots: 10, x: -300, y: -50 },
-    { id: 'mlArchitects',         name: 'Base Model Architects',       dots: 10, x: 0,    y: -200 },
-    { id: 'artists',              name: 'Artists',                     dots: 12, x: 300,  y: -50 },
-    { id: 'artToolBuilders',      name: 'Tool Builders',               dots: 10, x: 200,  y: 200 },
-    { id: 'experimenters',        name: 'Workflow Creators',           dots: 10, x: -50,  y: 300 },
-    { id: 'infrastructureBuilders', name: 'Infrastructure Engineers',  dots: 10, x: -250, y: 150 }
+    { id: 'modelTinkerers',         name: 'Fine-Tuners & Trainers',      dots: 10, x: -300, y: -50 },
+    { id: 'mlArchitects',           name: 'Base Model Architects',       dots: 10, x: 0,    y: -200 },
+    { id: 'artists',                name: 'Artists',                     dots: 12, x: 300,  y: -50 },
+    { id: 'artToolBuilders',        name: 'Tool Builders',               dots: 10, x: 200,  y: 200 },
+    { id: 'experimenters',          name: 'Workflow Creators',           dots: 10, x: -50,  y: 300 },
+    { id: 'infrastructureBuilders', name: 'Infrastructure Engineers',    dots: 10, x: -250, y: 150 }
   ];
 
   let connections = [
@@ -268,7 +238,7 @@ export function runEcosystem(appendToEl = document.body) {
     }
   });
 
-  // Track orbit parameters (keyed by "sectionId-index") for each dot
+  // Track orbit parameters (keyed by "dotId") for each orbiting dot
   let dotOffsets = {};
 
   // Arrays for pulses, popups, expansions
@@ -294,86 +264,8 @@ export function runEcosystem(appendToEl = document.body) {
   let scene, camera, renderer, controls, raycaster, mouse;
   let nodeMeshes = [];
   let connectionMeshes = [];
-  let orbitingDotMeshes = {};
+  let orbitingDotMeshes = {}; // { sectionId: [Mesh, Mesh, ...], ... }
   let pulseLineMeshes = [];
-
-  // For tracking numbers for the counter
-  let artistCount = sections.find(s => s.id === 'artists')?.dots || 0;
-  let inspiredCount = 0;
-
-  // Create the counter element
-  function createPeopleCounter() {
-    const existingCounter = simulationContainer.querySelector('#people-counter');
-    if (existingCounter) return;
-
-    const counterEl = document.createElement('div');
-    counterEl.id = 'people-counter';
-    
-    const artistRow = document.createElement('div');
-    artistRow.className = 'counter-row';
-    const artistTitle = document.createElement('h4');
-    artistTitle.textContent = 'Number of people creating AI art:';
-    const artistSilhouettes = document.createElement('div');
-    artistSilhouettes.className = 'silhouette-container artists';
-    artistRow.appendChild(artistTitle);
-    artistRow.appendChild(artistSilhouettes);
-    
-    const inspiredRow = document.createElement('div');
-    inspiredRow.className = 'counter-row';
-    const inspiredTitle = document.createElement('h4');
-    inspiredTitle.textContent = 'Number of people inspired by art:';
-    const inspiredSilhouettes = document.createElement('div');
-    inspiredSilhouettes.className = 'silhouette-container inspired';
-    inspiredRow.appendChild(inspiredTitle);
-    inspiredRow.appendChild(inspiredSilhouettes);
-    
-    counterEl.appendChild(artistRow);
-    counterEl.appendChild(inspiredRow);
-    
-    simulationContainer.appendChild(counterEl);
-    
-    // Initial render
-    updatePeopleCounter();
-  }
-  
-  function updatePeopleCounter() {
-    // Update artist count
-    artistCount = sections.find(s => s.id === 'artists')?.dots || 0;
-    
-    // Calculate inspired count - people in sections directly connected to artists
-    const artistsSection = sections.find(s => s.id === 'artists');
-    if (artistsSection) {
-      const inspiredSections = connections
-        .filter(conn => conn.from === 'artists' && conn.type === 'red')
-        .map(conn => conn.to);
-      
-      inspiredCount = sections
-        .filter(s => inspiredSections.includes(s.id))
-        .reduce((sum, s) => sum + s.dots, 0);
-    }
-    
-    // Update silhouettes
-    const artistContainer = simulationContainer.querySelector('.silhouette-container.artists');
-    const inspiredContainer = simulationContainer.querySelector('.silhouette-container.inspired');
-    
-    if (artistContainer) {
-      artistContainer.innerHTML = '';
-      for (let i = 0; i < Math.min(artistCount, 30); i++) {
-        const silhouette = document.createElement('div');
-        silhouette.className = 'silhouette artist';
-        artistContainer.appendChild(silhouette);
-      }
-    }
-    
-    if (inspiredContainer) {
-      inspiredContainer.innerHTML = '';
-      for (let i = 0; i < Math.min(inspiredCount, 30); i++) {
-        const silhouette = document.createElement('div');
-        silhouette.className = 'silhouette inspired';
-        inspiredContainer.appendChild(silhouette);
-      }
-    }
-  }
 
   // ---------------------------------------------------------------------
   // 2a. Initialize Three.js
@@ -401,7 +293,7 @@ export function runEcosystem(appendToEl = document.body) {
     camera.position.set(0, 0, 10);
 
     const panX = isMobile ? -20 : -30; // Less pan on mobile
-    const panY = isMobile ? 30 : 50; // Less pan on mobile
+    const panY = isMobile ? 30 : 50;   // Less pan on mobile
 
     camera.left += panX;
     camera.right += panX;
@@ -410,7 +302,7 @@ export function runEcosystem(appendToEl = document.body) {
     camera.updateProjectionMatrix();
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for better performance
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0); // transparent
     renderer.sortObjects = true;
@@ -424,7 +316,7 @@ export function runEcosystem(appendToEl = document.body) {
     
     // Fix for mobile scrolling - disable OrbitControls from capturing all touch events
     if (isMobile) {
-      controls.enabled = false; // Disable controls entirely on mobile to allow scrolling
+      controls.enabled = false; // fully disable on mobile to allow page scroll
     }
 
     raycaster = new THREE.Raycaster();
@@ -432,14 +324,13 @@ export function runEcosystem(appendToEl = document.body) {
 
     window.addEventListener('resize', onWindowResize);
     
-    // Use separate event handlers for mobile vs desktop
+    // On mobile, interpret a short touch as a "tap"
     if (isMobile) {
-      // On mobile, we want taps to work but not block scrolling
       let touchStartY = 0;
       let touchStartX = 0;
       let touchMoved = false;
-      const touchMoveThreshold = 10; // pixels of movement to consider it a scroll instead of a tap
-      
+      const touchMoveThreshold = 10; // px
+
       renderer.domElement.addEventListener('touchstart', (event) => {
         if (event.touches.length !== 1) return;
         touchStartY = event.touches[0].clientY;
@@ -453,7 +344,6 @@ export function runEcosystem(appendToEl = document.body) {
         const touchX = event.touches[0].clientX;
         const deltaY = Math.abs(touchY - touchStartY);
         const deltaX = Math.abs(touchX - touchStartX);
-        
         if (deltaY > touchMoveThreshold || deltaX > touchMoveThreshold) {
           touchMoved = true;
         }
@@ -464,7 +354,9 @@ export function runEcosystem(appendToEl = document.body) {
         if (touchMoved) return;
         onTouchStart(event);
       }, { passive: true });
+
     } else {
+      // Desktop pointer
       renderer.domElement.addEventListener('pointerdown', onPointerDown);
     }
   }
@@ -599,77 +491,92 @@ export function runEcosystem(appendToEl = document.body) {
   }
 
   // ---------------------------------------------------------------------
-  // 2c. Orbiting Dots
+  // 2c. **Revised** Orbiting Dots (with extra logs)
   // ---------------------------------------------------------------------
+  /**
+   * Instead of relying on `section.dots`, we use the data in `dotOffsets`.
+   * This avoids discarding a dot that's currently in transit or otherwise
+   * not reflected by the plain `section.dots` count.
+   */
   function buildOrbitingDots() {
+    console.log('[buildOrbitingDots] Rebuilding all orbiting dots from dotOffsets...');
+
     // Remove old
     Object.values(orbitingDotMeshes).forEach(array => {
       array.forEach(mesh => scene.remove(mesh));
     });
     orbitingDotMeshes = {};
 
-    // Build new
+    // Initialize arrays per section
     sections.forEach(section => {
       orbitingDotMeshes[section.id] = [];
-      for (let i = 0; i < section.dots; i++) {
-        const geometry = new THREE.CircleGeometry(4, 16);
-        const material = new THREE.MeshBasicMaterial({
-          color: sectionColors[section.id],
-          opacity: 0, // start invisible, fade in
-          transparent: true
-        });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.renderOrder = 5;
-        mesh.userData.dotId = `${section.id}-${i}`;
-        mesh.userData.fadeCreated = Date.now();
+    });
 
-        scene.add(mesh);
-        orbitingDotMeshes[section.id].push(mesh);
+    // For each offset/dot, create a mesh in the correct section group
+    Object.keys(dotOffsets).forEach(dotId => {
+      const offset = dotOffsets[dotId];
+      const secId = offset.homeSectionId;
+
+      if (!orbitingDotMeshes[secId]) {
+        // In case something is off
+        console.warn(`[buildOrbitingDots] Creating a new array for section ${secId}`);
+        orbitingDotMeshes[secId] = [];
       }
+
+      // Build the mesh
+      const geometry = new THREE.CircleGeometry(4, 16);
+      const material = new THREE.MeshBasicMaterial({
+        color: sectionColors[secId],
+        opacity: 0, // start invisible, fade in
+        transparent: true
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.renderOrder = 5;
+      mesh.userData.dotId = dotId;
+      mesh.userData.fadeCreated = Date.now();
+
+      scene.add(mesh);
+      orbitingDotMeshes[secId].push(mesh);
     });
   }
 
-  function updateOrbitingDotsForSection(section) {
-    // If user adds new dots, create new meshes as needed
-    if (!orbitingDotMeshes[section.id]) {
-      orbitingDotMeshes[section.id] = [];
+  /**
+   * If you want to explicitly create a mesh for a new dot
+   * right after calling `handleSectionClick()`,
+   * you can call this. It no longer uses `section.dots`
+   * to decide how many to add—just the new `dotId`.
+   */
+  function createSingleDotMesh(dotId) {
+    const offset = dotOffsets[dotId];
+    if (!offset) {
+      console.warn(`[createSingleDotMesh] No offset found for dotId=${dotId}`);
+      return;
     }
-    const currentCount = orbitingDotMeshes[section.id].length;
-    const desiredCount = section.dots;
-    const diff = desiredCount - currentCount;
-    if (diff > 0) {
-      for (let i = currentCount; i < desiredCount; i++) {
-        const geometry = new THREE.CircleGeometry(4, 16);
-        const material = new THREE.MeshBasicMaterial({
-          color: sectionColors[section.id],
-          opacity: 0,
-          transparent: true
-        });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.renderOrder = 5;
-        mesh.userData.dotId = `${section.id}-${i}`;
-        mesh.userData.fadeCreated = Date.now();
-
-        scene.add(mesh);
-        orbitingDotMeshes[section.id].push(mesh);
-      }
+    const secId = offset.homeSectionId;
+    if (!orbitingDotMeshes[secId]) {
+      orbitingDotMeshes[secId] = [];
     }
-  }
 
-  let orbitRebuildTimeout = null;
-  function scheduleOrbitingDotsRebuild() {
-    if (orbitRebuildTimeout) clearTimeout(orbitRebuildTimeout);
-    orbitRebuildTimeout = setTimeout(() => {
-      buildOrbitingDots();
-      orbitRebuildTimeout = null;
-    }, 100);
+    const geometry = new THREE.CircleGeometry(4, 16);
+    const material = new THREE.MeshBasicMaterial({
+      color: sectionColors[secId],
+      opacity: 0,
+      transparent: true
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.renderOrder = 5;
+    mesh.userData.dotId = dotId;
+    mesh.userData.fadeCreated = Date.now();
+
+    scene.add(mesh);
+    orbitingDotMeshes[secId].push(mesh);
+
+    console.log(`[createSingleDotMesh] Created mesh for ${dotId} in section ${secId}.`);
   }
 
   // ---------------------------------------------------------------------
   // 2d. Pulses (traveling segments)
   // ---------------------------------------------------------------------
-
-  // Helper to create both the main pulse mesh and the glow mesh
   function createPulseMesh(x1, y1, x2, y2, thickness, color, opacity = 0.8, glowOpacity = 0.2) {
     const dx = x2 - x1;
     const dy = y2 - y1;
@@ -697,7 +604,8 @@ export function runEcosystem(appendToEl = document.body) {
       color,
       opacity,
       transparent: true,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      depthTest: false
     });
     const segmentMesh = new THREE.Mesh(geometry, material);
     segmentMesh.renderOrder = 2;
@@ -718,7 +626,8 @@ export function runEcosystem(appendToEl = document.body) {
       color,
       opacity: glowOpacity,
       transparent: true,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      depthTest: false
     });
     const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
     glowMesh.renderOrder = 2;
@@ -830,7 +739,8 @@ export function runEcosystem(appendToEl = document.body) {
     const material = new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
-      opacity: 0.7
+      opacity: 0.7,
+      depthTest: false
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(section.x, section.y, 0.8);
@@ -979,7 +889,8 @@ export function runEcosystem(appendToEl = document.body) {
   // ---------------------------------------------------------------------
   function calcInTransitPosition(offset) {
     const now = Date.now();
-    const t = Math.min(1, (now - offset.inTransitStartTime) / offset.inTransitDuration);
+    const progress = (now - offset.inTransitStartTime) / offset.inTransitDuration;
+    const t = Math.min(1, progress);
     const x = offset.oldX + (offset.newX - offset.oldX) * t;
     const y = offset.oldY + (offset.newY - offset.oldY) * t;
     return { x, y, progress: t };
@@ -1008,9 +919,15 @@ export function runEcosystem(appendToEl = document.body) {
   }
 
   function maybeMoveToAnotherHub(dotId, offset) {
-    if (offset.isInTransit) return;
-    const moveChance = 0.0005; // small chance each frame
+    if (offset.isInTransit) {
+      // Additional logging to catch "already in transit" attempts
+      // (Should not happen with the guard below, but let's keep a log.)
+      // console.log(`[maybeMoveToAnotherHub] Dot ${dotId} is already inTransit. Skipping re-move.`);
+      return;
+    }
+    const moveChance = 0.00005; // small chance each frame
     if (Math.random() < moveChance) {
+      console.log(`[maybeMoveToAnotherHub] Dot ${dotId} from ${offset.homeSectionId} is deciding to move...`);
       const homeId = offset.homeSectionId;
       const neighbors = adjacency[homeId] || [];
 
@@ -1024,19 +941,15 @@ export function runEcosystem(appendToEl = document.body) {
       }
       if (candidateSectionId === homeId) return;
 
-      // Transit
-      const fromSection = sections.find(s => s.id === homeId);
-      const toSection   = sections.find(s => s.id === candidateSectionId);
-      if (!fromSection || !toSection) return;
-
+      console.log(`[maybeMoveToAnotherHub] Dot ${dotId} => wants to go to section ${candidateSectionId}`);
       offset.isInTransit = true;
       offset.inTransitStartTime = Date.now();
       offset.inTransitDuration  = 2000;
 
-      offset.oldX = fromSection.x;
-      offset.oldY = fromSection.y;
-      offset.newX = toSection.x;
-      offset.newY = toSection.y;
+      offset.oldX = sections.find(s => s.id === homeId)?.x || 0;
+      offset.oldY = sections.find(s => s.id === homeId)?.y || 0;
+      offset.newX = sections.find(s => s.id === candidateSectionId)?.x || 0;
+      offset.newY = sections.find(s => s.id === candidateSectionId)?.y || 0;
       offset.newSectionId = candidateSectionId;
 
       offset.fromColor = new THREE.Color(sectionColors[homeId]);
@@ -1047,20 +960,52 @@ export function runEcosystem(appendToEl = document.body) {
   function finalizeTransit(dotId, offset) {
     offset.isInTransit = false;
     if (!offset.newSectionId) return;
+
+    const oldSectionId = offset.homeSectionId;
     const newId = offset.newSectionId;
     offset.newSectionId = null;
 
+    console.log(`[finalizeTransit] Dot ${dotId} finishing transit from section ${oldSectionId} to ${newId}`);
+
     const newSec = sections.find(s => s.id === newId);
-    if (!newSec) return;
+    if (!newSec) {
+      console.warn(`[finalizeTransit] Dot ${dotId} new section ${newId} not found in 'sections'.`);
+      return;
+    }
 
+    // Keep the section counts in sync (for display or pulse logic, etc.)
+    const oldSec = sections.find(s => s.id === oldSectionId);
+    if (oldSec) {
+      oldSec.dots = Math.max(0, oldSec.dots - 1);
+    }
+    newSec.dots++;
+
+    // Re-assign the dot's mesh from old group to new group
+    const oldArray = orbitingDotMeshes[oldSectionId];
+    if (!oldArray) {
+      console.warn(`[finalizeTransit] orbitingDotMeshes[${oldSectionId}] does not exist! Dot ${dotId} might be orphaned!`);
+    } else {
+      const idx = oldArray.findIndex(m => m.userData.dotId === dotId);
+      if (idx === -1) {
+        console.warn(`[finalizeTransit] Dot ${dotId} not found in orbitingDotMeshes[${oldSectionId}] array!`);
+      } else {
+        const [dotMesh] = oldArray.splice(idx, 1);
+        if (!orbitingDotMeshes[newId]) {
+          console.warn(`[finalizeTransit] orbitingDotMeshes[${newId}] doesn't exist yet. Creating it now...`);
+          orbitingDotMeshes[newId] = [];
+        }
+        orbitingDotMeshes[newId].push(dotMesh);
+        console.log(`[finalizeTransit] Dot ${dotId} re-assigned from orbitingDotMeshes[${oldSectionId}] to orbitingDotMeshes[${newId}]`);
+      }
+    }
+
+    // Finish updating offset to the new "home" section
     offset.homeSectionId = newId;
-
     offset.startTime = Date.now();
     offset.flightDuration = 1000;
     offset.initialDistance = 0;
     offset.distance = 50 + Math.random() * 50;
 
-    // Recompute orbit angle
     const dx = offset.newX - newSec.x;
     const dy = offset.newY - newSec.y;
     offset.phase = Math.atan2(dy, dx);
@@ -1096,10 +1041,12 @@ export function runEcosystem(appendToEl = document.body) {
       popupTexts = popupTexts.filter(p => p.id !== newPopup.id);
     }, 2000);
 
+    // Rebuild lines only, no orb rebuild
     rebuildSceneObjects();
   }
 
   function handleSectionClick(sectionId) {
+    console.log(`[handleSectionClick] Adding a new dot to section ${sectionId}`);
     const targetSection = sections.find(s => s.id === sectionId);
     if (!targetSection) return;
 
@@ -1107,9 +1054,9 @@ export function runEcosystem(appendToEl = document.body) {
     targetSection.dots += 1;
 
     const randomDist = 50 + Math.random() * 50;
-    const speed         = 0.0005 + (newDotIndex % 5) * 0.0002;
-    const direction     = newDotIndex % 2 === 0 ? 1 : -1;
-    const phase         = (newDotIndex / targetSection.dots) * Math.PI * 2;
+    const speed       = 0.0005 + (newDotIndex % 5) * 0.0002;
+    const direction   = newDotIndex % 2 === 0 ? 1 : -1;
+    const phase       = (newDotIndex / targetSection.dots) * Math.PI * 2;
 
     const initialDistance = 500;
     const flightDuration  = 1000;
@@ -1118,7 +1065,7 @@ export function runEcosystem(appendToEl = document.body) {
     const driftAmplitude = 10 + Math.random() * 30;
     const driftSpeed = 0.001 + Math.random() * 0.002;
 
-    const newDotId = `${sectionId}-${newDotIndex}`;
+    const newDotId = generateUUID();
     dotOffsets[newDotId] = {
       homeSectionId: sectionId,
       distance: randomDist,
@@ -1133,11 +1080,8 @@ export function runEcosystem(appendToEl = document.body) {
       isInTransit: false
     };
 
-    // Ensure there's a mesh for this new dot
-    updateOrbitingDotsForSection(targetSection);
-    
-    // Update the counter when dots are added
-    updatePeopleCounter();
+    // Create the mesh for this single new dot
+    createSingleDotMesh(newDotId);
   }
 
   function handleAddDots() {
@@ -1194,9 +1138,13 @@ export function runEcosystem(appendToEl = document.body) {
           return;
         }
 
-        maybeMoveToAnotherHub(dotId, offset);
-
+        // We can check for stuck in-transit
         if (offset.isInTransit) {
+          const timeSinceTransit = Date.now() - offset.inTransitStartTime;
+          if (timeSinceTransit > (offset.inTransitDuration * 2)) {
+            console.warn(`[animate] Dot ${dotId} has been in transit for too long (${timeSinceTransit}ms). Check if something is blocking finalizeTransit().`);
+          }
+
           const { x, y, progress } = calcInTransitPosition(offset);
           // color fade
           if (offset.fromColor && offset.toColor) {
@@ -1211,6 +1159,8 @@ export function runEcosystem(appendToEl = document.body) {
           }
         } else {
           // normal orbit
+          maybeMoveToAnotherHub(dotId, offset);
+
           const now = Date.now();
           const elapsed = now - offset.startTime;
           const homeSec = sections.find(s => s.id === offset.homeSectionId);
@@ -1247,11 +1197,6 @@ export function runEcosystem(appendToEl = document.body) {
 
     renderPopups();
     renderNodeLabels();
-    
-    // Periodically update the counter
-    if (animationFrame % 30 === 0) {
-      updatePeopleCounter();
-    }
   }
 
   function renderPopups() {
@@ -1335,7 +1280,7 @@ export function runEcosystem(appendToEl = document.body) {
   function initializeDotOffsets() {
     sections.forEach(section => {
       for (let i = 0; i < section.dots; i++) {
-        const id = `${section.id}-${i}`;
+        const id = generateUUID();
         if (!dotOffsets[id]) {
           const randomDist = 50 + Math.random() * 50;
           const driftAmplitude = 10 + Math.random() * 30;
@@ -1367,11 +1312,15 @@ export function runEcosystem(appendToEl = document.body) {
   }
 
   initializeDotOffsets();
-  setupPulseSpawning();
-  rebuildSceneObjects();
-  scheduleOrbitingDotsRebuild();
-  createPeopleCounter();  // Create the people counter
 
+  // Create pulses occasionally
+  setupPulseSpawning();
+
+  // Build the scene & orbits exactly once at startup
+  rebuildSceneObjects();
+  buildOrbitingDots();
+
+  // Start rendering
   animate();
 }
 
