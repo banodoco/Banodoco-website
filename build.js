@@ -35,7 +35,8 @@ function build() {
         assets: { src: 'src/assets', dest: 'assets' },
         styles: { src: 'src/styles', dest: 'styles' },
         components: { src: 'src/components', dest: 'components' },
-        data: { src: 'src/data', dest: 'data' }
+        data: { src: 'src/data', dest: 'data' },
+        pages: { src: 'src/pages', dest: 'pages' }
     };
 
     // Copy each directory
@@ -50,4 +51,4 @@ function build() {
 }
 
 // Run the build
-build(); 
+build();
