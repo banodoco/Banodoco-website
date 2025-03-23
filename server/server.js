@@ -43,26 +43,15 @@ const server = http.createServer((req, res) => {
     
     // Try different possible locations in order
     const possiblePaths = [
-      path.join(ROOT_DIR, urlPath),
-      path.join(SRC_DIR, urlPath),
-      path.join(ROOT_DIR, 'src', urlPath),
-      path.join(ROOT_DIR, urlPath.toLowerCase())
+      path.join(ROOT_DIR, urlPath), // Root directory
+      path.join(ROOT_DIR, 'src', urlPath), // src directory
+      path.join(ROOT_DIR, urlPath.toLowerCase()) // Try lowercase version (for case-sensitive systems)
     ];
     
     // Find the first path that exists
     filePath = possiblePaths.find(p => fs.existsSync(p));
     
-    // If no path exists, try serving from pages directory
-    if (!filePath && urlPath.startsWith('pages/')) {
-      const pagePath = urlPath.replace('pages/', '');
-      const possiblePagePaths = [
-        path.join(ROOT_DIR, 'src', 'pages', pagePath),
-        path.join(ROOT_DIR, 'pages', pagePath)
-      ];
-      filePath = possiblePagePaths.find(p => fs.existsSync(p));
-    }
-    
-    // If still no path exists, default to the requested path in root
+    // If no path exists, default to the requested path in root
     if (!filePath) {
       filePath = possiblePaths[0];
     }
@@ -120,5 +109,5 @@ const gracefulShutdown = () => {
 };
 
 // Listen for termination signals
-process.on('SIGINT', gracefulShutdown);
-process.on('SIGTERM', gracefulShutdown); 
+process.on('SIGINT', gracefulShutdown); // Ctrl+C
+process.on('SIGTERM', gracefulShutdown); // kill command 
