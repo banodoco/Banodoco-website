@@ -1,0 +1,9 @@
+/* Mobile override for ecosystem-visualization */
+@media (max-width: 768px) {
+  .ecosystem-visualization {
+    min-width: 0 !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+  }
+} 

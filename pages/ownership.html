@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Banodoco Ownership - Explanation, Disclaimers & FAQ</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.151.3/build/three.module.js"
+    }
+  }
+  </script>
+  <link rel="icon" href="../assets/images/b-t.png" type="image/png">
+  <link rel="shortcut icon" href="../assets/images/b-t.png" type="image/png">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../src/styles/main.css">
+  <link rel="stylesheet" href="../src/styles/components/header.css">
+  <link rel="stylesheet" href="../src/styles/components/footer.css">
+  <!-- Feather Icons and React -->
+  <script src="https://unpkg.com/feather-icons"></script>
+  <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+  <style>
+    /* Basic required styles matching index.html */
+    #plantCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .plant-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(242, 242, 255, 0.7);
+      backdrop-filter: brightness(1.1) contrast(1.05);
+      z-index: 2;
+      pointer-events: none;
+    }
+    .container {
+      position: relative;
+      padding: 2rem;
+      z-index: 3;
+    }
+    .site-header {
+      display: flex;
+      align-items: center;
+      padding: 1rem 0;
+    }
+    .site-header img {
+      width: 40px;
+      height: auto;
+      margin-right: 0.5rem;
+      margin-left: -30px;
+      position: relative;
+      z-index: 1;
+    }
+    .site-header .site-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+      position: relative;
+      z-index: 1;
+    }
+    .side-window-toggle {
+      position: static;
+      margin-left: auto;
+      margin-right: -30px;
+      transform: none;
+      background: none;
+      border: 1px solid rgba(204, 204, 204, 0.5);
+      border-radius: 4px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.3s ease;
+      width: 36px;
+      height: 36px;
+      position: relative;
+      z-index: 1;
+      background-color: #333;
+      border-color: #333;
+    }
+    .hero-title {
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      color: #333;
+    }
+    .content-section {
+      margin: 3rem 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.1rem;
+      line-height: 1.8;
+      color: #333;
+    }
+    /* New rule for paragraph spacing */
+    p {
+      margin-bottom: 1.2rem;
+    }
+    .image-placeholder {
+      background-color: #f5f5f5;
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+      margin: 1rem;
+      font-family: 'Space Mono', monospace;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      max-width: 40%;
+    }
+    .stacked-right {
+      float: right;
+      clear: right;
+      margin: 0 0 1rem 1rem;
+      max-width: 50%;
+    }
+    .stacked-left {
+      float: left;
+      clear: left;
+      margin: 0 1rem 1rem 0;
+      max-width: 50%;
+    }
+    .image-placeholder:not(.stacked-right):not(.stacked-left) {
+      margin: 2rem auto;
+      max-width: 80%;
+    }
+    ol {
+      margin-left: 1.5rem;
+    }
+    li {
+      margin-bottom: 1rem;
+    }
+    a {
+      color: inherit;
+      text-decoration: underline;
+    }
+    .toggle-grant {
+      background: none;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      color: #666;
+    }
+    .toggle-grant:hover {
+      background: #f5f5f5;
+    }
+    /* Reveal full grant details on hover */
+    .grant-content:hover .grant-full {
+      display: block !important;
+    }
+    /* Updated subtle style for the toggle button */
+    #toggleTableRows {
+      background-color: #EEF5FF;
+      color: #4285F4;
+      border: 1px solid #CBD9F6;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.3s ease;
+      box-shadow: none;
+    }
+    #toggleTableRows:hover {
+      background-color: #E0EBFF;
+    }
+    #toggleTableRows:active {
+      background-color: #D8E4FF;
+    }
+
+    /* Add media query for mobile devices */
+    @media screen and (max-width: 768px) {
+      .image-placeholder {
+        float: none !important;
+        clear: both !important;
+        margin: 2rem 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+      
+      .stacked-right,
+      .stacked-left,
+      .image-placeholder:not(.stacked-right):not(.stacked-left) {
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+
+      .container {
+        padding: 1rem;
+      }
+    }
+
+    /* Ownership page mobile fixes */
+    @media (max-width: 768px) {
+      .stacked-right,
+      .stacked-left {
+        float: none !important;
+        max-width: 100% !important;
+        margin: 1rem auto !important;
+        display: block;
+      }
+      .image-placeholder {
+        max-width: 100% !important;
+        margin: 1rem auto !important;
+        display: block;
+      }
+      .container {
+        padding: 1rem !important;
+      }
+      .site-header img {
+        margin-left: 0 !important;
+      }
+    }
+
+    /* Mobile table fixes to prevent horizontal overflow in Ownership page */
+    @media (max-width: 768px) {
+      table {
+        table-layout: fixed;
+        width: 100% !important;
+      }
+      th, td {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        hyphens: auto;
+        word-break: break-all;
+      }
+    }
+
+    /* Additional mobile table responsiveness to prevent dead space on right */
+    @media (max-width: 768px) {
+      table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+      }
+      th, td {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        hyphens: auto;
+        word-break: break-all;
+        white-space: normal !important;
+      }
+    }
+
+    /* Increase left column spacing in Ownership grants table */
+    #ownershipGrants th:first-child,
+    #ownershipGrants td:first-child {
+        padding-left: 20px !important;
+    }
+
+    /* Table column width fixes */
+    #ownershipGrants td:first-child,
+    #ownershipGrants th:first-child {
+        width: 30% !important;
+        min-width: 150px !important;
+    }
+
+    /* Ensure second column takes remaining space */
+    #ownershipGrants td:nth-child(2),
+    #ownershipGrants th:nth-child(2) {
+        width: 70% !important;
+    }
+
+    .watering-container {
+        position: absolute;
+        top: calc(100% + 2rem);
+        left: calc(50% - 1.0rem);
+        transform: translateX(calc(-50% + 10px));
+        cursor: pointer;
+        z-index: 1000;
+        transform-origin: 80% 100%;
+        transition: transform 2.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1s ease;
+        width: 50px;
+        height: 50px;
+    }
+
+    #initialBud {
+        position: absolute;
+        top: calc(100% + 4rem);
+        left: calc(50% + 1.95rem);
+        transform: translateX(calc(-50% - 2.5px));
+        width: 12px;
+        height: 12px;
+        background-color: #8fb996;
+        border-radius: 50%;
+        box-shadow: 0 0 10px rgba(143, 185, 150, 0.5);
+        z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="plantCanvas"></canvas>
+  <div class="plant-overlay"></div>
+  <div class="container" style="position: relative;">
+    <!-- Site Header -->
+    <div class="site-header">
+      <a href="../" style="display: flex; align-items: center; text-decoration: none;">
+        <img src="../assets/images/b-t.png" alt="Logo">
+        <span class="site-title">
+          <span class="brand-highlight">Ba</span><span class="brand-no">no</span><span class="brand-do">do</span><span class="brand-co">co</span>
+        </span>
+      </a>
+    </div>
+    <!-- Main Content -->
+    <h1 class="hero-title" style="text-align: left;">Ownership - Explanation, Disclaimers & FAQ</h1>
+    <div class="content-section">
+      <div class="image-placeholder stacked-right"><img src="https://banodoco.s3.amazonaws.com/images/typical_startup_equity.webp" alt="Typical Startup Equity" style="max-width:100%;"/></div>
+      <div class="image-placeholder stacked-right"><img src="https://banodoco.s3.amazonaws.com/images/open_source_native.webp" alt="Open Source Native" style="max-width:100%;"/></div>
+      
+      <p>Our goal is to build Banodoco into a highly-successful business that can support the development of the open source AI art ecosystem - by creating a commercial entity that is an extremely attractive investment for those who believe in our mission and open source. You can read more about our plan <a href="https://banodoco.ai/Plan">here</a>.</p>
+      
+      <p>Most startups give out 90% of their ownership to founders and 10% to early employees.</p>
+      
+      <p>However, if you believe as we do that we're in a space that will relentlessly evolve over the coming decades and that this evolution will be driven by open source ingenuity, this incentive structure doesn't reflect where the value will be created - or incentivise the right kinds of contributions.</p>
+      
+      <p>Instead, we're choosing a structure that aims to incentivise and inspire open source ingenuity in a cohesive direction throughout a far longer period - by sharing 100% of our equity with contributors over the first 8.5 years.</p>
+      
+      <p>Practically, as per the illustration, this means that we'll split 1% per month between people who contribute open source work that's aligned with our core goals.</p>
+      
+      <p>How this is distributed will constantly evolve as we figure out the best model - but we hope to arrive at a consistent approach over the first 2 years that is fair and inspires the right kind of contributions.</p>
+      
+      <!-- Add a clearing div to ensure disclaimers start in a new block -->
+      <div style="clear: both; margin-top: 2rem;"></div>
+      
+      <h3>Disclaimers:</h3>
+      <p><strong>1) We haven't set this up legally yet</strong></p>
+      <p>Doing this will be costly and time-consuming - it'll become a priority as soon as we have the resources to do so - which will also hopefully be when people start to actually care!</p>
+      
+      <div class="image-placeholder stacked-left"><img src="https://banodoco.s3.amazonaws.com/plan/structure.png" alt="Corporate Structure Example" style="max-width:100%;"/></div>
+      
+      <p>To achieve this, we'll likely have an entity that owns the "founder's" stock on behalf of the community and distributes realised gains at pre-agreed points - with investors investing into the LLC that the foundation starts with owning entirely. This will allow us to be an attractive investment due to having a conventional underlying corporate structure, while allowing us to distribute gains via the foundation in a way that's fair and transparent to everyone in the community.</p>
+      
+      <p>While the actual implementation of this is uncertain, below is an example of what it might look like from a corporate structure perspective:</p>
+      
+      <div style="clear: both; margin-bottom: 2rem;"></div>
+      
+      <p><strong>2) Startup equity is highly-speculative</strong></p>
+      <p>Our goal is that we'll be worth a lot someday - and in this world, even 0.05% will probably be a decent amount of money - but that is <em>objectively</em> unlikely. Given this, don't do anything because you want to get rich. Maybe you will, but really you should do it because you love what it can be and what you're working on - and feel good that - if our collected efforts to create something valuable - you may share in that.</p>
+      
+      <p><strong>3) Figuring this out will be an ever-evolving process - and we will make mistakes</strong></p>
+      <p>I believe that this fundamental approach makes sense but figuring out how to actually implement it will take time. We'll also make mistakes along the way - if you feel we've made a mistake, please let me know. I always will want to hear if you feel anything isn't right.</p>
+      
+      <p><strong>4) How the 'ownership' will be structured is unclear & lots of stuff is TBD</strong></p>
+      <p>For example, it may not literally be ownership, but possibly an agreement that the grantee can buy equity from us at a price of 0.01c when the equity becomes liquid. However, whatever way it's structured, my goal is that it means that the realisable gains from it are exactly proportional to the percentage of ownership - say, if the company is valued at 1b USD, and you have 1% equity, that will be worth exactly 1% of that (pre-tax of course).</p>
+      
+      <p><strong>5) Ownership will get diluted as we take on investment, or as we allocate more equity for contributors</strong></p>
+      <p>Say, for example, we get an investment of 5m USD at a 50m USD valuation. That means that the ownership pool for contributors (including me) will be diluted. In the case of the above example, it would mean that what was once 0.1% of the whole entity, would now be 0.091%. However, this would mostly be offset by the actual value increasing as the percentage decreases. We may also allocate more ownership to contributors - which would have the same effect. While things may change, I can only promise that every change that impacts owners will impact me equally.</p>
+      
+      <h3>Ownership grants to date:</h3>
+      <p>As per the above, each month, 1% of the company will be split equally between contributors. Up until, February 2024, the amount each month was split equally between all contributors. After this, instead of it being split equally, we'll split 0.25% to each major group - core, infrastructure builders, knowledge sharers, and artists. That means all the people listed in that group will get that 0.25% split between them.</p>
+      <table id="ownershipGrants" border="1" cellspacing="0" cellpadding="8" style="width:100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem;">
+        <thead>
+          <tr style="background-color: #f8f8f8;">
+            <th style="padding: 10px; text-align: left; width: 30%;">Month</th>
+            <th style="padding: 10px; text-align: left;">Ownership Grants</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">November, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div class="grant-content">
+                <div class="grant-preview"><strong>CORE:</strong> matt3o, pom<br><strong>INFRASTRUCTURE:</strong> Kijai, lone_samurai, 2kpr, Juxtapoz, Kosinkadink</div>
+                <div class="grant-full" style="display: none;"><strong>KNOWLEDGE/TOOLS:</strong> Organoids, atom.p, Yvann, lilien, avataraim, ryanontheinside, VK, HeadOfOliver, Mickmumpitz, Cseti, Zuko, Nathan Shipley, DREX, mel, Latent Spacer<br><strong>ARTISTS:</strong> Cristartisty, kentskooking, Hannah Submarine, Nablah, MidJourney.Man, Chris.exe, AndyXR, jboogx.creative, solus_fx, Udart, NebSH, mrboofy, happy.j, Purz, Minelauvart, VisualFrisson</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">October, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div class="grant-content">
+                <div class="grant-preview"><strong>CORE:</strong> matt3o, lone_samurai, melih, pom<br><strong>INFRASTRUCTURE:</strong> Kijai, Juxtapoz, Kosinkadink</div>
+                <div class="grant-full" style="display: none;"><strong>KNOWLEDGE/TOOLS:</strong> akatz, atom.p, Yvann, lilien, avataraim, ryanontheinside, VK, HeadOfOliver, Mickmumpitz, Cseti, Zuko, Nathan Shipley, DREX, mel, Latent Spacer<br><strong>ARTISTS:</strong> Cristartisty, kentskooking, Hannah Submarine, Nablah, MidJourney.Man, Chris.exe, AndyXR, jboogx.creative, solus_fx, Udart, NebSH, mrboofy, happy.j, Purz, Minelauvart, VisualFrisson</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">September, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div class="grant-content">
+                <div class="grant-preview"><strong>CORE:</strong> pom, lone_samurai, Ian_G<br><strong>ARTISTS:</strong> fabdream, Hannah Submarine, realsammyt, oumoumad, Teslanaut</div>
+                <div class="grant-full" style="display: none;"><strong>INFRASTRUCTURE:</strong> Kijai, mel, Kosinkadink, matt3o<br><strong>KNOWLEDGE/TOOLS:</strong> akatz, mgfxer, cyncratic, toyxyz, Klinter, atom.p, Jas, fai, Cseti, neofuturist, 𝖊𝖑𝖎𝖈, Kewkッ, Inner_Reflections_AI, Flipping Sigmas, NebSH</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">August, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div class="grant-content">
+                <div class="grant-preview"><strong>CORE:</strong> matt3o, lone_samurai, melih, pom<br><strong>ARTISTS:</strong> Infinite Vibes, Martin_H, Flipping Sigmas, enigmatic_e, ButchersBrain, fabdream, Hannah Submarine, RenderStorm, Zlikwid</div>
+                <div class="grant-full" style="display: none;"><strong>INFRASTRUCTURE:</strong> Ostris, Kosinkadink, Juxtapoz, Kijai, RedStrawberries, matt3o<br><strong>KNOWLEDGE/TOOLS:</strong> ryanontheinside, fai, Cseti, cyncratic, Inner_Reflections_AI, Akumetsu971, MidJourney.Man, neofuturist, xander, akatz, [Ai]ndmix, jeru, cyncratic, toyxyz, Nathan Shipley, Klinter, mel, A.I.Warper</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">July, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div class="grant-content">
+                <div class="grant-preview"><strong>CORE:</strong> pom, lone_samurai, Ian_G<br><strong>ARTISTS:</strong> fabdream, Hannah Submarine, anó, The Dor Brothers, Flipping Sigmas</div>
+                <div class="grant-full" style="display: none;"><strong>INFRASTRUCTURE:</strong> ryanontheinside, Kijai, matt3o, Nate - LK Dev, Daxton Caylor, akatz<br><strong>KNOWLEDGE/TOOLS:</strong> Yvann, Nate - LK Dev, Kytra, jboogx.creative, Ethanfel, brbbbq, Cseti, Draken, ezMan, Zlikwid, toyxyz, VK, cyncratic</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">June, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div class="grant-content">
+                <div class="grant-preview"><strong>CORE:</strong> pom, lone_samurai, melih, Ian_G<br><strong>ARTISTS:</strong> fabdream, Hannah Submarine, anó, The Dor Brothers, Flipping Sigmas</div>
+                <div class="grant-full" style="display: none;"><strong>INFRASTRUCTURE:</strong> ryanontheinside, Kijai, matt3o, Nate - LK Dev, Daxton Caylor, akatz<br><strong>KNOWLEDGE/TOOLS:</strong> Yvann, Nate - LK Dev, Kytra, jboogx.creative, Ethanfel, brbbbq, Cseti, Draken, ezMan, Zlikwid, toyxyz, VK, cyncratic</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">May, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div class="grant-content">
+                <div class="grant-preview"><strong>CORE:</strong> matt3o, lone_samurai, melih, pom<br><strong>INFRASTRUCTURE:</strong> Kijai, Juxtapoz, Kosinkadink</div>
+                <div class="grant-full" style="display: none;"><strong>KNOWLEDGE/TOOLS:</strong> Organoids, atom.p, Yvann, lilien, avataraim, ryanontheinside, VK, HeadOfOliver, Mickmumpitz, Cseti, Zuko, Nathan Shipley, DREX, mel, Latent Spacer<br><strong>ARTISTS:</strong> Cristartisty, kentskooking, Hannah Submarine, Nablah, MidJourney.Man, Chris.exe, AndyXR, jboogx.creative, solus_fx, Udart, NebSH, mrboofy, happy.j, Purz, Minelauvart, VisualFrisson</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">April, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div class="grant-content">
+                <div class="grant-preview"><strong>CORE:</strong> pom, lone_samurai, Ian_G<br><strong>ARTISTS:</strong> fabdream, Hannah Submarine, anó, The Dor Brothers, Flipping Sigmas</div>
+                <div class="grant-full" style="display: none;"><strong>INFRASTRUCTURE:</strong> ryanontheinside, Kijai, matt3o, Nate - LK Dev, Daxton Caylor, akatz<br><strong>KNOWLEDGE/TOOLS:</strong> Yvann, Nate - LK Dev, Kytra, jboogx.creative, Ethanfel, brbbbq, Cseti, Draken, ezMan, Zlikwid, toyxyz, VK, cyncratic</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">March, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div class="grant-content">
+                <div class="grant-preview"><strong>CORE:</strong> pom, lone_samurai, mel<br><strong>ARTISTS:</strong> Hannah Submarine, MidJourney.Man, Chris.exe, sorrymary, kajukabla, Teslanaut, ByArlooo, Material_Rabbit, enigmatic_e, jeru, fabdream</div>
+                <div class="grant-full" style="display: none;"><strong>INFRASTRUCTURE:</strong> Kosinkadink, matt3o, Kijai, Juxtapoz, jags, TwoPikachus<br><strong>KNOWLEDGE/TOOLS:</strong> Flipping Sigmas, Cseti, mgfxer, A.eye_101, huemin, Jack G, Yvann, Kewk, Jerry Davos, Klinter, cyncratic, Inner_Reflections_AI</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">February, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div class="grant-content">
+                <div class="grant-preview"><strong>CORE:</strong> lone_samurai, POM, Ian_G, Pollyanna<br><strong>INFRASTRUCTURE:</strong> mel, Kijai, Kosinkadink, Juxtapoz, matt3o, Fannovel16, Joviex</div>
+                <div class="grant-full" style="display: none;"><strong>KNOWLEDGE SHARERS:</strong> SuperBeasts.AI (Brad), yuvraj, Purz, Adam, melih, toyxyz, Cseti, Gasia 🌷, Impactframes, DREX, yo9o, Question, Isaac, neofuturist, brbbbq, Piligrim, anó, 𝕽𝖊𝖑𝖎𝖈, VK, A.I.Warper, Klinter, nosecretsai<br><strong>ARTISTS:</strong> PTMarks, The Dor Brothers, makeitrad, VisualFrisson, Infinite Vibes, Zlikwid, jboogx.creative, cerspense, Hannah Submarine, A.eye_101, NebSH, anime_is_real, Arkitecc, jags, MidJourney.Man, Scruntee, Udart (Vibeke), Pajaritaflora...MaryAnn, Material_Rabbit, Flipping Sigmas, enigmatic_e, RainbowPilot, traxxas25, Teslanaut, Jas, jeru, Chris.exe, T2, mgfxer</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; vertical-align: top;">January, 2024</td>
+            <td style="padding: 10px; vertical-align: top;">Kijai, toyxyz, Ceyuan Yang/Animatediff team x2, Siraj, comfy, Fannovel16, melmass, Fictiverse, Fizzledorf, Inner_Reflections_AI, Kosinkadink, Impactframes.s, matt3o, Simian Luo, jboogx.creative, Nathan Shipley, lone_samurai, anime_is_real, Dr.Lt.Data</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">December, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">kijai, piblarg, drex15704080, fictiverse, fannovel16, citizenplain, kosinkadink, jfischoff, lone_samurai, fizzledorf, anime_is_real, fabdream, cainisable, redstrawberries, manshoety, drakenza, consumption_</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">November, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">Inner_Reflections_AI, Kaïros, Kosinkadink, manshoety, Antzu ☕, lone_samurai, Draken, jfischoff, RedStrawberries, itsB34STW4RS, Fizzledorf, Consumption</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">October, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">itsB34STW4RS, Kosinkadink, PBPBPB, Cubey, lone_samurai, neggles, toyxyz, POM</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">September, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">POM</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">August, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">POM</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">July, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">POM</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">June, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">POM</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">May, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">POM</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">April, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">POM</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">February, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">POM</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">January, 2023</td>
+            <td style="padding: 10px; vertical-align: top;">POM</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">December, 2022</td>
+            <td style="padding: 10px; vertical-align: top;">POM</td>
+          </tr>
+          <tr class="extra-row">
+            <td style="padding: 10px; vertical-align: top;">November, 2022</td>
+            <td style="padding: 10px; vertical-align: top;">POM</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <button id="toggleTableRows">Show More</button>
+      </div>
+      
+      <h3>Additional transfers to date:</h3>
+      <p>In addition to the above, holders, in particular POM may transfer equity to contributors at their discretion. This is subject to approval by POM. The below table shows the transfers to date:</p>
+      <table border="1" cellspacing="0" cellpadding="8" style="width:100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem;">
+        <thead>
+          <tr style="background-color: #f8f8f8;">
+            <th style="padding: 10px; text-align: left; width: 30%;">From</th>
+            <th style="padding: 10px; text-align: left; width: 30%;">To</th>
+            <th style="padding: 10px; text-align: left; width: 20%;">Amount</th>
+            <th style="padding: 10px; text-align: left; width: 20%;">Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 10px;">POM</td>
+            <td style="padding: 10px;">Ceyuan Yang</td>
+            <td style="padding: 10px;">0.25%</td>
+            <td style="padding: 10px;">December, 2023</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px;">POM</td>
+            <td style="padding: 10px;">ComfyAnonymous</td>
+            <td style="padding: 10px;">0.575%</td>
+            <td style="padding: 10px;">June, 2024</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px;">POM</td>
+            <td style="padding: 10px;">Matt3o</td>
+            <td style="padding: 10px;">3.3625%</td>
+            <td style="padding: 10px;">November, 2024</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <h3>FAQ:</h3>
+      <p><strong>"What's your plan to make this actually valuable?"</strong></p>
+      <p>You can read more about our plan <a href="https://banodoco.ai/Plan">here</a></p>
+      
+      <p><strong>"Why should I trust you?"</strong></p>
+      <p>I think that this is a very fair question. - I could in theory go back on this when the company is valuable. In fact, there are loads of ways people screw others in all kinds of equity arrangements. While I do hope to get wealthy enough to not have to worry about money, that's not strictly my goal - in fact, my goal is to do stuff like this for the rest of my life and doing anything that would make me untrustworthy in the eyes of the types of people I want to collaborate with would be stupid and short-sighted.</p>
+      
+      <p><strong>"If the equity becomes valuable, how will I be able to sell it?"</strong></p>
+      <p>This is TBC but many private startups like SpaceX offer equity holders the opportunity to sell at pre-determined times and we'll probably do something similar. What we don't want is for our equity to become like a token that's speculatively bought and sold, so will put constraints to avoid this - probably time-bound.</p>
+      
+      <p><strong>"What about crypto?"</strong></p>
+      <p>While I dislike a lot of the association crypto currently has, it could in theory be possible to implement this using crypto - if you have any ideas on how to achieve this in a way that isn't bullshitty and aligns with the above goals, please get in touch.</p>
+      
+      <p><strong>"What about tax?"</strong></p>
+      <p>We'll try to set it up in a way that tax is only due upon actual gains actually being realised - meaning, you'd only pay based on actual money you make. Again, I'll need to hire fancy lawyers and accountants to figure this out so have no clue what this means right now.</p>
+      
+      <p><strong>"What if I don't want it?"</strong></p>
+      <p>If you don't want it, your equity will be redistributed to other contributors.</p>
+      
+      <p><strong>"What happens if the company is sold before the equity is allocated?"</strong></p>
+      <p>Firstly, our intention is to build this into a self-sustaining entity for the long-term. However, if we do get purchased by another company, equity will be distributed proportionally based on the allocations made to date. For example, if someone holds 1% of the equity and 33.3% of the total equity has been allocated, they would receive 3% of the purchase price.</p>
+      
+      <p><strong>"I have another question"</strong></p>
+      <p>DM me on <a href="https://discord.com/invite/eKQm3uHKx2">our Discord</a>!</p>
+    </div>
+
+    <!-- Footer -->
+    <div class="final-section" style="margin-bottom: 4rem;">
+      <div class="social-links" style="flex: 1;">
+        <a href="https://twitter.com/banodoco" target="_blank" class="social-link">
+          <i data-feather="twitter"></i>
+        </a>
+        <a href="https://github.com/banodoco" target="_blank" class="social-link">
+          <i data-feather="github"></i>
+        </a>
+        <a href="https://www.youtube.com/@banodoco" target="_blank" class="social-link">
+          <i data-feather="youtube"></i>
+        </a>
+        <a href="https://discord.gg/banodoco" target="_blank" class="social-link">
+          <i data-feather="message-circle"></i>
+        </a>
+        <div class="watering-container">
+          <div class="watering-can">
+            <div class="can-body"></div>
+            <div class="spout"></div>
+            <div class="handle"></div>
+            <div class="water-drops">
+              <div class="drop"></div>
+              <div class="drop"></div>
+              <div class="drop"></div>
+            </div>
+          </div>
+        </div>
+        <div id="initialBud"></div>
+      </div>
+    </div>
+  </div>
+  <script src="../js/components/icons.js"></script>
+  <script src="../js/components/script.js"></script>
+  <script src="../js/components/plant-animation.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="../js/components/grid-animations.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      const btn = document.getElementById('toggleTableRows');
+      const extraRows = document.querySelectorAll('#ownershipGrants .extra-row');
+      extraRows.forEach(row => { row.style.display = 'none'; });
+      btn.addEventListener('click', function(){
+        const isHidden = extraRows[0].style.display === 'none';
+        extraRows.forEach(row => { row.style.display = isHidden ? '' : 'none'; });
+        btn.textContent = isHidden ? 'Show Less' : 'Show More';
+      });
+    });
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      if(window.innerWidth <= 768) {
+        const section = document.querySelector('.content-section');
+        if(section) {
+          const images = section.querySelectorAll('.image-placeholder');
+          const paragraphs = section.querySelectorAll('p');
+          if(images.length >= 2 && paragraphs.length >= 4) {
+            // Move first image after the second paragraph
+            paragraphs[1].insertAdjacentElement('afterend', images[0]);
+            // Move second image after the fourth paragraph
+            paragraphs[3].insertAdjacentElement('afterend', images[1]);
+          }
+          if(images.length >= 3) {
+            const targetText = 'While the actual implementation of this is uncertain, below is an example of what it might look like from a corporate structure perspective:';
+            const targetParagraph = Array.from(paragraphs).find(p => p.textContent.includes(targetText));
+            if(targetParagraph) {
+              targetParagraph.insertAdjacentElement('afterend', images[2]);
+            }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html> 

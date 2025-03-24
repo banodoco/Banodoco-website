@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banodoco</title>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.151.3/build/three.module.js"
+      }
+    }
+    </script>
+    <link rel="icon" href="assets/images/b-t.png" type="image/png">
+    <link rel="shortcut icon" href="assets/images/b-t.png" type="image/png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="src/styles/main.css">
+    <link rel="stylesheet" href="styles/components/styles.css">
+    <link rel="stylesheet" href="src/styles/components/header.css">
+    <link rel="stylesheet" href="src/styles/components/footer.css">
+    <!-- Feather Icons (similar to Lucide) -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <style>
+        #plantCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1; /* Changed from -2 to 1 */
+            pointer-events: none;
+        }
+        
+        /* Add overlay for better text contrast */
+        .plant-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(242, 242, 255, 0.7);
+            backdrop-filter: brightness(1.1) contrast(1.05);
+            z-index: 2; /* Changed from -1 to 2 */
+            pointer-events: none;
+        }
+        
+        .container {
+            position: relative;
+            padding: 2rem;
+            z-index: 3; /* Added z-index to ensure content stays on top */
+        }
+        
+        /* Add background to text elements */
+        h1, h2, h3, .links {
+            position: relative;
+            z-index: 3;
+            display: block;
+            line-height: 1.7;
+            background: none;
+            backdrop-filter: none;
+        }
+
+        /* Ensure block-level elements still take full width */
+        h1, h2, h3 {
+            width: 100%;
+            margin: 1rem 0;
+        }
+
+        /* Remove margin between paragraphs since line-height will create spacing */
+        p {
+            margin: 0;
+            display: block;
+        }
+
+        /* Add vertical spacing between paragraphs */
+        p + p {
+            margin-top: 0.7rem;
+        }
+
+        /* Links specific styling */
+        .links {
+            display: inline-block;
+            margin-top: 1rem;
+        }
+
+        .links span {
+            margin: 0 0.5rem;
+        }
+
+        /* Remove background from elements that shouldn't have it */
+        .image-container, .styled-image-box, .social-links, .watering-container, .links span {
+            background: none !important;
+            backdrop-filter: none !important;
+            padding: 0;
+        }
+
+        .highlight-box {
+            background-color: rgba(143, 185, 150, 0.1);
+            border-left: 4px solid #8fb996;
+            padding: 1.5rem;
+            border-radius: 0 8px 8px 0;
+            margin: 2rem 0;
+        }
+
+        .highlight-box h3, .highlight-box p {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+        }
+        
+        /* Add transition property to social-links for smooth margin changes */
+        .social-links {
+            transition: margin-bottom 1.5s ease-in-out;
+            margin-top: 20px; /* Increased margin-top to create more space */
+            position: relative; /* Ensure position context for absolute elements */
+            border-top: none; /* Remove the border-top that was causing the line */
+            padding-top: 0; /* Remove padding-top since we don't have a border anymore */
+        }
+        
+        .watering-container {
+            position: absolute;
+            top: calc(100% + 0rem);
+            left: calc(50% - 1.0rem);
+            transform: translateX(calc(-50% + 10px));
+            cursor: pointer;
+            z-index: 1000;
+            transform-origin: 80% 100%;
+            transition: transform 2.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1s ease;
+            width: 50px;
+            height: 50px;
+        }
+
+        /* Add hover animation for watering can */
+        .watering-container:hover {
+            animation: shake 0.8s ease-in-out infinite;
+        }
+
+        /* Disable hover animation when no-hover class is present */
+        .watering-container.no-hover:hover {
+            animation: none;
+        }
+
+        /* Keyframes for the shaking animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(calc(-50% + 10px)) rotate(0deg); }
+            25% { transform: translateX(calc(-50% + 10px)) rotate(-5deg); }
+            75% { transform: translateX(calc(-50% + 10px)) rotate(5deg); }
+        }
+
+        .watering-can {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: none;
+        }
+
+        /* Main body of watering can */
+        .can-body {
+            position: absolute;
+            width: 34px;
+            height: 28px;
+            background: white;
+            border: 3px solid #888;
+            border-radius: 6px;
+            bottom: 0;
+            left: 0;
+            z-index: 2;
+        }
+
+        /* Spout of watering can */
+        .spout {
+            position: absolute;
+            width: 20px;
+            height: 10px;
+            background: white;
+            border: 3px solid #888;
+            border-radius: 0 6px 6px 0;
+            bottom: 10px;
+            left: 30px;
+            transform: rotate(-45deg);
+            transform-origin: left center;
+            z-index: 1;
+        }
+
+        /* Handle of watering can */
+        .handle {
+            position: absolute;
+            width: 16px;
+            height: 18px;
+            background: white;
+            border: 3px solid #888;
+            border-radius: 8px 8px 0 0;
+            border-bottom: none;
+            bottom: 18px;
+            left: 10px;
+        }
+
+        /* Water droplets container */
+        .water-drops {
+            position: absolute;
+            bottom: 2px;
+            left: 44px;
+            width: 10px;
+            height: 30px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        /* Individual water droplets */
+        .drop {
+            position: absolute;
+            width: 5px;
+            height: 8px;
+            background-color: rgba(110, 181, 255, 0.8);
+            border-radius: 50% 50% 50% 50%;
+            opacity: 0;
+            transform-origin: center top;
+        }
+
+        .drop:nth-child(1) {
+            top: 2px;
+            left: 2px;
+            animation: dropHorizontal 0.7s infinite;
+            animation-delay: 0.2s;
+        }
+
+        .drop:nth-child(2) {
+            top: 2px;
+            left: 0;
+            animation: dropHorizontal 0.7s infinite;
+            animation-delay: 0.45s;
+        }
+
+        .drop:nth-child(3) {
+            top: 2px;
+            left: -2px;
+            animation: dropHorizontal 0.7s infinite;
+            animation-delay: 0.7s;
+        }
+
+        @keyframes dropHorizontal {
+            0% {
+                left: 0px;
+                top: 0px;
+                opacity: 0;
+                transform: scale(0.8) rotate(-45deg);
+            }
+            15% {
+                opacity: 1;
+                transform: scale(1.1) rotate(-45deg);
+            }
+            85% {
+                opacity: 1;
+                transform: scale(1) rotate(-45deg);
+            }
+            95% {
+                opacity: 0.5;
+                transform: scale(0.9) rotate(-45deg);
+            }
+            100% {
+                left: 20px;
+                top: 8px;
+                opacity: 0;
+                transform: scale(0.8) rotate(-45deg);
+            }
+        }
+
+        #initialBud {
+            position: absolute;
+            top: calc(100% + 2rem);
+            left: calc(50% + 1.95rem);
+            transform: translateX(calc(-50% - 2.5px));
+            width: 12px;
+            height: 12px;
+            background-color: #8fb996;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(143, 185, 150, 0.5);
+            z-index: 999;
+        }
+
+        #initialBud::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 5px;
+            width: 2px;
+            height: 8px;
+            background-color: #8fb996;
+            transform: rotate(-15deg);
+        }
+
+        .watering-container.pouring {
+            transform: translateX(-60%) rotate(30deg);
+            animation: none; /* Stop the shaking animation when pouring */
+        }
+
+        .watering-container.pouring .water-drops {
+            opacity: 1;
+            transform: rotate(-30deg) translate(-2px, -2px);
+        }
+
+        .watering-container.fade-out {
+            opacity: 0;
+        }
+
+        /* COMPLETELY REWRITTEN VIDEO STYLES */
+        /* Base video container styles */
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 50%; /* 2:1 aspect ratio */
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            border-radius: 4px;
+            transition: padding-bottom 0.3s ease;
+        }
+
+        /* Video thumbnail styles */
+        .video-thumbnail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.3s ease;
+            z-index: 1;
+        }
+
+        /* Video overlay styles */
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        /* Play icon styles */
+        .play-icon {
+            color: white;
+            width: 64px;
+            height: 64px;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
+        /* Video embed container */
+        .video-embed {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 3; /* Higher than thumbnail and overlay */
+        }
+
+        /* When video is revealed */
+        .video-embed.revealed,
+        .video-embed[style*="visibility: visible"] {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        /* Hide thumbnail and overlay when video is playing */
+        .video-embed.revealed ~ .video-thumbnail,
+        .video-embed.revealed ~ .video-overlay,
+        .video-embed[style*="visibility: visible"] ~ .video-thumbnail,
+        .video-embed[style*="visibility: visible"] ~ .video-overlay {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            display: none !important;
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            .card.expanded .video-container {
+                padding-bottom: 75%; /* Taller aspect ratio on mobile */
+            }
+            
+            /* Ensure thumbnail is hidden when card is expanded */
+            .card.expanded .video-thumbnail {
+                opacity: 0 !important;
+                visibility: hidden !important;
+                display: none !important;
+            }
+            
+            /* Ensure overlay is hidden when card is expanded */
+            .card.expanded .video-overlay {
+                opacity: 0 !important;
+                visibility: hidden !important;
+                display: none !important;
+            }
+            
+            /* Ensure video is visible when card is expanded */
+            .card.expanded .video-embed {
+                opacity: 1 !important;
+                visibility: visible !important;
+                display: block !important;
+            }
+        }
+
+        /* New styles for Main Text and Images Section */
+        .main-text-images {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin: 2rem 0;
+        }
+        .main-text-images .main-text {
+            flex: 1;
+            text-align: left;
+            padding-right: 2rem;
+        }
+        .main-text-images .images-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            width: 300px; /* Adjust width as needed */
+        }
+        .main-text-images .images-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* New styles for dashboard layout: two cards per row max */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* New styles for site header */
+        .site-header {
+            display: flex;
+            align-items: center;
+            padding: 1rem 0;
+        }
+        .site-header img {
+            width: 40px;
+            height: auto;
+            margin-right: 0.5rem;
+            margin-left: -30px;
+            position: relative;
+            z-index: 1;
+        }
+        .site-header .site-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Divider for section breaks */
+        hr.section-divider {
+            border: none;
+            border-top: 1px solid rgba(204, 204, 204, 0.3);
+            margin: 2rem auto;
+            width: 90%;
+        }
+        /* End divider styles */
+
+        /* Side window styles */
+        .side-window {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 300px;
+            height: 100%;
+            background-color: #fbf8ef;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            padding: 1rem;
+            z-index: 1001;
+            color: #333;
+            border-left: 1px solid rgba(204, 204, 204, 0.5);
+        }
+        .side-window.open {
+            right: 0;
+        }
+        .side-window-toggle {
+            position: fixed;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            background-color: #333;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            z-index: 1002;
+        }
+        .side-window-close {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+        .side-window-close:hover {
+            background-color: rgba(204, 204, 204, 0.3);
+            color: #333;
+        }
+        .site-header .side-window-toggle {
+            position: static;
+            margin-left: auto;
+            margin-right: -30px;
+            transform: none;
+            background: none;
+            border: 1px solid rgba(204, 204, 204, 0.5);
+            border-radius: 4px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.3s ease;
+            width: 36px;
+            height: 36px;
+            position: relative;
+            z-index: 1;
+            background-color: #333;
+            border-color: #333;
+        }
+        .site-header .side-window-toggle.active {
+            transform: rotate(90deg);
+        }
+        .site-header .side-window-toggle:hover {
+            background-color: #444;
+            border-color: #444;
+        }
+        .side-window-toggle .line {
+            width: 18px;
+            height: 2px;
+            background-color: #fff;
+            transition: all 0.3s ease;
+        }
+        .side-window-toggle:hover .line {
+            width: 20px;
+        }
+        .side-window-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .side-window-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Styled image box */
+        .styled-image-box {
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            height: 100%;
+        }
+        .styled-image-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .styled-image-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0);
+            z-index: 1;
+        }
+        /* Main text and images layout */
+        .main-text-images {
+            display: flex;
+            align-items: flex-start;
+            gap: 2rem;
+        }
+        .main-text-images .main-text {
+            flex: 1;
+        }
+        .main-text-images .images-container {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Section styles for new content */
+        .hero-section {
+            text-align: center;
+            margin: 3rem 0;
+        }
+        
+        .hero-section h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+        }
+        
+        .content-section {
+            margin: 4rem 0;
+        }
+        
+        /* First content section spacing */
+        .content-section:first-of-type {
+            margin-top: 2rem;
+        }
+        
+        .content-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .content-section p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Hero title style */
+        .hero-title {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            color: #333;
+            line-height: 1.2;
+            text-align: center;
+            max-width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .two-column {
+            display: flex;
+            gap: 3rem;
+            align-items: flex-start;
+        }
+        
+        .two-column .text-column {
+            flex: 1;
+        }
+        
+        .two-column .ecosystem-visualization {
+            flex: 1.2;
+            min-width: 450px;
+            height: 500px;
+            position: relative;
+        }
+        
+        .image-placeholder {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-family: 'Space Mono', monospace;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 1200px) {
+            .two-column {
+                gap: 2rem;
+            }
+            
+            .two-column .text-column {
+                flex: 1;
+            }
+            
+            .two-column .ecosystem-visualization {
+                flex: 1.2;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .ecosystem-visualization {
+                width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+            }
+            
+            .two-column {
+                flex-direction: column;
+            }
+            
+            .two-column .text-column,
+            .two-column .ecosystem-visualization {
+                flex: none;
+                width: 100%;
+            }
+            
+            .two-column .ecosystem-visualization {
+                height: 700px;
+                margin-left: 0;
+                margin-top: -90px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .ecosystem-visualization {
+                width: calc(100% + 2rem) !important;
+                max-width: none;
+                margin-left: -1rem !important;
+                margin-right: -1rem !important;
+                left: 0 !important;
+                right: 0 !important;
+                overflow: hidden;
+                transform: scale(0.95);
+                transform-origin: center top;
+                margin-bottom: -50px;
+                margin-top: -60px !important;
+            }
+
+            .two-column .ecosystem-visualization {
+                width: calc(100% + 2rem) !important;
+                height: 550px !important;
+                margin-left: -1rem !important;
+                margin-right: -1rem !important;
+                margin-top: -60px !important;
+                margin-bottom: -50px !important;
+                overflow: hidden;
+                position: relative;
+                transform: scale(0.95);
+                transform-origin: center top;
+            }
+
+            .content-section {
+                margin: 2rem 0;
+            }
+
+            .site-header {
+                padding: 1rem 0.5rem;
+            }
+
+            .site-header img {
+                width: 35px;
+                margin-left: 0;
+                margin-right: 0.5rem;
+            }
+
+            /* Adjust node labels for better mobile visibility */
+            .node-label {
+                font-size: 0.7rem !important;
+                padding: 2px 6px !important;
+            }
+
+            /* Adjust legend position for mobile */
+            #legend {
+                bottom: 15px;
+                right: 25%;
+                padding: 8px;
+                font-size: 0.8rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .ecosystem-visualization {
+                height: 450px !important;
+                margin-top: -100px !important;
+                transform: scale(0.9);
+                margin-bottom: -80px;
+            }
+
+            .two-column .ecosystem-visualization {
+                height: 450px !important;
+                margin-top: -100px !important;
+                transform: scale(0.9);
+                margin-bottom: -80px !important;
+            }
+
+            .site-header img {
+                width: 32px;
+            }
+
+            .content-section {
+                margin: 1.5rem 0;
+            }
+
+            #legend {
+                bottom: 15px;
+                right: 20%;
+            }
+        }
+
+        /* Add new styles for ownership grid hover effects */
+        .ownership-images-grid svg rect {
+          transition: filter 0.3s ease;
+        }
+
+        .ownership-images-grid svg:hover rect {
+          filter: brightness(1.15);
+        }
+
+        /* Remove shine effect for grid images */
+        @keyframes shine {
+          0% {
+            background-position: -100% 0;
+          }
+          100% {
+            background-position: 200% 0;
+          }
+        }
+        
+        .shine-effect {
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .shine-effect::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            rgba(255, 255, 255, 0) 100%
+          );
+          background-size: 200% 100%;
+          animation: shine 1s ease-in-out;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        /* Filename display on hover - now hidden for ownership grid */
+        .filename-display {
+            position: absolute;
+            top: -20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            text-align: center;
+            max-width: none;
+            white-space: nowrap;
+            z-index: 10;
+            overflow: visible;
+            display: none; /* Hide filename display completely */
+        }
+
+        /* Updated media query for smaller screens */
+        @media (max-width: 768px) {
+          .community-images-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 4px !important;
+          }
+          .community-images-grid > img:nth-child(n+9) {
+            display: none;
+          }
+          .community-images-grid img {
+            aspect-ratio: 1/1 !important;
+            height: auto !important;
+            object-fit: cover !important;
+            opacity: 1 !important;
+          }
+          .community-images-grid img.shine-effect::after {
+            display: none !important;
+          }
+          .ownership-images-grid {
+            grid-template-columns: repeat(8, 1fr) !important;
+          }
+          .ownership-images-grid > div:nth-child(n+33) {
+            display: none;
+          }
+        }
+    </style>
+    <style>
+      body {
+        transition: background-color 2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        background-color: #f2f2ff;
+        animation: backgroundCycle 40s ease-in-out infinite;
+        animation-delay: 2s; /* Add delay to initial animation */
+      }
+
+      /* Ecosystem visualization styles */
+      .ecosystem-visualization {
+        overflow: hidden;
+        width: 120%; /* Increased from 100% to extend to the right */
+        height: 100%;
+        position: relative;
+        margin-top: -170px;
+        margin-left: -30px;
+      }
+
+      .ecosystem-visualization #three-container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+
+      #control-panel {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.9);
+        padding: 8px 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: flex;
+        gap: 12px;
+        z-index: 10;
+        align-items: center;
+        backdrop-filter: blur(5px);
+      }
+
+      #control-panel label {
+        font-size: 0.85rem;
+        color: #333;
+      }
+
+      #control-panel select, 
+      #control-panel input {
+        padding: 4px 8px;
+        font-size: 0.85rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: white;
+      }
+
+      #control-panel button,
+
+      #legend {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 12px;
+        border-radius: 8px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+        z-index: 200;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(5px);
+        width: fit-content;
+        height: fit-content;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        justify-content: flex-start;
+        width: auto;
+      }
+
+      .legend-line {
+        width: 40px;
+        height: 6px;
+        margin-right: 8px;
+        border-radius: 3px;
+        flex-shrink: 0;
+      }
+
+      .legend-label {
+        white-space: nowrap;
+      }
+
+      .legend-line.inspire {
+        background: #FF9800;
+      }
+
+      .legend-line.equip {
+        background: linear-gradient(to right, #4285F4 0%, #4285F4 20%, #9C27B0 20%, #9C27B0 40%, #F44336 40%, #F44336 60%, #00BCD4 60%, #00BCD4 80%, #4CAF50 80%, #4CAF50 100%);
+      }
+
+      .node-label {
+        position: absolute;
+        transform: translateX(-50%);
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-align: center;
+        pointer-events: none;
+        white-space: nowrap;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 20;
+        font-family: 'Inter', sans-serif;
+        backdrop-filter: blur(5px);
+      }
+
+      .popup-message {
+        position: absolute;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 2px solid #FF9800;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 0.85rem;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        white-space: nowrap;
+        font-family: 'Inter', sans-serif;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(5px);
+      }
+
+      @keyframes backgroundCycle {
+        0%, 20% { background-color: #f2f2ff; }
+        25%, 45% { background-color: #f2fff2; }
+        50%, 70% { background-color: #fff2f2; }
+        75%, 95% { background-color: #fffff2; }
+        100% { background-color: #f2f2ff; }
+      }
+
+      /* Link Animation and Styling */
+      a {
+        position: relative;
+        color: #333;
+        text-decoration: none !important;
+        transition: color 0.3s ease;
+      }
+      
+      /* Spaced-out underline effect - REVERSED: starts extended, narrows on hover */
+      a:after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 1px;
+        bottom: -1px;
+        left: 0;
+        background-color: currentColor;
+        transform: scaleX(1);
+        transform-origin: bottom center;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        opacity: 0.7;
+      }
+      
+      /* Hover animation for links */
+      a:hover {
+        color: #5353a5;
+      }
+      
+      a:hover:after {
+        transform: scaleX(0.8);
+        opacity: 1;
+      }
+      
+      /* Special styling for side panel links */
+      .side-window a {
+        border-bottom: none !important;
+      }
+      
+      .side-window a:after {
+        height: 1px;
+        bottom: 0;
+        background-color: #ccc;
+        transform: scaleX(1);
+      }
+      
+      .side-window a:hover:after {
+        transform: scaleX(0.8);
+        opacity: 1;
+      }
+      
+      /* Social links should not have underlines */
+      .social-link:after {
+        display: none !important;
+      }
+
+      .plant-overlay {
+        transition: background-color 2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        animation: overlayBackgroundCycle 40s ease-in-out infinite;
+        animation-delay: 2s;
+      }
+
+      @keyframes overlayBackgroundCycle {
+        0%, 20% { background-color: rgba(242, 242, 255, 0.7); }
+        25%, 45% { background-color: rgba(242, 255, 242, 0.7); }
+        50%, 70% { background-color: rgba(255, 242, 242, 0.7); }
+        75%, 95% { background-color: rgba(255, 255, 242, 0.7); }
+        100% { background-color: rgba(242, 242, 255, 0.7); }
+      }
+
+      /* Hover classes with consistent transitions */
+      body.hovered-background,
+      body.hovered-no-background,
+      body.hovered-do-background,
+      body.hovered-co-background {
+        animation-play-state: paused !important;
+        animation: none !important;
+        transition: background-color 2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+      }
+
+      body.hovered-background .plant-overlay,
+      body.hovered-no-background .plant-overlay,
+      body.hovered-do-background .plant-overlay,
+      body.hovered-co-background .plant-overlay {
+        animation-play-state: paused !important;
+        animation: none !important;
+        transition: background-color 2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+      }
+
+      /* Individual hover states */
+      body.hovered-background {
+        background-color: #f2f2ff !important;
+      }
+      body.hovered-background .plant-overlay {
+        background-color: rgba(242, 242, 255, 0.7) !important;
+      }
+      
+      body.hovered-no-background {
+        background-color: #f2fff2 !important;
+      }
+      body.hovered-no-background .plant-overlay {
+        background-color: rgba(242, 255, 242, 0.7) !important;
+      }
+      
+      body.hovered-do-background {
+        background-color: #fff2f2 !important;
+      }
+      body.hovered-do-background .plant-overlay {
+        background-color: rgba(255, 242, 242, 0.7) !important;
+      }
+      
+      body.hovered-co-background {
+        background-color: #fffff2 !important;
+      }
+      body.hovered-co-background .plant-overlay {
+        background-color: rgba(255, 255, 242, 0.7) !important;
+      }
+
+      #plantCanvas {
+        transition: opacity 2s cubic-bezier(0.25, 0.1, 0.25, 1);
+      }
+      body.hovered-background #plantCanvas {
+        opacity: 0.9 !important;
+      }
+
+      /* Brand styling */
+      .brand-highlight, .brand-no, .brand-do, .brand-co {
+        color: #333;
+        transition: color 2s cubic-bezier(0.25, 0.1, 0.25, 1);
+      }
+      
+      .brand-highlight:after, .brand-no:after, .brand-do:after, .brand-co:after {
+        display: none;
+      }
+      
+      .brand-highlight:hover {
+        color: #5353a5;
+      }
+      .brand-no:hover {
+        color: #53a553;
+      }
+      .brand-do:hover {
+        color: #a55353;
+      }
+      .brand-co:hover {
+        color: #a5a553;
+      }
+      
+      .site-title {
+        display: inline-flex;
+        align-items: center;
+      }
+      .site-title span {
+        display: inline-block;
+        letter-spacing: normal;
+      }
+
+      /* CSS for Renaissance Section responsive behavior */
+      @media (max-width: 1024px) and (min-width: 851px) {
+        .renaissance-section .image-column {
+          width: 60% !important;
+        }
+        .renaissance-section > div:first-child {
+          width: 40% !important;
+        }
+        .renaissance-section .image-column .styled-image-box {
+          width: 100%;
+          height: auto;
+        }
+      }
+      @media (max-width: 850px) {
+        .renaissance-section {
+          flex-direction: column !important;
+        }
+        .renaissance-section .image-column {
+          order: -1;
+          width: 100% !important;
+        }
+        .renaissance-section .image-column .styled-image-box {
+          width: 100%;
+          height: auto;
+        }
+      }
+    </style>
+</head>
+<body>
+    <canvas id="plantCanvas"></canvas>
+    <div class="plant-overlay"></div>
+    <!-- POM Border -->
+    <div class="inner-border"></div>
+    <div class="container" style="position: relative;">
+      <!-- Site Header -->
+      <div class="site-header">
+        <a href="./" style="display: flex; align-items: center; text-decoration: none;">
+            <img src="./assets/images/b-t.png" alt="Logo">
+            <span class="site-title">
+                <span class="brand-highlight">Ba</span><span class="brand-no">no</span><span class="brand-do">do</span><span class="brand-co">co</span>
+            </span>
+        </a>
+      </div>
+
+      <!-- Improved Hero Section with integrated content -->
+      <div class="content-section">
+          <div class="two-column" style="margin-top: 3rem; align-items: center;">
+              <div class="text-column" style="margin-top: -35px; flex: 1.2; max-width: 600px;">
+                  <h1 class="hero-title" style="text-align: left; margin-left: 0; max-width: 100%;">Tools and resources to help the open source AI art ecosystem thrive</h1>
+                  <p style="margin-bottom: 2rem;">We're building tools, a culture and an economic foundation that that to enable and reward open collaboration in the AI art ecosystem. More coming soon.</p>
+              </div>
+              <div class="ecosystem-visualization" style="flex-grow: 1.5; min-width: 500px; margin-left: -50px; margin-top: -80px;">
+
+                <!-- Legend inserted in top left of visualization -->
+                <div id="legend">
+                  <div class="legend-item">
+                    <div class="legend-line inspire"></div>
+                    <div class="legend-label">Inspire</div>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-line equip"></div>
+                    <div class="legend-label">Equip</div>
+                  </div>
+                </div>
+              </div>
+          </div>
+      </div>
+      
+      <!-- Divider -->
+      <!-- <hr class="section-divider"> -->
+      
+      <!-- Mellon Section -->
+      <!-- <div class="content-section">
+          <h2>Coming soon: Mellon aims to bring the capabalities that the open source AI art ecosystem produces to the world</h2>
+          
+          <div class="two-column">
+              <div class="text-column">
+                                    
+                  <p style="margin-bottom: 2rem;">Every day, new capabilities are added to the ecosystem across Diffusers, ComfyUI, and random repos. With Mellon, our goal is to make these capabilities accessible - with a user experience that's easy to understand and use.</p>
+                  <p style="margin-bottom: 1rem;">We believe that a tool that's designed with artistic expression in mind that the community can build on top of will hugely expand access to open source AI, therefore extending the creative potential of the ecosystem.</p>
+                  <div class="links" style="display: flex; gap: 1rem; align-items: center;">
+                      <a href="#" style="color: inherit;">Visit Github</a>                                            
+                  </div>
+              </div>
+              <div class="image-column">
+                  <div class="image-placeholder">
+                      <span>Mellon Platform Visualization</span>
+                  </div>
+              </div>
+          </div>
+      </div> -->
+      
+      <!-- Divider -->
+      <hr class="section-divider">
+      
+      <!-- Open Source Section -->
+      <div class="content-section">
+          <h2>We're building a community-driven company that aims to empower the open source ecosystem to unlock its potential</h2>
+          
+          <!-- <div class="highlight-box">
+              <h3>The power of open collaboration</h3>
+              <p>Harnesses collective creativity and continuous innovation. Fosters an interconnected ecosystem that's easy to build upon. Attracts the best talent and empowers artists.</p>
+              <p>To do this, we're creating infrastructure that makes contribution, sharing, and building upon others' work seamless and rewarding.</p>
+          </div> -->
+      </div>
+      
+      <!-- Dashboard Cards -->
+      <div class="dashboard">
+          <!-- Card 1: Community -->
+          <div class="card story-tile" data-category="story" data-position="7">
+              <div class="image-container">
+                  <img src="https://via.placeholder.com/300x200?text=Community" alt="Community visual">
+              </div>
+              <div class="community-images-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin: 1rem 0;"></div>
+              <h3>Our community that aims to capture the best of the open source AI art ecosystem</h3>
+              <div class="text-content">
+                  <p>Our community has been on the cutting-edge of every major development in open source AI art over the past two years - both technically and artistically.</p>
+              </div>
+              <div class="links" style="margin-top: 1rem;">
+                  <a href="https://discord.gg/acg8aNBTxd" style="color: inherit;">Join our community</a>
+              </div>
+          </div>
+
+          <!-- Card 2: Ownership -->
+          <div class="card life-tile" data-category="life" data-position="1">
+              <div class="image-container">
+                  <img src="https://via.placeholder.com/300x200?text=Ownership" alt="Ownership visual">
+              </div>
+              <div class="ownership-images-grid" style="display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; margin: 1rem 0;"></div>
+              <h3>We're sharing 100% of our company's ownership with people who help the open source ecosystem thrive</h3>
+              <div class="text-content">
+                <p>We believe that it's only fair that a company built on the open source ecosystem should be owned by the community that built it. Aside from investor dilution, open source contributors will own all of our company.</p>
+            </div>
+              <div class="links" style="margin-top: 1rem;">
+                  <a href="pages/ownership.html" style="color: inherit;">Learn how it works</a>
+              </div>
+          </div>
+      </div>
+      
+      <!-- Divider -->
+      <hr class="section-divider">
+      
+      <!-- Renaissance Section -->
+      <div class="content-section renaissance-section" style="display: flex; gap: 40px; align-items: flex-start;">
+        <div style="flex: 1;">
+          <h2>Accelerating the 2nd Renaissance</h2>
+          <p style="margin-bottom: 2rem;">As humanity's creative potential is unlocked by AI, the impact on the world may be so profound that the time era comes to be known as a "2nd Renaissance". A thriving open source AI ecosystem will be one of the key predecessors to such an era - and the collective actions of people within it may be enough to accelerate its beginning by a few months.</p>
+          <div class="links" style="display: flex; gap: 1rem; align-items: center;">
+            <a href="https://www.schlupfloch.xyz/consider-pretending-that-the-2nd-renaissance-is-about-to-start-and-that-you-can-be-a-part-of-it/" style="color: inherit;">Read about this idea</a>
+          </div>
+        </div>
+        <div class="image-column" style="width: 40%; margin-top: 10px;">
+            <div class="styled-image-box">
+                <img src="https://www.schlupfloch.xyz/content/images/size/w2000/2025/02/Group-2--14--4c552dc74e6827a2.png" alt="Open Source Ecosystem">
+            </div>
+        </div>
+      </div>
+      
+      <!-- Divider -->
+      <hr class="section-divider">
+
+      <!-- Updated final section markup for debugging -->
+      <div class="final-section" style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 4rem;">
+        <div class="social-links" style="flex: 1;">
+            <a href="https://twitter.com/banodoco" target="_blank" class="social-link">
+                <i data-feather="twitter"></i>
+            </a>
+            <a href="https://github.com/banodoco" target="_blank" class="social-link">
+                <i data-feather="github"></i>
+            </a>
+            <a href="https://www.youtube.com/@banodoco" target="_blank" class="social-link">
+                <i data-feather="youtube"></i>
+            </a>
+            <a href="https://discord.gg/banodoco" target="_blank" class="social-link">
+                <i data-feather="message-circle"></i>
+            </a>
+            <div class="watering-container">
+                <div class="watering-can">
+                    <div class="can-body"></div>
+                    <div class="spout"></div>
+                    <div class="handle"></div>
+                    <div class="water-drops">
+                        <div class="drop"></div>
+                        <div class="drop"></div>
+                        <div class="drop"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="initialBud"></div>
+        </div>
+      </div>
+    </div>
+    <script src="js/components/icons.js"></script>
+    <script src="js/components/script.js"></script>
+    <script src="js/components/plant-animation.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="js/components/ecosystem.js" type="module"></script>
+    <script src="js/components/grid-animations.js"></script>
+</body>
+</html> 
