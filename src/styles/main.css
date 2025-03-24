@@ -181,3 +181,10 @@ body {
     overflow-x: hidden;
   }
 }
+
+/* Desktop override for final-section margin-bottom */
+@media (min-width: 769px) {
+  .final-section {
+    margin-bottom: 1rem !important;
+  }
+}
