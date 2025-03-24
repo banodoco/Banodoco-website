@@ -17,9 +17,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="src/styles/main.css">
     <link rel="stylesheet" href="styles/components/styles.css">
-    <link rel="stylesheet" href="styles/components/header.css">
-    <link rel="stylesheet" href="styles/components/footer.css">
+    <link rel="stylesheet" href="src/styles/components/header.css">
+    <link rel="stylesheet" href="src/styles/components/footer.css">
     <!-- Feather Icons (similar to Lucide) -->
     <script src="https://unpkg.com/feather-icons"></script>
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
@@ -56,20 +57,16 @@
         
         /* Add background to text elements */
         h1, h2, h3, .links {
-            position: relative; /* Added position relative */
-            z-index: 3; /* Added z-index */
-            display: inline;
-            box-decoration-break: clone;
-            -webkit-box-decoration-break: clone;
-            background-color: rgba(255, 255, 255, 0.15); /* Reduced from 0.25 */
-            backdrop-filter: blur(0.5px);
-            border-radius: 2px;
+            position: relative;
+            z-index: 3;
+            display: block;
             line-height: 1.7;
+            background: none;
+            backdrop-filter: none;
         }
 
         /* Ensure block-level elements still take full width */
         h1, h2, h3 {
-            display: inline-block;
             width: 100%;
             margin: 1rem 0;
         }
@@ -462,7 +459,7 @@
             padding: 1rem 0;
         }
         .site-header img {
-            width: 40px; /* Adjust size as needed */
+            width: 40px;
             height: auto;
             margin-right: 0.5rem;
             margin-left: -30px;
@@ -726,6 +723,12 @@
         }
         
         @media (max-width: 992px) {
+            .ecosystem-visualization {
+                width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+            }
+            
             .two-column {
                 flex-direction: column;
             }
@@ -737,23 +740,52 @@
             }
             
             .two-column .ecosystem-visualization {
-                height: 700px; /* Further increased height for tablet sizes */
-                margin-left: -20px; /* Less negative margin on tablets */
-                margin-top: -90px; /* Adjusted for tablet view */
+                height: 700px;
+                margin-left: 0;
+                margin-top: -90px;
             }
         }
         
         @media (max-width: 768px) {
-            .two-column .ecosystem-visualization {
-                width: 100% !important;
-                height: 550px !important;
-                margin-left: -10px !important; /* Less negative margin on mobile */
-                margin-top: -120px !important;
+            .ecosystem-visualization {
+                width: calc(100% + 2rem) !important;
+                max-width: none;
+                margin-left: -1rem !important;
+                margin-right: -1rem !important;
+                left: 0 !important;
+                right: 0 !important;
                 overflow: hidden;
+                transform: scale(0.95);
+                transform-origin: center top;
+                margin-bottom: -50px;
+                margin-top: -60px !important;
             }
 
             .two-column .ecosystem-visualization {
+                width: calc(100% + 2rem) !important;
                 height: 550px !important;
+                margin-left: -1rem !important;
+                margin-right: -1rem !important;
+                margin-top: -60px !important;
+                margin-bottom: -50px !important;
+                overflow: hidden;
+                position: relative;
+                transform: scale(0.95);
+                transform-origin: center top;
+            }
+
+            .content-section {
+                margin: 2rem 0;
+            }
+
+            .site-header {
+                padding: 1rem 0.5rem;
+            }
+
+            .site-header img {
+                width: 35px;
+                margin-left: 0;
+                margin-right: 0.5rem;
             }
 
             /* Adjust node labels for better mobile visibility */
@@ -764,8 +796,8 @@
 
             /* Adjust legend position for mobile */
             #legend {
-                bottom: 10px;
-                right: 10px;
+                bottom: 15px;
+                right: 25%;
                 padding: 8px;
                 font-size: 0.8rem;
             }
@@ -774,11 +806,29 @@
         @media (max-width: 480px) {
             .ecosystem-visualization {
                 height: 450px !important;
-                margin-top: -90px !important;
+                margin-top: -100px !important;
+                transform: scale(0.9);
+                margin-bottom: -80px;
             }
 
             .two-column .ecosystem-visualization {
                 height: 450px !important;
+                margin-top: -100px !important;
+                transform: scale(0.9);
+                margin-bottom: -80px !important;
+            }
+
+            .site-header img {
+                width: 32px;
+            }
+
+            .content-section {
+                margin: 1.5rem 0;
+            }
+
+            #legend {
+                bottom: 15px;
+                right: 20%;
             }
         }
 
@@ -887,8 +937,8 @@
         width: 120%; /* Increased from 100% to extend to the right */
         height: 100%;
         position: relative;
-        margin-top: -170px; /* Increased negative margin to move it up more */
-        margin-left: -30px; /* Added negative margin to move it left */
+        margin-top: -170px;
+        margin-left: -30px;
       }
 
       .ecosystem-visualization #three-container {
@@ -1289,7 +1339,7 @@
                   <p>Our community has been on the cutting-edge of every major development in open source AI art over the past two years - both technically and artistically.</p>
               </div>
               <div class="links" style="margin-top: 1rem;">
-                  <a href="#" style="color: inherit;">Join our community</a>
+                  <a href="https://discord.gg/acg8aNBTxd" style="color: inherit;">Join our community</a>
               </div>
           </div>
 
@@ -1332,7 +1382,7 @@
       <hr class="section-divider">
 
       <!-- Updated final section markup for debugging -->
-      <div class="final-section" style="display: flex; gap: 20px; align-items: flex-start;">
+      <div class="final-section" style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 4rem;">
         <div class="social-links" style="flex: 1;">
             <a href="https://twitter.com/banodoco" target="_blank" class="social-link">
                 <i data-feather="twitter"></i>
@@ -1346,11 +1396,6 @@
             <a href="https://discord.gg/banodoco" target="_blank" class="social-link">
                 <i data-feather="message-circle"></i>
             </a>
-            <div>
-                <a href="mailto:hello@banodoco.ai" class="social-link">
-                    <i data-feather="mail"></i>
-                </a>
-            </div>
             <div class="watering-container">
                 <div class="watering-can">
                     <div class="can-body"></div>

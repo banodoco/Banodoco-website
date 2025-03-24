@@ -88,17 +88,17 @@ wateringContainer.addEventListener('click', () => {
                         const socialLinks = document.querySelector('.social-links');
                         if (socialLinks) {
                             // Add a transition for smooth animation
-                            socialLinks.style.transition = 'margin-bottom 1.5s ease-in-out';
+                            socialLinks.style.transition = 'margin-bottom 2s ease-in-out';
                             // After a small delay to ensure transition is applied
                             setTimeout(() => {
-                                socialLinks.style.marginBottom = '0.45rem'; // Reduced space from 1.5rem to 1rem
-                            }, 50);
+                                socialLinks.style.marginBottom = '6rem';
+                            }, 100);
                         }
-                    }, 1000); // 1 second delay before removing dead space
+                    }, 1500);
                 }, 1000); // Wait for fade-out to complete before hiding
-            }, 1000); // Wait for plant to start growing (reduced from 1500ms)
+            }, 1000); // Wait for plant to start growing
             
-        }, 1500); // Reduced delay for water drop animation
+        }, 1500); // Delay for water drop animation
     }
 });
 

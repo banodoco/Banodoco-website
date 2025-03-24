@@ -17,9 +17,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles/components/styles.css">
-  <link rel="stylesheet" href="../styles/components/header.css">
-  <link rel="stylesheet" href="../styles/components/footer.css">
+  <link rel="stylesheet" href="../src/styles/main.css">
+  <link rel="stylesheet" href="../src/styles/components/header.css">
+  <link rel="stylesheet" href="../src/styles/components/footer.css">
   <!-- Feather Icons and React -->
   <script src="https://unpkg.com/feather-icons"></script>
   <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
@@ -200,6 +200,103 @@
         padding: 1rem;
       }
     }
+
+    /* Ownership page mobile fixes */
+    @media (max-width: 768px) {
+      .stacked-right,
+      .stacked-left {
+        float: none !important;
+        max-width: 100% !important;
+        margin: 1rem auto !important;
+        display: block;
+      }
+      .image-placeholder {
+        max-width: 100% !important;
+        margin: 1rem auto !important;
+        display: block;
+      }
+      .container {
+        padding: 1rem !important;
+      }
+      .site-header img {
+        margin-left: 0 !important;
+      }
+    }
+
+    /* Mobile table fixes to prevent horizontal overflow in Ownership page */
+    @media (max-width: 768px) {
+      table {
+        table-layout: fixed;
+        width: 100% !important;
+      }
+      th, td {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        hyphens: auto;
+        word-break: break-all;
+      }
+    }
+
+    /* Additional mobile table responsiveness to prevent dead space on right */
+    @media (max-width: 768px) {
+      table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+      }
+      th, td {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        hyphens: auto;
+        word-break: break-all;
+        white-space: normal !important;
+      }
+    }
+
+    /* Increase left column spacing in Ownership grants table */
+    #ownershipGrants th:first-child,
+    #ownershipGrants td:first-child {
+        padding-left: 20px !important;
+    }
+
+    /* Table column width fixes */
+    #ownershipGrants td:first-child,
+    #ownershipGrants th:first-child {
+        width: 30% !important;
+        min-width: 150px !important;
+    }
+
+    /* Ensure second column takes remaining space */
+    #ownershipGrants td:nth-child(2),
+    #ownershipGrants th:nth-child(2) {
+        width: 70% !important;
+    }
+
+    .watering-container {
+        position: absolute;
+        top: calc(100% + 2rem);
+        left: calc(50% - 1.0rem);
+        transform: translateX(calc(-50% + 10px));
+        cursor: pointer;
+        z-index: 1000;
+        transform-origin: 80% 100%;
+        transition: transform 2.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1s ease;
+        width: 50px;
+        height: 50px;
+    }
+
+    #initialBud {
+        position: absolute;
+        top: calc(100% + 4rem);
+        left: calc(50% + 1.95rem);
+        transform: translateX(calc(-50% - 2.5px));
+        width: 12px;
+        height: 12px;
+        background-color: #8fb996;
+        border-radius: 50%;
+        box-shadow: 0 0 10px rgba(143, 185, 150, 0.5);
+        z-index: 999;
+    }
   </style>
 </head>
 <body>
@@ -216,7 +313,7 @@
       </a>
     </div>
     <!-- Main Content -->
-    <h1 class="hero-title" style="text-align: left;">Banodoco Ownership - Explanation, Disclaimers & FAQ</h1>
+    <h1 class="hero-title" style="text-align: left;">Ownership - Explanation, Disclaimers & FAQ</h1>
     <div class="content-section">
       <div class="image-placeholder stacked-right"><img src="https://banodoco.s3.amazonaws.com/images/typical_startup_equity.webp" alt="Typical Startup Equity" style="max-width:100%;"/></div>
       <div class="image-placeholder stacked-right"><img src="https://banodoco.s3.amazonaws.com/images/open_source_native.webp" alt="Open Source Native" style="max-width:100%;"/></div>
@@ -265,7 +362,7 @@
       <table id="ownershipGrants" border="1" cellspacing="0" cellpadding="8" style="width:100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem;">
         <thead>
           <tr style="background-color: #f8f8f8;">
-            <th style="padding: 10px; text-align: left;">Month</th>
+            <th style="padding: 10px; text-align: left; width: 30%;">Month</th>
             <th style="padding: 10px; text-align: left;">Ownership Grants</th>
           </tr>
         </thead>
@@ -428,10 +525,10 @@
       <table border="1" cellspacing="0" cellpadding="8" style="width:100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem;">
         <thead>
           <tr style="background-color: #f8f8f8;">
-            <th style="padding: 10px; text-align: left; width: 20%;">From</th>
+            <th style="padding: 10px; text-align: left; width: 30%;">From</th>
             <th style="padding: 10px; text-align: left; width: 30%;">To</th>
             <th style="padding: 10px; text-align: left; width: 20%;">Amount</th>
-            <th style="padding: 10px; text-align: left; width: 30%;">Date</th>
+            <th style="padding: 10px; text-align: left; width: 20%;">Date</th>
           </tr>
         </thead>
         <tbody>
@@ -483,7 +580,7 @@
     </div>
 
     <!-- Footer -->
-    <div class="final-section">
+    <div class="final-section" style="margin-bottom: 4rem;">
       <div class="social-links" style="flex: 1;">
         <a href="https://twitter.com/banodoco" target="_blank" class="social-link">
           <i data-feather="twitter"></i>
@@ -497,11 +594,6 @@
         <a href="https://discord.gg/banodoco" target="_blank" class="social-link">
           <i data-feather="message-circle"></i>
         </a>
-        <div>
-          <a href="mailto:hello@banodoco.ai" class="social-link">
-            <i data-feather="mail"></i>
-          </a>
-        </div>
         <div class="watering-container">
           <div class="watering-can">
             <div class="can-body"></div>
@@ -522,7 +614,7 @@
   <script src="../js/components/script.js"></script>
   <script src="../js/components/plant-animation.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="../js/components/ecosystem.js" type="module"></script>
+  <script src="../js/components/grid-animations.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function(){
       const btn = document.getElementById('toggleTableRows');

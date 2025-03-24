@@ -52,4 +52,10 @@
 .brand-highlight:hover { color: #5353a5; }
 .brand-no:hover { color: #53a553; }
 .brand-do:hover { color: #a55353; }
-.brand-co:hover { color: #a5a553; } 
+.brand-co:hover { color: #a5a553; }
+
+@media (max-width: 768px) {
+  .site-header {
+    transform: translateX(-10px);
+  }
+} 
