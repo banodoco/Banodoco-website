@@ -4,12 +4,6 @@ const imageCache = {
   ownership: new Map()
 };
 
-// Helper function to fix image paths for GitHub Pages
-function fixImagePath(path) {
-  // Remove leading slash if present
-  return path.startsWith('/') ? path.substring(1) : path;
-}
-
 // Preload a single image and store in cache
 function preloadImage(src, cacheType) {
   return new Promise((resolve, reject) => {
@@ -24,7 +18,7 @@ function preloadImage(src, cacheType) {
       resolve(img);
     };
     img.onerror = reject;
-    img.src = fixImagePath(src);
+    img.src = src;
   });
 }
 
@@ -272,7 +266,7 @@ async function initializeOwnershipGrid() {
         ownershipDisplayed.add(randomIndex);
         
         const img = document.createElement('img');
-        img.src = fixImagePath(imageFiles[randomIndex]);
+        img.src = imageFiles[randomIndex];
         img.style.width = '100%';
         img.style.height = '100%';
         img.style.objectFit = 'cover';
@@ -349,7 +343,7 @@ function addOwnershipImageEventListeners(wrapper, img, imageFiles, ownershipDisp
     if (!img.flickerInterval) {
       img.flickerInterval = setInterval(function() {
         let newIndex = getUniqueOwnershipImage(img, ownershipDisplayed, imageFiles);
-        img.src = fixImagePath(imageFiles[newIndex]);
+        img.src = imageFiles[newIndex];
       }, 100);
     }
   });
@@ -372,7 +366,7 @@ function addOwnershipImageEventListeners(wrapper, img, imageFiles, ownershipDisp
     
     img.flickerInterval = setInterval(function() {
       let newIndex = getUniqueOwnershipImage(img, ownershipDisplayed, imageFiles);
-      img.src = fixImagePath(imageFiles[newIndex]);
+      img.src = imageFiles[newIndex];
     }, 100);
     
     setTimeout(function() {
