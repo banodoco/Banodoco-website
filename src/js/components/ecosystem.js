@@ -306,6 +306,7 @@ export function runEcosystem(appendToEl = document.body) {
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0); // transparent
     renderer.sortObjects = true;
+    if (isMobile) { renderer.domElement.style.touchAction = 'pan-y'; }
     threeContainer.appendChild(renderer.domElement);
 
     controls = new OrbitControls(camera, renderer.domElement);
@@ -317,18 +318,11 @@ export function runEcosystem(appendToEl = document.body) {
     // Fix for mobile scrolling - disable OrbitControls from capturing all touch events
     if (isMobile) {
       controls.enabled = false; // fully disable on mobile to allow page scroll
-    }
-
-    raycaster = new THREE.Raycaster();
-    mouse = new THREE.Vector2();
-
-    window.addEventListener('resize', onWindowResize);
-    
-    // On mobile, interpret a short touch as a "tap"
-    if (isMobile) {
+      
       let touchStartY = 0;
       let touchStartX = 0;
       let touchMoved = false;
+      let isTouchScrolling = false;
       const touchMoveThreshold = 10; // px
 
       renderer.domElement.addEventListener('touchstart', (event) => {
@@ -336,6 +330,7 @@ export function runEcosystem(appendToEl = document.body) {
         touchStartY = event.touches[0].clientY;
         touchStartX = event.touches[0].clientX;
         touchMoved = false;
+        isTouchScrolling = false;
       }, { passive: true });
       
       renderer.domElement.addEventListener('touchmove', (event) => {
@@ -344,21 +339,30 @@ export function runEcosystem(appendToEl = document.body) {
         const touchX = event.touches[0].clientX;
         const deltaY = Math.abs(touchY - touchStartY);
         const deltaX = Math.abs(touchX - touchStartX);
-        if (deltaY > touchMoveThreshold || deltaX > touchMoveThreshold) {
-          touchMoved = true;
+        
+        // If vertical movement is greater than horizontal, it's likely a scroll attempt
+        if (deltaY > deltaX && deltaY > touchMoveThreshold) {
+          isTouchScrolling = true;
         }
+        
+        touchMoved = true;
       }, { passive: true });
       
       renderer.domElement.addEventListener('touchend', (event) => {
-        // Only process taps, not scrolls
-        if (touchMoved) return;
-        onTouchStart(event);
+        // Only process taps (not scrolls or long touches)
+        if (!touchMoved && !isTouchScrolling) {
+          onTouchStart(event);
+        }
       }, { passive: true });
-
     } else {
       // Desktop pointer
       renderer.domElement.addEventListener('pointerdown', onPointerDown);
     }
+
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+
+    window.addEventListener('resize', onWindowResize);
   }
 
   function onWindowResize() {

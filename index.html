@@ -1247,6 +1247,23 @@
         }
       }
     </style>
+    <!-- Insert Safari specific override for #legend positioning -->
+    <style>
+    @supports (-webkit-overflow-scrolling: touch) {
+      #legend {
+        right: 10px !important;
+      }
+    }
+    </style>
+    <!-- Insert iOS Safari specific override for #legend positioning -->
+    <style>
+    @media only screen and (max-device-width: 812px) {
+      #legend {
+        right: 10px !important;
+        left: auto !important;
+      }
+    }
+    </style>
 </head>
 <body>
     <canvas id="plantCanvas"></canvas>
@@ -1418,5 +1435,21 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="js/components/ecosystem.js" type="module"></script>
     <script src="js/components/grid-animations.js"></script>
+    <!-- iOS Safari legend positioning fix -->
+    <script>
+      if (/iP(hone|od|ad)/.test(navigator.platform)) {
+        window.addEventListener('load', function() {
+          setTimeout(function() {
+            var legend = document.getElementById('legend');
+            if (legend) {
+              legend.style.position = 'absolute';
+              legend.style.right = '10px';
+              legend.style.left = 'auto';
+              console.log('iOS Safari legend reposition applied:', legend.style.cssText);
+            }
+          }, 100);
+        });
+      }
+    </script>
 </body>
 </html> 
