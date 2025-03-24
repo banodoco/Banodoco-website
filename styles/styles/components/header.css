@@ -1,0 +1,61 @@
+/* Header-specific styles */
+.site-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+.site-header img {
+  width: 40px;
+  height: auto;
+  margin-right: 0.5rem;
+  margin-left: -30px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure header link never has underline or inherits global link styles */
+.site-header a {
+  text-decoration: none !important;
+  border-bottom: none !important;
+}
+
+.site-header a:after {
+  display: none !important;
+}
+
+.site-header .site-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.site-header .site-title span {
+  display: inline-block;
+  letter-spacing: normal;
+}
+
+/* Brand styling */
+.brand-highlight, .brand-no, .brand-do, .brand-co {
+  color: #333;
+  transition: color 2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.brand-highlight:after, .brand-no:after, .brand-do:after, .brand-co:after {
+  display: none;
+}
+
+.brand-highlight:hover { color: #5353a5; }
+.brand-no:hover { color: #53a553; }
+.brand-do:hover { color: #a55353; }
+.brand-co:hover { color: #a5a553; }
+
+@media (max-width: 768px) {
+  .site-header {
+    transform: translateX(-10px);
+  }
+} 
