@@ -1,0 +1,7 @@
+# system
+__pycache__/
+/.vscode
+
+# user
+/venv
+.env
