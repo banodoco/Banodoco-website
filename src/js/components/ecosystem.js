@@ -263,10 +263,7 @@ export function runEcosystem(appendToEl = document.body) {
     if (first.userData.type === 'sectionNode') {
       handleSectionClick(first.userData.sectionId);
     }
-    else if (first.userData.type === 'connectionLine') {
-      const clickPos = intersects[0].point;
-      handleConnectionClick(first.userData.connIndex, clickPos.x, clickPos.y);
-    }
+
   }
 
   // ---------------------------------------------------------------------
@@ -797,34 +794,6 @@ export function runEcosystem(appendToEl = document.body) {
     offset.phase = Math.atan2(dy, dx);
   }
 
-  // ---------------------------------------------------------------------
-  // 2h. User Interactions (clicks, UI input)
-  // ---------------------------------------------------------------------
-  function handleConnectionClick(connIndex, x, y) {
-    connections[connIndex].thickness += 0.5;
-    rebuildSceneObjects();  // update line thickness
-
-    const popup = document.createElement('div');
-    popup.className = 'popup-message';
-    popup.textContent = 'Connection Strengthened!';
-    popup.style.left = x + 'px';   // we'll do basic positioning in world->screen
-    popup.style.top  = y + 'px';
-    
-    // Project to screen coords
-    const vec = new THREE.Vector3(x, y, 0);
-    vec.project(camera);
-    const rect = renderer.domElement.getBoundingClientRect();
-    const halfWidth = rect.width / 2, halfHeight = rect.height / 2;
-    const screenX = vec.x * halfWidth + halfWidth + rect.left;
-    const screenY = -vec.y * halfHeight + halfHeight + rect.top;
-    popup.style.left = screenX + 'px';
-    popup.style.top  = screenY + 'px';
-
-    document.body.appendChild(popup);
-    setTimeout(() => {
-      popup.remove();
-    }, 2000);
-  }
 
   function handleSectionClick(sectionId) {
     const sec = sections.find(s => s.id === sectionId);
