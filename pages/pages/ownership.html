@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ownership - Banodoco</title>
+    <link rel="icon" href="../assets/images/b-t.png" type="image/png">
+    <link rel="shortcut icon" href="../assets/images/b-t.png" type="image/png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../src/styles/main.css">
+    <link rel="stylesheet" href="../styles/components/styles.css">
+    <link rel="stylesheet" href="../src/styles/components/header.css">
+    <link rel="stylesheet" href="../src/styles/components/footer.css">
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .hero-section {
+            text-align: center;
+            margin: 3rem 0;
+        }
+        
+        .content-section {
+            margin: 4rem 0;
+        }
+        
+        .highlight-box {
+            background-color: rgba(143, 185, 150, 0.1);
+            border-left: 4px solid #8fb996;
+            padding: 1.5rem;
+            border-radius: 0 8px 8px 0;
+            margin: 2rem 0;
+        }
+        
+        .ownership-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        
+        .ownership-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .ownership-card h3 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .site-header {
+            display: flex;
+            align-items: center;
+            padding: 1rem 0;
+        }
+        
+        .site-header img {
+            width: 40px;
+            height: auto;
+            margin-right: 0.5rem;
+        }
+        
+        .site-header .site-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .ownership-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Site Header -->
+        <div class="site-header">
+            <a href="../" style="display: flex; align-items: center; text-decoration: none;">
+                <img src="../assets/images/b-t.png" alt="Logo">
+                <span class="site-title">
+                    <span class="brand-highlight">Ba</span><span class="brand-no">no</span><span class="brand-do">do</span><span class="brand-co">co</span>
+                </span>
+            </a>
+        </div>
+
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <h1>Community Ownership Model</h1>
+            <p>Building a company owned by the open source AI art ecosystem</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content-section">
+            <h2>Our Vision for Ownership</h2>
+            <p>At Banodoco, we believe that a company built on the open source ecosystem should be owned by the community that built it. That's why we're sharing 100% of our company's ownership (aside from investor dilution) with people who help the open source ecosystem thrive.</p>
+            
+            <div class="highlight-box">
+                <h3>Key Principles</h3>
+                <ul>
+                    <li>Community ownership drives alignment between the company and ecosystem</li>
+                    <li>Contributors should be rewarded for their impact</li>
+                    <li>Open source collaboration creates more value than closed development</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h2>How It Works</h2>
+            <div class="ownership-grid">
+                <div class="ownership-card">
+                    <h3>Contribution</h3>
+                    <p>Contributors to the open source AI art ecosystem can earn ownership through various forms of contribution:</p>
+                    <ul>
+                        <li>Code contributions</li>
+                        <li>Documentation</li>
+                        <li>Community support</li>
+                        <li>Art creation and sharing</li>
+                        <li>Educational content</li>
+                    </ul>
+                </div>
+                
+                <div class="ownership-card">
+                    <h3>Distribution</h3>
+                    <p>Ownership is distributed based on:</p>
+                    <ul>
+                        <li>Impact of contributions</li>
+                        <li>Consistency of involvement</li>
+                        <li>Community recognition</li>
+                        <li>Long-term commitment</li>
+                    </ul>
+                </div>
+                
+                <div class="ownership-card">
+                    <h3>Benefits</h3>
+                    <p>Community owners receive:</p>
+                    <ul>
+                        <li>Voting rights on key decisions</li>
+                        <li>Share in company success</li>
+                        <li>Early access to new features</li>
+                        <li>Direct influence on product direction</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h2>Get Involved</h2>
+            <p>Ready to become part of the Banodoco ownership community? Here's how you can start:</p>
+            <ol>
+                <li>Join our <a href="https://discord.com/invite/acg8aNBTxd">Discord community</a></li>
+                <li>Contribute to open source AI art projects</li>
+                <li>Share your work and help others</li>
+                <li>Participate in community discussions</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Feather icons
+        feather.replace();
+    </script>
+</body>
+</html> 
