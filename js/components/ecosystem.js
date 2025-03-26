@@ -191,11 +191,10 @@ export function runEcosystem(appendToEl = document.body) {
     renderer.setClearColor(0x000000, 0);
     renderer.sortObjects = true;
     threeContainer.appendChild(renderer.domElement);
-    renderer.domElement.style.touchAction = 'pan-y';  // Allow vertical scrolling on mobile
 
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableRotate = false;
-    controls.enablePan = false;    // Disable panning on all devices
+    controls.enablePan = !isMobile;
     controls.enableZoom = false;
     controls.addEventListener('change', () => {
       updateNodeLabelPositions();
@@ -205,19 +204,9 @@ export function runEcosystem(appendToEl = document.body) {
     mouse = new THREE.Vector2();
 
     if (isMobile) {
-      // Disable interactivity on mobile by adding a blocker overlay
+      // Minimal tap handling for mobile
       controls.enabled = false;
-      // Ensure the container is positioned relatively so the blocker positions correctly
-      threeContainer.style.position = 'relative';
-      const blocker = document.createElement('div');
-      blocker.style.position = 'absolute';
-      blocker.style.top = '0';
-      blocker.style.left = '0';
-      blocker.style.width = '100%';
-      blocker.style.height = '100%';
-      blocker.style.zIndex = '10';
-      blocker.style.backgroundColor = 'transparent';
-      threeContainer.appendChild(blocker);
+      renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: true });
     } else {
       renderer.domElement.addEventListener('pointerdown', onPointerDown);
     }

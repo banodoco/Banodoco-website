@@ -1,0 +1,276 @@
+/* Footer-specific styles */
+.social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin: 1.5rem 0 5rem;
+    padding-top: 2rem;
+    border-top: 1px solid #eaeaea;
+    transition: margin-bottom 1.5s ease-in-out;
+    position: relative;
+}
+
+.social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    border: 1px solid #eaeaea;
+    border-radius: 50%;
+    background-color: #ffffff;
+    color: #555;
+    text-decoration: none;
+    width: 40px;
+    height: 40px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.social-link:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    color: #000;
+}
+
+/* Social links should not have underlines */
+.social-link:after {
+    display: none !important;
+}
+
+/* Watering can styles */
+.watering-container {
+    position: absolute;
+    top: calc(100% + 2rem);
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: pointer;
+    z-index: 1000;
+    transform-origin: 80% 100%;
+    transition: transform 2.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1s ease;
+    width: 50px;
+    height: 50px;
+}
+
+.watering-container:hover {
+    animation: shake 0.8s ease-in-out infinite;
+}
+
+.watering-container.no-hover:hover {
+    animation: none;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(calc(-50% + 10px)) rotate(0deg); }
+    25% { transform: translateX(calc(-50% + 10px)) rotate(-5deg); }
+    75% { transform: translateX(calc(-50% + 10px)) rotate(5deg); }
+}
+
+.watering-can {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: none;
+}
+
+.can-body {
+    position: absolute;
+    width: 34px;
+    height: 28px;
+    background: white;
+    border: 3px solid #888;
+    border-radius: 6px;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+}
+
+.spout {
+    position: absolute;
+    width: 20px;
+    height: 10px;
+    background: white;
+    border: 3px solid #888;
+    border-radius: 0 6px 6px 0;
+    bottom: 10px;
+    left: 30px;
+    transform: rotate(-45deg);
+    transform-origin: left center;
+    z-index: 1;
+}
+
+.handle {
+    position: absolute;
+    width: 16px;
+    height: 18px;
+    background: white;
+    border: 3px solid #888;
+    border-radius: 8px 8px 0 0;
+    border-bottom: none;
+    bottom: 18px;
+    left: 10px;
+}
+
+.water-drops {
+    position: absolute;
+    bottom: 2px;
+    left: 44px;
+    width: 10px;
+    height: 30px;
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+.drop {
+    position: absolute;
+    width: 5px;
+    height: 8px;
+    background-color: rgba(110, 181, 255, 0.8);
+    border-radius: 50% 50% 50% 50%;
+    opacity: 0;
+    transform-origin: center top;
+}
+
+.drop:nth-child(1) {
+    top: 2px;
+    left: 2px;
+    animation: dropHorizontal 0.7s infinite;
+    animation-delay: 0.2s;
+}
+
+.drop:nth-child(2) {
+    top: 2px;
+    left: 0;
+    animation: dropHorizontal 0.7s infinite;
+    animation-delay: 0.45s;
+}
+
+.drop:nth-child(3) {
+    top: 2px;
+    left: -2px;
+    animation: dropHorizontal 0.7s infinite;
+    animation-delay: 0.7s;
+}
+
+@keyframes dropHorizontal {
+    0% {
+        left: 0px;
+        top: 0px;
+        opacity: 0;
+        transform: scale(0.8) rotate(-45deg);
+    }
+    15% {
+        opacity: 1;
+        transform: scale(1.1) rotate(-45deg);
+    }
+    85% {
+        opacity: 1;
+        transform: scale(1) rotate(-45deg);
+    }
+    95% {
+        opacity: 0.5;
+        transform: scale(0.9) rotate(-45deg);
+    }
+    100% {
+        left: 20px;
+        top: 8px;
+        opacity: 0;
+        transform: scale(0.8) rotate(-45deg);
+    }
+}
+
+.watering-container.pouring {
+    transform: translateX(-60%) rotate(30deg);
+    animation: none;
+}
+
+.watering-container.pouring .water-drops {
+    opacity: 1;
+    transform: rotate(-30deg) translate(-2px, -2px);
+}
+
+.watering-container.fade-out {
+    opacity: 0;
+}
+
+/* Initial bud styles */
+#initialBud {
+    position: absolute;
+    top: calc(100% + 2rem);
+    left: calc(50% + 1.95rem);
+    transform: translateX(calc(-50% - 2.5px));
+    width: 12px;
+    height: 12px;
+    background-color: #8fb996;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(143, 185, 150, 0.5);
+    z-index: 999;
+}
+
+#initialBud::after {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 5px;
+    width: 2px;
+    height: 8px;
+    background-color: #8fb996;
+    transform: rotate(-15deg);
+}
+
+/* Plant canvas styles */
+#plantCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    transition: opacity 2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.plant-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(242, 242, 255, 0.7);
+    backdrop-filter: brightness(1.1) contrast(1.05);
+    z-index: 2;
+    pointer-events: none;
+    transition: background-color 2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    animation: overlayBackgroundCycle 40s ease-in-out infinite;
+    animation-delay: 2s;
+}
+
+@keyframes overlayBackgroundCycle {
+    0%, 20% { background-color: rgba(242, 242, 255, 0.7); }
+    25%, 45% { background-color: rgba(242, 255, 242, 0.7); }
+    50%, 70% { background-color: rgba(255, 242, 242, 0.7); }
+    75%, 95% { background-color: rgba(255, 255, 242, 0.7); }
+    100% { background-color: rgba(242, 242, 255, 0.7); }
+}
+
+/* Final section layout */
+.final-section {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+/* Enhanced Mobile fix for footer */
+@media (max-width: 768px) {
+    .final-section {
+        justify-content: center !important;
+        text-align: center;
+        padding: 0 1rem;
+    }
+    .final-section .social-links[style] {
+        flex: none !important;
+        display: inline-flex !important;
+        width: auto !important;
+        margin: 0 auto !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+} 
