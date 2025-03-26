@@ -3,6 +3,7 @@
   display: flex;
   align-items: center;
   padding: 1rem 0;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .site-header img {
