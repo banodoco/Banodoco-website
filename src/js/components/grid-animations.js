@@ -134,7 +134,7 @@ async function initializeCommunityGrid() {
     // Track currently displayed community images to prevent duplicates
     const communityDisplayed = new Set();
 
-    // Create community grid with numbered images
+    // Create community grid with 16 numbered images (for 8x2 desktop)
     for (let i = 0; i < 16; i++) {
       let randomIndex = Math.floor(Math.random() * 66);
       while (communityDisplayed.has(randomIndex)) {

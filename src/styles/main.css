@@ -357,9 +357,34 @@ hr.section-divider:not(:first-of-type) {
 
 /* Ownership grid mobile styles */
 @media (max-width: 768px) {
+    /* Community grid mobile styles */
+    .community-images-grid {
+        grid-template-columns: repeat(5, 1fr) !important;
+        gap: 4px !important;
+    }
+    .community-images-grid > img:nth-child(n+11) {
+        display: none !important; /* Added important */
+    }
+    .community-images-grid img {
+        aspect-ratio: 1/1 !important;
+        height: auto !important;
+        object-fit: cover !important;
+        opacity: 1 !important;
+    }
+    .community-images-grid img.shine-effect::after {
+        display: none !important;
+    }
+
+    /* Existing Ownership grid styles */
     .ownership-images-grid {
-        aspect-ratio: 2/1 !important;
+        /* Override inline styles for mobile */
+        grid-auto-flow: row !important;
+        grid-template-rows: auto !important;
+        grid-auto-columns: unset !important;
+        
+        /* Apply responsive mobile grid layout */
         grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)) !important;
+        aspect-ratio: 2/1 !important; 
     }
     
     .ownership-images-grid img,
@@ -369,22 +394,21 @@ hr.section-divider:not(:first-of-type) {
         height: 100%;
         object-fit: cover;
     }
+
+    /* Existing ADOS card image height override */
+    .card[data-category="ados"] .image-hover-container {
+      height: 116px !important;
+      max-height: none !important;
+    }
+    .card[data-category="ados"] .image-hover-container > div[style*="padding-top"] {
+      display: none !important;
+    }
 }
 
 @media (max-width: 480px) {
     .ownership-images-grid {
-        aspect-ratio: 1.5/1 !important;
+        /* Further adjust for smaller screens */
         grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)) !important;
+        aspect-ratio: 1.5/1 !important;
     }
-}
-
-/* Mobile override for ADOS card image height */
-@media (max-width: 768px) {
-  .card[data-category="ados"] .image-hover-container {
-    height: 116px !important;
-    max-height: none !important;
-  }
-  .card[data-category="ados"] .image-hover-container > div[style*="padding-top"] {
-    display: none !important;
-  }
 }

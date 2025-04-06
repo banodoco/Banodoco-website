@@ -385,22 +385,6 @@
             }
 
             /* Rules from third media query block */
-            .community-images-grid {
-                grid-template-columns: repeat(4, 1fr) !important;
-                gap: 4px !important;
-            }
-            .community-images-grid > img:nth-child(n+9) {
-                display: none;
-            }
-            .community-images-grid img {
-                aspect-ratio: 1/1 !important;
-                height: auto !important;
-                object-fit: cover !important;
-                opacity: 1 !important;
-            }
-            .community-images-grid img.shine-effect::after {
-                display: none !important;
-            }
             .ownership-images-grid {
                 grid-auto-flow: row !important;
                 grid-template-columns: repeat(6, 1fr) !important;
@@ -1000,6 +984,13 @@
       #plantCanvas {
         background-color: #f2f2ff;
       }
+      
+      /* Add specific margin for ownership intro on desktop */
+      @media (min-width: 769px) {
+        #ownership-intro-section {
+          margin-bottom: 4rem !important; /* Increased margin for desktop */
+        }
+      }
     </style>
 </head>
 <body>
@@ -1069,7 +1060,7 @@
       
       <!-- Open Source Section -->
       <div class="content-section">
-          <h2>We're building an interlocking series of things - all driven to help open source ecosystem to unlock its potential</h2>
+          <h2>We're driving an interlocking series of activities to help the open source AI art ecosystem thrive</h2>
           
           <!-- <div class="highlight-box">
               <h3>The power of open collaboration</h3>
@@ -1183,13 +1174,13 @@
       <!-- Divider -->
       <hr class="section-divider">
       <!-- Header Section -->
-      <div class="content-section" style="margin-bottom: 1.5rem;">
-          <h2>We want to build a community-driven company that's symbiotic with the open source ecosystem - for us to thrive, the ecosystem must thrive</h2>
+      <div class="content-section" id="ownership-intro-section" style="margin-bottom: 1.5rem;">
+          <h2>We want to build a community-driven company that's symbiotic with the open source ecosystem</h2>
       </div>
       
       <!-- Full Width Ownership Card -->
       <div class="card life-tile" data-category="life" data-position="1" style="width: 100%; margin-bottom: 4rem;">
-          <div class="ownership-images-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 2px; margin: 1rem 0; aspect-ratio: 3/1;"></div>
+          <div class="ownership-images-grid" style="display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto); grid-auto-columns: 1fr; gap: 2px; margin: 1rem 0;"></div>
           <h3>We're sharing 100% of our company's ownership with people who help the open source ecosystem succeed</h3>
           <div class="text-content">
               <p>Aside from investor dilution, open source contributors will own all of our company. We believe that a company that's built with the community should belong to the community.</p>
