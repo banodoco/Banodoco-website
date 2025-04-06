@@ -405,10 +405,60 @@ hr.section-divider:not(:first-of-type) {
     }
 }
 
+/* Tablet Styles for Community Grid */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .community-images-grid {
+        grid-template-columns: repeat(5, 1fr) !important; /* 5 columns */
+    }
+    .community-images-grid > img:nth-child(n+11) {
+        display: none !important; /* Hide images after the 10th (5x2) */
+    }
+}
+
 @media (max-width: 480px) {
     .ownership-images-grid {
         /* Further adjust for smaller screens */
         grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)) !important;
         aspect-ratio: 1.5/1 !important;
     }
+}
+
+/* Mobile & Tablet override for ADOS card image height and centering */
+@media (max-width: 1024px) { /* Increased max-width to cover tablets */
+  .card[data-category="ados"] .image-hover-container {
+    height: 116px !important;
+    max-height: none !important;
+    position: relative !important; /* Crucial for absolute children */
+    overflow: hidden !important; /* Hide parts outside bounds */
+    /* Make container span full card width, ignoring padding */
+    width: calc(100% + 3rem) !important; /* Card padding is 1.5rem each side */
+    margin-left: -1.5rem !important;
+    margin-right: -1.5rem !important;
+    /* Keep bottom margin */
+    margin-bottom: 1rem !important;
+    /* Ensure border-radius is only applied top-left/top-right */
+    border-radius: 4px 4px 0 0 !important; 
+  }
+  .card[data-category="ados"] .image-hover-container > div[style*="padding-top"] {
+    display: none !important;
+  }
+  .card[data-category="ados"] .image-hover-container .static-image,
+  .card[data-category="ados"] .image-hover-container .hover-gif {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center center !important;
+    /* No border-radius needed here; container handles it */
+    border-radius: 0 !important; 
+    
+    /* Clean up previous attempts */
+    right: auto !important;
+    bottom: auto !important;
+    margin: 0 !important;
+  }
+
+  /* Remove CSS hover fallback - rely on JS */
 }

@@ -298,7 +298,7 @@ export function initializeBndcSquiggles(containerId) {
              const baseSpriteYPosition = bubbleOriginalCenterY + bubbleHeight * 0.1; // Base Y
              const spriteYPosition = baseSpriteYPosition - 5; // Shift down 5px
              const baseSpriteXPosition = bubbleOriginalCenterX - (bubbleWidth / 2) * 0.8; // Base X (start near left-center of original bubble)
-             const spriteXPosition = baseSpriteXPosition + 80; // Shift 40px right (25 + 15)
+             const spriteXPosition = baseSpriteXPosition + 85; // Shift 90px right
 
              bubbleTextSprite.position.set(spriteXPosition, spriteYPosition, 1);
              scene.add(bubbleTextSprite);

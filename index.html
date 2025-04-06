@@ -1030,37 +1030,13 @@
               </div>
           </div>
       </div>
-      
-      <!-- Divider -->
-      <!-- <hr class="section-divider"> -->
-      
-      <!-- Mellon Section -->
-      <!-- <div class="content-section">
-          <h2>Coming soon: Mellon aims to bring the capabalities that the open source AI art ecosystem produces to the world</h2>
-          
-          <div class="two-column">
-              <div class="text-column">
-                                    
-                  <p style="margin-bottom: 2rem;">Every day, new capabilities are added to the ecosystem across Diffusers, ComfyUI, and random repos. With Mellon, our goal is to make these capabilities accessible - with a user experience that's easy to understand and use.</p>
-                  <p style="margin-bottom: 1rem;">We believe that a tool that's designed with artistic expression in mind that the community can build on top of will hugely expand access to open source AI, therefore extending the creative potential of the ecosystem.</p>
-                  <div class="links" style="display: flex; gap: 1rem; align-items: center;">
-                      <a href="#" style="color: inherit;">Visit Github</a>                                            
-                  </div>
-              </div>
-              <div class="image-column">
-                  <div class="image-placeholder">
-                      <span>Mellon Platform Visualization</span>
-                  </div>
-              </div>
-          </div>
-      </div> -->
-      
+
       <!-- Divider -->
       <hr class="section-divider">
       
       <!-- Open Source Section -->
       <div class="content-section">
-          <h2>We're driving an interlocking series of activities to help the open source AI art ecosystem thrive</h2>
+          <h2>We're driving an interlocking series of activities to help the ecosystem succeed and grow</h2>
           
           <!-- <div class="highlight-box">
               <h3>The power of open collaboration</h3>
@@ -1079,7 +1055,7 @@
                   <p>Our community has been on the cutting-edge of the open source AI art over the past two years.</p>
               </div>
               <div class="links" style="margin-top: 1rem;">
-                  <a href="https://discord.com/invite/acg8aNBTxd" style="color: inherit;">Join our community</a>
+                  <a href="https://discord.com/invite/acg8aNBTxd" style="color: inherit;">Visit our community</a>
               </div>
           </div>
 
@@ -1093,7 +1069,7 @@
                     <p>We want OpenMuse to become a place full of hand-picked resources that you can trust.</p>
                   </div>
                   <div class="links" style="margin-top: 1rem;">
-                    <a href="https://openmuse.ai/" style="color: inherit;">Read More</a>
+                    <a href="https://openmuse.ai/" style="color: inherit;">Learn more</a>
                   </div>
                 </div>
               </div>
@@ -1132,8 +1108,8 @@
                 <p>Our goal is that he can help the community function better and use its collected knowledge to assist you.</p>
             </div>
             <div class="links" style="margin-top: 1rem;">
-              <a href="https://discord.gg/NnFxGvx94b" style="color: inherit;">Check out summaries</a>
-              <span style="margin: 0 0.5rem;">|</span> <a href="https://github.com/peteromallet/hivemind/" style="color: inherit; margin-left: 0rem;">Check out code</a>
+              <a href="https://discord.gg/NnFxGvx94b" style="color: inherit;">View summaries</a>
+              <span style="margin: 0 0.5rem;">|</span> <a href="https://github.com/peteromallet/hivemind/" style="color: inherit; margin-left: 0rem;">See code</a>
           </div>
           </div>
 
@@ -1175,7 +1151,7 @@
       <hr class="section-divider">
       <!-- Header Section -->
       <div class="content-section" id="ownership-intro-section" style="margin-bottom: 1.5rem;">
-          <h2>We want to build a community-driven company that's symbiotic with the open source ecosystem</h2>
+          <h2>We're building a community-driven company that's symbiotic with the open source ecosystem</h2>
       </div>
       
       <!-- Full Width Ownership Card -->
@@ -1399,6 +1375,26 @@
             } else {
               console.log('Already at start, no need for fixed-step reverse.');
               reverseAnimationId = null; // Ensure ID is null
+            }
+          });
+
+          // --- Add click/touch listener for mobile playback ---
+          renaissanceContainer.addEventListener('click', () => {
+            console.log('Container clicked/tapped');
+            // Stop any reverse animation if it's running
+            if (reverseAnimationId) {
+              cancelAnimationFrame(reverseAnimationId);
+              reverseAnimationId = null;
+              console.log('Cancelled reverse animation on click');
+            }
+            // Toggle play/pause
+            if (renaissanceVideo.paused) {
+              console.log('Video paused, playing on click');
+              renaissanceVideo.playbackRate = 1; // Ensure forward playback
+              renaissanceVideo.play().catch(e => console.error('Error playing video on click:', e));
+            } else {
+              console.log('Video playing, pausing on click');
+              renaissanceVideo.pause();
             }
           });
 
