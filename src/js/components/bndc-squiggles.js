@@ -22,18 +22,18 @@ export function initializeBndcSquiggles(containerId) {
     let smallShapes = []; // Store small shape line objects
     let speechBubble = null; // Store speech bubble line object
     let bubbleTextSprite = null; // Store text sprite object
-    let targetText = "How can I help you?"; // Store the target text
+    let targetText = "Helllooo...what's up?"; // Store the target text
     let bubbleTotalPoints = 0; // Store total points for drawRange animation
     let currentTextLength = 0; // Track how much text is visible
     let writingStartTime = 0; // Track when writing begins
-    let writingSpeed = 20; // Characters per second
+    let writingSpeed = 8; // Characters per second
 
     // Animation state variables
     let animationFrameId = null;
     let clock = new THREE.Clock();
     let animationState = 'idle'; // 'idle', 'shapesFading', 'bubbleAppearing', 'bubbleWriting', 'bubbleFading', 'shapesAppearing'
     let transitionProgress = 0;
-    const transitionDuration = 0.4; // Duration of fade/appear in seconds
+    const transitionDuration = 0.2; // Duration of fade/appear in seconds
 
     function init() {
         scene = new THREE.Scene();
