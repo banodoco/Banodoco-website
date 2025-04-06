@@ -1119,7 +1119,7 @@
               </div>
               <h3>ADOS bring together artists and engineers from the community in the real world</h3>
               <div class="text-content">
-                  <p>Step for a few days into a utopia in which everything turns out beautifully.</p>
+                  <p>Step for a few days into a utopia in which humanity's relationship with AI turns out beautifully.</p>
               </div>
               <div class="links" style="margin-top: 1rem;">
                   <a href="https://lu.ma/user/usr-dktOQDdKt2eNzn1" style="color: inherit;">Check out previous events</a>
@@ -1129,7 +1129,9 @@
           <!-- Card X: BNDC Video -->
           <div class="card" data-category="placeholder"> <!-- Removed background style here -->
               <div style="background-color: #f8f8f8; border-radius: 6px 6px 0 0; margin-bottom: 1rem;"> <!-- Added wrapper div with background and top border radius -->
-                  <video src="assets/bndc/1.webm" muted playsinline style="display: block; border-radius: 6px 6px 0 0; /* Keep top radius */ margin-bottom: 0; /* Remove bottom margin */ aspect-ratio: 1 / 1; object-fit: contain; height: 116px; margin-right: auto; position: relative; z-index: 10; margin-left: 75px;">
+                  <video muted playsinline style="display: block; border-radius: 6px 6px 0 0; margin-bottom: 0; aspect-ratio: 1 / 1; object-fit: contain; height: 116px; margin-right: auto; position: relative; z-index: 10; margin-left: 75px;">
+                      <source src="assets/bndc/1.webm" type="video/webm">
+                      <source src="assets/bndc/1.mov" type="video/quicktime">
                       Your browser does not support the video tag.
                   </video>
                   <div id="bndc-squiggle-canvas-container" style="/* Styles for squiggle container if needed, like height */"></div>
@@ -1187,7 +1189,7 @@
       
       <!-- Full Width Ownership Card -->
       <div class="card life-tile" data-category="life" data-position="1" style="width: 100%; margin-bottom: 4rem;">
-          <div class="ownership-images-grid" style="display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto); grid-auto-columns: 1fr; gap: 2px; margin: 1rem 0;"></div>
+          <div class="ownership-images-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 2px; margin: 1rem 0; aspect-ratio: 3/1;"></div>
           <h3>We're sharing 100% of our company's ownership with people who help the open source ecosystem succeed</h3>
           <div class="text-content">
               <p>Aside from investor dilution, open source contributors will own all of our company. We believe that a company that's built with the community should belong to the community.</p>

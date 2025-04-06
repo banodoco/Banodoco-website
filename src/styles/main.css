@@ -354,3 +354,37 @@ hr.section-divider:not(:first-of-type) {
   width: 100%;
   height: 100%;
 }
+
+/* Ownership grid mobile styles */
+@media (max-width: 768px) {
+    .ownership-images-grid {
+        aspect-ratio: 2/1 !important;
+        grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)) !important;
+    }
+    
+    .ownership-images-grid img,
+    .ownership-images-grid div {
+        aspect-ratio: 1/1;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+@media (max-width: 480px) {
+    .ownership-images-grid {
+        aspect-ratio: 1.5/1 !important;
+        grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)) !important;
+    }
+}
+
+/* Mobile override for ADOS card image height */
+@media (max-width: 768px) {
+  .card[data-category="ados"] .image-hover-container {
+    height: 116px !important;
+    max-height: none !important;
+  }
+  .card[data-category="ados"] .image-hover-container > div[style*="padding-top"] {
+    display: none !important;
+  }
+}

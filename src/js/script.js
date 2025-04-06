@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
     
                         const video = document.createElement('video');
-                        video.src = 'assets/ados_video/intro.mov'; 
+                        video.src = 'https://banodoco.s3.us-east-1.amazonaws.com/intro.mov'; 
                         video.controls = true;
                         video.autoplay = true;
                         video.style.maxWidth = '100%';
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
     
                     const video = document.createElement('video');
-                    video.src = 'assets/ados_video/intro.mov'; // <<-- Might need different src for other cards
+                    video.src = 'https://banodoco.s3.us-east-1.amazonaws.com/intro.mov'; // <<-- Might need different src for other cards
                     video.controls = true;
                     video.autoplay = true;
                     // ... (rest of video setup copied from above) ...
