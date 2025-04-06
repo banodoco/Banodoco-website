@@ -5,8 +5,8 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "build": "cp -r src/js js && cp -r src/assets assets && cp -r src/styles styles && cp -r src/data data && cp -r src/pages pages",
-    "dev": "npm run build && npm start"
+    "build": "echo 'No build step needed - files are already in place'",
+    "dev": "npm start"
   },
   "dependencies": {
     "express": "^4.18.2"

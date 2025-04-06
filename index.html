@@ -11,8 +11,8 @@
       }
     }
     </script>
-    <link rel="icon" href="assets/images/b-t.png" type="image/png">
-    <link rel="shortcut icon" href="assets/images/b-t.png" type="image/png">
+    <link rel="icon" href="assets/logos/banodoco.png" type="image/png">
+    <link rel="shortcut icon" href="assets/logos/banodoco.png" type="image/png">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -171,6 +171,7 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0);
             z-index: 1;
+            pointer-events: none; /* Allow hover events to pass through */
         }
         /* Main text and images layout */
         .main-text-images {
@@ -304,67 +305,145 @@
             }
         }
         
+        /* Combined Mobile Styles (768px and below) */
         @media (max-width: 768px) {
+            /* Original rule from first media query block */
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            /* Rules from second media query block (with overrides) */
             .ecosystem-visualization {
                 width: 100% !important;
                 min-width: auto !important;
                 margin-left: 0 !important;
                 margin-right: 0 !important;
-                margin-top: -20px !important;
-                margin-bottom: 0 !important;
-                transform: none !important;
+                margin-top: -20px !important; /* Override from later block */
+                margin-bottom: 0 !important; /* Override from later block */
+                transform: none !important; /* Override from later block */
             }
             #legend {
-                bottom: 5px !important;  /* Decreased further to move it down more */
-                right: 20px !important;
-                padding: 8px !important;
+                bottom: 5px !important;  /* Moved down 10px */
+                right: 15px !important; /* Adjusted right position slightly */
+                padding: 6px !important; /* Reduced padding */
             }
-
-            /* Adjust spacing for hero section on mobile */
+            /* Added styles for smaller legend items */
+            .legend-item {
+                margin-bottom: 5px !important; /* Reduced bottom margin */
+            }
+            .legend-line {
+                width: 30px !important; /* Reduced width */
+                height: 4px !important; /* Reduced height */
+                margin-right: 6px !important; /* Reduced margin */
+                border-radius: 2px !important; /* Adjusted radius */
+            }
+            .legend-label {
+                font-size: 0.75rem !important; /* Reduced font size */
+            }
+            /* End added styles */
             .hero-title + p {
                 margin-bottom: 1rem !important;
             }
-
-            /* Add margin to section divider and content section */
             .section-divider + .content-section {
-                margin-top: 2rem !important;  /* Reduced from 5rem */
+                margin-top: 2rem !important;
             }
-            
             .section-divider:first-of-type {
-                margin-top: 7rem !important;
+                margin-top: 5rem !important; /* Reduced top margin significantly */
             }
-
             .two-column .ecosystem-visualization {
                 width: calc(100% + 2rem) !important;
                 height: 550px !important;
                 margin-left: -1rem !important;
                 margin-right: -1rem !important;
-                margin-top: -60px !important;
-                margin-bottom: -50px !important;
+                margin-top: -80px !important;
+                margin-bottom: -60px !important;
                 overflow: hidden;
                 position: relative;
                 transform: scale(0.95);
                 transform-origin: center top;
             }
-
             .content-section {
                 margin: 2rem 0;
             }
-
             .site-header {
                 padding: 1rem 0.5rem;
             }
-
             .site-header img {
                 width: 35px;
                 margin-left: 0;
                 margin-right: 0.5rem;
             }
-
-            /* Adjust node labels for better mobile visibility */
             .node-label {
                 font-size: 0.7rem !important;
                 padding: 2px 6px !important;
+            }
+            
+            /* Make h2 smaller on mobile */
+            h2 {
+                font-size: 1.5rem !important; 
+                margin-bottom: 1.2rem !important; /* Optional: adjust margin */
+            }
+
+            /* Rules from third media query block */
+            .community-images-grid {
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 4px !important;
+            }
+            .community-images-grid > img:nth-child(n+9) {
+                display: none;
+            }
+            .community-images-grid img {
+                aspect-ratio: 1/1 !important;
+                height: auto !important;
+                object-fit: cover !important;
+                opacity: 1 !important;
+            }
+            .community-images-grid img.shine-effect::after {
+                display: none !important;
+            }
+            .ownership-images-grid {
+                grid-auto-flow: row !important;
+                grid-template-columns: repeat(6, 1fr) !important;
+                grid-template-rows: auto !important;
+                grid-auto-columns: unset !important;
+            }
+            .ownership-images-grid > div:nth-child(n+25) {
+                display: none;
+            }
+
+            /* Rules from Mellon Card media query block */
+            .card[data-category="mellon"] {
+                flex-direction: column !important;
+                gap: 1rem !important;
+                min-height: auto !important;
+                align-items: stretch;
+            }
+            .card[data-category="mellon"] > #mellon-animation-container {
+                order: -1;
+                flex: none !important;
+                margin-left: -1rem;
+                margin-right: -1rem;
+                width: calc(100% + 2rem);
+                max-width: calc(100% + 2rem);
+                min-height: 250px;
+                margin-bottom: 1rem;
+                box-sizing: border-box;
+            }
+            .card[data-category="mellon"] > .text-column {
+                order: 0;
+                flex: none !important;
+                width: 100% !important;
+            }
+            .dashboard .card[data-category="mellon"] {
+                grid-column: auto !important;
+            }
+
+            /* Ensure BNDC links are underlined on mobile */
+            .card[data-category="placeholder"] .links a {
+                text-decoration: underline !important;
+            }
+            .card[data-category="placeholder"] .links a:after {
+                display: none !important; /* Hide custom underline */
             }
         }
         
@@ -373,14 +452,14 @@
                 height: 450px !important;
                 margin-top: -100px !important;
                 transform: scale(0.9);
-                margin-bottom: -80px;
+                margin-bottom: -60px !important;
             }
 
             .two-column .ecosystem-visualization {
                 height: 450px !important;
-                margin-top: -100px !important;
+                margin-top: -120px !important;
                 transform: scale(0.9);
-                margin-bottom: -80px !important;
+                margin-bottom: -55px !important;
             }
 
             .content-section {
@@ -388,7 +467,7 @@
             }
 
             #legend {
-                bottom: 0px !important;  /* Pushed all the way to the bottom */
+                bottom: 5px !important;  /* Moved down 10px */
                 right: 20px !important;
             }
         }
@@ -438,34 +517,194 @@
 
 
         /* Updated media query for smaller screens */
-        @media (max-width: 768px) {
-          .community-images-grid {
-            grid-template-columns: repeat(4, 1fr) !important;
-            gap: 4px !important;
-          }
-          .community-images-grid > img:nth-child(n+9) {
-            display: none;
-          }
-          .community-images-grid img {
-            aspect-ratio: 1/1 !important;
-            height: auto !important;
-            object-fit: cover !important;
-            opacity: 1 !important;
-          }
-          .community-images-grid img.shine-effect::after {
-            display: none !important;
-          }
-          .ownership-images-grid {
-            grid-template-columns: repeat(8, 1fr) !important;
-          }
-          .ownership-images-grid > div:nth-child(n+33) {
-            display: none;
-          }
+        /* @media (max-width: 768px) { ... } */ /* REMOVED - Consolidated above */
+
+        /* New styles for split-left card layout */
+        .card.card-split-left {
+          display: flex !important; /* Force flex display */
+          padding: 0 !important; /* Remove default card padding */
+          align-items: stretch; /* Make columns equal height */
         }
+        
+        .card.card-split-left > .content-left {
+          flex: 0 0 50%; /* Occupy left 50% */
+          display: flex;
+          flex-direction: column; /* Stack video and text vertically */
+          background-color: #fff; /* Optional: background for left side */
+          border-radius: 8px 0 0 8px; /* Match card rounding on left */
+        }
+        
+        .card.card-split-left > .content-right {
+          flex: 0 0 50%; /* Occupy right 50% */
+          background-color: #f8f8f8; /* Optional: distinct background for right */
+          border-radius: 0 8px 8px 0; /* Match card rounding on right */
+        }
+        
+        .card.card-split-left .content-left video {
+          width: 100%; 
+          min-height: 117px; 
+          display: block; 
+          border-radius: 8px 0 0 0; /* Only top-left corner rounded */
+          object-fit: cover;
+          background-color: #f8f8f8; /* Background for video area */
+          margin-bottom: 0; /* Remove default margin */
+        }
+        
+        .card.card-split-left .content-left h3 {
+          padding: 1rem; /* Add padding around the text */
+          margin: 0; /* Remove default margin */
+          font-size: 1.1rem; /* Adjust font size if needed */
+          line-height: 1.4; /* Adjust line height */
+          flex-grow: 1; /* Allow text area to fill remaining space */
+        }
+
+        /* Add styles for the sneak peek button */
+        .sneak-peek-button {
+            position: absolute;
+            top: 0px; /* Adjusted position */
+            right: 16px;
+            padding: 6px 12px;
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: 1px solid rgba(200, 200, 220, 0.3);
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            z-index: 100; /* Increased z-index */
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            backdrop-filter: blur(5px);
+        }
+
+        .sneak-peek-button:hover {
+            background-color: rgba(255, 255, 255, 1);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+        /* End sneak peek button styles */
+
+        /* Styles for Sneak Peek Content */
+        .sneak-peek-content {
+            /* Positioning */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%; /* Cover the container */
+            height: 100%;
+            z-index: 50; /* Ensure it's above animation but below button */
+
+            /* Appearance & Layout */
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 3rem; /* Increased gap */
+            padding: 1.5rem;
+            box-sizing: border-box;
+            border-radius: 6px; /* Match container */
+
+            /* Initial Hidden State & Transition */
+            opacity: 0;
+            pointer-events: none; /* Don't intercept clicks when hidden */
+            transition: opacity 0.4s ease-out;
+        }
+
+        /* Visible State */
+        .sneak-peek-content.visible {
+            opacity: 1;
+            pointer-events: auto; /* Allow clicks when visible */
+        }
+
+        .sneak-peek-unit {
+            position: relative;
+            flex: 1;
+            max-width: 60%; /* Increased max-width */
+            transition: transform 0.5s ease-out; /* Add transition for the unit itself */
+        }
+
+        .sneak-peek-unit img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .sneak-peek-item.text-item {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(200, 200, 220, 0.3);
+            border-radius: 4px;
+            padding: 0.5rem 0.8rem;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+            font-size: 0.8rem;
+            line-height: 1.4;
+            text-align: left;
+            max-width: 60%;
+            backdrop-filter: blur(4px);
+        }
+
+        .sneak-peek-item.text-item-1 {
+            top: 10px;
+            left: 10px;
+        }
+
+        .sneak-peek-item.text-item-2 {
+            bottom: 10px;
+            right: 10px;
+        }
+
+        /* Initial states for elements INSIDE the container */
+        .sneak-peek-content .sneak-peek-unit.unit-1 img {
+            transform: translateY(-30px); /* Increased distance */
+            opacity: 0;
+            transition: transform 0.6s ease-out, opacity 0.6s ease-out; /* Increased duration */
+        }
+        .sneak-peek-content .sneak-peek-unit.unit-1 .text-item-1 {
+            transform: translateY(-10px); /* Start closer to final position */
+            opacity: 0;
+            transition: transform 0.6s ease-out, opacity 0.6s ease-out; /* Increased duration */
+        }
+        .sneak-peek-content .sneak-peek-unit.unit-2 img {
+            transform: translateY(30px); /* Increased distance */
+            opacity: 0;
+            transition: transform 0.6s ease-out, opacity 0.6s ease-out; /* Increased duration */
+        }
+        .sneak-peek-content .sneak-peek-unit.unit-2 .text-item-2 {
+            transform: translateY(10px); /* Start closer to final position */
+            opacity: 0;
+            transition: transform 0.6s ease-out, opacity 0.6s ease-out; /* Increased duration */
+        }
+
+        /* Final states when container is visible */
+        .sneak-peek-content.visible .sneak-peek-unit img {
+            /* Image final state remains translateY(0) relative to its shifted unit */
+            transform: translateY(0);
+            opacity: 1;
+        }
+        /* Set specific final positions for text items */
+        .sneak-peek-content.visible .sneak-peek-unit.unit-1 .text-item-1 {
+            transform: translateY(-40px); /* Original final position */
+            opacity: 1;
+        }
+        .sneak-peek-content.visible .sneak-peek-unit.unit-2 .text-item-2 {
+            transform: translateY(40px); /* Original final position */
+            opacity: 1;
+        }
+        
+        /* Re-apply the original unit shifts in the final visible state */
+        .sneak-peek-content.visible .sneak-peek-unit.unit-1 {
+            transform: translateY(-15px);
+        }
+        .sneak-peek-content.visible .sneak-peek-unit.unit-2 {
+            transform: translateY(15px);
+        }
+        /* End Sneak Peek Content Styles */
     </style>
     <style>
       body {
-        transition: background-color 2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        /* Removed transition to prevent color snapping on mobile tab resume */
+        /* transition: background-color 2s cubic-bezier(0.25, 0.1, 0.25, 1); */
         background-color: #f2f2ff;
         animation: backgroundCycle 40s ease-in-out infinite;
         animation-delay: 2s; /* Add delay to initial animation */
@@ -588,11 +827,11 @@
         height: 1px;
         bottom: -1px;
         left: 0;
-        background-color: currentColor;
+        background-color: rgba(51, 51, 51, 0.3); /* Lighter underline using RGBA */
         transform: scaleX(1);
         transform-origin: bottom center;
-        transition: transform 0.3s ease, opacity 0.3s ease;
-        opacity: 0.7;
+        transition: transform 0.3s ease, opacity 0.3s ease, background-color 0.3s ease; /* Added background-color transition */
+        opacity: 1; /* Use RGBA for transparency, keep opacity 1 */
       }
       
       /* Hover animation for links */
@@ -603,6 +842,7 @@
       a:hover:after {
         transform: scaleX(0.8);
         opacity: 1;
+        background-color: rgba(83, 83, 165, 0.6); /* Lighter hover underline using RGBA */
       }
       
       /* Special styling for side panel links */
@@ -613,13 +853,15 @@
       .side-window a:after {
         height: 1px;
         bottom: 0;
-        background-color: #ccc;
+        background-color: rgba(204, 204, 204, 0.5); /* Lighter gray underline */
         transform: scaleX(1);
+        transition: transform 0.3s ease, opacity 0.3s ease, background-color 0.3s ease; /* Added background-color transition */
       }
       
       .side-window a:hover:after {
         transform: scaleX(0.8);
         opacity: 1;
+        background-color: rgba(204, 204, 204, 0.8); /* Slightly darker gray on hover */
       }
       
 
@@ -688,13 +930,58 @@
           height: auto;
         }
       }
+
+      /* Default styles for Mellon card (desktop) */
+      .card[data-category="mellon"] {
+          display: flex;
+          flex-direction: row;
+          gap: 1.5rem;
+          align-items: stretch;
+          min-height: 250px; /* Maintain min-height for desktop */
+      }
+
+      /* Add new styles for Mellon card on mobile */
+      @media (max-width: 768px) {
+          .card[data-category="mellon"] {
+              flex-direction: column !important; /* Stack vertically */
+              gap: 1rem !important; /* Adjust vertical gap */
+              min-height: auto !important; /* Remove fixed height */
+              align-items: stretch; /* Ensure children stretch */
+          }
+
+          .card[data-category="mellon"] > #mellon-animation-container {
+              order: -1; /* Move animation to the top */
+              flex: none !important; /* Override flex properties */
+              /* Make wider than parent card padding */
+              margin-left: -1rem; 
+              margin-right: -1rem;
+              width: calc(100% + 2rem); /* Adjust width to account for negative margins */
+              max-width: calc(100% + 2rem); /* Explicit max-width */
+              min-height: 250px; /* Set a reasonable min-height for the animation */
+              margin-bottom: 1rem; /* Add space below animation */
+              box-sizing: border-box; /* Include padding/border in width */
+          }
+
+          .card[data-category="mellon"] > .text-column {
+              order: 0; /* Ensure text is below */
+              flex: none !important; /* Override flex properties */
+              width: 100% !important; /* Make it full width */
+          }
+      }
+      /* End Mellon card mobile styles */
+
+      /* Remove top margin specifically for Mellon card's h3 */
+      .card[data-category="mellon"] .text-column h3 {
+        margin-top: 0;
+      }
+      /* End Mellon card mobile styles */
     </style>
     <!-- Insert Safari specific override for #legend positioning -->
     <style>
     @supports (-webkit-overflow-scrolling: touch) {
       #legend {
         right: 10px !important;
-        bottom: 40px !important;  /* Added bottom position */
+        bottom: 5px !important;  /* Moved down 10px */
       }
     }
     </style>
@@ -704,28 +991,15 @@
       #legend {
         right: 10px !important;
         left: auto !important;
-        bottom: 40px !important;  /* Added bottom position */
+        bottom: 5px !important;  /* Moved down 10px */
       }
     }
     </style>
-    <!-- Mobile overrides for ecosystem container and legend positioning -->
+    <!-- Added style to prevent black flicker on mobile by setting canvas background -->
     <style>
-    @media (max-width: 768px) {
-      .ecosystem-visualization {
-        width: 100% !important;
-        min-width: auto !important;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        margin-top: -20px !important;
-        margin-bottom: 0 !important;
-        transform: none !important;
+      #plantCanvas {
+        background-color: #f2f2ff;
       }
-      #legend {
-        bottom: 5px !important;  /* Decreased further to move it down more */
-        right: 20px !important;
-        padding: 8px !important;
-      }
-    }
     </style>
 </head>
 <body>
@@ -746,8 +1020,8 @@
       <div class="content-section">
           <div class="two-column" style="margin-top: 3rem; align-items: center;">
               <div class="text-column" style="margin-top: -35px; flex: 1.2; max-width: 600px;">
-                  <h1 class="hero-title" style="text-align: left; margin-left: 0; max-width: 100%;">Tools and resources to help the open source AI art ecosystem thrive</h1>
-                  <p style="margin-bottom: 2rem;">We're building tools, a culture and an economic foundation that enable and reward open collaboration in the AI art ecosystem. More coming soon.</p>
+                  <h1 class="hero-title" style="text-align: left; margin-left: 0; max-width: 100%;">Tools & resources to help the open source AI art ecosystem thrive</h1>
+                  <p style="margin-bottom: 2rem;">We're building tools, nurturing a culture, and shaping an economic foundation with the goal of inspiring and rewarding open collaboration in the AI art ecosystem. More coming soon.</p>                
               </div>
               <div class="ecosystem-visualization" style="flex-grow: 1.5; min-width: 500px; margin-left: -50px; margin-top: -80px;">
 
@@ -795,7 +1069,7 @@
       
       <!-- Open Source Section -->
       <div class="content-section">
-          <h2>We're building a community-driven company that aims to empower the open source ecosystem to unlock its potential</h2>
+          <h2>We're building an interlocking series of things - all driven to help open source ecosystem to unlock its potential</h2>
           
           <!-- <div class="highlight-box">
               <h3>The power of open collaboration</h3>
@@ -808,9 +1082,8 @@
       <div class="dashboard" style="margin-bottom: 4rem;">
           <!-- Card 1: Community -->
           <div class="card story-tile" data-category="story" data-position="7">
-  
-              <div class="community-images-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin: 1rem 0;"></div>
-              <h3>Our community that aims to capture the best of the open source AI art ecosystem</h3>
+              <div class="community-images-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin-bottom: 1rem;"></div>
+              <h3>The Banodoco community is a meeting point for people from across the ecosystem</h3>
               <div class="text-content">
                   <p>Our community has been on the cutting-edge of the open source AI art over the past two years.</p>
               </div>
@@ -819,17 +1092,108 @@
               </div>
           </div>
 
-          <!-- Card 2: Ownership -->
-          <div class="card life-tile" data-category="life" data-position="1">
-
-              <div class="ownership-images-grid" style="display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; margin: 1rem 0;"></div>
-              <h3>We're sharing 100% of our company's ownership with people who help the open source ecosystem thrive</h3>
-              <div class="text-content">
-                <p>Aside from investor dilution, open source contributors will own all of our company.</p>
-            </div>
-              <div class="links" style="margin-top: 1rem;">
-                  <a href="pages/ownership.html" style="color: inherit;">Learn how it works</a>
+          <!-- Card 2: OpenMuse -->
+          <div class="card" data-category="openmuse">
+              <div class="col-lg-6">
+                <div class="box">
+                  <img src="assets/logos/openmuse.png" alt="OpenMuse Logo" style="height: 116px; max-width: 100%; object-fit: contain; margin-bottom: 10px;">
+                  <h3>OpenMuse is a curated collection of resources for open video models</h3>
+                  <div class="text-content">
+                    <p>We want OpenMuse to become a place full of hand-picked resources that you can trust.</p>
+                  </div>
+                  <div class="links" style="margin-top: 1rem;">
+                    <a href="https://openmuse.ai/" style="color: inherit;">Read More</a>
+                  </div>
+                </div>
               </div>
+          </div>
+
+          <!-- Card 3: ADOS -->
+          <div class="card" data-category="ados">
+              <div class="image-hover-container" style="position: relative; width: 100%; max-height: 200px; margin-bottom: 1rem; border-radius: 4px; overflow: hidden;">
+                <img src="assets/ados_video/first_frame.png" alt="Abstract visual representing the ADOS ecosystem" class="static-image" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+                <img src="assets/ados_video/preview.gif" alt="Animated preview of the ADOS ecosystem" class="hover-gif" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
+                <!-- Placeholder div to maintain container height -->
+                <div style="padding-top: 23.54%;"></div> <!-- Aspect ratio: 226 / 917 * 100% -->
+                <button class="watch-video-button">Watch intro video</button>
+              </div>
+              <h3>ADOS bring together artists and engineers from the community in the real world</h3>
+              <div class="text-content">
+                  <p>Step for a few days into a utopia in which everything turns out beautifully.</p>
+              </div>
+              <div class="links" style="margin-top: 1rem;">
+                  <a href="https://lu.ma/user/usr-dktOQDdKt2eNzn1" style="color: inherit;">Check out previous events</a>
+              </div>
+          </div>
+
+          <!-- Card X: BNDC Video -->
+          <div class="card" data-category="placeholder"> <!-- Removed background style here -->
+              <div style="background-color: #f8f8f8; border-radius: 6px 6px 0 0; margin-bottom: 1rem;"> <!-- Added wrapper div with background and top border radius -->
+                  <video src="assets/bndc/1.webm" muted playsinline style="display: block; border-radius: 6px 6px 0 0; /* Keep top radius */ margin-bottom: 0; /* Remove bottom margin */ aspect-ratio: 1 / 1; object-fit: contain; height: 116px; margin-right: auto; position: relative; z-index: 10; margin-left: 75px;">
+                      Your browser does not support the video tag.
+                  </video>
+                  <div id="bndc-squiggle-canvas-container" style="/* Styles for squiggle container if needed, like height */"></div>
+              </div>
+              <h3>BNDC is a friendly robot that answers questions & helps out around the community</h3>
+              <div class="text-content">
+                <p>Our goal is that he can help the community function better and use its collected knowledge to assist you.</p>
+            </div>
+            <div class="links" style="margin-top: 1rem;">
+              <a href="https://discord.gg/NnFxGvx94b" style="color: inherit;">Check out summaries</a>
+              <span style="margin: 0 0.5rem;">|</span> <a href="https://github.com/peteromallet/hivemind/" style="color: inherit; margin-left: 0rem;">Check out code</a>
+          </div>
+          </div>
+
+          <!-- Card 4: Mellon -->
+          <!--
+          <div class="card" data-category="mellon" style="grid-column: span 2;">
+              <div class="text-column" style="flex: 1 1 33%;">
+                  <h3>Coming soon: Mellon aims to unlock the artistic potential of the open source AI art ecosystem</h3>
+                  <div class="text-content">
+                      <p>Mellon will allow the community to combine the capabilities in the ecosystem and build and share tools that make them accessible and unlock their artistic potential.</p>
+                  </div>
+                  <div class="links" style="margin-top: 1rem;">
+                      <a href="#" style="color: inherit;">Visit Github</a>
+                  </div>
+              </div>
+              <div id="mellon-animation-container" class="mellon-animation-host" style="flex: 1 1 67%; min-height: 200px; position: relative; border-radius: 6px; background-color: #f8f8f8;">
+                  
+                  <button class="sneak-peek-button">Take a sneak peek</button>
+                  <div class="sneak-peek-content">
+                      <div class="sneak-peek-unit unit-1">
+                          <img src="data:image/svg+xml,%3Csvg width='390' height='208' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='390' height='208' style='fill:rgb(211,211,211);stroke-width:0;' /%3E%3C/svg%3E" alt="Placeholder Image 1">
+                          <div class="sneak-peek-item text-item text-item-1">
+                              <p>Build/share tools that combine diffusers, ComfyUI workflows, & more.</p>
+                          </div>
+                      </div>
+                      <div class="sneak-peek-unit unit-2">
+                          <img src="data:image/svg+xml,%3Csvg width='390' height='208' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='390' height='208' style='fill:rgb(211,211,211);stroke-width:0;' /%3E%3C/svg%3E" alt="Placeholder Image 2">
+                          <div class="sneak-peek-item text-item text-item-2">
+                              <p>Create workflows natively on top of the 50,000+ diffusers repos. </p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          -->
+      </div>
+      
+      <!-- Divider -->
+      <hr class="section-divider">
+      <!-- Header Section -->
+      <div class="content-section" style="margin-bottom: 1.5rem;">
+          <h2>We want to build a community-driven company that's symbiotic with the open source ecosystem - for us to thrive, the ecosystem must thrive</h2>
+      </div>
+      
+      <!-- Full Width Ownership Card -->
+      <div class="card life-tile" data-category="life" data-position="1" style="width: 100%; margin-bottom: 4rem;">
+          <div class="ownership-images-grid" style="display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto); grid-auto-columns: 1fr; gap: 2px; margin: 1rem 0;"></div>
+          <h3>We're sharing 100% of our company's ownership with people who help the open source ecosystem succeed</h3>
+          <div class="text-content">
+              <p>Aside from investor dilution, open source contributors will own all of our company. We believe that a company that's built with the community should belong to the community.</p>
+          </div>
+          <div class="links" style="margin-top: 1rem;">
+              <a href="pages/ownership.html" style="color: inherit;">Learn how it works</a>
           </div>
       </div>
       
@@ -847,7 +1211,14 @@
         </div>
         <div class="image-column" style="width: 40%; margin-top: 10px;">
             <div class="styled-image-box">
-                <img src="https://www.schlupfloch.xyz/content/images/size/w2000/2025/02/Group-2--14--4c552dc74e6827a2.png" alt="Open Source Ecosystem">
+                <video id="renaissance-video" 
+                       poster="assets/2nd_Renaissance/first_frame.png" 
+                       src="assets/2nd_Renaissance/the_creation.mp4"  /* Changed src to original video */
+                       muted 
+                       playsinline 
+                       style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    Your browser does not support the video tag.
+                </video>
             </div>
         </div>
       </div>
@@ -860,6 +1231,7 @@
     <script src="src/js/components/plant-animation.js" type="module"></script>
     <script src="src/js/components/ecosystem.js" type="module"></script>
     <script src="src/js/components/grid-animations.js"></script>
+    <script src="src/js/components/mellon-animation.js" type="module"></script>
     <!-- iOS Safari legend positioning fix -->
     <script>
       if (/iP(hone|od|ad)/.test(navigator.platform)) {
@@ -891,6 +1263,161 @@
             feather.replace();
           }
         });
+    </script>
+
+    <!-- Video Lightbox Structure -->
+    <div id="video-lightbox" class="video-lightbox-styles">
+      <button class="close-lightbox" aria-label="Close video">&times;</button>
+      <div id="lightbox-content" class="lightbox-content-styles">
+        <div class="lightbox-title">ADOS - Paris, 2025 - Intro Video</div>
+        <!-- Video will be inserted here by JS -->
+      </div>
+    </div>
+
+    <script>
+      const bndcCard = document.querySelector('.card[data-category="placeholder"]');
+      const bndcVideo = bndcCard.querySelector('video');
+
+      bndcCard.addEventListener('mouseenter', () => {
+        bndcVideo.play();
+      });
+
+      bndcCard.addEventListener('mouseleave', () => {
+        bndcVideo.pause();
+        bndcVideo.currentTime = 0; // Optional: Reset video to start
+      });
+    </script>
+    <script type="module">
+      import { initializeBndcSquiggles } from './src/js/components/bndc-squiggles.js';
+      initializeBndcSquiggles('bndc-squiggle-canvas-container');
+    </script>
+
+    <!-- <script type="module">
+      // Import text suppression functions
+      import { suppressMellonText, unsuppressMellonText } from './src/js/components/mellon-animation.js';
+
+      // Sneak Peek Button Logic
+      const sneakPeekButton = document.querySelector('.sneak-peek-button');
+      const mellonAnimationContainer = document.getElementById('mellon-animation-container');
+      const sneakPeekContent = mellonAnimationContainer ? mellonAnimationContainer.querySelector('.sneak-peek-content') : null; // Added null check
+
+      // Initial state assumes sneak peek is hidden
+      let isSneakPeekVisible = false; 
+
+      // Add check to ensure button and container exist
+      if (sneakPeekButton && mellonAnimationContainer && sneakPeekContent) { 
+          sneakPeekButton.addEventListener('click', () => {
+            if (!isSneakPeekVisible) {
+              // --- Show Sneak Peek Overlay ---
+              sneakPeekContent.classList.add('visible');
+              suppressMellonText(mellonAnimationContainer); // Suppress text
+
+              // Update button text and state
+              sneakPeekButton.textContent = 'Hide sneak peek';
+              isSneakPeekVisible = true;
+
+            } else {
+              // --- Hide Sneak Peek Overlay ---
+              sneakPeekContent.classList.remove('visible');
+              unsuppressMellonText(mellonAnimationContainer); // Unsuppress text
+
+              // Update button text and state
+              sneakPeekButton.textContent = 'Take a sneak peek';
+              isSneakPeekVisible = false;
+            }
+          });
+      } else {
+          console.warn("Mellon sneak peek elements not found, disabling button logic.");
+          if (sneakPeekButton) {
+              // Optionally hide or disable the button if its container isn't found
+              sneakPeekButton.style.display = 'none'; 
+          }
+      }
+    </script> -->
+
+    <!-- Add script for Renaissance video hover effect -->
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM loaded, attempting to set up Renaissance video hover');
+        const renaissanceVideo = document.getElementById('renaissance-video');
+        const renaissanceContainer = renaissanceVideo ? renaissanceVideo.closest('.styled-image-box') : null;
+        
+        let reverseAnimationId = null; // Variable to hold animation frame ID
+        // We don't need reverseStartTime or targetReverseStartTime for this fixed-step approach
+
+        if (renaissanceVideo && renaissanceContainer) {
+          console.log('Found Renaissance video and container, adding listeners.');
+
+          // --- Animation function for reversing with fixed step ---
+          const reverseStep = () => {
+            const step = 1 / 60; // Fixed time step for ~60fps reverse
+            const newTime = renaissanceVideo.currentTime - step;
+
+            if (newTime <= 0) {
+              console.log('Fixed-step reverse finished.');
+              renaissanceVideo.currentTime = 0;
+              reverseAnimationId = null; 
+            } else {
+              renaissanceVideo.currentTime = newTime;
+              reverseAnimationId = requestAnimationFrame(reverseStep);
+            }
+          };
+
+          // --- Pause when video ends playing forward ---
+          const handleEnded = () => {
+            if (renaissanceVideo.playbackRate > 0) { // Check if it ended playing forward
+              console.log('Forward playback ended, pausing.');
+              renaissanceVideo.pause();
+            }
+          };
+
+          // --- Play forward on hover ---
+          renaissanceContainer.addEventListener('mouseenter', () => {
+            console.log('Mouse entered: Playing forward');
+            // Stop any reverse animation if it's running
+            if (reverseAnimationId) {
+              cancelAnimationFrame(reverseAnimationId);
+              reverseAnimationId = null;
+              console.log('Cancelled reverse animation on enter');
+            }
+            
+            renaissanceVideo.playbackRate = 1; // Ensure forward playback speed
+            // If paused, start playing. DO NOT reset time here.
+            if (renaissanceVideo.paused) {
+              // renaissanceVideo.currentTime = 0; // REMOVED THIS LINE
+            }
+            renaissanceVideo.play().catch(e => console.error('Error playing forward video:', e));
+          });
+
+          // --- Play reverse smoothly using fixed-step animation on de-hover ---
+          renaissanceContainer.addEventListener('mouseleave', () => {
+            console.log('Mouse left: Starting fixed-step reverse');
+            renaissanceVideo.pause(); // Pause immediately
+            
+            // Stop any previous reverse animation request
+            if (reverseAnimationId) {
+              cancelAnimationFrame(reverseAnimationId);
+              console.log('Cancelled previous reverse animation on leave');
+            }
+            
+            // Start the reverse animation only if not already at the start
+            if (renaissanceVideo.currentTime > 0) {
+              reverseAnimationId = requestAnimationFrame(reverseStep);
+            } else {
+              console.log('Already at start, no need for fixed-step reverse.');
+              reverseAnimationId = null; // Ensure ID is null
+            }
+          });
+
+          // Attach listeners
+          renaissanceVideo.addEventListener('ended', handleEnded);
+
+        } else {
+          console.error('Could not find Renaissance video or its container.');
+          if (!renaissanceVideo) console.error('renaissanceVideo element not found');
+          if (!renaissanceContainer) console.error('renaissanceContainer element not found');
+        }
+      });
     </script>
 </body>
 </html> 

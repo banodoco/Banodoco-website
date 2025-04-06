@@ -256,7 +256,7 @@ async function initializeOwnershipGrid() {
       const usedIndices = new Set();
       const ownershipDisplayed = new Set();
 
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 102; i++) {
         let randomIndex;
         do {
           randomIndex = Math.floor(Math.random() * imageFiles.length);
@@ -286,7 +286,7 @@ async function initializeOwnershipGrid() {
         wrapper.appendChild(img);
         container.appendChild(wrapper);
         
-        if (usedIndices.size >= imageFiles.length && i < 99) {
+        if (usedIndices.size >= imageFiles.length && i < 101) {
           usedIndices.clear();
         }
       }
@@ -296,7 +296,7 @@ async function initializeOwnershipGrid() {
   } catch (error) {
     console.error('Error loading profile pics list:', error);
     const container = document.querySelector('.ownership-images-grid');
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 102; i++) {
       createPastelSvg(container);
     }
   }

@@ -926,8 +926,10 @@ export function runEcosystem(appendToEl = document.body) {
 
     controls.update();
     renderer.render(scene, camera);
-    // Update label positions once per frame
-    updateNodeLabelPositions();
+    // Update label positions once per frame - CHANGED: Update only every 10 frames
+    if (animationFrame % 10 === 0) {
+      updateNodeLabelPositions();
+    }
   }
 
   // ---------------------------------------------------------------------

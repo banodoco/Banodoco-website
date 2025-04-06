@@ -153,19 +153,204 @@ body {
   }
 }
 
-
-
 /* Section Divider */
 hr.section-divider {
   border: none !important;
   border-top: 2px solid rgba(204, 204, 204, 0.2) !important;
-  margin: 2rem auto !important;
+  /* Default margin for all dividers (including the first) */
+  margin: 2rem auto !important; 
   width: 90% !important;
   display: block !important;
 }
 
+/* Override full margin for subsequent dividers */
+hr.section-divider:not(:first-of-type) {
+  /* Reduced top, keep auto left/right, keep default bottom */
+  margin: 1rem auto 2rem auto !important; 
+}
+
 @media (max-width: 768px) {
   hr.section-divider {
+    /* Default mobile margin */
     margin: 1.5rem auto !important;
   }
+  /* Override full margin for subsequent dividers on mobile */
+  hr.section-divider:not(:first-of-type) {
+    /* Reduced top, keep auto left/right, keep default mobile bottom */
+    margin: 0.75rem auto 1.5rem auto !important; 
+  }
+}
+
+/* Styles for image hover effect (e.g., ADOS card) */
+.image-hover-container {
+  /* Container styles are mostly set inline in HTML, but ensure position is relative */
+  position: relative;
+  cursor: pointer; /* Indicate clickable area */
+}
+
+.image-hover-container .static-image,
+.image-hover-container .hover-gif {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px; /* Match container rounding */
+  /* Removed transition and backface-visibility for immediate switch */
+  z-index: 1; /* Keep images above button initially */
+}
+
+/* Initially show static, hide GIF */
+.image-hover-container .static-image {
+  display: block;
+}
+.image-hover-container .hover-gif {
+  display: none;
+}
+
+/* :hover rules removed - JavaScript now handles this */
+
+/* Ensure the placeholder div doesn't interfere visually */
+.image-hover-container > div[style*='padding-top'] {
+  position: relative; /* Needed for stacking context */
+  z-index: -1; /* Put it behind the images */
+}
+
+/* Watch Video Button Styles */
+.watch-video-button {
+  position: absolute;
+  top: 50%; /* Center vertically */
+  left: 50%; /* Center horizontally */
+  transform: translate(-50%, -50%); /* Adjust for element size */
+  padding: 8px 15px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease, transform 0.3s ease;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  z-index: 2; /* Ensure button is above images */
+}
+
+/* Add hover effect for the button */
+.watch-video-button:hover {
+  background-color: rgba(0, 0, 0, 0.9); /* Darken background slightly */
+  transform: translate(-50%, -50%) scale(1.05); /* Combine translate with scale */
+}
+
+.image-hover-container:hover .watch-video-button {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Lightbox Styles */
+.video-lightbox-styles {
+  display: none; /* Initially hidden */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  z-index: 1000;
+  display: flex; /* Keep display:flex for alignment */
+  align-items: center; /* Vertical centering */
+  justify-content: center; /* Horizontal centering */
+  padding: 20px;
+  box-sizing: border-box;
+  opacity: 0; /* Start hidden for transition */
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease; /* Add transition */
+}
+
+.lightbox-title { /* New rule for the title */
+  position: absolute;
+  top: 9px; /* Position relative to content area */
+  left: 35px; /* Increased position relative to content area */
+  color: white;
+  font-size: 1rem;
+  font-family: 'Inter', sans-serif;
+  z-index: 1001;
+  opacity: 1; /* Start visible */
+  transition: opacity 0.5s ease-out; /* Add transition for fade */
+}
+
+/* Class to trigger fade out */
+.lightbox-title.fade-out {
+  opacity: 0;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+#video-lightbox.show {
+  /* display: flex; Replaced by opacity/visibility */
+  opacity: 1;
+  visibility: visible;
+}
+
+.close-lightbox {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  font-size: 40px;
+  line-height: 1;
+  color: white;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.lightbox-content-styles {
+  position: relative; /* Added for title positioning context */
+  max-width: 90%;
+  max-height: 90%;
+  /* Removed width/height auto, let flexbox handle sizing */
+  display: flex; /* Add flex to center the video inside */
+  align-items: center;
+  justify-content: center;
+}
+
+#lightbox-content video {
+  max-width: 100%;
+  max-height: 100%; /* Ensure video doesn't exceed container */
+  display: block; /* Keep block for sizing */
+}
+
+/* Styling for BNDC squiggle canvas container */
+.card[data-category="placeholder"] {
+  position: relative; /* Needed for absolute positioning of children */
+}
+
+#bndc-squiggle-canvas-container {
+  position: absolute;
+  top: 1.5rem; /* Align with top padding */
+  left: 1.5rem; /* Align with left padding */
+  right: 1.5rem; /* Align with right padding */
+  width: calc(100% - 3rem); /* Full width minus padding */
+  height: 116px; /* Match video height */
+  pointer-events: none; /* Allow hovering over card */
+  z-index: 1; /* Ensure it's above background, below text if needed */
+  overflow: hidden; /* Hide parts of animation outside bounds */
+  /* Add split background */
+  background: linear-gradient(to right, 
+    rgba(248, 248, 248, 0) 0%,   /* Transparent start */
+    rgba(248, 248, 248, 0) 50%,  /* Transparent up to midpoint */
+    rgba(248, 248, 248, 1) 50%,  /* Solid #f8f8f8 from midpoint */
+    rgba(248, 248, 248, 1) 100% /* Solid #f8f8f8 to end */
+  );
+}
+
+#bndc-squiggle-canvas-container canvas {
+  display: block; /* Ensure canvas fills container */
+  width: 100%;
+  height: 100%;
 }
