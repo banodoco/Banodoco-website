@@ -384,12 +384,11 @@ hr.section-divider:not(:first-of-type) {
         
         /* Apply responsive mobile grid layout */
         grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)) !important;
-        aspect-ratio: 2/1 !important; 
+        aspect-ratio: 2/1 !important;
     }
     
     .ownership-images-grid img,
     .ownership-images-grid div {
-        aspect-ratio: 1/1;
         width: 100%;
         height: 100%;
         object-fit: cover;
@@ -415,6 +414,17 @@ hr.section-divider:not(:first-of-type) {
     }
 }
 
+/* Desktop Styles for Community Grid - Added */
+@media (min-width: 1025px) {
+  .community-images-grid img {
+    max-height: 59px; /* Limit the max height of images */
+    height: auto;     /* Allow height to adjust naturally up to the max */
+    /* width: 100%; already set by JS */
+    /* object-fit: cover; already set by JS */
+  }
+}
+/* End Added Desktop Styles */
+
 @media (max-width: 480px) {
     .ownership-images-grid {
         /* Further adjust for smaller screens */
@@ -431,9 +441,9 @@ hr.section-divider:not(:first-of-type) {
     position: relative !important; /* Crucial for absolute children */
     overflow: hidden !important; /* Hide parts outside bounds */
     /* Make container span full card width, ignoring padding */
-    width: calc(100% + 3rem) !important; /* Card padding is 1.5rem each side */
-    margin-left: -1.5rem !important;
-    margin-right: -1.5rem !important;
+    width: 100% !important; /* Reset width to fill parent's content area */
+    margin-left: 0 !important; /* Reset left margin */
+    margin-right: 0 !important; /* Reset right margin */
     /* Keep bottom margin */
     margin-bottom: 1rem !important;
     /* Ensure border-radius is only applied top-left/top-right */

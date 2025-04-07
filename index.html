@@ -1055,7 +1055,7 @@
                   <p>Our community has been on the cutting-edge of the technical and artistic scenes over the past two years.</p>
               </div>
               <div class="links" style="margin-top: 1rem;">
-                  <a href="https://discord.com/invite/acg8aNBTxd" style="color: inherit;">Visit our community</a>
+                  <a href="https://discord.com/invite/acg8aNBTxd" style="color: inherit;">Visit community</a>
               </div>
           </div>
 
@@ -1089,7 +1089,7 @@
                   <p>At ADOS, you can step for a few days into a utopia in which humanity's relationship with AI turns out beautifully.</p>
               </div>
               <div class="links" style="margin-top: 1rem;">
-                  <a href="https://lu.ma/user/usr-dktOQDdKt2eNzn1" style="color: inherit;">Check out previous events</a>
+                  <a href="https://lu.ma/user/usr-dktOQDdKt2eNzn1" style="color: inherit;">See previous events</a>
               </div>
           </div>
 
@@ -1109,7 +1109,7 @@
             </div>
             <div class="links" style="margin-top: 1rem;">
               <a href="https://discord.gg/NnFxGvx94b" style="color: inherit;">View summaries</a>
-              <span style="margin: 0 0.5rem;">|</span> <a href="https://github.com/peteromallet/hivemind/" style="color: inherit; margin-left: 0rem;">See code</a>
+              <span style="margin: 0 0.5rem;">|</span> <a href="https://github.com/peteromallet/hivemind/" style="color: inherit; margin-left: 0rem;">Check out code</a>
           </div>
           </div>
 
@@ -1246,12 +1246,25 @@
     <script>
       const bndcCard = document.querySelector('.card[data-category="placeholder"]');
       const bndcVideo = bndcCard.querySelector('video');
+      let playTimeoutId = null; // Variable to hold the timeout ID
 
       bndcCard.addEventListener('mouseenter', () => {
-        bndcVideo.play();
+        // Clear any previous timeout to prevent multiple plays
+        if (playTimeoutId) {
+          clearTimeout(playTimeoutId);
+        }
+        // Set a delay before playing
+        playTimeoutId = setTimeout(() => {
+          bndcVideo.play();
+        }, 150); // 150ms delay
       });
 
       bndcCard.addEventListener('mouseleave', () => {
+        // Clear the timeout if the mouse leaves before video starts
+        if (playTimeoutId) {
+          clearTimeout(playTimeoutId);
+          playTimeoutId = null;
+        }
         bndcVideo.pause();
         bndcVideo.currentTime = 0; // Optional: Reset video to start
       });

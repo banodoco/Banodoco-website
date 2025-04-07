@@ -27,13 +27,14 @@ export function initializeBndcSquiggles(containerId) {
     let currentTextLength = 0; // Track how much text is visible
     let writingStartTime = 0; // Track when writing begins
     let writingSpeed = 8; // Characters per second
+    let writingHasBegun = false; // Flag to track if typing should start
 
     // Animation state variables
     let animationFrameId = null;
     let clock = new THREE.Clock();
     let animationState = 'idle'; // 'idle', 'shapesFading', 'bubbleAppearing', 'bubbleWriting', 'bubbleFading', 'shapesAppearing'
     let transitionProgress = 0;
-    const transitionDuration = 0.2; // Duration of fade/appear in seconds
+    const transitionDuration = 0.8; // Duration of fade/appear in seconds
 
     function init() {
         scene = new THREE.Scene();
@@ -404,19 +405,33 @@ export function initializeBndcSquiggles(containerId) {
             transitionProgress = 1.0 - transitionProgress;
         } else {
             // Start a new transition
-            transitionProgress = 0;
-            // Reset text length if starting bubble appearance
-            if(newState === 'bubbleAppearing') {
+            transitionProgress = 0; // Reset transition progress for the new state
+
+            // Handle state-specific setup ONLY if it's a true start, not a continuation
+
+            if (newState === 'bubbleAppearing') {
+                // Resetting when the bubble starts appearing
                 currentTextLength = 0;
-                // Ensure text texture is cleared initially for the writing effect
-                 if (bubbleTextSprite && bubbleTextSprite.material.map?.image) updateTextTexture("");
-             }
-             // Reset writing start time when entering writing state
-             if (newState === 'bubbleWriting') {
-                 writingStartTime = clock.getElapsedTime();
-                 currentTextLength = 0; // Reset internal counter too
-             }
+                writingHasBegun = false; // Crucial reset
+                if (bubbleTextSprite && bubbleTextSprite.material.map?.image) {
+                    updateTextTexture(""); // Clear texture
+                }
+            } else if (newState === 'bubbleWriting') {
+                // Only reset time/length if we *weren't* already writing during bubbleAppearing
+                if (!writingHasBegun) { 
+                    writingStartTime = clock.getElapsedTime();
+                    currentTextLength = 0;
+                    if (bubbleTextSprite && bubbleTextSprite.material.map?.image) {
+                         updateTextTexture(""); // Clear texture if starting fresh
+                    }
+                }
+                 // Ensure flag is true when entering this state regardless
+                 writingHasBegun = true;
+            }
+            // Other state initializations could go here...
         }
+
+        // Set the new state
         animationState = newState;
         startAnimationLoop(); // Ensure loop is running
     }
@@ -525,33 +540,71 @@ export function initializeBndcSquiggles(containerId) {
             } else if (animationState === 'bubbleAppearing') {
                  if (speechBubble) {
                      speechBubble.visible = true; // Make sure it's visible
-                     // Animate drawRange instead of scale/opacity for the line
+                     // Animate drawRange until complete
                      const count = Math.ceil(lerp(0, bubbleTotalPoints, transitionProgress));
                      speechBubble.geometry.setDrawRange(0, count);
-                     speechBubble.material.opacity = 1; // Keep opacity 1 while drawing
-                     speechBubble.scale.set(1, 1, 1); // Keep scale normal
+                     speechBubble.material.opacity = 1;
+                     speechBubble.scale.set(1, 1, 1);
                  }
 
-                 // Make text sprite object visible, but keep text content empty for now
+                 // Make text sprite visible and fade in
                  if(bubbleTextSprite) {
                      bubbleTextSprite.visible = true;
-                     bubbleTextSprite.material.opacity = lerp(0, 1, transitionProgress);
+                     // Fade in opacity, but let writing logic override to 1 later if needed
+                     if (!writingHasBegun) {
+                        bubbleTextSprite.material.opacity = lerp(0, 1, transitionProgress);
+                     }
                  }
+
+                 // Check if it's time to start writing
+                 if (!writingHasBegun && transitionProgress >= 0.0) { // Start writing immediately
+                     writingHasBegun = true;
+                     writingStartTime = clock.getElapsedTime();
+                     currentTextLength = 0; // Reset text length counter
+                     // Ensure text texture is empty initially when writing starts mid-draw
+                     if (bubbleTextSprite && bubbleTextSprite.material.map?.image) {
+                        updateTextTexture("");
+                        bubbleTextSprite.material.map.image.__currentText = "";
+                     }
+                 }
+
+                 // If writing has started, handle text updates here
+                 if (writingHasBegun) {
+                     const elapsedWritingTime = clock.getElapsedTime() - writingStartTime;
+                     let charsToShow = Math.min(Math.floor(elapsedWritingTime * writingSpeed), targetText.length);
+                     currentTextLength = charsToShow;
+
+                     if (bubbleTextSprite && bubbleTextSprite.material.map?.image) {
+                         const expectedText = targetText.substring(0, charsToShow);
+                         if (bubbleTextSprite.material.map.image.__currentText !== expectedText) {
+                             updateTextTexture(expectedText);
+                             bubbleTextSprite.material.map.image.__currentText = expectedText;
+                         }
+                     }
+                      // Ensure text sprite opacity snaps to 1 once writing starts
+                      if (bubbleTextSprite && bubbleTextSprite.material.opacity < 1) {
+                          bubbleTextSprite.material.opacity = 1;
+                      }
+                 }
+
+                 // Check if bubble drawing is finished
                  if (transitionProgress >= 1) {
-                     // Reset progress for next potential transition step if needed elsewhere
-                     // transitionProgress = 0; // Not strictly needed if next state handles its own timing
-                     startTransition('bubbleWriting'); // Transition to writing state
+                    // Bubble is drawn. Check if writing is also finished.
+                    const isWritingFinished = currentTextLength >= targetText.length;
+                    if (isWritingFinished) {
+                        animationState = 'idle'; // Both done, go idle
+                    } else {
+                        // Bubble done, but writing continues. Transition to dedicated writing state.
+                        // Note: writingStartTime and currentTextLength are already set correctly.
+                        startTransition('bubbleWriting');
+                    }
                  }
             } else if (animationState === 'bubbleWriting') {
-                 // Calculate elapsed time since writing started
+                 // This state now ONLY handles continuing writing if it didn't finish during bubbleAppearing
                  const elapsedWritingTime = clock.getElapsedTime() - writingStartTime;
-
-                 // Calculate how many characters should be visible based on elapsed time
                  let charsToShow = Math.min(Math.floor(elapsedWritingTime * writingSpeed), targetText.length);
-
-                 // Internal tracker (optional, but can be useful)
                  currentTextLength = charsToShow;
-                 
+
                  // Only update texture if the text content changes
                  if (bubbleTextSprite && bubbleTextSprite.material.map?.image) {
                       const expectedText = targetText.substring(0, charsToShow);
@@ -561,8 +614,8 @@ export function initializeBndcSquiggles(containerId) {
                       }
                  }
 
-                 // Ensure text sprite opacity is 1 after writing starts/finishes
-                 if (bubbleTextSprite.material.opacity < 1) {
+                 // Ensure text sprite opacity is 1
+                 if (bubbleTextSprite && bubbleTextSprite.material.opacity < 1) {
                      bubbleTextSprite.material.opacity = 1;
                  }
 
