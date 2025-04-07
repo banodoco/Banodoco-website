@@ -59,18 +59,19 @@
       font-family: 'Space Mono', monospace;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       max-width: 40%;
+      height: auto !important;
     }
     .stacked-right {
       float: right;
       clear: right;
       margin: 0 0 1rem 1rem;
-      max-width: 50%;
+      max-width: 45%;
     }
     .stacked-left {
       float: left;
       clear: left;
       margin: 0 1rem 1rem 0;
-      max-width: 50%;
+      max-width: 45%;
     }
     .image-placeholder:not(.stacked-right):not(.stacked-left) {
       margin: 2rem auto;
@@ -204,7 +205,18 @@
         width: 70% !important;
     }
 
+    /* Ensure images scale correctly within placeholders */
+    .image-placeholder img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+    }
 
+    /* Override external styles for image-placeholder on ownership page */
+    .container .image-placeholder {
+        display: block !important;
+        height: auto !important;
+    }
 
     /* Keyframes for the shaking animation */
     @keyframes shake {
@@ -212,7 +224,6 @@
         25% { transform: translateX(calc(-50% + 10px)) rotate(-5deg); }
         75% { transform: translateX(calc(-50% + 10px)) rotate(5deg); }
     }
-
 
     @keyframes dropHorizontal {
         0% {
@@ -240,7 +251,19 @@
             transform: scale(0.8) rotate(-45deg);
         }
     }
- 
+
+    /* Add clearfix for content-section to clear floated image elements */
+    .content-section::after {
+        content: "";
+        display: table;
+        clear: both;
+    }
+
+    /* Override hero-title styling to align with the text */
+    .ownership-page .hero-title {
+      margin: 2rem 0 2rem 0 !important;
+      text-align: left !important;
+    }
 
   </style>
   <style>
@@ -252,8 +275,25 @@
     }
 
   </style>
+  <style>
+    .ownership-page .image-placeholder {
+        height: auto !important;
+        display: block !important;
+    }
+  </style>
+  <style>
+    /* Additional overrides for ownership page to force proper sizing of image placeholders */
+    .ownership-page .image-placeholder,
+    .ownership-page .stacked-right,
+    .ownership-page .stacked-left {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        display: block !important;
+    }
+  </style>
 </head>
-<body>
+<body class="ownership-page">
   <canvas id="plantCanvas"></canvas>
   <div class="plant-overlay"></div>
   <div class="container" style="position: relative;">

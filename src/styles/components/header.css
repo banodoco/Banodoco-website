@@ -59,4 +59,7 @@
   .site-header {
     transform: translateX(-10px);
   }
+  .site-header img {
+    margin-left: 0px;
+  }
 } 

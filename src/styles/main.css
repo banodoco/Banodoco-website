@@ -1,474 +1,1244 @@
+/* ===== main.css ===== */
+
 /* Base Reset */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 /* Global Styles */
 body {
-    position: relative;
-    min-height: 100vh;
-    background-color: #fbf8ef;
-    overflow-x: hidden;
-    font-family: 'Space Mono', 'Roboto Mono', monospace;
-    color: #333;
-    line-height: 1.6;
-    padding: 0 4rem 2rem 4rem;
+  position: relative;
+  min-height: 100vh;
+  background-color: #fbf8ef;
+  overflow-x: hidden;
+  font-family: 'Space Mono', 'Roboto Mono', monospace;
+  color: #333;
+  line-height: 1.6;
+  padding: 0 4rem 2rem 4rem;
 }
 
 /* Container & Inner Border */
 .container {
-    position: relative;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding-top: 2rem;
-    padding-bottom: 1.5rem;
-    z-index: 1;
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-top: 2rem;
+  padding-bottom: 1.5rem;
+  z-index: 1;
 }
 
 .inner-border {
-    position: fixed;
-    top: 20px;
-    left: 40px;
-    right: 40px;
-    bottom: 40px;
-    /* Removed the border property */
-    /* border: 1px solid rgba(200, 200, 220, 0.5); */
-    box-shadow: none;
-    pointer-events: none;
-    z-index: 0;
+  position: fixed;
+  top: 20px;
+  left: 40px;
+  right: 40px;
+  bottom: 40px;
+  /* Removed the border property */
+  /* border: 1px solid rgba(200, 200, 220, 0.5); */
+  box-shadow: none;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* Site Header */
 .site-header {
-    display: flex;
-    align-items: center;
-    padding: 1rem 0;
+  display: flex;
+  align-items: center;
+  padding: 1rem 0;
 }
 .site-header img {
-    width: 40px; /* Adjust as needed */
-    height: auto;
-    margin-right: 0.5rem;
+  width: 40px; /* Adjust as needed */
+  height: auto;
+  margin-right: 0.5rem;
 }
 .site-header .site-title {
-    font-size: 1.5rem;
-    font-weight: bold;
+  font-size: 1.5rem;
+  font-weight: bold;
 }
 
 /* Main Text & Images Section */
 .main-text-images {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin: 2rem 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 2rem 0;
 }
 .main-text-images .main-text {
-    flex: 1;
-    text-align: left;
-    padding-right: 2rem;
+  flex: 1;
+  text-align: left;
+  padding-right: 2rem;
 }
 .main-text-images .images-container {
-    width: 300px; /* Adjust as needed */
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+  width: 300px; /* Adjust as needed */
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 .main-text-images .images-container img {
-    width: 100%;
-    height: auto;
-    display: block;
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 /* Dashboard Grid for Cards */
 .dashboard {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
-    margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-top: 1rem;
 }
 @media (max-width: 768px) {
-    .dashboard {
-        grid-template-columns: 1fr;
-    }
+  .dashboard {
+      grid-template-columns: 1fr;
+  }
 }
 
 /* Card Styles */
 .card {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(200, 200, 220, 0.3);
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    transition: transform 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    min-height: 340px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(200, 200, 220, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 340px;
 }
 .card:hover {
-    transform: scale(1.02);
+  transform: scale(1.02);
 }
 
 /* Image Container inside Cards */
 .image-container {
-    position: relative;
-    width: 100%;
-    height: 0;
-    padding-bottom: 50%; /* Aspect ratio 2:1 */
-    margin-bottom: 1rem;
-    overflow: hidden;
-    border-radius: 6px;
-    background-color: #f5f5f5;
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 50%; /* Aspect ratio 2:1 */
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border-radius: 6px;
+  background-color: #f5f5f5;
 }
 .image-container img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s ease, filter 0.5s ease;
-    filter: grayscale(20%);
-}
-.card:hover .image-container img {
-    filter: grayscale(0%);
-    transform: scale(1.05);
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    body {
-        padding: 0.25rem 1rem 1rem;
-    }
-    .container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-}
-
-/* Mobile fix to prevent horizontal overflow */
-@media (max-width: 768px) {
-  body {
-    overflow-x: hidden;
-  }
-}
-
-/* Section Divider */
-hr.section-divider {
-  border: none !important;
-  border-top: 2px solid rgba(204, 204, 204, 0.2) !important;
-  /* Default margin for all dividers (including the first) */
-  margin: 2rem auto !important; 
-  width: 90% !important;
-  display: block !important;
-}
-
-/* Override full margin for subsequent dividers */
-hr.section-divider:not(:first-of-type) {
-  /* Reduced top, keep auto left/right, keep default bottom */
-  margin: 1rem auto 2rem auto !important; 
-}
-
-@media (max-width: 768px) {
-  hr.section-divider {
-    /* Default mobile margin */
-    margin: 1.5rem auto !important;
-  }
-  /* Override full margin for subsequent dividers on mobile */
-  hr.section-divider:not(:first-of-type) {
-    /* Reduced top, keep auto left/right, keep default mobile bottom */
-    margin: 0.75rem auto 1.5rem auto !important; 
-  }
-}
-
-/* Styles for image hover effect (e.g., ADOS card) */
-.image-hover-container {
-  /* Container styles are mostly set inline in HTML, but ensure position is relative */
-  position: relative;
-  cursor: pointer; /* Indicate clickable area */
-}
-
-.image-hover-container .static-image,
-.image-hover-container .hover-gif {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 4px; /* Match container rounding */
-  /* Removed transition and backface-visibility for immediate switch */
-  z-index: 1; /* Keep images above button initially */
+  transition: transform 0.5s ease, filter 0.5s ease;
+  filter: grayscale(20%);
+}
+.card:hover .image-container img {
+  filter: grayscale(0%);
+  transform: scale(1.05);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  body {
+      padding: 0.25rem 1rem 1rem;
+  }
+  .container {
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+  }
+}
+
+/* Mobile fix to prevent horizontal overflow */
+@media (max-width: 768px) {
+body {
+  overflow-x: hidden;
+}
+}
+
+/* Section Divider */
+hr.section-divider {
+border: none !important;
+border-top: 2px solid rgba(204, 204, 204, 0.2) !important;
+/* Default margin for all dividers (including the first) */
+margin: 2rem auto !important; 
+width: 90% !important;
+display: block !important;
+}
+
+/* Override full margin for subsequent dividers */
+hr.section-divider:not(:first-of-type) {
+/* Reduced top, keep auto left/right, keep default bottom */
+margin: 1rem auto 2rem auto !important; 
+}
+
+@media (max-width: 768px) {
+hr.section-divider {
+  /* Default mobile margin */
+  margin: 1.5rem auto !important;
+}
+/* Override full margin for subsequent dividers on mobile */
+hr.section-divider:not(:first-of-type) {
+  /* Reduced top, keep auto left/right, keep default mobile bottom */
+  margin: 0.75rem auto 1.5rem auto !important; 
+}
+}
+
+/* Styles for image hover effect (e.g., ADOS card) */
+.image-hover-container {
+position: relative;
+cursor: pointer; /* Indicate clickable area */
+}
+
+.image-hover-container .static-image,
+.image-hover-container .hover-gif {
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+object-fit: cover;
+border-radius: 4px; /* Match container rounding */
+z-index: 1; /* Keep images above button initially */
 }
 
 /* Initially show static, hide GIF */
 .image-hover-container .static-image {
-  display: block;
+display: block;
 }
 .image-hover-container .hover-gif {
-  display: none;
+display: none;
 }
 
-/* :hover rules removed - JavaScript now handles this */
+/* :hover rules removed - now handled by JS */
 
 /* Ensure the placeholder div doesn't interfere visually */
 .image-hover-container > div[style*='padding-top'] {
-  position: relative; /* Needed for stacking context */
-  z-index: -1; /* Put it behind the images */
+position: relative;
+z-index: -1;
 }
 
 /* Watch Video Button Styles */
 .watch-video-button {
-  position: absolute;
-  top: 50%; /* Center vertically */
-  left: 50%; /* Center horizontally */
-  transform: translate(-50%, -50%); /* Adjust for element size */
-  padding: 8px 15px;
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease, transform 0.3s ease;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9rem;
-  z-index: 2; /* Ensure button is above images */
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+padding: 8px 15px;
+background-color: rgba(0, 0, 0, 0.7);
+color: white;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+opacity: 0;
+visibility: hidden;
+transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease,
+  transform 0.3s ease;
+font-family: 'Inter', sans-serif;
+font-size: 0.9rem;
+z-index: 2;
 }
-
-/* Add hover effect for the button */
 .watch-video-button:hover {
-  background-color: rgba(0, 0, 0, 0.9); /* Darken background slightly */
-  transform: translate(-50%, -50%) scale(1.05); /* Combine translate with scale */
+background-color: rgba(0, 0, 0, 0.9);
+transform: translate(-50%, -50%) scale(1.05);
 }
-
 .image-hover-container:hover .watch-video-button {
-  opacity: 1;
-  visibility: visible;
+opacity: 1;
+visibility: visible;
 }
 
 /* Lightbox Styles */
 .video-lightbox-styles {
-  display: none; /* Initially hidden */
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.85);
-  z-index: 1000;
-  display: flex; /* Keep display:flex for alignment */
-  align-items: center; /* Vertical centering */
-  justify-content: center; /* Horizontal centering */
-  padding: 20px;
-  box-sizing: border-box;
-  opacity: 0; /* Start hidden for transition */
-  visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0.3s ease; /* Add transition */
+display: none; /* Initially hidden */
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background-color: rgba(0, 0, 0, 0.85);
+z-index: 1000;
+display: flex; /* For alignment */
+align-items: center;
+justify-content: center;
+padding: 20px;
+box-sizing: border-box;
+opacity: 0; /* Start hidden for transition */
+visibility: hidden;
+transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.lightbox-title { /* New rule for the title */
-  position: absolute;
-  top: 9px; /* Position relative to content area */
-  left: 35px; /* Increased position relative to content area */
-  color: white;
-  font-size: 1rem;
-  font-family: 'Inter', sans-serif;
-  z-index: 1001;
-  opacity: 1; /* Start visible */
-  transition: opacity 0.5s ease-out; /* Add transition for fade */
+.lightbox-title {
+position: absolute;
+top: 9px;
+left: 35px;
+color: white;
+font-size: 1rem;
+font-family: 'Inter', sans-serif;
+z-index: 1001;
+opacity: 1;
+transition: opacity 0.5s ease-out;
 }
-
-/* Class to trigger fade out */
 .lightbox-title.fade-out {
+opacity: 0;
+}
+@keyframes fadeOut {
+from {
+  opacity: 1;
+}
+to {
   opacity: 0;
 }
-
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
 }
 
 #video-lightbox.show {
-  /* display: flex; Replaced by opacity/visibility */
-  opacity: 1;
-  visibility: visible;
+opacity: 1;
+visibility: visible;
 }
 
 .close-lightbox {
-  position: absolute;
-  top: 20px;
-  right: 30px;
-  font-size: 40px;
-  line-height: 1;
-  color: white;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-weight: bold;
+position: absolute;
+top: 20px;
+right: 30px;
+font-size: 40px;
+line-height: 1;
+color: white;
+background: none;
+border: none;
+cursor: pointer;
+font-weight: bold;
 }
 
 .lightbox-content-styles {
-  position: relative; /* Added for title positioning context */
-  max-width: 90%;
-  max-height: 90%;
-  /* Removed width/height auto, let flexbox handle sizing */
-  display: flex; /* Add flex to center the video inside */
-  align-items: center;
-  justify-content: center;
+position: relative; 
+max-width: 90%;
+max-height: 90%;
+display: flex;
+align-items: center;
+justify-content: center;
 }
-
 #lightbox-content video {
-  max-width: 100%;
-  max-height: 100%; /* Ensure video doesn't exceed container */
-  display: block; /* Keep block for sizing */
+max-width: 100%;
+max-height: 100%;
+display: block;
 }
 
 /* Styling for BNDC squiggle canvas container */
 .card[data-category="placeholder"] {
-  position: relative; /* Needed for absolute positioning of children */
+position: relative;
 }
-
 #bndc-squiggle-canvas-container {
-  position: absolute;
-  top: 1.5rem; /* Align with top padding */
-  left: 1.5rem; /* Align with left padding */
-  right: 1.5rem; /* Align with right padding */
-  width: calc(100% - 3rem); /* Full width minus padding */
-  height: 116px; /* Match video height */
-  pointer-events: none; /* Allow hovering over card */
-  z-index: 1; /* Ensure it's above background, below text if needed */
-  overflow: hidden; /* Hide parts of animation outside bounds */
-  /* Add split background */
-  background: linear-gradient(to right, 
-    rgba(248, 248, 248, 0) 0%,   /* Transparent start */
-    rgba(248, 248, 248, 0) 50%,  /* Transparent up to midpoint */
-    rgba(248, 248, 248, 1) 50%,  /* Solid #f8f8f8 from midpoint */
-    rgba(248, 248, 248, 1) 100% /* Solid #f8f8f8 to end */
-  );
+position: absolute;
+top: 1.5rem;
+left: 1.5rem;
+right: 1.5rem;
+width: calc(100% - 3rem);
+height: 116px;
+pointer-events: none;
+z-index: 1;
+overflow: hidden;
+background: linear-gradient(
+  to right,
+  rgba(248, 248, 248, 0) 0%,
+  rgba(248, 248, 248, 0) 50%,
+  rgba(248, 248, 248, 1) 50%,
+  rgba(248, 248, 248, 1) 100%
+);
 }
-
 #bndc-squiggle-canvas-container canvas {
-  display: block; /* Ensure canvas fills container */
-  width: 100%;
-  height: 100%;
+display: block;
+width: 100%;
+height: 100%;
 }
 
 /* Ownership grid mobile styles */
 @media (max-width: 768px) {
-    /* Community grid mobile styles */
-    .community-images-grid {
-        grid-template-columns: repeat(5, 1fr) !important;
-        gap: 4px !important;
-    }
-    .community-images-grid > img:nth-child(n+11) {
-        display: none !important; /* Added important */
-    }
-    .community-images-grid img {
-        aspect-ratio: 1/1 !important;
-        height: auto !important;
-        object-fit: cover !important;
-        opacity: 1 !important;
-    }
-    .community-images-grid img.shine-effect::after {
-        display: none !important;
-    }
+/* Community grid mobile styles */
+.community-images-grid {
+  grid-template-columns: repeat(5, 1fr) !important;
+  gap: 4px !important;
+}
+.community-images-grid > img:nth-child(n+11) {
+  display: none !important;
+}
+.community-images-grid img {
+  aspect-ratio: 1/1 !important;
+  height: auto !important;
+  object-fit: cover !important;
+  opacity: 1 !important;
+}
+.community-images-grid img.shine-effect::after {
+  display: none !important;
+}
 
-    /* Existing Ownership grid styles */
-    .ownership-images-grid {
-        /* Override inline styles for mobile */
-        grid-auto-flow: row !important;
-        grid-template-rows: auto !important;
-        grid-auto-columns: unset !important;
-        
-        /* Apply responsive mobile grid layout */
-        grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)) !important;
-        aspect-ratio: 2/1 !important;
-    }
-    
-    .ownership-images-grid img,
-    .ownership-images-grid div {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
+/* Existing Ownership grid styles */
+.ownership-images-grid {
+  grid-auto-flow: row !important;
+  grid-template-rows: auto !important;
+  grid-auto-columns: unset !important;
+  grid-template-columns: repeat(auto-fill, minmax(35px, 1fr)) !important;
+  aspect-ratio: 2/1 !important;
+}
+.ownership-images-grid img,
+.ownership-images-grid div {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-    /* Existing ADOS card image height override */
-    .card[data-category="ados"] .image-hover-container {
-      height: 116px !important;
-      max-height: none !important;
-    }
-    .card[data-category="ados"] .image-hover-container > div[style*="padding-top"] {
-      display: none !important;
-    }
+/* Existing ADOS card image height override */
+.card[data-category="ados"] .image-hover-container {
+  height: 116px !important;
+  max-height: none !important;
+}
+.card[data-category="ados"] .image-hover-container > div[style*="padding-top"] {
+  display: none !important;
+}
 }
 
 /* Tablet Styles for Community Grid */
 @media (min-width: 769px) and (max-width: 1024px) {
-    .community-images-grid {
-        grid-template-columns: repeat(5, 1fr) !important; /* 5 columns */
-    }
-    .community-images-grid > img:nth-child(n+11) {
-        display: none !important; /* Hide images after the 10th (5x2) */
-    }
+.community-images-grid {
+  grid-template-columns: repeat(5, 1fr) !important;
+}
+.community-images-grid > img:nth-child(n+11) {
+  display: none !important;
+}
 }
 
-/* Desktop Styles for Community Grid - Added */
+/* Desktop Styles for Community Grid */
 @media (min-width: 1025px) {
-  .community-images-grid img {
-    max-height: 59px; /* Limit the max height of images */
-    height: auto;     /* Allow height to adjust naturally up to the max */
-    /* width: 100%; already set by JS */
-    /* object-fit: cover; already set by JS */
-  }
+.community-images-grid img {
+  max-height: 59px;
+  height: auto;
 }
-/* End Added Desktop Styles */
+}
 
 @media (max-width: 480px) {
-    .ownership-images-grid {
-        /* Further adjust for smaller screens */
-        grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)) !important;
-        aspect-ratio: 1.5/1 !important;
-    }
+.ownership-images-grid {
+  grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)) !important;
+  aspect-ratio: 1.5/1 !important;
+}
 }
 
 /* Mobile & Tablet override for ADOS card image height and centering */
-@media (max-width: 1024px) { /* Increased max-width to cover tablets */
-  .card[data-category="ados"] .image-hover-container {
-    height: 116px !important;
-    max-height: none !important;
-    position: relative !important; /* Crucial for absolute children */
-    overflow: hidden !important; /* Hide parts outside bounds */
-    /* Make container span full card width, ignoring padding */
-    width: 100% !important; /* Reset width to fill parent's content area */
-    margin-left: 0 !important; /* Reset left margin */
-    margin-right: 0 !important; /* Reset right margin */
-    /* Keep bottom margin */
-    margin-bottom: 1rem !important;
-    /* Ensure border-radius is only applied top-left/top-right */
-    border-radius: 4px 4px 0 0 !important; 
-  }
-  .card[data-category="ados"] .image-hover-container > div[style*="padding-top"] {
-    display: none !important;
-  }
-  .card[data-category="ados"] .image-hover-container .static-image,
-  .card[data-category="ados"] .image-hover-container .hover-gif {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-    object-position: center center !important;
-    /* No border-radius needed here; container handles it */
-    border-radius: 0 !important; 
-    
-    /* Clean up previous attempts */
-    right: auto !important;
-    bottom: auto !important;
-    margin: 0 !important;
-  }
+@media (max-width: 1024px) {
+.card[data-category="ados"] .image-hover-container {
+  height: 116px !important;
+  max-height: none !important;
+  position: relative !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  margin-bottom: 1rem !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+.card[data-category="ados"] .image-hover-container > div[style*="padding-top"] {
+  display: none !important;
+}
+.card[data-category="ados"] .image-hover-container .static-image,
+.card[data-category="ados"] .image-hover-container .hover-gif {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  border-radius: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+}
+}
 
-  /* Remove CSS hover fallback - rely on JS */
+/* ====== BELOW: CSS MOVED FROM index.html <style> blocks ====== */
+
+/* 1) Basic container and text elements from index.html */
+.container {
+position: relative;
+padding: 2rem;
+z-index: 3; /* Ensure content stays on top */
+}
+h1, h2, h3, .links {
+position: relative;
+z-index: 3;
+display: block;
+line-height: 1.7;
+background: none;
+backdrop-filter: none;
+}
+h1, h2, h3 {
+width: 100%;
+margin: 1rem 0;
+}
+p {
+margin: 0;
+display: block;
+}
+/* Add vertical spacing between paragraphs */
+p + p {
+margin-top: 0.7rem;
+}
+.links {
+display: inline-block;
+margin-top: 1rem;
+}
+.links span {
+margin: 0 0.5rem;
+}
+
+/* Keyframes from index.html */
+@keyframes dropHorizontal {
+0% {
+    left: 0px;
+    top: 0px;
+    opacity: 0;
+    transform: scale(0.8) rotate(-45deg);
+}
+15% {
+    opacity: 1;
+    transform: scale(1.1) rotate(-45deg);
+}
+85% {
+    opacity: 1;
+    transform: scale(1) rotate(-45deg);
+}
+95% {
+    opacity: 0.5;
+    transform: scale(0.9) rotate(-45deg);
+}
+100% {
+    left: 20px;
+    top: 8px;
+    opacity: 0;
+    transform: scale(0.8) rotate(-45deg);
+}
+}
+
+/* Additional .main-text-images duplication from index.html, ensuring coverage */
+.main-text-images {
+display: flex;
+align-items: flex-start;
+gap: 2rem;
+}
+.main-text-images .main-text {
+flex: 1;
+}
+.main-text-images .images-container {
+width: 300px;
+height: 300px;
+}
+
+/* Section styles for new content */
+.hero-section {
+text-align: center;
+margin: 3rem 0;
+}
+.hero-section h1 {
+font-size: 2.5rem;
+margin-bottom: 1.5rem;
+font-family: 'Space Grotesk', sans-serif;
+font-weight: 700;
+}
+.content-section {
+margin: 4rem 0;
+}
+/* First content section spacing */
+.content-section:first-of-type {
+margin-top: 2rem;
+}
+.content-section h2 {
+font-size: 1.8rem;
+margin-bottom: 1.5rem;
+font-family: 'Space Grotesk', sans-serif;
+font-weight: 600;
+color: #333;
+}
+.content-section p {
+font-size: 1.1rem;
+line-height: 1.6;
+margin-bottom: 1rem;
+font-family: 'Inter', sans-serif;
+}
+
+/* Hero title style */
+.hero-title {
+font-size: 2.5rem;
+margin-bottom: 2rem;
+font-family: 'Space Grotesk', sans-serif;
+font-weight: 700;
+color: #333;
+line-height: 1.2;
+text-align: center;
+max-width: 90%;
+margin-left: auto;
+margin-right: auto;
+}
+.two-column {
+display: flex;
+gap: 3rem;
+align-items: flex-start;
+}
+.two-column .text-column {
+flex: 1;
+}
+.two-column .ecosystem-visualization {
+flex: 1.2;
+min-width: 450px;
+height: 500px;
+position: relative;
+}
+.image-placeholder {
+background-color: #f5f5f5;
+border-radius: 8px;
+height: 300px;
+display: flex;
+align-items: center;
+justify-content: center;
+color: #888;
+font-family: 'Space Mono', monospace;
+box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 1200px) {
+.two-column {
+  gap: 2rem;
+}
+.two-column .text-column {
+  flex: 1;
+}
+.two-column .ecosystem-visualization {
+  flex: 1.2;
+}
+}
+@media (max-width: 992px) {
+.ecosystem-visualization {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+.two-column {
+  flex-direction: column;
+}
+.two-column .text-column,
+.two-column .ecosystem-visualization {
+  flex: none;
+  width: 100%;
+}
+.two-column .ecosystem-visualization {
+  height: 700px;
+  margin-left: 0;
+  margin-top: -90px;
+}
+}
+
+/* Combined Mobile Styles (768px and below) */
+@media (max-width: 768px) {
+.dashboard {
+  grid-template-columns: 1fr;
+}
+.ecosystem-visualization {
+  width: 100% !important;
+  min-width: auto !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  margin-top: -20px !important;
+  margin-bottom: 0 !important;
+  transform: none !important;
+}
+#legend {
+  bottom: 5px !important;
+  right: 15px !important;
+  padding: 6px !important;
+}
+.legend-item {
+  margin-bottom: 5px !important;
+}
+.legend-line {
+  width: 30px !important;
+  height: 4px !important;
+  margin-right: 6px !important;
+  border-radius: 2px !important;
+}
+.legend-label {
+  font-size: 0.75rem !important;
+}
+.hero-title + p {
+  margin-bottom: 1rem !important;
+}
+.section-divider + .content-section {
+  margin-top: 2rem !important;
+}
+.section-divider:first-of-type {
+  margin-top: 5rem !important;
+}
+.two-column .ecosystem-visualization {
+  width: calc(100% + 2rem) !important;
+  height: 550px !important;
+  margin-left: -1rem !important;
+  margin-right: -1rem !important;
+  margin-top: -80px !important;
+  margin-bottom: -60px !important;
+  overflow: hidden;
+  position: relative;
+  transform: scale(0.95);
+  transform-origin: center top;
+}
+.content-section {
+  margin: 2rem 0;
+}
+.site-header {
+  padding: 1rem 0.5rem;
+}
+.site-header img {
+  width: 35px;
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+.node-label {
+  font-size: 0.7rem !important;
+  padding: 2px 6px !important;
+}
+h2 {
+  font-size: 1.5rem !important;
+  margin-bottom: 1.2rem !important;
+}
+.ownership-images-grid {
+  grid-auto-flow: row !important;
+  grid-template-columns: repeat(6, 1fr) !important;
+  grid-template-rows: auto !important;
+  grid-auto-columns: unset !important;
+}
+.ownership-images-grid > div:nth-child(n+25) {
+  display: none;
+}
+.card[data-category="mellon"] {
+  flex-direction: column !important;
+  gap: 1rem !important;
+  min-height: auto !important;
+  align-items: stretch;
+}
+.card[data-category="mellon"] > #mellon-animation-container {
+  order: -1;
+  flex: none !important;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  width: calc(100% + 2rem);
+  max-width: calc(100% + 2rem);
+  min-height: 250px;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+.card[data-category="mellon"] > .text-column {
+  order: 0;
+  flex: none !important;
+  width: 100% !important;
+}
+.dashboard .card[data-category="mellon"] {
+  grid-column: auto !important;
+}
+.card[data-category="placeholder"] .links a {
+  text-decoration: underline !important;
+}
+.card[data-category="placeholder"] .links a:after {
+  display: none !important;
+}
+}
+@media (max-width: 480px) {
+.ecosystem-visualization {
+  height: 450px !important;
+  margin-top: -100px !important;
+  transform: scale(0.9);
+  margin-bottom: -60px !important;
+}
+.two-column .ecosystem-visualization {
+  height: 450px !important;
+  margin-top: -120px !important;
+  transform: scale(0.9);
+  margin-bottom: -55px !important;
+}
+.content-section {
+  margin: 1.5rem 0;
+}
+#legend {
+  bottom: 5px !important;
+  right: 20px !important;
+}
+}
+
+/* Add new styles for ownership grid hover effects */
+.ownership-images-grid svg rect {
+transition: filter 0.3s ease;
+}
+.ownership-images-grid svg:hover rect {
+filter: brightness(1.15);
+}
+/* Remove shine effect for grid images */
+@keyframes shine {
+0% {
+  background-position: -100% 0;
+}
+100% {
+  background-position: 200% 0;
+}
+}
+.shine-effect {
+position: relative;
+overflow: hidden;
+}
+.shine-effect::after {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background: linear-gradient(
+  to right,
+  rgba(255,255,255,0) 0%,
+  rgba(255,255,255,0.4) 50%,
+  rgba(255,255,255,0) 100%
+);
+background-size: 200% 100%;
+animation: shine 1s ease-in-out;
+pointer-events: none;
+z-index: 1;
+}
+
+/* New styles for split-left card layout */
+.card.card-split-left {
+display: flex !important;
+padding: 0 !important;
+align-items: stretch;
+}
+.card.card-split-left > .content-left {
+flex: 0 0 50%;
+display: flex;
+flex-direction: column;
+background-color: #fff;
+border-radius: 8px 0 0 8px;
+}
+.card.card-split-left > .content-right {
+flex: 0 0 50%;
+background-color: #f8f8f8;
+border-radius: 0 8px 8px 0;
+}
+.card.card-split-left .content-left video {
+width: 100%;
+min-height: 117px;
+display: block;
+border-radius: 8px 0 0 0;
+object-fit: cover;
+background-color: #f8f8f8;
+margin-bottom: 0;
+}
+.card.card-split-left .content-left h3 {
+padding: 1rem;
+margin: 0;
+font-size: 1.1rem;
+line-height: 1.4;
+flex-grow: 1;
+}
+
+/* Add styles for the sneak peek button */
+.sneak-peek-button {
+position: absolute;
+top: 0px;
+right: 16px;
+padding: 6px 12px;
+background-color: rgba(255, 255, 255, 0.9);
+color: #333;
+border: 1px solid rgba(200, 200, 220, 0.3);
+border-radius: 6px;
+font-family: 'Inter', sans-serif;
+font-size: 0.85rem;
+cursor: pointer;
+z-index: 100;
+transition: all 0.3s ease;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+backdrop-filter: blur(5px);
+}
+.sneak-peek-button:hover {
+background-color: rgba(255, 255, 255, 1);
+transform: translateY(-1px);
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* Styles for Sneak Peek Content */
+.sneak-peek-content {
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+z-index: 50;
+display: flex;
+justify-content: space-around;
+align-items: center;
+gap: 3rem;
+padding: 1.5rem;
+box-sizing: border-box;
+border-radius: 6px;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.4s ease-out;
+}
+.sneak-peek-content.visible {
+opacity: 1;
+pointer-events: auto;
+}
+.sneak-peek-unit {
+position: relative;
+flex: 1;
+max-width: 60%;
+transition: transform 0.5s ease-out;
+}
+.sneak-peek-unit img {
+width: 100%;
+height: auto;
+display: block;
+border-radius: 6px;
+box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.sneak-peek-item.text-item {
+position: absolute;
+background: rgba(255, 255, 255, 0.9);
+border: 1px solid rgba(200, 200, 220, 0.3);
+border-radius: 4px;
+padding: 0.5rem 0.8rem;
+box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+font-size: 0.8rem;
+line-height: 1.4;
+text-align: left;
+max-width: 60%;
+backdrop-filter: blur(4px);
+}
+.sneak-peek-item.text-item-1 {
+top: 10px;
+left: 10px;
+}
+.sneak-peek-item.text-item-2 {
+bottom: 10px;
+right: 10px;
+}
+/* Initial states for elements inside container */
+.sneak-peek-content .sneak-peek-unit.unit-1 img {
+transform: translateY(-30px);
+opacity: 0;
+transition: transform 0.6s ease-out, opacity 0.6s ease-out;
+}
+.sneak-peek-content .sneak-peek-unit.unit-1 .text-item-1 {
+transform: translateY(-10px);
+opacity: 0;
+transition: transform 0.6s ease-out, opacity 0.6s ease-out;
+}
+.sneak-peek-content .sneak-peek-unit.unit-2 img {
+transform: translateY(30px);
+opacity: 0;
+transition: transform 0.6s ease-out, opacity 0.6s ease-out;
+}
+.sneak-peek-content .sneak-peek-unit.unit-2 .text-item-2 {
+transform: translateY(10px);
+opacity: 0;
+transition: transform 0.6s ease-out, opacity 0.6s ease-out;
+}
+/* Final states when visible */
+.sneak-peek-content.visible .sneak-peek-unit img {
+transform: translateY(0);
+opacity: 1;
+}
+.sneak-peek-content.visible .sneak-peek-unit.unit-1 .text-item-1 {
+transform: translateY(-40px);
+opacity: 1;
+}
+.sneak-peek-content.visible .sneak-peek-unit.unit-2 .text-item-2 {
+transform: translateY(40px);
+opacity: 1;
+}
+.sneak-peek-content.visible .sneak-peek-unit.unit-1 {
+transform: translateY(-15px);
+}
+.sneak-peek-content.visible .sneak-peek-unit.unit-2 {
+transform: translateY(15px);
+}
+
+/* 2) Body background animations from index.html */
+body {
+/* Overriding the earlier body background color + adding animation from index.html */
+background-color: #f2f2ff;
+animation: backgroundCycle 40s ease-in-out infinite;
+animation-delay: 2s; /* Add delay to initial animation */
+}
+@keyframes backgroundCycle {
+0%, 20% { background-color: #f2f2ff; }
+25%, 45% { background-color: #f2fff2; }
+50%, 70% { background-color: #fff2f2; }
+75%, 95% { background-color: #fffff2; }
+100% { background-color: #f2f2ff; }
+}
+
+/* Ecosystem visualization styles */
+.ecosystem-visualization {
+overflow: hidden;
+width: 120%;
+height: 100%;
+position: relative;
+margin-top: -170px;
+margin-left: -30px;
+}
+.ecosystem-visualization #three-container {
+width: 100%;
+height: 100%;
+position: relative;
+}
+#legend {
+position: absolute;
+bottom: 20px;
+right: 20px;
+background: rgba(255, 255, 255, 0.9);
+padding: 12px;
+border-radius: 8px;
+font-family: 'Inter', sans-serif;
+font-size: 0.9rem;
+z-index: 200;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+backdrop-filter: blur(5px);
+}
+.legend-item {
+display: flex;
+align-items: center;
+margin-bottom: 8px;
+justify-content: flex-start;
+width: auto;
+}
+.legend-line {
+width: 40px;
+height: 6px;
+margin-right: 8px;
+border-radius: 3px;
+flex-shrink: 0;
+}
+.legend-label {
+white-space: nowrap;
+}
+.legend-line.inspire {
+background: #FF9800;
+}
+.legend-line.equip {
+background: linear-gradient(
+  to right,
+  #4285F4 0%,
+  #4285F4 20%,
+  #9C27B0 20%,
+  #9C27B0 40%,
+  #F44336 40%,
+  #F44336 60%,
+  #00BCD4 60%,
+  #00BCD4 80%,
+  #4CAF50 80%,
+  #4CAF50 100%
+);
+}
+.node-label {
+position: absolute;
+transform: translateX(-50%);
+background-color: rgba(255, 255, 255, 0.9);
+padding: 4px 10px;
+border-radius: 4px;
+font-size: 0.8rem;
+font-weight: 500;
+text-align: center;
+pointer-events: none;
+white-space: nowrap;
+box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+z-index: 20;
+font-family: 'Inter', sans-serif;
+backdrop-filter: blur(5px);
+}
+.popup-message {
+position: absolute;
+padding: 6px 12px;
+background: rgba(255, 255, 255, 0.95);
+border: 2px solid #FF9800;
+border-radius: 8px;
+text-align: center;
+font-size: 0.85rem;
+pointer-events: none;
+transform: translate(-50%, -50%);
+white-space: nowrap;
+font-family: 'Inter', sans-serif;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+backdrop-filter: blur(5px);
+}
+
+/* Link Animation and Styling */
+a {
+position: relative;
+display: inline-block;
+color: #333;
+text-decoration: none !important;
+transition: color 0.3s ease;
+}
+a:after {
+content: '';
+position: absolute;
+width: 100%;
+height: 1px;
+bottom: 0;
+left: 0;
+background-color: rgba(51, 51, 51, 0.3);
+transform: translateY(-2px) scaleX(1);
+transform-origin: bottom center;
+transition: transform 0.3s ease, opacity 0.3s ease, background-color 0.3s ease;
+opacity: 1;
+}
+a:hover {
+color: #5353a5;
+}
+a:hover:after {
+transform: translateY(-2px) scaleX(0.8);
+opacity: 1;
+}
+
+/* Special styling for side panel links */
+.side-window a {
+border-bottom: none !important;
+}
+.side-window a:after {
+height: 1px;
+bottom: 0;
+background-color: rgba(204, 204, 204, 0.5);
+transform: scaleX(1);
+transition: transform 0.3s ease, opacity 0.3s ease,
+  background-color 0.3s ease;
+}
+.side-window a:hover:after {
+transform: scaleX(0.8);
+opacity: 1;
+background-color: rgba(204, 204, 204, 0.8);
+}
+
+/* Overlay background cycle keyframes */
+@keyframes overlayBackgroundCycle {
+0%, 20% { background-color: rgba(242, 242, 255, 0.7); }
+25%, 45% { background-color: rgba(242, 255, 242, 0.7); }
+50%, 70% { background-color: rgba(255, 242, 242, 0.7); }
+75%, 95% { background-color: rgba(255, 255, 242, 0.7); }
+100% { background-color: rgba(242, 242, 255, 0.7); }
+}
+
+/* Hover classes with consistent transitions */
+body.hovered-background,
+body.hovered-no-background,
+body.hovered-do-background,
+body.hovered-co-background {
+animation-play-state: paused !important;
+animation: none !important;
+transition: background-color 2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+}
+body.hovered-background {
+background-color: #f2f2ff !important;
+}
+body.hovered-no-background {
+background-color: #f2fff2 !important;
+}
+body.hovered-do-background {
+background-color: #fff2f2 !important;
+}
+body.hovered-co-background {
+background-color: #fffff2 !important;
+}
+
+/* CSS for Renaissance Section responsive behavior */
+@media (max-width: 1024px) and (min-width: 851px) {
+.renaissance-section .image-column {
+  width: 60% !important;
+}
+.renaissance-section > div:first-child {
+  width: 40% !important;
+}
+.renaissance-section .image-column .styled-image-box {
+  width: 100%;
+  height: auto;
+}
+}
+@media (max-width: 850px) {
+.renaissance-section {
+  flex-direction: column !important;
+}
+.renaissance-section .image-column {
+  order: -1;
+  width: 100% !important;
+}
+.renaissance-section .image-column .styled-image-box {
+  width: 100%;
+  height: auto;
+}
+}
+
+/* Default styles for Mellon card (desktop) */
+.card[data-category="mellon"] {
+display: flex;
+flex-direction: row;
+gap: 1.5rem;
+align-items: stretch;
+min-height: 250px;
+}
+/* Mellon card on mobile */
+@media (max-width: 768px) {
+.card[data-category="mellon"] {
+  flex-direction: column !important;
+  gap: 1rem !important;
+  min-height: auto !important;
+  align-items: stretch !important;
+}
+.card[data-category="mellon"] > #mellon-animation-container {
+  order: -1;
+  flex: none !important;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  width: calc(100% + 2rem);
+  max-width: calc(100% + 2rem);
+  min-height: 250px;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+.card[data-category="mellon"] > .text-column {
+  order: 0;
+  flex: none !important;
+  width: 100% !important;
+}
+}
+/* Remove top margin specifically for Mellon card's h3 */
+.card[data-category="mellon"] .text-column h3 {
+margin-top: 0;
+}
+
+/* Safari-specific override for #legend positioning */
+@supports (-webkit-overflow-scrolling: touch) {
+#legend {
+  right: 10px !important;
+  bottom: 5px !important;
+}
+}
+
+/* iOS Safari specific override for #legend positioning */
+@media only screen and (max-device-width: 812px) {
+#legend {
+  right: 10px !important;
+  left: auto !important;
+  bottom: 5px !important;
+}
+}
+
+/* Prevent black flicker on mobile by setting canvas background */
+#plantCanvas {
+background-color: #f2f2ff;
+}
+
+/* Margin for ownership intro on desktop */
+@media (min-width: 769px) {
+#ownership-intro-section {
+  margin-bottom: 4rem !important;
+}
 }

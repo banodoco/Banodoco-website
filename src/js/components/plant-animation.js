@@ -108,10 +108,13 @@ class Branch {
       setTimeout(() => this.startFlowering(), 100);
     } else {
       setTimeout(() => {
-        // Use the flower position to determine where the seed comes from
-        const seedX = this.startX + Math.sin(this.angle * Math.PI / 180) * -this.length * this.flowerPosition;
-        const seedY = this.startY + Math.cos(this.angle * Math.PI / 180) * -this.length * this.flowerPosition;
-        seeds.push(new Seed(seedX, seedY));
+        // Only create a seed sometimes (e.g., 50% chance)
+        if (Math.random() < 0.5) { 
+            // Use the flower position to determine where the seed comes from
+            const seedX = this.startX + Math.sin(this.angle * Math.PI / 180) * -this.length * this.flowerPosition;
+            const seedY = this.startY + Math.cos(this.angle * Math.PI / 180) * -this.length * this.flowerPosition;
+            seeds.push(new Seed(seedX, seedY));
+        }
       }, 1000 + Math.random() * 5000);
     }
   }

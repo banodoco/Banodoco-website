@@ -251,4 +251,255 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-}); 
+
+    // iOS Safari legend fix
+    if (/iP(hone|od|ad)/.test(navigator.platform)) {
+      window.addEventListener('load', function() { // Use load to ensure layout is complete
+        setTimeout(function() {
+          var legend = document.getElementById('legend');
+          if (legend) {
+            legend.style.position = 'absolute'; // Re-apply position just in case
+            legend.style.right = '10px';
+            legend.style.left = 'auto';
+            // Note: bottom positioning is likely handled by CSS overrides now
+            console.log('iOS Safari legend reposition applied via JS:', legend.style.cssText);
+          } else {
+            console.warn("Legend element not found for iOS fix.");
+          }
+        }, 150); // Slightly longer timeout
+      });
+    }
+
+    // Dynamically fetch the shared footer partial
+    fetch('src/components/footer.html')
+      .then(response => {
+          if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.text();
+      })
+      .then(html => {
+        const footerElement = document.getElementById('footer');
+        if (footerElement) {
+            footerElement.innerHTML = html;
+            console.log("Footer HTML loaded.");
+
+            // Initialize plant animation after footer is loaded
+            // Attempt to load and run plant-init.js if it exists
+            import('./components/plant-init.js')
+              .then(module => {
+                if (typeof module.initializePlantAnimation === 'function') {
+                  console.log("Initializing plant animation...");
+                  module.initializePlantAnimation();
+                } else {
+                  console.warn('initializePlantAnimation function not found in plant-init.js');
+                }
+              })
+              .catch(err => {
+                console.warn('Could not load plant-init.js dynamically. Plant animation might not start.', err);
+              });
+
+            // Replace feather icons within the newly added footer
+            if (typeof feather !== 'undefined') {
+              console.log("Replacing feather icons in footer...");
+              feather.replace();
+            } else {
+              console.warn("Feather icons library not loaded when footer arrived.");
+            }
+        } else {
+            console.error("Footer element (#footer) not found in DOM.");
+        }
+      })
+      .catch(error => {
+          console.error("Error fetching or processing footer:", error);
+      });
+
+    // BNDC Card hover logic
+    const bndcCard = document.querySelector('.card[data-category="placeholder"]');
+    if (bndcCard) {
+        const bndcVideo = bndcCard.querySelector('video');
+        if (bndcVideo) {
+            let playTimeoutId = null;
+            console.log("Setting up BNDC card hover listeners.");
+            bndcCard.addEventListener('mouseenter', () => {
+                if (playTimeoutId) clearTimeout(playTimeoutId);
+                playTimeoutId = setTimeout(() => {
+                    console.log("Playing BNDC video on hover...");
+                    bndcVideo.play().catch(e => console.error("Error playing BNDC video:", e));
+                }, 350);
+            });
+            bndcCard.addEventListener('mouseleave', () => {
+                if (playTimeoutId) {
+                    clearTimeout(playTimeoutId);
+                    playTimeoutId = null;
+                }
+                console.log("Pausing BNDC video on mouseleave.");
+                bndcVideo.pause();
+                bndcVideo.currentTime = 0;
+            });
+        } else {
+            console.warn("BNDC video element not found inside the placeholder card.");
+        }
+    } else {
+        console.warn("BNDC card (.card[data-category='placeholder']) not found.");
+    }
+
+    // Initialize BNDC Squiggles (Dynamically imports the module)
+    console.log("Attempting to initialize BNDC squiggles...");
+    import('./components/bndc-squiggles.js')
+      .then(module => {
+        if (typeof module.initializeBndcSquiggles === 'function') {
+          module.initializeBndcSquiggles('bndc-squiggle-canvas-container');
+          console.log("BNDC squiggles initialized.");
+        } else {
+           console.warn('initializeBndcSquiggles function not found in bndc-squiggles.js');
+        }
+      })
+      .catch(err => console.error('Failed to load bndc-squiggles module dynamically:', err));
+
+
+    // Mellon Sneak Peek Logic (Dynamically imports functions)
+    const sneakPeekButton = document.querySelector('.sneak-peek-button');
+    const mellonAnimationContainer = document.getElementById('mellon-animation-container');
+
+    if (sneakPeekButton && mellonAnimationContainer) { // Check button and container first
+        const sneakPeekContent = mellonAnimationContainer.querySelector('.sneak-peek-content');
+        if (sneakPeekContent) { // Then check content
+             console.log("Setting up Mellon sneak peek button listener.");
+            let isSneakPeekVisible = false;
+            let mellonFuncs = null; // To store loaded functions
+
+            const loadMellonFunctions = async () => {
+                if (mellonFuncs) return mellonFuncs; // Return cached functions if already loaded
+                try {
+                    const module = await import('./components/mellon-animation.js');
+                    if (typeof module.suppressMellonText === 'function' && typeof module.unsuppressMellonText === 'function') {
+                         console.log("Mellon animation functions loaded.");
+                         mellonFuncs = {
+                             suppress: module.suppressMellonText,
+                             unsuppress: module.unsuppressMellonText
+                         };
+                         return mellonFuncs;
+                    } else {
+                         console.warn("Mellon functions (suppress/unsuppress) not found in module.");
+                         return null;
+                    }
+                } catch (err) {
+                    console.error('Failed to load mellon-animation module dynamically:', err);
+                    return null;
+                }
+            };
+
+            sneakPeekButton.addEventListener('click', async () => {
+                const funcs = await loadMellonFunctions();
+                if (!funcs) {
+                     console.error("Cannot toggle sneak peek, Mellon functions not available.");
+                     return;
+                }
+
+                if (!isSneakPeekVisible) {
+                    console.log("Showing Mellon sneak peek.");
+                    sneakPeekContent.classList.add('visible');
+                    funcs.suppress(mellonAnimationContainer);
+                    sneakPeekButton.textContent = 'Hide sneak peek';
+                    isSneakPeekVisible = true;
+                } else {
+                    console.log("Hiding Mellon sneak peek.");
+                    sneakPeekContent.classList.remove('visible');
+                    funcs.unsuppress(mellonAnimationContainer);
+                    sneakPeekButton.textContent = 'Take a sneak peek';
+                    isSneakPeekVisible = false;
+                }
+            });
+        } else {
+             console.warn("Mellon sneak peek content element not found inside container.");
+        }
+    } else {
+        if (document.querySelector('[data-category="mellon"]')) { // Only warn if Mellon card exists but button/container don't
+             console.warn("Mellon sneak peek button or animation container not found. Button logic disabled.");
+        }
+         // If Mellon card itself is commented out/removed, no warning is needed.
+    }
+
+
+    // Renaissance video hover effect
+    console.log('Attempting to set up Renaissance video hover from script.js');
+    const renaissanceVideo = document.getElementById('renaissance-video');
+    const renaissanceContainer = renaissanceVideo ? renaissanceVideo.closest('.styled-image-box') : null;
+
+    if (renaissanceVideo && renaissanceContainer) {
+        console.log('Found Renaissance video and container, adding listeners.');
+        let reverseAnimationId = null;
+
+        const reverseStep = () => {
+            const step = 1 / 60; // ~60fps reverse
+            const newTime = renaissanceVideo.currentTime - step;
+            if (newTime <= 0) {
+                renaissanceVideo.currentTime = 0;
+                if (reverseAnimationId) cancelAnimationFrame(reverseAnimationId);
+                reverseAnimationId = null;
+            } else {
+                renaissanceVideo.currentTime = newTime;
+                reverseAnimationId = requestAnimationFrame(reverseStep);
+            }
+        };
+
+        const handleEnded = () => {
+             // Check playbackRate to ensure it ended while playing forward, not backward.
+            if (renaissanceVideo.playbackRate > 0 && !renaissanceVideo.paused) {
+                 console.log('Renaissance forward playback ended.');
+                 // Don't pause here, let mouseleave handle it or click handle it.
+                 // Pausing here can interfere if the mouse is still over the element.
+            }
+        };
+
+        renaissanceContainer.addEventListener('mouseenter', () => {
+            console.log('Mouse entered Renaissance');
+            if (reverseAnimationId) {
+                cancelAnimationFrame(reverseAnimationId);
+                reverseAnimationId = null;
+            }
+            // Only play if paused and not already playing forward
+            if (renaissanceVideo.paused) {
+                 renaissanceVideo.playbackRate = 1;
+                 renaissanceVideo.play().catch(e => console.error('Error playing forward Renaissance video:', e));
+            }
+        });
+
+        renaissanceContainer.addEventListener('mouseleave', () => {
+            console.log('Mouse left Renaissance');
+            // Always pause on mouseleave before potentially starting reverse
+            renaissanceVideo.pause();
+            if (reverseAnimationId) {
+                 cancelAnimationFrame(reverseAnimationId); // Cancel any existing reverse
+            }
+            if (renaissanceVideo.currentTime > 0 && !reverseAnimationId) { // Only start reverse if not already at 0 and not already reversing
+                reverseAnimationId = requestAnimationFrame(reverseStep);
+            } else if (renaissanceVideo.currentTime <= 0) {
+                reverseAnimationId = null; // Ensure it's null if at start
+            }
+        });
+
+        // Click/Tap to toggle play/pause
+        renaissanceContainer.addEventListener('click', () => {
+            console.log('Renaissance container clicked/tapped');
+            if (reverseAnimationId) { // Stop reverse if active
+                cancelAnimationFrame(reverseAnimationId);
+                reverseAnimationId = null;
+            }
+            if (renaissanceVideo.paused) {
+                renaissanceVideo.playbackRate = 1;
+                renaissanceVideo.play().catch(e => console.error('Error playing Renaissance video on click:', e));
+            } else {
+                renaissanceVideo.pause();
+            }
+        });
+
+        // Listener for when the video naturally ends
+        renaissanceVideo.addEventListener('ended', handleEnded);
+
+    } else {
+        console.warn('Could not find Renaissance video (#renaissance-video) or its container (.styled-image-box). Hover/click effects inactive.');
+    }
+
+}); // End of DOMContentLoaded 
