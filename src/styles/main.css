@@ -93,6 +93,10 @@ body {
   .dashboard {
       grid-template-columns: 1fr;
   }
+  /* Move OpenMuse logo left on mobile */
+  .card[data-category="openmuse"] img {
+    margin-left: -1rem; /* Adjust value as needed */
+  }
 }
 
 /* Card Styles */
