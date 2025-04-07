@@ -26,7 +26,8 @@ export function initializeBndcSquiggles(containerId) {
     let bubbleTotalPoints = 0; // Store total points for drawRange animation
     let currentTextLength = 0; // Track how much text is visible
     let writingStartTime = 0; // Track when writing begins
-    let writingSpeed = 8; // Characters per second
+    const baseWritingSpeed = 5; // Characters per second (initial speed)
+    const fastWritingSpeed = 13; // Characters per second (after 'w')
     let writingHasBegun = false; // Flag to track if typing should start
 
     // Animation state variables
@@ -35,6 +36,10 @@ export function initializeBndcSquiggles(containerId) {
     let animationState = 'idle'; // 'idle', 'shapesFading', 'bubbleAppearing', 'bubbleWriting', 'bubbleFading', 'shapesAppearing'
     let transitionProgress = 0;
     const transitionDuration = 0.8; // Duration of fade/appear in seconds
+
+    // Find the index where speed changes
+    const speedChangeIndex = targetText.indexOf('w');
+    const timeToReachChange = speedChangeIndex >= 0 ? speedChangeIndex / baseWritingSpeed : Infinity;
 
     function init() {
         scene = new THREE.Scene();
@@ -573,7 +578,18 @@ export function initializeBndcSquiggles(containerId) {
                  // If writing has started, handle text updates here
                  if (writingHasBegun) {
                      const elapsedWritingTime = clock.getElapsedTime() - writingStartTime;
-                     let charsToShow = Math.min(Math.floor(elapsedWritingTime * writingSpeed), targetText.length);
+                     let charsToShow;
+
+                     if (speedChangeIndex === -1 || elapsedWritingTime <= timeToReachChange) {
+                         // Before the speed change point or if 'w' not found
+                         charsToShow = Math.min(Math.floor(elapsedWritingTime * baseWritingSpeed), targetText.length);
+                     } else {
+                         // After the speed change point
+                         const timeAfterChange = elapsedWritingTime - timeToReachChange;
+                         const charsAfterChange = Math.floor(timeAfterChange * fastWritingSpeed);
+                         charsToShow = Math.min(speedChangeIndex + charsAfterChange, targetText.length);
+                     }
+
                      currentTextLength = charsToShow;
 
                      if (bubbleTextSprite && bubbleTextSprite.material.map?.image) {
@@ -604,7 +620,18 @@ export function initializeBndcSquiggles(containerId) {
             } else if (animationState === 'bubbleWriting') {
                  // This state now ONLY handles continuing writing if it didn't finish during bubbleAppearing
                  const elapsedWritingTime = clock.getElapsedTime() - writingStartTime;
-                 let charsToShow = Math.min(Math.floor(elapsedWritingTime * writingSpeed), targetText.length);
+                 let charsToShow;
+
+                 if (speedChangeIndex === -1 || elapsedWritingTime <= timeToReachChange) {
+                     // Before the speed change point or if 'w' not found
+                     charsToShow = Math.min(Math.floor(elapsedWritingTime * baseWritingSpeed), targetText.length);
+                 } else {
+                     // After the speed change point
+                     const timeAfterChange = elapsedWritingTime - timeToReachChange;
+                     const charsAfterChange = Math.floor(timeAfterChange * fastWritingSpeed);
+                     charsToShow = Math.min(speedChangeIndex + charsAfterChange, targetText.length);
+                 }
+
                  currentTextLength = charsToShow;
 
                  // Only update texture if the text content changes
