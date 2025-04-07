@@ -962,6 +962,65 @@ transform: translateY(-15px);
 transform: translateY(15px);
 }
 
+/* Mobile specific styles for sneak peek */
+@media (max-width: 768px) {
+    .sneak-peek-content.visible .sneak-peek-unit.unit-1 {
+        /* Adjust base position slightly less drastically */
+        transform: translateY(-10px); 
+    }
+    .sneak-peek-content.visible .sneak-peek-unit.unit-2 {
+        transform: translateY(10px);
+    }
+
+    .sneak-peek-content.visible .sneak-peek-unit img {
+        /* Apply scaling and vertical shift for mobile */
+        /* Note: Combining scale and translate */
+        transform-origin: center center; /* Ensure scaling happens from the center */
+    }
+    
+    .sneak-peek-content.visible .sneak-peek-unit.unit-1 img {
+         /* Scale up and move slightly higher */
+        transform: scale(1.5) translateY(-15px);
+        /* Add transition for the transform property */
+        transition: transform 0.6s ease-out, opacity 0.6s ease-out; 
+    }
+
+    .sneak-peek-content.visible .sneak-peek-unit.unit-2 img {
+        /* Scale up and move slightly lower */
+        transform: scale(1.5) translateY(15px);
+         /* Add transition for the transform property */
+        transition: transform 0.6s ease-out, opacity 0.6s ease-out;
+    }
+    
+    /* Adjust text item positions relative to scaled images if needed */
+     .sneak-peek-content.visible .sneak-peek-unit.unit-1 .text-item-1 {
+        /* Move text below image on mobile */
+        transform: translateY(30px); /* Move down instead of up */
+        opacity: 1;
+        /* Make text match the 1.5x scaled image width on mobile */
+        max-width: 150%; /* Match the image scale */
+        width: 150%;
+        left: -25%; /* Center the 150% wide element: (100% - 150%) / 2 */
+        right: auto;
+        text-align: center;
+        font-size: 0.65rem; /* Reduce font size on mobile */
+    }
+     .sneak-peek-content.visible .sneak-peek-unit.unit-2 .text-item-2 {
+         /* Move text above image on mobile */
+        transform: translateY(-100px); /* Move up instead of down */
+        opacity: 1;
+        /* Make text match the 1.5x scaled image width on mobile */
+        max-width: 150%; /* Match the image scale */
+        width: 150%;
+        left: -25%; /* Center the 150% wide element */
+        right: auto; 
+        bottom: auto; /* Remove explicit bottom offset, rely on transform */
+        text-align: center;
+        font-size: 0.65rem; /* Reduce font size on mobile */
+    }
+
+}
+
 /* 2) Body background animations from index.html */
 body {
 /* Overriding the earlier body background color + adding animation from index.html */
