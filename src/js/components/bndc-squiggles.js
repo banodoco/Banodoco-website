@@ -543,8 +543,10 @@ export function initializeBndcSquiggles(containerId) {
                      // Animate drawRange until complete
                      const count = Math.ceil(lerp(0, bubbleTotalPoints, transitionProgress));
                      speechBubble.geometry.setDrawRange(0, count);
-                     speechBubble.material.opacity = 1;
-                     speechBubble.scale.set(1, 1, 1);
+                     // Fade in opacity and scale up
+                     speechBubble.material.opacity = lerp(0, 1, transitionProgress);
+                     const scale = lerp(0.1, 1, transitionProgress);
+                     speechBubble.scale.set(scale, scale, 1);
                  }
 
                  // Make text sprite visible and fade in
