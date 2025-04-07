@@ -507,4 +507,18 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('Could not find Renaissance video (#renaissance-video) or its container (.styled-image-box). Hover/click effects inactive.');
     }
 
+    // --- Page Visibility API Handler for BNDC Video ---
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            // Select the video element within the BNDC card
+            // Using the data-category="placeholder" as seen in index.html
+            const bndcVideo = document.querySelector('.card[data-category="placeholder"] video');
+            if (bndcVideo) {
+                console.log('Page became visible, reloading BNDC video.'); // Optional: for debugging
+                bndcVideo.load(); // Reload the video source
+            }
+        }
+    });
+
+    const filterButtons = document.querySelectorAll('.filter-btn');
 }); // End of DOMContentLoaded 

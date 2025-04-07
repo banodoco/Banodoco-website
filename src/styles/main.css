@@ -741,12 +741,6 @@ h2 {
 .dashboard .card[data-category="mellon"] {
   grid-column: auto !important;
 }
-.card[data-category="placeholder"] .links a {
-  text-decoration: underline !important;
-}
-.card[data-category="placeholder"] .links a:after {
-  display: none !important;
-}
 .content-section h2 {
   /* Increase space below section titles on mobile, overriding general h2 */
   margin-top: 0.5rem !important;
