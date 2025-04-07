@@ -3,6 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Feather icons
     feather.replace();
 
+    // Set playback speed for the Renaissance video
+    const renaissanceVideo = document.getElementById('renaissance-video');
+    if (renaissanceVideo) {
+        renaissanceVideo.playbackRate = 0.7;
+    }
+
     // Handle video card functionality only
     const videoCards = document.querySelectorAll('.video-card');
     const videoSources = new Map();
@@ -424,7 +430,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Renaissance video hover effect
     console.log('Attempting to set up Renaissance video hover from script.js');
-    const renaissanceVideo = document.getElementById('renaissance-video');
     const renaissanceContainer = renaissanceVideo ? renaissanceVideo.closest('.styled-image-box') : null;
 
     if (renaissanceVideo && renaissanceContainer) {

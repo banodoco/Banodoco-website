@@ -1301,3 +1301,9 @@ background-color: #f2f2ff;
   margin-bottom: 4rem !important;
 }
 }
+
+/* Add rounded corners to the renaissance video */
+#renaissance-video {
+  border-radius: 8px; /* Adjust value as needed */
+  overflow: hidden; /* Clip content to rounded corners */
+}
