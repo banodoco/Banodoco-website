@@ -747,6 +747,11 @@ h2 {
 .card[data-category="placeholder"] .links a:after {
   display: none !important;
 }
+.content-section h2 {
+  /* Increase space below section titles on mobile, overriding general h2 */
+  margin-top: 0.5rem !important;
+  margin-bottom: 2.5rem !important; 
+}
 }
 @media (max-width: 480px) {
 .ecosystem-visualization {
