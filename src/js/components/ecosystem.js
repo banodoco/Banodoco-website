@@ -93,12 +93,12 @@ export function runEcosystem(appendToEl = document.body) {
   let animationFrame = 0;
 
   const sections = [
-    { id: 'modelTinkerers',         name: 'Fine-Tuners & Trainers',   dots: 15, x: 300, y: -50 },
-    { id: 'mlArchitects',           name: 'Base Model Architects',    dots: 15, x: 0,    y: -200 },
-    { id: 'artists',                name: 'Artists',                  dots: 15, x: -300,  y: -50 },
-    { id: 'artToolBuilders',        name: 'Tool Builders',            dots: 15, x: -200,  y: 200 },
-    { id: 'experimenters',          name: 'Workflow Creators',        dots: 15, x: 50,  y: 300 },
-    { id: 'infrastructureBuilders', name: 'Infrastructure Engineers', dots: 15, x: 250, y: 150 }
+    { id: 'modelTinkerers',         name: 'Fine-Tuners & Trainers',   dots: 12, x: 300, y: -50 },
+    { id: 'mlArchitects',           name: 'Base Model Architects',    dots: 12, x: 0,    y: -200 },
+    { id: 'artists',                name: 'Artists',                  dots: 12, x: -300,  y: -50 },
+    { id: 'artToolBuilders',        name: 'Tool Builders',            dots: 12, x: -200,  y: 200 },
+    { id: 'experimenters',          name: 'Workflow Creators',        dots: 12, x: 50,  y: 300 },
+    { id: 'infrastructureBuilders', name: 'Infrastructure Engineers', dots: 12, x: 250, y: 150 }
   ];
 
   const connections = [
@@ -186,7 +186,7 @@ export function runEcosystem(appendToEl = document.body) {
     camera.updateProjectionMatrix();
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0);
     renderer.sortObjects = true;
