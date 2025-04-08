@@ -1089,16 +1089,16 @@ background: #FF9800;
 .legend-line.equip {
 background: linear-gradient(
   to right,
-  #4285F4 0%,
-  #4285F4 20%,
+  #9C27B0 0%,  /* Purple */
   #9C27B0 20%,
-  #9C27B0 40%,
-  #F44336 40%,
-  #F44336 60%,
-  #00BCD4 60%,
+  #4285F4 20%,  /* Blue */
+  #4285F4 40%,
+  #4CAF50 40%,  /* Green */
+  #4CAF50 60%,
+  #00BCD4 60%,  /* Light Blue */
   #00BCD4 80%,
-  #4CAF50 80%,
-  #4CAF50 100%
+  #F44336 80%,  /* Red */
+  #F44336 100%
 );
 }
 .node-label {
@@ -1319,4 +1319,11 @@ background-color: #f2f2ff;
 /* Apply zoom and rotation on card hover */
 .card[data-category="openmuse"]:hover img {
   transform: scale(1.08) rotate(-4deg); /* Slight zoom and counter-clockwise rotation */
+}
+
+/* Add media query for desktop */
+@media (min-width: 769px) {
+  .legend-label {
+    font-size: 0.8rem; /* Make legend text slightly smaller on desktop */
+  }
 }
