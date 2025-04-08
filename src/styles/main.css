@@ -1310,3 +1310,13 @@ background-color: #f2f2ff;
   border-radius: 8px; /* Adjust value as needed */
   overflow: hidden; /* Clip content to rounded corners */
 }
+
+/* OpenMuse Card Image Hover Effect */
+.card[data-category="openmuse"] img {
+  transition: transform 1.5s ease-in-out; /* Increase duration for slower animation */
+}
+
+/* Apply zoom and rotation on card hover */
+.card[data-category="openmuse"]:hover img {
+  transform: scale(1.08) rotate(-4deg); /* Slight zoom and counter-clockwise rotation */
+}
