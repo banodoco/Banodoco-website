@@ -119,11 +119,11 @@ class MellonAnimationInstance {
     const fontSize = Math.max(20, Math.min(this.width, this.height) * 0.06);
     const yPosition = '50%';
 
-    this.capabilitiesLabel.style.left = `${this.width * 0.25}px`;
+    this.capabilitiesLabel.style.left = `${this.width * 0.23}px`;
     this.capabilitiesLabel.style.top = yPosition;
     this.capabilitiesLabel.style.fontSize = `${fontSize}px`;
 
-    this.creationsLabel.style.left = `${this.width * 0.75}px`;
+    this.creationsLabel.style.left = `${this.width * 0.77}px`;
     this.creationsLabel.style.top = yPosition;
     this.creationsLabel.style.fontSize = `${fontSize}px`;
 
