@@ -1379,11 +1379,11 @@ background-color: #f2f2ff;
 
 /* Fade-in animation: Define transition, initial state, final state in .visible */
 /* Set initial state (hidden) for elements that fade in */
-.content-section:not(:first-of-type), 
-.dashboard, 
-.card, 
-#footer,
-#header {
+body:not(.ownership-page) .content-section:not(:first-of-type), 
+body:not(.ownership-page) .dashboard, 
+body:not(.ownership-page) .card, 
+body:not(.ownership-page) #footer,
+body:not(.ownership-page) #header {
   opacity: 0; /* Start hidden */
   /* Only define the transition for opacity */
   transition: opacity 1.2s ease-out; /* << Slower transition */
@@ -1396,7 +1396,7 @@ background-color: #f2f2ff;
 
 /* The first content section also fades in immediately, handled by JS */
 /* ALSO set initial opacity 0 here */
-.content-section:first-of-type {
+body:not(.ownership-page) .content-section:first-of-type {
   opacity: 0; /* Start hidden */
   transition: opacity 1.2s ease-out; /* << Slower transition */
 }
