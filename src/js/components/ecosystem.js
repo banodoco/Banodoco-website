@@ -177,7 +177,7 @@ export function runEcosystem(appendToEl = document.body) {
     );
     camera.position.set(0, 0, 10);
 
-    const panX = isMobile ? -20 : -30;
+    const panX = isMobile ? 30 : -30;
     const panY = isMobile ? 30 : 50;
     camera.left   += panX;
     camera.right  += panX;
@@ -238,7 +238,7 @@ export function runEcosystem(appendToEl = document.body) {
     camera.top    =  VIEW_SIZE_ADJUSTED;
     camera.bottom = -VIEW_SIZE_ADJUSTED;
 
-    const panX = isMobile ? -20 : -30;
+    const panX = isMobile ? 30 : -30;
     const panY = isMobile ? 30 : 50;
     camera.left   += panX;
     camera.right  += panX;

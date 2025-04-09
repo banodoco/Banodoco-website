@@ -3,6 +3,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Feather icons
     feather.replace();
 
+    // --- Dynamically load HEADER --- 
+    fetch('src/components/header.html')
+        .then(response => response.text())
+        .then(html => {
+            const headerElement = document.getElementById('header');
+            if (headerElement) {
+                headerElement.innerHTML = html;
+                console.log("Header HTML loaded, applying fade-in with timeout");
+                // Set initial opacity style
+                headerElement.style.opacity = '0';
+                // headerElement.style.transform = 'translateY(20px)'; // Removed transform
+                // Apply final opacity style after a short delay
+                setTimeout(() => {
+                    console.log("Applying final opacity style to header via timeout");
+                    headerElement.style.opacity = '1';
+                    // headerElement.style.transform = 'translateY(0)'; // Removed transform
+                }, 20); // 20ms delay
+                
+                // Re-run feather.replace() if header contains icons
+                if (typeof feather !== 'undefined') {
+                    feather.replace(); 
+                }
+            }
+        });
+
     // Set playback speed for the Renaissance video
     const renaissanceVideo = document.getElementById('renaissance-video');
     if (renaissanceVideo) {
@@ -265,10 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
           var legend = document.getElementById('legend');
           if (legend) {
             legend.style.position = 'absolute'; // Re-apply position just in case
-            legend.style.right = '10px';
-            legend.style.left = 'auto';
             // Note: bottom positioning is likely handled by CSS overrides now
-            console.log('iOS Safari legend reposition applied via JS:', legend.style.cssText);
+            console.log('iOS Safari legend reposition applied via JS (position only):', legend.style.cssText);
           } else {
             console.warn("Legend element not found for iOS fix.");
           }
@@ -289,6 +312,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (footerElement) {
             footerElement.innerHTML = html;
             console.log("Footer HTML loaded.");
+
+            // Ensure footer starts invisible for transition by setting styles directly
+            footerElement.style.opacity = '0';
+            footerElement.style.transform = 'translateY(20px)';
+            // Optionally remove class if it somehow exists, though styles take precedence
+            footerElement.classList.remove('visible'); 
+
+            // Observe the footer *after* loading its content and setting initial styles
+            if (observer) { // Check if observer is initialized
+              console.log("Observer found, attempting to observe footer (now styled invisible):", footerElement);
+              observer.observe(footerElement);
+            } else {
+              console.error("IntersectionObserver not initialized when trying to observe footer.");
+            }
 
             // Initialize plant animation after footer is loaded
             // Attempt to load and run plant-init.js if it exists
@@ -521,4 +558,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const filterButtons = document.querySelectorAll('.filter-btn');
+
+    // Add fade-in animation on scroll
+    // Select elements that should fade in *on scroll* (exclude first section)
+    const sectionsToAnimateOnScroll = document.querySelectorAll('.content-section:not(:first-of-type), .dashboard, .card'); 
+    // Select the element that should fade in *immediately*
+    const firstContentSection = document.querySelector('.content-section:first-of-type');
+
+    // Set initial styles for elements that fade in on scroll
+    sectionsToAnimateOnScroll.forEach(el => {
+      el.style.opacity = '0';
+      // el.style.transform = 'translateY(20px)'; // Removed transform
+    });
+
+    // Set initial styles and trigger immediate fade-in ONLY for the first content section
+    if (firstContentSection) { 
+      console.log("Setting initial opacity style for immediate fade-in:", firstContentSection.className);
+      firstContentSection.style.opacity = '0';
+      // firstContentSection.style.transform = 'translateY(20px)'; // Removed transform
+      // Remove class just in case
+      firstContentSection.classList.remove('visible'); 
+
+      // Apply final opacity style after a short delay
+      setTimeout(() => {
+          console.log("Applying final opacity style for immediate fade-in via timeout:", firstContentSection.className);
+          firstContentSection.style.opacity = '1';
+          // firstContentSection.style.transform = 'translateY(0)'; // Removed transform
+      }, 20); // 20ms delay
+    }
+
+    const observerOptions = {
+        root: null, // relative to the viewport
+        rootMargin: '0px',
+        threshold: 0.1 // Trigger when 10% of the element is visible
+    };
+
+    const observerCallback = (entries, observer) => {
+        entries.forEach(entry => {
+            console.log("Intersection detected for:", entry.target.id || entry.target.className);
+            if (entry.isIntersecting) {
+                // Apply final opacity style after a short delay
+                setTimeout(() => {
+                    console.log("Applying final opacity style directly via timeout to:", entry.target.id || entry.target.className);
+                    entry.target.style.opacity = '1';
+                    // entry.target.style.transform = 'translateY(0)'; // Removed transform
+                }, 20); // 20ms delay
+                
+                observer.unobserve(entry.target); // Stop observing once visible
+            }
+        });
+    };
+
+    // Define observer here so it's accessible in the footer fetch scope
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Observe only the scroll-dependent sections initially
+    sectionsToAnimateOnScroll.forEach(section => {
+        observer.observe(section);
+    });
 }); // End of DOMContentLoaded 

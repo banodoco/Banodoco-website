@@ -22,12 +22,14 @@ export function initializeBndcSquiggles(containerId) {
     let smallShapes = []; // Store small shape line objects
     let speechBubble = null; // Store speech bubble line object
     let bubbleTextSprite = null; // Store text sprite object
-    let targetText = "Helllooo...what's up?"; // Store the target text
+    let targetText = "Hello...what's up?"; // Store the target text
     let bubbleTotalPoints = 0; // Store total points for drawRange animation
     let currentTextLength = 0; // Track how much text is visible
     let writingStartTime = 0; // Track when writing begins
-    const baseWritingSpeed = 5; // Characters per second (initial speed)
-    const fastWritingSpeed = 13; // Characters per second (after 'w')
+    // Define speeds for different text segments
+    const helloSpeed = 15; // Characters per second (Fast)
+    const ellipsisSpeed = 1.7; // Characters per second (Slow)
+    const restSpeed = 13; // Characters per second (Fast again)
     let writingHasBegun = false; // Flag to track if typing should start
 
     // Animation state variables
@@ -37,9 +39,12 @@ export function initializeBndcSquiggles(containerId) {
     let transitionProgress = 0;
     const transitionDuration = 0.8; // Duration of fade/appear in seconds
 
-    // Find the index where speed changes
-    const speedChangeIndex = targetText.indexOf('w');
-    const timeToReachChange = speedChangeIndex >= 0 ? speedChangeIndex / baseWritingSpeed : Infinity;
+    // Calculate text segment lengths and timings
+    const helloEndIndex = 5; // Index after "Hello"
+    const ellipsisEndIndex = 8; // Index after "Hello..."
+    const timeForHello = helloEndIndex / helloSpeed;
+    const timeForEllipsis = (ellipsisEndIndex - helloEndIndex) / ellipsisSpeed;
+    const totalLength = targetText.length;
 
     function init() {
         scene = new THREE.Scene();
@@ -207,7 +212,31 @@ export function initializeBndcSquiggles(containerId) {
 
         // Create smooth curve through all points
         const curve = new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.5);
-        const curvePoints = curve.getPoints(200); // More points for smoother curve
+        let curvePoints = curve.getPoints(200); // More points for smoother curve
+
+        // --- Reorder points to start drawing from the tail tip ---
+        // Find the approximate index of the tail tip in the generated curve points
+        const tailTipTarget = new THREE.Vector3(tailEndX, tailEndY, 0);
+        let tailTipIndex = -1;
+        let minDistanceSq = Infinity;
+
+        curvePoints.forEach((p, index) => {
+            const distSq = p.distanceToSquared(tailTipTarget);
+            if (distSq < minDistanceSq) {
+                minDistanceSq = distSq;
+                tailTipIndex = index;
+            }
+        });
+
+        // Reorder the array if a plausible tail tip was found
+        if (tailTipIndex !== -1) {
+            const pointsBefore = curvePoints.slice(0, tailTipIndex);
+            const pointsAfter = curvePoints.slice(tailTipIndex);
+            curvePoints = pointsAfter.concat(pointsBefore); // Start with the tail tip segment
+        }
+        curvePoints.reverse(); // Reverse the order to draw the other way around
+        // --- End reordering ---
+
         bubbleTotalPoints = curvePoints.length;
 
         const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
@@ -250,7 +279,7 @@ export function initializeBndcSquiggles(containerId) {
         const baseCanvasHeight = 28; // Base height based on font size + padding
 
         // --- Calculate Logical Dimensions (based on base font size) ---
-        context.font = `${baseFontSize}px Arial`;
+        context.font = `${baseFontSize}px Verdana`;
         const logicalTextMetrics = context.measureText(targetText); // Measure the full target text
         const logicalTextWidth = logicalTextMetrics.width;
         const logicalCanvasWidth = Math.ceil(logicalTextWidth) + basePadding * 2;
@@ -263,7 +292,7 @@ export function initializeBndcSquiggles(containerId) {
         canvas.height = renderCanvasHeight;
 
         // --- Configure Context for High-Res Drawing ---
-        context.font = `${baseFontSize * dpr}px Arial`; // Use scaled font size
+        context.font = `${baseFontSize * dpr}px Verdana`; // Use scaled font size (Verdana)
         context.fillStyle = "#444444";
         context.textAlign = 'left';
         context.textBaseline = 'middle';
@@ -338,7 +367,7 @@ export function initializeBndcSquiggles(containerId) {
         context.clearRect(0, 0, canvasWidth, canvasHeight);
 
         // Re-apply scaled font and draw the new text
-        context.font = `${baseFontSize * dpr}px Arial`;
+        context.font = `${baseFontSize * dpr}px Verdana`; // Use Verdana here too
         context.fillStyle = "#444444";
         context.textAlign = 'left';
         context.textBaseline = 'middle';
@@ -516,13 +545,16 @@ export function initializeBndcSquiggles(containerId) {
     function animate() {
         animationFrameId = requestAnimationFrame(animate);
         const deltaTime = clock.getDelta();
+        // Cap delta time to avoid jumps on tab focus (e.g., max 1/30th of a second)
+        const cappedDeltaTime = Math.min(deltaTime, 1 / 30); 
         let needsRender = false;
 
         // Handle Transitions and Writing
         if (animationState !== 'idle') {
             // Only manage transitionProgress for fade/appear states
             if (animationState !== 'bubbleWriting') {
-                 transitionProgress += deltaTime / transitionDuration;
+                 // Use cappedDeltaTime for transition progress calculation
+                 transitionProgress += cappedDeltaTime / transitionDuration; 
                  transitionProgress = Math.min(transitionProgress, 1.0);
             }
             needsRender = true;
@@ -533,9 +565,9 @@ export function initializeBndcSquiggles(containerId) {
                     line.material.opacity = lerp(1, 0, transitionProgress);
                     const scale = lerp(1, 0.1, transitionProgress);
                     line.scale.set(scale, scale, 1);
-                    // Drift animation during fade
-                    line.position.x += (line.position.x > 0 ? 1 : -1) * deltaTime * 50; // Faster drift out
-                    line.position.y += (line.position.y > 0 ? 1 : -1) * deltaTime * 50;
+                    // Drift animation during fade - use cappedDeltaTime
+                    line.position.x += (line.position.x > 0 ? 1 : -1) * cappedDeltaTime * 50; 
+                    line.position.y += (line.position.y > 0 ? 1 : -1) * cappedDeltaTime * 50; 
                 });
                 if (transitionProgress >= 1) {
                     setShapesVisibility(false, true);
@@ -545,13 +577,12 @@ export function initializeBndcSquiggles(containerId) {
             } else if (animationState === 'bubbleAppearing') {
                  if (speechBubble) {
                      speechBubble.visible = true; // Make sure it's visible
+                     speechBubble.material.opacity = 1; // Bubble line should be fully opaque
+                     speechBubble.scale.set(1, 1, 1); // Ensure scale is normal (no scaling animation)
+
                      // Animate drawRange until complete
                      const count = Math.ceil(lerp(0, bubbleTotalPoints, transitionProgress));
                      speechBubble.geometry.setDrawRange(0, count);
-                     // Fade in opacity and scale up
-                     speechBubble.material.opacity = lerp(0, 1, transitionProgress);
-                     const scale = lerp(0.1, 1, transitionProgress);
-                     speechBubble.scale.set(scale, scale, 1);
                  }
 
                  // Make text sprite visible and fade in
@@ -578,19 +609,23 @@ export function initializeBndcSquiggles(containerId) {
                  // If writing has started, handle text updates here
                  if (writingHasBegun) {
                      const elapsedWritingTime = clock.getElapsedTime() - writingStartTime;
-                     let charsToShow;
+                     let charsToShow = 0;
 
-                     if (speedChangeIndex === -1 || elapsedWritingTime <= timeToReachChange) {
-                         // Before the speed change point or if 'w' not found
-                         charsToShow = Math.min(Math.floor(elapsedWritingTime * baseWritingSpeed), targetText.length);
+                     if (elapsedWritingTime <= timeForHello) {
+                         // Typing "Hello"
+                         charsToShow = Math.floor(elapsedWritingTime * helloSpeed);
+                     } else if (elapsedWritingTime <= timeForHello + timeForEllipsis) {
+                         // Typing "..."
+                         const timeInEllipsis = elapsedWritingTime - timeForHello;
+                         charsToShow = helloEndIndex + Math.floor(timeInEllipsis * ellipsisSpeed);
                      } else {
-                         // After the speed change point
-                         const timeAfterChange = elapsedWritingTime - timeToReachChange;
-                         const charsAfterChange = Math.floor(timeAfterChange * fastWritingSpeed);
-                         charsToShow = Math.min(speedChangeIndex + charsAfterChange, targetText.length);
+                         // Typing "what's up?"
+                         const timeInRest = elapsedWritingTime - (timeForHello + timeForEllipsis);
+                         charsToShow = ellipsisEndIndex + Math.floor(timeInRest * restSpeed);
                      }
 
-                     currentTextLength = charsToShow;
+                     // Ensure charsToShow doesn't exceed total length
+                     currentTextLength = Math.min(charsToShow, totalLength);
 
                      if (bubbleTextSprite && bubbleTextSprite.material.map?.image) {
                          const expectedText = targetText.substring(0, charsToShow);
@@ -620,19 +655,23 @@ export function initializeBndcSquiggles(containerId) {
             } else if (animationState === 'bubbleWriting') {
                  // This state now ONLY handles continuing writing if it didn't finish during bubbleAppearing
                  const elapsedWritingTime = clock.getElapsedTime() - writingStartTime;
-                 let charsToShow;
+                 let charsToShow = 0;
 
-                 if (speedChangeIndex === -1 || elapsedWritingTime <= timeToReachChange) {
-                     // Before the speed change point or if 'w' not found
-                     charsToShow = Math.min(Math.floor(elapsedWritingTime * baseWritingSpeed), targetText.length);
+                 if (elapsedWritingTime <= timeForHello) {
+                     // Typing "Hello"
+                     charsToShow = Math.floor(elapsedWritingTime * helloSpeed);
+                 } else if (elapsedWritingTime <= timeForHello + timeForEllipsis) {
+                     // Typing "..."
+                     const timeInEllipsis = elapsedWritingTime - timeForHello;
+                     charsToShow = helloEndIndex + Math.floor(timeInEllipsis * ellipsisSpeed);
                  } else {
-                     // After the speed change point
-                     const timeAfterChange = elapsedWritingTime - timeToReachChange;
-                     const charsAfterChange = Math.floor(timeAfterChange * fastWritingSpeed);
-                     charsToShow = Math.min(speedChangeIndex + charsAfterChange, targetText.length);
+                     // Typing "what's up?"
+                     const timeInRest = elapsedWritingTime - (timeForHello + timeForEllipsis);
+                     charsToShow = ellipsisEndIndex + Math.floor(timeInRest * restSpeed);
                  }
 
-                 currentTextLength = charsToShow;
+                 // Ensure charsToShow doesn't exceed total length
+                 currentTextLength = Math.min(charsToShow, totalLength);
 
                  // Only update texture if the text content changes
                  if (bubbleTextSprite && bubbleTextSprite.material.map?.image) {
@@ -658,22 +697,25 @@ export function initializeBndcSquiggles(containerId) {
                  }
                  // Keep needsRender = true while writing
             } else if (animationState === 'bubbleFading') {
-                 const scale = lerp(1, 0.1, transitionProgress);
-                 // Fade out using scale and opacity (keep this simple)
+                 // Fade out using reverse drawRange (erasing) and text opacity
                  if(speechBubble) {
-                     speechBubble.scale.set(scale, scale, 1);
-                     speechBubble.material.opacity = lerp(1, 0, transitionProgress);
+                      const eraseProgress = lerp(0, 1, transitionProgress); // 0 = full, 1 = empty
+                      const count = Math.ceil(bubbleTotalPoints * (1 - eraseProgress));
+                      speechBubble.geometry.setDrawRange(0, count); // Decrease draw range to erase
+                      // Keep opacity at 1 while erasing, then hide at the end
+                      speechBubble.material.opacity = eraseProgress < 1 ? 1 : 0;
                  }
                  if(bubbleTextSprite) bubbleTextSprite.material.opacity = lerp(1, 0, transitionProgress); // Fade text too
+
                  if (transitionProgress >= 1) {
-                    setBubbleVisibility(false, true); // This will also clear the text now
-                    randomizeShapesPosition(); // Randomize positions before appearing
-                    // Explicitly set initial state for shapes appearing animation
-                    smallShapes.forEach(shapeData => {
-                        shapeData.line.material.opacity = 0;
-                        shapeData.line.scale.set(0.1, 0.1, 1);
-                    });
-                    startTransition('shapesAppearing');
+                     setBubbleVisibility(false, true); // This will also clear the text now
+                     randomizeShapesPosition(); // Randomize positions before appearing
+                     // Explicitly set initial state for shapes appearing animation
+                     smallShapes.forEach(shapeData => {
+                         shapeData.line.material.opacity = 0;
+                         shapeData.line.scale.set(0.1, 0.1, 1);
+                     });
+                     startTransition('shapesAppearing');
                  }
             } else if (animationState === 'shapesAppearing') {
                 setShapesVisibility(true); 
@@ -690,7 +732,8 @@ export function initializeBndcSquiggles(containerId) {
         } else { 
              // --- Idle Animation --- 
              if (!speechBubble || !speechBubble.visible) {
-                 animateIdleShapes(deltaTime);
+                 // Use cappedDeltaTime for idle animation
+                 animateIdleShapes(cappedDeltaTime); 
                  needsRender = true; // Shapes are moving, need render
              } else {
                   // Bubble is visible and idle (finished writing), no animation needed here
