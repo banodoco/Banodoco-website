@@ -55,34 +55,48 @@ function initializePlantAnimation() {
                     // Start the growth from the sapling position
                     startGrowth(startX, startY);
                     
-                    // Wait for the plant to start growing before fading out the watering can
-                    setTimeout(() => {
-                        // Add fade-out class to the watering can
-                        wateringContainer.classList.add('fade-out');
-                        
-                        // Wait for fade-out to complete before hiding
-                        setTimeout(() => {
-                            wateringContainer.style.display = 'none';
-                            if (initialBud) {
-                                initialBud.style.display = 'none';
-                            }
-                            
-                            // Wait an additional 1 second before removing the dead space
-                            setTimeout(() => {
-                                // Get the social-links element and adjust its margin to remove dead space
-                                const socialLinks = document.querySelector('.social-links');
-                                if (socialLinks) {
-                                    // Add a transition for smooth animation
-                                    socialLinks.style.transition = 'margin-bottom 1.5s ease-in-out';
-                                    // After a small delay to ensure transition is applied
-                                    setTimeout(() => {
-                                        socialLinks.style.marginBottom = '0.45rem';
-                                    }, 50);
-                                }
-                            }, 1000);
-                        }, 1000); // Wait for fade-out to complete before hiding
-                    }, 1000); // Wait for plant to start growing
+                    // START FADE/MARGIN ADJUSTMENT IMMEDIATELY
+                    console.log('Starting fade-out of watering can AND margin adjustment NOW (immediately after startGrowth).');
                     
+                    // Add fade-out class to the watering can
+                    wateringContainer.classList.add('fade-out');
+                    
+                    // Get parent elements for logging
+                    const footer = document.getElementById('footer');
+                    const finalSection = document.querySelector('.final-section');
+                    
+                    // Log initial parent dimensions
+                    if (footer) console.log('Footer initial height:', footer.offsetHeight, window.getComputedStyle(footer).height);
+                    if (finalSection) console.log('Final Section initial height:', finalSection.offsetHeight, window.getComputedStyle(finalSection).height);
+                    
+                    // Get the social-links element
+                    const socialLinks = document.querySelector('.social-links');
+                    
+                    if (socialLinks) {
+                        console.log('Starting margin adjustment for .social-links.');
+                        const currentMargin = window.getComputedStyle(socialLinks).marginBottom;
+                        console.log('Current .social-links margin-bottom (before transition):', currentMargin);
+                        
+                        // Set the target margin - use requestAnimationFrame for timing
+                        requestAnimationFrame(() => {
+                            // Log parent dimensions just before setting margin
+                            if (footer) console.log('Footer height BEFORE margin set:', footer.offsetHeight, window.getComputedStyle(footer).height);
+                            if (finalSection) console.log('Final Section height BEFORE margin set:', finalSection.offsetHeight, window.getComputedStyle(finalSection).height);
+                            
+                            console.log('Setting new .social-links margin-bottom to 1.75rem.');
+                            socialLinks.style.marginBottom = '1.75rem';
+                            
+                            // Log parent dimensions immediately after setting margin (might not reflect final state yet)
+                            setTimeout(() => {
+                                if (footer) console.log('Footer height JUST AFTER margin set:', footer.offsetHeight, window.getComputedStyle(footer).height);
+                                if (finalSection) console.log('Final Section height JUST AFTER margin set:', finalSection.offsetHeight, window.getComputedStyle(finalSection).height);
+                            }, 0);
+                        });
+                        
+                    } else {
+                        console.log('.social-links element not found.');
+                    }
+
                 }, 1500); // Delay for water drop animation
             }
         });

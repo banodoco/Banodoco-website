@@ -10,6 +10,7 @@ const MAX_TREES = 100; // Maximum number of trees allowed
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  console.log('resizeCanvas called: canvas dimensions:', canvas.width, canvas.height);
 }
 
 resizeCanvas();
@@ -17,9 +18,21 @@ let baseSize = { width: canvas.width, height: canvas.height };
 
 window.addEventListener('resize', () => {
   resizeCanvas();
+  // Always log the state after resize, regardless of animationStarted
+  console.log('Window resized:', { 
+    innerWidth: window.innerWidth, 
+    innerHeight: window.innerHeight, 
+    canvasWidth: canvas.width, 
+    canvasHeight: canvas.height, 
+    baseSize: baseSize,
+    animationStarted: animationStarted 
+  });
   // If animation hasn't started, update the baseline; once started, keep baseSize fixed
   if (!animationStarted) {
     baseSize = { width: canvas.width, height: canvas.height };
+    console.log('Base size updated because animation not started yet.');
+  } else {
+    console.log('Base size NOT updated because animation has started.');
   }
 });
 
@@ -122,6 +135,8 @@ class Branch {
   draw() {
     const scaleX = canvas.width / baseSize.width;
     const scaleY = canvas.height / baseSize.height;
+    // Log scale factors, perhaps throttle this too if too noisy, but let's try without first
+    // REMOVED: console.log('Branch.draw scale factors:', { scaleX, scaleY, canvasWidth: canvas.width, canvasHeight: canvas.height, baseSizeW: baseSize.width, baseSizeH: baseSize.height });
 
     // Draw the branch
     ctx.lineWidth = this.branchWidth * ((scaleX + scaleY) / 2);
@@ -204,10 +219,17 @@ class Seed {
 
 // Track the last timestamp to compute a delta on each frame
 let lastTimestamp = 0;
+let lastLogTime = 0; // Added for throttling logs in animate
 function animate(timestamp) {
   if (!lastTimestamp) lastTimestamp = timestamp;
   const delta = timestamp - lastTimestamp; // milliseconds since last frame
   lastTimestamp = timestamp;
+
+  // Log every frame for the first 5000ms, then throttle to once per second
+  if (timestamp < 5000 || timestamp - lastLogTime > 1000) {
+    console.log('animate frame:', { timestamp, delta, canvasWidth: canvas.width, canvasHeight: canvas.height, baseSize });
+    lastLogTime = timestamp;
+  }
 
   // Clear (fill) the canvas each frame
   ctx.fillStyle = '#fbf8ef'; // match the body background color
@@ -220,7 +242,17 @@ function animate(timestamp) {
 }
 
 function startGrowth(startX, startY) {
+  console.log('startGrowth called. Current state:', { 
+    startX, 
+    startY, 
+    canvasWidth: canvas.width, 
+    canvasHeight: canvas.height, 
+    baseSize: baseSize, 
+    animationStarted: animationStarted 
+  });
+
   animationStarted = true;
+  console.log('animationStarted set to true.');
 
   // Main upward branch
   branches.push(new Branch(startX, startY + 5, canvas.height / 7.5, 0, 10, 7));
