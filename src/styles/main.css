@@ -1231,15 +1231,15 @@ background-color: #fffff2 !important;
 
 
 @media (max-width: 1024px) and (min-width: 851px) {
-.renaissance-section .image-column {
-  flex-basis: 60% !important; /* Adjust flex-basis */
-  width: auto !important; /* Remove fixed width */
-  margin-top: 30px; /* Keep margin if needed */
-}
-.renaissance-section > div:first-child {
-  flex-basis: 40% !important; /* Adjust flex-basis */
-  width: auto !important; /* Remove fixed width */
-}
+  .renaissance-section > div:first-child {
+    flex-basis: 50% !important;
+    width: auto !important;
+  }
+  .renaissance-section .image-column {
+    flex-basis: 50% !important;
+    width: auto !important;
+    margin-top: 30px;
+  }
 }
 @media (max-width: 850px) {
 .renaissance-section {
@@ -1408,4 +1408,16 @@ body:not(.ownership-page) .content-section:first-of-type.visible {
 #footer, #plantCanvas {
   opacity: 1 !important;
   transform: none !important;
+}
+
+@media (max-width: 1024px) {
+  .card[data-category="openmuse"] img {
+    height: 95px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .card[data-category="openmuse"] img {
+    height: 60px !important; /* Further reduce height for smaller tablets */
+  }
 }
