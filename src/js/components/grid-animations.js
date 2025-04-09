@@ -437,18 +437,18 @@ async function initializeOwnershipGrid() {
   try {
     // --- Inject Ownership Grid CSS ---
     const ownershipGridCSS = `
-      /* Base styles for ownership grid */
+      /* Base styles for ownership grid (Mobile-first) */
       .ownership-images-grid {
         display: grid;
         gap: 2px;
         margin: 1rem 0;
         overflow: hidden; /* Contain internal overflow */
-        /* Mobile-first: 12 columns, 6 rows */
+        /* Mobile (< 480px): 12 columns, 6 rows = 72 items */
         grid-template-columns: repeat(12, minmax(0, 1fr));
         grid-template-rows: repeat(6, auto);
       }
 
-      /* Hide items beyond 72 for mobile */
+      /* Hide items beyond 72 for mobile by default */
       .ownership-images-grid > *:nth-child(n+73) {
         display: none;
       }
@@ -471,35 +471,50 @@ async function initializeOwnershipGrid() {
       }
 
       /* Responsive adjustments */
-      /* Small tablets */
+
+      /* Small Tablets (480px - 767px) */
       @media (min-width: 480px) {
         .ownership-images-grid {
+          /* 14 columns, 4 rows = 56 items */
           grid-template-columns: repeat(14, minmax(0, 1fr));
           grid-template-rows: repeat(4, auto);
         }
-        .ownership-images-grid > *:nth-child(n+73) { display: block; }
-        .ownership-images-grid > *:nth-child(n+85) { display: none; }
+        /* Show items up to 72 (were hidden on mobile), then hide specifically from 57 */
+        .ownership-images-grid > *:nth-child(-n+72) { display: block; } /* Unhide mobile-hidden */
+        .ownership-images-grid > *:nth-child(n+57) { display: none; }  /* Hide > 56 */
       }
 
-      /* Small Desktops */
-      @media (min-width: 992px) {
+      /* Standard Tablets / Small Desktops (768px - 991px) */
+      @media (min-width: 768px) {
         .ownership-images-grid {
+          /* 18 columns, 4 rows = 72 items */
           grid-template-columns: repeat(18, minmax(0, 1fr));
-          grid-template-rows: repeat(4, auto);
+          /* grid-template-rows: repeat(4, auto); */ /* Inherited */
         }
-        .ownership-images-grid > *:nth-child(n+97) { display: block; }
-        .ownership-images-grid > *:nth-child(n+109) { display: none; }
+        /* Show items up to 56 (were hidden), then hide specifically from 73 */
+        .ownership-images-grid > *:nth-child(-n+74) { display: block; } /* Unhide tablet-hidden */
+        .ownership-images-grid > *:nth-child(n+73) { display: none; }  /* Hide > 72 */
       }
 
-      /* Desktop - Restore original flow with 3 rows */
+      /* Larger Small Desktops (992px - 1199px) */
+      @media (min-width: 992px) {
+        /* Keep 18x4 grid, but show more items (up to 96) */
+        /* Show items up to 72 (were hidden), then hide specifically from 97 */
+        .ownership-images-grid > *:nth-child(-n+72) { display: block; } /* Unhide previous-hidden */
+        .ownership-images-grid > *:nth-child(n+97) { display: none; } /* Hide > 96 */
+      }
+
+      /* Large Desktops (>= 1200px) */
       @media (min-width: 1200px) {
         .ownership-images-grid {
           grid-auto-flow: column;
           grid-template-columns: none;
           grid-auto-columns: minmax(0, 1fr);
+          /* 3 rows */
           grid-template-rows: repeat(3, auto);
         }
-        .ownership-images-grid > *:nth-child(n+109) { display: block; }
+        /* Show all items (override previous hide rules) */
+        .ownership-images-grid > *:nth-child(n+1) { display: block !important; }
       }
     `;
     const styleElement = document.createElement('style');

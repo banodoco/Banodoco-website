@@ -699,15 +699,8 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   }
   .ownership-images-grid {
     /* Mobile-first: 12 columns, 6 rows */
-    grid-template-columns: repeat(12, minmax(0, 1fr)); /* Use minmax(0, 1fr) */
-    grid-template-rows: repeat(6, auto); /* Changed from 4 */
-  }
-  .ownership-images-grid img,
-  .ownership-images-grid div {
-    /* Delete this block if it only contains ownership grid styles */
-  }
-  .ownership-images-grid > *:nth-child(n+73) { /* Changed from n+49 */
-    display: none;
+    /* grid-template-columns: repeat(12, minmax(0, 1fr)); REMOVED */
+    /* grid-template-rows: repeat(6, auto); REMOVED */
   }
   .card[data-category="mellon"] {
     flex-direction: column !important;
@@ -1384,14 +1377,32 @@ background-color: #f2f2ff;
   margin-top: 13rem;
 }
 
-/* Fade-in animation: Define transition, final state in .visible */
-.content-section, .dashboard, .card, #header, #footer {
+/* Fade-in animation: Define transition, initial state, final state in .visible */
+/* Set initial state (hidden) for elements that fade in */
+.content-section:not(:first-of-type), 
+.dashboard, 
+.card, 
+#footer,
+#header {
+  opacity: 0; /* Start hidden */
   /* Only define the transition for opacity */
-  transition: opacity 0.6s ease-out;
-  /* Opacity is now initially set by JS */
+  transition: opacity 1.2s ease-out; /* << Slower transition */
 }
 
+/* Special case for header - fades in immediately, so no initial opacity here, set by JS */
+/* #header {  -- REMOVED: Now handled above
+  transition: opacity 0.6s ease-out;
+} */
+
+/* The first content section also fades in immediately, handled by JS */
+/* ALSO set initial opacity 0 here */
+.content-section:first-of-type {
+  opacity: 0; /* Start hidden */
+  transition: opacity 1.2s ease-out; /* << Slower transition */
+}
+
+/* Define the visible state */
 .visible {
   opacity: 1;
-  transform: translateY(0);
+  /* transform: translateY(0); // Transform removed */
 }

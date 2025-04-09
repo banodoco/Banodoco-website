@@ -10,16 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const headerElement = document.getElementById('header');
             if (headerElement) {
                 headerElement.innerHTML = html;
-                console.log("Header HTML loaded, applying fade-in with timeout");
-                // Set initial opacity style
-                headerElement.style.opacity = '0';
-                // headerElement.style.transform = 'translateY(20px)'; // Removed transform
-                // Apply final opacity style after a short delay
-                setTimeout(() => {
-                    console.log("Applying final opacity style to header via timeout");
-                    headerElement.style.opacity = '1';
-                    // headerElement.style.transform = 'translateY(0)'; // Removed transform
-                }, 20); // 20ms delay
+                console.log("Header HTML loaded, applying final opacity directly");
+                // Set initial opacity style -- REMOVED, CSS handles this
+                // headerElement.style.opacity = '0'; 
+                // Apply final opacity style immediately (transition handles the fade)
+                headerElement.style.opacity = '1';
                 
                 // Re-run feather.replace() if header contains icons
                 if (typeof feather !== 'undefined') {
@@ -565,26 +560,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Select the element that should fade in *immediately*
     const firstContentSection = document.querySelector('.content-section:first-of-type');
 
-    // Set initial styles for elements that fade in on scroll
-    sectionsToAnimateOnScroll.forEach(el => {
-      el.style.opacity = '0';
-      // el.style.transform = 'translateY(20px)'; // Removed transform
-    });
+    // Set initial styles for elements that fade in on scroll -- NOW DONE IN CSS
+    // sectionsToAnimateOnScroll.forEach(el => {
+    //   el.style.opacity = '0';
+    //   // el.style.transform = 'translateY(20px)'; // Removed transform
+    // });
 
     // Set initial styles and trigger immediate fade-in ONLY for the first content section
     if (firstContentSection) { 
-      console.log("Setting initial opacity style for immediate fade-in:", firstContentSection.className);
-      firstContentSection.style.opacity = '0';
-      // firstContentSection.style.transform = 'translateY(20px)'; // Removed transform
-      // Remove class just in case
+      console.log("Setting initial opacity style for immediate fade-in: -- REMOVED, handled by CSS");
+      // firstContentSection.style.opacity = '0'; -- REMOVED, handled by CSS
+      // Remove class just in case (still useful)
       firstContentSection.classList.remove('visible'); 
 
-      // Apply final opacity style after a short delay
+      // Apply final opacity style after a short delay (timeout ensures transition occurs)
       setTimeout(() => {
           console.log("Applying final opacity style for immediate fade-in via timeout:", firstContentSection.className);
           firstContentSection.style.opacity = '1';
-          // firstContentSection.style.transform = 'translateY(0)'; // Removed transform
-      }, 20); // 20ms delay
+      }, 20); // 20ms delay needed here so transition has time to register initial state
     }
 
     const observerOptions = {
@@ -615,5 +608,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Observe only the scroll-dependent sections initially
     sectionsToAnimateOnScroll.forEach(section => {
         observer.observe(section);
+    });
+
+    // Added code to trigger fade-in for visible elements on page load
+    window.addEventListener('load', () => {
+        sectionsToAnimateOnScroll.forEach(section => {
+            const rect = section.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom >= 0) {
+                setTimeout(() => {
+                    section.style.opacity = '1';
+                }, 20);
+            }
+        });
     });
 }); // End of DOMContentLoaded 
