@@ -29,7 +29,7 @@ export function initializeBndcSquiggles(containerId) {
     // Define speeds for different text segments
     const helloSpeed = 15; // Characters per second (Fast)
     const ellipsisSpeed = 1.7; // Characters per second (Slow)
-    const restSpeed = 13; // Characters per second (Fast again)
+    const restSpeed = 20; // Characters per second (Fast again)
     let writingHasBegun = false; // Flag to track if typing should start
 
     // Animation state variables
