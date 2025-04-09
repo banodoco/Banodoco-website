@@ -10,11 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const headerElement = document.getElementById('header');
             if (headerElement) {
                 headerElement.innerHTML = html;
-                console.log("Header HTML loaded, applying final opacity directly");
-                // Set initial opacity style -- REMOVED, CSS handles this
-                // headerElement.style.opacity = '0'; 
-                // Apply final opacity style immediately (transition handles the fade)
-                headerElement.style.opacity = '1';
+                console.log("Header HTML loaded, applying .visible class");
+                // Ensure header starts invisible (handled by CSS, but remove class just in case)
+                headerElement.classList.remove('visible'); 
+                // Apply final state by adding class
+                // Minimal timeout might still be useful here
+                setTimeout(() => {
+                    headerElement.classList.add('visible');
+                }, 1); 
                 
                 // Re-run feather.replace() if header contains icons
                 if (typeof feather !== 'undefined') {
@@ -27,6 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const renaissanceVideo = document.getElementById('renaissance-video');
     if (renaissanceVideo) {
         renaissanceVideo.playbackRate = 0.7;
+    }
+
+    // Set playback speed for the BNDC video
+    const bndcVideo = document.querySelector('video[src="assets/bndc/1.webm"]');
+    if (bndcVideo) {
+        bndcVideo.playbackRate = 1.25; // Increase speed by 25%
     }
 
     // Handle video card functionality only
@@ -567,17 +576,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // });
 
     // Set initial styles and trigger immediate fade-in ONLY for the first content section
-    if (firstContentSection) { 
-      console.log("Setting initial opacity style for immediate fade-in: -- REMOVED, handled by CSS");
+    if (firstContentSection) {
+      console.log("Setting initial state for immediate fade-in: -- Handled by CSS");
       // firstContentSection.style.opacity = '0'; -- REMOVED, handled by CSS
       // Remove class just in case (still useful)
-      firstContentSection.classList.remove('visible'); 
+      firstContentSection.classList.remove('visible');
 
-      // Apply final opacity style after a short delay (timeout ensures transition occurs)
+      // Apply final state by adding class (timeout ensures transition occurs if needed, but often not necessary for class toggle)
+      // Using a minimal timeout just in case browser needs a frame to register initial state
       setTimeout(() => {
-          console.log("Applying final opacity style for immediate fade-in via timeout:", firstContentSection.className);
-          firstContentSection.style.opacity = '1';
-      }, 20); // 20ms delay needed here so transition has time to register initial state
+          console.log("Adding .visible class for immediate fade-in via timeout:", firstContentSection.className);
+          firstContentSection.classList.add('visible');
+      }, 1); // Minimal 1ms delay
     }
 
     const observerOptions = {
@@ -590,13 +600,11 @@ document.addEventListener('DOMContentLoaded', () => {
         entries.forEach(entry => {
             console.log("Intersection detected for:", entry.target.id || entry.target.className);
             if (entry.isIntersecting) {
-                // Apply final opacity style after a short delay
-                setTimeout(() => {
-                    console.log("Applying final opacity style directly via timeout to:", entry.target.id || entry.target.className);
-                    entry.target.style.opacity = '1';
-                    // entry.target.style.transform = 'translateY(0)'; // Removed transform
-                }, 20); // 20ms delay
-                
+                // Apply final state by adding the class
+                console.log("Adding .visible class to:", entry.target.id || entry.target.className);
+                entry.target.classList.add('visible');
+                // entry.target.style.transform = 'translateY(0)'; // Removed transform
+
                 observer.unobserve(entry.target); // Stop observing once visible
             }
         });
@@ -615,10 +623,22 @@ document.addEventListener('DOMContentLoaded', () => {
         sectionsToAnimateOnScroll.forEach(section => {
             const rect = section.getBoundingClientRect();
             if (rect.top < window.innerHeight && rect.bottom >= 0) {
-                setTimeout(() => {
-                    section.style.opacity = '1';
-                }, 20);
+                 // Apply final state by adding the class
+                console.log("Adding .visible class on load to:", section.id || section.className);
+                section.classList.add('visible');
             }
         });
     });
+
+    // Ensure footer and plant canvas are always visible
+    const footerEl = document.getElementById('footer');
+    if (footerEl) {
+      footerEl.removeAttribute('style'); // Remove inline styles that force opacity 0
+      footerEl.classList.add('visible');
+    }
+    const plantCanvas = document.getElementById('plantCanvas');
+    if (plantCanvas) {
+      plantCanvas.removeAttribute('style');
+      plantCanvas.classList.add('visible');
+    }
 }); // End of DOMContentLoaded 

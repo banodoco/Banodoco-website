@@ -122,13 +122,13 @@ body {
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  transition: transform 0.3s ease;
   display: flex;
   flex-direction: column;
   min-height: 340px;
 }
 .card:hover {
   transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 /* Image Container inside Cards */
@@ -1380,29 +1380,32 @@ background-color: #f2f2ff;
 /* Fade-in animation: Define transition, initial state, final state in .visible */
 /* Set initial state (hidden) for elements that fade in */
 body:not(.ownership-page) .content-section:not(:first-of-type), 
-body:not(.ownership-page) .dashboard, 
 body:not(.ownership-page) .card, 
-body:not(.ownership-page) #footer,
-body:not(.ownership-page) #header {
-  opacity: 0; /* Start hidden */
-  /* Only define the transition for opacity */
-  transition: opacity 1.2s ease-out; /* << Slower transition */
-}
-
-/* Special case for header - fades in immediately, so no initial opacity here, set by JS */
-/* #header {  -- REMOVED: Now handled above
-  transition: opacity 0.6s ease-out;
-} */
-
-/* The first content section also fades in immediately, handled by JS */
-/* ALSO set initial opacity 0 here */
+body:not(.ownership-page) .dashboard, 
 body:not(.ownership-page) .content-section:first-of-type {
   opacity: 0; /* Start hidden */
-  transition: opacity 1.2s ease-out; /* << Slower transition */
+  /* Define ALL transitions here */
+  transition: opacity 1.2s ease-out, /* Fade-in */
+              transform 0.3s ease,   /* Hover scale */
+              box-shadow 0.3s ease; /* Hover shadow */
 }
 
-/* Define the visible state */
-.visible {
+/* Ensure header and footer are visible by default */
+#header, #footer {
+  opacity: 1 !important;
+}
+
+/* Define the visible state with increased specificity for targeted elements */
+body:not(.ownership-page) .content-section:not(:first-of-type).visible, 
+body:not(.ownership-page) .card.visible, 
+body:not(.ownership-page) .dashboard.visible, 
+body:not(.ownership-page) .content-section:first-of-type.visible {
   opacity: 1;
   /* transform: translateY(0); // Transform removed */
+}
+
+/* Force footer and plant canvas to be visible regardless of inline styles */
+#footer, #plantCanvas {
+  opacity: 1 !important;
+  transform: none !important;
 }
