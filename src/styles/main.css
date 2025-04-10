@@ -1382,7 +1382,8 @@ background-color: #f2f2ff;
 body:not(.ownership-page) .content-section:not(:first-of-type), 
 body:not(.ownership-page) .card, 
 body:not(.ownership-page) .dashboard, 
-body:not(.ownership-page) .content-section:first-of-type {
+body:not(.ownership-page) .content-section:first-of-type,
+body:not(.ownership-page) #header {
   opacity: 0; /* Start hidden */
   /* Define ALL transitions here */
   transition: opacity 1.2s ease-out, /* Fade-in */
@@ -1391,21 +1392,22 @@ body:not(.ownership-page) .content-section:first-of-type {
 }
 
 /* Ensure header and footer are visible by default */
-#header, #footer {
+/* DELETED #header, #footer {
   opacity: 1 !important;
-}
+} */
 
 /* Define the visible state with increased specificity for targeted elements */
 body:not(.ownership-page) .content-section:not(:first-of-type).visible, 
 body:not(.ownership-page) .card.visible, 
 body:not(.ownership-page) .dashboard.visible, 
-body:not(.ownership-page) .content-section:first-of-type.visible {
+body:not(.ownership-page) .content-section:first-of-type.visible,
+body:not(.ownership-page) #header.visible {
   opacity: 1;
   /* transform: translateY(0); // Transform removed */
 }
 
 /* Force footer and plant canvas to be visible regardless of inline styles */
-#footer, #plantCanvas {
+#footer, #plantCanvas { /* Restore #footer */
   opacity: 1 !important;
   transform: none !important;
 }
