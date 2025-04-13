@@ -636,7 +636,7 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   }
   .ecosystem-visualization {
     min-width: auto !important;
-    margin-top: -40px !important;
+    margin-top: -20px !important; /* Changed from -40px */
     margin-bottom: 0 !important;
     position: relative !important;
     width: 100vw !important;
@@ -662,12 +662,12 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 
   /* Add mobile margin override for section divider */
   hr.section-divider {
-    margin: 3rem auto !important; /* Adjusted margin for mobile */
+    margin: 5rem auto 3rem auto !important; /* Increased top margin for mobile */
   }
 
   .two-column .ecosystem-visualization {
     height: 550px !important;
-    margin-top: -40px !important;
+    margin-top: -20px !important; /* Changed from -40px */
     margin-bottom: -50px !important;
     position: relative;
   }
@@ -731,12 +731,12 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 @media (max-width: 480px) {
 .ecosystem-visualization {
   height: 380px !important;
-  margin-top: -110px !important;
+  margin-top: -90px !important; /* Changed from -110px */
   margin-bottom: -50px !important;
 }
 .two-column .ecosystem-visualization {
   height: 380px !important;
-  margin-top: -110px !important;
+  margin-top: -90px !important; /* Changed from -110px */
   margin-bottom: -50px !important;
 }
 
