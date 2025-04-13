@@ -28,7 +28,7 @@ export function initializeBndcSquiggles(containerId) {
     let writingStartTime = 0; // Track when writing begins
     // Define speeds for different text segments
     const helloSpeed = 21.75; // Characters per second (Fast) - Increased from 15
-    const ellipsisSpeed = 1.75; // Characters per second (Slow) - Increased from 1.4
+    const ellipsisSpeed = 1.65; // Characters per second (Slow) - Increased from 1.4
     const restSpeed = 25; // Characters per second (Fast again) - Increased from 20
     let writingHasBegun = false; // Flag to track if typing should start
 
