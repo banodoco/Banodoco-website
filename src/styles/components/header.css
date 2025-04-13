@@ -96,7 +96,7 @@
 /* New query for widescreen tablets (e.g., iPad Air in landscape) */
 @media only screen and (max-width: 1024px) and (orientation: landscape) {
   #header .site-header {
-    margin-left: 120px; /* Increase left margin for widescreen tablets */
+    margin-left: 0px; /* Increase left margin for widescreen tablets */
     padding-top: 2rem; /* Increase top padding for more vertical spacing */
   }
   #header .site-header img {
