@@ -163,7 +163,7 @@ export function runEcosystem(appendToEl = document.body) {
     scene.background = null; 
 
     const aspect = width / height;
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = window.innerWidth <= 1024;
     const mobileScale = isMobile ? 1.5 : 1;
     const VIEW_SIZE_ADJUSTED = VIEW_SIZE * mobileScale;
 
@@ -229,7 +229,7 @@ export function runEcosystem(appendToEl = document.body) {
     const width = threeContainer.clientWidth;
     const height = threeContainer.clientHeight;
     const aspect = width / height;
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = window.innerWidth <= 1024;
     const mobileScale = isMobile ? 1.5 : 1;
     const VIEW_SIZE_ADJUSTED = VIEW_SIZE * mobileScale;
 

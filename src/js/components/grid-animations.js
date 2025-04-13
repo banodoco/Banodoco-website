@@ -135,8 +135,16 @@ async function initializeCommunityGrid() {
     const communityDisplayed = new Set();
 
     // Determine number of images based on screen width
-    const isMobile = window.innerWidth <= 768;
-    const numberOfImages = isMobile ? 18 : 16; // 6x2 on mobile, 8x2 on desktop
+    const screenWidth = window.innerWidth;
+    let numberOfImages;
+
+    if (screenWidth <= 768) { // Mobile
+      numberOfImages = 18; // 6x3 grid
+    } else if (screenWidth >= 769 && screenWidth <= 1024) { // Vertical Tablet
+      numberOfImages = 12; // Reduced to 12 for 6x2 grid
+    } else { // Desktop (> 1024px)
+      numberOfImages = 16; // Default 8x2 grid
+    }
 
     // Create community grid with the calculated number of images
     for (let i = 0; i < numberOfImages; i++) {
@@ -204,8 +212,16 @@ function addCommunityImageEventListeners(img, communityDisplayed) {
   let currentGlobalDirection = 1; // 1 for forward snake, -1 for backward snake
 
   // Determine grid columns based on screen width
-  const isMobile = window.innerWidth <= 768;
-  const gridCols = isMobile ? 6 : 8; // 6 for mobile, 8 for desktop
+  const screenWidth = window.innerWidth;
+  let gridCols;
+
+  if (screenWidth <= 768) { // Mobile
+      gridCols = 6;
+  } else if (screenWidth >= 769 && screenWidth <= 1024) { // Vertical Tablet
+      gridCols = 6; // Matches the CSS override for this range
+  } else { // Desktop (> 1024px)
+      gridCols = 8; // Matches the default CSS
+  }
 
   // Helper to map snake index to linear index
   function getLinearIndexFromSnake(snakeIndex, cols, totalImages) {
