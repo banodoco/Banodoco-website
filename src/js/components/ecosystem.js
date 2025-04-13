@@ -164,7 +164,7 @@ export function runEcosystem(appendToEl = document.body) {
 
     const aspect = width / height;
     const isMobile = window.innerWidth <= 1024;
-    const mobileScale = isMobile ? 1.5 : 1;
+    const mobileScale = isMobile ? 1.275 : 1;
     const VIEW_SIZE_ADJUSTED = VIEW_SIZE * mobileScale;
 
     camera = new THREE.OrthographicCamera(
@@ -230,7 +230,7 @@ export function runEcosystem(appendToEl = document.body) {
     const height = threeContainer.clientHeight;
     const aspect = width / height;
     const isMobile = window.innerWidth <= 1024;
-    const mobileScale = isMobile ? 1.5 : 1;
+    const mobileScale = isMobile ? 1.275 : 1;
     const VIEW_SIZE_ADJUSTED = VIEW_SIZE * mobileScale;
 
     camera.left   = -VIEW_SIZE_ADJUSTED * aspect;

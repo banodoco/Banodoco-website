@@ -195,18 +195,6 @@ hr.section-divider:not(:first-of-type) {
 margin: 1rem auto 2rem auto !important; 
 }
 
-@media (max-width: 768px) {
-hr.section-divider {
-  /* Default mobile margin */
-  margin: 1.5rem auto !important;
-}
-/* Override full margin for subsequent dividers on mobile */
-hr.section-divider:not(:first-of-type) {
-  /* Reduced top, keep auto left/right, keep default mobile bottom */
-  margin: 0.75rem auto 1.5rem auto !important; 
-}
-}
-
 /* Styles for image hover effect (e.g., ADOS card) */
 .image-hover-container {
 position: relative;
@@ -539,6 +527,7 @@ font-family: 'Inter', sans-serif;
   flex-grow: 1.5;
   min-width: 500px;
   margin-left: -110px;
+  margin-top: 10px; /* Push down by 10px */
 }
 
 /* Styles for links within the Renaissance section */
@@ -621,7 +610,7 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   position: relative;
   width: 100vw;
   max-width: 100vw;
-  margin-left: calc(46% - 55vw);
+  margin-left: calc(50% - 55vw);
 }
 }
 
@@ -671,16 +660,17 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     margin-top: 2rem !important;
   }
 
+  /* Add mobile margin override for section divider */
+  hr.section-divider {
+    margin: 3rem auto !important; /* Adjusted margin for mobile */
+  }
+
   .two-column .ecosystem-visualization {
     height: 550px !important;
     margin-top: -40px !important;
     margin-bottom: -50px !important;
     position: relative;
   }
-  .content-section {
-    margin: 2rem 0;
-  }
-
 
   .node-label {
     font-size: 0.7rem !important;
@@ -728,7 +718,7 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   }
   /* This is the intended mobile rule - Ensure it's NOT commented out */
   #legend {
-    bottom: 45px !important;
+    bottom: 15px !important; /* Changed from 45px */
     right: 20px !important;
     padding: 6px !important;
   }
@@ -750,9 +740,6 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   margin-bottom: -50px !important;
 }
 
-.content-section {
-  margin: 1.5rem 0;
-}
 /* This rule conflicts - Should remain commented out */
 /* #legend {
   bottom: 5px !important;
