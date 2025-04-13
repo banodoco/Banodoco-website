@@ -1204,7 +1204,7 @@ background-color: #fffff2 !important;
 }
 .renaissance-section .image-column { /* Image column */
   flex-basis: 40%; /* Use flex-basis instead of width */
-  margin-top: 30px; /* Keep specific top margin */
+  margin-top: 10px; /* Keep specific top margin */
 }
 .renaissance-section .image-column .styled-image-box {
   width: 100%; /* Ensure image box fills the column */
