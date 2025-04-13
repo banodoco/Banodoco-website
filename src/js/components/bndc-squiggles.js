@@ -22,13 +22,13 @@ export function initializeBndcSquiggles(containerId) {
     let smallShapes = []; // Store small shape line objects
     let speechBubble = null; // Store speech bubble line object
     let bubbleTextSprite = null; // Store text sprite object
-    let targetText = "Hello...what's up?"; // Store the target text
+    let targetText = "Hellllooo...what's up?"; // Store the target text
     let bubbleTotalPoints = 0; // Store total points for drawRange animation
     let currentTextLength = 0; // Track how much text is visible
     let writingStartTime = 0; // Track when writing begins
     // Define speeds for different text segments
-    const helloSpeed = 18.75; // Characters per second (Fast) - Increased from 15
-    const ellipsisSpeed = 1.25; // Characters per second (Slow) - Increased from 1.4
+    const helloSpeed = 21.75; // Characters per second (Fast) - Increased from 15
+    const ellipsisSpeed = 1.75; // Characters per second (Slow) - Increased from 1.4
     const restSpeed = 25; // Characters per second (Fast again) - Increased from 20
     let writingHasBegun = false; // Flag to track if typing should start
 
@@ -40,8 +40,8 @@ export function initializeBndcSquiggles(containerId) {
     const transitionDuration = 0.8; // Duration of fade/appear in seconds
 
     // Calculate text segment lengths and timings
-    const helloEndIndex = 5; // Index after "Hello"
-    const ellipsisEndIndex = 8; // Index after "Hello..."
+    const helloEndIndex = 9; // Index after "Hellllooo" (Updated from 5)
+    const ellipsisEndIndex = 12; // Index after "Hellllooo..." (Updated from 8)
     const timeForHello = helloEndIndex / helloSpeed;
     const timeForEllipsis = (ellipsisEndIndex - helloEndIndex) / ellipsisSpeed;
     const totalLength = targetText.length;

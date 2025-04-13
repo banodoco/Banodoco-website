@@ -136,6 +136,10 @@ class MellonAnimationInstance {
   }
 
   updateSceneGeometry() {
+    if (this.width === 0 || this.height === 0) {
+        console.warn("MellonAnimation: Container dimensions are zero, skipping geometry update.");
+        return; // Don't create geometry if dimensions are invalid
+    }
     this.lineMeshes.forEach(mesh => {
          if (mesh.geometry) mesh.geometry.dispose();
          if (mesh.material) mesh.material.dispose();
@@ -682,7 +686,7 @@ class ExplosionParticle {
         this.completed = false;
     this.endTextDisplayed = false;
     this.numPulsePoints = 15;
-        this.createMesh();
+        this.createMesh(0); // Pass initial globalTime (e.g., 0)
 
         // --- TRIGGER EXPLOSION FOR OUTWARD PULSE --- 
         if (this.direction === 'outward' && this.instance) {
@@ -711,9 +715,25 @@ class ExplosionParticle {
         const perpY = dx / len;
         // Use globalTime for consistent wiggle calculation
         const offset = wiggleAmplitude * Math.sin(2 * Math.PI * wiggleFrequency * t + globalTime + wigglePhase) * Math.sin(Math.PI * t);
+        
+        const finalX = baseX + perpX * offset;
+        const finalY = baseY + perpY * offset;
+
+        // --- DEBUG LOGGING ---
+        /* // Removing debug log
+        if (!isFinite(len) || !isFinite(perpX) || !isFinite(perpY) || !isFinite(offset) || !isFinite(finalX) || !isFinite(finalY)) {
+            console.warn('computePosition potential NaN:', {
+                t, globalTime, startX, startY, endX, endY, 
+                dx, dy, len, perpX, perpY, offset,
+                finalX, finalY
+            });
+        }
+        */
+        // --- END DEBUG LOGGING ---
+        
         return { 
-          x: baseX + perpX * offset, 
-          y: baseY + perpY * offset,
+          x: finalX, 
+          y: finalY,
           perpX: perpX,
           perpY: perpY
         };

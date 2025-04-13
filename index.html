@@ -225,6 +225,7 @@
           "
         >
           <video
+            id="bndcVideo"
             muted
             playsinline
             style="
@@ -241,9 +242,28 @@
             "
           >
             <source src="assets/bndc/1.webm" type="video/webm" />
-            <source src="assets/bndc/1.mov" type="video/quicktime" />
+            <source src="assets/bndc/1.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
+          <!-- Fallback image for iPad -->
+          <img 
+            id="bndcFallbackImage" 
+            src="assets/bndc/first_frame.png" 
+            alt="BNDC Robot First Frame" 
+            style="
+              display: none; /* Initially hidden */
+              border-radius: 6px 6px 0 0;
+              margin-bottom: 0;
+              aspect-ratio: 1 / 1;
+              object-fit: contain;
+              height: 116px;
+              margin-right: auto;
+              position: relative;
+              z-index: 10;
+              margin-left: 75px;
+              background-color: #f8f8f8; /* Match parent div background */
+            "
+          />
           <div
             id="bndc-squiggle-canvas-container"
             style="
@@ -303,8 +323,8 @@
       </div>
       -->
     </div>
-
-    <!-- Divider -->
+    
+    <!-- Divider
     <hr class="section-divider" />
 
     <!-- Header Section -->

@@ -3,6 +3,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Feather icons
     feather.replace();
 
+    // --- iPad BNDC Video Fallback --- 
+    const isIPad = /iPad/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const bndcVideoElement = document.getElementById('bndcVideo');
+    const bndcFallbackImageElement = document.getElementById('bndcFallbackImage');
+
+    if (isIPad && bndcVideoElement && bndcFallbackImageElement) {
+      console.log("iPad detected, swapping BNDC video for fallback image.");
+      bndcVideoElement.style.display = 'none';       // Hide the video
+      bndcFallbackImageElement.style.display = 'block'; // Show the image
+      // Stop the video if it might have started loading/playing
+      bndcVideoElement.pause();
+      bndcVideoElement.removeAttribute('src'); // Use removeAttribute for video sources
+      bndcVideoElement.load(); // Optional: ensure loading stops
+    } else if (bndcVideoElement) {
+      // Optional: Ensure video plays only if it's not an iPad fallback case
+      // bndcVideoElement.play(); // Add if needed, but browsers might block autoplay
+    }
+    // --- End iPad BNDC Video Fallback ---
+
     // --- Dynamically load HEADER --- 
     fetch('src/components/header.html')
         .then(response => response.text())
