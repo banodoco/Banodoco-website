@@ -42,30 +42,27 @@ body {
   z-index: 0;
 }
 
-/* Site Header */
-.site-header {
-  display: flex;
-  align-items: center;
-  padding: 1rem 0;
+
+/* Adjust header margin for vertical tablets */
+@media (min-width: 768px) and (max-width: 1024px) {
+  #header {
+    margin-bottom: 2.5rem; /* Reduced margin for tablets */
+  }
+
+  /* Increase ecosystem visualization height on tablets */
+  .two-column .ecosystem-visualization {
+    height: 750px; /* Increased height for tablets */
+    /* Keep other styles like margins from the max-width: 992px rule */
+  }
 }
 
-/* Add margin above the fetched header */
-@media (min-width: 768px) {
+/* Add margin above the fetched header for larger screens */
+@media (min-width: 1025px) { /* Changed from 768px */
   #header {
     margin-bottom: 5rem; /* Adjust this value as needed */
   }
 }
 
-.site-header img {
-  width: 40px; /* Adjust as needed */
-  height: auto;
-  margin-right: 0.5rem;
-}
-
-.site-header .site-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-}
 
 /* Main Text & Images Section */
 .main-text-images {
@@ -169,6 +166,9 @@ body {
   /* Add space before interlocking tools section on mobile */
   #interlocking-tools-section {
     margin-top: 1.5rem; /* Adjust this value if needed */
+  }
+  #header {
+    margin-bottom: 0.5rem; /* Reduced margin for mobile */
   }
 }
 
@@ -680,14 +680,8 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   .content-section {
     margin: 2rem 0;
   }
-  .site-header {
-    padding: 1rem 0.5rem;
-  }
-  .site-header img {
-    width: 35px;
-    margin-left: 0;
-    margin-right: 0.5rem;
-  }
+
+
   .node-label {
     font-size: 0.7rem !important;
     padding: 2px 6px !important;
@@ -1447,5 +1441,19 @@ body:not(.ownership-page) #header.visible {
   /* Reduce container padding on these screens */
   .container {
     padding-top: 0rem;
+  }
+}
+
+/* Adjust ecosystem animation margin for vertical iPad Air devices */
+@media only screen and (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+  .ecosystem-visualization {
+    margin-top: -120px !important;
+  }
+}
+
+/* Override ecosystem visualization margin for vertical iPad Air in portrait */
+@media only screen and (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+  .ecosystem-visualization {
+    margin-top: -120px !important;
   }
 }

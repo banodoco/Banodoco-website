@@ -55,11 +55,52 @@
 .brand-do:hover { color: #a55353; }
 .brand-co:hover { color: #a5a553; }
 
-@media (max-width: 768px) {
+/* Mobile styles */
+@media (max-width: 600px) {
   .site-header {
-    transform: translateX(-10px);
+    transform: translateX(-10px); /* Original mobile adjustment */
+    padding-bottom: 0.5rem; /* Mobile bottom padding */
+    padding-top: 1.5rem; /* Mobile top padding */
   }
   .site-header img {
-    margin-left: 0px;
+    margin-left: 5px; /* Mobile logo position */
+    margin-top: 5px; /* Mobile logo top margin */
+  }
+}
+
+/* Tablet Portrait styles (e.g., iPad) */
+@media (min-width: 601px) and (max-width: 1024px) {
+  #header .site-header {
+    margin-left: 20px; /* Move header right using margin */
+    padding-bottom: 0.5rem; /* Keep reduced bottom padding */
+    padding-top: 1.5rem; /* Keep increased top padding */
+  }
+  #header .site-header img {
+    margin-left: -30px !important; /* Explicitly set original relative offset and override main.css */
+    margin-top: 5px; /* Keep top margin */
+  }
+}
+
+/* Widescreen Tablet/Desktop styles - restore original desktop behavior */
+@media (min-width: 1025px) {
+  #header .site-header {
+    margin-left: -15px; /* Original desktop behavior */
+    padding-top: 1.5rem; /* Original top padding */
+  }
+  #header .site-header img {
+    margin-left: 0 !important; /* Original desktop behavior */
+    margin-top: 5px; /* Keep logo top margin */
+  }
+}
+
+/* New query for widescreen tablets (e.g., iPad Air in landscape) */
+@media only screen and (max-width: 1024px) and (orientation: landscape) {
+  #header .site-header {
+    margin-left: 120px; /* Increase left margin for widescreen tablets */
+    padding-top: 2rem; /* Increase top padding for more vertical spacing */
+  }
+  #header .site-header img {
+    margin-left: 0 !important; /* Ensure logo is positioned correctly */
+    margin-top: 5px;
   }
 } 
