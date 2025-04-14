@@ -66,6 +66,9 @@
     margin-left: 5px; /* Mobile logo position */
     margin-top: 5px; /* Mobile logo top margin */
   }
+  .site-header .site-title {
+    margin-top: 5px; /* Move title down slightly on mobile */
+  }
 }
 
 /* Tablet Portrait styles (e.g., iPad) */
