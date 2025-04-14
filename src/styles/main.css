@@ -1444,3 +1444,40 @@ body:not(.ownership-page) #header.visible {
     margin-top: -120px !important;
   }
 }
+
+/* Coming Soon Overlay for Cards */
+.card.card-coming-soon {
+    position: relative; /* Ensure the card is a positioning context */
+    overflow: hidden; /* Hide any overflow from the overlay */
+    /* Optionally dim the card content slightly */
+    /* opacity: 0.7; */
+}
+
+.card.card-coming-soon::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(248, 248, 248, 0.75);
+    backdrop-filter: blur(4px); /* Slightly increased blur */
+    -webkit-backdrop-filter: blur(4px); /* Safari support */
+    z-index: 101; /* Increased z-index */
+    border-radius: 6px;
+}
+
+.card.card-coming-soon::after {
+    content: 'Coming soon';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 102; /* Increased z-index */
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #555;
+    text-align: center;
+    font-family: 'Space Grotesk', sans-serif;
+    pointer-events: none;
+}
