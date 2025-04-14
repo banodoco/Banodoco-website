@@ -299,7 +299,7 @@ export function runEcosystem(appendToEl = document.body) {
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
       const material = new THREE.LineBasicMaterial({
         color: sectionColors[conn.from] || '#2196F3',
-        linewidth: conn.thickness,
+        linewidth: conn.thickness * 2,
         opacity: 0.7,
         transparent: true
       });

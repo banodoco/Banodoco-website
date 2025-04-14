@@ -271,7 +271,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(242, 242, 255, 0.7);
+    background-color: rgba(242, 242, 255, 0.5);
     backdrop-filter: brightness(1.1) contrast(1.05);
     z-index: 2;
     pointer-events: none;
@@ -281,11 +281,11 @@
 }
 
 @keyframes overlayBackgroundCycle {
-    0%, 20% { background-color: rgba(242, 242, 255, 0.7); }
-    25%, 45% { background-color: rgba(242, 255, 242, 0.7); }
-    50%, 70% { background-color: rgba(255, 242, 242, 0.7); }
-    75%, 95% { background-color: rgba(255, 255, 242, 0.7); }
-    100% { background-color: rgba(242, 242, 255, 0.7); }
+    0%, 20% { background-color: rgba(242, 242, 255, 0.5); }
+    25%, 45% { background-color: rgba(242, 255, 242, 0.5); }
+    50%, 70% { background-color: rgba(255, 242, 242, 0.5); }
+    75%, 95% { background-color: rgba(255, 255, 242, 0.5); }
+    100% { background-color: rgba(242, 242, 255, 0.5); }
 }
 
 /* Enhanced Mobile fix for footer */
