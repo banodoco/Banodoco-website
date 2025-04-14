@@ -56,7 +56,7 @@ function initializePlantAnimation() {
                     startGrowth(startX, startY);
                     
                     // START FADE/MARGIN ADJUSTMENT IMMEDIATELY
-                    console.log('Starting fade-out of watering can AND margin adjustment NOW (immediately after startGrowth).');
+                    // console.log('Starting fade-out of watering can AND margin adjustment NOW (immediately after startGrowth).');
                     
                     // Add fade-out class to the watering can
                     wateringContainer.classList.add('fade-out');
@@ -66,35 +66,35 @@ function initializePlantAnimation() {
                     const finalSection = document.querySelector('.final-section');
                     
                     // Log initial parent dimensions
-                    if (footer) console.log('Footer initial height:', footer.offsetHeight, window.getComputedStyle(footer).height);
-                    if (finalSection) console.log('Final Section initial height:', finalSection.offsetHeight, window.getComputedStyle(finalSection).height);
+                    // if (footer) console.log('Footer initial height:', footer.offsetHeight, window.getComputedStyle(footer).height);
+                    // if (finalSection) console.log('Final Section initial height:', finalSection.offsetHeight, window.getComputedStyle(finalSection).height);
                     
                     // Get the social-links element
                     const socialLinks = document.querySelector('.social-links');
                     
                     if (socialLinks) {
-                        console.log('Starting margin adjustment for .social-links.');
+                        // console.log('Starting margin adjustment for .social-links.');
                         const currentMargin = window.getComputedStyle(socialLinks).marginBottom;
-                        console.log('Current .social-links margin-bottom (before transition):', currentMargin);
+                        // console.log('Current .social-links margin-bottom (before transition):', currentMargin);
                         
                         // Set the target margin - use requestAnimationFrame for timing
                         requestAnimationFrame(() => {
                             // Log parent dimensions just before setting margin
-                            if (footer) console.log('Footer height BEFORE margin set:', footer.offsetHeight, window.getComputedStyle(footer).height);
-                            if (finalSection) console.log('Final Section height BEFORE margin set:', finalSection.offsetHeight, window.getComputedStyle(finalSection).height);
+                            // if (footer) console.log('Footer height BEFORE margin set:', footer.offsetHeight, window.getComputedStyle(footer).height);
+                            // if (finalSection) console.log('Final Section height BEFORE margin set:', finalSection.offsetHeight, window.getComputedStyle(finalSection).height);
                             
-                            console.log('Setting new .social-links margin-bottom to 1.75rem.');
+                            // console.log('Setting new .social-links margin-bottom to 1.75rem.');
                             socialLinks.style.marginBottom = '1.75rem';
                             
                             // Log parent dimensions immediately after setting margin (might not reflect final state yet)
                             setTimeout(() => {
-                                if (footer) console.log('Footer height JUST AFTER margin set:', footer.offsetHeight, window.getComputedStyle(footer).height);
-                                if (finalSection) console.log('Final Section height JUST AFTER margin set:', finalSection.offsetHeight, window.getComputedStyle(finalSection).height);
+                                // if (footer) console.log('Footer height JUST AFTER margin set:', footer.offsetHeight, window.getComputedStyle(footer).height);
+                                // if (finalSection) console.log('Final Section height JUST AFTER margin set:', finalSection.offsetHeight, window.getComputedStyle(finalSection).height);
                             }, 0);
                         });
                         
                     } else {
-                        console.log('.social-links element not found.');
+                        // console.log('.social-links element not found.');
                     }
 
                 }, 1500); // Delay for water drop animation

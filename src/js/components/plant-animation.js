@@ -10,7 +10,7 @@ const MAX_TREES = 100; // Maximum number of trees allowed
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  console.log('resizeCanvas called: canvas dimensions:', canvas.width, canvas.height);
+  // console.log('resizeCanvas called: canvas dimensions:', canvas.width, canvas.height);
 }
 
 resizeCanvas();
@@ -19,20 +19,20 @@ let baseSize = { width: canvas.width, height: canvas.height };
 window.addEventListener('resize', () => {
   resizeCanvas();
   // Always log the state after resize, regardless of animationStarted
-  console.log('Window resized:', { 
-    innerWidth: window.innerWidth, 
-    innerHeight: window.innerHeight, 
-    canvasWidth: canvas.width, 
-    canvasHeight: canvas.height, 
-    baseSize: baseSize,
-    animationStarted: animationStarted 
-  });
+  // console.log('Window resized:', { 
+  //   innerWidth: window.innerWidth, 
+  //   innerHeight: window.innerHeight, 
+  //   canvasWidth: canvas.width, 
+  //   canvasHeight: canvas.height, 
+  //   baseSize: baseSize,
+  //   animationStarted: animationStarted 
+  // });
   // If animation hasn't started, update the baseline; once started, keep baseSize fixed
   if (!animationStarted) {
     baseSize = { width: canvas.width, height: canvas.height };
-    console.log('Base size updated because animation not started yet.');
+    // console.log('Base size updated because animation not started yet.');
   } else {
-    console.log('Base size NOT updated because animation has started.');
+    // console.log('Base size NOT updated because animation has started.');
   }
 });
 
@@ -227,7 +227,7 @@ function animate(timestamp) {
 
   // Log every frame for the first 5000ms, then throttle to once per second
   if (timestamp < 5000 || timestamp - lastLogTime > 1000) {
-    console.log('animate frame:', { timestamp, delta, canvasWidth: canvas.width, canvasHeight: canvas.height, baseSize });
+    // console.log('animate frame:', { timestamp, delta, canvasWidth: canvas.width, canvasHeight: canvas.height, baseSize });
     lastLogTime = timestamp;
   }
 
@@ -242,17 +242,24 @@ function animate(timestamp) {
 }
 
 function startGrowth(startX, startY) {
-  console.log('startGrowth called. Current state:', { 
-    startX, 
-    startY, 
-    canvasWidth: canvas.width, 
-    canvasHeight: canvas.height, 
-    baseSize: baseSize, 
-    animationStarted: animationStarted 
-  });
-
+  // console.log('startGrowth called. Current state:', { 
+  //   startX, 
+  //   startY, 
+  //   canvasWidth: canvas.width, 
+  //   canvasHeight: canvas.height, 
+  //   baseSize: baseSize, 
+  //   branchesLength: branches.length, 
+  //   seedsLength: seeds.length, 
+  //   animationStarted 
+  // });
+  
+  // Ensure we only start once
+  if (animationStarted) return;
   animationStarted = true;
-  console.log('animationStarted set to true.');
+  // console.log('animationStarted set to true.');
+
+  // Reset state if restarting (optional)
+  branches = [];
 
   // Main upward branch
   branches.push(new Branch(startX, startY + 5, canvas.height / 7.5, 0, 10, 7));

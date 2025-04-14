@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const bndcFallbackImageElement = document.getElementById('bndcFallbackImage');
 
     if (isIPad && bndcVideoElement && bndcFallbackImageElement) {
-      console.log("iPad detected, swapping BNDC video for fallback image.");
+      // console.log("iPad detected, swapping BNDC video for fallback image.");
       bndcVideoElement.style.display = 'none';       // Hide the video
       bndcFallbackImageElement.style.display = 'block'; // Show the image
       // Stop the video if it might have started loading/playing
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const headerElement = document.getElementById('header');
             if (headerElement) {
                 headerElement.innerHTML = html;
-                console.log("Header HTML loaded, applying .visible class");
+                // console.log("Header HTML loaded, applying .visible class");
                 // Ensure header starts invisible (handled by CSS, but remove class just in case)
                 headerElement.classList.remove('visible'); 
                 // Apply final state by adding class
@@ -312,9 +312,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(function() {
           var legend = document.getElementById('legend');
           if (legend) {
-            legend.style.position = 'absolute'; // Re-apply position just in case
-            // Note: bottom positioning is likely handled by CSS overrides now
-            console.log('iOS Safari legend reposition applied via JS (position only):', legend.style.cssText);
+            // Instead of forcing left and top which can stretch the element, we clear them
+            // and restore the intended CSS positioning from main.css
+            legend.style.left = '';
+            legend.style.top = '';
+            legend.style.right = '25px';
+            legend.style.bottom = '25px';
           } else {
             console.warn("Legend element not found for iOS fix.");
           }
@@ -334,28 +337,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const footerElement = document.getElementById('footer');
         if (footerElement) {
             footerElement.innerHTML = html;
-            console.log("Footer HTML loaded.");
-
-            // Ensure footer starts invisible for transition by setting styles directly
-            footerElement.style.opacity = '0';
-            footerElement.style.transform = 'translateY(20px)';
-            // Optionally remove class if it somehow exists, though styles take precedence
-            footerElement.classList.remove('visible'); 
-
-            // Observe the footer *after* loading its content and setting initial styles
-            if (observer) { // Check if observer is initialized
-              console.log("Observer found, attempting to observe footer (now styled invisible):", footerElement);
-              observer.observe(footerElement);
-            } else {
-              console.error("IntersectionObserver not initialized when trying to observe footer.");
-            }
+            // console.log("Footer HTML loaded.");
 
             // Initialize plant animation after footer is loaded
-            // Attempt to load and run plant-init.js if it exists
             import('./components/plant-init.js')
               .then(module => {
                 if (typeof module.initializePlantAnimation === 'function') {
-                  console.log("Initializing plant animation...");
+                  // console.log("Initializing plant animation...");
                   module.initializePlantAnimation();
                 } else {
                   console.warn('initializePlantAnimation function not found in plant-init.js');
@@ -365,12 +353,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn('Could not load plant-init.js dynamically. Plant animation might not start.', err);
               });
 
-            // Replace feather icons within the newly added footer
+            // Re-run feather.replace() after adding footer content
             if (typeof feather !== 'undefined') {
-              console.log("Replacing feather icons in footer...");
-              feather.replace();
-            } else {
-              console.warn("Feather icons library not loaded when footer arrived.");
+                // console.log("Replacing feather icons in footer...");
+                feather.replace();
             }
         } else {
             console.error("Footer element (#footer) not found in DOM.");
@@ -386,11 +372,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const bndcVideo = bndcCard.querySelector('video');
         if (bndcVideo) {
             let playTimeoutId = null;
-            console.log("Setting up BNDC card hover listeners.");
+            // console.log("Setting up BNDC card hover listeners.");
             bndcCard.addEventListener('mouseenter', () => {
                 if (playTimeoutId) clearTimeout(playTimeoutId);
                 playTimeoutId = setTimeout(() => {
-                    console.log("Playing BNDC video on hover...");
+                    // console.log("Playing BNDC video on hover...");
                     bndcVideo.play().catch(e => console.error("Error playing BNDC video:", e));
                 }, 350);
             });
@@ -399,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     clearTimeout(playTimeoutId);
                     playTimeoutId = null;
                 }
-                console.log("Pausing BNDC video on mouseleave.");
+                // console.log("Pausing BNDC video on mouseleave.");
                 bndcVideo.pause();
                 bndcVideo.currentTime = 0;
             });
@@ -411,12 +397,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Initialize BNDC Squiggles (Dynamically imports the module)
-    console.log("Attempting to initialize BNDC squiggles...");
+    // console.log("Attempting to initialize BNDC squiggles...");
     import('./components/bndc-squiggles.js')
       .then(module => {
         if (typeof module.initializeBndcSquiggles === 'function') {
           module.initializeBndcSquiggles('bndc-squiggle-canvas-container');
-          console.log("BNDC squiggles initialized.");
+          // console.log("BNDC squiggles initialized.");
         } else {
            console.warn('initializeBndcSquiggles function not found in bndc-squiggles.js');
         }
@@ -431,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sneakPeekButton && mellonAnimationContainer) { // Check button and container first
         const sneakPeekContent = mellonAnimationContainer.querySelector('.sneak-peek-content');
         if (sneakPeekContent) { // Then check content
-             console.log("Setting up Mellon sneak peek button listener.");
+             // console.log("Setting up Mellon sneak peek button listener.");
             let isSneakPeekVisible = false;
             let mellonFuncs = null; // To store loaded functions
 
@@ -440,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const module = await import('./components/mellon-animation.js');
                     if (typeof module.suppressMellonText === 'function' && typeof module.unsuppressMellonText === 'function') {
-                         console.log("Mellon animation functions loaded.");
+                         // console.log("Mellon animation functions loaded.");
                          mellonFuncs = {
                              suppress: module.suppressMellonText,
                              unsuppress: module.unsuppressMellonText
@@ -464,13 +450,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (!isSneakPeekVisible) {
-                    console.log("Showing Mellon sneak peek.");
+                    // console.log("Showing Mellon sneak peek.");
                     sneakPeekContent.classList.add('visible');
                     funcs.suppress(mellonAnimationContainer);
                     sneakPeekButton.textContent = 'Hide sneak peek';
                     isSneakPeekVisible = true;
                 } else {
-                    console.log("Hiding Mellon sneak peek.");
+                    // console.log("Hiding Mellon sneak peek.");
                     sneakPeekContent.classList.remove('visible');
                     funcs.unsuppress(mellonAnimationContainer);
                     sneakPeekButton.textContent = 'Take a sneak peek';
@@ -489,11 +475,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Renaissance video hover effect
-    console.log('Attempting to set up Renaissance video hover from script.js');
+    // console.log('Attempting to set up Renaissance video hover from script.js');
     const renaissanceContainer = renaissanceVideo ? renaissanceVideo.closest('.styled-image-box') : null;
 
     if (renaissanceVideo && renaissanceContainer) {
-        console.log('Found Renaissance video and container, adding listeners.');
+        // console.log('Found Renaissance video and container, adding listeners.');
         let reverseAnimationId = null;
 
         const reverseStep = () => {
@@ -512,14 +498,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const handleEnded = () => {
              // Check playbackRate to ensure it ended while playing forward, not backward.
             if (renaissanceVideo.playbackRate > 0 && !renaissanceVideo.paused) {
-                 console.log('Renaissance forward playback ended.');
+                 // console.log('Renaissance forward playback ended.');
                  // Don't pause here, let mouseleave handle it or click handle it.
                  // Pausing here can interfere if the mouse is still over the element.
             }
         };
 
         renaissanceContainer.addEventListener('mouseenter', () => {
-            console.log('Mouse entered Renaissance');
+            // console.log('Mouse entered Renaissance');
             if (reverseAnimationId) {
                 cancelAnimationFrame(reverseAnimationId);
                 reverseAnimationId = null;
@@ -532,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         renaissanceContainer.addEventListener('mouseleave', () => {
-            console.log('Mouse left Renaissance');
+            // console.log('Mouse left Renaissance');
             // Always pause on mouseleave before potentially starting reverse
             renaissanceVideo.pause();
             if (reverseAnimationId) {
@@ -547,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Click/Tap to toggle play/pause
         renaissanceContainer.addEventListener('click', () => {
-            console.log('Renaissance container clicked/tapped');
+            // console.log('Renaissance container clicked/tapped');
             if (reverseAnimationId) { // Stop reverse if active
                 cancelAnimationFrame(reverseAnimationId);
                 reverseAnimationId = null;
@@ -564,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renaissanceVideo.addEventListener('ended', handleEnded);
 
     } else {
-        console.warn('Could not find Renaissance video (#renaissance-video) or its container (.styled-image-box). Hover/click effects inactive.');
+        // console.warn('Could not find Renaissance video (#renaissance-video) or its container (.styled-image-box). Hover/click effects inactive.');
     }
 
     // --- Page Visibility API Handler for BNDC Video ---
@@ -574,7 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Using the data-category="placeholder" as seen in index.html
             const bndcVideo = document.querySelector('.card[data-category="placeholder"] video');
             if (bndcVideo) {
-                console.log('Page became visible, reloading BNDC video.'); // Optional: for debugging
+                // console.log('Page became visible, reloading BNDC video.'); // Optional: for debugging
                 bndcVideo.load(); // Reload the video source
             }
         }
@@ -596,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set initial styles and trigger immediate fade-in ONLY for the first content section
     if (firstContentSection) {
-      console.log("Setting initial state for immediate fade-in: -- Handled by CSS");
+      // console.log("Setting initial state for immediate fade-in: -- Handled by CSS");
       // firstContentSection.style.opacity = '0'; -- REMOVED, handled by CSS
       // Remove class just in case (still useful)
       firstContentSection.classList.remove('visible');
@@ -604,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Apply final state by adding class (timeout ensures transition occurs if needed, but often not necessary for class toggle)
       // Using a minimal timeout just in case browser needs a frame to register initial state
       setTimeout(() => {
-          console.log("Adding .visible class for immediate fade-in via timeout:", firstContentSection.className);
+          // console.log("Adding .visible class for immediate fade-in via timeout:", firstContentSection.className);
           firstContentSection.classList.add('visible');
       }, 1); // Minimal 1ms delay
     }
@@ -617,10 +603,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const observerCallback = (entries, observer) => {
         entries.forEach(entry => {
-            console.log("Intersection detected for:", entry.target.id || entry.target.className);
+            // console.log("Intersection detected for:", entry.target.id || entry.target.className);
             if (entry.isIntersecting) {
                 // Apply final state by adding the class
-                console.log("Adding .visible class to:", entry.target.id || entry.target.className);
+                // console.log("Adding .visible class to:", entry.target.id || entry.target.className);
                 entry.target.classList.add('visible');
                 // entry.target.style.transform = 'translateY(0)'; // Removed transform
 
@@ -643,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rect = section.getBoundingClientRect();
             if (rect.top < window.innerHeight && rect.bottom >= 0) {
                  // Apply final state by adding the class
-                console.log("Adding .visible class on load to:", section.id || section.className);
+                // console.log("Adding .visible class on load to:", section.id || section.className);
                 section.classList.add('visible');
             }
         });

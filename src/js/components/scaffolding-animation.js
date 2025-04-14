@@ -613,5 +613,9 @@ function startScaffolding() {
 export { startScaffolding, addStick, buildFullScaffold };
 
 function updateTreeCount() {
-    console.log("Total trees: " + treeCount);
+    const treeCountElement = document.getElementById('treeCountDisplay');
+    if (treeCountElement) {
+        treeCountElement.textContent = `Trees grown: ${treeCount}`;
+    }
+    // console.log("Total trees: " + treeCount);
 } 

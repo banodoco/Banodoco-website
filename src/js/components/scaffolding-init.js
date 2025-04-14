@@ -12,14 +12,14 @@ startScaffolding();
 
 // Event listener for the initial interaction area
 interactionArea.addEventListener('click', () => {
-    console.log('Interaction area clicked.');
+    // console.log('Interaction area clicked.');
     // Only allow adding sticks manually if the full build hasn't started
     if (!fullBuildTriggered) {
         const currentStickCount = addStick(); // Add a stick and get the count
 
         // Check if the manual limit is reached
         if (currentStickCount === 5) { // STICK_LIMIT_MANUAL is 5 in animation.js
-            console.log('Manual stick limit reached. Showing button.');
+            // console.log('Manual stick limit reached. Showing button.');
             interactionArea.style.display = 'none'; // Hide the initial text
             addMoreButton.style.display = 'block'; // Show the button
         }
@@ -28,7 +28,7 @@ interactionArea.addEventListener('click', () => {
 
 // Event listener for the "Add 1000 more?" button
 addMoreButton.addEventListener('click', () => {
-    console.log('Add More button clicked.');
+    // console.log('Add More button clicked.');
     if (!fullBuildTriggered) {
         fullBuildTriggered = true;
         addMoreButton.style.display = 'none'; // Hide the button after clicking

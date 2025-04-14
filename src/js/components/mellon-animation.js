@@ -473,7 +473,6 @@ class MellonAnimationInstance {
     if (this.creationsLabel && this.creationsLabel.parentNode === this.container) {
       this.container.removeChild(this.creationsLabel);
     }
-    // console.log("Mellon animation instance stopped and cleaned up.");
   }
 }
 // --- End Animation Instance Class ---
@@ -877,10 +876,7 @@ export function stopMellonAnimation(containerElement) {
   const instance = animationInstances.get(containerElement);
   if (instance) {
     instance.stopAnimation();
-    animationInstances.delete(containerElement); // Clean up map entry
-    console.log('Mellon animation stopped for container:', containerElement);
-  } else {
-    console.warn('Could not find Mellon animation instance to stop for container:', containerElement);
+    animationInstances.delete(containerElement);
   }
 }
 
@@ -897,10 +893,6 @@ export function suppressMellonText(containerElement) {
     // Immediately remove existing dots from the scene
     instance.activeDots.forEach(dot => dot.remove()); // Call remove on each dot
     instance.activeDots.length = 0; // Clear the array
-
-    console.log('Mellon temporary text suppressed and existing elements removed for container:', containerElement);
-  } else {
-    console.warn('Could not find Mellon instance to suppress text for:', containerElement);
   }
 }
 
@@ -908,9 +900,6 @@ export function unsuppressMellonText(containerElement) {
   const instance = animationInstances.get(containerElement);
   if (instance) {
     instance.suppressTemporaryText = false;
-    console.log('Mellon temporary text unsuppressed for container:', containerElement);
-  } else {
-    console.warn('Could not find Mellon instance to unsuppress text for:', containerElement);
   }
 }
 
@@ -940,10 +929,6 @@ export function initializeMellonAnimation(containerId) {
         // Now, create the new instance (the check is somewhat redundant now but harmless)
         if (!animationInstances.has(container)) {
             new MellonAnimationInstance(container);
-            console.log(`Mellon animation initialized for #${containerId}`);
-        } else {
-            // This branch should ideally not be reached now
-            console.log(`Mellon animation already initialized for #${containerId}`);
         }
     } else {
         console.error(`Container with ID '${containerId}' not found for Mellon animation.`);
