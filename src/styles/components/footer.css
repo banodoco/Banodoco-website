@@ -3,7 +3,7 @@
     display: flex;
     gap: 20px;
     align-items: flex-start;
-    margin-bottom: 4rem;
+    margin-bottom: 1rem;
 }
 
 .social-links {
@@ -13,7 +13,7 @@
     margin: 1.5rem 0 5rem;
     padding-top: 2rem;
     border-top: 1px solid #eaeaea;
-    transition: margin-bottom 1.5s ease-in-out;
+    transition: margin-bottom 3.5s ease-in-out;
     position: relative;
     flex: 1;
     background: none !important;

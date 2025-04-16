@@ -8,31 +8,25 @@ let treeCount = 0; // Counter to track the number of trees
 const MAX_TREES = 100; // Maximum number of trees allowed
 
 function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  // console.log('resizeCanvas called: canvas dimensions:', canvas.width, canvas.height);
+  const dpr = window.innerWidth < 768 ? 1 : (window.devicePixelRatio || 1);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  // console.log('resizeCanvas called: canvas dimensions:', canvas.width, canvas.height, 'dpr:', dpr);
 }
 
 resizeCanvas();
 let baseSize = { width: canvas.width, height: canvas.height };
 
 window.addEventListener('resize', () => {
+  if (window.innerWidth < 768 && animationStarted) {
+    // On mobile, if the animation has started, do not resize to preserve the simulation baseline.
+    return;
+  }
   resizeCanvas();
-  // Always log the state after resize, regardless of animationStarted
-  // console.log('Window resized:', { 
-  //   innerWidth: window.innerWidth, 
-  //   innerHeight: window.innerHeight, 
-  //   canvasWidth: canvas.width, 
-  //   canvasHeight: canvas.height, 
-  //   baseSize: baseSize,
-  //   animationStarted: animationStarted 
-  // });
-  // If animation hasn't started, update the baseline; once started, keep baseSize fixed
   if (!animationStarted) {
     baseSize = { width: canvas.width, height: canvas.height };
-    // console.log('Base size updated because animation not started yet.');
-  } else {
-    // console.log('Base size NOT updated because animation has started.');
   }
 });
 
@@ -58,26 +52,24 @@ function randomSeedDriftSpeed() {
 }
 
 class Branch {
-  constructor(startX, startY, length, angle, branchWidth, depth) {
+  constructor(startX, startY, length, angle, branchWidth, depth, growthDuration) {
     this.startX = startX;
     this.startY = startY;
     this.length = length;
     this.angle = angle;
     this.branchWidth = branchWidth;
     this.depth = depth;
-
+    this.growthDuration = growthDuration || GROWTH_DURATION_MS;
     // How far this branch has "grown" along its length
     this.grown = 0;
     this.finished = false;
-
     // Flowering
     this.floweringProgress = 0;
     this.flowered = false;
     this.flowerColor = `hsl(${Math.random() * 360}, 70%, 85%)`;
-    this.flowerPosition = 0.6 + Math.random() * 0.4; // 60% - 100% of branch length
-
-    // Precompute the growth rate so we grow from 0..length in ~GROWTH_DURATION_MS
-    this.growthRate = this.length / GROWTH_DURATION_MS; // px/ms
+    this.flowerPosition = 0.6 + Math.random() * 0.4;
+    // Precompute the growth rate so we grow from 0..length in ~growthDuration
+    this.growthRate = this.length / this.growthDuration;
   }
 
   update(delta) {
@@ -99,7 +91,7 @@ class Branch {
         branches.push(new Branch(
           this.startX + Math.sin(this.angle * Math.PI / 180) * -this.length,
           this.startY + Math.cos(this.angle * Math.PI / 180) * -this.length,
-          newLength, newAngle, newWidth, this.depth - 1
+          newLength, newAngle, newWidth, this.depth - 1, GROWTH_DURATION_MS
         ));
       }
       this.finished = true;
@@ -190,7 +182,7 @@ class Seed {
   update(delta) {
     // Move seeds based on time (ms) passed
     // if they haven't hit the "ground" (y ~ canvas.height)
-    const groundY = canvas.height - 5;
+    const groundY = baseSize.height - 5;
     if (this.y < groundY) {
       this.x += this.vx * delta;  // px = px/ms * ms
       this.y += this.vy * delta;  
@@ -198,7 +190,9 @@ class Seed {
       this.hasCheckedGrowth = true;
       // only create a new branch sometimes, respecting the max
       if (Math.random() < 0.02 && treeCount < MAX_TREES) {
-        branches.push(new Branch(this.x, canvas.height, canvas.height / 6, 0, 8, 5));
+        // Determine DPR (same logic as in resizeCanvas/startGrowth)
+        const dpr = window.innerWidth < 768 ? 1 : (window.devicePixelRatio || 1);
+        branches.push(new Branch(this.x, baseSize.height, baseSize.height / 6, 0, 8 * dpr, 5)); // Apply dpr scaling
         treeCount++;
       }
       this.planted = true;
@@ -222,7 +216,9 @@ let lastTimestamp = 0;
 let lastLogTime = 0; // Added for throttling logs in animate
 function animate(timestamp) {
   if (!lastTimestamp) lastTimestamp = timestamp;
-  const delta = timestamp - lastTimestamp; // milliseconds since last frame
+  let delta = timestamp - lastTimestamp;
+  // Cap the delta to a maximum of 50ms to prevent large jumps
+  delta = Math.min(delta, 50);
   lastTimestamp = timestamp;
 
   // Log every frame for the first 5000ms, then throttle to once per second
@@ -231,9 +227,10 @@ function animate(timestamp) {
     lastLogTime = timestamp;
   }
 
-  // Clear (fill) the canvas each frame
-  ctx.fillStyle = '#fbf8ef'; // match the body background color
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Clear the canvas transparently each frame
+  // ctx.fillStyle = '#fbf8ef'; // match the body background color // REMOVED
+  // ctx.fillRect(0, 0, canvas.width, canvas.height); // REMOVED
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // ADDED
 
   branches.forEach(branch => branch.update(delta));
   seeds.forEach(seed => seed.update(delta));
@@ -241,37 +238,25 @@ function animate(timestamp) {
   requestAnimationFrame(animate);
 }
 
-function startGrowth(startX, startY) {
-  // console.log('startGrowth called. Current state:', { 
-  //   startX, 
-  //   startY, 
-  //   canvasWidth: canvas.width, 
-  //   canvasHeight: canvas.height, 
-  //   baseSize: baseSize, 
-  //   branchesLength: branches.length, 
-  //   seedsLength: seeds.length, 
-  //   animationStarted 
-  // });
-  
-  // Ensure we only start once
+function startGrowth(startX, startY, options = {}) {
+  let growthDuration = options.duration || GROWTH_DURATION_MS;
   if (animationStarted) return;
   animationStarted = true;
-  // console.log('animationStarted set to true.');
+
+  // Determine DPR (same logic as in resizeCanvas)
+  const dpr = window.innerWidth < 768 ? 1 : (window.devicePixelRatio || 1);
 
   // Reset state if restarting (optional)
   branches = [];
-
-  // Main upward branch
-  branches.push(new Branch(startX, startY + 5, canvas.height / 7.5, 0, 10, 7));
+  // Scale initial branch width by DPR
+  branches.push(new Branch(startX, startY + 5, baseSize.height / 7.5, 0, 10 * dpr, 7, growthDuration));
   treeCount++;
-
-  // Root (downward branch) to the bottom, set to skip flowering
-  const rootBranch = new Branch(startX, startY + 5, (canvas.height - startY - 5), 180, 10, 0);
-  rootBranch.floweringProgress = -1; 
+  // Also scale root branch width
+  const rootBranch = new Branch(startX, startY + 5, (baseSize.height - startY - 5), 180, 10 * dpr, 0, growthDuration);
+  rootBranch.floweringProgress = -1;
   rootBranch.flowered = true;
   branches.push(rootBranch);
-
-  // Start the animation loop
+  lastTimestamp = performance.now();
   requestAnimationFrame(animate);
 }
 
