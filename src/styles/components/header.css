@@ -33,6 +33,7 @@
   z-index: 1;
   display: inline-flex;
   align-items: center;
+  margin-top: 5px;
 }
 
 .site-header .site-title span {
@@ -92,7 +93,7 @@
   }
   #header .site-header img {
     margin-left: 0 !important; /* Original desktop behavior */
-    margin-top: 5px; /* Keep logo top margin */
+    margin-top: 4px; /* Keep logo top margin */
   }
 }
 
