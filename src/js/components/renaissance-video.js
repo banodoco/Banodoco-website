@@ -60,8 +60,11 @@ document.addEventListener("DOMContentLoaded", function() {
       reverseAnimationId = null;
     }
 
-    // Play forward (0.75× speed) if paused & not ended
-    if (video.paused && !video.ended) {
+    if (video.ended) {
+      // If video is at the end, start reverse playback
+      startReversePlayback();
+    } else if (video.paused) {
+      // Otherwise, if paused, play forward
       video.playbackRate = 0.75;
       video.play().catch(function(err) {
         console.error('hover play failed', err);
