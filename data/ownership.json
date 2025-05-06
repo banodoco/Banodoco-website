@@ -1,1222 +1,1532 @@
 [
   {
     "Username":"pom",
-    "Percentage of Granted":15.9647,
-    "Percentage of Total":4.3105
+    "Percentage of Granted":15.4793,
+    "Percentage of Total":4.6438
   },
   {
     "Username":"matt3o",
-    "Percentage of Granted":15.9649,
-    "Percentage of Total":4.3105
+    "Percentage of Granted":15.0629,
+    "Percentage of Total":4.5189
   },
   {
     "Username":"lone_samurai",
-    "Percentage of Granted":9.1602,
+    "Percentage of Granted":8.2442,
     "Percentage of Total":2.4732
   },
   {
     "Username":"kosinkadink",
-    "Percentage of Granted":3.3291,
-    "Percentage of Total":0.8989
+    "Percentage of Granted":3.149,
+    "Percentage of Total":0.9447
   },
   {
     "Username":"kijai",
-    "Percentage of Granted":2.7119,
-    "Percentage of Total":0.7322
+    "Percentage of Granted":2.6768,
+    "Percentage of Total":0.803
   },
   {
     "Username":"comfyanonymous",
-    "Percentage of Granted":2.3148,
+    "Percentage of Granted":2.0833,
     "Percentage of Total":0.625
   },
   {
     "Username":"toyxyz",
-    "Percentage of Granted":1.3221,
-    "Percentage of Total":0.357
+    "Percentage of Granted":1.2187,
+    "Percentage of Total":0.3656
   },
   {
     "Username":"inner_reflections_ai",
-    "Percentage of Granted":1.2486,
+    "Percentage of Granted":1.1238,
     "Percentage of Total":0.3371
   },
   {
     "Username":"ian_g",
-    "Percentage of Granted":1.1883,
+    "Percentage of Granted":1.0694,
     "Percentage of Total":0.3208
   },
   {
+    "Username":"fannovel16",
+    "Percentage of Granted":0.9882,
+    "Percentage of Total":0.2965
+  },
+  {
     "Username":"juxtapoz",
-    "Percentage of Granted":1.0273,
+    "Percentage of Granted":0.9246,
     "Percentage of Total":0.2774
   },
   {
-    "Username":"fannovel16",
-    "Percentage of Granted":1.0054,
-    "Percentage of Total":0.2715
+    "Username":"drakenza",
+    "Percentage of Granted":0.9039,
+    "Percentage of Total":0.2712
   },
   {
     "Username":"redstrawberries",
-    "Percentage of Granted":0.9843,
+    "Percentage of Granted":0.8859,
     "Percentage of Total":0.2658
   },
   {
-    "Username":"drakenza",
-    "Percentage of Granted":0.9724,
-    "Percentage of Total":0.2626
-  },
-  {
     "Username":"itsb34stw4rs",
-    "Percentage of Granted":0.9526,
+    "Percentage of Granted":0.8574,
     "Percentage of Total":0.2572
   },
   {
     "Username":"ceyuan yang",
-    "Percentage of Granted":0.9259,
+    "Percentage of Granted":0.8333,
     "Percentage of Total":0.25
   },
   {
+    "Username":"citizenplain",
+    "Percentage of Granted":0.8098,
+    "Percentage of Total":0.2429
+  },
+  {
     "Username":"cseti",
-    "Percentage of Granted":0.823,
+    "Percentage of Granted":0.7407,
     "Percentage of Total":0.2222
   },
   {
-    "Username":"citizenplain",
-    "Percentage of Granted":0.8011,
-    "Percentage of Total":0.2163
-  },
-  {
     "Username":"fabdream",
-    "Percentage of Granted":0.7753,
+    "Percentage of Granted":0.6978,
     "Percentage of Total":0.2093
   },
   {
-    "Username":"hannah submarine",
-    "Percentage of Granted":0.7426,
-    "Percentage of Total":0.2005
-  },
-  {
-    "Username":"fizzledorf",
-    "Percentage of Granted":0.7117,
-    "Percentage of Total":0.1922
-  },
-  {
-    "Username":"austinmroz",
-    "Percentage of Granted":0.6415,
-    "Percentage of Total":0.1732
-  },
-  {
-    "Username":"nebsh",
-    "Percentage of Granted":0.6121,
-    "Percentage of Total":0.1653
-  },
-  {
-    "Username":"anime_is_real",
-    "Percentage of Granted":0.5949,
-    "Percentage of Total":0.1606
+    "Username":"hannahsubmarine",
+    "Percentage of Granted":0.6944,
+    "Percentage of Total":0.2083
   },
   {
     "Username":"trenthunter",
-    "Percentage of Granted":0.5774,
-    "Percentage of Total":0.1559
+    "Percentage of Granted":0.6747,
+    "Percentage of Total":0.2024
   },
   {
-    "Username":"jboogx.creative",
-    "Percentage of Granted":0.5689,
-    "Percentage of Total":0.1536
+    "Username":"hannah submarine",
+    "Percentage of Granted":0.6684,
+    "Percentage of Total":0.2005
   },
   {
-    "Username":"fictiverse",
-    "Percentage of Granted":0.5455,
-    "Percentage of Total":0.1473
+    "Username":"austinmroz",
+    "Percentage of Granted":0.6607,
+    "Percentage of Total":0.1982
+  },
+  {
+    "Username":"fizzledorf",
+    "Percentage of Granted":0.6405,
+    "Percentage of Total":0.1922
+  },
+  {
+    "Username":"nebsh",
+    "Percentage of Granted":0.6205,
+    "Percentage of Total":0.1861
   },
   {
     "Username":"enigmatic_e",
-    "Percentage of Granted":0.5358,
-    "Percentage of Total":0.1447
+    "Percentage of Granted":0.588,
+    "Percentage of Total":0.1764
+  },
+  {
+    "Username":"jboogx.creative",
+    "Percentage of Granted":0.5816,
+    "Percentage of Total":0.1745
+  },
+  {
+    "Username":"anime_is_real",
+    "Percentage of Granted":0.5355,
+    "Percentage of Total":0.1606
+  },
+  {
+    "Username":"ryanontheinside",
+    "Percentage of Granted":0.5346,
+    "Percentage of Total":0.1604
+  },
+  {
+    "Username":"visualfrisson",
+    "Percentage of Granted":0.51,
+    "Percentage of Total":0.153
+  },
+  {
+    "Username":"drex15704080",
+    "Percentage of Granted":0.502,
+    "Percentage of Total":0.1506
+  },
+  {
+    "Username":"fictiverse",
+    "Percentage of Granted":0.491,
+    "Percentage of Total":0.1473
+  },
+  {
+    "Username":"melmass",
+    "Percentage of Granted":0.488,
+    "Percentage of Total":0.1464
   },
   {
     "Username":"jfischoff",
-    "Percentage of Granted":0.5265,
+    "Percentage of Granted":0.4739,
     "Percentage of Total":0.1422
   },
   {
     "Username":"manshoety",
-    "Percentage of Granted":0.5265,
+    "Percentage of Granted":0.4739,
     "Percentage of Total":0.1422
   },
   {
-    "Username":"drex15704080",
-    "Percentage of Granted":0.5259,
-    "Percentage of Total":0.142
-  },
-  {
     "Username":"melih",
-    "Percentage of Granted":0.5051,
+    "Percentage of Granted":0.4545,
     "Percentage of Total":0.1364
   },
   {
     "Username":"akatz",
-    "Percentage of Granted":0.5014,
+    "Percentage of Granted":0.4513,
     "Percentage of Total":0.1354
   },
   {
-    "Username":"visualfrisson",
-    "Percentage of Granted":0.4894,
-    "Percentage of Total":0.1321
-  },
-  {
-    "Username":"mel",
-    "Percentage of Granted":0.4769,
-    "Percentage of Total":0.1288
-  },
-  {
-    "Username":"ryanontheinside",
-    "Percentage of Granted":0.475,
-    "Percentage of Total":0.1282
-  },
-  {
-    "Username":"pbpbpb",
-    "Percentage of Granted":0.463,
-    "Percentage of Total":0.125
+    "Username":"benjamin.paine",
+    "Percentage of Granted":0.4463,
+    "Percentage of Total":0.1339
   },
   {
     "Username":"cubey",
-    "Percentage of Granted":0.463,
+    "Percentage of Granted":0.4392,
+    "Percentage of Total":0.1318
+  },
+  {
+    "Username":"mel",
+    "Percentage of Granted":0.4292,
+    "Percentage of Total":0.1288
+  },
+  {
+    "Username":"pbpbpb",
+    "Percentage of Granted":0.4167,
     "Percentage of Total":0.125
   },
   {
     "Username":"neggles",
-    "Percentage of Granted":0.463,
+    "Percentage of Granted":0.4167,
     "Percentage of Total":0.125
   },
   {
-    "Username":"melmass",
-    "Percentage of Granted":0.4588,
-    "Percentage of Total":0.1239
+    "Username":"cerspense",
+    "Percentage of Granted":0.4159,
+    "Percentage of Total":0.1248
   },
   {
     "Username":"consumption",
-    "Percentage of Granted":0.4511,
+    "Percentage of Granted":0.406,
     "Percentage of Total":0.1218
   },
   {
+    "Username":"thedorbrothers",
+    "Percentage of Granted":0.4029,
+    "Percentage of Total":0.1209
+  },
+  {
     "Username":"klinter",
-    "Percentage of Granted":0.4382,
+    "Percentage of Granted":0.3944,
     "Percentage of Total":0.1183
   },
   {
+    "Username":"midjourney.man",
+    "Percentage of Granted":0.3852,
+    "Percentage of Total":0.1156
+  },
+  {
     "Username":"cyncratic",
-    "Percentage of Granted":0.4262,
+    "Percentage of Granted":0.3835,
     "Percentage of Total":0.1151
   },
   {
-    "Username":"cerspense",
-    "Percentage of Granted":0.4251,
-    "Percentage of Total":0.1148
-  },
-  {
     "Username":"yuvraj108c",
-    "Percentage of Granted":0.3951,
-    "Percentage of Total":0.1067
-  },
-  {
-    "Username":"yvann",
-    "Percentage of Granted":0.3722,
-    "Percentage of Total":0.1005
-  },
-  {
-    "Username":"thedorbrothers",
-    "Percentage of Granted":0.3704,
-    "Percentage of Total":0.1
-  },
-  {
-    "Username":"animatediff team c\/o ceyuan yang",
-    "Percentage of Granted":0.3704,
-    "Percentage of Total":0.1
+    "Percentage of Granted":0.3781,
+    "Percentage of Total":0.1134
   },
   {
     "Username":"purz",
-    "Percentage of Granted":0.3674,
-    "Percentage of Total":0.0992
+    "Percentage of Granted":0.364,
+    "Percentage of Total":0.1092
+  },
+  {
+    "Username":"yvann",
+    "Percentage of Granted":0.3349,
+    "Percentage of Total":0.1005
+  },
+  {
+    "Username":"animatediff team c\/o ceyuan yang",
+    "Percentage of Granted":0.3333,
+    "Percentage of Total":0.1
   },
   {
     "Username":"jeru",
-    "Percentage of Granted":0.3661,
+    "Percentage of Granted":0.3295,
     "Percentage of Total":0.0988
   },
   {
     "Username":"ian_101",
-    "Percentage of Granted":0.3638,
+    "Percentage of Granted":0.3274,
     "Percentage of Total":0.0982
   },
   {
-    "Username":"midjourney.man",
-    "Percentage of Granted":0.3507,
-    "Percentage of Total":0.0947
-  },
-  {
     "Username":"dr.lt.data",
-    "Percentage of Granted":0.3462,
+    "Percentage of Granted":0.3116,
     "Percentage of Total":0.0935
   },
   {
     "Username":"ai.god",
-    "Percentage of Granted":0.3456,
+    "Percentage of Granted":0.311,
     "Percentage of Total":0.0933
   },
   {
+    "Username":"alissonerdx",
+    "Percentage of Granted":0.3095,
+    "Percentage of Total":0.0929
+  },
+  {
+    "Username":"teslanaut",
+    "Percentage of Granted":0.3064,
+    "Percentage of Total":0.0919
+  },
+  {
     "Username":"ostris",
-    "Percentage of Granted":0.3395,
+    "Percentage of Granted":0.3056,
     "Percentage of Total":0.0917
   },
   {
+    "Username":"syntaxdiffusion",
+    "Percentage of Granted":0.3036,
+    "Percentage of Total":0.0911
+  },
+  {
     "Username":"anó",
-    "Percentage of Granted":0.3366,
+    "Percentage of Granted":0.3029,
     "Percentage of Total":0.0909
   },
   {
     "Username":"siraj",
-    "Percentage of Granted":0.3276,
+    "Percentage of Granted":0.2949,
     "Percentage of Total":0.0885
   },
   {
-    "Username":"benjamin.paine",
-    "Percentage of Granted":0.3262,
-    "Percentage of Total":0.0881
+    "Username":"impactframes.",
+    "Percentage of Granted":0.2925,
+    "Percentage of Total":0.0878
+  },
+  {
+    "Username":"twopikachus",
+    "Percentage of Granted":0.2917,
+    "Percentage of Total":0.0875
   },
   {
     "Username":"antzu ☕",
-    "Percentage of Granted":0.3086,
+    "Percentage of Granted":0.2778,
     "Percentage of Total":0.0833
   },
   {
     "Username":"kaïros",
-    "Percentage of Granted":0.3086,
+    "Percentage of Granted":0.2778,
     "Percentage of Total":0.0833
   },
   {
     "Username":"badcrc",
-    "Percentage of Granted":0.3086,
+    "Percentage of Granted":0.2778,
     "Percentage of Total":0.0833
   },
   {
-    "Username":"bennykok",
-    "Percentage of Granted":0.3035,
+    "Username":"pxlpshr",
+    "Percentage of Granted":0.2731,
     "Percentage of Total":0.0819
   },
   {
-    "Username":"teslanaut",
-    "Percentage of Granted":0.3002,
-    "Percentage of Total":0.0811
+    "Username":"bennykok",
+    "Percentage of Granted":0.2731,
+    "Percentage of Total":0.0819
+  },
+  {
+    "Username":"spacepxl",
+    "Percentage of Granted":0.2718,
+    "Percentage of Total":0.0815
+  },
+  {
+    "Username":"neofuturist",
+    "Percentage of Granted":0.2662,
+    "Percentage of Total":0.0799
   },
   {
     "Username":"zlikwid",
-    "Percentage of Granted":0.2927,
+    "Percentage of Granted":0.2634,
     "Percentage of Total":0.079
   },
   {
     "Username":"pollyanna",
-    "Percentage of Granted":0.2701,
+    "Percentage of Granted":0.2431,
     "Percentage of Total":0.0729
   },
   {
     "Username":"chris.exe",
-    "Percentage of Granted":0.2694,
+    "Percentage of Granted":0.2424,
     "Percentage of Total":0.0727
   },
   {
-    "Username":"pxlpshr",
-    "Percentage of Granted":0.2665,
-    "Percentage of Total":0.0719
+    "Username":"hashu786",
+    "Percentage of Granted":0.2405,
+    "Percentage of Total":0.0721
   },
   {
-    "Username":"neofuturist",
-    "Percentage of Granted":0.2556,
-    "Percentage of Total":0.069
+    "Username":"hunters.freud",
+    "Percentage of Granted":0.2333,
+    "Percentage of Total":0.07
+  },
+  {
+    "Username":"lovis.io",
+    "Percentage of Granted":0.2323,
+    "Percentage of Total":0.0697
+  },
+  {
+    "Username":"organoids",
+    "Percentage of Granted":0.2232,
+    "Percentage of Total":0.067
+  },
+  {
+    "Username":"jasblack",
+    "Percentage of Granted":0.2211,
+    "Percentage of Total":0.0663
   },
   {
     "Username":"material_rabbit",
-    "Percentage of Granted":0.2414,
+    "Percentage of Granted":0.2172,
     "Percentage of Total":0.0652
   },
   {
     "Username":"mgfxer",
-    "Percentage of Granted":0.2315,
+    "Percentage of Granted":0.2083,
     "Percentage of Total":0.0625
   },
   {
     "Username":"yuvraj",
-    "Percentage of Granted":0.2273,
+    "Percentage of Granted":0.2045,
     "Percentage of Total":0.0614
   },
   {
     "Username":"nate - lk dev",
-    "Percentage of Granted":0.2255,
+    "Percentage of Granted":0.203,
     "Percentage of Total":0.0609
   },
   {
-    "Username":"alissonerdx",
-    "Percentage of Granted":0.2249,
+    "Username":"a.i.warper",
+    "Percentage of Granted":0.2022,
     "Percentage of Total":0.0607
   },
   {
-    "Username":"a.i.warper",
-    "Percentage of Granted":0.2247,
-    "Percentage of Total":0.0607
+    "Username":"solus_fx",
+    "Percentage of Granted":0.1999,
+    "Percentage of Total":0.06
   },
   {
     "Username":"huemin",
-    "Percentage of Granted":0.2196,
+    "Percentage of Granted":0.1976,
     "Percentage of Total":0.0593
   },
   {
-    "Username":"cainisable",
-    "Percentage of Granted":0.2179,
+    "Username":"consumption_",
+    "Percentage of Granted":0.1961,
     "Percentage of Total":0.0588
   },
   {
-    "Username":"consumption_",
-    "Percentage of Granted":0.2179,
+    "Username":"cainisable",
+    "Percentage of Granted":0.1961,
     "Percentage of Total":0.0588
   },
   {
     "Username":"roman_anderson",
-    "Percentage of Granted":0.2098,
+    "Percentage of Granted":0.1888,
     "Percentage of Total":0.0566
   },
   {
-    "Username":"syntaxdiffusion",
-    "Percentage of Granted":0.2086,
+    "Username":"byarlooo",
+    "Percentage of Granted":0.1881,
+    "Percentage of Total":0.0564
+  },
+  {
+    "Username":"sagansagansagans",
+    "Percentage of Granted":0.1875,
     "Percentage of Total":0.0563
   },
   {
-    "Username":"2kpr",
-    "Percentage of Granted":0.1852,
-    "Percentage of Total":0.05
+    "Username":"davidsnow1",
+    "Percentage of Granted":0.1745,
+    "Percentage of Total":0.0523
   },
   {
-    "Username":"oumoumad",
-    "Percentage of Granted":0.1852,
+    "Username":"2kpr",
+    "Percentage of Granted":0.1667,
     "Percentage of Total":0.05
   },
   {
     "Username":"realsammyt",
-    "Percentage of Granted":0.1852,
+    "Percentage of Granted":0.1667,
     "Percentage of Total":0.05
   },
   {
-    "Username":"jags",
-    "Percentage of Granted":0.1852,
-    "Percentage of Total":0.05
-  },
-  {
-    "Username":"simian luo",
-    "Percentage of Granted":0.1852,
+    "Username":"oumoumad",
+    "Percentage of Granted":0.1667,
     "Percentage of Total":0.05
   },
   {
     "Username":"impactframes. s",
-    "Percentage of Granted":0.1852,
+    "Percentage of Granted":0.1667,
     "Percentage of Total":0.05
   },
   {
-    "Username":"hunters.freud",
-    "Percentage of Granted":0.1819,
-    "Percentage of Total":0.0491
+    "Username":"jags",
+    "Percentage of Granted":0.1667,
+    "Percentage of Total":0.05
   },
   {
-    "Username":"solus_fx",
-    "Percentage of Granted":0.1819,
-    "Percentage of Total":0.0491
+    "Username":"simian luo",
+    "Percentage of Granted":0.1667,
+    "Percentage of Total":0.05
   },
   {
-    "Username":"jasblack",
-    "Percentage of Granted":0.1803,
-    "Percentage of Total":0.0487
+    "Username":"udart",
+    "Percentage of Granted":0.1653,
+    "Percentage of Total":0.0496
+  },
+  {
+    "Username":"doctordiffusion",
+    "Percentage of Granted":0.1652,
+    "Percentage of Total":0.0496
+  },
+  {
+    "Username":"machinedelusions",
+    "Percentage of Granted":0.1598,
+    "Percentage of Total":0.048
   },
   {
     "Username":"vk",
-    "Percentage of Granted":0.175,
+    "Percentage of Granted":0.1575,
     "Percentage of Total":0.0473
   },
   {
+    "Username":"yvann_ba",
+    "Percentage of Granted":0.1558,
+    "Percentage of Total":0.0467
+  },
+  {
     "Username":"felixturner",
-    "Percentage of Granted":0.1723,
+    "Percentage of Granted":0.1551,
     "Percentage of Total":0.0465
   },
   {
-    "Username":"byarlooo",
-    "Percentage of Granted":0.1719,
-    "Percentage of Total":0.0464
+    "Username":"fred.bliss",
+    "Percentage of Granted":0.1507,
+    "Percentage of Total":0.0452
   },
   {
-    "Username":"hashu786",
-    "Percentage of Granted":0.1636,
-    "Percentage of Total":0.0442
-  },
-  {
-    "Username":"datavoid",
-    "Percentage of Granted":0.161,
-    "Percentage of Total":0.0435
-  },
-  {
-    "Username":"andro-meda",
-    "Percentage of Granted":0.161,
-    "Percentage of Total":0.0435
-  },
-  {
-    "Username":"semi",
-    "Percentage of Granted":0.161,
-    "Percentage of Total":0.0435
-  },
-  {
-    "Username":"polyanna",
-    "Percentage of Granted":0.161,
+    "Username":"inner_reflections",
+    "Percentage of Granted":0.1449,
     "Percentage of Total":0.0435
   },
   {
     "Username":"twist",
-    "Percentage of Granted":0.161,
-    "Percentage of Total":0.0435
-  },
-  {
-    "Username":"inner_reflections",
-    "Percentage of Granted":0.161,
+    "Percentage of Granted":0.1449,
     "Percentage of Total":0.0435
   },
   {
     "Username":"marcus aurelius",
-    "Percentage of Granted":0.161,
-    "Percentage of Total":0.0435
-  },
-  {
-    "Username":"mr example",
-    "Percentage of Granted":0.161,
+    "Percentage of Granted":0.1449,
     "Percentage of Total":0.0435
   },
   {
     "Username":"crishhh98",
-    "Percentage of Granted":0.161,
+    "Percentage of Granted":0.1449,
+    "Percentage of Total":0.0435
+  },
+  {
+    "Username":"datavoid",
+    "Percentage of Granted":0.1449,
+    "Percentage of Total":0.0435
+  },
+  {
+    "Username":"andro-meda",
+    "Percentage of Granted":0.1449,
     "Percentage of Total":0.0435
   },
   {
     "Username":"lone samurai",
-    "Percentage of Granted":0.161,
+    "Percentage of Granted":0.1449,
     "Percentage of Total":0.0435
   },
   {
-    "Username":"impactframes.",
-    "Percentage of Granted":0.1553,
-    "Percentage of Total":0.0419
+    "Username":"mr example",
+    "Percentage of Granted":0.1449,
+    "Percentage of Total":0.0435
   },
   {
-    "Username":"lilien",
-    "Percentage of Granted":0.1543,
-    "Percentage of Total":0.0417
+    "Username":"semi",
+    "Percentage of Granted":0.1449,
+    "Percentage of Total":0.0435
   },
   {
-    "Username":"lovis.io",
-    "Percentage of Granted":0.1543,
-    "Percentage of Total":0.0417
-  },
-  {
-    "Username":"twopikachus",
-    "Percentage of Granted":0.1543,
-    "Percentage of Total":0.0417
+    "Username":"polyanna",
+    "Percentage of Granted":0.1449,
+    "Percentage of Total":0.0435
   },
   {
     "Username":"mrboofy",
-    "Percentage of Granted":0.1543,
+    "Percentage of Granted":0.1389,
+    "Percentage of Total":0.0417
+  },
+  {
+    "Username":"lilien",
+    "Percentage of Granted":0.1389,
     "Percentage of Total":0.0417
   },
   {
     "Username":"daxton caylor",
-    "Percentage of Granted":0.1543,
+    "Percentage of Granted":0.1389,
     "Percentage of Total":0.0417
   },
   {
-    "Username":"udart",
-    "Percentage of Granted":0.1466,
-    "Percentage of Total":0.0396
+    "Username":"kytr.ai",
+    "Percentage of Granted":0.1359,
+    "Percentage of Total":0.0408
   },
   {
-    "Username":"thibaudz",
-    "Percentage of Granted":0.1425,
-    "Percentage of Total":0.0385
+    "Username":"melih35x",
+    "Percentage of Granted":0.1354,
+    "Percentage of Total":0.0406
   },
   {
-    "Username":"ursium",
-    "Percentage of Granted":0.1425,
-    "Percentage of Total":0.0385
+    "Username":"atom.p",
+    "Percentage of Granted":0.1349,
+    "Percentage of Total":0.0405
   },
   {
-    "Username":"harrowed",
-    "Percentage of Granted":0.1425,
-    "Percentage of Total":0.0385
+    "Username":"mamad851",
+    "Percentage of Granted":0.1346,
+    "Percentage of Total":0.0404
+  },
+  {
+    "Username":"sxela",
+    "Percentage of Granted":0.1346,
+    "Percentage of Total":0.0404
+  },
+  {
+    "Username":"7bithero",
+    "Percentage of Granted":0.1346,
+    "Percentage of Total":0.0404
+  },
+  {
+    "Username":"ingierlingsson",
+    "Percentage of Granted":0.1315,
+    "Percentage of Total":0.0395
   },
   {
     "Username":"imcybearpunk",
-    "Percentage of Granted":0.1425,
+    "Percentage of Granted":0.1282,
     "Percentage of Total":0.0385
   },
   {
     "Username":"jahwffrey",
-    "Percentage of Granted":0.1425,
+    "Percentage of Granted":0.1282,
     "Percentage of Total":0.0385
   },
   {
-    "Username":"impactframes",
-    "Percentage of Granted":0.1425,
-    "Percentage of Total":0.0385
-  },
-  {
-    "Username":"dkamacho",
-    "Percentage of Granted":0.1425,
-    "Percentage of Total":0.0385
-  },
-  {
-    "Username":"fabian3000",
-    "Percentage of Granted":0.1425,
-    "Percentage of Total":0.0385
-  },
-  {
-    "Username":"exponentialml",
-    "Percentage of Granted":0.1425,
-    "Percentage of Total":0.0385
-  },
-  {
-    "Username":"mrdravcan",
-    "Percentage of Granted":0.1425,
-    "Percentage of Total":0.0385
-  },
-  {
-    "Username":"datarevised",
-    "Percentage of Granted":0.1425,
+    "Username":"thibaudz",
+    "Percentage of Granted":0.1282,
     "Percentage of Total":0.0385
   },
   {
     "Username":"angry.penguin",
-    "Percentage of Granted":0.1425,
+    "Percentage of Granted":0.1282,
+    "Percentage of Total":0.0385
+  },
+  {
+    "Username":"fabian3000",
+    "Percentage of Granted":0.1282,
+    "Percentage of Total":0.0385
+  },
+  {
+    "Username":"impactframes",
+    "Percentage of Granted":0.1282,
+    "Percentage of Total":0.0385
+  },
+  {
+    "Username":"ursium",
+    "Percentage of Granted":0.1282,
+    "Percentage of Total":0.0385
+  },
+  {
+    "Username":"harrowed",
+    "Percentage of Granted":0.1282,
+    "Percentage of Total":0.0385
+  },
+  {
+    "Username":"mrdravcan",
+    "Percentage of Granted":0.1282,
+    "Percentage of Total":0.0385
+  },
+  {
+    "Username":"dkamacho",
+    "Percentage of Granted":0.1282,
+    "Percentage of Total":0.0385
+  },
+  {
+    "Username":"exponentialml",
+    "Percentage of Granted":0.1282,
     "Percentage of Total":0.0385
   },
   {
     "Username":"extrafuzzy",
-    "Percentage of Granted":0.1425,
+    "Percentage of Granted":0.1282,
+    "Percentage of Total":0.0385
+  },
+  {
+    "Username":"datarevised",
+    "Percentage of Granted":0.1282,
     "Percentage of Total":0.0385
   },
   {
     "Username":"mcxi",
-    "Percentage of Granted":0.1425,
+    "Percentage of Granted":0.1282,
     "Percentage of Total":0.0385
   },
   {
+    "Username":"jmysff",
+    "Percentage of Granted":0.1282,
+    "Percentage of Total":0.0384
+  },
+  {
+    "Username":"juampab12",
+    "Percentage of Granted":0.1272,
+    "Percentage of Total":0.0382
+  },
+  {
     "Username":"kewk",
-    "Percentage of Granted":0.1389,
+    "Percentage of Granted":0.125,
     "Percentage of Total":0.0375
   },
   {
+    "Username":"itspoidaman",
+    "Percentage of Granted":0.123,
+    "Percentage of Total":0.0369
+  },
+  {
     "Username":"infinite vibes",
-    "Percentage of Granted":0.1337,
+    "Percentage of Granted":0.1204,
     "Percentage of Total":0.0361
   },
   {
-    "Username":"spacepxl",
-    "Percentage of Granted":0.1323,
-    "Percentage of Total":0.0357
-  },
-  {
-    "Username":"wasasquatch",
-    "Percentage of Granted":0.1323,
+    "Username":"jimblug",
+    "Percentage of Granted":0.119,
     "Percentage of Total":0.0357
   },
   {
     "Username":"artchan",
-    "Percentage of Granted":0.1323,
+    "Percentage of Granted":0.119,
     "Percentage of Total":0.0357
   },
   {
-    "Username":"jimblug",
-    "Percentage of Granted":0.1323,
+    "Username":"wasasquatch",
+    "Percentage of Granted":0.119,
     "Percentage of Total":0.0357
   },
   {
     "Username":"joviex",
-    "Percentage of Granted":0.1323,
+    "Percentage of Granted":0.119,
     "Percentage of Total":0.0357
   },
   {
-    "Username":"melih35x",
-    "Percentage of Granted":0.124,
-    "Percentage of Total":0.0335
+    "Username":"cseti007",
+    "Percentage of Granted":0.1158,
+    "Percentage of Total":0.0347
   },
   {
-    "Username":"atom.p",
-    "Percentage of Granted":0.1235,
-    "Percentage of Total":0.0333
+    "Username":"burgstall",
+    "Percentage of Granted":0.1113,
+    "Percentage of Total":0.0334
   },
   {
     "Username":"avataraim",
-    "Percentage of Granted":0.1235,
-    "Percentage of Total":0.0333
-  },
-  {
-    "Username":"organoids",
-    "Percentage of Granted":0.1235,
+    "Percentage of Granted":0.1111,
     "Percentage of Total":0.0333
   },
   {
     "Username":"iemesowum",
-    "Percentage of Granted":0.1235,
+    "Percentage of Granted":0.1111,
     "Percentage of Total":0.0333
   },
   {
     "Username":"kytra",
-    "Percentage of Granted":0.1227,
+    "Percentage of Granted":0.1104,
     "Percentage of Total":0.0331
   },
   {
+    "Username":"traxxas25",
+    "Percentage of Granted":0.1088,
+    "Percentage of Total":0.0326
+  },
+  {
+    "Username":"pln1",
+    "Percentage of Granted":0.1084,
+    "Percentage of Total":0.0325
+  },
+  {
     "Username":"zuko",
-    "Percentage of Granted":0.1196,
+    "Percentage of Granted":0.1076,
     "Percentage of Total":0.0323
   },
   {
-    "Username":"sagansagansagans",
-    "Percentage of Granted":0.1157,
-    "Percentage of Total":0.0312
+    "Username":"kudzueye",
+    "Percentage of Granted":0.1057,
+    "Percentage of Total":0.0317
+  },
+  {
+    "Username":"nrmopp",
+    "Percentage of Granted":0.1058,
+    "Percentage of Total":0.0317
   },
   {
     "Username":"fai",
-    "Percentage of Granted":0.1132,
+    "Percentage of Granted":0.1019,
     "Percentage of Total":0.0306
   },
   {
     "Username":"brbbbq",
-    "Percentage of Granted":0.1133,
+    "Percentage of Granted":0.102,
     "Percentage of Total":0.0306
   },
   {
-    "Username":"jmysff",
-    "Percentage of Granted":0.1105,
+    "Username":"0xmacbeth",
+    "Percentage of Granted":0.0993,
     "Percentage of Total":0.0298
   },
   {
-    "Username":"davidsnow1",
-    "Percentage of Granted":0.1105,
-    "Percentage of Total":0.0298
-  },
-  {
-    "Username":"fred.bliss",
-    "Percentage of Granted":0.1105,
-    "Percentage of Total":0.0298
+    "Username":"makeitrad",
+    "Percentage of Granted":0.0987,
+    "Percentage of Total":0.0296
   },
   {
     "Username":"a.eye_101",
-    "Percentage of Granted":0.108,
+    "Percentage of Granted":0.0972,
     "Percentage of Total":0.0292
   },
   {
+    "Username":"gerdegotit9",
+    "Percentage of Granted":0.0958,
+    "Percentage of Total":0.0287
+  },
+  {
+    "Username":"tk_999",
+    "Percentage of Granted":0.0951,
+    "Percentage of Total":0.0285
+  },
+  {
+    "Username":"08453",
+    "Percentage of Granted":0.0951,
+    "Percentage of Total":0.0285
+  },
+  {
     "Username":"𝕽𝖊𝖑𝖎𝖈",
-    "Percentage of Granted":0.1038,
+    "Percentage of Granted":0.0934,
     "Percentage of Total":0.028
   },
   {
-    "Username":"martin_h",
-    "Percentage of Granted":0.1029,
+    "Username":"renderstorm",
+    "Percentage of Granted":0.0926,
     "Percentage of Total":0.0278
   },
   {
-    "Username":"renderstorm",
-    "Percentage of Granted":0.1029,
+    "Username":"martin_h",
+    "Percentage of Granted":0.0926,
     "Percentage of Total":0.0278
   },
   {
     "Username":"butchersbrain",
-    "Percentage of Granted":0.1029,
+    "Percentage of Granted":0.0926,
     "Percentage of Total":0.0278
   },
   {
-    "Username":"machinedelusions",
-    "Percentage of Granted":0.1003,
-    "Percentage of Total":0.0271
+    "Username":"able.jones",
+    "Percentage of Granted":0.092,
+    "Percentage of Total":0.0276
+  },
+  {
+    "Username":"piblarg",
+    "Percentage of Granted":0.0888,
+    "Percentage of Total":0.0266
   },
   {
     "Username":"ptmarks",
-    "Percentage of Granted":0.097,
+    "Percentage of Granted":0.0873,
     "Percentage of Total":0.0262
   },
   {
-    "Username":"ghost",
-    "Percentage of Granted":0.0965,
-    "Percentage of Total":0.026
+    "Username":"n0nsens.",
+    "Percentage of Granted":0.0859,
+    "Percentage of Total":0.0258
   },
   {
-    "Username":"yvann_ba",
-    "Percentage of Granted":0.0926,
+    "Username":"bright_capybara_46732",
+    "Percentage of Granted":0.0833,
     "Percentage of Total":0.025
   },
   {
     "Username":"lilien86",
-    "Percentage of Granted":0.0926,
+    "Percentage of Granted":0.0833,
     "Percentage of Total":0.025
   },
   {
-    "Username":"ingierlingsson",
-    "Percentage of Granted":0.0877,
-    "Percentage of Total":0.0237
+    "Username":"clownsharkbatwing",
+    "Percentage of Granted":0.0833,
+    "Percentage of Total":0.025
+  },
+  {
+    "Username":"ncreature",
+    "Percentage of Granted":0.0833,
+    "Percentage of Total":0.025
   },
   {
     "Username":"minelauvart",
-    "Percentage of Granted":0.0877,
+    "Percentage of Granted":0.079,
     "Percentage of Total":0.0237
   },
   {
+    "Username":"xander6270",
+    "Percentage of Granted":0.0781,
+    "Percentage of Total":0.0234
+  },
+  {
+    "Username":"yo9otatara",
+    "Percentage of Granted":0.0781,
+    "Percentage of Total":0.0234
+  },
+  {
+    "Username":"johndopamine",
+    "Percentage of Granted":0.0781,
+    "Percentage of Total":0.0234
+  },
+  {
     "Username":"sorrymary",
-    "Percentage of Granted":0.0842,
+    "Percentage of Granted":0.0758,
     "Percentage of Total":0.0227
   },
   {
     "Username":"kajukabla",
-    "Percentage of Granted":0.0842,
+    "Percentage of Granted":0.0758,
     "Percentage of Total":0.0227
   },
   {
-    "Username":"jack g",
-    "Percentage of Granted":0.0772,
-    "Percentage of Total":0.0208
+    "Username":"happy.j",
+    "Percentage of Granted":0.0746,
+    "Percentage of Total":0.0224
+  },
+  {
+    "Username":"zuko4230",
+    "Percentage of Granted":0.0726,
+    "Percentage of Total":0.0218
   },
   {
     "Username":"jerry davos",
-    "Percentage of Granted":0.0772,
+    "Percentage of Granted":0.0694,
     "Percentage of Total":0.0208
   },
   {
+    "Username":"jack g",
+    "Percentage of Granted":0.0694,
+    "Percentage of Total":0.0208
+  },
+  {
+    "Username":"wandereronarock",
+    "Percentage of Granted":0.0694,
+    "Percentage of Total":0.0208
+  },
+  {
+    "Username":"ezman",
+    "Percentage of Granted":0.0641,
+    "Percentage of Total":0.0192
+  },
+  {
     "Username":"ethanfel",
-    "Percentage of Granted":0.0712,
+    "Percentage of Granted":0.0641,
     "Percentage of Total":0.0192
   },
   {
     "Username":"draken",
-    "Percentage of Granted":0.0712,
+    "Percentage of Granted":0.0641,
     "Percentage of Total":0.0192
   },
   {
-    "Username":"ezman",
-    "Percentage of Granted":0.0712,
-    "Percentage of Total":0.0192
+    "Username":"hypereikon",
+    "Percentage of Granted":0.0631,
+    "Percentage of Total":0.0189
   },
   {
-    "Username":"makeitrad",
-    "Percentage of Granted":0.0694,
-    "Percentage of Total":0.0187
+    "Username":"emmacatnip",
+    "Percentage of Granted":0.0631,
+    "Percentage of Total":0.0189
+  },
+  {
+    "Username":"chinese_dream",
+    "Percentage of Granted":0.0631,
+    "Percentage of Total":0.0189
   },
   {
     "Username":"pajaritaflora...maryann",
-    "Percentage of Granted":0.0694,
+    "Percentage of Granted":0.0625,
     "Percentage of Total":0.0187
   },
   {
-    "Username":"traxxas25",
-    "Percentage of Granted":0.0694,
-    "Percentage of Total":0.0187
+    "Username":"timhannan",
+    "Percentage of Granted":0.0602,
+    "Percentage of Total":0.0181
   },
   {
-    "Username":"lawrence9678",
-    "Percentage of Granted":0.0661,
-    "Percentage of Total":0.0179
+    "Username":"iskarioto",
+    "Percentage of Granted":0.0602,
+    "Percentage of Total":0.0181
   },
   {
-    "Username":"gerdegotit9",
-    "Percentage of Granted":0.0661,
-    "Percentage of Total":0.0179
+    "Username":"armandw.",
+    "Percentage of Granted":0.06,
+    "Percentage of Total":0.018
   },
   {
     "Username":"soreliusbeats",
-    "Percentage of Granted":0.0661,
+    "Percentage of Granted":0.0595,
     "Percentage of Total":0.0179
   },
   {
-    "Username":"doctordiffusion",
-    "Percentage of Granted":0.0661,
+    "Username":"lawrence9678",
+    "Percentage of Granted":0.0595,
     "Percentage of Total":0.0179
-  },
-  {
-    "Username":"jackg",
-    "Percentage of Granted":0.0617,
-    "Percentage of Total":0.0167
-  },
-  {
-    "Username":"xander6270",
-    "Percentage of Granted":0.0617,
-    "Percentage of Total":0.0167
-  },
-  {
-    "Username":"pollyannain4d",
-    "Percentage of Granted":0.0617,
-    "Percentage of Total":0.0167
-  },
-  {
-    "Username":"miklosnagy",
-    "Percentage of Granted":0.0617,
-    "Percentage of Total":0.0167
-  },
-  {
-    "Username":"headofoliver",
-    "Percentage of Granted":0.0617,
-    "Percentage of Total":0.0167
   },
   {
     "Username":"mickmumpitz",
-    "Percentage of Granted":0.0617,
+    "Percentage of Granted":0.0556,
     "Percentage of Total":0.0167
   },
   {
     "Username":"latent spacer",
-    "Percentage of Granted":0.0617,
-    "Percentage of Total":0.0167
-  },
-  {
-    "Username":"lemuet.",
-    "Percentage of Granted":0.0617,
-    "Percentage of Total":0.0167
-  },
-  {
-    "Username":"yo9otatara",
-    "Percentage of Granted":0.0617,
-    "Percentage of Total":0.0167
-  },
-  {
-    "Username":".tarkan",
-    "Percentage of Granted":0.0617,
-    "Percentage of Total":0.0167
-  },
-  {
-    "Username":"byronimo",
-    "Percentage of Granted":0.0617,
+    "Percentage of Granted":0.0556,
     "Percentage of Total":0.0167
   },
   {
     "Username":"stenandrimpy_83415",
-    "Percentage of Granted":0.0617,
+    "Percentage of Granted":0.0556,
+    "Percentage of Total":0.0167
+  },
+  {
+    "Username":"headofoliver",
+    "Percentage of Granted":0.0556,
     "Percentage of Total":0.0167
   },
   {
     "Username":"fakeitorleaveit",
-    "Percentage of Granted":0.0617,
+    "Percentage of Granted":0.0556,
     "Percentage of Total":0.0167
   },
   {
-    "Username":"happy.j",
-    "Percentage of Granted":0.0579,
-    "Percentage of Total":0.0156
+    "Username":"miklosnagy",
+    "Percentage of Granted":0.0556,
+    "Percentage of Total":0.0167
+  },
+  {
+    "Username":"pollyannain4d",
+    "Percentage of Granted":0.0556,
+    "Percentage of Total":0.0167
+  },
+  {
+    "Username":"lemuet.",
+    "Percentage of Granted":0.0556,
+    "Percentage of Total":0.0167
+  },
+  {
+    "Username":".tarkan",
+    "Percentage of Granted":0.0556,
+    "Percentage of Total":0.0167
+  },
+  {
+    "Username":"byronimo",
+    "Percentage of Granted":0.0556,
+    "Percentage of Total":0.0167
+  },
+  {
+    "Username":"jackg",
+    "Percentage of Granted":0.0556,
+    "Percentage of Total":0.0167
+  },
+  {
+    "Username":"3zm4n",
+    "Percentage of Granted":0.0525,
+    "Percentage of Total":0.0158
   },
   {
     "Username":"andyxr",
-    "Percentage of Granted":0.0579,
+    "Percentage of Granted":0.0521,
     "Percentage of Total":0.0156
   },
   {
     "Username":"qanics2",
-    "Percentage of Granted":0.0579,
-    "Percentage of Total":0.0156
-  },
-  {
-    "Username":"sxela",
-    "Percentage of Granted":0.0579,
+    "Percentage of Granted":0.0521,
     "Percentage of Total":0.0156
   },
   {
     "Username":"habibigonemad",
-    "Percentage of Granted":0.0579,
-    "Percentage of Total":0.0156
-  },
-  {
-    "Username":"nablah",
-    "Percentage of Granted":0.0579,
-    "Percentage of Total":0.0156
-  },
-  {
-    "Username":"kentskooking",
-    "Percentage of Granted":0.0579,
-    "Percentage of Total":0.0156
-  },
-  {
-    "Username":"cristartisty",
-    "Percentage of Granted":0.0579,
+    "Percentage of Granted":0.0521,
     "Percentage of Total":0.0156
   },
   {
     "Username":"remycoup",
-    "Percentage of Granted":0.0579,
+    "Percentage of Granted":0.0521,
     "Percentage of Total":0.0156
   },
   {
-    "Username":"xander",
-    "Percentage of Granted":0.0514,
-    "Percentage of Total":0.0139
+    "Username":"nablah",
+    "Percentage of Granted":0.0521,
+    "Percentage of Total":0.0156
   },
   {
-    "Username":"[ai]ndmix",
-    "Percentage of Granted":0.0514,
-    "Percentage of Total":0.0139
+    "Username":"kentskooking",
+    "Percentage of Granted":0.0521,
+    "Percentage of Total":0.0156
   },
   {
-    "Username":"koba.eth",
-    "Percentage of Granted":0.0514,
-    "Percentage of Total":0.0139
+    "Username":"cristartisty",
+    "Percentage of Granted":0.0521,
+    "Percentage of Total":0.0156
   },
   {
-    "Username":"akumetsu971",
-    "Percentage of Granted":0.0514,
-    "Percentage of Total":0.0139
+    "Username":"pedro_sanchez_86",
+    "Percentage of Granted":0.0513,
+    "Percentage of Total":0.0154
+  },
+  {
+    "Username":"scruntee",
+    "Percentage of Granted":0.0503,
+    "Percentage of Total":0.0151
   },
   {
     "Username":"nopeburger",
-    "Percentage of Granted":0.0514,
-    "Percentage of Total":0.0139
-  },
-  {
-    "Username":"stephan tual",
-    "Percentage of Granted":0.0514,
-    "Percentage of Total":0.0139
-  },
-  {
-    "Username":"andro.meta",
-    "Percentage of Granted":0.0514,
+    "Percentage of Granted":0.0463,
     "Percentage of Total":0.0139
   },
   {
     "Username":"re_diffusion",
-    "Percentage of Granted":0.0514,
+    "Percentage of Granted":0.0463,
+    "Percentage of Total":0.0139
+  },
+  {
+    "Username":"andro.meta",
+    "Percentage of Granted":0.0463,
     "Percentage of Total":0.0139
   },
   {
     "Username":"amli",
-    "Percentage of Granted":0.0514,
+    "Percentage of Granted":0.0463,
+    "Percentage of Total":0.0139
+  },
+  {
+    "Username":"stephan tual",
+    "Percentage of Granted":0.0463,
+    "Percentage of Total":0.0139
+  },
+  {
+    "Username":"ajo6268",
+    "Percentage of Granted":0.0463,
+    "Percentage of Total":0.0139
+  },
+  {
+    "Username":"koba.eth",
+    "Percentage of Granted":0.0463,
+    "Percentage of Total":0.0139
+  },
+  {
+    "Username":"the.artofficial.trainer",
+    "Percentage of Granted":0.0463,
+    "Percentage of Total":0.0139
+  },
+  {
+    "Username":"akumetsu971",
+    "Percentage of Granted":0.0463,
+    "Percentage of Total":0.0139
+  },
+  {
+    "Username":"xander",
+    "Percentage of Granted":0.0463,
+    "Percentage of Total":0.0139
+  },
+  {
+    "Username":"[ai]ndmix",
+    "Percentage of Granted":0.0463,
+    "Percentage of Total":0.0139
+  },
+  {
+    "Username":"verolelb",
+    "Percentage of Granted":0.0463,
     "Percentage of Total":0.0139
   },
   {
     "Username":"uehreka",
-    "Percentage of Granted":0.0487,
-    "Percentage of Total":0.0132
-  },
-  {
-    "Username":"juampab12",
-    "Percentage of Granted":0.0487,
-    "Percentage of Total":0.0132
-  },
-  {
-    "Username":"milescorban",
-    "Percentage of Granted":0.0487,
-    "Percentage of Total":0.0132
-  },
-  {
-    "Username":"tk_999",
-    "Percentage of Granted":0.0487,
+    "Percentage of Granted":0.0439,
     "Percentage of Total":0.0132
   },
   {
     "Username":"chancelor.",
-    "Percentage of Granted":0.0487,
+    "Percentage of Granted":0.0439,
     "Percentage of Total":0.0132
   },
   {
-    "Username":"zuko4230",
-    "Percentage of Granted":0.0487,
+    "Username":"milescorban",
+    "Percentage of Granted":0.0439,
     "Percentage of Total":0.0132
-  },
-  {
-    "Username":"08453",
-    "Percentage of Granted":0.0487,
-    "Percentage of Total":0.0132
-  },
-  {
-    "Username":"superbeasts.ai (brad)",
-    "Percentage of Granted":0.0421,
-    "Percentage of Total":0.0114
-  },
-  {
-    "Username":"isaac",
-    "Percentage of Granted":0.0421,
-    "Percentage of Total":0.0114
-  },
-  {
-    "Username":"question",
-    "Percentage of Granted":0.0421,
-    "Percentage of Total":0.0114
-  },
-  {
-    "Username":"yo9o",
-    "Percentage of Granted":0.0421,
-    "Percentage of Total":0.0114
   },
   {
     "Username":"gasia 🌷",
-    "Percentage of Granted":0.0421,
-    "Percentage of Total":0.0114
-  },
-  {
-    "Username":"piligrim",
-    "Percentage of Granted":0.0421,
+    "Percentage of Granted":0.0379,
     "Percentage of Total":0.0114
   },
   {
     "Username":"nosecretsai",
-    "Percentage of Granted":0.0421,
+    "Percentage of Granted":0.0379,
     "Percentage of Total":0.0114
   },
   {
-    "Username":"mh",
-    "Percentage of Granted":0.0386,
+    "Username":"superbeasts.ai (brad)",
+    "Percentage of Granted":0.0379,
+    "Percentage of Total":0.0114
+  },
+  {
+    "Username":"isaac",
+    "Percentage of Granted":0.0379,
+    "Percentage of Total":0.0114
+  },
+  {
+    "Username":"question",
+    "Percentage of Granted":0.0379,
+    "Percentage of Total":0.0114
+  },
+  {
+    "Username":"yo9o",
+    "Percentage of Granted":0.0379,
+    "Percentage of Total":0.0114
+  },
+  {
+    "Username":"piligrim",
+    "Percentage of Granted":0.0379,
+    "Percentage of Total":0.0114
+  },
+  {
+    "Username":"pajaritaflora",
+    "Percentage of Granted":0.0362,
+    "Percentage of Total":0.0109
+  },
+  {
+    "Username":"purzbeats",
+    "Percentage of Granted":0.0362,
+    "Percentage of Total":0.0109
+  },
+  {
+    "Username":"simonxxoo",
+    "Percentage of Granted":0.0362,
+    "Percentage of Total":0.0109
+  },
+  {
+    "Username":"mhshapes",
+    "Percentage of Granted":0.0362,
+    "Percentage of Total":0.0109
+  },
+  {
+    "Username":"destogeima",
+    "Percentage of Granted":0.0362,
+    "Percentage of Total":0.0109
+  },
+  {
+    "Username":"superkleen n",
+    "Percentage of Granted":0.0362,
+    "Percentage of Total":0.0109
+  },
+  {
+    "Username":"theoreticallymedia",
+    "Percentage of Granted":0.0362,
+    "Percentage of Total":0.0109
+  },
+  {
+    "Username":"araminta_k",
+    "Percentage of Granted":0.0362,
+    "Percentage of Total":0.0109
+  },
+  {
+    "Username":"kingpigeon49",
+    "Percentage of Granted":0.0362,
+    "Percentage of Total":0.0109
+  },
+  {
+    "Username":"bluedangerx",
+    "Percentage of Granted":0.0347,
     "Percentage of Total":0.0104
   },
   {
     "Username":"siraev.vis",
-    "Percentage of Granted":0.0386,
-    "Percentage of Total":0.0104
-  },
-  {
-    "Username":"bluedangerx",
-    "Percentage of Granted":0.0386,
-    "Percentage of Total":0.0104
-  },
-  {
-    "Username":"the shadow (nyc)",
-    "Percentage of Granted":0.0386,
-    "Percentage of Total":0.0104
-  },
-  {
-    "Username":"adam",
-    "Percentage of Granted":0.0386,
+    "Percentage of Granted":0.0347,
     "Percentage of Total":0.0104
   },
   {
     "Username":"boldtron",
-    "Percentage of Granted":0.0386,
+    "Percentage of Granted":0.0347,
     "Percentage of Total":0.0104
   },
   {
-    "Username":"arkitecc",
-    "Percentage of Granted":0.0309,
+    "Username":"mh",
+    "Percentage of Granted":0.0347,
+    "Percentage of Total":0.0104
+  },
+  {
+    "Username":"adam",
+    "Percentage of Granted":0.0347,
+    "Percentage of Total":0.0104
+  },
+  {
+    "Username":"the shadow (nyc)",
+    "Percentage of Granted":0.0347,
+    "Percentage of Total":0.0104
+  },
+  {
+    "Username":"andre_68386_81501",
+    "Percentage of Granted":0.0333,
+    "Percentage of Total":0.01
+  },
+  {
+    "Username":"cml.jar",
+    "Percentage of Granted":0.0333,
+    "Percentage of Total":0.01
+  },
+  {
+    "Username":"connorfarnsworth",
+    "Percentage of Granted":0.0333,
+    "Percentage of Total":0.01
+  },
+  {
+    "Username":"jjjjshn",
+    "Percentage of Granted":0.0333,
+    "Percentage of Total":0.01
+  },
+  {
+    "Username":"cody9475",
+    "Percentage of Granted":0.0333,
+    "Percentage of Total":0.01
+  },
+  {
+    "Username":"neonninjaastro_63946",
+    "Percentage of Granted":0.0287,
+    "Percentage of Total":0.0086
+  },
+  {
+    "Username":"aemotionstudio",
+    "Percentage of Granted":0.0287,
+    "Percentage of Total":0.0086
+  },
+  {
+    "Username":"janoschsimon",
+    "Percentage of Granted":0.0287,
+    "Percentage of Total":0.0086
+  },
+  {
+    "Username":"lumifel",
+    "Percentage of Granted":0.0287,
+    "Percentage of Total":0.0086
+  },
+  {
+    "Username":"guahunyo",
+    "Percentage of Granted":0.0287,
+    "Percentage of Total":0.0086
+  },
+  {
+    "Username":"laurenneal",
+    "Percentage of Granted":0.0287,
+    "Percentage of Total":0.0086
+  },
+  {
+    "Username":"t2",
+    "Percentage of Granted":0.0278,
     "Percentage of Total":0.0083
   },
   {
     "Username":"rainbowpilot",
-    "Percentage of Granted":0.0309,
+    "Percentage of Granted":0.0278,
     "Percentage of Total":0.0083
   },
   {
-    "Username":"t2",
-    "Percentage of Granted":0.0309,
+    "Username":"arkitecc",
+    "Percentage of Granted":0.0278,
     "Percentage of Total":0.0083
   },
   {
-    "Username":"scruntee",
-    "Percentage of Granted":0.0309,
-    "Percentage of Total":0.0083
-  },
-  {
-    "Username":"baronvonnift33",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"0xmacbeth",
-    "Percentage of Granted":0.0299,
+    "Username":"tkpandaman",
+    "Percentage of Granted":0.0269,
     "Percentage of Total":0.0081
   },
   {
     "Username":"earthstorm",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"huwhitememes",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"wyzborrero",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"aleksej623",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"chinese_dream",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"_nic_h",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"iskarioto",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"emmacatnip",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"inductor.ai",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"tkpandaman",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"nftnik",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"tobowers",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"tonon",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"timhannan",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
-  },
-  {
-    "Username":"honestabe37",
-    "Percentage of Granted":0.0299,
+    "Percentage of Granted":0.0269,
     "Percentage of Total":0.0081
   },
   {
     "Username":"palpapalpa",
-    "Percentage of Granted":0.0299,
+    "Percentage of Granted":0.0269,
     "Percentage of Total":0.0081
   },
   {
-    "Username":"hypereikon",
-    "Percentage of Granted":0.0299,
+    "Username":"_nic_h",
+    "Percentage of Granted":0.0269,
+    "Percentage of Total":0.0081
+  },
+  {
+    "Username":"aleksej623",
+    "Percentage of Granted":0.0269,
+    "Percentage of Total":0.0081
+  },
+  {
+    "Username":"inductor.ai",
+    "Percentage of Granted":0.0269,
+    "Percentage of Total":0.0081
+  },
+  {
+    "Username":"wyzborrero",
+    "Percentage of Granted":0.0269,
+    "Percentage of Total":0.0081
+  },
+  {
+    "Username":"huwhitememes",
+    "Percentage of Granted":0.0269,
+    "Percentage of Total":0.0081
+  },
+  {
+    "Username":"baronvonnift33",
+    "Percentage of Granted":0.0269,
+    "Percentage of Total":0.0081
+  },
+  {
+    "Username":"nftnik",
+    "Percentage of Granted":0.0269,
+    "Percentage of Total":0.0081
+  },
+  {
+    "Username":"tobowers",
+    "Percentage of Granted":0.0269,
+    "Percentage of Total":0.0081
+  },
+  {
+    "Username":"tonon",
+    "Percentage of Granted":0.0269,
+    "Percentage of Total":0.0081
+  },
+  {
+    "Username":"honestabe37",
+    "Percentage of Granted":0.0269,
     "Percentage of Total":0.0081
   },
   {
     "Username":"arc37us",
-    "Percentage of Granted":0.0299,
+    "Percentage of Granted":0.0269,
     "Percentage of Total":0.0081
   },
   {
-    "Username":"johndopamine",
-    "Percentage of Granted":0.0299,
-    "Percentage of Total":0.0081
+    "Username":"semixd",
+    "Percentage of Granted":0.0238,
+    "Percentage of Total":0.0071
+  },
+  {
+    "Username":"ddparker",
+    "Percentage of Granted":0.0238,
+    "Percentage of Total":0.0071
+  },
+  {
+    "Username":"christiansandor",
+    "Percentage of Granted":0.0238,
+    "Percentage of Total":0.0071
+  },
+  {
+    "Username":"benjimon0842",
+    "Percentage of Granted":0.0238,
+    "Percentage of Total":0.0071
+  },
+  {
+    "Username":"c.j.g.",
+    "Percentage of Granted":0.0238,
+    "Percentage of Total":0.0071
+  },
+  {
+    "Username":"natalie5567",
+    "Percentage of Granted":0.0238,
+    "Percentage of Total":0.0071
+  },
+  {
+    "Username":"dezoomer",
+    "Percentage of Granted":0.0238,
+    "Percentage of Total":0.0071
+  },
+  {
+    "Username":"ramonguthrie",
+    "Percentage of Granted":0.0238,
+    "Percentage of Total":0.0071
+  },
+  {
+    "Username":"seruva19",
+    "Percentage of Granted":0.0238,
+    "Percentage of Total":0.0071
+  },
+  {
+    "Username":"adrientoupet",
+    "Percentage of Granted":0.0238,
+    "Percentage of Total":0.0071
+  },
+  {
+    "Username":"dichtbringer",
+    "Percentage of Granted":0.0225,
+    "Percentage of Total":0.0068
+  },
+  {
+    "Username":"amirsunpapi",
+    "Percentage of Granted":0.0225,
+    "Percentage of Total":0.0068
+  },
+  {
+    "Username":"the_shadow_nyc",
+    "Percentage of Granted":0.0225,
+    "Percentage of Total":0.0068
+  },
+  {
+    "Username":"aikitoria",
+    "Percentage of Granted":0.0225,
+    "Percentage of Total":0.0068
+  },
+  {
+    "Username":"zombiematrix.",
+    "Percentage of Granted":0.0225,
+    "Percentage of Total":0.0068
+  },
+  {
+    "Username":"ofirbibi",
+    "Percentage of Granted":0.0225,
+    "Percentage of Total":0.0068
+  },
+  {
+    "Username":"vrgamedevgirl",
+    "Percentage of Granted":0.0225,
+    "Percentage of Total":0.0068
+  },
+  {
+    "Username":"77oussam_",
+    "Percentage of Granted":0.0225,
+    "Percentage of Total":0.0068
+  },
+  {
+    "Username":"g.5940",
+    "Percentage of Granted":0.0225,
+    "Percentage of Total":0.0068
+  },
+  {
+    "Username":"orabazes",
+    "Percentage of Granted":0.0225,
+    "Percentage of Total":0.0068
   }
 ]
