@@ -3,35 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Page Not Found</title>
-    <!-- Google Fonts -->
+    <title>404 - Page Not Found | Banodoco</title>
+    <!-- Importmap from index.html -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.151.3/build/three.module.js"
+      }
+    }
+    </script>
+    <!-- Favicons from index.html, paths adjusted -->
+    <link rel="icon" href="../assets/logos/banodoco.png" type="image/png">
+    <link rel="shortcut icon" href="../assets/logos/banodoco.png" type="image/png">
+    <!-- Google Fonts from index.html -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Main CSS files from root, paths adjusted -->
+    <link rel="stylesheet" href="../src/styles/main.css">
+    <link rel="stylesheet" href="../src/styles/components/header.css">
+    <link rel="stylesheet" href="../src/styles/components/footer.css">
+    
+    <!-- 404-specific styles - path is relative to pages/404.html -->
+    <link rel="stylesheet" href="styles.css"> 
+    
+    <!-- Feather Icons and React from index.html -->
     <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
 </head>
 <body>
-    <div class="error-container">
-        <div class="letters">
-            <div class="letter animated-p">
-                P
-                <div class="face">
-                    <div class="eye left-eye"></div>
-                    <div class="eye right-eye"></div>
-                    <div class="mouth"></div>
+    <!-- Elements from index.html for background/border -->
+    <canvas id="plantCanvas"></canvas>
+    <div class="plant-overlay"></div>
+    <div class="inner-border"></div>
+
+    <div class="container" style="position: relative; display: flex; flex-direction: column; min-height: 100vh;">
+        <!-- Site Header -->
+        <div id="header"></div>
+        <script>
+            fetch('../src/components/header.html') // Path adjusted
+                .then(response => response.text())
+                .then(html => {
+                    if (document.getElementById('header')) {
+                        document.getElementById('header').innerHTML = html;
+                    }
+                    // Ensure Feather icons in the header are processed if necessary
+                    if (typeof feather !== 'undefined') {
+                        feather.replace();
+                    }
+                });
+        </script>
+
+        <!-- Main 404 Content Area -->
+        <div class="content-section" style="text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem;">
+            <div class="error-container">
+                <div class="letters">
+                    <div class="letter animated-p">
+                        P
+                        <div class="face">
+                            <div class="eye left-eye"></div>
+                            <div class="eye right-eye"></div>
+                            <div class="mouth"></div>
+                        </div>
+                    </div>
+                    <div class="letter">O</div>
+                    <div class="letter">M</div>
                 </div>
+                <h2>Oops! Looks like this page went missing...</h2>
+                <a href="../index.html" class="home-link">Go back home</a> <!-- Path adjusted -->
             </div>
-            <div class="letter">O</div>
-            <div class="letter">M</div>
         </div>
-        <h2>Oops! Looks like this page went missing...</h2>
-        <a href="index.html" class="home-link">Go back home</a>
+
+        <!-- Site Footer -->
+        <div id="footer" style="margin-top: auto;"></div>
+        <script>
+            fetch('../src/components/footer.html') // Path adjusted
+                .then(response => response.text())
+                .then(html => {
+                    if (document.getElementById('footer')) {
+                        document.getElementById('footer').innerHTML = html;
+                    }
+                    // Ensure Feather icons in the footer are processed if necessary
+                    if (typeof feather !== 'undefined') {
+                        feather.replace();
+                    }
+                });
+        </script>
     </div>
 
-    <script>
-        feather.replace();
-    </script>
+    <!-- Scripts from root index.html, paths adjusted -->
+    <script src="../src/js/components/icons.js"></script> 
+    <script src="../src/js/script.js"></script> <!-- Main site script -->
+    <script src="../src/js/components/plant-animation.js" type="module"></script>
+
+    <!-- 404-specific script - path relative to pages/404.html -->
+    <!-- This script likely handles the POM animation and its own feather.replace() if needed. -->
     <script src="script.js"></script>
+    <script>
+        // Final call to ensure all Feather icons are processed, including those in 404-specific content.
+        // This might be redundant if pages/script.js or ../src/js/script.js already handles it thoroughly.
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    </script>
 </body>
 </html> 

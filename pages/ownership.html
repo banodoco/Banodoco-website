@@ -265,6 +265,14 @@
       text-align: left !important;
     }
 
+    .sortable-header {
+      cursor: pointer;
+      user-select: none; /* Prevents text selection on double click */
+    }
+    .sortable-header:hover {
+      background-color: #e9ecef; /* A light grey hover effect */
+    }
+
   </style>
   <style>
     body {
@@ -305,12 +313,12 @@
         .then(html => { document.getElementById('header').innerHTML = html; });
     </script>
     <!-- Main Content -->
-    <h1 class="hero-title" style="text-align: left;">Ownership - Explanation, Disclaimers & FAQ</h1>
+    <h1 class="hero-title" style="text-align: left;">Ownership - Explanation, Disclaimers & Grants to Date</h1>
     <div class="content-section">
       <div class="image-placeholder stacked-right"><img src="https://banodoco.s3.amazonaws.com/images/typical_startup_equity.webp" alt="Typical Startup Equity" style="max-width:100%;"/></div>
       <div class="image-placeholder stacked-right"><img src="https://banodoco.s3.amazonaws.com/images/open_source_native.webp" alt="Open Source Native" style="max-width:100%;"/></div>
       
-      <p>Our goal is to build Banodoco into a highly-successful business that can support the development of the open source AI art ecosystem - by creating a commercial entity that is an extremely attractive investment for those who believe in our mission and open source. You can read more about our plan <a href="https://banodoco.ai/Plan">here</a>.</p>
+      <p>Our goal is to build Banodoco into a successful business that can helpsupport the development of the open source AI art ecosystem. To do this, we're creating a commercial entity that aims to be an extremely attractive investment for those who believe in our mission and open source. You can read more about our plan <a href="https://banodoco.ai">here</a>.</p>
       
       <p>Most startups give out 90% of their ownership to founders and 10% to early employees.</p>
       
@@ -325,6 +333,7 @@
       <!-- Add a clearing div to ensure disclaimers start in a new block -->
       <div style="clear: both; margin-top: 2rem;"></div>
       
+      <hr style="margin: 2rem 0;">
       <h3>Disclaimers:</h3>
       <p><strong>1) We haven't set this up legally yet</strong></p>
       <p>Doing this will be costly and time-consuming - it'll become a priority as soon as we have the resources to do so - which will also hopefully be when people start to actually care!</p>
@@ -340,204 +349,416 @@
       <p><strong>2) Startup equity is highly-speculative</strong></p>
       <p>Our goal is that we'll be worth a lot someday - and in this world, even 0.05% will probably be a decent amount of money - but that is <em>objectively</em> unlikely. Given this, don't do anything because you want to get rich. Maybe you will, but really you should do it because you love what it can be and what you're working on - and feel good that - if our collected efforts to create something valuable - you may share in that.</p>
       
-      <p><strong>3) Figuring this out will be an ever-evolving process - and we will make mistakes</strong></p>
+      <p><strong> 3) Grants will be biased towards core contributors and people who do things that are aligned with our goals</strong></p>
+      <p>While we would like to reward people who contribute to everything, we're also trying to build a business that is successful. As such, we'll likely be biased towards rewarding people who are core to the business and who are contributing things that are most aligned with our goals.</p>
+      
+      <p><strong>4) Figuring this out will be an ever-evolving process - and we will make mistakes</strong></p>
       <p>I believe that this fundamental approach makes sense but figuring out how to actually implement it will take time. We'll also make mistakes along the way - if you feel we've made a mistake, please let me know. I always will want to hear if you feel anything isn't right.</p>
       
-      <p><strong>4) How the 'ownership' will be structured is unclear & lots of stuff is TBD</strong></p>
+      <p><strong>5) How the 'ownership' will be structured is unclear & lots of stuff is TBD</strong></p>
       <p>For example, it may not literally be ownership, but possibly an agreement that the grantee can buy equity from us at a price of 0.01c when the equity becomes liquid. However, whatever way it's structured, my goal is that it means that the realisable gains from it are exactly proportional to the percentage of ownership - say, if the company is valued at 1b USD, and you have 1% equity, that will be worth exactly 1% of that (pre-tax of course).</p>
       
-      <p><strong>5) Ownership will get diluted as we take on investment, or as we allocate more equity for contributors</strong></p>
+      <p><strong>6) Ownership will get diluted as we take on investment, or as we allocate more equity for contributors</strong></p>
       <p>Say, for example, we get an investment of 5m USD at a 50m USD valuation. That means that the ownership pool for contributors (including me) will be diluted. In the case of the above example, it would mean that what was once 0.1% of the whole entity, would now be 0.091%. However, this would mostly be offset by the actual value increasing as the percentage decreases. We may also allocate more ownership to contributors - which would have the same effect. While things may change, I can only promise that every change that impacts owners will impact me equally.</p>
       
-      <h3>Ownership grants to date:</h3>
+      <hr style="margin: 2rem 0;">
+      <h3>Grants, transfers, and ownership to date</h3>
       <p>As per the above, each month, 1% of the company will be split equally between contributors. Up until, February 2024, the amount each month was split equally between all contributors. After this, instead of it being split equally, we'll split 0.25% to each major group - core, infrastructure builders, knowledge sharers, and artists. That means all the people listed in that group will get that 0.25% split between them.</p>
-      <table id="ownershipGrants" border="1" cellspacing="0" cellpadding="8" style="width:100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem;">
-        <thead>
-          <tr style="background-color: #f8f8f8;">
-            <th style="padding: 10px; text-align: left; width: 30%;">Month</th>
-            <th style="padding: 10px; text-align: left;">Ownership Grants</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">November, 2022</td>
-            <td style="padding: 10px; vertical-align: top;">POM</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">December, 2022</td>
-            <td style="padding: 10px; vertical-align: top;">POM</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">January, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">POM</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">February, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">POM</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">March, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">POM</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">April, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">POM</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">May, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">POM; Lone_Samurai</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">June, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">POM; Lone_Samurai</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">July, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">POM; Lone_Samurai</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">August, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">itsB34STW4RS; Kosinkadink; PBPBPB; Cubey; lone_samurai; neggles; toyxyz; POM</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">September, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">Inner_Reflections_AI; Kaïros; Kosinkadink; manshoety; Antzu ☕; lone_samurai; Draken; jfischoff; RedStrawberries; itsB34STW4RS; Fizzledorf; Consumption</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">October, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">kijai; piblarg; drex15704080; fictiverse; fannovel16; citizenplain; kosinkadink; jfischoff; lone_samurai; fizzledorf; anime_is_real; fabdream; cainisable; redstrawberries; manshoety; drakenza; consumption_</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">November, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">Kijai; toyxyz; Ceyuan Yang/Animatediff team x2; Siraj; comfy; Fannovel16; melmass; Fictiverse; Fizzledorf; Inner_Reflections_AI; Kosinkadink; Impactframes. s; matt3o; Simian Luo; jboogx.creative; Nathan Shipley; lone_samurai; anime_is_real; Dr.Lt.Data</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">December, 2023</td>
-            <td style="padding: 10px; vertical-align: top;">cerspense; matt3o; redstrawberries; lone_samurai; kijai; visualfrisson; piblarg; kosinkadink; thibaudz; drakenza; angry.penguin; jahwffrey; imcybearpunk; felixturner; toyxyz; harrowed; fictiverse; fannovel16; siraj; impactframes; syntaxdiffusion; jboogx.creative; citizenplain; nebsh; benjamin.paine; ai.god</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">January, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">Kijai; Mr Example; NebSH; matt30; Lone Samurai; Polyanna; Kosinkadink; RedStrawberries; Jeru; anime_is_real; Adam; roman_anderson; draken; BennyKok; Inner Reflections; toyxyz; Twist; DataVoid; Semi; Dr Lt Data; Andro-Meda; crishhh98; Marcus Aurelius</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">February, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">matt3o; lone_samurai; kosinkadink; kijai; consumption; mcxi; datarevised; bennykok; extrafuzzy; exponentialml; cerspense; piblarg; pxlpshr; fannovel16; itsb34stw4rs; drex15704080; visualfrisson; mrdravcan; ursium; huemin; fabian3000; enigmatic_e; drakenza; dkamacho; cseti007; citizenplain</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">March, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">CORE: lone_samurai;POM;BadCRC | INFRASTRUCTURE: Kosinkadink;matt3o;Kijai;Fannovel16;Ostris | KNOWLEDGE SHARERS: Purz;Stephan Tual;amli;anó;jboogx.creative;Andro.Meta;Klinter;Kytra;Koba.eth;Cseti;nopeburger;Re_diffusion;cyncratic;enigmatic_e;Benjaminimal;cerspense;toyxyz;Impactframes. | ART: neofuturist;Adam;Chris.exe;The Shadow (NYC);yvann;BOLDTRON;The Dor Brothers;itsB34STW4RS;BlueDangerX;traxxas25;jeru;Pollyanna;Hannah Submarine;makeitrad;mrboofy;siraev.vis;MidJourney.Man;Fill;A.I.Warper;Ghost;NebSH;siraev.vis;MH;Pajaritaflora...MaryAnn;Material_Rabbit</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">April, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">CORE: lone_samurai;POM;Ian_G;Pollyanna | INFRASTRUCTURE: mel;Kijai;Kosinkadink;Juxtapoz;matt3o;Fannovel16;Joviex | KNOWLEDGE SHARERS: SuperBeasts.AI (Brad);yuvraj;Purz;Adam;melih;toyxyz;Cseti;Gasia 🌷;Impactframes.;DREX;yo9o;Question;Isaac;neofuturist;brbbbq;Piligrim;anó;𝕽𝖊𝖑𝖎𝖈;VK;A.I.Warper;Klinter;nosecretsai | ARTISTS: PTMarks;The Dor Brothers;makeitrad;VisualFrisson;Infinite Vibes;Zlikwid;jboogx.creative;cerspense;Hannah Submarine;A.eye_101;NebSH;anime_is_real;Arkitecc;jags;MidJourney.Man;Scruntee;Udart (Vibeke);Pajaritaflora...MaryAnn;Material_Rabbit;Flipping Sigmas;enigmatic_e;RainbowPilot;traxxas25;Teslanaut;Jas;yvann;jeru;Chris.exe;T2;mgfxer</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">May, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">INFRASTRUCTURE: matt3o:wasasquatch:kosinkadink:kijai:melmass:artchan:jimblug | KNOWLEDGE SHARERS: mgfxer:pollyannain4d:fakeitorleaveit:lovis.io:xander6270:neofuturist:drex15704080:iemesowum:jackg:trenthunter:cyncratic:byronimo:machinedelusions:.tarkan:purzbeats | ARTISTS: arc37us:midjourney.man:zlikwid:hypereikon:ingierlingsson:jboogx.creative:palpapalpa:felixturner:honestabe37:timhannan:cseti007:tonon:tobowers:nftnik:inductor.ai:tkpandaman:0xmacbeth:emmacatnip:iskarioto:johndopamine:_nic_h:chinese_dream:jasblack:minelauvart:aleksej623:material_rabbit:byarlooo:wyzborrero:huwhitememes:earthstorm:baronvonnift33 | CORE: ian_101:.lone_samurai:yuvraj108c:pom_i_moq</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">June, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">CORE: lone_samurai:yuvraj:pom:Austin Mroz:Ian_G | ARTISTS: Hannah Submarine:MidJourney.Man:Chris.exe:sorrymary:kajukabla:Teslanaut:ByArlooo:Material_Rabbit:enigmatic_e:jeru:fabdream | INFRASTRUCTURE: Kosinkadink:matt3o:Kijai:Juxtapoz:jags:TwoPikachus | KNOWLEDGE/TOOLS: Flipping Sigmas:Cseti:mgfxer:A.eye_101:huemin:Jack G:Yvann:Kewk:Jerry Davos:Klinter:cyncratic:Inner_Reflections_AI</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">July, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">CORE: Ian_G:lone_samurai:Austin Mroz:pom | ARTISTS: fabdream:Hannah Submarine:realsammyt:oumoumad:Teslanaut | INFRASTRUCTURE: Kijai:mel:Kosinkadink:matt3o | KNOWLEDGE/TOOLS: akatz:mgfxer:cyncratic:toyxyz:Klinter:atom.p:Jas:fai:Cseti:neofuturist:𝖊𝖑𝖎𝖈:Kewkッ:Inner_Reflections_AI:Flipping Sigmas:NebSH</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">August, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">CORE: pom:lone_samurai:melih:Ian_G | ARTISTS: Infinite Vibes:Martin_H:Flipping Sigmas:enigmatic_e:ButchersBrain:fabdream:Hannah Submarine:RenderStorm:Zlikwid | INFRASTRUCTURE: Ostris:Kosinkadink:Juxtapoz:Kijai:RedStrawberries:matt3o | KNOWLEDGE/TOOLS: ryanontheinside:fai:Cseti:cyncratic:Inner_Reflections_AI:Akumetsu971:MidJourney.Man:neofuturist:xander:akatz:[Ai]ndmix:jeru:cyncratic:toyxyz:Nathan Shipley:Klinter:mel:A.I.Warper</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">September, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">CORE: pom:lone_samurai:Ian_G | ARTISTS: fabdream:Hannah Submarine:anó:The Dor Brothers:Flipping Sigmas | INFRASTRUCTURE: ryanontheinside:Kijai:matt3o:Nate - LK Dev:Daxton Caylor:akatz | KNOWLEDGE/TOOLS: Yvann:Nate - LK Dev:Kytra:jboogx.creative:Ethanfel:brbbbq:Cseti:Draken:ezMan:Zlikwid:toyxyz:VK:cyncratic</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">October, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">CORE: matt3o:lone_samurai:melih:pom | INFRASTRUCTURE: Kijai:Juxtapoz:Kosinkadink | KNOWLEDGE/TOOLS: akatz:Cseti:Purz:A.I.Warper:Klinter:Yvann:lilien:ryanontheinside:toyxyz:lovis.io | ARTISTS: Zuko:NebSH:MidJourney.Man:HunterS.Freud:anó:VisualFrisson:cerspense:sagansagansagans:habibigonemad:The Dor Brothers:RemyCoup:solus_fx:Udart:Hannah Submarine:Chris.exe:Ghost</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; vertical-align: top;">November, 2024</td>
-            <td style="padding: 10px; vertical-align: top;">CORE: matt3o:pom | INFRASTRUCTURE: Kijai:lone_samurai:2kpr:Juxtapoz:Kosinkadink | KNOWLEDGE/TOOLS: Organoids:atom.p:Yvann:lilien:avataraim:ryanontheinside:VK:HeadOfOliver:Mickmumpitz:Cseti:Zuko:Nathan Shipley:DREX:mel:Latent Spacer | ARTISTS: Cristartisty:kentskooking:Hannah Submarine:Nablah:MidJourney.Man:Chris.exe:AndyXR:jboogx.creative:solus_fx:Udart:NebSH:mrboofy:happy.j:Purz:Minelauvart:VisualFrisson</td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <div style="text-align: center; margin-bottom: 2rem;">
-        <button id="toggleTableRows">Show More</button>
+      <p>How this is distributed will constantly evolve as we figure out the best model - but we hope to arrive at a consistent approach over the first 2 years that is fair and inspires the right kind of contributions.</p>
+      <!-- Add a clearing div to ensure disclaimers start in a new block -->
+      <style>
+        .warning-box {
+          background-color: #f5f6f8;
+          color: #555;
+          padding: 0.85rem 1rem;
+          border: 1px solid #e0e3e9;
+          border-radius: .25rem;
+          margin-bottom: 1.5rem;
+          font-family: 'Inter', sans-serif;
+          font-size: 0.95rem;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .tabs { margin-top: 1rem; }
+        .tab-menu { list-style: none; padding: 0; display: flex; border-bottom: 1px solid #ccc; margin-bottom: 1rem; }
+        .tab-menu .tab-item { cursor: pointer; padding: 10px 20px; border: 1px solid #ccc; border-bottom: none; margin-right: 5px; border-radius: 5px 5px 0 0; }
+        .tab-menu .active { background-color: #EEF5FF; color: #4285F4; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+      </style>
+      <div class="tabs">
+        <ul class="tab-menu">
+          <li class="tab-item active" data-tab="grants-transfers">Grants & transfers</li>
+          <li class="tab-item" data-tab="ownership-to-date">Ownership to date</li>
+        </ul>
+        
+        <div class="warning-box">
+          <p style="margin-bottom: 0;"><strong>Note:</strong> There may be minor issues in this data. The ground source of truth for this will be the original announcements on Discord.</p>
+        </div>
+
+        <div class="tab-content">
+          <div id="grants-transfers" class="tab-panel active">
+            <p>Below are the grants and transfers to date:</p>
+            <div style="clear: both; margin-top: 2rem;"></div>
+            <div id="grants-container">
+              
+              <div id="grants-table-container"></div>
+            </div>
+            <div id="transfers-container">
+              <h3>Additional Transfers</h3>
+              <p>In addition to the above, holders may transfer equity to contributors at their discretion. This is subject to approval by POM. The below table shows the transfers to date:</p>
+              <div id="transfers-table-container"></div>
+            </div>
+          </div>
+          <div id="ownership-to-date" class="tab-panel">
+            <!-- Content for this tab will be loaded from ownership.json -->
+            <p>Below is the current breakdown of equity distribution among all contributors:</p>
+            <input type="text" id="ownershipFilterInput" placeholder="Filter by Username..." style="margin-bottom: 10px; padding: 8px; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;">
+            <p id="ownership-loading">Loading ownership data...</p> <div id="ownership-data-table-container"></div>
+          </div>
+        </div>
       </div>
-      
-      <h3>Additional transfers to date:</h3>
-      <p>In addition to the above, holders, in particular POM may transfer equity to contributors at their discretion. This is subject to approval by POM. The below table shows the transfers to date:</p>
-      <table border="1" cellspacing="0" cellpadding="8" style="width:100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem;">
-        <thead>
-          <tr style="background-color: #f8f8f8;">
-            <th style="padding: 10px; text-align: left; width: 30%;">From</th>
-            <th style="padding: 10px; text-align: left; width: 30%;">To</th>
-            <th style="padding: 10px; text-align: left; width: 20%;">Amount</th>
-            <th style="padding: 10px; text-align: left; width: 20%;">Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding: 10px;">POM</td>
-            <td style="padding: 10px;">Ceyuan Yang</td>
-            <td style="padding: 10px;">0.25%</td>
-            <td style="padding: 10px;">December, 2023</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px;">POM</td>
-            <td style="padding: 10px;">ComfyAnonymous</td>
-            <td style="padding: 10px;">0.575%</td>
-            <td style="padding: 10px;">June, 2024</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px;">POM</td>
-            <td style="padding: 10px;">Matt3o</td>
-            <td style="padding: 10px;">3.3625%</td>
-            <td style="padding: 10px;">November, 2024</td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <h3>FAQ:</h3>
+      <hr style="margin: 2rem 0;">
+      <h3>Frequently Asked Questions:</h3>
       <p><strong>"What's your plan to make this actually valuable?"</strong></p>
-      <p>You can read more about our plan <a href="https://banodoco.ai/Plan">here</a></p>
-      
+      <p>You can read more about what we're up to <a href="https://banodoco.ai/">here - more coming soon.</a></p>
       <p><strong>"Why should I trust you?"</strong></p>
-      <p>I think that this is a very fair question. - I could in theory go back on this when the company is valuable. In fact, there are loads of ways people screw others in all kinds of equity arrangements. While I do hope to get wealthy enough to not have to worry about money, that's not strictly my goal - in fact, my goal is to do stuff like this for the rest of my life and doing anything that would make me untrustworthy in the eyes of the types of people I want to collaborate with would be stupid and short-sighted.</p>
-      
+      <p>I think that this is a very fair question. I could in theory go back on this when the company is valuable. In fact, there are loads of ways people screw others in all kinds of equity arrangements. While I do hope to get wealthy enough to not have to worry about money, that's not strictly my goal. My goal is actually to do stuff like this for the rest of my life and doing anything that would make me untrustworthy in the eyes of the types of people I want to collaborate with would be stupid and short-sighted.</p>
       <p><strong>"If the equity becomes valuable, how will I be able to sell it?"</strong></p>
       <p>This is TBC but many private startups like SpaceX offer equity holders the opportunity to sell at pre-determined times and we'll probably do something similar. What we don't want is for our equity to become like a token that's speculatively bought and sold, so will put constraints to avoid this - probably time-bound.</p>
-      
       <p><strong>"What about crypto?"</strong></p>
       <p>While I dislike a lot of the association crypto currently has, it could in theory be possible to implement this using crypto - if you have any ideas on how to achieve this in a way that isn't bullshitty and aligns with the above goals, please get in touch.</p>
-      
       <p><strong>"What about tax?"</strong></p>
       <p>We'll try to set it up in a way that tax is only due upon actual gains actually being realised - meaning, you'd only pay based on actual money you make. Again, I'll need to hire fancy lawyers and accountants to figure this out so have no clue what this means right now.</p>
-      
       <p><strong>"What if I don't want it?"</strong></p>
-      <p>If you don't want it, your equity will be redistributed to other contributors.</p>
-      
+      <p>If you don't want it, your equity will be redistributed to other contributors proportionally.</p>
       <p><strong>"What happens if the company is sold before the equity is allocated?"</strong></p>
       <p>Firstly, our intention is to build this into a self-sustaining entity for the long-term. However, if we do get purchased by another company, equity will be distributed proportionally based on the allocations made to date. For example, if someone holds 1% of the equity and 33.3% of the total equity has been allocated, they would receive 3% of the purchase price.</p>
-      
       <p><strong>"I have another question"</strong></p>
       <p>DM me on <a href="https://discord.com/invite/eKQm3uHKx2">our Discord</a>!</p>
+      <script>
+        let fullOwnershipData = []; // Store all fetched ownership data
+        const headersForOwnershipTable = ['Username', 'Percentage of Granted', 'Percentage of Total']; // Define headers here
+        let currentSortColumn = 'Username'; // Default sort column
+        let currentSortDirection = 'asc';   // Default sort direction
+
+        function sortAndRerenderData() {
+            const sortKey = currentSortColumn;
+            const direction = currentSortDirection;
+
+            fullOwnershipData.sort((itemA, itemB) => {
+                let valA = itemA[sortKey];
+                let valB = itemB[sortKey];
+
+                const valAExists = valA !== undefined && valA !== null;
+                const valBExists = valB !== undefined && valB !== null;
+
+                if (!valAExists && !valBExists) return 0;
+                if (!valAExists) return direction === 'asc' ? 1 : -1;
+                if (!valBExists) return direction === 'asc' ? -1 : 1;
+
+                if (sortKey !== 'Username') { // Numeric columns
+                    valA = parseFloat(String(valA).replace('%', '')); // Ensure % is removed for parsing
+                    valB = parseFloat(String(valB).replace('%', ''));
+
+                    if (isNaN(valA) && isNaN(valB)) return 0;
+                    if (isNaN(valA)) return direction === 'asc' ? 1 : -1;
+                    if (isNaN(valB)) return direction === 'asc' ? -1 : 1;
+                } else { // Username column (string)
+                    valA = String(valA).toLowerCase();
+                    valB = String(valB).toLowerCase();
+                }
+
+                if (valA < valB) return direction === 'asc' ? -1 : 1;
+                if (valA > valB) return direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            const filterInput = document.getElementById('ownershipFilterInput');
+            const filterValue = filterInput ? filterInput.value.toLowerCase().trim() : "";
+            
+            let dataToDisplay = fullOwnershipData;
+            if (filterValue) {
+                dataToDisplay = fullOwnershipData.filter(item =>
+                    item.Username && typeof item.Username === 'string' && item.Username.toLowerCase().includes(filterValue)
+                );
+            }
+            renderOwnershipTable(dataToDisplay);
+        }
+
+        // Function to render the ownership table
+        function renderOwnershipTable(dataToRender) {
+            const container = document.getElementById('ownership-data-table-container');
+            const loadingMessage = document.getElementById('ownership-loading');
+
+            if (!container) {
+                // console.error('Table container for ownership data not found.');
+                if (loadingMessage && loadingMessage.parentNode) { // Check parentNode before modifying
+                    loadingMessage.textContent = 'Error: Table container not found.';
+                }
+                return;
+            }
+            container.innerHTML = ''; 
+            if (loadingMessage && loadingMessage.parentNode) {
+                loadingMessage.style.display = 'none'; 
+            }
+
+            if (!Array.isArray(dataToRender) || dataToRender.length === 0) {
+                const filterInput = document.getElementById('ownershipFilterInput');
+                const currentFilterValue = filterInput ? filterInput.value.trim() : "";
+                if (currentFilterValue) {
+                    container.innerHTML = '<p>No usernames match your filter.</p>';
+                } else {
+                    container.innerHTML = '<p>No ownership data available to display.</p>';
+                }
+                return;
+            }
+
+            const table = document.createElement('table');
+            table.setAttribute('border', '1');
+            table.setAttribute('cellspacing', '0');
+            table.style.width = '100%';
+            table.style.tableLayout = 'fixed';
+            table.style.borderCollapse = 'collapse';
+            table.style.marginBottom = '1.5rem';
+            table.style.fontSize = '0.95rem';
+            table.style.whiteSpace = 'normal';
+            table.style.wordBreak = 'break-all';
+            table.style.overflowWrap = 'anywhere';
+
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            headerRow.style.backgroundColor = '#f8f8f8';
+            
+            headersForOwnershipTable.forEach(headerText => {
+                const th = document.createElement('th');
+                th.style.padding = '10px';
+                th.style.textAlign = 'left';
+                if (headerText === 'Username') th.style.width = '40%';
+                else if (headerText === 'Percentage of Granted') th.style.width = '30%';
+                else if (headerText === 'Percentage of Total') th.style.width = '30%';
+                
+                th.textContent = headerText;
+                th.classList.add('sortable-header');
+                th.dataset.columnKey = headerText;
+
+                if (headerText === currentSortColumn) {
+                    th.textContent += (currentSortDirection === 'asc' ? ' ▲' : ' ▼');
+                }
+
+                th.addEventListener('click', function() {
+                    const clickedColumnKey = this.dataset.columnKey;
+                    if (clickedColumnKey === currentSortColumn) {
+                        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSortColumn = clickedColumnKey;
+                        currentSortDirection = 'asc'; // Default to ascending when changing column
+                    }
+                    sortAndRerenderData();
+                });
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            dataToRender.forEach(item => {
+                const row = document.createElement('tr');
+                headersForOwnershipTable.forEach(header => {
+                    const td = document.createElement('td');
+                    td.style.padding = '10px';
+                    td.style.verticalAlign = 'top';
+                    td.textContent = item[header] !== undefined ? item[header] : 'N/A'; 
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+
+        // Function to load and initially display ownership data from JSON
+        function loadAndDisplayOwnershipData() {
+            const container = document.getElementById('ownership-data-table-container');
+            const loadingMessage = document.getElementById('ownership-loading');
+            const filterInput = document.getElementById('ownershipFilterInput');
+            
+            if (!container) { /* console.error(...) */ return; }
+
+            if (loadingMessage) {
+                loadingMessage.style.display = 'block';
+                loadingMessage.textContent = 'Loading ownership data...';
+            }
+
+            fetch('../data/ownership.json')
+              .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+              })
+              .then(data => {
+                fullOwnershipData = Array.isArray(data) ? data : []; 
+                
+                // Set default sort state before the first render if not already set by tab switch logic
+                // currentSortColumn = 'Username'; // Already defined globally
+                // currentSortDirection = 'asc';   // Already defined globally
+                sortAndRerenderData(); // This will sort (default by Username), then filter, then render
+              })
+              .catch(error => {
+                // console.error('Error fetching or parsing ownership.json:', error);
+                if (loadingMessage && loadingMessage.parentNode) {
+                    loadingMessage.style.display = 'none';
+                }
+                if (container) {
+                    container.innerHTML = `<p>Error loading ownership data: ${error.message}. Please check the console or ensure data/ownership.json is valid.</p>`;
+                }
+              });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+          const tabs = document.querySelectorAll('.tab-menu .tab-item');
+          const tabPanels = document.querySelectorAll('.tab-panel');
+          const filterInput = document.getElementById('ownershipFilterInput');
+
+          if (filterInput) {
+            filterInput.addEventListener('input', function() {
+              const filterValue = this.value.toLowerCase().trim();
+              const filteredData = fullOwnershipData.filter(item => { // fullOwnershipData is already sorted
+                return item.Username && typeof item.Username === 'string' && item.Username.toLowerCase().includes(filterValue);
+              });
+              renderOwnershipTable(filteredData);
+            });
+          }
+
+          tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+              tabs.forEach(t => t.classList.remove('active'));
+              tabPanels.forEach(panel => panel.classList.remove('active'));
+              tab.classList.add('active');
+              const targetPanelId = tab.getAttribute('data-tab');
+              const targetPanel = document.getElementById(targetPanelId);
+              if (targetPanel) {
+                  targetPanel.classList.add('active');
+              }
+
+              if (targetPanelId === 'ownership-to-date') {
+                // If data hasn't been loaded, or to ensure it's fresh / sorted correctly
+                loadAndDisplayOwnershipData(); 
+              }
+            });
+          });
+
+          const activeTab = document.querySelector('.tab-menu .tab-item.active');
+          if (activeTab && activeTab.getAttribute('data-tab') === 'ownership-to-date') {
+            loadAndDisplayOwnershipData();
+          } else {
+            const loadingMessage = document.getElementById('ownership-loading');
+            if (loadingMessage && loadingMessage.parentNode) loadingMessage.style.display = 'none';
+          }
+        });
+      </script>
+      <script>
+        document.addEventListener('DOMContentLoaded', function(){
+          if(window.innerWidth <= 768) {
+            const section = document.querySelector('.content-section');
+            if(section) {
+              const images = section.querySelectorAll('.image-placeholder');
+              const paragraphs = section.querySelectorAll('p');
+              if(images.length >= 2 && paragraphs.length >= 4) {
+                // Move first image after the second paragraph
+                paragraphs[1].insertAdjacentElement('afterend', images[0]);
+                // Move second image after the fourth paragraph
+                paragraphs[3].insertAdjacentElement('afterend', images[1]);
+              }
+              if(images.length >= 3) {
+                const targetText = 'While the actual implementation of this is uncertain, below is an example of what it might look like from a corporate structure perspective:';
+                const targetParagraph = Array.from(paragraphs).find(p => p.textContent.includes(targetText));
+                if(targetParagraph) {
+                  targetParagraph.insertAdjacentElement('afterend', images[2]);
+                }
+              }
+            }
+          }
+        });
+      </script>
+      <script>
+        // Script for Show More/Show Less functionality on the first tab's table
+        document.addEventListener('DOMContentLoaded', function() {
+          const table = document.getElementById('ownershipGrants');
+          const btn = document.getElementById('toggleTableRows');
+          
+          if (table && btn) { // Ensure both elements exist
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return; // Ensure tbody exists
+
+            const rows = Array.from(tbody.rows);
+            rows.reverse().forEach(row => tbody.appendChild(row)); // Newest at top
+            
+            const visibleCount = 3;
+            rows.forEach((row, index) => {
+              if (index >= visibleCount) {
+                row.classList.add('extra-row');
+                row.style.display = 'none';
+              }
+            });
+
+            if (rows.length > visibleCount) {
+                btn.style.display = ''; // Show button if there are hidden rows
+                btn.textContent = 'Show More';
+            } else {
+                btn.style.display = 'none'; // Hide button if all rows are visible
+            }
+            
+            btn.addEventListener('click', function() {
+              const extraRows = tbody.querySelectorAll('.extra-row');
+              if (extraRows.length === 0) return;
+
+              // Check visibility of the first extra row to determine current state
+              const isHidden = extraRows[0].style.display === 'none';
+              
+              extraRows.forEach(row => {
+                row.style.display = isHidden ? '' : 'none';
+              });
+              
+              btn.textContent = isHidden ? 'Show Less' : 'Show More';
+            });
+          } else {
+            // console.warn("Could not find table 'ownershipGrants' or button 'toggleTableRows' for Show More/Less functionality.");
+          }
+        });
+      </script>
     </div>
   </div>
+  <!-- Begin Grants Data Script -->
+  <script>
+  document.addEventListener("DOMContentLoaded", function() {
+    fetch('../data/grants.json')
+      .then(response => response.json())
+      .then(data => {
+        renderGrantsTable(data.grants);
+        renderTransfersTable(data.transfers);
+      })
+      .catch(error => console.error('Error loading grants data:', error));
 
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const table = document.getElementById('ownershipGrants');
-    const btn = document.getElementById('toggleTableRows');
-    
-    if (table) {
-      // First reverse the rows so newest are at top
-      const tbody = table.querySelector('tbody');
-      const rows = Array.from(tbody.rows);
+    function renderGrantsTable(grants) {
+      var container = document.getElementById('grants-table-container');
+      if (!container) return;
+      let html = '<table border="1" cellspacing="0" cellpadding="8" style="width:100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem;">';
+      html += '<thead><tr style="background-color: #f8f8f8;"><th style="padding: 10px; text-align: left; width: 30%;">Month</th><th style="padding: 10px; text-align: left;">Ownership Grants</th></tr></thead>';
+      html += '<tbody>';
+      grants.forEach(item => {
+        html += `<tr><td style="padding: 10px; vertical-align: top;">${item.month}</td><td style="padding: 10px; vertical-align: top; word-break: break-all; overflow-wrap: anywhere; white-space: normal;">${item.ownership_grants}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+
+      // Reorder rows (newest at top) and add Show More/Show Less functionality
+      let table = container.querySelector('table');
+      if (!table) return;
+      let tbody = table.querySelector('tbody');
+      if (!tbody) return;
+      let rows = Array.from(tbody.rows);
+      // Reverse the rows so that newest entries (last in original order) come first
       rows.reverse().forEach(row => tbody.appendChild(row));
-      
-      // Hide all but the last 3 months initially
+
       const visibleCount = 3;
       rows.forEach((row, index) => {
         if (index >= visibleCount) {
@@ -546,58 +767,47 @@
         }
       });
 
-      // Update button text
-      btn.textContent = 'Show More';
-      
-      // Add click handler
-      btn.addEventListener('click', function() {
-        const extraRows = document.querySelectorAll('#ownershipGrants .extra-row');
-        const isHidden = extraRows[0].style.display === 'none';
-        
-        extraRows.forEach(row => {
-          row.style.display = isHidden ? '' : 'none';
+      if (rows.length > visibleCount) {
+        let tfoot = document.createElement('tfoot');
+        let tr = document.createElement('tr');
+        let td = document.createElement('td');
+        td.setAttribute('colspan', '2');
+        td.style.textAlign = 'center';
+        td.style.padding = '10px';
+        let btn = document.createElement('button');
+        btn.id = 'toggleTableRows';
+        btn.textContent = 'Show More';
+        td.appendChild(btn);
+        tr.appendChild(td);
+        tfoot.appendChild(tr);
+        table.appendChild(tfoot);
+
+        btn.addEventListener('click', function() {
+          let extraRows = tbody.querySelectorAll('.extra-row');
+          if (extraRows.length === 0) return;
+          const isHidden = extraRows[0].style.display === 'none';
+          extraRows.forEach(row => {
+            row.style.display = isHidden ? '' : 'none';
+          });
+          btn.textContent = isHidden ? 'Show Less' : 'Show More';
         });
-        
-        btn.textContent = isHidden ? 'Show Less' : 'Show More';
-      });
-    }
-  });
-</script>
-<script>
-  document.addEventListener('DOMContentLoaded', function(){
-    if(window.innerWidth <= 768) {
-      const section = document.querySelector('.content-section');
-      if(section) {
-        const images = section.querySelectorAll('.image-placeholder');
-        const paragraphs = section.querySelectorAll('p');
-        if(images.length >= 2 && paragraphs.length >= 4) {
-          // Move first image after the second paragraph
-          paragraphs[1].insertAdjacentElement('afterend', images[0]);
-          // Move second image after the fourth paragraph
-          paragraphs[3].insertAdjacentElement('afterend', images[1]);
-        }
-        if(images.length >= 3) {
-          const targetText = 'While the actual implementation of this is uncertain, below is an example of what it might look like from a corporate structure perspective:';
-          const targetParagraph = Array.from(paragraphs).find(p => p.textContent.includes(targetText));
-          if(targetParagraph) {
-            targetParagraph.insertAdjacentElement('afterend', images[2]);
-          }
-        }
       }
     }
-  });
-</script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    var table = document.getElementById('ownershipGrants');
-    if (table) {
-       var tbody = table.querySelector('tbody');
-       var rows = Array.from(tbody.rows);
-       rows.reverse().forEach(function(row) {
-         tbody.appendChild(row);
-       });
+
+    function renderTransfersTable(transfers) {
+      var container = document.getElementById('transfers-table-container');
+      if (!container) return;
+      let html = '<table border="1" cellspacing="0" cellpadding="8" style="width:100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem;">';
+      html += '<thead><tr style="background-color: #f8f8f8;"><th style="padding: 10px; text-align: left; width: 30%;">From</th><th style="padding: 10px; text-align: left; width: 30%;">To</th><th style="padding: 10px; text-align: left; width: 20%;">Amount</th><th style="padding: 10px; text-align: left; width: 20%;">Date</th></tr></thead>';
+      html += '<tbody>';
+      transfers.forEach(item => {
+        html += `<tr><td style="padding: 10px; word-break: break-all; overflow-wrap: anywhere; white-space: normal;">${item.from}</td><td style="padding: 10px; word-break: break-all; overflow-wrap: anywhere; white-space: normal;">${item.to}</td><td style="padding: 10px; word-break: break-all; overflow-wrap: anywhere; white-space: normal;">${item.amount}</td><td style="padding: 10px; word-break: break-all; overflow-wrap: anywhere; white-space: normal;">${item.date}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
     }
   });
-</script>
+  </script>
+  <!-- End Grants Data Script -->
 </body>
 </html> 
