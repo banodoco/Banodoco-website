@@ -50,8 +50,9 @@ body {
   }
 
   /* Increase ecosystem visualization height on tablets */
+  /* This rule is quite general, might be overridden by more specific ones below for struggle.html */
   .two-column .ecosystem-visualization {
-    height: 750px; /* Increased height for tablets */
+    /* height: 750px; */ /* Increased height for tablets - Commented out as struggle.html specific rules will handle height via 'auto' or specific values */
     /* Keep other styles like margins from the max-width: 992px rule */
   }
 }
@@ -509,10 +510,14 @@ line-height: 1.6;
 font-family: 'Inter', sans-serif;
 }
 
+/* Center the heading in the submission section */
+.submission-title {
+  text-align: center;
+}
 
-/* Style for paragraph directly after the hero title */
+/* Styles for paragraph directly after the hero title */
 .hero-title + p {
-  margin-bottom: 2rem;
+  margin-bottom: 0 !important; /* Align spacing between paragraphs on mobile */
 }
 
 /* Styles for the specific two-column layout in the hero section */
@@ -554,6 +559,7 @@ margin-right: auto;
 display: flex;
 gap: 1.5rem;
 align-items: flex-start;
+justify-content: center;
 }
 .two-column .text-column {
 flex: 1;
@@ -589,29 +595,37 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   flex: 1.2;
 }
 }
+
+/* Rules for when .two-column stacks (tablet and smaller) */
 @media (max-width: 992px) {
-.ecosystem-visualization {
-  width: 100%;
-  margin-left: 0;
-  margin-right: 0;
-}
-.two-column {
-  flex-direction: column;
-}
-.two-column .text-column,
-.two-column .ecosystem-visualization {
-  flex: none;
-  width: 100%;
-}
-.two-column .ecosystem-visualization {
-  height: 600px;
-  margin-top: -90px;
-  margin-bottom: -50px;
-  position: relative;
-  width: 100vw;
-  max-width: 100vw;
-  margin-left: calc(50% - 55vw);
-}
+  /* Default stacking behavior for all .two-column */
+  .two-column {
+    flex-direction: column;
+  }
+  .two-column .text-column,
+  .two-column .ecosystem-visualization {
+    flex: none; /* Make items take full width of the column */
+    width: 100%;
+  }
+
+  /* Specific adjustments for general .ecosystem-visualization when stacked */
+  .ecosystem-visualization { /* This applies to ALL ecosystem-visualizations when < 992px, unless overridden */
+    width: 100%; /* Was 100vw, changed to 100% to respect padding */
+    max-width: 100%; /* Remove 100vw to prevent overflow */
+    margin-left: 0; /* Was calc(50% - 55vw), reset for standard flow */
+    margin-right: 0;
+    height: 600px; /* Default height when stacked */
+    margin-top: -90px;
+    margin-bottom: -50px; /* Pulls up subsequent content */
+    position: relative;
+  }
+
+  /* Override for inline styles for mobile - force text columns to full width */
+  /* This is a bit redundant given the above, but ensures max-width from inline style is also overridden */
+  .two-column .text-column {
+    max-width: 100% !important;
+    flex: none !important; /* Reinforce, though covered by the rule above */
+  }
 }
 
 /* Combined Mobile Styles (768px and below) */
@@ -631,17 +645,33 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   }
   /* End restored community grid styles */
 
+  /* Override inline styles for mobile - force text columns to full width */
+  /* This is very general, ensure it doesn't conflict with ownership-page specifics if they differ */
+  /* .two-column .text-column { MOVED and handled by max-width: 992px rule and ownership-page specific rule below for hero section 
+    max-width: 100% !important;
+    flex: none !important;
+  } */
+
   .dashboard {
     grid-template-columns: 1fr;
   }
-  .ecosystem-visualization {
+
+  /* General .ecosystem-visualization adjustments for mobile (<=768px), this will apply unless ownership-page overrides it for the hero */
+  .ecosystem-visualization { /* This is broad, struggle.html hero section needs more specific rules */
     min-width: auto !important;
-    margin-top: -20px !important; /* Changed from -40px */
+    margin-top: -20px !important; 
     margin-bottom: 0 !important;
-    position: relative !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    margin-left: calc(48% - 50vw) !important;
+    /* width, max-width, margin-left already set by <=992px rule, but can be fine-tuned here if needed for smaller screens */
+    /* margin-left: calc(48% - 50vw) !important; */ /* This was likely for a full-bleed effect, might not be needed if width is 100% of parent */
+  }
+  
+  /* Specific style for the .two-column .ecosystem-visualization (like the one in struggle.html hero) on mobile */
+  /* This is more specific than just .ecosystem-visualization */
+  .two-column .ecosystem-visualization {
+    height: 550px !important; /* Default height for two-column visualizations on mobile */
+    margin-top: -20px !important; 
+    margin-bottom: -50px !important; /* Pulls up subsequent content, might cause overlap if not careful */
+    /* position: relative; already set */
   }
 
   .legend-line {
@@ -654,7 +684,7 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     font-size: 0.75rem !important;
   }
   .hero-title + p {
-    margin-bottom: 1rem !important;
+    margin-bottom: 0 !important; /* Align spacing between paragraphs on mobile */
   }
   .section-divider + .content-section {
     margin-top: 2rem !important;
@@ -663,13 +693,6 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   /* Add mobile margin override for section divider */
   hr.section-divider {
     margin: 5rem auto 3rem auto !important; /* Increased top margin for mobile */
-  }
-
-  .two-column .ecosystem-visualization {
-    height: 550px !important;
-    margin-top: -20px !important; /* Changed from -40px */
-    margin-bottom: -50px !important;
-    position: relative;
   }
 
   .node-label {
@@ -727,18 +750,70 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   .renaissance-section {
       margin-bottom: 3rem !important;
   }
+
+  /* Submission section mobile: place dropzone after heading */
+  #submission-section #dropzone {
+    order: 1; /* Dropzone after heading */
+    width: 100% !important;
+    margin-bottom: 1rem !important; /* Reduce space */
+  }
+  #submission-section .text-column {
+    order: 2; /* Details form after dropzone */
+    width: 100% !important;
+  }
+  #submission-section .two-column {
+    gap: 0 !important;
+  }
+
+  /* Hero section mobile layout specific for struggle.html (ownership-page) */
+  body.ownership-page .content-section:first-of-type .two-column {
+    flex-direction: row !important; /* Keep side-by-side for struggle.html hero */
+    align-items: flex-start !important;
+    gap: 3rem !important; /* Adjusted gap */
+  }
+  body.ownership-page .content-section:first-of-type .two-column .text-column {
+    max-width: 80% !important; /* As per original mobile spec for struggle.html hero */
+    flex: 0 0 80% !important; /* As per original mobile spec for struggle.html hero */
+  }
+  body.ownership-page .content-section:first-of-type .two-column .ecosystem-visualization {
+    width: 20% !important; /* As per original mobile spec for struggle.html hero */
+    max-width: 20% !important;
+    min-width: 0 !important; /* Prevent overflow */
+    height: auto !important;
+    margin: 0 !important; /* Reset all margins for this specific case */
+  }
+  /* Show images as 2x2 grid within the struggle.html hero's visualization */
+  body.ownership-page .content-section:first-of-type .ecosystem-visualization > div {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-auto-rows: auto;
+    gap: 4px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  body.ownership-page .content-section:first-of-type .ecosystem-visualization img {
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
 }
+
 @media (max-width: 480px) {
-.ecosystem-visualization {
-  height: 380px !important;
-  margin-top: -90px !important; /* Changed from -110px */
-  margin-bottom: -50px !important;
-}
-.two-column .ecosystem-visualization {
-  height: 380px !important;
-  margin-top: -90px !important; /* Changed from -110px */
-  margin-bottom: -50px !important;
-}
+  /* General .ecosystem-visualization adjustments for very small screens */
+  /* This applies unless a more specific rule (like for struggle.html hero) overrides it */
+  .ecosystem-visualization {
+    height: 380px !important;
+    margin-top: -90px !important; 
+    margin-bottom: -50px !important;
+  }
+
+  /* Specific for .two-column .ecosystem-visualization on very small screens */
+  /* This would apply to struggle.html hero's visualization if not for the more specific rule at <=768px for ownership-page */
+  .two-column .ecosystem-visualization {
+    height: 380px !important;
+    margin-top: -90px !important; 
+    margin-bottom: -50px !important;
+  }
 
 /* This rule conflicts - Should remain commented out */
 /* #legend {
@@ -1019,10 +1094,9 @@ animation-delay: 2s; /* Add delay to initial animation */
 
 /* Ecosystem visualization styles */
 .ecosystem-visualization {
-
-height: 100%;
+/* height: 100%; */ /* This general height might be too much, specific instances should control height */
 position: relative;
-margin-top: -170px;
+/* margin-top: -170px; */ /* This is a very large negative margin, likely for a specific desktop case, should not be general */
 }
 .ecosystem-visualization #three-container {
 width: 100%;
@@ -1432,18 +1506,20 @@ body:not(.ownership-page) #header.visible {
 }
 
 /* Adjust ecosystem animation margin for vertical iPad Air devices */
+/* These are very specific and might be better integrated or might conflict if not carefully managed with struggle.html specifics */
 @media only screen and (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-  .ecosystem-visualization {
-    margin-top: -120px !important;
-  }
+  /* This rule targets .ecosystem-visualization generally. If it's for the one in .two-column, it's handled below. */
+  /* For struggle.html, the body.ownership-page rules will be more specific for the hero section's visualization */
+  /* .ecosystem-visualization { margin-top: -120px !important; } */ /* Commenting out, too general, may conflict */
 }
 
 /* Override ecosystem visualization margin for vertical iPad Air in portrait */
-@media only screen and (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+/* This is a duplicate of the above, also commented out */
+/* @media only screen and (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
   .ecosystem-visualization {
     margin-top: -120px !important;
   }
-}
+} */
 
 /* Coming Soon Overlay for Cards */
 .card.card-coming-soon {
@@ -1488,4 +1564,84 @@ body:not(.ownership-page) #header.visible {
     text-align: center;
     font-family: 'Space Grotesk', sans-serif;
     pointer-events: none;
+}
+
+
+/* ------- STRUGGLE.HTML (.ownership-page) SPECIFIC OVERRIDES FOR TABLET AND MOBILE ------- */
+
+/* TABLET: Special flex behavior for struggle.html hero section (max-width: 992px) */
+/* This ensures side-by-side layout for hero on struggle.html tablets, overriding general stacking. */
+@media (max-width: 992px) {
+  body.ownership-page .content-section:first-of-type > .two-column {
+    flex-direction: row !important; /* Keep side-by-side */
+    align-items: flex-start !important; /* Align to top */
+    /* gap is handled by inline style on struggle.html (currently 3rem) */
+  }
+  body.ownership-page .content-section:first-of-type > .two-column > .text-column {
+    flex: 1 1 45% !important; /* Re-assert flex properties, using basis from inline style */
+    max-width: 45% !important; /* Re-assert max-width from inline style */
+    width: auto !important; /* Let flexbox determine actual width based on basis and available space */
+  }
+  body.ownership-page .content-section:first-of-type > .two-column > .ecosystem-visualization {
+    flex: 1.2 1 auto !important; /* Restore its flex property, allow shrinking/growing */
+    width: auto !important; /* Let flexbox determine width */
+    min-width: 0 !important; /* Allow it to shrink smaller than its content if necessary */
+    margin-left: -110px !important; /* Restore original desktop negative margin for bleed */
+    margin-top: -20px !important; /* Restore original inline style from struggle.html */
+    margin-bottom: 0 !important; /* Override any general stacking margins */
+    height: auto !important; /* Let content dictate height */
+  }
+}
+
+/* MOBILE: Hero section layout for struggle.html (max-width: 768px) */
+/* This overrides the tablet (<=992px) rule above for smaller screens if needed for struggle.html hero */
+@media (max-width: 768px) {
+  /* This block is from before, specific to how struggle.html hero content itself should behave on mobile */
+  body.ownership-page .content-section:first-of-type .two-column {
+    /* flex-direction: row !important; is already set by <=992px rule, but repeated here for clarity/safety */
+    /* align-items: flex-start !important; is also set */
+    gap: 3rem !important; /* Gap between text and image grid, already in inline style but reinforced */
+  }
+  body.ownership-page .content-section:first-of-type .two-column .text-column {
+    max-width: 80% !important; /* Specific mobile sizing for struggle hero text */
+    flex: 0 0 80% !important;   /* Specific mobile sizing for struggle hero text */
+  }
+  body.ownership-page .content-section:first-of-type .two-column .ecosystem-visualization {
+    width: 20% !important; /* Specific mobile sizing for struggle hero image grid container */
+    max-width: 20% !important;
+    /* min-width: 0 !important; already set by <=992px rule */
+    /* height: auto !important; already set by <=992px rule */
+    /* margin: 0 !important; already set by the general mobile rule for this section if it applies, or can be re-stated */
+    margin-left: 0 !important; /* Override the -110px from tablet for this mobile layout */
+    margin-top: 0 !important; /* Override the -20px from tablet for this mobile layout */
+  }
+  /* Arrangement of the 4 GIFs within the ecosystem-visualization on mobile for struggle.html hero */
+  body.ownership-page .content-section:first-of-type .ecosystem-visualization > div {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-auto-rows: auto;
+    gap: 4px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  body.ownership-page .content-section:first-of-type .ecosystem-visualization img {
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+}
+
+
+/* ------- GENERAL TABLET OVERLAP FIX FOR NON-STRUGGLE PAGES ------- */
+/* This applies when .two-column stacks due to the <=992px rule, but only for pages NOT struggle.html */
+@media (min-width: 768px) and (max-width: 1024px) {
+  body:not(.ownership-page) .two-column .ecosystem-visualization {
+    /* This context implies .two-column is flex-direction: column */
+    /* These styles are for when it's taking full width and stacked */
+    margin-top: -40px !important;   /* Original iPad overlap fix value */
+    margin-bottom: 2rem !important; /* Original iPad overlap fix value */
+    width: 100% !important;         /* Takes full width of its parent column */
+    margin-left: 0 !important;      /* No special left margin when stacked */
+    height: auto !important;        /* Let content or other rules dictate height */
+  }
 }

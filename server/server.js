@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 8008;
+const PORT = 7777;
 // Use 0.0.0.0 to listen on all network interfaces (needed for external access)
 const HOST = '0.0.0.0';
 

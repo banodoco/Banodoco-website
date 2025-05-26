@@ -541,7 +541,7 @@
       <div class="faq-item">
         <p class="faq-header"><strong>"What's your plan to make this actually valuable?"</strong></p>
         <div class="faq-content">
-          <p>You can read more about what we're up to <a href="https://banodoco.ai/">here - more coming soon.</a></p>
+          <p>You can read more about what we're up to <a href="https://banodoco.ai/">here</a> - more coming soon./p>
         </div>
       </div>
 
@@ -886,6 +886,35 @@
       </script>
     </div>
   </div>
+  <!-- Insert the container for the new, fetched footer -->
+  <div id="footer" style="position: relative; z-index: 3;"></div>
+  <script>
+    // Dynamically fetch the shared footer partial and initialise icons + watering-can logic
+    fetch('../src/components/footer.html')
+      .then(response => response.text())
+      .then(html => {
+        const footerElement = document.getElementById('footer');
+        footerElement.innerHTML = html;
+
+        // Render Feather icons that were just added
+        if (window.feather) {
+          feather.replace();
+        }
+
+        // Initialise the watering-can / plant animation interactions once footer exists
+        import('../src/js/components/plant-init.js')
+          .then(mod => {
+            if (typeof mod.initializePlantAnimation === 'function') {
+              mod.initializePlantAnimation();
+            }
+          })
+          .catch(err => console.error('Could not load plant-init.js:', err));
+      })
+      .catch(err => console.error('Error loading footer.html:', err));
+  </script>
+  <!-- Feather icon helper & supporting modules -->
+  <script src="../src/js/components/icons.js"></script>
+  <script src="../src/js/components/plant-animation.js" type="module"></script>
   <!-- Begin Grants Data Script -->
   <script>
   document.addEventListener("DOMContentLoaded", function() {
