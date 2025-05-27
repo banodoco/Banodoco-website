@@ -114,6 +114,22 @@
     .ecosystem-visualization img:hover::after {
       border-color: rgba(252, 192, 97, 0.6);
     }
+
+    /* Prevent horizontal scrolling */
+    html, body {
+      overflow-x: hidden;
+      max-width: 100%;
+    }
+    
+    .container {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    
+    .ecosystem-visualization {
+      overflow: hidden;
+      max-width: 100%;
+    }
   </style>
 </head>
 
@@ -143,30 +159,30 @@
             Objectively, most of the control mechanisms now popular in AI video were pioneered in the Animatediff ecosystem. 
           </p>
           <p>
-            Subejctively, most of the early AI art that was made with real craft and intentionality was created with Animatediff.
+            Subjectively, much of the early AI art that was made with true craft and intentionality was created with Animatediff.
           </p>
           <p>
             I'd like to tell the story of this ecosystem by explaining the advances and innovations that fueled it, and showing the art that came from them. 
           </p>
           <p>
-            To do this, I want to use a combination of generations and original input materials, along with completed artworks to chart the ecosystem's collective progress.
+            To do this, I would like to use a mix of input materials like test generations, and completed artworks - each of which I will make into an NFT.
           </p>
           <p>
-            The goal of this will be to tell our story, earn money for both Banodco and people who participate, and explore if and how a larger crypto initiative could work.
+            The goal of this will be to tell our story, earn money for both Banodoco and people who participate, and explore if and how a larger crypto initiative aimed at supporting the ecosystem could work.
           </p>
           <p>
-            If you're seeing this, it means I'd hugely appreciate your particpation. 
+            If you're seeing this, it means I'd hugely appreciate your participation. 
           </p>
         </div>
         <div class="ecosystem-visualization" style="margin-top: 15px; margin-left: 20px; max-width: 40%; flex: 0 0 40%;">
           <!-- Placeholder GIF collage -->
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: -10px; padding: 20px; margin-top: -20px;">
-            <img src="test.gif" alt="Test GIF 1" style="width: 110%; border-radius: 4px; margin-right: -15px; margin-left: 15px; z-index: 1; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-            <img src="test.gif" alt="Test GIF 2" style="width: 110%; border-radius: 4px; margin-left: 15px; margin-right: -15px; z-index: 2; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-            <img src="test.gif" alt="Test GIF 3" style="width: 110%; border-radius: 4px; margin-right: -15px; margin-top: -20px; z-index: 7; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-            <img src="test.gif" alt="Test GIF 4" style="width: 110%; border-radius: 4px; margin-left: 0px; margin-top: -20px; z-index: 8; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-            <img src="test.gif" alt="Test GIF 5" style="width: 110%; border-radius: 4px; margin-left: 15px; margin-right: -15px; margin-top: -20px; z-index: 5; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-            <img src="test.gif" alt="Test GIF 6" style="width: 110%; border-radius: 4px; margin-left: 15px; margin-right: -15px; margin-top: -20px; z-index: 6; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 20px; margin-top: -20px; overflow: hidden;">
+            <img src="test.gif" alt="Test GIF 1" style="width: 100%; border-radius: 4px; z-index: 1; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 2" style="width: 100%; border-radius: 4px; z-index: 2; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 3" style="width: 100%; border-radius: 4px; margin-top: -20px; z-index: 7; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 4" style="width: 100%; border-radius: 4px; margin-top: -20px; z-index: 8; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 5" style="width: 100%; border-radius: 4px; margin-top: -20px; z-index: 5; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 6" style="width: 100%; border-radius: 4px; margin-top: -20px; z-index: 6; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
           </div>
         </div>
       </div>
@@ -177,7 +193,7 @@
 
     <!-- Submission Section -->
     <div class="content-section" id="submission-section">
-      <h2 class="submission-title" style="margin-bottom: 2rem; color: #333;">Submit your generations:</h2>
+      <h2 class="submission-title" style="margin-bottom: 2rem; color: #333;">Submit your generations & art:</h2>
       <div class="two-column" style="gap: 3rem; align-items: stretch;">
         <div class="text-column" style="max-width: 45%; flex: 0 0 45%;">
           <form id="submission-form" style="background: rgba(255, 255, 255, 0.9); padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
@@ -513,7 +529,7 @@
             createFloatingEmoji(value, '🤨', '1rem', 5);
           } else { // value === 0
             // far left – heart eyes, smaller, slower
-            createFloatingEmoji(value, '😍', '1rem', 5);
+            createFloatingEmoji(value, '😏', '1rem', 5);
           }
         }, 100);
       }
@@ -738,7 +754,27 @@
                     
                     // Get the uploaded file info
                     const safeUploaderName = uploaderName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-                    const fileName = `public/${safeUploaderName || 'anon'}/${self.crypto.randomUUID()}-${file.name}`;
+                    
+                    // Generate a UUID that works in all browsers
+                    function generateUUID() {
+                        // Try modern crypto.randomUUID first
+                        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                            try {
+                                return crypto.randomUUID();
+                            } catch (e) {
+                                // Fall through to fallback
+                            }
+                        }
+                        
+                        // Fallback UUID generation for older browsers or non-secure contexts
+                        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                            const r = Math.random() * 16 | 0;
+                            const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                            return v.toString(16);
+                        });
+                    }
+                    
+                    const fileName = `public/${safeUploaderName || 'anon'}/${generateUUID()}-${file.name}`;
                     
                     const { data, error } = await supabase.storage
                         .from('nft')

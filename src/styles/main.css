@@ -742,7 +742,7 @@ box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   /* This is the intended mobile rule - Ensure it's NOT commented out */
   #legend {
     bottom: 15px !important; /* Changed from 45px */
-    right: 20px !important;
+    right: -50px !important;
     padding: 6px !important;
   }
 
@@ -1643,5 +1643,15 @@ body:not(.ownership-page) #header.visible {
     width: 100% !important;         /* Takes full width of its parent column */
     margin-left: 0 !important;      /* No special left margin when stacked */
     height: auto !important;        /* Let content or other rules dictate height */
+  }
+}
+
+/* Mobile adjustment for ecosystem animation: move it to the right on mobile */
+@media (max-width: 768px) {
+  body:not(.ownership-page) .ecosystem-visualization {
+    width: 90% !important;
+    max-width: 90% !important;
+    margin-left: -5px !important;
+    margin-right: 0 !important;
   }
 }

@@ -4,7 +4,7 @@
   "description": "Banodoco Website",
   "main": "server/server.js",
   "scripts": {
-    "start": "node server/server.js",
+    "start": "npx nodemon server/server.js",
     "build": "echo 'No build step needed - files are already in place'",
     "dev": "npm start"
   },
