@@ -96,6 +96,10 @@
     .ecosystem-visualization img:nth-child(4) { transition-delay: 150ms; }
     .ecosystem-visualization img:nth-child(5) { transition-delay: 200ms; }
     .ecosystem-visualization img:nth-child(6) { transition-delay: 250ms; }
+    .ecosystem-visualization img:nth-child(7) { transition-delay: 300ms; }
+    .ecosystem-visualization img:nth-child(8) { transition-delay: 350ms; }
+    .ecosystem-visualization img:nth-child(9) { transition-delay: 400ms; }
+    .ecosystem-visualization img:nth-child(10) { transition-delay: 450ms; }
 
     /* Add a subtle border that appears on hover */
     .ecosystem-visualization img::after {
@@ -127,8 +131,31 @@
     }
     
     .ecosystem-visualization {
-      overflow: hidden;
+      overflow: visible;
       max-width: 100%;
+    }
+
+    @media (min-width: 1024px) {
+      .two-column {
+        display: flex;
+        align-items: stretch;
+      }
+      .two-column .text-column,
+      .two-column .ecosystem-visualization {
+        margin-top: 0 !important;
+      }
+      .two-column .ecosystem-visualization {
+        margin-top: 20px !important;
+      }
+      .ecosystem-visualization > div {
+        height: 100%;
+      }
+      .ecosystem-visualization img {
+        transform: none !important;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
     }
   </style>
 </head>
@@ -176,13 +203,17 @@
         </div>
         <div class="ecosystem-visualization" style="margin-top: 15px; margin-left: 20px; max-width: 40%; flex: 0 0 40%;">
           <!-- Placeholder GIF collage -->
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 20px; margin-top: -20px; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(5, 1fr); gap: 10px; padding: 20px; height: 100%;">
             <img src="test.gif" alt="Test GIF 1" style="width: 100%; border-radius: 4px; z-index: 1; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
             <img src="test.gif" alt="Test GIF 2" style="width: 100%; border-radius: 4px; z-index: 2; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-            <img src="test.gif" alt="Test GIF 3" style="width: 100%; border-radius: 4px; margin-top: -20px; z-index: 7; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-            <img src="test.gif" alt="Test GIF 4" style="width: 100%; border-radius: 4px; margin-top: -20px; z-index: 8; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-            <img src="test.gif" alt="Test GIF 5" style="width: 100%; border-radius: 4px; margin-top: -20px; z-index: 5; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-            <img src="test.gif" alt="Test GIF 6" style="width: 100%; border-radius: 4px; margin-top: -20px; z-index: 6; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 3" style="width: 100%; border-radius: 4px; transform: translateY(-20px); z-index: 7; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 4" style="width: 100%; border-radius: 4px; transform: translateY(-20px); z-index: 8; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 5" style="width: 100%; border-radius: 4px; transform: translateY(-20px); z-index: 5; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 6" style="width: 100%; border-radius: 4px; transform: translateY(-20px); z-index: 6; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 7" style="width: 100%; border-radius: 4px; transform: translateY(-20px); z-index: 9; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 8" style="width: 100%; border-radius: 4px; transform: translateY(-20px); z-index: 10; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 9" style="width: 100%; border-radius: 4px; transform: translateY(-20px); z-index: 11; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            <img src="test.gif" alt="Test GIF 10" style="width: 100%; border-radius: 4px; transform: translateY(-20px); z-index: 12; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
           </div>
         </div>
       </div>
