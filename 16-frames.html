@@ -245,6 +245,22 @@
     .scroll-stagger-9 { transition-delay: 0.9s; }
     .scroll-stagger-10 { transition-delay: 1.0s; }
 
+    /* Faster animations specifically for Q&A items */
+    .qa-item.scroll-fade-in {
+      transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    }
+    
+    /* Faster stagger delays for Q&A items */
+    .qa-item.scroll-stagger-1 { transition-delay: 0.05s; }
+    .qa-item.scroll-stagger-2 { transition-delay: 0.1s; }
+    .qa-item.scroll-stagger-3 { transition-delay: 0.15s; }
+    .qa-item.scroll-stagger-4 { transition-delay: 0.2s; }
+    .qa-item.scroll-stagger-5 { transition-delay: 0.25s; }
+    .qa-item.scroll-stagger-6 { transition-delay: 0.3s; }
+    .qa-item.scroll-stagger-7 { transition-delay: 0.35s; }
+    .qa-item.scroll-stagger-8 { transition-delay: 0.4s; }
+    .qa-item.scroll-stagger-9 { transition-delay: 0.45s; }
+
     /* Utility classes for common patterns */
     .glass-overlay {
       background: rgba(0, 0, 0, 0.8);
@@ -364,7 +380,7 @@
 
     /* Override excessive margin from main.css */
     .content-section:first-of-type {
-        margin-top: 0 !important;
+        margin-top: -2rem !important;
     }
 
     /* Lightbox Styles */
@@ -405,6 +421,137 @@
       to {
         opacity: 1;
         transform: translateY(0);
+      }
+    }
+
+    /* Enhanced hero title styling */
+    .hero-title-enhanced {
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+      position: relative;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      background: none;
+    }
+
+    .hero-title-enhanced:hover {
+      color: #5353a5;
+      transition: color 0.3s ease;
+    }
+
+    .hero-title-enhanced::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #5353a5, #FCC061);
+      transition: width 0.8s ease;
+    }
+
+    .hero-title-enhanced:hover::after {
+      width: 100%;
+    }
+
+    /* Fallback for browsers that don't support background-clip */
+    @supports not (-webkit-background-clip: text) {
+      .hero-title-enhanced {
+        color: #1a1a1a !important;
+        background: none !important;
+      }
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* Enhanced body text with drop cap */
+    .enhanced-body-text {
+      position: relative;
+    }
+
+    .enhanced-body-text .first-paragraph {
+      position: relative;
+      padding-left: 3rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .enhanced-body-text .first-paragraph::first-letter {
+      float: left;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 3.5rem;
+      line-height: 2.8rem;
+      font-weight: 700;
+      margin: 0.2rem 0.5rem 0.2rem -2.5rem;
+      color: #5353a5;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Enhanced paragraph styling */
+    .enhanced-paragraph {
+      position: relative;
+      margin-bottom: 1rem;
+      padding: 0.5rem 0;
+      border-left: 2px solid transparent;
+      padding-left: 0.5rem;
+      margin-left: -0.5rem;
+      border-radius: 0 4px 4px 0;
+      transition: all 0.3s ease;
+    }
+
+    .enhanced-paragraph:hover {
+      border-left-color: rgba(252, 192, 97, 0.4);
+      background: linear-gradient(90deg, rgba(252, 192, 97, 0.03) 0%, transparent 100%);
+      transform: translateX(2px);
+    }
+
+    /* Key phrases highlighting */
+    .key-phrase {
+      background: linear-gradient(120deg, transparent 0%, rgba(252, 192, 97, 0.15) 50%, transparent 100%);
+      padding: 0.1em 0.3em;
+      border-radius: 3px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .key-phrase:hover {
+      background: linear-gradient(120deg, transparent 0%, rgba(252, 192, 97, 0.25) 50%, transparent 100%);
+    }
+
+    /* Enhanced signature styling */
+    .enhanced-signature {
+      position: relative;
+      display: inline-block;
+      background: linear-gradient(135deg, rgba(252, 192, 97, 0.08) 0%, rgba(83, 83, 165, 0.08) 100%);
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      border: 1px solid rgba(252, 192, 97, 0.2);
+      margin-top: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .enhanced-signature:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      border-color: rgba(252, 192, 97, 0.4);
+    }
+
+    /* Improved mobile responsiveness for enhanced elements */
+    @media (max-width: 1024px) {
+      .enhanced-body-text .first-paragraph {
+        padding-left: 2rem;
+      }
+      
+      .enhanced-body-text .first-paragraph::first-letter {
+        font-size: 2.8rem;
+        line-height: 2.2rem;
+        margin: 0.1rem 0.4rem 0.1rem -1.8rem;
+      }
+      
+      .enhanced-paragraph {
+        margin-left: 0;
+        padding-left: 0.3rem;
       }
     }
 
@@ -564,6 +711,16 @@
     .ecosystem-visualization > div {
       overflow: visible !important;
     }
+
+    /* Ensure Q&A section does not introduce its own scrollbars */
+    #qa-section {
+      overflow: visible !important;
+    }
+
+    /* Prevent each QA item from clipping expanded answers on desktop */
+    .qa-item {
+      overflow: visible !important;
+    }
   </style>
 </head>
 
@@ -583,17 +740,23 @@
     </script>
 
     <!-- Hero Section -->
-    <section class="content-section mb-16 mt-8">
+    <section class="content-section mb-16">
+      <!-- Full Width Title -->
+      <div class="text-center lg:text-left mb-8 lg:mb-12 fade-in-up">
+        <h1 class="hero-title-enhanced text-4xl lg:text-5xl xl:text-6xl font-space-grotesk font-bold leading-tight mb-3">
+          16 Frames
+        </h1>
+        <h2 class="text-xl lg:text-2xl xl:text-3xl font-space-grotesk font-medium text-gray-600 leading-relaxed">
+          Struggle & Triumph in the AnimateDiff Ecosystem
+        </h2>
+      </div>
+      
       <div class="flex flex-col lg:flex-row gap-8 lg:items-start lg:justify-between">
         <!-- Text Column -->
         <div class="lg:w-1/2 lg:max-w-none">
-          <h1 class="text-3xl lg:text-4xl xl:text-5xl font-space-grotesk font-bold text-gray-800 leading-tight mb-6 lg:mb-8 mt-8 lg:mt-0 text-left fade-in-up">
-            16 Frames: Struggle & Triumph in the AnimateDiff Ecosystem
-          </h1>
-          
-          <div class="space-y-4 text-base lg:text-lg font-inter text-gray-700 leading-relaxed">
-          <p class="fade-in-up stagger-1">
-          AnimateDiff was one of the first openly released video models. When it launched in 2023, it could generate just 16-frame low resolution videos from a text prompt.</p>
+          <div class="enhanced-body-text space-y-4 text-base lg:text-lg font-inter text-gray-700 leading-relaxed">
+          <p class="first-paragraph enhanced-paragraph fade-in-up stagger-1">
+          AnimateDiff was one of the first openly released video models. When it launched in 2023, it could generate just <span class="key-phrase">16-frame low resolution videos</span> from a text prompt.</p>
           </p>
           
           <!-- Mobile AnimateDiff Samples - shown after first paragraph -->
@@ -628,24 +791,26 @@
             </div>
           </div>
           
-          <p class="fade-in-up stagger-3">
-            However, thanks to it being released openly, the community could build on top of it, and they worked together to extend it to create near-infinite frames, and developed mechanisms to allow artists to steer it.  Most of the control techniques now popular in AI video - steering with images, prompt travel, video2video with structural control - were pioneered and refined in the AnimateDiff ecosystem. All while still technically being constrained by the 16-frame limit.
+          <p class="enhanced-paragraph fade-in-up stagger-3">
+            However, thanks to it being <span class="key-phrase">released openly</span>, the community could build on top of it, and they worked together to extend it to create <span class="key-phrase">near-infinite frames</span>, and developed mechanisms to allow artists to steer it.  Most of the control techniques now popular in AI video - <span class="key-phrase">steering with images, prompt travel, video2video with structural control</span> - were pioneered and refined in the AnimateDiff ecosystem. All while still technically being constrained by the <span class="key-phrase">16-frame limit</span>.
           </p>
-          <p class="fade-in-up stagger-4">
-            I would like to tell the story of this ecosystem by explaining the advances and innovations that fueled it, and showing the art that came from them.
+          <p class="enhanced-paragraph fade-in-up stagger-4">
+            I would like to tell the story of this ecosystem by explaining the <span class="key-phrase">advances and innovations</span> that fueled it, and showing the art that came from them.
           </p>
-          <p class="fade-in-up stagger-5">
-            To do this, I will create a visual explainer, using a mixture of input materials like test generations and completed artworks - each of which I'll make into an NFT.
+          <p class="enhanced-paragraph fade-in-up stagger-5">
+            To do this, I will create a <span class="key-phrase">visual explainer</span>, using a mixture of input materials like test generations and completed artworks - each of which I'll make into an NFT.
           </p>
-          <p class="fade-in-up stagger-6">
-              The goal of this will be to map our collected progress while earning money for those who helped the AnimateDiff ecosystem flourish. Banodoco's proceeds will go towards supporting the community today: 50% will fund an open source AI art competition, while 50% will go towards compute for open source research and training.
+          <p class="enhanced-paragraph fade-in-up stagger-6">
+              The goal of this will be to map our collected progress while earning money for those who helped the AnimateDiff ecosystem flourish. Banodoco's proceeds will go towards supporting the community today: <span class="key-phrase">50% will fund an open source AI art competition</span>, while <span class="key-phrase">50% will go towards compute for open source research and training</span>.
           </p>
-          <p class="fade-in-up stagger-7">
+          <p class="enhanced-paragraph fade-in-up stagger-7">
             If you're seeing this, it means I'd highly appreciate your participation. 
           </p>
-            <p class="font-allura text-6xl lg:text-7xl mt-6 text-gray-700 transform -rotate-2 fade-in-up stagger-8" style="letter-spacing: 0.15em; text-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1;">
-            POM
-          </p>
+            <div class="enhanced-signature fade-in-up stagger-8">
+              <p class="font-allura text-6xl lg:text-7xl text-gray-700 transform -rotate-2 m-0" style="letter-spacing: 0.15em; text-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1;">
+                POM
+              </p>
+            </div>
         </div>
           </div>
         
