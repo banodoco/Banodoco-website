@@ -554,6 +554,16 @@
       max-width: 100%;
       overflow-x: hidden;
     }
+
+    /* Remove internal scrollbars in hero section on desktop */
+    .content-section:first-of-type {
+      overflow: visible !important; /* Ensure entire hero section shows without internal scrollbar */
+    }
+
+    /* Ensure the ecosystem visualization wrapper does not add scrollbars */
+    .ecosystem-visualization > div {
+      overflow: visible !important;
+    }
   </style>
 </head>
 
