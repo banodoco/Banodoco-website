@@ -383,6 +383,53 @@
         margin-top: -2rem !important;
     }
 
+    /* Add proper spacing above title on mobile */
+    @media (max-width: 1024px) {
+      .content-section:first-of-type {
+        margin-top: 1rem !important;
+      }
+    }
+
+    /* Ensure mobile header doesn't overlap content */
+    @media (max-width: 768px) {
+      .content-section:first-of-type {
+        margin-top: 1.5rem !important;
+      }
+    }
+
+    /* Reduce space below subtitle */
+    .hero-section h2 {
+      margin-bottom: 1rem !important;
+    }
+
+    @media (min-width: 1024px) {
+      .hero-section h2 {
+        margin-bottom: 1.5rem !important;
+      }
+    }
+
+    /* More specific targeting for subtitle spacing */
+    .content-section:first-of-type h2 {
+      margin-bottom: 1rem !important;
+    }
+
+    @media (min-width: 1024px) {
+      .content-section:first-of-type h2 {
+        margin-bottom: 1.5rem !important;
+      }
+    }
+
+    /* Also target the container div that wraps the titles */
+    .content-section:first-of-type > div:first-child {
+      margin-bottom: 1.5rem !important;
+    }
+
+    @media (min-width: 1024px) {
+      .content-section:first-of-type > div:first-child {
+        margin-bottom: 2rem !important;
+      }
+    }
+
     /* Lightbox Styles */
     #lightbox {
       transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
@@ -438,20 +485,86 @@
       transition: color 0.3s ease;
     }
 
-    .hero-title-enhanced::after {
-      content: '';
+    /* Container for 16 segments */
+    .title-segments {
       position: absolute;
       bottom: -4px;
       left: 0;
-      width: 0;
+      width: 100%;
       height: 3px;
-      background: linear-gradient(90deg, #5353a5, #FCC061);
-      transition: width 0.8s ease;
+      pointer-events: none;
     }
 
-    .hero-title-enhanced:hover::after {
-      width: 100%;
+    /* Individual segment styling */
+    .title-segment {
+      position: absolute;
+      top: 0;
+      height: 3px;
+      width: calc((100% - 45px) / 16); /* Account for 15 gaps of 3px each */
+      background: linear-gradient(90deg, #5353a5, #FCC061);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.05s ease;
     }
+
+    /* Position each of the 16 segments */
+    .title-segment:nth-child(1) { left: calc(0 * (100% / 16) + 0 * 3px); }
+    .title-segment:nth-child(2) { left: calc(1 * (100% / 16) + 1 * 3px); }
+    .title-segment:nth-child(3) { left: calc(2 * (100% / 16) + 2 * 3px); }
+    .title-segment:nth-child(4) { left: calc(3 * (100% / 16) + 3 * 3px); }
+    .title-segment:nth-child(5) { left: calc(4 * (100% / 16) + 4 * 3px); }
+    .title-segment:nth-child(6) { left: calc(5 * (100% / 16) + 5 * 3px); }
+    .title-segment:nth-child(7) { left: calc(6 * (100% / 16) + 6 * 3px); }
+    .title-segment:nth-child(8) { left: calc(7 * (100% / 16) + 7 * 3px); }
+    .title-segment:nth-child(9) { left: calc(8 * (100% / 16) + 8 * 3px); }
+    .title-segment:nth-child(10) { left: calc(9 * (100% / 16) + 9 * 3px); }
+    .title-segment:nth-child(11) { left: calc(10 * (100% / 16) + 10 * 3px); }
+    .title-segment:nth-child(12) { left: calc(11 * (100% / 16) + 11 * 3px); }
+    .title-segment:nth-child(13) { left: calc(12 * (100% / 16) + 12 * 3px); }
+    .title-segment:nth-child(14) { left: calc(13 * (100% / 16) + 13 * 3px); }
+    .title-segment:nth-child(15) { left: calc(14 * (100% / 16) + 14 * 3px); }
+    .title-segment:nth-child(16) { left: calc(15 * (100% / 16) + 15 * 3px); }
+
+    /* Hover animation - stagger the segments */
+    .hero-title-enhanced:hover .title-segment:nth-child(1) { transform: scaleX(1); transition-delay: 0.05s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(2) { transform: scaleX(1); transition-delay: 0.1s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(3) { transform: scaleX(1); transition-delay: 0.15s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(4) { transform: scaleX(1); transition-delay: 0.2s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(5) { transform: scaleX(1); transition-delay: 0.25s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(6) { transform: scaleX(1); transition-delay: 0.3s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(7) { transform: scaleX(1); transition-delay: 0.35s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(8) { transform: scaleX(1); transition-delay: 0.4s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(9) { transform: scaleX(1); transition-delay: 0.45s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(10) { transform: scaleX(1); transition-delay: 0.5s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(11) { transform: scaleX(1); transition-delay: 0.55s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(12) { transform: scaleX(1); transition-delay: 0.6s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(13) { transform: scaleX(1); transition-delay: 0.65s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(14) { transform: scaleX(1); transition-delay: 0.7s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(15) { transform: scaleX(1); transition-delay: 0.75s; }
+    .hero-title-enhanced:hover .title-segment:nth-child(16) { transform: scaleX(1); transition-delay: 0.8s; }
+
+    /* Smoother animation override */
+    .title-segment {
+      transition: transform 0.2s ease-out !important;
+    }
+
+    /* Adjusted timing for smoother progression */
+    .hero-title-enhanced:hover .title-segment:nth-child(1) { transition-delay: 0.0s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(2) { transition-delay: 0.04s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(3) { transition-delay: 0.08s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(4) { transition-delay: 0.12s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(5) { transition-delay: 0.16s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(6) { transition-delay: 0.2s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(7) { transition-delay: 0.24s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(8) { transition-delay: 0.28s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(9) { transition-delay: 0.32s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(10) { transition-delay: 0.36s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(11) { transition-delay: 0.4s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(12) { transition-delay: 0.44s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(13) { transition-delay: 0.48s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(14) { transition-delay: 0.52s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(15) { transition-delay: 0.56s !important; }
+    .hero-title-enhanced:hover .title-segment:nth-child(16) { transition-delay: 0.6s !important; }
 
     /* Fallback for browsers that don't support background-clip */
     @supports not (-webkit-background-clip: text) {
@@ -466,26 +579,9 @@
       50% { background-position: 100% 50%; }
     }
 
-    /* Enhanced body text with drop cap */
+    /* Enhanced body text */
     .enhanced-body-text {
       position: relative;
-    }
-
-    .enhanced-body-text .first-paragraph {
-      position: relative;
-      padding-left: 3rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .enhanced-body-text .first-paragraph::first-letter {
-      float: left;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 3.5rem;
-      line-height: 2.8rem;
-      font-weight: 700;
-      margin: 0.2rem 0.5rem 0.2rem -2.5rem;
-      color: #5353a5;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     /* Enhanced paragraph styling */
@@ -539,16 +635,6 @@
 
     /* Improved mobile responsiveness for enhanced elements */
     @media (max-width: 1024px) {
-      .enhanced-body-text .first-paragraph {
-        padding-left: 2rem;
-      }
-      
-      .enhanced-body-text .first-paragraph::first-letter {
-        font-size: 2.8rem;
-        line-height: 2.2rem;
-        margin: 0.1rem 0.4rem 0.1rem -1.8rem;
-      }
-      
       .enhanced-paragraph {
         margin-left: 0;
         padding-left: 0.3rem;
@@ -755,7 +841,7 @@
         <!-- Text Column -->
         <div class="lg:w-1/2 lg:max-w-none">
           <div class="enhanced-body-text space-y-4 text-base lg:text-lg font-inter text-gray-700 leading-relaxed">
-          <p class="first-paragraph enhanced-paragraph fade-in-up stagger-1">
+          <p class="enhanced-paragraph fade-in-up stagger-1">
           AnimateDiff was one of the first openly released video models. When it launched in 2023, it could generate just <span class="key-phrase">16-frame low resolution videos</span> from a text prompt.</p>
           </p>
           
@@ -804,7 +890,7 @@
               The goal of this will be to map our collected progress while earning money for those who helped the AnimateDiff ecosystem flourish. Banodoco's proceeds will go towards supporting the community today: <span class="key-phrase">50% will fund an open source AI art competition</span>, while <span class="key-phrase">50% will go towards compute for open source research and training</span>.
           </p>
           <p class="enhanced-paragraph fade-in-up stagger-7">
-            If you're seeing this, it means I'd highly appreciate your participation. 
+            If you're seeing this, it likely means I'd highly appreciate your participation. 
           </p>
             <div class="enhanced-signature fade-in-up stagger-8">
               <p class="font-allura text-6xl lg:text-7xl text-gray-700 transform -rotate-2 m-0" style="letter-spacing: 0.15em; text-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1;">
@@ -2207,6 +2293,25 @@
     document.addEventListener('DOMContentLoaded', () => {
       // Wait a bit to ensure Supabase is initialized
       setTimeout(loadFeaturedPieces, 500);
+    });
+
+    // Create 16 segments for the title animation
+    document.addEventListener('DOMContentLoaded', () => {
+      const heroTitle = document.querySelector('.hero-title-enhanced');
+      if (heroTitle) {
+        // Create container for segments
+        const segmentsContainer = document.createElement('div');
+        segmentsContainer.className = 'title-segments';
+        
+        // Create 16 individual segments
+        for (let i = 0; i < 16; i++) {
+          const segment = document.createElement('div');
+          segment.className = 'title-segment';
+          segmentsContainer.appendChild(segment);
+        }
+        
+        heroTitle.appendChild(segmentsContainer);
+      }
     });
 
     // Scroll-triggered animations
