@@ -185,6 +185,8 @@
     .stagger-6 { animation-delay: 0.6s; }
     .stagger-7 { animation-delay: 0.7s; }
     .stagger-8 { animation-delay: 0.8s; }
+    .stagger-9 { animation-delay: 0.9s; }
+    
 
     /* Scroll-triggered animations */
     .scroll-fade-in {
@@ -239,6 +241,9 @@
     .scroll-stagger-5 { transition-delay: 0.5s; }
     .scroll-stagger-6 { transition-delay: 0.6s; }
     .scroll-stagger-7 { transition-delay: 0.7s; }
+    .scroll-stagger-8 { transition-delay: 0.8s; }
+    .scroll-stagger-9 { transition-delay: 0.9s; }
+    .scroll-stagger-10 { transition-delay: 1.0s; }
 
     /* Utility classes for common patterns */
     .glass-overlay {
@@ -1010,6 +1015,26 @@
           </div>
         </div>
 
+
+        <!-- Question 8 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-8">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">How can I help?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed space-y-4">
+                <p>Firstly, any submissions or sharing with people who might submit is hugely appreciated!</p>
+                <p>Secondly, if you're a web designer and developer who would like to help me build a really nice web experience for the story, I would hugely appreciate the help.</p>
+            </div>
+          </div>
+        </div>
+
+
         <!-- Question 7 -->
         <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-7">
           <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
@@ -1029,7 +1054,24 @@
             </div>
           </div>
         </div>
-      </div>
+        <!-- Question 9 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-9">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">How can I get in touch?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed">
+              <p>Message POM on <a href="https://discord.gg/KprdCw48" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200">Discord</a>.</p>
+            </div>
+          </div>
+        </div>
+
+
     </section>
 
     <!-- Footer -->
