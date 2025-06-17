@@ -8,9 +8,14 @@
 }
 
 /* Global Styles */
+html {
+  height: 100%;
+}
+
 body {
   position: relative;
   min-height: 100vh;
+  height: 100%;
   background-color: #fbf8ef;
   overflow-x: hidden;
   font-family: 'Space Mono', 'Roboto Mono', monospace;
@@ -1653,5 +1658,18 @@ body:not(.ownership-page) #header.visible {
     max-width: 90% !important;
     margin-left: -5px !important;
     margin-right: 0 !important;
+  }
+}
+
+/* Mobile-specific fixes for full height background */
+@media (max-width: 768px) {
+  html {
+    min-height: 100%;
+  }
+  
+  body {
+    min-height: 100%;
+    height: auto;
+    position: relative;
   }
 }

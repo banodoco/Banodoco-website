@@ -59,16 +59,16 @@
 /* Mobile styles */
 @media (max-width: 600px) {
   .site-header {
-    transform: translateX(-10px); /* Original mobile adjustment */
+    transform: translateX(-20px); /* Increased leftward movement from -10px to -20px */
     padding-bottom: 0.5rem; /* Mobile bottom padding */
-    padding-top: 1.5rem; /* Mobile top padding */
+    padding-top: 1rem; /* Increased from 0.75rem to move header down a tiny bit */
   }
   .site-header img {
-    margin-left: 5px; /* Mobile logo position */
-    margin-top: 5px; /* Mobile logo top margin */
+    margin-left: -5px; /* Moved further left from 5px to -5px */
+    margin-top: -3px; /* Reduced from 0px to move logo up a tiny bit more */
   }
   .site-header .site-title {
-    margin-top: 5px; /* Move title down slightly on mobile */
+    margin-top: -3px; /* Reduced from 0px to keep title aligned with logo */
   }
 }
 

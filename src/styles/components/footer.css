@@ -259,7 +259,8 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: 100vh;
+    min-height: 100%;
     z-index: 1;
     pointer-events: none;
     transition: opacity 2s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -270,7 +271,8 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: 100vh;
+    min-height: 100%;
     background-color: rgba(242, 242, 255, 0.5);
     backdrop-filter: brightness(1.1) contrast(1.05);
     z-index: 2;
@@ -302,6 +304,12 @@
         margin: 0 auto !important;
         justify-content: center !important;
         text-align: center !important;
+    }
+    #plantCanvas,
+    .plant-overlay {
+        position: absolute;
+        height: 100%;
+        min-height: 100vh;
     }
 }
 

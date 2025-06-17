@@ -541,6 +541,19 @@
     .featured-item {
       max-width: 100%;
     }
+
+    /* Ensure ecosystem visualization doesn't cause overflow */
+    .ecosystem-visualization {
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    /* Ensure hero section doesn't cause overflow */
+    .hero-section,
+    .hero-section > div {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
   </style>
 </head>
 
@@ -550,7 +563,7 @@
   <!-- POM Border -->
   <div class="inner-border"></div>
 
-  <div class="container max-w-6xl mx-auto px-8 pt-8 pb-6 relative z-10">
+  <div class="container max-w-6xl mx-auto px-8 pt-8 pb-6 relative z-10 overflow-x-hidden">
     <!-- Site Header -->
     <div id="header"></div>
     <script>
@@ -564,7 +577,7 @@
       <div class="flex flex-col lg:flex-row gap-8 lg:items-start lg:justify-between">
         <!-- Text Column -->
         <div class="lg:w-1/2 lg:max-w-none">
-          <h1 class="text-3xl lg:text-4xl xl:text-5xl font-space-grotesk font-bold text-gray-800 leading-tight mb-6 lg:mb-8 text-left fade-in-up">
+          <h1 class="text-3xl lg:text-4xl xl:text-5xl font-space-grotesk font-bold text-gray-800 leading-tight mb-6 lg:mb-8 mt-8 lg:mt-0 text-left fade-in-up">
             16 Frames: Struggle & Triumph in the AnimateDiff Ecosystem
           </h1>
           
@@ -580,22 +593,22 @@
                 Samples of what AnimateDiff could generate upon release:
               </p>
               <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 max-w-sm mx-auto sm:max-w-none">
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-3">
                   <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_01.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
                 </div>
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-4">
                   <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_02.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
                 </div>
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-5">
                   <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_03.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
                 </div>
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-6">
                   <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_04.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
                 </div>
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-7">
                   <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_05.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
                 </div>
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-8">
                   <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_06.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
                 </div>
               </div>
