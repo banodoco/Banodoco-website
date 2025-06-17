@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>16 Frames: Struggle & Triumph in the AnimateDiff Ecosystem</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.151.3/build/three.module.js"
+    }
+  }
+  </script>
+  <link rel="icon" href="assets/logos/banodoco.png" type="image/png" />
+  <link rel="shortcut icon" href="assets/logos/banodoco.png" type="image/png" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'space-mono': ['Space Mono', 'Roboto Mono', 'monospace'],
+            'space-grotesk': ['Space Grotesk', 'sans-serif'],
+            'inter': ['Inter', 'sans-serif'],
+            'dancing': ['Dancing Script', 'cursive'],
+            'allura': ['Allura', 'cursive'],
+            'great-vibes': ['Great Vibes', 'cursive']
+          },
+          colors: {
+            'banodoco-bg': '#fbf8ef',
+            'banodoco-accent': '#FCC061',
+            'banodoco-purple': '#5353a5'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Allura&family=Great+Vibes&display=swap"
+    rel="stylesheet"
+  />
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="src/styles/main.css" />
+
+  <!-- Header & Footer component CSS -->
+  <link rel="stylesheet" href="src/styles/components/header.css" />
+  <link rel="stylesheet" href="src/styles/components/footer.css" />
+
+  <!-- Feather Icons -->
+  <script src="https://unpkg.com/feather-icons"></script>
+  <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+  
+  <style>
+    /* Essential custom animations that can't be replaced with Tailwind */
+    @keyframes floatUp {
+      0%   { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+      25%  { transform: translateY(-20px) rotate(-5deg) scale(1.1); }
+      50%  { transform: translateY(-40px) rotate(3deg) scale(1); }
+      75%  { opacity: 0.7; transform: translateY(-60px) rotate(-2deg) scale(0.9); }
+      100% { opacity: 0; transform: translateY(-80px) rotate(0deg) scale(0.8); }
+    }
+
+    @keyframes floatUpQuickly {
+      0%   { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+      15%  { opacity: 0.95; transform: translateY(-8px) rotate(-8deg) scale(1.05); }
+      30%  { opacity: 0.9; transform: translateY(-16px) rotate(6deg) scale(1.05); }
+      45%  { opacity: 0.6; transform: translateY(-24px) rotate(-4deg) scale(0.95); }
+      60%  { opacity: 0.3; transform: translateY(-32px) rotate(3deg) scale(0.9); }
+      75%  { opacity: 0.1; transform: translateY(-40px) rotate(-2deg) scale(0.85); }
+      90%  { opacity: 0.05; transform: translateY(-48px) rotate(1deg) scale(0.8); }
+      100% { opacity: 0; transform: translateY(-56px) rotate(0deg) scale(0.7); }
+    }
+
+    /* Page load fade-in animations */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes fadeInRight {
+      from {
+        opacity: 0;
+        transform: translateX(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* Initial page load animations */
+    .fade-in-up {
+      opacity: 0;
+      animation: fadeInUp 0.8s ease-out forwards;
+    }
+
+    .fade-in-down {
+      opacity: 0;
+      animation: fadeInDown 0.6s ease-out forwards;
+    }
+
+    .fade-in-left {
+      opacity: 0;
+      animation: fadeInLeft 0.8s ease-out forwards;
+    }
+
+    .fade-in-right {
+      opacity: 0;
+      animation: fadeInRight 0.8s ease-out forwards;
+    }
+
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 1s ease-out forwards;
+    }
+
+    .scale-in {
+      opacity: 0;
+      animation: scaleIn 0.6s ease-out forwards;
+    }
+
+    /* Staggered animations for sequential elements */
+    .stagger-1 { animation-delay: 0.1s; }
+    .stagger-2 { animation-delay: 0.2s; }
+    .stagger-3 { animation-delay: 0.3s; }
+    .stagger-4 { animation-delay: 0.4s; }
+    .stagger-5 { animation-delay: 0.5s; }
+    .stagger-6 { animation-delay: 0.6s; }
+    .stagger-7 { animation-delay: 0.7s; }
+    .stagger-8 { animation-delay: 0.8s; }
+
+    /* Scroll-triggered animations */
+    .scroll-fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .scroll-fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .scroll-fade-in-left {
+      opacity: 0;
+      transform: translateX(-30px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+
+    .scroll-fade-in-left.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .scroll-fade-in-right {
+      opacity: 0;
+      transform: translateX(30px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+
+    .scroll-fade-in-right.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .scroll-scale-in {
+      opacity: 0;
+      transform: scale(0.9);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .scroll-scale-in.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Staggered scroll animations */
+    .scroll-stagger-1 { transition-delay: 0.1s; }
+    .scroll-stagger-2 { transition-delay: 0.2s; }
+    .scroll-stagger-3 { transition-delay: 0.3s; }
+    .scroll-stagger-4 { transition-delay: 0.4s; }
+    .scroll-stagger-5 { transition-delay: 0.5s; }
+    .scroll-stagger-6 { transition-delay: 0.6s; }
+    .scroll-stagger-7 { transition-delay: 0.7s; }
+
+    /* Utility classes for common patterns */
+    .glass-overlay {
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+    }
+    
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Floating emoji positioning */
+    .floating-emoji {
+      position: absolute;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* Dropzone smooth hover animation */
+    .dropzone-container {
+      will-change: transform, box-shadow, border-color;
+      backface-visibility: hidden;
+      transform: translate3d(0, 0, 0);
+      transition: all 0.3s ease-out;
+    }
+
+    .dropzone-container:hover {
+      transform: translateY(-4px);
+      border-color: rgba(252, 192, 97, 0.7);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .dropzone-container:hover .absolute.inset-0.opacity-20 {
+      opacity: 0.3;
+    }
+
+    .dropzone-container:hover .blur-sm {
+      opacity: 0.2;
+    }
+
+    .dropzone-container:hover .text-center {
+      transform: translateY(-2px);
+    }
+
+    .dropzone-container:hover .w-20.h-20 {
+      transform: scale(1.08);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    
+    .dropzone-container:hover .w-10.h-10 {
+      transform: scale(1.1);
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+    
+    .dropzone-container:hover .absolute.-top-2.-right-2 {
+      opacity: 1;
+      transform: translate(8px, -8px) rotate(15deg) scale(1.2);
+    }
+
+    .dropzone-container:hover .absolute.-bottom-1.-left-2 {
+      opacity: 1;
+      transform: translate(-8px, 8px) rotate(-15deg) scale(1.2);
+    }
+
+    .dropzone-container:hover .absolute.top-1.-left-3 {
+      opacity: 1;
+      transform: translate(-8px, -4px) rotate(-25deg) scale(1.2);
+    }
+    
+    .dropzone-container:hover h3 {
+      color: #1a1a1a;
+      transform: scale(1.02);
+    }
+    
+    .dropzone-container:hover p.text-yellow-700 {
+      color: #b45309;
+    }
+
+    .dropzone-container:hover .flex-wrap span {
+      transform: translateY(-3px);
+      background-color: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    /* Unified spinner styles */
+    .spinner, .mini-spinner {
+      border-radius: 50%;
+      border-style: solid;
+      border-color: #e0e0e0;
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border-width: 2px;
+      border-top-color: #5353a5;
+    }
+    .mini-spinner {
+      width: 14px;
+      height: 14px;
+      border-width: 2px;
+      border-top-color: #FCC061;
+      margin-right: 0.5rem;
+      animation-duration: 0.8s;
+    }
+
+    /* Hide ecosystem visualization on mobile */
+    @media (max-width: 1024px) {
+    .ecosystem-visualization {
+        display: none !important;
+      }
+    }
+
+    /* Override excessive margin from main.css */
+    .content-section:first-of-type {
+        margin-top: 0 !important;
+    }
+
+    /* Lightbox Styles */
+    #lightbox {
+      transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    }
+
+    /* Override main.css lightbox styles that are causing the media to hit screen edges */
+    #lightbox #lightbox-content video,
+    #lightbox #lightbox-content img {
+      max-width: 70vw !important;
+      max-height: 70vh !important;
+      width: auto !important;
+      height: auto !important;
+    }
+
+    .form-upload-note {
+      font-size: 12px !important;
+      line-height: 1.2 !important;
+      opacity: 0.7 !important;
+    }
+
+    /* Featured items animation */
+    .featured-item {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeInUp 0.6s ease-out forwards;
+    }
+    
+    .featured-item:nth-child(1) { animation-delay: 0.1s; }
+    .featured-item:nth-child(2) { animation-delay: 0.2s; }
+    .featured-item:nth-child(3) { animation-delay: 0.3s; }
+    .featured-item:nth-child(4) { animation-delay: 0.4s; }
+    .featured-item:nth-child(5) { animation-delay: 0.5s; }
+    .featured-item:nth-child(6) { animation-delay: 0.6s; }
+
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Custom style for select dropdown arrow */
+    #created-month {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      padding-right: 2.5rem; /* Make space for arrow */
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.75rem center;
+      background-repeat: no-repeat;
+      background-size: 1.5em 1.5em;
+    }
+
+    /* Mobile video controls */
+    .mobile-video {
+      cursor: pointer;
+      position: relative;
+    }
+
+    .mobile-video::-webkit-media-controls {
+      display: none !important;
+    }
+
+    .mobile-video::-webkit-media-controls-panel {
+      display: none !important;
+    }
+
+    .mobile-video::-webkit-media-controls-play-button {
+      display: none !important;
+    }
+
+    .mobile-video::-webkit-media-controls-start-playback-button {
+      display: none !important;
+    }
+
+    .mobile-video::media-controls {
+      display: none !important;
+    }
+
+    .mobile-video::media-controls-panel {
+      display: none !important;
+    }
+
+    /* Featured video mobile behavior */
+    .featured-video-mobile {
+      cursor: pointer;
+      position: relative;
+    }
+
+    .featured-video-mobile::-webkit-media-controls {
+      display: none !important;
+    }
+
+    .featured-video-mobile::-webkit-media-controls-panel {
+      display: none !important;
+    }
+
+    .featured-video-mobile::-webkit-media-controls-play-button {
+      display: none !important;
+    }
+
+    .featured-video-mobile::-webkit-media-controls-start-playback-button {
+      display: none !important;
+    }
+
+    /* Video tap indicator - subtle pulse effect */
+    .video-tap-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .video-container:hover .video-tap-indicator {
+      opacity: 1;
+    }
+
+    @media (max-width: 1024px) {
+      .video-container .video-tap-indicator {
+        opacity: 0.7;
+      }
+    }
+
+    /* Play button icon */
+    .play-icon {
+      width: 0;
+      height: 0;
+      border-left: 20px solid #333;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      margin-left: 4px;
+    }
+
+    /* Prevent horizontal scrolling on mobile */
+    html, body {
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .container {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    /* Ensure all content stays within viewport */
+    .content-section {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    /* Fix any potential grid overflow */
+    .grid {
+      max-width: 100%;
+    }
+
+    /* Ensure cards don't cause overflow */
+    .featured-item {
+      max-width: 100%;
+    }
+  </style>
+</head>
+
+<body class="ownership-page bg-banodoco-bg font-space-mono text-gray-800 leading-relaxed overflow-x-hidden">
+  <canvas id="plantCanvas"></canvas>
+  <div class="plant-overlay"></div>
+  <!-- POM Border -->
+  <div class="inner-border"></div>
+
+  <div class="container max-w-6xl mx-auto px-8 pt-8 pb-6 relative z-10">
+    <!-- Site Header -->
+    <div id="header"></div>
+    <script>
+      fetch('src/components/header.html')
+        .then(response => response.text())
+        .then(html => { document.getElementById('header').innerHTML = html; });
+    </script>
+
+    <!-- Hero Section -->
+    <section class="content-section mb-16 mt-8">
+      <div class="flex flex-col lg:flex-row gap-8 lg:items-start lg:justify-between">
+        <!-- Text Column -->
+        <div class="lg:w-1/2 lg:max-w-none">
+          <h1 class="text-3xl lg:text-4xl xl:text-5xl font-space-grotesk font-bold text-gray-800 leading-tight mb-6 lg:mb-8 text-left fade-in-up">
+            16 Frames: Struggle & Triumph in the AnimateDiff Ecosystem
+          </h1>
+          
+          <div class="space-y-4 text-base lg:text-lg font-inter text-gray-700 leading-relaxed">
+          <p class="fade-in-up stagger-1">
+          AnimateDiff was one of the first openly released video models. When it launched in 2023, it could generate just 16-frame low resolution videos from a text prompt.</p>
+          </p>
+          
+          <!-- Mobile AnimateDiff Samples - shown after first paragraph -->
+          <div class="block lg:hidden my-6 fade-in-up stagger-2">
+            <div class="bg-white bg-opacity-70 rounded-xl p-4 shadow-lg border border-gray-200 border-opacity-50">
+              <p class="text-center text-gray-700 font-inter font-medium mb-4" style="font-size: 0.75rem;">
+                Samples of what AnimateDiff could generate upon release:
+              </p>
+              <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 max-w-sm mx-auto sm:max-w-none">
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_01.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
+                </div>
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_02.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
+                </div>
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_03.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
+                </div>
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_04.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
+                </div>
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_05.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
+                </div>
+                <div class="aspect-square rounded-lg overflow-hidden shadow-md">
+                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_06.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
+                </div>
+              </div>
+              <p class="text-center text-gray-500 font-inter mt-3" style="font-size: 0.65rem; opacity: 0.8;">
+                Source: <a href="https://animatediff.github.io/" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200">AnimateDiff project page</a>.
+              </p>
+            </div>
+          </div>
+          
+          <p class="fade-in-up stagger-3">
+            However, thanks to it being released openly, the community could build on top of it, and they worked together to extend it to create near-infinite frames, and developed mechanisms to allow artists to steer it.  Most of the control techniques now popular in AI video - steering with images, prompt travel, video2video with structural control - were pioneered and refined in the AnimateDiff ecosystem. All while still technically being constrained by the 16-frame limit.
+          </p>
+          <p class="fade-in-up stagger-4">
+            I would like to tell the story of this ecosystem by explaining the advances and innovations that fueled it, and showing the art that came from them.
+          </p>
+          <p class="fade-in-up stagger-5">
+            To do this, I will create a visual explainer, using a mixture of input materials like test generations and completed artworks - each of which I'll make into an NFT.
+          </p>
+          <p class="fade-in-up stagger-6">
+              The goal of this will be to map our collected progress while earning money for those who helped the AnimateDiff ecosystem flourish. Banodoco's proceeds will go towards supporting the community today: 50% will fund an open source AI art competition, while 50% will go towards compute for open source research and training.
+          </p>
+          <p class="fade-in-up stagger-7">
+            If you're seeing this, it means I'd highly appreciate your participation. 
+          </p>
+            <p class="font-allura text-6xl lg:text-7xl mt-6 text-gray-700 transform -rotate-2 fade-in-up stagger-8" style="letter-spacing: 0.15em; text-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1;">
+            POM
+          </p>
+        </div>
+          </div>
+        
+        <!-- Image Grid Column -->
+        <div class="ecosystem-visualization lg:w-5/12 lg:flex-shrink-0 hidden lg:block fade-in-right stagger-2">
+          <div class="bg-white bg-opacity-70 rounded-xl p-6 shadow-lg border border-gray-200 border-opacity-50">
+            <p class="text-center text-gray-700 font-inter font-medium mb-4" style="font-size: 14px;">Samples of what Animatediff could generate upon release:</p>
+            <div class="grid grid-cols-2 gap-3 auto-rows-fr max-w-md mx-auto lg:mx-0">
+              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
+                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_01.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
+          </div>
+              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
+                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_02.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
+      </div>
+              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
+                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_03.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
+    </div>
+              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
+                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_04.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
+              </div>
+              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
+                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_05.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
+              </div>
+              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
+                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_06.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
+              </div>
+            </div>
+            <p class="text-center text-gray-500 font-inter mt-4" style="font-size: 12px;">
+              Source: <a href="https://animatediff.github.io/" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200">AnimateDiff project page</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Divider -->
+    <hr class="section-divider border-none border-t-2 border-gray-300 border-opacity-20 mx-auto w-4/5 my-8" />
+
+
+
+    <!-- Featured Pieces Section -->
+    <section class="content-section mb-16 scroll-fade-in" id="featured-section">
+      <h2 class="text-3xl font-space-grotesk font-semibold text-gray-800 mb-12 text-center">Featured work</h2>
+      
+      <!-- Collection Info -->
+      <p class="text-center text-gray-500 font-inter mb-6 max-w-2xl mx-auto text-sm">
+        We plan to include 50-100 inputs - test generations, masks, etc. - and 50-100 artworks in the final collection. Below are some of the featured pieces.
+      </p>
+      
+      <!-- Input/Output Toggle -->
+      <div class="flex justify-center mb-8">
+        <div class="bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+          <button id="filter-all" class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-banodoco-purple text-white">All</button>
+          <button id="filter-input" class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-800">Input</button>
+          <button id="filter-output" class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-800">Output</button>
+        </div>
+      </div>
+      
+      <div id="featured-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+        <!-- Loading state -->
+        <div class="col-span-full text-center py-12">
+          <div class="spinner mx-auto mb-4"></div>
+          <p class="text-gray-600 font-inter">Loading featured pieces...</p>
+        </div>
+      </div>
+
+      <div id="pagination-controls" class="flex justify-center items-center space-x-2 mt-8"></div>
+    </section>
+
+    <!-- Divider -->
+    <hr class="section-divider border-none border-t-2 border-gray-300 border-opacity-20 mx-auto w-4/5 my-8" />
+
+    <!-- Submission Section -->
+    <section class="content-section mb-12 scroll-fade-in" id="submission-section">
+      <h2 class="text-3xl font-space-grotesk font-semibold text-gray-800 mb-8 text-center">Submit your generations & art:</h2>
+      
+      <div class="flex flex-col lg:flex-row gap-12 lg:items-stretch">
+        <!-- Form Column -->
+        <div class="lg:w-2/5 lg:flex-shrink-0 order-2 lg:order-1 scroll-fade-in-left scroll-stagger-1">
+          <form id="submission-form" class="bg-white bg-opacity-90 p-8 rounded-xl shadow-lg">
+            <!-- Name Input -->
+            <div class="mb-6">
+              <label for="name" class="block mb-2 font-medium text-gray-800 font-inter">Your Name:</label>
+              <input 
+                type="text" 
+                id="name" 
+                name="name" 
+                required
+                class="w-full p-3 border-2 border-gray-300 rounded-lg text-base transition-colors duration-300 ease-in-out focus:border-banodoco-purple focus:outline-none font-inter"
+              >
+            </div>
+
+            <!-- Revenue Split -->
+            <div class="mb-6">
+              <label for="split" class="flex items-center mb-3 font-medium text-gray-800 font-inter">
+                Revenue split percentage:
+                <div class="relative inline-flex items-center ml-2">
+                  <span class="cursor-help font-inter font-bold text-banodoco-purple border border-banodoco-purple rounded-full w-5 h-5 inline-flex items-center justify-center text-xs info-icon" tabindex="0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  </span>
+                  <div class="tooltip-text w-64 bg-gray-800 text-white text-left rounded-md p-2.5 absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 transition-opacity duration-300 ease-in-out shadow-md font-normal text-sm leading-5 opacity-0 invisible pointer-events-none">
+                    After expenses including minting and listing fees. This figure will be included on the listing.
+                  </div>
+                </div>
+              </label>
+              <div class="flex items-center gap-4 mb-2">
+                <input type="range" id="split" name="split" min="0" max="100" value="50" class="flex-1 h-1.5 bg-gray-300 rounded-full appearance-none cursor-pointer" oninput="updateSplitValues(this.value)">
+              </div>
+              <div class="flex justify-between text-sm text-gray-600 font-inter">
+                <span>Banodoco: <span id="banodocoPercent" class="font-semibold">50%</span></span>
+                <span>You: <span id="youPercent" class="font-semibold">50%</span></span>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-6">
+              <label for="description" class="block mb-2 font-medium text-gray-800 font-inter">Include any relevant description:</label>
+              <textarea 
+                id="description" 
+                name="description" 
+                class="w-11/12 min-h-[3rem] p-3 border-2 border-gray-300 rounded-lg text-base transition-colors duration-300 ease-in-out resize-y font-inter focus:border-banodoco-purple focus:outline-none"
+                rows="2"
+              ></textarea>
+            </div>
+
+            <!-- When Created -->
+            <div class="mb-6">
+              <label class="block mb-2 font-medium text-gray-800 font-inter">When did you create this?</label>
+              <div class="flex gap-3">
+                <div class="flex-1">
+                  <label for="created-month" class="block mb-1 text-sm text-gray-600 font-inter">Month</label>
+                  <select 
+                    id="created-month" 
+                    name="created-month" 
+                    class="w-full p-3 border-2 border-gray-300 rounded-lg text-base transition-colors duration-300 ease-in-out focus:border-banodoco-purple focus:outline-none font-inter">
+                    <option value="January">January</option>
+                    <option value="February">February</option>
+                    <option value="March">March</option>
+                    <option value="April">April</option>
+                    <option value="May" selected>May</option>
+                    <option value="June">June</option>
+                    <option value="July">July</option>
+                    <option value="August">August</option>
+                    <option value="September">September</option>
+                    <option value="October">October</option>
+                    <option value="November">November</option>
+                    <option value="December">December</option>
+                  </select>
+                </div>
+                <div class="flex-1">
+                  <label for="created-year" class="block mb-1 text-sm text-gray-600 font-inter">Year</label>
+                  <input 
+                    type="number" 
+                    id="created-year" 
+                    name="created-year" 
+                    value="2024"
+                    min="2020" 
+                    max="2030"
+                    class="w-full p-3 border-2 border-gray-300 rounded-lg text-base transition-colors duration-300 ease-in-out focus:border-banodoco-purple focus:outline-none font-inter"
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Permission Checkbox -->
+            <div class="mb-6 mt-2">
+              <label class="flex items-start cursor-pointer leading-5 font-inter">
+                <input type="checkbox" id="permission" name="permission" class="mr-3 mt-1.5 transform scale-120">
+                <span class="text-gray-800">I give permission to Banodoco, Inc. to use the attached generations in the 16 Frames collection</span>
+              </label>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="relative inline-block w-full">
+              <button type="submit" id="submit-generations-button" 
+                class="block w-full py-3.5 bg-gradient-to-r from-banodoco-accent via-red-400 to-purple-600 text-white border-none rounded-lg text-lg font-semibold cursor-pointer transition-all duration-300 ease-in-out disabled:bg-none disabled:bg-gray-400 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none hover:enabled:transform hover:enabled:scale-105 hover:enabled:shadow-lg" 
+                disabled>
+                Submit Generations
+              </button>
+              <div class="button-tooltip-text w-[15.5rem] bg-gray-800 text-white text-center rounded-md p-2 absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 opacity-0 invisible transition-opacity duration-300 ease-in-out shadow-md text-xs pointer-events-none" id="button-tooltip">
+                You need to have uploaded to submit
+            </div>
+            </div>
+            
+            <p class="mt-4 text-center italic font-inter form-upload-note">Note: you can upload multiple batches. We will choose the most suitable items to include.</p>
+            
+            <!-- Progress Container -->
+            <div id="upload-progress-container" class="mt-6 hidden">
+              <div class="bg-banodoco-purple bg-opacity-5 rounded-lg p-6 border border-banodoco-purple border-opacity-20">
+                <div class="flex items-center mb-4">
+                  <div class="spinner mr-3" id="main-spinner"></div>
+                  <h3 id="progress-title" class="m-0 text-banodoco-purple text-lg">Preparing upload...</h3>
+                </div>
+                
+                <div id="overall-progress-bar" class="w-full h-2 bg-gray-300 rounded overflow-hidden mb-4">
+                  <div id="overall-progress-fill" class="h-full bg-gradient-to-r from-banodoco-accent to-red-400 w-0 transition-all duration-300 ease-in-out rounded"></div>
+                </div>
+                
+                <div id="file-progress-list" class="max-h-[12.5rem] overflow-y-auto"></div>
+                
+                <div id="progress-summary" class="text-center mt-4 text-sm text-gray-600"></div>
+              </div>
+            </div>
+            
+            <div id="submission-status" class="mt-4 text-center text-sm"></div>
+          </form>
+        </div>
+        
+        <!-- Dropzone Column -->
+        <div id="dropzone" 
+          class="dropzone-container group flex items-center justify-center border-2 border-dashed border-banodoco-accent min-h-80 rounded-2xl p-8 bg-gradient-to-br from-banodoco-accent/5 via-banodoco-accent/10 to-purple-500/5 transition-all duration-500 ease-out cursor-pointer relative overflow-hidden lg:flex-1 order-1 lg:order-2 scroll-fade-in-right scroll-stagger-1">
+          
+          <!-- Background pattern -->
+          <div class="absolute inset-0 opacity-20 transition-opacity duration-500 ease-out">
+            <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgba(252,192,97,0.15) 1px, transparent 0); background-size: 20px 20px;"></div>
+          </div>
+          
+          <!-- Animated border glow -->
+          <div class="absolute inset-0 rounded-2xl bg-gradient-to-r from-banodoco-accent via-purple-500 to-banodoco-accent opacity-0 transition-opacity duration-500 ease-out blur-sm"></div>
+          
+          <input type="file" id="file-input" multiple accept="*/*" class="hidden">
+          
+          <div class="text-center pointer-events-auto relative z-10 transition-transform duration-500 ease-out">
+            <!-- Icon container with animation -->
+            <div class="relative mb-6 transition-transform duration-500 ease-out">
+              <div class="w-20 h-20 mx-auto bg-gradient-to-br from-banodoco-accent to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ease-out">
+                <svg class="w-10 h-10 text-white transition-transform duration-500 ease-out" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+        </div>
+              
+              <!-- Floating particles -->
+              <div class="absolute -top-2 -right-2 w-3 h-3 bg-yellow-400 rounded-full opacity-0 transition-all duration-700 ease-out"></div>
+              <div class="absolute -bottom-1 -left-2 w-2 h-2 bg-purple-400 rounded-full opacity-0 transition-all duration-700 ease-out"></div>
+              <div class="absolute top-1 -left-3 w-1.5 h-1.5 bg-banodoco-accent rounded-full opacity-0 transition-all duration-700 ease-out"></div>
+            </div>
+            
+            <div class="space-y-3 transition-all duration-500 ease-out">
+              <h3 class="text-xl font-space-grotesk font-semibold text-gray-800 transition-colors duration-500 ease-out">
+                Drop your files here
+              </h3>
+              <p class="text-base text-yellow-700 font-medium transition-colors duration-500 ease-out">
+                or click to browse and upload
+              </p>
+              <p class="text-sm text-gray-500 font-inter transition-colors duration-500 ease-out" id="dropzone-helper-text">
+                
+              </p>
+              
+              <!-- File format hints -->
+              <div class="flex flex-wrap justify-center gap-2 mt-4 opacity-60 transition-all duration-500 ease-out">
+                <span class="px-2 py-1 text-xs bg-white/60 rounded-full text-gray-600 transition-all duration-300 ease-out">.mp4</span>
+                <span class="px-2 py-1 text-xs bg-white/60 rounded-full text-gray-600 transition-all duration-300 ease-out">.gif</span>
+                <span class="px-2 py-1 text-xs bg-white/60 rounded-full text-gray-600 transition-all duration-300 ease-out">.png</span>
+                <span class="px-2 py-1 text-xs bg-white/60 rounded-full text-gray-600 transition-all duration-300 ease-out">.jpg</span>
+                <span class="px-2 py-1 text-xs bg-white/60 rounded-full text-gray-600 transition-all duration-300 ease-out">+more</span>
+      </div>
+    </div>
+
+            <div id="file-list" class="mt-6 text-sm text-gray-800 text-left"></div>
+          </div>
+          
+          <!-- Active drag overlay -->
+          <div id="drag-overlay" class="absolute inset-0 bg-gradient-to-br from-banodoco-accent/20 to-purple-500/20 rounded-2xl border-2 border-banodoco-accent/60 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-200 backdrop-blur-sm">
+            <div class="text-center">
+              <div class="w-16 h-16 mx-auto bg-banodoco-accent rounded-2xl flex items-center justify-center shadow-lg mb-4 scale-110">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+              </div>
+              <h3 class="text-lg font-space-grotesk font-semibold text-gray-800">Release to upload</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Divider -->
+    <hr class="section-divider border-none border-t-2 border-gray-300 border-opacity-20 mx-auto w-4/5 my-8" />
+
+    <!-- Q&A Section -->
+    <section class="content-section mb-16 scroll-fade-in" id="qa-section">
+      <h2 class="text-3xl font-space-grotesk font-semibold text-gray-800 mb-8 text-center">Questions & answers</h2>
+      
+      <div class="max-w-4xl mx-auto space-y-4">
+        <!-- Question 1 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-1">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">What type of submissions are you looking for?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed">
+              <ul class="list-disc list-inside space-y-2">
+                <li><strong>Input Materials:</strong> things that give a feeling of the artistic or technical process as people created and built things - test generations, masks, fails, etc.</li>
+                <li><strong>Refined, High-Effort Art:</strong> created at various stages of the AnimateDiff's development lifecycle.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-2">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">Do I need to have been active in the Banodoco community?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed">
+              <p>No, we highly appreciate submissions from anyone who created art or technology for AnimateDiff.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-3">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">How does the revenue sharing work?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed space-y-4">
+              <p>Contributors can set their own revenue split percentage when submitting content.</p>
+              <p>This percentage applies to net proceeds after expenses like minting, listing fees, and platform costs.</p>
+              <p>The split you choose will be transparently displayed on the NFT listing, ensuring fair compensation.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-4">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">How will the Banodoco portion be spent?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed space-y-4">
+                <p>After expenses and tax, 50% of Banodoco's portion will go towards a prize fund for an art competition, while 50% will fund compute for researchers and trainers in the community.</p>
+                <p>All expenditure of these funds will be public for anyone to view. All sales data from which this revenue is derived will be public on the blockchain also.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-5">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">How will the final NFTs be selected and curated?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed">
+              <p>POM will choose items that he feels both suit the story well, and represent the ecosystem's collected progress well.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 6 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-6">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">Which blockchain will you use? Will you be listing with a partner or L2?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed">
+                <p>This is TBC. We have a few options but are very open to ideas and offers.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 7 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-7">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">Why might someone buy one? Why might they become valuable with time?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed space-y-4">
+                <p>There's a craving for realness in the crypto world - for projects and people who aren't doing things for the sake of money. This is a large part of why Beeple's work was valuable - his years of effort with no reward was undeniable evidence that he was 'real'.</p>
+                <p>I believe that our ecosystem is also very 'real'; it involves hundreds of people working for free over a long period of time, creating art for no incentive, and pioneering technology and artistic approaches, often years before closed source companies catch up.</p>
+                <p>Given the artistic approaches pioneered with AnimateDiff, its prominence as an early AI video model and the utopian nature of this community, I believe that it in particular will have significance from an art history perspective.</p>
+                <p>I believe that - if we communicate this well - people in the crypto world will understand the significance of this, and as people understand the importance of open models and innovation for artistic expression that significance will grow with time.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <div id="footer"></div>
+    <script>
+      fetch('src/components/footer.html')
+        .then(response => response.text())
+        .then(html => {
+          const footerElement = document.getElementById('footer');
+          footerElement.innerHTML = html;
+          if (window.feather) {
+            feather.replace();
+          }
+          import('./src/js/components/plant-init.js')
+            .then(mod => {
+              if (typeof mod.initializePlantAnimation === 'function') {
+                mod.initializePlantAnimation();
+              }
+            })
+            .catch(err => console.error('Could not load plant-init.js:', err));
+        })
+        .catch(err => console.error('Error loading footer.html:', err));
+    </script>
+  </div>
+
+  <div id="lightbox" class="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center z-[9999] hidden opacity-0 invisible p-8">
+    <button id="lightbox-close" class="absolute top-4 right-6 text-white text-5xl font-light z-[10000] cursor-pointer hover:text-gray-300 transition-colors">&times;</button>
+    <div id="lightbox-content" class="relative">
+      <!-- Media will be injected here -->
+    </div>
+  </div>
+
+  <script src="src/js/components/icons.js"></script>
+  <script src="src/js/components/plant-animation.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const SUPABASE_URL = 'https://ddbobialzdjkzainyqgb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkYm9iaWFsemRqa3phaW55cWdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2MzQ0MTgsImV4cCI6MjA2MjIxMDQxOH0.CAstIrTFMcIAIDht0ZacLYY-obBptH3XXShohSzbwjU';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let selectedFiles = [];
+
+    // Lightbox global variables
+    let hideLightboxTimeout;
+    let lightbox, lightboxContent;
+    let allFeaturedPieces = [];
+    let currentPage = 1;
+    const itemsPerPage = 6;
+    let currentFilter = 'all'; // Track current filter state
+
+    // Tooltip functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      lightbox = document.getElementById('lightbox');
+      lightboxContent = document.getElementById('lightbox-content');
+
+      const infoIcon = document.querySelector('.info-icon');
+      const tooltip = document.querySelector('.tooltip-text');
+      const buttonTooltip = document.querySelector('.button-tooltip-text');
+      
+      infoIcon.addEventListener('mouseenter', () => {
+        tooltip.classList.remove('opacity-0', 'invisible');
+        tooltip.classList.add('opacity-100', 'visible');
+      });
+      
+      infoIcon.addEventListener('mouseleave', () => {
+        tooltip.classList.add('opacity-0', 'invisible');
+        tooltip.classList.remove('opacity-100', 'visible');
+      });
+
+      // Button tooltip
+      const submitButton = document.getElementById('submit-generations-button');
+      submitButton.addEventListener('mouseenter', () => {
+        if (submitButton.disabled) {
+          buttonTooltip.classList.remove('opacity-0', 'invisible');
+          buttonTooltip.classList.add('opacity-100', 'visible');
+        }
+      });
+      
+      submitButton.addEventListener('mouseleave', () => {
+        buttonTooltip.classList.add('opacity-0', 'invisible');
+        buttonTooltip.classList.remove('opacity-100', 'visible');
+      });
+
+      // Lightbox listeners
+      document.getElementById('lightbox-close').addEventListener('click', () => hideLightbox(true));
+
+      lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) {
+            hideLightbox(true); // Force hide immediately on backdrop click
+        }
+      });
+
+      // Filter toggle functionality
+      const filterButtons = {
+        all: document.getElementById('filter-all'),
+        input: document.getElementById('filter-input'),
+        output: document.getElementById('filter-output')
+      };
+
+      Object.entries(filterButtons).forEach(([filterType, button]) => {
+        if (button) {
+          button.addEventListener('click', () => {
+            // Update active button styling
+            Object.values(filterButtons).forEach(btn => {
+              if (btn) {
+                btn.classList.remove('bg-banodoco-purple', 'text-white');
+                btn.classList.add('text-gray-600', 'hover:text-gray-800');
+              }
+            });
+            button.classList.add('bg-banodoco-purple', 'text-white');
+            button.classList.remove('text-gray-600', 'hover:text-gray-800');
+
+            // Update filter and refresh display
+            currentFilter = filterType;
+            currentPage = 1; // Reset to first page
+            displayPage(1);
+          });
+        }
+      });
+    });
+
+    function showLightbox(url, mediaType) {
+        lightboxContent.innerHTML = '';
+
+        let mediaElement;
+        if (mediaType === 'video') {
+            mediaElement = document.createElement('video');
+            mediaElement.src = url;
+            mediaElement.autoplay = true;
+            mediaElement.loop = true;
+            mediaElement.muted = false; // Unmute in lightbox
+            mediaElement.controls = true;
+            mediaElement.volume = 0.5; // Set default volume to 50%
+            mediaElement.className = 'max-w-[70vw] max-h-[70vh] rounded-lg';
+        } else if (mediaType === 'image') {
+            mediaElement = document.createElement('img');
+            mediaElement.src = url;
+            mediaElement.className = 'max-w-[70vw] max-h-[70vh] rounded-lg';
+        } else {
+            return; // Don't show lightbox for other file types
+        }
+
+        lightboxContent.appendChild(mediaElement);
+        lightbox.classList.remove('hidden');
+        setTimeout(() => lightbox.classList.remove('opacity-0', 'invisible'), 10); // Start transition
+    }
+
+    function hideLightbox(force = false) {
+        const delay = force ? 0 : 200;
+        setTimeout(() => {
+            lightbox.classList.add('opacity-0', 'invisible');
+            // Wait for transition to finish before hiding and clearing content
+            setTimeout(() => {
+                lightbox.classList.add('hidden');
+                lightboxContent.innerHTML = '';
+            }, 300);
+        }, delay);
+    }
+
+    function updateSplitValues(valueString) {
+      const value = parseInt(valueString, 10);
+      const banodocoPercent = 100 - value;
+      const youPercent = value;
+      
+      document.getElementById('banodocoPercent').textContent = banodocoPercent + '%';
+      document.getElementById('youPercent').textContent = youPercent + '%';
+
+      if (value === 0 || value === 100) {
+        createFloatingEmoji(value); 
+
+        setTimeout(() => {
+          if (value === 100) {
+            createFloatingEmoji(value, '🤨', '1rem', 5);
+          } else {
+            createFloatingEmoji(value, '😏', '1rem', 5);
+          }
+        }, 100);
+      }
+    }
+
+    function createFloatingEmoji(numericValue, emojiChar = '😮', fontSize = '2rem', durationSeconds = 3) {
+      const slider = document.getElementById('split');
+      const sliderRect = slider.getBoundingClientRect();
+      
+      const emoji = document.createElement('div');
+      emoji.textContent = emojiChar;
+      emoji.className = 'floating-emoji';
+      emoji.style.fontSize = fontSize;
+
+      if (durationSeconds === 5) {
+        emoji.style.animation = 'floatUpQuickly 5s ease-out forwards';
+        emoji.style.zIndex = '999';
+      } else {
+        emoji.style.animation = 'floatUp 3s ease-out forwards';
+        emoji.style.zIndex = '1000';
+      }
+      
+      const thumbPosition = (numericValue / 100) * sliderRect.width;
+      const approxHalfWidth = parseFloat(fontSize) * 8;
+      emoji.style.left = (sliderRect.left + thumbPosition - approxHalfWidth) + 'px'; 
+      emoji.style.top = (sliderRect.top + window.scrollY - 40) + 'px';
+      
+      document.body.appendChild(emoji);
+      
+      setTimeout(() => {
+        if (emoji.parentNode) {
+          emoji.parentNode.removeChild(emoji);
+        }
+      }, durationSeconds * 1000);
+    }
+
+    // Form and file handling logic
+    const submissionForm = document.getElementById('submission-form');
+    const fileInput = document.getElementById('file-input');
+    const dropzone = document.getElementById('dropzone');
+    const fileListDisplay = document.getElementById('file-list');
+    const submissionStatus = document.getElementById('submission-status');
+    const nameInput = document.getElementById('name');
+    const permissionCheckbox = document.getElementById('permission');
+    const splitSlider = document.getElementById('split');
+    const dropzoneHelperText = document.getElementById('dropzone-helper-text');
+    const submitButton = document.getElementById('submit-generations-button');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (event) => {
+        handleFiles(event.target.files);
+    });
+
+    dropzone.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        const dragOverlay = document.getElementById('drag-overlay');
+        if (!dropzone.classList.contains('dragging')) {
+          dropzone.classList.add('dragging');
+          dragOverlay.style.opacity = '1';
+        }
+    });
+
+    dropzone.addEventListener('dragleave', (event) => {
+        // Only trigger if we're leaving the dropzone entirely
+        if (!dropzone.contains(event.relatedTarget)) {
+            const dragOverlay = document.getElementById('drag-overlay');
+            dropzone.classList.remove('dragging');
+            dragOverlay.style.opacity = '0';
+        }
+    });
+
+    dropzone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        const dragOverlay = document.getElementById('drag-overlay');
+        dropzone.classList.remove('dragging');
+        dragOverlay.style.opacity = '0';
+        handleFiles(event.dataTransfer.files);
+    });
+
+    function handleFiles(files) {
+        if (!files) return;
+        const newFiles = Array.from(files);
+        const combinedFiles = [...selectedFiles, ...newFiles].reduce((acc, current) => {
+            if (!acc.find(item => item.name === current.name && item.size === current.size)) {
+                acc.push(current);
+            }
+            return acc;
+        }, []);
+        selectedFiles = combinedFiles;
+        updateFileDisplay();
+    }
+
+    function updateFileDisplay() {
+        fileListDisplay.innerHTML = '';
+        if (selectedFiles.length > 0) {
+            const list = document.createElement('ul');
+            list.className = 'list-none p-0';
+            selectedFiles.forEach((file, index) => {
+                const listItem = document.createElement('li');
+                listItem.className = 'flex justify-between items-center mb-2 py-1';
+                
+                const fileInfo = document.createElement('span');
+                fileInfo.textContent = file.name + ' (' + (file.size / 1024).toFixed(2) + ' KB)';
+                
+                const removeButton = document.createElement('button');
+                removeButton.textContent = '×';
+                removeButton.className = 'bg-none border-none text-gray-500 text-xl cursor-pointer px-2 ml-2 rounded transition-colors duration-200 hover:text-gray-700';
+                removeButton.onclick = (event) => {
+                    event.stopPropagation();
+                    removeFile(index);
+                };
+                
+                listItem.appendChild(fileInfo);
+                listItem.appendChild(removeButton);
+                list.appendChild(listItem);
+            });
+            fileListDisplay.appendChild(list);
+        }
+        
+        if (selectedFiles.length >= 1) {
+            submitButton.disabled = false;
+            dropzoneHelperText.textContent = selectedFiles.length + ' file(s) selected.';
+        } else {
+            submitButton.disabled = true;
+            dropzoneHelperText.textContent = '(Min 1 file)';
+        }
+    }
+
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        updateFileDisplay();
+    }
+
+    submissionForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        
+        const uploaderName = nameInput.value.trim();
+        const permissionGiven = permissionCheckbox.checked;
+        const percentageToThem = parseInt(splitSlider.value, 10);
+        const description = document.getElementById('description').value.trim();
+        const createdMonth = document.getElementById('created-month').value;
+        const createdYear = document.getElementById('created-year').value;
+        const createdDate = createdMonth && createdYear ? `${createdMonth} ${createdYear}` : null;
+
+        if (!uploaderName) {
+            showSimpleStatus('Please enter your name.', 'red');
+            return;
+        }
+
+        if (!permissionGiven) {
+            showSimpleStatus('Please grant permission to use the generations.', 'red');
+            return;
+        }
+
+        if (selectedFiles.length < 1) {
+            showSimpleStatus('Please select at least 1 file to upload.', 'red');
+            return;
+        }
+
+        startProgressSystem();
+        submitButton.disabled = true;
+
+        try {
+            const uploadedFileUrls = [];
+            const uploadedFileNames = [];
+            
+            createFileProgressItems();
+            
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                updateProgressTitle(`Uploading file ${i + 1} of ${selectedFiles.length}...`);
+                updateOverallProgress((i / selectedFiles.length) * 80);
+                
+                try {
+                    await uploadFileWithProgress(file, i);
+                    
+                    const safeUploaderName = uploaderName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                    
+                    function generateUUID() {
+                        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                            try {
+                                return crypto.randomUUID();
+                            } catch (e) {}
+                        }
+                        
+                        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                            const r = Math.random() * 16 | 0;
+                            const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                            return v.toString(16);
+                        });
+                    }
+                    
+                    const fileName = `public/${safeUploaderName || 'anon'}/${generateUUID()}-${file.name}`;
+                    
+                    const { data, error } = await supabase.storage
+                        .from('nft')
+                        .upload(fileName, file, {
+                            cacheControl: '3600',
+                            upsert: false
+                        });
+
+                    if (error) {
+                        throw new Error(`Upload failed: ${error.message}`);
+                    }
+
+                    const { data: publicURLData } = supabase.storage.from('nft').getPublicUrl(data.path);
+                    uploadedFileUrls.push(publicURLData.publicUrl);
+                    uploadedFileNames.push(file.name);
+                    
+                    updateFileStatus(i, 'completed', 'Uploaded ✓');
+                    
+                } catch (error) {
+                    updateFileStatus(i, 'error', 'Failed ✗');
+                    throw error;
+                }
+            }
+
+            updateProgressTitle('Saving submission details...');
+            updateOverallProgress(90);
+            updateProgressSummary('Finalizing submission...');
+
+            const { error: dbError } = await supabase
+                .from('nft')
+                .insert({
+                    uploader_name: uploaderName,
+                    file_names: uploadedFileNames,
+                    percentage_to_them: percentageToThem,
+                    urls: uploadedFileUrls,
+                    description: description || null,
+                    Created: createdDate || null
+                });
+
+            if (dbError) {
+                throw new Error(`Database save failed: ${dbError.message}`);
+            }
+
+            updateProgressTitle('Upload Complete! 🎉');
+            updateOverallProgress(100);
+            updateProgressSummary(`Successfully uploaded ${selectedFiles.length} file(s)`);
+            hideSpinner();
+            
+            setTimeout(() => {
+                hideProgressSystem();
+                showSimpleStatus('Submission successful! Thank you.', 'green');
+                resetForm();
+            }, 2000);
+
+        } catch (error) {
+            console.error('Submission error:', error);
+            updateProgressTitle('Upload Failed');
+            hideSpinner();
+            updateProgressSummary(`Error: ${error.message}`);
+            
+            setTimeout(() => {
+                hideProgressSystem();
+                showSimpleStatus(`Error: ${error.message}`, 'red');
+                submitButton.disabled = selectedFiles.length < 1;
+            }, 3000);
+        }
+    });
+
+    // Progress system helper functions
+    function startProgressSystem() {
+        document.getElementById('upload-progress-container').classList.remove('hidden');
+        document.getElementById('submission-status').textContent = '';
+        updateProgressTitle('Preparing upload...');
+        updateOverallProgress(0);
+        updateProgressSummary('');
+    }
+
+    function hideProgressSystem() {
+        document.getElementById('upload-progress-container').classList.add('hidden');
+    }
+
+    function updateProgressTitle(title) {
+        document.getElementById('progress-title').textContent = title;
+    }
+
+    function updateOverallProgress(percentage) {
+        document.getElementById('overall-progress-fill').style.width = percentage + '%';
+    }
+
+    function updateProgressSummary(text) {
+        document.getElementById('progress-summary').textContent = text;
+    }
+
+    function hideSpinner() {
+        document.getElementById('main-spinner').style.display = 'none';
+    }
+
+    function createFileProgressItems() {
+        const container = document.getElementById('file-progress-list');
+        container.innerHTML = '';
+        
+        selectedFiles.forEach((file, index) => {
+            const item = document.createElement('div');
+            item.className = 'flex items-center justify-between p-3 mb-2 bg-white bg-opacity-70 rounded-md border-l-4 border-gray-300 transition-all duration-300 ease-in-out';
+            item.id = `file-progress-${index}`;
+            
+            item.innerHTML = `
+                <div class="flex-1 mr-4">
+                    <div class="font-medium text-gray-800 text-sm mb-1">${file.name}</div>
+                    <div class="text-xs text-gray-600">${(file.size / 1024).toFixed(2)} KB</div>
+                    <div class="w-full h-1 bg-gray-300 rounded mt-2 overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-banodoco-accent to-red-400 w-0 transition-all duration-300 ease-in-out rounded animate-pulse" id="file-progress-fill-${index}"></div>
+                    </div>
+                </div>
+                <div class="flex items-center text-sm min-w-[6.25rem] justify-end" id="file-status-${index}">
+                    <span>Waiting...</span>
+                </div>
+            `;
+            
+            container.appendChild(item);
+        });
+    }
+
+    async function uploadFileWithProgress(file, index) {
+        const item = document.getElementById(`file-progress-${index}`);
+        const statusElement = document.getElementById(`file-status-${index}`);
+        const progressFill = document.getElementById(`file-progress-fill-${index}`);
+        
+        item.classList.add('border-banodoco-accent', 'bg-banodoco-accent', 'bg-opacity-10');
+        item.classList.remove('border-gray-300');
+        statusElement.innerHTML = '<div class="mini-spinner"></div><span>Uploading...</span>';
+        
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 95) progress = 95;
+            progressFill.style.width = progress + '%';
+        }, 200);
+        
+        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+        
+        clearInterval(progressInterval);
+        progressFill.style.width = '100%';
+    }
+
+    function updateFileStatus(index, status, text) {
+        const item = document.getElementById(`file-progress-${index}`);
+        const statusElement = document.getElementById(`file-status-${index}`);
+        
+        item.classList.remove('border-banodoco-accent', 'bg-banodoco-accent', 'bg-opacity-10', 'border-gray-300');
+        
+        if (status === 'completed') {
+            item.classList.add('border-green-500', 'bg-green-500', 'bg-opacity-10');
+        } else if (status === 'error') {
+            item.classList.add('border-red-500', 'bg-red-500', 'bg-opacity-10');
+        }
+        
+        let icon = '';
+        if (status === 'completed') icon = '✓';
+        else if (status === 'error') icon = '✗';
+        
+        statusElement.innerHTML = `<span>${text}</span><span class="ml-2 text-base">${icon}</span>`;
+    }
+
+    function showSimpleStatus(message, color) {
+        const statusElement = document.getElementById('submission-status');
+        statusElement.textContent = message;
+        
+        if (message.includes('Submission successful')) {
+            statusElement.className = 'mt-4 text-center text-sm bg-green-500 text-white p-4 rounded-lg border-2 border-green-600 font-medium shadow-lg';
+        } else {
+            statusElement.className = `mt-4 text-center text-sm text-${color}-600`;
+        }
+    }
+
+    function resetForm() {
+        submissionForm.reset();
+        selectedFiles = [];
+        fileListDisplay.innerHTML = '';
+        dropzoneHelperText.textContent = '(Min 1 file)';
+        document.getElementById('banodocoPercent').textContent = '50%';
+        document.getElementById('youPercent').textContent = '50%';
+        document.getElementById('description').value = '';
+        document.getElementById('created-month').value = 'May';
+        document.getElementById('created-year').value = '2024';
+        submitButton.disabled = true;
+    }
+
+    // Q&A Toggle Function
+    function toggleQA(button) {
+      const qaItem = button.closest('.qa-item');
+      const answer = qaItem.querySelector('.qa-answer');
+      const icon = button.querySelector('.qa-icon');
+      const isOpen = answer.style.maxHeight && answer.style.maxHeight !== '0px';
+
+      if (isOpen) {
+        // Close the answer
+        answer.style.maxHeight = '0px';
+        icon.style.transform = 'rotate(0deg)';
+        button.setAttribute('aria-expanded', 'false');
+      } else {
+        // Open the answer
+        answer.style.maxHeight = answer.scrollHeight + 'px';
+        icon.style.transform = 'rotate(180deg)';
+        button.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+    // Load and display featured pieces from Supabase
+    async function loadFeaturedPieces() {
+      try {
+        const { data, error } = await supabase
+          .from('nft')
+          .select('*')
+          .eq('Status', 'Approved')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        allFeaturedPieces = [];
+        if (data) {
+          data.forEach(entry => {
+            const urls = Array.isArray(entry.urls) ? entry.urls : [];
+            urls.forEach(url => {
+                allFeaturedPieces.push({ ...entry, singleUrl: url });
+            });
+          });
+        }
+        
+        displayPage(1);
+
+      } catch (error) {
+        console.error('Error loading featured pieces:', error);
+        const featuredGrid = document.getElementById('featured-grid');
+        featuredGrid.innerHTML = `
+          <div class="col-span-full text-center py-12">
+            <p class="text-red-600 font-inter">Error loading featured pieces. Please try again later.</p>
+          </div>
+        `;
+      }
+    }
+
+    function displayPage(page) {
+      currentPage = page;
+      const featuredGrid = document.getElementById('featured-grid');
+      featuredGrid.innerHTML = '';
+
+      if (!allFeaturedPieces || allFeaturedPieces.length === 0) {
+        featuredGrid.innerHTML = `
+          <div class="col-span-full text-center py-12">
+            <p class="text-gray-600 font-inter">No approved pieces yet. Be the first to contribute!</p>
+          </div>
+        `;
+        renderPagination();
+        return;
+      }
+      
+      // Apply filter
+      let filteredPieces = allFeaturedPieces;
+      if (currentFilter === 'input') {
+        filteredPieces = allFeaturedPieces.filter(item => (item.Type || 'Input') === 'Input');
+      } else if (currentFilter === 'output') {
+        filteredPieces = allFeaturedPieces.filter(item => (item.Type || 'Input') === 'Output');
+      }
+      
+      const startIndex = (page - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const pageItems = filteredPieces.slice(startIndex, endIndex);
+
+      if (pageItems.length === 0 && filteredPieces.length > 0) {
+           featuredGrid.innerHTML = `
+              <div class="col-span-full text-center py-12">
+                  <p class="text-gray-600 font-inter">No items on this page.</p>
+              </div>
+          `;
+          renderPagination(filteredPieces);
+          return;
+      }
+
+      if (filteredPieces.length === 0) {
+        featuredGrid.innerHTML = `
+          <div class="col-span-full text-center py-12">
+            <p class="text-gray-600 font-inter">No ${currentFilter} items found.</p>
+          </div>
+        `;
+        renderPagination(filteredPieces);
+        return;
+      }
+
+      pageItems.forEach(entry => {
+        const url = entry.singleUrl;
+        const fileName = getFileNameFromUrl(url);
+        const fileExtension = getFileExtension(fileName);
+        const mediaType = getMediaType(fileExtension);
+        const isMobile = window.innerWidth <= 1024;
+        
+        const avatarInitials = entry.uploader_name ? 
+          entry.uploader_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 
+          'AN';
+
+        const avatarColor = getAvatarColor(entry.uploader_name || 'Anonymous');
+
+        const card = document.createElement('div');
+        card.className = 'group relative aspect-square bg-gray-900 rounded-lg overflow-visible shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer featured-item';
+        
+        // Create video element with appropriate mobile handling
+        let videoHtml = '';
+        if (mediaType === 'video') {
+          if (isMobile) {
+            videoHtml = `<video class="w-full h-full object-cover featured-video-mobile" muted loop preload="auto" playsinline>
+                          <source src="${url}" type="video/mp4">
+                        </video>`;
+          } else {
+            videoHtml = `<video class="w-full h-full object-cover" muted loop>
+                          <source src="${url}" type="video/mp4">
+                        </video>`;
+          }
+        }
+        
+        card.innerHTML = `
+          <div class="absolute inset-0 overflow-hidden rounded-lg">
+            ${mediaType === 'video' ? 
+              videoHtml :
+              mediaType === 'image' ? 
+              `<img src="${url}" alt="${fileName}" class="w-full h-full object-cover">` :
+              `<div class="w-full h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 flex items-center justify-center">
+                 <div class="text-center">
+                   <div class="w-16 h-16 mx-auto bg-gray-600 rounded-lg flex items-center justify-center mb-4">
+                     <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                     </svg>
+                   </div>
+                   <p class="text-white text-sm">${fileExtension.toUpperCase()}</p>
+                 </div>
+               </div>`
+            }
+          </div>
+
+          <!-- Top Left Avatar -->
+          <div class="absolute top-3 left-3 flex items-center gap-3 z-30">
+            ${entry.Avatar ?
+              `<img src="${entry.Avatar}" alt="${entry.uploader_name || 'anonymous'} avatar" class="w-8 h-8 rounded-full object-cover shadow-md border border-white/30">` :
+              `<div class="w-8 h-8 bg-gradient-to-br ${avatarColor} rounded-full flex items-center justify-center shadow-md border border-white/30">
+                <span class="text-white font-semibold text-xs">${avatarInitials}</span>
+              </div>`
+            }
+            <div class="glass-overlay text-white px-2 py-1 rounded text-xs font-medium">
+              ${entry.uploader_name || 'Anonymous'}
+            </div>
+          </div>
+
+          <!-- Top Right Type -->
+          <div class="absolute top-3 right-3 z-30">
+            <div class="px-2 py-0.5 rounded text-xs font-normal bg-white bg-opacity-20 text-white border border-white border-opacity-30">
+              ${entry.Type || 'Input'}
+            </div>
+          </div>
+
+          <!-- Bottom Left Description -->
+          ${entry.description ? `
+            <div class="absolute bottom-3 left-3 max-w-[50%] z-30">
+              <div class="bg-black bg-opacity-30 text-white text-xs rounded px-2 py-1 leading-snug font-light">
+                <p style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 10px; line-height: 1.3;">${entry.description}</p>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Bottom Right Creation Date -->
+          ${entry.Created ? `
+            <div class="absolute bottom-3 right-3 z-30">
+              <div class="bg-white bg-opacity-90 text-gray-800 text-xs rounded-md px-2 py-1 font-medium shadow-sm border border-white border-opacity-50">
+                ${formatCreatedDate(entry.Created)}
+              </div>
+            </div>
+          ` : ''}
+        `;
+
+        // Add video interaction functionality
+        if (mediaType === 'video') {
+          const video = card.querySelector('video');
+          
+          if (isMobile) {
+            // Mobile: ensure first frame shows and click to play/pause
+            video.addEventListener('loadeddata', () => {
+              video.currentTime = 0;
+              video.pause();
+            });
+            
+            video.addEventListener('loadedmetadata', () => {
+              video.currentTime = 0;
+            });
+            
+            // Double-tap detection for mobile
+            let tapCount = 0;
+            let tapTimer = null;
+            
+            card.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              tapCount++;
+              
+              if (tapCount === 1) {
+                // First tap - wait for potential second tap
+                tapTimer = setTimeout(() => {
+                  // Single tap - play/pause video
+                  if (video.paused) {
+                    // Pause all other featured videos first
+                    document.querySelectorAll('.featured-video-mobile').forEach(otherVideo => {
+                      if (otherVideo !== video && !otherVideo.paused) {
+                        otherVideo.pause();
+                        otherVideo.currentTime = 0;
+                      }
+                    });
+                    video.play().catch(e => console.log('Featured video play failed:', e));
+                  } else {
+                    video.pause();
+                    video.currentTime = 0;
+                  }
+                  tapCount = 0;
+                }, 300); // Wait 300ms for second tap
+              } else if (tapCount === 2) {
+                // Double tap - open lightbox
+                clearTimeout(tapTimer);
+                showLightbox(url, mediaType);
+                tapCount = 0;
+              }
+            });
+            
+            // Ensure video starts paused and at beginning
+            video.pause();
+            video.currentTime = 0;
+            
+            // Force load the video to show first frame
+            video.load();
+          } else {
+            // Desktop: hover to play
+            card.addEventListener('mouseenter', () => video.play().catch(e => {}));
+            card.addEventListener('mouseleave', () => {
+              video.pause();
+              video.currentTime = 0;
+            });
+            
+            // Desktop: click to open lightbox
+            card.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation(); 
+              showLightbox(url, mediaType);
+            });
+          }
+        } else {
+          // Non-video: always click to open lightbox
+          card.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); 
+            showLightbox(url, mediaType);
+          });
+        }
+
+        featuredGrid.appendChild(card);
+      });
+
+      renderPagination(filteredPieces);
+    }
+
+    function renderPagination(pieces) {
+      const paginationControls = document.getElementById('pagination-controls');
+      paginationControls.innerHTML = '';
+      const totalPages = Math.ceil(pieces.length / itemsPerPage);
+
+      if (totalPages <= 1) {
+          return;
+      }
+
+      for (let i = 1; i <= totalPages; i++) {
+          const pageButton = document.createElement('button');
+          pageButton.textContent = i;
+          pageButton.className = `px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+              i === currentPage 
+              ? 'bg-banodoco-purple text-white shadow-md' 
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+          }`;
+          pageButton.onclick = () => {
+            displayPage(i);
+            // Smooth scroll to featured section
+            const featuredSection = document.getElementById('featured-section');
+            if (featuredSection) {
+              featuredSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          };
+          paginationControls.appendChild(pageButton);
+      }
+    }
+
+    // Helper functions
+    function getFileNameFromUrl(url) {
+      return url.split('/').pop() || 'unknown';
+    }
+
+    function getFileExtension(fileName) {
+      return fileName.split('.').pop().toLowerCase();
+    }
+
+    function getMediaType(extension) {
+      const videoExts = ['mp4', 'mov', 'avi', 'webm', 'mkv'];
+      const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+      
+      if (videoExts.includes(extension)) return 'video';
+      if (imageExts.includes(extension)) return 'image';
+      return 'file';
+    }
+
+    function formatCreatedDate(dateValue) {
+      if (!dateValue) return '';
+      
+      try {
+        // Handle different date formats
+        let date;
+        
+        if (typeof dateValue === 'string') {
+          // If it's already a formatted string like "May 2024", return as is
+          if (dateValue.match(/^[A-Za-z]+ \d{4}$/)) {
+            return dateValue;
+          }
+          
+          // Try to parse as ISO string or other common formats
+          date = new Date(dateValue);
+        } else {
+          date = new Date(dateValue);
+        }
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          // If invalid, try to extract month/year from string
+          if (typeof dateValue === 'string') {
+            const monthYearMatch = dateValue.match(/(\w+)\s+(\d{4})/);
+            if (monthYearMatch) {
+              return `${monthYearMatch[1]} ${monthYearMatch[2]}`;
+            }
+          }
+          return 'Unknown';
+        }
+        
+        return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      } catch (error) {
+        console.log('Date formatting error:', error, dateValue);
+        return 'Unknown';
+      }
+    }
+
+    function getAvatarColor(name) {
+      const colors = [
+        'from-purple-500 to-purple-700',
+        'from-blue-500 to-blue-700',
+        'from-green-500 to-green-700',
+        'from-red-500 to-red-700',
+        'from-yellow-500 to-yellow-700',
+        'from-pink-500 to-pink-700',
+        'from-indigo-500 to-indigo-700',
+        'from-teal-500 to-teal-700',
+        'from-orange-500 to-orange-700',
+        'from-emerald-500 to-emerald-700'
+      ];
+      
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      
+      return colors[Math.abs(hash) % colors.length];
+    }
+
+    // Load featured pieces when the page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      // Wait a bit to ensure Supabase is initialized
+      setTimeout(loadFeaturedPieces, 500);
+    });
+
+    // Scroll-triggered animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const animationObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          // Stop observing once animated
+          animationObserver.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
+
+    // Observe all elements with scroll animation classes
+    document.addEventListener('DOMContentLoaded', () => {
+      const scrollElements = document.querySelectorAll('.scroll-fade-in, .scroll-fade-in-left, .scroll-fade-in-right, .scroll-scale-in');
+      scrollElements.forEach(el => animationObserver.observe(el));
+    });
+
+    // Set dynamic transition delays for Q&A items based on their order
+    document.addEventListener('DOMContentLoaded', () => {
+      const qaItems = document.querySelectorAll('#qa-section .qa-item');
+      qaItems.forEach((item, index) => {
+        // Set delay: first item 0.1s, second 0.2s, etc.
+        item.style.transitionDelay = ((index + 1) * 0.1) + 's';
+      });
+    });
+
+    // Mobile video click-to-play functionality
+    function initializeMobileVideoControls() {
+      const isMobile = window.innerWidth <= 1024;
+      
+      if (isMobile) {
+        // Handle static mobile videos in hero section
+        const mobileVideos = document.querySelectorAll('.mobile-video');
+        mobileVideos.forEach(video => {
+          // Remove any existing listeners by cloning the element
+          const newVideo = video.cloneNode(true);
+          video.parentNode.replaceChild(newVideo, video);
+          
+          // Double-tap detection for mobile hero videos
+          let tapCount = 0;
+          let tapTimer = null;
+          
+          newVideo.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            tapCount++;
+            
+            if (tapCount === 1) {
+              // First tap - wait for potential second tap
+              tapTimer = setTimeout(() => {
+                // Single tap - play/pause video
+                if (newVideo.paused) {
+                  // Pause all other mobile videos first
+                  document.querySelectorAll('.mobile-video').forEach(otherVideo => {
+                    if (otherVideo !== newVideo && !otherVideo.paused) {
+                      otherVideo.pause();
+                      otherVideo.currentTime = 0;
+                    }
+                  });
+                  
+                  newVideo.play().catch(e => console.log('Video play failed:', e));
+                } else {
+                  newVideo.pause();
+                  newVideo.currentTime = 0;
+                }
+                tapCount = 0;
+              }, 300); // Wait 300ms for second tap
+            } else if (tapCount === 2) {
+              // Double tap - open lightbox
+              clearTimeout(tapTimer);
+              showLightbox(newVideo.src, 'video');
+              tapCount = 0;
+            }
+          });
+          
+          // Ensure video starts paused on mobile
+          newVideo.pause();
+          newVideo.currentTime = 0;
+          
+          // Ensure first frame is visible
+          newVideo.addEventListener('loadeddata', () => {
+            newVideo.currentTime = 0;
+            newVideo.pause();
+          });
+          
+          newVideo.addEventListener('loadedmetadata', () => {
+            newVideo.currentTime = 0;
+          });
+          
+          // Force load the video to show first frame
+          newVideo.load();
+        });
+      }
+    }
+
+    // Initialize mobile video controls when DOM is ready
+    document.addEventListener('DOMContentLoaded', initializeMobileVideoControls);
+
+    // Re-initialize on window resize
+    window.addEventListener('resize', () => {
+      setTimeout(initializeMobileVideoControls, 100);
+    });
+
+    // Modify the featured pieces video creation for mobile
+    function createFeaturedVideoElement(url, isMobile) {
+      if (isMobile) {
+        return `<video class="w-full h-full object-cover featured-video-mobile" muted loop preload="metadata" playsinline>
+                 <source src="${url}" type="video/mp4">
+               </video>`;
+      } else {
+        return `<video class="w-full h-full object-cover" muted loop>
+                 <source src="${url}" type="video/mp4">
+               </video>`;
+      }
+    }
+  </script>
+</body>
+</html>
