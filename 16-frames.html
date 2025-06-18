@@ -521,6 +521,51 @@
       height: 4px;
       z-index: 10; /* Ensure it appears above static line */
       pointer-events: none; /* Let hero-title receive hover */
+      display: none; /* Hide the animated line segments */
+    }
+
+    /* Line animation container */
+    .line-animation-container {
+      position: relative;
+      width: 64px;
+      height: 4px;
+      margin: 4px auto 1.5rem auto;
+      overflow: visible;
+    }
+
+    /* Breakable line container */
+    .breakable-line {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      gap: 1px;
+      transition: all 0.6s ease-out;
+    }
+
+    /* Individual line segments */
+    .line-segment {
+      flex: 1;
+      height: 100%;
+      background: linear-gradient(90deg, #5353a5, #FCC061);
+      border-radius: 1px;
+      transition: all 0.6s ease-out;
+      transform-origin: center;
+    }
+
+    /* Replacement line that appears */
+    .replacement-line {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #5353a5, #FCC061);
+      border-radius: 2px;
+      opacity: 0;
+      transition: all 0.8s ease-out;
+      transition-delay: 0.05s;
+      display: none; /* Hide the replacement line */
     }
 
     /* Individual segment styling */
@@ -1327,6 +1372,7 @@
       height: 4px;
       z-index: 10; /* Ensure it appears above static line */
       pointer-events: none; /* Let hero-title receive hover */
+      display: none; /* Hide the animated line segments */
     }
 
     /* Individual segment styling */
@@ -1449,6 +1495,41 @@
         margin-top: 1.5rem !important;
       }
     }
+
+    /* Hover animations triggered by title hover */
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(1) { transform: translateX(-42px) rotate(-5deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(2) { transform: translateX(-36px) rotate(-8deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(3) { transform: translateX(-30px) rotate(3deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(4) { transform: translateX(-24px) rotate(-2deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(5) { transform: translateX(-18px) rotate(6deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(6) { transform: translateX(-12px) rotate(-4deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(7) { transform: translateX(-6px) rotate(2deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(8) { transform: translateX(0px) rotate(-7deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(9) { transform: translateX(6px) rotate(7deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(10) { transform: translateX(12px) rotate(-2deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(11) { transform: translateX(18px) rotate(4deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(12) { transform: translateX(24px) rotate(-6deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(13) { transform: translateX(30px) rotate(2deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(14) { transform: translateX(36px) rotate(-3deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(15) { transform: translateX(42px) rotate(8deg); }
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment:nth-child(16) { transform: translateX(48px) rotate(5deg); }
+
+    /* Fade out segments and bring in replacement line on hover */
+    .hero-title-enhanced:hover ~ .line-animation-container .line-segment {
+      opacity: 0.3;
+    }
+
+    .hero-title-enhanced:hover ~ .line-animation-container .replacement-line {
+      width: 100%;
+      opacity: 1;
+    }
+
+    /* Mobile responsive adjustments for line animation */
+    @media (max-width: 1024px) {
+      .line-animation-container {
+        margin: 4px auto 1rem auto;
+      }
+    }
   </style>
 </head>
 
@@ -1477,7 +1558,29 @@
           <h1 class="hero-title-enhanced text-4xl lg:text-6xl xl:text-7xl font-space-grotesk font-bold leading-tight mb-2 lg:mb-3">
             16 Frames
           </h1>
-          <div class="w-16 h-1 bg-gradient-to-r from-banodoco-accent to-banodoco-purple mx-auto mb-4 lg:mb-6 rounded-full"></div>
+          <div class="line-animation-container">
+            <!-- 16 breakable segments -->
+            <div class="breakable-line">
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+              <div class="line-segment"></div>
+            </div>
+            <!-- New line that appears and grows -->
+            <div class="replacement-line"></div>
+          </div>
           <h2 class="text-lg lg:text-xl xl:text-2xl font-space-grotesk font-medium text-gray-600 leading-relaxed max-w-2xl mx-auto">
             Help me tell the story of the AnimateDiff Ecosystem
           </h2>
