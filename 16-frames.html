@@ -60,6 +60,13 @@
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
   
   <style>
+    /* Disable conflicting margin from external stylesheet for tablet view */
+    @media (min-width: 768px) and (max-width: 1024px) {
+        #header {
+            margin-bottom: 0 !important;
+        }
+    }
+    
     /* Essential custom animations that can't be replaced with Tailwind */
     @keyframes floatUp {
       0%   { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
@@ -380,8 +387,18 @@
     }
 
     /* Override excessive margin from main.css */
-    .content-section:first-of-type {
-        margin-top: -2rem !important;
+    /* CONSOLIDATED SPACING FIX */
+    @media (min-width: 1024px) {
+      .container {
+        padding-top: 2rem !important; /* Ensure consistent padding above header */
+      }
+      .container .site-header {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .content-section:first-of-type {
+        margin-top: 2rem !important; /* Match the 2rem padding above for balanced spacing */
+      }
     }
 
     /* Add proper spacing above title on mobile */
@@ -395,6 +412,13 @@
     @media (max-width: 768px) {
       .content-section:first-of-type {
         margin-top: 1.5rem !important;
+      }
+    }
+
+    /* Fix desktop spacing to match the 2rem container padding above */
+    @media (min-width: 1025px) {
+      .content-section:first-of-type {
+        margin-top: 0rem !important; /* Remove negative margin for balanced spacing */
       }
     }
 
@@ -1271,7 +1295,7 @@
       display: flex !important;
       justify-content: center !important;
       padding: 0 !important;
-      margin: 0 !important; /* Reset margin for mobile */
+      margin: 0 !important;
     }
     
     .site-header a {
@@ -1357,8 +1381,72 @@
 
     /* Only reduce space on larger screens */
     @media (min-width: 1024px) {
-      .site-header {
-        margin: 0 0 -3rem 0 !important; /* Reduce space below logo on desktop only */
+      .container .site-header {
+        padding-top: 0 !important;
+        margin: 0 0 0 0 !important; /* No negative margin since content-section already has -2rem */
+      }
+    }
+
+    /* POM section spacing adjustments for smaller screens */
+    @media (max-width: 1023px) {
+      /* Add more spacing before POM on smaller screens */
+      .fade-in-up.stagger-9.text-center {
+        margin-top: 2rem !important;
+        margin-bottom: 0.5rem !important;
+      }
+    }
+
+    /* Override any conflicting margin rules for the POM container specifically */
+    .fade-in-up.stagger-9.text-center.mt-4 {
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 1023px) {
+      .fade-in-up.stagger-9.text-center.mt-4 {
+        margin-top: 2rem !important;
+        margin-bottom: 0.5rem !important;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .fade-in-up.stagger-9.text-center.mt-4 {
+        margin-top: 1.5rem;
+      }
+    }
+
+    /* Override main.css interference with container padding and content-section margins */
+    .container {
+      padding-top: 2rem !important; /* Force pt-8 equivalent on all screens */
+    }
+    
+    /* Fix desktop spacing to match the 2rem container padding above */
+    @media (min-width: 1025px) {
+      .content-section:first-of-type {
+        margin-top: 0rem !important; /* Remove negative margin for balanced spacing */
+      }
+    }
+
+    /* Override excessive margin from main.css */
+    /* FINAL SPACING FIX: */
+    /* This rule is scoped specifically to this page context to override main.css */
+    /* and correctly balance the header spacing on desktop views. */
+    @media (min-width: 1024px) {
+      body.ownership-page .container {
+        padding-top: 2rem !important;
+      }
+      body.ownership-page .content-section:first-of-type {
+        margin-top: 1.25rem !important; /* 20px - user adjusted for perfect spacing */
+      }
+      body.ownership-page .site-header {
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+    }
+
+    /* Ensure mobile header doesn't overlap content */
+    @media (max-width: 768px) {
+      .content-section:first-of-type {
+        margin-top: 1.5rem !important;
       }
     }
   </style>
@@ -1370,9 +1458,10 @@
   <!-- POM Border -->
   <div class="inner-border"></div>
 
-  <div class="container max-w-6xl mx-auto px-8 pt-8 pb-6 relative z-10 overflow-x-hidden">
+  <!-- This container now uses inline styles to force correct spacing -->
+  <div class="container max-w-6xl mx-auto px-8" style="padding-top: 2.5rem; padding-bottom: 1.5rem;">
     <!-- Site Header -->
-    <div id="header"></div>
+    <div id="header" style="margin-bottom:0!important"></div>
     <script>
       fetch('src/components/header.html')
         .then(response => response.text())
@@ -1380,7 +1469,7 @@
     </script>
 
     <!-- Hero Section -->
-    <section class="content-section mb-16">
+    <section class="content-section" style="margin-top: 2rem; margin-bottom: 3rem;">
       <!-- Centered Single Column Layout -->
       <div class="max-w-4xl mx-auto">
         <!-- Enhanced Title Section with Better Hierarchy -->
@@ -1414,7 +1503,7 @@
             
             <!-- Content -->
             <div class="relative z-10">
-              <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 max-w-2xl mx-auto">
+              <div class="grid grid-cols-3 lg:grid-cols-3 gap-4 lg:gap-6 max-w-2xl mx-auto">
                 <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
                   <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_01.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 1">
                 </div>
@@ -1436,7 +1525,7 @@
               </div>
               
               <div class="text-center mt-6">
-                <p class="text-xs lg:text-sm text-gray-500 font-inter">
+                <p class="text-gray-500 font-inter" style="font-size: 14px; line-height: 1.2;">
                   Source: <a href="https://animatediff.github.io/" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200 underline">AnimateDiff project page</a>
                 </p>
               </div>
@@ -1451,7 +1540,7 @@
           </p>
 
           <p class="enhanced-paragraph fade-in-up stagger-3">
-            This is thanks to it being <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/huggingface.png">released openly</span> &mdash; which meant that thousands of developers could work together informally to extend its capabilities.
+            It punched far above its weight thanks to being <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/huggingface.png">released openly</span> &mdash; which meant that thousands of developers and tinkerers could work together informally to extend its capabilities.
           </p>
 
           <p class="enhanced-paragraph fade-in-up stagger-3">
@@ -1459,15 +1548,15 @@
           </p>
           
           <p class="enhanced-paragraph fade-in-up stagger-4">
-            I would like to tell the story of this collected effort by explaining the advances and innovations that fueled it, and showing the art that was created because of them. To do this, I'll create a <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Are you a dev/designer who wants to help me make this? <a href='mailto:peter@omalley.io'>Get in touch</a>.">visual explainer</span> using a mixture of 'inputs' like test generations and 'outputs' like completed artworks - each of which will be made into an NFT.
+            I would like to tell the story of this collected effort by explaining the advances and innovations that fueled it, and showing the art that was created because of them. To do this, I'll create a <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Are you a dev/designer who wants to help me make this? <a href='mailto:peter@omalley.io'>Get in touch</a>.">visual explainer</span> using a mixture of 'inputs' like test generations and 'outputs' like completed artworks - each of which will be made into <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Many in our community will have a viscerally negative reaction to the idea of including crypto - including <a href='https://x.com/peteromallet/status/1540633365505769472' target='_blank' rel='noopener noreferrer'>past me</a>.<br><br>While a lot of people have used crypto in fraudulent and dishonest ways, this is also true of most immature financial instruments.<br><br>I've now come to believe that it not only isn't inherently bad, but it has the potential to be extremely positive when paired with open source AI - an area that is undoubtedly valuable, but not very well-valued in our existing economy.<br><br>However, to not be destructive, it must be approached with extreme thoughtfulness and care - which is what I'm aiming to do.">an NFT</span> if permitted by the creator.
           </p>
           
           <p class="enhanced-paragraph fade-in-up stagger-6">
-            My goal will be to help people understand the struggle that went into these developments, while getting recognition for our collective achievements at an important time in art history. Earnings will be shared with those who contribute generations or art, with Banodoco's proceeds split equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">providing compute for open research and training</span>.
+            My goal will be to help people understand the struggle that went into these developments, while getting recognition for the community's collective achievements at an important time in art history. Earnings will be shared with those who contribute generations or art, with Banodoco's proceeds split equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">providing compute for open research and training</span>.
           </p> 
           
           <p class="enhanced-paragraph fade-in-up stagger-8">
-            If you're seeing this and were involved in the AnimateDiff ecosystem, I'd highly appreciate your participation. 
+            If you're seeing this and were involved in the AnimateDiff ecosystem, your participation would be hugely helpful. In any case, I'd very much appreciate your support.
           </p>
           
           <div class="fade-in-up stagger-9 text-center mt-4 lg:mt-6">
