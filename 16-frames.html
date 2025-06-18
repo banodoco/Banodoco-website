@@ -529,7 +529,7 @@
       position: relative;
       width: 64px;
       height: 4px;
-      margin: 4px auto 1.5rem auto;
+      margin: 20px auto calc(1.5rem + 10px) auto;
       overflow: visible;
     }
 
@@ -540,17 +540,38 @@
       height: 100%;
       gap: 1px;
       transition: all 0.6s ease-out;
+      justify-content: center;
+      align-items: center;
     }
 
     /* Individual line segments */
     .line-segment {
-      flex: 1;
-      height: 100%;
-      background: linear-gradient(90deg, #5353a5, #FCC061);
-      border-radius: 1px;
+      width: 6px;
+      height: 6px;
+      background: #5353a5;
+      border-radius: 0px;
       transition: all 0.6s ease-out;
       transform-origin: center;
+      flex-shrink: 0;
     }
+
+    /* Default state - halfway through the scattering animation */
+    .line-segment:nth-child(1) { transform: translateX(-21px) rotate(-2.5deg); }
+    .line-segment:nth-child(2) { transform: translateX(-18px) rotate(-4deg); }
+    .line-segment:nth-child(3) { transform: translateX(-15px) rotate(1.5deg); }
+    .line-segment:nth-child(4) { transform: translateX(-12px) rotate(-1deg); }
+    .line-segment:nth-child(5) { transform: translateX(-9px) rotate(3deg); }
+    .line-segment:nth-child(6) { transform: translateX(-6px) rotate(-2deg); }
+    .line-segment:nth-child(7) { transform: translateX(-3px) rotate(1deg); }
+    .line-segment:nth-child(8) { transform: translateX(0px) rotate(-3.5deg); }
+    .line-segment:nth-child(9) { transform: translateX(3px) rotate(3.5deg); }
+    .line-segment:nth-child(10) { transform: translateX(6px) rotate(-1deg); }
+    .line-segment:nth-child(11) { transform: translateX(9px) rotate(2deg); }
+    .line-segment:nth-child(12) { transform: translateX(12px) rotate(-3deg); }
+    .line-segment:nth-child(13) { transform: translateX(15px) rotate(1deg); }
+    .line-segment:nth-child(14) { transform: translateX(18px) rotate(-1.5deg); }
+    .line-segment:nth-child(15) { transform: translateX(21px) rotate(4deg); }
+    .line-segment:nth-child(16) { transform: translateX(24px) rotate(2.5deg); }
 
     /* Replacement line that appears */
     .replacement-line {
@@ -680,21 +701,6 @@
       box-shadow: 0 4px 15px rgba(252, 192, 97, 0.1);
     }
 
-    /* First paragraph gets special treatment */
-    .enhanced-paragraph:first-of-type {
-      font-size: 1.125rem;
-      line-height: 1.8;
-      font-weight: 500;
-      background: linear-gradient(135deg, rgba(252, 192, 97, 0.08) 0%, rgba(83, 83, 165, 0.06) 100%);
-      border-left-color: rgba(252, 192, 97, 0.3);
-    }
-
-    @media (min-width: 1024px) {
-      .enhanced-paragraph:first-of-type {
-        font-size: 1.25rem;
-        line-height: 1.8;
-      }
-    }
 
     /* Enhanced body text container */
     .enhanced-body-text {
@@ -717,17 +723,6 @@
       );
     }
 
-    @media (max-width: 1024px) {
-      .enhanced-body-text::before {
-        display: none;
-      }
-      
-      .enhanced-paragraph {
-        margin-left: 0;
-        padding-left: 0.5rem;
-        border-left-width: 2px;
-      }
-    }
 
     /* Hover Box for key phrases */
     #key-phrase-hover-box {
@@ -1641,7 +1636,7 @@
       <!-- Centered Single Column Layout -->
       <div class="max-w-4xl mx-auto">
         <!-- Enhanced Title Section with Better Hierarchy -->
-        <div class="text-center mb-8 lg:mb-10 fade-in-up">
+        <div class="text-center mb-6 lg:mb-8 fade-in-up">
           <h1 class="hero-title-enhanced text-4xl lg:text-6xl xl:text-7xl font-space-grotesk font-bold leading-tight mb-2 lg:mb-3">
             16 Frames
           </h1>
@@ -1669,17 +1664,17 @@
             <div class="replacement-line"></div>
           </div>
           <h2 class="text-lg lg:text-xl xl:text-2xl font-space-grotesk font-medium text-gray-600 leading-relaxed max-w-2xl mx-auto">
-            Help me tell the story of the AnimateDiff Ecosystem
+            Help me tell the story of the AnimateDiff ecosystem
           </h2>
         </div>
         
         <!-- Single Column Text Content -->
         <div class="enhanced-body-text space-y-2 text-base lg:text-lg font-inter text-gray-700 leading-relaxed max-w-4xl mx-auto">
-          <p class="first-paragraph-no-hover fade-in-up stagger-1 text-lg lg:text-xl leading-relaxed mb-0">
-            <span class="key-phrase">AnimateDiff</span> was one of the first popular video models, created by Yuwei Guo, Ceyuan Yang, and team.
+          <p class="enhanced-paragraph fade-in-up stagger-1 text-lg lg:text-xl leading-relaxed mb-0">
+            AnimateDiff was one of the first popular video models, created by Yuwei Guo, Ceyuan Yang, and team.
           </p>
-          <p class="first-paragraph-no-hover fade-in-up stagger-1 text-lg lg:text-xl leading-relaxed mb-6">
-            When it launched in 2023, it could generate just <span class="key-phrase">16 low resolution frames</span> from a text prompt:
+          <p class="enhanced-paragraph fade-in-up stagger-1 text-lg lg:text-xl leading-relaxed mb-6">
+            When it launched in 2023, it could generate just 16 low resolution frames from a text prompt:
           </p>
           
           <!-- Spacer to equalise space above -->
@@ -1775,10 +1770,19 @@
       
       <!-- Input/Output Toggle -->
       <div class="flex justify-center mb-8">
-        <div class="bg-white rounded-lg p-1 shadow-sm border border-gray-200">
-          <button id="filter-all" class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-banodoco-purple text-white">All</button>
-          <button id="filter-input" class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-800">Inputs</button>
-          <button id="filter-output" class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-800">Outputs</button>
+        <div class="bg-white rounded-lg p-1 shadow-sm border border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div class="flex">
+            <button id="filter-all" class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-banodoco-purple text-white">All</button>
+            <button id="filter-input" class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-800">Inputs</button>
+            <button id="filter-output" class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-800">Outputs</button>
+          </div>
+          
+          <!-- Creator Filter -->
+          <div class="border-t sm:border-t-0 sm:border-l border-gray-200 pt-2 sm:pt-0 sm:pl-2 sm:ml-2">
+            <select id="filter-creator" class="w-full px-3 py-2 text-sm font-medium rounded-md border border-gray-300 transition-colors duration-200 focus:border-banodoco-purple focus:outline-none bg-white text-gray-600">
+              <option value="">All Creators</option>
+            </select>
+          </div>
         </div>
       </div>
       
@@ -2148,9 +2152,10 @@
           </button>
           <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
             <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed space-y-4">
-                <p>There's a craving for realness in the crypto world - for projects and people who aren't doing things for the sake of money. This is a large part of why Beeple's work was valuable - his years of effort with no reward was undeniable evidence that he was 'real'.</p>
-                <p>I believe that our ecosystem is also very 'real'; it involves hundreds of people working for free over a long period of time, creating art for no incentive, and pioneering technology and artistic approaches, often years before closed source companies catch up.</p>
-                <p>Given the artistic approaches pioneered with AnimateDiff, its prominence as an early AI video model and the utopian nature of this community, I believe that it in particular will have significance from an art history perspective.</p>
+                <p>First of all, I don't know if it'll work. I have very limited expereince in the crypto space.</p>
+                <p>However, I do believe that there's a craving for realness in the crypto world - for projects and people who aren't doing things for the sake of money. I believe that this is a large part of why Beeple's work was valuable - his years of effort with no reward was undeniable evidence that he was 'real'.</p>
+                <p>I believe that our ecosystem is also very 'real'; it involves hundreds of people working for free over a long period of time, creating art, tools, and technology for no incentive - often years before closed source companies caught up.</p> 
+                <p>Given the artistic approaches pioneered with AnimateDiff, its prominence as an early AI video model and the utopian nature of this community, I believe that it in particular will have significance from an art history perspective - video is the primary artistic medium today and our community pioneered many approaches that are in the midst of revolutionising it. </p>
                 <p>I believe that - if we communicate this well - people in the crypto world will understand the significance of this, and as people understand the importance of open models and innovation for artistic expression that significance will grow with time.</p>
             </div>
           </div>
@@ -2228,6 +2233,7 @@
     let currentPage = 1;
     const itemsPerPage = 6;
     let currentFilter = 'all'; // Track current filter state
+    let currentCreator = ''; // Track current creator filter
 
     // Hover-box global variables
     let hoverBox;
@@ -2310,6 +2316,16 @@
           });
         }
       });
+
+      // Creator filter functionality
+      const creatorSelect = document.getElementById('filter-creator');
+      if (creatorSelect) {
+        creatorSelect.addEventListener('change', () => {
+          currentCreator = creatorSelect.value;
+          currentPage = 1; // Reset to first page
+          displayPage(1);
+        });
+      }
 
       // Initialize Hover Box
       initializeHoverBox();
@@ -2851,6 +2867,7 @@
         }
         
         displayPage(1);
+        populateCreatorFilter(); // Populate creator dropdown after loading data
 
       } catch (error) {
         console.error('Error loading featured pieces:', error);
@@ -2884,6 +2901,11 @@
         filteredPieces = allFeaturedPieces.filter(item => (item.Type || 'Input') === 'Input');
       } else if (currentFilter === 'output') {
         filteredPieces = allFeaturedPieces.filter(item => (item.Type || 'Input') === 'Output');
+      }
+      
+      // Apply creator filter
+      if (currentCreator) {
+        filteredPieces = filteredPieces.filter(item => (item.uploader_name || 'Anonymous') === currentCreator);
       }
       
       const startIndex = (page - 1) * itemsPerPage;
@@ -3702,6 +3724,25 @@
 
         hoverBox.style.left = `${x}px`;
         hoverBox.style.top = `${y}px`;
+    }
+
+    function populateCreatorFilter() {
+      const creatorSelect = document.getElementById('filter-creator');
+      if (!creatorSelect || !allFeaturedPieces) return;
+
+      // Get unique creators
+      const creators = [...new Set(allFeaturedPieces.map(piece => piece.uploader_name || 'Anonymous'))].sort();
+      
+      // Clear existing options except "All Creators"
+      creatorSelect.innerHTML = '<option value="">All Creators</option>';
+      
+      // Add creator options
+      creators.forEach(creator => {
+        const option = document.createElement('option');
+        option.value = creator;
+        option.textContent = creator;
+        creatorSelect.appendChild(option);
+      });
     }
   </script>
 </body>
