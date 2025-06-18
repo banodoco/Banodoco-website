@@ -2273,6 +2273,7 @@
     let currentHoverElement = null;
     let isStaticHover = false;
     let hoverBoxClearTimeout; // manages delayed clearing of hover box content
+    let staticHoverEntryPosition = { x: 0, y: 0 }; // Track cursor entry position for static hovers
 
     // Mobile support: keep references to listeners that close the hover-box on outside tap / scroll
     let touchOutsideListener, touchScrollListener;
@@ -3476,6 +3477,8 @@
         const onMouseEnter = (e) => {
             // If the mouse enters a trigger, clear any pending hide actions
             clearTimeout(hideTimeout);
+            // Store cursor entry position for static hover boxes
+            staticHoverEntryPosition = { x: e.clientX, y: e.clientY };
             // Show the hover box for the current element
             showHoverBox(e, e.currentTarget.dataset, e.currentTarget);
         };
@@ -3753,23 +3756,23 @@
     function positionStaticHoverBox(element) {
         if (!hoverBox || !element) return;
 
-        const rect = element.getBoundingClientRect();
         const boxWidth = hoverBox.offsetWidth || 200;
         const boxHeight = hoverBox.offsetHeight || 100;
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const offset = 10;
 
-        let x = rect.left + (rect.width / 2) - (boxWidth / 2);
-        let y = rect.bottom + offset;
+        // Use cursor entry position instead of element center
+        let x = staticHoverEntryPosition.x - (boxWidth / 2);
+        let y = staticHoverEntryPosition.y + offset;
 
         // Keep within viewport horizontally
         if (x < 10) x = 10;
         if (x + boxWidth > viewportWidth - 10) x = viewportWidth - boxWidth - 10;
 
-        // If it would go below viewport, show above
+        // If it would go below viewport, show above cursor entry point
         if (y + boxHeight > viewportHeight - 10) {
-            y = rect.top - boxHeight - offset;
+            y = staticHoverEntryPosition.y - boxHeight - offset;
         }
 
         // Ensure not above viewport top
