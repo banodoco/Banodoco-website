@@ -1550,14 +1550,43 @@
     .hover-image-container {
       position: relative;
       display: inline-block;
+      min-width: 100px; /* Minimum size while loading */
+      min-height: 100px; /* Minimum size while loading */
     }
 
+    .hover-image-container img {
+      display: block;
+      width: 100%;
+      height: auto;
+      transition: opacity 0.2s ease;
+    }
+    
+    /* Reserve space for info-box images */
+    .info-box-wrapper .hover-image-container {
+      width: auto; /* Let it size based on content */
+      max-width: 300px;
+    }
+    
+    /* Ensure loading spinner doesn't cause jumps */
+    .hover-box-loading {
+      min-width: unset !important;
+      min-height: unset !important;
+    }
+    
+    /* For single image hover boxes */
     .hover-image-container .hover-box-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100px; /* Match container minimum */
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
+    }
+    
+    .hover-image-container .hover-box-loading {
       z-index: 2;
     }
 
@@ -1611,40 +1640,6 @@
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
-    }
-
-    /* Improved hover box loading states for layout stability */
-    .hover-image-container {
-      min-width: 200px; /* Default minimum width for images */
-      min-height: 150px; /* Default minimum height for images */
-    }
-    
-    .hover-image-container img {
-      display: block;
-      width: 100%;
-      height: auto;
-      transition: opacity 0.2s ease;
-    }
-    
-    /* Reserve space for info-box images */
-    .info-box-wrapper .hover-image-container {
-      width: 100%;
-      max-width: 300px;
-      aspect-ratio: 16 / 9; /* Common aspect ratio, will adjust when image loads */
-    }
-    
-    /* Ensure loading spinner doesn't cause jumps */
-    .hover-box-loading {
-      min-width: unset !important;
-      min-height: unset !important;
-    }
-    
-    /* For single image hover boxes */
-    .hover-image-container .hover-box-loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 150px; /* Reasonable default */
     }
   </style>
 </head>
@@ -3543,25 +3538,20 @@
                 imgContainer.appendChild(loadingDiv);
                 
                 const img = document.createElement('img');
-                img.src = hoverImage;
                 img.style.opacity = '0'; // Start hidden
-                img.style.position = 'absolute'; // Position absolute to overlay loading state
-                img.style.top = '0';
-                img.style.left = '0';
+                img.style.display = 'block';
                 img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'contain';
+                img.style.height = 'auto';
                 
-                // Preload the image to get dimensions
-                const preloadImg = new Image();
-                preloadImg.onload = function() {
-                    // Calculate aspect ratio and set container dimensions
-                    const aspectRatio = this.width / this.height;
+                // Set up load event before setting src
+                img.addEventListener('load', function() {
+                    // Calculate dimensions when image loads
+                    const aspectRatio = img.naturalWidth / img.naturalHeight;
                     const maxWidth = 300; // Maximum width for hover images
                     const maxHeight = 400; // Maximum height for hover images
                     
-                    let finalWidth = this.width;
-                    let finalHeight = this.height;
+                    let finalWidth = img.naturalWidth;
+                    let finalHeight = img.naturalHeight;
                     
                     // Scale down if needed
                     if (finalWidth > maxWidth) {
@@ -3577,24 +3567,18 @@
                     imgContainer.style.width = finalWidth + 'px';
                     imgContainer.style.height = finalHeight + 'px';
                     
-                    // When actual image loads, show it
-                    img.addEventListener('load', () => {
-                        loadingDiv.style.display = 'none';
-                        img.style.opacity = '1';
-                        img.style.position = 'relative'; // Reset position
-                    });
-                };
+                    // Hide loading and show image
+                    loadingDiv.style.display = 'none';
+                    img.style.opacity = '1';
+                });
                 
-                preloadImg.onerror = function() {
-                    loadingDiv.innerHTML = '<div style="color: #666; font-size: 12px;">Failed to load</div>';
-                };
-                
-                preloadImg.src = hoverImage;
-                
-                // Handle load errors on actual image too
+                // Handle load errors
                 img.addEventListener('error', () => {
                     loadingDiv.innerHTML = '<div style="color: #666; font-size: 12px;">Failed to load</div>';
                 });
+                
+                // Now set the src to trigger loading
+                img.src = hoverImage;
                 
                 imgContainer.appendChild(img);
                 
