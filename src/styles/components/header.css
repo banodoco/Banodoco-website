@@ -91,7 +91,7 @@
 @media (max-width: 600px) {
   .site-header {
     transform: none; /* Remove translateX since we're centering */
-    padding: 0.25rem 0; /* Further reduced padding for mobile */
+    padding: 2rem 0 0.25rem 0; /* Increased top padding to 1rem for more space above icon */
   }
   .site-header img {
     margin-left: 0; /* Center the logo */
@@ -104,7 +104,7 @@
 @media (min-width: 601px) and (max-width: 1023px) {
   .site-header {
     margin-left: 0; /* Remove left margin since we're centering */
-    padding: 0.5rem 0; /* Reduced padding for tablet */
+    padding: 1rem 0 0.5rem 0; /* Increased top padding for better spacing */
   }
   .site-header img {
     margin-left: 0; /* Center the logo */

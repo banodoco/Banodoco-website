@@ -47,8 +47,21 @@ function initializePlantAnimation() {
                 
                 // Start at the bud's position
                 const budRect = initialBud.getBoundingClientRect();
-                const startX = budRect.left + budRect.width / 2;
-                const startY = budRect.top + budRect.height / 2;
+                
+                // On mobile, we need to account for scroll position since canvas is absolute
+                const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+                
+                let startX, startY;
+                if (window.innerWidth < 768) {
+                    // For mobile, use page coordinates (accounting for scroll)
+                    startX = budRect.left + scrollX + budRect.width / 2;
+                    startY = budRect.top + scrollY + budRect.height / 2;
+                } else {
+                    // For desktop, use viewport coordinates (canvas is fixed)
+                    startX = budRect.left + budRect.width / 2;
+                    startY = budRect.top + budRect.height / 2;
+                }
 
                 // Determine DPR (same logic as in plant-animation.js)
                 const dpr = window.innerWidth < 768 ? 1 : (window.devicePixelRatio || 1);
@@ -64,8 +77,11 @@ function initializePlantAnimation() {
                     // Stop the water animation by removing the pouring class
                     wateringContainer.classList.remove('pouring');
                     
+                    // Use longer duration on mobile for slower growth
+                    const growthDuration = window.innerWidth < 768 ? 10000 : 2000; // 10s on mobile (40% speed), 2s on desktop
+                    
                     // Start the growth from the sapling position with options, scaling coordinates by DPR
-                    startGrowth(startX * dpr, startY * dpr, { duration: 2000 });
+                    startGrowth(startX * dpr, startY * dpr, { duration: growthDuration });
                     
                     // Add fade-out class to the watering can
                     wateringContainer.classList.add('fade-out');

@@ -1382,10 +1382,13 @@ margin-top: 0;
 
 /* Prevent black flicker on mobile by setting canvas background */
 #plantCanvas {
-background-color: #f2f2ff;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-
+#plantCanvas.visible {
+  opacity: 1;
+}
 
 /* Add rounded corners to the renaissance video */
 #renaissance-video {

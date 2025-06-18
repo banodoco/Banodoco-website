@@ -9,10 +9,16 @@ const MAX_TREES = 100; // Maximum number of trees allowed
 
 function resizeCanvas() {
   const dpr = window.innerWidth < 768 ? 1 : (window.devicePixelRatio || 1);
+  
+  // On mobile, use document height to ensure canvas covers entire page
+  const canvasHeight = window.innerWidth < 768 
+    ? Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight)
+    : window.innerHeight;
+    
   canvas.width = window.innerWidth * dpr;
-  canvas.height = window.innerHeight * dpr;
+  canvas.height = canvasHeight * dpr;
   canvas.style.width = window.innerWidth + 'px';
-  canvas.style.height = window.innerHeight + 'px';
+  canvas.style.height = canvasHeight + 'px';
   // console.log('resizeCanvas called: canvas dimensions:', canvas.width, canvas.height, 'dpr:', dpr);
 }
 
@@ -29,6 +35,20 @@ window.addEventListener('resize', () => {
     baseSize = { width: canvas.width, height: canvas.height };
   }
 });
+
+// On mobile, also handle scroll events to ensure canvas remains properly sized
+if (window.innerWidth < 768) {
+  let scrollTimeout;
+  window.addEventListener('scroll', () => {
+    if (!animationStarted) {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        resizeCanvas();
+        baseSize = { width: canvas.width, height: canvas.height };
+      }, 100);
+    }
+  });
+}
 
 // ------------------------------------
 // Time-based helpers
@@ -91,7 +111,7 @@ class Branch {
         branches.push(new Branch(
           this.startX + Math.sin(this.angle * Math.PI / 180) * -this.length,
           this.startY + Math.cos(this.angle * Math.PI / 180) * -this.length,
-          newLength, newAngle, newWidth, this.depth - 1, GROWTH_DURATION_MS
+          newLength, newAngle, newWidth, this.depth - 1, this.growthDuration
         ));
       }
       this.finished = true;
@@ -192,7 +212,9 @@ class Seed {
       if (Math.random() < 0.02 && treeCount < MAX_TREES) {
         // Determine DPR (same logic as in resizeCanvas/startGrowth)
         const dpr = window.innerWidth < 768 ? 1 : (window.devicePixelRatio || 1);
-        branches.push(new Branch(this.x, baseSize.height, baseSize.height / 6, 0, 8 * dpr, 5)); // Apply dpr scaling
+        // Use appropriate growth duration based on device
+        const growthDuration = window.innerWidth < 768 ? 10000 : 2500; // 10s on mobile (40% speed), 2.5s on desktop
+        branches.push(new Branch(this.x, baseSize.height, baseSize.height / 6, 0, 8 * dpr, 5, growthDuration)); // Apply dpr scaling
         treeCount++;
       }
       this.planted = true;
