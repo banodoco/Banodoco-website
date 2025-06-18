@@ -1530,6 +1530,80 @@
         margin: 4px auto 1rem auto;
       }
     }
+
+    /* Hover box loading state styles */
+    .hover-box-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 100px;
+      min-height: 100px;
+      background: rgba(248, 250, 252, 0.95);
+      border-radius: 8px;
+    }
+
+    .hover-box-loading .spinner {
+      width: 24px;
+      height: 24px;
+      border-width: 3px;
+      border-top-color: #5353a5;
+    }
+
+    .hover-image-container {
+      position: relative;
+      display: inline-block;
+    }
+
+    .hover-image-container .hover-box-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2;
+    }
+
+    .hover-image-container img {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Grid loading states for multi-image hover boxes */
+    .hover-box-item {
+      position: relative;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .hover-box-item.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .hover-box-item .hover-box-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      min-width: auto;
+      min-height: auto;
+      background: rgba(248, 250, 252, 0.9);
+      border-radius: 4px;
+      z-index: 2;
+    }
+
+    .hover-box-item .hover-box-loading .spinner {
+      width: 16px;
+      height: 16px;
+      border-width: 2px;
+    }
+
+    .hover-box-item img {
+      position: relative;
+      z-index: 1;
+    }
   </style>
 </head>
 
@@ -2359,6 +2433,12 @@
     const dropzoneHelperText = document.getElementById('dropzone-helper-text');
     const submitButton = document.getElementById('submit-generations-button');
 
+    // Add event listener for permission checkbox
+    permissionCheckbox.addEventListener('change', updateSubmitButtonState);
+    
+    // Add event listener for name input
+    nameInput.addEventListener('input', updateSubmitButtonState);
+
     dropzone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (event) => {
         handleFiles(event.target.files);
@@ -2431,11 +2511,38 @@
         }
         
         if (selectedFiles.length >= 1) {
-            submitButton.disabled = false;
             dropzoneHelperText.textContent = selectedFiles.length + ' file(s) selected.';
         } else {
-            submitButton.disabled = true;
             dropzoneHelperText.textContent = '(Min 1 file)';
+        }
+        
+        updateSubmitButtonState();
+    }
+
+    function updateSubmitButtonState() {
+        const hasFiles = selectedFiles.length >= 1;
+        const hasPermission = permissionCheckbox.checked;
+        const hasName = nameInput.value.trim().length > 0;
+        const buttonTooltip = document.getElementById('button-tooltip');
+        
+        if (hasFiles && hasPermission && hasName) {
+            submitButton.disabled = false;
+        } else {
+            submitButton.disabled = true;
+            
+            // Build tooltip message based on what's missing
+            const missing = [];
+            if (!hasName) missing.push('enter your name');
+            if (!hasFiles) missing.push('upload files');
+            if (!hasPermission) missing.push('grant permission');
+            
+            if (missing.length === 1) {
+                buttonTooltip.textContent = `You need to ${missing[0]} to submit`;
+            } else if (missing.length === 2) {
+                buttonTooltip.textContent = `You need to ${missing[0]} and ${missing[1]} to submit`;
+            } else {
+                buttonTooltip.textContent = `You need to ${missing[0]}, ${missing[1]}, and ${missing[2]} to submit`;
+            }
         }
     }
 
@@ -3362,10 +3469,30 @@
 
             if (hoverImage) {
                 const imgContainer = document.createElement('div');
+                imgContainer.className = 'hover-image-container';
                 imgContainer.style.position = 'relative';
+                
+                // Create loading state
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'hover-box-loading';
+                loadingDiv.innerHTML = '<div class="spinner"></div>';
+                imgContainer.appendChild(loadingDiv);
                 
                 const img = document.createElement('img');
                 img.src = hoverImage;
+                img.style.opacity = '0'; // Start hidden
+                
+                // Show image and hide loading when loaded
+                img.addEventListener('load', () => {
+                    loadingDiv.style.display = 'none';
+                    img.style.opacity = '1';
+                });
+                
+                // Handle load errors
+                img.addEventListener('error', () => {
+                    loadingDiv.innerHTML = '<div style="color: #666; font-size: 12px;">Failed to load</div>';
+                });
+                
                 imgContainer.appendChild(img);
                 
                 // Add overlay text if provided
@@ -3417,10 +3544,28 @@
                 itemContainer.className = 'hover-box-item';
                 itemContainer.style.transitionDelay = `${i * 40}ms`;
 
+                // Create loading state for grid items
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'hover-box-loading';
+                loadingDiv.innerHTML = '<div class="spinner"></div>';
+                itemContainer.appendChild(loadingDiv);
+
                 const img = document.createElement('img');
                 img.src = path;
                 img.alt = `Frame ${i + 1}`;
                 img.loading = 'lazy';
+                img.style.opacity = '0'; // Start hidden
+                
+                // Show image and hide loading when loaded
+                img.addEventListener('load', () => {
+                    loadingDiv.style.display = 'none';
+                    img.style.opacity = '1';
+                });
+                
+                // Handle load errors
+                img.addEventListener('error', () => {
+                    loadingDiv.innerHTML = '<div style="color: #666; font-size: 10px; text-align: center;">Failed</div>';
+                });
                 
                 const numberOverlay = document.createElement('span');
                 numberOverlay.className = 'frame-number';
