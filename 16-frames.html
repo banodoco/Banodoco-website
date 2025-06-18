@@ -1612,6 +1612,40 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    /* Improved hover box loading states for layout stability */
+    .hover-image-container {
+      min-width: 200px; /* Default minimum width for images */
+      min-height: 150px; /* Default minimum height for images */
+    }
+    
+    .hover-image-container img {
+      display: block;
+      width: 100%;
+      height: auto;
+      transition: opacity 0.2s ease;
+    }
+    
+    /* Reserve space for info-box images */
+    .info-box-wrapper .hover-image-container {
+      width: 100%;
+      max-width: 300px;
+      aspect-ratio: 16 / 9; /* Common aspect ratio, will adjust when image loads */
+    }
+    
+    /* Ensure loading spinner doesn't cause jumps */
+    .hover-box-loading {
+      min-width: unset !important;
+      min-height: unset !important;
+    }
+    
+    /* For single image hover boxes */
+    .hover-image-container .hover-box-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 150px; /* Reasonable default */
+    }
   </style>
 </head>
 
@@ -3511,14 +3545,53 @@
                 const img = document.createElement('img');
                 img.src = hoverImage;
                 img.style.opacity = '0'; // Start hidden
+                img.style.position = 'absolute'; // Position absolute to overlay loading state
+                img.style.top = '0';
+                img.style.left = '0';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'contain';
                 
-                // Show image and hide loading when loaded
-                img.addEventListener('load', () => {
-                    loadingDiv.style.display = 'none';
-                    img.style.opacity = '1';
-                });
+                // Preload the image to get dimensions
+                const preloadImg = new Image();
+                preloadImg.onload = function() {
+                    // Calculate aspect ratio and set container dimensions
+                    const aspectRatio = this.width / this.height;
+                    const maxWidth = 300; // Maximum width for hover images
+                    const maxHeight = 400; // Maximum height for hover images
+                    
+                    let finalWidth = this.width;
+                    let finalHeight = this.height;
+                    
+                    // Scale down if needed
+                    if (finalWidth > maxWidth) {
+                        finalWidth = maxWidth;
+                        finalHeight = finalWidth / aspectRatio;
+                    }
+                    if (finalHeight > maxHeight) {
+                        finalHeight = maxHeight;
+                        finalWidth = finalHeight * aspectRatio;
+                    }
+                    
+                    // Set container dimensions to prevent layout shift
+                    imgContainer.style.width = finalWidth + 'px';
+                    imgContainer.style.height = finalHeight + 'px';
+                    
+                    // When actual image loads, show it
+                    img.addEventListener('load', () => {
+                        loadingDiv.style.display = 'none';
+                        img.style.opacity = '1';
+                        img.style.position = 'relative'; // Reset position
+                    });
+                };
                 
-                // Handle load errors
+                preloadImg.onerror = function() {
+                    loadingDiv.innerHTML = '<div style="color: #666; font-size: 12px;">Failed to load</div>';
+                };
+                
+                preloadImg.src = hoverImage;
+                
+                // Handle load errors on actual image too
                 img.addEventListener('error', () => {
                     loadingDiv.innerHTML = '<div style="color: #666; font-size: 12px;">Failed to load</div>';
                 });
