@@ -1760,16 +1760,20 @@
             I would like to tell the story of this collected effort by explaining the advances and innovations that fueled it, and showing the art that was created because of them. To do this, I'll create <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Are you a dev/designer who wants to help me make this? <a href='mailto:peter@omalley.io'>Get in touch</a>.">an interactive website</span> using a mixture of 'inputs' like test generations and 'outputs' like completed artworks. If permitted by the creator, each of the examples used to tell the story will be made into <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Many in our community will have a viscerally negative reaction to the idea of including crypto - including <a href='https://x.com/peteromallet/status/1540633365505769472' target='_blank' rel='noopener noreferrer'>past me</a>.<br><br>While a lot of people have used crypto in fraudulent and dishonest ways, this is also true of most immature financial instruments.<br><br>I've now come to believe that it not only isn't inherently bad, but it has the potential to be extremely positive when paired with open source AI - an area that is undoubtedly valuable, but not very well-valued in our existing economy.<br><br>However, to not be destructive, it must be approached with extreme thoughtfulness and care - which is what I'm aiming to do.">an NFT</span>.
           </p>
           
-          <p class="enhanced-paragraph fade-in-up stagger-6">
-            My goal will be to help people understand the struggle that went into these developments, while getting recognition for the community's collective achievements at an important time in art history.
+          <p class="enhanced-paragraph fade-in-up stagger-5">
+            The goal of this will be twofold:
           </p>
-          
-          <p class="enhanced-paragraph fade-in-up stagger-6">
-            Earnings <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Creators will determine what percentage they will share with Banodoco - from 0-100%.">will be shared</span> with those who contribute generations or art, with Banodoco's proceeds split equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">providing compute for open research and training</span> - all with full transparency into expenditure.
+
+          <p class="enhanced-paragraph fade-in-up stagger-5" style="margin-left: 1rem;">
+            <strong>1) To help people understand</strong> the landmarks that the community achieved, the art that was created as a result, and the broader significance of this <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/2nd-Renaissance.gif">technoartistic movement</span> at what will come to be viewed as a pivotal time in art history. Additionally, I would like people to help people appreciate the importance of open source models and open innovation in unlocking the creative potential of AI and the role this community and AnimatedDiff played in that movement.
           </p>
+
+          <p class="enhanced-paragraph fade-in-up stagger-5" style="margin-left: 1rem;">
+            <strong>2) To make money</strong> for both people in the community and projects. I believe that if collectors understand the broader context of the community's efforts, they will find the NFTs to be valuable. Proceeds <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Creators will determine what percentage they will share with Banodoco - from 0-100%.">will be shared</span> with those who contribute generations and art - community members who did valuable but uncompensated open source work - with Banodoco's portion used to fund projects. Concretely, we will split our earnings equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">supporting model training</span> - all with full expenditure transparency.
+          </p>          
           
           <p class="enhanced-paragraph fade-in-up stagger-8">
-            If you're seeing this and were involved in the AnimateDiff ecosystem, your participation would be hugely helpful. If you weren't involved but think it would be cool if this succeeeded, I'd very much appreciate your support.
+            If you're seeing this and were involved in the AnimateDiff ecosystem, your participation would be hugely helpful. If you weren't involved but think it would be cool if this succeeded, I'd very much appreciate your support.
           </p>
           
           <div class="fade-in-up stagger-9 text-center mt-4 lg:mt-6">
@@ -3431,19 +3435,30 @@
     initializeHoverBox();
 
     // Preload hover GIFs for smooth experience
+    const preloadedGifs = new Map(); // Track which GIFs are loaded
+    
     function preloadHoverGifs() {
       const hoverGifs = [
         'assets/16-frames/travel_between_images.gif',
         'assets/16-frames/prompt_travel.gif',
-        'assets/16-frames/controlnet.gif'
+        'assets/16-frames/controlnet.gif',
+        'assets/16-frames/2nd-Renaissance.gif'
       ];
       
       hoverGifs.forEach(gifPath => {
+        // Initialize as not loaded
+        preloadedGifs.set(gifPath, false);
+        
         const img = new Image();
+        img.onload = () => {
+          console.log(`Preloaded: ${gifPath}`);
+          preloadedGifs.set(gifPath, true);
+        };
+        img.onerror = () => {
+          console.warn(`Failed to preload: ${gifPath}`);
+          preloadedGifs.set(gifPath, 'error');
+        };
         img.src = gifPath;
-        // Optional: add load/error handlers for debugging
-        img.onload = () => console.log(`Preloaded: ${gifPath}`);
-        img.onerror = () => console.warn(`Failed to preload: ${gifPath}`);
       });
     }
     
@@ -3551,56 +3566,69 @@
                 imgContainer.className = 'hover-image-container';
                 imgContainer.style.position = 'relative';
                 
-                // Create loading state
-                const loadingDiv = document.createElement('div');
-                loadingDiv.className = 'hover-box-loading';
-                loadingDiv.innerHTML = '<div class="spinner"></div>';
-                imgContainer.appendChild(loadingDiv);
+                // Check if this GIF is preloaded
+                const isPreloaded = preloadedGifs.get(hoverImage);
                 
-                const img = document.createElement('img');
-                img.style.opacity = '0'; // Start hidden
-                img.style.display = 'block';
-                img.style.width = '100%';
-                img.style.height = 'auto';
-                
-                // Set up load event before setting src
-                img.addEventListener('load', function() {
-                    // Calculate dimensions when image loads
-                    const aspectRatio = img.naturalWidth / img.naturalHeight;
-                    const maxWidth = 300; // Maximum width for hover images
-                    const maxHeight = 400; // Maximum height for hover images
+                if (isPreloaded === true) {
+                    // GIF is ready, show it immediately
+                    const img = document.createElement('img');
+                    img.style.display = 'block';
+                    img.style.width = '100%';
+                    img.style.height = 'auto';
+                    img.src = hoverImage;
                     
-                    let finalWidth = img.naturalWidth;
-                    let finalHeight = img.naturalHeight;
-                    
-                    // Scale down if needed
-                    if (finalWidth > maxWidth) {
-                        finalWidth = maxWidth;
-                        finalHeight = finalWidth / aspectRatio;
-                    }
-                    if (finalHeight > maxHeight) {
-                        finalHeight = maxHeight;
-                        finalWidth = finalHeight * aspectRatio;
-                    }
-                    
-                    // Set container dimensions to prevent layout shift
-                    imgContainer.style.width = finalWidth + 'px';
-                    imgContainer.style.height = finalHeight + 'px';
-                    
-                    // Hide loading and show image
-                    loadingDiv.style.display = 'none';
-                    img.style.opacity = '1';
-                });
-                
-                // Handle load errors
-                img.addEventListener('error', () => {
+                    imgContainer.appendChild(img);
+                } else if (isPreloaded === 'error') {
+                    // Preload failed, try loading normally with error handling
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.className = 'hover-box-loading';
                     loadingDiv.innerHTML = '<div style="color: #666; font-size: 12px;">Failed to load</div>';
-                });
-                
-                // Now set the src to trigger loading
-                img.src = hoverImage;
-                
-                imgContainer.appendChild(img);
+                    imgContainer.appendChild(loadingDiv);
+                } else {
+                    // Not preloaded yet, show loading state and load on demand
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.className = 'hover-box-loading';
+                    loadingDiv.innerHTML = '<div class="spinner"></div>';
+                    imgContainer.appendChild(loadingDiv);
+                    
+                    const img = document.createElement('img');
+                    img.style.opacity = '0';
+                    img.style.display = 'block';
+                    img.style.width = '100%';
+                    img.style.height = 'auto';
+                    
+                    img.addEventListener('load', function() {
+                        // Calculate dimensions when image loads
+                        const aspectRatio = img.naturalWidth / img.naturalHeight;
+                        const maxWidth = 300;
+                        const maxHeight = 400;
+                        
+                        let finalWidth = img.naturalWidth;
+                        let finalHeight = img.naturalHeight;
+                        
+                        if (finalWidth > maxWidth) {
+                            finalWidth = maxWidth;
+                            finalHeight = finalWidth / aspectRatio;
+                        }
+                        if (finalHeight > maxHeight) {
+                            finalHeight = maxHeight;
+                            finalWidth = finalHeight * aspectRatio;
+                        }
+                        
+                        imgContainer.style.width = finalWidth + 'px';
+                        imgContainer.style.height = finalHeight + 'px';
+                        
+                        loadingDiv.style.display = 'none';
+                        img.style.opacity = '1';
+                    });
+                    
+                    img.addEventListener('error', () => {
+                        loadingDiv.innerHTML = '<div style="color: #666; font-size: 12px;">Failed to load</div>';
+                    });
+                    
+                    img.src = hoverImage;
+                    imgContainer.appendChild(img);
+                }
                 
                 // Add overlay text if provided
                 if (overlayText) {
@@ -3614,7 +3642,6 @@
             }
             
             hoverBox.appendChild(wrapper);
-
         } else if (hoverType === 'video' && hoverVideo) {
             hoverBox.style.display = 'flex';
             hoverBox.style.alignItems = 'center';
