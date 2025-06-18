@@ -490,42 +490,45 @@
     /* Container for 16 segments */
     .title-segments {
       position: absolute;
-      bottom: -4px;
-      left: 0;
-      width: 100%;
-      height: 3px;
-      pointer-events: none;
+      bottom: -6px; /* Align closely with static gradient line */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 64px; /* Match static line width */
+      height: 4px;
+      z-index: 10; /* Ensure it appears above static line */
+      pointer-events: none; /* Let hero-title receive hover */
     }
 
     /* Individual segment styling */
     .title-segment {
       position: absolute;
       top: 0;
-      height: 3px;
-      width: calc((100% - 45px) / 16); /* Account for 15 gaps of 3px each */
+      height: 4px; /* Match the gradient line height */
+      width: calc(64px / 16); /* Simple equal division */
       background: linear-gradient(90deg, #5353a5, #FCC061);
       transform: scaleX(0);
       transform-origin: left;
-      transition: transform 0.05s ease;
+      transition: transform 0.2s ease-out;
+      border-radius: 9999px; /* Match rounded-full */
     }
 
-    /* Position each of the 16 segments */
-    .title-segment:nth-child(1) { left: calc(0 * (100% / 16) + 0 * 3px); }
-    .title-segment:nth-child(2) { left: calc(1 * (100% / 16) + 1 * 3px); }
-    .title-segment:nth-child(3) { left: calc(2 * (100% / 16) + 2 * 3px); }
-    .title-segment:nth-child(4) { left: calc(3 * (100% / 16) + 3 * 3px); }
-    .title-segment:nth-child(5) { left: calc(4 * (100% / 16) + 4 * 3px); }
-    .title-segment:nth-child(6) { left: calc(5 * (100% / 16) + 5 * 3px); }
-    .title-segment:nth-child(7) { left: calc(6 * (100% / 16) + 6 * 3px); }
-    .title-segment:nth-child(8) { left: calc(7 * (100% / 16) + 7 * 3px); }
-    .title-segment:nth-child(9) { left: calc(8 * (100% / 16) + 8 * 3px); }
-    .title-segment:nth-child(10) { left: calc(9 * (100% / 16) + 9 * 3px); }
-    .title-segment:nth-child(11) { left: calc(10 * (100% / 16) + 10 * 3px); }
-    .title-segment:nth-child(12) { left: calc(11 * (100% / 16) + 11 * 3px); }
-    .title-segment:nth-child(13) { left: calc(12 * (100% / 16) + 12 * 3px); }
-    .title-segment:nth-child(14) { left: calc(13 * (100% / 16) + 13 * 3px); }
-    .title-segment:nth-child(15) { left: calc(14 * (100% / 16) + 14 * 3px); }
-    .title-segment:nth-child(16) { left: calc(15 * (100% / 16) + 15 * 3px); }
+    /* Position each of the 16 segments - simplified positioning */
+    .title-segment:nth-child(1) { left: calc(0 * (64px / 16)); }
+    .title-segment:nth-child(2) { left: calc(1 * (64px / 16)); }
+    .title-segment:nth-child(3) { left: calc(2 * (64px / 16)); }
+    .title-segment:nth-child(4) { left: calc(3 * (64px / 16)); }
+    .title-segment:nth-child(5) { left: calc(4 * (64px / 16)); }
+    .title-segment:nth-child(6) { left: calc(5 * (64px / 16)); }
+    .title-segment:nth-child(7) { left: calc(6 * (64px / 16)); }
+    .title-segment:nth-child(8) { left: calc(7 * (64px / 16)); }
+    .title-segment:nth-child(9) { left: calc(8 * (64px / 16)); }
+    .title-segment:nth-child(10) { left: calc(9 * (64px / 16)); }
+    .title-segment:nth-child(11) { left: calc(10 * (64px / 16)); }
+    .title-segment:nth-child(12) { left: calc(11 * (64px / 16)); }
+    .title-segment:nth-child(13) { left: calc(12 * (64px / 16)); }
+    .title-segment:nth-child(14) { left: calc(13 * (64px / 16)); }
+    .title-segment:nth-child(15) { left: calc(14 * (64px / 16)); }
+    .title-segment:nth-child(16) { left: calc(15 * (64px / 16)); }
 
     /* Hover animation - stagger the segments */
     .hero-title-enhanced:hover .title-segment:nth-child(1) { transform: scaleX(1); transition-delay: 0.05s; }
@@ -589,19 +592,69 @@
     /* Enhanced paragraph styling */
     .enhanced-paragraph {
       position: relative;
-      margin-bottom: 1rem;
-      padding: 0.5rem 0;
-      border-left: 2px solid transparent;
-      padding-left: 0.5rem;
-      margin-left: -0.5rem;
-      border-radius: 0 4px 4px 0;
-      transition: all 0.3s ease;
+      margin-bottom: 1rem !important;
+      padding: 0.5rem 1rem !important;
+      padding-left: 1rem !important;
+      margin-left: -1rem !important;
+      border-radius: 0 8px 8px 0;
+      transition: all 0.4s ease;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(252, 192, 97, 0.03) 100%);
     }
 
     .enhanced-paragraph:hover {
-      border-left-color: rgba(252, 192, 97, 0.4);
-      background: linear-gradient(90deg, rgba(252, 192, 97, 0.03) 0%, transparent 100%);
-      transform: translateX(2px);
+      border-left-color: rgba(252, 192, 97, 0.6);
+      background: linear-gradient(135deg, rgba(252, 192, 97, 0.06) 0%, rgba(83, 83, 165, 0.04) 100%);
+      transform: translateX(4px);
+      box-shadow: 0 4px 15px rgba(252, 192, 97, 0.1);
+    }
+
+    /* First paragraph gets special treatment */
+    .enhanced-paragraph:first-of-type {
+      font-size: 1.125rem;
+      line-height: 1.8;
+      font-weight: 500;
+      background: linear-gradient(135deg, rgba(252, 192, 97, 0.08) 0%, rgba(83, 83, 165, 0.06) 100%);
+      border-left-color: rgba(252, 192, 97, 0.3);
+    }
+
+    @media (min-width: 1024px) {
+      .enhanced-paragraph:first-of-type {
+        font-size: 1.25rem;
+        line-height: 1.8;
+      }
+    }
+
+    /* Enhanced body text container */
+    .enhanced-body-text {
+      position: relative;
+    }
+
+    .enhanced-body-text::before {
+      content: '';
+      position: absolute;
+      left: -2rem;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(to bottom, 
+        transparent 0%, 
+        rgba(252, 192, 97, 0.3) 20%, 
+        rgba(83, 83, 165, 0.3) 50%, 
+        rgba(252, 192, 97, 0.3) 80%, 
+        transparent 100%
+      );
+    }
+
+    @media (max-width: 1024px) {
+      .enhanced-body-text::before {
+        display: none;
+      }
+      
+      .enhanced-paragraph {
+        margin-left: 0;
+        padding-left: 1rem;
+        border-left-width: 2px;
+      }
     }
 
     /* Hover Box for key phrases */
@@ -1204,6 +1257,110 @@
     .info-box-wrapper a:hover {
         color: #FCC061;
     }
+
+    /* Make paragraphs less blocky */
+    .enhanced-paragraph {
+      margin-bottom: 1rem !important;
+      padding: 0.5rem 1rem !important;
+      padding-left: 1rem !important;
+      margin-left: -1rem !important;
+    }
+
+    /* Page-specific header styling - center logo and hide text */
+    .site-header {
+      display: flex !important;
+      justify-content: center !important;
+      padding: 0 !important;
+      margin: 0 !important; /* Reset margin for mobile */
+    }
+    
+    .site-header a {
+      justify-content: center !important;
+      display: flex !important;
+      align-items: center !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    
+    .site-header .site-title {
+      display: none !important;
+    }
+
+    /* Adjust logo size on this page */
+    .site-header img {
+      width: 60px !important;
+      height: 60px !important;
+      margin: 0 !important;
+    }
+
+    /* Container for 16 segments */
+    .title-segments {
+      position: absolute;
+      bottom: -6px; /* Align closely with static gradient line */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 64px; /* Match static line width */
+      height: 4px;
+      z-index: 10; /* Ensure it appears above static line */
+      pointer-events: none; /* Let hero-title receive hover */
+    }
+
+    /* Individual segment styling */
+    .title-segment {
+      position: absolute;
+      top: 0;
+      height: 4px; /* Match the gradient line height */
+      width: calc(64px / 16); /* Simple equal division */
+      background: linear-gradient(90deg, #5353a5, #FCC061);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.2s ease-out;
+      border-radius: 9999px; /* Match rounded-full */
+    }
+
+    /* Position each of the 16 segments - simplified positioning */
+    .title-segment:nth-child(1) { left: calc(0 * (64px / 16)); }
+    .title-segment:nth-child(2) { left: calc(1 * (64px / 16)); }
+    .title-segment:nth-child(3) { left: calc(2 * (64px / 16)); }
+    .title-segment:nth-child(4) { left: calc(3 * (64px / 16)); }
+    .title-segment:nth-child(5) { left: calc(4 * (64px / 16)); }
+    .title-segment:nth-child(6) { left: calc(5 * (64px / 16)); }
+    .title-segment:nth-child(7) { left: calc(6 * (64px / 16)); }
+    .title-segment:nth-child(8) { left: calc(7 * (64px / 16)); }
+    .title-segment:nth-child(9) { left: calc(8 * (64px / 16)); }
+    .title-segment:nth-child(10) { left: calc(9 * (64px / 16)); }
+    .title-segment:nth-child(11) { left: calc(10 * (64px / 16)); }
+    .title-segment:nth-child(12) { left: calc(11 * (64px / 16)); }
+    .title-segment:nth-child(13) { left: calc(12 * (64px / 16)); }
+    .title-segment:nth-child(14) { left: calc(13 * (64px / 16)); }
+    .title-segment:nth-child(15) { left: calc(14 * (64px / 16)); }
+    .title-segment:nth-child(16) { left: calc(15 * (64px / 16)); }
+
+    /* Hover animation to show the line segments when hovered */
+    .title-segments:hover .title-segment {
+      transform: scaleX(1) !important;
+    }
+
+    /* Remove hover states from first paragraph key phrases */
+    .first-paragraph-no-hover .key-phrase {
+      background: none !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      font-weight: normal !important;
+      transition: none !important;
+    }
+
+    .first-paragraph-no-hover .key-phrase:hover {
+      background: none !important;
+      cursor: default !important;
+    }
+
+    /* Only reduce space on larger screens */
+    @media (min-width: 1024px) {
+      .site-header {
+        margin: 0 0 -3rem 0 !important; /* Reduce space below logo on desktop only */
+      }
+    }
   </style>
 </head>
 
@@ -1224,102 +1381,88 @@
 
     <!-- Hero Section -->
     <section class="content-section mb-16">
-      <!-- Full Width Title -->
-      <div class="text-center lg:text-left mb-8 lg:mb-12 fade-in-up">
-        <h1 class="hero-title-enhanced text-4xl lg:text-5xl xl:text-6xl font-space-grotesk font-bold leading-tight mb-3">
-          16 Frames
-        </h1>
-        <h2 class="text-xl lg:text-2xl xl:text-3xl font-space-grotesk font-medium text-gray-600 leading-relaxed">
-          Struggle & Triumph in the AnimateDiff Ecosystem
-        </h2>
-      </div>
-      
-      <div class="flex flex-col lg:flex-row gap-8 lg:items-start lg:justify-between">
-        <!-- Text Column -->
-        <div class="lg:w-5/12 lg:max-w-none">
-          <div class="enhanced-body-text space-y-4 text-sm lg:text-base font-inter text-gray-700 leading-relaxed">
-          <p class="enhanced-paragraph fade-in-up stagger-1">
-            <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/released.png">AnimateDiff</span> was one of the first video models. When it launched in 2023, it could generate just <span class="key-phrase" data-hover-box data-image-path="assets/16-frames/extracted_frames/frame_{{i}}.png" data-frames="16" data-padding="3" data-columns="4">16 low resolution frames</span> from a text prompt.
+      <!-- Centered Single Column Layout -->
+      <div class="max-w-4xl mx-auto">
+        <!-- Enhanced Title Section with Better Hierarchy -->
+        <div class="text-center mb-8 lg:mb-10 fade-in-up">
+          <h1 class="hero-title-enhanced text-4xl lg:text-6xl xl:text-7xl font-space-grotesk font-bold leading-tight mb-2 lg:mb-3">
+            16 Frames
+          </h1>
+          <div class="w-16 h-1 bg-gradient-to-r from-banodoco-accent to-banodoco-purple mx-auto mb-4 lg:mb-6 rounded-full"></div>
+          <h2 class="text-lg lg:text-xl xl:text-2xl font-space-grotesk font-medium text-gray-600 leading-relaxed max-w-2xl mx-auto">
+            Help me tell the story of the AnimateDiff Ecosystem
+          </h2>
+        </div>
+        
+        <!-- Single Column Text Content -->
+        <div class="enhanced-body-text space-y-6 text-base lg:text-lg font-inter text-gray-700 leading-relaxed max-w-3xl mx-auto">
+          <p class="first-paragraph-no-hover fade-in-up stagger-1 text-lg lg:text-xl leading-relaxed mb-6">
+            <span class="key-phrase">AnimateDiff</span> was one of the first video models. When it launched in 2023, it could generate just <span class="key-phrase">16 low resolution frames</span> from a text prompt:
           </p>
           
-          <!-- Mobile AnimateDiff Samples - shown after first paragraph -->
-          <div class="block lg:hidden my-6 fade-in-up stagger-2">
-            <div class="bg-white bg-opacity-90 backdrop-blur-sm rounded-xl p-5 shadow-lg border border-banodoco-accent border-opacity-40" style="box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
-              <p class="text-center text-gray-800 font-inter font-medium mb-4" style="font-size: 0.75rem;">
-                Samples of what AnimateDiff could generate upon release:
-              </p>
-              <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 max-w-sm mx-auto sm:max-w-none">
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-3">
-                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_01.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
+          <!-- Desktop AnimateDiff Samples - now positioned after first paragraph -->
+          <div class="my-8 lg:my-10 fade-in-up stagger-2">
+            <div class="bg-gradient-to-br from-banodoco-accent/5 via-banodoco-accent/8 to-purple-500/5 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg border border-banodoco-accent border-opacity-30 relative overflow-hidden">
+              <!-- Background Pattern -->
+              <div class="absolute inset-0 opacity-10">
+                <div class="absolute inset-0" style="background-image: radial-gradient(circle at 2px 2px, rgba(252,192,97,0.3) 1px, transparent 0); background-size: 24px 24px;"></div>
+              </div>
+              
+              <!-- Content -->
+              <div class="relative z-10">
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 max-w-2xl mx-auto">
+                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                    <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_01.mp4" class="w-full h-full object-cover desktop-video group-hover:scale-110 transition-transform duration-300" autoplay loop muted playsinline></video>
+                  </div>
+                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                    <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_02.mp4" class="w-full h-full object-cover desktop-video group-hover:scale-110 transition-transform duration-300" autoplay loop muted playsinline></video>
+                  </div>
+                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                    <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_03.mp4" class="w-full h-full object-cover desktop-video group-hover:scale-110 transition-transform duration-300" autoplay loop muted playsinline></video>
+                  </div>
+                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                    <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_04.mp4" class="w-full h-full object-cover desktop-video group-hover:scale-110 transition-transform duration-300" autoplay loop muted playsinline></video>
+                  </div>
+                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                    <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_05.mp4" class="w-full h-full object-cover desktop-video group-hover:scale-110 transition-transform duration-300" autoplay loop muted playsinline></video>
+                  </div>
+                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                    <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_06.mp4" class="w-full h-full object-cover desktop-video group-hover:scale-110 transition-transform duration-300" autoplay loop muted playsinline></video>
+                  </div>
                 </div>
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-4">
-                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_02.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
-                </div>
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-5">
-                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_03.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
-                </div>
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-6">
-                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_04.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
-                </div>
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-7">
-                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_05.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
-                </div>
-                <div class="aspect-square rounded-lg overflow-hidden shadow-md fade-in-up stagger-8">
-                  <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_06.mp4" class="w-full h-full object-cover mobile-video" muted loop preload="metadata" playsinline></video>
+                
+                <div class="text-center mt-6">
+                  <p class="text-xs lg:text-sm text-gray-500 font-inter">
+                    Source: <a href="https://animatediff.github.io/" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200 underline">AnimateDiff project page</a>
+                  </p>
                 </div>
               </div>
-              <p class="text-center text-gray-500 font-inter mt-3" style="font-size: 0.65rem; opacity: 0.8;">
-                Source: <a href="https://animatediff.github.io/" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200">AnimateDiff project page</a>.
-              </p>
             </div>
           </div>
           
+
           <p class="enhanced-paragraph fade-in-up stagger-3">
             However, thanks to it being <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/huggingface.png">released openly</span>, developers and artists could build on top of it and thousands of them worked together informally to extend its capabilities. Their developments enabled it to effectively generate infinite frames and steer the model in a multitude of ways. Most of the control techniques now popular in AI video - <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/travel_between_images.gif" data-overlay-text="Example by Matt30">using anchor images</span>, <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/prompt_travel.gif" data-overlay-text="Example by CitizenPlain">prompt travel</span>, <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/controlnet.gif" data-overlay-text="Example by Kijai">video2video with structural control</span> - were pioneered and/or refined by people in the AnimateDiff ecosystem.
           </p>
+          
           <p class="enhanced-paragraph fade-in-up stagger-4">
             I would like to tell the story of this collected effort by explaining the advances and innovations that fueled it, and showing the art that was created because of them. To do this, I'll create a <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Are you a dev/designer who wants to help me make this? <a href='mailto:peter@omalley.io'>Get in touch</a>.">visual explainer</span> using a mixture of 'inputs' like test generations and 'outputs' like completed artworks - each of which will be made into an NFT.
           </p>
+          
           <p class="enhanced-paragraph fade-in-up stagger-6">
-            My goal will be to help people understand the struggle that went into these developments, while getting recognition for our collective achievements at an important time in art history. Earnings will be shared with those who contribute generations or art, with Banodoco's proceeds split equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">providing compute for open research and training</span>.</p> 
+            My goal will be to help people understand the struggle that went into these developments, while getting recognition for our collective achievements at an important time in art history. Earnings will be shared with those who contribute generations or art, with Banodoco's proceeds split equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">providing compute for open research and training</span>.
+          </p> 
+          
           <p class="enhanced-paragraph fade-in-up stagger-8">
             If you're seeing this and were involved in the AnimateDiff ecosystem, I'd highly appreciate your participation. 
           </p>
-            <div class="fade-in-up stagger-9">
-              <p class="text-2xl font-inter font-medium text-gray-700 m-0">
+          
+          <div class="fade-in-up stagger-9 text-center mt-4 lg:mt-6">
+            <div class="inline-block bg-gradient-to-r from-banodoco-accent/10 via-banodoco-purple/10 to-banodoco-accent/10 rounded-2xl p-4 border border-banodoco-accent/20">
+              <p class="text-2xl lg:text-3xl font-inter font-medium text-gray-700 m-0">
                 <span class="key-phrase cursor-pointer" data-hover-box data-hover-type="static-info-box" data-hover-html="Get in touch:<div class='contact-links'><a href='https://pom.voyage/' target='_blank' title='Website'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'></circle><path d='M2 12h20'></path><path d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'></path></svg></a><a href='mailto:peter@omalley.io' title='Email'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z'></path><polyline points='22,6 12,13 2,6'></polyline></svg></a><a href='https://x.com/peteromallet' target='_blank' title='X'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M4 4l11.733 16h4.267l-11.733 -16z'></path><path d='M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772'></path></svg></a></div>">POM</span>
               </p>
             </div>
-        </div>
-          </div>
-        
-        <!-- Image Grid Column -->
-        <div class="ecosystem-visualization lg:w-1/2 lg:flex-shrink-0 hidden lg:block fade-in-right stagger-2">
-          <div class="bg-white bg-opacity-90 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-banodoco-accent border-opacity-40" style="box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
-            <p class="text-center text-gray-800 font-inter font-medium mb-4" style="font-size: 14px;">Samples of what Animatediff could generate upon release:</p>
-            <div class="grid grid-cols-2 gap-4 auto-rows-fr w-full">
-              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
-                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_01.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
-          </div>
-              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
-                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_02.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
-      </div>
-              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
-                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_03.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
-    </div>
-              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
-                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_04.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
-              </div>
-              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
-                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_05.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
-              </div>
-              <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 hover:scale-105">
-                <video src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_06.mp4" class="w-full h-full object-cover desktop-video" autoplay loop muted playsinline></video>
-              </div>
-            </div>
-            <p class="text-center text-gray-500 font-inter mt-4" style="font-size: 12px;">
-              Source: <a href="https://animatediff.github.io/" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200">AnimateDiff project page</a>.
-            </p>
           </div>
         </div>
       </div>
