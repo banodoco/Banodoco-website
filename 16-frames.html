@@ -277,7 +277,7 @@
 
     /* Floating emoji positioning */
     .floating-emoji {
-      position: fixed;
+      position: absolute;
       pointer-events: none;
       z-index: 1000;
       will-change: transform, opacity;
@@ -479,6 +479,7 @@
       position: relative;
       text-shadow: 0 2px 4px rgba(0,0,0,0.1);
       background: none;
+      display: inline-block; /* Shrink to text width so the underline segments stay within title bounds */
     }
 
     .hero-title-enhanced:hover {
@@ -1274,15 +1275,15 @@
           </div>
           
           <p class="enhanced-paragraph fade-in-up stagger-3">
-            However, thanks to it being <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/huggingface.png">released openly</span>, developers and artists could build on top of it and thousands of them worked together informally to extend its capabilities. Their developments enabled it to effectively generate infinite frames and steer the model in a multitude of ways. Most of the control techniques now popular in AI video - <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/travel_between_images.gif" data-overlay-text="Example by Matt30">using anchor images</span>, <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/prompt_travel.gif" data-overlay-text="Example by CitizenPlain">prompt travel</span>, <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/controlnet.gif" data-overlay-text="Example by Kijai">video2video with structural control</span> - were pioneered in the AnimateDiff ecosystem.
+            However, thanks to it being <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/huggingface.png">released openly</span>, developers and artists could build on top of it and thousands of them worked together informally to extend its capabilities. Their developments enabled it to effectively generate infinite frames and steer the model in a multitude of ways. Most of the control techniques now popular in AI video - <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/travel_between_images.gif" data-overlay-text="Example by Matt30">using anchor images</span>, <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/prompt_travel.gif" data-overlay-text="Example by CitizenPlain">prompt travel</span>, <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/controlnet.gif" data-overlay-text="Example by Kijai">video2video with structural control</span> - were pioneered and/or refined by people in the AnimateDiff ecosystem.
           </p>
           <p class="enhanced-paragraph fade-in-up stagger-4">
-            I would like to tell the story of this collected effort by explaining the advances and innovations that fueled it, and showing the art that was created because of them. To do this, I'll create a <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Are you a dev/designer who wants to help me make this? <a href='mailto:peter@omalley.io'>Get in touch</a>.">visual explainer</span> using a mixture of 'inputs' like test generations and completed artworks from people in the community - each of which will be made into an NFT.
+            I would like to tell the story of this collected effort by explaining the advances and innovations that fueled it, and showing the art that was created because of them. To do this, I'll create a <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Are you a dev/designer who wants to help me make this? <a href='mailto:peter@omalley.io'>Get in touch</a>.">visual explainer</span> using a mixture of 'inputs' like test generations and 'outputs' like completed artworks - each of which will be made into an NFT.
           </p>
           <p class="enhanced-paragraph fade-in-up stagger-6">
-            My goal will be to help people understand the struggle that went into these developments, while earning recognition for our collective achievements at an important time in art history. Earnings will be shared with those who contribute generations or art, with Banodoco's proceeds split equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">providing compute for open research and training</span>.</p>
+            My goal will be to help people understand the struggle that went into these developments, while getting recognition for our collective achievements at an important time in art history. Earnings will be shared with those who contribute generations or art, with Banodoco's proceeds split equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">providing compute for open research and training</span>.</p> 
           <p class="enhanced-paragraph fade-in-up stagger-8">
-            If you're seeing this, it likely means I'd highly appreciate your participation. 
+            If you're seeing this and were involved in the AnimateDiff ecosystem, I'd highly appreciate your participation. 
           </p>
             <div class="fade-in-up stagger-9">
               <p class="text-2xl font-inter font-medium text-gray-700 m-0">
@@ -1732,7 +1733,7 @@
           </button>
           <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
             <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed">
-              <p>Message POM on <a href="https://discord.gg/KprdCw48" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200">Discord</a>.</p>
+              <p>Message POM on <a href="https://discord.gg/KprdCw48" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200">Discord</a> or <a href="mailto:peter@omalley.io" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200">email him</a>.</p>
             </div>
           </div>
         </div>
@@ -1947,6 +1948,8 @@
       emoji.textContent = emojiChar;
       emoji.className = 'floating-emoji';
       emoji.style.fontSize = fontSize;
+      emoji.style.position = 'absolute';
+      emoji.style.pointerEvents = 'none';
 
       if (durationSeconds === 5) {
         emoji.style.animation = 'floatUpQuickly 5s ease-out forwards';
@@ -1959,16 +1962,29 @@
       // Calculate thumb position within the slider
       const thumbPosition = (numericValue / 100) * sliderRect.width;
       
-      // Calculate emoji starting position
-      // Use fixed positioning to avoid scroll offset issues
-      emoji.style.position = 'fixed';
+      // Calculate emoji starting position - properly convert viewport to document coordinates
+      const emojiWidth = parseFloat(fontSize) * 16;
       
-      // Center the emoji horizontally on the thumb
-      const emojiWidth = parseFloat(fontSize) * 16; // Approximate width based on font size
-      const leftPosition = sliderRect.left + thumbPosition - (emojiWidth / 2);
+      // Get current scroll position (use more reliable method)
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0;
       
-      emoji.style.left = leftPosition + 'px';
-      emoji.style.top = (sliderRect.top - 40) + 'px'; // Position above slider
+      // Get the slider's position in the document
+      const sliderDocumentLeft = sliderRect.left + scrollLeft;
+      const sliderDocumentTop = sliderRect.top + scrollTop;
+      
+      // Calculate final position
+      const finalLeft = sliderDocumentLeft + thumbPosition - (emojiWidth / 2);
+      const finalTop = sliderDocumentTop - 40;
+      
+      // Debug logging
+      console.log('Slider rect:', sliderRect);
+      console.log('Scroll positions:', { scrollTop, scrollLeft });
+      console.log('Final positions:', { finalLeft, finalTop });
+      
+      // Set position
+      emoji.style.left = finalLeft + 'px';
+      emoji.style.top = finalTop + 'px';
       
       document.body.appendChild(emoji);
       
@@ -2737,16 +2753,24 @@
 
         // Function to align segment bar length & position with subtitle width
         const adjustSegments = () => {
-          if (!subtitle) return; // Safety check
-
           const heroRect = heroTitle.getBoundingClientRect();
-          const subRect  = subtitle.getBoundingClientRect();
 
-          // Match the width of the subtitle text
-          segmentsContainer.style.width = `${subRect.width}px`;
+          /*
+            The CSS for each segment subtracts a fixed 45 px total gap from
+            the container width and then redistributes that gap via `left`.
+            This makes the rendered line overshoot its own container by
+            `45 * (15 / 16) ≈ 42.19 px`.  We counter-act that here so the
+            visible line ends exactly at the same width as the title text.
+          */
+          const segments = 16;
+          const gapPx = 3;              // must match CSS constant
+          const totalGap = gapPx * (segments - 1);
+          const overflow = totalGap * ((segments - 1) / segments); // 45 * 15/16
 
-          // Align left edge of segments with subtitle text
-          segmentsContainer.style.left  = `${subRect.left - heroRect.left}px`;
+          const correctedWidth = heroRect.width - overflow;
+
+          segmentsContainer.style.width = `${correctedWidth}px`;
+          segmentsContainer.style.left  = `0px`; // anchor to title left edge
         };
 
         // Run once after paint

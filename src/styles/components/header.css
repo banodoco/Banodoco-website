@@ -6,6 +6,38 @@
   font-family: 'Space Grotesk', sans-serif;
 }
 
+/* Center header on screens below lg (1024px) where title is centered */
+@media (max-width: 1023px) {
+  .site-header {
+    justify-content: center;
+    padding: 0.5rem 0; /* Reduced padding for compact appearance */
+  }
+  
+  /* Hide the "Banodoco" text on smaller screens */
+  .site-header .site-title {
+    display: none;
+  }
+}
+
+/* Keep left alignment on lg+ screens where title is left-aligned */
+@media (min-width: 1024px) {
+  .site-header {
+    justify-content: flex-start;
+    margin-left: -15px; /* Original desktop behavior */
+    padding-top: 1.5rem; /* Original top padding */
+  }
+  
+  /* Show the "Banodoco" text on larger screens */
+  .site-header .site-title {
+    display: inline-flex;
+  }
+  
+  .site-header img {
+    margin-left: 0 !important; /* Original desktop behavior */
+    margin-top: 4px; /* Keep logo top margin */
+  }
+}
+
 .site-header img {
   width: 40px;
   height: auto;
@@ -31,7 +63,6 @@
   color: #333;
   position: relative;
   z-index: 1;
-  display: inline-flex;
   align-items: center;
   margin-top: 5px;
 }
@@ -59,39 +90,36 @@
 /* Mobile styles */
 @media (max-width: 600px) {
   .site-header {
-    transform: translateX(-20px); /* Increased leftward movement from -10px to -20px */
-    padding-bottom: 0.5rem; /* Mobile bottom padding */
-    padding-top: 1rem; /* Increased from 0.75rem to move header down a tiny bit */
+    transform: none; /* Remove translateX since we're centering */
+    padding: 0.25rem 0; /* Further reduced padding for mobile */
   }
   .site-header img {
-    margin-left: -5px; /* Moved further left from 5px to -5px */
-    margin-top: -3px; /* Reduced from 0px to move logo up a tiny bit more */
-  }
-  .site-header .site-title {
-    margin-top: -3px; /* Reduced from 0px to keep title aligned with logo */
+    margin-left: 0; /* Center the logo */
+    margin-right: 0;
+    margin-top: 0; /* Remove top margin for tighter spacing */
   }
 }
 
 /* Tablet Portrait styles (e.g., iPad) */
-@media (min-width: 601px) and (max-width: 1024px) {
-  #header .site-header {
-    margin-left: 20px; /* Move header right using margin */
-    padding-bottom: 0.5rem; /* Keep reduced bottom padding */
-    padding-top: 1.5rem; /* Keep increased top padding */
+@media (min-width: 601px) and (max-width: 1023px) {
+  .site-header {
+    margin-left: 0; /* Remove left margin since we're centering */
+    padding: 0.5rem 0; /* Reduced padding for tablet */
   }
-  #header .site-header img {
-    margin-left: -30px !important; /* Explicitly set original relative offset and override main.css */
-    margin-top: 5px; /* Keep top margin */
+  .site-header img {
+    margin-left: 0; /* Center the logo */
+    margin-right: 0;
+    margin-top: 0; /* Remove top margin for tighter spacing */
   }
 }
 
 /* Widescreen Tablet/Desktop styles - restore original desktop behavior */
-@media (min-width: 1025px) {
-  #header .site-header {
+@media (min-width: 1024px) {
+  .site-header {
     margin-left: -15px; /* Original desktop behavior */
     padding-top: 1.5rem; /* Original top padding */
   }
-  #header .site-header img {
+  .site-header img {
     margin-left: 0 !important; /* Original desktop behavior */
     margin-top: 4px; /* Keep logo top margin */
   }
