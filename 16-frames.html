@@ -1769,7 +1769,7 @@
           </p>
 
           <p class="enhanced-paragraph fade-in-up stagger-5" style="margin-left: 1rem;">
-            <strong>2) To make money</strong> for both people in the community and projects. I believe that if collectors understand the broader context of the community's efforts, they will find the NFTs to be valuable. Proceeds <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Creators will determine what percentage they will share with Banodoco - from 0-100%.">will be shared</span> with those who contribute generations and art - community members who did valuable but uncompensated open source work - with Banodoco's portion used to fund projects. Concretely, we will split our earnings equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">supporting model training</span> - all with full expenditure transparency.
+            <strong>2) To make money</strong> for both people in the community and projects. I believe that if collectors understand the broader context of the community's efforts, they may find the NFTs to be valuable. If they do, proceeds <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Creators will determine what percentage they will share with Banodoco - from 0-100%.">will be shared</span> with those who contribute generations and art - community members who did valuable but uncompensated open source work - with Banodoco's portion used to fund projects. Concretely, we will split our earnings equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">supporting model training</span> - all with full expenditure transparency.
           </p>          
           
           <p class="enhanced-paragraph fade-in-up stagger-8">
@@ -3781,6 +3781,21 @@
 
     function hideHoverBox() {
         if (!hoverBox) return;
+        
+        // Reset any GIF animations before hiding
+        const gifImages = hoverBox.querySelectorAll('img[src$=".gif"], img[src*=".gif"]');
+        gifImages.forEach(img => {
+            if (img.src) {
+                // Force GIF to restart by briefly clearing and reassigning the src
+                const originalSrc = img.src;
+                img.src = '';
+                // Use requestAnimationFrame to ensure the src change is processed
+                requestAnimationFrame(() => {
+                    img.src = originalSrc;
+                });
+            }
+        });
+        
         hoverBox.classList.remove('visible');
         hoverBox.classList.remove('static');
         isStaticHover = false;
