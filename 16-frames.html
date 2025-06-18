@@ -787,7 +787,7 @@
     /* Key phrases highlighting */
     .key-phrase {
       background: linear-gradient(120deg, transparent 0%, rgba(252, 192, 97, 0.15) 50%, transparent 100%);
-      padding: 0.1em 0.3em;
+      padding: 0.05em 0.15em; /* reduce extra space */
       border-radius: 3px;
       font-weight: 500;
       transition: all 0.2s ease;
@@ -799,7 +799,7 @@
 
     .key-phrase-red {
       background: linear-gradient(120deg, transparent 0%, rgba(239, 68, 68, 0.15) 50%, transparent 100%);
-      padding: 0.1em 0.3em;
+      padding: 0.05em 0.15em;
       border-radius: 3px;
       font-weight: 500;
       transition: all 0.2s ease;
@@ -811,7 +811,7 @@
 
     .key-phrase-green {
       background: linear-gradient(120deg, transparent 0%, rgba(34, 197, 94, 0.15) 50%, transparent 100%);
-      padding: 0.1em 0.3em;
+      padding: 0.05em 0.15em;
       border-radius: 3px;
       font-weight: 500;
       transition: all 0.2s ease;
@@ -1396,53 +1396,66 @@
         
         <!-- Single Column Text Content -->
         <div class="enhanced-body-text space-y-2 text-base lg:text-lg font-inter text-gray-700 leading-relaxed max-w-3xl mx-auto">
+          <p class="first-paragraph-no-hover fade-in-up stagger-1 text-lg lg:text-xl leading-relaxed mb-0">
+            <span class="key-phrase">AnimateDiff</span> was one of the first popular video models.
+          </p>
           <p class="first-paragraph-no-hover fade-in-up stagger-1 text-lg lg:text-xl leading-relaxed mb-6">
-            <span class="key-phrase">AnimateDiff</span> was one of the first video models. When it launched in 2023, it could generate just <span class="key-phrase">16 low resolution frames</span> from a text prompt:
+            However, when it launched in 2023, it could generate just <span class="key-phrase">16 low resolution frames</span> from a text prompt:
           </p>
           
-          <!-- Desktop AnimateDiff Samples - now positioned after first paragraph -->
-          <div class="my-8 lg:my-10 fade-in-up stagger-2">
-            <div class="bg-gradient-to-br from-banodoco-accent/5 via-banodoco-accent/8 to-purple-500/5 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg border border-banodoco-accent border-opacity-30 relative overflow-hidden">
-              <!-- Background Pattern -->
-              <div class="absolute inset-0 opacity-10">
-                <div class="absolute inset-0" style="background-image: radial-gradient(circle at 2px 2px, rgba(252,192,97,0.3) 1px, transparent 0); background-size: 24px 24px;"></div>
+          <!-- Spacer to equalise space above -->
+          <div class="h-3 lg:h-4"></div>
+
+          <div class="mb-20 lg:mb-24 fade-in-up stagger-2">
+            <!-- Background Pattern -->
+            <div class="absolute inset-0 opacity-10">
+              <div class="absolute inset-0" style="background-image: radial-gradient(circle at 2px 2px, rgba(252,192,97,0.3) 1px, transparent 0); background-size: 24px 24px;"></div>
+            </div>
+            
+            <!-- Content -->
+            <div class="relative z-10">
+              <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 max-w-2xl mx-auto">
+                <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                  <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_01.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 1">
+                </div>
+                <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                  <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_02.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 2">
+                </div>
+                <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                  <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_03.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 3">
+                </div>
+                <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                  <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_04.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 4">
+                </div>
+                <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                  <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_05.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 5">
+                </div>
+                <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
+                  <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_06.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 6">
+                </div>
               </div>
               
-              <!-- Content -->
-              <div class="relative z-10">
-                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 max-w-2xl mx-auto">
-                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
-                    <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_01.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 1">
-                  </div>
-                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
-                    <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_02.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 2">
-                  </div>
-                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
-                    <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_03.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 3">
-                  </div>
-                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
-                    <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_04.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 4">
-                  </div>
-                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
-                    <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_05.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 5">
-                  </div>
-                  <div class="aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group">
-                    <img src="https://ddbobialzdjkzainyqgb.supabase.co/storage/v1/object/public/nft//ani_06.gif" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="AnimateDiff Sample 6">
-                  </div>
-                </div>
-                
-                <div class="text-center mt-6">
-                  <p class="text-xs lg:text-sm text-gray-500 font-inter">
-                    Source: <a href="https://animatediff.github.io/" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200 underline">AnimateDiff project page</a>
-                  </p>
-                </div>
+              <div class="text-center mt-6">
+                <p class="text-xs lg:text-sm text-gray-500 font-inter">
+                  Source: <a href="https://animatediff.github.io/" target="_blank" rel="noopener noreferrer" class="text-banodoco-purple hover:text-banodoco-accent transition-colors duration-200 underline">AnimateDiff project page</a>
+                </p>
               </div>
             </div>
           </div>
           
+          <!-- Spacer to ensure sufficient gap before next paragraph -->
+          <div class="h-3 lg:h-4"></div>
 
           <p class="enhanced-paragraph fade-in-up stagger-3">
-            However, thanks to it being <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/huggingface.png">released openly</span>, developers and artists could build on top of it and thousands of them worked together informally to extend its capabilities. Their developments enabled it to effectively generate infinite frames and steer the model in a multitude of ways. Most of the control techniques now popular in AI video - <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/travel_between_images.gif" data-overlay-text="Example by Matt30">using anchor images</span>, <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/prompt_travel.gif" data-overlay-text="Example by CitizenPlain">prompt travel</span>, <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/controlnet.gif" data-overlay-text="Example by Kijai">video2video with structural control</span> - were pioneered and/or refined by people in the AnimateDiff ecosystem.
+            Despite this, it achieved significant popularity and was used to create art that made its way to stages, screens and productions all over the world.
+          </p>
+
+          <p class="enhanced-paragraph fade-in-up stagger-3">
+            This is thanks to it being <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/huggingface.png">released openly</span> &mdash; which meant that thousands of developers could work together informally to extend its capabilities.
+          </p>
+
+          <p class="enhanced-paragraph fade-in-up stagger-3">
+            Thanks to this, most of the control techniques now popular in AI video &mdash; <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/travel_between_images.gif" data-overlay-text="Example by Matt30">using anchor images</span>, <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/prompt_travel.gif" data-overlay-text="Example by CitizenPlain">prompt travel</span>, <span class="key-phrase" data-hover-box data-hover-type="info-box" data-hover-image="assets/16-frames/controlnet.gif" data-overlay-text="Example by Kijai">video2video with structural control</span> &mdash; were pioneered and/or refined by people in the AnimateDiff ecosystem.
           </p>
           
           <p class="enhanced-paragraph fade-in-up stagger-4">
