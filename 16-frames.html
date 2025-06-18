@@ -668,6 +668,9 @@
       border-radius: 0 8px 8px 0;
       transition: all 0.4s ease;
       background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(252, 192, 97, 0.03) 100%);
+      overflow: visible !important;
+      word-wrap: break-word;
+      hyphens: auto;
     }
 
     .enhanced-paragraph:hover {
@@ -1604,6 +1607,16 @@
       position: relative;
       z-index: 1;
     }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 
@@ -1661,7 +1674,7 @@
         </div>
         
         <!-- Single Column Text Content -->
-        <div class="enhanced-body-text space-y-2 text-base lg:text-lg font-inter text-gray-700 leading-relaxed max-w-3xl mx-auto">
+        <div class="enhanced-body-text space-y-2 text-base lg:text-lg font-inter text-gray-700 leading-relaxed max-w-4xl mx-auto">
           <p class="first-paragraph-no-hover fade-in-up stagger-1 text-lg lg:text-xl leading-relaxed mb-0">
             <span class="key-phrase">AnimateDiff</span> was one of the first popular video models, created by Yuwei Guo, Ceyuan Yang, and team.
           </p>
@@ -1733,11 +1746,11 @@
           </p>
           
           <p class="enhanced-paragraph fade-in-up stagger-6">
-            Earnings <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Creators will determine what percentage they will share with Banodoco - from 0-100%.">will be shared</span> with those who contribute generations or art, with Banodoco's proceeds split equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">providing compute for open research and training</span>.
+            Earnings <span class="key-phrase" data-hover-box data-hover-type="static-info-box" data-hover-html="Creators will determine what percentage they will share with Banodoco - from 0-100%.">will be shared</span> with those who contribute generations or art, with Banodoco's proceeds split equally between <span class="key-phrase-red">funding an open source AI art competition</span> and <span class="key-phrase-green">providing compute for open research and training</span> - all with full transparency into expenditure.
           </p>
           
           <p class="enhanced-paragraph fade-in-up stagger-8">
-            If you're seeing this and were involved in the AnimateDiff ecosystem, your participation would be hugely helpful. In any case, I'd very much appreciate your support.
+            If you're seeing this and were involved in the AnimateDiff ecosystem, your participation would be hugely helpful. If you weren't involved but think it would be cool if this succeeeded, I'd very much appreciate your support.
           </p>
           
           <div class="fade-in-up stagger-9 text-center mt-4 lg:mt-6">
