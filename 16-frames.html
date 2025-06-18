@@ -3430,6 +3430,26 @@
     // Initialize Hover Box
     initializeHoverBox();
 
+    // Preload hover GIFs for smooth experience
+    function preloadHoverGifs() {
+      const hoverGifs = [
+        'assets/16-frames/travel_between_images.gif',
+        'assets/16-frames/prompt_travel.gif',
+        'assets/16-frames/controlnet.gif'
+      ];
+      
+      hoverGifs.forEach(gifPath => {
+        const img = new Image();
+        img.src = gifPath;
+        // Optional: add load/error handlers for debugging
+        img.onload = () => console.log(`Preloaded: ${gifPath}`);
+        img.onerror = () => console.warn(`Failed to preload: ${gifPath}`);
+      });
+    }
+    
+    // Call preload function when page loads
+    preloadHoverGifs();
+
     function initializeHoverBox() {
         hoverBox = document.getElementById('key-phrase-hover-box');
         if (!hoverBox) return;
