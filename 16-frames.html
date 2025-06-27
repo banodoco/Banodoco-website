@@ -2668,7 +2668,13 @@
                         });
                     }
                     
-                    const fileName = `public/${safeUploaderName || 'anon'}/${generateUUID()}-${file.name}`;
+                    // Sanitize file name to remove problematic characters
+                    const fileExtension = file.name.split('.').pop();
+                    const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+                    const safeFileName = fileNameWithoutExt.replace(/[^a-zA-Z0-9-_\s]/g, '').replace(/\s+/g, '_');
+                    const sanitizedFileName = safeFileName + '.' + fileExtension;
+                    
+                    const fileName = `public/${safeUploaderName || 'anon'}/${generateUUID()}-${sanitizedFileName}`;
                     
                     const { data, error } = await supabase.storage
                         .from('nft')
