@@ -915,7 +915,7 @@
     }
 
     /* Custom style for select dropdown arrow */
-    #created-month {
+    #created-month, #filter-creator {
       -webkit-appearance: none;
       -moz-appearance: none;
       appearance: none;
@@ -1928,9 +1928,29 @@
             <!-- Permission Checkbox -->
             <div class="mb-6 mt-2">
               <label class="flex items-start cursor-pointer leading-5 font-inter">
-                <input type="checkbox" id="permission" name="permission" class="mr-3 mt-1.5 transform scale-120">
+                <input type="checkbox" id="permission" name="permission" class="mr-3 mt-1.5 transform scale-120" checked>
                 <span class="text-gray-800">I give permission to Banodoco, Inc. to use the attached generations in the 16 Frames collection</span>
               </label>
+            </div>
+
+            <!-- Rights Ownership Checkbox -->
+            <div class="mb-6">
+              <label class="flex items-start cursor-pointer leading-5 font-inter">
+                <input type="checkbox" id="rights-owned" name="rights-owned" class="mr-3 mt-1.5 transform scale-120" checked>
+                <span class="text-gray-800">I own the rights to every element of this</span>
+              </label>
+              
+              <!-- Rights Description (hidden by default) -->
+              <div id="rights-description-container" class="mt-3 ml-7 hidden">
+                <label for="rights-description" class="block mb-2 text-sm text-gray-600 font-inter">Please describe which elements you don't own - will remove this from the actual sale:</label>
+                <textarea 
+                  id="rights-description" 
+                  name="rights-description" 
+                  class="w-11/12 min-h-[3rem] p-3 border-2 border-gray-300 rounded-lg text-base transition-colors duration-300 ease-in-out resize-y font-inter focus:border-banodoco-purple focus:outline-none"
+                  rows="2"
+                  placeholder="e.g., Background music by Artist Name, stock footage from Source..."
+                ></textarea>
+              </div>
             </div>
 
             <!-- Submit Button -->
@@ -1971,67 +1991,52 @@
         
         <!-- Dropzone Column -->
         <div id="dropzone" 
-          class="dropzone-container group flex items-center justify-center border-2 border-dashed border-banodoco-accent min-h-80 rounded-2xl p-8 bg-gradient-to-br from-banodoco-accent/5 via-banodoco-accent/10 to-purple-500/5 transition-all duration-500 ease-out cursor-pointer relative overflow-hidden lg:flex-1 order-1 lg:order-2 scroll-fade-in-right scroll-stagger-1">
+          class="dropzone-container group flex items-center justify-center border-2 border-dashed border-banodoco-accent min-h-80 rounded-2xl p-8 bg-gradient-to-br from-banodoco-accent/5 via-banodoco-accent/10 to-purple-500/5 transition-all duration-300 ease-out cursor-pointer relative overflow-hidden lg:flex-1 order-1 lg:order-2 scroll-fade-in-right scroll-stagger-1">
           
           <!-- Background pattern -->
-          <div class="absolute inset-0 opacity-20 transition-opacity duration-500 ease-out">
+          <div class="absolute inset-0 opacity-20 transition-opacity duration-300 ease-out">
             <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgba(252,192,97,0.15) 1px, transparent 0); background-size: 20px 20px;"></div>
           </div>
           
-          <!-- Animated border glow -->
-          <div class="absolute inset-0 rounded-2xl bg-gradient-to-r from-banodoco-accent via-purple-500 to-banodoco-accent opacity-0 transition-opacity duration-500 ease-out blur-sm"></div>
-          
           <input type="file" id="file-input" multiple accept="*/*" class="hidden">
           
-          <div class="text-center pointer-events-auto relative z-10 transition-transform duration-500 ease-out">
+          <div id="dropzone-content" class="text-center pointer-events-auto relative z-10 transition-all duration-300 ease-out">
             <!-- Icon container with animation -->
-            <div class="relative mb-6 transition-transform duration-500 ease-out">
-              <div class="w-20 h-20 mx-auto bg-gradient-to-br from-banodoco-accent to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ease-out">
-                <svg class="w-10 h-10 text-white transition-transform duration-500 ease-out" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="relative mb-6 transition-transform duration-300 ease-out">
+              <div class="w-20 h-20 mx-auto bg-gradient-to-br from-banodoco-accent to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 ease-out">
+                <svg class="w-10 h-10 text-white transition-transform duration-300 ease-out" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                 </svg>
-        </div>
+              </div>
               
               <!-- Floating particles -->
-              <div class="absolute -top-2 -right-2 w-3 h-3 bg-yellow-400 rounded-full opacity-0 transition-all duration-700 ease-out"></div>
-              <div class="absolute -bottom-1 -left-2 w-2 h-2 bg-purple-400 rounded-full opacity-0 transition-all duration-700 ease-out"></div>
-              <div class="absolute top-1 -left-3 w-1.5 h-1.5 bg-banodoco-accent rounded-full opacity-0 transition-all duration-700 ease-out"></div>
+              <div class="absolute -top-2 -right-2 w-3 h-3 bg-yellow-400 rounded-full opacity-0 transition-all duration-300 ease-out"></div>
+              <div class="absolute -bottom-1 -left-2 w-2 h-2 bg-purple-400 rounded-full opacity-0 transition-all duration-300 ease-out"></div>
+              <div class="absolute top-1 -left-3 w-1.5 h-1.5 bg-banodoco-accent rounded-full opacity-0 transition-all duration-300 ease-out"></div>
             </div>
             
-            <div class="space-y-3 transition-all duration-500 ease-out">
-              <h3 class="text-xl font-space-grotesk font-semibold text-gray-800 transition-colors duration-500 ease-out">
+            <div class="space-y-3 transition-all duration-300 ease-out">
+              <h3 id="dropzone-title" class="text-xl font-space-grotesk font-semibold text-gray-800 transition-all duration-300 ease-out">
                 Drop your files here
               </h3>
-              <p class="text-base text-yellow-700 font-medium transition-colors duration-500 ease-out">
+              <p id="dropzone-subtitle" class="text-base text-yellow-700 font-medium transition-all duration-300 ease-out">
                 or click to browse and upload
               </p>
-              <p class="text-sm text-gray-500 font-inter transition-colors duration-500 ease-out" id="dropzone-helper-text">
+              <p class="text-sm text-gray-500 font-inter transition-colors duration-300 ease-out" id="dropzone-helper-text">
                 
               </p>
               
               <!-- File format hints -->
-              <div class="flex flex-wrap justify-center gap-2 mt-4 opacity-60 transition-all duration-500 ease-out">
+              <div class="flex flex-wrap justify-center gap-2 mt-4 opacity-60 transition-all duration-300 ease-out">
                 <span class="px-2 py-1 text-xs bg-white/60 rounded-full text-gray-600 transition-all duration-300 ease-out">.mp4</span>
                 <span class="px-2 py-1 text-xs bg-white/60 rounded-full text-gray-600 transition-all duration-300 ease-out">.gif</span>
                 <span class="px-2 py-1 text-xs bg-white/60 rounded-full text-gray-600 transition-all duration-300 ease-out">.png</span>
                 <span class="px-2 py-1 text-xs bg-white/60 rounded-full text-gray-600 transition-all duration-300 ease-out">.jpg</span>
                 <span class="px-2 py-1 text-xs bg-white/60 rounded-full text-gray-600 transition-all duration-300 ease-out">+more</span>
-      </div>
-    </div>
+              </div>
+            </div>
 
             <div id="file-list" class="mt-6 text-sm text-gray-800 text-left"></div>
-          </div>
-          
-          <!-- Active drag overlay -->
-          <div id="drag-overlay" class="absolute inset-0 bg-gradient-to-br from-banodoco-accent/20 to-purple-500/20 rounded-2xl border-2 border-banodoco-accent/60 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-200 backdrop-blur-sm">
-            <div class="text-center">
-              <div class="w-16 h-16 mx-auto bg-banodoco-accent rounded-2xl flex items-center justify-center shadow-lg mb-4 scale-110">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                </svg>
-              </div>
-              <h3 class="text-lg font-space-grotesk font-semibold text-gray-800">Release to upload</h3>
-            </div>
           </div>
         </div>
       </div>
@@ -2140,6 +2145,25 @@
         <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-6">
           <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
             <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">What if I don't own the rights to the music or some element used?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed space-y-4">
+                <p>We understand that many AI artworks incorporate elements like music, stock footage, or other third-party content.</p>
+                <p>If your submission includes elements you don't own the rights to, please indicate this in the submission form. We'll use these elements for display purposes on the website, but the NFT sale will only include the rights to the portions you actually own.</p>
+                <p>This ensures transparency for collectors while still allowing us to showcase the full artistic work as you intended it to be experienced.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 7 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-7">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
               <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">Which blockchain will you use? Will you be listing with a partner or L2?</h3>
               <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2158,25 +2182,6 @@
         <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-8">
           <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
             <div class="flex justify-between items-center">
-              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">How can I help?</h3>
-              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-              </svg>
-            </div>
-          </button>
-          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
-            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed space-y-4">
-                <p>Firstly, any submissions or sharing with people who might submit is hugely appreciated!</p>
-                <p>Secondly, if you're a web designer and developer who would like to help me build a really nice web experience for the story, I would hugely appreciate the help.</p>
-            </div>
-          </div>
-        </div>
-
-
-        <!-- Question 7 -->
-        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-7">
-          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
-            <div class="flex justify-between items-center">
               <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">Why might someone buy one? Why might they become valuable with time?</h3>
               <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2193,8 +2198,27 @@
             </div>
           </div>
         </div>
+
         <!-- Question 9 -->
         <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-9">
+          <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">How can I help?</h3>
+              <svg class="qa-icon w-6 h-6 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </button>
+          <div class="qa-answer max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <div class="px-6 pb-4 pt-4 text-gray-700 font-inter leading-relaxed space-y-4">
+                <p>Firstly, any submissions or sharing with people who might submit is hugely appreciated!</p>
+                <p>Secondly, if you're a web designer and developer who would like to help me build a really nice web experience for the story, I would hugely appreciate the help.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 10 -->
+        <div class="qa-item bg-white bg-opacity-90 rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-fade-in scroll-stagger-10">
           <button class="qa-question w-full text-left py-4 px-6 hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:bg-gray-50" onclick="toggleQA(this)">
             <div class="flex justify-between items-center">
               <h3 class="text-lg font-medium font-space-grotesk text-gray-800 pr-4">How can I get in touch?</h3>
@@ -2479,6 +2503,16 @@
       }, durationSeconds * 1000);
     }
 
+    // Utility function to escape HTML
+    function escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     // Form and file handling logic
     const submissionForm = document.getElementById('submission-form');
     const fileInput = document.getElementById('file-input');
@@ -2496,6 +2530,21 @@
     
     // Add event listener for name input
     nameInput.addEventListener('input', updateSubmitButtonState);
+    
+    // Add event listener for rights checkbox
+    const rightsCheckbox = document.getElementById('rights-owned');
+    const rightsDescriptionContainer = document.getElementById('rights-description-container');
+    
+    rightsCheckbox.addEventListener('change', function() {
+        if (!this.checked) {
+            // Show description field when they DON'T own all rights
+            rightsDescriptionContainer.classList.remove('hidden');
+        } else {
+            // Hide description field when they DO own all rights
+            rightsDescriptionContainer.classList.add('hidden');
+            document.getElementById('rights-description').value = ''; // Clear the field when hidden
+        }
+    });
 
     dropzone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (event) => {
@@ -2504,27 +2553,52 @@
 
     dropzone.addEventListener('dragover', (event) => {
         event.preventDefault();
-        const dragOverlay = document.getElementById('drag-overlay');
         if (!dropzone.classList.contains('dragging')) {
-          dropzone.classList.add('dragging');
-          dragOverlay.style.opacity = '1';
+            dropzone.classList.add('dragging');
+            // Change styling to indicate drag state
+            dropzone.style.backgroundColor = 'rgba(252, 192, 97, 0.15)';
+            dropzone.style.borderColor = 'rgba(252, 192, 97, 0.8)';
+            dropzone.style.transform = 'scale(1.02)';
+            
+            // Update text content
+            const title = document.getElementById('dropzone-title');
+            const subtitle = document.getElementById('dropzone-subtitle');
+            if (title) title.textContent = 'Release to upload';
+            if (subtitle) subtitle.textContent = 'Drop your files here';
         }
     });
 
     dropzone.addEventListener('dragleave', (event) => {
         // Only trigger if we're leaving the dropzone entirely
         if (!dropzone.contains(event.relatedTarget)) {
-            const dragOverlay = document.getElementById('drag-overlay');
             dropzone.classList.remove('dragging');
-            dragOverlay.style.opacity = '0';
+            // Reset styling
+            dropzone.style.backgroundColor = '';
+            dropzone.style.borderColor = '';
+            dropzone.style.transform = '';
+            
+            // Reset text content
+            const title = document.getElementById('dropzone-title');
+            const subtitle = document.getElementById('dropzone-subtitle');
+            if (title) title.textContent = 'Drop your files here';
+            if (subtitle) subtitle.textContent = 'or click to browse and upload';
         }
     });
 
     dropzone.addEventListener('drop', (event) => {
         event.preventDefault();
-        const dragOverlay = document.getElementById('drag-overlay');
         dropzone.classList.remove('dragging');
-        dragOverlay.style.opacity = '0';
+        // Reset styling
+        dropzone.style.backgroundColor = '';
+        dropzone.style.borderColor = '';
+        dropzone.style.transform = '';
+        
+        // Reset text content
+        const title = document.getElementById('dropzone-title');
+        const subtitle = document.getElementById('dropzone-subtitle');
+        if (title) title.textContent = 'Drop your files here';
+        if (subtitle) subtitle.textContent = 'or click to browse and upload';
+        
         handleFiles(event.dataTransfer.files);
     });
 
@@ -2619,6 +2693,8 @@
         const createdMonth = document.getElementById('created-month').value;
         const createdYear = document.getElementById('created-year').value;
         const createdDate = createdMonth && createdYear ? `${createdMonth} ${createdYear}` : null;
+        const ownsAllRights = document.getElementById('rights-owned').checked;
+        const rightsDescription = !ownsAllRights ? document.getElementById('rights-description').value.trim() : null;
 
         if (!uploaderName) {
             showSimpleStatus('Please enter your name.', 'red');
@@ -2689,7 +2765,7 @@
 
                     const { data: publicURLData } = supabase.storage.from('nft').getPublicUrl(data.path);
                     uploadedFileUrls.push(publicURLData.publicUrl);
-                    uploadedFileNames.push(file.name);
+                    uploadedFileNames.push(sanitizedFileName);
                     
                     updateFileStatus(i, 'completed', 'Uploaded ✓');
                     
@@ -2711,7 +2787,8 @@
                     percentage_to_them: percentageToThem,
                     urls: uploadedFileUrls,
                     description: description || null,
-                    Created: createdDate || null
+                    Created: createdDate || null,
+                    rights: rightsDescription || null
                 });
 
             if (dbError) {
@@ -2783,7 +2860,7 @@
             
             item.innerHTML = `
                 <div class="flex-1 mr-4">
-                    <div class="font-medium text-gray-800 text-sm mb-1">${file.name}</div>
+                    <div class="font-medium text-gray-800 text-sm mb-1">${escapeHtml(file.name)}</div>
                     <div class="text-xs text-gray-600">${(file.size / 1024).toFixed(2)} KB</div>
                     <div class="w-full h-1 bg-gray-300 rounded mt-2 overflow-hidden">
                         <div class="h-full bg-gradient-to-r from-banodoco-accent to-red-400 w-0 transition-all duration-300 ease-in-out rounded animate-pulse" id="file-progress-fill-${index}"></div>
@@ -2860,6 +2937,9 @@
         document.getElementById('description').value = '';
         document.getElementById('created-month').value = 'May';
         document.getElementById('created-year').value = '2024';
+        document.getElementById('rights-owned').checked = true;
+        document.getElementById('rights-description').value = '';
+        document.getElementById('rights-description-container').classList.add('hidden');
         submitButton.disabled = true;
     }
 
@@ -3007,7 +3087,7 @@
             ${mediaType === 'video' ? 
               videoHtml :
               mediaType === 'image' ? 
-              `<img src="${url}" alt="${fileName}" class="w-full h-full object-cover">` :
+              `<img src="${url}" alt="${escapeHtml(fileName)}" class="w-full h-full object-cover">` :
               `<div class="w-full h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 flex items-center justify-center">
                  <div class="text-center">
                    <div class="w-16 h-16 mx-auto bg-gray-600 rounded-lg flex items-center justify-center mb-4">
@@ -3024,13 +3104,13 @@
           <!-- Top Left Avatar -->
           <div class="absolute top-3 left-3 flex items-center gap-3 z-30">
             ${entry.Avatar ?
-              `<img src="${entry.Avatar}" alt="${entry.uploader_name || 'anonymous'} avatar" class="w-8 h-8 rounded-full object-cover shadow-md border border-white/30">` :
+              `<img src="${entry.Avatar}" alt="${escapeHtml(entry.uploader_name || 'anonymous')} avatar" class="w-8 h-8 rounded-full object-cover shadow-md border border-white/30">` :
               `<div class="w-8 h-8 bg-gradient-to-br ${avatarColor} rounded-full flex items-center justify-center shadow-md border border-white/30">
                 <span class="text-white font-semibold text-xs">${avatarInitials}</span>
               </div>`
             }
             <div class="glass-overlay text-white px-2 py-1 rounded text-xs font-medium">
-              ${entry.uploader_name || 'Anonymous'}
+              ${escapeHtml(entry.uploader_name || 'Anonymous')}
             </div>
           </div>
 
@@ -3045,7 +3125,7 @@
           ${entry.description ? `
             <div class="absolute bottom-3 left-3 max-w-[50%] z-30">
               <div class="bg-black bg-opacity-30 text-white text-xs rounded px-2 py-1 leading-snug font-light">
-                <p style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 10px; line-height: 1.3;">${entry.description}</p>
+                <p style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 10px; line-height: 1.3;">${escapeHtml(entry.description)}</p>
               </div>
             </div>
           ` : ''}
