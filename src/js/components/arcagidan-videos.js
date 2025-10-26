@@ -1,18 +1,32 @@
-// Arca Gidan Prize video hover functionality
+// Arca Gidan Prize GIF animation functionality
 document.addEventListener('DOMContentLoaded', function() {
-  const videos = document.querySelectorAll('.arcagidan-video');
+  const gifs = document.querySelectorAll('.arcagidan-gif');
   
-  videos.forEach(video => {
-    // Play video on hover
-    video.addEventListener('mouseenter', function() {
-      this.play();
+  gifs.forEach(gif => {
+    let isAnimating = false;
+    
+    // Desktop: Show animated GIF on hover
+    gif.addEventListener('mouseenter', function() {
+      this.src = this.dataset.animated;
+      isAnimating = true;
     });
     
-    // Pause video when hover ends
-    video.addEventListener('mouseleave', function() {
-      this.pause();
-      this.currentTime = 0; // Reset to beginning
+    // Desktop: Show static poster when hover ends
+    gif.addEventListener('mouseleave', function() {
+      this.src = this.dataset.static;
+      isAnimating = false;
+    });
+    
+    // Mobile: Toggle between static and animated on tap
+    gif.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      if (isAnimating) {
+        this.src = this.dataset.static;
+        isAnimating = false;
+      } else {
+        this.src = this.dataset.animated;
+        isAnimating = true;
+      }
     });
   });
 });
-

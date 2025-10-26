@@ -10,6 +10,8 @@
 /* Global Styles */
 html {
   height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -1333,28 +1335,37 @@ min-height: 250px;
 }
 /* Mellon card on mobile */
 @media (max-width: 768px) {
-.card[data-category="mellon"] {
-  flex-direction: column !important;
-  gap: 1rem !important;
-  min-height: auto !important;
-  align-items: stretch !important;
-}
-.card[data-category="mellon"] > #mellon-animation-container {
-  order: -1;
-  flex: none !important;
-  margin-left: -1rem;
-  margin-right: -1rem;
-  width: calc(100% + 2rem);
-  max-width: calc(100% + 2rem);
-  min-height: 250px;
-  margin-bottom: 1rem;
-  box-sizing: border-box;
-}
-.card[data-category="mellon"] > .text-column {
-  order: 0;
-  flex: none !important;
-  width: 100% !important;
-}
+  /* General card text size on mobile */
+  .card h3 {
+    font-size: 1.1rem !important;
+  }
+  .card .text-content p {
+    font-size: 0.9rem !important;
+  }
+
+  .card[data-category="mellon"] {
+    flex-direction: column !important;
+    gap: 1rem !important;
+    min-height: auto !important;
+    align-items: stretch !important;
+  }
+  .card[data-category="mellon"] > #mellon-animation-container {
+    order: -1;
+    flex: none !important;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    width: calc(100% + 2rem);
+    max-width: calc(100% + 2rem);
+    min-height: 250px;
+    margin-bottom: 1rem;
+    box-sizing: border-box;
+  }
+  .card[data-category="mellon"] > .text-column {
+    order: 0;
+    flex: none !important;
+    width: 100% !important;
+  }
+
 }
 /* Remove top margin specifically for Mellon card's h3 */
 .card[data-category="mellon"] .text-column h3 {
