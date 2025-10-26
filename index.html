@@ -126,13 +126,13 @@
         </div>
       </div>
 
-      <!-- Card 2: OpenMuse -->
-      <div class="card" data-category="openmuse">
+      <!-- Card 2: Reigh -->
+      <div class="card" data-category="reigh">
         <div class="col-lg-6">
           <div class="box">
             <img
-              src="assets/logos/openmuse.png"
-              alt="OpenMuse Logo"
+              src="assets/logos/reigh.png"
+              alt="Reigh Logo"
               style="
                 height: 116px;
                 max-width: 100%;
@@ -141,17 +141,15 @@
               "
             />
             <h3>
-              OpenMuse is a curated collection of resources for open video
-              models
+              Reigh is an open source art tool for travelling between images
             </h3>
             <div class="text-content">
               <p>
-                OpenMuse will become the home of resources
-                for creative AI models that you can trust.
+                We believe that there's a whole artform waiting to be discovered in the journey from on image to another.
               </p>
             </div>
             <div class="links" style="margin-top: 1rem;">
-              <a href="https://openmuse.ai/" target="_blank" style="color: inherit;"
+              <a href="http://reigh.art/" target="_blank" style="color: inherit;"
                 >Learn more</a
               >
             </div>
@@ -215,78 +213,61 @@
         </div>
       </div>
 
-      <!-- Card X: BNDC Video -->
-      <div class="card" data-category="placeholder">
-        <div
-          style="
-            background-color: #f8f8f8;
-            border-radius: 6px 6px 0 0;
-            margin-bottom: 1rem;
-          "
-        >
+      <!-- Card X: Arca Gidan Prize -->
+      <div class="card" data-category="arcagidan">
+        <div style="display: flex; margin-bottom: 1rem; max-height: 116px; overflow: hidden;">
           <video
-            id="bndcVideo"
+            class="arcagidan-video"
             muted
             playsinline
-            style="
-              display: block;
-              border-radius: 6px 6px 0 0;
-              margin-bottom: 0;
-              aspect-ratio: 1 / 1;
-              object-fit: contain;
-              height: 116px;
-              margin-right: auto;
-              position: relative;
-              z-index: 10;
-              margin-left: 75px;
-            "
+            loop
+            poster="assets/arca-gidan/1_francesco_petrarca_poster.jpg"
+            style="flex: 1; height: 116px; object-fit: cover; cursor: pointer;"
           >
-            <source src="assets/bndc/1.webm" type="video/webm" />
-            <source src="assets/bndc/1.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
+            <source src="assets/arca-gidan/1_francesco_petrarca_video.mp4" type="video/mp4" />
           </video>
-          <!-- Fallback image for iPad -->
-          <img 
-            id="bndcFallbackImage" 
-            src="assets/bndc/first_frame.png" 
-            alt="BNDC Robot First Frame" 
-            style="
-              display: none; /* Initially hidden */
-              border-radius: 6px 6px 0 0;
-              margin-bottom: 0;
-              aspect-ratio: 1 / 1;
-              object-fit: contain;
-              height: 116px;
-              margin-right: auto;
-              position: relative;
-              z-index: 10;
-              margin-left: 75px;
-              background-color: #f8f8f8; /* Match parent div background */
-            "
-          />
-          <div
-            id="bndc-squiggle-canvas-container"
-            style="
-              /* Styles for squiggle container if needed, like height */
-            "
-          ></div>
+          <video
+            class="arcagidan-video"
+            muted
+            playsinline
+            loop
+            poster="assets/arca-gidan/2_arnolfo_di_cambio_poster.jpg"
+            style="flex: 1; height: 116px; object-fit: cover; cursor: pointer;"
+          >
+            <source src="assets/arca-gidan/2_arnolfo_di_cambio_video.mp4" type="video/mp4" />
+          </video>
+          <video
+            class="arcagidan-video"
+            muted
+            playsinline
+            loop
+            poster="assets/arca-gidan/3_giotto_di_bondone_poster.jpg"
+            style="flex: 1; height: 116px; object-fit: cover; cursor: pointer;"
+          >
+            <source src="assets/arca-gidan/3_giotto_di_bondone_video.mp4" type="video/mp4" />
+          </video>
+          <video
+            class="arcagidan-video"
+            muted
+            playsinline
+            loop
+            poster="assets/arca-gidan/4_jean_buridan_poster.jpg"
+            style="flex: 1; height: 116px; object-fit: cover; cursor: pointer;"
+          >
+            <source src="assets/arca-gidan/4_jean_buridan_video.mp4" type="video/mp4" />
+          </video>
         </div>
-        <h3>BNDC is a friendly robot that helps out around the community</h3>
+        <h3>
+          The Arca Gidan Prize is an open source AI art competition
+        </h3>
         <div class="text-content">
           <p>
-            Over the years, he'll grow to become a steward for the community 
-            who will help it function better & unlock its collective knowledge.
+            Over the years, we want to provide a reason for people to push themselves and open models to their limits.
           </p>
         </div>
         <div class="links" style="margin-top: 1rem;">
-          <a href="https://discord.gg/NnFxGvx94b" target="_blank" style="color: inherit;"
-            >View summaries</a
-          >
-          <span style="margin: 0 0.5rem;">|</span>
-          <a
-            href="https://github.com/peteromallet/hivemind/" target="_blank"
-            style="color: inherit; margin-left: 0rem;"
-            >Check out code</a
+          <a href="https://arcagidan.com/" target="_blank" style="color: inherit;"
+            >Visit Website</a
           >
         </div>
       </div>
@@ -425,6 +406,7 @@
   <script src="src/js/components/grid-animations.js"></script>
   <script src="src/js/components/mellon-animation.js" type="module"></script>
   <script src="src/js/components/renaissance-video.js" type="module"></script>
+  <script src="src/js/components/arcagidan-videos.js"></script>
 
   <!-- Video Lightbox Structure -->
   <div id="video-lightbox" class="video-lightbox-styles">
