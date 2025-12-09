@@ -3,16 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Banodoco</title>
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.151.3/build/three.module.js"
-    }
-  }
-  </script>
+  
+  <!-- SEO Meta Tags -->
+  <title>Banodoco - Empowering the Open Source AI Art Ecosystem</title>
+  <meta name="description" content="Building tools and nurturing a culture to inspire, empower and reward open collaboration in the AI and digital art ecosystem."/>
+  <meta name="keywords" content="AI art, open source, digital art, Reigh, ADOS, Mellon, AI tools, creative tools, ecosystem"/>
+  <meta name="author" content="Banodoco"/>
+  <meta name="robots" content="index, follow"/>
+  <link rel="canonical" href="https://banodoco.ai"/>
+  
+  <!-- Open Graph Meta Tags (Facebook, LinkedIn) -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://banodoco.ai"/>
+  <meta property="og:title" content="Banodoco - Empowering the Open Source AI Art Ecosystem"/>
+  <meta property="og:description" content="Building tools and nurturing a culture to inspire, empower and reward open collaboration in the AI and digital art ecosystem."/>
+  <meta property="og:image" content="https://banodoco.ai/assets/logos/banodoco.png"/>
+  <meta property="og:site_name" content="Banodoco"/>
+  
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:url" content="https://banodoco.ai"/>
+  <meta name="twitter:title" content="Banodoco - Empowering the Open Source AI Art Ecosystem"/>
+  <meta name="twitter:description" content="Building tools and nurturing a culture to inspire, empower and reward open collaboration in the AI and digital art ecosystem."/>
+  <meta name="twitter:image" content="https://banodoco.ai/assets/logos/banodoco.png"/>
+  
+  <!-- Favicon -->
   <link rel="icon" href="assets/logos/banodoco.png" type="image/png" />
   <link rel="shortcut icon" href="assets/logos/banodoco.png" type="image/png" />
+  <link rel="apple-touch-icon" href="assets/logos/banodoco.png"/>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -23,27 +41,28 @@
   />
 
   <!-- Main CSS -->
-  <link rel="stylesheet" href="src/styles/main.css" />
-
-  <!-- Header & Footer component CSS -->
-  <link rel="stylesheet" href="src/styles/components/header.css" />
-  <link rel="stylesheet" href="src/styles/components/footer.css" />
-
-  <!-- Feather Icons (similar to Lucide) -->
+  <link rel="stylesheet" href="/src/styles/main.css" />
+  
+  <!-- External Dependencies (CDN) -->
   <script src="https://unpkg.com/feather-icons"></script>
-  <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.151.3/build/three.module.js"
+    }
+  }
+  </script>
 </head>
 
 <body>
-  <canvas id="plantCanvas"></canvas>
-  <div class="plant-overlay"></div>
+  <canvas id="plantCanvas" aria-hidden="true"></canvas>
+  <div class="plant-overlay" aria-hidden="true"></div>
   <!-- POM Border -->
-  <div class="inner-border"></div>
+  <div class="inner-border" aria-hidden="true"></div>
 
   <div class="container" style="position: relative;">
     <!-- Site Header -->
-    <div id="header"></div>
+    <header id="header" role="banner"></header>
     <script>
       fetch('src/components/header.html')
         .then(response => response.text())
@@ -51,12 +70,13 @@
     </script>
 
     <!-- Improved Hero Section with integrated content -->
-    <div class="content-section">
+    <section class="content-section" aria-labelledby="hero-heading">
       <div class="two-column">
         <div
           class="text-column"
         >
           <h1
+            id="hero-heading"
             class="hero-title"
           >
             We want to help the open source AI art ecosystem thrive
@@ -68,39 +88,41 @@
         </div>
         <div
           class="ecosystem-visualization"
+          role="img"
+          aria-label="Interactive ecosystem visualization showing connections between community members and tools"
         >
           <!-- Legend inserted in top left of visualization -->
-          <div id="legend">
-            <div class="legend-item">
-              <div class="legend-line inspire"></div>
+          <div id="legend" role="list" aria-label="Ecosystem connection types">
+            <div class="legend-item" role="listitem">
+              <div class="legend-line inspire" aria-hidden="true"></div>
               <div class="legend-label">Inspire</div>
             </div>
-            <div class="legend-item">
-              <div class="legend-line equip"></div>
+            <div class="legend-item" role="listitem">
+              <div class="legend-line equip" aria-hidden="true"></div>
               <div class="legend-label">Equip</div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- Divider -->
-    <hr class="section-divider" />
+    <hr class="section-divider" aria-hidden="true" />
 
     <!-- Open Source Section -->
-    <div class="content-section" id="interlocking-tools-section">
-      <h2>
+    <section class="content-section" id="interlocking-tools-section" aria-labelledby="tools-heading">
+      <h2 id="tools-heading">
         We're building an interlocking collection of tools & resources to empower the ecosystem
         succeed and grow
       </h2>
 
 
-    </div>
+    </section>
 
     <!-- Dashboard Cards -->
-    <div class="dashboard">
+    <div class="dashboard" role="list">
       <!-- Card 1: Community -->
-      <div class="card story-tile" daxrta-category="story" data-position="7">
+      <article class="card story-tile" daxrta-category="story" data-position="7" role="listitem">
         <div
           class="community-images-grid"
           style="
@@ -124,10 +146,10 @@
             >Visit community</a
           >
         </div>
-      </div>
+      </article>
 
       <!-- Card 2: Reigh -->
-      <div class="card" data-category="reigh">
+      <article class="card" data-category="reigh" role="listitem">
         <div class="col-lg-6">
           <div class="box">
             <img
@@ -365,7 +387,7 @@
           class="links"
         >
           <a
-            href="https://www.schlupfloch.xyz/consider-pretending-that-the-2nd-renaissance-is-about-to-start-and-that-you-can-be-a-part-of-it/" target="_blank"
+            href="https://schlupfloch.ghost.io/consider-pretending-that-the-2nd-renaissance-is-about-to-start-and-that-you-can-be-a-part-of-it/" target="_blank"
             style="color: inherit;"
             >Read about this idea</a
           >
@@ -388,17 +410,11 @@
     </div>
 
     <!-- Insert the container for the new, fetched footer -->
-    <div id="footer"></div>
+    <footer id="footer" role="contentinfo"></footer>
   </div>
 
-  <script src="src/js/components/icons.js"></script>
-  <script src="src/js/script.js"></script>
-  <script src="src/js/components/plant-animation.js" type="module"></script>
-  <script src="src/js/components/ecosystem.js" type="module"></script>
-  <script src="src/js/components/grid-animations.js"></script>
-  <script src="src/js/components/mellon-animation.js" type="module"></script>
-  <script src="src/js/components/renaissance-video.js" type="module"></script>
-  <script src="src/js/components/arcagidan-videos.js"></script>
+  <!-- Main JavaScript Entry Point (Vite will bundle this) -->
+  <script type="module" src="/src/js/main.js"></script>
 
   <!-- Video Lightbox Structure -->
   <div id="video-lightbox" class="video-lightbox-styles">
