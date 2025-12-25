@@ -62,14 +62,14 @@
 </head>
 
 <body>
-  <canvas id="plantCanvas" aria-hidden="true"></canvas>
-  <div class="plant-overlay" aria-hidden="true"></div>
+  <canvas id="plantCanvas"></canvas>
+  <div class="plant-overlay"></div>
   <!-- POM Border -->
-  <div class="inner-border" aria-hidden="true"></div>
+  <div class="inner-border"></div>
 
   <div class="container" style="position: relative;">
     <!-- Site Header -->
-    <header id="header" role="banner"></header>
+    <div id="header"></div>
     <script>
       fetch('src/components/header.html')
         .then(response => response.text())
@@ -77,13 +77,12 @@
     </script>
 
     <!-- Improved Hero Section with integrated content -->
-    <section class="content-section" aria-labelledby="hero-heading">
+    <div class="content-section">
       <div class="two-column">
         <div
           class="text-column"
         >
           <h1
-            id="hero-heading"
             class="hero-title"
           >
             We want to help the open source AI art ecosystem thrive
@@ -95,41 +94,39 @@
         </div>
         <div
           class="ecosystem-visualization"
-          role="img"
-          aria-label="Interactive ecosystem visualization showing connections between community members and tools"
         >
           <!-- Legend inserted in top left of visualization -->
-          <div id="legend" role="list" aria-label="Ecosystem connection types">
-            <div class="legend-item" role="listitem">
-              <div class="legend-line inspire" aria-hidden="true"></div>
+          <div id="legend">
+            <div class="legend-item">
+              <div class="legend-line inspire"></div>
               <div class="legend-label">Inspire</div>
             </div>
-            <div class="legend-item" role="listitem">
-              <div class="legend-line equip" aria-hidden="true"></div>
+            <div class="legend-item">
+              <div class="legend-line equip"></div>
               <div class="legend-label">Equip</div>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
     <!-- Divider -->
-    <hr class="section-divider" aria-hidden="true" />
+    <hr class="section-divider" />
 
     <!-- Open Source Section -->
-    <section class="content-section" id="interlocking-tools-section" aria-labelledby="tools-heading">
-      <h2 id="tools-heading">
+    <div class="content-section" id="interlocking-tools-section">
+      <h2>
         We're building an interlocking collection of tools & resources to empower the ecosystem
         succeed and grow
       </h2>
 
 
-    </section>
+    </div>
 
     <!-- Dashboard Cards -->
-    <div class="dashboard" role="list">
+    <div class="dashboard">
       <!-- Card 1: Community -->
-      <article class="card story-tile" daxrta-category="story" data-position="7" role="listitem">
+      <div class="card story-tile" daxrta-category="story" data-position="7">
         <div
           class="community-images-grid"
           style="
@@ -153,10 +150,10 @@
             >Visit community</a
           >
         </div>
-      </article>
+      </div>
 
       <!-- Card 2: Reigh -->
-      <article class="card" data-category="reigh" role="listitem">
+      <div class="card" data-category="reigh">
         <div class="col-lg-6">
           <div class="box">
             <img
@@ -184,10 +181,10 @@
             </div>
           </div>
         </div>
-      </article>
+      </div>
 
       <!-- Card 3: ADOS -->
-      <article class="card" data-category="ados" role="listitem">
+      <div class="card" data-category="ados">
         <div
           class="image-hover-container"
           style="
@@ -417,7 +414,7 @@
     </div>
 
     <!-- Insert the container for the new, fetched footer -->
-    <footer id="footer" role="contentinfo"></footer>
+    <div id="footer"></div>
   </div>
 
   <script src="src/js/components/icons.js"></script>
