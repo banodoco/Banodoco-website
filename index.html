@@ -32,6 +32,14 @@
   <link rel="shortcut icon" href="assets/logos/banodoco.png" type="image/png" />
   <link rel="apple-touch-icon" href="assets/logos/banodoco.png"/>
 
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.151.3/build/three.module.js"
+    }
+  }
+  </script>
+
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -41,17 +49,16 @@
   />
 
   <!-- Main CSS -->
-  <link rel="stylesheet" href="/src/styles/main.css" />
-  
-  <!-- External Dependencies (CDN) -->
+  <link rel="stylesheet" href="src/styles/main.css" />
+
+  <!-- Header & Footer component CSS -->
+  <link rel="stylesheet" href="src/styles/components/header.css" />
+  <link rel="stylesheet" href="src/styles/components/footer.css" />
+
+  <!-- Feather Icons (similar to Lucide) -->
   <script src="https://unpkg.com/feather-icons"></script>
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.151.3/build/three.module.js"
-    }
-  }
-  </script>
+  <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
 </head>
 
 <body>
@@ -177,10 +184,10 @@
             </div>
           </div>
         </div>
-      </div>
+      </article>
 
       <!-- Card 3: ADOS -->
-      <div class="card" data-category="ados">
+      <article class="card" data-category="ados" role="listitem">
         <div
           class="image-hover-container"
           style="
@@ -413,8 +420,14 @@
     <footer id="footer" role="contentinfo"></footer>
   </div>
 
-  <!-- Main JavaScript Entry Point (Vite will bundle this) -->
-  <script type="module" src="/src/js/main.js"></script>
+  <script src="src/js/components/icons.js"></script>
+  <script src="src/js/script.js"></script>
+  <script src="src/js/components/plant-animation.js" type="module"></script>
+  <script src="src/js/components/ecosystem.js" type="module"></script>
+  <script src="src/js/components/grid-animations.js"></script>
+  <script src="src/js/components/mellon-animation.js" type="module"></script>
+  <script src="src/js/components/renaissance-video.js" type="module"></script>
+  <script src="src/js/components/arcagidan-videos.js"></script>
 
   <!-- Video Lightbox Structure -->
   <div id="video-lightbox" class="video-lightbox-styles">
