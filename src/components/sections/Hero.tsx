@@ -25,7 +25,7 @@ export const Hero = () => {
           <img
             src="https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=600&h=500&fit=crop&crop=center"
             alt="Terrarium with lush green plants"
-            className="w-full max-w-lg h-auto rounded-sm shadow-lg"
+            className="w-full max-w-[200px] sm:max-w-sm md:max-w-lg h-auto rounded-sm shadow-lg"
           />
         </div>
         </div>
