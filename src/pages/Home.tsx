@@ -4,7 +4,7 @@ import { Reigh } from '@/components/sections/Reigh';
 import { ArcaGidan } from '@/components/sections/ArcaGidan';
 import { Events } from '@/components/sections/Events';
 import { Ecosystem } from '@/components/sections/Ecosystem';
-import { Ownership } from '@/components/sections/Ownership';
+import { OwnershipStatement } from '@/components/sections/OwnershipStatement';
 
 const Home = () => {
   return (
@@ -15,7 +15,7 @@ const Home = () => {
       <ArcaGidan />
       <Events />
       <Ecosystem />
-      <Ownership />
+      <OwnershipStatement />
     </>
   );
 };
