@@ -156,7 +156,7 @@ export const Ecosystem: React.FC = () => {
   }, []);
 
   return (
-    <section className="h-screen snap-start bg-[#102018] text-white relative overflow-hidden">
+    <section className="h-screen snap-start bg-gradient-to-br from-[#0c1a14] via-[#102018] to-[#081510] text-white relative overflow-hidden">
       {/* Header */}
       <div className="absolute top-12 left-4 right-4 z-20 flex justify-center">
         <div className="w-full max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10 text-center">

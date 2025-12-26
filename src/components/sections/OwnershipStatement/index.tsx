@@ -5,7 +5,7 @@ export const OwnershipStatement = () => {
   const { visiblePics, allPics, usedPicsRef, handleSwap } = useProfilePics();
 
   return (
-    <section className="h-screen snap-start bg-[#1f1a18] text-white flex flex-col overflow-hidden">
+    <section className="h-screen snap-start bg-gradient-to-br from-[#1a1614] via-[#1f1a18] to-[#141210] text-white flex flex-col overflow-hidden">
       {/* Profile grid at top */}
       <div className="w-full pt-8">
         <div className="profile-grid">
@@ -66,24 +66,24 @@ export const OwnershipStatement = () => {
         .profile-grid {
           display: grid;
           gap: 2px;
-          grid-template-columns: repeat(8, 1fr);
+          grid-template-columns: repeat(10, 1fr);
         }
         
         @media (min-width: 480px) {
           .profile-grid {
-            grid-template-columns: repeat(10, 1fr);
+            grid-template-columns: repeat(12, 1fr);
           }
         }
         
         @media (min-width: 768px) {
           .profile-grid {
-            grid-template-columns: repeat(16, 1fr);
+            grid-template-columns: repeat(18, 1fr);
           }
         }
         
         @media (min-width: 1200px) {
           .profile-grid {
-            grid-template-columns: repeat(20, 1fr);
+            grid-template-columns: repeat(22, 1fr);
           }
         }
       `}</style>

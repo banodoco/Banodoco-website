@@ -69,13 +69,26 @@ export { SVG_CONFIG } from './config';
 /** External events originate from this area (left side of visualization) */
 export const BANODOCO_SOURCE = {
   x: 30,
-  yMin: 150,
-  yMax: 450,
+  yMin: 120,
+  yMax: 480,
+  minDistanceFromCenter: 80, // Avoid spawning too close to the river line
 } as const;
 
-/** Get a random Y position for external event source */
+/** Get a random Y position for external event source (avoids center line) */
 export const getRandomSourceY = (): number => {
-  return BANODOCO_SOURCE.yMin + Math.random() * (BANODOCO_SOURCE.yMax - BANODOCO_SOURCE.yMin);
+  const centerY = SVG_CONFIG.centerY;
+  const minDist = BANODOCO_SOURCE.minDistanceFromCenter;
+  
+  // Two valid zones: above center and below center
+  const aboveRange = { min: BANODOCO_SOURCE.yMin, max: centerY - minDist };
+  const belowRange = { min: centerY + minDist, max: BANODOCO_SOURCE.yMax };
+  
+  // Randomly pick above or below
+  if (Math.random() < 0.5) {
+    return aboveRange.min + Math.random() * (aboveRange.max - aboveRange.min);
+  } else {
+    return belowRange.min + Math.random() * (belowRange.max - belowRange.min);
+  }
 };
 
 /** Get the X position where a stage's lines END (right edge) */

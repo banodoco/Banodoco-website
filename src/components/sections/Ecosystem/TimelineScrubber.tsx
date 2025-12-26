@@ -68,7 +68,7 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
   return (
     <div className="w-full">
       {/* Date display */}
-      <div className="text-center leading-none mb-3">
+      <div className="text-center leading-none">
         <div className="text-sm text-white/50 font-medium tracking-wider uppercase">{month}</div>
         <div className="text-4xl md:text-5xl font-light text-white tabular-nums">{year}</div>
       </div>
@@ -76,7 +76,7 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
       {/* Track */}
       <div
         ref={trackRef}
-        className="relative h-8 cursor-grab active:cursor-grabbing select-none"
+        className="relative h-8 cursor-grab active:cursor-grabbing select-none mb-4"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={endDrag}
@@ -100,16 +100,17 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
         {/* Year markers */}
         {YEAR_MARKERS.map((y) => {
           const yearIdx = (y - TIME_CONFIG.startYear) * 12;
-          const pos = (yearIdx / (TOTAL_MONTHS - 1)) * 100;
+          const isLastYear = y === TIME_CONFIG.endYear;
+          const pos = isLastYear ? 100 : (yearIdx / (TOTAL_MONTHS - 1)) * 100;
           const isPast = monthIdx >= yearIdx;
           return (
             <div
               key={y}
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center"
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
               style={{ left: `${pos}%` }}
             >
               <div className={cn('w-2 h-2 rounded-full', isPast ? 'bg-white' : 'bg-white/30')} />
-              <span className={cn('text-xs mt-2 font-medium', isPast ? 'text-white/80' : 'text-white/30')}>
+              <span className={cn('absolute left-1/2 -translate-x-1/2 top-4 text-xs font-medium whitespace-nowrap', isPast ? 'text-white/80' : 'text-white/30')}>
                 {y}
               </span>
             </div>
