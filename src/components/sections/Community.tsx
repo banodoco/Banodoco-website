@@ -28,7 +28,7 @@ interface TopicData {
 const IMAGE_DISPLAY_DURATION = 5000; // 5 seconds for images
 
 // Media Gallery Component with progress tracking
-const MediaGallery = ({ urls, isVisible }: { urls: string[], isVisible: boolean }) => {
+const MediaGallery = ({ urls, isVisible, compact = false }: { urls: string[], isVisible: boolean, compact?: boolean }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -173,15 +173,18 @@ const MediaGallery = ({ urls, isVisible }: { urls: string[], isVisible: boolean 
   }, [selectedIndex]);
 
   return (
-    <div className="space-y-3">
+    <div className={compact ? "space-y-1.5" : "space-y-2 md:space-y-3"}>
       {/* Main display */}
-      <div className="relative aspect-video rounded-lg overflow-hidden bg-black/20">
+      <div className={cn(
+        "relative rounded-lg overflow-hidden bg-black/20",
+        compact ? "aspect-square" : "aspect-video"
+      )}>
         {isVideo ? (
           <video 
             ref={videoRef}
             key={currentUrl}
             src={currentUrl}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
             autoPlay={isVisible}
             muted
             playsInline
@@ -194,14 +197,23 @@ const MediaGallery = ({ urls, isVisible }: { urls: string[], isVisible: boolean 
             key={currentUrl}
             src={currentUrl}
             alt=""
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
           />
+        )}
+        {/* Progress indicator for compact mode */}
+        {compact && urls.length > 1 && (
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10">
+            <div 
+              className="h-full bg-emerald-400 transition-all duration-100"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         )}
       </div>
       
-      {/* Thumbnail selector with progress */}
-      {urls.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto py-1 px-0.5 -mx-0.5">
+      {/* Thumbnail selector with progress - hidden in compact mode */}
+      {!compact && urls.length > 1 && (
+        <div className="flex gap-1.5 md:gap-2 overflow-x-auto py-1 px-0.5 -mx-0.5">
           {urls.map((url, idx) => {
             const isVid = url.match(/\.(mp4|webm|mov)(\?|$)/i);
             const isSelected = idx === selectedIndex;
@@ -211,7 +223,7 @@ const MediaGallery = ({ urls, isVisible }: { urls: string[], isVisible: boolean 
                 key={idx}
                 onClick={() => handleSelect(idx)}
                 className={cn(
-                  "relative shrink-0 w-14 h-14 rounded-md overflow-hidden transition-all",
+                  "relative shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-md overflow-hidden transition-all",
                   isSelected 
                     ? "ring-2 ring-emerald-400" 
                     : "ring-1 ring-white/10 hover:ring-white/30"
@@ -231,7 +243,7 @@ const MediaGallery = ({ urls, isVisible }: { urls: string[], isVisible: boolean 
                 {/* Thumbnail content */}
                 {isVid ? (
                   <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white/60" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 md:w-5 md:h-5 text-white/60" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z"/>
                     </svg>
                   </div>
@@ -246,6 +258,24 @@ const MediaGallery = ({ urls, isVisible }: { urls: string[], isVisible: boolean 
               </button>
             );
           })}
+        </div>
+      )}
+      
+      {/* Compact mode: dot indicators */}
+      {compact && urls.length > 1 && (
+        <div className="flex justify-center gap-1">
+          {urls.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleSelect(idx)}
+              className={cn(
+                "w-1.5 h-1.5 rounded-full transition-all",
+                idx === selectedIndex 
+                  ? "bg-emerald-400" 
+                  : "bg-white/30"
+              )}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -390,11 +420,32 @@ export const Community = () => {
 
   return (
     <section id="community" className="h-screen snap-start bg-[#1a1a1a] text-white overflow-hidden">
-      <div ref={containerRef} className="h-full overflow-y-auto px-8 md:px-16 py-12">
+      <div ref={containerRef} className="h-full overflow-y-auto px-4 md:px-16 py-6 md:py-12">
         <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
-          {/* Left side - Introduction text */}
-          <div className="lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
+        {/* Mobile intro - shown above cards */}
+        <div className="mb-6 md:hidden">
+          <h2 className="text-2xl font-normal tracking-tight leading-[1.15] mb-3">
+            Our Discord is a gathering place for people from across the ecosystem
+          </h2>
+          <p className="text-sm text-white/60 leading-relaxed mb-4">
+            We've been at the cutting-edge of the technical & artistic scenes over the past two years.
+          </p>
+          <a 
+            href="https://discord.gg/banodoco" 
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-white/90 transition-colors"
+          >
+            Join Discord
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-16">
+          {/* Left side - Introduction text (desktop only) */}
+          <div className="hidden md:block lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
             <h2 className="text-4xl md:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
               Our Discord is a gathering place for people from across the ecosystem
             </h2>
@@ -435,7 +486,7 @@ export const Community = () => {
             )}
 
             {!loading && !error && topics.length > 0 && (
-              <div className="space-y-6 pt-6">
+              <div className="space-y-3 md:space-y-6 md:pt-6">
                 {topics.map((item, idx) => (
                   <article 
                     key={idx}
@@ -443,21 +494,63 @@ export const Community = () => {
                       topicRefs.current[idx] = el;
                     }}
                     className={cn(
-                      "bg-white/5 backdrop-blur-sm rounded-2xl overflow-hidden border transition-colors duration-500",
+                      "bg-white/5 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden border transition-colors duration-500",
                       idx === activeTopicIndex ? "border-white/30 bg-white/10" : "border-white/10"
                     )}
                   >
-                    {/* Channel header */}
-                    <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400">
+                    {/* Channel header - more compact on mobile */}
+                    <div className="px-3 py-2 md:px-6 md:py-4 border-b border-white/10 flex items-center justify-between">
+                      <span className="inline-flex items-center px-2 py-1 md:px-3 md:py-1.5 rounded-full text-[10px] md:text-xs font-medium bg-emerald-500/20 text-emerald-400">
                         #{formatChannelName(item.channel_name)}
                       </span>
-                      <span className="text-xs text-white/40 font-medium">{formatDate(item.summary_date)}</span>
+                      <span className="text-[10px] md:text-xs text-white/40 font-medium">{formatDate(item.summary_date)}</span>
                     </div>
 
-                    {/* Content */}
-                    <div className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Content - compact mobile layout */}
+                    <div className="p-3 md:p-6">
+                      {/* Mobile: Horizontal layout with media on right */}
+                      <div className="flex gap-3 md:hidden">
+                        {/* Bullet points on the left */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-white mb-2 leading-snug line-clamp-2">
+                            {item.topic_title}
+                          </h3>
+                          {item.topic_sub_topics && item.topic_sub_topics.length > 0 && (
+                            <div className="space-y-1.5">
+                              {item.topic_sub_topics.slice(0, 3).map((sub, subIdx) => (
+                                <div 
+                                  key={subIdx}
+                                  className="flex items-start gap-1.5 text-[11px] text-white/50"
+                                >
+                                  <span className="text-emerald-400 shrink-0">→</span>
+                                  <span 
+                                    className="line-clamp-1"
+                                    dangerouslySetInnerHTML={{ __html: formatText(sub.text) }}
+                                  />
+                                </div>
+                              ))}
+                              {item.topic_sub_topics.length > 3 && (
+                                <p className="text-[10px] text-white/30 pl-3">
+                                  +{item.topic_sub_topics.length - 3} more
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {/* Media on the right for mobile */}
+                        {item.mediaUrls && item.mediaUrls.length > 0 && (
+                          <div className="w-24 shrink-0">
+                            <MediaGallery 
+                              urls={item.mediaUrls} 
+                              isVisible={idx === activeTopicIndex}
+                              compact
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Desktop: Original grid layout */}
+                      <div className="hidden md:grid grid-cols-2 gap-6">
                         {/* Text content */}
                         <div>
                           <h3 className="text-lg font-medium text-white mb-3 leading-snug">
@@ -503,8 +596,8 @@ export const Community = () => {
                       </div>
                     </div>
 
-                    {/* Read full update button */}
-                    <div className="px-6 py-4 border-t border-white/10">
+                    {/* Read full update button - hidden on mobile */}
+                    <div className="hidden md:block px-6 py-4 border-t border-white/10">
                       <button className="text-sm text-white/60 hover:text-white transition-colors flex items-center gap-2 group">
                         Read full update
                         <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

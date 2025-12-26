@@ -41,6 +41,16 @@ const PROFILE_PICS = [
 
 const GRID_SIZE = 102;
 const FLICKER_INTERVAL = 50; // ms between flickers
+const MOBILE_FLICKER_COUNT = 8; // number of flickers on mobile tap
+
+// Grid configuration by breakpoint
+const GRID_CONFIG = {
+  mobile: { columns: 10, rows: 5 },      // <480px: 10 cols × 5 rows = 50
+  smallTablet: { columns: 12, rows: 5 }, // 480-767px: 12 cols × 5 rows = 60
+  tablet: { columns: 18, rows: null },   // 768-991px: show all
+  desktop: { columns: 18, rows: null },  // 992-1199px: show all
+  large: { columns: 34, rows: null },    // ≥1200px: show all
+};
 
 // Shuffle array using Fisher-Yates algorithm
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -58,6 +68,15 @@ const getRandomPastelColor = () => {
   return `hsl(${hue}, 70%, 80%)`;
 };
 
+// Get grid config based on window width
+const getGridConfig = (width: number) => {
+  if (width >= 1200) return GRID_CONFIG.large;
+  if (width >= 992) return GRID_CONFIG.desktop;
+  if (width >= 768) return GRID_CONFIG.tablet;
+  if (width >= 480) return GRID_CONFIG.smallTablet;
+  return GRID_CONFIG.mobile;
+};
+
 // Single profile image component with flickering hover effect
 const ProfileImage = ({ 
   initialPic, 
@@ -72,10 +91,12 @@ const ProfileImage = ({
 }) => {
   const [currentPic, setCurrentPic] = useState(initialPic);
   const [hasError, setHasError] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const [isActive, setIsActive] = useState(false);
   const fallbackColor = useRef(getRandomPastelColor());
   const flickerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const flickerCountRef = useRef(0);
   const originalPicRef = useRef(initialPic);
+  const isTouchRef = useRef(false);
 
   const stopFlickering = useCallback(() => {
     if (flickerIntervalRef.current) {
@@ -90,19 +111,28 @@ const ProfileImage = ({
       const otherPics = availablePics.filter(pic => pic !== excludePic);
       return otherPics[Math.floor(Math.random() * otherPics.length)];
     }
-    // Fallback: just pick any random pic
     return allPics[Math.floor(Math.random() * allPics.length)];
   }, [allPics, usedPicsRef]);
 
+  const settleOnFinalPic = useCallback(() => {
+    stopFlickering();
+    setIsActive(false);
+    const finalPic = getRandomUnusedPic(originalPicRef.current);
+    onSwap(originalPicRef.current, finalPic);
+    setCurrentPic(finalPic);
+    originalPicRef.current = finalPic;
+  }, [getRandomUnusedPic, onSwap, stopFlickering]);
+
+  // Desktop hover handlers
   const handleMouseEnter = useCallback(() => {
-    setIsHovered(true);
+    if (isTouchRef.current) return; // Skip if touch device
+    
+    setIsActive(true);
     originalPicRef.current = currentPic;
     
-    // Immediately show a different image (don't wait for first interval)
     const firstFlickerPic = allPics[Math.floor(Math.random() * allPics.length)];
     setCurrentPic(firstFlickerPic);
     
-    // Continue flickering endlessly until mouse leaves
     flickerIntervalRef.current = setInterval(() => {
       const flickerPic = allPics[Math.floor(Math.random() * allPics.length)];
       setCurrentPic(flickerPic);
@@ -110,13 +140,34 @@ const ProfileImage = ({
   }, [currentPic, allPics]);
 
   const handleMouseLeave = useCallback(() => {
-    setIsHovered(false);
-    stopFlickering();
-    // Settle on a final random pic
-    const finalPic = getRandomUnusedPic(originalPicRef.current);
-    onSwap(originalPicRef.current, finalPic);
-    setCurrentPic(finalPic);
-  }, [getRandomUnusedPic, onSwap, stopFlickering]);
+    if (isTouchRef.current) return;
+    settleOnFinalPic();
+  }, [settleOnFinalPic]);
+
+  // Mobile tap handler - quick scramble then settle
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    isTouchRef.current = true;
+    
+    // If already flickering, ignore
+    if (flickerIntervalRef.current) return;
+    
+    setIsActive(true);
+    originalPicRef.current = currentPic;
+    flickerCountRef.current = 0;
+    
+    // Quick scramble through images
+    flickerIntervalRef.current = setInterval(() => {
+      flickerCountRef.current++;
+      const flickerPic = allPics[Math.floor(Math.random() * allPics.length)];
+      setCurrentPic(flickerPic);
+      
+      // Stop after set number of flickers
+      if (flickerCountRef.current >= MOBILE_FLICKER_COUNT) {
+        settleOnFinalPic();
+      }
+    }, FLICKER_INTERVAL);
+  }, [currentPic, allPics, settleOnFinalPic]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -130,22 +181,24 @@ const ProfileImage = ({
         style={{ backgroundColor: fallbackColor.current }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
       />
     );
   }
 
   return (
     <div 
-      className="relative w-full aspect-square overflow-hidden group cursor-pointer"
+      className="relative w-full aspect-square overflow-hidden cursor-pointer"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
     >
       <img
         src={`/profile_pics/${currentPic}.jpg`}
         alt=""
         className="w-full h-full object-cover transition-[filter] duration-100"
         style={{
-          filter: isHovered ? 'brightness(1.15)' : 'brightness(1)',
+          filter: isActive ? 'brightness(1.15)' : 'brightness(1)',
         }}
         loading="lazy"
         onError={() => setHasError(true)}
@@ -156,8 +209,11 @@ const ProfileImage = ({
 
 export const Ownership = () => {
   const [selectedPics, setSelectedPics] = useState<string[]>([]);
+  const [visibleCount, setVisibleCount] = useState(GRID_SIZE);
+  const [columns, setColumns] = useState(10);
   const usedPicsRef = useRef<Set<string>>(new Set());
 
+  // Initialize pics
   useEffect(() => {
     const shuffled = shuffleArray(PROFILE_PICS);
     const selected = shuffled.slice(0, GRID_SIZE);
@@ -165,24 +221,44 @@ export const Ownership = () => {
     usedPicsRef.current = new Set(selected);
   }, []);
 
+  // Handle responsive grid
+  useEffect(() => {
+    const updateGrid = () => {
+      const config = getGridConfig(window.innerWidth);
+      setColumns(config.columns);
+      
+      if (config.rows) {
+        // Limit to exact rows × columns
+        setVisibleCount(config.rows * config.columns);
+      } else {
+        // Show all
+        setVisibleCount(GRID_SIZE);
+      }
+    };
+
+    updateGrid();
+    window.addEventListener('resize', updateGrid);
+    return () => window.removeEventListener('resize', updateGrid);
+  }, []);
+
   const handleSwap = useCallback((oldPic: string, newPic: string) => {
     usedPicsRef.current.delete(oldPic);
     usedPicsRef.current.add(newPic);
   }, []);
 
+  const visiblePics = selectedPics.slice(0, visibleCount);
+
   return (
     <section id="ownership" className="snap-start bg-[#0a0a0a] text-white overflow-hidden">
       {/* Full-width image grid - truly edge-to-edge */}
-      <div className="w-full overflow-hidden">
+      <div className="w-full">
         <div 
-          className="ownership-grid"
+          className="grid gap-[2px]"
           style={{
-            display: 'grid',
-            gap: '2px',
-            width: '100%',
+            gridTemplateColumns: `repeat(${columns}, 1fr)`,
           }}
         >
-          {selectedPics.map((pic, idx) => (
+          {visiblePics.map((pic, idx) => (
             <ProfileImage
               key={`${pic}-${idx}`}
               initialPic={pic}
@@ -228,41 +304,6 @@ export const Ownership = () => {
           </div>
         </div>
       </div>
-
-      <style>{`
-        .ownership-grid {
-          /* Mobile (<480px): 12 columns */
-          grid-template-columns: repeat(12, 1fr);
-        }
-        
-        @media (min-width: 480px) {
-          /* Small tablets (480-767px): 14 columns */
-          .ownership-grid {
-            grid-template-columns: repeat(14, 1fr);
-          }
-        }
-        
-        @media (min-width: 768px) {
-          /* Tablets (768-991px): 18 columns */
-          .ownership-grid {
-            grid-template-columns: repeat(18, 1fr);
-          }
-        }
-        
-        @media (min-width: 992px) {
-          /* Small desktop (992-1199px): 18 columns */
-          .ownership-grid {
-            grid-template-columns: repeat(18, 1fr);
-          }
-        }
-        
-        @media (min-width: 1200px) {
-          /* Large desktop (≥1200px): ~34 columns for 3 rows with all 102 visible */
-          .ownership-grid {
-            grid-template-columns: repeat(34, 1fr);
-          }
-        }
-      `}</style>
     </section>
   );
 };

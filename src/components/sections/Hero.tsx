@@ -1,8 +1,10 @@
-import React from 'react';
+import { Header } from '@/components/layout/Header';
 
 export const Hero = () => {
   return (
-    <section className="h-screen snap-start px-8 md:px-16 flex items-center">
+    <section className="h-screen snap-start flex flex-col">
+      <Header />
+      <div className="flex-1 px-8 md:px-16 flex items-center">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
         {/* Text Content */}
         <div className="space-y-8">
@@ -23,6 +25,7 @@ export const Hero = () => {
             className="w-full max-w-lg h-auto rounded-sm shadow-lg"
           />
         </div>
+      </div>
       </div>
     </section>
   );

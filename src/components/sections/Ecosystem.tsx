@@ -518,7 +518,11 @@ export const Ecosystem: React.FC = () => {
     if (isPaused) return;
 
     const interval = setInterval(() => {
-      setMonthIdx((prev) => (prev >= TOTAL_MONTHS - 1 ? 0 : prev + 1));
+      setMonthIdx((prev) => {
+        // Stop at the end instead of looping
+        if (prev >= TOTAL_MONTHS - 1) return prev;
+        return prev + 1;
+      });
     }, TIME_CONFIG.autoAdvanceMs);
 
     return () => clearInterval(interval);
