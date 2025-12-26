@@ -15,7 +15,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     // Home uses scroll-snap sections; Header is rendered inside Hero section
     // so it's part of the first snap point (not orphaned above it).
     return (
-      <div className="h-screen overflow-y-auto snap-y snap-mandatory bg-[#f5f5f3] text-foreground">
+      <div className="h-[100dvh] overflow-y-auto snap-y snap-mandatory bg-[#f5f5f3] text-foreground">
         {children}
         <Footer />
       </div>

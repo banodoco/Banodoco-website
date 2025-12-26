@@ -1,14 +1,73 @@
 import { useEffect, useState, useRef } from 'react';
 import { useCommunityTopics } from './useCommunityTopics';
 import { TopicCard } from './TopicCard';
+import { Section } from '@/components/layout/Section';
 
 export const Community = () => {
   const { topics, loading, error } = useCommunityTopics();
   const [activeTopicIndex, setActiveTopicIndex] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const topicRefs = useRef<(HTMLElement | null)[]>([]);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const mobileCardRefs = useRef<(HTMLElement | null)[]>([]);
+  const scrollDirectionRef = useRef<'up' | 'down'>('down');
+  const wasVisibleRef = useRef(false);
 
-  // Track scroll to determine active topic
+  // Set internal scroll position on section exit, so it's ready for re-entry
+  useEffect(() => {
+    const section = sectionRef.current;
+    const container = containerRef.current;
+    if (!section || !container) return;
+
+    // Find the snap scroll parent
+    const scrollParent = section.closest('.snap-y') as HTMLElement | null;
+    if (!scrollParent) return;
+
+    let lastScrollTop = scrollParent.scrollTop;
+
+    const handleParentScroll = () => {
+      const currentScrollTop = scrollParent.scrollTop;
+      if (currentScrollTop !== lastScrollTop) {
+        scrollDirectionRef.current = currentScrollTop > lastScrollTop ? 'down' : 'up';
+        lastScrollTop = currentScrollTop;
+      }
+    };
+
+    scrollParent.addEventListener('scroll', handleParentScroll, { passive: true });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        const isNowVisible = entry.isIntersecting && entry.intersectionRatio > 0.5;
+        
+        // Set scroll position when leaving the section
+        if (!isNowVisible && wasVisibleRef.current) {
+          if (scrollDirectionRef.current === 'down') {
+            // Left by scrolling down - set to bottom for when user scrolls back up
+            container.scrollTop = container.scrollHeight - container.clientHeight;
+          } else {
+            // Left by scrolling up - set to top for when user scrolls back down
+            container.scrollTop = 0;
+          }
+        }
+        
+        wasVisibleRef.current = isNowVisible;
+      },
+      {
+        threshold: [0.5],
+      }
+    );
+
+    observer.observe(section);
+
+    return () => {
+      scrollParent.removeEventListener('scroll', handleParentScroll);
+      observer.disconnect();
+    };
+  }, []);
+
+  // Track scroll to determine active topic (desktop - vertical scroll)
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -44,16 +103,54 @@ export const Community = () => {
     return () => container.removeEventListener('scroll', handleScroll);
   }, [topics.length]);
 
+  // Track horizontal scroll to determine active topic (mobile)
+  useEffect(() => {
+    const mobileScroll = mobileScrollRef.current;
+    if (!mobileScroll) return;
+
+    const handleMobileScroll = () => {
+      if (!mobileScroll || mobileCardRefs.current.length === 0) return;
+      
+      const scrollLeft = mobileScroll.scrollLeft;
+      const containerWidth = mobileScroll.clientWidth;
+      const scrollCenter = scrollLeft + containerWidth / 2;
+      
+      let closestIdx = 0;
+      let minDiff = Infinity;
+      
+      mobileCardRefs.current.forEach((ref, idx) => {
+        if (!ref) return;
+        const cardLeft = ref.offsetLeft;
+        const cardWidth = ref.offsetWidth;
+        const cardCenter = cardLeft + cardWidth / 2;
+        const diff = Math.abs(cardCenter - scrollCenter);
+        
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIdx = idx;
+        }
+      });
+      
+      setActiveTopicIndex(closestIdx);
+    };
+
+    // Initial check
+    handleMobileScroll();
+
+    mobileScroll.addEventListener('scroll', handleMobileScroll, { passive: true });
+    return () => mobileScroll.removeEventListener('scroll', handleMobileScroll);
+  }, [topics.length]);
+
   return (
-    <section id="community" className="h-screen snap-start bg-gradient-to-br from-[#0c1420] via-[#101825] to-[#0a1018] text-white overflow-hidden">
-      <div ref={containerRef} className="h-full overflow-y-auto px-4 md:px-16 py-6 md:py-12">
-        <div className="max-w-7xl mx-auto">
+    <Section ref={sectionRef} id="community" className="bg-gradient-to-br from-[#0c1420] via-[#101825] to-[#0a1018] text-white">
+      <div ref={containerRef} className="h-full overflow-hidden md:overflow-y-auto px-6 md:px-16 md:py-12 flex items-center md:items-start">
+        <div className="max-w-7xl mx-auto w-full">
           {/* Mobile intro - shown above cards */}
-          <div className="mb-6 md:hidden">
-            <h2 className="text-2xl font-normal tracking-tight leading-[1.15] mb-3">
+          <div className="mb-4 md:hidden">
+            <h2 className="text-xl font-normal tracking-tight leading-[1.15] mb-2">
               Our Discord is a gathering place for people from across the ecosystem
             </h2>
-            <p className="text-sm text-white/60 leading-relaxed mb-4">
+            <p className="text-xs text-white/60 leading-relaxed mb-3">
               We've been at the cutting-edge of the technical & artistic scenes over the past two years.
             </p>
             <a 
@@ -69,13 +166,78 @@ export const Community = () => {
             </a>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-16">
+          {/* Mobile horizontal scroll cards */}
+          <div className="md:hidden -mx-4">
+            {loading && (
+              <div className="flex items-center justify-center py-20 px-4">
+                <div className="animate-pulse text-white/40">Loading latest updates...</div>
+              </div>
+            )}
+
+            {error && (
+              <div className="text-center py-20 px-4 text-white/50">
+                {error}
+              </div>
+            )}
+
+            {!loading && !error && topics.length === 0 && (
+              <div className="text-center py-20 px-4 text-white/50">
+                No updates available yet. Check back later!
+              </div>
+            )}
+
+            {!loading && !error && topics.length > 0 && (
+              <>
+                <div 
+                  ref={mobileScrollRef}
+                  className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-4 scrollbar-hide"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {topics.map((topic, idx) => (
+                    <TopicCard
+                      key={idx}
+                      ref={(el) => {
+                        mobileCardRefs.current[idx] = el;
+                      }}
+                      topic={topic}
+                      isActive={idx === activeTopicIndex}
+                      fullWidth
+                    />
+                  ))}
+                </div>
+                {/* Dot indicators */}
+                <div className="flex justify-center gap-2 mt-2">
+                  {topics.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        const card = mobileCardRefs.current[idx];
+                        if (card && mobileScrollRef.current) {
+                          mobileScrollRef.current.scrollTo({
+                            left: card.offsetLeft - 16,
+                            behavior: 'smooth'
+                          });
+                        }
+                      }}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        idx === activeTopicIndex 
+                          ? 'bg-emerald-400 w-4' 
+                          : 'bg-white/30'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="hidden md:grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-16">
             {/* Left side - Introduction text (desktop only) */}
             <div className="hidden md:block lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
-              <h2 className="text-4xl md:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
+              <h2 className="text-2xl md:text-3xl font-normal tracking-tight leading-[1.15] mb-4">
                 Our Discord is a gathering place for people from across the ecosystem
               </h2>
-              <p className="text-lg text-white/60 leading-relaxed mb-8">
+              <p className="text-sm md:text-base text-white/60 leading-relaxed mb-6">
                 We've been at the cutting-edge of the technical & artistic scenes over the past two years.
               </p>
               <a 
@@ -91,8 +253,8 @@ export const Community = () => {
               </a>
             </div>
 
-            {/* Right side - Topic cards */}
-            <div className="lg:col-span-8">
+            {/* Right side - Topic cards (desktop only) */}
+            <div className="hidden md:block lg:col-span-8">
               {loading && (
                 <div className="flex items-center justify-center py-20">
                   <div className="animate-pulse text-white/40">Loading latest updates...</div>
@@ -112,7 +274,7 @@ export const Community = () => {
               )}
 
               {!loading && !error && topics.length > 0 && (
-                <div className="space-y-3 md:space-y-6 md:pt-6">
+                <div className="space-y-6 pt-6">
                   {topics.map((topic, idx) => (
                     <TopicCard
                       key={idx}
@@ -129,7 +291,6 @@ export const Community = () => {
           </div>
         </div>
       </div>
-    </section>
+    </Section>
   );
 };
-

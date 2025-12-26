@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { TIME_CONFIG, TOTAL_MONTHS, STAGE_X, SVG_CONFIG } from './config';
+import { TIME_CONFIG, TOTAL_MONTHS, SVG_CONFIG } from './config';
 import { calculateStats } from './utils';
 import { RiverVisualization } from './RiverVisualization';
+import { MobileVisualization } from './MobileVisualization';
 import { TimelineScrubber } from './TimelineScrubber';
 import { EventAnimation } from './EventAnimation';
 import { 
@@ -9,6 +10,7 @@ import {
   getStageInputX,
   type EcosystemEvent 
 } from './eventConfig';
+import { Section } from '@/components/layout/Section';
 
 export const Ecosystem: React.FC = () => {
   const [monthIdx, setMonthIdx] = useState(0);
@@ -156,21 +158,21 @@ export const Ecosystem: React.FC = () => {
   }, []);
 
   return (
-    <section className="h-screen snap-start bg-gradient-to-br from-[#0c1a14] via-[#102018] to-[#081510] text-white relative overflow-hidden">
-      {/* Header */}
-      <div className="absolute top-12 left-4 right-4 z-20 flex justify-center">
+    <Section className="bg-gradient-to-br from-[#0c1a14] via-[#102018] to-[#081510] text-white relative">
+      {/* Header - positioned at ~8% from top on desktop, higher on mobile */}
+      <div className="absolute top-[4%] md:top-[8%] left-4 right-4 z-20 flex justify-center">
         <div className="w-full max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10 text-center">
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-normal tracking-tight leading-tight">
+          <h2 className="text-xl md:text-2xl lg:text-3xl font-normal tracking-tight leading-tight">
             We nurture the ecosystem so thousands of open-source tools can help billions fall in love with AI
           </h2>
-          <p className="text-base md:text-lg text-white/60 max-w-xl mx-auto mt-2">
+          <p className="text-sm md:text-base text-white/60 max-w-xl mx-auto mt-2">
             We want to help open source AI technology make its way into the hands of everyone through consumer-facing tools built by the community.
           </p>
         </div>
       </div>
 
-      {/* River visualization */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none pt-8">
+      {/* Desktop River visualization */}
+      <div className="absolute inset-0 hidden md:flex items-center justify-center pointer-events-none pt-8">
         <div className="w-full max-w-7xl px-4">
           <RiverVisualization 
             progress={progress} 
@@ -186,9 +188,18 @@ export const Ecosystem: React.FC = () => {
           />
         </div>
       </div>
+      
+      {/* Mobile visualization - vertical flow, positioned between header and timeline */}
+      <div className="absolute inset-x-0 top-[30%] bottom-[24%] flex md:hidden items-center justify-center pointer-events-none">
+        <MobileVisualization 
+          progress={progress}
+          stats={stats}
+          waveX={waveX}
+        />
+      </div>
 
-      {/* Timeline */}
-      <div className="absolute bottom-16 left-4 right-4 z-20 flex justify-center">
+      {/* Timeline - positioned at ~10% from bottom on desktop, lower on mobile */}
+      <div className="absolute bottom-[5%] md:bottom-[10%] left-4 right-4 z-20 flex justify-center">
         <div className="w-full max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10">
           <TimelineScrubber
             monthIdx={monthIdx}
@@ -198,6 +209,6 @@ export const Ecosystem: React.FC = () => {
           />
         </div>
       </div>
-    </section>
+    </Section>
   );
 };

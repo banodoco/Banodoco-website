@@ -21,7 +21,7 @@ export const Ownership = () => {
         </div>
       </div>
 
-      {/* CSS for responsive grid */}
+      {/* CSS for responsive grid - columns are factors of 90 for even rows */}
       <style>{`
         .profile-grid {
           display: grid;
@@ -31,7 +31,7 @@ export const Ownership = () => {
         
         @media (min-width: 480px) {
           .profile-grid {
-            grid-template-columns: repeat(12, 1fr);
+            grid-template-columns: repeat(15, 1fr);
           }
         }
         
@@ -43,7 +43,7 @@ export const Ownership = () => {
         
         @media (min-width: 1200px) {
           .profile-grid {
-            grid-template-columns: repeat(34, 1fr);
+            grid-template-columns: repeat(30, 1fr);
           }
         }
       `}</style>

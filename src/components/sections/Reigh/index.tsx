@@ -3,6 +3,7 @@ import { TravelSelector } from './TravelSelector';
 import { useTravelAutoAdvance } from './useTravelAutoAdvance';
 import { useInViewStart } from './useInViewStart';
 import { travelExamples } from './data';
+import { Section, SectionContent } from '@/components/layout/Section';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
@@ -58,13 +59,12 @@ export const Reigh: React.FC = () => {
   const currentExample = travelExamples[selectedExample];
 
   return (
-    <section ref={sectionRef} className="h-screen snap-start bg-gradient-to-br from-[#140c22] via-[#181028] to-[#100820] text-white overflow-hidden">
-      <div className="h-full px-8 md:px-16 py-12 flex items-center">
-        <div className="max-w-7xl mx-auto w-full">
+    <Section ref={sectionRef} className="bg-gradient-to-br from-[#140c22] via-[#181028] to-[#100820] text-white">
+      <SectionContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left side - Video showcase */}
             <div className="order-2 lg:order-1 flex flex-col">
-              <div className="relative rounded-xl overflow-hidden bg-black/50 h-[50vh] lg:h-[60vh] flex items-center justify-center">
+              <div className="relative rounded-xl overflow-hidden bg-black/50 h-[35dvh] md:h-[50dvh] lg:h-[60dvh] flex items-center justify-center">
                 <video
                   ref={videoRef}
                   src={currentExample.video}
@@ -110,25 +110,23 @@ export const Reigh: React.FC = () => {
 
             {/* Right side - Text */}
             <div className="order-1 lg:order-2">
-              <h2 className="text-4xl md:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
+              <h2 className="text-2xl md:text-3xl font-normal tracking-tight leading-[1.15] mb-4">
                 Reigh is an open source art tool for travelling between images
               </h2>
-              <p className="text-lg text-white/60 leading-relaxed mb-8">
-                We believe that there's a whole artform waiting to be discovered in the journey from one image to another.
+              <p className="text-base text-white/60 leading-relaxed">
+                We believe that there's a whole artform waiting to be discovered in the journey from one image to another.{' '}
+                <a 
+                  href="#"
+                  className="inline-flex items-center text-emerald-400 hover:text-emerald-300 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </a>
               </p>
-              <a 
-                href="#"
-                className="inline-flex items-center gap-2 text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
-              >
-                Learn more
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </a>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
+      </SectionContent>
+    </Section>
   );
 };

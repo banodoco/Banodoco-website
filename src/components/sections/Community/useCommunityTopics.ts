@@ -74,3 +74,4 @@ export const useCommunityTopics = (): UseCommunityTopicsResult => {
   return { topics, loading, error };
 };
 
+

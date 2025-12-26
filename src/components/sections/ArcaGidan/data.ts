@@ -32,3 +32,4 @@ export const artworks: ArtworkItem[] = [
   },
 ];
 
+

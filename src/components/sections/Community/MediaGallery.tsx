@@ -264,3 +264,4 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
   );
 };
 
+

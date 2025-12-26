@@ -46,9 +46,19 @@
   -webkit-mask-image: radial-gradient(circle at center, black 60%, transparent 70%);
 }
 
-/* River Visualization Clip Path Animation */
+/* Auto-advance progress animations */
 @keyframes drainFillLeftToRight {
   from { clip-path: inset(0 0 0 0); }
+  to { clip-path: inset(0 0 0 100%); }
+}
+
+@keyframes revealBorderLeftToRight {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0% 0 0); }
+}
+
+@keyframes hideBorderLeftToRight {
+  from { clip-path: inset(0 0% 0 0); }
   to { clip-path: inset(0 0 0 100%); }
 }
 
@@ -59,4 +69,46 @@
 
 .ecosystem-ribbon {
   /* No animation - updates smoothly with progress */
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile ecosystem flow animation */
+@keyframes flow-down {
+  0% {
+    top: -6px;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% + 6px);
+    opacity: 0;
+  }
+}
+
+.animate-flow-down {
+  animation: flow-down 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(100%);
+    opacity: 0.5;
+  }
 }

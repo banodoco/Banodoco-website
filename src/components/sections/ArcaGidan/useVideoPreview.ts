@@ -43,11 +43,8 @@ export const useVideoPreview = ({ videoRef }: UseVideoPreviewOptions): UseVideoP
 
   const handleMouseLeave = useCallback(() => {
     if (!isTouchDevice) {
-      setShowVideo(false);
-      if (videoRef.current) {
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
-      }
+      // Just pause - keep showing the video frame (don't switch back to poster)
+      videoRef.current?.pause();
     }
   }, [isTouchDevice, videoRef]);
 
@@ -57,20 +54,17 @@ export const useVideoPreview = ({ videoRef }: UseVideoPreviewOptions): UseVideoP
 
   const handleClick = useCallback(() => {
     if (isTouchDevice) {
-      if (!showVideo) {
+      if (videoRef.current?.paused) {
         if (hasPlayedOnceRef.current) {
           setShowVideo(true);
         }
         videoRef.current?.play();
       } else {
-        setShowVideo(false);
-        if (videoRef.current) {
-          videoRef.current.pause();
-          videoRef.current.currentTime = 0;
-        }
+        // Just pause - keep showing the video frame
+        videoRef.current?.pause();
       }
     }
-  }, [isTouchDevice, showVideo, videoRef]);
+  }, [isTouchDevice, videoRef]);
 
   const handlePlaying = useCallback(() => {
     setShowVideo(true);
@@ -87,4 +81,5 @@ export const useVideoPreview = ({ videoRef }: UseVideoPreviewOptions): UseVideoP
     handlePlaying,
   };
 };
+
 

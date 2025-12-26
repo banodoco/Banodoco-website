@@ -1,28 +1,83 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import type { PhotoItem } from './types';
 
 interface PolaroidProps {
   photo: PhotoItem;
   index: number;
+  totalPhotos: number;
   baseZIndex: number;
   isExpanded: boolean;
+  isVisible: boolean;
   onOpen: () => void;
   onClose: () => void;
 }
 
+// Hook to detect if we're on mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  return isMobile;
+};
+
+// Get mobile positions for top-right cluster (spread out more)
+const getMobilePosition = (index: number): { x: number; y: number } => {
+  const positions = [
+    { x: 72, y: 4 },
+    { x: 88, y: 6 },
+    { x: 80, y: 18 },
+    { x: 95, y: 20 },
+    { x: 68, y: 28 },
+  ];
+  return positions[index % positions.length];
+};
+
+// Each polaroid gets a unique exit direction for variety
+const getExitTransform = (index: number): { x: number; y: number; rotation: number } => {
+  const directions = [
+    { x: -150, y: -80, rotation: -45 },   // up-left
+    { x: 180, y: -60, rotation: 35 },     // up-right
+    { x: -200, y: 40, rotation: -30 },    // left
+    { x: 200, y: 20, rotation: 40 },      // right
+    { x: -120, y: 100, rotation: -25 },   // down-left
+  ];
+  return directions[index % directions.length];
+};
+
 export const Polaroid: React.FC<PolaroidProps> = ({ 
   photo, 
   index, 
+  totalPhotos,
   baseZIndex, 
   isExpanded, 
+  isVisible,
   onOpen, 
   onClose 
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const isMobile = useIsMobile();
+
+  // Get position based on screen size
+  const mobilePos = useMemo(() => getMobilePosition(index), [index]);
+  const posX = isMobile ? mobilePos.x : photo.x;
+  const posY = isMobile ? mobilePos.y : photo.y;
 
   // Smoothly reduce rotation on hover for a "picked up" effect
   const hoverRotation = photo.rotation * 0.3;
+
+  // Calculate staggered delay - enter in sequence, exit in reverse
+  const enterDelay = index * 80; // ms between each polaroid entering
+  const exitDelay = (totalPhotos - 1 - index) * 60; // reverse order for exit
+
+  // Get unique exit direction for this polaroid
+  const exitTransform = useMemo(() => getExitTransform(index), [index]);
 
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false);
@@ -31,15 +86,28 @@ export const Polaroid: React.FC<PolaroidProps> = ({
     }
   }, [isExpanded, onClose]);
 
+  // Calculate the transform based on state
+  const getTransform = () => {
+    if (!isVisible) {
+      // Exit state - fly off in unique direction
+      return `translate(-50%, -50%) translate(${exitTransform.x}%, ${exitTransform.y}%) rotate(${exitTransform.rotation}deg) scale(0.6)`;
+    }
+    // Visible state - normal position
+    return 'translate(-50%, -50%)';
+  };
+
   return (
     <div
-      className="absolute w-24 md:w-28 lg:w-32 cursor-pointer"
+      className="absolute w-16 sm:w-20 md:w-28 lg:w-32 cursor-pointer"
       style={{
-        left: `${photo.x}%`,
-        top: `${photo.y}%`,
-        transform: 'translate(-50%, -50%)',
+        left: `${posX}%`,
+        top: `${posY}%`,
+        transform: getTransform(),
+        opacity: isVisible ? 1 : 0,
         zIndex: isExpanded ? 200 : isHovered ? 100 : baseZIndex + index,
-        transition: 'z-index 0s',
+        transition: isVisible
+          ? `transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) ${enterDelay}ms, opacity 0.4s ease-out ${enterDelay}ms`
+          : `transform 0.5s cubic-bezier(0.55, 0, 0.85, 0.36) ${exitDelay}ms, opacity 0.3s ease-in ${exitDelay}ms`,
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={handleMouseLeave}
@@ -47,7 +115,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
     >
       <div
         className={cn(
-          "bg-white p-1.5 pb-6 shadow-xl transition-all duration-500 ease-out",
+          "bg-white p-1 pb-4 sm:p-1.5 sm:pb-5 lg:pb-6 shadow-xl transition-all duration-500 ease-out",
           isHovered && !isExpanded && "shadow-2xl",
           isExpanded && "shadow-2xl"
         )}
@@ -84,4 +152,5 @@ export const Polaroid: React.FC<PolaroidProps> = ({
     </div>
   );
 };
+
 
