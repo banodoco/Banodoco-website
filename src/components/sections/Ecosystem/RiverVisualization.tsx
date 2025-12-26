@@ -27,6 +27,7 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
         )}
         fill={COLORS.contributors}
         opacity={0.15 + progress * 0.1}
+        className="ecosystem-ribbon"
       />
     );
 
@@ -41,6 +42,9 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
           strokeWidth={1.5 + progress * 0.5}
           opacity={0.5}
           fill="none"
+          pathLength={1}
+          className="ecosystem-line"
+          style={{ animationDelay: `${i * 30}ms` }}
         />
       );
     }
@@ -59,6 +63,8 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
         )}
         fill={COLORS.tools}
         opacity={0.15 + progress * 0.1}
+        className="ecosystem-ribbon"
+        style={{ animationDelay: '50ms' }}
       />
     );
 
@@ -75,6 +81,9 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
           strokeWidth={Math.max(1, 3 - progress * 1.5)}
           opacity={0.6}
           fill="none"
+          pathLength={1}
+          className="ecosystem-line"
+          style={{ animationDelay: `${i * 25}ms` }}
         />
       );
     }
@@ -93,9 +102,12 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
         )}
         fill={COLORS.artists}
         opacity={0.1 + progress * 0.1}
+        className="ecosystem-ribbon"
+        style={{ animationDelay: '100ms' }}
       />
     );
 
+    let artistLineIdx = 0;
     toolEndpoints.forEach((toolY, tIdx) => {
       const localSpread = 12 + progress * 35;
 
@@ -116,8 +128,12 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
             strokeWidth={Math.max(0.5, 2 - progress * 1.2)}
             opacity={0.35}
             fill="none"
+            pathLength={1}
+            className="ecosystem-line"
+            style={{ animationDelay: `${artistLineIdx * 15}ms` }}
           />
         );
+        artistLineIdx++;
       }
     });
 
@@ -136,6 +152,8 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
         )}
         fill={COLORS.consumers}
         opacity={0.12 + progress * 0.22}
+        className="ecosystem-ribbon"
+        style={{ animationDelay: '150ms' }}
       />
     );
 
@@ -153,6 +171,9 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
           strokeWidth={0.7 + progress * 0.8}
           opacity={0.18 + progress * 0.18}
           fill="none"
+          pathLength={1}
+          className="ecosystem-line"
+          style={{ animationDelay: `${Math.min(i * 5, 300)}ms` }}
         />
       );
     }
