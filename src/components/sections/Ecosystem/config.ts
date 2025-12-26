@@ -15,8 +15,8 @@ export const TOTAL_MONTHS = (TIME_CONFIG.endYear - TIME_CONFIG.startYear + 1) * 
 export const GROWTH_CONFIG = {
   contributors: { base: 12, annualGrowth: 1.4 },
   tools: { base: 1, annualGrowth: 1.35 },
-  artists: { base: 89, annualGrowth: 1.45 },
-  consumers: { base: 1200, annualGrowth: 1.5 },
+  artists: { base: 1200, annualGrowth: 1.5 },
+  fans: { base: 12000, annualGrowth: 1.5 },
   // Dampen growth after year 20 to keep numbers realistic
   dampeningAfterYear: 20,
   dampeningFactor: 0.85,
@@ -27,7 +27,7 @@ export const COLORS = {
   contributors: '#3b82f6',
   tools: '#10b981',
   artists: '#f59e0b',
-  consumers: '#f43f5e',
+  fans: '#f43f5e',
 } as const;
 
 // X-positions for each stage in the SVG (viewBox is 1400 wide)
@@ -36,7 +36,7 @@ export const STAGE_X = {
   reigh: 240,
   tools: 440,
   artists: 760,
-  consumers: 1300,
+  fans: 1300,
 } as const;
 
 export const SVG_CONFIG = {
@@ -55,6 +55,6 @@ export interface Stats {
   contributors: number;
   tools: number;
   artists: number;
-  consumers: number;
+  fans: number;
 }
 

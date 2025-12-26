@@ -1,17 +1,19 @@
 import { useMemo } from 'react';
 import { COLORS, STAGE_X, SVG_CONFIG, type Stats } from './config';
-import { curvePath, ribbonPath, formatNumber } from './utils';
+import { curvePath, ribbonPath } from './utils';
+import { AnimatedNumber } from './AnimatedNumber';
 
 interface RiverVisualizationProps {
   progress: number;
   stats: Stats;
+  waveX?: number | null; // X position of the distortion wave (null = no wave)
+  eventOverlay?: React.ReactNode;
 }
 
-export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress, stats }) => {
-  const { ribbons, lines, nodes } = useMemo(() => {
+export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress, stats, waveX, eventOverlay }) => {
+  const { ribbons, lines } = useMemo(() => {
     const ribbons: JSX.Element[] = [];
     const lines: JSX.Element[] = [];
-    const nodes: JSX.Element[] = [];
     const { centerY } = SVG_CONFIG;
 
     // --- STAGE 1: Contributors flowing into Reigh ---
@@ -44,7 +46,6 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
           fill="none"
           pathLength={1}
           className="ecosystem-line"
-          style={{ animationDelay: `${i * 30}ms` }}
         />
       );
     }
@@ -64,7 +65,6 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
         fill={COLORS.tools}
         opacity={0.15 + progress * 0.1}
         className="ecosystem-ribbon"
-        style={{ animationDelay: '50ms' }}
       />
     );
 
@@ -83,7 +83,6 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
           fill="none"
           pathLength={1}
           className="ecosystem-line"
-          style={{ animationDelay: `${i * 25}ms` }}
         />
       );
     }
@@ -103,7 +102,6 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
         fill={COLORS.artists}
         opacity={0.1 + progress * 0.1}
         className="ecosystem-ribbon"
-        style={{ animationDelay: '100ms' }}
       />
     );
 
@@ -130,14 +128,13 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
             fill="none"
             pathLength={1}
             className="ecosystem-line"
-            style={{ animationDelay: `${artistLineIdx * 15}ms` }}
           />
         );
         artistLineIdx++;
       }
     });
 
-    // --- STAGE 4: Consumers exploding from Artists ---
+    // --- STAGE 4: Fans exploding from Artists ---
     const consumerSpread = 35 + progress * 420;
     const artistMin = artistEndpoints.length > 0 ? Math.min(...artistEndpoints) : centerY - 20;
     const artistMax = artistEndpoints.length > 0 ? Math.max(...artistEndpoints) : centerY + 20;
@@ -145,15 +142,14 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
 
     ribbons.push(
       <path
-        key="ribbon-consumers"
+        key="ribbon-fans"
         d={ribbonPath(
           STAGE_X.artists, artistMin, artistMax,
-          STAGE_X.consumers, centerY - consumerSpread / 2, centerY + consumerSpread / 2
+          STAGE_X.fans, centerY - consumerSpread / 2, centerY + consumerSpread / 2
         )}
-        fill={COLORS.consumers}
+        fill={COLORS.fans}
         opacity={0.12 + progress * 0.22}
         className="ecosystem-ribbon"
-        style={{ animationDelay: '150ms' }}
       />
     );
 
@@ -166,29 +162,25 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
       lines.push(
         <path
           key={`consumer-line-${i}`}
-          d={curvePath(STAGE_X.artists, startY, STAGE_X.consumers, endY)}
-          stroke={COLORS.consumers}
+          d={curvePath(STAGE_X.artists, startY, STAGE_X.fans, endY)}
+          stroke={COLORS.fans}
           strokeWidth={0.7 + progress * 0.8}
           opacity={0.18 + progress * 0.18}
           fill="none"
           pathLength={1}
           className="ecosystem-line"
-          style={{ animationDelay: `${Math.min(i * 5, 300)}ms` }}
         />
       );
     }
 
-    // --- TRANSITION NODES ---
-    nodes.push(
-      <circle key="node-reigh" cx={STAGE_X.reigh} cy={centerY} r={14} fill={COLORS.tools} filter="url(#glow)" stroke="white" strokeWidth="2" />,
-      <circle key="node-tools" cx={STAGE_X.tools} cy={centerY} r={8 + progress * 4} fill={COLORS.tools} filter="url(#glow)" stroke="white" strokeWidth="1.5" opacity={0.9} />,
-      <circle key="node-artists" cx={STAGE_X.artists} cy={centerY} r={6 + progress * 6} fill={COLORS.artists} filter="url(#glow)" stroke="white" strokeWidth="1.5" opacity={0.9} />
-    );
-
-    return { ribbons, lines, nodes };
+    return { ribbons, lines };
   }, [progress]);
 
-  const { centerY } = SVG_CONFIG;
+  const { centerY, height } = SVG_CONFIG;
+  const hasWave = waveX !== null && waveX !== undefined;
+  
+  // Wave band width in SVG units
+  const waveWidth = 80;
 
   return (
     <svg
@@ -204,47 +196,115 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        
+        {/* Distortion wave filter - uses turbulence masked to a vertical band */}
+        <filter id="distortion-wave" x="-10%" y="-10%" width="120%" height="120%">
+          {/* Create turbulence pattern for displacement */}
+          <feTurbulence 
+            type="turbulence" 
+            baseFrequency="0.015 0.04" 
+            numOctaves="2" 
+            seed="42"
+            result="turbulence"
+          />
+          
+          {/* Apply displacement using the turbulence */}
+          <feDisplacementMap
+            in="SourceGraphic"
+            in2="turbulence"
+            scale="18"
+            xChannelSelector="R"
+            yChannelSelector="G"
+            result="displaced"
+          />
+          
+          {/* Create a horizontal gradient mask for the wave band */}
+          <feFlood floodColor="black" result="black" />
+          <feFlood floodColor="white" result="white" />
+          
+          {/* Composite to create the final masked displacement */}
+          <feComposite in="displaced" in2="SourceGraphic" operator="over" />
+        </filter>
+        
+        {/* Clip path that moves with the wave - creates a vertical stripe */}
+        {hasWave && (
+          <clipPath id="wave-clip">
+            <rect 
+              x={waveX! - waveWidth / 2} 
+              y={0} 
+              width={waveWidth} 
+              height={height} 
+            />
+          </clipPath>
+        )}
       </defs>
 
       <g>{ribbons}</g>
+      
+      {/* Normal lines (not affected by wave) */}
       <g>{lines}</g>
-      <g>{nodes}</g>
+      
+      {/* Distorted lines overlay (only in the wave band) */}
+      {hasWave && (
+        <g 
+          clipPath="url(#wave-clip)" 
+          filter="url(#distortion-wave)"
+          style={{ opacity: 0.9 }}
+        >
+          {lines}
+        </g>
+      )}
+      
+      {/* Event animation overlay */}
+      {eventOverlay}
 
       {/* Labels */}
       <g fontFamily="system-ui" fontWeight="500" fill="white">
+        {/* Contributors */}
         <text x={STAGE_X.start} y={centerY - 30 - progress * 30} fill={COLORS.contributors} fontSize="12" opacity={0.9}>
           Contributors
         </text>
-        <text x={STAGE_X.start} y={centerY - 13 - progress * 30} fontSize="16" fontWeight="bold">
-          {formatNumber(stats.contributors)}
-        </text>
+        <foreignObject x={STAGE_X.start} y={centerY - 28 - progress * 30} width="100" height="24">
+          <div style={{ fontSize: 16, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui' }}>
+            <AnimatedNumber value={stats.contributors} />
+          </div>
+        </foreignObject>
 
+        {/* Reigh */}
         <text x={STAGE_X.reigh} y={centerY + 40} textAnchor="middle" fontSize="13" opacity={0.7}>
           Reigh
         </text>
 
+        {/* Tools */}
         <text x={STAGE_X.tools} y={centerY - 40 - progress * 40} fill={COLORS.tools} textAnchor="middle" fontSize="12" opacity={0.9}>
           Tools
         </text>
-        <text x={STAGE_X.tools} y={centerY - 23 - progress * 40} fontSize="16" fontWeight="bold" textAnchor="middle">
-          {formatNumber(stats.tools)}
-        </text>
+        <foreignObject x={STAGE_X.tools - 50} y={centerY - 38 - progress * 40} width="100" height="24">
+          <div style={{ fontSize: 16, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center' }}>
+            <AnimatedNumber value={stats.tools} />
+          </div>
+        </foreignObject>
 
+        {/* Artists */}
         <text x={STAGE_X.artists} y={centerY - 50 - progress * 60} fill={COLORS.artists} textAnchor="middle" fontSize="12" opacity={0.9}>
           Artists
         </text>
-        <text x={STAGE_X.artists} y={centerY - 33 - progress * 60} fontSize="16" fontWeight="bold" textAnchor="middle">
-          {formatNumber(stats.artists)}
-        </text>
+        <foreignObject x={STAGE_X.artists - 50} y={centerY - 48 - progress * 60} width="100" height="24">
+          <div style={{ fontSize: 16, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center' }}>
+            <AnimatedNumber value={stats.artists} />
+          </div>
+        </foreignObject>
 
-        <text x={STAGE_X.consumers} y={centerY - 55 - progress * 80} fill={COLORS.consumers} textAnchor="end" fontSize="12" opacity={0.9}>
-          Consumers
+        {/* Fans */}
+        <text x={STAGE_X.fans} y={centerY - 55 - progress * 80} fill={COLORS.fans} textAnchor="end" fontSize="12" opacity={0.9}>
+          Fans
         </text>
-        <text x={STAGE_X.consumers} y={centerY - 35 - progress * 80} fontSize="22" fontWeight="bold" textAnchor="end">
-          {formatNumber(stats.consumers)}
-        </text>
+        <foreignObject x={STAGE_X.fans - 100} y={centerY - 53 - progress * 80} width="100" height="30">
+          <div style={{ fontSize: 22, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'right' }}>
+            <AnimatedNumber value={stats.fans} />
+          </div>
+        </foreignObject>
       </g>
     </svg>
   );
 };
-

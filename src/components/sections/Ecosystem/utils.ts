@@ -34,7 +34,7 @@ export const calculateStats = (monthIdx: number): Stats => {
     contributors: calc('contributors'),
     tools: calc('tools'),
     artists: calc('artists'),
-    consumers: calc('consumers'),
+    fans: calc('fans'),
   };
 };
 

@@ -93,7 +93,7 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
           className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full"
           style={{
             width: `${progress * 100}%`,
-            background: `linear-gradient(90deg, ${COLORS.contributors} 0%, ${COLORS.tools} 25%, ${COLORS.artists} 60%, ${COLORS.consumers} 100%)`,
+            background: `linear-gradient(90deg, ${COLORS.contributors} 0%, ${COLORS.tools} 25%, ${COLORS.artists} 60%, ${COLORS.fans} 100%)`,
           }}
         />
 
