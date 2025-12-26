@@ -1,54 +1,16 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { TravelSelector } from './TravelSelector';
-import type { TravelExample } from './TravelSelector';
 import { useTravelAutoAdvance } from './useTravelAutoAdvance';
-
-// Travel examples with actual media files
-const travelExamples: TravelExample[] = [
-  {
-    id: '2-images',
-    label: '2 Images',
-    images: [
-      '/example-image1.jpg',
-      '/example-image2.jpg',
-    ],
-    video: '/example-video.mp4',
-  },
-  {
-    id: '4-images',
-    label: '4 Images',
-    images: [
-      '/916-1.jpg',
-      '/916-2.jpg',
-      '/916-3.jpg',
-      '/916-4.jpg',
-    ],
-    video: '/916-output.mp4',
-    poster: '/916-output-poster.jpg',
-  },
-  {
-    id: '7-images',
-    label: '7 Images',
-    images: [
-      '/h1-crop.webp',
-      '/h2-crop.webp',
-      '/h3-crop.webp',
-      '/h4-crop.webp',
-      '/h5-crop.webp',
-      '/h6-crop.webp',
-      '/h7-crop.webp',
-    ],
-    video: '/h-output.mp4',
-    poster: '/h-output-poster.jpg',
-  },
-];
+import { useInViewStart } from './useInViewStart';
+import { travelExamples } from './data';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
-  const [hasStarted, setHasStarted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const sectionRef = useRef<HTMLElement>(null);
   const lastPlayedRef = useRef<number | null>(null);
+
+  // Start when section comes into view
+  const { ref: sectionRef, hasStarted } = useInViewStart<HTMLElement>({ threshold: 0.5 });
 
   const autoAdvance = useTravelAutoAdvance({
     totalExamples: travelExamples.length,
@@ -63,7 +25,7 @@ export const Reigh: React.FC = () => {
     handleManualSelect,
   } = autoAdvance;
 
-  // Play video function - uses refs to avoid dependency issues
+  // Play video function
   const playCurrentVideo = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -78,26 +40,6 @@ export const Reigh: React.FC = () => {
     handleVideoStarted(selectedExample);
   }, [handleVideoStarted, selectedExample]);
 
-  // Start playing when section comes into view
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !hasStarted) {
-            setHasStarted(true);
-          }
-        });
-      },
-      { threshold: 0.5 }
-    );
-
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, [hasStarted]);
-
   // Play video when selection changes or when first started
   useEffect(() => {
     if (!hasStarted) return;
@@ -109,7 +51,7 @@ export const Reigh: React.FC = () => {
 
   // Handle play button click - restart the whole cycle
   const handlePlayClick = useCallback(() => {
-    lastPlayedRef.current = null; // Reset so it will play again
+    lastPlayedRef.current = null;
     handleManualSelect(selectedExample);
   }, [handleManualSelect, selectedExample]);
 
@@ -117,22 +59,6 @@ export const Reigh: React.FC = () => {
 
   return (
     <section ref={sectionRef} className="h-screen snap-start bg-[#0f0f0f] text-white overflow-hidden">
-      {/* CSS Keyframes */}
-      <style>{`
-        @keyframes revealBorderLeftToRight {
-          from { clip-path: inset(0 100% 0 0); }
-          to { clip-path: inset(0 0% 0 0); }
-        }
-        @keyframes hideBorderLeftToRight {
-          from { clip-path: inset(0 0% 0 0); }
-          to { clip-path: inset(0 0% 0 100%); }
-        }
-        @keyframes drainFillLeftToRight {
-          from { clip-path: inset(0 0 0 0); }
-          to { clip-path: inset(0 0 0 100%); }
-        }
-      `}</style>
-
       <div className="h-full px-8 md:px-16 py-12 flex items-center">
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
@@ -206,4 +132,3 @@ export const Reigh: React.FC = () => {
     </section>
   );
 };
-

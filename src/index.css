@@ -75,12 +75,24 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* Placeholder for custom fonts - User should add @font-face rules here */
-  /* 
-  @font-face {
-    font-family: 'Coldiac';
-    src: url('/fonts/Coldiac.otf');
-  }
-  ...
-  */
+}
+
+/* =============================================================================
+   ANIMATIONS - Shared keyframes used across components
+   ============================================================================= */
+
+/* Reigh section - progress border animations */
+@keyframes revealBorderLeftToRight {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0% 0 0); }
+}
+
+@keyframes hideBorderLeftToRight {
+  from { clip-path: inset(0 0% 0 0); }
+  to { clip-path: inset(0 0% 0 100%); }
+}
+
+@keyframes drainFillLeftToRight {
+  from { clip-path: inset(0 0 0 0); }
+  to { clip-path: inset(0 0 0 100%); }
 }

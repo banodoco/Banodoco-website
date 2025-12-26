@@ -24,7 +24,6 @@ interface TravelSelectorProps {
 
 interface SelectorButtonProps {
   example: TravelExample;
-  idx: number;
   isSelected: boolean;
   onClick: () => void;
   isNextWithBorder: boolean;
@@ -36,7 +35,6 @@ interface SelectorButtonProps {
 
 const SelectorButton: React.FC<SelectorButtonProps> = ({
   example,
-  idx,
   isSelected,
   onClick,
   isNextWithBorder,
@@ -178,7 +176,6 @@ export const TravelSelector: React.FC<TravelSelectorProps> = ({
         <SelectorButton
           key={example.id}
           example={example}
-          idx={idx}
           isSelected={selectedIndex === idx}
           onClick={() => onSelect(idx)}
           isNextWithBorder={nextAdvanceIdx === idx}
