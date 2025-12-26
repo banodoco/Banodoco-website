@@ -2,9 +2,11 @@ import { Header } from '@/components/layout/Header';
 
 export const Hero = () => {
   return (
-    <section className="h-screen snap-start flex flex-col">
-      <Header />
-      <div className="flex-1 px-8 md:px-16 flex items-center">
+    <section className="h-screen snap-start relative">
+      <div className="absolute top-0 left-0 right-0 z-10">
+        <Header />
+      </div>
+      <div className="h-full px-8 md:px-16 flex items-center">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
         {/* Text Content */}
         <div className="space-y-8">

@@ -161,7 +161,7 @@ export const Ecosystem: React.FC = () => {
       <div className="absolute top-12 left-4 right-4 z-20 flex justify-center">
         <div className="w-full max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10 text-center">
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-normal tracking-tight leading-tight">
-            We want to nurture an ecosystem of thousands of tools based on open technology
+            We nurture the ecosystem so thousands of open-source tools can help billions fall in love with AI
           </h2>
           <p className="text-base md:text-lg text-white/60 max-w-xl mx-auto mt-2">
             We want to help open source AI technology make its way into the hands of everyone through consumer-facing tools built by the community.
