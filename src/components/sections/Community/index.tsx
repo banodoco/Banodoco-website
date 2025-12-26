@@ -45,7 +45,7 @@ export const Community = () => {
   }, [topics.length]);
 
   return (
-    <section id="community" className="h-screen snap-start bg-[#1a1a1a] text-white overflow-hidden">
+    <section id="community" className="h-screen snap-start bg-[#0a1018] text-white overflow-hidden">
       <div ref={containerRef} className="h-full overflow-y-auto px-4 md:px-16 py-6 md:py-12">
         <div className="max-w-7xl mx-auto">
           {/* Mobile intro - shown above cards */}

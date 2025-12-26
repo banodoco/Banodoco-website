@@ -12,7 +12,7 @@ export const Events: React.FC = () => {
   }, []);
 
   return (
-    <section className="h-screen snap-start bg-[#1a1418] text-white overflow-hidden">
+    <section className="h-screen snap-start bg-[#180a10] text-white overflow-hidden">
       <div className="h-full px-8 md:px-16 py-12 flex items-center">
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">

@@ -58,7 +58,7 @@ export const Reigh: React.FC = () => {
   const currentExample = travelExamples[selectedExample];
 
   return (
-    <section ref={sectionRef} className="h-screen snap-start bg-[#0f0f0f] text-white overflow-hidden">
+    <section ref={sectionRef} className="h-screen snap-start bg-[#0f0a18] text-white overflow-hidden">
       <div className="h-full px-8 md:px-16 py-12 flex items-center">
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
