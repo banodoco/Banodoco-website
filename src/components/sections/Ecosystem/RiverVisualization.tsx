@@ -259,48 +259,55 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
       {eventOverlay}
 
       {/* Labels */}
-      <g fontFamily="system-ui" fontWeight="500" fill="white">
+      <g fontFamily="system-ui" fontWeight="600" fill="white">
+        {/* Text shadow filter for legibility */}
+        <defs>
+          <filter id="text-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="black" floodOpacity="0.8" />
+          </filter>
+        </defs>
+
         {/* Contributors */}
-        <text x={STAGE_X.start} y={centerY - 30 - progress * 30} fill={COLORS.contributors} fontSize="12" opacity={0.9}>
+        <text x={STAGE_X.start} y={centerY - 30 - progress * 30} fill={COLORS.contributors} fontSize="13" filter="url(#text-shadow)">
           Contributors
         </text>
-        <foreignObject x={STAGE_X.start} y={centerY - 28 - progress * 30} width="100" height="24">
-          <div style={{ fontSize: 16, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui' }}>
+        <foreignObject x={STAGE_X.start} y={centerY - 28 - progress * 30} width="100" height="28">
+          <div style={{ fontSize: 18, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textShadow: '0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)' }}>
             <AnimatedNumber value={stats.contributors} />
           </div>
         </foreignObject>
 
         {/* Reigh */}
-        <text x={STAGE_X.reigh} y={centerY + 40} textAnchor="middle" fontSize="13" opacity={0.7}>
+        <text x={STAGE_X.reigh} y={centerY + 40} textAnchor="middle" fontSize="13" opacity={0.8} filter="url(#text-shadow)">
           Reigh
         </text>
 
         {/* Tools */}
-        <text x={STAGE_X.tools} y={centerY - 40 - progress * 40} fill={COLORS.tools} textAnchor="middle" fontSize="12" opacity={0.9}>
+        <text x={STAGE_X.tools} y={centerY - 40 - progress * 40} fill={COLORS.tools} textAnchor="middle" fontSize="13" filter="url(#text-shadow)">
           Tools
         </text>
-        <foreignObject x={STAGE_X.tools - 50} y={centerY - 38 - progress * 40} width="100" height="24">
-          <div style={{ fontSize: 16, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center' }}>
+        <foreignObject x={STAGE_X.tools - 50} y={centerY - 38 - progress * 40} width="100" height="28">
+          <div style={{ fontSize: 18, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center', textShadow: '0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)' }}>
             <AnimatedNumber value={stats.tools} />
           </div>
         </foreignObject>
 
         {/* Artists */}
-        <text x={STAGE_X.artists} y={centerY - 50 - progress * 60} fill={COLORS.artists} textAnchor="middle" fontSize="12" opacity={0.9}>
+        <text x={STAGE_X.artists} y={centerY - 50 - progress * 60} fill={COLORS.artists} textAnchor="middle" fontSize="13" filter="url(#text-shadow)">
           Artists
         </text>
-        <foreignObject x={STAGE_X.artists - 50} y={centerY - 48 - progress * 60} width="100" height="24">
-          <div style={{ fontSize: 16, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center' }}>
+        <foreignObject x={STAGE_X.artists - 50} y={centerY - 48 - progress * 60} width="100" height="28">
+          <div style={{ fontSize: 18, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center', textShadow: '0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)' }}>
             <AnimatedNumber value={stats.artists} />
           </div>
         </foreignObject>
 
         {/* Fans */}
-        <text x={STAGE_X.fans} y={centerY - 55 - progress * 80} fill={COLORS.fans} textAnchor="end" fontSize="12" opacity={0.9}>
+        <text x={STAGE_X.fans} y={centerY - 55 - progress * 80} fill={COLORS.fans} textAnchor="end" fontSize="13" filter="url(#text-shadow)">
           Fans
         </text>
-        <foreignObject x={STAGE_X.fans - 100} y={centerY - 53 - progress * 80} width="100" height="30">
-          <div style={{ fontSize: 22, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'right' }}>
+        <foreignObject x={STAGE_X.fans - 100} y={centerY - 53 - progress * 80} width="100" height="34">
+          <div style={{ fontSize: 24, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'right', textShadow: '0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)' }}>
             <AnimatedNumber value={stats.fans} />
           </div>
         </foreignObject>
