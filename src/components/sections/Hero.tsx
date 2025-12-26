@@ -8,11 +8,11 @@ export const Hero = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
         {/* Text Content */}
         <div className="space-y-8">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-normal leading-[1.1] tracking-tight text-foreground">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-normal leading-[1.1] tracking-tight text-gray-900">
             We want to help the open source AI art ecosystem thrive
           </h1>
           
-          <p className="text-lg md:text-xl text-foreground/70 max-w-xl leading-relaxed">
+          <p className="text-lg md:text-xl text-gray-600 max-w-xl leading-relaxed">
             We're building tools and nurturing a culture to inspire, empower and reward open collaboration in the AI and digital art ecosystem.
           </p>
         </div>

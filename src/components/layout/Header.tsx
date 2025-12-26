@@ -11,7 +11,7 @@ export const Header = () => {
             className="h-7 w-7"
             draggable={false}
           />
-          <span className="text-2xl font-semibold tracking-tight">Banodoco</span>
+          <span className="text-2xl font-semibold tracking-tight text-gray-900">Banodoco</span>
         </Link>
       </div>
     </header>
