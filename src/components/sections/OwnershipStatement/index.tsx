@@ -5,7 +5,7 @@ export const OwnershipStatement = () => {
   const { visiblePics, allPics, usedPicsRef, handleSwap } = useProfilePics();
 
   return (
-    <section className="h-screen snap-start bg-[#14100f] text-white flex flex-col overflow-hidden">
+    <section className="h-screen snap-start bg-[#1f1a18] text-white flex flex-col overflow-hidden">
       {/* Profile grid at top */}
       <div className="w-full pt-8">
         <div className="profile-grid">

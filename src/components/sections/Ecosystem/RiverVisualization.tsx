@@ -88,7 +88,7 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
     }
 
     // --- STAGE 3: Artists multiplying from Tools ---
-    const artistSpread = toolSpread + 15 + progress * 100;
+    const artistSpread = toolSpread + progress * 115;
     const artistsPerTool = Math.max(1, Math.floor(1 + progress * 5));
     const artistEndpoints: number[] = [];
 

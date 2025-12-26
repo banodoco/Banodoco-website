@@ -3,7 +3,7 @@ import { VideoPreviewCard } from './VideoPreviewCard';
 
 export const ArcaGidan: React.FC = () => {
   return (
-    <section className="h-screen snap-start bg-[#18140a] text-white overflow-hidden flex flex-row">
+    <section className="h-screen snap-start bg-[#251f10] text-white overflow-hidden flex flex-row">
       {/* Text content on left */}
       <div className="w-[45%] md:w-[40%] xl:w-[35%] flex items-center px-4 md:px-12 lg:px-16 py-8 lg:py-12 shrink-0">
         <div className="max-w-lg">
