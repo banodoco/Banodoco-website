@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { TIME_CONFIG, TOTAL_MONTHS, COLORS, YEAR_MARKERS } from './config';
 import { monthIndexToDate } from './utils';
+import { AnimatedText } from './AnimatedText';
 
 interface TimelineScrubberProps {
   monthIdx: number;
@@ -69,8 +70,12 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
     <div className="w-full">
       {/* Date display */}
       <div className="text-center leading-none">
-        <div className="text-sm text-white/50 font-medium tracking-wider uppercase">{month}</div>
-        <div className="text-4xl md:text-5xl font-light text-white tabular-nums">{year}</div>
+        <div className="text-sm text-white/50 font-medium tracking-wider uppercase">
+          <AnimatedText value={month} />
+        </div>
+        <div className="text-4xl md:text-5xl font-light text-white tabular-nums">
+          <AnimatedText value={year.toString()} />
+        </div>
       </div>
 
       {/* Track */}

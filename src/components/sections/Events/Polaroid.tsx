@@ -13,15 +13,41 @@ interface PolaroidProps {
   onClose: () => void;
 }
 
-// Hook to detect if we're on mobile
+// Shared mobile state - only one resize listener for all Polaroids
+let mobileListenerCount = 0;
+let isMobileGlobal = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
+const mobileListeners = new Set<() => void>();
+
+const handleResize = () => {
+  const newIsMobile = window.innerWidth < 1024;
+  if (newIsMobile !== isMobileGlobal) {
+    isMobileGlobal = newIsMobile;
+    mobileListeners.forEach(cb => cb());
+  }
+};
+
+// Hook to detect if we're on mobile - shares a single resize listener
 const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(isMobileGlobal);
   
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const update = () => setIsMobile(isMobileGlobal);
+    mobileListeners.add(update);
+    
+    // Only add event listener for first subscriber
+    if (mobileListenerCount === 0) {
+      window.addEventListener('resize', handleResize, { passive: true });
+    }
+    mobileListenerCount++;
+    
+    return () => {
+      mobileListeners.delete(update);
+      mobileListenerCount--;
+      // Remove event listener when last subscriber leaves
+      if (mobileListenerCount === 0) {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
   }, []);
   
   return isMobile;

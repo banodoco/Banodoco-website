@@ -11,6 +11,7 @@ import {
   type EcosystemEvent 
 } from './eventConfig';
 import { Section } from '@/components/layout/Section';
+import { useSectionVisibility } from '@/lib/useSectionVisibility';
 
 export const Ecosystem: React.FC = () => {
   const [monthIdx, setMonthIdx] = useState(0);
@@ -21,6 +22,7 @@ export const Ecosystem: React.FC = () => {
   const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const waveAnimationRef = useRef<number | null>(null);
+  const { ref: sectionRef, isVisible: isSectionVisible } = useSectionVisibility({ threshold: 0.35 });
 
   const stats = calculateStats(monthIdx);
   const progress = monthIdx / (TOTAL_MONTHS - 1);
@@ -94,7 +96,7 @@ export const Ecosystem: React.FC = () => {
 
   // Auto-advance timer - triggers event animation, which then advances the month
   useEffect(() => {
-    if (isPaused || isAnimating) return;
+    if (!isSectionVisible || isPaused || isAnimating) return;
 
     // Wait a bit, then start the event animation
     advanceTimeoutRef.current = setTimeout(() => {
@@ -106,7 +108,29 @@ export const Ecosystem: React.FC = () => {
         clearTimeout(advanceTimeoutRef.current);
       }
     };
-  }, [isPaused, isAnimating, monthIdx, startEventAnimation]);
+  }, [isSectionVisible, isPaused, isAnimating, monthIdx, startEventAnimation]);
+
+  // If the section scrolls out of view, stop all timers/animations immediately.
+  useEffect(() => {
+    if (isSectionVisible) return;
+
+    if (resumeTimeoutRef.current) {
+      clearTimeout(resumeTimeoutRef.current);
+      resumeTimeoutRef.current = null;
+    }
+    if (advanceTimeoutRef.current) {
+      clearTimeout(advanceTimeoutRef.current);
+      advanceTimeoutRef.current = null;
+    }
+    if (waveAnimationRef.current) {
+      cancelAnimationFrame(waveAnimationRef.current);
+      waveAnimationRef.current = null;
+    }
+
+    setWaveX(null);
+    setCurrentEvent(null);
+    setIsAnimating(false);
+  }, [isSectionVisible]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -158,7 +182,7 @@ export const Ecosystem: React.FC = () => {
   }, []);
 
   return (
-    <Section className="bg-gradient-to-br from-[#0c1a14] via-[#102018] to-[#081510] text-white relative">
+    <Section ref={sectionRef} className="bg-gradient-to-br from-[#0c1a14] via-[#102018] to-[#081510] text-white relative">
       {/* Header - positioned at ~8% from top on desktop, higher on mobile */}
       <div className="absolute top-[4%] md:top-[8%] left-4 right-4 z-20 flex justify-center">
         <div className="w-full max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10 text-center">

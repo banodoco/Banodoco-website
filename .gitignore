@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Large video files (over 100MB GitHub limit)
+public/events/paris-2025-video.mp4
+public/events/la-2025-video.mp4
+public/upscaled.mp4
+public/upscaled_new.mp4
+

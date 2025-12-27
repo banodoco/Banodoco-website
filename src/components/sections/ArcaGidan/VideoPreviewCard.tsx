@@ -1,17 +1,19 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useVideoPreview } from './useVideoPreview';
 
 interface VideoPreviewCardProps {
   poster: string;
   video: string;
   alt: string;
+  /** Whether the parent section is visible - used to pause video when scrolled away */
+  isSectionVisible?: boolean;
 }
 
 /**
  * A card that shows a poster image and plays video on hover (desktop) or tap (mobile).
  * Reusable component for any hover-to-preview video pattern.
  */
-export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, video, alt }) => {
+export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, video, alt, isSectionVisible = true }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   
   const {
@@ -22,6 +24,16 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
     handleClick,
     handlePlaying,
   } = useVideoPreview({ videoRef });
+
+  // Pause video when section scrolls out of view
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+    
+    if (!isSectionVisible) {
+      videoEl.pause();
+    }
+  }, [isSectionVisible]);
 
   return (
     <div

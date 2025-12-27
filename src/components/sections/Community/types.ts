@@ -3,9 +3,19 @@ export interface Attachment {
   filename: string;
 }
 
+export interface MediaUrl {
+  url: string;
+  type: 'video' | 'image';
+  poster_url?: string;
+}
+
 export interface SubTopic {
   text: string;
   subTopicMediaMessageIds?: string[];
+  message_id?: string;
+  channel_id?: string;
+  included_in_main?: boolean;
+  subTopicMediaUrls?: MediaUrl[][];
 }
 
 export interface TopicData {
@@ -17,7 +27,28 @@ export interface TopicData {
   media_message_ids: string[];
   media_count: number;
   summary_date: string;
-  mediaUrls?: string[];
+  mediaUrls?: MediaUrl[];
+  included_in_main?: boolean;
 }
 
+// Raw API response types
+export interface RawSubTopic {
+  text: string;
+  subTopicMediaMessageIds: string[];
+  message_id: string;
+  channel_id: string;
+  included_in_main: boolean;
+  subTopicMediaUrls: MediaUrl[][];
+}
+
+export interface RawTopic {
+  title: string;
+  mainText: string;
+  mainMediaMessageId: string | null;
+  message_id: string;
+  channel_id: string;
+  subTopics: RawSubTopic[];
+  included_in_main: boolean;
+  mainMediaUrls: MediaUrl[] | null;
+}
 

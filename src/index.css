@@ -23,6 +23,11 @@
     min-width: 320px;
     min-height: 100vh;
   }
+
+  /* Prevent flash during scroll by promoting heavy sections to GPU layers */
+  section {
+    backface-visibility: hidden;
+  }
 }
 
 /* Custom scrollbar for webkit */

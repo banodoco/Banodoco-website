@@ -4,19 +4,20 @@ import { events } from './data';
 import { EventSelector } from './EventSelector';
 import { EventContent } from './EventContent';
 import { useEventsAutoAdvance } from './useEventsAutoAdvance';
-import { useInViewStart } from '../Reigh/useInViewStart';
+import { useSectionVisibility } from '@/lib/useSectionVisibility';
 import { Section, SectionContent } from '@/components/layout/Section';
 
 export const Events: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   
-  // Start auto-advance when section comes into view
-  const { ref: sectionRef, hasStarted } = useInViewStart<HTMLElement>({ threshold: 0.5 });
+  // Track section visibility - pause videos when scrolled away
+  const { ref: sectionRef, isVisible, hasBeenVisible: hasStarted } = useSectionVisibility({ threshold: 0.5 });
 
   const autoAdvance = useEventsAutoAdvance({
     totalEvents: events.length,
     onEventChange: setSelectedEvent,
-    isActive: hasStarted,
+    isActive: hasStarted && !lightboxOpen,
   });
 
   const handleSelect = useCallback((idx: number) => {
@@ -26,11 +27,11 @@ export const Events: React.FC = () => {
   return (
     <Section ref={sectionRef} className="bg-gradient-to-br from-[#200c14] via-[#251018] to-[#1a0810] text-white">
       <SectionContent>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
+          <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6 2xl:gap-16 items-center">
             {/* Left side - Event content */}
-            <div className="lg:col-span-8 order-2 lg:order-1">
+            <div className="2xl:col-span-8 order-2 2xl:order-1">
               {/* Main content area - stack all events for smooth polaroid transitions */}
-              <div className="relative aspect-video">
+              <div className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-video">
                 {events.map((event, idx) => (
                   <div
                     key={event.id}
@@ -41,29 +42,40 @@ export const Events: React.FC = () => {
                         : "z-0 pointer-events-none"
                     )}
                   >
-                    <EventContent event={event} isVisible={selectedEvent === idx} hasStarted={hasStarted} />
+                    <EventContent 
+                      event={event} 
+                      isVisible={selectedEvent === idx} 
+                      hasStarted={hasStarted}
+                      isSectionVisible={isVisible}
+                      onLightboxChange={setLightboxOpen}
+                    />
                   </div>
                 ))}
               </div>
               
-              {/* Selector below */}
-              <EventSelector
-                events={events}
-                selectedIndex={selectedEvent}
-                onSelect={handleSelect}
-                progress={autoAdvance.progress}
-                nextAdvanceIdx={autoAdvance.nextAdvanceIdx}
-                prevAdvanceIdx={autoAdvance.prevAdvanceIdx}
-                drainingIdx={autoAdvance.drainingIdx}
-              />
+              {/* Selector below - hide when lightbox is open */}
+              <div className={cn(
+                "transition-opacity duration-200",
+                lightboxOpen && "opacity-0 pointer-events-none"
+              )}>
+                <EventSelector
+                  events={events}
+                  selectedIndex={selectedEvent}
+                  onSelect={handleSelect}
+                  progress={autoAdvance.progress}
+                  nextAdvanceIdx={autoAdvance.nextAdvanceIdx}
+                  prevAdvanceIdx={autoAdvance.prevAdvanceIdx}
+                  drainingIdx={autoAdvance.drainingIdx}
+                />
+              </div>
             </div>
 
             {/* Right side - Text */}
-            <div className="lg:col-span-4 order-1 lg:order-2">
-              <h2 className="text-2xl md:text-3xl font-normal tracking-tight leading-[1.15] mb-4">
+            <div className="2xl:col-span-4 order-1 2xl:order-2">
+              <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
                 ADOS events bring the community together in the real world
               </h2>
-              <p className="text-sm md:text-base text-white/60 leading-relaxed mb-6">
+              <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-8">
                 We gather our community with people from the extended creative world to look at art, eat nice food, and create things.
               </p>
               <a

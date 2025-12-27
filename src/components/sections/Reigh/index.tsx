@@ -1,17 +1,17 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { TravelSelector } from './TravelSelector';
 import { useTravelAutoAdvance } from './useTravelAutoAdvance';
-import { useInViewStart } from './useInViewStart';
 import { travelExamples } from './data';
 import { Section, SectionContent } from '@/components/layout/Section';
+import { useSectionVisibility } from '@/lib/useSectionVisibility';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastPlayedRef = useRef<number | null>(null);
 
-  // Start when section comes into view
-  const { ref: sectionRef, hasStarted } = useInViewStart<HTMLElement>({ threshold: 0.5 });
+  // Track section visibility - pause video when scrolled away
+  const { ref: sectionRef, isVisible, hasBeenVisible: hasStarted } = useSectionVisibility({ threshold: 0.5 });
 
   const autoAdvance = useTravelAutoAdvance({
     totalExamples: travelExamples.length,
@@ -49,6 +49,18 @@ export const Reigh: React.FC = () => {
     lastPlayedRef.current = selectedExample;
     playCurrentVideo();
   }, [selectedExample, hasStarted, playCurrentVideo]);
+
+  // Pause video when scrolled away, resume when scrolled back
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !hasStarted) return;
+    
+    if (isVisible) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [isVisible, hasStarted]);
 
   // Handle play button click - restart the whole cycle
   const handlePlayClick = useCallback(() => {
@@ -110,20 +122,21 @@ export const Reigh: React.FC = () => {
 
             {/* Right side - Text */}
             <div className="order-1 lg:order-2">
-              <h2 className="text-2xl md:text-3xl font-normal tracking-tight leading-[1.15] mb-4">
+              <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
                 Reigh is an open source art tool for travelling between images
               </h2>
-              <p className="text-base text-white/60 leading-relaxed">
-                We believe that there's a whole artform waiting to be discovered in the journey from one image to another.{' '}
-                <a 
-                  href="#"
-                  className="inline-flex items-center text-emerald-400 hover:text-emerald-300 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </a>
+              <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-8">
+                We believe that there's a whole artform waiting to be discovered in the journey from one image to another.
               </p>
+              <a 
+                href="#"
+                className="inline-flex items-center gap-2 text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
+              >
+                Learn more
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </a>
             </div>
           </div>
       </SectionContent>

@@ -6,6 +6,7 @@ import { Section } from '@/components/layout/Section';
 export const Community = () => {
   const { topics, loading, error } = useCommunityTopics();
   const [activeTopicIndex, setActiveTopicIndex] = useState<number>(0);
+  const [sectionIsVisible, setSectionIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const topicRefs = useRef<(HTMLElement | null)[]>([]);
@@ -40,6 +41,7 @@ export const Community = () => {
       (entries) => {
         const entry = entries[0];
         const isNowVisible = entry.isIntersecting && entry.intersectionRatio > 0.5;
+        setSectionIsVisible(isNowVisible);
         
         // Set scroll position when leaving the section
         if (!isNowVisible && wasVisibleRef.current) {
@@ -143,14 +145,14 @@ export const Community = () => {
 
   return (
     <Section ref={sectionRef} id="community" className="bg-gradient-to-br from-[#0c1420] via-[#101825] to-[#0a1018] text-white">
-      <div ref={containerRef} className="h-full overflow-hidden md:overflow-y-auto px-6 md:px-16 md:py-12 flex items-center md:items-start">
+      <div ref={containerRef} className="h-full overflow-hidden xl:overflow-y-auto px-6 md:px-16 xl:py-12 flex items-center xl:items-start">
         <div className="max-w-7xl mx-auto w-full">
-          {/* Mobile intro - shown above cards */}
-          <div className="mb-4 md:hidden">
-            <h2 className="text-xl font-normal tracking-tight leading-[1.15] mb-2">
+          {/* Mobile/tablet intro - shown above cards */}
+          <div className="mb-8 xl:hidden">
+            <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
               Our Discord is a gathering place for people from across the ecosystem
             </h2>
-            <p className="text-xs text-white/60 leading-relaxed mb-3">
+            <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-8">
               We've been at the cutting-edge of the technical & artistic scenes over the past two years.
             </p>
             <a 
@@ -166,8 +168,8 @@ export const Community = () => {
             </a>
           </div>
 
-          {/* Mobile horizontal scroll cards */}
-          <div className="md:hidden -mx-4">
+          {/* Mobile/tablet horizontal scroll cards */}
+          <div className="xl:hidden -mx-4 md:-mx-8">
             {loading && (
               <div className="flex items-center justify-center py-20 px-4">
                 <div className="animate-pulse text-white/40">Loading latest updates...</div>
@@ -190,7 +192,7 @@ export const Community = () => {
               <>
                 <div 
                   ref={mobileScrollRef}
-                  className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-4 scrollbar-hide"
+                  className="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory px-4 md:px-8 pb-4 scrollbar-hide"
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                   {topics.map((topic, idx) => (
@@ -200,7 +202,7 @@ export const Community = () => {
                         mobileCardRefs.current[idx] = el;
                       }}
                       topic={topic}
-                      isActive={idx === activeTopicIndex}
+                      isActive={sectionIsVisible && idx === activeTopicIndex}
                       fullWidth
                     />
                   ))}
@@ -231,13 +233,13 @@ export const Community = () => {
             )}
           </div>
 
-          <div className="hidden md:grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-16">
+          <div className="hidden xl:grid grid-cols-12 gap-16">
             {/* Left side - Introduction text (desktop only) */}
-            <div className="hidden md:block lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
-              <h2 className="text-2xl md:text-3xl font-normal tracking-tight leading-[1.15] mb-4">
+            <div className="col-span-4 sticky top-24 self-start">
+              <h2 className="text-5xl font-normal tracking-tight leading-[1.15] mb-6">
                 Our Discord is a gathering place for people from across the ecosystem
               </h2>
-              <p className="text-sm md:text-base text-white/60 leading-relaxed mb-6">
+              <p className="text-lg text-white/60 leading-relaxed mb-8">
                 We've been at the cutting-edge of the technical & artistic scenes over the past two years.
               </p>
               <a 
@@ -254,7 +256,7 @@ export const Community = () => {
             </div>
 
             {/* Right side - Topic cards (desktop only) */}
-            <div className="hidden md:block lg:col-span-8">
+            <div className="col-span-8">
               {loading && (
                 <div className="flex items-center justify-center py-20">
                   <div className="animate-pulse text-white/40">Loading latest updates...</div>
@@ -282,7 +284,7 @@ export const Community = () => {
                         topicRefs.current[idx] = el;
                       }}
                       topic={topic}
-                      isActive={idx === activeTopicIndex}
+                      isActive={sectionIsVisible && idx === activeTopicIndex}
                     />
                   ))}
                 </div>

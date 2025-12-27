@@ -125,7 +125,26 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
         </filter>
       </defs>
 
-      {/* External event label - appears first */}
+      {/* The animated path - rendered first so it appears UNDER the label */}
+      {showPath && (
+        <path
+          d={path}
+          fill="none"
+          stroke={color}
+          strokeWidth={3}
+          strokeLinecap="round"
+          opacity={0.9}
+          filter="url(#event-glow)"
+          style={{
+            strokeDasharray: 1,
+            strokeDashoffset: 1,
+            animation: `drawPath ${EVENT_TIMING.pathDrawDuration}ms ease-out forwards`,
+          }}
+          pathLength={1}
+        />
+      )}
+
+      {/* External event label - rendered after path so it appears ON TOP */}
       {!isInternal && (
         <g 
           style={{ 
@@ -162,25 +181,6 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
             filter="url(#event-glow)"
           />
         </g>
-      )}
-
-      {/* The animated path - progressively draws */}
-      {showPath && (
-        <path
-          d={path}
-          fill="none"
-          stroke={color}
-          strokeWidth={3}
-          strokeLinecap="round"
-          opacity={0.9}
-          filter="url(#event-glow)"
-          style={{
-            strokeDasharray: 1,
-            strokeDashoffset: 1,
-            animation: `drawPath ${EVENT_TIMING.pathDrawDuration}ms ease-out forwards`,
-          }}
-          pathLength={1}
-        />
       )}
 
       {/* CSS keyframes for path drawing */}

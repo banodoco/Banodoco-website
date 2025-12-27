@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import type { MediaUrl } from './types';
 
 // Constants for timing
 const IMAGE_DISPLAY_DURATION = 5000; // 5 seconds for images
 
 interface MediaGalleryProps {
-  urls: string[];
+  urls: MediaUrl[];
   isVisible: boolean;
   compact?: boolean;
 }
@@ -28,8 +29,8 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
   
   if (urls.length === 0) return null;
   
-  const currentUrl = urls[selectedIndex];
-  const isVideo = !!currentUrl.match(/\.(mp4|webm|mov)(\?|$)/i);
+  const currentMedia = urls[selectedIndex];
+  const isVideo = currentMedia.type === 'video' || !!currentMedia.url.match(/\.(mp4|webm|mov)(\?|$)/i);
 
   // Clear any image timer
   const clearImageTimer = useCallback(() => {
@@ -113,8 +114,8 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
     
     if (isVisible) {
       // Start playing
-      const url = urls[selectedIndex];
-      const isVid = !!url?.match(/\.(mp4|webm|mov)(\?|$)/i);
+      const media = urls[selectedIndex];
+      const isVid = media.type === 'video' || !!media.url?.match(/\.(mp4|webm|mov)(\?|$)/i);
       
       if (!isVid) {
         startImageTimer();
@@ -137,8 +138,8 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
   useEffect(() => {
     if (!isVisible) return;
     
-    const url = urls[selectedIndex];
-    const isVid = !!url?.match(/\.(mp4|webm|mov)(\?|$)/i);
+    const media = urls[selectedIndex];
+    const isVid = media.type === 'video' || !!media.url?.match(/\.(mp4|webm|mov)(\?|$)/i);
     
     if (!isVid) {
       // Start image timer
@@ -164,8 +165,9 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
         {isVideo ? (
           <video 
             ref={videoRef}
-            key={currentUrl}
-            src={currentUrl}
+            key={currentMedia.url}
+            src={currentMedia.url}
+            poster={currentMedia.poster_url}
             className="w-full h-full object-cover"
             autoPlay={isVisible}
             muted
@@ -176,8 +178,8 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
           />
         ) : (
           <img 
-            key={currentUrl}
-            src={currentUrl}
+            key={currentMedia.url}
+            src={currentMedia.url}
             alt=""
             className="w-full h-full object-cover"
           />
@@ -196,8 +198,8 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
       {/* Thumbnail selector with progress - hidden in compact mode */}
       {!compact && urls.length > 1 && (
         <div className="flex gap-1.5 md:gap-2 overflow-x-auto py-1 px-0.5 -mx-0.5">
-          {urls.map((url, idx) => {
-            const isVid = url.match(/\.(mp4|webm|mov)(\?|$)/i);
+          {urls.map((media, idx) => {
+            const isVid = media.type === 'video' || !!media.url.match(/\.(mp4|webm|mov)(\?|$)/i);
             const isSelected = idx === selectedIndex;
             
             return (
@@ -224,14 +226,27 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
                 
                 {/* Thumbnail content */}
                 {isVid ? (
-                  <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                    <svg className="w-4 h-4 md:w-5 md:h-5 text-white/60" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  </div>
+                  <>
+                    {media.poster_url ? (
+                      <img 
+                        src={media.poster_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-white/10" />
+                    )}
+                    {/* Play icon overlay for videos */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <svg className="w-4 h-4 md:w-5 md:h-5 text-white/80 drop-shadow" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                    </div>
+                  </>
                 ) : (
                   <img 
-                    src={url}
+                    src={media.url}
                     alt=""
                     className="w-full h-full object-cover"
                     loading="lazy"
@@ -263,5 +278,3 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
     </div>
   );
 };
-
-

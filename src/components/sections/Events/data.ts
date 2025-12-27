@@ -6,8 +6,8 @@ export const events: EventItem[] = [
     label: 'Paris',
     year: '2024',
     date: 'September 14-15',
-    video: '/events/paris-2024-video.mp4',
-    poster: '/events/paris-2024-poster.jpg',
+    video: '/events/paris-2025-video.mp4',
+    poster: '/events/paris-2025-poster.jpg',
     photos: [
       { src: '/events/paris-2024-1.jpg', rotation: -12, x: 8, y: 68, caption: 'Opening night at the gallery' },
       { src: '/events/paris-2024-2.jpg', rotation: 8, x: 18, y: 62, caption: 'Live art demonstration' },

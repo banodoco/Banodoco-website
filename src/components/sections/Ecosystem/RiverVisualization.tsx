@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type FC, type ReactElement, type ReactNode } from 'react';
 import { COLORS, STAGE_X, SVG_CONFIG, type Stats } from './config';
 import { curvePath, ribbonPath } from './utils';
 import { AnimatedNumber } from './AnimatedNumber';
@@ -7,13 +7,13 @@ interface RiverVisualizationProps {
   progress: number;
   stats: Stats;
   waveX?: number | null; // X position of the distortion wave (null = no wave)
-  eventOverlay?: React.ReactNode;
+  eventOverlay?: ReactNode;
 }
 
-export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress, stats, waveX, eventOverlay }) => {
+export const RiverVisualization: FC<RiverVisualizationProps> = ({ progress, stats, waveX, eventOverlay }) => {
   const { ribbons, lines } = useMemo(() => {
-    const ribbons: JSX.Element[] = [];
-    const lines: JSX.Element[] = [];
+    const ribbons: ReactElement[] = [];
+    const lines: ReactElement[] = [];
     const { centerY } = SVG_CONFIG;
 
     // --- STAGE 1: Contributors flowing into Reigh ---
@@ -187,6 +187,11 @@ export const RiverVisualization: React.FC<RiverVisualizationProps> = ({ progress
       viewBox={`0 0 ${SVG_CONFIG.width} ${SVG_CONFIG.height}`}
       className="w-full h-full"
       preserveAspectRatio="xMidYMid meet"
+      style={{ 
+        // Force GPU layer to prevent parent repaints from affecting this
+        transform: 'translateZ(0)',
+        willChange: hasWave ? 'contents' : 'auto',
+      }}
     >
       <defs>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
