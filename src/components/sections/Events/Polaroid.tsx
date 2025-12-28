@@ -12,6 +12,7 @@ interface PolaroidProps {
   onOpen: () => void;
   onClose: () => void;
   onNavigate?: (direction: 'prev' | 'next') => void;
+  onHoverChange?: (isHovered: boolean) => void;
 }
 
 // Shared screen size state - only one resize listener for all Polaroids
@@ -103,6 +104,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   onOpen, 
   onClose,
   onNavigate,
+  onHoverChange,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const screenSize = useScreenSize();
@@ -123,10 +125,16 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   // Get unique exit direction for this polaroid
   const exitTransform = useMemo(() => getExitTransform(index), [index]);
 
+  const handleMouseEnter = useCallback(() => {
+    setIsHovered(true);
+    onHoverChange?.(true);
+  }, [onHoverChange]);
+
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false);
+    onHoverChange?.(false);
     // Don't close on mouse leave when expanded - user must click elsewhere or press Escape
-  }, []);
+  }, [onHoverChange]);
 
   // Arrow key navigation when expanded
   useEffect(() => {
@@ -146,6 +154,10 @@ export const Polaroid: React.FC<PolaroidProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isExpanded, onNavigate]);
 
+  // Fixed center position for expanded cards (ensures full visibility with chevrons)
+  const expandedPosX = 50;
+  const expandedPosY = 70;
+
   // Calculate the transform based on state
   const getTransform = () => {
     if (!isVisible) {
@@ -156,21 +168,25 @@ export const Polaroid: React.FC<PolaroidProps> = ({
     return 'translate(-50%, -50%)';
   };
 
+  // Current position - moves to center when expanded
+  const currentPosX = isExpanded ? expandedPosX : posX;
+  const currentPosY = isExpanded ? expandedPosY : posY;
+
   return (
     <div
       data-polaroid
       className="absolute w-16 sm:w-20 md:w-24 lg:w-20 xl:w-32 cursor-pointer"
       style={{
-        left: `${posX}%`,
-        top: `${posY}%`,
+        left: `${currentPosX}%`,
+        top: `${currentPosY}%`,
         transform: getTransform(),
         opacity: isVisible ? 1 : 0,
         zIndex: isExpanded ? 200 : isHovered ? 100 : baseZIndex + index,
         transition: isVisible
-          ? `transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) ${enterDelay}ms, opacity 0.4s ease-out ${enterDelay}ms`
+          ? `left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) ${enterDelay}ms, opacity 0.4s ease-out ${enterDelay}ms`
           : `transform 0.5s cubic-bezier(0.55, 0, 0.85, 0.36) ${exitDelay}ms, opacity 0.3s ease-in ${exitDelay}ms`,
       }}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={onOpen}
     >

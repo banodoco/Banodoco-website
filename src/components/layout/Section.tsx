@@ -21,7 +21,8 @@ export const Section = forwardRef<HTMLElement, SectionProps>(
       ref={ref}
       id={id}
       className={cn(
-        "h-[100dvh] snap-start overflow-hidden",
+        // `snap-always` helps Safari/iOS avoid "resting" between sections.
+        "h-[100dvh] snap-start snap-always overflow-hidden",
         className
       )}
     >

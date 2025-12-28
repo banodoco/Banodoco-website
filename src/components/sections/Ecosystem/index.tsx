@@ -214,7 +214,7 @@ export const Ecosystem: React.FC = () => {
       </div>
       
       {/* Mobile/tablet visualization - centered with equal margins for header/timeline */}
-      <div className="absolute inset-x-0 top-[16%] bottom-[16%] flex xl:hidden items-center justify-center pointer-events-none px-4 md:px-8 lg:px-12">
+      <div className="absolute inset-x-0 top-[23%] sm:top-[20%] md:top-[17%] bottom-[17%] sm:bottom-[17%] md:bottom-[15%] flex xl:hidden items-center justify-center pointer-events-none px-4 md:px-8 lg:px-12">
         <MobileVisualization 
           progress={progress}
           stats={stats}

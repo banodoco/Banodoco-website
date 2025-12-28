@@ -20,6 +20,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   const [expandedPhotoIdx, setExpandedPhotoIdx] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [hoveredCount, setHoveredCount] = useState(0); // Track how many cards are hovered (usually 0 or 1)
 
   // Some videos should start at an offset (e.g. skip leader frames).
   // On mobile Safari, setting currentTime before metadata is loaded can be ignored,
@@ -125,23 +126,44 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
       onPauseChange?.(false);
     };
     
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Listen on window and document for better coverage
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll, { capture: true });
+      document.removeEventListener('scroll', handleScroll, { capture: true });
+    };
   }, [expandedPhotoIdx, onPauseChange]);
 
-  // Close expanded photo when clicking outside the polaroid
-  const handleContainerClick = (e: React.MouseEvent) => {
+  // Close expanded photo helper
+  const closeExpandedPhoto = () => {
+    setExpandedPhotoIdx(null);
+    onPauseChange?.(false);
+  };
+
+  // Close expanded photo when clicking outside of it
+  useEffect(() => {
     if (expandedPhotoIdx === null) return;
     
-    // Check if we clicked on a polaroid or navigation button
-    const target = e.target as HTMLElement;
-    const clickedOnPolaroid = target.closest('[data-polaroid]');
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const clickedOnPolaroid = target.closest('[data-polaroid]');
+      
+      if (!clickedOnPolaroid) {
+        closeExpandedPhoto();
+      }
+    };
     
-    if (!clickedOnPolaroid) {
-      setExpandedPhotoIdx(null);
-      onPauseChange?.(false);
-    }
-  };
+    // Use setTimeout to avoid the click that opened the card from immediately closing it
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 0);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [expandedPhotoIdx, onPauseChange]);
 
   if (event.comingSoon) {
     return (
@@ -166,9 +188,18 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   return (
     <div 
       className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-[16/10] rounded-xl overflow-visible"
-      onClick={handleContainerClick}
     >
-      {/* Video background - fades with visibility */}
+      {/* Touch/click blocker overlay when a card is expanded */}
+      {expandedPhotoIdx !== null && (
+        <div 
+          className="fixed inset-0 z-[150]"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeExpandedPhoto();
+          }}
+        />
+      )}
       <div 
         className="absolute inset-0 rounded-xl overflow-hidden bg-black/50 transition-opacity duration-500"
         style={{ opacity: isFullyVisible ? 1 : 0 }}
@@ -266,11 +297,11 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
             const newIdx = expandedPhotoIdx === idx ? null : idx;
             setExpandedPhotoIdx(newIdx);
             // Pause auto-advance when a polaroid is expanded
-            onPauseChange?.(newIdx !== null);
+            onPauseChange?.(newIdx !== null || hoveredCount > 0);
           }}
           onClose={() => {
             setExpandedPhotoIdx(null);
-            onPauseChange?.(false);
+            onPauseChange?.(hoveredCount > 0);
           }}
           onNavigate={(direction) => {
             const total = event.photos?.length ?? 0;
@@ -279,6 +310,12 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
               ? (idx + 1) % total 
               : (idx - 1 + total) % total;
             setExpandedPhotoIdx(newIdx);
+          }}
+          onHoverChange={(isHovered) => {
+            setHoveredCount(prev => isHovered ? prev + 1 : Math.max(0, prev - 1));
+            // Pause when hovering or expanded
+            const newHoveredCount = isHovered ? hoveredCount + 1 : Math.max(0, hoveredCount - 1);
+            onPauseChange?.(expandedPhotoIdx !== null || newHoveredCount > 0);
           }}
         />
       ))}

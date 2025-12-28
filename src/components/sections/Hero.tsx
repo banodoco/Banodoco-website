@@ -142,14 +142,14 @@ export const Hero = () => {
       {/* Mobile fullscreen video background */}
       <div className="absolute inset-0 xl:hidden overflow-hidden">
         {/* Skeleton */}
-        <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 animate-pulse scale-[1.2] md:scale-[1.3]" />
+        <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 animate-pulse scale-[1.6] md:scale-[1.3]" />
         
         {/* Poster */}
         <img
           src="/upscaled-poster.jpg"
           alt=""
           onLoad={() => setPosterLoaded(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.2] md:scale-[1.3] ${
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.6] md:scale-[1.3] ${
             posterLoaded ? 'opacity-100' : 'opacity-0'
           }`}
         />
@@ -162,7 +162,7 @@ export const Hero = () => {
           playsInline
           onCanPlay={handleVideoCanPlay}
           onEnded={handleVideoEnded}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.2] md:scale-[1.3] ${
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.6] md:scale-[1.3] ${
             videoReady ? 'opacity-100' : 'opacity-0'
           }`}
         />

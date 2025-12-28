@@ -22,10 +22,9 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   }, []);
 
   const homeScrollClasses = useMemo(() => {
-    // `snap-mandatory` is the most brittle mode on iOS; `snap-proximity` is much more stable.
-    const snapMode = isIOS ? 'snap-proximity' : 'snap-mandatory';
-    return `h-[100dvh] overflow-y-auto snap-y ${snapMode} bg-[#f5f5f3] text-foreground`;
-  }, [isIOS]);
+    // Keep snap behavior consistent across devices; "proximity" can feel like it stalls on mobile.
+    return 'h-[100dvh] overflow-y-auto snap-y snap-mandatory bg-[#f5f5f3] text-foreground';
+  }, []);
 
   if (isHome) {
     // Home uses scroll-snap sections; Header is rendered inside Hero section
@@ -37,7 +36,8 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           // Keep the scroll container "plain" (no transforms) so we don't force a giant
           // composited layer (which can blank/flicker under memory pressure) and so
           // `position: fixed` descendants behave relative to the real viewport.
-          WebkitOverflowScrolling: isIOS ? 'auto' : 'touch',
+          // On iOS, momentum scrolling improves scroll-snap feel; non-iOS ignores this.
+          ...(isIOS ? { WebkitOverflowScrolling: 'touch' as const } : {}),
         }}
       >
         {children}
