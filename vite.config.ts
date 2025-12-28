@@ -15,9 +15,12 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
+          // React and React DOM must be in the same chunk
+          if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
+            return 'react';
+          }
           if (id.includes('framer-motion')) return 'motion';
-          if (id.includes('@supabase')) return 'supabase';
-          if (id.includes('/react/') || id.includes('/react-dom/')) return 'react';
+          if (id.includes('@supabase') || id.includes('supabase')) return 'supabase';
           return 'vendor';
         },
       },
