@@ -80,7 +80,7 @@ export const Hero = () => {
               showRewindButton={showRewindButton}
               showThumbsUp={showThumbsUp}
               variant="desktop"
-              style={{ bottom: '24px', left: '86px' }}
+              style={{ bottom: '24px', left: '110px' }}
             />
           </DesktopHeroVideo>
         </div>

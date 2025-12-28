@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { AUTO_ADVANCE_ANIMATION_DURATION } from './useTravelAutoAdvance';
 
@@ -43,6 +43,16 @@ const SelectorButton: React.FC<SelectorButtonProps> = ({
   videoProgress,
   isVideoEnded,
 }) => {
+  // Avoid animating progress "backwards" when it resets to 0 on selection/pause.
+  const prevProgressRef = useRef<number>(0);
+  const shouldAnimateProgress = useMemo(() => {
+    if (!isSelected || isVideoEnded) return false;
+    const prev = prevProgressRef.current;
+    prevProgressRef.current = videoProgress;
+    // Animate only when progress moves forward (or stays equal)
+    return videoProgress >= prev;
+  }, [isSelected, isVideoEnded, videoProgress]);
+
   return (
     <button
       onClick={onClick}
@@ -62,7 +72,7 @@ const SelectorButton: React.FC<SelectorButtonProps> = ({
           className="absolute inset-0 bg-emerald-500/20 rounded-lg"
           style={{
             clipPath: `inset(0 ${100 - videoProgress}% 0 0)`,
-            transition: 'clip-path 500ms ease-out',
+            transition: shouldAnimateProgress ? 'clip-path 500ms ease-out' : 'none',
           }}
         />
       )}

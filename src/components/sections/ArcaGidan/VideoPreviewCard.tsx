@@ -17,10 +17,23 @@ interface VideoPreviewCardProps {
 export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, video, alt, isSectionVisible = true }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
+  const pendingPlayRef = useRef(false);
 
   const activateVideo = useCallback(() => {
     // Attach `src` only after first user intent (hover/tap).
-    setShouldLoadVideo(true);
+    // Mark that we want to play once loaded.
+    if (!shouldLoadVideo) {
+      pendingPlayRef.current = true;
+      setShouldLoadVideo(true);
+    }
+  }, [shouldLoadVideo]);
+
+  // Called when video has enough data to play
+  const handleCanPlay = useCallback(() => {
+    if (pendingPlayRef.current) {
+      pendingPlayRef.current = false;
+      videoRef.current?.play();
+    }
   }, []);
   
   const {
@@ -63,7 +76,8 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
         muted
         loop
         playsInline
-        preload={shouldLoadVideo ? 'metadata' : 'none'}
+        preload={shouldLoadVideo ? 'auto' : 'none'}
+        onCanPlay={handleCanPlay}
         onPlaying={handlePlaying}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-150 ${
           showVideo ? 'opacity-100' : 'opacity-0'

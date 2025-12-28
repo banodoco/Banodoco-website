@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { GRID_SIZE } from './config';
 import { shuffleArray } from './utils';
 
@@ -20,16 +20,14 @@ interface UseProfilePicsResult {
 }
 
 export const useProfilePics = (): UseProfilePicsResult => {
-  const [selectedPics, setSelectedPics] = useState<string[]>([]);
-  const usedPicsRef = useRef<Set<string>>(new Set());
-
-  // Initialize with shuffled selection
-  useEffect(() => {
+  // Initialize synchronously so the grid isn't empty on first paint (especially noticeable on mobile).
+  const [selectedPics] = useState<string[]>(() => {
     const shuffled = shuffleArray(ALL_PROFILE_PICS);
-    const selected = shuffled.slice(0, GRID_SIZE);
-    setSelectedPics(selected);
-    usedPicsRef.current = new Set(selected);
-  }, []);
+    return shuffled.slice(0, GRID_SIZE);
+  });
+
+  // Ref tracking which pics are currently in use (seeded from the initial selection).
+  const usedPicsRef = useRef<Set<string>>(new Set(selectedPics));
 
   const handleSwap = useCallback((oldPic: string, newPic: string) => {
     usedPicsRef.current.delete(oldPic);

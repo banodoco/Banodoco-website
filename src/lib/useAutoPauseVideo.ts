@@ -61,6 +61,13 @@ export interface UseAutoPauseVideoOptions {
   pauseOnly?: boolean;
 
   /**
+   * Debounce delay (ms) before pausing when the section becomes inactive.
+   * Helps avoid rapid pause/play thrash on fast scroll or IO flapping.
+   * @default 0
+   */
+  pauseDelayMs?: number;
+
+  /**
    * If true, the hook will auto-play on first entry when hasStarted becomes true.
    * If false, initial play is left to the component (e.g., triggered by selection change).
    * @default true
@@ -140,6 +147,7 @@ export function useAutoPauseVideo(
     onAfterResume,
     startOffset = 0,
     pauseOnly = false,
+    pauseDelayMs = 0,
     loopToOffset = false,
     autoPlayOnStart = true,
   } = options;
@@ -148,6 +156,8 @@ export function useAutoPauseVideo(
   const pausedByVisibilityRef = useRef(false);
   // Track if we've ever played (to avoid resuming something that never started)
   const hasPlayedRef = useRef(false);
+  // Pending pause timeout (debounce for brief visibility flaps)
+  const pendingPauseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Whether all conditions allow playback
   const canPlay = isActive && hasStarted && canResume && !pauseOnly;
@@ -199,6 +209,12 @@ export function useAutoPauseVideo(
     if (!video) return;
 
     if (canPlay) {
+      // Cancel any pending debounced pause when we become active again
+      if (pendingPauseTimeoutRef.current) {
+        clearTimeout(pendingPauseTimeoutRef.current);
+        pendingPauseTimeoutRef.current = null;
+      }
+
       // Resume if we previously paused due to visibility
       const shouldResumeDueToPause = pausedByVisibilityRef.current;
       // Auto-play on first entry (if enabled and component hasn't played yet)
@@ -208,15 +224,39 @@ export function useAutoPauseVideo(
         safePlay();
       }
     } else if (isActive === false) {
+      // Debounced pause to avoid rapid scroll/IO flapping causing flicker
+      if (pendingPauseTimeoutRef.current) return;
+
       // Only handle pause when explicitly not active (scrolled away)
       // Don't pause just because canResume is false (that's a blocking condition)
-      if (!video.paused) {
-        video.pause();
-        pausedByVisibilityRef.current = true;
-        onPause?.();
+      const doPause = () => {
+        pendingPauseTimeoutRef.current = null;
+        const v = videoRef.current;
+        if (!v) return;
+        if (!v.paused) {
+          v.pause();
+          pausedByVisibilityRef.current = true;
+          onPause?.();
+        }
+      };
+
+      if (pauseDelayMs > 0) {
+        pendingPauseTimeoutRef.current = setTimeout(doPause, pauseDelayMs);
+      } else {
+        doPause();
       }
     }
-  }, [canPlay, isActive, hasStarted, safePlay, onPause, videoRef, autoPlayOnStart]);
+  }, [canPlay, isActive, hasStarted, safePlay, onPause, videoRef, autoPlayOnStart, pauseDelayMs]);
+
+  // Cleanup any pending pause on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingPauseTimeoutRef.current) {
+        clearTimeout(pendingPauseTimeoutRef.current);
+        pendingPauseTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Handle loop-to-offset for videos with startOffset
   useEffect(() => {

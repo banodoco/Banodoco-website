@@ -18,6 +18,7 @@ export const ProfileImage = ({
   const [currentPic, setCurrentPic] = useState(initialPic);
   const [hasError, setHasError] = useState(false);
   const [isActive, setIsActive] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const fallbackColor = useRef(getRandomPastelColor());
   const flickerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const flickerCountRef = useRef(0);
@@ -97,6 +98,11 @@ export const ProfileImage = ({
     return () => stopFlickering();
   }, [stopFlickering]);
 
+  // When the image changes, treat it as not-yet-loaded so we can show a placeholder.
+  useEffect(() => {
+    setIsLoaded(false);
+  }, [currentPic]);
+
   if (hasError) {
     return (
       <div 
@@ -115,15 +121,19 @@ export const ProfileImage = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
+      style={{ backgroundColor: fallbackColor.current }}
     >
       <img
         src={`/profile_pics/${currentPic}.jpg`}
         alt=""
-        className="w-full h-full object-cover transition-[filter] duration-100"
+        className="w-full h-full object-cover transition-[filter,opacity] duration-150"
         style={{
           filter: isActive ? 'brightness(1.15)' : 'brightness(1)',
+          opacity: isLoaded ? 1 : 0,
         }}
         loading="lazy"
+        decoding="async"
+        onLoad={() => setIsLoaded(true)}
         onError={() => setHasError(true)}
       />
     </div>

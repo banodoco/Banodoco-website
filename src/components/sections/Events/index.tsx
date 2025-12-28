@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { events } from './data';
 import { EventSelector } from './EventSelector';
@@ -6,6 +6,7 @@ import { EventContent } from './EventContent';
 import { useEventsAutoAdvance } from './useEventsAutoAdvance';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { Section, SectionContent } from '@/components/layout/Section';
+import { useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
 
 export const Events: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState(0);
@@ -14,6 +15,13 @@ export const Events: React.FC = () => {
   
   // Track section visibility - pause videos when scrolled away
   const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ threshold: 0.5 });
+
+  // Preload all event videos when section comes into view
+  const videoUrls = useMemo(
+    () => events.filter((e) => e.video).map((e) => e.video!),
+    []
+  );
+  useVideoPreloadOnVisible(videoUrls, isActive);
 
   const autoAdvance = useEventsAutoAdvance({
     totalEvents: events.length,

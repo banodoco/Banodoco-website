@@ -1,10 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { TravelSelector } from './TravelSelector';
 import { useTravelAutoAdvance } from './useTravelAutoAdvance';
 import { travelExamples } from './data';
 import { Section, SectionContent } from '@/components/layout/Section';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
+import { useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
@@ -13,6 +14,10 @@ export const Reigh: React.FC = () => {
 
   // Track section visibility - pause video when scrolled away
   const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ threshold: 0.5 });
+
+  // Preload all videos when section comes into view
+  const videoUrls = useMemo(() => travelExamples.map((e) => e.video), []);
+  useVideoPreloadOnVisible(videoUrls, isActive);
 
   const autoAdvance = useTravelAutoAdvance({
     totalExamples: travelExamples.length,
@@ -57,6 +62,7 @@ export const Reigh: React.FC = () => {
     isActive,
     hasStarted,
     autoPlayOnStart: false, // Selection change effect handles initial play
+    pauseDelayMs: 250, // avoid pause/play thrash on fast scroll / IO flaps (prevents flicker)
   });
 
   // Handle play button click - restart the whole cycle
@@ -78,6 +84,7 @@ export const Reigh: React.FC = () => {
                   ref={videoRef}
                   src={currentExample.video}
                   poster={currentExample.poster}
+                  preload="metadata"
                   muted
                   playsInline
                   onPlay={handleVideoPlay}
@@ -90,18 +97,22 @@ export const Reigh: React.FC = () => {
                 />
 
                 {/* Play button overlay */}
-                {autoAdvance.videoEnded.has(selectedExample) && (
-                  <button
-                    onClick={handlePlayClick}
-                    className="absolute inset-0 bg-black/40 flex items-center justify-center hover:bg-black/30 transition-colors"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                      <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                    </div>
-                  </button>
-                )}
+                <button
+                  onClick={handlePlayClick}
+                  aria-label="Play video"
+                  className={[
+                    "absolute inset-0 bg-black/40 flex items-center justify-center hover:bg-black/30 transition-all duration-200",
+                    autoAdvance.videoEnded.has(selectedExample)
+                      ? "opacity-100 pointer-events-auto"
+                      : "opacity-0 pointer-events-none",
+                  ].join(" ")}
+                >
+                  <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </div>
+                </button>
               </div>
 
               {/* Selector */}
