@@ -198,7 +198,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
         )}
         style={{
           transform: isExpanded 
-            ? `rotate(0deg) scale(2.5) translateY(-20%)`
+            ? `rotate(0deg) scale(${screenSize === 'mobile' ? 4 : screenSize === 'tablet' ? 3.5 : 2.5}) translateY(-20%)`
             : isHovered 
               ? `rotate(${hoverRotation}deg) scale(1.15) translateY(-8px)`
               : `rotate(${photo.rotation}deg) scale(1) translateY(0)`,
