@@ -19,7 +19,7 @@ export const Footer = () => {
     <footer className="snap-start bg-[#f5f5f3] border-t border-black/5">
       <div className="flex justify-center items-center gap-8 py-12">
         <a 
-          href="https://x.com/banaboratory" 
+          href="https://twitter.com/banodoco" 
           target="_blank" 
           rel="noopener noreferrer"
           className="text-neutral-500 hover:text-neutral-900 transition-colors"
@@ -37,7 +37,7 @@ export const Footer = () => {
           <Github className="w-6 h-6" />
         </a>
         <a 
-          href="https://discord.gg/banodoco" 
+          href="https://discord.gg/NnFxGvx94b" 
           target="_blank" 
           rel="noopener noreferrer"
           className="text-neutral-500 hover:text-neutral-900 transition-colors"

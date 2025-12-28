@@ -280,7 +280,7 @@ const OwnershipPage = () => {
               header="I have another question"
               content={
                 <p>
-                  DM me on <a href="https://discord.com/invite/eKQm3uHKx2" className="text-blue-600 hover:underline">our Discord</a>!
+                  DM me on <a href="https://discord.gg/NnFxGvx94b" className="text-blue-600 hover:underline">our Discord</a>!
                 </p>
               }
             />

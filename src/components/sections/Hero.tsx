@@ -5,7 +5,7 @@ import { useSectionVisibility } from '@/lib/useSectionVisibility';
 
 // Desktop-only styles with clip path and masks
 const desktopMediaStyles = {
-  clipPath: 'inset(13px 67px 13px 74px round 8px)',
+  clipPath: 'inset(15px 81px 15px 86px round 8px)',
   maskImage: `
     linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent),
     linear-gradient(to bottom, transparent, black 20px, black calc(100% - 20px), transparent)

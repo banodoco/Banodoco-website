@@ -9,9 +9,10 @@ interface EventContentProps {
   /** Whether the parent section is visible in viewport */
   isSectionVisible?: boolean;
   onLightboxChange?: (isOpen: boolean) => void;
+  onPauseChange?: (isPaused: boolean) => void;
 }
 
-export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, hasStarted, isSectionVisible = true, onLightboxChange }) => {
+export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, hasStarted, isSectionVisible = true, onLightboxChange, onPauseChange }) => {
   // Combined visibility: section must be in view, section must be visible in viewport, AND this event must be selected
   const isFullyVisible = hasStarted && isVisible && isSectionVisible;
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -103,8 +104,9 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
       if (e.key === 'Escape') {
         if (showLightbox) {
           closeLightbox();
-        } else {
+        } else if (expandedPhotoIdx !== null) {
           setExpandedPhotoIdx(null);
+          onPauseChange?.(false);
         }
       }
     };
@@ -112,7 +114,34 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
       document.addEventListener('keydown', handleEscape);
     }
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [expandedPhotoIdx, showLightbox]);
+  }, [expandedPhotoIdx, showLightbox, onPauseChange]);
+
+  // Close expanded photo on scroll
+  useEffect(() => {
+    if (expandedPhotoIdx === null) return;
+    
+    const handleScroll = () => {
+      setExpandedPhotoIdx(null);
+      onPauseChange?.(false);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [expandedPhotoIdx, onPauseChange]);
+
+  // Close expanded photo when clicking outside the polaroid
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if (expandedPhotoIdx === null) return;
+    
+    // Check if we clicked on a polaroid or navigation button
+    const target = e.target as HTMLElement;
+    const clickedOnPolaroid = target.closest('[data-polaroid]');
+    
+    if (!clickedOnPolaroid) {
+      setExpandedPhotoIdx(null);
+      onPauseChange?.(false);
+    }
+  };
 
   if (event.comingSoon) {
     return (
@@ -135,7 +164,10 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   }
 
   return (
-    <div className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-[16/10] rounded-xl overflow-visible">
+    <div 
+      className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-[16/10] rounded-xl overflow-visible"
+      onClick={handleContainerClick}
+    >
       {/* Video background - fades with visibility */}
       <div 
         className="absolute inset-0 rounded-xl overflow-hidden bg-black/50 transition-opacity duration-500"
@@ -230,8 +262,24 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
           baseZIndex={10}
           isExpanded={expandedPhotoIdx === idx}
           isVisible={isFullyVisible}
-          onOpen={() => setExpandedPhotoIdx(expandedPhotoIdx === idx ? null : idx)}
-          onClose={() => setExpandedPhotoIdx(null)}
+          onOpen={() => {
+            const newIdx = expandedPhotoIdx === idx ? null : idx;
+            setExpandedPhotoIdx(newIdx);
+            // Pause auto-advance when a polaroid is expanded
+            onPauseChange?.(newIdx !== null);
+          }}
+          onClose={() => {
+            setExpandedPhotoIdx(null);
+            onPauseChange?.(false);
+          }}
+          onNavigate={(direction) => {
+            const total = event.photos?.length ?? 0;
+            if (total === 0) return;
+            const newIdx = direction === 'next' 
+              ? (idx + 1) % total 
+              : (idx - 1 + total) % total;
+            setExpandedPhotoIdx(newIdx);
+          }}
         />
       ))}
 

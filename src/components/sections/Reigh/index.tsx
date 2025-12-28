@@ -129,7 +129,9 @@ export const Reigh: React.FC = () => {
                 We believe that there's a whole artform waiting to be discovered in the journey from one image to another.
               </p>
               <a 
-                href="#"
+                href="https://reigh.art/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
               >
                 Learn more

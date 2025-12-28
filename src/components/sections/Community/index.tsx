@@ -145,18 +145,18 @@ export const Community = () => {
 
   return (
     <Section ref={sectionRef} id="community" className="bg-gradient-to-br from-[#0c1420] via-[#101825] to-[#0a1018] text-white">
-      <div ref={containerRef} className="h-full overflow-hidden 2xl:overflow-y-auto px-6 md:px-16 2xl:py-12 flex items-center 2xl:items-start">
+      <div ref={containerRef} className="h-full overflow-hidden xl:overflow-y-auto px-6 md:px-16 xl:py-12 flex items-center xl:items-start">
         <div className="max-w-7xl mx-auto w-full">
           {/* Mobile/tablet intro - shown above cards */}
-          <div className="mb-6 2xl:hidden">
-            <h2 className="text-xl md:text-3xl font-normal tracking-tight leading-[1.15] mb-4">
+          <div className="mb-8 xl:hidden">
+            <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
               Our Discord is a gathering place for people from across the ecosystem
             </h2>
-            <p className="text-sm md:text-base text-white/60 leading-relaxed mb-4">
+            <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-8">
               We've been at the cutting-edge of the technical & artistic scenes over the past two years.
             </p>
             <a 
-              href="https://discord.gg/banodoco" 
+              href="https://discord.gg/NnFxGvx94b" 
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-white/90 transition-colors"
@@ -169,7 +169,7 @@ export const Community = () => {
           </div>
 
           {/* Mobile/tablet horizontal scroll cards */}
-          <div className="2xl:hidden -mx-4 md:-mx-8">
+          <div className="xl:hidden -mx-4 md:-mx-8">
             {loading && (
               <div className="flex items-center justify-center py-20 px-4">
                 <div className="animate-pulse text-white/40">Loading latest updates...</div>
@@ -203,7 +203,7 @@ export const Community = () => {
                       }}
                       topic={topic}
                       isActive={sectionIsVisible && idx === activeTopicIndex}
-                      variant="scroll"
+                      fullWidth
                     />
                   ))}
                 </div>
@@ -233,7 +233,7 @@ export const Community = () => {
             )}
           </div>
 
-          <div className="hidden 2xl:grid grid-cols-12 gap-12">
+          <div className="hidden xl:grid grid-cols-12 gap-16">
             {/* Left side - Introduction text (desktop only) */}
             <div className="col-span-4 sticky top-24 self-start">
               <h2 className="text-5xl font-normal tracking-tight leading-[1.15] mb-6">
@@ -243,7 +243,7 @@ export const Community = () => {
                 We've been at the cutting-edge of the technical & artistic scenes over the past two years.
               </p>
               <a 
-                href="https://discord.gg/banodoco" 
+                href="https://discord.gg/NnFxGvx94b" 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-white/90 transition-colors"

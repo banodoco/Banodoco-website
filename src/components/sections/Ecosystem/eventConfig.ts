@@ -14,6 +14,7 @@ export interface InternalEvent {
   type: 'internal';
   from: Stage;
   to: Stage;
+  label: string;
 }
 
 export interface ExternalEvent {
@@ -40,6 +41,52 @@ const INTERNAL_TRANSITIONS: Array<{ from: Stage; to: Stage }> = [
   { from: 'artists', to: 'contributors' },
   { from: 'tools', to: 'contributors' },
 ];
+
+/** Internal event labels - describes why someone "levels up" in the ecosystem */
+const INTERNAL_LABELS: Record<string, string[]> = {
+  // Fan becoming an artist - they were enjoying art and now want to make their own
+  'fans→artists': [
+    'Generates first image',
+    'Makes their own video',
+    'Tries a new model',
+    'Posts first creation',
+  ],
+  // Fan becoming a tool builder - they want to solve a specific problem or build something
+  'fans→tools': [
+    'Writes a ComfyUI node',
+    'Builds a workflow',
+    'Creates a Discord bot',
+    'Automates generation',
+  ],
+  // Fan becoming a contributor - they start helping the ecosystem directly
+  'fans→contributors': [
+    'Submits first PR',
+    'Reports a bug fix',
+    'Documents a feature',
+    'Answers in Discord',
+  ],
+  // Artist wanting to understand/build tools - they need more control over their process
+  'artists→tools': [
+    'Builds custom node',
+    'Modifies the pipeline',
+    'Creates a LoRA',
+    'Forks a workflow',
+  ],
+  // Artist becoming a contributor - they share what they've learned
+  'artists→contributors': [
+    'Writes a tutorial',
+    'Shares their workflow',
+    'Mentors new artists',
+    'Open sources preset',
+  ],
+  // Tool builder becoming a contributor - they contribute to core projects
+  'tools→contributors': [
+    'PR merged upstream',
+    'Maintains a package',
+    'Joins core team',
+    'Reviews PRs',
+  ],
+};
 
 /** External event labels by target stage */
 const EXTERNAL_LABELS: Record<Stage, string[]> = {
@@ -120,42 +167,67 @@ export const getStageColor = (stage: Stage): string => {
 // PATH GENERATORS
 // =============================================================================
 
+// Padding from SVG edges to keep paths visible
+const PADDING = {
+  left: 20,
+  right: 20,
+  top: 30,
+  bottom: 30,
+} as const;
+
+/** Clamp a value within the visible SVG bounds */
+const clampX = (x: number): number => 
+  Math.max(PADDING.left, Math.min(SVG_CONFIG.width - PADDING.right, x));
+
+const clampY = (y: number): number => 
+  Math.max(PADDING.top, Math.min(SVG_CONFIG.height - PADDING.bottom, y));
+
 /** 
  * Generate SVG path for internal events.
  * Loops down and around to approach target from the left (flow direction).
+ * All coordinates are clamped to stay within the visible SVG area.
  */
 export const getInternalEventPath = (from: Stage, to: Stage): string => {
   const fromX = getStageX(from);
   const toX = getStageInputX(to);
   const centerY = SVG_CONFIG.centerY;
 
-  const loopBottom = centerY + 120;
-  const overshootX = toX - 100;  // How far left of target to swing
-  const approachX = toX - 60;    // Where final approach begins
+  // Calculate loop parameters, but constrained to visible area
+  const loopDepth = Math.min(100, (SVG_CONFIG.height - PADDING.bottom) - centerY - 20);
+  const loopBottom = centerY + loopDepth;
+  
+  // How far left to swing - make it proportional to distance but stay in bounds
+  const distance = fromX - toX;
+  const overshootAmount = Math.min(80, distance * 0.15);
+  const overshootX = clampX(toX - overshootAmount);
+  const loopLeftX = clampX(overshootX - 40);
+  const approachX = clampX(toX - 50);
 
   return `M ${fromX} ${centerY}
-    Q ${(fromX + overshootX) / 2} ${loopBottom + 30}, 
-      ${overshootX} ${loopBottom}
-    Q ${overshootX - 50} ${loopBottom - 40}, 
-      ${overshootX - 50} ${centerY + 20}
-    Q ${overshootX - 50} ${centerY - 40}, 
-      ${approachX} ${centerY - 30}
-    Q ${toX - 20} ${centerY - 15}, 
+    Q ${clampX((fromX + overshootX) / 2)} ${clampY(loopBottom + 20)}, 
+      ${overshootX} ${clampY(loopBottom)}
+    Q ${loopLeftX} ${clampY(loopBottom - 30)}, 
+      ${loopLeftX} ${clampY(centerY + 15)}
+    Q ${loopLeftX} ${clampY(centerY - 30)}, 
+      ${approachX} ${clampY(centerY - 25)}
+    Q ${clampX(toX - 15)} ${clampY(centerY - 12)}, 
       ${toX} ${centerY}`;
 };
 
 /** 
  * Generate SVG path for external events.
  * Smooth curve from Banodoco source to target stage.
+ * All coordinates are clamped to stay within the visible SVG area.
  */
 export const getExternalEventPath = (target: Stage, sourceY: number): string => {
   const targetX = getStageInputX(target);
   const centerY = SVG_CONFIG.centerY;
 
-  const cp1x = BANODOCO_SOURCE.x + 100;
-  const cp1y = sourceY - 60;
-  const cp2x = targetX - 80;
-  const cp2y = centerY;
+  // Control points that stay within bounds
+  const cp1x = clampX(BANODOCO_SOURCE.x + 100);
+  const cp1y = clampY(sourceY - 50);
+  const cp2x = clampX(targetX - 80);
+  const cp2y = clampY(centerY);
 
   return `M ${BANODOCO_SOURCE.x} ${sourceY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${targetX} ${centerY}`;
 };
@@ -167,10 +239,14 @@ export const getExternalEventPath = (target: Stage, sourceY: number): string => 
 /** Generate a random internal event (user "leveling up" in the ecosystem) */
 export const generateRandomInternalEvent = (): InternalEvent => {
   const transition = INTERNAL_TRANSITIONS[Math.floor(Math.random() * INTERNAL_TRANSITIONS.length)];
+  const key = `${transition.from}→${transition.to}`;
+  const labels = INTERNAL_LABELS[key] || ['Levels up'];
+  const label = labels[Math.floor(Math.random() * labels.length)];
   return {
     type: 'internal',
     from: transition.from,
     to: transition.to,
+    label,
   };
 };
 

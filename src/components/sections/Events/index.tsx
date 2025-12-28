@@ -10,6 +10,7 @@ import { Section, SectionContent } from '@/components/layout/Section';
 export const Events: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   
   // Track section visibility - pause videos when scrolled away
   const { ref: sectionRef, isVisible, hasBeenVisible: hasStarted } = useSectionVisibility({ threshold: 0.5 });
@@ -17,7 +18,7 @@ export const Events: React.FC = () => {
   const autoAdvance = useEventsAutoAdvance({
     totalEvents: events.length,
     onEventChange: setSelectedEvent,
-    isActive: hasStarted && !lightboxOpen,
+    isActive: hasStarted && !lightboxOpen && !isPaused,
   });
 
   const handleSelect = useCallback((idx: number) => {
@@ -48,6 +49,7 @@ export const Events: React.FC = () => {
                       hasStarted={hasStarted}
                       isSectionVisible={isVisible}
                       onLightboxChange={setLightboxOpen}
+                      onPauseChange={setIsPaused}
                     />
                   </div>
                 ))}
@@ -79,7 +81,7 @@ export const Events: React.FC = () => {
                 We gather our community with people from the extended creative world to look at art, eat nice food, and create things.
               </p>
               <a
-                href="#"
+                href="https://ados.events/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-rose-400 font-medium hover:text-rose-300 transition-colors"

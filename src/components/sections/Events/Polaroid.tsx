@@ -11,6 +11,7 @@ interface PolaroidProps {
   isVisible: boolean;
   onOpen: () => void;
   onClose: () => void;
+  onNavigate?: (direction: 'prev' | 'next') => void;
 }
 
 // Shared screen size state - only one resize listener for all Polaroids
@@ -100,7 +101,8 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   isExpanded, 
   isVisible,
   onOpen, 
-  onClose 
+  onClose,
+  onNavigate,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const screenSize = useScreenSize();
@@ -123,10 +125,26 @@ export const Polaroid: React.FC<PolaroidProps> = ({
 
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false);
-    if (isExpanded) {
-      onClose();
-    }
-  }, [isExpanded, onClose]);
+    // Don't close on mouse leave when expanded - user must click elsewhere or press Escape
+  }, []);
+
+  // Arrow key navigation when expanded
+  useEffect(() => {
+    if (!isExpanded || !onNavigate) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        onNavigate('prev');
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        onNavigate('next');
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isExpanded, onNavigate]);
 
   // Calculate the transform based on state
   const getTransform = () => {
@@ -140,6 +158,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
 
   return (
     <div
+      data-polaroid
       className="absolute w-16 sm:w-20 md:w-24 lg:w-20 xl:w-32 cursor-pointer"
       style={{
         left: `${posX}%`,
@@ -157,7 +176,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
     >
       <div
         className={cn(
-          "bg-white p-1 pb-4 sm:p-1.5 sm:pb-5 lg:pb-6 shadow-xl transition-all duration-500 ease-out",
+          "bg-white p-1 pb-4 sm:p-1.5 sm:pb-5 lg:pb-6 shadow-xl transition-all duration-500 ease-out relative",
           isHovered && !isExpanded && "shadow-2xl",
           isExpanded && "shadow-2xl"
         )}
@@ -170,6 +189,35 @@ export const Polaroid: React.FC<PolaroidProps> = ({
           transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease-out',
         }}
       >
+        {/* Navigation chevrons - only when expanded */}
+        {isExpanded && onNavigate && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate('prev');
+              }}
+              className="absolute -left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 transition-colors z-10"
+              style={{ fontSize: '5px' }}
+            >
+              <svg className="w-1.5 h-1.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate('next');
+              }}
+              className="absolute -right-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 transition-colors z-10"
+              style={{ fontSize: '5px' }}
+            >
+              <svg className="w-1.5 h-1.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </>
+        )}
         <div className="aspect-square bg-neutral-200 overflow-hidden">
           <img
             src={photo.src}
@@ -180,13 +228,16 @@ export const Polaroid: React.FC<PolaroidProps> = ({
             }}
           />
         </div>
-        {/* Caption - only show when expanded */}
+        {/* Caption - always visible, scales with card transform */}
         <p 
-          className={cn(
-            "text-center text-neutral-600 text-[6px] mt-1 px-1 transition-opacity duration-300",
-            isExpanded ? "opacity-100" : "opacity-0"
-          )}
-          style={{ fontFamily: "'Caveat', cursive", fontSize: isExpanded ? '10px' : '6px' }}
+          className="text-center text-neutral-700 px-0.5 truncate"
+          style={{ 
+            fontFamily: "'Caveat', cursive", 
+            fontSize: '6px',
+            lineHeight: '1',
+            marginTop: '8px',
+            letterSpacing: '-0.02em',
+          }}
         >
           {photo.caption}
         </p>

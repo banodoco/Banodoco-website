@@ -3,9 +3,11 @@ import {
   type EcosystemEvent,
   EVENT_TIMING,
   BANODOCO_SOURCE,
+  SVG_CONFIG,
   getInternalEventPath,
   getExternalEventPath,
   getStageColor,
+  getStageX,
   getRandomSourceY,
 } from './eventConfig';
 
@@ -65,21 +67,26 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
         clearTimeout(completeTimer);
       };
     } else {
-      // Internal: draw immediately, then fadeout
-      setPhase('drawing');
+      // Internal: label first, then draw, then fadeout (same as external now)
+      setPhase('label');
+      
+      const drawTimer = setTimeout(() => {
+        setPhase('drawing');
+      }, EVENT_TIMING.labelAppearDuration);
 
       // Fire onImpact when line finishes drawing
       const impactTimer = setTimeout(() => {
         onImpact?.();
         setPhase('fadeout');
-      }, EVENT_TIMING.pathDrawDuration);
+      }, EVENT_TIMING.labelAppearDuration + EVENT_TIMING.pathDrawDuration);
 
       const completeTimer = setTimeout(() => {
         setPhase('idle');
         onComplete?.();
-      }, EVENT_TIMING.pathDrawDuration + EVENT_TIMING.fadeoutDuration);
+      }, EVENT_TIMING.labelAppearDuration + EVENT_TIMING.pathDrawDuration + EVENT_TIMING.fadeoutDuration);
 
       return () => {
+        clearTimeout(drawTimer);
         clearTimeout(impactTimer);
         clearTimeout(completeTimer);
       };
@@ -103,8 +110,12 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
     : getStageColor(event.target);
 
   const showPath = phase === 'drawing' || phase === 'fadeout';
-  const showLabel = !isInternal && (phase === 'label' || phase === 'drawing' || phase === 'fadeout');
+  const showLabel = phase === 'label' || phase === 'drawing' || phase === 'fadeout';
   const isFadingOut = phase === 'fadeout';
+  
+  // For internal events, label appears at the starting (from) stage
+  const internalLabelX = isInternal ? getStageX(event.from) : 0;
+  const internalLabelY = SVG_CONFIG.centerY;
 
   return (
     <g 
@@ -176,6 +187,45 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
           <circle
             cx={BANODOCO_SOURCE.x}
             cy={sourceY}
+            r={8}
+            fill={color}
+            filter="url(#event-glow)"
+          />
+        </g>
+      )}
+
+      {/* Internal event label - appears at the origin stage */}
+      {isInternal && (
+        <g 
+          style={{ 
+            opacity: showLabel ? 1 : 0, 
+            transition: `opacity ${EVENT_TIMING.labelAppearDuration}ms ease-out`,
+          }}
+        >
+          {/* Label background - positioned above the source point */}
+          <rect
+            x={internalLabelX - 60}
+            y={internalLabelY - 55}
+            width={120}
+            height={24}
+            rx={4}
+            fill="black"
+            opacity={0.7}
+          />
+          <text
+            x={internalLabelX}
+            y={internalLabelY - 38}
+            textAnchor="middle"
+            fill={color}
+            fontSize={12}
+            fontWeight={600}
+          >
+            {event.label}
+          </text>
+          {/* Source node at the from stage */}
+          <circle
+            cx={internalLabelX}
+            cy={internalLabelY}
             r={8}
             fill={color}
             filter="url(#event-glow)"
