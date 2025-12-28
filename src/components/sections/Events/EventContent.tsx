@@ -273,8 +273,9 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
       </div>
 
       {/* Date overlay - fades with visibility */}
+      {/* Mobile: bottom-left (polaroids are top-right), Tablet/Desktop: top-right (polaroids are bottom-left) */}
       <div 
-        className="absolute top-4 left-4 z-20 transition-opacity duration-400"
+        className="absolute bottom-4 left-4 lg:bottom-auto lg:left-auto lg:top-4 lg:right-4 z-20 transition-opacity duration-400"
         style={{ opacity: isFullyVisible ? 1 : 0, transitionDelay: isFullyVisible ? '200ms' : '0ms' }}
       >
         <div className="bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
