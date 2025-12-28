@@ -9,6 +9,7 @@ import { useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastPlayedRef = useRef<number | null>(null);
 
@@ -47,6 +48,11 @@ export const Reigh: React.FC = () => {
     handleVideoStarted(selectedExample);
   }, [handleVideoStarted, selectedExample]);
 
+  // Reset readiness when the selected video changes (avoids black-frame flashes on entry)
+  useEffect(() => {
+    setIsVideoReady(false);
+  }, [selectedExample]);
+
   // Play video when selection changes or when first started
   useEffect(() => {
     if (!hasStarted) return;
@@ -72,6 +78,7 @@ export const Reigh: React.FC = () => {
   }, [handleManualSelect, selectedExample]);
 
   const currentExample = travelExamples[selectedExample];
+  const currentPoster = currentExample.poster ?? currentExample.images?.[0];
 
   return (
     <Section ref={sectionRef} className="bg-gradient-to-br from-[#140c22] via-[#181028] to-[#100820] text-white">
@@ -80,20 +87,33 @@ export const Reigh: React.FC = () => {
             {/* Left side - Video showcase */}
             <div className="order-2 lg:order-1 flex flex-col">
               <div className="relative rounded-xl overflow-hidden bg-black/50 h-[35dvh] md:h-[50dvh] lg:h-[60dvh] flex items-center justify-center">
+                {/* Poster fallback (separate element so we can fade video in without hiding poster) */}
+                {currentPoster && (
+                  <img
+                    src={currentPoster}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-contain"
+                    loading="eager"
+                    decoding="async"
+                    draggable={false}
+                  />
+                )}
                 <video
                   ref={videoRef}
                   src={currentExample.video}
-                  poster={currentExample.poster}
+                  poster={currentPoster}
                   preload="metadata"
                   muted
                   playsInline
                   onPlay={handleVideoPlay}
+                  onLoadedData={() => setIsVideoReady(true)}
                   onTimeUpdate={(e) => {
                     const video = e.currentTarget;
                     onVideoTimeUpdate(selectedExample, video.currentTime, video.duration, selectedExample);
                   }}
                   onEnded={() => onVideoEnded(selectedExample)}
-                  className="max-w-full max-h-full object-contain"
+                  className="max-w-full max-h-full object-contain transition-opacity duration-150"
+                  style={{ opacity: isVideoReady ? 1 : 0 }}
                 />
 
                 {/* Play button overlay */}
