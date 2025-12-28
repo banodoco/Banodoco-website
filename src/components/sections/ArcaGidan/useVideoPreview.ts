@@ -3,6 +3,11 @@ import { useState, useCallback, useRef } from 'react';
 interface UseVideoPreviewOptions {
   /** Video element ref */
   videoRef: React.RefObject<HTMLVideoElement | null>;
+  /**
+   * Called right before we attempt to play.
+   * Use this to lazily attach `src` / kick off loading.
+   */
+  onActivate?: () => void;
 }
 
 interface UseVideoPreviewResult {
@@ -26,20 +31,24 @@ interface UseVideoPreviewResult {
  * Hook for hover-to-preview video behavior.
  * Handles both desktop (hover) and mobile (tap to toggle) interactions.
  */
-export const useVideoPreview = ({ videoRef }: UseVideoPreviewOptions): UseVideoPreviewResult => {
+export const useVideoPreview = ({ videoRef, onActivate }: UseVideoPreviewOptions): UseVideoPreviewResult => {
   const [showVideo, setShowVideo] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const hasPlayedOnceRef = useRef(false);
 
   const handleMouseEnter = useCallback(() => {
     if (!isTouchDevice) {
+      // Allow the caller to lazy-load the video before we try to play.
+      // (Important for performance: don't download 4 previews on mount.)
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      onActivate?.();
       // If video has played before, show it immediately (it's cached)
       if (hasPlayedOnceRef.current) {
         setShowVideo(true);
       }
       videoRef.current?.play();
     }
-  }, [isTouchDevice, videoRef]);
+  }, [isTouchDevice, videoRef, onActivate]);
 
   const handleMouseLeave = useCallback(() => {
     if (!isTouchDevice) {
@@ -55,6 +64,7 @@ export const useVideoPreview = ({ videoRef }: UseVideoPreviewOptions): UseVideoP
   const handleClick = useCallback(() => {
     if (isTouchDevice) {
       if (videoRef.current?.paused) {
+        onActivate?.();
         if (hasPlayedOnceRef.current) {
           setShowVideo(true);
         }
@@ -64,7 +74,7 @@ export const useVideoPreview = ({ videoRef }: UseVideoPreviewOptions): UseVideoP
         videoRef.current?.pause();
       }
     }
-  }, [isTouchDevice, videoRef]);
+  }, [isTouchDevice, videoRef, onActivate]);
 
   const handlePlaying = useCallback(() => {
     setShowVideo(true);

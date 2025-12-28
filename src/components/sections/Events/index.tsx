@@ -27,11 +27,11 @@ export const Events: React.FC = () => {
   return (
     <Section ref={sectionRef} className="bg-gradient-to-br from-[#200c14] via-[#251018] to-[#1a0810] text-white">
       <SectionContent>
-          <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6 2xl:gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left side - Event content */}
-            <div className="2xl:col-span-8 order-2 2xl:order-1">
+            <div className="lg:col-span-7 order-2 lg:order-1">
               {/* Main content area - stack all events for smooth polaroid transitions */}
-              <div className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-video">
+              <div className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-[16/10]">
                 {events.map((event, idx) => (
                   <div
                     key={event.id}
@@ -71,7 +71,7 @@ export const Events: React.FC = () => {
             </div>
 
             {/* Right side - Text */}
-            <div className="2xl:col-span-4 order-1 2xl:order-2">
+            <div className="lg:col-span-5 order-1 lg:order-2">
               <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
                 ADOS events bring the community together in the real world
               </h2>

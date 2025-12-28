@@ -117,7 +117,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   if (event.comingSoon) {
     return (
       <div 
-        className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-video rounded-xl overflow-hidden bg-white/5 flex items-center justify-center transition-opacity duration-500"
+        className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-[16/10] rounded-xl overflow-hidden bg-white/5 flex items-center justify-center transition-opacity duration-500"
         style={{ opacity: isFullyVisible ? 1 : 0 }}
       >
         <div className="text-center px-4">
@@ -135,7 +135,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   }
 
   return (
-    <div className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-video rounded-xl overflow-visible">
+    <div className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-[16/10] rounded-xl overflow-visible">
       {/* Video background - fades with visibility */}
       <div 
         className="absolute inset-0 rounded-xl overflow-hidden bg-black/50 transition-opacity duration-500"

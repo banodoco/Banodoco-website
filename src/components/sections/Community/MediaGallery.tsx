@@ -9,9 +9,10 @@ interface MediaGalleryProps {
   urls: MediaUrl[];
   isVisible: boolean;
   compact?: boolean;
+  maxHeight?: string;
 }
 
-export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryProps) => {
+export const MediaGallery = ({ urls, isVisible, compact = false, maxHeight }: MediaGalleryProps) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -156,12 +157,18 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
   }, [selectedIndex]);
 
   return (
-    <div className={compact ? "space-y-1.5" : "space-y-2 md:space-y-3"}>
+    <div className={cn(
+      compact ? "space-y-1.5" : "space-y-2 md:space-y-0 md:flex md:gap-3",
+      maxHeight && "md:items-start"
+    )}>
       {/* Main display */}
-      <div className={cn(
-        "relative rounded-lg overflow-hidden bg-black/20",
-        compact ? "aspect-square" : "aspect-video"
-      )}>
+      <div 
+        className={cn(
+          "relative rounded-lg overflow-hidden bg-black/20 md:flex-1",
+          compact ? "aspect-square" : "aspect-video",
+          maxHeight
+        )}
+      >
         {isVideo ? (
           <video 
             ref={videoRef}
@@ -196,8 +203,9 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
       </div>
       
       {/* Thumbnail selector with progress - hidden in compact mode */}
+      {/* Mobile: horizontal row below, iPad+: vertical column on right */}
       {!compact && urls.length > 1 && (
-        <div className="flex gap-1.5 md:gap-2 overflow-x-auto py-1 px-0.5 -mx-0.5">
+        <div className="flex md:flex-col gap-1.5 md:gap-2 overflow-x-auto md:overflow-x-visible md:overflow-y-auto py-1 md:py-0 px-0.5 md:px-0 -mx-0.5 md:mx-0 md:max-h-36">
           {urls.map((media, idx) => {
             const isVid = media.type === 'video' || !!media.url.match(/\.(mp4|webm|mov)(\?|$)/i);
             const isSelected = idx === selectedIndex;
@@ -207,7 +215,7 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
                 key={idx}
                 onClick={() => handleSelect(idx)}
                 className={cn(
-                  "relative shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-md overflow-hidden transition-all",
+                  "relative shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-md overflow-hidden transition-all",
                   isSelected 
                     ? "ring-2 ring-emerald-400" 
                     : "ring-1 ring-white/10 hover:ring-white/30"

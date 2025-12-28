@@ -34,9 +34,6 @@ function getSectionPreloadList() {
 
   // Video metadata only (avoid pulling entire MP4s)
   const videos = uniqueNonEmpty([
-    // Hero
-    '/upscaled_new.mp4',
-
     // Reigh first example (may be missing poster, so warm video)
     firstReigh?.video,
 
@@ -45,6 +42,41 @@ function getSectionPreloadList() {
   ]);
 
   return { images, videos };
+}
+
+function isLikelyIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const isiOSDevice = /iPad|iPhone|iPod/.test(ua);
+  const isiPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return isiOSDevice || isiPadOS;
+}
+
+function shouldPreloadVideos(): boolean {
+  // Video metadata preloads can still spin up decoders on some browsers and contribute to
+  // GPU/memory pressure (which can manifest as blanking/flicker during scroll).
+  // Be conservative here.
+  if (isLikelyIOS()) return false;
+
+  const nav = navigator as Navigator & {
+    connection?: { saveData?: boolean; effectiveType?: string };
+  };
+  const connection = nav.connection;
+  if (connection?.saveData) return false;
+  const effectiveType = connection?.effectiveType;
+  if (effectiveType && /(^|-)2g$/.test(effectiveType)) return false;
+
+  return true;
+}
+
+function scheduleIdle(fn: () => void): void {
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number };
+  if (typeof w.requestIdleCallback === 'function') {
+    w.requestIdleCallback(fn, { timeout: 2000 });
+    return;
+  }
+  // Fallback: delay slightly so we don't compete with first paint / scroll.
+  window.setTimeout(fn, 750);
 }
 
 /**
@@ -83,8 +115,15 @@ export function preloadSectionAssets(): void {
   if (typeof window === 'undefined') return;
   const { images, videos } = getSectionPreloadList();
 
+  // Images are cheap and help perceived performance.
   images.forEach(preloadImage);
-  videos.forEach(preloadVideoMetadata);
+
+  // Defer video metadata preloads until idle, and skip entirely on iOS / Save-Data.
+  if (videos.length > 0 && shouldPreloadVideos()) {
+    scheduleIdle(() => {
+      videos.forEach(preloadVideoMetadata);
+    });
+  }
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useVideoPreview } from './useVideoPreview';
 
 interface VideoPreviewCardProps {
@@ -15,6 +15,12 @@ interface VideoPreviewCardProps {
  */
 export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, video, alt, isSectionVisible = true }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
+
+  const activateVideo = useCallback(() => {
+    // Attach `src` only after first user intent (hover/tap).
+    setShouldLoadVideo(true);
+  }, []);
   
   const {
     showVideo,
@@ -23,7 +29,7 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
     handleTouchStart,
     handleClick,
     handlePlaying,
-  } = useVideoPreview({ videoRef });
+  } = useVideoPreview({ videoRef, onActivate: activateVideo });
 
   // Pause video when section scrolls out of view
   useEffect(() => {
@@ -55,11 +61,12 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
       {/* Video - fade in when playing */}
       <video
         ref={videoRef}
-        src={video}
+        src={shouldLoadVideo ? video : undefined}
+        poster={poster}
         muted
         loop
         playsInline
-        preload="auto"
+        preload={shouldLoadVideo ? 'metadata' : 'none'}
         onPlaying={handlePlaying}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-150 ${
           showVideo ? 'opacity-100' : 'opacity-0'

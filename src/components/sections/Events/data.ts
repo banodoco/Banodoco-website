@@ -6,7 +6,7 @@ export const events: EventItem[] = [
     label: 'Paris',
     year: '2024',
     date: 'September 14-15',
-    video: '/events/paris-2025-video.mp4',
+    video: '/events/paris-2025-video-720p.mp4',
     poster: '/events/paris-2025-poster.jpg',
     photos: [
       { src: '/events/paris-2024-1.jpg', rotation: -12, x: 8, y: 68, caption: 'Opening night at the gallery' },
@@ -21,7 +21,7 @@ export const events: EventItem[] = [
     label: 'LA',
     year: '2025',
     date: 'March 8-9',
-    video: '/events/la-2025-video.mp4',
+    video: '/events/la-2025-video-720p.mp4',
     poster: '/events/la-2025-poster.jpg',
     photos: [
       { src: '/events/la-2025-1.jpg', rotation: 10, x: 10, y: 65, caption: 'Venue setup' },

@@ -24,11 +24,6 @@ export const Section = forwardRef<HTMLElement, SectionProps>(
         "h-[100dvh] snap-start overflow-hidden",
         className
       )}
-      style={{ 
-        // Force GPU compositing layer to prevent flash during scroll
-        transform: 'translateZ(0)',
-        willChange: 'transform',
-      }}
     >
       {children}
     </section>

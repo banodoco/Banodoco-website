@@ -184,7 +184,7 @@ export const Ecosystem: React.FC = () => {
   return (
     <Section ref={sectionRef} className="bg-gradient-to-br from-[#0c1a14] via-[#102018] to-[#081510] text-white relative">
       {/* Header - positioned at ~8% from top on desktop, higher on mobile */}
-      <div className="absolute top-[4%] md:top-[8%] left-4 right-4 z-20 flex justify-center">
+      <div className="absolute top-[4%] xl:top-[8%] left-4 right-4 z-20 flex justify-center">
         <div className="w-full max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10 text-center">
           <h2 className="text-xl md:text-2xl lg:text-3xl font-normal tracking-tight leading-tight">
             We nurture the ecosystem so thousands of open-source tools can help billions fall in love with AI
@@ -196,7 +196,7 @@ export const Ecosystem: React.FC = () => {
       </div>
 
       {/* Desktop River visualization */}
-      <div className="absolute inset-0 hidden md:flex items-center justify-center pointer-events-none pt-8">
+      <div className="absolute inset-0 hidden xl:flex items-center justify-center pointer-events-none pt-8">
         <div className="w-full max-w-7xl px-4">
           <RiverVisualization 
             progress={progress} 
@@ -213,8 +213,8 @@ export const Ecosystem: React.FC = () => {
         </div>
       </div>
       
-      {/* Mobile visualization - vertical flow, positioned between header and timeline */}
-      <div className="absolute inset-x-0 top-[30%] bottom-[24%] flex md:hidden items-center justify-center pointer-events-none">
+      {/* Mobile/tablet visualization - centered with equal margins for header/timeline */}
+      <div className="absolute inset-x-0 top-[16%] bottom-[16%] flex xl:hidden items-center justify-center pointer-events-none px-4 md:px-8 lg:px-12">
         <MobileVisualization 
           progress={progress}
           stats={stats}
@@ -223,7 +223,7 @@ export const Ecosystem: React.FC = () => {
       </div>
 
       {/* Timeline - positioned at ~10% from bottom on desktop, lower on mobile */}
-      <div className="absolute bottom-[5%] md:bottom-[10%] left-4 right-4 z-20 flex justify-center">
+      <div className="absolute bottom-[5%] xl:bottom-[10%] left-4 right-4 z-20 flex justify-center">
         <div className="w-full max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10">
           <TimelineScrubber
             monthIdx={monthIdx}

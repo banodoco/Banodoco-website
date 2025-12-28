@@ -52,7 +52,7 @@ export function useEventsAutoAdvance({
     setProgress(0);
     
     const startTime = Date.now();
-    const updateInterval = 50; // Update every 50ms for smooth progress
+    const updateInterval = 100; // 10fps is plenty; reduces re-renders under scroll-snap
     
     progressIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;

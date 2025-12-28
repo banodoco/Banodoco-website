@@ -13,44 +13,47 @@ interface PolaroidProps {
   onClose: () => void;
 }
 
-// Shared mobile state - only one resize listener for all Polaroids
-let mobileListenerCount = 0;
-let isMobileGlobal = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
-const mobileListeners = new Set<() => void>();
+// Shared screen size state - only one resize listener for all Polaroids
+let listenerCount = 0;
+let screenSizeGlobal: 'mobile' | 'tablet' | 'desktop' = typeof window !== 'undefined' 
+  ? window.innerWidth < 1024 ? 'mobile' : window.innerWidth < 1280 ? 'tablet' : 'desktop'
+  : 'mobile';
+const screenListeners = new Set<() => void>();
 
 const handleResize = () => {
-  const newIsMobile = window.innerWidth < 1024;
-  if (newIsMobile !== isMobileGlobal) {
-    isMobileGlobal = newIsMobile;
-    mobileListeners.forEach(cb => cb());
+  const newSize: 'mobile' | 'tablet' | 'desktop' = 
+    window.innerWidth < 1024 ? 'mobile' : window.innerWidth < 1280 ? 'tablet' : 'desktop';
+  if (newSize !== screenSizeGlobal) {
+    screenSizeGlobal = newSize;
+    screenListeners.forEach(cb => cb());
   }
 };
 
-// Hook to detect if we're on mobile - shares a single resize listener
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(isMobileGlobal);
+// Hook to detect screen size - shares a single resize listener
+const useScreenSize = () => {
+  const [screenSize, setScreenSize] = useState(screenSizeGlobal);
   
   useEffect(() => {
-    const update = () => setIsMobile(isMobileGlobal);
-    mobileListeners.add(update);
+    const update = () => setScreenSize(screenSizeGlobal);
+    screenListeners.add(update);
     
     // Only add event listener for first subscriber
-    if (mobileListenerCount === 0) {
+    if (listenerCount === 0) {
       window.addEventListener('resize', handleResize, { passive: true });
     }
-    mobileListenerCount++;
+    listenerCount++;
     
     return () => {
-      mobileListeners.delete(update);
-      mobileListenerCount--;
+      screenListeners.delete(update);
+      listenerCount--;
       // Remove event listener when last subscriber leaves
-      if (mobileListenerCount === 0) {
+      if (listenerCount === 0) {
         window.removeEventListener('resize', handleResize);
       }
     };
   }, []);
   
-  return isMobile;
+  return screenSize;
 };
 
 // Get mobile positions for top-right cluster (spread out more)
@@ -61,6 +64,18 @@ const getMobilePosition = (index: number): { x: number; y: number } => {
     { x: 80, y: 18 },
     { x: 95, y: 20 },
     { x: 68, y: 28 },
+  ];
+  return positions[index % positions.length];
+};
+
+// Get tablet positions for tighter bottom-left cluster
+const getTabletPosition = (index: number): { x: number; y: number } => {
+  const positions = [
+    { x: 6, y: 58 },
+    { x: 14, y: 62 },
+    { x: 8, y: 72 },
+    { x: 18, y: 68 },
+    { x: 12, y: 80 },
   ];
   return positions[index % positions.length];
 };
@@ -88,12 +103,13 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   onClose 
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const isMobile = useIsMobile();
+  const screenSize = useScreenSize();
 
   // Get position based on screen size
   const mobilePos = useMemo(() => getMobilePosition(index), [index]);
-  const posX = isMobile ? mobilePos.x : photo.x;
-  const posY = isMobile ? mobilePos.y : photo.y;
+  const tabletPos = useMemo(() => getTabletPosition(index), [index]);
+  const posX = screenSize === 'mobile' ? mobilePos.x : screenSize === 'tablet' ? tabletPos.x : photo.x;
+  const posY = screenSize === 'mobile' ? mobilePos.y : screenSize === 'tablet' ? tabletPos.y : photo.y;
 
   // Smoothly reduce rotation on hover for a "picked up" effect
   const hoverRotation = photo.rotation * 0.3;
@@ -124,7 +140,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
 
   return (
     <div
-      className="absolute w-16 sm:w-20 md:w-28 lg:w-32 cursor-pointer"
+      className="absolute w-16 sm:w-20 md:w-24 lg:w-20 xl:w-32 cursor-pointer"
       style={{
         left: `${posX}%`,
         top: `${posY}%`,

@@ -24,10 +24,11 @@
     min-height: 100vh;
   }
 
-  /* Prevent flash during scroll by promoting heavy sections to GPU layers */
-  section {
-    backface-visibility: hidden;
-  }
+  /*
+   * Avoid global "flash prevention" hacks here.
+   * `backface-visibility: hidden` can cause intermittent blanking on some
+   * browsers (especially during scroll/compositing), and we don't rely on it.
+   */
 }
 
 /* Custom scrollbar for webkit */

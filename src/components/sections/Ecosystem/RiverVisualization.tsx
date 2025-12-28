@@ -187,15 +187,10 @@ export const RiverVisualization: FC<RiverVisualizationProps> = ({ progress, stat
       viewBox={`0 0 ${SVG_CONFIG.width} ${SVG_CONFIG.height}`}
       className="w-full h-full"
       preserveAspectRatio="xMidYMid meet"
-      style={{ 
-        // Force GPU layer to prevent parent repaints from affecting this
-        transform: 'translateZ(0)',
-        willChange: hasWave ? 'contents' : 'auto',
-      }}
     >
       <defs>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+          <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
           <feMerge>
             <feMergeNode in="coloredBlur" />
             <feMergeNode in="SourceGraphic" />
@@ -217,7 +212,7 @@ export const RiverVisualization: FC<RiverVisualizationProps> = ({ progress, stat
           <feDisplacementMap
             in="SourceGraphic"
             in2="turbulence"
-            scale="18"
+            scale="12"
             xChannelSelector="R"
             yChannelSelector="G"
             result="displaced"
