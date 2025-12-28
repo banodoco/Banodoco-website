@@ -3,7 +3,8 @@ import { TravelSelector } from './TravelSelector';
 import { useTravelAutoAdvance } from './useTravelAutoAdvance';
 import { travelExamples } from './data';
 import { Section, SectionContent } from '@/components/layout/Section';
-import { useSectionVisibility } from '@/lib/useSectionVisibility';
+import { useSectionRuntime } from '@/lib/useSectionRuntime';
+import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
@@ -11,7 +12,7 @@ export const Reigh: React.FC = () => {
   const lastPlayedRef = useRef<number | null>(null);
 
   // Track section visibility - pause video when scrolled away
-  const { ref: sectionRef, isVisible, hasBeenVisible: hasStarted } = useSectionVisibility({ threshold: 0.5 });
+  const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ threshold: 0.5 });
 
   const autoAdvance = useTravelAutoAdvance({
     totalExamples: travelExamples.length,
@@ -51,16 +52,12 @@ export const Reigh: React.FC = () => {
   }, [selectedExample, hasStarted, playCurrentVideo]);
 
   // Pause video when scrolled away, resume when scrolled back
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !hasStarted) return;
-    
-    if (isVisible) {
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  }, [isVisible, hasStarted]);
+  // Initial play is handled by selection change effect, so autoPlayOnStart: false
+  useAutoPauseVideo(videoRef, {
+    isActive,
+    hasStarted,
+    autoPlayOnStart: false, // Selection change effect handles initial play
+  });
 
   // Handle play button click - restart the whole cycle
   const handlePlayClick = useCallback(() => {
@@ -126,7 +123,7 @@ export const Reigh: React.FC = () => {
                 Reigh is an open source art tool for travelling between images
               </h2>
               <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-8">
-                We believe that there's a whole artform waiting to be discovered in the journey from one image to another.
+                We believe that there's an artform waiting to be discovered in the AI-powered journey from one image to another.
               </p>
               <a 
                 href="https://reigh.art/"

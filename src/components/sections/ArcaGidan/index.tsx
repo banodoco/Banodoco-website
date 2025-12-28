@@ -1,10 +1,10 @@
 import { artworks } from './data';
 import { VideoPreviewCard } from './VideoPreviewCard';
 import { Section } from '@/components/layout/Section';
-import { useSectionVisibility } from '@/lib/useSectionVisibility';
+import { useSectionRuntime } from '@/lib/useSectionRuntime';
 
 export const ArcaGidan: React.FC = () => {
-  const { ref: sectionRef, isVisible } = useSectionVisibility({ threshold: 0.3 });
+  const { ref: sectionRef, isActive } = useSectionRuntime({ threshold: 0.3 });
   
   return (
     <Section ref={sectionRef} className="bg-gradient-to-br from-[#201a0c] via-[#251f10] to-[#1a1508] text-white flex">
@@ -15,7 +15,7 @@ export const ArcaGidan: React.FC = () => {
             The Arca Gidan Prize is an open source AI art competition
           </h2>
           <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-8">
-            Over the years, we want to provide a reason for people to push themselves and open models to their limits.
+            We wish to provide a reason for people to push themselves and open models to their limits.
           </p>
           <a
             href="https://arcagidan.com"
@@ -40,7 +40,7 @@ export const ArcaGidan: React.FC = () => {
               poster={artworks[0].poster}
               video={artworks[0].video}
               alt={artworks[0].name}
-              isSectionVisible={isVisible}
+              isSectionVisible={isActive}
             />
           </div>
           <div className="flex-1 min-w-0 relative overflow-hidden">
@@ -48,7 +48,7 @@ export const ArcaGidan: React.FC = () => {
               poster={artworks[1].poster}
               video={artworks[1].video}
               alt={artworks[1].name}
-              isSectionVisible={isVisible}
+              isSectionVisible={isActive}
             />
           </div>
         </div>
@@ -59,7 +59,7 @@ export const ArcaGidan: React.FC = () => {
               poster={artworks[2].poster}
               video={artworks[2].video}
               alt={artworks[2].name}
-              isSectionVisible={isVisible}
+              isSectionVisible={isActive}
             />
           </div>
           <div className="flex-1 min-w-0 relative overflow-hidden">
@@ -67,7 +67,7 @@ export const ArcaGidan: React.FC = () => {
               poster={artworks[3].poster}
               video={artworks[3].video}
               alt={artworks[3].name}
-              isSectionVisible={isVisible}
+              isSectionVisible={isActive}
             />
           </div>
         </div>

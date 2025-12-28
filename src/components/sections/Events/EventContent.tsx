@@ -1,6 +1,7 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import type { EventItem } from './types';
 import { Polaroid } from './Polaroid';
+import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 
 interface EventContentProps {
   event: EventItem;
@@ -27,9 +28,9 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   // so we enforce this in multiple lifecycle points.
   const startOffsetSeconds = event.id === 'paris-2024' ? 2 : 0;
 
-  const ensureStartOffset = () => {
-    const video = videoRef.current;
-    if (!video || startOffsetSeconds <= 0) return;
+  // Apply start offset with Mobile Safari workaround
+  const ensureStartOffset = useCallback((video: HTMLVideoElement) => {
+    if (startOffsetSeconds <= 0) return;
 
     const applyOffset = () => {
       // Small epsilon to avoid oscillating seeks
@@ -53,34 +54,17 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
       video.removeEventListener('loadedmetadata', onLoadedMetadata);
     };
     video.addEventListener('loadedmetadata', onLoadedMetadata);
-  };
+  }, [startOffsetSeconds]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (isFullyVisible && !showLightbox) {
-      ensureStartOffset();
-      video.play().then(() => {
-        // Re-apply after play begins (mobile Safari can ignore early seeks)
-        ensureStartOffset();
-      }).catch(() => {});
-      
-      // Handle loop case for Paris video - reset to 2s when it loops back to start
-      if (startOffsetSeconds > 0) {
-        const handleTimeUpdate = () => {
-          // Only reset if video looped back to near the start (0-0.5s)
-          if (video.currentTime < 0.5 && !video.paused) {
-            video.currentTime = startOffsetSeconds;
-          }
-        };
-        video.addEventListener('timeupdate', handleTimeUpdate);
-        return () => video.removeEventListener('timeupdate', handleTimeUpdate);
-      }
-    } else {
-      video.pause();
-    }
-  }, [isFullyVisible, showLightbox, event.id, startOffsetSeconds]);
+  // Use shared hook for video pause/resume with visibility
+  const { safePlay } = useAutoPauseVideo(videoRef, {
+    isActive: isFullyVisible,
+    canResume: !showLightbox,
+    startOffset: startOffsetSeconds,
+    loopToOffset: startOffsetSeconds > 0,
+    onBeforeResume: ensureStartOffset,
+    onAfterResume: ensureStartOffset, // Re-apply after play (Mobile Safari workaround)
+  });
 
   const openLightbox = () => {
     const video = videoRef.current;
@@ -92,10 +76,10 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   const closeLightbox = () => {
     setShowLightbox(false);
     onLightboxChange?.(false);
-    // Resume background video after closing
-    const video = videoRef.current;
-    if (video && isFullyVisible) {
-      video.play().catch(() => {});
+    // Resume background video after closing (hook will handle this via canResume change)
+    // But we can explicitly trigger it for immediate response
+    if (isFullyVisible) {
+      safePlay();
     }
   };
 

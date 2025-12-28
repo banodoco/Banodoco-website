@@ -11,7 +11,7 @@ import {
   type EcosystemEvent 
 } from './eventConfig';
 import { Section } from '@/components/layout/Section';
-import { useSectionVisibility } from '@/lib/useSectionVisibility';
+import { useSectionRuntime } from '@/lib/useSectionRuntime';
 
 export const Ecosystem: React.FC = () => {
   const [monthIdx, setMonthIdx] = useState(0);
@@ -22,7 +22,7 @@ export const Ecosystem: React.FC = () => {
   const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const waveAnimationRef = useRef<number | null>(null);
-  const { ref: sectionRef, isVisible: isSectionVisible } = useSectionVisibility({ threshold: 0.35 });
+  const { ref: sectionRef, isActive: isSectionVisible } = useSectionRuntime({ threshold: 0.35 });
 
   const stats = calculateStats(monthIdx);
   const progress = monthIdx / (TOTAL_MONTHS - 1);

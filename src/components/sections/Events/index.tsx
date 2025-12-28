@@ -4,7 +4,7 @@ import { events } from './data';
 import { EventSelector } from './EventSelector';
 import { EventContent } from './EventContent';
 import { useEventsAutoAdvance } from './useEventsAutoAdvance';
-import { useSectionVisibility } from '@/lib/useSectionVisibility';
+import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { Section, SectionContent } from '@/components/layout/Section';
 
 export const Events: React.FC = () => {
@@ -13,7 +13,7 @@ export const Events: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   
   // Track section visibility - pause videos when scrolled away
-  const { ref: sectionRef, isVisible, hasBeenVisible: hasStarted } = useSectionVisibility({ threshold: 0.5 });
+  const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ threshold: 0.5 });
 
   const autoAdvance = useEventsAutoAdvance({
     totalEvents: events.length,
@@ -47,7 +47,7 @@ export const Events: React.FC = () => {
                       event={event} 
                       isVisible={selectedEvent === idx} 
                       hasStarted={hasStarted}
-                      isSectionVisible={isVisible}
+                      isSectionVisible={isActive}
                       onLightboxChange={setLightboxOpen}
                       onPauseChange={setIsPaused}
                     />

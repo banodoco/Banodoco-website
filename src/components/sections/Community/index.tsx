@@ -2,24 +2,25 @@ import { useEffect, useState, useRef } from 'react';
 import { useCommunityTopics } from './useCommunityTopics';
 import { TopicCard } from './TopicCard';
 import { Section } from '@/components/layout/Section';
+import { useSectionRuntime } from '@/lib/useSectionRuntime';
 
 export const Community = () => {
   const { topics, loading, error } = useCommunityTopics();
   const [activeTopicIndex, setActiveTopicIndex] = useState<number>(0);
-  const [sectionIsVisible, setSectionIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const sectionRef = useRef<HTMLElement>(null);
+  const { ref: sectionRef, isActive: sectionIsVisible } = useSectionRuntime({ threshold: 0.5 });
   const topicRefs = useRef<(HTMLElement | null)[]>([]);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const mobileCardRefs = useRef<(HTMLElement | null)[]>([]);
   const scrollDirectionRef = useRef<'up' | 'down'>('down');
   const wasVisibleRef = useRef(false);
+  const desktopScrollRafRef = useRef<number | null>(null);
+  const mobileScrollRafRef = useRef<number | null>(null);
 
-  // Set internal scroll position on section exit, so it's ready for re-entry
+  // Track scroll direction of the snap parent so we can reset internal scroll position on exit.
   useEffect(() => {
     const section = sectionRef.current;
-    const container = containerRef.current;
-    if (!section || !container) return;
+    if (!section) return;
 
     // Find the snap scroll parent
     const scrollParent = section.closest('.snap-y') as HTMLElement | null;
@@ -37,37 +38,29 @@ export const Community = () => {
 
     scrollParent.addEventListener('scroll', handleParentScroll, { passive: true });
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        const isNowVisible = entry.isIntersecting && entry.intersectionRatio > 0.5;
-        setSectionIsVisible(isNowVisible);
-        
-        // Set scroll position when leaving the section
-        if (!isNowVisible && wasVisibleRef.current) {
-          if (scrollDirectionRef.current === 'down') {
-            // Left by scrolling down - set to bottom for when user scrolls back up
-            container.scrollTop = container.scrollHeight - container.clientHeight;
-          } else {
-            // Left by scrolling up - set to top for when user scrolls back down
-            container.scrollTop = 0;
-          }
-        }
-        
-        wasVisibleRef.current = isNowVisible;
-      },
-      {
-        threshold: [0.5],
-      }
-    );
-
-    observer.observe(section);
-
     return () => {
       scrollParent.removeEventListener('scroll', handleParentScroll);
-      observer.disconnect();
     };
   }, []);
+
+  // Reset internal scroll position on section exit, so it's ready for re-entry.
+  // (We use the shared useSectionVisibility hook to avoid visibility flapping.)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (!sectionIsVisible && wasVisibleRef.current) {
+      if (scrollDirectionRef.current === 'down') {
+        // Left by scrolling down - set to bottom for when user scrolls back up
+        container.scrollTop = container.scrollHeight - container.clientHeight;
+      } else {
+        // Left by scrolling up - set to top for when user scrolls back down
+        container.scrollTop = 0;
+      }
+    }
+
+    wasVisibleRef.current = sectionIsVisible;
+  }, [sectionIsVisible]);
 
   // Track scroll to determine active topic (desktop - vertical scroll)
   useEffect(() => {
@@ -75,34 +68,46 @@ export const Community = () => {
     if (!container) return;
 
     const handleScroll = () => {
-      if (!container || topicRefs.current.length === 0) return;
-      
-      const containerRect = container.getBoundingClientRect();
-      const containerCenter = containerRect.top + containerRect.height / 2;
-      
-      let closestIdx = 0;
-      let minDiff = Infinity;
-      
-      topicRefs.current.forEach((ref, idx) => {
-        if (!ref) return;
-        const rect = ref.getBoundingClientRect();
-        const center = rect.top + rect.height / 2;
-        const diff = Math.abs(center - containerCenter);
-        
-        if (diff < minDiff) {
-          minDiff = diff;
-          closestIdx = idx;
-        }
+      if (desktopScrollRafRef.current !== null) return;
+      desktopScrollRafRef.current = requestAnimationFrame(() => {
+        desktopScrollRafRef.current = null;
+
+        if (!container || topicRefs.current.length === 0) return;
+
+        const containerRect = container.getBoundingClientRect();
+        const containerCenter = containerRect.top + containerRect.height / 2;
+
+        let closestIdx = 0;
+        let minDiff = Infinity;
+
+        topicRefs.current.forEach((ref, idx) => {
+          if (!ref) return;
+          const rect = ref.getBoundingClientRect();
+          const center = rect.top + rect.height / 2;
+          const diff = Math.abs(center - containerCenter);
+
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = idx;
+          }
+        });
+
+        // Only update state if it actually changed (avoids extra renders).
+        setActiveTopicIndex((prev) => (prev === closestIdx ? prev : closestIdx));
       });
-      
-      setActiveTopicIndex(closestIdx);
     };
 
     // Initial check
     handleScroll();
 
     container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (desktopScrollRafRef.current !== null) {
+        cancelAnimationFrame(desktopScrollRafRef.current);
+        desktopScrollRafRef.current = null;
+      }
+    };
   }, [topics.length]);
 
   // Track horizontal scroll to determine active topic (mobile)
@@ -111,36 +116,47 @@ export const Community = () => {
     if (!mobileScroll) return;
 
     const handleMobileScroll = () => {
-      if (!mobileScroll || mobileCardRefs.current.length === 0) return;
-      
-      const scrollLeft = mobileScroll.scrollLeft;
-      const containerWidth = mobileScroll.clientWidth;
-      const scrollCenter = scrollLeft + containerWidth / 2;
-      
-      let closestIdx = 0;
-      let minDiff = Infinity;
-      
-      mobileCardRefs.current.forEach((ref, idx) => {
-        if (!ref) return;
-        const cardLeft = ref.offsetLeft;
-        const cardWidth = ref.offsetWidth;
-        const cardCenter = cardLeft + cardWidth / 2;
-        const diff = Math.abs(cardCenter - scrollCenter);
-        
-        if (diff < minDiff) {
-          minDiff = diff;
-          closestIdx = idx;
-        }
+      if (mobileScrollRafRef.current !== null) return;
+      mobileScrollRafRef.current = requestAnimationFrame(() => {
+        mobileScrollRafRef.current = null;
+
+        if (!mobileScroll || mobileCardRefs.current.length === 0) return;
+
+        const scrollLeft = mobileScroll.scrollLeft;
+        const containerWidth = mobileScroll.clientWidth;
+        const scrollCenter = scrollLeft + containerWidth / 2;
+
+        let closestIdx = 0;
+        let minDiff = Infinity;
+
+        mobileCardRefs.current.forEach((ref, idx) => {
+          if (!ref) return;
+          const cardLeft = ref.offsetLeft;
+          const cardWidth = ref.offsetWidth;
+          const cardCenter = cardLeft + cardWidth / 2;
+          const diff = Math.abs(cardCenter - scrollCenter);
+
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = idx;
+          }
+        });
+
+        setActiveTopicIndex((prev) => (prev === closestIdx ? prev : closestIdx));
       });
-      
-      setActiveTopicIndex(closestIdx);
     };
 
     // Initial check
     handleMobileScroll();
 
     mobileScroll.addEventListener('scroll', handleMobileScroll, { passive: true });
-    return () => mobileScroll.removeEventListener('scroll', handleMobileScroll);
+    return () => {
+      mobileScroll.removeEventListener('scroll', handleMobileScroll);
+      if (mobileScrollRafRef.current !== null) {
+        cancelAnimationFrame(mobileScrollRafRef.current);
+        mobileScrollRafRef.current = null;
+      }
+    };
   }, [topics.length]);
 
   return (
@@ -197,7 +213,7 @@ export const Community = () => {
                 >
                   {topics.map((topic, idx) => (
                     <TopicCard
-                      key={idx}
+                      key={`${topic.channel_id}-${topic.summary_date}-${topic.topic_title}`}
                       ref={(el) => {
                         mobileCardRefs.current[idx] = el;
                       }}

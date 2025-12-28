@@ -1,5 +1,6 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { useVideoPreview } from './useVideoPreview';
+import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 
 interface VideoPreviewCardProps {
   poster: string;
@@ -31,15 +32,11 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
     handlePlaying,
   } = useVideoPreview({ videoRef, onActivate: activateVideo });
 
-  // Pause video when section scrolls out of view
-  useEffect(() => {
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-    
-    if (!isSectionVisible) {
-      videoEl.pause();
-    }
-  }, [isSectionVisible]);
+  // Pause video when section scrolls out of view (hover-triggered, so pauseOnly)
+  useAutoPauseVideo(videoRef, {
+    isActive: isSectionVisible,
+    pauseOnly: true, // Don't auto-resume - video is hover/tap triggered
+  });
 
   return (
     <div
