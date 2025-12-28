@@ -250,8 +250,8 @@ export const Polaroid: React.FC<PolaroidProps> = ({
           style={{ 
             fontFamily: "'Caveat', cursive", 
             fontSize: '6px',
-            lineHeight: '1',
-            marginTop: '8px',
+            lineHeight: '1.3',
+            marginTop: '6px',
             letterSpacing: '-0.02em',
           }}
         >
