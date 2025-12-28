@@ -26,7 +26,7 @@ export const Hero = () => {
   const [isRewinding, setIsRewinding] = useState(false);
   const [showThumbsUp, setShowThumbsUp] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const [isHovering, setIsHovering] = useState(false);
+  // const [isHovering, setIsHovering] = useState(false);
   const animationRef = useRef<number | null>(null);
   const rewindAudioRef = useRef<HTMLAudioElement | null>(null);
   
@@ -56,12 +56,12 @@ export const Hero = () => {
     }
   }, [isVisible, videoReady, isRewinding, showRewindButton, showThumbsUp]);
 
-  const toggleMute = () => {
-    const video = activeVideoRef.current;
-    if (!video) return;
-    video.muted = !video.muted;
-    setIsMuted(video.muted);
-  };
+  // const toggleMute = () => {
+  //   const video = activeVideoRef.current;
+  //   if (!video) return;
+  //   video.muted = !video.muted;
+  //   setIsMuted(video.muted);
+  // };
 
   const handleVideoCanPlay = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     activeVideoRef.current = e.currentTarget;
@@ -205,7 +205,7 @@ export const Hero = () => {
               <span className="text-sm">Scroll</span>
             </button>
             {/* Mute button - shows during normal playback */}
-            {!showRewindButton && !isRewinding && !showThumbsUp && (
+            {/* {!showRewindButton && !isRewinding && !showThumbsUp && (
               <button
                 onClick={toggleMute}
                 className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg backdrop-blur-sm transition-all"
@@ -224,7 +224,7 @@ export const Hero = () => {
                   {isMuted ? 'Unmute' : 'Mute'}
                 </span>
               </button>
-            )}
+            )} */}
             {/* Rewind button - shows when video ends */}
             {(showRewindButton || isRewinding) && (
               <button
@@ -262,8 +262,8 @@ export const Hero = () => {
         <div className="hidden xl:flex justify-end -mr-8 -ml-32">
           <div 
             className="relative w-[125%] max-w-[400px] sm:max-w-2xl md:max-w-4xl xl:max-w-none"
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
+            // onMouseEnter={() => setIsHovering(true)}
+            // onMouseLeave={() => setIsHovering(false)}
           >
             {/* Skeleton - always present as base layer */}
             <div 
@@ -342,7 +342,7 @@ export const Hero = () => {
             </div>
 
             {/* Mute/Unmute button - appears on hover */}
-            <button
+            {/* <button
               onClick={toggleMute}
               className={`absolute z-10 flex items-center justify-center w-10 h-10 bg-black/60 hover:bg-black/80 text-white rounded-lg backdrop-blur-sm transition-all duration-300 ${
                 isHovering && videoReady && !showThumbsUp && !showRewindButton && !isRewinding ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -359,7 +359,7 @@ export const Hero = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                 </svg>
               )}
-            </button>
+            </button> */}
           </div>
         </div>
         </div>
