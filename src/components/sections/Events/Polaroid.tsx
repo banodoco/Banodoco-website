@@ -102,7 +102,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   isExpanded, 
   isVisible,
   onOpen, 
-  onClose,
+  onClose: _onClose,
   onNavigate,
   onHoverChange,
 }) => {
