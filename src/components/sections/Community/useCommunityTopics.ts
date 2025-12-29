@@ -18,8 +18,29 @@ interface SummaryRow {
   } | { channel_name: string }[] | null;
 }
 
+// Valid image and video file extensions
+const IMAGE_EXTENSIONS = /\.(jpg|jpeg|jfif|png|gif|webp|avif|bmp|tiff?|svg|heic|heif)(\?|$)/i;
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|avi|mkv|m4v|ogv|3gp|ts|mts|m2ts)(\?|$)/i;
+
+// Check if a URL is a valid image or video file
+const isValidMediaUrl = (media: MediaUrl): boolean => {
+  if (!media.url) return false;
+  const url = media.url.toLowerCase();
+  
+  // Check by type first
+  if (media.type === 'video') {
+    return VIDEO_EXTENSIONS.test(url);
+  }
+  if (media.type === 'image') {
+    return IMAGE_EXTENSIONS.test(url);
+  }
+  
+  // Fallback: check by extension if type is not set correctly
+  return IMAGE_EXTENSIONS.test(url) || VIDEO_EXTENSIONS.test(url);
+};
+
 // Extract all media URLs from a topic (mainMediaUrls + subTopicMediaUrls)
-// Sorts results with videos first
+// Filters to only images/videos and sorts results with videos first
 const extractMediaUrls = (rawTopic: RawTopic): MediaUrl[] => {
   const urls: MediaUrl[] = [];
   
@@ -41,12 +62,14 @@ const extractMediaUrls = (rawTopic: RawTopic): MediaUrl[] => {
     }
   }
   
-  // Sort with videos first
-  return urls.sort((a, b) => {
-    if (a.type === 'video' && b.type !== 'video') return -1;
-    if (a.type !== 'video' && b.type === 'video') return 1;
-    return 0;
-  });
+  // Filter to only valid image/video files, then sort with videos first
+  return urls
+    .filter(isValidMediaUrl)
+    .sort((a, b) => {
+      if (a.type === 'video' && b.type !== 'video') return -1;
+      if (a.type !== 'video' && b.type === 'video') return 1;
+      return 0;
+    });
 };
 
 

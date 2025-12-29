@@ -1,9 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import type { MediaUrl } from './types';
 
 // Constants for timing
 const IMAGE_DISPLAY_DURATION = 5000; // 5 seconds for images
+const MAX_MEDIA_ITEMS = 5;
 
 interface MediaGalleryProps {
   urls: MediaUrl[];
@@ -11,7 +12,32 @@ interface MediaGalleryProps {
   compact?: boolean;
 }
 
-export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryProps) => {
+export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: MediaGalleryProps) => {
+  // Limit to max 5 items - memoize to prevent unnecessary effect re-runs
+  const urls = useMemo(() => rawUrls.slice(0, MAX_MEDIA_ITEMS), [rawUrls]);
+  
+  // Preload poster images and first few images on mount
+  useEffect(() => {
+    const imagesToPreload: string[] = [];
+    
+    urls.forEach((media, idx) => {
+      const isVid = media.type === 'video' || !!media.url.match(/\.(mp4|webm|mov)(\?|$)/i);
+      
+      if (isVid && media.poster_url) {
+        // Preload video posters
+        imagesToPreload.push(media.poster_url);
+      } else if (!isVid && idx < 3) {
+        // Preload first 3 images
+        imagesToPreload.push(media.url);
+      }
+    });
+    
+    // Create Image objects to trigger preload
+    imagesToPreload.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, [urls]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -159,16 +185,22 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
     <div className={compact ? "space-y-1.5" : "space-y-2 md:space-y-3"}>
       {/* Main display */}
       <div className={cn(
-        "relative rounded-lg overflow-hidden bg-black/20",
+        "relative rounded-lg overflow-hidden bg-white/5",
         compact ? "aspect-square" : "aspect-video"
       )}>
+        {/* Loading placeholder - shows behind content */}
+        <div className="absolute inset-0 flex items-center justify-center bg-white/5">
+          <div className="w-8 h-8 rounded-full border-2 border-white/10 border-t-white/30 animate-spin" />
+        </div>
+        
         {isVideo ? (
           <video 
             ref={videoRef}
             key={currentMedia.url}
             src={currentMedia.url}
             poster={currentMedia.poster_url}
-            className="w-full h-full object-cover"
+            preload="metadata"
+            className="relative w-full h-full object-cover"
             autoPlay={isVisible}
             muted
             playsInline
@@ -181,7 +213,7 @@ export const MediaGallery = ({ urls, isVisible, compact = false }: MediaGalleryP
             key={currentMedia.url}
             src={currentMedia.url}
             alt=""
-            className="w-full h-full object-cover"
+            className="relative w-full h-full object-cover"
           />
         )}
         {/* Progress indicator for compact mode */}

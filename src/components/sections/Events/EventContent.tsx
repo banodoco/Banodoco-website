@@ -57,13 +57,15 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   }, [startOffsetSeconds]);
 
   // Use shared hook for video pause/resume with visibility
-  const { safePlay } = useAutoPauseVideo(videoRef, {
+  const { safePlay, videoEventHandlers } = useAutoPauseVideo(videoRef, {
     isActive: isFullyVisible,
     canResume: !showLightbox,
     startOffset: startOffsetSeconds,
     loopToOffset: startOffsetSeconds > 0,
     onBeforeResume: ensureStartOffset,
     onAfterResume: ensureStartOffset, // Re-apply after play (Mobile Safari workaround)
+    retryDelayMs: 150,
+    maxRetries: 5,
   });
 
   const openLightbox = () => {
@@ -202,6 +204,8 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
               e.currentTarget.currentTime = startOffsetSeconds;
             }
           }}
+          onLoadedData={videoEventHandlers.onLoadedData}
+          onCanPlay={videoEventHandlers.onCanPlay}
           onSeeking={(e) => {
             // Prevent seeking before offset for videos that start later
             if (startOffsetSeconds > 0 && e.currentTarget.currentTime < startOffsetSeconds) {
@@ -209,6 +213,8 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
             }
           }}
           onPlay={(e) => {
+            // Sync hook state
+            videoEventHandlers.onPlay();
             // Mobile Safari can still start at 0 briefly; force jump to offset on play.
             if (startOffsetSeconds > 0 && e.currentTarget.currentTime < startOffsetSeconds - 0.05) {
               e.currentTarget.currentTime = startOffsetSeconds;

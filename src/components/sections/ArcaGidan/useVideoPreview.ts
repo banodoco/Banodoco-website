@@ -36,19 +36,22 @@ export const useVideoPreview = ({ videoRef, onActivate }: UseVideoPreviewOptions
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const hasPlayedOnceRef = useRef(false);
 
+  // Check if video is ready to show immediately (has at least some data loaded)
+  const isVideoReady = useCallback(() => {
+    // readyState >= 2 means HAVE_CURRENT_DATA (at least one frame available)
+    return videoRef.current && videoRef.current.readyState >= 2;
+  }, [videoRef]);
+
   const handleMouseEnter = useCallback(() => {
     if (!isTouchDevice) {
-      // Allow the caller to lazy-load the video before we try to play.
-      // (Important for performance: don't download 4 previews on mount.)
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
       onActivate?.();
-      // If video has played before, show it immediately (it's cached)
-      if (hasPlayedOnceRef.current) {
+      // Show video immediately if it's ready (preloaded)
+      if (hasPlayedOnceRef.current || isVideoReady()) {
         setShowVideo(true);
       }
       videoRef.current?.play();
     }
-  }, [isTouchDevice, videoRef, onActivate]);
+  }, [isTouchDevice, videoRef, onActivate, isVideoReady]);
 
   const handleMouseLeave = useCallback(() => {
     if (!isTouchDevice) {
@@ -65,8 +68,10 @@ export const useVideoPreview = ({ videoRef, onActivate }: UseVideoPreviewOptions
     if (isTouchDevice) {
       if (videoRef.current?.paused) {
         onActivate?.();
-        if (hasPlayedOnceRef.current) {
+        // Show video immediately if it's ready (preloaded) - don't wait for onPlaying
+        if (hasPlayedOnceRef.current || isVideoReady()) {
           setShowVideo(true);
+          hasPlayedOnceRef.current = true;
         }
         videoRef.current?.play();
       } else {
@@ -74,7 +79,7 @@ export const useVideoPreview = ({ videoRef, onActivate }: UseVideoPreviewOptions
         videoRef.current?.pause();
       }
     }
-  }, [isTouchDevice, videoRef, onActivate]);
+  }, [isTouchDevice, videoRef, onActivate, isVideoReady]);
 
   const handlePlaying = useCallback(() => {
     setShowVideo(true);

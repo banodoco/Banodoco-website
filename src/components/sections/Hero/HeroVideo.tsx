@@ -7,11 +7,12 @@ interface HeroVideoProps {
   isRewinding: boolean;
   onPosterLoad: () => void;
   onVideoCanPlay: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
+  onVideoLoadedData: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
   onVideoEnded: (videoEl: HTMLVideoElement) => void;
 }
 
 export const MobileHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
-  ({ posterLoaded, videoReady, isRewinding, onPosterLoad, onVideoCanPlay, onVideoEnded }, ref) => (
+  ({ posterLoaded, videoReady, isRewinding, onPosterLoad, onVideoCanPlay, onVideoLoadedData, onVideoEnded }, ref) => (
     <div className="absolute inset-0 xl:hidden overflow-hidden">
       {/* Skeleton */}
       <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 animate-pulse scale-[1.6] md:scale-[1.3]" />
@@ -26,7 +27,7 @@ export const MobileHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
         }`}
       />
 
-      {/* Video */}
+      {/* Video - autoPlay for immediate start on page load, hook provides retry fallback */}
       <video
         src={HERO_VIDEO_SRC_MOBILE}
         autoPlay
@@ -34,6 +35,7 @@ export const MobileHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
         playsInline
         ref={ref}
         onCanPlay={onVideoCanPlay}
+        onLoadedData={onVideoLoadedData}
         onEnded={(e) => onVideoEnded(e.currentTarget)}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.6] md:scale-[1.3] ${
           videoReady ? 'opacity-100' : 'opacity-0'
@@ -62,7 +64,7 @@ interface DesktopHeroVideoProps extends HeroVideoProps {
 }
 
 export const DesktopHeroVideo = forwardRef<HTMLVideoElement, DesktopHeroVideoProps>(
-  ({ posterLoaded, videoReady, isRewinding, onPosterLoad, onVideoCanPlay, onVideoEnded, children, onMouseEnter, onMouseLeave }, ref) => (
+  ({ posterLoaded, videoReady, isRewinding, onPosterLoad, onVideoCanPlay, onVideoLoadedData, onVideoEnded, children, onMouseEnter, onMouseLeave }, ref) => (
     <div className="hidden xl:flex justify-end items-center h-full mt-1 -mr-8 -ml-32">
       <div 
         className="relative w-[125%] max-w-[400px] sm:max-w-2xl md:max-w-4xl xl:max-w-none"
@@ -86,7 +88,7 @@ export const DesktopHeroVideo = forwardRef<HTMLVideoElement, DesktopHeroVideoPro
           style={desktopMediaStyles}
         />
 
-        {/* Video */}
+        {/* Video - autoPlay for immediate start on page load, hook provides retry fallback */}
         <video
           src={HERO_VIDEO_SRC_DESKTOP}
           autoPlay
@@ -94,6 +96,7 @@ export const DesktopHeroVideo = forwardRef<HTMLVideoElement, DesktopHeroVideoPro
           playsInline
           ref={ref}
           onCanPlay={onVideoCanPlay}
+          onLoadedData={onVideoLoadedData}
           onEnded={(e) => onVideoEnded(e.currentTarget)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
             videoReady ? 'opacity-100' : 'opacity-0'

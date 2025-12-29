@@ -14,7 +14,12 @@ export const Events: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   
   // Track section visibility - pause videos when scrolled away
-  const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ threshold: 0.5 });
+  // Low threshold (0.15) so video starts as soon as section begins entering viewport
+  // exitThreshold (0.1) pauses when mostly scrolled away but not completely gone
+  const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ 
+    threshold: 0.15,
+    exitThreshold: 0.1,
+  });
 
   // Preload all event videos when section comes into view
   const videoUrls = useMemo(

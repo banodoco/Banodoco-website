@@ -1,16 +1,10 @@
-import { useMemo } from 'react';
 import { artworks } from './data';
 import { VideoPreviewCard } from './VideoPreviewCard';
 import { Section } from '@/components/layout/Section';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
-import { useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
 
 export const ArcaGidan: React.FC = () => {
   const { ref: sectionRef, isActive } = useSectionRuntime({ threshold: 0.3 });
-  
-  // Preload all videos when section comes into view
-  const videoUrls = useMemo(() => artworks.map((a) => a.video), []);
-  useVideoPreloadOnVisible(videoUrls, isActive);
   
   return (
     <Section ref={sectionRef} className="bg-gradient-to-br from-[#201a0c] via-[#251f10] to-[#1a1508] text-white flex">

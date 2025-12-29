@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { useVideoPreview } from './useVideoPreview';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 
@@ -19,8 +19,14 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
   const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
   const pendingPlayRef = useRef(false);
 
+  // Start loading video as soon as section is visible (for faster playback on tap/hover)
+  useEffect(() => {
+    if (isSectionVisible && !shouldLoadVideo) {
+      setShouldLoadVideo(true);
+    }
+  }, [isSectionVisible, shouldLoadVideo]);
+
   const activateVideo = useCallback(() => {
-    // Attach `src` only after first user intent (hover/tap).
     // Mark that we want to play once loaded.
     if (!shouldLoadVideo) {
       pendingPlayRef.current = true;
@@ -63,7 +69,7 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
       <img
         src={poster}
         alt={alt}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-150 ${
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-75 ${
           showVideo ? 'opacity-0' : 'opacity-100'
         }`}
       />
@@ -79,7 +85,7 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
         preload={shouldLoadVideo ? 'auto' : 'none'}
         onCanPlay={handleCanPlay}
         onPlaying={handlePlaying}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-150 ${
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-75 ${
           showVideo ? 'opacity-100' : 'opacity-0'
         }`}
       />

@@ -80,6 +80,19 @@ export interface UseAutoPauseVideoOptions {
    * @default false
    */
   loopToOffset?: boolean;
+
+  /**
+   * Retry delay (ms) for play attempts. On mobile, videos sometimes need
+   * multiple attempts due to browser restrictions.
+   * @default 100
+   */
+  retryDelayMs?: number;
+
+  /**
+   * Maximum number of retry attempts for play.
+   * @default 3
+   */
+  maxRetries?: number;
 }
 
 /**
@@ -102,6 +115,16 @@ export interface UseAutoPauseVideoResult {
    * (isActive && hasStarted && canResume && !pauseOnly).
    */
   canPlay: boolean;
+
+  /**
+   * Event handlers to attach to the video element.
+   * These sync internal state with actual video state.
+   */
+  videoEventHandlers: {
+    onPlay: () => void;
+    onCanPlay: () => void;
+    onLoadedData: () => void;
+  };
 }
 
 /**
@@ -150,6 +173,8 @@ export function useAutoPauseVideo(
     pauseDelayMs = 0,
     loopToOffset = false,
     autoPlayOnStart = true,
+    retryDelayMs = 100,
+    maxRetries = 3,
   } = options;
 
   // Track whether we've paused due to visibility (vs user/natural pause)
@@ -158,14 +183,24 @@ export function useAutoPauseVideo(
   const hasPlayedRef = useRef(false);
   // Pending pause timeout (debounce for brief visibility flaps)
   const pendingPauseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Pending retry timeout
+  const pendingRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Current retry count
+  const retryCountRef = useRef(0);
+  // Track if a play attempt is in progress to avoid concurrent attempts
+  const playInProgressRef = useRef(false);
 
   // Whether all conditions allow playback
   const canPlay = isActive && hasStarted && canResume && !pauseOnly;
 
-  // Safe play helper - catches rejection, respects offset
-  const safePlay = useCallback(() => {
+  // Core play function with retry logic
+  const attemptPlay = useCallback((isRetry = false) => {
     const video = videoRef.current;
     if (!video) return;
+    
+    // Prevent concurrent play attempts
+    if (playInProgressRef.current && !isRetry) return;
+    playInProgressRef.current = true;
 
     // Apply start offset if needed and video is before it
     if (startOffset > 0 && video.currentTime < startOffset - 0.1) {
@@ -179,29 +214,96 @@ export function useAutoPauseVideo(
     // Let caller prepare video (set playback rate, etc.)
     if (onBeforeResume) {
       const shouldProceed = onBeforeResume(video);
-      if (shouldProceed === false) return;
+      if (shouldProceed === false) {
+        playInProgressRef.current = false;
+        return;
+      }
     }
 
     video.play()
       .then(() => {
         hasPlayedRef.current = true;
         pausedByVisibilityRef.current = false;
+        retryCountRef.current = 0;
+        playInProgressRef.current = false;
         // Call post-play callback (useful for Mobile Safari workarounds)
         onAfterResume?.(video);
       })
       .catch(() => {
-        // Autoplay blocked or video not ready - this is expected.
-        // Important: don't flip `hasPlayed` / `pausedByVisibility` here, so we don't get "stuck"
-        // thinking playback succeeded.
+        playInProgressRef.current = false;
+        // Retry if we haven't exceeded max retries and conditions still allow play
+        if (retryCountRef.current < maxRetries) {
+          retryCountRef.current++;
+          // Clear any existing retry timeout
+          if (pendingRetryTimeoutRef.current) {
+            clearTimeout(pendingRetryTimeoutRef.current);
+          }
+          pendingRetryTimeoutRef.current = setTimeout(() => {
+            pendingRetryTimeoutRef.current = null;
+            // Only retry if conditions still allow playback
+            const v = videoRef.current;
+            if (v && v.paused && isActive && hasStarted && canResume && !pauseOnly) {
+              attemptPlay(true);
+            }
+          }, retryDelayMs);
+        }
       });
-  }, [videoRef, startOffset, onBeforeResume, onAfterResume]);
+  }, [videoRef, startOffset, onBeforeResume, onAfterResume, maxRetries, retryDelayMs, isActive, hasStarted, canResume, pauseOnly]);
+
+  // Safe play helper - resets retry count and attempts play
+  const safePlay = useCallback(() => {
+    retryCountRef.current = 0;
+    attemptPlay(false);
+  }, [attemptPlay]);
 
   // Safe pause helper
   const safePause = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
+    // Clear any pending retries when pausing
+    if (pendingRetryTimeoutRef.current) {
+      clearTimeout(pendingRetryTimeoutRef.current);
+      pendingRetryTimeoutRef.current = null;
+    }
+    retryCountRef.current = 0;
+    playInProgressRef.current = false;
     video.pause();
   }, [videoRef]);
+
+  // Event handler: sync state when video actually starts playing
+  // This handles the case where autoPlay attribute or external code starts the video
+  const handleVideoPlay = useCallback(() => {
+    hasPlayedRef.current = true;
+    pausedByVisibilityRef.current = false;
+    retryCountRef.current = 0;
+    playInProgressRef.current = false;
+  }, []);
+
+  // Event handler: retry play when video has enough data
+  // This is critical for mobile where autoPlay often fails on first attempt
+  const handleVideoCanPlay = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    // Only attempt play if:
+    // 1. Video is paused
+    // 2. All conditions allow playback
+    // 3. No play attempt is already in progress
+    if (video.paused && canPlay && !playInProgressRef.current) {
+      // Use microtask to avoid racing with other event handlers
+      queueMicrotask(() => {
+        const v = videoRef.current;
+        if (v && v.paused && canPlay) {
+          safePlay();
+        }
+      });
+    }
+  }, [videoRef, canPlay, safePlay]);
+
+  // Event handler: additional retry point when data is loaded
+  const handleVideoLoadedData = useCallback(() => {
+    handleVideoCanPlay();
+  }, [handleVideoCanPlay]);
 
   // Main visibility effect
   useEffect(() => {
@@ -238,6 +340,13 @@ export function useAutoPauseVideo(
           pausedByVisibilityRef.current = true;
           onPause?.();
         }
+        // Clear retries when we pause due to visibility
+        if (pendingRetryTimeoutRef.current) {
+          clearTimeout(pendingRetryTimeoutRef.current);
+          pendingRetryTimeoutRef.current = null;
+        }
+        retryCountRef.current = 0;
+        playInProgressRef.current = false;
       };
 
       if (pauseDelayMs > 0) {
@@ -248,12 +357,16 @@ export function useAutoPauseVideo(
     }
   }, [canPlay, isActive, hasStarted, safePlay, onPause, videoRef, autoPlayOnStart, pauseDelayMs]);
 
-  // Cleanup any pending pause on unmount
+  // Cleanup any pending timeouts on unmount
   useEffect(() => {
     return () => {
       if (pendingPauseTimeoutRef.current) {
         clearTimeout(pendingPauseTimeoutRef.current);
         pendingPauseTimeoutRef.current = null;
+      }
+      if (pendingRetryTimeoutRef.current) {
+        clearTimeout(pendingRetryTimeoutRef.current);
+        pendingRetryTimeoutRef.current = null;
       }
     };
   }, []);
@@ -280,6 +393,11 @@ export function useAutoPauseVideo(
     safePlay,
     safePause,
     canPlay,
+    videoEventHandlers: {
+      onPlay: handleVideoPlay,
+      onCanPlay: handleVideoCanPlay,
+      onLoadedData: handleVideoLoadedData,
+    },
   };
 }
 

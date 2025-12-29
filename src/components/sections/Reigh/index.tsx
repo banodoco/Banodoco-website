@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { TravelSelector } from './TravelSelector';
 import { useTravelAutoAdvance } from './useTravelAutoAdvance';
 import { travelExamples } from './data';
@@ -13,7 +13,12 @@ export const Reigh: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Track section visibility - pause video when scrolled away
-  const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ threshold: 0.5 });
+  // Low threshold (0.15) so video starts as soon as section begins entering viewport
+  // exitThreshold (0.1) pauses when mostly scrolled away but not completely gone
+  const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ 
+    threshold: 0.15,
+    exitThreshold: 0.1,
+  });
   const isFullyVisible = hasStarted && isActive;
 
   // Preload all videos when section comes into view
@@ -33,33 +38,39 @@ export const Reigh: React.FC = () => {
     handleManualSelect,
   } = autoAdvance;
 
-  // Keep video playing only when the section is actually visible.
-  // This also ensures we retry playback when re-entering the section (no "latched" failure).
-  useAutoPauseVideo(videoRef, {
+  // Consolidated video playback control - single source of truth for play/pause logic.
+  // Handles visibility changes, retries on mobile, and state synchronization.
+  const { safePlay, videoEventHandlers } = useAutoPauseVideo(videoRef, {
     isActive: isFullyVisible,
     pauseDelayMs: 250, // avoid pause/play thrash on fast scroll / IO flaps (prevents flicker)
+    retryDelayMs: 150, // mobile browsers sometimes need a bit more time
+    maxRetries: 5, // be persistent on mobile
   });
 
-  // Start/restart playback when the selected example changes OR when the section becomes visible.
-  // (Reigh is more sensitive than Events because it swaps sources and doesn't loop.)
+  // When example changes, reset video state and trigger play via the hook.
+  // We reset progress here but let the hook handle the actual play logic.
   useEffect(() => {
     if (!isFullyVisible) return;
-    const video = videoRef.current;
-    if (!video) return;
-
+    
     // Show poster until we confirm actual playback (prevents black frames).
     setShowPoster(true);
     setVideoProgress(0);
-    try {
-      video.currentTime = 0;
-    } catch {
-      // ignore (can throw if not seekable yet)
+
+    // The video element is recreated due to key prop, so we need to
+    // wait for it to be ready. The hook's onCanPlay handler will
+    // trigger play when the new video element has data.
+    // We also trigger safePlay here as a backup for browsers that
+    // fire canplay before our effect runs.
+    const video = videoRef.current;
+    if (video) {
+      try {
+        video.currentTime = 0;
+      } catch {
+        // ignore (can throw if not seekable yet)
+      }
+      safePlay();
     }
-    const p = video.play();
-    if (p && typeof p.catch === 'function') {
-      p.catch(() => {});
-    }
-  }, [selectedExample, isFullyVisible, setVideoProgress]);
+  }, [selectedExample, isFullyVisible, setVideoProgress, safePlay]);
 
   // Handle play button click - restart the whole cycle
   const handlePlayClick = useCallback(() => {
@@ -95,19 +106,16 @@ export const Reigh: React.FC = () => {
                   preload="auto"
                   muted
                   playsInline
-                  autoPlay
-                  onPlay={() => handleVideoStarted(selectedExample)}
-                  onPlaying={() => setShowPoster(false)}
-                  onCanPlay={() => {
-                    // Retry play when enough data is available (some browsers need this after src swaps).
-                    if (!isFullyVisible) return;
-                    const v = videoRef.current;
-                    if (!v) return;
-                    if (v.paused) {
-                      const p = v.play();
-                      if (p && typeof p.catch === 'function') p.catch(() => {});
-                    }
+                  // No autoPlay - let the hook handle all play logic to avoid race conditions
+                  onPlay={() => {
+                    // Sync hook state with actual video state
+                    videoEventHandlers.onPlay();
+                    // Notify auto-advance system
+                    handleVideoStarted(selectedExample);
                   }}
+                  onPlaying={() => setShowPoster(false)}
+                  onCanPlay={videoEventHandlers.onCanPlay}
+                  onLoadedData={videoEventHandlers.onLoadedData}
                   onTimeUpdate={(e) => {
                     const video = e.currentTarget;
                     onVideoTimeUpdate(selectedExample, video.currentTime, video.duration, selectedExample);

@@ -7,6 +7,10 @@ function isElementVisible(el: HTMLElement | null): boolean {
   return !!el && el.getClientRects().length > 0;
 }
 
+// Retry configuration for mobile browsers
+const RETRY_DELAY_MS = 150;
+const MAX_RETRIES = 5;
+
 export interface HeroVideoState {
   posterLoaded: boolean;
   videoReady: boolean;
@@ -21,6 +25,7 @@ export interface HeroVideoActions {
   setPosterLoaded: (loaded: boolean) => void;
   setIsHovering: (hovering: boolean) => void;
   handleVideoCanPlay: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
+  handleVideoLoadedData: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
   handleVideoEnded: (videoEl: HTMLVideoElement) => void;
   handleRewind: () => void;
   toggleMute: () => void;
@@ -39,6 +44,9 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
   const animationRef = useRef<number | null>(null);
   const rewindAudioRef = useRef<HTMLAudioElement | null>(null);
   const thumbsUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
+  const playInProgressRef = useRef(false);
 
   const [posterLoaded, setPosterLoaded] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
@@ -66,7 +74,47 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       if (rewindAudioRef.current) rewindAudioRef.current.pause();
       if (thumbsUpTimeoutRef.current) clearTimeout(thumbsUpTimeoutRef.current);
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     };
+  }, []);
+
+  // Play with retry logic for mobile browsers
+  const playWithRetry = useCallback((video: HTMLVideoElement, isRetry = false) => {
+    if (playInProgressRef.current && !isRetry) return;
+    playInProgressRef.current = true;
+
+    video.play()
+      .then(() => {
+        retryCountRef.current = 0;
+        playInProgressRef.current = false;
+      })
+      .catch(() => {
+        playInProgressRef.current = false;
+        // Retry if we haven't exceeded max retries
+        if (retryCountRef.current < MAX_RETRIES) {
+          retryCountRef.current++;
+          if (retryTimeoutRef.current) {
+            clearTimeout(retryTimeoutRef.current);
+          }
+          retryTimeoutRef.current = setTimeout(() => {
+            retryTimeoutRef.current = null;
+            // Only retry if video is still paused and conditions allow
+            if (video.paused && isActive && !isRewinding && !showRewindButton && !showThumbsUp) {
+              playWithRetry(video, true);
+            }
+          }, RETRY_DELAY_MS);
+        }
+      });
+  }, [isActive, isRewinding, showRewindButton, showThumbsUp]);
+
+  // Clear retries when pausing
+  const clearRetries = useCallback(() => {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    retryCountRef.current = 0;
+    playInProgressRef.current = false;
   }, []);
 
   // Pause video when scrolled away, resume when scrolled back
@@ -85,8 +133,12 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
       if (mobile && mobile !== active) mobile.pause();
       if (desktop && desktop !== active) desktop.pause();
 
-      active.play().catch(() => {});
+      // Use retry logic for robust mobile playback
+      playWithRetry(active);
     } else {
+      // Clear any pending retries before pausing
+      clearRetries();
+      
       mobile?.pause();
       desktop?.pause();
 
@@ -111,13 +163,43 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
         setShowRewindButton(true);
       }
     }
-  }, [isActive, videoReady, isRewinding, showRewindButton, showThumbsUp, getActiveVideo]);
+  }, [isActive, videoReady, isRewinding, showRewindButton, showThumbsUp, getActiveVideo, playWithRetry, clearRetries]);
 
   const handleVideoCanPlay = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
-    e.currentTarget.playbackRate = PLAYBACK_RATE;
-    setIsMuted(e.currentTarget.muted);
+    const video = e.currentTarget;
+    video.playbackRate = PLAYBACK_RATE;
+    setIsMuted(video.muted);
     setVideoReady(true);
-  }, []);
+    
+    // Retry play when video has enough data - critical for mobile
+    // Only if this is the active video and conditions allow playback
+    if (video.paused && isActive && !isRewinding && !showRewindButton && !showThumbsUp) {
+      const active = getActiveVideo();
+      if (video === active) {
+        queueMicrotask(() => {
+          if (video.paused) {
+            playWithRetry(video);
+          }
+        });
+      }
+    }
+  }, [isActive, isRewinding, showRewindButton, showThumbsUp, getActiveVideo, playWithRetry]);
+
+  // Additional retry point when data is loaded
+  const handleVideoLoadedData = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    // Same logic as canPlay - retry if paused and conditions allow
+    if (video.paused && isActive && !isRewinding && !showRewindButton && !showThumbsUp) {
+      const active = getActiveVideo();
+      if (video === active) {
+        queueMicrotask(() => {
+          if (video.paused) {
+            playWithRetry(video);
+          }
+        });
+      }
+    }
+  }, [isActive, isRewinding, showRewindButton, showThumbsUp, getActiveVideo, playWithRetry]);
 
   const handleVideoEnded = useCallback((videoEl: HTMLVideoElement) => {
     if (videoEl !== getActiveVideo()) return;
@@ -171,7 +253,8 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
           const activeNow = getActiveVideo();
           if (activeNow) {
             activeNow.playbackRate = PLAYBACK_RATE;
-            activeNow.play().catch(() => {});
+            retryCountRef.current = 0; // Reset retries for fresh play
+            playWithRetry(activeNow);
           }
         }, 1000);
       } else {
@@ -210,6 +293,7 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
     setPosterLoaded,
     setIsHovering,
     handleVideoCanPlay,
+    handleVideoLoadedData,
     handleVideoEnded,
     handleRewind,
     toggleMute,
