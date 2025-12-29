@@ -14,13 +14,16 @@ export interface HeroVideoState {
   isRewinding: boolean;
   showThumbsUp: boolean;
   isMuted: boolean;
+  isHovering: boolean;
 }
 
 export interface HeroVideoActions {
   setPosterLoaded: (loaded: boolean) => void;
+  setIsHovering: (hovering: boolean) => void;
   handleVideoCanPlay: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
   handleVideoEnded: (videoEl: HTMLVideoElement) => void;
   handleRewind: () => void;
+  toggleMute: () => void;
   scrollToNextSection: () => void;
 }
 
@@ -43,6 +46,7 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
   const [isRewinding, setIsRewinding] = useState(false);
   const [showThumbsUp, setShowThumbsUp] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
 
   const { ref: sectionRef, isActive } = useSectionRuntime();
 
@@ -178,6 +182,13 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
     animationRef.current = requestAnimationFrame(step);
   }, [isRewinding, isMuted, getActiveVideo]);
 
+  const toggleMute = useCallback(() => {
+    const video = getActiveVideo();
+    if (!video) return;
+    video.muted = !video.muted;
+    setIsMuted(video.muted);
+  }, [getActiveVideo]);
+
   const scrollToNextSection = useCallback(() => {
     const hero = document.querySelector('section');
     const nextSection = hero?.nextElementSibling;
@@ -194,11 +205,14 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
     isRewinding,
     showThumbsUp,
     isMuted,
+    isHovering,
     // Actions
     setPosterLoaded,
+    setIsHovering,
     handleVideoCanPlay,
     handleVideoEnded,
     handleRewind,
+    toggleMute,
     scrollToNextSection,
     // Refs
     sectionRef,

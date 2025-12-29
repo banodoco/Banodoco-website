@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { desktopMediaStyles, HERO_VIDEO_SRC, HERO_POSTER_SRC } from './config';
+import { desktopMediaStyles, HERO_VIDEO_SRC_DESKTOP, HERO_VIDEO_SRC_MOBILE, HERO_POSTER_SRC } from './config';
 
 interface HeroVideoProps {
   posterLoaded: boolean;
@@ -28,7 +28,7 @@ export const MobileHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
 
       {/* Video */}
       <video
-        src={HERO_VIDEO_SRC}
+        src={HERO_VIDEO_SRC_MOBILE}
         autoPlay
         muted
         playsInline
@@ -57,12 +57,18 @@ MobileHeroVideo.displayName = 'MobileHeroVideo';
 
 interface DesktopHeroVideoProps extends HeroVideoProps {
   children?: React.ReactNode;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
 export const DesktopHeroVideo = forwardRef<HTMLVideoElement, DesktopHeroVideoProps>(
-  ({ posterLoaded, videoReady, isRewinding, onPosterLoad, onVideoCanPlay, onVideoEnded, children }, ref) => (
+  ({ posterLoaded, videoReady, isRewinding, onPosterLoad, onVideoCanPlay, onVideoEnded, children, onMouseEnter, onMouseLeave }, ref) => (
     <div className="hidden xl:flex justify-end -mr-8 -ml-32">
-      <div className="relative w-[125%] max-w-[400px] sm:max-w-2xl md:max-w-4xl xl:max-w-none">
+      <div 
+        className="relative w-[125%] max-w-[400px] sm:max-w-2xl md:max-w-4xl xl:max-w-none"
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
         {/* Skeleton */}
         <div
           className="w-full aspect-[1792/992] bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 animate-pulse"
@@ -82,7 +88,7 @@ export const DesktopHeroVideo = forwardRef<HTMLVideoElement, DesktopHeroVideoPro
 
         {/* Video */}
         <video
-          src={HERO_VIDEO_SRC}
+          src={HERO_VIDEO_SRC_DESKTOP}
           autoPlay
           muted
           playsInline

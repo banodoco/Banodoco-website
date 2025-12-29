@@ -13,8 +13,9 @@ export const desktopMediaStyles = {
   WebkitMaskComposite: 'source-in' as const,
 };
 
-export const HERO_VIDEO_SRC = '/upscaled_new.mp4';
-export const HERO_POSTER_SRC = '/upscaled-poster.jpg';
+export const HERO_VIDEO_SRC_DESKTOP = '/hero-desktop.mp4';
+export const HERO_VIDEO_SRC_MOBILE = '/hero-mobile.mp4';
+export const HERO_POSTER_SRC = '/hero-poster.jpg';
 export const REWIND_SOUND_SRC = '/Rewind Sound Effect.mp3';
 export const REWIND_DURATION_MS = 5000;
 export const PLAYBACK_RATE = 0.75;
