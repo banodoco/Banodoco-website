@@ -18,7 +18,8 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   }, []);
 
   const homeScrollClasses = useMemo(() => {
-    return 'h-[100dvh] overflow-y-auto snap-y snap-mandatory bg-[#f5f5f3] text-foreground';
+    // Use stable viewport height for the snap container to avoid mobile dvh relayout flicker.
+    return 'h-screen h-[100svh] overflow-y-auto snap-y snap-mandatory bg-[#f5f5f3] text-foreground';
   }, []);
 
   if (isHome) {

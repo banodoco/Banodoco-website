@@ -22,7 +22,9 @@ export const Section = forwardRef<HTMLElement, SectionProps>(
       id={id}
       className={cn(
         // `snap-always` helps Safari/iOS avoid "resting" between sections.
-        "h-[100dvh] snap-start snap-always overflow-hidden",
+        // Use a *stable* viewport height to avoid intermittent flicker/blanking on mobile
+        // when browser chrome shows/hides (100dvh can change during scroll).
+        "h-screen h-[100svh] snap-start snap-always overflow-hidden",
         className
       )}
     >
