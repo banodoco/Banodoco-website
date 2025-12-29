@@ -31,7 +31,7 @@ export const Hero = () => {
   };
 
   return (
-    <Section ref={sectionRef} className="relative">
+    <Section ref={sectionRef} className="relative bg-[#0b0b0f] xl:bg-[#f5f5f3]">
       <div className="absolute top-0 left-0 right-0 z-10">
         <Header />
       </div>
