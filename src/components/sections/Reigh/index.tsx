@@ -45,6 +45,9 @@ export const Reigh: React.FC = () => {
 
   // Mark video as started when it actually plays
   const handleVideoPlay = useCallback(() => {
+    // Some browsers can start playback without reliably firing `loadeddata` in a way
+    // that matches our render timing; latch readiness on actual playback as well.
+    setIsVideoReady(true);
     handleVideoStarted(selectedExample);
   }, [handleVideoStarted, selectedExample]);
 
@@ -106,6 +109,7 @@ export const Reigh: React.FC = () => {
                   muted
                   playsInline
                   onPlay={handleVideoPlay}
+                  onPlaying={() => setIsVideoReady(true)}
                   onLoadedData={() => setIsVideoReady(true)}
                   onTimeUpdate={(e) => {
                     const video = e.currentTarget;
