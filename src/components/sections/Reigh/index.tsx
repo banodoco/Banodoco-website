@@ -9,12 +9,12 @@ import { useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
-  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [showPoster, setShowPoster] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const lastPlayedRef = useRef<number | null>(null);
 
   // Track section visibility - pause video when scrolled away
   const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ threshold: 0.5 });
+  const isFullyVisible = hasStarted && isActive;
 
   // Preload all videos when section comes into view
   const videoUrls = useMemo(() => travelExamples.map((e) => e.video), []);
@@ -33,50 +33,36 @@ export const Reigh: React.FC = () => {
     handleManualSelect,
   } = autoAdvance;
 
-  // Play video function
-  const playCurrentVideo = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    
-    video.currentTime = 0;
-    setVideoProgress(0);
-    video.play().catch(() => {});
-  }, [setVideoProgress]);
-
-  // Mark video as started when it actually plays
-  const handleVideoPlay = useCallback(() => {
-    // Some browsers can start playback without reliably firing `loadeddata` in a way
-    // that matches our render timing; latch readiness on actual playback as well.
-    setIsVideoReady(true);
-    handleVideoStarted(selectedExample);
-  }, [handleVideoStarted, selectedExample]);
-
-  // Reset readiness when the selected video changes (avoids black-frame flashes on entry)
-  useEffect(() => {
-    setIsVideoReady(false);
-  }, [selectedExample]);
-
-  // Play video when selection changes or when first started
-  useEffect(() => {
-    if (!hasStarted) return;
-    if (lastPlayedRef.current === selectedExample) return;
-    
-    lastPlayedRef.current = selectedExample;
-    playCurrentVideo();
-  }, [selectedExample, hasStarted, playCurrentVideo]);
-
-  // Pause video when scrolled away, resume when scrolled back
-  // Initial play is handled by selection change effect, so autoPlayOnStart: false
+  // Keep video playing only when the section is actually visible.
+  // This also ensures we retry playback when re-entering the section (no "latched" failure).
   useAutoPauseVideo(videoRef, {
-    isActive,
-    hasStarted,
-    autoPlayOnStart: false, // Selection change effect handles initial play
+    isActive: isFullyVisible,
     pauseDelayMs: 250, // avoid pause/play thrash on fast scroll / IO flaps (prevents flicker)
   });
 
+  // Start/restart playback when the selected example changes OR when the section becomes visible.
+  // (Reigh is more sensitive than Events because it swaps sources and doesn't loop.)
+  useEffect(() => {
+    if (!isFullyVisible) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Show poster until we confirm actual playback (prevents black frames).
+    setShowPoster(true);
+    setVideoProgress(0);
+    try {
+      video.currentTime = 0;
+    } catch {
+      // ignore (can throw if not seekable yet)
+    }
+    const p = video.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {});
+    }
+  }, [selectedExample, isFullyVisible, setVideoProgress]);
+
   // Handle play button click - restart the whole cycle
   const handlePlayClick = useCallback(() => {
-    lastPlayedRef.current = null;
     handleManualSelect(selectedExample);
   }, [handleManualSelect, selectedExample]);
 
@@ -91,33 +77,43 @@ export const Reigh: React.FC = () => {
             <div className="order-2 lg:order-1 flex flex-col">
               <div className="relative rounded-xl overflow-hidden bg-black/50 h-[35dvh] md:h-[50dvh] lg:h-[60dvh] flex items-center justify-center">
                 {/* Poster fallback (separate element so we can fade video in without hiding poster) */}
-                {currentPoster && (
+                {currentPoster && showPoster && (
                   <img
                     src={currentPoster}
                     alt=""
-                    className="absolute inset-0 w-full h-full object-contain"
+                    className="absolute inset-0 w-full h-full object-contain z-0"
                     loading="eager"
                     decoding="async"
                     draggable={false}
                   />
                 )}
                 <video
+                  key={currentExample.video}
                   ref={videoRef}
                   src={currentExample.video}
                   poster={currentPoster}
-                  preload="metadata"
+                  preload="auto"
                   muted
                   playsInline
-                  onPlay={handleVideoPlay}
-                  onPlaying={() => setIsVideoReady(true)}
-                  onLoadedData={() => setIsVideoReady(true)}
+                  autoPlay
+                  onPlay={() => handleVideoStarted(selectedExample)}
+                  onPlaying={() => setShowPoster(false)}
+                  onCanPlay={() => {
+                    // Retry play when enough data is available (some browsers need this after src swaps).
+                    if (!isFullyVisible) return;
+                    const v = videoRef.current;
+                    if (!v) return;
+                    if (v.paused) {
+                      const p = v.play();
+                      if (p && typeof p.catch === 'function') p.catch(() => {});
+                    }
+                  }}
                   onTimeUpdate={(e) => {
                     const video = e.currentTarget;
                     onVideoTimeUpdate(selectedExample, video.currentTime, video.duration, selectedExample);
                   }}
                   onEnded={() => onVideoEnded(selectedExample)}
-                  className="max-w-full max-h-full object-contain transition-opacity duration-150"
-                  style={{ opacity: isVideoReady ? 1 : 0 }}
+                  className="relative z-10 max-w-full max-h-full object-contain"
                 />
 
                 {/* Play button overlay */}
