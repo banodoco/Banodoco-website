@@ -16,13 +16,13 @@ const DiscordIcon = ({ className }: { className?: string }) => (
 
 export const Footer = () => {
   return (
-    <footer className="snap-start bg-[#f5f5f3] border-t border-black/5">
+    <footer className="snap-start bg-[#0b0b0f] border-t border-white/5">
       <div className="flex justify-center items-center gap-8 py-12">
         <a 
           href="https://twitter.com/banodoco" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="text-neutral-500 hover:text-neutral-900 transition-colors"
+          className="text-neutral-400 hover:text-white transition-colors"
           aria-label="X (Twitter)"
         >
           <XIcon className="w-6 h-6" />
@@ -31,7 +31,7 @@ export const Footer = () => {
           href="https://github.com/banodoco" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="text-neutral-500 hover:text-neutral-900 transition-colors"
+          className="text-neutral-400 hover:text-white transition-colors"
           aria-label="GitHub"
         >
           <Github className="w-6 h-6" />
@@ -40,7 +40,7 @@ export const Footer = () => {
           href="https://discord.gg/NnFxGvx94b" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="text-neutral-500 hover:text-neutral-900 transition-colors"
+          className="text-neutral-400 hover:text-white transition-colors"
           aria-label="Discord"
         >
           <DiscordIcon className="w-6 h-6" />

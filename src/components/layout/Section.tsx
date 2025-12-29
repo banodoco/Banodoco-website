@@ -27,6 +27,13 @@ export const Section = forwardRef<HTMLElement, SectionProps>(
         "h-screen h-[100svh] snap-start snap-always overflow-hidden",
         className
       )}
+      style={{
+        // Isolate each section into its own compositing layer to prevent
+        // cross-section repaint flicker during scroll-snap transitions.
+        contain: 'layout style paint',
+        // Force GPU layer (reduces main-thread repaint during scroll)
+        transform: 'translateZ(0)',
+      }}
     >
       {children}
     </section>
