@@ -22,6 +22,8 @@
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
+    /* Avoid white flashes during scroll-snap / overscroll on mobile by ensuring a dark base bg. */
+    background-color: #0b0b0f;
   }
 
   /*
