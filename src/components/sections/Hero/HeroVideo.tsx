@@ -63,7 +63,7 @@ interface DesktopHeroVideoProps extends HeroVideoProps {
 
 export const DesktopHeroVideo = forwardRef<HTMLVideoElement, DesktopHeroVideoProps>(
   ({ posterLoaded, videoReady, isRewinding, onPosterLoad, onVideoCanPlay, onVideoEnded, children, onMouseEnter, onMouseLeave }, ref) => (
-    <div className="hidden xl:flex justify-end -mr-8 -ml-32">
+    <div className="hidden xl:flex justify-end items-center h-full mt-1 -mr-8 -ml-32">
       <div 
         className="relative w-[125%] max-w-[400px] sm:max-w-2xl md:max-w-4xl xl:max-w-none"
         onMouseEnter={onMouseEnter}
