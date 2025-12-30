@@ -28,12 +28,13 @@ export const MobileHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
         }`}
       />
 
-      {/* Video - hook handles all play/pause logic via useAutoPauseVideo */}
+      {/* Video - hook handles all play/pause logic via useAutoPauseVideo
+          preload="metadata" instead of "auto" - less aggressive on mobile data */}
       <video
         src={HERO_VIDEO_SRC_MOBILE}
         muted
         playsInline
-        preload="auto"
+        preload="metadata"
         ref={ref}
         onCanPlay={onVideoCanPlay}
         onLoadedData={onVideoLoadedData}

@@ -21,6 +21,7 @@ export const Hero = () => {
     sectionRef,
     mobileVideoRef,
     desktopVideoRef,
+    isMobileView,
   } = useHeroVideo();
 
   const videoProps = {
@@ -40,8 +41,8 @@ export const Hero = () => {
         <Header />
       </div>
 
-      {/* Mobile fullscreen video background */}
-      <MobileHeroVideo ref={mobileVideoRef} {...videoProps} />
+      {/* Mobile fullscreen video background - only render on mobile to save resources */}
+      {isMobileView && <MobileHeroVideo ref={mobileVideoRef} {...videoProps} />}
 
       <SectionContent className="px-5 md:px-16">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:gap-12 w-full">
@@ -76,11 +77,13 @@ export const Hero = () => {
             </div>
           </div>
 
-          {/* Desktop Hero Video */}
-          <DesktopHeroVideo 
-            ref={desktopVideoRef} 
-            {...videoProps}
-          />
+          {/* Desktop Hero Video - only render on desktop to save resources */}
+          {!isMobileView && (
+            <DesktopHeroVideo 
+              ref={desktopVideoRef} 
+              {...videoProps}
+            />
+          )}
         </div>
       </SectionContent>
     </Section>

@@ -32,6 +32,8 @@ export interface HeroVideoRefs {
   sectionRef: React.RefObject<HTMLElement | null>;
   mobileVideoRef: React.RefObject<HTMLVideoElement | null>;
   desktopVideoRef: React.RefObject<HTMLVideoElement | null>;
+  /** Whether we're below the xl breakpoint (mobile/tablet view) */
+  isMobileView: boolean;
 }
 
 export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRefs {
@@ -98,13 +100,14 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
   }, [isRewinding, showThumbsUp]);
 
   // Use the shared hook for mobile video (active when below xl breakpoint)
+  // More retries + longer delay for mobile networks
   const { safePlay: safeMobilePlay, videoEventHandlers: mobileHandlers } = useAutoPauseVideo(mobileVideoRef, {
     isActive: isActive && videoReady && isMobileView,
     canResume,
     onBeforeResume,
     onPause: isMobileView ? onPause : undefined, // Only handle pause cleanup for the active video
-    retryDelayMs: 150,
-    maxRetries: 5,
+    retryDelayMs: 200,
+    maxRetries: 10, // 2 seconds total - more patient on mobile
   });
 
   // Use the shared hook for desktop video (active at xl breakpoint and above)
@@ -282,5 +285,6 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
     sectionRef,
     mobileVideoRef,
     desktopVideoRef,
+    isMobileView,
   };
 }
