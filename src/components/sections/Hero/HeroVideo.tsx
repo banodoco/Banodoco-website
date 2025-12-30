@@ -7,9 +7,9 @@ interface HeroVideoProps {
   isRewinding: boolean;
   onPosterLoad: () => void;
   onVideoCanPlay: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
-  onVideoLoadedData: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
+  onVideoLoadedData: () => void;
   onVideoPlay: () => void;
-  onVideoEnded: (videoEl: HTMLVideoElement) => void;
+  onVideoEnded: () => void;
 }
 
 export const MobileHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
@@ -39,7 +39,7 @@ export const MobileHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
         onCanPlay={onVideoCanPlay}
         onLoadedData={onVideoLoadedData}
         onPlay={onVideoPlay}
-        onEnded={(e) => onVideoEnded(e.currentTarget)}
+        onEnded={onVideoEnded}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.6] md:scale-[1.3] ${
           videoReady ? 'opacity-100' : 'opacity-0'
         }`}
@@ -86,7 +86,7 @@ export const DesktopHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
         onCanPlay={onVideoCanPlay}
         onLoadedData={onVideoLoadedData}
         onPlay={onVideoPlay}
-        onEnded={(e) => onVideoEnded(e.currentTarget)}
+        onEnded={onVideoEnded}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.3] ${
           videoReady ? 'opacity-100' : 'opacity-0'
         }`}

@@ -17,12 +17,15 @@ export const Hero = () => {
     handleVideoPlay,
     handleVideoEnded,
     handleRewind,
-    scrollToNextSection,
     sectionRef,
-    mobileVideoRef,
-    desktopVideoRef,
+    videoRef,
     isMobileView,
   } = useHeroVideo();
+
+  const scrollToNextSection = () => {
+    const nextSection = sectionRef.current?.nextElementSibling;
+    nextSection?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const videoProps = {
     posterLoaded,
@@ -42,7 +45,7 @@ export const Hero = () => {
       </div>
 
       {/* Mobile fullscreen video background - only render on mobile to save resources */}
-      {isMobileView && <MobileHeroVideo ref={mobileVideoRef} {...videoProps} />}
+      {isMobileView && <MobileHeroVideo ref={videoRef} {...videoProps} />}
 
       <SectionContent className="px-5 md:px-16">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:gap-12 w-full">
@@ -80,7 +83,7 @@ export const Hero = () => {
           {/* Desktop Hero Video - only render on desktop to save resources */}
           {!isMobileView && (
             <DesktopHeroVideo 
-              ref={desktopVideoRef} 
+              ref={videoRef} 
               {...videoProps}
             />
           )}

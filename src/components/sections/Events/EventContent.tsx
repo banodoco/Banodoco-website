@@ -61,10 +61,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   const { safePlay, videoEventHandlers } = useAutoPauseVideo(videoRef, {
     isActive: isFullyVisible,
     canResume: !showLightbox,
-    startOffset: startOffsetSeconds,
-    loopToOffset: startOffsetSeconds > 0,
     onBeforeResume: ensureStartOffset,
-    onAfterResume: ensureStartOffset, // Re-apply after play (Mobile Safari workaround)
     retryDelayMs: 150,
     maxRetries: 5,
   });

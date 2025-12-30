@@ -11,17 +11,9 @@ export interface UseAutoPauseVideoOptions {
   isActive: boolean;
 
   /**
-   * Whether the section has been seen at least once.
-   * If provided and false, video won't auto-play until user has scrolled to section.
-   * Useful for sections that shouldn't play until first visible.
-   * @default true
-   */
-  hasStarted?: boolean;
-
-  /**
    * Additional blocking condition(s) that prevent auto-resume.
    * Examples: lightbox open, rewind animation in progress, etc.
-   * Video will only auto-resume when isActive && hasStarted && canResume.
+   * Video will only auto-resume when isActive && canResume.
    * @default true
    */
   canResume?: boolean;
@@ -41,19 +33,6 @@ export interface UseAutoPauseVideoOptions {
   onBeforeResume?: (video: HTMLVideoElement) => boolean | void;
 
   /**
-   * Called after video.play() promise resolves successfully.
-   * Use this for post-play actions like re-applying seek on Mobile Safari.
-   */
-  onAfterResume?: (video: HTMLVideoElement) => void;
-
-  /**
-   * Start offset in seconds. Video will seek to this position before resuming.
-   * Useful for videos that should skip intro frames.
-   * @default 0
-   */
-  startOffset?: number;
-
-  /**
    * If true, the hook will only pause the video when scrolled away,
    * but will NOT auto-resume. Use for hover/tap-triggered videos.
    * @default false
@@ -66,20 +45,6 @@ export interface UseAutoPauseVideoOptions {
    * @default 0
    */
   pauseDelayMs?: number;
-
-  /**
-   * If true, the hook will auto-play on first entry when hasStarted becomes true.
-   * If false, initial play is left to the component (e.g., triggered by selection change).
-   * @default true
-   */
-  autoPlayOnStart?: boolean;
-
-  /**
-   * If true, the video should loop back to startOffset (not 0) when it loops.
-   * Only relevant when startOffset > 0 and video has loop attribute.
-   * @default false
-   */
-  loopToOffset?: boolean;
 
   /**
    * Retry delay (ms) for play attempts. On mobile, videos sometimes need
@@ -111,8 +76,7 @@ export interface UseAutoPauseVideoResult {
   safePause: () => void;
 
   /**
-   * Whether the video is currently allowed to play
-   * (isActive && hasStarted && canResume && !pauseOnly).
+   * Whether the video is currently allowed to play (isActive && canResume && !pauseOnly).
    */
   canPlay: boolean;
 
@@ -132,10 +96,9 @@ export interface UseAutoPauseVideoResult {
  * 
  * Handles common edge cases:
  * - Blocking conditions (lightbox, animations)
- * - Start offsets (skip intro)
- * - Loop offset reset
  * - Cleanup callbacks on pause
  * - Hover-only videos (pauseOnly mode)
+ * - Retry logic for mobile browsers
  * 
  * @example
  * // Simple case - auto pause/resume
@@ -163,16 +126,11 @@ export function useAutoPauseVideo(
 ): UseAutoPauseVideoResult {
   const {
     isActive,
-    hasStarted = true,
     canResume = true,
     onPause,
     onBeforeResume,
-    onAfterResume,
-    startOffset = 0,
     pauseOnly = false,
     pauseDelayMs = 0,
-    loopToOffset = false,
-    autoPlayOnStart = true,
     retryDelayMs = 100,
     maxRetries = 3,
   } = options;
@@ -191,7 +149,7 @@ export function useAutoPauseVideo(
   const playInProgressRef = useRef(false);
 
   // Whether all conditions allow playback
-  const canPlay = isActive && hasStarted && canResume && !pauseOnly;
+  const canPlay = isActive && canResume && !pauseOnly;
 
   // Core play function with retry logic
   const attemptPlay = useCallback((isRetry = false) => {
@@ -202,16 +160,7 @@ export function useAutoPauseVideo(
     if (playInProgressRef.current && !isRetry) return;
     playInProgressRef.current = true;
 
-    // Apply start offset if needed and video is before it
-    if (startOffset > 0 && video.currentTime < startOffset - 0.1) {
-      try {
-        video.currentTime = startOffset;
-      } catch {
-        // Ignore (some browsers can throw if not seekable yet)
-      }
-    }
-
-    // Let caller prepare video (set playback rate, etc.)
+    // Let caller prepare video (set playback rate, seek position, etc.)
     if (onBeforeResume) {
       const shouldProceed = onBeforeResume(video);
       if (shouldProceed === false) {
@@ -226,29 +175,25 @@ export function useAutoPauseVideo(
         pausedByVisibilityRef.current = false;
         retryCountRef.current = 0;
         playInProgressRef.current = false;
-        // Call post-play callback (useful for Mobile Safari workarounds)
-        onAfterResume?.(video);
       })
       .catch(() => {
         playInProgressRef.current = false;
         // Retry if we haven't exceeded max retries and conditions still allow play
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current++;
-          // Clear any existing retry timeout
           if (pendingRetryTimeoutRef.current) {
             clearTimeout(pendingRetryTimeoutRef.current);
           }
           pendingRetryTimeoutRef.current = setTimeout(() => {
             pendingRetryTimeoutRef.current = null;
-            // Only retry if conditions still allow playback
             const v = videoRef.current;
-            if (v && v.paused && isActive && hasStarted && canResume && !pauseOnly) {
+            if (v && v.paused && isActive && canResume && !pauseOnly) {
               attemptPlay(true);
             }
           }, retryDelayMs);
         }
       });
-  }, [videoRef, startOffset, onBeforeResume, onAfterResume, maxRetries, retryDelayMs, isActive, hasStarted, canResume, pauseOnly]);
+  }, [videoRef, onBeforeResume, maxRetries, retryDelayMs, isActive, canResume, pauseOnly]);
 
   // Safe play helper - resets retry count and attempts play
   const safePlay = useCallback(() => {
@@ -317,20 +262,13 @@ export function useAutoPauseVideo(
         pendingPauseTimeoutRef.current = null;
       }
 
-      // Resume if we previously paused due to visibility
-      const shouldResumeDueToPause = pausedByVisibilityRef.current;
-      // Auto-play on first entry (if enabled and component hasn't played yet)
-      const shouldAutoStart = autoPlayOnStart && !hasPlayedRef.current && hasStarted;
-      
-      if (shouldResumeDueToPause || shouldAutoStart) {
+      // Resume if we previously paused due to visibility, or auto-play on first entry
+      if (pausedByVisibilityRef.current || !hasPlayedRef.current) {
         safePlay();
       }
     } else if (isActive === false) {
-      // Debounced pause to avoid rapid scroll/IO flapping causing flicker
       if (pendingPauseTimeoutRef.current) return;
 
-      // Only handle pause when explicitly not active (scrolled away)
-      // Don't pause just because canResume is false (that's a blocking condition)
       const doPause = () => {
         pendingPauseTimeoutRef.current = null;
         const v = videoRef.current;
@@ -340,7 +278,6 @@ export function useAutoPauseVideo(
           pausedByVisibilityRef.current = true;
           onPause?.();
         }
-        // Clear retries when we pause due to visibility
         if (pendingRetryTimeoutRef.current) {
           clearTimeout(pendingRetryTimeoutRef.current);
           pendingRetryTimeoutRef.current = null;
@@ -355,39 +292,19 @@ export function useAutoPauseVideo(
         doPause();
       }
     }
-  }, [canPlay, isActive, hasStarted, safePlay, onPause, videoRef, autoPlayOnStart, pauseDelayMs]);
+  }, [canPlay, isActive, safePlay, onPause, videoRef, pauseDelayMs]);
 
-  // Cleanup any pending timeouts on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (pendingPauseTimeoutRef.current) {
         clearTimeout(pendingPauseTimeoutRef.current);
-        pendingPauseTimeoutRef.current = null;
       }
       if (pendingRetryTimeoutRef.current) {
         clearTimeout(pendingRetryTimeoutRef.current);
-        pendingRetryTimeoutRef.current = null;
       }
     };
   }, []);
-
-  // Handle loop-to-offset for videos with startOffset
-  useEffect(() => {
-    if (!loopToOffset || startOffset <= 0) return;
-
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleTimeUpdate = () => {
-      // If video looped back to near start (0-0.5s), jump to offset
-      if (video.currentTime < 0.5 && !video.paused && video.loop) {
-        video.currentTime = startOffset;
-      }
-    };
-
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    return () => video.removeEventListener('timeupdate', handleTimeUpdate);
-  }, [videoRef, startOffset, loopToOffset]);
 
   return {
     safePlay,
@@ -401,47 +318,4 @@ export function useAutoPauseVideo(
   };
 }
 
-/**
- * Variant for multiple videos where only one should be active at a time.
- * Pauses all videos when not active, but doesn't auto-resume
- * (assumes manual control of which video plays).
- */
-export function useAutoPauseVideos(
-  videoRefs: React.RefObject<HTMLVideoElement | null>[],
-  options: Omit<UseAutoPauseVideoOptions, 'pauseOnly'> & {
-    /** Index of the currently selected video (-1 for none) */
-    activeIndex?: number;
-  }
-): void {
-  const { isActive, onPause, activeIndex = -1 } = options;
-
-  useEffect(() => {
-    if (!isActive) {
-      // Pause all videos when section not visible
-      let anyPaused = false;
-      videoRefs.forEach((ref) => {
-        const video = ref.current;
-        if (video && !video.paused) {
-          video.pause();
-          anyPaused = true;
-        }
-      });
-      if (anyPaused) {
-        onPause?.();
-      }
-    }
-  }, [isActive, videoRefs, onPause]);
-
-  // Pause videos that aren't the active one
-  useEffect(() => {
-    if (activeIndex < 0) return;
-
-    videoRefs.forEach((ref, idx) => {
-      const video = ref.current;
-      if (video && idx !== activeIndex && !video.paused) {
-        video.pause();
-      }
-    });
-  }, [activeIndex, videoRefs]);
-}
 
