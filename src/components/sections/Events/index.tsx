@@ -39,7 +39,7 @@ export const Events: React.FC = () => {
   }, [autoAdvance]);
 
   return (
-    <Section ref={sectionRef} className="bg-gradient-to-br from-[#200c14] via-[#251018] to-[#1a0810] text-white">
+    <Section ref={sectionRef} id="ados" className="bg-gradient-to-br from-[#200c14] via-[#251018] to-[#1a0810] text-white">
       <SectionContent>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left side - Event content */}

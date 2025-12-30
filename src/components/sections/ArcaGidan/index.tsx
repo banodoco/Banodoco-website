@@ -7,7 +7,7 @@ export const ArcaGidan: React.FC = () => {
   const { ref: sectionRef, isActive } = useSectionRuntime({ threshold: 0.3 });
   
   return (
-    <Section ref={sectionRef} className="bg-gradient-to-br from-[#201a0c] via-[#251f10] to-[#1a1508] text-white flex">
+    <Section ref={sectionRef} id="arca-gidan" className="bg-gradient-to-br from-[#201a0c] via-[#251f10] to-[#1a1508] text-white flex">
       {/* Text content on left - wider on mobile for readability */}
       <div className="w-[50%] sm:w-[45%] md:w-[40%] xl:w-[35%] flex items-center px-4 md:px-12 lg:px-16 shrink-0">
         <div className="max-w-lg">
