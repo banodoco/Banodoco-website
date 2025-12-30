@@ -71,9 +71,18 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
     if (video) video.pause();
     setShowLightbox(true);
     onLightboxChange?.(true);
+    // Play lightbox video synchronously in click handler for iOS compatibility
+    // The video element is always mounted (just hidden), so ref exists
+    lightboxVideoRef.current?.play().catch(() => {});
   };
 
   const closeLightbox = () => {
+    // Pause and reset lightbox video
+    const lbVideo = lightboxVideoRef.current;
+    if (lbVideo) {
+      lbVideo.pause();
+      lbVideo.currentTime = 0;
+    }
     setShowLightbox(false);
     onLightboxChange?.(false);
     // Resume background video after closing (hook will handle this via canResume change)
@@ -307,39 +316,38 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
         />
       ))}
 
-      {/* Video Lightbox */}
-      {showLightbox && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      {/* Video Lightbox - always mounted so ref exists for synchronous play() in click handler */}
+      <div 
+        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-200 ${
+          showLightbox ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={closeLightbox}
+      >
+        {/* Close button */}
+        <button
           onClick={closeLightbox}
+          className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
         >
-          {/* Close button */}
-          <button
-            onClick={closeLightbox}
-            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-          >
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          
-          {/* Video container - smaller and at top */}
-          <div 
-            className="relative w-full max-w-2xl mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <video
-              ref={lightboxVideoRef}
-              src={event.video}
-              poster={event.poster}
-              autoPlay
-              controls
-              playsInline
-              className="w-full rounded-lg"
-            />
-          </div>
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        
+        {/* Video container - smaller and at top */}
+        <div 
+          className="relative w-full max-w-2xl mx-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <video
+            ref={lightboxVideoRef}
+            src={event.video}
+            poster={event.poster}
+            controls
+            playsInline
+            className="w-full rounded-lg"
+          />
         </div>
-      )}
+      </div>
     </div>
   );
 };
