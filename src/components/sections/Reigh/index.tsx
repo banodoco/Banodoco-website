@@ -6,6 +6,7 @@ import { Section, SectionContent } from '@/components/layout/Section';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 import { useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
+import { bindAutoPauseVideo } from '@/lib/bindAutoPauseVideo';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
@@ -107,15 +108,10 @@ export const Reigh: React.FC = () => {
                   muted
                   playsInline
                   // No autoPlay - let the hook handle all play logic to avoid race conditions
-                  onPlay={() => {
-                    // Sync hook state with actual video state
-                    videoEventHandlers.onPlay();
-                    // Notify auto-advance system
-                    handleVideoStarted(selectedExample);
-                  }}
+                  {...bindAutoPauseVideo(videoEventHandlers, {
+                    onPlay: () => handleVideoStarted(selectedExample),
+                  })}
                   onPlaying={() => setShowPoster(false)}
-                  onCanPlay={videoEventHandlers.onCanPlay}
-                  onLoadedData={videoEventHandlers.onLoadedData}
                   onTimeUpdate={(e) => {
                     const video = e.currentTarget;
                     onVideoTimeUpdate(selectedExample, video.currentTime, video.duration, selectedExample);

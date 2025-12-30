@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import type { EventItem } from './types';
 import { Polaroid } from './Polaroid';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
+import { bindAutoPauseVideo } from '@/lib/bindAutoPauseVideo';
 
 interface EventContentProps {
   event: EventItem;
@@ -204,22 +205,20 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
               e.currentTarget.currentTime = startOffsetSeconds;
             }
           }}
-          onLoadedData={videoEventHandlers.onLoadedData}
-          onCanPlay={videoEventHandlers.onCanPlay}
+          {...bindAutoPauseVideo(videoEventHandlers, {
+            onPlay: (e) => {
+              // Mobile Safari can still start at 0 briefly; force jump to offset on play.
+              if (startOffsetSeconds > 0 && e.currentTarget.currentTime < startOffsetSeconds - 0.05) {
+                e.currentTarget.currentTime = startOffsetSeconds;
+              }
+              setIsPlaying(true);
+            },
+          })}
           onSeeking={(e) => {
             // Prevent seeking before offset for videos that start later
             if (startOffsetSeconds > 0 && e.currentTarget.currentTime < startOffsetSeconds) {
               e.currentTarget.currentTime = startOffsetSeconds;
             }
-          }}
-          onPlay={(e) => {
-            // Sync hook state
-            videoEventHandlers.onPlay();
-            // Mobile Safari can still start at 0 briefly; force jump to offset on play.
-            if (startOffsetSeconds > 0 && e.currentTarget.currentTime < startOffsetSeconds - 0.05) {
-              e.currentTarget.currentTime = startOffsetSeconds;
-            }
-            setIsPlaying(true);
           }}
           onPause={() => setIsPlaying(false)}
           onError={(e) => {
