@@ -38,7 +38,7 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
   const handleCanPlay = useCallback(() => {
     if (pendingPlayRef.current) {
       pendingPlayRef.current = false;
-      videoRef.current?.play();
+      videoRef.current?.play().catch(() => {});
     }
   }, []);
   
