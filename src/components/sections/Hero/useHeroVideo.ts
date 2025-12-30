@@ -3,10 +3,8 @@ import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 import { REWIND_SOUND_SRC, REWIND_DURATION_MS, PLAYBACK_RATE } from './config';
 
-function isElementVisible(el: HTMLElement | null): boolean {
-  // `getClientRects()` is empty when `display: none` (e.g. Tailwind `hidden`)
-  return !!el && el.getClientRects().length > 0;
-}
+// Tailwind xl breakpoint - must match the xl:hidden / hidden xl:block classes in HeroVideo.tsx
+const XL_BREAKPOINT = 1280;
 
 export interface HeroVideoState {
   posterLoaded: boolean;
@@ -51,6 +49,20 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
   const [isMuted, setIsMuted] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
 
+  // Track which video is visible based on CSS breakpoint
+  // This triggers re-renders on resize so the hooks get updated isActive props
+  const [isMobileView, setIsMobileView] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < XL_BREAKPOINT : true
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < XL_BREAKPOINT);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Use a very low threshold so video keeps playing even when mostly scrolled away
   const { ref: sectionRef, isActive } = useSectionRuntime({ threshold: 0.05, exitThreshold: 0.02 });
 
@@ -85,44 +97,48 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
     }
   }, [isRewinding, showThumbsUp]);
 
-  // Use the shared hook for mobile video
+  // Use the shared hook for mobile video (active when below xl breakpoint)
   const { safePlay: safeMobilePlay, videoEventHandlers: mobileHandlers } = useAutoPauseVideo(mobileVideoRef, {
-    // Only consider it active if it's actually rendered (xl:hidden vs hidden xl:block)
-    isActive: isActive && videoReady && isElementVisible(mobileVideoRef.current),
+    isActive: isActive && videoReady && isMobileView,
     canResume,
     onBeforeResume,
-    onPause,
+    onPause: isMobileView ? onPause : undefined, // Only handle pause cleanup for the active video
     retryDelayMs: 150,
     maxRetries: 5,
   });
 
-  // Use the shared hook for desktop video
+  // Use the shared hook for desktop video (active at xl breakpoint and above)
   const { safePlay: safeDesktopPlay, videoEventHandlers: desktopHandlers } = useAutoPauseVideo(desktopVideoRef, {
-    // Only consider it active if it's actually rendered
-    isActive: isActive && videoReady && isElementVisible(desktopVideoRef.current),
+    isActive: isActive && videoReady && !isMobileView,
     canResume,
     onBeforeResume,
-    onPause,
+    onPause: !isMobileView ? onPause : undefined,
     retryDelayMs: 150,
     maxRetries: 5,
   });
 
-  // Get the currently active video element
+  // Get the currently active video element based on breakpoint
   const getActiveVideo = useCallback(() => {
-    const desktop = desktopVideoRef.current;
-    const mobile = mobileVideoRef.current;
-    if (isElementVisible(desktop)) return desktop;
-    if (isElementVisible(mobile)) return mobile;
-    return desktop ?? mobile ?? null;
-  }, []);
+    return isMobileView ? mobileVideoRef.current : desktopVideoRef.current;
+  }, [isMobileView]);
 
   // Get the safe play function for the active video
   const safePlayActive = useCallback(() => {
-    const active = getActiveVideo();
-    if (!active) return;
-    if (active === mobileVideoRef.current) safeMobilePlay();
-    if (active === desktopVideoRef.current) safeDesktopPlay();
-  }, [getActiveVideo, safeMobilePlay, safeDesktopPlay]);
+    if (isMobileView) {
+      safeMobilePlay();
+    } else {
+      safeDesktopPlay();
+    }
+  }, [isMobileView, safeMobilePlay, safeDesktopPlay]);
+
+  // Pause the non-active video when breakpoint changes
+  useEffect(() => {
+    if (isMobileView) {
+      desktopVideoRef.current?.pause();
+    } else {
+      mobileVideoRef.current?.pause();
+    }
+  }, [isMobileView]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -160,11 +176,12 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
 
   // Consolidated play handler - syncs hook state
   const handleVideoPlay = useCallback(() => {
-    const active = getActiveVideo();
-    if (!active) return;
-    if (active === mobileVideoRef.current) mobileHandlers.onPlay();
-    if (active === desktopVideoRef.current) desktopHandlers.onPlay();
-  }, [getActiveVideo, mobileHandlers, desktopHandlers]);
+    if (isMobileView) {
+      mobileHandlers.onPlay();
+    } else {
+      desktopHandlers.onPlay();
+    }
+  }, [isMobileView, mobileHandlers, desktopHandlers]);
 
   const handleVideoEnded = useCallback((videoEl: HTMLVideoElement) => {
     const active = getActiveVideo();
