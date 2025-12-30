@@ -342,6 +342,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
             ref={lightboxVideoRef}
             src={event.video}
             poster={event.poster}
+            preload="none"
             controls
             playsInline
             className="w-full rounded-lg"
