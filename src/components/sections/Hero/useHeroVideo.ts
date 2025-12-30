@@ -56,7 +56,9 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
   const [isMuted, setIsMuted] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
 
-  const { ref: sectionRef, isActive } = useSectionRuntime();
+  // Use a very low threshold so video keeps playing even when mostly scrolled away
+  // Default 0.5 was causing premature pausing at ~20s if any layout shift occurred
+  const { ref: sectionRef, isActive } = useSectionRuntime({ threshold: 0.05, exitThreshold: 0.02 });
 
   const getActiveVideo = useCallback(() => {
     const desktop = desktopVideoRef.current;
