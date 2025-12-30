@@ -33,6 +33,7 @@ export const MobileHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
         autoPlay
         muted
         playsInline
+        preload="auto"
         ref={ref}
         onCanPlay={onVideoCanPlay}
         onLoadedData={onVideoLoadedData}
@@ -94,6 +95,7 @@ export const DesktopHeroVideo = forwardRef<HTMLVideoElement, DesktopHeroVideoPro
           autoPlay
           muted
           playsInline
+          preload="auto"
           ref={ref}
           onCanPlay={onVideoCanPlay}
           onLoadedData={onVideoLoadedData}
