@@ -326,7 +326,7 @@ export const RiverVisualization: FC<RiverVisualizationProps> = ({ progress, stat
               <text x={segmentCenter} y={centerY - 55 - progress * 80} fill={COLORS.fans} textAnchor="middle" fontSize="13" filter="url(#text-shadow)">
                 Fans
               </text>
-              <foreignObject x={segmentCenter - 50} y={centerY - 53 - progress * 80} width="100" height="34">
+              <foreignObject x={segmentCenter - 70} y={centerY - 53 - progress * 80} width="140" height="34">
                 <div style={{ fontSize: 24, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center', textShadow: '0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)' }}>
                   <AnimatedNumber value={stats.fans} />
                 </div>

@@ -42,58 +42,69 @@ const INTERNAL_TRANSITIONS: Array<{ from: Stage; to: Stage }> = [
   { from: 'tools', to: 'contributors' },
 ];
 
-/** Internal event labels - describes why someone "levels up" in the ecosystem */
+/** Internal event labels - why someone from one group participates in another */
 const INTERNAL_LABELS: Record<string, string[]> = {
-  // Fan becoming an artist - they were enjoying art and now want to make their own
+  // Fan inspired to create
   'fans→artists': [
-    'Generates first image',
-    'Makes their own video',
-    'Tries a new model',
-    'Posts first creation',
+    'Inspired to create',
+    'Joins fan art challenge',
+    'Wants to make their own',
+    'Recreates favorite style',
+    'Enters remix contest',
+    'Collaborates with artist',
   ],
-  // Fan becoming a tool builder - they want to solve a specific problem or build something
+  // Fan wants to help artists/build for them
   'fans→tools': [
-    'Writes a ComfyUI node',
-    'Builds a workflow',
-    'Creates a Discord bot',
-    'Automates generation',
+    'Makes tools for artists',
+    'Builds workflow for friend',
+    'Solves artist\'s problem',
+    'Creates Discord bot',
+    'Automates for community',
   ],
-  // Fan becoming a contributor - they start helping the ecosystem directly
+  // Fan helps the ecosystem directly
   'fans→contributors': [
-    'Submits first PR',
-    'Reports a bug fix',
-    'Documents a feature',
+    'Helps with feedback',
     'Answers in Discord',
+    'Writes docs',
+    'Reports bug',
+    'Translates content',
+    'Moderates community',
   ],
-  // Artist wanting to understand/build tools - they need more control over their process
+  // Artist builds for fans/improves their process
   'artists→tools': [
-    'Builds custom node',
-    'Modifies the pipeline',
-    'Creates a LoRA',
-    'Forks a workflow',
+    'Builds tools for fans',
+    'Modifies their pipeline',
+    'Creates LoRA for fans',
+    'Shares custom workflow',
+    'Automates their process',
+    'Develops style preset',
   ],
-  // Artist becoming a contributor - they share what they've learned
+  // Artist gives back to community
   'artists→contributors': [
     'Writes a tutorial',
     'Shares their workflow',
     'Mentors new artists',
-    'Open sources preset',
+    'Open sources presets',
+    'Streams their process',
+    'Creates learning content',
   ],
-  // Tool builder becoming a contributor - they contribute to core projects
+  // Tool builder joins core development
   'tools→contributors': [
     'PR merged upstream',
     'Maintains a package',
-    'Joins core team',
+    'Joins core tool team',
     'Reviews PRs',
+    'Fixes critical bug',
+    'Improves docs',
   ],
 };
 
-/** External event labels by target stage */
+/** External event labels - what attracts NEW people to each stage */
 const EXTERNAL_LABELS: Record<Stage, string[]> = {
-  contributors: ['Open Source Grant', 'Dev Bounty', 'Core Funding'],
-  tools: ['Model Released', 'API Update', 'New Framework'],
-  artists: ['Art Contest', 'Creator Fund', 'Workshop'],
-  fans: ['Product Launch', 'Free Access', 'Community Event'],
+  contributors: ['Open source grant', 'Dev bounty', 'Hackathon announced', 'Mentorship program', 'Core team opening', 'Bug bounty'],
+  tools: ['New model released', 'New framework', 'Major update shipped', 'Performance breakthrough', 'New integration'],
+  artists: ['Art contest', 'Creator fund', 'Artist spotlight', 'Workshop announced', 'Collab opportunity', 'Commission marketplace'],
+  fans: ['Artist releases new work', 'Viral creation shared', 'New app launched', 'Free access event', 'Featured in media', 'Celebrity uses tool'],
 };
 
 // =============================================================================

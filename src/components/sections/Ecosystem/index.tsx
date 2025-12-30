@@ -185,12 +185,12 @@ export const Ecosystem: React.FC = () => {
     <Section ref={sectionRef} className="bg-gradient-to-br from-[#0c1a14] via-[#102018] to-[#081510] text-white relative">
       {/* Header - positioned at ~8% from top on desktop, higher on mobile */}
       <div className="absolute top-[4%] xl:top-[8%] left-4 right-4 z-20 flex justify-center">
-        <div className="w-full max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10 text-center">
+        <div className="w-full max-w-4xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10 text-center">
           <h2 className="text-xl md:text-2xl lg:text-3xl font-normal tracking-tight leading-tight">
-            We nurture the ecosystem so thousands of open-source tools can help billions fall in love with AI
+            We aim to support, energise & equip the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions fall in love with AI
           </h2>
-          <p className="text-sm md:text-base text-white/60 max-w-xl mx-auto mt-2">
-            We want to help open source AI technology make its way into the hands of everyone through consumer-facing tools built by the community.
+          <p className="text-sm md:text-base text-white/50 max-w-xl mx-auto mt-2">
+            *OpenCore tools are built on open models, open-source their assets, and share profits to support the ecosystem that made them possible.
           </p>
         </div>
       </div>

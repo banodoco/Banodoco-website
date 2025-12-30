@@ -4,7 +4,7 @@
 
 export const TIME_CONFIG = {
   startYear: 2025,
-  endYear: 2055,
+  endYear: 2095,
   autoAdvanceMs: 1200,
   resumeDelayMs: 500,
 } as const;
@@ -12,14 +12,15 @@ export const TIME_CONFIG = {
 export const TOTAL_MONTHS = (TIME_CONFIG.endYear - TIME_CONFIG.startYear + 1) * 12;
 
 // Growth rates (annual) and starting values - the "soul" of the projection
+// Tuned to reach ~5B fans by 2095
 export const GROWTH_CONFIG = {
-  contributors: { base: 12, annualGrowth: 1.4 },
-  tools: { base: 1, annualGrowth: 1.35 },
-  artists: { base: 1200, annualGrowth: 1.5 },
-  fans: { base: 12000, annualGrowth: 1.5 },
-  // Dampen growth after year 20 to keep numbers realistic
-  dampeningAfterYear: 20,
-  dampeningFactor: 0.85,
+  contributors: { base: 12, annualGrowth: 1.24 },
+  tools: { base: 1, annualGrowth: 1.21 },
+  artists: { base: 1200, annualGrowth: 1.25 },
+  fans: { base: 12000, annualGrowth: 1.285 },
+  // Dampen growth after year 25 to keep numbers realistic
+  dampeningAfterYear: 25,
+  dampeningFactor: 0.73,
 } as const;
 
 // Visual constants for the river visualization
@@ -45,7 +46,7 @@ export const SVG_CONFIG = {
   centerY: 250,
 } as const;
 
-export const YEAR_MARKERS = [2025, 2030, 2035, 2040, 2045, 2050, 2055];
+export const YEAR_MARKERS = [2025, 2035, 2045, 2055, 2065, 2075, 2085, 2095];
 
 // =============================================================================
 // TYPES
