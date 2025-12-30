@@ -49,7 +49,7 @@ export const useVideoPreview = ({ videoRef, onActivate }: UseVideoPreviewOptions
       if (hasPlayedOnceRef.current || isVideoReady()) {
         setShowVideo(true);
       }
-      videoRef.current?.play();
+      videoRef.current?.play().catch(() => {});
     }
   }, [isTouchDevice, videoRef, onActivate, isVideoReady]);
 
@@ -73,7 +73,7 @@ export const useVideoPreview = ({ videoRef, onActivate }: UseVideoPreviewOptions
           setShowVideo(true);
           hasPlayedOnceRef.current = true;
         }
-        videoRef.current?.play();
+        videoRef.current?.play().catch(() => {});
       } else {
         // Just pause - keep showing the video frame
         videoRef.current?.pause();

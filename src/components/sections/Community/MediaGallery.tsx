@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import type { MediaUrl } from './types';
+import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 
 // Constants for timing
 const IMAGE_DISPLAY_DURATION = 5000; // 5 seconds for images
@@ -57,6 +58,14 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
   
   const currentMedia = urls[selectedIndex];
   const isVideo = currentMedia.type === 'video' || !!currentMedia.url.match(/\.(mp4|webm|mov)(\?|$)/i);
+
+  // Single source of truth for video playback: pause/resume based on visibility.
+  // This avoids racing `autoPlay` attribute vs imperative `.play()` calls.
+  const { safePlay, safePause, videoEventHandlers } = useAutoPauseVideo(videoRef, {
+    isActive: isVisible && isVideo,
+    retryDelayMs: 150,
+    maxRetries: 5,
+  });
 
   // Clear any image timer
   const clearImageTimer = useCallback(() => {
@@ -134,29 +143,30 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
     setSelectedIndex(idx);
   }, [clearImageTimer]);
 
-  // Handle visibility changes - pause/play
+  // Handle visibility changes (images vs video)
   useEffect(() => {
-    const video = videoRef.current;
-    
-    if (isVisible) {
-      // Start playing
-      const media = urls[selectedIndex];
-      const isVid = media.type === 'video' || !!media.url?.match(/\.(mp4|webm|mov)(\?|$)/i);
-      
-      if (!isVid) {
-        startImageTimer();
-      } else if (video) {
-        video.play().catch(() => {});
-        setIsPlaying(true);
-      }
-    } else {
-      // Pause everything
+    if (!isVisible) {
       clearImageTimer();
-      if (video) {
-        video.pause();
-      }
+      safePause();
       setIsPlaying(false);
+      return;
     }
+
+    const media = urls[selectedIndex];
+    const isVid = media.type === 'video' || !!media.url?.match(/\.(mp4|webm|mov)(\?|$)/i);
+
+    if (!isVid) {
+      // Images: timer-driven
+      safePause();
+      startImageTimer();
+    } else {
+      // Videos: hook-driven
+      clearImageTimer();
+      setProgress(0);
+      setIsPlaying(true);
+      safePlay();
+    }
+    // Intentionally keep deps narrow; internal refs track selectedIndex/urls length.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible]);
 
@@ -169,12 +179,14 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
     
     if (!isVid) {
       // Start image timer
+      safePause();
       startImageTimer();
     } else {
-      // Clear image timer, video handles itself via autoPlay
+      // Clear image timer, hook handles playback
       clearImageTimer();
       setProgress(0);
       setIsPlaying(true);
+      safePlay();
     }
     
     return () => clearImageTimer();
@@ -201,12 +213,16 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
             poster={currentMedia.poster_url}
             preload="metadata"
             className="relative w-full h-full object-cover"
-            autoPlay={isVisible}
             muted
             playsInline
             onTimeUpdate={handleVideoTimeUpdate}
             onEnded={handleVideoEnded}
-            onPlay={handleVideoPlay}
+            onPlay={() => {
+              videoEventHandlers.onPlay();
+              handleVideoPlay();
+            }}
+            onCanPlay={videoEventHandlers.onCanPlay}
+            onLoadedData={videoEventHandlers.onLoadedData}
           />
         ) : (
           <img 

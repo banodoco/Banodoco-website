@@ -14,6 +14,7 @@ export const Hero = () => {
     setPosterLoaded,
     handleVideoCanPlay,
     handleVideoLoadedData,
+    handleVideoPlay,
     handleVideoEnded,
     handleRewind,
     scrollToNextSection,
@@ -29,6 +30,7 @@ export const Hero = () => {
     onPosterLoad: () => setPosterLoaded(true),
     onVideoCanPlay: handleVideoCanPlay,
     onVideoLoadedData: handleVideoLoadedData,
+    onVideoPlay: handleVideoPlay,
     onVideoEnded: handleVideoEnded,
   };
 
