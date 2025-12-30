@@ -56,8 +56,8 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Section visibility
-  const { ref: sectionRef, isActive } = useSectionRuntime({ threshold: 0.05, exitThreshold: 0.02 });
+  // Section visibility - threshold raised to reduce decoder contention with other video sections
+  const { ref: sectionRef, isActive } = useSectionRuntime({ threshold: 0.15, exitThreshold: 0.05 });
 
   // Blocking conditions for auto-resume
   const canResume = !isRewinding && !showRewindButton && !showThumbsUp;

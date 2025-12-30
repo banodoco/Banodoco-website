@@ -14,11 +14,10 @@ export const Reigh: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Track section visibility - pause video when scrolled away
-  // Low threshold (0.15) so video starts as soon as section begins entering viewport
-  // exitThreshold (0.1) pauses when mostly scrolled away but not completely gone
+  // Threshold raised to reduce decoder contention with other video sections on mobile
   const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ 
-    threshold: 0.15,
-    exitThreshold: 0.1,
+    threshold: 0.25,
+    exitThreshold: 0.15,
   });
   const isFullyVisible = hasStarted && isActive;
 
