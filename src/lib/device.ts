@@ -26,16 +26,17 @@ export function getConnectionInfo(): { saveData?: boolean; effectiveType?: strin
 }
 
 /**
- * Checks if we should preload videos based on device/connection.
+ * Checks if we should preload videos based on connection quality.
+ * Note: We no longer skip iOS entirely — the UX hit from delayed video loading
+ * is worse than the data usage, especially since we only preload metadata + first videos.
  */
 export function shouldPreloadVideos(): boolean {
-  if (isIOS()) return false;
-  
   const connection = getConnectionInfo();
   if (connection?.saveData) return false;
   
   const effectiveType = connection?.effectiveType;
-  if (effectiveType && /(^|-)2g$/.test(effectiveType)) return false;
+  // Only skip on very slow connections
+  if (effectiveType === 'slow-2g' || effectiveType === '2g') return false;
   
   return true;
 }
