@@ -1,6 +1,26 @@
 import { useRef, useEffect } from 'react';
 
 /**
+ * Preload images into browser cache when condition is met.
+ * Unlike video preloading, this doesn't check connection speed since images are much smaller.
+ */
+export const useImagePreloadOnVisible = (urls: string[], isActive: boolean) => {
+  const preloadedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!isActive) return;
+    if (typeof window === 'undefined') return;
+
+    urls.forEach((url) => {
+      if (!url || preloadedRef.current.has(url)) return;
+      preloadedRef.current.add(url);
+      const img = new Image();
+      img.src = url;
+    });
+  }, [isActive, urls]);
+};
+
+/**
  * Simpler version that just fetches videos into browser cache.
  * More reliable than link[rel=preload] for videos.
  *

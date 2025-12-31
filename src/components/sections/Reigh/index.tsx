@@ -5,7 +5,7 @@ import { travelExamples } from './data';
 import { Section, SectionContent } from '@/components/layout/Section';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
-import { useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
+import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
 import { bindAutoPauseVideo } from '@/lib/bindAutoPauseVideo';
 
 export const Reigh: React.FC = () => {
@@ -20,6 +20,17 @@ export const Reigh: React.FC = () => {
     exitThreshold: 0.15,
   });
   const isFullyVisible = hasStarted && isActive;
+
+  // Preload ALL poster images (small files, won't saturate bandwidth)
+  const allPosterUrls = useMemo(() => {
+    const posters: string[] = [];
+    travelExamples.forEach((e) => {
+      if (e.poster) posters.push(e.poster);
+      if (e.images) posters.push(...e.images);
+    });
+    return posters;
+  }, []);
+  useImagePreloadOnVisible(allPosterUrls, isActive);
 
   // Only preload current + next 2 videos (not all) to avoid saturating bandwidth on slow connections
   const videoUrls = useMemo(() => {
@@ -102,6 +113,14 @@ export const Reigh: React.FC = () => {
                     draggable={false}
                   />
                 )}
+                
+                {/* Loading spinner - shows when trying to play but video hasn't started yet */}
+                {isFullyVisible && showPoster && !autoAdvance.videoEnded.has(selectedExample) && (
+                  <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <div className="w-10 h-10 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+                  </div>
+                )}
+
                 <video
                   key={currentExample.video}
                   ref={videoRef}

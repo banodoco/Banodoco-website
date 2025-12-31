@@ -197,6 +197,13 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
         className="absolute inset-0 rounded-xl overflow-hidden bg-black/50 transition-opacity duration-500"
         style={{ opacity: isFullyVisible ? 1 : 0 }}
       >
+        {/* Loading spinner - shows when trying to play but video hasn't started yet */}
+        {isFullyVisible && !isPlaying && (
+          <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+            <div className="w-10 h-10 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+          </div>
+        )}
+        
         <video
           ref={videoRef}
           src={event.video}

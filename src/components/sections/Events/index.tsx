@@ -6,7 +6,7 @@ import { EventContent } from './EventContent';
 import { useEventsAutoAdvance } from './useEventsAutoAdvance';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { Section, SectionContent } from '@/components/layout/Section';
-import { useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
+import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
 
 export const Events: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState(0);
@@ -19,6 +19,17 @@ export const Events: React.FC = () => {
     threshold: 0.25,
     exitThreshold: 0.15,
   });
+
+  // Preload ALL poster images and polaroid photos (small files, won't saturate bandwidth)
+  const allImageUrls = useMemo(() => {
+    const images: string[] = [];
+    events.forEach((e) => {
+      if (e.poster) images.push(e.poster);
+      e.photos?.forEach((p) => images.push(p.src));
+    });
+    return images;
+  }, []);
+  useImagePreloadOnVisible(allImageUrls, isActive);
 
   // Only preload current + next 2 event videos (not all) to avoid saturating bandwidth on slow connections
   const videoUrls = useMemo(() => {
