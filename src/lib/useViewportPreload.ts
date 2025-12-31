@@ -5,7 +5,7 @@ import { useRef, useEffect } from 'react';
  * More reliable than link[rel=preload] for videos.
  *
  * Note: This intentionally avoids preloading on users with "Data Saver" enabled
- * or very slow connections.
+ * or slow connections (3G and below).
  */
 export const useVideoPreloadOnVisible = (urls: string[], isActive: boolean) => {
   const preloadedRef = useRef<Set<string>>(new Set());
@@ -16,10 +16,11 @@ export const useVideoPreloadOnVisible = (urls: string[], isActive: boolean) => {
     const anyNav = navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } };
     const saveData = anyNav.connection?.saveData === true;
     const effectiveType = anyNav.connection?.effectiveType;
-    const isVerySlow =
-      effectiveType === 'slow-2g' || effectiveType === '2g';
+    // Skip on 3G and below - preloading multiple videos would saturate bandwidth
+    const isSlow =
+      effectiveType === 'slow-2g' || effectiveType === '2g' || effectiveType === '3g';
 
-    return saveData || isVerySlow;
+    return saveData || isSlow;
   };
 
   useEffect(() => {

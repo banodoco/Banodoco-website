@@ -21,8 +21,12 @@ export const Reigh: React.FC = () => {
   });
   const isFullyVisible = hasStarted && isActive;
 
-  // Preload all videos when section comes into view
-  const videoUrls = useMemo(() => travelExamples.map((e) => e.video), []);
+  // Only preload current + next 2 videos (not all) to avoid saturating bandwidth on slow connections
+  const videoUrls = useMemo(() => {
+    const total = travelExamples.length;
+    const indices = [selectedExample, (selectedExample + 1) % total, (selectedExample + 2) % total];
+    return [...new Set(indices)].map((i) => travelExamples[i].video);
+  }, [selectedExample]);
   useVideoPreloadOnVisible(videoUrls, isActive);
 
   const autoAdvance = useTravelAutoAdvance({

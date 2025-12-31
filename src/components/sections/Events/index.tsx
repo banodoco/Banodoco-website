@@ -20,11 +20,18 @@ export const Events: React.FC = () => {
     exitThreshold: 0.15,
   });
 
-  // Preload all event videos when section comes into view
-  const videoUrls = useMemo(
-    () => events.filter((e) => e.video).map((e) => e.video!),
-    []
-  );
+  // Only preload current + next 2 event videos (not all) to avoid saturating bandwidth on slow connections
+  const videoUrls = useMemo(() => {
+    const eventsWithVideo = events.filter((e) => e.video);
+    const total = eventsWithVideo.length;
+    if (total === 0) return [];
+    // Find current index within events-with-video array
+    const currentEventId = events[selectedEvent]?.id;
+    const currentIdx = eventsWithVideo.findIndex((e) => e.id === currentEventId);
+    if (currentIdx === -1) return [eventsWithVideo[0]?.video].filter(Boolean) as string[];
+    const indices = [currentIdx, (currentIdx + 1) % total, (currentIdx + 2) % total];
+    return [...new Set(indices)].map((i) => eventsWithVideo[i].video!);
+  }, [selectedEvent]);
   useVideoPreloadOnVisible(videoUrls, isActive);
 
   const autoAdvance = useEventsAutoAdvance({
