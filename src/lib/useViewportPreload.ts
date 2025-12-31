@@ -36,11 +36,11 @@ export const useVideoPreloadOnVisible = (urls: string[], isActive: boolean) => {
     const anyNav = navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } };
     const saveData = anyNav.connection?.saveData === true;
     const effectiveType = anyNav.connection?.effectiveType;
-    // Skip on 3G and below - preloading multiple videos would saturate bandwidth
-    const isSlow =
-      effectiveType === 'slow-2g' || effectiveType === '2g' || effectiveType === '3g';
+    // Only skip on very slow connections - 3G is borderline but still usable
+    const isVerySlow =
+      effectiveType === 'slow-2g' || effectiveType === '2g';
 
-    return saveData || isSlow;
+    return saveData || isVerySlow;
   };
 
   useEffect(() => {
