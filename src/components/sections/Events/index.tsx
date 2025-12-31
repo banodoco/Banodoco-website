@@ -20,16 +20,15 @@ export const Events: React.FC = () => {
     exitThreshold: 0.15,
   });
 
-  // Preload ALL poster images and polaroid photos (small files, won't saturate bandwidth)
-  const allImageUrls = useMemo(() => {
-    const images: string[] = [];
-    events.forEach((e) => {
-      if (e.poster) images.push(e.poster);
-      e.photos?.forEach((p) => images.push(p.src));
-    });
-    return images;
-  }, []);
-  useImagePreloadOnVisible(allImageUrls, isActive);
+  // Preload video posters first (priority), then polaroid photos (delayed)
+  const videoPosterUrls = useMemo(() => 
+    events.map((e) => e.poster).filter(Boolean) as string[],
+  []);
+  const polaroidPhotoUrls = useMemo(() => 
+    events.flatMap((e) => e.photos?.map((p) => p.src) ?? []),
+  []);
+  useImagePreloadOnVisible(videoPosterUrls, isActive, { priority: true });
+  useImagePreloadOnVisible(polaroidPhotoUrls, isActive, { priority: false });
 
   // Only preload current + next 2 event videos (not all) to avoid saturating bandwidth on slow connections
   const videoUrls = useMemo(() => {

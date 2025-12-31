@@ -3,21 +3,40 @@ import { useRef, useEffect } from 'react';
 /**
  * Preload images into browser cache when condition is met.
  * Unlike video preloading, this doesn't check connection speed since images are much smaller.
+ * 
+ * @param urls - Array of image URLs to preload
+ * @param isActive - Whether to start preloading
+ * @param options.priority - If true, loads immediately. If false, waits 500ms (for lower-priority images)
  */
-export const useImagePreloadOnVisible = (urls: string[], isActive: boolean) => {
+export const useImagePreloadOnVisible = (
+  urls: string[], 
+  isActive: boolean,
+  options: { priority?: boolean } = {}
+) => {
+  const { priority = true } = options;
   const preloadedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!isActive) return;
     if (typeof window === 'undefined') return;
 
-    urls.forEach((url) => {
-      if (!url || preloadedRef.current.has(url)) return;
-      preloadedRef.current.add(url);
-      const img = new Image();
-      img.src = url;
-    });
-  }, [isActive, urls]);
+    const doPreload = () => {
+      urls.forEach((url) => {
+        if (!url || preloadedRef.current.has(url)) return;
+        preloadedRef.current.add(url);
+        const img = new Image();
+        img.src = url;
+      });
+    };
+
+    if (priority) {
+      doPreload();
+    } else {
+      // Delay non-priority images so posters/videos get bandwidth first
+      const timeout = setTimeout(doPreload, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [isActive, urls, priority]);
 };
 
 /**

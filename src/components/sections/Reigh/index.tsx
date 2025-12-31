@@ -21,16 +21,15 @@ export const Reigh: React.FC = () => {
   });
   const isFullyVisible = hasStarted && isActive;
 
-  // Preload ALL poster images (small files, won't saturate bandwidth)
-  const allPosterUrls = useMemo(() => {
-    const posters: string[] = [];
-    travelExamples.forEach((e) => {
-      if (e.poster) posters.push(e.poster);
-      if (e.images) posters.push(...e.images);
-    });
-    return posters;
-  }, []);
-  useImagePreloadOnVisible(allPosterUrls, isActive);
+  // Preload video posters first (priority), then example images (delayed)
+  const videoPosterUrls = useMemo(() => 
+    travelExamples.map((e) => e.poster).filter(Boolean) as string[], 
+  []);
+  const exampleImageUrls = useMemo(() => 
+    travelExamples.flatMap((e) => e.images ?? []),
+  []);
+  useImagePreloadOnVisible(videoPosterUrls, isActive, { priority: true });
+  useImagePreloadOnVisible(exampleImageUrls, isActive, { priority: false });
 
   // Only preload current + next 2 videos (not all) to avoid saturating bandwidth on slow connections
   const videoUrls = useMemo(() => {
