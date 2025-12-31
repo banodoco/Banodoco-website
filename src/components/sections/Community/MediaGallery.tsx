@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import type { MediaUrl } from './types';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 import { bindAutoPauseVideo } from '@/lib/bindAutoPauseVideo';
+import { useImagePreloadOnVisible } from '@/lib/useViewportPreload';
 
 // Constants for timing
 const IMAGE_DISPLAY_DURATION = 5000; // 5 seconds for images
@@ -18,28 +19,20 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
   // Limit to max 5 items - memoize to prevent unnecessary effect re-runs
   const urls = useMemo(() => rawUrls.slice(0, MAX_MEDIA_ITEMS), [rawUrls]);
   
-  // Preload poster images and first few images on mount
-  useEffect(() => {
-    const imagesToPreload: string[] = [];
-    
-    urls.forEach((media, idx) => {
-      const isVid = media.type === 'video' || !!media.url.match(/\.(mp4|webm|mov)(\?|$)/i);
-      
-      if (isVid && media.poster_url) {
-        // Preload video posters
-        imagesToPreload.push(media.poster_url);
-      } else if (!isVid && idx < 3) {
-        // Preload first 3 images
-        imagesToPreload.push(media.url);
-      }
-    });
-    
-    // Create Image objects to trigger preload
-    imagesToPreload.forEach(src => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, [urls]);
+  // Preload video posters first (priority), then images (delayed)
+  const posterUrls = useMemo(() => 
+    urls
+      .filter((m) => (m.type === 'video' || !!m.url.match(/\.(mp4|webm|mov)(\?|$)/i)) && m.poster_url)
+      .map((m) => m.poster_url!)
+  , [urls]);
+  const imageUrls = useMemo(() => 
+    urls
+      .filter((m) => m.type !== 'video' && !m.url.match(/\.(mp4|webm|mov)(\?|$)/i))
+      .slice(0, 3)
+      .map((m) => m.url)
+  , [urls]);
+  useImagePreloadOnVisible(posterUrls, isVisible, { priority: true });
+  useImagePreloadOnVisible(imageUrls, isVisible, { priority: false });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
