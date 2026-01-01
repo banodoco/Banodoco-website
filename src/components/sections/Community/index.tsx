@@ -164,7 +164,7 @@ export const Community = () => {
       <div ref={containerRef} className="h-full overflow-hidden xl:overflow-y-auto px-6 md:px-16 xl:pb-12 flex items-center xl:items-start" style={{ paddingTop: 'var(--header-height)' }}>
         <div className="max-w-7xl mx-auto w-full">
           {/* Mobile/tablet intro - shown above cards */}
-          <div className="mb-8 xl:hidden">
+          <div className="mb-4 md:mb-6 xl:hidden">
             <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
               Our Discord is a gathering place for people from across the ecosystem
             </h2>
@@ -249,9 +249,10 @@ export const Community = () => {
             )}
           </div>
 
-          <div className="hidden xl:grid grid-cols-12 gap-16">
-            {/* Left side - Introduction text (desktop only) */}
-            <div className="col-span-4 sticky top-24 self-start">
+          <div className="hidden xl:grid grid-cols-12 gap-16 min-h-full">
+            {/* Left side - Introduction text (desktop only) - centered vertically */}
+            <div className="col-span-4 flex items-center sticky top-0 h-[calc(100vh-var(--header-height))]">
+              <div>
               <h2 className="text-5xl font-normal tracking-tight leading-[1.15] mb-6">
                 Our Discord is a gathering place for people from across the ecosystem
               </h2>
@@ -269,6 +270,7 @@ export const Community = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
+              </div>
             </div>
 
             {/* Right side - Topic cards (desktop only) */}
