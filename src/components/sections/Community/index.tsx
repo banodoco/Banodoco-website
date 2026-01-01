@@ -12,103 +12,7 @@ export const Community = () => {
   const topicRefs = useRef<(HTMLElement | null)[]>([]);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const mobileCardRefs = useRef<(HTMLElement | null)[]>([]);
-  const scrollDirectionRef = useRef<'up' | 'down'>('down');
-  const wasVisibleRef = useRef(false);
-  const desktopScrollRafRef = useRef<number | null>(null);
   const mobileScrollRafRef = useRef<number | null>(null);
-
-  // Track scroll direction of the snap parent so we can reset internal scroll position on exit.
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-
-    // Find the snap scroll parent
-    const scrollParent = section.closest('.snap-y') as HTMLElement | null;
-    if (!scrollParent) return;
-
-    let lastScrollTop = scrollParent.scrollTop;
-
-    const handleParentScroll = () => {
-      const currentScrollTop = scrollParent.scrollTop;
-      if (currentScrollTop !== lastScrollTop) {
-        scrollDirectionRef.current = currentScrollTop > lastScrollTop ? 'down' : 'up';
-        lastScrollTop = currentScrollTop;
-      }
-    };
-
-    scrollParent.addEventListener('scroll', handleParentScroll, { passive: true });
-
-    return () => {
-      scrollParent.removeEventListener('scroll', handleParentScroll);
-    };
-  }, []);
-
-  // Reset internal scroll position on section exit, so it's ready for re-entry.
-  // (We use the shared useSectionVisibility hook to avoid visibility flapping.)
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    if (!sectionIsVisible && wasVisibleRef.current) {
-      if (scrollDirectionRef.current === 'down') {
-        // Left by scrolling down - set to bottom for when user scrolls back up
-        container.scrollTop = container.scrollHeight - container.clientHeight;
-      } else {
-        // Left by scrolling up - set to top for when user scrolls back down
-        container.scrollTop = 0;
-      }
-    }
-
-    wasVisibleRef.current = sectionIsVisible;
-  }, [sectionIsVisible]);
-
-  // Track scroll to determine active topic (desktop - vertical scroll)
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      if (desktopScrollRafRef.current !== null) return;
-      desktopScrollRafRef.current = requestAnimationFrame(() => {
-        desktopScrollRafRef.current = null;
-
-        if (!container || topicRefs.current.length === 0) return;
-
-        const containerRect = container.getBoundingClientRect();
-        const containerCenter = containerRect.top + containerRect.height / 2;
-
-        let closestIdx = 0;
-        let minDiff = Infinity;
-
-        topicRefs.current.forEach((ref, idx) => {
-          if (!ref) return;
-          const rect = ref.getBoundingClientRect();
-          const center = rect.top + rect.height / 2;
-          const diff = Math.abs(center - containerCenter);
-
-          if (diff < minDiff) {
-            minDiff = diff;
-            closestIdx = idx;
-          }
-        });
-
-        // Only update state if it actually changed (avoids extra renders).
-        setActiveTopicIndex((prev) => (prev === closestIdx ? prev : closestIdx));
-      });
-    };
-
-    // Initial check
-    handleScroll();
-
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      if (desktopScrollRafRef.current !== null) {
-        cancelAnimationFrame(desktopScrollRafRef.current);
-        desktopScrollRafRef.current = null;
-      }
-    };
-  }, [topics.length]);
 
   // Track horizontal scroll to determine active topic (mobile)
   useEffect(() => {
@@ -161,31 +65,33 @@ export const Community = () => {
 
   return (
     <Section ref={sectionRef} id="community" className="bg-gradient-to-br from-[#0c1420] via-[#101825] to-[#0a1018] text-white">
-      <div ref={containerRef} className="h-full overflow-hidden xl:overflow-y-auto px-6 md:px-16 xl:pb-12 flex items-center xl:items-start" style={{ paddingTop: 'var(--header-height)' }}>
-        <div className="max-w-7xl mx-auto w-full">
-          {/* Mobile/tablet intro - shown above cards */}
-          <div className="mb-4 md:mb-6 xl:hidden">
-            <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
-              Our Discord is a gathering place for people from across the ecosystem
-            </h2>
-            <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-4 md:mb-6">
-              We've been at the cutting-edge of the technical & artistic scenes over the past two years.
-            </p>
-            <a 
-              href="https://discord.gg/NnFxGvx94b" 
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sky-400 font-medium hover:text-sky-300 transition-colors"
-            >
-              Join Discord
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-          </div>
+      <div ref={containerRef} className="h-full px-6 md:px-16 flex flex-col xl:block" style={{ paddingTop: 'var(--header-height)' }}>
+        <div className="max-w-7xl mx-auto w-full h-full flex flex-col xl:block">
+          {/* Mobile/tablet layout - vertically centered */}
+          <div className="xl:hidden flex-1 flex flex-col justify-center">
+            {/* Intro text */}
+            <div>
+              <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
+                Our Discord is a gathering place for people from across the ecosystem
+              </h2>
+              <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-4 md:mb-6">
+                We've been at the cutting-edge of the technical & artistic scenes over the past two years.
+              </p>
+              <a 
+                href="https://discord.gg/NnFxGvx94b" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sky-400 font-medium hover:text-sky-300 transition-colors"
+              >
+                Join Discord
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
 
-          {/* Mobile/tablet horizontal scroll cards */}
-          <div className="xl:hidden -mx-4 md:-mx-8">
+            {/* Horizontal scroll cards */}
+            <div className="-mx-4 md:-mx-8 mt-6">
             {loading && (
               <div className="flex items-center justify-center py-20 px-4">
                 <div className="animate-pulse text-white/40">Loading latest updates...</div>
@@ -247,34 +153,36 @@ export const Community = () => {
                 </div>
               </>
             )}
+            </div>
           </div>
 
-          <div className="hidden xl:grid grid-cols-12 gap-16 min-h-full">
-            {/* Left side - Introduction text (desktop only) - centered vertically */}
-            <div className="col-span-4 flex items-center sticky top-0 h-[calc(100vh-var(--header-height))]">
+          {/* Desktop layout - two columns, left centered, right scrollable */}
+          <div className="hidden xl:grid grid-cols-12 gap-16 h-full">
+            {/* Left side - Introduction text (vertically centered) */}
+            <div className="col-span-4 flex items-center">
               <div>
-              <h2 className="text-5xl font-normal tracking-tight leading-[1.15] mb-6">
-                Our Discord is a gathering place for people from across the ecosystem
-              </h2>
-              <p className="text-lg text-white/60 leading-relaxed mb-6">
-                We've been at the cutting-edge of the technical & artistic scenes over the past two years.
-              </p>
-              <a 
-                href="https://discord.gg/NnFxGvx94b" 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sky-400 font-medium hover:text-sky-300 transition-colors"
-              >
-                Join Discord
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
+                <h2 className="text-5xl font-normal tracking-tight leading-[1.15] mb-6">
+                  Our Discord is a gathering place for people from across the ecosystem
+                </h2>
+                <p className="text-lg text-white/60 leading-relaxed mb-6">
+                  We've been at the cutting-edge of the technical & artistic scenes over the past two years.
+                </p>
+                <a 
+                  href="https://discord.gg/NnFxGvx94b" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sky-400 font-medium hover:text-sky-300 transition-colors"
+                >
+                  Join Discord
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
               </div>
             </div>
 
-            {/* Right side - Topic cards (desktop only) */}
-            <div className="col-span-8">
+            {/* Right side - Topic cards (independently scrollable) */}
+            <div className="col-span-8 overflow-y-auto py-8">
               {loading && (
                 <div className="flex items-center justify-center py-20">
                   <div className="animate-pulse text-white/40">Loading latest updates...</div>
@@ -294,7 +202,7 @@ export const Community = () => {
               )}
 
               {!loading && !error && topics.length > 0 && (
-                <div className="space-y-6 pt-6">
+                <div className="space-y-4">
                   {topics.map((topic, idx) => (
                     <TopicCard
                       key={idx}

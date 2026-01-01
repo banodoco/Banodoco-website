@@ -97,7 +97,7 @@ export const Reigh: React.FC = () => {
   return (
     <Section ref={sectionRef} id="reigh" className="bg-gradient-to-br from-[#140c22] via-[#181028] to-[#100820] text-white">
       <SectionContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-16 items-center">
             {/* Left side - Video showcase */}
             <div className="order-2 lg:order-1 flex flex-col">
               <div className="relative rounded-xl overflow-hidden bg-black/50 h-[35dvh] md:h-[50dvh] lg:h-[60dvh] flex items-center justify-center">
