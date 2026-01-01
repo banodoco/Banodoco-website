@@ -70,10 +70,10 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
     <div className="w-full">
       {/* Date display */}
       <div className="text-center leading-none">
-        <div className="text-sm text-white/50 font-medium tracking-wider uppercase">
+        <div className="text-sm md:text-xs lg:text-sm text-white/50 font-medium tracking-wider uppercase">
           <AnimatedText value={month} />
         </div>
-        <div className="text-4xl md:text-5xl font-light text-white tabular-nums">
+        <div className="text-4xl md:text-3xl lg:text-5xl font-light text-white tabular-nums">
           <AnimatedText value={year.toString()} />
         </div>
       </div>
@@ -81,7 +81,7 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
       {/* Track */}
       <div
         ref={trackRef}
-        className="relative h-8 cursor-grab active:cursor-grabbing select-none mb-4"
+        className="relative h-8 md:h-6 lg:h-8 cursor-grab active:cursor-grabbing select-none mb-4 md:mb-3 lg:mb-4"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={endDrag}

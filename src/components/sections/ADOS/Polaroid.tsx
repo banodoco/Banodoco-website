@@ -180,7 +180,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   return (
     <div
       data-polaroid
-      className="absolute w-16 sm:w-20 md:w-20 lg:w-20 xl:w-32 cursor-pointer"
+      className="absolute w-16 sm:w-20 md:w-[72px] lg:w-20 xl:w-32 cursor-pointer"
       style={{
         left: `${currentPosX}%`,
         top: `${currentPosY}%`,
@@ -203,7 +203,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
         )}
         style={{
           transform: isExpanded 
-            ? `rotate(0deg) scale(${screenSize === 'mobile' ? 4 : screenSize === 'tablet' ? 3.5 : 2.5}) translateY(-20%)`
+            ? `rotate(0deg) scale(${screenSize === 'mobile' ? 4 : screenSize === 'tablet' ? 3.2 : 2.5}) translateY(-20%)`
             : isHovered 
               ? `rotate(${hoverRotation}deg) scale(1.15) translateY(-8px)`
               : `rotate(${photo.rotation}deg) scale(1) translateY(0)`,

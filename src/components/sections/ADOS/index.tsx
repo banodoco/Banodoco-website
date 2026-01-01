@@ -61,7 +61,7 @@ export const ADOS: React.FC = () => {
             {/* Left side - Event content */}
             <div className="lg:col-span-7 order-2 lg:order-1">
               {/* Main content area - stack all events for smooth polaroid transitions */}
-              <div className="relative aspect-[16/10] md:aspect-auto md:h-[42dvh] lg:aspect-[16/10] lg:h-auto">
+              <div className="relative aspect-[16/10] md:aspect-auto md:h-[36dvh] lg:aspect-[16/10] lg:h-auto">
                 {events.map((event, idx) => (
                   <div
                     key={event.id}

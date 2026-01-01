@@ -183,54 +183,91 @@ export const Ecosystem: React.FC = () => {
 
   return (
     <Section ref={sectionRef} id="ecosystem" className="bg-gradient-to-br from-[#0c1a14] via-[#102018] to-[#081510] text-white relative">
-      {/* Header - positioned below the fixed nav header on desktop */}
-      <div className="absolute top-[4%] xl:top-[calc(8%+var(--header-height))] left-4 right-4 z-20 flex justify-center">
-        <div className="w-full max-w-4xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10 text-center">
-          <h2 className="text-xl md:text-2xl lg:text-3xl font-normal tracking-tight leading-tight">
-            We aim to support, energise & equip the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions fall in love with AI
-          </h2>
-          <p className="text-sm md:text-base text-white/50 max-w-xl mx-auto mt-2">
-            *OpenCore tools are built on open models, open-source their assets, and share profits to support the ecosystem that made them possible.
-          </p>
+      {/* Mobile/tablet layout - flexbox with proportional sizing */}
+      {/* 1/10 empty | 2/10 header | 5/10 vis | 1/10 timeline | 1/10 empty */}
+      <div className="absolute inset-0 flex flex-col xl:hidden px-4 pt-[var(--header-height)]">
+        {/* Top spacer */}
+        <div className="flex-[0.5]" />
+        
+        {/* Header - 2/10 */}
+        <div className="flex-[2] flex items-center justify-center z-20">
+          <div className="w-full max-w-4xl md:max-w-2xl lg:max-w-4xl bg-black/60 backdrop-blur-md rounded-xl px-4 py-3 md:px-5 md:py-3 lg:px-6 lg:py-4 border border-white/10 text-center">
+            <h2 className="text-xl md:text-lg lg:text-3xl font-normal tracking-tight leading-tight">
+              We aim to support, energise & equip the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions fall in love with AI
+            </h2>
+            <p className="text-sm md:text-xs lg:text-base text-white/50 max-w-xl mx-auto mt-2 md:mt-1 lg:mt-2">
+              *OpenCore tools are built on open models, open-source their assets, and share profits to support the ecosystem that made them possible.
+            </p>
+          </div>
         </div>
-      </div>
-
-      {/* Desktop River visualization - centered between header and timeline, accounting for fixed nav */}
-      <div className="absolute inset-x-0 top-[calc(18%+var(--header-height))] bottom-[calc(18%-2rem)] hidden xl:flex items-center justify-center pointer-events-none">
-        <div className="w-full max-w-7xl px-4">
-          <RiverVisualization 
-            progress={progress} 
+        
+        {/* Visualization - 5/10 */}
+        <div className="flex-[5] flex items-center justify-center pointer-events-none">
+          <MobileVisualization 
+            progress={progress}
             stats={stats}
             waveX={waveX}
-            eventOverlay={
-              <EventAnimation 
-                event={currentEvent} 
-                onImpact={handleEventImpact}
-                onComplete={handleEventComplete} 
-              />
-            }
           />
         </div>
-      </div>
-      
-      {/* Mobile/tablet visualization - centered with equal margins for header/timeline */}
-      <div className="absolute inset-x-0 top-[27%] sm:top-[24%] md:top-[21%] bottom-[17%] sm:bottom-[17%] md:bottom-[15%] flex xl:hidden items-center justify-center pointer-events-none px-4 md:px-8 lg:px-12">
-        <MobileVisualization 
-          progress={progress}
-          stats={stats}
-          waveX={waveX}
-        />
+        
+        {/* Timeline - 1/10 */}
+        <div className="flex-[1] flex items-center justify-center z-20">
+          <div className="w-full max-w-3xl md:max-w-xl lg:max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-4 py-3 md:px-5 md:py-3 lg:px-6 lg:py-4 border border-white/10">
+            <TimelineScrubber
+              monthIdx={monthIdx}
+              onMonthChange={handleMonthChange}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            />
+          </div>
+        </div>
+        
+        {/* Bottom spacer */}
+        <div className="flex-[0.5]" />
       </div>
 
-      {/* Timeline - positioned at ~10% from bottom on desktop, lower on mobile */}
-      <div className="absolute bottom-[5%] xl:bottom-[10%] left-4 right-4 z-20 flex justify-center">
-        <div className="w-full max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10">
-          <TimelineScrubber
-            monthIdx={monthIdx}
-            onMonthChange={handleMonthChange}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          />
+      {/* Desktop layout - absolute positioning */}
+      <div className="hidden xl:block">
+        {/* Header - positioned below the fixed nav header on desktop */}
+        <div className="absolute top-[calc(8%+var(--header-height))] left-4 right-4 z-20 flex justify-center">
+          <div className="w-full max-w-4xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10 text-center">
+            <h2 className="text-3xl font-normal tracking-tight leading-tight">
+              We aim to support, energise & equip the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions fall in love with AI
+            </h2>
+            <p className="text-base text-white/50 max-w-xl mx-auto mt-2">
+              *OpenCore tools are built on open models, open-source their assets, and share profits to support the ecosystem that made them possible.
+            </p>
+          </div>
+        </div>
+
+        {/* Desktop River visualization - centered between header and timeline */}
+        <div className="absolute inset-x-0 top-[calc(18%+var(--header-height))] bottom-[calc(18%-2rem)] flex items-center justify-center pointer-events-none">
+          <div className="w-full max-w-7xl px-4">
+            <RiverVisualization 
+              progress={progress} 
+              stats={stats}
+              waveX={waveX}
+              eventOverlay={
+                <EventAnimation 
+                  event={currentEvent} 
+                  onImpact={handleEventImpact}
+                  onComplete={handleEventComplete} 
+                />
+              }
+            />
+          </div>
+        </div>
+
+        {/* Timeline - positioned at ~10% from bottom */}
+        <div className="absolute bottom-[10%] left-4 right-4 z-20 flex justify-center">
+          <div className="w-full max-w-3xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10">
+            <TimelineScrubber
+              monthIdx={monthIdx}
+              onMonthChange={handleMonthChange}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            />
+          </div>
         </div>
       </div>
     </Section>

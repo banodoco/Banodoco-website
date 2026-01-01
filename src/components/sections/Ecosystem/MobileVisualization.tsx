@@ -22,11 +22,11 @@ const Stage: React.FC<StageProps> = ({ label, color, value, isCenter, isActive, 
   const widthPercent = isCenter ? 45 : 55 + scale * 35;
   
   return (
-    <div className="flex flex-col items-center py-0.5 sm:py-1 md:py-1.5 lg:py-1 shrink-0">
+    <div className="flex flex-col items-center py-0.5 sm:py-1 md:py-1 lg:py-1 shrink-0">
       <div 
         className={`
           relative overflow-hidden rounded-lg md:rounded-xl transition-all duration-700 ease-out
-          ${isCenter ? 'px-2 py-1 sm:px-3 sm:py-1.5 md:px-5 md:py-2.5 lg:px-5 lg:py-2' : 'px-3 py-1.5 sm:px-4 sm:py-2.5 md:px-6 md:py-3 lg:px-6 lg:py-3'}
+          ${isCenter ? 'px-2 py-1 sm:px-3 sm:py-1.5 md:px-3 md:py-1.5 lg:px-5 lg:py-2' : 'px-3 py-1.5 sm:px-4 sm:py-2.5 md:px-4 md:py-2 lg:px-6 lg:py-3'}
         `}
         style={{
           width: `${widthPercent}%`,
@@ -50,14 +50,14 @@ const Stage: React.FC<StageProps> = ({ label, color, value, isCenter, isActive, 
         
         <div className={`flex ${isCenter ? 'flex-row gap-2 justify-center' : 'flex-row justify-between'} items-center relative z-10`}>
           <span 
-            className={`font-medium tracking-wide ${isCenter ? 'text-[10px] sm:text-xs md:text-sm lg:text-xs opacity-70' : 'text-xs sm:text-sm md:text-base lg:text-sm'}`}
+            className={`font-medium tracking-wide ${isCenter ? 'text-[10px] sm:text-xs md:text-xs lg:text-xs opacity-70' : 'text-xs sm:text-sm md:text-sm lg:text-sm'}`}
             style={{ color: isCenter ? '#94a3b8' : color }}
           >
             {label}
           </span>
           {!isCenter && (
             <div 
-              className="font-bold tabular-nums text-base sm:text-lg md:text-xl lg:text-lg"
+              className="font-bold tabular-nums text-base sm:text-lg md:text-lg lg:text-lg"
               style={{ 
                 color: 'white',
                 textShadow: `0 0 10px ${color}60`,
@@ -90,7 +90,7 @@ const FlowLine: React.FC<FlowLineProps> = ({ fromColor, toColor, fromWidth, toWi
   const toSpread = 20 + toWidth * 30;
   
   return (
-    <div className="relative h-4 sm:h-6 md:h-8 lg:h-6 w-full flex items-center justify-center overflow-hidden shrink">
+    <div className="relative h-4 sm:h-6 md:h-5 lg:h-6 w-full flex items-center justify-center overflow-hidden shrink">
       {/* Flow lines SVG */}
       <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
         <defs>
@@ -166,7 +166,7 @@ export const MobileVisualization: React.FC<MobileVisualizationProps> = ({
   const fansScale = 0.8 + progress * 0.2;
   
   return (
-    <div className="w-full max-w-[280px] sm:max-w-[360px] md:max-w-[420px] lg:max-w-[420px] mx-auto px-2 h-full max-h-full flex flex-col justify-center overflow-hidden">
+    <div className="w-full max-w-[280px] sm:max-w-[360px] md:max-w-[320px] lg:max-w-[420px] mx-auto px-2 h-full max-h-full flex flex-col justify-center overflow-hidden">
       {/* Stages with connecting flow lines */}
       <div className="flex flex-col shrink min-h-0">
         {/* Contributors */}
