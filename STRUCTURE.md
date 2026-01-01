@@ -43,7 +43,7 @@ Current sections:
 - **`Community/`**: `useCommunityTopics.ts`, `MediaGallery.tsx`, `TopicCard.tsx`, `types.ts`, `utils.ts`, `index.tsx`
 - **`Reigh/`**: `data.ts`, `useInViewStart.ts`, `useTravelAutoAdvance.ts`, `TravelSelector.tsx`, `index.tsx`
 - **`ArcaGidan/`**: `data.ts`, `useVideoPreview.ts`, `VideoPreviewCard.tsx`, `index.tsx`
-- **`Events/`**: `data.ts`, `types.ts`, `EventContent.tsx`, `EventSelector.tsx`, `Polaroid.tsx`, `index.tsx`
+- **`ADOS/`**: `data.ts`, `types.ts`, `EventContent.tsx`, `EventSelector.tsx`, `Polaroid.tsx`, `useEventsAutoAdvance.ts`, `index.tsx`
 - **`Ecosystem/`**: `config.ts`, `eventConfig.ts`, `utils.ts`, `RiverVisualization.tsx`, `TimelineScrubber.tsx`, `index.tsx`
 - **`Ownership/`**: `useOwnershipData.ts`, `useProfilePics.ts`, `ProfileImage.tsx`, `config.ts`, `data.ts`, `utils.ts`, `index.tsx`
 
@@ -63,7 +63,7 @@ That works because each section folder exports from `index.tsx`.
 - **`src/components/layout/Footer.tsx`**
 - **`src/components/layout/Section.tsx`**: Shared section wrapper for snap-scroll behavior.
 
-Note: On `/`, the `Header` is rendered **inside `Hero/index.tsx`** so it belongs to the first snap section.
+Note: On `/`, the `Header` is rendered by `MainLayout` **inside the home scroll container** (and is `md:fixed`), so it overlays all snap sections.
 
 ### Shared utilities
 
@@ -84,10 +84,10 @@ These hooks provide unified, stable visibility + pause/resume behavior across se
 - **`src/lib/useAutoPauseVideo.ts`**: Video-specific pause/resume hook. Handles common edge cases:
   - `isActive` / `hasStarted` — from section visibility
   - `canResume` — blocking conditions (e.g., `!showLightbox`)
-  - `startOffset` / `loopToOffset` — skip intro frames, reset on loop
   - `pauseOnly` — for hover-triggered videos (don't auto-resume)
-  - `autoPlayOnStart` — let component control first play
-  - `onPause` / `onBeforeResume` / `onAfterResume` — callbacks for cleanup, prep, Mobile Safari workarounds
+  - `pauseDelayMs` — debounce pause to avoid play/pause thrash on fast scroll
+  - `retryDelayMs` / `maxRetries` — retry play attempts for mobile browser flakiness
+  - `onPause` / `onBeforeResume` — callbacks for cleanup and “prepare before play” (seek/rate/etc.). Return `false` from `onBeforeResume` to abort.
 
   Notes:
   - `useAutoPauseVideo` is best for **single-video** or “one video per card” patterns. For more complex flows (multiple videos where only one is active, audio + rewind animations, mixed image/video carousels with timers), keep the section’s bespoke logic or build a dedicated hook for that subsystem.

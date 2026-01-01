@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 // Nav sections that should be highlighted
@@ -30,12 +30,6 @@ export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const isHomePage = location.pathname === '/';
-
-  // Close mobile menu when navigating
-  const handleMobileNavClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    scrollToSection(e, id);
-    setMobileMenuOpen(false);
-  }, []);
 
   useEffect(() => {
     if (!isHomePage) {
@@ -117,10 +111,21 @@ export const Header = () => {
         
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          <a href="#community" onClick={(e) => scrollToSection(e, 'community')} className={getLinkClasses('community')}>Community</a>
-          <a href="#reigh" onClick={(e) => scrollToSection(e, 'reigh')} className={getLinkClasses('reigh')}>Reigh</a>
-          <a href="#arca-gidan" onClick={(e) => scrollToSection(e, 'arca-gidan')} className={getLinkClasses('arca-gidan')}>Arca Gidan</a>
-          <a href="#ados" onClick={(e) => scrollToSection(e, 'ados')} className={getLinkClasses('ados')}>ADOS</a>
+          {isHomePage ? (
+            <>
+              <a href="#community" onClick={(e) => scrollToSection(e, 'community')} className={getLinkClasses('community')}>Community</a>
+              <a href="#reigh" onClick={(e) => scrollToSection(e, 'reigh')} className={getLinkClasses('reigh')}>Reigh</a>
+              <a href="#arca-gidan" onClick={(e) => scrollToSection(e, 'arca-gidan')} className={getLinkClasses('arca-gidan')}>Arca Gidan</a>
+              <a href="#ados" onClick={(e) => scrollToSection(e, 'ados')} className={getLinkClasses('ados')}>ADOS</a>
+            </>
+          ) : (
+            <>
+              <Link to="/" state={{ scrollTo: 'community' }} className={getLinkClasses('community')}>Community</Link>
+              <Link to="/" state={{ scrollTo: 'reigh' }} className={getLinkClasses('reigh')}>Reigh</Link>
+              <Link to="/" state={{ scrollTo: 'arca-gidan' }} className={getLinkClasses('arca-gidan')}>Arca Gidan</Link>
+              <Link to="/" state={{ scrollTo: 'ados' }} className={getLinkClasses('ados')}>ADOS</Link>
+            </>
+          )}
         </nav>
 
         {/* Mobile hamburger button */}
@@ -148,34 +153,85 @@ export const Header = () => {
         }`}
       >
         <div className="grid grid-cols-4 py-3 border-b border-white/15">
-          <a 
-            href="#community" 
-            onClick={(e) => handleMobileNavClick(e, 'community')} 
-            className={getLinkClasses('community') + ' text-center text-xs py-1'}
-          >
-            Discord
-          </a>
-          <a 
-            href="#reigh" 
-            onClick={(e) => handleMobileNavClick(e, 'reigh')} 
-            className={getLinkClasses('reigh') + ' text-center text-xs py-1'}
-          >
-            Reigh
-          </a>
-          <a 
-            href="#arca-gidan" 
-            onClick={(e) => handleMobileNavClick(e, 'arca-gidan')} 
-            className={getLinkClasses('arca-gidan') + ' text-center text-xs py-1'}
-          >
-            Arca Gidan
-          </a>
-          <a 
-            href="#ados" 
-            onClick={(e) => handleMobileNavClick(e, 'ados')} 
-            className={getLinkClasses('ados') + ' text-center text-xs py-1'}
-          >
-            ADOS
-          </a>
+          {isHomePage ? (
+            <>
+              <a
+                href="#community"
+                onClick={(e) => {
+                  scrollToSection(e, 'community');
+                  setMobileMenuOpen(false);
+                }}
+                className={getLinkClasses('community') + ' text-center text-xs py-1'}
+              >
+                Discord
+              </a>
+              <a
+                href="#reigh"
+                onClick={(e) => {
+                  scrollToSection(e, 'reigh');
+                  setMobileMenuOpen(false);
+                }}
+                className={getLinkClasses('reigh') + ' text-center text-xs py-1'}
+              >
+                Reigh
+              </a>
+              <a
+                href="#arca-gidan"
+                onClick={(e) => {
+                  scrollToSection(e, 'arca-gidan');
+                  setMobileMenuOpen(false);
+                }}
+                className={getLinkClasses('arca-gidan') + ' text-center text-xs py-1'}
+              >
+                Arca Gidan
+              </a>
+              <a
+                href="#ados"
+                onClick={(e) => {
+                  scrollToSection(e, 'ados');
+                  setMobileMenuOpen(false);
+                }}
+                className={getLinkClasses('ados') + ' text-center text-xs py-1'}
+              >
+                ADOS
+              </a>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/"
+                state={{ scrollTo: 'community' }}
+                onClick={() => setMobileMenuOpen(false)}
+                className={getLinkClasses('community') + ' text-center text-xs py-1'}
+              >
+                Discord
+              </Link>
+              <Link
+                to="/"
+                state={{ scrollTo: 'reigh' }}
+                onClick={() => setMobileMenuOpen(false)}
+                className={getLinkClasses('reigh') + ' text-center text-xs py-1'}
+              >
+                Reigh
+              </Link>
+              <Link
+                to="/"
+                state={{ scrollTo: 'arca-gidan' }}
+                onClick={() => setMobileMenuOpen(false)}
+                className={getLinkClasses('arca-gidan') + ' text-center text-xs py-1'}
+              >
+                Arca Gidan
+              </Link>
+              <Link
+                to="/"
+                state={{ scrollTo: 'ados' }}
+                onClick={() => setMobileMenuOpen(false)}
+                className={getLinkClasses('ados') + ' text-center text-xs py-1'}
+              >
+                ADOS
+              </Link>
+            </>
+          )}
         </div>
       </nav>
     </header>

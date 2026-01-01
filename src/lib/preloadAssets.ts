@@ -6,7 +6,7 @@
 import { useEffect } from 'react';
 import { travelExamples } from '@/components/sections/Reigh/data';
 import { artworks } from '@/components/sections/ArcaGidan/data';
-import { events } from '@/components/sections/Events/data';
+import { events } from '@/components/sections/ADOS/data';
 import { shouldPreloadVideos } from './device';
 
 let didPreload = false;

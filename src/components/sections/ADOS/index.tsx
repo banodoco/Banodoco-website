@@ -8,7 +8,7 @@ import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { Section, SectionContent } from '@/components/layout/Section';
 import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
 
-export const Events: React.FC = () => {
+export const ADOS: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
