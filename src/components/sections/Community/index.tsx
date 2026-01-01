@@ -182,7 +182,7 @@ export const Community = () => {
             </div>
 
             {/* Right side - Topic cards (independently scrollable) */}
-            <div className="col-span-8 overflow-y-auto py-8">
+            <div className="col-span-8 overflow-y-auto py-8 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {loading && (
                 <div className="flex items-center justify-center py-20">
                   <div className="animate-pulse text-white/40">Loading latest updates...</div>
