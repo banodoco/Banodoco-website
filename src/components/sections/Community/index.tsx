@@ -161,25 +161,25 @@ export const Community = () => {
 
   return (
     <Section ref={sectionRef} id="community" className="bg-gradient-to-br from-[#0c1420] via-[#101825] to-[#0a1018] text-white">
-      <div ref={containerRef} className="h-full overflow-hidden xl:overflow-y-auto px-6 md:px-16 xl:py-12 flex items-center xl:items-start">
+      <div ref={containerRef} className="h-full overflow-hidden xl:overflow-y-auto px-6 md:px-16 xl:pb-12 flex items-center xl:items-start" style={{ paddingTop: 'var(--header-height)' }}>
         <div className="max-w-7xl mx-auto w-full">
           {/* Mobile/tablet intro - shown above cards */}
           <div className="mb-8 xl:hidden">
-            <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
+            <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
               Our Discord is a gathering place for people from across the ecosystem
             </h2>
-            <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-8">
+            <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-4 md:mb-6">
               We've been at the cutting-edge of the technical & artistic scenes over the past two years.
             </p>
             <a 
               href="https://discord.gg/NnFxGvx94b" 
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-white/90 transition-colors"
+              className="inline-flex items-center gap-2 text-sky-400 font-medium hover:text-sky-300 transition-colors"
             >
               Join Discord
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             </a>
           </div>
@@ -255,18 +255,18 @@ export const Community = () => {
               <h2 className="text-5xl font-normal tracking-tight leading-[1.15] mb-6">
                 Our Discord is a gathering place for people from across the ecosystem
               </h2>
-              <p className="text-lg text-white/60 leading-relaxed mb-8">
+              <p className="text-lg text-white/60 leading-relaxed mb-6">
                 We've been at the cutting-edge of the technical & artistic scenes over the past two years.
               </p>
               <a 
                 href="https://discord.gg/NnFxGvx94b" 
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-white/90 transition-colors"
+                className="inline-flex items-center gap-2 text-sky-400 font-medium hover:text-sky-300 transition-colors"
               >
                 Join Discord
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
             </div>

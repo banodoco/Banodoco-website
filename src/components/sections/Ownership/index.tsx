@@ -7,9 +7,9 @@ export const Ownership = () => {
   const { visiblePics, allPics, usedPicsRef, handleSwap } = useProfilePics();
 
   return (
-    <Section className="bg-gradient-to-br from-[#1a1614] via-[#1f1a18] to-[#141210] text-white flex flex-col justify-center items-center">
-      {/* Centered container for both grid and text */}
-      <div className="w-full">
+    <Section id="ownership" className="bg-gradient-to-br from-[#1a1614] via-[#1f1a18] to-[#141210] text-white">
+      {/* Full height flex container with header offset */}
+      <div className="h-full flex flex-col justify-center gap-6 md:gap-8" style={{ paddingTop: 'var(--header-height)' }}>
         {/* Profile grid */}
         <div className="profile-grid">
           {visiblePics.map((pic, idx) => (
@@ -24,11 +24,11 @@ export const Ownership = () => {
         </div>
         
         {/* Text content below */}
-        <div className="px-6 md:px-16 pt-12 md:pt-16 pb-8">
-          <div className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row lg:items-stretch lg:justify-between gap-8 lg:gap-16">
+        <div className="px-6 md:px-16">
+          <div className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row lg:items-stretch lg:justify-between gap-4 md:gap-6 lg:gap-16">
             {/* Header */}
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-light tracking-tight leading-[1.15] text-left">
-              We're sharing <span className="text-white font-normal">100%</span>
+            <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] text-left">
+              We're sharing <span className="text-white font-semibold">100%</span>
               <br className="hidden md:block" />
               {' '}of our company's ownership
               <br className="hidden md:block" />
@@ -39,7 +39,7 @@ export const Ownership = () => {
             
             {/* Subtext on the right */}
             <div className="lg:max-w-xs text-left shrink-0 flex flex-col lg:justify-between">
-              <p className="text-sm md:text-base text-white/60 leading-relaxed">
+              <p className="text-sm md:text-lg text-white/60 leading-relaxed">
                 Aside from investor dilution, open source contributors will own all of our company. We believe that a company that's built with the community should belong to the community.
               </p>
               

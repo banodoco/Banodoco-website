@@ -175,10 +175,10 @@ export const Reigh: React.FC = () => {
 
             {/* Right side - Text */}
             <div className="order-1 lg:order-2">
-              <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
+              <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
                 Reigh is an open source art tool for travelling between images
               </h2>
-              <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-8">
+              <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-4 md:mb-6">
                 We believe that there's an artform waiting to be discovered in the AI-powered journey from one image to another.
               </p>
               <a 
@@ -187,9 +187,9 @@ export const Reigh: React.FC = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
               >
-                Learn more
+                Try it out
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
             </div>

@@ -10,6 +10,48 @@ interface RiverVisualizationProps {
   eventOverlay?: ReactNode;
 }
 
+// Label component for consistent styling
+interface LabelProps {
+  label: string;
+  value: number;
+  color: string;
+  left: string;
+  top: string;
+  large?: boolean;
+}
+
+const Label: FC<LabelProps> = ({ label, value, color, left, top, large }) => (
+  <div
+    className="absolute pointer-events-auto"
+    style={{
+      left,
+      top,
+      transform: 'translate(-50%, -50%)',
+      zIndex: 30,
+    }}
+  >
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        background: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(8px)',
+        borderRadius: '8px',
+        padding: large ? '8px 14px' : '6px 12px',
+        border: `1px solid ${color}40`,
+      }}
+    >
+      <span style={{ fontSize: 11, fontWeight: 600, color, fontFamily: 'system-ui' }}>
+        {label}
+      </span>
+      <span style={{ fontSize: large ? 24 : 18, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui' }}>
+        <AnimatedNumber value={value} />
+      </span>
+    </div>
+  </div>
+);
+
 export const RiverVisualization: FC<RiverVisualizationProps> = ({ progress, stats, waveX, eventOverlay }) => {
   const { ribbons, lines } = useMemo(() => {
     const ribbons: ReactElement[] = [];
@@ -182,159 +224,120 @@ export const RiverVisualization: FC<RiverVisualizationProps> = ({ progress, stat
   // Wave band width in SVG units
   const waveWidth = 80;
 
+  // Calculate label positions as percentages
+  const { width, height: svgHeight } = SVG_CONFIG;
+  const contribCenterX = (STAGE_X.start + STAGE_X.reigh) / 2;
+  const toolsCenterX = (STAGE_X.reigh + STAGE_X.tools) / 2;
+  const artistsCenterX = (STAGE_X.tools + STAGE_X.artists) / 2;
+  const fansCenterX = (STAGE_X.artists + STAGE_X.fans) / 2;
+
   return (
-    <svg
-      viewBox={`0 0 ${SVG_CONFIG.width} ${SVG_CONFIG.height}`}
-      className="w-full h-full"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      <defs>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        
-        {/* Distortion wave filter - uses turbulence masked to a vertical band */}
-        <filter id="distortion-wave" x="-10%" y="-10%" width="120%" height="120%">
-          {/* Create turbulence pattern for displacement */}
-          <feTurbulence 
-            type="turbulence" 
-            baseFrequency="0.015 0.04" 
-            numOctaves="2" 
-            seed="42"
-            result="turbulence"
-          />
-          
-          {/* Apply displacement using the turbulence */}
-          <feDisplacementMap
-            in="SourceGraphic"
-            in2="turbulence"
-            scale="12"
-            xChannelSelector="R"
-            yChannelSelector="G"
-            result="displaced"
-          />
-          
-          {/* Create a horizontal gradient mask for the wave band */}
-          <feFlood floodColor="black" result="black" />
-          <feFlood floodColor="white" result="white" />
-          
-          {/* Composite to create the final masked displacement */}
-          <feComposite in="displaced" in2="SourceGraphic" operator="over" />
-        </filter>
-        
-        {/* Clip path that moves with the wave - creates a vertical stripe */}
-        {hasWave && (
-          <clipPath id="wave-clip">
-            <rect 
-              x={waveX! - waveWidth / 2} 
-              y={0} 
-              width={waveWidth} 
-              height={height} 
-            />
-          </clipPath>
-        )}
-      </defs>
-
-      <g>{ribbons}</g>
-      
-      {/* Normal lines (not affected by wave) */}
-      <g>{lines}</g>
-      
-      {/* Distorted lines overlay (only in the wave band) */}
-      {hasWave && (
-        <g 
-          clipPath="url(#wave-clip)" 
-          filter="url(#distortion-wave)"
-          style={{ opacity: 0.9 }}
-        >
-          {lines}
-        </g>
-      )}
-      
-      {/* Event animation overlay */}
-      {eventOverlay}
-
-      {/* Labels - centered over each segment */}
-      <g fontFamily="system-ui" fontWeight="600" fill="white">
-        {/* Text shadow filter for legibility */}
+    <div className="relative w-full h-full">
+      <svg
+        viewBox={`0 0 ${SVG_CONFIG.width} ${SVG_CONFIG.height}`}
+        className="w-full h-full"
+        preserveAspectRatio="xMidYMid meet"
+      >
         <defs>
-          <filter id="text-shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="black" floodOpacity="0.8" />
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
           </filter>
+          
+          {/* Distortion wave filter - uses turbulence masked to a vertical band */}
+          <filter id="distortion-wave" x="-10%" y="-10%" width="120%" height="120%">
+            {/* Create turbulence pattern for displacement */}
+            <feTurbulence 
+              type="turbulence" 
+              baseFrequency="0.015 0.04" 
+              numOctaves="2" 
+              seed="42"
+              result="turbulence"
+            />
+            
+            {/* Apply displacement using the turbulence */}
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="turbulence"
+              scale="12"
+              xChannelSelector="R"
+              yChannelSelector="G"
+              result="displaced"
+            />
+            
+            {/* Create a horizontal gradient mask for the wave band */}
+            <feFlood floodColor="black" result="black" />
+            <feFlood floodColor="white" result="white" />
+            
+            {/* Composite to create the final masked displacement */}
+            <feComposite in="displaced" in2="SourceGraphic" operator="over" />
+          </filter>
+          
+          {/* Clip path that moves with the wave - creates a vertical stripe */}
+          {hasWave && (
+            <clipPath id="wave-clip">
+              <rect 
+                x={waveX! - waveWidth / 2} 
+                y={0} 
+                width={waveWidth} 
+                height={height} 
+              />
+            </clipPath>
+          )}
         </defs>
 
-        {/* Contributors - centered over segment from start to reigh */}
-        {(() => {
-          const segmentCenter = (STAGE_X.start + STAGE_X.reigh) / 2;
-          return (
-            <>
-              <text x={segmentCenter} y={centerY - 30 - progress * 30} fill={COLORS.contributors} textAnchor="middle" fontSize="13" filter="url(#text-shadow)">
-                Contributors
-              </text>
-              <foreignObject x={segmentCenter - 50} y={centerY - 28 - progress * 30} width="100" height="28">
-                <div style={{ fontSize: 18, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center', textShadow: '0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)' }}>
-                  <AnimatedNumber value={stats.contributors} />
-                </div>
-              </foreignObject>
-            </>
-          );
-        })()}
+        <g>{ribbons}</g>
+        
+        {/* Normal lines (not affected by wave) */}
+        <g>{lines}</g>
+        
+        {/* Distorted lines overlay (only in the wave band) */}
+        {hasWave && (
+          <g 
+            clipPath="url(#wave-clip)" 
+            filter="url(#distortion-wave)"
+            style={{ opacity: 0.9 }}
+          >
+            {lines}
+          </g>
+        )}
+        
+        {/* Event animation overlay */}
+        {eventOverlay}
+      </svg>
 
-        {/* Tools - centered over segment from reigh to tools */}
-        {(() => {
-          const segmentCenter = (STAGE_X.reigh + STAGE_X.tools) / 2;
-          return (
-            <>
-              <text x={segmentCenter} y={centerY - 40 - progress * 40} fill={COLORS.tools} textAnchor="middle" fontSize="13" filter="url(#text-shadow)">
-                Tools
-              </text>
-              <foreignObject x={segmentCenter - 50} y={centerY - 38 - progress * 40} width="100" height="28">
-                <div style={{ fontSize: 18, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center', textShadow: '0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)' }}>
-                  <AnimatedNumber value={stats.tools} />
-                </div>
-              </foreignObject>
-            </>
-          );
-        })()}
-
-        {/* Artists - centered over segment from tools to artists */}
-        {(() => {
-          const segmentCenter = (STAGE_X.tools + STAGE_X.artists) / 2;
-          return (
-            <>
-              <text x={segmentCenter} y={centerY - 50 - progress * 60} fill={COLORS.artists} textAnchor="middle" fontSize="13" filter="url(#text-shadow)">
-                Artists
-              </text>
-              <foreignObject x={segmentCenter - 50} y={centerY - 48 - progress * 60} width="100" height="28">
-                <div style={{ fontSize: 18, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center', textShadow: '0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)' }}>
-                  <AnimatedNumber value={stats.artists} />
-                </div>
-              </foreignObject>
-            </>
-          );
-        })()}
-
-        {/* Fans - centered over segment from artists to fans */}
-        {(() => {
-          const segmentCenter = (STAGE_X.artists + STAGE_X.fans) / 2;
-          return (
-            <>
-              <text x={segmentCenter} y={centerY - 55 - progress * 80} fill={COLORS.fans} textAnchor="middle" fontSize="13" filter="url(#text-shadow)">
-                Fans
-              </text>
-              <foreignObject x={segmentCenter - 70} y={centerY - 53 - progress * 80} width="140" height="34">
-                <div style={{ fontSize: 24, fontWeight: 'bold', color: 'white', fontFamily: 'system-ui', textAlign: 'center', textShadow: '0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6)' }}>
-                  <AnimatedNumber value={stats.fans} />
-                </div>
-              </foreignObject>
-            </>
-          );
-        })()}
-      </g>
-    </svg>
+      {/* HTML Labels - positioned above everything with z-index */}
+      <Label
+        label="Contributors"
+        value={stats.contributors}
+        color={COLORS.contributors}
+        left={`${(contribCenterX / width) * 100}%`}
+        top={`${((centerY - 24 - progress * 30) / svgHeight) * 100}%`}
+      />
+      <Label
+        label="Tools"
+        value={stats.tools}
+        color={COLORS.tools}
+        left={`${(toolsCenterX / width) * 100}%`}
+        top={`${((centerY - 30 - progress * 40) / svgHeight) * 100}%`}
+      />
+      <Label
+        label="Artists"
+        value={stats.artists}
+        color={COLORS.artists}
+        left={`${(artistsCenterX / width) * 100}%`}
+        top={`${((centerY - 40 - progress * 60) / svgHeight) * 100}%`}
+      />
+      <Label
+        label="Fans"
+        value={stats.fans}
+        color={COLORS.fans}
+        left={`${(fansCenterX / width) * 100}%`}
+        top={`${((centerY - 50 - progress * 80) / svgHeight) * 100}%`}
+      />
+    </div>
   );
 };

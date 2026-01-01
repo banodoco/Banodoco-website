@@ -50,16 +50,20 @@ interface SectionContentProps {
 /**
  * Centered content container for sections.
  * Vertically and horizontally centers content within the section.
+ * Uses CSS variable --header-height on desktop to account for fixed header.
  * 
  * Usage:
  * - Wrap your content in this for standard centered layout
  * - Add className for custom padding/overflow behavior
  */
 export const SectionContent = ({ children, className }: SectionContentProps) => (
-  <div className={cn(
-    "h-full px-6 md:px-16 flex items-center",
-    className
-  )}>
+  <div 
+    className={cn(
+      "h-full px-6 md:px-16 flex items-center",
+      className
+    )}
+    style={{ paddingTop: 'var(--header-height)' }}
+  >
     <div className="max-w-7xl mx-auto w-full">
       {children}
     </div>

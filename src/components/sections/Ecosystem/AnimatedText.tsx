@@ -78,3 +78,4 @@ export const AnimatedText: React.FC<AnimatedTextProps> = ({
   );
 };
 
+

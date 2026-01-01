@@ -21,12 +21,14 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     // Use stable viewport height for the snap container to avoid mobile dvh relayout flicker.
     // Also keep a dark base bg so any transient "unpainted" areas during scroll-snap
     // (common on iOS/Safari compositing) don't flash white.
-    return 'h-screen h-[100svh] overflow-y-auto snap-y snap-mandatory overscroll-none bg-[#0b0b0f] text-foreground';
+    // relative is needed for absolute positioned header on mobile
+    return 'relative h-screen h-[100svh] overflow-y-auto snap-y snap-mandatory overscroll-none bg-[#0b0b0f] text-foreground';
   }, []);
 
   if (isHome) {
     return (
       <div 
+        id="home-scroll-container"
         className={homeScrollClasses}
         style={{
           // iOS momentum scrolling + scroll-snap can produce intermittent white "checkerboarding".
@@ -34,6 +36,8 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           ...(isIOSDevice ? { WebkitOverflowScrolling: 'auto' as const } : {}),
         }}
       >
+        {/* Fixed header on desktop overlays the content */}
+        <Header />
         {children}
         <Footer />
       </div>

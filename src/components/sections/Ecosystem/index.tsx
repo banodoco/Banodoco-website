@@ -182,9 +182,9 @@ export const Ecosystem: React.FC = () => {
   }, []);
 
   return (
-    <Section ref={sectionRef} className="bg-gradient-to-br from-[#0c1a14] via-[#102018] to-[#081510] text-white relative">
-      {/* Header - positioned at ~8% from top on desktop, higher on mobile */}
-      <div className="absolute top-[4%] xl:top-[8%] left-4 right-4 z-20 flex justify-center">
+    <Section ref={sectionRef} id="ecosystem" className="bg-gradient-to-br from-[#0c1a14] via-[#102018] to-[#081510] text-white relative">
+      {/* Header - positioned below the fixed nav header on desktop */}
+      <div className="absolute top-[4%] xl:top-[calc(8%+var(--header-height))] left-4 right-4 z-20 flex justify-center">
         <div className="w-full max-w-4xl bg-black/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10 text-center">
           <h2 className="text-xl md:text-2xl lg:text-3xl font-normal tracking-tight leading-tight">
             We aim to support, energise & equip the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions fall in love with AI
@@ -195,8 +195,8 @@ export const Ecosystem: React.FC = () => {
         </div>
       </div>
 
-      {/* Desktop River visualization */}
-      <div className="absolute inset-0 hidden xl:flex items-center justify-center pointer-events-none pt-8">
+      {/* Desktop River visualization - centered between header and timeline, accounting for fixed nav */}
+      <div className="absolute inset-x-0 top-[calc(18%+var(--header-height))] bottom-[calc(18%-2rem)] hidden xl:flex items-center justify-center pointer-events-none">
         <div className="w-full max-w-7xl px-4">
           <RiverVisualization 
             progress={progress} 
@@ -214,7 +214,7 @@ export const Ecosystem: React.FC = () => {
       </div>
       
       {/* Mobile/tablet visualization - centered with equal margins for header/timeline */}
-      <div className="absolute inset-x-0 top-[23%] sm:top-[20%] md:top-[17%] bottom-[17%] sm:bottom-[17%] md:bottom-[15%] flex xl:hidden items-center justify-center pointer-events-none px-4 md:px-8 lg:px-12">
+      <div className="absolute inset-x-0 top-[27%] sm:top-[24%] md:top-[21%] bottom-[17%] sm:bottom-[17%] md:bottom-[15%] flex xl:hidden items-center justify-center pointer-events-none px-4 md:px-8 lg:px-12">
         <MobileVisualization 
           progress={progress}
           stats={stats}

@@ -103,10 +103,10 @@ export const Events: React.FC = () => {
 
             {/* Right side - Text */}
             <div className="lg:col-span-5 order-1 lg:order-2">
-              <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
+              <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
                 ADOS events bring the community together in the real world
               </h2>
-              <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-8">
+              <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-4 md:mb-6">
                 We gather our community with people from the extended creative world to look at art, eat nice food, and create things.
               </p>
               <a
@@ -115,7 +115,7 @@ export const Events: React.FC = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-rose-400 font-medium hover:text-rose-300 transition-colors"
               >
-                See website
+                See upcoming events
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>

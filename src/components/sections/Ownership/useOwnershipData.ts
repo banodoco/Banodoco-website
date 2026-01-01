@@ -27,3 +27,4 @@ export const useOwnershipData = () => {
   return { data, loading, error };
 };
 
+

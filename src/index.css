@@ -16,6 +16,16 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+
+    /* Header height: used for section content offset on desktop where header is fixed */
+    --header-height: 0px;
+  }
+
+  /* On md+ screens, header is fixed and takes up space */
+  @media (min-width: 768px) {
+    :root {
+      --header-height: 64px;
+    }
   }
 
   html {
