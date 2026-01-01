@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { getScreenSize, type ScreenSize } from '@/lib/breakpoints';
 import type { PhotoItem } from './types';
 
 interface PolaroidProps {
@@ -15,16 +16,24 @@ interface PolaroidProps {
   onHoverChange?: (isHovered: boolean) => void;
 }
 
-// Shared screen size state - only one resize listener for all Polaroids
+// =============================================================================
+// Screen Size Detection (singleton pattern - one resize listener for all Polaroids)
+// =============================================================================
+
+// Scale factor when polaroid is expanded (clicked/focused)
+const EXPANDED_SCALE: Record<ScreenSize, number> = {
+  mobile: 4,
+  tablet: 3.2,
+  desktop: 2.5,
+};
+
+// Shared state across all Polaroid instances
 let listenerCount = 0;
-let screenSizeGlobal: 'mobile' | 'tablet' | 'desktop' = typeof window !== 'undefined' 
-  ? window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1280 ? 'tablet' : 'desktop'
-  : 'mobile';
+let screenSizeGlobal: ScreenSize = getScreenSize();
 const screenListeners = new Set<() => void>();
 
 const handleResize = () => {
-  const newSize: 'mobile' | 'tablet' | 'desktop' = 
-    window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1280 ? 'tablet' : 'desktop';
+  const newSize = getScreenSize();
   if (newSize !== screenSizeGlobal) {
     screenSizeGlobal = newSize;
     screenListeners.forEach(cb => cb());
@@ -112,8 +121,14 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   // Get position based on screen size
   const mobilePos = useMemo(() => getMobilePosition(index), [index]);
   const tabletPos = useMemo(() => getTabletPosition(index), [index]);
-  const posX = screenSize === 'mobile' ? mobilePos.x : screenSize === 'tablet' ? tabletPos.x : photo.x;
-  const posY = screenSize === 'mobile' ? mobilePos.y : screenSize === 'tablet' ? tabletPos.y : photo.y;
+  
+  const { posX, posY } = useMemo(() => {
+    switch (screenSize) {
+      case 'mobile': return { posX: mobilePos.x, posY: mobilePos.y };
+      case 'tablet': return { posX: tabletPos.x, posY: tabletPos.y };
+      default:       return { posX: photo.x, posY: photo.y };
+    }
+  }, [screenSize, mobilePos, tabletPos, photo.x, photo.y]);
 
   // Smoothly reduce rotation on hover for a "picked up" effect
   const hoverRotation = photo.rotation * 0.3;
@@ -202,11 +217,15 @@ export const Polaroid: React.FC<PolaroidProps> = ({
           isExpanded && "shadow-2xl"
         )}
         style={{
-          transform: isExpanded 
-            ? `rotate(0deg) scale(${screenSize === 'mobile' ? 4 : screenSize === 'tablet' ? 3.2 : 2.5}) translateY(-20%)`
-            : isHovered 
-              ? `rotate(${hoverRotation}deg) scale(1.15) translateY(-8px)`
-              : `rotate(${photo.rotation}deg) scale(1) translateY(0)`,
+          transform: (() => {
+            if (isExpanded) {
+              return `rotate(0deg) scale(${EXPANDED_SCALE[screenSize]}) translateY(-20%)`;
+            }
+            if (isHovered) {
+              return `rotate(${hoverRotation}deg) scale(1.15) translateY(-8px)`;
+            }
+            return `rotate(${photo.rotation}deg) scale(1) translateY(0)`;
+          })(),
           transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease-out',
         }}
       >

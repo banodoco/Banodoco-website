@@ -16,7 +16,7 @@ const DiscordIcon = ({ className }: { className?: string }) => (
 
 export const Footer = () => {
   return (
-    <footer className="bg-[#0b0b0f] border-t border-white/5">
+    <footer className="bg-[#0b0b0f] border-t border-white/5 snap-end">
       <div className="flex justify-center items-center gap-8 py-12">
         <a 
           href="https://twitter.com/banodoco" 

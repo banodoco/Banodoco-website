@@ -1,10 +1,8 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
+import { BREAKPOINTS } from '@/lib/breakpoints';
 import { REWIND_SOUND_SRC, REWIND_DURATION_MS, PLAYBACK_RATE } from './config';
-
-// Tailwind xl breakpoint - must match the xl:hidden / hidden xl:block classes in HeroVideo.tsx
-const XL_BREAKPOINT = 1280;
 
 export interface HeroVideoState {
   posterLoaded: boolean;
@@ -47,11 +45,11 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
 
   // Track breakpoint for conditional rendering in parent
   const [isMobileView, setIsMobileView] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth < XL_BREAKPOINT : true
+    typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.xl : true
   );
 
   useEffect(() => {
-    const handleResize = () => setIsMobileView(window.innerWidth < XL_BREAKPOINT);
+    const handleResize = () => setIsMobileView(window.innerWidth < BREAKPOINTS.xl);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
