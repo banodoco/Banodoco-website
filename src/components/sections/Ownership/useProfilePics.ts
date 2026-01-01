@@ -1,12 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { GRID_SIZE } from './config';
 import { shuffleArray } from './utils';
+import { PROFILE_PIC_IDS } from './profilePicsManifest';
 
-// Auto-discover profile pics at build time using Vite's glob import
-const profilePicPaths = import.meta.glob('/public/profile_pics/*.jpg');
-const ALL_PROFILE_PICS = Object.keys(profilePicPaths)
-  .map(path => path.split('/').pop()?.replace('.jpg', '') ?? '')
-  .filter(Boolean);
+const ALL_PROFILE_PICS = [...PROFILE_PIC_IDS];
 
 interface UseProfilePicsResult {
   /** The currently selected/visible profile pics */
@@ -22,6 +19,7 @@ interface UseProfilePicsResult {
 export const useProfilePics = (): UseProfilePicsResult => {
   // Initialize synchronously so the grid isn't empty on first paint (especially noticeable on mobile).
   const [selectedPics] = useState<string[]>(() => {
+    if (ALL_PROFILE_PICS.length === 0) return [];
     const shuffled = shuffleArray(ALL_PROFILE_PICS);
     return shuffled.slice(0, GRID_SIZE);
   });

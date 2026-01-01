@@ -19,5 +19,19 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      /**
+       * The React Hooks plugin recently added some "React Compiler"-style rules
+       * that are too restrictive for this codebase's patterns (media timers,
+       * visibility-driven state, and refs used for stable values).
+       *
+       * We keep the important ones:
+       * - react-hooks/rules-of-hooks
+       * - react-hooks/exhaustive-deps
+       */
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/immutability': 'off',
+    },
   },
 ])

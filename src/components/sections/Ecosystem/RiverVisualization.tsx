@@ -147,7 +147,6 @@ export const RiverVisualization: FC<RiverVisualizationProps> = ({ progress, stat
       />
     );
 
-    let artistLineIdx = 0;
     toolEndpoints.forEach((toolY, tIdx) => {
       const localSpread = 12 + progress * 35;
 
@@ -172,7 +171,6 @@ export const RiverVisualization: FC<RiverVisualizationProps> = ({ progress, stat
             className="ecosystem-line"
           />
         );
-        artistLineIdx++;
       }
     });
 

@@ -22,11 +22,11 @@ const Stage: React.FC<StageProps> = ({ label, color, value, isCenter, isActive, 
   const widthPercent = isCenter ? 45 : 55 + scale * 35;
   
   return (
-    <div className="flex flex-col items-center py-0.5 sm:py-1 md:py-2 lg:py-1 shrink-0">
+    <div className="flex flex-col items-center py-0.5 sm:py-1 md:py-1.5 lg:py-1 shrink-0">
       <div 
         className={`
           relative overflow-hidden rounded-lg md:rounded-xl transition-all duration-700 ease-out
-          ${isCenter ? 'px-2 py-1 sm:px-3 sm:py-1.5 md:px-6 md:py-3 lg:px-5 lg:py-2' : 'px-3 py-1.5 sm:px-4 sm:py-2.5 md:px-8 md:py-4 lg:px-6 lg:py-3'}
+          ${isCenter ? 'px-2 py-1 sm:px-3 sm:py-1.5 md:px-5 md:py-2.5 lg:px-5 lg:py-2' : 'px-3 py-1.5 sm:px-4 sm:py-2.5 md:px-6 md:py-3 lg:px-6 lg:py-3'}
         `}
         style={{
           width: `${widthPercent}%`,
@@ -90,7 +90,7 @@ const FlowLine: React.FC<FlowLineProps> = ({ fromColor, toColor, fromWidth, toWi
   const toSpread = 20 + toWidth * 30;
   
   return (
-    <div className="relative h-4 sm:h-6 md:h-10 lg:h-6 w-full flex items-center justify-center overflow-hidden shrink">
+    <div className="relative h-4 sm:h-6 md:h-8 lg:h-6 w-full flex items-center justify-center overflow-hidden shrink">
       {/* Flow lines SVG */}
       <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
         <defs>
@@ -166,7 +166,7 @@ export const MobileVisualization: React.FC<MobileVisualizationProps> = ({
   const fansScale = 0.8 + progress * 0.2;
   
   return (
-    <div className="w-full max-w-[280px] sm:max-w-[360px] md:max-w-[500px] lg:max-w-[420px] mx-auto px-2 h-full max-h-full flex flex-col justify-center overflow-hidden">
+    <div className="w-full max-w-[280px] sm:max-w-[360px] md:max-w-[420px] lg:max-w-[420px] mx-auto px-2 h-full max-h-full flex flex-col justify-center overflow-hidden">
       {/* Stages with connecting flow lines */}
       <div className="flex flex-col shrink min-h-0">
         {/* Contributors */}

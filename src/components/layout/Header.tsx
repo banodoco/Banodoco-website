@@ -82,6 +82,11 @@ export const Header = () => {
   }, [isHomePage]);
 
   const getLinkClasses = (sectionId: string) => {
+    if (!isHomePage) {
+      // On non-home pages we use a light layout, so keep links dark and avoid section highlighting.
+      return 'text-sm font-semibold transition-colors text-gray-900/80 hover:text-gray-900';
+    }
+
     const isActive = activeSection === sectionId;
     if (!isActive) {
       return 'text-sm font-semibold transition-colors text-white/90 hover:text-white';
@@ -97,7 +102,20 @@ export const Header = () => {
   };
 
   return (
-    <header className={`absolute top-0 left-0 right-0 md:fixed px-5 md:px-16 pt-[max(env(safe-area-inset-top),16px)] pb-4 bg-black/50 backdrop-blur-lg border-b border-white/15 z-50 ${mobileMenuOpen ? 'border-b-0' : ''}`}>
+    <header
+      className={[
+        // Positioning differs between home and non-home:
+        // - Home: overlays the snap-scroll sections.
+        // - Non-home: should behave like a normal header (avoid md:fixed overlap).
+        isHomePage ? 'absolute top-0 left-0 right-0 md:fixed' : 'relative',
+        'px-5 md:px-16 pt-[max(env(safe-area-inset-top),16px)] pb-4 z-50',
+        // Visual style differs for dark home vs light pages
+        isHomePage
+          ? 'bg-black/50 backdrop-blur-lg border-b border-white/15'
+          : 'bg-[#f5f5f3]/90 backdrop-blur-lg border-b border-black/10',
+        mobileMenuOpen ? 'border-b-0' : '',
+      ].join(' ')}
+    >
       <div className="flex items-center justify-between">
         <Link to="/" onClick={(e) => scrollToTop(e, isHomePage)} className="flex items-center gap-3">
           <img
@@ -106,7 +124,7 @@ export const Header = () => {
             className="h-7 w-7"
             draggable={false}
           />
-          <span className="text-2xl font-semibold tracking-tight text-white">Banodoco</span>
+          <span className={`text-2xl font-semibold tracking-tight ${isHomePage ? 'text-white' : 'text-gray-900'}`}>Banodoco</span>
         </Link>
         
         {/* Desktop nav */}
@@ -131,7 +149,10 @@ export const Header = () => {
         {/* Mobile hamburger button */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 -mr-2 text-white/80 hover:text-white transition-colors"
+          className={[
+            "md:hidden p-2 -mr-2 transition-colors",
+            isHomePage ? "text-white/80 hover:text-white" : "text-gray-900/70 hover:text-gray-900",
+          ].join(" ")}
           aria-label="Toggle menu"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,11 +169,11 @@ export const Header = () => {
       <nav 
         className={`md:hidden overflow-hidden transition-all duration-200 ease-out -mx-5 ${
           mobileMenuOpen 
-            ? 'max-h-20 opacity-100 mt-4 border-t border-white/15' 
+            ? `max-h-20 opacity-100 mt-4 border-t ${isHomePage ? 'border-white/15' : 'border-black/10'}` 
             : 'max-h-0 opacity-0 mt-0'
         }`}
       >
-        <div className="grid grid-cols-4 py-3 border-b border-white/15">
+        <div className={`grid grid-cols-4 py-3 border-b ${isHomePage ? 'border-white/15' : 'border-black/10'}`}>
           {isHomePage ? (
             <>
               <a
@@ -163,7 +184,7 @@ export const Header = () => {
                 }}
                 className={getLinkClasses('community') + ' text-center text-xs py-1'}
               >
-                Discord
+                Community
               </a>
               <a
                 href="#reigh"
@@ -204,7 +225,7 @@ export const Header = () => {
                 onClick={() => setMobileMenuOpen(false)}
                 className={getLinkClasses('community') + ' text-center text-xs py-1'}
               >
-                Discord
+                Community
               </Link>
               <Link
                 to="/"

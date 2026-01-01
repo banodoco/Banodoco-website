@@ -66,7 +66,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
     maxRetries: 5,
   });
 
-  const openLightbox = () => {
+  const openLightbox = useCallback(() => {
     const video = videoRef.current;
     if (video) video.pause();
     setShowLightbox(true);
@@ -74,9 +74,9 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
     // Play lightbox video synchronously in click handler for iOS compatibility
     // The video element is always mounted (just hidden), so ref exists
     lightboxVideoRef.current?.play().catch(() => {});
-  };
+  }, [onLightboxChange]);
 
-  const closeLightbox = () => {
+  const closeLightbox = useCallback(() => {
     // Pause and reset lightbox video
     const lbVideo = lightboxVideoRef.current;
     if (lbVideo) {
@@ -90,7 +90,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
     if (isFullyVisible) {
       safePlay();
     }
-  };
+  }, [isFullyVisible, onLightboxChange, safePlay]);
 
   // Handle escape key to close expanded photo or lightbox
   useEffect(() => {
@@ -108,7 +108,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
       document.addEventListener('keydown', handleEscape);
     }
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [expandedPhotoIdx, showLightbox, onPauseChange]);
+  }, [expandedPhotoIdx, showLightbox, closeLightbox, onPauseChange]);
 
   // Close expanded photo on scroll
   useEffect(() => {
@@ -129,10 +129,10 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   }, [expandedPhotoIdx, onPauseChange]);
 
   // Close expanded photo helper
-  const closeExpandedPhoto = () => {
+  const closeExpandedPhoto = useCallback(() => {
     setExpandedPhotoIdx(null);
     onPauseChange?.(false);
-  };
+  }, [onPauseChange]);
 
   // Close expanded photo when clicking outside of it
   useEffect(() => {
@@ -156,12 +156,12 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
       clearTimeout(timeoutId);
       document.removeEventListener('click', handleClickOutside);
     };
-  }, [expandedPhotoIdx, onPauseChange]);
+  }, [expandedPhotoIdx, closeExpandedPhoto]);
 
   if (event.comingSoon) {
     return (
       <div 
-        className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-[16/10] rounded-xl overflow-hidden bg-white/5 flex items-center justify-center transition-opacity duration-500"
+        className="relative w-full h-full rounded-xl overflow-hidden bg-white/5 flex items-center justify-center transition-opacity duration-500"
         style={{ opacity: isFullyVisible ? 1 : 0 }}
       >
         <div className="text-center px-4">
@@ -180,7 +180,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
 
   return (
     <div 
-      className="relative aspect-[16/10] md:aspect-[16/9] lg:aspect-[16/10] rounded-xl overflow-visible"
+      className="relative w-full h-full rounded-xl overflow-visible"
     >
       {/* Touch/click blocker overlay when a card is expanded */}
       {expandedPhotoIdx !== null && (

@@ -6,6 +6,7 @@ The official website for [Banodoco](https://banodoco.ai) — built with React, T
 
 ```bash
 npm install
+cp env.example .env
 npm run dev
 ```
 

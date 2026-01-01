@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type { TopicData, MediaUrl, RawTopic } from './types';
 
 interface UseCommunityTopicsResult {
@@ -79,11 +79,20 @@ export const useCommunityTopics = (): UseCommunityTopicsResult => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const client = supabase;
+    if (!isSupabaseConfigured || !client) {
+      // Don't hard-crash the whole site just because Supabase isn't configured.
+      setTopics([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
         // Fetch daily summaries that are included in main (exclude dev mode)
         // Join with discord_channels to get channel names
-        const { data: summariesData, error: summariesError } = await supabase
+        const { data: summariesData, error: summariesError } = await client
           .from('daily_summaries')
           .select('full_summary, date, channel_id, discord_channels(channel_name)')
           .eq('included_in_main_summary', true)

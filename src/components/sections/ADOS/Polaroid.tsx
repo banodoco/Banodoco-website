@@ -18,13 +18,13 @@ interface PolaroidProps {
 // Shared screen size state - only one resize listener for all Polaroids
 let listenerCount = 0;
 let screenSizeGlobal: 'mobile' | 'tablet' | 'desktop' = typeof window !== 'undefined' 
-  ? window.innerWidth < 1024 ? 'mobile' : window.innerWidth < 1280 ? 'tablet' : 'desktop'
+  ? window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1280 ? 'tablet' : 'desktop'
   : 'mobile';
 const screenListeners = new Set<() => void>();
 
 const handleResize = () => {
   const newSize: 'mobile' | 'tablet' | 'desktop' = 
-    window.innerWidth < 1024 ? 'mobile' : window.innerWidth < 1280 ? 'tablet' : 'desktop';
+    window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1280 ? 'tablet' : 'desktop';
   if (newSize !== screenSizeGlobal) {
     screenSizeGlobal = newSize;
     screenListeners.forEach(cb => cb());
@@ -102,7 +102,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   isExpanded, 
   isVisible,
   onOpen, 
-  onClose: _onClose,
+  onClose,
   onNavigate,
   onHoverChange,
 }) => {
@@ -138,21 +138,26 @@ export const Polaroid: React.FC<PolaroidProps> = ({
 
   // Arrow key navigation when expanded
   useEffect(() => {
-    if (!isExpanded || !onNavigate) return;
+    if (!isExpanded) return;
     
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
+        if (!onNavigate) return;
         e.preventDefault();
         onNavigate('prev');
       } else if (e.key === 'ArrowRight') {
+        if (!onNavigate) return;
         e.preventDefault();
         onNavigate('next');
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
       }
     };
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isExpanded, onNavigate]);
+  }, [isExpanded, onNavigate, onClose]);
 
   // Fixed center position for expanded cards (ensures full visibility with chevrons)
   const expandedPosX = 50;
@@ -175,7 +180,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   return (
     <div
       data-polaroid
-      className="absolute w-16 sm:w-20 md:w-24 lg:w-20 xl:w-32 cursor-pointer"
+      className="absolute w-16 sm:w-20 md:w-20 lg:w-20 xl:w-32 cursor-pointer"
       style={{
         left: `${currentPosX}%`,
         top: `${currentPosY}%`,

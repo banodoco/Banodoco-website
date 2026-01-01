@@ -53,11 +53,11 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
   selectedIndexRef.current = selectedIndex;
   urlsLengthRef.current = urls.length;
   isVisibleRef.current = isVisible;
-  
-  if (urls.length === 0) return null;
-  
-  const currentMedia = urls[selectedIndex];
-  const isVideo = currentMedia.type === 'video' || !!currentMedia.url.match(/\.(mp4|webm|mov)(\?|$)/i);
+
+  // Current media is optional; keep hooks unconditional (Rules of Hooks).
+  const currentMedia = urls[selectedIndex] ?? urls[0];
+  const isVideo =
+    currentMedia?.type === 'video' || !!currentMedia?.url?.match(/\.(mp4|webm|mov)(\?|$)/i);
 
   // Single source of truth for video playback: pause/resume based on visibility.
   // This avoids racing `autoPlay` attribute vs imperative `.play()` calls.
@@ -153,6 +153,7 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
     }
 
     const media = urls[selectedIndex];
+    if (!media) return;
     const isVid = media.type === 'video' || !!media.url?.match(/\.(mp4|webm|mov)(\?|$)/i);
 
     if (!isVid) {
@@ -175,6 +176,7 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
     if (!isVisible) return;
     
     const media = urls[selectedIndex];
+    if (!media) return;
     const isVid = media.type === 'video' || !!media.url?.match(/\.(mp4|webm|mov)(\?|$)/i);
     
     if (!isVid) {
@@ -192,6 +194,8 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
     return () => clearImageTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIndex]);
+
+  if (urls.length === 0 || !currentMedia) return null;
 
   return (
     <div className={compact ? "space-y-1.5" : "space-y-2 md:space-y-3"}>
