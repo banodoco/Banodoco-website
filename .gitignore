@@ -23,6 +23,15 @@ dist-ssr
 *.sln
 *.sw?
 
-# Large video files (over 100MB GitHub limit) - kept as reference
-# These original high-res versions were deleted, 720p versions are used instead
+# Unused dev/test assets (not referenced in code)
+public/new.mp4
+public/upscaled_new.mp4
+public/output.mp4
+public/Screenshot 2025-12-27 at 23.18.09.png
+public/PXL_20251107_194544229.MP.jpg
+public/5ff173f7-c4f0-4f07-bdf6-93155ef14d8f_9531191f-d7d6-4714-bc91-cf7593a4216f.mp4
+public/896728249ae4425fad3e0b90339cf71a.mp4
+
+# Arca Gidan GIFs (MP4 versions are used instead)
+public/arca-gidan/*.gif
 
