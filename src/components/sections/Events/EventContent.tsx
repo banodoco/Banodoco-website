@@ -27,7 +27,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   // Some videos should start at an offset (e.g. skip leader frames).
   // On mobile Safari, setting currentTime before metadata is loaded can be ignored,
   // so we enforce this in multiple lifecycle points.
-  const startOffsetSeconds = event.id === 'paris-2024' ? 2 : 0;
+  const startOffsetSeconds = event.id === 'paris-2025' ? 25 : 0;
 
   // Apply start offset with Mobile Safari workaround
   const ensureStartOffset = useCallback((video: HTMLVideoElement) => {
@@ -281,8 +281,8 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
         style={{ opacity: isFullyVisible ? 1 : 0, transitionDelay: isFullyVisible ? '200ms' : '0ms' }}
       >
         <div className="bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
-          <p className="text-xs text-white/50 uppercase tracking-wider">{event.label} {event.year}</p>
-          <p className="text-lg font-medium text-white">{event.date}</p>
+          <p className="text-lg font-medium text-white">{event.label} {event.year}</p>
+          <p className="text-xs text-white/50 uppercase tracking-wider">{event.date}</p>
         </div>
       </div>
 

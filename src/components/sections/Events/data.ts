@@ -2,9 +2,9 @@ import type { EventItem } from './types';
 
 export const events: EventItem[] = [
   {
-    id: 'paris-2024',
+    id: 'paris-2025',
     label: 'Paris',
-    year: '2024',
+    year: '2025',
     date: '28-29 March 2025',
     video: '/events/paris-2025-video-720p.mp4',
     poster: '/events/paris-2025-poster.jpg',
