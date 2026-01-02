@@ -35,3 +35,8 @@ public/896728249ae4425fad3e0b90339cf71a.mp4
 # Arca Gidan GIFs (MP4 versions are used instead)
 public/arca-gidan/*.gif
 
+
+# Environment variables
+.env
+.env.*
+!.env.example
