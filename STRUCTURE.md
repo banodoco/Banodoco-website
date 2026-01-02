@@ -39,13 +39,16 @@ src/components/sections/SomeSection/
 ```
 
 Current sections:
-- **`Hero/`**: `config.ts`, `useHeroVideo.ts`, `HeroVideo.tsx`, `RewindButton.tsx`, `index.tsx`
-- **`Community/`**: `useCommunityTopics.ts`, `MediaGallery.tsx`, `TopicCard.tsx`, `types.ts`, `utils.ts`, `index.tsx`
-- **`Reigh/`**: `data.ts`, `useInViewStart.ts`, `useTravelAutoAdvance.ts`, `TravelSelector.tsx`, `index.tsx`
-- **`ArcaGidan/`**: `data.ts`, `useVideoPreview.ts`, `VideoPreviewCard.tsx`, `index.tsx`
-- **`ADOS/`**: `data.ts`, `types.ts`, `EventContent.tsx`, `EventSelector.tsx`, `Polaroid.tsx`, `useEventsAutoAdvance.ts`, `index.tsx`
-- **`Ecosystem/`**: `config.ts`, `eventConfig.ts`, `utils.ts`, `RiverVisualization.tsx`, `TimelineScrubber.tsx`, `index.tsx`
-- **`Ownership/`**: `useOwnershipData.ts`, `useProfilePics.ts`, `ProfileImage.tsx`, `config.ts`, `data.ts`, `utils.ts`, `index.tsx`
+
+| Section | Files |
+|---------|-------|
+| **Hero/** | `config.ts`, `useHeroVideo.ts`, `HeroVideo.tsx`, `RewindButton.tsx`, `index.tsx` |
+| **Community/** | `useCommunityTopics.ts`, `MediaGallery.tsx`, `TopicCard.tsx`, `types.ts`, `utils.ts`, `index.tsx` |
+| **Reigh/** | `data.ts`, `useInViewStart.ts`, `useTravelAutoAdvance.ts`, `TravelSelector.tsx`, `index.tsx` |
+| **ArcaGidan/** | `data.ts`, `useVideoPreview.ts`, `VideoPreviewCard.tsx`, `index.tsx` |
+| **ADOS/** | `data.ts`, `types.ts`, `EventContent.tsx`, `EventSelector.tsx`, `Polaroid.tsx`, `useEventsAutoAdvance.ts`, `index.tsx` |
+| **Ecosystem/** | `config.ts`, `eventConfig.ts`, `utils.ts`, `AnimatedNumber.tsx`, `AnimatedText.tsx`, `EventAnimation.tsx`, `MobileVisualization.tsx`, `RiverVisualization.tsx`, `TimelineScrubber.tsx`, `index.tsx` |
+| **Ownership/** | `config.ts`, `data.ts`, `utils.ts`, `useOwnershipData.ts`, `useProfilePics.ts`, `profilePicsManifest.ts`, `Accordion.tsx`, `GrantsTable.tsx`, `OwnershipTable.tsx`, `ProfileImage.tsx`, `TransfersTable.tsx`, `index.tsx` |
 
 #### "Barrel import" expectation
 
@@ -65,12 +68,21 @@ That works because each section folder exports from `index.tsx`.
 
 Note: On `/`, the `Header` is rendered by `MainLayout` **inside the home scroll container** (and is `md:fixed`), so it overlays all snap sections.
 
+### UI components
+
+Shared UI primitives live in **`src/components/ui/`**:
+
+- **`icons.tsx`**: Common SVG icons (`ExternalLinkIcon`, `PlayIcon`, `ArrowRightIcon`, `ArrowDownIcon`, `ArrowLeftIcon`, `ChevronLeftIcon`, `ChevronRightIcon`, `CloseIcon`, `CalendarIcon`). All accept an optional `className` prop for sizing/colors.
+
 ### Shared utilities
 
 - **`src/lib/utils.ts`**: shared helpers like `cn(...)`.
 - **`src/lib/device.ts`**: device detection utilities (`isIOS()`, `shouldPreloadVideos()`).
+- **`src/lib/breakpoints.ts`**: responsive breakpoint constants.
 - **`src/lib/preloadAssets.ts`**: asset preloading for better perceived performance.
 - **`src/lib/supabase.ts`**: Supabase client setup.
+- **`src/lib/useScreenSize.ts`**: hook for responsive breakpoint detection.
+- **`src/lib/useViewportPreload.ts`**: viewport-based asset preloading.
 - **`src/index.css`**: Tailwind layers + global styles + shared keyframes.
 
 #### Section lifecycle hooks
@@ -87,10 +99,12 @@ These hooks provide unified, stable visibility + pause/resume behavior across se
   - `pauseOnly` — for hover-triggered videos (don't auto-resume)
   - `pauseDelayMs` — debounce pause to avoid play/pause thrash on fast scroll
   - `retryDelayMs` / `maxRetries` — retry play attempts for mobile browser flakiness
-  - `onPause` / `onBeforeResume` — callbacks for cleanup and “prepare before play” (seek/rate/etc.). Return `false` from `onBeforeResume` to abort.
+  - `onPause` / `onBeforeResume` — callbacks for cleanup and "prepare before play" (seek/rate/etc.). Return `false` from `onBeforeResume` to abort.
+
+- **`src/lib/bindAutoPauseVideo.ts`**: Non-hook version of auto-pause for imperative use cases.
 
   Notes:
-  - `useAutoPauseVideo` is best for **single-video** or “one video per card” patterns. For more complex flows (multiple videos where only one is active, audio + rewind animations, mixed image/video carousels with timers), keep the section’s bespoke logic or build a dedicated hook for that subsystem.
+  - `useAutoPauseVideo` is best for **single-video** or "one video per card" patterns. For more complex flows (multiple videos where only one is active, audio + rewind animations, mixed image/video carousels with timers), keep the section's bespoke logic or build a dedicated hook for that subsystem.
   - Always remember to attach the returned `ref` from `useSectionRuntime` to the section wrapper (e.g. `<Section ref={ref} />`), otherwise visibility will never become active.
 
 Example usage:
@@ -112,11 +126,10 @@ useAutoPauseVideo(videoRef, {
 useAutoPauseVideo(videoRef, { isActive, pauseOnly: true });
 ```
 
-> Note: If you need shared UI primitives (button, card, etc.), create `src/components/ui/` and add them there.
-
 ### Conventions / tips
 
 - **Keep sections focused**: `index.tsx` should orchestrate; move heavy logic into hooks/utilities.
 - **Prefer static data in `data.ts`** over embedding large arrays inside the main component file.
 - **Avoid nested scroll containers** on the homepage; `/` is intentionally one scroll container for snap behavior.
 - **Use `src/lib/device.ts`** for device detection instead of inline checks.
+- **Use shared icons** from `src/components/ui/icons.tsx` instead of inline SVGs.

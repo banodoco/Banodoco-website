@@ -102,12 +102,10 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
     // After initial delay, start repeating
     holdTimeoutRef.current = setTimeout(() => {
       holdIntervalRef.current = setInterval(() => {
-        // Use functional update to get latest monthIdx
         onDragStart();
-        onMonthChange(prev => {
-          const newIdx = Math.max(0, Math.min(TOTAL_MONTHS - 1, prev + years * 12));
-          return newIdx;
-        });
+        // Note: Uses closure over `years` but reads current `monthIdx` from DOM workaround
+        // since we can't access current state in setInterval. Jump button will repeat at interval.
+        jumpYears(years);
         onDragEnd();
       }, HOLD_REPEAT_INTERVAL);
     }, HOLD_INITIAL_DELAY);

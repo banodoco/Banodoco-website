@@ -21,17 +21,3 @@ export interface DailySummary {
   created_at: string;
 }
 
-export interface SummaryTopic {
-  title: string;
-  mainText: string;
-  mainMediaMessageId: string | null;
-  message_id: string;
-  channel_id: string;
-  subTopics: {
-    text: string;
-    subTopicMediaMessageIds: string[];
-    message_id: string;
-    channel_id: string;
-  }[];
-}
-

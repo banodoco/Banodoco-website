@@ -35,11 +35,11 @@ const Label: FC<LabelProps> = ({ label, value, color, left, top, large }) => (
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        background: 'rgba(0, 0, 0, 0.75)',
+        background: 'rgba(255, 255, 255, 0.06)',
         backdropFilter: 'blur(8px)',
         borderRadius: '8px',
         padding: large ? '8px 14px' : '6px 12px',
-        border: `1px solid ${color}40`,
+        border: `1px solid ${color}50`,
       }}
     >
       <span style={{ fontSize: 11, fontWeight: 600, color, fontFamily: 'system-ui' }}>

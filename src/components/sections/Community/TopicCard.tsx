@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import type { TopicData } from './types';
 import { formatChannelName, formatDate, formatText } from './utils';
 import { MediaGallery } from './MediaGallery';
+import { ArrowRightIcon } from '@/components/ui/icons';
 
 interface TopicCardProps {
   topic: TopicData;
@@ -190,9 +191,7 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
             className="text-sm text-white/60 hover:text-white transition-colors flex items-center gap-2 group"
           >
             Read full update
-            <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
+            <ArrowRightIcon className="transition-transform group-hover:translate-x-1" />
           </a>
         </div>
       </article>

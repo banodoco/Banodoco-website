@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { ArrowLeftIcon } from '@/components/ui/icons';
 
 const NotFound = () => {
   return (
@@ -13,9 +14,7 @@ const NotFound = () => {
         to="/"
         className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
+        <ArrowLeftIcon />
         Back to Home
       </Link>
     </div>

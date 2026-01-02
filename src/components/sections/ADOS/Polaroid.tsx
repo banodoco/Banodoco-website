@@ -1,7 +1,13 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { getScreenSize, type ScreenSize } from '@/lib/breakpoints';
+import { useScreenSize } from '@/lib/useScreenSize';
+import type { ScreenSize } from '@/lib/breakpoints';
 import type { PhotoItem } from './types';
+import { ChevronLeftIcon, ChevronRightIcon } from '@/components/ui/icons';
+
+// =============================================================================
+// Types & Constants
+// =============================================================================
 
 interface PolaroidProps {
   photo: PhotoItem;
@@ -16,9 +22,21 @@ interface PolaroidProps {
   onHoverChange?: (isHovered: boolean) => void;
 }
 
-// =============================================================================
-// Screen Size Detection (singleton pattern - one resize listener for all Polaroids)
-// =============================================================================
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface ExitTransform extends Position {
+  rotation: number;
+}
+
+// Animation timing
+const ANIMATION = {
+  ENTER_STAGGER_MS: 80,    // Delay between each polaroid entering
+  EXIT_STAGGER_MS: 60,     // Delay between each polaroid exiting (reverse order)
+  HOVER_ROTATION_FACTOR: 0.3, // How much to reduce rotation on hover
+} as const;
 
 // Scale factor when polaroid is expanded (clicked/focused)
 const EXPANDED_SCALE: Record<ScreenSize, number> = {
@@ -27,81 +45,49 @@ const EXPANDED_SCALE: Record<ScreenSize, number> = {
   desktop: 2.5,
 };
 
-// Shared state across all Polaroid instances
-let listenerCount = 0;
-let screenSizeGlobal: ScreenSize = getScreenSize();
-const screenListeners = new Set<() => void>();
+// Fixed center position for expanded cards
+const EXPANDED_POSITION = { x: 50, y: 70 };
 
-const handleResize = () => {
-  const newSize = getScreenSize();
-  if (newSize !== screenSizeGlobal) {
-    screenSizeGlobal = newSize;
-    screenListeners.forEach(cb => cb());
-  }
-};
+// =============================================================================
+// Position Configuration
+// =============================================================================
 
-// Hook to detect screen size - shares a single resize listener
-const useScreenSize = () => {
-  const [screenSize, setScreenSize] = useState(screenSizeGlobal);
-  
-  useEffect(() => {
-    const update = () => setScreenSize(screenSizeGlobal);
-    screenListeners.add(update);
-    
-    // Only add event listener for first subscriber
-    if (listenerCount === 0) {
-      window.addEventListener('resize', handleResize, { passive: true });
-    }
-    listenerCount++;
-    
-    return () => {
-      screenListeners.delete(update);
-      listenerCount--;
-      // Remove event listener when last subscriber leaves
-      if (listenerCount === 0) {
-        window.removeEventListener('resize', handleResize);
-      }
-    };
-  }, []);
-  
-  return screenSize;
-};
+// Mobile: top-right cluster (spread out more)
+const MOBILE_POSITIONS: Position[] = [
+  { x: 72, y: 4 },
+  { x: 88, y: 6 },
+  { x: 80, y: 18 },
+  { x: 95, y: 20 },
+  { x: 68, y: 28 },
+];
 
-// Get mobile positions for top-right cluster (spread out more)
-const getMobilePosition = (index: number): { x: number; y: number } => {
-  const positions = [
-    { x: 72, y: 4 },
-    { x: 88, y: 6 },
-    { x: 80, y: 18 },
-    { x: 95, y: 20 },
-    { x: 68, y: 28 },
-  ];
-  return positions[index % positions.length];
-};
+// Tablet: bottom-left cluster (tighter grouping)
+const TABLET_POSITIONS: Position[] = [
+  { x: 6, y: 58 },
+  { x: 14, y: 62 },
+  { x: 8, y: 72 },
+  { x: 18, y: 68 },
+  { x: 12, y: 80 },
+];
 
-// Get tablet positions for tighter bottom-left cluster
-const getTabletPosition = (index: number): { x: number; y: number } => {
-  const positions = [
-    { x: 6, y: 58 },
-    { x: 14, y: 62 },
-    { x: 8, y: 72 },
-    { x: 18, y: 68 },
-    { x: 12, y: 80 },
-  ];
-  return positions[index % positions.length];
-};
+// Exit directions for variety when leaving
+const EXIT_TRANSFORMS: ExitTransform[] = [
+  { x: -150, y: -80, rotation: -45 },  // up-left
+  { x: 180, y: -60, rotation: 35 },    // up-right
+  { x: -200, y: 40, rotation: -30 },   // left
+  { x: 200, y: 20, rotation: 40 },     // right
+  { x: -120, y: 100, rotation: -25 },  // down-left
+];
 
-// Each polaroid gets a unique exit direction for variety
-const getExitTransform = (index: number): { x: number; y: number; rotation: number } => {
-  const directions = [
-    { x: -150, y: -80, rotation: -45 },   // up-left
-    { x: 180, y: -60, rotation: 35 },     // up-right
-    { x: -200, y: 40, rotation: -30 },    // left
-    { x: 200, y: 20, rotation: 40 },      // right
-    { x: -120, y: 100, rotation: -25 },   // down-left
-  ];
-  return directions[index % directions.length];
-};
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+const getFromArray = <T,>(array: T[], index: number): T => array[index % array.length];
+
+// =============================================================================
+// Component
+// =============================================================================
 
 export const Polaroid: React.FC<PolaroidProps> = ({ 
   photo, 
@@ -119,26 +105,30 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   const screenSize = useScreenSize();
 
   // Get position based on screen size
-  const mobilePos = useMemo(() => getMobilePosition(index), [index]);
-  const tabletPos = useMemo(() => getTabletPosition(index), [index]);
-  
   const { posX, posY } = useMemo(() => {
     switch (screenSize) {
-      case 'mobile': return { posX: mobilePos.x, posY: mobilePos.y };
-      case 'tablet': return { posX: tabletPos.x, posY: tabletPos.y };
-      default:       return { posX: photo.x, posY: photo.y };
+      case 'mobile': {
+        const pos = getFromArray(MOBILE_POSITIONS, index);
+        return { posX: pos.x, posY: pos.y };
+      }
+      case 'tablet': {
+        const pos = getFromArray(TABLET_POSITIONS, index);
+        return { posX: pos.x, posY: pos.y };
+      }
+      default:
+        return { posX: photo.x, posY: photo.y };
     }
-  }, [screenSize, mobilePos, tabletPos, photo.x, photo.y]);
+  }, [screenSize, index, photo.x, photo.y]);
 
   // Smoothly reduce rotation on hover for a "picked up" effect
-  const hoverRotation = photo.rotation * 0.3;
+  const hoverRotation = photo.rotation * ANIMATION.HOVER_ROTATION_FACTOR;
 
-  // Calculate staggered delay - enter in sequence, exit in reverse
-  const enterDelay = index * 80; // ms between each polaroid entering
-  const exitDelay = (totalPhotos - 1 - index) * 60; // reverse order for exit
+  // Calculate staggered delays - enter in sequence, exit in reverse
+  const enterDelay = index * ANIMATION.ENTER_STAGGER_MS;
+  const exitDelay = (totalPhotos - 1 - index) * ANIMATION.EXIT_STAGGER_MS;
 
   // Get unique exit direction for this polaroid
-  const exitTransform = useMemo(() => getExitTransform(index), [index]);
+  const exitTransform = useMemo(() => getFromArray(EXIT_TRANSFORMS, index), [index]);
 
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
@@ -148,7 +138,6 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false);
     onHoverChange?.(false);
-    // Don't close on mouse leave when expanded - user must click elsewhere or press Escape
   }, [onHoverChange]);
 
   // Arrow key navigation when expanded
@@ -156,12 +145,10 @@ export const Polaroid: React.FC<PolaroidProps> = ({
     if (!isExpanded) return;
     
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        if (!onNavigate) return;
+      if (e.key === 'ArrowLeft' && onNavigate) {
         e.preventDefault();
         onNavigate('prev');
-      } else if (e.key === 'ArrowRight') {
-        if (!onNavigate) return;
+      } else if (e.key === 'ArrowRight' && onNavigate) {
         e.preventDefault();
         onNavigate('next');
       } else if (e.key === 'Escape') {
@@ -174,23 +161,29 @@ export const Polaroid: React.FC<PolaroidProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isExpanded, onNavigate, onClose]);
 
-  // Fixed center position for expanded cards (ensures full visibility with chevrons)
-  const expandedPosX = 50;
-  const expandedPosY = 70;
-
-  // Calculate the transform based on state
-  const getTransform = () => {
+  // Calculate the transform based on visibility state
+  const outerTransform = useMemo(() => {
     if (!isVisible) {
       // Exit state - fly off in unique direction
       return `translate(-50%, -50%) translate(${exitTransform.x}%, ${exitTransform.y}%) rotate(${exitTransform.rotation}deg) scale(0.6)`;
     }
-    // Visible state - normal position
     return 'translate(-50%, -50%)';
-  };
+  }, [isVisible, exitTransform]);
 
   // Current position - moves to center when expanded
-  const currentPosX = isExpanded ? expandedPosX : posX;
-  const currentPosY = isExpanded ? expandedPosY : posY;
+  const currentPosX = isExpanded ? EXPANDED_POSITION.x : posX;
+  const currentPosY = isExpanded ? EXPANDED_POSITION.y : posY;
+
+  // Inner card transform based on interaction state
+  const innerTransform = useMemo(() => {
+    if (isExpanded) {
+      return `rotate(0deg) scale(${EXPANDED_SCALE[screenSize]}) translateY(-20%)`;
+    }
+    if (isHovered) {
+      return `rotate(${hoverRotation}deg) scale(1.15) translateY(-8px)`;
+    }
+    return `rotate(${photo.rotation}deg) scale(1) translateY(0)`;
+  }, [isExpanded, isHovered, screenSize, hoverRotation, photo.rotation]);
 
   return (
     <div
@@ -199,7 +192,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
       style={{
         left: `${currentPosX}%`,
         top: `${currentPosY}%`,
-        transform: getTransform(),
+        transform: outerTransform,
         opacity: isVisible ? 1 : 0,
         zIndex: isExpanded ? 200 : isHovered ? 100 : baseZIndex + index,
         transition: isVisible
@@ -213,19 +206,10 @@ export const Polaroid: React.FC<PolaroidProps> = ({
       <div
         className={cn(
           "bg-white p-1 pb-4 sm:p-1.5 sm:pb-5 lg:pb-6 shadow-xl transition-all duration-500 ease-out relative",
-          isHovered && !isExpanded && "shadow-2xl",
-          isExpanded && "shadow-2xl"
+          (isHovered || isExpanded) && "shadow-2xl"
         )}
         style={{
-          transform: (() => {
-            if (isExpanded) {
-              return `rotate(0deg) scale(${EXPANDED_SCALE[screenSize]}) translateY(-20%)`;
-            }
-            if (isHovered) {
-              return `rotate(${hoverRotation}deg) scale(1.15) translateY(-8px)`;
-            }
-            return `rotate(${photo.rotation}deg) scale(1) translateY(0)`;
-          })(),
+          transform: innerTransform,
           transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease-out',
         }}
       >
@@ -240,9 +224,7 @@ export const Polaroid: React.FC<PolaroidProps> = ({
               className="absolute -left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 transition-colors z-10"
               style={{ fontSize: '5px' }}
             >
-              <svg className="w-1.5 h-1.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
+              <ChevronLeftIcon className="w-1.5 h-1.5 text-white" />
             </button>
             <button
               onClick={(e) => {
@@ -252,12 +234,11 @@ export const Polaroid: React.FC<PolaroidProps> = ({
               className="absolute -right-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 transition-colors z-10"
               style={{ fontSize: '5px' }}
             >
-              <svg className="w-1.5 h-1.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
+              <ChevronRightIcon className="w-1.5 h-1.5 text-white" />
             </button>
           </>
         )}
+        
         <div className="aspect-square bg-neutral-200 overflow-hidden">
           <img
             src={photo.src}
@@ -268,7 +249,8 @@ export const Polaroid: React.FC<PolaroidProps> = ({
             }}
           />
         </div>
-        {/* Caption - always visible, scales with card transform */}
+        
+        {/* Caption */}
         <p 
           className="text-center text-neutral-700 px-0.5 truncate"
           style={{ 
@@ -285,5 +267,3 @@ export const Polaroid: React.FC<PolaroidProps> = ({
     </div>
   );
 };
-
-

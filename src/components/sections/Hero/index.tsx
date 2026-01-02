@@ -2,7 +2,18 @@ import { Section } from '@/components/layout/Section';
 import { useHeroVideo } from './useHeroVideo';
 import { MobileHeroVideo, DesktopHeroVideo } from './HeroVideo';
 import { RewindButton } from './RewindButton';
+import { ArrowDownIcon } from '@/components/ui/icons';
 
+/**
+ * Hero section - the landing/above-the-fold section.
+ * 
+ * NOTE: This section intentionally does NOT use header offset because:
+ * 1. Content should be visually centered in the full viewport
+ * 2. Video background extends edge-to-edge
+ * 3. Mobile uses pt-16 for safe area, desktop content is naturally centered
+ * 
+ * This is the only section where full-viewport centering is desired.
+ */
 export const Hero = () => {
   const {
     posterLoaded,
@@ -38,7 +49,7 @@ export const Hero = () => {
   };
 
   return (
-    <Section ref={sectionRef} id="hero" className="relative bg-[#0b0b0f]">
+    <Section ref={sectionRef} id="hero" className="relative bg-[var(--color-bg-base)]">
       {/* Mobile fullscreen video background - only render on mobile to save resources */}
       {isMobileView && <MobileHeroVideo ref={videoRef} {...videoProps} />}
 
@@ -63,9 +74,7 @@ export const Hero = () => {
                 className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-white/90 text-gray-900 rounded-lg transition-all font-medium"
               >
                 <span className="text-sm">Learn more</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                </svg>
+                <ArrowDownIcon />
               </button>
               <RewindButton
                 onClick={handleRewind}

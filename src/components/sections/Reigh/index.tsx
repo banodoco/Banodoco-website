@@ -7,6 +7,7 @@ import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
 import { bindAutoPauseVideo } from '@/lib/bindAutoPauseVideo';
+import { PlayIcon, ExternalLinkIcon } from '@/components/ui/icons';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
@@ -95,7 +96,7 @@ export const Reigh: React.FC = () => {
   const currentPoster = currentExample.poster ?? currentExample.images?.[0];
 
   return (
-    <Section ref={sectionRef} id="reigh" className="bg-gradient-to-br from-[#140c22] via-[#181028] to-[#100820] text-white">
+    <Section ref={sectionRef} id="reigh" className="bg-gradient-to-br from-[#0c1a14] via-[#0d2018] to-[#081510] text-white">
       <SectionContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-16 items-center">
             {/* Left side - Video showcase */}
@@ -153,9 +154,7 @@ export const Reigh: React.FC = () => {
                   ].join(" ")}
                 >
                   <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
+                    <PlayIcon className="w-8 h-8 text-white ml-1" />
                   </div>
                 </button>
               </div>
@@ -188,9 +187,7 @@ export const Reigh: React.FC = () => {
                 className="inline-flex items-center gap-2 text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
               >
                 Try it out
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
+                <ExternalLinkIcon />
               </a>
             </div>
           </div>

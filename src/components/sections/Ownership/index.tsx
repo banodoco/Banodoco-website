@@ -1,16 +1,16 @@
 import { Link } from 'react-router-dom';
 import { useProfilePics } from './useProfilePics';
 import { ProfileImage } from './ProfileImage';
-import { Section } from '@/components/layout/Section';
+import { Section, SectionContent } from '@/components/layout/Section';
+import { ArrowRightIcon } from '@/components/ui/icons';
 
 export const Ownership = () => {
   const { visiblePics, allPics, usedPicsRef, handleSwap } = useProfilePics();
 
   return (
     <Section id="ownership" className="bg-gradient-to-br from-[#1a1614] via-[#1f1a18] to-[#141210] text-white">
-      {/* Full height flex container with header offset */}
-      <div className="h-full flex flex-col justify-center gap-6 md:gap-8" style={{ paddingTop: 'var(--header-height)' }}>
-        {/* Profile grid */}
+      <SectionContent fullWidth className="flex-col justify-center gap-6 md:gap-8">
+        {/* Profile grid - edge-to-edge */}
         <div className="profile-grid">
           {visiblePics.map((pic, idx) => (
             <ProfileImage
@@ -50,50 +50,12 @@ export const Ownership = () => {
                 <span className="border-b border-white/30 group-hover:border-white/60 transition-colors pb-0.5">
                   Learn how it works
                 </span>
-                <svg 
-                  className="w-5 h-5 transition-transform group-hover:translate-x-1" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
+                <ArrowRightIcon className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* CSS for responsive grid - 3 rows mobile, 5 rows desktop */}
-      <style>{`
-        .profile-grid {
-          display: grid;
-          gap: 2px;
-        }
-        
-        /* Mobile: 10 columns × 5 rows = 50 images */
-        @media (max-width: 479px) {
-          .profile-grid { grid-template-columns: repeat(10, 1fr); }
-          .profile-grid > *:nth-child(n+51) { display: none; }
-        }
-        
-        /* Small: 15 columns × 4 rows = 60 images */
-        @media (min-width: 480px) and (max-width: 767px) {
-          .profile-grid { grid-template-columns: repeat(15, 1fr); }
-          .profile-grid > *:nth-child(n+61) { display: none; }
-        }
-        
-        /* Medium: 20 columns × 5 rows = 100 images */
-        @media (min-width: 768px) and (max-width: 1199px) {
-          .profile-grid { grid-template-columns: repeat(20, 1fr); }
-          .profile-grid > *:nth-child(n+101) { display: none; }
-        }
-        
-        /* Desktop: 30 columns × 5 rows = all 150 images */
-        @media (min-width: 1200px) {
-          .profile-grid { grid-template-columns: repeat(30, 1fr); }
-        }
-      `}</style>
+      </SectionContent>
     </Section>
   );
 };

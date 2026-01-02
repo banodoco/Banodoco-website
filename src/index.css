@@ -10,7 +10,10 @@
 
     color-scheme: light dark;
     color: rgba(255, 255, 255, 0.87);
-    background-color: #0b0b0f;
+
+    /* Base dark background color - used throughout the site */
+    --color-bg-base: #0b0b0f;
+    background-color: var(--color-bg-base);
 
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -30,7 +33,7 @@
 
   html {
     /* Ensure no white flash from html element during scroll-snap / overscroll */
-    background-color: #0b0b0f;
+    background-color: var(--color-bg-base);
   }
 
   body {
@@ -38,7 +41,7 @@
     min-width: 320px;
     min-height: 100vh;
     /* Avoid white flashes during scroll-snap / overscroll on mobile by ensuring a dark base bg. */
-    background-color: #0b0b0f;
+    background-color: var(--color-bg-base);
   }
 
   /*
@@ -133,5 +136,51 @@
   50% {
     transform: translateX(100%);
     opacity: 0.5;
+  }
+}
+
+/* =============================================================================
+   Ownership Section - Profile Grid
+   Responsive grid that shows different numbers of profile pics at each breakpoint
+   ============================================================================= */
+.profile-grid {
+  display: grid;
+  gap: 2px;
+}
+
+/* Mobile: 10 columns × 5 rows = 50 images */
+@media (max-width: 479px) {
+  .profile-grid {
+    grid-template-columns: repeat(10, 1fr);
+  }
+  .profile-grid > *:nth-child(n+51) {
+    display: none;
+  }
+}
+
+/* Small: 15 columns × 4 rows = 60 images */
+@media (min-width: 480px) and (max-width: 767px) {
+  .profile-grid {
+    grid-template-columns: repeat(15, 1fr);
+  }
+  .profile-grid > *:nth-child(n+61) {
+    display: none;
+  }
+}
+
+/* Medium: 20 columns × 5 rows = 100 images */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .profile-grid {
+    grid-template-columns: repeat(20, 1fr);
+  }
+  .profile-grid > *:nth-child(n+101) {
+    display: none;
+  }
+}
+
+/* Desktop: 30 columns × 5 rows = all 150 images */
+@media (min-width: 1200px) {
+  .profile-grid {
+    grid-template-columns: repeat(30, 1fr);
   }
 }

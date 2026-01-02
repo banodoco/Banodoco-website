@@ -7,6 +7,7 @@ import { useEventsAutoAdvance } from './useEventsAutoAdvance';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { Section, SectionContent } from '@/components/layout/Section';
 import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
+import { ExternalLinkIcon } from '@/components/ui/icons';
 
 export const ADOS: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState(0);
@@ -55,7 +56,7 @@ export const ADOS: React.FC = () => {
   }, [autoAdvance]);
 
   return (
-    <Section ref={sectionRef} id="ados" className="bg-gradient-to-br from-[#200c14] via-[#251018] to-[#1a0810] text-white">
+    <Section ref={sectionRef} id="ados" className="bg-gradient-to-br from-[#2a0a0f] via-[#320e12] to-[#20060a] text-white">
       <SectionContent>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left side - Event content */}
@@ -116,9 +117,7 @@ export const ADOS: React.FC = () => {
                 className="inline-flex items-center gap-2 text-rose-400 font-medium hover:text-rose-300 transition-colors"
               >
                 See events
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
+                <ExternalLinkIcon />
               </a>
             </div>
           </div>

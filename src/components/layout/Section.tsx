@@ -1,6 +1,23 @@
 import { forwardRef, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
+// =============================================================================
+// Constants
+// =============================================================================
+
+/**
+ * CSS variable for header height offset.
+ * Use this in calc() expressions for absolute positioned elements.
+ * 
+ * @example
+ * style={{ top: `calc(8% + ${HEADER_OFFSET_VAR})` }}
+ */
+export const HEADER_OFFSET_VAR = 'var(--header-height)';
+
+// =============================================================================
+// Section Component
+// =============================================================================
+
 interface SectionProps {
   id?: string;
   className?: string;
@@ -42,31 +59,79 @@ export const Section = forwardRef<HTMLElement, SectionProps>(
 
 Section.displayName = 'Section';
 
+// =============================================================================
+// SectionContent Component
+// =============================================================================
+
 interface SectionContentProps {
   children: ReactNode;
   className?: string;
+  /**
+   * When true, removes horizontal padding and max-width constraint.
+   * Content stretches edge-to-edge but still gets header offset.
+   * Useful for: profile grids, edge-to-edge media, asymmetric layouts.
+   */
+  fullWidth?: boolean;
+  /**
+   * How to vertically position content within the section.
+   * - 'center': Default, centers content vertically
+   * - 'start': Content starts from top
+   * - 'stretch': Content fills full height (flex-col)
+   */
+  verticalAlign?: 'center' | 'start' | 'stretch';
+  /**
+   * Skip applying header offset. Rare - only for sections where content
+   * should appear centered in the full viewport (e.g., Hero with bg video).
+   */
+  noHeaderOffset?: boolean;
 }
 
 /**
- * Centered content container for sections.
- * Vertically and horizontally centers content within the section.
- * Uses CSS variable --header-height on desktop to account for fixed header.
+ * Content container for sections with standardized header offset.
  * 
- * Usage:
- * - Wrap your content in this for standard centered layout
- * - Add className for custom padding/overflow behavior
+ * Standard usage (centered, padded, max-width):
+ *   <SectionContent>...</SectionContent>
+ * 
+ * Full-width (edge-to-edge content):
+ *   <SectionContent fullWidth>...</SectionContent>
+ * 
+ * Custom vertical alignment:
+ *   <SectionContent verticalAlign="stretch">...</SectionContent>
+ * 
+ * For complex layouts (e.g., absolute positioning with calc()), use
+ * HEADER_OFFSET_VAR directly instead of SectionContent.
  */
-export const SectionContent = ({ children, className }: SectionContentProps) => (
-  <div 
-    className={cn(
-      "h-full px-6 md:px-16 flex items-center",
-      className
-    )}
-    style={{ paddingTop: 'var(--header-height)' }}
-  >
-    <div className="max-w-7xl mx-auto w-full">
-      {children}
+export const SectionContent = ({ 
+  children, 
+  className,
+  fullWidth = false,
+  verticalAlign = 'center',
+  noHeaderOffset = false,
+}: SectionContentProps) => {
+  const alignmentClasses = {
+    center: 'flex items-center',
+    start: 'flex items-start',
+    stretch: 'flex flex-col',
+  };
+
+  return (
+    <div 
+      className={cn(
+        "h-full",
+        !fullWidth && "px-6 md:px-16",
+        alignmentClasses[verticalAlign],
+        className
+      )}
+      style={noHeaderOffset ? undefined : { paddingTop: HEADER_OFFSET_VAR }}
+    >
+      {fullWidth ? (
+        children
+      ) : (
+        <div className="max-w-7xl mx-auto w-full">
+          {children}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
