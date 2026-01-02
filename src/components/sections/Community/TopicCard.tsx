@@ -131,7 +131,11 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
           )}
 
           {/* Desktop: Original grid layout */}
-          <div className={cn("hidden md:grid grid-cols-2 gap-6", fullWidth && "!hidden")}>
+          <div className={cn(
+            "hidden md:grid gap-6", 
+            fullWidth && "!hidden",
+            topic.mediaUrls && topic.mediaUrls.length > 0 ? "grid-cols-2" : "grid-cols-1"
+          )}>
             {/* Text content */}
             <div>
               <h3 className="text-lg font-medium text-white mb-3 leading-snug">

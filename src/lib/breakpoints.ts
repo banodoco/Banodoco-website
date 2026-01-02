@@ -26,3 +26,4 @@ export const getScreenSize = (): ScreenSize => {
   return 'desktop';
 };
 
+
