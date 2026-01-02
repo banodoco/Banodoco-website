@@ -1,12 +1,14 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useLayoutContext, useIsInOwnershipZone } from '@/contexts/LayoutContext';
+import { useLayoutContext } from '@/contexts/LayoutContext';
 import { 
   NAV_SECTIONS, 
   SECTION_COLORS, 
   SECTION_HOVER_COLORS,
+  SECTION_SCRIM_COLORS,
   SECTION_IDS,
+  type SectionId,
 } from '@/lib/sections';
 
 // =============================================================================
@@ -83,10 +85,13 @@ const NavLink = ({ sectionId, label, isHomePage, isActive, isDark, className, on
 export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, isHomePage, currentSection } = useLayoutContext();
-  const isInOwnershipZone = useIsInOwnershipZone();
   const isDark = theme === 'dark';
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+  
+  // Get scrim color based on current section (defaults to hero's light scrim)
+  const scrimKey = (currentSection ?? SECTION_IDS.hero) as SectionId | 'footer';
+  const scrimColor = SECTION_SCRIM_COLORS[scrimKey] ?? SECTION_SCRIM_COLORS[SECTION_IDS.hero];
 
   // Determine active nav section (only highlight if it's a nav item)
   const activeSection = NAV_SECTIONS.some(item => item.id === currentSection) 
@@ -100,7 +105,7 @@ export const Header = () => {
         isDark 
           ? [
               'absolute top-0 left-0 right-0 md:fixed border-b border-white/10',
-              isInOwnershipZone ? 'bg-[#1a1614]/90' : 'bg-black/5'
+              scrimColor
             ]
           : 'relative bg-[#f5f5f3]/90 border-b border-black/10',
         mobileMenuOpen && 'border-b-0'

@@ -43,3 +43,18 @@ export const SECTION_HOVER_COLORS: Partial<Record<SectionId, string>> = {
   [SECTION_IDS.ados]: 'hover:text-rose-300/80',
 };
 
+/** 
+ * Scrim background colors for header - matches each section's gradient start color.
+ * Hero uses the light default scrim; all other sections use heavier scrims.
+ */
+export const SECTION_SCRIM_COLORS: Record<SectionId | 'footer', string> = {
+  [SECTION_IDS.hero]: 'bg-black/5',
+  [SECTION_IDS.community]: 'bg-[#0c1420]/90',
+  [SECTION_IDS.reigh]: 'bg-[#0c1a14]/90',
+  [SECTION_IDS.arcaGidan]: 'bg-[#201a0c]/90',
+  [SECTION_IDS.ados]: 'bg-[#2a0a0f]/90',
+  [SECTION_IDS.ecosystem]: 'bg-[#0a1218]/90',
+  [SECTION_IDS.ownership]: 'bg-[#1a1614]/90',
+  footer: 'bg-[#1a1614]/90', // Footer uses same as ownership
+};
+

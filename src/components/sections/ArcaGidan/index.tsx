@@ -9,11 +9,14 @@ export const ArcaGidan: React.FC = () => {
   
   return (
     <Section ref={sectionRef} id="arca-gidan" className="bg-gradient-to-br from-[#201a0c] via-[#251f10] to-[#1a1508] text-white">
-      {/* Asymmetric layout: left padded text, right edge-to-edge artwork */}
-      <SectionContent fullWidth verticalAlign="stretch">
+      {/* Asymmetric layout: left padded text, right edge-to-edge artwork (extends under header) */}
+      <SectionContent fullWidth verticalAlign="stretch" noHeaderOffset>
         <div className="h-full flex">
-          {/* Text content on left - wider on mobile for readability */}
-          <div className="w-[50%] sm:w-[45%] md:w-[40%] xl:w-[35%] flex items-center px-4 md:px-12 lg:px-16 shrink-0">
+          {/* Text content on left - wider on mobile for readability, has its own header offset */}
+          <div 
+            className="w-[50%] sm:w-[45%] md:w-[40%] xl:w-[35%] flex items-center px-4 md:px-12 lg:px-16 shrink-0"
+            style={{ paddingTop: 'var(--header-height)' }}
+          >
             <div className="max-w-lg">
               <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
                 The Arca Gidan Prize is an open source AI art competition
@@ -27,13 +30,13 @@ export const ArcaGidan: React.FC = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-amber-400 font-medium hover:text-amber-300 transition-colors text-base"
               >
-                Winter 2025 Winners
+                2025 Winners
                 <ExternalLinkIcon />
               </a>
             </div>
           </div>
 
-          {/* Artwork area - flex column on mobile, row on desktop */}
+          {/* Artwork area - extends full height under header */}
           <div className="flex-1 h-full min-h-0 flex flex-col md:flex-row">
             {/* Top row on mobile (first 2 videos), left half on desktop */}
             <div className="h-1/2 md:h-full md:flex-1 min-h-0 flex">

@@ -211,15 +211,14 @@ export const Community = () => {
 
   return (
     <Section ref={sectionRef} id="community" className="bg-gradient-to-br from-[#0c1420] via-[#101825] to-[#0a1018] text-white">
-      <div ref={containerRef} className="h-full px-6 md:px-16 flex flex-col xl:block" style={{ paddingTop: 'var(--header-height)' }}>
-        <div className="max-w-7xl mx-auto w-full h-full flex flex-col xl:block">
-          {/* Mobile/tablet layout - vertically centered */}
-          <div className="xl:hidden flex-1 flex items-center">
-            <div className="w-full">
-              <CommunityIntro />
+      {/* Mobile/tablet layout - with header offset */}
+      <div ref={containerRef} className="xl:hidden h-full px-6 md:px-16 flex flex-col" style={{ paddingTop: 'var(--header-height)' }}>
+        <div className="max-w-7xl mx-auto w-full flex-1 flex items-center">
+          <div className="w-full">
+            <CommunityIntro />
 
-              {/* Horizontal scroll cards */}
-              <div className="-mx-4 md:-mx-8 mt-6">
+            {/* Horizontal scroll cards */}
+            <div className="-mx-4 md:-mx-8 mt-6">
               {loading && <TopicCardsSkeleton mobile />}
               {showErrorOrEmpty && (
                 <TopicCardsState error={error} isEmpty={topics.length === 0} />
@@ -269,38 +268,45 @@ export const Community = () => {
                 </>
               )}
             </div>
-            </div>
           </div>
+        </div>
+      </div>
 
-          {/* Desktop layout - two columns, left centered, right scrollable */}
-          <div className="hidden xl:grid grid-cols-12 gap-16 h-full">
-            {/* Left side - Introduction text (vertically centered) */}
-            <div className="col-span-4 flex items-center">
-              <CommunityIntro />
-            </div>
+      {/* Desktop layout - two columns, cards scroll under header */}
+      <div className="hidden xl:grid grid-cols-12 gap-16 h-full px-16">
+        {/* Left side - Introduction text (vertically centered, with header offset) */}
+        <div className="col-span-4 flex items-center" style={{ paddingTop: 'var(--header-height)' }}>
+          <div className="max-w-md">
+            <CommunityIntro />
+          </div>
+        </div>
 
-            {/* Right side - Topic cards (independently scrollable) */}
-            <div className="col-span-8 overflow-y-auto py-8 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {loading && <TopicCardsSkeleton />}
-              {showErrorOrEmpty && (
-                <TopicCardsState error={error} isEmpty={topics.length === 0} />
-              )}
+        {/* Right side - Topic cards (scroll under header) */}
+        <div 
+          className="col-span-8 overflow-y-auto scrollbar-hide" 
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {/* Inner padding so first card starts below header, but can scroll up behind it */}
+          <div className="pt-[var(--header-height)] pb-8">
+            {loading && <TopicCardsSkeleton />}
+            {showErrorOrEmpty && (
+              <TopicCardsState error={error} isEmpty={topics.length === 0} />
+            )}
 
-              {hasTopics && (
-                <div className="space-y-4">
-                  {topics.map((topic, idx) => (
-                    <TopicCard
-                      key={idx}
-                      ref={(el) => {
-                        topicRefs.current[idx] = el;
-                      }}
-                      topic={topic}
-                      isActive={sectionIsVisible && idx === activeTopicIndex}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            {hasTopics && (
+              <div className="space-y-4">
+                {topics.map((topic, idx) => (
+                  <TopicCard
+                    key={idx}
+                    ref={(el) => {
+                      topicRefs.current[idx] = el;
+                    }}
+                    topic={topic}
+                    isActive={sectionIsVisible && idx === activeTopicIndex}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
