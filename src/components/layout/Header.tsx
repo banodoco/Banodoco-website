@@ -1,10 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useLayoutContext } from '@/contexts/LayoutContext';
+import { useLayoutContext, useIsInOwnershipZone } from '@/contexts/LayoutContext';
 import { 
   NAV_SECTIONS, 
-  ALL_SECTION_IDS, 
   SECTION_COLORS, 
   SECTION_HOVER_COLORS,
   SECTION_IDS,
@@ -82,62 +81,27 @@ const NavLink = ({ sectionId, label, isHomePage, isActive, isDark, className, on
 // =============================================================================
 
 export const Header = () => {
-  const [activeSection, setActiveSection] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { theme, isHomePage } = useLayoutContext();
+  const { theme, isHomePage, currentSection } = useLayoutContext();
+  const isInOwnershipZone = useIsInOwnershipZone();
   const isDark = theme === 'dark';
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
-  // Track which section is currently visible (for highlighting nav items)
-  useEffect(() => {
-    if (!isHomePage) {
-      setActiveSection(null);
-      return;
-    }
-
-    const scrollContainer = document.getElementById('home-scroll-container');
-    if (!scrollContainer) return;
-
-    const intersectingSections = new Set<string>();
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            intersectingSections.add(entry.target.id);
-          } else {
-            intersectingSections.delete(entry.target.id);
-          }
-        });
-
-        // Find the first nav section that's intersecting
-        const activeNav = ALL_SECTION_IDS.find(
-          (id) => intersectingSections.has(id) && NAV_SECTIONS.some(item => item.id === id)
-        );
-        setActiveSection(activeNav ?? null);
-      },
-      {
-        root: scrollContainer,
-        rootMargin: '-45% 0px -45% 0px',
-        threshold: 0,
-      }
-    );
-
-    ALL_SECTION_IDS.forEach((id) => {
-      const element = document.getElementById(id);
-      if (element) observer.observe(element);
-    });
-
-    return () => observer.disconnect();
-  }, [isHomePage]);
+  // Determine active nav section (only highlight if it's a nav item)
+  const activeSection = NAV_SECTIONS.some(item => item.id === currentSection) 
+    ? currentSection 
+    : null;
 
   return (
     <header
       className={cn(
-        'px-5 md:px-16 pt-[max(env(safe-area-inset-top),16px)] pb-4 z-50 backdrop-blur-lg',
+        'px-5 md:px-16 py-3 z-50 backdrop-blur-sm transition-colors duration-300',
         isDark 
-          ? 'absolute top-0 left-0 right-0 md:fixed bg-black/50 border-b border-white/15' 
+          ? [
+              'absolute top-0 left-0 right-0 md:fixed border-b border-white/10',
+              isInOwnershipZone ? 'bg-[#1a1614]/90' : 'bg-black/5'
+            ]
           : 'relative bg-[#f5f5f3]/90 border-b border-black/10',
         mobileMenuOpen && 'border-b-0'
       )}

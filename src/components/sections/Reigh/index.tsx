@@ -13,6 +13,7 @@ export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
   const [showPoster, setShowPoster] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const bgVideoRef = useRef<HTMLVideoElement>(null);
 
   // Track section visibility - pause video when scrolled away
   // Threshold raised to reduce decoder contention with other video sections on mobile
@@ -77,15 +78,27 @@ export const Reigh: React.FC = () => {
     // We also trigger safePlay here as a backup for browsers that
     // fire canplay before our effect runs.
     const video = videoRef.current;
+    const bgVideo = bgVideoRef.current;
     if (video) {
       try {
         video.currentTime = 0;
+        if (bgVideo) bgVideo.currentTime = 0;
       } catch {
         // ignore (can throw if not seekable yet)
       }
       safePlay();
     }
   }, [selectedExample, isFullyVisible, setVideoProgress, safePlay]);
+
+  // Sync background video pause state with main video
+  useEffect(() => {
+    const bgVideo = bgVideoRef.current;
+    if (!bgVideo) return;
+    
+    if (!isFullyVisible) {
+      bgVideo.pause();
+    }
+  }, [isFullyVisible]);
 
   // Handle play button click - restart the whole cycle
   const handlePlayClick = useCallback(() => {
@@ -101,13 +114,29 @@ export const Reigh: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-16 items-center">
             {/* Left side - Video showcase */}
             <div className="order-2 lg:order-1 flex flex-col">
-              <div className="relative rounded-xl overflow-hidden bg-black/50 h-[35dvh] md:h-[36dvh] lg:h-[60dvh] flex items-center justify-center">
+              <div className="relative rounded-xl overflow-hidden bg-black h-[35dvh] md:h-[36dvh] lg:h-[60dvh] flex items-center justify-center">
+                {/* Blurred background video - stretched to fill empty edges */}
+                <div className="absolute inset-0 z-0">
+                  <video
+                    key={`bg-${currentExample.video}`}
+                    ref={bgVideoRef}
+                    src={currentExample.video}
+                    poster={currentPoster}
+                    muted
+                    playsInline
+                    preload="auto"
+                    className="absolute inset-0 w-full h-full object-cover scale-110 blur-lg opacity-50"
+                  />
+                  {/* Subtle vignette overlay for depth */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/40" />
+                </div>
+
                 {/* Poster fallback (separate element so we can fade video in without hiding poster) */}
                 {currentPoster && showPoster && (
                   <img
                     src={currentPoster}
                     alt=""
-                    className="absolute inset-0 w-full h-full object-contain z-0"
+                    className="absolute inset-0 w-full h-full object-contain z-[5]"
                     loading="eager"
                     decoding="async"
                     draggable={false}
@@ -133,12 +162,20 @@ export const Reigh: React.FC = () => {
                   {...bindAutoPauseVideo(videoEventHandlers, {
                     onPlay: () => handleVideoStarted(selectedExample),
                   })}
-                  onPlaying={() => setShowPoster(false)}
+                  onPlaying={() => {
+                    setShowPoster(false);
+                    // Sync background video
+                    bgVideoRef.current?.play().catch(() => {});
+                  }}
                   onTimeUpdate={(e) => {
                     const video = e.currentTarget;
                     onVideoTimeUpdate(selectedExample, video.currentTime, video.duration, selectedExample);
                   }}
-                  onEnded={() => onVideoEnded(selectedExample)}
+                  onEnded={() => {
+                    onVideoEnded(selectedExample);
+                    bgVideoRef.current?.pause();
+                  }}
+                  onPause={() => bgVideoRef.current?.pause()}
                   className="relative z-10 max-w-full max-h-full object-contain"
                 />
 

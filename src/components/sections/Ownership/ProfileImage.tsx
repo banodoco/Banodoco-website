@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { FLICKER_INTERVAL, MOBILE_FLICKER_COUNT } from './config';
 import { getRandomPastelColor } from './utils';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface ProfileImageProps {
   initialPic: string;
@@ -17,6 +18,7 @@ export const ProfileImage = ({
 }: ProfileImageProps) => {
   const [currentPic, setCurrentPic] = useState(initialPic);
   const [hasError, setHasError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const fallbackColor = useRef(getRandomPastelColor());
   const flickerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -116,14 +118,21 @@ export const ProfileImage = ({
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
     >
+      {/* Skeleton shimmer while loading */}
+      {!isLoaded && (
+        <Skeleton className="absolute inset-0 rounded-none" />
+      )}
       <img
         src={`/profile_pics/${currentPic}.jpg`}
         alt=""
-        className="w-full h-full object-cover transition-[filter] duration-100"
+        className={`w-full h-full object-cover transition-[filter,opacity] duration-200 ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
         style={{
           filter: isActive ? 'brightness(1.15)' : 'brightness(1)',
         }}
         loading="lazy"
+        onLoad={() => setIsLoaded(true)}
         onError={() => setHasError(true)}
       />
     </div>

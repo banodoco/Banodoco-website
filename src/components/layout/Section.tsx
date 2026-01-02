@@ -22,6 +22,11 @@ interface SectionProps {
   id?: string;
   className?: string;
   children: ReactNode;
+  /**
+   * Disable snap behavior for this section.
+   * Use on the last section to allow natural scrolling to the footer.
+   */
+  noSnap?: boolean;
 }
 
 /**
@@ -33,15 +38,17 @@ interface SectionProps {
  * - Content layout is handled by children
  */
 export const Section = forwardRef<HTMLElement, SectionProps>(
-  ({ id, className, children }, ref) => (
+  ({ id, className, children, noSnap = false }, ref) => (
     <section
       ref={ref}
       id={id}
       className={cn(
-        // `snap-always` helps Safari/iOS avoid "resting" between sections.
         // Use a *stable* viewport height to avoid intermittent flicker/blanking on mobile
         // when browser chrome shows/hides (100dvh can change during scroll).
-        "h-screen h-[100svh] snap-start snap-always overflow-hidden",
+        "h-screen h-[100svh] overflow-hidden",
+        // `snap-always` helps Safari/iOS avoid "resting" between sections.
+        // noSnap allows the last section to scroll naturally to the footer.
+        !noSnap && "snap-start snap-always",
         className
       )}
       style={{

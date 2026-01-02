@@ -8,14 +8,15 @@ export const Footer = () => {
 
   return (
     <footer 
+      id="footer"
       className={cn(
         "border-t",
         isDark 
-          ? "bg-[var(--color-bg-base)] border-white/5 snap-end" 
+          ? "bg-[var(--color-bg-base)] border-white/5 snap-start min-h-[25vh] md:min-h-0" 
           : "bg-[#f5f5f3] border-gray-200"
       )}
     >
-      <div className="flex justify-center items-center gap-8 py-12">
+      <div className="flex justify-center items-center gap-8 w-full py-7 md:py-12">
         <a 
           href="https://twitter.com/banodoco" 
           target="_blank" 

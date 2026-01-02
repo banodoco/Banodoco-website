@@ -214,11 +214,12 @@ export const Community = () => {
       <div ref={containerRef} className="h-full px-6 md:px-16 flex flex-col xl:block" style={{ paddingTop: 'var(--header-height)' }}>
         <div className="max-w-7xl mx-auto w-full h-full flex flex-col xl:block">
           {/* Mobile/tablet layout - vertically centered */}
-          <div className="xl:hidden flex-1 flex flex-col justify-center">
-            <CommunityIntro />
+          <div className="xl:hidden flex-1 flex items-center">
+            <div className="w-full">
+              <CommunityIntro />
 
-            {/* Horizontal scroll cards */}
-            <div className="-mx-4 md:-mx-8 mt-6">
+              {/* Horizontal scroll cards */}
+              <div className="-mx-4 md:-mx-8 mt-6">
               {loading && <TopicCardsSkeleton mobile />}
               {showErrorOrEmpty && (
                 <TopicCardsState error={error} isEmpty={topics.length === 0} />
@@ -267,6 +268,7 @@ export const Community = () => {
                   </div>
                 </>
               )}
+            </div>
             </div>
           </div>
 

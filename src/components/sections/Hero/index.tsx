@@ -56,7 +56,7 @@ export const Hero = () => {
       {/* Hero uses custom layout - no header offset since content should be centered in full viewport */}
       <div className="h-full px-5 md:px-16 flex items-center">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:gap-12 w-full pt-16 md:pt-0">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:gap-12 w-full">
           {/* Text Content */}
           <div className="flex flex-col space-y-4 md:space-y-6 xl:space-y-8 relative z-10 max-w-[34rem] md:max-w-[36rem] xl:max-w-[44rem]">
             <h1 className="text-[2.5rem] md:text-5xl lg:text-6xl xl:text-6xl font-normal leading-[1.08] tracking-tight text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.4)]">

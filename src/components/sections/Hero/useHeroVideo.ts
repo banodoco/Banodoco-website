@@ -81,9 +81,10 @@ export function useHeroVideo(): HeroVideoState & HeroVideoActions & HeroVideoRef
     }
   }, [isRewinding, showThumbsUp]);
 
-  // Single hook instance - active when section visible and video ready
+  // Single hook instance - active when section visible
+  // Note: Don't gate on videoReady here - mobile browsers need a play() attempt to even start loading
   const { safePlay, videoEventHandlers } = useAutoPauseVideo(videoRef, {
-    isActive: isActive && videoReady,
+    isActive,
     canResume,
     onBeforeResume: (video) => { video.playbackRate = PLAYBACK_RATE; },
     onPause,

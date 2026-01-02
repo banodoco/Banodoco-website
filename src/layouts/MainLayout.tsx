@@ -1,8 +1,8 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { LayoutProvider, type LayoutTheme } from '@/contexts/LayoutContext';
+import { LayoutProvider } from '@/contexts/LayoutContext';
 import { isIOS } from '@/lib/device';
 
 interface MainLayoutProps {
@@ -20,15 +20,11 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const isHome = pathname === '/';
   const [isIOSDevice] = useState(() => isIOS());
 
-  const theme: LayoutTheme = isHome ? 'dark' : 'light';
-  const layoutContext = useMemo(() => ({
-    theme,
-    isHomePage: isHome,
-  }), [theme, isHome]);
+  const theme = isHome ? 'dark' : 'light';
 
   if (isHome) {
     return (
-      <LayoutProvider value={layoutContext}>
+      <LayoutProvider theme={theme} isHomePage={isHome}>
         <div 
           id="home-scroll-container"
           className={HOME_SCROLL_CLASSES}
@@ -48,7 +44,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   }
 
   return (
-    <LayoutProvider value={layoutContext}>
+    <LayoutProvider theme={theme} isHomePage={isHome}>
       <div className="min-h-screen flex flex-col bg-[#f5f5f3] text-foreground">
         <Header />
         <main className="flex-1">
