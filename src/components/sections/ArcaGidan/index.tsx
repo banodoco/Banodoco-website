@@ -22,13 +22,13 @@ export const ArcaGidan: React.FC = () => {
                 We wish to provide a reason for people to push themselves and open models to their limits.
               </p>
               <a
-                href="https://arcagidan.com"
+                href="https://arcagidan.com/winners"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-amber-400 font-medium hover:text-amber-300 transition-colors text-base"
               >
-                Visit website
-                <ExternalLinkIcon className="w-3 h-3 md:w-4 md:h-4" />
+                Winter 2025 Winners
+                <ExternalLinkIcon />
               </a>
             </div>
           </div>
