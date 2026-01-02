@@ -83,3 +83,14 @@ export const SkeletonCard = ({ className }: SkeletonProps) => (
   </div>
 );
 
+/**
+ * Skeleton bullet point - arrow indicator + text line
+ * Commonly used for list items with arrow markers
+ */
+export const SkeletonBullet = ({ className }: SkeletonProps) => (
+  <div className={cn("flex items-start gap-2", className)}>
+    <Skeleton className="w-3 h-3 bg-emerald-400/20 shrink-0" />
+    <Skeleton className="h-3 w-full" />
+  </div>
+);
+

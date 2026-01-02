@@ -1,38 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useLayoutContext } from '@/lib/LayoutContext';
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-// Navigation items configuration
-const NAV_ITEMS = [
-  { id: 'community', label: 'Community' },
-  { id: 'reigh', label: 'Reigh' },
-  { id: 'arca-gidan', label: 'Arca Gidan' },
-  { id: 'ados', label: 'ADOS' },
-] as const;
-
-// Section accent colors for active state
-const SECTION_COLORS: Record<string, string> = {
-  'community': 'text-sky-400',
-  'reigh': 'text-emerald-400',
-  'arca-gidan': 'text-amber-400',
-  'ados': 'text-rose-400',
-};
-
-// Section hover colors (softer versions for gentle hover effect)
-const SECTION_HOVER_COLORS: Record<string, string> = {
-  'community': 'hover:text-sky-300/80',
-  'reigh': 'hover:text-emerald-300/80',
-  'arca-gidan': 'hover:text-amber-300/80',
-  'ados': 'hover:text-rose-300/80',
-};
-
-// All sections to observe (including ones that should clear the highlight)
-const ALL_SECTION_IDS = ['hero', 'community', 'reigh', 'arca-gidan', 'ados', 'ecosystem', 'ownership'];
+import { useLayoutContext } from '@/contexts/LayoutContext';
+import { 
+  NAV_SECTIONS, 
+  ALL_SECTION_IDS, 
+  SECTION_COLORS, 
+  SECTION_HOVER_COLORS,
+  SECTION_IDS,
+} from '@/lib/sections';
 
 // =============================================================================
 // Helpers
@@ -46,7 +22,7 @@ const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => 
 const scrollToTop = (e: React.MouseEvent<HTMLAnchorElement>, isHomePage: boolean) => {
   if (isHomePage) {
     e.preventDefault();
-    document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById(SECTION_IDS.hero)?.scrollIntoView({ behavior: 'smooth' });
   }
 };
 
@@ -65,12 +41,12 @@ interface NavLinkProps {
 }
 
 const NavLink = ({ sectionId, label, isHomePage, isActive, isDark, className, onClick }: NavLinkProps) => {
-  const hoverColor = SECTION_HOVER_COLORS[sectionId] ?? 'hover:text-amber-300/80';
+  const hoverColor = SECTION_HOVER_COLORS[sectionId as keyof typeof SECTION_HOVER_COLORS] ?? 'hover:text-amber-300/80';
   const combinedClasses = cn(
     'text-sm font-semibold transition-colors duration-500 ease-out',
     !isDark && 'text-gray-900/80 hover:text-gray-900',
     isDark && !isActive && ['text-white/90', hoverColor],
-    isDark && isActive && (SECTION_COLORS[sectionId] ?? 'text-amber-400'),
+    isDark && isActive && (SECTION_COLORS[sectionId as keyof typeof SECTION_COLORS] ?? 'text-amber-400'),
     className
   );
 
@@ -137,7 +113,7 @@ export const Header = () => {
 
         // Find the first nav section that's intersecting
         const activeNav = ALL_SECTION_IDS.find(
-          (id) => intersectingSections.has(id) && NAV_ITEMS.some(item => item.id === id)
+          (id) => intersectingSections.has(id) && NAV_SECTIONS.some(item => item.id === id)
         );
         setActiveSection(activeNav ?? null);
       },
@@ -177,7 +153,7 @@ export const Header = () => {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          {NAV_ITEMS.map(({ id, label }) => (
+          {NAV_SECTIONS.map(({ id, label }) => (
             <NavLink
               key={id}
               sectionId={id}
@@ -218,7 +194,7 @@ export const Header = () => {
         )}
       >
         <div className={cn('grid grid-cols-4 py-3 border-b', isDark ? 'border-white/15' : 'border-black/10')}>
-          {NAV_ITEMS.map(({ id, label }) => (
+          {NAV_SECTIONS.map(({ id, label }) => (
             <NavLink
               key={id}
               sectionId={id}

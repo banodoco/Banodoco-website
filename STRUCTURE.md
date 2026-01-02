@@ -47,7 +47,7 @@ Current sections:
 | **Reigh/** | `data.ts`, `useInViewStart.ts`, `useTravelAutoAdvance.ts`, `TravelSelector.tsx`, `index.tsx` |
 | **ArcaGidan/** | `data.ts`, `useVideoPreview.ts`, `VideoPreviewCard.tsx`, `index.tsx` |
 | **ADOS/** | `data.ts`, `types.ts`, `EventContent.tsx`, `EventSelector.tsx`, `Polaroid.tsx`, `useEventsAutoAdvance.ts`, `index.tsx` |
-| **Ecosystem/** | `config.ts`, `eventConfig.ts`, `utils.ts`, `AnimatedNumber.tsx`, `AnimatedText.tsx`, `EventAnimation.tsx`, `MobileVisualization.tsx`, `RiverVisualization.tsx`, `TimelineScrubber.tsx`, `index.tsx` |
+| **Ecosystem/** | `config.ts`, `eventConfig.ts` (barrel), `eventTypes.ts`, `eventPaths.ts`, `eventGenerators.ts`, `utils.ts`, `AnimatedNumber.tsx`, `AnimatedText.tsx`, `EventAnimation.tsx`, `MobileVisualization.tsx`, `RiverVisualization.tsx`, `TimelineScrubber.tsx`, `index.tsx` |
 | **Ownership/** | `config.ts`, `data.ts`, `utils.ts`, `useOwnershipData.ts`, `useProfilePics.ts`, `profilePicsManifest.ts`, `Accordion.tsx`, `GrantsTable.tsx`, `OwnershipTable.tsx`, `ProfileImage.tsx`, `TransfersTable.tsx`, `index.tsx` |
 
 #### "Barrel import" expectation
@@ -79,10 +79,12 @@ Shared UI primitives live in **`src/components/ui/`**:
 - **`src/lib/utils.ts`**: shared helpers like `cn(...)`.
 - **`src/lib/device.ts`**: device detection utilities (`isIOS()`, `shouldPreloadVideos()`).
 - **`src/lib/breakpoints.ts`**: responsive breakpoint constants.
+- **`src/lib/sections.ts`**: centralized section IDs and navigation config (avoids string duplication).
 - **`src/lib/preloadAssets.ts`**: asset preloading for better perceived performance.
 - **`src/lib/supabase.ts`**: Supabase client setup.
 - **`src/lib/useScreenSize.ts`**: hook for responsive breakpoint detection.
 - **`src/lib/useViewportPreload.ts`**: viewport-based asset preloading.
+- **`src/contexts/LayoutContext.tsx`**: React context for layout theme and page detection.
 - **`src/index.css`**: Tailwind layers + global styles + shared keyframes.
 
 #### Section lifecycle hooks

@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { useLayoutContext } from '@/lib/LayoutContext';
+import { useLayoutContext } from '@/contexts/LayoutContext';
 import { XIcon, DiscordIcon, GithubIcon } from '@/components/ui/icons';
 
 export const Footer = () => {

@@ -17,6 +17,16 @@ import { useSectionRuntime } from '@/lib/useSectionRuntime';
 // Fixed tick interval - month advances at steady pace
 const TICK_INTERVAL_MS = 1200;
 
+/**
+ * Ecosystem section with animated river visualization.
+ * 
+ * NOTE: This section uses a custom layout instead of SectionContent because:
+ * 1. Desktop has absolutely positioned elements with calc() for precise placement
+ * 2. Mobile uses a flex column layout with proportional flex-grow values
+ * 3. The SVG visualization needs to fill the space between header and timeline
+ * 
+ * The header offset is applied via HEADER_OFFSET_VAR constant for consistency.
+ */
 export const Ecosystem: React.FC = () => {
   const [monthIdx, setMonthIdx] = useState(0);
   const [isPaused, setIsPaused] = useState(false);

@@ -2,7 +2,7 @@ import { useState, useMemo, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { LayoutProvider, type LayoutTheme } from '@/lib/LayoutContext';
+import { LayoutProvider, type LayoutTheme } from '@/contexts/LayoutContext';
 import { isIOS } from '@/lib/device';
 
 interface MainLayoutProps {

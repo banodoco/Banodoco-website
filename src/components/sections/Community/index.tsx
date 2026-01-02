@@ -4,7 +4,7 @@ import { TopicCard } from './TopicCard';
 import { Section } from '@/components/layout/Section';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { ExternalLinkIcon } from '@/components/ui/icons';
-import { Skeleton, SkeletonParagraph } from '@/components/ui/Skeleton';
+import { Skeleton, SkeletonParagraph, SkeletonBullet } from '@/components/ui/Skeleton';
 
 /** Shared intro content - responsive styling handles mobile vs desktop */
 const CommunityIntro = () => (
@@ -24,14 +24,6 @@ const CommunityIntro = () => (
       Join Discord
       <ExternalLinkIcon />
     </a>
-  </div>
-);
-
-/** Skeleton bullet point - arrow + text line */
-const SkeletonBullet = ({ className }: { className?: string }) => (
-  <div className={`flex items-start gap-2 ${className || ''}`}>
-    <Skeleton className="w-3 h-3 bg-emerald-400/20 shrink-0" />
-    <Skeleton className="h-3 w-full" />
   </div>
 );
 
