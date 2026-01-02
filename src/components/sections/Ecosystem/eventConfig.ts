@@ -25,6 +25,15 @@ export interface ExternalEvent {
 
 export type EcosystemEvent = InternalEvent | ExternalEvent;
 
+/** An event instance with tracking info for multi-event management */
+export interface ActiveEvent {
+  id: string;
+  event: EcosystemEvent;
+  startTime: number;
+  sourceY?: number; // For external events - pre-computed to avoid collisions
+  delay?: number; // Stagger delay in ms for batch animations
+}
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -112,9 +121,9 @@ const EXTERNAL_LABELS: Record<Stage, string[]> = {
 // =============================================================================
 
 export const EVENT_TIMING = {
-  labelAppearDuration: 400,   // Label fades in first
-  pathDrawDuration: 600,      // Then path draws (wave starts when this ends)
-  fadeoutDuration: 400,       // Fade out everything
+  labelAppearDuration: 250,   // Label fades in first
+  pathDrawDuration: 450,      // Then path draws (wave starts when this ends)
+  fadeoutDuration: 300,       // Fade out everything
 } as const;
 
 // =============================================================================
@@ -278,4 +287,189 @@ export const generateRandomEvent = (): EcosystemEvent => {
   return Math.random() < 0.5
     ? generateRandomInternalEvent()
     : generateRandomExternalEvent();
+};
+
+// =============================================================================
+// MULTI-EVENT MANAGEMENT
+// =============================================================================
+
+/** 
+ * Get max concurrent events based on progress (0 → 1).
+ * 2025: 1 event, 2085+: 6 events
+ */
+export const getMaxConcurrentEvents = (progress: number): number => {
+  // progress 0 = 2025, progress ~0.857 = 2085 (60/70 years), progress 1 = 2095
+  // Scale from 1 to 6, reaching 6 at progress ~0.857 (2085)
+  const targetProgress = 60 / 70; // 2085 is 60 years into a 70 year span
+  const scaledProgress = Math.min(progress / targetProgress, 1);
+  return Math.floor(1 + scaledProgress * 5); // 1 → 6
+};
+
+/**
+ * Get spawn interval based on progress.
+ * Early years = slower spawns, later years = faster
+ */
+export const getSpawnInterval = (progress: number): number => {
+  // Early: 1800ms, Late: 500ms between spawn attempts
+  return Math.floor(1800 - progress * 1300);
+};
+
+/** Check if a stage is already targeted by an active event */
+export const isStageOccupied = (stage: Stage, activeEvents: ActiveEvent[]): boolean => {
+  return activeEvents.some(ae => {
+    const target = ae.event.type === 'internal' ? ae.event.to : ae.event.target;
+    return target === stage;
+  });
+};
+
+/** Check if a stage is already the source of an active internal event */
+export const isStageSourceOccupied = (stage: Stage, activeEvents: ActiveEvent[]): boolean => {
+  return activeEvents.some(ae => {
+    if (ae.event.type === 'internal') {
+      return ae.event.from === stage;
+    }
+    return false;
+  });
+};
+
+/** Count active internal events (limit these to avoid visual chaos) */
+export const countActiveInternalEvents = (activeEvents: ActiveEvent[]): number => {
+  return activeEvents.filter(ae => ae.event.type === 'internal').length;
+};
+
+/** 
+ * Y-zone management for external events to prevent label overlap.
+ * Divides the source area into zones and finds an available one.
+ */
+const EXTERNAL_Y_ZONES = (() => {
+  const centerY = SVG_CONFIG.centerY;
+  const minDist = BANODOCO_SOURCE.minDistanceFromCenter;
+  
+  // Create zones above and below center
+  const zones: Array<{ min: number; max: number }> = [];
+  
+  // Above center: divide into 3 zones
+  const aboveStart = BANODOCO_SOURCE.yMin;
+  const aboveEnd = centerY - minDist;
+  const aboveHeight = (aboveEnd - aboveStart) / 3;
+  for (let i = 0; i < 3; i++) {
+    zones.push({ 
+      min: aboveStart + i * aboveHeight, 
+      max: aboveStart + (i + 1) * aboveHeight 
+    });
+  }
+  
+  // Below center: divide into 3 zones
+  const belowStart = centerY + minDist;
+  const belowEnd = BANODOCO_SOURCE.yMax;
+  const belowHeight = (belowEnd - belowStart) / 3;
+  for (let i = 0; i < 3; i++) {
+    zones.push({ 
+      min: belowStart + i * belowHeight, 
+      max: belowStart + (i + 1) * belowHeight 
+    });
+  }
+  
+  return zones;
+})();
+
+/** Get which zone a Y value falls into (0-5, or -1 if none) */
+const getYZoneIndex = (y: number): number => {
+  return EXTERNAL_Y_ZONES.findIndex(zone => y >= zone.min && y <= zone.max);
+};
+
+/** Get an available Y position for an external event, avoiding occupied zones */
+export const getAvailableSourceY = (activeEvents: ActiveEvent[]): number | null => {
+  // Find which zones are occupied by active external events
+  const occupiedZones = new Set<number>();
+  activeEvents.forEach(ae => {
+    if (ae.event.type === 'external' && ae.sourceY !== undefined) {
+      const zoneIdx = getYZoneIndex(ae.sourceY);
+      if (zoneIdx >= 0) occupiedZones.add(zoneIdx);
+    }
+  });
+  
+  // Find available zones
+  const availableZones = EXTERNAL_Y_ZONES.map((zone, idx) => ({ zone, idx }))
+    .filter(({ idx }) => !occupiedZones.has(idx));
+  
+  if (availableZones.length === 0) return null;
+  
+  // Pick a random available zone
+  const { zone } = availableZones[Math.floor(Math.random() * availableZones.length)];
+  
+  // Return a random Y within that zone
+  return zone.min + Math.random() * (zone.max - zone.min);
+};
+
+/** 
+ * Try to generate a valid event that doesn't conflict with active events.
+ * Returns null if no valid event can be generated.
+ */
+export const generateNonConflictingEvent = (
+  activeEvents: ActiveEvent[]
+): { event: EcosystemEvent; sourceY?: number } | null => {
+  const maxAttempts = 10;
+  
+  // Limit internal events to 2 at a time to avoid visual chaos
+  const canDoInternal = countActiveInternalEvents(activeEvents) < 2;
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Decide internal vs external
+    const tryInternal = canDoInternal && Math.random() < 0.5;
+    
+    if (tryInternal) {
+      const event = generateRandomInternalEvent();
+      // Check if target stage is free
+      if (!isStageOccupied(event.to, activeEvents) && 
+          !isStageSourceOccupied(event.from, activeEvents)) {
+        return { event };
+      }
+    } else {
+      const event = generateRandomExternalEvent();
+      // Check if target stage is free
+      if (!isStageOccupied(event.target, activeEvents)) {
+        // Find available Y position
+        const sourceY = getAvailableSourceY(activeEvents);
+        if (sourceY !== null) {
+          return { event, sourceY };
+        }
+      }
+    }
+  }
+  
+  return null;
+};
+
+/** Generate a unique ID for an event */
+let eventIdCounter = 0;
+export const generateEventId = (): string => {
+  return `event-${++eventIdCounter}-${Date.now()}`;
+};
+
+/** Stagger delay between events in a batch (ms) */
+const EVENT_STAGGER_MS = 120;
+
+/**
+ * Generate a batch of N non-conflicting events with staggered start times.
+ * Used for the batch-based system where events fire together but slightly offset.
+ */
+export const generateEventBatch = (count: number): ActiveEvent[] => {
+  const batch: ActiveEvent[] = [];
+  const now = Date.now();
+  
+  for (let i = 0; i < count; i++) {
+    const result = generateNonConflictingEvent(batch);
+    if (!result) break; // Can't generate more non-conflicting events
+    
+    batch.push({
+      id: generateEventId(),
+      event: result.event,
+      startTime: now,
+      sourceY: result.sourceY,
+      delay: i * EVENT_STAGGER_MS, // Stagger each event
+    });
+  }
+  
+  return batch;
 };

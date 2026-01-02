@@ -4,24 +4,28 @@ import { calculateStats } from './utils';
 import { RiverVisualization } from './RiverVisualization';
 import { MobileVisualization } from './MobileVisualization';
 import { TimelineScrubber } from './TimelineScrubber';
-import { EventAnimation } from './EventAnimation';
+import { MultiEventAnimation } from './EventAnimation';
 import { 
-  generateRandomEvent,
   getStageInputX,
-  type EcosystemEvent 
+  getMaxConcurrentEvents,
+  generateEventBatch,
+  type ActiveEvent,
 } from './eventConfig';
 import { Section } from '@/components/layout/Section';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
 
+// Fixed tick interval - month advances at steady pace
+const TICK_INTERVAL_MS = 1200;
+
 export const Ecosystem: React.FC = () => {
   const [monthIdx, setMonthIdx] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentEvent, setCurrentEvent] = useState<EcosystemEvent | null>(null);
+  const [activeEvents, setActiveEvents] = useState<ActiveEvent[]>([]);
   const [waveX, setWaveX] = useState<number | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
   const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tickIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const waveAnimationRef = useRef<number | null>(null);
+  const hasAdvancedThisBatch = useRef(false); // Only advance once per batch
   const { ref: sectionRef, isActive: isSectionVisible } = useSectionRuntime({ threshold: 0.35 });
 
   const stats = calculateStats(monthIdx);
@@ -59,56 +63,71 @@ export const Ecosystem: React.FC = () => {
     waveAnimationRef.current = requestAnimationFrame(animate);
   }, []);
 
-  // When particle hits target - advance month and trigger wave immediately
-  const handleEventImpact = useCallback(() => {
-    // Trigger distortion wave from the target stage's X position
-    if (currentEvent) {
-      const targetStage = currentEvent.type === 'internal' ? currentEvent.to : currentEvent.target;
-      const startX = getStageInputX(targetStage);
-      startWaveAnimation(startX);
-    }
-    
-    // Advance to next month right when particle hits
-    setMonthIdx((prev) => {
-      if (prev >= TOTAL_MONTHS - 1) return prev;
-      return prev + 1;
+  // When an event's particle hits its target - only advance month ONCE per batch
+  const handleEventImpact = useCallback((eventId: string) => {
+    // Find the event to get its target stage for wave animation
+    setActiveEvents(prev => {
+      const activeEvent = prev.find(ae => ae.id === eventId);
+      if (activeEvent) {
+        const targetStage = activeEvent.event.type === 'internal' 
+          ? activeEvent.event.to 
+          : activeEvent.event.target;
+        const startX = getStageInputX(targetStage);
+        
+        // Only trigger wave on first impact of batch
+        if (!hasAdvancedThisBatch.current) {
+          startWaveAnimation(startX);
+        }
+      }
+      return prev;
     });
-  }, [currentEvent, startWaveAnimation]);
+    
+    // Advance month only once per batch (first event to impact)
+    if (!hasAdvancedThisBatch.current) {
+      hasAdvancedThisBatch.current = true;
+      setMonthIdx((prev) => {
+        if (prev >= TOTAL_MONTHS - 1) return prev;
+        return prev + 1;
+      });
+    }
+  }, [startWaveAnimation]);
 
-  // When animation fully finishes (after fadeout) - clean up
-  // Wait for wave to complete + 500ms before allowing next event
-  const handleEventComplete = useCallback(() => {
-    setCurrentEvent(null);
-    // Wave takes ~1200ms, plus 500ms pause = 1700ms total from impact
-    // But fadeout ends ~400ms after impact, so ~1300ms remaining
-    setTimeout(() => {
-      setIsAnimating(false);
-    }, 1500);
+  // When an event animation fully finishes (after fadeout)
+  const handleEventComplete = useCallback((eventId: string) => {
+    setActiveEvents(prev => prev.filter(ae => ae.id !== eventId));
   }, []);
 
-  // Start an event animation (called by the timer)
-  const startEventAnimation = useCallback(() => {
-    if (monthIdx >= TOTAL_MONTHS - 1) return; // Don't animate at the end
+  // Spawn a batch of events (all at once)
+  const spawnEventBatch = useCallback(() => {
+    if (monthIdx >= TOTAL_MONTHS - 1) return; // Don't spawn at the end
     
-    setIsAnimating(true);
-    setCurrentEvent(generateRandomEvent());
-  }, [monthIdx]);
+    const numEvents = getMaxConcurrentEvents(progress);
+    const batch = generateEventBatch(numEvents);
+    
+    if (batch.length > 0) {
+      hasAdvancedThisBatch.current = false; // Reset for new batch
+      setActiveEvents(batch);
+    }
+  }, [monthIdx, progress]);
 
-  // Auto-advance timer - triggers event animation, which then advances the month
+  // Main tick loop - spawns batches at fixed intervals
   useEffect(() => {
-    if (!isSectionVisible || isPaused || isAnimating) return;
+    if (!isSectionVisible || isPaused) return;
+    if (monthIdx >= TOTAL_MONTHS - 1) return; // Stop at the end
+    
+    // Only schedule next tick when no events are active (batch complete)
+    if (activeEvents.length > 0) return;
 
-    // Wait a bit, then start the event animation
-    advanceTimeoutRef.current = setTimeout(() => {
-      startEventAnimation();
-    }, TIME_CONFIG.autoAdvanceMs);
+    tickIntervalRef.current = setTimeout(() => {
+      spawnEventBatch();
+    }, TICK_INTERVAL_MS);
 
     return () => {
-      if (advanceTimeoutRef.current) {
-        clearTimeout(advanceTimeoutRef.current);
+      if (tickIntervalRef.current) {
+        clearTimeout(tickIntervalRef.current);
       }
     };
-  }, [isSectionVisible, isPaused, isAnimating, monthIdx, startEventAnimation]);
+  }, [isSectionVisible, isPaused, monthIdx, activeEvents.length, spawnEventBatch]);
 
   // If the section scrolls out of view, stop all timers/animations immediately.
   useEffect(() => {
@@ -118,9 +137,9 @@ export const Ecosystem: React.FC = () => {
       clearTimeout(resumeTimeoutRef.current);
       resumeTimeoutRef.current = null;
     }
-    if (advanceTimeoutRef.current) {
-      clearTimeout(advanceTimeoutRef.current);
-      advanceTimeoutRef.current = null;
+    if (tickIntervalRef.current) {
+      clearTimeout(tickIntervalRef.current);
+      tickIntervalRef.current = null;
     }
     if (waveAnimationRef.current) {
       cancelAnimationFrame(waveAnimationRef.current);
@@ -128,8 +147,8 @@ export const Ecosystem: React.FC = () => {
     }
 
     setWaveX(null);
-    setCurrentEvent(null);
-    setIsAnimating(false);
+    setActiveEvents([]);
+    hasAdvancedThisBatch.current = false;
   }, [isSectionVisible]);
 
   // Cleanup timeouts on unmount
@@ -138,8 +157,8 @@ export const Ecosystem: React.FC = () => {
       if (resumeTimeoutRef.current) {
         clearTimeout(resumeTimeoutRef.current);
       }
-      if (advanceTimeoutRef.current) {
-        clearTimeout(advanceTimeoutRef.current);
+      if (tickIntervalRef.current) {
+        clearTimeout(tickIntervalRef.current);
       }
       if (waveAnimationRef.current) {
         cancelAnimationFrame(waveAnimationRef.current);
@@ -157,9 +176,9 @@ export const Ecosystem: React.FC = () => {
       clearTimeout(resumeTimeoutRef.current);
       resumeTimeoutRef.current = null;
     }
-    if (advanceTimeoutRef.current) {
-      clearTimeout(advanceTimeoutRef.current);
-      advanceTimeoutRef.current = null;
+    if (tickIntervalRef.current) {
+      clearTimeout(tickIntervalRef.current);
+      tickIntervalRef.current = null;
     }
     // Cancel any ongoing wave animation
     if (waveAnimationRef.current) {
@@ -167,9 +186,9 @@ export const Ecosystem: React.FC = () => {
       waveAnimationRef.current = null;
     }
     setWaveX(null);
-    // Cancel any ongoing animation
-    setCurrentEvent(null);
-    setIsAnimating(false);
+    // Cancel all active events
+    setActiveEvents([]);
+    hasAdvancedThisBatch.current = false;
     setIsPaused(true);
   }, []);
 
@@ -248,8 +267,8 @@ export const Ecosystem: React.FC = () => {
               stats={stats}
               waveX={waveX}
               eventOverlay={
-                <EventAnimation 
-                  event={currentEvent} 
+                <MultiEventAnimation 
+                  events={activeEvents} 
                   onImpact={handleEventImpact}
                   onComplete={handleEventComplete} 
                 />

@@ -19,9 +19,17 @@ export const monthIndexToDate = (idx: number): { month: string; year: number } =
 // =============================================================================
 
 export const calculateStats = (monthIdx: number): Stats => {
-  const years = monthIdx / 12;
-  const dampening = years > GROWTH_CONFIG.dampeningAfterYear ? GROWTH_CONFIG.dampeningFactor : 1;
-  const effectiveMonths = monthIdx * dampening;
+  const dampeningThresholdMonths = GROWTH_CONFIG.dampeningAfterYear * 12;
+  
+  // Calculate effective months: full growth up to threshold, then dampened growth after
+  let effectiveMonths: number;
+  if (monthIdx <= dampeningThresholdMonths) {
+    effectiveMonths = monthIdx;
+  } else {
+    // Full growth for first 25 years, dampened growth for remaining months
+    const monthsAfterThreshold = monthIdx - dampeningThresholdMonths;
+    effectiveMonths = dampeningThresholdMonths + (monthsAfterThreshold * GROWTH_CONFIG.dampeningFactor);
+  }
 
   const calc = (key: keyof typeof GROWTH_CONFIG) => {
     const config = GROWTH_CONFIG[key];

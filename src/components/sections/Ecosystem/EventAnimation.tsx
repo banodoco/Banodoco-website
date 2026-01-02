@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import {
   type EcosystemEvent,
+  type ActiveEvent,
   EVENT_TIMING,
   BANODOCO_SOURCE,
   SVG_CONFIG,
@@ -8,105 +9,73 @@ import {
   getExternalEventPath,
   getStageColor,
   getStageX,
-  getRandomSourceY,
 } from './eventConfig';
 
-interface EventAnimationProps {
-  event: EcosystemEvent | null;
-  onImpact?: () => void;    // Called when line hits target
-  onComplete?: () => void;  // Called when animation fully finishes
+// =============================================================================
+// SINGLE EVENT ANIMATION (internal component)
+// =============================================================================
+
+interface SingleEventProps {
+  activeEvent: ActiveEvent;
+  onImpact: (id: string) => void;
+  onComplete: (id: string) => void;
 }
 
-type Phase = 'idle' | 'label' | 'drawing' | 'fadeout';
+type Phase = 'waiting' | 'label' | 'drawing' | 'fadeout' | 'done';
 
-export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact, onComplete }) => {
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [sourceY, setSourceY] = useState<number>(360);
-  const animationKey = useRef(0);
-
-  // Generate new random position when event changes
-  useEffect(() => {
-    if (event && event.type === 'external') {
-      setSourceY(getRandomSourceY());
-    }
-  }, [event]);
+const SingleEventAnimation: React.FC<SingleEventProps> = ({ activeEvent, onImpact, onComplete }) => {
+  const { id, event, sourceY, delay = 0 } = activeEvent;
+  const [phase, setPhase] = useState<Phase>(delay > 0 ? 'waiting' : 'label');
+  
+  // Unique filter ID to avoid conflicts between simultaneous events
+  const filterId = `event-glow-${id}`;
 
   useEffect(() => {
-    if (!event) {
-      setPhase('idle');
-      return;
-    }
-
-    // New event - start animation
-    animationKey.current += 1;
+    // All timers offset by the stagger delay
+    const baseDelay = delay;
     
-    const isExternal = event.type === 'external';
+    // Wait phase (if delayed)
+    const labelTimer = delay > 0 ? setTimeout(() => {
+      setPhase('label');
+    }, baseDelay) : null;
     
-    if (isExternal) {
-      // External: label first, then draw, then fadeout
-      setPhase('label');
-      
-      const drawTimer = setTimeout(() => {
-        setPhase('drawing');
-      }, EVENT_TIMING.labelAppearDuration);
-      
-      // Fire onImpact when line finishes drawing
-      const impactTimer = setTimeout(() => {
-        onImpact?.();
-        setPhase('fadeout');
-      }, EVENT_TIMING.labelAppearDuration + EVENT_TIMING.pathDrawDuration);
-      
-      const completeTimer = setTimeout(() => {
-        setPhase('idle');
-        onComplete?.();
-      }, EVENT_TIMING.labelAppearDuration + EVENT_TIMING.pathDrawDuration + EVENT_TIMING.fadeoutDuration);
-      
-      return () => {
-        clearTimeout(drawTimer);
-        clearTimeout(impactTimer);
-        clearTimeout(completeTimer);
-      };
-    } else {
-      // Internal: label first, then draw, then fadeout (same as external now)
-      setPhase('label');
-      
-      const drawTimer = setTimeout(() => {
-        setPhase('drawing');
-      }, EVENT_TIMING.labelAppearDuration);
-
-      // Fire onImpact when line finishes drawing
-      const impactTimer = setTimeout(() => {
-        onImpact?.();
-        setPhase('fadeout');
-      }, EVENT_TIMING.labelAppearDuration + EVENT_TIMING.pathDrawDuration);
-
-      const completeTimer = setTimeout(() => {
-        setPhase('idle');
-        onComplete?.();
-      }, EVENT_TIMING.labelAppearDuration + EVENT_TIMING.pathDrawDuration + EVENT_TIMING.fadeoutDuration);
-
-      return () => {
-        clearTimeout(drawTimer);
-        clearTimeout(impactTimer);
-        clearTimeout(completeTimer);
-      };
-    }
-  }, [event, onImpact, onComplete]);
+    // Start drawing after label appears
+    const drawTimer = setTimeout(() => {
+      setPhase('drawing');
+    }, baseDelay + EVENT_TIMING.labelAppearDuration);
+    
+    // Fire onImpact when line finishes drawing
+    const impactTimer = setTimeout(() => {
+      onImpact(id);
+      setPhase('fadeout');
+    }, baseDelay + EVENT_TIMING.labelAppearDuration + EVENT_TIMING.pathDrawDuration);
+    
+    const completeTimer = setTimeout(() => {
+      setPhase('done');
+      onComplete(id);
+    }, baseDelay + EVENT_TIMING.labelAppearDuration + EVENT_TIMING.pathDrawDuration + EVENT_TIMING.fadeoutDuration);
+    
+    return () => {
+      if (labelTimer) clearTimeout(labelTimer);
+      clearTimeout(drawTimer);
+      clearTimeout(impactTimer);
+      clearTimeout(completeTimer);
+    };
+  }, [id, delay, onImpact, onComplete]);
 
   // Memoize path to avoid recalculation
   const path = useMemo(() => {
-    if (!event) return '';
     if (event.type === 'internal') {
       return getInternalEventPath(event.from, event.to);
     }
-    return getExternalEventPath(event.target, sourceY);
+    return getExternalEventPath(event.target, sourceY ?? SVG_CONFIG.centerY);
   }, [event, sourceY]);
 
-  if (!event || phase === 'idle') return null;
+  if (phase === 'done' || phase === 'waiting') return null;
 
   const isInternal = event.type === 'internal';
   const color = isInternal
-    ? getStageColor(event.from)  // Use the origin stage's color for internal events
+    ? getStageColor(event.from)
     : getStageColor(event.target);
 
   const showPath = phase === 'drawing' || phase === 'fadeout';
@@ -116,18 +85,20 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
   // For internal events, label appears at the starting (from) stage
   const internalLabelX = isInternal ? getStageX(event.from) : 0;
   const internalLabelY = SVG_CONFIG.centerY;
+  
+  // Use pre-computed sourceY for external events
+  const externalSourceY = sourceY ?? SVG_CONFIG.centerY;
 
   return (
     <g 
-      key={animationKey.current}
       style={{
         opacity: isFadingOut ? 0 : 1,
         transition: `opacity ${EVENT_TIMING.fadeoutDuration}ms ease-out`,
       }}
     >
-      {/* Glow filter for this event */}
+      {/* Unique glow filter for this event */}
       <defs>
-        <filter id="event-glow" x="-100%" y="-100%" width="300%" height="300%">
+        <filter id={filterId} x="-100%" y="-100%" width="300%" height="300%">
           <feGaussianBlur stdDeviation="6" result="coloredBlur" />
           <feMerge>
             <feMergeNode in="coloredBlur" />
@@ -136,7 +107,7 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
         </filter>
       </defs>
 
-      {/* The animated path - rendered first so it appears UNDER the label */}
+      {/* The animated path */}
       {showPath && (
         <path
           d={path}
@@ -145,17 +116,17 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
           strokeWidth={3}
           strokeLinecap="round"
           opacity={0.9}
-          filter="url(#event-glow)"
+          filter={`url(#${filterId})`}
           style={{
             strokeDasharray: 1,
             strokeDashoffset: 1,
-            animation: `drawPath ${EVENT_TIMING.pathDrawDuration}ms ease-out forwards`,
+            animation: `drawPath-${id} ${EVENT_TIMING.pathDrawDuration}ms ease-out forwards`,
           }}
           pathLength={1}
         />
       )}
 
-      {/* External event label - rendered after path so it appears ON TOP */}
+      {/* External event label */}
       {!isInternal && (
         <g 
           style={{ 
@@ -163,10 +134,9 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
             transition: `opacity ${EVENT_TIMING.labelAppearDuration}ms ease-out`,
           }}
         >
-          {/* Label background */}
           <rect
             x={BANODOCO_SOURCE.x - 5}
-            y={sourceY - 32}
+            y={externalSourceY - 32}
             width={100}
             height={24}
             rx={4}
@@ -175,7 +145,7 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
           />
           <text
             x={BANODOCO_SOURCE.x + 45}
-            y={sourceY - 15}
+            y={externalSourceY - 15}
             textAnchor="middle"
             fill={color}
             fontSize={12}
@@ -183,18 +153,17 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
           >
             {event.label}
           </text>
-          {/* Source node */}
           <circle
             cx={BANODOCO_SOURCE.x}
-            cy={sourceY}
+            cy={externalSourceY}
             r={8}
             fill={color}
-            filter="url(#event-glow)"
+            filter={`url(#${filterId})`}
           />
         </g>
       )}
 
-      {/* Internal event label - appears at the origin stage */}
+      {/* Internal event label */}
       {isInternal && (
         <g 
           style={{ 
@@ -202,7 +171,6 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
             transition: `opacity ${EVENT_TIMING.labelAppearDuration}ms ease-out`,
           }}
         >
-          {/* Label background - positioned above the source point */}
           <rect
             x={internalLabelX - 60}
             y={internalLabelY - 55}
@@ -222,30 +190,116 @@ export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact,
           >
             {event.label}
           </text>
-          {/* Source node at the from stage */}
           <circle
             cx={internalLabelX}
             cy={internalLabelY}
             r={8}
             fill={color}
-            filter="url(#event-glow)"
+            filter={`url(#${filterId})`}
           />
         </g>
       )}
 
-      {/* CSS keyframes for path drawing */}
+      {/* Unique CSS keyframes for this event's path animation */}
       <style>
         {`
-          @keyframes drawPath {
-            from {
-              stroke-dashoffset: 1;
-            }
-            to {
-              stroke-dashoffset: 0;
-            }
+          @keyframes drawPath-${id} {
+            from { stroke-dashoffset: 1; }
+            to { stroke-dashoffset: 0; }
           }
         `}
       </style>
     </g>
+  );
+};
+
+// =============================================================================
+// MULTI-EVENT ANIMATION (main export)
+// =============================================================================
+
+interface MultiEventAnimationProps {
+  events: ActiveEvent[];
+  onImpact: (id: string) => void;
+  onComplete: (id: string) => void;
+}
+
+export const MultiEventAnimation: React.FC<MultiEventAnimationProps> = ({ 
+  events, 
+  onImpact, 
+  onComplete 
+}) => {
+  // Stable callback refs to avoid re-triggering child effects
+  const onImpactRef = useRef(onImpact);
+  const onCompleteRef = useRef(onComplete);
+  onImpactRef.current = onImpact;
+  onCompleteRef.current = onComplete;
+  
+  const handleImpact = useCallback((id: string) => {
+    onImpactRef.current(id);
+  }, []);
+  
+  const handleComplete = useCallback((id: string) => {
+    onCompleteRef.current(id);
+  }, []);
+
+  if (events.length === 0) return null;
+
+  return (
+    <g>
+      {events.map(activeEvent => (
+        <SingleEventAnimation
+          key={activeEvent.id}
+          activeEvent={activeEvent}
+          onImpact={handleImpact}
+          onComplete={handleComplete}
+        />
+      ))}
+    </g>
+  );
+};
+
+// =============================================================================
+// LEGACY SINGLE EVENT (for backwards compatibility if needed)
+// =============================================================================
+
+interface EventAnimationProps {
+  event: EcosystemEvent | null;
+  onImpact?: () => void;
+  onComplete?: () => void;
+}
+
+export const EventAnimation: React.FC<EventAnimationProps> = ({ event, onImpact, onComplete }) => {
+  const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
+  
+  useEffect(() => {
+    if (event) {
+      setActiveEvent({
+        id: `legacy-${Date.now()}`,
+        event,
+        startTime: Date.now(),
+        sourceY: event.type === 'external' ? undefined : undefined,
+      });
+    } else {
+      setActiveEvent(null);
+    }
+  }, [event]);
+  
+  const handleImpact = useCallback(() => {
+    onImpact?.();
+  }, [onImpact]);
+  
+  const handleComplete = useCallback(() => {
+    onComplete?.();
+    setActiveEvent(null);
+  }, [onComplete]);
+
+  if (!activeEvent) return null;
+
+  return (
+    <MultiEventAnimation
+      events={[activeEvent]}
+      onImpact={handleImpact}
+      onComplete={handleComplete}
+    />
   );
 };

@@ -1,8 +1,12 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { TIME_CONFIG, TOTAL_MONTHS, COLORS, YEAR_MARKERS } from './config';
 import { monthIndexToDate } from './utils';
 import { AnimatedText } from './AnimatedText';
+
+// Hold-to-repeat timing
+const HOLD_INITIAL_DELAY = 400; // ms before repeat starts
+const HOLD_REPEAT_INTERVAL = 150; // ms between repeats
 
 interface TimelineScrubberProps {
   monthIdx: number;
@@ -66,16 +70,117 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
   const progress = monthIdx / (TOTAL_MONTHS - 1);
   const { month, year } = monthIndexToDate(monthIdx);
 
+  // Hold-to-repeat refs
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isHolding, setIsHolding] = useState<'left' | 'right' | null>(null);
+
+  // Jump by years (12 months per year) - returns the new index for chaining
+  const jumpYears = useCallback((years: number) => {
+    const newIdx = Math.max(0, Math.min(TOTAL_MONTHS - 1, monthIdx + years * 12));
+    onDragStart(); // Pause auto-advance
+    onMonthChange(newIdx);
+    onDragEnd(); // Resume after delay
+  }, [monthIdx, onMonthChange, onDragStart, onDragEnd]);
+
+  // Jump to a specific year (for clickable year markers)
+  const jumpToYear = useCallback((targetYear: number) => {
+    const newIdx = (targetYear - TIME_CONFIG.startYear) * 12;
+    onDragStart();
+    onMonthChange(Math.max(0, Math.min(TOTAL_MONTHS - 1, newIdx)));
+    onDragEnd();
+  }, [onMonthChange, onDragStart, onDragEnd]);
+
+  // Start hold-to-repeat
+  const startHold = useCallback((direction: 'left' | 'right') => {
+    const years = direction === 'left' ? -1 : 1;
+    setIsHolding(direction);
+    
+    // Immediate first jump
+    jumpYears(years);
+    
+    // After initial delay, start repeating
+    holdTimeoutRef.current = setTimeout(() => {
+      holdIntervalRef.current = setInterval(() => {
+        // Use functional update to get latest monthIdx
+        onDragStart();
+        onMonthChange(prev => {
+          const newIdx = Math.max(0, Math.min(TOTAL_MONTHS - 1, prev + years * 12));
+          return newIdx;
+        });
+        onDragEnd();
+      }, HOLD_REPEAT_INTERVAL);
+    }, HOLD_INITIAL_DELAY);
+  }, [jumpYears, onDragStart, onMonthChange, onDragEnd]);
+
+  // Stop hold-to-repeat
+  const stopHold = useCallback(() => {
+    setIsHolding(null);
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+  }, []);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+      if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+    };
+  }, []);
+
   return (
     <div className="w-full">
-      {/* Date display */}
-      <div className="text-center leading-none">
-        <div className="text-sm md:text-xs lg:text-sm text-white/50 font-medium tracking-wider uppercase">
-          <AnimatedText value={month} />
+      {/* Date display with single chevron navigation (hold to repeat) */}
+      <div className="flex items-center justify-center gap-2 leading-none">
+        {/* Left chevron - hold to repeat */}
+        <button
+          onMouseDown={() => monthIdx >= 12 && startHold('left')}
+          onMouseUp={stopHold}
+          onMouseLeave={stopHold}
+          onTouchStart={() => monthIdx >= 12 && startHold('left')}
+          onTouchEnd={stopHold}
+          disabled={monthIdx < 12}
+          className={cn(
+            "p-2 text-2xl md:text-xl lg:text-3xl transition-all duration-200 disabled:opacity-0 disabled:cursor-default select-none",
+            isHolding === 'left' ? 'text-white/90' : 'text-white/25 hover:text-white/80'
+          )}
+          title="Back 1 year (hold to repeat)"
+        >
+          ‹
+        </button>
+
+        {/* Date display */}
+        <div className="text-center min-w-[100px] sm:min-w-[120px]">
+          <div className="text-sm md:text-xs lg:text-sm text-white/50 font-medium tracking-wider uppercase">
+            <AnimatedText value={month} />
+          </div>
+          <div className="text-4xl md:text-3xl lg:text-5xl font-light text-white tabular-nums">
+            <AnimatedText value={year.toString()} />
+          </div>
         </div>
-        <div className="text-4xl md:text-3xl lg:text-5xl font-light text-white tabular-nums">
-          <AnimatedText value={year.toString()} />
-        </div>
+
+        {/* Right chevron - hold to repeat */}
+        <button
+          onMouseDown={() => monthIdx <= TOTAL_MONTHS - 13 && startHold('right')}
+          onMouseUp={stopHold}
+          onMouseLeave={stopHold}
+          onTouchStart={() => monthIdx <= TOTAL_MONTHS - 13 && startHold('right')}
+          onTouchEnd={stopHold}
+          disabled={monthIdx > TOTAL_MONTHS - 13}
+          className={cn(
+            "p-2 text-2xl md:text-xl lg:text-3xl transition-all duration-200 disabled:opacity-0 disabled:cursor-default select-none",
+            isHolding === 'right' ? 'text-white/90' : 'text-white/25 hover:text-white/80'
+          )}
+          title="Forward 1 year (hold to repeat)"
+        >
+          ›
+        </button>
       </div>
 
       {/* Track */}
@@ -102,23 +207,35 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
           }}
         />
 
-        {/* Year markers */}
+        {/* Year markers - clickable to jump */}
         {YEAR_MARKERS.map((y) => {
           const yearIdx = (y - TIME_CONFIG.startYear) * 12;
           const isLastYear = y === TIME_CONFIG.endYear;
           const pos = isLastYear ? 100 : (yearIdx / (TOTAL_MONTHS - 1)) * 100;
           const isPast = monthIdx >= yearIdx;
+          const isCurrent = year === y;
           return (
-            <div
+            <button
               key={y}
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+              onClick={(e) => {
+                e.stopPropagation();
+                jumpToYear(y);
+              }}
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group cursor-pointer"
               style={{ left: `${pos}%` }}
+              title={`Jump to ${y}`}
             >
-              <div className={cn('w-2 h-2 rounded-full', isPast ? 'bg-white' : 'bg-white/30')} />
-              <span className={cn('absolute left-1/2 -translate-x-1/2 top-4 text-xs font-medium whitespace-nowrap', isPast ? 'text-white/80' : 'text-white/30')}>
+              <div className={cn(
+                'w-2 h-2 rounded-full transition-all duration-200 group-hover:scale-150',
+                isCurrent ? 'bg-white scale-125' : isPast ? 'bg-white group-hover:bg-white' : 'bg-white/30 group-hover:bg-white/60'
+              )} />
+              <span className={cn(
+                'absolute left-1/2 -translate-x-1/2 top-4 text-xs font-medium whitespace-nowrap transition-colors duration-200',
+                isCurrent ? 'text-white' : isPast ? 'text-white/80 group-hover:text-white' : 'text-white/30 group-hover:text-white/60'
+              )}>
                 {y}
               </span>
-            </div>
+            </button>
           );
         })}
 

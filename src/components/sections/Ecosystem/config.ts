@@ -19,8 +19,9 @@ export const GROWTH_CONFIG = {
   artists: { base: 1200, annualGrowth: 1.25 },
   fans: { base: 12000, annualGrowth: 1.285 },
   // Dampen growth after year 25 to keep numbers realistic
+  // Factor tuned to reach ~5B fans by 2095 with the corrected dampening logic
   dampeningAfterYear: 25,
-  dampeningFactor: 0.73,
+  dampeningFactor: 0.58,
 } as const;
 
 // Visual constants for the river visualization
