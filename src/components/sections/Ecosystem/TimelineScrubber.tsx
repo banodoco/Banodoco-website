@@ -145,8 +145,12 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
           onTouchEnd={stopHold}
           disabled={monthIdx < 12}
           className={cn(
-            "p-2 text-2xl md:text-xl lg:text-3xl transition-all duration-200 disabled:opacity-0 disabled:cursor-default select-none",
-            isHolding === 'left' ? 'text-white/90' : 'text-white/25 hover:text-white/80'
+            "p-2 text-2xl md:text-xl lg:text-3xl transition-all duration-200 select-none",
+            monthIdx < 12 
+              ? 'text-white/25 cursor-default' 
+              : isHolding === 'left' 
+                ? 'text-white' 
+                : 'text-white/80 hover:text-white'
           )}
           title="Back 1 year (hold to repeat)"
         >
@@ -172,8 +176,12 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
           onTouchEnd={stopHold}
           disabled={monthIdx > TOTAL_MONTHS - 13}
           className={cn(
-            "p-2 text-2xl md:text-xl lg:text-3xl transition-all duration-200 disabled:opacity-0 disabled:cursor-default select-none",
-            isHolding === 'right' ? 'text-white/90' : 'text-white/25 hover:text-white/80'
+            "p-2 text-2xl md:text-xl lg:text-3xl transition-all duration-200 select-none",
+            monthIdx > TOTAL_MONTHS - 13
+              ? 'text-white/25 cursor-default'
+              : isHolding === 'right'
+                ? 'text-white'
+                : 'text-white/80 hover:text-white'
           )}
           title="Forward 1 year (hold to repeat)"
         >
