@@ -148,12 +148,12 @@
   gap: 2px;
 }
 
-/* Mobile: 10 columns × 5 rows = 50 images */
+/* Mobile: 11 columns × 5 rows = 55 images */
 @media (max-width: 479px) {
   .profile-grid {
-    grid-template-columns: repeat(10, 1fr);
+    grid-template-columns: repeat(11, 1fr);
   }
-  .profile-grid > *:nth-child(n+51) {
+  .profile-grid > *:nth-child(n+56) {
     display: none;
   }
 }

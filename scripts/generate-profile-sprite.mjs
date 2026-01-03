@@ -15,7 +15,7 @@ const manifestOut = path.join(
 );
 
 // Sprite configuration
-const TILE_SIZE = 48; // Each profile pic is 48x48
+const TILE_SIZE = 96; // 2x for Retina displays (source is 48x48, upscaled)
 const COLUMNS = 20;   // 20 columns in the sprite
 
 function isJpg(filename) {
