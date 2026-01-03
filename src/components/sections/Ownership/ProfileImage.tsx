@@ -1,30 +1,48 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { FLICKER_INTERVAL, MOBILE_FLICKER_COUNT } from './config';
 import { getRandomPastelColor } from './utils';
-import { Skeleton } from '@/components/ui/Skeleton';
+import type { ProfilePic } from './useProfilePics';
 
 interface ProfileImageProps {
-  initialPic: string;
-  allPics: string[];
+  initialPic: ProfilePic;
+  allPics: readonly ProfilePic[];
+  spriteConfig: {
+    src: string;
+    columns: number;
+    rows: number;
+  };
   usedPicsRef: React.MutableRefObject<Set<string>>;
-  onSwap: (oldPic: string, newPic: string) => void;
+  onSwap: (oldId: string, newId: string) => void;
 }
 
 export const ProfileImage = ({ 
   initialPic, 
   allPics, 
+  spriteConfig,
   usedPicsRef,
   onSwap
 }: ProfileImageProps) => {
   const [currentPic, setCurrentPic] = useState(initialPic);
-  const [hasError, setHasError] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const fallbackColor = useRef(getRandomPastelColor());
   const flickerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const flickerCountRef = useRef(0);
   const originalPicRef = useRef(initialPic);
   const isTouchRef = useRef(false);
+
+  // Calculate background position for current pic
+  const backgroundStyle = useMemo(() => {
+    const { columns, rows, src } = spriteConfig;
+    const xPercent = columns > 1 ? (currentPic.col / (columns - 1)) * 100 : 0;
+    const yPercent = rows > 1 ? (currentPic.row / (rows - 1)) * 100 : 0;
+    
+    return {
+      backgroundImage: `url(${src})`,
+      backgroundSize: `${columns * 100}% ${rows * 100}%`,
+      backgroundPosition: `${xPercent}% ${yPercent}%`,
+      filter: isActive ? 'brightness(1.15)' : 'brightness(1)',
+    };
+  }, [currentPic, spriteConfig, isActive]);
 
   const stopFlickering = useCallback(() => {
     if (flickerIntervalRef.current) {
@@ -33,10 +51,10 @@ export const ProfileImage = ({
     }
   }, []);
 
-  const getRandomUnusedPic = useCallback((excludePic: string) => {
-    const availablePics = allPics.filter(pic => !usedPicsRef.current.has(pic) || pic === excludePic);
+  const getRandomUnusedPic = useCallback((excludeId: string) => {
+    const availablePics = allPics.filter(pic => !usedPicsRef.current.has(pic.id) || pic.id === excludeId);
     if (availablePics.length > 1) {
-      const otherPics = availablePics.filter(pic => pic !== excludePic);
+      const otherPics = availablePics.filter(pic => pic.id !== excludeId);
       return otherPics[Math.floor(Math.random() * otherPics.length)];
     }
     return allPics[Math.floor(Math.random() * allPics.length)];
@@ -45,8 +63,8 @@ export const ProfileImage = ({
   const settleOnFinalPic = useCallback(() => {
     stopFlickering();
     setIsActive(false);
-    const finalPic = getRandomUnusedPic(originalPicRef.current);
-    onSwap(originalPicRef.current, finalPic);
+    const finalPic = getRandomUnusedPic(originalPicRef.current.id);
+    onSwap(originalPicRef.current.id, finalPic.id);
     setCurrentPic(finalPic);
     originalPicRef.current = finalPic;
   }, [getRandomUnusedPic, onSwap, stopFlickering]);
@@ -99,44 +117,15 @@ export const ProfileImage = ({
     return () => stopFlickering();
   }, [stopFlickering]);
 
-  if (hasError) {
-    return (
-      <div 
-        className="w-full aspect-square transition-all duration-200"
-        style={{ backgroundColor: fallbackColor.current }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onTouchStart={handleTouchStart}
-      />
-    );
-  }
-
   return (
     <div 
-      className="relative w-full aspect-square overflow-hidden cursor-pointer"
+      className="w-full aspect-square cursor-pointer transition-[filter] duration-200"
+      style={backgroundStyle}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
-    >
-      {/* Skeleton shimmer while loading */}
-      {!isLoaded && (
-        <Skeleton className="absolute inset-0 rounded-none" />
-      )}
-      <img
-        src={`/profile_pics/${currentPic}.jpg`}
-        alt=""
-        className={`w-full h-full object-cover transition-[filter,opacity] duration-200 ${
-          isLoaded ? 'opacity-100' : 'opacity-0'
-        }`}
-        style={{
-          filter: isActive ? 'brightness(1.15)' : 'brightness(1)',
-        }}
-        loading="lazy"
-        onLoad={() => setIsLoaded(true)}
-        onError={() => setHasError(true)}
-      />
-    </div>
+      role="img"
+      aria-label="Community member profile"
+    />
   );
 };
-
-

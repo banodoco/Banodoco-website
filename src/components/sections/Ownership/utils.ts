@@ -14,4 +14,10 @@ export const getRandomPastelColor = (): string => {
   return `hsl(${hue}, 70%, 80%)`;
 };
 
+/** Generate a subtle muted color for skeleton placeholders on dark backgrounds */
+export const getRandomSkeletonColor = (): string => {
+  const hue = Math.floor(Math.random() * 360);
+  return `hsl(${hue}, 20%, 25%)`;
+};
+
 

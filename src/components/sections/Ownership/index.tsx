@@ -5,18 +5,19 @@ import { Section, SectionContent } from '@/components/layout/Section';
 import { ArrowRightIcon } from '@/components/ui/icons';
 
 export const Ownership = () => {
-  const { visiblePics, allPics, usedPicsRef, handleSwap } = useProfilePics();
+  const { visiblePics, allPics, spriteConfig, usedPicsRef, handleSwap } = useProfilePics();
 
   return (
     <Section id="ownership" className="bg-gradient-to-br from-[#1a1614] via-[#1f1a18] to-[#141210] text-white">
       <SectionContent fullWidth className="flex-col justify-center gap-6 md:gap-8">
         {/* Profile grid - edge-to-edge */}
-        <div className="profile-grid">
+        <div className="profile-grid w-full">
           {visiblePics.map((pic, idx) => (
             <ProfileImage
-              key={`${pic}-${idx}`}
+              key={`${pic.id}-${idx}`}
               initialPic={pic}
               allPics={allPics}
+              spriteConfig={spriteConfig}
               usedPicsRef={usedPicsRef}
               onSwap={handleSwap}
             />
