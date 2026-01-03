@@ -50,6 +50,10 @@ export function useEventsAutoAdvance({
   const startProgressTimer = useCallback(() => {
     clearTimers();
     setProgress(0);
+    // Clear transition states to avoid stuck states if timer restarts mid-transition
+    setNextAdvanceIdx(null);
+    setPrevAdvanceIdx(null);
+    setDrainingIdx(null);
     
     const startTime = Date.now();
     const updateInterval = 100; // 10fps is plenty; reduces re-renders under scroll-snap
