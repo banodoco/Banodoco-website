@@ -28,3 +28,5 @@ export interface ActiveEvent {
   delay?: number; // Stagger delay in ms for batch animations
 }
 
+
+

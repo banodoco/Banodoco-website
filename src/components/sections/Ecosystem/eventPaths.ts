@@ -128,3 +128,5 @@ export const getExternalEventPath = (target: Stage, sourceY: number): string => 
   return `M ${BANODOCO_SOURCE.x} ${sourceY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${targetX} ${centerY}`;
 };
 
+
+

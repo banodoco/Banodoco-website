@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { FLICKER_INTERVAL, MOBILE_FLICKER_COUNT } from './config';
-import { getRandomPastelColor } from './utils';
 import type { ProfilePic } from './useProfilePics';
 
 interface ProfileImageProps {
@@ -24,7 +23,6 @@ export const ProfileImage = ({
 }: ProfileImageProps) => {
   const [currentPic, setCurrentPic] = useState(initialPic);
   const [isActive, setIsActive] = useState(false);
-  const fallbackColor = useRef(getRandomPastelColor());
   const flickerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const flickerCountRef = useRef(0);
   const originalPicRef = useRef(initialPic);

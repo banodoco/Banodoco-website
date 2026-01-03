@@ -25,8 +25,9 @@ interface UseProfilePicsResult {
 export const useProfilePics = (): UseProfilePicsResult => {
   // Initialize synchronously so the grid isn't empty on first paint (especially noticeable on mobile).
   const [selectedPics] = useState<ProfilePic[]>(() => {
-    if (PROFILE_PICS.length === 0) return [];
-    const shuffled = shuffleArray([...PROFILE_PICS]);
+    const pics = [...PROFILE_PICS] as ProfilePic[];
+    if (pics.length === 0) return [];
+    const shuffled = shuffleArray(pics);
     return shuffled.slice(0, GRID_SIZE);
   });
 
