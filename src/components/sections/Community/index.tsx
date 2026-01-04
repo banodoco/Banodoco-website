@@ -325,8 +325,8 @@ export const Community = () => {
               opacity: topGradientOpacity,
             }}
           />
-          {/* Inner padding so first card starts below header, but can scroll up behind it */}
-          <div className="pt-[var(--header-height)] pb-8">
+          {/* Inner padding so first card starts below header with matching top/bottom spacing */}
+          <div className="pb-8" style={{ paddingTop: 'calc(var(--header-height) + 2rem)' }}>
             {loading && <TopicCardsSkeleton />}
             {showErrorOrEmpty && (
               <TopicCardsState error={error} isEmpty={topics.length === 0} />
