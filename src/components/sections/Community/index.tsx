@@ -326,9 +326,10 @@ export const Community = () => {
             }}
           />
           {/* Inner padding: centers first/last card in visible area (accounting for header) */}
+          {/* Assuming card height ~640px (40rem), half is 20rem */}
           <div style={{ 
-            paddingTop: 'calc(50vh + var(--header-height)/2 - 8rem)', 
-            paddingBottom: 'calc(50vh - var(--header-height)/2 - 8rem)' 
+            paddingTop: 'calc(50vh + var(--header-height)/2 - 20rem)', 
+            paddingBottom: 'calc(50vh - var(--header-height)/2 - 20rem)' 
           }}>
             {loading && <TopicCardsSkeleton />}
             {showErrorOrEmpty && (
