@@ -40,7 +40,13 @@ const aspectClasses: Record<string, string> = {
   square: 'aspect-square',
 };
 
-const MasonryGrid = ({ images }: { images: Section extends { layout: 'masonry' } ? Section['images'] : never }) => (
+type MasonryImage = {
+  label: string;
+  aspect: 'portrait' | 'landscape' | 'wide' | 'tall' | 'square';
+  gradient: string;
+};
+
+const MasonryGrid = ({ images }: { images: MasonryImage[] }) => (
   <div className="columns-2 gap-2 space-y-2">
     {images.map((img, i) => (
       <div key={i} className="break-inside-avoid">

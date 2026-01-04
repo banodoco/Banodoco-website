@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { HoverReveal } from './HoverReveal';
 import { Emphasis } from './Emphasis';
 
@@ -424,7 +424,7 @@ export const sections: Section[] = [
   {
     id: 'questions-list',
     layout: 'custom',
-    render: (sectionNumber) => null, // We'll implement this in the renderer
+    render: (_sectionNumber) => null, // We'll implement this in the renderer
   },
 
   // ─────────────────────────────────────────────────────────────────────────────
