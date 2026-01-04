@@ -154,7 +154,6 @@ export const Community = () => {
   const [bottomGradientOpacity, setBottomGradientOpacity] = useState(1);
   const [paddings, setPaddings] = useState({ top: 0, bottom: 0 });
   
-  const containerRef = useRef<HTMLDivElement>(null);
   const desktopScrollRef = useRef<HTMLDivElement>(null);
   const { ref: sectionRef, isActive: sectionIsVisible } = useSectionRuntime({ threshold: 0.5 });
   const topicRefs = useRef<(HTMLElement | null)[]>([]);
@@ -229,12 +228,16 @@ export const Community = () => {
       setBottomGradientOpacity(bottomOpacity);
     };
 
-    // Initial check to set bottom gradient correctly on load
-    handleDesktopScroll();
+    // Initial check to set gradient correctly on load and after padding changes
+    // Use RAF to ensure DOM has updated with new padding
+    const rafId = requestAnimationFrame(handleDesktopScroll);
 
     desktopScroll.addEventListener('scroll', handleDesktopScroll, { passive: true });
-    return () => desktopScroll.removeEventListener('scroll', handleDesktopScroll);
-  }, []);
+    return () => {
+      desktopScroll.removeEventListener('scroll', handleDesktopScroll);
+      cancelAnimationFrame(rafId);
+    };
+  }, [paddings]); // Re-run when padding changes to recalc gradient with new scrollHeight
 
   // Calculate dynamic padding to center first/last cards
   useEffect(() => {
@@ -291,7 +294,7 @@ export const Community = () => {
   return (
     <Section ref={sectionRef} id="community" className="bg-gradient-to-br from-[#0c1420] via-[#101825] to-[#0a1018] text-white">
       {/* Mobile/tablet layout - with header offset */}
-      <div ref={containerRef} className="xl:hidden h-full px-6 md:px-16 flex flex-col" style={{ paddingTop: 'var(--header-height)' }}>
+      <div className="xl:hidden h-full px-6 md:px-16 flex flex-col" style={{ paddingTop: 'var(--header-height)' }}>
         <div className="max-w-7xl mx-auto w-full flex-1 flex items-center">
           <div className="w-full">
             <CommunityIntro />
