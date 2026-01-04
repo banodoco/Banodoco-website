@@ -325,8 +325,11 @@ export const Community = () => {
               opacity: topGradientOpacity,
             }}
           />
-          {/* Inner padding: centers first/last card vertically in viewport */}
-          <div style={{ paddingTop: 'calc(50vh - 8rem)', paddingBottom: 'calc(50vh - 8rem)' }}>
+          {/* Inner padding: centers first/last card in visible area (accounting for header) */}
+          <div style={{ 
+            paddingTop: 'calc(50vh + var(--header-height)/2 - 8rem)', 
+            paddingBottom: 'calc(50vh - var(--header-height)/2 - 8rem)' 
+          }}>
             {loading && <TopicCardsSkeleton />}
             {showErrorOrEmpty && (
               <TopicCardsState error={error} isEmpty={topics.length === 0} />
