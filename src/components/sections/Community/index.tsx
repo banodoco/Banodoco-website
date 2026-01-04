@@ -325,8 +325,8 @@ export const Community = () => {
               opacity: topGradientOpacity,
             }}
           />
-          {/* Inner padding so first card starts below header, but can scroll up behind it */}
-          <div className="pt-[var(--header-height)]">
+          {/* Inner padding so first card starts below header; bottom padding allows gradient fade to complete */}
+          <div className="pt-[var(--header-height)] pb-20">
             {loading && <TopicCardsSkeleton />}
             {showErrorOrEmpty && (
               <TopicCardsState error={error} isEmpty={topics.length === 0} />
