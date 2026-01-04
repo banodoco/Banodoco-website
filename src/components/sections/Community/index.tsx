@@ -150,7 +150,7 @@ const TopicCardsState = ({ error, isEmpty }: TopicCardsStateProps) => {
 export const Community = () => {
   const { topics, loading, error } = useCommunityTopics();
   const [activeTopicIndex, setActiveTopicIndex] = useState<number>(0);
-  const [isScrolledDown, setIsScrolledDown] = useState(false);
+  const [topGradientOpacity, setTopGradientOpacity] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const desktopScrollRef = useRef<HTMLDivElement>(null);
   const { ref: sectionRef, isActive: sectionIsVisible } = useSectionRuntime({ threshold: 0.5 });
@@ -208,15 +208,16 @@ export const Community = () => {
     };
   }, [topics.length]);
 
-  // Track vertical scroll on desktop to show/hide top gradient
+  // Track vertical scroll on desktop to progressively fade in top gradient
   useEffect(() => {
     const desktopScroll = desktopScrollRef.current;
     if (!desktopScroll) return;
 
     const handleDesktopScroll = () => {
       const scrollTop = desktopScroll.scrollTop;
-      // Show top gradient after scrolling more than 10px
-      setIsScrolledDown(scrollTop > 10);
+      // Fade in over 80px of scroll (fully visible at 80px)
+      const opacity = Math.min(1, scrollTop / 80);
+      setTopGradientOpacity(opacity);
     };
 
     desktopScroll.addEventListener('scroll', handleDesktopScroll, { passive: true });
@@ -304,13 +305,14 @@ export const Community = () => {
           className="col-span-8 overflow-y-auto scrollbar-hide relative" 
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          {/* Subtle gradient fade at top to indicate scrollable content above - only shown when scrolled */}
+          {/* Subtle gradient fade at top to indicate scrollable content above - fades in as you scroll */}
           <div 
-            className={`sticky top-0 left-0 right-0 pointer-events-none z-10 transition-opacity duration-200 ${isScrolledDown ? 'opacity-100' : 'opacity-0'}`}
+            className="sticky top-0 left-0 right-0 pointer-events-none z-10"
             style={{ 
               height: 'calc(var(--header-height) + 4rem)',
               marginBottom: 'calc(-1 * (var(--header-height) + 4rem))',
-              background: 'linear-gradient(to bottom, rgba(16, 24, 37, 1) 0%, rgba(16, 24, 37, 1) calc(100% - 4rem), rgba(16, 24, 37, 0) 100%)'
+              background: 'linear-gradient(to bottom, rgba(16, 24, 37, 1) 0%, rgba(16, 24, 37, 1) calc(100% - 4rem), rgba(16, 24, 37, 0) 100%)',
+              opacity: topGradientOpacity,
             }}
           />
           {/* Inner padding so first card starts below header, but can scroll up behind it */}
