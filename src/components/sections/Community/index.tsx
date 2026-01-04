@@ -325,8 +325,8 @@ export const Community = () => {
               opacity: topGradientOpacity,
             }}
           />
-          {/* Inner padding: header offset + buffer for gradient fade on both ends */}
-          <div className="pb-32" style={{ paddingTop: 'calc(var(--header-height) + 8rem)' }}>
+          {/* Inner padding: centers first/last card vertically in viewport */}
+          <div style={{ paddingTop: 'calc(50vh - 8rem)', paddingBottom: 'calc(50vh - 8rem)' }}>
             {loading && <TopicCardsSkeleton />}
             {showErrorOrEmpty && (
               <TopicCardsState error={error} isEmpty={topics.length === 0} />
