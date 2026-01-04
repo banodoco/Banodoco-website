@@ -151,6 +151,7 @@ export const Community = () => {
   const { topics, loading, error } = useCommunityTopics();
   const [activeTopicIndex, setActiveTopicIndex] = useState<number>(0);
   const [topGradientOpacity, setTopGradientOpacity] = useState(0);
+  const [bottomGradientOpacity, setBottomGradientOpacity] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const desktopScrollRef = useRef<HTMLDivElement>(null);
   const { ref: sectionRef, isActive: sectionIsVisible } = useSectionRuntime({ threshold: 0.5 });
@@ -208,17 +209,26 @@ export const Community = () => {
     };
   }, [topics.length]);
 
-  // Track vertical scroll on desktop to progressively fade in top gradient
+  // Track vertical scroll on desktop to progressively fade gradients
   useEffect(() => {
     const desktopScroll = desktopScrollRef.current;
     if (!desktopScroll) return;
 
     const handleDesktopScroll = () => {
-      const scrollTop = desktopScroll.scrollTop;
-      // Fade in over 80px of scroll (fully visible at 80px)
-      const opacity = Math.min(1, scrollTop / 80);
-      setTopGradientOpacity(opacity);
+      const { scrollTop, scrollHeight, clientHeight } = desktopScroll;
+      
+      // Top gradient: fade in over 80px of scroll from top
+      const topOpacity = Math.min(1, scrollTop / 80);
+      setTopGradientOpacity(topOpacity);
+      
+      // Bottom gradient: fade in over 80px of scroll from bottom
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const bottomOpacity = Math.min(1, distanceFromBottom / 80);
+      setBottomGradientOpacity(bottomOpacity);
     };
+
+    // Initial check to set bottom gradient correctly on load
+    handleDesktopScroll();
 
     desktopScroll.addEventListener('scroll', handleDesktopScroll, { passive: true });
     return () => desktopScroll.removeEventListener('scroll', handleDesktopScroll);
@@ -337,11 +347,12 @@ export const Community = () => {
               </div>
             )}
           </div>
-          {/* Subtle gradient fade at bottom to indicate scrollable content below */}
+          {/* Subtle gradient fade at bottom to indicate scrollable content below - fades in based on distance from bottom */}
           <div 
             className="sticky bottom-0 left-0 right-0 h-16 pointer-events-none z-10 -mt-16"
             style={{ 
-              background: 'linear-gradient(to top, rgba(16, 24, 37, 0.95) 0%, rgba(16, 24, 37, 0) 100%)'
+              background: 'linear-gradient(to top, rgba(16, 24, 37, 0.95) 0%, rgba(16, 24, 37, 0) 100%)',
+              opacity: bottomGradientOpacity,
             }}
           />
         </div>
