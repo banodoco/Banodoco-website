@@ -283,9 +283,18 @@ export const Community = () => {
 
         {/* Right side - Topic cards (scroll under header) */}
         <div 
-          className="col-span-8 overflow-y-auto scrollbar-hide" 
+          className="col-span-8 overflow-y-auto scrollbar-hide relative" 
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
+          {/* Subtle gradient fade at top to indicate scrollable content above */}
+          <div 
+            className="sticky top-0 left-0 right-0 pointer-events-none z-10"
+            style={{ 
+              height: 'calc(var(--header-height) + 4rem)',
+              marginBottom: 'calc(-1 * (var(--header-height) + 4rem))',
+              background: 'linear-gradient(to bottom, rgba(16, 24, 37, 1) 0%, rgba(16, 24, 37, 1) calc(100% - 4rem), rgba(16, 24, 37, 0) 100%)'
+            }}
+          />
           {/* Inner padding so first card starts below header, but can scroll up behind it */}
           <div className="pt-[var(--header-height)] pb-8">
             {loading && <TopicCardsSkeleton />}
@@ -308,6 +317,13 @@ export const Community = () => {
               </div>
             )}
           </div>
+          {/* Subtle gradient fade at bottom to indicate scrollable content below */}
+          <div 
+            className="sticky bottom-0 left-0 right-0 h-16 pointer-events-none z-10 -mt-16"
+            style={{ 
+              background: 'linear-gradient(to top, rgba(16, 24, 37, 0.95) 0%, rgba(16, 24, 37, 0) 100%)'
+            }}
+          />
         </div>
       </div>
     </Section>

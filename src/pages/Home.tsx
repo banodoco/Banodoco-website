@@ -16,10 +16,22 @@ const Home = () => {
 
   useEffect(() => {
     // Support "navigate home and scroll to section" from other pages.
-    const state = (location.state ?? {}) as { scrollTo?: string };
+    const state = (location.state ?? {}) as { scrollTo?: string; scrollToTop?: boolean };
     const scrollTargetFromState = state.scrollTo;
     const scrollTargetFromHash = location.hash?.replace('#', '') || undefined;
     const targetId = scrollTargetFromState || scrollTargetFromHash;
+    
+    // Scroll to top if explicitly requested
+    if (state.scrollToTop) {
+      requestAnimationFrame(() => {
+        const homeContainer = document.getElementById('home-scroll-container');
+        if (homeContainer) {
+          homeContainer.scrollTo({ top: 0, behavior: 'instant' });
+        }
+      });
+      return;
+    }
+    
     if (!targetId) return;
 
     // Defer to ensure sections are mounted before scrolling (important for snap container).

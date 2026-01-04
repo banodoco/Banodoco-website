@@ -18,9 +18,10 @@ const HOME_SCROLL_CLASSES = 'relative h-screen h-[100svh] overflow-y-auto snap-y
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const { pathname } = useLocation();
   const isHome = pathname === '/';
+  const isSecondRenaissance = pathname === '/2nd-renaissance';
   const [isIOSDevice] = useState(() => isIOS());
 
-  const theme = isHome ? 'dark' : 'light';
+  const theme = (isHome || isSecondRenaissance) ? 'dark' : 'light';
 
   if (isHome) {
     return (
@@ -38,6 +39,18 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           <Header />
           {children}
           <Footer />
+        </div>
+      </LayoutProvider>
+    );
+  }
+
+  // Special fullscreen layout for 2nd Renaissance page - no header/footer
+  // Uses mandatory snap for firm section snapping
+  if (isSecondRenaissance) {
+    return (
+      <LayoutProvider theme={theme} isHomePage={false}>
+        <div className="h-screen overflow-y-auto snap-y snap-mandatory bg-[var(--color-bg-base)] text-white">
+          {children}
         </div>
       </LayoutProvider>
     );

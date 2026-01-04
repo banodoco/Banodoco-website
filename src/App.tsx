@@ -6,6 +6,7 @@ import Home from '@/pages/Home';
 
 // Lazy load non-critical pages
 const OwnershipPage = lazy(() => import('@/pages/OwnershipPage'));
+const SecondRenaissance = lazy(() => import('@/pages/SecondRenaissance'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Loading fallback with skeleton
@@ -28,6 +29,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/ownership" element={<OwnershipPage />} />
+            <Route path="/2nd-renaissance" element={<SecondRenaissance />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
