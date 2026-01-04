@@ -326,7 +326,7 @@ export const Community = () => {
             }}
           />
           {/* Inner padding: header offset + buffer for gradient fade on both ends */}
-          <div className="pb-20" style={{ paddingTop: 'calc(var(--header-height) + 5rem)' }}>
+          <div className="pb-32" style={{ paddingTop: 'calc(var(--header-height) + 8rem)' }}>
             {loading && <TopicCardsSkeleton />}
             {showErrorOrEmpty && (
               <TopicCardsState error={error} isEmpty={topics.length === 0} />
