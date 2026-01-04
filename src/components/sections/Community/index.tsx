@@ -152,6 +152,8 @@ export const Community = () => {
   const [activeTopicIndex, setActiveTopicIndex] = useState<number>(0);
   const [topGradientOpacity, setTopGradientOpacity] = useState(0);
   const [bottomGradientOpacity, setBottomGradientOpacity] = useState(1);
+  const [paddings, setPaddings] = useState({ top: 0, bottom: 0 });
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const desktopScrollRef = useRef<HTMLDivElement>(null);
   const { ref: sectionRef, isActive: sectionIsVisible } = useSectionRuntime({ threshold: 0.5 });
@@ -233,6 +235,55 @@ export const Community = () => {
     desktopScroll.addEventListener('scroll', handleDesktopScroll, { passive: true });
     return () => desktopScroll.removeEventListener('scroll', handleDesktopScroll);
   }, []);
+
+  // Calculate dynamic padding to center first/last cards
+  useEffect(() => {
+    if (loading || topics.length === 0) return;
+
+    const calculatePaddings = () => {
+      // Get header height from CSS variable
+      const headerHeightVal = getComputedStyle(document.documentElement)
+        .getPropertyValue('--header-height').trim();
+      const headerHeightPx = headerHeightVal.endsWith('px') 
+        ? parseFloat(headerHeightVal) 
+        : 80; // Default fallback
+
+      const windowHeight = window.innerHeight;
+      
+      // Measure first and last cards
+      const firstCard = topicRefs.current[0];
+      const lastCard = topicRefs.current[topics.length - 1];
+      
+      if (!firstCard || !lastCard) return;
+
+      const firstHeight = firstCard.offsetHeight;
+      const lastHeight = lastCard.offsetHeight;
+
+      // Top padding: Center first card in visible area (below header)
+      // Visible area center = headerHeight + (windowHeight - headerHeight)/2
+      // Top padding = Visible Center - firstHeight/2
+      //             = (windowHeight + headerHeight - firstHeight) / 2
+      const top = Math.max(headerHeightPx, (windowHeight + headerHeightPx - firstHeight) / 2);
+
+      // Bottom padding: Center last card in visible area
+      // Bottom padding = (windowHeight - headerHeight - lastHeight) / 2
+      const bottom = Math.max(80, (windowHeight - headerHeightPx - lastHeight) / 2);
+
+      setPaddings({ top, bottom });
+    };
+
+    // Initial calc
+    // Small delay to ensure render complete
+    const timer = setTimeout(calculatePaddings, 100);
+    
+    // Recalc on resize
+    window.addEventListener('resize', calculatePaddings);
+    
+    return () => {
+      window.removeEventListener('resize', calculatePaddings);
+      clearTimeout(timer);
+    };
+  }, [loading, topics.length]);
 
   const hasTopics = !loading && !error && topics.length > 0;
   const showErrorOrEmpty = !loading && (error || topics.length === 0);
@@ -325,11 +376,10 @@ export const Community = () => {
               opacity: topGradientOpacity,
             }}
           />
-          {/* Inner padding: centers first/last card in visible area (accounting for header) */}
-          {/* Assuming card height ~640px (40rem), half is 20rem */}
+          {/* Inner padding: dynamically calculated to center first/last cards */}
           <div style={{ 
-            paddingTop: 'calc(50vh + var(--header-height)/2 - 20rem)', 
-            paddingBottom: 'calc(50vh - var(--header-height)/2 - 20rem)' 
+            paddingTop: paddings.top ? `${paddings.top}px` : 'var(--header-height)', 
+            paddingBottom: paddings.bottom ? `${paddings.bottom}px` : '5rem' 
           }}>
             {loading && <TopicCardsSkeleton />}
             {showErrorOrEmpty && (
