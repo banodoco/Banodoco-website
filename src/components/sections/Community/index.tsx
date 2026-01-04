@@ -150,7 +150,9 @@ const TopicCardsState = ({ error, isEmpty }: TopicCardsStateProps) => {
 export const Community = () => {
   const { topics, loading, error } = useCommunityTopics();
   const [activeTopicIndex, setActiveTopicIndex] = useState<number>(0);
+  const [isScrolledDown, setIsScrolledDown] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const desktopScrollRef = useRef<HTMLDivElement>(null);
   const { ref: sectionRef, isActive: sectionIsVisible } = useSectionRuntime({ threshold: 0.5 });
   const topicRefs = useRef<(HTMLElement | null)[]>([]);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
@@ -205,6 +207,21 @@ export const Community = () => {
       }
     };
   }, [topics.length]);
+
+  // Track vertical scroll on desktop to show/hide top gradient
+  useEffect(() => {
+    const desktopScroll = desktopScrollRef.current;
+    if (!desktopScroll) return;
+
+    const handleDesktopScroll = () => {
+      const scrollTop = desktopScroll.scrollTop;
+      // Show top gradient after scrolling more than 10px
+      setIsScrolledDown(scrollTop > 10);
+    };
+
+    desktopScroll.addEventListener('scroll', handleDesktopScroll, { passive: true });
+    return () => desktopScroll.removeEventListener('scroll', handleDesktopScroll);
+  }, []);
 
   const hasTopics = !loading && !error && topics.length > 0;
   const showErrorOrEmpty = !loading && (error || topics.length === 0);
@@ -283,12 +300,13 @@ export const Community = () => {
 
         {/* Right side - Topic cards (scroll under header) */}
         <div 
+          ref={desktopScrollRef}
           className="col-span-8 overflow-y-auto scrollbar-hide relative" 
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          {/* Subtle gradient fade at top to indicate scrollable content above */}
+          {/* Subtle gradient fade at top to indicate scrollable content above - only shown when scrolled */}
           <div 
-            className="sticky top-0 left-0 right-0 pointer-events-none z-10"
+            className={`sticky top-0 left-0 right-0 pointer-events-none z-10 transition-opacity duration-200 ${isScrolledDown ? 'opacity-100' : 'opacity-0'}`}
             style={{ 
               height: 'calc(var(--header-height) + 4rem)',
               marginBottom: 'calc(-1 * (var(--header-height) + 4rem))',
