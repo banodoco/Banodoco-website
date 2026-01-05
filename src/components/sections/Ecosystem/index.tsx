@@ -215,7 +215,7 @@ export const Ecosystem: React.FC = () => {
       ref={sectionRef} 
       id="ecosystem" 
       className="text-white relative"
-      videoOverlay="rgba(10, 18, 24, 0.85)"
+      videoOverlay="rgba(10, 18, 24, 0.92)"
     >
       {/* 
        * Ecosystem uses absolute positioning with calc() for header offset.

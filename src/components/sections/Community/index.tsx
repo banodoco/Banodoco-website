@@ -415,9 +415,10 @@ export const Community = () => {
             }}
           />
           {/* Inner padding: dynamically calculated to center first/last cards */}
+          {/* Fallback uses same formula as JS calc: (windowHeight + headerHeight - cardHeight) / 2 */}
           <div style={{ 
-            paddingTop: paddings.top ? `${paddings.top}px` : 'var(--header-height)', 
-            paddingBottom: paddings.bottom ? `${paddings.bottom}px` : '5rem' 
+            paddingTop: paddings.top ? `${paddings.top}px` : 'calc((100vh + var(--header-height) - 20rem) / 2)', 
+            paddingBottom: paddings.bottom ? `${paddings.bottom}px` : 'calc((100vh - var(--header-height) - 20rem) / 2)' 
           }}>
             {loading && <TopicCardsSkeleton />}
             {showErrorOrEmpty && (

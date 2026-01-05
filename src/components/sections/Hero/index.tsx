@@ -31,7 +31,7 @@ export const Hero = () => {
               We're working to help the open source AI art ecosystem thrive
             </h1>
 
-            <p className="text-base md:text-lg lg:text-xl xl:text-2xl text-white leading-relaxed xl:leading-[1.7] max-w-[20rem] md:max-w-none xl:max-w-[38rem] [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
+            <p className="text-sm md:text-base lg:text-lg xl:text-xl text-white leading-relaxed xl:leading-[1.7] max-w-[20rem] md:max-w-none xl:max-w-[38rem] [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
               We're building tools and nurturing a culture to inspire, empower and reward open collaboration and ambition in the AI art ecosystem.
             </p>
 

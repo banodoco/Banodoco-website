@@ -22,9 +22,9 @@ const SECTION_TIMESTAMPS: Record<string, SectionTimestamps> = {
   community:    { start: 7, end: 12 },   // Gap 10→12 scrubbed, drifts to 14
   reigh:        { start: 17, end: 20 },   // Gap 14→16 scrubbed, drifts to 18
   'arca-gidan': { start: 20, end: 24 },   // Gap 18→20 scrubbed, drifts to 22
-  ados:         { start: 25, end: 30 },   // Gap 22→24 scrubbed, drifts to 26
-  ecosystem:    { start: 35, end: 37 },   // Gap 26→28 scrubbed, drifts to 33
-  ownership:    { start: 38, end: 38 },   // Gap 33→35 scrubbed, drifts to 39
+  ados:         { start: 25, end: 29 },   // Gap 22→24 scrubbed, drifts to 26
+  ecosystem:    { start: 30, end: 31 },   // Gap 26→28 scrubbed, drifts to 33
+  ownership:    { start: 31.5, end: 36.5 },   // Gap 33→35 scrubbed, drifts to 39
 };
 
 // Section IDs in order (must match the order they appear on the page)
@@ -55,7 +55,7 @@ export const ScrollVideoBackground = () => {
   const currentVideoTimeRef = useRef<number>(0); // The actual video time (smoothed)
   const targetVideoTimeRef = useRef<number>(0); // Target time for smoothing/drift
   const smoothingRafRef = useRef<number | null>(null);
-  const lastScrollProgressRef = useRef<number>(0);
+  const currentSectionIdRef = useRef<string>(SECTION_ORDER[0] ?? 'hero');
   const [posterLoaded, setPosterLoaded] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
 
@@ -65,69 +65,73 @@ export const ScrollVideoBackground = () => {
   }, []);
 
   /**
-   * Get the current section index and progress within that section based on scroll.
+   * Determine which section we're in + progress within it based on actual DOM positions.
+   * This avoids footer affecting section progress (which was causing Ownership to start near "end").
    */
-  const getScrollSectionInfo = useCallback((scrollProgress: number) => {
-    const numSections = SECTION_ORDER.length;
-    const scrollPerSection = 1 / numSections;
-    const sectionIndex = Math.min(Math.floor(scrollProgress / scrollPerSection), numSections - 1);
-    const sectionStart = sectionIndex * scrollPerSection;
-    const progressInSection = (scrollProgress - sectionStart) / scrollPerSection;
-    
-    return {
-      sectionIndex,
-      sectionId: SECTION_ORDER[sectionIndex],
-      progressInSection: Math.max(0, Math.min(1, progressInSection)),
-    };
-  }, []);
+  const getScrollSectionInfoFromDOM = useCallback((scrollTop: number) => {
+    const scrollContainer = getScrollContainer();
+    if (!scrollContainer) {
+      return { sectionId: SECTION_ORDER[0] ?? 'hero', progressInSection: 0 };
+    }
+
+    const sections = SECTION_ORDER
+      .map((id) => {
+        const el = scrollContainer.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+        if (!el) return null;
+        return { id, top: el.offsetTop, height: el.offsetHeight };
+      })
+      .filter(Boolean) as Array<{ id: string; top: number; height: number }>;
+
+    if (sections.length === 0) {
+      return { sectionId: SECTION_ORDER[0] ?? 'hero', progressInSection: 0 };
+    }
+
+    // Find the last section whose top is <= scrollTop (with small tolerance)
+    const tolerancePx = 2;
+    let idx = 0;
+    for (let i = 0; i < sections.length; i++) {
+      if (scrollTop + tolerancePx >= sections[i].top) idx = i;
+      else break;
+    }
+
+    const current = sections[idx];
+    const next = sections[idx + 1];
+    const startTop = current.top;
+    const endTop = next ? next.top : current.top + current.height;
+    const denom = Math.max(endTop - startTop, 1);
+    const progressInSection = Math.max(0, Math.min(1, (scrollTop - startTop) / denom));
+
+    return { sectionId: current.id, progressInSection };
+  }, [getScrollContainer]);
 
   /**
    * Convert scroll progress to video timestamp (in seconds).
    * Uses the configured timestamps for each section.
    */
-  const scrollToVideoTime = useCallback((scrollProgress: number) => {
-    const { sectionIndex, sectionId, progressInSection } = getScrollSectionInfo(scrollProgress);
+  const scrollToVideoTime = useCallback((scrollTop: number) => {
+    const { sectionId, progressInSection } = getScrollSectionInfoFromDOM(scrollTop);
     const sectionConfig = SECTION_TIMESTAMPS[sectionId];
     
     if (!sectionConfig) {
       // Fallback: linear mapping
-      return scrollProgress * videoDurationRef.current;
+      const scrollContainer = getScrollContainer();
+      const scrollHeight = scrollContainer
+        ? scrollContainer.scrollHeight - scrollContainer.clientHeight
+        : 1;
+      const progress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
+      return Math.max(0, Math.min(1, progress)) * videoDurationRef.current;
     }
     
     // Interpolate within this section's timestamp range
     const { start, end } = sectionConfig;
     return start + progressInSection * (end - start);
-  }, [getScrollSectionInfo]);
-
-  /**
-   * Get the timestamp boundaries for a given scroll position.
-   * Returns { startTime, endTime, sectionId } for the current section.
-   */
-  const getSectionTimeBounds = useCallback((scrollProgress: number) => {
-    const { sectionId } = getScrollSectionInfo(scrollProgress);
-    const config = SECTION_TIMESTAMPS[sectionId];
-    
-    if (!config) {
-      // Fallback
-      return {
-        startTime: 0,
-        endTime: videoDurationRef.current,
-        sectionId,
-      };
-    }
-    
-    return {
-      startTime: config.start,
-      endTime: config.end,
-      sectionId,
-    };
-  }, [getScrollSectionInfo]);
+  }, [getScrollContainer, getScrollSectionInfoFromDOM]);
 
   // Calculate section-aware target for idle drift (returns timestamp in seconds)
   // Always drifts toward `end` - the resting point of the section
-  const calculateDriftTargetTime = useCallback((currentTime: number, scrollProgress: number) => {
-    const bounds = getSectionTimeBounds(scrollProgress);
-    const { endTime } = bounds;
+  const calculateDriftTargetTime = useCallback((currentTime: number) => {
+    const sectionId = currentSectionIdRef.current;
+    const endTime = SECTION_TIMESTAMPS[sectionId]?.end ?? currentTime;
     
     // Drift target is always the section's end time (resting point)
     // If we're already past it, don't drift further
@@ -136,7 +140,7 @@ export const ScrollVideoBackground = () => {
     }
     
     return endTime;
-  }, [getSectionTimeBounds]);
+  }, []);
 
   // Idle drift animation - slowly progress toward target when not scrolling
   // Updates targetVideoTimeRef which the smoothing loop animates toward
@@ -147,7 +151,7 @@ export const ScrollVideoBackground = () => {
 
     // Calculate drift target time based on current section
     const currentTime = targetVideoTimeRef.current;
-    const driftTargetTime = calculateDriftTargetTime(currentTime, lastScrollProgressRef.current);
+    const driftTargetTime = calculateDriftTargetTime(currentTime);
     
     let lastFrameTime = performance.now();
 
@@ -198,15 +202,28 @@ export const ScrollVideoBackground = () => {
 
     const scrollTop = scrollContainer.scrollTop;
     const scrollHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-    const scrollProgress = Math.max(0, Math.min(1, scrollTop / Math.max(scrollHeight, 1)));
+    let scrollProgress = Math.max(0, Math.min(1, scrollTop / Math.max(scrollHeight, 1)));
+    
+    // Cap scroll progress at the end of the last section (don't progress into footer)
+    // Each section is 1/numSections of the sections area, but footer adds extra scroll
+    const sections = scrollContainer.querySelectorAll('section');
+    if (sections.length > 0) {
+      const lastSection = sections[sections.length - 1];
+      const lastSectionBottom = lastSection.offsetTop + lastSection.offsetHeight;
+      const maxScrollForSections = lastSectionBottom - scrollContainer.clientHeight;
+      const maxProgress = maxScrollForSections / Math.max(scrollHeight, 1);
+      scrollProgress = Math.min(scrollProgress, maxProgress);
+    }
     
     // Convert scroll progress to video timestamp using config
-    const targetTime = scrollToVideoTime(scrollProgress);
+    const effectiveScrollTop = scrollProgress * Math.max(scrollHeight, 1);
+    const info = getScrollSectionInfoFromDOM(effectiveScrollTop);
+    currentSectionIdRef.current = info.sectionId;
+    const targetTime = scrollToVideoTime(effectiveScrollTop);
     
     // Store for drift calculations
-    lastScrollProgressRef.current = scrollProgress;
     targetVideoTimeRef.current = targetTime;
-  }, [getScrollContainer, scrollToVideoTime]);
+  }, [getScrollContainer, getScrollSectionInfoFromDOM, scrollToVideoTime]);
 
   // Continuous smoothing loop - runs every frame to smoothly animate video
   const startSmoothingLoop = useCallback(() => {

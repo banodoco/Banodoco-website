@@ -44,15 +44,15 @@ export const Ownership = () => {
             
             {/* Subtext on the right */}
             <div className="lg:max-w-xs text-left shrink-0 flex flex-col lg:justify-between">
-              <p className="text-sm md:text-lg text-white/60 leading-relaxed">
+              <p className="text-sm md:text-lg text-white/90 leading-relaxed">
                 Aside from investor dilution, open source contributors will own all of our company. We believe that a company that's built with the community should belong to the community.
               </p>
               
               <Link 
                 to="/ownership" 
-                className="inline-flex items-center justify-start gap-2 mt-4 text-white/70 hover:text-white transition-colors group text-sm md:text-base"
+                className="inline-flex items-center justify-start gap-2 mt-4 text-white/90 hover:text-white transition-colors group text-sm md:text-base"
               >
-                <span className="border-b border-white/30 group-hover:border-white/60 transition-colors pb-0.5">
+                <span className="border-b border-white/50 group-hover:border-white/80 transition-colors pb-0.5">
                   Learn how it works
                 </span>
                 <ArrowRightIcon className="w-5 h-5 transition-transform group-hover:translate-x-1" />
