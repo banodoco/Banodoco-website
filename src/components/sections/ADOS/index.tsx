@@ -56,7 +56,12 @@ export const ADOS: React.FC = () => {
   }, [autoAdvance]);
 
   return (
-    <Section ref={sectionRef} id="ados" className="bg-gradient-to-br from-[#2a0a0f] via-[#320e12] to-[#20060a] text-white">
+    <Section 
+      ref={sectionRef} 
+      id="ados" 
+      className="text-white"
+      videoOverlay="rgba(42, 10, 15, 0.85)"
+    >
       <SectionContent>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left side - Event content */}

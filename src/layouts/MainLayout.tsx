@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { ScrollVideoBackground } from '@/components/layout/ScrollVideoBackground';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { isIOS } from '@/lib/device';
 
@@ -10,10 +11,9 @@ interface MainLayoutProps {
 }
 
 // Use stable viewport height for the snap container to avoid mobile dvh relayout flicker.
-// Also keep a dark base bg so any transient "unpainted" areas during scroll-snap
-// (common on iOS/Safari compositing) don't flash white.
+// Background is transparent to allow the scroll-driven video to show through section masks.
 // relative is needed for absolute positioned header on mobile
-const HOME_SCROLL_CLASSES = 'relative h-screen h-[100svh] overflow-y-auto snap-y snap-mandatory overscroll-none bg-[var(--color-bg-base)] text-foreground';
+const HOME_SCROLL_CLASSES = 'relative h-screen h-[100svh] overflow-y-auto snap-y snap-mandatory overscroll-none bg-transparent text-foreground';
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const { pathname } = useLocation();
@@ -26,6 +26,8 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   if (isHome) {
     return (
       <LayoutProvider theme={theme} isHomePage={isHome}>
+        {/* Fixed scroll-driven video background - visible through section masks */}
+        <ScrollVideoBackground />
         <div 
           id="home-scroll-container"
           className={HOME_SCROLL_CLASSES}

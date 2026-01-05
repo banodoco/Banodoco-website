@@ -109,7 +109,12 @@ export const Reigh: React.FC = () => {
   const currentPoster = currentExample.poster ?? currentExample.images?.[0];
 
   return (
-    <Section ref={sectionRef} id="reigh" className="bg-gradient-to-br from-[#0c1a14] via-[#0d2018] to-[#081510] text-white">
+    <Section 
+      ref={sectionRef} 
+      id="reigh" 
+      className="text-white"
+      videoOverlay="rgba(12, 26, 20, 0.85)"
+    >
       <SectionContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-16 items-center">
             {/* Left side - Video showcase */}

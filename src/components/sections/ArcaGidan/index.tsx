@@ -8,7 +8,12 @@ export const ArcaGidan: React.FC = () => {
   const { ref: sectionRef, isActive } = useSectionRuntime({ threshold: 0.3 });
   
   return (
-    <Section ref={sectionRef} id="arca-gidan" className="bg-gradient-to-br from-[#201a0c] via-[#251f10] to-[#1a1508] text-white">
+    <Section 
+      ref={sectionRef} 
+      id="arca-gidan" 
+      className="text-white"
+      videoOverlay="rgba(32, 26, 12, 0.85)"
+    >
       {/* Asymmetric layout: left padded text, right edge-to-edge artwork (extends under header) */}
       <SectionContent fullWidth verticalAlign="stretch" noHeaderOffset>
         <div className="h-full flex">

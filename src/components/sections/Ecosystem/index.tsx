@@ -211,7 +211,12 @@ export const Ecosystem: React.FC = () => {
   }, []);
 
   return (
-    <Section ref={sectionRef} id="ecosystem" className="bg-gradient-to-br from-[#0a1218] via-[#0c161c] to-[#080e14] text-white relative">
+    <Section 
+      ref={sectionRef} 
+      id="ecosystem" 
+      className="text-white relative"
+      videoOverlay="rgba(10, 18, 24, 0.85)"
+    >
       {/* 
        * Ecosystem uses absolute positioning with calc() for header offset.
        * Uses HEADER_OFFSET_VAR constant for consistency with SectionContent.

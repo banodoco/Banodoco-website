@@ -322,7 +322,12 @@ export const Community = () => {
   const showErrorOrEmpty = !loading && (error || topics.length === 0);
 
   return (
-    <Section ref={sectionRef} id="community" className="bg-gradient-to-br from-[#0c1420] via-[#101825] to-[#0a1018] text-white">
+    <Section 
+      ref={sectionRef} 
+      id="community" 
+      className="text-white"
+      videoOverlay="rgba(12, 20, 32, 0.85)"
+    >
       {/* Mobile/tablet layout - with header offset */}
       <div className="xl:hidden h-full px-6 md:px-16 flex flex-col" style={{ paddingTop: 'var(--header-height)' }}>
         <div className="max-w-7xl mx-auto w-full flex-1 flex items-center">

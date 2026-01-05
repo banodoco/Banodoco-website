@@ -27,6 +27,11 @@ interface SectionProps {
    * Use on the last section to allow natural scrolling to the footer.
    */
   noSnap?: boolean;
+  /**
+   * Semi-transparent background color to overlay on scroll video.
+   * The video shows through the transparency.
+   */
+  videoOverlay?: string;
 }
 
 /**
@@ -36,16 +41,17 @@ interface SectionProps {
  * Usage:
  * - Pass background colors/gradients via className
  * - Content layout is handled by children
+ * - Use videoOverlay prop to show scroll video through a semi-transparent color
  */
 export const Section = forwardRef<HTMLElement, SectionProps>(
-  ({ id, className, children, noSnap = false }, ref) => (
+  ({ id, className, children, noSnap = false, videoOverlay }, ref) => (
     <section
       ref={ref}
       id={id}
       className={cn(
         // Use a *stable* viewport height to avoid intermittent flicker/blanking on mobile
         // when browser chrome shows/hides (100dvh can change during scroll).
-        "h-screen h-[100svh] overflow-hidden",
+        "h-screen h-[100svh] overflow-hidden relative",
         // `snap-always` helps Safari/iOS avoid "resting" between sections.
         // noSnap allows the last section to scroll naturally to the footer.
         !noSnap && "snap-start snap-always",
@@ -57,6 +63,8 @@ export const Section = forwardRef<HTMLElement, SectionProps>(
         contain: 'layout style paint',
         // Force GPU layer (reduces main-thread repaint during scroll)
         transform: 'translateZ(0)',
+        // Semi-transparent background to show video through
+        ...(videoOverlay ? { backgroundColor: videoOverlay } : {}),
       }}
     >
       {children}
