@@ -20,20 +20,45 @@ export const useImagePreloadOnVisible = (
     if (!isActive) return;
     if (typeof window === 'undefined') return;
 
-    const doPreload = () => {
-      urls.forEach((url) => {
-        if (!url || preloadedRef.current.has(url)) return;
+    // Preload sequentially (not as a burst) to avoid creating a long main-thread
+    // decode spike that can stall scroll-driven background video.
+    let cancelled = false;
+    let startTimeout: ReturnType<typeof setTimeout> | null = null;
+    let stepTimeout: ReturnType<typeof setTimeout> | null = null;
+    let idx = 0;
+
+    const step = () => {
+      if (cancelled) return;
+      // Find next URL we haven't preloaded
+      while (idx < urls.length) {
+        const url = urls[idx++];
+        if (!url) continue;
+        if (preloadedRef.current.has(url)) continue;
         preloadedRef.current.add(url);
         const img = new Image();
+        // Hint: allow async decoding where supported
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (img as any).decoding = 'async';
         img.src = url;
-      });
+        break;
+      }
+
+      if (idx >= urls.length) return;
+
+      // Spread the work across frames/time slices.
+      stepTimeout = setTimeout(step, priority ? 80 : 120);
     };
 
     // Both priority and non-priority images get a delay to avoid competing
-    // with scroll video animation when entering sections
+    // with scroll video animation when entering sections.
     const delay = priority ? 300 : 600; // Priority gets shorter delay
-    const timeout = setTimeout(doPreload, delay);
-    return () => clearTimeout(timeout);
+    startTimeout = setTimeout(step, delay);
+
+    return () => {
+      cancelled = true;
+      if (startTimeout) clearTimeout(startTimeout);
+      if (stepTimeout) clearTimeout(stepTimeout);
+    };
   }, [isActive, urls, priority]);
 };
 
@@ -67,51 +92,69 @@ export const useVideoPreloadOnVisible = (urls: string[], isActive: boolean) => {
     if (document.visibilityState === 'hidden') return;
     if (shouldSkip()) return;
 
-    // Delay video preloading to avoid competing with scroll video animation
-    // This prevents the "stall" when entering sections with video content
-    const timeoutId = setTimeout(() => {
-      urls.forEach((url) => {
-        if (preloadedRef.current.has(url)) return;
-        if (inflightRef.current.has(url)) return;
-        preloadedRef.current.add(url);
+    // Delay + sequential video preloading to avoid competing with scroll video animation.
+    // Creating multiple <video> elements and calling .load() in a burst can cause
+    // noticeable main-thread stalls (decoder + resource scheduling).
+    let cancelled = false;
+    let startTimeout: ReturnType<typeof setTimeout> | null = null;
+    let stepTimeout: ReturnType<typeof setTimeout> | null = null;
+    let idx = 0;
 
-        // Create a video element to trigger browser fetch and keep it alive
-        // until we have enough buffered to start playback.
-        const video = document.createElement('video');
-        video.preload = 'auto';
-        video.src = url;
-        inflightRef.current.set(url, video);
+    const preloadOne = (url: string) => {
+      if (preloadedRef.current.has(url)) return;
+      if (inflightRef.current.has(url)) return;
+      preloadedRef.current.add(url);
 
-        const cleanup = () => {
-          video.removeEventListener('canplaythrough', cleanup);
-          video.removeEventListener('loadeddata', cleanup);
-          // Drop references; keep whatever the browser cached.
-          inflightRef.current.delete(url);
-          // Help GC / reduce memory pressure.
-          video.removeAttribute('src');
-          try {
-            video.load();
-          } catch {
-            // ignore
-          }
-        };
+      const video = document.createElement('video');
+      video.preload = 'auto';
+      video.src = url;
+      inflightRef.current.set(url, video);
 
-        // Either event is good enough; canplaythrough may never fire on some browsers.
-        video.addEventListener('canplaythrough', cleanup, { once: true });
-        video.addEventListener('loadeddata', cleanup, { once: true });
-
-        // Safety timeout: don't keep elements around forever.
-        window.setTimeout(cleanup, 15000);
-
+      const cleanup = () => {
+        video.removeEventListener('canplaythrough', cleanup);
+        video.removeEventListener('loadeddata', cleanup);
+        inflightRef.current.delete(url);
+        video.removeAttribute('src');
         try {
           video.load();
         } catch {
-          cleanup();
+          // ignore
         }
-      });
-    }, 800); // 800ms delay lets scroll animation settle first
+      };
 
-    return () => clearTimeout(timeoutId);
+      video.addEventListener('canplaythrough', cleanup, { once: true });
+      video.addEventListener('loadeddata', cleanup, { once: true });
+      window.setTimeout(cleanup, 15000);
+
+      try {
+        video.load();
+      } catch {
+        cleanup();
+      }
+    };
+
+    const step = () => {
+      if (cancelled) return;
+
+      while (idx < urls.length) {
+        const url = urls[idx++];
+        if (!url) continue;
+        if (preloadedRef.current.has(url)) continue;
+        preloadOne(url);
+        break;
+      }
+
+      if (idx >= urls.length) return;
+      stepTimeout = setTimeout(step, 250);
+    };
+
+    startTimeout = setTimeout(step, 800);
+
+    return () => {
+      cancelled = true;
+      if (startTimeout) clearTimeout(startTimeout);
+      if (stepTimeout) clearTimeout(stepTimeout);
+    };
   }, [isActive, urls]);
 };
 

@@ -121,9 +121,8 @@ const DesktopScrollVideo = () => {
   const currentSectionRef = useRef(SECTION_ORDER[0]);
   
   // === CACHED SECTION POSITIONS (avoid DOM queries every frame) ===
+  // Only refreshed on init and resize - NOT during animation loop
   const sectionCacheRef = useRef<Array<{ id: string; top: number; height: number }>>([]);
-  const lastCacheTimeRef = useRef(0);
-  const CACHE_TTL = 500; // Refresh cache every 500ms (handles resize/layout changes)
   
   // === REACT STATE (for UI) ===
   const [posterLoaded, setPosterLoaded] = useState(false);
@@ -145,21 +144,14 @@ const DesktopScrollVideo = () => {
         return el ? { id, top: el.offsetTop, height: el.offsetHeight } : null;
       })
       .filter(Boolean) as Array<{ id: string; top: number; height: number }>;
-    
-    lastCacheTimeRef.current = performance.now();
   };
 
   /** 
    * Calculate which section we're in and progress within it.
-   * Uses cached section positions (refreshed every CACHE_TTL ms).
+   * Uses cached section positions (only refreshed on init/resize, not during animation).
    * Returns { sectionId, progress (0-1), nextSectionId }
    */
-  const getSectionInfo = (scrollTop: number, now: number) => {
-    // Refresh cache if stale
-    if (now - lastCacheTimeRef.current > CACHE_TTL || sectionCacheRef.current.length === 0) {
-      refreshSectionCache();
-    }
-    
+  const getSectionInfo = (scrollTop: number) => {
     const sections = sectionCacheRef.current;
     if (!sections.length) return { sectionId: SECTION_ORDER[0], progress: 0, nextSectionId: SECTION_ORDER[1] };
 
@@ -183,8 +175,8 @@ const DesktopScrollVideo = () => {
    * Maps each section's scroll range to: section.start → nextSection.start
    * Applies ease-out curve for front-loaded feel.
    */
-  const scrollToVideoTime = (scrollTop: number, now: number = performance.now()): number => {
-    const { sectionId, progress, nextSectionId } = getSectionInfo(scrollTop, now);
+  const scrollToVideoTime = (scrollTop: number): number => {
+    const { sectionId, progress, nextSectionId } = getSectionInfo(scrollTop);
     const current = SECTION_TIMESTAMPS[sectionId];
     const next = nextSectionId ? SECTION_TIMESTAMPS[nextSectionId] : null;
 
@@ -259,8 +251,8 @@ const DesktopScrollVideo = () => {
       lastScrollTop = scrollTop;
 
       // === 3. UPDATE SCROLL TIME (pure function of scroll position) ===
-      const newScrollTime = scrollToVideoTime(cappedScrollTop, now);
-      const { sectionId } = getSectionInfo(cappedScrollTop, now);
+      const newScrollTime = scrollToVideoTime(cappedScrollTop);
+      const { sectionId } = getSectionInfo(cappedScrollTop);
       
       // Track section changes
       if (sectionId !== currentSectionRef.current) {
@@ -339,7 +331,7 @@ const DesktopScrollVideo = () => {
       const container = getScrollContainer();
       if (container) {
         const scrollTop = container.scrollTop;
-        const initialTime = scrollToVideoTime(scrollTop, performance.now());
+        const initialTime = scrollToVideoTime(scrollTop);
         scrollTimeRef.current = initialTime;
         currentTimeRef.current = initialTime;
         video.currentTime = initialTime;
@@ -359,6 +351,10 @@ const DesktopScrollVideo = () => {
     video.addEventListener('loadeddata', initialize);
     video.addEventListener('canplay', initialize);
     
+    // Refresh section cache on resize (layout may change)
+    const handleResize = () => refreshSectionCache();
+    window.addEventListener('resize', handleResize);
+    
     // Fallback polling
     const interval = setInterval(initialize, 100);
     
@@ -369,6 +365,7 @@ const DesktopScrollVideo = () => {
       video.removeEventListener('play', preventPlay);
       video.removeEventListener('loadeddata', initialize);
       video.removeEventListener('canplay', initialize);
+      window.removeEventListener('resize', handleResize);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, [startAnimationLoop]);
