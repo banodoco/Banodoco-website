@@ -410,10 +410,11 @@ const DesktopScrollVideo = () => {
       {/* Skeleton */}
       <div className="w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 animate-pulse scale-[1.3]" />
 
-      {/* Poster */}
+      {/* Poster - high priority for fast initial render */}
       <img
         src={HERO_POSTER_SRC}
         alt=""
+        fetchPriority="high"
         onLoad={() => setPosterLoaded(true)}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.3] ${
           posterLoaded ? 'opacity-100' : 'opacity-0'
@@ -438,6 +439,8 @@ const DesktopScrollVideo = () => {
 
 // =============================================================================
 // MOBILE: Separate video clips with crossfade
+// Only renders current section ± 1 for better memory usage
+// Preloads next section for smooth forward transitions
 // =============================================================================
 const MobileScrollVideo = () => {
   const [currentSection, setCurrentSection] = useState<string>(SECTION_ORDER[0]);
@@ -449,6 +452,24 @@ const MobileScrollVideo = () => {
   const getScrollContainer = useCallback(() => {
     return document.getElementById('home-scroll-container');
   }, []);
+
+  // Determine which sections to render (current ± 1 for lazy mounting)
+  const sectionsToRender = (() => {
+    const currentIdx = SECTION_ORDER.indexOf(currentSection);
+    const prevIdx = previousSection ? SECTION_ORDER.indexOf(previousSection) : -1;
+    const indices = new Set<number>();
+    
+    // Always include current
+    if (currentIdx >= 0) indices.add(currentIdx);
+    // Include previous (for transitions)
+    if (prevIdx >= 0) indices.add(prevIdx);
+    // Include next (for preloading)
+    if (currentIdx >= 0 && currentIdx < SECTION_ORDER.length - 1) indices.add(currentIdx + 1);
+    // Include previous neighbor (for smooth backward scroll)
+    if (currentIdx > 0) indices.add(currentIdx - 1);
+    
+    return Array.from(indices).map(i => SECTION_ORDER[i]).filter(Boolean);
+  })();
 
   const getCurrentSectionFromScroll = useCallback(() => {
     const scrollContainer = getScrollContainer();
@@ -535,14 +556,27 @@ const MobileScrollVideo = () => {
     }
   }, [currentSection]);
 
+  // Get next section for preloading
+  const currentIdx = SECTION_ORDER.indexOf(currentSection);
+  const nextSection = currentIdx < SECTION_ORDER.length - 1 ? SECTION_ORDER[currentIdx + 1] : null;
+
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-      {SECTION_ORDER.map((sectionId) => {
+      {/* Only render sections we need (current ± 1) */}
+      {sectionsToRender.map((sectionId) => {
         const config = SECTION_VIDEOS[sectionId];
         if (!config) return null;
 
         const isCurrent = sectionId === currentSection;
         const isPrevious = sectionId === previousSection && isTransitioning;
+        const isNext = sectionId === nextSection;
+
+        // Determine preload strategy:
+        // - Current: auto (playing)
+        // - Previous during transition: auto (fading out)
+        // - Next: auto (preload for smooth forward transition)
+        // - Others: metadata only
+        const preloadStrategy = isCurrent || isPrevious || isNext ? 'auto' : 'metadata';
 
         return (
           <div
@@ -562,7 +596,7 @@ const MobileScrollVideo = () => {
               muted
               loop
               playsInline
-              preload={isCurrent || isPrevious ? 'auto' : 'metadata'}
+              preload={preloadStrategy}
               className="absolute inset-0 w-full h-full object-cover scale-[1.3]"
             />
           </div>
