@@ -21,7 +21,7 @@ interface SectionTimestamps {
 const SECTION_TIMESTAMPS: Record<string, SectionTimestamps> = {
   hero:         { start: 0,  end: 5 },   // Drifts 0→10
   community:    { start: 7, end: 12 },   // Gap 10→12 scrubbed, drifts to 14
-  reigh:        { start: 15, end: 20 },   // Gap 14→16 scrubbed, drifts to 18
+  reigh:        { start: 16.5, end: 20 },   // Gap 14→16 scrubbed, drifts to 18
   'arca-gidan': { start: 22, end: 24 },   // Gap 18→20 scrubbed, drifts to 22
   ados:         { start: 25, end: 29 },   // Gap 22→24 scrubbed, drifts to 26
   ecosystem:    { start: 30, end: 31 },   // Gap 26→28 scrubbed, drifts to 33
@@ -265,11 +265,19 @@ const DesktopScrollVideo = () => {
 
       // === 4. HANDLE IDLE BONUS ===
       if (isScrolling) {
-        // Actively scrolling: drop idle bonus immediately.
-        // Rationale: if we keep any idleBonus while starting a scroll transition,
-        // the targetTime can overshoot forward (because scrollTime is already moving),
-        // then snap/reverse when the section changes and idleBonus resets.
-        idleBonusRef.current = 0;
+        // When scrolling, decay idleBonus so that targetTime never goes below
+        // the current display time. This prevents the "overshoot then reverse"
+        // problem when transitioning after drift.
+        //
+        // Key insight: idleBonus = currentDisplayTime - scrollTime
+        // As scrollTime catches up to where the video is, idleBonus naturally → 0
+        const minBonusToMaintainPosition = Math.max(0, currentTimeRef.current - newScrollTime);
+        
+        // Only decrease idleBonus, never increase it while scrolling
+        if (idleBonusRef.current > minBonusToMaintainPosition) {
+          idleBonusRef.current = minBonusToMaintainPosition;
+        }
+        
         idleStartTime = null;
       } else {
         // Not scrolling: accumulate idle bonus after delay
