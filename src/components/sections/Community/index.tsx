@@ -414,32 +414,38 @@ export const Community = () => {
               opacity: topGradientOpacity,
             }}
           />
-          {/* Inner padding: dynamically calculated to center first/last cards */}
-          {/* Fallback uses same formula as JS calc: (windowHeight + headerHeight - cardHeight) / 2 */}
-          <div style={{ 
-            paddingTop: paddings.top ? `${paddings.top}px` : 'calc((100vh + var(--header-height) - 20rem) / 2)', 
-            paddingBottom: paddings.bottom ? `${paddings.bottom}px` : 'calc((100vh - var(--header-height) - 20rem) / 2)' 
-          }}>
-            {loading && <TopicCardsSkeleton />}
-            {showErrorOrEmpty && (
-              <TopicCardsState error={error} isEmpty={topics.length === 0} />
-            )}
-
-            {hasTopics && (
-              <div className="space-y-4">
-                {topics.map((topic, idx) => (
-                  <TopicCard
-                    key={idx}
-                    ref={(el) => {
-                      topicRefs.current[idx] = el;
-                    }}
-                    topic={topic}
-                    isActive={sectionIsVisible && idx === activeTopicIndex}
-                  />
-                ))}
+          {/* Loading: use flexbox centering. Loaded: use calculated padding for precise card centering */}
+          {loading ? (
+            <div className="min-h-full flex items-center" style={{ paddingTop: 'var(--header-height)' }}>
+              <div className="w-full">
+                <TopicCardsSkeleton />
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div style={{ 
+              paddingTop: paddings.top ? `${paddings.top}px` : 'var(--header-height)', 
+              paddingBottom: paddings.bottom ? `${paddings.bottom}px` : '5rem' 
+            }}>
+              {showErrorOrEmpty && (
+                <TopicCardsState error={error} isEmpty={topics.length === 0} />
+              )}
+
+              {hasTopics && (
+                <div className="space-y-4">
+                  {topics.map((topic, idx) => (
+                    <TopicCard
+                      key={idx}
+                      ref={(el) => {
+                        topicRefs.current[idx] = el;
+                      }}
+                      topic={topic}
+                      isActive={sectionIsVisible && idx === activeTopicIndex}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {/* Subtle gradient fade at bottom to indicate scrollable content below - fades in based on distance from bottom */}
           <div 
             className="sticky bottom-0 left-0 right-0 h-16 pointer-events-none z-10 -mt-16"
