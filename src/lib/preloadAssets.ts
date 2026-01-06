@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { travelExamples } from '@/components/sections/Reigh/data';
 import { artworks } from '@/components/sections/ArcaGidan/data';
 import { events } from '@/components/sections/ADOS/data';
+import { HERO_POSTER_SRC } from '@/components/sections/Hero/config';
 import { shouldPreloadVideos } from './device';
 
 let didPreload = false;
@@ -19,14 +20,19 @@ function getSectionPreloadList() {
   const firstReigh = travelExamples[0];
   const firstEvent = events[0];
 
-  const images = uniqueNonEmpty([
-    // Hero (first section)
-    '/upscaled-poster.jpg',
+  // Keep this list intentionally small and staged:
+  // - Critical images: load immediately (above-the-fold)
+  // - Soon images: load during idle (next sections)
+  const criticalImages = uniqueNonEmpty([
+    // Hero background poster (used by ScrollVideoBackground)
+    HERO_POSTER_SRC,
+  ]);
 
+  const soonImages = uniqueNonEmpty([
     // Reigh (first example images)
     ...(firstReigh?.images ?? []),
 
-    // ArcaGidan (all 4 posters are immediately visible)
+    // ArcaGidan (all 4 posters are immediately visible when you reach that section)
     ...artworks.map((a) => a.poster),
 
     // Events (first event poster)
@@ -42,7 +48,7 @@ function getSectionPreloadList() {
     firstEvent?.video,
   ]);
 
-  return { images, videos };
+  return { criticalImages, soonImages, videos };
 }
 
 function scheduleIdle(fn: () => void): void {
@@ -85,9 +91,17 @@ function preloadVideoMetadata(src: string): Promise<void> {
  */
 export function preloadSectionAssets(): void {
   if (typeof window === 'undefined') return;
-  const { images, videos } = getSectionPreloadList();
+  const { criticalImages, soonImages, videos } = getSectionPreloadList();
 
-  images.forEach(preloadImage);
+  // Load above-the-fold immediately.
+  criticalImages.forEach(preloadImage);
+
+  // Defer the rest to idle to avoid competing with initial scroll/video setup.
+  if (soonImages.length > 0) {
+    scheduleIdle(() => {
+      soonImages.forEach(preloadImage);
+    });
+  }
 
   if (videos.length > 0 && shouldPreloadVideos()) {
     scheduleIdle(() => {

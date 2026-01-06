@@ -29,13 +29,11 @@ export const useImagePreloadOnVisible = (
       });
     };
 
-    if (priority) {
-      doPreload();
-    } else {
-      // Delay non-priority images so posters/videos get bandwidth first
-      const timeout = setTimeout(doPreload, 500);
-      return () => clearTimeout(timeout);
-    }
+    // Both priority and non-priority images get a delay to avoid competing
+    // with scroll video animation when entering sections
+    const delay = priority ? 300 : 600; // Priority gets shorter delay
+    const timeout = setTimeout(doPreload, delay);
+    return () => clearTimeout(timeout);
   }, [isActive, urls, priority]);
 };
 
@@ -69,45 +67,51 @@ export const useVideoPreloadOnVisible = (urls: string[], isActive: boolean) => {
     if (document.visibilityState === 'hidden') return;
     if (shouldSkip()) return;
 
-    urls.forEach((url) => {
-      if (preloadedRef.current.has(url)) return;
-      if (inflightRef.current.has(url)) return;
-      preloadedRef.current.add(url);
+    // Delay video preloading to avoid competing with scroll video animation
+    // This prevents the "stall" when entering sections with video content
+    const timeoutId = setTimeout(() => {
+      urls.forEach((url) => {
+        if (preloadedRef.current.has(url)) return;
+        if (inflightRef.current.has(url)) return;
+        preloadedRef.current.add(url);
 
-      // Create a video element to trigger browser fetch and keep it alive
-      // until we have enough buffered to start playback.
-      const video = document.createElement('video');
-      video.preload = 'auto';
-      video.src = url;
-      inflightRef.current.set(url, video);
+        // Create a video element to trigger browser fetch and keep it alive
+        // until we have enough buffered to start playback.
+        const video = document.createElement('video');
+        video.preload = 'auto';
+        video.src = url;
+        inflightRef.current.set(url, video);
 
-      const cleanup = () => {
-        video.removeEventListener('canplaythrough', cleanup);
-        video.removeEventListener('loadeddata', cleanup);
-        // Drop references; keep whatever the browser cached.
-        inflightRef.current.delete(url);
-        // Help GC / reduce memory pressure.
-        video.removeAttribute('src');
+        const cleanup = () => {
+          video.removeEventListener('canplaythrough', cleanup);
+          video.removeEventListener('loadeddata', cleanup);
+          // Drop references; keep whatever the browser cached.
+          inflightRef.current.delete(url);
+          // Help GC / reduce memory pressure.
+          video.removeAttribute('src');
+          try {
+            video.load();
+          } catch {
+            // ignore
+          }
+        };
+
+        // Either event is good enough; canplaythrough may never fire on some browsers.
+        video.addEventListener('canplaythrough', cleanup, { once: true });
+        video.addEventListener('loadeddata', cleanup, { once: true });
+
+        // Safety timeout: don't keep elements around forever.
+        window.setTimeout(cleanup, 15000);
+
         try {
           video.load();
         } catch {
-          // ignore
+          cleanup();
         }
-      };
+      });
+    }, 800); // 800ms delay lets scroll animation settle first
 
-      // Either event is good enough; canplaythrough may never fire on some browsers.
-      video.addEventListener('canplaythrough', cleanup, { once: true });
-      video.addEventListener('loadeddata', cleanup, { once: true });
-
-      // Safety timeout: don't keep elements around forever.
-      window.setTimeout(cleanup, 15000);
-
-      try {
-        video.load();
-      } catch {
-        cleanup();
-      }
-    });
+    return () => clearTimeout(timeoutId);
   }, [isActive, urls]);
 };
 

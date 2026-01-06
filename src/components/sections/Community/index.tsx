@@ -306,8 +306,8 @@ export const Community = () => {
     };
 
     // Initial calc
-    // Small delay to ensure render complete
-    const timer = setTimeout(calculatePaddings, 100);
+    // Delay to avoid competing with scroll video animation when section enters view
+    const timer = setTimeout(calculatePaddings, 600);
     
     // Recalc on resize
     window.addEventListener('resize', calculatePaddings);

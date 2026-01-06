@@ -21,7 +21,7 @@ interface SectionTimestamps {
 const SECTION_TIMESTAMPS: Record<string, SectionTimestamps> = {
   hero:         { start: 0,  end: 5 },   // Drifts 0→10
   community:    { start: 7, end: 12 },   // Gap 10→12 scrubbed, drifts to 14
-  reigh:        { start: 17, end: 20 },   // Gap 14→16 scrubbed, drifts to 18
+  reigh:        { start: 15, end: 20 },   // Gap 14→16 scrubbed, drifts to 18
   'arca-gidan': { start: 22, end: 24 },   // Gap 18→20 scrubbed, drifts to 22
   ados:         { start: 25, end: 29 },   // Gap 22→24 scrubbed, drifts to 26
   ecosystem:    { start: 30, end: 31 },   // Gap 26→28 scrubbed, drifts to 33
@@ -93,356 +93,293 @@ const preloadPostersInOrder = () => {
 };
 
 // =============================================================================
-// DESKTOP: Scroll-driven single video with seeking (ORIGINAL IMPLEMENTATION)
+// DESKTOP: Scroll-driven video with idle drift
 // =============================================================================
+// 
+// MENTAL MODEL:
+// - scrollTime: Pure function of scroll position (the "truth" based on where you've scrolled)
+// - idleBonus: Extra time accumulated while idle (0 when actively scrolling)
+// - displayTime: scrollTime + idleBonus (what we actually show)
+// - currentVideoTime: Smoothly animated toward displayTime
+//
+// This means:
+// - Scroll is ALWAYS the source of truth
+// - Drift is ADDITIVE, not fighting with scroll
+// - When scrolling resumes, idleBonus fades back to 0 (smooth return)
+//
 const DesktopScrollVideo = () => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const driftRafRef = useRef<number | null>(null);
-  const idleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const videoDurationRef = useRef<number>(0);
-  const videoInitializedRef = useRef(false);
-  const lastScrollTimeRef = useRef<number>(0);
-  const currentVideoTimeRef = useRef<number>(0); // The actual video time (smoothed)
-  const targetVideoTimeRef = useRef<number>(0); // Target time for smoothing/drift
-  const smoothingRafRef = useRef<number | null>(null);
-  const currentSectionIdRef = useRef<string>(SECTION_ORDER[0] ?? 'hero');
+  // === REFS ===
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const animationRef = useRef<number | null>(null);
+  const initializedRef = useRef(false); // Prevent multiple initializations
+  
+  // === STATE (as refs for performance - updated every frame) ===
+  const scrollTimeRef = useRef(0);      // Video time based purely on scroll position
+  const idleBonusRef = useRef(0);       // Additional time from idle drift
+  const currentTimeRef = useRef(0);     // Smoothed display time (actually shown)
+  const isScrollingRef = useRef(false); // Are we actively scrolling?
+  const currentSectionRef = useRef(SECTION_ORDER[0]);
+  
+  // === CACHED SECTION POSITIONS (avoid DOM queries every frame) ===
+  const sectionCacheRef = useRef<Array<{ id: string; top: number; height: number }>>([]);
+  const lastCacheTimeRef = useRef(0);
+  const CACHE_TTL = 500; // Refresh cache every 500ms (handles resize/layout changes)
+  
+  // === REACT STATE (for UI) ===
   const [posterLoaded, setPosterLoaded] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
 
-  // Get the scroll container (home-scroll-container)
-  const getScrollContainer = useCallback(() => {
-    return document.getElementById('home-scroll-container');
-  }, []);
+  // === PURE FUNCTIONS ===
+  
+  /** Get the scroll container element */
+  const getScrollContainer = () => document.getElementById('home-scroll-container');
 
-  /**
-   * Determine which section we're in + progress within it based on actual DOM positions.
-   * Also returns nextSectionId for gap interpolation during transitions.
-   */
-  const getScrollSectionInfoFromDOM = useCallback((scrollTop: number) => {
-    const scrollContainer = getScrollContainer();
-    if (!scrollContainer) {
-      return { sectionId: SECTION_ORDER[0] ?? 'hero', progressInSection: 0, nextSectionId: SECTION_ORDER[1] };
-    }
-
-    const sections = SECTION_ORDER
-      .map((id) => {
-        const el = scrollContainer.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
-        if (!el) return null;
-        return { id, top: el.offsetTop, height: el.offsetHeight };
+  /** Build/refresh the section position cache */
+  const refreshSectionCache = () => {
+    const container = getScrollContainer();
+    if (!container) return;
+    
+    sectionCacheRef.current = SECTION_ORDER
+      .map(id => {
+        const el = container.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+        return el ? { id, top: el.offsetTop, height: el.offsetHeight } : null;
       })
       .filter(Boolean) as Array<{ id: string; top: number; height: number }>;
+    
+    lastCacheTimeRef.current = performance.now();
+  };
 
-    if (sections.length === 0) {
-      return { sectionId: SECTION_ORDER[0] ?? 'hero', progressInSection: 0, nextSectionId: SECTION_ORDER[1] };
+  /** 
+   * Calculate which section we're in and progress within it.
+   * Uses cached section positions (refreshed every CACHE_TTL ms).
+   * Returns { sectionId, progress (0-1), nextSectionId }
+   */
+  const getSectionInfo = (scrollTop: number, now: number) => {
+    // Refresh cache if stale
+    if (now - lastCacheTimeRef.current > CACHE_TTL || sectionCacheRef.current.length === 0) {
+      refreshSectionCache();
     }
+    
+    const sections = sectionCacheRef.current;
+    if (!sections.length) return { sectionId: SECTION_ORDER[0], progress: 0, nextSectionId: SECTION_ORDER[1] };
 
-    // Find the last section whose top is <= scrollTop (with small tolerance)
-    const tolerancePx = 2;
+    // Find current section (last one whose top <= scrollTop)
     let idx = 0;
     for (let i = 0; i < sections.length; i++) {
-      if (scrollTop + tolerancePx >= sections[i].top) idx = i;
+      if (scrollTop + 2 >= sections[i].top) idx = i;
       else break;
     }
 
     const current = sections[idx];
     const next = sections[idx + 1];
-    const startTop = current.top;
-    const endTop = next ? next.top : current.top + current.height;
-    const denom = Math.max(endTop - startTop, 1);
-    const progressInSection = Math.max(0, Math.min(1, (scrollTop - startTop) / denom));
+    const sectionHeight = (next?.top ?? current.top + current.height) - current.top;
+    const progress = Math.max(0, Math.min(1, (scrollTop - current.top) / Math.max(sectionHeight, 1)));
 
-    return { sectionId: current.id, progressInSection, nextSectionId: next?.id };
-  }, [getScrollContainer]);
+    return { sectionId: current.id, progress, nextSectionId: next?.id };
+  };
 
   /**
-   * Convert scroll progress to video timestamp (in seconds).
-   * Maps each section's scroll range to: current.start → next.start
-   * This means the GAP between sections is scrubbed DURING the scroll, not after arrival.
-   * 
-   * Uses ease-out curve to front-load video content (more video shown early in scroll).
+   * Convert scroll position to video time.
+   * Maps each section's scroll range to: section.start → nextSection.start
+   * Applies ease-out curve for front-loaded feel.
    */
-  const scrollToVideoTime = useCallback((scrollTop: number) => {
-    const { sectionId, progressInSection, nextSectionId } = getScrollSectionInfoFromDOM(scrollTop);
-    const currentConfig = SECTION_TIMESTAMPS[sectionId];
-    const nextConfig = nextSectionId ? SECTION_TIMESTAMPS[nextSectionId] : null;
-    
-    if (!currentConfig) {
-      // Fallback: linear mapping
-      const scrollContainer = getScrollContainer();
-      const scrollHeight = scrollContainer
-        ? scrollContainer.scrollHeight - scrollContainer.clientHeight
-        : 1;
-      const progress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
-      return Math.max(0, Math.min(1, progress)) * videoDurationRef.current;
-    }
-    
-    // Apply ease-out curve: front-loads video content (more shown early in scroll)
-    // Lower exponent = more front-loaded. 0.6 means at 50% scroll you're at ~65% video progress
-    const easeOutProgress = 1 - Math.pow(1 - progressInSection, 0.6);
-    
-    // Map scroll progress to video time:
-    // - 0% progress = current section's start
-    // - 100% progress = next section's start (or current section's end if last section)
-    const videoStart = currentConfig.start;
-    const videoEnd = nextConfig ? nextConfig.start : currentConfig.end;
-    
-    return videoStart + easeOutProgress * (videoEnd - videoStart);
-  }, [getScrollContainer, getScrollSectionInfoFromDOM]);
+  const scrollToVideoTime = (scrollTop: number, now: number = performance.now()): number => {
+    const { sectionId, progress, nextSectionId } = getSectionInfo(scrollTop, now);
+    const current = SECTION_TIMESTAMPS[sectionId];
+    const next = nextSectionId ? SECTION_TIMESTAMPS[nextSectionId] : null;
 
-  // Calculate section-aware target for idle drift (returns timestamp in seconds)
-  // Always drifts toward `end` - the resting point of the section
-  const calculateDriftTargetTime = useCallback((currentTime: number) => {
-    const sectionId = currentSectionIdRef.current;
-    const endTime = SECTION_TIMESTAMPS[sectionId]?.end ?? currentTime;
-    
-    // Drift target is always the section's end time (resting point)
-    // If we're already past it, don't drift further
-    if (currentTime >= endTime) {
-      return currentTime;
-    }
-    
-    return endTime;
-  }, []);
+    if (!current) return 0;
 
-  // Idle drift animation - slowly progress toward target when not scrolling
-  // Updates targetVideoTimeRef which the smoothing loop animates toward
-  const startIdleDrift = useCallback(() => {
-    const video = videoRef.current;
-    const duration = videoDurationRef.current;
-    if (!video || !duration) return;
+    // Ease-out: front-load video content (more happens early in scroll)
+    const easedProgress = 1 - Math.pow(1 - progress, 0.6);
 
-    // Calculate drift target time based on current section
-    const currentTime = targetVideoTimeRef.current;
-    const driftTargetTime = calculateDriftTargetTime(currentTime);
-    
-    let lastFrameTime = performance.now();
+    // Map to video time range
+    const videoStart = current.start;
+    const videoEnd = next ? next.start : current.end;
 
-    const drift = (now: number) => {
-      const delta = (now - lastFrameTime) / 1000; // seconds
-      lastFrameTime = now;
+    return videoStart + easedProgress * (videoEnd - videoStart);
+  };
 
-      const current = targetVideoTimeRef.current;
-      
-      // If we're already at or past target, stop drifting
-      if (current >= driftTargetTime) {
-        driftRafRef.current = null;
-        return;
-      }
+  /**
+   * Get the maximum idle bonus allowed for the current section.
+   * This is the distance from scroll position to section's end timestamp.
+   */
+  const getMaxIdleBonus = (): number => {
+    const sectionId = currentSectionRef.current;
+    const config = SECTION_TIMESTAMPS[sectionId];
+    if (!config) return 0;
 
-      // Drift toward target at DRIFT_SPEED (seconds per second)
-      const newTime = Math.min(driftTargetTime, current + DRIFT_SPEED * delta);
-      targetVideoTimeRef.current = newTime;
+    // Max bonus = section.end - current scroll time
+    // (Can't drift past the section's end)
+    return Math.max(0, config.end - scrollTimeRef.current);
+  };
 
-      driftRafRef.current = requestAnimationFrame(drift);
-    };
-
-    driftRafRef.current = requestAnimationFrame(drift);
-  }, [calculateDriftTargetTime]);
-
-  // Stop idle drift
-  const stopIdleDrift = useCallback(() => {
-    if (driftRafRef.current) {
-      cancelAnimationFrame(driftRafRef.current);
-      driftRafRef.current = null;
-    }
-    if (idleTimeoutRef.current) {
-      clearTimeout(idleTimeoutRef.current);
-      idleTimeoutRef.current = null;
-    }
-  }, []);
-
-  // Schedule idle drift after scroll stops
-  const scheduleIdleDrift = useCallback(() => {
-    stopIdleDrift();
-    idleTimeoutRef.current = setTimeout(startIdleDrift, IDLE_DELAY_MS);
-  }, [stopIdleDrift, startIdleDrift]);
-
-  // Update scroll-based target (called on scroll)
-  const updateScrollTarget = useCallback(() => {
-    const scrollContainer = getScrollContainer();
-    if (!scrollContainer) return;
-
-    const scrollTop = scrollContainer.scrollTop;
-    const scrollHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-    let scrollProgress = Math.max(0, Math.min(1, scrollTop / Math.max(scrollHeight, 1)));
-    
-    // Cap scroll progress at the end of the last section (don't progress into footer)
-    // Each section is 1/numSections of the sections area, but footer adds extra scroll
-    const sections = scrollContainer.querySelectorAll('section');
-    if (sections.length > 0) {
-      const lastSection = sections[sections.length - 1];
-      const lastSectionBottom = lastSection.offsetTop + lastSection.offsetHeight;
-      const maxScrollForSections = lastSectionBottom - scrollContainer.clientHeight;
-      const maxProgress = maxScrollForSections / Math.max(scrollHeight, 1);
-      scrollProgress = Math.min(scrollProgress, maxProgress);
-    }
-    
-    // Convert scroll progress to video timestamp using config
-    const effectiveScrollTop = scrollProgress * Math.max(scrollHeight, 1);
-    const info = getScrollSectionInfoFromDOM(effectiveScrollTop);
-    currentSectionIdRef.current = info.sectionId;
-    const targetTime = scrollToVideoTime(effectiveScrollTop);
-    
-    // Store for drift calculations
-    targetVideoTimeRef.current = targetTime;
-  }, [getScrollContainer, getScrollSectionInfoFromDOM, scrollToVideoTime]);
-
-  // Continuous smoothing loop - runs every frame to smoothly animate video
-  const startSmoothingLoop = useCallback(() => {
+  // === MAIN ANIMATION LOOP ===
+  // Single loop handles everything: reading scroll, applying drift, smoothing, updating video
+  
+  const startAnimationLoop = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
 
     let lastTime = performance.now();
+    let lastScrollTop = -1;
+    let idleStartTime: number | null = null;
 
-    const smoothLoop = (currentTime: number) => {
-      const delta = (currentTime - lastTime) / 1000;
-      lastTime = currentTime;
+    const loop = (now: number) => {
+      const delta = (now - lastTime) / 1000;
+      lastTime = now;
 
+      // Skip if video not ready
       if (video.readyState < 2) {
-        smoothingRafRef.current = requestAnimationFrame(smoothLoop);
+        animationRef.current = requestAnimationFrame(loop);
         return;
       }
 
-      const target = targetVideoTimeRef.current;
-      const current = currentVideoTimeRef.current;
-      const diff = target - current;
+      const container = getScrollContainer();
+      if (!container) {
+        animationRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
+      // === 1. READ SCROLL POSITION ===
+      const scrollTop = container.scrollTop;
       
-      // Smooth toward target with time-based lerp (smoother across frame rates)
-      // Higher value = faster response
-      const lerpSpeed = 8;
-      const lerpFactor = 1 - Math.exp(-lerpSpeed * delta);
+      // Cap at last section (don't progress into footer) - use cached sections
+      let cappedScrollTop = scrollTop;
+      const sections = sectionCacheRef.current;
+      if (sections.length > 0) {
+        const lastSection = sections[sections.length - 1];
+        const maxScroll = lastSection.top + lastSection.height - container.clientHeight;
+        cappedScrollTop = Math.min(scrollTop, maxScroll);
+      }
+
+      // === 2. DETECT SCROLL STATE ===
+      const isScrolling = scrollTop !== lastScrollTop;
+      isScrollingRef.current = isScrolling;
+      lastScrollTop = scrollTop;
+
+      // === 3. UPDATE SCROLL TIME (pure function of scroll position) ===
+      const newScrollTime = scrollToVideoTime(cappedScrollTop, now);
+      const { sectionId } = getSectionInfo(cappedScrollTop, now);
       
-      let newTime: number;
-      if (Math.abs(diff) < 0.05) {
-        newTime = target;
-      } else {
-        newTime = current + diff * lerpFactor;
+      // Track section changes
+      if (sectionId !== currentSectionRef.current) {
+        currentSectionRef.current = sectionId;
+        // Reset idle bonus on section change (start fresh)
+        idleBonusRef.current = 0;
       }
       
-      currentVideoTimeRef.current = newTime;
-      
-      // Update video time
+      scrollTimeRef.current = newScrollTime;
+
+      // === 4. HANDLE IDLE BONUS ===
+      if (isScrolling) {
+        // Actively scrolling: fade idle bonus back to 0
+        idleBonusRef.current = Math.max(0, idleBonusRef.current - delta * 3); // Fade at 3s/s
+        idleStartTime = null;
+      } else {
+        // Not scrolling: accumulate idle bonus after delay
+        if (idleStartTime === null) {
+          idleStartTime = now;
+        }
+        
+        const idleTime = now - idleStartTime;
+        if (idleTime > IDLE_DELAY_MS) {
+          // Drift: increase idle bonus toward max
+          const maxBonus = getMaxIdleBonus();
+          if (idleBonusRef.current < maxBonus) {
+            idleBonusRef.current = Math.min(maxBonus, idleBonusRef.current + DRIFT_SPEED * delta);
+          }
+        }
+      }
+
+      // === 5. CALCULATE TARGET & SMOOTH ===
+      const targetTime = scrollTimeRef.current + idleBonusRef.current;
+      const currentTime = currentTimeRef.current;
+      const diff = targetTime - currentTime;
+
+      // Smooth interpolation (lerp)
+      const lerpSpeed = 8;
+      const lerpFactor = 1 - Math.exp(-lerpSpeed * delta);
+      const newTime = Math.abs(diff) < 0.03 ? targetTime : currentTime + diff * lerpFactor;
+      currentTimeRef.current = newTime;
+
+      // === 6. UPDATE VIDEO ===
       if (Math.abs(video.currentTime - newTime) > 0.02) {
         try {
           video.currentTime = newTime;
         } catch {
-          // ignore
+          // Ignore seek errors
         }
       }
 
-      smoothingRafRef.current = requestAnimationFrame(smoothLoop);
+      animationRef.current = requestAnimationFrame(loop);
     };
 
-    smoothingRafRef.current = requestAnimationFrame(smoothLoop);
+    animationRef.current = requestAnimationFrame(loop);
   }, []);
 
-  // Legacy function name for compatibility
-  const updateVideoTime = updateScrollTarget;
-
-  const handleScroll = useCallback(() => {
-    lastScrollTimeRef.current = performance.now();
-    
-    // Stop any ongoing drift
-    stopIdleDrift();
-    
-    // Cancel any pending animation frame
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-    }
-    // Schedule update on next animation frame for smooth performance
-    rafRef.current = requestAnimationFrame(() => {
-      updateVideoTime();
-      // Schedule drift to start after scroll stops
-      scheduleIdleDrift();
-    });
-  }, [updateVideoTime, stopIdleDrift, scheduleIdleDrift]);
-
-  useEffect(() => {
-    const scrollContainer = getScrollContainer();
-    if (!scrollContainer) return;
-    
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      scrollContainer.removeEventListener('scroll', handleScroll);
-      stopIdleDrift();
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
-      if (smoothingRafRef.current) {
-        cancelAnimationFrame(smoothingRafRef.current);
-      }
-    };
-  }, [handleScroll, getScrollContainer, stopIdleDrift]);
-
-  // Initialize video when it's ready enough to seek
-  const initializeVideo = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || videoInitializedRef.current) return;
-    
-    // Check if we have duration and enough data
-    if (video.duration && !isNaN(video.duration) && video.duration > 0 && video.readyState >= 2) {
-      videoInitializedRef.current = true;
-      videoDurationRef.current = video.duration;
-      // Ensure video is paused - we ONLY control it via scroll/drift
-      video.pause();
-      video.currentTime = 0;
-      setVideoReady(true);
-      // Set initial scroll target
-      updateScrollTarget();
-      // Start the continuous smoothing loop
-      startSmoothingLoop();
-      // Start idle drift on initial load
-      scheduleIdleDrift();
-    }
-  }, [updateScrollTarget, startSmoothingLoop, scheduleIdleDrift]);
-
-  // Force load the video on mount and ensure it never plays
+  // === LIFECYCLE ===
+  
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    
-    // Immediately pause if browser tries to auto-play
-    const preventAutoPlay = () => {
+
+    const initialize = () => {
+      // Prevent multiple initializations
+      if (initializedRef.current) return;
+      if (video.readyState < 2 || !video.duration || video.duration <= 0) return;
+      
+      initializedRef.current = true;
       video.pause();
+      
+      // Initialize section cache BEFORE calculating scroll position
+      refreshSectionCache();
+      
+      // Calculate initial scroll position BEFORE starting loop
+      const container = getScrollContainer();
+      if (container) {
+        const scrollTop = container.scrollTop;
+        const initialTime = scrollToVideoTime(scrollTop, performance.now());
+        scrollTimeRef.current = initialTime;
+        currentTimeRef.current = initialTime;
+        video.currentTime = initialTime;
+      } else {
+        video.currentTime = 0;
+      }
+      
+      setVideoReady(true);
+      startAnimationLoop();
     };
+
+    // Prevent autoplay
+    const preventPlay = () => video.pause();
+    video.addEventListener('play', preventPlay);
     
-    // Force the video to start loading
+    // Initialize when ready
+    video.addEventListener('loadeddata', initialize);
+    video.addEventListener('canplay', initialize);
+    
+    // Fallback polling
+    const interval = setInterval(initialize, 100);
+    
     video.load();
-    
-    // Poll for video readiness as a fallback
-    const checkReady = () => {
-      if (videoInitializedRef.current) return;
-      initializeVideo();
-    };
-    
-    // Check periodically until ready
-    const interval = setInterval(checkReady, 100);
-    
-    // Listen for play events and immediately pause - this video should NEVER play
-    video.addEventListener('play', preventAutoPlay);
-    video.addEventListener('loadeddata', initializeVideo);
-    video.addEventListener('canplay', initializeVideo);
-    video.addEventListener('canplaythrough', initializeVideo);
-    
+
     return () => {
       clearInterval(interval);
-      video.removeEventListener('play', preventAutoPlay);
-      video.removeEventListener('loadeddata', initializeVideo);
-      video.removeEventListener('canplay', initializeVideo);
-      video.removeEventListener('canplaythrough', initializeVideo);
+      video.removeEventListener('play', preventPlay);
+      video.removeEventListener('loadeddata', initialize);
+      video.removeEventListener('canplay', initialize);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [initializeVideo]);
+  }, [startAnimationLoop]);
 
-  // Silence unused variable warning
-  void lastScrollTimeRef;
-
+  // === RENDER ===
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-      {/* Skeleton */}
+      {/* Loading skeleton */}
       <div className="w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 animate-pulse scale-[1.3]" />
 
-      {/* Poster - high priority for fast initial render */}
+      {/* Poster (high priority) */}
       <img
         src={HERO_POSTER_SRC}
         alt=""
@@ -453,7 +390,7 @@ const DesktopScrollVideo = () => {
         }`}
       />
 
-      {/* Video - controlled by scroll, NEVER auto-plays */}
+      {/* Video */}
       <video
         ref={videoRef}
         src={HERO_VIDEO_SRC_DESKTOP}
@@ -461,9 +398,14 @@ const DesktopScrollVideo = () => {
         playsInline
         preload="auto"
         autoPlay={false}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.3] ${
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
           videoReady ? 'opacity-100' : 'opacity-0'
         }`}
+        style={{ 
+          willChange: 'transform',
+          transform: 'translateZ(0) scale(1.3)',
+          backfaceVisibility: 'hidden'
+        }}
       />
     </div>
   );
@@ -634,7 +576,12 @@ const MobileScrollVideo = () => {
               loop
               playsInline
               preload={preloadStrategy}
-              className="absolute inset-0 w-full h-full object-cover scale-[1.3]"
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ 
+                willChange: 'transform, opacity',
+                transform: 'translateZ(0) scale(1.3)',
+                backfaceVisibility: 'hidden'
+              }}
             />
           </div>
         );
