@@ -265,8 +265,11 @@ const DesktopScrollVideo = () => {
 
       // === 4. HANDLE IDLE BONUS ===
       if (isScrolling) {
-        // Actively scrolling: fade idle bonus back to 0
-        idleBonusRef.current = Math.max(0, idleBonusRef.current - delta * 3); // Fade at 3s/s
+        // Actively scrolling: drop idle bonus immediately.
+        // Rationale: if we keep any idleBonus while starting a scroll transition,
+        // the targetTime can overshoot forward (because scrollTime is already moving),
+        // then snap/reverse when the section changes and idleBonus resets.
+        idleBonusRef.current = 0;
         idleStartTime = null;
       } else {
         // Not scrolling: accumulate idle bonus after delay
