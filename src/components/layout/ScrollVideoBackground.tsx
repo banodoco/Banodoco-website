@@ -22,7 +22,7 @@ const SECTION_TIMESTAMPS: Record<string, SectionTimestamps> = {
   hero:         { start: 0,  end: 5 },   // Drifts 0→10
   community:    { start: 7, end: 12 },   // Gap 10→12 scrubbed, drifts to 14
   reigh:        { start: 17, end: 20 },   // Gap 14→16 scrubbed, drifts to 18
-  'arca-gidan': { start: 20, end: 24 },   // Gap 18→20 scrubbed, drifts to 22
+  'arca-gidan': { start: 22, end: 24 },   // Gap 18→20 scrubbed, drifts to 22
   ados:         { start: 25, end: 29 },   // Gap 22→24 scrubbed, drifts to 26
   ecosystem:    { start: 30, end: 31 },   // Gap 26→28 scrubbed, drifts to 33
   ownership:    { start: 31.5, end: 36.5 },   // Gap 33→35 scrubbed, drifts to 39
@@ -59,6 +59,38 @@ const SECTION_VIDEOS: Record<string, SectionVideoConfig> = {
 
 const MOBILE_PLAYBACK_RATE = 0.5;
 const CROSSFADE_DURATION = 800;
+
+// =============================================================================
+// POSTER PRELOADING - Load all posters in order on mount
+// =============================================================================
+const preloadPostersInOrder = () => {
+  let currentIndex = 0;
+  
+  const loadNext = () => {
+    if (currentIndex >= SECTION_ORDER.length) return;
+    
+    const sectionId = SECTION_ORDER[currentIndex];
+    const config = SECTION_VIDEOS[sectionId];
+    if (!config) {
+      currentIndex++;
+      loadNext();
+      return;
+    }
+    
+    const img = new Image();
+    img.onload = () => {
+      currentIndex++;
+      loadNext(); // Load next poster after this one completes
+    };
+    img.onerror = () => {
+      currentIndex++;
+      loadNext(); // Continue even if one fails
+    };
+    img.src = config.poster;
+  };
+  
+  loadNext();
+};
 
 // =============================================================================
 // DESKTOP: Scroll-driven single video with seeking (ORIGINAL IMPLEMENTATION)
@@ -448,6 +480,11 @@ const MobileScrollVideo = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Preload all posters in order on mount
+  useEffect(() => {
+    preloadPostersInOrder();
+  }, []);
 
   const getScrollContainer = useCallback(() => {
     return document.getElementById('home-scroll-container');
