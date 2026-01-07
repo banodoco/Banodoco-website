@@ -101,32 +101,25 @@ export const Hero = () => {
       <div className="h-full px-6 md:px-20 lg:px-24 flex items-center relative z-10">
         <div className="max-w-7xl mx-auto w-full">
           <div className="flex flex-col space-y-5 md:space-y-6 max-w-[520px] md:max-w-[580px] lg:max-w-[620px]">
-            {/* Headline - confident, near-black, medium weight */}
+            {/* Headline - white on mobile, dark on desktop */}
             <h1 
-              className="text-[2.25rem] md:text-5xl lg:text-[3.5rem] font-medium leading-[1.1] tracking-[-0.02em]"
-              style={{ color: '#141414' }}
+              className="text-[2.25rem] md:text-5xl lg:text-[3.5rem] font-medium leading-[1.1] tracking-[-0.02em] text-white md:text-[#141414]"
             >
               We're working to help the open source AI art ecosystem thrive
             </h1>
 
-            {/* Subhead - softer gray, readable */}
+            {/* Subhead - white/gray on mobile, dark gray on desktop */}
             <p 
-              className="text-base md:text-lg lg:text-xl leading-relaxed max-w-[520px]"
-              style={{ color: '#3A3A3A' }}
+              className="text-base md:text-lg lg:text-xl leading-relaxed max-w-[520px] text-white/80 md:text-[#3A3A3A]"
             >
               Tools, community, resources, and initiatives to support the ecosystem.
             </p>
 
-            {/* CTA */}
+            {/* CTA - white border on mobile, orange gradient on desktop */}
             <div className="flex items-center gap-4 pt-2">
               <button
                 onClick={scrollToNextSection}
-                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-lg transition-all hover:gap-3 hover:shadow-lg hover:scale-[1.02]"
-                style={{ 
-                  color: '#1a1a1a',
-                  background: 'linear-gradient(135deg, rgba(255, 195, 115, 0.9) 0%, rgba(255, 170, 80, 0.85) 100%)',
-                  boxShadow: '0 2px 8px rgba(255, 170, 80, 0.3)',
-                }}
+                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-lg transition-all hover:gap-3 hover:shadow-lg hover:scale-[1.02] text-white border border-white/50 md:border-0 md:text-[#1a1a1a] md:bg-gradient-to-br md:from-[rgba(255,195,115,0.9)] md:to-[rgba(255,170,80,0.85)] md:shadow-[0_2px_8px_rgba(255,170,80,0.3)]"
               >
                 Learn more
                 <ArrowDownIcon />

@@ -52,7 +52,8 @@ const NavLink = ({ sectionId, label, isHomePage, isActive, isDark, isOnHero, cla
     'text-[13px] font-medium transition-all duration-200 relative',
     // Underline on hover for premium feel
     'after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:transition-all after:duration-200 hover:after:w-full',
-    isOnHero && 'text-[#141414] hover:text-[#141414] after:bg-[#141414]',
+    // Hero: white on mobile, dark on desktop
+    isOnHero && 'text-white/80 hover:text-white after:bg-white md:text-[#141414] md:hover:text-[#141414] md:after:bg-[#141414]',
     !isOnHero && !isDark && 'text-[#4B4B4B] hover:text-[#141414] after:bg-[#141414]',
     !isOnHero && isDark && !isActive && ['text-white/80', hoverColor, hoverUnderlineColor],
     !isOnHero && isDark && isActive && [SECTION_COLORS[sectionId as keyof typeof SECTION_COLORS] ?? 'text-amber-400', activeUnderlineColor],
@@ -137,7 +138,8 @@ export const Header = () => {
           <span 
             className={cn(
               'text-xl font-semibold tracking-[-0.01em]',
-              isOnHero && 'text-[#141414]',
+              // Mobile: white on hero, desktop: dark on hero
+              isOnHero && 'text-white md:text-[#141414]',
               !isOnHero && isDark && 'text-white',
               !isOnHero && !isDark && 'text-[#141414]'
             )}
@@ -166,7 +168,9 @@ export const Header = () => {
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className={cn(
             'md:hidden p-2 -mr-2 transition-colors',
-            (isOnHero || !isDark) ? 'text-gray-900/70 hover:text-gray-900' : 'text-white/80 hover:text-white'
+            // Mobile on hero: white, desktop on hero: dark
+            isOnHero ? 'text-white/80 hover:text-white' : 
+            !isDark ? 'text-gray-900/70 hover:text-gray-900' : 'text-white/80 hover:text-white'
           )}
           aria-label="Toggle menu"
         >
