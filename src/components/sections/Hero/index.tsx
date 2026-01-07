@@ -62,7 +62,13 @@ export const Hero = () => {
         }}
       />
 
-      {/* Mobile: no overlay - video shows through */}
+      {/* Mobile: dark overlay for text readability */}
+      <div 
+        className="absolute inset-0 pointer-events-none md:hidden"
+        style={{
+          backgroundColor: 'rgba(10, 10, 12, 0.65)',
+        }}
+      />
       
       {/* Warm accent glow - subtle, refined (desktop) */}
       <div 
