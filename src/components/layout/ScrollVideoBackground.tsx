@@ -682,7 +682,10 @@ const MobileScrollVideo = () => {
     if (incomingVideo) {
       // For backward scroll: start at end, will scrub to beginning then play forward
       // For forward scroll: start at beginning
-      incomingVideo.currentTime = isScrollingForward ? 0 : (incomingVideo.duration || 7);
+      const incomingDuration = Number.isFinite(incomingVideo.duration) ? incomingVideo.duration : null;
+      try {
+        incomingVideo.currentTime = isScrollingForward ? 0 : (incomingDuration ?? 0);
+      } catch {}
       incomingVideo.playbackRate = MOBILE_PLAYBACK_RATE;
     }
 
@@ -696,7 +699,9 @@ const MobileScrollVideo = () => {
       
       outgoingVideo.pause();
       let lastTime = performance.now();
-      const targetTime = isScrollingForward ? (outgoingVideo.duration || 7) : 0;
+      const outgoingDuration = Number.isFinite(outgoingVideo.duration) ? outgoingVideo.duration : null;
+      // If metadata isn't loaded yet, don't risk scrubbing past duration (can throw on iOS)
+      const targetTime = isScrollingForward ? (outgoingDuration ?? outgoingVideo.currentTime) : 0;
       
       const scrubLoop = (now: number) => {
         const delta = (now - lastTime) / 1000;
@@ -710,12 +715,14 @@ const MobileScrollVideo = () => {
           : newTime <= 0.1;
         
         if (reachedTarget) {
-          outgoingVideo.currentTime = targetTime;
+          try { outgoingVideo.currentTime = targetTime; } catch {}
           startIncomingPhase();
           return;
         }
         
-        outgoingVideo.currentTime = Math.max(0, Math.min(newTime, outgoingVideo.duration || 10));
+        const clampMax = outgoingDuration ?? Math.max(outgoingVideo.currentTime, 0);
+        const clamped = Math.max(0, Math.min(newTime, clampMax));
+        try { outgoingVideo.currentTime = clamped; } catch {}
         scrubAnimationRef.current = requestAnimationFrame(scrubLoop);
       };
       
@@ -734,6 +741,7 @@ const MobileScrollVideo = () => {
 
       if (isScrollingForward) {
         // Forward: just play from beginning
+        try { incomingVideo.currentTime = 0; } catch {}
         incomingVideo.play().catch(() => {});
         finishTransition();
       } else {
@@ -749,13 +757,13 @@ const MobileScrollVideo = () => {
           
           if (newTime <= 0.1) {
             // Reached beginning, now play forward
-            incomingVideo.currentTime = 0;
+            try { incomingVideo.currentTime = 0; } catch {}
             incomingVideo.play().catch(() => {});
             finishTransition();
             return;
           }
           
-          incomingVideo.currentTime = Math.max(0, newTime);
+          try { incomingVideo.currentTime = Math.max(0, newTime); } catch {}
           scrubAnimationRef.current = requestAnimationFrame(incomingScrubLoop);
         };
         
@@ -804,9 +812,14 @@ const MobileScrollVideo = () => {
     const currentVideo = videoRefs.current[currentSection];
     if (currentVideo) {
       currentVideo.playbackRate = MOBILE_PLAYBACK_RATE;
-      currentVideo.play().catch(() => {});
+      // IMPORTANT: during transitions we control playback manually (scrub then fade).
+      // If we autoplay here while the incoming video is hidden, it can "finish" offscreen
+      // (and because we removed loop, it looks like later sections never play).
+      if (!isTransitioning && !isScrubbing) {
+        currentVideo.play().catch(() => {});
+      }
     }
-  }, [currentSection]);
+  }, [currentSection, isTransitioning, isScrubbing]);
 
   // Get next section for preloading
   const currentIdx = SECTION_ORDER.indexOf(currentSection);
