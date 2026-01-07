@@ -118,7 +118,7 @@ export const Hero = () => {
             <p 
               className="text-base md:text-lg lg:text-xl leading-relaxed max-w-[520px] text-white/80 md:text-[#3A3A3A]"
             >
-              Tools, community, resources, and initiatives to support the ecosystem.
+              Tools, community, resources, and initiatives to support the open source AI movement.
             </p>
 
             {/* CTA - white border on mobile, orange gradient on desktop */}
