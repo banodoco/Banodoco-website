@@ -28,6 +28,15 @@ const SECTION_TIMESTAMPS: Record<string, SectionTimestamps> = {
   ownership:    { start: 31.5, end: 36.5 },   // Gap 33→35 scrubbed, drifts to 39
 };
 
+// ALTERNATIVE SETTINGS (tighter timing):
+// hero:         { start: 0,  end: 5 },
+// community:    { start: 7, end: 11 },
+// reigh:        { start: 12, end: 14.5 },
+// 'arca-gidan': { start: 15, end: 20 },
+// ados:         { start: 21, end: 25 },
+// ecosystem:    { start: 27, end: 30 },
+// ownership:    { start: 31.5, end: 36.5 },
+
 // Section IDs in order (must match the order they appear on the page)
 const SECTION_ORDER = ['hero', 'community', 'reigh', 'arca-gidan', 'ados', 'ecosystem', 'ownership'];
 
