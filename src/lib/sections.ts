@@ -43,6 +43,22 @@ export const SECTION_HOVER_COLORS: Partial<Record<SectionId, string>> = {
   [SECTION_IDS.ados]: 'hover:text-rose-300/80',
 };
 
+/** Section underline colors for hover effect (matches hover text colors) */
+export const SECTION_UNDERLINE_COLORS: Partial<Record<SectionId, string>> = {
+  [SECTION_IDS.community]: 'hover:after:bg-sky-300/80',
+  [SECTION_IDS.reigh]: 'hover:after:bg-emerald-300/80',
+  [SECTION_IDS.arcaGidan]: 'hover:after:bg-amber-300/80',
+  [SECTION_IDS.ados]: 'hover:after:bg-rose-300/80',
+};
+
+/** Section underline colors for active state (matches active text colors) */
+export const SECTION_ACTIVE_UNDERLINE_COLORS: Partial<Record<SectionId, string>> = {
+  [SECTION_IDS.community]: 'after:bg-sky-400',
+  [SECTION_IDS.reigh]: 'after:bg-emerald-400',
+  [SECTION_IDS.arcaGidan]: 'after:bg-amber-400',
+  [SECTION_IDS.ados]: 'after:bg-rose-400',
+};
+
 /** 
  * Scrim background colors for header - matches each section's gradient start color.
  * Hero uses the light default scrim; all other sections use heavier scrims.
