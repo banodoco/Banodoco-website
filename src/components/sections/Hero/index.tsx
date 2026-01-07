@@ -22,9 +22,9 @@ export const Hero = () => {
       id="hero" 
       className="relative"
     >
-      {/* Top edge fog - extends across the full width + top right corner accent */}
+      {/* Top edge fog - extends across the full width + top right corner accent (desktop) */}
       <div 
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none hidden md:block"
         style={{
           background: `
             radial-gradient(
@@ -45,9 +45,9 @@ export const Hero = () => {
         }}
       />
       
-      {/* Base overlay - cleaner, tighter gradient for sharper tech-forward feel */}
+      {/* Base overlay - desktop: left-to-right gradient */}
       <div 
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none hidden md:block"
         style={{
           background: `linear-gradient(
             to right,
@@ -61,10 +61,12 @@ export const Hero = () => {
           WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.7) 85%, transparent 100%)',
         }}
       />
+
+      {/* Mobile: no overlay - video shows through */}
       
-      {/* Warm accent glow - subtle, refined */}
+      {/* Warm accent glow - subtle, refined (desktop) */}
       <div 
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none hidden md:block"
         style={{
           background: `
             /* Core warmth - tighter, more defined */
@@ -85,6 +87,7 @@ export const Hero = () => {
           WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)',
         }}
       />
+
       
       {/* Subtle film grain texture for premium feel */}
       <div 

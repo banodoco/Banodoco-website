@@ -68,17 +68,18 @@ interface SectionVideoConfig {
 }
 
 const SECTION_VIDEOS: Record<string, SectionVideoConfig> = {
-  hero:         { video: '/section-videos/hero.mp4', poster: '/section-videos/hero-poster.jpg' },
+  hero:         { video: '/hero-part1.mp4', poster: '/section-videos/hero-poster.jpg' },  // HD version
   community:    { video: '/section-videos/community.mp4', poster: '/section-videos/community-poster.jpg' },
   reigh:        { video: '/section-videos/reigh.mp4', poster: '/section-videos/reigh-poster.jpg' },
   'arca-gidan': { video: '/section-videos/arca-gidan.mp4', poster: '/section-videos/arca-gidan-poster.jpg' },
   ados:         { video: '/section-videos/ados.mp4', poster: '/section-videos/ados-poster.jpg' },
   ecosystem:    { video: '/section-videos/ecosystem.mp4', poster: '/section-videos/ecosystem-poster.jpg' },
-  ownership:    { video: '/section-videos/ownership.mp4', poster: '/section-videos/ownership-poster.jpg' },
+  ownership:    { video: '/hero-part3.mp4', poster: '/section-videos/ownership-poster.jpg' },  // HD version
 };
 
 const MOBILE_PLAYBACK_RATE = 0.5;
-const CROSSFADE_DURATION = 800;
+const CROSSFADE_DURATION = 500;
+const TRANSITION_SCRUB_SPEED = 8; // How fast to scrub during transition (seconds per second) - very fast
 
 // =============================================================================
 // POSTER PRELOADING - Load all posters in order on mount
@@ -596,8 +597,10 @@ const MobileScrollVideo = () => {
   const [currentSection, setCurrentSection] = useState<string>(SECTION_ORDER[0]);
   const [previousSection, setPreviousSection] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isScrubbing, setIsScrubbing] = useState(false); // True during scrub phase, false during fade phase
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrubAnimationRef = useRef<number | null>(null);
 
   // Preload all posters in order on mount
   useEffect(() => {
@@ -658,25 +661,118 @@ const MobileScrollVideo = () => {
     if (transitionTimeoutRef.current) {
       clearTimeout(transitionTimeoutRef.current);
     }
+    if (scrubAnimationRef.current) {
+      cancelAnimationFrame(scrubAnimationRef.current);
+    }
+
+    // Determine scroll direction
+    const currentIdx = SECTION_ORDER.indexOf(currentSection);
+    const newIdx = SECTION_ORDER.indexOf(newSection);
+    const isScrollingForward = newIdx > currentIdx;
 
     setPreviousSection(currentSection);
     setCurrentSection(newSection);
     setIsTransitioning(true);
+    setIsScrubbing(true); // Start in scrubbing phase
 
     const outgoingVideo = videoRefs.current[currentSection];
     const incomingVideo = videoRefs.current[newSection];
 
+    // Prepare incoming video
     if (incomingVideo) {
-      incomingVideo.currentTime = 0;
+      // For backward scroll: start at end, will scrub to beginning then play forward
+      // For forward scroll: start at beginning
+      incomingVideo.currentTime = isScrollingForward ? 0 : (incomingVideo.duration || 7);
       incomingVideo.playbackRate = MOBILE_PLAYBACK_RATE;
-      incomingVideo.play().catch(() => {});
     }
 
-    transitionTimeoutRef.current = setTimeout(() => {
-      setIsTransitioning(false);
-      setPreviousSection(null);
-      if (outgoingVideo) outgoingVideo.pause();
-    }, CROSSFADE_DURATION);
+    // Phase 1: Scrub the outgoing video to completion
+    const startOutgoingScrub = () => {
+      if (!outgoingVideo) {
+        // No outgoing video, go straight to incoming scrub/fade
+        startIncomingPhase();
+        return;
+      }
+      
+      outgoingVideo.pause();
+      let lastTime = performance.now();
+      const targetTime = isScrollingForward ? (outgoingVideo.duration || 7) : 0;
+      
+      const scrubLoop = (now: number) => {
+        const delta = (now - lastTime) / 1000;
+        lastTime = now;
+        
+        const scrubDelta = delta * TRANSITION_SCRUB_SPEED * (isScrollingForward ? 1 : -1);
+        const newTime = outgoingVideo.currentTime + scrubDelta;
+        
+        const reachedTarget = isScrollingForward 
+          ? newTime >= targetTime - 0.1
+          : newTime <= 0.1;
+        
+        if (reachedTarget) {
+          outgoingVideo.currentTime = targetTime;
+          startIncomingPhase();
+          return;
+        }
+        
+        outgoingVideo.currentTime = Math.max(0, Math.min(newTime, outgoingVideo.duration || 10));
+        scrubAnimationRef.current = requestAnimationFrame(scrubLoop);
+      };
+      
+      scrubAnimationRef.current = requestAnimationFrame(scrubLoop);
+    };
+
+    // Phase 2: For backward scroll, scrub incoming video from end to beginning, then play
+    // For forward scroll, just fade in and play
+    const startIncomingPhase = () => {
+      setIsScrubbing(false); // Show incoming video now
+      
+      if (!incomingVideo) {
+        finishTransition();
+        return;
+      }
+
+      if (isScrollingForward) {
+        // Forward: just play from beginning
+        incomingVideo.play().catch(() => {});
+        finishTransition();
+      } else {
+        // Backward: scrub from end to beginning, then play forward
+        let lastTime = performance.now();
+        
+        const incomingScrubLoop = (now: number) => {
+          const delta = (now - lastTime) / 1000;
+          lastTime = now;
+          
+          const scrubDelta = delta * TRANSITION_SCRUB_SPEED * -1; // Always backward
+          const newTime = incomingVideo.currentTime + scrubDelta;
+          
+          if (newTime <= 0.1) {
+            // Reached beginning, now play forward
+            incomingVideo.currentTime = 0;
+            incomingVideo.play().catch(() => {});
+            finishTransition();
+            return;
+          }
+          
+          incomingVideo.currentTime = Math.max(0, newTime);
+          scrubAnimationRef.current = requestAnimationFrame(incomingScrubLoop);
+        };
+        
+        scrubAnimationRef.current = requestAnimationFrame(incomingScrubLoop);
+      }
+    };
+
+    const finishTransition = () => {
+      transitionTimeoutRef.current = setTimeout(() => {
+        setIsTransitioning(false);
+        setPreviousSection(null);
+        if (outgoingVideo) outgoingVideo.pause();
+      }, CROSSFADE_DURATION);
+    };
+
+    // Start the transition
+    startOutgoingScrub();
   }, [currentSection]);
 
   useEffect(() => {
@@ -700,6 +796,7 @@ const MobileScrollVideo = () => {
       scrollContainer.removeEventListener('scroll', handleScroll);
       if (rafId) cancelAnimationFrame(rafId);
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+      if (scrubAnimationRef.current) cancelAnimationFrame(scrubAnimationRef.current);
     };
   }, [getScrollContainer, getCurrentSectionFromScroll, handleSectionChange]);
 
@@ -733,12 +830,20 @@ const MobileScrollVideo = () => {
         // - Others: metadata only
         const preloadStrategy = isCurrent || isPrevious || isNext ? 'auto' : 'metadata';
 
+        // During scrubbing phase: only show the outgoing video (previous)
+        // After scrubbing: fade in the incoming video (current)
+        const showVideo = isCurrent 
+          ? (isScrubbing ? false : true)  // Incoming: hidden during scrub, visible after
+          : isPrevious 
+            ? true  // Outgoing: always visible during transition
+            : false;
+
         return (
           <div
             key={sectionId}
             className="absolute inset-0 w-full h-full transition-opacity"
             style={{
-              opacity: isCurrent ? 1 : isPrevious ? 0 : 0,
+              opacity: showVideo ? 1 : 0,
               transitionDuration: `${CROSSFADE_DURATION}ms`,
               transitionTimingFunction: 'ease-in-out',
               zIndex: isCurrent ? 2 : isPrevious ? 1 : 0,
@@ -749,7 +854,6 @@ const MobileScrollVideo = () => {
               src={config.video}
               poster={config.poster}
               muted
-              loop
               playsInline
               preload={preloadStrategy}
               className="absolute inset-0 w-full h-full object-cover"
@@ -763,13 +867,7 @@ const MobileScrollVideo = () => {
         );
       })}
 
-      <div
-        className="absolute inset-0 backdrop-blur-sm transition-opacity pointer-events-none"
-        style={{
-          opacity: isTransitioning ? 0.3 : 0,
-          transitionDuration: `${CROSSFADE_DURATION / 2}ms`,
-        }}
-      />
+      {/* Removed blur overlay - using true cross-dissolve instead */}
     </div>
   );
 };
