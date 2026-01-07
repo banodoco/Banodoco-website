@@ -1,6 +1,17 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { HERO_VIDEO_SRC_DESKTOP, HERO_POSTER_SRC } from '@/components/sections/Hero/config';
+import { HERO_POSTER_SRC } from '@/components/sections/Hero/config';
 import { BREAKPOINTS } from '@/lib/breakpoints';
+
+// =============================================================================
+// THREE-PART VIDEO CONFIG (Desktop)
+// =============================================================================
+// The full video is split into three parts for seamless scroll-based transitions.
+// Adjacent parts share their boundary frame for seamless switching.
+const VIDEO_PART1_SRC = '/hero-part1.mp4';  // 0-7 seconds (hero section)
+const VIDEO_PART2_SRC = '/hero-part2.mp4';  // 7-31.5 seconds (middle sections)
+const VIDEO_PART3_SRC = '/hero-part3.mp4';  // 31.5+ seconds (ownership section)
+const VIDEO_TRANSITION_1 = 7.0;             // Part 1 → Part 2 transition
+const VIDEO_TRANSITION_2 = 31.5;            // Part 2 → Part 3 transition
 
 // =============================================================================
 // SECTION TIMESTAMP CONFIG
@@ -117,17 +128,20 @@ const preloadPostersInOrder = () => {
 // - When scrolling resumes, idleBonus fades back to 0 (smooth return)
 //
 const DesktopScrollVideo = () => {
-  // === REFS ===
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // === REFS (Three videos for seamless transitions) ===
+  const video1Ref = useRef<HTMLVideoElement>(null);  // Part 1: 0-7 seconds
+  const video2Ref = useRef<HTMLVideoElement>(null);  // Part 2: 7-31.5 seconds
+  const video3Ref = useRef<HTMLVideoElement>(null);  // Part 3: 31.5+ seconds
   const animationRef = useRef<number | null>(null);
   const initializedRef = useRef(false); // Prevent multiple initializations
   
   // === STATE (as refs for performance - updated every frame) ===
-  const scrollTimeRef = useRef(0);      // Video time based purely on scroll position
+  const scrollTimeRef = useRef(0);      // Video time based purely on scroll position (in "logical" time)
   const idleBonusRef = useRef(0);       // Additional time from idle drift
   const currentTimeRef = useRef(0);     // Smoothed display time (actually shown)
   const isScrollingRef = useRef(false); // Are we actively scrolling?
   const currentSectionRef = useRef(SECTION_ORDER[0]);
+  const activeVideoRef = useRef<1 | 2 | 3>(1); // Which video is currently active
   
   // === CACHED SECTION POSITIONS (avoid DOM queries every frame) ===
   // Only refreshed on init and resize - NOT during animation loop
@@ -135,7 +149,11 @@ const DesktopScrollVideo = () => {
   
   // === REACT STATE (for UI) ===
   const [posterLoaded, setPosterLoaded] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
+  const [video1Ready, setVideo1Ready] = useState(false);
+  const [video2Ready, setVideo2Ready] = useState(false);
+  const [video3Ready, setVideo3Ready] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<1 | 2 | 3>(1); // Which video is visible
+  const videoReady = video1Ready && video2Ready && video3Ready;
 
   // === PURE FUNCTIONS ===
   
@@ -217,10 +235,13 @@ const DesktopScrollVideo = () => {
 
   // === MAIN ANIMATION LOOP ===
   // Single loop handles everything: reading scroll, applying drift, smoothing, updating video
+  // Now handles THREE videos with seamless transitions at VIDEO_TRANSITION_1 and VIDEO_TRANSITION_2
   
   const startAnimationLoop = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const video1 = video1Ref.current;
+    const video2 = video2Ref.current;
+    const video3 = video3Ref.current;
+    if (!video1 || !video2 || !video3) return;
 
     let lastTime = performance.now();
     let lastScrollTop = -1;
@@ -230,8 +251,8 @@ const DesktopScrollVideo = () => {
       const delta = (now - lastTime) / 1000;
       lastTime = now;
 
-      // Skip if video not ready
-      if (video.readyState < 2) {
+      // Skip if videos not ready
+      if (video1.readyState < 2 || video2.readyState < 2 || video3.readyState < 2) {
         animationRef.current = requestAnimationFrame(loop);
         return;
       }
@@ -315,12 +336,53 @@ const DesktopScrollVideo = () => {
       const newTime = Math.abs(diff) < 0.03 ? targetTime : currentTime + diff * lerpFactor;
       currentTimeRef.current = newTime;
 
-      // === 6. UPDATE VIDEO ===
-      if (Math.abs(video.currentTime - newTime) > 0.02) {
-        try {
-          video.currentTime = newTime;
-        } catch {
-          // Ignore seek errors
+      // === 6. UPDATE VIDEOS (three-part system) ===
+      // Determine which video should be active based on current time
+      // Videos share boundary frames at transition points for seamless switching
+      let newActiveVideo: 1 | 2 | 3;
+      if (newTime >= VIDEO_TRANSITION_2) {
+        newActiveVideo = 3;
+      } else if (newTime >= VIDEO_TRANSITION_1) {
+        newActiveVideo = 2;
+      } else {
+        newActiveVideo = 1;
+      }
+      
+      // Handle video switching - update both ref and state
+      if (newActiveVideo !== activeVideoRef.current) {
+        activeVideoRef.current = newActiveVideo;
+        setActiveVideo(newActiveVideo);
+      }
+      
+      // Update the appropriate video's currentTime
+      if (newActiveVideo === 3) {
+        // Part 3: internal time starts at 0, representing 31.5+ seconds
+        const video3Time = newTime - VIDEO_TRANSITION_2;
+        if (Math.abs(video3.currentTime - video3Time) > 0.02) {
+          try {
+            video3.currentTime = Math.max(0, video3Time);
+          } catch {
+            // Ignore seek errors
+          }
+        }
+      } else if (newActiveVideo === 2) {
+        // Part 2: internal time starts at 0, representing 7-31.5 seconds
+        const video2Time = newTime - VIDEO_TRANSITION_1;
+        if (Math.abs(video2.currentTime - video2Time) > 0.02) {
+          try {
+            video2.currentTime = Math.max(0, video2Time);
+          } catch {
+            // Ignore seek errors
+          }
+        }
+      } else {
+        // Part 1: internal time is the same as logical time (0-7 seconds)
+        if (Math.abs(video1.currentTime - newTime) > 0.02) {
+          try {
+            video1.currentTime = newTime;
+          } catch {
+            // Ignore seek errors
+          }
         }
       }
 
@@ -333,16 +395,24 @@ const DesktopScrollVideo = () => {
   // === LIFECYCLE ===
   
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const video1 = video1Ref.current;
+    const video2 = video2Ref.current;
+    const video3 = video3Ref.current;
+    if (!video1 || !video2 || !video3) return;
 
-    const initialize = () => {
+    const checkAndInitialize = () => {
       // Prevent multiple initializations
       if (initializedRef.current) return;
-      if (video.readyState < 2 || !video.duration || video.duration <= 0) return;
+      
+      // All three videos must be ready
+      if (video1.readyState < 2 || !video1.duration || video1.duration <= 0) return;
+      if (video2.readyState < 2 || !video2.duration || video2.duration <= 0) return;
+      if (video3.readyState < 2 || !video3.duration || video3.duration <= 0) return;
       
       initializedRef.current = true;
-      video.pause();
+      video1.pause();
+      video2.pause();
+      video3.pause();
       
       // Initialize section cache BEFORE calculating scroll position
       refreshSectionCache();
@@ -354,37 +424,87 @@ const DesktopScrollVideo = () => {
         const initialTime = scrollToVideoTime(scrollTop);
         scrollTimeRef.current = initialTime;
         currentTimeRef.current = initialTime;
-        video.currentTime = initialTime;
+        
+        // Set initial video times and active video
+        if (initialTime >= VIDEO_TRANSITION_2) {
+          activeVideoRef.current = 3;
+          setActiveVideo(3);
+          video3.currentTime = initialTime - VIDEO_TRANSITION_2;
+          video2.currentTime = VIDEO_TRANSITION_2 - VIDEO_TRANSITION_1; // Park at end
+          video1.currentTime = VIDEO_TRANSITION_1; // Park at end
+        } else if (initialTime >= VIDEO_TRANSITION_1) {
+          activeVideoRef.current = 2;
+          setActiveVideo(2);
+          video2.currentTime = initialTime - VIDEO_TRANSITION_1;
+          video1.currentTime = VIDEO_TRANSITION_1; // Park at end
+          video3.currentTime = 0; // Park at start
+        } else {
+          activeVideoRef.current = 1;
+          setActiveVideo(1);
+          video1.currentTime = initialTime;
+          video2.currentTime = 0; // Park at start
+          video3.currentTime = 0; // Park at start
+        }
       } else {
-        video.currentTime = 0;
+        video1.currentTime = 0;
+        video2.currentTime = 0;
+        video3.currentTime = 0;
       }
       
-      setVideoReady(true);
       startAnimationLoop();
     };
 
-    // Prevent autoplay
-    const preventPlay = () => video.pause();
-    video.addEventListener('play', preventPlay);
+    // Prevent autoplay on all videos
+    const preventPlay1 = () => video1.pause();
+    const preventPlay2 = () => video2.pause();
+    const preventPlay3 = () => video3.pause();
+    video1.addEventListener('play', preventPlay1);
+    video2.addEventListener('play', preventPlay2);
+    video3.addEventListener('play', preventPlay3);
     
-    // Initialize when ready
-    video.addEventListener('loadeddata', initialize);
-    video.addEventListener('canplay', initialize);
+    // Track readiness of each video
+    const onVideo1Ready = () => {
+      setVideo1Ready(true);
+      checkAndInitialize();
+    };
+    const onVideo2Ready = () => {
+      setVideo2Ready(true);
+      checkAndInitialize();
+    };
+    const onVideo3Ready = () => {
+      setVideo3Ready(true);
+      checkAndInitialize();
+    };
+    
+    video1.addEventListener('loadeddata', onVideo1Ready);
+    video1.addEventListener('canplay', onVideo1Ready);
+    video2.addEventListener('loadeddata', onVideo2Ready);
+    video2.addEventListener('canplay', onVideo2Ready);
+    video3.addEventListener('loadeddata', onVideo3Ready);
+    video3.addEventListener('canplay', onVideo3Ready);
     
     // Refresh section cache on resize (layout may change)
     const handleResize = () => refreshSectionCache();
     window.addEventListener('resize', handleResize);
     
     // Fallback polling
-    const interval = setInterval(initialize, 100);
+    const interval = setInterval(checkAndInitialize, 100);
     
-    video.load();
+    video1.load();
+    video2.load();
+    video3.load();
 
     return () => {
       clearInterval(interval);
-      video.removeEventListener('play', preventPlay);
-      video.removeEventListener('loadeddata', initialize);
-      video.removeEventListener('canplay', initialize);
+      video1.removeEventListener('play', preventPlay1);
+      video2.removeEventListener('play', preventPlay2);
+      video3.removeEventListener('play', preventPlay3);
+      video1.removeEventListener('loadeddata', onVideo1Ready);
+      video1.removeEventListener('canplay', onVideo1Ready);
+      video2.removeEventListener('loadeddata', onVideo2Ready);
+      video2.removeEventListener('canplay', onVideo2Ready);
+      video3.removeEventListener('loadeddata', onVideo3Ready);
+      video3.removeEventListener('canplay', onVideo3Ready);
       window.removeEventListener('resize', handleResize);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
@@ -407,21 +527,60 @@ const DesktopScrollVideo = () => {
         }`}
       />
 
-      {/* Video */}
+      {/* Video Part 1 (0-7 seconds) */}
       <video
-        ref={videoRef}
-        src={HERO_VIDEO_SRC_DESKTOP}
+        ref={video1Ref}
+        src={VIDEO_PART1_SRC}
         muted
         playsInline
         preload="auto"
         autoPlay={false}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-          videoReady ? 'opacity-100' : 'opacity-0'
+        className={`absolute inset-0 w-full h-full object-cover ${
+          videoReady && activeVideo === 1 ? 'opacity-100' : 'opacity-0'
         }`}
         style={{ 
           willChange: 'transform',
           transform: 'translateZ(0) scale(1.3)',
-          backfaceVisibility: 'hidden'
+          backfaceVisibility: 'hidden',
+          // No transition on opacity - instant switch for seamless frame matching
+        }}
+      />
+
+      {/* Video Part 2 (7-31.5 seconds) */}
+      <video
+        ref={video2Ref}
+        src={VIDEO_PART2_SRC}
+        muted
+        playsInline
+        preload="auto"
+        autoPlay={false}
+        className={`absolute inset-0 w-full h-full object-cover ${
+          videoReady && activeVideo === 2 ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{ 
+          willChange: 'transform',
+          transform: 'translateZ(0) scale(1.3)',
+          backfaceVisibility: 'hidden',
+          // No transition on opacity - instant switch for seamless frame matching
+        }}
+      />
+
+      {/* Video Part 3 (31.5+ seconds) */}
+      <video
+        ref={video3Ref}
+        src={VIDEO_PART3_SRC}
+        muted
+        playsInline
+        preload="auto"
+        autoPlay={false}
+        className={`absolute inset-0 w-full h-full object-cover ${
+          videoReady && activeVideo === 3 ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{ 
+          willChange: 'transform',
+          transform: 'translateZ(0) scale(1.3)',
+          backfaceVisibility: 'hidden',
+          // No transition on opacity - instant switch for seamless frame matching
         }}
       />
     </div>
@@ -619,12 +778,13 @@ const MobileScrollVideo = () => {
 // MAIN EXPORT: Switch between desktop and mobile implementations
 // =============================================================================
 export const ScrollVideoBackground = () => {
+  // Use md breakpoint (768px) so tablets/iPads get the desktop scroll experience
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.xl : true
+    typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.md : true
   );
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < BREAKPOINTS.xl);
+    const handleResize = () => setIsMobile(window.innerWidth < BREAKPOINTS.md);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
