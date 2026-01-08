@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { HERO_POSTER_SRC } from '@/components/sections/Hero/config';
 import { BREAKPOINTS } from '@/lib/breakpoints';
 
@@ -79,7 +79,6 @@ const SECTION_VIDEOS: Record<string, SectionVideoConfig> = {
 
 const MOBILE_PLAYBACK_RATE = 0.5;
 const CROSSFADE_DURATION = 500;
-const TRANSITION_SCRUB_SPEED = 8; // How fast to scrub during transition (seconds per second) - very fast
 
 // =============================================================================
 // POSTER PRELOADING - Load all posters in order on mount
@@ -296,17 +295,18 @@ const DesktopScrollVideo = () => {
 
       // === 4. HANDLE IDLE BONUS ===
       if (isScrolling) {
-        // When scrolling, decay idleBonus so that targetTime never goes below
-        // the current display time. This prevents the "overshoot then reverse"
-        // problem when transitioning after drift.
-        //
-        // Key insight: idleBonus = currentDisplayTime - scrollTime
-        // As scrollTime catches up to where the video is, idleBonus naturally → 0
-        const minBonusToMaintainPosition = Math.max(0, currentTimeRef.current - newScrollTime);
+        const scrollingForward = scrollTop > lastScrollTop;
         
-        // Only decrease idleBonus, never increase it while scrolling
-        if (idleBonusRef.current > minBonusToMaintainPosition) {
-          idleBonusRef.current = minBonusToMaintainPosition;
+        if (scrollingForward && newScrollTime < currentTimeRef.current) {
+          // Scrolling forward but scroll-based time is still behind the drifted video position.
+          // Quickly decay the bonus so the video syncs with scroll position.
+          // The lerp smoothing will make any slight backwards movement gradual.
+          // At ~4 units/sec decay, a 5 second drift catches up in ~1.2 seconds.
+          idleBonusRef.current = Math.max(0, idleBonusRef.current - delta * 4);
+        } else {
+          // Either scrolling backward, or scroll has caught up/passed video position
+          // Clear bonus and follow scroll directly
+          idleBonusRef.current = 0;
         }
         
         idleStartTime = null;
@@ -590,29 +590,58 @@ const DesktopScrollVideo = () => {
 
 // =============================================================================
 // MOBILE: Separate video clips with crossfade
-// Only renders current section ± 1 for better memory usage
-// Preloads next section for smooth forward transitions
+// Simplified architecture to avoid race conditions:
+// - Uses refs for real-time state tracking (no stale closures)
+// - Renders current + adjacent sections for smooth transitions
+// - Videos play once per section "visit" (reset when leaving)
+// - Simple crossfade transitions without complex scrubbing
 // =============================================================================
 const MobileScrollVideo = () => {
+  // === STATE ===
   const [currentSection, setCurrentSection] = useState<string>(SECTION_ORDER[0]);
   const [previousSection, setPreviousSection] = useState<string | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isScrubbing, setIsScrubbing] = useState(false); // True during scrub phase, false during fade phase
+  const [transitionPhase, setTransitionPhase] = useState<'idle' | 'waiting' | 'fading'>('idle');
+  const [readyBySection, setReadyBySection] = useState<Record<string, boolean>>({
+    // Pre-mark initial section as ready to avoid stuck state on first load
+    [SECTION_ORDER[0]]: true,
+  });
+  
+  // === REFS (for real-time access without stale closures) ===
+  const currentSectionRef = useRef<string>(SECTION_ORDER[0]);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scrubAnimationRef = useRef<number | null>(null);
+  const waitingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playAttemptRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Track which sections have played their video in this "visit"
+  // Reset when a section is no longer current or adjacent
+  const playedInVisitRef = useRef<Set<string>>(new Set());
 
   // Preload all posters in order on mount
   useEffect(() => {
     preloadPostersInOrder();
   }, []);
 
+  // === HELPERS ===
   const getScrollContainer = useCallback(() => {
     return document.getElementById('home-scroll-container');
   }, []);
 
-  // Determine which sections to render (current ± 1 for lazy mounting)
-  const sectionsToRender = (() => {
+  const markReady = useCallback((sectionId: string) => {
+    setReadyBySection(prev => (prev[sectionId] ? prev : { ...prev, [sectionId]: true }));
+  }, []);
+
+  // Set video ref AND check if already ready (for cached videos where events already fired)
+  const setVideoRef = useCallback((sectionId: string, el: HTMLVideoElement | null) => {
+    videoRefs.current[sectionId] = el;
+    // If video is already loaded (cached), mark it ready immediately
+    if (el && el.readyState >= 2) {
+      markReady(sectionId);
+    }
+  }, [markReady]);
+
+  // Determine which sections to render (current + adjacent for smooth transitions)
+  const sectionsToRender = useMemo(() => {
     const currentIdx = SECTION_ORDER.indexOf(currentSection);
     const prevIdx = previousSection ? SECTION_ORDER.indexOf(previousSection) : -1;
     const indices = new Set<number>();
@@ -627,7 +656,17 @@ const MobileScrollVideo = () => {
     if (currentIdx > 0) indices.add(currentIdx - 1);
     
     return Array.from(indices).map(i => SECTION_ORDER[i]).filter(Boolean);
-  })();
+  }, [currentSection, previousSection]);
+
+  // Clean up "played" status for sections that are no longer rendered
+  useEffect(() => {
+    const renderedSet = new Set(sectionsToRender);
+    playedInVisitRef.current.forEach((sectionId: string) => {
+      if (!renderedSet.has(sectionId)) {
+        playedInVisitRef.current.delete(sectionId);
+      }
+    });
+  }, [sectionsToRender]);
 
   const getCurrentSectionFromScroll = useCallback(() => {
     const scrollContainer = getScrollContainer();
@@ -655,134 +694,128 @@ const MobileScrollVideo = () => {
     return currentId;
   }, [getScrollContainer]);
 
-  const handleSectionChange = useCallback((newSection: string) => {
-    if (newSection === currentSection) return;
+  // === PLAY VIDEO WITH RETRY ===
+  // Handles the case where video ref might not be ready yet after a re-render
+  const playVideoWithRetry = useCallback((sectionId: string, retries = 3) => {
+    // Don't play if already played in this visit
+    if (playedInVisitRef.current.has(sectionId)) return;
+    
+    const video = videoRefs.current[sectionId];
+    
+    if (!video) {
+      // Video not mounted yet, retry after a short delay
+      if (retries > 0) {
+        playAttemptRef.current = setTimeout(() => {
+          playVideoWithRetry(sectionId, retries - 1);
+        }, 50);
+      }
+      return;
+    }
 
+    // Reset to beginning and play
+    try {
+      video.currentTime = 0;
+      video.playbackRate = MOBILE_PLAYBACK_RATE;
+    } catch {
+      // Ignore seek errors on videos not yet loaded
+    }
+
+    video.play()
+      .then(() => {
+        playedInVisitRef.current.add(sectionId);
+      })
+      .catch((err) => {
+        // On mobile, play() can fail if video isn't loaded yet
+        // Retry after a short delay
+        if (retries > 0 && err.name !== 'AbortError') {
+          playAttemptRef.current = setTimeout(() => {
+            playVideoWithRetry(sectionId, retries - 1);
+          }, 100);
+        }
+      });
+  }, []);
+
+  // === SECTION CHANGE HANDLER ===
+  const handleSectionChange = useCallback((newSection: string) => {
+    // Use ref for real-time comparison (avoids stale closure issues)
+    if (newSection === currentSectionRef.current) return;
+
+    // Clear any pending operations
     if (transitionTimeoutRef.current) {
       clearTimeout(transitionTimeoutRef.current);
     }
-    if (scrubAnimationRef.current) {
-      cancelAnimationFrame(scrubAnimationRef.current);
+    if (playAttemptRef.current) {
+      clearTimeout(playAttemptRef.current);
     }
 
-    // Determine scroll direction
-    const currentIdx = SECTION_ORDER.indexOf(currentSection);
-    const newIdx = SECTION_ORDER.indexOf(newSection);
-    const isScrollingForward = newIdx > currentIdx;
-
-    setPreviousSection(currentSection);
-    setCurrentSection(newSection);
-    setIsTransitioning(true);
-    setIsScrubbing(true); // Start in scrubbing phase
-
-    const outgoingVideo = videoRefs.current[currentSection];
-    const incomingVideo = videoRefs.current[newSection];
-
-    // Prepare incoming video
-    if (incomingVideo) {
-      // For backward scroll: start at end, will scrub to beginning then play forward
-      // For forward scroll: start at beginning
-      const incomingDuration = Number.isFinite(incomingVideo.duration) ? incomingVideo.duration : null;
-      try {
-        incomingVideo.currentTime = isScrollingForward ? 0 : (incomingDuration ?? 0);
-      } catch {}
-      incomingVideo.playbackRate = MOBILE_PLAYBACK_RATE;
-    }
-
-    // Phase 1: Scrub the outgoing video to completion
-    const startOutgoingScrub = () => {
-      if (!outgoingVideo) {
-        // No outgoing video, go straight to incoming scrub/fade
-        startIncomingPhase();
-        return;
-      }
-      
+    const oldSection = currentSectionRef.current;
+    
+    // Update ref immediately (source of truth)
+    currentSectionRef.current = newSection;
+    
+    // Pause the outgoing video
+    const outgoingVideo = videoRefs.current[oldSection];
+    if (outgoingVideo) {
       outgoingVideo.pause();
-      let lastTime = performance.now();
-      const outgoingDuration = Number.isFinite(outgoingVideo.duration) ? outgoingVideo.duration : null;
-      // If metadata isn't loaded yet, don't risk scrubbing past duration (can throw on iOS)
-      const targetTime = isScrollingForward ? (outgoingDuration ?? outgoingVideo.currentTime) : 0;
-      
-      const scrubLoop = (now: number) => {
-        const delta = (now - lastTime) / 1000;
-        lastTime = now;
-        
-        const scrubDelta = delta * TRANSITION_SCRUB_SPEED * (isScrollingForward ? 1 : -1);
-        const newTime = outgoingVideo.currentTime + scrubDelta;
-        
-        const reachedTarget = isScrollingForward 
-          ? newTime >= targetTime - 0.1
-          : newTime <= 0.1;
-        
-        if (reachedTarget) {
-          try { outgoingVideo.currentTime = targetTime; } catch {}
-          startIncomingPhase();
-          return;
-        }
-        
-        const clampMax = outgoingDuration ?? Math.max(outgoingVideo.currentTime, 0);
-        const clamped = Math.max(0, Math.min(newTime, clampMax));
-        try { outgoingVideo.currentTime = clamped; } catch {}
-        scrubAnimationRef.current = requestAnimationFrame(scrubLoop);
-      };
-      
-      scrubAnimationRef.current = requestAnimationFrame(scrubLoop);
-    };
+    }
 
-    // Phase 2: For backward scroll, scrub incoming video from end to beginning, then play
-    // For forward scroll, just fade in and play
-    const startIncomingPhase = () => {
-      setIsScrubbing(false); // Show incoming video now
-      
-      if (!incomingVideo) {
-        finishTransition();
-        return;
+    // Update state (triggers re-render)
+    setPreviousSection(oldSection);
+    setCurrentSection(newSection);
+    // Stage 1: keep outgoing visible until incoming has at least loaded a frame.
+    setTransitionPhase('waiting');
+
+    // Kick off loading/decoding for the incoming section ASAP.
+    playVideoWithRetry(newSection);
+  }, [playVideoWithRetry]);
+
+  // Stage 2: once incoming is ready (or timeout), crossfade and then finalize.
+  useEffect(() => {
+    if (transitionPhase !== 'waiting') {
+      // Clear any waiting timeout if we're not in waiting phase
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
       }
+      return;
+    }
+    if (!previousSection) {
+      setTransitionPhase('idle');
+      return;
+    }
 
-      if (isScrollingForward) {
-        // Forward: just play from beginning
-        try { incomingVideo.currentTime = 0; } catch {}
-        incomingVideo.play().catch(() => {});
-        finishTransition();
-      } else {
-        // Backward: scrub from end to beginning, then play forward
-        let lastTime = performance.now();
-        
-        const incomingScrubLoop = (now: number) => {
-          const delta = (now - lastTime) / 1000;
-          lastTime = now;
-          
-          const scrubDelta = delta * TRANSITION_SCRUB_SPEED * -1; // Always backward
-          const newTime = incomingVideo.currentTime + scrubDelta;
-          
-          if (newTime <= 0.1) {
-            // Reached beginning, now play forward
-            try { incomingVideo.currentTime = 0; } catch {}
-            incomingVideo.play().catch(() => {});
-            finishTransition();
-            return;
-          }
-          
-          try { incomingVideo.currentTime = Math.max(0, newTime); } catch {}
-          scrubAnimationRef.current = requestAnimationFrame(incomingScrubLoop);
-        };
-        
-        scrubAnimationRef.current = requestAnimationFrame(incomingScrubLoop);
+    const startFade = () => {
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
       }
-    };
+      setTransitionPhase('fading');
+      // Ensure playback is started (once-per-visit logic still applies).
+      playVideoWithRetry(currentSection);
 
-    const finishTransition = () => {
+      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
       transitionTimeoutRef.current = setTimeout(() => {
-        setIsTransitioning(false);
         setPreviousSection(null);
-        if (outgoingVideo) outgoingVideo.pause();
+        setTransitionPhase('idle');
       }, CROSSFADE_DURATION);
     };
 
-    // Start the transition
-    startOutgoingScrub();
-  }, [currentSection]);
+    // If already ready, start fade immediately
+    if (readyBySection[currentSection]) {
+      startFade();
+      return;
+    }
 
+    // Fallback: don't wait forever - start fade after 500ms even if not "ready"
+    // This handles cases where onLoadedData/onCanPlay never fire (iOS quirks, cached videos, etc.)
+    if (!waitingTimeoutRef.current) {
+      waitingTimeoutRef.current = setTimeout(() => {
+        startFade();
+      }, 500);
+    }
+  }, [transitionPhase, previousSection, currentSection, readyBySection, playVideoWithRetry]);
+
+  // === SCROLL LISTENER ===
   useEffect(() => {
     const scrollContainer = getScrollContainer();
     if (!scrollContainer) return;
@@ -798,77 +831,70 @@ const MobileScrollVideo = () => {
     };
 
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Initial section detection and video play
     handleScroll();
+    // Also try to play initial section video after a short delay (for first load)
+    const initialPlayTimeout = setTimeout(() => {
+      playVideoWithRetry(currentSectionRef.current);
+    }, 100);
 
     return () => {
       scrollContainer.removeEventListener('scroll', handleScroll);
       if (rafId) cancelAnimationFrame(rafId);
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-      if (scrubAnimationRef.current) cancelAnimationFrame(scrubAnimationRef.current);
+      if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current);
+      if (playAttemptRef.current) clearTimeout(playAttemptRef.current);
+      clearTimeout(initialPlayTimeout);
     };
-  }, [getScrollContainer, getCurrentSectionFromScroll, handleSectionChange]);
+  }, [getScrollContainer, getCurrentSectionFromScroll, handleSectionChange, playVideoWithRetry]);
 
-  useEffect(() => {
-    const currentVideo = videoRefs.current[currentSection];
-    if (currentVideo) {
-      currentVideo.playbackRate = MOBILE_PLAYBACK_RATE;
-      // IMPORTANT: during transitions we control playback manually (scrub then fade).
-      // If we autoplay here while the incoming video is hidden, it can "finish" offscreen
-      // (and because we removed loop, it looks like later sections never play).
-      if (!isTransitioning && !isScrubbing) {
-        currentVideo.play().catch(() => {});
-      }
-    }
-  }, [currentSection, isTransitioning, isScrubbing]);
-
-  // Get next section for preloading
-  const currentIdx = SECTION_ORDER.indexOf(currentSection);
-  const nextSection = currentIdx < SECTION_ORDER.length - 1 ? SECTION_ORDER[currentIdx + 1] : null;
-
+  // === RENDER ===
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-      {/* Only render sections we need (current ± 1) */}
       {sectionsToRender.map((sectionId) => {
         const config = SECTION_VIDEOS[sectionId];
         if (!config) return null;
 
         const isCurrent = sectionId === currentSection;
+        const isTransitioning = transitionPhase !== 'idle';
         const isPrevious = sectionId === previousSection && isTransitioning;
-        const isNext = sectionId === nextSection;
 
-        // Determine preload strategy:
-        // - Current: auto (playing)
-        // - Previous during transition: auto (fading out)
-        // - Next: auto (preload for smooth forward transition)
-        // - Others: metadata only
-        const preloadStrategy = isCurrent || isPrevious || isNext ? 'auto' : 'metadata';
-
-        // During scrubbing phase: only show the outgoing video (previous)
-        // After scrubbing: fade in the incoming video (current)
-        const showVideo = isCurrent 
-          ? (isScrubbing ? false : true)  // Incoming: hidden during scrub, visible after
-          : isPrevious 
-            ? true  // Outgoing: always visible during transition
-            : false;
+        // Crossfade behavior:
+        // - idle: show current only
+        // - waiting: show previous only (prevents blank/black incoming layer covering it)
+        // - fading: fade previous out, fade current in
+        let opacity = 0;
+        if (transitionPhase === 'idle') {
+          opacity = isCurrent ? 1 : 0;
+        } else if (transitionPhase === 'waiting') {
+          opacity = isPrevious ? 1 : 0;
+        } else {
+          // fading
+          opacity = isCurrent ? 1 : isPrevious ? 0 : 0;
+        }
 
         return (
           <div
             key={sectionId}
             className="absolute inset-0 w-full h-full transition-opacity"
             style={{
-              opacity: showVideo ? 1 : 0,
+              opacity,
               transitionDuration: `${CROSSFADE_DURATION}ms`,
               transitionTimingFunction: 'ease-in-out',
+              // Current on top, previous below (for crossfade), preload hidden
               zIndex: isCurrent ? 2 : isPrevious ? 1 : 0,
             }}
           >
             <video
-              ref={(el) => { videoRefs.current[sectionId] = el; }}
+              ref={(el) => setVideoRef(sectionId, el)}
               src={config.video}
               poster={config.poster}
               muted
               playsInline
-              preload={preloadStrategy}
+              preload="auto"
+              onLoadedData={() => markReady(sectionId)}
+              onCanPlay={() => markReady(sectionId)}
               className="absolute inset-0 w-full h-full object-cover"
               style={{ 
                 willChange: 'transform, opacity',
@@ -879,8 +905,6 @@ const MobileScrollVideo = () => {
           </div>
         );
       })}
-
-      {/* Removed blur overlay - using true cross-dissolve instead */}
     </div>
   );
 };
