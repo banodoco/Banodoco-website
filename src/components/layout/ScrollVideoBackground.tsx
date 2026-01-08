@@ -134,6 +134,7 @@ const DesktopScrollVideo = () => {
   const video3Ref = useRef<HTMLVideoElement>(null);  // Part 3: 31.5+ seconds
   const animationRef = useRef<number | null>(null);
   const initializedRef = useRef(false); // Prevent multiple initializations
+  const seekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // Track initial seek timeout
   
   // === STATE (as refs for performance - updated every frame) ===
   const scrollTimeRef = useRef(0);      // Video time based purely on scroll position (in "logical" time)
@@ -278,6 +279,7 @@ const DesktopScrollVideo = () => {
 
       // === 2. DETECT SCROLL STATE ===
       const isScrolling = scrollTop !== lastScrollTop;
+      const scrollingForward = scrollTop > lastScrollTop;  // Check direction BEFORE updating lastScrollTop
       isScrollingRef.current = isScrolling;
       lastScrollTop = scrollTop;
 
@@ -296,7 +298,6 @@ const DesktopScrollVideo = () => {
 
       // === 4. HANDLE IDLE BONUS ===
       if (isScrolling) {
-        const scrollingForward = scrollTop > lastScrollTop;
         
         if (scrollingForward && newScrollTime < currentTimeRef.current) {
           // Scrolling forward but scroll-based time is still behind the drifted video position.
@@ -456,13 +457,18 @@ const DesktopScrollVideo = () => {
         // This prevents the "leaped forward" issue where video shows a buffered frame
         const onSeeked = () => {
           activeVideo.removeEventListener('seeked', onSeeked);
+          if (seekTimeoutRef.current) {
+            clearTimeout(seekTimeoutRef.current);
+            seekTimeoutRef.current = null;
+          }
           setInitialSeekComplete(true);
         };
         activeVideo.addEventListener('seeked', onSeeked);
         
         // Fallback: if seeked event doesn't fire within 500ms, show anyway
-        setTimeout(() => {
+        seekTimeoutRef.current = setTimeout(() => {
           activeVideo.removeEventListener('seeked', onSeeked);
+          seekTimeoutRef.current = null;
           setInitialSeekComplete(true);
         }, 500);
       } else {
@@ -517,6 +523,7 @@ const DesktopScrollVideo = () => {
 
     return () => {
       clearInterval(interval);
+      if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current);
       video1.removeEventListener('play', preventPlay1);
       video2.removeEventListener('play', preventPlay2);
       video3.removeEventListener('play', preventPlay3);
