@@ -152,8 +152,9 @@ const DesktopScrollVideo = () => {
   const [video1Ready, setVideo1Ready] = useState(false);
   const [video2Ready, setVideo2Ready] = useState(false);
   const [video3Ready, setVideo3Ready] = useState(false);
+  const [initialSeekComplete, setInitialSeekComplete] = useState(false); // Wait for first seek before showing
   const [activeVideo, setActiveVideo] = useState<1 | 2 | 3>(1); // Which video is visible
-  const videoReady = video1Ready && video2Ready && video3Ready;
+  const videoReady = video1Ready && video2Ready && video3Ready && initialSeekComplete;
 
   // === PURE FUNCTIONS ===
   
@@ -426,30 +427,49 @@ const DesktopScrollVideo = () => {
         scrollTimeRef.current = initialTime;
         currentTimeRef.current = initialTime;
         
-        // Set initial video times and active video
+        // Determine which video is active and set up seek completion handler
+        let activeVideo: HTMLVideoElement;
         if (initialTime >= VIDEO_TRANSITION_2) {
           activeVideoRef.current = 3;
           setActiveVideo(3);
+          activeVideo = video3;
           video3.currentTime = initialTime - VIDEO_TRANSITION_2;
           video2.currentTime = VIDEO_TRANSITION_2 - VIDEO_TRANSITION_1; // Park at end
           video1.currentTime = VIDEO_TRANSITION_1; // Park at end
         } else if (initialTime >= VIDEO_TRANSITION_1) {
           activeVideoRef.current = 2;
           setActiveVideo(2);
+          activeVideo = video2;
           video2.currentTime = initialTime - VIDEO_TRANSITION_1;
           video1.currentTime = VIDEO_TRANSITION_1; // Park at end
           video3.currentTime = 0; // Park at start
         } else {
           activeVideoRef.current = 1;
           setActiveVideo(1);
+          activeVideo = video1;
           video1.currentTime = initialTime;
           video2.currentTime = 0; // Park at start
           video3.currentTime = 0; // Park at start
         }
+        
+        // Wait for the active video's seek to complete before showing
+        // This prevents the "leaped forward" issue where video shows a buffered frame
+        const onSeeked = () => {
+          activeVideo.removeEventListener('seeked', onSeeked);
+          setInitialSeekComplete(true);
+        };
+        activeVideo.addEventListener('seeked', onSeeked);
+        
+        // Fallback: if seeked event doesn't fire within 500ms, show anyway
+        setTimeout(() => {
+          activeVideo.removeEventListener('seeked', onSeeked);
+          setInitialSeekComplete(true);
+        }, 500);
       } else {
         video1.currentTime = 0;
         video2.currentTime = 0;
         video3.currentTime = 0;
+        setInitialSeekComplete(true);
       }
       
       startAnimationLoop();
