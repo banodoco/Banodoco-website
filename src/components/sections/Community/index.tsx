@@ -6,6 +6,25 @@ import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { ExternalLinkIcon } from '@/components/ui/icons';
 import { Skeleton, SkeletonParagraph, SkeletonBullet } from '@/components/ui/Skeleton';
 
+/** Header for the updates section with subtle styling */
+const UpdatesHeader = ({ className = '' }: { className?: string }) => (
+  <div className={`flex items-center gap-3 pl-1 ${className}`}>
+    <div className="flex items-center gap-2">
+      <span className="relative flex h-2 w-2 ml-0.5">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+      </span>
+      <span className="text-xs uppercase tracking-widest text-white/40 font-medium">
+        Live updates
+      </span>
+    </div>
+    <span className="text-white/20">·</span>
+    <span className="text-xs text-white/50">
+      from the past 24 hours
+    </span>
+  </div>
+);
+
 /** Shared intro content - responsive styling handles mobile vs desktop */
 const CommunityIntro = () => (
   <div>
@@ -336,6 +355,7 @@ export const Community = () => {
 
             {/* Horizontal scroll cards */}
             <div className="-mx-4 md:-mx-8 mt-6">
+              <UpdatesHeader className="px-4 md:px-8 mb-2" />
               {loading && <TopicCardsSkeleton mobile />}
               {showErrorOrEmpty && (
                 <TopicCardsState error={error} isEmpty={topics.length === 0} />
@@ -414,6 +434,17 @@ export const Community = () => {
               opacity: topGradientOpacity,
             }}
           />
+          {/* Updates header - fixed position, doesn't scroll with content */}
+          <div 
+            className="absolute z-20 pointer-events-none"
+            style={{ 
+              top: 'calc(var(--header-height) + 3.25rem)',
+              left: 0,
+            }}
+          >
+            <UpdatesHeader className="pointer-events-auto" />
+          </div>
+          
           {/* Loading: use flexbox centering. Loaded: use calculated padding for precise card centering */}
           {loading ? (
             <div className="min-h-full flex items-center" style={{ paddingTop: 'var(--header-height)' }}>
