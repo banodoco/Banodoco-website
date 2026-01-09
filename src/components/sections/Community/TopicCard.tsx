@@ -27,25 +27,43 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
           "border-b border-white/10 flex items-center justify-between",
           fullWidth ? "px-4 py-3" : "px-3 py-2 md:px-6 md:py-4"
         )}>
-          <span className={cn(
-            "inline-flex items-center rounded-full font-medium bg-emerald-500/20 text-emerald-400",
-            fullWidth ? "px-3 py-1.5 text-xs" : "px-2 py-1 md:px-3 md:py-1.5 text-[10px] md:text-xs"
-          )}>
-            #{formatChannelName(topic.channel_name)}
-          </span>
-          <span className={cn(
-            "flex items-center gap-2 text-white/40 font-medium",
-            fullWidth ? "text-xs" : "text-[10px] md:text-xs"
-          )}>
-            {/* Live indicator - only show on fullWidth (mobile) cards */}
-            {fullWidth && (
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+          {/* On mobile (fullWidth), show date first, then channel tag */}
+          {fullWidth ? (
+            <>
+              <span className={cn(
+                "flex items-center gap-2 text-white/40 font-medium",
+                "text-xs"
+              )}>
+                {/* Live indicator - only show on fullWidth (mobile) cards */}
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                </span>
+                {formatDate(topic.summary_date)}
               </span>
-            )}
-            {formatDate(topic.summary_date)}
-          </span>
+              <span className={cn(
+                "inline-flex items-center rounded-full font-medium bg-emerald-500/20 text-emerald-400",
+                "px-3 py-1.5 text-xs"
+              )}>
+                #{formatChannelName(topic.channel_name)}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className={cn(
+                "inline-flex items-center rounded-full font-medium bg-emerald-500/20 text-emerald-400",
+                "px-2 py-1 md:px-3 md:py-1.5 text-[10px] md:text-xs"
+              )}>
+                #{formatChannelName(topic.channel_name)}
+              </span>
+              <span className={cn(
+                "flex items-center gap-2 text-white/40 font-medium",
+                "text-[10px] md:text-xs"
+              )}>
+                {formatDate(topic.summary_date)}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Content */}
