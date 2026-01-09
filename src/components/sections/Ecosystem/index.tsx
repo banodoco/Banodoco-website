@@ -13,6 +13,7 @@ import {
 } from './eventConfig';
 import { Section, HEADER_OFFSET_VAR } from '@/components/layout/Section';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
+import { NameHighlight, GradientHighlight } from '@/components/ui/TextHighlight';
 
 // Fixed tick interval - month advances at steady pace
 const TICK_INTERVAL_MS = 1200;
@@ -244,7 +245,7 @@ export const Ecosystem: React.FC = () => {
               className="font-normal tracking-tight leading-tight line-clamp-2"
               style={{ fontSize: 'clamp(1rem, 2.5vw + 0.5rem, 1.75rem)' }}
             >
-              We aim to support, energise & equip the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions fall in love with AI
+              We aim to <NameHighlight color="sky">support</NameHighlight>, <NameHighlight color="amber">equip</NameHighlight>, <NameHighlight color="emerald">energise</NameHighlight> & <NameHighlight color="rose">connect</NameHighlight> the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions <GradientHighlight>fall in love with AI</GradientHighlight>
             </h2>
             <p className="text-sm md:text-xs lg:text-base text-white/50 max-w-xl mx-auto mt-2 md:mt-1 lg:mt-2">
               *OpenCore tools are built on open models, open-source their assets, and share profits to support the ecosystem that made them possible.
@@ -288,7 +289,7 @@ export const Ecosystem: React.FC = () => {
               className="font-normal tracking-tight leading-tight line-clamp-2"
               style={{ fontSize: 'clamp(1.25rem, 2vw + 0.5rem, 1.875rem)' }}
             >
-              We aim to support, energise & equip the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions fall in love with AI
+              We aim to <NameHighlight color="sky">support</NameHighlight>, <NameHighlight color="amber">equip</NameHighlight>, <NameHighlight color="emerald">energise</NameHighlight> & <NameHighlight color="rose">connect</NameHighlight> the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions <GradientHighlight>fall in love with AI</GradientHighlight>
             </h2>
             <p className="text-base text-white/50 max-w-xl mx-auto mt-2">
               *OpenCore tools are built on open models, open-source their assets, and share profits to support the ecosystem that made them possible.

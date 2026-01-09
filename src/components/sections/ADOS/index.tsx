@@ -8,6 +8,7 @@ import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { Section, SectionContent } from '@/components/layout/Section';
 import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
 import { ExternalLinkIcon } from '@/components/ui/icons';
+import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
 
 export const ADOS: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState(0);
@@ -110,7 +111,7 @@ export const ADOS: React.FC = () => {
             {/* Right side - Text */}
             <div className="lg:col-span-5 order-1 lg:order-2">
               <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
-                ADOS events bring the community together in the real world
+                <NameHighlight color="rose">ADOS</NameHighlight> events bring the community <MeaningHighlight color="rose">together in the real world</MeaningHighlight>
               </h2>
               <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-4 md:mb-6">
                 We gather our community with people from the extended creative world to look at art, eat nice food, and create things.

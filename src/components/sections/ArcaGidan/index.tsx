@@ -3,6 +3,7 @@ import { VideoPreviewCard } from './VideoPreviewCard';
 import { Section, SectionContent } from '@/components/layout/Section';
 import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { ExternalLinkIcon } from '@/components/ui/icons';
+import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
 
 export const ArcaGidan: React.FC = () => {
   const { ref: sectionRef, isActive } = useSectionRuntime({ threshold: 0.3 });
@@ -24,7 +25,7 @@ export const ArcaGidan: React.FC = () => {
           >
             <div className="max-w-lg">
               <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
-                The Arca Gidan Prize is an open source AI art competition
+                The <NameHighlight color="amber">Arca Gidan Prize</NameHighlight> is an open source <MeaningHighlight color="amber">AI art competition</MeaningHighlight>
               </h2>
               <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-4 md:mb-6">
                 We wish to provide a reason for people to push themselves and open models to their limits.

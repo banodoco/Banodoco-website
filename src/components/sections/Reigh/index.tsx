@@ -8,6 +8,7 @@ import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
 import { bindAutoPauseVideo } from '@/lib/bindAutoPauseVideo';
 import { PlayIcon, ExternalLinkIcon } from '@/components/ui/icons';
+import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
@@ -206,7 +207,7 @@ export const Reigh: React.FC = () => {
             {/* Right side - Text */}
             <div className="order-1 lg:order-2">
               <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
-                Reigh is an open source art tool for travelling between images
+                <NameHighlight color="emerald">Reigh</NameHighlight> is an open source art tool for <MeaningHighlight color="emerald">travelling between images</MeaningHighlight>
               </h2>
               <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-4 md:mb-6">
                 We believe that there's an artform waiting to be discovered in the AI-powered journey from one image to another.
@@ -217,7 +218,7 @@ export const Reigh: React.FC = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
               >
-                Try it out
+                Join pre-beta
                 <ExternalLinkIcon />
               </a>
             </div>

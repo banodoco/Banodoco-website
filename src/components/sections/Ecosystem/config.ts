@@ -56,8 +56,8 @@ export const GROWTH_CONFIG = {
 // Visual constants for the river visualization
 export const COLORS = {
   contributors: '#3b82f6',
-  tools: '#10b981',
-  artists: '#f59e0b',
+  tools: '#f59e0b',      // amber/orange (swapped with artists)
+  artists: '#10b981',    // emerald/green (swapped with tools)
   fans: '#f43f5e',
 } as const;
 
