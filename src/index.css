@@ -56,7 +56,9 @@
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  /* Solid dark background prevents the fixed video from bleeding through 
+     the scrollbar gutter without the section overlay applied */
+  background: var(--color-bg-base);
 }
 ::-webkit-scrollbar-thumb {
   background: #333;

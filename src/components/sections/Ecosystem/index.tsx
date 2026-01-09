@@ -222,14 +222,19 @@ export const Ecosystem: React.FC = () => {
        * Uses HEADER_OFFSET_VAR constant for consistency with SectionContent.
        */}
       {/* Mobile/tablet layout - flexbox with proportional sizing */}
-      <div className="absolute inset-0 flex flex-col xl:hidden px-4" style={{ paddingTop: HEADER_OFFSET_VAR }}>
+      {/* Hidden on xl+ OR on md+ landscape screens (where desktop viz is used) */}
+      <div className="absolute inset-0 flex flex-col xl:hidden md:landscape:hidden px-4" style={{ paddingTop: HEADER_OFFSET_VAR }}>
         {/* Top spacer */}
         <div className="flex-[0.5]" />
         
         {/* Header - 2/10 */}
         <div className="flex-[2] flex items-center justify-center z-20">
           <div className="w-full max-w-4xl md:max-w-2xl lg:max-w-4xl bg-white/[0.06] backdrop-blur-md rounded-xl px-4 py-3 md:px-5 md:py-3 lg:px-6 lg:py-4 border border-white/15 text-center">
-            <h2 className="text-xl md:text-lg lg:text-3xl font-normal tracking-tight leading-tight">
+            {/* Fluid font size: scales from ~16px at 320px viewport to ~28px at 1024px, capped at 2 lines */}
+            <h2 
+              className="font-normal tracking-tight leading-tight line-clamp-2"
+              style={{ fontSize: 'clamp(1rem, 2.5vw + 0.5rem, 1.75rem)' }}
+            >
               We aim to support, energise & equip the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions fall in love with AI
             </h2>
             <p className="text-sm md:text-xs lg:text-base text-white/50 max-w-xl mx-auto mt-2 md:mt-1 lg:mt-2">
@@ -264,11 +269,16 @@ export const Ecosystem: React.FC = () => {
       </div>
 
       {/* Desktop layout - absolute positioning with calc() for header offset */}
-      <div className="hidden xl:block">
+      {/* Shown on xl+ OR on md+ landscape screens */}
+      <div className="hidden xl:block md:landscape:block">
         {/* Header - positioned below the fixed nav header on desktop */}
         <div className="absolute left-4 right-4 z-20 flex justify-center" style={{ top: `calc(8% + ${HEADER_OFFSET_VAR})` }}>
           <div className="w-full max-w-4xl bg-white/[0.06] backdrop-blur-md rounded-xl px-6 py-4 border border-white/15 text-center">
-            <h2 className="text-3xl font-normal tracking-tight leading-tight">
+            {/* Fluid font size for desktop/landscape: scales smoothly, capped at 2 lines */}
+            <h2 
+              className="font-normal tracking-tight leading-tight line-clamp-2"
+              style={{ fontSize: 'clamp(1.25rem, 2vw + 0.5rem, 1.875rem)' }}
+            >
               We aim to support, energise & equip the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions fall in love with AI
             </h2>
             <p className="text-base text-white/50 max-w-xl mx-auto mt-2">

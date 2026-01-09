@@ -171,6 +171,8 @@ export const Community = () => {
   const [activeTopicIndex, setActiveTopicIndex] = useState<number>(0);
   const [topGradientOpacity, setTopGradientOpacity] = useState(0);
   const [bottomGradientOpacity, setBottomGradientOpacity] = useState(1);
+  const [leftGradientOpacity, setLeftGradientOpacity] = useState(0);
+  const [rightGradientOpacity, setRightGradientOpacity] = useState(1);
   const [paddings, setPaddings] = useState({ top: 0, bottom: 0 });
   
   const desktopScrollRef = useRef<HTMLDivElement>(null);
@@ -195,6 +197,14 @@ export const Community = () => {
         const scrollLeft = mobileScroll.scrollLeft;
         const containerWidth = mobileScroll.clientWidth;
         const scrollCenter = scrollLeft + containerWidth / 2;
+
+        // Edge gradient fades: indicate more content left/right on horizontal scroll (mobile)
+        const fadePx = 48; // similar feel to desktop 80px, but tighter for mobile
+        const distanceFromRight = mobileScroll.scrollWidth - mobileScroll.clientWidth - scrollLeft;
+        const leftOpacity = Math.min(1, Math.max(0, scrollLeft / fadePx));
+        const rightOpacity = Math.min(1, Math.max(0, distanceFromRight / fadePx));
+        setLeftGradientOpacity(leftOpacity);
+        setRightGradientOpacity(rightOpacity);
 
         let closestIdx = 0;
         let minDiff = Infinity;
@@ -354,8 +364,8 @@ export const Community = () => {
             <CommunityIntro />
 
             {/* Horizontal scroll cards */}
-            <div className="-mx-4 md:-mx-8 mt-6">
-              <UpdatesHeader className="px-4 md:px-8 mb-2" />
+            <div className="-mx-6 md:-mx-16 mt-6">
+              <UpdatesHeader className="px-6 md:px-16 mb-2" />
               {loading && <TopicCardsSkeleton mobile />}
               {showErrorOrEmpty && (
                 <TopicCardsState error={error} isEmpty={topics.length === 0} />
@@ -363,22 +373,40 @@ export const Community = () => {
 
               {hasTopics && (
                 <>
-                  <div 
-                    ref={mobileScrollRef}
-                    className="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory px-4 md:px-8 pb-4 scrollbar-hide"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                  >
-                    {topics.map((topic, idx) => (
-                      <TopicCard
-                        key={`${topic.channel_id}-${topic.summary_date}-${topic.topic_title}`}
-                        ref={(el) => {
-                          mobileCardRefs.current[idx] = el;
-                        }}
-                        topic={topic}
-                        isActive={sectionIsVisible && idx === activeTopicIndex}
-                        fullWidth
-                      />
-                    ))}
+                  <div className="relative">
+                    <div 
+                      ref={mobileScrollRef}
+                      className="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory px-6 md:px-16 pb-4 scrollbar-hide"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                      {topics.map((topic, idx) => (
+                        <TopicCard
+                          key={`${topic.channel_id}-${topic.summary_date}-${topic.topic_title}`}
+                          ref={(el) => {
+                            mobileCardRefs.current[idx] = el;
+                          }}
+                          topic={topic}
+                          isActive={sectionIsVisible && idx === activeTopicIndex}
+                          fullWidth
+                        />
+                      ))}
+                    </div>
+
+                    {/* Subtle gradient fade at left/right to indicate horizontally scrollable content */}
+                    <div
+                      className="pointer-events-none absolute inset-y-0 left-0 w-10 md:w-16 z-10"
+                      style={{
+                        background: 'linear-gradient(to right, rgba(16, 24, 37, 0.95) 0%, rgba(16, 24, 37, 0) 100%)',
+                        opacity: leftGradientOpacity,
+                      }}
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-y-0 right-0 w-10 md:w-16 z-10"
+                      style={{
+                        background: 'linear-gradient(to left, rgba(16, 24, 37, 0.95) 0%, rgba(16, 24, 37, 0) 100%)',
+                        opacity: rightGradientOpacity,
+                      }}
+                    />
                   </div>
                   {/* Dot indicators */}
                   <div className="flex justify-center gap-2 mt-2">
@@ -389,7 +417,7 @@ export const Community = () => {
                           const card = mobileCardRefs.current[idx];
                           if (card && mobileScrollRef.current) {
                             mobileScrollRef.current.scrollTo({
-                              left: card.offsetLeft - 16,
+                              left: card.offsetLeft - 24, // Matches px-6 (24px)
                               behavior: 'smooth'
                             });
                           }
