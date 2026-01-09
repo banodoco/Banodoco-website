@@ -141,6 +141,18 @@
   }
 }
 
+/* Sparkle animation for highlighted text on hover */
+@keyframes sparkle-fly {
+  0% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--vx), var(--vy)) scale(0) rotate(180deg);
+    opacity: 0;
+  }
+}
+
 /* =============================================================================
    Ownership Section - Profile Grid
    Responsive grid that shows different numbers of profile pics at each breakpoint

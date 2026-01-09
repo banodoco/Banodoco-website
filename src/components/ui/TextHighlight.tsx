@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 
 type HighlightColor = 'sky' | 'emerald' | 'amber' | 'rose' | 'violet';
 
@@ -42,16 +42,98 @@ const colorConfig: Record<HighlightColor, { text: string; rgb: string; glow: str
   },
 };
 
+interface Sparkle {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  vx: number;
+  vy: number;
+}
+
 /**
  * Highlights the NAME/subject of a section (e.g., "ADOS", "Reigh")
  * Renders in the section's accent color with a subtle glow
+ * Features tiny sparkles that spring off randomly on hover
  */
 export const NameHighlight = ({ children, color }: NameHighlightProps) => {
   const config = colorConfig[color];
+  const ref = useRef<HTMLSpanElement>(null);
+  const [sparkles, setSparkles] = useState<Sparkle[]>([]);
+  const sparkleIdRef = useRef(0);
+  const lastSpawnRef = useRef(0);
+  
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!ref.current) return;
+    
+    // Throttle spawning - only spawn every ~50ms
+    const now = Date.now();
+    if (now - lastSpawnRef.current < 50) return;
+    lastSpawnRef.current = now;
+    
+    const rect = ref.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Spawn 1-2 sparkles at cursor position with random velocities
+    const newSparkles: Sparkle[] = [];
+    const count = Math.random() > 0.5 ? 2 : 1;
+    
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 2;
+      newSparkles.push({
+        id: sparkleIdRef.current++,
+        x,
+        y,
+        size: 4 + Math.random() * 4,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1, // slight upward bias
+      });
+    }
+    
+    setSparkles(prev => [...prev, ...newSparkles]);
+    
+    // Clean up old sparkles after animation
+    setTimeout(() => {
+      setSparkles(prev => prev.filter(s => !newSparkles.find(ns => ns.id === s.id)));
+    }, 600);
+  }, []);
   
   return (
-    <span className={`${config.text} font-semibold ${config.glow}`}>
+    <span 
+      ref={ref}
+      className={`${config.text} font-semibold ${config.glow} relative inline-block cursor-default`}
+      style={{ overflow: 'visible' }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => setSparkles([])}
+    >
       {children}
+      {/* Sparkles that spring off */}
+      {sparkles.map(sparkle => (
+        <svg
+          key={sparkle.id}
+          className="absolute pointer-events-none"
+          style={{
+            left: sparkle.x - sparkle.size / 2,
+            top: sparkle.y - sparkle.size / 2,
+            width: sparkle.size,
+            height: sparkle.size,
+            zIndex: 50,
+            filter: `drop-shadow(0 0 2px rgba(${config.rgb}, 0.6))`,
+            animation: 'sparkle-fly 0.6s ease-out forwards',
+            ['--vx' as string]: `${sparkle.vx * 20}px`,
+            ['--vy' as string]: `${sparkle.vy * 20}px`,
+          }}
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <path
+            d="M12 0L13.5 9L22 12L13.5 15L12 24L10.5 15L2 12L10.5 9L12 0Z"
+            fill={`rgba(${config.rgb}, 0.9)`}
+          />
+        </svg>
+      ))}
     </span>
   );
 };
@@ -159,9 +241,9 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
         backgroundRepeat: 'no-repeat',
         backgroundSize: shouldAnimate ? '100% 3px' : '0% 3px',
         transition: 'background-size 0.9s ease-out',
-        WebkitBoxDecorationBreak: 'clone',
-        boxDecorationBreak: 'clone',
         paddingBottom: '3px',
+        // Keep as single line to preserve gradient continuity
+        whiteSpace: 'nowrap',
       }}
     >
       {children}
