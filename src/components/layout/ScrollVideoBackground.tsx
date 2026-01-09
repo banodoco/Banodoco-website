@@ -248,7 +248,9 @@ const DesktopScrollVideo = () => {
     if (!video1 || !video2 || !video3) return;
 
     let lastTime = performance.now();
-    let lastScrollTop = -1;
+    // Track scroll using the *capped* scrollTop so direction/state doesn't jitter when the user
+    // scrolls into regions we intentionally ignore (e.g. footer) or during snap/overscroll.
+    let lastCappedScrollTop = -1;
     let idleStartTime: number | null = null;
 
     const loop = (now: number) => {
@@ -280,10 +282,10 @@ const DesktopScrollVideo = () => {
       }
 
       // === 2. DETECT SCROLL STATE ===
-      const isScrolling = scrollTop !== lastScrollTop;
-      const scrollingForward = scrollTop > lastScrollTop;  // Check direction BEFORE updating lastScrollTop
+      const isScrolling = cappedScrollTop !== lastCappedScrollTop;
+      const scrollingForward = cappedScrollTop > lastCappedScrollTop;  // Check direction BEFORE updating last
       isScrollingRef.current = isScrolling;
-      lastScrollTop = scrollTop;
+      lastCappedScrollTop = cappedScrollTop;
 
       // === 3. UPDATE SCROLL TIME (pure function of scroll position) ===
       const newScrollTime = scrollToVideoTime(cappedScrollTop);
@@ -331,9 +333,16 @@ const DesktopScrollVideo = () => {
       }
 
       // === 5. CALCULATE TARGET & SMOOTH ===
-      const targetTime = scrollTimeRef.current + idleBonusRef.current;
+      let targetTime = scrollTimeRef.current + idleBonusRef.current;
       const currentTime = currentTimeRef.current;
       const diff = targetTime - currentTime;
+
+      // Important UX: when the user scrolls forward, never show a backwards "rewind" correction.
+      // This can happen if the video drifted forward while idle and then scroll resumes.
+      // Instead, hold the current frame until scroll catches up.
+      if (isScrolling && scrollingForward && targetTime < currentTime) {
+        targetTime = currentTime;
+      }
 
       // Smooth interpolation (lerp)
       const lerpSpeed = 8;
