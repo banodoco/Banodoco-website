@@ -152,8 +152,15 @@ export const useCommunityTopics = (): UseCommunityTopicsResult => {
           }
         }
 
+        // Filter out topics with no bullet points AND no media (too sparse to display)
+        const filteredTopics = allTopics.filter(topic => {
+          const hasSubTopics = topic.topic_sub_topics && topic.topic_sub_topics.length > 0;
+          const hasMedia = topic.mediaUrls && topic.mediaUrls.length > 0;
+          return hasSubTopics || hasMedia;
+        });
+
         // Sort topics: prioritize those with media, videos first
-        const sortedTopics = allTopics.sort((a, b) => {
+        const sortedTopics = filteredTopics.sort((a, b) => {
           const aHasMedia = (a.mediaUrls?.length || 0) > 0;
           const bHasMedia = (b.mediaUrls?.length || 0) > 0;
           

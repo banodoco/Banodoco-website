@@ -7,8 +7,8 @@ import { ExternalLinkIcon } from '@/components/ui/icons';
 import { Skeleton, SkeletonParagraph, SkeletonBullet } from '@/components/ui/Skeleton';
 
 /** Header for the updates section with subtle styling */
-const UpdatesHeader = ({ className = '' }: { className?: string }) => (
-  <div className={`flex items-center gap-3 pl-1 ${className}`}>
+const UpdatesHeader = ({ className = '', rightAlign = false }: { className?: string; rightAlign?: boolean }) => (
+  <div className={`flex items-center gap-3 ${rightAlign ? 'justify-end pr-1' : 'pl-1'} ${className}`}>
     <div className="flex items-center gap-2">
       <span className="relative flex h-2 w-2 ml-0.5">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -367,8 +367,8 @@ export const Community = () => {
             </div>
 
             {/* Horizontal scroll cards */}
+            {/* Live indicator moved inside TopicCard header on mobile */}
             <div className="-mx-6 md:-mx-16 mt-6">
-              <UpdatesHeader className="px-6 md:px-16 mb-2" />
               {loading && <TopicCardsSkeleton mobile />}
               {showErrorOrEmpty && (
                 <TopicCardsState error={error} isEmpty={topics.length === 0} />

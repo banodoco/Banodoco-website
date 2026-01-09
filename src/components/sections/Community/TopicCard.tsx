@@ -34,9 +34,16 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
             #{formatChannelName(topic.channel_name)}
           </span>
           <span className={cn(
-            "text-white/40 font-medium",
+            "flex items-center gap-2 text-white/40 font-medium",
             fullWidth ? "text-xs" : "text-[10px] md:text-xs"
           )}>
+            {/* Live indicator - only show on fullWidth (mobile) cards */}
+            {fullWidth && (
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+              </span>
+            )}
             {formatDate(topic.summary_date)}
           </span>
         </div>
