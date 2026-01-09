@@ -5,14 +5,29 @@ import { formatChannelName, formatDate, formatText } from './utils';
 import { MediaGallery } from './MediaGallery';
 import { ArrowRightIcon } from '@/components/ui/icons';
 
+// Understated colors for channel tags (excluding blue and green)
+const CHANNEL_COLORS = [
+  { bg: 'bg-rose-500/10', text: 'text-rose-400/70' },
+  { bg: 'bg-purple-500/10', text: 'text-purple-400/70' },
+  { bg: 'bg-amber-500/10', text: 'text-amber-400/70' },
+  { bg: 'bg-pink-500/10', text: 'text-pink-400/70' },
+  { bg: 'bg-orange-500/10', text: 'text-orange-400/70' },
+  { bg: 'bg-fuchsia-500/10', text: 'text-fuchsia-400/70' },
+  { bg: 'bg-violet-500/10', text: 'text-violet-400/70' },
+  { bg: 'bg-stone-500/10', text: 'text-stone-400/70' },
+];
+
 interface TopicCardProps {
   topic: TopicData;
   isActive: boolean;
   fullWidth?: boolean;
+  index?: number;
 }
 
 export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
-  ({ topic, isActive, fullWidth = false }, ref) => {
+  ({ topic, isActive, fullWidth = false, index = 0 }, ref) => {
+    const channelColor = CHANNEL_COLORS[index % CHANNEL_COLORS.length];
+    
     return (
       <article 
         ref={ref}
@@ -22,48 +37,33 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
           fullWidth && "w-[85vw] shrink-0 snap-center"
         )}
       >
-        {/* Channel header */}
+        {/* Channel header - date/live on left, channel tag on right */}
         <div className={cn(
           "border-b border-white/10 flex items-center justify-between",
           fullWidth ? "px-4 py-3" : "px-3 py-2 md:px-6 md:py-4"
         )}>
-          {/* On mobile (fullWidth), show date first, then channel tag */}
-          {fullWidth ? (
-            <>
-              <span className={cn(
-                "flex items-center gap-2 text-white/40 font-medium",
-                "text-xs"
-              )}>
-                {/* Live indicator - only show on fullWidth (mobile) cards */}
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-                </span>
-                {formatDate(topic.summary_date)}
-              </span>
-              <span className={cn(
-                "inline-flex items-center rounded-full font-medium bg-emerald-500/20 text-emerald-400",
-                "px-3 py-1.5 text-xs"
-              )}>
-                #{formatChannelName(topic.channel_name)}
-              </span>
-            </>
-          ) : (
-            <>
-              <span className={cn(
-                "inline-flex items-center rounded-full font-medium bg-emerald-500/20 text-emerald-400",
-                "px-2 py-1 md:px-3 md:py-1.5 text-[10px] md:text-xs"
-              )}>
-                #{formatChannelName(topic.channel_name)}
-              </span>
-              <span className={cn(
-                "flex items-center gap-2 text-white/40 font-medium",
-                "text-[10px] md:text-xs"
-              )}>
-                {formatDate(topic.summary_date)}
-              </span>
-            </>
-          )}
+          {/* Left side: Live indicator + date */}
+          <span className={cn(
+            "flex items-center gap-2 text-white/40 font-medium",
+            fullWidth ? "text-xs" : "text-[10px] md:text-xs"
+          )}>
+            {/* Live indicator */}
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+            </span>
+            {formatDate(topic.summary_date)}
+          </span>
+          
+          {/* Right side: Channel tag */}
+          <span className={cn(
+            "inline-flex items-center rounded-full font-medium",
+            channelColor.bg,
+            channelColor.text,
+            fullWidth ? "px-3 py-1.5 text-xs" : "px-2 py-1 md:px-3 md:py-1.5 text-[10px] md:text-xs"
+          )}>
+            #{formatChannelName(topic.channel_name)}
+          </span>
         </div>
 
         {/* Content */}

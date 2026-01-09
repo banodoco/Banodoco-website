@@ -7,25 +7,6 @@ import { ExternalLinkIcon } from '@/components/ui/icons';
 import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
 import { Skeleton, SkeletonParagraph, SkeletonBullet } from '@/components/ui/Skeleton';
 
-/** Header for the updates section with subtle styling */
-const UpdatesHeader = ({ className = '', rightAlign = false }: { className?: string; rightAlign?: boolean }) => (
-  <div className={`flex items-center gap-3 ${rightAlign ? 'justify-end pr-1' : 'pl-1'} ${className}`}>
-    <div className="flex items-center gap-2">
-      <span className="relative flex h-2 w-2 ml-0.5">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-      </span>
-      <span className="text-xs uppercase tracking-widest text-white/40 font-medium">
-        Live updates
-      </span>
-    </div>
-    <span className="text-white/20">·</span>
-    <span className="text-xs text-white/50">
-      from the past 24 hours
-    </span>
-  </div>
-);
-
 /** Shared intro content - responsive styling handles mobile vs desktop */
 const CommunityIntro = () => (
   <div>
@@ -322,15 +303,12 @@ export const Community = () => {
       const firstHeight = firstCard.offsetHeight;
       const lastHeight = lastCard.offsetHeight;
 
-      // Top padding: Center first card in visible area (below header)
-      // Visible area center = headerHeight + (windowHeight - headerHeight)/2
-      // Top padding = Visible Center - firstHeight/2
-      //             = (windowHeight + headerHeight - firstHeight) / 2
-      const top = Math.max(headerHeightPx, (windowHeight + headerHeightPx - firstHeight) / 2);
+      // Top padding: Center first card in visible area (accounting for header)
+      // Use half header height to avoid pushing card too far down
+      const top = Math.max(headerHeightPx, (windowHeight + headerHeightPx * 0.5 - firstHeight) / 2);
 
       // Bottom padding: Center last card in visible area
-      // Bottom padding = (windowHeight - headerHeight - lastHeight) / 2
-      const bottom = Math.max(80, (windowHeight - headerHeightPx - lastHeight) / 2);
+      const bottom = Math.max(80, (windowHeight - headerHeightPx * 0.5 - lastHeight) / 2);
 
       setPaddings({ top, bottom });
     };
@@ -392,6 +370,7 @@ export const Community = () => {
                           topic={topic}
                           isActive={sectionIsVisible && idx === activeTopicIndex}
                           fullWidth
+                          index={idx}
                         />
                       ))}
                     </div>
@@ -443,8 +422,8 @@ export const Community = () => {
 
       {/* Desktop layout - two columns, cards scroll under header */}
       <div className="hidden xl:grid grid-cols-12 gap-16 h-full px-16">
-        {/* Left side - Introduction text (vertically centered, with header offset) */}
-        <div className="col-span-4 flex items-center" style={{ paddingTop: 'var(--header-height)' }}>
+        {/* Left side - Introduction text (vertically centered, offset slightly for header) */}
+        <div className="col-span-4 flex items-center" style={{ paddingTop: 'calc(var(--header-height) * 0.5)' }}>
           <div className="max-w-md">
             <CommunityIntro />
           </div>
@@ -466,16 +445,6 @@ export const Community = () => {
               opacity: topGradientOpacity,
             }}
           />
-          {/* Updates header - fixed position, doesn't scroll with content */}
-          <div 
-            className="absolute z-20 pointer-events-none"
-            style={{ 
-              top: 'calc(var(--header-height) + 3.25rem)',
-              left: 0,
-            }}
-          >
-            <UpdatesHeader className="pointer-events-auto" />
-          </div>
           
           {/* Loading: use flexbox centering. Loaded: use calculated padding for precise card centering */}
           {loading ? (
@@ -503,6 +472,7 @@ export const Community = () => {
                       }}
                       topic={topic}
                       isActive={sectionIsVisible && idx === activeTopicIndex}
+                      index={idx}
                     />
                   ))}
                 </div>

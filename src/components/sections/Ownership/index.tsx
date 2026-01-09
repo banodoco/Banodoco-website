@@ -39,7 +39,7 @@ export const Ownership = () => {
               <br className="hidden md:block" />
               {' '}with people who help the
               <br className="hidden md:block" />
-              {' '}open source ecosystem succeed
+              {' '}ecosystem succeed
             </h2>
             
             {/* Subtext on the right */}
