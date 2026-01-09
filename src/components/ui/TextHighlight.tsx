@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, type RefObject } from 'react';
 
 type HighlightColor = 'sky' | 'emerald' | 'amber' | 'rose' | 'violet';
 
@@ -42,6 +42,10 @@ const colorConfig: Record<HighlightColor, { text: string; rgb: string; glow: str
   },
 };
 
+// =============================================================================
+// SHARED SPARKLE SYSTEM
+// =============================================================================
+
 interface Sparkle {
   id: number;
   x: number;
@@ -49,33 +53,29 @@ interface Sparkle {
   size: number;
   vx: number;
   vy: number;
+  color: HighlightColor;
 }
 
+type ColorPicker = () => HighlightColor;
+
 /**
- * Highlights the NAME/subject of a section (e.g., "ADOS", "Reigh")
- * Renders in the section's accent color with a subtle glow
- * Features tiny sparkles that spring off randomly on hover
+ * Shared hook for continuous sparkle effects on hover.
+ * Works with any element ref and color picker function.
  */
-export const NameHighlight = ({ children, color }: NameHighlightProps) => {
-  const config = colorConfig[color];
-  const ref = useRef<HTMLSpanElement>(null);
+function useSparkles(
+  ref: RefObject<HTMLElement | null>,
+  getColor: ColorPicker
+) {
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
+  const [isHovering, setIsHovering] = useState(false);
   const sparkleIdRef = useRef(0);
-  const lastSpawnRef = useRef(0);
-  
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!ref.current) return;
+  const mousePositionRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Spawn sparkles at current mouse position
+  const spawnSparkles = useCallback(() => {
+    if (!mousePositionRef.current) return;
     
-    // Throttle spawning - only spawn every ~50ms
-    const now = Date.now();
-    if (now - lastSpawnRef.current < 50) return;
-    lastSpawnRef.current = now;
-    
-    const rect = ref.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Spawn 1-2 sparkles at cursor position with random velocities
+    const { x, y } = mousePositionRef.current;
     const newSparkles: Sparkle[] = [];
     const count = Math.random() > 0.5 ? 2 : 1;
     
@@ -89,51 +89,119 @@ export const NameHighlight = ({ children, color }: NameHighlightProps) => {
         size: 4 + Math.random() * 4,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed - 1, // slight upward bias
+        color: getColor(),
       });
     }
     
     setSparkles(prev => [...prev, ...newSparkles]);
     
-    // Clean up old sparkles after animation
+    // Clean up after animation
     setTimeout(() => {
       setSparkles(prev => prev.filter(s => !newSparkles.find(ns => ns.id === s.id)));
     }, 600);
+  }, [getColor]);
+
+  // Continuous sparkle interval while hovering
+  useEffect(() => {
+    if (!isHovering) return;
+    
+    const interval = setInterval(spawnSparkles, 50);
+    return () => clearInterval(interval);
+  }, [isHovering, spawnSparkles]);
+
+  // Event handlers
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    mousePositionRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+  }, [ref]);
+
+  const handleMouseEnter = useCallback(() => {
+    setIsHovering(true);
   }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsHovering(false);
+    mousePositionRef.current = null;
+    setSparkles([]);
+  }, []);
+
+  return {
+    sparkles,
+    handlers: {
+      onMouseEnter: handleMouseEnter,
+      onMouseMove: handleMouseMove,
+      onMouseLeave: handleMouseLeave,
+    },
+  };
+}
+
+/**
+ * Renders sparkle SVGs - shared between NameHighlight and GradientHighlight
+ */
+function SparkleOverlay({ sparkles }: { sparkles: Sparkle[] }) {
+  return (
+    <>
+      {sparkles.map(sparkle => {
+        const config = colorConfig[sparkle.color];
+        return (
+          <svg
+            key={sparkle.id}
+            className="absolute pointer-events-none"
+            style={{
+              left: sparkle.x - sparkle.size / 2,
+              top: sparkle.y - sparkle.size / 2,
+              width: sparkle.size,
+              height: sparkle.size,
+              zIndex: 50,
+              filter: `drop-shadow(0 0 2px rgba(${config.rgb}, 0.6))`,
+              animation: 'sparkle-fly 0.6s ease-out forwards',
+              ['--vx' as string]: `${sparkle.vx * 20}px`,
+              ['--vy' as string]: `${sparkle.vy * 20}px`,
+            }}
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <path
+              d="M12 0L13.5 9L22 12L13.5 15L12 24L10.5 15L2 12L10.5 9L12 0Z"
+              fill={`rgba(${config.rgb}, 0.9)`}
+            />
+          </svg>
+        );
+      })}
+    </>
+  );
+}
+
+// =============================================================================
+// HIGHLIGHT COMPONENTS
+// =============================================================================
+
+/**
+ * Highlights the NAME/subject of a section (e.g., "ADOS", "Reigh")
+ * Renders in the section's accent color with a subtle glow
+ * Features tiny sparkles that spring off continuously on hover
+ */
+export const NameHighlight = ({ children, color }: NameHighlightProps) => {
+  const config = colorConfig[color];
+  const ref = useRef<HTMLSpanElement>(null);
+  
+  // Single color sparkles
+  const getColor = useCallback(() => color, [color]);
+  const { sparkles, handlers } = useSparkles(ref, getColor);
   
   return (
     <span 
       ref={ref}
       className={`${config.text} font-semibold ${config.glow} relative inline-block cursor-default`}
       style={{ overflow: 'visible' }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => setSparkles([])}
+      {...handlers}
     >
       {children}
-      {/* Sparkles that spring off */}
-      {sparkles.map(sparkle => (
-        <svg
-          key={sparkle.id}
-          className="absolute pointer-events-none"
-          style={{
-            left: sparkle.x - sparkle.size / 2,
-            top: sparkle.y - sparkle.size / 2,
-            width: sparkle.size,
-            height: sparkle.size,
-            zIndex: 50,
-            filter: `drop-shadow(0 0 2px rgba(${config.rgb}, 0.6))`,
-            animation: 'sparkle-fly 0.6s ease-out forwards',
-            ['--vx' as string]: `${sparkle.vx * 20}px`,
-            ['--vy' as string]: `${sparkle.vy * 20}px`,
-          }}
-          viewBox="0 0 24 24"
-          fill="none"
-        >
-          <path
-            d="M12 0L13.5 9L22 12L13.5 15L12 24L10.5 15L2 12L10.5 9L12 0Z"
-            fill={`rgba(${config.rgb}, 0.9)`}
-          />
-        </svg>
-      ))}
+      <SparkleOverlay sparkles={sparkles} />
     </span>
   );
 };
@@ -197,9 +265,12 @@ interface GradientHighlightProps {
   delay?: number;
 }
 
+const gradientSparkleColors: HighlightColor[] = ['sky', 'emerald', 'amber', 'rose'];
+
 /**
  * Highlights text with a multi-color gradient underline (sky → amber → emerald → rose)
  * Used for phrases that represent the whole ecosystem vision.
+ * On hover, spawns colorful sparkles in all four ecosystem colors!
  */
 export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightProps) => {
   const ref = useRef<HTMLSpanElement>(null);
@@ -224,6 +295,13 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
     return () => observer.disconnect();
   }, [delay, isVisible]);
 
+  // Random color from the four gradient colors
+  const getColor = useCallback(
+    () => gradientSparkleColors[Math.floor(Math.random() * gradientSparkleColors.length)],
+    []
+  );
+  const { sparkles, handlers } = useSparkles(ref, getColor);
+
   // Four-color gradient: sky → amber → emerald → rose
   const gradientColors = `
     rgba(${colorConfig.sky.rgb}, 0.9),
@@ -234,7 +312,8 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
   
   return (
     <span 
-      ref={ref} 
+      ref={ref}
+      className="relative inline-block cursor-default"
       style={{ 
         backgroundImage: `linear-gradient(90deg, ${gradientColors})`,
         backgroundPosition: '0 100%',
@@ -244,10 +323,12 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
         paddingBottom: '3px',
         // Keep as single line to preserve gradient continuity
         whiteSpace: 'nowrap',
+        overflow: 'visible',
       }}
+      {...handlers}
     >
       {children}
+      <SparkleOverlay sparkles={sparkles} />
     </span>
   );
 };
-
