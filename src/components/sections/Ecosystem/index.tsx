@@ -240,9 +240,9 @@ export const Ecosystem: React.FC = () => {
         {/* Header - 2/10 */}
         <div className="flex-[2] flex items-center justify-center z-20">
           <div className="w-full max-w-4xl md:max-w-2xl lg:max-w-4xl bg-white/[0.06] backdrop-blur-md rounded-xl px-4 py-3 md:px-5 md:py-3 lg:px-6 lg:py-4 border border-white/15 text-center">
-            {/* Fluid font size: scales from ~16px at 320px viewport to ~28px at 1024px, capped at 2 lines */}
+            {/* Fluid font size: scales from ~16px at 320px viewport to ~28px at 1024px */}
             <h2 
-              className="font-normal tracking-tight leading-tight line-clamp-2"
+              className="font-normal tracking-tight leading-tight"
               style={{ fontSize: 'clamp(1rem, 2.5vw + 0.5rem, 1.75rem)' }}
             >
               We aim to <NameHighlight color="sky">support</NameHighlight>, <NameHighlight color="emerald">equip</NameHighlight>, <NameHighlight color="amber">energise</NameHighlight> & <NameHighlight color="rose">connect</NameHighlight> the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions <GradientHighlight>fall in love with AI</GradientHighlight>
