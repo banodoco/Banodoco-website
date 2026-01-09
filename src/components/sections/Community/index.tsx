@@ -361,7 +361,10 @@ export const Community = () => {
       <div className="xl:hidden h-full px-6 md:px-16 flex flex-col" style={{ paddingTop: 'var(--header-height)' }}>
         <div className="max-w-7xl mx-auto w-full flex-1 flex items-center">
           <div className="w-full">
-            <CommunityIntro />
+            {/* On landscape tablets, limit intro text to 3/4 width */}
+            <div className="md:landscape:w-5/6">
+              <CommunityIntro />
+            </div>
 
             {/* Horizontal scroll cards */}
             <div className="-mx-6 md:-mx-16 mt-6">

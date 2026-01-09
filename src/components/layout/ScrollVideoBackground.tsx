@@ -77,8 +77,10 @@ const SECTION_VIDEOS: Record<string, SectionVideoConfig> = {
   ownership:    { video: '/hero-part3.mp4', poster: '/section-videos/ownership-poster.jpg' },  // HD version
 };
 
-const MOBILE_PLAYBACK_RATE = 0.5;
+const MOBILE_PLAYBACK_RATE_IDLE = 0.5;      // Slow drift when not scrolling
+const MOBILE_PLAYBACK_RATE_SCROLL = 2.5;    // Speed up when scrolling
 const CROSSFADE_DURATION = 500;
+const SCROLL_IDLE_TIMEOUT = 150;            // ms before considering scroll "stopped"
 
 // =============================================================================
 // POSTER PRELOADING - Load all posters in order on mount
@@ -639,10 +641,21 @@ const MobileScrollVideo = () => {
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const waitingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playAttemptRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isScrollingRef = useRef(false);
   
   // Track which sections have played their video in this "visit"
   // Reset when a section is no longer current or adjacent
   const playedInVisitRef = useRef<Set<string>>(new Set());
+
+  // Update playback rate on all playing videos based on scroll state
+  const updatePlaybackRates = useCallback((rate: number) => {
+    Object.values(videoRefs.current).forEach(video => {
+      if (video && !video.paused) {
+        video.playbackRate = rate;
+      }
+    });
+  }, []);
 
   // Preload all posters in order on mount
   useEffect(() => {
@@ -723,7 +736,8 @@ const MobileScrollVideo = () => {
 
   // === PLAY VIDEO WITH RETRY ===
   // Handles the case where video ref might not be ready yet after a re-render
-  const playVideoWithRetry = useCallback((sectionId: string, retries = 3) => {
+  // Uses 5 retries with 150ms delay to match standardized config for iOS reliability
+  const playVideoWithRetry = useCallback((sectionId: string, retries = 5) => {
     // Don't play if already played in this visit
     if (playedInVisitRef.current.has(sectionId)) return;
     
@@ -734,7 +748,7 @@ const MobileScrollVideo = () => {
       if (retries > 0) {
         playAttemptRef.current = setTimeout(() => {
           playVideoWithRetry(sectionId, retries - 1);
-        }, 50);
+        }, 150);
       }
       return;
     }
@@ -742,7 +756,8 @@ const MobileScrollVideo = () => {
     // Reset to beginning and play
     try {
       video.currentTime = 0;
-      video.playbackRate = MOBILE_PLAYBACK_RATE;
+      // Use current scroll state to determine initial playback rate
+      video.playbackRate = isScrollingRef.current ? MOBILE_PLAYBACK_RATE_SCROLL : MOBILE_PLAYBACK_RATE_IDLE;
     } catch {
       // Ignore seek errors on videos not yet loaded
     }
@@ -753,11 +768,11 @@ const MobileScrollVideo = () => {
       })
       .catch((err) => {
         // On mobile, play() can fail if video isn't loaded yet
-        // Retry after a short delay
+        // Retry after a short delay (150ms for iOS reliability)
         if (retries > 0 && err.name !== 'AbortError') {
           playAttemptRef.current = setTimeout(() => {
             playVideoWithRetry(sectionId, retries - 1);
-          }, 100);
+          }, 150);
         }
       });
   }, []);
@@ -854,6 +869,21 @@ const MobileScrollVideo = () => {
       rafId = requestAnimationFrame(() => {
         const newSection = getCurrentSectionFromScroll();
         handleSectionChange(newSection);
+        
+        // Speed up video when scrolling (gives impression of scrubbing)
+        if (!isScrollingRef.current) {
+          isScrollingRef.current = true;
+          updatePlaybackRates(MOBILE_PLAYBACK_RATE_SCROLL);
+        }
+        
+        // Clear existing idle timeout and set new one
+        if (scrollIdleTimeoutRef.current) {
+          clearTimeout(scrollIdleTimeoutRef.current);
+        }
+        scrollIdleTimeoutRef.current = setTimeout(() => {
+          isScrollingRef.current = false;
+          updatePlaybackRates(MOBILE_PLAYBACK_RATE_IDLE);
+        }, SCROLL_IDLE_TIMEOUT);
       });
     };
 
@@ -872,13 +902,31 @@ const MobileScrollVideo = () => {
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
       if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current);
       if (playAttemptRef.current) clearTimeout(playAttemptRef.current);
+      if (scrollIdleTimeoutRef.current) clearTimeout(scrollIdleTimeoutRef.current);
       clearTimeout(initialPlayTimeout);
     };
-  }, [getScrollContainer, getCurrentSectionFromScroll, handleSectionChange, playVideoWithRetry]);
+  }, [getScrollContainer, getCurrentSectionFromScroll, handleSectionChange, playVideoWithRetry, updatePlaybackRates]);
 
   // === RENDER ===
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+      {/* Loading skeleton - prevents flash of black on initial load */}
+      <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" 
+        style={{ transform: 'scale(1.3)' }}
+      />
+      
+      {/* Hero poster as base layer - shows immediately while videos load */}
+      {/* Must use the poster that matches hero-part1.mp4 (not the flipped version) */}
+      <img
+        src={SECTION_VIDEOS.hero.poster}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ 
+          transform: 'translateZ(0) scale(1.3)',
+          backfaceVisibility: 'hidden',
+        }}
+      />
+
       {sectionsToRender.map((sectionId) => {
         const config = SECTION_VIDEOS[sectionId];
         if (!config) return null;
@@ -916,7 +964,7 @@ const MobileScrollVideo = () => {
             <video
               ref={(el) => setVideoRef(sectionId, el)}
               src={config.video}
-              poster={config.poster}
+              // No poster attribute - base layer provides fallback to avoid zoom mismatch
               muted
               playsInline
               preload="auto"
@@ -940,13 +988,14 @@ const MobileScrollVideo = () => {
 // MAIN EXPORT: Switch between desktop and mobile implementations
 // =============================================================================
 export const ScrollVideoBackground = () => {
-  // Use md breakpoint (768px) so tablets/iPads get the desktop scroll experience
+  // Use xl breakpoint (1280px) - iPads/tablets get MobileScrollVideo which actually plays
+  // videos (DesktopScrollVideo uses scroll-scrubbing which iOS Safari doesn't handle well)
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.md : true
+    typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.xl : true
   );
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < BREAKPOINTS.md);
+    const handleResize = () => setIsMobile(window.innerWidth < BREAKPOINTS.xl);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);

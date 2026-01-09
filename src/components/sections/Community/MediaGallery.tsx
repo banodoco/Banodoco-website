@@ -64,6 +64,7 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
   // This avoids racing `autoPlay` attribute vs imperative `.play()` calls.
   const { safePlay, safePause, videoEventHandlers } = useAutoPauseVideo(videoRef, {
     isActive: isVisible && isVideo,
+    pauseDelayMs: 250,  // Prevent pause/play thrash on fast scroll
     retryDelayMs: 150,
     maxRetries: 5,
   });

@@ -109,17 +109,17 @@ export const Hero = () => {
           <div className="flex flex-col space-y-5 md:space-y-6 max-w-[520px] md:max-w-[580px] lg:max-w-[620px]">
             {/* Headline - white on mobile, dark on desktop */}
             <h1 
-              className="text-[2.25rem] md:text-5xl lg:text-[3.5rem] font-medium leading-[1.1] tracking-[-0.02em] text-white md:text-[#141414]"
+              className="text-[2.25rem] md:text-5xl lg:text-[3.5rem] font-medium leading-[1.1] tracking-[-0.02em] text-white md:text-[#141414] md:max-w-[50vw]"
             >
               We're working to help the open source AI art ecosystem thrive
             </h1>
 
             {/* Subhead - white/gray on mobile, dark gray on desktop */}
-            <p 
-              className="text-base md:text-lg lg:text-xl leading-relaxed max-w-[520px] text-white/80 md:text-[#3A3A3A]"
+            <h2 
+              className="text-base md:text-lg lg:text-xl leading-relaxed max-w-[520px] md:max-w-[40vw] text-white/80 md:text-[#3A3A3A]"
             >
               Tools, community, resources, and initiatives to support the open source AI movement.
-            </p>
+            </h2>
 
             {/* CTA - white border on mobile, orange gradient on desktop */}
             <div className="flex items-center gap-4 pt-2">

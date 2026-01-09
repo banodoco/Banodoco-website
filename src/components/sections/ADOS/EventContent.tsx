@@ -63,6 +63,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
     isActive: isFullyVisible,
     canResume: !showLightbox,
     onBeforeResume: ensureStartOffset,
+    pauseDelayMs: 250,  // Prevent pause/play thrash on fast scroll
     retryDelayMs: 150,
     maxRetries: 5,
   });

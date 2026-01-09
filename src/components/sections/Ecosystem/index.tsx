@@ -36,6 +36,7 @@ export const Ecosystem: React.FC = () => {
   const tickIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const waveAnimationRef = useRef<number | null>(null);
   const hasAdvancedThisBatch = useRef(false); // Only advance once per batch
+  const hasFiredInitialEvent = useRef(false); // Track if we've fired the initial event on section enter
   const { ref: sectionRef, isActive: isSectionVisible } = useSectionRuntime({ threshold: 0.35 });
 
   const stats = calculateStats(monthIdx);
@@ -128,6 +129,13 @@ export const Ecosystem: React.FC = () => {
     // Only schedule next tick when no events are active (batch complete)
     if (activeEvents.length > 0) return;
 
+    // Fire first event immediately when section becomes visible
+    if (!hasFiredInitialEvent.current) {
+      hasFiredInitialEvent.current = true;
+      spawnEventBatch();
+      return;
+    }
+
     tickIntervalRef.current = setTimeout(() => {
       spawnEventBatch();
     }, TICK_INTERVAL_MS);
@@ -159,6 +167,7 @@ export const Ecosystem: React.FC = () => {
     setWaveX(null);
     setActiveEvents([]);
     hasAdvancedThisBatch.current = false;
+    hasFiredInitialEvent.current = false;
   }, [isSectionVisible]);
 
   // Cleanup timeouts on unmount
