@@ -651,6 +651,8 @@ const MobileScrollVideo = () => {
   const waitingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playAttemptRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sectionChangeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSectionRef = useRef<string | null>(null);
   const isScrollingRef = useRef(false);
   
   // Track which sections have played their video in this "visit"
@@ -787,37 +789,63 @@ const MobileScrollVideo = () => {
   }, []);
 
   // === SECTION CHANGE HANDLER ===
+  // Debounces rapid section changes (e.g., from header navigation smooth scroll)
+  // to avoid loading/playing videos for every intermediate section we pass through.
   const handleSectionChange = useCallback((newSection: string) => {
     // Use ref for real-time comparison (avoids stale closure issues)
-    if (newSection === currentSectionRef.current) return;
+    if (newSection === currentSectionRef.current && !pendingSectionRef.current) return;
 
-    // Clear any pending operations
-    if (transitionTimeoutRef.current) {
-      clearTimeout(transitionTimeoutRef.current);
-    }
-    if (playAttemptRef.current) {
-      clearTimeout(playAttemptRef.current);
-    }
+    // If jumping multiple sections (e.g., header nav), debounce to avoid video stutter
+    const currentIdx = SECTION_ORDER.indexOf(currentSectionRef.current);
+    const newIdx = SECTION_ORDER.indexOf(newSection);
+    const isJumping = Math.abs(newIdx - currentIdx) > 1;
 
-    const oldSection = currentSectionRef.current;
-    
-    // Update ref immediately (source of truth)
-    currentSectionRef.current = newSection;
-    
-    // Pause the outgoing video
-    const outgoingVideo = videoRefs.current[oldSection];
-    if (outgoingVideo) {
-      outgoingVideo.pause();
+    // Store the pending section
+    pendingSectionRef.current = newSection;
+
+    // Clear any existing debounce timeout
+    if (sectionChangeDebounceRef.current) {
+      clearTimeout(sectionChangeDebounceRef.current);
     }
 
-    // Update state (triggers re-render)
-    setPreviousSection(oldSection);
-    setCurrentSection(newSection);
-    // Stage 1: keep outgoing visible until incoming has at least loaded a frame.
-    setTransitionPhase('waiting');
+    // If jumping multiple sections, wait for scroll to settle before switching
+    // This prevents rapid video load/play/pause cycles during header navigation
+    const debounceTime = isJumping ? 200 : 50;
 
-    // Kick off loading/decoding for the incoming section ASAP.
-    playVideoWithRetry(newSection);
+    sectionChangeDebounceRef.current = setTimeout(() => {
+      const targetSection = pendingSectionRef.current;
+      pendingSectionRef.current = null;
+      
+      if (!targetSection || targetSection === currentSectionRef.current) return;
+
+      // Clear any pending operations
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+      if (playAttemptRef.current) {
+        clearTimeout(playAttemptRef.current);
+      }
+
+      const oldSection = currentSectionRef.current;
+      
+      // Update ref immediately (source of truth)
+      currentSectionRef.current = targetSection;
+      
+      // Pause the outgoing video
+      const outgoingVideo = videoRefs.current[oldSection];
+      if (outgoingVideo) {
+        outgoingVideo.pause();
+      }
+
+      // Update state (triggers re-render)
+      setPreviousSection(oldSection);
+      setCurrentSection(targetSection);
+      // Stage 1: keep outgoing visible until incoming has at least loaded a frame.
+      setTransitionPhase('waiting');
+
+      // Kick off loading/decoding for the incoming section ASAP.
+      playVideoWithRetry(targetSection);
+    }, debounceTime);
   }, [playVideoWithRetry]);
 
   // Stage 2: once incoming is ready (or timeout), crossfade and then finalize.
@@ -912,6 +940,7 @@ const MobileScrollVideo = () => {
       if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current);
       if (playAttemptRef.current) clearTimeout(playAttemptRef.current);
       if (scrollIdleTimeoutRef.current) clearTimeout(scrollIdleTimeoutRef.current);
+      if (sectionChangeDebounceRef.current) clearTimeout(sectionChangeDebounceRef.current);
       clearTimeout(initialPlayTimeout);
     };
   }, [getScrollContainer, getCurrentSectionFromScroll, handleSectionChange, playVideoWithRetry, updatePlaybackRates]);

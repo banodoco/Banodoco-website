@@ -209,14 +209,37 @@ export const NameHighlight = ({ children, color }: NameHighlightProps) => {
 /**
  * Highlights the MEANING/concept of a section (e.g., "together in the real world")
  * Renders with an animated underline that draws when scrolled into view.
- * Uses background-image approach to support multi-line text.
+ * On hover, single-line text gets a localized wavy ripple effect.
+ * Multi-line text uses simple background-image underline (no wave).
  */
 export const MeaningHighlight = ({ children, color, delay = 300 }: MeaningHighlightProps) => {
   const ref = useRef<HTMLSpanElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [shouldAnimate, setShouldAnimate] = useState(false);
+  const [isMultiLine, setIsMultiLine] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const [mouseX, setMouseX] = useState(0);
+  const [time, setTime] = useState(0);
   const config = colorConfig[color];
 
+  const segmentCount = 40;
+
+  // Detect if text wraps to multiple lines
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const checkMultiLine = () => {
+      const rects = element.getClientRects();
+      setIsMultiLine(rects.length > 1);
+    };
+
+    checkMultiLine();
+    window.addEventListener('resize', checkMultiLine);
+    return () => window.removeEventListener('resize', checkMultiLine);
+  }, []);
+
+  // Intersection observer for draw-in animation
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
@@ -225,7 +248,6 @@ export const MeaningHighlight = ({ children, color, delay = 300 }: MeaningHighli
       ([entry]) => {
         if (entry.isIntersecting && !isVisible) {
           setIsVisible(true);
-          // Add delay before starting animation
           setTimeout(() => setShouldAnimate(true), delay);
         }
       },
@@ -236,25 +258,102 @@ export const MeaningHighlight = ({ children, color, delay = 300 }: MeaningHighli
     return () => observer.disconnect();
   }, [delay, isVisible]);
 
-  // Use background-image for underline - works across line breaks
-  const underlineColor = `rgba(${config.rgb}, 0.8)`;
-  
+  // Animation loop for wave effect (single-line only)
+  useEffect(() => {
+    if (!isHovering || isMultiLine) return;
+    
+    let animationId: number;
+    const animate = () => {
+      setTime(t => t + 0.15);
+      animationId = requestAnimationFrame(animate);
+    };
+    animationId = requestAnimationFrame(animate);
+    
+    return () => cancelAnimationFrame(animationId);
+  }, [isHovering, isMultiLine]);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!ref.current || isMultiLine) return;
+    const rect = ref.current.getBoundingClientRect();
+    setMouseX((e.clientX - rect.left) / rect.width);
+  };
+
+  const getSegmentOffset = (segmentIndex: number): number => {
+    if (!isHovering || isMultiLine) return 0;
+    
+    const segmentX = segmentIndex / segmentCount;
+    const distance = Math.abs(segmentX - mouseX);
+    
+    const amplitude = 3;
+    const wavelength = 0.15;
+    const falloff = 0.12;
+    const decay = Math.exp(-distance / falloff);
+    const wave = Math.sin(time + segmentIndex * wavelength * Math.PI * 2);
+    
+    return wave * amplitude * decay;
+  };
+
+  // Multi-line: use simple background-image underline
+  if (isMultiLine) {
+    const underlineColor = `rgba(${config.rgb}, 0.8)`;
+    return (
+      <span 
+        ref={ref}
+        style={{ 
+          backgroundImage: `linear-gradient(${underlineColor}, ${underlineColor})`,
+          backgroundPosition: '0 100%',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: shouldAnimate ? '100% 2px' : '0% 2px',
+          transition: 'background-size 0.7s ease-out',
+          WebkitBoxDecorationBreak: 'clone',
+          boxDecorationBreak: 'clone' as const,
+          paddingBottom: '2px',
+        }}
+      >
+        {children}
+      </span>
+    );
+  }
+
+  // Single-line: use segmented wavy underline
   return (
     <span 
-      ref={ref} 
+      ref={ref}
+      className="relative cursor-default"
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => {
+        setIsHovering(false);
+        setTime(0);
+      }}
       style={{ 
-        backgroundImage: `linear-gradient(${underlineColor}, ${underlineColor})`,
-        backgroundPosition: '0 100%',
-        backgroundRepeat: 'no-repeat',
-        backgroundSize: shouldAnimate ? '100% 2px' : '0% 2px',
-        transition: 'background-size 0.7s ease-out',
-        // Ensure underline appears on each line when text wraps
-        WebkitBoxDecorationBreak: 'clone',
-        boxDecorationBreak: 'clone',
-        paddingBottom: '2px',
+        display: 'inline-block',
+        paddingBottom: '4px',
       }}
     >
       {children}
+      <span 
+        className="absolute left-0 bottom-0 pointer-events-none flex"
+        style={{ 
+          width: '100%',
+          height: '2px',
+          transform: shouldAnimate ? 'scaleX(1)' : 'scaleX(0)',
+          transformOrigin: 'left',
+          transition: 'transform 0.7s ease-out',
+        }}
+      >
+        {Array.from({ length: segmentCount }).map((_, i) => (
+          <span
+            key={i}
+            style={{
+              flex: 1,
+              height: '100%',
+              backgroundColor: `rgba(${config.rgb}, 0.8)`,
+              transform: `translateY(${getSegmentOffset(i)}px)`,
+            }}
+          />
+        ))}
+      </span>
     </span>
   );
 };

@@ -163,7 +163,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
   if (event.comingSoon) {
     return (
       <div 
-        className="relative w-full h-full rounded-xl overflow-hidden bg-white/5 flex items-center justify-center transition-opacity duration-500"
+        className="relative w-full h-full rounded-xl overflow-hidden bg-black/40 flex items-center justify-center transition-opacity duration-500"
         style={{ opacity: isFullyVisible ? 1 : 0 }}
       >
         <div className="text-center px-4">
