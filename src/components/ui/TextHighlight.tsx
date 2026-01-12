@@ -71,6 +71,19 @@ function useSparkles(
   const [isHovering, setIsHovering] = useState(false);
   const sparkleIdRef = useRef(0);
   const mousePositionRef = useRef<{ x: number; y: number } | null>(null);
+  const autoStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-stop effect after timeout (for touch devices that don't have mouse leave)
+  const resetAutoStopTimer = useCallback(() => {
+    if (autoStopTimeoutRef.current) {
+      clearTimeout(autoStopTimeoutRef.current);
+    }
+    autoStopTimeoutRef.current = setTimeout(() => {
+      setIsHovering(false);
+      mousePositionRef.current = null;
+      setSparkles([]);
+    }, 2000); // Stop after 2 seconds of no movement
+  }, []);
 
   // Spawn sparkles at current mouse position
   const spawnSparkles = useCallback(() => {
@@ -110,6 +123,15 @@ function useSparkles(
     return () => clearInterval(interval);
   }, [isHovering, spawnSparkles]);
 
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoStopTimeoutRef.current) {
+        clearTimeout(autoStopTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Event handlers - use viewport coordinates for fixed positioning (multi-line support)
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!ref.current) return;
@@ -118,16 +140,22 @@ function useSparkles(
       x: e.clientX,
       y: e.clientY,
     };
-  }, [ref]);
+    // Reset auto-stop timer on movement
+    resetAutoStopTimer();
+  }, [ref, resetAutoStopTimer]);
 
   const handleMouseEnter = useCallback(() => {
     setIsHovering(true);
-  }, []);
+    resetAutoStopTimer();
+  }, [resetAutoStopTimer]);
 
   const handleMouseLeave = useCallback(() => {
     setIsHovering(false);
     mousePositionRef.current = null;
     setSparkles([]);
+    if (autoStopTimeoutRef.current) {
+      clearTimeout(autoStopTimeoutRef.current);
+    }
   }, []);
 
   return {
@@ -299,7 +327,19 @@ export const MeaningHighlight = ({ children, color, delay = 300 }: MeaningHighli
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [wavePos, setWavePos] = useState<{ x: number; y: number; lineLeft: number; lineRight: number } | null>(null);
+  const autoStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const config = colorConfig[color];
+
+  // Auto-stop effect after timeout (for touch devices)
+  const resetAutoStopTimer = useCallback(() => {
+    if (autoStopTimeoutRef.current) {
+      clearTimeout(autoStopTimeoutRef.current);
+    }
+    autoStopTimeoutRef.current = setTimeout(() => {
+      setIsHovering(false);
+      setWavePos(null);
+    }, 2000);
+  }, []);
 
   useEffect(() => {
     const element = ref.current;
@@ -319,6 +359,15 @@ export const MeaningHighlight = ({ children, color, delay = 300 }: MeaningHighli
     return () => observer.disconnect();
   }, [delay, isVisible]);
 
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoStopTimeoutRef.current) {
+        clearTimeout(autoStopTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!ref.current) return;
     
@@ -332,6 +381,7 @@ export const MeaningHighlight = ({ children, color, delay = 300 }: MeaningHighli
         const x = Math.max(rect.left, Math.min(rect.right, e.clientX));
         const y = rect.bottom;
         setWavePos({ x, y, lineLeft: rect.left, lineRight: rect.right });
+        resetAutoStopTimer();
         return;
       }
     }
@@ -343,11 +393,17 @@ export const MeaningHighlight = ({ children, color, delay = 300 }: MeaningHighli
     <span 
       ref={ref}
       className="cursor-default"
-      onMouseEnter={() => setIsHovering(true)}
+      onMouseEnter={() => {
+        setIsHovering(true);
+        resetAutoStopTimer();
+      }}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {
         setIsHovering(false);
         setWavePos(null);
+        if (autoStopTimeoutRef.current) {
+          clearTimeout(autoStopTimeoutRef.current);
+        }
       }}
       style={{ 
         backgroundImage: `linear-gradient(${underlineColor}, ${underlineColor})`,
@@ -469,6 +525,18 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [wavePos, setWavePos] = useState<{ x: number; width: number } | null>(null);
+  const autoStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-stop effect after timeout (for touch devices)
+  const resetAutoStopTimer = useCallback(() => {
+    if (autoStopTimeoutRef.current) {
+      clearTimeout(autoStopTimeoutRef.current);
+    }
+    autoStopTimeoutRef.current = setTimeout(() => {
+      setIsHovering(false);
+      setWavePos(null);
+    }, 2000);
+  }, []);
 
   useEffect(() => {
     const element = ref.current;
@@ -488,6 +556,15 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
     return () => observer.disconnect();
   }, [delay, isVisible]);
 
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoStopTimeoutRef.current) {
+        clearTimeout(autoStopTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Random color from the four gradient colors
   const getColor = useCallback(
     () => gradientSparkleColors[Math.floor(Math.random() * gradientSparkleColors.length)],
@@ -503,6 +580,7 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
     const rect = ref.current.getBoundingClientRect();
     const x = e.clientX - rect.left; // Relative to element left edge
     setWavePos({ x, width: rect.width });
+    resetAutoStopTimer();
   };
 
   // Four-color gradient: sky → amber → emerald → rose
@@ -520,12 +598,16 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
       onMouseEnter={() => {
         setIsHovering(true);
         sparkleHandlers.onMouseEnter();
+        resetAutoStopTimer();
       }}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {
         setIsHovering(false);
         setWavePos(null);
         sparkleHandlers.onMouseLeave();
+        if (autoStopTimeoutRef.current) {
+          clearTimeout(autoStopTimeoutRef.current);
+        }
       }}
       style={{ 
         backgroundImage: `linear-gradient(90deg, ${gradientColors})`,
