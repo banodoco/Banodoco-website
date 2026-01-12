@@ -32,9 +32,9 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
       <article 
         ref={ref}
         className={cn(
-          "bg-white/5 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden border transition-colors duration-500 snap-center snap-always",
+          "bg-white/5 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden border transition-colors duration-500",
           isActive ? "border-white/30 bg-white/10" : "border-white/10",
-          fullWidth && "w-[85vw] shrink-0"
+          fullWidth && "w-[85vw] shrink-0 snap-center"
         )}
       >
         {/* Channel header - date/live on left, channel tag on right */}

@@ -108,7 +108,7 @@ export const Reigh: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-16 items-center">
             {/* Left side - Video showcase */}
             <div className="order-2 lg:order-1 flex flex-col">
-              <div className="relative rounded-xl overflow-hidden bg-black h-[35dvh] md:h-[36dvh] lg:h-[60dvh] flex items-center justify-center">
+              <div className="relative rounded-xl overflow-hidden bg-black h-[35svh] md:h-[36svh] lg:h-[60svh] flex items-center justify-center">
                 {/* Blurred background video - stretched to fill empty edges */}
                 <div className="absolute inset-0 z-0">
                   {/* 

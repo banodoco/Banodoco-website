@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { useCommunityTopics } from './useCommunityTopics';
 import { TopicCard } from './TopicCard';
 import { Section } from '@/components/layout/Section';
@@ -31,8 +31,8 @@ const CommunityIntro = () => (
 /** Skeleton card for loading state - matches TopicCard structure */
 const TopicCardSkeleton = ({ fullWidth = false }: { fullWidth?: boolean }) => (
   <div 
-    className={`bg-white/5 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden border border-white/10 snap-center snap-always ${
-      fullWidth ? "w-[85vw] shrink-0" : ""
+    className={`bg-white/5 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden border border-white/10 ${
+      fullWidth ? "w-[85vw] shrink-0 snap-center" : ""
     }`}
   >
     {/* Channel header */}
@@ -164,43 +164,6 @@ export const Community = () => {
   const mobileCardRefs = useRef<(HTMLElement | null)[]>([]);
   const mobileScrollRafRef = useRef<number | null>(null);
 
-  // Allow scroll-chaining: when the desktop card column is at the top/bottom,
-  // keep scrolling to snap the *page* to the previous/next section.
-  useEffect(() => {
-    const el = desktopScrollRef.current;
-    if (!el) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      const scrollContainer = document.getElementById('home-scroll-container');
-      if (!scrollContainer) return;
-
-      const topEpsilon = 2;
-      const bottomEpsilon = 2;
-      const atTop = el.scrollTop <= topEpsilon;
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - bottomEpsilon;
-
-      if (e.deltaY < 0 && atTop) {
-        const sectionEl = el.closest('section') as HTMLElement | null;
-        const prev = sectionEl?.previousElementSibling as HTMLElement | null;
-        if (!prev) return;
-        e.preventDefault();
-        scrollContainer.scrollTo({ top: prev.offsetTop, behavior: 'smooth' });
-        return;
-      }
-
-      if (e.deltaY > 0 && atBottom) {
-        const sectionEl = el.closest('section') as HTMLElement | null;
-        const next = sectionEl?.nextElementSibling as HTMLElement | null;
-        if (!next) return;
-        e.preventDefault();
-        scrollContainer.scrollTo({ top: next.offsetTop, behavior: 'smooth' });
-      }
-    };
-
-    el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
-  }, []);
-
   // Track horizontal scroll to determine active topic (mobile)
   useEffect(() => {
     const mobileScroll = mobileScrollRef.current;
@@ -318,7 +281,7 @@ export const Community = () => {
   }, [paddings]); // Re-run when padding changes to recalc gradient with new scrollHeight
 
   // Calculate dynamic padding to center first/last cards
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (loading || topics.length === 0) return;
 
     const calculatePaddings = () => {
@@ -350,16 +313,14 @@ export const Community = () => {
       setPaddings({ top, bottom });
     };
 
-    // Initial calc
-    // Delay to avoid competing with scroll video animation when section enters view
-    const timer = setTimeout(calculatePaddings, 600);
+    // Initial calc - immediate to prevent layout shift
+    calculatePaddings();
     
     // Recalc on resize
     window.addEventListener('resize', calculatePaddings);
     
     return () => {
       window.removeEventListener('resize', calculatePaddings);
-      clearTimeout(timer);
     };
   }, [loading, topics.length]);
 
@@ -469,7 +430,7 @@ export const Community = () => {
         {/* Right side - Topic cards (scroll under header) */}
         <div 
           ref={desktopScrollRef}
-          className="col-span-8 overflow-y-auto scrollbar-hide relative snap-y snap-mandatory" 
+          className="col-span-8 overflow-y-auto scrollbar-hide relative" 
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {/* Subtle gradient fade at top to indicate scrollable content above - fades in as you scroll */}
