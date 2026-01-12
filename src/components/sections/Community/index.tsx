@@ -31,8 +31,8 @@ const CommunityIntro = () => (
 /** Skeleton card for loading state - matches TopicCard structure */
 const TopicCardSkeleton = ({ fullWidth = false }: { fullWidth?: boolean }) => (
   <div 
-    className={`bg-white/5 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden border border-white/10 ${
-      fullWidth ? "w-[85vw] shrink-0 snap-center" : ""
+    className={`bg-white/5 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden border border-white/10 snap-center snap-always ${
+      fullWidth ? "w-[85vw] shrink-0" : ""
     }`}
   >
     {/* Channel header */}
@@ -432,7 +432,7 @@ export const Community = () => {
         {/* Right side - Topic cards (scroll under header) */}
         <div 
           ref={desktopScrollRef}
-          className="col-span-8 overflow-y-auto scrollbar-hide relative" 
+          className="col-span-8 overflow-y-auto scrollbar-hide relative snap-y snap-mandatory" 
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {/* Subtle gradient fade at top to indicate scrollable content above - fades in as you scroll */}

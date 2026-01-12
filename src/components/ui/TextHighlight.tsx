@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 
 type HighlightColor = 'sky' | 'emerald' | 'amber' | 'rose' | 'violet';
 
@@ -109,13 +110,13 @@ function useSparkles(
     return () => clearInterval(interval);
   }, [isHovering, spawnSparkles]);
 
-  // Event handlers
+  // Event handlers - use viewport coordinates for fixed positioning (multi-line support)
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
+    // Use viewport coordinates directly - sparkles use fixed positioning
     mousePositionRef.current = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: e.clientX,
+      y: e.clientY,
     };
   }, [ref]);
 
@@ -140,23 +141,26 @@ function useSparkles(
 }
 
 /**
- * Renders sparkle SVGs - shared between NameHighlight and GradientHighlight
+ * Renders sparkle SVGs - uses portal + fixed positioning to avoid parent transform issues
  */
 function SparkleOverlay({ sparkles }: { sparkles: Sparkle[] }) {
-  return (
+  // Use portal to render at document body level, avoiding any parent transforms
+  if (typeof document === 'undefined' || sparkles.length === 0) return null;
+  
+  return createPortal(
     <>
       {sparkles.map(sparkle => {
         const config = colorConfig[sparkle.color];
         return (
           <svg
             key={sparkle.id}
-            className="absolute pointer-events-none"
+            className="fixed pointer-events-none"
             style={{
               left: sparkle.x - sparkle.size / 2,
               top: sparkle.y - sparkle.size / 2,
               width: sparkle.size,
               height: sparkle.size,
-              zIndex: 50,
+              zIndex: 9999,
               filter: `drop-shadow(0 0 2px rgba(${config.rgb}, 0.6))`,
               animation: 'sparkle-fly 0.6s ease-out forwards',
               ['--vx' as string]: `${sparkle.vx * 20}px`,
@@ -172,7 +176,8 @@ function SparkleOverlay({ sparkles }: { sparkles: Sparkle[] }) {
           </svg>
         );
       })}
-    </>
+    </>,
+    document.body
   );
 }
 
@@ -196,7 +201,7 @@ export const NameHighlight = ({ children, color }: NameHighlightProps) => {
   return (
     <span 
       ref={ref}
-      className={`${config.text} font-semibold ${config.glow} relative inline-block cursor-default`}
+      className={`${config.text} font-semibold ${config.glow} relative cursor-default`}
       style={{ overflow: 'visible' }}
       {...handlers}
     >
@@ -207,39 +212,95 @@ export const NameHighlight = ({ children, color }: NameHighlightProps) => {
 };
 
 /**
+ * Animated wavy line segment that follows the cursor, clipped to line bounds
+ */
+const WavySegment = ({ 
+  x, 
+  y, 
+  lineLeft, 
+  lineRight, 
+  rgb 
+}: { 
+  x: number; 
+  y: number; 
+  lineLeft: number;
+  lineRight: number;
+  rgb: string;
+}) => {
+  const [time, setTime] = useState(0);
+  
+  useEffect(() => {
+    let animationId: number;
+    const animate = () => {
+      setTime(t => t + 0.25);
+      animationId = requestAnimationFrame(animate);
+    };
+    animationId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+
+  // Calculate wave bounds - 60px wide but clipped to line edges
+  const waveHalfWidth = 30;
+  const left = Math.max(lineLeft, x - waveHalfWidth);
+  const right = Math.min(lineRight, x + waveHalfWidth);
+  const width = right - left;
+  
+  if (width <= 0) return null;
+  
+  const height = 10;
+  const amplitude = 3;
+  const frequency = 0.4;
+  
+  // Build path with wave - use absolute X positions for consistent wave phase
+  let path = '';
+  for (let i = 0; i <= width; i++) {
+    const absX = left + i; // Absolute X position for consistent wave
+    const wave = Math.sin(time + absX * frequency) * amplitude;
+    
+    // Fade amplitude at edges (relative to cursor position, not segment edges)
+    const distFromCursor = Math.abs(absX - x);
+    const edgeFade = Math.max(0, 1 - distFromCursor / waveHalfWidth);
+    
+    const pathY = height / 2 + wave * edgeFade;
+    path += i === 0 ? `M ${i} ${pathY}` : ` L ${i} ${pathY}`;
+  }
+
+  return (
+    <svg
+      className="fixed pointer-events-none"
+      style={{
+        left,
+        top: y - height / 2 - 1, // -1 to align with 2px underline
+        width,
+        height,
+        zIndex: 50,
+      }}
+      viewBox={`0 0 ${width} ${height}`}
+    >
+      <path
+        d={path}
+        fill="none"
+        stroke={`rgba(${rgb}, 0.8)`}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+};
+
+/**
  * Highlights the MEANING/concept of a section (e.g., "together in the real world")
  * Renders with an animated underline that draws when scrolled into view.
- * On hover, single-line text gets a localized wavy ripple effect.
- * Multi-line text uses simple background-image underline (no wave).
+ * On hover, a wavy distortion follows the cursor along the underline.
  */
 export const MeaningHighlight = ({ children, color, delay = 300 }: MeaningHighlightProps) => {
   const ref = useRef<HTMLSpanElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [shouldAnimate, setShouldAnimate] = useState(false);
-  const [isMultiLine, setIsMultiLine] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
-  const [mouseX, setMouseX] = useState(0);
-  const [time, setTime] = useState(0);
+  const [wavePos, setWavePos] = useState<{ x: number; y: number; lineLeft: number; lineRight: number } | null>(null);
   const config = colorConfig[color];
 
-  const segmentCount = 40;
-
-  // Detect if text wraps to multiple lines
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const checkMultiLine = () => {
-      const rects = element.getClientRects();
-      setIsMultiLine(rects.length > 1);
-    };
-
-    checkMultiLine();
-    window.addEventListener('resize', checkMultiLine);
-    return () => window.removeEventListener('resize', checkMultiLine);
-  }, []);
-
-  // Intersection observer for draw-in animation
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
@@ -258,102 +319,59 @@ export const MeaningHighlight = ({ children, color, delay = 300 }: MeaningHighli
     return () => observer.disconnect();
   }, [delay, isVisible]);
 
-  // Animation loop for wave effect (single-line only)
-  useEffect(() => {
-    if (!isHovering || isMultiLine) return;
-    
-    let animationId: number;
-    const animate = () => {
-      setTime(t => t + 0.15);
-      animationId = requestAnimationFrame(animate);
-    };
-    animationId = requestAnimationFrame(animate);
-    
-    return () => cancelAnimationFrame(animationId);
-  }, [isHovering, isMultiLine]);
-
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!ref.current || isMultiLine) return;
-    const rect = ref.current.getBoundingClientRect();
-    setMouseX((e.clientX - rect.left) / rect.width);
+    if (!ref.current) return;
+    
+    // Get all line rects for multi-line support
+    const rects = ref.current.getClientRects();
+    
+    // Find which line the cursor is on
+    for (const rect of rects) {
+      if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        // Cursor is on this line - position wave at cursor X (clamped to line), line's bottom
+        const x = Math.max(rect.left, Math.min(rect.right, e.clientX));
+        const y = rect.bottom;
+        setWavePos({ x, y, lineLeft: rect.left, lineRight: rect.right });
+        return;
+      }
+    }
   };
 
-  const getSegmentOffset = (segmentIndex: number): number => {
-    if (!isHovering || isMultiLine) return 0;
-    
-    const segmentX = segmentIndex / segmentCount;
-    const distance = Math.abs(segmentX - mouseX);
-    
-    const amplitude = 3;
-    const wavelength = 0.15;
-    const falloff = 0.12;
-    const decay = Math.exp(-distance / falloff);
-    const wave = Math.sin(time + segmentIndex * wavelength * Math.PI * 2);
-    
-    return wave * amplitude * decay;
-  };
-
-  // Multi-line: use simple background-image underline
-  if (isMultiLine) {
-    const underlineColor = `rgba(${config.rgb}, 0.8)`;
-    return (
-      <span 
-        ref={ref}
-        style={{ 
-          backgroundImage: `linear-gradient(${underlineColor}, ${underlineColor})`,
-          backgroundPosition: '0 100%',
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: shouldAnimate ? '100% 2px' : '0% 2px',
-          transition: 'background-size 0.7s ease-out',
-          WebkitBoxDecorationBreak: 'clone',
-          boxDecorationBreak: 'clone' as const,
-          paddingBottom: '2px',
-        }}
-      >
-        {children}
-      </span>
-    );
-  }
-
-  // Single-line: use segmented wavy underline
+  const underlineColor = `rgba(${config.rgb}, 0.8)`;
+  
   return (
     <span 
       ref={ref}
-      className="relative cursor-default"
+      className="cursor-default"
       onMouseEnter={() => setIsHovering(true)}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {
         setIsHovering(false);
-        setTime(0);
+        setWavePos(null);
       }}
       style={{ 
-        display: 'inline-block',
-        paddingBottom: '4px',
+        backgroundImage: `linear-gradient(${underlineColor}, ${underlineColor})`,
+        backgroundPosition: '0 100%',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: shouldAnimate ? '100% 2px' : '0% 2px',
+        transition: 'background-size 0.7s ease-out',
+        WebkitBoxDecorationBreak: 'clone',
+        boxDecorationBreak: 'clone' as const,
+        paddingBottom: '2px',
       }}
     >
       {children}
-      <span 
-        className="absolute left-0 bottom-0 pointer-events-none flex"
-        style={{ 
-          width: '100%',
-          height: '2px',
-          transform: shouldAnimate ? 'scaleX(1)' : 'scaleX(0)',
-          transformOrigin: 'left',
-          transition: 'transform 0.7s ease-out',
-        }}
-      >
-        {Array.from({ length: segmentCount }).map((_, i) => (
-          <span
-            key={i}
-            style={{
-              flex: 1,
-              height: '100%',
-              backgroundColor: `rgba(${config.rgb}, 0.8)`,
-              transform: `translateY(${getSegmentOffset(i)}px)`,
-            }}
-          />
-        ))}
-      </span>
+      
+      {/* Wavy line segment that follows cursor */}
+      {isHovering && wavePos && (
+        <WavySegment 
+          x={wavePos.x} 
+          y={wavePos.y} 
+          lineLeft={wavePos.lineLeft}
+          lineRight={wavePos.lineRight}
+          rgb={config.rgb} 
+        />
+      )}
     </span>
   );
 };
@@ -367,14 +385,90 @@ interface GradientHighlightProps {
 const gradientSparkleColors: HighlightColor[] = ['sky', 'emerald', 'amber', 'rose'];
 
 /**
+ * Gradient wavy segment - uses absolute positioning within parent
+ */
+const GradientWavySegment = ({ 
+  x, 
+  elementWidth,
+}: { 
+  x: number; 
+  elementWidth: number;
+}) => {
+  const [time, setTime] = useState(0);
+  
+  useEffect(() => {
+    let animationId: number;
+    const animate = () => {
+      setTime(t => t + 0.25);
+      animationId = requestAnimationFrame(animate);
+    };
+    animationId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+
+  const waveHalfWidth = 30;
+  const left = Math.max(0, x - waveHalfWidth);
+  const right = Math.min(elementWidth, x + waveHalfWidth);
+  const segmentWidth = right - left;
+  
+  if (segmentWidth <= 0) return null;
+  
+  const height = 12;
+  const amplitude = 3.5;
+  const frequency = 0.4;
+  
+  let path = '';
+  for (let i = 0; i <= segmentWidth; i++) {
+    const absX = left + i;
+    const wave = Math.sin(time + absX * frequency) * amplitude;
+    const distFromCursor = Math.abs(absX - x);
+    const edgeFade = Math.max(0, 1 - distFromCursor / waveHalfWidth);
+    const pathY = height / 2 + wave * edgeFade;
+    path += i === 0 ? `M ${i} ${pathY}` : ` L ${i} ${pathY}`;
+  }
+
+  return (
+    <svg
+      className="absolute pointer-events-none"
+      style={{
+        left: left,
+        bottom: -height / 2 + 1.5, // Center on the 3px underline
+        width: segmentWidth,
+        height,
+        zIndex: 50,
+      }}
+      viewBox={`0 0 ${segmentWidth} ${height}`}
+    >
+      <defs>
+        <linearGradient id={`grad-wave-${Math.round(x)}`} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={`rgba(${colorConfig.sky.rgb}, 0.9)`} />
+          <stop offset="33%" stopColor={`rgba(${colorConfig.amber.rgb}, 0.9)`} />
+          <stop offset="66%" stopColor={`rgba(${colorConfig.emerald.rgb}, 0.9)`} />
+          <stop offset="100%" stopColor={`rgba(${colorConfig.rose.rgb}, 0.9)`} />
+        </linearGradient>
+      </defs>
+      <path
+        d={path}
+        fill="none"
+        stroke={`url(#grad-wave-${Math.round(x)})`}
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+};
+
+/**
  * Highlights text with a multi-color gradient underline (sky → amber → emerald → rose)
  * Used for phrases that represent the whole ecosystem vision.
- * On hover, spawns colorful sparkles in all four ecosystem colors!
+ * On hover, spawns colorful sparkles and shows wavy effect!
  */
 export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightProps) => {
   const ref = useRef<HTMLSpanElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [shouldAnimate, setShouldAnimate] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const [wavePos, setWavePos] = useState<{ x: number; width: number } | null>(null);
 
   useEffect(() => {
     const element = ref.current;
@@ -399,7 +493,17 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
     () => gradientSparkleColors[Math.floor(Math.random() * gradientSparkleColors.length)],
     []
   );
-  const { sparkles, handlers } = useSparkles(ref, getColor);
+  const { sparkles, handlers: sparkleHandlers } = useSparkles(ref, getColor);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!ref.current) return;
+    sparkleHandlers.onMouseMove(e);
+    
+    // Get position relative to element for absolute positioning
+    const rect = ref.current.getBoundingClientRect();
+    const x = e.clientX - rect.left; // Relative to element left edge
+    setWavePos({ x, width: rect.width });
+  };
 
   // Four-color gradient: sky → amber → emerald → rose
   const gradientColors = `
@@ -413,6 +517,16 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
     <span 
       ref={ref}
       className="relative inline-block cursor-default"
+      onMouseEnter={() => {
+        setIsHovering(true);
+        sparkleHandlers.onMouseEnter();
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => {
+        setIsHovering(false);
+        setWavePos(null);
+        sparkleHandlers.onMouseLeave();
+      }}
       style={{ 
         backgroundImage: `linear-gradient(90deg, ${gradientColors})`,
         backgroundPosition: '0 100%',
@@ -424,10 +538,16 @@ export const GradientHighlight = ({ children, delay = 300 }: GradientHighlightPr
         whiteSpace: 'nowrap',
         overflow: 'visible',
       }}
-      {...handlers}
     >
       {children}
       <SparkleOverlay sparkles={sparkles} />
+      {/* Gradient wavy segment that follows cursor */}
+      {isHovering && wavePos && (
+        <GradientWavySegment 
+          x={wavePos.x} 
+          elementWidth={wavePos.width}
+        />
+      )}
     </span>
   );
 };
