@@ -164,6 +164,43 @@ export const Community = () => {
   const mobileCardRefs = useRef<(HTMLElement | null)[]>([]);
   const mobileScrollRafRef = useRef<number | null>(null);
 
+  // Allow scroll-chaining: when the desktop card column is at the top/bottom,
+  // keep scrolling to snap the *page* to the previous/next section.
+  useEffect(() => {
+    const el = desktopScrollRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      const scrollContainer = document.getElementById('home-scroll-container');
+      if (!scrollContainer) return;
+
+      const topEpsilon = 2;
+      const bottomEpsilon = 2;
+      const atTop = el.scrollTop <= topEpsilon;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - bottomEpsilon;
+
+      if (e.deltaY < 0 && atTop) {
+        const sectionEl = el.closest('section') as HTMLElement | null;
+        const prev = sectionEl?.previousElementSibling as HTMLElement | null;
+        if (!prev) return;
+        e.preventDefault();
+        scrollContainer.scrollTo({ top: prev.offsetTop, behavior: 'smooth' });
+        return;
+      }
+
+      if (e.deltaY > 0 && atBottom) {
+        const sectionEl = el.closest('section') as HTMLElement | null;
+        const next = sectionEl?.nextElementSibling as HTMLElement | null;
+        if (!next) return;
+        e.preventDefault();
+        scrollContainer.scrollTo({ top: next.offsetTop, behavior: 'smooth' });
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
   // Track horizontal scroll to determine active topic (mobile)
   useEffect(() => {
     const mobileScroll = mobileScrollRef.current;
