@@ -430,7 +430,7 @@ export const Community = () => {
         {/* Right side - Topic cards (scroll under header) */}
         <div 
           ref={desktopScrollRef}
-          className="col-span-8 overflow-y-auto scrollbar-hide relative" 
+          className="col-span-8 overflow-y-auto scrollbar-hide relative snap-y snap-proximity" 
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {/* Subtle gradient fade at top to indicate scrollable content above - fades in as you scroll */}
@@ -471,6 +471,7 @@ export const Community = () => {
                       topic={topic}
                       isActive={sectionIsVisible && idx === activeTopicIndex}
                       index={idx}
+                      snapToCenter={idx !== 0 && idx !== topics.length - 1}
                     />
                   ))}
                 </div>

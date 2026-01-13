@@ -22,10 +22,12 @@ interface TopicCardProps {
   isActive: boolean;
   fullWidth?: boolean;
   index?: number;
+  /** Enable snap-center for this card (desktop only, disabled for first/last to allow smooth section transitions) */
+  snapToCenter?: boolean;
 }
 
 export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
-  ({ topic, isActive, fullWidth = false, index = 0 }, ref) => {
+  ({ topic, isActive, fullWidth = false, index = 0, snapToCenter = false }, ref) => {
     const channelColor = CHANNEL_COLORS[index % CHANNEL_COLORS.length];
     
     return (
@@ -34,7 +36,8 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
         className={cn(
           "bg-white/5 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden border transition-colors duration-500",
           isActive ? "border-white/30 bg-white/10" : "border-white/10",
-          fullWidth && "w-[85vw] shrink-0 snap-center"
+          fullWidth && "w-[85vw] shrink-0 snap-center",
+          !fullWidth && snapToCenter && "snap-center"
         )}
       >
         {/* Channel header - date/live on left, channel tag on right */}
