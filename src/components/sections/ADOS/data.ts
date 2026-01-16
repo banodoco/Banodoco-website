@@ -35,7 +35,8 @@ export const events: EventItem[] = [
     id: 'paris-2026',
     label: 'Paris',
     year: '2026',
-    comingSoon: true,
+    date: '16—19 April.',
+    video: '/events/paris-2026-720p.mp4',
   },
 ];
 

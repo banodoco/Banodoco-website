@@ -7,7 +7,7 @@ import { BREAKPOINTS } from '@/lib/breakpoints';
 // =============================================================================
 // The full video is split into three parts for seamless scroll-based transitions.
 // Adjacent parts share their boundary frame for seamless switching.
-const VIDEO_PART1_SRC = '/hero-part1.mp4';  // 0-7 seconds (hero section)
+const VIDEO_PART1_SRC = '/upscaled-h1.mp4';  // 0-7 seconds (hero section)
 const VIDEO_PART2_SRC = '/hero-part2.mp4';  // 7-31.5 seconds (middle sections)
 const VIDEO_PART3_SRC = '/hero-part3.mp4';  // 31.5+ seconds (ownership section)
 const VIDEO_TRANSITION_1 = 7.0;             // Part 1 → Part 2 transition
@@ -68,7 +68,7 @@ interface SectionVideoConfig {
 }
 
 const SECTION_VIDEOS: Record<string, SectionVideoConfig> = {
-  hero:         { video: '/hero-part1.mp4', poster: '/section-videos/hero-poster.jpg' },  // HD version
+  hero:         { video: '/W5ylOCytG00m3lqZKBml6_gXEN4DqG.mp4', poster: '/hero-poster-flipped.jpg' },  // HD version
   community:    { video: '/section-videos/community.mp4', poster: '/section-videos/community-poster.jpg' },
   reigh:        { video: '/section-videos/reigh.mp4', poster: '/section-videos/reigh-poster.jpg' },
   'arca-gidan': { video: '/section-videos/arca-gidan.mp4', poster: '/section-videos/arca-gidan-poster.jpg' },
@@ -622,6 +622,14 @@ const DesktopScrollVideo = () => {
           // No transition on opacity - instant switch for seamless frame matching
         }}
       />
+
+      {/* Film grain overlay */}
+      <div 
+        className="absolute inset-0 opacity-[0.08] pointer-events-none mix-blend-overlay"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+        }}
+      />
     </div>
   );
 };
@@ -810,7 +818,8 @@ const MobileScrollVideo = () => {
 
     // If jumping multiple sections, wait for scroll to settle before switching
     // This prevents rapid video load/play/pause cycles during header navigation
-    const debounceTime = isJumping ? 200 : 50;
+    // For single-section scrolls, respond immediately so transition starts right away
+    const debounceTime = isJumping ? 200 : 0;
 
     sectionChangeDebounceRef.current = setTimeout(() => {
       const targetSection = pendingSectionRef.current;
@@ -1018,6 +1027,14 @@ const MobileScrollVideo = () => {
           </div>
         );
       })}
+
+      {/* Film grain overlay */}
+      <div 
+        className="absolute inset-0 opacity-[0.08] pointer-events-none mix-blend-overlay"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+        }}
+      />
     </div>
   );
 };

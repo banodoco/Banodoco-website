@@ -13,7 +13,7 @@ export const desktopMediaStyles = {
   WebkitMaskComposite: 'source-in' as const,
 };
 
-export const HERO_VIDEO_SRC_DESKTOP = '/hero-desktop-flipped.mp4';
+export const HERO_VIDEO_SRC_DESKTOP = '/upscaled-h1.mp4';
 export const HERO_VIDEO_SRC_MOBILE = '/hero-mobile.mp4';
 export const HERO_POSTER_SRC = '/hero-poster-flipped.jpg';
 export const REWIND_SOUND_SRC = '/Rewind Sound Effect.mp3';

@@ -284,9 +284,9 @@ export const Ecosystem: React.FC = () => {
         {/* Header - positioned below the fixed nav header on desktop */}
         <div className="absolute left-4 right-4 z-20 flex justify-center" style={{ top: `calc(8% + ${HEADER_OFFSET_VAR})` }}>
           <div className="w-full max-w-4xl bg-white/[0.06] backdrop-blur-md rounded-xl px-6 py-4 border border-white/15 text-center">
-            {/* Fluid font size for desktop/landscape: scales smoothly, capped at 2 lines */}
+            {/* Fluid font size for desktop/landscape: scales smoothly */}
             <h2 
-              className="font-normal tracking-tight leading-tight line-clamp-2"
+              className="font-normal tracking-tight leading-tight"
               style={{ fontSize: 'clamp(1.25rem, 2vw + 0.5rem, 1.875rem)' }}
             >
               We aim to <NameHighlight color="sky">support</NameHighlight>, <NameHighlight color="emerald">equip</NameHighlight>, <NameHighlight color="amber">energise</NameHighlight> & <NameHighlight color="rose">connect</NameHighlight> the ecosystem so thousands of OpenCore<span className="text-white/50">*</span> tools can help billions <GradientHighlight>fall in love with AI</GradientHighlight>

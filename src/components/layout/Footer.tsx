@@ -3,9 +3,8 @@ import { useLayoutContext } from '@/contexts/LayoutContext';
 import { XIcon, DiscordIcon, GithubIcon } from '@/components/ui/icons';
 
 export const Footer = () => {
-  const { theme, isHomePage } = useLayoutContext();
+  const { theme } = useLayoutContext();
   const isDark = theme === 'dark';
-  const isHomeDark = isHomePage && isDark;
 
   return (
     <footer 
@@ -13,15 +12,7 @@ export const Footer = () => {
       className={cn(
         "border-t",
         isDark 
-          ? cn(
-              "bg-[var(--color-bg-base)] border-white/5 snap-start",
-              // On the homepage, the scroll container is transparent so the fixed background
-              // video can show through section overlays. If the footer is shorter than the
-              // viewport, the uncovered area looks like the video is "stuck fullscreen".
-              // Make the dark homepage footer fill the viewport on mobile to avoid that.
-              isHomeDark ? "min-h-[100svh]" : "min-h-[25vh]",
-              "md:min-h-0"
-            )
+          ? "bg-[var(--color-bg-base)] border-white/5"
           : "bg-[#f5f5f3] border-gray-200"
       )}
     >
