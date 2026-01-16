@@ -63,11 +63,11 @@ const MOBILE_POSITIONS: Position[] = [
 
 // Tablet: bottom-left cluster (tighter grouping)
 const TABLET_POSITIONS: Position[] = [
-  { x: 6, y: 63 },
-  { x: 14, y: 67 },
-  { x: 8, y: 77 },
-  { x: 18, y: 73 },
-  { x: 12, y: 85 },
+  { x: 6, y: 68 },
+  { x: 14, y: 72 },
+  { x: 8, y: 82 },
+  { x: 18, y: 78 },
+  { x: 12, y: 90 },
 ];
 
 // Exit directions for variety when leaving
