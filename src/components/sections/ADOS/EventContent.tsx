@@ -213,6 +213,7 @@ export const EventContent: React.FC<EventContentProps> = ({ event, isVisible, ha
           loop
           playsInline
           className="w-full h-full object-cover opacity-70"
+          style={event.id === 'paris-2026' ? { transform: 'scale(1.05)' } : undefined}
           onLoadedMetadata={(e) => {
             if (startOffsetSeconds > 0) {
               e.currentTarget.currentTime = startOffsetSeconds;
