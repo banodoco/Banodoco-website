@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect, useCallback } from 'react';
 import { useCommunityTopics } from './useCommunityTopics';
 import { TopicCard } from './TopicCard';
 import { Section } from '@/components/layout/Section';
@@ -221,17 +221,19 @@ export const Community = () => {
     };
   }, [topics.length]);
 
+  // Helper to get current header height - read fresh each time to handle viewport changes (iPad rotation, Safari chrome)
+  const getHeaderHeight = useCallback(() => {
+    const headerHeightVal = getComputedStyle(document.documentElement)
+      .getPropertyValue('--header-height').trim();
+    return headerHeightVal.endsWith('px') 
+      ? parseFloat(headerHeightVal) 
+      : 80; // Default fallback
+  }, []);
+
   // Track vertical scroll on desktop to progressively fade gradients and determine active card
   useEffect(() => {
     const desktopScroll = desktopScrollRef.current;
     if (!desktopScroll) return;
-
-    // Get header height for visible center calculation
-    const headerHeightVal = getComputedStyle(document.documentElement)
-      .getPropertyValue('--header-height').trim();
-    const headerHeightPx = headerHeightVal.endsWith('px') 
-      ? parseFloat(headerHeightVal) 
-      : 80;
 
     const handleDesktopScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = desktopScroll;
@@ -244,6 +246,9 @@ export const Community = () => {
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       const bottomOpacity = Math.min(1, distanceFromBottom / 80);
       setBottomGradientOpacity(bottomOpacity);
+
+      // Read header height fresh on each scroll to handle viewport changes (iPad, Safari)
+      const headerHeightPx = getHeaderHeight();
 
       // Determine which card is closest to the visible center
       // Visible center is at (windowHeight + headerHeight) / 2 from viewport top
@@ -278,20 +283,15 @@ export const Community = () => {
       desktopScroll.removeEventListener('scroll', handleDesktopScroll);
       cancelAnimationFrame(rafId);
     };
-  }, [paddings]); // Re-run when padding changes to recalc gradient with new scrollHeight
+  }, [paddings, getHeaderHeight]); // Re-run when padding changes to recalc gradient with new scrollHeight
 
   // Calculate dynamic padding to center first/last cards
   useLayoutEffect(() => {
     if (loading || topics.length === 0) return;
 
     const calculatePaddings = () => {
-      // Get header height from CSS variable
-      const headerHeightVal = getComputedStyle(document.documentElement)
-        .getPropertyValue('--header-height').trim();
-      const headerHeightPx = headerHeightVal.endsWith('px') 
-        ? parseFloat(headerHeightVal) 
-        : 80; // Default fallback
-
+      // Read header height fresh to handle viewport changes (iPad rotation, Safari)
+      const headerHeightPx = getHeaderHeight();
       const windowHeight = window.innerHeight;
       
       // Measure first and last cards
@@ -319,10 +319,20 @@ export const Community = () => {
     // Recalc on resize
     window.addEventListener('resize', calculatePaddings);
     
+    // Also listen for breakpoint changes via matchMedia - catches the exact moment
+    // CSS variable --header-height changes (768px), which resize alone may miss on iPad
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const handleBreakpointChange = () => {
+      // Slight delay to ensure CSS variable has updated
+      requestAnimationFrame(calculatePaddings);
+    };
+    mediaQuery.addEventListener('change', handleBreakpointChange);
+    
     return () => {
       window.removeEventListener('resize', calculatePaddings);
+      mediaQuery.removeEventListener('change', handleBreakpointChange);
     };
-  }, [loading, topics.length]);
+  }, [loading, topics.length, getHeaderHeight]);
 
   const hasTopics = !loading && !error && topics.length > 0;
   const showErrorOrEmpty = !loading && (error || topics.length === 0);

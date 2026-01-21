@@ -1,5 +1,6 @@
 /** Format channel name for display (e.g., "ad_art_discussion" -> "Art Discussion") */
-export const formatChannelName = (name: string): string => {
+export const formatChannelName = (name: string | null | undefined): string => {
+  if (!name) return '';
   return name
     .replace(/_/g, ' ')
     .replace(/^ad[-_]/, '')
@@ -27,7 +28,8 @@ export const formatDate = (dateStr: string): string => {
 };
 
 /** Format markdown-like text to HTML (bold text) */
-export const formatText = (text: string): string => {
+export const formatText = (text: string | null | undefined): string => {
+  if (!text) return '';
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/:\s*$/, '');
