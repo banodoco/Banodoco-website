@@ -19,9 +19,10 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const { pathname } = useLocation();
   const isHome = pathname === '/';
   const isSecondRenaissance = pathname === '/2nd-renaissance';
+  const isWrapped = pathname === '/1m';
   const [isIOSDevice] = useState(() => isIOS());
 
-  const theme = (isHome || isSecondRenaissance) ? 'dark' : 'light';
+  const theme = (isHome || isSecondRenaissance || isWrapped) ? 'dark' : 'light';
 
   if (isHome) {
     return (
@@ -54,6 +55,15 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         <div className="h-screen overflow-y-auto snap-y snap-mandatory bg-[var(--color-bg-base)] text-white">
           {children}
         </div>
+      </LayoutProvider>
+    );
+  }
+
+  // Wrapped page has its own fullscreen layout
+  if (isWrapped) {
+    return (
+      <LayoutProvider theme={theme} isHomePage={false}>
+        {children}
       </LayoutProvider>
     );
   }

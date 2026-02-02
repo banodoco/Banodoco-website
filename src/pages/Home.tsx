@@ -5,6 +5,7 @@ import { ArcaGidan } from '@/components/sections/ArcaGidan';
 import { ADOS } from '@/components/sections/ADOS';
 import { Ecosystem } from '@/components/sections/Ecosystem';
 import { Ownership } from '@/components/sections/Ownership';
+import { MilestonePopup } from '@/components/ui/MilestonePopup';
 import { usePreloadAssets } from '@/lib/preloadAssets';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -49,6 +50,7 @@ const Home = () => {
       <ADOS />
       <Ecosystem />
       <Ownership />
+      <MilestonePopup />
     </>
   );
 };
