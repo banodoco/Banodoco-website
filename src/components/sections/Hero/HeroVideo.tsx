@@ -16,14 +16,14 @@ export const MobileHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
   ({ posterLoaded, videoReady, isRewinding, onPosterLoad, onVideoCanPlay, onVideoLoadedData, onVideoPlay, onVideoEnded }, ref) => (
     <div className="absolute inset-0 xl:hidden overflow-hidden">
       {/* Skeleton */}
-      <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 animate-pulse scale-100" />
+      <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 animate-pulse scale-[1.6] md:scale-[1.3]" />
 
       {/* Poster */}
       <img
         src={HERO_POSTER_SRC}
         alt=""
         onLoad={onPosterLoad}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-100 ${
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.6] md:scale-[1.3] ${
           posterLoaded ? 'opacity-100' : 'opacity-0'
         }`}
       />
@@ -39,7 +39,7 @@ export const MobileHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
         onLoadedData={onVideoLoadedData}
         onPlay={onVideoPlay}
         onEnded={onVideoEnded}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-100 ${
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.6] md:scale-[1.3] ${
           videoReady ? 'opacity-100' : 'opacity-0'
         }`}
       />
@@ -63,14 +63,14 @@ export const DesktopHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
   ({ posterLoaded, videoReady, isRewinding, onPosterLoad, onVideoCanPlay, onVideoLoadedData, onVideoPlay, onVideoEnded }, ref) => (
     <div className="hidden xl:block absolute inset-0 overflow-hidden">
       {/* Skeleton */}
-      <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 animate-pulse scale-100" />
+      <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 animate-pulse scale-[1.3]" />
 
       {/* Poster */}
       <img
         src={HERO_POSTER_SRC}
         alt=""
         onLoad={onPosterLoad}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-100 ${
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.3] ${
           posterLoaded ? 'opacity-100' : 'opacity-0'
         }`}
       />
@@ -86,7 +86,7 @@ export const DesktopHeroVideo = forwardRef<HTMLVideoElement, HeroVideoProps>(
         onLoadedData={onVideoLoadedData}
         onPlay={onVideoPlay}
         onEnded={onVideoEnded}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.3] ${
           videoReady ? 'opacity-100' : 'opacity-0'
         }`}
       />

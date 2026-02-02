@@ -110,11 +110,18 @@ export const Header = () => {
   // Hero section uses light fog overlay, so logo/nav should be dark knockout text
   const isOnHero = isHomePage && (currentSection === SECTION_IDS.hero || currentSection === null);
 
+  // Transparent header with blur and border for hero
+  const heroHeaderStyle = isOnHero ? {
+    background: 'transparent',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
+  } : undefined;
+
   return (
     <header
       className={cn(
         'px-6 md:px-20 lg:px-24 py-4 z-50 transition-colors duration-300',
-        isOnHero && 'absolute top-0 left-0 right-0 md:fixed',
+        isOnHero && 'absolute top-0 left-0 right-0 md:fixed border-b border-black/10',
         !isOnHero && isDark && [
           'absolute top-0 left-0 right-0 md:fixed border-b border-white/10 backdrop-blur-md',
           scrimColor
@@ -122,6 +129,7 @@ export const Header = () => {
         !isOnHero && !isDark && 'relative bg-[#faf9f7]/90 border-b border-black/[0.06] backdrop-blur-md',
         mobileMenuOpen && 'border-b-0'
       )}
+      style={heroHeaderStyle}
     >
       <div className="flex items-center justify-between">
         {/* Logo */}
