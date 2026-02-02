@@ -38,6 +38,13 @@ export function useDiscordData(): UseDiscordDataResult {
       if (!response.ok) throw new Error(`Failed to load data: ${response.status}`);
       const appData: AppData = await response.json();
 
+      // Filter out topGenerations items without valid Supabase media URLs
+      if (appData.topGenerations) {
+        appData.topGenerations = appData.topGenerations.filter(
+          (gen) => gen.mediaUrl?.includes('supabase.co/storage')
+        );
+      }
+
       setData(appData);
       setProgress({ phase: 'done', phaseLabel: 'Ready', phasePct: 100, overallPct: 100 });
     } catch (err) {

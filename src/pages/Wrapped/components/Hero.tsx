@@ -17,10 +17,13 @@ const Hero: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="space-y-2 sm:space-y-3 relative z-10 pointer-events-none"
+        className="space-y-3 sm:space-y-4 relative z-10 pointer-events-none"
       >
-        <div className="inline-block px-3 sm:px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs sm:text-sm font-medium text-cyan-400 backdrop-blur-sm">
-          Celebrating
+        <div className="flex flex-col items-center gap-2 mb-2">
+          <img src="/banodoco.png" alt="Banodoco" className="h-10 w-10 sm:h-12 sm:w-12" draggable={false} />
+          <span className="text-xs sm:text-sm font-medium text-white/50 uppercase tracking-widest">
+            Celebrating
+          </span>
         </div>
 
         <h1 className="text-4xl sm:text-5xl md:text-8xl font-black tracking-tighter leading-none">
