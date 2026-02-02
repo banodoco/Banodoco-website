@@ -355,7 +355,7 @@ const ModelTrends: React.FC<ModelTrendsProps> = ({ data }) => {
         className="mb-4 sm:mb-6"
       >
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 sm:mb-3 flex items-center gap-2 sm:gap-3">
-          <span className="text-cyan-500">🤖</span> We've Seen the Rise & Fall of Many Models
+          <span className="text-cyan-500">🤖</span> We've Seen Models Come and Go
         </h2>
         <p className="text-gray-400 text-xs sm:text-sm">Share of conversation by model family — watching the community shift as new technology emerged.</p>
       </motion.div>

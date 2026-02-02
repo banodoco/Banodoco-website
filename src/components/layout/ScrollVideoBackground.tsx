@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { HERO_POSTER_SRC } from '@/components/sections/Hero/config';
+import { HERO_VIDEO_SRC_DESKTOP, HERO_POSTER_SRC } from '@/components/sections/Hero/config';
 import { BREAKPOINTS } from '@/lib/breakpoints';
 
 // =============================================================================
@@ -7,10 +7,10 @@ import { BREAKPOINTS } from '@/lib/breakpoints';
 // =============================================================================
 // The full video is split into three parts for seamless scroll-based transitions.
 // Adjacent parts share their boundary frame for seamless switching.
-const VIDEO_PART1_SRC = '/upscaled-h1.mp4';  // 0-7 seconds (hero section)
-const VIDEO_PART2_SRC = '/hero-part2.mp4';  // 7-31.5 seconds (middle sections)
+const VIDEO_PART1_SRC = HERO_VIDEO_SRC_DESKTOP;  // 0-5 seconds (hero section - full video)
+const VIDEO_PART2_SRC = '/hero-part2.mp4';  // 5-31.5 seconds (middle sections)
 const VIDEO_PART3_SRC = '/hero-part3.mp4';  // 31.5+ seconds (ownership section)
-const VIDEO_TRANSITION_1 = 7.0;             // Part 1 → Part 2 transition
+const VIDEO_TRANSITION_1 = 5.0;             // Part 1 → Part 2 transition (after hero video ends)
 const VIDEO_TRANSITION_2 = 31.5;            // Part 2 → Part 3 transition
 
 // =============================================================================
@@ -30,7 +30,7 @@ interface SectionTimestamps {
 // `end`: Where video drifts TO when idle (the resting point)
 // GAPS between sections (prev.end → next.start) are scrubbed during scroll transitions.
 const SECTION_TIMESTAMPS: Record<string, SectionTimestamps> = {
-  hero:         { start: 0,  end: 5 },   // Drifts 0→10
+  hero:         { start: 0,  end: 5 },   // Full video (~5s at 0.5x drift = 10s real time)
   community:    { start: 7, end: 12 },   // Gap 10→12 scrubbed, drifts to 14
   reigh:        { start: 16.5, end: 20 },   // Gap 14→16 scrubbed, drifts to 18
   'arca-gidan': { start: 22, end: 24 },   // Gap 18→20 scrubbed, drifts to 22
@@ -68,7 +68,7 @@ interface SectionVideoConfig {
 }
 
 const SECTION_VIDEOS: Record<string, SectionVideoConfig> = {
-  hero:         { video: '/W5ylOCytG00m3lqZKBml6_gXEN4DqG.mp4', poster: '/hero-poster-flipped.jpg' },  // HD version
+  hero:         { video: HERO_VIDEO_SRC_DESKTOP, poster: HERO_POSTER_SRC },
   community:    { video: '/section-videos/community.mp4', poster: '/section-videos/community-poster.jpg' },
   reigh:        { video: '/section-videos/reigh.mp4', poster: '/section-videos/reigh-poster.jpg' },
   'arca-gidan': { video: '/section-videos/arca-gidan.mp4', poster: '/section-videos/arca-gidan-poster.jpg' },
@@ -77,8 +77,8 @@ const SECTION_VIDEOS: Record<string, SectionVideoConfig> = {
   ownership:    { video: '/hero-part3.mp4', poster: '/section-videos/ownership-poster.jpg' },  // HD version
 };
 
-const MOBILE_PLAYBACK_RATE_IDLE = 0.5;      // Slow drift when not scrolling
-const MOBILE_PLAYBACK_RATE_SCROLL = 2.5;    // Speed up when scrolling
+const MOBILE_PLAYBACK_RATE_IDLE = 0.5;      // Half speed when not scrolling
+const MOBILE_PLAYBACK_RATE_SCROLL = 2.0;    // Speed up when scrolling
 const CROSSFADE_DURATION = 500;
 const SCROLL_IDLE_TIMEOUT = 150;            // ms before considering scroll "stopped"
 
@@ -553,7 +553,7 @@ const DesktopScrollVideo = () => {
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
       {/* Loading skeleton */}
-      <div className="w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 animate-pulse scale-[1.3]" />
+      <div className="w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 animate-pulse scale-100" />
 
       {/* Poster (high priority) */}
       <img
@@ -561,7 +561,7 @@ const DesktopScrollVideo = () => {
         alt=""
         fetchPriority="high"
         onLoad={() => setPosterLoaded(true)}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-[1.3] ${
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 scale-100 ${
           posterLoaded ? 'opacity-100' : 'opacity-0'
         }`}
       />
@@ -579,7 +579,7 @@ const DesktopScrollVideo = () => {
         }`}
         style={{ 
           willChange: 'transform',
-          transform: 'translateZ(0) scale(1.3)',
+          transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
           // No transition on opacity - instant switch for seamless frame matching
         }}
@@ -598,7 +598,7 @@ const DesktopScrollVideo = () => {
         }`}
         style={{ 
           willChange: 'transform',
-          transform: 'translateZ(0) scale(1.3)',
+          transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
           // No transition on opacity - instant switch for seamless frame matching
         }}
@@ -617,9 +617,40 @@ const DesktopScrollVideo = () => {
         }`}
         style={{ 
           willChange: 'transform',
-          transform: 'translateZ(0) scale(1.3)',
+          transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
           // No transition on opacity - instant switch for seamless frame matching
+        }}
+      />
+
+      {/* Watercolor paper texture overlay - visible grain effect */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)'/%3E%3C/svg%3E")`,
+          mixBlendMode: 'overlay',
+          opacity: 0.5,
+        }}
+      />
+
+      {/* Watercolor wash - warm/cool color variation */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 60% at 20% 30%, rgba(180, 140, 100, 0.12) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 80% at 80% 70%, rgba(100, 130, 160, 0.1) 0%, transparent 50%),
+            radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(252, 248, 240, 0.2) 100%)
+          `,
+          mixBlendMode: 'soft-light',
+        }}
+      />
+
+      {/* Watercolor edge bleeding - soft irregular edges */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          boxShadow: 'inset 0 0 100px 20px rgba(252, 248, 240, 0.3)',
         }}
       />
 
@@ -958,9 +989,7 @@ const MobileScrollVideo = () => {
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
       {/* Loading skeleton - prevents flash of black on initial load */}
-      <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" 
-        style={{ transform: 'scale(1.3)' }}
-      />
+      <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" />
       
       {/* Hero poster as base layer - shows immediately while videos load */}
       {/* Must use the poster that matches hero-part1.mp4 (not the flipped version) */}
@@ -969,7 +998,7 @@ const MobileScrollVideo = () => {
         alt=""
         className="absolute inset-0 w-full h-full object-cover"
         style={{ 
-          transform: 'translateZ(0) scale(1.3)',
+          transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
         }}
       />
@@ -1020,13 +1049,44 @@ const MobileScrollVideo = () => {
               className="absolute inset-0 w-full h-full object-cover"
               style={{ 
                 willChange: 'transform, opacity',
-                transform: 'translateZ(0) scale(1.3)',
+                transform: 'translateZ(0)',
                 backfaceVisibility: 'hidden'
               }}
             />
           </div>
         );
       })}
+
+      {/* Watercolor paper texture overlay - visible grain effect */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)'/%3E%3C/svg%3E")`,
+          mixBlendMode: 'overlay',
+          opacity: 0.4,
+        }}
+      />
+
+      {/* Watercolor wash - warm/cool color variation */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 60% at 20% 30%, rgba(180, 140, 100, 0.1) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 80% at 80% 70%, rgba(100, 130, 160, 0.08) 0%, transparent 50%),
+            radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(252, 248, 240, 0.15) 100%)
+          `,
+          mixBlendMode: 'soft-light',
+        }}
+      />
+
+      {/* Watercolor edge bleeding - soft irregular edges */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          boxShadow: 'inset 0 0 80px 15px rgba(252, 248, 240, 0.25)',
+        }}
+      />
 
       {/* Film grain overlay */}
       <div 
