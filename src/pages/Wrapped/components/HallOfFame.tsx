@@ -33,6 +33,7 @@ const HallOfFame: React.FC<HallOfFameProps> = ({ mostThanked }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<ThankedPerson | null>(null);
+  const [hoveredPerson, setHoveredPerson] = useState<ThankedPerson | null>(null);
   const [showMedals, setShowMedals] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -141,7 +142,18 @@ const HallOfFame: React.FC<HallOfFameProps> = ({ mostThanked }) => {
                     key={person.rank}
                     className="flex-1 flex flex-col items-center justify-end h-full group relative cursor-pointer"
                     onClick={() => setSelectedPerson(selectedPerson?.rank === person.rank ? null : person)}
+                    onMouseEnter={() => !isMobile && setHoveredPerson(person)}
+                    onMouseLeave={() => !isMobile && setHoveredPerson(null)}
                   >
+                    {/* Hover tooltip - desktop only */}
+                    {!isMobile && hoveredPerson?.rank === person.rank && (
+                      <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-30 bg-black/90 backdrop-blur-sm rounded-lg px-2 py-1.5 whitespace-nowrap border border-white/10 shadow-lg">
+                        <p className="text-white font-medium text-xs">@{person.username}</p>
+                        <p className="text-cyan-400 text-[10px]">{person.thanks.toLocaleString()} thanks</p>
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-black/90 border-r border-b border-white/10" />
+                      </div>
+                    )}
+
                     {/* Bar wrapper - maintains height for medal positioning */}
                     <div className="w-full relative" style={{ height: `${heightPercent}%` }}>
                       {/* Gold medal particles for #1 - positioned at top of bar */}
@@ -177,8 +189,8 @@ const HallOfFame: React.FC<HallOfFameProps> = ({ mostThanked }) => {
             </div>
           </div>
 
-          {/* Selected person name display */}
-          {selectedPerson && (
+          {/* Selected person name display - mobile only */}
+          {selectedPerson && isMobile && (
             <div className="ml-10 sm:ml-12 pl-2 pt-2 text-center">
               <p className="text-white font-bold text-xs sm:text-sm">@{selectedPerson.username}</p>
               <p className="text-cyan-400 text-[10px] sm:text-xs">{selectedPerson.thanks.toLocaleString()} thanks</p>
@@ -194,7 +206,7 @@ const HallOfFame: React.FC<HallOfFameProps> = ({ mostThanked }) => {
               return (
                 <motion.div
                   key={person.rank}
-                  className="flex-1 flex justify-center cursor-pointer"
+                  className="flex-1 flex justify-center cursor-pointer relative"
                   initial={{ opacity: 0 }}
                   animate={isVisible ? { opacity: 1 } : { opacity: 0 }}
                   transition={{
@@ -202,6 +214,8 @@ const HallOfFame: React.FC<HallOfFameProps> = ({ mostThanked }) => {
                     delay: index * 0.08 + 0.3
                   }}
                   onClick={() => setSelectedPerson(isSelected ? null : person)}
+                  onMouseEnter={() => !isMobile && setHoveredPerson(person)}
+                  onMouseLeave={() => !isMobile && setHoveredPerson(null)}
                 >
                   {/* Avatar */}
                   <div className={`relative transition-transform ${isSelected ? 'scale-125' : ''}`}>
