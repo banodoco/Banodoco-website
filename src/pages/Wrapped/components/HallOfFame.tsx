@@ -145,15 +145,6 @@ const HallOfFame: React.FC<HallOfFameProps> = ({ mostThanked }) => {
                     onMouseEnter={() => !isMobile && setHoveredPerson(person)}
                     onMouseLeave={() => !isMobile && setHoveredPerson(null)}
                   >
-                    {/* Hover tooltip - desktop only */}
-                    {!isMobile && hoveredPerson?.rank === person.rank && (
-                      <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-30 bg-black/90 backdrop-blur-sm rounded-lg px-2 py-1.5 whitespace-nowrap border border-white/10 shadow-lg">
-                        <p className="text-white font-medium text-xs">@{person.username}</p>
-                        <p className="text-cyan-400 text-[10px]">{person.thanks.toLocaleString()} thanks</p>
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-black/90 border-r border-b border-white/10" />
-                      </div>
-                    )}
-
                     {/* Bar wrapper - maintains height for medal positioning */}
                     <div className="w-full relative" style={{ height: `${heightPercent}%` }}>
                       {/* Gold medal particles for #1 - positioned at top of bar */}
@@ -217,6 +208,15 @@ const HallOfFame: React.FC<HallOfFameProps> = ({ mostThanked }) => {
                   onMouseEnter={() => !isMobile && setHoveredPerson(person)}
                   onMouseLeave={() => !isMobile && setHoveredPerson(null)}
                 >
+                  {/* Hover tooltip - desktop only */}
+                  {!isMobile && hoveredPerson?.rank === person.rank && (
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-30 bg-black/90 backdrop-blur-sm rounded-lg px-2 py-1.5 whitespace-nowrap border border-white/10 shadow-lg">
+                      <p className="text-white font-medium text-xs">@{person.username}</p>
+                      <p className="text-cyan-400 text-[10px]">{person.thanks.toLocaleString()} thanks</p>
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-black/90 border-r border-b border-white/10" />
+                    </div>
+                  )}
+
                   {/* Avatar */}
                   <div className={`relative transition-transform ${isSelected ? 'scale-125' : ''}`}>
                     {person.avatarUrl ? (
