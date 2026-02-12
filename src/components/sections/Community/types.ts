@@ -1,15 +1,10 @@
-export interface Attachment {
-  url: string;
-  filename: string;
-}
-
 export interface MediaUrl {
   url: string;
   type: 'video' | 'image';
   poster_url?: string;
 }
 
-export interface SubTopic {
+interface SubTopic {
   text: string;
   subTopicMediaMessageIds?: string[];
   message_id?: string;
@@ -32,7 +27,7 @@ export interface TopicData {
 }
 
 // Raw API response types
-export interface RawSubTopic {
+interface RawSubTopic {
   text: string;
   subTopicMediaMessageIds: string[];
   message_id: string;

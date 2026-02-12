@@ -3,7 +3,7 @@ import { useEffect, useRef, useCallback } from 'react';
 /**
  * Options for useAutoPauseVideo hook.
  */
-export interface UseAutoPauseVideoOptions {
+interface UseAutoPauseVideoOptions {
   /**
    * Whether the section is currently active/visible.
    * Video will pause when false, resume when true (unless blocked).

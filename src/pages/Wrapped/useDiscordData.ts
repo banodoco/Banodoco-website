@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { AppData } from './types';
 import { demoData } from './constants';
 
-export type FetchPhase = 'idle' | 'loading' | 'done' | 'error';
+type FetchPhase = 'idle' | 'loading' | 'done' | 'error';
 
 export interface FetchProgress {
   phase: FetchPhase;
@@ -13,7 +13,7 @@ export interface FetchProgress {
   error?: string;
 }
 
-export interface UseDiscordDataResult {
+interface UseDiscordDataResult {
   data: AppData;
   progress: FetchProgress;
   isLoading: boolean;

@@ -87,19 +87,6 @@ export interface GridItemData {
   coords: SpriteCoords;
 }
 
-export interface CommunityUpdate {
-  id: string;
-  tag: string;
-  tagColor: 'rose' | 'purple' | 'amber';
-  title: string;
-  description: string;
-  bullets: string[];
-  mediaType: 'video' | 'image';
-  mediaUrl: string;
-  posterUrl?: string;
-  thumbnails?: string[];
-}
-
 export interface AppData {
   totalMessages: number;
   totalMembers: number;

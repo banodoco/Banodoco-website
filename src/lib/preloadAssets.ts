@@ -89,7 +89,7 @@ function preloadVideoMetadata(src: string): Promise<void> {
 /**
  * Start preloading all section assets.
  */
-export function preloadSectionAssets(): void {
+function preloadSectionAssets(): void {
   if (typeof window === 'undefined') return;
   const { criticalImages, soonImages, videos } = getSectionPreloadList();
 

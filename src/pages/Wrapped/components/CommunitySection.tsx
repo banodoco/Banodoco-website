@@ -31,8 +31,6 @@ interface CommunitySectionProps {
 const CommunitySection: React.FC<CommunitySectionProps> = ({ data }) => {
   const isDesktop = useIsDesktop();
 
-  console.log(`[VideoDebug] CommunitySection rendering, isDesktop: ${isDesktop}`);
-
   const sectionRef = useRef<HTMLElement>(null);
   const scrollColumnRef = useRef<HTMLDivElement>(null);
   const mobileScrollRef = useRef<HTMLDivElement>(null);

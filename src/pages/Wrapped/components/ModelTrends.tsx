@@ -193,13 +193,19 @@ function useAutoPlayOnVisible(
 
 // ============ Components ============
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface TooltipEntry {
+  value: number;
+  name: string;
+  color: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string }) => {
   if (!active || !payload?.length) return null;
-  const sorted = [...payload].sort((a: any, b: any) => b.value - a.value);
+  const sorted = [...payload].sort((a, b) => b.value - a.value);
   return (
     <div className="bg-[#1a1a1a] border border-white/10 px-4 py-3 rounded-xl shadow-2xl min-w-[140px]">
       <p className="text-xs text-gray-400 mb-2 font-medium">{label}</p>
-      {sorted.map((entry: any, i: number) => (
+      {sorted.map((entry, i: number) => (
         entry.value > 0 && (
           <div key={i} className="flex items-center justify-between gap-4 text-xs py-0.5">
             <div className="flex items-center gap-1.5">

@@ -1,6 +1,6 @@
 import { useSectionVisibility } from '@/lib/useSectionVisibility';
 
-export interface UseSectionRuntimeOptions {
+interface UseSectionRuntimeOptions {
   /**
    * Intersection threshold (0-1) for when to consider active. Default: 0.5
    * (Also used as the "enter" threshold in useSectionVisibility's hysteresis.)
@@ -21,7 +21,7 @@ export interface UseSectionRuntimeOptions {
   rootMargin?: string;
 }
 
-export interface SectionRuntime {
+interface SectionRuntime {
   /** Ref to attach to the section element */
   ref: React.RefObject<HTMLElement | null>;
   /**

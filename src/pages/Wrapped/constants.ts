@@ -6,8 +6,6 @@ export const SPRITE_URL = 'https://www.banodoco.ai/profile-sprite.jpg';
 export const SPRITE_COLS = 20;
 export const SPRITE_ROWS = 10;
 export const TOTAL_ITEMS = 140;
-export const SHUFFLE_PROBABILITY = 0.2;
-
 export const demoData: AppData = {
   totalMessages: 1000000,
   totalMembers: 12847,

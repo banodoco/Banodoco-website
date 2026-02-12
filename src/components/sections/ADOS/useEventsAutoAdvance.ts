@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 // Timing constants - how long each event is displayed
-export const EVENT_DISPLAY_DURATION_MS = 6000; // 6 seconds per event
+const EVENT_DISPLAY_DURATION_MS = 6000; // 6 seconds per event
 export const TRANSITION_ANIMATION_DURATION = '600ms';
 
 interface UseEventsAutoAdvanceOptions {

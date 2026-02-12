@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useMemo, useEffect, type ReactNode } from 'react';
-import { ALL_SECTION_IDS, SECTION_IDS } from '@/lib/sections';
+import { ALL_SECTION_IDS } from '@/lib/sections';
 
-export type LayoutTheme = 'dark' | 'light';
+type LayoutTheme = 'dark' | 'light';
 
 interface LayoutContextValue {
   theme: LayoutTheme;
@@ -118,12 +118,5 @@ export function useLayoutContext(): LayoutContextValue {
   return context;
 }
 
-/**
- * Helper to check if current section should show the "ownership zone" header bg.
- * Use in components that need to react to being in Ownership or Footer.
- */
-export function useIsInOwnershipZone(): boolean {
-  const { currentSection } = useLayoutContext();
-  return currentSection === SECTION_IDS.ownership || currentSection === 'footer';
-}
+
 

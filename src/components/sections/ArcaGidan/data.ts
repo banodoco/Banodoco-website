@@ -1,4 +1,4 @@
-export interface ArtworkItem {
+interface ArtworkItem {
   id: string;
   name: string;
   poster: string;

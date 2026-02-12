@@ -17,7 +17,7 @@ export function isIOS(): boolean {
 /**
  * Returns connection info if available.
  */
-export function getConnectionInfo(): { saveData?: boolean; effectiveType?: string } | null {
+function getConnectionInfo(): { saveData?: boolean; effectiveType?: string } | null {
   if (typeof navigator === 'undefined') return null;
   const nav = navigator as Navigator & {
     connection?: { saveData?: boolean; effectiveType?: string };

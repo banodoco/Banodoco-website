@@ -21,7 +21,7 @@ const formatDate = (dateStr: string) => {
   return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 };
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
   if (!active || !payload?.length) return null;
   const value = payload[0].value;
   const isNearMillion = value >= 950000;

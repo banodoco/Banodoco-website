@@ -8,16 +8,5 @@ export const shuffleArray = <T,>(array: T[]): T[] => {
   return shuffled;
 };
 
-/** Generate a random pastel color for fallback */
-export const getRandomPastelColor = (): string => {
-  const hue = Math.floor(Math.random() * 360);
-  return `hsl(${hue}, 70%, 80%)`;
-};
-
-/** Generate a subtle muted color for skeleton placeholders on dark backgrounds */
-export const getRandomSkeletonColor = (): string => {
-  const hue = Math.floor(Math.random() * 360);
-  return `hsl(${hue}, 20%, 25%)`;
-};
 
 

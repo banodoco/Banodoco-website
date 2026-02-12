@@ -12,12 +12,5 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
 export const supabase: SupabaseClient | null =
   isSupabaseConfigured ? createClient(supabaseUrl!, supabaseKey!) : null;
 
-export interface DailySummary {
-  daily_summary_id: number;
-  date: string;
-  channel_id: string;
-  full_summary: string;
-  short_summary: string;
-  created_at: string;
-}
+
 

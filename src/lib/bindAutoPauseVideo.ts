@@ -11,7 +11,7 @@ function chainEvent<E>(a: VoidFn, b: EventFn<E>): (e: E) => void {
   };
 }
 
-export interface BindAutoPauseVideoOverrides {
+interface BindAutoPauseVideoOverrides {
   onPlay?: EventFn<SyntheticEvent<HTMLVideoElement>>;
   onCanPlay?: EventFn<SyntheticEvent<HTMLVideoElement>>;
   onLoadedData?: EventFn<SyntheticEvent<HTMLVideoElement>>;

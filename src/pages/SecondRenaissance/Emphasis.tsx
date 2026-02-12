@@ -252,7 +252,7 @@ const injectStyles = () => {
 // =============================================================================
 // Emphasis Types
 // =============================================================================
-export type EmphasisType = 
+type EmphasisType =
   | 'glow'            // Warm, hopeful, inspiring
   | 'pulse'           // Attention-grabbing, urgent
   | 'gradient'        // Dynamic, modern, flowing

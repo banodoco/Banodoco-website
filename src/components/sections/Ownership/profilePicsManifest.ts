@@ -1007,7 +1007,3 @@ export const PROFILE_PICS = [
   }
 ] as const;
 
-/** Just the IDs for backward compatibility */
-export const PROFILE_PIC_IDS = PROFILE_PICS.map(p => p.id);
-
-export type ProfilePicId = (typeof PROFILE_PICS)[number]['id'];

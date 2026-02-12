@@ -120,7 +120,6 @@ const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(
       const observer = new IntersectionObserver(
         ([entry]) => {
           const dominated = entry.intersectionRatio > 0.6;
-          console.log(`[VideoDebug][${month}][${variant}] ratio: ${entry.intersectionRatio.toFixed(2)}, shouldPlay: ${dominated}`);
           setShouldPlayVideo(dominated);
 
           // Also set isVisible for lazy loading images (one-time, lower threshold)
@@ -138,23 +137,15 @@ const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(
       return () => observer.disconnect();
     }, [scrollRoot, month]);
 
-    // Reset video state only when switching to a different featured item
-    useEffect(() => {
+    // Reset video state immediately when switching featured item (avoids extra render from useEffect)
+    const prevFeaturedIndex = useRef(featuredIndex);
+    if (prevFeaturedIndex.current !== featuredIndex) {
+      prevFeaturedIndex.current = featuredIndex;
       setProgress(0);
       setMediaLoaded(false);
-    }, [featuredIndex]);
+    }
 
 
-    // Log video mount/unmount
-    useEffect(() => {
-      if (featured?.mediaType === 'video') {
-        if (shouldPlayVideo) {
-          console.log(`[VideoDebug][${month}][${variant}] Video MOUNTED`);
-        } else {
-          console.log(`[VideoDebug][${month}][${variant}] Video UNMOUNTED`);
-        }
-      }
-    }, [shouldPlayVideo, featured?.mediaType, month, variant]);
 
     const handleTimeUpdate = useCallback(() => {
       const video = videoRef.current;

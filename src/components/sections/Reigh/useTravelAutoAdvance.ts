@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 // Timing constants - keep CSS and JS in sync
-export const AUTO_ADVANCE_DELAY_MS = 3800;
+const AUTO_ADVANCE_DELAY_MS = 3800;
 export const AUTO_ADVANCE_ANIMATION_DURATION = '3.75s';
 // Fallback timeout if video doesn't play/end (e.g., iOS autoplay blocked)
-export const FALLBACK_ADVANCE_TIMEOUT_MS = 8000;
+const FALLBACK_ADVANCE_TIMEOUT_MS = 8000;
 
 interface UseTravelAutoAdvanceOptions {
   totalExamples: number;
