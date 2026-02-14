@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutGrid, Sparkles, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
+import { LayoutGrid, Palette, BookOpen, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
 import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
-import { ArtPicksSection } from './ArtPicks/ArtPicksSection';
+import { ArtShowcaseSection } from './ArtShowcase/ArtShowcaseSection';
+import { ResourcesFeedSection } from './ResourcesFeed/ResourcesFeedSection';
 import { FilterBar } from './FilterBar';
 import { ResourceGrid } from './ResourceGrid';
 import { ResourceModal } from './ResourceModal';
@@ -186,6 +187,46 @@ const Resources = () => {
           </div>
         </motion.section>
 
+        {/* Community Art */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={containerVariants}
+          id="community-art"
+          className="space-y-12"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-zinc-900 rounded-lg">
+              <Palette size={20} className="text-zinc-100" />
+            </div>
+            <h2 className="text-4xl font-black tracking-tight uppercase">
+              Community Art
+            </h2>
+          </div>
+          <ArtShowcaseSection />
+        </motion.section>
+
+        {/* Community Resources */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={containerVariants}
+          id="community-resources"
+          className="space-y-12"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-zinc-900 rounded-lg">
+              <BookOpen size={20} className="text-zinc-100" />
+            </div>
+            <h2 className="text-4xl font-black tracking-tight uppercase">
+              Community Resources
+            </h2>
+          </div>
+          <ResourcesFeedSection />
+        </motion.section>
+
         {/* The Forge — Assets */}
         <motion.section
           initial="hidden"
@@ -269,25 +310,6 @@ const Resources = () => {
           )}
         </motion.section>
 
-        {/* The Gallery — Art Picks */}
-        <motion.section
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={containerVariants}
-          id="art-picks"
-          className="space-y-12"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-zinc-900 rounded-lg">
-              <Sparkles size={20} className="text-zinc-100" />
-            </div>
-            <h2 className="text-4xl font-black tracking-tight uppercase">
-              The Gallery
-            </h2>
-          </div>
-          <ArtPicksSection />
-        </motion.section>
       </div>
 
       {/* Modal */}

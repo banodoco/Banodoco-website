@@ -8,8 +8,6 @@ const OwnershipPage = lazy(() => import('@/pages/OwnershipPage'));
 const SecondRenaissance = lazy(() => import('@/pages/SecondRenaissance'));
 const WrappedPage = lazy(() => import('@/pages/Wrapped'));
 const Resources = lazy(() => import('@/pages/Resources'));
-const ArtPicksIndex = lazy(() => import('@/pages/Resources/ArtPicks/ArtPicksIndex'));
-const ArtPicksDetail = lazy(() => import('@/pages/Resources/ArtPicks/ArtPicksDetail'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Minimal loading fallback — keeps layout stable while lazy chunks load.
@@ -29,8 +27,6 @@ function App() {
             <Route path="/2nd-renaissance" element={<SecondRenaissance />} />
             <Route path="/1m" element={<WrappedPage />} />
             <Route path="/resources" element={<Resources />} />
-            <Route path="/resources/art-picks" element={<ArtPicksIndex />} />
-            <Route path="/resources/art-picks/:weekId" element={<ArtPicksDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
