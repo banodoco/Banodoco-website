@@ -11,7 +11,7 @@ export interface CumulativeDataPoint {
   cumulative: number;
 }
 
-export interface Contributor {
+interface Contributor {
   rank: number;
   username: string;
   messages: number;
@@ -19,7 +19,7 @@ export interface Contributor {
   avatarUrl?: string;
 }
 
-export interface Award {
+interface Award {
   username: string;
   count?: number;
   metric?: string;

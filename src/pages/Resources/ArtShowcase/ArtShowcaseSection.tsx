@@ -20,7 +20,7 @@ export const ArtShowcaseSection = () => {
     <section>
       {/* Loading skeleton */}
       {loading && (
-        <div className="grid grid-cols-12 gap-4">
+        <div className="grid grid-cols-12 gap-3 sm:gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
@@ -38,7 +38,7 @@ export const ArtShowcaseSection = () => {
 
       {/* Grid */}
       {!loading && (
-        <div className="grid grid-cols-12 gap-4">
+        <div className="grid grid-cols-12 gap-3 sm:gap-4">
           {mediaMessages.map((msg, i) => (
             <div
               key={msg.message_id}

@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { TopicData, MediaUrl, RawTopic } from './types';
 
 // Shape of what we actually select from the database
-export interface SummaryRow {
+interface SummaryRow {
   full_summary: string;
   date: string;
   channel_id: string;
@@ -16,7 +16,7 @@ const IMAGE_EXTENSIONS = /\.(jpg|jpeg|jfif|png|gif|webp|avif|bmp|tiff?|svg|heic|
 const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|avi|mkv|m4v|ogv|3gp|ts|mts|m2ts)(\?|$)/i;
 
 // Check if a URL is a valid image or video file
-export const isValidMediaUrl = (media: MediaUrl): boolean => {
+const isValidMediaUrl = (media: MediaUrl): boolean => {
   if (!media.url) return false;
   const url = media.url.toLowerCase();
 
@@ -32,7 +32,7 @@ export const isValidMediaUrl = (media: MediaUrl): boolean => {
 
 // Extract all media URLs from a topic (mainMediaUrls + subTopicMediaUrls)
 // Filters to only images/videos and sorts results with videos first
-export const extractMediaUrls = (rawTopic: RawTopic): MediaUrl[] => {
+const extractMediaUrls = (rawTopic: RawTopic): MediaUrl[] => {
   const urls: MediaUrl[] = [];
 
   if (rawTopic.mainMediaUrls && rawTopic.mainMediaUrls.length > 0) {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, Palette, BookOpen, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
 import { useResources } from './useResources';
@@ -36,10 +36,13 @@ const Resources = () => {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [page, setPage] = useState(1);
 
-  // Reset to page 1 whenever filters change
-  useEffect(() => {
-    setPage(1);
-  }, [filters.type, filters.status, filters.mediaType, filters.baseModel, filters.loraType, filters.search]);
+  // Reset to page 1 whenever filters change (synchronous render-time check)
+  const filterKey = `${filters.type}|${filters.status}|${filters.mediaType}|${filters.baseModel}|${filters.loraType}|${filters.search}`;
+  const filterKeyRef = useRef(filterKey);
+  if (filterKeyRef.current !== filterKey) {
+    filterKeyRef.current = filterKey;
+    if (page !== 1) setPage(1);
+  }
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginatedAssets = useMemo(() => {
@@ -83,7 +86,7 @@ const Resources = () => {
                 Art <span className="text-zinc-800">&</span> <br />
                 <span className="italic">Intelligence</span>
               </h1>
-              <p className="max-w-md text-zinc-400 text-lg font-light leading-relaxed">
+              <p className="max-w-md text-zinc-400 text-base lg:text-lg font-light leading-relaxed">
                 The curated archive of AI video generation. Discover battle-tested workflows and the art defining the new era.
               </p>
             </motion.div>
@@ -92,7 +95,7 @@ const Resources = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="flex items-center gap-8 pt-6"
+              className="flex items-center gap-4 sm:gap-8 pt-6"
             >
               <div className="flex flex-col">
                 <span className="text-2xl font-black italic">104</span>
@@ -158,7 +161,7 @@ const Resources = () => {
         </motion.div>
       </section>
 
-      <div className="max-w-[1400px] mx-auto px-6 space-y-32 pb-32">
+      <div className="max-w-[1400px] mx-auto px-6 space-y-16 lg:space-y-32 pb-16 lg:pb-32">
         {/* News Section — Briefing Sidebar Layout */}
         <motion.section
           initial="hidden"
@@ -166,7 +169,7 @@ const Resources = () => {
           viewport={{ once: true }}
           variants={containerVariants}
           id="news"
-          className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-32"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 pt-16 lg:pt-32"
         >
           <div className="lg:col-span-4">
             <div className="sticky top-24">
@@ -200,7 +203,7 @@ const Resources = () => {
             <div className="p-2 bg-zinc-900 rounded-lg">
               <Palette size={20} className="text-zinc-100" />
             </div>
-            <h2 className="text-4xl font-black tracking-tight uppercase">
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
               Community Art
             </h2>
           </div>
@@ -220,7 +223,7 @@ const Resources = () => {
             <div className="p-2 bg-zinc-900 rounded-lg">
               <BookOpen size={20} className="text-zinc-100" />
             </div>
-            <h2 className="text-4xl font-black tracking-tight uppercase">
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
               Community Resources
             </h2>
           </div>
@@ -236,17 +239,17 @@ const Resources = () => {
           id="assets"
           className="space-y-12"
         >
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-800 pb-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-800 pb-6 md:pb-12">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-zinc-900 rounded-lg">
                   <LayoutGrid size={20} className="text-zinc-100" />
                 </div>
-                <h2 className="text-4xl font-black tracking-tight uppercase">
+                <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
                   The Forge
                 </h2>
               </div>
-              <p className="text-zinc-500 text-lg max-w-xl font-light">
+              <p className="text-zinc-500 text-base lg:text-lg max-w-xl font-light">
                 Battle-tested workflows and model weights contributed by the community.
               </p>
             </div>

@@ -9,7 +9,7 @@ export interface DiscordAttachment {
   size?: number;
 }
 
-export interface DiscordEmbed {
+interface DiscordEmbed {
   url?: string;
   title?: string;
   description?: string;

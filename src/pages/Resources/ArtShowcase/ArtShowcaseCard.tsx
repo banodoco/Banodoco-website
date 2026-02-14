@@ -54,7 +54,7 @@ export const ArtShowcaseCard = ({ message, onClick, featured = false }: ArtShowc
       </div>
 
       {/* Info */}
-      <div className="p-3">
+      <div className="p-2.5 sm:p-3">
         <div className="flex items-center gap-1.5">
           {avatarUrl && (
             <img src={avatarUrl} alt="" className="w-4 h-4 rounded-full flex-shrink-0" loading="lazy" />

@@ -15,7 +15,7 @@ export const ResourceFeedCard = ({ message }: ResourceFeedCardProps) => {
   const embedsWithContent = message.embeds.filter(e => e.title || e.description).slice(0, 1);
 
   return (
-    <div className="bg-white/[0.03] rounded-xl p-4 border border-white/5 hover:border-white/10 transition">
+    <div className="bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/5 hover:border-white/10 transition">
       {/* Author header */}
       <div className="flex items-center gap-2.5 mb-3">
         {avatarUrl ? (
@@ -95,12 +95,12 @@ export const ResourceFeedCard = ({ message }: ResourceFeedCardProps) => {
       {mediaAttachments.length > 0 && (
         <div className="flex gap-2 mb-3">
           {mediaAttachments.map((att) => (
-            <div key={att.id} className="rounded-md overflow-hidden flex-shrink-0" style={{ height: 80 }}>
+            <div key={att.id} className="rounded-md overflow-hidden flex-shrink-0 h-16 sm:h-20">
               <MediaWithRefresh
                 src={att.url}
                 messageId={message.message_id}
                 alt={att.filename}
-                className="h-full w-auto max-w-[140px] rounded-md"
+                className="h-full w-auto max-w-[100px] sm:max-w-[140px] rounded-md"
                 isVideo={isVideoContentType(att.content_type)}
               />
             </div>

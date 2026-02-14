@@ -1,6 +1,6 @@
 import type { DiscordAttachment } from '@/pages/Resources/Discord/types';
 
-export interface ContentSegment {
+interface ContentSegment {
   type: 'text' | 'url';
   value: string;
 }
