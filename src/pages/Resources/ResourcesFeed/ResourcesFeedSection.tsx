@@ -28,7 +28,7 @@ function SkeletonCard() {
 export const ResourcesFeedSection = () => {
   const { messages, loading, loadingMore, error, hasMore, loadMore } = useDiscordMessages(
     CHANNEL_RESOURCES,
-    20,
+    8,
   );
 
   if (error) {
