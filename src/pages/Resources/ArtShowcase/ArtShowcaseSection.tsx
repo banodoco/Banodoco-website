@@ -18,11 +18,6 @@ export const ArtShowcaseSection = () => {
 
   return (
     <section>
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-zinc-100 tracking-tight">Art Showcase</h2>
-        <p className="mt-2 text-sm text-white/50">Community creations from the art sharing channel</p>
-      </div>
-
       {/* Loading skeleton */}
       {loading && (
         <div className="grid grid-cols-12 gap-4">

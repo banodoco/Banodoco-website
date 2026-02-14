@@ -26,9 +26,9 @@ export const ArtShowcaseCard = ({ message, onClick, featured = false }: ArtShowc
           src={attachment.url}
           messageId={message.message_id}
           alt={attachment.filename}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          isVideo={false}
-          poster={isVideo ? attachment.url : undefined}
+          className="w-full h-full transition-transform duration-300 group-hover:scale-105"
+          isVideo={isVideo}
+          videoPreview
         />
 
         {/* Video badge */}

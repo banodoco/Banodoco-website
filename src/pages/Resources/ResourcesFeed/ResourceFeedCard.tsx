@@ -12,7 +12,7 @@ export const ResourceFeedCard = ({ message }: ResourceFeedCardProps) => {
   const avatarUrl = author?.avatar_url;
   const segments = parseUrls(message.content);
   const mediaAttachments = message.attachments.filter(isMediaAttachment).slice(0, 3);
-  const embedsWithContent = message.embeds.filter(e => e.title || e.description);
+  const embedsWithContent = message.embeds.filter(e => e.title || e.description).slice(0, 1);
 
   return (
     <div className="bg-white/[0.03] rounded-xl p-4 border border-white/5 hover:border-white/10 transition">
@@ -38,9 +38,9 @@ export const ResourceFeedCard = ({ message }: ResourceFeedCardProps) => {
         </div>
       </div>
 
-      {/* Content body */}
+      {/* Content body — clamped to 4 lines */}
       {message.content && (
-        <div className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap break-words mb-3">
+        <div className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap break-words mb-3 line-clamp-4">
           {segments.map((seg, i) =>
             seg.type === 'url' ? (
               <a
