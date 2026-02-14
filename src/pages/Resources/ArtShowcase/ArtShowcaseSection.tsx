@@ -6,7 +6,7 @@ import { ArtShowcaseCard } from './ArtShowcaseCard';
 import { ArtShowcaseModal } from './ArtShowcaseModal';
 
 export const ArtShowcaseSection = () => {
-  const { messages, loading, loadingMore, hasMore, loadMore } = useDiscordMessages(CHANNEL_ART_SHARING, 20);
+  const { messages, loading, loadingMore, hasMore, loadMore } = useDiscordMessages(CHANNEL_ART_SHARING, 8);
   const [selectedMessage, setSelectedMessage] = useState<EnrichedDiscordMessage | null>(null);
 
   // Filter to only messages with image or video attachments
@@ -21,7 +21,7 @@ export const ArtShowcaseSection = () => {
       {/* Loading skeleton */}
       {loading && (
         <div className="grid grid-cols-12 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
               className={`${i < 2 ? 'col-span-12 sm:col-span-6 lg:col-span-6' : 'col-span-12 sm:col-span-6 lg:col-span-4'} rounded-lg overflow-hidden bg-white/5 border border-white/10 animate-pulse`}
