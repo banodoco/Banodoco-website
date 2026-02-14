@@ -1,56 +1,105 @@
-import { Link, useParams, Navigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Play, User, Sparkles } from 'lucide-react';
 import { getWeeks } from './data';
 
 const ArtPicksDetail = () => {
-  const { weekId } = useParams<{ weekId: string }>();
-  const week = getWeeks().find((w) => w.id === weekId);
+  const { weekId } = useParams();
+  const allWeeks = getWeeks();
+  const week = allWeeks.find((w) => w.id === weekId);
 
   if (!week) {
-    return <Navigate to="/resources/art-picks" replace />;
+    return (
+      <div className="min-h-screen flex items-center justify-center flex-col gap-4">
+        <h1 className="text-2xl font-bold">Week not found</h1>
+        <Link to="/resources/art-picks" className="text-orange-500 underline">
+          Back to Archive
+        </Link>
+      </div>
+    );
   }
 
-  const startDate = new Date(week.weekOf + 'T00:00:00');
-  const endDate = new Date(startDate);
-  endDate.setDate(startDate.getDate() + 6);
-  const dateRange = `${startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
-
   return (
-    <div className="pt-20 pb-16 px-6 md:px-20 lg:px-24 max-w-[1400px] mx-auto">
-      <Link
-        to="/resources/art-picks"
-        className="inline-block text-sm text-white/40 hover:text-white transition-colors mb-6"
-      >
-        &larr; Back to Art Picks
-      </Link>
-
-      <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-tight">
-        {week.title}
-      </h1>
-      <p className="text-white/50 text-sm mt-1">{dateRange}</p>
-
-      <p className="text-white/60 mt-4 mb-8 max-w-2xl leading-relaxed">
-        {week.introText}
-      </p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {week.videos.map((video, i) => (
-          <div key={i}>
-            {/* Placeholder video thumbnail */}
-            <div className="aspect-video bg-white/5 border border-white/10 rounded-lg flex items-center justify-center">
-              <svg
-                className="w-12 h-12 text-white/20"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M8 5v14l11-7z" />
-              </svg>
+    <div className="max-w-[1400px] mx-auto px-6 pt-20 pb-32">
+      {/* Header Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-24">
+        <div className="lg:col-span-8 space-y-8">
+          <Link
+            to="/resources/art-picks"
+            className="inline-flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
+          >
+            <ArrowLeft size={14} /> Back to Archive
+          </Link>
+          <div className="space-y-4">
+            <h1 className="text-5xl md:text-8xl font-black tracking-tighter uppercase leading-none">
+              {week.title}
+            </h1>
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                Curated by Banodoco Editorial
+              </span>
+              <span className="w-1 h-1 bg-zinc-800 rounded-full" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                Issue #{week.id.split('w')[1]}
+              </span>
             </div>
-            <h3 className="mt-2 text-sm font-medium text-white/80">
-              {video.title}
-            </h3>
-            <p className="text-xs text-white/40">{video.creator}</p>
           </div>
-        ))}
+          <p className="text-zinc-400 text-xl font-light leading-relaxed max-w-3xl border-l border-zinc-800 pl-8 py-4">
+            {week.introText}
+          </p>
+        </div>
+
+        <div className="lg:col-span-4 flex items-end">
+          <div className="w-full aspect-square bg-zinc-900/50 rounded-3xl border border-zinc-800 flex items-center justify-center p-12 text-center group">
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-white rounded-full mx-auto flex items-center justify-center text-black group-hover:scale-110 transition-transform">
+                <Sparkles size={24} />
+              </div>
+              <div className="text-xl font-black tracking-tighter">FEATURED ISSUE</div>
+              <div className="text-zinc-500 text-xs font-bold uppercase tracking-widest leading-relaxed">
+                Exploration of<br />Temporal Consistency
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Video Grid — Editorial Style */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8">
+        {week.videos.map((video, idx) => {
+          const span =
+            idx === 0
+              ? 'lg:col-span-8'
+              : idx === 3 || idx === 7
+                ? 'lg:col-span-6'
+                : 'lg:col-span-4';
+
+          return (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: (idx % 4) * 0.1 }}
+              className={`${span} group relative aspect-video overflow-hidden rounded-2xl bg-zinc-900 border border-zinc-800`}
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+
+              {/* Placeholder play icon */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-10 group-hover:opacity-20 transition-opacity">
+                <Play size={48} className="text-white" />
+              </div>
+
+              <div className="absolute bottom-0 left-0 right-0 p-6 z-20 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                <div className="flex items-center gap-2 text-[10px] font-black tracking-widest text-orange-500 uppercase mb-2">
+                  <User size={12} />
+                  {video.creator}
+                </div>
+                <h3 className="text-xl font-bold tracking-tight">{video.title}</h3>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

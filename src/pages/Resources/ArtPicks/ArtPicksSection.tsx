@@ -1,67 +1,84 @@
 import { Link } from 'react-router-dom';
+import { ArrowUpRight } from 'lucide-react';
 import { getWeeks } from './data';
 import { ArtPickCard } from './ArtPickCard';
 
 export const ArtPicksSection = () => {
-  const weeks = getWeeks();
-  const featured = weeks[0];
-  const nextFour = weeks.slice(1, 5);
-
-  const startDate = new Date(featured.weekOf + 'T00:00:00');
-  const endDate = new Date(startDate);
-  endDate.setDate(startDate.getDate() + 6);
-  const dateRange = `${startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+  const allWeeks = getWeeks();
+  const featuredWeek = allWeeks[0];
+  const recentWeeks = allWeeks.slice(1, 4);
 
   return (
-    <div className="mt-16">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-semibold text-white">Art From The Community</h2>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+      {/* Featured Large Card */}
+      <div className="lg:col-span-7">
         <Link
-          to="/resources/art-picks"
-          className="text-sm text-white/40 hover:text-white transition-colors"
+          to={`/resources/art-picks/${featuredWeek.id}`}
+          className="block group relative aspect-[16/10] overflow-hidden rounded-3xl bg-zinc-900 border border-white/5"
         >
-          View all &rarr;
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10" />
+
+          {/* Decorative week number */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-30">
+            <span className="text-[15rem] font-black text-white italic -rotate-12 select-none tracking-tighter">
+              {featuredWeek.id.split('-')[1].toUpperCase()}
+            </span>
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 p-8 lg:p-12 z-20 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1 bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full">
+                Latest Issue
+              </span>
+              <span className="text-zinc-400 text-xs font-bold tracking-widest uppercase">
+                {featuredWeek.title}
+              </span>
+            </div>
+            <h3 className="text-4xl md:text-6xl font-black tracking-tighter group-hover:text-zinc-300 transition-colors">
+              THE CUTTING EDGE
+            </h3>
+            <p className="text-zinc-400 max-w-xl line-clamp-2 text-lg font-light leading-relaxed">
+              {featuredWeek.introText}
+            </p>
+          </div>
+
+          <div className="absolute top-12 right-12 z-20 p-4 rounded-full bg-white/10 backdrop-blur-md opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+            <ArrowUpRight size={32} />
+          </div>
         </Link>
       </div>
 
-      {/* Side-by-side: featured left, 2x2 grid right */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Featured latest week — left half */}
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col">
-          <div className="aspect-video bg-white/5 flex items-center justify-center">
-            <svg
-              className="w-14 h-14 text-white/15"
-              fill="currentColor"
-              viewBox="0 0 24 24"
+      {/* Side Recent Weeks */}
+      <div className="lg:col-span-5 flex flex-col justify-between">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+            <span className="text-[10px] font-black tracking-widest uppercase text-zinc-500">Recent Archives</span>
+            <Link
+              to="/resources/art-picks"
+              className="text-[10px] font-black tracking-widest uppercase text-white hover:text-orange-500 transition-colors"
             >
-              <path d="M8 5v14l11-7z" />
-            </svg>
+              View All Issues
+            </Link>
           </div>
 
-          <div className="p-4 md:p-5 flex flex-col flex-1">
-            <h3 className="text-lg md:text-xl font-semibold text-white">
-              Top Art From the {featured.title}
-            </h3>
-            <p className="text-xs text-white/40 mt-0.5">{dateRange}</p>
-
-            <p className="text-white/50 text-sm mt-2 leading-relaxed line-clamp-3">
-              {featured.introText}
-            </p>
-
-            <Link
-              to={`/resources/art-picks/${featured.id}`}
-              className="inline-block mt-3 px-4 py-2 rounded-lg text-sm font-medium bg-white/10 text-white/80 hover:bg-white/15 hover:text-white transition-colors self-start"
-            >
-              View all picks from this week &rarr;
-            </Link>
+          <div className="grid grid-cols-1 gap-4">
+            {recentWeeks.map((week) => (
+              <ArtPickCard key={week.id} week={week} />
+            ))}
           </div>
         </div>
 
-        {/* 2x2 grid of previous weeks — right half */}
-        <div className="grid grid-cols-2 gap-3">
-          {nextFour.map((week) => (
-            <ArtPickCard key={week.id} week={week} />
-          ))}
+        <div className="mt-12 p-8 bg-zinc-900/50 rounded-3xl border border-zinc-800 border-dashed">
+          <p className="text-zinc-500 text-sm leading-relaxed mb-6">
+            Explore 2 years of community art. Each week features 10 hand-picked videos that defined the aesthetic of AI generation at that moment in time.
+          </p>
+          <Link
+            to="/resources/art-picks"
+            className="inline-flex items-center gap-2 text-sm font-bold border-b border-white pb-1 hover:text-orange-500 hover:border-orange-500 transition-all"
+          >
+            Browse the Archive
+            <ArrowUpRight size={16} />
+          </Link>
         </div>
       </div>
     </div>
