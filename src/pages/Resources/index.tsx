@@ -60,7 +60,7 @@ const Resources = () => {
   const coverImgRef = useRef<HTMLImageElement>(null);
   const lastFrameRef = useRef(0);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const frameIndex = useTransform(scrollYProgress, [0, 0.5], [0, FRAME_COUNT - 1], { clamp: true });
+  const frameIndex = useTransform(scrollYProgress, [0, 1], [0, FRAME_COUNT - 1]);
   const coverScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
 
   // Preload all frames into browser cache
