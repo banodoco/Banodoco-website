@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
 import { LayoutGrid, Palette, BookOpen, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
 import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
@@ -12,6 +12,8 @@ import { CommunityNewsSection } from './CommunityNews/CommunityNewsSection';
 import type { Asset } from './types';
 
 const ITEMS_PER_PAGE = 8;
+const FRAME_COUNT = 155;
+const FRAME_PATHS = Array.from({ length: FRAME_COUNT }, (_, i) => `/bndc/${String(i + 1).padStart(4, '0')}.jpg`);
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -53,11 +55,26 @@ const Resources = () => {
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
-  // Parallax for magazine cover
+  // Scroll-driven image sequence for magazine cover
   const heroRef = useRef<HTMLElement>(null);
+  const coverImgRef = useRef<HTMLImageElement>(null);
+  const lastFrameRef = useRef(0);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const coverY = useTransform(scrollYProgress, [0, 1], ['0%', '25%']);
-  const coverScale = useTransform(scrollYProgress, [0, 1], [1, 1.15]);
+  const frameIndex = useTransform(scrollYProgress, [0, 1], [0, FRAME_COUNT - 1]);
+  const coverScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
+
+  // Preload all frames into browser cache
+  useEffect(() => {
+    FRAME_PATHS.forEach(src => { const img = new Image(); img.src = src; });
+  }, []);
+
+  // Swap frame on scroll (direct DOM update, no React re-render)
+  useMotionValueEvent(frameIndex, 'change', (latest) => {
+    const index = Math.min(FRAME_COUNT - 1, Math.max(0, Math.round(latest)));
+    if (index === lastFrameRef.current) return;
+    lastFrameRef.current = index;
+    if (coverImgRef.current) coverImgRef.current.src = FRAME_PATHS[index];
+  });
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
@@ -141,13 +158,15 @@ const Resources = () => {
                   </div>
                 </div>
               </div>
-              {/* Parallax Background Image */}
-              <motion.img
-                src="/bndc/0001.jpg"
-                alt="Cover art"
-                style={{ y: coverY, scale: coverScale }}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+              {/* Scroll-driven image sequence */}
+              <motion.div style={{ scale: coverScale }} className="absolute inset-0">
+                <img
+                  ref={coverImgRef}
+                  src="/bndc/0001.jpg"
+                  alt="Cover art"
+                  className="w-full h-full object-cover"
+                />
+              </motion.div>
             </div>
 
             {/* Magazine Style Vertical Label */}
