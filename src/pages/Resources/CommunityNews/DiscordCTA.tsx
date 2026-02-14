@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DiscordIcon } from '@/components/ui/icons';
-import { DISCORD_INVITE_URL, CLAUDE_CODE_INSTRUCTIONS } from '@/lib/discord';
+const DISCORD_INVITE_URL = 'https://discord.gg/NnFxGvx94b';
+const CLAUDE_CODE_INSTRUCTIONS = 'Join the Banodoco Discord community at https://discord.gg/NnFxGvx94b';
 
 export const DiscordCTA = () => {
   const [copied, setCopied] = useState(false);

@@ -50,8 +50,9 @@ export const HlsPlayer = ({ hlsUrl, thumbnailUrl, autoPlay = true, className = '
         if (autoPlay) video.play().catch(() => {});
       });
 
-      hls.on(Hls.Events.ERROR, (_event: unknown, data: { fatal: boolean }) => {
-        if (data.fatal) {
+      hls.on(Hls.Events.ERROR, (...args: unknown[]) => {
+        const data = args[1] as { fatal: boolean } | undefined;
+        if (data?.fatal) {
           setError(true);
           setLoading(false);
         }
