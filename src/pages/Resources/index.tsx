@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
 import { LayoutGrid, Palette, BookOpen, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
 import { useResources } from './useResources';
@@ -12,8 +12,8 @@ import { CommunityNewsSection } from './CommunityNews/CommunityNewsSection';
 import type { Asset } from './types';
 
 const ITEMS_PER_PAGE = 8;
-const FRAME_COUNT = 155;
-const FRAME_PATHS = Array.from({ length: FRAME_COUNT }, (_, i) => `/bndc/${String(i + 1).padStart(4, '0')}.jpg`);
+const FRAME_COUNT = 25;
+const FRAME_PATHS = Array.from({ length: FRAME_COUNT }, (_, i) => `/assorted_propaganda/${i + 1}.jpg`);
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -63,18 +63,44 @@ const Resources = () => {
   const frameIndex = useTransform(scrollYProgress, [0, 1], [0, FRAME_COUNT - 1]);
   const coverScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
 
+  // Autoplay state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playFrameRef = useRef(0);
+  const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Preload all frames into browser cache
   useEffect(() => {
     FRAME_PATHS.forEach(src => { const img = new Image(); img.src = src; });
   }, []);
 
-  // Swap frame on scroll (direct DOM update, no React re-render)
+  // Swap frame on scroll (direct DOM update, no React re-render) — only when not autoplaying
   useMotionValueEvent(frameIndex, 'change', (latest) => {
+    if (isPlaying) return;
     const index = Math.min(FRAME_COUNT - 1, Math.max(0, Math.round(latest)));
     if (index === lastFrameRef.current) return;
     lastFrameRef.current = index;
     if (coverImgRef.current) coverImgRef.current.src = FRAME_PATHS[index];
   });
+
+  // Autoplay: cycle through frames on interval
+  const togglePlay = useCallback(() => {
+    setIsPlaying(prev => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      if (playIntervalRef.current) clearInterval(playIntervalRef.current);
+      playIntervalRef.current = null;
+      return;
+    }
+    playFrameRef.current = lastFrameRef.current;
+    playIntervalRef.current = setInterval(() => {
+      playFrameRef.current = (playFrameRef.current + 1) % FRAME_COUNT;
+      lastFrameRef.current = playFrameRef.current;
+      if (coverImgRef.current) coverImgRef.current.src = FRAME_PATHS[playFrameRef.current];
+    }, 800);
+    return () => { if (playIntervalRef.current) clearInterval(playIntervalRef.current); };
+  }, [isPlaying]);
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
@@ -152,9 +178,19 @@ const Resources = () => {
                   <h2 className="text-2xl font-bold leading-tight">Hyper-realistic<br />Dreamscapes</h2>
                   <div className="pt-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
                     <span className="text-xs text-zinc-400">Issue #104</span>
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black">
-                      <Play size={16} fill="black" />
-                    </div>
+                    <button
+                      onClick={togglePlay}
+                      className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black hover:scale-110 transition-transform cursor-pointer relative z-30"
+                    >
+                      {isPlaying ? (
+                        <span className="flex gap-[3px]">
+                          <span className="w-[3px] h-4 bg-black rounded-sm" />
+                          <span className="w-[3px] h-4 bg-black rounded-sm" />
+                        </span>
+                      ) : (
+                        <Play size={16} fill="black" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -162,7 +198,7 @@ const Resources = () => {
               <motion.div style={{ scale: coverScale }} className="absolute inset-0">
                 <img
                   ref={coverImgRef}
-                  src="/bndc/0001.jpg"
+                  src="/assorted_propaganda/1.jpg"
                   alt="Cover art"
                   className="w-full h-full object-cover"
                 />
