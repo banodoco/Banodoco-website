@@ -1,25 +1,21 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
-import { Skeleton } from '@/components/ui/Skeleton';
 import Home from '@/pages/Home';
 
 // Lazy load non-critical pages
 const OwnershipPage = lazy(() => import('@/pages/OwnershipPage'));
 const SecondRenaissance = lazy(() => import('@/pages/SecondRenaissance'));
 const WrappedPage = lazy(() => import('@/pages/Wrapped'));
+const Resources = lazy(() => import('@/pages/Resources'));
+const ArtPicksIndex = lazy(() => import('@/pages/Resources/ArtPicks/ArtPicksIndex'));
+const ArtPicksDetail = lazy(() => import('@/pages/Resources/ArtPicks/ArtPicksDetail'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
-// Loading fallback with skeleton
+// Minimal loading fallback — keeps layout stable while lazy chunks load.
+// Intentionally blank so page-specific skeletons (e.g. ResourceGrid) aren't preceded by a flash.
 const PageLoader = () => (
-  <div className="min-h-[60vh] flex items-center justify-center">
-    <div className="w-full max-w-md space-y-4 px-6">
-      <Skeleton className="h-8 w-3/4 mx-auto" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-5/6" />
-      <Skeleton className="h-4 w-4/6" />
-    </div>
-  </div>
+  <div className="min-h-[60vh]" />
 );
 
 function App() {
@@ -32,6 +28,9 @@ function App() {
             <Route path="/ownership" element={<OwnershipPage />} />
             <Route path="/2nd-renaissance" element={<SecondRenaissance />} />
             <Route path="/1m" element={<WrappedPage />} />
+            <Route path="/resources" element={<Resources />} />
+            <Route path="/resources/art-picks" element={<ArtPicksIndex />} />
+            <Route path="/resources/art-picks/:weekId" element={<ArtPicksDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

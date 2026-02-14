@@ -20,9 +20,10 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const isHome = pathname === '/';
   const isSecondRenaissance = pathname === '/2nd-renaissance';
   const isWrapped = pathname === '/1m';
+  const isResources = pathname.startsWith('/resources');
   const [isIOSDevice] = useState(() => isIOS());
 
-  const theme = (isHome || isSecondRenaissance || isWrapped) ? 'dark' : 'light';
+  const theme = (isHome || isSecondRenaissance || isWrapped || isResources) ? 'dark' : 'light';
 
   if (isHome) {
     return (
@@ -70,7 +71,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
   return (
     <LayoutProvider theme={theme} isHomePage={isHome}>
-      <div className="min-h-screen flex flex-col bg-[#f5f5f3] text-foreground">
+      <div className={`min-h-screen flex flex-col ${isResources ? 'bg-[var(--color-bg-base)] text-white' : 'bg-[#f5f5f3] text-foreground'}`}>
         <Header />
         <main className="flex-1">
           {children}
