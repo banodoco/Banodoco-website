@@ -14,6 +14,7 @@ import type { Asset } from './types';
 const ITEMS_PER_PAGE = 8;
 const FRAME_COUNT = 25;
 const FRAME_PATHS = Array.from({ length: FRAME_COUNT }, (_, i) => `/assorted_propaganda/${i + 1}.jpg`);
+const INITIAL_FRAME = Math.floor(Math.random() * FRAME_COUNT);
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -58,7 +59,7 @@ const Resources = () => {
   // Scroll-driven image sequence for magazine cover
   const heroRef = useRef<HTMLElement>(null);
   const coverImgRef = useRef<HTMLImageElement>(null);
-  const lastFrameRef = useRef(0);
+  const lastFrameRef = useRef(INITIAL_FRAME);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
   const frameIndex = useTransform(scrollYProgress, [0, 1], [0, FRAME_COUNT - 1]);
   const coverScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
@@ -198,7 +199,7 @@ const Resources = () => {
               <motion.div style={{ scale: coverScale }} className="absolute inset-0">
                 <img
                   ref={coverImgRef}
-                  src="/assorted_propaganda/1.jpg"
+                  src={FRAME_PATHS[INITIAL_FRAME]}
                   alt="Cover art"
                   className="w-full h-full object-cover"
                 />
