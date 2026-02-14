@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { LayoutGrid, Palette, BookOpen, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
 import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
@@ -53,10 +53,16 @@ const Resources = () => {
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
+  // Parallax for magazine cover
+  const heroRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const coverY = useTransform(scrollYProgress, [0, 1], ['0%', '25%']);
+  const coverScale = useTransform(scrollYProgress, [0, 1], [1, 1.15]);
+
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
       {/* Full-screen Hero — Editorial Magazine */}
-      <section className="relative h-screen flex items-center justify-center px-6 overflow-hidden border-b border-white/5">
+      <section ref={heroRef} className="relative h-screen flex items-center justify-center px-6 overflow-hidden border-b border-white/5">
         {/* Abstract Background */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[120px]" />
@@ -135,11 +141,13 @@ const Resources = () => {
                   </div>
                 </div>
               </div>
-              {/* Background Mock Graphic */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-                <div className="w-full h-full bg-gradient-to-tr from-indigo-500/20 via-transparent to-orange-500/20" />
-                <span className="absolute text-[200px] font-black text-white/5 italic">B</span>
-              </div>
+              {/* Parallax Background Image */}
+              <motion.img
+                src="/bndc/0001.jpg"
+                alt="Cover art"
+                style={{ y: coverY, scale: coverScale }}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
             </div>
 
             {/* Magazine Style Vertical Label */}
