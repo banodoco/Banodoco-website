@@ -3,8 +3,8 @@ import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent }
 import { LayoutGrid, Palette, BookOpen, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
 import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
-import { ArtShowcaseSection } from './ArtShowcase/ArtShowcaseSection';
-import { ResourcesFeedSection } from './ResourcesFeed/ResourcesFeedSection';
+import { ArtGallerySection } from './ArtGallery/ArtGallerySection';
+import { CommunityResourcesSection } from './CommunityResourcesFeed/CommunityResourcesSection';
 import { FilterBar } from './FilterBar';
 import { ResourceGrid } from './ResourceGrid';
 import { ResourceModal } from './ResourceModal';
@@ -271,7 +271,7 @@ const Resources = () => {
               Community Art
             </h2>
           </div>
-          <ArtShowcaseSection />
+          <ArtGallerySection />
         </motion.section>
 
         {/* Community Resources */}
@@ -291,7 +291,7 @@ const Resources = () => {
               Community Resources
             </h2>
           </div>
-          <ResourcesFeedSection />
+          <CommunityResourcesSection />
         </motion.section>
 
         {/* The Forge — Assets */}

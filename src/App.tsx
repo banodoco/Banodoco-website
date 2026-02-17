@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { MainLayout } from '@/layouts/MainLayout';
 import Home from '@/pages/Home';
 
@@ -8,6 +9,12 @@ const OwnershipPage = lazy(() => import('@/pages/OwnershipPage'));
 const SecondRenaissance = lazy(() => import('@/pages/SecondRenaissance'));
 const WrappedPage = lazy(() => import('@/pages/Wrapped'));
 const Resources = lazy(() => import('@/pages/Resources'));
+const ArtDetail = lazy(() => import('@/pages/ArtDetail'));
+const ResourceDetail = lazy(() => import('@/pages/ResourceDetail'));
+const UserProfile = lazy(() => import('@/pages/UserProfile'));
+const AuthCallback = lazy(() => import('@/pages/AuthCallback'));
+const SubmitArt = lazy(() => import('@/pages/SubmitArt'));
+const SubmitResource = lazy(() => import('@/pages/SubmitResource'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Minimal loading fallback — keeps layout stable while lazy chunks load.
@@ -19,18 +26,30 @@ const PageLoader = () => (
 function App() {
   return (
     <Router>
-      <MainLayout>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/ownership" element={<OwnershipPage />} />
-            <Route path="/2nd-renaissance" element={<SecondRenaissance />} />
-            <Route path="/1m" element={<WrappedPage />} />
-            <Route path="/resources" element={<Resources />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </MainLayout>
+      <AuthProvider>
+        <MainLayout>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/ownership" element={<OwnershipPage />} />
+              <Route path="/2nd-renaissance" element={<SecondRenaissance />} />
+              <Route path="/1m" element={<WrappedPage />} />
+              <Route path="/resources" element={<Resources />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/u/:username" element={<UserProfile />} />
+              <Route path="/u/:username/art" element={<UserProfile />} />
+              <Route path="/u/:username/resources" element={<UserProfile />} />
+              <Route path="/u/:username/art/:id" element={<ArtDetail />} />
+              <Route path="/u/:username/resources/:id" element={<ResourceDetail />} />
+              <Route path="/art/:id" element={<ArtDetail />} />
+              <Route path="/resources/:id" element={<ResourceDetail />} />
+              <Route path="/submit/art" element={<SubmitArt />} />
+              <Route path="/submit/resource" element={<SubmitResource />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </MainLayout>
+      </AuthProvider>
     </Router>
   );
 }
