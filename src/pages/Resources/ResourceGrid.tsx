@@ -5,7 +5,6 @@ interface ResourceGridProps {
   assets: Asset[];
   profiles: Map<string, AssetProfile>;
   loading: boolean;
-  onCardClick: (asset: Asset) => void;
 }
 
 const SkeletonCard = ({ featured = false }: { featured?: boolean }) => (
@@ -38,7 +37,7 @@ const SkeletonCard = ({ featured = false }: { featured?: boolean }) => (
   </div>
 );
 
-export const ResourceGrid = ({ assets, profiles, loading, onCardClick }: ResourceGridProps) => {
+export const ResourceGrid = ({ assets, profiles, loading }: ResourceGridProps) => {
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
@@ -60,9 +59,25 @@ export const ResourceGrid = ({ assets, profiles, loading, onCardClick }: Resourc
     );
   }
 
+  // Trim items so the last row on xl (4 cols) is always full.
+  // Featured items span 2 cols, regular items span 1.
+  const xlCols = 4;
+  let slots = 0;
+  const displayAssets: Asset[] = [];
+  for (const asset of assets) {
+    const span = asset.admin_status === 'Featured' ? 2 : 1;
+    displayAssets.push(asset);
+    slots += span;
+  }
+  // Remove items from the end until total slots is divisible by xlCols
+  while (displayAssets.length > 0 && slots % xlCols !== 0) {
+    const removed = displayAssets.pop()!;
+    slots -= removed.admin_status === 'Featured' ? 2 : 1;
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-      {assets.map(asset => {
+      {displayAssets.map(asset => {
         const isFeaturedSize = asset.admin_status === 'Featured';
         return (
           <div
@@ -73,7 +88,6 @@ export const ResourceGrid = ({ assets, profiles, loading, onCardClick }: Resourc
               asset={asset}
               profile={asset.user_id ? profiles.get(asset.user_id) : null}
               isFeaturedSize={isFeaturedSize}
-              onClick={() => onCardClick(asset)}
             />
           </div>
         );

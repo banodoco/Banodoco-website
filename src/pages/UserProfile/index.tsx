@@ -110,7 +110,7 @@ const UserProfile = () => {
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
-      <div className="max-w-6xl mx-auto px-6 py-16">
+      <div className="max-w-6xl mx-auto px-6 pt-24 pb-16">
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

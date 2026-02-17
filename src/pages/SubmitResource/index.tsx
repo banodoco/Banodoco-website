@@ -87,7 +87,7 @@ function SubmitResourceForm() {
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
-      <div className="max-w-2xl mx-auto px-6 py-16 sm:py-24">
+      <div className="max-w-2xl mx-auto px-6 pt-24 pb-16 sm:pt-28 sm:pb-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

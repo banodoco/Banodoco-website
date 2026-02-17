@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { BASE_MODEL_MAP } from './constants';
 import type { Asset, AssetMedia, AssetProfile } from './types';
 
@@ -19,10 +20,9 @@ interface ResourceCardProps {
   asset: Asset;
   profile?: AssetProfile | null;
   isFeaturedSize?: boolean;
-  onClick: () => void;
 }
 
-export const ResourceCard = ({ asset, profile, isFeaturedSize, onClick }: ResourceCardProps) => {
+export const ResourceCard = ({ asset, profile, isFeaturedSize }: ResourceCardProps) => {
   const media = unwrap<AssetMedia>(asset.media);
   const thumbnailUrl = media?.cloudflare_thumbnail_url;
   const hasVideo = !!media?.cloudflare_playback_hls_url;
@@ -43,12 +43,16 @@ export const ResourceCard = ({ asset, profile, isFeaturedSize, onClick }: Resour
     setAnimatedLoaded(false);
   }, []);
 
+  const linkUrl = profile?.username
+    ? `/u/${profile.username}/resources/${asset.id}`
+    : `/resources/${asset.id}`;
+
   return (
-    <button
-      onClick={onClick}
+    <Link
+      to={linkUrl}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`group text-left w-full rounded-lg overflow-hidden bg-white/5 border transition-all duration-200 hover:scale-[1.02] hover:border-white/20 cursor-pointer ${
+      className={`group block w-full rounded-lg overflow-hidden bg-white/5 border transition-all duration-200 hover:scale-[1.02] hover:border-white/20 cursor-pointer ${
         isFeatured
           ? 'border-amber-400/30 hover:border-amber-400/50'
           : isCurated
@@ -148,6 +152,6 @@ export const ResourceCard = ({ asset, profile, isFeaturedSize, onClick }: Resour
           )}
         </div>
       </div>
-    </button>
+    </Link>
   );
 };

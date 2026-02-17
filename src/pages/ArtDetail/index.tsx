@@ -42,7 +42,7 @@ const ArtDetail = () => {
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-24 pb-8 sm:pt-28 sm:pb-12">
         {/* Back button */}
         <button
           onClick={() => navigate(-1)}

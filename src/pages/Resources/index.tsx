@@ -1,14 +1,12 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
+import { motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
 import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
 import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
 import { ArtGallerySection } from './ArtGallery/ArtGallerySection';
 import { FilterBar } from './FilterBar';
 import { ResourceGrid } from './ResourceGrid';
-import { ResourceModal } from './ResourceModal';
 import { CommunityNewsSection } from './CommunityNews/CommunityNewsSection';
-import type { Asset } from './types';
 
 const ITEMS_PER_PAGE = 8;
 const FRAME_COUNT = 25;
@@ -35,7 +33,6 @@ const Resources = () => {
     availableLoraTypes,
   } = useResourceFilters(assets);
 
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [page, setPage] = useState(1);
 
   // Reset to page 1 whenever filters change (synchronous render-time check)
@@ -325,7 +322,6 @@ const Resources = () => {
                 assets={paginatedAssets}
                 profiles={profiles}
                 loading={loading}
-                onCardClick={setSelectedAsset}
               />
             </div>
           )}
@@ -358,15 +354,6 @@ const Resources = () => {
 
       </div>
 
-      {/* Modal */}
-      <AnimatePresence>
-        {selectedAsset && (
-          <ResourceModal
-            asset={selectedAsset}
-            onClose={() => setSelectedAsset(null)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 };
