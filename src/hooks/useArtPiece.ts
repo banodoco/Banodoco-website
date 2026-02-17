@@ -99,6 +99,7 @@ export const useArtPiece = (id: string | undefined): UseArtPieceResult => {
           mediaType: row.type,
           createdAt: row.created_at,
           creator,
+          userId: row.user_id,
         });
       } catch {
         setError('Failed to load art piece');

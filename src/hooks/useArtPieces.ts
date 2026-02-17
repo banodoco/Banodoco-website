@@ -17,6 +17,7 @@ export interface ArtPieceItem {
   mediaType: string | null;
   createdAt: string;
   creator: ArtPieceCreator;
+  userId: string | null;
 }
 
 interface MediaRow {
@@ -76,6 +77,7 @@ function mapRowToItem(row: MediaRow, profileMap: Map<string, ProfileRow>): ArtPi
     mediaType: row.type,
     createdAt: row.created_at,
     creator,
+    userId: row.user_id,
   };
 }
 
