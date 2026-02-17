@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 002: Art Pieces, Community Resources, Profile extensions
+-- Migration 002: Profile extensions, storage bucket, auth trigger, RLS
 -- ============================================================================
 
 -- Enable UUID generation if not already enabled
@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ============================================================================
 
 ALTER TABLE profiles
-  ADD COLUMN IF NOT EXISTS bio TEXT,
+  ADD COLUMN IF NOT EXISTS description TEXT,
   ADD COLUMN IF NOT EXISTS discord_member_id TEXT,
   ADD COLUMN IF NOT EXISTS discord_username TEXT;
 
@@ -25,106 +25,8 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 2. art_pieces table
+-- 2. RLS Policies
 -- ============================================================================
-
-CREATE TABLE IF NOT EXISTS art_pieces (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  source_type TEXT NOT NULL DEFAULT 'discord' CHECK (source_type IN ('discord', 'upload')),
-  discord_message_id TEXT REFERENCES discord_messages(message_id),
-  title TEXT,
-  caption TEXT,
-  user_id UUID REFERENCES auth.users(id),
-  discord_author_id TEXT,
-  media_urls TEXT[] NOT NULL DEFAULT '{}',
-  media_types TEXT[] NOT NULL DEFAULT '{}',
-  thumbnail_url TEXT,
-  reaction_count INT NOT NULL DEFAULT 0,
-  tags TEXT[] NOT NULL DEFAULT '{}',
-  associated_asset_id UUID REFERENCES assets(id),
-  status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('published', 'draft', 'hidden')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_art_pieces_status ON art_pieces(status);
-CREATE INDEX IF NOT EXISTS idx_art_pieces_user_id ON art_pieces(user_id);
-CREATE INDEX IF NOT EXISTS idx_art_pieces_discord_message_id ON art_pieces(discord_message_id);
-CREATE INDEX IF NOT EXISTS idx_art_pieces_created_at ON art_pieces(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_art_pieces_reaction_count ON art_pieces(reaction_count DESC);
-
--- ============================================================================
--- 3. community_resources table
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS community_resources (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  source_type TEXT NOT NULL DEFAULT 'discord' CHECK (source_type IN ('discord', 'upload')),
-  discord_message_id TEXT REFERENCES discord_messages(message_id),
-  title TEXT NOT NULL,
-  description TEXT,
-  primary_url TEXT,
-  additional_urls TEXT[] NOT NULL DEFAULT '{}',
-  user_id UUID REFERENCES auth.users(id),
-  discord_author_id TEXT,
-  media_urls TEXT[] NOT NULL DEFAULT '{}',
-  media_types TEXT[] NOT NULL DEFAULT '{}',
-  thumbnail_url TEXT,
-  tags TEXT[] NOT NULL DEFAULT '{}',
-  resource_type TEXT NOT NULL DEFAULT 'other' CHECK (resource_type IN ('tutorial', 'tool', 'model', 'workflow', 'other')),
-  status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('published', 'draft', 'hidden')),
-  reaction_count INT NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_community_resources_status ON community_resources(status);
-CREATE INDEX IF NOT EXISTS idx_community_resources_user_id ON community_resources(user_id);
-CREATE INDEX IF NOT EXISTS idx_community_resources_discord_message_id ON community_resources(discord_message_id);
-CREATE INDEX IF NOT EXISTS idx_community_resources_created_at ON community_resources(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_community_resources_reaction_count ON community_resources(reaction_count DESC);
-CREATE INDEX IF NOT EXISTS idx_community_resources_resource_type ON community_resources(resource_type);
-
--- ============================================================================
--- 4. RLS Policies
--- ============================================================================
-
-ALTER TABLE art_pieces ENABLE ROW LEVEL SECURITY;
-ALTER TABLE community_resources ENABLE ROW LEVEL SECURITY;
-
--- Public read for published art
-CREATE POLICY "Public can view published art"
-  ON art_pieces FOR SELECT
-  USING (status = 'published');
-
--- Authenticated users can insert their own art
-CREATE POLICY "Users can insert own art"
-  ON art_pieces FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-
--- Authenticated users can update their own art
-CREATE POLICY "Users can update own art"
-  ON art_pieces FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
-
--- Public read for published resources
-CREATE POLICY "Public can view published resources"
-  ON community_resources FOR SELECT
-  USING (status = 'published');
-
--- Authenticated users can insert their own resources
-CREATE POLICY "Users can insert own resources"
-  ON community_resources FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-
--- Authenticated users can update their own resources
-CREATE POLICY "Users can update own resources"
-  ON community_resources FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
 
 -- Profiles: public read
 DO $$
@@ -153,7 +55,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 5. Storage bucket for user uploads
+-- 3. Storage bucket for user uploads
 -- ============================================================================
 
 INSERT INTO storage.buckets (id, name, public)
@@ -193,7 +95,7 @@ CREATE POLICY "Users can delete own uploads"
   );
 
 -- ============================================================================
--- 6. Auto-create profile trigger on auth.users insert
+-- 4. Auto-create profile trigger on auth.users insert
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()

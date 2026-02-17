@@ -50,7 +50,7 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
         // Fetch the profile by username
         const { data: profileData, error: profileError } = await client
           .from('profiles')
-          .select('id, username, display_name, avatar_url, bio, discord_username')
+          .select('id, username, display_name, avatar_url, description, discord_username')
           .eq('username', username)
           .single();
 
@@ -73,32 +73,32 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
           username: profileData.username,
           displayName: profileData.display_name,
           avatarUrl: profileData.avatar_url,
-          bio: profileData.bio,
+          bio: profileData.description,
           discordUsername: profileData.discord_username,
         };
 
         setProfile(mapped);
 
-        // Fetch art_pieces count where user_id = profile.id and status = 'published'
-        const { count: artPiecesCount, error: artError } = await client
-          .from('art_pieces')
+        // Fetch media count (art) where user_id = profile.id
+        const { count: mediaCount, error: artError } = await client
+          .from('media')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', mapped.id)
-          .eq('status', 'published');
+          .in('admin_status', ['Featured', 'Curated', 'Listed']);
 
         if (!cancelled && !artError) {
-          setArtCount(artPiecesCount ?? 0);
+          setArtCount(mediaCount ?? 0);
         }
 
-        // Fetch community_resources count where user_id = profile.id and status = 'published'
-        const { count: resourcesCount, error: resourceError } = await client
-          .from('community_resources')
+        // Fetch assets count (resources) where user_id = profile.id
+        const { count: assetsCount, error: resourceError } = await client
+          .from('assets')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', mapped.id)
-          .eq('status', 'published');
+          .in('admin_status', ['Featured', 'Curated', 'Listed']);
 
         if (!cancelled && !resourceError) {
-          setResourceCount(resourcesCount ?? 0);
+          setResourceCount(assetsCount ?? 0);
         }
       } catch {
         if (!cancelled) {

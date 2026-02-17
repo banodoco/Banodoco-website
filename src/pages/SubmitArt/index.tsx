@@ -6,21 +6,13 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { MediaUploader } from '@/components/forms/MediaUploader';
-import { BASE_MODELS } from '@/pages/Resources/constants';
-
-function getFileExtension(file: File): string {
-  const parts = file.name.split('.');
-  return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : 'bin';
-}
 
 function SubmitArtForm() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
 
   const [files, setFiles] = useState<File[]>([]);
-  const [caption, setCaption] = useState('');
-  const [tagsInput, setTagsInput] = useState('');
-  const [modelId, setModelId] = useState('');
+  const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,57 +46,44 @@ function SubmitArtForm() {
     setSubmitting(true);
 
     try {
-      const mediaUrls: string[] = [];
-      const mediaTypes: string[] = [];
+      // For each file, insert a row into media table
+      // For now we support single-file upload (first file)
+      const file = files[0];
+      const isVideo = file.type.startsWith('video/');
+      const mediaType = isVideo ? 'video' : 'image';
 
-      // Upload each file to Supabase Storage
-      for (const file of files) {
-        const ext = getFileExtension(file);
-        const fileName = `${crypto.randomUUID()}.${ext}`;
-        const storagePath = `${user.id}/art/${fileName}`;
+      // Upload file to Supabase Storage
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
+      const fileName = `${crypto.randomUUID()}.${ext}`;
+      const storagePath = `${user.id}/art/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('user-uploads')
-          .upload(storagePath, file, {
-            contentType: file.type,
-            upsert: false,
-          });
+      const { error: uploadError } = await supabase.storage
+        .from('user-uploads')
+        .upload(storagePath, file, {
+          contentType: file.type,
+          upsert: false,
+        });
 
-        if (uploadError) {
-          throw new Error(`Failed to upload "${file.name}": ${uploadError.message}`);
-        }
-
-        const { data: publicUrlData } = supabase.storage
-          .from('user-uploads')
-          .getPublicUrl(storagePath);
-
-        mediaUrls.push(publicUrlData.publicUrl);
-        mediaTypes.push(file.type);
+      if (uploadError) {
+        throw new Error(`Failed to upload "${file.name}": ${uploadError.message}`);
       }
 
-      // Determine thumbnail: first image, or first file if no images
-      const firstImageIndex = mediaTypes.findIndex(t => t.startsWith('image/'));
-      const thumbnailUrl = firstImageIndex >= 0 ? mediaUrls[firstImageIndex] : mediaUrls[0];
+      const { data: publicUrlData } = supabase.storage
+        .from('user-uploads')
+        .getPublicUrl(storagePath);
 
-      // Parse tags
-      const tags = tagsInput
-        .split(',')
-        .map(t => t.trim())
-        .filter(Boolean);
+      const fileUrl = publicUrlData.publicUrl;
 
-      // Insert into art_pieces
+      // Insert into media table
       const { data: insertData, error: insertError } = await supabase
-        .from('art_pieces')
+        .from('media')
         .insert({
-          source_type: 'upload',
+          type: mediaType,
+          description: description || null,
           user_id: user.id,
-          media_urls: mediaUrls,
-          media_types: mediaTypes,
-          thumbnail_url: thumbnailUrl,
-          caption: caption || null,
-          tags: tags.length > 0 ? tags : null,
-          associated_asset_id: modelId || null,
-          status: 'published',
+          admin_status: 'Listed',
+          user_status: 'Listed',
+          cloudflare_thumbnail_url: fileUrl,
         })
         .select('id')
         .single();
@@ -152,63 +131,25 @@ function SubmitArtForm() {
                 onFilesSelected={handleFilesSelected}
                 onRemoveFile={handleRemoveFile}
                 accept="image/*,video/*"
-                maxFiles={5}
+                maxFiles={1}
                 maxSizeMB={50}
               />
             </fieldset>
 
-            {/* Caption */}
+            {/* Description */}
             <div>
-              <label htmlFor="caption" className="block text-sm font-medium text-zinc-300 mb-2">
-                Caption
+              <label htmlFor="description" className="block text-sm font-medium text-zinc-300 mb-2">
+                Description
               </label>
               <textarea
-                id="caption"
-                value={caption}
-                onChange={e => setCaption(e.target.value)}
+                id="description"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
                 disabled={submitting}
                 rows={3}
                 placeholder="Describe your artwork..."
                 className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-colors resize-y"
               />
-            </div>
-
-            {/* Tags */}
-            <div>
-              <label htmlFor="tags" className="block text-sm font-medium text-zinc-300 mb-2">
-                Tags
-              </label>
-              <input
-                id="tags"
-                type="text"
-                value={tagsInput}
-                onChange={e => setTagsInput(e.target.value)}
-                disabled={submitting}
-                placeholder="e.g. landscape, surreal, portrait"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-colors"
-              />
-              <p className="text-xs text-zinc-600 mt-1">Comma-separated</p>
-            </div>
-
-            {/* Model Association */}
-            <div>
-              <label htmlFor="model" className="block text-sm font-medium text-zinc-300 mb-2">
-                Model Association
-              </label>
-              <select
-                id="model"
-                value={modelId}
-                onChange={e => setModelId(e.target.value)}
-                disabled={submitting}
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-colors appearance-none"
-              >
-                <option value="">None</option>
-                {BASE_MODELS.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.label} ({m.mediaType})
-                  </option>
-                ))}
-              </select>
             </div>
 
             {/* Error */}

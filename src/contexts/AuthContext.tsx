@@ -37,7 +37,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const { data, error } = await client
       .from('profiles')
-      .select('id, username, display_name, avatar_url, bio, discord_username')
+      .select('id, username, display_name, avatar_url, description, discord_username')
       .eq('id', userId)
       .single();
 
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         username: data.username,
         displayName: data.display_name,
         avatarUrl: data.avatar_url,
-        bio: data.bio,
+        bio: data.description,
         discordUsername: data.discord_username,
       });
     } else {
