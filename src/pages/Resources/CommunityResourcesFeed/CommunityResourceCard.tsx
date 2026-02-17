@@ -6,9 +6,7 @@ interface CommunityResourceCardProps {
 }
 
 const RESOURCE_TYPE_COLORS: Record<string, string> = {
-  tutorial: 'bg-blue-500/20 text-blue-300',
-  tool: 'bg-emerald-500/20 text-emerald-300',
-  model: 'bg-purple-500/20 text-purple-300',
+  lora: 'bg-blue-500/20 text-blue-300',
   workflow: 'bg-orange-500/20 text-orange-300',
   other: 'bg-zinc-500/20 text-zinc-300',
 };
@@ -34,24 +32,23 @@ export const CommunityResourceCard = ({ resource }: CommunityResourceCardProps) 
       to={linkTo}
       className="block bg-white/[0.03] rounded-xl p-4 border border-white/5 hover:border-white/20 transition group"
     >
+      {/* Thumbnail */}
+      {resource.thumbnailUrl && (
+        <div className="aspect-video rounded-lg overflow-hidden mb-3 bg-white/5">
+          <img
+            src={resource.thumbnailUrl}
+            alt={resource.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
+
       {/* Resource type badge */}
       <div className="flex items-center justify-between mb-3">
         <span className={`inline-block text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${colorClass}`}>
           {resource.resourceType}
         </span>
-        {resource.reactionCount > 0 && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-zinc-400 bg-white/5 rounded-full">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-              />
-            </svg>
-            {resource.reactionCount}
-          </span>
-        )}
       </div>
 
       {/* Title */}
@@ -88,23 +85,6 @@ export const CommunityResourceCard = ({ resource }: CommunityResourceCardProps) 
               d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
             />
           </svg>
-        </div>
-      )}
-
-      {/* Tags */}
-      {resource.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {resource.tags.slice(0, 5).map((tag) => (
-            <span
-              key={tag}
-              className="bg-white/10 text-zinc-400 text-[10px] rounded-full px-2 py-0.5"
-            >
-              {tag}
-            </span>
-          ))}
-          {resource.tags.length > 5 && (
-            <span className="text-[10px] text-zinc-600">+{resource.tags.length - 5}</span>
-          )}
         </div>
       )}
 

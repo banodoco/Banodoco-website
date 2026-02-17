@@ -1,11 +1,12 @@
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCommunityResource } from '@/hooks/useCommunityResource';
+import { HlsPlayer } from '@/pages/Resources/HlsPlayer';
+import type { GalleryMediaItem } from '@/hooks/useCommunityResource';
 
 const RESOURCE_TYPE_COLORS: Record<string, string> = {
-  tutorial: 'bg-blue-500/20 text-blue-300',
-  tool: 'bg-emerald-500/20 text-emerald-300',
-  model: 'bg-purple-500/20 text-purple-300',
+  lora: 'bg-blue-500/20 text-blue-300',
   workflow: 'bg-orange-500/20 text-orange-300',
   other: 'bg-zinc-500/20 text-zinc-300',
 };
@@ -25,10 +26,6 @@ function formatDate(iso: string): string {
     month: 'long',
     day: 'numeric',
   });
-}
-
-function isVideoType(mediaType: string): boolean {
-  return mediaType.startsWith('video/');
 }
 
 function LoadingSkeleton() {
@@ -61,7 +58,11 @@ function LoadingSkeleton() {
 const ResourceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { resource, loading, error } = useCommunityResource(id);
+  const { resource, galleryMedia, loading, error } = useCommunityResource(id);
+  const [activeMedia, setActiveMedia] = useState<GalleryMediaItem | null>(null);
+
+  // Set initial active media when gallery loads
+  const displayMedia = activeMedia ?? galleryMedia[0] ?? null;
 
   const colorClass = resource
     ? (RESOURCE_TYPE_COLORS[resource.resourceType] ?? RESOURCE_TYPE_COLORS.other)
@@ -108,19 +109,60 @@ const ResourceDetail = () => {
             transition={{ duration: 0.4 }}
             className="space-y-8"
           >
-            {/* Resource type badge and tags */}
+            {/* Media viewer */}
+            {displayMedia && (
+              <div>
+                {displayMedia.cloudflare_playback_hls_url ? (
+                  <HlsPlayer
+                    hlsUrl={displayMedia.cloudflare_playback_hls_url}
+                    thumbnailUrl={displayMedia.cloudflare_thumbnail_url}
+                    className="w-full aspect-video rounded-lg overflow-hidden"
+                  />
+                ) : displayMedia.cloudflare_thumbnail_url ? (
+                  <div className="w-full aspect-video rounded-lg overflow-hidden bg-black">
+                    <img
+                      src={displayMedia.cloudflare_thumbnail_url}
+                      alt={resource.title}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                ) : null}
+
+                {/* Gallery strip */}
+                {galleryMedia.length > 1 && (
+                  <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+                    {galleryMedia.map(media => (
+                      <button
+                        key={media.id}
+                        onClick={() => setActiveMedia(media)}
+                        className={`flex-shrink-0 w-20 h-14 rounded overflow-hidden border-2 transition-colors ${
+                          displayMedia?.id === media.id ? 'border-white/60' : 'border-white/10 hover:border-white/30'
+                        }`}
+                      >
+                        {media.cloudflare_thumbnail_url ? (
+                          <img
+                            src={media.cloudflare_thumbnail_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-white/5 flex items-center justify-center text-white/20 text-[10px]">
+                            {media.type === 'video' ? 'VID' : 'IMG'}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Resource type badge */}
             <div className="flex flex-wrap items-center gap-2">
               <span className={`inline-block text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${colorClass}`}>
                 {resource.resourceType}
               </span>
-              {resource.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-white/10 text-zinc-400 text-xs rounded-full px-2 py-0.5"
-                >
-                  {tag}
-                </span>
-              ))}
             </div>
 
             {/* Title */}
@@ -131,19 +173,6 @@ const ResourceDetail = () => {
             {/* Meta row */}
             <div className="flex items-center gap-4 text-sm text-zinc-500">
               <span>{formatDate(resource.createdAt)}</span>
-              {resource.reactionCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
-                  </svg>
-                  {resource.reactionCount} reactions
-                </span>
-              )}
             </div>
 
             {/* Description */}
@@ -183,67 +212,6 @@ const ResourceDetail = () => {
               </div>
             )}
 
-            {/* Additional URLs */}
-            {resource.additionalUrls.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wide">
-                  Additional Links
-                </h3>
-                <ul className="space-y-1.5">
-                  {resource.additionalUrls.map((url, i) => (
-                    <li key={i}>
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 hover:underline transition"
-                      >
-                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
-                        {extractDomain(url)}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Media gallery */}
-            {resource.mediaUrls.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wide">
-                  Media
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {resource.mediaUrls.map((url, i) => {
-                    const mediaType = resource.mediaTypes[i] ?? '';
-                    return isVideoType(mediaType) ? (
-                      <video
-                        key={i}
-                        src={url}
-                        controls
-                        className="w-full rounded-lg border border-white/10 bg-black"
-                      />
-                    ) : (
-                      <img
-                        key={i}
-                        src={url}
-                        alt={`${resource.title} media ${i + 1}`}
-                        className="w-full rounded-lg border border-white/10 object-cover"
-                        loading="lazy"
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             {/* Creator info */}
             <div className="flex items-center gap-3 pt-6 border-t border-white/5">
               {resource.creator.avatarUrl ? (
@@ -271,9 +239,6 @@ const ResourceDetail = () => {
                 ) : (
                   <span className="text-sm font-medium text-zinc-200">{creatorName}</span>
                 )}
-                <p className="text-xs text-zinc-500">
-                  {resource.sourceType === 'discord' ? 'Shared via Discord' : 'Uploaded'}
-                </p>
               </div>
             </div>
           </motion.article>

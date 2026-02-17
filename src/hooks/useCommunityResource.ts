@@ -4,22 +4,23 @@ import type { CommunityResourceItem, ResourceCreator } from '@/hooks/useCommunit
 
 export type { CommunityResourceItem };
 
-interface RawResource {
+interface AssetRow {
   id: string;
-  source_type: string;
-  title: string;
+  name: string;
   description: string | null;
-  primary_url: string | null;
-  additional_urls: string[] | null;
-  media_urls: string[] | null;
-  media_types: string[] | null;
-  thumbnail_url: string | null;
-  tags: string[] | null;
-  resource_type: string;
-  reaction_count: number;
+  type: string;
+  lora_link: string | null;
   created_at: string;
   user_id: string | null;
-  discord_author_id: string | null;
+  creator: string | null;
+  media: { cloudflare_thumbnail_url: string | null } | { cloudflare_thumbnail_url: string | null }[] | null;
+}
+
+export interface GalleryMediaItem {
+  id: string;
+  type: string | null;
+  cloudflare_thumbnail_url: string | null;
+  cloudflare_playback_hls_url: string | null;
 }
 
 interface ProfileRow {
@@ -29,25 +30,21 @@ interface ProfileRow {
   avatar_url: string | null;
 }
 
-interface DiscordMemberRow {
-  member_id: string;
-  username: string | null;
-  global_name: string | null;
-  server_nick: string | null;
-  avatar_url: string | null;
-}
-
 interface UseCommunityResourceResult {
   resource: CommunityResourceItem | null;
+  galleryMedia: GalleryMediaItem[];
   loading: boolean;
   error: string | null;
 }
 
-async function fetchCreator(
-  raw: RawResource,
-): Promise<ResourceCreator> {
+function unwrapMedia(media: AssetRow['media']): { cloudflare_thumbnail_url: string | null } | null {
+  if (Array.isArray(media)) return media[0] ?? null;
+  return media;
+}
+
+async function fetchCreator(raw: AssetRow): Promise<ResourceCreator> {
   if (!supabase) {
-    return { username: null, displayName: null, avatarUrl: null, profileUrl: null };
+    return { username: null, displayName: raw.creator ?? null, avatarUrl: null, profileUrl: null };
   }
 
   if (raw.user_id) {
@@ -68,29 +65,12 @@ async function fetchCreator(
     }
   }
 
-  if (raw.discord_author_id) {
-    const { data } = await supabase
-      .from('discord_members')
-      .select('member_id, username, global_name, server_nick, avatar_url')
-      .eq('member_id', raw.discord_author_id)
-      .single();
-
-    if (data) {
-      const member = data as DiscordMemberRow;
-      return {
-        username: member.username,
-        displayName: member.server_nick ?? member.global_name ?? member.username,
-        avatarUrl: member.avatar_url,
-        profileUrl: null,
-      };
-    }
-  }
-
-  return { username: null, displayName: null, avatarUrl: null, profileUrl: null };
+  return { username: null, displayName: raw.creator ?? 'Unknown', avatarUrl: null, profileUrl: null };
 }
 
 export const useCommunityResource = (id: string | undefined): UseCommunityResourceResult => {
   const [resource, setResource] = useState<CommunityResourceItem | null>(null);
+  const [galleryMedia, setGalleryMedia] = useState<GalleryMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,12 +92,13 @@ export const useCommunityResource = (id: string | undefined): UseCommunityResour
 
       try {
         const { data, error: fetchError } = await supabase!
-          .from('community_resources')
-          .select(
-            'id, source_type, title, description, primary_url, additional_urls, media_urls, media_types, thumbnail_url, tags, resource_type, reaction_count, created_at, user_id, discord_author_id',
-          )
+          .from('assets')
+          .select(`
+            id, name, description, type, lora_link, created_at, user_id, creator,
+            media:primary_media_id ( cloudflare_thumbnail_url )
+          `)
           .eq('id', id)
-          .eq('status', 'published')
+          .in('admin_status', ['Featured', 'Curated', 'Listed'])
           .single();
 
         if (fetchError) throw fetchError;
@@ -126,25 +107,37 @@ export const useCommunityResource = (id: string | undefined): UseCommunityResour
           return;
         }
 
-        const raw = data as RawResource;
+        const raw = data as AssetRow;
         const creator = await fetchCreator(raw);
+        const primaryMedia = unwrapMedia(raw.media);
 
         setResource({
           id: raw.id,
-          sourceType: raw.source_type === 'discord' ? 'discord' : 'upload',
-          title: raw.title,
+          title: raw.name,
           description: raw.description,
-          primaryUrl: raw.primary_url,
-          additionalUrls: raw.additional_urls ?? [],
-          mediaUrls: raw.media_urls ?? [],
-          mediaTypes: raw.media_types ?? [],
-          thumbnailUrl: raw.thumbnail_url,
-          tags: raw.tags ?? [],
-          resourceType: raw.resource_type,
-          reactionCount: raw.reaction_count,
+          primaryUrl: raw.lora_link,
+          resourceType: raw.type,
+          thumbnailUrl: primaryMedia?.cloudflare_thumbnail_url ?? null,
           createdAt: raw.created_at,
           creator,
         });
+
+        // Fetch gallery media via asset_media junction
+        const { data: galleryData } = await supabase!
+          .from('asset_media')
+          .select('media:media_id (id, type, cloudflare_thumbnail_url, cloudflare_playback_hls_url)')
+          .eq('asset_id', id);
+
+        if (galleryData) {
+          const media = (galleryData as { media: GalleryMediaItem | GalleryMediaItem[] | null }[])
+            .map(row => {
+              const m = row.media;
+              if (Array.isArray(m)) return m[0] ?? null;
+              return m;
+            })
+            .filter((m): m is GalleryMediaItem => m !== null);
+          setGalleryMedia(media);
+        }
       } catch {
         setError('Failed to load resource');
       } finally {
@@ -155,5 +148,5 @@ export const useCommunityResource = (id: string | undefined): UseCommunityResour
     fetchResource();
   }, [id]);
 
-  return { resource, loading, error };
+  return { resource, galleryMedia, loading, error };
 };

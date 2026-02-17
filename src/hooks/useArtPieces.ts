@@ -10,45 +10,29 @@ export interface ArtPieceCreator {
 
 export interface ArtPieceItem {
   id: string;
-  sourceType: 'discord' | 'upload';
   title: string | null;
   caption: string | null;
-  mediaUrls: string[];
-  mediaTypes: string[];
   thumbnailUrl: string | null;
-  reactionCount: number;
-  tags: string[];
+  hlsUrl: string | null;
+  mediaType: string | null;
   createdAt: string;
   creator: ArtPieceCreator;
 }
 
-interface ArtPieceRow {
+interface MediaRow {
   id: string;
-  source_type: string;
-  title: string | null;
-  caption: string | null;
-  media_urls: string[] | null;
-  media_types: string[] | null;
-  thumbnail_url: string | null;
-  reaction_count: number;
-  tags: string[] | null;
+  type: string | null;
+  description: string | null;
+  cloudflare_thumbnail_url: string | null;
+  cloudflare_playback_hls_url: string | null;
   created_at: string;
   user_id: string | null;
-  discord_author_id: string | null;
 }
 
 interface ProfileRow {
   id: string;
   username: string | null;
   display_name: string | null;
-  avatar_url: string | null;
-}
-
-interface DiscordMemberRow {
-  member_id: string;
-  username: string;
-  global_name: string | null;
-  server_nick: string | null;
   avatar_url: string | null;
 }
 
@@ -63,29 +47,7 @@ interface UseArtPiecesResult {
 
 const PAGE_SIZE = 12;
 
-function buildCreatorFromProfile(profile: ProfileRow): ArtPieceCreator {
-  return {
-    username: profile.username,
-    displayName: profile.display_name ?? profile.username,
-    avatarUrl: profile.avatar_url,
-    profileUrl: profile.username ? `/u/${profile.username}` : null,
-  };
-}
-
-function buildCreatorFromDiscordMember(member: DiscordMemberRow): ArtPieceCreator {
-  return {
-    username: member.username,
-    displayName: member.server_nick ?? member.global_name ?? member.username,
-    avatarUrl: member.avatar_url,
-    profileUrl: null,
-  };
-}
-
-function mapRowToItem(
-  row: ArtPieceRow,
-  profileMap: Map<string, ProfileRow>,
-  discordMap: Map<string, DiscordMemberRow>,
-): ArtPieceItem {
+function mapRowToItem(row: MediaRow, profileMap: Map<string, ProfileRow>): ArtPieceItem {
   let creator: ArtPieceCreator = {
     username: null,
     displayName: 'Unknown',
@@ -96,25 +58,22 @@ function mapRowToItem(
   if (row.user_id) {
     const profile = profileMap.get(row.user_id);
     if (profile) {
-      creator = buildCreatorFromProfile(profile);
-    }
-  } else if (row.discord_author_id) {
-    const member = discordMap.get(row.discord_author_id);
-    if (member) {
-      creator = buildCreatorFromDiscordMember(member);
+      creator = {
+        username: profile.username,
+        displayName: profile.display_name ?? profile.username,
+        avatarUrl: profile.avatar_url,
+        profileUrl: profile.username ? `/u/${profile.username}` : null,
+      };
     }
   }
 
   return {
     id: row.id,
-    sourceType: row.source_type === 'upload' ? 'upload' : 'discord',
-    title: row.title,
-    caption: row.caption,
-    mediaUrls: row.media_urls ?? [],
-    mediaTypes: row.media_types ?? [],
-    thumbnailUrl: row.thumbnail_url,
-    reactionCount: row.reaction_count,
-    tags: row.tags ?? [],
+    title: null,
+    caption: row.description,
+    thumbnailUrl: row.cloudflare_thumbnail_url,
+    hlsUrl: row.cloudflare_playback_hls_url,
+    mediaType: row.type,
     createdAt: row.created_at,
     creator,
   };
@@ -127,23 +86,18 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const offsetRef = useRef(0);
-
   const profileCacheRef = useRef(new Map<string, ProfileRow>());
-  const discordCacheRef = useRef(new Map<string, DiscordMemberRow>());
 
-  const resolveCreators = useCallback(async (rows: ArtPieceRow[]) => {
+  const resolveProfiles = useCallback(async (rows: MediaRow[]) => {
     const client = supabase;
     if (!client) return;
 
-    const profileCache = profileCacheRef.current;
-    const discordCache = discordCacheRef.current;
-
-    // Collect uncached user IDs
+    const cache = profileCacheRef.current;
     const userIds = [
       ...new Set(
         rows
           .map((r) => r.user_id)
-          .filter((id): id is string => id != null && !profileCache.has(id)),
+          .filter((id): id is string => id != null && !cache.has(id)),
       ),
     ];
 
@@ -155,29 +109,7 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
 
       if (data) {
         for (const p of data as ProfileRow[]) {
-          profileCache.set(p.id, p);
-        }
-      }
-    }
-
-    // Collect uncached discord author IDs
-    const discordIds = [
-      ...new Set(
-        rows
-          .map((r) => r.discord_author_id)
-          .filter((id): id is string => id != null && !discordCache.has(id)),
-      ),
-    ];
-
-    if (discordIds.length > 0) {
-      const { data } = await client
-        .from('discord_members')
-        .select('member_id, username, global_name, server_nick, avatar_url')
-        .in('member_id', discordIds);
-
-      if (data) {
-        for (const m of data as DiscordMemberRow[]) {
-          discordCache.set(m.member_id, m);
+          cache.set(p.id, p);
         }
       }
     }
@@ -199,12 +131,11 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
 
       try {
         let query = client
-          .from('art_pieces')
+          .from('media')
           .select(
-            'id, source_type, title, caption, media_urls, media_types, thumbnail_url, reaction_count, tags, created_at, user_id, discord_author_id',
+            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, user_id',
           )
-          .eq('status', 'published')
-          .order('reaction_count', { ascending: false })
+          .in('admin_status', ['Featured', 'Curated', 'Listed'])
           .order('created_at', { ascending: false })
           .range(offset, offset + PAGE_SIZE - 1);
 
@@ -216,13 +147,13 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
 
         if (fetchError) throw fetchError;
 
-        const rows = (data ?? []) as ArtPieceRow[];
+        const rows = (data ?? []) as MediaRow[];
         setHasMore(rows.length === PAGE_SIZE);
 
-        await resolveCreators(rows);
+        await resolveProfiles(rows);
 
         const items = rows.map((row) =>
-          mapRowToItem(row, profileCacheRef.current, discordCacheRef.current),
+          mapRowToItem(row, profileCacheRef.current),
         );
 
         if (isLoadMore) {
@@ -239,13 +170,12 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
         setLoadingMore(false);
       }
     },
-    [userId, resolveCreators],
+    [userId, resolveProfiles],
   );
 
   useEffect(() => {
     offsetRef.current = 0;
     profileCacheRef.current.clear();
-    discordCacheRef.current.clear();
     setArtPieces([]);
     setHasMore(true);
     setError(null);

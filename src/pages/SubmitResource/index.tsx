@@ -1,24 +1,15 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Loader2, BookOpen } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { RequireAuth } from '@/components/auth/RequireAuth';
-import { MediaUploader } from '@/components/forms/MediaUploader';
 
 const RESOURCE_TYPES = [
-  { value: 'tutorial', label: 'Tutorial' },
-  { value: 'tool', label: 'Tool' },
-  { value: 'model', label: 'Model' },
+  { value: 'lora', label: 'LoRA' },
   { value: 'workflow', label: 'Workflow' },
-  { value: 'other', label: 'Other' },
 ] as const;
-
-function getFileExtension(file: File): string {
-  const parts = file.name.split('.');
-  return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : 'bin';
-}
 
 function isValidUrl(value: string): boolean {
   try {
@@ -33,39 +24,23 @@ function SubmitResourceForm() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
 
-  const [title, setTitle] = useState('');
+  const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [primaryUrl, setPrimaryUrl] = useState('');
-  const [additionalUrlsInput, setAdditionalUrlsInput] = useState('');
-  const [resourceType, setResourceType] = useState<string>('tutorial');
-  const [tagsInput, setTagsInput] = useState('');
-  const [files, setFiles] = useState<File[]>([]);
+  const [loraLink, setLoraLink] = useState('');
+  const [resourceType, setResourceType] = useState<string>('lora');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const handleFilesSelected = useCallback((incoming: File[]) => {
-    setFiles(prev => [...prev, ...incoming]);
-  }, []);
-
-  const handleRemoveFile = useCallback((index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!title.trim()) {
-      setError('Title is required.');
+    if (!name.trim()) {
+      setError('Name is required.');
       return;
     }
 
-    if (!primaryUrl.trim()) {
-      setError('Primary URL is required.');
-      return;
-    }
-
-    if (!isValidUrl(primaryUrl.trim())) {
+    if (loraLink.trim() && !isValidUrl(loraLink.trim())) {
       setError('Please enter a valid URL (including https://).');
       return;
     }
@@ -83,69 +58,15 @@ function SubmitResourceForm() {
     setSubmitting(true);
 
     try {
-      let mediaUrls: string[] = [];
-      let mediaTypes: string[] = [];
-      let thumbnailUrl: string | null = null;
-
-      // Upload media files if any
-      if (files.length > 0) {
-        for (const file of files) {
-          const ext = getFileExtension(file);
-          const fileName = `${crypto.randomUUID()}.${ext}`;
-          const storagePath = `${user.id}/resources/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('user-uploads')
-            .upload(storagePath, file, {
-              contentType: file.type,
-              upsert: false,
-            });
-
-          if (uploadError) {
-            throw new Error(`Failed to upload "${file.name}": ${uploadError.message}`);
-          }
-
-          const { data: publicUrlData } = supabase.storage
-            .from('user-uploads')
-            .getPublicUrl(storagePath);
-
-          mediaUrls.push(publicUrlData.publicUrl);
-          mediaTypes.push(file.type);
-        }
-
-        // Thumbnail: first image, or first file
-        const firstImageIndex = mediaTypes.findIndex(t => t.startsWith('image/'));
-        thumbnailUrl = firstImageIndex >= 0 ? mediaUrls[firstImageIndex] : mediaUrls[0];
-      }
-
-      // Parse additional URLs
-      const additionalUrls = additionalUrlsInput
-        .split('\n')
-        .map(u => u.trim())
-        .filter(Boolean);
-
-      // Parse tags
-      const tags = tagsInput
-        .split(',')
-        .map(t => t.trim())
-        .filter(Boolean);
-
-      // Insert into community_resources
       const { data: insertData, error: insertError } = await supabase
-        .from('community_resources')
+        .from('assets')
         .insert({
-          source_type: 'upload',
-          user_id: user.id,
-          title: title.trim(),
+          name: name.trim(),
           description: description.trim() || null,
-          primary_url: primaryUrl.trim(),
-          additional_urls: additionalUrls.length > 0 ? additionalUrls : null,
-          resource_type: resourceType,
-          tags: tags.length > 0 ? tags : null,
-          media_urls: mediaUrls.length > 0 ? mediaUrls : null,
-          media_types: mediaTypes.length > 0 ? mediaTypes : null,
-          thumbnail_url: thumbnailUrl,
-          status: 'published',
+          type: resourceType,
+          lora_link: loraLink.trim() || null,
+          user_id: user.id,
+          admin_status: 'Listed',
         })
         .select('id')
         .single();
@@ -183,18 +104,18 @@ function SubmitResourceForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Title */}
+            {/* Name */}
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-zinc-300 mb-2">
-                Title <span className="text-red-400">*</span>
+              <label htmlFor="name" className="block text-sm font-medium text-zinc-300 mb-2">
+                Name <span className="text-red-400">*</span>
               </label>
               <input
-                id="title"
+                id="name"
                 type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
+                value={name}
+                onChange={e => setName(e.target.value)}
                 disabled={submitting}
-                placeholder="Resource title"
+                placeholder="Resource name"
                 className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-colors"
               />
             </div>
@@ -215,37 +136,20 @@ function SubmitResourceForm() {
               />
             </div>
 
-            {/* Primary URL */}
+            {/* Link */}
             <div>
-              <label htmlFor="primary-url" className="block text-sm font-medium text-zinc-300 mb-2">
-                Primary URL <span className="text-red-400">*</span>
+              <label htmlFor="lora-link" className="block text-sm font-medium text-zinc-300 mb-2">
+                Link
               </label>
               <input
-                id="primary-url"
+                id="lora-link"
                 type="url"
-                value={primaryUrl}
-                onChange={e => setPrimaryUrl(e.target.value)}
+                value={loraLink}
+                onChange={e => setLoraLink(e.target.value)}
                 disabled={submitting}
                 placeholder="https://..."
                 className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-colors"
               />
-            </div>
-
-            {/* Additional URLs */}
-            <div>
-              <label htmlFor="additional-urls" className="block text-sm font-medium text-zinc-300 mb-2">
-                Additional URLs
-              </label>
-              <textarea
-                id="additional-urls"
-                value={additionalUrlsInput}
-                onChange={e => setAdditionalUrlsInput(e.target.value)}
-                disabled={submitting}
-                rows={3}
-                placeholder={"https://example.com/related\nhttps://example.com/docs"}
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-colors resize-y"
-              />
-              <p className="text-xs text-zinc-600 mt-1">One URL per line</p>
             </div>
 
             {/* Resource Type */}
@@ -268,38 +172,6 @@ function SubmitResourceForm() {
               </select>
             </div>
 
-            {/* Tags */}
-            <div>
-              <label htmlFor="tags" className="block text-sm font-medium text-zinc-300 mb-2">
-                Tags
-              </label>
-              <input
-                id="tags"
-                type="text"
-                value={tagsInput}
-                onChange={e => setTagsInput(e.target.value)}
-                disabled={submitting}
-                placeholder="e.g. comfyui, animation, lora"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-colors"
-              />
-              <p className="text-xs text-zinc-600 mt-1">Comma-separated</p>
-            </div>
-
-            {/* Media Upload */}
-            <fieldset disabled={submitting}>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Media (optional)
-              </label>
-              <MediaUploader
-                files={files}
-                onFilesSelected={handleFilesSelected}
-                onRemoveFile={handleRemoveFile}
-                accept="image/*,video/*"
-                maxFiles={3}
-                maxSizeMB={50}
-              />
-            </fieldset>
-
             {/* Error */}
             {error && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3">
@@ -310,13 +182,13 @@ function SubmitResourceForm() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={submitting || !title.trim() || !primaryUrl.trim()}
+              disabled={submitting || !name.trim()}
               className="w-full flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-6 py-3 text-sm font-semibold text-white hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  Uploading...
+                  Submitting...
                 </>
               ) : (
                 'Submit Resource'

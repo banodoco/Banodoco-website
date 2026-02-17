@@ -1,10 +1,9 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
-import { LayoutGrid, Palette, BookOpen, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
+import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
 import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
 import { ArtGallerySection } from './ArtGallery/ArtGallerySection';
-import { CommunityResourcesSection } from './CommunityResourcesFeed/CommunityResourcesSection';
 import { FilterBar } from './FilterBar';
 import { ResourceGrid } from './ResourceGrid';
 import { ResourceModal } from './ResourceModal';
@@ -272,26 +271,6 @@ const Resources = () => {
             </h2>
           </div>
           <ArtGallerySection />
-        </motion.section>
-
-        {/* Community Resources */}
-        <motion.section
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={containerVariants}
-          id="community-resources"
-          className="space-y-12"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-zinc-900 rounded-lg">
-              <BookOpen size={20} className="text-zinc-100" />
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
-              Community Resources
-            </h2>
-          </div>
-          <CommunityResourcesSection />
         </motion.section>
 
         {/* The Forge — Assets */}
