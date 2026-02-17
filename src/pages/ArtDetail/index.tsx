@@ -31,13 +31,14 @@ const ArtDetail = () => {
   const navigate = useNavigate();
   const { artPiece, loading, error } = useArtPiece(id);
 
-  // Fetch other art from the same creator
+  // Fetch other art from the same creator (only when userId exists)
+  const hasCreatorId = !!artPiece?.userId;
   const { artPieces: creatorArt, loading: sidebarLoading } = useArtPieces(
     artPiece?.userId ?? undefined
   );
-  const relatedArt = creatorArt
-    .filter(a => a.id !== id)
-    .slice(0, 6);
+  const relatedArt = hasCreatorId
+    ? creatorArt.filter(a => a.id !== id).slice(0, 6)
+    : [];
 
   if (loading) {
     return (
@@ -63,7 +64,7 @@ const ArtDetail = () => {
 
   const { creator, caption, createdAt, hlsUrl, thumbnailUrl } = artPiece;
   const creatorName = creator.displayName ?? creator.username ?? 'Unknown';
-  const showSidebar = sidebarLoading || relatedArt.length > 0;
+  const showSidebar = hasCreatorId && (sidebarLoading || relatedArt.length > 0);
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
