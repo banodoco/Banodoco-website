@@ -120,7 +120,6 @@ export const useCommunityResource = (id: string | undefined): UseCommunityResour
           thumbnailUrl: primaryMedia?.cloudflare_thumbnail_url ?? null,
           createdAt: raw.created_at,
           creator,
-          userId: raw.user_id,
         });
 
         // Fetch gallery media via asset_media junction
