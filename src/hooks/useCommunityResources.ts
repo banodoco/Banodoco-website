@@ -19,6 +19,7 @@ export interface CommunityResourceItem {
   thumbnailUrl: string | null;
   createdAt: string;
   creator: ResourceCreator;
+  userId: string | null;
 }
 
 interface UseCommunityResourcesResult {
@@ -88,6 +89,7 @@ function mapRow(
     thumbnailUrl: primaryMedia?.cloudflare_thumbnail_url ?? null,
     createdAt: row.created_at,
     creator,
+    userId: row.user_id,
   };
 }
 
