@@ -1,12 +1,15 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
-import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Play } from 'lucide-react';
+import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
 import { ArtGallerySection } from './ArtGallery/ArtGallerySection';
 import { FilterBar } from './FilterBar';
 import { ResourceGrid } from './ResourceGrid';
 import { CommunityNewsSection } from './CommunityNews/CommunityNewsSection';
+import { AuthActionModal } from './AuthActionModal';
 
 const ITEMS_PER_PAGE = 8;
 const FRAME_COUNT = 25;
@@ -22,6 +25,8 @@ const containerVariants = {
 };
 
 const Resources = () => {
+  const navigate = useNavigate();
+  const { user, loading: authLoading, signInWithDiscord } = useAuth();
   const { assets, profiles, loading, error } = useResources();
   const {
     filters,
@@ -61,9 +66,10 @@ const Resources = () => {
   const coverScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
 
   // Autoplay state
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying] = useState(true);
   const playFrameRef = useRef(0);
   const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [authAction, setAuthAction] = useState<'art' | 'resource' | null>(null);
 
   // Preload all frames into browser cache
   useEffect(() => {
@@ -78,11 +84,6 @@ const Resources = () => {
     lastFrameRef.current = index;
     if (coverImgRef.current) coverImgRef.current.src = FRAME_PATHS[index];
   });
-
-  // Autoplay: cycle through frames on interval
-  const togglePlay = useCallback(() => {
-    setIsPlaying(prev => !prev);
-  }, []);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -99,10 +100,25 @@ const Resources = () => {
     return () => { if (playIntervalRef.current) clearInterval(playIntervalRef.current); };
   }, [isPlaying]);
 
+  const handleCreateClick = (type: 'art' | 'resource') => {
+    if (user) {
+      navigate(type === 'art' ? '/submit/art' : '/submit/resource');
+      return;
+    }
+    setAuthAction(type);
+  };
+
+  const handleModalClose = () => setAuthAction(null);
+
+  const handleModalSignIn = async () => {
+    await signInWithDiscord();
+    setAuthAction(null);
+  };
+
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
       {/* Full-screen Hero — Editorial Magazine */}
-      <section ref={heroRef} className="relative h-screen flex items-center justify-center px-6 overflow-hidden border-b border-white/5">
+      <section ref={heroRef} className="relative h-screen flex items-center justify-center overflow-hidden bg-[#0d131c]">
         {/* Abstract Background */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[120px]" />
@@ -110,105 +126,78 @@ const Resources = () => {
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 0)', backgroundSize: '40px 40px' }} />
         </div>
 
-        <div className="max-w-[1400px] w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
-          {/* Text Content */}
-          <div className="lg:col-span-7 space-y-8">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              className="flex items-center gap-4"
-            >
-              <span className="h-px w-12 bg-orange-500" />
-              <span className="text-orange-500 font-black tracking-[0.4em] uppercase text-[10px]">Independent AI Publication</span>
-            </motion.div>
+        <div className="w-full max-w-[1400px] mx-auto px-6 relative z-10">
+          <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Text Content */}
+            <div className="lg:col-span-7 space-y-8">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6 }}
+                className="flex items-center gap-4"
+              >
+                <span className="h-px w-12 bg-orange-500" />
+                <span className="text-orange-500 font-black tracking-[0.4em] uppercase text-[10px]">Independent AI Publication</span>
+              </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-            >
-              <h1 className="text-[12vw] lg:text-[100px] font-black leading-[0.85] tracking-tighter mb-6 uppercase">
-                Art <span className="text-zinc-800">&</span> <br />
-                <span className="italic">Intelligence</span>
-              </h1>
-              <p className="max-w-md text-zinc-400 text-base lg:text-lg font-light leading-relaxed">
-                The curated archive of AI video generation. Discover battle-tested workflows and the art defining the new era.
-              </p>
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+              >
+                <h1 className="text-[12vw] lg:text-[100px] font-black leading-[0.85] tracking-tighter mb-6 uppercase">
+                  Art <span className="text-zinc-800">&</span> <br />
+                  <span className="italic">Intelligence</span>
+                </h1>
+                <p className="max-w-md text-zinc-400 text-base lg:text-lg font-light leading-relaxed">
+                  The curated archive of AI video generation. Discover battle-tested workflows and the art defining the new era.
+                </p>
+              </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="flex items-center gap-4 sm:gap-8 pt-6"
-            >
-              <div className="flex flex-col">
-                <span className="text-2xl font-black italic">104</span>
-                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Weeks</span>
-              </div>
-              <div className="w-px h-10 bg-zinc-800" />
-              <div className="flex flex-col">
-                <span className="text-2xl font-black italic">10K+</span>
-                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Tools</span>
-              </div>
-              <div className="w-px h-10 bg-zinc-800" />
-              <div className="flex flex-col">
-                <span className="text-2xl font-black italic">&infin;</span>
-                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Visions</span>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Magazine Cover Mockup */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotate: 5 }}
-            animate={{ opacity: 1, scale: 1, rotate: -2 }}
-            transition={{ duration: 1.2, ease: "easeOut", delay: 0.4 }}
-            className="hidden lg:block lg:col-span-5 relative"
-          >
-            <div className="relative aspect-[3/4] w-full max-w-sm mx-auto bg-zinc-900 rounded-[2rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(255,165,0,0.1)] group">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent z-10 opacity-50" />
-              <div className="absolute inset-0 flex flex-col justify-end p-8 z-20">
-                <div className="space-y-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                  <span className="text-[10px] font-black tracking-widest text-orange-500 uppercase">Cover Selection</span>
-                  <h2 className="text-2xl font-bold leading-tight">Hyper-realistic<br />Dreamscapes</h2>
-                  <div className="pt-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
-                    <span className="text-xs text-zinc-400">Issue #104</span>
-                    <button
-                      onClick={togglePlay}
-                      className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black hover:scale-110 transition-transform cursor-pointer relative z-30"
-                    >
-                      {isPlaying ? (
-                        <span className="flex gap-[3px]">
-                          <span className="w-[3px] h-4 bg-black rounded-sm" />
-                          <span className="w-[3px] h-4 bg-black rounded-sm" />
-                        </span>
-                      ) : (
-                        <Play size={16} fill="black" />
-                      )}
-                    </button>
-                  </div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="flex items-center gap-4 sm:gap-8 pt-6"
+              >
+                <div className="flex flex-col">
+                  <span className="text-2xl font-black italic">104</span>
+                  <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Weeks</span>
                 </div>
-              </div>
-              {/* Scroll-driven image sequence */}
-              <motion.div style={{ scale: coverScale }} className="absolute inset-0">
-                <img
-                  ref={coverImgRef}
-                  src={FRAME_PATHS[INITIAL_FRAME]}
-                  alt="Cover art"
-                  className="w-full h-full object-cover"
-                />
+                <div className="w-px h-10 bg-zinc-800" />
+                <div className="flex flex-col">
+                  <span className="text-2xl font-black italic">10K+</span>
+                  <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Tools</span>
+                </div>
+                <div className="w-px h-10 bg-zinc-800" />
+                <div className="flex flex-col">
+                  <span className="text-2xl font-black italic">&infin;</span>
+                  <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Visions</span>
+                </div>
               </motion.div>
             </div>
 
-            {/* Magazine Style Vertical Label */}
-            <div className="absolute -right-8 top-1/2 -translate-y-1/2">
-              <span className="text-[10px] font-black tracking-[0.5em] text-zinc-700 uppercase whitespace-nowrap rotate-90 inline-block">
-                VOL. 02 — FEB 2025
-              </span>
-            </div>
-          </motion.div>
+            {/* Magazine Cover Mockup */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, rotate: 5 }}
+              animate={{ opacity: 1, scale: 1, rotate: -2 }}
+              transition={{ duration: 1.2, ease: "easeOut", delay: 0.4 }}
+              className="hidden lg:block lg:col-span-5 relative w-full"
+            >
+              <div className="relative aspect-[3/4] w-full max-w-sm ml-auto bg-zinc-900 rounded-[2rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(255,165,0,0.1)]">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent z-10 opacity-35 pointer-events-none" />
+                {/* Scroll-driven image sequence */}
+                <motion.div style={{ scale: coverScale }} className="absolute inset-0">
+                  <img
+                    ref={coverImgRef}
+                    src={FRAME_PATHS[INITIAL_FRAME]}
+                    alt="Cover art"
+                    className="w-full h-full object-cover"
+                  />
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
         <motion.div
@@ -219,37 +208,16 @@ const Resources = () => {
         >
           <ArrowDown size={16} className="text-zinc-500 animate-bounce" />
         </motion.div>
+
+        {/* Constrained bottom border to match section content width below */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0">
+          <div className="max-w-[1400px] mx-auto px-6">
+            <div className="h-px w-full bg-white/5" />
+          </div>
+        </div>
       </section>
 
-      <div className="max-w-[1400px] mx-auto px-6 space-y-16 lg:space-y-32 pb-16 lg:pb-32">
-        {/* News Section — Briefing Sidebar Layout */}
-        <motion.section
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={containerVariants}
-          id="news"
-          className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 pt-16 lg:pt-32"
-        >
-          <div className="lg:col-span-4">
-            <div className="sticky top-24">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-zinc-900 rounded-lg">
-                  <Newspaper size={20} className="text-zinc-100" />
-                </div>
-                <h2 className="text-2xl font-bold tracking-tight uppercase">Briefing</h2>
-              </div>
-              <p className="text-zinc-500 text-sm leading-relaxed mb-8">
-                Dispatches from the community frontlines. Latest integrations, research notes, and community milestones.
-              </p>
-              <div className="h-px w-full bg-zinc-800" />
-            </div>
-          </div>
-          <div className="lg:col-span-8">
-            <CommunityNewsSection />
-          </div>
-        </motion.section>
-
+      <div className="max-w-[1400px] mx-auto px-6 pt-12 lg:pt-20 space-y-12 lg:space-y-16 pb-6 lg:pb-10">
         {/* Community Art */}
         <motion.section
           initial="hidden"
@@ -257,15 +225,24 @@ const Resources = () => {
           viewport={{ once: true }}
           variants={containerVariants}
           id="community-art"
-          className="space-y-12"
+          className="space-y-10 rounded-2xl border border-white/10 bg-[#101522] p-6 sm:p-8"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-zinc-900 rounded-lg">
-              <Palette size={20} className="text-zinc-100" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-zinc-900 rounded-lg">
+                <Palette size={20} className="text-zinc-100" />
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
+                Community Art
+              </h2>
             </div>
-            <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
-              Community Art
-            </h2>
+            <button
+              onClick={() => handleCreateClick('art')}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 hover:border-white/25 transition-colors"
+            >
+              <Plus size={16} />
+              Add Art
+            </button>
           </div>
           <ArtGallerySection />
         </motion.section>
@@ -277,22 +254,24 @@ const Resources = () => {
           viewport={{ once: true, margin: '-100px' }}
           variants={containerVariants}
           id="assets"
-          className="space-y-12"
+          className="space-y-10 rounded-2xl border border-white/10 bg-[#151120] p-6 sm:p-8"
         >
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-800 pb-6 md:pb-12">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-zinc-900 rounded-lg">
-                  <LayoutGrid size={20} className="text-zinc-100" />
-                </div>
-                <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
-                  The Forge
-                </h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-5 md:pb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-zinc-900 rounded-lg">
+                <LayoutGrid size={20} className="text-zinc-100" />
               </div>
-              <p className="text-zinc-500 text-base lg:text-lg max-w-xl font-light">
-                Battle-tested workflows and model weights contributed by the community.
-              </p>
+              <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
+                The Forge
+              </h2>
             </div>
+            <button
+              onClick={() => handleCreateClick('resource')}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 hover:border-white/25 transition-colors"
+            >
+              <Plus size={16} />
+              Add Resources
+            </button>
           </div>
 
           {/* Error state */}
@@ -352,7 +331,42 @@ const Resources = () => {
           )}
         </motion.section>
 
+        {/* News Section — Briefing Sidebar Layout */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={containerVariants}
+          id="news"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 rounded-2xl border border-white/10 bg-[#101821] p-6 sm:p-8"
+        >
+          <div className="lg:col-span-4">
+            <div className="sticky top-24">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-zinc-900 rounded-lg">
+                  <Newspaper size={20} className="text-zinc-100" />
+                </div>
+                <h2 className="text-2xl font-bold tracking-tight uppercase">Briefing</h2>
+              </div>
+              <p className="text-zinc-500 text-sm leading-relaxed mb-8">
+                Dispatches from the community frontlines. Latest integrations, research notes, and community milestones.
+              </p>
+              <div className="h-px w-full bg-zinc-800" />
+            </div>
+          </div>
+          <div className="lg:col-span-8">
+            <CommunityNewsSection />
+          </div>
+        </motion.section>
       </div>
+
+      <AuthActionModal
+        isOpen={authAction !== null}
+        actionLabel={authAction === 'art' ? 'Add Art' : 'Add Resources'}
+        onClose={handleModalClose}
+        onSignIn={handleModalSignIn}
+        loading={authLoading}
+      />
 
     </div>
   );

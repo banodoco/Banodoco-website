@@ -5,6 +5,7 @@ import { Loader2, BookOpen } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { RequireAuth } from '@/components/auth/RequireAuth';
+import { buildResourcePath } from '@/lib/routing';
 
 const RESOURCE_TYPES = [
   { value: 'lora', label: 'LoRA' },
@@ -76,8 +77,7 @@ function SubmitResourceForm() {
       }
 
       const newId = insertData.id;
-      const username = profile?.username ?? user.id;
-      navigate(`/u/${username}/resources/${newId}`);
+      navigate(buildResourcePath(newId, name, profile?.username ?? null));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {

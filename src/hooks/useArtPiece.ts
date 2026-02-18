@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type { ArtPieceItem, ArtPieceCreator } from '@/hooks/useArtPieces';
+import { buildEntitySlug, extractEntityIdFromSlug, profilePath } from '@/lib/routing';
 
 export type ArtPieceDetail = ArtPieceItem;
 
@@ -27,14 +28,21 @@ interface ProfileRow {
   avatar_url: string | null;
 }
 
-export const useArtPiece = (id: string | undefined): UseArtPieceResult => {
+export const useArtPiece = (slugOrId: string | undefined): UseArtPieceResult => {
   const [artPiece, setArtPiece] = useState<ArtPieceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) {
+    if (!slugOrId) {
       setLoading(false);
+      return;
+    }
+
+    const resolvedId = extractEntityIdFromSlug(slugOrId);
+    if (!resolvedId) {
+      setLoading(false);
+      setError('Invalid art link');
       return;
     }
 
@@ -54,7 +62,7 @@ export const useArtPiece = (id: string | undefined): UseArtPieceResult => {
           .select(
             'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, user_id',
           )
-          .eq('id', id)
+          .eq('id', resolvedId)
           .single();
 
         if (fetchError) throw fetchError;
@@ -85,13 +93,14 @@ export const useArtPiece = (id: string | undefined): UseArtPieceResult => {
               username: profile.username,
               displayName: profile.display_name ?? profile.username,
               avatarUrl: profile.avatar_url,
-              profileUrl: profile.username ? `/u/${profile.username}` : null,
+              profileUrl: profile.username ? profilePath(profile.username) : null,
             };
           }
         }
 
         setArtPiece({
           id: row.id,
+          slug: buildEntitySlug(row.description, row.id),
           title: null,
           caption: row.description,
           thumbnailUrl: row.cloudflare_thumbnail_url,
@@ -109,7 +118,7 @@ export const useArtPiece = (id: string | undefined): UseArtPieceResult => {
     };
 
     fetchArtPiece();
-  }, [id]);
+  }, [slugOrId]);
 
   return { artPiece, loading, error };
 };

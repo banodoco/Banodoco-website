@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { BASE_MODEL_MAP } from './constants';
 import type { Asset, AssetMedia, AssetProfile } from './types';
+import { buildResourcePath } from '@/lib/routing';
 
 /** Safely unwrap Supabase joins that may return an object or a single-element array */
 function unwrap<T>(val: T | T[] | null): T | null {
@@ -43,9 +44,7 @@ export const ResourceCard = ({ asset, profile, isFeaturedSize }: ResourceCardPro
     setAnimatedLoaded(false);
   }, []);
 
-  const linkUrl = profile?.username
-    ? `/u/${profile.username}/resources/${asset.id}`
-    : `/resources/${asset.id}`;
+  const linkUrl = buildResourcePath(asset.id, asset.name, profile?.username);
 
   return (
     <Link

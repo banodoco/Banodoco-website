@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCommunityResource } from '@/hooks/useCommunityResource';
 import { HlsPlayer } from '@/pages/Resources/HlsPlayer';
 import type { GalleryMediaItem } from '@/hooks/useCommunityResource';
+import { buildResourcePath, extractEntityIdFromSlug } from '@/lib/routing';
 
 const RESOURCE_TYPE_COLORS: Record<string, string> = {
   lora: 'bg-blue-500/20 text-blue-300',
@@ -56,10 +57,17 @@ function LoadingSkeleton() {
 }
 
 const ResourceDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug, username } = useParams<{ slug: string; username?: string }>();
   const navigate = useNavigate();
-  const { resource, galleryMedia, loading, error } = useCommunityResource(id);
+  const { resource, galleryMedia, loading, error } = useCommunityResource(slug);
   const [activeMedia, setActiveMedia] = useState<GalleryMediaItem | null>(null);
+  const routeResourceId = extractEntityIdFromSlug(slug);
+
+  useEffect(() => {
+    if (!resource || !slug || !routeResourceId) return;
+    if (resource.id !== routeResourceId || resource.slug === slug) return;
+    navigate(buildResourcePath(resource.id, resource.title, username), { replace: true });
+  }, [navigate, resource, routeResourceId, slug, username]);
 
   // Set initial active media when gallery loads
   const displayMedia = activeMedia ?? galleryMedia[0] ?? null;
@@ -73,17 +81,51 @@ const ResourceDetail = () => {
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
-      <div className="max-w-4xl mx-auto px-6 pt-24 pb-12 md:pt-28 md:pb-20">
-        {/* Back button */}
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition mb-8 group"
-        >
-          <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
+      <div className="max-w-4xl mx-auto px-6 pt-20 pb-12 md:pt-24 md:pb-20">
+        <div className="mb-8 flex items-center justify-between gap-4">
+          {/* Back button */}
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition group"
+          >
+            <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+
+          {resource && (
+            <div className="flex min-w-0 items-center gap-3">
+              {resource.creator.avatarUrl ? (
+                <img
+                  src={resource.creator.avatarUrl}
+                  alt={creatorName}
+                  className="w-8 h-8 rounded-full flex-shrink-0"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs text-white/40 font-medium">
+                    {creatorName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+
+              {resource.creator.profileUrl ? (
+                <Link
+                  to={resource.creator.profileUrl}
+                  className="max-w-[14rem] truncate text-sm font-medium text-zinc-300 hover:text-white transition"
+                >
+                  {creatorName}
+                </Link>
+              ) : (
+                <span className="max-w-[14rem] truncate text-sm font-medium text-zinc-300">
+                  {creatorName}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Loading state */}
         {loading && <LoadingSkeleton />}
@@ -116,6 +158,7 @@ const ResourceDetail = () => {
                   <HlsPlayer
                     hlsUrl={displayMedia.cloudflare_playback_hls_url}
                     thumbnailUrl={displayMedia.cloudflare_thumbnail_url}
+                    autoPlay
                     className="w-full aspect-video rounded-lg overflow-hidden"
                   />
                 ) : displayMedia.cloudflare_thumbnail_url ? (
@@ -212,35 +255,6 @@ const ResourceDetail = () => {
               </div>
             )}
 
-            {/* Creator info */}
-            <div className="flex items-center gap-3 pt-6 border-t border-white/5">
-              {resource.creator.avatarUrl ? (
-                <img
-                  src={resource.creator.avatarUrl}
-                  alt={creatorName}
-                  className="w-10 h-10 rounded-full flex-shrink-0"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm text-white/40 font-medium">
-                    {creatorName.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div>
-                {resource.creator.profileUrl ? (
-                  <Link
-                    to={resource.creator.profileUrl}
-                    className="text-sm font-medium text-zinc-200 hover:text-white transition"
-                  >
-                    {creatorName}
-                  </Link>
-                ) : (
-                  <span className="text-sm font-medium text-zinc-200">{creatorName}</span>
-                )}
-              </div>
-            </div>
           </motion.article>
         )}
       </div>

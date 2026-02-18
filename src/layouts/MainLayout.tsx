@@ -1,10 +1,11 @@
-import { useState, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ScrollVideoBackground } from '@/components/layout/ScrollVideoBackground';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { isIOS } from '@/lib/device';
+import { isProfilePathname, normalizeLegacyHashUsernamePath } from '@/lib/routing';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -16,15 +17,47 @@ interface MainLayoutProps {
 const HOME_SCROLL_CLASSES = 'relative h-screen h-[100svh] overflow-y-auto snap-y snap-mandatory overscroll-none bg-transparent text-foreground';
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { pathname } = location;
   const isHome = pathname === '/';
   const isSecondRenaissance = pathname === '/2nd-renaissance';
   const isWrapped = pathname === '/1m';
   const isResources = pathname.startsWith('/resources');
-  const isDarkPath = pathname.startsWith('/u/') || pathname.startsWith('/submit/') || pathname.startsWith('/auth/') || pathname.startsWith('/art/');
+  const isDarkPath =
+    isProfilePathname(pathname)
+    || pathname.startsWith('/submit/')
+    || pathname.startsWith('/auth/')
+    || pathname.startsWith('/art/');
   const [isIOSDevice] = useState(() => isIOS());
 
   const theme = (isHome || isSecondRenaissance || isWrapped || isResources || isDarkPath) ? 'dark' : 'light';
+
+  // Centralized route-change scroll behavior:
+  // - All non-home routes start at top
+  // - Home starts at top unless explicit section-target state/hash is provided
+  useEffect(() => {
+    const normalizedPath = normalizeLegacyHashUsernamePath(pathname, location.hash);
+    if (normalizedPath) {
+      navigate(`${normalizedPath}${location.search}`, { replace: true });
+      return;
+    }
+
+    const state = (location.state ?? {}) as { scrollTo?: string; scrollToTop?: boolean };
+
+    if (pathname === '/') {
+      if (state.scrollTo || state.scrollToTop || location.hash) return;
+      requestAnimationFrame(() => {
+        const homeContainer = document.getElementById('home-scroll-container');
+        homeContainer?.scrollTo({ top: 0, behavior: 'auto' });
+      });
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    });
+  }, [pathname, location.hash, location.key, location.search, location.state, navigate]);
 
   if (isHome) {
     return (

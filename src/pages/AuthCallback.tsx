@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { profilePath } from '@/lib/routing';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -10,7 +11,7 @@ const AuthCallback = () => {
     if (loading) return;
 
     if (user && profile?.username) {
-      navigate(`/u/${profile.username}`, { replace: true });
+      navigate(profilePath(profile.username), { replace: true });
     } else if (user) {
       // User exists but profile may not have a username yet
       navigate('/', { replace: true });

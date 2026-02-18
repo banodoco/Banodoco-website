@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { isProfilePathname, profilePath } from '@/lib/routing';
 import {
   NAV_SECTIONS,
   SECTION_COLORS,
@@ -96,9 +97,17 @@ export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
   const { theme, isHomePage, currentSection } = useLayoutContext();
   const { user, profile, loading: authLoading, signInWithDiscord, signOut } = useAuth();
   const isDark = theme === 'dark';
+  const showSectionNav = isHomePage;
+  const showResourcesShortcut = isHomePage;
+  const isResourceContextSubpage =
+    isProfilePathname(pathname)
+    || pathname.startsWith('/art/')
+    || (pathname.startsWith('/resources/') && pathname !== '/resources');
+  const logoTarget = isResourceContextSubpage ? '/resources' : '/';
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
@@ -125,6 +134,15 @@ export const Header = () => {
   // Hero section uses light fog overlay, so logo/nav should be dark knockout text
   const isOnHero = isHomePage && (currentSection === SECTION_IDS.hero || currentSection === null);
 
+  const resourcesButtonClass = cn(
+    'text-[13px] font-medium px-3 py-1.5 rounded-lg transition-all',
+    isOnHero
+      ? 'text-white/80 hover:text-white bg-white/10 hover:bg-white/20 md:text-[#141414] md:bg-black/5 md:hover:bg-black/10 md:hover:text-[#141414]'
+      : isDark
+        ? 'text-white/80 hover:text-white bg-white/10 hover:bg-white/15'
+        : 'text-[#4B4B4B] hover:text-[#141414] bg-black/5 hover:bg-black/10'
+  );
+
   // Transparent header with blur and border for hero
   const heroHeaderStyle = isOnHero ? {
     background: 'transparent',
@@ -148,7 +166,7 @@ export const Header = () => {
     >
       <div className="flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" onClick={(e) => scrollToTop(e, isHomePage)} className="flex items-center gap-2.5">
+        <Link to={logoTarget} onClick={(e) => scrollToTop(e, isHomePage)} className="flex items-center gap-2.5">
           <img src="/banodoco.png" alt="Banodoco" className="h-7 w-7" draggable={false} />
           <span 
             className={cn(
@@ -164,8 +182,8 @@ export const Header = () => {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-8">
-          {NAV_SECTIONS.map(({ id, label }) => (
+        <nav className={cn('hidden md:flex items-center', showSectionNav ? 'gap-8' : 'gap-4')}>
+          {showSectionNav && NAV_SECTIONS.map(({ id, label }) => (
             <NavLink
               key={id}
               sectionId={id}
@@ -177,8 +195,14 @@ export const Header = () => {
             />
           ))}
 
+          {showResourcesShortcut && (
+            <Link to="/resources" className={resourcesButtonClass}>
+              Resources
+            </Link>
+          )}
+
           {/* Auth: Sign In / User Menu */}
-          {!authLoading && !user && (
+          {!isHomePage && !authLoading && !user && (
             <button
               onClick={signInWithDiscord}
               className={cn(
@@ -194,7 +218,7 @@ export const Header = () => {
             </button>
           )}
 
-          {!authLoading && user && (
+          {!isHomePage && !authLoading && user && (
             <div ref={userMenuRef} className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -222,7 +246,7 @@ export const Header = () => {
                   </div>
                   {profile?.username && (
                     <Link
-                      to={`/u/${profile.username}`}
+                      to={profilePath(profile.username)}
                       onClick={() => setUserMenuOpen(false)}
                       className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors"
                     >
@@ -256,28 +280,30 @@ export const Header = () => {
         </nav>
 
         {/* Mobile hamburger button */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className={cn(
-            'md:hidden p-2 -mr-2 transition-colors',
-            // Mobile on hero: white, desktop on hero: dark
-            isOnHero ? 'text-white/80 hover:text-white' : 
-            !isDark ? 'text-gray-900/70 hover:text-gray-900' : 'text-white/80 hover:text-white'
-          )}
-          aria-label="Toggle menu"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {mobileMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        {showSectionNav && (
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className={cn(
+              'md:hidden p-2 -mr-2 transition-colors',
+              // Mobile on hero: white, desktop on hero: dark
+              isOnHero ? 'text-white/80 hover:text-white' : 
+              !isDark ? 'text-gray-900/70 hover:text-gray-900' : 'text-white/80 hover:text-white'
             )}
-          </svg>
-        </button>
+            aria-label="Toggle menu"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {mobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Mobile menu */}
-      <nav
+      {showSectionNav && <nav
         className={cn(
           'md:hidden overflow-hidden transition-all duration-200 ease-out -mx-5',
           mobileMenuOpen 
@@ -300,7 +326,7 @@ export const Header = () => {
             />
           ))}
         </div>
-      </nav>
+      </nav>}
     </header>
   );
 };

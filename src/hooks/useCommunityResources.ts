@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { buildEntitySlug, profilePath } from '@/lib/routing';
 
 const PAGE_SIZE = 12;
 
@@ -12,6 +13,7 @@ export interface ResourceCreator {
 
 export interface CommunityResourceItem {
   id: string;
+  slug: string;
   title: string;
   description: string | null;
   primaryUrl: string | null;
@@ -72,7 +74,7 @@ function mapRow(
         username: profile.username,
         displayName: profile.display_name ?? profile.username,
         avatarUrl: profile.avatar_url,
-        profileUrl: profile.username ? `/u/${profile.username}` : null,
+        profileUrl: profile.username ? profilePath(profile.username) : null,
       };
     }
   }
@@ -81,6 +83,7 @@ function mapRow(
 
   return {
     id: row.id,
+    slug: buildEntitySlug(row.name, row.id),
     title: row.name,
     description: row.description,
     primaryUrl: row.lora_link,

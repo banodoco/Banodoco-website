@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ArtPieceItem } from '@/hooks/useArtPieces';
+import { buildArtPath } from '@/lib/routing';
 
 interface ArtGalleryCardProps {
   artPiece: ArtPieceItem;
@@ -13,9 +14,7 @@ export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardPro
 
   const isVideo = mediaType === 'video' || !!hlsUrl;
 
-  const href = creator.profileUrl
-    ? `${creator.profileUrl}/art/${id}`
-    : `/art/${id}`;
+  const href = buildArtPath(id, artPiece.caption, creator.username);
 
   return (
     <Link
