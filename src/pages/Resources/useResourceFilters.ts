@@ -5,13 +5,17 @@ import type { Asset, ResourceFilters } from './types';
 
 const DEBOUNCE_MS = 300;
 
+const MUSIC_KEYWORDS = ['music', 'audio', 'song', 'sound', 'udio', 'suno', 'musicgen', 'stable-audio', 'riffusion', 'audioldm'];
+const VIDEO_KEYWORDS = ['video', 'wan', 'ltx', 'hunyuan', 'cogvideo', 'animatediff', 'kling', 'veo'];
+const IMAGE_KEYWORDS = ['image', 'flux', 'sdxl', 'stable-diffusion', 'stable diffusion', 'midjourney'];
+
 function parseFilters(params: URLSearchParams): ResourceFilters {
   return {
     type: (['all', 'lora', 'workflow'].includes(params.get('type') ?? '')
       ? params.get('type') as ResourceFilters['type']
       : 'all'),
     status: params.get('status') === 'all' ? 'all' : 'featured',
-    mediaType: (['all', 'video', 'image'].includes(params.get('mediaType') ?? '')
+    mediaType: (['all', 'video', 'image', 'music'].includes(params.get('mediaType') ?? '')
       ? params.get('mediaType') as ResourceFilters['mediaType']
       : 'all'),
     baseModel: params.get('baseModel') || null,
@@ -31,9 +35,47 @@ function filtersToParams(filters: ResourceFilters): URLSearchParams {
   return params;
 }
 
-function getModelMediaType(baseModel: string | null): 'video' | 'image' | null {
+function getMediaTypeFromText(value: string | null | undefined): 'video' | 'image' | 'music' | null {
+  if (!value) return null;
+  const text = value.toLowerCase();
+  if (MUSIC_KEYWORDS.some((keyword) => text.includes(keyword))) return 'music';
+  if (VIDEO_KEYWORDS.some((keyword) => text.includes(keyword))) return 'video';
+  if (IMAGE_KEYWORDS.some((keyword) => text.includes(keyword))) return 'image';
+  return null;
+}
+
+function getModelMediaType(baseModel: string | null): 'video' | 'image' | 'music' | null {
   if (!baseModel) return null;
-  return BASE_MODEL_MAP.get(baseModel)?.mediaType ?? null;
+  const normalized = baseModel.toLowerCase();
+  return BASE_MODEL_MAP.get(baseModel)?.mediaType
+    ?? BASE_MODEL_MAP.get(normalized)?.mediaType
+    ?? getMediaTypeFromText(baseModel);
+}
+
+function inferAssetMediaType(asset: Asset): 'video' | 'image' | 'music' | null {
+  const fromBaseModel = getModelMediaType(asset.lora_base_model);
+  if (fromBaseModel) return fromBaseModel;
+
+  const media = Array.isArray(asset.media) ? asset.media[0] : asset.media;
+  if (media?.type) {
+    const mediaType = getMediaTypeFromText(media.type);
+    if (mediaType) return mediaType;
+  }
+
+  if (media?.metadata) {
+    const metadataType = getMediaTypeFromText(JSON.stringify(media.metadata));
+    if (metadataType) return metadataType;
+  }
+
+  const textType = getMediaTypeFromText([
+    asset.type,
+    asset.lora_type,
+    asset.model_variant,
+    asset.name,
+    asset.description,
+  ].filter(Boolean).join(' '));
+
+  return textType;
 }
 
 export function useResourceFilters(assets: Asset[]) {
@@ -92,8 +134,8 @@ export function useResourceFilters(assets: Asset[]) {
     // Filter by selected media type
     const filtered = [...allIds].filter(id => {
       if (filters.mediaType === 'all') return true;
-      const info = BASE_MODEL_MAP.get(id);
-      return info ? info.mediaType === filters.mediaType : true;
+      const modelType = getModelMediaType(id);
+      return modelType === filters.mediaType;
     });
 
     return filtered.sort();
@@ -117,10 +159,10 @@ export function useResourceFilters(assets: Asset[]) {
       if (filters.type === 'lora' && asset.type !== 'lora') return false;
       if (filters.type === 'workflow' && asset.type !== 'workflow') return false;
 
-      // Media type filter (based on the asset's base model)
-      if (filters.mediaType !== 'all' && asset.lora_base_model) {
-        const modelType = getModelMediaType(asset.lora_base_model);
-        if (modelType && modelType !== filters.mediaType) return false;
+      // Media type filter (video/image/music)
+      if (filters.mediaType !== 'all') {
+        const assetMediaType = inferAssetMediaType(asset);
+        if (assetMediaType !== filters.mediaType) return false;
       }
 
       if (filters.baseModel && asset.lora_base_model !== filters.baseModel) return false;

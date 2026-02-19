@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { CommunityResourceItem } from '@/hooks/useCommunityResources';
+import { buildResourcePath } from '@/lib/routing';
 
 interface CommunityResourceCardProps {
   resource: CommunityResourceItem;
@@ -23,9 +24,7 @@ export const CommunityResourceCard = ({ resource }: CommunityResourceCardProps) 
   const colorClass = RESOURCE_TYPE_COLORS[resource.resourceType] ?? RESOURCE_TYPE_COLORS.other;
   const creatorName = resource.creator.displayName ?? resource.creator.username ?? 'Unknown';
 
-  const linkTo = resource.creator.username
-    ? `/u/${resource.creator.username}/resources/${resource.id}`
-    : `/resources/${resource.id}`;
+  const linkTo = buildResourcePath(resource.id, resource.title, resource.creator.username);
 
   return (
     <Link

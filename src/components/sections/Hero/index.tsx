@@ -105,8 +105,8 @@ export const Hero = () => {
       />
 
       {/* Hero content */}
-      <div className="h-full px-6 md:px-20 lg:px-24 flex items-center relative z-10">
-        <div className="max-w-7xl mx-auto w-full">
+      <div className="h-full px-8 md:px-24 lg:px-28 flex items-center relative z-10">
+        <div className="max-w-6xl mx-auto w-full">
           <div className="flex flex-col space-y-5 md:space-y-6 max-w-[520px] md:max-w-[580px] lg:max-w-[620px]">
             {/* Headline - white on mobile, dark on desktop */}
             <h1 
@@ -133,7 +133,7 @@ export const Hero = () => {
               </button>
               <Link
                 to="/resources"
-                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-lg transition-all hover:shadow-lg hover:scale-[1.02] text-white bg-white/25 hover:bg-white/35 backdrop-blur-sm md:text-[#1a1a1a] md:bg-black/8 md:hover:bg-black/12 md:backdrop-blur-none"
+                className="inline-flex items-center px-6 py-3 text-sm font-semibold rounded-lg transition-all text-white border border-white/50 hover:bg-white/10 md:text-[#1a1a1a] md:border-black/15 md:hover:bg-black/5"
               >
                 Resources
               </Link>

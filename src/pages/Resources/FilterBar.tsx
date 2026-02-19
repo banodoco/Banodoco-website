@@ -74,7 +74,7 @@ export const FilterBar = ({
           ))}
         </div>
 
-        {/* Media type pills (Image / Video) */}
+        {/* Media type pills (All / Video / Image / Music) */}
         {showLoraFilters && (
           <div className="flex gap-1 bg-white/5 rounded-lg p-1">
             {MEDIA_TYPE_OPTIONS.map(opt => (

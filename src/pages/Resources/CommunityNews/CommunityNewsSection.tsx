@@ -207,7 +207,7 @@ export const CommunityNewsSection = () => {
   );
 
   return (
-    <div className="mb-12">
+    <div>
       <h2 className="text-2xl font-semibold text-white mb-1">News from the Community</h2>
       <p className="text-white/50 text-sm mb-5">Daily highlights from our Discord, powered by AI summaries.</p>
 

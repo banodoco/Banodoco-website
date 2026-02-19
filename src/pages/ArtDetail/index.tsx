@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useArtPiece } from '@/hooks/useArtPiece';
 import { useArtPieces } from '@/hooks/useArtPieces';
 import { HlsPlayer } from '@/pages/Resources/HlsPlayer';
 import { ArtGalleryCard } from '@/pages/Resources/ArtGallery/ArtGalleryCard';
+import { buildArtPath, extractEntityIdFromSlug } from '@/lib/routing';
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -27,9 +29,16 @@ function SidebarSkeleton() {
 }
 
 const ArtDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug, username } = useParams<{ slug: string; username?: string }>();
   const navigate = useNavigate();
-  const { artPiece, loading, error } = useArtPiece(id);
+  const { artPiece, loading, error } = useArtPiece(slug);
+  const routeArtId = extractEntityIdFromSlug(slug);
+
+  useEffect(() => {
+    if (!artPiece || !slug || !routeArtId) return;
+    if (artPiece.id !== routeArtId || artPiece.slug === slug) return;
+    navigate(buildArtPath(artPiece.id, artPiece.caption, username), { replace: true });
+  }, [artPiece, navigate, routeArtId, slug, username]);
 
   // Fetch other art from the same creator
   // Pass a dummy non-matching ID until artPiece loads (prevents fetching ALL art)
@@ -38,7 +47,7 @@ const ArtDetail = () => {
     creatorUserId ?? '__none__'
   );
   const relatedArt = creatorUserId
-    ? creatorArt.filter(a => a.id !== id).slice(0, 6)
+    ? creatorArt.filter(a => a.id !== artPiece?.id).slice(0, 6)
     : [];
 
   if (loading) {
@@ -69,27 +78,60 @@ const ArtDetail = () => {
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-8 sm:pt-28 sm:pb-12">
-        {/* Back button */}
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors mb-8 cursor-pointer"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-20 pb-8 sm:pt-24 sm:pb-12">
+        <div className="mb-8 flex items-center justify-between gap-4">
+          {/* Back button */}
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          Back
-        </button>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            Back
+          </button>
+
+          <div className="flex min-w-0 items-center gap-3">
+            {creator.avatarUrl ? (
+              <img
+                src={creator.avatarUrl}
+                alt=""
+                className="w-8 h-8 rounded-full flex-shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs text-white/40 font-medium">
+                  {creatorName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            <div className="min-w-0 text-right">
+              {creator.profileUrl ? (
+                <Link
+                  to={creator.profileUrl}
+                  className="block truncate text-sm font-medium text-zinc-300 hover:text-white transition-colors"
+                >
+                  {creatorName}
+                </Link>
+              ) : (
+                <span className="block truncate text-sm font-medium text-zinc-300">
+                  {creatorName}
+                </span>
+              )}
+              <p className="text-xs text-zinc-500">{formatDate(createdAt)}</p>
+            </div>
+          </div>
+        </div>
 
         {/* Two-column YouTube layout */}
         <div className={`grid grid-cols-1 gap-8 ${showSidebar ? 'lg:grid-cols-[1fr_340px]' : ''}`}>
@@ -101,6 +143,7 @@ const ArtDetail = () => {
                 <HlsPlayer
                   hlsUrl={hlsUrl}
                   thumbnailUrl={thumbnailUrl}
+                  autoPlay
                   className="w-full aspect-video"
                 />
               ) : thumbnailUrl ? (
@@ -117,33 +160,7 @@ const ArtDetail = () => {
             </div>
 
             {/* Info section */}
-            <div className="mt-8 space-y-6">
-              {/* Creator info */}
-              <div className="flex items-center gap-3">
-                {creator.avatarUrl && (
-                  <img
-                    src={creator.avatarUrl}
-                    alt=""
-                    className="w-10 h-10 rounded-full"
-                  />
-                )}
-                <div>
-                  {creator.profileUrl ? (
-                    <Link
-                      to={creator.profileUrl}
-                      className="text-sm font-medium text-white hover:text-orange-400 transition-colors"
-                    >
-                      {creatorName}
-                    </Link>
-                  ) : (
-                    <span className="text-sm font-medium text-white">
-                      {creatorName}
-                    </span>
-                  )}
-                  <p className="text-xs text-zinc-500">{formatDate(createdAt)}</p>
-                </div>
-              </div>
-
+            <div className="mt-8">
               {/* Caption */}
               {caption && (
                 <p className="text-zinc-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">

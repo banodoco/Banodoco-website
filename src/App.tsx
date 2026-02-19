@@ -36,13 +36,13 @@ function App() {
               <Route path="/1m" element={<WrappedPage />} />
               <Route path="/resources" element={<Resources />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/u/:username" element={<UserProfile />} />
-              <Route path="/u/:username/art" element={<UserProfile />} />
-              <Route path="/u/:username/resources" element={<UserProfile />} />
-              <Route path="/u/:username/art/:id" element={<ArtDetail />} />
-              <Route path="/u/:username/resources/:id" element={<ResourceDetail />} />
-              <Route path="/art/:id" element={<ArtDetail />} />
-              <Route path="/resources/:id" element={<ResourceDetail />} />
+              <Route path="/art/:slug" element={<ArtDetail />} />
+              <Route path="/resources/:slug" element={<ResourceDetail />} />
+              <Route path="/:username/art/:slug" element={<ArtDetail />} />
+              <Route path="/:username/resources/:slug" element={<ResourceDetail />} />
+              <Route path="/:username/art" element={<UserProfile />} />
+              <Route path="/:username/resources" element={<UserProfile />} />
+              <Route path="/:username" element={<UserProfile />} />
               <Route path="/submit/art" element={<SubmitArt />} />
               <Route path="/submit/resource" element={<SubmitResource />} />
               <Route path="*" element={<NotFound />} />

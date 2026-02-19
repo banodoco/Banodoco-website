@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type { CommunityResourceItem, ResourceCreator } from '@/hooks/useCommunityResources';
+import { buildEntitySlug, extractEntityIdFromSlug, profilePath } from '@/lib/routing';
 
 export type { CommunityResourceItem };
 
@@ -60,7 +61,7 @@ async function fetchCreator(raw: AssetRow): Promise<ResourceCreator> {
         username: profile.username,
         displayName: profile.display_name ?? profile.username,
         avatarUrl: profile.avatar_url,
-        profileUrl: profile.username ? `/u/${profile.username}` : null,
+        profileUrl: profile.username ? profilePath(profile.username) : null,
       };
     }
   }
@@ -68,16 +69,23 @@ async function fetchCreator(raw: AssetRow): Promise<ResourceCreator> {
   return { username: null, displayName: raw.creator ?? 'Unknown', avatarUrl: null, profileUrl: null };
 }
 
-export const useCommunityResource = (id: string | undefined): UseCommunityResourceResult => {
+export const useCommunityResource = (slugOrId: string | undefined): UseCommunityResourceResult => {
   const [resource, setResource] = useState<CommunityResourceItem | null>(null);
   const [galleryMedia, setGalleryMedia] = useState<GalleryMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) {
+    if (!slugOrId) {
       setLoading(false);
       setError('No resource ID provided');
+      return;
+    }
+
+    const resolvedId = extractEntityIdFromSlug(slugOrId);
+    if (!resolvedId) {
+      setLoading(false);
+      setError('Invalid resource link');
       return;
     }
 
@@ -97,7 +105,7 @@ export const useCommunityResource = (id: string | undefined): UseCommunityResour
             id, name, description, type, lora_link, created_at, user_id, creator,
             media:primary_media_id ( cloudflare_thumbnail_url )
           `)
-          .eq('id', id)
+          .eq('id', resolvedId)
           .in('admin_status', ['Featured', 'Curated', 'Listed'])
           .single();
 
@@ -113,6 +121,7 @@ export const useCommunityResource = (id: string | undefined): UseCommunityResour
 
         setResource({
           id: raw.id,
+          slug: buildEntitySlug(raw.name, raw.id),
           title: raw.name,
           description: raw.description,
           primaryUrl: raw.lora_link,
@@ -126,7 +135,7 @@ export const useCommunityResource = (id: string | undefined): UseCommunityResour
         const { data: galleryData } = await supabase!
           .from('asset_media')
           .select('media:media_id (id, type, cloudflare_thumbnail_url, cloudflare_playback_hls_url)')
-          .eq('asset_id', id);
+          .eq('asset_id', resolvedId);
 
         if (galleryData) {
           const media = (galleryData as { media: GalleryMediaItem | GalleryMediaItem[] | null }[])
@@ -146,7 +155,7 @@ export const useCommunityResource = (id: string | undefined): UseCommunityResour
     };
 
     fetchResource();
-  }, [id]);
+  }, [slugOrId]);
 
   return { resource, galleryMedia, loading, error };
 };

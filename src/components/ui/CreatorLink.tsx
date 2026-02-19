@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { profilePath } from '@/lib/routing';
 
 interface CreatorLinkProps {
   username: string | null;
@@ -54,7 +55,7 @@ export const CreatorLink = ({
 
   return (
     <Link
-      to={`/u/${username}`}
+      to={profilePath(username)}
       className="hover:opacity-80 transition-opacity"
       onClick={(e) => e.stopPropagation()}
     >

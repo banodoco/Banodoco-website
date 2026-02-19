@@ -6,6 +6,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { MediaUploader } from '@/components/forms/MediaUploader';
+import { buildArtPath } from '@/lib/routing';
 
 function SubmitArtForm() {
   const navigate = useNavigate();
@@ -93,8 +94,7 @@ function SubmitArtForm() {
       }
 
       const newId = insertData.id;
-      const username = profile?.username ?? user.id;
-      navigate(`/u/${username}/art/${newId}`);
+      navigate(buildArtPath(newId, description || file.name, profile?.username ?? null));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { buildEntitySlug, profilePath } from '@/lib/routing';
 
 export interface ArtPieceCreator {
   username: string | null;
@@ -10,6 +11,7 @@ export interface ArtPieceCreator {
 
 export interface ArtPieceItem {
   id: string;
+  slug: string;
   title: string | null;
   caption: string | null;
   thumbnailUrl: string | null;
@@ -63,13 +65,14 @@ function mapRowToItem(row: MediaRow, profileMap: Map<string, ProfileRow>): ArtPi
         username: profile.username,
         displayName: profile.display_name ?? profile.username,
         avatarUrl: profile.avatar_url,
-        profileUrl: profile.username ? `/u/${profile.username}` : null,
+        profileUrl: profile.username ? profilePath(profile.username) : null,
       };
     }
   }
 
   return {
     id: row.id,
+    slug: buildEntitySlug(row.description, row.id),
     title: null,
     caption: row.description,
     thumbnailUrl: row.cloudflare_thumbnail_url,

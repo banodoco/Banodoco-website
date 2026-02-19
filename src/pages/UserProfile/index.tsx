@@ -8,6 +8,7 @@ import { useCommunityResources } from '@/hooks/useCommunityResources';
 import { ArtGalleryCard } from '@/pages/Resources/ArtGallery/ArtGalleryCard';
 import { CommunityResourceCard } from '@/pages/Resources/CommunityResourcesFeed/CommunityResourceCard';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { profilePath, profileResourcesPath } from '@/lib/routing';
 
 type TabKey = 'art' | 'resources';
 
@@ -97,14 +98,14 @@ const UserProfile = () => {
       label: 'Art',
       count: artCount,
       icon: Palette,
-      path: `/u/${profile.username}`,
+      path: profilePath(profile.username),
     },
     {
       key: 'resources',
       label: 'Resources',
       count: resourceCount,
       icon: BookOpen,
-      path: `/u/${profile.username}/resources`,
+      path: profileResourcesPath(profile.username),
     },
   ];
 

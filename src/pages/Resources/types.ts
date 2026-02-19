@@ -35,7 +35,7 @@ export interface Asset {
 export interface ResourceFilters {
   type: 'all' | 'lora' | 'workflow';
   status: 'featured' | 'all';
-  mediaType: 'all' | 'video' | 'image';
+  mediaType: 'all' | 'video' | 'image' | 'music';
   baseModel: string | null;
   loraType: string | null;
   search: string;
