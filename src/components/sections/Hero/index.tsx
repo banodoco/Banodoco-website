@@ -1,5 +1,4 @@
 import { useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { Section } from '@/components/layout/Section';
 import { ArrowDownIcon } from '@/components/ui/icons';
 
@@ -122,8 +121,8 @@ export const Hero = () => {
               Tools, community, resources, and initiatives to support the open source AI movement.
             </h2>
 
-            {/* CTAs - white border on mobile, styled on desktop */}
-            <div className="flex items-center gap-3 pt-2">
+            {/* CTA - white border on mobile, orange gradient on desktop */}
+            <div className="flex items-center gap-4 pt-2">
               <button
                 onClick={scrollToNextSection}
                 className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-lg transition-all hover:gap-3 hover:shadow-lg hover:scale-[1.02] text-white border border-white/50 md:border-0 md:text-[#1a1a1a] md:bg-gradient-to-br md:from-[rgba(255,195,115,0.9)] md:to-[rgba(255,170,80,0.85)] md:shadow-[0_2px_8px_rgba(255,170,80,0.3)]"
@@ -131,12 +130,6 @@ export const Hero = () => {
                 Learn more
                 <ArrowDownIcon />
               </button>
-              <Link
-                to="/resources"
-                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-lg transition-all hover:shadow-lg hover:scale-[1.02] text-white bg-white/25 hover:bg-white/35 backdrop-blur-sm md:text-[#1a1a1a] md:bg-black/8 md:hover:bg-black/12 md:backdrop-blur-none"
-              >
-                Resources
-              </Link>
             </div>
           </div>
         </div>

@@ -2,11 +2,10 @@ import { useEffect, useState, useRef, useLayoutEffect, useCallback } from 'react
 import { useCommunityTopics } from './useCommunityTopics';
 import { TopicCard } from './TopicCard';
 import { Section } from '@/components/layout/Section';
-import { useSectionVisibility } from '@/lib/useSectionVisibility';
+import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { ExternalLinkIcon } from '@/components/ui/icons';
 import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
 import { Skeleton, SkeletonParagraph, SkeletonBullet } from '@/components/ui/Skeleton';
-import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
 /** Shared intro content - responsive styling handles mobile vs desktop */
 const CommunityIntro = () => (
@@ -18,7 +17,7 @@ const CommunityIntro = () => (
       We've been at the cutting-edge of the technical & artistic scenes over the past two years.
     </p>
     <a 
-      href={EXTERNAL_LINKS.discordInvite}
+      href="https://discord.gg/NnFxGvx94b" 
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center gap-2 text-sky-400 font-medium hover:text-sky-300 transition-colors"
@@ -159,7 +158,7 @@ export const Community = () => {
   const [paddings, setPaddings] = useState({ top: 0, bottom: 0 });
   
   const desktopScrollRef = useRef<HTMLDivElement>(null);
-  const { ref: sectionRef, isVisible: sectionIsVisible } = useSectionVisibility({ threshold: 0.5 });
+  const { ref: sectionRef, isActive: sectionIsVisible } = useSectionRuntime({ threshold: 0.5 });
   const topicRefs = useRef<(HTMLElement | null)[]>([]);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const mobileCardRefs = useRef<(HTMLElement | null)[]>([]);

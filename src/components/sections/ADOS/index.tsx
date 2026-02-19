@@ -4,12 +4,11 @@ import { events } from './data';
 import { EventSelector } from './EventSelector';
 import { EventContent } from './EventContent';
 import { useEventsAutoAdvance } from './useEventsAutoAdvance';
-import { useSectionVisibility } from '@/lib/useSectionVisibility';
+import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { Section, SectionContent } from '@/components/layout/Section';
 import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
 import { ExternalLinkIcon } from '@/components/ui/icons';
 import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
-import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
 export const ADOS: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState(0);
@@ -18,7 +17,7 @@ export const ADOS: React.FC = () => {
   
   // Track section visibility - pause videos when scrolled away
   // Threshold raised to reduce decoder contention with other video sections on mobile
-  const { ref: sectionRef, isVisible: isActive, hasBeenVisible: hasStarted } = useSectionVisibility({ 
+  const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ 
     threshold: 0.25,
     exitThreshold: 0.15,
   });
@@ -118,7 +117,7 @@ export const ADOS: React.FC = () => {
                 We gather our community with people from the extended creative world to look at art, eat nice food, and create things.
               </p>
               <a
-                href={EXTERNAL_LINKS.adosEvents}
+                href="https://ados.events/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-rose-400 font-medium hover:text-rose-300 transition-colors"
@@ -132,3 +131,4 @@ export const ADOS: React.FC = () => {
     </Section>
   );
 };
+

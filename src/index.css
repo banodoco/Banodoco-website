@@ -22,24 +22,6 @@
 
     /* Header height: used for section content offset on desktop where header is fixed */
     --header-height: 0px;
-
-    /* Wrapped page color tokens */
-    --wrapped-model-sd: #3B82F6;
-    --wrapped-model-animatediff: #F97316;
-    --wrapped-model-flux: #A855F7;
-    --wrapped-model-wan: #22C55E;
-    --wrapped-model-cogvideo: #EC4899;
-    --wrapped-model-hunyuan: #EAB308;
-    --wrapped-model-ltx: #06B6D4;
-    --wrapped-chart-surface: #1a1a1a;
-    --wrapped-chart-axis: #666;
-    --wrapped-chart-grid: #333;
-    --wrapped-chart-cumulative: #06B6D4;
-    --wrapped-chart-cumulative-glow: #06B6D4;
-    --wrapped-chart-active-dot-stroke: #fff;
-    --wrapped-chart-milestone-fill: #FFD700;
-    --wrapped-chart-milestone-stroke: #FFA500;
-    --wrapped-bg-pattern-fill: #252525;
   }
 
   /* On md+ screens, header is fixed and takes up space */

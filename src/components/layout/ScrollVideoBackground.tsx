@@ -58,7 +58,6 @@ const SECTION_ORDER = ['hero', 'community', 'reigh', 'arca-gidan', 'ados', 'ecos
 const IDLE_DELAY_MS = 500;
 // How fast the video drifts when idle (seconds per second, e.g., 0.5 = half speed playback)
 const DRIFT_SPEED = 0.5;
-const MILLISECONDS_PER_SECOND = 1000;
 
 // =============================================================================
 // MOBILE CONFIG - Separate video clips
@@ -163,13 +162,10 @@ const DesktopScrollVideo = () => {
   // === PURE FUNCTIONS ===
   
   /** Get the scroll container element */
-  const getScrollContainer = useCallback(
-    () => document.getElementById('home-scroll-container'),
-    []
-  );
+  const getScrollContainer = () => document.getElementById('home-scroll-container');
 
   /** Build/refresh the section position cache */
-  const refreshSectionCache = useCallback(() => {
+  const refreshSectionCache = () => {
     const container = getScrollContainer();
     if (!container) return;
     
@@ -179,14 +175,14 @@ const DesktopScrollVideo = () => {
         return el ? { id, top: el.offsetTop, height: el.offsetHeight } : null;
       })
       .filter(Boolean) as Array<{ id: string; top: number; height: number }>;
-  }, [getScrollContainer]);
+  };
 
   /** 
    * Calculate which section we're in and progress within it.
    * Uses cached section positions (only refreshed on init/resize, not during animation).
    * Returns { sectionId, progress (0-1), nextSectionId }
    */
-  const getSectionInfo = useCallback((scrollTop: number) => {
+  const getSectionInfo = (scrollTop: number) => {
     const sections = sectionCacheRef.current;
     if (!sections.length) return { sectionId: SECTION_ORDER[0], progress: 0, nextSectionId: SECTION_ORDER[1] };
 
@@ -203,14 +199,14 @@ const DesktopScrollVideo = () => {
     const progress = Math.max(0, Math.min(1, (scrollTop - current.top) / Math.max(sectionHeight, 1)));
 
     return { sectionId: current.id, progress, nextSectionId: next?.id };
-  }, []);
+  };
 
   /**
    * Convert scroll position to video time.
    * Maps each section's scroll range to: section.start → nextSection.start
    * Applies ease-out curve for front-loaded feel.
    */
-  const scrollToVideoTime = useCallback((scrollTop: number): number => {
+  const scrollToVideoTime = (scrollTop: number): number => {
     const { sectionId, progress, nextSectionId } = getSectionInfo(scrollTop);
     const current = SECTION_TIMESTAMPS[sectionId];
     const next = nextSectionId ? SECTION_TIMESTAMPS[nextSectionId] : null;
@@ -225,7 +221,7 @@ const DesktopScrollVideo = () => {
     const videoEnd = next ? next.start : current.end;
 
     return videoStart + easedProgress * (videoEnd - videoStart);
-  }, [getSectionInfo]);
+  };
 
   /**
    * Get the maximum idle bonus allowed for the current section.
@@ -258,7 +254,7 @@ const DesktopScrollVideo = () => {
     let idleStartTime: number | null = null;
 
     const loop = (now: number) => {
-      const delta = (now - lastTime) / MILLISECONDS_PER_SECOND;
+      const delta = (now - lastTime) / 1000;
       lastTime = now;
 
       // Skip if videos not ready
@@ -408,7 +404,7 @@ const DesktopScrollVideo = () => {
     };
 
     animationRef.current = requestAnimationFrame(loop);
-  }, [getScrollContainer, getSectionInfo, scrollToVideoTime]);
+  }, []);
 
   // === LIFECYCLE ===
   
@@ -551,7 +547,7 @@ const DesktopScrollVideo = () => {
       window.removeEventListener('resize', handleResize);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [getScrollContainer, startAnimationLoop, refreshSectionCache, scrollToVideoTime]);
+  }, [startAnimationLoop]);
 
   // === RENDER ===
   return (

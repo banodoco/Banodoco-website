@@ -10,29 +10,9 @@ interface TimelineProps {
   cumulativeMessages: CumulativeDataPoint[];
 }
 
-const THOUSAND = 10 ** 3;
-const ONE_MILLION = THOUSAND * THOUSAND;
-const MILLION_CELEBRATION_THRESHOLD = ONE_MILLION - 50 * THOUSAND;
-const MILLION_MARKER_Y = ONE_MILLION * 0.99;
-const PERCENT_SCALE = 100;
-const TIMELINE_ANIMATION_DURATION_S = 2.5;
-
-const CHART_COLORS = {
-  surface: 'var(--wrapped-chart-surface)',
-  axis: 'var(--wrapped-chart-axis)',
-  grid: 'var(--wrapped-chart-grid)',
-  cumulative: 'var(--wrapped-chart-cumulative)',
-  cumulativeGlow: 'var(--wrapped-chart-cumulative-glow)',
-  activeDotStroke: 'var(--wrapped-chart-active-dot-stroke)',
-  milestoneFill: 'var(--wrapped-chart-milestone-fill)',
-  milestoneStroke: 'var(--wrapped-chart-milestone-stroke)',
-} as const;
-
-const TIMELINE_CONFETTI_COLORS = ['gold', 'orange', 'khaki', 'white'] as const;
-
 const formatYAxis = (v: number) => {
-  if (v >= ONE_MILLION) return `${(v / ONE_MILLION).toFixed(1)}M`;
-  if (v >= THOUSAND) return `${(v / THOUSAND).toFixed(0)}K`;
+  if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
+  if (v >= 1000) return `${(v / 1000).toFixed(0)}K`;
   return String(v);
 };
 
@@ -42,9 +22,9 @@ const formatDate = (dateStr: string) => {
 };
 
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
-  if (!active || !payload?.length || !label) return null;
+  if (!active || !payload?.length) return null;
   const value = payload[0].value;
-  const isNearMillion = value >= MILLION_CELEBRATION_THRESHOLD;
+  const isNearMillion = value >= 950000;
 
   if (isNearMillion) {
     // Gold tooltip for 1M area
@@ -57,10 +37,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
   }
 
   return (
-    <div
-      className="px-4 py-3 rounded-xl shadow-2xl border border-white/10"
-      style={{ backgroundColor: CHART_COLORS.surface }}
-    >
+    <div className="px-4 py-3 rounded-xl shadow-2xl border bg-[#1a1a1a] border-white/10">
       <p className="text-xs text-gray-400 mb-1">{formatDate(label)}</p>
       <p className="text-sm font-bold text-white">{value.toLocaleString()} posts</p>
     </div>
@@ -68,7 +45,9 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 };
 
 // Clean Y-axis ticks
-const Y_TICKS = [0, ONE_MILLION * 0.2, ONE_MILLION * 0.4, ONE_MILLION * 0.6, ONE_MILLION * 0.8, ONE_MILLION];
+const Y_TICKS = [0, 200000, 400000, 600000, 800000, 1000000];
+
+const ANIMATION_DURATION = 2.5; // seconds
 
 const Timeline: React.FC<TimelineProps> = ({ cumulativeMessages }) => {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -82,18 +61,18 @@ const Timeline: React.FC<TimelineProps> = ({ cumulativeMessages }) => {
     let closestIdx = 0;
     let closestDist = Infinity;
     for (let i = 0; i < cumulativeMessages.length; i++) {
-      const dist = Math.abs(cumulativeMessages[i].cumulative - ONE_MILLION);
+      const dist = Math.abs(cumulativeMessages[i].cumulative - 1000000);
       if (dist < closestDist) {
         closestDist = dist;
         closestIdx = i;
       }
     }
     // Calculate percentage position (where in the data array is the 1M point)
-    const pct = ((closestIdx + 1) / cumulativeMessages.length) * PERCENT_SCALE;
+    const pct = ((closestIdx + 1) / cumulativeMessages.length) * 100;
     // Cap data at 1M so line doesn't go over
     const capped = cumulativeMessages.map(d => ({
       ...d,
-      cumulative: Math.min(d.cumulative, ONE_MILLION)
+      cumulative: Math.min(d.cumulative, 1000000)
     }));
     return {
       millionPoint: cumulativeMessages[closestIdx],
@@ -107,7 +86,7 @@ const Timeline: React.FC<TimelineProps> = ({ cumulativeMessages }) => {
     if (isInView && !animationComplete) {
       const timer = setTimeout(() => {
         setAnimationComplete(true);
-      }, TIMELINE_ANIMATION_DURATION_S * THOUSAND);
+      }, ANIMATION_DURATION * 1000);
       return () => clearTimeout(timer);
     }
   }, [isInView, animationComplete]);
@@ -127,7 +106,7 @@ const Timeline: React.FC<TimelineProps> = ({ cumulativeMessages }) => {
         particleCount: 50,
         spread: 60,
         origin: { x: originX, y: originY },
-        colors: [...TIMELINE_CONFETTI_COLORS],
+        colors: ['#FFD700', '#FFA500', '#FFEC8B', '#FFFFFF'],
         startVelocity: 25,
         gravity: 0.8,
         scalar: 0.9,
@@ -161,8 +140,8 @@ const Timeline: React.FC<TimelineProps> = ({ cumulativeMessages }) => {
           <AreaChart data={cappedData} margin={{ top: 10, right: 10, left: -5, bottom: 5 }}>
             <defs>
               <linearGradient id="cumulativeGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={CHART_COLORS.cumulative} stopOpacity={0.5}/>
-                <stop offset="95%" stopColor={CHART_COLORS.cumulative} stopOpacity={0.02}/>
+                <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.5}/>
+                <stop offset="95%" stopColor="#06B6D4" stopOpacity={0.02}/>
               </linearGradient>
               {/* Clip path for reveal animation - stops at 1M point */}
               <clipPath id="revealClip">
@@ -172,13 +151,13 @@ const Timeline: React.FC<TimelineProps> = ({ cumulativeMessages }) => {
                   height="100%"
                   initial={{ width: '0%' }}
                   animate={{ width: isInView ? `${millionPct}%` : '0%' }}
-                  transition={{ duration: TIMELINE_ANIMATION_DURATION_S, ease: 'easeOut' }}
+                  transition={{ duration: ANIMATION_DURATION, ease: 'easeOut' }}
                 />
               </clipPath>
             </defs>
             <XAxis
               dataKey="date"
-              stroke={CHART_COLORS.axis}
+              stroke="#666"
               tick={{ fontSize: 10 }}
               axisLine={false}
               tickLine={false}
@@ -187,40 +166,40 @@ const Timeline: React.FC<TimelineProps> = ({ cumulativeMessages }) => {
               interval={Math.floor(cappedData.length / 6)}
             />
             <YAxis
-              stroke={CHART_COLORS.axis}
+              stroke="#666"
               tick={{ fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={formatYAxis}
               width={45}
-              domain={[0, ONE_MILLION]}
+              domain={[0, 1000000]}
               ticks={Y_TICKS}
               allowDataOverflow={false}
             />
             {/* Horizontal grid lines at each Y tick */}
             {Y_TICKS.map((tick) => (
-              <ReferenceLine key={tick} y={tick} stroke={CHART_COLORS.grid} strokeDasharray="3 3" />
+              <ReferenceLine key={tick} y={tick} stroke="#333" strokeDasharray="3 3" />
             ))}
             <Tooltip content={<CustomTooltip />} />
             <Area
               type="monotone"
               dataKey="cumulative"
-              stroke={CHART_COLORS.cumulative}
+              stroke="#06B6D4"
               strokeWidth={2.5}
               fillOpacity={1}
               fill="url(#cumulativeGrad)"
               clipPath="url(#revealClip)"
               isAnimationActive={false}
-              activeDot={{ r: 6, fill: CHART_COLORS.cumulativeGlow, stroke: CHART_COLORS.activeDotStroke, strokeWidth: 2 }}
+              activeDot={{ r: 6, fill: '#06B6D4', stroke: '#fff', strokeWidth: 2 }}
             />
             {/* Gold 1M milestone marker - only shows after animation completes */}
             {animationComplete && millionPoint && (
               <ReferenceDot
                 x={millionPoint.date}
-                y={MILLION_MARKER_Y}
+                y={990000}
                 r={10}
-                fill={CHART_COLORS.milestoneFill}
-                stroke={CHART_COLORS.milestoneStroke}
+                fill="#FFD700"
+                stroke="#FFA500"
                 strokeWidth={3}
               />
             )}
