@@ -25,6 +25,8 @@ interface TopicCardProps {
   index?: number;
   /** Enable snap-center for this card (desktop only, disabled for first/last to allow smooth section transitions) */
   snapToCenter?: boolean;
+  /** Show pulsing green live dot (true) or static gray dot (false). Defaults to true. */
+  isLive?: boolean;
 }
 
 const renderSafeText = (value: string) =>
@@ -34,7 +36,7 @@ const renderSafeText = (value: string) =>
     .trim();
 
 export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
-  ({ topic, isActive, fullWidth = false, index = 0, snapToCenter = false }, ref) => {
+  ({ topic, isActive, fullWidth = false, index = 0, snapToCenter = false, isLive = true }, ref) => {
     const channelColor = CHANNEL_COLORS[index % CHANNEL_COLORS.length];
     
     return (
@@ -57,11 +59,15 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
             "flex items-center gap-2 text-white/40 font-medium",
             fullWidth ? "text-xs" : "text-[10px] md:text-xs"
           )}>
-            {/* Live indicator */}
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-            </span>
+            {/* Live/static indicator */}
+            {isLive ? (
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+              </span>
+            ) : (
+              <span className="inline-flex rounded-full h-2 w-2 bg-white/30"></span>
+            )}
             {formatDate(topic.summary_date)}
           </span>
           
