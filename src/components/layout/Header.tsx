@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useLayoutContext } from '@/contexts/LayoutContext';
+import { useLayoutContext } from '@/contexts/layout-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { isProfilePathname, profilePath } from '@/lib/routing';
 import {
