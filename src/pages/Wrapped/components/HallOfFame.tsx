@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import type { ThankedPerson } from '../types';
 
+const MILLISECONDS_PER_SECOND = 1000;
+
 // Gold medal particles that pop off from the #1 bar
 const MedalParticle: React.FC<{ delay: number; x: number; y: number }> = ({ delay, x, y }) => (
   <motion.span
@@ -75,7 +77,7 @@ const HallOfFame: React.FC<HallOfFameProps> = ({ mostThanked }) => {
       const numBars = isMobile ? 10 : 20;
       // #1 bar is last, delay = (numBars - 1) * 0.08 + 0.6s duration
       const medalDelay = (numBars - 1) * 0.08 + 0.6;
-      const timer = setTimeout(() => setShowMedals(true), medalDelay * 1000);
+      const timer = setTimeout(() => setShowMedals(true), medalDelay * MILLISECONDS_PER_SECOND);
       return () => clearTimeout(timer);
     }
   }, [isVisible, isMobile]);

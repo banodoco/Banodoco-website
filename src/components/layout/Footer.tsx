@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
-import { useLayoutContext } from '@/contexts/LayoutContext';
+import { useLayoutContext } from '@/contexts/layout-context';
 import { XIcon, DiscordIcon, GithubIcon } from '@/components/ui/icons';
+import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
 export const Footer = () => {
   const { theme, isHomePage } = useLayoutContext();
@@ -19,7 +20,7 @@ export const Footer = () => {
     >
       <div className="flex justify-center items-center gap-8 w-full py-7 md:py-12">
         <a 
-          href="https://twitter.com/banodoco" 
+          href={EXTERNAL_LINKS.twitter}
           target="_blank" 
           rel="noopener noreferrer"
           className={cn(
@@ -33,7 +34,7 @@ export const Footer = () => {
           <XIcon className="w-6 h-6" />
         </a>
         <a 
-          href="https://github.com/banodoco" 
+          href={EXTERNAL_LINKS.github}
           target="_blank" 
           rel="noopener noreferrer"
           className={cn(
@@ -47,7 +48,7 @@ export const Footer = () => {
           <GithubIcon className="w-6 h-6" />
         </a>
         <a 
-          href="https://discord.gg/NnFxGvx94b" 
+          href={EXTERNAL_LINKS.discordInvite}
           target="_blank" 
           rel="noopener noreferrer"
           className={cn(

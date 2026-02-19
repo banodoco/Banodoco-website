@@ -12,13 +12,13 @@ interface ModelTrendsProps {
 
 // Order matters for stacked areas - bottom to top
 const MODEL_COLORS: Record<string, { stroke: string; name: string }> = {
-  sd: { stroke: '#3B82F6', name: 'Stable Diffusion' },
-  animatediff: { stroke: '#F97316', name: 'AnimateDiff' },
-  flux: { stroke: '#A855F7', name: 'Flux' },
-  wan: { stroke: '#22C55E', name: 'Wan' },
-  cogvideo: { stroke: '#EC4899', name: 'CogVideoX' },
-  hunyuan: { stroke: '#EAB308', name: 'HunyuanVideo' },
-  ltx: { stroke: '#06B6D4', name: 'LTX' },
+  sd: { stroke: 'var(--wrapped-model-sd)', name: 'Stable Diffusion' },
+  animatediff: { stroke: 'var(--wrapped-model-animatediff)', name: 'AnimateDiff' },
+  flux: { stroke: 'var(--wrapped-model-flux)', name: 'Flux' },
+  wan: { stroke: 'var(--wrapped-model-wan)', name: 'Wan' },
+  cogvideo: { stroke: 'var(--wrapped-model-cogvideo)', name: 'CogVideoX' },
+  hunyuan: { stroke: 'var(--wrapped-model-hunyuan)', name: 'HunyuanVideo' },
+  ltx: { stroke: 'var(--wrapped-model-ltx)', name: 'LTX' },
 };
 
 const MODEL_KEYS = Object.keys(MODEL_COLORS);
@@ -29,6 +29,12 @@ const ANIMATION = {
   AUTO_PLAY_DELAY_MS: 100,
   VISIBILITY_THRESHOLD: 0.3,
   LABEL_DURATION_FRAMES: 15,
+} as const;
+
+const CHART_COLORS = {
+  tooltipBackground: 'var(--wrapped-chart-surface)',
+  axisAndTicks: 'var(--wrapped-chart-axis)',
+  grid: 'var(--wrapped-chart-grid)',
 } as const;
 
 // ============ Utilities ============
@@ -203,7 +209,10 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
   if (!active || !payload?.length) return null;
   const sorted = [...payload].sort((a, b) => b.value - a.value);
   return (
-    <div className="bg-[#1a1a1a] border border-white/10 px-4 py-3 rounded-xl shadow-2xl min-w-[140px]">
+    <div
+      className="border border-white/10 px-4 py-3 rounded-xl shadow-2xl min-w-[140px]"
+      style={{ backgroundColor: CHART_COLORS.tooltipBackground }}
+    >
       <p className="text-xs text-gray-400 mb-2 font-medium">{label}</p>
       {sorted.map((entry, i: number) => (
         entry.value > 0 && (
@@ -259,7 +268,7 @@ const LegendItem: React.FC<{
           transition={{ duration: 0.6, ease: 'easeOut' }}
           className="absolute inset-0 rounded-lg"
           style={{
-            background: `radial-gradient(circle, ${stroke}40 0%, transparent 70%)`,
+            background: `radial-gradient(circle, color-mix(in srgb, ${stroke} 25%, transparent) 0%, transparent 70%)`,
           }}
         />
       )}
@@ -267,7 +276,10 @@ const LegendItem: React.FC<{
         className="w-3 h-3 rounded-sm relative z-10"
         style={{ backgroundColor: stroke }}
         animate={isNew ? {
-          boxShadow: [`0 0 12px 4px ${stroke}80`, `0 0 0px 0px ${stroke}00`]
+          boxShadow: [
+            `0 0 12px 4px color-mix(in srgb, ${stroke} 50%, transparent)`,
+            '0 0 0px 0px transparent'
+          ]
         } : {}}
         transition={{ duration: 0.5 }}
       />
@@ -415,10 +427,10 @@ const ModelTrends: React.FC<ModelTrendsProps> = ({ data }) => {
                 </linearGradient>
               ))}
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
             <XAxis
               dataKey="month"
-              stroke="#666"
+              stroke={CHART_COLORS.axisAndTicks}
               axisLine={false}
               tickLine={false}
               dy={10}
@@ -430,7 +442,7 @@ const ModelTrends: React.FC<ModelTrendsProps> = ({ data }) => {
                     x={x}
                     y={Number(y) + 10}
                     textAnchor="middle"
-                    fill="#666"
+                    fill={CHART_COLORS.axisAndTicks}
                     fontSize={10}
                   >
                     {formatMonth(payload?.value ?? '')}
@@ -440,7 +452,7 @@ const ModelTrends: React.FC<ModelTrendsProps> = ({ data }) => {
               interval={0}
             />
             <YAxis
-              stroke="#666"
+              stroke={CHART_COLORS.axisAndTicks}
               tick={{ fontSize: 10 }}
               axisLine={false}
               tickLine={false}

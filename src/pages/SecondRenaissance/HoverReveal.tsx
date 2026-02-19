@@ -189,6 +189,3 @@ export const HoverReveal = ({
     </>
   );
 };
-
-export type { UnderlineStyle };
-export { underlineStyles };
