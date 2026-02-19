@@ -99,50 +99,57 @@ const fetchSummariesForDate = async (
   return (data as SummaryRow[]) || [];
 };
 
+const tryParseRawTopics = (summary: string): RawTopic[] | null => {
+  try {
+    return JSON.parse(summary) as RawTopic[];
+  } catch {
+    return null;
+  }
+};
+
 // Helper to parse summaries into TopicData array
 const parseSummariesToTopics = (summaries: SummaryRow[]): TopicData[] => {
   const allTopics: TopicData[] = [];
 
   for (const summary of summaries) {
-    try {
-      const rawTopics: RawTopic[] = JSON.parse(summary.full_summary);
-      
-      // Filter for topics with included_in_main: true
-      const includedTopics = rawTopics
-        .filter((t: RawTopic) => t.included_in_main === true);
+    const rawTopics = tryParseRawTopics(summary.full_summary);
+    if (!rawTopics) {
+      continue;
+    }
 
-      // Transform to TopicData format
-      for (const rawTopic of includedTopics) {
-        const mediaUrls = extractMediaUrls(rawTopic);
-        const channelName =
-          Array.isArray(summary.discord_channels)
-            ? summary.discord_channels[0]?.channel_name
-            : summary.discord_channels?.channel_name;
-        
-        allTopics.push({
-          channel_id: rawTopic.channel_id || summary.channel_id,
-          channel_name: channelName || 'community',
-          topic_title: rawTopic.title,
-          topic_main_text: rawTopic.mainText,
-          topic_sub_topics: rawTopic.subTopics
-            .filter(st => st.included_in_main)
-            .map(st => ({
-              text: st.text,
-              subTopicMediaMessageIds: st.subTopicMediaMessageIds,
-              message_id: st.message_id,
-              channel_id: st.channel_id,
-              included_in_main: st.included_in_main,
-              subTopicMediaUrls: st.subTopicMediaUrls,
-            })),
-          media_message_ids: [],
-          media_count: mediaUrls.length,
-          summary_date: summary.date,
-          mediaUrls: mediaUrls,
-          included_in_main: true,
-        });
-      }
-    } catch (parseErr) {
-      console.error('Error parsing summary:', parseErr);
+    // Filter for topics with included_in_main: true
+    const includedTopics = rawTopics
+      .filter((t: RawTopic) => t.included_in_main === true);
+
+    // Transform to TopicData format
+    for (const rawTopic of includedTopics) {
+      const mediaUrls = extractMediaUrls(rawTopic);
+      const channelName =
+        Array.isArray(summary.discord_channels)
+          ? summary.discord_channels[0]?.channel_name
+          : summary.discord_channels?.channel_name;
+      
+      allTopics.push({
+        channel_id: rawTopic.channel_id || summary.channel_id,
+        channel_name: channelName || 'community',
+        topic_title: rawTopic.title,
+        topic_main_text: rawTopic.mainText,
+        topic_sub_topics: rawTopic.subTopics
+          .filter(st => st.included_in_main)
+          .map(st => ({
+            text: st.text,
+            subTopicMediaMessageIds: st.subTopicMediaMessageIds,
+            message_id: st.message_id,
+            channel_id: st.channel_id,
+            included_in_main: st.included_in_main,
+            subTopicMediaUrls: st.subTopicMediaUrls,
+          })),
+        media_message_ids: [],
+        media_count: mediaUrls.length,
+        summary_date: summary.date,
+        mediaUrls: mediaUrls,
+        included_in_main: true,
+      });
     }
   }
 
@@ -222,8 +229,7 @@ export const useCommunityTopics = (): UseCommunityTopicsResult => {
         // Combine: today's topics first, then yesterday's to fill remaining slots
         const combinedTopics = [...todayTopics, ...yesterdayTopics];
         setTopics(combinedTopics.slice(0, MIN_TOPICS_DESIRED));
-      } catch (err) {
-        console.error('Error fetching data:', err);
+      } catch {
         setError('Failed to load community updates');
       } finally {
         setLoading(false);

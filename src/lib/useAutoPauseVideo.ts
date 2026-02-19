@@ -60,10 +60,252 @@ interface UseAutoPauseVideoOptions {
   maxRetries?: number;
 }
 
+interface VisibilityPauseEffectParams {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  canPlay: boolean;
+  isActive: boolean;
+  safePlay: () => void;
+  onPause?: () => void;
+  pauseDelayMs: number;
+  pendingPauseTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  pendingRetryTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  pausedByVisibilityRef: React.MutableRefObject<boolean>;
+  hasPlayedRef: React.MutableRefObject<boolean>;
+  playInProgressRef: React.MutableRefObject<boolean>;
+  retryCountRef: React.MutableRefObject<number>;
+}
+
+interface PlaybackHandlersParams {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  isActive: boolean;
+  canResume: boolean;
+  pauseOnly: boolean;
+  canPlay: boolean;
+  onBeforeResume?: (video: HTMLVideoElement) => boolean | void;
+  maxRetries: number;
+  retryDelayMs: number;
+  pausedByVisibilityRef: React.MutableRefObject<boolean>;
+  hasPlayedRef: React.MutableRefObject<boolean>;
+  pendingRetryTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  retryCountRef: React.MutableRefObject<number>;
+  playInProgressRef: React.MutableRefObject<boolean>;
+}
+
+interface PlaybackHandlersResult {
+  safePlay: () => void;
+  safePause: () => void;
+  handleVideoPlay: () => void;
+  handleVideoCanPlay: () => void;
+  handleVideoLoadedData: () => void;
+}
+
+const clearTimeoutRef = (timeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>) => {
+  const timeoutId = timeoutRef.current;
+  if (timeoutId) {
+    clearTimeout(timeoutId);
+  }
+};
+
+const useVisibilityPauseEffect = ({
+  videoRef,
+  canPlay,
+  isActive,
+  safePlay,
+  onPause,
+  pauseDelayMs,
+  pendingPauseTimeoutRef,
+  pendingRetryTimeoutRef,
+  pausedByVisibilityRef,
+  hasPlayedRef,
+  playInProgressRef,
+  retryCountRef,
+}: VisibilityPauseEffectParams) => {
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (canPlay) {
+      if (pendingPauseTimeoutRef.current) {
+        clearTimeout(pendingPauseTimeoutRef.current);
+        pendingPauseTimeoutRef.current = null;
+      }
+
+      if (pausedByVisibilityRef.current || !hasPlayedRef.current) {
+        safePlay();
+      }
+      return;
+    }
+
+    if (isActive !== false || pendingPauseTimeoutRef.current) return;
+
+    const doPause = () => {
+      pendingPauseTimeoutRef.current = null;
+      const currentVideo = videoRef.current;
+      if (!currentVideo) return;
+      if (!currentVideo.paused) {
+        currentVideo.pause();
+        pausedByVisibilityRef.current = true;
+        onPause?.();
+      }
+      if (pendingRetryTimeoutRef.current) {
+        clearTimeout(pendingRetryTimeoutRef.current);
+        pendingRetryTimeoutRef.current = null;
+      }
+      retryCountRef.current = 0;
+      playInProgressRef.current = false;
+    };
+
+    if (pauseDelayMs > 0) {
+      pendingPauseTimeoutRef.current = setTimeout(doPause, pauseDelayMs);
+    } else {
+      doPause();
+    }
+  }, [
+    canPlay,
+    isActive,
+    safePlay,
+    onPause,
+    pauseDelayMs,
+    videoRef,
+    pendingPauseTimeoutRef,
+    pendingRetryTimeoutRef,
+    pausedByVisibilityRef,
+    hasPlayedRef,
+    playInProgressRef,
+    retryCountRef,
+  ]);
+};
+
+const useAutoPauseCleanup = (
+  pendingPauseTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
+  pendingRetryTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>
+) => {
+  useEffect(() => {
+    return () => {
+      clearTimeoutRef(pendingPauseTimeoutRef);
+      clearTimeoutRef(pendingRetryTimeoutRef);
+    };
+  }, [pendingPauseTimeoutRef, pendingRetryTimeoutRef]);
+};
+
+const usePlaybackHandlers = ({
+  videoRef,
+  isActive,
+  canResume,
+  pauseOnly,
+  canPlay,
+  onBeforeResume,
+  maxRetries,
+  retryDelayMs,
+  pausedByVisibilityRef,
+  hasPlayedRef,
+  pendingRetryTimeoutRef,
+  retryCountRef,
+  playInProgressRef,
+}: PlaybackHandlersParams): PlaybackHandlersResult => {
+  const attemptPlay = useCallback((isRetry = false) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (playInProgressRef.current && !isRetry) return;
+    playInProgressRef.current = true;
+
+    if (onBeforeResume) {
+      const shouldProceed = onBeforeResume(video);
+      if (shouldProceed === false) {
+        playInProgressRef.current = false;
+        return;
+      }
+    }
+
+    video.play()
+      .then(() => {
+        hasPlayedRef.current = true;
+        pausedByVisibilityRef.current = false;
+        retryCountRef.current = 0;
+        playInProgressRef.current = false;
+      })
+      .catch(() => {
+        playInProgressRef.current = false;
+        if (retryCountRef.current < maxRetries) {
+          retryCountRef.current++;
+          clearTimeoutRef(pendingRetryTimeoutRef);
+          pendingRetryTimeoutRef.current = setTimeout(() => {
+            pendingRetryTimeoutRef.current = null;
+            const currentVideo = videoRef.current;
+            if (currentVideo && currentVideo.paused && isActive && canResume && !pauseOnly) {
+              attemptPlay(true);
+            }
+          }, retryDelayMs);
+        }
+      });
+  }, [
+    videoRef,
+    onBeforeResume,
+    maxRetries,
+    retryDelayMs,
+    isActive,
+    canResume,
+    pauseOnly,
+    playInProgressRef,
+    hasPlayedRef,
+    pausedByVisibilityRef,
+    retryCountRef,
+    pendingRetryTimeoutRef,
+  ]);
+
+  const safePlay = useCallback(() => {
+    retryCountRef.current = 0;
+    attemptPlay(false);
+  }, [attemptPlay, retryCountRef]);
+
+  const safePause = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    clearTimeoutRef(pendingRetryTimeoutRef);
+    pendingRetryTimeoutRef.current = null;
+    retryCountRef.current = 0;
+    playInProgressRef.current = false;
+    video.pause();
+  }, [videoRef, pendingRetryTimeoutRef, retryCountRef, playInProgressRef]);
+
+  const handleVideoPlay = useCallback(() => {
+    hasPlayedRef.current = true;
+    pausedByVisibilityRef.current = false;
+    retryCountRef.current = 0;
+    playInProgressRef.current = false;
+  }, [hasPlayedRef, pausedByVisibilityRef, retryCountRef, playInProgressRef]);
+
+  const handleVideoCanPlay = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused && canPlay && !playInProgressRef.current) {
+      queueMicrotask(() => {
+        const currentVideo = videoRef.current;
+        if (currentVideo && currentVideo.paused && canPlay) {
+          safePlay();
+        }
+      });
+    }
+  }, [videoRef, canPlay, safePlay, playInProgressRef]);
+
+  const handleVideoLoadedData = useCallback(() => {
+    handleVideoCanPlay();
+  }, [handleVideoCanPlay]);
+
+  return {
+    safePlay,
+    safePause,
+    handleVideoPlay,
+    handleVideoCanPlay,
+    handleVideoLoadedData,
+  };
+};
+
 /**
  * Result from useAutoPauseVideo hook.
  */
-export interface UseAutoPauseVideoResult {
+interface UseAutoPauseVideoResult {
   /**
    * Manually trigger a safe play (catches promise rejection).
    * Respects blocking conditions - won't play if !canResume.
@@ -151,160 +393,44 @@ export function useAutoPauseVideo(
   // Whether all conditions allow playback
   const canPlay = isActive && canResume && !pauseOnly;
 
-  // Core play function with retry logic
-  const attemptPlay = useCallback((isRetry = false) => {
-    const video = videoRef.current;
-    if (!video) return;
-    
-    // Prevent concurrent play attempts
-    if (playInProgressRef.current && !isRetry) return;
-    playInProgressRef.current = true;
+  const {
+    safePlay,
+    safePause,
+    handleVideoPlay,
+    handleVideoCanPlay,
+    handleVideoLoadedData,
+  } = usePlaybackHandlers({
+    videoRef,
+    isActive,
+    canResume,
+    pauseOnly,
+    canPlay,
+    onBeforeResume,
+    maxRetries,
+    retryDelayMs,
+    pausedByVisibilityRef,
+    hasPlayedRef,
+    pendingRetryTimeoutRef,
+    retryCountRef,
+    playInProgressRef,
+  });
 
-    // Let caller prepare video (set playback rate, seek position, etc.)
-    if (onBeforeResume) {
-      const shouldProceed = onBeforeResume(video);
-      if (shouldProceed === false) {
-        playInProgressRef.current = false;
-        return;
-      }
-    }
+  useVisibilityPauseEffect({
+    videoRef,
+    canPlay,
+    isActive,
+    safePlay,
+    onPause,
+    pauseDelayMs,
+    pendingPauseTimeoutRef,
+    pendingRetryTimeoutRef,
+    pausedByVisibilityRef,
+    hasPlayedRef,
+    playInProgressRef,
+    retryCountRef,
+  });
 
-    video.play()
-      .then(() => {
-        hasPlayedRef.current = true;
-        pausedByVisibilityRef.current = false;
-        retryCountRef.current = 0;
-        playInProgressRef.current = false;
-      })
-      .catch(() => {
-        playInProgressRef.current = false;
-        // Retry if we haven't exceeded max retries and conditions still allow play
-        if (retryCountRef.current < maxRetries) {
-          retryCountRef.current++;
-          if (pendingRetryTimeoutRef.current) {
-            clearTimeout(pendingRetryTimeoutRef.current);
-          }
-          pendingRetryTimeoutRef.current = setTimeout(() => {
-            pendingRetryTimeoutRef.current = null;
-            const v = videoRef.current;
-            if (v && v.paused && isActive && canResume && !pauseOnly) {
-              attemptPlay(true);
-            }
-          }, retryDelayMs);
-        }
-      });
-  }, [videoRef, onBeforeResume, maxRetries, retryDelayMs, isActive, canResume, pauseOnly]);
-
-  // Safe play helper - resets retry count and attempts play
-  const safePlay = useCallback(() => {
-    retryCountRef.current = 0;
-    attemptPlay(false);
-  }, [attemptPlay]);
-
-  // Safe pause helper
-  const safePause = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    // Clear any pending retries when pausing
-    if (pendingRetryTimeoutRef.current) {
-      clearTimeout(pendingRetryTimeoutRef.current);
-      pendingRetryTimeoutRef.current = null;
-    }
-    retryCountRef.current = 0;
-    playInProgressRef.current = false;
-    video.pause();
-  }, [videoRef]);
-
-  // Event handler: sync state when video actually starts playing
-  // This handles the case where autoPlay attribute or external code starts the video
-  const handleVideoPlay = useCallback(() => {
-    hasPlayedRef.current = true;
-    pausedByVisibilityRef.current = false;
-    retryCountRef.current = 0;
-    playInProgressRef.current = false;
-  }, []);
-
-  // Event handler: retry play when video has enough data
-  // This is critical for mobile where autoPlay often fails on first attempt
-  const handleVideoCanPlay = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    
-    // Only attempt play if:
-    // 1. Video is paused
-    // 2. All conditions allow playback
-    // 3. No play attempt is already in progress
-    if (video.paused && canPlay && !playInProgressRef.current) {
-      // Use microtask to avoid racing with other event handlers
-      queueMicrotask(() => {
-        const v = videoRef.current;
-        if (v && v.paused && canPlay) {
-          safePlay();
-        }
-      });
-    }
-  }, [videoRef, canPlay, safePlay]);
-
-  // Event handler: additional retry point when data is loaded
-  const handleVideoLoadedData = useCallback(() => {
-    handleVideoCanPlay();
-  }, [handleVideoCanPlay]);
-
-  // Main visibility effect
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (canPlay) {
-      // Cancel any pending debounced pause when we become active again
-      if (pendingPauseTimeoutRef.current) {
-        clearTimeout(pendingPauseTimeoutRef.current);
-        pendingPauseTimeoutRef.current = null;
-      }
-
-      // Resume if we previously paused due to visibility, or auto-play on first entry
-      if (pausedByVisibilityRef.current || !hasPlayedRef.current) {
-        safePlay();
-      }
-    } else if (isActive === false) {
-      if (pendingPauseTimeoutRef.current) return;
-
-      const doPause = () => {
-        pendingPauseTimeoutRef.current = null;
-        const v = videoRef.current;
-        if (!v) return;
-        if (!v.paused) {
-          v.pause();
-          pausedByVisibilityRef.current = true;
-          onPause?.();
-        }
-        if (pendingRetryTimeoutRef.current) {
-          clearTimeout(pendingRetryTimeoutRef.current);
-          pendingRetryTimeoutRef.current = null;
-        }
-        retryCountRef.current = 0;
-        playInProgressRef.current = false;
-      };
-
-      if (pauseDelayMs > 0) {
-        pendingPauseTimeoutRef.current = setTimeout(doPause, pauseDelayMs);
-      } else {
-        doPause();
-      }
-    }
-  }, [canPlay, isActive, safePlay, onPause, videoRef, pauseDelayMs]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (pendingPauseTimeoutRef.current) {
-        clearTimeout(pendingPauseTimeoutRef.current);
-      }
-      if (pendingRetryTimeoutRef.current) {
-        clearTimeout(pendingRetryTimeoutRef.current);
-      }
-    };
-  }, []);
+  useAutoPauseCleanup(pendingPauseTimeoutRef, pendingRetryTimeoutRef);
 
   return {
     safePlay,
@@ -317,5 +443,3 @@ export function useAutoPauseVideo(
     },
   };
 }
-
-

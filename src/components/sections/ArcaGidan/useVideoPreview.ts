@@ -16,9 +16,9 @@ interface UseVideoPreviewResult {
   /** Whether this is a touch device */
   isTouchDevice: boolean;
   /** Call on mouse enter (desktop) */
-  handleMouseEnter: () => void;
+  handlePreviewMouseEnter: () => void;
   /** Call on mouse leave (desktop) */
-  handleMouseLeave: () => void;
+  handlePreviewMouseLeave: () => void;
   /** Call on touch start (mobile) */
   handleTouchStart: () => void;
   /** Call on click (mobile toggle) */
@@ -42,7 +42,7 @@ export const useVideoPreview = ({ videoRef, onActivate }: UseVideoPreviewOptions
     return videoRef.current && videoRef.current.readyState >= 2;
   }, [videoRef]);
 
-  const handleMouseEnter = useCallback(() => {
+  const handlePreviewMouseEnter = useCallback(() => {
     if (!isTouchDevice) {
       onActivate?.();
       // Show video immediately if it's ready (preloaded)
@@ -53,7 +53,7 @@ export const useVideoPreview = ({ videoRef, onActivate }: UseVideoPreviewOptions
     }
   }, [isTouchDevice, videoRef, onActivate, isVideoReady]);
 
-  const handleMouseLeave = useCallback(() => {
+  const handlePreviewMouseLeave = useCallback(() => {
     if (!isTouchDevice) {
       // Just pause - keep showing the video frame (don't switch back to poster)
       videoRef.current?.pause();
@@ -89,12 +89,11 @@ export const useVideoPreview = ({ videoRef, onActivate }: UseVideoPreviewOptions
   return {
     showVideo,
     isTouchDevice,
-    handleMouseEnter,
-    handleMouseLeave,
+    handlePreviewMouseEnter,
+    handlePreviewMouseLeave,
     handleTouchStart,
     handleClick,
     handlePlaying,
   };
 };
-
 
