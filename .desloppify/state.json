@@ -1,0 +1,3125 @@
+{
+  "version": 1,
+  "created": "2026-02-14T16:53:38+00:00",
+  "last_scan": "2026-02-14T17:00:09+00:00",
+  "scan_count": 3,
+  "config": {
+    "ignore": []
+  },
+  "score": 17.5,
+  "stats": {
+    "total": 116,
+    "open": 93,
+    "fixed": 11,
+    "auto_resolved": 0,
+    "wontfix": 11,
+    "false_positive": 1,
+    "by_tier": {
+      "2": {
+        "open": 7,
+        "fixed": 11,
+        "auto_resolved": 0,
+        "wontfix": 0,
+        "false_positive": 0
+      },
+      "3": {
+        "open": 84,
+        "fixed": 0,
+        "auto_resolved": 0,
+        "wontfix": 11,
+        "false_positive": 1
+      },
+      "4": {
+        "open": 2,
+        "fixed": 0,
+        "auto_resolved": 0,
+        "wontfix": 0,
+        "false_positive": 0
+      }
+    }
+  },
+  "findings": {
+    "exports::src/components/sections/Community/fetchTopics.ts::SummaryRow": {
+      "id": "exports::src/components/sections/Community/fetchTopics.ts::SummaryRow",
+      "detector": "exports",
+      "file": "src/components/sections/Community/fetchTopics.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: SummaryRow",
+      "detail": {
+        "line": 5,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "exports::src/components/sections/Community/fetchTopics.ts::isValidMediaUrl": {
+      "id": "exports::src/components/sections/Community/fetchTopics.ts::isValidMediaUrl",
+      "detector": "exports",
+      "file": "src/components/sections/Community/fetchTopics.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: isValidMediaUrl",
+      "detail": {
+        "line": 19,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "exports::src/components/sections/Community/fetchTopics.ts::extractMediaUrls": {
+      "id": "exports::src/components/sections/Community/fetchTopics.ts::extractMediaUrls",
+      "detector": "exports",
+      "file": "src/components/sections/Community/fetchTopics.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: extractMediaUrls",
+      "detail": {
+        "line": 35,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "exports::src/components/sections/Hero/config.ts::HERO_VIDEO_SRC_MOBILE": {
+      "id": "exports::src/components/sections/Hero/config.ts::HERO_VIDEO_SRC_MOBILE",
+      "detector": "exports",
+      "file": "src/components/sections/Hero/config.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: HERO_VIDEO_SRC_MOBILE",
+      "detail": {
+        "line": 2,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "exports::src/components/sections/Hero/config.ts::REWIND_SOUND_SRC": {
+      "id": "exports::src/components/sections/Hero/config.ts::REWIND_SOUND_SRC",
+      "detector": "exports",
+      "file": "src/components/sections/Hero/config.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: REWIND_SOUND_SRC",
+      "detail": {
+        "line": 4,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "exports::src/components/sections/Hero/config.ts::REWIND_DURATION_MS": {
+      "id": "exports::src/components/sections/Hero/config.ts::REWIND_DURATION_MS",
+      "detector": "exports",
+      "file": "src/components/sections/Hero/config.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: REWIND_DURATION_MS",
+      "detail": {
+        "line": 5,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "exports::src/components/sections/Hero/config.ts::PLAYBACK_RATE": {
+      "id": "exports::src/components/sections/Hero/config.ts::PLAYBACK_RATE",
+      "detector": "exports",
+      "file": "src/components/sections/Hero/config.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: PLAYBACK_RATE",
+      "detail": {
+        "line": 6,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "exports::src/pages/Resources/Discord/types.ts::DiscordEmbed": {
+      "id": "exports::src/pages/Resources/Discord/types.ts::DiscordEmbed",
+      "detector": "exports",
+      "file": "src/pages/Resources/Discord/types.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: DiscordEmbed",
+      "detail": {
+        "line": 12,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "exports::src/pages/Resources/ResourcesFeed/utils.ts::ContentSegment": {
+      "id": "exports::src/pages/Resources/ResourcesFeed/utils.ts::ContentSegment",
+      "detector": "exports",
+      "file": "src/pages/Resources/ResourcesFeed/utils.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: ContentSegment",
+      "detail": {
+        "line": 3,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "exports::src/pages/Wrapped/types.ts::Contributor": {
+      "id": "exports::src/pages/Wrapped/types.ts::Contributor",
+      "detector": "exports",
+      "file": "src/pages/Wrapped/types.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: Contributor",
+      "detail": {
+        "line": 14,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "exports::src/pages/Wrapped/types.ts::Award": {
+      "id": "exports::src/pages/Wrapped/types.ts::Award",
+      "detector": "exports",
+      "file": "src/pages/Wrapped/types.ts",
+      "tier": 2,
+      "confidence": "high",
+      "summary": "Dead export: Award",
+      "detail": {
+        "line": 22,
+        "kind": null
+      },
+      "status": "fixed",
+      "note": "auto-fixed by desloppify fix dead-exports",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T16:53:41+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "structural::src/components/layout/ScrollVideoBackground.tsx": {
+      "id": "structural::src/components/layout/ScrollVideoBackground.tsx",
+      "detector": "structural",
+      "file": "src/components/layout/ScrollVideoBackground.tsx",
+      "tier": 4,
+      "confidence": "high",
+      "summary": "Needs decomposition: large (1059 LOC) / complexity score 43 / 40 hooks (6 useEffects, 11 useStates)",
+      "detail": {
+        "loc": 1059,
+        "complexity_score": 43,
+        "complexity_signals": [
+          "6 useEffects",
+          "23 useRefs"
+        ],
+        "hook_total": 40,
+        "hook_reasons": [
+          "6 useEffects",
+          "11 useStates",
+          "40 total hooks"
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "structural::src/components/sections/Ownership/profilePicsManifest.ts": {
+      "id": "structural::src/components/sections/Ownership/profilePicsManifest.ts",
+      "detector": "structural",
+      "file": "src/components/sections/Ownership/profilePicsManifest.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Needs decomposition: large (1009 LOC)",
+      "detail": {
+        "loc": 1009
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "structural::src/components/ui/TextHighlight.tsx": {
+      "id": "structural::src/components/ui/TextHighlight.tsx",
+      "detector": "structural",
+      "file": "src/components/ui/TextHighlight.tsx",
+      "tier": 4,
+      "confidence": "high",
+      "summary": "Needs decomposition: large (635 LOC) / complexity score 22 / 28 hooks (8 useEffects, 12 useStates)",
+      "detail": {
+        "loc": 635,
+        "complexity_score": 22,
+        "complexity_signals": [
+          "8 useEffects",
+          "6 inline types",
+          "8 useRefs"
+        ],
+        "hook_total": 28,
+        "hook_reasons": [
+          "8 useEffects",
+          "12 useStates",
+          "28 total hooks"
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "structural::src/components/sections/Community/index.tsx": {
+      "id": "structural::src/components/sections/Community/index.tsx",
+      "detector": "structural",
+      "file": "src/components/sections/Community/index.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Needs decomposition: large (503 LOC) / 13 hooks (6 useStates, 13 total hooks)",
+      "detail": {
+        "loc": 503,
+        "hook_total": 13,
+        "hook_reasons": [
+          "6 useStates",
+          "13 total hooks"
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "structural::src/pages/Wrapped/components/ModelTrends.tsx": {
+      "id": "structural::src/pages/Wrapped/components/ModelTrends.tsx",
+      "detector": "structural",
+      "file": "src/pages/Wrapped/components/ModelTrends.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Needs decomposition: 10 hooks (9 custom hooks, 10 total hooks)",
+      "detail": {
+        "hook_total": 10,
+        "hook_reasons": [
+          "9 custom hooks",
+          "10 total hooks"
+        ],
+        "loc": 482
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "structural::src/pages/Wrapped/components/CommunitySection.tsx": {
+      "id": "structural::src/pages/Wrapped/components/CommunitySection.tsx",
+      "detector": "structural",
+      "file": "src/pages/Wrapped/components/CommunitySection.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Needs decomposition: 21 hooks (6 useEffects, 8 useStates)",
+      "detail": {
+        "hook_total": 21,
+        "hook_reasons": [
+          "6 useEffects",
+          "8 useStates",
+          "21 total hooks"
+        ],
+        "loc": 438
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "structural::src/pages/Wrapped/components/ArticleCard.tsx": {
+      "id": "structural::src/pages/Wrapped/components/ArticleCard.tsx",
+      "detector": "structural",
+      "file": "src/pages/Wrapped/components/ArticleCard.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Needs decomposition: 11 hooks (6 useStates, 11 total hooks)",
+      "detail": {
+        "hook_total": 11,
+        "hook_reasons": [
+          "6 useStates",
+          "11 total hooks"
+        ],
+        "loc": 358
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "structural::src/components/sections/Community/MediaGallery.tsx": {
+      "id": "structural::src/components/sections/Community/MediaGallery.tsx",
+      "detector": "structural",
+      "file": "src/components/sections/Community/MediaGallery.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Needs decomposition: 11 hooks (14 custom hooks, 11 total hooks)",
+      "detail": {
+        "hook_total": 11,
+        "hook_reasons": [
+          "14 custom hooks",
+          "11 total hooks"
+        ],
+        "loc": 327
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "single_use::src/components/layout/Header.tsx": {
+      "id": "single_use::src/components/layout/Header.tsx",
+      "detector": "single_use",
+      "file": "src/components/layout/Header.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Single-use (214 LOC): only imported by src/layouts/MainLayout.tsx",
+      "detail": {
+        "loc": 214,
+        "sole_importer": "src/layouts/MainLayout.tsx"
+      },
+      "status": "wontfix",
+      "note": "Layout component - single consumer (MainLayout) is correct architecture",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:58+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "single_use::src/components/sections/Ownership/Accordion.tsx": {
+      "id": "single_use::src/components/sections/Ownership/Accordion.tsx",
+      "detector": "single_use",
+      "file": "src/components/sections/Ownership/Accordion.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Single-use (47 LOC): only imported by src/pages/OwnershipPage.tsx",
+      "detail": {
+        "loc": 47,
+        "sole_importer": "src/pages/OwnershipPage.tsx"
+      },
+      "status": "wontfix",
+      "note": "Domain component co-located with its page - reasonable separation",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:58+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "single_use::src/components/sections/Ownership/TransfersTable.tsx": {
+      "id": "single_use::src/components/sections/Ownership/TransfersTable.tsx",
+      "detector": "single_use",
+      "file": "src/components/sections/Ownership/TransfersTable.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Single-use (41 LOC): only imported by src/pages/OwnershipPage.tsx",
+      "detail": {
+        "loc": 41,
+        "sole_importer": "src/pages/OwnershipPage.tsx"
+      },
+      "status": "wontfix",
+      "note": "Domain component co-located with its page - reasonable separation",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:58+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "single_use::src/App.tsx": {
+      "id": "single_use::src/App.tsx",
+      "detector": "single_use",
+      "file": "src/App.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Single-use (38 LOC): only imported by src/main.tsx",
+      "detail": {
+        "loc": 38,
+        "sole_importer": "src/main.tsx"
+      },
+      "status": "wontfix",
+      "note": "Standard React entrypoint - always single-use by design",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:58+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "single_use::src/components/sections/Ownership/useOwnershipData.ts": {
+      "id": "single_use::src/components/sections/Ownership/useOwnershipData.ts",
+      "detector": "single_use",
+      "file": "src/components/sections/Ownership/useOwnershipData.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Single-use (30 LOC): only imported by src/pages/OwnershipPage.tsx",
+      "detail": {
+        "loc": 30,
+        "sole_importer": "src/pages/OwnershipPage.tsx"
+      },
+      "status": "wontfix",
+      "note": "Data hook co-located with its page - reasonable separation",
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:58+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/layout/ScrollVideoBackground.tsx": {
+      "id": "test_coverage::src/components/layout/ScrollVideoBackground.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/layout/ScrollVideoBackground.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (1059 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 1059,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Ownership/profilePicsManifest.ts": {
+      "id": "test_coverage::src/components/sections/Ownership/profilePicsManifest.ts",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Ownership/profilePicsManifest.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (1009 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 1009,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/ui/TextHighlight.tsx": {
+      "id": "test_coverage::src/components/ui/TextHighlight.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/ui/TextHighlight.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (635 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 635,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Community/index.tsx": {
+      "id": "test_coverage::src/components/sections/Community/index.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Community/index.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (503 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 503,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Wrapped/components/ModelTrends.tsx": {
+      "id": "test_coverage::src/pages/Wrapped/components/ModelTrends.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Wrapped/components/ModelTrends.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (482 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 482,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/SecondRenaissance/sections.tsx": {
+      "id": "test_coverage::src/pages/SecondRenaissance/sections.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/SecondRenaissance/sections.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (454 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 454,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Wrapped/components/CommunitySection.tsx": {
+      "id": "test_coverage::src/pages/Wrapped/components/CommunitySection.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Wrapped/components/CommunitySection.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (438 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 438,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/ADOS/EventContent.tsx": {
+      "id": "test_coverage::src/components/sections/ADOS/EventContent.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/ADOS/EventContent.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (360 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 360,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Wrapped/components/ArticleCard.tsx": {
+      "id": "test_coverage::src/pages/Wrapped/components/ArticleCard.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Wrapped/components/ArticleCard.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (358 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 358,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/SecondRenaissance/SectionRenderer.tsx": {
+      "id": "test_coverage::src/pages/SecondRenaissance/SectionRenderer.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/SecondRenaissance/SectionRenderer.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (343 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 343,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Ecosystem/RiverVisualization.tsx": {
+      "id": "test_coverage::src/components/sections/Ecosystem/RiverVisualization.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Ecosystem/RiverVisualization.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (341 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 341,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Ecosystem/index.tsx": {
+      "id": "test_coverage::src/components/sections/Ecosystem/index.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Ecosystem/index.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (332 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 332,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Resources/index.tsx": {
+      "id": "test_coverage::src/pages/Resources/index.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Resources/index.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (331 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 331,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Ecosystem/eventGenerators.ts": {
+      "id": "test_coverage::src/components/sections/Ecosystem/eventGenerators.ts",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Ecosystem/eventGenerators.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (327 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 327,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Community/MediaGallery.tsx": {
+      "id": "test_coverage::src/components/sections/Community/MediaGallery.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Community/MediaGallery.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (327 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 327,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/lib/useAutoPauseVideo.ts": {
+      "id": "test_coverage::src/lib/useAutoPauseVideo.ts",
+      "detector": "test_coverage",
+      "file": "src/lib/useAutoPauseVideo.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (321 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 321,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Wrapped/components/MillionthMessage.tsx": {
+      "id": "test_coverage::src/pages/Wrapped/components/MillionthMessage.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Wrapped/components/MillionthMessage.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (319 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 319,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Ecosystem/EventAnimation.tsx": {
+      "id": "test_coverage::src/components/sections/Ecosystem/EventAnimation.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Ecosystem/EventAnimation.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (305 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 305,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Resources/CommunityNews/CommunityNewsSection.tsx": {
+      "id": "test_coverage::src/pages/Resources/CommunityNews/CommunityNewsSection.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Resources/CommunityNews/CommunityNewsSection.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (302 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 302,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/SecondRenaissance/Emphasis.tsx": {
+      "id": "test_coverage::src/pages/SecondRenaissance/Emphasis.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/SecondRenaissance/Emphasis.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (294 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 294,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/OwnershipPage.tsx": {
+      "id": "test_coverage::src/pages/OwnershipPage.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/OwnershipPage.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (294 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 294,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Wrapped/components/HallOfFame.tsx": {
+      "id": "test_coverage::src/pages/Wrapped/components/HallOfFame.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Wrapped/components/HallOfFame.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (273 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 273,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/ADOS/Polaroid.tsx": {
+      "id": "test_coverage::src/components/sections/ADOS/Polaroid.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/ADOS/Polaroid.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (269 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 269,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Ecosystem/TimelineScrubber.tsx": {
+      "id": "test_coverage::src/components/sections/Ecosystem/TimelineScrubber.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Ecosystem/TimelineScrubber.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (259 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 259,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Ecosystem/MobileVisualization.tsx": {
+      "id": "test_coverage::src/components/sections/Ecosystem/MobileVisualization.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Ecosystem/MobileVisualization.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (242 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 242,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Community/TopicCard.tsx": {
+      "id": "test_coverage::src/components/sections/Community/TopicCard.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Community/TopicCard.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (238 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 238,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Resources/ResourceModal.tsx": {
+      "id": "test_coverage::src/pages/Resources/ResourceModal.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Resources/ResourceModal.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (233 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 233,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Reigh/index.tsx": {
+      "id": "test_coverage::src/components/sections/Reigh/index.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Reigh/index.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (229 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 229,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Wrapped/components/Timeline.tsx": {
+      "id": "test_coverage::src/pages/Wrapped/components/Timeline.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Wrapped/components/Timeline.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (214 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 214,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/layout/Header.tsx": {
+      "id": "test_coverage::src/components/layout/Header.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/layout/Header.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (214 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 214,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/SecondRenaissance/index.tsx": {
+      "id": "test_coverage::src/pages/SecondRenaissance/index.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/SecondRenaissance/index.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (212 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 212,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Wrapped/components/TopGenerations.tsx": {
+      "id": "test_coverage::src/pages/Wrapped/components/TopGenerations.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Wrapped/components/TopGenerations.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (203 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 203,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Reigh/useTravelAutoAdvance.ts": {
+      "id": "test_coverage::src/components/sections/Reigh/useTravelAutoAdvance.ts",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Reigh/useTravelAutoAdvance.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (202 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 202,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Reigh/TravelSelector.tsx": {
+      "id": "test_coverage::src/components/sections/Reigh/TravelSelector.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Reigh/TravelSelector.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (201 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 201,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/SecondRenaissance/HoverReveal.tsx": {
+      "id": "test_coverage::src/pages/SecondRenaissance/HoverReveal.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/SecondRenaissance/HoverReveal.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (194 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 194,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/lib/useViewportPreload.ts": {
+      "id": "test_coverage::src/lib/useViewportPreload.ts",
+      "detector": "test_coverage",
+      "file": "src/lib/useViewportPreload.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (160 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 160,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Resources/FilterBar.tsx": {
+      "id": "test_coverage::src/pages/Resources/FilterBar.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Resources/FilterBar.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (158 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 158,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Community/fetchTopics.ts": {
+      "id": "test_coverage::src/components/sections/Community/fetchTopics.ts",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Community/fetchTopics.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (156 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 156,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Resources/ResourceCard.tsx": {
+      "id": "test_coverage::src/pages/Resources/ResourceCard.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Resources/ResourceCard.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (153 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 153,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/layout/Section.tsx": {
+      "id": "test_coverage::src/components/layout/Section.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/layout/Section.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (152 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 152,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Resources/useResourceFilters.ts": {
+      "id": "test_coverage::src/pages/Resources/useResourceFilters.ts",
+      "detector": "test_coverage",
+      "file": "src/pages/Resources/useResourceFilters.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (150 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 150,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/ADOS/useEventsAutoAdvance.ts": {
+      "id": "test_coverage::src/components/sections/ADOS/useEventsAutoAdvance.ts",
+      "detector": "test_coverage",
+      "file": "src/components/sections/ADOS/useEventsAutoAdvance.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (142 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 142,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Hero/index.tsx": {
+      "id": "test_coverage::src/components/sections/Hero/index.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Hero/index.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (139 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 139,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Ecosystem/eventPaths.ts": {
+      "id": "test_coverage::src/components/sections/Ecosystem/eventPaths.ts",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Ecosystem/eventPaths.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (135 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 135,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/ADOS/EventSelector.tsx": {
+      "id": "test_coverage::src/components/sections/ADOS/EventSelector.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/ADOS/EventSelector.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (135 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 135,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Ecosystem/utils.ts": {
+      "id": "test_coverage::src/components/sections/Ecosystem/utils.ts",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Ecosystem/utils.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (135 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 135,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/ADOS/index.tsx": {
+      "id": "test_coverage::src/components/sections/ADOS/index.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/ADOS/index.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (134 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 134,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Wrapped/constants.ts": {
+      "id": "test_coverage::src/pages/Wrapped/constants.ts",
+      "detector": "test_coverage",
+      "file": "src/pages/Wrapped/constants.ts",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (133 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 133,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/components/sections/Ownership/ProfileImage.tsx": {
+      "id": "test_coverage::src/components/sections/Ownership/ProfileImage.tsx",
+      "detector": "test_coverage",
+      "file": "src/components/sections/Ownership/ProfileImage.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (129 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 129,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "test_coverage::src/pages/Resources/ResourcesFeed/ResourceFeedCard.tsx": {
+      "id": "test_coverage::src/pages/Resources/ResourcesFeed/ResourceFeedCard.tsx",
+      "detector": "test_coverage",
+      "file": "src/pages/Resources/ResourcesFeed/ResourceFeedCard.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "summary": "Untested module (129 LOC, 0 importers) \u2014 no test files found",
+      "detail": {
+        "kind": "untested_module",
+        "loc": 129,
+        "importer_count": 0
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:41+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/layout/ScrollVideoBackground.tsx::monster_function": {
+      "id": "smells::src/components/layout/ScrollVideoBackground.tsx::monster_function",
+      "detector": "smells",
+      "file": "src/components/layout/ScrollVideoBackground.tsx",
+      "tier": 2,
+      "confidence": "medium",
+      "summary": "2x Monster function (>150 LOC)",
+      "detail": {
+        "smell_id": "monster_function",
+        "severity": "high",
+        "count": 2,
+        "lines": [
+          132,
+          645
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/Community/index.tsx::monster_function": {
+      "id": "smells::src/components/sections/Community/index.tsx::monster_function",
+      "detector": "smells",
+      "file": "src/components/sections/Community/index.tsx",
+      "tier": 2,
+      "confidence": "medium",
+      "summary": "1x Monster function (>150 LOC)",
+      "detail": {
+        "smell_id": "monster_function",
+        "severity": "high",
+        "count": 1,
+        "lines": [
+          151
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/Ecosystem/index.tsx::monster_function": {
+      "id": "smells::src/components/sections/Ecosystem/index.tsx::monster_function",
+      "detector": "smells",
+      "file": "src/components/sections/Ecosystem/index.tsx",
+      "tier": 2,
+      "confidence": "medium",
+      "summary": "1x Monster function (>150 LOC)",
+      "detail": {
+        "smell_id": "monster_function",
+        "severity": "high",
+        "count": 1,
+        "lines": [
+          31
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/lib/useAutoPauseVideo.ts::monster_function": {
+      "id": "smells::src/lib/useAutoPauseVideo.ts::monster_function",
+      "detector": "smells",
+      "file": "src/lib/useAutoPauseVideo.ts",
+      "tier": 2,
+      "confidence": "medium",
+      "summary": "1x Monster function (>150 LOC)",
+      "detail": {
+        "smell_id": "monster_function",
+        "severity": "high",
+        "count": 1,
+        "lines": [
+          123
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/OwnershipPage.tsx::monster_function": {
+      "id": "smells::src/pages/OwnershipPage.tsx::monster_function",
+      "detector": "smells",
+      "file": "src/pages/OwnershipPage.tsx",
+      "tier": 2,
+      "confidence": "medium",
+      "summary": "1x Monster function (>150 LOC)",
+      "detail": {
+        "smell_id": "monster_function",
+        "severity": "high",
+        "count": 1,
+        "lines": [
+          9
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Resources/CommunityNews/CommunityNewsSection.tsx::monster_function": {
+      "id": "smells::src/pages/Resources/CommunityNews/CommunityNewsSection.tsx::monster_function",
+      "detector": "smells",
+      "file": "src/pages/Resources/CommunityNews/CommunityNewsSection.tsx",
+      "tier": 2,
+      "confidence": "medium",
+      "summary": "1x Monster function (>150 LOC)",
+      "detail": {
+        "smell_id": "monster_function",
+        "severity": "high",
+        "count": 1,
+        "lines": [
+          52
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Resources/index.tsx::monster_function": {
+      "id": "smells::src/pages/Resources/index.tsx::monster_function",
+      "detector": "smells",
+      "file": "src/pages/Resources/index.tsx",
+      "tier": 2,
+      "confidence": "medium",
+      "summary": "1x Monster function (>150 LOC)",
+      "detail": {
+        "smell_id": "monster_function",
+        "severity": "high",
+        "count": 1,
+        "lines": [
+          24
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/components/ModelTrends.tsx::hardcoded_color": {
+      "id": "smells::src/pages/Wrapped/components/ModelTrends.tsx::hardcoded_color",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/components/ModelTrends.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "11x Hardcoded color values",
+      "detail": {
+        "smell_id": "hardcoded_color",
+        "severity": "medium",
+        "count": 11,
+        "lines": [
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          418,
+          421,
+          433
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/components/Timeline.tsx::hardcoded_color": {
+      "id": "smells::src/pages/Wrapped/components/Timeline.tsx::hardcoded_color",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/components/Timeline.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "7x Hardcoded color values",
+      "detail": {
+        "smell_id": "hardcoded_color",
+        "severity": "medium",
+        "count": 7,
+        "lines": [
+          160,
+          169,
+          181,
+          187,
+          193,
+          201,
+          202
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/components/ui/bg-pattern.tsx::hardcoded_color": {
+      "id": "smells::src/pages/Wrapped/components/ui/bg-pattern.tsx::hardcoded_color",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/components/ui/bg-pattern.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Hardcoded color values",
+      "detail": {
+        "smell_id": "hardcoded_color",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          58
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/layout/Footer.tsx::hardcoded_url": {
+      "id": "smells::src/components/layout/Footer.tsx::hardcoded_url",
+      "detector": "smells",
+      "file": "src/components/layout/Footer.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "3x Hardcoded URL in source code",
+      "detail": {
+        "smell_id": "hardcoded_url",
+        "severity": "medium",
+        "count": 3,
+        "lines": [
+          21,
+          35,
+          49
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/ADOS/index.tsx::hardcoded_url": {
+      "id": "smells::src/components/sections/ADOS/index.tsx::hardcoded_url",
+      "detector": "smells",
+      "file": "src/components/sections/ADOS/index.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Hardcoded URL in source code",
+      "detail": {
+        "smell_id": "hardcoded_url",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          120
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/ArcaGidan/index.tsx::hardcoded_url": {
+      "id": "smells::src/components/sections/ArcaGidan/index.tsx::hardcoded_url",
+      "detector": "smells",
+      "file": "src/components/sections/ArcaGidan/index.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Hardcoded URL in source code",
+      "detail": {
+        "smell_id": "hardcoded_url",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          34
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/Community/TopicCard.tsx::hardcoded_url": {
+      "id": "smells::src/components/sections/Community/TopicCard.tsx::hardcoded_url",
+      "detector": "smells",
+      "file": "src/components/sections/Community/TopicCard.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Hardcoded URL in source code",
+      "detail": {
+        "smell_id": "hardcoded_url",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          222
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/Community/index.tsx::hardcoded_url": {
+      "id": "smells::src/components/sections/Community/index.tsx::hardcoded_url",
+      "detector": "smells",
+      "file": "src/components/sections/Community/index.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Hardcoded URL in source code",
+      "detail": {
+        "smell_id": "hardcoded_url",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          20
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/Reigh/index.tsx::hardcoded_url": {
+      "id": "smells::src/components/sections/Reigh/index.tsx::hardcoded_url",
+      "detector": "smells",
+      "file": "src/components/sections/Reigh/index.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Hardcoded URL in source code",
+      "detail": {
+        "smell_id": "hardcoded_url",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          216
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/OwnershipPage.tsx::hardcoded_url": {
+      "id": "smells::src/pages/OwnershipPage.tsx::hardcoded_url",
+      "detector": "smells",
+      "file": "src/pages/OwnershipPage.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "4x Hardcoded URL in source code",
+      "detail": {
+        "smell_id": "hardcoded_url",
+        "severity": "medium",
+        "count": 4,
+        "lines": [
+          26,
+          33,
+          80,
+          283
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/components/CommunitySection.tsx::hardcoded_url": {
+      "id": "smells::src/pages/Wrapped/components/CommunitySection.tsx::hardcoded_url",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/components/CommunitySection.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "2x Hardcoded URL in source code",
+      "detail": {
+        "smell_id": "hardcoded_url",
+        "severity": "medium",
+        "count": 2,
+        "lines": [
+          280,
+          368
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/constants.ts::hardcoded_url": {
+      "id": "smells::src/pages/Wrapped/constants.ts::hardcoded_url",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/constants.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "2x Hardcoded URL in source code",
+      "detail": {
+        "smell_id": "hardcoded_url",
+        "severity": "medium",
+        "count": 2,
+        "lines": [
+          116,
+          128
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/Community/fetchTopics.ts::console_error_no_throw": {
+      "id": "smells::src/components/sections/Community/fetchTopics.ts::console_error_no_throw",
+      "detector": "smells",
+      "file": "src/components/sections/Community/fetchTopics.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x console.error without throw/return",
+      "detail": {
+        "smell_id": "console_error_no_throw",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          120
+        ]
+      },
+      "status": "wontfix",
+      "note": "Parse error logging for debugging - intentional continue",
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:48+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/Community/useCommunityTopics.ts::console_error_no_throw": {
+      "id": "smells::src/components/sections/Community/useCommunityTopics.ts::console_error_no_throw",
+      "detector": "smells",
+      "file": "src/components/sections/Community/useCommunityTopics.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x console.error without throw/return",
+      "detail": {
+        "smell_id": "console_error_no_throw",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          55
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Resources/CommunityNews/DiscordCTA.tsx::console_error_no_throw": {
+      "id": "smells::src/pages/Resources/CommunityNews/DiscordCTA.tsx::console_error_no_throw",
+      "detector": "smells",
+      "file": "src/pages/Resources/CommunityNews/DiscordCTA.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x console.error without throw/return",
+      "detail": {
+        "smell_id": "console_error_no_throw",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          15
+        ]
+      },
+      "status": "wontfix",
+      "note": "Clipboard failure - console.error is sufficient",
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:32+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Resources/CommunityNews/useCommunityNews.ts::console_error_no_throw": {
+      "id": "smells::src/pages/Resources/CommunityNews/useCommunityNews.ts::console_error_no_throw",
+      "detector": "smells",
+      "file": "src/pages/Resources/CommunityNews/useCommunityNews.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "2x console.error without throw/return",
+      "detail": {
+        "smell_id": "console_error_no_throw",
+        "severity": "medium",
+        "count": 2,
+        "lines": [
+          49,
+          98
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/components/MillionthMessage.tsx::console_error_no_throw": {
+      "id": "smells::src/pages/Wrapped/components/MillionthMessage.tsx::console_error_no_throw",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/components/MillionthMessage.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x console.error without throw/return",
+      "detail": {
+        "smell_id": "console_error_no_throw",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          60
+        ]
+      },
+      "status": "wontfix",
+      "note": "Clipboard failure - console.error is sufficient",
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:39+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/useDiscordData.ts::console_error_no_throw": {
+      "id": "smells::src/pages/Wrapped/useDiscordData.ts::console_error_no_throw",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/useDiscordData.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x console.error without throw/return",
+      "detail": {
+        "smell_id": "console_error_no_throw",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          52
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/Community/fetchTopics.ts::swallowed_error": {
+      "id": "smells::src/components/sections/Community/fetchTopics.ts::swallowed_error",
+      "detector": "smells",
+      "file": "src/components/sections/Community/fetchTopics.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Catch blocks that only log (swallowed errors)",
+      "detail": {
+        "smell_id": "swallowed_error",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          119
+        ]
+      },
+      "status": "wontfix",
+      "note": "Intentional error recovery - continues processing remaining summaries",
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:48+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Resources/CommunityNews/DiscordCTA.tsx::swallowed_error": {
+      "id": "smells::src/pages/Resources/CommunityNews/DiscordCTA.tsx::swallowed_error",
+      "detector": "smells",
+      "file": "src/pages/Resources/CommunityNews/DiscordCTA.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Catch blocks that only log (swallowed errors)",
+      "detail": {
+        "smell_id": "swallowed_error",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          14
+        ]
+      },
+      "status": "wontfix",
+      "note": "Clipboard failure is non-critical UI - intentional silent catch",
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:24+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/components/MillionthMessage.tsx::swallowed_error": {
+      "id": "smells::src/pages/Wrapped/components/MillionthMessage.tsx::swallowed_error",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/components/MillionthMessage.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Catch blocks that only log (swallowed errors)",
+      "detail": {
+        "smell_id": "swallowed_error",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          59
+        ]
+      },
+      "status": "wontfix",
+      "note": "Clipboard failure is non-critical - intentional silent catch",
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:39+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/lib/bindAutoPauseVideo.ts::dead_function": {
+      "id": "smells::src/lib/bindAutoPauseVideo.ts::dead_function",
+      "detector": "smells",
+      "file": "src/lib/bindAutoPauseVideo.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Dead function (body is empty/return-only)",
+      "detail": {
+        "smell_id": "dead_function",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          27
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/lib/useSectionRuntime.ts::dead_function": {
+      "id": "smells::src/lib/useSectionRuntime.ts::dead_function",
+      "detector": "smells",
+      "file": "src/lib/useSectionRuntime.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Dead function (body is empty/return-only)",
+      "detail": {
+        "smell_id": "dead_function",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          44
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Resources/index.tsx::dead_function": {
+      "id": "smells::src/pages/Resources/index.tsx::dead_function",
+      "detector": "smells",
+      "file": "src/pages/Resources/index.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "1x Dead function (body is empty/return-only)",
+      "detail": {
+        "smell_id": "dead_function",
+        "severity": "medium",
+        "count": 1,
+        "lines": [
+          54
+        ]
+      },
+      "status": "false_positive",
+      "note": "handleNext is used in JSX onClick - not dead",
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": "2026-02-14T16:59:17+00:00",
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/layout/ScrollVideoBackground.tsx::magic_number": {
+      "id": "smells::src/components/layout/ScrollVideoBackground.tsx::magic_number",
+      "detector": "smells",
+      "file": "src/components/layout/ScrollVideoBackground.tsx",
+      "tier": 3,
+      "confidence": "low",
+      "summary": "1x Magic numbers (>1000 in logic)",
+      "detail": {
+        "smell_id": "magic_number",
+        "severity": "low",
+        "count": 1,
+        "lines": [
+          257
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/Ecosystem/eventGenerators.ts::magic_number": {
+      "id": "smells::src/components/sections/Ecosystem/eventGenerators.ts::magic_number",
+      "detector": "smells",
+      "file": "src/components/sections/Ecosystem/eventGenerators.ts",
+      "tier": 3,
+      "confidence": "low",
+      "summary": "1x Magic numbers (>1000 in logic)",
+      "detail": {
+        "smell_id": "magic_number",
+        "severity": "low",
+        "count": 1,
+        "lines": [
+          160
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Resources/ResourcesFeed/utils.ts::magic_number": {
+      "id": "smells::src/pages/Resources/ResourcesFeed/utils.ts::magic_number",
+      "detector": "smells",
+      "file": "src/pages/Resources/ResourcesFeed/utils.ts",
+      "tier": 3,
+      "confidence": "low",
+      "summary": "1x Magic numbers (>1000 in logic)",
+      "detail": {
+        "smell_id": "magic_number",
+        "severity": "low",
+        "count": 1,
+        "lines": [
+          43
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/SecondRenaissance/SectionRenderer.tsx::magic_number": {
+      "id": "smells::src/pages/SecondRenaissance/SectionRenderer.tsx::magic_number",
+      "detector": "smells",
+      "file": "src/pages/SecondRenaissance/SectionRenderer.tsx",
+      "tier": 3,
+      "confidence": "low",
+      "summary": "1x Magic numbers (>1000 in logic)",
+      "detail": {
+        "smell_id": "magic_number",
+        "severity": "low",
+        "count": 1,
+        "lines": [
+          240
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/components/CommunitySection.tsx::magic_number": {
+      "id": "smells::src/pages/Wrapped/components/CommunitySection.tsx::magic_number",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/components/CommunitySection.tsx",
+      "tier": 3,
+      "confidence": "low",
+      "summary": "1x Magic numbers (>1000 in logic)",
+      "detail": {
+        "smell_id": "magic_number",
+        "severity": "low",
+        "count": 1,
+        "lines": [
+          235
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/components/HallOfFame.tsx::magic_number": {
+      "id": "smells::src/pages/Wrapped/components/HallOfFame.tsx::magic_number",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/components/HallOfFame.tsx",
+      "tier": 3,
+      "confidence": "low",
+      "summary": "1x Magic numbers (>1000 in logic)",
+      "detail": {
+        "smell_id": "magic_number",
+        "severity": "low",
+        "count": 1,
+        "lines": [
+          78
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/components/MillionthMessage.tsx::magic_number": {
+      "id": "smells::src/pages/Wrapped/components/MillionthMessage.tsx::magic_number",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/components/MillionthMessage.tsx",
+      "tier": 3,
+      "confidence": "low",
+      "summary": "1x Magic numbers (>1000 in logic)",
+      "detail": {
+        "smell_id": "magic_number",
+        "severity": "low",
+        "count": 1,
+        "lines": [
+          66
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/pages/Wrapped/components/Timeline.tsx::magic_number": {
+      "id": "smells::src/pages/Wrapped/components/Timeline.tsx::magic_number",
+      "detector": "smells",
+      "file": "src/pages/Wrapped/components/Timeline.tsx",
+      "tier": 3,
+      "confidence": "low",
+      "summary": "5x Magic numbers (>1000 in logic)",
+      "detail": {
+        "smell_id": "magic_number",
+        "severity": "low",
+        "count": 5,
+        "lines": [
+          14,
+          15,
+          27,
+          64,
+          89
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/ArcaGidan/useVideoPreview.ts::sig_variance::handleMouseEnter": {
+      "id": "smells::src/components/sections/ArcaGidan/useVideoPreview.ts::sig_variance::handleMouseEnter",
+      "detector": "smells",
+      "file": "src/components/sections/ArcaGidan/useVideoPreview.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Signature variance: handleMouseEnter() has 2 different signatures across 4 files",
+      "detail": {
+        "function": "handleMouseEnter",
+        "file_count": 4,
+        "signature_count": 2,
+        "variants": [
+          {
+            "file": "src/components/sections/ArcaGidan/useVideoPreview.ts",
+            "line": 45,
+            "params": [],
+            "param_count": 0
+          },
+          {
+            "file": "src/components/sections/Ownership/ProfileImage.tsx",
+            "line": 71,
+            "params": [],
+            "param_count": 0
+          },
+          {
+            "file": "src/pages/Resources/ResourceCard.tsx",
+            "line": 40,
+            "params": [],
+            "param_count": 0
+          },
+          {
+            "file": "src/pages/SecondRenaissance/SectionRenderer.tsx",
+            "line": 223,
+            "params": [
+              "e"
+            ],
+            "param_count": 1
+          }
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "smells::src/components/sections/ArcaGidan/useVideoPreview.ts::sig_variance::handleMouseLeave": {
+      "id": "smells::src/components/sections/ArcaGidan/useVideoPreview.ts::sig_variance::handleMouseLeave",
+      "detector": "smells",
+      "file": "src/components/sections/ArcaGidan/useVideoPreview.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "Signature variance: handleMouseLeave() has 2 different signatures across 3 files",
+      "detail": {
+        "function": "handleMouseLeave",
+        "file_count": 3,
+        "signature_count": 2,
+        "variants": [
+          {
+            "file": "src/components/sections/ArcaGidan/useVideoPreview.ts",
+            "line": 56,
+            "params": [],
+            "param_count": 0
+          },
+          {
+            "file": "src/components/sections/Ownership/ProfileImage.tsx",
+            "line": 86,
+            "params": [],
+            "param_count": 0
+          },
+          {
+            "file": "src/pages/SecondRenaissance/SectionRenderer.tsx",
+            "line": 231,
+            "params": [
+              "e"
+            ],
+            "param_count": 1
+          }
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T17:00:09+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    },
+    "react::src/pages/Resources/index.tsx::setPage": {
+      "id": "react::src/pages/Resources/index.tsx::setPage",
+      "detector": "react",
+      "file": "src/pages/Resources/index.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "summary": "State sync anti-pattern: useEffect only calls setPage",
+      "detail": {
+        "line": 40,
+        "setters": [
+          "setPage"
+        ]
+      },
+      "status": "open",
+      "note": null,
+      "first_seen": "2026-02-14T16:53:42+00:00",
+      "last_seen": "2026-02-14T16:55:49+00:00",
+      "resolved_at": null,
+      "reopen_count": 0,
+      "lang": "typescript",
+      "zone": "production"
+    }
+  },
+  "zone_distribution": {
+    "production": 124,
+    "generated": 1,
+    "config": 1
+  },
+  "tool_hash": "aa82f0efabc4",
+  "potentials": {
+    "typescript": {
+      "logs": 124,
+      "unused": 124,
+      "exports": 211,
+      "deprecated": 0,
+      "structural": 124,
+      "flat_dirs": 24,
+      "props": 59,
+      "single_use": 61,
+      "coupling": 0,
+      "cycles": 123,
+      "orphaned": 123,
+      "patterns": 4,
+      "naming": 24,
+      "facade": 123,
+      "test_coverage": 120,
+      "smells": 124,
+      "react": 67,
+      "dupes": 229
+    }
+  },
+  "codebase_metrics": {
+    "typescript": {
+      "total_files": 126,
+      "total_loc": 19277,
+      "total_directories": 24
+    }
+  },
+  "scan_completeness": {
+    "typescript": "full"
+  },
+  "strict_score": 7.5,
+  "dimension_scores": {
+    "Import hygiene": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 124,
+      "issues": 0,
+      "tier": 1,
+      "detectors": {
+        "unused": {
+          "potential": 124,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Debug cleanliness": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 124,
+      "issues": 0,
+      "tier": 1,
+      "detectors": {
+        "logs": {
+          "potential": 124,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "API surface": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 211,
+      "issues": 0,
+      "tier": 2,
+      "detectors": {
+        "exports": {
+          "potential": 211,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "File health": {
+      "score": 95.0,
+      "strict": 95.0,
+      "checks": 124,
+      "issues": 8,
+      "tier": 3,
+      "detectors": {
+        "structural": {
+          "potential": 124,
+          "pass_rate": 0.95,
+          "issues": 8,
+          "weighted_failures": 6.200000000000001
+        }
+      }
+    },
+    "Component design": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 59,
+      "issues": 0,
+      "tier": 3,
+      "detectors": {
+        "props": {
+          "potential": 59,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Coupling": {
+      "score": 100.0,
+      "strict": 94.3,
+      "checks": 61,
+      "issues": 0,
+      "tier": 3,
+      "detectors": {
+        "single_use": {
+          "potential": 61,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Organization": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 294,
+      "issues": 0,
+      "tier": 3,
+      "detectors": {
+        "orphaned": {
+          "potential": 123,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        },
+        "flat_dirs": {
+          "potential": 24,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        },
+        "naming": {
+          "potential": 24,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        },
+        "facade": {
+          "potential": 123,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Code quality": {
+      "score": 89.5,
+      "strict": 88.1,
+      "checks": 191,
+      "issues": 35,
+      "tier": 3,
+      "detectors": {
+        "smells": {
+          "potential": 124,
+          "pass_rate": 0.8435483870967742,
+          "issues": 34,
+          "weighted_failures": 19.4
+        },
+        "react": {
+          "potential": 67,
+          "pass_rate": 0.9895522388059701,
+          "issues": 1,
+          "weighted_failures": 0.7
+        }
+      }
+    },
+    "Duplication": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 229,
+      "issues": 0,
+      "tier": 3,
+      "detectors": {
+        "dupes": {
+          "potential": 229,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Pattern consistency": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 4,
+      "issues": 0,
+      "tier": 3,
+      "detectors": {
+        "patterns": {
+          "potential": 4,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Dependency health": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 123,
+      "issues": 0,
+      "tier": 4,
+      "detectors": {
+        "cycles": {
+          "potential": 123,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Test health": {
+      "score": 58.3,
+      "strict": 58.3,
+      "checks": 120,
+      "issues": 50,
+      "tier": 4,
+      "detectors": {
+        "test_coverage": {
+          "potential": 120,
+          "pass_rate": 0.5833333333333334,
+          "issues": 50,
+          "weighted_failures": 50.0
+        }
+      }
+    }
+  },
+  "objective_score": 93.3,
+  "objective_strict": 92.8,
+  "scan_history": [
+    {
+      "timestamp": "2026-02-14T16:54:00+00:00",
+      "lang": "typescript",
+      "objective_strict": 92.3,
+      "objective_score": 92.3,
+      "open": 116,
+      "diff_new": 116,
+      "diff_resolved": 0,
+      "dimension_scores": {
+        "Import hygiene": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Debug cleanliness": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "API surface": {
+          "score": 95.0,
+          "strict": 95.0
+        },
+        "File health": {
+          "score": 95.0,
+          "strict": 95.0
+        },
+        "Component design": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Coupling": {
+          "score": 94.3,
+          "strict": 94.3
+        },
+        "Organization": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Code quality": {
+          "score": 88.0,
+          "strict": 88.0
+        },
+        "Duplication": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Pattern consistency": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Dependency health": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Test health": {
+          "score": 58.3,
+          "strict": 58.3
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-14T16:55:49+00:00",
+      "lang": "typescript",
+      "objective_strict": 92.8,
+      "objective_score": 92.8,
+      "open": 105,
+      "diff_new": 0,
+      "diff_resolved": 0,
+      "dimension_scores": {
+        "Import hygiene": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Debug cleanliness": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "API surface": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "File health": {
+          "score": 95.0,
+          "strict": 95.0
+        },
+        "Component design": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Coupling": {
+          "score": 94.3,
+          "strict": 94.3
+        },
+        "Organization": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Code quality": {
+          "score": 88.0,
+          "strict": 88.0
+        },
+        "Duplication": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Pattern consistency": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Dependency health": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Test health": {
+          "score": 58.3,
+          "strict": 58.3
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-14T17:00:09+00:00",
+      "lang": "typescript",
+      "objective_strict": 92.8,
+      "objective_score": 93.3,
+      "open": 93,
+      "diff_new": 0,
+      "diff_resolved": 0,
+      "dimension_scores": {
+        "Import hygiene": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Debug cleanliness": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "API surface": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "File health": {
+          "score": 95.0,
+          "strict": 95.0
+        },
+        "Component design": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Coupling": {
+          "score": 100.0,
+          "strict": 94.3
+        },
+        "Organization": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Code quality": {
+          "score": 89.5,
+          "strict": 88.1
+        },
+        "Duplication": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Pattern consistency": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Dependency health": {
+          "score": 100.0,
+          "strict": 100.0
+        },
+        "Test health": {
+          "score": 58.3,
+          "strict": 58.3
+        }
+      }
+    }
+  ],
+  "reminder_history": {
+    "auto_fixers_available": 3,
+    "dry_run_first": 3,
+    "zone_classification": 3,
+    "badge_recommendation": 2,
+    "stagnant_nudge": 11
+  }
+}

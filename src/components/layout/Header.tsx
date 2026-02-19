@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useLayoutContext } from '@/contexts/LayoutContext';
+import { useLayoutContext } from '@/contexts/layout-context';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   NAV_SECTIONS,
@@ -112,14 +112,14 @@ export const Header = () => {
     if (userMenuOpen) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [userMenuOpen]);
-  
+
   // Get scrim color based on current section (defaults to hero's light scrim)
   const scrimKey = (currentSection ?? SECTION_IDS.hero) as SectionId | 'footer';
   const scrimColor = SECTION_SCRIM_COLORS[scrimKey] ?? SECTION_SCRIM_COLORS[SECTION_IDS.hero];
 
   // Determine active nav section (only highlight if it's a nav item)
-  const activeSection = NAV_SECTIONS.some(item => item.id === currentSection) 
-    ? currentSection 
+  const activeSection = NAV_SECTIONS.some(item => item.id === currentSection)
+    ? currentSection
     : null;
 
   // Hero section uses light fog overlay, so logo/nav should be dark knockout text
@@ -150,7 +150,7 @@ export const Header = () => {
         {/* Logo */}
         <Link to="/" onClick={(e) => scrollToTop(e, isHomePage)} className="flex items-center gap-2.5">
           <img src="/banodoco.png" alt="Banodoco" className="h-7 w-7" draggable={false} />
-          <span 
+          <span
             className={cn(
               'text-xl font-semibold tracking-[-0.01em]',
               // Mobile: white on hero, desktop: dark on hero
@@ -261,7 +261,7 @@ export const Header = () => {
           className={cn(
             'md:hidden p-2 -mr-2 transition-colors',
             // Mobile on hero: white, desktop on hero: dark
-            isOnHero ? 'text-white/80 hover:text-white' : 
+            isOnHero ? 'text-white/80 hover:text-white' :
             !isDark ? 'text-gray-900/70 hover:text-gray-900' : 'text-white/80 hover:text-white'
           )}
           aria-label="Toggle menu"
@@ -280,12 +280,12 @@ export const Header = () => {
       <nav
         className={cn(
           'md:hidden overflow-hidden transition-all duration-200 ease-out -mx-5',
-          mobileMenuOpen 
+          mobileMenuOpen
             ? cn('max-h-20 opacity-100 mt-4 border-t', isDark ? 'border-white/15' : 'border-black/10')
             : 'max-h-0 opacity-0 mt-0'
         )}
       >
-        <div className={cn('grid grid-cols-4 py-3 border-b', isDark ? 'border-white/15' : 'border-black/10')}>
+        <div className={cn('grid grid-cols-5 py-3 border-b', isDark ? 'border-white/15' : 'border-black/10')}>
           {NAV_SECTIONS.map(({ id, label }) => (
             <NavLink
               key={id}
@@ -299,6 +299,18 @@ export const Header = () => {
               onClick={closeMobileMenu}
             />
           ))}
+          <Link
+            to="/resources"
+            onClick={closeMobileMenu}
+            className={cn(
+              'text-center text-xs py-1 mx-1 rounded font-medium transition-all duration-200',
+              isOnHero && 'text-white/90 bg-white/10',
+              !isOnHero && !isDark && 'text-[#4B4B4B] bg-black/5',
+              !isOnHero && isDark && 'text-white/80 bg-white/8',
+            )}
+          >
+            Resources
+          </Link>
         </div>
       </nav>
     </header>

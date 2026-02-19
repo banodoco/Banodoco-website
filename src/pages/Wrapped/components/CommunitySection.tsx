@@ -2,6 +2,7 @@
 import React, { useMemo, useRef, useEffect, useState, useLayoutEffect, useCallback } from 'react';
 import ArticleCard from './ArticleCard';
 import type { TopGeneration } from '../types';
+import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
 // Hook to detect if we're on desktop/tablet (lg breakpoint = 1024px, includes iPads)
 const useIsDesktop = () => {
@@ -27,6 +28,9 @@ const useIsDesktop = () => {
 interface CommunitySectionProps {
   data: TopGeneration[];
 }
+
+const DESKTOP_MIN_WIDTH_PX = 1024;
+const SNAP_REENABLE_DELAY_MS = 150;
 
 const CommunitySection: React.FC<CommunitySectionProps> = ({ data }) => {
   const isDesktop = useIsDesktop();
@@ -232,14 +236,14 @@ const CommunitySection: React.FC<CommunitySectionProps> = ({ data }) => {
     if (!col) return;
 
     const handler = (e: WheelEvent) => {
-      if (window.innerWidth < 1024) return;
+      if (window.innerWidth < DESKTOP_MIN_WIDTH_PX) return;
 
       // Disable snap during active scrolling to prevent jitter
       col.style.scrollSnapType = 'none';
       if (snapTimerRef.current) clearTimeout(snapTimerRef.current);
       snapTimerRef.current = setTimeout(() => {
         col.style.scrollSnapType = '';
-      }, 150);
+      }, SNAP_REENABLE_DELAY_MS);
 
       const prevScrollTop = col.scrollTop;
       col.scrollTop += e.deltaY;
@@ -277,7 +281,7 @@ const CommunitySection: React.FC<CommunitySectionProps> = ({ data }) => {
             The most loved creations from the community — sorted by reactions each month.
           </p>
           <a
-            href="https://discord.gg/NnFxGvx94b"
+            href={EXTERNAL_LINKS.discordInvite}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sky-400 text-sm font-medium hover:text-sky-300 transition-colors border border-sky-400/20 px-3 py-1.5 rounded-full bg-sky-400/5"
@@ -365,7 +369,7 @@ const CommunitySection: React.FC<CommunitySectionProps> = ({ data }) => {
               The most loved creations from the community — sorted by reactions each month.
             </p>
             <a
-              href="https://discord.gg/NnFxGvx94b"
+              href={EXTERNAL_LINKS.discordInvite}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sky-400 font-medium hover:text-sky-300 transition-colors group"

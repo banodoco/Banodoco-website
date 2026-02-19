@@ -4,6 +4,7 @@ import type { TopicData } from './types';
 import { formatChannelName, formatDate, formatText } from './utils';
 import { MediaGallery } from './MediaGallery';
 import { ArrowRightIcon } from '@/components/ui/icons';
+import { DISCORD_INVITE_URL } from '@/lib/discord';
 
 // Understated colors for channel tags (excluding blue and green)
 const CHANNEL_COLORS = [
@@ -27,6 +28,12 @@ interface TopicCardProps {
   /** Show pulsing green live dot (true) or static gray dot (false). Defaults to true. */
   isLive?: boolean;
 }
+
+const renderSafeText = (value: string) =>
+  formatText(value)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .trim();
 
 export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
   ({ topic, isActive, fullWidth = false, index = 0, snapToCenter = false, isLive = true }, ref) => {
@@ -107,8 +114,9 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
                         <span className="text-emerald-400 mt-0.5 shrink-0">→</span>
                         <span 
                           className="line-clamp-2"
-                          dangerouslySetInnerHTML={{ __html: formatText(sub.text) }}
-                        />
+                        >
+                          {renderSafeText(sub.text)}
+                        </span>
                       </div>
                     ))}
                     {topic.topic_sub_topics.length > 4 && (
@@ -140,8 +148,9 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
                         <span className="text-emerald-400 shrink-0">→</span>
                         <span 
                           className="line-clamp-1"
-                          dangerouslySetInnerHTML={{ __html: formatText(sub.text) }}
-                        />
+                        >
+                          {renderSafeText(sub.text)}
+                        </span>
                       </div>
                     ))}
                     {topic.topic_sub_topics.length > 3 && (
@@ -176,10 +185,9 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
               <h3 className="text-lg font-medium text-white mb-3 leading-snug">
                 {topic.topic_title}
               </h3>
-              <p 
-                className="text-sm text-white/60 leading-relaxed mb-4"
-                dangerouslySetInnerHTML={{ __html: formatText(topic.topic_main_text) }}
-              />
+              <p className="text-sm text-white/60 leading-relaxed mb-4 whitespace-pre-line">
+                {renderSafeText(topic.topic_main_text)}
+              </p>
               
               {topic.topic_sub_topics && topic.topic_sub_topics.length > 0 && (
                 <div className="space-y-2 mt-4">
@@ -191,8 +199,9 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
                       <span className="text-emerald-400 mt-0.5 shrink-0">→</span>
                       <span 
                         className="line-clamp-2"
-                        dangerouslySetInnerHTML={{ __html: formatText(sub.text) }}
-                      />
+                      >
+                        {renderSafeText(sub.text)}
+                      </span>
                     </div>
                   ))}
                   {topic.topic_sub_topics.length > 2 && (
@@ -219,7 +228,7 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
         {/* Read full update button - desktop only */}
         <div className="hidden md:block px-6 py-4 border-t border-white/10">
           <a 
-            href="https://discord.gg/NnFxGvx94b"
+            href={DISCORD_INVITE_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-white/60 hover:text-white transition-colors flex items-center gap-2 group"
@@ -234,5 +243,3 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
 );
 
 TopicCard.displayName = 'TopicCard';
-
-

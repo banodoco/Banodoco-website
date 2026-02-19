@@ -1,12 +1,13 @@
 import { artworks } from './data';
 import { VideoPreviewCard } from './VideoPreviewCard';
 import { Section, SectionContent } from '@/components/layout/Section';
-import { useSectionRuntime } from '@/lib/useSectionRuntime';
+import { useSectionVisibility } from '@/lib/useSectionVisibility';
 import { ExternalLinkIcon } from '@/components/ui/icons';
 import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
+import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
 export const ArcaGidan: React.FC = () => {
-  const { ref: sectionRef, isActive } = useSectionRuntime({ threshold: 0.3 });
+  const { ref: sectionRef, isVisible: isActive } = useSectionVisibility({ threshold: 0.3 });
   
   return (
     <Section 
@@ -31,7 +32,7 @@ export const ArcaGidan: React.FC = () => {
                 We wish to provide a reason for people to push themselves and open models to their limits.
               </p>
               <a
-                href="https://arcagidan.com/winners"
+                href={EXTERNAL_LINKS.arcaGidanWinners}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-amber-400 font-medium hover:text-amber-300 transition-colors text-base"

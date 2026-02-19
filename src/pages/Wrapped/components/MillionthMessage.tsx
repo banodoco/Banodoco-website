@@ -3,48 +3,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 import type { MillionthMessage as MillionthMessageType } from '../types';
 import confetti from 'canvas-confetti';
-
-const CLAUDE_CODE_INSTRUCTIONS = `Your goal is to answer questons based on the below Discord. Dig into the messages based on user queries.
-
-Discord DB Tables
-=================
-discord_messages: message_id, author_id, channel_id, content, created_at, reference_id
-discord_members:  member_id, username, global_name, server_nick
-discord_channels: channel_id, channel_name
-
-Joins: messages.author_id → members.member_id | messages.channel_id → channels.channel_id
-Note: IDs are numeric in JSON (jq: .author_id == 123, not "123")
-
-API_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqbHd1dmtyeGx2b3N3d2tlcmRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczNzcyMzcsImV4cCI6MjA4MjczNzIzN30.XSTztghf_6a_bpR62wZdoA4S4oafJFDMoPQDRR4dT08'
-BASE='https://ujlwuvkrxlvoswwkerdf.supabase.co/rest/v1'
-
-curl -s "$BASE/discord_messages?select=content,author_id&limit=10" -H "apikey: $API_KEY" | jq
-curl -s "$BASE/discord_members?member_id=eq.123456789" -H "apikey: $API_KEY" | jq
-curl -s "$BASE/discord_messages?content=ilike.*keyword*&limit=20" -H "apikey: $API_KEY" | jq
-curl -s "$BASE/discord_messages?limit=1000&offset=1000" -H "apikey: $API_KEY" | jq  # page 2
-
-Filters: eq, neq, gt, lt, ilike, is.null, not.is.null, in.(a,b,c)
-         reference_id=not.is.null ✓   not.reference_id=is.null ✗
-
-Tips: Max 1000 rows (use offset=N to page) • ~100 IDs per in.() query • Parallelize with &
-      -H "Prefer: count=exact" → X-Total-Count header • Aggregation is client-side
-
-Refresh Discord Media URLs
-==========================
-Discord CDN URLs expire. To refresh a message's attachment URLs:
-
-curl -X POST 'https://ujlwuvkrxlvoswwkerdf.supabase.co/functions/v1/refresh-media-urls' \\
-  -H "Authorization: Bearer $API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"message_id": "1465702490467995718"}'
-
-Returns: { "success": true, "attachments": [...], "urls_updated": 1 }
-
-Note: message_id must be a STRING (quoted) to preserve precision for Discord's large IDs.`;
+import { CLAUDE_CODE_INSTRUCTIONS } from '@/lib/discord';
 
 interface MillionthMessageProps {
   message: MillionthMessageType;
 }
+
+const COPIED_RESET_MS = 2000;
+const CONFETTI_DURATION_MS = 5000;
+const CONFETTI_INTERVAL_MS = 250;
+const CONFETTI_BASE_PARTICLE_COUNT = 50;
 
 const MillionthMessage: React.FC<MillionthMessageProps> = ({ message }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -55,15 +23,15 @@ const MillionthMessage: React.FC<MillionthMessageProps> = ({ message }) => {
     try {
       await navigator.clipboard.writeText(CLAUDE_CODE_INSTRUCTIONS);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+      setTimeout(() => setCopied(false), COPIED_RESET_MS);
+    } catch {
+      setCopied(false);
     }
   };
 
   useEffect(() => {
     if (isInView) {
-      const duration = 5 * 1000;
+      const duration = CONFETTI_DURATION_MS;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
 
@@ -76,10 +44,10 @@ const MillionthMessage: React.FC<MillionthMessageProps> = ({ message }) => {
           return clearInterval(interval);
         }
 
-        const particleCount = 50 * (timeLeft / duration);
+        const particleCount = CONFETTI_BASE_PARTICLE_COUNT * (timeLeft / duration);
         confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
         confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-      }, 250);
+      }, CONFETTI_INTERVAL_MS);
     }
   }, [isInView]);
 
@@ -290,13 +258,13 @@ const MillionthMessage: React.FC<MillionthMessageProps> = ({ message }) => {
             🔍 Want to explore this data yourself?
           </p>
           <p className="text-[10px] sm:text-xs text-gray-400 mb-2">
-            Play with the full Discord dataset in Claude Code.
+            Play with the full Discord dataset in your coding agent.
           </p>
           <button
             onClick={handleCopyInstructions}
             className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-md transition-colors text-xs"
           >
-            {copied ? '✓ Copied!' : 'Copy Claude Code Instructions'}
+            {copied ? '✓ Copied!' : 'Copy Agent Instructions'}
           </button>
         </motion.div>
 

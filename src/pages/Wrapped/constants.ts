@@ -1,8 +1,9 @@
 
 import type { AppData } from './types';
+import { WRAPPED_ASSET_URLS } from '@/lib/externalLinks';
 
 // Sprite grid config
-export const SPRITE_URL = 'https://www.banodoco.ai/profile-sprite.jpg';
+export const SPRITE_URL = WRAPPED_ASSET_URLS.sprite;
 export const SPRITE_COLS = 20;
 export const SPRITE_ROWS = 10;
 export const TOTAL_ITEMS = 140;
@@ -113,7 +114,7 @@ export const demoData: AppData = {
       channel: "#flux_gens",
       created_at: "2024-06-15T12:00:00Z",
       reaction_count: 42,
-      mediaUrl: "https://placehold.co/512x512/1a1a2e/ffffff?text=Flux+Art",
+      mediaUrl: WRAPPED_ASSET_URLS.demoFluxImage,
       mediaType: "image",
       content: "My best Flux generation yet!",
     },
@@ -125,7 +126,7 @@ export const demoData: AppData = {
       channel: "#wan_gens",
       created_at: "2024-09-20T18:30:00Z",
       reaction_count: 38,
-      mediaUrl: "https://placehold.co/512x512/2e1a2e/ffffff?text=Wan+Video",
+      mediaUrl: WRAPPED_ASSET_URLS.demoWanVideo,
       mediaType: "video",
       content: "Wan video generation - incredible quality",
     },

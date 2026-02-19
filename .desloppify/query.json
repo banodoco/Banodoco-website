@@ -1,0 +1,544 @@
+{
+  "command": "scan",
+  "score": 17.5,
+  "strict_score": 7.5,
+  "prev_score": 17.5,
+  "diff": {
+    "new": 0,
+    "auto_resolved": 0,
+    "reopened": 0,
+    "total_current": 104,
+    "suspect_detectors": [],
+    "chronic_reopeners": [],
+    "skipped_other_lang": 0,
+    "skipped_out_of_scope": 1
+  },
+  "stats": {
+    "total": 116,
+    "open": 93,
+    "fixed": 11,
+    "auto_resolved": 0,
+    "wontfix": 11,
+    "false_positive": 1,
+    "by_tier": {
+      "2": {
+        "open": 7,
+        "fixed": 11,
+        "auto_resolved": 0,
+        "wontfix": 0,
+        "false_positive": 0
+      },
+      "3": {
+        "open": 84,
+        "fixed": 0,
+        "auto_resolved": 0,
+        "wontfix": 11,
+        "false_positive": 1
+      },
+      "4": {
+        "open": 2,
+        "fixed": 0,
+        "auto_resolved": 0,
+        "wontfix": 0,
+        "false_positive": 0
+      }
+    }
+  },
+  "warnings": [],
+  "objective_score": 93.3,
+  "objective_strict": 92.8,
+  "dimension_scores": {
+    "Import hygiene": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 124,
+      "issues": 0,
+      "tier": 1,
+      "detectors": {
+        "unused": {
+          "potential": 124,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Debug cleanliness": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 124,
+      "issues": 0,
+      "tier": 1,
+      "detectors": {
+        "logs": {
+          "potential": 124,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "API surface": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 211,
+      "issues": 0,
+      "tier": 2,
+      "detectors": {
+        "exports": {
+          "potential": 211,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "File health": {
+      "score": 95.0,
+      "strict": 95.0,
+      "checks": 124,
+      "issues": 8,
+      "tier": 3,
+      "detectors": {
+        "structural": {
+          "potential": 124,
+          "pass_rate": 0.95,
+          "issues": 8,
+          "weighted_failures": 6.200000000000001
+        }
+      }
+    },
+    "Component design": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 59,
+      "issues": 0,
+      "tier": 3,
+      "detectors": {
+        "props": {
+          "potential": 59,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Coupling": {
+      "score": 100.0,
+      "strict": 94.3,
+      "checks": 61,
+      "issues": 0,
+      "tier": 3,
+      "detectors": {
+        "single_use": {
+          "potential": 61,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Organization": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 294,
+      "issues": 0,
+      "tier": 3,
+      "detectors": {
+        "orphaned": {
+          "potential": 123,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        },
+        "flat_dirs": {
+          "potential": 24,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        },
+        "naming": {
+          "potential": 24,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        },
+        "facade": {
+          "potential": 123,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Code quality": {
+      "score": 89.5,
+      "strict": 88.1,
+      "checks": 191,
+      "issues": 35,
+      "tier": 3,
+      "detectors": {
+        "smells": {
+          "potential": 124,
+          "pass_rate": 0.8435483870967742,
+          "issues": 34,
+          "weighted_failures": 19.4
+        },
+        "react": {
+          "potential": 67,
+          "pass_rate": 0.9895522388059701,
+          "issues": 1,
+          "weighted_failures": 0.7
+        }
+      }
+    },
+    "Duplication": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 229,
+      "issues": 0,
+      "tier": 3,
+      "detectors": {
+        "dupes": {
+          "potential": 229,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Pattern consistency": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 4,
+      "issues": 0,
+      "tier": 3,
+      "detectors": {
+        "patterns": {
+          "potential": 4,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Dependency health": {
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 123,
+      "issues": 0,
+      "tier": 4,
+      "detectors": {
+        "cycles": {
+          "potential": 123,
+          "pass_rate": 1.0,
+          "issues": 0,
+          "weighted_failures": 0.0
+        }
+      }
+    },
+    "Test health": {
+      "score": 58.3,
+      "strict": 58.3,
+      "checks": 120,
+      "issues": 50,
+      "tier": 4,
+      "detectors": {
+        "test_coverage": {
+          "potential": 120,
+          "pass_rate": 0.5833333333333334,
+          "issues": 50,
+          "weighted_failures": 50.0
+        }
+      }
+    }
+  },
+  "potentials": {
+    "typescript": {
+      "logs": 124,
+      "unused": 124,
+      "exports": 211,
+      "deprecated": 0,
+      "structural": 124,
+      "flat_dirs": 24,
+      "props": 59,
+      "single_use": 61,
+      "coupling": 0,
+      "cycles": 123,
+      "orphaned": 123,
+      "patterns": 4,
+      "naming": 24,
+      "facade": 123,
+      "test_coverage": 120,
+      "smells": 124,
+      "react": 67,
+      "dupes": 229
+    }
+  },
+  "zone_distribution": {
+    "production": 124,
+    "generated": 1,
+    "config": 1
+  },
+  "narrative": {
+    "phase": "stagnation",
+    "headline": "Score plateaued at 92.8 for 3 scans. Test health (58.3%) is where the breakthrough is. 11 wontfix items may also be worth revisiting.",
+    "dimensions": {
+      "lowest_dimensions": [
+        {
+          "name": "Test health",
+          "strict": 58.3,
+          "issues": 50,
+          "impact": 0.0
+        },
+        {
+          "name": "Code quality",
+          "strict": 88.1,
+          "issues": 35,
+          "impact": 0.0
+        },
+        {
+          "name": "Coupling",
+          "strict": 94.3,
+          "issues": 0,
+          "impact": 0.0
+        }
+      ],
+      "biggest_gap_dimensions": [
+        {
+          "name": "Coupling",
+          "lenient": 100.0,
+          "strict": 94.3,
+          "gap": 5.7,
+          "wontfix_count": 5
+        },
+        {
+          "name": "Code quality",
+          "lenient": 89.5,
+          "strict": 88.1,
+          "gap": 1.4,
+          "wontfix_count": 6
+        }
+      ],
+      "stagnant_dimensions": [
+        {
+          "name": "Import hygiene",
+          "strict": 100.0,
+          "stuck_scans": 3
+        },
+        {
+          "name": "Debug cleanliness",
+          "strict": 100.0,
+          "stuck_scans": 3
+        },
+        {
+          "name": "File health",
+          "strict": 95.0,
+          "stuck_scans": 3
+        },
+        {
+          "name": "Component design",
+          "strict": 100.0,
+          "stuck_scans": 3
+        },
+        {
+          "name": "Coupling",
+          "strict": 94.3,
+          "stuck_scans": 3
+        },
+        {
+          "name": "Organization",
+          "strict": 100.0,
+          "stuck_scans": 3
+        },
+        {
+          "name": "Code quality",
+          "strict": 88.1,
+          "stuck_scans": 3
+        },
+        {
+          "name": "Duplication",
+          "strict": 100.0,
+          "stuck_scans": 3
+        },
+        {
+          "name": "Pattern consistency",
+          "strict": 100.0,
+          "stuck_scans": 3
+        },
+        {
+          "name": "Dependency health",
+          "strict": 100.0,
+          "stuck_scans": 3
+        },
+        {
+          "name": "Test health",
+          "strict": 58.3,
+          "stuck_scans": 3
+        }
+      ]
+    },
+    "actions": [
+      {
+        "priority": 1,
+        "type": "auto_fix",
+        "count": 34,
+        "description": "34 smells findings \u2014 auto-fixable",
+        "command": "desloppify fix dead-useeffect --dry-run",
+        "impact": 0.0,
+        "dimension": "Code quality"
+      },
+      {
+        "priority": 2,
+        "type": "refactor",
+        "count": 8,
+        "description": "8 structural findings \u2014 decompose large files \u2014 extract logic into focused modules",
+        "command": "desloppify show structural --status open",
+        "impact": 0.0,
+        "dimension": "File health"
+      },
+      {
+        "priority": 3,
+        "type": "refactor",
+        "count": 1,
+        "description": "1 react findings \u2014 refactor React antipatterns (state sync, provider nesting, hook bloat)",
+        "command": "desloppify show react --status open",
+        "impact": 0.0,
+        "dimension": "Code quality"
+      },
+      {
+        "priority": 4,
+        "type": "refactor",
+        "count": 50,
+        "description": "50 test_coverage findings \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "command": "desloppify show test_coverage --status open",
+        "impact": 0.0,
+        "dimension": "Test health"
+      }
+    ],
+    "tools": {
+      "fixers": [
+        {
+          "name": "dead-useeffect",
+          "detector": "smells",
+          "open_count": 34,
+          "command": "desloppify fix dead-useeffect --dry-run"
+        },
+        {
+          "name": "empty-if-chain",
+          "detector": "smells",
+          "open_count": 34,
+          "command": "desloppify fix empty-if-chain --dry-run"
+        }
+      ],
+      "move": {
+        "available": true,
+        "relevant": false,
+        "reason": null,
+        "usage": "desloppify move <source> <dest> [--dry-run]"
+      },
+      "plan": {
+        "command": "desloppify plan",
+        "description": "Generate prioritized markdown cleanup plan"
+      },
+      "badge": {
+        "generated": true,
+        "in_readme": false,
+        "path": "scorecard.png",
+        "recommendation": "Add to README: <img src=\"scorecard.png\" width=\"400\">"
+      }
+    },
+    "debt": {
+      "overall_gap": 0.6,
+      "wontfix_count": 11,
+      "worst_dimension": "Coupling",
+      "worst_gap": 5.7,
+      "trend": "stable"
+    },
+    "milestone": null,
+    "reminders": [
+      {
+        "type": "auto_fixers_available",
+        "message": "34 findings are auto-fixable. Run `desloppify fix dead-useeffect --dry-run`.",
+        "command": "desloppify fix dead-useeffect --dry-run"
+      },
+      {
+        "type": "badge_recommendation",
+        "message": "Score is above 90! Add the scorecard to your README: <img src=\"scorecard.png\" width=\"400\">",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "Import hygiene has been at 100.0% for 3 scans. The remaining items may be worth marking as wontfix if they're intentional.",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "Debug cleanliness has been at 100.0% for 3 scans. The remaining items may be worth marking as wontfix if they're intentional.",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "File health has been stuck at 95.0% for 3 scans. Try tackling it from a different angle \u2014 run `desloppify next` to find the right entry point.",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "Component design has been at 100.0% for 3 scans. The remaining items may be worth marking as wontfix if they're intentional.",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "Coupling has been stuck at 94.3% for 3 scans. Try tackling it from a different angle \u2014 run `desloppify next` to find the right entry point.",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "Organization has been at 100.0% for 3 scans. The remaining items may be worth marking as wontfix if they're intentional.",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "Code quality has been stuck at 88.1% for 3 scans. Try tackling it from a different angle \u2014 run `desloppify next` to find the right entry point.",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "Duplication has been at 100.0% for 3 scans. The remaining items may be worth marking as wontfix if they're intentional.",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "Pattern consistency has been at 100.0% for 3 scans. The remaining items may be worth marking as wontfix if they're intentional.",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "Dependency health has been at 100.0% for 3 scans. The remaining items may be worth marking as wontfix if they're intentional.",
+        "command": null
+      },
+      {
+        "type": "stagnant_nudge",
+        "message": "Test health has been stuck at 58.3% for 3 scans. Try tackling it from a different angle \u2014 run `desloppify next` to find the right entry point.",
+        "command": null
+      },
+      {
+        "type": "dry_run_first",
+        "message": "Always --dry-run first, review changes, then apply.",
+        "command": null
+      },
+      {
+        "type": "zone_classification",
+        "message": "2 of 126 files classified as non-production (1 config, 1 generated). Override with `desloppify zone set <file> production` if any are misclassified.",
+        "command": "desloppify zone show"
+      }
+    ],
+    "reminder_history": {
+      "auto_fixers_available": 3,
+      "dry_run_first": 3,
+      "zone_classification": 3,
+      "badge_recommendation": 2,
+      "stagnant_nudge": 11
+    }
+  }
+}

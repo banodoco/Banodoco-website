@@ -51,8 +51,7 @@ export const useCommunityTopics = (): UseCommunityTopicsResult => {
 
         const combinedTopics = [...todayTopics, ...yesterdayTopics];
         setTopics(combinedTopics.slice(0, MIN_TOPICS_DESIRED));
-      } catch (err) {
-        console.error('Error fetching data:', err);
+      } catch {
         setError('Failed to load community updates');
       } finally {
         setLoading(false);
