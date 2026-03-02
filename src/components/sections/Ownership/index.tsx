@@ -8,8 +8,8 @@ export const Ownership = () => {
   const { visiblePics, allPics, spriteConfig, usedPicsRef, handleSwap } = useProfilePics();
 
   return (
-    <Section 
-      id="ownership" 
+    <Section
+      id="ownership"
       className="text-white"
       videoOverlay="rgba(26, 22, 20, 0.65)"
     >

@@ -7,11 +7,11 @@ export const Footer = () => {
   const isDark = theme === 'dark';
 
   return (
-    <footer 
+    <footer
       id="footer"
       className={cn(
-        "border-t",
-        isDark 
+        "border-t snap-end",
+        isDark
           ? "bg-[var(--color-bg-base)] border-white/5"
           : "bg-[#f5f5f3] border-gray-200"
       )}
