@@ -22,7 +22,7 @@ const formatDate = (dateStr: string) => {
 };
 
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
-  if (!active || !payload?.length) return null;
+  if (!active || !payload?.length || !label) return null;
   const value = payload[0].value;
   const isNearMillion = value >= 950000;
 
