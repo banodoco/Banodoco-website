@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useCommunityTopics } from './useCommunityTopics';
 import { TopicCard } from './TopicCard';
 import { Section } from '@/components/layout/Section';
@@ -140,29 +140,34 @@ const TopicCardsState = ({ error, isEmpty }: TopicCardsStateProps) => {
 
 /**
  * Community section with Discord updates.
- * 
+ *
  * NOTE: This section uses a custom layout instead of SectionContent because:
  * 1. Mobile layout has edge-bleeding horizontal scroll cards with negative margins
- * 2. Desktop has independently scrollable right column (not just centered content)
+ * 2. Desktop has a right-column horizontal carousel (not just centered content)
  * 3. Layout fundamentally changes between xl breakpoint and below
- * 
+ *
+ * Both mobile and desktop use horizontal-only scroll for cards, so vertical scroll
+ * is never contested with the outer snap-mandatory container.
+ *
  * The header offset is applied via inline style on the container div.
  */
 export const Community = () => {
   const { topics, loading, error } = useCommunityTopics();
   const [activeTopicIndex, setActiveTopicIndex] = useState<number>(0);
-  const [topGradientOpacity, setTopGradientOpacity] = useState(0);
-  const [bottomGradientOpacity, setBottomGradientOpacity] = useState(1);
+  // Mobile horizontal scroll gradient opacities
   const [leftGradientOpacity, setLeftGradientOpacity] = useState(0);
   const [rightGradientOpacity, setRightGradientOpacity] = useState(1);
-  const [paddings, setPaddings] = useState({ top: 0, bottom: 0 });
-  
+  // Desktop horizontal scroll gradient opacities
+  const [desktopLeftOpacity, setDesktopLeftOpacity] = useState(0);
+  const [desktopRightOpacity, setDesktopRightOpacity] = useState(1);
+
   const desktopScrollRef = useRef<HTMLDivElement>(null);
   const { ref: sectionRef, isActive: sectionIsVisible } = useSectionRuntime({ threshold: 0.5 });
   const topicRefs = useRef<(HTMLElement | null)[]>([]);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const mobileCardRefs = useRef<(HTMLElement | null)[]>([]);
   const mobileScrollRafRef = useRef<number | null>(null);
+  const desktopScrollRafRef = useRef<number | null>(null);
 
   // Track horizontal scroll to determine active topic (mobile)
   useEffect(() => {
@@ -221,118 +226,62 @@ export const Community = () => {
     };
   }, [topics.length]);
 
-  // Helper to get current header height - read fresh each time to handle viewport changes (iPad rotation, Safari chrome)
-  const getHeaderHeight = useCallback(() => {
-    const headerHeightVal = getComputedStyle(document.documentElement)
-      .getPropertyValue('--header-height').trim();
-    return headerHeightVal.endsWith('px') 
-      ? parseFloat(headerHeightVal) 
-      : 80; // Default fallback
-  }, []);
-
-  // Track vertical scroll on desktop to progressively fade gradients and determine active card
+  // Track horizontal scroll to determine active topic (desktop)
   useEffect(() => {
     const desktopScroll = desktopScrollRef.current;
     if (!desktopScroll) return;
 
     const handleDesktopScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = desktopScroll;
-      
-      // Top gradient: fade in over 80px of scroll from top
-      const topOpacity = Math.min(1, scrollTop / 80);
-      setTopGradientOpacity(topOpacity);
-      
-      // Bottom gradient: fade in over 80px of scroll from bottom
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      const bottomOpacity = Math.min(1, distanceFromBottom / 80);
-      setBottomGradientOpacity(bottomOpacity);
+      if (desktopScrollRafRef.current !== null) return;
+      desktopScrollRafRef.current = requestAnimationFrame(() => {
+        desktopScrollRafRef.current = null;
 
-      // Read header height fresh on each scroll to handle viewport changes (iPad, Safari)
-      const headerHeightPx = getHeaderHeight();
+        if (!desktopScroll || topicRefs.current.length === 0) return;
 
-      // Determine which card is closest to the visible center
-      // Visible center is at (windowHeight + headerHeight) / 2 from viewport top
-      // In scroll container coords: scrollTop + (clientHeight + headerHeightPx) / 2
-      const visibleCenter = scrollTop + (clientHeight + headerHeightPx) / 2;
+        const scrollLeft = desktopScroll.scrollLeft;
+        const containerWidth = desktopScroll.clientWidth;
+        const scrollCenter = scrollLeft + containerWidth / 2;
 
-      let closestIdx = 0;
-      let minDiff = Infinity;
+        // Edge gradient fades: indicate more content left/right
+        const fadePx = 80;
+        const distanceFromRight = desktopScroll.scrollWidth - desktopScroll.clientWidth - scrollLeft;
+        const leftOpacity = Math.min(1, Math.max(0, scrollLeft / fadePx));
+        const rightOpacity = Math.min(1, Math.max(0, distanceFromRight / fadePx));
+        setDesktopLeftOpacity(leftOpacity);
+        setDesktopRightOpacity(rightOpacity);
 
-      topicRefs.current.forEach((ref, idx) => {
-        if (!ref) return;
-        const cardTop = ref.offsetTop;
-        const cardHeight = ref.offsetHeight;
-        const cardCenter = cardTop + cardHeight / 2;
-        const diff = Math.abs(cardCenter - visibleCenter);
+        let closestIdx = 0;
+        let minDiff = Infinity;
 
-        if (diff < minDiff) {
-          minDiff = diff;
-          closestIdx = idx;
-        }
+        topicRefs.current.forEach((ref, idx) => {
+          if (!ref) return;
+          const cardLeft = ref.offsetLeft;
+          const cardWidth = ref.offsetWidth;
+          const cardCenter = cardLeft + cardWidth / 2;
+          const diff = Math.abs(cardCenter - scrollCenter);
+
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = idx;
+          }
+        });
+
+        setActiveTopicIndex((prev) => (prev === closestIdx ? prev : closestIdx));
       });
-
-      setActiveTopicIndex((prev) => (prev === closestIdx ? prev : closestIdx));
     };
 
-    // Initial check to set gradient correctly on load and after padding changes
-    // Use RAF to ensure DOM has updated with new padding
-    const rafId = requestAnimationFrame(handleDesktopScroll);
+    // Initial check
+    handleDesktopScroll();
 
     desktopScroll.addEventListener('scroll', handleDesktopScroll, { passive: true });
     return () => {
       desktopScroll.removeEventListener('scroll', handleDesktopScroll);
-      cancelAnimationFrame(rafId);
+      if (desktopScrollRafRef.current !== null) {
+        cancelAnimationFrame(desktopScrollRafRef.current);
+        desktopScrollRafRef.current = null;
+      }
     };
-  }, [paddings, getHeaderHeight]); // Re-run when padding changes to recalc gradient with new scrollHeight
-
-  // Calculate dynamic padding to center first/last cards
-  useLayoutEffect(() => {
-    if (loading || topics.length === 0) return;
-
-    const calculatePaddings = () => {
-      // Read header height fresh to handle viewport changes (iPad rotation, Safari)
-      const headerHeightPx = getHeaderHeight();
-      const windowHeight = window.innerHeight;
-      
-      // Measure first and last cards
-      const firstCard = topicRefs.current[0];
-      const lastCard = topicRefs.current[topics.length - 1];
-      
-      if (!firstCard || !lastCard) return;
-
-      const firstHeight = firstCard.offsetHeight;
-      const lastHeight = lastCard.offsetHeight;
-
-      // Top padding: Center first card in visible area (accounting for header)
-      // Use half header height to avoid pushing card too far down
-      const top = Math.max(headerHeightPx, (windowHeight + headerHeightPx * 0.5 - firstHeight) / 2);
-
-      // Bottom padding: Center last card in visible area
-      const bottom = Math.max(80, (windowHeight - headerHeightPx * 0.5 - lastHeight) / 2);
-
-      setPaddings({ top, bottom });
-    };
-
-    // Initial calc - immediate to prevent layout shift
-    calculatePaddings();
-    
-    // Recalc on resize
-    window.addEventListener('resize', calculatePaddings);
-    
-    // Also listen for breakpoint changes via matchMedia - catches the exact moment
-    // CSS variable --header-height changes (768px), which resize alone may miss on iPad
-    const mediaQuery = window.matchMedia('(min-width: 768px)');
-    const handleBreakpointChange = () => {
-      // Slight delay to ensure CSS variable has updated
-      requestAnimationFrame(calculatePaddings);
-    };
-    mediaQuery.addEventListener('change', handleBreakpointChange);
-    
-    return () => {
-      window.removeEventListener('resize', calculatePaddings);
-      mediaQuery.removeEventListener('change', handleBreakpointChange);
-    };
-  }, [loading, topics.length, getHeaderHeight]);
+  }, [topics.length]);
 
   const hasTopics = !loading && !error && topics.length > 0;
   const showErrorOrEmpty = !loading && (error || topics.length === 0);
@@ -428,7 +377,7 @@ export const Community = () => {
         </div>
       </div>
 
-      {/* Desktop layout - two columns, cards scroll under header */}
+      {/* Desktop layout - two columns, cards in horizontal carousel (no vertical scroll conflict) */}
       <div className="hidden xl:grid grid-cols-12 gap-16 h-full px-16">
         {/* Left side - Introduction text (vertically centered, offset slightly for header) */}
         <div className="col-span-4 flex items-center" style={{ paddingTop: 'calc(var(--header-height) * 0.5)' }}>
@@ -437,65 +386,80 @@ export const Community = () => {
           </div>
         </div>
 
-        {/* Right side - Topic cards (scroll under header) */}
-        <div 
-          ref={desktopScrollRef}
-          className="col-span-8 overflow-y-auto scrollbar-hide relative snap-y snap-proximity" 
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {/* Subtle gradient fade at top to indicate scrollable content above - fades in as you scroll */}
-          <div 
-            className="sticky top-0 left-0 right-0 pointer-events-none z-10"
-            style={{ 
-              height: 'calc(var(--header-height) + 4rem)',
-              marginBottom: 'calc(-1 * (var(--header-height) + 4rem))',
-              background: 'linear-gradient(to bottom, rgba(16, 24, 37, 1) 0%, rgba(16, 24, 37, 1) calc(100% - 4rem), rgba(16, 24, 37, 0) 100%)',
-              opacity: topGradientOpacity,
-            }}
-          />
-          
-          {/* Loading: use flexbox centering. Loaded: use calculated padding for precise card centering */}
-          {loading ? (
-            <div className="min-h-full flex items-center" style={{ paddingTop: 'var(--header-height)' }}>
-              <div className="w-full">
-                <TopicCardsSkeleton />
-              </div>
-            </div>
-          ) : (
-            <div style={{ 
-              paddingTop: paddings.top ? `${paddings.top}px` : 'var(--header-height)', 
-              paddingBottom: paddings.bottom ? `${paddings.bottom}px` : '5rem' 
-            }}>
-              {showErrorOrEmpty && (
-                <TopicCardsState error={error} isEmpty={topics.length === 0} />
-              )}
-
-              {hasTopics && (
-                <div className="space-y-4">
-                  {topics.map((topic, idx) => (
-                    <TopicCard
-                      key={idx}
-                      ref={(el) => {
-                        topicRefs.current[idx] = el;
-                      }}
-                      topic={topic}
-                      isActive={sectionIsVisible && idx === activeTopicIndex}
-                      index={idx}
-                      snapToCenter={idx !== 0 && idx !== topics.length - 1}
-                    />
-                  ))}
-                </div>
-              )}
+        {/* Right side - Horizontal carousel: owns only the horizontal axis, never blocks vertical snap */}
+        <div className="col-span-8 flex flex-col" style={{ paddingTop: 'var(--header-height)' }}>
+          {loading && (
+            <div className="flex-1 flex items-center">
+              <div className="w-full"><TopicCardsSkeleton /></div>
             </div>
           )}
-          {/* Subtle gradient fade at bottom to indicate scrollable content below - fades in based on distance from bottom */}
-          <div 
-            className="sticky bottom-0 left-0 right-0 h-16 pointer-events-none z-10 -mt-16"
-            style={{ 
-              background: 'linear-gradient(to top, rgba(16, 24, 37, 0.95) 0%, rgba(16, 24, 37, 0) 100%)',
-              opacity: bottomGradientOpacity,
-            }}
-          />
+          {showErrorOrEmpty && (
+            <div className="flex-1 flex items-center">
+              <TopicCardsState error={error} isEmpty={topics.length === 0} />
+            </div>
+          )}
+          {hasTopics && (
+            <>
+              <div className="relative flex-1 flex items-center overflow-hidden">
+                <div
+                  ref={desktopScrollRef}
+                  className="flex flex-row overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {topics.map((topic, idx) => (
+                    <div
+                      key={`${topic.channel_id}-${topic.summary_date}-${topic.topic_title}`}
+                      ref={(el) => { topicRefs.current[idx] = el; }}
+                      className="w-full shrink-0 snap-start py-6"
+                    >
+                      <TopicCard
+                        topic={topic}
+                        isActive={sectionIsVisible && idx === activeTopicIndex}
+                        index={idx}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Gradient fades to indicate more cards left/right */}
+                <div
+                  className="pointer-events-none absolute inset-y-0 left-0 w-16 z-10"
+                  style={{
+                    background: 'linear-gradient(to right, rgba(16, 24, 37, 0.95) 0%, rgba(16, 24, 37, 0) 100%)',
+                    opacity: desktopLeftOpacity,
+                  }}
+                />
+                <div
+                  className="pointer-events-none absolute inset-y-0 right-0 w-16 z-10"
+                  style={{
+                    background: 'linear-gradient(to left, rgba(16, 24, 37, 0.95) 0%, rgba(16, 24, 37, 0) 100%)',
+                    opacity: desktopRightOpacity,
+                  }}
+                />
+              </div>
+
+              {/* Dot indicators */}
+              <div className="flex justify-center gap-2 pb-6">
+                {topics.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      const card = topicRefs.current[idx];
+                      if (card && desktopScrollRef.current) {
+                        desktopScrollRef.current.scrollTo({
+                          left: card.offsetLeft,
+                          behavior: 'smooth',
+                        });
+                      }
+                    }}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      idx === activeTopicIndex ? 'bg-emerald-400 w-4' : 'bg-white/30'
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </Section>
