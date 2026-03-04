@@ -34,7 +34,7 @@ export const travelExamples: TravelExample[] = [
       '/h6-crop.webp',
       '/h7-crop.webp',
     ],
-    video: '/upscaled-h1.mp4',
+    video: '/h-output.mp4',
     poster: '/h-output-poster.jpg',
   },
 ];
