@@ -18,13 +18,13 @@ interface MediaRow {
   cloudflare_thumbnail_url: string | null;
   cloudflare_playback_hls_url: string | null;
   created_at: string;
-  user_id: string | null;
+  member_id: number | null;
 }
 
-interface ProfileRow {
-  id: string;
+interface MemberRow {
+  member_id: number;
   username: string | null;
-  display_name: string | null;
+  global_name: string | null;
   avatar_url: string | null;
 }
 
@@ -60,7 +60,7 @@ export const useArtPiece = (slugOrId: string | undefined): UseArtPieceResult => 
         const { data, error: fetchError } = await client
           .from('media')
           .select(
-            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, user_id',
+            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, member_id',
           )
           .eq('id', resolvedId)
           .single();
@@ -80,20 +80,20 @@ export const useArtPiece = (slugOrId: string | undefined): UseArtPieceResult => 
           profileUrl: null,
         };
 
-        if (row.user_id) {
-          const { data: profileData } = await client
-            .from('profiles')
-            .select('id, username, display_name, avatar_url')
-            .eq('id', row.user_id)
+        if (row.member_id) {
+          const { data: memberData } = await client
+            .from('members')
+            .select('member_id, username, global_name, avatar_url')
+            .eq('member_id', row.member_id)
             .single();
 
-          if (profileData) {
-            const profile = profileData as ProfileRow;
+          if (memberData) {
+            const member = memberData as MemberRow;
             creator = {
-              username: profile.username,
-              displayName: profile.display_name ?? profile.username,
-              avatarUrl: profile.avatar_url,
-              profileUrl: profile.username ? profilePath(profile.username) : null,
+              username: member.username,
+              displayName: member.global_name ?? member.username,
+              avatarUrl: member.avatar_url,
+              profileUrl: member.username ? profilePath(member.username) : null,
             };
           }
         }
@@ -108,7 +108,7 @@ export const useArtPiece = (slugOrId: string | undefined): UseArtPieceResult => 
           mediaType: row.type,
           createdAt: row.created_at,
           creator,
-          userId: row.user_id,
+          memberId: row.member_id,
         });
       } catch {
         setError('Failed to load art piece');

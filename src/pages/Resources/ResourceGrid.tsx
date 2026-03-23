@@ -86,7 +86,7 @@ export const ResourceGrid = ({ assets, profiles, loading }: ResourceGridProps) =
           >
             <ResourceCard
               asset={asset}
-              profile={asset.user_id ? profiles.get(asset.user_id) : null}
+              profile={asset.member_id ? profiles.get(String(asset.member_id)) : null}
               isFeaturedSize={isFeaturedSize}
             />
           </div>

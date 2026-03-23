@@ -12,7 +12,7 @@ interface AssetRow {
   type: string;
   lora_link: string | null;
   created_at: string;
-  user_id: string | null;
+  member_id: number | null;
   creator: string | null;
   media: { cloudflare_thumbnail_url: string | null } | { cloudflare_thumbnail_url: string | null }[] | null;
 }
@@ -24,10 +24,10 @@ export interface GalleryMediaItem {
   cloudflare_playback_hls_url: string | null;
 }
 
-interface ProfileRow {
-  id: string;
+interface MemberRow {
+  member_id: number;
   username: string | null;
-  display_name: string | null;
+  global_name: string | null;
   avatar_url: string | null;
 }
 
@@ -48,20 +48,20 @@ async function fetchCreator(raw: AssetRow): Promise<ResourceCreator> {
     return { username: null, displayName: raw.creator ?? null, avatarUrl: null, profileUrl: null };
   }
 
-  if (raw.user_id) {
+  if (raw.member_id) {
     const { data } = await supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url')
-      .eq('id', raw.user_id)
+      .from('members')
+      .select('member_id, username, global_name, avatar_url')
+      .eq('member_id', raw.member_id)
       .single();
 
     if (data) {
-      const profile = data as ProfileRow;
+      const member = data as MemberRow;
       return {
-        username: profile.username,
-        displayName: profile.display_name ?? profile.username,
-        avatarUrl: profile.avatar_url,
-        profileUrl: profile.username ? profilePath(profile.username) : null,
+        username: member.username,
+        displayName: member.global_name ?? member.username,
+        avatarUrl: member.avatar_url,
+        profileUrl: member.username ? profilePath(member.username) : null,
       };
     }
   }
@@ -102,7 +102,7 @@ export const useCommunityResource = (slugOrId: string | undefined): UseCommunity
         const { data, error: fetchError } = await supabase!
           .from('assets')
           .select(`
-            id, name, description, type, lora_link, created_at, user_id, creator,
+            id, name, description, type, lora_link, created_at, member_id, creator,
             media:primary_media_id ( cloudflare_thumbnail_url )
           `)
           .eq('id', resolvedId)

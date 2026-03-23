@@ -39,8 +39,8 @@ function SubmitArtForm() {
       return;
     }
 
-    if (!user) {
-      setError('You must be signed in to submit art.');
+    if (!user || !profile?.memberId) {
+      setError('You must be signed in with a linked Discord account to submit art.');
       return;
     }
 
@@ -81,7 +81,7 @@ function SubmitArtForm() {
         .insert({
           type: mediaType,
           description: description || null,
-          user_id: user.id,
+          member_id: Number(profile.memberId),
           admin_status: 'Listed',
           user_status: 'Listed',
           cloudflare_thumbnail_url: fileUrl,
@@ -94,7 +94,7 @@ function SubmitArtForm() {
       }
 
       const newId = insertData.id;
-      navigate(buildArtPath(newId, description || file.name, profile?.username ?? null));
+      navigate(buildArtPath(newId, description || file.name, profile?.discordUsername ?? null));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {

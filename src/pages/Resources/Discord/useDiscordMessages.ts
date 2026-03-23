@@ -30,7 +30,7 @@ export const useDiscordMessages = (
 
     if (uncached.length > 0 && supabase) {
       const { data } = await supabase
-        .from('discord_members')
+        .from('members')
         .select('member_id, username, global_name, server_nick, avatar_url')
         .in('member_id', uncached);
 

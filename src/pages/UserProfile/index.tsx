@@ -22,15 +22,17 @@ const UserProfile = () => {
   const activeTab: TabKey = location.pathname.endsWith('/resources') ? 'resources' : 'art';
 
   // Fetch art pieces and community resources for the profile
+  const profileMemberId = profile?.memberId ? Number(profile.memberId) : undefined;
+
   const {
     artPieces,
     loading: artLoading,
-  } = useArtPieces(profile?.id);
+  } = useArtPieces(profileMemberId);
 
   const {
     resources,
     loading: resourcesLoading,
-  } = useCommunityResources(profile?.id);
+  } = useCommunityResources(profileMemberId);
 
   const isOwnProfile = !!(user && profile && user.id === profile.id);
 
@@ -98,14 +100,14 @@ const UserProfile = () => {
       label: 'Art',
       count: artCount,
       icon: Palette,
-      path: profilePath(profile.username),
+      path: profilePath(profile.discordUsername!),
     },
     {
       key: 'resources',
       label: 'Resources',
       count: resourceCount,
       icon: BookOpen,
-      path: profileResourcesPath(profile.username),
+      path: profileResourcesPath(profile.discordUsername!),
     },
   ];
 
@@ -123,13 +125,13 @@ const UserProfile = () => {
           {profile.avatarUrl ? (
             <img
               src={profile.avatarUrl}
-              alt={profile.displayName || profile.username}
+              alt={profile.displayName || profile.discordUsername || 'User'}
               className="w-24 h-24 rounded-full object-cover border-2 border-white/10"
             />
           ) : (
             <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center border-2 border-white/10">
               <span className="text-3xl text-white/40 font-medium">
-                {(profile.displayName || profile.username).charAt(0).toUpperCase()}
+                {(profile.displayName || profile.discordUsername || 'U').charAt(0).toUpperCase()}
               </span>
             </div>
           )}
@@ -137,9 +139,11 @@ const UserProfile = () => {
           {/* Name & Username */}
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-zinc-100">
-              {profile.displayName || profile.username}
+              {profile.displayName || profile.discordUsername || 'User'}
             </h1>
-            <p className="text-zinc-500 mt-1">@{profile.username}</p>
+            {profile.discordUsername && (
+              <p className="text-zinc-500 mt-1">@{profile.discordUsername}</p>
+            )}
           </div>
 
           {/* Bio */}

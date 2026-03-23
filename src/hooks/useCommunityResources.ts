@@ -39,15 +39,15 @@ interface AssetRow {
   type: string;
   lora_link: string | null;
   created_at: string;
-  user_id: string | null;
+  member_id: number | null;
   creator: string | null;
   media: { cloudflare_thumbnail_url: string | null } | { cloudflare_thumbnail_url: string | null }[] | null;
 }
 
-interface ProfileRow {
-  id: string;
+interface MemberRow {
+  member_id: number;
   username: string | null;
-  display_name: string | null;
+  global_name: string | null;
   avatar_url: string | null;
 }
 
@@ -58,7 +58,7 @@ function unwrapMedia(media: AssetRow['media']): { cloudflare_thumbnail_url: stri
 
 function mapRow(
   row: AssetRow,
-  profileMap: Map<string, ProfileRow>,
+  memberMap: Map<number, MemberRow>,
 ): CommunityResourceItem {
   let creator: ResourceCreator = {
     username: null,
@@ -67,14 +67,14 @@ function mapRow(
     profileUrl: null,
   };
 
-  if (row.user_id) {
-    const profile = profileMap.get(row.user_id);
-    if (profile) {
+  if (row.member_id) {
+    const member = memberMap.get(row.member_id);
+    if (member) {
       creator = {
-        username: profile.username,
-        displayName: profile.display_name ?? profile.username,
-        avatarUrl: profile.avatar_url,
-        profileUrl: profile.username ? profilePath(profile.username) : null,
+        username: member.username,
+        displayName: member.global_name ?? member.username,
+        avatarUrl: member.avatar_url,
+        profileUrl: member.username ? profilePath(member.username) : null,
       };
     }
   }
@@ -94,7 +94,7 @@ function mapRow(
   };
 }
 
-export const useCommunityResources = (userId?: string): UseCommunityResourcesResult => {
+export const useCommunityResources = (memberId?: number): UseCommunityResourcesResult => {
   const [resources, setResources] = useState<CommunityResourceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -118,15 +118,15 @@ export const useCommunityResources = (userId?: string): UseCommunityResourcesRes
       let query = supabase
         .from('assets')
         .select(`
-          id, name, description, type, lora_link, created_at, user_id, creator,
+          id, name, description, type, lora_link, created_at, member_id, creator,
           media:primary_media_id ( cloudflare_thumbnail_url )
         `)
         .in('admin_status', ['Featured', 'Curated', 'Listed'])
         .order('created_at', { ascending: false })
         .range(offset, offset + PAGE_SIZE - 1);
 
-      if (userId) {
-        query = query.eq('user_id', userId);
+      if (memberId) {
+        query = query.eq('member_id', memberId);
       }
 
       const { data, error: fetchError } = await query;
@@ -136,23 +136,23 @@ export const useCommunityResources = (userId?: string): UseCommunityResourcesRes
       const rows = (data ?? []) as AssetRow[];
       setHasMore(rows.length === PAGE_SIZE);
 
-      // Fetch profiles for user_ids
-      const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean))] as string[];
-      const profileMap = new Map<string, ProfileRow>();
-      if (userIds.length > 0) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('id, username, display_name, avatar_url')
-          .in('id', userIds);
+      // Fetch members for member_ids
+      const memberIds = [...new Set(rows.map((r) => r.member_id).filter(Boolean))] as number[];
+      const memberMap = new Map<number, MemberRow>();
+      if (memberIds.length > 0) {
+        const { data: memberData } = await supabase
+          .from('members')
+          .select('member_id, username, global_name, avatar_url')
+          .in('member_id', memberIds);
 
-        if (profileData) {
-          for (const p of profileData as ProfileRow[]) {
-            profileMap.set(p.id, p);
+        if (memberData) {
+          for (const m of memberData as MemberRow[]) {
+            memberMap.set(m.member_id, m);
           }
         }
       }
 
-      const mapped = rows.map((r) => mapRow(r, profileMap));
+      const mapped = rows.map((r) => mapRow(r, memberMap));
 
       if (isLoadMore) {
         setResources((prev) => [...prev, ...mapped]);
@@ -167,7 +167,7 @@ export const useCommunityResources = (userId?: string): UseCommunityResourcesRes
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [userId]);
+  }, [memberId]);
 
   useEffect(() => {
     offsetRef.current = 0;

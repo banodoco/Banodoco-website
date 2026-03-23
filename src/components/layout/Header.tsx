@@ -231,7 +231,7 @@ export const Header = () => {
                     'w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium',
                     isDark ? 'bg-white/10 text-white/60' : 'bg-black/10 text-black/60'
                   )}>
-                    {(profile?.displayName ?? profile?.username ?? 'U').charAt(0).toUpperCase()}
+                    {(profile?.displayName ?? profile?.discordUsername ?? 'U').charAt(0).toUpperCase()}
                   </div>
                 )}
               </button>
@@ -239,14 +239,14 @@ export const Header = () => {
               {userMenuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-48 bg-zinc-900 border border-white/10 rounded-lg shadow-xl py-1 z-50">
                   <div className="px-3 py-2 border-b border-white/10">
-                    <p className="text-sm font-medium text-zinc-100 truncate">{profile?.displayName ?? profile?.username}</p>
-                    {profile?.username && (
-                      <p className="text-xs text-zinc-500 truncate">@{profile.username}</p>
+                    <p className="text-sm font-medium text-zinc-100 truncate">{profile?.displayName ?? profile?.discordUsername}</p>
+                    {profile?.discordUsername && (
+                      <p className="text-xs text-zinc-500 truncate">@{profile.discordUsername}</p>
                     )}
                   </div>
-                  {profile?.username && (
+                  {profile?.discordUsername && (
                     <Link
-                      to={profilePath(profile.username)}
+                      to={profilePath(profile.discordUsername)}
                       onClick={() => setUserMenuOpen(false)}
                       className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors"
                     >

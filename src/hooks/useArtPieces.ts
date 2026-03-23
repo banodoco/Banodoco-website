@@ -19,7 +19,7 @@ export interface ArtPieceItem {
   mediaType: string | null;
   createdAt: string;
   creator: ArtPieceCreator;
-  userId: string | null;
+  memberId: number | null;
 }
 
 interface MediaRow {
@@ -29,13 +29,13 @@ interface MediaRow {
   cloudflare_thumbnail_url: string | null;
   cloudflare_playback_hls_url: string | null;
   created_at: string;
-  user_id: string | null;
+  member_id: number | null;
 }
 
-interface ProfileRow {
-  id: string;
+interface MemberRow {
+  member_id: number;
   username: string | null;
-  display_name: string | null;
+  global_name: string | null;
   avatar_url: string | null;
 }
 
@@ -50,7 +50,7 @@ interface UseArtPiecesResult {
 
 const PAGE_SIZE = 12;
 
-function mapRowToItem(row: MediaRow, profileMap: Map<string, ProfileRow>): ArtPieceItem {
+function mapRowToItem(row: MediaRow, memberMap: Map<number, MemberRow>): ArtPieceItem {
   let creator: ArtPieceCreator = {
     username: null,
     displayName: 'Unknown',
@@ -58,14 +58,14 @@ function mapRowToItem(row: MediaRow, profileMap: Map<string, ProfileRow>): ArtPi
     profileUrl: null,
   };
 
-  if (row.user_id) {
-    const profile = profileMap.get(row.user_id);
-    if (profile) {
+  if (row.member_id) {
+    const member = memberMap.get(row.member_id);
+    if (member) {
       creator = {
-        username: profile.username,
-        displayName: profile.display_name ?? profile.username,
-        avatarUrl: profile.avatar_url,
-        profileUrl: profile.username ? profilePath(profile.username) : null,
+        username: member.username,
+        displayName: member.global_name ?? member.username,
+        avatarUrl: member.avatar_url,
+        profileUrl: member.username ? profilePath(member.username) : null,
       };
     }
   }
@@ -80,41 +80,41 @@ function mapRowToItem(row: MediaRow, profileMap: Map<string, ProfileRow>): ArtPi
     mediaType: row.type,
     createdAt: row.created_at,
     creator,
-    userId: row.user_id,
+    memberId: row.member_id,
   };
 }
 
-export const useArtPieces = (userId?: string): UseArtPiecesResult => {
+export const useArtPieces = (memberId?: number): UseArtPiecesResult => {
   const [artPieces, setArtPieces] = useState<ArtPieceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const offsetRef = useRef(0);
-  const profileCacheRef = useRef(new Map<string, ProfileRow>());
+  const memberCacheRef = useRef(new Map<number, MemberRow>());
 
-  const resolveProfiles = useCallback(async (rows: MediaRow[]) => {
+  const resolveMembers = useCallback(async (rows: MediaRow[]) => {
     const client = supabase;
     if (!client) return;
 
-    const cache = profileCacheRef.current;
-    const userIds = [
+    const cache = memberCacheRef.current;
+    const memberIds = [
       ...new Set(
         rows
-          .map((r) => r.user_id)
-          .filter((id): id is string => id != null && !cache.has(id)),
+          .map((r) => r.member_id)
+          .filter((id): id is number => id != null && !cache.has(id)),
       ),
     ];
 
-    if (userIds.length > 0) {
+    if (memberIds.length > 0) {
       const { data } = await client
-        .from('profiles')
-        .select('id, username, display_name, avatar_url')
-        .in('id', userIds);
+        .from('members')
+        .select('member_id, username, global_name, avatar_url')
+        .in('member_id', memberIds);
 
       if (data) {
-        for (const p of data as ProfileRow[]) {
-          cache.set(p.id, p);
+        for (const m of data as MemberRow[]) {
+          cache.set(m.member_id, m);
         }
       }
     }
@@ -138,14 +138,14 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
         let query = client
           .from('media')
           .select(
-            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, user_id',
+            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, member_id',
           )
           .in('admin_status', ['Featured', 'Curated', 'Listed'])
           .order('created_at', { ascending: false })
           .range(offset, offset + PAGE_SIZE - 1);
 
-        if (userId) {
-          query = query.eq('user_id', userId);
+        if (memberId) {
+          query = query.eq('member_id', memberId);
         }
 
         const { data, error: fetchError } = await query;
@@ -155,10 +155,10 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
         const rows = (data ?? []) as MediaRow[];
         setHasMore(rows.length === PAGE_SIZE);
 
-        await resolveProfiles(rows);
+        await resolveMembers(rows);
 
         const items = rows.map((row) =>
-          mapRowToItem(row, profileCacheRef.current),
+          mapRowToItem(row, memberCacheRef.current),
         );
 
         if (isLoadMore) {
@@ -175,12 +175,12 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
         setLoadingMore(false);
       }
     },
-    [userId, resolveProfiles],
+    [memberId, resolveMembers],
   );
 
   useEffect(() => {
     offsetRef.current = 0;
-    profileCacheRef.current.clear();
+    memberCacheRef.current.clear();
     setArtPieces([]);
     setHasMore(true);
     setError(null);

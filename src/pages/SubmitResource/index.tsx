@@ -51,8 +51,8 @@ function SubmitResourceForm() {
       return;
     }
 
-    if (!user) {
-      setError('You must be signed in to submit a resource.');
+    if (!user || !profile?.memberId) {
+      setError('You must be signed in with a linked Discord account to submit a resource.');
       return;
     }
 
@@ -66,7 +66,7 @@ function SubmitResourceForm() {
           description: description.trim() || null,
           type: resourceType,
           lora_link: loraLink.trim() || null,
-          user_id: user.id,
+          member_id: Number(profile.memberId),
           admin_status: 'Listed',
         })
         .select('id')
@@ -77,7 +77,7 @@ function SubmitResourceForm() {
       }
 
       const newId = insertData.id;
-      navigate(buildResourcePath(newId, name, profile?.username ?? null));
+      navigate(buildResourcePath(newId, name, profile?.discordUsername ?? null));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {

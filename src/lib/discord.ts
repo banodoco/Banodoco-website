@@ -5,7 +5,7 @@ export const CLAUDE_CODE_INSTRUCTIONS = `Your goal is to answer questons based o
 Discord DB Tables
 =================
 discord_messages: message_id, author_id, channel_id, content, created_at, reference_id
-discord_members:  member_id, username, global_name, server_nick
+members:          member_id, username, global_name, server_nick
 discord_channels: channel_id, channel_name
 
 Joins: messages.author_id → members.member_id | messages.channel_id → channels.channel_id
@@ -15,7 +15,7 @@ API_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6In
 BASE='https://ujlwuvkrxlvoswwkerdf.supabase.co/rest/v1'
 
 curl -s "$BASE/discord_messages?select=content,author_id&limit=10" -H "apikey: $API_KEY" | jq
-curl -s "$BASE/discord_members?member_id=eq.123456789" -H "apikey: $API_KEY" | jq
+curl -s "$BASE/members?member_id=eq.123456789" -H "apikey: $API_KEY" | jq
 curl -s "$BASE/discord_messages?content=ilike.*keyword*&limit=20" -H "apikey: $API_KEY" | jq
 curl -s "$BASE/discord_messages?limit=1000&offset=1000" -H "apikey: $API_KEY" | jq  # page 2
 

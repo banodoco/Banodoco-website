@@ -30,7 +30,7 @@ export const useResources = (): UseResourcesResult => {
         const { data, error: fetchError } = await client
           .from('assets')
           .select(`
-            id, type, name, description, admin_status, creator, user_id,
+            id, type, name, description, admin_status, creator, member_id,
             lora_type, lora_base_model, model_variant,
             lora_link, download_link, primary_media_id, created_at,
             media:primary_media_id (
@@ -52,18 +52,23 @@ export const useResources = (): UseResourcesResult => {
 
         setAssets(sorted);
 
-        // Fetch profiles for all unique user_ids
-        const userIds = [...new Set(sorted.map(a => a.user_id).filter(Boolean))] as string[];
-        if (userIds.length > 0) {
-          const { data: profileData } = await client
-            .from('profiles')
-            .select('id, username, display_name, avatar_url')
-            .in('id', userIds);
+        // Fetch members for all unique member_ids
+        const memberIds = [...new Set(sorted.map(a => a.member_id).filter(Boolean))] as number[];
+        if (memberIds.length > 0) {
+          const { data: memberData } = await client
+            .from('members')
+            .select('member_id, username, global_name, avatar_url')
+            .in('member_id', memberIds);
 
-          if (profileData) {
+          if (memberData) {
             const map = new Map<string, AssetProfile>();
-            for (const p of profileData as AssetProfile[]) {
-              map.set(p.id, p);
+            for (const m of memberData as { member_id: number; username: string | null; global_name: string | null; avatar_url: string | null }[]) {
+              map.set(String(m.member_id), {
+                id: String(m.member_id),
+                username: m.username,
+                display_name: m.global_name,
+                avatar_url: m.avatar_url,
+              });
             }
             setProfiles(map);
           }

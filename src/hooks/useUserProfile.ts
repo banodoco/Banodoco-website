@@ -3,11 +3,11 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 export interface UserProfileData {
   id: string;
-  username: string;
+  memberId: string | null;
+  discordUsername: string | null;
   displayName: string | null;
   avatarUrl: string | null;
   bio: string | null;
-  discordUsername: string | null;
 }
 
 interface UseUserProfileResult {
@@ -47,11 +47,11 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
       setError(null);
 
       try {
-        // Fetch the profile by username
+        // Fetch the profile by discord_username
         const { data: profileData, error: profileError } = await client
           .from('profiles')
-          .select('id, username, display_name, avatar_url, description, discord_username')
-          .eq('username', username)
+          .select('id, discord_id, discord_username, display_name, avatar_url, bio')
+          .eq('discord_username', username)
           .single();
 
         if (profileError) {
@@ -70,35 +70,40 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
 
         const mapped: UserProfileData = {
           id: profileData.id,
-          username: profileData.username,
+          memberId: profileData.discord_id,
+          discordUsername: profileData.discord_username,
           displayName: profileData.display_name,
           avatarUrl: profileData.avatar_url,
-          bio: profileData.description,
-          discordUsername: profileData.discord_username,
+          bio: profileData.bio,
         };
 
         setProfile(mapped);
 
-        // Fetch media count (art) where user_id = profile.id
-        const { count: mediaCount, error: artError } = await client
-          .from('media')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', mapped.id)
-          .in('admin_status', ['Featured', 'Curated', 'Listed']);
+        // Use discord_id (member_id as string) to query media/assets by member_id
+        const memberId = mapped.memberId ? Number(mapped.memberId) : null;
 
-        if (!cancelled && !artError) {
-          setArtCount(mediaCount ?? 0);
-        }
+        if (memberId) {
+          // Fetch media count (art) where member_id matches
+          const { count: mediaCount, error: artError } = await client
+            .from('media')
+            .select('id', { count: 'exact', head: true })
+            .eq('member_id', memberId)
+            .in('admin_status', ['Featured', 'Curated', 'Listed']);
 
-        // Fetch assets count (resources) where user_id = profile.id
-        const { count: assetsCount, error: resourceError } = await client
-          .from('assets')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', mapped.id)
-          .in('admin_status', ['Featured', 'Curated', 'Listed']);
+          if (!cancelled && !artError) {
+            setArtCount(mediaCount ?? 0);
+          }
 
-        if (!cancelled && !resourceError) {
-          setResourceCount(assetsCount ?? 0);
+          // Fetch assets count (resources) where member_id matches
+          const { count: assetsCount, error: resourceError } = await client
+            .from('assets')
+            .select('id', { count: 'exact', head: true })
+            .eq('member_id', memberId)
+            .in('admin_status', ['Featured', 'Curated', 'Listed']);
+
+          if (!cancelled && !resourceError) {
+            setResourceCount(assetsCount ?? 0);
+          }
         }
       } catch {
         if (!cancelled) {

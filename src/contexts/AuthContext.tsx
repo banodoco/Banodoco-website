@@ -4,11 +4,11 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 export interface UserProfile {
   id: string;
-  username: string;
+  memberId: string | null;
+  discordUsername: string | null;
   displayName: string | null;
   avatarUrl: string | null;
   bio: string | null;
-  discordUsername: string | null;
 }
 
 interface AuthContextValue {
@@ -37,18 +37,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const { data, error } = await client
       .from('profiles')
-      .select('id, username, display_name, avatar_url, description, discord_username')
+      .select('id, discord_id, discord_username, display_name, avatar_url, bio')
       .eq('id', userId)
       .single();
 
     if (!error && data) {
       setProfile({
         id: data.id,
-        username: data.username,
+        memberId: data.discord_id,
+        discordUsername: data.discord_username,
         displayName: data.display_name,
         avatarUrl: data.avatar_url,
-        bio: data.description,
-        discordUsername: data.discord_username,
+        bio: data.bio,
       });
     } else {
       setProfile(null);

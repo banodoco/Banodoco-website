@@ -10,8 +10,8 @@ const AuthCallback = () => {
   useEffect(() => {
     if (loading) return;
 
-    if (user && profile?.username) {
-      navigate(profilePath(profile.username), { replace: true });
+    if (user && profile?.discordUsername) {
+      navigate(profilePath(profile.discordUsername), { replace: true });
     } else if (user) {
       // User exists but profile may not have a username yet
       navigate('/', { replace: true });

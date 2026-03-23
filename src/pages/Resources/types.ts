@@ -28,7 +28,7 @@ export interface Asset {
   primary_media_id: string | null;
   created_at: string;
   creator: string | null;
-  user_id: string | null;
+  member_id: number | null;
   media: AssetMedia | AssetMedia[] | null;
 }
 
