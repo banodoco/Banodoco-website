@@ -11,7 +11,7 @@ discord_channels: channel_id, channel_name
 Joins: messages.author_id → members.member_id | messages.channel_id → channels.channel_id
 Note: IDs are numeric in JSON (jq: .author_id == 123, not "123")
 
-API_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqbHd1dmtyeGx2b3N3d2tlcmRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczNzcyMzcsImV4cCI6MjA4MjczNzIzN30.XSTztghf_6a_bpR62wZdoA4S4oafJFDMoPQDRR4dT08'
+API_KEY='sb_publishable_O38oPBafrBoFrpi_rlWJvA_UJrulFsx'
 BASE='https://ujlwuvkrxlvoswwkerdf.supabase.co/rest/v1'
 
 curl -s "$BASE/discord_messages?select=content,author_id&limit=10" -H "apikey: $API_KEY" | jq
