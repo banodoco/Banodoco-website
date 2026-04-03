@@ -2,8 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import type { Section } from './sections';
 import { reflectionQuestions } from './sections';
 
-const MILLISECONDS_PER_SECOND = 1000;
-
 // =============================================================================
 // Section Badge - Shows number in bottom right
 // =============================================================================
@@ -239,7 +237,7 @@ export const SectionRenderer = ({
         let lastTime = performance.now();
         
         const reverseStep = (now: number) => {
-          const delta = (now - lastTime) / MILLISECONDS_PER_SECOND; // seconds
+          const delta = (now - lastTime) / 1000; // seconds
           lastTime = now;
           
           const newTime = video.currentTime - (delta * reverseSpeed);
@@ -342,3 +340,4 @@ export const SectionRenderer = ({
       return null;
   }
 };
+

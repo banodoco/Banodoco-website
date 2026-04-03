@@ -1,14 +1,5 @@
 import { useRef, useEffect } from 'react';
 
-interface NavigatorConnectionInfo {
-  saveData?: boolean;
-  effectiveType?: string;
-}
-
-type NavigatorWithConnection = Navigator & {
-  connection?: NavigatorConnectionInfo;
-};
-
 /**
  * Preload images into browser cache when condition is met.
  * Unlike video preloading, this doesn't check connection speed since images are much smaller.
@@ -46,7 +37,8 @@ export const useImagePreloadOnVisible = (
         preloadedRef.current.add(url);
         const img = new Image();
         // Hint: allow async decoding where supported
-        img.decoding = 'async';
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (img as any).decoding = 'async';
         img.src = url;
         break;
       }
@@ -83,9 +75,9 @@ export const useVideoPreloadOnVisible = (urls: string[], isActive: boolean) => {
 
   const shouldSkip = () => {
     // Respect user intent (Chrome/Android etc.)
-    const navigatorWithConnection = navigator as NavigatorWithConnection;
-    const saveData = navigatorWithConnection.connection?.saveData === true;
-    const effectiveType = navigatorWithConnection.connection?.effectiveType;
+    const anyNav = navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } };
+    const saveData = anyNav.connection?.saveData === true;
+    const effectiveType = anyNav.connection?.effectiveType;
     // Only skip on very slow connections - 3G is borderline but still usable
     const isVerySlow =
       effectiveType === 'slow-2g' || effectiveType === '2g';
@@ -165,3 +157,4 @@ export const useVideoPreloadOnVisible = (urls: string[], isActive: boolean) => {
     };
   }, [isActive, urls]);
 };
+

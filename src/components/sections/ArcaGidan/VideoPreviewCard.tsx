@@ -44,8 +44,8 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
   
   const {
     showVideo,
-    handlePreviewMouseEnter,
-    handlePreviewMouseLeave,
+    handleMouseEnter,
+    handleMouseLeave,
     handleTouchStart,
     handleClick,
     handlePlaying,
@@ -60,8 +60,8 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
   return (
     <div
       className="relative h-full min-h-0 overflow-hidden cursor-pointer group"
-      onMouseEnter={handlePreviewMouseEnter}
-      onMouseLeave={handlePreviewMouseLeave}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
       onClick={handleClick}
     >
@@ -95,4 +95,5 @@ export const VideoPreviewCard: React.FC<VideoPreviewCardProps> = ({ poster, vide
     </div>
   );
 };
+
 

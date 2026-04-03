@@ -122,8 +122,8 @@ export const Hero = () => {
               Tools, community, resources, and initiatives to support the open source AI movement.
             </h2>
 
-            {/* CTAs - white border on mobile, styled on desktop */}
-            <div className="flex items-center gap-3 pt-2">
+            {/* CTA - white border on mobile, orange gradient on desktop */}
+            <div className="flex items-center gap-4 pt-2">
               <button
                 onClick={scrollToNextSection}
                 className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-lg transition-all hover:gap-3 hover:shadow-lg hover:scale-[1.02] text-white border border-white/50 md:border-0 md:text-[#1a1a1a] md:bg-gradient-to-br md:from-[rgba(255,195,115,0.9)] md:to-[rgba(255,170,80,0.85)] md:shadow-[0_2px_8px_rgba(255,170,80,0.3)]"

@@ -109,7 +109,7 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
         onDragEnd();
       }, HOLD_REPEAT_INTERVAL);
     }, HOLD_INITIAL_DELAY);
-  }, [jumpYears, onDragStart, onDragEnd]);
+  }, [jumpYears, onDragStart, onMonthChange, onDragEnd]);
 
   // Stop hold-to-repeat
   const stopHold = useCallback(() => {
@@ -256,3 +256,4 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
     </div>
   );
 };
+

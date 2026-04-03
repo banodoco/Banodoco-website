@@ -12,7 +12,7 @@ import {
   type ActiveEvent,
 } from './eventConfig';
 import { Section, HEADER_OFFSET_VAR } from '@/components/layout/Section';
-import { useSectionVisibility } from '@/lib/useSectionVisibility';
+import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { NameHighlight, GradientHighlight } from '@/components/ui/TextHighlight';
 
 // Fixed tick interval - month advances at steady pace
@@ -38,7 +38,7 @@ export const Ecosystem: React.FC = () => {
   const waveAnimationRef = useRef<number | null>(null);
   const hasAdvancedThisBatch = useRef(false); // Only advance once per batch
   const hasFiredInitialEvent = useRef(false); // Track if we've fired the initial event on section enter
-  const { ref: sectionRef, isVisible: isSectionVisible } = useSectionVisibility({ threshold: 0.35 });
+  const { ref: sectionRef, isActive: isSectionVisible } = useSectionRuntime({ threshold: 0.35 });
 
   const stats = calculateStats(monthIdx);
   const progress = monthIdx / (TOTAL_MONTHS - 1);

@@ -88,9 +88,6 @@ const EXTERNAL_LABELS: Record<Stage, string[]> = {
   fans: ['Artist releases new work', 'Viral creation shared', 'New app launched', 'Free access event', 'Featured in media', 'Celebrity uses tool'],
 };
 
-const EARLY_SPAWN_INTERVAL_MS = 1800;
-const SPAWN_INTERVAL_DECAY_MS = 1300;
-
 // =============================================================================
 // TIMING
 // =============================================================================
@@ -160,7 +157,7 @@ export const getMaxConcurrentEvents = (progress: number): number => {
  */
 export const getSpawnInterval = (progress: number): number => {
   // Early: 1800ms, Late: 500ms between spawn attempts
-  return Math.floor(EARLY_SPAWN_INTERVAL_MS - progress * SPAWN_INTERVAL_DECAY_MS);
+  return Math.floor(1800 - progress * 1300);
 };
 
 /** Check if a stage is already targeted by an active event */
@@ -322,6 +319,7 @@ export const generateEventBatch = (count: number): ActiveEvent[] => {
   
   return batch;
 };
+
 
 
 

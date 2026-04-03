@@ -424,7 +424,7 @@ export const sections: Section[] = [
   {
     id: 'questions-list',
     layout: 'custom',
-    render: () => null, // We'll implement this in the renderer
+    render: (_sectionNumber) => null, // We'll implement this in the renderer
   },
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -451,3 +451,4 @@ export const reflectionQuestions = [
   "What could you create that inspires or enables others to create with AI?",
   "What might the first steps you take towards figuring this out be?",
 ];
+
