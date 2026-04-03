@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
-import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Users, Trophy } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
+import { useFeaturedCreators } from '@/hooks/useFeaturedCreators';
 import { ArtGallerySection } from './ArtGallery/ArtGallerySection';
 import { FilterBar } from './FilterBar';
 import { ResourceGrid } from './ResourceGrid';
@@ -28,6 +29,7 @@ const Resources = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, signInWithDiscord } = useAuth();
   const { assets, loading, error } = useResources();
+  const { creators } = useFeaturedCreators(8);
   const {
     filters,
     searchInput,
@@ -328,6 +330,87 @@ const Resources = () => {
               </button>
             </div>
           )}
+        </motion.section>
+
+        {/* Creators */}
+        {creators.length > 0 && (
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={containerVariants}
+            id="creators"
+            className="space-y-8 rounded-2xl border border-white/10 bg-[#0f1518] p-6 sm:p-8"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-zinc-900 rounded-lg">
+                  <Users size={20} className="text-zinc-100" />
+                </div>
+                <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
+                  Creators
+                </h2>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {creators.map(creator => (
+                <Link
+                  key={creator.memberId}
+                  to={creator.profileUrl}
+                  className="group flex flex-col items-center gap-3 p-4 sm:p-5 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/15 transition-all hover:bg-white/[0.04]"
+                >
+                  {creator.avatarUrl ? (
+                    <img src={creator.avatarUrl} alt="" className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-white/10 group-hover:border-white/25 transition-colors" loading="lazy" />
+                  ) : (
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 flex items-center justify-center border border-white/10">
+                      <span className="text-lg text-white/40 font-medium">{(creator.displayName ?? creator.username).charAt(0).toUpperCase()}</span>
+                    </div>
+                  )}
+                  <div className="text-center min-w-0 w-full">
+                    <p className="text-sm font-medium text-zinc-200 truncate group-hover:text-white transition-colors">
+                      {creator.displayName ?? creator.username}
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      {creator.artCount > 0 && `${creator.artCount} art`}
+                      {creator.artCount > 0 && creator.resourceCount > 0 && ' · '}
+                      {creator.resourceCount > 0 && `${creator.resourceCount} resources`}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* Competitions CTA */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={containerVariants}
+          className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 to-orange-950/20 p-6 sm:p-8"
+        >
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-500/10 rounded-lg">
+                <Trophy size={20} className="text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase text-amber-100">
+                  Competitions
+                </h2>
+                <p className="text-sm text-amber-200/40 mt-0.5">Browse Arca Gidan prize entries and community competitions</p>
+              </div>
+            </div>
+            <Link
+              to="/competitions"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 hover:border-amber-500/50 transition-colors"
+            >
+              View Competitions
+              <ChevronRight size={16} />
+            </Link>
+          </div>
         </motion.section>
 
         {/* News Section — Briefing Sidebar Layout */}

@@ -15,6 +15,7 @@ const UserProfile = lazy(() => import('@/pages/UserProfile'));
 const AuthCallback = lazy(() => import('@/pages/AuthCallback'));
 const SubmitArt = lazy(() => import('@/pages/SubmitArt'));
 const SubmitResource = lazy(() => import('@/pages/SubmitResource'));
+const Competitions = lazy(() => import('@/pages/Competitions'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Minimal loading fallback — keeps layout stable while lazy chunks load.
@@ -35,6 +36,7 @@ function App() {
               <Route path="/2nd-renaissance" element={<SecondRenaissance />} />
               <Route path="/1m" element={<WrappedPage />} />
               <Route path="/resources" element={<Resources />} />
+              <Route path="/competitions" element={<Competitions />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/art/:slug" element={<ArtDetail />} />
               <Route path="/resources/:slug" element={<ResourceDetail />} />
