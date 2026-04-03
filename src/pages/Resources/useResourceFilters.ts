@@ -172,7 +172,8 @@ export function useResourceFilters(assets: Asset[]) {
       if (searchLower) {
         const nameMatch = asset.name.toLowerCase().includes(searchLower);
         const descMatch = asset.description?.toLowerCase().includes(searchLower);
-        const creatorMatch = asset.creator?.toLowerCase().includes(searchLower);
+        const member = Array.isArray(asset.members) ? asset.members[0] : asset.members;
+        const creatorMatch = member?.username?.toLowerCase().includes(searchLower) || member?.global_name?.toLowerCase().includes(searchLower);
         if (!nameMatch && !descMatch && !creatorMatch) return false;
       }
 

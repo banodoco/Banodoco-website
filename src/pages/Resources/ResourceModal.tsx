@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { HlsPlayer } from './HlsPlayer';
-import type { Asset, AssetMedia } from './types';
+import type { Asset, AssetMedia, AssetMember } from './types';
 
 function unwrap<T>(val: T | T[] | null): T | null {
   if (Array.isArray(val)) return val[0] ?? null;
@@ -20,7 +20,8 @@ interface ResourceModalProps {
 
 export const ResourceModal = ({ asset, onClose }: ResourceModalProps) => {
   const primaryMedia = unwrap<AssetMedia>(asset.media);
-  const creatorName = asset.creator || 'Unknown';
+  const member = unwrap<AssetMember>(asset.members);
+  const creatorName = member?.global_name ?? member?.username ?? 'Unknown';
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 

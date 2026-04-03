@@ -11,21 +11,31 @@ interface UseArtPieceResult {
   error: string | null;
 }
 
+interface MemberJoin {
+  member_id: number;
+  username: string | null;
+  global_name: string | null;
+  avatar_url: string | null;
+  stored_avatar_url: string | null;
+  bio: string | null;
+}
+
 interface MediaRow {
   id: string;
   type: string | null;
+  title: string | null;
   description: string | null;
   cloudflare_thumbnail_url: string | null;
   cloudflare_playback_hls_url: string | null;
   created_at: string;
-  user_id: string | null;
+  member_id: number | null;
+  tools_used: string[] | null;
+  members: MemberJoin | MemberJoin[] | null;
 }
 
-interface ProfileRow {
-  id: string;
-  username: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
+function unwrapMember(m: MemberJoin | MemberJoin[] | null): MemberJoin | null {
+  if (Array.isArray(m)) return m[0] ?? null;
+  return m;
 }
 
 export const useArtPiece = (slugOrId: string | undefined): UseArtPieceResult => {
@@ -60,7 +70,8 @@ export const useArtPiece = (slugOrId: string | undefined): UseArtPieceResult => 
         const { data, error: fetchError } = await client
           .from('media')
           .select(
-            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, user_id',
+            `id, type, title, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, member_id, tools_used,
+             members(member_id, username, global_name, avatar_url, stored_avatar_url, bio)`,
           )
           .eq('id', resolvedId)
           .single();
@@ -72,43 +83,37 @@ export const useArtPiece = (slugOrId: string | undefined): UseArtPieceResult => 
         }
 
         const row = data as MediaRow;
+        const member = unwrapMember(row.members);
+        const avatarUrl = member?.stored_avatar_url ?? member?.avatar_url ?? null;
 
-        let creator: ArtPieceCreator = {
-          username: null,
-          displayName: 'Unknown',
-          avatarUrl: null,
-          profileUrl: null,
-        };
-
-        if (row.user_id) {
-          const { data: profileData } = await client
-            .from('profiles')
-            .select('id, username, display_name, avatar_url')
-            .eq('id', row.user_id)
-            .single();
-
-          if (profileData) {
-            const profile = profileData as ProfileRow;
-            creator = {
-              username: profile.username,
-              displayName: profile.display_name ?? profile.username,
-              avatarUrl: profile.avatar_url,
-              profileUrl: profile.username ? profilePath(profile.username) : null,
+        const creator: ArtPieceCreator = member
+          ? {
+              memberId: member.member_id,
+              username: member.username,
+              displayName: member.global_name ?? member.username,
+              avatarUrl,
+              profileUrl: member.username ? profilePath(member.username) : null,
+            }
+          : {
+              memberId: null,
+              username: null,
+              displayName: 'Unknown',
+              avatarUrl: null,
+              profileUrl: null,
             };
-          }
-        }
 
         setArtPiece({
           id: row.id,
-          slug: buildEntitySlug(row.description, row.id),
-          title: null,
+          slug: buildEntitySlug(row.title || row.description, row.id),
+          title: row.title,
           caption: row.description,
           thumbnailUrl: row.cloudflare_thumbnail_url,
           hlsUrl: row.cloudflare_playback_hls_url,
           mediaType: row.type,
+          toolsUsed: row.tools_used ?? [],
           createdAt: row.created_at,
           creator,
-          userId: row.user_id,
+          memberId: row.member_id,
         });
       } catch {
         setError('Failed to load art piece');

@@ -27,7 +27,7 @@ const containerVariants = {
 const Resources = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, signInWithDiscord } = useAuth();
-  const { assets, profiles, loading, error } = useResources();
+  const { assets, loading, error } = useResources();
   const {
     filters,
     searchInput,
@@ -299,7 +299,6 @@ const Resources = () => {
             <div className="mt-6">
               <ResourceGrid
                 assets={paginatedAssets}
-                profiles={profiles}
                 loading={loading}
               />
             </div>

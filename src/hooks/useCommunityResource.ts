@@ -5,16 +5,27 @@ import { buildEntitySlug, extractEntityIdFromSlug, profilePath } from '@/lib/rou
 
 export type { CommunityResourceItem };
 
+interface MemberJoin {
+  member_id: number;
+  username: string | null;
+  global_name: string | null;
+  avatar_url: string | null;
+  stored_avatar_url: string | null;
+}
+
 interface AssetRow {
   id: string;
   name: string;
   description: string | null;
   type: string;
   lora_link: string | null;
+  download_link: string | null;
+  lora_base_model: string | null;
+  lora_type: string | null;
   created_at: string;
-  user_id: string | null;
-  creator: string | null;
+  member_id: number | null;
   media: { cloudflare_thumbnail_url: string | null } | { cloudflare_thumbnail_url: string | null }[] | null;
+  members: MemberJoin | MemberJoin[] | null;
 }
 
 export interface GalleryMediaItem {
@@ -22,13 +33,6 @@ export interface GalleryMediaItem {
   type: string | null;
   cloudflare_thumbnail_url: string | null;
   cloudflare_playback_hls_url: string | null;
-}
-
-interface ProfileRow {
-  id: string;
-  username: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
 }
 
 interface UseCommunityResourceResult {
@@ -43,30 +47,24 @@ function unwrapMedia(media: AssetRow['media']): { cloudflare_thumbnail_url: stri
   return media;
 }
 
-async function fetchCreator(raw: AssetRow): Promise<ResourceCreator> {
-  if (!supabase) {
-    return { username: null, displayName: raw.creator ?? null, avatarUrl: null, profileUrl: null };
+function unwrapMember(m: MemberJoin | MemberJoin[] | null): MemberJoin | null {
+  if (Array.isArray(m)) return m[0] ?? null;
+  return m;
+}
+
+function buildCreator(raw: AssetRow): ResourceCreator {
+  const member = unwrapMember(raw.members);
+  if (member) {
+    const avatarUrl = member.stored_avatar_url ?? member.avatar_url ?? null;
+    return {
+      memberId: member.member_id,
+      username: member.username,
+      displayName: member.global_name ?? member.username,
+      avatarUrl,
+      profileUrl: member.username ? profilePath(member.username) : null,
+    };
   }
-
-  if (raw.user_id) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url')
-      .eq('id', raw.user_id)
-      .single();
-
-    if (data) {
-      const profile = data as ProfileRow;
-      return {
-        username: profile.username,
-        displayName: profile.display_name ?? profile.username,
-        avatarUrl: profile.avatar_url,
-        profileUrl: profile.username ? profilePath(profile.username) : null,
-      };
-    }
-  }
-
-  return { username: null, displayName: raw.creator ?? 'Unknown', avatarUrl: null, profileUrl: null };
+  return { memberId: null, username: null, displayName: 'Unknown', avatarUrl: null, profileUrl: null };
 }
 
 export const useCommunityResource = (slugOrId: string | undefined): UseCommunityResourceResult => {
@@ -102,8 +100,9 @@ export const useCommunityResource = (slugOrId: string | undefined): UseCommunity
         const { data, error: fetchError } = await supabase!
           .from('assets')
           .select(`
-            id, name, description, type, lora_link, created_at, user_id, creator,
-            media:primary_media_id ( cloudflare_thumbnail_url )
+            id, name, description, type, lora_link, download_link, lora_base_model, lora_type, created_at, member_id,
+            media:primary_media_id ( cloudflare_thumbnail_url ),
+            members(member_id, username, global_name, avatar_url, stored_avatar_url)
           `)
           .eq('id', resolvedId)
           .in('admin_status', ['Featured', 'Curated', 'Listed'])
@@ -116,7 +115,7 @@ export const useCommunityResource = (slugOrId: string | undefined): UseCommunity
         }
 
         const raw = data as AssetRow;
-        const creator = await fetchCreator(raw);
+        const creator = buildCreator(raw);
         const primaryMedia = unwrapMedia(raw.media);
 
         setResource({
@@ -124,7 +123,7 @@ export const useCommunityResource = (slugOrId: string | undefined): UseCommunity
           slug: buildEntitySlug(raw.name, raw.id),
           title: raw.name,
           description: raw.description,
-          primaryUrl: raw.lora_link,
+          primaryUrl: raw.lora_link ?? raw.download_link,
           resourceType: raw.type,
           thumbnailUrl: primaryMedia?.cloudflare_thumbnail_url ?? null,
           createdAt: raw.created_at,

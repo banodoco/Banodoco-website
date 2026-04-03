@@ -7,11 +7,12 @@ export interface AssetMedia {
   metadata: Record<string, unknown> | null;
 }
 
-export interface AssetProfile {
-  id: string;
+export interface AssetMember {
+  member_id: number;
   username: string | null;
-  display_name: string | null;
+  global_name: string | null;
   avatar_url: string | null;
+  stored_avatar_url: string | null;
 }
 
 export interface Asset {
@@ -27,9 +28,9 @@ export interface Asset {
   download_link: string | null;
   primary_media_id: string | null;
   created_at: string;
-  creator: string | null;
-  user_id: string | null;
+  member_id: number | null;
   media: AssetMedia | AssetMedia[] | null;
+  members: AssetMember | AssetMember[] | null;
 }
 
 export interface ResourceFilters {

@@ -81,7 +81,7 @@ function SubmitArtForm() {
         .insert({
           type: mediaType,
           description: description || null,
-          user_id: user.id,
+          member_id: profile?.memberId ?? null,
           admin_status: 'Listed',
           user_status: 'Listed',
           cloudflare_thumbnail_url: fileUrl,
