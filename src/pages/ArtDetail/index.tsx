@@ -132,6 +132,9 @@ const ArtDetail = () => {
 
             {/* Info section */}
             <div className="mt-6 space-y-4">
+              {artPiece.title && (
+                <h1 className="text-xl sm:text-2xl font-bold text-white">{artPiece.title}</h1>
+              )}
               {caption && (
                 <p className="text-zinc-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
                   {caption}
@@ -178,6 +181,21 @@ const ArtDetail = () => {
                             )}
                           </div>
                         </div>
+                        {/* Download/source link */}
+                        {(asset.loraLink || asset.downloadLink) && (
+                          <a
+                            href={(asset.loraLink || asset.downloadLink)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1.5 rounded bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+                            title="Download"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                          </a>
+                        )}
                         <svg className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>

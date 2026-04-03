@@ -18,7 +18,10 @@ export interface CommunityResourceItem {
   title: string;
   description: string | null;
   primaryUrl: string | null;
+  downloadUrl: string | null;
   resourceType: string;
+  loraBaseModel: string | null;
+  loraType: string | null;
   thumbnailUrl: string | null;
   createdAt: string;
   creator: ResourceCreator;
@@ -48,6 +51,8 @@ interface AssetRow {
   type: string;
   lora_link: string | null;
   download_link: string | null;
+  lora_base_model: string | null;
+  lora_type: string | null;
   created_at: string;
   member_id: number | null;
   media: { cloudflare_thumbnail_url: string | null } | { cloudflare_thumbnail_url: string | null }[] | null;
@@ -92,7 +97,10 @@ function mapRow(row: AssetRow): CommunityResourceItem {
     title: row.name,
     description: row.description,
     primaryUrl: row.lora_link ?? row.download_link,
+    downloadUrl: row.download_link,
     resourceType: row.type,
+    loraBaseModel: row.lora_base_model,
+    loraType: row.lora_type,
     thumbnailUrl: primaryMedia?.cloudflare_thumbnail_url ?? null,
     createdAt: row.created_at,
     creator,
@@ -123,7 +131,7 @@ export const useCommunityResources = (memberId?: number | string): UseCommunityR
       let query = supabase
         .from('assets')
         .select(`
-          id, name, description, type, lora_link, download_link, created_at, member_id,
+          id, name, description, type, lora_link, download_link, lora_base_model, lora_type, created_at, member_id,
           media:primary_media_id ( cloudflare_thumbnail_url ),
           members(member_id, username, global_name, avatar_url, stored_avatar_url)
         `)

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCommunityResource } from '@/hooks/useCommunityResource';
 import { useLinkedMedia } from '@/hooks/useLinkedAssets';
+import { useCommunityResources } from '@/hooks/useCommunityResources';
 import { CinematicVideoPlayer } from '@/components/CinematicVideoPlayer';
 import type { GalleryMediaItem } from '@/hooks/useCommunityResource';
 import { buildResourcePath, buildArtPath } from '@/lib/routing';
@@ -47,6 +48,9 @@ const ResourceDetail = () => {
   const navigate = useNavigate();
   const { resource, galleryMedia, loading, error } = useCommunityResource(slug);
   const { media: linkedArt } = useLinkedMedia(resource?.id);
+  // Related assets from same creator
+  const { resources: creatorResources } = useCommunityResources(resource?.creator?.memberId ?? undefined);
+  const relatedAssets = creatorResources.filter(r => r.id !== resource?.id).slice(0, 4);
   const [activeMedia, setActiveMedia] = useState<GalleryMediaItem | null>(null);
 
   useEffect(() => {
@@ -148,11 +152,21 @@ const ResourceDetail = () => {
               </div>
             )}
 
-            {/* Type badge */}
+            {/* Type & model badges */}
             <div className="flex flex-wrap items-center gap-2">
               <span className={`inline-block text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${colorClass}`}>
                 {resource.resourceType}
               </span>
+              {resource.loraBaseModel && (
+                <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-white/10 text-zinc-300">
+                  {resource.loraBaseModel}
+                </span>
+              )}
+              {resource.loraType && (
+                <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-white/10 text-zinc-400">
+                  {resource.loraType}
+                </span>
+              )}
             </div>
 
             {/* Title */}
@@ -217,6 +231,38 @@ const ResourceDetail = () => {
                           No preview
                         </div>
                       )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Related assets from same creator */}
+            {relatedAssets.length > 0 && (
+              <div className="pt-6 border-t border-white/5">
+                <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+                  More from {creatorName}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {relatedAssets.map(ra => (
+                    <Link
+                      key={ra.id}
+                      to={buildResourcePath(ra.id, ra.title, ra.creator.username)}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5 hover:border-white/15 transition group"
+                    >
+                      {ra.thumbnailUrl && (
+                        <img src={ra.thumbnailUrl} alt="" className="w-14 h-10 rounded object-cover flex-shrink-0" loading="lazy" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-zinc-200 truncate group-hover:text-white transition-colors">{ra.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-[10px] font-medium uppercase px-1.5 py-0.5 rounded ${
+                            RESOURCE_TYPE_COLORS[ra.resourceType] ?? RESOURCE_TYPE_COLORS.other
+                          }`}>
+                            {ra.resourceType}
+                          </span>
+                          {ra.loraBaseModel && <span className="text-[10px] text-zinc-500">{ra.loraBaseModel}</span>}
+                        </div>
+                      </div>
                     </Link>
                   ))}
                 </div>
