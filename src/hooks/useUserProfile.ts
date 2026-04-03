@@ -3,11 +3,16 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 export interface UserProfileData {
   id: string;
+  memberId: number;
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
   bio: string | null;
-  discordUsername: string | null;
+  realName: string | null;
+  websiteUrl: string | null;
+  instagramUrl: string | null;
+  twitterUrl: string | null;
+  banodocoOwner: boolean;
 }
 
 interface UseUserProfileResult {
@@ -16,6 +21,20 @@ interface UseUserProfileResult {
   resourceCount: number;
   loading: boolean;
   error: string | null;
+}
+
+interface MemberRow {
+  member_id: number;
+  username: string;
+  global_name: string | null;
+  avatar_url: string | null;
+  stored_avatar_url: string | null;
+  bio: string | null;
+  real_name: string | null;
+  website_url: string | null;
+  instagram_url: string | null;
+  twitter_url: string | null;
+  banodoco_owner: boolean;
 }
 
 export const useUserProfile = (username: string | undefined): UseUserProfileResult => {
@@ -47,54 +66,60 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
       setError(null);
 
       try {
-        // Fetch the profile by username
-        const { data: profileData, error: profileError } = await client
-          .from('profiles')
-          .select('id, username, display_name, avatar_url, description, discord_username')
+        const { data: memberData, error: memberError } = await client
+          .from('members')
+          .select('member_id, username, global_name, avatar_url, stored_avatar_url, bio, real_name, website_url, instagram_url, twitter_url, banodoco_owner')
           .eq('username', username)
           .single();
 
-        if (profileError) {
-          if (profileError.code === 'PGRST116') {
-            // No rows returned — profile not found
+        if (memberError) {
+          if (memberError.code === 'PGRST116') {
             if (!cancelled) {
               setProfile(null);
               setLoading(false);
             }
             return;
           }
-          throw profileError;
+          throw memberError;
         }
 
         if (cancelled) return;
 
+        const row = memberData as MemberRow;
+        const avatarUrl = row.stored_avatar_url ?? row.avatar_url;
+
         const mapped: UserProfileData = {
-          id: profileData.id,
-          username: profileData.username,
-          displayName: profileData.display_name,
-          avatarUrl: profileData.avatar_url,
-          bio: profileData.description,
-          discordUsername: profileData.discord_username,
+          id: String(row.member_id),
+          memberId: row.member_id,
+          username: row.username,
+          displayName: row.global_name,
+          avatarUrl,
+          bio: row.bio,
+          realName: row.real_name,
+          websiteUrl: row.website_url,
+          instagramUrl: row.instagram_url,
+          twitterUrl: row.twitter_url,
+          banodocoOwner: row.banodoco_owner,
         };
 
         setProfile(mapped);
 
-        // Fetch media count (art) where user_id = profile.id
+        // Fetch media count (art) where member_id matches
         const { count: mediaCount, error: artError } = await client
           .from('media')
           .select('id', { count: 'exact', head: true })
-          .eq('user_id', mapped.id)
+          .eq('member_id', row.member_id)
           .in('admin_status', ['Featured', 'Curated', 'Listed']);
 
         if (!cancelled && !artError) {
           setArtCount(mediaCount ?? 0);
         }
 
-        // Fetch assets count (resources) where user_id = profile.id
+        // Fetch assets count (resources)
         const { count: assetsCount, error: resourceError } = await client
           .from('assets')
           .select('id', { count: 'exact', head: true })
-          .eq('user_id', mapped.id)
+          .eq('member_id', row.member_id)
           .in('admin_status', ['Featured', 'Curated', 'Listed']);
 
         if (!cancelled && !resourceError) {

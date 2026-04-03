@@ -66,7 +66,7 @@ function SubmitResourceForm() {
           description: description.trim() || null,
           type: resourceType,
           lora_link: loraLink.trim() || null,
-          user_id: user.id,
+          member_id: profile?.memberId ?? null,
           admin_status: 'Listed',
         })
         .select('id')

@@ -4,11 +4,11 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 export interface UserProfile {
   id: string;
+  memberId: number | null;
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
   bio: string | null;
-  discordUsername: string | null;
 }
 
 interface AuthContextValue {
@@ -30,25 +30,46 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch profile from the profiles table for a given user ID
-  const fetchProfile = useCallback(async (userId: string) => {
+  // Fetch profile: try members table first (via auth_user_id), then profiles table as fallback
+  const fetchProfile = useCallback(async (authUser: User) => {
     const client = supabase;
     if (!client) return;
 
-    const { data, error } = await client
-      .from('profiles')
-      .select('id, username, display_name, avatar_url, description, discord_username')
-      .eq('id', userId)
+    // Try members table (linked via auth_user_id)
+    const { data: memberData } = await client
+      .from('members')
+      .select('member_id, username, global_name, avatar_url, stored_avatar_url, bio')
+      .eq('auth_user_id', authUser.id)
       .single();
 
-    if (!error && data) {
+    if (memberData) {
+      const avatarUrl = memberData.stored_avatar_url ?? memberData.avatar_url;
       setProfile({
-        id: data.id,
-        username: data.username,
-        displayName: data.display_name,
-        avatarUrl: data.avatar_url,
-        bio: data.description,
-        discordUsername: data.discord_username,
+        id: authUser.id,
+        memberId: memberData.member_id,
+        username: memberData.username,
+        displayName: memberData.global_name,
+        avatarUrl,
+        bio: memberData.bio,
+      });
+      return;
+    }
+
+    // Fallback to profiles table (for users who signed up via Discord OAuth)
+    const { data: profileData, error } = await client
+      .from('profiles')
+      .select('id, username, display_name, avatar_url, description')
+      .eq('id', authUser.id)
+      .single();
+
+    if (!error && profileData) {
+      setProfile({
+        id: profileData.id,
+        memberId: null,
+        username: profileData.username,
+        displayName: profileData.display_name,
+        avatarUrl: profileData.avatar_url,
+        bio: profileData.description,
       });
     } else {
       setProfile(null);
@@ -67,7 +88,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        fetchProfile(currentUser.id).finally(() => setLoading(false));
+        fetchProfile(currentUser).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -78,7 +99,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        fetchProfile(currentUser.id);
+        fetchProfile(currentUser);
       } else {
         setProfile(null);
       }

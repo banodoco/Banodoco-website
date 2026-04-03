@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { BASE_MODEL_MAP } from './constants';
-import type { Asset, AssetMedia, AssetProfile } from './types';
+import type { Asset, AssetMedia, AssetMember } from './types';
 import { buildResourcePath } from '@/lib/routing';
 
 /** Safely unwrap Supabase joins that may return an object or a single-element array */
@@ -12,23 +12,21 @@ function unwrap<T>(val: T | T[] | null): T | null {
 
 /** Convert a Cloudflare static thumbnail URL to an animated GIF preview */
 function getAnimatedThumbnail(staticUrl: string): string {
-  // https://...cloudflarestream.com/{id}/thumbnails/thumbnail.jpg
-  // → https://...cloudflarestream.com/{id}/thumbnails/thumbnail.gif?duration=4s&height=360
   return staticUrl.replace('/thumbnail.jpg', '/thumbnail.gif?duration=4s&height=360');
 }
 
 interface ResourceCardProps {
   asset: Asset;
-  profile?: AssetProfile | null;
   isFeaturedSize?: boolean;
 }
 
-export const ResourceCard = ({ asset, profile, isFeaturedSize }: ResourceCardProps) => {
+export const ResourceCard = ({ asset, isFeaturedSize }: ResourceCardProps) => {
   const media = unwrap<AssetMedia>(asset.media);
+  const member = unwrap<AssetMember>(asset.members);
   const thumbnailUrl = media?.cloudflare_thumbnail_url;
   const hasVideo = !!media?.cloudflare_playback_hls_url;
-  const creatorName = asset.creator || 'Unknown';
-  const avatarUrl = profile?.avatar_url;
+  const creatorName = member?.global_name ?? member?.username ?? 'Unknown';
+  const avatarUrl = member?.stored_avatar_url ?? member?.avatar_url;
 
   const isFeatured = asset.admin_status === 'Featured';
   const isCurated = asset.admin_status === 'Curated';
@@ -44,7 +42,7 @@ export const ResourceCard = ({ asset, profile, isFeaturedSize }: ResourceCardPro
     setAnimatedLoaded(false);
   }, []);
 
-  const linkUrl = buildResourcePath(asset.id, asset.name, profile?.username);
+  const linkUrl = buildResourcePath(asset.id, asset.name, member?.username);
 
   return (
     <Link

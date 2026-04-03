@@ -5,6 +5,7 @@ import { buildEntitySlug, profilePath } from '@/lib/routing';
 const PAGE_SIZE = 12;
 
 export interface ResourceCreator {
+  memberId: number | null;
   username: string | null;
   displayName: string | null;
   avatarUrl: string | null;
@@ -32,23 +33,25 @@ interface UseCommunityResourcesResult {
   loadMore: () => void;
 }
 
+interface MemberJoin {
+  member_id: number;
+  username: string | null;
+  global_name: string | null;
+  avatar_url: string | null;
+  stored_avatar_url: string | null;
+}
+
 interface AssetRow {
   id: string;
   name: string;
   description: string | null;
   type: string;
   lora_link: string | null;
+  download_link: string | null;
   created_at: string;
-  user_id: string | null;
-  creator: string | null;
+  member_id: number | null;
   media: { cloudflare_thumbnail_url: string | null } | { cloudflare_thumbnail_url: string | null }[] | null;
-}
-
-interface ProfileRow {
-  id: string;
-  username: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
+  members: MemberJoin | MemberJoin[] | null;
 }
 
 function unwrapMedia(media: AssetRow['media']): { cloudflare_thumbnail_url: string | null } | null {
@@ -56,28 +59,30 @@ function unwrapMedia(media: AssetRow['media']): { cloudflare_thumbnail_url: stri
   return media;
 }
 
-function mapRow(
-  row: AssetRow,
-  profileMap: Map<string, ProfileRow>,
-): CommunityResourceItem {
-  let creator: ResourceCreator = {
-    username: null,
-    displayName: row.creator ?? 'Unknown',
-    avatarUrl: null,
-    profileUrl: null,
-  };
+function unwrapMember(m: MemberJoin | MemberJoin[] | null): MemberJoin | null {
+  if (Array.isArray(m)) return m[0] ?? null;
+  return m;
+}
 
-  if (row.user_id) {
-    const profile = profileMap.get(row.user_id);
-    if (profile) {
-      creator = {
-        username: profile.username,
-        displayName: profile.display_name ?? profile.username,
-        avatarUrl: profile.avatar_url,
-        profileUrl: profile.username ? profilePath(profile.username) : null,
+function mapRow(row: AssetRow): CommunityResourceItem {
+  const member = unwrapMember(row.members);
+  const avatarUrl = member?.stored_avatar_url ?? member?.avatar_url ?? null;
+
+  const creator: ResourceCreator = member
+    ? {
+        memberId: member.member_id,
+        username: member.username,
+        displayName: member.global_name ?? member.username,
+        avatarUrl,
+        profileUrl: member.username ? profilePath(member.username) : null,
+      }
+    : {
+        memberId: null,
+        username: null,
+        displayName: 'Unknown',
+        avatarUrl: null,
+        profileUrl: null,
       };
-    }
-  }
 
   const primaryMedia = unwrapMedia(row.media);
 
@@ -86,7 +91,7 @@ function mapRow(
     slug: buildEntitySlug(row.name, row.id),
     title: row.name,
     description: row.description,
-    primaryUrl: row.lora_link,
+    primaryUrl: row.lora_link ?? row.download_link,
     resourceType: row.type,
     thumbnailUrl: primaryMedia?.cloudflare_thumbnail_url ?? null,
     createdAt: row.created_at,
@@ -94,7 +99,7 @@ function mapRow(
   };
 }
 
-export const useCommunityResources = (userId?: string): UseCommunityResourcesResult => {
+export const useCommunityResources = (memberId?: number | string): UseCommunityResourcesResult => {
   const [resources, setResources] = useState<CommunityResourceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -118,15 +123,16 @@ export const useCommunityResources = (userId?: string): UseCommunityResourcesRes
       let query = supabase
         .from('assets')
         .select(`
-          id, name, description, type, lora_link, created_at, user_id, creator,
-          media:primary_media_id ( cloudflare_thumbnail_url )
+          id, name, description, type, lora_link, download_link, created_at, member_id,
+          media:primary_media_id ( cloudflare_thumbnail_url ),
+          members(member_id, username, global_name, avatar_url, stored_avatar_url)
         `)
         .in('admin_status', ['Featured', 'Curated', 'Listed'])
         .order('created_at', { ascending: false })
         .range(offset, offset + PAGE_SIZE - 1);
 
-      if (userId) {
-        query = query.eq('user_id', userId);
+      if (memberId) {
+        query = query.eq('member_id', memberId);
       }
 
       const { data, error: fetchError } = await query;
@@ -136,23 +142,7 @@ export const useCommunityResources = (userId?: string): UseCommunityResourcesRes
       const rows = (data ?? []) as AssetRow[];
       setHasMore(rows.length === PAGE_SIZE);
 
-      // Fetch profiles for user_ids
-      const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean))] as string[];
-      const profileMap = new Map<string, ProfileRow>();
-      if (userIds.length > 0) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('id, username, display_name, avatar_url')
-          .in('id', userIds);
-
-        if (profileData) {
-          for (const p of profileData as ProfileRow[]) {
-            profileMap.set(p.id, p);
-          }
-        }
-      }
-
-      const mapped = rows.map((r) => mapRow(r, profileMap));
+      const mapped = rows.map(mapRow);
 
       if (isLoadMore) {
         setResources((prev) => [...prev, ...mapped]);
@@ -167,7 +157,7 @@ export const useCommunityResources = (userId?: string): UseCommunityResourcesRes
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [userId]);
+  }, [memberId]);
 
   useEffect(() => {
     offsetRef.current = 0;

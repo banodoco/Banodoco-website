@@ -3,6 +3,7 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { buildEntitySlug, profilePath } from '@/lib/routing';
 
 export interface ArtPieceCreator {
+  memberId: number | null;
   username: string | null;
   displayName: string | null;
   avatarUrl: string | null;
@@ -17,26 +18,31 @@ export interface ArtPieceItem {
   thumbnailUrl: string | null;
   hlsUrl: string | null;
   mediaType: string | null;
+  toolsUsed: string[];
   createdAt: string;
   creator: ArtPieceCreator;
-  userId: string | null;
+  memberId: number | null;
+}
+
+interface MemberJoin {
+  member_id: number;
+  username: string | null;
+  global_name: string | null;
+  avatar_url: string | null;
+  stored_avatar_url: string | null;
 }
 
 interface MediaRow {
   id: string;
   type: string | null;
+  title: string | null;
   description: string | null;
   cloudflare_thumbnail_url: string | null;
   cloudflare_playback_hls_url: string | null;
   created_at: string;
-  user_id: string | null;
-}
-
-interface ProfileRow {
-  id: string;
-  username: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
+  member_id: number | null;
+  tools_used: string[] | null;
+  members: MemberJoin | MemberJoin[] | null;
 }
 
 interface UseArtPiecesResult {
@@ -50,75 +56,53 @@ interface UseArtPiecesResult {
 
 const PAGE_SIZE = 12;
 
-function mapRowToItem(row: MediaRow, profileMap: Map<string, ProfileRow>): ArtPieceItem {
-  let creator: ArtPieceCreator = {
-    username: null,
-    displayName: 'Unknown',
-    avatarUrl: null,
-    profileUrl: null,
-  };
+function unwrapMember(m: MemberJoin | MemberJoin[] | null): MemberJoin | null {
+  if (Array.isArray(m)) return m[0] ?? null;
+  return m;
+}
 
-  if (row.user_id) {
-    const profile = profileMap.get(row.user_id);
-    if (profile) {
-      creator = {
-        username: profile.username,
-        displayName: profile.display_name ?? profile.username,
-        avatarUrl: profile.avatar_url,
-        profileUrl: profile.username ? profilePath(profile.username) : null,
+function mapRowToItem(row: MediaRow): ArtPieceItem {
+  const member = unwrapMember(row.members);
+  const avatarUrl = member?.stored_avatar_url ?? member?.avatar_url ?? null;
+
+  const creator: ArtPieceCreator = member
+    ? {
+        memberId: member.member_id,
+        username: member.username,
+        displayName: member.global_name ?? member.username,
+        avatarUrl,
+        profileUrl: member.username ? profilePath(member.username) : null,
+      }
+    : {
+        memberId: null,
+        username: null,
+        displayName: 'Unknown',
+        avatarUrl: null,
+        profileUrl: null,
       };
-    }
-  }
 
   return {
     id: row.id,
-    slug: buildEntitySlug(row.description, row.id),
-    title: null,
+    slug: buildEntitySlug(row.title || row.description, row.id),
+    title: row.title,
     caption: row.description,
     thumbnailUrl: row.cloudflare_thumbnail_url,
     hlsUrl: row.cloudflare_playback_hls_url,
     mediaType: row.type,
+    toolsUsed: row.tools_used ?? [],
     createdAt: row.created_at,
     creator,
-    userId: row.user_id,
+    memberId: row.member_id,
   };
 }
 
-export const useArtPieces = (userId?: string): UseArtPiecesResult => {
+export const useArtPieces = (memberId?: number | string): UseArtPiecesResult => {
   const [artPieces, setArtPieces] = useState<ArtPieceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const offsetRef = useRef(0);
-  const profileCacheRef = useRef(new Map<string, ProfileRow>());
-
-  const resolveProfiles = useCallback(async (rows: MediaRow[]) => {
-    const client = supabase;
-    if (!client) return;
-
-    const cache = profileCacheRef.current;
-    const userIds = [
-      ...new Set(
-        rows
-          .map((r) => r.user_id)
-          .filter((id): id is string => id != null && !cache.has(id)),
-      ),
-    ];
-
-    if (userIds.length > 0) {
-      const { data } = await client
-        .from('profiles')
-        .select('id, username, display_name, avatar_url')
-        .in('id', userIds);
-
-      if (data) {
-        for (const p of data as ProfileRow[]) {
-          cache.set(p.id, p);
-        }
-      }
-    }
-  }, []);
 
   const fetchPage = useCallback(
     async (offset: number, isLoadMore: boolean) => {
@@ -138,14 +122,15 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
         let query = client
           .from('media')
           .select(
-            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, user_id',
+            `id, type, title, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, member_id, tools_used,
+             members(member_id, username, global_name, avatar_url, stored_avatar_url)`,
           )
           .in('admin_status', ['Featured', 'Curated', 'Listed'])
           .order('created_at', { ascending: false })
           .range(offset, offset + PAGE_SIZE - 1);
 
-        if (userId) {
-          query = query.eq('user_id', userId);
+        if (memberId && memberId !== '__none__') {
+          query = query.eq('member_id', memberId);
         }
 
         const { data, error: fetchError } = await query;
@@ -155,11 +140,7 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
         const rows = (data ?? []) as MediaRow[];
         setHasMore(rows.length === PAGE_SIZE);
 
-        await resolveProfiles(rows);
-
-        const items = rows.map((row) =>
-          mapRowToItem(row, profileCacheRef.current),
-        );
+        const items = rows.map(mapRowToItem);
 
         if (isLoadMore) {
           setArtPieces((prev) => [...prev, ...items]);
@@ -175,12 +156,11 @@ export const useArtPieces = (userId?: string): UseArtPiecesResult => {
         setLoadingMore(false);
       }
     },
-    [userId, resolveProfiles],
+    [memberId],
   );
 
   useEffect(() => {
     offsetRef.current = 0;
-    profileCacheRef.current.clear();
     setArtPieces([]);
     setHasMore(true);
     setError(null);
