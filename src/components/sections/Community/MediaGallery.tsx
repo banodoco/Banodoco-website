@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import type { MediaUrl } from './types';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
+import { bindAutoPauseVideo } from '@/lib/bindAutoPauseVideo';
 import { useImagePreloadOnVisible, useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
 
 // Constants for timing
@@ -221,12 +222,7 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
             playsInline
             onTimeUpdate={handleVideoTimeUpdate}
             onEnded={handleVideoEnded}
-            onPlay={() => {
-              videoEventHandlers.onPlay();
-              handleVideoPlay();
-            }}
-            onCanPlay={videoEventHandlers.onCanPlay}
-            onLoadedData={videoEventHandlers.onLoadedData}
+            {...bindAutoPauseVideo(videoEventHandlers, { onPlay: handleVideoPlay })}
           />
         ) : (
           <img 

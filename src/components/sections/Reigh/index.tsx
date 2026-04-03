@@ -3,12 +3,12 @@ import { TravelSelector } from './TravelSelector';
 import { useTravelAutoAdvance } from './useTravelAutoAdvance';
 import { travelExamples } from './data';
 import { Section, SectionContent } from '@/components/layout/Section';
-import { useSectionVisibility } from '@/lib/useSectionVisibility';
+import { useSectionRuntime } from '@/lib/useSectionRuntime';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
+import { bindAutoPauseVideo } from '@/lib/bindAutoPauseVideo';
 import { PlayIcon, ExternalLinkIcon } from '@/components/ui/icons';
 import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
-import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
@@ -17,7 +17,7 @@ export const Reigh: React.FC = () => {
 
   // Track section visibility - pause video when scrolled away
   // Threshold raised to reduce decoder contention with other video sections on mobile
-  const { ref: sectionRef, isVisible: isActive, hasBeenVisible: hasStarted } = useSectionVisibility({ 
+  const { ref: sectionRef, isActive, hasStarted } = useSectionRuntime({ 
     threshold: 0.25,
     exitThreshold: 0.15,
   });
@@ -158,12 +158,9 @@ export const Reigh: React.FC = () => {
                   muted
                   playsInline
                   // No autoPlay - let the hook handle all play logic to avoid race conditions
-                  onPlay={() => {
-                    videoEventHandlers.onPlay();
-                    handleVideoStarted(selectedExample);
-                  }}
-                  onCanPlay={videoEventHandlers.onCanPlay}
-                  onLoadedData={videoEventHandlers.onLoadedData}
+                  {...bindAutoPauseVideo(videoEventHandlers, {
+                    onPlay: () => handleVideoStarted(selectedExample),
+                  })}
                   onPlaying={() => {
                     setShowPoster(false);
                   }}
@@ -216,7 +213,7 @@ export const Reigh: React.FC = () => {
                 We believe that there's an artform waiting to be discovered in the AI-powered journey from one image to another.
               </p>
               <a 
-                href={EXTERNAL_LINKS.reighHome}
+                href="https://reigh.art/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-emerald-400 font-medium hover:text-emerald-300 transition-colors"

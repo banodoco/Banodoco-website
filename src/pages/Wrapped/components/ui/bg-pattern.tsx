@@ -55,7 +55,7 @@ const BGPattern = ({
     variant = 'grid',
     mask = 'none',
     size = 24,
-    fill = 'var(--wrapped-bg-pattern-fill)',
+    fill = '#252525',
     className,
     style,
     ...props

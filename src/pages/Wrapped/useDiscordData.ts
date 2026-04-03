@@ -49,6 +49,7 @@ export function useDiscordData(): UseDiscordDataResult {
       setProgress({ phase: 'done', phaseLabel: 'Ready', phasePct: 100, overallPct: 100 });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Failed to load data.json:', err);
       // Fall back to demo data
       setProgress({
         phase: 'error',

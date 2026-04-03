@@ -41,10 +41,6 @@ export const getStageX = (stage: Stage): number => {
     case 'tools': return STAGE_X.tools;
     case 'artists': return STAGE_X.artists;
     case 'fans': return STAGE_X.fans;
-    default: {
-      const _exhaustive: never = stage;
-      return _exhaustive;
-    }
   }
 };
 
@@ -55,10 +51,6 @@ export const getStageInputX = (stage: Stage): number => {
     case 'tools': return STAGE_X.reigh;          // 240 - left edge of tools section
     case 'artists': return STAGE_X.tools;        // 440 - left edge of artists section
     case 'fans': return STAGE_X.artists;         // 760 - left edge of fans section
-    default: {
-      const _exhaustive: never = stage;
-      return _exhaustive;
-    }
   }
 };
 
@@ -135,6 +127,7 @@ export const getExternalEventPath = (target: Stage, sourceY: number): string => 
 
   return `M ${BANODOCO_SOURCE.x} ${sourceY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${targetX} ${centerY}`;
 };
+
 
 
 

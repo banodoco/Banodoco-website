@@ -1,6 +1,16 @@
-import { useState, useMemo, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, useEffect, type ReactNode } from 'react';
 import { ALL_SECTION_IDS } from '@/lib/sections';
-import { LayoutContext, type LayoutTheme } from './layout-context';
+
+type LayoutTheme = 'dark' | 'light';
+
+interface LayoutContextValue {
+  theme: LayoutTheme;
+  isHomePage: boolean;
+  /** Currently visible section ID (null if none or not on homepage) */
+  currentSection: string | null;
+}
+
+const LayoutContext = createContext<LayoutContextValue | null>(null);
 
 interface LayoutProviderProps {
   children: ReactNode;
@@ -99,3 +109,14 @@ export function LayoutProvider({ children, theme, isHomePage }: LayoutProviderPr
     </LayoutContext.Provider>
   );
 }
+
+export function useLayoutContext(): LayoutContextValue {
+  const context = useContext(LayoutContext);
+  if (!context) {
+    throw new Error('useLayoutContext must be used within a LayoutProvider');
+  }
+  return context;
+}
+
+
+
