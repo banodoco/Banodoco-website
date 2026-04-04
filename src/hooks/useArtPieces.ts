@@ -22,7 +22,72 @@ export interface ArtPieceItem {
   createdAt: string;
   creator: ArtPieceCreator;
   memberId: number | null;
+  competition?: {
+    name: string;
+    winner?: boolean;
+    badge?: string;
+  };
 }
+
+// Static Arca Gidan Data to be injected
+const ARCA_GIDAN_ITEMS: ArtPieceItem[] = [
+  {
+    id: 'arca-gidan-1',
+    slug: 'francesco-petrarca',
+    title: 'Francesco Petrarca',
+    caption: null,
+    thumbnailUrl: '/arca-gidan/1_francesco_petrarca_poster.jpg',
+    hlsUrl: '/arca-gidan/1_francesco_petrarca_video.mp4',
+    mediaType: 'video',
+    toolsUsed: [],
+    createdAt: new Date().toISOString(),
+    creator: { memberId: null, username: null, displayName: 'Arca Gidan Winner', avatarUrl: null, profileUrl: null },
+    memberId: null,
+    competition: { name: 'Arca Gidan', winner: true, badge: 'Winner' }
+  },
+  {
+    id: 'arca-gidan-2',
+    slug: 'arnolfo-di-cambio',
+    title: 'Arnolfo di Cambio',
+    caption: null,
+    thumbnailUrl: '/arca-gidan/2_arnolfo_di_cambio_poster.jpg',
+    hlsUrl: '/arca-gidan/2_arnolfo_di_cambio_video.mp4',
+    mediaType: 'video',
+    toolsUsed: [],
+    createdAt: new Date().toISOString(),
+    creator: { memberId: null, username: null, displayName: 'Arca Gidan Winner', avatarUrl: null, profileUrl: null },
+    memberId: null,
+    competition: { name: 'Arca Gidan', winner: true, badge: 'Winner' }
+  },
+  {
+    id: 'arca-gidan-3',
+    slug: 'giotto-di-bondone',
+    title: 'Giotto di Bondone',
+    caption: null,
+    thumbnailUrl: '/arca-gidan/3_giotto_di_bondone_poster.jpg',
+    hlsUrl: '/arca-gidan/3_giotto_di_bondone_video.mp4',
+    mediaType: 'video',
+    toolsUsed: [],
+    createdAt: new Date().toISOString(),
+    creator: { memberId: null, username: null, displayName: 'Arca Gidan Winner', avatarUrl: null, profileUrl: null },
+    memberId: null,
+    competition: { name: 'Arca Gidan', winner: true, badge: 'Winner' }
+  },
+  {
+    id: 'arca-gidan-4',
+    slug: 'jean-buridan',
+    title: 'Jean Buridan',
+    caption: null,
+    thumbnailUrl: '/arca-gidan/4_jean_buridan_poster.jpg',
+    hlsUrl: '/arca-gidan/4_jean_buridan_video.mp4',
+    mediaType: 'video',
+    toolsUsed: [],
+    createdAt: new Date().toISOString(),
+    creator: { memberId: null, username: null, displayName: 'Arca Gidan Winner', avatarUrl: null, profileUrl: null },
+    memberId: null,
+    competition: { name: 'Arca Gidan', winner: true, badge: 'Winner' }
+  }
+];
 
 interface MemberJoin {
   member_id: number;
@@ -145,7 +210,9 @@ export const useArtPieces = (memberId?: number | string): UseArtPiecesResult => 
         if (isLoadMore) {
           setArtPieces((prev) => [...prev, ...items]);
         } else {
-          setArtPieces(items);
+          // If we are on the first page, and no specific memberId is requested, inject Arca Gidan
+          const isGlobalFeed = !memberId || memberId === '__none__';
+          setArtPieces(isGlobalFeed ? [...ARCA_GIDAN_ITEMS, ...items] : items);
         }
 
         offsetRef.current = offset + rows.length;

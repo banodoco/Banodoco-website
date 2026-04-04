@@ -31,6 +31,11 @@ export interface Asset {
   member_id: number | null;
   media: AssetMedia | AssetMedia[] | null;
   members: AssetMember | AssetMember[] | null;
+  competition?: {
+    name: string;
+    winner?: boolean;
+    badge?: string;
+  };
 }
 
 export interface ResourceFilters {

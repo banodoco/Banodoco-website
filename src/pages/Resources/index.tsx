@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
-import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Users, Trophy } from 'lucide-react';
+import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Users } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useResources } from './useResources';
@@ -382,36 +382,6 @@ const Resources = () => {
             </div>
           </motion.section>
         )}
-
-        {/* Competitions CTA */}
-        <motion.section
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={containerVariants}
-          className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 to-orange-950/20 p-6 sm:p-8"
-        >
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-500/10 rounded-lg">
-                <Trophy size={20} className="text-amber-400" />
-              </div>
-              <div>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase text-amber-100">
-                  Competitions
-                </h2>
-                <p className="text-sm text-amber-200/40 mt-0.5">Browse Arca Gidan prize entries and community competitions</p>
-              </div>
-            </div>
-            <Link
-              to="/competitions"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 hover:border-amber-500/50 transition-colors"
-            >
-              View Competitions
-              <ChevronRight size={16} />
-            </Link>
-          </div>
-        </motion.section>
 
         {/* News Section — Briefing Sidebar Layout */}
         <motion.section
