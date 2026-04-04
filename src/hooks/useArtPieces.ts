@@ -120,7 +120,7 @@ async function fetchArcaGidanItems(client: NonNullable<typeof supabase>): Promis
     )
     .eq('competition_id', ARCA_GIDAN_COMPETITION_ID)
     .not('media_id', 'is', null)
-    .limit(50);
+    .limit(8);
 
   if (error || !data) return [];
 
