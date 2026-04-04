@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ArtPieceItem } from '@/hooks/useArtPieces';
-import { buildArtPath } from '@/lib/routing';
+import { buildArtPath, isUuid } from '@/lib/routing';
 
 interface ArtGalleryCardProps {
   artPiece: ArtPieceItem;
@@ -13,14 +13,13 @@ export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardPro
   if (!thumbnailUrl) return null;
 
   const isVideo = mediaType === 'video' || !!hlsUrl;
+  const isLinkable = isUuid(id);
+  const href = isLinkable ? buildArtPath(id, artPiece.caption, creator.username) : '';
 
-  const href = buildArtPath(id, artPiece.caption, creator.username);
+  const cardClass = `group block w-full rounded-lg overflow-hidden bg-white/5 border border-white/10 transition-all duration-200 ${isLinkable ? 'hover:scale-[1.02] hover:border-white/20' : 'cursor-default'}`;
 
-  return (
-    <Link
-      to={href}
-      className="group block w-full rounded-lg overflow-hidden bg-white/5 border border-white/10 transition-all duration-200 hover:scale-[1.02] hover:border-white/20"
-    >
+  const content = (
+    <>
       {/* Media */}
       <div
         className={`relative bg-white/5 overflow-hidden ${featured ? 'aspect-[2/1]' : 'aspect-video'}`}
@@ -71,6 +70,16 @@ export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardPro
           </div>
         </div>
       </div>
+    </>
+  );
+
+  if (!isLinkable) {
+    return <div className={cardClass}>{content}</div>;
+  }
+
+  return (
+    <Link to={href} className={cardClass}>
+      {content}
     </Link>
   );
 };
