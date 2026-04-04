@@ -110,7 +110,9 @@ function mapRowToItem(row: MediaRow, competition?: ArtPieceItem['competition']):
   };
 }
 
-async function fetchArcaGidanItems(client: NonNullable<typeof supabase>): Promise<ArtPieceItem[]> {
+const ARCA_PAGE_SIZE = 8;
+
+async function fetchArcaGidanPage(client: NonNullable<typeof supabase>, offset: number): Promise<{ items: ArtPieceItem[]; hasMore: boolean }> {
   const { data, error } = await client
     .from('competition_entries')
     .select(
@@ -120,12 +122,12 @@ async function fetchArcaGidanItems(client: NonNullable<typeof supabase>): Promis
     )
     .eq('competition_id', ARCA_GIDAN_COMPETITION_ID)
     .not('media_id', 'is', null)
-    .limit(8);
+    .range(offset, offset + ARCA_PAGE_SIZE - 1);
 
-  if (error || !data) return [];
+  if (error || !data) return { items: [], hasMore: false };
 
   const entries = data as unknown as CompetitionEntryRow[];
-  return entries
+  const items = entries
     .filter(e => e.media !== null)
     .map(e => {
       const competition: ArtPieceItem['competition'] = {
@@ -136,6 +138,8 @@ async function fetchArcaGidanItems(client: NonNullable<typeof supabase>): Promis
       return mapRowToItem(e.media!, competition);
     })
     .filter(item => item.thumbnailUrl !== null);
+
+  return { items, hasMore: data.length === ARCA_PAGE_SIZE };
 }
 
 export const useArtPieces = (memberId?: number | string): UseArtPiecesResult => {
@@ -145,6 +149,8 @@ export const useArtPieces = (memberId?: number | string): UseArtPiecesResult => 
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const offsetRef = useRef(0);
+  const arcaOffsetRef = useRef(0);
+  const arcaHasMoreRef = useRef(true);
 
   const fetchPage = useCallback(
     async (offset: number, isLoadMore: boolean) => {
@@ -177,23 +183,32 @@ export const useArtPieces = (memberId?: number | string): UseArtPiecesResult => 
 
         const isGlobalFeed = !memberId || memberId === '__none__';
 
-        // Fetch Arca Gidan items in parallel on first page of global feed
-        const [{ data, error: fetchError }, arcaItems] = await Promise.all([
+        // Fetch Arca Gidan items in parallel when on global feed and still has more
+        const shouldFetchArca = isGlobalFeed && arcaHasMoreRef.current;
+        const [{ data, error: fetchError }, arcaResult] = await Promise.all([
           query,
-          isGlobalFeed && offset === 0 ? fetchArcaGidanItems(client) : Promise.resolve([]),
+          shouldFetchArca
+            ? fetchArcaGidanPage(client, arcaOffsetRef.current)
+            : Promise.resolve({ items: [], hasMore: false }),
         ]);
 
         if (fetchError) throw fetchError;
 
         const rows = (data ?? []) as MediaRow[];
-        setHasMore(rows.length === PAGE_SIZE);
+        setHasMore(rows.length === PAGE_SIZE || (shouldFetchArca && arcaResult.hasMore));
+
+        if (shouldFetchArca) {
+          arcaOffsetRef.current += arcaResult.items.length;
+          arcaHasMoreRef.current = arcaResult.hasMore;
+        }
 
         const items = rows.map(row => mapRowToItem(row));
+        const newItems = isGlobalFeed ? [...arcaResult.items, ...items] : items;
 
         if (isLoadMore) {
-          setArtPieces(prev => [...prev, ...items]);
+          setArtPieces(prev => [...prev, ...newItems]);
         } else {
-          setArtPieces(isGlobalFeed ? [...(arcaItems as ArtPieceItem[]), ...items] : items);
+          setArtPieces(newItems);
         }
 
         offsetRef.current = offset + rows.length;
@@ -209,6 +224,8 @@ export const useArtPieces = (memberId?: number | string): UseArtPiecesResult => 
 
   useEffect(() => {
     offsetRef.current = 0;
+    arcaOffsetRef.current = 0;
+    arcaHasMoreRef.current = true;
     setArtPieces([]);
     setHasMore(true);
     setError(null);
