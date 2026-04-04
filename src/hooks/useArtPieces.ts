@@ -29,65 +29,7 @@ export interface ArtPieceItem {
   };
 }
 
-// Static Arca Gidan Data to be injected
-const ARCA_GIDAN_ITEMS: ArtPieceItem[] = [
-  {
-    id: 'arca-gidan-1',
-    slug: 'francesco-petrarca',
-    title: 'Francesco Petrarca',
-    caption: null,
-    thumbnailUrl: '/arca-gidan/1_francesco_petrarca_poster.jpg',
-    hlsUrl: '/arca-gidan/1_francesco_petrarca_video.mp4',
-    mediaType: 'video',
-    toolsUsed: [],
-    createdAt: new Date().toISOString(),
-    creator: { memberId: null, username: null, displayName: 'Arca Gidan Winner', avatarUrl: null, profileUrl: null },
-    memberId: null,
-    competition: { name: 'Arca Gidan', winner: true, badge: 'Winner' }
-  },
-  {
-    id: 'arca-gidan-2',
-    slug: 'arnolfo-di-cambio',
-    title: 'Arnolfo di Cambio',
-    caption: null,
-    thumbnailUrl: '/arca-gidan/2_arnolfo_di_cambio_poster.jpg',
-    hlsUrl: '/arca-gidan/2_arnolfo_di_cambio_video.mp4',
-    mediaType: 'video',
-    toolsUsed: [],
-    createdAt: new Date().toISOString(),
-    creator: { memberId: null, username: null, displayName: 'Arca Gidan Winner', avatarUrl: null, profileUrl: null },
-    memberId: null,
-    competition: { name: 'Arca Gidan', winner: true, badge: 'Winner' }
-  },
-  {
-    id: 'arca-gidan-3',
-    slug: 'giotto-di-bondone',
-    title: 'Giotto di Bondone',
-    caption: null,
-    thumbnailUrl: '/arca-gidan/3_giotto_di_bondone_poster.jpg',
-    hlsUrl: '/arca-gidan/3_giotto_di_bondone_video.mp4',
-    mediaType: 'video',
-    toolsUsed: [],
-    createdAt: new Date().toISOString(),
-    creator: { memberId: null, username: null, displayName: 'Arca Gidan Winner', avatarUrl: null, profileUrl: null },
-    memberId: null,
-    competition: { name: 'Arca Gidan', winner: true, badge: 'Winner' }
-  },
-  {
-    id: 'arca-gidan-4',
-    slug: 'jean-buridan',
-    title: 'Jean Buridan',
-    caption: null,
-    thumbnailUrl: '/arca-gidan/4_jean_buridan_poster.jpg',
-    hlsUrl: '/arca-gidan/4_jean_buridan_video.mp4',
-    mediaType: 'video',
-    toolsUsed: [],
-    createdAt: new Date().toISOString(),
-    creator: { memberId: null, username: null, displayName: 'Arca Gidan Winner', avatarUrl: null, profileUrl: null },
-    memberId: null,
-    competition: { name: 'Arca Gidan', winner: true, badge: 'Winner' }
-  }
-];
+const ARCA_GIDAN_COMPETITION_ID = '8c1bcdf1-c8ef-4c7e-83c1-091b68e9ca4c';
 
 interface MemberJoin {
   member_id: number;
@@ -110,6 +52,12 @@ interface MediaRow {
   members: MemberJoin | MemberJoin[] | null;
 }
 
+interface CompetitionEntryRow {
+  winner: boolean;
+  status: string;
+  media: MediaRow | null;
+}
+
 interface UseArtPiecesResult {
   artPieces: ArtPieceItem[];
   loading: boolean;
@@ -126,7 +74,7 @@ function unwrapMember(m: MemberJoin | MemberJoin[] | null): MemberJoin | null {
   return m;
 }
 
-function mapRowToItem(row: MediaRow): ArtPieceItem {
+function mapRowToItem(row: MediaRow, competition?: ArtPieceItem['competition']): ArtPieceItem {
   const member = unwrapMember(row.members);
   const avatarUrl = member?.stored_avatar_url ?? member?.avatar_url ?? null;
 
@@ -158,7 +106,36 @@ function mapRowToItem(row: MediaRow): ArtPieceItem {
     createdAt: row.created_at,
     creator,
     memberId: row.member_id,
+    competition,
   };
+}
+
+async function fetchArcaGidanItems(client: NonNullable<typeof supabase>): Promise<ArtPieceItem[]> {
+  const { data, error } = await client
+    .from('competition_entries')
+    .select(
+      `winner, status,
+       media:media_id(id, type, title, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, member_id, tools_used,
+         members(member_id, username, global_name, avatar_url, stored_avatar_url))`,
+    )
+    .eq('competition_id', ARCA_GIDAN_COMPETITION_ID)
+    .not('media_id', 'is', null)
+    .limit(50);
+
+  if (error || !data) return [];
+
+  const entries = data as unknown as CompetitionEntryRow[];
+  return entries
+    .filter(e => e.media !== null)
+    .map(e => {
+      const competition: ArtPieceItem['competition'] = {
+        name: 'Arca Gidan',
+        winner: e.winner,
+        badge: e.winner ? 'Winner' : undefined,
+      };
+      return mapRowToItem(e.media!, competition);
+    })
+    .filter(item => item.thumbnailUrl !== null);
 }
 
 export const useArtPieces = (memberId?: number | string): UseArtPiecesResult => {
@@ -198,21 +175,25 @@ export const useArtPieces = (memberId?: number | string): UseArtPiecesResult => 
           query = query.eq('member_id', memberId);
         }
 
-        const { data, error: fetchError } = await query;
+        const isGlobalFeed = !memberId || memberId === '__none__';
+
+        // Fetch Arca Gidan items in parallel on first page of global feed
+        const [{ data, error: fetchError }, arcaItems] = await Promise.all([
+          query,
+          isGlobalFeed && offset === 0 ? fetchArcaGidanItems(client) : Promise.resolve([]),
+        ]);
 
         if (fetchError) throw fetchError;
 
         const rows = (data ?? []) as MediaRow[];
         setHasMore(rows.length === PAGE_SIZE);
 
-        const items = rows.map(mapRowToItem);
+        const items = rows.map(row => mapRowToItem(row));
 
         if (isLoadMore) {
-          setArtPieces((prev) => [...prev, ...items]);
+          setArtPieces(prev => [...prev, ...items]);
         } else {
-          // If we are on the first page, and no specific memberId is requested, inject Arca Gidan
-          const isGlobalFeed = !memberId || memberId === '__none__';
-          setArtPieces(isGlobalFeed ? [...ARCA_GIDAN_ITEMS, ...items] : items);
+          setArtPieces(isGlobalFeed ? [...(arcaItems as ArtPieceItem[]), ...items] : items);
         }
 
         offsetRef.current = offset + rows.length;

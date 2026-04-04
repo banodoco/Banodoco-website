@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ArtPieceItem } from '@/hooks/useArtPieces';
-import { buildArtPath, isUuid } from '@/lib/routing';
+import { buildArtPath } from '@/lib/routing';
 
 interface ArtGalleryCardProps {
   artPiece: ArtPieceItem;
@@ -13,13 +13,13 @@ export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardPro
   if (!thumbnailUrl) return null;
 
   const isVideo = mediaType === 'video' || !!hlsUrl;
-  const isLinkable = isUuid(id);
-  const href = isLinkable ? buildArtPath(id, artPiece.caption, creator.username) : '';
+  const href = buildArtPath(id, artPiece.caption, creator.username);
 
-  const cardClass = `group block w-full rounded-lg overflow-hidden bg-white/5 border border-white/10 transition-all duration-200 ${isLinkable ? 'hover:scale-[1.02] hover:border-white/20' : 'cursor-default'}`;
-
-  const content = (
-    <>
+  return (
+    <Link
+      to={href}
+      className="group block w-full rounded-lg overflow-hidden bg-white/5 border border-white/10 transition-all duration-200 hover:scale-[1.02] hover:border-white/20"
+    >
       {/* Media */}
       <div
         className={`relative bg-white/5 overflow-hidden ${featured ? 'aspect-[2/1]' : 'aspect-video'}`}
@@ -31,7 +31,7 @@ export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardPro
           loading="lazy"
         />
 
-        {/* Top-left badges container */}
+        {/* Top-left badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1.5 items-start">
           {competition && (
             <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500/90 text-white rounded shadow-sm flex items-center gap-1">
@@ -53,7 +53,7 @@ export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardPro
           )}
         </div>
 
-        {/* Creator glassmorphism overlay at bottom */}
+        {/* Creator overlay */}
         <div className="absolute bottom-0 inset-x-0 px-2.5 py-2 bg-black/40 backdrop-blur-md border-t border-white/10">
           <div className="flex items-center gap-1.5">
             {creator.avatarUrl && (
@@ -70,16 +70,6 @@ export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardPro
           </div>
         </div>
       </div>
-    </>
-  );
-
-  if (!isLinkable) {
-    return <div className={cardClass}>{content}</div>;
-  }
-
-  return (
-    <Link to={href} className={cardClass}>
-      {content}
     </Link>
   );
 };
