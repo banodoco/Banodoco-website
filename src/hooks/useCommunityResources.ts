@@ -135,12 +135,13 @@ export const useCommunityResources = (memberId?: number | string): UseCommunityR
           media:primary_media_id ( cloudflare_thumbnail_url ),
           members(member_id, username, global_name, avatar_url, stored_avatar_url)
         `)
-        .in('admin_status', ['Featured', 'Curated', 'Listed'])
         .order('created_at', { ascending: false })
         .range(offset, offset + PAGE_SIZE - 1);
 
       if (memberId) {
         query = query.eq('member_id', memberId);
+      } else {
+        query = query.in('admin_status', ['Featured', 'Curated', 'Listed']);
       }
 
       const { data, error: fetchError } = await query;

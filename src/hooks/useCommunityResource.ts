@@ -105,7 +105,6 @@ export const useCommunityResource = (slugOrId: string | undefined): UseCommunity
             members(member_id, username, global_name, avatar_url, stored_avatar_url)
           `)
           .eq('id', resolvedId)
-          .in('admin_status', ['Featured', 'Curated', 'Listed'])
           .single();
 
         if (fetchError) throw fetchError;
