@@ -4,7 +4,6 @@ import type { MediaUrl } from './types';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
 import { bindAutoPauseVideo } from '@/lib/bindAutoPauseVideo';
 import { useImagePreloadOnVisible, useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
-import { PlayIcon } from '@/components/ui/icons';
 
 // Constants for timing
 const IMAGE_DISPLAY_DURATION = 5000; // 5 seconds for images
@@ -286,10 +285,6 @@ export const MediaGallery = ({ urls: rawUrls, isVisible, compact = false }: Medi
                     ) : (
                       <div className="w-full h-full bg-white/10" />
                     )}
-                    {/* Play icon overlay for videos */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                      <PlayIcon className="w-4 h-4 md:w-5 md:h-5 text-white/80 drop-shadow" />
-                    </div>
                   </>
                 ) : (
                   <img 

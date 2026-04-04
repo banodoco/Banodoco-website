@@ -5,7 +5,6 @@
 
 import { useEffect } from 'react';
 import { travelExamples } from '@/components/sections/Reigh/data';
-import { artworks } from '@/components/sections/ArcaGidan/data';
 import { events } from '@/components/sections/ADOS/data';
 import { HERO_POSTER_SRC } from '@/components/sections/Hero/config';
 import { shouldPreloadVideos } from './device';
@@ -31,9 +30,6 @@ function getSectionPreloadList() {
   const soonImages = uniqueNonEmpty([
     // Reigh (first example images)
     ...(firstReigh?.images ?? []),
-
-    // ArcaGidan (all 4 posters are immediately visible when you reach that section)
-    ...artworks.map((a) => a.poster),
 
     // Events (first event poster)
     firstEvent?.poster,
