@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "title": "Missing aspect ratio",
+  "entry": "index.html",
+  "layout": {
+    "mode": "inline-fixed"
+  }
+}

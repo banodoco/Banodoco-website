@@ -8,10 +8,11 @@ export const Ownership = () => {
   const { visiblePics, allPics, spriteConfig, usedPicsRef, handleSwap } = useProfilePics();
 
   return (
-    <Section 
-      id="ownership" 
+    <Section
+      id="ownership"
       className="text-white"
       videoOverlay="rgba(26, 22, 20, 0.65)"
+      noSnap
     >
       <SectionContent fullWidth className="flex-col justify-center gap-6 md:gap-8">
         {/* Profile grid - edge-to-edge */}

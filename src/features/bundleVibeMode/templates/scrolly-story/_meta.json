@@ -1,0 +1,6 @@
+{
+  "id": "scrolly-story",
+  "label": "Scrolly story",
+  "description": "Long-form piece with pinned sections that react to scroll position.",
+  "continuationPrompt": "The author picked 'scrolly-story'. It uses IntersectionObserver to fade sections in and sticks a hero section as the reader scrolls. Build on this pattern; keep the scroll-driven transitions."
+}

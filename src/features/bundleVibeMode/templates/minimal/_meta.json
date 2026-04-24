@@ -1,0 +1,6 @@
+{
+  "id": "minimal",
+  "label": "Minimal",
+  "description": "A clean starting point: single-file HTML with the resize snippet pre-wired.",
+  "continuationPrompt": "The author started from the 'minimal' template. It already contains a valid post.json manifest with layout.mode='inline-auto' and the banodoco:resize postMessage snippet. Extend it to match the user's request without removing the resize snippet or manifest."
+}

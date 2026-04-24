@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Scrolly story</title>
+    <style>
+      body { margin: 0; font-family: Georgia, serif; color: #fff; background: #0b0b0f; }
+      section { min-height: 80vh; padding: 4rem 2rem; opacity: 0; transition: opacity .8s ease; }
+      section.in { opacity: 1; }
+      .hero { position: sticky; top: 0; background: linear-gradient(135deg, #1f1147, #0b0b0f); }
+    </style>
+  </head>
+  <body>
+    <section class="hero in"><h1>The scrolly starts</h1></section>
+    <section><h2>Part one</h2><p>Edit me.</p></section>
+    <section><h2>Part two</h2><p>Edit me too.</p></section>
+    <script>
+      const io = new IntersectionObserver(
+        (entries) => entries.forEach((e) => e.target.classList.toggle('in', e.isIntersecting)),
+        { threshold: 0.2 },
+      );
+      document.querySelectorAll('section').forEach((s) => io.observe(s));
+      const postSize = () => {
+        const h = Math.ceil(document.documentElement.scrollHeight);
+        window.parent.postMessage({ type: 'banodoco:resize', v: 1, height: h }, '*');
+      };
+      window.addEventListener('load', postSize);
+      new ResizeObserver(postSize).observe(document.documentElement);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "title": "Vibe-authored bundle",
+  "entry": "index.html",
+  "source": "vibe",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.7778
+  }
+}

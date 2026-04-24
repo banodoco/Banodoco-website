@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "title": "Bad heights",
+  "entry": "index.html",
+  "layout": {
+    "mode": "inline-auto",
+    "minHeight": 800,
+    "maxHeight": 320
+  }
+}

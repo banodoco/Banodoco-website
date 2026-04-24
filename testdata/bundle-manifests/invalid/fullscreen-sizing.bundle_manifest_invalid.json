@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "title": "Fullscreen sizing",
+  "entry": "index.html",
+  "layout": {
+    "mode": "fullscreen",
+    "aspectRatio": 1.6
+  }
+}

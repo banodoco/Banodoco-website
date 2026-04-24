@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, type ReactNode } from 'react';
+import { getHomeScrollContainer } from '@/lib/homeScrollContainer';
 import { ALL_SECTION_IDS } from '@/lib/sections';
 import { LayoutContext, type LayoutTheme } from './layout-context';
 
@@ -26,7 +27,7 @@ function useSectionObserver(isHomePage: boolean): string | null {
 
     // Wait a tick for scroll container and sections to be in DOM
     const timeoutId = setTimeout(() => {
-      const scrollContainer = document.getElementById('home-scroll-container');
+      const scrollContainer = getHomeScrollContainer();
       if (!scrollContainer) return;
 
       const computeActiveSection = () => {

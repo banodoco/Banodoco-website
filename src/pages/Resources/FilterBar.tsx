@@ -36,9 +36,9 @@ export const FilterBar = ({
         {/* Status toggle */}
         <div className="flex gap-1 bg-white/5 rounded-lg p-1">
           <button
-            onClick={() => onFilterChange('status', 'featured')}
+            onClick={() => onFilterChange('status', 'curated')}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              filters.status === 'featured'
+              filters.status === 'curated'
                 ? 'bg-white/15 text-white'
                 : 'text-white/50 hover:text-white/70'
             }`}

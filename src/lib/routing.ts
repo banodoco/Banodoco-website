@@ -4,16 +4,20 @@ const RESERVED_TOP_LEVEL_SEGMENTS = new Set([
   'ownership',
   '2nd-renaissance',
   '1m',
+  '2RP',
   'resources',
+  'posts',
   'auth',
   'submit',
   'art',
+  'admin',
 ]);
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const isUuid = (value: string): boolean => UUID_REGEX.test(value);
+export const HOME_PATH = '/';
 
 const encodePathSegment = (segment: string): string => {
   try {
@@ -25,6 +29,7 @@ const encodePathSegment = (segment: string): string => {
 
 export const profilePath = (username: string): string => `/${encodePathSegment(username)}`;
 export const profileArtPath = (username: string): string => `/${encodePathSegment(username)}/art`;
+export const profilePostsPath = (username: string): string => `/${encodePathSegment(username)}/posts`;
 export const profileResourcesPath = (username: string): string => `/${encodePathSegment(username)}/resources`;
 
 /**
@@ -49,6 +54,8 @@ export const normalizeLegacyHashUsernamePath = (pathname: string, hash: string):
   const isSupportedDetailPath =
     remainder === '/art'
     || remainder.startsWith('/art/')
+    || remainder === '/posts'
+    || remainder.startsWith('/posts/')
     || remainder === '/resources'
     || remainder.startsWith('/resources/');
 
@@ -136,7 +143,19 @@ export const buildArtPath = (id: string, label?: string | null, username?: strin
   return username ? `${profilePath(username)}/art/${slug}` : `/art/${slug}`;
 };
 
-export const buildResourcePath = (id: string, label?: string | null, username?: string | null): string => {
+export const buildPostPath = (id: string, label?: string | null, username?: string | null): string => {
   const slug = buildEntitySlug(label, id);
-  return username ? `${profilePath(username)}/resources/${slug}` : `/resources/${slug}`;
+  return username ? `${profilePath(username)}/posts/${slug}` : `/posts/${slug}`;
+};
+
+export const buildResourcePath = (
+  id: string,
+  opts: {
+    label?: string | null;
+    persistedSlug?: string | null;
+    username?: string | null;
+  } = {},
+): string => {
+  const slug = opts.persistedSlug ?? buildEntitySlug(opts.label, id);
+  return opts.username ? `${profilePath(opts.username)}/resources/${slug}` : `/resources/${slug}`;
 };

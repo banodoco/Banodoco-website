@@ -1,25 +1,17 @@
-import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { AuthContext, type AuthContextValue } from './useAuth';
 
 export interface UserProfile {
   id: string;
   memberId: string | null;
+  isAdmin: boolean;
   discordUsername: string | null;
   displayName: string | null;
   avatarUrl: string | null;
   bio: string | null;
 }
-
-interface AuthContextValue {
-  user: User | null;
-  profile: UserProfile | null;
-  loading: boolean;
-  signInWithDiscord: () => Promise<void>;
-  signOut: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -29,6 +21,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const adminCacheRef = useRef(new Map<string, boolean>());
 
   // Fetch profile from the profiles table for a given user ID
   const fetchProfile = useCallback(async (userId: string) => {
@@ -41,10 +34,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .eq('id', userId)
       .single();
 
+    let isAdmin = adminCacheRef.current.get(userId) ?? false;
+    if (!adminCacheRef.current.has(userId)) {
+      try {
+        const { data: adminData, error: adminError } = await client.rpc('is_admin', { check_user_id: userId });
+        isAdmin = !adminError && adminData === true;
+      } catch {
+        isAdmin = false;
+      }
+      adminCacheRef.current.set(userId, isAdmin);
+    }
+
     if (!error && data) {
       setProfile({
         id: data.id,
         memberId: data.discord_id,
+        isAdmin,
         discordUsername: data.discord_username,
         displayName: data.display_name,
         avatarUrl: data.avatar_url,
@@ -80,6 +85,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (currentUser) {
         fetchProfile(currentUser.id);
       } else {
+        adminCacheRef.current.clear();
         setProfile(null);
       }
     });
@@ -106,6 +112,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!client) return;
 
     await client.auth.signOut();
+    adminCacheRef.current.clear();
     setUser(null);
     setProfile(null);
   }, []);
@@ -123,12 +130,4 @@ export function AuthProvider({ children }: AuthProviderProps) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }

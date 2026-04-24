@@ -15,11 +15,14 @@ export interface ArtPieceItem {
   title: string | null;
   caption: string | null;
   thumbnailUrl: string | null;
+  /** Raw Cloudflare thumbnail — needed for hover GIF previews since the
+   *  submitter's backup_thumbnail_url can't be swapped into a GIF URL. */
+  cloudflareThumbnailUrl: string | null;
   hlsUrl: string | null;
   mediaType: string | null;
   createdAt: string;
   creator: ArtPieceCreator;
-  memberId: number | null;
+  memberId: string | null;
 }
 
 interface MediaRow {
@@ -28,15 +31,26 @@ interface MediaRow {
   description: string | null;
   cloudflare_thumbnail_url: string | null;
   cloudflare_playback_hls_url: string | null;
+  backup_thumbnail_url: string | null;
   created_at: string;
-  member_id: number | null;
+  member_id: string | null;
 }
 
 interface MemberRow {
-  member_id: number;
+  member_id: string;
   username: string | null;
   global_name: string | null;
   avatar_url: string | null;
+}
+
+interface UseArtPiecesOptions {
+  /**
+   * When true, only media with `featured_on_2rf = true` are returned
+   * (and the admin_status filter is bypassed, mirroring the Forge pattern).
+   * Used by the Community Art section on /2RP to show the curated Arca
+   * Gidan Ed 2 entries.
+   */
+  featuredOn2rf?: boolean;
 }
 
 interface UseArtPiecesResult {
@@ -50,7 +64,7 @@ interface UseArtPiecesResult {
 
 const PAGE_SIZE = 12;
 
-function mapRowToItem(row: MediaRow, memberMap: Map<number, MemberRow>): ArtPieceItem {
+export function mapRowToItem(row: MediaRow, memberMap: Map<string, MemberRow>): ArtPieceItem {
   let creator: ArtPieceCreator = {
     username: null,
     displayName: 'Unknown',
@@ -75,7 +89,8 @@ function mapRowToItem(row: MediaRow, memberMap: Map<number, MemberRow>): ArtPiec
     slug: buildEntitySlug(row.description, row.id),
     title: null,
     caption: row.description,
-    thumbnailUrl: row.cloudflare_thumbnail_url,
+    thumbnailUrl: row.backup_thumbnail_url ?? row.cloudflare_thumbnail_url,
+    cloudflareThumbnailUrl: row.cloudflare_thumbnail_url,
     hlsUrl: row.cloudflare_playback_hls_url,
     mediaType: row.type,
     createdAt: row.created_at,
@@ -84,14 +99,18 @@ function mapRowToItem(row: MediaRow, memberMap: Map<number, MemberRow>): ArtPiec
   };
 }
 
-export const useArtPieces = (memberId?: number): UseArtPiecesResult => {
+export const useArtPieces = (
+  memberId?: string,
+  options: UseArtPiecesOptions = {},
+): UseArtPiecesResult => {
+  const { featuredOn2rf = false } = options;
   const [artPieces, setArtPieces] = useState<ArtPieceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const offsetRef = useRef(0);
-  const memberCacheRef = useRef(new Map<number, MemberRow>());
+  const memberCacheRef = useRef(new Map<string, MemberRow>());
 
   const resolveMembers = useCallback(async (rows: MediaRow[]) => {
     const client = supabase;
@@ -102,14 +121,14 @@ export const useArtPieces = (memberId?: number): UseArtPiecesResult => {
       ...new Set(
         rows
           .map((r) => r.member_id)
-          .filter((id): id is number => id != null && !cache.has(id)),
+          .filter((id): id is string => id != null && !cache.has(id)),
       ),
     ];
 
     if (memberIds.length > 0) {
       const { data } = await client
         .from('members')
-        .select('member_id, username, global_name, avatar_url')
+        .select('member_id:member_id::text, username, global_name, avatar_url')
         .in('member_id', memberIds);
 
       if (data) {
@@ -138,11 +157,17 @@ export const useArtPieces = (memberId?: number): UseArtPiecesResult => {
         let query = client
           .from('media')
           .select(
-            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, member_id',
+            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, backup_thumbnail_url, created_at, member_id:member_id::text',
           )
-          .in('admin_status', ['Featured', 'Curated', 'Listed'])
+          .eq('source', 'art')
           .order('created_at', { ascending: false })
           .range(offset, offset + PAGE_SIZE - 1);
+
+        if (featuredOn2rf) {
+          query = query.eq('featured_on_2rf', true);
+        } else {
+          query = query.in('admin_status', ['Featured', 'Curated', 'Listed']);
+        }
 
         if (memberId) {
           query = query.eq('member_id', memberId);
@@ -175,7 +200,7 @@ export const useArtPieces = (memberId?: number): UseArtPiecesResult => {
         setLoadingMore(false);
       }
     },
-    [memberId, resolveMembers],
+    [memberId, featuredOn2rf, resolveMembers],
   );
 
   useEffect(() => {

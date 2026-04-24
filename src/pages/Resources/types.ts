@@ -3,6 +3,7 @@ export interface AssetMedia {
   type: string | null;
   cloudflare_thumbnail_url: string | null;
   cloudflare_playback_hls_url: string | null;
+  backup_thumbnail_url: string | null;
   placeholder_image: string | null;
   metadata: Record<string, unknown> | null;
 }
@@ -16,10 +17,16 @@ export interface AssetProfile {
 
 export interface Asset {
   id: string;
+  slug: string | null;
   type: string;
   name: string;
   description: string | null;
-  admin_status: 'Featured' | 'Curated' | 'Listed';
+  source?: 'manual' | 'discord_import' | null;
+  discord_guild_id?: string | number | null;
+  discord_channel_id?: string | number | null;
+  discord_thread_id?: string | number | null;
+  is_hidden?: boolean | null;
+  admin_status: 'Curated' | 'Listed' | null;
   lora_type: string | null;
   lora_base_model: string | null;
   model_variant: string | null;
@@ -28,13 +35,16 @@ export interface Asset {
   primary_media_id: string | null;
   created_at: string;
   creator: string | null;
-  member_id: number | null;
-  media: AssetMedia | AssetMedia[] | null;
+  member_id: string | null;
+  galleryCount: number;
+  discussionCount: number;
+  media: AssetMedia | null;
+  fallbackMedia?: AssetMedia[];
 }
 
 export interface ResourceFilters {
   type: 'all' | 'lora' | 'workflow';
-  status: 'featured' | 'all';
+  status: 'curated' | 'all';
   mediaType: 'all' | 'video' | 'image' | 'music';
   baseModel: string | null;
   loraType: string | null;

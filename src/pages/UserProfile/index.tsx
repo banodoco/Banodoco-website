@@ -1,28 +1,37 @@
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Palette, BookOpen, Pencil, Plus } from 'lucide-react';
+import { Palette, BookOpen, Newspaper, Pencil, Plus } from 'lucide-react';
+import { PostListCard } from '@/components/posts/PostListCard';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useArtPieces } from '@/hooks/useArtPieces';
+import { useAuthorResourceDrafts } from '@/hooks/useAuthorResourceDrafts';
 import { useCommunityResources } from '@/hooks/useCommunityResources';
+import { usePosts } from '@/hooks/usePosts';
 import { ArtGalleryCard } from '@/pages/Resources/ArtGallery/ArtGalleryCard';
 import { CommunityResourceCard } from '@/pages/Resources/CommunityResourcesFeed/CommunityResourceCard';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { profilePath, profileResourcesPath } from '@/lib/routing';
+import { buildResourcePath, profilePath, profilePostsPath, profileResourcesPath } from '@/lib/routing';
 
-type TabKey = 'art' | 'resources';
+type TabKey = 'art' | 'posts' | 'resources';
 
 const UserProfile = () => {
   const { username } = useParams<{ username: string }>();
   const location = useLocation();
-  const { profile, artCount, resourceCount, loading, error } = useUserProfile(username);
   const { user } = useAuth();
+  const { profile, artCount, postCount, publishedCount, draftCount, loading, error } = useUserProfile(
+    username,
+    user?.id,
+  );
 
   // Determine active tab from the URL path
-  const activeTab: TabKey = location.pathname.endsWith('/resources') ? 'resources' : 'art';
-
-  // Fetch art pieces and community resources for the profile
-  const profileMemberId = profile?.memberId ? Number(profile.memberId) : undefined;
+  const profileMemberId = profile?.memberId ?? undefined;
+  const isOwnProfile = !!(user && profile && user.id === profile.id);
+  const activeTab: TabKey = location.pathname.endsWith('/resources')
+    ? 'resources'
+    : location.pathname.endsWith('/posts')
+      ? 'posts'
+      : 'art';
 
   const {
     artPieces,
@@ -34,7 +43,23 @@ const UserProfile = () => {
     loading: resourcesLoading,
   } = useCommunityResources(profileMemberId);
 
-  const isOwnProfile = !!(user && profile && user.id === profile.id);
+  const {
+    drafts,
+    loading: draftsLoading,
+    error: draftsError,
+  } = useAuthorResourceDrafts(isOwnProfile ? profileMemberId : undefined);
+
+  const {
+    posts: profilePosts,
+    loading: postsLoading,
+    loadingMore: postsLoadingMore,
+    error: postsError,
+    hasMore: postsHasMore,
+    loadMore: loadMorePosts,
+  } = usePosts({
+    memberId: profileMemberId,
+    includeDrafts: isOwnProfile,
+  });
 
   // Loading skeleton
   if (loading) {
@@ -48,6 +73,7 @@ const UserProfile = () => {
             <Skeleton className="h-4 w-64 mt-2" />
           </div>
           <div className="mt-12 flex justify-center gap-8">
+            <Skeleton className="h-10 w-32" />
             <Skeleton className="h-10 w-32" />
             <Skeleton className="h-10 w-32" />
           </div>
@@ -103,9 +129,16 @@ const UserProfile = () => {
       path: profilePath(profile.discordUsername!),
     },
     {
+      key: 'posts',
+      label: 'Posts',
+      count: postCount,
+      icon: Newspaper,
+      path: profilePostsPath(profile.discordUsername!),
+    },
+    {
       key: 'resources',
       label: 'Resources',
-      count: resourceCount,
+      count: isOwnProfile ? publishedCount + draftCount : publishedCount,
       icon: BookOpen,
       path: profileResourcesPath(profile.discordUsername!),
     },
@@ -175,6 +208,13 @@ const UserProfile = () => {
                 <Plus size={14} />
                 Submit Resource
               </Link>
+              <Link
+                to="/submit/post"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <Plus size={14} />
+                Add Post
+              </Link>
             </div>
           )}
         </motion.div>
@@ -243,24 +283,153 @@ const UserProfile = () => {
           )}
 
           {activeTab === 'resources' && (
+            <div className="space-y-10">
+              {isOwnProfile && (
+                <section className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold text-zinc-100">Drafts</h2>
+                      <p className="mt-1 text-sm text-zinc-500">Only you can see unpublished resources.</p>
+                    </div>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                      {draftCount}
+                    </span>
+                  </div>
+
+                  {draftsLoading ? (
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="aspect-video rounded-lg" />
+                      ))}
+                    </div>
+                  ) : draftsError ? (
+                    <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-300">
+                      {draftsError}
+                    </div>
+                  ) : drafts.length === 0 ? (
+                    <div className="rounded-2xl border border-white/8 bg-white/[0.02] px-4 py-8 text-center text-sm text-zinc-500">
+                      No drafts yet.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                      {drafts.map((draft) => (
+                        <Link
+                          key={draft.id}
+                          to={`${buildResourcePath(draft.id, {
+                            label: draft.title,
+                            persistedSlug: draft.slug,
+                            username: draft.creator.username,
+                          })}?edit=1`}
+                          className="block rounded-xl border border-amber-400/15 bg-amber-400/[0.04] p-4 transition hover:border-amber-300/30 hover:bg-amber-300/[0.06]"
+                        >
+                          {draft.thumbnailUrl && (
+                            <div className="mb-3 aspect-video overflow-hidden rounded-lg bg-white/5">
+                              <img
+                                src={draft.thumbnailUrl}
+                                alt={draft.title}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="inline-flex rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
+                              Draft
+                            </span>
+                            <span className="text-xs text-zinc-500">
+                              {new Date(draft.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <h3 className="mt-3 line-clamp-2 text-base font-semibold text-zinc-100">
+                            {draft.title}
+                          </h3>
+                          {draft.description && (
+                            <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-zinc-400">
+                              {draft.description}
+                            </p>
+                          )}
+                          <p className="mt-4 text-xs font-medium text-amber-100">
+                            Continue editing
+                          </p>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+
+              <section className="space-y-4">
+                {isOwnProfile && (
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold text-zinc-100">Published</h2>
+                      <p className="mt-1 text-sm text-zinc-500">Resources visible on your public profile.</p>
+                    </div>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+                      {publishedCount}
+                    </span>
+                  </div>
+                )}
+
+                {resourcesLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Skeleton key={i} className="aspect-video rounded-lg" />
+                    ))}
+                  </div>
+                ) : resources.length === 0 ? (
+                  <div className="text-center py-16">
+                    <BookOpen size={48} className="mx-auto text-zinc-700 mb-4" />
+                    <p className="text-zinc-500">No published resources yet.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {resources.map((resource) => (
+                      <CommunityResourceCard key={resource.id} resource={resource} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'posts' && (
             <div>
-              {resourcesLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {postsLoading ? (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <Skeleton key={i} className="aspect-video rounded-lg" />
                   ))}
                 </div>
-              ) : resources.length === 0 ? (
-                <div className="text-center py-16">
-                  <BookOpen size={48} className="mx-auto text-zinc-700 mb-4" />
-                  <p className="text-zinc-500">No resources yet.</p>
+              ) : postsError ? (
+                <div className="py-16 text-center">
+                  <p className="text-zinc-500">{postsError}</p>
+                </div>
+              ) : profilePosts.length === 0 ? (
+                <div className="py-16 text-center">
+                  <Newspaper size={48} className="mx-auto mb-4 text-zinc-700" />
+                  <p className="text-zinc-500">No posts yet.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {resources.map((resource) => (
-                    <CommunityResourceCard key={resource.id} resource={resource} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {profilePosts.map((post) => (
+                      <PostListCard key={post.id} post={post} />
+                    ))}
+                  </div>
+                  {postsHasMore && (
+                    <div className="mt-8 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={loadMorePosts}
+                        disabled={postsLoadingMore}
+                        className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {postsLoadingMore ? 'Loading…' : 'Load more'}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "title": "This title is intentionally made longer than one hundred and twenty characters so the validator rejects it for exceeding the maximum length.",
+  "entry": "index.html",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.5
+  }
+}

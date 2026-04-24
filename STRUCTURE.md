@@ -80,10 +80,9 @@ Shared UI primitives live in **`src/components/ui/`**:
 - **`src/lib/device.ts`**: device detection utilities (`isIOS()`, `shouldPreloadVideos()`).
 - **`src/lib/breakpoints.ts`**: responsive breakpoint constants.
 - **`src/lib/sections.ts`**: centralized section IDs and navigation config (avoids string duplication).
-- **`src/lib/preloadAssets.ts`**: asset preloading for better perceived performance.
+- **`src/lib/preloadAssets.ts`**: asset preloading for better perceived performance, including viewport-based asset preloading.
 - **`src/lib/supabase.ts`**: Supabase client setup.
 - **`src/lib/useScreenSize.ts`**: hook for responsive breakpoint detection.
-- **`src/lib/useViewportPreload.ts`**: viewport-based asset preloading.
 - **`src/contexts/LayoutContext.tsx`**: React context for layout theme and page detection.
 - **`src/index.css`**: Tailwind layers + global styles + shared keyframes.
 

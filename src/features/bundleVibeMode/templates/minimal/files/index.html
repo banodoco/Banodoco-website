@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Minimal bundle</title>
+    <style>
+      /* Banodoco default palette — override as you like. */
+      :root {
+        --bg: #0b0b0f;
+        --surface: #10141d;
+        --text: #f4f4f5;
+        --text-muted: #a1a1aa;
+        --accent: #f97316;
+        --border: rgba(255, 255, 255, 0.08);
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 2.5rem 1.5rem;
+      }
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      p { margin: 0 0 1rem; color: var(--text-muted); }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      code { background: var(--surface); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Hello from Vibe</h1>
+      <p>Edit this page with the chat on the right. Attach images with the paperclip — they'll land in <code>assets/</code> and the agent will wire them into the markup.</p>
+    </main>
+    <script>
+      // Report our content height back to the host so the iframe sizes to fit.
+      const postSize = () => {
+        const h = Math.ceil(document.documentElement.scrollHeight);
+        window.parent.postMessage({ type: 'banodoco:resize', v: 1, height: h }, '*');
+      };
+      window.addEventListener('load', postSize);
+      new ResizeObserver(postSize).observe(document.documentElement);
+    </script>
+  </body>
+</html>

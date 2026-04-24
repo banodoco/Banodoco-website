@@ -1,5 +1,30 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/resources/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|TelegramBot|WhatsApp|Embedly|SkypeUriPreview|bingbot|googlebot|applebot)"
+        }
+      ],
+      "destination": "https://ujlwuvkrxlvoswwkerdf.supabase.co/functions/v1/resource-og?slug=:slug"
+    },
+    {
+      "source": "/:username/resources/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|TelegramBot|WhatsApp|Embedly|SkypeUriPreview|bingbot|googlebot|applebot)"
+        }
+      ],
+      "destination": "https://ujlwuvkrxlvoswwkerdf.supabase.co/functions/v1/resource-og?slug=:slug"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

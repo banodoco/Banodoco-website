@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Loader2, ImagePlus } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { MediaUploader } from '@/components/forms/MediaUploader';
 import { buildArtPath } from '@/lib/routing';
@@ -82,6 +82,7 @@ function SubmitArtForm() {
           type: mediaType,
           description: description || null,
           member_id: Number(profile.memberId),
+          source: 'art',
           admin_status: 'Listed',
           user_status: 'Listed',
           cloudflare_thumbnail_url: fileUrl,

@@ -1,21 +1,30 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
-import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Youtube, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { PostListCard } from '@/components/posts/PostListCard';
+import { useAuth } from '@/contexts/useAuth';
+import { usePosts } from '@/hooks/usePosts';
 import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
 import { ArtGallerySection } from './ArtGallery/ArtGallerySection';
+import { HeroArtistCycler } from './HeroArtistCycler';
+import { CommunityMontage } from './CommunityMontage';
 import { FilterBar } from './FilterBar';
 import { ResourceGrid } from './ResourceGrid';
 import { CommunityNewsSection } from './CommunityNews/CommunityNewsSection';
 import { AuthActionModal } from './AuthActionModal';
+import { YouTubeEmbed } from './YouTubeEmbed';
+
+const BRIEFING_VIDEOS: Array<{ videoId: string; title: string; caption: string }> = [
+  { videoId: '6oBWkKcq59A', title: 'Community Briefing — April', caption: 'Latest integrations & releases' },
+  { videoId: '6oBWkKcq59A', title: 'Community Briefing — March', caption: 'Research notes & spotlights' },
+  { videoId: '6oBWkKcq59A', title: 'Community Briefing — February', caption: 'Milestones & ships' },
+];
+
+const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@banodoco';
 
 const ITEMS_PER_PAGE = 8;
-const FRAME_COUNT = 25;
-const FRAME_PATHS = Array.from({ length: FRAME_COUNT }, (_, i) => `/assorted_propaganda/${i + 1}.jpg`);
-const INITIAL_FRAME = Math.floor(Math.random() * FRAME_COUNT);
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -28,6 +37,7 @@ const Resources = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, signInWithDiscord } = useAuth();
   const { assets, profiles, loading, error } = useResources();
+  const { posts, loading: postsLoading, error: postsError } = usePosts({ limit: 6 });
   const {
     filters,
     searchInput,
@@ -48,6 +58,8 @@ const Resources = () => {
     if (page !== 1) setPage(1);
   }
 
+  // One resource per person: `filtered` is pre-sorted by status then date,
+  // so keeping the first occurrence surfaces each person's top-ranked entry.
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginatedAssets = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
@@ -57,52 +69,17 @@ const Resources = () => {
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
-  // Scroll-driven image sequence for magazine cover
-  const heroRef = useRef<HTMLElement>(null);
-  const coverImgRef = useRef<HTMLImageElement>(null);
-  const lastFrameRef = useRef(INITIAL_FRAME);
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const frameIndex = useTransform(scrollYProgress, [0, 1], [0, FRAME_COUNT - 1]);
-  const coverScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
+  const [authAction, setAuthAction] = useState<'art' | 'resource' | 'post' | null>(null);
 
-  // Autoplay state
-  const [isPlaying] = useState(true);
-  const playFrameRef = useRef(0);
-  const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [authAction, setAuthAction] = useState<'art' | 'resource' | null>(null);
-
-  // Preload all frames into browser cache
-  useEffect(() => {
-    FRAME_PATHS.forEach(src => { const img = new Image(); img.src = src; });
-  }, []);
-
-  // Swap frame on scroll (direct DOM update, no React re-render) — only when not autoplaying
-  useMotionValueEvent(frameIndex, 'change', (latest) => {
-    if (isPlaying) return;
-    const index = Math.min(FRAME_COUNT - 1, Math.max(0, Math.round(latest)));
-    if (index === lastFrameRef.current) return;
-    lastFrameRef.current = index;
-    if (coverImgRef.current) coverImgRef.current.src = FRAME_PATHS[index];
-  });
-
-  useEffect(() => {
-    if (!isPlaying) {
-      if (playIntervalRef.current) clearInterval(playIntervalRef.current);
-      playIntervalRef.current = null;
-      return;
-    }
-    playFrameRef.current = lastFrameRef.current;
-    playIntervalRef.current = setInterval(() => {
-      playFrameRef.current = (playFrameRef.current + 1) % FRAME_COUNT;
-      lastFrameRef.current = playFrameRef.current;
-      if (coverImgRef.current) coverImgRef.current.src = FRAME_PATHS[playFrameRef.current];
-    }, 800);
-    return () => { if (playIntervalRef.current) clearInterval(playIntervalRef.current); };
-  }, [isPlaying]);
-
-  const handleCreateClick = (type: 'art' | 'resource') => {
+  const handleCreateClick = (type: 'art' | 'resource' | 'post') => {
     if (user) {
-      navigate(type === 'art' ? '/submit/art' : '/submit/resource');
+      navigate(
+        type === 'art'
+          ? '/submit/art'
+          : type === 'resource'
+            ? '/submit/resource'
+            : '/submit/post',
+      );
       return;
     }
     setAuthAction(type);
@@ -118,7 +95,7 @@ const Resources = () => {
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
       {/* Full-screen Hero — Editorial Magazine */}
-      <section ref={heroRef} className="relative h-screen flex items-center justify-center overflow-hidden bg-[#0d131c]">
+      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-[#0d131c]">
         {/* Abstract Background */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[120px]" />
@@ -126,10 +103,21 @@ const Resources = () => {
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 0)', backgroundSize: '40px 40px' }} />
         </div>
 
-        <div className="w-full max-w-[1400px] mx-auto px-6 relative z-10">
+        {/* Full right artist cycler, fading diagonally into the bg toward the bottom-left */}
+        <div
+          className="hidden lg:block absolute inset-y-0 right-0 w-[75%] z-[1]"
+          style={{
+            maskImage: 'linear-gradient(65deg, transparent 10%, rgba(0,0,0,0.5) 40%, black 75%)',
+            WebkitMaskImage: 'linear-gradient(65deg, transparent 10%, rgba(0,0,0,0.5) 40%, black 75%)',
+          }}
+        >
+          <HeroArtistCycler />
+        </div>
+
+        <div className="w-full max-w-[1400px] mx-auto px-6 relative z-10 pointer-events-none">
           <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Text Content */}
-            <div className="lg:col-span-7 space-y-8">
+            <div className="lg:col-span-7 space-y-8 pointer-events-auto">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -137,7 +125,7 @@ const Resources = () => {
                 className="flex items-center gap-4"
               >
                 <span className="h-px w-12 bg-orange-500" />
-                <span className="text-orange-500 font-black tracking-[0.4em] uppercase text-[10px]">Independent AI Publication</span>
+                <span className="text-orange-500 font-black tracking-[0.4em] uppercase text-[10px]">2nd Renaissance People</span>
               </motion.div>
 
               <motion.div
@@ -145,12 +133,12 @@ const Resources = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
               >
-                <h1 className="text-[12vw] lg:text-[100px] font-black leading-[0.85] tracking-tighter mb-6 uppercase">
-                  Art <span className="text-zinc-800">&</span> <br />
-                  <span className="italic">Intelligence</span>
+                <h1 className="text-[10vw] lg:text-[82px] font-black leading-[0.85] tracking-tighter mb-6 uppercase">
+                  Art <span className="text-zinc-500">&</span> <span className="italic">Resources</span> <br />
+                  for Open Source <span className="italic">Nerds</span>
                 </h1>
                 <p className="max-w-md text-zinc-400 text-base lg:text-lg font-light leading-relaxed">
-                  The curated archive of AI video generation. Discover battle-tested workflows and the art defining the new era.
+                  Empowering and inspiring resources from some of the most talented people in the open source space.
                 </p>
               </motion.div>
 
@@ -177,26 +165,6 @@ const Resources = () => {
               </motion.div>
             </div>
 
-            {/* Magazine Cover Mockup */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8, rotate: 5 }}
-              animate={{ opacity: 1, scale: 1, rotate: -2 }}
-              transition={{ duration: 1.2, ease: "easeOut", delay: 0.4 }}
-              className="hidden lg:block lg:col-span-5 relative w-full"
-            >
-              <div className="relative aspect-[3/4] w-full max-w-sm ml-auto bg-zinc-900 rounded-[2rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(255,165,0,0.1)]">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent z-10 opacity-35 pointer-events-none" />
-                {/* Scroll-driven image sequence */}
-                <motion.div style={{ scale: coverScale }} className="absolute inset-0">
-                  <img
-                    ref={coverImgRef}
-                    src={FRAME_PATHS[INITIAL_FRAME]}
-                    alt="Cover art"
-                    className="w-full h-full object-cover"
-                  />
-                </motion.div>
-              </div>
-            </motion.div>
           </div>
         </div>
 
@@ -281,8 +249,14 @@ const Resources = () => {
             </div>
           )}
 
+          {!error && !loading && assets.length === 0 && (
+            <div className="text-center py-16">
+              <p className="text-white/40 text-lg">No resources yet</p>
+            </div>
+          )}
+
           {/* Filters */}
-          {!error && (
+          {!error && (loading || assets.length > 0) && (
             <FilterBar
               filters={filters}
               searchInput={searchInput}
@@ -295,7 +269,7 @@ const Resources = () => {
           )}
 
           {/* Grid */}
-          {!error && (
+          {!error && (loading || assets.length > 0) && (
             <div className="mt-6">
               <ResourceGrid
                 assets={paginatedAssets}
@@ -306,7 +280,7 @@ const Resources = () => {
           )}
 
           {/* Pagination */}
-          {!error && !loading && totalPages > 1 && (
+          {!error && !loading && assets.length > 0 && totalPages > 1 && (
             <div className="flex items-center justify-center gap-8 pt-12">
               <button
                 disabled={page === 1}
@@ -340,29 +314,137 @@ const Resources = () => {
           id="news"
           className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 rounded-2xl border border-white/10 bg-[#101821] p-6 sm:p-8"
         >
-          <div className="lg:col-span-4">
-            <div className="sticky top-24">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-zinc-900 rounded-lg">
-                  <Newspaper size={20} className="text-zinc-100" />
+          <div className="lg:col-span-4 lg:relative">
+            <div className="lg:absolute lg:inset-0 flex flex-col">
+              <div className="shrink-0">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-zinc-900 rounded-lg">
+                    <Newspaper size={20} className="text-zinc-100" />
+                  </div>
+                  <h2 className="text-2xl font-bold tracking-tight uppercase">Briefing</h2>
                 </div>
-                <h2 className="text-2xl font-bold tracking-tight uppercase">Briefing</h2>
+                <p className="text-zinc-500 text-sm leading-relaxed mb-6">
+                  Dispatches from the community frontlines. Latest integrations, research notes, and community milestones.
+                </p>
+                <div className="h-px w-full bg-zinc-800 mb-4" />
               </div>
-              <p className="text-zinc-500 text-sm leading-relaxed mb-8">
-                Dispatches from the community frontlines. Latest integrations, research notes, and community milestones.
-              </p>
-              <div className="h-px w-full bg-zinc-800" />
+              <div className="flex-1 min-h-0 overflow-y-auto pr-1 -mr-1 space-y-4">
+                {BRIEFING_VIDEOS.map((video, i) => (
+                  <YouTubeEmbed
+                    key={`${video.videoId}-${i}`}
+                    videoId={video.videoId}
+                    title={video.title}
+                    caption={video.caption}
+                  />
+                ))}
+              </div>
+              <div className="shrink-0 pt-4">
+                <a
+                  href={YOUTUBE_CHANNEL_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-zinc-900 px-4 py-3 text-sm font-medium text-zinc-200 hover:bg-zinc-800 hover:border-white/20 transition"
+                >
+                  <Youtube size={16} className="text-red-500" />
+                  Visit the full YouTube channel
+                  <ChevronRight size={14} className="text-zinc-400" />
+                </a>
+              </div>
             </div>
           </div>
           <div className="lg:col-span-8">
             <CommunityNewsSection />
           </div>
         </motion.section>
+
+        {/* Community Posts — compact list, just title + author */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={containerVariants}
+          id="community-posts"
+          className="space-y-6 rounded-2xl border border-white/10 bg-[#101522] p-6 sm:p-8"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-zinc-900 p-2">
+                <Newspaper size={18} className="text-zinc-100" />
+              </div>
+              <h2 className="text-xl font-black uppercase tracking-tight sm:text-2xl">
+                Community Posts
+              </h2>
+            </div>
+            <button
+              onClick={() => handleCreateClick('post')}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-white/25 hover:bg-white/15"
+            >
+              <Plus size={16} />
+              Add Post
+            </button>
+          </div>
+
+          {postsError ? (
+            <div className="py-8 text-center">
+              <p className="text-zinc-400">{postsError}</p>
+            </div>
+          ) : postsLoading ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-16 animate-pulse rounded-xl border border-white/5 bg-white/[0.03]"
+                />
+              ))}
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-zinc-500">No published posts yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {posts.map((post) => (
+                <PostListCard key={post.id} post={post} />
+              ))}
+            </div>
+          )}
+        </motion.section>
+
+        {/* Community Gathering — Footer Montage */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={containerVariants}
+          id="community-gathering"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center rounded-2xl border border-white/10 bg-[#10141d] p-6 sm:p-8"
+        >
+          <div className="lg:col-span-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-zinc-900 rounded-lg">
+                <Users size={20} className="text-zinc-100" />
+              </div>
+              <span className="text-zinc-500 font-black tracking-[0.4em] uppercase text-[10px]">Community</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase leading-tight">
+              The open source community gathers in our community
+            </h2>
+          </div>
+          <div className="lg:col-span-7">
+            <CommunityMontage />
+          </div>
+        </motion.section>
       </div>
 
       <AuthActionModal
         isOpen={authAction !== null}
-        actionLabel={authAction === 'art' ? 'Add Art' : 'Add Resources'}
+        actionLabel={
+          authAction === 'art'
+            ? 'Add Art'
+            : authAction === 'resource'
+              ? 'Add Resources'
+              : 'Add Post'
+        }
         onClose={handleModalClose}
         onSignIn={handleModalSignIn}
         loading={authLoading}

@@ -17,12 +17,13 @@ interface MediaRow {
   description: string | null;
   cloudflare_thumbnail_url: string | null;
   cloudflare_playback_hls_url: string | null;
+  backup_thumbnail_url: string | null;
   created_at: string;
-  member_id: number | null;
+  member_id: string | null;
 }
 
 interface MemberRow {
-  member_id: number;
+  member_id: string;
   username: string | null;
   global_name: string | null;
   avatar_url: string | null;
@@ -60,7 +61,7 @@ export const useArtPiece = (slugOrId: string | undefined): UseArtPieceResult => 
         const { data, error: fetchError } = await client
           .from('media')
           .select(
-            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, created_at, member_id',
+            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, backup_thumbnail_url, created_at, member_id:member_id::text',
           )
           .eq('id', resolvedId)
           .single();
@@ -83,7 +84,7 @@ export const useArtPiece = (slugOrId: string | undefined): UseArtPieceResult => 
         if (row.member_id) {
           const { data: memberData } = await client
             .from('members')
-            .select('member_id, username, global_name, avatar_url')
+            .select('member_id:member_id::text, username, global_name, avatar_url')
             .eq('member_id', row.member_id)
             .single();
 
@@ -103,7 +104,8 @@ export const useArtPiece = (slugOrId: string | undefined): UseArtPieceResult => 
           slug: buildEntitySlug(row.description, row.id),
           title: null,
           caption: row.description,
-          thumbnailUrl: row.cloudflare_thumbnail_url,
+          thumbnailUrl: row.backup_thumbnail_url ?? row.cloudflare_thumbnail_url,
+          cloudflareThumbnailUrl: row.cloudflare_thumbnail_url,
           hlsUrl: row.cloudflare_playback_hls_url,
           mediaType: row.type,
           createdAt: row.created_at,

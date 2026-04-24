@@ -132,10 +132,10 @@ export const Hero = () => {
                 <ArrowDownIcon />
               </button>
               <Link
-                to="/resources"
+                to="/2RP"
                 className="inline-flex items-center px-6 py-3 text-sm font-semibold rounded-lg transition-all text-white border border-white/50 hover:bg-white/10 md:text-[#1a1a1a] md:border-black/15 md:hover:bg-black/5"
               >
-                Resources
+                2RP
               </Link>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import type { MediaUrl } from './types';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
-import { useImagePreloadOnVisible, useVideoPreloadOnVisible } from '@/lib/useViewportPreload';
+import { useImagePreloadOnVisible, useVideoPreloadOnVisible } from '@/lib/preloadAssets';
 
 // Constants for timing
 const IMAGE_DISPLAY_DURATION = 5000; // 5 seconds for images

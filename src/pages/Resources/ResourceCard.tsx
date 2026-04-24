@@ -1,42 +1,57 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BASE_MODEL_MAP } from './constants';
+import { Star } from 'lucide-react';
 import type { Asset, AssetMedia, AssetProfile } from './types';
+import { useAuth } from '@/contexts/useAuth';
+import { supabase } from '@/lib/supabase';
 import { buildResourcePath } from '@/lib/routing';
 
-/** Safely unwrap Supabase joins that may return an object or a single-element array */
-function unwrap<T>(val: T | T[] | null): T | null {
-  if (Array.isArray(val)) return val[0] ?? null;
-  return val;
+function unwrap<T>(value: T | T[] | null): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value;
 }
 
-/** Convert a Cloudflare static thumbnail URL to an animated GIF preview */
 function getAnimatedThumbnail(staticUrl: string): string {
-  // https://...cloudflarestream.com/{id}/thumbnails/thumbnail.jpg
-  // → https://...cloudflarestream.com/{id}/thumbnails/thumbnail.gif?duration=4s&height=360
   return staticUrl.replace('/thumbnail.jpg', '/thumbnail.gif?duration=4s&height=360');
+}
+
+function getTypePillClass(type: string): string {
+  if (type === 'workflow') return 'border-zinc-300/20 bg-zinc-300/15 text-zinc-100';
+  if (type === 'lora') return 'border-zinc-100/20 bg-zinc-100 text-zinc-900';
+  return 'border-white/10 bg-white/[0.06] text-zinc-100';
 }
 
 interface ResourceCardProps {
   asset: Asset;
   profile?: AssetProfile | null;
-  isFeaturedSize?: boolean;
 }
 
-export const ResourceCard = ({ asset, profile, isFeaturedSize }: ResourceCardProps) => {
+export const ResourceCard = ({ asset, profile }: ResourceCardProps) => {
+  const { profile: authProfile } = useAuth();
+  const isAdmin = Boolean(authProfile?.isAdmin);
+
   const media = unwrap<AssetMedia>(asset.media);
-  const thumbnailUrl = media?.cloudflare_thumbnail_url;
-  const hasVideo = !!media?.cloudflare_playback_hls_url;
-  const creatorName = asset.creator || 'Unknown';
+  const thumbnailUrl = media?.backup_thumbnail_url ?? media?.cloudflare_thumbnail_url;
+  const cloudflareThumbnailUrl = media?.cloudflare_thumbnail_url ?? null;
+  const hasVideo = Boolean(media?.cloudflare_playback_hls_url);
+  const creatorName = profile?.display_name || profile?.username || asset.creator || 'Unknown';
   const avatarUrl = profile?.avatar_url;
+  // Local admin_status so the Curate toggle updates optimistically without
+  // forcing a refetch. Seeded from the server value; reverts on error.
+  const [adminStatus, setAdminStatus] = useState<Asset['admin_status']>(asset.admin_status ?? null);
+  const [curateBusy, setCurateBusy] = useState(false);
+  const [curateError, setCurateError] = useState<string | null>(null);
+  const isCurated = adminStatus === 'Curated';
 
-  const isFeatured = asset.admin_status === 'Featured';
-  const isCurated = asset.admin_status === 'Curated';
-
-  // Hover-to-play: swap static thumbnail for animated GIF
   const [hovered, setHovered] = useState(false);
   const [animatedLoaded, setAnimatedLoaded] = useState(false);
-  const animatedUrl = thumbnailUrl && hasVideo ? getAnimatedThumbnail(thumbnailUrl) : null;
+  const animatedUrl = cloudflareThumbnailUrl && hasVideo ? getAnimatedThumbnail(cloudflareThumbnailUrl) : null;
+  const linkUrl = buildResourcePath(asset.id, {
+    label: asset.name,
+    persistedSlug: asset.slug,
+  });
+  const galleryCount = asset.galleryCount ?? 0;
+  const discussionCount = asset.discussionCount ?? 0;
 
   const handleMouseEnter = useCallback(() => setHovered(true), []);
   const handleMouseLeave = useCallback(() => {
@@ -44,113 +59,167 @@ export const ResourceCard = ({ asset, profile, isFeaturedSize }: ResourceCardPro
     setAnimatedLoaded(false);
   }, []);
 
-  const linkUrl = buildResourcePath(asset.id, asset.name, profile?.username);
+  const handleToggleCurate = useCallback(async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!supabase || curateBusy) return;
+    const nextStatus: Asset['admin_status'] = isCurated ? 'Listed' : 'Curated';
+    const prevStatus = adminStatus;
+    setCurateBusy(true);
+    setCurateError(null);
+    setAdminStatus(nextStatus);
+    try {
+      const { error: updateError } = await supabase
+        .from('assets')
+        .update({ admin_status: nextStatus })
+        .eq('id', asset.id);
+      if (updateError) throw updateError;
+    } catch (caught) {
+      setAdminStatus(prevStatus);
+      setCurateError(
+        caught instanceof Error && caught.message
+          ? caught.message
+          : 'Failed to update curate status',
+      );
+    } finally {
+      setCurateBusy(false);
+    }
+  }, [adminStatus, asset.id, curateBusy, isCurated]);
 
   return (
-    <Link
-      to={linkUrl}
+    <div
+      className="relative"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`group block w-full rounded-lg overflow-hidden bg-white/5 border transition-all duration-200 hover:scale-[1.02] hover:border-white/20 cursor-pointer ${
-        isFeatured
-          ? 'border-amber-400/30 hover:border-amber-400/50'
-          : isCurated
-            ? 'border-cyan-400/20 hover:border-cyan-400/40'
-            : 'border-white/10'
-      }`}
     >
-      {/* Thumbnail */}
-      <div className={`relative bg-white/5 overflow-hidden ${isFeaturedSize ? 'aspect-[2/1]' : 'aspect-video'}`}>
-        {thumbnailUrl ? (
-          <>
-            <img
-              src={thumbnailUrl}
-              alt={asset.name}
-              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
-                hovered && animatedLoaded ? 'opacity-0' : 'opacity-100'
-              }`}
-              loading="lazy"
-            />
-            {/* Animated preview on hover (preloaded when hovered) */}
-            {hovered && animatedUrl && (
+      <Link
+        to={linkUrl}
+        className={`group block w-full overflow-hidden rounded-xl border bg-white/5 transition-all duration-200 hover:scale-[1.02] hover:border-white/20 ${
+          isCurated ? 'border-white/15' : 'border-white/10'
+        }`}
+      >
+        <div className="relative overflow-hidden bg-white/5 aspect-video">
+          {thumbnailUrl ? (
+            <>
               <img
-                src={animatedUrl}
-                alt=""
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
-                  animatedLoaded ? 'opacity-100' : 'opacity-0'
+                src={thumbnailUrl}
+                alt={asset.name}
+                className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+                  hovered && animatedLoaded ? 'opacity-0' : 'opacity-100'
                 }`}
-                onLoad={() => setAnimatedLoaded(true)}
+                loading="lazy"
               />
-            )}
-          </>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-white/20">
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {asset.type === 'workflow' ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              {hovered && animatedUrl && (
+                <img
+                  src={animatedUrl}
+                  alt=""
+                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-200 ${
+                    animatedLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  onLoad={() => setAnimatedLoaded(true)}
+                />
               )}
-            </svg>
+            </>
+          ) : asset.fallbackMedia && asset.fallbackMedia.length > 0 ? (
+            <div className="flex h-full w-full gap-0.5">
+              {asset.fallbackMedia.slice(0, 3).map((m) => {
+                const url = m.backup_thumbnail_url ?? m.cloudflare_thumbnail_url;
+                return url ? (
+                  <img
+                    key={m.id}
+                    src={url}
+                    alt=""
+                    className="h-full flex-1 min-w-0 object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div key={m.id} className="h-full flex-1 min-w-0 bg-white/5" />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-white/20">
+              <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+              </svg>
+            </div>
+          )}
+
+          {hasVideo && hovered && !animatedLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-full border-2 border-white/30 border-t-white/70 animate-spin" />
+            </div>
+          )}
+
+          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getTypePillClass(asset.type)}`}>
+              {asset.type}
+            </span>
+            {hasVideo && (
+              <span className="rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white">
+                Video
+              </span>
+            )}
+            {isCurated && (
+              <span className="rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white">
+                Curated
+              </span>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Play indicator on hover */}
-        {hasVideo && hovered && !animatedLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-white/30 border-t-white/70 rounded-full animate-spin" />
+        <div className="space-y-3 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="truncate font-medium text-white/95 text-sm">
+                {asset.name}
+              </h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                {galleryCount} {galleryCount === 1 ? 'item' : 'items'} · {discussionCount} {discussionCount === 1 ? 'discussion' : 'discussions'}
+              </p>
+            </div>
           </div>
-        )}
 
-        {/* Badges overlay */}
-        <div className="absolute top-2 left-2 flex gap-1.5">
-          {hasVideo && (
-            <span className="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-black/60 backdrop-blur-sm text-white/90 rounded">
-              Video
-            </span>
-          )}
-          {isFeatured && (
-            <span className="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-amber-500/80 backdrop-blur-sm text-white rounded">
-              Featured
-            </span>
-          )}
-          {isCurated && (
-            <span className="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-cyan-500/60 backdrop-blur-sm text-white rounded">
-              Curated
-            </span>
-          )}
-        </div>
-      </div>
+          <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/10 px-2.5 py-2">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={creatorName}
+                className="h-6 w-6 rounded-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[10px] font-medium text-zinc-300">
+                {creatorName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium text-zinc-200">{creatorName}</p>
+              <p className="truncate text-[11px] text-zinc-500">Author</p>
+            </div>
+          </div>
 
-      {/* Info */}
-      <div className="p-3">
-        <h3 className={`font-medium text-white/90 truncate ${isFeaturedSize ? 'text-base' : 'text-sm'}`}>{asset.name}</h3>
-        <div className="flex items-center gap-1.5 mt-1">
-          {avatarUrl && (
-            <img src={avatarUrl} alt="" className="w-4 h-4 rounded-full" loading="lazy" />
-          )}
-          <p className="text-xs text-white/50 truncate">by {creatorName}</p>
         </div>
+      </Link>
 
-        {/* Pills */}
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {asset.lora_base_model && (
-            <span className="px-2 py-0.5 text-[10px] font-medium bg-white/8 text-white/60 rounded-full">
-              {BASE_MODEL_MAP.get(asset.lora_base_model)?.label ?? asset.lora_base_model}
-            </span>
-          )}
-          {asset.lora_type && (
-            <span className="px-2 py-0.5 text-[10px] font-medium bg-white/8 text-white/60 rounded-full">
-              {asset.lora_type}
-            </span>
-          )}
-          {asset.type === 'workflow' && (
-            <span className="px-2 py-0.5 text-[10px] font-medium bg-purple-500/20 text-purple-300/80 rounded-full">
-              Workflow
-            </span>
-          )}
-        </div>
-      </div>
-    </Link>
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={handleToggleCurate}
+          disabled={curateBusy}
+          aria-label={isCurated ? 'Remove from Forge' : 'Curate'}
+          aria-pressed={isCurated}
+          title={curateError ?? (isCurated ? 'Remove from Forge' : 'Curate')}
+          className="absolute right-3 top-3 z-10 inline-flex items-center justify-center rounded-full border border-white/10 bg-zinc-900/80 p-1.5 text-zinc-200 backdrop-blur-sm transition hover:bg-zinc-800/90 hover:text-white disabled:opacity-60"
+        >
+          <Star
+            size={14}
+            className={isCurated ? 'fill-amber-200 text-amber-200' : undefined}
+          />
+        </button>
+      )}
+    </div>
   );
 };
+
+export default ResourceCard;

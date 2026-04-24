@@ -13,21 +13,35 @@ export interface UserProfileData {
 interface UseUserProfileResult {
   profile: UserProfileData | null;
   artCount: number;
+  postCount: number;
   resourceCount: number;
+  publishedCount: number;
+  draftCount: number;
   loading: boolean;
   error: string | null;
 }
 
-export const useUserProfile = (username: string | undefined): UseUserProfileResult => {
+export const useUserProfile = (
+  username: string | undefined,
+  viewerAuthUserId?: string,
+): UseUserProfileResult => {
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [artCount, setArtCount] = useState(0);
+  const [postCount, setPostCount] = useState(0);
   const [resourceCount, setResourceCount] = useState(0);
+  const [publishedCount, setPublishedCount] = useState(0);
+  const [draftCount, setDraftCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!username) {
       setProfile(null);
+      setArtCount(0);
+      setPostCount(0);
+      setResourceCount(0);
+      setPublishedCount(0);
+      setDraftCount(0);
       setLoading(false);
       return;
     }
@@ -35,6 +49,11 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
     const client = supabase;
     if (!isSupabaseConfigured || !client) {
       setProfile(null);
+      setArtCount(0);
+      setPostCount(0);
+      setResourceCount(0);
+      setPublishedCount(0);
+      setDraftCount(0);
       setError(null);
       setLoading(false);
       return;
@@ -45,6 +64,11 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
     const fetchProfile = async () => {
       setLoading(true);
       setError(null);
+      setArtCount(0);
+      setPostCount(0);
+      setResourceCount(0);
+      setPublishedCount(0);
+      setDraftCount(0);
 
       try {
         // Fetch the profile by discord_username
@@ -59,6 +83,11 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
             // No rows returned — profile not found
             if (!cancelled) {
               setProfile(null);
+              setArtCount(0);
+              setPostCount(0);
+              setResourceCount(0);
+              setPublishedCount(0);
+              setDraftCount(0);
               setLoading(false);
             }
             return;
@@ -80,7 +109,8 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
         setProfile(mapped);
 
         // Use discord_id (member_id as string) to query media/assets by member_id
-        const memberId = mapped.memberId ? Number(mapped.memberId) : null;
+        const memberId = mapped.memberId?.trim() || null;
+        const isOwnerView = Boolean(viewerAuthUserId && viewerAuthUserId === mapped.id);
 
         if (memberId) {
           // Fetch media count (art) where member_id matches
@@ -88,22 +118,63 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
             .from('media')
             .select('id', { count: 'exact', head: true })
             .eq('member_id', memberId)
+            .eq('source', 'art')
             .in('admin_status', ['Featured', 'Curated', 'Listed']);
 
           if (!cancelled && !artError) {
             setArtCount(mediaCount ?? 0);
           }
 
+          const postsQuery = client
+            .from('posts')
+            .select('id', { count: 'exact', head: true })
+            .eq('member_id', memberId);
+
+          const { count: postsCount, error: postError } = isOwnerView
+            ? await postsQuery.in('status', ['draft', 'published'])
+            : await postsQuery
+              .eq('status', 'published')
+              .or('admin_status.is.null,admin_status.neq.Hidden');
+
+          if (!cancelled && !postError) {
+            setPostCount(postsCount ?? 0);
+          }
+
           // Fetch assets count (resources) where member_id matches
           const { count: assetsCount, error: resourceError } = await client
+            // status filter required for public reads
             .from('assets')
-            .select('id', { count: 'exact', head: true })
+            .select('id, source, discord_guild_id, discord_channel_id, discord_thread_id, is_hidden', { count: 'exact', head: true })
             .eq('member_id', memberId)
-            .in('admin_status', ['Featured', 'Curated', 'Listed']);
+            .eq('is_hidden', false)
+            .eq('status', 'published')
+            .in('admin_status', ['Curated', 'Listed']);
 
           if (!cancelled && !resourceError) {
-            setResourceCount(assetsCount ?? 0);
+            const nextPublishedCount = assetsCount ?? 0;
+            setPublishedCount(nextPublishedCount);
+            setResourceCount(nextPublishedCount);
           }
+
+          if (isOwnerView) {
+            const { count: draftAssetsCount, error: draftResourceError } = await client
+              .from('assets')
+              .select('id', { count: 'exact', head: true })
+              .eq('member_id', memberId)
+              .eq('status', 'draft');
+
+            if (!cancelled && !draftResourceError) {
+              setDraftCount(draftAssetsCount ?? 0);
+            }
+          } else if (!cancelled) {
+            setDraftCount(0);
+          }
+        } else if (!cancelled) {
+          setArtCount(0);
+          setPostCount(0);
+          setResourceCount(0);
+          setPublishedCount(0);
+          setDraftCount(0);
         }
       } catch {
         if (!cancelled) {
@@ -121,7 +192,7 @@ export const useUserProfile = (username: string | undefined): UseUserProfileResu
     return () => {
       cancelled = true;
     };
-  }, [username]);
+  }, [username, viewerAuthUserId]);
 
-  return { profile, artCount, resourceCount, loading, error };
+  return { profile, artCount, postCount, resourceCount, publishedCount, draftCount, loading, error };
 };

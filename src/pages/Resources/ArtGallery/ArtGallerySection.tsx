@@ -2,7 +2,7 @@ import { useArtPieces } from '@/hooks/useArtPieces';
 import { ArtGalleryCard } from './ArtGalleryCard';
 
 export const ArtGallerySection = () => {
-  const { artPieces, loading, loadingMore, hasMore, loadMore } = useArtPieces();
+  const { artPieces, loading, loadingMore, hasMore, loadMore } = useArtPieces(undefined, { featuredOn2rf: true });
 
   return (
     <section>

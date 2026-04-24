@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "title": "Minimal bundle",
+  "entry": "index.html",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.7778
+  }
+}

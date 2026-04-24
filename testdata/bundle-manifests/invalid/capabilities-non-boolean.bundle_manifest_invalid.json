@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "title": "Bad capabilities",
+  "entry": "index.html",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.5
+  },
+  "capabilities": {
+    "scripts": "yes"
+  }
+}

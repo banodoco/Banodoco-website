@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "title": "Fullscreen demo",
+  "entry": "immersive/index.html",
+  "layout": {
+    "mode": "fullscreen",
+    "allowFullscreenToggle": true
+  }
+}

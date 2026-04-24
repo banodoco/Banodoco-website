@@ -6,6 +6,7 @@ import { ADOS } from '@/components/sections/ADOS';
 import { Ecosystem } from '@/components/sections/Ecosystem';
 import { Ownership } from '@/components/sections/Ownership';
 import { MilestonePopup } from '@/components/ui/MilestonePopup';
+import { getHomeScrollContainer } from '@/lib/homeScrollContainer';
 import { usePreloadAssets } from '@/lib/preloadAssets';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -25,7 +26,7 @@ const Home = () => {
     // Scroll to top if explicitly requested
     if (state.scrollToTop) {
       requestAnimationFrame(() => {
-        const homeContainer = document.getElementById('home-scroll-container');
+        const homeContainer = getHomeScrollContainer();
         if (homeContainer) {
           homeContainer.scrollTo({ top: 0, behavior: 'instant' });
         }

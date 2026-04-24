@@ -6,7 +6,7 @@ import { EventContent } from './EventContent';
 import { useEventsAutoAdvance } from './useEventsAutoAdvance';
 import { useSectionVisibility } from '@/lib/useSectionVisibility';
 import { Section, SectionContent } from '@/components/layout/Section';
-import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
+import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/preloadAssets';
 import { ExternalLinkIcon } from '@/components/ui/icons';
 import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
 import { EXTERNAL_LINKS } from '@/lib/externalLinks';

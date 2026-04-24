@@ -7,12 +7,20 @@ import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
 import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
 export const ArcaGidan: React.FC = () => {
+  // Start the artwork hover-preview cycle as soon as the tile grid begins entering the viewport.
   const { ref: sectionRef, isVisible: isActive } = useSectionVisibility({ threshold: 0.3 });
-  
+
+  const tiles = artworks.map((artwork) => ({
+    key: artwork.id,
+    poster: artwork.poster,
+    video: artwork.video,
+    alt: artwork.name,
+  }));
+
   return (
-    <Section 
-      ref={sectionRef} 
-      id="arca-gidan" 
+    <Section
+      ref={sectionRef}
+      id="arca-gidan"
       className="text-white"
       videoOverlay="rgba(32, 26, 12, 0.85)"
     >
@@ -20,7 +28,7 @@ export const ArcaGidan: React.FC = () => {
       <SectionContent fullWidth verticalAlign="stretch" noHeaderOffset>
         <div className="h-full flex">
           {/* Text content on left - wider on mobile for readability, has its own header offset */}
-          <div 
+          <div
             className="w-[50%] sm:w-[45%] md:w-[40%] xl:w-[35%] flex items-center px-4 md:px-12 lg:px-16 shrink-0"
             style={{ paddingTop: 'var(--header-height)' }}
           >
@@ -49,17 +57,17 @@ export const ArcaGidan: React.FC = () => {
             <div className="h-1/2 md:h-full md:flex-1 min-h-0 flex">
               <div className="flex-1 min-w-0 relative overflow-hidden">
                 <VideoPreviewCard
-                  poster={artworks[0].poster}
-                  video={artworks[0].video}
-                  alt={artworks[0].name}
+                  poster={tiles[0].poster}
+                  video={tiles[0].video}
+                  alt={tiles[0].alt}
                   isSectionVisible={isActive}
                 />
               </div>
               <div className="flex-1 min-w-0 relative overflow-hidden">
                 <VideoPreviewCard
-                  poster={artworks[1].poster}
-                  video={artworks[1].video}
-                  alt={artworks[1].name}
+                  poster={tiles[1].poster}
+                  video={tiles[1].video}
+                  alt={tiles[1].alt}
                   isSectionVisible={isActive}
                 />
               </div>
@@ -68,17 +76,17 @@ export const ArcaGidan: React.FC = () => {
             <div className="h-1/2 md:h-full md:flex-1 min-h-0 flex">
               <div className="flex-1 min-w-0 relative overflow-hidden">
                 <VideoPreviewCard
-                  poster={artworks[2].poster}
-                  video={artworks[2].video}
-                  alt={artworks[2].name}
+                  poster={tiles[2].poster}
+                  video={tiles[2].video}
+                  alt={tiles[2].alt}
                   isSectionVisible={isActive}
                 />
               </div>
               <div className="flex-1 min-w-0 relative overflow-hidden">
                 <VideoPreviewCard
-                  poster={artworks[3].poster}
-                  video={artworks[3].video}
-                  alt={artworks[3].name}
+                  poster={tiles[3].poster}
+                  video={tiles[3].video}
+                  alt={tiles[3].alt}
                   isSectionVisible={isActive}
                 />
               </div>

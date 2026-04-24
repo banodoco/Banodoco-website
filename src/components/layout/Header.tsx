@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useLayoutContext } from '@/contexts/layout-context';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { isProfilePathname, profilePath } from '@/lib/routing';
 import {
   NAV_SECTIONS,
@@ -106,8 +106,10 @@ export const Header = () => {
   const isResourceContextSubpage =
     isProfilePathname(pathname)
     || pathname.startsWith('/art/')
+    || pathname.startsWith('/posts/')
+    || pathname.startsWith('/admin/')
     || (pathname.startsWith('/resources/') && pathname !== '/resources');
-  const logoTarget = isResourceContextSubpage ? '/resources' : '/';
+  const logoTarget = isResourceContextSubpage ? '/2RP' : '/';
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
@@ -196,8 +198,8 @@ export const Header = () => {
           ))}
 
           {showResourcesShortcut && (
-            <Link to="/resources" className={resourcesButtonClass}>
-              Resources
+            <Link to="/2RP" className={resourcesButtonClass}>
+              2RP
             </Link>
           )}
 
@@ -259,6 +261,13 @@ export const Header = () => {
                     className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors"
                   >
                     Submit Art
+                  </Link>
+                  <Link
+                    to="/submit/post"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors"
+                  >
+                    Submit Post
                   </Link>
                   <Link
                     to="/submit/resource"

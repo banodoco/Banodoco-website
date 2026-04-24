@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "title": "Inline auto demo",
+  "entry": "index.html",
+  "layout": {
+    "mode": "inline-auto",
+    "minHeight": 320,
+    "maxHeight": 1440
+  }
+}

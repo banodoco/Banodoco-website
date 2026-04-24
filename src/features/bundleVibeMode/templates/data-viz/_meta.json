@@ -1,0 +1,6 @@
+{
+  "id": "data-viz",
+  "label": "Data viz",
+  "description": "Chart-first layout with an inline SVG scaffold and data stub.",
+  "continuationPrompt": "The author picked 'data-viz'. The scaffold includes an inline SVG and a data.json stub that the <script> renders. Keep the data-driven pattern; extend it with the requested chart types."
+}

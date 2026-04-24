@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "title": "Absolute path",
+  "entry": "/index.html",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.5
+  }
+}

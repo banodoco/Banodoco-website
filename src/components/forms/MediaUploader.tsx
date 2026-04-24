@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from 'react';
-import { Upload, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FileArchive, Upload, X } from 'lucide-react';
 
 interface MediaUploaderProps {
   onFilesSelected: (files: File[]) => void;
@@ -19,6 +19,12 @@ function formatFileSize(bytes: number): string {
 function isAcceptedType(file: File, accept: string): boolean {
   const acceptedTypes = accept.split(',').map(t => t.trim());
   return acceptedTypes.some(type => {
+    if (type.startsWith('.')) {
+      const normalizedType = type.toLowerCase();
+      const normalizedName = file.name.toLowerCase();
+      return normalizedName.endsWith(normalizedType)
+        || (normalizedType === '.zip' && file.type === 'application/zip');
+    }
     if (type.endsWith('/*')) {
       const category = type.slice(0, type.indexOf('/'));
       return file.type.startsWith(category + '/');
@@ -171,14 +177,21 @@ export function MediaUploader({
 
 function FilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
   const isVideo = file.type.startsWith('video/');
-  const objectUrl = URL.createObjectURL(file);
+  const isImage = file.type.startsWith('image/');
+  const [objectUrl] = useState(() => (isVideo || isImage ? URL.createObjectURL(file) : null));
+
+  useEffect(() => {
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [objectUrl]);
 
   return (
     <div className="relative group rounded-lg overflow-hidden border border-zinc-800 bg-zinc-900">
       <div className="aspect-square">
         {isVideo ? (
           <video
-            src={objectUrl}
+            src={objectUrl ?? undefined}
             className="w-full h-full object-cover"
             muted
             playsInline
@@ -188,21 +201,32 @@ function FilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
               (e.target as HTMLVideoElement).currentTime = 0.1;
             }}
           />
-        ) : (
+        ) : isImage ? (
           <img
-            src={objectUrl}
+            src={objectUrl ?? undefined}
             alt={file.name}
             className="w-full h-full object-cover"
-            onLoad={() => URL.revokeObjectURL(objectUrl)}
           />
+        ) : (
+          <div className="flex h-full flex-col justify-between bg-zinc-950 p-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-zinc-300">
+              <FileArchive size={24} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-zinc-200 line-clamp-2 break-all">{file.name}</p>
+              <p className="text-xs text-zinc-500">{formatFileSize(file.size)}</p>
+            </div>
+          </div>
         )}
       </div>
 
       {/* File info overlay */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-        <p className="text-xs text-zinc-300 truncate">{file.name}</p>
-        <p className="text-[10px] text-zinc-500">{formatFileSize(file.size)}</p>
-      </div>
+      {(isVideo || isImage) && (
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+          <p className="text-xs text-zinc-300 truncate">{file.name}</p>
+          <p className="text-[10px] text-zinc-500">{formatFileSize(file.size)}</p>
+        </div>
+      )}
 
       {/* Remove button */}
       <button

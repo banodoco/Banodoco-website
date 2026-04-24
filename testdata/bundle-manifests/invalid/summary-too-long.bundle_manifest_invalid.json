@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "title": "Long summary",
+  "summary": "This summary is intentionally pushed beyond the two hundred character limit so the validator has to reject it when fixture parity runs against both copies of the manifest schema implementation in this bundle-mode posts feature set.",
+  "entry": "index.html",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.5
+  }
+}

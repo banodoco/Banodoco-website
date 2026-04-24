@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "title": "Capability demo",
+  "summary": "A bundle with metadata and explicit capabilities.",
+  "entry": "index.html",
+  "layout": {
+    "mode": "inline-auto",
+    "minHeight": 400,
+    "maxHeight": 1200,
+    "allowFullscreenToggle": false
+  },
+  "ogImage": "assets/og.png",
+  "capabilities": {
+    "scripts": true,
+    "pointerLock": false,
+    "popups": false
+  },
+  "authoredAt": "2026-04-21T12:00:00Z"
+}

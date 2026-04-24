@@ -1,0 +1,6 @@
+{
+  "id": "interactive-toy",
+  "label": "Interactive toy",
+  "description": "Canvas-based micro-interaction with mouse input.",
+  "continuationPrompt": "The author picked 'interactive-toy'. It renders a canvas, listens for pointer/mouse input, and animates via requestAnimationFrame. Preserve this loop when extending; keep interactions responsive."
+}

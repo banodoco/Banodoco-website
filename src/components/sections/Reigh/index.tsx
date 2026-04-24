@@ -5,7 +5,7 @@ import { travelExamples } from './data';
 import { Section, SectionContent } from '@/components/layout/Section';
 import { useSectionVisibility } from '@/lib/useSectionVisibility';
 import { useAutoPauseVideo } from '@/lib/useAutoPauseVideo';
-import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/useViewportPreload';
+import { useVideoPreloadOnVisible, useImagePreloadOnVisible } from '@/lib/preloadAssets';
 import { PlayIcon, ExternalLinkIcon } from '@/components/ui/icons';
 import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
 import { EXTERNAL_LINKS } from '@/lib/externalLinks';

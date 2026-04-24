@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
+import { HOME_PATH } from '@/lib/routing';
 
 const STORAGE_KEY = 'banodoco-1m-dismissed';
 
 export const MilestonePopup = () => {
   const location = useLocation();
-  const isHomePage = location.pathname === '/';
+  const isHomePage = location.pathname === HOME_PATH;
 
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(() => {

@@ -14,6 +14,25 @@ import { cn } from '@/lib/utils';
  */
 export const HEADER_OFFSET_VAR = 'var(--header-height)';
 
+/**
+ * Returns header-offset padding; optionally multiply the base header height for half-height layouts.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const headerOffsetPadding = (
+  options?: { multiplier?: number }
+): { paddingTop: string } => {
+  const multiplier = options?.multiplier;
+
+  if (multiplier === undefined || multiplier === 1) {
+    return { paddingTop: HEADER_OFFSET_VAR };
+  }
+
+  return { paddingTop: `calc(${HEADER_OFFSET_VAR} * ${multiplier})` };
+};
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const withHeaderOffsetTop = (offset: string): string => `calc(${offset} + ${HEADER_OFFSET_VAR})`;
+
 // =============================================================================
 // Section Component
 // =============================================================================
@@ -114,7 +133,8 @@ interface SectionContentProps {
  *   <SectionContent verticalAlign="stretch">...</SectionContent>
  * 
  * For complex layouts (e.g., absolute positioning with calc()), use
- * HEADER_OFFSET_VAR directly instead of SectionContent.
+ * `headerOffsetPadding()` or `withHeaderOffsetTop(x)` instead of importing
+ * `HEADER_OFFSET_VAR` into section files.
  */
 export const SectionContent = ({ 
   children, 
@@ -149,4 +169,3 @@ export const SectionContent = ({
     </div>
   );
 };
-

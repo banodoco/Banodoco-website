@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "title": "Protocol path",
+  "entry": "https://example.com/index.html",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.5
+  }
+}

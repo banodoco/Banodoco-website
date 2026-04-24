@@ -7,11 +7,11 @@ interface ResourceGridProps {
   loading: boolean;
 }
 
-const SkeletonCard = ({ featured = false }: { featured?: boolean }) => (
-  <div className={featured ? 'sm:col-span-2' : ''}>
+const SkeletonCard = () => (
+  <div>
     <div className="w-full rounded-lg overflow-hidden bg-white/5 border border-white/10">
-      {/* Thumbnail area — exact same aspect ratios as ResourceCard */}
-      <div className={`relative bg-white/[0.07] ${featured ? 'aspect-[2/1]' : 'aspect-video'}`}>
+      {/* Thumbnail area — exact same aspect ratio as ResourceCard */}
+      <div className="relative bg-white/[0.07] aspect-video">
         <div className="absolute inset-0 animate-pulse bg-white/[0.04]" />
         {/* Badge placeholders */}
         <div className="absolute top-2 left-2 flex gap-1.5">
@@ -21,7 +21,7 @@ const SkeletonCard = ({ featured = false }: { featured?: boolean }) => (
       {/* Info section — mirrors ResourceCard's p-3 layout */}
       <div className="p-3">
         {/* Title */}
-        <div className={`rounded bg-white/10 animate-pulse ${featured ? 'h-5 w-3/4' : 'h-4 w-3/4'}`} />
+        <div className="rounded bg-white/10 animate-pulse h-4 w-3/4" />
         {/* Avatar + creator name (mt-1 matches ResourceCard) */}
         <div className="flex items-center gap-1.5 mt-1">
           <div className="w-4 h-4 rounded-full bg-white/10 animate-pulse shrink-0" />
@@ -41,9 +41,7 @@ export const ResourceGrid = ({ assets, profiles, loading }: ResourceGridProps) =
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-        <SkeletonCard featured />
-        <SkeletonCard featured />
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <SkeletonCard key={i} />
         ))}
       </div>
@@ -59,39 +57,15 @@ export const ResourceGrid = ({ assets, profiles, loading }: ResourceGridProps) =
     );
   }
 
-  // Trim items so the last row on xl (4 cols) is always full.
-  // Featured items span 2 cols, regular items span 1.
-  const xlCols = 4;
-  let slots = 0;
-  const displayAssets: Asset[] = [];
-  for (const asset of assets) {
-    const span = asset.admin_status === 'Featured' ? 2 : 1;
-    displayAssets.push(asset);
-    slots += span;
-  }
-  // Remove items from the end until total slots is divisible by xlCols
-  while (displayAssets.length > 0 && slots % xlCols !== 0) {
-    const removed = displayAssets.pop()!;
-    slots -= removed.admin_status === 'Featured' ? 2 : 1;
-  }
-
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-      {displayAssets.map(asset => {
-        const isFeaturedSize = asset.admin_status === 'Featured';
-        return (
-          <div
-            key={asset.id}
-            className={isFeaturedSize ? 'sm:col-span-2' : ''}
-          >
-            <ResourceCard
-              asset={asset}
-              profile={asset.member_id ? profiles.get(String(asset.member_id)) : null}
-              isFeaturedSize={isFeaturedSize}
-            />
-          </div>
-        );
-      })}
+      {assets.map(asset => (
+        <ResourceCard
+          key={asset.id}
+          asset={asset}
+          profile={asset.member_id ? profiles.get(asset.member_id) : null}
+        />
+      ))}
     </div>
   );
 };

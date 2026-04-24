@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom';
+import { useState, useCallback } from 'react';
 import type { ArtPieceItem } from '@/hooks/useArtPieces';
-import { buildArtPath } from '@/lib/routing';
+import { ArtGalleryModal } from './ArtGalleryModal';
+import { getAnimatedThumbnail } from './getAnimatedThumbnail';
 
 interface ArtGalleryCardProps {
   artPiece: ArtPieceItem;
@@ -8,18 +9,30 @@ interface ArtGalleryCardProps {
 }
 
 export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardProps) => {
-  const { id, thumbnailUrl, hlsUrl, mediaType, creator } = artPiece;
+  const { thumbnailUrl, cloudflareThumbnailUrl, hlsUrl, mediaType, creator } = artPiece;
+
+  const [hovered, setHovered] = useState(false);
+  const [animatedLoaded, setAnimatedLoaded] = useState(false);
+  const [open, setOpen] = useState(false);
+  const handleMouseEnter = useCallback(() => setHovered(true), []);
+  const handleMouseLeave = useCallback(() => {
+    setHovered(false);
+    setAnimatedLoaded(false);
+  }, []);
 
   if (!thumbnailUrl) return null;
 
   const isVideo = mediaType === 'video' || !!hlsUrl;
-
-  const href = buildArtPath(id, artPiece.caption, creator.username);
+  const animatedUrl = isVideo && cloudflareThumbnailUrl ? getAnimatedThumbnail(cloudflareThumbnailUrl) : null;
 
   return (
-    <Link
-      to={href}
-      className="group block w-full rounded-lg overflow-hidden bg-white/5 border border-white/10 transition-all duration-200 hover:scale-[1.02] hover:border-white/20"
+    <>
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="group block w-full text-left rounded-lg overflow-hidden bg-white/5 border border-white/10 transition-all duration-200 hover:scale-[1.02] hover:border-white/20 cursor-pointer"
     >
       {/* Media */}
       <div
@@ -28,9 +41,21 @@ export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardPro
         <img
           src={thumbnailUrl}
           alt={artPiece.caption ?? 'Art piece'}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+            hovered && animatedLoaded ? 'opacity-0' : 'opacity-100'
+          }`}
           loading="lazy"
         />
+        {hovered && animatedUrl && (
+          <img
+            src={animatedUrl}
+            alt=""
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
+              animatedLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+            onLoad={() => setAnimatedLoaded(true)}
+          />
+        )}
 
         {/* Video badge top-left */}
         {isVideo && (
@@ -58,6 +83,8 @@ export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardPro
           </div>
         </div>
       </div>
-    </Link>
+    </button>
+    {open && <ArtGalleryModal artPiece={artPiece} onClose={() => setOpen(false)} />}
+    </>
   );
 };

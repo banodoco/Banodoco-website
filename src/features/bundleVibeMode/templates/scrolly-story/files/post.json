@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "title": "Scrolly story",
+  "entry": "index.html",
+  "source": "vibe",
+  "layout": {
+    "mode": "inline-auto",
+    "minHeight": 640,
+    "maxHeight": 4000
+  }
+}

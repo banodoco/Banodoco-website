@@ -14,7 +14,7 @@ function parseFilters(params: URLSearchParams): ResourceFilters {
     type: (['all', 'lora', 'workflow'].includes(params.get('type') ?? '')
       ? params.get('type') as ResourceFilters['type']
       : 'all'),
-    status: params.get('status') === 'all' ? 'all' : 'featured',
+    status: params.get('status') === 'all' ? 'all' : 'curated',
     mediaType: (['all', 'video', 'image', 'music'].includes(params.get('mediaType') ?? '')
       ? params.get('mediaType') as ResourceFilters['mediaType']
       : 'all'),
@@ -27,7 +27,7 @@ function parseFilters(params: URLSearchParams): ResourceFilters {
 function filtersToParams(filters: ResourceFilters): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.type !== 'all') params.set('type', filters.type);
-  if (filters.status !== 'featured') params.set('status', filters.status);
+  if (filters.status !== 'curated') params.set('status', filters.status);
   if (filters.mediaType !== 'all') params.set('mediaType', filters.mediaType);
   if (filters.baseModel) params.set('baseModel', filters.baseModel);
   if (filters.loraType) params.set('loraType', filters.loraType);
@@ -154,7 +154,7 @@ export function useResourceFilters(assets: Asset[]) {
     const searchLower = filters.search.toLowerCase();
 
     return assets.filter(asset => {
-      if (filters.status === 'featured' && asset.admin_status === 'Listed') return false;
+      if (filters.status === 'curated' && asset.admin_status === 'Listed') return false;
 
       if (filters.type === 'lora' && asset.type !== 'lora') return false;
       if (filters.type === 'workflow' && asset.type !== 'workflow') return false;

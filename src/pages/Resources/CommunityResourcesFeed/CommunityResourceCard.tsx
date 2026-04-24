@@ -24,7 +24,11 @@ export const CommunityResourceCard = ({ resource }: CommunityResourceCardProps) 
   const colorClass = RESOURCE_TYPE_COLORS[resource.resourceType] ?? RESOURCE_TYPE_COLORS.other;
   const creatorName = resource.creator.displayName ?? resource.creator.username ?? 'Unknown';
 
-  const linkTo = buildResourcePath(resource.id, resource.title, resource.creator.username);
+  const linkTo = buildResourcePath(resource.id, {
+    label: resource.title,
+    persistedSlug: resource.slug,
+    username: resource.creator.username,
+  });
 
   return (
     <Link

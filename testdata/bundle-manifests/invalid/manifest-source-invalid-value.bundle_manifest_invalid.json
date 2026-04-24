@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "title": "Invalid source value",
+  "entry": "index.html",
+  "source": "garbage",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.7778
+  }
+}

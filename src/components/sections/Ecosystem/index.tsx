@@ -11,7 +11,7 @@ import {
   generateEventBatch,
   type ActiveEvent,
 } from './eventConfig';
-import { Section, HEADER_OFFSET_VAR } from '@/components/layout/Section';
+import { Section, headerOffsetPadding, withHeaderOffsetTop } from '@/components/layout/Section';
 import { useSectionVisibility } from '@/lib/useSectionVisibility';
 import { NameHighlight, GradientHighlight } from '@/components/ui/TextHighlight';
 
@@ -26,7 +26,7 @@ const TICK_INTERVAL_MS = 1200;
  * 2. Mobile uses a flex column layout with proportional flex-grow values
  * 3. The SVG visualization needs to fill the space between header and timeline
  * 
- * The header offset is applied via HEADER_OFFSET_VAR constant for consistency.
+ * The header offset is applied via shared Section helpers for consistency.
  */
 export const Ecosystem: React.FC = () => {
   const [monthIdx, setMonthIdx] = useState(0);
@@ -38,6 +38,7 @@ export const Ecosystem: React.FC = () => {
   const waveAnimationRef = useRef<number | null>(null);
   const hasAdvancedThisBatch = useRef(false); // Only advance once per batch
   const hasFiredInitialEvent = useRef(false); // Track if we've fired the initial event on section enter
+  // Start the river animation slightly before the section fully settles into the viewport.
   const { ref: sectionRef, isVisible: isSectionVisible } = useSectionVisibility({ threshold: 0.35 });
 
   const stats = calculateStats(monthIdx);
@@ -229,11 +230,11 @@ export const Ecosystem: React.FC = () => {
     >
       {/* 
        * Ecosystem uses absolute positioning with calc() for header offset.
-       * Uses HEADER_OFFSET_VAR constant for consistency with SectionContent.
+       * Uses shared Section helpers to mirror SectionContent's header offset.
        */}
       {/* Mobile/tablet layout - flexbox with proportional sizing */}
       {/* Hidden on xl+ OR on md+ landscape screens (where desktop viz is used) */}
-      <div className="absolute inset-0 flex flex-col xl:hidden md:landscape:hidden px-4" style={{ paddingTop: HEADER_OFFSET_VAR }}>
+      <div className="absolute inset-0 flex flex-col xl:hidden md:landscape:hidden px-4" style={headerOffsetPadding()}>
         {/* Top spacer */}
         <div className="flex-[0.5]" />
         
@@ -282,7 +283,7 @@ export const Ecosystem: React.FC = () => {
       {/* Shown on xl+ OR on md+ landscape screens */}
       <div className="hidden xl:block md:landscape:block">
         {/* Header - positioned below the fixed nav header on desktop */}
-        <div className="absolute left-4 right-4 z-20 flex justify-center" style={{ top: `calc(8% + ${HEADER_OFFSET_VAR})` }}>
+        <div className="absolute left-4 right-4 z-20 flex justify-center" style={{ top: withHeaderOffsetTop('8%') }}>
           <div className="w-full max-w-4xl bg-white/[0.06] backdrop-blur-md rounded-xl px-6 py-4 border border-white/15 text-center">
             {/* Fluid font size for desktop/landscape: scales smoothly */}
             <h2 
@@ -298,7 +299,7 @@ export const Ecosystem: React.FC = () => {
         </div>
 
         {/* Desktop River visualization - centered between header and timeline */}
-        <div className="absolute inset-x-0 bottom-[calc(18%-2rem)] flex items-center justify-center pointer-events-none" style={{ top: `calc(18% + ${HEADER_OFFSET_VAR})` }}>
+        <div className="absolute inset-x-0 bottom-[calc(18%-2rem)] flex items-center justify-center pointer-events-none" style={{ top: withHeaderOffsetTop('18%') }}>
           <div className="w-full max-w-7xl px-4">
             <RiverVisualization 
               progress={progress} 

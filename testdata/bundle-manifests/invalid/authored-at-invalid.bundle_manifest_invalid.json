@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "title": "Bad authoredAt",
+  "entry": "index.html",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.5
+  },
+  "authoredAt": "2026-04-21"
+}

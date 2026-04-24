@@ -1,0 +1,6 @@
+{
+  "id": "article-with-embeds",
+  "label": "Article with embeds",
+  "description": "Text-forward layout with space for YouTube/Vimeo iframes and caption grids.",
+  "continuationPrompt": "The author picked 'article-with-embeds'. The layout reserves an embed slot and a captioned image grid. Keep the responsive layout; when the author references media, put it in the dedicated slots."
+}

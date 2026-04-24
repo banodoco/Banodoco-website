@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Article with embeds</title>
+    <style>
+      body { margin: 0; font-family: system-ui, sans-serif; background: #fafafa; color: #111; }
+      article { max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem; line-height: 1.6; }
+      .embed { aspect-ratio: 16 / 9; background: #000; margin: 2rem 0; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
+      .grid figure { margin: 0; }
+      .grid img { width: 100%; border-radius: 8px; }
+      figcaption { font-size: .85rem; color: #666; }
+    </style>
+  </head>
+  <body>
+    <article>
+      <h1>Article title</h1>
+      <p>Lead paragraph.</p>
+      <div class="embed" id="embed">(embed slot)</div>
+      <h2>Section</h2>
+      <p>Body text.</p>
+      <div class="grid">
+        <figure><img src="" alt=""><figcaption>Caption</figcaption></figure>
+      </div>
+    </article>
+    <script>
+      const postSize = () => {
+        const h = Math.ceil(document.documentElement.scrollHeight);
+        window.parent.postMessage({ type: 'banodoco:resize', v: 1, height: h }, '*');
+      };
+      window.addEventListener('load', postSize);
+      new ResizeObserver(postSize).observe(document.documentElement);
+    </script>
+  </body>
+</html>

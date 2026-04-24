@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "title": "Article with embeds",
+  "entry": "index.html",
+  "source": "vibe",
+  "layout": {
+    "mode": "inline-auto",
+    "minHeight": 480,
+    "maxHeight": 4000
+  }
+}

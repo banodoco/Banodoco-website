@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 2,
+  "title": "Wrong version",
+  "entry": "index.html",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.5
+  }
+}

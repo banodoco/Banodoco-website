@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "title": "Traversal path",
+  "entry": "../index.html",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.5
+  }
+}

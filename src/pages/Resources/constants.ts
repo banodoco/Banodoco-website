@@ -1,7 +1,6 @@
 export const STATUS_ORDER: Record<string, number> = {
-  Featured: 0,
-  Curated: 1,
-  Listed: 2,
+  Curated: 0,
+  Listed: 1,
 };
 
 export const TYPE_OPTIONS = [

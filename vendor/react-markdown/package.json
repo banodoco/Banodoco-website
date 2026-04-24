@@ -1,0 +1,10 @@
+{
+  "name": "react-markdown",
+  "version": "10.1.0",
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

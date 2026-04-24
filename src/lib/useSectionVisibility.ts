@@ -33,10 +33,17 @@ interface UseSectionVisibilityResult {
 /**
  * Hook to track whether a section is currently visible in the viewport.
  * Use this to pause/resume videos and animations when scrolling away.
- * 
+ *
+ * Threshold convention:
+ * The default threshold is `0.5` because it maps to "this section owns more than half
+ * of the viewport", which is a robust trigger across mobile and desktop snap containers.
+ * Override it only when decoder contention requires lower enter/exit thresholds for stacked
+ * video sections (see Reigh/ADOS), or when an animation needs to begin before the section
+ * has fully settled into place.
+ *
  * @example
  * const { ref, isVisible } = useSectionVisibility();
- * 
+ *
  * useEffect(() => {
  *   if (isVisible) {
  *     videoRef.current?.play();
@@ -108,4 +115,3 @@ export const useSectionVisibility = (
 
   return { ref, isVisible, hasBeenVisible };
 };
-

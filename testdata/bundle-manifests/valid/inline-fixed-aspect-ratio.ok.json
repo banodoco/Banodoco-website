@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "title": "Inline fixed demo",
+  "summary": "A fixed-ratio interactive demo.",
+  "entry": "bundle/index.html",
+  "layout": {
+    "mode": "inline-fixed",
+    "aspectRatio": 1.3333,
+    "allowFullscreenToggle": false
+  }
+}

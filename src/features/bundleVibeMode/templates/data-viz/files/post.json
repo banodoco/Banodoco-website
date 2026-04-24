@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "title": "Data viz",
+  "entry": "index.html",
+  "source": "vibe",
+  "layout": {
+    "mode": "inline-auto",
+    "minHeight": 420,
+    "maxHeight": 1600
+  }
+}
