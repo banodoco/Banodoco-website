@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getHomeScrollContainer } from '@/lib/homeScrollContainer';
 import type { HomeSectionId } from './scrollVideoConfig';
 import {
   BG_SCALE,
@@ -69,10 +68,6 @@ export const CrossfadeScrollVideo = () => {
   }, []);
 
   // === HELPERS ===
-  const getScrollContainer = useCallback(() => {
-    return getHomeScrollContainer();
-  }, []);
-
   const markReady = useCallback((sectionId: HomeSectionId) => {
     setReadyBySection(prev => (prev[sectionId] ? prev : { ...prev, [sectionId]: true }));
   }, []);
@@ -115,14 +110,13 @@ export const CrossfadeScrollVideo = () => {
   }, [sectionsToRender]);
 
   const getCurrentSectionFromScroll = useCallback(() => {
-    const scrollContainer = getScrollContainer();
-    if (!scrollContainer) return SECTION_IDS[0];
+    if (typeof window === 'undefined') return SECTION_IDS[0];
 
-    const scrollTop = scrollContainer.scrollTop;
-    const viewportHeight = scrollContainer.clientHeight;
+    const scrollTop = window.scrollY;
+    const viewportHeight = window.innerHeight;
     const scrollCenter = scrollTop + viewportHeight / 2;
 
-    const sections = scrollContainer.querySelectorAll('section');
+    const sections = document.querySelectorAll('section');
     let currentId = SECTION_IDS[0];
 
     sections.forEach(section => {
@@ -138,7 +132,7 @@ export const CrossfadeScrollVideo = () => {
     });
 
     return currentId;
-  }, [getScrollContainer]);
+  }, []);
 
   // === PLAY VIDEO WITH RETRY ===
   // Handles the case where video ref might not be ready yet after a re-render
@@ -292,9 +286,6 @@ export const CrossfadeScrollVideo = () => {
 
   // === SCROLL LISTENER ===
   useEffect(() => {
-    const scrollContainer = getScrollContainer();
-    if (!scrollContainer) return;
-
     let rafId: number | null = null;
 
     const handleScroll = () => {
@@ -320,7 +311,9 @@ export const CrossfadeScrollVideo = () => {
       });
     };
 
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    // Document/body scroll fires on `window` — listen there now that the home
+    // page scrolls the body instead of an internal div.
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     // Initial section detection and video play
     handleScroll();
@@ -330,7 +323,7 @@ export const CrossfadeScrollVideo = () => {
     }, INITIAL_PLAY_DELAY_MS);
 
     return () => {
-      scrollContainer.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
       if (rafId) cancelAnimationFrame(rafId);
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
       if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current);
@@ -339,7 +332,7 @@ export const CrossfadeScrollVideo = () => {
       if (sectionChangeDebounceRef.current) clearTimeout(sectionChangeDebounceRef.current);
       clearTimeout(initialPlayTimeout);
     };
-  }, [getScrollContainer, getCurrentSectionFromScroll, handleSectionChange, playVideoWithRetry, updatePlaybackRates]);
+  }, [getCurrentSectionFromScroll, handleSectionChange, playVideoWithRetry, updatePlaybackRates]);
 
   // === RENDER ===
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -6,18 +6,17 @@ import { ScrollVideoBackground } from '@/components/layout/ScrollVideoBackground
 import { FullscreenProvider } from '@/contexts/FullscreenContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { useFullscreenContext } from '@/contexts/fullscreen-context';
-import { isIOS } from '@/lib/device';
-import { HOME_SCROLL_CONTAINER_ID, getHomeScrollContainer } from '@/lib/homeScrollContainer';
 import { isProfilePathname, normalizeLegacyHashUsernamePath } from '@/lib/routing';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
-// Use stable viewport height for the snap container to avoid mobile dvh relayout flicker.
-// Background is transparent to allow the scroll-driven video to show through section masks.
-// relative is needed for absolute positioned header on mobile
-const HOME_SCROLL_CLASSES = 'relative h-screen h-[100svh] overflow-y-auto snap-y snap-mandatory overscroll-none bg-transparent text-foreground';
+// Snap classes applied to the document root (<html>) while on the home route.
+// We use `snap-y snap-mandatory` so sections snap as before, plus `overscroll-none`
+// to keep iOS rubber-banding in check. The classes are applied/cleaned up by the
+// effect below — keep them in sync if you change the markup.
+const HOME_HTML_SNAP_CLASSES = ['snap-y', 'snap-mandatory', 'overscroll-none'] as const;
 
 const MainLayoutContent = ({ children }: MainLayoutProps) => {
   const location = useLocation();
@@ -35,7 +34,6 @@ const MainLayoutContent = ({ children }: MainLayoutProps) => {
     || pathname.startsWith('/art/')
     || pathname.startsWith('/posts/')
     || pathname.startsWith('/admin/');
-  const [isIOSDevice] = useState(() => isIOS());
   // Tracks the pathname/hash from the previous run of the scroll effect so we
   // can distinguish actual route changes from same-route updates (e.g. a page
   // updating `location.search` via `setSearchParams` for its own filter state).
@@ -68,8 +66,7 @@ const MainLayoutContent = ({ children }: MainLayoutProps) => {
     if (pathname === '/') {
       if (state.scrollTo || state.scrollToTop || location.hash) return;
       requestAnimationFrame(() => {
-        const homeContainer = getHomeScrollContainer();
-        homeContainer?.scrollTo({ top: 0, behavior: 'auto' });
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
       });
       return;
     }
@@ -79,25 +76,27 @@ const MainLayoutContent = ({ children }: MainLayoutProps) => {
     });
   }, [pathname, location.hash, location.key, location.search, location.state, navigate]);
 
+  // Apply scroll-snap to the document root only while on the home route, so the
+  // snap container is the body itself and the footer naturally lives below the
+  // last snap section. Cleanup removes the classes when navigating away.
+  useEffect(() => {
+    if (!isHome) return;
+    const html = document.documentElement;
+    html.classList.add(...HOME_HTML_SNAP_CLASSES);
+    return () => {
+      html.classList.remove(...HOME_HTML_SNAP_CLASSES);
+    };
+  }, [isHome]);
+
   if (isHome) {
     return (
       <LayoutProvider theme={theme} isHomePage={isHome}>
         {/* Fixed scroll-driven video background - visible through section masks */}
         <ScrollVideoBackground />
-        <div 
-          id={HOME_SCROLL_CONTAINER_ID}
-          className={HOME_SCROLL_CLASSES}
-          style={{
-            // iOS momentum scrolling + scroll-snap can produce intermittent white "checkerboarding".
-            // Prefer default scrolling here for stability.
-            ...(isIOSDevice ? { WebkitOverflowScrolling: 'auto' as const } : {}),
-          }}
-        >
-          {/* Fixed header on desktop overlays the content */}
-          <Header />
-          {children}
-          <Footer />
-        </div>
+        {/* Fixed header on desktop overlays the content */}
+        <Header />
+        {children}
+        <Footer />
       </LayoutProvider>
     );
   }

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { HERO_POSTER_SRC } from '@/components/sections/Hero/config';
-import { getHomeScrollContainer } from '@/lib/homeScrollContainer';
 import type { HomeSectionId } from './scrollVideoConfig';
 import {
   BG_SCALE,
@@ -66,23 +65,17 @@ export const DesktopScrollVideo = () => {
   const videoReady = video1Ready && video2Ready && video3Ready && initialSeekComplete;
 
   // === PURE FUNCTIONS ===
-  const getScrollContainer = useCallback(
-    () => getHomeScrollContainer(),
-    []
-  );
-
   /** Build/refresh the section position cache */
   const refreshSectionCache = useCallback(() => {
-    const container = getScrollContainer();
-    if (!container) return;
+    if (typeof document === 'undefined') return;
 
     sectionCacheRef.current = SECTION_IDS
       .map(id => {
-        const el = container.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+        const el = document.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
         return el ? { id, top: el.offsetTop, height: el.offsetHeight } : null;
       })
       .filter(Boolean) as Array<{ id: HomeSectionId; top: number; height: number }>;
-  }, [getScrollContainer]);
+  }, []);
 
   /**
    * Calculate which section we're in and progress within it.
@@ -169,21 +162,16 @@ export const DesktopScrollVideo = () => {
         return;
       }
 
-      const container = getScrollContainer();
-      if (!container) {
-        animationRef.current = requestAnimationFrame(loop);
-        return;
-      }
-
       // === 1. READ SCROLL POSITION ===
-      const scrollTop = container.scrollTop;
+      // Document/body scroll: window.scrollY is the cross-browser canonical read.
+      const scrollTop = window.scrollY;
 
       // Cap at last section (don't progress into footer) - use cached sections
       let cappedScrollTop = scrollTop;
       const sections = sectionCacheRef.current;
       if (sections.length > 0) {
         const lastSection = sections[sections.length - 1];
-        const maxScroll = lastSection.top + lastSection.height - container.clientHeight;
+        const maxScroll = lastSection.top + lastSection.height - window.innerHeight;
         cappedScrollTop = Math.min(scrollTop, maxScroll);
       }
 
@@ -307,7 +295,7 @@ export const DesktopScrollVideo = () => {
     };
 
     animationRef.current = requestAnimationFrame(loop);
-  }, [getScrollContainer, getSectionInfo, scrollToVideoTime]);
+  }, [getSectionInfo, scrollToVideoTime]);
 
   // === LIFECYCLE ===
   useEffect(() => {
@@ -333,9 +321,8 @@ export const DesktopScrollVideo = () => {
       refreshSectionCache();
 
       // Calculate initial scroll position BEFORE starting loop
-      const container = getScrollContainer();
-      if (container) {
-        const scrollTop = container.scrollTop;
+      if (typeof window !== 'undefined') {
+        const scrollTop = window.scrollY;
         const initialTime = scrollToVideoTime(scrollTop);
         scrollTimeRef.current = initialTime;
         currentTimeRef.current = initialTime;
@@ -448,7 +435,7 @@ export const DesktopScrollVideo = () => {
       window.removeEventListener('resize', handleResize);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [getScrollContainer, startAnimationLoop, refreshSectionCache, scrollToVideoTime]);
+  }, [startAnimationLoop, refreshSectionCache, scrollToVideoTime]);
 
   // === RENDER ===
   return (

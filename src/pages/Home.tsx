@@ -6,7 +6,6 @@ import { ADOS } from '@/components/sections/ADOS';
 import { Ecosystem } from '@/components/sections/Ecosystem';
 import { Ownership } from '@/components/sections/Ownership';
 import { MilestonePopup } from '@/components/ui/MilestonePopup';
-import { getHomeScrollContainer } from '@/lib/homeScrollContainer';
 import { usePreloadAssets } from '@/lib/preloadAssets';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -22,21 +21,18 @@ const Home = () => {
     const scrollTargetFromState = state.scrollTo;
     const scrollTargetFromHash = location.hash?.replace('#', '') || undefined;
     const targetId = scrollTargetFromState || scrollTargetFromHash;
-    
+
     // Scroll to top if explicitly requested
     if (state.scrollToTop) {
       requestAnimationFrame(() => {
-        const homeContainer = getHomeScrollContainer();
-        if (homeContainer) {
-          homeContainer.scrollTo({ top: 0, behavior: 'instant' });
-        }
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
       });
       return;
     }
-    
+
     if (!targetId) return;
 
-    // Defer to ensure sections are mounted before scrolling (important for snap container).
+    // Defer to ensure sections are mounted before scrolling.
     requestAnimationFrame(() => {
       document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth' });
     });

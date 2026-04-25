@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, type ReactNode } from 'react';
-import { getHomeScrollContainer } from '@/lib/homeScrollContainer';
 import { ALL_SECTION_IDS } from '@/lib/sections';
 import { LayoutContext, type LayoutTheme } from './layout-context';
 
@@ -23,19 +22,17 @@ function useSectionObserver(isHomePage: boolean): string | null {
     }
 
     let rafId: number | null = null;
+    let cleanup: (() => void) | null = null;
     const idsToCheck = [...ALL_SECTION_IDS, 'footer'];
 
-    // Wait a tick for scroll container and sections to be in DOM
+    // Wait a tick for sections to be in DOM
     const timeoutId = setTimeout(() => {
-      const scrollContainer = getHomeScrollContainer();
-      if (!scrollContainer) return;
-
       const computeActiveSection = () => {
-        // Use the scroll container's visible center to select the active section.
+        // Use the viewport's visible center to select the active section.
         // This is more reliable than IntersectionObserver around snap boundaries
         // (where two sections can be intersecting briefly).
-        const scrollTop = scrollContainer.scrollTop;
-        const viewportHeight = scrollContainer.clientHeight;
+        const scrollTop = window.scrollY;
+        const viewportHeight = window.innerHeight;
         const scrollCenter = scrollTop + viewportHeight / 2;
 
         let active: string | null = null;
@@ -63,12 +60,13 @@ function useSectionObserver(isHomePage: boolean): string | null {
       // Initial compute (covers initial load + deep links).
       computeActiveSection();
 
-      scrollContainer.addEventListener('scroll', onScroll, { passive: true });
+      // Document-level scroll fires on `window` — listen there now that the
+      // home page scrolls the body instead of an internal div.
+      window.addEventListener('scroll', onScroll, { passive: true });
       window.addEventListener('resize', computeActiveSection);
 
-      // Cleanup
-      return () => {
-        scrollContainer.removeEventListener('scroll', onScroll);
+      cleanup = () => {
+        window.removeEventListener('scroll', onScroll);
         window.removeEventListener('resize', computeActiveSection);
         if (rafId !== null) {
           cancelAnimationFrame(rafId);
@@ -79,6 +77,7 @@ function useSectionObserver(isHomePage: boolean): string | null {
 
     return () => {
       clearTimeout(timeoutId);
+      cleanup?.();
     };
   }, [isHomePage]);
 
