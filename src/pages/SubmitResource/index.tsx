@@ -32,6 +32,7 @@ interface SubmitResourceFormProps {
   submitTitle?: string;
   onValidityChange?: (valid: boolean) => void;
   onSubmit?: (data: SubmitResourceFormData) => Promise<void>;
+  onDirtyChange?: (dirty: boolean) => void;
   onSaved?: (result: { id: string; slug: string | null; status: 'draft' | 'published' }) => void;
 }
 
@@ -90,6 +91,28 @@ function normalizeGalleryItem(item: {
   };
 }
 
+function buildResourceSnapshot(input: {
+  name: string;
+  description: string;
+  resourceType: string;
+  links: ResourceLinkInput[];
+  primaryMediaId: string | null;
+  selfAttributed: boolean;
+  galleryItems: GalleryEditorItem[];
+  modelItems: AssetModelInput[];
+}): string {
+  return JSON.stringify({
+    name: input.name,
+    description: input.description,
+    resourceType: input.resourceType,
+    links: input.links,
+    primaryMediaId: input.primaryMediaId,
+    selfAttributed: input.selfAttributed,
+    galleryItems: input.galleryItems,
+    modelItems: input.modelItems,
+  });
+}
+
 export function SubmitResourceForm({
   editSlug,
   inline = false,
@@ -99,6 +122,7 @@ export function SubmitResourceForm({
   submitTitle,
   onValidityChange,
   onSubmit,
+  onDirtyChange,
   onSaved,
 }: SubmitResourceFormProps) {
   const navigate = useNavigate();
@@ -128,6 +152,8 @@ export function SubmitResourceForm({
   const [savingStatus, setSavingStatus] = useState<'draft' | 'published' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const initializedResourceIdRef = useRef<string | null>(null);
+  const savedSnapshotRef = useRef<string | null>(null);
+  const dirtyStateRef = useRef(false);
 
   const canEdit = Boolean(
     existingResource
@@ -157,19 +183,32 @@ export function SubmitResourceForm({
     setResourceMode(normalizedLinks.some((link) => link.source === 'upload') ? 'upload' : 'link');
     const normalizedGallery = galleryMedia.map((item) => normalizeGalleryItem(item));
     setGalleryItems(normalizedGallery);
-    setPrimaryMediaId(
+    const normalizedPrimaryMediaId = (
       existingResource.primaryMediaId
         ?? normalizedGallery[0]?.mediaId
-        ?? null,
+        ?? null
     );
-    setModelItems(
-      assetModels.map((item) => ({
-        modelId: item.modelId,
-        compatibilityNote: item.compatibilityNote,
-      })),
-    );
+    setPrimaryMediaId(normalizedPrimaryMediaId);
+    const normalizedModelItems = assetModels.map((item) => ({
+      modelId: item.modelId,
+      compatibilityNote: item.compatibilityNote,
+    }));
+    setModelItems(normalizedModelItems);
     setSelfAttributed(existingResource.selfAttributed);
-  }, [assetModels, existingResource, galleryMedia]);
+
+    savedSnapshotRef.current = buildResourceSnapshot({
+      name: existingResource.title,
+      description: existingResource.description ?? '',
+      resourceType: existingResource.resourceType,
+      links: normalizedLinks,
+      primaryMediaId: normalizedPrimaryMediaId,
+      selfAttributed: existingResource.selfAttributed,
+      galleryItems: normalizedGallery,
+      modelItems: normalizedModelItems,
+    });
+    dirtyStateRef.current = false;
+    onDirtyChange?.(false);
+  }, [assetModels, existingResource, galleryMedia, onDirtyChange]);
 
   useEffect(() => {
     if (galleryItems.length === 0) {
@@ -186,9 +225,38 @@ export function SubmitResourceForm({
   const effectiveSubmitDisabled = formInvalid || submitDisabled;
   const isApprovalRequestMode = mode === 'approval-request';
 
+  const currentSnapshot = useMemo(
+    () => buildResourceSnapshot({
+      name,
+      description,
+      resourceType,
+      links,
+      primaryMediaId,
+      selfAttributed,
+      galleryItems,
+      modelItems,
+    }),
+    [description, galleryItems, links, modelItems, name, primaryMediaId, resourceType, selfAttributed],
+  );
+
   useEffect(() => {
     onValidityChange?.(!formInvalid);
   }, [formInvalid, onValidityChange]);
+
+  useEffect(() => {
+    if (savedSnapshotRef.current === null) {
+      savedSnapshotRef.current = currentSnapshot;
+      dirtyStateRef.current = false;
+      onDirtyChange?.(false);
+      return;
+    }
+
+    const isDirty = savedSnapshotRef.current !== currentSnapshot;
+    if (dirtyStateRef.current !== isDirty) {
+      dirtyStateRef.current = isDirty;
+      onDirtyChange?.(isDirty);
+    }
+  }, [currentSnapshot, onDirtyChange]);
 
   const trimmedLinks = useMemo(
     () => links.map((link) => ({
@@ -302,6 +370,9 @@ export function SubmitResourceForm({
           throw new Error('Approval request submit handler is not configured.');
         }
         await onSubmit(payload);
+        savedSnapshotRef.current = currentSnapshot;
+        dirtyStateRef.current = false;
+        onDirtyChange?.(false);
         return;
       }
 
@@ -320,6 +391,9 @@ export function SubmitResourceForm({
       });
 
       onSaved?.({ ...result, status });
+      savedSnapshotRef.current = currentSnapshot;
+      dirtyStateRef.current = false;
+      onDirtyChange?.(false);
 
       navigate(buildResourcePath(result.id, {
         label: name.trim(),

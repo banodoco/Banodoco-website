@@ -3,6 +3,7 @@ import { Community } from '@/components/sections/Community';
 import { Reigh } from '@/components/sections/Reigh';
 import { ArcaGidan } from '@/components/sections/ArcaGidan';
 import { ADOS } from '@/components/sections/ADOS';
+import { CommunityProjects } from '@/components/sections/CommunityProjects';
 import { Ecosystem } from '@/components/sections/Ecosystem';
 import { Ownership } from '@/components/sections/Ownership';
 import { MilestonePopup } from '@/components/ui/MilestonePopup';
@@ -45,6 +46,7 @@ const Home = () => {
       <Reigh />
       <ArcaGidan />
       <ADOS />
+      <CommunityProjects />
       <Ecosystem />
       <Ownership />
       <MilestonePopup />

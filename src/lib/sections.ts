@@ -10,6 +10,7 @@ export const SECTION_IDS = {
   reigh: 'reigh',
   arcaGidan: 'arca-gidan',
   ados: 'ados',
+  communityProjects: 'community-projects',
   ecosystem: 'ecosystem',
   ownership: 'ownership',
 } as const;
@@ -69,8 +70,8 @@ export const SECTION_SCRIM_COLORS: Record<SectionId | 'footer', string> = {
   [SECTION_IDS.reigh]: 'bg-[#0c1a14]/90',
   [SECTION_IDS.arcaGidan]: 'bg-[#201a0c]/90',
   [SECTION_IDS.ados]: 'bg-[#2a0a0f]/90',
+  [SECTION_IDS.communityProjects]: 'bg-[#0c1418]/90',
   [SECTION_IDS.ecosystem]: 'bg-[#0a1218]/90',
   [SECTION_IDS.ownership]: 'bg-[#1a1614]/90',
   footer: 'bg-[#1a1614]/90', // Footer uses same as ownership
 };
-

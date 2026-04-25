@@ -8,9 +8,10 @@ import { ProfileLinksEditor } from '@/components/profile/ProfileLinksEditor';
 import { MediaUploader } from '@/components/forms/MediaUploader';
 import { useAuth } from '@/contexts/useAuth';
 import { createArtMedia, deleteUserUpload } from '@/lib/media';
+import { saveResource } from '@/lib/resources';
 import { HOME_PATH, profilePath } from '@/lib/routing';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
-import { SubmitResourceForm } from '@/pages/SubmitResource';
+import { SubmitResourceForm, type SubmitResourceFormData } from '@/pages/SubmitResource';
 import type { PendingApprovalRow } from '@/hooks/usePendingApproval';
 import {
   loadPendingApplication,
@@ -78,6 +79,77 @@ async function insertApprovalRequest(input: {
   return data as { id: string };
 }
 
+async function updateApprovalRequest(input: {
+  id: string;
+  bioSnapshot: string;
+  attachedMediaId: string | null;
+  attachedResourceId: string | null;
+}) {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Approval service is not configured.');
+  }
+
+  const { error } = await supabase
+    .from('approval_requests')
+    .update({
+      bio_snapshot: input.bioSnapshot,
+      attached_media_id: input.attachedMediaId,
+      attached_resource_id: input.attachedResourceId,
+    })
+    .eq('id', input.id)
+    .eq('status', 'pending');
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+async function updateExistingArtMedia(input: {
+  id: string;
+  memberId: string;
+  title: string;
+  description: string;
+  selfAttributed: boolean;
+}) {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Approval service is not configured.');
+  }
+
+  const { error } = await supabase
+    .from('media')
+    .update({
+      title: input.title.trim() || 'Untitled',
+      description: input.description.trim() || null,
+      self_attributed: input.selfAttributed,
+    })
+    .eq('id', input.id)
+    .eq('member_id', input.memberId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+async function deleteHiddenArtMedia(input: {
+  id: string;
+  memberId: string;
+}) {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Approval service is not configured.');
+  }
+
+  const { error } = await supabase
+    .from('media')
+    .delete()
+    .eq('id', input.id)
+    .eq('member_id', input.memberId)
+    .eq('admin_status', 'Hidden');
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 interface StepDotProps {
   number: number;
   label: string;
@@ -115,9 +187,10 @@ interface ArtworkSlotProps {
   onMarkPrimary: () => void;
   canRemove: boolean;
   index: number;
+  memberId: string;
 }
 
-function ArtworkSlot({ draft, expanded, onExpand, onChange, onRemove, onMarkPrimary, canRemove, index }: ArtworkSlotProps) {
+function ArtworkSlot({ draft, expanded, onExpand, onChange, onRemove, onMarkPrimary, canRemove, index, memberId }: ArtworkSlotProps) {
   const handleFilesSelected = useCallback(
     (files: File[]) => {
       if (files.length === 0) return;
@@ -138,6 +211,32 @@ function ArtworkSlot({ draft, expanded, onExpand, onChange, onRemove, onMarkPrim
     onChange({ file: null, thumbnailUrl: null, editStatus: 'new' });
   }, [draft.existingMediaId, draft.file, draft.thumbnailUrl, onChange]);
 
+  const handleResourceSubmit = useCallback(
+    async (payload: SubmitResourceFormData) => {
+      const result = await saveResource({
+        id: draft.savedResourceId ?? undefined,
+        memberId,
+        name: payload.name,
+        description: payload.description,
+        type: payload.type,
+        links: payload.links,
+        primaryMediaId: payload.primaryMediaId,
+        status: 'draft',
+        selfAttributed: payload.selfAttributed,
+        galleryItems: payload.galleryItems,
+        modelItems: payload.modelItems,
+      });
+
+      onChange({
+        savedResourceId: result.id,
+        savedResourceName: null,
+        editStatus: draft.editStatus === 'new' ? 'new' : 'edited',
+        resourceDirty: false,
+      });
+    },
+    [draft.editStatus, draft.savedResourceId, memberId, onChange],
+  );
+
   if (!expanded) {
     const isResource = draft.creationType === 'resource';
     const fallbackTitle = `${isResource ? 'Resource' : 'Art'} ${index + 1}`;
@@ -145,7 +244,7 @@ function ArtworkSlot({ draft, expanded, onExpand, onChange, onRemove, onMarkPrim
       ? (draft.savedResourceName ?? fallbackTitle)
       : (draft.title.trim() || fallbackTitle);
     const collapsedSubtitle = isResource
-      ? (draft.savedResourceId ? 'Saved as draft' : 'Not yet saved')
+      ? (draft.resourceDirty ? 'Unsaved changes' : draft.savedResourceId ? 'Saved as draft' : 'Not yet saved')
       : (draft.file ? draft.file.name : draft.existingMediaId ? 'Existing upload' : 'No file selected');
     return (
       <button
@@ -212,18 +311,20 @@ function ArtworkSlot({ draft, expanded, onExpand, onChange, onRemove, onMarkPrim
       </div>
 
       {isResource ? (
-        <SubmitResourceForm
-          inline
-          mode="approval-request"
-          submitLabel={draft.savedResourceId ? 'Update resource draft' : 'Save resource draft'}
-          onSaved={(result) => {
-            onChange({
-              savedResourceId: result.id,
-              savedResourceName: null, // SubmitResourceForm doesn't echo the name back; collapsed view uses fallback
-              editStatus: draft.editStatus === 'new' ? 'new' : 'edited',
-            });
-          }}
-        />
+        <>
+          {draft.resourceDirty && (
+            <div className="rounded border border-amber-300/25 bg-amber-300/[0.08] px-3 py-2 text-xs text-amber-100">
+              Unsaved changes
+            </div>
+          )}
+          <SubmitResourceForm
+            inline
+            mode="approval-request"
+            submitLabel={draft.savedResourceId ? 'Update resource draft' : 'Save resource draft'}
+            onSubmit={handleResourceSubmit}
+            onDirtyChange={(dirty) => onChange({ resourceDirty: dirty })}
+          />
+        </>
       ) : !hasArtMedia ? (
         <MediaUploader
           files={[]}
@@ -252,7 +353,7 @@ function ArtworkSlot({ draft, expanded, onExpand, onChange, onRemove, onMarkPrim
             )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-zinc-100">
-                {draft.file?.name ?? draft.title.trim() || 'Existing artwork'}
+                {draft.file?.name ?? (draft.title.trim() || 'Existing artwork')}
               </p>
               <p className="text-xs text-zinc-500">
                 {draft.file ? `${(draft.file.size / 1024 / 1024).toFixed(2)} MB` : 'Saved upload'}
@@ -312,6 +413,7 @@ interface Step1Props {
   onRemove: (id: string) => void;
   onMarkPrimary: (id: string) => void;
   onAddAnother: () => void;
+  memberId: string;
 }
 
 function Step1({
@@ -323,6 +425,7 @@ function Step1({
   onRemove,
   onMarkPrimary,
   onAddAnother,
+  memberId,
 }: Step1Props) {
   const visibleDrafts = drafts.filter((draft) => draft.editStatus !== 'removed');
 
@@ -362,6 +465,7 @@ function Step1({
               onRemove={() => onRemove(draft.id)}
               onMarkPrimary={() => onMarkPrimary(draft.id)}
               canRemove={visibleDrafts.length > 1}
+              memberId={memberId}
             />
           ))}
 
@@ -451,7 +555,7 @@ function Step2({ displayName, handle, avatarUrl, bio, onBioChange, profileLinks,
   );
 }
 
-function Step3() {
+function Step3({ onEdit }: { onEdit: () => void }) {
   return (
     <section className="flex flex-col items-center gap-6 py-8 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-400/10 text-emerald-200">
@@ -473,7 +577,17 @@ function Step3() {
           {' '}
           channel of the Banodoco Discord — we'll tag you there for community review.
         </p>
+        <p className="mx-auto max-w-md text-sm leading-relaxed text-zinc-500">
+          You can keep editing your bio, artworks, or resources at any time — approvers see the latest version.
+        </p>
       </div>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-200 transition hover:border-white/25 hover:bg-white/[0.06]"
+      >
+        Edit application
+      </button>
     </section>
   );
 }
@@ -610,6 +724,9 @@ function GetApprovedPage() {
     setSubmitError(null);
 
     const uploadedMedia: Array<{ id: string; storagePath: string; draftId: string }> = [];
+    const createdResourceIds = validDrafts
+      .filter((d) => d.creationType === 'resource' && d.savedResourceId && d.editStatus === 'new')
+      .map((d) => d.savedResourceId as string);
 
     // Upload any 'art'-type drafts now. Resource drafts were already saved
     // via SubmitResourceForm when the user clicked their per-slot save button.
@@ -671,7 +788,178 @@ function GetApprovedPage() {
         try { await supabase?.from('media').delete().eq('id', u.id); } catch { /* best effort */ }
         try { await deleteUserUpload(u.storagePath); } catch { /* best effort */ }
       }
+      for (const resourceId of createdResourceIds) {
+        try { await supabase?.from('assets').delete().eq('id', resourceId); } catch { /* best effort */ }
+      }
       setSubmitError(err instanceof Error ? err.message : 'Failed to submit.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const cleanupUploadedMedia = async (uploads: Array<{ id: string; storagePath: string }>) => {
+    for (const upload of uploads) {
+      try { await supabase?.from('media').delete().eq('id', upload.id); } catch { /* best effort */ }
+      try { await deleteUserUpload(upload.storagePath); } catch { /* best effort */ }
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user || !profile?.memberId || !pendingRow) {
+      setSubmitError('You must be signed in.');
+      return;
+    }
+    if (validDrafts.length === 0) {
+      setSubmitError('Add at least one artwork or generation.');
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const uploadedMedia: Array<{ id: string; storagePath: string }> = [];
+    const pendingDeletes: Array<{
+      id: string;
+      storage: { storageBucket: string | null; storagePath: string | null };
+    }> = [];
+    const nextDrafts = drafts.map((draft) => ({ ...draft }));
+
+    try {
+      for (const draft of nextDrafts) {
+        if (draft.editStatus !== 'removed' && !isDraftValid(draft)) {
+          continue;
+        }
+
+        if (draft.creationType !== 'art') {
+          if (draft.editStatus !== 'removed' && draft.savedResourceId) {
+            draft.editStatus = 'unchanged';
+          }
+          continue;
+        }
+
+        if (draft.editStatus === 'removed') {
+          if (draft.existingMediaId) {
+            pendingDeletes.push({
+              id: draft.existingMediaId,
+              storage: {
+                storageBucket: draft.storageBucket,
+                storagePath: draft.storagePath,
+              },
+            });
+          }
+          continue;
+        }
+
+        if (draft.file) {
+          const previousMediaId = draft.existingMediaId;
+          const previousStorage = {
+            storageBucket: draft.storageBucket,
+            storagePath: draft.storagePath,
+          };
+          const result = await createArtMedia({
+            file: draft.file,
+            title: draft.title.trim() || 'Untitled',
+            description: draft.description.trim() || null,
+            memberId: profile.memberId,
+            userId: user.id,
+            hidden: true,
+            selfAttributed: true,
+            creationType: 'art',
+          });
+
+          uploadedMedia.push({ id: result.id, storagePath: result.storagePath });
+
+          if (previousMediaId) {
+            pendingDeletes.push({
+              id: previousMediaId,
+              storage: previousStorage,
+            });
+          }
+
+          draft.existingMediaId = result.id;
+          draft.storageBucket = 'user-uploads';
+          draft.storagePath = result.storagePath;
+          draft.file = null;
+          draft.thumbnailUrl = result.url;
+          draft.editStatus = 'unchanged';
+          continue;
+        }
+
+        if (draft.editStatus === 'edited' && draft.existingMediaId) {
+          await updateExistingArtMedia({
+            id: draft.existingMediaId,
+            memberId: profile.memberId,
+            title: draft.title,
+            description: draft.description,
+            selfAttributed: draft.selfAttributed,
+          });
+          draft.editStatus = 'unchanged';
+        }
+      }
+
+      const visibleDrafts = nextDrafts.filter((draft) => draft.editStatus !== 'removed');
+      const primaryDraft = visibleDrafts.find((draft) => draft.isPrimary && isDraftValid(draft))
+        ?? visibleDrafts.find(isDraftValid);
+      let attachedMediaId: string | null = null;
+      let attachedResourceId: string | null = null;
+
+      if (primaryDraft?.creationType === 'resource') {
+        attachedResourceId = primaryDraft.savedResourceId;
+      } else if (primaryDraft?.creationType === 'art') {
+        attachedMediaId = primaryDraft.existingMediaId ?? null;
+      }
+
+      if (!attachedMediaId && !attachedResourceId) {
+        throw new Error('Could not resolve a primary attachment.');
+      }
+
+      await updateApprovalRequest({
+        id: pendingRow.id,
+        bioSnapshot: bio.trim(),
+        attachedMediaId,
+        attachedResourceId,
+      });
+
+      for (const pendingDelete of pendingDeletes) {
+        try {
+          await deleteHiddenArtMedia({ id: pendingDelete.id, memberId: profile.memberId });
+        } catch (deleteError) {
+          console.warn('[GetApproved] failed to delete replaced hidden media', deleteError);
+        }
+
+        if (pendingDelete.storage.storagePath && supabase) {
+          const bucket = pendingDelete.storage.storageBucket || 'user-uploads';
+          try {
+            await supabase.storage.from(bucket).remove([pendingDelete.storage.storagePath]);
+          } catch (storageError) {
+            console.warn('[GetApproved] failed to remove replaced media storage', storageError);
+          }
+        }
+      }
+
+      const savedDrafts = visibleDrafts.length > 0
+        ? visibleDrafts.map((draft) => ({
+          ...draft,
+          isPrimary: draft === primaryDraft,
+          editStatus: isDraftValid(draft) ? 'unchanged' as const : draft.editStatus,
+        }))
+        : [newDraft()];
+
+      setDrafts(savedDrafts);
+      originalSnapshotRef.current = savedDrafts;
+      setExpandedDraftId(primaryDraft?.id ?? savedDrafts[0]?.id ?? '');
+      setPendingRow({
+        ...pendingRow,
+        bio_snapshot: bio.trim(),
+        attached_media_id: attachedMediaId,
+        attached_resource_id: attachedResourceId,
+        embed_dirty: true,
+      });
+      setStep('thanks');
+    } catch (err) {
+      console.error('[GetApproved] approval update failed', err);
+      await cleanupUploadedMedia(uploadedMedia);
+      setSubmitError(err instanceof Error ? err.message : 'Failed to save changes.');
     } finally {
       setSubmitting(false);
     }
@@ -714,6 +1002,7 @@ function GetApprovedPage() {
             drafts={drafts}
             expandedDraftId={expandedDraftId}
             isEditMode={Boolean(pendingRow)}
+            memberId={profile?.memberId ?? ''}
             onExpand={(id) => setExpandedDraftId(id)}
             onChange={updateDraft}
             onRemove={removeDraft}
@@ -731,7 +1020,7 @@ function GetApprovedPage() {
             submitError={submitError}
           />
         ) : (
-          <Step3 />
+          <Step3 onEdit={() => setStep('human')} />
         )}
       </main>
 
@@ -767,7 +1056,7 @@ function GetApprovedPage() {
             ) : (
               <button
                 type="button"
-                onClick={handleFinalSubmit}
+                onClick={pendingRow ? handleSave : handleFinalSubmit}
                 disabled={!canSubmitStep2}
                 className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition ${
                   canSubmitStep2

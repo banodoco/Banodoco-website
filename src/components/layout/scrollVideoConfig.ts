@@ -37,13 +37,18 @@ export const HOME_SECTIONS = [
     clip: { video: '/section-videos/ados.mp4', poster: '/section-videos/ados-poster.jpg' },
   },
   {
-    id: 'ecosystem',
+    id: 'community-projects',
     scrub: { start: 30, end: 31 },
+    clip: { video: '/section-videos/ados.mp4', poster: '/section-videos/ados-poster.jpg' },
+  },
+  {
+    id: 'ecosystem',
+    scrub: { start: 31, end: 32 },
     clip: { video: '/section-videos/ecosystem.mp4', poster: '/section-videos/ecosystem-poster.jpg' },
   },
   {
     id: 'ownership',
-    scrub: { start: 31.5, end: 36.5 },
+    scrub: { start: 32.5, end: 37.5 },
     clip: { video: '/hero-part3.mp4', poster: '/section-videos/ownership-poster.jpg' },
   },
 ] as const satisfies readonly HomeSection[];

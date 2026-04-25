@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import GetApproved from './index';
@@ -75,14 +75,21 @@ const formPayloads = vi.hoisted(() => ({
 
 const supabaseMock = vi.hoisted(() => {
   const makeApprovalQuery = () => {
-    let action: 'select' | 'insert' = 'select';
+    let action: 'select' | 'insert' | 'update' = 'select';
     let payload: unknown;
 
     const query = {
       select: () => query,
       eq: () => query,
+      order: () => query,
+      limit: () => query,
       insert: (value: unknown) => {
         action = 'insert';
+        payload = value;
+        return query;
+      },
+      update: (value: unknown) => {
+        action = 'update';
         payload = value;
         return query;
       },
@@ -102,18 +109,30 @@ const supabaseMock = vi.hoisted(() => {
     return query;
   };
 
-  const makeDeleteQuery = (table: string) => ({
-    delete: () => ({
-      eq: async (column: string, value: unknown) => {
-        mockAuth.deletedRows.push({ table, column, value });
-        return { data: null, error: null };
+  const makeTableQuery = (table: string) => {
+    const query = {
+      select: () => query,
+      eq: (column: string, value: unknown) => {
+        if (query.action === 'delete') {
+          mockAuth.deletedRows.push({ table, column, value });
+        }
+        return query;
       },
-    }),
-  });
+      order: async () => ({ data: [], error: null }),
+      maybeSingle: async () => ({ data: null, error: null }),
+      delete: () => {
+        query.action = 'delete';
+        return query;
+      },
+      action: 'select',
+    };
+
+    return query;
+  };
 
   return {
     from: vi.fn((table: string) => (
-      table === 'approval_requests' ? makeApprovalQuery() : makeDeleteQuery(table)
+      table === 'approval_requests' ? makeApprovalQuery() : makeTableQuery(table)
     )),
   };
 });
@@ -147,27 +166,21 @@ vi.mock('@/lib/resources', () => ({
   saveResource: resourceMocks.saveResource,
 }));
 
-vi.mock('@/pages/SubmitArt', () => ({
-  SubmitArtForm: ({
-    onSubmit,
-    submitDisabled,
-    submitTitle,
+vi.mock('@/components/forms/MediaUploader', () => ({
+  MediaUploader: ({
+    onFilesSelected,
   }: {
-    onSubmit: (data: typeof formPayloads.art) => Promise<void>;
-    submitDisabled?: boolean;
-    submitTitle?: string;
+    onFilesSelected: (files: File[]) => void;
   }) => (
     <button
       type="button"
-      disabled={submitDisabled}
-      title={submitTitle}
       onClick={() => {
-        if (formPayloads.art) {
-          void onSubmit(formPayloads.art).catch(() => undefined);
+        if (formPayloads.artFile) {
+          onFilesSelected([formPayloads.artFile]);
         }
       }}
     >
-      Submit test attachment
+      Upload test attachment
     </button>
   ),
 }));
@@ -208,13 +221,50 @@ function renderGetApproved(entry = '/get-approved') {
 }
 
 async function fillBio(value = longBio) {
-  fireEvent.change(await screen.findByLabelText('Bio'), {
+  fireEvent.change(await screen.findByLabelText(/bio/i), {
     target: { value },
   });
 }
 
-async function findSubmitButton() {
-  return screen.findByRole('button', { name: /submit test attachment/i });
+async function uploadArtAttachment() {
+  fireEvent.click(await screen.findByRole('button', { name: /upload test attachment/i }));
+  fireEvent.change(await screen.findByPlaceholderText('Title (optional)'), {
+    target: { value: 'Approval Piece' },
+  });
+  fireEvent.change(screen.getByPlaceholderText("Anything you'd like to say about this..."), {
+    target: { value: 'Art description' },
+  });
+  fireEvent.click(screen.getByLabelText(/I made this/i));
+}
+
+async function goToBioStepWithArt() {
+  await uploadArtAttachment();
+  const next = await screen.findByRole('button', { name: /next/i });
+  await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false));
+  fireEvent.click(next);
+}
+
+async function submitArtApproval() {
+  await goToBioStepWithArt();
+  await fillBio(longBio);
+  fireEvent.click(screen.getByRole('button', { name: /submit for review/i }));
+}
+
+async function saveResourceDraft() {
+  fireEvent.click(await screen.findByRole('button', { name: /resource/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /submit test attachment/i }));
+  await waitFor(() => {
+    expect(resourceMocks.saveResource).toHaveBeenCalled();
+  });
+}
+
+async function submitResourceApproval() {
+  await saveResourceDraft();
+  const next = await screen.findByRole('button', { name: /next/i });
+  await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false));
+  fireEvent.click(next);
+  await fillBio(longBio);
+  fireEvent.click(screen.getByRole('button', { name: /submit for review/i }));
 }
 
 beforeEach(() => {
@@ -270,40 +320,42 @@ afterEach(() => {
 });
 
 describe('GetApproved', () => {
-  it('keeps the embedded submit disabled until the bio reaches 120 characters', async () => {
+  it('keeps the next step disabled until the art attachment is complete', async () => {
     renderGetApproved();
 
-    const submit = await findSubmitButton();
-    expect(submit.hasAttribute('disabled')).toBe(true);
-    expect(submit.getAttribute('title')).toBe('Add a 120+ character bio first');
+    const next = await screen.findByRole('button', { name: /next/i });
+    expect(next.hasAttribute('disabled')).toBe(true);
 
-    await fillBio('I make procedural films.');
-    expect(submit.hasAttribute('disabled')).toBe(true);
-
-    await fillBio(longBio);
-
+    fireEvent.click(await screen.findByRole('button', { name: /upload test attachment/i }));
+    expect(next.hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByLabelText(/I made this/i));
     await waitFor(() => {
-      expect(submit.hasAttribute('disabled')).toBe(false);
+      expect(next.hasAttribute('disabled')).toBe(false);
     });
-    expect(submit.getAttribute('title')).toBeNull();
   });
 
   it('auto-saves the bio after the debounce and shows the Saved pill', async () => {
     renderGetApproved();
+    await goToBioStepWithArt();
     vi.useFakeTimers();
 
-    fireEvent.change(screen.getByLabelText('Bio'), {
+    fireEvent.change(screen.getByLabelText(/bio/i), {
       target: { value: longBio },
     });
-    await vi.advanceTimersByTimeAsync(600);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600);
+    });
 
     expect(profileMocks.updateBio).toHaveBeenCalledWith(longBio);
     expect(mockAuth.refreshProfile).toHaveBeenCalled();
-    expect(screen.getByText('Saved').className).toContain('opacity-100');
+    expect(screen.getAllByText('Saved').some((element) => (
+      element.className.includes('opacity-100')
+    ))).toBe(true);
   });
 
   it('auto-saves valid profile links with the filtered link array', async () => {
     renderGetApproved();
+    await goToBioStepWithArt();
     vi.useFakeTimers();
 
     const firstLink = screen.getByPlaceholderText('https://example.com');
@@ -320,8 +372,7 @@ describe('GetApproved', () => {
   it('submits an art approval request by creating hidden media and inserting approval_requests', async () => {
     renderGetApproved();
 
-    await fillBio(longBio);
-    fireEvent.click(await findSubmitButton());
+    await submitArtApproval();
 
     await waitFor(() => {
       expect(mediaMocks.createArtMedia).toHaveBeenCalledWith({
@@ -332,6 +383,7 @@ describe('GetApproved', () => {
         userId: 'user-1',
         hidden: true,
         selfAttributed: true,
+        creationType: 'art',
       });
       expect(mockAuth.insertRows).toEqual([{
         member_id: '42',
@@ -341,15 +393,13 @@ describe('GetApproved', () => {
         status: 'pending',
       }]);
     });
-    expect(await screen.findByRole('heading', { name: /review pending/i })).not.toBeNull();
+    expect(await screen.findByRole('heading', { name: /thank you/i })).not.toBeNull();
   });
 
   it('submits a resource approval request by saving a draft resource and inserting approval_requests', async () => {
     renderGetApproved();
 
-    await fillBio(longBio);
-    fireEvent.click(screen.getByRole('button', { name: /resource/i }));
-    fireEvent.click(await findSubmitButton());
+    await submitResourceApproval();
 
     await waitFor(() => {
       expect(resourceMocks.saveResource).toHaveBeenCalledWith({
@@ -373,15 +423,14 @@ describe('GetApproved', () => {
         status: 'pending',
       }]);
     });
-    expect(await screen.findByRole('heading', { name: /review pending/i })).not.toBeNull();
+    expect(await screen.findByRole('heading', { name: /thank you/i })).not.toBeNull();
   });
 
   it('rolls back created art media and storage when approval_requests insert fails', async () => {
     mockAuth.approvalInsertError = { message: 'duplicate key value', code: '23505' };
     renderGetApproved();
 
-    await fillBio(longBio);
-    fireEvent.click(await findSubmitButton());
+    await submitArtApproval();
 
     await waitFor(() => {
       expect(mockAuth.deletedRows).toContainEqual({
@@ -398,9 +447,7 @@ describe('GetApproved', () => {
     mockAuth.approvalInsertError = { message: 'duplicate key value', code: '23505' };
     renderGetApproved();
 
-    await fillBio(longBio);
-    fireEvent.click(screen.getByRole('button', { name: /resource/i }));
-    fireEvent.click(await findSubmitButton());
+    await submitResourceApproval();
 
     await waitFor(() => {
       expect(mockAuth.deletedRows).toContainEqual({
@@ -417,9 +464,9 @@ describe('GetApproved', () => {
 
     renderGetApproved();
 
-    expect(await screen.findByRole('heading', { name: /review pending/i })).not.toBeNull();
-    expect(screen.getByText('Your request is in the approval queue. Posting unlocks after the review is handled manually.')).not.toBeNull();
-    expect(screen.queryByRole('button', { name: /submit test attachment/i })).toBeNull();
+    expect(await screen.findByText('Pending review')).not.toBeNull();
+    expect(screen.getByRole('button', { name: /next/i })).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /submit for review/i })).toBeNull();
   });
 
   it('renders the introductions copy when the approval request has been posted', async () => {
@@ -427,9 +474,9 @@ describe('GetApproved', () => {
 
     renderGetApproved();
 
-    expect(await screen.findByRole('heading', { name: /review pending/i })).not.toBeNull();
-    expect(screen.getByText('Your application is in #introductions')).not.toBeNull();
-    expect(screen.queryByText('Your request is in the approval queue. Posting unlocks after the review is handled manually.')).toBeNull();
+    expect(await screen.findByText('Pending review')).not.toBeNull();
+    expect(screen.getByRole('button', { name: /next/i })).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /submit for review/i })).toBeNull();
   });
 
   it('redirects approved users with null discordUsername to HOME_PATH', async () => {

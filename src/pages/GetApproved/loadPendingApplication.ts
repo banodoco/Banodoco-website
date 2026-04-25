@@ -9,6 +9,8 @@ export interface ArtworkDraft {
   creationType: CreationType;
   file: File | null;
   existingMediaId?: string;
+  storageBucket?: string | null;
+  storagePath?: string | null;
   isPrimary?: boolean;
   editStatus?: ArtworkEditStatus;
   thumbnailUrl: string | null;
@@ -17,6 +19,7 @@ export interface ArtworkDraft {
   selfAttributed: boolean;
   savedResourceId: string | null;
   savedResourceName: string | null;
+  resourceDirty: boolean;
 }
 
 interface HiddenMediaRow {
@@ -35,6 +38,15 @@ interface AssetRow {
   name: string | null;
 }
 
+const getStorageInfo = (metadata: unknown): { bucket: string | null; path: string | null } => {
+  if (!metadata || typeof metadata !== 'object') return { bucket: null, path: null };
+  const record = metadata as { bucket?: unknown; path?: unknown };
+  return {
+    bucket: typeof record.bucket === 'string' ? record.bucket : null,
+    path: typeof record.path === 'string' ? record.path : null,
+  };
+};
+
 export const newApprovalDraft = (): ArtworkDraft => ({
   id: crypto.randomUUID(),
   creationType: 'art',
@@ -45,6 +57,7 @@ export const newApprovalDraft = (): ArtworkDraft => ({
   selfAttributed: false,
   savedResourceId: null,
   savedResourceName: null,
+  resourceDirty: false,
   isPrimary: true,
   editStatus: 'new',
 });
@@ -72,20 +85,26 @@ export async function loadPendingApplication(
 
   if (mediaError) throw new Error(mediaError.message);
 
-  const drafts: ArtworkDraft[] = ((mediaRows ?? []) as HiddenMediaRow[]).map((row) => ({
-    id: row.id,
-    creationType: 'art',
-    file: null,
-    existingMediaId: row.id,
-    isPrimary: row.id === approvalRequest.attached_media_id,
-    editStatus: 'unchanged',
-    thumbnailUrl: row.cloudflare_thumbnail_url ?? row.url ?? null,
-    title: row.title ?? '',
-    description: row.description ?? '',
-    selfAttributed: row.self_attributed ?? false,
-    savedResourceId: null,
-    savedResourceName: null,
-  }));
+  const drafts: ArtworkDraft[] = ((mediaRows ?? []) as HiddenMediaRow[]).map((row) => {
+    const storage = getStorageInfo(row.metadata);
+    return {
+      id: row.id,
+      creationType: 'art',
+      file: null,
+      existingMediaId: row.id,
+      storageBucket: storage.bucket,
+      storagePath: storage.path,
+      isPrimary: row.id === approvalRequest.attached_media_id,
+      editStatus: 'unchanged',
+      thumbnailUrl: row.cloudflare_thumbnail_url ?? row.url ?? null,
+      title: row.title ?? '',
+      description: row.description ?? '',
+      selfAttributed: row.self_attributed ?? false,
+      savedResourceId: null,
+      savedResourceName: null,
+      resourceDirty: false,
+    };
+  });
 
   if (approvalRequest.attached_resource_id) {
     const { data: asset, error: assetError } = await supabase
@@ -110,6 +129,7 @@ export async function loadPendingApplication(
       selfAttributed: true,
       savedResourceId: approvalRequest.attached_resource_id,
       savedResourceName: resource?.name ?? null,
+      resourceDirty: false,
     });
   }
 
