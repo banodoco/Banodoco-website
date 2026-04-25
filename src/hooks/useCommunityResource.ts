@@ -30,6 +30,7 @@ interface AssetRow {
   created_at: string;
   member_id: string | null;
   creator: string | null;
+  self_attributed: boolean | null;
   media:
     | {
         url: string | null;
@@ -186,7 +187,7 @@ export const useCommunityResource = (
         let resourceQuery = supabase!
           .from('assets')
           .select(`
-            id, name, slug, description, source, is_hidden, status, admin_status, links, type, lora_link, download_link, primary_media_id, created_at, creator,
+            id, name, slug, description, source, is_hidden, status, admin_status, links, type, lora_link, download_link, primary_media_id, created_at, creator, self_attributed,
             member_id:member_id::text,
             discord_guild_id:discord_guild_id::text,
             discord_channel_id:discord_channel_id::text,

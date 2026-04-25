@@ -1,12 +1,15 @@
+import { useEffect, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Palette, BookOpen, Newspaper, Pencil, Plus } from 'lucide-react';
+import { CheckCircle2, Loader2, Palette, BookOpen, Newspaper, Pencil, Plus } from 'lucide-react';
+import { BioAutosaveEditor } from '@/components/profile/BioAutosaveEditor';
 import { PostListCard } from '@/components/posts/PostListCard';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/useAuth';
 import { useArtPieces } from '@/hooks/useArtPieces';
 import { useAuthorResourceDrafts } from '@/hooks/useAuthorResourceDrafts';
 import { useCommunityResources } from '@/hooks/useCommunityResources';
+import { usePendingApproval } from '@/hooks/usePendingApproval';
 import { usePosts } from '@/hooks/usePosts';
 import { ArtGalleryCard } from '@/pages/Resources/ArtGallery/ArtGalleryCard';
 import { CommunityResourceCard } from '@/pages/Resources/CommunityResourcesFeed/CommunityResourceCard';
@@ -18,20 +21,29 @@ type TabKey = 'art' | 'posts' | 'resources';
 const UserProfile = () => {
   const { username } = useParams<{ username: string }>();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, profile: viewerProfile } = useAuth();
   const { profile, artCount, postCount, publishedCount, draftCount, loading, error } = useUserProfile(
     username,
     user?.id,
   );
+  const [bio, setBio] = useState('');
 
   // Determine active tab from the URL path
   const profileMemberId = profile?.memberId ?? undefined;
   const isOwnProfile = !!(user && profile && user.id === profile.id);
+  const {
+    pendingApproval,
+    loading: pendingApprovalLoading,
+  } = usePendingApproval(isOwnProfile ? profileMemberId : undefined);
   const activeTab: TabKey = location.pathname.endsWith('/resources')
     ? 'resources'
     : location.pathname.endsWith('/posts')
       ? 'posts'
       : 'art';
+
+  useEffect(() => {
+    setBio(profile?.bio ?? '');
+  }, [profile?.bio, profile?.id]);
 
   const {
     artPieces,
@@ -143,6 +155,9 @@ const UserProfile = () => {
       path: profileResourcesPath(profile.discordUsername!),
     },
   ];
+  const visibleBio = bio;
+  const showPendingApproval = Boolean(pendingApproval) || pendingApprovalLoading;
+  const isApproved = viewerProfile?.isApproved === true;
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
@@ -180,41 +195,78 @@ const UserProfile = () => {
           </div>
 
           {/* Bio */}
-          {profile.bio && (
-            <p className="text-zinc-400 max-w-lg leading-relaxed">{profile.bio}</p>
-          )}
+          <div className="w-full max-w-lg space-y-3">
+            {isOwnProfile ? (
+              <div className="text-left">
+                <BioAutosaveEditor
+                  value={bio}
+                  onChange={setBio}
+                  placeholder="Tell people what you make."
+                  rows={4}
+                />
+              </div>
+            ) : (
+              visibleBio && (
+                <p className="text-zinc-400 leading-relaxed">{visibleBio}</p>
+              )
+            )}
+          </div>
 
           {/* Own profile actions */}
           {isOwnProfile && (
-            <div className="flex items-center gap-3 mt-2">
-              <Link
-                to="/settings/profile"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <Pencil size={14} />
-                Edit Profile
-              </Link>
-              <Link
-                to="/submit/art"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <Plus size={14} />
-                Submit Art
-              </Link>
-              <Link
-                to="/submit/resource"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <Plus size={14} />
-                Submit Resource
-              </Link>
-              <Link
-                to="/submit/post"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <Plus size={14} />
-                Add Post
-              </Link>
+            <div className="mt-2 w-full max-w-2xl space-y-3">
+              {isApproved ? (
+                <>
+                  <h2 className="text-lg font-semibold text-zinc-100">Share something you made.</h2>
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <Link
+                      to="/settings/profile"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      <Pencil size={14} />
+                      Edit Profile
+                    </Link>
+                    <Link
+                      to="/submit/art"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      <Plus size={14} />
+                      Submit Art
+                    </Link>
+                    <Link
+                      to="/submit/resource"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      <Plus size={14} />
+                      Submit Resource
+                    </Link>
+                    <Link
+                      to="/submit/post"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      <Plus size={14} />
+                      Add Post
+                    </Link>
+                  </div>
+                </>
+              ) : showPendingApproval ? (
+                <div className="mx-auto flex max-w-sm items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium text-zinc-500">
+                  {pendingApprovalLoading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <CheckCircle2 size={16} />
+                  )}
+                  Review pending
+                </div>
+              ) : (
+                <Link
+                  to="/get-approved"
+                  className="mx-auto flex max-w-sm items-center justify-center gap-2 rounded-lg border border-amber-300/40 bg-amber-300/[0.06] px-4 py-3 text-sm font-semibold text-amber-100 transition hover:border-amber-200/70 hover:bg-amber-300/[0.1]"
+                >
+                  <CheckCircle2 size={16} />
+                  Get approved to post.
+                </Link>
+              )}
             </div>
           )}
         </motion.div>

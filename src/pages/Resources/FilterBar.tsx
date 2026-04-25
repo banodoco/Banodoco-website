@@ -16,6 +16,9 @@ function getModelLabel(id: string): string {
   return BASE_MODEL_MAP.get(id)?.label ?? id.toUpperCase();
 }
 
+const selectClassName = 'h-[34px] cursor-pointer appearance-none rounded-lg border border-white/10 bg-zinc-950/80 px-3 py-1.5 pr-8 text-xs text-zinc-100 transition-colors focus:border-white/25 focus:outline-none focus:ring-1 focus:ring-white/10';
+const optionClassName = 'bg-zinc-950 text-zinc-100';
+
 export const FilterBar = ({
   filters,
   searchInput,
@@ -125,11 +128,11 @@ export const FilterBar = ({
             <select
               value={filters.baseModel || ''}
               onChange={e => onFilterChange('baseModel', e.target.value || null)}
-              className="px-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white/70 focus:outline-none focus:border-white/25 transition-colors appearance-none cursor-pointer"
+              className={selectClassName}
             >
-              <option value="">All Base Models</option>
+              <option value="" className={optionClassName}>All Base Models</option>
               {availableBaseModels.map(m => (
-                <option key={m} value={m}>{getModelLabel(m)}</option>
+                <option key={m} value={m} className={optionClassName}>{getModelLabel(m)}</option>
               ))}
             </select>
           )}
@@ -138,11 +141,11 @@ export const FilterBar = ({
             <select
               value={filters.loraType || ''}
               onChange={e => onFilterChange('loraType', e.target.value || null)}
-              className="px-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white/70 focus:outline-none focus:border-white/25 transition-colors appearance-none cursor-pointer"
+              className={selectClassName}
             >
-              <option value="">All LoRA Types</option>
+              <option value="" className={optionClassName}>All LoRA Types</option>
               {availableLoraTypes.map(t => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t} className={optionClassName}>{t}</option>
               ))}
             </select>
           )}

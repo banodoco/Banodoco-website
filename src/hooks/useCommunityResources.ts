@@ -36,6 +36,7 @@ export interface CommunityResourceItem {
   isHidden?: boolean | null;
   status: 'draft' | 'published';
   adminStatus: 'Curated' | 'Listed' | null;
+  selfAttributed: boolean;
   links: ResourceLink[];
   primaryMediaId: string | null;
   primaryMediaUrl: string | null;
@@ -78,6 +79,7 @@ interface AssetRow {
   created_at: string;
   member_id: string | null;
   creator: string | null;
+  self_attributed: boolean | null;
   media:
     | {
         url: string | null;
@@ -178,6 +180,7 @@ export function mapCommunityResourceRow(
     isHidden: row.is_hidden,
     status: row.status,
     adminStatus: row.admin_status ?? null,
+    selfAttributed: row.self_attributed ?? false,
     links,
     primaryMediaId: row.primary_media_id,
     primaryMediaUrl: primaryMedia?.url ?? null,
@@ -238,7 +241,7 @@ export const useCommunityResources = (memberId?: string): UseCommunityResourcesR
         // status filter required for public reads
         .from('assets')
         .select(`
-          id, name, slug, description, source, is_hidden, status, admin_status, links, type, lora_link, download_link, primary_media_id, created_at, creator,
+          id, name, slug, description, source, is_hidden, status, admin_status, links, type, lora_link, download_link, primary_media_id, created_at, creator, self_attributed,
           member_id:member_id::text,
           discord_guild_id:discord_guild_id::text,
           discord_channel_id:discord_channel_id::text,

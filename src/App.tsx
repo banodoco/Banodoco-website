@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { MainLayout } from '@/layouts/MainLayout';
+import UserSwitcher from '@/components/admin/UserSwitcher';
 import Home from '@/pages/Home';
 
 // Lazy load non-critical pages
@@ -13,6 +14,7 @@ const ArtDetail = lazy(() => import('@/pages/ArtDetail'));
 const ResourceDetail = lazy(() => import('@/pages/ResourceDetail'));
 const UserProfile = lazy(() => import('@/pages/UserProfile'));
 const AuthCallback = lazy(() => import('@/pages/AuthCallback'));
+const GetApproved = lazy(() => import('@/pages/GetApproved'));
 const SubmitArt = lazy(() => import('@/pages/SubmitArt'));
 const SubmitPost = lazy(() => import('@/pages/SubmitPost'));
 const SubmitResource = lazy(() => import('@/pages/SubmitResource'));
@@ -53,6 +55,7 @@ function App() {
               <Route path="/1m" element={<WrappedPage />} />
               <Route path="/2RP" element={<Resources />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/get-approved" element={<GetApproved />} />
               <Route path="/art/:slug" element={<ArtDetail />} />
               <Route path="/posts/id/:id" element={<PostDetail />} />
               <Route path="/posts/:slug" element={<PostDetail />} />
@@ -72,6 +75,7 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          <UserSwitcher />
         </MainLayout>
       </AuthProvider>
     </Router>

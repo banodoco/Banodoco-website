@@ -6,6 +6,8 @@ import {
   mapCommunityResourceRow,
 } from '@/hooks/useCommunityResources';
 
+// If you add a new drafts surface, apply the same pending-approval exclusion filter.
+
 interface AssetRow {
   id: string;
   name: string;
@@ -26,6 +28,7 @@ interface AssetRow {
   created_at: string;
   member_id: string | null;
   creator: string | null;
+  self_attributed: boolean | null;
   media:
     | {
         url: string | null;
@@ -83,10 +86,23 @@ export const useAuthorResourceDrafts = (
       setError(null);
 
       try {
-        const { data, error: fetchError } = await client
+        const { data: pendingRows, error: pendingError } = await client
+          .from('approval_requests')
+          .select('attached_resource_id')
+          .eq('member_id', memberId)
+          .eq('status', 'pending')
+          .not('attached_resource_id', 'is', null);
+
+        if (pendingError) throw pendingError;
+
+        const pendingResourceIds = (pendingRows ?? [])
+          .map((row) => row.attached_resource_id)
+          .filter((value): value is string => typeof value === 'string' && value.length > 0);
+
+        let draftsQuery = client
           .from('assets')
           .select(`
-            id, name, slug, description, source, is_hidden, status, admin_status, links, type, lora_link, download_link, primary_media_id, created_at, creator,
+            id, name, slug, description, source, is_hidden, status, admin_status, links, type, lora_link, download_link, primary_media_id, created_at, creator, self_attributed,
             member_id:member_id::text,
             discord_guild_id:discord_guild_id::text,
             discord_channel_id:discord_channel_id::text,
@@ -103,6 +119,12 @@ export const useAuthorResourceDrafts = (
           .eq('member_id', memberId)
           .eq('status', 'draft')
           .order('created_at', { ascending: false });
+
+        if (pendingResourceIds.length > 0) {
+          draftsQuery = draftsQuery.not('id', 'in', `(${pendingResourceIds.join(',')})`);
+        }
+
+        const { data, error: fetchError } = await draftsQuery;
 
         if (fetchError) throw fetchError;
 

@@ -1,12 +1,14 @@
 // @vitest-environment happy-dom
 
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import UserProfile from './index';
 
 const mockState = vi.hoisted(() => ({
   authUserId: 'profile-1',
+  isApproved: true,
+  pendingApproval: null as { id: string; posted_message_id: number | null } | null,
   profileResult: {
     profile: {
       id: 'profile-1',
@@ -14,7 +16,7 @@ const mockState = vi.hoisted(() => ({
       discordUsername: 'author',
       displayName: 'Author Name',
       avatarUrl: null,
-      bio: null,
+      bio: null as string | null,
     },
     artCount: 0,
     postCount: 0,
@@ -74,6 +76,8 @@ const mockState = vi.hoisted(() => ({
       profileUrl: '/author',
     },
   }],
+  refreshProfile: vi.fn(),
+  updateBio: vi.fn(),
 }));
 
 vi.mock('framer-motion', () => ({
@@ -83,7 +87,15 @@ vi.mock('framer-motion', () => ({
 vi.mock('@/contexts/useAuth', () => ({
   useAuth: () => ({
     user: mockState.authUserId ? { id: mockState.authUserId } : null,
+    profile: {
+      isApproved: mockState.isApproved,
+    },
+    refreshProfile: mockState.refreshProfile,
   }),
+}));
+
+vi.mock('@/lib/profile', () => ({
+  updateBio: mockState.updateBio,
 }));
 
 vi.mock('@/hooks/useUserProfile', () => ({
@@ -100,6 +112,14 @@ vi.mock('@/hooks/useCommunityResources', () => ({
 vi.mock('@/hooks/useAuthorResourceDrafts', () => ({
   useAuthorResourceDrafts: (memberId?: string) => ({
     drafts: memberId ? mockState.drafts : [],
+    loading: false,
+    error: null,
+  }),
+}));
+
+vi.mock('@/hooks/usePendingApproval', () => ({
+  usePendingApproval: () => ({
+    pendingApproval: mockState.pendingApproval,
     loading: false,
     error: null,
   }),
@@ -155,6 +175,11 @@ function renderProfile(entry = '/author/resources') {
 
 beforeEach(() => {
   mockState.authUserId = 'profile-1';
+  mockState.isApproved = true;
+  mockState.pendingApproval = null;
+  mockState.refreshProfile.mockReset();
+  mockState.updateBio.mockReset();
+  mockState.updateBio.mockResolvedValue(undefined);
   mockState.profileResult = {
     profile: {
       id: 'profile-1',
@@ -175,6 +200,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   vi.clearAllMocks();
 });
@@ -202,5 +228,65 @@ describe('UserProfile resources tab', () => {
 
     const resourcesTab = screen.getByRole('link', { name: /resources/i });
     expect(within(resourcesTab).getByText('3')).not.toBeNull();
+  });
+});
+
+describe('UserProfile approval actions', () => {
+  it('shows the approved sharing actions and inline autosave bio editor', () => {
+    renderProfile('/author');
+
+    expect(screen.getByRole('heading', { name: /share something you made/i })).not.toBeNull();
+    expect(screen.getByRole('link', { name: /submit art/i })).not.toBeNull();
+    expect(screen.getByRole('link', { name: /submit resource/i })).not.toBeNull();
+    expect(screen.getByRole('link', { name: /add post/i })).not.toBeNull();
+    expect(screen.getByPlaceholderText(/tell people what you make/i)).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /save bio/i })).toBeNull();
+  });
+
+  it('shows the muted review pending card for unapproved users with a pending request', () => {
+    mockState.isApproved = false;
+    mockState.pendingApproval = { id: 'approval-1', posted_message_id: null };
+
+    renderProfile('/author');
+
+    expect(screen.getByText('Review pending')).not.toBeNull();
+    expect(screen.queryByRole('link', { name: /submit art/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /get approved to post/i })).toBeNull();
+  });
+
+  it('shows the get-approved card for unapproved users without a pending request', () => {
+    mockState.isApproved = false;
+
+    renderProfile('/author');
+
+    const approvalLink = screen.getByRole('link', { name: /get approved to post/i });
+    expect(approvalLink.getAttribute('href')).toBe('/get-approved');
+    expect(screen.queryByRole('link', { name: /submit art/i })).toBeNull();
+  });
+
+  it('auto-saves inline bio edits through updateBio and refreshProfile', async () => {
+    vi.useFakeTimers();
+    renderProfile('/author');
+
+    fireEvent.change(screen.getByPlaceholderText(/tell people what you make/i), {
+      target: { value: 'Updated bio text' },
+    });
+    await vi.advanceTimersByTimeAsync(600);
+
+    await vi.waitFor(() => {
+      expect(mockState.updateBio).toHaveBeenCalledWith('Updated bio text');
+      expect(mockState.refreshProfile).toHaveBeenCalled();
+    });
+  });
+
+  it('renders non-owner bio as read-only text', () => {
+    mockState.authUserId = 'visitor-2';
+    mockState.profileResult.profile.bio = 'Read-only creator bio.';
+
+    renderProfile('/author');
+
+    expect(screen.getByText('Read-only creator bio.')).not.toBeNull();
+    expect(screen.queryByPlaceholderText(/tell people what you make/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /save bio/i })).toBeNull();
   });
 });

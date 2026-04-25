@@ -4,20 +4,21 @@ import { XIcon, DiscordIcon, GithubIcon } from '@/components/ui/icons';
 import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
 export const Footer = () => {
-  const { theme } = useLayoutContext();
+  const { theme, isHomePage } = useLayoutContext();
   const isDark = theme === 'dark';
 
   return (
     <footer
       id="footer"
       className={cn(
-        "border-t",
+        "relative z-10 border-t",
+        isHomePage && "min-h-[20svh] snap-end snap-always",
         isDark
           ? "bg-[var(--color-bg-base)] border-white/5"
           : "bg-[#f5f5f3] border-gray-200"
       )}
     >
-      <div className="flex justify-center items-center gap-8 w-full py-7 md:py-12">
+      <div className="flex min-h-[inherit] justify-center items-center gap-8 w-full py-7 md:py-12">
         <a 
           href={EXTERNAL_LINKS.twitter}
           target="_blank" 

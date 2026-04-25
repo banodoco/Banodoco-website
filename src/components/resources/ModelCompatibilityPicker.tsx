@@ -115,9 +115,9 @@ export function ModelCompatibilityPicker({
               event.target.value = '';
             }}
             disabled={disabled || availableModels.length === 0}
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-100 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-[46px] w-full appearance-none rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 pr-10 text-sm text-zinc-100 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <option value="">
+            <option value="" className="bg-zinc-950 text-zinc-100">
               {models.length === 0
                 ? 'No models available'
                 : availableModels.length === 0
@@ -125,7 +125,7 @@ export function ModelCompatibilityPicker({
                   : 'Add a compatible model...'}
             </option>
             {availableModels.map((model) => (
-              <option key={model.id} value={model.id}>
+              <option key={model.id} value={model.id} className="bg-zinc-950 text-zinc-100">
                 {model.display_name ?? model.id}
                 {model.default_variant ? ` (${model.default_variant})` : ''}
               </option>

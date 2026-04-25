@@ -645,7 +645,7 @@ export function DiscordResourceSections({
           </h2>
           {!commentsLoading && comments.length > 0 && (
             <span className="text-xs text-zinc-500">
-              {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
+              {`${comments.length} ${comments.length === 1 ? 'comment' : 'comments'}`}
             </span>
           )}
         </div>

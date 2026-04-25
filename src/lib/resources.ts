@@ -6,9 +6,18 @@ export interface UploadedResourceMedia {
   url: string;
 }
 
+export interface UploadedResourceFile {
+  fileName: string;
+  url: string;
+  storagePath: string;
+}
+
 export interface ResourceLinkInput {
   label: string;
   url: string;
+  description?: string | null;
+  source?: 'link' | 'upload';
+  fileName?: string | null;
 }
 
 export interface AssetMediaInput {
@@ -30,6 +39,7 @@ export interface SaveResourceInput {
   links: ResourceLinkInput[];
   primaryMediaId?: string | null;
   status: 'draft' | 'published';
+  selfAttributed: boolean;
   galleryItems: AssetMediaInput[];
   modelItems: AssetModelInput[];
 }
@@ -120,6 +130,37 @@ export const uploadResourceMedia = async (
     id: data.id,
     type: mediaType,
     url: fileUrl,
+  };
+};
+
+export const uploadResourceFile = async (
+  file: File,
+  userId: string,
+): Promise<UploadedResourceFile> => {
+  const client = getClient();
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
+  const fileName = `${crypto.randomUUID()}.${ext}`;
+  const storagePath = `${userId}/resource-files/${fileName}`;
+
+  const { error: uploadError } = await client.storage
+    .from('user-uploads')
+    .upload(storagePath, file, {
+      contentType: file.type || 'application/octet-stream',
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(`Failed to upload "${file.name}": ${uploadError.message}`);
+  }
+
+  const { data: publicUrlData } = client.storage
+    .from('user-uploads')
+    .getPublicUrl(storagePath);
+
+  return {
+    fileName: file.name,
+    url: publicUrlData.publicUrl,
+    storagePath,
   };
 };
 
@@ -274,6 +315,9 @@ export const saveResource = async (
     .map((link) => ({
       label: link.label.trim(),
       url: link.url.trim(),
+      ...(link.description?.trim() ? { description: link.description.trim() } : {}),
+      ...(link.source === 'upload' ? { source: link.source } : {}),
+      ...(link.fileName?.trim() ? { fileName: link.fileName.trim() } : {}),
     }))
     .filter((link) => link.label || link.url);
 
@@ -284,6 +328,7 @@ export const saveResource = async (
     links: normalizedLinks,
     primary_media_id: input.primaryMediaId ?? null,
     status: input.status,
+    self_attributed: input.selfAttributed,
   };
 
   const legacyLoraLink = input.type === 'lora' && normalizedLinks[0]?.url ? normalizedLinks[0].url : undefined;

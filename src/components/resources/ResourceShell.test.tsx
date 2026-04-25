@@ -22,6 +22,7 @@ const baseResource: CommunityResourceItem = {
   isHidden: false,
   status: 'published',
   adminStatus: 'Listed',
+  selfAttributed: true,
   links: [{ label: 'Download', url: 'https://example.com/download' }],
   primaryMediaId: 'media-1',
   primaryMediaUrl: 'https://example.com/media-1.webp',
@@ -374,9 +375,7 @@ describe('ResourceShell', () => {
             <span
               class="text-xs text-zinc-500"
             >
-              1
-
-              comment
+              1 comment
             </span>
           </div>
           <div

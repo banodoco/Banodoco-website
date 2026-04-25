@@ -89,6 +89,13 @@ beforeEach(() => {
 });
 
 describe('ResourceCard admin curate toggle', () => {
+  it('shows asset comment count as comments and omits gallery item count', () => {
+    renderCard({ ...baseAsset, galleryCount: 9, discussionCount: 3 });
+    expect(screen.getByText('3 comments')).toBeTruthy();
+    expect(screen.queryByText(/9 items/)).toBeNull();
+    expect(screen.queryByText(/discussions/)).toBeNull();
+  });
+
   it('does not render the toggle for non-admin viewers', () => {
     mockState.authProfile = null;
     renderCard();

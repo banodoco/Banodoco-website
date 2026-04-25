@@ -108,6 +108,7 @@ export const Header = () => {
     || pathname.startsWith('/art/')
     || pathname.startsWith('/posts/')
     || pathname.startsWith('/admin/')
+    || pathname.startsWith('/submit/')
     || (pathname.startsWith('/resources/') && pathname !== '/resources');
   const logoTarget = isResourceContextSubpage ? '/2RP' : '/';
 
@@ -255,27 +256,39 @@ export const Header = () => {
                       Profile
                     </Link>
                   )}
-                  <Link
-                    to="/submit/art"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors"
-                  >
-                    Submit Art
-                  </Link>
-                  <Link
-                    to="/submit/post"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors"
-                  >
-                    Submit Post
-                  </Link>
-                  <Link
-                    to="/submit/resource"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors"
-                  >
-                    Submit Resource
-                  </Link>
+                  {profile?.isApproved === false ? (
+                    <Link
+                      to="/get-approved"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-3 py-2 text-sm text-amber-200 hover:bg-white/5 transition-colors"
+                    >
+                      Get approved to post
+                    </Link>
+                  ) : (
+                    <>
+                      <Link
+                        to="/submit/art"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors"
+                      >
+                        Submit Art
+                      </Link>
+                      <Link
+                        to="/submit/post"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors"
+                      >
+                        Submit Post
+                      </Link>
+                      <Link
+                        to="/submit/resource"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors"
+                      >
+                        Submit Resource
+                      </Link>
+                    </>
+                  )}
                   <button
                     onClick={() => { signOut(); setUserMenuOpen(false); }}
                     className="w-full text-left px-3 py-2 text-sm text-zinc-400 hover:bg-white/5 hover:text-red-400 transition-colors border-t border-white/10"

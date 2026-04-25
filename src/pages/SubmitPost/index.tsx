@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
+  ArrowLeft,
   FileText,
   ImagePlus,
   Loader2,
@@ -10,7 +11,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import { RequireAuth } from '@/components/auth/RequireAuth';
+import { RequireApproved } from '@/components/auth/RequireApproved';
 import { MarkdownEditor } from '@/components/editor/MarkdownEditor';
 import { useAuth } from '@/contexts/useAuth';
 import { useArtPieces, type ArtPieceItem } from '@/hooks/useArtPieces';
@@ -714,6 +715,14 @@ function SubmitPostForm() {
           >
            <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-6 py-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/70 text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+                aria-label="Go back"
+              >
+                <ArrowLeft size={18} />
+              </button>
               <div className="rounded-lg bg-zinc-900 p-2">
                 <Newspaper size={20} className="text-zinc-100" />
               </div>
@@ -896,8 +905,8 @@ function SubmitPostForm() {
 
 export default function SubmitPost() {
   return (
-    <RequireAuth>
+    <RequireApproved>
       <SubmitPostForm />
-    </RequireAuth>
+    </RequireApproved>
   );
 }

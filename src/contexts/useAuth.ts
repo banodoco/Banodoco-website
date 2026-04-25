@@ -8,6 +8,7 @@ export interface AuthContextValue {
   loading: boolean;
   signInWithDiscord: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

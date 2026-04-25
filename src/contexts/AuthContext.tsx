@@ -3,14 +3,23 @@ import type { User } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { AuthContext, type AuthContextValue } from './useAuth';
 
+export const PREVIEW_UNAPPROVED_KEY = 'banodoco_preview_unapproved';
+
+function readPreviewUnapproved(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.sessionStorage.getItem(PREVIEW_UNAPPROVED_KEY) === '1';
+}
+
 export interface UserProfile {
   id: string;
   memberId: string | null;
   isAdmin: boolean;
+  isApproved: boolean;
   discordUsername: string | null;
   displayName: string | null;
   avatarUrl: string | null;
   bio: string | null;
+  profileLinks: string[];
 }
 
 interface AuthProviderProps {
@@ -30,7 +39,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const { data, error } = await client
       .from('profiles')
-      .select('id, discord_id, discord_username, display_name, avatar_url, bio')
+      .select('id, discord_id, discord_username, display_name, avatar_url, bio, profile_links, is_approved')
       .eq('id', userId)
       .single();
 
@@ -46,14 +55,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     if (!error && data) {
+      const previewUnapproved = readPreviewUnapproved();
       setProfile({
         id: data.id,
         memberId: data.discord_id,
         isAdmin,
+        isApproved: previewUnapproved ? false : (data.is_approved ?? false),
         discordUsername: data.discord_username,
         displayName: data.display_name,
         avatarUrl: data.avatar_url,
         bio: data.bio,
+        profileLinks: Array.isArray(data.profile_links) ? data.profile_links : [],
       });
     } else {
       setProfile(null);
@@ -117,13 +129,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setProfile(null);
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    if (!user) return;
+    await fetchProfile(user.id);
+  }, [fetchProfile, user]);
+
   const value = useMemo<AuthContextValue>(() => ({
     user,
     profile,
     loading,
     signInWithDiscord,
     signOut,
-  }), [user, profile, loading, signInWithDiscord, signOut]);
+    refreshProfile,
+  }), [user, profile, loading, signInWithDiscord, signOut, refreshProfile]);
 
   return (
     <AuthContext.Provider value={value}>

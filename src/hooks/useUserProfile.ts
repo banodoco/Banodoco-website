@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
+// If you add a new drafts surface, apply the same pending-approval exclusion filter.
+
 export interface UserProfileData {
   id: string;
   memberId: string | null;
@@ -157,11 +159,30 @@ export const useUserProfile = (
           }
 
           if (isOwnerView) {
-            const { count: draftAssetsCount, error: draftResourceError } = await client
+            const { data: pendingRows, error: pendingError } = await client
+              .from('approval_requests')
+              .select('attached_resource_id')
+              .eq('member_id', memberId)
+              .eq('status', 'pending')
+              .not('attached_resource_id', 'is', null);
+
+            if (pendingError) throw pendingError;
+
+            const pendingResourceIds = (pendingRows ?? [])
+              .map((row) => row.attached_resource_id)
+              .filter((value): value is string => typeof value === 'string' && value.length > 0);
+
+            let draftAssetsQuery = client
               .from('assets')
               .select('id', { count: 'exact', head: true })
               .eq('member_id', memberId)
               .eq('status', 'draft');
+
+            if (pendingResourceIds.length > 0) {
+              draftAssetsQuery = draftAssetsQuery.not('id', 'in', `(${pendingResourceIds.join(',')})`);
+            }
+
+            const { count: draftAssetsCount, error: draftResourceError } = await draftAssetsQuery;
 
             if (!cancelled && !draftResourceError) {
               setDraftCount(draftAssetsCount ?? 0);

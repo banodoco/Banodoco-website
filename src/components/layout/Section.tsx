@@ -43,7 +43,7 @@ interface SectionProps {
   children: ReactNode;
   /**
    * Disable snap behavior for this section.
-   * Use on the last section to allow natural scrolling to the footer.
+   * Use only for non-page-height content inside a snap container.
    */
   noSnap?: boolean;
   /**
@@ -72,7 +72,7 @@ export const Section = forwardRef<HTMLElement, SectionProps>(
         // when browser chrome shows/hides (100dvh can change during scroll).
         "h-screen h-[100svh] overflow-hidden relative",
         // `snap-always` helps Safari/iOS avoid "resting" between sections.
-        // noSnap allows the last section to scroll naturally to the footer.
+        // noSnap allows specialized non-page-height content inside a snap container.
         !noSnap && "snap-start snap-always",
         className
       )}

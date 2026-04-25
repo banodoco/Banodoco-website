@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, Loader2, Upload } from 'lucide-react';
+import { ArrowLeft, BookOpen, Loader2, Upload } from 'lucide-react';
 import { MarkdownEditor } from '@/components/editor/MarkdownEditor';
 import { GalleryMediaEditor, type GalleryEditorItem } from '@/components/resources/GalleryMediaEditor';
 import { LinksEditor } from '@/components/resources/LinksEditor';
@@ -11,10 +11,11 @@ import {
   saveResource,
   type AssetModelInput,
   type ResourceLinkInput,
+  uploadResourceFile,
   uploadResourceMedia,
 } from '@/lib/resources';
 import { useAuth } from '@/contexts/useAuth';
-import { RequireAuth } from '@/components/auth/RequireAuth';
+import { RequireApproved } from '@/components/auth/RequireApproved';
 import { buildResourcePath } from '@/lib/routing';
 
 const RESOURCE_TYPES = [
@@ -25,7 +26,26 @@ const RESOURCE_TYPES = [
 interface SubmitResourceFormProps {
   editSlug?: string;
   inline?: boolean;
+  mode?: 'publish' | 'approval-request';
+  submitDisabled?: boolean;
+  submitLabel?: string;
+  submitTitle?: string;
+  onValidityChange?: (valid: boolean) => void;
+  onSubmit?: (data: SubmitResourceFormData) => Promise<void>;
   onSaved?: (result: { id: string; slug: string | null; status: 'draft' | 'published' }) => void;
+}
+
+export interface SubmitResourceFormData {
+  id?: string;
+  memberId: string | number | null;
+  name: string;
+  description: string;
+  type: string;
+  links: ResourceLinkInput[];
+  primaryMediaId: string | null;
+  selfAttributed: true;
+  galleryItems: Array<{ mediaId: string; sortOrder: number }>;
+  modelItems: AssetModelInput[];
 }
 
 function isValidUrl(value: string): boolean {
@@ -41,13 +61,14 @@ function isVideoType(value: string | null | undefined): value is string {
   return typeof value === 'string' && value.startsWith('video');
 }
 
-function normalizeLinksForEditor(resourceLinks: ResourceLinkInput[], fallbackUrl: string | null, resourceType: string): ResourceLinkInput[] {
+function normalizeLinksForEditor(resourceLinks: ResourceLinkInput[], fallbackUrl: string | null): ResourceLinkInput[] {
   if (resourceLinks.length > 0) return resourceLinks;
-  if (!fallbackUrl) return [{ label: '', url: '' }];
+  if (!fallbackUrl) return [{ label: 'Resource', url: '', source: 'link' }];
 
   return [{
-    label: resourceType === 'workflow' ? 'Download' : 'Source',
+    label: 'Resource',
     url: fallbackUrl,
+    source: 'link',
   }];
 }
 
@@ -72,6 +93,12 @@ function normalizeGalleryItem(item: {
 export function SubmitResourceForm({
   editSlug,
   inline = false,
+  mode = 'publish',
+  submitDisabled = false,
+  submitLabel,
+  submitTitle,
+  onValidityChange,
+  onSubmit,
   onSaved,
 }: SubmitResourceFormProps) {
   const navigate = useNavigate();
@@ -92,10 +119,12 @@ export function SubmitResourceForm({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [resourceType, setResourceType] = useState<string>('lora');
-  const [links, setLinks] = useState<ResourceLinkInput[]>([{ label: '', url: '' }]);
+  const [resourceMode, setResourceMode] = useState<'link' | 'upload'>('link');
+  const [links, setLinks] = useState<ResourceLinkInput[]>([{ label: 'Resource', url: '', source: 'link' }]);
   const [galleryItems, setGalleryItems] = useState<GalleryEditorItem[]>([]);
   const [primaryMediaId, setPrimaryMediaId] = useState<string | null>(null);
   const [modelItems, setModelItems] = useState<AssetModelInput[]>([]);
+  const [selfAttributed, setSelfAttributed] = useState(false);
   const [savingStatus, setSavingStatus] = useState<'draft' | 'published' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const initializedResourceIdRef = useRef<string | null>(null);
@@ -123,7 +152,9 @@ export function SubmitResourceForm({
     setName(existingResource.title);
     setDescription(existingResource.description ?? '');
     setResourceType(existingResource.resourceType);
-    setLinks(normalizeLinksForEditor(existingResource.links, existingResource.primaryUrl, existingResource.resourceType));
+    const normalizedLinks = normalizeLinksForEditor(existingResource.links, existingResource.primaryUrl);
+    setLinks(normalizedLinks);
+    setResourceMode(normalizedLinks.some((link) => link.source === 'upload') ? 'upload' : 'link');
     const normalizedGallery = galleryMedia.map((item) => normalizeGalleryItem(item));
     setGalleryItems(normalizedGallery);
     setPrimaryMediaId(
@@ -137,6 +168,7 @@ export function SubmitResourceForm({
         compatibilityNote: item.compatibilityNote,
       })),
     );
+    setSelfAttributed(existingResource.selfAttributed);
   }, [assetModels, existingResource, galleryMedia]);
 
   useEffect(() => {
@@ -150,12 +182,21 @@ export function SubmitResourceForm({
   }, [galleryItems, primaryMediaId]);
 
   const headerTitle = resolvedEditSlug ? 'Edit Resource' : 'Submit Resource';
-  const submitDisabled = !name.trim() || savingStatus !== null;
+  const formInvalid = !name.trim() || !selfAttributed || savingStatus !== null;
+  const effectiveSubmitDisabled = formInvalid || submitDisabled;
+  const isApprovalRequestMode = mode === 'approval-request';
+
+  useEffect(() => {
+    onValidityChange?.(!formInvalid);
+  }, [formInvalid, onValidityChange]);
 
   const trimmedLinks = useMemo(
     () => links.map((link) => ({
       label: link.label.trim(),
       url: link.url.trim(),
+      description: link.description?.trim() || null,
+      source: link.source,
+      fileName: link.fileName?.trim() || null,
     })),
     [links],
   );
@@ -166,10 +207,15 @@ export function SubmitResourceForm({
       return false;
     }
 
-    const nonEmptyLinks = trimmedLinks.filter((link) => link.label || link.url);
-    const hasPartialLink = nonEmptyLinks.some((link) => !link.label || !link.url);
+    if (!selfAttributed) {
+      setError('Please confirm that you made this.');
+      return false;
+    }
+
+    const nonEmptyLinks = trimmedLinks.filter((link) => link.url || (resourceMode === 'upload' && link.label));
+    const hasPartialLink = nonEmptyLinks.some((link) => !link.url || (resourceMode === 'upload' && !link.label));
     if (hasPartialLink) {
-      setError('Every external link needs both a label and a URL.');
+      setError(resourceMode === 'upload' ? 'Every uploaded resource needs a file link.' : 'Resource URL is required when a resource link is provided.');
       return false;
     }
 
@@ -208,6 +254,26 @@ export function SubmitResourceForm({
     return uploadedItems;
   };
 
+  const handleResourceUpload = async (files: File[]) => {
+    if (!user) {
+      throw new Error('You must be signed in to upload resource files.');
+    }
+
+    const uploadedLinks: ResourceLinkInput[] = [];
+
+    for (const file of files) {
+      const uploaded = await uploadResourceFile(file, user.id);
+      uploadedLinks.push({
+        label: file.name.replace(/\.[^.]+$/, '') || file.name,
+        url: uploaded.url,
+        source: 'upload',
+        fileName: uploaded.fileName,
+      });
+    }
+
+    return uploadedLinks;
+  };
+
   const handleSave = async (status: 'draft' | 'published') => {
     if (!validateBeforeSave()) return;
 
@@ -215,7 +281,7 @@ export function SubmitResourceForm({
     setSavingStatus(status);
 
     try {
-      const result = await saveResource({
+      const payload: SubmitResourceFormData = {
         id: existingResource?.id,
         memberId: existingResource?.memberId ?? profile?.memberId ?? null,
         name: name.trim(),
@@ -223,12 +289,34 @@ export function SubmitResourceForm({
         type: resourceType,
         links: trimmedLinks.filter((link) => link.label && link.url),
         primaryMediaId: primaryMediaId ?? galleryItems[0]?.mediaId ?? null,
-        status,
+        selfAttributed: true,
         galleryItems: galleryItems.map((item, index) => ({
           mediaId: item.mediaId,
           sortOrder: index,
         })),
         modelItems,
+      };
+
+      if (isApprovalRequestMode) {
+        if (!onSubmit) {
+          throw new Error('Approval request submit handler is not configured.');
+        }
+        await onSubmit(payload);
+        return;
+      }
+
+      const result = await saveResource({
+        id: payload.id,
+        memberId: payload.memberId,
+        name: payload.name,
+        description: payload.description,
+        type: payload.type,
+        links: payload.links,
+        primaryMediaId: payload.primaryMediaId,
+        status,
+        selfAttributed: payload.selfAttributed,
+        galleryItems: payload.galleryItems,
+        modelItems: payload.modelItems,
       });
 
       onSaved?.({ ...result, status });
@@ -263,11 +351,12 @@ export function SubmitResourceForm({
     );
   }
 
-  const pageWrapperClass = inline
+  const suppressChrome = inline || isApprovalRequestMode;
+  const pageWrapperClass = suppressChrome
     ? 'space-y-6'
     : 'bg-[#0b0b0f] text-zinc-100 min-h-screen';
 
-  const contentWrapperClass = inline
+  const contentWrapperClass = suppressChrome
     ? ''
     : 'max-w-6xl mx-auto px-6 pt-24 pb-16 sm:pt-28 sm:pb-24';
 
@@ -275,13 +364,21 @@ export function SubmitResourceForm({
     <div className={pageWrapperClass}>
       <div className={contentWrapperClass}>
         <motion.div
-          initial={inline ? false : { opacity: 0, y: 20 }}
-          animate={inline ? undefined : { opacity: 1, y: 0 }}
-          transition={inline ? undefined : { duration: 0.5 }}
+          initial={suppressChrome ? false : { opacity: 0, y: 20 }}
+          animate={suppressChrome ? undefined : { opacity: 1, y: 0 }}
+          transition={suppressChrome ? undefined : { duration: 0.5 }}
           className="space-y-6"
         >
-          {!inline && (
+          {!suppressChrome && (
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/70 text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+                aria-label="Go back"
+              >
+                <ArrowLeft size={18} />
+              </button>
               <div className="rounded-lg bg-zinc-900 p-2">
                 <BookOpen size={20} className="text-zinc-100" />
               </div>
@@ -324,10 +421,10 @@ export function SubmitResourceForm({
                   value={resourceType}
                   onChange={(event) => setResourceType(event.target.value)}
                   disabled={savingStatus !== null}
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                  className="h-[46px] w-full appearance-none rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 pr-10 text-sm text-zinc-100 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {RESOURCE_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
+                    <option key={type.value} value={type.value} className="bg-zinc-950 text-zinc-100">
                       {type.label}
                     </option>
                   ))}
@@ -339,6 +436,10 @@ export function SubmitResourceForm({
               links={links}
               onChange={setLinks}
               disabled={savingStatus !== null}
+              mode={resourceMode}
+              onModeChange={setResourceMode}
+              resourceType={resourceType}
+              onUpload={handleResourceUpload}
             />
 
             <ModelCompatibilityPicker
@@ -358,6 +459,7 @@ export function SubmitResourceForm({
                 minRows={10}
                 enableEmbeds={false}
                 enableInlineMedia
+                hidePreview={mode === 'approval-request'}
                 onInlineUpload={async (files) => {
                   if (!user || !profile?.memberId) {
                     setError('You must be signed in to upload inline images.');
@@ -390,6 +492,23 @@ export function SubmitResourceForm({
               disabled={savingStatus !== null}
             />
 
+            <label className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+              <input
+                type="checkbox"
+                checked={selfAttributed}
+                onChange={(event) => setSelfAttributed(event.target.checked)}
+                disabled={savingStatus !== null}
+                required
+                className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-orange-500 focus:ring-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              <span>
+                <span className="block text-sm font-medium text-zinc-200">I made this.</span>
+                <span className="mt-1 block text-xs text-zinc-500">
+                  Only share things you personally made or agentically directed.
+                </span>
+              </span>
+            </label>
+
             {error && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3">
                 <p className="text-sm text-red-300">{error}</p>
@@ -397,25 +516,28 @@ export function SubmitResourceForm({
             )}
 
             <div className="flex flex-col gap-3 border-t border-white/8 pt-4 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => void handleSave('draft')}
-                disabled={submitDisabled}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {savingStatus === 'draft' ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Saving draft...
-                  </>
-                ) : (
-                  'Save Draft'
-                )}
-              </button>
+              {!isApprovalRequestMode && (
+                <button
+                  type="button"
+                  onClick={() => void handleSave('draft')}
+                  disabled={formInvalid || submitDisabled}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {savingStatus === 'draft' ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Saving draft...
+                    </>
+                  ) : (
+                    'Save Draft'
+                  )}
+                </button>
+              )}
 
               <button
                 type="submit"
-                disabled={submitDisabled}
+                disabled={effectiveSubmitDisabled}
+                title={submitTitle}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-orange-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {savingStatus === 'published' ? (
@@ -426,7 +548,7 @@ export function SubmitResourceForm({
                 ) : (
                   <>
                     <Upload size={16} />
-                    Publish Resource
+                    {submitLabel ?? 'Publish Resource'}
                   </>
                 )}
               </button>
@@ -456,8 +578,8 @@ export function SubmitResourceForm({
 
 export default function SubmitResource() {
   return (
-    <RequireAuth>
+    <RequireApproved>
       <SubmitResourceForm />
-    </RequireAuth>
+    </RequireApproved>
   );
 }

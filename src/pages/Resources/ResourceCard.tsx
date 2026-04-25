@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import type { Asset, AssetMedia, AssetProfile } from './types';
@@ -21,6 +21,15 @@ function getTypePillClass(type: string): string {
   return 'border-white/10 bg-white/[0.06] text-zinc-100';
 }
 
+function getPreviewUrl(media: AssetMedia | null): string | null {
+  if (!media) return null;
+  const metadataUrl = typeof media.metadata?.url === 'string' ? media.metadata.url : null;
+  return media.backup_thumbnail_url
+    ?? media.cloudflare_thumbnail_url
+    ?? media.placeholder_image
+    ?? (media.type?.startsWith('image/') ? metadataUrl : null);
+}
+
 interface ResourceCardProps {
   asset: Asset;
   profile?: AssetProfile | null;
@@ -31,9 +40,15 @@ export const ResourceCard = ({ asset, profile }: ResourceCardProps) => {
   const isAdmin = Boolean(authProfile?.isAdmin);
 
   const media = unwrap<AssetMedia>(asset.media);
-  const thumbnailUrl = media?.backup_thumbnail_url ?? media?.cloudflare_thumbnail_url;
-  const cloudflareThumbnailUrl = media?.cloudflare_thumbnail_url ?? null;
-  const hasVideo = Boolean(media?.cloudflare_playback_hls_url);
+  const previewMedia = useMemo(() => {
+    const candidates = [media, ...(asset.fallbackMedia ?? [])];
+    return candidates.filter((candidate): candidate is AssetMedia => Boolean(candidate && getPreviewUrl(candidate)));
+  }, [asset.fallbackMedia, media]);
+  const [failedPreviewIds, setFailedPreviewIds] = useState<Set<string>>(() => new Set());
+  const selectedPreview = previewMedia.find((candidate) => !failedPreviewIds.has(candidate.id)) ?? null;
+  const thumbnailUrl = getPreviewUrl(selectedPreview);
+  const cloudflareThumbnailUrl = selectedPreview?.cloudflare_thumbnail_url ?? null;
+  const hasVideo = Boolean(selectedPreview?.cloudflare_playback_hls_url);
   const creatorName = profile?.display_name || profile?.username || asset.creator || 'Unknown';
   const avatarUrl = profile?.avatar_url;
   // Local admin_status so the Curate toggle updates optimistically without
@@ -50,12 +65,19 @@ export const ResourceCard = ({ asset, profile }: ResourceCardProps) => {
     label: asset.name,
     persistedSlug: asset.slug,
   });
-  const galleryCount = asset.galleryCount ?? 0;
   const discussionCount = asset.discussionCount ?? 0;
 
   const handleMouseEnter = useCallback(() => setHovered(true), []);
   const handleMouseLeave = useCallback(() => {
     setHovered(false);
+    setAnimatedLoaded(false);
+  }, []);
+  const handlePreviewError = useCallback((mediaId: string) => {
+    setFailedPreviewIds((prev) => {
+      const next = new Set(prev);
+      next.add(mediaId);
+      return next;
+    });
     setAnimatedLoaded(false);
   }, []);
 
@@ -108,6 +130,9 @@ export const ResourceCard = ({ asset, profile }: ResourceCardProps) => {
                   hovered && animatedLoaded ? 'opacity-0' : 'opacity-100'
                 }`}
                 loading="lazy"
+                onError={() => {
+                  if (selectedPreview) handlePreviewError(selectedPreview.id);
+                }}
               />
               {hovered && animatedUrl && (
                 <img
@@ -120,10 +145,10 @@ export const ResourceCard = ({ asset, profile }: ResourceCardProps) => {
                 />
               )}
             </>
-          ) : asset.fallbackMedia && asset.fallbackMedia.length > 0 ? (
+          ) : previewMedia.length > 0 ? (
             <div className="flex h-full w-full gap-0.5">
-              {asset.fallbackMedia.slice(0, 3).map((m) => {
-                const url = m.backup_thumbnail_url ?? m.cloudflare_thumbnail_url;
+              {previewMedia.slice(0, 3).map((m) => {
+                const url = getPreviewUrl(m);
                 return url ? (
                   <img
                     key={m.id}
@@ -131,6 +156,7 @@ export const ResourceCard = ({ asset, profile }: ResourceCardProps) => {
                     alt=""
                     className="h-full flex-1 min-w-0 object-cover"
                     loading="lazy"
+                    onError={() => handlePreviewError(m.id)}
                   />
                 ) : (
                   <div key={m.id} className="h-full flex-1 min-w-0 bg-white/5" />
@@ -175,7 +201,7 @@ export const ResourceCard = ({ asset, profile }: ResourceCardProps) => {
                 {asset.name}
               </h3>
               <p className="mt-1 text-xs text-zinc-500">
-                {galleryCount} {galleryCount === 1 ? 'item' : 'items'} · {discussionCount} {discussionCount === 1 ? 'discussion' : 'discussions'}
+                {discussionCount} {discussionCount === 1 ? 'comment' : 'comments'}
               </p>
             </div>
           </div>

@@ -27,6 +27,17 @@ interface UseResourcesResult {
   error: string | null;
 }
 
+function hasPreviewableMedia(media: AssetMedia | null): boolean {
+  if (!media) return false;
+  const type = media.type ?? '';
+  return Boolean(
+    media.backup_thumbnail_url
+    || media.cloudflare_thumbnail_url
+    || media.placeholder_image
+    || (type.startsWith('image/') && media.metadata?.url),
+  );
+}
+
 export const useResources = (options: UseResourcesOptions = {}): UseResourcesResult => {
   const { sourceOnly, curatedOnly } = options;
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -127,10 +138,10 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
           media: Array.isArray(media) ? media[0] ?? null : media,
         }));
 
-        // For cards with no primary media, fetch up to 3 fallback thumbnails
-        // (gallery first, comment media second) so the card isn't just a
-        // placeholder icon.
-        const noPrimaryIds = normalized.filter((a) => !a.media).map((a) => a.id);
+        // For cards with no previewable primary media, fetch up to 3 fallback
+        // thumbnails (gallery first, comment media second) so ZIP/JSON primary
+        // files do not leave otherwise visual resources blank.
+        const noPrimaryIds = normalized.filter((a) => !hasPreviewableMedia(a.media)).map((a) => a.id);
         const fallbackByAsset = new Map<string, AssetMedia[]>();
         if (noPrimaryIds.length > 0) {
           const { data: galleryRows } = await client

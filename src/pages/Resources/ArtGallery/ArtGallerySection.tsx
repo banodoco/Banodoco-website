@@ -1,11 +1,149 @@
+import { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useArtPieces } from '@/hooks/useArtPieces';
 import { ArtGalleryCard } from './ArtGalleryCard';
 
+const PAGE_SIZE_OPTIONS = [8, 11, 20];
+
+function getArtCardClass(index: number, featuredCount: number): string {
+  if (index < featuredCount) return 'col-span-12 sm:col-span-6 lg:col-span-6';
+  return 'col-span-12 sm:col-span-6 lg:col-span-4';
+}
+
 export const ArtGallerySection = () => {
-  const { artPieces, loading, loadingMore, hasMore, loadMore } = useArtPieces(undefined, { featuredOn2rf: true });
+  const sectionRef = useRef<HTMLElement>(null);
+  const [artStatus, setArtStatus] = useState<'curated' | 'all'>('curated');
+  const [pageSize, setPageSize] = useState(8);
+  const [page, setPage] = useState(1);
+  const [sectionInView, setSectionInView] = useState(false);
+  const [sectionHovered, setSectionHovered] = useState(false);
+  const [pagerHovered, setPagerHovered] = useState(false);
+  const { artPieces, loading, totalCount } = useArtPieces(undefined, {
+    featuredOn2rf: artStatus === 'curated',
+    page,
+    pageSize,
+  });
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const featuredCount = Math.min(2, artPieces.length);
+
+  useEffect(() => {
+    if (!loading && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [loading, page, totalPages]);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setSectionInView(entry.isIntersecting),
+      { threshold: 0.12 },
+    );
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleStatusChange = (nextStatus: 'curated' | 'all') => {
+    setArtStatus(nextStatus);
+    setPage(1);
+  };
+
+  const handlePageSizeChange = (nextPageSize: number) => {
+    setPageSize(nextPageSize);
+    setPage(1);
+  };
+
+  const showPager = sectionInView && (sectionHovered || pagerHovered);
 
   return (
-    <section>
+    <section
+      ref={sectionRef}
+      className="relative"
+      onMouseEnter={() => setSectionHovered(true)}
+      onMouseLeave={() => setSectionHovered(false)}
+    >
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1 rounded-lg bg-white/5 p-1">
+          <button
+            onClick={() => handleStatusChange('curated')}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              artStatus === 'curated'
+                ? 'bg-white/15 text-white'
+                : 'text-white/50 hover:text-white/70'
+            }`}
+          >
+            Curated
+          </button>
+          <button
+            onClick={() => handleStatusChange('all')}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              artStatus === 'all'
+                ? 'bg-white/15 text-white'
+                : 'text-white/50 hover:text-white/70'
+            }`}
+          >
+            All
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-white/30">
+            Showing {artPieces.length} of {totalCount} artwork{totalCount !== 1 ? 's' : ''}
+          </p>
+          <select
+            value={pageSize}
+            onChange={(event) => handlePageSizeChange(Number(event.target.value))}
+            className="h-[34px] cursor-pointer appearance-none rounded-lg border border-white/10 bg-zinc-950/80 px-3 py-1.5 pr-8 text-xs text-zinc-100 transition-colors focus:border-white/25 focus:outline-none focus:ring-1 focus:ring-white/10"
+            aria-label="Artworks per page"
+          >
+            {PAGE_SIZE_OPTIONS.map((value) => (
+              <option key={value} value={value} className="bg-zinc-950 text-zinc-100">
+                {value} per page
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div
+          className={`fixed inset-x-0 bottom-4 z-50 flex justify-center transition-opacity duration-150 ${
+            showPager
+              ? 'pointer-events-auto opacity-100'
+              : 'pointer-events-none opacity-0'
+          }`}
+          onMouseEnter={() => setPagerHovered(true)}
+          onMouseLeave={() => setPagerHovered(false)}
+        >
+          <div className="flex items-center gap-5 rounded-full border border-white/10 bg-zinc-950/85 px-3 py-2 shadow-2xl shadow-black/30 backdrop-blur">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
+              className="rounded-full border border-white/10 p-2 text-white transition hover:border-white/25 disabled:cursor-not-allowed disabled:opacity-30"
+              aria-label="Previous art page"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="flex min-w-16 items-center justify-center gap-3 text-sm font-bold">
+              <span className="text-zinc-100">{page}</span>
+              <span className="text-zinc-700">/</span>
+              <span className="text-zinc-500">{totalPages}</span>
+            </div>
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+              className="rounded-full border border-white/10 p-2 text-white transition hover:border-white/25 disabled:cursor-not-allowed disabled:opacity-30"
+              aria-label="Next art page"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Loading skeleton */}
       {loading && (
         <div className="grid grid-cols-12 gap-3 sm:gap-4">
@@ -27,61 +165,18 @@ export const ArtGallerySection = () => {
       )}
 
       {/* Grid */}
-      {!loading && artPieces.length > 0 && (() => {
-        // Trim so last row of regular items (3/row on lg) is always full.
-        // Reserve 1 slot for the Discord CTA card.
-        const featured = artPieces.slice(0, Math.min(2, artPieces.length));
-        const rest = artPieces.slice(featured.length);
-        // We add 1 CTA card, so total regular slots = rest.length + 1 must be divisible by 3
-        const regularCount = Math.floor((rest.length + 1) / 3) * 3 - 1;
-        const displayRegular = rest.slice(0, Math.max(0, regularCount));
-        const displayItems = [...featured, ...displayRegular];
-
-        return (
-          <div className="grid grid-cols-12 gap-3 sm:gap-4">
-            {displayItems.map((piece, i) => (
-              <div
-                key={piece.id}
-                className={
-                  i < featured.length
-                    ? 'col-span-12 sm:col-span-6 lg:col-span-6'
-                    : 'col-span-12 sm:col-span-6 lg:col-span-4'
-                }
-              >
-                <ArtGalleryCard artPiece={piece} featured={i < featured.length} />
-              </div>
-            ))}
-
-            {/* Discord CTA card */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-4">
-              <a
-                href="https://discord.gg/NnFxGvx94b"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group block h-full rounded-lg overflow-hidden border border-indigo-500/20 hover:border-indigo-400/40 bg-gradient-to-br from-indigo-950/50 to-purple-950/30 transition-all duration-200 hover:scale-[1.02]"
-              >
-                <div className="flex flex-col items-center justify-center text-center aspect-video p-6 gap-3">
-                  <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center group-hover:bg-indigo-500/30 transition-colors">
-                    <svg className="w-6 h-6 text-indigo-400" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-sm font-semibold text-white/90">Share Your Art on Discord</h3>
-                  <p className="text-xs text-white/50 leading-relaxed max-w-[200px]">
-                    Join our weekly art sharing event and get featured
-                  </p>
-                  <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-400 group-hover:text-indigo-300 transition-colors">
-                    Join the community
-                    <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </span>
-                </div>
-              </a>
+      {!loading && artPieces.length > 0 && (
+        <div className="grid grid-cols-12 gap-3 sm:gap-4">
+          {artPieces.map((piece, i) => (
+            <div
+              key={piece.id}
+              className={getArtCardClass(i, featuredCount)}
+            >
+              <ArtGalleryCard artPiece={piece} featured={i < featuredCount} />
             </div>
-          </div>
-        );
-      })()}
+          ))}
+        </div>
+      )}
 
       {/* Empty state */}
       {!loading && artPieces.length === 0 && (
@@ -90,25 +185,6 @@ export const ArtGallerySection = () => {
         </div>
       )}
 
-      {/* Load more */}
-      {!loading && hasMore && (
-        <div className="mt-8 flex justify-center">
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium bg-white/10 hover:bg-white/15 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {loadingMore ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white/70 rounded-full animate-spin" />
-                Loading...
-              </>
-            ) : (
-              'Load more'
-            )}
-          </button>
-        </div>
-      )}
     </section>
   );
 };

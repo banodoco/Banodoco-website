@@ -40,6 +40,10 @@ vi.mock('@/components/auth/RequireAuth', () => ({
   RequireAuth: ({ children }: { children: unknown }) => children,
 }));
 
+vi.mock('@/components/auth/RequireApproved', () => ({
+  RequireApproved: ({ children }: { children: unknown }) => children,
+}));
+
 vi.mock('@/components/forms/MediaUploader', () => ({
   MediaUploader: () => null,
 }));

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Youtube, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -68,6 +68,24 @@ const Resources = () => {
 
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
+
+  const forgeSectionRef = useRef<HTMLElement>(null);
+  const [forgeInView, setForgeInView] = useState(false);
+  const [forgeHovered, setForgeHovered] = useState(false);
+  const [forgePagerHovered, setForgePagerHovered] = useState(false);
+  const showForgePager = forgeInView && (forgeHovered || forgePagerHovered);
+
+  useEffect(() => {
+    const section = forgeSectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setForgeInView(entry.isIntersecting),
+      { threshold: 0.12 },
+    );
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
 
   const [authAction, setAuthAction] = useState<'art' | 'resource' | 'post' | null>(null);
 
@@ -217,12 +235,15 @@ const Resources = () => {
 
         {/* The Forge — Assets */}
         <motion.section
+          ref={forgeSectionRef}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-100px' }}
           variants={containerVariants}
           id="assets"
-          className="space-y-10 rounded-2xl border border-white/10 bg-[#151120] p-6 sm:p-8"
+          className="relative space-y-10 rounded-2xl border border-white/10 bg-[#151120] p-6 sm:p-8"
+          onMouseEnter={() => setForgeHovered(true)}
+          onMouseLeave={() => setForgeHovered(false)}
         >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-5 md:pb-6">
             <div className="flex items-center gap-3">
@@ -268,6 +289,43 @@ const Resources = () => {
             />
           )}
 
+          {/* Pagination */}
+          {!error && !loading && assets.length > 0 && totalPages > 1 && (
+            <div
+              className={`fixed inset-x-0 bottom-4 z-50 flex justify-center transition-opacity duration-150 ${
+                showForgePager
+                  ? 'pointer-events-auto opacity-100'
+                  : 'pointer-events-none opacity-0'
+              }`}
+              onMouseEnter={() => setForgePagerHovered(true)}
+              onMouseLeave={() => setForgePagerHovered(false)}
+            >
+              <div className="flex items-center gap-5 rounded-full border border-white/10 bg-zinc-950/85 px-3 py-2 shadow-2xl shadow-black/30 backdrop-blur">
+                <button
+                  disabled={page === 1}
+                  onClick={handlePrev}
+                  className="rounded-full border border-white/10 p-2 text-white transition hover:border-white/25 disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Previous resource page"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="flex min-w-16 items-center justify-center gap-3 text-sm font-bold">
+                  <span className="text-zinc-100">{page}</span>
+                  <span className="text-zinc-700">/</span>
+                  <span className="text-zinc-500">{totalPages}</span>
+                </div>
+                <button
+                  disabled={page === totalPages}
+                  onClick={handleNext}
+                  className="rounded-full border border-white/10 p-2 text-white transition hover:border-white/25 disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Next resource page"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Grid */}
           {!error && (loading || assets.length > 0) && (
             <div className="mt-6">
@@ -279,30 +337,6 @@ const Resources = () => {
             </div>
           )}
 
-          {/* Pagination */}
-          {!error && !loading && assets.length > 0 && totalPages > 1 && (
-            <div className="flex items-center justify-center gap-8 pt-12">
-              <button
-                disabled={page === 1}
-                onClick={handlePrev}
-                className="p-3 rounded-full border border-zinc-800 disabled:opacity-30 hover:border-zinc-500 transition-all text-white"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <div className="flex items-center gap-4 text-sm font-bold">
-                <span className="text-zinc-100">{page}</span>
-                <span className="text-zinc-700">/</span>
-                <span className="text-zinc-500">{totalPages}</span>
-              </div>
-              <button
-                disabled={page === totalPages}
-                onClick={handleNext}
-                className="p-3 rounded-full border border-zinc-800 disabled:opacity-30 hover:border-zinc-500 transition-all text-white"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          )}
         </motion.section>
 
         {/* News Section — Briefing Sidebar Layout */}

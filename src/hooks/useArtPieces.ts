@@ -20,6 +20,7 @@ export interface ArtPieceItem {
   cloudflareThumbnailUrl: string | null;
   hlsUrl: string | null;
   mediaType: string | null;
+  adminStatus: string | null;
   createdAt: string;
   creator: ArtPieceCreator;
   memberId: string | null;
@@ -28,10 +29,12 @@ export interface ArtPieceItem {
 interface MediaRow {
   id: string;
   type: string | null;
+  title: string | null;
   description: string | null;
   cloudflare_thumbnail_url: string | null;
   cloudflare_playback_hls_url: string | null;
   backup_thumbnail_url: string | null;
+  admin_status: string | null;
   created_at: string;
   member_id: string | null;
 }
@@ -51,6 +54,12 @@ interface UseArtPiecesOptions {
    * Gidan Ed 2 entries.
    */
   featuredOn2rf?: boolean;
+  /**
+   * Optional page controls for numbered pagination. When omitted, the hook
+   * keeps the existing incremental `loadMore` behavior.
+   */
+  page?: number;
+  pageSize?: number;
 }
 
 interface UseArtPiecesResult {
@@ -59,6 +68,7 @@ interface UseArtPiecesResult {
   loadingMore: boolean;
   error: string | null;
   hasMore: boolean;
+  totalCount: number;
   loadMore: () => void;
 }
 
@@ -87,12 +97,13 @@ export function mapRowToItem(row: MediaRow, memberMap: Map<string, MemberRow>): 
   return {
     id: row.id,
     slug: buildEntitySlug(row.description, row.id),
-    title: null,
+    title: row.title,
     caption: row.description,
     thumbnailUrl: row.backup_thumbnail_url ?? row.cloudflare_thumbnail_url,
     cloudflareThumbnailUrl: row.cloudflare_thumbnail_url,
     hlsUrl: row.cloudflare_playback_hls_url,
     mediaType: row.type,
+    adminStatus: row.admin_status,
     createdAt: row.created_at,
     creator,
     memberId: row.member_id,
@@ -103,12 +114,14 @@ export const useArtPieces = (
   memberId?: string,
   options: UseArtPiecesOptions = {},
 ): UseArtPiecesResult => {
-  const { featuredOn2rf = false } = options;
+  const { featuredOn2rf = false, page, pageSize = PAGE_SIZE } = options;
+  const pagedMode = page != null;
   const [artPieces, setArtPieces] = useState<ArtPieceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
   const offsetRef = useRef(0);
   const memberCacheRef = useRef(new Map<string, MemberRow>());
 
@@ -157,11 +170,12 @@ export const useArtPieces = (
         let query = client
           .from('media')
           .select(
-            'id, type, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, backup_thumbnail_url, created_at, member_id:member_id::text',
+            'id, type, title, description, cloudflare_thumbnail_url, cloudflare_playback_hls_url, backup_thumbnail_url, admin_status, created_at, member_id:member_id::text',
+            pagedMode ? { count: 'exact' } : undefined,
           )
           .eq('source', 'art')
           .order('created_at', { ascending: false })
-          .range(offset, offset + PAGE_SIZE - 1);
+          .range(offset, offset + pageSize - 1);
 
         if (featuredOn2rf) {
           query = query.eq('featured_on_2rf', true);
@@ -173,12 +187,19 @@ export const useArtPieces = (
           query = query.eq('member_id', memberId);
         }
 
-        const { data, error: fetchError } = await query;
+        const { data, error: fetchError, count } = await query;
 
         if (fetchError) throw fetchError;
 
         const rows = (data ?? []) as MediaRow[];
-        setHasMore(rows.length === PAGE_SIZE);
+        if (pagedMode) {
+          const resolvedCount = count ?? rows.length;
+          setTotalCount(resolvedCount);
+          setHasMore(offset + rows.length < resolvedCount);
+        } else {
+          setTotalCount(offset + rows.length);
+          setHasMore(rows.length === pageSize);
+        }
 
         await resolveMembers(rows);
 
@@ -186,7 +207,7 @@ export const useArtPieces = (
           mapRowToItem(row, memberCacheRef.current),
         );
 
-        if (isLoadMore) {
+        if (isLoadMore && !pagedMode) {
           setArtPieces((prev) => [...prev, ...items]);
         } else {
           setArtPieces(items);
@@ -200,23 +221,25 @@ export const useArtPieces = (
         setLoadingMore(false);
       }
     },
-    [memberId, featuredOn2rf, resolveMembers],
+    [memberId, featuredOn2rf, pageSize, pagedMode, resolveMembers],
   );
 
   useEffect(() => {
-    offsetRef.current = 0;
+    const nextOffset = pagedMode ? ((page ?? 1) - 1) * pageSize : 0;
+    offsetRef.current = nextOffset;
     memberCacheRef.current.clear();
     setArtPieces([]);
     setHasMore(true);
+    setTotalCount(0);
     setError(null);
-    fetchPage(0, false);
-  }, [fetchPage]);
+    fetchPage(nextOffset, false);
+  }, [fetchPage, page, pageSize, pagedMode]);
 
   const loadMore = useCallback(() => {
-    if (!loadingMore && hasMore) {
+    if (!pagedMode && !loadingMore && hasMore) {
       fetchPage(offsetRef.current, true);
     }
-  }, [loadingMore, hasMore, fetchPage]);
+  }, [pagedMode, loadingMore, hasMore, fetchPage]);
 
-  return { artPieces, loading, loadingMore, error, hasMore, loadMore };
+  return { artPieces, loading, loadingMore, error, hasMore, totalCount, loadMore };
 };

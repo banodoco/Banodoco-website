@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import type { ComponentProps } from 'react';
 import { buildEntitySlug } from '@/lib/routing';
 import { SubmitResourceForm } from './index';
 
@@ -28,6 +29,7 @@ interface AssetRecord {
   member_id: string | number | null;
   creator: string | null;
   admin_status: string | null;
+  self_attributed: boolean;
 }
 
 interface MediaRecord {
@@ -172,6 +174,7 @@ const mockState = vi.hoisted(() => {
     member_id: asset.member_id === null ? null : String(asset.member_id),
     creator: asset.creator,
     admin_status: asset.admin_status,
+    self_attributed: asset.self_attributed,
     media: buildMediaRow(asset.primary_media_id),
   });
 
@@ -240,6 +243,7 @@ const mockState = vi.hoisted(() => {
             member_id: payload.member_id as string | number | null,
             creator: 'Author Name',
             admin_status: typeof payload.admin_status === 'string' ? payload.admin_status : 'Listed',
+            self_attributed: payload.self_attributed === true,
           };
           state.db.assets.push(asset);
           return { data: buildAssetRow(asset), error: null };
@@ -644,11 +648,50 @@ function renderSubmitResourceForm(entry: string, path = '/submit/resource') {
   return { router };
 }
 
+function renderApprovalResourceForm({
+  onSubmit = vi.fn().mockResolvedValue(undefined),
+  submitDisabled = false,
+}: {
+  onSubmit?: (data: Parameters<NonNullable<ComponentProps<typeof SubmitResourceForm>['onSubmit']>>[0]) => Promise<void>;
+  submitDisabled?: boolean;
+} = {}) {
+  const router = createMemoryRouter([
+    {
+      path: '/approval',
+      element: (
+        <SubmitResourceForm
+          inline
+          mode="approval-request"
+          submitLabel="Submit for approval"
+          submitDisabled={submitDisabled}
+          onSubmit={onSubmit}
+        />
+      ),
+    },
+    {
+      path: '/resources/:slug',
+      element: <div data-testid="resource-detail-route">resource detail</div>,
+    },
+  ], {
+    initialEntries: ['/approval'],
+  });
+
+  render(<RouterProvider router={router} />);
+  return { router, onSubmit };
+}
+
 function fillLink(label: string, url: string) {
   const inputs = screen.getAllByPlaceholderText(/label|https:\/\/example\.com\/resource/i);
   const [labelInput, urlInput] = inputs as HTMLInputElement[];
   fireEvent.change(labelInput, { target: { value: label } });
   fireEvent.change(urlInput, { target: { value: url } });
+}
+
+function confirmSelfAttributed() {
+  const checkbox = screen.getByRole('checkbox', { name: /i made this/i });
+  if (!(checkbox as HTMLInputElement).checked) {
+    fireEvent.click(checkbox);
+  }
 }
 
 beforeEach(() => {
@@ -669,12 +712,26 @@ describe('SubmitResourceForm', () => {
     expect(mockState.state.db.assets).toHaveLength(0);
   });
 
+  it('requires the I made this checkbox before creating a resource', async () => {
+    renderSubmitResourceForm('/submit/resource');
+
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Unchecked Resource' } });
+
+    expect((screen.getByRole('checkbox', { name: /i made this/i }) as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByRole('button', { name: /publish resource/i }).hasAttribute('disabled')).toBe(true);
+
+    confirmSelfAttributed();
+
+    expect(screen.getByRole('button', { name: /publish resource/i }).hasAttribute('disabled')).toBe(false);
+  });
+
   it('publishes a resource with status, media, links, models, and primary media id, then redirects to the canonical detail route', async () => {
     const { router } = renderSubmitResourceForm('/submit/resource');
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Publishable Resource' } });
     fireEvent.click(screen.getByRole('button', { name: /upload gallery image/i }));
     fillLink('Download', 'https://example.com/download');
+    confirmSelfAttributed();
     await waitFor(() => {
       expect(screen.getByText(/media-1/i)).not.toBeNull();
     });
@@ -695,6 +752,7 @@ describe('SubmitResourceForm', () => {
     const createdAsset = mockState.state.db.assets[0];
     const galleryMediaId = mockState.state.db.media[0]?.id;
     expect(createdAsset.status).toBe('published');
+    expect(createdAsset.self_attributed).toBe(true);
     expect(createdAsset.links).toEqual([{ label: 'Download', url: 'https://example.com/download' }]);
     expect(createdAsset.primary_media_id).toBe(galleryMediaId);
     expect(mockState.state.db.assetMedia).toEqual([
@@ -723,9 +781,11 @@ describe('SubmitResourceForm', () => {
     renderSubmitResourceForm('/submit/resource');
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Draft Resource' } });
+    confirmSelfAttributed();
     fireEvent.click(screen.getByRole('button', { name: /save draft/i }));
 
     expect(mockState.state.db.assets[0]?.status).toBe('draft');
+    expect(mockState.state.db.assets[0]?.self_attributed).toBe(true);
   });
 
   it('loads a draft in edit mode, applies diffs across junction tables, and updates status', async () => {
@@ -782,6 +842,7 @@ describe('SubmitResourceForm', () => {
       member_id: '42',
       creator: 'Author Name',
       admin_status: 'Listed',
+      self_attributed: true,
     }];
     mockState.state.db.assetMedia = [{
       asset_id: existingId,
@@ -829,6 +890,7 @@ describe('SubmitResourceForm', () => {
     });
 
     expect(mockState.state.db.assets[0]?.status).toBe('published');
+    expect(mockState.state.db.assets[0]?.self_attributed).toBe(true);
     expect(mockState.state.db.assets[0]?.name).toBe('Edited Draft');
     expect(mockState.state.db.assets[0]?.links).toEqual([{ label: 'New link', url: 'https://example.com/new' }]);
     expect(mockState.state.db.assetMedia).toEqual([
@@ -852,12 +914,49 @@ describe('SubmitResourceForm', () => {
     });
   });
 
+  it('pre-checks I made this in edit mode for legacy backfilled self_attributed resources', async () => {
+    const existingId = '423e4567-e89b-12d3-a456-426614174000';
+    const existingSlug = buildEntitySlug('Legacy Resource', existingId);
+
+    mockState.state.db.assets = [{
+      id: existingId,
+      name: 'Legacy Resource',
+      slug: existingSlug,
+      description: 'Existing description',
+      source: 'manual',
+      discord_guild_id: null,
+      discord_channel_id: null,
+      discord_thread_id: null,
+      is_hidden: false,
+      status: 'draft',
+      links: [],
+      type: 'workflow',
+      lora_link: null,
+      download_link: null,
+      primary_media_id: null,
+      created_at: '2026-04-20T00:00:00.000Z',
+      member_id: '42',
+      creator: 'Author Name',
+      admin_status: 'Listed',
+      self_attributed: true,
+    }];
+
+    renderSubmitResourceForm(`/resources/${existingSlug}?edit=1`, '/resources/:slug');
+
+    await waitFor(() => {
+      expect((screen.getByLabelText(/name/i) as HTMLInputElement).value).toBe('Legacy Resource');
+    });
+
+    expect((screen.getByRole('checkbox', { name: /i made this/i }) as HTMLInputElement).checked).toBe(true);
+  });
+
   it('surfaces asset write errors in the UI', async () => {
     mockState.state.assetWriteError = 'new row violates row-level security policy for table "assets"';
 
     renderSubmitResourceForm('/submit/resource');
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'RLS Blocked' } });
+    confirmSelfAttributed();
     fireEvent.click(screen.getByRole('button', { name: /publish resource/i }));
 
     expect(await screen.findByText(/row-level security policy/i)).not.toBeNull();
@@ -883,6 +982,7 @@ describe('SubmitResourceForm', () => {
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Video Gallery Resource' } });
     fireEvent.click(screen.getByRole('button', { name: /upload gallery video/i }));
+    confirmSelfAttributed();
     await waitFor(() => {
       expect(screen.getByText('media-1')).not.toBeNull();
     });
@@ -904,5 +1004,49 @@ describe('SubmitResourceForm', () => {
     });
 
     warnSpy.mockRestore();
+  });
+
+  it('delegates approval-request submission without writing an asset or navigating', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const { router } = renderApprovalResourceForm({ onSubmit });
+
+    expect(screen.queryByRole('button', { name: /save draft/i })).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Approval Resource' } });
+    fillLink('Download', 'https://example.com/download');
+    confirmSelfAttributed();
+    fireEvent.click(screen.getByRole('button', { name: /submit for approval/i }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+        id: undefined,
+        memberId: '42',
+        name: 'Approval Resource',
+        description: '',
+        type: 'lora',
+        links: [{
+          label: 'Download',
+          url: 'https://example.com/download',
+          description: null,
+          source: 'link',
+          fileName: null,
+        }],
+        primaryMediaId: null,
+        selfAttributed: true,
+        galleryItems: [],
+        modelItems: [],
+      }));
+    });
+    expect(mockState.state.db.assets).toHaveLength(0);
+    expect(router.state.location.pathname).toBe('/approval');
+  });
+
+  it('honors submitDisabled in approval-request mode even when internal form fields are valid', () => {
+    renderApprovalResourceForm({ submitDisabled: true });
+
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Ready Resource' } });
+    confirmSelfAttributed();
+
+    expect(screen.getByRole('button', { name: /submit for approval/i }).hasAttribute('disabled')).toBe(true);
   });
 });

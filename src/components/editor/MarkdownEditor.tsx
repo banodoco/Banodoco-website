@@ -29,6 +29,7 @@ export interface MarkdownEditorProps {
   minRows?: number;
   enableEmbeds?: boolean;
   enableInlineMedia?: boolean;
+  hidePreview?: boolean;
   onInlineUpload?: (files: File[]) => Promise<string | null>;
   uploadedMedia?: EditorPickerItem[];
   previewMediaById?: Record<string, PostMediaItem>;
@@ -42,6 +43,7 @@ export function MarkdownEditor({
   minRows = 22,
   enableEmbeds = false,
   enableInlineMedia = true,
+  hidePreview = false,
   onInlineUpload,
   uploadedMedia = [],
   previewMediaById = {},
@@ -83,7 +85,35 @@ export function MarkdownEditor({
       const textarea = textareaRef.current;
       const start = textarea?.selectionStart ?? value.length;
       const end = textarea?.selectionEnd ?? value.length;
+
+      // Toggle off when the chars immediately outside the selection are the markers.
+      // e.g. selection is "hello" inside "**hello**" → click Bold again → unwrap.
+      const beforeStart = Math.max(0, start - prefix.length);
+      const before = value.slice(beforeStart, start);
+      const after = value.slice(end, end + suffix.length);
+      if (before === prefix && after === suffix) {
+        const nextValue =
+          value.slice(0, beforeStart) +
+          value.slice(start, end) +
+          value.slice(end + suffix.length);
+        setEditorState(nextValue, beforeStart, end - prefix.length);
+        return;
+      }
+
+      // Toggle off when the selection itself is the wrapped form.
+      // e.g. selection is "**hello**" → click Bold again → unwrap to "hello".
       const selectedText = value.slice(start, end);
+      if (
+        selectedText.length >= prefix.length + suffix.length
+        && selectedText.startsWith(prefix)
+        && selectedText.endsWith(suffix)
+      ) {
+        const inner = selectedText.slice(prefix.length, selectedText.length - suffix.length);
+        const nextValue = `${value.slice(0, start)}${inner}${value.slice(end)}`;
+        setEditorState(nextValue, start, start + inner.length);
+        return;
+      }
+
       const content = selectedText || placeholderText;
       const insertion = `${prefix}${content}${suffix}`;
       const nextValue = `${value.slice(0, start)}${insertion}${value.slice(end)}`;
@@ -153,7 +183,7 @@ export function MarkdownEditor({
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className={`grid gap-4 ${hidePreview ? '' : 'md:grid-cols-2'}`}>
         <textarea
           ref={textareaRef}
           value={value}
@@ -163,7 +193,7 @@ export function MarkdownEditor({
           className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 px-4 py-4 font-mono text-sm leading-6 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
         />
 
-        {enableEmbeds ? (
+        {!hidePreview && (enableEmbeds ? (
           <PreviewPanel
             body={value}
             mediaById={previewMediaById}
@@ -177,7 +207,7 @@ export function MarkdownEditor({
             </div>
             <MarkdownRenderer content={value} variant="detail" emptyMessage="Preview updates as you type." />
           </div>
-        )}
+        ))}
       </div>
 
       {(enableEmbeds || enableInlineMedia) && (
