@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useLayoutContext } from '@/contexts/layout-context';
 import { useAuth } from '@/contexts/useAuth';
@@ -198,11 +199,22 @@ export const Header = () => {
             />
           ))}
 
-          {showResourcesShortcut && (
-            <Link to="/2RP" className={resourcesButtonClass}>
-              2RP
-            </Link>
-          )}
+          <AnimatePresence initial={false}>
+            {showResourcesShortcut && !isOnHero && (
+              <motion.div
+                key="resources-shortcut"
+                initial={{ width: 0, opacity: 0, x: 24, marginLeft: -32 }}
+                animate={{ width: 'auto', opacity: 1, x: 0, marginLeft: 0 }}
+                exit={{ width: 0, opacity: 0, x: 24, marginLeft: -32 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                style={{ overflow: 'hidden' }}
+              >
+                <Link to="/2RP" className={resourcesButtonClass}>
+                  <span style={{ fontFamily: '"Sixtyfour", monospace' }}>2RP</span>
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Auth: Sign In / User Menu */}
           {!isHomePage && !authLoading && !user && (

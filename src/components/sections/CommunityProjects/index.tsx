@@ -1,21 +1,18 @@
 import { Link } from 'react-router-dom';
 import { Section, SectionContent } from '@/components/layout/Section';
-import { GradientHighlight, NameHighlight } from '@/components/ui/TextHighlight';
+import { NameHighlight } from '@/components/ui/TextHighlight';
 import { useSectionVisibility } from '@/lib/useSectionVisibility';
+import { TetrisBoard, type TetrisProject } from './TetrisBoard';
 
 type ProjectAccent = 'rose' | 'amber' | 'emerald';
 
-type Project = {
-  name: string;
-  description: string;
-  href: string;
-  external: boolean;
-  accent: ProjectAccent;
-  imageSrc: string;
-  imageAlt: string;
-  imageShape: 'circle' | 'rectangle';
-  linkLabel: string;
+const LINK_ACCENT_CLASSES: Record<ProjectAccent, string> = {
+  rose: 'text-rose-200 group-hover:text-rose-100',
+  amber: 'text-amber-200 group-hover:text-amber-100',
+  emerald: 'text-emerald-200 group-hover:text-emerald-100',
 };
+
+type Project = TetrisProject;
 
 const PROJECTS: Project[] = [
   {
@@ -24,7 +21,7 @@ const PROJECTS: Project[] = [
     href: 'https://github.com/banodoco/brain-of-bndc',
     external: true,
     accent: 'rose',
-    imageSrc: '/community-projects/bndc.png',
+    imageSrc: '/community-projects/bndc.jpg',
     imageAlt: 'BNDC mascot portrait',
     imageShape: 'circle',
     linkLabel: 'View on GitHub',
@@ -46,45 +43,56 @@ const PROJECTS: Project[] = [
     href: '/2RP',
     external: false,
     accent: 'emerald',
-    imageSrc: '/2nd-renaissance/first_frame.png',
-    imageAlt: '2nd Renaissance hero still',
+    imageSrc: '/community-projects/2rp.jpg',
+    imageAlt: 'VisualFrisson — Everyone All at Once',
     imageShape: 'rectangle',
     linkLabel: 'Explore 2RP',
   },
 ];
 
-const cardClassName = 'group flex h-full flex-row items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none md:flex-col md:items-stretch md:gap-4 md:p-6';
+const cardClassName = 'group relative block overflow-hidden rounded-xl md:rounded-2xl border border-white/10 aspect-[21/9] md:aspect-[3/4] transition hover:border-white/20 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none';
 
-const ProjectVisual = ({ project }: { project: Project }) => {
+const ProjectCardContent = ({ project }: { project: Project }) => {
   const isCircle = project.imageShape === 'circle';
   return (
-    <div className="shrink-0 w-20 h-20 md:w-full md:h-auto md:aspect-[4/3] rounded-xl overflow-hidden flex items-center justify-center bg-white/5">
+    <>
       <img
         src={project.imageSrc}
         alt={project.imageAlt}
-        className={`w-full h-full object-cover ${isCircle ? 'rounded-full md:rounded-xl' : ''}`}
+        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04] ${isCircle ? 'object-top' : ''}`}
       />
-    </div>
+      <div className="absolute inset-x-0 top-0 h-1/2 md:h-1/3 bg-gradient-to-b from-black/75 via-black/30 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/45 to-transparent pointer-events-none md:block hidden" />
+
+      <h3 className="absolute top-3 left-3 right-3 md:top-4 md:left-4 md:right-4 z-10 text-base md:text-2xl font-normal tracking-tight">
+        <NameHighlight color={project.accent}>
+          {project.name === '2RP' ? (
+            <span style={{ fontFamily: '"Sixtyfour", monospace' }}>{project.name}</span>
+          ) : project.name === 'Art Compute' ? (
+            <span
+              className="!font-bold uppercase tracking-[0.2em]"
+              style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace' }}
+            >
+              ArtCompute
+            </span>
+          ) : (
+            project.name
+          )}
+        </NameHighlight>
+      </h3>
+
+      <div className="absolute bottom-3 left-3 right-3 md:bottom-4 md:left-4 md:right-4 z-10">
+        <p className="hidden md:block text-sm md:text-base text-white/85 leading-snug mb-2">
+          {project.description}
+        </p>
+        <span className={`inline-flex items-center gap-1 text-xs md:text-sm font-semibold transition-all ${LINK_ACCENT_CLASSES[project.accent]} group-hover:gap-2`}>
+          <span className="hidden md:inline">{project.linkLabel}</span>
+          <span aria-hidden>→</span>
+        </span>
+      </div>
+    </>
   );
 };
-
-const ProjectCardContent = ({ project }: { project: Project }) => (
-  <>
-    <ProjectVisual project={project} />
-    <div className="min-w-0 md:flex md:flex-1 md:flex-col">
-      <h3 className="text-base md:text-xl font-normal tracking-tight mb-1 md:mb-3">
-        <NameHighlight color={project.accent}>{project.name}</NameHighlight>
-      </h3>
-      <p className="text-sm md:text-base text-white/80 leading-relaxed line-clamp-2">
-        {project.description}
-      </p>
-      <span className="mt-2 md:mt-3 inline-flex items-center gap-1 text-sm font-medium text-white/70 group-hover:text-white transition-colors">
-        {project.linkLabel}
-        <span aria-hidden>→</span>
-      </span>
-    </div>
-  </>
-);
 
 const ProjectCard = ({ project }: { project: Project }) => {
   if (project.external) {
@@ -121,23 +129,35 @@ export const CommunityProjects = () => {
       className="text-white"
     >
       <SectionContent fullWidth className="flex-col justify-center gap-6 md:gap-10">
-        <div className="w-full px-6 md:px-16">
+        {/* Mobile-only heading (desktop heading is baked into the title piece) */}
+        <div className="md:hidden w-full px-6">
           <div className="max-w-6xl mx-auto text-center">
-            <h2 className="text-lg md:text-3xl lg:text-4xl font-normal tracking-tight">
-              Friends in the <GradientHighlight>community</GradientHighlight>
+            <h2 className="text-lg font-normal tracking-tight">
+              Some other pieces of the puzzle
             </h2>
           </div>
         </div>
 
-        <div className="w-full px-6 md:px-16">
+        {/* Mobile: stacked layout (unchanged) */}
+        <div className="w-full px-6 md:hidden">
           <div
-            className={`max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 transition-opacity duration-700 ${
+            className={`max-w-6xl mx-auto grid grid-cols-1 gap-4 transition-opacity duration-700 ${
               hasBeenVisible ? 'opacity-100' : 'opacity-0'
             }`}
           >
             {PROJECTS.map(project => (
               <ProjectCard key={project.name} project={project} />
             ))}
+          </div>
+        </div>
+
+        {/* Desktop: tetris layout. The title piece overhangs the bbox upward by
+           half the bbox height (25% of bbox width); the bbox is shifted down via
+           padding-top so the full composition (title piece + bottom row) sits
+           visually centered in its allotted vertical space. */}
+        <div className="hidden md:flex w-full px-6 md:px-16 items-center justify-center">
+          <div className="max-w-6xl mx-auto w-full overflow-visible">
+            <TetrisBoard projects={PROJECTS} hasBeenVisible={hasBeenVisible} />
           </div>
         </div>
       </SectionContent>

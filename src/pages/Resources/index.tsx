@@ -143,7 +143,12 @@ const Resources = () => {
                 className="flex items-center gap-4"
               >
                 <span className="h-px w-12 bg-orange-500" />
-                <span className="text-orange-500 font-black tracking-[0.4em] uppercase text-[10px]">2nd Renaissance People</span>
+                <span
+                  className="text-orange-500 font-black tracking-[0.4em] uppercase text-[10px]"
+                  style={{ fontFamily: '"Sixtyfour", monospace' }}
+                >
+                  2nd Renaissance People
+                </span>
               </motion.div>
 
               <motion.div

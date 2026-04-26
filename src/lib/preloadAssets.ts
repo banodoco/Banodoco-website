@@ -47,9 +47,9 @@ function getSectionPreloadList() {
     firstEvent?.poster,
 
     // Community Projects (BNDC avatar, Art Compute, 2RP)
-    '/community-projects/bndc.png',
+    '/community-projects/bndc.jpg',
     '/community-projects/artcompute.jpg',
-    '/2nd-renaissance/first_frame.png',
+    '/community-projects/2rp.jpg',
   ]);
 
   // Video metadata only (avoid pulling entire MP4s)
