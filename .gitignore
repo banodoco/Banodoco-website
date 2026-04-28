@@ -41,3 +41,16 @@ public/bundle-starter.zip
 .env
 .env.*
 !.env.example
+
+# Local agent / planning tool state
+.baseline/
+.claude/
+.megaplan/
+
+# Dev / scratch artifacts (not referenced in code)
+banodoco-dns-zone.txt
+critique_output*.json
+public/eeep.mp4
+public/opening.mp4
+public/hero-intro-*.mp4
+public/8zCN3OQTDP1rqF-L6HRNm_video.mp4

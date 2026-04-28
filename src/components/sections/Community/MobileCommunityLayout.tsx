@@ -1,4 +1,5 @@
 import type * as React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { headerOffsetPadding } from '@/components/layout/Section';
 import { TopicCard } from './TopicCard';
 import { TopicCardsSkeleton, TopicCardsState } from './Skeletons';
@@ -6,11 +7,20 @@ import type { TopicData } from './types';
 import { useMobileCarousel } from './useMobileCarousel';
 import { CommunityIntro } from './CommunityIntro';
 
+const SLIDE_SHIFT = 32; // px
+const SLIDE_EASE = [0.25, 0.46, 0.45, 0.94] as const;
+
+const sideVariants = (fromLeft: boolean, reduced: boolean) => ({
+  hidden: { opacity: 0, x: reduced ? 0 : fromLeft ? -SLIDE_SHIFT : SLIDE_SHIFT },
+  visible: { opacity: 1, x: 0 },
+});
+
 interface MobileCommunityLayoutProps {
   topics: TopicData[];
   loading: boolean;
   error: string | null;
   sectionIsVisible: boolean;
+  hasBeenVisible: boolean;
   activeTopicIndex: number;
   setActiveTopicIndex: React.Dispatch<React.SetStateAction<number>>;
 }
@@ -20,9 +30,17 @@ export const MobileCommunityLayout = ({
   loading,
   error,
   sectionIsVisible,
+  hasBeenVisible,
   activeTopicIndex,
   setActiveTopicIndex,
 }: MobileCommunityLayoutProps) => {
+  const prefersReducedMotion = useReducedMotion() ?? false;
+  const textTransition = prefersReducedMotion
+    ? { duration: 0.4, ease: 'easeOut' as const }
+    : { duration: 0.6, ease: SLIDE_EASE, delay: 0.08 };
+  const mediaTransition = prefersReducedMotion
+    ? { duration: 0.4, ease: 'easeOut' as const }
+    : { duration: 0.6, ease: SLIDE_EASE };
   const {
     scrollRef,
     cardRefs,
@@ -42,13 +60,25 @@ export const MobileCommunityLayout = ({
       <div className="max-w-7xl mx-auto w-full flex-1 flex items-center">
         <div className="w-full">
           {/* On landscape tablets, limit intro text to 3/4 width */}
-          <div className="md:landscape:w-5/6">
+          <motion.div
+            className="md:landscape:w-5/6"
+            variants={sideVariants(true, prefersReducedMotion)}
+            initial="hidden"
+            animate={hasBeenVisible ? 'visible' : 'hidden'}
+            transition={textTransition}
+          >
             <CommunityIntro />
-          </div>
+          </motion.div>
 
           {/* Horizontal scroll cards */}
           {/* Live indicator moved inside TopicCard header on mobile */}
-          <div className="-mx-6 md:-mx-16 mt-6">
+          <motion.div
+            className="-mx-6 md:-mx-16 mt-6"
+            variants={sideVariants(false, prefersReducedMotion)}
+            initial="hidden"
+            animate={hasBeenVisible ? 'visible' : 'hidden'}
+            transition={mediaTransition}
+          >
             {loading && <TopicCardsSkeleton mobile />}
             {showErrorOrEmpty && (
               <TopicCardsState error={error} isEmpty={topics.length === 0} />
@@ -110,7 +140,7 @@ export const MobileCommunityLayout = ({
                 </div>
               </>
             )}
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

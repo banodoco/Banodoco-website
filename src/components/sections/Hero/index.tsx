@@ -133,7 +133,7 @@ export const Hero = () => {
               </button>
               <Link
                 to="/2RP"
-                className="inline-flex items-center px-6 py-3 text-sm font-semibold rounded-lg transition-all text-white border border-white/50 hover:bg-white/10 md:text-[#1a1a1a] md:border-black/15 md:hover:bg-black/5"
+                className="inline-flex items-center px-6 py-3 text-sm font-semibold rounded-lg transition-all text-white border border-white/50 hover:bg-white/25 hover:text-orange-500 md:text-[#1a1a1a] md:border-black/15 md:hover:bg-white/35 md:hover:text-orange-500"
               >
                 <span style={{ fontFamily: '"Sixtyfour", monospace' }}>2RP</span>
               </Link>

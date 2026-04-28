@@ -15,12 +15,6 @@ function getAnimatedThumbnail(staticUrl: string): string {
   return staticUrl.replace('/thumbnail.jpg', '/thumbnail.gif?duration=4s&height=360');
 }
 
-function getTypePillClass(type: string): string {
-  if (type === 'workflow') return 'border-zinc-300/20 bg-zinc-300/15 text-zinc-100';
-  if (type === 'lora') return 'border-zinc-100/20 bg-zinc-100 text-zinc-900';
-  return 'border-white/10 bg-white/[0.06] text-zinc-100';
-}
-
 function getPreviewUrl(media: AssetMedia | null): string | null {
   if (!media) return null;
   const metadataUrl = typeof media.metadata?.url === 'string' ? media.metadata.url : null;
@@ -177,54 +171,36 @@ export const ResourceCard = ({ asset, profile }: ResourceCardProps) => {
             </div>
           )}
 
-          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${getTypePillClass(asset.type)}`}>
-              {asset.type}
-            </span>
-            {hasVideo && (
-              <span className="rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white">
-                Video
-              </span>
-            )}
-            {isCurated && (
-              <span className="rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white">
-                Curated
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-3 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="truncate font-medium text-white/95 text-sm">
-                {asset.name}
-              </h3>
-              <p className="mt-1 text-xs text-zinc-500">
-                {discussionCount} {discussionCount === 1 ? 'comment' : 'comments'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/10 px-2.5 py-2">
+          <div className="pointer-events-none absolute left-3 top-3 flex max-w-[calc(100%-5rem)] items-center gap-2 rounded-full border border-white/10 bg-black/55 px-2 py-1 backdrop-blur-sm">
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt={creatorName}
-                className="h-6 w-6 rounded-full object-cover"
+                className="h-5 w-5 shrink-0 rounded-full object-cover"
                 loading="lazy"
               />
             ) : (
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[10px] font-medium text-zinc-300">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/15 text-[10px] font-medium text-zinc-100">
                 {creatorName.charAt(0).toUpperCase()}
               </div>
             )}
-            <div className="min-w-0">
-              <p className="truncate text-xs font-medium text-zinc-200">{creatorName}</p>
-              <p className="truncate text-[11px] text-zinc-500">Author</p>
-            </div>
+            <span className="truncate text-[11px] font-medium text-white">{creatorName}</span>
           </div>
 
+          {isCurated && !isAdmin && (
+            <span className="absolute right-3 top-3 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white">
+              Featured
+            </span>
+          )}
+        </div>
+
+        <div className="p-4">
+          <h3 className="truncate font-medium text-white/95 text-sm">
+            {asset.name}
+          </h3>
+          <p className="mt-1 text-xs text-zinc-500">
+            {discussionCount} {discussionCount === 1 ? 'comment' : 'comments'}
+          </p>
         </div>
       </Link>
 

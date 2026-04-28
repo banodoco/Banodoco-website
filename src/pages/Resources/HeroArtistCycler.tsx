@@ -17,6 +17,16 @@ export const HeroArtistCycler = ({
   const [index, setIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [open, setOpen] = useState(false);
+  const [readyIds, setReadyIds] = useState<ReadonlySet<string>>(() => new Set());
+
+  const markReady = (id: string) => {
+    setReadyIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (pieces.length === 0) {
@@ -39,6 +49,7 @@ export const HeroArtistCycler = ({
     };
   }, [hovered, open, pieces.length]);
 
+
   if (loading) {
     return <div className="bg-white/5 w-full h-full" />;
   }
@@ -54,6 +65,7 @@ export const HeroArtistCycler = ({
 
   const { thumbnailUrl, creator } = currentPiece;
   const displayName = creator.displayName ?? creator.username ?? 'Unknown';
+  const isReady = readyIds.has(currentPiece.id);
 
   return (
     <>
@@ -69,9 +81,12 @@ export const HeroArtistCycler = ({
           <motion.div
             key={currentPiece.id}
             initial={{ opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
+            animate={{ opacity: isReady ? 1 : 0, x: isReady ? 0 : 24 }}
             exit={{ opacity: 0, x: -24 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
+            transition={{
+              opacity: { duration: 0.9, ease: [0.22, 0.61, 0.36, 1] },
+              x: { duration: 0.7, ease: 'easeOut' },
+            }}
             className="absolute inset-0"
           >
             <div className="absolute inset-0 bg-white/5 overflow-hidden">
@@ -82,7 +97,20 @@ export const HeroArtistCycler = ({
                     src={thumbnailUrl}
                     alt={currentPiece.caption ?? 'Art piece'}
                     className="w-full h-full object-cover"
-                    loading="lazy"
+                    loading="eager"
+                    decoding="async"
+                    ref={(node) => {
+                      if (!node) return;
+                      const id = currentPiece.id;
+                      const finalize = () => markReady(id);
+                      if (typeof node.decode === 'function') {
+                        node.decode().then(finalize).catch(finalize);
+                      } else if (node.complete && node.naturalWidth > 0) {
+                        finalize();
+                      }
+                    }}
+                    onLoad={() => markReady(currentPiece.id)}
+                    onError={() => markReady(currentPiece.id)}
                   />
                 )}
               </div>

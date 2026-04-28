@@ -3,29 +3,35 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useArtPieces } from '@/hooks/useArtPieces';
 import { ArtGalleryCard } from './ArtGalleryCard';
 
-const PAGE_SIZE_OPTIONS = [8, 11, 20];
+const PAGE_SIZE = 5;
+
+interface ArtGallerySectionProps {
+  status: 'curated' | 'all';
+}
 
 function getArtCardClass(index: number, featuredCount: number): string {
   if (index < featuredCount) return 'col-span-12 sm:col-span-6 lg:col-span-6';
   return 'col-span-12 sm:col-span-6 lg:col-span-4';
 }
 
-export const ArtGallerySection = () => {
+export const ArtGallerySection = ({ status }: ArtGallerySectionProps) => {
   const sectionRef = useRef<HTMLElement>(null);
-  const [artStatus, setArtStatus] = useState<'curated' | 'all'>('curated');
-  const [pageSize, setPageSize] = useState(8);
   const [page, setPage] = useState(1);
   const [sectionInView, setSectionInView] = useState(false);
   const [sectionHovered, setSectionHovered] = useState(false);
   const [pagerHovered, setPagerHovered] = useState(false);
   const { artPieces, loading, totalCount } = useArtPieces(undefined, {
-    featuredOn2rf: artStatus === 'curated',
+    featuredOn2rf: status === 'curated',
     page,
-    pageSize,
+    pageSize: PAGE_SIZE,
   });
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const featuredCount = Math.min(2, artPieces.length);
+
+  useEffect(() => {
+    setPage(1);
+  }, [status]);
 
   useEffect(() => {
     if (!loading && page > totalPages) {
@@ -45,16 +51,6 @@ export const ArtGallerySection = () => {
     return () => observer.disconnect();
   }, []);
 
-  const handleStatusChange = (nextStatus: 'curated' | 'all') => {
-    setArtStatus(nextStatus);
-    setPage(1);
-  };
-
-  const handlePageSizeChange = (nextPageSize: number) => {
-    setPageSize(nextPageSize);
-    setPage(1);
-  };
-
   const showPager = sectionInView && (sectionHovered || pagerHovered);
 
   return (
@@ -64,49 +60,6 @@ export const ArtGallerySection = () => {
       onMouseEnter={() => setSectionHovered(true)}
       onMouseLeave={() => setSectionHovered(false)}
     >
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-lg bg-white/5 p-1">
-          <button
-            onClick={() => handleStatusChange('curated')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              artStatus === 'curated'
-                ? 'bg-white/15 text-white'
-                : 'text-white/50 hover:text-white/70'
-            }`}
-          >
-            Curated
-          </button>
-          <button
-            onClick={() => handleStatusChange('all')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              artStatus === 'all'
-                ? 'bg-white/15 text-white'
-                : 'text-white/50 hover:text-white/70'
-            }`}
-          >
-            All
-          </button>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <p className="text-xs text-white/30">
-            Showing {artPieces.length} of {totalCount} artwork{totalCount !== 1 ? 's' : ''}
-          </p>
-          <select
-            value={pageSize}
-            onChange={(event) => handlePageSizeChange(Number(event.target.value))}
-            className="h-[34px] cursor-pointer appearance-none rounded-lg border border-white/10 bg-zinc-950/80 px-3 py-1.5 pr-8 text-xs text-zinc-100 transition-colors focus:border-white/25 focus:outline-none focus:ring-1 focus:ring-white/10"
-            aria-label="Artworks per page"
-          >
-            {PAGE_SIZE_OPTIONS.map((value) => (
-              <option key={value} value={value} className="bg-zinc-950 text-zinc-100">
-                {value} per page
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
       {/* Pagination */}
       {!loading && totalPages > 1 && (
         <div
@@ -147,7 +100,7 @@ export const ArtGallerySection = () => {
       {/* Loading skeleton */}
       {loading && (
         <div className="grid grid-cols-12 gap-3 sm:gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: PAGE_SIZE }).map((_, i) => (
             <div
               key={i}
               className={`${

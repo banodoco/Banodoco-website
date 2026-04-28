@@ -17,7 +17,7 @@ import { DesktopCommunityLayout } from './DesktopCommunityLayout';
  */
 export const Community = () => {
   const { topics, loading, error } = useCommunityTopics();
-  const { ref: sectionRef, isVisible: sectionIsVisible } = useSectionVisibility();
+  const { ref: sectionRef, isVisible: sectionIsVisible, hasBeenVisible } = useSectionVisibility();
   const [activeTopicIndex, setActiveTopicIndex] = useState<number>(0);
 
   return (
@@ -32,6 +32,7 @@ export const Community = () => {
         loading={loading}
         error={error}
         sectionIsVisible={sectionIsVisible}
+        hasBeenVisible={hasBeenVisible}
         activeTopicIndex={activeTopicIndex}
         setActiveTopicIndex={setActiveTopicIndex}
       />
@@ -40,6 +41,7 @@ export const Community = () => {
         loading={loading}
         error={error}
         sectionIsVisible={sectionIsVisible}
+        hasBeenVisible={hasBeenVisible}
         activeTopicIndex={activeTopicIndex}
         setActiveTopicIndex={setActiveTopicIndex}
       />

@@ -5,8 +5,7 @@
 //
 // IMPORTANT: scroll *events* on the body/document fire on `window`, not on
 // `document.documentElement`. Callers that listen for scroll should attach
-// their listener to `window` (see DesktopScrollVideo, CrossfadeScrollVideo,
-// LayoutContext for examples).
+// their listener to `window` (see LayoutContext for an example).
 
 // Kept as a no-op constant for any lingering references; the element with
 // this id no longer exists in the DOM after the refactor.

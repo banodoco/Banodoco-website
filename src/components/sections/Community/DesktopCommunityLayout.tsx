@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import type * as React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { headerOffsetPadding } from '@/components/layout/Section';
 import { TopicCard } from './TopicCard';
 import { TopicCardsSkeleton, TopicCardsState } from './Skeletons';
@@ -8,11 +9,20 @@ import { useCenteringPaddings } from './useCenteringPaddings';
 import { useDesktopScrollTracking } from './useDesktopScrollTracking';
 import { CommunityIntro } from './CommunityIntro';
 
+const SLIDE_SHIFT = 32; // px
+const SLIDE_EASE = [0.25, 0.46, 0.45, 0.94] as const;
+
+const sideVariants = (fromLeft: boolean, reduced: boolean) => ({
+  hidden: { opacity: 0, x: reduced ? 0 : fromLeft ? -SLIDE_SHIFT : SLIDE_SHIFT },
+  visible: { opacity: 1, x: 0 },
+});
+
 interface DesktopCommunityLayoutProps {
   topics: TopicData[];
   loading: boolean;
   error: string | null;
   sectionIsVisible: boolean;
+  hasBeenVisible: boolean;
   activeTopicIndex: number;
   setActiveTopicIndex: React.Dispatch<React.SetStateAction<number>>;
 }
@@ -22,9 +32,17 @@ export const DesktopCommunityLayout = ({
   loading,
   error,
   sectionIsVisible,
+  hasBeenVisible,
   activeTopicIndex,
   setActiveTopicIndex,
 }: DesktopCommunityLayoutProps) => {
+  const prefersReducedMotion = useReducedMotion() ?? false;
+  const textTransition = prefersReducedMotion
+    ? { duration: 0.4, ease: 'easeOut' as const }
+    : { duration: 0.6, ease: SLIDE_EASE, delay: 0.08 };
+  const mediaTransition = prefersReducedMotion
+    ? { duration: 0.4, ease: 'easeOut' as const }
+    : { duration: 0.6, ease: SLIDE_EASE };
   const centeringTopicRefs = useRef<(HTMLElement | null)[]>([]);
   const hasTopics = !loading && !error && topics.length > 0;
   const showErrorOrEmpty = !loading && (error || topics.length === 0);
@@ -49,17 +67,28 @@ export const DesktopCommunityLayout = ({
   return (
     <div className="hidden xl:grid grid-cols-12 gap-16 h-full px-16">
       {/* Left side - Introduction text (vertically centered, offset slightly for header) */}
-      <div className="col-span-4 flex items-center" style={headerOffsetPadding({ multiplier: 0.5 })}>
+      <motion.div
+        className="col-span-4 flex items-center"
+        style={headerOffsetPadding({ multiplier: 0.5 })}
+        variants={sideVariants(true, prefersReducedMotion)}
+        initial="hidden"
+        animate={hasBeenVisible ? 'visible' : 'hidden'}
+        transition={textTransition}
+      >
         <div className="max-w-md">
           <CommunityIntro />
         </div>
-      </div>
+      </motion.div>
 
       {/* Right side - Topic cards (scroll under header) */}
-      <div
+      <motion.div
         ref={scrollRef}
         className="col-span-8 overflow-y-auto scrollbar-hide relative snap-y snap-proximity"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        variants={sideVariants(false, prefersReducedMotion)}
+        initial="hidden"
+        animate={hasBeenVisible ? 'visible' : 'hidden'}
+        transition={mediaTransition}
       >
         {/* CSS-string exception site 1/2: the sticky gradient height + negative margin pair cannot use headerOffsetPadding(). */}
         <div
@@ -120,7 +149,7 @@ export const DesktopCommunityLayout = ({
             opacity: bottomGradientOpacity,
           }}
         />
-      </div>
+      </motion.div>
     </div>
   );
 };

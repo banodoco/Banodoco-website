@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Youtube, Users } from 'lucide-react';
+import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Youtube, Users, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PostListCard } from '@/components/posts/PostListCard';
 import { useAuth } from '@/contexts/useAuth';
@@ -9,12 +9,14 @@ import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
 import { ArtGallerySection } from './ArtGallery/ArtGallerySection';
 import { HeroArtistCycler } from './HeroArtistCycler';
+import PixelBlast, { type PixelBlastHandle } from './PixelBlast';
 import { CommunityMontage } from './CommunityMontage';
 import { FilterBar } from './FilterBar';
 import { ResourceGrid } from './ResourceGrid';
 import { CommunityNewsSection } from './CommunityNews/CommunityNewsSection';
 import { AuthActionModal } from './AuthActionModal';
 import { YouTubeEmbed } from './YouTubeEmbed';
+import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
 const BRIEFING_VIDEOS: Array<{ videoId: string; title: string; caption: string }> = [
   { videoId: '6oBWkKcq59A', title: 'Community Briefing — April', caption: 'Latest integrations & releases' },
@@ -45,10 +47,10 @@ const Resources = () => {
     setFilter,
     handleSearchChange,
     availableBaseModels,
-    availableLoraTypes,
   } = useResourceFilters(assets);
 
   const [page, setPage] = useState(1);
+  const [artStatus, setArtStatus] = useState<'curated' | 'all'>('curated');
 
   // Reset to page 1 whenever filters change (synchronous render-time check)
   const filterKey = `${filters.type}|${filters.status}|${filters.mediaType}|${filters.baseModel}|${filters.loraType}|${filters.search}`;
@@ -87,6 +89,23 @@ const Resources = () => {
     return () => observer.disconnect();
   }, []);
 
+  // PixelBlast pattern translates spatially as the page scrolls. Imperative API
+  // (instead of a prop) to avoid the WebGL context reinitializing on every
+  // scroll tick.
+  const pixelBlastRef = useRef<PixelBlastHandle | null>(null);
+  useEffect(() => {
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      // Offset is in UV space; the shader scales by uScale internally.
+      // Mostly vertical drift with a slight horizontal slide for visual interest.
+      pixelBlastRef.current?.setPatternOffset(progress * 0.3, progress * 1.0);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const [authAction, setAuthAction] = useState<'art' | 'resource' | 'post' | null>(null);
 
   const handleCreateClick = (type: 'art' | 'resource' | 'post') => {
@@ -112,8 +131,26 @@ const Resources = () => {
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
+      {/* Page-wide ambient background — fixed so it follows scroll */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <PixelBlast
+          ref={pixelBlastRef}
+          variant="square"
+          pixelSize={6}
+          color="#B497CF"
+          patternScale={3}
+          patternDensity={1.2}
+          pixelSizeJitter={0.5}
+          enableRipples={false}
+          liquid={false}
+          speed={0.6}
+          edgeFade={0.25}
+          transparent
+        />
+      </div>
+
       {/* Full-screen Hero — Editorial Magazine */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-[#0d131c]">
+      <section className="relative z-10 h-screen flex items-center justify-center overflow-hidden bg-[#0b0b0f]">
         {/* Abstract Background */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[120px]" />
@@ -208,7 +245,7 @@ const Resources = () => {
         </div>
       </section>
 
-      <div className="max-w-[1400px] mx-auto px-6 pt-12 lg:pt-20 space-y-12 lg:space-y-16 pb-6 lg:pb-10">
+      <div className="relative z-10 max-w-[1400px] mx-auto px-6 pt-12 lg:pt-20 space-y-12 lg:space-y-16 pb-6 lg:pb-10">
         {/* Community Art */}
         <motion.section
           initial="hidden"
@@ -218,7 +255,7 @@ const Resources = () => {
           id="community-art"
           className="space-y-10 rounded-2xl border border-white/10 bg-[#101522] p-6 sm:p-8"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-zinc-900 rounded-lg">
                 <Palette size={20} className="text-zinc-100" />
@@ -227,15 +264,39 @@ const Resources = () => {
                 Community Art
               </h2>
             </div>
-            <button
-              onClick={() => handleCreateClick('art')}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 hover:border-white/25 transition-colors"
-            >
-              <Plus size={16} />
-              Add Art
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                <button
+                  onClick={() => setArtStatus('curated')}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                    artStatus === 'curated'
+                      ? 'bg-white/15 text-white'
+                      : 'text-white/50 hover:text-white/70'
+                  }`}
+                >
+                  Curated
+                </button>
+                <button
+                  onClick={() => setArtStatus('all')}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                    artStatus === 'all'
+                      ? 'bg-white/15 text-white'
+                      : 'text-white/50 hover:text-white/70'
+                  }`}
+                >
+                  All
+                </button>
+              </div>
+              <button
+                onClick={() => handleCreateClick('art')}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 hover:border-white/25 transition-colors"
+              >
+                <Plus size={16} />
+                Add Art
+              </button>
+            </div>
           </div>
-          <ArtGallerySection />
+          <ArtGallerySection status={artStatus} />
         </motion.section>
 
         {/* The Forge — Assets */}
@@ -250,18 +311,29 @@ const Resources = () => {
           onMouseEnter={() => setForgeHovered(true)}
           onMouseLeave={() => setForgeHovered(false)}
         >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-5 md:pb-6">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 border-b border-zinc-800 pb-5 md:pb-6 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+            <div className="flex items-center gap-3 shrink-0">
               <div className="p-2 bg-zinc-900 rounded-lg">
                 <LayoutGrid size={20} className="text-zinc-100" />
               </div>
               <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
-                The Forge
+                Resources
               </h2>
             </div>
+            {!error && (loading || assets.length > 0) && (
+              <div className="flex-1 lg:px-4">
+                <FilterBar
+                  filters={filters}
+                  searchInput={searchInput}
+                  availableBaseModels={availableBaseModels}
+                  onFilterChange={setFilter}
+                  onSearchChange={handleSearchChange}
+                />
+              </div>
+            )}
             <button
               onClick={() => handleCreateClick('resource')}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 hover:border-white/25 transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 hover:border-white/25 transition-colors shrink-0 self-start lg:self-auto"
             >
               <Plus size={16} />
               Add Resources
@@ -281,18 +353,6 @@ const Resources = () => {
             </div>
           )}
 
-          {/* Filters */}
-          {!error && (loading || assets.length > 0) && (
-            <FilterBar
-              filters={filters}
-              searchInput={searchInput}
-              resultCount={filtered.length}
-              availableBaseModels={availableBaseModels}
-              availableLoraTypes={availableLoraTypes}
-              onFilterChange={setFilter}
-              onSearchChange={handleSearchChange}
-            />
-          )}
 
           {/* Pagination */}
           {!error && !loading && assets.length > 0 && totalPages > 1 && (
@@ -458,18 +518,27 @@ const Resources = () => {
           id="community-gathering"
           className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center rounded-2xl border border-white/10 bg-[#10141d] p-6 sm:p-8"
         >
-          <div className="lg:col-span-5">
-            <div className="flex items-center gap-3 mb-4">
+          <div className="lg:col-span-6 flex flex-col gap-6">
+            <div className="flex items-center gap-3">
               <div className="p-2 bg-zinc-900 rounded-lg">
                 <Users size={20} className="text-zinc-100" />
               </div>
               <span className="text-zinc-500 font-black tracking-[0.4em] uppercase text-[10px]">Community</span>
             </div>
             <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase leading-tight">
-              The open source community gathers in our community
+              The open source world gathers in our community
             </h2>
+            <a
+              href={EXTERNAL_LINKS.discordInvite}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center gap-2 self-start text-sm font-semibold uppercase tracking-[0.2em] text-zinc-100 hover:text-white transition-colors"
+            >
+              Join the community
+              <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+            </a>
           </div>
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-6">
             <CommunityMontage />
           </div>
         </motion.section>

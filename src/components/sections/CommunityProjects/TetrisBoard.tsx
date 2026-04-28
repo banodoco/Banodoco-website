@@ -82,24 +82,36 @@ const TileVisual = ({ project }: { project: TetrisProject }) => {
 const TileText = ({
   project,
   placement,
-  hideDescription,
 }: {
   project: TetrisProject;
   placement: TextPlacement;
-  hideDescription: boolean;
 }) => {
+  const linkInner = (
+    <span
+      className={`inline-flex items-center gap-2 text-sm font-semibold pointer-events-none ${LINK_ACCENT_CLASSES[project.accent]}`}
+    >
+      <span>{project.linkLabel}</span>
+      <span
+        aria-hidden
+        className="transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+      >
+        ↗
+      </span>
+    </span>
+  );
+
   if (placement === 'left-bar') {
     return (
       <>
         <h3 className="absolute top-4 left-4 z-10 max-w-[45%] text-2xl font-normal tracking-tight pointer-events-none text-left">
           <ProjectName project={project} />
         </h3>
-        <span
-          className={`absolute bottom-4 left-4 z-10 max-w-[45%] inline-flex items-center gap-1 text-sm font-semibold transition-all pointer-events-none ${LINK_ACCENT_CLASSES[project.accent]} group-hover:gap-2`}
-        >
-          <span>{project.linkLabel}</span>
-          <span aria-hidden>→</span>
-        </span>
+        <p className="absolute top-14 left-4 right-[55%] z-10 text-base text-white/85 leading-snug pointer-events-none">
+          {project.description}
+        </p>
+        <div className="absolute bottom-4 left-4 right-[55%] z-10 flex justify-end pointer-events-none">
+          {linkInner}
+        </div>
       </>
     );
   }
@@ -110,18 +122,12 @@ const TileText = ({
         <ProjectName project={project} />
       </h3>
 
-      <div className="absolute bottom-4 left-4 right-4 z-10 pointer-events-none">
-        {!hideDescription && (
-          <p className="text-base text-white/85 leading-snug mb-2">
-            {project.description}
-          </p>
-        )}
-        <span
-          className={`inline-flex items-center gap-1 text-sm font-semibold transition-all ${LINK_ACCENT_CLASSES[project.accent]} group-hover:gap-2`}
-        >
-          <span>{project.linkLabel}</span>
-          <span aria-hidden>→</span>
-        </span>
+      <p className="absolute top-14 left-4 right-4 z-10 text-base text-white/85 leading-snug pointer-events-none max-w-[14em]">
+        {project.description}
+      </p>
+
+      <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-end pointer-events-none">
+        {linkInner}
       </div>
     </>
   );
@@ -154,8 +160,6 @@ const TetrisTile = ({
   innerClassName?: string;
   textPlacement?: TextPlacement;
 }) => {
-  const hideDescription = project.name === 'BNDC';
-
   const initial = prefersReducedMotion
     ? { opacity: 0 }
     : { opacity: 0, y: '-120%' };
@@ -182,11 +186,7 @@ const TetrisTile = ({
       <div className={innerWrapperClass} style={innerStyle}>
         <TileVisual project={project} />
       </div>
-      <TileText
-        project={project}
-        placement={textPlacement}
-        hideDescription={hideDescription}
-      />
+      <TileText project={project} placement={textPlacement} />
     </>
   );
 
@@ -414,7 +414,7 @@ export const TetrisBoard = ({ projects, hasBeenVisible }: TetrisBoardProps) => {
             animate={titleTextAnimate}
             transition={titleTextTransition}
           >
-            Some pieces of the puzzle...
+            Some more pieces of the puzzle...
           </motion.span>
         </motion.div>
       </div>

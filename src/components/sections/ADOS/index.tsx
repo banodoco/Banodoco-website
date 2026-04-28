@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { events } from './data';
 import { EventSelector } from './EventSelector';
@@ -11,6 +12,14 @@ import { ExternalLinkIcon } from '@/components/ui/icons';
 import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
 import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
+const SLIDE_SHIFT = 32; // px
+const SLIDE_EASE = [0.25, 0.46, 0.45, 0.94] as const;
+
+const sideVariants = (fromLeft: boolean, reduced: boolean) => ({
+  hidden: { opacity: 0, x: reduced ? 0 : fromLeft ? -SLIDE_SHIFT : SLIDE_SHIFT },
+  visible: { opacity: 1, x: 0 },
+});
+
 export const ADOS: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -18,10 +27,18 @@ export const ADOS: React.FC = () => {
   
   // Track section visibility - pause videos when scrolled away
   // Threshold raised to reduce decoder contention with other video sections on mobile
-  const { ref: sectionRef, isVisible: isActive, hasBeenVisible: hasStarted } = useSectionVisibility({ 
+  const { ref: sectionRef, isVisible: isActive, hasBeenVisible: hasStarted } = useSectionVisibility({
     threshold: 0.25,
     exitThreshold: 0.15,
   });
+
+  const prefersReducedMotion = useReducedMotion() ?? false;
+  const mediaTransition = prefersReducedMotion
+    ? { duration: 0.4, ease: 'easeOut' as const }
+    : { duration: 0.6, ease: SLIDE_EASE };
+  const textTransition = prefersReducedMotion
+    ? { duration: 0.4, ease: 'easeOut' as const }
+    : { duration: 0.6, ease: SLIDE_EASE, delay: 0.08 };
 
   // Preload video posters first (priority), then polaroid photos (delayed)
   const videoPosterUrls = useMemo(() => 
@@ -67,7 +84,13 @@ export const ADOS: React.FC = () => {
       <SectionContent>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left side - Event content */}
-            <div className="lg:col-span-7 order-2 lg:order-1">
+            <motion.div
+              className="lg:col-span-7 order-2 lg:order-1"
+              variants={sideVariants(true, prefersReducedMotion)}
+              initial="hidden"
+              animate={hasStarted ? 'visible' : 'hidden'}
+              transition={mediaTransition}
+            >
               {/* Main content area - stack all events for smooth polaroid transitions */}
               <div className="relative aspect-[16/10] md:aspect-auto md:h-[36dvh] lg:aspect-[16/10] lg:h-auto">
                 {events.map((event, idx) => (
@@ -107,10 +130,16 @@ export const ADOS: React.FC = () => {
                   drainingIdx={autoAdvance.drainingIdx}
                 />
               </div>
-            </div>
+            </motion.div>
 
             {/* Right side - Text */}
-            <div className="lg:col-span-5 order-1 lg:order-2">
+            <motion.div
+              className="lg:col-span-5 order-1 lg:order-2"
+              variants={sideVariants(false, prefersReducedMotion)}
+              initial="hidden"
+              animate={hasStarted ? 'visible' : 'hidden'}
+              transition={textTransition}
+            >
               <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
                 <NameHighlight color="rose">ADOS</NameHighlight> events bring the community <MeaningHighlight color="rose">together in the real world</MeaningHighlight>
               </h2>
@@ -126,7 +155,7 @@ export const ADOS: React.FC = () => {
                 See events
                 <ExternalLinkIcon />
               </a>
-            </div>
+            </motion.div>
           </div>
       </SectionContent>
     </Section>

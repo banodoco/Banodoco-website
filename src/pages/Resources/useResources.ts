@@ -101,35 +101,49 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
           media: AssetMedia | AssetMedia[] | null;
         })[];
         const assetIds = rows.map(({ id }) => id);
-        const [galleryCountsResponse, discussionCountsResponse] = assetIds.length > 0
-          ? await Promise.all([
-              client
-                .from('asset_media')
-                .select('asset_id')
-                .in('asset_id', assetIds)
-                .eq('is_deleted', false),
-              client
-                .from('asset_comments')
-                .select('asset_id')
-                .in('asset_id', assetIds)
-                .eq('is_deleted', false),
-            ])
-          : [{ data: [], error: null }, { data: [], error: null }];
+        console.log(`${logTag} assetIds (${assetIds.length}):`, assetIds);
 
-        if (galleryCountsResponse.error) throw galleryCountsResponse.error;
-        if (discussionCountsResponse.error) throw discussionCountsResponse.error;
+        // Don't transfer rows to count them. `head: true, count: 'exact'`
+        // asks PostgREST for just a row count, no payload. Run one HEAD per
+        // asset in parallel — bulletproof against any server-side row cap,
+        // RLS surprises, or pagination edge cases (the previous bulk fetch
+        // silently truncated when the server's max-rows cap fired).
+        const fetchCount = async (table: 'asset_media' | 'asset_comments', assetId: string) => {
+          const { count, error: countError } = await client
+            .from(table)
+            .select('*', { count: 'exact', head: true })
+            .eq('asset_id', assetId)
+            .eq('is_deleted', false);
+          if (countError) {
+            console.error(`${logTag} count failed for ${table} asset_id=${assetId}:`, countError);
+            return 0;
+          }
+          return count ?? 0;
+        };
+
+        const [galleryCounts, discussionCounts] = assetIds.length > 0
+          ? await Promise.all([
+              Promise.all(assetIds.map((id) => fetchCount('asset_media', id))),
+              Promise.all(assetIds.map((id) => fetchCount('asset_comments', id))),
+            ])
+          : [[] as number[], [] as number[]];
 
         const galleryCountMap = new Map<string, number>();
-        for (const row of (galleryCountsResponse.data ?? []) as Array<{ asset_id: string | null }>) {
-          if (!row.asset_id) continue;
-          galleryCountMap.set(row.asset_id, (galleryCountMap.get(row.asset_id) ?? 0) + 1);
-        }
-
         const discussionCountMap = new Map<string, number>();
-        for (const row of (discussionCountsResponse.data ?? []) as Array<{ asset_id: string | null }>) {
-          if (!row.asset_id) continue;
-          discussionCountMap.set(row.asset_id, (discussionCountMap.get(row.asset_id) ?? 0) + 1);
-        }
+        assetIds.forEach((id, idx) => {
+          galleryCountMap.set(id, galleryCounts[idx] ?? 0);
+          discussionCountMap.set(id, discussionCounts[idx] ?? 0);
+        });
+        console.log(
+          `${logTag} per-asset counts:`,
+          rows.map((r) => ({
+            id: r.id,
+            slug: r.slug,
+            name: r.name,
+            comments: discussionCountMap.get(r.id) ?? 0,
+            gallery: galleryCountMap.get(r.id) ?? 0,
+          })),
+        );
 
         const normalized: Asset[] = rows.map(({ media, ...rest }) => ({
           ...rest,

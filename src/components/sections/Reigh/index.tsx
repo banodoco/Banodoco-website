@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { TravelSelector } from './TravelSelector';
 import { useTravelAutoAdvance } from './useTravelAutoAdvance';
 import { travelExamples } from './data';
@@ -10,6 +11,14 @@ import { PlayIcon, ExternalLinkIcon } from '@/components/ui/icons';
 import { NameHighlight, MeaningHighlight } from '@/components/ui/TextHighlight';
 import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
+const SLIDE_SHIFT = 32; // px
+const SLIDE_EASE = [0.25, 0.46, 0.45, 0.94] as const;
+
+const sideVariants = (fromLeft: boolean, reduced: boolean) => ({
+  hidden: { opacity: 0, x: reduced ? 0 : fromLeft ? -SLIDE_SHIFT : SLIDE_SHIFT },
+  visible: { opacity: 1, x: 0 },
+});
+
 export const Reigh: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState(0);
   const [showPoster, setShowPoster] = useState(true);
@@ -17,11 +26,19 @@ export const Reigh: React.FC = () => {
 
   // Track section visibility - pause video when scrolled away
   // Threshold raised to reduce decoder contention with other video sections on mobile
-  const { ref: sectionRef, isVisible: isActive, hasBeenVisible: hasStarted } = useSectionVisibility({ 
+  const { ref: sectionRef, isVisible: isActive, hasBeenVisible: hasStarted } = useSectionVisibility({
     threshold: 0.25,
     exitThreshold: 0.15,
   });
   const isFullyVisible = hasStarted && isActive;
+
+  const prefersReducedMotion = useReducedMotion() ?? false;
+  const mediaTransition = prefersReducedMotion
+    ? { duration: 0.4, ease: 'easeOut' as const }
+    : { duration: 0.6, ease: SLIDE_EASE };
+  const textTransition = prefersReducedMotion
+    ? { duration: 0.4, ease: 'easeOut' as const }
+    : { duration: 0.6, ease: SLIDE_EASE, delay: 0.08 };
 
   // Preload video posters first (priority), then example images (delayed)
   const videoPosterUrls = useMemo(() => 
@@ -107,7 +124,13 @@ export const Reigh: React.FC = () => {
       <SectionContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-16 items-center">
             {/* Left side - Video showcase */}
-            <div className="order-2 lg:order-1 flex flex-col">
+            <motion.div
+              className="order-2 lg:order-1 flex flex-col"
+              variants={sideVariants(true, prefersReducedMotion)}
+              initial="hidden"
+              animate={hasStarted ? 'visible' : 'hidden'}
+              transition={mediaTransition}
+            >
               <div className="relative rounded-xl overflow-hidden bg-black h-[35svh] md:h-[36svh] lg:h-[60svh] flex items-center justify-center">
                 {/* Blurred background video - stretched to fill empty edges */}
                 <div className="absolute inset-0 z-0">
@@ -205,17 +228,23 @@ export const Reigh: React.FC = () => {
                 videoProgress={autoAdvance.videoProgress}
                 videoEnded={autoAdvance.videoEnded}
               />
-            </div>
+            </motion.div>
 
             {/* Right side - Text */}
-            <div className="order-1 lg:order-2">
+            <motion.div
+              className="order-1 lg:order-2"
+              variants={sideVariants(false, prefersReducedMotion)}
+              initial="hidden"
+              animate={hasStarted ? 'visible' : 'hidden'}
+              transition={textTransition}
+            >
               <h2 className="text-xl md:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] mb-4 md:mb-6">
                 <NameHighlight color="emerald">Reigh</NameHighlight> is an open source art tool for <MeaningHighlight color="emerald">travelling between images</MeaningHighlight>
               </h2>
               <p className="text-sm md:text-lg text-white/60 leading-relaxed mb-4 md:mb-6">
                 We believe that there's an artform waiting to be discovered in the AI-powered journey from one image to another.
               </p>
-              <a 
+              <a
                 href={EXTERNAL_LINKS.reighHome}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -224,7 +253,7 @@ export const Reigh: React.FC = () => {
                 Join pre-beta
                 <ExternalLinkIcon />
               </a>
-            </div>
+            </motion.div>
           </div>
       </SectionContent>
     </Section>

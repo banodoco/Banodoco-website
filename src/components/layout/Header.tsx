@@ -112,6 +112,12 @@ export const Header = () => {
     || pathname.startsWith('/submit/')
     || (pathname.startsWith('/resources/') && pathname !== '/resources');
   const logoTarget = isResourceContextSubpage ? '/2RP' : '/';
+  const is2RPContext =
+    pathname === '/2RP'
+    || pathname.startsWith('/art/')
+    || pathname.startsWith('/posts/')
+    || (pathname.startsWith('/resources/') && pathname !== '/resources')
+    || /^\/[^/]+\/(art|posts|resources)(\/|$)/.test(pathname);
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
@@ -141,10 +147,11 @@ export const Header = () => {
   const resourcesButtonClass = cn(
     'text-[13px] font-medium px-3 py-1.5 rounded-lg transition-all',
     isOnHero
-      ? 'text-white/80 hover:text-white bg-white/10 hover:bg-white/20 md:text-[#141414] md:bg-black/5 md:hover:bg-black/10 md:hover:text-[#141414]'
+      ? 'text-white/80 bg-white/10 hover:bg-white/20 md:text-[#141414] md:bg-black/5 md:hover:bg-black/10'
       : isDark
-        ? 'text-white/80 hover:text-white bg-white/10 hover:bg-white/15'
-        : 'text-[#4B4B4B] hover:text-[#141414] bg-black/5 hover:bg-black/10'
+        ? 'text-white/80 bg-white/10 hover:bg-white/15'
+        : 'text-[#4B4B4B] bg-black/5 hover:bg-black/10',
+    'hover:text-orange-500 md:hover:text-orange-500'
   );
 
   // Transparent header with blur and border for hero
@@ -172,16 +179,17 @@ export const Header = () => {
         {/* Logo */}
         <Link to={logoTarget} onClick={(e) => scrollToTop(e, isHomePage)} className="flex items-center gap-2.5">
           <img src="/banodoco.png" alt="Banodoco" className="h-7 w-7" draggable={false} />
-          <span 
+          <span
             className={cn(
-              'text-xl font-semibold tracking-[-0.01em]',
+              is2RPContext ? 'text-lg font-medium' : 'text-xl font-semibold tracking-[-0.01em]',
               // Mobile: white on hero, desktop: dark on hero
               isOnHero && 'text-white md:text-[#141414]',
               !isOnHero && isDark && 'text-white',
               !isOnHero && !isDark && 'text-[#141414]'
             )}
+            style={is2RPContext ? { fontFamily: '"Sixtyfour", monospace' } : undefined}
           >
-            Banodoco
+            {is2RPContext ? '2RP' : 'Banodoco'}
           </span>
         </Link>
 
