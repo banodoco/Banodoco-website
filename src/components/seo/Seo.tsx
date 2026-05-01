@@ -9,13 +9,14 @@ interface SeoProps {
 
 const DEFAULT_TITLE = 'Banodoco';
 const DEFAULT_DESCRIPTION = 'Discover art, resources, and creative tooling on Banodoco.';
+const DEFAULT_SITE_ORIGIN = 'https://banodoco.ai';
 
 function getSiteOrigin(): string {
   if (typeof window !== 'undefined' && window.location.origin) {
     return window.location.origin;
   }
 
-  return 'https://banodoco.com';
+  return DEFAULT_SITE_ORIGIN;
 }
 
 export function Seo({ title, description, image, url }: SeoProps) {

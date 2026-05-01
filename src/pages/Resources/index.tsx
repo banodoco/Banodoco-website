@@ -4,6 +4,7 @@ import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, P
 import { useNavigate } from 'react-router-dom';
 import { PostListCard } from '@/components/posts/PostListCard';
 import { RpLogo } from '@/components/brand/RpLogo';
+import { Seo } from '@/components/seo/Seo';
 import {
   previousRpLogoTheme,
   RP_THEME_SETTINGS,
@@ -247,6 +248,12 @@ const Resources = () => {
 
   return (
     <div className="rp-theme-scope bg-[#0b0b0f] text-zinc-100 min-h-screen" style={rpThemeStyle}>
+      <Seo
+        title="2nd Renaissance People - Art & Resources for Open Source Nerds"
+        description="Empowering and inspiring resources from some of the most talented people in the open source space."
+        image="https://banodoco.ai/2rp-social-card.jpg"
+        url="https://banodoco.ai/2rp"
+      />
       {/* Page-wide ambient background — fixed so it follows scroll */}
       <div className="pointer-events-none fixed inset-0 z-0">
         {showPreviousBackground && previousRpLogoTheme && (

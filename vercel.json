@@ -1,6 +1,50 @@
 {
   "rewrites": [
     {
+      "source": "/2rp",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|TelegramBot|WhatsApp|Embedly|SkypeUriPreview|bingbot|googlebot|applebot)"
+        }
+      ],
+      "destination": "/2rp-social.html"
+    },
+    {
+      "source": "/2RP",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|TelegramBot|WhatsApp|Embedly|SkypeUriPreview|bingbot|googlebot|applebot)"
+        }
+      ],
+      "destination": "/2rp-social.html"
+    },
+    {
+      "source": "/2rp/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|TelegramBot|WhatsApp|Embedly|SkypeUriPreview|bingbot|googlebot|applebot)"
+        }
+      ],
+      "destination": "/2rp-social.html"
+    },
+    {
+      "source": "/2RP/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|TelegramBot|WhatsApp|Embedly|SkypeUriPreview|bingbot|googlebot|applebot)"
+        }
+      ],
+      "destination": "/2rp-social.html"
+    },
+    {
       "source": "/resources/:slug",
       "has": [
         {

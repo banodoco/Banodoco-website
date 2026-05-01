@@ -7,6 +7,7 @@ import { CommunityProjects } from '@/components/sections/CommunityProjects';
 import { Ecosystem } from '@/components/sections/Ecosystem';
 import { Ownership } from '@/components/sections/Ownership';
 import { MilestonePopup } from '@/components/ui/MilestonePopup';
+import { Seo } from '@/components/seo/Seo';
 import { usePreloadAssets } from '@/lib/preloadAssets';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -41,6 +42,12 @@ const Home = () => {
   
   return (
     <>
+      <Seo
+        title="Banodoco - Empowering the Open Source AI Art Ecosystem"
+        description="Building tools and nurturing a culture to inspire, empower and reward open collaboration in the AI and digital art ecosystem."
+        image="https://banodoco.ai/hero-poster-flipped.jpg"
+        url="https://banodoco.ai/"
+      />
       <Hero />
       <Community />
       <Reigh />
