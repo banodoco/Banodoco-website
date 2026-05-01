@@ -134,7 +134,7 @@ export const Hero = () => {
               </button>
               <Link
                 to="/2RP"
-                className="inline-flex h-11 min-w-[4.75rem] items-center justify-center px-6 text-sm font-semibold leading-none rounded-lg transition-all text-white border border-white/50 hover:bg-white/25 md:text-[#1a1a1a] md:border-black/15 md:hover:bg-white/35 [--rp-logo-color:#fff7ed] [--rp-logo-shadow-color:rgba(0,0,0,0.65)] md:[--rp-logo-color:#171717] md:[--rp-logo-shadow-color:rgba(255,255,255,0.8)]"
+                className="inline-flex h-11 min-w-[4.75rem] items-center justify-center rounded-lg border border-white/50 bg-white/25 px-6 text-sm font-semibold leading-none text-orange-500 shadow-[0_2px_10px_rgba(0,0,0,0.12)] backdrop-blur-sm transition-all hover:bg-white/35 md:border-black/15 md:bg-white/35 md:hover:bg-white/45 [--rp-logo-color:#f97316] [--rp-logo-shadow-color:rgba(255,255,255,0.8)]"
               >
                 <RpLogo className="translate-y-px" />
               </Link>
