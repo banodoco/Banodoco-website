@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
-import { RP_THEME_SETTINGS } from '@/components/brand/rpLogoTheme';
 import { BREAKPOINTS } from '@/lib/breakpoints';
 import {
   compileTransitions,
@@ -37,40 +35,6 @@ type LoopHideTechnique =
   | 'refract'
   | 'heat'
   | 'prism';
-
-const LOOP_HIDE_TECHNIQUES: Array<{ id: LoopHideTechnique; label: string }> = [
-  { id: 'veil', label: 'Veil' },
-  { id: 'blur', label: 'Blur' },
-  { id: 'glitch', label: 'Glitch' },
-  { id: 'shutter', label: 'Shutter' },
-  { id: 'flash', label: 'Flash' },
-  { id: 'fade', label: 'Fade' },
-  { id: 'bloom', label: 'Bloom' },
-  { id: 'focus', label: 'Focus' },
-  { id: 'leak', label: 'Leak' },
-  { id: 'drift', label: 'Drift' },
-  { id: 'refract', label: 'Refract' },
-  { id: 'heat', label: 'Heat' },
-  { id: 'prism', label: 'Prism' },
-];
-
-const RP_EASING_OPTIONS = [
-  { label: 'Soft', value: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-  { label: 'Linear', value: 'linear' },
-  { label: 'Slow', value: 'ease-in-out' },
-] as const;
-
-const readStoredNumber = (key: string, fallback: number) => {
-  if (typeof window === 'undefined') return fallback;
-  const raw = window.localStorage.getItem(key);
-  const value = raw ? Number(raw) : NaN;
-  return Number.isFinite(value) ? value : fallback;
-};
-
-const readStoredString = (key: string, fallback: string) => {
-  if (typeof window === 'undefined') return fallback;
-  return window.localStorage.getItem(key) ?? fallback;
-};
 
 const isMobileViewport = () =>
   typeof window === 'undefined' ? true : window.innerWidth < BREAKPOINTS.xl;
@@ -111,21 +75,15 @@ export const HomeBackgroundVideo = () => {
   const loopMaskActiveUntilRef = useRef(0);
   const [isMobile, setIsMobile] = useState(isMobileViewport);
   const [hasFirstFrame, setHasFirstFrame] = useState(false);
-  const [loopMaskEnabled, setLoopMaskEnabled] = useState(true);
-  const [loopMaskTechnique, setLoopMaskTechnique] = useState<LoopHideTechnique>('refract');
-  const [loopMaskStartAmount, setLoopMaskStartAmount] = useState(7);
-  const [loopMaskPeakAmount, setLoopMaskPeakAmount] = useState(23);
-  const [loopMaskDurationMs, setLoopMaskDurationMs] = useState(4230);
-  const [loopMaskEdge, setLoopMaskEdge] = useState(95);
-  const [loopMaskWhite, setLoopMaskWhite] = useState(46);
-  const [loopMaskFade, setLoopMaskFade] = useState(53);
+  const loopMaskEnabled = true;
+  const loopMaskTechnique = 'refract' as LoopHideTechnique;
+  const loopMaskStartAmount = 7;
+  const loopMaskPeakAmount = 23;
+  const loopMaskDurationMs = 4230;
+  const loopMaskEdge = 95;
+  const loopMaskWhite = 46;
+  const loopMaskFade = 53;
   const [loopMaskActive, setLoopMaskActive] = useState(false);
-  const [rpCrossfadeMs, setRpCrossfadeMs] = useState(() =>
-    readStoredNumber(RP_THEME_SETTINGS.crossfadeMsStorageKey, RP_THEME_SETTINGS.crossfadeMs),
-  );
-  const [rpCrossfadeEasing, setRpCrossfadeEasing] = useState(() =>
-    readStoredString(RP_THEME_SETTINGS.crossfadeEasingStorageKey, RP_THEME_SETTINGS.crossfadeEasing),
-  );
 
   const markFirstFrame = useCallback(() => {
     setHasFirstFrame(true);
@@ -134,14 +92,6 @@ export const HomeBackgroundVideo = () => {
   useEffect(() => {
     loopMaskDurationRef.current = loopMaskDurationMs;
   }, [loopMaskDurationMs]);
-
-  useEffect(() => {
-    window.localStorage.setItem(RP_THEME_SETTINGS.crossfadeMsStorageKey, String(rpCrossfadeMs));
-  }, [rpCrossfadeMs]);
-
-  useEffect(() => {
-    window.localStorage.setItem(RP_THEME_SETTINGS.crossfadeEasingStorageKey, rpCrossfadeEasing);
-  }, [rpCrossfadeEasing]);
 
   const triggerLoopMask = useCallback((phase = 'manual', fallbackOnly = false) => {
     if (!loopMaskEnabled) return;
@@ -418,180 +368,6 @@ export const HomeBackgroundVideo = () => {
         </div>
       </div>
 
-      <div className="fixed bottom-4 left-4 z-[70] w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-white/12 bg-black/70 p-3 text-white shadow-2xl backdrop-blur-md">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 shrink-0 text-white/75" aria-hidden="true" />
-            <p className="truncate text-xs font-semibold uppercase tracking-[0.14em] text-white/80">
-              Loop Hiding
-            </p>
-          </div>
-          <label className="flex cursor-pointer items-center gap-2 text-xs text-white/75">
-            <input
-              type="checkbox"
-              checked={loopMaskEnabled}
-              onChange={(event) => setLoopMaskEnabled(event.target.checked)}
-              className="h-3.5 w-3.5 accent-white"
-            />
-            Enabled
-          </label>
-        </div>
-
-        <div className="mb-3 grid grid-cols-3 gap-1 rounded-md bg-white/8 p-1">
-          {LOOP_HIDE_TECHNIQUES.map(technique => (
-            <button
-              key={technique.id}
-              type="button"
-              onClick={() => setLoopMaskTechnique(technique.id)}
-              className={`rounded px-2 py-1.5 text-xs transition ${
-                loopMaskTechnique === technique.id
-                  ? 'bg-white text-black'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {technique.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-2.5">
-          <div className="border-t border-white/10 pt-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
-              RP Crossfade
-            </div>
-            <div className="mb-2 grid grid-cols-3 gap-1 rounded-md bg-white/8 p-1">
-              {RP_EASING_OPTIONS.map(option => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setRpCrossfadeEasing(option.value)}
-                  className={`rounded px-2 py-1.5 text-xs transition ${
-                    rpCrossfadeEasing === option.value
-                      ? 'bg-white text-black'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <label className="block text-xs text-white/75">
-              <span className="mb-1 flex justify-between">
-                <span>Duration</span>
-                <span>{rpCrossfadeMs}ms</span>
-              </span>
-              <input
-                type="range"
-                min="0"
-                max="6000"
-                step="100"
-                value={rpCrossfadeMs}
-                onChange={(event) => setRpCrossfadeMs(Number(event.target.value))}
-                className="w-full accent-white"
-              />
-            </label>
-          </div>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Start amount</span>
-              <span>{loopMaskStartAmount}%</span>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="200"
-              value={loopMaskStartAmount}
-              onChange={(event) => setLoopMaskStartAmount(Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Peak amount</span>
-              <span>{loopMaskPeakAmount}%</span>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="200"
-              value={loopMaskPeakAmount}
-              onChange={(event) => setLoopMaskPeakAmount(Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Duration</span>
-              <span>{loopMaskDurationMs}ms</span>
-            </span>
-            <input
-              type="range"
-              min="80"
-              max="5000"
-              step="10"
-              value={loopMaskDurationMs}
-              onChange={(event) => setLoopMaskDurationMs(Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Edge spread</span>
-              <span>{loopMaskEdge}%</span>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="160"
-              value={loopMaskEdge}
-              onChange={(event) => setLoopMaskEdge(Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>White</span>
-              <span>{loopMaskWhite}%</span>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="150"
-              value={loopMaskWhite}
-              onChange={(event) => setLoopMaskWhite(Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Fade clear</span>
-              <span>{loopMaskFade}%</span>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="150"
-              value={loopMaskFade}
-              onChange={(event) => setLoopMaskFade(Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <button
-            type="button"
-            onClick={() => triggerLoopMask()}
-            className="w-full rounded border border-white/15 px-3 py-1.5 text-xs text-white/80 transition hover:bg-white/10 hover:text-white"
-          >
-            Preview effect
-          </button>
-        </div>
-      </div>
     </>
   );
 };

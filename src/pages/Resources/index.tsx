@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef, type CSSProperties, type Ref } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Youtube, Users, ArrowRight, SlidersHorizontal } from 'lucide-react';
+import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Youtube, Users, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PostListCard } from '@/components/posts/PostListCard';
 import { RpLogo } from '@/components/brand/RpLogo';
@@ -63,18 +63,6 @@ const renderPixelBlast = (
   />
 );
 
-const readStoredNumber = (key: string, fallback: number) => {
-  if (typeof window === 'undefined') return fallback;
-  const raw = window.localStorage.getItem(key);
-  const value = raw ? Number(raw) : NaN;
-  return Number.isFinite(value) ? value : fallback;
-};
-
-const readStoredString = (key: string, fallback: string) => {
-  if (typeof window === 'undefined') return fallback;
-  return window.localStorage.getItem(key) ?? fallback;
-};
-
 const getComplementColor = (hex: string) => {
   const normalized = hex.replace('#', '');
   const value = Number.parseInt(normalized, 16);
@@ -89,12 +77,6 @@ const getComplementColor = (hex: string) => {
 
   return `#${complement}`;
 };
-
-const EASING_OPTIONS = [
-  { label: 'Soft', value: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-  { label: 'Linear', value: 'linear' },
-  { label: 'Slow', value: 'ease-in-out' },
-] as const;
 
 const Resources = () => {
   const navigate = useNavigate();
@@ -159,23 +141,11 @@ const Resources = () => {
   // scroll tick.
   const pixelBlastRef = useRef<PixelBlastHandle | null>(null);
   const previousPixelBlastRef = useRef<PixelBlastHandle | null>(null);
-  const [currentEffect, setCurrentEffect] = useState<RpPixelBlastTheme>(selectedRpLogoTheme.effect);
-  const [crossfadeMs, setCrossfadeMs] = useState(() =>
-    readStoredNumber(RP_THEME_SETTINGS.crossfadeMsStorageKey, RP_THEME_SETTINGS.crossfadeMs),
-  );
-  const [crossfadeEasing, setCrossfadeEasing] = useState(() =>
-    readStoredString(RP_THEME_SETTINGS.crossfadeEasingStorageKey, RP_THEME_SETTINGS.crossfadeEasing),
-  );
+  const currentEffect = selectedRpLogoTheme.effect;
+  const crossfadeMs = RP_THEME_SETTINGS.crossfadeMs;
+  const crossfadeEasing = RP_THEME_SETTINGS.crossfadeEasing;
   const [backgroundCrossfadeReady, setBackgroundCrossfadeReady] = useState(!previousRpLogoTheme);
   const [showPreviousBackground, setShowPreviousBackground] = useState(Boolean(previousRpLogoTheme));
-
-  useEffect(() => {
-    window.localStorage.setItem(RP_THEME_SETTINGS.crossfadeMsStorageKey, String(crossfadeMs));
-  }, [crossfadeMs]);
-
-  useEffect(() => {
-    window.localStorage.setItem(RP_THEME_SETTINGS.crossfadeEasingStorageKey, crossfadeEasing);
-  }, [crossfadeEasing]);
 
   useEffect(() => {
     if (!previousRpLogoTheme) return;
@@ -269,9 +239,6 @@ const Resources = () => {
     };
   }, [rpThemeStyle]);
 
-  const setEffectNumber = (key: keyof RpPixelBlastTheme, value: number) => {
-    setCurrentEffect((effect) => ({ ...effect, [key]: value }));
-  };
   const secondaryPillStyle = {
     backgroundColor: 'var(--rp-section-accent-soft)',
     boxShadow: 'inset 0 0 0 1px var(--rp-section-accent-border)',
@@ -301,161 +268,6 @@ const Resources = () => {
           }}
         >
           {renderPixelBlast(currentEffect, pixelBlastRef)}
-        </div>
-      </div>
-
-      <div className="fixed bottom-4 left-4 z-[70] w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-white/12 bg-black/70 p-3 text-white shadow-2xl backdrop-blur-md">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 shrink-0 text-white/75" aria-hidden="true" />
-            <p className="truncate text-xs font-semibold uppercase tracking-[0.14em] text-white/80">
-              RP Theme
-            </p>
-          </div>
-          <p className="truncate text-xs text-white/55">{selectedRpLogoTheme.font.description}</p>
-        </div>
-
-        <div className="mb-3 grid grid-cols-3 gap-1 rounded-md bg-white/8 p-1">
-          {EASING_OPTIONS.map(option => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setCrossfadeEasing(option.value)}
-              className={`rounded px-2 py-1.5 text-xs transition ${
-                crossfadeEasing === option.value
-                  ? 'bg-white text-black'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-2.5">
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Crossfade</span>
-              <span>{crossfadeMs}ms</span>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="6000"
-              step="100"
-              value={crossfadeMs}
-              onChange={(event) => setCrossfadeMs(Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Pixel size</span>
-              <span>{currentEffect.pixelSize}</span>
-            </span>
-            <input
-              type="range"
-              min="2"
-              max="22"
-              step="1"
-              value={currentEffect.pixelSize}
-              onChange={(event) => setEffectNumber('pixelSize', Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Scale</span>
-              <span>{currentEffect.patternScale.toFixed(1)}</span>
-            </span>
-            <input
-              type="range"
-              min="0.5"
-              max="12"
-              step="0.1"
-              value={currentEffect.patternScale}
-              onChange={(event) => setEffectNumber('patternScale', Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Density</span>
-              <span>{currentEffect.patternDensity.toFixed(2)}</span>
-            </span>
-            <input
-              type="range"
-              min="0.7"
-              max="2"
-              step="0.01"
-              value={currentEffect.patternDensity}
-              onChange={(event) => setEffectNumber('patternDensity', Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Jitter</span>
-              <span>{currentEffect.pixelSizeJitter.toFixed(2)}</span>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="2"
-              step="0.01"
-              value={currentEffect.pixelSizeJitter}
-              onChange={(event) => setEffectNumber('pixelSizeJitter', Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Speed</span>
-              <span>{currentEffect.speed.toFixed(2)}</span>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="2"
-              step="0.01"
-              value={currentEffect.speed}
-              onChange={(event) => setEffectNumber('speed', Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <label className="block text-xs text-white/75">
-            <span className="mb-1 flex justify-between">
-              <span>Edge fade</span>
-              <span>{currentEffect.edgeFade.toFixed(2)}</span>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="0.8"
-              step="0.01"
-              value={currentEffect.edgeFade}
-              onChange={(event) => setEffectNumber('edgeFade', Number(event.target.value))}
-              className="w-full accent-white"
-            />
-          </label>
-
-          <button
-            type="button"
-            onClick={() => {
-              setCurrentEffect(selectedRpLogoTheme.effect);
-              setCrossfadeMs(RP_THEME_SETTINGS.crossfadeMs);
-              setCrossfadeEasing(RP_THEME_SETTINGS.crossfadeEasing);
-            }}
-            className="w-full rounded border border-white/15 px-3 py-1.5 text-xs text-white/80 transition hover:bg-white/10 hover:text-white"
-          >
-            Reset RP settings
-          </button>
         </div>
       </div>
 
