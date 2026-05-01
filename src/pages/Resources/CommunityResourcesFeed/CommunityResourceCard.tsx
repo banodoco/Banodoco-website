@@ -33,7 +33,7 @@ export const CommunityResourceCard = ({ resource }: CommunityResourceCardProps) 
   return (
     <Link
       to={linkTo}
-      className="block bg-white/[0.03] rounded-xl p-4 border border-white/5 hover:border-white/20 transition group"
+      className="rp-themed-card block bg-white/[0.03] rounded-xl p-4 border border-white/5 transition group"
     >
       {/* Thumbnail */}
       {resource.thumbnailUrl && (
@@ -55,7 +55,7 @@ export const CommunityResourceCard = ({ resource }: CommunityResourceCardProps) 
       </div>
 
       {/* Title */}
-      <h3 className="text-base font-semibold text-zinc-100 mb-1.5 line-clamp-2 group-hover:text-white transition-colors">
+      <h3 className="resource-card-title mb-1.5 line-clamp-2 text-base font-semibold text-zinc-100 transition-colors group-hover:text-white">
         {resource.title}
       </h3>
 

@@ -28,6 +28,11 @@ export const FilterBar = ({
   onSearchChange,
 }: FilterBarProps) => {
   const showBaseModel = filters.type !== 'workflow' && availableBaseModels.length > 0;
+  const activePillStyle = {
+    backgroundColor: 'var(--rp-section-accent-soft)',
+    boxShadow: 'inset 0 0 0 1px var(--rp-section-accent-border)',
+    color: 'var(--rp-section-accent)',
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -37,9 +42,10 @@ export const FilterBar = ({
           onClick={() => onFilterChange('status', 'curated')}
           className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
             filters.status === 'curated'
-              ? 'bg-white/15 text-white'
+              ? ''
               : 'text-white/50 hover:text-white/70'
           }`}
+          style={filters.status === 'curated' ? activePillStyle : undefined}
         >
           Curated
         </button>
@@ -47,9 +53,10 @@ export const FilterBar = ({
           onClick={() => onFilterChange('status', 'all')}
           className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
             filters.status === 'all'
-              ? 'bg-white/15 text-white'
+              ? ''
               : 'text-white/50 hover:text-white/70'
           }`}
+          style={filters.status === 'all' ? activePillStyle : undefined}
         >
           All
         </button>
@@ -63,9 +70,10 @@ export const FilterBar = ({
             onClick={() => onFilterChange('type', opt.value)}
             className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
               filters.type === opt.value
-                ? 'bg-white/15 text-white'
+                ? ''
                 : 'text-white/50 hover:text-white/70'
             }`}
+            style={filters.type === opt.value ? activePillStyle : undefined}
           >
             {opt.label}
           </button>
@@ -89,7 +97,13 @@ export const FilterBar = ({
 
       {/* Search */}
       <div className="relative w-full sm:w-44 md:w-52">
-        <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+          fill="none"
+          stroke="currentColor"
+          style={{ color: 'var(--rp-section-accent)', opacity: 0.65 }}
+          viewBox="0 0 24 24"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input

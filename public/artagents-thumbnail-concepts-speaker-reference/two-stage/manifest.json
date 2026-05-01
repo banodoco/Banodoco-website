@@ -1,0 +1,29 @@
+[
+  {
+    "prompt": "16:9 YouTube thumbnail, realistic cinematic portrait of a speaker based on this description: man wearing beige cap, round glasses, moustache and short beard, black-and-white striped sweater, holding a handheld microphone. Preserve the cap, glasses, facial hair, striped sweater, microphone. Older techno-renaissance temple direction, not exaggerated Chad: standing in front of a grounded futuristic Renaissance temple of art and technology, stone and polished concrete arches, luminous circuitry inlaid into architecture, holographic stained-glass light, fresco-like digital panels, vaulted temple forms, soft white abstract ADOS/Banodoco-like symbol shapes. Epic visionary but naturalistic, premium editorial keynote thumbnail, large readable subject, cinematic natural lighting. No text, no labels, no biology, no photosynthesis, no plants, no educational infographic, no computer diagram, no UI, no medieval costume, no sci-fi armor, no cartoon.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts-speaker-reference/two-stage/001-16-9-youtube-thumbnail-realistic-cinematic-portrait-of-a-speaker.png"
+    ],
+    "usage": {
+      "input_tokens": 189,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 189
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1267
+    },
+    "created": 1777594029
+  }
+]

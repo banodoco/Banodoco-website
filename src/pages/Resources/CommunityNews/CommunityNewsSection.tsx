@@ -143,15 +143,22 @@ export const CommunityNewsSection = () => {
   const showEmpty = !loading && !error && topics.length === 0 && selectedDate;
 
   // Shared rendering helpers
+  const activePillStyle = {
+    backgroundColor: 'var(--rp-section-accent-soft)',
+    boxShadow: 'inset 0 0 0 1px var(--rp-section-accent-border)',
+    color: 'var(--rp-section-accent)',
+  };
+
   const renderMonthButton = (monthKey: string) => (
     <button
       key={monthKey}
       onClick={() => handleMonthSelect(monthKey)}
       className={`shrink-0 px-3 py-2 rounded-lg text-center transition-all whitespace-nowrap ${
         monthKey === selectedMonth
-          ? 'bg-white/10 text-white text-sm font-medium'
+          ? 'text-sm font-medium'
           : 'text-white/30 text-xs hover:text-white/50 hover:bg-white/5'
       }`}
+      style={monthKey === selectedMonth ? activePillStyle : undefined}
     >
       {formatMonthLabel(monthKey)}
     </button>
@@ -169,9 +176,10 @@ export const CommunityNewsSection = () => {
         onClick={() => setSelectedDate(date)}
         className={`shrink-0 flex flex-col items-center justify-center rounded-lg transition-all px-3 py-1.5 ${
           isSelected
-            ? 'bg-white/10 text-white text-sm font-medium'
+            ? 'text-sm font-medium'
             : 'text-white/30 text-xs hover:text-white/50 hover:bg-white/5'
         }`}
+        style={isSelected ? activePillStyle : undefined}
       >
         <span>{day}</span>
         {isToday && <span className="text-[9px] text-emerald-400 leading-tight">Today</span>}
@@ -208,7 +216,7 @@ export const CommunityNewsSection = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-white mb-1">News from the Community</h2>
+      <h2 className="text-2xl font-semibold text-[var(--rp-section-accent)] mb-1">News from the Community</h2>
       <p className="text-white/50 text-sm mb-5">Daily highlights from our Discord, powered by AI summaries.</p>
 
       {/* ── Desktop: three-column layout (md+) ── */}

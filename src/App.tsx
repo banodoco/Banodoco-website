@@ -10,6 +10,7 @@ const OwnershipPage = lazy(() => import('@/pages/OwnershipPage'));
 const SecondRenaissance = lazy(() => import('@/pages/SecondRenaissance'));
 const WrappedPage = lazy(() => import('@/pages/Wrapped'));
 const Resources = lazy(() => import('@/pages/Resources'));
+const ArtAgents = lazy(() => import('@/pages/ArtAgents'));
 const ArtDetail = lazy(() => import('@/pages/ArtDetail'));
 const ResourceDetail = lazy(() => import('@/pages/ResourceDetail'));
 const UserProfile = lazy(() => import('@/pages/UserProfile'));
@@ -18,6 +19,7 @@ const GetApproved = lazy(() => import('@/pages/GetApproved'));
 const SubmitArt = lazy(() => import('@/pages/SubmitArt'));
 const SubmitPost = lazy(() => import('@/pages/SubmitPost'));
 const SubmitResource = lazy(() => import('@/pages/SubmitResource'));
+const SubmitAgentNode = lazy(() => import('@/pages/SubmitAgentNode'));
 const PostDetail = lazy(() => import('@/pages/PostDetail'));
 const AdminBundles = lazy(() => import('@/pages/admin/Bundles'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -54,6 +56,7 @@ function App() {
               <Route path="/2nd-renaissance" element={<SecondRenaissance />} />
               <Route path="/1m" element={<WrappedPage />} />
               <Route path="/2RP" element={<Resources />} />
+              <Route path="/art-agents" element={<ArtAgents />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/get-approved" element={<GetApproved />} />
               <Route path="/art/:slug" element={<ArtDetail />} />
@@ -71,6 +74,7 @@ function App() {
               <Route path="/submit/post" element={<SubmitPost />} />
               <Route path="/submit/post/:postId" element={<SubmitPost />} />
               <Route path="/submit/resource" element={<SubmitResource />} />
+              <Route path="/submit/art-agent" element={<SubmitAgentNode />} />
               <Route path="/admin/bundles" element={<AdminBundles />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

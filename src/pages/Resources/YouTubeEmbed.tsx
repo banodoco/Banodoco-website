@@ -39,15 +39,22 @@ export const YouTubeEmbed = ({ videoId, title, caption, className = '' }: YouTub
               className="absolute inset-0 h-full w-full object-cover"
             />
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur border border-white/20 group-hover:bg-black/80 group-hover:scale-105 transition">
-                <Play size={20} className="text-white fill-white translate-x-0.5" />
+              <div
+                className="flex h-12 w-12 items-center justify-center rounded-full border bg-black/60 backdrop-blur transition group-hover:scale-105 group-hover:bg-black/80"
+                style={{
+                  borderColor: 'var(--rp-section-accent-border)',
+                  color: 'var(--rp-section-accent)',
+                  boxShadow: '0 14px 38px -28px var(--rp-section-accent)',
+                }}
+              >
+                <Play size={20} className="translate-x-0.5 fill-current" />
               </div>
             </div>
             {(title || caption) && (
               <div className="absolute inset-x-2 bottom-2 text-left pointer-events-none">
                 <div className="inline-block rounded-md bg-black/75 backdrop-blur-sm px-2.5 py-1.5">
                   {title && (
-                    <p className="text-xs font-semibold text-white leading-tight">{title}</p>
+                    <p className="text-xs font-semibold leading-tight text-[var(--rp-section-accent)]">{title}</p>
                   )}
                   {caption && (
                     <p className="text-[11px] text-zinc-300 mt-0.5 leading-tight">{caption}</p>

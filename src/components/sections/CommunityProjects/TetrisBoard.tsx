@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
+import { RpLogo } from '@/components/brand/RpLogo';
 import { NameHighlight } from '@/components/ui/TextHighlight';
 
 type ProjectAccent = 'rose' | 'amber' | 'emerald';
@@ -44,7 +45,7 @@ type TextPlacement = 'default' | 'left-bar';
 const ProjectName = ({ project }: { project: TetrisProject }) => (
   <NameHighlight color={project.accent}>
     {project.name === '2RP' ? (
-      <span style={{ fontFamily: '"Sixtyfour", monospace' }}>{project.name}</span>
+      <RpLogo />
     ) : project.name === 'Art Compute' ? (
       <span
         className="!font-bold uppercase tracking-[0.2em]"

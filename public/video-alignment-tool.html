@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Video Alignment Tool</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #101014;
+        color: #f4f4f5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        background: #101014;
+      }
+
+      main {
+        min-width: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .stage {
+        position: relative;
+        width: min(100%, 1280px);
+        aspect-ratio: 1930 / 1080;
+        overflow: hidden;
+        background:
+          linear-gradient(45deg, #1b1b22 25%, transparent 25%),
+          linear-gradient(-45deg, #1b1b22 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #1b1b22 75%),
+          linear-gradient(-45deg, transparent 75%, #1b1b22 75%);
+        background-color: #14141a;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+        background-size: 20px 20px;
+        border: 1px solid rgb(255 255 255 / 0.12);
+      }
+
+      video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform-origin: center;
+      }
+
+      #intro {
+        opacity: var(--intro-opacity, 0.62);
+        filter: grayscale(1) contrast(1.08);
+        mix-blend-mode: normal;
+      }
+
+      #loop {
+        opacity: var(--loop-opacity, 0.55);
+        transform: translate(var(--loop-x, 0px), var(--loop-y, 0px)) scale(var(--loop-scale, 1));
+        filter: saturate(1.35) contrast(1.08);
+        mix-blend-mode: screen;
+      }
+
+      .crosshair,
+      .grid {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .grid {
+        opacity: var(--grid-opacity, 0.28);
+        background:
+          linear-gradient(rgb(255 255 255 / 0.24) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(255 255 255 / 0.24) 1px, transparent 1px);
+        background-size: 5% 5%;
+      }
+
+      .crosshair::before,
+      .crosshair::after {
+        content: "";
+        position: absolute;
+        background: rgb(255 255 255 / 0.5);
+      }
+
+      .crosshair::before {
+        left: 50%;
+        top: 0;
+        width: 1px;
+        height: 100%;
+      }
+
+      .crosshair::after {
+        left: 0;
+        top: 50%;
+        width: 100%;
+        height: 1px;
+      }
+
+      aside {
+        border-left: 1px solid rgb(255 255 255 / 0.1);
+        padding: 18px;
+        background: #15151b;
+        overflow: auto;
+      }
+
+      h1 {
+        margin: 0 0 16px;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .group {
+        display: grid;
+        gap: 12px;
+        padding: 14px 0;
+        border-top: 1px solid rgb(255 255 255 / 0.1);
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 12px;
+        color: rgb(244 244 245 / 0.78);
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: white;
+      }
+
+      input[type="number"] {
+        width: 94px;
+        border: 1px solid rgb(255 255 255 / 0.16);
+        border-radius: 6px;
+        padding: 6px 8px;
+        background: rgb(255 255 255 / 0.06);
+        color: white;
+      }
+
+      button {
+        border: 1px solid rgb(255 255 255 / 0.16);
+        border-radius: 6px;
+        padding: 8px 10px;
+        background: rgb(255 255 255 / 0.08);
+        color: white;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: rgb(255 255 255 / 0.14);
+      }
+
+      .buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      code {
+        display: block;
+        white-space: pre-wrap;
+        border: 1px solid rgb(255 255 255 / 0.12);
+        border-radius: 6px;
+        padding: 10px;
+        background: rgb(0 0 0 / 0.25);
+        color: #d4d4d8;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="stage" id="stage">
+        <video id="intro" src="/8zCN-chunks/desktop-1.mp4" muted playsinline preload="auto"></video>
+        <video id="loop" src="/hero-loop-matched-v2.mp4" muted playsinline preload="auto"></video>
+        <div class="grid"></div>
+        <div class="crosshair"></div>
+      </div>
+    </main>
+
+    <aside>
+      <h1>Video Alignment Tool</h1>
+
+      <div class="group">
+        <label>
+          <span class="row"><span>Intro time</span><span id="introTimeLabel">7.50s</span></span>
+          <input id="introTime" type="range" min="0" max="13" step="0.01" value="7.5" />
+        </label>
+        <label>
+          <span class="row"><span>Loop time</span><span id="loopTimeLabel">0.00s</span></span>
+          <input id="loopTime" type="range" min="0" max="5.593" step="0.01" value="0" />
+        </label>
+        <div class="buttons">
+          <button id="playPause" type="button">Play/Pause</button>
+          <button id="resetTimes" type="button">Reset times</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <label>
+          <span class="row"><span>Loop X</span><input id="xNumber" type="number" step="0.5" value="0" /></span>
+          <input id="x" type="range" min="-160" max="160" step="0.5" value="0" />
+        </label>
+        <label>
+          <span class="row"><span>Loop Y</span><input id="yNumber" type="number" step="0.5" value="0" /></span>
+          <input id="y" type="range" min="-160" max="160" step="0.5" value="0" />
+        </label>
+        <label>
+          <span class="row"><span>Loop scale</span><input id="scaleNumber" type="number" step="0.001" value="1" /></span>
+          <input id="scale" type="range" min="0.9" max="1.1" step="0.001" value="1" />
+        </label>
+      </div>
+
+      <div class="group">
+        <label>
+          <span class="row"><span>Intro opacity</span><span id="introOpacityLabel">62%</span></span>
+          <input id="introOpacity" type="range" min="0" max="1" step="0.01" value="0.62" />
+        </label>
+        <label>
+          <span class="row"><span>Loop opacity</span><span id="loopOpacityLabel">55%</span></span>
+          <input id="loopOpacity" type="range" min="0" max="1" step="0.01" value="0.55" />
+        </label>
+        <label>
+          <span class="row"><span>Grid opacity</span><span id="gridOpacityLabel">28%</span></span>
+          <input id="gridOpacity" type="range" min="0" max="0.8" step="0.01" value="0.28" />
+        </label>
+      </div>
+
+      <div class="group">
+        <div class="buttons">
+          <button id="nudgeUp" type="button">Up 1px</button>
+          <button id="nudgeDown" type="button">Down 1px</button>
+          <button id="nudgeLeft" type="button">Left 1px</button>
+          <button id="nudgeRight" type="button">Right 1px</button>
+        </div>
+        <button id="resetTransform" type="button">Reset transform</button>
+      </div>
+
+      <div class="group">
+        <code id="output"></code>
+      </div>
+    </aside>
+
+    <script>
+      const stage = document.getElementById("stage");
+      const intro = document.getElementById("intro");
+      const loop = document.getElementById("loop");
+      const controls = {
+        introTime: document.getElementById("introTime"),
+        loopTime: document.getElementById("loopTime"),
+        x: document.getElementById("x"),
+        y: document.getElementById("y"),
+        scale: document.getElementById("scale"),
+        introOpacity: document.getElementById("introOpacity"),
+        loopOpacity: document.getElementById("loopOpacity"),
+        gridOpacity: document.getElementById("gridOpacity"),
+      };
+      const numbers = {
+        x: document.getElementById("xNumber"),
+        y: document.getElementById("yNumber"),
+        scale: document.getElementById("scaleNumber"),
+      };
+      const labels = {
+        introTime: document.getElementById("introTimeLabel"),
+        loopTime: document.getElementById("loopTimeLabel"),
+        introOpacity: document.getElementById("introOpacityLabel"),
+        loopOpacity: document.getElementById("loopOpacityLabel"),
+        gridOpacity: document.getElementById("gridOpacityLabel"),
+      };
+      const output = document.getElementById("output");
+
+      let playing = false;
+
+      function setVideoTime(video, value) {
+        if (!Number.isFinite(video.duration) || video.duration <= 0) return;
+        video.currentTime = Math.min(video.duration - 0.02, Math.max(0, value));
+      }
+
+      function apply() {
+        const x = Number(controls.x.value);
+        const y = Number(controls.y.value);
+        const scale = Number(controls.scale.value);
+        const introOpacity = Number(controls.introOpacity.value);
+        const loopOpacity = Number(controls.loopOpacity.value);
+        const gridOpacity = Number(controls.gridOpacity.value);
+
+        stage.style.setProperty("--loop-x", `${x}px`);
+        stage.style.setProperty("--loop-y", `${y}px`);
+        stage.style.setProperty("--loop-scale", String(scale));
+        stage.style.setProperty("--intro-opacity", String(introOpacity));
+        stage.style.setProperty("--loop-opacity", String(loopOpacity));
+        stage.style.setProperty("--grid-opacity", String(gridOpacity));
+
+        numbers.x.value = String(x);
+        numbers.y.value = String(y);
+        numbers.scale.value = String(scale);
+        labels.introTime.textContent = `${Number(controls.introTime.value).toFixed(2)}s`;
+        labels.loopTime.textContent = `${Number(controls.loopTime.value).toFixed(2)}s`;
+        labels.introOpacity.textContent = `${Math.round(introOpacity * 100)}%`;
+        labels.loopOpacity.textContent = `${Math.round(loopOpacity * 100)}%`;
+        labels.gridOpacity.textContent = `${Math.round(gridOpacity * 100)}%`;
+
+        output.textContent = [
+          `loopOffsetX: ${x}px`,
+          `loopOffsetY: ${y}px`,
+          `loopScale: ${scale}`,
+          `introTime: ${Number(controls.introTime.value).toFixed(2)}s`,
+          `loopTime: ${Number(controls.loopTime.value).toFixed(2)}s`,
+        ].join("\n");
+      }
+
+      function syncTimeFromControls() {
+        setVideoTime(intro, Number(controls.introTime.value));
+        setVideoTime(loop, Number(controls.loopTime.value));
+        apply();
+      }
+
+      Object.values(controls).forEach((input) => {
+        input.addEventListener("input", () => {
+          if (input === controls.introTime || input === controls.loopTime) {
+            syncTimeFromControls();
+            return;
+          }
+          apply();
+        });
+      });
+
+      Object.entries(numbers).forEach(([key, input]) => {
+        input.addEventListener("input", () => {
+          controls[key].value = input.value;
+          apply();
+        });
+      });
+
+      document.getElementById("nudgeUp").addEventListener("click", () => {
+        controls.y.value = String(Number(controls.y.value) - 1);
+        apply();
+      });
+      document.getElementById("nudgeDown").addEventListener("click", () => {
+        controls.y.value = String(Number(controls.y.value) + 1);
+        apply();
+      });
+      document.getElementById("nudgeLeft").addEventListener("click", () => {
+        controls.x.value = String(Number(controls.x.value) - 1);
+        apply();
+      });
+      document.getElementById("nudgeRight").addEventListener("click", () => {
+        controls.x.value = String(Number(controls.x.value) + 1);
+        apply();
+      });
+      document.getElementById("resetTransform").addEventListener("click", () => {
+        controls.x.value = "0";
+        controls.y.value = "0";
+        controls.scale.value = "1";
+        apply();
+      });
+      document.getElementById("resetTimes").addEventListener("click", () => {
+        controls.introTime.value = "7.5";
+        controls.loopTime.value = "0";
+        syncTimeFromControls();
+      });
+      document.getElementById("playPause").addEventListener("click", async () => {
+        if (playing) {
+          intro.pause();
+          loop.pause();
+          playing = false;
+          return;
+        }
+        playing = true;
+        await Promise.allSettled([intro.play(), loop.play()]);
+      });
+
+      intro.addEventListener("loadedmetadata", syncTimeFromControls);
+      loop.addEventListener("loadedmetadata", syncTimeFromControls);
+      apply();
+    </script>
+  </body>
+</html>

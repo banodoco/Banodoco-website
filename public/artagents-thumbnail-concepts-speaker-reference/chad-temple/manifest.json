@@ -1,0 +1,110 @@
+[
+  {
+    "prompt": "16:9 YouTube thumbnail, realistic cinematic portrait of a heroic tech-art speaker based on this description: man wearing a beige cap, round glasses, moustache and short beard, black-and-white striped textural sweater, holding a handheld microphone. Make him look more like a charismatic Chad founder: confident posture, stronger jawline, broader shoulders, intense visionary expression, one hand gesturing. He stands before a techno-renaissance temple: vaulted stone and polished concrete arches, luminous circuitry inlays, holographic stained-glass glow, fresco-like digital panels, soft white abstract ADOS/Banodoco symbol forms. Grounded naturalistic premium lighting, epic but believable, no text, no diagrams, no computer parts, no educational poster, no cartoon, no armor.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts-speaker-reference/chad-temple/001-16-9-youtube-thumbnail-realistic-cinematic-portrait-of-a-heroic-.png"
+    ],
+    "usage": {
+      "input_tokens": 161,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 161
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1239
+    },
+    "created": 1777593498
+  },
+  {
+    "prompt": "16:9 YouTube thumbnail, realistic cinematic portrait of a heroic tech-art speaker based on this description: red-haired bearded man with shoulder-length hair, green shirt, purple lanyard, holding a handheld microphone. Make him look more like a charismatic Chad founder: confident grin, strong jawline, broad shoulders, open visionary hand gesture. He stands before a techno-renaissance temple: vaulted stone and polished concrete arches, luminous circuitry inlays, holographic stained-glass glow, fresco-like digital panels, soft white abstract ADOS/Banodoco symbol forms. Grounded naturalistic premium lighting, epic but believable, no text, no diagrams, no computer parts, no educational poster, no cartoon, no armor.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts-speaker-reference/chad-temple/002-16-9-youtube-thumbnail-realistic-cinematic-portrait-of-a-heroic-.png"
+    ],
+    "usage": {
+      "input_tokens": 152,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 152
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1230
+    },
+    "created": 1777593537
+  },
+  {
+    "prompt": "16:9 YouTube thumbnail, realistic cinematic portrait of a heroic tech-art speaker based on this description: bald man in a dark jacket over white shirt, purple lanyard, holding a handheld microphone. Make him look more like a charismatic Chad founder: serious focused expression, sharper jawline, broad shoulders, powerful explaining gesture. He stands before a techno-renaissance temple: vaulted stone and polished concrete arches, luminous circuitry inlays, holographic stained-glass glow, fresco-like digital panels, soft white abstract ADOS/Banodoco symbol forms. Grounded naturalistic premium lighting, epic but believable, no text, no diagrams, no computer parts, no educational poster, no cartoon, no armor.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts-speaker-reference/chad-temple/003-16-9-youtube-thumbnail-realistic-cinematic-portrait-of-a-heroic-.png"
+    ],
+    "usage": {
+      "input_tokens": 149,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 149
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1227
+    },
+    "created": 1777593582
+  },
+  {
+    "prompt": "16:9 YouTube thumbnail, realistic cinematic portrait of a heroic tech-art speaker based on this description: man with tied-back hair, light stubble, gray hoodie over green shirt, purple lanyard, holding a handheld microphone. Make him look more like a charismatic Chad founder: stronger jawline, broader shoulders, thoughtful visionary expression, one hand gesturing. He stands before a techno-renaissance temple: vaulted stone and polished concrete arches, luminous circuitry inlays, holographic stained-glass glow, fresco-like digital panels, soft white abstract ADOS/Banodoco symbol forms. Grounded naturalistic premium lighting, epic but believable, no text, no diagrams, no computer parts, no educational poster, no cartoon, no armor.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts-speaker-reference/chad-temple/004-16-9-youtube-thumbnail-realistic-cinematic-portrait-of-a-heroic-.png"
+    ],
+    "usage": {
+      "input_tokens": 156,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 156
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1234
+    },
+    "created": 1777593624
+  }
+]

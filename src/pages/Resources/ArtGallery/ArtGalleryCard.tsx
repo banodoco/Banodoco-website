@@ -32,7 +32,7 @@ export const ArtGalleryCard = ({ artPiece, featured = false }: ArtGalleryCardPro
       onClick={() => setOpen(true)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="group block w-full text-left rounded-lg overflow-hidden bg-white/5 border border-white/10 transition-all duration-200 hover:scale-[1.02] hover:border-white/20 cursor-pointer"
+      className="rp-themed-card group block w-full text-left rounded-lg overflow-hidden bg-white/5 border border-white/10 transition-all duration-200 hover:scale-[1.02] cursor-pointer"
     >
       {/* Media */}
       <div

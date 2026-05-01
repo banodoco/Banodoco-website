@@ -1,0 +1,83 @@
+[
+  {
+    "prompt": "16:9 YouTube thumbnail, realistic cinematic portrait of a speaker based on this description: red-haired bearded man with shoulder-length hair, green shirt, purple lanyard, holding a handheld microphone. Preserve red beard, shoulder-length hair, green shirt, microphone. Older techno-renaissance temple direction, not exaggerated Chad: standing in front of a grounded futuristic Renaissance temple of art and technology, stone and polished concrete arches, luminous circuitry inlaid into architecture, holographic stained-glass light, fresco-like digital panels, vaulted temple forms, soft white abstract ADOS/Banodoco-like symbol shapes. Epic visionary but naturalistic, premium editorial keynote thumbnail, large readable subject, cinematic natural lighting. No text, no labels, no biology, no educational infographic, no computer diagram, no UI, no medieval costume, no sci-fi armor, no cartoon.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts-speaker-reference/two-stage/others-base/001-16-9-youtube-thumbnail-realistic-cinematic-portrait-of-a-speaker.png"
+    ],
+    "usage": {
+      "input_tokens": 179,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 179
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1257
+    },
+    "created": 1777594990
+  },
+  {
+    "prompt": "16:9 YouTube thumbnail, realistic cinematic portrait of a speaker based on this description: bald man in a dark jacket over white shirt, purple lanyard, holding a handheld microphone. Preserve bald head, dark jacket, white shirt, microphone. Older techno-renaissance temple direction, not exaggerated Chad: standing in front of a grounded futuristic Renaissance temple of art and technology, stone and polished concrete arches, luminous circuitry inlaid into architecture, holographic stained-glass light, fresco-like digital panels, vaulted temple forms, soft white abstract ADOS/Banodoco-like symbol shapes. Epic visionary but naturalistic, premium editorial keynote thumbnail, large readable subject, cinematic natural lighting. No text, no labels, no biology, no educational infographic, no computer diagram, no UI, no medieval costume, no sci-fi armor, no cartoon.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts-speaker-reference/two-stage/others-base/002-16-9-youtube-thumbnail-realistic-cinematic-portrait-of-a-speaker.png"
+    ],
+    "usage": {
+      "input_tokens": 175,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 175
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1253
+    },
+    "created": 1777595037
+  },
+  {
+    "prompt": "16:9 YouTube thumbnail, realistic cinematic portrait of a speaker based on this description: man with tied-back hair, light stubble, gray hoodie over green shirt, purple lanyard, holding a handheld microphone. Preserve tied-back hair, gray hoodie, green shirt, microphone. Older techno-renaissance temple direction, not exaggerated Chad: standing in front of a grounded futuristic Renaissance temple of art and technology, stone and polished concrete arches, luminous circuitry inlaid into architecture, holographic stained-glass light, fresco-like digital panels, vaulted temple forms, soft white abstract ADOS/Banodoco-like symbol shapes. Epic visionary but naturalistic, premium editorial keynote thumbnail, large readable subject, cinematic natural lighting. No text, no labels, no biology, no educational infographic, no computer diagram, no UI, no medieval costume, no sci-fi armor, no cartoon.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts-speaker-reference/two-stage/others-base/003-16-9-youtube-thumbnail-realistic-cinematic-portrait-of-a-speaker.png"
+    ],
+    "usage": {
+      "input_tokens": 182,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 182
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1260
+    },
+    "created": 1777595079
+  }
+]

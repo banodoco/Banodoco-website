@@ -624,15 +624,16 @@ function GetApprovedPage() {
 
   useEffect(() => {
     if (!profile?.memberId || profile.isApproved) return;
+    const memberId = profile.memberId;
     let cancelled = false;
     setPendingLoading(true);
-    queryPendingApproval(profile.memberId)
+    queryPendingApproval(memberId)
       .then(async (pending) => {
         if (cancelled) return;
         setPendingRequestId(pending?.id ?? null);
         setPendingRow(pending);
         if (pending?.id) {
-          const hydrated = await loadPendingApplication(pending, profile.memberId);
+          const hydrated = await loadPendingApplication(pending, memberId);
           if (cancelled) return;
           setBio(hydrated.bio || profile.bio || '');
           setDrafts(hydrated.drafts);
@@ -842,8 +843,8 @@ function GetApprovedPage() {
             pendingDeletes.push({
               id: draft.existingMediaId,
               storage: {
-                storageBucket: draft.storageBucket,
-                storagePath: draft.storagePath,
+                storageBucket: draft.storageBucket ?? null,
+                storagePath: draft.storagePath ?? null,
               },
             });
           }
@@ -853,8 +854,8 @@ function GetApprovedPage() {
         if (draft.file) {
           const previousMediaId = draft.existingMediaId;
           const previousStorage = {
-            storageBucket: draft.storageBucket,
-            storagePath: draft.storagePath,
+            storageBucket: draft.storageBucket ?? null,
+            storagePath: draft.storagePath ?? null,
           };
           const result = await createArtMedia({
             file: draft.file,

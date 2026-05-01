@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useLayoutContext } from '@/contexts/layout-context';
 import { useAuth } from '@/contexts/useAuth';
+import { RpLogo } from '@/components/brand/RpLogo';
 import { isProfilePathname, profilePath } from '@/lib/routing';
 import {
   NAV_SECTIONS,
@@ -106,6 +107,7 @@ export const Header = () => {
   const showResourcesShortcut = isHomePage;
   const isResourceContextSubpage =
     isProfilePathname(pathname)
+    || pathname === '/art-agents'
     || pathname.startsWith('/art/')
     || pathname.startsWith('/posts/')
     || pathname.startsWith('/admin/')
@@ -114,6 +116,7 @@ export const Header = () => {
   const logoTarget = isResourceContextSubpage ? '/2RP' : '/';
   const is2RPContext =
     pathname === '/2RP'
+    || pathname === '/art-agents'
     || pathname.startsWith('/art/')
     || pathname.startsWith('/posts/')
     || (pathname.startsWith('/resources/') && pathname !== '/resources')
@@ -179,18 +182,29 @@ export const Header = () => {
         {/* Logo */}
         <Link to={logoTarget} onClick={(e) => scrollToTop(e, isHomePage)} className="flex items-center gap-2.5">
           <img src="/banodoco.png" alt="Banodoco" className="h-7 w-7" draggable={false} />
-          <span
-            className={cn(
-              is2RPContext ? 'text-lg font-medium' : 'text-xl font-semibold tracking-[-0.01em]',
-              // Mobile: white on hero, desktop: dark on hero
-              isOnHero && 'text-white md:text-[#141414]',
-              !isOnHero && isDark && 'text-white',
-              !isOnHero && !isDark && 'text-[#141414]'
-            )}
-            style={is2RPContext ? { fontFamily: '"Sixtyfour", monospace' } : undefined}
-          >
-            {is2RPContext ? '2RP' : 'Banodoco'}
-          </span>
+          {is2RPContext ? (
+            <RpLogo
+              className={cn(
+                'text-lg font-medium',
+                // Mobile: white on hero, desktop: dark on hero
+                isOnHero && 'text-white md:text-[#141414]',
+                !isOnHero && isDark && 'text-white',
+                !isOnHero && !isDark && 'text-[#141414]'
+              )}
+            />
+          ) : (
+            <span
+              className={cn(
+                'text-xl font-semibold tracking-[-0.01em]',
+                // Mobile: white on hero, desktop: dark on hero
+                isOnHero && 'text-white md:text-[#141414]',
+                !isOnHero && isDark && 'text-white',
+                !isOnHero && !isDark && 'text-[#141414]'
+              )}
+            >
+              Banodoco
+            </span>
+          )}
         </Link>
 
         {/* Desktop nav */}
@@ -218,7 +232,7 @@ export const Header = () => {
                 style={{ overflow: 'hidden' }}
               >
                 <Link to="/2RP" className={resourcesButtonClass}>
-                  <span style={{ fontFamily: '"Sixtyfour", monospace' }}>2RP</span>
+                  <RpLogo />
                 </Link>
               </motion.div>
             )}
@@ -229,13 +243,19 @@ export const Header = () => {
             <button
               onClick={signInWithDiscord}
               className={cn(
-                'text-[13px] font-medium px-3 py-1.5 rounded-lg transition-all',
+                'text-[13px] font-medium px-3 py-1.5 rounded-lg border transition-all',
                 isOnHero
                   ? 'text-white/80 hover:text-white bg-white/10 hover:bg-white/20 md:text-[#141414] md:bg-black/5 md:hover:bg-black/10 md:hover:text-[#141414]'
                   : isDark
                     ? 'text-white/80 hover:text-white bg-white/10 hover:bg-white/15'
-                    : 'text-[#4B4B4B] hover:text-[#141414] bg-black/5 hover:bg-black/10'
+                    : 'text-[#4B4B4B] hover:text-[#141414] bg-black/5 hover:bg-black/10',
+                'border-transparent'
               )}
+              style={is2RPContext ? {
+                backgroundColor: 'var(--rp-section-accent-soft)',
+                borderColor: 'var(--rp-section-accent-border)',
+                color: 'var(--rp-section-accent)',
+              } : undefined}
             >
               Sign In
             </button>

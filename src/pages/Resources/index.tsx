@@ -1,8 +1,15 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, type CSSProperties, type Ref } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Youtube, Users, ArrowRight } from 'lucide-react';
+import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Youtube, Users, ArrowRight, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PostListCard } from '@/components/posts/PostListCard';
+import { RpLogo } from '@/components/brand/RpLogo';
+import {
+  previousRpLogoTheme,
+  RP_THEME_SETTINGS,
+  type RpPixelBlastTheme,
+  selectedRpLogoTheme,
+} from '@/components/brand/rpLogoTheme';
 import { useAuth } from '@/contexts/useAuth';
 import { usePosts } from '@/hooks/usePosts';
 import { useResources } from './useResources';
@@ -16,6 +23,7 @@ import { ResourceGrid } from './ResourceGrid';
 import { CommunityNewsSection } from './CommunityNews/CommunityNewsSection';
 import { AuthActionModal } from './AuthActionModal';
 import { YouTubeEmbed } from './YouTubeEmbed';
+import { AgentNodesSection } from './AgentNodesSection';
 import { EXTERNAL_LINKS } from '@/lib/externalLinks';
 
 const BRIEFING_VIDEOS: Array<{ videoId: string; title: string; caption: string }> = [
@@ -34,6 +42,59 @@ const containerVariants = {
     transition: { staggerChildren: 0.1, delayChildren: 0.2 },
   },
 };
+
+const renderPixelBlast = (
+  effect: RpPixelBlastTheme,
+  ref: Ref<PixelBlastHandle>,
+) => (
+  <PixelBlast
+    ref={ref}
+    variant={effect.variant}
+    pixelSize={effect.pixelSize}
+    color={effect.color}
+    patternScale={effect.patternScale}
+    patternDensity={effect.patternDensity}
+    pixelSizeJitter={effect.pixelSizeJitter}
+    enableRipples={false}
+    liquid={false}
+    speed={effect.speed}
+    edgeFade={effect.edgeFade}
+    transparent
+  />
+);
+
+const readStoredNumber = (key: string, fallback: number) => {
+  if (typeof window === 'undefined') return fallback;
+  const raw = window.localStorage.getItem(key);
+  const value = raw ? Number(raw) : NaN;
+  return Number.isFinite(value) ? value : fallback;
+};
+
+const readStoredString = (key: string, fallback: string) => {
+  if (typeof window === 'undefined') return fallback;
+  return window.localStorage.getItem(key) ?? fallback;
+};
+
+const getComplementColor = (hex: string) => {
+  const normalized = hex.replace('#', '');
+  const value = Number.parseInt(normalized, 16);
+  if (!Number.isFinite(value)) return '#d8d2c8';
+
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  const complement = [255 - r, 255 - g, 255 - b]
+    .map((channel) => channel.toString(16).padStart(2, '0'))
+    .join('');
+
+  return `#${complement}`;
+};
+
+const EASING_OPTIONS = [
+  { label: 'Soft', value: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+  { label: 'Linear', value: 'linear' },
+  { label: 'Slow', value: 'ease-in-out' },
+] as const;
 
 const Resources = () => {
   const navigate = useNavigate();
@@ -78,6 +139,10 @@ const Resources = () => {
   const showForgePager = forgeInView && (forgeHovered || forgePagerHovered);
 
   useEffect(() => {
+    console.info('[AgentNodes] 2RP Resources page mounted', { path: window.location.pathname });
+  }, []);
+
+  useEffect(() => {
     const section = forgeSectionRef.current;
     if (!section) return;
 
@@ -93,18 +158,60 @@ const Resources = () => {
   // (instead of a prop) to avoid the WebGL context reinitializing on every
   // scroll tick.
   const pixelBlastRef = useRef<PixelBlastHandle | null>(null);
+  const previousPixelBlastRef = useRef<PixelBlastHandle | null>(null);
+  const [currentEffect, setCurrentEffect] = useState<RpPixelBlastTheme>(selectedRpLogoTheme.effect);
+  const [crossfadeMs, setCrossfadeMs] = useState(() =>
+    readStoredNumber(RP_THEME_SETTINGS.crossfadeMsStorageKey, RP_THEME_SETTINGS.crossfadeMs),
+  );
+  const [crossfadeEasing, setCrossfadeEasing] = useState(() =>
+    readStoredString(RP_THEME_SETTINGS.crossfadeEasingStorageKey, RP_THEME_SETTINGS.crossfadeEasing),
+  );
+  const [backgroundCrossfadeReady, setBackgroundCrossfadeReady] = useState(!previousRpLogoTheme);
+  const [showPreviousBackground, setShowPreviousBackground] = useState(Boolean(previousRpLogoTheme));
+
+  useEffect(() => {
+    window.localStorage.setItem(RP_THEME_SETTINGS.crossfadeMsStorageKey, String(crossfadeMs));
+  }, [crossfadeMs]);
+
+  useEffect(() => {
+    window.localStorage.setItem(RP_THEME_SETTINGS.crossfadeEasingStorageKey, crossfadeEasing);
+  }, [crossfadeEasing]);
+
+  useEffect(() => {
+    if (!previousRpLogoTheme) return;
+
+    const raf = window.requestAnimationFrame(() => setBackgroundCrossfadeReady(true));
+    const timeout = window.setTimeout(
+      () => setShowPreviousBackground(false),
+      crossfadeMs,
+    );
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(timeout);
+    };
+  }, [crossfadeMs]);
+
   useEffect(() => {
     const onScroll = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
       const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      const { scrollDrift } = currentEffect;
       // Offset is in UV space; the shader scales by uScale internally.
-      // Mostly vertical drift with a slight horizontal slide for visual interest.
-      pixelBlastRef.current?.setPatternOffset(progress * 0.3, progress * 1.0);
+      pixelBlastRef.current?.setPatternOffset(progress * scrollDrift.x, progress * scrollDrift.y);
+
+      if (previousRpLogoTheme) {
+        const previousScrollDrift = previousRpLogoTheme.effect.scrollDrift;
+        previousPixelBlastRef.current?.setPatternOffset(
+          progress * previousScrollDrift.x,
+          progress * previousScrollDrift.y,
+        );
+      }
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [currentEffect]);
 
   const [authAction, setAuthAction] = useState<'art' | 'resource' | 'post' | null>(null);
 
@@ -129,24 +236,227 @@ const Resources = () => {
     setAuthAction(null);
   };
 
+  const transition = `opacity ${crossfadeMs}ms ${crossfadeEasing}`;
+  const complementColor = getComplementColor(currentEffect.color);
+  const logoColor = `color-mix(in srgb, ${complementColor} 40%, #f4f4f5 60%)`;
+  const secondaryColor = `color-mix(in srgb, ${complementColor} 24%, #f4f4f5 76%)`;
+  const rpThemeStyle = useMemo(() => ({
+    '--rp-theme-color': currentEffect.color,
+    '--rp-theme-text': `color-mix(in srgb, ${currentEffect.color} 72%, #d8d2c8 28%)`,
+    '--rp-logo-color': logoColor,
+    '--rp-logo-shadow-color': `color-mix(in srgb, ${complementColor} 48%, transparent)`,
+    '--rp-theme-color-soft': `${currentEffect.color}14`,
+    '--rp-theme-color-border': `${currentEffect.color}3d`,
+    '--rp-theme-color-glow': `${currentEffect.color}18`,
+    '--rp-section-accent': secondaryColor,
+    '--rp-hero-secondary': secondaryColor,
+    '--rp-section-accent-soft': `color-mix(in srgb, ${complementColor} 13%, transparent)`,
+    '--rp-section-accent-border': `color-mix(in srgb, ${complementColor} 28%, transparent)`,
+  }) as CSSProperties, [complementColor, currentEffect.color, logoColor, secondaryColor]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const entries = Object.entries(rpThemeStyle) as Array<[string, string]>;
+
+    entries.forEach(([key, value]) => {
+      root.style.setProperty(key, value);
+    });
+
+    return () => {
+      entries.forEach(([key]) => {
+        root.style.removeProperty(key);
+      });
+    };
+  }, [rpThemeStyle]);
+
+  const setEffectNumber = (key: keyof RpPixelBlastTheme, value: number) => {
+    setCurrentEffect((effect) => ({ ...effect, [key]: value }));
+  };
+  const secondaryPillStyle = {
+    backgroundColor: 'var(--rp-section-accent-soft)',
+    boxShadow: 'inset 0 0 0 1px var(--rp-section-accent-border)',
+    color: 'var(--rp-section-accent)',
+  };
+
   return (
-    <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
+    <div className="rp-theme-scope bg-[#0b0b0f] text-zinc-100 min-h-screen" style={rpThemeStyle}>
       {/* Page-wide ambient background — fixed so it follows scroll */}
       <div className="pointer-events-none fixed inset-0 z-0">
-        <PixelBlast
-          ref={pixelBlastRef}
-          variant="square"
-          pixelSize={6}
-          color="#B497CF"
-          patternScale={3}
-          patternDensity={1.2}
-          pixelSizeJitter={0.5}
-          enableRipples={false}
-          liquid={false}
-          speed={0.6}
-          edgeFade={0.25}
-          transparent
-        />
+        {showPreviousBackground && previousRpLogoTheme && (
+          <div
+            className="absolute inset-0"
+            style={{
+              opacity: backgroundCrossfadeReady ? 0 : 1,
+              transition,
+            }}
+          >
+            {renderPixelBlast(previousRpLogoTheme.effect, previousPixelBlastRef)}
+          </div>
+        )}
+        <div
+          className="absolute inset-0"
+          style={{
+            opacity: backgroundCrossfadeReady ? 1 : 0,
+            transition,
+          }}
+        >
+          {renderPixelBlast(currentEffect, pixelBlastRef)}
+        </div>
+      </div>
+
+      <div className="fixed bottom-4 left-4 z-[70] w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-white/12 bg-black/70 p-3 text-white shadow-2xl backdrop-blur-md">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 shrink-0 text-white/75" aria-hidden="true" />
+            <p className="truncate text-xs font-semibold uppercase tracking-[0.14em] text-white/80">
+              RP Theme
+            </p>
+          </div>
+          <p className="truncate text-xs text-white/55">{selectedRpLogoTheme.font.description}</p>
+        </div>
+
+        <div className="mb-3 grid grid-cols-3 gap-1 rounded-md bg-white/8 p-1">
+          {EASING_OPTIONS.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setCrossfadeEasing(option.value)}
+              className={`rounded px-2 py-1.5 text-xs transition ${
+                crossfadeEasing === option.value
+                  ? 'bg-white text-black'
+                  : 'text-white/70 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-2.5">
+          <label className="block text-xs text-white/75">
+            <span className="mb-1 flex justify-between">
+              <span>Crossfade</span>
+              <span>{crossfadeMs}ms</span>
+            </span>
+            <input
+              type="range"
+              min="0"
+              max="6000"
+              step="100"
+              value={crossfadeMs}
+              onChange={(event) => setCrossfadeMs(Number(event.target.value))}
+              className="w-full accent-white"
+            />
+          </label>
+
+          <label className="block text-xs text-white/75">
+            <span className="mb-1 flex justify-between">
+              <span>Pixel size</span>
+              <span>{currentEffect.pixelSize}</span>
+            </span>
+            <input
+              type="range"
+              min="2"
+              max="22"
+              step="1"
+              value={currentEffect.pixelSize}
+              onChange={(event) => setEffectNumber('pixelSize', Number(event.target.value))}
+              className="w-full accent-white"
+            />
+          </label>
+
+          <label className="block text-xs text-white/75">
+            <span className="mb-1 flex justify-between">
+              <span>Scale</span>
+              <span>{currentEffect.patternScale.toFixed(1)}</span>
+            </span>
+            <input
+              type="range"
+              min="0.5"
+              max="12"
+              step="0.1"
+              value={currentEffect.patternScale}
+              onChange={(event) => setEffectNumber('patternScale', Number(event.target.value))}
+              className="w-full accent-white"
+            />
+          </label>
+
+          <label className="block text-xs text-white/75">
+            <span className="mb-1 flex justify-between">
+              <span>Density</span>
+              <span>{currentEffect.patternDensity.toFixed(2)}</span>
+            </span>
+            <input
+              type="range"
+              min="0.7"
+              max="2"
+              step="0.01"
+              value={currentEffect.patternDensity}
+              onChange={(event) => setEffectNumber('patternDensity', Number(event.target.value))}
+              className="w-full accent-white"
+            />
+          </label>
+
+          <label className="block text-xs text-white/75">
+            <span className="mb-1 flex justify-between">
+              <span>Jitter</span>
+              <span>{currentEffect.pixelSizeJitter.toFixed(2)}</span>
+            </span>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.01"
+              value={currentEffect.pixelSizeJitter}
+              onChange={(event) => setEffectNumber('pixelSizeJitter', Number(event.target.value))}
+              className="w-full accent-white"
+            />
+          </label>
+
+          <label className="block text-xs text-white/75">
+            <span className="mb-1 flex justify-between">
+              <span>Speed</span>
+              <span>{currentEffect.speed.toFixed(2)}</span>
+            </span>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.01"
+              value={currentEffect.speed}
+              onChange={(event) => setEffectNumber('speed', Number(event.target.value))}
+              className="w-full accent-white"
+            />
+          </label>
+
+          <label className="block text-xs text-white/75">
+            <span className="mb-1 flex justify-between">
+              <span>Edge fade</span>
+              <span>{currentEffect.edgeFade.toFixed(2)}</span>
+            </span>
+            <input
+              type="range"
+              min="0"
+              max="0.8"
+              step="0.01"
+              value={currentEffect.edgeFade}
+              onChange={(event) => setEffectNumber('edgeFade', Number(event.target.value))}
+              className="w-full accent-white"
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={() => {
+              setCurrentEffect(selectedRpLogoTheme.effect);
+              setCrossfadeMs(RP_THEME_SETTINGS.crossfadeMs);
+              setCrossfadeEasing(RP_THEME_SETTINGS.crossfadeEasing);
+            }}
+            className="w-full rounded border border-white/15 px-3 py-1.5 text-xs text-white/80 transition hover:bg-white/10 hover:text-white"
+          >
+            Reset RP settings
+          </button>
+        </div>
       </div>
 
       {/* Full-screen Hero — Editorial Magazine */}
@@ -179,13 +489,11 @@ const Resources = () => {
                 transition={{ duration: 0.6 }}
                 className="flex items-center gap-4"
               >
-                <span className="h-px w-12 bg-orange-500" />
-                <span
+                <span className="h-px w-12" style={{ backgroundColor: 'var(--rp-theme-text)' }} />
+                <RpLogo
+                  text="2nd Renaissance People"
                   className="text-orange-500 font-black tracking-[0.4em] uppercase text-[10px]"
-                  style={{ fontFamily: '"Sixtyfour", monospace' }}
-                >
-                  2nd Renaissance People
-                </span>
+                />
               </motion.div>
 
               <motion.div
@@ -193,7 +501,7 @@ const Resources = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
               >
-                <h1 className="text-[10vw] lg:text-[82px] font-black leading-[0.85] tracking-tighter mb-6 uppercase">
+                <h1 className="text-[10vw] lg:text-[82px] font-black leading-[0.85] tracking-tighter mb-6 uppercase text-[var(--rp-hero-secondary)]">
                   Art <span className="text-zinc-500">&</span> <span className="italic">Resources</span> <br />
                   for Open Source <span className="italic">Nerds</span>
                 </h1>
@@ -234,7 +542,11 @@ const Resources = () => {
           transition={{ delay: 1.2, duration: 1 }}
           className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
         >
-          <ArrowDown size={16} className="text-zinc-500 animate-bounce" />
+          <ArrowDown
+            size={16}
+            className="animate-bounce"
+            style={{ color: 'var(--rp-theme-text)' }}
+          />
         </motion.div>
 
         {/* Constrained bottom border to match section content width below */}
@@ -257,10 +569,10 @@ const Resources = () => {
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-zinc-900 rounded-lg">
-                <Palette size={20} className="text-zinc-100" />
+              <div className="rp-section-icon p-2 rounded-lg">
+                <Palette size={20} />
               </div>
-              <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
+              <h2 className="rp-section-heading text-2xl sm:text-4xl font-black tracking-tight uppercase">
                 Community Art
               </h2>
             </div>
@@ -270,9 +582,10 @@ const Resources = () => {
                   onClick={() => setArtStatus('curated')}
                   className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
                     artStatus === 'curated'
-                      ? 'bg-white/15 text-white'
+                      ? ''
                       : 'text-white/50 hover:text-white/70'
                   }`}
+                  style={artStatus === 'curated' ? secondaryPillStyle : undefined}
                 >
                   Curated
                 </button>
@@ -280,16 +593,17 @@ const Resources = () => {
                   onClick={() => setArtStatus('all')}
                   className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
                     artStatus === 'all'
-                      ? 'bg-white/15 text-white'
+                      ? ''
                       : 'text-white/50 hover:text-white/70'
                   }`}
+                  style={artStatus === 'all' ? secondaryPillStyle : undefined}
                 >
                   All
                 </button>
               </div>
               <button
                 onClick={() => handleCreateClick('art')}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 hover:border-white/25 transition-colors"
+                className="rp-secondary-action inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 transition-colors"
               >
                 <Plus size={16} />
                 Add Art
@@ -298,6 +612,8 @@ const Resources = () => {
           </div>
           <ArtGallerySection status={artStatus} />
         </motion.section>
+
+        <AgentNodesSection />
 
         {/* The Forge — Assets */}
         <motion.section
@@ -313,10 +629,10 @@ const Resources = () => {
         >
           <div className="flex flex-col gap-3 border-b border-zinc-800 pb-5 md:pb-6 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
             <div className="flex items-center gap-3 shrink-0">
-              <div className="p-2 bg-zinc-900 rounded-lg">
-                <LayoutGrid size={20} className="text-zinc-100" />
+              <div className="rp-section-icon p-2 rounded-lg">
+                <LayoutGrid size={20} />
               </div>
-              <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase">
+              <h2 className="rp-section-heading text-2xl sm:text-4xl font-black tracking-tight uppercase">
                 Resources
               </h2>
             </div>
@@ -333,7 +649,7 @@ const Resources = () => {
             )}
             <button
               onClick={() => handleCreateClick('resource')}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 hover:border-white/25 transition-colors shrink-0 self-start lg:self-auto"
+              className="rp-secondary-action inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 transition-colors shrink-0 self-start lg:self-auto"
             >
               <Plus size={16} />
               Add Resources
@@ -417,10 +733,10 @@ const Resources = () => {
             <div className="lg:absolute lg:inset-0 flex flex-col">
               <div className="shrink-0">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-zinc-900 rounded-lg">
-                    <Newspaper size={20} className="text-zinc-100" />
+                  <div className="rp-section-icon p-2 rounded-lg">
+                    <Newspaper size={20} />
                   </div>
-                  <h2 className="text-2xl font-bold tracking-tight uppercase">Briefing</h2>
+                  <h2 className="rp-section-heading text-2xl font-bold tracking-tight uppercase">Briefing</h2>
                 </div>
                 <p className="text-zinc-500 text-sm leading-relaxed mb-6">
                   Dispatches from the community frontlines. Latest integrations, research notes, and community milestones.
@@ -442,7 +758,7 @@ const Resources = () => {
                   href={YOUTUBE_CHANNEL_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-zinc-900 px-4 py-3 text-sm font-medium text-zinc-200 hover:bg-zinc-800 hover:border-white/20 transition"
+                  className="rp-secondary-action flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-zinc-900 px-4 py-3 text-sm font-medium text-zinc-200 hover:bg-zinc-800 transition"
                 >
                   <Youtube size={16} className="text-red-500" />
                   Visit the full YouTube channel
@@ -467,16 +783,16 @@ const Resources = () => {
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-zinc-900 p-2">
-                <Newspaper size={18} className="text-zinc-100" />
+              <div className="rp-section-icon rounded-lg p-2">
+                <Newspaper size={18} />
               </div>
-              <h2 className="text-xl font-black uppercase tracking-tight sm:text-2xl">
+              <h2 className="rp-section-heading text-xl font-black uppercase tracking-tight sm:text-2xl">
                 Community Posts
               </h2>
             </div>
             <button
               onClick={() => handleCreateClick('post')}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-white/25 hover:bg-white/15"
+              className="rp-secondary-action inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15"
             >
               <Plus size={16} />
               Add Post
@@ -520,12 +836,12 @@ const Resources = () => {
         >
           <div className="lg:col-span-6 flex flex-col gap-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-zinc-900 rounded-lg">
-                <Users size={20} className="text-zinc-100" />
+              <div className="rp-section-icon p-2 rounded-lg">
+                <Users size={20} />
               </div>
-              <span className="text-zinc-500 font-black tracking-[0.4em] uppercase text-[10px]">Community</span>
+              <span className="rp-section-eyebrow font-black tracking-[0.4em] uppercase text-[10px]">Community</span>
             </div>
-            <h2 className="text-2xl sm:text-4xl font-black tracking-tight uppercase leading-tight">
+            <h2 className="rp-section-heading text-2xl sm:text-4xl font-black tracking-tight uppercase leading-tight">
               The open source world gathers in our community
             </h2>
             <a

@@ -6,6 +6,8 @@ export type Track = {
   src: string;
   startAt?: number;
   endAt?: number;
+  transform?: string;
+  holdAtStartMs?: number;
   mode:
     // `speed` is the playback rate. When `speedEnd` is also provided, the rate
     // ramps linearly from `speed` to `speedEnd` across the play step's

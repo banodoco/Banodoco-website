@@ -119,14 +119,28 @@ export const HeroArtistCycler = ({
             {/* Stacked actions in bottom-right: play pill above creator pill */}
             <div className="absolute bottom-6 right-6 flex flex-col items-end gap-3">
               {/* Play invite — settled at rest, pops on hover to feel clickable */}
-              <span className="inline-flex items-center gap-2 pl-3 pr-4 py-2 rounded-full bg-orange-500/90 backdrop-blur-md border border-orange-200/40 text-white shadow-[0_10px_30px_rgba(249,115,22,0.35)] transition-all duration-300 ease-out group-hover:scale-[1.08] group-hover:-translate-y-0.5 group-hover:bg-orange-500 group-hover:shadow-[0_18px_48px_rgba(249,115,22,0.55)]">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/20 transition-colors duration-300 group-hover:bg-white/30">
+              <span
+                className="inline-flex items-center gap-2 rounded-full border py-2 pl-3 pr-4 backdrop-blur-md transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-[1.08]"
+                style={{
+                  backgroundColor: 'var(--rp-section-accent-soft)',
+                  borderColor: 'var(--rp-section-accent-border)',
+                  color: 'var(--rp-section-accent)',
+                  boxShadow: '0 14px 38px -26px var(--rp-section-accent)',
+                }}
+              >
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-current/20 bg-current/10 transition-colors duration-300 group-hover:bg-current/15">
                   <Play className="w-2.5 h-2.5 fill-current translate-x-[0.5px]" />
                 </span>
                 <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Play</span>
               </span>
               {/* Creator pill */}
-              <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-black/55 backdrop-blur-md border border-white/10 shadow-lg">
+              <span
+                className="inline-flex items-center gap-2 rounded-full border bg-black/55 px-3 py-2 shadow-lg backdrop-blur-md"
+                style={{
+                  borderColor: 'var(--rp-section-accent-border)',
+                  color: 'var(--rp-section-accent)',
+                }}
+              >
                 {creator.avatarUrl && (
                   <img
                     src={creator.avatarUrl}
@@ -135,7 +149,7 @@ export const HeroArtistCycler = ({
                     loading="lazy"
                   />
                 )}
-                <span className="text-sm text-white/90 truncate max-w-[160px]">{displayName}</span>
+                <span className="max-w-[160px] truncate text-sm">{displayName}</span>
               </span>
             </div>
           </motion.div>

@@ -18,7 +18,7 @@ export const ArtShowcaseCard = ({ message, onClick, featured = false }: ArtShowc
   return (
     <button
       onClick={onClick}
-      className={`group text-left w-full rounded-lg overflow-hidden bg-white/5 border border-white/10 transition-all duration-200 hover:scale-[1.02] hover:border-white/20 cursor-pointer`}
+      className="rp-themed-card group text-left w-full rounded-lg overflow-hidden bg-white/5 border border-white/10 transition-all duration-200 hover:scale-[1.02] cursor-pointer"
     >
       {/* Media */}
       <div className={`relative bg-white/5 overflow-hidden ${featured ? 'aspect-[2/1]' : 'aspect-video'}`}>

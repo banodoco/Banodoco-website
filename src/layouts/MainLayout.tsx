@@ -26,7 +26,7 @@ const MainLayoutContent = ({ children }: MainLayoutProps) => {
   const isHome = pathname === '/';
   const isSecondRenaissance = pathname === '/2nd-renaissance';
   const isWrapped = pathname === '/1m';
-  const isResources = pathname === '/2RP' || pathname.startsWith('/resources/');
+  const isResources = pathname === '/2RP' || pathname === '/art-agents' || pathname.startsWith('/resources/');
   const isDarkPath =
     isProfilePathname(pathname)
     || pathname.startsWith('/submit/')

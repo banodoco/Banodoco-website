@@ -16,7 +16,8 @@ const PAUSED_SEEK_EPSILON_SEC = 0.02;
 // network buffering, dropped frames), this threshold catches it and snaps
 // the video forward to where it should be. Tune up for more tolerance,
 // down for tighter sync.
-const PLAYING_RESYNC_THRESHOLD_SEC = 0.6;
+const PLAYING_RESYNC_THRESHOLD_SEC = 0.18;
+const REST_STAGE_SOURCE_SWAP_MS = 0;
 
 type SlotKey = 'A' | 'B';
 
@@ -37,6 +38,14 @@ type EngineState = {
   stageElapsedMs: number;
   phase: 'rest' | 'transitioning';
   activeSlot: SlotKey;
+  stageCrossfade?: {
+    fromSlot: SlotKey;
+    toSlot: SlotKey;
+    elapsedMs: number;
+    durationMs: number;
+    track: Track;
+    primed: boolean;
+  };
   transition?: {
     compiled: CompiledTransition;
     stepIndex: number;
@@ -52,6 +61,13 @@ type CreateEngineArgs = {
   slotA: HTMLVideoElement;
   slotB: HTMLVideoElement;
   isMobile: boolean;
+  onRestStageProgress?: (event: {
+    sectionId: string;
+    stageIndex: number;
+    track: Track;
+    nextTrack: Track | null;
+    remainingSeconds: number;
+  }) => void;
 };
 
 type Engine = {
@@ -65,6 +81,7 @@ export const createEngine = ({
   slotA,
   slotB,
   isMobile,
+  onRestStageProgress,
 }: CreateEngineArgs): Engine => {
   const sectionById = new Map(sections.map(section => [section.id, section]));
   const initialSection = sections[0];
@@ -103,6 +120,8 @@ export const createEngine = ({
   const setSlotSource = (slotKey: SlotKey, track: Track): { ready: boolean; changed: boolean } => {
     const slot = slots[slotKey];
 
+    slot.el.style.transform = track.transform ?? '';
+
     if (slot.src === track.src) return { ready: slot.ready, changed: false };
 
     slot.src = track.src;
@@ -116,7 +135,7 @@ export const createEngine = ({
         resolve();
       };
 
-      slot.el.addEventListener('loadedmetadata', markReady, { once: true });
+      slot.el.addEventListener('loadeddata', markReady, { once: true });
     });
 
     slot.el.src = track.src;
@@ -125,7 +144,7 @@ export const createEngine = ({
     slot.el.preload = 'auto';
     slot.el.load();
 
-    if (slot.el.readyState >= HTMLMediaElement.HAVE_METADATA) {
+    if (slot.el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
       slot.ready = true;
       slot.readyPromise = Promise.resolve();
     }
@@ -149,12 +168,6 @@ export const createEngine = ({
       slot.el.playbackRate = slot.desiredRate;
     }
 
-    if (slot.desiredPlay && slot.el.paused) {
-      slot.el.play().catch(() => {});
-    } else if (!slot.desiredPlay && !slot.el.paused) {
-      slot.el.pause();
-    }
-
     const epsilon = slot.desiredPlay ? PLAYING_RESYNC_THRESHOLD_SEC : PAUSED_SEEK_EPSILON_SEC;
     if (Math.abs(slot.el.currentTime - slot.desiredTime) > epsilon) {
       try {
@@ -162,6 +175,12 @@ export const createEngine = ({
       } catch {
         slot.ready = false;
       }
+    }
+
+    if (slot.desiredPlay && slot.el.paused) {
+      slot.el.play().catch(() => {});
+    } else if (!slot.desiredPlay && !slot.el.paused) {
+      slot.el.pause();
     }
   };
 
@@ -185,13 +204,102 @@ export const createEngine = ({
   const advanceStage = () => {
     const section = sectionById.get(state.sectionId);
     if (!section) return;
-    state.stageIndex = Math.min(state.stageIndex + 1, section.stages.length - 1);
+    const nextStageIndex = Math.min(state.stageIndex + 1, section.stages.length - 1);
+    const nextTrack = section.stages[nextStageIndex].track;
+    const activeKey = state.activeSlot;
+    const activeSlotRuntime = slots[activeKey];
+
+    state.stageIndex = nextStageIndex;
     state.stageElapsedMs = 0;
-    prepareSlot(state.activeSlot, section.stages[state.stageIndex].track);
+
+    if (activeSlotRuntime.src && activeSlotRuntime.src !== nextTrack.src) {
+      const toSlot = inactiveSlot(activeKey);
+      prepareSlot(toSlot, nextTrack, trackStart(nextTrack));
+      state.stageCrossfade = {
+        fromSlot: activeKey,
+        toSlot,
+        elapsedMs: 0,
+        durationMs: REST_STAGE_SOURCE_SWAP_MS,
+        track: nextTrack,
+        primed: false,
+      };
+      return;
+    }
+
+    prepareSlot(state.activeSlot, nextTrack);
   };
 
   const renderRest = (dtMs: number) => {
     const stage = currentStage();
+    const crossfade = state.stageCrossfade;
+
+    if (crossfade) {
+      const fromSlot = slots[crossfade.fromSlot];
+      const toSlot = slots[crossfade.toSlot];
+      const ready = prepareSlot(crossfade.toSlot, crossfade.track);
+
+      fromSlot.desiredPlay = false;
+      fromSlot.el.style.zIndex = '0';
+      toSlot.el.style.zIndex = '1';
+      fromSlot.opacity = 1;
+      toSlot.opacity = 0;
+
+      if (!ready) return;
+
+      const isCrossfadeEntry = crossfade.elapsedMs === 0;
+      const startAt = trackStart(crossfade.track);
+      const endAt = trackEnd(crossfade.track);
+
+      if (!crossfade.primed) {
+        toSlot.desiredPlay = false;
+        toSlot.desiredRate = 1;
+        toSlot.desiredTime = crossfade.track.mode.kind === 'freeze' ? endAt : startAt;
+        crossfade.primed = true;
+        return;
+      }
+
+      crossfade.elapsedMs += dtMs;
+      const t = crossfade.durationMs <= 0
+        ? 1
+        : Math.min(1, crossfade.elapsedMs / crossfade.durationMs);
+      fromSlot.opacity = 1;
+      toSlot.opacity = t;
+
+      if (crossfade.track.mode.kind === 'loop') {
+        toSlot.desiredPlay = true;
+        toSlot.desiredRate = 1;
+        const span = Math.max(endAt - startAt, 0.001);
+        if (isCrossfadeEntry) {
+          toSlot.desiredTime = startAt;
+        } else {
+          let next = toSlot.desiredTime + (dtMs / 1000);
+          if (next >= endAt) next = startAt + ((next - startAt) % span);
+          toSlot.desiredTime = next;
+        }
+      } else if (crossfade.track.mode.kind === 'play') {
+        toSlot.desiredPlay = true;
+        toSlot.desiredRate = crossfade.track.mode.speed;
+        if (isCrossfadeEntry) {
+          toSlot.desiredTime = startAt;
+        } else {
+          toSlot.desiredTime = Math.min(endAt, toSlot.desiredTime + (dtMs / 1000) * crossfade.track.mode.speed);
+        }
+      } else {
+        toSlot.desiredPlay = false;
+        toSlot.desiredRate = 1;
+        toSlot.desiredTime = endAt;
+      }
+
+      if (t >= 1) {
+        state.activeSlot = crossfade.toSlot;
+        slots[crossfade.fromSlot].opacity = 0;
+        slots[crossfade.fromSlot].desiredPlay = false;
+        state.stageCrossfade = undefined;
+      }
+
+      return;
+    }
+
     const activeKey = state.activeSlot;
     const inactiveKey = inactiveSlot(activeKey);
     const slot = slots[activeKey];
@@ -221,7 +329,11 @@ export const createEngine = ({
       slot.desiredPlay = true;
       slot.desiredRate = 1;
       const span = Math.max(endAt - startAt, 0.001);
+      const holdAtStartMs = stage.track.holdAtStartMs ?? 0;
       if (isStageEntry) {
+        slot.desiredTime = startAt;
+      } else if (state.stageElapsedMs <= holdAtStartMs) {
+        slot.desiredPlay = false;
         slot.desiredTime = startAt;
       } else {
         let next = slot.desiredTime + (dtMs / 1000);
@@ -241,6 +353,16 @@ export const createEngine = ({
     } else {
       slot.desiredTime = Math.min(endAt, slot.desiredTime + (dtMs / 1000) * speed);
     }
+
+    const section = sectionById.get(state.sectionId);
+    const nextTrack = section?.stages[state.stageIndex + 1]?.track ?? null;
+    onRestStageProgress?.({
+      sectionId: state.sectionId,
+      stageIndex: state.stageIndex,
+      track: stage.track,
+      nextTrack,
+      remainingSeconds: Math.max(0, endAt - slot.desiredTime),
+    });
 
     if (
       slot.desiredTime >= endAt

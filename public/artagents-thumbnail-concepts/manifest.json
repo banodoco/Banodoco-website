@@ -1,0 +1,83 @@
+[
+  {
+    "prompt": "YouTube thumbnail concept, 16:9. A funny stylized hooded cartoon avatar inspired by a simple hand-drawn profile picture: brown hood, white ghostlike face, long nose, deadpan smile, black sketch outline. The character stands heroically at a podium, pointing forward like a visionary giving a grand speech. Huge glowing abstract logo emblem behind them, cinematic spotlight rays, crowd silhouettes, confetti, mock-serious epic scale, polished meme thumbnail energy. Leave clean negative space for future title text. No readable text.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts/001-youtube-thumbnail-concept-16-9-a-funny-stylized-hooded-cartoon-a.png"
+    ],
+    "usage": {
+      "input_tokens": 114,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 114
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1192
+    },
+    "created": 1777581888
+  },
+  {
+    "prompt": "YouTube thumbnail concept, 16:9. Same funny hooded cartoon avatar: brown hood, white face, simple black outline, smug visionary expression. Character stands on a massive keynote stage, one arm pointing upward toward a glowing logo on a giant screen, dramatic tech-conference lighting, laser beams, crowd silhouettes, absurdly epic but humorous, high contrast, vibrant colors, space for title. No readable text.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts/002-youtube-thumbnail-concept-16-9-same-funny-hooded-cartoon-avatar-.png"
+    ],
+    "usage": {
+      "input_tokens": 90,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 90
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1168
+    },
+    "created": 1777581944
+  },
+  {
+    "prompt": "YouTube thumbnail concept, 16:9. Same stylized hooded avatar with brown hood and white ghostlike face, standing on a windswept heroic platform, pointing toward the horizon like a founder announcing the future. Giant logo halo in the sky behind them, flags, backlight, cinematic clouds, funny over-the-top inspirational poster mood, bold thumbnail composition, no readable text.",
+    "request": {
+      "model": "gpt-image-2",
+      "n": 1,
+      "size": "1536x864",
+      "quality": "medium",
+      "output_format": "png"
+    },
+    "outputs": [
+      "/Users/peteromalley/Documents/banodoco-workspace/banodoco-website/public/artagents-thumbnail-concepts/003-youtube-thumbnail-concept-16-9-same-stylized-hooded-avatar-with-.png"
+    ],
+    "usage": {
+      "input_tokens": 84,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 84
+      },
+      "output_tokens": 1078,
+      "output_tokens_details": {
+        "image_tokens": 1078,
+        "text_tokens": 0
+      },
+      "total_tokens": 1162
+    },
+    "created": 1777581999
+  }
+]

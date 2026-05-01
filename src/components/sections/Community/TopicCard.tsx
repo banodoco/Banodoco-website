@@ -100,7 +100,7 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
               
               {/* Title and bullet points on right */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-medium text-white mb-2 leading-snug">
+                <h3 className="community-topic-title mb-2 text-sm font-medium leading-snug text-white">
                   {topic.topic_title}
                 </h3>
                 
@@ -135,7 +135,7 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
             <div className="flex gap-3 md:hidden">
               {/* Bullet points on the left */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-medium text-white mb-2 leading-snug line-clamp-2">
+                <h3 className="community-topic-title mb-2 line-clamp-2 text-sm font-medium leading-snug text-white">
                   {topic.topic_title}
                 </h3>
                 {topic.topic_sub_topics && topic.topic_sub_topics.length > 0 && (
@@ -182,7 +182,7 @@ export const TopicCard = forwardRef<HTMLElement, TopicCardProps>(
           )}>
             {/* Text content */}
             <div>
-              <h3 className="text-lg font-medium text-white mb-3 leading-snug">
+              <h3 className="community-topic-title mb-3 text-lg font-medium leading-snug text-white">
                 {topic.topic_title}
               </h3>
               <p className="text-sm text-white/60 leading-relaxed mb-4 whitespace-pre-line">

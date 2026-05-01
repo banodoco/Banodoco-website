@@ -34,7 +34,12 @@ export const DiscordCTA = () => {
       {/* Copy agent instructions */}
       <button
         onClick={handleCopy}
-        className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/25 transition-colors"
+        className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border transition-colors"
+        style={{
+          backgroundColor: 'var(--rp-theme-color-soft)',
+          borderColor: 'var(--rp-theme-color-border)',
+          color: 'var(--rp-theme-text)',
+        }}
       >
         {copied ? (
           <>

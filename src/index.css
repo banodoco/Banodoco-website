@@ -86,6 +86,36 @@
   background: #555;
 }
 
+.rp-theme-scope .rp-themed-card:hover {
+  border-color: var(--rp-theme-color-border);
+  box-shadow: 0 18px 45px -32px var(--rp-theme-color-glow);
+}
+
+.rp-theme-scope .rp-section-heading,
+.rp-theme-scope .rp-section-eyebrow {
+  color: var(--rp-section-accent);
+}
+
+.rp-theme-scope .rp-section-icon {
+  background: var(--rp-section-accent-soft);
+  border: 1px solid var(--rp-section-accent-border);
+  color: var(--rp-section-accent);
+}
+
+.rp-theme-scope .rp-secondary-action:hover {
+  border-color: var(--rp-section-accent-border);
+  color: var(--rp-section-accent);
+}
+
+.rp-theme-scope .rp-secondary-action {
+  color: var(--rp-section-accent);
+}
+
+.rp-theme-scope .community-topic-title,
+.rp-theme-scope .resource-card-title {
+  color: var(--rp-section-accent);
+}
+
 /* Image mask effect for profile pics */
 .mask-radial {
   mask-image: radial-gradient(circle at center, black 60%, transparent 70%);
@@ -106,6 +136,925 @@
 @keyframes hideBorderLeftToRight {
   from { clip-path: inset(0 0% 0 0); }
   to { clip-path: inset(0 0 0 100%); }
+}
+
+/* Homepage background loop-disguise effects. Tuned by CSS variables from HomeBackgroundVideo. */
+.home-video-slots {
+  position: absolute;
+  inset: 0;
+}
+
+.home-video-slots.is-loop-video-fading {
+  animation: loop-video-fade-out var(--loop-seam-duration) ease-in-out both;
+}
+
+.home-video-slots.is-loop-video-blooming {
+  animation: loop-video-bloom-drift var(--loop-seam-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: 52% 48%;
+}
+
+.home-video-slots.is-loop-video-focusing {
+  animation: loop-video-focus-rack var(--loop-seam-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: 50% 50%;
+}
+
+.home-video-slots.is-loop-video-leaking {
+  animation: loop-video-light-leak var(--loop-seam-duration) ease-in-out both;
+  transform-origin: 48% 52%;
+}
+
+.home-video-slots.is-loop-video-drifting {
+  animation: loop-video-camera-drift var(--loop-seam-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: 54% 46%;
+}
+
+.home-video-slots.is-loop-video-refracting {
+  animation: loop-video-refract var(--loop-seam-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: 50% 50%;
+}
+
+.home-video-slots.is-loop-video-heating {
+  animation: loop-video-heat-haze var(--loop-seam-duration) ease-in-out both;
+  transform-origin: 50% 56%;
+}
+
+.home-video-slots.is-loop-video-prisming {
+  animation: loop-video-prism-drift var(--loop-seam-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: 52% 48%;
+}
+
+.loop-seam-mask {
+  --loop-seam-amount: 0.7;
+  --loop-seam-duration: 650ms;
+  --loop-seam-veil-blur: 7px;
+  --loop-seam-veil-saturate: 1.45;
+  --loop-seam-blur: 15px;
+  --loop-seam-brightness: 1.12;
+  --loop-seam-opacity-start: 0.15;
+  --loop-seam-opacity-low: 0.35;
+  --loop-seam-opacity-mid: 0.53;
+  --loop-seam-opacity-high: 0.6;
+  --loop-seam-soft-alpha: 0.13;
+  --loop-seam-line-alpha: 0.08;
+  --loop-seam-edge-spread: 41%;
+  --loop-seam-side-stop: 20%;
+  --loop-seam-side-alpha: 0.25;
+  --loop-seam-vertical-alpha: 0.18;
+  --loop-seam-glitch-alpha: 0.13;
+  --loop-seam-cyan-alpha: 0.15;
+  --loop-seam-magenta-alpha: 0.14;
+  --loop-seam-band-inset: 15%;
+  --loop-seam-glitch-sweep-start: -34px;
+  --loop-seam-glitch-sweep-end: 45px;
+  --loop-seam-shutter-alpha: 0.55;
+  --loop-seam-shutter-offset: 45%;
+  --loop-seam-shutter-offset-negative: -45%;
+  --loop-seam-flash-alpha: 0.7;
+  --loop-seam-flash-alpha-start: 0.22;
+  --loop-seam-flash-clear-alpha: 0.42;
+  --loop-seam-flash-clear-alpha-start: 0.14;
+  --loop-seam-flash-baseline-alpha: 0.32;
+  --loop-seam-flash-pulse-alpha: 0.58;
+  --loop-seam-flash-blur: 8px;
+  --loop-video-fade-opacity: 0.35;
+  --loop-video-fade-opacity-start: 0.7;
+  --loop-video-fade-blur: 5px;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.loop-seam-mask::before,
+.loop-seam-mask::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.loop-seam-mask.is-active {
+  animation-duration: var(--loop-seam-duration);
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+
+.loop-seam-mask.is-active::before,
+.loop-seam-mask.is-active::after {
+  animation-duration: var(--loop-seam-duration);
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+
+.loop-seam-mask--veil.is-active {
+  animation-name: loop-seam-veil;
+  backdrop-filter: blur(var(--loop-seam-veil-blur)) saturate(var(--loop-seam-veil-saturate));
+}
+
+.loop-seam-mask--veil::before {
+  background:
+    radial-gradient(circle at 50% 50%, rgb(255 255 255 / var(--loop-seam-soft-alpha)), transparent var(--loop-seam-edge-spread)),
+    linear-gradient(90deg, rgb(255 255 255 / 0), rgb(255 255 255 / var(--loop-seam-line-alpha)), rgb(255 255 255 / 0));
+}
+
+.loop-seam-mask--veil.is-active::before {
+  animation-name: loop-seam-pulse;
+}
+
+.loop-seam-mask--blur.is-active {
+  animation-name: loop-seam-blur;
+  backdrop-filter: blur(var(--loop-seam-blur)) brightness(var(--loop-seam-brightness));
+}
+
+.loop-seam-mask--blur::before {
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / var(--loop-seam-side-alpha)), transparent var(--loop-seam-side-stop), transparent calc(100% - var(--loop-seam-side-stop)), rgb(0 0 0 / var(--loop-seam-side-alpha))),
+    linear-gradient(180deg, rgb(0 0 0 / var(--loop-seam-vertical-alpha)), transparent 24%, transparent 76%, rgb(0 0 0 / var(--loop-seam-vertical-alpha)));
+}
+
+.loop-seam-mask--blur.is-active::before {
+  animation-name: loop-seam-pulse;
+}
+
+.loop-seam-mask--glitch {
+  mix-blend-mode: screen;
+}
+
+.loop-seam-mask--glitch::before {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgb(255 255 255 / var(--loop-seam-glitch-alpha)) 0 1px,
+      transparent 1px 7px
+    ),
+    linear-gradient(90deg, rgb(19 210 255 / var(--loop-seam-cyan-alpha)), transparent 35%, rgb(255 47 146 / var(--loop-seam-magenta-alpha)));
+  clip-path: inset(var(--loop-seam-band-inset) 0 var(--loop-seam-band-inset) 0);
+}
+
+.loop-seam-mask--glitch::after {
+  background:
+    linear-gradient(90deg, transparent, rgb(255 255 255 / var(--loop-seam-cyan-alpha)), transparent),
+    repeating-linear-gradient(90deg, transparent 0 7%, rgb(255 255 255 / var(--loop-seam-line-alpha)) 7% 8%);
+  transform: translateX(var(--loop-seam-glitch-sweep-start));
+}
+
+.loop-seam-mask--glitch.is-active {
+  animation-name: loop-seam-glitch-base;
+}
+
+.loop-seam-mask--glitch.is-active::before {
+  animation-name: loop-seam-glitch-bands;
+}
+
+.loop-seam-mask--glitch.is-active::after {
+  animation-name: loop-seam-glitch-sweep;
+}
+
+.loop-seam-mask--shutter::before {
+  background: rgb(0 0 0 / var(--loop-seam-shutter-alpha));
+  clip-path: inset(0 0 50% 0);
+}
+
+.loop-seam-mask--shutter::after {
+  background: rgb(0 0 0 / var(--loop-seam-shutter-alpha));
+  clip-path: inset(50% 0 0 0);
+}
+
+.loop-seam-mask--shutter.is-active::before {
+  animation-name: loop-seam-shutter-top;
+}
+
+.loop-seam-mask--shutter.is-active::after {
+  animation-name: loop-seam-shutter-bottom;
+}
+
+.loop-seam-mask--flash.is-active {
+  opacity: 1;
+}
+
+.loop-seam-mask--flash.is-enabled {
+  opacity: 1;
+}
+
+.loop-seam-mask--flash::before,
+.loop-seam-mask--flash::after {
+  display: none;
+}
+
+.loop-seam-flash-baseline,
+.loop-seam-flash-pulse {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: rgb(255 255 255 / 1);
+}
+
+.loop-seam-mask--flash.is-enabled .loop-seam-flash-baseline {
+  opacity: var(--loop-seam-flash-baseline-alpha);
+}
+
+.loop-seam-mask--flash.is-active .loop-seam-flash-pulse {
+  animation: loop-seam-flash-pulse var(--loop-seam-duration) ease-in-out both;
+}
+
+.loop-seam-mask--fade.is-active {
+  animation-name: loop-seam-fade-base;
+}
+
+.loop-seam-mask--fade::before {
+  background: rgb(255 255 255 / var(--loop-seam-flash-clear-alpha));
+}
+
+.loop-seam-mask--fade::after {
+  background:
+    radial-gradient(circle at 50% 52%, rgb(255 255 255 / calc(var(--loop-seam-flash-alpha) * 0.2)), rgb(255 255 255 / calc(var(--loop-seam-flash-alpha) * 0.08)) 42%, rgb(255 255 255 / 0) 76%);
+}
+
+.loop-seam-mask--fade.is-active::before {
+  animation-name: loop-seam-fade-dip;
+}
+
+.loop-seam-mask--fade.is-active::after {
+  animation-name: loop-seam-fade-wash;
+}
+
+.loop-seam-mask--bloom {
+  mix-blend-mode: screen;
+}
+
+.loop-seam-mask--bloom.is-active {
+  animation-name: loop-seam-bloom-base;
+  backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.42)) brightness(var(--loop-seam-brightness)) saturate(1.08);
+}
+
+.loop-seam-mask--bloom::before {
+  background:
+    radial-gradient(
+      circle at 58% 43%,
+      rgb(255 246 220 / calc(var(--loop-seam-flash-alpha) * 0.5)),
+      rgb(255 230 190 / calc(var(--loop-seam-flash-alpha) * 0.18)) 34%,
+      rgb(255 255 255 / 0) 72%
+    ),
+    linear-gradient(
+      105deg,
+      rgb(255 255 255 / 0) 0%,
+      rgb(255 244 220 / calc(var(--loop-seam-line-alpha) * 2.2)) 38%,
+      rgb(255 255 255 / calc(var(--loop-seam-soft-alpha) * 0.75)) 50%,
+      rgb(255 255 255 / 0) 72%
+    );
+}
+
+.loop-seam-mask--bloom::after {
+  background:
+    radial-gradient(
+      ellipse at 50% 52%,
+      rgb(255 255 255 / 0) 38%,
+      rgb(255 240 215 / calc(var(--loop-seam-soft-alpha) * 0.95)) 65%,
+      rgb(0 0 0 / calc(var(--loop-seam-side-alpha) * 0.32)) 100%
+    );
+}
+
+.loop-seam-mask--bloom.is-active::before {
+  animation-name: loop-seam-bloom-wash;
+}
+
+.loop-seam-mask--bloom.is-active::after {
+  animation-name: loop-seam-bloom-vignette;
+}
+
+.loop-seam-mask--focus.is-active {
+  animation-name: loop-seam-focus-base;
+  backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.55)) brightness(1.04) saturate(1.02);
+}
+
+.loop-seam-mask--focus::before {
+  background:
+    radial-gradient(
+      ellipse at 50% 50%,
+      rgb(255 255 255 / 0) 28%,
+      rgb(255 255 255 / calc(var(--loop-seam-soft-alpha) * 0.5)) 54%,
+      rgb(0 0 0 / calc(var(--loop-seam-side-alpha) * 0.4)) 100%
+    );
+}
+
+.loop-seam-mask--focus::after {
+  background:
+    radial-gradient(
+      circle at 48% 46%,
+      rgb(255 255 255 / calc(var(--loop-seam-line-alpha) * 1.2)),
+      rgb(255 255 255 / 0) 34%
+    );
+}
+
+.loop-seam-mask--focus.is-active::before {
+  animation-name: loop-seam-focus-vignette;
+}
+
+.loop-seam-mask--focus.is-active::after {
+  animation-name: loop-seam-focus-highlight;
+}
+
+.loop-seam-mask--leak {
+  mix-blend-mode: screen;
+}
+
+.loop-seam-mask--leak.is-active {
+  animation-name: loop-seam-light-leak-base;
+}
+
+.loop-seam-mask--leak::before {
+  background:
+    radial-gradient(
+      ellipse at 0% 45%,
+      rgb(255 210 150 / calc(var(--loop-seam-flash-alpha) * 0.78)),
+      rgb(255 118 92 / calc(var(--loop-seam-flash-alpha) * 0.2)) 34%,
+      rgb(255 255 255 / 0) 72%
+    );
+  filter: blur(calc(var(--loop-seam-flash-blur) * 0.9));
+}
+
+.loop-seam-mask--leak::after {
+  background:
+    linear-gradient(
+      105deg,
+      rgb(255 255 255 / 0) 0%,
+      rgb(255 244 210 / calc(var(--loop-seam-line-alpha) * 1.6)) 46%,
+      rgb(255 255 255 / calc(var(--loop-seam-soft-alpha) * 0.9)) 54%,
+      rgb(255 255 255 / 0) 68%
+    );
+}
+
+.loop-seam-mask--leak.is-active::before {
+  animation-name: loop-seam-light-leak-orb;
+}
+
+.loop-seam-mask--leak.is-active::after {
+  animation-name: loop-seam-light-leak-streak;
+}
+
+.loop-seam-mask--drift.is-active {
+  animation-name: loop-seam-drift-base;
+  backdrop-filter: brightness(1.035) saturate(1.02);
+}
+
+.loop-seam-mask--drift::before {
+  background:
+    linear-gradient(
+      180deg,
+      rgb(255 255 255 / calc(var(--loop-seam-line-alpha) * 0.72)),
+      rgb(255 255 255 / 0) 24%,
+      rgb(255 255 255 / 0) 74%,
+      rgb(0 0 0 / calc(var(--loop-seam-side-alpha) * 0.34))
+    );
+}
+
+.loop-seam-mask--drift::after {
+  background:
+    radial-gradient(
+      ellipse at 54% 46%,
+      rgb(255 255 255 / calc(var(--loop-seam-soft-alpha) * 0.62)),
+      rgb(255 255 255 / 0) 62%
+    );
+}
+
+.loop-seam-mask--drift.is-active::before {
+  animation-name: loop-seam-drift-shade;
+}
+
+.loop-seam-mask--drift.is-active::after {
+  animation-name: loop-seam-drift-lift;
+}
+
+.loop-seam-mask--refract.is-active {
+  animation-name: loop-seam-refract-base;
+  backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.08)) brightness(1.025) saturate(1.04);
+}
+
+.loop-seam-mask--refract::before {
+  background:
+    linear-gradient(
+      115deg,
+      rgb(255 255 255 / 0) 0%,
+      rgb(255 255 255 / calc(var(--loop-seam-line-alpha) * 0.9)) 42%,
+      rgb(255 255 255 / calc(var(--loop-seam-soft-alpha) * 0.45)) 50%,
+      rgb(255 255 255 / 0) 62%
+    );
+}
+
+.loop-seam-mask--refract::after {
+  background:
+    radial-gradient(
+      ellipse at 50% 50%,
+      rgb(255 255 255 / 0) 24%,
+      rgb(255 255 255 / calc(var(--loop-seam-soft-alpha) * 0.32)) 62%,
+      rgb(0 0 0 / calc(var(--loop-seam-side-alpha) * 0.2)) 100%
+    );
+}
+
+.loop-seam-mask--refract.is-active::before {
+  animation-name: loop-seam-refract-sheen;
+}
+
+.loop-seam-mask--refract.is-active::after {
+  animation-name: loop-seam-refract-edge;
+}
+
+.loop-seam-mask--heat.is-active {
+  animation-name: loop-seam-heat-base;
+  backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.06)) brightness(1.018) saturate(1.025);
+}
+
+.loop-seam-mask--heat::before {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgb(255 255 255 / calc(var(--loop-seam-line-alpha) * 0.8)) 0 1px,
+      rgb(255 255 255 / 0) 1px 13px
+    );
+  clip-path: inset(12% 0 10% 0);
+}
+
+.loop-seam-mask--heat::after {
+  background:
+    linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0) 0%,
+      rgb(255 244 220 / calc(var(--loop-seam-soft-alpha) * 0.35)) 46%,
+      rgb(255 255 255 / 0) 78%
+    );
+}
+
+.loop-seam-mask--heat.is-active::before {
+  animation-name: loop-seam-heat-lines;
+}
+
+.loop-seam-mask--heat.is-active::after {
+  animation-name: loop-seam-heat-lift;
+}
+
+.loop-seam-mask--prism {
+  mix-blend-mode: screen;
+}
+
+.loop-seam-mask--prism.is-active {
+  animation-name: loop-seam-prism-base;
+}
+
+.loop-seam-mask--prism::before {
+  background:
+    linear-gradient(
+      100deg,
+      rgb(0 255 255 / calc(var(--loop-seam-cyan-alpha) * 0.62)),
+      rgb(255 255 255 / 0) 31%,
+      rgb(255 255 255 / calc(var(--loop-seam-soft-alpha) * 0.38)) 50%,
+      rgb(255 45 150 / calc(var(--loop-seam-magenta-alpha) * 0.62))
+    );
+}
+
+.loop-seam-mask--prism::after {
+  background:
+    radial-gradient(
+      ellipse at 50% 50%,
+      rgb(255 255 255 / 0) 34%,
+      rgb(255 255 255 / calc(var(--loop-seam-line-alpha) * 0.82)) 72%,
+      rgb(255 255 255 / 0) 100%
+    );
+}
+
+.loop-seam-mask--prism.is-active::before {
+  animation-name: loop-seam-prism-split;
+}
+
+.loop-seam-mask--prism.is-active::after {
+  animation-name: loop-seam-prism-ring;
+}
+
+@keyframes loop-seam-veil {
+  0%, 100% { opacity: 0; }
+  8%, 92% { opacity: var(--loop-seam-opacity-start); }
+  22%, 78% { opacity: var(--loop-seam-opacity-low); }
+  50% { opacity: var(--loop-seam-opacity-high); }
+}
+
+@keyframes loop-seam-blur {
+  0%, 100% { opacity: 0; }
+  8%, 92% { opacity: var(--loop-seam-opacity-start); }
+  22%, 78% { opacity: var(--loop-seam-opacity-low); }
+  50% { opacity: var(--loop-seam-opacity-mid); }
+}
+
+@keyframes loop-seam-pulse {
+  0%, 100% { opacity: 0; transform: scale(1); }
+  8%, 92% { opacity: var(--loop-seam-opacity-start); transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.035); }
+}
+
+@keyframes loop-seam-glitch-base {
+  0%, 100% { opacity: 0; backdrop-filter: none; }
+  8%, 92% { opacity: var(--loop-seam-opacity-start); backdrop-filter: none; }
+  24%, 76% { opacity: var(--loop-seam-opacity-low); backdrop-filter: contrast(1.12); }
+  50% { opacity: 1; backdrop-filter: contrast(1.3); }
+}
+
+@keyframes loop-seam-glitch-bands {
+  0%, 100% { opacity: 0; transform: translateX(0); }
+  8%, 92% { opacity: var(--loop-seam-opacity-start); transform: translateX(0); }
+  24% { opacity: 0.35; transform: translateX(8px); }
+  38% { transform: translateX(-20px); }
+  50% { opacity: 1; transform: translateX(14px); }
+  62% { transform: translateX(-12px); }
+  76% { opacity: 0.35; transform: translateX(0); }
+}
+
+@keyframes loop-seam-glitch-sweep {
+  0%, 100% { opacity: 0; }
+  8% { opacity: var(--loop-seam-opacity-start); transform: translateX(var(--loop-seam-glitch-sweep-start)); }
+  50% { opacity: 1; transform: translateX(0); }
+  76% { opacity: 0.35; transform: translateX(var(--loop-seam-glitch-sweep-end)); }
+  92% { opacity: var(--loop-seam-opacity-start); }
+}
+
+@keyframes loop-seam-shutter-top {
+  0%, 100% { opacity: 0; transform: translateY(-100%); }
+  8%, 92% { opacity: var(--loop-seam-opacity-start); transform: translateY(-100%); }
+  22%, 78% { opacity: 0.65; transform: translateY(var(--loop-seam-shutter-offset-negative)); }
+  50% { opacity: 1; transform: translateY(var(--loop-seam-shutter-offset-negative)); }
+}
+
+@keyframes loop-seam-shutter-bottom {
+  0%, 100% { opacity: 0; transform: translateY(100%); }
+  8%, 92% { opacity: var(--loop-seam-opacity-start); transform: translateY(100%); }
+  22%, 78% { opacity: 0.65; transform: translateY(var(--loop-seam-shutter-offset)); }
+  50% { opacity: 1; transform: translateY(var(--loop-seam-shutter-offset)); }
+}
+
+@keyframes loop-seam-flash-base {
+  0%, 100% { opacity: var(--loop-seam-opacity-start); }
+  24%, 76% { opacity: 0.2; }
+  50% { opacity: 0.58; }
+}
+
+@keyframes loop-seam-flash-pulse {
+  0%, 100% { opacity: 0; }
+  24%, 76% { opacity: calc(var(--loop-seam-flash-pulse-alpha) * 0.28); }
+  50% { opacity: var(--loop-seam-flash-pulse-alpha); }
+}
+
+@keyframes loop-seam-fade-base {
+  0%, 100% { opacity: 0; }
+  8%, 92% { opacity: var(--loop-seam-opacity-start); }
+  24%, 76% { opacity: 0.12; }
+  50% { opacity: 0.28; }
+}
+
+@keyframes loop-seam-fade-dip {
+  0%, 100% { opacity: 0; }
+  8%, 92% { opacity: var(--loop-seam-flash-clear-alpha-start); }
+  24%, 76% { opacity: 0.18; }
+  50% { opacity: 0.42; }
+}
+
+@keyframes loop-seam-fade-wash {
+  0%, 100% { opacity: 0; }
+  8%, 92% { opacity: var(--loop-seam-flash-alpha-start); }
+  24%, 76% { opacity: 0.12; }
+  50% { opacity: 0.32; }
+}
+
+@keyframes loop-seam-bloom-base {
+  0%, 100% {
+    opacity: 0;
+    backdrop-filter: blur(0) brightness(1) saturate(1);
+  }
+  14%, 86% {
+    opacity: calc(var(--loop-seam-opacity-start) * 0.85);
+    backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.12)) brightness(1.03) saturate(1.03);
+  }
+  42%, 58% {
+    opacity: calc(var(--loop-seam-opacity-low) * 0.9);
+    backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.34)) brightness(var(--loop-seam-brightness)) saturate(1.08);
+  }
+}
+
+@keyframes loop-seam-bloom-wash {
+  0%, 100% {
+    opacity: 0;
+    transform: translate3d(-2.5%, 1%, 0) scale(1);
+  }
+  18%, 82% {
+    opacity: calc(var(--loop-seam-opacity-start) * 0.85);
+  }
+  50% {
+    opacity: min(0.58, var(--loop-seam-opacity-high));
+    transform: translate3d(1.5%, -0.6%, 0) scale(1.035);
+  }
+}
+
+@keyframes loop-seam-bloom-vignette {
+  0%, 100% { opacity: 0; }
+  20%, 80% { opacity: calc(var(--loop-seam-opacity-start) * 0.8); }
+  50% { opacity: calc(var(--loop-seam-opacity-mid) * 0.7); }
+}
+
+@keyframes loop-seam-focus-base {
+  0%, 100% {
+    opacity: 0;
+    backdrop-filter: blur(0) brightness(1) saturate(1);
+  }
+  18%, 82% {
+    opacity: calc(var(--loop-seam-opacity-start) * 0.7);
+    backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.24)) brightness(1.025) saturate(1.01);
+  }
+  50% {
+    opacity: calc(var(--loop-seam-opacity-low) * 0.95);
+    backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.55)) brightness(1.04) saturate(1.02);
+  }
+}
+
+@keyframes loop-seam-focus-vignette {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  18%, 82% { opacity: calc(var(--loop-seam-opacity-start) * 0.65); }
+  50% {
+    opacity: calc(var(--loop-seam-opacity-mid) * 0.52);
+    transform: scale(1);
+  }
+}
+
+@keyframes loop-seam-focus-highlight {
+  0%, 100% { opacity: 0; transform: scale(0.96); }
+  50% { opacity: calc(var(--loop-seam-opacity-low) * 0.45); transform: scale(1.06); }
+}
+
+@keyframes loop-seam-light-leak-base {
+  0%, 100% { opacity: 0; }
+  12%, 88% { opacity: calc(var(--loop-seam-opacity-start) * 0.72); }
+  50% { opacity: calc(var(--loop-seam-opacity-low) * 0.55); }
+}
+
+@keyframes loop-seam-light-leak-orb {
+  0%, 100% {
+    opacity: 0;
+    transform: translate3d(-18%, 0, 0) scale(0.95);
+  }
+  18%, 82% { opacity: calc(var(--loop-seam-opacity-start) * 1.2); }
+  50% {
+    opacity: min(0.68, var(--loop-seam-opacity-high));
+    transform: translate3d(14%, -2%, 0) scale(1.08);
+  }
+}
+
+@keyframes loop-seam-light-leak-streak {
+  0%, 100% {
+    opacity: 0;
+    transform: translate3d(-8%, 0, 0);
+  }
+  22%, 78% { opacity: calc(var(--loop-seam-line-alpha) * 1.4); }
+  50% {
+    opacity: calc(var(--loop-seam-soft-alpha) * 1.8);
+    transform: translate3d(7%, 0, 0);
+  }
+}
+
+@keyframes loop-seam-drift-base {
+  0%, 100% {
+    opacity: 0;
+    backdrop-filter: brightness(1) saturate(1);
+  }
+  18%, 82% {
+    opacity: calc(var(--loop-seam-opacity-start) * 0.62);
+    backdrop-filter: brightness(1.015) saturate(1.01);
+  }
+  50% {
+    opacity: calc(var(--loop-seam-opacity-low) * 0.42);
+    backdrop-filter: brightness(1.035) saturate(1.02);
+  }
+}
+
+@keyframes loop-seam-drift-shade {
+  0%, 100% { opacity: 0; transform: translateY(0); }
+  50% { opacity: calc(var(--loop-seam-opacity-mid) * 0.42); transform: translateY(-0.6%); }
+}
+
+@keyframes loop-seam-drift-lift {
+  0%, 100% { opacity: 0; transform: translate3d(-1%, 0.6%, 0) scale(1); }
+  50% { opacity: calc(var(--loop-seam-opacity-low) * 0.44); transform: translate3d(1%, -0.4%, 0) scale(1.025); }
+}
+
+@keyframes loop-seam-refract-base {
+  0%, 100% {
+    opacity: 0;
+    backdrop-filter: blur(0) brightness(1) saturate(1);
+  }
+  8%, 92% {
+    opacity: calc(var(--loop-seam-opacity-start) * 0.36);
+    backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.025)) brightness(1.008) saturate(1.012);
+  }
+  22%, 78% {
+    opacity: calc(var(--loop-seam-opacity-start) * 0.56);
+    backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.045)) brightness(1.014) saturate(1.024);
+  }
+  50% {
+    opacity: calc(var(--loop-seam-opacity-low) * 0.38);
+    backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.08)) brightness(1.025) saturate(1.04);
+  }
+}
+
+@keyframes loop-seam-refract-sheen {
+  0%, 100% { opacity: 0; transform: translate3d(-8%, 0, 0); }
+  8%, 92% { opacity: calc(var(--loop-seam-opacity-start) * 0.28); }
+  22%, 78% { opacity: calc(var(--loop-seam-opacity-start) * 0.72); }
+  50% { opacity: calc(var(--loop-seam-opacity-low) * 0.58); transform: translate3d(7%, -0.8%, 0); }
+}
+
+@keyframes loop-seam-refract-edge {
+  0%, 100% { opacity: 0; transform: scale(1.025); }
+  8%, 92% { opacity: calc(var(--loop-seam-opacity-start) * 0.16); }
+  50% { opacity: calc(var(--loop-seam-opacity-mid) * 0.32); transform: scale(1); }
+}
+
+@keyframes loop-seam-heat-base {
+  0%, 100% {
+    opacity: 0;
+    backdrop-filter: blur(0) brightness(1) saturate(1);
+  }
+  8%, 92% {
+    opacity: calc(var(--loop-seam-opacity-start) * 0.28);
+    backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.02)) brightness(1.005) saturate(1.006);
+  }
+  22%, 78% {
+    opacity: calc(var(--loop-seam-opacity-start) * 0.48);
+    backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.03)) brightness(1.008) saturate(1.01);
+  }
+  50% {
+    opacity: calc(var(--loop-seam-opacity-low) * 0.34);
+    backdrop-filter: blur(calc(var(--loop-seam-blur) * 0.06)) brightness(1.018) saturate(1.025);
+  }
+}
+
+@keyframes loop-seam-heat-lines {
+  0%, 100% { opacity: 0; transform: translate3d(0, 1.8%, 0); }
+  8%, 92% { opacity: calc(var(--loop-seam-opacity-start) * 0.18); }
+  22%, 78% { opacity: calc(var(--loop-seam-opacity-start) * 0.42); }
+  50% { opacity: calc(var(--loop-seam-line-alpha) * 2.2); transform: translate3d(0, -1.5%, 0); }
+}
+
+@keyframes loop-seam-heat-lift {
+  0%, 100% { opacity: 0; transform: translateY(2%); }
+  8%, 92% { opacity: calc(var(--loop-seam-opacity-start) * 0.14); }
+  50% { opacity: calc(var(--loop-seam-opacity-low) * 0.36); transform: translateY(-1%); }
+}
+
+@keyframes loop-seam-prism-base {
+  0%, 100% { opacity: 0; }
+  16%, 84% { opacity: calc(var(--loop-seam-opacity-start) * 0.58); }
+  50% { opacity: calc(var(--loop-seam-opacity-low) * 0.44); }
+}
+
+@keyframes loop-seam-prism-split {
+  0%, 100% { opacity: 0; transform: translateX(0) scale(1); }
+  20%, 80% { opacity: calc(var(--loop-seam-opacity-start) * 0.74); }
+  50% { opacity: calc(var(--loop-seam-opacity-mid) * 0.38); transform: translateX(0.8%) scale(1.01); }
+}
+
+@keyframes loop-seam-prism-ring {
+  0%, 100% { opacity: 0; transform: scale(0.98); }
+  50% { opacity: calc(var(--loop-seam-opacity-low) * 0.4); transform: scale(1.035); }
+}
+
+@keyframes loop-video-fade-out {
+  0%, 100% {
+    opacity: 1;
+    filter: none;
+  }
+  8%, 92% {
+    opacity: var(--loop-video-fade-opacity-start);
+    filter: none;
+  }
+  24%, 76% {
+    opacity: calc((1 + var(--loop-video-fade-opacity)) / 2);
+    filter: none;
+  }
+  50% {
+    opacity: var(--loop-video-fade-opacity);
+    filter: none;
+  }
+}
+
+@keyframes loop-video-bloom-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: none;
+  }
+  16%, 84% {
+    transform: translate3d(-0.18%, 0.12%, 0) scale(1.006);
+    filter: brightness(1.02) saturate(1.02);
+  }
+  50% {
+    transform: translate3d(0.34%, -0.22%, 0) scale(1.018);
+    filter: blur(calc(var(--loop-video-fade-blur) * 0.52)) brightness(1.08) saturate(1.04);
+  }
+}
+
+@keyframes loop-video-focus-rack {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: none;
+  }
+  18%, 82% {
+    transform: translate3d(0, 0, 0) scale(1.004);
+    filter: blur(calc(var(--loop-video-fade-blur) * 0.22)) brightness(1.015);
+  }
+  50% {
+    transform: translate3d(-0.08%, 0.06%, 0) scale(1.014);
+    filter: blur(calc(var(--loop-video-fade-blur) * 0.78)) brightness(1.045) saturate(1.02);
+  }
+}
+
+@keyframes loop-video-light-leak {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: none;
+  }
+  18%, 82% {
+    transform: translate3d(-0.12%, 0.08%, 0) scale(1.004);
+    filter: brightness(1.02) saturate(1.03);
+  }
+  50% {
+    transform: translate3d(0.2%, -0.12%, 0) scale(1.011);
+    filter: brightness(1.075) saturate(1.08);
+  }
+}
+
+@keyframes loop-video-camera-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: none;
+  }
+  18%, 82% {
+    transform: translate3d(-0.18%, 0.12%, 0) scale(1.005);
+    filter: brightness(1.012);
+  }
+  50% {
+    transform: translate3d(0.48%, -0.3%, 0) scale(1.017);
+    filter: brightness(1.035) saturate(1.015);
+  }
+}
+
+@keyframes loop-video-refract {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: none;
+  }
+  8%, 92% {
+    transform: translate3d(-0.03%, 0.02%, 0) scale(1.001);
+    filter: brightness(1.003) saturate(1.006);
+  }
+  22%, 78% {
+    transform: translate3d(-0.08%, 0.05%, 0) scale(1.003);
+    filter: brightness(1.008) saturate(1.015);
+  }
+  50% {
+    transform: translate3d(0.18%, -0.12%, 0) scale(1.008);
+    filter: brightness(1.018) saturate(1.035);
+  }
+}
+
+@keyframes loop-video-heat-haze {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: none;
+  }
+  8%, 92% {
+    transform: translate3d(0.02%, -0.02%, 0) scale(1.001);
+    filter: brightness(1.002) saturate(1.004);
+  }
+  22%, 78% {
+    transform: translate3d(0.06%, -0.04%, 0) scale(1.002);
+    filter: brightness(1.006) saturate(1.01);
+  }
+  50% {
+    transform: translate3d(-0.12%, -0.22%, 0) scale(1.006);
+    filter: brightness(1.016) saturate(1.025);
+  }
+}
+
+@keyframes loop-video-prism-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: none;
+  }
+  18%, 82% {
+    transform: translate3d(-0.1%, 0.06%, 0) scale(1.004);
+    filter: contrast(1.02) saturate(1.08) hue-rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0.24%, -0.16%, 0) scale(1.01);
+    filter: contrast(1.04) saturate(1.16) hue-rotate(2deg);
+  }
 }
 
 /* Ecosystem visualization */

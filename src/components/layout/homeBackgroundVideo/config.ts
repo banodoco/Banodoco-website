@@ -10,6 +10,11 @@ const EPSILON = 0.000001;
 const DESKTOP_TRANSITION_DURATION_MS = 600;
 const MOBILE_TRANSITION_DURATION_MS = 500;
 const OVERRIDE_DURATION = 8.828125;
+const HERO_INTRO_END = 7.46875;
+const HERO_LOOP_DURATION = 5.59375;
+const HERO_LOOP_SRC = '/hero-loop-matched-v4.mp4';
+const HERO_LOOP_START_HOLD_MS = 0;
+const HERO_LOOP_TRANSFORM = undefined;
 
 type MasterContinueOptions = {
   headCrossfadeMs?: number;
@@ -114,7 +119,7 @@ export const playFromFile = (
   src: string,
   startAt = 0,
   endAt?: number,
-  opts: { loop?: boolean } = {}
+  opts: { loop?: boolean; transform?: string } = {}
 ): Stage[] => {
   if (endAt === undefined) {
     throw new Error(`playFromFile(${src}) requires an endAt time`);
@@ -130,6 +135,8 @@ export const playFromFile = (
           src,
           startAt: clampedStart,
           endAt: clampedEnd,
+          transform: opts.transform,
+          holdAtStartMs: HERO_LOOP_START_HOLD_MS,
           mode: { kind: 'loop' },
         },
       },
@@ -137,7 +144,7 @@ export const playFromFile = (
   }
 
   return [
-    { track: playTrack(src, clampedStart, clampedEnd) },
+    { track: { ...playTrack(src, clampedStart, clampedEnd), transform: opts.transform } },
     { track: freezeTrack(src, clampedEnd) },
   ];
 };
@@ -146,8 +153,8 @@ export const DESKTOP_SECTIONS = [
   {
     id: 'hero',
     stages: [
-      { track: playFromMaster(0, 7.5) },
-      { track: freezeFromMaster(7.5) },
+      { track: playFromMaster(0, HERO_INTRO_END) },
+      ...playFromFile(HERO_LOOP_SRC, 0, HERO_LOOP_DURATION, { loop: true, transform: HERO_LOOP_TRANSFORM }),
     ],
   },
   {
@@ -232,7 +239,13 @@ const mobileTrack = (
 };
 
 export const MOBILE_SECTIONS = [
-  { id: 'hero', stages: mobileTrack('hero', 0, 7.5, 7.5) },
+  {
+    id: 'hero',
+    stages: [
+      { track: playTrack('/8zCN-chunks/mobile-hero.mp4', 0, HERO_INTRO_END) },
+      ...playFromFile(HERO_LOOP_SRC, 0, HERO_LOOP_DURATION, { loop: true, transform: HERO_LOOP_TRANSFORM }),
+    ],
+  },
   { id: 'community', stages: mobileTrack('community', 5.5, 5.5, 5.5) },
   { id: 'reigh', stages: mobileTrack('reigh', 3, 9, 9) },
   { id: 'arca-gidan', stages: mobileTrack('arca-gidan', 2, 8.5, 8.5) },

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Section, SectionContent } from '@/components/layout/Section';
+import { RpLogo } from '@/components/brand/RpLogo';
 import { NameHighlight } from '@/components/ui/TextHighlight';
 import { useSectionVisibility } from '@/lib/useSectionVisibility';
 import { TetrisBoard, type TetrisProject } from './TetrisBoard';
@@ -67,7 +68,7 @@ const ProjectCardContent = ({ project }: { project: Project }) => {
       <h3 className="absolute top-3 left-3 right-3 md:top-4 md:left-4 md:right-4 z-10 text-base md:text-2xl font-normal tracking-tight">
         <NameHighlight color={project.accent}>
           {project.name === '2RP' ? (
-            <span style={{ fontFamily: '"Sixtyfour", monospace' }}>{project.name}</span>
+            <RpLogo />
           ) : project.name === 'Art Compute' ? (
             <span
               className="!font-bold uppercase tracking-[0.2em]"

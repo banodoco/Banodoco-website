@@ -110,7 +110,7 @@ export const ResourceCard = ({ asset, profile }: ResourceCardProps) => {
     >
       <Link
         to={linkUrl}
-        className={`group block w-full overflow-hidden rounded-xl border bg-white/5 transition-all duration-200 hover:scale-[1.02] hover:border-white/20 ${
+        className={`rp-themed-card group block w-full overflow-hidden rounded-xl border bg-white/5 transition-all duration-200 hover:scale-[1.02] ${
           isCurated ? 'border-white/15' : 'border-white/10'
         }`}
       >
@@ -195,7 +195,7 @@ export const ResourceCard = ({ asset, profile }: ResourceCardProps) => {
         </div>
 
         <div className="p-4">
-          <h3 className="truncate font-medium text-white/95 text-sm">
+          <h3 className="resource-card-title truncate text-sm font-medium text-white/95">
             {asset.name}
           </h3>
           <p className="mt-1 text-xs text-zinc-500">

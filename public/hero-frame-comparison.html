@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hero Frame Comparison</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      }
+
+      body {
+        margin: 0;
+        background: #f7f7f2;
+        color: #141414;
+      }
+
+      main {
+        padding: 20px;
+      }
+
+      pre {
+        margin: 0 0 20px;
+        white-space: pre-wrap;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      canvas {
+        width: 100%;
+        height: auto;
+        background: white;
+        border: 1px solid #d7d7cf;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <pre id="report">Running comparison...</pre>
+      <div class="grid">
+        <canvas id="intro-frame" width="960" height="540"></canvas>
+        <canvas id="loop-frame" width="960" height="540"></canvas>
+        <canvas id="page-intro-frame" width="960" height="540"></canvas>
+        <canvas id="page-loop-frame" width="960" height="540"></canvas>
+      </div>
+    </main>
+
+    <script>
+      const VIEWPORT = { width: 1440, height: 900 };
+      const NATURAL = { width: 1930, height: 1080 };
+      const LOOP_TRANSFORM = { x: 0, y: 0 };
+      const INTRO_SRC = '/8zCN-chunks/desktop-1.mp4';
+      const LOOP_SRC = '/hero-loop-matched-v4.mp4';
+      const SAMPLE_TIMES = {
+        introOneFrameBeforeOldCut: 7.46875,
+        introOldCut: 7.5,
+        loopStart: 0,
+        loopSecondFrame: 0.03125,
+        loopLastFrame: 5.5625,
+      };
+
+      const wait = (target, event) => new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${event}`)), 8000);
+        target.addEventListener(event, () => {
+          clearTimeout(timeout);
+          resolve();
+        }, { once: true });
+      });
+
+      async function getFrame(src, time) {
+        const video = document.createElement('video');
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = 'auto';
+        video.src = src;
+        await wait(video, 'loadedmetadata');
+        if (time > 0.001) {
+          video.currentTime = time;
+          await wait(video, 'seeked');
+        } else if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          await wait(video, 'loadeddata');
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.drawImage(video, 0, 0);
+        return {
+          canvas,
+          data: context.getImageData(0, 0, canvas.width, canvas.height),
+          width: canvas.width,
+          height: canvas.height,
+          videoWidth: video.videoWidth,
+          videoHeight: video.videoHeight,
+          duration: video.duration,
+        };
+      }
+
+      function drawObjectCover(frame, transform = { x: 0, y: 0 }) {
+        const canvas = document.createElement('canvas');
+        canvas.width = VIEWPORT.width;
+        canvas.height = VIEWPORT.height;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.fillStyle = '#fff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        const scale = Math.max(canvas.width / frame.width, canvas.height / frame.height);
+        const drawnWidth = frame.width * scale;
+        const drawnHeight = frame.height * scale;
+        const x = ((canvas.width - drawnWidth) / 2) + transform.x;
+        const y = ((canvas.height - drawnHeight) / 2) + transform.y;
+        context.drawImage(frame.canvas, x, y, drawnWidth, drawnHeight);
+
+        return {
+          canvas,
+          data: context.getImageData(0, 0, canvas.width, canvas.height),
+          draw: { scale, x, y, drawnWidth, drawnHeight },
+          width: canvas.width,
+          height: canvas.height,
+        };
+      }
+
+      function downsampleToDisplay(source, targetCanvasId) {
+        const canvas = document.getElementById(targetCanvasId);
+        const context = canvas.getContext('2d');
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(source.canvas, 0, 0, canvas.width, canvas.height);
+      }
+
+      function cropImageData(image, crop) {
+        const { x, y, width, height } = crop;
+        const sourceData = image.data.data ?? image.data;
+        const output = new Uint8ClampedArray(width * height * 4);
+        for (let row = 0; row < height; row += 1) {
+          const sourceStart = ((y + row) * image.width + x) * 4;
+          const targetStart = row * width * 4;
+          output.set(sourceData.slice(sourceStart, sourceStart + (width * 4)), targetStart);
+        }
+        return { data: output, width, height };
+      }
+
+      function compareOffset(a, b, maxShift = 10) {
+        const crop = { x: 260, y: 160, width: Math.min(a.width, b.width) - 520, height: Math.min(a.height, b.height) - 320 };
+        const ac = cropImageData(a, crop);
+        const bcFull = b;
+        const bData = bcFull.data.data ?? bcFull.data;
+        let best = { mad: Number.POSITIVE_INFINITY, dx: 0, dy: 0 };
+
+        for (let dy = -maxShift; dy <= maxShift; dy += 1) {
+          for (let dx = -maxShift; dx <= maxShift; dx += 1) {
+            let sum = 0;
+            let count = 0;
+            for (let y = 0; y < ac.height; y += 3) {
+              const by = crop.y + y + dy;
+              if (by < 0 || by >= bcFull.height) continue;
+              for (let x = 0; x < ac.width; x += 3) {
+                const bx = crop.x + x + dx;
+                if (bx < 0 || bx >= bcFull.width) continue;
+                const ai = (y * ac.width + x) * 4;
+                const bi = (by * bcFull.width + bx) * 4;
+                sum += Math.abs(ac.data[ai] - bData[bi]);
+                sum += Math.abs(ac.data[ai + 1] - bData[bi + 1]);
+                sum += Math.abs(ac.data[ai + 2] - bData[bi + 2]);
+                count += 3;
+              }
+            }
+            const mad = sum / Math.max(1, count);
+            if (mad < best.mad) best = { mad, dx, dy };
+          }
+        }
+
+        return best;
+      }
+
+      async function run() {
+        const introBeforeOldCut = await getFrame(INTRO_SRC, SAMPLE_TIMES.introOneFrameBeforeOldCut);
+        const introOldCut = await getFrame(INTRO_SRC, SAMPLE_TIMES.introOldCut);
+        const loopStart = await getFrame(LOOP_SRC, SAMPLE_TIMES.loopStart);
+        const loopSecond = await getFrame(LOOP_SRC, SAMPLE_TIMES.loopSecondFrame);
+        const loopLast = await getFrame(LOOP_SRC, SAMPLE_TIMES.loopLastFrame);
+
+        const pageIntroBeforeOldCut = drawObjectCover(introBeforeOldCut);
+        const pageIntroOldCut = drawObjectCover(introOldCut);
+        const pageLoopStart = drawObjectCover(loopStart, LOOP_TRANSFORM);
+        const pageLoopSecond = drawObjectCover(loopSecond, LOOP_TRANSFORM);
+        const pageLoopLast = drawObjectCover(loopLast, LOOP_TRANSFORM);
+
+        downsampleToDisplay(introBeforeOldCut, 'intro-frame');
+        downsampleToDisplay(loopStart, 'loop-frame');
+        downsampleToDisplay(pageIntroBeforeOldCut, 'page-intro-frame');
+        downsampleToDisplay(pageLoopStart, 'page-loop-frame');
+
+        const report = {
+          viewport: VIEWPORT,
+          natural: NATURAL,
+          loopTransform: LOOP_TRANSFORM,
+          decoded: {
+            intro: {
+              width: introBeforeOldCut.videoWidth,
+              height: introBeforeOldCut.videoHeight,
+              duration: introBeforeOldCut.duration,
+            },
+            loop: {
+              width: loopStart.videoWidth,
+              height: loopStart.videoHeight,
+              duration: loopStart.duration,
+            },
+          },
+          pageObjectCoverDraws: {
+            introBeforeOldCut: pageIntroBeforeOldCut.draw,
+            introOldCut: pageIntroOldCut.draw,
+            loopStart: pageLoopStart.draw,
+          },
+          sourceFrameOffsetBestFits: {
+            introBeforeOldCut_vs_loopStart: compareOffset(introBeforeOldCut, loopStart),
+            introOldCut_vs_loopStart: compareOffset(introOldCut, loopStart),
+            loopLast_vs_loopStart: compareOffset(loopLast, loopStart),
+            loopStart_vs_loopSecond: compareOffset(loopStart, loopSecond),
+          },
+          pageRenderedOffsetBestFits: {
+            introBeforeOldCut_vs_loopStart: compareOffset(pageIntroBeforeOldCut, pageLoopStart),
+            introOldCut_vs_loopStart: compareOffset(pageIntroOldCut, pageLoopStart),
+            loopLast_vs_loopStart: compareOffset(pageLoopLast, pageLoopStart),
+            loopStart_vs_loopSecond: compareOffset(pageLoopStart, pageLoopSecond),
+          },
+        };
+
+        document.getElementById('report').textContent = JSON.stringify(report, null, 2);
+        document.body.dataset.done = 'true';
+      }
+
+      run().catch((error) => {
+        document.getElementById('report').textContent = error.stack || String(error);
+        document.body.dataset.done = 'error';
+      });
+    </script>
+  </body>
+</html>
