@@ -10,7 +10,7 @@
         header_regexp User-Agent (?i)(Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|TelegramBot|WhatsApp|Embedly|SkypeUriPreview|bingbot|googlebot|applebot)
     }
     rewrite @social2rp /2rp-social.html
-    redir @resourceOg https://ujlwuvkrxlvoswwkerdf.supabase.co/functions/v1/resource-og?slug={re.resourceOg.1} 302
+    redir @resourceOg https://ujlwuvkrxlvoswwkerdf.supabase.co/functions/v1/resource-og?slug={http.regexp.resourceOg.1} 302
     try_files {path} /index.html
     file_server
 }
