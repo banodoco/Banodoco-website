@@ -19,7 +19,12 @@ export default function ArtAgentsPage() {
 
   return (
     <div className="min-h-screen bg-[#0b0b0f] px-6 pb-16 pt-24 text-zinc-100 sm:pt-28">
-      <Seo title="Art Agents | Banodoco" />
+      <Seo
+        title="Art Agents | Banodoco"
+        description="Installable Agent and Orchestrator nodes for ArtAgents. Approved entries from the Banodoco catalog appear here."
+        image="/2rp-social-card.jpg"
+        url="https://banodoco.ai/art-agents"
+      />
       <motion.div
         initial="hidden"
         animate="visible"

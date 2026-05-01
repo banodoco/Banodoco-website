@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 
 import { logAgentNodesDebug } from '@/features/agentNodes/api';
 import { useAgentNodeCatalog } from '@/features/agentNodes/useAgentNodeCatalog';
+import { agentNodeSummary } from '@/features/agentNodes/media';
 import type { AgentNodeCatalogItem, AgentNodeInstallTarget } from '@/features/agentNodes/types';
 
 const sectionVariants = {
@@ -21,10 +22,6 @@ function refLabel(target: AgentNodeInstallTarget): string {
   if ('branch' in target.ref && target.ref.branch) return target.ref.branch;
   if ('source_ref' in target.ref && target.ref.source_ref) return target.ref.source_ref;
   return 'unresolved';
-}
-
-function nodeSummary(node: AgentNodeCatalogItem): string {
-  return node.catalog.summary || node.short_description || node.description || 'No description provided yet.';
 }
 
 function AgentBadge({ node }: { node: AgentNodeCatalogItem }) {
@@ -70,9 +67,13 @@ export function AgentNodeCard({ node }: { node: AgentNodeCatalogItem }) {
         )}
       </div>
 
-      <h3 className="text-xl font-black uppercase tracking-tight text-white">{node.name}</h3>
+      <h3 className="text-xl font-black uppercase tracking-tight text-white">
+        <Link to={`/art-agents/${node.slug}`} className="transition hover:text-[var(--rp-section-accent)]">
+          {node.name}
+        </Link>
+      </h3>
       {creator && <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/35">by {creator}</p>}
-      <p className="mt-4 flex-1 text-sm leading-relaxed text-zinc-400">{nodeSummary(node)}</p>
+      <p className="mt-4 flex-1 text-sm leading-relaxed text-zinc-400">{agentNodeSummary(node)}</p>
 
       <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-zinc-500">
         {target ? (

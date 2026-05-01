@@ -19,12 +19,24 @@ function getSiteOrigin(): string {
   return DEFAULT_SITE_ORIGIN;
 }
 
+function resolveAbsoluteUrl(value: string | null | undefined, origin: string): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+
+  try {
+    return new URL(trimmed, origin).toString();
+  } catch {
+    return trimmed;
+  }
+}
+
 export function Seo({ title, description, image, url }: SeoProps) {
   const origin = getSiteOrigin();
   const resolvedTitle = title?.trim() || DEFAULT_TITLE;
   const resolvedDescription = description?.trim() || DEFAULT_DESCRIPTION;
-  const resolvedUrl = url?.trim() || (typeof window !== 'undefined' ? window.location.href : origin);
-  const resolvedImage = image?.trim() || `${origin}/og-default.jpg`;
+  const resolvedUrl = resolveAbsoluteUrl(url, origin)
+    || (typeof window !== 'undefined' ? window.location.href : origin);
+  const resolvedImage = resolveAbsoluteUrl(image, origin) || `${origin}/og-default.jpg`;
 
   return (
     <Helmet>

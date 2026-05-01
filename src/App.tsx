@@ -11,6 +11,7 @@ const SecondRenaissance = lazy(() => import('@/pages/SecondRenaissance'));
 const WrappedPage = lazy(() => import('@/pages/Wrapped'));
 const Resources = lazy(() => import('@/pages/Resources'));
 const ArtAgents = lazy(() => import('@/pages/ArtAgents'));
+const AgentNodeDetail = lazy(() => import('@/pages/AgentNodeDetail'));
 const ArtDetail = lazy(() => import('@/pages/ArtDetail'));
 const ResourceDetail = lazy(() => import('@/pages/ResourceDetail'));
 const UserProfile = lazy(() => import('@/pages/UserProfile'));
@@ -57,6 +58,7 @@ function App() {
               <Route path="/1m" element={<WrappedPage />} />
               <Route path="/2RP" element={<Resources />} />
               <Route path="/art-agents" element={<ArtAgents />} />
+              <Route path="/art-agents/:slug" element={<AgentNodeDetail />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/get-approved" element={<GetApproved />} />
               <Route path="/art/:slug" element={<ArtDetail />} />

@@ -5,6 +5,7 @@ import { useArtPieces } from '@/hooks/useArtPieces';
 import { HlsPlayer } from '@/pages/Resources/HlsPlayer';
 import { ArtGalleryCard } from '@/pages/Resources/ArtGallery/ArtGalleryCard';
 import { buildArtPath, extractEntityIdFromSlug } from '@/lib/routing';
+import { Seo } from '@/components/seo/Seo';
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -26,6 +27,10 @@ function SidebarSkeleton() {
       ))}
     </div>
   );
+}
+
+function stripText(value: string | null | undefined): string {
+  return (value ?? '').replace(/\s+/g, ' ').trim();
 }
 
 const ArtDetail = () => {
@@ -75,9 +80,22 @@ const ArtDetail = () => {
   const { creator, caption, createdAt, hlsUrl, thumbnailUrl } = artPiece;
   const creatorName = creator.displayName ?? creator.username ?? 'Unknown';
   const showSidebar = !!creatorMemberId && (sidebarLoading || relatedArt.length > 0);
+  const title = artPiece.title || caption || `Art by ${creatorName}`;
+  const description = stripText(caption || `Artwork by ${creatorName}`);
+  const seoDescription = description.length > 180 ? `${description.slice(0, 177)}...` : description;
+  const canonicalUrl = new URL(
+    buildArtPath(artPiece.id, artPiece.caption, creator.username),
+    window.location.origin,
+  ).toString();
 
   return (
     <div className="bg-[#0b0b0f] text-zinc-100 min-h-screen">
+      <Seo
+        title={title}
+        description={seoDescription}
+        image={thumbnailUrl}
+        url={canonicalUrl}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-20 pb-8 sm:pt-24 sm:pb-12">
         <div className="mb-8 flex items-center justify-between gap-4">
           {/* Back button */}
