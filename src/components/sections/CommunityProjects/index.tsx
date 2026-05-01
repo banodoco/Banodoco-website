@@ -68,7 +68,7 @@ const ProjectCardContent = ({ project }: { project: Project }) => {
       <h3 className="absolute top-3 left-3 right-3 md:top-4 md:left-4 md:right-4 z-10 text-base md:text-2xl font-normal tracking-tight">
         <NameHighlight color={project.accent}>
           {project.name === '2RP' ? (
-            <RpLogo />
+            <RpLogo className="[--rp-logo-color:#fff7ed] [--rp-logo-shadow-color:rgba(0,0,0,0.7)]" />
           ) : project.name === 'Art Compute' ? (
             <span
               className="!font-bold uppercase tracking-[0.2em]"

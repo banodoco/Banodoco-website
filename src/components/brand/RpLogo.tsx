@@ -77,6 +77,10 @@ export const RpLogo = ({ text = '2RP', className, style }: RpLogoProps) => {
         className={className}
         data-rp-logo-font={selectedRpLogoTheme.font.description}
         style={{
+          display: 'inline-grid',
+          placeItems: 'center',
+          verticalAlign: 'middle',
+          whiteSpace: 'nowrap',
           ...fontStyle(selectedRpLogoTheme),
           ...style,
         }}
@@ -92,7 +96,9 @@ export const RpLogo = ({ text = '2RP', className, style }: RpLogoProps) => {
       data-rp-logo-font={selectedRpLogoTheme.font.description}
       style={{
         display: 'inline-grid',
+        placeItems: 'center',
         lineHeight: 1,
+        verticalAlign: 'middle',
         ...style,
       }}
     >

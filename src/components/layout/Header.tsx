@@ -148,13 +148,12 @@ export const Header = () => {
   const isOnHero = isHomePage && (currentSection === SECTION_IDS.hero || currentSection === null);
 
   const resourcesButtonClass = cn(
-    'text-[13px] font-medium px-3 py-1.5 rounded-lg transition-all',
+    'inline-flex min-h-8 min-w-[3.5rem] items-center justify-center rounded-lg px-3 text-[13px] font-medium leading-none transition-all',
     isOnHero
-      ? 'text-white/80 bg-white/10 hover:bg-white/20 md:text-[#141414] md:bg-black/5 md:hover:bg-black/10'
+      ? 'text-white/80 bg-white/10 hover:bg-white/20 [--rp-logo-color:#fff7ed] [--rp-logo-shadow-color:rgba(0,0,0,0.65)] md:text-[#141414] md:bg-black/5 md:hover:bg-black/10 md:[--rp-logo-color:#171717] md:[--rp-logo-shadow-color:rgba(255,255,255,0.8)]'
       : isDark
-        ? 'text-white/80 bg-white/10 hover:bg-white/15'
-        : 'text-[#4B4B4B] bg-black/5 hover:bg-black/10',
-    'hover:text-orange-500 md:hover:text-orange-500'
+        ? 'text-white/80 bg-white/10 hover:bg-white/15 [--rp-logo-color:#fff7ed] [--rp-logo-shadow-color:rgba(0,0,0,0.65)]'
+        : 'text-[#4B4B4B] bg-black/5 hover:bg-black/10 [--rp-logo-color:#171717] [--rp-logo-shadow-color:rgba(255,255,255,0.8)]',
   );
 
   // Transparent header with blur and border for hero
@@ -232,7 +231,7 @@ export const Header = () => {
                 style={{ overflow: 'hidden' }}
               >
                 <Link to="/2RP" className={resourcesButtonClass}>
-                  <RpLogo />
+                  <RpLogo className="translate-y-px" />
                 </Link>
               </motion.div>
             )}

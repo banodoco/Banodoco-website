@@ -45,7 +45,7 @@ type TextPlacement = 'default' | 'left-bar';
 const ProjectName = ({ project }: { project: TetrisProject }) => (
   <NameHighlight color={project.accent}>
     {project.name === '2RP' ? (
-      <RpLogo />
+      <RpLogo className="[--rp-logo-color:#fff7ed] [--rp-logo-shadow-color:rgba(0,0,0,0.7)]" />
     ) : project.name === 'Art Compute' ? (
       <span
         className="!font-bold uppercase tracking-[0.2em]"
