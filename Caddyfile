@@ -9,8 +9,18 @@
         path_regexp resourceOg ^/(?:[^/]+/)?resources/([^/?#]+)$
         expression `{header.User-Agent}.matches("(?i).*?(?:Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|TelegramBot|WhatsApp|Embedly|SkypeUriPreview|bingbot|googlebot|applebot).*")`
     }
+    @artOg {
+        path_regexp artOg ^/(?:[^/]+/)?art/([^/?#]+)$
+        expression `{header.User-Agent}.matches("(?i).*?(?:Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|TelegramBot|WhatsApp|Embedly|SkypeUriPreview|bingbot|googlebot|applebot).*")`
+    }
+    @agentNodeOg {
+        path_regexp agentNodeOg ^/art-agents/([^/?#]+)$
+        expression `{header.User-Agent}.matches("(?i).*?(?:Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|TelegramBot|WhatsApp|Embedly|SkypeUriPreview|bingbot|googlebot|applebot).*")`
+    }
     rewrite @social2rp /2rp-social.html
     redir @resourceOg https://ujlwuvkrxlvoswwkerdf.supabase.co/functions/v1/resource-og?slug={re.resourceOg.1} 302
+    redir @artOg https://ujlwuvkrxlvoswwkerdf.supabase.co/functions/v1/art-og?slug={re.artOg.1} 302
+    redir @agentNodeOg https://ujlwuvkrxlvoswwkerdf.supabase.co/functions/v1/agent-node-og?slug={re.agentNodeOg.1} 302
     try_files {path} /index.html
     file_server
 }
