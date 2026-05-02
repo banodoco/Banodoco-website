@@ -11,7 +11,7 @@ export const Footer = () => {
     <footer
       id="footer"
       className={cn(
-        "relative z-10 border-t",
+        "relative z-10 border-t snap-end",
         isHomePage && "min-h-[20svh] snap-end snap-always",
         isDark
           ? "bg-[var(--color-bg-base)] border-white/5"
