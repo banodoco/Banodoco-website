@@ -31,6 +31,9 @@ export const formatDate = (dateStr: string): string => {
 export const formatText = (text: string | null | undefined): string => {
   if (!text) return '';
   return text
+    // Hide source-citation markup (e.g. " [[1]](https://discord.com/...)") which
+    // the daily-update bot embeds for Discord but should not surface on the site.
+    .replace(/\s*\[\[?\d+\]?\]\(https?:\/\/[^)]*\)/g, '')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/:\s*$/, '');
 };
