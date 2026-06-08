@@ -5,6 +5,7 @@ const RESERVED_TOP_LEVEL_SEGMENTS = new Set([
   '2nd-renaissance',
   '1m',
   '2RP',
+  '2rp',
   'resources',
   'posts',
   'auth',

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { MainLayout } from '@/layouts/MainLayout';
 import UserSwitcher from '@/components/admin/UserSwitcher';
@@ -27,9 +27,36 @@ const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Minimal loading fallback — keeps layout stable while lazy chunks load.
 // Intentionally blank so page-specific skeletons (e.g. ResourceGrid) aren't preceded by a flash.
-const PageLoader = () => (
-  <div className="min-h-[60vh]" />
-);
+const PageLoader = () => {
+  const { pathname } = useLocation();
+  const isResourcesRoute = pathname.toLowerCase() === '/2rp';
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !isResourcesRoute) return;
+
+    const start = performance.now();
+    console.info('[2RP:route] lazy route fallback mounted');
+    return () => {
+      console.info(`[2RP:route] lazy route fallback unmounted after ${Math.round(performance.now() - start)}ms`);
+    };
+  }, [isResourcesRoute]);
+
+  if (isResourcesRoute) {
+    return (
+      <div className="min-h-screen bg-[#0b0b0f] text-zinc-100">
+        <div className="mx-auto flex min-h-screen max-w-[1400px] items-center px-6">
+          <div className="space-y-5">
+            <div className="h-3 w-32 animate-pulse rounded bg-white/10" />
+            <div className="h-16 w-[min(72vw,620px)] animate-pulse rounded bg-white/10" />
+            <div className="h-4 w-[min(56vw,420px)] animate-pulse rounded bg-white/10" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return <div className="min-h-[60vh]" />;
+};
 
 function App() {
   useEffect(() => {
@@ -57,6 +84,7 @@ function App() {
               <Route path="/2nd-renaissance" element={<SecondRenaissance />} />
               <Route path="/1m" element={<WrappedPage />} />
               <Route path="/2RP" element={<Resources />} />
+              <Route path="/2rp" element={<Resources />} />
               <Route path="/art-agents" element={<ArtAgents />} />
               <Route path="/art-agents/:slug" element={<AgentNodeDetail />} />
               <Route path="/auth/callback" element={<AuthCallback />} />

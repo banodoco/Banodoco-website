@@ -4,8 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/build-bundle-starter.mjs",
-    "dev": "vite",
+    "dev": "node scripts/dev-with-hourly-bundle.mjs",
     "prebuild": "node scripts/build-bundle-starter.mjs",
     "build": "tsc -b && vite build",
     "gen:profile-pics": "node scripts/generate-profile-pics-manifest.mjs",

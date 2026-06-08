@@ -148,7 +148,7 @@ export const Header = () => {
   const isOnHero = isHomePage && (currentSection === SECTION_IDS.hero || currentSection === null);
 
   const resourcesButtonClass = cn(
-    'inline-flex min-h-8 min-w-[3.5rem] items-center justify-center rounded-lg px-3 text-[13px] font-medium leading-none transition-all',
+    'inline-flex min-h-8 items-center justify-center rounded-lg px-3 text-[13px] font-medium leading-none transition-all',
     isOnHero
       ? 'text-white/80 bg-white/10 hover:bg-white/20 [--rp-logo-color:#fff7ed] [--rp-logo-shadow-color:rgba(0,0,0,0.65)] md:text-[#141414] md:bg-black/5 md:hover:bg-black/10 md:[--rp-logo-color:#171717] md:[--rp-logo-shadow-color:rgba(255,255,255,0.8)]'
       : isDark
@@ -231,7 +231,7 @@ export const Header = () => {
                 style={{ overflow: 'hidden' }}
               >
                 <Link to="/2RP" className={resourcesButtonClass}>
-                  <RpLogo className="translate-y-px" />
+                  <RpLogo className="translate-y-px" reserveWidth="max-content" align="center" />
                 </Link>
               </motion.div>
             )}

@@ -7,6 +7,7 @@ import { logAgentNodesDebug } from '@/features/agentNodes/api';
 import { useAgentNodeCatalog } from '@/features/agentNodes/useAgentNodeCatalog';
 import { agentNodeSummary } from '@/features/agentNodes/media';
 import type { AgentNodeCatalogItem, AgentNodeInstallTarget } from '@/features/agentNodes/types';
+import { RpLogo } from '@/components/brand/RpLogo';
 
 const sectionVariants = {
   hidden: { opacity: 0 },
@@ -135,7 +136,7 @@ export function AgentNodesSection() {
             <Bot size={20} />
           </div>
           <h2 className="rp-section-heading text-2xl font-black uppercase tracking-tight sm:text-4xl">
-            Art Agents
+            <RpLogo text="Art Agents" reserveWidth="10em" />
           </h2>
         </div>
         <div className="flex-1 lg:px-4">

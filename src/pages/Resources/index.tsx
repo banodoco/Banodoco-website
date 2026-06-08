@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo, useRef, type CSSProperties, type Ref } from 'react';
+import { lazy, Suspense, useEffect, useState, useMemo, useRef, type CSSProperties, type Ref } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, Palette, ChevronLeft, ChevronRight, ArrowDown, Newspaper, Plus, Youtube, Users, ArrowRight } from 'lucide-react';
+import { LayoutGrid, Palette, ChevronRight, ArrowDown, Newspaper, Plus, Youtube, Users, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PostListCard } from '@/components/posts/PostListCard';
 import { RpLogo } from '@/components/brand/RpLogo';
@@ -17,10 +17,11 @@ import { useResources } from './useResources';
 import { useResourceFilters } from './useResourceFilters';
 import { ArtGallerySection } from './ArtGallery/ArtGallerySection';
 import { HeroArtistCycler } from './HeroArtistCycler';
-import PixelBlast, { type PixelBlastHandle } from './PixelBlast';
+import type { PixelBlastHandle } from './PixelBlast';
 import { CommunityMontage } from './CommunityMontage';
 import { FilterBar } from './FilterBar';
 import { ResourceGrid } from './ResourceGrid';
+import { ResourcePagination } from './ResourcePagination';
 import { CommunityNewsSection } from './CommunityNews/CommunityNewsSection';
 import { AuthActionModal } from './AuthActionModal';
 import { YouTubeEmbed } from './YouTubeEmbed';
@@ -34,6 +35,7 @@ const BRIEFING_VIDEOS: Array<{ videoId: string; title: string; caption: string }
 ];
 
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@banodoco';
+const PixelBlast = lazy(() => import('./PixelBlast'));
 
 const ITEMS_PER_PAGE = 8;
 const containerVariants = {
@@ -48,20 +50,22 @@ const renderPixelBlast = (
   effect: RpPixelBlastTheme,
   ref: Ref<PixelBlastHandle>,
 ) => (
-  <PixelBlast
-    ref={ref}
-    variant={effect.variant}
-    pixelSize={effect.pixelSize}
-    color={effect.color}
-    patternScale={effect.patternScale}
-    patternDensity={effect.patternDensity}
-    pixelSizeJitter={effect.pixelSizeJitter}
-    enableRipples={false}
-    liquid={false}
-    speed={effect.speed}
-    edgeFade={effect.edgeFade}
-    transparent
-  />
+  <Suspense fallback={null}>
+    <PixelBlast
+      ref={ref}
+      variant={effect.variant}
+      pixelSize={effect.pixelSize}
+      color={effect.color}
+      patternScale={effect.patternScale}
+      patternDensity={effect.patternDensity}
+      pixelSizeJitter={effect.pixelSizeJitter}
+      enableRipples={false}
+      liquid={false}
+      speed={effect.speed}
+      edgeFade={effect.edgeFade}
+      transparent
+    />
+  </Suspense>
 );
 
 const getComplementColor = (hex: string) => {
@@ -112,29 +116,13 @@ const Resources = () => {
     return filtered.slice(start, start + ITEMS_PER_PAGE);
   }, [filtered, page]);
 
-  const handlePrev = () => setPage((p) => Math.max(1, p - 1));
-  const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
-
-  const forgeSectionRef = useRef<HTMLElement>(null);
-  const [forgeInView, setForgeInView] = useState(false);
-  const [forgeHovered, setForgeHovered] = useState(false);
-  const [forgePagerHovered, setForgePagerHovered] = useState(false);
-  const showForgePager = forgeInView && (forgeHovered || forgePagerHovered);
-
   useEffect(() => {
-    console.info('[AgentNodes] 2RP Resources page mounted', { path: window.location.pathname });
-  }, []);
+    if (!import.meta.env.DEV) return;
 
-  useEffect(() => {
-    const section = forgeSectionRef.current;
-    if (!section) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => setForgeInView(entry.isIntersecting),
-      { threshold: 0.12 },
-    );
-    observer.observe(section);
-    return () => observer.disconnect();
+    console.info('[2RP:route] Resources component mounted', {
+      path: window.location.pathname,
+      elapsed: Math.round(performance.now()),
+    });
   }, []);
 
   // PixelBlast pattern translates spatially as the page scrolls. Imperative API
@@ -377,7 +365,7 @@ const Resources = () => {
       </section>
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-6 pt-12 lg:pt-20 space-y-12 lg:space-y-16 pb-6 lg:pb-10">
-        {/* Community Art */}
+        {/* Art */}
         <motion.section
           initial="hidden"
           whileInView="visible"
@@ -392,7 +380,7 @@ const Resources = () => {
                 <Palette size={20} />
               </div>
               <h2 className="rp-section-heading text-2xl sm:text-4xl font-black tracking-tight uppercase">
-                Community Art
+                <RpLogo text="Art" reserveWidth="4.5em" />
               </h2>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -436,15 +424,12 @@ const Resources = () => {
 
         {/* The Forge — Assets */}
         <motion.section
-          ref={forgeSectionRef}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-100px' }}
           variants={containerVariants}
           id="assets"
           className="relative space-y-10 rounded-2xl border border-white/10 bg-[#151120] p-6 sm:p-8"
-          onMouseEnter={() => setForgeHovered(true)}
-          onMouseLeave={() => setForgeHovered(false)}
         >
           <div className="flex flex-col gap-3 border-b border-zinc-800 pb-5 md:pb-6 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
             <div className="flex items-center gap-3 shrink-0">
@@ -452,7 +437,7 @@ const Resources = () => {
                 <LayoutGrid size={20} />
               </div>
               <h2 className="rp-section-heading text-2xl sm:text-4xl font-black tracking-tight uppercase">
-                Resources
+                <RpLogo text="Resources" reserveWidth="10.5em" />
               </h2>
             </div>
             {!error && (loading || assets.length > 0) && (
@@ -489,43 +474,6 @@ const Resources = () => {
           )}
 
 
-          {/* Pagination */}
-          {!error && !loading && assets.length > 0 && totalPages > 1 && (
-            <div
-              className={`fixed inset-x-0 bottom-4 z-50 flex justify-center transition-opacity duration-150 ${
-                showForgePager
-                  ? 'pointer-events-auto opacity-100'
-                  : 'pointer-events-none opacity-0'
-              }`}
-              onMouseEnter={() => setForgePagerHovered(true)}
-              onMouseLeave={() => setForgePagerHovered(false)}
-            >
-              <div className="flex items-center gap-5 rounded-full border border-white/10 bg-zinc-950/85 px-3 py-2 shadow-2xl shadow-black/30 backdrop-blur">
-                <button
-                  disabled={page === 1}
-                  onClick={handlePrev}
-                  className="rounded-full border border-white/10 p-2 text-white transition hover:border-white/25 disabled:cursor-not-allowed disabled:opacity-30"
-                  aria-label="Previous resource page"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <div className="flex min-w-16 items-center justify-center gap-3 text-sm font-bold">
-                  <span className="text-zinc-100">{page}</span>
-                  <span className="text-zinc-700">/</span>
-                  <span className="text-zinc-500">{totalPages}</span>
-                </div>
-                <button
-                  disabled={page === totalPages}
-                  onClick={handleNext}
-                  className="rounded-full border border-white/10 p-2 text-white transition hover:border-white/25 disabled:cursor-not-allowed disabled:opacity-30"
-                  aria-label="Next resource page"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Grid */}
           {!error && (loading || assets.length > 0) && (
             <div className="mt-6">
@@ -535,6 +483,16 @@ const Resources = () => {
                 loading={loading}
               />
             </div>
+          )}
+
+          {/* Pagination — in-flow, centered, numbered */}
+          {!error && !loading && assets.length > 0 && (
+            <ResourcePagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              className="mt-8 flex justify-center"
+            />
           )}
 
         </motion.section>
@@ -555,7 +513,9 @@ const Resources = () => {
                   <div className="rp-section-icon p-2 rounded-lg">
                     <Newspaper size={20} />
                   </div>
-                  <h2 className="rp-section-heading text-2xl font-bold tracking-tight uppercase">Briefing</h2>
+                  <h2 className="rp-section-heading text-2xl font-bold tracking-tight uppercase">
+                    <RpLogo text="Briefing" reserveWidth="9em" />
+                  </h2>
                 </div>
                 <p className="text-zinc-500 text-sm leading-relaxed mb-6">
                   Dispatches from the community frontlines. Latest integrations, research notes, and community milestones.
@@ -591,7 +551,7 @@ const Resources = () => {
           </div>
         </motion.section>
 
-        {/* Community Posts — compact list, just title + author */}
+        {/* Posts — compact list, just title + author */}
         <motion.section
           initial="hidden"
           whileInView="visible"
@@ -606,7 +566,7 @@ const Resources = () => {
                 <Newspaper size={18} />
               </div>
               <h2 className="rp-section-heading text-xl font-black uppercase tracking-tight sm:text-2xl">
-                Community Posts
+                <RpLogo text="Posts" reserveWidth="6em" />
               </h2>
             </div>
             <button
@@ -658,7 +618,9 @@ const Resources = () => {
               <div className="rp-section-icon p-2 rounded-lg">
                 <Users size={20} />
               </div>
-              <span className="rp-section-eyebrow font-black tracking-[0.4em] uppercase text-[10px]">Community</span>
+              <span className="rp-section-eyebrow font-black tracking-[0.4em] uppercase text-[10px]">
+                <RpLogo text="Community" reserveWidth="11em" />
+              </span>
             </div>
             <h2 className="rp-section-heading text-2xl sm:text-4xl font-black tracking-tight uppercase leading-tight">
               The open source world gathers in our community

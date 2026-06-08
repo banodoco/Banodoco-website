@@ -6,18 +6,24 @@ import type {
   Track,
 } from './types';
 import { transitionKey } from './types';
+import {
+  getCatchUpStage,
+  getEntryStage,
+  getJumpStage,
+} from './sectionStages';
 
 // Hard seek when the slot is paused (we want to land exactly where requested).
 const PAUSED_SEEK_EPSILON_SEC = 0.02;
-// While playing, let the video element's natural clock drift away from the
-// engine's expected time up to this much before we hard-seek to resync.
-// Writing currentTime every frame causes per-frame seeks that stutter, so we
-// stay loose. But if the natural clock falls badly behind (decoder stall,
-// network buffering, dropped frames), this threshold catches it and snaps
-// the video forward to where it should be. Tune up for more tolerance,
-// down for tighter sync.
-const PLAYING_RESYNC_THRESHOLD_SEC = 0.18;
-const REST_STAGE_SOURCE_SWAP_MS = 0;
+// While playing, avoid writing currentTime for ordinary drift. A currentTime
+// assignment is a seek, so a low threshold makes catch-up look like a sequence
+// of cuts. Small lag is absorbed by temporarily raising playbackRate; only
+// extreme drift gets a hard seek.
+const PLAYING_SOFT_RESYNC_THRESHOLD_SEC = 0.12;
+const PLAYING_HARD_RESYNC_THRESHOLD_SEC = 10;
+const PLAYING_MAX_RATE = 4;
+const PLAYING_MIN_RATE = 0.5;
+const PLAYING_DRIFT_RATE_GAIN = 1.2;
+const REST_STAGE_SOURCE_SWAP_MS = 280;
 
 type SlotKey = 'A' | 'B';
 
@@ -26,6 +32,7 @@ type SlotRuntime = {
   src: string | null;
   ready: boolean;
   readyPromise: Promise<void> | null;
+  forceSeek: boolean;
   desiredTime: number;
   desiredPlay: boolean;
   desiredRate: number;
@@ -68,6 +75,7 @@ type CreateEngineArgs = {
     nextTrack: Track | null;
     remainingSeconds: number;
   }) => void;
+  onJumpLand?: (event: { from: string; to: string }) => void;
 };
 
 type Engine = {
@@ -82,8 +90,10 @@ export const createEngine = ({
   slotB,
   isMobile,
   onRestStageProgress,
+  onJumpLand,
 }: CreateEngineArgs): Engine => {
   const sectionById = new Map(sections.map(section => [section.id, section]));
+  const sectionIndexById = new Map(sections.map((section, index) => [section.id, index]));
   const initialSection = sections[0];
 
   if (!initialSection?.stages[0]) {
@@ -91,8 +101,8 @@ export const createEngine = ({
   }
 
   const slots: Record<SlotKey, SlotRuntime> = {
-    A: { el: slotA, src: null, ready: false, readyPromise: null, desiredTime: 0, desiredPlay: false, desiredRate: 1, opacity: 1 },
-    B: { el: slotB, src: null, ready: false, readyPromise: null, desiredTime: 0, desiredPlay: false, desiredRate: 1, opacity: 0 },
+    A: { el: slotA, src: null, ready: false, readyPromise: null, forceSeek: false, desiredTime: 0, desiredPlay: false, desiredRate: 1, opacity: 1 },
+    B: { el: slotB, src: null, ready: false, readyPromise: null, forceSeek: false, desiredTime: 0, desiredPlay: false, desiredRate: 1, opacity: 0 },
   };
 
   const state: EngineState = {
@@ -107,8 +117,15 @@ export const createEngine = ({
   let lastTick: number | null = null;
   let destroyed = false;
   let gestureHandler: (() => void) | null = null;
+  let queuedTargetId: string | null = null;
 
   const inactiveSlot = (slot: SlotKey): SlotKey => (slot === 'A' ? 'B' : 'A');
+  const sectionDistance = (from: string, to: string): number => {
+    const fromIndex = sectionIndexById.get(from);
+    const toIndex = sectionIndexById.get(to);
+    if (fromIndex === undefined || toIndex === undefined) return Number.POSITIVE_INFINITY;
+    return Math.abs(toIndex - fromIndex);
+  };
   const resolveSlot = (role: SlotRole, transition = state.transition): SlotKey => {
     if (!transition) return role === 'active' ? state.activeSlot : inactiveSlot(state.activeSlot);
     return role === 'active' ? transition.fromSlot : transition.toSlot;
@@ -137,6 +154,7 @@ export const createEngine = ({
 
       slot.el.addEventListener('loadeddata', markReady, { once: true });
     });
+    slot.forceSeek = false;
 
     slot.el.src = track.src;
     slot.el.muted = true;
@@ -164,17 +182,35 @@ export const createEngine = ({
     slot.el.style.opacity = String(slot.opacity);
     if (!slot.ready) return;
 
-    if (slot.el.playbackRate !== slot.desiredRate) {
-      slot.el.playbackRate = slot.desiredRate;
-    }
+    const driftSeconds = slot.desiredTime - slot.el.currentTime;
+    const absDriftSeconds = Math.abs(driftSeconds);
+    const shouldHardSeek = slot.desiredPlay
+      ? slot.forceSeek || absDriftSeconds > PLAYING_HARD_RESYNC_THRESHOLD_SEC
+      : absDriftSeconds > PAUSED_SEEK_EPSILON_SEC;
 
-    const epsilon = slot.desiredPlay ? PLAYING_RESYNC_THRESHOLD_SEC : PAUSED_SEEK_EPSILON_SEC;
-    if (Math.abs(slot.el.currentTime - slot.desiredTime) > epsilon) {
+    if (shouldHardSeek) {
       try {
         slot.el.currentTime = slot.desiredTime;
+        slot.forceSeek = false;
       } catch {
         slot.ready = false;
       }
+    }
+
+    let effectiveRate = slot.desiredRate;
+    if (slot.desiredPlay && !shouldHardSeek && absDriftSeconds > PLAYING_SOFT_RESYNC_THRESHOLD_SEC) {
+      const maxRate = Math.max(PLAYING_MAX_RATE, slot.desiredRate);
+      effectiveRate = Math.min(
+        maxRate,
+        Math.max(
+          PLAYING_MIN_RATE,
+          slot.desiredRate + (driftSeconds * PLAYING_DRIFT_RATE_GAIN)
+        )
+      );
+    }
+
+    if (Math.abs(slot.el.playbackRate - effectiveRate) > 0.01) {
+      slot.el.playbackRate = effectiveRate;
     }
 
     if (slot.desiredPlay && slot.el.paused) {
@@ -189,11 +225,14 @@ export const createEngine = ({
     applySlot('B');
   };
 
-  const firstStageTrack = (sectionId: string) => {
-    const track = sectionById.get(sectionId)?.stages[0]?.track;
-    if (!track) throw new Error(`Missing first stage for section ${sectionId}`);
-    return track;
+  const getSection = (sectionId: string): Section => {
+    const section = sectionById.get(sectionId);
+    if (!section) throw new Error(`Missing section ${sectionId}`);
+    return section;
   };
+
+  const entryTrack = (sectionId: string) => getEntryStage(getSection(sectionId)).track;
+  const jumpTrack = (sectionId: string) => getJumpStage(getSection(sectionId)).track;
 
   const currentStage = () => {
     const section = sectionById.get(state.sectionId);
@@ -273,7 +312,10 @@ export const createEngine = ({
           toSlot.desiredTime = startAt;
         } else {
           let next = toSlot.desiredTime + (dtMs / 1000);
-          if (next >= endAt) next = startAt + ((next - startAt) % span);
+          if (next >= endAt) {
+            next = startAt + ((next - startAt) % span);
+            toSlot.forceSeek = true;
+          }
           toSlot.desiredTime = next;
         }
       } else if (crossfade.track.mode.kind === 'play') {
@@ -337,7 +379,10 @@ export const createEngine = ({
         slot.desiredTime = startAt;
       } else {
         let next = slot.desiredTime + (dtMs / 1000);
-        if (next >= endAt) next = startAt + ((next - startAt) % span);
+        if (next >= endAt) {
+          next = startAt + ((next - startAt) % span);
+          slot.forceSeek = true;
+        }
         slot.desiredTime = next;
       }
       return;
@@ -376,23 +421,36 @@ export const createEngine = ({
     const transition = state.transition;
     if (!transition) return;
 
-    const newFirstTrack = firstStageTrack(transition.compiled.to);
+    const landingTrack = entryTrack(transition.compiled.to);
     // Same-chunk transitions: keep the slot that just rendered the play step. Swapping
-    // to toSlot — which was preloaded at currentTime = newFirstTrack.startAt exactly —
-    // would visibly rewind by ~1 frame (slot A was at startAt+ε from natural playback).
+    // to toSlot — which was preloaded at the landing track exactly — would visibly
+    // rewind by ~1 frame (slot A was at startAt+ε from natural playback).
     // Cross-chunk: must swap to toSlot, which has the new chunk preloaded.
-    const finalSlot: SlotKey = slots[state.activeSlot].src === newFirstTrack.src
+    const finalSlot: SlotKey = slots[state.activeSlot].src === landingTrack.src
       ? state.activeSlot
       : transition.toSlot;
 
+    const finalSlotRuntime = slots[finalSlot];
+    const landingStart = trackStart(landingTrack);
+    const landingProgressSeconds = Math.max(0, finalSlotRuntime.desiredTime - landingStart);
+    const landingSpeed = landingTrack.mode.kind === 'play' ? landingTrack.mode.speed : 1;
+
     state.sectionId = transition.compiled.to;
     state.stageIndex = 0;
-    state.stageElapsedMs = 0;
+    state.stageElapsedMs = landingProgressSeconds > 0
+      ? (landingProgressSeconds / Math.max(landingSpeed, 0.001)) * 1000
+      : 0;
     state.phase = 'rest';
     state.activeSlot = finalSlot;
     state.transition = undefined;
 
-    prepareSlot(state.activeSlot, newFirstTrack);
+    prepareSlot(state.activeSlot, landingTrack);
+
+    const queued = queuedTargetId;
+    queuedTargetId = null;
+    if (queued && queued !== state.sectionId) {
+      requestSection(queued);
+    }
   };
 
   const stepFinalSlot = (step: CompiledTransitionStep, transition: NonNullable<EngineState['transition']>) => {
@@ -520,7 +578,7 @@ export const createEngine = ({
     slots[toSlot].opacity = 1;
     slots[inactiveSlot(toSlot)].opacity = 0;
     slots[inactiveSlot(toSlot)].desiredPlay = false;
-    // The cut target's first stage will own play/rate next frame in renderRest.
+    // The landing stage will own play/rate next frame in renderRest.
     slots[toSlot].desiredTime = trackStart(step.track);
     slots[toSlot].desiredPlay = step.track.mode.kind !== 'freeze';
     slots[toSlot].desiredRate = step.track.mode.kind === 'play' ? step.track.mode.speed : 1;
@@ -546,26 +604,24 @@ export const createEngine = ({
   const synthesizeCut = (from: string, to: string): CompiledTransition => ({
     from,
     to,
-    steps: [{ kind: 'cut', toSlot: 'inactive', track: firstStageTrack(to), durationMs: 0 }],
+    steps: [{ kind: 'cut', toSlot: 'inactive', track: jumpTrack(to), durationMs: 0 }],
   });
 
   // If the user scrolls out of a section while its rest video still has unplayed
   // content, fast-forward through the remainder before running the transition.
-  // Target: ~400ms total catch-up; speed clamped to [MIN, max]. The max defaults
+  // Target: <=3s total catch-up; speed clamped to [MIN, max]. The max defaults
   // to DEFAULT_CATCH_UP_MAX_SPEED, but each Section can override via
   // `catchUpMaxSpeed` for content that looks harsh when sped up.
-  const CATCH_UP_TARGET_MS = 400;
+  const CATCH_UP_TARGET_MS = 3000;
   const CATCH_UP_MIN_SPEED = 1.25;
-  const DEFAULT_CATCH_UP_MAX_SPEED = 2;
+  const DEFAULT_CATCH_UP_MAX_SPEED = 4;
   const CATCH_UP_REMAINING_EPSILON_SEC = 0.05;
 
   const computeCatchUpStep = (): CompiledTransitionStep | null => {
     if (state.phase !== 'rest') return null;
     const fromSection = sectionById.get(state.sectionId);
     if (!fromSection) return null;
-    const lastStage = fromSection.stages[fromSection.stages.length - 1];
-    if (!lastStage) return null;
-    const targetTrack = lastStage.track;
+    const targetTrack = getCatchUpStage(fromSection).track;
     if (targetTrack.mode.kind === 'loop') return null;
     const targetTime = trackEnd(targetTrack);
     const slot = slots[state.activeSlot];
@@ -596,18 +652,43 @@ export const createEngine = ({
   const requestSection = (targetId: string) => {
     if (targetId === state.sectionId && state.phase === 'rest') return;
     // Already transitioning to this target — don't restart it.
-    if (state.phase === 'transitioning' && state.transition?.compiled.to === targetId) return;
     if (!sectionById.has(targetId)) return;
+
+    if (state.phase === 'transitioning' && state.transition) {
+      const transitionTarget = state.transition.compiled.to;
+      if (transitionTarget === targetId) {
+        queuedTargetId = null;
+        return;
+      }
+
+      if (sectionDistance(transitionTarget, targetId) <= 1) {
+        queuedTargetId = targetId;
+        return;
+      }
+    }
 
     const from = state.phase === 'transitioning' && state.transition
       ? state.transition.compiled.to
       : state.sectionId;
-    const baseCompiled = compiledTransitions.get(transitionKey(from, targetId)) ?? synthesizeCut(from, targetId);
+    const distance = sectionDistance(from, targetId);
+    const shouldJumpLand = distance > 1;
+    if (shouldJumpLand) {
+      onJumpLand?.({ from, to: targetId });
+    }
+    const baseCompiled = shouldJumpLand
+      ? synthesizeCut(from, targetId)
+      : compiledTransitions.get(transitionKey(from, targetId)) ?? synthesizeCut(from, targetId);
     // Only play-first transitions read the active slot's time. Crossfades/cuts
     // can start immediately; finishing rest first injects a visible speed-up.
     const catchUp = baseCompiled.steps[0]?.kind === 'play' ? computeCatchUpStep() : null;
     const compiled: CompiledTransition = catchUp
-      ? { ...baseCompiled, steps: [catchUp, ...baseCompiled.steps] }
+      ? {
+          ...baseCompiled,
+          steps: [
+            catchUp,
+            ...baseCompiled.steps,
+          ],
+        }
       : baseCompiled;
 
     const fromSlot = state.activeSlot;
@@ -619,14 +700,20 @@ export const createEngine = ({
     } else {
       // masterContinue play step (or catch-up step) runs on the active slot;
       // we still need toSlot ready for finalizeTransition to land on a loaded video.
-      // Preload to-section's first stage on toSlot in parallel — otherwise the
+      // Preload to-section's entry stage on toSlot in parallel — otherwise the
       // post-transition swap shows a black frame while it loads.
-      prepareSlot(toSlot, firstStageTrack(targetId));
+      prepareSlot(toSlot, entryTrack(targetId));
     }
 
     state.sectionId = from;
     state.phase = 'transitioning';
-    state.transition = { compiled, stepIndex: 0, stepElapsedMs: 0, fromSlot, toSlot };
+    state.transition = {
+      compiled,
+      stepIndex: 0,
+      stepElapsedMs: 0,
+      fromSlot,
+      toSlot,
+    };
   };
 
   const unlockPlayback = () => {

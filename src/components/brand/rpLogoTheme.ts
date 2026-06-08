@@ -37,7 +37,7 @@ export const RP_THEME_SETTINGS = {
 // One reliable background primitive, tuned hard in different directions.
 // These fonts all resolve through Google Fonts as normal web fonts; no color-font
 // families or axis-heavy requests that can silently fall back in some browsers.
-const RP_LOGO_THEMES: RpLogoTheme[] = [
+export const RP_LOGO_THEMES: RpLogoTheme[] = [
   {
     id: 'pixel-grid',
     font: { family: 'Sixtyfour', description: 'pixel grid' },
@@ -114,21 +114,6 @@ const RP_LOGO_THEMES: RpLogoTheme[] = [
     },
   },
   {
-    id: 'dimensional-sign',
-    font: { family: 'Bungee Shade', description: 'dimensional sign' },
-    effect: {
-      variant: 'diamond',
-      pixelSize: 8,
-      color: '#74A7FF',
-      patternScale: 2,
-      patternDensity: 1.55,
-      pixelSizeJitter: 0.1,
-      speed: 0.42,
-      edgeFade: 0.32,
-      scrollDrift: { x: 0.85, y: -1.45 },
-    },
-  },
-  {
     id: 'neon-line',
     font: { family: 'Monoton', description: 'neon line' },
     effect: {
@@ -174,36 +159,6 @@ const RP_LOGO_THEMES: RpLogoTheme[] = [
     },
   },
   {
-    id: 'woven-bitmap',
-    font: { family: 'Jacquard 12', description: 'woven bitmap' },
-    effect: {
-      variant: 'diamond',
-      pixelSize: 4,
-      color: '#D7C8FF',
-      patternScale: 11,
-      patternDensity: 0.7,
-      pixelSizeJitter: 0.2,
-      speed: 0.24,
-      edgeFade: 0.16,
-      scrollDrift: { x: -1.1, y: 1.7 },
-    },
-  },
-  {
-    id: 'blackletter',
-    font: { family: 'UnifrakturCook', googleFamily: 'UnifrakturCook:wght@700', description: 'blackletter' },
-    effect: {
-      variant: 'triangle',
-      pixelSize: 12,
-      color: '#E2C46E',
-      patternScale: 1.4,
-      patternDensity: 0.84,
-      pixelSizeJitter: 0.9,
-      speed: 0.1,
-      edgeFade: 0.5,
-      scrollDrift: { x: 0.18, y: 0.3 },
-    },
-  },
-  {
     id: 'drippy-display',
     font: { family: 'Creepster', description: 'drippy display' },
     effect: {
@@ -231,21 +186,6 @@ const RP_LOGO_THEMES: RpLogoTheme[] = [
       speed: 1.2,
       edgeFade: 0.22,
       scrollDrift: { x: 1.2, y: 1.45 },
-    },
-  },
-  {
-    id: 'blobby-display',
-    font: { family: 'Rubik Puddles', description: 'blobby display' },
-    effect: {
-      variant: 'circle',
-      pixelSize: 16,
-      color: '#65C7FF',
-      patternScale: 0.85,
-      patternDensity: 1.2,
-      pixelSizeJitter: 0.75,
-      speed: 0.2,
-      edgeFade: 0.44,
-      scrollDrift: { x: -0.35, y: -0.42 },
     },
   },
 ];

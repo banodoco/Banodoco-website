@@ -38,6 +38,17 @@ function hasPreviewableMedia(media: AssetMedia | null): boolean {
   );
 }
 
+const logResourceTiming = (
+  tag: string,
+  start: number,
+  message: string,
+  extra?: Record<string, unknown>,
+) => {
+  if (!import.meta.env.DEV) return;
+
+  console.info(`[useResources:${tag}] ${message} +${Math.round(performance.now() - start)}ms`, extra ?? '');
+};
+
 export const useResources = (options: UseResourcesOptions = {}): UseResourcesResult => {
   const { sourceOnly, curatedOnly } = options;
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -56,8 +67,8 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
 
     const fetchData = async () => {
       const tag = curatedOnly ? 'curated' : sourceOnly ?? 'all';
-      const logTag = `[useResources:${tag}]`;
-      console.log(`${logTag} fetching assets...`);
+      const startedAt = performance.now();
+      logResourceTiming(tag, startedAt, 'fetch started');
       try {
         let query = client
           // status filter required for public reads
@@ -90,10 +101,10 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
         const { data, error: fetchError } = await query;
 
         if (fetchError) {
-          console.error(`${logTag} assets query failed:`, fetchError);
+          console.error(`[useResources:${tag}] assets query failed:`, fetchError);
           throw fetchError;
         }
-        console.log(`${logTag} assets returned: ${data?.length ?? 0} rows`);
+        logResourceTiming(tag, startedAt, 'assets query returned', { rows: data?.length ?? 0 });
 
         // Supabase returns `media` as a single object for FK-based joins, but
         // the generated types sometimes widen to an array. Normalize to `AssetMedia | null`.
@@ -101,7 +112,7 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
           media: AssetMedia | AssetMedia[] | null;
         })[];
         const assetIds = rows.map(({ id }) => id);
-        console.log(`${logTag} assetIds (${assetIds.length}):`, assetIds);
+        logResourceTiming(tag, startedAt, 'count queries starting', { assetCount: assetIds.length });
 
         // Don't transfer rows to count them. `head: true, count: 'exact'`
         // asks PostgREST for just a row count, no payload. Run one HEAD per
@@ -115,7 +126,7 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
             .eq('asset_id', assetId)
             .eq('is_deleted', false);
           if (countError) {
-            console.error(`${logTag} count failed for ${table} asset_id=${assetId}:`, countError);
+            console.error(`[useResources:${tag}] count failed for ${table} asset_id=${assetId}:`, countError);
             return 0;
           }
           return count ?? 0;
@@ -127,6 +138,7 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
               Promise.all(assetIds.map((id) => fetchCount('asset_comments', id))),
             ])
           : [[] as number[], [] as number[]];
+        logResourceTiming(tag, startedAt, 'count queries finished');
 
         const galleryCountMap = new Map<string, number>();
         const discussionCountMap = new Map<string, number>();
@@ -134,16 +146,6 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
           galleryCountMap.set(id, galleryCounts[idx] ?? 0);
           discussionCountMap.set(id, discussionCounts[idx] ?? 0);
         });
-        console.log(
-          `${logTag} per-asset counts:`,
-          rows.map((r) => ({
-            id: r.id,
-            slug: r.slug,
-            name: r.name,
-            comments: discussionCountMap.get(r.id) ?? 0,
-            gallery: galleryCountMap.get(r.id) ?? 0,
-          })),
-        );
 
         const normalized: Asset[] = rows.map(({ media, ...rest }) => ({
           ...rest,
@@ -158,6 +160,7 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
         const noPrimaryIds = normalized.filter((a) => !hasPreviewableMedia(a.media)).map((a) => a.id);
         const fallbackByAsset = new Map<string, AssetMedia[]>();
         if (noPrimaryIds.length > 0) {
+          logResourceTiming(tag, startedAt, 'fallback media queries starting', { assetCount: noPrimaryIds.length });
           const { data: galleryRows } = await client
             .from('asset_media')
             .select(`
@@ -213,6 +216,7 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
             const list = fallbackByAsset.get(a.id);
             if (list && list.length > 0) a.fallbackMedia = list;
           }
+          logResourceTiming(tag, startedAt, 'fallback media queries finished');
         }
 
         // Sort: Curated first, then Listed, then by date within each tier.
@@ -230,6 +234,7 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
         // precision when JSON.parse converts them to JS numbers.
         const memberIds = [...new Set(sorted.map(a => a.member_id).filter((v): v is string => !!v))];
         if (memberIds.length > 0) {
+          logResourceTiming(tag, startedAt, 'member query starting', { memberCount: memberIds.length });
           const { data: memberData } = await client
             .from('members')
             .select('member_id:member_id::text, username, global_name, avatar_url')
@@ -247,9 +252,11 @@ export const useResources = (options: UseResourcesOptions = {}): UseResourcesRes
             }
             setProfiles(map);
           }
+          logResourceTiming(tag, startedAt, 'member query finished');
         }
+        logResourceTiming(tag, startedAt, 'fetch finished', { rows: sorted.length });
       } catch (caught) {
-        console.error(`${logTag} failed:`, caught);
+        console.error(`[useResources:${tag}] failed:`, caught);
         setError(
           caught instanceof Error && caught.message
             ? `Failed to load resources: ${caught.message}`

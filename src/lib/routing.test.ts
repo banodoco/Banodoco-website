@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildEntitySlug, buildResourcePath, extractEntityIdFromSlug } from './routing';
+import { buildEntitySlug, buildResourcePath, extractEntityIdFromSlug, isProfilePathname } from './routing';
 
 describe('buildResourcePath', () => {
   test('uses persistedSlug verbatim when provided', () => {
@@ -39,5 +39,11 @@ describe('extractEntityIdFromSlug', () => {
 
     expect(extractEntityIdFromSlug(token)).toBe(id);
     expect(extractEntityIdFromSlug(slug)).toBe(id);
+  });
+});
+
+describe('isProfilePathname', () => {
+  test('does not treat the 2RP lowercase route as a username route', () => {
+    expect(isProfilePathname('/2rp')).toBe(false);
   });
 });

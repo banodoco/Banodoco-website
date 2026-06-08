@@ -5,8 +5,15 @@ import type {
   Transition,
 } from './types';
 import { transitionKey } from './types';
+import {
+  getEntryStage,
+  getJumpStage,
+  getReverseEntryStage,
+  getSettledStage,
+} from './sectionStages';
 
 const EPSILON = 0.000001;
+const DEFAULT_REVERSE_CROSSFADE_MS = 600;
 
 const clampTime = (value: number) => Math.max(0, Number(value.toFixed(6)));
 
@@ -57,28 +64,46 @@ export const compileTransitions = (
       throw new Error(`Missing target section for transition ${key}`);
     }
 
-    const fromLastTrack = fromSection.stages[fromSection.stages.length - 1]?.track;
-    const firstStageTrack = toSection.stages[0]?.track;
+    const fromSettledTrack = getSettledStage(fromSection).track;
+    const reverseEntryTrack = getReverseEntryStage(fromSection).track;
+    const entryTrack = getEntryStage(toSection).track;
+    const jumpTrack = getJumpStage(toSection).track;
 
-    if (!fromLastTrack) {
-      throw new Error(`Source section ${transition.from} has no last stage`);
-    }
+    const reverseDurationMs = transition.spec.kind === 'crossfade'
+      ? transition.spec.durationMs
+      : DEFAULT_REVERSE_CROSSFADE_MS;
+    const setCompiled = (compiledTransition: CompiledTransition) => {
+      compiled.set(key, compiledTransition);
 
-    if (!firstStageTrack) {
-      throw new Error(`Target section ${transition.to} has no first stage`);
-    }
+      const reverseKey = transitionKey(transition.to, transition.from);
+      if (!compiled.has(reverseKey)) {
+        compiled.set(reverseKey, {
+          from: transition.to,
+          to: transition.from,
+          steps: [
+            {
+              kind: 'crossfade',
+              fromSlot: 'active',
+              toSlot: 'inactive',
+              track: reverseEntryTrack,
+              durationMs: reverseDurationMs,
+            },
+          ],
+        });
+      }
+    };
 
     if (transition.spec.kind === 'cut') {
-      compiled.set(key, {
+      setCompiled({
         from: transition.from,
         to: transition.to,
-        steps: [{ kind: 'cut', toSlot: 'inactive', track: firstStageTrack, durationMs: 0 }],
+        steps: [{ kind: 'cut', toSlot: 'inactive', track: jumpTrack, durationMs: 0 }],
       });
       return;
     }
 
     if (transition.spec.kind === 'crossfade') {
-      compiled.set(key, {
+      setCompiled({
         from: transition.from,
         to: transition.to,
         steps: [
@@ -86,7 +111,7 @@ export const compileTransitions = (
             kind: 'crossfade',
             fromSlot: 'active',
             toSlot: 'inactive',
-            track: firstStageTrack,
+            track: entryTrack,
             durationMs: transition.spec.durationMs,
           },
         ],
@@ -112,8 +137,8 @@ export const compileTransitions = (
     const rampEnd = hasRamp ? speedEnd! : undefined;
     const startPoint = resolveChunk(masterStart, 'in');
     const endPoint = resolveChunk(masterEnd, 'out');
-    const isOriginOverride = fromLastTrack.src !== startPoint.src;
-    const isDestinationOverride = firstStageTrack.src !== endPoint.src;
+    const isOriginOverride = fromSettledTrack.src !== startPoint.src;
+    const isDestinationOverride = entryTrack.src !== endPoint.src;
     const hasOverride = isOriginOverride || isDestinationOverride;
     const hasSpeedRampFlag = speedStart !== undefined || speedEnd !== undefined;
     const isChunkCross = startPoint.src !== endPoint.src;
@@ -139,7 +164,7 @@ export const compileTransitions = (
     }
 
     if (startPoint.src === endPoint.src && !hasOverride) {
-      compiled.set(key, {
+      setCompiled({
         from: transition.from,
         to: transition.to,
         steps: [
@@ -164,7 +189,7 @@ export const compileTransitions = (
       // stays distance/durationMs. Head/tail crossfades overlap with master
       // playback rather than extending the transition.
       if (!isOriginOverride) {
-        compiled.set(key, {
+        setCompiled({
           from: transition.from,
           to: transition.to,
           steps: [
@@ -178,7 +203,7 @@ export const compileTransitions = (
               kind: 'crossfade',
               fromSlot: 'active',
               toSlot: 'inactive',
-              track: firstStageTrack,
+              track: entryTrack,
               durationMs: tailMs,
             },
           ],
@@ -194,7 +219,7 @@ export const compileTransitions = (
       );
 
       if (!isDestinationOverride) {
-        compiled.set(key, {
+        setCompiled({
           from: transition.from,
           to: transition.to,
           steps: [
@@ -216,7 +241,7 @@ export const compileTransitions = (
         return;
       }
 
-      compiled.set(key, {
+      setCompiled({
         from: transition.from,
         to: transition.to,
         steps: [
@@ -242,7 +267,7 @@ export const compileTransitions = (
             kind: 'crossfade',
             fromSlot: 'inactive',
             toSlot: 'active',
-            track: firstStageTrack,
+            track: entryTrack,
             durationMs: tailMs,
           },
         ],
@@ -276,7 +301,7 @@ export const compileTransitions = (
     // direction 'out' — that lands us on the same chunk's last frame.
     const startChunkEndPoint = resolveChunk(startChunkMasterEnd, 'out');
 
-    compiled.set(key, {
+    setCompiled({
       from: transition.from,
       to: transition.to,
       steps: [

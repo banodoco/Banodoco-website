@@ -1,39 +1,21 @@
 import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { BASE_MODEL_MAP, BASE_MODELS } from './constants';
+import { BASE_MODEL_MAP, BASE_MODELS, STATUS_ORDER } from './constants';
 import type { Asset, ResourceFilters } from './types';
 
 const DEBOUNCE_MS = 300;
 
+const DEFAULT_FILTERS: ResourceFilters = {
+  type: 'all',
+  status: 'curated',
+  mediaType: 'all',
+  baseModel: null,
+  loraType: null,
+  search: '',
+};
+
 const MUSIC_KEYWORDS = ['music', 'audio', 'song', 'sound', 'udio', 'suno', 'musicgen', 'stable-audio', 'riffusion', 'audioldm'];
 const VIDEO_KEYWORDS = ['video', 'wan', 'ltx', 'hunyuan', 'cogvideo', 'animatediff', 'kling', 'veo'];
 const IMAGE_KEYWORDS = ['image', 'flux', 'sdxl', 'stable-diffusion', 'stable diffusion', 'midjourney'];
-
-function parseFilters(params: URLSearchParams): ResourceFilters {
-  return {
-    type: (['all', 'lora', 'workflow'].includes(params.get('type') ?? '')
-      ? params.get('type') as ResourceFilters['type']
-      : 'all'),
-    status: params.get('status') === 'all' ? 'all' : 'curated',
-    mediaType: (['all', 'video', 'image', 'music'].includes(params.get('mediaType') ?? '')
-      ? params.get('mediaType') as ResourceFilters['mediaType']
-      : 'all'),
-    baseModel: params.get('baseModel') || null,
-    loraType: params.get('loraType') || null,
-    search: params.get('q') || '',
-  };
-}
-
-function filtersToParams(filters: ResourceFilters): URLSearchParams {
-  const params = new URLSearchParams();
-  if (filters.type !== 'all') params.set('type', filters.type);
-  if (filters.status !== 'curated') params.set('status', filters.status);
-  if (filters.mediaType !== 'all') params.set('mediaType', filters.mediaType);
-  if (filters.baseModel) params.set('baseModel', filters.baseModel);
-  if (filters.loraType) params.set('loraType', filters.loraType);
-  if (filters.search) params.set('q', filters.search);
-  return params;
-}
 
 function getMediaTypeFromText(value: string | null | undefined): 'video' | 'image' | 'music' | null {
   if (!value) return null;
@@ -79,37 +61,35 @@ function inferAssetMediaType(asset: Asset): 'video' | 'image' | 'music' | null {
 }
 
 export function useResourceFilters(assets: Asset[]) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const filters = parseFilters(searchParams);
+  // Filters live in local component state, not the URL. Selecting a filter
+  // updates state in place and never touches the address bar (no ?status=…&q=…).
+  const [filters, setFilters] = useState<ResourceFilters>(DEFAULT_FILTERS);
 
-  const [searchInput, setSearchInput] = useState(filters.search);
+  const [searchInput, setSearchInput] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  useEffect(() => {
-    const urlSearch = searchParams.get('q') || '';
-    setSearchInput(urlSearch);
-  }, [searchParams]);
 
   const setFilter = useCallback(<K extends keyof ResourceFilters>(
     key: K,
     value: ResourceFilters[K]
   ) => {
-    const next = { ...parseFilters(searchParams), [key]: value };
-    // Reset dependent filters
-    if (key === 'type' && value !== 'lora') {
-      next.baseModel = null;
-      next.loraType = null;
-      next.mediaType = 'all';
-    }
-    // Reset base model if switching media type and current base model doesn't match
-    if (key === 'mediaType' && next.baseModel) {
-      const modelType = getModelMediaType(next.baseModel);
-      if (value !== 'all' && modelType !== value) {
+    setFilters((prev) => {
+      const next = { ...prev, [key]: value };
+      // Reset dependent filters
+      if (key === 'type' && value !== 'lora') {
         next.baseModel = null;
+        next.loraType = null;
+        next.mediaType = 'all';
       }
-    }
-    setSearchParams(filtersToParams(next), { replace: true });
-  }, [searchParams, setSearchParams]);
+      // Reset base model if switching media type and current base model doesn't match
+      if (key === 'mediaType' && next.baseModel) {
+        const modelType = getModelMediaType(next.baseModel);
+        if (value !== 'all' && modelType !== value) {
+          next.baseModel = null;
+        }
+      }
+      return next;
+    });
+  }, []);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value);
@@ -153,7 +133,7 @@ export function useResourceFilters(assets: Asset[]) {
   const filtered = useMemo(() => {
     const searchLower = filters.search.toLowerCase();
 
-    return assets.filter(asset => {
+    const matched = assets.filter(asset => {
       if (filters.status === 'curated' && asset.admin_status === 'Listed') return false;
 
       if (filters.type === 'lora' && asset.type !== 'lora') return false;
@@ -177,6 +157,25 @@ export function useResourceFilters(assets: Asset[]) {
       }
 
       return true;
+    });
+
+    const byDateDesc = (a: Asset, b: Asset) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+
+    // Sort a copy so we never mutate the upstream `assets` array.
+    if (filters.status === 'all') {
+      // "All" mode is dominated by ~122 Listed community imports vs ~10 Curated
+      // entries. Sorting curated-first would bury the freshest community
+      // resources past page 1, so "All" sorts purely newest-first by recency.
+      return [...matched].sort(byDateDesc);
+    }
+
+    // "Curated" mode keeps the editorial Curated-first ordering, then date-desc.
+    return [...matched].sort((a, b) => {
+      const rankA = STATUS_ORDER[a.admin_status ?? 'Listed'] ?? STATUS_ORDER.Listed;
+      const rankB = STATUS_ORDER[b.admin_status ?? 'Listed'] ?? STATUS_ORDER.Listed;
+      if (rankA !== rankB) return rankA - rankB;
+      return byDateDesc(a, b);
     });
   }, [assets, filters]);
 

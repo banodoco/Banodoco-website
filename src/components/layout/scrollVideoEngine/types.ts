@@ -23,6 +23,32 @@ export type Section = {
   id: string;
   stages: Stage[];
   /**
+   * Stage used when this section is entered via an ordinary adjacent transition.
+   * Defaults to 0.
+   */
+  entryStageIndex?: number;
+  /**
+   * Stage used when the user skips directly to this section. Defaults to
+   * `entryStageIndex`, so jumps start the section's own video unless a page
+   * explicitly asks for a settled frame instead.
+   */
+  jumpStageIndex?: number;
+  /**
+   * Stage that represents the section after its entry motion has completed.
+   * Defaults to the final stage.
+   */
+  settledStageIndex?: number;
+  /**
+   * Stage to fast-forward toward before leaving a section. Defaults to
+   * `settledStageIndex`.
+   */
+  catchUpStageIndex?: number;
+  /**
+   * Stage used by automatically synthesized reverse transitions. Defaults to
+   * `entryStageIndex`.
+   */
+  reverseEntryStageIndex?: number;
+  /**
    * Max playback rate (×) for the catch-up step that fast-forwards the rest video
    * when the user scrolls out before its drift completes. Default is the engine's
    * built-in `DEFAULT_CATCH_UP_MAX_SPEED` (set to feel rapid but not jarring).
