@@ -15,18 +15,14 @@ import {
 } from './config';
 import {
   DEFAULT_LOOP_EFFECT_TUNING,
-  type LoopEffectTuning,
   type LoopHideTechnique,
 } from './loopEffects/model';
 import {
-  getStoredLoopControlsOpen,
   getStoredLoopMaskSettings,
-  writeLoopControlsOpen,
   writeLoopMaskSettings,
 } from './loopEffects/storage';
 import { useLoopMaskScheduler } from './loopEffects/useLoopMaskScheduler';
 import { LoopVideoEffectStack } from './loopEffects/LoopVideoEffectStack';
-import { LoopMaskControls } from './loopEffects/LoopMaskControls';
 
 const POSTER_SRC = '/hero-poster-flipped.jpg';
 const LOOP_VIDEO_SRC = '/hero-loop-matched-v4.mp4';
@@ -71,8 +67,7 @@ export const HomeBackgroundVideo = () => {
   const [isMobile, setIsMobile] = useState(isMobileViewport);
   const [hasFirstFrame, setHasFirstFrame] = useState(false);
   const [jumpWarpActive, setJumpWarpActive] = useState(false);
-  const [loopMaskSettings, setLoopMaskSettings] = useState(getStoredLoopMaskSettings);
-  const [loopControlsOpen, setLoopControlsOpen] = useState(getStoredLoopControlsOpen);
+  const [loopMaskSettings] = useState(getStoredLoopMaskSettings);
   const loopMaskEnabled = loopMaskSettings.enabled && loopMaskSettings.effects.length > 0;
 
   const markFirstFrame = useCallback(() => {
@@ -85,7 +80,6 @@ export const HomeBackgroundVideo = () => {
 
   const {
     activeLoopMaskEffects,
-    triggerLoopMask,
     onRestStageProgress,
   } = useLoopMaskScheduler({
     loopMaskEnabled,
@@ -100,10 +94,6 @@ export const HomeBackgroundVideo = () => {
   useEffect(() => {
     writeLoopMaskSettings(loopMaskSettings);
   }, [loopMaskSettings]);
-
-  useEffect(() => {
-    writeLoopControlsOpen(loopControlsOpen);
-  }, [loopControlsOpen]);
 
   const triggerJumpWarp = useCallback(() => {
     if (JUMP_WARP_PRESETS[JUMP_WARP_PRESET].durationMs <= 0) return;
@@ -124,36 +114,6 @@ export const HomeBackgroundVideo = () => {
       clearTimeout(timeoutId);
     };
   }, [jumpWarpActive]);
-
-  const toggleLoopMaskEffect = (effect: LoopHideTechnique) => {
-    setLoopMaskSettings(previous => {
-      const effects = previous.effects.includes(effect)
-        ? previous.effects.filter(item => item !== effect)
-        : [...previous.effects, effect];
-
-      return {
-        ...previous,
-        effects,
-      };
-    });
-  };
-
-  const updateLoopEffectTuning = <Key extends keyof LoopEffectTuning>(
-    effect: LoopHideTechnique,
-    key: Key,
-    value: LoopEffectTuning[Key]
-  ) => {
-    setLoopMaskSettings(previous => ({
-      ...previous,
-      effectSettings: {
-        ...previous.effectSettings,
-        [effect]: {
-          ...(previous.effectSettings[effect] ?? DEFAULT_LOOP_EFFECT_TUNING),
-          [key]: value,
-        },
-      },
-    }));
-  };
 
   useEffect(() => {
     const slotA = slotARef.current;
@@ -245,15 +205,6 @@ export const HomeBackgroundVideo = () => {
         />
       </div>
 
-      <LoopMaskControls
-        open={loopControlsOpen}
-        onOpenChange={setLoopControlsOpen}
-        settings={loopMaskSettings}
-        onSettingsChange={setLoopMaskSettings}
-        onToggleEffect={toggleLoopMaskEffect}
-        onUpdateEffectTuning={updateLoopEffectTuning}
-        onPreview={() => triggerLoopMask('preview')}
-      />
     </>
   );
 };
