@@ -28,11 +28,10 @@
      The scene grows over 4.2s in the order a real agaric does
      (see introStateAt in mushroom-scene.js):
        0.0-1.9s   ground web strokes itself in
-       1.6-2.7s   stipe fibres draw upward -> headline rises alongside
-       2.4-3.7s   cap mesh + gills ink in       -> light spill reaches the
-                                                   page, EQUIP follows
-       3.4-3.9s   the rim ring, as a flourish
-       3.7-4.2s   the spore plume, last
+       1.6-2.8s   stalk climbs in two waves: verticals, then lattice
+       2.4-3.5s   under-cap double loop: gill sweep, then rim ring
+       3.4-4.0s   cap top surface inks in       -> light spill on the page
+       3.1-4.2s   the spore plume gathers
        4.35s+     the callouts boot up in numbered order: 01, 02, 03
      Every delay below is tuned against those beats — change one, move all.
      QA: ?introat=0.55 freezes scene AND page at that progress. ?nointro=1
@@ -628,7 +627,7 @@
   </div>
 
 <script type="module">
-import { createScene } from './mushroom-scene.js?v=1785425700';
+import { createScene } from './mushroom-scene.js?v=1785426200';
 
 // --- responsive camera compositions, keyed by mode ---
 const VIEWS = {
