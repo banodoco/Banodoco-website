@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reference vs Render</title>
+<style>
+  html,body{margin:0;height:100%;background:#08070a;color:#8a7a63;
+    font:400 11px/1.4 ui-monospace,Menlo,monospace;overflow:hidden}
+  #row{display:flex;height:100vh;align-items:center;justify-content:center;gap:2px}
+  .pane{position:relative;height:96vh;aspect-ratio:680/854;background:#000}
+  .pane img,.pane iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+  .pane img{object-fit:fill}
+  .tag{position:absolute;top:6px;left:8px;z-index:5;letter-spacing:.12em;
+    text-transform:uppercase;opacity:.5;text-shadow:0 0 6px #000}
+  /* Overlay mode: stack the two panes and cross-fade. */
+  body.overlay #row{gap:0}
+  body.overlay #b{position:absolute;left:50%;transform:translateX(-50%)}
+  body.overlay #a{position:absolute;left:50%;transform:translateX(-50%);
+    opacity:var(--mix,.5);z-index:4;mix-blend-mode:difference}
+  #ui{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:20;
+    display:flex;gap:14px;align-items:center;background:#000a;padding:6px 12px;border-radius:20px}
+  input[type=range]{width:180px}
+  button{background:#1a1512;color:#b98b52;border:1px solid #3a2c1e;
+    padding:4px 10px;border-radius:12px;font:inherit;cursor:pointer}
+</style>
+</head>
+<body>
+  <div id="row">
+    <div class="pane" id="a"><span class="tag">reference</span><img src="reference.jpg" alt="reference"></div>
+    <div class="pane" id="b"><span class="tag">render</span><iframe src="index.html"></iframe></div>
+  </div>
+  <div id="ui">
+    <button id="mode">overlay: off</button>
+    <input type="range" id="mix" min="0" max="100" value="50">
+    <button id="reload">reload render</button>
+  </div>
+<script>
+  const body = document.body, mix = document.getElementById('mix');
+  document.getElementById('mode').onclick = (e) => {
+    body.classList.toggle('overlay');
+    e.target.textContent = 'overlay: ' + (body.classList.contains('overlay') ? 'on' : 'off');
+  };
+  mix.oninput = () => body.style.setProperty('--mix', mix.value / 100);
+  document.getElementById('reload').onclick = () => {
+    const f = document.querySelector('iframe'); f.src = f.src;
+  };
+</script>
+</body>
+</html>

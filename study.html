@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study — photoreal bioluminescent mushroom</title>
+<style>
+  html, body {
+    margin: 0; height: 100%; background: #000; overflow: hidden;
+    font: 400 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #b98b52;
+  }
+  #wrap { position: fixed; inset: 0; display: grid; place-items: center; }
+  #stage {
+    position: relative;
+    height: min(100vh, calc(100vw / 0.7963));
+    aspect-ratio: 680 / 854;
+    background: #000;
+  }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+  #hud {
+    position: fixed; left: 14px; bottom: 12px;
+    letter-spacing: .04em; opacity: .42; pointer-events: none;
+    text-transform: uppercase; font-size: 10px;
+  }
+  #hud.hidden { display: none; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="wrap"><div id="stage"></div></div>
+  <div id="hud">drag&nbsp;·&nbsp;orbit &nbsp;&nbsp; scroll&nbsp;·&nbsp;zoom &nbsp;&nbsp; R&nbsp;·&nbsp;reset &nbsp;&nbsp; H&nbsp;·&nbsp;hide</div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
