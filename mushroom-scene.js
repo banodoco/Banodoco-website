@@ -99,7 +99,7 @@ const camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, 0.1, 1
   camera.position.set(0.15 + panX + Math.sin(az) * camZ, camY, Math.cos(az) * camZ);
 }
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -980,7 +980,10 @@ scene.add(stemGroup);
       }
     }
   }
-  // long vertical fiber strands — the stem's striated texture
+  // long vertical fiber strands — the stem's striated texture. They get
+  // their own buffer so the entry can draw them as a FIRST wave, with the
+  // wavier lattice mesh above following as a second wave.
+  const flp = [], flc = [], flt = [];
   const dF = Math.PI * 2 / 48; // azimuth to the neighbouring fibre
   for (let f = 0; f < 48; f++) {
     const a0 = (f / 48) * Math.PI * 2 + gauss() * 0.1;
@@ -995,13 +998,13 @@ scene.add(stemGroup);
       const tf = new THREE.Vector3(Math.cos(a + dF) * r - Math.cos(a) * r, 0,
                                    Math.sin(a + dF) * r - Math.sin(a) * r);
       if (prev) {
-        lp.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-        lt.push(prevT.x, prevT.y, prevT.z, tf.x, tf.y, tf.z);
-        pushC(lc, b + gauss() * 0.04); pushC(lc, b + gauss() * 0.04);
+        flp.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+        flt.push(prevT.x, prevT.y, prevT.z, tf.x, tf.y, tf.z);
+        pushC(flc, b + gauss() * 0.04); pushC(flc, b + gauss() * 0.04);
         if (f % 5 === 0) { // every fifth fiber is a heavier structural strand
-          lp.push(prev.x + 0.009, prev.y, prev.z, p.x + 0.009, p.y, p.z);
-          lt.push(prevT.x, prevT.y, prevT.z, tf.x, tf.y, tf.z);
-          pushC(lc, b * 0.8); pushC(lc, b * 0.8);
+          flp.push(prev.x + 0.009, prev.y, prev.z, p.x + 0.009, p.y, p.z);
+          flt.push(prevT.x, prevT.y, prevT.z, tf.x, tf.y, tf.z);
+          pushC(flc, b * 0.8); pushC(flc, b * 0.8);
         }
         if (rand() < 0.09) {
           pp.push(p.x, p.y, p.z);
@@ -1012,7 +1015,8 @@ scene.add(stemGroup);
       prev = p; prevT = tf;
     }
   }
-  stemGroup.add(makeDenseLines(lp, lc, lt, 0.32));
+  stemGroup.add(makeDenseLines(flp, flc, flt, 0.32)); // wave 1: vertical strands
+  stemGroup.add(makeDenseLines(lp, lc, lt, 0.32));    // wave 2: lattice mesh
   stemGroup.add(makePoints(pp, pc, ps, 0.7));
 }
 
@@ -1517,12 +1521,16 @@ const animators = new Map(); // name -> fn(t, dt)
  *  second addAnimator with the same name replaces the callback in place. */
 function addAnimator(name, fn) { animators.set(name, fn); return () => animators.delete(name); }
 
+// Collected once — a full scene.traverse() per frame just to poke a uniform
+// is pure overhead once the graph is final.
+const _timeUniforms = [];
+scene.traverse(o => {
+  if (o.material && o.material.uniforms && o.material.uniforms.time) {
+    _timeUniforms.push(o.material.uniforms.time);
+  }
+});
 addAnimator('uniform-time', (t) => {
-  scene.traverse(o => {
-    if (o.material && o.material.uniforms && o.material.uniforms.time) {
-      o.material.uniforms.time.value = t;
-    }
-  });
+  for (const u of _timeUniforms) u.value = t;
 });
 
 // the body leans downwind: negative z-rotation tips the cap toward +x, the
@@ -1551,12 +1559,14 @@ addAnimator('spore-drift', (t, dt) => {
   const gust = 0.72 + 0.28 * breeze(t);   // gusts surge the drift as the body leans
   const k = Math.min(dt, 0.033) * 60;     // advance per 60fps-equivalent frame
   const pos = sporePts.geometry.attributes.position;
+  const arr = pos.array; // raw typed array: the getter/setter API costs real
+                         // time at 4200 spores x 60fps in the hottest JS loop
   for (let i = 0; i < pos.count; i++) {
     const i3 = i * 3;
     // the gills that release this spore are swaying, so its origin swings too
     const gx = sporeOrigin[i3] * swayCos - sporeOrigin[i3 + 1] * swaySin;
     const gy = sporeOrigin[i3] * swaySin + sporeOrigin[i3 + 1] * swayCos;
-    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    let x = arr[i3], y = arr[i3 + 1], z = arr[i3 + 2];
     // Under the cap the air is still, so a fresh spore drops clear of the gills
     // before the wind takes hold. That handover is measured in TIME, not in
     // distance travelled: the drift is slow enough (~0.06 units/s) that a
@@ -1573,7 +1583,7 @@ addAnimator('spore-drift', (t, dt) => {
     if (x > 6.8 || y > 7.6 || y < 0.2 || x < gx - 2.5) {
       x = gx; y = gy; z = sporeOrigin[i3 + 2]; sporeAge[i] = 0;
     }
-    pos.setXYZ(i, x, y, z);
+    arr[i3] = x; arr[i3 + 1] = y; arr[i3 + 2] = z;
   }
   pos.needsUpdate = true;
 });
@@ -1627,8 +1637,9 @@ function _shellFade(shells, k, clip) {
 function shellsAt(p) {
   // solidity follows the ink: each shell fades in WHILE its region is being
   // stroked, so the body fills in under the accumulating lines. The stem
-  // shell must ride the fibre window — faded in any later, it reads as a
-  // black slab dropping over an already-finished stalk.
+  // shell's clip plane also RISES with wave 1's climbing front (capped at
+  // the cap line), so no dark body ever stands above the drawn strands.
+  _stemClip[0].constant = Math.min(3.65, Math.max(0.02, ((p - 0.40) / 0.14) * 3.9));
   _shellFade(_stemShells, Math.min(1, Math.max(0, (p - 0.40) / 0.18)), _stemClip);
   _shellFade(_capShells, Math.min(1, Math.max(0, (p - 0.56) / 0.16)), null);
 }
@@ -1640,18 +1651,63 @@ function shellsRestore() {
   const filt = list => list.filter(o => o.material &&
     ((o.material.uniforms && o.material.uniforms.uWin) || o.material.userData.uWin));
   const [web, myc, mossPts, pools, roots, ribbon, beads] = filt(groundGroup.children);
-  const [fibres, stemPts] = filt(stemGroup.children);
+  const [stemVerts, stemMesh, stemPts] = filt(stemGroup.children);
   const [capMesh, overlay, overlayPts, gills, gillCore, rim, rimPts, capBeads] =
     filt(mushroom.children);
   const [motes, spores] = filt(scene.children);
+  // The ground does not scatter in at random — it CONVERGES. Every ground
+  // vertex is re-keyed to draw by distance from the mushroom's base,
+  // outermost first, so all the threads stream inward together and arrive
+  // at the foot of the stem just as the stalk fires upward. The mushroom
+  // is what everything is moving toward.
+  function convergeDraw(obj) {
+    const pos = obj.geometry.attributes.position;
+    const a = obj.geometry.attributes.aDraw;
+    let rMin = Infinity, rMax = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      const r = Math.hypot(pos.getX(i), pos.getZ(i));
+      if (r < rMin) rMin = r;
+      if (r > rMax) rMax = r;
+    }
+    const span = (rMax - rMin) || 1;
+    for (let i = 0; i < pos.count; i++) {
+      const r = Math.hypot(pos.getX(i), pos.getZ(i));
+      a.setX(i, (rMax - r) / span);
+    }
+    a.needsUpdate = true;
+  }
+  for (const o of [web, myc, mossPts, pools, roots, ribbon, beads]) convergeDraw(o);
+  // The stalk rises the same way: draw order re-keyed by HEIGHT, so every
+  // strand climbs together as one wave (a ring of ember light riding up the
+  // stem) instead of strand-by-strand around the circumference — which made
+  // far-side strands look like they simply appeared.
+  function riseDraw(obj) {
+    const pos = obj.geometry.attributes.position;
+    const a = obj.geometry.attributes.aDraw;
+    let yMin = Infinity, yMax = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y < yMin) yMin = y;
+      if (y > yMax) yMax = y;
+    }
+    const span = (yMax - yMin) || 1;
+    for (let i = 0; i < pos.count; i++) a.setX(i, (pos.getY(i) - yMin) / span);
+    a.needsUpdate = true;
+  }
+  for (const o of [stemVerts, stemMesh, stemPts]) riseDraw(o);
   const WINDOWS = [
-    [web, 0.00, 0.36], [myc, 0.05, 0.38], [mossPts, 0.10, 0.42],
-    [roots, 0.10, 0.44], [beads, 0.14, 0.46], [ribbon, 0.16, 0.46],
-    [pools, 0.22, 0.46],
-    [fibres, 0.38, 0.62], [stemPts, 0.42, 0.64],
-    [capMesh, 0.56, 0.76], [overlay, 0.60, 0.80], [overlayPts, 0.64, 0.82],
-    [gills, 0.64, 0.86], [gillCore, 0.70, 0.86], [capBeads, 0.68, 0.88],
-    [rim, 0.80, 0.93], [rimPts, 0.84, 0.94],
+    // one shared converging wave: threads lead, dust trails a half-beat
+    [web, 0.00, 0.40], [myc, 0.02, 0.40], [roots, 0.00, 0.40],
+    [ribbon, 0.02, 0.40], [mossPts, 0.06, 0.42], [beads, 0.06, 0.42],
+    [pools, 0.10, 0.42],
+    // the stalk climbs in two waves: strong verticals, then the lattice
+    [stemVerts, 0.38, 0.52], [stemMesh, 0.46, 0.64], [stemPts, 0.50, 0.66],
+    // under the cap, two loops — the gill sweep, then the rim right at the
+    // edge chasing it — and only then does the cap top surface ink in
+    [gills, 0.56, 0.74], [gillCore, 0.64, 0.76],
+    [rim, 0.72, 0.84], [rimPts, 0.76, 0.86],
+    [capMesh, 0.80, 0.94], [overlay, 0.84, 0.96], [overlayPts, 0.86, 0.97],
+    [capBeads, 0.82, 0.96],
     // spores get the longest single window — the plume should gather slowly,
     // still settling as everything else finishes
     [motes, 0.30, 0.70], [spores, 0.74, 1.00],
@@ -1662,7 +1718,7 @@ function shellsRestore() {
   // swallowed as the cap's body fades in — drawn, then un-drawn. So the
   // stipe strokes stop at the cap line instead; the buried joint never
   // draws, and the lid lifts invisibly behind the shells once parked.
-  for (const o of [fibres, stemPts]) o.material.uniforms.uClampY.value = 3.65;
+  for (const o of [stemVerts, stemMesh, stemPts]) o.material.uniforms.uClampY.value = 3.65;
 }
 
 // ?introat=P (0..1) freezes the drawing at that progress for frame inspection
@@ -1706,9 +1762,7 @@ function animate() {
 }
 animate();
 
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
+function syncRenderSizes() {
   renderer.setSize(innerWidth, innerHeight);
   const db = renderer.getDrawingBufferSize(new THREE.Vector2());
   composer.renderTarget1.setSize(db.width, db.height);
@@ -1716,6 +1770,32 @@ addEventListener('resize', () => {
   taaPass.setSize(db.width, db.height);
   bloom.setSize(innerWidth, innerHeight); // bloom's spread is tuned in CSS pixels
   for (const m of _denseMats) m.uniforms.uRes.value.set(db.width, db.height);
+}
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  syncRenderSizes();
+});
+
+// ---- adaptive resolution: keep weak GPUs smooth ----
+// The pipeline (4x MSAA + bloom + TAA at up to 2x DPR) is heavy for older
+// hardware. If the frame budget is blown for a sustained window, step the
+// pixel ratio down a notch and re-check. One-way ratchet — it never steps
+// back up, so there is no visible resolution flicker; on machines that hold
+// 60fps it never engages at all.
+let _perfTime = 0, _perfFrames = 0;
+addAnimator('perf-governor', (t, dt) => {
+  _perfTime += dt;
+  _perfFrames++;
+  if (_perfTime < 2.5) return;
+  const avgMs = (_perfTime / _perfFrames) * 1000;
+  _perfTime = 0;
+  _perfFrames = 0;
+  const pr = renderer.getPixelRatio();
+  if (avgMs > 24 && pr > 1) {
+    renderer.setPixelRatio(Math.max(1, pr - 0.25));
+    syncRenderSizes();
+  }
 });
 
 // ---- easing used by the view tween below ----
