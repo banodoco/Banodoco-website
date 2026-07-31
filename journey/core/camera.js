@@ -2,7 +2,7 @@
 // camera path through six chapter clusters, with organic occlusion veils at the
 // five anatomical boundaries. See CONTRACT.md for ranges and cluster envelopes.
 import * as THREE from 'three';
-import { easings, noise3 } from '../lib/helpers.js';
+import { easings, noise3 } from '../lib/helpers.js?v=6';
 
 export const CHAPTER_RANGES = [
   { id: 'mission', start: 0.000, end: 0.135 },
@@ -23,6 +23,10 @@ export const CLUSTER_OFFSETS = {
 };
 
 export const VEIL_HALF = 0.018; // half-width of each boundary veil in p units
+// Canonical rest band (chapter-local progress) in which copy and hotspot
+// labels are shown — single source for core/main.js and core/interact.js.
+export const REST_LO = 0.20;
+export const REST_HI = 0.80;
 
 // Boundary veil flavors: [mission→equip, equip→connect, connect→inspire,
 // inspire→owned, owned→final]
@@ -63,9 +67,9 @@ const PATHS = {
   // cp 0.20–0.80 rest band.
   connect: [
     { t: 0.00, pos: V(3.0, 1.2, 0.5),   look: V(10.0, 2.8, 3.0), fov: 55 },
-    { t: 0.26, pos: V(5.2, 2.0, -2.6),  look: V(9.5, 2.5, 0.5), fov: 52 },
-    { t: 0.50, pos: V(2.6, 2.2, -5.4),  look: V(-4.5, 2.9, 7.8), fov: 52 },
-    { t: 0.76, pos: V(-2.0, 2.4, -6.5), look: V(2.0, 3.0, -8.3), fov: 52 },
+    { t: 0.26, pos: V(7.6, 2.0, -4.4),  look: V(9.5, 2.5, 0.5), fov: 52 },
+    { t: 0.50, pos: V(3.9, 2.2, -8.1),  look: V(-4.5, 2.9, 7.8), fov: 52 },
+    { t: 0.76, pos: V(-3.1, 2.4, -8.8), look: V(2.0, 3.0, -8.3), fov: 52 },
     { t: 1.00, pos: V(2.8, 3.6, -7.5),  look: V(0.0, 5.2, -2.0), fov: 56 },
   ],
   inspire: [
@@ -186,6 +190,14 @@ export function createCameraDirector(camera, veilParent) {
     const c = chapterAt(p);
     const t = localProgress(p, c);
     const s = samplePath(c.id, t);
+    // deliberate portrait pose: a tall frame can't hold the landscape framing,
+    // so back the camera off along its own axis and open the fov a touch —
+    // the whole composition (organism + copy space) survives the rotation
+    if (camera.aspect < 1) {
+      const back = 1.30 - camera.aspect * 0.22; // ≈1.16–1.30 depending on how tall
+      s.pos.sub(s.look).multiplyScalar(back).add(s.look);
+      s.fov = Math.min(s.fov + 6, 62);
+    }
     const off = CLUSTER_OFFSETS[c.id];
     _pos.copy(s.pos).add(off);
     _look.copy(s.look).add(off);

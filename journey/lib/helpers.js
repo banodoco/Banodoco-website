@@ -205,7 +205,6 @@ export function makePulseMat(baseColor = 0xd9a441, opts = {}) {
     uPulseColor: { value: new THREE.Color(opts.pulseColor ?? 0xf0c877) },
     uPulseWidth: { value: opts.pulseWidth ?? 0.12 },
     uTwinkle: { value: opts.twinkle ?? 0.35 },
-    uFogColor: { value: new THREE.Color(opts.fogColor ?? 0x0a0805) },
     uFogDensity: { value: opts.fogDensity ?? 0.0 },
   };
   const mat = new THREE.ShaderMaterial({
@@ -228,7 +227,7 @@ export function makePulseMat(baseColor = 0xd9a441, opts = {}) {
       }`,
     fragmentShader: /* glsl */`
       uniform float uTime, uPulse, uPulseOn, uBase, uPulseWidth, uTwinkle, uFogDensity;
-      uniform vec3 uColor, uPulseColor, uFogColor;
+      uniform vec3 uColor, uPulseColor;
       varying float vAlong, vStrand, vFogDepth;
       void main() {
         // asynchronous ambient twinkle, randomized per strand
@@ -239,7 +238,7 @@ export function makePulseMat(baseColor = 0xd9a441, opts = {}) {
         float pulse = uPulseOn * exp(-d * d / (uPulseWidth * uPulseWidth)) ;
         vec3 col = uColor * amb + uPulseColor * pulse;
         float fogF = 1.0 - exp(-uFogDensity * uFogDensity * vFogDepth * vFogDepth);
-        col = mix(col, uFogColor * 0.0, clamp(fogF, 0.0, 1.0)); // additive: fade to black
+        col *= 1.0 - clamp(fogF, 0.0, 1.0); // additive: depth fades to black
         gl_FragColor = vec4(col, 1.0);
       }`,
   });

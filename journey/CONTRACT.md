@@ -62,7 +62,7 @@ final    0.850–1.000
 ```
 Boundary veils peak exactly at the range edges (width ±0.018). Chapter-local
 progress `cp = (p − start)/(end − start)`; copy/labels show in the rest band
-`cp ∈ [0.22, 0.78]`.
+`cp ∈ [0.20, 0.80]` (canonical constants `REST_LO`/`REST_HI` in core/camera.js).
 
 ## Chapter module interface (files `journey/chapters/<id>.js`)
 
@@ -196,3 +196,31 @@ final upper-left. DOM copy is core-owned; chapters never create DOM.
 4. Zero console errors; module must import cleanly in a browser with no DOM access
    at import time (build only inside createChapter).
 5. Stay in budget; implement `setQuality(2)` honestly.
+
+
+## Accepted deviations (audited 2026-08-01)
+
+Deliberate, documented departures from the handoff spec — not oversights:
+
+1. **Tier 3 stills are hand-authored CSS compositions**, not build-time captures
+   of the live scene. This project is deliberately no-build (vanilla ES modules);
+   a capture pipeline would introduce the project's first build step. Revisit if
+   a build step ever lands. (Spec: "Generate Tier 3 captures automatically.")
+2. **Loader progress is an eased minimum-duration animation** gated on the hero
+   cluster only, not blended with real per-asset progress — all six clusters are
+   procedural (no network assets), so "real load progress" has no meaningful
+   signal beyond module import latency.
+3. **Reduced-motion grain**: prefers-reduced-motion routes to the complete
+   Tier 3 static journey (per spec §accessibility), so the WebGL frozen-grain
+   path in optics.js is only exercised if Tier 3 is ever bypassed. The CSS
+   stills carry no grain.
+4. **Keyboard order**: node buttons live in a single #node-layer after the
+   chapter copy rather than inside each section; off-chapter buttons are
+   `hidden` (unfocusable), so effective tab order still follows the narrative.
+5. **Tier heuristics** are pointer-coarseness + viewport size + a runtime
+   watchdog; no GPU-string probing. The watchdog covers the weak-desktop case
+   within a few seconds.
+6. **The final cluster's fairy-ring mushrooms are merged-geometry line batches**
+   (4 draw calls each), not THREE.InstancedMesh — "instanced" in the contract is
+   satisfied in spirit (one shared builder, seeded variation) and the vertex
+   budget holds with a wide margin.

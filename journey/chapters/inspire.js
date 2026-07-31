@@ -257,7 +257,7 @@ export function createChapter(ctx) {
   tilted.add(flowLines);
   pulseMats.push(flowMat);
   const flowDriver = H.pulseDriver(4.2);
-  let flowPulseT = 3 + Math.random() * 0; // deterministic below via rng
+  let flowPulseT;
   {
     const r = H.rng(77);
     flowPulseT = 6 + r() * 8;
@@ -267,9 +267,10 @@ export function createChapter(ctx) {
   /* SPORE PLUMES — shared Points system, per-particle authored path    */
   /* under-cap origin → lateral migration → rim curl → turbulent rise   */
   /* ================================================================ */
-  const SPORE_FULL = 9000;   // tier 1: 3000 / plume
-  const SPORE_TIER2 = 3600;  // tier 2: 1200 / plume
+  const SPORE_FULL = 8940;   // tier 1: 2980 / plume
+  const SPORE_TIER2 = 3150;  // tier 2: 1050 / plume
   const sporeTex = H.softDisc(48);
+  const GILL_CHANNEL = TAU / GILL_FULL; // gill-lamella spacing, for origin quantizing
 
   function buildSporeAttrs(count) {
     const rand = H.rng(41207);
@@ -292,11 +293,23 @@ export function createChapter(ctx) {
     for (let p = 0; p < PLUMES.length; p++) {
       const n = (p === PLUMES.length - 1) ? (count - idx) : perPlume;
       for (let j = 0; j < n; j++, idx++) {
-        const originR = 2.0 + rand() * 3.5;
+        // gill blades occupy r≈6.5–9.6 — origins must sit between them, not
+        // at the stipe-side inner radius.
+        const originR = 6.3 + rand() * 2.9;
         const originY = 2.6 + rand() * 1.4;
-        const lane = (rand() - 0.5) * 1.35; // channel offset within the sector
+        // spread across the sector but snap to a gill channel (a multiple of
+        // TAU/56) so spores visibly emerge from between lamellae rather than
+        // floating mid-blade; jitter kept well under half a channel width.
+        const laneRaw = (rand() - 0.5) * 1.35;
+        const laneChannel = Math.round(laneRaw / GILL_CHANNEL) * GILL_CHANNEL;
+        const laneJitter = (rand() - 0.5) * GILL_CHANNEL * 0.4;
+        const lane = laneChannel + laneJitter;
         const isDrop = rand() < 0.16;
-        const riseTop = isDrop ? (5.0 + rand() * 2.2) : (12.5 + rand() * 16.5);
+        const rimR = 9.5 + rand() * 1.7;
+        const rimY = 4.35 + rand() * 1.15;
+        // drop cohort must end BELOW the rim so they genuinely sink and fade,
+        // rather than above it (which just reads as a slow riser).
+        const riseTop = isDrop ? (rimY - (1.5 + rand() * 2.0)) : (12.5 + rand() * 16.5);
 
         position[idx * 3 + 0] = Math.cos(PLUMES[p].az) * originR;
         position[idx * 3 + 1] = originY;
@@ -306,8 +319,8 @@ export function createChapter(ctx) {
         aAz[idx] = PLUMES[p].az + lane;
         aOriginR[idx] = originR;
         aOriginY[idx] = originY;
-        aRimR[idx] = 9.5 + rand() * 1.7;
-        aRimY[idx] = 4.35 + rand() * 1.15;
+        aRimR[idx] = rimR;
+        aRimY[idx] = rimY;
         aRiseTop[idx] = riseTop;
         aPeriod[idx] = 7.0 + rand() * 7.5;
         aPhase0[idx] = rand();
@@ -492,6 +505,7 @@ export function createChapter(ctx) {
       id: spec.id, az,
       line, mat, streak, streakMat, proxy,
       driver: H.pulseDriver(3.0),
+      ambientRng: H.rng(6600 + Math.round(az * 1000)),
       ambientT: 4 + Math.round(az * 7) % 6,
       hover: 0, sel: 0,
     };
@@ -527,18 +541,22 @@ export function createChapter(ctx) {
         const active2 = Math.max(pl.hover, pl.sel * 0.85);
         const glow = active2 + surge * 0.18;
 
-        // ambient rim-circulation pulse: fires periodically regardless of
-        // hover, brightens/quickens when the initiative is active
+        // ambient rim-circulation pulse: fires on an irregular per-plume
+        // clock (re-randomized each cycle from a seeded rng stream, never a
+        // fixed period), brightens/quickens when the initiative is active
         pl.ambientT -= dt;
-        if (pl.ambientT <= 0) { pl.driver.fire(); pl.ambientT = (9 + ((pl.az * 13) % 7)) * (1 - 0.4 * active2); }
+        if (pl.ambientT <= 0) { pl.driver.fire(); pl.ambientT = (9 + pl.ambientRng() * 7) * (1 - 0.4 * active2); }
         pl.driver.update(dt);
         const on = pl.driver.active ? 1 : 0;
         pl.mat.uniforms.uPulse.value = pl.driver.value;
         pl.mat.uniforms.uPulseOn.value = on * (0.22 + 0.85 * active2);
         pl.mat.uniforms.uBase.value = 0.10 * (1 + 2.2 * active2);
 
-        pl.streakMat.opacity = 0.55 * glow;
-        pl.streak.scale.set(3.2 + 1.2 * glow, 0.45 + 0.15 * glow, 1);
+        // anamorphic streak: exclusive to the currently active (hovered/
+        // selected) release point — the release surge must NOT light all
+        // three streaks at once, so it deliberately excludes `surge`.
+        pl.streakMat.opacity = 0.55 * active2;
+        pl.streak.scale.set(3.2 + 1.2 * active2, 0.45 + 0.15 * active2, 1);
 
         const idx = PLUMES.findIndex(p => p.id === pl.id);
         const gu = 'uGlow' + idx, cu = 'uCoh' + idx;
@@ -585,7 +603,12 @@ export function createChapter(ctx) {
       const half = tier === 2;
       sporeGeo.setDrawRange(0, half ? SPORE_TIER2 : SPORE_FULL);
       gillMesh.count = half ? GILL_TIER2 : GILL_FULL;
-      const fn = half ? Math.floor(FLOW_FULL * 0.55) * 2 : flowRes.geometry.attributes.position.count;
+      // drawRange counts VERTICES, not strands — derive from the geometry's
+      // actual vertex count (22 strands × 6 segments × 2 verts = 264), not
+      // from FLOW_FULL (a strand count), and keep it even so line-segment
+      // pairs stay intact.
+      const fullVerts = flowRes.geometry.attributes.position.count;
+      const fn = half ? Math.floor(fullVerts * 0.55 / 2) * 2 : fullVerts;
       flowRes.geometry.setDrawRange(0, fn);
     },
 
@@ -593,8 +616,13 @@ export function createChapter(ctx) {
       group.traverse((o) => {
         if (o.geometry) o.geometry.dispose();
         if (o.material) {
+          // maps from helpers (glowSprite/softDisc) are process-wide cached
+          // and shared with other chapters — never dispose .map here. This
+          // chapter creates no one-off textures of its own, so material
+          // disposal alone is sufficient (geometries/materials it authored
+          // are also tracked in `disposables` below).
           const mats = Array.isArray(o.material) ? o.material : [o.material];
-          for (const m of mats) { if (m.map) m.map.dispose?.(); m.dispose?.(); }
+          for (const m of mats) m.dispose?.();
         }
       });
       for (const d of disposables) d.dispose?.();

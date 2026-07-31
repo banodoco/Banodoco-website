@@ -1,7 +1,10 @@
 // Shared procedural mushroom builder for instanced/repeated fruiting bodies
 // (used by the final fairy ring; small luminous line-work agarics).
 // buildMushroom(THREE, helpers, { seed, height, capRadius, tilt, detail })
-//   → { group, capTopY }
+//   → { group, capTopY, capBaseY, mats }
+// capBaseY is the cap rim (under-cap release height); mats are the time-driven
+// pulse materials — callers MUST tick mats[i].uniforms.uTime or the fruiting
+// bodies sit motionless.
 // Child ordering matters for the callers' cheap LOD pass: the first two
 // drawable children are the essential silhouette (body strands, gills);
 // later children may be hidden on low detail.
@@ -143,5 +146,5 @@ export function buildMushroom(T, helpers, opts = {}) {
   rimLines.frustumCulled = false;
   group.add(rimLines);
 
-  return { group, capTopY };
+  return { group, capTopY, capBaseY, mats: [bodyMat, gillMat, rimMat] };
 }

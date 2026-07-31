@@ -115,7 +115,9 @@ const GradePassShader = {
       float rolloff = smoothstep(0.55, 1.5, lum);
       vec3 softClipped = color / (1.0 + max(color - 0.9, vec3(0.0)));
       color = mix(color, softClipped, rolloff);
-      color = mix(color, emberTarget * max(lum, 0.001), rolloff * 0.35);
+      vec3 emberSoft = emberTarget * max(lum, 0.001);
+      emberSoft = emberSoft / (1.0 + max(emberSoft - 0.9, vec3(0.0)));
+      color = mix(color, emberSoft, rolloff * 0.35);
 
       // --- 3. luminance-weighted fine animated grain ---
       float gLum = luma(color);

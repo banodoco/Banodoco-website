@@ -1,7 +1,7 @@
 // Canonical journey state: native page scroll ↔ progress p ∈ [0,1] ↔ routes.
 // Nav clicks animate scroll (cancelled by any manual scroll intent).
 // Deep links jump instantly. One source of truth: the scroll position.
-import { CHAPTER_RANGES, chapterAt } from './camera.js';
+import { CHAPTER_RANGES, chapterAt } from './camera.js?v=6';
 
 export function createJourneyState({ onNavigate } = {}) {
   const spacer = document.getElementById('scroll-spacer');
@@ -48,12 +48,13 @@ export function createJourneyState({ onNavigate } = {}) {
     const [chap, node] = h.split('/').filter(Boolean);
     return { chapter: chap || null, node: node || null };
   }
-  function writeRoute(chapterId, nodeId) {
+  function writeRoute(chapterId, nodeId, { push = false } = {}) {
     const h = nodeId ? `#/${chapterId}/${nodeId}` : `#/${chapterId}`;
     if (location.hash !== h) {
       suppressRoute++;
-      history.replaceState(null, '', h);
-      // replaceState does not fire hashchange; keep counter symmetric
+      if (push) history.pushState(null, '', h);
+      else history.replaceState(null, '', h);
+      // neither fires hashchange synchronously; keep counter symmetric
       suppressRoute--;
     }
   }

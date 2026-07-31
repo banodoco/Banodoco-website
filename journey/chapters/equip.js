@@ -5,8 +5,9 @@
 // Arnold and Astrid are differentiated hyphal knots fed by real branch fibres
 // that visibly leave PYPE. See CONTRACT.md — cluster envelope "equip".
 //
-// Local envelope: fibre field radius ~14, y ∈ [−13, 27]; camera ascends near the
-// axis from (0.5,−6,2.2) to (0.8,13.5,−1.2) so the exterior is never visible.
+// Local envelope: fibre field radius ~14, y ∈ [−12.5, +25] (CONTRACT equip row);
+// camera ascends near the axis from (0.5,−6,2.2) to (0.8,13.5,−1.2) so the
+// exterior is never visible.
 import * as THREE from 'three';
 
 const TAU = Math.PI * 2;
@@ -51,6 +52,47 @@ function mergeGeos(geos) {
   return out;
 }
 
+/*
+ spreadOrder(n): a deterministic permutation of 0..n-1 whose EVERY prefix is
+ evenly distributed over the range (greedy farthest-point). Strand geometries are
+ merged in this order, so `setDrawRange` truncation at tier 2 thins a bundle
+ uniformly instead of slicing a wedge out of it. wrap=true for bundles indexed by
+ azimuth, false for bundles ordered along a line (e.g. feeders stacked in height).
+*/
+function spreadOrder(n, wrap = true) {
+  if (n < 2) return [0];
+  const picked = wrap ? [0] : [0, n - 1];
+  const left = [];
+  for (let i = 0; i < n; i++) if (picked.indexOf(i) < 0) left.push(i);
+  while (left.length) {
+    let bi = 0, bd = -1;
+    for (let a = 0; a < left.length; a++) {
+      let d = Infinity;
+      for (const p of picked) {
+        let dd = Math.abs(left[a] - p);
+        if (wrap) dd = Math.min(dd, n - dd);
+        if (dd < d) d = dd;
+      }
+      if (d > bd) { bd = d; bi = a; }
+    }
+    picked.push(left.splice(bi, 1)[0]);
+  }
+  return picked;
+}
+
+// Merge `n` topologically identical strand geometries in spread order and record
+// the index count per strand, so a strand count maps straight to a draw range.
+function mergeBundle(geos, wrap = true) {
+  const n = geos.length;
+  const ord = spreadOrder(n, wrap);
+  const geo = mergeGeos(ord.map(i => geos[i]));
+  return { geo, n, per: geo.index ? geo.index.count / n : geo.attributes.position.count / n };
+}
+
+function setStrands(rec, keep) {
+  rec.geo.setDrawRange(0, Math.round(rec.per * Math.min(keep, rec.n)));
+}
+
 /* ------------------------------------------------------------------ */
 /* sequential feeder material: one draw call, per-strand staggered pulse */
 /* ------------------------------------------------------------------ */
@@ -92,6 +134,74 @@ function makeFeederMat(baseColor, pulseColor, opts = {}) {
         float pulse = exp(-d * d / (uWidth * uWidth));
         float trail = 0.30 * exp(-abs(min(d, 0.0)) * 7.0) * step(d, 0.0);
         vec3 col = uColor * amb + uPulseColor * uPulseOn * (pulse + trail);
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* braid material: the three staggered PYPE sub-bundles in ONE draw call.
+   Reproduces helpers.makePulseMat exactly, but selects colour / base opacity /
+   pulse width / pulse phase per sub-bundle from the strand index, so the braid
+   keeps its three independent transport waves without three meshes. Selection
+   is branchless (step weights, no dynamic uniform indexing) for GLSL ES 1.00. */
+/* ------------------------------------------------------------------ */
+function makeBraidMat(opts) {
+  const c = opts.colors.map(x => new THREE.Color(x));
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uStrands: { value: opts.strands },
+      uC0: { value: c[0] }, uC1: { value: c[1] }, uC2: { value: c[2] },
+      uBaseOp: { value: new THREE.Vector3(...opts.bases) },
+      uWidth: { value: new THREE.Vector3(...opts.widths) },
+      uPulse: { value: new THREE.Vector3() },
+      uPulseOn: { value: new THREE.Vector3() },
+      uPulseColor: { value: new THREE.Color(opts.pulseColor) },
+      uTwinkle: { value: opts.twinkle },
+      uFogColor: { value: new THREE.Color(opts.fogColor ?? 0x0a0805) },
+      uFogDensity: { value: opts.fogDensity ?? 0 },
+    },
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexShader: /* glsl */`
+      attribute float aAlong;
+      attribute float aStrand;
+      uniform float uStrands;
+      varying float vAlong;
+      varying float vStrand;
+      varying float vFogDepth;
+      varying vec3 vSel;
+      void main() {
+        vAlong = aAlong;
+        vStrand = aStrand;
+        // sub-bundle = strandIndex mod 3, recovered from the packed aStrand
+        float b = mod(floor(aStrand * uStrands + 0.5), 3.0);
+        vSel = vec3(step(b, 0.5), step(0.5, b) * step(b, 1.5), step(1.5, b));
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vFogDepth = -mv.z;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */`
+      uniform float uTime, uTwinkle, uFogDensity;
+      uniform vec3 uBaseOp, uWidth, uPulse, uPulseOn;
+      uniform vec3 uC0, uC1, uC2, uPulseColor, uFogColor;
+      varying float vAlong, vStrand, vFogDepth;
+      varying vec3 vSel;
+      void main() {
+        float baseOp = dot(uBaseOp, vSel);
+        float wdt = dot(uWidth, vSel);
+        float phase = dot(uPulse, vSel);
+        float amount = dot(uPulseOn, vSel);
+        vec3 tint = uC0 * vSel.x + uC1 * vSel.y + uC2 * vSel.z;
+        float tw = 0.5 + 0.5 * sin(uTime * (0.6 + vStrand * 1.7) + vStrand * 43.7);
+        float amb = baseOp * (1.0 - uTwinkle + uTwinkle * tw);
+        float d = abs(vAlong - phase);
+        float pulse = amount * exp(-d * d / (wdt * wdt));
+        vec3 col = tint * amb + uPulseColor * pulse;
+        float fogF = 1.0 - exp(-uFogDensity * uFogDensity * vFogDepth * vFogDepth);
+        col = mix(col, uFogColor * 0.0, clamp(fogF, 0.0, 1.0)); // additive: fade to black
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
@@ -190,14 +300,15 @@ export function createChapter(ctx) {
     specs.forEach((s, i) => {
       const tex = streakTexture(4400 + i * 137);
       tex.repeat.set(s.rep, 1);
-      const geo = new THREE.CylinderGeometry(s.r, s.r * 1.08, 44, 40, 1, true);
+      // 36.6 tall centred at 6.2 → y ∈ [−12.1, 24.5], inside the equip envelope
+      const geo = new THREE.CylinderGeometry(s.r, s.r * 1.08, 36.6, 40, 1, true);
       const mat = new THREE.MeshBasicMaterial({
         map: tex, color: new THREE.Color(s.col), transparent: true,
         opacity: s.op, depthWrite: false, blending: THREE.AdditiveBlending,
         side: THREE.DoubleSide, fog: true,
       });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.y = 7;
+      mesh.position.y = 6.2;
       mesh.renderOrder = -10 + i;
       mesh.frustumCulled = false;
       group.add(mesh);
@@ -214,8 +325,8 @@ export function createChapter(ctx) {
       generator: (i, rand) => {
         const ang = rand() * TAU;
         const rr = rMin + (rMax - rMin) * Math.pow(rand(), 0.62);
-        const yBot = -13 + rand() * 4.5;
-        const yTop = 18 + rand() * 9;
+        const yBot = -12.2 + rand() * 4.2;
+        const yTop = 17.4 + rand() * 7.0;
         // patchy density: azimuth × height mask carves real dark gaps
         const dens = H.fbm3(Math.cos(ang) * 1.7, (yBot + yTop) * 0.035, Math.sin(ang) * 1.7, 3);
         if (dens < -0.10) return null;
@@ -303,6 +414,7 @@ export function createChapter(ctx) {
   });
   pulseMats.push(nearMat);
   const nearGroup = new THREE.Group();
+  let nearRec;
   {
     const rand = H.rng(7723);
     const geos = [];
@@ -310,8 +422,8 @@ export function createChapter(ctx) {
     for (let i = 0; i < HERO; i++) {
       const ang = (i / HERO) * TAU + (rand() - 0.5) * 0.5;
       const rr = 1.4 + rand() * 4.8;
-      const yBot = -13 - rand() * 1.5;
-      const yTop = 22 + rand() * 5;
+      const yBot = -11.5 - rand() * 0.7;
+      const yTop = 21.4 + rand() * 3.0;
       const segs = 20;
       const wav = 0.55 + rand() * 0.75;
       const pts = [];
@@ -331,7 +443,8 @@ export function createChapter(ctx) {
         taper: 0.7 + rand() * 0.5,
       }, i / HERO));
     }
-    const mesh = new THREE.Mesh(mergeGeos(geos), nearMat);
+    nearRec = mergeBundle(geos, true);
+    const mesh = new THREE.Mesh(nearRec.geo, nearMat);
     mesh.frustumCulled = false;
     nearGroup.add(mesh);
     group.add(nearGroup);
@@ -346,6 +459,7 @@ export function createChapter(ctx) {
     pulseColor: P.ember, fogDensity: 0.016,
   });
   pulseMats.push(fanMat);
+  let fanRec;
   {
     const rand = H.rng(3391);
     const geos = [];
@@ -357,7 +471,7 @@ export function createChapter(ctx) {
       const pts = [];
       for (let j = 0; j <= segs; j++) {
         const t = j / segs;
-        const y = 12.5 + t * 14.5;
+        const y = 12.5 + t * 11.9;
         const spread = 1 + t * t * 0.85;      // already opens a little on its own
         const nx = H.fbm3(i * 3.3, y * 0.07, 2.2, 3);
         const r2 = r0 * spread + nx * 0.5;
@@ -368,7 +482,8 @@ export function createChapter(ctx) {
         tubularSegments: 30, taper: 0.8,
       }, i / N));
     }
-    const mesh = new THREE.Mesh(mergeGeos(geos), fanMat);
+    fanRec = mergeBundle(geos, true);
+    const mesh = new THREE.Mesh(fanRec.geo, fanMat);
     mesh.frustumCulled = false;
     exitFan.add(mesh);
     group.add(exitFan);
@@ -378,15 +493,30 @@ export function createChapter(ctx) {
   /* ================================================================ */
   /* PYPE — braided fascicle hugging the axis (3 staggered sub-mats)   */
   /* ================================================================ */
-  const PY0 = -13, PY1 = 26;
+  const PY0 = -12.2, PY1 = 24.4;
+  const PYPE_STRANDS = 9;
   const pypeStates = [];
   const pypeGroup = new THREE.Group();
-  {
+  const braidMat = makeBraidMat({
+    strands: PYPE_STRANDS,
+    colors: [P.goldBright, P.gold, P.ember],
+    bases: [0.46, 0.51, 0.56],
+    widths: [0.055, 0.075, 0.095],
+    pulseColor: P.goldBright, twinkle: 0.16, fogDensity: 0.008,
+  });
+  pulseMats.push(braidMat);
+  const braidGeos = [null, null, null];       // indexed by quality tier
+  // The braid is the one bundle whose silhouette must stay 9 strands wide at both
+  // tiers, so tier 2 rebuilds it at lower tessellation rather than dropping
+  // strands. The rng is consumed identically in both passes → same strand shapes.
+  function buildBraid(q) {
+    if (braidGeos[q]) return braidGeos[q];
     const rand = H.rng(5150);
-    const STRANDS = 9;
-    const buckets = [[], [], []];
-    for (let k = 0; k < STRANDS; k++) {
-      const a0 = (k / STRANDS) * TAU + (rand() - 0.5) * 0.45;
+    const tub = q === 2 ? 46 : 110;
+    const radial = q === 2 ? 4 : 5;
+    const geos = [];
+    for (let k = 0; k < PYPE_STRANDS; k++) {
+      const a0 = (k / PYPE_STRANDS) * TAU + (rand() - 0.5) * 0.45;
       const twist = 0.10 + rand() * 0.06;
       const rBase = 0.30 + rand() * 0.44;
       const segs = 30;
@@ -401,29 +531,29 @@ export function createChapter(ctx) {
         const c = pypeCenterAt(y);
         pts.push(new V3(c.x + Math.cos(a) * r, y, c.z + Math.sin(a) * r));
       }
-      buckets[k % 3].push(tubeStrand(pts, {
-        radius: 0.045 + rand() * 0.032, radialSegments: 5,
-        tubularSegments: 110, taper: 0.9,
-      }, k / STRANDS));
+      geos.push(tubeStrand(pts, {
+        radius: 0.045 + rand() * 0.032, radialSegments: radial,
+        tubularSegments: tub, taper: 0.9,
+      }, k / PYPE_STRANDS));
     }
-    const cols = [P.goldBright, P.gold, P.ember];
-    buckets.forEach((geos, i) => {
-      const mat = H.makePulseMat(cols[i], {
-        baseOpacity: 0.46 + i * 0.05, twinkle: 0.16,
-        pulseWidth: 0.055 + i * 0.02, pulseColor: P.goldBright, fogDensity: 0.008,
-      });
-      const mesh = new THREE.Mesh(mergeGeos(geos), mat);
-      mesh.frustumCulled = false;
-      pypeGroup.add(mesh);
-      pulseMats.push(mat);
-      disposables.push(mesh.geometry);
+    const geo = mergeBundle(geos, true).geo;
+    braidGeos[q] = geo;
+    disposables.push(geo);
+    return geo;
+  }
+  // built at the incoming tier so mobile never pays for the dense braid
+  const braidMesh = new THREE.Mesh(buildBraid(ctx.tier === 2 ? 2 : 1), braidMat);
+  {
+    braidMesh.frustumCulled = false;
+    pypeGroup.add(braidMesh);
+    for (let i = 0; i < 3; i++) {
       pypeStates.push({
-        mat, base: 0.46 + i * 0.05,
+        i, base: 0.46 + i * 0.05,
         p: -0.35 - i * 0.30,
         speed: 0.135 + i * 0.028,
         k: i * 5.3 + 1.7,
       });
-    });
+    }
     group.add(pypeGroup);
     flexGroups.push({ g: pypeGroup, seed: 41.1, ampR: 0.0016, ampP: 0.010 });
   }
@@ -487,7 +617,8 @@ export function createChapter(ctx) {
       pulseColor: P.goldBright, fogDensity: 0.006,
     });
     pulseMats.push(tangleMat);
-    const tangle = new THREE.Mesh(mergeGeos(geos), tangleMat);
+    const tangleRec = mergeBundle(geos, true);
+    const tangle = new THREE.Mesh(tangleRec.geo, tangleMat);
     tangle.frustumCulled = false;
     kg.add(tangle);
     disposables.push(tangle.geometry);
@@ -503,11 +634,15 @@ export function createChapter(ctx) {
     core.scale.setScalar(S.coreScale);
     kg.add(core);
 
-    // --- raycast proxy (invisible but hittable) ---
+    // --- raycast proxy (never rendered, still hittable) ---
+    // WebGLRenderer.projectObject skips objects whose material.visible is false,
+    // so this costs zero draw calls; Mesh.raycast never consults material.visible,
+    // so the hotspot stays hit-testable (and getWorldPosition still anchors it).
     const proxyGeo = new THREE.SphereGeometry(1.2, 10, 8);
     const proxyMat = new THREE.MeshBasicMaterial({
       transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending,
     });
+    proxyMat.visible = false;
     const proxy = new THREE.Mesh(proxyGeo, proxyMat);
     kg.add(proxy);
     disposables.push(proxyGeo, proxyMat);
@@ -545,7 +680,8 @@ export function createChapter(ctx) {
       baseOpacity: 0.26, stagger: 0.5, pulseWidth: 0.085,
     });
     pulseMats.push(feederMat);
-    const feederMesh = new THREE.Mesh(mergeGeos(fgeos), feederMat);
+    const feederRec = mergeBundle(fgeos, false);   // ordered along height, not azimuth
+    const feederMesh = new THREE.Mesh(feederRec.geo, feederMat);
     feederMesh.frustumCulled = false;
     const fgrp = new THREE.Group();
     fgrp.add(feederMesh);
@@ -554,9 +690,9 @@ export function createChapter(ctx) {
     disposables.push(feederMesh.geometry);
 
     knots[id] = {
-      id, group: kg, tangle, tangleMat, tangleBase: 0.40,
+      id, group: kg, tangle, tangleMat, tangleBase: 0.40, tangleRec,
       core, coreMat, coreBase: S.coreOp, coreScale: S.coreScale,
-      feederMat, feederBase: 0.26,
+      feederMat, feederBase: 0.26, feederRec,
       driver: H.pulseDriver(2.1),
       hover: 0, sel: 0, proxy,
     };
@@ -569,6 +705,7 @@ export function createChapter(ctx) {
     const mat = new THREE.MeshBasicMaterial({
       transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending,
     });
+    mat.visible = false;                      // see knot proxy note: hittable, not drawn
     const m = new THREE.Mesh(geo, mat);
     m.position.set(c.x, 5.0, c.z);
     group.add(m);
@@ -649,8 +786,9 @@ export function createChapter(ctx) {
 
     k.tangleMat.uniforms.uBase.value = k.tangleBase * (1 + 0.75 * k.hover + 0.6 * k.sel);
     k.coreMat.opacity = Math.min(0.95, k.coreBase * (1 + 0.85 * k.hover + 0.7 * k.sel));
-    // never bouncy: pure exponential approach, knot tightens on select
-    k.tangle.scale.setScalar(1 - 0.06 * k.sel);
+    // never bouncy: pure exponential approach. The knot tightens on hover/focus
+    // (half amount) and fully on select — both driven by the smoothed values.
+    k.tangle.scale.setScalar(1 - 0.06 * Math.max(k.hover * 0.5, k.sel));
     k.core.scale.setScalar(k.coreScale * (1 + 0.05 * k.hover - 0.04 * k.sel));
   }
 
@@ -658,7 +796,9 @@ export function createChapter(ctx) {
     id: 'equip',
     group,
     hotspots: [
-      { id: 'pype', object: pypeProxy, radius: 1.4, labelOffset: { x: 0, y: 1.0, z: 0 } },
+      // higher label offset keeps the PYPE tag clear of the right-side copy
+      // block, which sits at the same screen height as the braid at rest
+      { id: 'pype', object: pypeProxy, radius: 1.4, labelOffset: { x: 0, y: 3.0, z: 0 } },
       { id: 'arnold', object: knots.arnold.proxy, radius: 1.2, labelOffset: { x: 0, y: 1.0, z: 0 } },
       { id: 'astrid', object: knots.astrid.proxy, radius: 1.2, labelOffset: { x: 0, y: 1.0, z: 0 } },
     ],
@@ -668,14 +808,16 @@ export function createChapter(ctx) {
 
       // --- PYPE: slow, uneven, staggered upward transport ---
       const hoverBoost = 1 + 1.5 * pypeHover;
+      const bu = braidMat.uniforms;
       for (const s of pypeStates) {
         const jitter = 0.5 + 0.85 * (0.5 + 0.5 * H.noise3(time * 0.11, s.k, 0));
         s.p += dt * s.speed * jitter * hoverBoost * (reduced ? 0.25 : 1);
         if (s.p > 1.3) s.p = -0.15 - rndA() * 0.7;      // uneven gaps between pulses
-        s.mat.uniforms.uPulse.value = s.p;
-        s.mat.uniforms.uPulseOn.value =
-          (s.p > -0.15 && s.p < 1.2) ? (0.45 + 0.85 * pypeHover) : 0;
-        s.mat.uniforms.uBase.value = s.base * (1 + 0.35 * pypeHover + 0.25 * pypeSel);
+        bu.uPulse.value.setComponent(s.i, s.p);
+        bu.uPulseOn.value.setComponent(s.i,
+          (s.p > -0.15 && s.p < 1.2) ? (0.45 + 0.85 * pypeHover) : 0);
+        bu.uBaseOp.value.setComponent(s.i,
+          s.base * (1 + 0.35 * pypeHover + 0.25 * pypeSel));
       }
 
       // --- rare slow transport pulse through the mid field ---
@@ -774,6 +916,10 @@ export function createChapter(ctx) {
       else if (name === 'fieldPulse') fieldDriver.fire();
     },
 
+    // Tier 2 thins EVERY bundle, not just the cheap backdrop: the line fields and
+    // bridges by draw range, the tube bundles by strand count (spread-ordered, so
+    // the thinning is even), and the braid by rebuilding at lower tessellation.
+    // All of it is real GPU work removed — see the arithmetic in the header notes.
     setQuality(tier) {
       quality = tier;
       const half = tier === 2;
@@ -785,6 +931,16 @@ export function createChapter(ctx) {
       bridges.geo.setDrawRange(0, bn - (bn % 2));
       farShells.forEach((s, i) => { s.mesh.visible = half ? i === 0 : true; });
       droplets.forEach((d, i) => { d.s.visible = half ? i === 0 : true; });
+
+      setStrands(nearRec, half ? 6 : nearRec.n);
+      setStrands(fanRec, half ? 5 : fanRec.n);
+      for (const id of Object.keys(knots)) {
+        const k = knots[id];
+        setStrands(k.tangleRec, half ? Math.round(k.tangleRec.n * 0.6) : k.tangleRec.n);
+        setStrands(k.feederRec, half ? Math.max(3, k.feederRec.n - 2) : k.feederRec.n);
+      }
+      braidMesh.geometry = buildBraid(half ? 2 : 1);
+
       exitFan.visible = true;
     },
 
@@ -792,8 +948,12 @@ export function createChapter(ctx) {
       group.traverse((o) => {
         if (o.geometry) o.geometry.dispose();
         if (o.material) {
+          // maps from helpers (glowSprite/softDisc) are process-wide cached and
+          // shared with other chapters — never dispose m.map here. Only textures
+          // this chapter authored (the far-shell streak canvases) are disposed,
+          // via `disposables`.
           const mats = Array.isArray(o.material) ? o.material : [o.material];
-          for (const m of mats) { if (m.map) m.map.dispose?.(); m.dispose?.(); }
+          for (const m of mats) m.dispose?.();
         }
       });
       for (const d of disposables) d.dispose?.();
