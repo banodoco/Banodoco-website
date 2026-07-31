@@ -566,8 +566,8 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "../vendor/three/three.module.js",
-    "three/addons/": "../vendor/three/addons/"
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
   }
 }
 </script>
@@ -627,7 +627,7 @@
   </div>
 
 <script type="module">
-import { createScene } from './mushroom-scene-2026-07-31.js';
+import { createScene } from './mushroom-scene.js?v=1785427900';
 
 // --- responsive camera compositions, keyed by mode ---
 const VIEWS = {
