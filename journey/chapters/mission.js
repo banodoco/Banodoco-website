@@ -299,11 +299,16 @@ export function createChapter(ctx) {
   /* ================================================================ */
   {
     const geo = new THREE.CircleGeometry(40, 64);
+    // depthWrite MUST stay false: the whole ground-level mycelial layer (field
+    // strands, guide strands, cta strands, cords) lives at y ≈ -0.32..0.03, i.e.
+    // BELOW this disc. Writing depth here depth-culls all of it. renderOrder
+    // -50 draws the soil first so every additive layer composites over it.
     const mat = new THREE.MeshBasicMaterial({
       color: new THREE.Color(P.soil), transparent: true, opacity: 0.90,
-      depthWrite: true, side: THREE.FrontSide, fog: true,
+      depthWrite: false, side: THREE.FrontSide, fog: true,
     });
     const mesh = new THREE.Mesh(geo, mat);
+    mesh.renderOrder = -50;
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.y = -0.03;
     group.add(mesh);
@@ -473,8 +478,12 @@ export function createChapter(ctx) {
       uTime: { value: 0 },
       uColor: { value: new THREE.Color(P.gold) },
       uPulseColor: { value: new THREE.Color(P.goldBright) },
+      uGuideColor: { value: new THREE.Color(P.ember) },
       uBase: { value: 0.05 },
       uWidth: { value: 0.14 },
+      uBoost: { value: 0 },   // chapter-exit ramp: one strand becomes THE guide
+      uLead: { value: -0.2 }, // guide head travelling outer(0) → stipe base(1)
+      uLeadAmt: { value: 0 },
     },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
@@ -487,8 +496,8 @@ export function createChapter(ctx) {
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }`,
     fragmentShader: /* glsl */`
-      uniform float uTime, uBase, uWidth;
-      uniform vec3 uColor, uPulseColor;
+      uniform float uTime, uBase, uWidth, uBoost, uLead, uLeadAmt;
+      uniform vec3 uColor, uPulseColor, uGuideColor;
       varying float vAlong, vStrand;
       float hash(float n){ return fract(sin(n) * 43758.5453); }
       void main() {
@@ -500,8 +509,14 @@ export function createChapter(ctx) {
         float d = vAlong - head;
         float pulse = lit * exp(-d * d / (uWidth * uWidth));
         float amb = uBase * (0.6 + 0.4 * sin(uTime * 0.3 + vStrand * 11.0));
-        vec3 col = uColor * amb + uPulseColor * pulse * 0.9;
-        gl_FragColor = vec4(col, amb + pulse);
+        // exit ramp: brighten, weighted toward the inner (stipe) end
+        amb *= 1.0 + uBoost * 2.2 * (0.42 + 0.58 * vAlong);
+        // the guide head itself — staggered per strand so it never reads as one ring
+        float stagger = (hash(vStrand * 29.0 + 7.0) - 0.5) * 0.22;
+        float dl = vAlong - (uLead + stagger);
+        float leadP = uLeadAmt * exp(-dl * dl / 0.0121);
+        vec3 col = uColor * amb + uPulseColor * pulse * 0.9 + uGuideColor * leadP * 1.15;
+        gl_FragColor = vec4(col, amb + pulse + leadP);
       }`,
   });
   timeMats.push(guideMat);
@@ -556,11 +571,11 @@ export function createChapter(ctx) {
         const pts = [];
         for (let s = 0; s <= STEPS; s++) {
           const t = s / STEPS;
-          pts.push(new V3(
-            THREE.MathUtils.lerp(cxo, cxi, t),
-            -0.12 + t * 0.15,
-            THREE.MathUtils.lerp(czo, czi, t),
-          ));
+          // same lateral wander the guide strands use — never a straight spoke
+          const x = THREE.MathUtils.lerp(cxo, cxi, t) + H.noise3(i * 1.9 + 11, t * 3, 2) * 0.38 * (1 - t);
+          const z = THREE.MathUtils.lerp(czo, czi, t) + H.noise3(i * 2.7 + 4.3, t * 3, 8) * 0.38 * (1 - t);
+          const y = -0.12 + t * 0.15 + H.noise3(x * 0.3, z * 0.3, t) * 0.025;
+          pts.push(new V3(x, y, z));
         }
         return pts;
       },
@@ -687,11 +702,130 @@ export function createChapter(ctx) {
     }
   }
 
+  /* ---------- foreground dust: slow motes drifting near the lens ---------- */
+  // Occupies the box the resting camera sits in (x 4..12, y 1..5, z 4..13) so a
+  // few out-of-focus motes always cross the frame without touching the organism.
+  const DUST_FULL = 54;
+  const DUST_TIER2 = 22;
+  const dustGeo = new THREE.BufferGeometry();
+  {
+    const rand = H.rng(3391);
+    const positions = new Float32Array(DUST_FULL * 3);
+    const seeds = new Float32Array(DUST_FULL);
+    const scales = new Float32Array(DUST_FULL);
+    for (let i = 0; i < DUST_FULL; i++) {
+      positions[i * 3 + 0] = 4.0 + rand() * 8.0;
+      positions[i * 3 + 1] = 1.0 + rand() * 4.0;
+      positions[i * 3 + 2] = 4.0 + rand() * 9.0;
+      seeds[i] = rand() * 1000;
+      scales[i] = 0.5 + rand() * 0.85;
+    }
+    dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    dustGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(seeds, 1));
+    dustGeo.setAttribute('aScale', new THREE.Float32BufferAttribute(scales, 1));
+  }
+  const dustMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uColor: { value: new THREE.Color(P.muted) },
+      uColor2: { value: new THREE.Color(P.goldBright) },
+      uMap: { value: H.softDisc(48) },
+      uSize: { value: 30 },
+      uOpacity: { value: 0.32 },
+    },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: /* glsl */`
+      attribute float aSeed;
+      attribute float aScale;
+      uniform float uTime, uSize;
+      varying float vFade;
+      varying float vSeed;
+      float hash(float n){ return fract(sin(n) * 43758.5453); }
+      void main() {
+        vSeed = aSeed;
+        float s1 = hash(aSeed * 1.7);
+        float s2 = hash(aSeed * 3.3);
+        vec3 p = position;
+        p.x += sin(uTime * (0.024 + s1 * 0.020) + aSeed * 2.1) * 0.60;
+        p.y += sin(uTime * (0.019 + s2 * 0.016) + aSeed * 1.3) * 0.38 + uTime * 0.006 * (s1 - 0.5);
+        p.z += cos(uTime * (0.022 + s1 * 0.018) + aSeed * 0.9) * 0.55;
+        float period = 17.0 + s2 * 15.0;
+        float ph = mod(uTime + s1 * 57.0, period) / period;
+        vFade = smoothstep(0.0, 0.16, ph) * smoothstep(1.0, 0.70, ph);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_Position = projectionMatrix * mv;
+        gl_PointSize = clamp(uSize * aScale * (1.0 / max(-mv.z, 0.6)), 1.0, 15.0);
+      }`,
+    fragmentShader: /* glsl */`
+      uniform sampler2D uMap;
+      uniform vec3 uColor, uColor2;
+      uniform float uOpacity;
+      varying float vFade;
+      varying float vSeed;
+      float hash(float n){ return fract(sin(n) * 43758.5453); }
+      void main() {
+        vec4 tex = texture2D(uMap, gl_PointCoord);
+        vec3 col = mix(uColor, uColor2, hash(vSeed * 4.7) * 0.5);
+        gl_FragColor = vec4(col, tex.a * vFade * uOpacity);
+      }`,
+  });
+  timeMats.push(dustMat);
+  const dustPoints = new THREE.Points(dustGeo, dustMat);
+  dustPoints.frustumCulled = false;
+  group.add(dustPoints);
+
+  /* ================================================================ */
+  /* MYCELIUM → FRUITING BODY PULSE HANDOFF                            */
+  /* ================================================================ */
+  // Guide-strand pulses that reach the stipe base (aAlong=1) hand off, after a
+  // short lag, to a low-amplitude upward sweep in the stipe; the surface fibres
+  // catch it slightly later, and the gills flush as it reaches the cap.
+  // Recurrence is randomized and rate-limited — never in step with the field.
+  const pulseRng = H.rng(5821);
+  function fractSin(n) { const s = Math.sin(n) * 43758.5453; return s - Math.floor(s); }
+
+  // mirrors the guide fragment shader's per-strand schedule so the handoff is
+  // actually caused by a pulse the viewer just watched arrive.
+  const guideSchedule = [];
+  for (let i = 0; i < GUIDE_FULL; i++) {
+    const h1 = fractSin((i / GUIDE_FULL) * 77.0 + 3.0);
+    guideSchedule.push({ period: 5.0 + h1 * 8.0, offset: h1 * 61.0, lastK: null });
+  }
+
+  const stipeDriver = H.pulseDriver(2.6);
+  const heroDriver = H.pulseDriver(1.7);
+  const gillDriver = H.pulseDriver(1.5);
+  let stipeQueue = -1, heroQueue = -1, gillQueue = -1;
+  let stipeCooldown = 2.5;
+  let stipeAmp = 0.3, heroAmp = 0.18, gillAmp = 0.15;
+
+  function queueHandoff(time, force) {
+    if (stipeQueue >= 0 || stipeDriver.active) return;
+    if (!force && stipeCooldown > 0) return;
+    if (!force && pulseRng() < 0.45) return;
+    stipeQueue = time + 0.28 + pulseRng() * 0.55;
+    stipeCooldown = 3.6 + pulseRng() * 5.5;
+  }
+
+  // cords carry their own slow inward pulses (aAlong 0 = near stipe, 1 = far)
+  const cordPulses = cordMeshes.map((c) => ({
+    mat: c.mat,
+    drv: H.pulseDriver(3.0 + pulseRng() * 1.8),
+    next: 1.5 + pulseRng() * 9,
+    amp: 0.20 + pulseRng() * 0.14,
+  }));
+
+  const envOf = (v) => Math.sin(Math.min(Math.max(v, 0), 1) * Math.PI);
+
   /* ================================================================ */
   /* STATE + FRAME LOOP                                                */
   /* ================================================================ */
   let quality = 1;
   const motion = reduced ? 0 : 1;
+
+  // chapter-exit guide state (finding: update() must react to cp)
+  let guideRamp = 0;
+  let leadHead = -0.2;
 
   const api = {
     id: 'mission',
@@ -707,8 +841,86 @@ export function createChapter(ctx) {
       ctaMat.uniforms.uPulseOn.value = ctaOn;
       ctaMat.uniforms.uPulse.value = ctaDriver.value;
       const ctaEnv = ctaDriver.active ? Math.sin(Math.min(ctaDriver.value, 1) * Math.PI) : 0;
-      entryGlow.mat.opacity = 0.5 * ctaEnv;
-      entryGlow.sprite.scale.setScalar(0.5 + 0.4 * ctaEnv);
+
+      /* --- chapter-exit guide: one strand takes the camera into the stipe --- */
+      const cpv = typeof cp === 'number' ? cp : 0;
+      const rampTarget = active
+        ? H.easings.smooth(THREE.MathUtils.clamp((cpv - 0.85) / 0.10, 0, 1))
+        : 0;
+      guideRamp += (rampTarget - guideRamp) * Math.min(1, dt * 2.2);
+      guideMat.uniforms.uBoost.value = guideRamp * (reduced ? 0.55 : 1);
+
+      let leadEnv = 0;
+      if (!reduced && guideRamp > 0.02) {
+        const prevHead = leadHead;
+        leadHead += dt * 0.62;
+        if (prevHead < 1.0 && leadHead >= 1.0) queueHandoff(time, true); // arrived at the base
+        if (leadHead > 1.35) leadHead = -0.12 - pulseRng() * 0.4;
+        const dh = leadHead - 1.0;
+        leadEnv = Math.exp(-dh * dh / 0.05) * guideRamp;
+      } else {
+        leadHead = -0.2;
+      }
+      guideMat.uniforms.uLead.value = leadHead;
+      guideMat.uniforms.uLeadAmt.value = guideRamp * 0.9;
+
+      entryGlow.mat.opacity = Math.max(0.5 * ctaEnv, 0.42 * leadEnv);
+      entryGlow.sprite.scale.setScalar(0.5 + 0.4 * Math.max(ctaEnv, leadEnv));
+
+      /* --- mycelium → fruiting body pulse chain --- */
+      if (!reduced) {
+        // guide pulses reaching aAlong=1 hand off to the stipe
+        for (const gs of guideSchedule) {
+          const k = Math.floor((time + gs.offset - 0.4 * gs.period) / gs.period);
+          if (gs.lastK === null) { gs.lastK = k; continue; }
+          if (k > gs.lastK) { gs.lastK = k; queueHandoff(time, false); }
+        }
+
+        if (stipeCooldown > 0) stipeCooldown -= dt;
+        if (stipeQueue >= 0 && time >= stipeQueue) {
+          stipeQueue = -1;
+          stipeDriver.duration = 2.2 + pulseRng() * 1.4;
+          stipeDriver.fire();
+          stipeAmp = 0.24 + pulseRng() * 0.16;
+          heroQueue = time + 0.16 + pulseRng() * 0.3;
+          heroAmp = 0.13 + pulseRng() * 0.10;
+          gillQueue = time + stipeDriver.duration * (0.80 + pulseRng() * 0.15);
+          gillAmp = 0.11 + pulseRng() * 0.09;
+        }
+        if (heroQueue >= 0 && time >= heroQueue) {
+          heroQueue = -1;
+          heroDriver.duration = 1.4 + pulseRng() * 0.7;
+          heroDriver.fire();
+        }
+        if (gillQueue >= 0 && time >= gillQueue) {
+          gillQueue = -1;
+          gillDriver.duration = 1.3 + pulseRng() * 0.8;
+          gillDriver.fire();
+        }
+
+        stipeDriver.update(dt); heroDriver.update(dt); gillDriver.update(dt);
+        stipeMat.uniforms.uPulse.value = stipeDriver.value;
+        stipeMat.uniforms.uPulseOn.value = stipeDriver.active ? stipeAmp * envOf(stipeDriver.value) : 0;
+        heroMat.uniforms.uPulse.value = heroDriver.value;
+        heroMat.uniforms.uPulseOn.value = heroDriver.active ? heroAmp * envOf(heroDriver.value) : 0;
+        gillMat.uniforms.uPulse.value = gillDriver.value;
+        gillMat.uniforms.uPulseOn.value = gillDriver.active ? gillAmp * envOf(gillDriver.value) : 0;
+
+        // cords: independent slow pulses travelling inward (aAlong 1 → 0)
+        for (const cp2 of cordPulses) {
+          if (!cp2.drv.active) {
+            cp2.next -= dt;
+            if (cp2.next <= 0) {
+              cp2.drv.duration = 2.8 + pulseRng() * 1.8;
+              cp2.drv.fire();
+              cp2.next = 7 + pulseRng() * 12;
+            }
+          }
+          cp2.drv.update(dt);
+          cp2.mat.uniforms.uPulse.value = 1 - cp2.drv.value;
+          cp2.mat.uniforms.uPulseOn.value = cp2.drv.active ? cp2.amp * envOf(cp2.drv.value) : 0;
+        }
+      }
 
       if (!reduced) {
         for (const g of moistureGlints) {
@@ -770,6 +982,9 @@ export function createChapter(ctx) {
       // spores: swap to a prebuilt lower-count geometry
       sporePoints.geometry = half ? sporeGeoLow : sporeGeoFull;
 
+      // foreground dust: draw-range trim (positions are already unordered)
+      dustGeo.setDrawRange(0, half ? DUST_TIER2 : DUST_FULL);
+
       // moisture glints / glow patches: hide roughly half on reduced tier
       moistureGlints.forEach((m, i) => { m.s.visible = half ? i % 2 === 0 : true; });
       glowPatches.forEach((p, i) => { p.s.visible = half ? i % 2 === 0 : true; });
@@ -781,8 +996,12 @@ export function createChapter(ctx) {
       group.traverse((o) => {
         if (o.geometry) o.geometry.dispose();
         if (o.material) {
+          // NEVER dispose m.map here: glowSprite()/softDisc() textures are
+          // module-singleton cached in helpers and shared with other chapters.
+          // Only textures this chapter authored would go in `disposables`
+          // (mission authors none).
           const mats = Array.isArray(o.material) ? o.material : [o.material];
-          for (const m of mats) { if (m.map) m.map.dispose?.(); m.dispose?.(); }
+          for (const m of mats) m.dispose?.();
         }
       });
       sporeGeoFull.dispose();

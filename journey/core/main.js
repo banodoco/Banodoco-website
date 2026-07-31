@@ -1,10 +1,10 @@
 // Boot + frame loop. One canonical journey state; chapters are lazy clusters.
 import * as THREE from 'three';
-import * as helpers from '../lib/helpers.js';
-import { createCameraDirector, CHAPTER_RANGES, CLUSTER_OFFSETS, chapterAt, localProgress } from './camera.js';
-import { createJourneyState } from './journeyState.js';
-import { createInteractions } from './interact.js';
-import { CONTENT } from './content.js';
+import * as helpers from '../lib/helpers.js?v=6';
+import { createCameraDirector, CHAPTER_RANGES, CLUSTER_OFFSETS, chapterAt, localProgress, REST_LO, REST_HI } from './camera.js?v=6';
+import { createJourneyState } from './journeyState.js?v=6';
+import { createInteractions } from './interact.js?v=6';
+import { CONTENT } from './content.js?v=6';
 
 const palette = {
   gold: 0xd9a441, goldBright: 0xf0c877, ember: 0xffb36b, deepGold: 0x8a6420,
@@ -27,6 +27,37 @@ function enterTier3(reason) {
     setTimeout(() => loaderEl.remove(), 900);
   }
   console.info('[journey] Tier 3 static journey (' + reason + ')');
+}
+
+// Single source of truth: chapter copy and footer render FROM the content
+// model at boot (all tiers), so index.html can never drift from content.js.
+// The static HTML remains as a crawlable no-JS fallback.
+function applyContentCopy() {
+  for (const [id, meta] of Object.entries(CONTENT.chapters)) {
+    const sec = document.querySelector(`.copy[data-chapter="${id}"]`);
+    if (!sec) continue;
+    const h = sec.querySelector('h1, h2');
+    if (h && meta.heading) h.textContent = meta.heading;
+    const sub = sec.querySelector('h1 + p, h2 + p');
+    if (sub && meta.sub) sub.innerHTML = meta.sub; // trusted, our own content model
+  }
+  const f = CONTENT.footer;
+  const grid = document.querySelector('#footer .footer-grid');
+  if (f && grid) {
+    const journey = Object.entries(CONTENT.chapters)
+      .filter(([id]) => id !== 'final')
+      .map(([id, m]) => `<a href="#/${id}">${m.nav}</a>`).join('');
+    const eco = f.social.concat(f.links.filter(l => !l.href.startsWith('mailto:')))
+      .filter((l, i, a) => a.findIndex(x => x.label === l.label) === i)
+      .map(l => `<a href="${l.href}" target="_blank" rel="noopener">${l.label}</a>`).join('');
+    const contact = f.links.filter(l => l.href.startsWith('mailto:'))
+      .map(l => `<a href="${l.href}">${l.href.replace('mailto:', '')}</a>`).join('');
+    grid.innerHTML =
+      `<div><h3>Banodoco</h3><p>One organism. One continuous circuit. Tools, spaces, and shared infrastructure for the open-source AI art ecosystem.</p></div>` +
+      `<div><h3>Journey</h3>${journey}</div>` +
+      `<div><h3>Ecosystem</h3>${eco}</div>` +
+      `<div><h3>Contact</h3>${contact}<p class="legal">${f.legal}</p></div>`;
+  }
 }
 
 // Always populate the accessible node information blocks (all tiers).
@@ -59,6 +90,7 @@ function populateNodeDetails() {
 }
 
 async function boot() {
+  applyContentCopy();
   if (reducedMotion) { enterTier3('prefers-reduced-motion'); wireNavStatic(); return; }
 
   let renderer;
@@ -80,7 +112,7 @@ async function boot() {
   renderer.domElement.setAttribute('aria-hidden', 'true');
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(palette.bgWarmBlack, 0.016);
+  scene.fog = new THREE.FogExp2(0x140e07, 0.016); // warm near-black: ember haze, not void
   const camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.05, 400);
 
   const veilScene = new THREE.Scene();
@@ -90,7 +122,7 @@ async function boot() {
   // optics (post stack) — degrade gracefully if it fails to build
   let optics = null;
   try {
-    const mod = await import('./optics.js');
+    const mod = await import('./optics.js?v=6');
     optics = mod.createOptics(THREE, renderer, scene, camera,
       { tier, width: innerWidth, height: innerHeight, palette, reducedMotion });
   } catch (e) {
@@ -98,10 +130,15 @@ async function boot() {
   }
 
   const journey = createJourneyState({
-    onNavigate: (r) => { if (r.node) interactions.open(r.node); },
+    // runtime hash navigation may target a chapter that hasn't lazy-loaded
+    // yet — make sure its cluster (and hotspot buttons) exist before opening
+    onNavigate: (r) => {
+      if (r.node) ensureChapter(r.chapter).then(() => interactions.open(r.node));
+    },
   });
   const interactions = createInteractions({
     camera, content: CONTENT, cameraDirector: director, journey,
+    onFocusHint: (pos) => optics?.setFocusHint(pos),
   });
 
   const ctx = { THREE, helpers, palette, tier, reducedMotion, content: CONTENT };
@@ -113,7 +150,7 @@ async function boot() {
   async function ensureChapter(id) {
     if (loaded.has(id) || failed.has(id)) return loaded.get(id);
     if (loading.has(id)) return loading.get(id);
-    const pr = import(`../chapters/${id}.js`).then(mod => {
+    const pr = import(`../chapters/${id}.js?v=6`).then(mod => {
       const ch = mod.createChapter(ctx);
       ch.group.position.copy(CLUSTER_OFFSETS[id]);
       scene.add(ch.group);
@@ -132,6 +169,7 @@ async function boot() {
   // Loading sequence: seed-spark grows while mission (hero) builds.
   const t0 = performance.now();
   await ensureChapter('mission');
+  if (failed.has('mission')) { enterTier3('hero cluster failed'); return; }
   // lazy-load the rest while the visitor reads the opening
   const rest = ['equip', 'connect', 'inspire', 'owned', 'final'];
   let restIdx = 0;
@@ -163,7 +201,7 @@ async function boot() {
 
   // QA hook (same convention as the hero page): ?dbg=1 exposes internals
   if (new URLSearchParams(location.search).has('dbg')) {
-    window.__journey = { scene, camera, loaded, journey, optics, renderer };
+    window.__journey = { scene, camera, loaded, journey, optics, renderer, interactions };
   }
 
   // raw-vs-finished debug toggle
@@ -242,8 +280,8 @@ async function boot() {
       const inRange = p >= c.start && p <= c.end;
       // first chapter is readable from page load; the epilogue stays up through
       // the long pullback
-      const lo = id === 'mission' ? -1 : 0.20;
-      const hi = id === 'final' ? 2 : 0.82;
+      const lo = id === 'mission' ? -1 : REST_LO;
+      const hi = id === 'final' ? 2 : REST_HI + 0.02; // copy lingers a touch past labels
       const vis = inRange && lcp > lo && lcp < hi && veil < 0.3 &&
         !(id === 'final' && p > 0.985); // release the epilogue copy to the footer
       el.classList.toggle('is-visible', vis);
@@ -280,6 +318,7 @@ function wireNav(journey) {
   for (const a of document.querySelectorAll('#nav [data-chapter]')) {
     a.addEventListener('click', (e) => {
       e.preventDefault();
+      journey.writeRoute(a.dataset.chapter, null, { push: true });
       journey.flyToChapter(a.dataset.chapter);
     });
   }

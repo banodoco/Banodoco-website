@@ -1262,7 +1262,10 @@ export function createChapter(ctx) {
         if (o.geometry) o.geometry.dispose();
         if (o.material) {
           const mats = Array.isArray(o.material) ? o.material : [o.material];
-          for (const m of mats) { if (m.map) m.map.dispose?.(); m.dispose?.(); }
+          // maps from helpers.glowSprite/softDisc are shared module-singleton
+          // caches — never dispose them here; chapter-owned textures live in
+          // `disposables`
+          for (const m of mats) { m.dispose?.(); }
         }
       });
       for (const d of disposables) d.dispose?.();
