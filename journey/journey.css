@@ -1,0 +1,328 @@
+/* Mushroom Journey — DOM layer. Amber on warm near-black; WCAG AA for text. */
+:root {
+  --gold: #d9a441;
+  --gold-bright: #f0c877;
+  --ember: #ffb36b;
+  --parchment: #f2ebdd;
+  --muted: #c9bfa8;
+  --bg: #0a0805;
+  --panel: rgba(16, 12, 6, 0.86);
+  --line: rgba(217, 164, 65, 0.28);
+  --focus: #f0c877;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: auto; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--parchment);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+body.sheet-open { overflow: hidden; }
+a { color: var(--gold-bright); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
+
+/* ---------- loader: seed-spark grows into the organism ---------- */
+#loader {
+  position: fixed; inset: 0; z-index: 60; background: var(--bg);
+  display: grid; place-items: center;
+  transition: opacity 0.9s ease;
+}
+#loader.done { opacity: 0; pointer-events: none; }
+#loader-organism { position: relative; width: 120px; height: 160px; }
+#loader-organism .seed {
+  position: absolute; left: 50%; bottom: 18px; width: 6px; height: 6px;
+  margin-left: -3px; border-radius: 50%;
+  background: var(--gold-bright);
+  box-shadow: 0 0 18px 4px rgba(240, 200, 119, 0.7);
+  animation: seed-pulse 1.6s ease-in-out infinite;
+}
+#loader-organism .sprout {
+  position: absolute; left: 50%; bottom: 20px; width: 2px; height: 0;
+  margin-left: -1px; background: linear-gradient(to top, var(--gold), transparent);
+  animation: sprout-grow 2.2s 0.5s ease-out forwards;
+}
+#loader-organism .cap {
+  position: absolute; left: 50%; bottom: 96px; width: 0; height: 0;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 12% 12%;
+  background: radial-gradient(ellipse at 50% 80%, rgba(240,200,119,0.9), rgba(217,164,65,0.25) 70%, transparent);
+  animation: cap-grow 1.6s 2.2s ease-out forwards;
+  filter: blur(0.4px);
+}
+@keyframes seed-pulse { 50% { box-shadow: 0 0 26px 7px rgba(240,200,119,0.85); } }
+@keyframes sprout-grow { to { height: 78px; } }
+@keyframes cap-grow { to { width: 74px; height: 34px; } }
+
+/* ---------- stage & scroll ---------- */
+#stage { position: fixed; inset: 0; z-index: 0; }
+#stage canvas { display: block; }
+#scroll-spacer { position: relative; width: 1px; }
+
+/* ---------- nav ---------- */
+#nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+  display: flex; align-items: center; gap: 2.2rem;
+  padding: 1.1rem 2rem;
+  background: linear-gradient(to bottom, rgba(10, 8, 5, 0.85), transparent);
+}
+#wordmark {
+  font-weight: 650; letter-spacing: 0.06em; text-decoration: none;
+  color: var(--parchment); font-size: 1.02rem;
+}
+#nav nav { display: flex; gap: 1.5rem; }
+#nav nav a {
+  color: var(--muted); text-decoration: none; font-size: 0.88rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 0.3rem 0.1rem; border-bottom: 1px solid transparent;
+  transition: color 0.35s ease, border-color 0.35s ease;
+}
+#nav nav a:hover, #nav nav a:focus-visible { color: var(--gold-bright); }
+#nav nav a.is-active { color: var(--gold-bright); border-bottom-color: var(--gold); }
+#destinations {
+  margin-left: auto; display: flex; border: 1px solid var(--line); border-radius: 999px;
+  overflow: hidden;
+}
+#destinations a {
+  color: var(--parchment); text-decoration: none; font-size: 0.82rem;
+  letter-spacing: 0.1em; padding: 0.42rem 1rem;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+#destinations a:hover, #destinations a:focus-visible { background: rgba(217,164,65,0.16); color: var(--gold-bright); }
+#destinations a + a { border-left: 1px solid var(--line); }
+
+/* ---------- chapter copy ---------- */
+.copy {
+  position: fixed; z-index: 20; max-width: 30rem;
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 1.1s ease, transform 1.1s ease;
+  pointer-events: none;
+}
+.copy.is-visible { opacity: 1; transform: none; pointer-events: auto; }
+.copy .kicker {
+  color: var(--gold); letter-spacing: 0.28em; text-transform: uppercase;
+  font-size: 0.75rem; margin: 0 0 0.9rem;
+}
+.copy h1, .copy h2 {
+  font-size: clamp(1.6rem, 3.2vw, 2.5rem); line-height: 1.16;
+  margin: 0 0 1rem; font-weight: 560; color: var(--parchment);
+  text-wrap: balance;
+}
+.copy p { color: var(--muted); line-height: 1.65; font-size: 1.02rem; margin: 0 0 0.8rem; }
+.copy p strong { color: var(--gold-bright); font-weight: 620; }
+.copy--left  { left: 5vw;  top: 50%; transform: translateY(calc(-50% + 14px)); }
+.copy--left.is-visible { transform: translateY(-50%); }
+.copy--right { right: 5vw; top: 50%; transform: translateY(calc(-50% + 14px)); text-align: left; }
+.copy--right.is-visible { transform: translateY(-50%); }
+.copy--bottom { left: 50%; bottom: 7vh; transform: translate(-50%, 14px); text-align: center; }
+.copy--bottom.is-visible { transform: translateX(-50%); }
+.copy--top { left: 50%; top: 11vh; transform: translate(-50%, 14px); text-align: center; }
+.copy--top.is-visible { transform: translateX(-50%); }
+.copy--upperleft { left: 6vw; top: 14vh; }
+.cta {
+  display: inline-block; margin-top: 0.4rem;
+  color: #1a1206; background: linear-gradient(120deg, var(--gold), var(--gold-bright));
+  padding: 0.75rem 1.5rem; border-radius: 999px; text-decoration: none;
+  font-weight: 640; letter-spacing: 0.03em;
+  box-shadow: 0 0 0 rgba(240, 200, 119, 0);
+  transition: box-shadow 0.5s ease, transform 0.5s ease;
+}
+.cta:hover, .cta:focus-visible { box-shadow: 0 0 34px rgba(240, 200, 119, 0.45); transform: translateY(-1px); }
+
+/* node info blocks: accessible always; visible presentation only in tier3 */
+.node-holder { margin-top: 1rem; }
+body.webgl .node-holder {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+.node-details { border-top: 1px solid var(--line); padding: 0.55rem 0; }
+.node-details summary { cursor: pointer; color: var(--parchment); font-weight: 600; }
+.node-details summary span { color: var(--muted); font-weight: 400; }
+.node-details div { padding: 0.5rem 0 0.2rem; color: var(--muted); line-height: 1.6; }
+.node-details a { color: var(--gold-bright); }
+
+/* ---------- projected node buttons ---------- */
+#node-layer { position: fixed; inset: 0; z-index: 25; pointer-events: none; }
+.node-label {
+  position: absolute; left: 0; top: 0; pointer-events: auto;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: none; border: 0; padding: 0.4rem 0.55rem; cursor: pointer;
+  color: var(--parchment); font: inherit; font-size: 0.92rem;
+  translate: -12px -50%;
+  transition: opacity 0.4s ease;
+}
+.node-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--gold-bright);
+  box-shadow: 0 0 10px 2px rgba(240, 200, 119, 0.55);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+.node-text {
+  letter-spacing: 0.05em; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+}
+.node-short {
+  position: absolute; left: 1.4rem; top: 100%; width: max-content; max-width: 15rem;
+  color: var(--muted); font-size: 0.8rem; line-height: 1.4;
+  opacity: 0; transform: translateY(-3px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.95);
+  pointer-events: none; text-align: left; white-space: normal;
+}
+.node-label[hidden] { display: none; }
+.node-label.is-hover .node-short, .node-label:focus-visible .node-short { opacity: 1; transform: none; }
+.node-label.is-hover .node-dot, .node-label:focus-visible .node-dot,
+.node-label.is-selected .node-dot {
+  transform: scale(1.35);
+  box-shadow: 0 0 18px 5px rgba(240, 200, 119, 0.8);
+}
+
+/* ---------- drawer / bottom sheet ---------- */
+#scrim {
+  position: fixed; inset: 0; z-index: 44; background: rgba(5, 4, 2, 0.35);
+  opacity: 0; transition: opacity 0.35s ease;
+}
+#scrim.is-open { opacity: 1; }
+#drawer {
+  position: fixed; z-index: 45; top: 0; right: 0; bottom: 0;
+  width: min(420px, 92vw);
+  background: var(--panel);
+  backdrop-filter: blur(14px);
+  border-left: 1px solid var(--line);
+  padding: 3.4rem 1.8rem 2rem;
+  transform: translateX(102%);
+  transition: transform 0.45s cubic-bezier(0.32, 0.72, 0.25, 1);
+  overflow-y: auto;
+}
+#drawer.is-open { transform: none; }
+#drawer h2 { margin: 0 0 0.3rem; color: var(--gold-bright); font-size: 1.5rem; font-weight: 600; }
+#drawer h3 { margin: 1.3rem 0 0.4rem; color: var(--parchment); font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; }
+#drawer p { color: var(--muted); line-height: 1.65; }
+#drawer .drawer-role { color: var(--gold); margin-top: 0; }
+#drawer .drawer-note { font-size: 0.85rem; opacity: 0.75; font-style: italic; }
+#drawer ul { color: var(--muted); line-height: 1.7; padding-left: 1.1rem; }
+#drawer .drawer-links { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-top: 1.2rem; }
+#drawer .drawer-links a {
+  border: 1px solid var(--line); border-radius: 999px; padding: 0.45rem 1rem;
+  text-decoration: none; font-size: 0.9rem;
+  transition: background 0.3s ease;
+}
+#drawer .drawer-links a:hover { background: rgba(217, 164, 65, 0.14); }
+#drawer-close {
+  position: absolute; top: 0.9rem; right: 0.9rem;
+  background: none; border: 1px solid var(--line); border-radius: 50%;
+  width: 2.2rem; height: 2.2rem; color: var(--parchment); font-size: 1.2rem;
+  cursor: pointer;
+}
+#drawer-close:hover { background: rgba(217, 164, 65, 0.14); }
+.sheet-grip { display: none; }
+
+@media (pointer: coarse), (max-width: 720px) {
+  #drawer {
+    top: auto; left: 0; right: 0; bottom: 0; width: auto;
+    max-height: 72vh; border-left: 0; border-top: 1px solid var(--line);
+    border-radius: 18px 18px 0 0;
+    transform: translateY(104%);
+  }
+  #drawer.is-open { transform: none; }
+  .sheet-grip {
+    display: block; width: 44px; height: 4px; border-radius: 2px;
+    background: var(--line); margin: -1.6rem auto 1.2rem;
+  }
+}
+
+/* ---------- hint / debug / footer ---------- */
+#scroll-hint {
+  position: fixed; z-index: 30; left: 50%; bottom: 2.4vh; transform: translateX(-50%);
+  color: var(--muted); font-size: 0.78rem; letter-spacing: 0.22em; text-transform: uppercase;
+  opacity: 0; transition: opacity 1s ease; pointer-events: none;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+#scroll-hint.is-visible { opacity: 0.8; }
+#scroll-hint span {
+  display: block; width: 1px; height: 30px;
+  background: linear-gradient(to bottom, transparent, var(--gold));
+  animation: hint-drop 2.4s ease-in-out infinite;
+}
+@keyframes hint-drop { 50% { transform: translateY(6px); opacity: 0.5; } }
+#debug-raw {
+  position: fixed; z-index: 50; top: 4.6rem; right: 1rem;
+  background: #3a1010; color: #ffd9d9; font-size: 0.75rem; letter-spacing: 0.1em;
+  padding: 0.4rem 0.8rem; border-radius: 4px;
+}
+#footer {
+  position: relative; z-index: 35;
+  background: linear-gradient(to bottom, transparent, rgba(10, 8, 5, 0.96) 22%);
+  padding: 9rem 2rem 3rem;
+  opacity: 0; transition: opacity 1.2s ease; pointer-events: none;
+}
+#footer.is-visible { opacity: 1; pointer-events: auto; }
+body:not(.webgl) #footer { opacity: 1; pointer-events: auto; position: relative; }
+.footer-grid {
+  max-width: 68rem; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 2.5rem;
+}
+#footer h3 { color: var(--gold); font-size: 0.85rem; letter-spacing: 0.2em; text-transform: uppercase; margin: 0 0 0.9rem; }
+#footer a { display: block; color: var(--muted); text-decoration: none; padding: 0.22rem 0; }
+#footer a:hover { color: var(--gold-bright); }
+#footer p { color: var(--muted); line-height: 1.6; font-size: 0.92rem; }
+#footer .legal { font-size: 0.8rem; opacity: 0.75; }
+
+/* ---------- Tier 3: complete static journey ---------- */
+body.tier3 #scroll-spacer, body.tier3 #node-layer, body.tier3 #scroll-hint { display: none; }
+body.tier3 { overflow-x: hidden; }
+body.tier3 .copy {
+  position: relative; opacity: 1; transform: none; pointer-events: auto;
+  left: auto; right: auto; top: auto; bottom: auto;
+  max-width: 40rem; margin: 0 auto; padding: 16vh 1.6rem;
+  min-height: 70vh;
+}
+body.tier3 .copy.copy--bottom, body.tier3 .copy.copy--top { text-align: left; }
+/* chapter stills: layered radial gradients evoke each resting composition */
+body.tier3 .copy::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0.9;
+}
+body.tier3 [data-chapter="mission"]::before {
+  background:
+    radial-gradient(38% 20% at 62% 42%, rgba(240, 200, 119, 0.28), transparent),
+    radial-gradient(6% 34% at 60% 62%, rgba(217, 164, 65, 0.3), transparent),
+    radial-gradient(70% 12% at 55% 80%, rgba(217, 164, 65, 0.16), transparent);
+}
+body.tier3 [data-chapter="equip"]::before {
+  background:
+    repeating-linear-gradient(94deg, transparent 0 26px, rgba(217, 164, 65, 0.10) 27px 28px),
+    radial-gradient(30% 60% at 48% 50%, rgba(240, 200, 119, 0.22), transparent);
+}
+body.tier3 [data-chapter="connect"]::before {
+  background:
+    repeating-conic-gradient(from 0.2turn at 50% -30%, rgba(217, 164, 65, 0.12) 0deg 3deg, transparent 3deg 14deg),
+    radial-gradient(50% 40% at 50% 30%, rgba(240, 200, 119, 0.14), transparent);
+}
+body.tier3 [data-chapter="inspire"]::before {
+  background:
+    radial-gradient(60% 26% at 50% 66%, rgba(217, 164, 65, 0.3), transparent),
+    radial-gradient(10% 40% at 32% 30%, rgba(240, 200, 119, 0.14), transparent),
+    radial-gradient(10% 44% at 52% 26%, rgba(240, 200, 119, 0.16), transparent),
+    radial-gradient(10% 38% at 70% 32%, rgba(240, 200, 119, 0.13), transparent);
+}
+body.tier3 [data-chapter="owned"]::before {
+  background:
+    radial-gradient(24% 18% at 50% 40%, rgba(255, 179, 107, 0.28), transparent),
+    radial-gradient(80% 60% at 50% 70%, rgba(122, 85, 38, 0.25), transparent),
+    radial-gradient(14% 10% at 26% 62%, rgba(240, 200, 119, 0.16), transparent),
+    radial-gradient(12% 9% at 74% 56%, rgba(240, 200, 119, 0.14), transparent);
+}
+body.tier3 [data-chapter="final"]::before {
+  background:
+    linear-gradient(172deg, transparent 44%, rgba(122, 85, 38, 0.22) 45%, rgba(26, 18, 10, 0.6)),
+    radial-gradient(46% 20% at 50% 40%, rgba(217, 164, 65, 0.2), transparent),
+    radial-gradient(60% 30% at 50% 12%, rgba(240, 200, 119, 0.12), transparent);
+}
+
+@media (max-width: 900px) {
+  #nav { gap: 1.1rem; padding: 0.9rem 1rem; flex-wrap: wrap; }
+  #nav nav { gap: 0.9rem; }
+  #nav nav a { font-size: 0.78rem; letter-spacing: 0.1em; }
+  .copy { max-width: min(30rem, 88vw); }
+  .copy--left, .copy--right { left: 6vw; right: 6vw; }
+}
