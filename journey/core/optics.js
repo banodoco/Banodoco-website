@@ -61,10 +61,10 @@ const GradePassShader = {
       // --- 4. restrained radial chromatic aberration (zero in central ~40%) ---
       vec3 base;
       {
-        float amt = uAberrationOn * smoothstep(0.08, 0.5, dist2);
+        float amt = uAberrationOn * smoothstep(0.14, 0.55, dist2);
         vec2 dir = (dist2 > 0.0000001) ? normalize(centered) : vec2(0.0);
         // ~1.5px max at corners, expressed in uv space against vertical resolution
-        float maxPx = 1.5 / max(uResolution.y, 1.0);
+        float maxPx = 1.0 / max(uResolution.y, 1.0);
         vec2 off = dir * amt * maxPx;
         float r = texture2D(tDiffuse, uv + off).r;
         float g = texture2D(tDiffuse, uv).g;
@@ -112,7 +112,7 @@ const GradePassShader = {
       color *= mix(vec3(1.0), gain, 1.0 - clamp(lum, 0.0, 1.0));
 
       vec3 emberTarget = vec3(1.0, 0.85, 0.6);
-      float rolloff = smoothstep(0.55, 1.5, lum);
+      float rolloff = smoothstep(0.40, 1.10, lum);
       vec3 softClipped = color / (1.0 + max(color - 0.9, vec3(0.0)));
       color = mix(color, softClipped, rolloff);
       vec3 emberSoft = emberTarget * max(lum, 0.001);
@@ -151,14 +151,17 @@ export function createOptics(THREE, renderer, scene, camera, opts) {
   const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.75, 0.6, 0.55);
   composer.addPass(bloomPass);
 
+  // OutputPass (tone map + sRGB encode) runs BEFORE the grade so the grade
+  // operates in display space — its lift/grain/threshold constants are
+  // display-space values; in linear they produced a milky grey floor and
+  // near-inert halation
+  const outputPass = new OutputPass();
+  composer.addPass(outputPass);
+
   const gradePass = new ShaderPass(GradePassShader);
   gradePass.uniforms.uResolution.value = new THREE.Vector2(width, height);
   gradePass.uniforms.uFocusUv.value = new THREE.Vector2(0.5, 0.5);
-  gradePass.renderToScreen = false;
   composer.addPass(gradePass);
-
-  const outputPass = new OutputPass();
-  composer.addPass(outputPass);
 
   function applyTier(tier) {
     tierState.tier = tier;
@@ -202,22 +205,17 @@ export function createOptics(THREE, renderer, scene, camera, opts) {
     applyTier(tier);
   }
 
+  let focusWorld = null;
+  const _fv = new THREE.Vector3();
   function setFocusHint(pos) {
-    if (!pos) {
-      gradePass.uniforms.uFocusOn.value = 0.0;
-      return;
-    }
-    try {
-      const v = new THREE.Vector3(pos.x, pos.y, pos.z).project(camera);
-      // NDC [-1,1] -> uv [0,1], flip y (screen-space uv has y up in this pass, vUv from geometry uv)
-      const u = (v.x + 1) / 2;
-      const vv = (v.y + 1) / 2;
-      gradePass.uniforms.uFocusUv.value.set(u, vv);
-      gradePass.uniforms.uFocusOn.value = 1.0;
-    } catch (e) {
-      // safety first: never let focus-hint projection break rendering
-      gradePass.uniforms.uFocusOn.value = 0.0;
-    }
+    focusWorld = pos ? new THREE.Vector3(pos.x, pos.y, pos.z) : null;
+    if (!focusWorld) gradePass.uniforms.uFocusOn.value = 0.0;
+  }
+  function projectFocus() {
+    if (!focusWorld) return;
+    _fv.copy(focusWorld).project(camera);
+    gradePass.uniforms.uFocusUv.value.set((_fv.x + 1) / 2, (_fv.y + 1) / 2);
+    gradePass.uniforms.uFocusOn.value = 1.0;
   }
 
   function render(dt, time) {
@@ -229,6 +227,7 @@ export function createOptics(THREE, renderer, scene, camera, opts) {
     if (!reducedMotion) {
       gradePass.uniforms.uGrainSeed.value = time * 97.13;
     }
+    projectFocus(); // the camera keeps moving while a detail is open
     composer.render(dt);
   }
 

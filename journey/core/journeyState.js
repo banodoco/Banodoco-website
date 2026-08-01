@@ -1,12 +1,14 @@
 // Canonical journey state: native page scroll ↔ progress p ∈ [0,1] ↔ routes.
 // Nav clicks animate scroll (cancelled by any manual scroll intent).
 // Deep links jump instantly. One source of truth: the scroll position.
-import { CHAPTER_RANGES, chapterAt } from './camera.js?v=6';
+import { CHAPTER_RANGES, chapterAt } from './camera.js?v=7';
+
 
 export function createJourneyState({ onNavigate } = {}) {
   const spacer = document.getElementById('scroll-spacer');
-  const SCROLL_VH = 1300; // total scroll length in vh
-  spacer.style.height = SCROLL_VH + 'vh';
+  const SCROLL_VH = 1900; // total scroll length (six chapters + soft rests)
+  // svh keeps maxScroll stable through mobile URL-bar show/hide
+  spacer.style.height = SCROLL_VH + (CSS.supports?.('height', '1svh') ? 'svh' : 'vh');
 
   let p = 0;               // smoothed progress (what the camera uses)
   let rawP = 0;            // instantaneous from scrollTop
@@ -32,7 +34,10 @@ export function createJourneyState({ onNavigate } = {}) {
   });
   window.addEventListener('scroll', readScroll, { passive: true });
 
-  function flyTo(targetP, dur = 2.2) {
+  function flyTo(targetP) {
+    // distance-proportional duration: adjacent chapters keep the familiar
+    // ~2s feel, a full-journey flight slows to ~4.4s so no veil strobes past
+    const dur = 1.4 + 4.0 * Math.abs(targetP - rawP);
     flight = { from: rawP, to: targetP, t: 0, dur };
   }
 
@@ -61,14 +66,21 @@ export function createJourneyState({ onNavigate } = {}) {
   window.addEventListener('hashchange', () => {
     if (suppressRoute > 0) return;
     const r = parseHash();
-    if (r.chapter) {
-      const target = chapterTarget(r.chapter);
-      const m = maxScroll();
-      window.scrollTo(0, target * m);
+    if (!r.chapter) return;
+    if (!CHAPTER_RANGES.some(c => c.id === r.chapter)) {
+      // unknown chapter in the hash: normalize rather than scrolling to 0
+      history.replaceState(null, '', '#/mission');
+      return;
+    }
+    // only teleport when the hash targets a DIFFERENT chapter — Back from a
+    // detail state within the current chapter must not yank the camera to
+    // the rest pose
+    if (chapterAt(p).id !== r.chapter) {
+      window.scrollTo(0, chapterTarget(r.chapter) * maxScroll());
       readScroll();
       p = rawP;
-      if (onNavigate) onNavigate(r);
     }
+    if (onNavigate) onNavigate(r);
   });
 
   function update(dt) {
@@ -85,6 +97,20 @@ export function createJourneyState({ onNavigate } = {}) {
     const k = flight ? 10 : 6.5;
     p += (rawP - p) * Math.min(dt * k, 1);
     if (Math.abs(rawP - p) < 0.00004) p = rawP;
+    // soft rest magnetism: once scrolling has effectively stopped near a
+    // chapter's rest pose, drift gently toward it — imperceptible as a snap,
+    // but every chapter settles into its composed frame
+    if (!flight && Math.abs(rawP - p) < 0.0008) {
+      const c = chapterAt(p);
+      const rest = c.start + (c.end - c.start) * 0.5;
+      const cp = (p - c.start) / (c.end - c.start);
+      if (Math.abs(cp - 0.5) < 0.12 && Math.abs(cp - 0.5) > 0.0005) {
+        const pull = Math.min(dt * 1.1, 1) * (rest - p);
+        p += pull;
+        window.scrollTo(0, p * maxScroll());
+        rawP = p;
+      }
+    }
     return p;
   }
 

@@ -473,6 +473,21 @@ export function createChapter(ctx) {
 
   /* ---------- ambient guide strands: irregular pulses INTO the fruiting body ---------- */
   const GUIDE_FULL = 22;
+  // ONE authoritative per-strand schedule, authored here in JS. The shader gets
+  // it as vertex attributes (aH1 = schedule, aH2 = head stagger) instead of
+  // hashing on its own, so the JS handoff logic below is looking at exactly the
+  // pulses the viewer sees. (A JS float64 mirror of a float32 GLSL
+  // fract(sin(n)*k) hash is uncorrelated — never reconstruct, always share.)
+  const guideSchedule = [];
+  {
+    const r = H.rng(4472);
+    for (let i = 0; i < GUIDE_FULL; i++) {
+      const h1 = r();
+      guideSchedule.push({
+        h1, h2: r(), period: 5.0 + h1 * 8.0, offset: h1 * 61.0, lastK: null,
+      });
+    }
+  }
   const guideMat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
@@ -489,19 +504,22 @@ export function createChapter(ctx) {
     vertexShader: /* glsl */`
       attribute float aAlong;
       attribute float aStrand;
+      attribute float aH1;
+      attribute float aH2;
       varying float vAlong;
       varying float vStrand;
+      varying float vH1;
+      varying float vH2;
       void main() {
-        vAlong = aAlong; vStrand = aStrand;
+        vAlong = aAlong; vStrand = aStrand; vH1 = aH1; vH2 = aH2;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }`,
     fragmentShader: /* glsl */`
       uniform float uTime, uBase, uWidth, uBoost, uLead, uLeadAmt;
       uniform vec3 uColor, uPulseColor, uGuideColor;
-      varying float vAlong, vStrand;
-      float hash(float n){ return fract(sin(n) * 43758.5453); }
+      varying float vAlong, vStrand, vH1, vH2;
       void main() {
-        float h1 = hash(vStrand * 77.0 + 3.0);
+        float h1 = vH1;   // shared with the JS handoff schedule
         float period = 5.0 + h1 * 8.0;
         float local = mod(uTime + h1 * 61.0, period) / period;
         float lit = step(local, 0.4);
@@ -512,7 +530,7 @@ export function createChapter(ctx) {
         // exit ramp: brighten, weighted toward the inner (stipe) end
         amb *= 1.0 + uBoost * 2.2 * (0.42 + 0.58 * vAlong);
         // the guide head itself — staggered per strand so it never reads as one ring
-        float stagger = (hash(vStrand * 29.0 + 7.0) - 0.5) * 0.22;
+        float stagger = (vH2 - 0.5) * 0.22;
         float dl = vAlong - (uLead + stagger);
         float leadP = uLeadAmt * exp(-dl * dl / 0.0121);
         vec3 col = uColor * amb + uPulseColor * pulse * 0.9 + uGuideColor * leadP * 1.15;
@@ -544,6 +562,19 @@ export function createChapter(ctx) {
         return pts;
       },
     });
+    // stamp the shared schedule onto the vertices (aStrand = i/GUIDE_FULL)
+    const st = res.geometry.attributes.aStrand;
+    const vn = st.count;
+    const h1a = new Float32Array(vn);
+    const h2a = new Float32Array(vn);
+    for (let v = 0; v < vn; v++) {
+      const gi = Math.min(GUIDE_FULL - 1, Math.max(0, Math.round(st.getX(v) * GUIDE_FULL)));
+      h1a[v] = guideSchedule[gi].h1;
+      h2a[v] = guideSchedule[gi].h2;
+    }
+    res.geometry.setAttribute('aH1', new THREE.BufferAttribute(h1a, 1));
+    res.geometry.setAttribute('aH2', new THREE.BufferAttribute(h2a, 1));
+
     guideLines = new THREE.LineSegments(res.geometry, guideMat);
     guideLines.frustumCulled = false;
     guideLines.userData.full = res.geometry.attributes.position.count;
@@ -781,16 +812,10 @@ export function createChapter(ctx) {
   // short lag, to a low-amplitude upward sweep in the stipe; the surface fibres
   // catch it slightly later, and the gills flush as it reaches the cap.
   // Recurrence is randomized and rate-limited — never in step with the field.
+  // `guideSchedule` (built above, uploaded as aH1) is the single source of truth
+  // for when each strand's pulse reaches the base — the shader reads the same
+  // numbers, so a handoff is caused by a pulse actually seen arriving.
   const pulseRng = H.rng(5821);
-  function fractSin(n) { const s = Math.sin(n) * 43758.5453; return s - Math.floor(s); }
-
-  // mirrors the guide fragment shader's per-strand schedule so the handoff is
-  // actually caused by a pulse the viewer just watched arrive.
-  const guideSchedule = [];
-  for (let i = 0; i < GUIDE_FULL; i++) {
-    const h1 = fractSin((i / GUIDE_FULL) * 77.0 + 3.0);
-    guideSchedule.push({ period: 5.0 + h1 * 8.0, offset: h1 * 61.0, lastK: null });
-  }
 
   const stipeDriver = H.pulseDriver(2.6);
   const heroDriver = H.pulseDriver(1.7);
@@ -820,7 +845,6 @@ export function createChapter(ctx) {
   /* ================================================================ */
   /* STATE + FRAME LOOP                                                */
   /* ================================================================ */
-  let quality = 1;
   const motion = reduced ? 0 : 1;
 
   // chapter-exit guide state (finding: update() must react to cp)
@@ -956,7 +980,6 @@ export function createChapter(ctx) {
     },
 
     setQuality(tier) {
-      quality = tier;
       const half = tier === 2;
 
       const hf = heroLines.userData.full;
@@ -994,7 +1017,9 @@ export function createChapter(ctx) {
 
     dispose() {
       group.traverse((o) => {
-        if (o.geometry) o.geometry.dispose();
+        // THREE shares ONE module-wide sprite geometry app-wide — never dispose
+        // it; the sprite's own material still gets released below.
+        if (o.geometry && !o.isSprite) o.geometry.dispose();
         if (o.material) {
           // NEVER dispose m.map here: glowSprite()/softDisc() textures are
           // module-singleton cached in helpers and shared with other chapters.

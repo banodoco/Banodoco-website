@@ -1,10 +1,10 @@
 // Boot + frame loop. One canonical journey state; chapters are lazy clusters.
 import * as THREE from 'three';
-import * as helpers from '../lib/helpers.js?v=6';
-import { createCameraDirector, CHAPTER_RANGES, CLUSTER_OFFSETS, chapterAt, localProgress, REST_LO, REST_HI } from './camera.js?v=6';
-import { createJourneyState } from './journeyState.js?v=6';
-import { createInteractions } from './interact.js?v=6';
-import { CONTENT } from './content.js?v=6';
+import * as helpers from '../lib/helpers.js?v=7';
+import { createCameraDirector, CHAPTER_RANGES, CLUSTER_OFFSETS, chapterAt, localProgress, REST_LO, REST_HI } from './camera.js?v=7';
+import { createJourneyState } from './journeyState.js?v=7';
+import { createInteractions } from './interact.js?v=7';
+import { CONTENT } from './content.js?v=7';
 
 const palette = {
   gold: 0xd9a441, goldBright: 0xf0c877, ember: 0xffb36b, deepGold: 0x8a6420,
@@ -113,7 +113,7 @@ async function boot() {
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x140e07, 0.016); // warm near-black: ember haze, not void
-  const camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.05, 400);
+  const camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.15, 200);
 
   const veilScene = new THREE.Scene();
   const veilCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -122,7 +122,7 @@ async function boot() {
   // optics (post stack) — degrade gracefully if it fails to build
   let optics = null;
   try {
-    const mod = await import('./optics.js?v=6');
+    const mod = await import('./optics.js?v=8');
     optics = mod.createOptics(THREE, renderer, scene, camera,
       { tier, width: innerWidth, height: innerHeight, palette, reducedMotion });
   } catch (e) {
@@ -150,7 +150,7 @@ async function boot() {
   async function ensureChapter(id) {
     if (loaded.has(id) || failed.has(id)) return loaded.get(id);
     if (loading.has(id)) return loading.get(id);
-    const pr = import(`../chapters/${id}.js?v=6`).then(mod => {
+    const pr = import(`../chapters/${id}.js?v=7`).then(mod => {
       const ch = mod.createChapter(ctx);
       ch.group.position.copy(CLUSTER_OFFSETS[id]);
       scene.add(ch.group);
@@ -169,7 +169,7 @@ async function boot() {
   // Loading sequence: seed-spark grows while mission (hero) builds.
   const t0 = performance.now();
   await ensureChapter('mission');
-  if (failed.has('mission')) { enterTier3('hero cluster failed'); return; }
+  if (failed.has('mission')) { enterTier3('hero cluster failed'); wireNavStatic(); return; }
   // lazy-load the rest while the visitor reads the opening
   const rest = ['equip', 'connect', 'inspire', 'owned', 'final'];
   let restIdx = 0;
@@ -224,11 +224,14 @@ async function boot() {
   document.getElementById('cta-final')?.addEventListener('focus', () => loaded.get('final')?.trigger?.('ringPulse'));
 
   // ---- resize ----
+  let resizeTimer = 0;
   window.addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
-    optics?.setSize(innerWidth, innerHeight);
+    // composer target reallocation is heavy — trail the drag by 120ms
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => optics?.setSize(innerWidth, innerHeight), 120);
   });
 
   // ---- performance watchdog: tier 1 → tier 2, never webgl → static ----
@@ -283,10 +286,10 @@ async function boot() {
       const lo = id === 'mission' ? -1 : REST_LO;
       const hi = id === 'final' ? 2 : REST_HI + 0.02; // copy lingers a touch past labels
       const vis = inRange && lcp > lo && lcp < hi && veil < 0.3 &&
-        !(id === 'final' && p > 0.985); // release the epilogue copy to the footer
+        !(id === 'final' && p > 0.96); // release the epilogue copy to the footer
       el.classList.toggle('is-visible', vis);
     }
-    document.getElementById('footer').classList.toggle('is-visible', p > 0.985);
+    document.getElementById('footer').classList.toggle('is-visible', p > 0.955);
     document.getElementById('scroll-hint').classList.toggle('is-visible', p < 0.02 && !interactions.selected);
 
     // update chapters near the camera only

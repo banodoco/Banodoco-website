@@ -1259,7 +1259,7 @@ export function createChapter(ctx) {
 
     dispose() {
       group.traverse((o) => {
-        if (o.geometry) o.geometry.dispose();
+        if (o.geometry && !o.isSprite) o.geometry.dispose(); // THREE shares one Sprite geometry app-wide
         if (o.material) {
           const mats = Array.isArray(o.material) ? o.material : [o.material];
           // maps from helpers.glowSprite/softDisc are shared module-singleton
