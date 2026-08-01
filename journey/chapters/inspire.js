@@ -203,7 +203,13 @@ export function createChapter(ctx) {
     const s = new V3();
     const SIGMA = 0.62; // rad, gill-sector brightening falloff
     for (let i = 0; i < GILL_FULL; i++) {
-      const az = (i / GILL_FULL) * TAU + (rand() - 0.5) * (TAU / GILL_FULL) * 0.7;
+      // instance index i is azimuth-interleaved (not sequential): slot(i)
+      // walks every-other ring position on the first pass, then fills the
+      // gaps on the second — so a tier-2 truncation to the first GILL_TIER2
+      // instances still lands one gill every ~2 channels around the WHOLE
+      // ring, instead of deleting the entire far half (az π..2π).
+      const slot = (i * 2) % GILL_FULL + Math.floor((i * 2) / GILL_FULL);
+      const az = (slot / GILL_FULL) * TAU + (rand() - 0.5) * (TAU / GILL_FULL) * 0.7;
       const rimR = 9.55 + rand() * 0.35;
       const rimY = 4.42 + rand() * 0.12;
       const len = 1.1 + rand() * 1.9;
@@ -274,7 +280,6 @@ export function createChapter(ctx) {
 
   function buildSporeAttrs(count) {
     const rand = H.rng(41207);
-    const perPlume = Math.floor(count / PLUMES.length);
     const position = new Float32Array(count * 3);
     const aSeed = new Float32Array(count);
     const aPlume = new Float32Array(count);
@@ -289,44 +294,49 @@ export function createChapter(ctx) {
     const aSize = new Float32Array(count);
     const aColorMix = new Float32Array(count);
 
-    let idx = 0;
-    for (let p = 0; p < PLUMES.length; p++) {
-      const n = (p === PLUMES.length - 1) ? (count - idx) : perPlume;
-      for (let j = 0; j < n; j++, idx++) {
-        // gill blades occupy r≈6.5–9.6 — origins must sit between them, not
-        // at the stipe-side inner radius.
-        const originR = 6.3 + rand() * 2.9;
-        const originY = 2.6 + rand() * 1.4;
-        // spread across the sector but snap to a gill channel (a multiple of
-        // TAU/56) so spores visibly emerge from between lamellae rather than
-        // floating mid-blade; jitter kept well under half a channel width.
-        const laneRaw = (rand() - 0.5) * 1.35;
-        const laneChannel = Math.round(laneRaw / GILL_CHANNEL) * GILL_CHANNEL;
-        const laneJitter = (rand() - 0.5) * GILL_CHANNEL * 0.4;
-        const lane = laneChannel + laneJitter;
-        const isDrop = rand() < 0.16;
-        const rimR = 9.5 + rand() * 1.7;
-        const rimY = 4.35 + rand() * 1.15;
-        // drop cohort must end BELOW the rim so they genuinely sink and fade,
-        // rather than above it (which just reads as a slow riser).
-        const riseTop = isDrop ? (rimY - (1.5 + rand() * 2.0)) : (12.5 + rand() * 16.5);
+    // Round-robin plume assignment (particle i → plume i % 3): buildSporeAttrs
+    // must interleave plumes because setQuality(2) truncates the buffer with
+    // a plain setDrawRange(0, N) — any contiguous per-plume block layout
+    // means a prefix draw either skips a plume entirely or over-represents
+    // one. With interleaving, every prefix (in particular any multiple of
+    // PLUMES.length, which SPORE_TIER2 is) is exactly plume-balanced.
+    const perPlumeCounters = new Array(PLUMES.length).fill(0);
+    for (let idx = 0; idx < count; idx++) {
+      const p = idx % PLUMES.length;
+      perPlumeCounters[p]++; // per-plume running count, available to any future plume-relative attribute
+      // gill blades occupy r≈6.5–9.6 — origins must sit between them, not
+      // at the stipe-side inner radius.
+      const originR = 6.3 + rand() * 2.9;
+      const originY = 2.6 + rand() * 1.4;
+      // spread across the sector but snap to a gill channel (a multiple of
+      // TAU/56) so spores visibly emerge from between lamellae rather than
+      // floating mid-blade; jitter kept well under half a channel width.
+      const laneRaw = (rand() - 0.5) * 1.35;
+      const laneChannel = Math.round(laneRaw / GILL_CHANNEL) * GILL_CHANNEL;
+      const laneJitter = (rand() - 0.5) * GILL_CHANNEL * 0.4;
+      const lane = laneChannel + laneJitter;
+      const isDrop = rand() < 0.16;
+      const rimR = 9.5 + rand() * 1.7;
+      const rimY = 4.35 + rand() * 1.15;
+      // drop cohort must end BELOW the rim so they genuinely sink and fade,
+      // rather than above it (which just reads as a slow riser).
+      const riseTop = isDrop ? (rimY - (1.5 + rand() * 2.0)) : (12.5 + rand() * 16.5);
 
-        position[idx * 3 + 0] = Math.cos(PLUMES[p].az) * originR;
-        position[idx * 3 + 1] = originY;
-        position[idx * 3 + 2] = Math.sin(PLUMES[p].az) * originR;
-        aSeed[idx] = rand() * 1000;
-        aPlume[idx] = p;
-        aAz[idx] = PLUMES[p].az + lane;
-        aOriginR[idx] = originR;
-        aOriginY[idx] = originY;
-        aRimR[idx] = rimR;
-        aRimY[idx] = rimY;
-        aRiseTop[idx] = riseTop;
-        aPeriod[idx] = 7.0 + rand() * 7.5;
-        aPhase0[idx] = rand();
-        aSize[idx] = 0.55 + rand() * 1.2;
-        aColorMix[idx] = rand();
-      }
+      position[idx * 3 + 0] = Math.cos(PLUMES[p].az) * originR;
+      position[idx * 3 + 1] = originY;
+      position[idx * 3 + 2] = Math.sin(PLUMES[p].az) * originR;
+      aSeed[idx] = rand() * 1000;
+      aPlume[idx] = p;
+      aAz[idx] = PLUMES[p].az + lane;
+      aOriginR[idx] = originR;
+      aOriginY[idx] = originY;
+      aRimR[idx] = rimR;
+      aRimY[idx] = rimY;
+      aRiseTop[idx] = riseTop;
+      aPeriod[idx] = 7.0 + rand() * 7.5;
+      aPhase0[idx] = rand();
+      aSize[idx] = 0.55 + rand() * 1.2;
+      aColorMix[idx] = rand();
     }
     const geo = new T.BufferGeometry();
     geo.setAttribute('position', new T.Float32BufferAttribute(position, 3));
@@ -515,7 +525,6 @@ export function createChapter(ctx) {
   /* STATE + FRAME LOOP                                                */
   /* ================================================================ */
   let hovered = null, selected = null;
-  let quality = 1;
   const motion = reduced ? 0.18 : 1;
 
   function plumeByAtId(id) { return plumeStates.find(pl => pl.id === id); }
@@ -599,7 +608,6 @@ export function createChapter(ctx) {
     },
 
     setQuality(tier) {
-      quality = tier;
       const half = tier === 2;
       sporeGeo.setDrawRange(0, half ? SPORE_TIER2 : SPORE_FULL);
       gillMesh.count = half ? GILL_TIER2 : GILL_FULL;
@@ -614,6 +622,10 @@ export function createChapter(ctx) {
 
     dispose() {
       group.traverse((o) => {
+        // THREE shares one module-wide default Sprite geometry across the
+        // whole app — never dispose it (streakMat, the sprite's actual
+        // owned resource, is disposed explicitly via `disposables` below).
+        if (o.isSprite) return;
         if (o.geometry) o.geometry.dispose();
         if (o.material) {
           // maps from helpers (glowSprite/softDisc) are process-wide cached

@@ -2,7 +2,7 @@
 // camera path through six chapter clusters, with organic occlusion veils at the
 // five anatomical boundaries. See CONTRACT.md for ranges and cluster envelopes.
 import * as THREE from 'three';
-import { easings, noise3 } from '../lib/helpers.js?v=6';
+import { easings, noise3 } from '../lib/helpers.js?v=7';
 
 export const CHAPTER_RANGES = [
   { id: 'mission', start: 0.000, end: 0.135 },
@@ -22,7 +22,7 @@ export const CLUSTER_OFFSETS = {
   final:   new THREE.Vector3(0, 0, 1100),
 };
 
-export const VEIL_HALF = 0.018; // half-width of each boundary veil in p units
+export const VEIL_HALF = 0.032; // half-width of each boundary veil in p units
 // Canonical rest band (chapter-local progress) in which copy and hotspot
 // labels are shown — single source for core/main.js and core/interact.js.
 export const REST_LO = 0.20;
@@ -102,7 +102,9 @@ export function localProgress(p, c) {
   return THREE.MathUtils.clamp((p - c.start) / (c.end - c.start), 0, 1);
 }
 
-function samplePath(id, t) {
+const _sp = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 50 };
+const _sp2 = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 50 };
+function samplePath(id, t, out = _sp) {
   const keys = PATHS[id];
   t = THREE.MathUtils.clamp(t, 0, 1);
   let i = 0;
@@ -110,11 +112,10 @@ function samplePath(id, t) {
   const a = keys[i], b = keys[i + 1];
   const span = Math.max(b.t - a.t, 1e-5);
   const f = easings.smooth(THREE.MathUtils.clamp((t - a.t) / span, 0, 1));
-  return {
-    pos: a.pos.clone().lerp(b.pos, f),
-    look: a.look.clone().lerp(b.look, f),
-    fov: THREE.MathUtils.lerp(a.fov ?? 50, b.fov ?? 50, f),
-  };
+  out.pos.copy(a.pos).lerp(b.pos, f);
+  out.look.copy(a.look).lerp(b.look, f);
+  out.fov = THREE.MathUtils.lerp(a.fov ?? 50, b.fov ?? 50, f);
+  return out;
 }
 
 export function createCameraDirector(camera, veilParent) {
@@ -167,9 +168,12 @@ export function createCameraDirector(camera, veilParent) {
         }
         // amount sweeps threshold so texture "closes over" the frame organically
         float a = smoothstep(1.0 - uAmount * 1.25, 1.0 - uAmount * 1.25 + 0.28, pattern + uAmount * 0.55);
-        a = clamp(a, 0.0, 1.0) * smoothstep(0.0, 0.06, uAmount);
+        a = clamp(a, 0.0, 1.0) * smoothstep(0.0, 0.10, uAmount);
         // near-opaque core stays very dark with faint warm tint
         vec3 col = mix(vec3(0.02, 0.013, 0.004), uColor * 0.10, pattern * 0.6);
+        // match the optics grain so the lens never "switches off" mid-threshold
+        float g = hash(uv * 1837.0 + fract(uTime) * 97.0) - 0.5;
+        col += g * 0.05;
         gl_FragColor = vec4(col, a);
       }`,
   });
@@ -181,20 +185,54 @@ export function createCameraDirector(camera, veilParent) {
 
   // focus state (detail drawers): lerp toward a framing of a node
   let focus = null;        // { worldPos: Vector3, dist, bias: Vector3 }
+  let lastFocus = null;    // survives clearFocus so the ease-out has a target
   let focusAmt = 0;
 
   const _pos = new THREE.Vector3();
   const _look = new THREE.Vector3();
+  const _dirA = new THREE.Vector3();
+  const _dirB = new THREE.Vector3();
+  const _fpos = new THREE.Vector3();
 
   function update(p, time, dt) {
     const c = chapterAt(p);
     const t = localProgress(p, c);
     const s = samplePath(c.id, t);
+    // Distribute the inter-chapter rotation across the veil band: while the
+    // tissue closes over the frame, blend this chapter's view direction toward
+    // the neighbouring chapter's entry/exit direction so the turn happens
+    // during the occlusion, never as a hidden hard cut.
+    {
+      const ci = CHAPTER_RANGES.indexOf(c);
+      const nextEdge = c.end, prevEdge = c.start;
+      let other = null, blend = 0;
+      if (ci < CHAPTER_RANGES.length - 1 && nextEdge - p < VEIL_HALF) {
+        other = CHAPTER_RANGES[ci + 1];
+        blend = 0.5 * (1 - (nextEdge - p) / VEIL_HALF); // 0 → 0.5 approaching edge
+        samplePath(other.id, 0, _sp2);
+      } else if (ci > 0 && p - prevEdge < VEIL_HALF && p > prevEdge) {
+        other = CHAPTER_RANGES[ci - 1];
+        blend = 0.5 * (1 - (p - prevEdge) / VEIL_HALF); // 0.5 → 0 leaving edge
+        samplePath(other.id, 1, _sp2);
+      }
+      if (other && blend > 0.001) {
+        const f = easings.smooth(blend);
+        // cluster offsets cancel for pure directions — blend view DIRECTIONS
+        // and re-aim the look target at the original distance
+        const lookDist = _dirA.copy(s.look).sub(s.pos).length();
+        _dirA.normalize();
+        _dirB.copy(_sp2.look).sub(_sp2.pos).normalize();
+        _dirA.lerp(_dirB, f).normalize();
+        s.look.copy(s.pos).addScaledVector(_dirA, lookDist);
+        // fov eases toward the neighbour's too
+        s.fov = THREE.MathUtils.lerp(s.fov, _sp2.fov, f);
+      }
+    }
     // deliberate portrait pose: a tall frame can't hold the landscape framing,
     // so back the camera off along its own axis and open the fov a touch —
     // the whole composition (organism + copy space) survives the rotation
     if (camera.aspect < 1) {
-      const back = 1.30 - camera.aspect * 0.22; // ≈1.16–1.30 depending on how tall
+      const back = 1.30 - camera.aspect * 0.22; // ≈1.08–1.21 over realistic portrait aspects
       s.pos.sub(s.look).multiplyScalar(back).add(s.look);
       s.fov = Math.min(s.fov + 6, 62);
     }
@@ -208,14 +246,18 @@ export function createCameraDirector(camera, veilParent) {
     _pos.y += noise3(0, time * 0.06, 7.7) * drift * 0.6;
     _look.x += noise3(time * 0.05, 11.3, 2) * drift * 0.5;
 
-    // focus override (detail state)
+    // focus override (detail state) — eases IN toward the node and, because
+    // lastFocus survives clearFocus(), eases OUT back to the path instead of
+    // snapping the frame on close
     const focusTarget = focus ? 1 : 0;
     focusAmt += (focusTarget - focusAmt) * Math.min(dt * 3.2, 1);
-    if (focusAmt > 0.001 && focus) {
-      const fpos = focus.worldPos.clone().add(focus.bias);
-      const flook = focus.worldPos;
-      _pos.lerp(fpos, easings.smooth(focusAmt));
-      _look.lerp(flook, easings.smooth(focusAmt));
+    const f = focus || lastFocus;
+    if (focusAmt > 0.001 && f) {
+      _fpos.copy(f.worldPos).add(f.bias);
+      _pos.lerp(_fpos, easings.smooth(focusAmt));
+      _look.lerp(f.worldPos, easings.smooth(focusAmt));
+    } else if (!focus && focusAmt <= 0.001) {
+      lastFocus = null;
     }
 
     camera.position.copy(_pos);
@@ -255,6 +297,7 @@ export function createCameraDirector(camera, veilParent) {
       // frame the node off-center: camera backs off along view axis, biased sideways
       const bias = new THREE.Vector3(side * dist * 0.55, dist * 0.22, dist * 0.85);
       focus = { worldPos: worldPos.clone(), bias };
+      lastFocus = focus;
     },
     clearFocus() { focus = null; },
     get focusActive() { return !!focus; },

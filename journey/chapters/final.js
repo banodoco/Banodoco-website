@@ -2,7 +2,7 @@
 // Fairy ring on the surface, mycelial colony beneath, spores dispersing above.
 // See CONTRACT.md ("final" row) and handoff.md Epilogue section.
 import * as THREE from 'three';
-import { buildMushroom } from '../lib/organism.js?v=6';
+import { buildMushroom } from '../lib/organism.js?v=7';
 
 const TAU = Math.PI * 2;
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -696,7 +696,8 @@ export function createChapter(ctx) {
     const b = m.brightness.value;
     grp.traverse(obj => {
       if (obj.material && obj.material.uniforms && obj.material.uniforms.uBase) {
-        obj.material.uniforms.uBase.value = b * 0.5;
+        if (obj.material.userData.baseU === undefined) obj.material.userData.baseU = obj.material.uniforms.uBase.value;
+        obj.material.uniforms.uBase.value = obj.material.userData.baseU * (0.4 + b * 0.8);
       } else if (obj.material && 'opacity' in obj.material && obj.userData.baseOpacity != null) {
         obj.material.opacity = obj.userData.baseOpacity * (0.6 + b * 0.6);
       }
@@ -793,10 +794,9 @@ export function createChapter(ctx) {
     for (const g of primordiaStalks) g.dispose();
     primordiaStalkMat.dispose();
     primordiaMat.dispose();
-    primordiaTex.dispose();
     for (const m of ringMembers) {
       m.built.group.traverse(obj => {
-        if (obj.geometry) obj.geometry.dispose();
+        if (obj.geometry && !obj.isSprite) obj.geometry.dispose(); // shared Sprite geometry
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach(mm => mm.dispose());
           else obj.material.dispose();

@@ -2,7 +2,7 @@
 // drawers (desktop) / bottom sheets (touch), cards, profile cards.
 // Canvas stays presentational; every interactive thing here is real DOM.
 import * as THREE from 'three';
-import { REST_LO, REST_HI } from './camera.js?v=6';
+import { REST_LO, REST_HI } from './camera.js?v=7';
 
 const DRAWER_NODES = new Set(['pype', 'arnold', 'astrid']); // full drawers + camera focus
 const CARD_NODES = new Set(['community', 'ados', 'hivemind', 'pod-shared', 'pod-monthly', 'pod-split']);
@@ -20,7 +20,7 @@ export function createInteractions({ camera, content, cameraDirector, journey, o
   let hovered = null;
   let selected = null;
   let lastTrigger = null;      // element to restore focus to
-  let touchMode = matchMedia('(pointer: coarse)').matches;
+  let touchMode = matchMedia('(pointer: coarse), (max-width: 720px)').matches;
   const chapters = new Map();  // chapterId → chapter module ref
 
   const _v = new THREE.Vector3();
@@ -45,6 +45,7 @@ export function createInteractions({ camera, content, cameraDirector, journey, o
       el.innerHTML = `<span class="node-dot" aria-hidden="true"></span><span class="node-text">${meta.label}</span>` +
         (meta.short ? `<span class="node-short">${meta.short}</span>` : '');
       el.setAttribute('aria-haspopup', 'dialog');
+      el.setAttribute('aria-expanded', 'false');
       el.hidden = true;
       layer.appendChild(el);
       const rec = { el, hotspot: h, chapterId, cluster: clusterOffset };
@@ -131,14 +132,14 @@ export function createInteractions({ camera, content, cameraDirector, journey, o
     selected = id;
     lastTrigger = triggerEl || rec.el;
     rec.el.classList.add('is-selected');
+    rec.el.setAttribute('aria-expanded', 'true');
     chapters.get(rec.chapterId)?.setSelected(id);
     drawerContent.innerHTML = buildDrawerHTML(id);
     drawerEl.hidden = false;
     scrim.hidden = false;
-    requestAnimationFrame(() => {
-      drawerEl.classList.add('is-open');
-      scrim.classList.add('is-open');
-    });
+    void drawerEl.offsetWidth; // commit display change so the transition runs
+    drawerEl.classList.add('is-open');
+    scrim.classList.add('is-open');
     drawerEl.setAttribute('aria-label', (content.nodes[id]?.label || contributorMeta(id)?.label || '') + ' details');
     if (!wasOpen) drawerClose.focus({ preventScroll: true });
     // camera focus for drawer-class nodes: keep world visible, tighten laterally
@@ -157,22 +158,32 @@ export function createInteractions({ camera, content, cameraDirector, journey, o
     if (onSelect) onSelect(id);
   }
 
-  function close({ returnFocus = true } = {}) {
+  function close({ returnFocus = true, fromHistory = false } = {}) {
     if (!selected) return;
     const rec = buttons.get(selected);
     if (rec) {
       rec.el.classList.remove('is-selected');
+      rec.el.setAttribute('aria-expanded', 'false');
       chapters.get(rec.chapterId)?.setSelected(null);
-      journey.writeRoute(rec.chapterId, null);
+      // a manual close consumes the entry the open pushed, so a later Back
+      // doesn't appear dead on an identical hash; a history-driven close
+      // (popstate/hashchange) must NOT navigate again
+      const r = journey.parseHash();
+      if (!fromHistory && r.node === selected) history.back();
+      else journey.writeRoute(rec.chapterId, null);
     }
     selected = null;
     drawerEl.classList.remove('is-open');
     scrim.classList.remove('is-open');
     document.body.classList.remove('sheet-open');
-    setTimeout(() => { if (!selected) { drawerEl.hidden = true; scrim.hidden = true; } }, 350);
+    setTimeout(() => { if (!selected) { drawerEl.hidden = true; scrim.hidden = true; } }, 480);
     cameraDirector.clearFocus();
     if (onFocusHint) onFocusHint(null);
-    if (returnFocus && lastTrigger) lastTrigger.focus({ preventScroll: true });
+    if (returnFocus && lastTrigger) {
+      const target = lastTrigger.offsetParent !== null ? lastTrigger :
+        document.querySelector(`#nav [data-chapter="${rec ? rec.chapterId : ''}"]`);
+      target?.focus({ preventScroll: true });
+    }
   }
 
   drawerClose.addEventListener('click', () => close());
@@ -188,12 +199,12 @@ export function createInteractions({ camera, content, cameraDirector, journey, o
   });
   // first meaningful scroll intent folds the drawer away (desktop)
   window.addEventListener('wheel', (e) => {
-    if (selected && !touchMode && Math.abs(e.deltaY) > 8) close({ returnFocus: false });
+    if (selected && !touchMode && Math.abs(e.deltaY) > 24) close({ returnFocus: false });
   }, { passive: true });
   // Browser Back closes detail state first
   window.addEventListener('hashchange', () => {
     const r = journey.parseHash();
-    if (selected && !r.node) close({ returnFocus: false });
+    if (selected && !r.node) close({ returnFocus: false, fromHistory: true });
     else if (r.node && r.node !== selected && buttons.has(r.node)) open(r.node);
   });
   // sheet drag-down dismiss (touch)
@@ -213,7 +224,8 @@ export function createInteractions({ camera, content, cameraDirector, journey, o
       // keep a detail open when we ARRIVED here to show it (deep link / hash
       // navigation); close only when travel leaves the selected node's chapter
       const selRec = selected ? buttons.get(selected) : null;
-      if (selRec && selRec.chapterId !== chapterId) close({ returnFocus: false });
+      // scroll-away close is history-neutral: never pop entries mid-travel
+      if (selRec && selRec.chapterId !== chapterId) close({ returnFocus: false, fromHistory: true });
       setHover(null);
     }
     const inRest = cp > REST_LO && cp < REST_HI && veil < 0.05;
@@ -231,6 +243,7 @@ export function createInteractions({ camera, content, cameraDirector, journey, o
       const off2 = behind || x < -80 || x > w + 80 || y < -60 || y > h + 60;
       if (off2) { if (!rec.el.hidden) rec.el.hidden = true; continue; }
       if (rec.el.hidden) rec.el.hidden = false;
+      rec.el.classList.toggle('edge-right', x > w * 0.72);
       rec.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
     }
   }
@@ -238,7 +251,22 @@ export function createInteractions({ camera, content, cameraDirector, journey, o
   return {
     registerChapter,
     update,
-    open: (id) => { const rec = buttons.get(id); if (rec) open(id, rec.el); },
+    open: (id) => {
+      const rec = buttons.get(id);
+      if (rec) { open(id, rec.el); return; }
+      // curated-subset miss (touch) or not-yet-registered node with valid
+      // content: show the information anyway — the drawer only needs a button
+      // for camera focus, which these nodes don't use
+      if (content.nodes[id] || contributorMeta(id)) {
+        selected = null;
+        drawerContent.innerHTML = buildDrawerHTML(id);
+        drawerEl.hidden = false; scrim.hidden = false;
+        void drawerEl.offsetWidth;
+        drawerEl.classList.add('is-open'); scrim.classList.add('is-open');
+        if (touchMode) document.body.classList.add('sheet-open');
+        selected = id;
+      }
+    },
     close,
     get selected() { return selected; },
     setHover,

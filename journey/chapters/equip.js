@@ -159,7 +159,6 @@ function makeBraidMat(opts) {
       uPulseOn: { value: new THREE.Vector3() },
       uPulseColor: { value: new THREE.Color(opts.pulseColor) },
       uTwinkle: { value: opts.twinkle },
-      uFogColor: { value: new THREE.Color(opts.fogColor ?? 0x0a0805) },
       uFogDensity: { value: opts.fogDensity ?? 0 },
     },
     transparent: true,
@@ -186,7 +185,7 @@ function makeBraidMat(opts) {
     fragmentShader: /* glsl */`
       uniform float uTime, uTwinkle, uFogDensity;
       uniform vec3 uBaseOp, uWidth, uPulse, uPulseOn;
-      uniform vec3 uC0, uC1, uC2, uPulseColor, uFogColor;
+      uniform vec3 uC0, uC1, uC2, uPulseColor;
       varying float vAlong, vStrand, vFogDepth;
       varying vec3 vSel;
       void main() {
@@ -946,7 +945,7 @@ export function createChapter(ctx) {
 
     dispose() {
       group.traverse((o) => {
-        if (o.geometry) o.geometry.dispose();
+        if (o.geometry && !o.isSprite) o.geometry.dispose(); // THREE shares one Sprite geometry app-wide
         if (o.material) {
           // maps from helpers (glowSprite/softDisc) are process-wide cached and
           // shared with other chapters — never dispose m.map here. Only textures
