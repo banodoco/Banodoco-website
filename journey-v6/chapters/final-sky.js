@@ -38,7 +38,11 @@ export function createFinalSky(sceneApi, uniforms) {
   /* ================================================================
      1. The spore cloud — one Points draw, GPU phase
      ================================================================ */
-  const N_SPORE = 3600;
+  // Declutter round: 3,600 -> 5,200 with the growth all in the standing
+  // broad cloud (mode 1), per the grade pass's honest gap ("the still's
+  // spore sky is far denser") — density in the SKY is atmosphere, and it
+  // buys back the richness the floor's culled strokes gave up.
+  const N_SPORE = 5200;
   counts.spores = N_SPORE;
   const sporeGeo = (() => {
     const position = new Float32Array(N_SPORE * 3);
@@ -47,15 +51,23 @@ export function createFinalSky(sceneApi, uniforms) {
     const aClump = new Float32Array(N_SPORE * 2);  // clump phase, peel flag
     const aGate = new Float32Array(N_SPORE * 2);   // reveal threshold, mode
     for (let i = 0; i < N_SPORE; i++) {
-      const highBand = rand() < 0.42;              // mode 1: standing cloud
+      const highBand = rand() < 0.60;              // mode 1: standing cloud
       let x, y, z, revealT;
       if (highBand) {
-        // aloft over the ring interior, biased downwind (+x, slightly +z) —
-        // the mass sweeps the frame's upper right, clear of the copy block
+        // aloft over the ring interior. Declutter round: still biased
+        // downwind (+x) but less hard, and a third of the mass spreads
+        // over the frame-LEFT arc (world −z) — the old all-right bias fed
+        // the left-of-frame imbalance. Kept high over the copy block so
+        // legibility is untouched.
         const a = rand() * TAU, r = Math.pow(rand(), 0.6) * 13;
-        x = RING_C.x + Math.cos(a) * r + 2.5 + rand() * 6.5;
-        z = RING_C.z + Math.sin(a) * r * 0.9 + 1.0 + rand() * 4.5;
-        y = 3.2 + Math.pow(rand(), 0.85) * 8.5;
+        const leftHalf = rand() < 0.34;
+        x = RING_C.x + Math.cos(a) * r + (leftHalf ? 0.5 + rand() * 4.0 : 2.0 + rand() * 6.5);
+        z = RING_C.z + Math.sin(a) * r * 0.9
+          + (leftHalf ? -4.5 + rand() * 3.5 : 0.5 + rand() * 4.5);
+        // the left cohort stays LOW (drifting off the left arc's caps) so
+        // the copy block above keeps its dark ground
+        y = leftHalf ? 2.6 + Math.pow(rand(), 0.85) * 4.6
+                     : 3.2 + Math.pow(rand(), 0.85) * 8.5;
         revealT = -1;
       } else {
         const src = SPORE_SOURCES[Math.floor(rand() * SPORE_SOURCES.length)];
@@ -182,16 +194,22 @@ export function createFinalSky(sceneApi, uniforms) {
   /* ================================================================
      2. Forest horizon: conifer silhouettes in two fogged distance bands
      ================================================================ */
+  // Declutter round: 48 trees -> 26, tones nearly halved, fewer boughs, and
+  // a GAP behind the hero's cap sector. Additive line trees can never be
+  // the still's dark silhouettes — at the old brightness they read as
+  // scratchy "sticks" all over the sky (Hannah, both rounds). Now they are
+  // whispers behind the mist, which carries the horizon instead.
   const trees = makeBatch();
   {
     const head = (REST.headingDeg * Math.PI) / 180;
     for (const [band, distLo, distHi, n, tone] of [
-      [0, 26, 34, 22, 0.30], [1, 36, 46, 26, 0.22],
+      [0, 26, 34, 11, 0.17], [1, 36, 46, 15, 0.125],
     ]) {
       for (let i = 0; i < n; i++) {
         // spread across the frame; thinner on the far left where the copy
         // block owns the upper-left negative space
         const rel = (-0.62 + (i / (n - 1)) * 1.5 + gauss() * 0.05);   // radians off gaze
+        if (rel > 0.08 && rel < 0.32) continue;   // keep the hero's sky clean
         const th = head + rel;
         const dist = distLo + rand() * (distHi - distLo);
         const x = REST.x + Math.cos(th) * dist;
@@ -204,7 +222,7 @@ export function createFinalSky(sceneApi, uniforms) {
         trees.seg(x, gy, z, x + gauss() * 0.1, gy + h, z + gauss() * 0.1, tone, tone * 1.3, meta);
         // conifer chevrons: symmetric drooping bough PAIRS, wide at the base
         // narrowing to the crown — the silhouette, not a streak
-        const NB = 5 + Math.floor(rand() * 3);
+        const NB = 4 + Math.floor(rand() * 2);
         // bough plane roughly facing the rest camera
         const face = Math.atan2(REST.z - z, REST.x - x) + Math.PI / 2;
         for (let b = 0; b < NB; b++) {
@@ -247,22 +265,35 @@ export function createFinalSky(sceneApi, uniforms) {
   };
   {
     const head = (REST.headingDeg * Math.PI) / 180;
-    // low mist banks among the trees
+    // low mist banks among the trees (bases raised: mist carries the
+    // horizon now that the trees are whispers)
     for (const [rel, dist, sx, sy, tone, base] of [
-      [-0.30, 30, 16, 5, 0.34, 0.05],
-      [0.05, 33, 22, 6, 0.36, 0.055],
-      [0.42, 28, 18, 5.5, 0.34, 0.05],
-      [0.75, 36, 20, 6, 0.32, 0.045],
+      [-0.30, 30, 16, 5, 0.34, 0.065],
+      [0.05, 33, 22, 6, 0.36, 0.07],
+      [0.42, 28, 18, 5.5, 0.34, 0.065],
+      [0.75, 36, 20, 6, 0.32, 0.055],
     ]) {
       const x = REST.x + Math.cos(head + rel) * dist;
       const z = REST.z + Math.sin(head + rel) * dist;
       addSprite(x, 1.6 + rand() * 1.2, z, sx, sy, tone, base);
     }
-    // one broad warm horizon glow, biased frame-right (under the spore
-    // cloud's drift), far enough that fog keeps it a breath, not a sun
-    const gx = REST.x + Math.cos(head + 0.28) * 40;
-    const gz = REST.z + Math.sin(head + 0.28) * 40;
-    addSprite(gx, 4.5, gz, 46, 12, 0.5, 0.085);
+    // Declutter round: two MID-distance mist bands drifting across the ring
+    // itself — the approved still's layered haze between the mushrooms.
+    // One sits over the frame-left arc (rebalance), one grazes centre-right.
+    const m1x = REST.x + Math.cos(head - 0.34) * 15;
+    const m1z = REST.z + Math.sin(head - 0.34) * 15;
+    addSprite(m1x, 1.9, m1z, 15, 3.6, 0.36, 0.052);
+    const m2x = REST.x + Math.cos(head + 0.30) * 19;
+    const m2z = REST.z + Math.sin(head + 0.30) * 19;
+    addSprite(m2x, 2.3, m2z, 18, 4.2, 0.34, 0.045);
+    // broad warm horizon glow, re-centred (the old +0.28 bias put a bright
+    // smear on the right frame edge) + a fainter answer over the left arc
+    const gx = REST.x + Math.cos(head + 0.10) * 40;
+    const gz = REST.z + Math.sin(head + 0.10) * 40;
+    addSprite(gx, 4.5, gz, 42, 11, 0.5, 0.06);
+    const lx = REST.x + Math.cos(head - 0.46) * 38;
+    const lz = REST.z + Math.sin(head - 0.46) * 38;
+    addSprite(lx, 3.6, lz, 26, 8, 0.44, 0.042);
   }
 
   return {

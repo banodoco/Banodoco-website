@@ -871,3 +871,107 @@ verbatim restore, per the established W4-A discipline).
   the ArtCompute ramp start should move with it (single constant, `ARR[0].a0`).
 - Fades still ease (k = dt·3.2), so during a fast flight the reveal lags its azimuth target
   slightly and converges at the rest — velocity-dependent by design, never discontinuous.
+
+---
+
+# FD — Final declutter (Hannah's two-round composition revision, 2026-08-02)
+
+**Trigger (Hannah, twice):** round 1 — "very cluttered... left side imbalanced, messy
+sticks on the right, the main mushroom looks like a different kind"; round 2 — "the
+first mushroom still looks different... messy lines that go all over the place,
+ESPECIALLY ALONG THE FOREST FLOOR."
+
+**Scope:** `chapters/final.js` / `final-world.js` / `final-ring.js` / `final-terrain.js`
+/ `final-sky.js`, plus ONE surgical line in `journey.js` (the Final halation focus hint
+now prefers the live `chapters.final.frontWorld()` — the API this round adds — falling
+back to the static nearest-member hint; W5 polish item 3). Director keys untouched (the
+scoped exception was not needed: rebalance was achieved in content). Hero files untouched.
+
+## Root-cause diagnosis (what the floor mess actually was)
+
+Under additive blending nothing occludes: every underground stroke — this chapter's
+hyphae/cords/front/connectors, the Owned colony field (which stays armed through the
+epilogue by design), and the hero's own §8 ground network lying at y≈0 across the whole
+stage — rendered THROUGH the soil as countable lines lying on the floor. Dimming alone
+cannot fix geometry with no occluder.
+
+## What changed
+
+1. **Soil occluder (the decisive fix):** an opaque fog-colored slab under the kept-side
+   surface + a face sheet down the cut (1,272 tris, 1 draw, `renderOrder -10`), the
+   mirror of the hero's §5 occlusion shells. The colony is now visible ONLY in the
+   section the cutaway opens — the approved still's exact reading. Depth-tested additive
+   fragments behind it are culled (an overdraw saving, not a cost).
+2. **Hero ground network scene-state dim** (`final.js`, Connect precedent): collected
+   once (`[web, myc, mossPts, pools, roots, ribbon, beads]` + the scene-level ambient
+   mote/bokeh cloud), dimmed per class as amount x pull rises (lines to 10–15%, moss/bead
+   points to 25–28%, glow POOLS kept at 55% — they are the new floor language; motes
+   retire below 12% visibility). **Restore proven byte-exact** (snapshot at the Owned
+   rest == snapshot after Final round-trip, incl. visibility flags).
+3. **Roots -> pools:** member root flares cut from up to ~40 wandering forking beaded
+   segments each to 1–2 short stubs; ground-merge mass moved to two soft base glow pools
+   per member in the existing glow batch (reveal-gated — they kindle with their member).
+4. **Terrain stroke cull:** surface 520->140 pairs (band-focused, shorter, dimmer), cut
+   face drops 130->60 + strata 90->40 + overhang ticks p 0.3->0.14 (lip statement kept,
+   near-camera taper added — the lip bloomed into a hot bar at the bottom-right edge),
+   hyphae 850->380 (deeper, dimmer), growth front 130->72 shorter sub-surface strokes +
+   44 glow carriers in the aggregate batch (boost 1: the pulse reads as travelling glow),
+   connectors 2->1 per member at lower rest tones, 12 colony glow pools in the exposed
+   wedge + ~30 lit cord junctions (glow, not strokes).
+5. **Species unity:** (a) elevation occlusion baked against the rest camera — gills, gill
+   core, upper stem lattice/fibres and the under-cap glow stack all fall toward 12% when
+   the lens looks down past a member's rim plane (the two near members read as open lit
+   bowls because their interiors showed through the cap; the hero's opaque shells never
+   allow that); (b) the lamp-look glow stack reworked (heart halo 3.0->2.1 capR and
+   0.48->0.36 tone, cavity/core gated by the same occlusion); (c) near/short members
+   raised (m3 1.7->2.0, m4 1.5->1.85, m1 1.6->2.0 + m 0.45->0.55) so the rest camera sees
+   them side-on; (d) individuation spreads tightened toward the hero's proportions
+   (rimScale/domeH/wave-harmonic/droop ranges all narrowed); (e) density ladder raised
+   where it was sketchiest — T2 (the visible frame-LEFT arc) up ~60%, T1 up ~20%, T0 up
+   ~5%: ring 21,280 -> 25,876 segs, 2,338 glow pts; (f) the two schematic far-side hint
+   octagons DELETED (they read as floating rings once the floor was clean) — two soft
+   ground glows keep their light.
+6. **Sky:** spores 3,600 -> 5,200 with the growth all in the standing broad cloud
+   (fraction 0.42->0.60), a third of it spread LOW over the frame-left arc (rebalance,
+   held under the copy block's dark ground); trees 48 -> 26 at roughly half tone with a
+   gap behind the hero's cap ("sticks", both rounds — additive line trees can only be
+   whispers; mist carries the horizon now); 2 mid-distance mist bands across the ring
+   (one over the left arc) + far mist bases raised; horizon glow re-centred off the right
+   frame edge + a faint left answer; 2 extra dark-pocket haze sprites under the left arc.
+7. **Left imbalance** addressed via content (denser left-arc members, left mist band +
+   haze + low spore cohort + colony pools biased left) — no director key change needed.
+
+## Measured (single accumulated frame, 1440x860, Final rest p=0.925, graded)
+
+| State | Draws | Line verts | Points | Tris |
+|---|---:|---:|---:|---:|
+| FD (this round) | **103** | 105,479 | 32,138 | 18,851 |
+| D15 reference | 104 | 103,667 | 30,187 | 17,578 |
+
+Delta: −1 draw net (+1 soil, +6 sprites, −1 retired mote cloud, sprite/point visibility
+wash), +1.8k line verts (ring densification minus terrain cull), +1.9k points (spores),
++1.3k tris (the soil slab). In-burst rAF deltas cluster at 13.5–21.3 ms around the
+16.7 ms vsync median; hidden-pane caveat as BASELINE §2. The slab additionally CULLS
+under-soil additive fragments by depth test, so effective overdraw went down.
+
+## Verified
+
+Graded rest 0.925 and mid-reveal 0.90 at 1440x860 AND 900x700 (cache-busted loads,
+screenshot-pumped fades): floor clean of countable strokes, one species, left balanced,
+sky denser; undarken forward + re-darken reverse clean (0.725 -> 0.925 -> 0.725);
+hero-ground dim restore byte-exact; [g] raw toggle live (look curve reports gain 1.139 /
+hal 1.246 at the rest); `frontWorld()` returns live front positions and journey.js
+follows it; fresh boot at p=0 renders the pristine hero; **zero console errors** across
+every load and scrub of the session.
+
+## Open notes for Hannah / next round
+
+- The Owned portrait FACES now read clearly in the near-field section wedge (bottom-left)
+  at the Final rest — the veil of hero bokeh that used to blur them is retired and the
+  floor around them is clean. If they should not appear in the epilogue frame, that is an
+  owned-chapter (or seam-retire) decision — outside this round's file boundary.
+- Reverse pass through the soil crossing now happens against a real slab (DoubleSide, in
+  family with Owned's own soil-underside lid). Verified clean in reverse scrub; one live
+  ride-through of T4 in both directions is the standing confirmation wish.
+- Tier-2 note: the soil slab must NEVER be cut (it is what keeps the floor legible); cut
+  order for the ring stands as D15 wrote it, with the new T2 counts as the new floor.

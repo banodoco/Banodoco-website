@@ -32,7 +32,7 @@
 // Parented to `scene` (adr-d3): the field does not sway.
 
 import * as THREE from 'three';
-import { makeUniforms, pullOf, makeRng } from './final-world.js';
+import { makeUniforms, pullOf, makeRng, TAU, RING_C, HERO_AZ } from './final-world.js';
 import { createFinalRing } from './final-ring.js';
 import { createFinalTerrain } from './final-terrain.js';
 import { createFinalSky } from './final-sky.js';
@@ -73,14 +73,82 @@ export function createFinal(sceneApi) {
 
   let amount = 0, amountTarget = 0;
 
+  /* ---- hero ground-network re-parameterisation (declutter round) ----
+     Hannah, twice: "messy lines that go all over the place, ESPECIALLY
+     ALONG THE FOREST FLOOR." The worst offender was the HERO's own §8
+     ground network — web, mycelium threads, root arteries, hub stars —
+     which lies at y≈0 across the entire Final floor and reads as a
+     countable-stroke carpet from the pullback camera. The hero itself is
+     untouchable, so this is handled scene-state-wise at the Final leg
+     (the Connect-chapter precedent): materials are collected once, dimmed
+     per class as the pullback proceeds, and restored EXACTLY on retire.
+     The soft moss glow POOLS keep most of their light (they ARE the
+     ground-glow language this revision moves the floor to); the stroke
+     carriers fall to a whisper. The scene-level ambient mote cloud (the
+     fake-DOF bokeh balloons in the near field) dims out entirely and is
+     retired below 12% — Connect's raster lesson. */
+  const heroDim = [];
+  let heroDimReady = false, heroDimActive = false;
+  function addDim(o, keep) {
+    const m = o.material;
+    const u = m && m.uniforms && m.uniforms.uOpacity;
+    if (u) heroDim.push({ o, u, base: u.value, keep, vis: o.visible });
+    else if (m && typeof m.opacity === 'number')
+      heroDim.push({ o, m, base: m.opacity, keep, vis: o.visible });
+  }
+  function collectHeroGround() {
+    if (heroDimReady) return;
+    heroDimReady = true;
+    const gg = sceneApi.groups && sceneApi.groups.ground;
+    if (gg) {
+      // same predicate + order the hero itself uses (§ intro sequencing):
+      // [web, myc, mossPts, pools, roots, ribbon, beads]
+      const withWin = gg.children.filter(o => o.material &&
+        ((o.material.uniforms && o.material.uniforms.uWin) ||
+         (o.material.userData && o.material.userData.uWin)));
+      const KEEP = [0.10, 0.10, 0.28, 0.55, 0.12, 0.15, 0.25];
+      withWin.forEach((o, i) => addDim(o, KEEP[i] ?? 0.20));
+    }
+    // ambient mote/bokeh cloud: a direct scene child, never the shed
+    for (const o of sceneApi.scene.children) {
+      if (o.isPoints && o !== sceneApi.groups.spores) addDim(o, 0.0);
+    }
+  }
+  function applyHeroDim(reach) {
+    heroDimActive = reach > 0.001;
+    for (const d of heroDim) {
+      const f = 1 - reach * (1 - d.keep);
+      if (d.u) d.u.value = d.base * f;
+      else d.m.opacity = d.base * f;
+      d.o.visible = d.vis && (d.o.isPoints ? f > 0.12 : true);
+    }
+  }
+  function restoreHeroDim() {
+    for (const d of heroDim) {
+      if (d.u) d.u.value = d.base;
+      else d.m.opacity = d.base;
+      d.o.visible = d.vis;
+    }
+    heroDimActive = false;
+  }
+
   sceneApi.addAnimator('journey-final', (t, dt) => {
     amount += (amountTarget - amount) * Math.min(1, dt * 2.2);
     if (amount < 0.004 && amountTarget === 0) amount = 0;
     group.visible = amount > 0.003;
-    if (!group.visible) { lastPull = pullOf(sceneApi.camera.position.x); return; }
+    if (!group.visible) {
+      lastPull = pullOf(sceneApi.camera.position.x);
+      if (heroDimActive) restoreHeroDim();   // byte-exact hand-back
+      return;
+    }
 
     // shared uniforms
     const pull = pullOf(sceneApi.camera.position.x);
+    // hero floor-network dim rides amount x pull — eases in with the
+    // pullback, reverses with it, restores exactly on retire
+    collectHeroGround();
+    const reachT = Math.max(0, Math.min(1, (pull - 0.25) / 0.45));
+    applyHeroDim(amount * reachT * reachT * (3 - 2 * reachT));
     uniforms.uAmount.value = amount;
     uniforms.uPull.value = pull;
     uniforms.uTime.value = t;
@@ -138,6 +206,21 @@ export function createFinal(sceneApi) {
     sky.update(t, amount);
   });
 
+  /* ---- growth-front world position (lens halation focus hint) ----
+     The travelling pulse finally has an exposed position (BUDGETS W5
+     polish item 3): the same pure arc formula final-terrain builds the
+     front from, sampled at the live phase. Null while the pulse rests or
+     runs off-arc — the journey falls back to its static member hint. */
+  const _front = new THREE.Vector3();
+  function frontWorld() {
+    if (!front.running || front.on < 0.08) return null;
+    const ph = Math.max(0, Math.min(1, front.phase));
+    const az = ph * TAU + HERO_AZ;
+    const r = 6.4 + 1.1 * Math.sin(ph * TAU * 2.3 + 1.0);
+    return _front.set(
+      RING_C.x + Math.cos(az) * r, -0.5, RING_C.z + Math.sin(az) * r);
+  }
+
   return {
     group,
     nodeIds: [],   // the epilogue has no detail state by design (adr-d6)
@@ -146,6 +229,8 @@ export function createFinal(sceneApi) {
     get armed() { return amountTarget > 0; },
     setHot() {},
     nodeWorld() { return null; },
+    /** Live growth-front position for the halation focus hint (or null). */
+    frontWorld,
     /** FN-3.1 — closing-CTA hook. Donor trigger names preserved. */
     trigger(name) { if (name === 'ctaPulse' || name === 'ringPulse') fireCta(); },
     /** QA introspection */
