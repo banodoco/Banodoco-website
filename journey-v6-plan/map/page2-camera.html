@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mushroom Journey — Plate II — Camera Journey</title>
+<style>
+  html, body { margin:0; padding:0; background:#141008; }
+  body { display:flex; justify-content:center; }
+  svg { max-width:1500px; width:100%; height:auto; display:block; }
+  text { font-family: Georgia, 'Times New Roman', serif; }
+  .h1   { fill:#f0c877; font-size:27px; letter-spacing:.14em; }
+  .h2   { fill:#a08850; font-size:14px; letter-spacing:.22em; }
+  .h3   { fill:#f0c877; font-size:19px; letter-spacing:.1em; }
+  .lab  { fill:#e6d3a3; font-size:13.5px; }
+  .labB { fill:#f0c877; font-size:14px; letter-spacing:.06em; }
+  .k    { fill:#f0c877; font-size:11.5px; letter-spacing:.16em; }
+  .tiny { fill:#a08850; font-size:11px; }
+  .cap  { fill:#c9b280; font-size:12px; font-style:italic; }
+  .spec { fill:#b09a6a; font-size:11.5px; font-family:'SF Mono',Menlo,monospace; }
+  .sk   { stroke:#d9a441; fill:none; stroke-linecap:round; }
+  .skB  { stroke:#f0c877; fill:none; stroke-linecap:round; }
+  .bar  { fill:#e6d3a3; opacity:0.85; }
+  .barD { fill:#a08850; opacity:0.55; }
+  .fr   { fill:#0f0b05; stroke:#d9a441; stroke-width:1.1; }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 1500 2140" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Plate II — camera journey: five resting poses and the continuous path between them">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0.6 L9,5 L0,9.4 L2.4,5 Z" fill="#f0c877"/>
+  </marker>
+  <marker id="arrD" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0,0.6 L9,5 L0,9.4 L2.4,5 Z" fill="#d9a441" opacity="0.8"/>
+  </marker>
+  <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+    <feGaussianBlur stdDeviation="4" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <radialGradient id="ember" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#f0c877" stop-opacity="0.9"/>
+    <stop offset="55%" stop-color="#d9a441" stop-opacity="0.35"/>
+    <stop offset="100%" stop-color="#d9a441" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+
+<rect x="0" y="0" width="1500" height="2140" fill="#141008"/>
+
+<!-- ======================= TITLE ======================= -->
+<text class="h1" x="70" y="78">THE MUSHROOM JOURNEY&#8202;&#8212;&#8202;PLATE II</text>
+<text class="h2" x="70" y="106">CAMERA JOURNEY &#183; FIVE RESTING POSES &#183; ONE CONTINUOUS, REVERSIBLE PATH</text>
+<line x1="70" y1="122" x2="1000" y2="122" stroke="#d9a441" stroke-width="1" opacity="0.4"/>
+<text class="tiny" x="70" y="142">Mission is the implemented hero pose, traced exactly. Scrubbed travel with soft chapter rests; fast scroll takes the same accelerated path. Reverse scroll retraces it cleanly.</text>
+
+<!-- no-roll badge -->
+<g>
+  <rect x="1058" y="52" width="382" height="58" fill="none" stroke="#f0c877" stroke-width="1.4"/>
+  <text class="labB" x="1249" y="78" text-anchor="middle" style="font-size:15px; letter-spacing:.2em">NO CAMERA ROLL &#8212; ANYWHERE</text>
+  <text class="tiny" x="1249" y="98" text-anchor="middle">no hard cuts &#183; no full decorative revolution on the orbit</text>
+</g>
+
+<!-- ======================= PLAN VIEW ======================= -->
+<text class="h3" x="70" y="196">PLAN VIEW</text>
+<text class="tiny" x="200" y="196">world +X right &#183; world +Z down (toward the Mission camera) &#183; &#8855; descends into the page &#183; &#8857; rises out of it</text>
+
+<!-- fairy ring (irregular, active on the left) -->
+<path d="M 358 262 C 460 258, 548 322, 566 408 C 582 486, 528 566, 434 592 C 336 618, 218 588, 176 508 C 138 434, 158 336, 240 290 C 276 268, 316 264, 358 262"
+      fill="none" stroke="#d9a441" stroke-width="1.1" stroke-dasharray="7 7" opacity="0.45"/>
+<path d="M 214 302 C 158 352, 146 448, 182 516" fill="none" stroke="#f0c877" stroke-width="2" stroke-dasharray="10 6" opacity="0.8" filter="url(#glow)"/>
+<g class="skB" stroke-width="1.2" opacity="0.8">
+  <path d="M 196 330 L 162 314" marker-end="url(#arrB)"/>
+  <path d="M 172 424 L 134 424" marker-end="url(#arrB)"/>
+  <path d="M 192 500 L 158 518" marker-end="url(#arrB)"/>
+</g>
+<text class="tiny" x="96" y="292">active growth front</text>
+<text class="tiny" x="96" y="306">(the ring&#8217;s live arc)</text>
+
+<!-- organism plan: asymmetric cap outline; lifted rim = back-right (upper right) -->
+<path d="M 370 350 C 404 348, 434 366, 442 396 C 452 430, 436 466, 402 480 C 366 496, 320 490, 300 462 C 282 436, 286 396, 312 372 C 328 356, 348 352, 370 350"
+      fill="none" stroke="#d9a441" stroke-width="1.6" opacity="0.8"/>
+<path d="M 380 350 C 414 352, 440 372, 444 402" fill="none" stroke="#f0c877" stroke-width="2.2" opacity="0.9" filter="url(#glow)"/>
+<text class="tiny" x="452" y="366">lifted rear-right rim</text>
+<text class="tiny" x="452" y="380">(gills exposed &#8212; the entry side)</text>
+<circle cx="368" cy="418" r="5" fill="#d9a441" opacity="0.9"/>
+<text class="tiny" x="330" y="440">stipe</text>
+
+<!-- exit sectors on the rear rim (rear = up) -->
+<g class="skB" stroke-width="2.2" opacity="0.9">
+  <path d="M 312 366 C 322 358, 334 352, 346 350"/>
+  <path d="M 356 348 C 368 346, 380 347, 390 350"/>
+  <path d="M 400 353 C 412 358, 424 366, 432 376"/>
+</g>
+<text class="tiny" x="238" y="346">2RP</text>
+<text class="tiny" x="352" y="332">Arca Gidan</text>
+<text class="tiny" x="440" y="342">ArtCompute</text>
+
+<!-- camera path -->
+<!-- 1: Mission -->
+<path d="M 370 640 C 490 634, 594 520, 594 414 C 594 302, 520 246, 438 238"
+      fill="none" stroke="#d9a441" stroke-width="1.6" stroke-dasharray="8 6" opacity="0.85"/>
+<path d="M 520 580 C 556 550, 578 518, 588 486" fill="none" stroke="#f0c877" stroke-width="1.4" opacity="0.9" marker-end="url(#arrB)"/>
+<path d="M 560 300 C 540 278, 514 260, 484 250" fill="none" stroke="#f0c877" stroke-width="1.4" opacity="0.9" marker-end="url(#arrB)"/>
+<!-- T1 on the orbit -->
+<path d="M 566 336 l 8 11 l -8 11 l -8 -11 Z" fill="#141008" stroke="#f0c877" stroke-width="1.5"/>
+<text class="tiny" x="586" y="334">T1 &#183; rear-cap discovery</text>
+<text class="tiny" x="586" y="348">(exits reveal in sequence)</text>
+<!-- pose 1 badge + frustum -->
+<circle cx="370" cy="640" r="13" fill="#141008" stroke="#f0c877" stroke-width="1.6"/>
+<text class="labB" x="370" y="645" text-anchor="middle">1</text>
+<g class="sk" stroke-width="0.9" opacity="0.6">
+  <line x1="362" y1="628" x2="330" y2="560"/><line x1="378" y1="628" x2="410" y2="560"/>
+</g>
+<text class="k" x="398" y="652">MISSION &#8212; the hero pose (az 0&#176;)</text>
+<text class="cap" x="470" y="600">orbit &#8776;160&#176; around the right flank + push-in</text>
+
+<!-- 2: Inspire -->
+<circle cx="438" cy="238" r="13" fill="#141008" stroke="#f0c877" stroke-width="1.6"/>
+<text class="labB" x="438" y="243" text-anchor="middle">2</text>
+<text class="k" x="462" y="230">INSPIRE &#8212; rear &#190;, &#8776;20&#176; right of dead-rear</text>
+<!-- slip-under -->
+<path d="M 430 252 C 420 280, 414 306, 412 330" fill="none" stroke="#d9a441" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.9" marker-end="url(#arrD)"/>
+<path d="M 414 318 l 8 11 l -8 11 l -8 -11 Z" fill="#141008" stroke="#f0c877" stroke-width="1.5"/>
+<text class="cap" x="470" y="286">slip-under beneath the lifted rim</text>
+<text class="tiny" x="470" y="302">T2 &#183; the cap occludes the sky</text>
+<!-- 3: Connect -->
+<circle cx="404" cy="358" r="13" fill="#141008" stroke="#f0c877" stroke-width="1.6"/>
+<text class="labB" x="404" y="363" text-anchor="middle">3</text>
+<text class="k" x="474" y="416">CONNECT &#8212; in the chamber</text>
+<!-- lateral to stipe junction + descend into page -->
+<path d="M 392 366 C 380 382, 372 396, 368 408" fill="none" stroke="#d9a441" stroke-width="1.3" stroke-dasharray="3 4" opacity="0.9" marker-end="url(#arrD)"/>
+<g transform="translate(362,428)">
+  <circle r="9" fill="#141008" stroke="#f0c877" stroke-width="1.4"/>
+  <line x1="-5.5" y1="-5.5" x2="5.5" y2="5.5" stroke="#f0c877" stroke-width="1.3"/>
+  <line x1="-5.5" y1="5.5" x2="5.5" y2="-5.5" stroke="#f0c877" stroke-width="1.3"/>
+</g>
+<text class="cap" x="386" y="452">lateral to the stipe junction,</text>
+<text class="cap" x="386" y="467">then descend (into the page)</text>
+<text class="tiny" x="386" y="483">T3 &#183; soil-line crossing</text>
+<!-- underground glide -->
+<path d="M 348 436 C 300 452, 252 458, 206 458" fill="none" stroke="#d9a441" stroke-width="1.5" stroke-dasharray="2 5" opacity="0.9" marker-end="url(#arrD)"/>
+<!-- 4: Owned -->
+<circle cx="188" cy="458" r="13" fill="#141008" stroke="#f0c877" stroke-width="1.6"/>
+<text class="labB" x="188" y="463" text-anchor="middle">4</text>
+<text class="k" x="88" y="492">OWNED &#8212; underground glide (&#8722;X)</text>
+<!-- rise + recede -->
+<path d="M 178 446 C 152 404, 128 348, 116 296" fill="none" stroke="#d9a441" stroke-width="1.4" stroke-dasharray="8 6" opacity="0.9" marker-end="url(#arrD)"/>
+<g transform="translate(110,270)">
+  <circle r="9" fill="#141008" stroke="#f0c877" stroke-width="1.4"/>
+  <circle r="2.6" fill="#f0c877"/>
+</g>
+<!-- 5: Final -->
+<circle cx="96" cy="228" r="13" fill="#141008" stroke="#f0c877" stroke-width="1.6"/>
+<text class="labB" x="96" y="233" text-anchor="middle">5</text>
+<text class="k" x="120" y="222">FINAL &#8212; rise + recede (out of the page)</text>
+<text class="cap" x="150" y="384">follows the growth front</text>
+
+<!-- ======================= HEIGHT PROFILE ======================= -->
+<text class="h3" x="760" y="196">HEIGHT PROFILE</text>
+<text class="tiny" x="760" y="216">schematic along the journey &#183; world heights &#183; not a strict projection</text>
+
+<!-- reference lines -->
+<line x1="780" y1="352" x2="1445" y2="352" stroke="#d9a441" stroke-width="0.6" stroke-dasharray="2 6" opacity="0.35"/>
+<text class="tiny" x="780" y="344">cap rim y = 3.15</text>
+<path d="M 780 470 C 880 464, 990 474, 1100 468 C 1220 462, 1330 474, 1445 468" fill="none" stroke="#d9a441" stroke-width="1.5" opacity="0.8"/>
+<text class="tiny" x="780" y="462">soil-line y = 0</text>
+
+<!-- faint organism silhouette -->
+<g class="sk" opacity="0.4">
+  <path d="M 1078 468 C 1074 430, 1078 396, 1074 352" stroke-width="1.4"/>
+  <path d="M 1010 356 C 1024 316, 1058 296, 1082 294 C 1112 292, 1142 314, 1150 348" stroke-width="1.4"/>
+  <path d="M 1010 356 C 1040 372, 1070 376, 1082 376 C 1108 374, 1134 362, 1150 348" stroke-width="1.2"/>
+  <line x1="1036" y1="366" x2="1082" y2="342"/><line x1="1120" y1="364" x2="1082" y2="342"/>
+</g>
+
+<!-- journey height curve -->
+<path d="M 800 384 C 846 376, 900 364, 938 360 C 986 356, 1010 362, 1032 376 C 1050 388, 1064 412, 1076 444 C 1084 466, 1096 496, 1122 512 C 1150 526, 1188 524, 1218 522 C 1258 520, 1288 508, 1310 470 C 1336 424, 1372 320, 1408 224"
+      fill="none" stroke="#d9a441" stroke-width="1.8" stroke-dasharray="8 6" opacity="0.9" marker-end="url(#arrD)"/>
+<!-- pose badges on the curve -->
+<circle cx="800" cy="384" r="12" fill="#141008" stroke="#f0c877" stroke-width="1.5"/><text class="labB" x="800" y="389" text-anchor="middle">1</text>
+<circle cx="944" cy="360" r="12" fill="#141008" stroke="#f0c877" stroke-width="1.5"/><text class="labB" x="944" y="365" text-anchor="middle">2</text>
+<circle cx="1038" cy="380" r="12" fill="#141008" stroke="#f0c877" stroke-width="1.5"/><text class="labB" x="1038" y="385" text-anchor="middle">3</text>
+<circle cx="1200" cy="522" r="12" fill="#141008" stroke="#f0c877" stroke-width="1.5"/><text class="labB" x="1200" y="527" text-anchor="middle">4</text>
+<circle cx="1408" cy="224" r="12" fill="#141008" stroke="#f0c877" stroke-width="1.5"/><text class="labB" x="1408" y="229" text-anchor="middle">5</text>
+<!-- thresholds -->
+<path d="M 890 356 l 8 11 l -8 11 l -8 -11 Z" fill="#141008" stroke="#f0c877" stroke-width="1.5"/>
+<text class="tiny" x="874" y="336">T1</text>
+<path d="M 1032 366 l 8 11 l -8 11 l -8 -11 Z" fill="#141008" stroke="#f0c877" stroke-width="1.5"/>
+<text class="tiny" x="1048" y="360">T2</text>
+<path d="M 1090 458 l 8 11 l -8 11 l -8 -11 Z" fill="#141008" stroke="#f0c877" stroke-width="1.5"/>
+<text class="tiny" x="1104" y="456">T3</text>
+<!-- segment captions -->
+<text class="cap" x="820" y="416">orbit + push-in (cam y 2.25 &#8594; &#8776;2.9)</text>
+<text class="cap" x="960" y="418">under-cap: low angle,</text>
+<text class="cap" x="960" y="433">looking up (y &#8776; 2.45)</text>
+<text class="cap" x="1120" y="556">stipe-side descent &#8594; glide y &#8776; &#8722;1.4</text>
+<text class="cap" x="1250" y="404">rise + recede &#8212;</text>
+<text class="cap" x="1250" y="419">tilt is pitch only,</text>
+<text class="cap" x="1250" y="434">never roll</text>
+
+<line x1="70" y1="682" x2="1440" y2="682" stroke="#d9a441" stroke-width="1" opacity="0.4"/>
+
+<!-- ======================= POSE ROWS ======================= -->
+<!-- ================= ROW 1 : MISSION ================= -->
+<g>
+  <circle cx="88" cy="734" r="14" fill="#141008" stroke="#f0c877" stroke-width="1.7"/>
+  <text class="labB" x="88" y="739" text-anchor="middle">1</text>
+  <text class="h3" x="114" y="741">MISSION</text>
+  <text class="tiny" x="240" y="741">the implemented hero &#8212; traced, preserved</text>
+  <text class="spec" x="70" y="768">cam (&#8722;2.25, 2.25, 10.4) &#183; target (&#8722;2.4, 2.6, 0) &#183; fov 38&#176; &#183; az 0&#176;</text>
+  <text class="lab" x="70" y="794">Resting pose = the live hero, exactly. Ambient life only:</text>
+  <text class="lab" x="70" y="811">irregular mycelial pulses, under-cap drift, moisture glints.</text>
+  <text class="lab" x="70" y="828">The +x spore drift seen here is later revealed as ArtCompute.</text>
+  <text class="labB" x="70" y="860">TEXT &#183; LEFT <tspan class="tiny">(existing DOM copy &#8212; unchanged)</tspan></text>
+
+  <!-- landscape thumb -->
+  <g transform="translate(560,706)">
+    <rect class="fr" width="340" height="191"/>
+    <g class="barD"><rect x="12" y="8" width="26" height="3"/><rect x="296" y="7" width="14" height="6" rx="3"/><rect x="314" y="7" width="16" height="6" rx="3"/></g>
+    <g class="bar"><rect x="22" y="46" width="92" height="5"/><rect x="22" y="58" width="74" height="5"/><rect x="22" y="70" width="86" height="5"/><rect x="22" y="82" width="58" height="5"/></g>
+    <g class="barD"><rect x="22" y="96" width="72" height="3"/><rect x="22" y="103" width="64" height="3"/></g>
+    <rect x="22" y="118" width="88" height="16" rx="8" fill="none" stroke="#d9a441" stroke-width="1"/>
+    <g class="sk" stroke-width="1.1">
+      <path d="M 216 164 C 214 148, 218 128, 213 108" stroke-width="1.6"/>
+      <path d="M 170 102 C 180 74, 208 62, 216 62 C 244 60, 266 76, 272 94" stroke-width="1.6"/>
+      <path d="M 170 102 C 192 112, 240 112, 272 94" class="skB" stroke-width="1.4"/>
+      <line x1="182" y1="106" x2="214" y2="96" opacity="0.5"/><line x1="200" y1="110" x2="215" y2="98" opacity="0.5"/>
+      <line x1="234" y1="110" x2="216" y2="98" opacity="0.5"/><line x1="256" y1="104" x2="218" y2="96" opacity="0.5"/>
+      <path d="M 120 172 C 160 166, 220 176, 268 170 C 300 166, 322 172, 336 170" opacity="0.5"/>
+      <path d="M 150 180 C 196 174, 260 182, 316 176" opacity="0.35"/>
+    </g>
+    <g fill="#d9a441">
+      <circle cx="282" cy="78" r="1.4" opacity="0.8"/><circle cx="292" cy="68" r="1.1" opacity="0.6"/><circle cx="288" cy="90" r="1" opacity="0.7"/><circle cx="300" cy="80" r="0.9" opacity="0.5"/><circle cx="306" cy="60" r="1.2" opacity="0.45"/>
+      <circle cx="150" cy="170" r="1.2" opacity="0.6"/><circle cx="240" cy="176" r="1.2" opacity="0.6"/><circle cx="296" cy="170" r="1" opacity="0.5"/>
+    </g>
+    <text class="tiny" x="0" y="205">landscape &#8212; copy left, organism right of centre, colony field low</text>
+  </g>
+
+  <!-- portrait thumb -->
+  <g transform="translate(950,706)">
+    <rect class="fr" width="107" height="191"/>
+    <g class="barD"><rect x="8" y="7" width="18" height="3"/><rect x="82" y="6" width="17" height="6" rx="3"/></g>
+    <g class="sk" stroke-width="1">
+      <path d="M 54 118 C 53 106, 55 94, 53 82" stroke-width="1.4"/>
+      <path d="M 26 78 C 33 58, 50 50, 55 50 C 74 49, 88 60, 92 72" stroke-width="1.4"/>
+      <path d="M 26 78 C 42 86, 76 85, 92 72" class="skB" stroke-width="1.2"/>
+      <path d="M 12 126 C 36 120, 70 128, 98 122" opacity="0.5"/>
+    </g>
+    <g fill="#d9a441"><circle cx="95" cy="60" r="1.1" opacity="0.7"/><circle cx="100" cy="50" r="0.9" opacity="0.5"/></g>
+    <g class="bar"><rect x="12" y="140" width="64" height="4"/><rect x="12" y="150" width="50" height="4"/></g>
+    <rect x="12" y="162" width="52" height="12" rx="6" fill="none" stroke="#d9a441" stroke-width="0.9"/>
+    <text class="tiny" x="-6" y="205">portrait &#8212; live mobile pose</text>
+    <text class="tiny" x="-6" y="219">(cam y 3.2 &#183; fov 64&#176;)</text>
+  </g>
+
+  <text class="labB" x="1120" y="734">ENTRY</text>
+  <text class="lab" x="1120" y="752">page load &#8212; preserved grow-in;</text>
+  <text class="lab" x="1120" y="769">no journey motion before consent</text>
+  <text class="labB" x="1120" y="796">EXIT</text>
+  <text class="lab" x="1120" y="814">CTA or first scroll &#8594; one restrained</text>
+  <text class="lab" x="1120" y="831">flow toward the cap, then the orbit</text>
+  <text class="labB" x="1120" y="858">STREAMING</text>
+  <text class="lab" x="1120" y="876">none at rest &#8212; rear-cap assets lazy-</text>
+  <text class="lab" x="1120" y="893">load only after the hero is stable</text>
+</g>
+<line x1="70" y1="948" x2="1440" y2="948" stroke="#d9a441" stroke-width="0.7" opacity="0.25"/>
+
+<!-- ================= ROW 2 : INSPIRE ================= -->
+<g>
+  <circle cx="88" cy="998" r="14" fill="#141008" stroke="#f0c877" stroke-width="1.7"/>
+  <text class="labB" x="88" y="1003" text-anchor="middle">2</text>
+  <text class="h3" x="114" y="1005">INSPIRE</text>
+  <text class="tiny" x="234" y="1005">rear three-quarter &#8212; after the orbit</text>
+  <text class="spec" x="70" y="1032">orbit &#8776;160&#176; right flank &#183; push-in 10.4 &#8594; &#8776;8.6 &#183; upward bias</text>
+  <text class="lab" x="70" y="1058">Controlled orbit from the hero pose &#8212; it may feel like a slow</text>
+  <text class="lab" x="70" y="1075">spin, never a revolution. Rest &#8776;20&#176; right of dead-rear so the</text>
+  <text class="lab" x="70" y="1092">three plumes sit asymmetrically, not in a symmetric crown.</text>
+  <text class="labB" x="70" y="1124">TEXT &#183; BOTTOM</text>
+
+  <!-- landscape thumb -->
+  <g transform="translate(560,970)">
+    <rect class="fr" width="340" height="191"/>
+    <g class="sk" stroke-width="1.3">
+      <path d="M 74 122 C 92 84, 136 62, 172 60 C 214 58, 252 74, 268 108" stroke-width="1.6"/>
+      <path d="M 74 122 C 108 138, 226 134, 268 108" class="skB" stroke-width="1.6"/>
+      <path d="M 160 136 C 158 152, 160 170, 158 191" opacity="0.6"/>
+      <path d="M 178 136 C 178 154, 180 172, 180 191" opacity="0.6"/>
+    </g>
+    <!-- plumes: ArtCompute screen-left, Arca top, 2RP screen-right (mirrored rear view) -->
+    <g class="sk" stroke-width="1">
+      <path d="M 92 116 C 76 96, 84 70, 68 48 C 60 38, 62 30, 58 24"/>
+      <path d="M 170 60 C 166 46, 174 34, 168 20"/>
+      <path d="M 252 96 C 262 78, 256 58, 270 40 C 276 32, 274 26, 280 22"/>
+    </g>
+    <g fill="#d9a441">
+      <circle cx="80" cy="86" r="1.2" opacity="0.7"/><circle cx="70" cy="58" r="1" opacity="0.6"/><circle cx="63" cy="36" r="0.9" opacity="0.5"/>
+      <circle cx="169" cy="44" r="1.2" opacity="0.7"/><circle cx="172" cy="28" r="0.9" opacity="0.55"/>
+      <circle cx="259" cy="70" r="1.2" opacity="0.7"/><circle cx="272" cy="48" r="1" opacity="0.6"/><circle cx="278" cy="30" r="0.9" opacity="0.5"/>
+    </g>
+    <g>
+      <rect x="20" y="8" width="62" height="13" rx="6.5" fill="#141008" stroke="#d9a441" stroke-width="0.9"/>
+      <text class="tiny" x="51" y="18" text-anchor="middle" style="fill:#f0c877">ArtCompute</text>
+      <rect x="134" y="2" width="72" height="13" rx="6.5" fill="#141008" stroke="#f0c877" stroke-width="0.9"/>
+      <text class="tiny" x="170" y="12" text-anchor="middle" style="fill:#f0c877">Arca Gidan</text>
+      <rect x="262" y="8" width="34" height="13" rx="6.5" fill="#141008" stroke="#d9a441" stroke-width="0.9"/>
+      <text class="tiny" x="279" y="18" text-anchor="middle" style="fill:#f0c877">2RP</text>
+    </g>
+    <g class="bar"><rect x="118" y="158" width="104" height="5"/><rect x="134" y="170" width="72" height="4"/></g>
+    <text class="tiny" x="0" y="205">landscape &#8212; crown centred, plumes asymmetric, copy bottom-centre</text>
+  </g>
+
+  <!-- portrait thumb -->
+  <g transform="translate(950,970)">
+    <rect class="fr" width="107" height="191"/>
+    <g class="sk" stroke-width="1.1">
+      <path d="M 22 118 C 32 92, 52 80, 56 80 C 74 78, 88 88, 92 104" stroke-width="1.3"/>
+      <path d="M 22 118 C 40 128, 76 126, 92 104" class="skB" stroke-width="1.3"/>
+    </g>
+    <g class="sk" stroke-width="0.9">
+      <path d="M 32 112 C 24 88, 32 62, 24 40 C 20 30, 22 22, 20 16"/>
+      <path d="M 56 80 C 54 62, 60 44, 56 26"/>
+      <path d="M 84 100 C 90 78, 86 56, 94 38"/>
+    </g>
+    <g fill="#d9a441"><circle cx="27" cy="66" r="0.9" opacity="0.6"/><circle cx="57" cy="50" r="0.9" opacity="0.6"/><circle cx="90" cy="62" r="0.9" opacity="0.6"/></g>
+    <g>
+      <rect x="8" y="6" width="44" height="11" rx="5.5" fill="#141008" stroke="#f0c877" stroke-width="0.8"/>
+      <text class="tiny" x="30" y="15" text-anchor="middle" style="fill:#f0c877;font-size:9px">Arca G.</text>
+      <rect x="58" y="22" width="42" height="11" rx="5.5" fill="#141008" stroke="#d9a441" stroke-width="0.8"/>
+      <text class="tiny" x="79" y="31" text-anchor="middle" style="fill:#f0c877;font-size:9px">ArtC.</text>
+      <rect x="8" y="34" width="28" height="11" rx="5.5" fill="#141008" stroke="#d9a441" stroke-width="0.8"/>
+      <text class="tiny" x="22" y="43" text-anchor="middle" style="fill:#f0c877;font-size:9px">2RP</text>
+    </g>
+    <g class="bar"><rect x="14" y="156" width="76" height="4"/><rect x="14" y="166" width="58" height="4"/></g>
+    <text class="tiny" x="-6" y="205">portrait &#8212; crown low, plumes</text>
+    <text class="tiny" x="-6" y="219">run the full height, chips stacked</text>
+  </g>
+
+  <text class="labB" x="1120" y="998">ENTRY</text>
+  <text class="lab" x="1120" y="1016">T1 mid-orbit: exits reveal in order &#8212;</text>
+  <text class="lab" x="1120" y="1033">ArtCompute &#8594; Arca Gidan &#8594; 2RP</text>
+  <text class="labB" x="1120" y="1060">EXIT</text>
+  <text class="lab" x="1120" y="1078">one plume becomes the guide; follow</text>
+  <text class="lab" x="1120" y="1095">it backward + down around the rim</text>
+  <text class="labB" x="1120" y="1122">STREAMING</text>
+  <text class="lab" x="1120" y="1140">front-face detail retires as it leaves</text>
+  <text class="lab" x="1120" y="1157">frame; under-cap sources stream in</text>
+</g>
+<line x1="70" y1="1212" x2="1440" y2="1212" stroke="#d9a441" stroke-width="0.7" opacity="0.25"/>
+
+<!-- ================= ROW 3 : CONNECT ================= -->
+<g>
+  <circle cx="88" cy="1262" r="14" fill="#141008" stroke="#f0c877" stroke-width="1.7"/>
+  <text class="labB" x="88" y="1267" text-anchor="middle">3</text>
+  <text class="h3" x="114" y="1269">CONNECT</text>
+  <text class="tiny" x="244" y="1269">wide low-angle in the gill chamber</text>
+  <text class="spec" x="70" y="1296">slip-under at the lifted rim &#183; rest y &#8776; 2.45, looking up &#8776;18&#176;</text>
+  <text class="lab" x="70" y="1322">Entered from the back-right, resting gaze across the chamber</text>
+  <text class="lab" x="70" y="1339">toward the front-left commons. Radial gills read as a</text>
+  <text class="lab" x="70" y="1356">colonnade; regions exchange light asynchronously.</text>
+  <text class="labB" x="70" y="1388">TEXT &#183; LEFT</text>
+
+  <!-- landscape thumb -->
+  <g transform="translate(560,1234)">
+    <rect class="fr" width="340" height="191"/>
+    <!-- gill colonnade: curtains falling from top -->
+    <g class="sk" stroke-width="1.1" opacity="0.8">
+      <path d="M 148 0 C 150 44, 142 96, 128 150 C 124 164, 118 176, 110 186"/>
+      <path d="M 190 0 C 192 50, 186 104, 176 156 C 173 168, 168 178, 162 186"/>
+      <path d="M 234 0 C 234 52, 230 108, 224 158"/>
+      <path d="M 276 0 C 278 46, 276 96, 272 144"/>
+      <path d="M 310 0 C 312 40, 312 84, 310 126"/>
+      <path d="M 128 76 C 148 82, 168 82, 186 78" stroke-width="0.7" opacity="0.6"/>
+      <path d="M 180 118 C 200 124, 218 124, 232 120" stroke-width="0.7" opacity="0.6"/>
+      <path d="M 228 64 C 244 70, 262 70, 276 66" stroke-width="0.7" opacity="0.6"/>
+    </g>
+    <path d="M 100 186 C 160 178, 260 182, 336 172" class="sk" stroke-width="0.8" opacity="0.5"/>
+    <!-- Community region -->
+    <g fill="#d9a441"><circle cx="152" cy="88" r="2" opacity="0.9"/><circle cx="170" cy="102" r="1.5" opacity="0.7"/><circle cx="140" cy="110" r="1.4" opacity="0.7"/></g>
+    <path d="M 132 70 C 150 64, 172 64, 188 70" class="skB" stroke-width="1.1" opacity="0.8"/>
+    <text class="tiny" x="106" y="58" style="font-size:9.5px">Community</text>
+    <!-- ADOS knot -->
+    <circle cx="296" cy="52" r="8" fill="url(#ember)"/><circle cx="296" cy="52" r="2.6" fill="#f0c877"/>
+    <g class="sk" stroke-width="0.7" opacity="0.6">
+      <path d="M 216 30 C 248 36, 274 42, 290 49"/>
+      <path d="M 226 88 C 252 76, 274 64, 290 55"/>
+      <path d="M 330 96 C 318 80, 308 66, 300 58"/>
+    </g>
+    <text class="tiny" x="306" y="40" style="font-size:9.5px">ADOS</text>
+    <!-- Hivemind braid -->
+    <g class="sk" stroke-width="1">
+      <path d="M 168 178 C 216 168, 262 172, 306 158 C 320 153, 330 148, 336 144"/>
+      <path d="M 168 182 C 218 176, 262 164, 308 164 C 322 160, 332 152, 336 148" opacity="0.7"/>
+    </g>
+    <g fill="#f0c877"><circle cx="222" cy="171" r="1.6" opacity="0.8"/><circle cx="280" cy="165" r="1.6" opacity="0.8"/><circle cx="322" cy="151" r="1.6" opacity="0.8"/></g>
+    <text class="tiny" x="236" y="188" style="font-size:9.5px">Hivemind</text>
+    <!-- copy left -->
+    <g class="bar"><rect x="18" y="70" width="76" height="5"/><rect x="18" y="82" width="60" height="5"/></g>
+    <g class="barD"><rect x="18" y="96" width="66" height="3"/><rect x="18" y="103" width="54" height="3"/></g>
+    <text class="tiny" x="0" y="205">landscape &#8212; low angle; knot upper-right, braid lower-right</text>
+  </g>
+
+  <!-- portrait thumb -->
+  <g transform="translate(950,1234)">
+    <rect class="fr" width="107" height="191"/>
+    <g class="sk" stroke-width="1" opacity="0.8">
+      <path d="M 40 0 C 42 60, 38 120, 30 178"/>
+      <path d="M 64 0 C 66 64, 62 126, 56 184"/>
+      <path d="M 88 0 C 90 58, 88 116, 86 168"/>
+      <path d="M 30 92 C 44 98, 58 98, 70 94" stroke-width="0.6" opacity="0.6"/>
+      <path d="M 60 130 C 72 136, 84 136, 94 132" stroke-width="0.6" opacity="0.6"/>
+    </g>
+    <circle cx="88" cy="44" r="6" fill="url(#ember)"/><circle cx="88" cy="44" r="2" fill="#f0c877"/>
+    <g class="sk" stroke-width="0.9">
+      <path d="M 28 176 C 52 170, 76 164, 98 152"/>
+      <path d="M 28 180 C 54 176, 78 158, 98 156" opacity="0.7"/>
+    </g>
+    <g class="bar"><rect x="10" y="120" width="54" height="4"/><rect x="10" y="130" width="42" height="4"/></g>
+    <text class="tiny" x="-6" y="205">portrait &#8212; taller colonnade;</text>
+    <text class="tiny" x="-6" y="219">copy drops to the lower-left</text>
+  </g>
+
+  <text class="labB" x="1120" y="1262">ENTRY</text>
+  <text class="lab" x="1120" y="1280">T2 &#8212; the cap occludes the sky: a dark</text>
+  <text class="lab" x="1120" y="1297">wipe; stream the chamber + LOD swap</text>
+  <text class="labB" x="1120" y="1324">EXIT</text>
+  <text class="lab" x="1120" y="1342">pulse commons &#8594; stipe junction; go</text>
+  <text class="lab" x="1120" y="1359">lateral, exit near the stipe, descend</text>
+  <text class="lab" x="1120" y="1376">outside it &#8212; never the Equip interior</text>
+  <text class="labB" x="1120" y="1403">STREAMING</text>
+  <text class="lab" x="1120" y="1421">rim + plumes retire behind the cap;</text>
+  <text class="lab" x="1120" y="1438">soil + mat clusters begin preloading</text>
+</g>
+<line x1="70" y1="1476" x2="1440" y2="1476" stroke="#d9a441" stroke-width="0.7" opacity="0.25"/>
+
+<!-- ================= ROW 4 : OWNED ================= -->
+<g>
+  <circle cx="88" cy="1526" r="14" fill="#141008" stroke="#f0c877" stroke-width="1.7"/>
+  <text class="labB" x="88" y="1531" text-anchor="middle">4</text>
+  <text class="h3" x="114" y="1533">OWNED</text>
+  <text class="tiny" x="226" y="1533">the underground glide</text>
+  <text class="spec" x="70" y="1560">stipe-side descent &#183; T3 punch-through &#183; glide y &#8776; &#8722;1.4, &#8722;X</text>
+  <text class="lab" x="70" y="1586">Level off inside the mat and drift outward, away from the</text>
+  <text class="lab" x="70" y="1603">stipe. Unmistakably underground: dark pockets, cords,</text>
+  <text class="lab" x="70" y="1620">portraits at many depths passing softly out of focus.</text>
+  <text class="labB" x="70" y="1652">TEXT &#183; TOP-CENTRE <tspan class="tiny">(claims hierarchy)</tspan></text>
+
+  <!-- landscape thumb -->
+  <g transform="translate(560,1498)">
+    <rect class="fr" width="340" height="191"/>
+    <rect x="120" y="12" width="100" height="17" rx="8.5" fill="#141008" stroke="#f0c877" stroke-width="1.1"/>
+    <text class="tiny" x="170" y="24" text-anchor="middle" style="fill:#f0c877;font-size:10px">100% shared</text>
+    <rect x="86" y="38" width="78" height="12" rx="6" fill="#141008" stroke="#d9a441" stroke-width="0.8"/>
+    <text class="tiny" x="125" y="47" text-anchor="middle" style="font-size:8.5px">granted 1% / month</text>
+    <rect x="176" y="38" width="80" height="12" rx="6" fill="#141008" stroke="#d9a441" stroke-width="0.8"/>
+    <text class="tiny" x="216" y="47" text-anchor="middle" style="font-size:8.5px">split between groups</text>
+    <!-- mat -->
+    <g class="sk" stroke-width="0.9" opacity="0.6">
+      <path d="M 10 120 C 60 108, 130 132, 200 118 C 260 106, 310 126, 336 116"/>
+      <path d="M 20 156 C 80 144, 150 166, 230 150 C 286 140, 320 154, 338 148"/>
+      <path d="M 60 92 C 100 100, 150 92, 196 100" opacity="0.5"/>
+      <path d="M 240 88 C 274 96, 306 92, 330 98" opacity="0.5"/>
+      <path d="M 40 178 C 100 170, 180 184, 260 172" opacity="0.5"/>
+    </g>
+    <g>
+      <circle cx="66" cy="118" r="7" fill="url(#ember)"/><circle cx="66" cy="118" r="2.6" fill="#f0c877"/>
+      <circle cx="150" cy="146" r="9" fill="url(#ember)"/><circle cx="150" cy="146" r="3.2" fill="#f0c877"/>
+      <circle cx="238" cy="112" r="6" fill="url(#ember)"/><circle cx="238" cy="112" r="2.2" fill="#f0c877"/>
+      <circle cx="300" cy="152" r="7.6" fill="url(#ember)"/><circle cx="300" cy="152" r="2.8" fill="#f0c877"/>
+      <circle cx="106" cy="88" r="4.4" fill="url(#ember)" opacity="0.7"/><circle cx="106" cy="88" r="1.6" fill="#f0c877" opacity="0.7"/>
+      <circle cx="196" cy="94" r="3.6" fill="url(#ember)" opacity="0.55"/><circle cx="196" cy="94" r="1.3" fill="#f0c877" opacity="0.55"/>
+      <circle cx="272" cy="80" r="3" fill="url(#ember)" opacity="0.45"/><circle cx="272" cy="80" r="1.1" fill="#f0c877" opacity="0.45"/>
+      <circle cx="34" cy="150" r="3.4" fill="url(#ember)" opacity="0.5"/><circle cx="34" cy="150" r="1.2" fill="#f0c877" opacity="0.5"/>
+    </g>
+    <ellipse cx="278" cy="178" rx="34" ry="10" fill="none" stroke="#a08850" stroke-width="0.6" stroke-dasharray="2 4" opacity="0.5"/>
+    <text class="tiny" x="0" y="205">landscape &#8212; claims top-centre; portraits at many depths</text>
+  </g>
+
+  <!-- portrait thumb -->
+  <g transform="translate(950,1498)">
+    <rect class="fr" width="107" height="191"/>
+    <rect x="18" y="10" width="70" height="14" rx="7" fill="#141008" stroke="#f0c877" stroke-width="1"/>
+    <text class="tiny" x="53" y="20" text-anchor="middle" style="fill:#f0c877;font-size:8.5px">100% shared</text>
+    <rect x="12" y="30" width="38" height="10" rx="5" fill="#141008" stroke="#d9a441" stroke-width="0.7"/>
+    <rect x="56" y="30" width="40" height="10" rx="5" fill="#141008" stroke="#d9a441" stroke-width="0.7"/>
+    <g class="sk" stroke-width="0.8" opacity="0.6">
+      <path d="M 4 88 C 30 80, 62 94, 100 84"/>
+      <path d="M 8 130 C 36 122, 68 136, 102 126"/>
+      <path d="M 6 168 C 34 160, 66 174, 100 164" opacity="0.5"/>
+    </g>
+    <g>
+      <circle cx="30" cy="90" r="6" fill="url(#ember)"/><circle cx="30" cy="90" r="2.2" fill="#f0c877"/>
+      <circle cx="76" cy="126" r="7" fill="url(#ember)"/><circle cx="76" cy="126" r="2.6" fill="#f0c877"/>
+      <circle cx="46" cy="162" r="5" fill="url(#ember)" opacity="0.7"/><circle cx="46" cy="162" r="1.8" fill="#f0c877" opacity="0.7"/>
+      <circle cx="88" cy="76" r="3.2" fill="url(#ember)" opacity="0.5"/><circle cx="88" cy="76" r="1.2" fill="#f0c877" opacity="0.5"/>
+    </g>
+    <text class="tiny" x="-6" y="205">portrait &#8212; curated node subset;</text>
+    <text class="tiny" x="-6" y="219">full list in a bottom-sheet index</text>
+  </g>
+
+  <text class="labB" x="1120" y="1526">ENTRY</text>
+  <text class="lab" x="1120" y="1544">T3 &#8212; substrate fills the frame on the</text>
+  <text class="lab" x="1120" y="1561">crossing; stream portraits + pods</text>
+  <text class="labB" x="1120" y="1588">EXIT</text>
+  <text class="lab" x="1120" y="1606">one growth-front pulse travels out;</text>
+  <text class="lab" x="1120" y="1623">the camera follows it and rises</text>
+  <text class="labB" x="1120" y="1650">STREAMING</text>
+  <text class="lab" x="1120" y="1668">chamber retires; ring instances +</text>
+  <text class="lab" x="1120" y="1685">forest atmosphere preload for Final</text>
+</g>
+<line x1="70" y1="1740" x2="1440" y2="1740" stroke="#d9a441" stroke-width="0.7" opacity="0.25"/>
+
+<!-- ================= ROW 5 : FINAL ================= -->
+<g>
+  <circle cx="88" cy="1790" r="14" fill="#141008" stroke="#f0c877" stroke-width="1.7"/>
+  <text class="labB" x="88" y="1795" text-anchor="middle">5</text>
+  <text class="h3" x="114" y="1797">FINAL</text>
+  <text class="tiny" x="204" y="1797">oblique cutaway recession &#8212; the epilogue</text>
+  <text class="spec" x="70" y="1824">rise through substrate &#183; tilt = pitch only &#183; long recession</text>
+  <text class="lab" x="70" y="1850">The soil-line crosses the frame on a slight diagonal: fairy</text>
+  <text class="lab" x="70" y="1867">ring + forest horizon above, living colony below, broken</text>
+  <text class="lab" x="70" y="1884">spore cloud rising. No single mushroom reads as parent.</text>
+  <text class="labB" x="70" y="1916">TEXT &#183; UPPER-LEFT <tspan class="tiny">(over the diagonal ground plane)</tspan></text>
+
+  <!-- landscape thumb -->
+  <g transform="translate(560,1762)">
+    <rect class="fr" width="340" height="191"/>
+    <!-- forest horizon -->
+    <path d="M 120 74 L 134 58 L 146 74 L 158 52 L 172 74 L 186 60 L 198 74 L 214 50 L 228 74 L 244 60 L 256 74 L 272 56 L 286 74 L 302 62 L 314 74"
+          class="sk" stroke-width="0.7" opacity="0.35"/>
+    <!-- diagonal soil-line -->
+    <path d="M 0 150 C 80 138, 200 112, 340 82" class="sk" stroke-width="1.6" opacity="0.9"/>
+    <!-- ring mushrooms (irregular; foreground/mid/background) -->
+    <g class="sk" stroke-width="1.2">
+      <path d="M 60 142 C 60 132, 60 124, 60 118 M 48 118 C 53 106, 68 106, 73 118" stroke-width="1.5"/>
+      <path d="M 128 128 C 128 120, 128 114, 128 108 M 118 108 C 122 99, 134 99, 138 108"/>
+      <path d="M 208 112 C 208 106, 208 101, 208 96 M 200 96 C 203 89, 213 89, 216 96" opacity="0.8"/>
+      <path d="M 274 98 C 274 93, 274 89, 274 85 M 268 85 C 270 79, 278 79, 280 85" opacity="0.6"/>
+      <path d="M 310 92 C 310 88, 310 85, 310 82 M 305 82 C 307 77, 313 77, 315 82" opacity="0.5"/>
+    </g>
+    <!-- underground colony -->
+    <g class="sk" stroke-width="0.8" opacity="0.55">
+      <path d="M 10 170 C 70 158, 150 174, 230 150 C 290 132, 320 122, 338 112"/>
+      <path d="M 30 186 C 100 176, 190 186, 270 158"/>
+      <path d="M 60 150 C 100 146, 140 152, 180 142" opacity="0.6"/>
+    </g>
+    <g fill="#d9a441"><circle cx="96" cy="164" r="1.4" opacity="0.7"/><circle cx="180" cy="158" r="1.2" opacity="0.6"/><circle cx="252" cy="142" r="1.3" opacity="0.6"/></g>
+    <!-- spore cloud: one dominant drift, particles peeling away -->
+    <g fill="#d9a441">
+      <circle cx="212" cy="38" r="1.4" opacity="0.7"/><circle cx="232" cy="30" r="1.2" opacity="0.65"/><circle cx="252" cy="24" r="1.4" opacity="0.6"/>
+      <circle cx="272" cy="18" r="1.1" opacity="0.55"/><circle cx="292" cy="14" r="1.3" opacity="0.5"/><circle cx="310" cy="10" r="1" opacity="0.45"/>
+      <circle cx="240" cy="44" r="1" opacity="0.5"/><circle cx="264" cy="36" r="0.9" opacity="0.45"/><circle cx="288" cy="30" r="1" opacity="0.4"/>
+      <circle cx="222" cy="16" r="0.9" opacity="0.4"/><circle cx="316" cy="26" r="0.9" opacity="0.35"/>
+    </g>
+    <!-- copy upper-left -->
+    <g class="bar"><rect x="16" y="18" width="96" height="5"/><rect x="16" y="30" width="84" height="5"/><rect x="16" y="42" width="64" height="5"/></g>
+    <g class="barD"><rect x="16" y="56" width="76" height="3"/><rect x="16" y="63" width="58" height="3"/></g>
+    <text class="tiny" x="0" y="205">landscape &#8212; ring above, colony below, spore sky</text>
+  </g>
+
+  <!-- portrait thumb -->
+  <g transform="translate(950,1762)">
+    <rect class="fr" width="107" height="191"/>
+    <path d="M 0 122 C 30 112, 70 92, 107 66" class="sk" stroke-width="1.3" opacity="0.9"/>
+    <path d="M 40 64 L 48 54 L 56 64 L 66 50 L 76 64 L 86 54 L 94 64" class="sk" stroke-width="0.6" opacity="0.35"/>
+    <g class="sk" stroke-width="1">
+      <path d="M 26 112 C 26 105, 26 100, 26 95 M 18 95 C 21 87, 31 87, 34 95"/>
+      <path d="M 62 96 C 62 90, 62 86, 62 82 M 56 82 C 58 76, 66 76, 68 82" opacity="0.8"/>
+      <path d="M 88 82 C 88 78, 88 74, 88 71 M 83 71 C 85 66, 91 66, 93 71" opacity="0.6"/>
+    </g>
+    <g class="sk" stroke-width="0.7" opacity="0.5">
+      <path d="M 6 148 C 36 140, 70 148, 100 128"/>
+      <path d="M 10 172 C 44 164, 76 172, 102 152"/>
+    </g>
+    <g fill="#d9a441"><circle cx="70" cy="30" r="1.1" opacity="0.6"/><circle cx="84" cy="22" r="0.9" opacity="0.5"/><circle cx="94" cy="34" r="0.9" opacity="0.45"/><circle cx="56" cy="40" r="0.8" opacity="0.4"/></g>
+    <g class="bar"><rect x="10" y="12" width="66" height="4"/><rect x="10" y="22" width="52" height="4"/></g>
+    <text class="tiny" x="-6" y="205">portrait &#8212; steeper diagonal;</text>
+    <text class="tiny" x="-6" y="219">copy top, ring stacked in depth</text>
+  </g>
+
+  <text class="labB" x="1120" y="1790">ENTRY</text>
+  <text class="lab" x="1120" y="1808">rising reveal &#8212; the soil wipe hides the</text>
+  <text class="lab" x="1120" y="1825">swap to impostors + instanced ring</text>
+  <text class="labB" x="1120" y="1852">EXIT</text>
+  <text class="lab" x="1120" y="1870">none &#8212; the epilogue resolves into</text>
+  <text class="lab" x="1120" y="1887">recession; the footer follows. Owned</text>
+  <text class="lab" x="1120" y="1904">stays the active nav chapter</text>
+  <text class="labB" x="1120" y="1931">STREAMING</text>
+  <text class="lab" x="1120" y="1949">distance LOD only; nothing new loads</text>
+  <text class="lab" x="1120" y="1966">during the closing statement</text>
+</g>
+
+<!-- ======================= FOOT ======================= -->
+<line x1="70" y1="2016" x2="1440" y2="2016" stroke="#d9a441" stroke-width="1" opacity="0.4"/>
+<g>
+  <line x1="70" y1="2048" x2="118" y2="2048" stroke="#d9a441" stroke-width="1.4" stroke-dasharray="8 6" opacity="0.85"/>
+  <text class="lab" x="130" y="2053">travel (scrub-reversible)</text>
+  <path d="M 320 2040 l 8 11 l -8 11 l -8 -11 Z" fill="#141008" stroke="#f0c877" stroke-width="1.5"/>
+  <text class="lab" x="342" y="2053">threshold: T1 rear-cap &#183; T2 under-cap &#183; T3 soil-line</text>
+  <circle cx="762" cy="2048" r="11" fill="#141008" stroke="#f0c877" stroke-width="1.5"/>
+  <text class="labB" x="762" y="2053" text-anchor="middle" style="font-size:12px">n</text>
+  <text class="lab" x="784" y="2053">resting pose (soft chapter rest)</text>
+  <text class="tiny" x="70" y="2086">Portrait poses are deliberate re-compositions, never squeezed desktop frames. Nav flights and deep links move the same journey state; manual scroll cancels a flight.</text>
+  <text class="tiny" x="70" y="2106">Plate II of II &#183; Mushroom Journey v6 &#183; camera journey &#183; awaiting Peter&#8217;s sign-off note + date &#183; exact splines, scroll allocation &amp; easing resolve in the grey-box.</text>
+</g>
+</svg>
+</body>
+</html>

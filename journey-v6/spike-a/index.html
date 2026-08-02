@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spike A — extension lens look-dev</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #1c160b;
+    color: #f2ebdd;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    overflow: hidden;
+  }
+  #stage { position: fixed; inset: 0; z-index: 0; }
+  #stage canvas { display: block; cursor: grab; }
+  #stage canvas:active { cursor: grabbing; }
+
+  /* --- hero page overlays, copied verbatim so the raw state matches the hero --- */
+  .spill {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 58% 62% at 66% 46%, rgba(255, 190, 95, 0.075), transparent 70%),
+      radial-gradient(ellipse 44% 26% at 20% 90%, rgba(255, 175, 80, 0.055), transparent 72%);
+  }
+  .vignette {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse 120% 105% at 62% 44%,
+      transparent 42%,
+      rgba(8, 5, 1, 0.28) 76%,
+      rgba(6, 4, 1, 0.52) 100%);
+  }
+  .grain {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    opacity: 0.045;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 280px 280px;
+  }
+  /* graded state: the in-chain lens supplies grain + vignette, so the CSS
+     versions stand down — otherwise they double up. */
+  body.graded .grain, body.graded .vignette { display: none; }
+
+  #hud {
+    position: fixed; top: 10px; right: 12px; z-index: 3;
+    font: 11px/1.5 "SF Mono", Menlo, monospace;
+    color: #c9bfa8; background: rgba(10, 7, 2, 0.55);
+    padding: 8px 10px; border: 1px solid rgba(217, 164, 65, 0.25);
+    white-space: pre; display: none; pointer-events: none;
+  }
+  #legend {
+    position: fixed; left: 12px; bottom: 10px; z-index: 3;
+    font: 10.5px/1.7 "SF Mono", Menlo, monospace;
+    color: rgba(201, 191, 168, 0.62); pointer-events: none;
+  }
+  #legend b { color: #d9a441; font-weight: 600; }
+  #state {
+    position: fixed; left: 12px; top: 10px; z-index: 3;
+    font: 10.5px/1.4 "SF Mono", Menlo, monospace;
+    letter-spacing: 0.18em; color: rgba(217, 164, 65, 0.8); pointer-events: none;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "../../vendor/three/three.module.js",
+    "three/addons/": "../../vendor/three/addons/"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="stage"></div>
+  <div class="spill"></div>
+  <div class="vignette"></div>
+  <div class="grain"></div>
+  <div id="state">SPIKE A</div>
+  <div id="hud"></div>
+  <div id="legend"><b>1</b> hero  <b>2</b> inspire rest  <b>3</b> connect frame  <b>space</b> play orbit  <b>&larr;&rarr;</b> scrub  <b>g</b> raw/graded  <b>e</b> streak exit  <b>h</b> HUD  <b>b</b> log budget row</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
