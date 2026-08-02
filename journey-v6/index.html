@@ -835,6 +835,15 @@ addEventListener('keydown', (e) => {
   body:not(.free-cam) #stage canvas { cursor: default; }
   body:not(.free-cam) #stage canvas:active { cursor: default; }
 
+  /* --- intro fast-forward (scroll during the entry choreography): the CSS
+     half of the intro compresses to match the clock-skewed scene grow-in.
+     The 01/02/03 callouts keep a quick version of their 1-2-3 sequence. --- */
+  body.intro-fast .spill { animation-delay: 0.1s !important; animation-duration: 0.35s !important; }
+  body.intro-fast .co { animation-duration: 0.16s !important; }
+  body.intro-fast #co-inspire { --d: 0.30s; }
+  body.intro-fast #co-equip   { --d: 0.44s; }
+  body.intro-fast #co-connect { --d: 0.58s; }
+
   /* ============================================================
      JOURNEY GREY-BOX (W3-A) — chapter nav, chapter copy, detail
      cards, hotspot proxies.
@@ -1442,10 +1451,55 @@ function loadJourney() {
 }
 
 const delay = skipIntro || frozen ? 0 : HERO_INTRO_MS;
-setTimeout(() => {
+const bootTimer = setTimeout(() => {
   if (typeof requestIdleCallback === 'function') requestIdleCallback(loadJourney, { timeout: 1200 });
   else loadJourney();
 }, delay);
+
+/* ============================================================
+   INTRO FAST-FORWARD (ride-through #4, Hannah): scrolling during
+   the entry choreography must never be a locked door. The scene's
+   grow-in runs on the wall clock (mushroom-scene 'intro-draw'
+   reads performance.now() live each frame), so skewing the clock
+   fast-forwards the ENTIRE intro through its own real math —
+   growth, ember release, shell restore — in ~0.5s. The page's CSS
+   half (spill + the 01/02/03 callouts) is compressed by a class,
+   keeping a quick version of the 1-2-3 sequence. journey.js boots
+   immediately, so the scroll takes over the moment the ramp ends.
+   The skew is a constant offset once settled — performance.now()
+   stays monotonic for every later consumer.
+   ============================================================ */
+if (!skipIntro && !frozen) {
+  const t0 = performance.now();
+  let armed = true;
+  const fastForward = () => {
+    if (!armed) return;
+    armed = false;
+    for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, onInput, true);
+    const lived = performance.now() - t0;
+    const remaining = Math.max(0, HERO_INTRO_MS + 900 - lived);
+    if (remaining < 200) return;                     // intro basically done anyway
+    document.body.classList.add('intro-fast');
+    const orig = performance.now.bind(performance);
+    let skew = 0;
+    performance.now = () => orig() + skew;
+    const RAMP_MS = 480;
+    const rampT0 = orig();
+    (function ramp() {
+      const f = Math.min((orig() - rampT0) / RAMP_MS, 1);
+      skew = remaining * (f * f * (3 - 2 * f));
+      if (f < 1) requestAnimationFrame(ramp);
+    })();
+    clearTimeout(bootTimer);
+    loadJourney();                                   // scroll model takes over now
+  };
+  const onInput = (e) => {
+    if (e.type === 'keydown' && !['ArrowDown', 'PageDown', ' '].includes(e.key)) return;
+    fastForward();
+  };
+  for (const t of ['wheel', 'touchmove', 'keydown']) addEventListener(t, onInput, { capture: true, passive: true });
+  setTimeout(() => { armed = false; for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, onInput, true); }, HERO_INTRO_MS);
+}
 </script>
 </body>
 </html>
