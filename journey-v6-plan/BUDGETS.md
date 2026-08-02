@@ -975,3 +975,84 @@ every load and scrub of the session.
   ride-through of T4 in both directions is the standing confirmation wish.
 - Tier-2 note: the soil slab must NEVER be cut (it is what keeps the floor legible); cut
   order for the ring stands as D15 wrote it, with the new T2 counts as the new floor.
+
+---
+
+# RD — River-delta arrival redesign, Inspire (Hannah's third spore note, 2026-08-02 — definitive)
+
+**Trigger (Hannah):** "There's the spores visible at the very beginning on the right side
+of the mushroom… and then different ones appear when you go into the second view. Why do
+we have to show new ones? Why can't we just zoom in on the ones that are already visible
+in the first view and animate them interestingly?" Third note on the same perception —
+the prior fixes (drift morph, draw-ons, global shed hand-over) solved pop-in MECHANICS
+but not the structural fact that two of the three plumes were still BORN in sectors the
+hero never showed shedding.
+
+**Scope:** `chapters/inspire.js`, `chapters/inspire-ambient.js` (doc note only).
+journey.js/driveInspire, core/, hero files untouched.
+
+## What changed (all pure in effective reveal / time — scrub-safe, reversible)
+
+1. **One birthplace.** Every Arca and 2RP spore's origin moved to the SOURCE sector
+   (ArtCompute's az 5.50 wedge — the hero's one visible stream); their own-sector lanes
+   are kept only as walk DESTINATIONS (`aMisc` widened vec3→vec4, `.w` = azSrc). A second
+   deterministic RNG stream (seed 4413) supplies the new lanes so the first stream's draw
+   order — which shapes the approved braids — is untouched.
+2. **Rim migration stage (spore vertex shader).** For migrating plumes the old local
+   rim-curl stage becomes a WALK along the real rim from azSrc to az0+curl, hugging the
+   actual anatomy via in-shader mirrors of rimRad/capUnderPt(1,a) (`rimRadG`/`rimYG`).
+   Stage boundaries rebalance (s1 .10, s2 .24, walk ends ∝ span: Arca ≈ .45, 2RP ≈ .53);
+   the rise math beyond is verbatim. The walk is clamped at a reveal-driven front
+   (`mig = smoothstep(0, .55, rev)`, hash-staggered tip, soft fade past it) so the
+   current visibly EXTENDS around the rim with the orbit; travelling brightness pulses
+   run with the flow. The rise then DRAWS ON upward (`rg = smoothstep(.55, 1, rev)`,
+   rim-up lead like the core ribbons); migrant drift-gathering tightened to complete by
+   rev ≈ .55 so the walk is populated while the front advances. Every gate is exactly 1
+   at rev = 1: the approved rest braid entry/knots/leans are byte-level the same math.
+3. **Persistent rim currents.** (a) The walk stage stays in every migrating particle's
+   cycle at rest (~22% / ~31% of Arca / 2RP cycle time on the rim — the delta remains
+   visibly fed); (b) new section 2b: 204 authored strand segments (2 links × 3 lines ×
+   34 segs, strand language, opacity 0.12, flow wave on) along the rim linking source →
+   Arca → 2RP, draw-on driven by the same mig() front (link B gated past MIG_SPLIT ≈
+   .512, where 2RP's longer walk passes the Arca sector), persisting at rest.
+4. **Destination furniture retime.** Arca/2RP under-rim filaments, beads, wisps, cap
+   flow and streaks now fade with `furnOf = smoothstep((eff−.55)/.45)` — the local gill
+   network ignites only as the current actually arrives, never before. Core ribbons
+   condense at rev .62 (was .50) on migrating plumes, after their spores. Exit 0 and the
+   gill band unchanged. All = 1 at rest.
+5. **Shed hand-over retimed (ride-through #3).** Global gk is now WEIGHTED across the
+   three exits (0.50/0.28/0.22 of a per-exit smoothstep .25→.90) instead of keyed to the
+   furthest exit: the original curtain survives phase A at ~50% and finishes ceding only
+   as the LAST current arrives. Capsule regions re-anchored to the delta: migrant origin
+   wedges + downwind envelopes moved to the source sector, rise corridors stay at the
+   release sectors, plus one migration corridor capsule per migrating exit (source lip →
+   release lip, gain .35; 9 → 11 regions, max-combine unchanged).
+
+## Phase map (camera az deg, desktop-orbit absolute; ARR ramps unchanged)
+
+- **A** az 82–116: the one stream gathers into ArtCompute's braid (unchanged), curtain
+  thins to ~50%, under-rim source brightens (now hosting ALL births).
+- **B** az 108–~126: a current peels off and walks the rim to Arca (front = mig(eff1));
+  az ~126–140: it arrives, turns upward, the Arca braid draws on bottom-up, ribbons at
+  rev .62, local gill furniture ignites.
+- **C** az 130–~143: a second current continues further along the same rim path through
+  the Arca sector to 2RP; az ~143–154: arrival + rise draw-on. All saturated by az 154,
+  before the rest window (~158–160). Reverse plays the delta re-merging exactly.
+
+## Cost
+
+Zero new draw calls beyond 2 (the two rim-link LineSegments); +204 strand segs; spore
+count unchanged at 5,100 (redistributed, not added); aMisc +1 float/particle (~20 KB);
+shader +2 small functions and one branch in the path chain; shed dimmer 9 → 11 capsules
+(same loop class). Tier-2 drawRange prefix stays plume-balanced (round-robin unchanged).
+
+## Verified (Browser pane, cache-busted modules, ?nosnap=1&steady=1, screenshot-pumped)
+
+8-point scrub p .10 / .165 / .19 / .205 / .215 / .23 / .26 forward and .22 / .198 / .16
+/ 0 reverse: one population at every sample (nothing ever appears disconnected from the
+source stream — the current is watchably walking the rim at .205/.215, rises appear
+only where a current has arrived); approved rest composition at .26 (three braids +
+labels + streak) with the new restrained rim river; fresh deep-link boot to the rest
+clean; hero p = 0 shed color checksum byte-exact after full forward + reverse
+(7789.45663, plus session index-weighted 3928.41656); **zero new console errors** across
+all loads and scrubs (the only buffer entries are pre-cache-bust stale-module lines).

@@ -26,6 +26,25 @@
 //      it onto the staged braid as the reveal rises;
 //   3. inspire-ambient.js dims the hero shed as-and-where the structured
 //      plume brightens, and restores it byte-exactly at p = 0.
+//
+// RIVER DELTA (Hannah, 2026-08-02, third note — the definitive fix): the hero
+// shows exactly ONE visible stream, the shed spilling from under the
+// back-right rim (ArtCompute's sector). So nothing may ever be BORN in the
+// Arca or 2RP sectors — however gently it fades in, a population appearing
+// rear-centre or back-left reads as a newcomer. Instead the one stream SPLITS:
+//   - every Arca and 2RP particle is born in the SOURCE sector (same under-rim
+//     wedge the visitor has been watching) and, as its plume's reveal rises, a
+//     visible current of them peels off and WALKS THE RIM — hugging the real
+//     rim anatomy (rimRadG/rimYG in-shader) — to its release sector, arriving,
+//     turning upward, and only then rising as the braid;
+//   - the walk front is a pure function of the reveal (advances ~rev 0..0.55,
+//     the rise draws on rev 0.55..1), so scrubbing backward re-merges the
+//     delta into the one stream;
+//   - at rest the walk stage stays in every migrating particle's cycle, plus
+//     faint authored rim-current strands (2b), so the three plumes remain
+//     visibly fed by the one shared source even in a still frame.
+// The braided rise itself (the approved rest look) is untouched: same rim
+// entry points, same braid math, same knots, ribbons and streak.
 import * as THREE from 'three';
 import {
   makeRng, gaussOf, heat, capUnderPt, capTopPt, rimRad,
@@ -122,13 +141,18 @@ function strandGeo(positions, colors, progs) {
 export function createInspire(sceneApi) {
   const rand = makeRng(7741);
   const gauss = () => gaussOf(rand);
+  // Second deterministic stream for the delta-redesign geometry (migration
+  // lanes + rim-current strands): the approved braids are shaped by the FIRST
+  // stream's exact draw order, so new randomness must never interleave with it.
+  const rand2 = makeRng(4413);
+  const gauss2 = () => gaussOf(rand2);
   const group = new THREE.Group();
   group.visible = false;
   sceneApi.groups.mushroom.add(group);
 
   const glowTex = makeGlowTexture();
   const streakTex = makeStreakTexture();
-  const counts = { sourceSegs: 0, wispSegs: 0, flowSegs: 0, gillSegs: 0, beads: 0, spores: 0, coreSegs: 0 };
+  const counts = { sourceSegs: 0, wispSegs: 0, flowSegs: 0, gillSegs: 0, beads: 0, spores: 0, coreSegs: 0, rimSegs: 0 };
 
   // per-exit fade drivers (sequential reveal)
   const exits = EXITS.map((spec) => ({ spec, fade: 0, target: 0, mats: [] }));
@@ -373,6 +397,73 @@ export function createInspire(sceneApi) {
   }
 
   /* ================================================================
+     2b. RIM DELTA CURRENTS (Hannah's river-delta redesign) — faint
+         authored strands ALONG the rim, linking the shared under-rim
+         source to the Arca and 2RP release sectors. They draw on with
+         the walking spore front (fade driven per-frame from the same
+         mig() curve the shader uses), and they PERSIST at rest at low
+         opacity, so the one-source truth stays legible in a still
+         frame. Same faint-line language as the wisps; carries the
+         travelling flow wave so the link visibly flows outward.
+     ================================================================ */
+  const rimLinks = [];
+  {
+    const SEGL = 34, N_LINE = 3;
+    const linkSpecs = [
+      { from: EXITS[0].az, to: EXITS[1].az },   // source -> Arca (rear-centre)
+      { from: EXITS[1].az, to: EXITS[2].az },   // …continuing on -> 2RP (back-left)
+    ];
+    for (const lk of linkSpecs) {
+      const lp = [], lc = [], lg = [];
+      for (let l = 0; l < N_LINE; l++) {
+        const offR = 0.04 + l * 0.05 + rand2() * 0.03;
+        const offY = -0.02 + l * 0.045 + rand2() * 0.02;
+        const ph = rand2() * TAU;
+        let prev = null, prevT = 0;
+        for (let s = 0; s <= SEGL; s++) {
+          const tt = s / SEGL;
+          const az = lk.from + (lk.to - lk.from) * tt;
+          const rr = rimRad(az) + offR + 0.05 * Math.sin(tt * 9 + ph);
+          const rim = capUnderPt(1.0, az);
+          const p = new THREE.Vector3(
+            Math.cos(az) * rr,
+            rim.y + 0.06 + offY + 0.04 * Math.sin(tt * 12 + ph * 1.3),
+            Math.sin(az) * rr);
+          if (prev) {
+            lp.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+            heat(0.32 + 0.18 * Math.sin(Math.PI * prevT), tmpC);
+            lc.push(tmpC.r, tmpC.g, tmpC.b);
+            heat(0.32 + 0.18 * Math.sin(Math.PI * tt), tmpC);
+            lc.push(tmpC.r, tmpC.g, tmpC.b);
+            lg.push(prevT, tt);
+            counts.rimSegs++;
+          }
+          prev = p; prevT = tt;
+        }
+      }
+      const mat = makeStrandMat(0.12, 1.0);
+      group.add(new THREE.LineSegments(strandGeo(lp, lc, lg), mat));
+      rimLinks.push({ mat });
+    }
+  }
+  // The strands' draw-on follows the walking front. mig mirrors the shader's
+  // smoothstep(0, 0.55, rev); MIG_SPLIT is where 2RP's longer walk passes the
+  // Arca sector, so link B only begins once a current actually continues past.
+  const MIG_SPLIT = Math.abs(EXITS[1].az - EXITS[0].az)
+                  / Math.abs(EXITS[2].az - EXITS[0].az);
+  function migOf(e) {
+    let x = e / 0.55; x = x < 0 ? 0 : x > 1 ? 1 : x;
+    return x * x * (3 - 2 * x);
+  }
+  function linkFades() {
+    const m1 = migOf(eff[1]), m2 = migOf(eff[2]);
+    const fA = Math.max(m1, Math.min(m2 / MIG_SPLIT, 1));
+    let fB = (m2 - MIG_SPLIT) / (1 - MIG_SPLIT);
+    fB = fB < 0 ? 0 : fB > 1 ? 1 : fB;
+    return [fA, fB];
+  }
+
+  /* ================================================================
      3. CAP-SURFACE FLOW — a faint travelling glow on the rear dome,
         flowing toward each exit sector (handoff: "the cap surface
         carries a faint travelling bioluminescent flow")
@@ -421,16 +512,24 @@ export function createInspire(sceneApi) {
     const aRim = new Float32Array(n * 3);       // (rimR, rimY, rimAz)
     const aRise = new Float32Array(n * 4);      // (riseTop, lean, curl, strandPhase)
     const aCycle = new Float32Array(n * 4);     // (period, phase0, size, tone)
-    const aMisc = new Float32Array(n * 3);      // (plume, seed, coreness)
+    const aMisc = new Float32Array(n * 4);      // (plume, seed, coreness, azSrc)
     for (let i = 0; i < n; i++) {
       const p = i % 3;
       const spec = EXITS[p];
-      // origin: snapped between real gill channels, inner-to-mid skirt
+      // destination lane: snapped between real gill channels, inner-to-mid
+      // skirt of the RELEASE sector (this shapes the approved braid entry)
       const lane = Math.round((gauss() * 0.34) / CHANNEL) * CHANNEL
                  + (rand() - 0.5) * CHANNEL * 0.4;
       const a = spec.az + lane;
       const u0 = 0.48 + Math.pow(rand(), 0.8) * 0.34;
-      const o = capUnderPt(u0, a);
+      // RIVER DELTA: the origin is NOT the release sector. Plume 0 (ArtCompute)
+      // is born in its own sector — which IS the hero's one visible stream —
+      // and the migrating plumes (Arca, 2RP) are born in that SAME source
+      // sector, on their own gill lanes, and walk the rim out to `a`.
+      const srcLane = Math.round((gauss2() * 0.34) / CHANNEL) * CHANNEL
+                    + (rand2() - 0.5) * CHANNEL * 0.4;
+      const aSrc = p === 0 ? a : EXITS[0].az + srcLane;
+      const o = capUnderPt(u0, aSrc);
       o.y -= 0.015 + rand() * 0.05;
       position[i * 3] = o.x; position[i * 3 + 1] = o.y; position[i * 3 + 2] = o.z;
 
@@ -461,21 +560,22 @@ export function createInspire(sceneApi) {
                         : 0.090 + rand() * 0.050;
       aCycle[i * 4 + 3] = Math.min(1, spec.tone + gauss() * 0.10 + (szR > 0.96 ? 0.2 : 0));
 
-      aMisc[i * 3] = p;
-      aMisc[i * 3 + 1] = rand() * 1000;
+      aMisc[i * 4] = p;
+      aMisc[i * 4 + 1] = rand() * 1000;
       // W4-A gap a: a core cohort rides TIGHT on its winding strand — reduced
       // scatter, hotter, carrying the knot cadence — so each braid resolves as
       // a defined sinuous core (the approved still) instead of a soft column.
       // The loose majority keeps the turbulent sheath around it.
       const coreR = rand();
-      aMisc[i * 3 + 2] = coreR < 0.32 ? 0.55 + rand() * 0.45 : 0.0;
+      aMisc[i * 4 + 2] = coreR < 0.32 ? 0.55 + rand() * 0.45 : 0.0;
+      aMisc[i * 4 + 3] = aSrc;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(position, 3));
     geo.setAttribute('aRim', new THREE.BufferAttribute(aRim, 3));
     geo.setAttribute('aRise', new THREE.BufferAttribute(aRise, 4));
     geo.setAttribute('aCycle', new THREE.BufferAttribute(aCycle, 4));
-    geo.setAttribute('aMisc', new THREE.BufferAttribute(aMisc, 3));
+    geo.setAttribute('aMisc', new THREE.BufferAttribute(aMisc, 4));
     return geo;
   })();
 
@@ -498,7 +598,7 @@ export function createInspire(sceneApi) {
       attribute vec3 aRim;    // rimR, rimY, rimAz
       attribute vec4 aRise;   // riseTop(+)/sink(-), lean, curl, strandPhase
       attribute vec4 aCycle;  // period, phase0, size, tone
-      attribute vec3 aMisc;   // plume, seed, coreness
+      attribute vec4 aMisc;   // plume, seed, coreness, azSrc
       uniform float uTime;
       uniform float uLean;
       uniform vec3 uRev;
@@ -512,6 +612,20 @@ export function createInspire(sceneApi) {
       // the hero scene's one air current (mushroom-scene §10b), normalized —
       // the drift state below must move on the same wind the visitor watched
       const vec3 SHED_BREEZE = vec3(0.8414, 0.5217, 0.1430);
+      // real rim anatomy in-shader (byte-mirrors core/anatomy.js rimRad and
+      // capUnderPt(1, a)): the delta migration must HUG the actual rim as its
+      // azimuth changes, not a circle of constant radius
+      float rimRadG(float a) {
+        return 2.35 * (1.0 + 0.09 * cos(a - 3.6)
+                           + 0.045 * cos(2.0 * a - 1.1)
+                           + 0.018 * sin(3.0 * a + 4.1));
+      }
+      float rimYG(float a) {
+        float fold = exp(-pow(atan(sin(a - 5.3), cos(a - 5.3)) / 0.35, 2.0));
+        float yoff = -0.16 * cos(a - 3.6) + 0.05 * cos(2.0 * a + 0.7) - 0.13 * fold;
+        float droop = -(0.11 + 0.05 * cos(a - 3.6));
+        return 3.15 + 0.03 + yoff + droop - 0.11;
+      }
 
       void main() {
         float plume = aMisc.x;
@@ -531,10 +645,25 @@ export function createInspire(sceneApi) {
         float riseTop = abs(aRise.x);
         float lean = aRise.y, curl = aRise.z, sp = aRise.w;
 
-        float s1 = 0.16;
-        float s2 = 0.40;
+        // ---- RIVER DELTA (Hannah's third note): plumes 1 and 2 are MIGRANTS.
+        // They are born in the source sector (azSrc, the one stream the hero
+        // shows) and walk the rim to az0. The walk front is a pure function of
+        // this plume's reveal: rev 0..0.55 extends the current around the rim,
+        // rev 0.55..1 draws the rise on upward at the release point. Both
+        // gates saturate at rev = 1, so the approved rest braid is untouched
+        // and reverse scroll re-merges the delta into the one stream.
+        float azSrc = aMisc.w;
+        float migF = step(0.5, plume);
+        float mig = smoothstep(0.0, 0.55, rev);                 // walk-front extent
+        float rg = migF > 0.5 ? smoothstep(0.55, 1.0, rev) : 1.0; // rise draw-on
+        float s1 = mix(0.16, 0.10, migF);
+        float s2 = mix(0.40, 0.24, migF);
+        float azS2 = azSrc + (h1 - 0.5) * 0.05;                 // lateral-stage exit heading
+        float span = (az0 + curl) - azS2;                       // signed walk, incl. braid entry
         float circleLen = (0.10 + h2 * 0.22) * mix(1.0, 0.62, coh);
-        float s3 = min(0.86, s2 + circleLen);
+        float s3 = migF > 0.5
+          ? s2 + 0.12 + 0.10 * abs(span) + (h2 - 0.5) * 0.06
+          : min(0.86, s2 + circleLen);
 
         vec3 p;
         float alpha;
@@ -542,27 +671,57 @@ export function createInspire(sceneApi) {
         float r, y, az;
         float xLean = 0.0, zLean = 0.0;
         if (t < s1) {
-          // born between the gills: a slow shimmer in place, drifting down a hair
+          // born between the gills: a slow shimmer in place, drifting down a
+          // hair. Migrants shimmer a touch dimmer — three plumes' worth of
+          // births now share the ONE source wedge, and it must glow, not blow out.
           float u0 = t / s1;
           r = length(position.xz) + sin(uTime * 0.5 + seed) * 0.03 * settle;
           y = position.y - 0.05 * u0 + sin(uTime * 0.6 + seed * 1.3) * 0.015;
           az = atan(position.z, position.x) + sin(uTime * 0.35 + seed * 2.1) * 0.012;
-          alpha = smoothstep(0.0, 0.45, u0) * 0.85;
+          alpha = smoothstep(0.0, 0.45, u0) * 0.85 * mix(1.0, 0.72, migF);
         } else if (t < s2) {
-          // lateral travel between the lamellae toward the margin
+          // lateral travel between the lamellae toward the margin — migrants
+          // head for the SOURCE sector's rim (their walk starts there), the
+          // resident plume for its own release rim, exactly as approved
           float u1 = smoothstep(0.0, 1.0, (t - s1) / (s2 - s1));
-          r = mix(length(position.xz), rimR, u1);
-          y = mix(position.y - 0.05, rimY, u1) - 0.10 * sin(u1 * 3.14159) ;
-          az = atan(position.z, position.x) + (h1 - 0.5) * 0.05 * u1;
-          alpha = 0.95;
+          float rT = migF > 0.5 ? rimRadG(azSrc) + 0.05 : rimR;
+          float yT = migF > 0.5 ? rimYG(azSrc) + (rimY - rimYG(az0)) : rimY;
+          r = mix(length(position.xz), rT, u1);
+          y = mix(position.y - 0.05, yT, u1) - 0.10 * sin(u1 * 3.14159) ;
+          az = mix(atan(position.z, position.x) + (h1 - 0.5) * 0.05 * u1,
+                   azS2, u1 * migF);
+          alpha = 0.95 * mix(1.0, 0.72, migF);
         } else if (t < s3) {
-          // curl around the rim margin in local airflow
           float u2 = (t - s2) / max(s3 - s2, 1e-4);
-          az = az0 + curl * u2 * mix(1.0, 0.5, coh);
-          float loops = 1.0 + h2 * 1.2;
-          r = rimR + 0.05 + sin(u2 * 3.14159 * loops + sp) * 0.10 * settle;
-          y = rimY + sin(u2 * 3.14159 * loops * 0.7 + 1.0 + sp) * 0.08 * settle + 0.10 * u2;
-          alpha = 1.0;
+          if (migF > 0.5) {
+            // RIM MIGRATION — the delta current. The particle walks the real
+            // rim from the source sector to its release sector, clamped at
+            // the reveal's advancing front: the current visibly EXTENDS around
+            // the rim as the orbit progresses (and retreats in reverse).
+            // Travelling brightness pulses run with the flow so the current
+            // reads as moving spores, not a static string.
+            float w = mix(u2, u2 * u2 * (3.0 - 2.0 * u2), 0.35);
+            float wFront = clamp(mig * 1.12 - h1 * 0.10, 0.0, 1.0);
+            float we = min(w, wFront);
+            az = azS2 + span * we;
+            float offR = rimR - rimRadG(az0);
+            float offY = rimY - rimYG(az0);
+            float bobE = sin(3.14159 * we);       // wobble fades at both ends
+            r = rimRadG(az) + mix(0.05, offR + 0.05, we)
+              + sin(we * 9.0 + sp) * 0.07 * settle * bobE;
+            y = rimYG(az) + offY + 0.10 * smoothstep(0.72, 1.0, we)
+              + sin(we * 12.0 + sp * 1.3 + uTime * 0.4) * 0.05 * settle * bobE;
+            float pulse = pow(0.5 + 0.5 * sin(we * 7.0 - uTime * 0.9 + sp), 2.0);
+            alpha = (0.55 + 0.45 * pulse)
+                  * (1.0 - smoothstep(0.0, 0.10, w - wFront)); // the current's live tip
+          } else {
+            // resident plume: curl around the rim margin in local airflow
+            az = az0 + curl * u2 * mix(1.0, 0.5, coh);
+            float loops = 1.0 + h2 * 1.2;
+            r = rimR + 0.05 + sin(u2 * 3.14159 * loops + sp) * 0.10 * settle;
+            y = rimY + sin(u2 * 3.14159 * loops * 0.7 + 1.0 + sp) * 0.08 * settle + 0.10 * u2;
+            alpha = 1.0;
+          }
         } else {
           // braided rise (or sinking drop), carried by the +x breeze
           float u3 = (t - s3) / max(1.0 - s3, 1e-4);
@@ -604,6 +763,13 @@ export function createInspire(sceneApi) {
             knotV = knotG * kn * (0.30 + 0.70 * core);
             alpha = eu * (1.0 - smoothstep(0.62, 1.0, u3));
           }
+          // migrating plumes: the rise (and its drop cohort) draws on UPWARD
+          // only once the current has arrived (rev's second half) — growing
+          // from the rim exactly like the core ribbons, never appearing
+          // full-height. rg = 1 for the resident plume, where the gate is
+          // inert (lead 1.12 clears every u3); at rev = 1 it is inert for all.
+          float rl = rg * 1.12;
+          alpha *= 1.0 - smoothstep(max(rl - 0.10, 0.0), rl + 0.001, u3);
         }
         p = vec3(cos(az) * r + xLean, y, sin(az) * r + zLean);
 
@@ -632,7 +798,12 @@ export function createInspire(sceneApi) {
         // every mix state
         float driftA = 0.8 * smoothstep(0.0, 0.06, t)
                      * (1.0 - smoothstep(0.55, 0.95, t));
-        float mi = smoothstep(0.0, 0.45, rev - hash(seed * 17.77) * 0.55);
+        // Migrants gather out of the drift EARLY in their window (complete by
+        // rev ~ 0.55) so the rim walk is populated while the front advances;
+        // the resident plume keeps the approved wide stagger. Both reach
+        // exactly 1 at rev = 1.
+        float mi = smoothstep(0.0, mix(0.45, 0.30, migF),
+                              rev - hash(seed * 17.77) * mix(0.55, 0.28, migF));
         p = mix(driftP, p, mi);
         alpha = mix(driftA, alpha, mi);
         knotV *= mi;   // knot pearls are a property of the organized braid
@@ -754,8 +925,12 @@ export function createInspire(sceneApi) {
         // the reveal's second half has gathered the drift onto the braid.
         // And it condenses as a draw-on GROWING UP from the rim (ride-through
         // #2): a full-length ribbon fading in reads as a new spore source.
-        // At rev = 1 both gates are exactly 1 (approved rest look untouched).
-        float grow = smoothstep(0.5, 1.0, rev);
+        // Delta retime: on the MIGRATING plumes (Arca, 2RP) the ribbon starts
+        // condensing only at rev 0.62 — after their rim current has arrived
+        // (front completes at rev 0.55) — so no structure ever precedes the
+        // spores that feed it. At rev = 1 both gates are exactly 1 (approved
+        // rest look untouched).
+        float grow = smoothstep(mix(0.5, 0.62, step(0.5, plume)), 1.0, rev);
         float lead = grow * 1.12;
         float mg = grow * (1.0 - smoothstep(max(lead - 0.10, 0.0), lead + 0.001, h));
         vBright = env * rev * mg * ((0.30 + 0.85 * kn) * (1.0 + 0.6 * coh) + tAmp * band);
@@ -892,25 +1067,39 @@ export function createInspire(sceneApi) {
   const shedRegions = (() => {
     const list = [];
     const driftLen = [4.8, 3.2, 2.6];   // ArtCompute rides the hero's full carry
+    // Delta re-anchor: the migrating plumes' populations are BORN in the
+    // source sector and walk the rim out, so their origin-wedge and downwind
+    // capsules sit at the SOURCE (overlaps max-combine, never stack), their
+    // rise corridor stays at the release sector, and a walk corridor along the
+    // rim chord covers the migration itself.
+    const lipAt = (az) => new THREE.Vector3(
+      Math.cos(az) * (rimRad(az) + 0.08),
+      capUnderPt(1.0, az).y - 0.15,
+      Math.sin(az) * (rimRad(az) + 0.08));
+    const srcAz = EXITS[0].az;
     for (let i = 0; i < 3; i++) {
       const spec = EXITS[i];
       const rise = (spec.riseMin + spec.riseMax) / 2;
       const rimR = rimRad(spec.az) + 0.08;
       const rim = capUnderPt(1.0, spec.az);
-      const lip = new THREE.Vector3(
-        Math.cos(spec.az) * rimR, rim.y - 0.15, Math.sin(spec.az) * rimR);
+      const lip = lipAt(spec.az);
       const top = new THREE.Vector3(
         Math.cos(spec.az) * (rimR + 0.19) + spec.lean * rise * 0.62,
         rim.y + 0.10 + rise,
         Math.sin(spec.az) * (rimR + 0.19) + spec.lean * rise * 0.105,
       );
-      const inner = capUnderPt(0.52, spec.az);
+      const homeAz = i === 0 ? spec.az : srcAz;   // where this plume is BORN
+      const srcLip = i === 0 ? lip.clone() : lipAt(srcAz);
+      const inner = capUnderPt(0.52, homeAz);
       inner.y -= 0.12;
-      const tail = lip.clone().addScaledVector(BREEZE, driftLen[i]);
+      const tail = srcLip.clone().addScaledVector(BREEZE, driftLen[i]);
       // rise corridor keeps W4-A's approved ArtCompute radii/gain
-      list.push({ exit: i, la: lip,          lb: top,  r0: 0.65, r1: 2.05, gain: 0.78 });
-      list.push({ exit: i, la: inner,        lb: lip.clone(), r0: 0.50, r1: 1.45, gain: 0.55 });
-      list.push({ exit: i, la: lip.clone(),  lb: tail, r0: 1.00, r1: 2.60, gain: i === 0 ? 0.52 : 0.40 });
+      list.push({ exit: i, la: lip,             lb: top,  r0: 0.65, r1: 2.05, gain: 0.78 });
+      list.push({ exit: i, la: inner,           lb: srcLip.clone(), r0: 0.50, r1: 1.45, gain: 0.55 });
+      list.push({ exit: i, la: srcLip.clone(),  lb: tail, r0: 1.00, r1: 2.60, gain: i === 0 ? 0.52 : 0.40 });
+      // migration corridor: source lip -> release lip (rim arc sagitta stays
+      // inside r1 for both spans)
+      if (i > 0) list.push({ exit: i, la: srcLip.clone(), lb: lip.clone(), r0: 0.50, r1: 1.35, gain: 0.35 });
     }
     for (const rg of list) { rg.a = new THREE.Vector3(); rg.b = new THREE.Vector3(); rg.k = 0; }
     return list;
@@ -954,6 +1143,17 @@ export function createInspire(sceneApi) {
     const azDeg = camAzDeg();
     for (let i = 0; i < 3; i++) eff[i] = exits[i].fade * arrOf(azDeg, ARR[i]);
     effBand = gillBand.fade * arrOf(azDeg, ARR_BAND);
+  }
+  // Delta retime for the DESTINATION furniture (under-rim filaments, beads,
+  // wisps, cap flow, streak) of the migrating exits: it ignites only as their
+  // rim current actually arrives (rev's second half — the front completes at
+  // rev 0.55), never before, so no local structure suggests a local birth.
+  // Exit 0 is the source itself and keeps its full-reveal drive. All three
+  // read exactly 1 at eff = 1: the approved rest is untouched.
+  function furnOf(i) {
+    if (i === 0) return eff[0];
+    let x = (eff[i] - 0.55) / 0.45; x = x < 0 ? 0 : x > 1 ? 1 : x;
+    return x * x * (3 - 2 * x);
   }
 
   // W3-B (gap g): initiative labels anchor on the PLUME BODY, not the rim
@@ -999,11 +1199,14 @@ export function createInspire(sceneApi) {
       for (let i = 0; i < 3; i++) {
         c.setComponent(i, (i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0));
         const st = streaks[i];
-        st.o = (i === effActive ? 0.42 : 0) * eff[i];
+        st.o = (i === effActive ? 0.42 : 0) * furnOf(i);
         st.sprite.visible = st.o > 0.01;
-        for (const m of exits[i].mats) m.uniforms.uFade.value = eff[i];
+        for (const m of exits[i].mats) m.uniforms.uFade.value = furnOf(i);
       }
       for (const m of gillBand.mats) m.uniforms.uFade.value = effBand;
+      const [fA, fB] = linkFades();
+      rimLinks[0].mat.uniforms.uFade.value = fA;
+      rimLinks[1].mat.uniforms.uFade.value = fB;
       sporeMat.uniforms.uRev.value.set(eff[0], eff[1], eff[2]);
     },
     /** T1 streaming seam: arm/retire the whole exit set. */
@@ -1077,11 +1280,21 @@ export function createInspire(sceneApi) {
     let anyVisible = effBand > 0;
     for (const m of gillBand.mats) { m.uniforms.uFade.value = effBand; m.uniforms.uTime.value = t; }
     effActive = resolveActive();
+    // rim delta currents: guide strands extend with the walking spore front
+    // and persist (fade 1) at rest
+    {
+      const [fA, fB] = linkFades();
+      if (fA > 0 || fB > 0) anyVisible = true;
+      rimLinks[0].mat.uniforms.uFade.value = fA;
+      rimLinks[1].mat.uniforms.uFade.value = fB;
+      for (const l of rimLinks) l.mat.uniforms.uTime.value = t;
+    }
     for (let i = 0; i < 3; i++) {
       const ex = exits[i];
       if (eff[i] > 0) anyVisible = true;
+      const fv = furnOf(i);
       for (const m of ex.mats) {
-        m.uniforms.uFade.value = eff[i];
+        m.uniforms.uFade.value = fv;
         m.uniforms.uTime.value = t;
       }
       // Full coherence on hover AND on the selected exit (W4-E: an open card
@@ -1104,12 +1317,14 @@ export function createInspire(sceneApi) {
     }
     // Ride-through #3 (Hannah): the plumes must not ignite BESIDE the old
     // curtain — as the exits complete, the WHOLE shed cedes to the structured
-    // system. Keyed to the furthest-along exit so the hand-over finishes with
-    // the first plume and the curtain never sits next to it as a sibling.
-    const maxEff = Math.max(eff[0], eff[1], eff[2]);
-    let gk = (maxEff - 0.25) / 0.65;
-    gk = gk < 0 ? 0 : gk > 1 ? 1 : gk;
-    gk = gk * gk * (3 - 2 * gk);
+    // system. Delta retime (Hannah's third note): the hand-over is now WEIGHTED
+    // ACROSS the three phases instead of keyed to the furthest exit, so the
+    // original stream's curtain survives phase A at ~50% and only finishes
+    // ceding as the LAST current arrives — the source never dies before its
+    // delta has visibly taken over. Still a pure function of the effective
+    // reveals: reverse scroll re-inflates the curtain the same way.
+    const S3 = (x) => { x = (x - 0.25) / 0.65; x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
+    const gk = 0.50 * S3(eff[0]) + 0.28 * S3(eff[1]) + 0.22 * S3(eff[2]);
     ambient.update(shedRegions, gk);
 
     group.visible = anyVisible;
@@ -1147,7 +1362,7 @@ export function createInspire(sceneApi) {
 
     for (let i = 0; i < 3; i++) {
       const st = streaks[i];
-      const want = (i === effActive ? 0.42 : 0) * eff[i];
+      const want = (i === effActive ? 0.42 : 0) * furnOf(i);
       st.o += (want - st.o) * Math.min(1, dt * 2.4);
       if (st.o < 0.02 && want === 0) st.o = 0;   // die cleanly, no lingering blade
       // a lens catching an exceptional source: slow breathing, slight shimmer
