@@ -146,12 +146,14 @@ function drawPhotoCell(g, ox, oy, CELL, spec) {
   g.restore();
 
   // 1. partial desaturation — kill the cool studio colour cast
+  //    (ride-through #2: Hannah judged 0.62/0.90 "too faded" — faces keep more
+  //    of their own colour now; the ember rim + grade still tie them in)
   g.globalCompositeOperation = 'saturation';
-  g.fillStyle = 'rgba(128,128,128,0.62)';
+  g.fillStyle = 'rgba(128,128,128,0.40)';
   g.fillRect(ox, oy, CELL, CELL);
   // 2. amber multiply — the main push into the palette
   g.globalCompositeOperation = 'multiply';
-  g.fillStyle = `rgba(226,${(150 + warmth * 22) | 0},${(86 + warmth * 20) | 0},0.90)`;
+  g.fillStyle = `rgba(226,${(150 + warmth * 22) | 0},${(86 + warmth * 20) | 0},0.72)`;
   g.fillRect(ox, oy, CELL, CELL);
   // 3. deterministic exposure trim (density variation)
   if (exposure < 1) {

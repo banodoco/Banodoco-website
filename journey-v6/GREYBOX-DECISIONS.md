@@ -491,3 +491,60 @@ bridge (its guard prefers the contract method). **Connect owes the same
 method** — it was mid-rewrite during this pass and was deliberately left
 alone; until it lands, Connect nodes open their cards with no geometry-side
 selected state. Final is exempt by design (no detail states).
+
+## 25. Velocity-continuous commit handoff (supersedes §19's ramp-in)
+
+Hannah's ride note on the commit: *"it should continue smoothly from the motion of the
+previous one"* — the glide must inherit the scroll's motion, not stop-then-restart. The old
+profile waited 160 ms idle then smoothstep-ramped a fresh glide from zero (`COMMIT_RAMP_S`
+0.35 s), which read as pause → decision → new motion.
+
+**Mechanism** (`core/scroll.js`, constants in `constants.js`):
+
+- The model now keeps a **perceived-rate estimate** `pVel`: an EMA of the raw surface's rate
+  d(pAt(v))/dt, run at **`SMOOTH_K` (6.5 /s) — the same constant `journeyState` smooths p
+  with** — and capped at `MAX_SCRUB_RATE` (a fling teleports v, but the visitor only ever
+  sees the limiter's rate). Because the decay constants match, pVel tracks the ON-SCREEN
+  rate through the idle window: what it holds at engage is what the eye is watching.
+- At engage the glide **seeds its rate with pVel** and eases it toward the signed
+  `COMMIT_GLIDE_RATE` cruise with an exponential blend, **`COMMIT_BLEND_K` = 6.0 /s**
+  (~63% in 165 ms, ~95% by 0.5 s — the same felt attack as the old ramp, minus the pause).
+  `COMMIT_RAMP_S` is retired. When the resolution runs against the residual motion, the
+  same blend decelerates smoothly **through** zero and returns — a continuous reversal.
+- The **landing is unchanged**: toward-target steps are capped by the critically-damped
+  `SNAP_K` pull and by the remaining distance (no overshoot, no bounce, by construction),
+  `SNAP_DEAD_P` settles exactly.
+- The target **and its bracketing rests are latched at engage**, so residual carry can
+  neither re-decide the resolution mid-glide nor leave the transition span (a hard clamp at
+  the span edges backs this, zeroing the carry rate if ever touched). `SNAP_ENGAGE_MS` 160
+  stays the gesture-end gate — wheel inter-event gaps make "velocity dropped" unreliable as
+  an earlier trigger, and with inheritance the idle window is imperceptible: the on-screen
+  motion is still decaying through it and the glide picks it up where it is.
+- Threshold semantics (`COMMIT_THRESHOLD` 0.35 forward-biased, `pickTarget` unchanged),
+  cancel-on-input (any delta clears the glide within a frame), `?nosnap=1`, and
+  `setProgress()` placements (which now also zero pVel — a placement carries no motion to
+  inherit) are all untouched.
+
+**Measured** (deterministic 60 fps virtual-clock sim of the exact animator pipeline, plus a
+live-loop ride; smoothed-p velocity traces, p/s):
+
+| trace | release | engage vel | takeover step (1 frame) | result |
+|---|---|---|---|---|
+| (a) medium fling dying mid-transition (release raw 0.393, fwd) | 0.088 | 0.087 | **0.9%** of instantaneous | → 0.490 in 2.3 s |
+| (b) slow scroll released just past threshold (raw 0.345) | 0.0245 | 0.0254 | **3.7%** | → 0.490 in 3.8 s |
+| (c) released just before threshold (raw 0.335, backward resolution) | +0.0226 | +0.0205 | **9.3%** | → 0.260 in 3.0 s |
+
+All under the 20% bound; zero spurious sign flips. Trace (c) is the signature: the glide
+inherits the dying forward rate, continues its existing deceleration slope (+0.020 → +0.005
+→ −0.005 → −0.086), crosses zero ONCE, smoothly, and the total forward carry past the
+release point is 0.0006 p (~a third of a millimetre of screen). Post-release |vel| in (a)
+and (b) never dips below the release rate's decay curve — motion never stops. The §20
+settle matrix re-ran 12/12 to the same rests (settle 1.3–2.5 s, same family). Cancel
+mid-glide: gliding=false on the same frame as the reverse delta, resolves back per the
+rule. `?nosnap=1&p=0.17` still parks; bare `?p=0.55` → 0.49; `#/owned` pins at 0.7250
+exactly. Zero console errors.
+
+**Feel:** the commit no longer announces itself. A dying scrub shades into the glide with
+no seam; a slow release feels like the page finishing your sentence at your own cadence;
+changing its mind (backward resolution) reads as your own momentum running out and settling
+back, not the page overruling you.

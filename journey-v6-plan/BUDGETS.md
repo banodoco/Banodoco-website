@@ -650,3 +650,224 @@ will need those two uniforms stepped down, they are the whole silk-vs-blade
 balance; (c) the fog constants in the chapter materials (`uFog` 0.26–0.34) fake
 depth falloff the scene fog can't provide at chamber range (scene fog near = 7);
 if grade unification re-parameterises scene fog inside T2, these can drop.
+
+---
+
+# W5 — Grade unification (documentary lens across the full journey, 2026-08-02)
+
+**Scope:** `core/lens.js` (rewritten around the G2a shader), `journey.js` (wiring:
+always-on grade, per-leg focus hints, [g] key), `chapters/inspire.js` (ONE named
+taste knob — see below). `core/seams.js` untouched (the T2/T3 bells are computed
+from the same `SEAM_FOG_DIPS` constants the director uses; no shared uniform was
+needed). No other chapter knob was turned.
+
+**Verified:** in-app pane, 1440×860 and 900×700, `?nointro=1&steady=1&nosnap=1&p=…`
+plus `window.journey.scrollTo()` sampling with `journey.scroll.enabled = false`
+(both snap models re-target arbitrary mid-leg p, so held sampling must freeze the
+scroll model). Screenshot-pump convergence per BASELINE §2. NOTE for future
+sessions, learned the hard way: python http.server + heuristic HTTP caching can
+serve a STALE module against fresh siblings after a concurrent edit (symptom:
+`does not provide an export` for an export that exists). Fix: `fetch(url,
+{cache:'reload'})` for each stale module, then a plain reload.
+
+## What the unified lens is
+
+ONE finishing language, p 0..1: the G2a shader (aberration, selective warm
+halation + focus hint, warm lift, low-luma amber gain, ember roll-off, luminance-
+weighted grain, clean-centre vignette, master uAmount) plus:
+
+- **uGain** — pre-tonemap exposure gain (the Final leg's missing luminosity is
+  the grade's job, per W4-D).
+- **uHalation** is now a continuous strength (0 disables), so the per-leg curve
+  and Tier 2 share one uniform.
+- **Per-leg look curve** (smoothstep-interpolated keys in p, in `lens.js`):
+
+| Leg | gain | lift | warm | halation | vignette | grain | anchored to |
+|---|---:|---:|---:|---:|---:|---:|---|
+| Mission/Inspire p≤0.38 | 1.00 | 1.00 | 0.00 | 1.00 | 0.34 | 0.030 | G2a identity, byte-exact |
+| Connect 0.44–0.60 | 1.00 | 1.00 | 0.10 | **0.62** | 0.35 | 0.031 | W4-B note (a): free-edge polylines are the brightest element; full halation smears the crisp carrier |
+| Owned 0.68–0.85 | 1.02 | 1.35 | 0.55 | 0.85 | 0.36 | 0.035 | underground warm near-black (this pass's leg curve licence) |
+| Final 0.93–1.00 | **1.14** | 1.18 | 0.30 | **1.25** | 0.29 | 0.030 | W4-D: raw is deliberately less dense/luminous than the approved still |
+
+- **T2/T3 seam bells** (same `SEAM_FOG_DIPS` p-bells as the director's fog dips,
+  so zero at every rest, perfectly reversible): grain +0.014·b, lift ×(1+0.55·b),
+  warm +0.40·b, vignette +0.045·b, halation ×(1−0.30·b) — the crossings read
+  RICHER, not just darker (W3-B's prediction, verified A/B at p=0.436 and 0.693).
+- **Halation focus hints** (journey.js, per frame): active Inspire exit
+  (`inspire.activeWorld()`), ADOS knot (`connect.nodeWorld('ados')`), primary
+  ownership nexus (`owned.nodeWorld('pod-shared')`), and on the Final leg the
+  nearest mature in-frustum ring member to the rest camera (a static "selected
+  fairy-ring highlight" — the travelling front exposes no world position and
+  final.js is outside this pass's file boundary; noted for polish).
+- **[g]** everywhere (journey.js keydown): raw = post-bloom, pre-grade hero
+  baseline at any p. `userRaw` is held inside the lens so the per-frame update
+  can never fight the toggle.
+- **Reduced motion:** grain freezes to a static frame (uGrainSeed pinned; live
+  `matchMedia` listener) — never removed (handoff VISUAL FINISHING). Could not
+  be exercised in-pane (no media-query emulation); code path only.
+- **setTier(2):** keeps LUT/lift/roll-off/grain/vignette, zeroes uHalation +
+  uAberration (streak-class effects are Tier-1 only). Verified live at the
+  Connect rest: identity holds, edges cleaner. `debugState().lens` now reports
+  the whole look {on, amount, gain, lift, warm, hal, vig, grain, tier}.
+
+## Chapter knobs turned (log)
+
+| Knob | Was | Now | Why |
+|---|---|---|---|
+| `chapters/inspire.js` spore-sheath scatter (`SHEATH` define, W4-A's open taste knob) | 1.0 | **0.72** | the approved still's sheaths are tighter columns. ONLY the per-particle scatter terms carry it — the winding terms are shared verbatim with the core-ribbon shader (4b), which must keep threading the braid. Verified ≥1280px: cores read, sheath hugs. |
+| `EXITS[].knot`, `coreMat uOpacity` (0.62) | — | untouched | knot cadence reads correctly under the unified grade |
+| `connect-blades uBase/uEdge` (0.26/0.26), chapter `uFog` | — | untouched | reconciled grade-side instead (halation 0.62, lift held at identity through Connect) — silk-vs-blade balance survives as tuned |
+| `final-ring` glow-points opacity (1.5) / halo sizes | — | untouched | under gain 1.14 + halation 1.25 the under-cap stacks read as lamps, not clips (ember roll-off absorbs the lift) |
+
+## TAA NaN hardening (W4-B's recommendation, implemented core-side)
+
+The hero's `TemporalAccumulatePass` lives in frozen `mushroom-scene.js`, so the
+lens patches the pass's blend material at boot (`hardenTAA()` in `core/lens.js`,
+idempotent, finds the pass by `.history && .blendMat`): non-finite history pixels
+are replaced by the current frame; a non-finite blend result flushes to black for
+one frame; either way the feedback loop re-converges. GLSL compiles as ES 3.00
+under WebGL2, so `isnan()/isinf()` are real builtins. Logs
+`[journey-lens] TAA history sanitise installed`; `journey.lens.taaHardened` = true.
+
+**Positive verification (new — stronger than the soak):** injected a 64×64 block
+of half-float NaN (0x7FFF) directly into `taaPass.history` via
+`copyTextureToTexture` at the Final rest — read back 16,384 poisoned components —
+then rendered on: **history NaN count 0 within the next frame(s), frame visually
+intact, composer targets clean.** Pre-fix this exact injection is permanent
+(mix(x, NaN, w) re-poisons every frame; `validHistory` cannot clear it).
+
+**Soak (BUDGETS W4-B method, 128×128 random-region scans of
+`composer.renderTarget1/2` for half-float NaN bit patterns):** clean at the two
+heaviest states — Connect rest under a programmatic hover-storm across all three
+behaviours, and the D15-density Final rest. Zero console errors across the whole
+session (boot, scrubs 0→1→0, tier toggle, storm, poison test, resizes).
+
+## Per-rest A/B verdicts (grade ON vs [g] raw, vs approved stills)
+
+- **Mission p=0** — raw IS the untouched hero (pose/fog/params byte-exact:
+  pose −2.25/2.25/10.4, fog 7/20, look = G2a identity). Grade ON = the exact
+  G2a family: warm halation breathing at the rim, lifted warm blacks, grain.
+  Unchanged from the approved leg. PASS.
+- **Inspire 0.26** — graded adds the warm envelope + halation focused on the
+  auto-active Arca column; SHEATH 0.72 tightens the columns toward the still.
+  Honest gap vs `approved/inspire.png`: our plumes remain airier/whiter than the
+  still's saturated amber braids, and the still's are still narrower.
+- **Connect 0.49** — graded warms the chamber and blooms the ADOS knot without
+  smearing the 1-px free edges (halation 0.62); blacks stay deep like the still.
+  Closest match of the five. PASS.
+- **Owned 0.725** — warm-lifted near-black turns the soil amber-dark exactly in
+  the still's family; portraits glow warm; deep pockets stay dark. PASS.
+- **Final 0.925** — gain 1.14 + halation 1.25 + warm lift moves the raw render
+  decisively toward the still's luminous density; members read as soft lamps.
+  Honest gap vs `approved/final.png`: the still's spore sky is far denser and
+  carries broad mist bands ours doesn't have (chapter geometry, not grade).
+- **Seam dips 0.436 / 0.693** — A/B shows raw as crisp/cool with hard white
+  bokeh; graded is warmer, softer-highlighted, grainier — "passing through
+  something", richer as predicted.
+- **DOM** — zoomed checks at Connect + Owned rests (900×700, near-native):
+  headings/copy/chips/nav pin-sharp; the canvas grade never touches DOM.
+
+## Cadence
+
+The pane never yielded a live rAF window this session (fronting was contested by
+a parallel session; collector starved) — **no honest fps median, same caveat as
+BASELINE §2 / W4-D.** In-burst rAF deltas at the Final rest clustered at
+16.7–18.6 ms median (n=14, contaminated). The pass adds zero geometry and one
+already-measured fullscreen pass (Spike A: grade ON = +1 draw, +1 tri); the new
+uniforms cost nothing measurable. The standing "one visible-tab session"
+follow-up now also covers the unified grade.
+
+## What still falls short of the stills (for the polish round)
+
+1. **Inspire plume saturation/width** — SHEATH 0.72 helps, but the still's
+   braids are narrower and more amber; candidates: SHEATH → ~0.6, a slight
+   spore-tone warm bias, or per-plume halation instead of frame halation.
+2. **Final spore-sky density + mist bands** — the still carries a dense glowing
+   sky and layered haze; needs chapter-side spores/sprites (Tier-1 headroom
+   exists), not more grade gain.
+3. **Final-leg halation focus is static** (nearest ring member); following the
+   growth-front pulse needs `final.js` to expose a front world position.
+4. **Owned deep-soil bottom third at p 0.696–0.706** (W4-C known soft spot)
+   reads flatter under the T3 bell's warm lift; if polish wants more structure
+   there, it is chapter content, not grade.
+5. **Reduced-motion frozen grain** verified by code path only; needs one session
+   with OS-level reduce-motion (and the TIER-WIRING §1 routing decision is still
+   open — today reduced-motion visitors get the live page).
+
+---
+
+# IN-CC — Inspire one-population handoff (Hannah's conceptual-continuity revision, 2026-08-02)
+
+**Trigger (Hannah, live ride):** the Inspire plume spores read as NEW spores appearing on
+scroll, doing the same conceptual work as the hero's visible right-drift. Binding note:
+ONE spore population, evolving — the drift the visitor watched during Mission must BECOME
+the plumes.
+
+**Scope:** `chapters/inspire.js` + `chapters/inspire-ambient.js` only. No new files, no
+core/ or journey.js changes, mushroom-scene.js untouched (scene-state reads/writes with
+verbatim restore, per the established W4-A discipline).
+
+## Mechanism (three pieces, all pure functions of effective reveal + time)
+
+1. **Arrival ramps.** Root cause of the pop: the T1 seam arms Inspire at ~92 deg of camera
+   azimuth past Mission, where driveInspire's ArtCompute ramp (az 36–72) is already
+   complete — the seam-gated fade stepped 0→1 in one frame and the whole 5,100-spore system
+   eased in fully formed. The chapter now multiplies each exit's fade by its own azimuth
+   ramp starting strictly AFTER the desktop arming azimuth (ArtCompute 82→116 deg, Arca
+   108→140, 2RP 130→154, gill band 80→100; all saturated by az ~154, before the rest window
+   at ~157.8–160). Effective reveal = fade × ramp is continuous in p, monotone along the
+   orbit, and identical forward/backward (parked-state audit: max fwd/bwd deviation 0.0002).
+2. **Drift→braid morph (spore vertex shader).** Below full reveal each plume particle IS a
+   hero-shed member: its own under-cap origin, dropped clear of the gills, carried by the
+   hero's breeze law (travel ∝ age, scatter spreading with travel, same normalized BREEZE
+   vector). As the reveal rises each particle converts at its own staggered moment
+   (hash-staggered smoothstep of rev) from drift to its staged gill→rim→braid path; knot
+   pearls, core brightening and the core ribbons (gated smoothstep(0.5,1,rev)) condense in
+   the second half. At rev = 1 every mix is exactly 1 — the staged math, i.e. the approved
+   rest look, is untouched (incl. the W5 SHEATH tightening that landed in parallel).
+3. **Shed conservation dim (inspire-ambient.js).** Generalized from W4-A's single ArtCompute
+   corridor to 9 capsules (per exit: under-cap origin wedge gain 0.55, rise corridor gain
+   0.78 with W4-A's approved radii, downwind drift envelope gain 0.52/0.40/0.40 with length
+   4.8/3.2/2.6 — ArtCompute rides the hero's full carry). Strength = gain × that exit's
+   effective reveal; max-combine across overlaps, total dim capped at 0.85. Same byte-exact
+   color-attribute restore on retire.
+
+## Cost
+
+- Zero new draw calls, zero new geometry, zero new particles. Spore + ribbon vertex shaders
+  gained a handful of ALU (one extra envelope + mix); attribute set unchanged.
+- Shed dimmer JS loop: 4,200 particles × ≤9 capsule distances while the leg is live
+  (~38k mul/adds per frame, still ~0.1–0.2 ms class; zero when retired — unchanged pattern).
+- At the settled Inspire rest the shed now hands over ~50–55% of its total color-attribute
+  luminance (sum 7,789 → ~3,500–4,100, oscillating with sway as the capsules ride the live
+  mushroom matrix) vs W4-A's 24.5% — the population has visibly moved into the plumes.
+
+## Verification (headless CDP harness at 1440×900, live frames; capture.py machinery)
+
+- Fine forward scrub p 0.10→0.26 (27 samples, 0.0025 steps through ignition): rev(p)
+  continuous — [0, 0.001, 0.079, 0.248, 0.466, 0.689, 0.985, 1] for ArtCompute across
+  p 0.1575–0.19; zero before az 82.7 (seam fade-step fully masked). Backward scrub over the
+  same targets: every parked sample byte-matches forward (max dRev 0.0002). Dense in-motion
+  sampling through the Arca/2RP window (p 0.19→0.26, 137+ samples): both ramps monotone,
+  no dRev > 0.30 within any dp < 0.01, in any pass.
+- Stills at p 0.15/0.165/0.175/0.19/mid-Arca/mid-2RP/0.26 forward and 0.175/0.15/0.1375
+  backward: the right-drift visibly reorganizes into ArtCompute's braid (curtain thins in
+  the corridor exactly as the cores condense — no double-exposure, no pop-in); Arca and 2RP
+  gather out of the under-rim haze as the camera reveals their sectors; reverse relaxes the
+  braid back into the curtain.
+- Restore: after full forward + backward + return to 0, shed color-attribute sum AND
+  index-weighted checksum equal the pristine boot values exactly (7789.45663 /
+  350099.30091) — byte-exact, twice.
+- Zero console errors from these files across all runs (a transient COMMIT_RAMP_S import
+  error observed once came from the parallel scroll-model edit mid-save, not this work).
+
+## Notes for parallel owners
+
+- Scroll model: under the new commit resolution (and even `?nosnap=1`), p ≈ 0.20–0.245
+  cannot be PARKED — it resolves to the 0.26 rest. The Arca/2RP arrival therefore only
+  plays in motion; QA that wants to freeze it must sample mid-glide (this audit did).
+- The arrival ramps are desktop-orbit absolute (mission az ≈ −12 deg), like driveInspire's
+  own ramps. If a responsive composition ever pushes the T1 arming azimuth past 82 deg,
+  the ArtCompute ramp start should move with it (single constant, `ARR[0].a0`).
+- Fades still ease (k = dt·3.2), so during a fast flight the reveal lags its azimuth target
+  slightly and converges at the rest — velocity-dependent by design, never discontinuous.

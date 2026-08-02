@@ -20,12 +20,12 @@
 
 import {
   CHAPTERS, SCROLL_VH, SNAP_ENGAGE_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
-  COMMIT_THRESHOLD, COMMIT_GLIDE_RATE, COMMIT_RAMP_S,
-  WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, restProgress,
+  COMMIT_THRESHOLD, COMMIT_GLIDE_RATE, COMMIT_BLEND_K,
+  WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K,
+  restProgress,
 } from '../constants.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
-const smooth01 = x => { x = clamp01(x); return x * x * (3 - 2 * x); };
 
 /* ==========================================================================
    INPUT OWNERSHIP  (a11y debt #1 — root cause, replacing the guard stack)
@@ -162,8 +162,18 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
   let v = 0;            // virtual scroll position, px
   let lastInput = -1e9; // performance.now() of the last manual input
   let lastDir = 0;      // sign of the last manual delta (+1 fwd / -1 back / 0 none)
-  let glideT = 0;       // seconds the current commit glide has been running
   let enabled = false;
+
+  // Perceived-rate estimate + commit-glide state (velocity-continuous handoff).
+  // pVel is an EMA of the raw surface's rate d(pAt(v))/dt, deliberately run at
+  // SMOOTH_K — the SAME constant journeyState uses to smooth p — so while input
+  // is idle pVel decays in lockstep with the on-screen rate. At commit engage
+  // it is therefore a faithful proxy for the motion the visitor is watching,
+  // and seeding the glide with it makes the takeover velocity-continuous.
+  let pVel = 0;         // p/s, EMA of the raw surface rate (capped at MAX_SCRUB_RATE)
+  let pPrev = null;     // pAt(v) last frame, for the EMA
+  let glide = null;     // active commit glide: { target, lo, hi } latched at engage
+  let glideVel = 0;     // p/s, the glide's own (signed) rate
 
   // ?nosnap=1 disables commit-resolution entirely (restores the band-limited
   // W3-A soft snap) so ?p= deep-scrub QA can park at arbitrary positions.
@@ -269,7 +279,7 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     if (onIntent && onIntent(kind) === false) { lastInput = performance.now(); return; }
     v = Math.max(0, Math.min(total, v + dpx));
     if (dpx) lastDir = dpx > 0 ? 1 : -1;   // any new input cancels a commit glide
-    glideT = 0;                            // instantly (via lastInput, below) and
+    glide = null;                          // instantly (via lastInput, below) and
     lastInput = performance.now();         // re-aims the next idle resolution
     if (onDelta) onDelta(pAt(v));
   }
@@ -335,7 +345,7 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     const from = v;
     v = scrollFor(p);
     lastDir = v > from ? 1 : v < from ? -1 : lastDir;
-    glideT = 0;
+    glide = null;
     lastInput = performance.now();
     if (onDelta) onDelta(pAt(v));
   }
@@ -361,25 +371,43 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
      The glide is a scroll, not an animation: it moves v, and journey.js
      smooths/limits it exactly as it does a wheel delta, so copy release,
      re-anchor, seam dips and handheld all behave as under a real scroll.
-     Profile: smoothstep ramp-in over COMMIT_RAMP_S to a COMMIT_GLIDE_RATE
-     cruise, handed to the critically-damped SNAP_K pull for the landing —
-     monotonic by construction (every step <= remaining distance), so no
-     overshoot and no bounce, ever. Any manual delta resets lastInput and
-     control returns to the visitor within a frame.
+
+     Profile — VELOCITY-CONTINUOUS (Hannah's ride note: the commit "should
+     continue smoothly from the motion of the previous one"). The glide does
+     not ramp from standstill: at engage it SEEDS its rate with pVel — the
+     perceived-rate estimate, which decayed through the idle window at the
+     same SMOOTH_K the on-screen motion did — and eases that rate toward the
+     signed COMMIT_GLIDE_RATE cruise (exponential blend, COMMIT_BLEND_K). The
+     visitor's gesture is carried to completion; there is never a
+     stop -> decide -> restart. When the resolution runs AGAINST the residual
+     motion (released just short of the threshold), the same blend decelerates
+     smoothly through zero and returns — a continuous reversal, never a step.
+     The landing is unchanged: the toward-target step is capped by the
+     critically-damped SNAP_K pull (every step <= remaining distance), so no
+     overshoot and no bounce, ever; SNAP_DEAD_P settles exactly. The target
+     and its bracketing rests are LATCHED at engage, so a residual carry can
+     neither re-decide the resolution mid-glide nor escape the transition
+     span. Any manual delta resets lastInput and control returns to the
+     visitor within a frame.
 
      p = 1 is a resolution anchor too (the authored end-hold): a fling to the
      end must settle where it landed, never be tugged back to the Final rest. */
   const ANCHORS = CHAPTERS.map(c => restProgress(c.id));
   const RESOLVE_P = [...ANCHORS, 1].filter((a, i, arr) => i === 0 || a > arr[i - 1] + 1e-6);
 
-  /** The rest this idle position must resolve to, per the direction rule. */
-  function commitTarget(p) {
+  /** The pair of resolution anchors bracketing p. */
+  function bracketAt(p) {
     let lo = RESOLVE_P[0], hi = RESOLVE_P[RESOLVE_P.length - 1];
     for (let i = 0; i < RESOLVE_P.length - 1; i++) {
       if (p >= RESOLVE_P[i] && p <= RESOLVE_P[i + 1]) {
         lo = RESOLVE_P[i]; hi = RESOLVE_P[i + 1]; break;
       }
     }
+    return [lo, hi];
+  }
+
+  /** The rest of [lo, hi] this position must resolve to, per the direction rule. */
+  function pickTarget(p, lo, hi) {
     if (hi - lo < 1e-9) return lo;
     const f = (p - lo) / (hi - lo);          // fraction of the transition, in p
     if (lastDir > 0) return f >= COMMIT_THRESHOLD ? hi : lo;
@@ -387,10 +415,27 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     return f >= 0.5 ? hi : lo;               // placed, never scrolled: nearest
   }
 
+  function commitTarget(p) {
+    const [lo, hi] = bracketAt(p);
+    return pickTarget(p, lo, hi);
+  }
+
   function update(dt) {
     if (!enabled || total <= 0) return null;
-    if (performance.now() - lastInput < SNAP_ENGAGE_MS) { glideT = 0; return pAt(v); }
     const p = pAt(v);
+    // Perceived-rate estimate, every frame (input live, idle, or gliding — a
+    // glide interrupted by a nudge re-engages with its own motion inherited).
+    // The instantaneous rate is capped at MAX_SCRUB_RATE because the on-screen
+    // rate can never exceed it: a fling teleports v, but the visitor only ever
+    // SEES the limiter's rate, and that is the motion a commit must continue.
+    if (dt > 0) {
+      const inst = pPrev === null ? 0 : (p - pPrev) / dt;
+      const capped = inst > MAX_SCRUB_RATE ? MAX_SCRUB_RATE
+        : inst < -MAX_SCRUB_RATE ? -MAX_SCRUB_RATE : inst;
+      pVel += (capped - pVel) * Math.min(1, dt * SMOOTH_K);
+      pPrev = p;
+    } else if (pPrev === null) pPrev = p;
+    if (performance.now() - lastInput < SNAP_ENGAGE_MS) { glide = null; return p; }
 
     if (NOSNAP) {
       // Legacy W3-A soft snap: band-limited magnetism only, parks anywhere
@@ -409,15 +454,38 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
       return pAt(v);
     }
 
-    const target = commitTarget(p);
-    if (Math.abs(target - p) < SNAP_DEAD_P) { v = scrollFor(target); glideT = 0; return target; }
-    glideT += dt;
+    if (dt <= 0) return p;
+
+    // Engage: latch the resolution (target + bracketing span) and inherit the
+    // perceived rate as the glide's initial condition — the handoff continues
+    // the visitor's own motion instead of restarting from zero.
+    if (!glide) {
+      const [lo, hi] = bracketAt(p);
+      glide = { target: pickTarget(p, lo, hi), lo, hi };
+      glideVel = pVel;
+    }
+    const { target, lo, hi } = glide;
     const dP = target - p;
-    const step = Math.min(
-      COMMIT_GLIDE_RATE * dt * smooth01(glideT / COMMIT_RAMP_S), // ramped cruise
-      Math.abs(dP) * Math.min(1, dt * SNAP_K),                   // damped landing
-    );
-    v = scrollFor(p + Math.sign(dP) * step);
+    if (Math.abs(dP) < SNAP_DEAD_P) {
+      v = scrollFor(target); glide = null; glideVel = 0; return target;
+    }
+    const sgn = dP > 0 ? 1 : -1;
+    // Rate eases toward the signed cruise. If the inherited rate opposes the
+    // resolution, this decelerates smoothly through zero — a continuous
+    // reversal, never a step.
+    glideVel += (sgn * COMMIT_GLIDE_RATE - glideVel) * Math.min(1, dt * COMMIT_BLEND_K);
+    let step = glideVel * dt;
+    // Damped landing cap, unchanged from the shipped profile: the toward-
+    // target step never exceeds the critically-damped SNAP_K pull, and never
+    // the remaining distance — no overshoot, no bounce, by construction.
+    const land = dP * Math.min(1, dt * SNAP_K);
+    if (dP > 0 ? step > land : step < land) { step = land; glideVel = step / dt; }
+    // Residual carry (opposing inherit) can drift away from the target while
+    // it bleeds off, but never out of the latched transition span.
+    let pn = p + step;
+    if (pn > hi) { pn = hi; glideVel = 0; }
+    else if (pn < lo) { pn = lo; glideVel = 0; }
+    v = scrollFor(pn);
     return pAt(v);
   }
 
@@ -438,16 +506,23 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     set enabled(on) { enabled = !!on; },
     get progress() { return pAt(v); },
     /** Place the virtual position without registering visitor intent.
-        Clears travel direction: a placement is not a scroll, so idle
-        resolution falls back to the nearest rest (rests resolve to
+        Clears travel direction AND the perceived-rate estimate: a placement
+        is not a scroll and carries no motion to inherit, so idle resolution
+        falls back to the nearest rest from standstill (rests resolve to
         themselves — deep links / ?pose= are not disturbed). */
-    setProgress(p) { v = scrollFor(p); lastDir = 0; glideT = 0; },
+    setProgress(p) { v = scrollFor(p); lastDir = 0; glide = null; glideVel = 0; pVel = 0; pPrev = null; },
     /** Milliseconds since the last manual input (flight cancellation, QA). */
     get sinceInput() { return performance.now() - lastInput; },
     /** QA: the rest idle would resolve to from here (null under ?nosnap=1). */
     get commitP() { return NOSNAP ? null : commitTarget(pAt(v)); },
     /** QA: sign of the last manual delta. */
     get lastDir() { return lastDir; },
+    /** QA: perceived-rate estimate (p/s) — what a commit glide would inherit. */
+    get pVel() { return pVel; },
+    /** QA: is a commit glide currently latched and running? */
+    get gliding() { return !!glide; },
+    /** QA: the running glide's own signed rate (p/s), 0 when not gliding. */
+    get glideVel() { return glide ? glideVel : 0; },
     /** QA: is a registered modal owner (dialog card / bottom sheet) holding
         the travel keys? */
     get modalInput() { return modalLive(); },

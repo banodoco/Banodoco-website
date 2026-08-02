@@ -1,29 +1,32 @@
-// journey-v6 — W4-A gap b: the hero's own ambient spore shed (mushroom-scene
-// §10, `sceneApi.groups.spores`) is a 4,200-particle curtain blown +x from the
-// back-side gills — straight through the ArtCompute exit sector. At the
-// Inspire rest it visually swallows part of the ArtCompute plume. Production
-// fix per ADR D3: re-parameterise the hero's shed DURING the Inspire leg via
-// scene-state manipulation only — the exact pattern spike-a/connect-frame.js
-// used for the hero point clouds (store base values, modulate while active,
-// restore EXACTLY on exit). mushroom-scene.js is never edited.
+// journey-v6 — the hero's own ambient spore shed (mushroom-scene §10,
+// `sceneApi.groups.spores`, 4,200 CPU-animated particles blown +x off the
+// back-side gills) versus the Inspire plume system.
 //
-// Mechanism: the hero shed's `color` attribute is static (the hero animator
-// writes positions only — verified by grep, §10/10c touch position + age).
-// We keep a byte-exact copy of the base colors, and while the ArtCompute
-// plume is revealed we dim each shed particle by its distance to the plume's
-// corridor (a world-space segment from the release lip up the leaning rise).
-// Spores outside the corridor are written back at exactly base value, and on
-// exit (fade -> 0) the whole base array is restored verbatim — so the p = 0
-// hero regression stays byte-identical.
+// W4-A gap b shipped this as a single corridor dim around the ArtCompute
+// plume. Hannah's conceptual-continuity revision (2026-08-02) makes the
+// relationship literal: there is ONE spore population. The drift the visitor
+// watches during Mission must BECOME the plumes — so as each exit's reveal
+// rises, the shed's apparent density is handed over to the plume system
+// as-and-where the structured spores brighten (inspire.js seeds those spores
+// in the shed's own drift envelope and gathers them onto the braid; see the
+// handoff block in its spore vertex shader). This file is the shed's half of
+// that exchange: a per-region dim whose strength tracks each exit's effective
+// reveal, over capsule regions that cover exactly where the plume population
+// is appearing — the under-cap origin wedge, the rise corridor, and the
+// downwind drift envelope.
+//
+// Discipline unchanged from W4-A (ADR D3): scene-STATE manipulation only.
+// The hero animator writes positions; the `color` attribute is static
+// (verified by grep, §10/10c touch position + age). We keep a byte-exact copy
+// of the base colors, modulate while any region is live, and restore the
+// whole base array verbatim on exit — the p = 0 hero regression stays
+// byte-identical. mushroom-scene.js is never edited.
 import * as THREE from 'three';
 
-const R0 = 0.65;      // full-dim core radius around the plume corridor
-const R1 = 2.05;      // feather to untouched beyond this
-const MAX_DIM = 0.78; // at full leg activity, corridor spores drop to 22%
+const MAX_TOTAL_DIM = 0.85; // floor: overlapping regions never fully erase a spore
 
 export function createAmbientShedDimmer(sceneApi) {
   let pts = null, base = null, active = false;
-  const _a = new THREE.Vector3(), _ab = new THREE.Vector3();
 
   function collect() {
     const p = sceneApi.groups && sceneApi.groups.spores;
@@ -40,33 +43,51 @@ export function createAmbientShedDimmer(sceneApi) {
     active = false;
   }
 
+  // scratch: per-region scalars, rebuilt each update (regions.length is ~9;
+  // kept as parallel flat arrays so the 4,200-particle loop touches no objects)
+  let ax = [], ay = [], az = [], bx = [], by = [], bz = [], ab2 = [],
+      r0 = [], r1 = [], kk = [];
+
   return {
-    /** k: 0..1 leg activity (the ArtCompute reveal fade); a/b: world-space
-     *  corridor segment, release lip -> plume top. k <= ~0 restores exactly. */
-    update(k, a, b) {
-      if (k <= 0.004) { if (active) restore(); return; }
+    /** regions: array of { a, b, r0, r1, k } — world-space capsule from a to b,
+     *  full dim inside radius r0, feathered to untouched at r1, strength k
+     *  (0..1, already scaled by the exit's effective reveal). The caller keeps
+     *  the region objects persistent and updates a/b/k in place each frame.
+     *  All k <= ~0 restores the shed exactly. */
+    update(regions) {
+      let n = 0;
+      for (const rg of regions) {
+        if (rg.k <= 0.004) continue;
+        ax[n] = rg.a.x; ay[n] = rg.a.y; az[n] = rg.a.z;
+        const dx = rg.b.x - rg.a.x, dy = rg.b.y - rg.a.y, dz = rg.b.z - rg.a.z;
+        bx[n] = dx; by[n] = dy; bz[n] = dz;
+        ab2[n] = Math.max(dx * dx + dy * dy + dz * dz, 1e-6);
+        r0[n] = rg.r0; r1[n] = rg.r1; kk[n] = rg.k;
+        n++;
+      }
+      if (n === 0) { if (active) restore(); return; }
       if (!pts && !collect()) return;
       active = true;
       const attr = pts.geometry.attributes.color;
       const col = attr.array;
       const pos = pts.geometry.attributes.position.array;
-      _a.copy(a); _ab.copy(b).sub(a);
-      const ab2 = Math.max(_ab.lengthSq(), 1e-6);
-      const abx = _ab.x, aby = _ab.y, abz = _ab.z;
-      const ax = _a.x, ay = _a.y, az = _a.z;
-      const kd = MAX_DIM * k;
       for (let i = 0; i < col.length; i += 3) {
-        const px = pos[i] - ax, py = pos[i + 1] - ay, pz = pos[i + 2] - az;
-        let t = (px * abx + py * aby + pz * abz) / ab2;
-        t = t < 0 ? 0 : t > 1 ? 1 : t;
-        const dx = px - abx * t, dy = py - aby * t, dz = pz - abz * t;
-        const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        let f = 1;
-        if (d < R1) {
-          let s = d <= R0 ? 1 : 1 - (d - R0) / (R1 - R0);
-          s = s * s * (3 - 2 * s);
-          f = 1 - kd * s;
+        const x = pos[i], y = pos[i + 1], z = pos[i + 2];
+        let dim = 0;
+        for (let j = 0; j < n; j++) {
+          const px = x - ax[j], py = y - ay[j], pz = z - az[j];
+          let t = (px * bx[j] + py * by[j] + pz * bz[j]) / ab2[j];
+          t = t < 0 ? 0 : t > 1 ? 1 : t;
+          const dx = px - bx[j] * t, dy = py - by[j] * t, dz = pz - bz[j] * t;
+          const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          if (d < r1[j]) {
+            let s = d <= r0[j] ? 1 : 1 - (d - r0[j]) / (r1[j] - r0[j]);
+            s = s * s * (3 - 2 * s);
+            const v = kk[j] * s;
+            if (v > dim) dim = v;   // max, not sum: overlaps must not over-darken
+          }
         }
+        const f = 1 - (dim > MAX_TOTAL_DIM ? MAX_TOTAL_DIM : dim);
         col[i] = base[i] * f;
         col[i + 1] = base[i + 1] * f;
         col[i + 2] = base[i + 2] * f;

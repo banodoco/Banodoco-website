@@ -13,10 +13,11 @@
 //   progress + routes core/journeyState.js
 //   camera path       core/director.js  Spike A orbit + keyed path
 //   streaming seams   core/seams.js     T1..T4, hysteresis + dwell
-//   optics            core/lens.js      Mission/Inspire leg only (see BUDGETS)
+//   optics            core/lens.js      unified grade, full journey (W5)
 //   DOM               core/ui.js        nav, copy, cards, hotspot proxies
 //   geometry          chapters/*.js
 
+import * as THREE from 'three';
 import { createJourneyState } from './core/journeyState.js';
 import { createScrollModel } from './core/scroll.js';
 import { createDirector } from './core/director.js';
@@ -27,6 +28,7 @@ import { createInspire } from './chapters/inspire.js';
 import { createConnect } from './chapters/connect.js';
 import { createOwned } from './chapters/owned.js';
 import { createFinal } from './chapters/final.js';
+import { MEMBERS } from './chapters/final-world.js';
 import { CONTENT } from './content/content.js';
 import {
   CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, HERO_INTRO_MS,
@@ -63,7 +65,13 @@ export function boot(opts = {}) {
   // arbitrary p must be reproducible frame-to-frame).
   const director = createDirector(sceneApi, { steady: q.get('steady') === '1' });
   const lens = createLens(sceneApi);
-  lens.setAmount(1);
+  lens.update(0);   // the unified grade covers the full journey; amount stays 1
+
+  // [g] — raw (post-bloom hero baseline) vs finished, everywhere. Same key
+  // as the approved spike; the raw reference at p=0 IS the hero's own look.
+  addEventListener('keydown', (e) => {
+    if (e.key === 'g' || e.key === 'G') lens.setEnabled(!lens.enabled);
+  });
 
   const chapters = {
     inspire: createInspire(sceneApi),
@@ -155,12 +163,29 @@ export function boot(opts = {}) {
   function navigateTo(chapterId) {
     closeDetail({ silent: true });
     journey.writeRoute(chapterId, null, { push: true });   // the visitor chose to travel
-    journey.flyToChapter(chapterId);
-    // The scroll surface is NOT moved to the destination here: it follows the
-    // flight frame by frame (see the animator). Pre-placing it would mean that
-    // a manual scroll cancelling the flight handed control back at the
-    // DESTINATION rather than where the camera actually is - the exact camera
-    // disagreement GB-3.5 forbids.
+    directJumpTo(chapterId);
+  }
+
+  /* Nav = a DIRECT jump (ride-through #2, Hannah): clicking a chapter must not
+     run the camera through every section in between. Journey state snaps to
+     the destination immediately (seams, copy, route, scroll surface all land
+     there this tick — so a cancelling scroll hands control back exactly where
+     the state is, satisfying GB-3.5 trivially), while the CAMERA takes a short
+     straight blend from where it was to the destination pose, with a slight
+     lift arc so the straight line doesn't shave through geometry. */
+  let camBlend = null;
+  function directJumpTo(chapterId) {
+    const targetP = restProgress(chapterId);
+    if (Math.abs(targetP - journey.progress) < 1e-4) return;
+    const cam = sceneApi.camera, ctl = sceneApi.controls;
+    const pos0 = cam.position.clone(), tgt0 = ctl.target.clone(), fov0 = cam.fov;
+    placeAt(targetP);                           // the deep-link settle: place, arm, never replay
+    camBlend = {
+      t: 0,
+      dur: 0.85 + 0.35 * Math.min(pos0.distanceTo(cam.position) / 20, 1),
+      pos0, tgt0, fov0,
+      lift: Math.min(2.2, 0.10 * pos0.distanceTo(cam.position)),
+    };
   }
 
   // True only when THIS session pushed the history entry for the open detail.
@@ -245,6 +270,25 @@ export function boot(opts = {}) {
     chapters.inspire.setReveal(a * out, b * out, c * out, band * out);
   }
 
+  // Final-leg halation focus: the nearest mature ring member IN FRONT of the
+  // Final rest camera (director key p=0.925, pos(-14.72,2.73,2.70) ->
+  // tgt(-3.06,0.83,-1.94)) — its under-cap glow is the frame's focal
+  // highlight ("selected fairy-ring highlights", handoff). Deterministic;
+  // ring members are scene-parented and never move.
+  const FINAL_FOCUS = (() => {
+    const cam = new THREE.Vector3(-14.72, 2.73, 2.70);
+    const dir = new THREE.Vector3(-3.06, 0.83, -1.94).sub(cam).normalize();
+    let best = null, score = Infinity;
+    const v = new THREE.Vector3();
+    for (const m of MEMBERS) {
+      v.set(m.x - cam.x, 0, m.z - cam.z);
+      if (v.x * dir.x + v.z * dir.z <= 0 || m.m < 0.55) continue;  // behind / immature
+      const dd = v.length();
+      if (dd < score) { score = dd; best = m; }
+    }
+    return best ? new THREE.Vector3(best.x, best.gy + best.h * 0.82, best.z) : null;
+  })();
+
   function applyFrame(p, dt) {
     const owned = p > 0.0008;
     director.setOwned(owned);
@@ -253,9 +297,19 @@ export function boot(opts = {}) {
     seams.update(p);
     driveInspire(p);
 
-    // Optics: the grade runs on the Mission/Inspire leg only. Full optics
-    // reconciliation across all chapters is a production task (BUDGETS.md).
-    lens.setAmount(1 - smooth01((p - 0.30) / 0.08));
+    // Optics (W5): ONE finishing language across the whole journey. The lens
+    // owns the per-leg parameter curve; the journey supplies progress and the
+    // active chapter's focal source for the halation focus hint (handoff:
+    // active Inspire exit, ADOS knot, primary ownership nexus, and on the
+    // Final leg the nearest lit ring member — the "selected fairy-ring
+    // highlight", since the travelling front has no exposed world position).
+    lens.update(p);
+    let focus = null;
+    if (p < 0.40) { if (chapters.inspire.armed) focus = chapters.inspire.activeWorld(); }
+    else if (p < 0.62) { if (chapters.connect.armed) focus = chapters.connect.nodeWorld('ados'); }
+    else if (p < 0.87) { if (chapters.owned.armed) focus = chapters.owned.nodeWorld('pod-shared'); }
+    else if (chapters.final.armed) focus = FINAL_FOCUS;
+    lens.setFocusHint(focus);
 
     const ch = chapterAt(p);
     // Hero furniture releases as the journey leaves the Mission composition.
@@ -277,6 +331,24 @@ export function boot(opts = {}) {
     else scroll.setProgress(journey.raw);            // keep the surface under the flight
     const p = journey.update(dt);
     applyFrame(p, dt);
+    // direct-jump camera blend: state is already AT the destination; the
+    // camera glides straight from where it was onto the destination pose the
+    // director just computed. Any manual input drops the blend instantly.
+    if (camBlend) {
+      if (scroll.sinceInput < 50) { camBlend = null; }
+      else {
+        camBlend.t += dt;
+        const f = Math.min(camBlend.t / camBlend.dur, 1);
+        const e = f * f * f * (f * (f * 6 - 15) + 10);   // smootherstep, C2 ends
+        const cam = sceneApi.camera, ctl = sceneApi.controls;
+        cam.position.lerpVectors(camBlend.pos0, cam.position, e);
+        cam.position.y += Math.sin(Math.PI * f) * camBlend.lift;
+        ctl.target.lerpVectors(camBlend.tgt0, ctl.target, e);
+        const fv = camBlend.fov0 * (1 - e) + cam.fov * e;
+        if (fv !== cam.fov) { cam.fov = fv; cam.updateProjectionMatrix(); }
+        if (f >= 1) camBlend = null;
+      }
+    }
   });
 
   /* ================================================================
@@ -354,7 +426,11 @@ export function boot(opts = {}) {
         nav: active ? active.dataset.chapter : null,
         detail: detailNode,
         armed: Object.keys(chapters).filter(k => chapters[k].armed),
-        lens: +lens.amount.toFixed(3),
+        lens: {
+          on: lens.enabled, amount: +lens.amount.toFixed(3),
+          ...Object.fromEntries(Object.entries(lens.look)
+            .map(([k, v]) => [k, typeof v === 'number' ? +v.toFixed(3) : v])),
+        },
         hotspots: ui.hotspots.filter(h => h.btn.classList.contains('vis')).map(h => h.id),
         radius: +Math.hypot(c.position.x, c.position.z).toFixed(3),
       };

@@ -14,6 +14,18 @@
 //   is a fountain, and nothing touches the cap top.
 // Everything parents to groups.mushroom, so it is authored in cap-local
 // coordinates with capUnderPt()/rimRad() and inherits cap bend + sway free.
+//
+// CONCEPTUAL CONTINUITY (Hannah, 2026-08-02): there is ONE spore population.
+// The plume spores do not appear alongside the hero's ambient shed — they ARE
+// it, evolving. Three cooperating pieces, all pure functions of (effective
+// reveal, time) so reverse scroll plays the transformation backward:
+//   1. arrival ramps (see ARR below) make each exit's reveal continuous in
+//      scroll position instead of stepping at the T1 seam;
+//   2. the spore vertex shader's handoff block starts every particle as a
+//      member of the hero's drift (same origins, same breeze law) and gathers
+//      it onto the staged braid as the reveal rises;
+//   3. inspire-ambient.js dims the hero shed as-and-where the structured
+//      plume brightens, and restores it byte-exactly at p = 0.
 import * as THREE from 'three';
 import {
   makeRng, gaussOf, heat, capUnderPt, capTopPt, rimRad,
@@ -55,6 +67,7 @@ function makeStrandMat(opacity, flow) {
       uniform float uFlow;
       uniform float uTrace;
       uniform float uTraceAmp;
+      uniform float uFade;
       void main() {
         vColor = color;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -68,6 +81,12 @@ function makeStrandMat(opacity, flow) {
         // BACKWARD along the strand to the gill sector of origin (IN-4.1)
         float band = exp(-pow((aProg - (1.0 - uTrace)) * 11.0, 2.0));
         vBright = mix(1.0, wave, uFlow) + uTraceAmp * band;
+        // draw-on (ride-through #2, one-population rule): a strand GROWS from
+        // its origin as the drift organizes — a full-length line appearing at
+        // once reads as a new spore source. Saturates past uFade = 1 so the
+        // approved rest look is untouched.
+        float lead = uFade * 1.12;
+        vBright *= 1.0 - smoothstep(max(lead - 0.10, 0.0), lead + 0.001, aProg);
         gl_Position = projectionMatrix * mv;
       }
     `,
@@ -191,12 +210,19 @@ export function createInspire(sceneApi) {
         varying float vFogDepth;
         varying float vShrink;
         varying float vNear;
+        varying float vOn;
         uniform float uTime;
+        uniform float uFade;
         void main() {
           vColor = color;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
           vFogDepth = -mv.z;
           vNear = smoothstep(0.9, 1.9, length(mv.xyz));
+          // draw-on (ride-through #2): beads condense one by one as the drift
+          // organizes — a full string appearing at once reads as a new source.
+          // Hash-staggered thresholds; all fully on at uFade = 1 (rest intact).
+          float hb = fract(sin(dot(position.xz, vec2(12.9898, 78.233))) * 43758.5453);
+          vOn = smoothstep(hb * 0.85, hb * 0.85 + 0.15, uFade);
           float tw = 0.85 + 0.15 * sin(uTime * 1.7 + position.x * 31.0);
           float sz = psize * tw * (300.0 / -mv.z);
           vShrink = 1.0;
@@ -214,10 +240,11 @@ export function createInspire(sceneApi) {
         varying float vFogDepth;
         varying float vShrink;
         varying float vNear;
+        varying float vOn;
         void main() {
           vec4 t = texture2D(map, gl_PointCoord);
           float fogF = clamp((fogFar - vFogDepth) / (fogFar - fogNear), 0.0, 1.0);
-          gl_FragColor = vec4(vColor * t.a * uFade * fogF * vShrink * vNear, 1.0);
+          gl_FragColor = vec4(vColor * t.a * uFade * vOn * fogF * vShrink * vNear, 1.0);
         }
       `,
       vertexColors: true,
@@ -482,6 +509,9 @@ export function createInspire(sceneApi) {
       varying float vFogDepth;
       varying float vShrink;
       float hash(float n) { return fract(sin(n) * 43758.5453); }
+      // the hero scene's one air current (mushroom-scene §10b), normalized —
+      // the drift state below must move on the same wind the visitor watched
+      const vec3 SHED_BREEZE = vec3(0.8414, 0.5217, 0.1430);
 
       void main() {
         float plume = aMisc.x;
@@ -549,13 +579,19 @@ export function createInspire(sceneApi) {
             // Core-cohort particles (W4-A gap a) damp their own wander and
             // scatter hard, so the winding core reads as a defined sinuous
             // line inside the loose sheath the majority still carries.
+            // SHEATH is the W5 grade-unification taste knob (W4-A's open
+            // item): the approved still's sheaths are tighter columns, so
+            // the per-particle scatter is narrowed. ONLY the scatter terms
+            // carry it - the winding terms are shared verbatim with the
+            // core-ribbon shader (4b), which must keep threading the braid.
+            #define SHEATH 0.72
             float tight = mix(1.0, 0.30, core);
             az = az0 + curl
                + (0.13 * sin(h * 5.1 + sp) + 0.07 * sin(h * 9.7 + sp * 2.3 + uTime * 0.21)) * settle
-               + 0.03 * sin(uTime * 0.13 + seed * 3.7) * u3 * tight;
+               + 0.03 * sin(uTime * 0.13 + seed * 3.7) * u3 * tight * SHEATH;
             r = rimR + 0.05
               + (0.10 * sin(h * 4.3 + sp * 1.7) + 0.05 * sin(uTime * 0.17 + seed * 2.3)) * settle
-              + (h1 - 0.5) * 0.09 * (0.4 + h) * tight     // scatter around the core
+              + (h1 - 0.5) * 0.09 * (0.4 + h) * tight * SHEATH  // scatter around the core
               + h * 0.14;
             // uLean damps the +x breeze lean while the camera crosses the +x
             // sector, so plume cores never stream along the view ray.
@@ -571,10 +607,42 @@ export function createInspire(sceneApi) {
         }
         p = vec3(cos(az) * r + xLean, y, sin(az) * r + zLean);
 
+        // ---- ONE-POPULATION HANDOFF (Hannah's conceptual-continuity note,
+        // 2026-08-02). Before this plume's reveal, the particle is a member of
+        // the hero's ambient shed: same under-cap origin, dropped clear of the
+        // gills and carried +x by the same breeze law the visitor watched
+        // during Mission (mushroom-scene §10: travel grows with age, scatter
+        // spreads with travel). As the reveal rises, each particle — at its
+        // own staggered moment — gathers out of that drift onto its staged
+        // gill -> rim -> braid path, so the drift continuously BECOMES the
+        // structured plume; the shed dimmer (inspire-ambient.js) hands the
+        // hero curtain's density over in the same regions at the same rate.
+        // Everything is a pure function of (reveal, time): reverse scroll
+        // plays the same transformation backward. At rev = 1 the mix is
+        // exactly 1 — the approved Inspire rest look is untouched.
+        float dh1 = hash(seed * 3.31), dh2 = hash(seed * 5.77);
+        float dh3 = hash(seed * 7.13), dh4 = hash(seed * 2.09);
+        float spread = 0.07 + t * 0.78;
+        vec3 driftP = position
+                    + vec3(-0.03, -0.05 - 0.55 * pow(dh4, 1.5), 0.0)
+                    + SHED_BREEZE * (t * 5.0)
+                    + (vec3(dh1, dh2, dh3) - 0.5) * spread * vec3(2.0, 1.5, 1.2);
+        // drift alpha mirrors the shed's envelope: born at the gills, thinning
+        // downwind; both ends sit at ~0 so the cycle wrap is invisible in
+        // every mix state
+        float driftA = 0.8 * smoothstep(0.0, 0.06, t)
+                     * (1.0 - smoothstep(0.55, 0.95, t));
+        float mi = smoothstep(0.0, 0.45, rev - hash(seed * 17.77) * 0.55);
+        p = mix(driftP, p, mi);
+        alpha = mix(driftA, alpha, mi);
+        knotV *= mi;   // knot pearls are a property of the organized braid
+
         // knot + core brightening applied OUTSIDE the clamp so hot pearls can
-        // exceed the base envelope; heat tone shifts toward near-white at knots
+        // exceed the base envelope; heat tone shifts toward near-white at
+        // knots. The structural gains ride the morph: a particle still in the
+        // drift carries no core/knot identity yet.
         vAlpha = clamp(alpha, 0.0, 1.0) * rev
-               * (1.0 + 0.5 * coh) * (1.0 + 0.28 * core + 1.15 * knotV);
+               * (1.0 + 0.5 * coh) * (1.0 + (0.28 * core + 1.15 * knotV) * mi);
         vTone = min(1.0, aCycle.w + 0.34 * knotV);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vFogDepth = -mv.z;
@@ -681,7 +749,16 @@ export function createInspire(sceneApi) {
         float env = smoothstep(0.0, 0.05, h) * (1.0 - smoothstep(0.62, 1.0, pow(h, 1.18)));
         // hover trace-back band, sweeping the core top -> rim
         float band = exp(-pow((h - (1.0 - uTrace)) * 9.0, 2.0));
-        vBright = env * rev * ((0.30 + 0.85 * kn) * (1.0 + 0.6 * coh) + tAmp * band);
+        // one-population handoff: the continuous winding core is the MOST
+        // organized structure in the plume, so it condenses last — only once
+        // the reveal's second half has gathered the drift onto the braid.
+        // And it condenses as a draw-on GROWING UP from the rim (ride-through
+        // #2): a full-length ribbon fading in reads as a new spore source.
+        // At rev = 1 both gates are exactly 1 (approved rest look untouched).
+        float grow = smoothstep(0.5, 1.0, rev);
+        float lead = grow * 1.12;
+        float mg = grow * (1.0 - smoothstep(max(lead - 0.10, 0.0), lead + 0.001, h));
+        vBright = env * rev * mg * ((0.30 + 0.85 * kn) * (1.0 + 0.6 * coh) + tAmp * band);
         vTone = min(1.0, tone + 0.12 + 0.30 * kn);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vFogDepth = -mv.z;
@@ -777,13 +854,13 @@ export function createInspire(sceneApi) {
   function computeAuto() {
     let ig = -1, settled = true;
     for (let i = 0; i < 3; i++) {
-      const f = exits[i].fade;
+      const f = eff[i];                        // EFFECTIVE reveal: fade x arrival
       if (f >= 0.12 && f <= 0.90) ig = i;      // currently igniting/retiring
       if (f < 0.97) settled = false;
     }
     if (ig >= 0) autoActive = ig;
     else if (settled) autoActive = 1;          // Arca at rest
-    else if (exits[0].fade < 0.12 && exits[1].fade < 0.12 && exits[2].fade < 0.12) autoActive = -1;
+    else if (eff[0] < 0.12 && eff[1] < 0.12 && eff[2] < 0.12) autoActive = -1;
     return autoActive;                          // hysteresis: else keep the last
   }
 
@@ -798,24 +875,86 @@ export function createInspire(sceneApi) {
     return computeAuto();
   }
 
-  // W4-A gap b: hero ambient shed vs the ArtCompute plume. World corridor =
-  // release lip -> plume top (mean rise + breeze lean), pushed through the
-  // live mushroom matrix each frame so it rides cap bend + sway.
+  // ONE-POPULATION HANDOFF, the shed's half (Hannah 2026-08-02; extends W4-A
+  // gap b). For each exit the hero's ambient shed hands its apparent density
+  // to the plume system over three capsule regions — the under-cap origin
+  // wedge (where the plume population is born), the rise corridor (lip ->
+  // plume top, W4-A's original ArtCompute corridor generalized to all three
+  // exits), and the downwind drift envelope (where the plume's drift-state
+  // particles co-locate with the hero curtain during arrival; longest for
+  // ArtCompute, whose sector carries the hero's visible right-drift). Local
+  // endpoints are authored once in cap space and pushed through the live
+  // mushroom matrix each frame so they ride cap bend + sway; per-region
+  // strength k = gain * that exit's EFFECTIVE reveal, so the dim grows
+  // exactly as, and exactly where, the structured plume brightens — and
+  // unwinds the same way in reverse.
   const ambient = createAmbientShedDimmer(sceneApi);
-  const artCorridor = (() => {
-    const spec = EXITS[0];
-    const rise = (spec.riseMin + spec.riseMax) / 2;
-    const rimR = rimRad(spec.az) + 0.08;
-    const rim = capUnderPt(1.0, spec.az);
-    const a = new THREE.Vector3(Math.cos(spec.az) * rimR, rim.y - 0.15, Math.sin(spec.az) * rimR);
-    const b = new THREE.Vector3(
-      Math.cos(spec.az) * (rimR + 0.19) + spec.lean * rise * 0.62,
-      rim.y + 0.10 + rise,
-      Math.sin(spec.az) * (rimR + 0.19) + spec.lean * rise * 0.105,
-    );
-    return { a, b };
+  const shedRegions = (() => {
+    const list = [];
+    const driftLen = [4.8, 3.2, 2.6];   // ArtCompute rides the hero's full carry
+    for (let i = 0; i < 3; i++) {
+      const spec = EXITS[i];
+      const rise = (spec.riseMin + spec.riseMax) / 2;
+      const rimR = rimRad(spec.az) + 0.08;
+      const rim = capUnderPt(1.0, spec.az);
+      const lip = new THREE.Vector3(
+        Math.cos(spec.az) * rimR, rim.y - 0.15, Math.sin(spec.az) * rimR);
+      const top = new THREE.Vector3(
+        Math.cos(spec.az) * (rimR + 0.19) + spec.lean * rise * 0.62,
+        rim.y + 0.10 + rise,
+        Math.sin(spec.az) * (rimR + 0.19) + spec.lean * rise * 0.105,
+      );
+      const inner = capUnderPt(0.52, spec.az);
+      inner.y -= 0.12;
+      const tail = lip.clone().addScaledVector(BREEZE, driftLen[i]);
+      // rise corridor keeps W4-A's approved ArtCompute radii/gain
+      list.push({ exit: i, la: lip,          lb: top,  r0: 0.65, r1: 2.05, gain: 0.78 });
+      list.push({ exit: i, la: inner,        lb: lip.clone(), r0: 0.50, r1: 1.45, gain: 0.55 });
+      list.push({ exit: i, la: lip.clone(),  lb: tail, r0: 1.00, r1: 2.60, gain: i === 0 ? 0.52 : 0.40 });
+    }
+    for (const rg of list) { rg.a = new THREE.Vector3(); rg.b = new THREE.Vector3(); rg.k = 0; }
+    return list;
   })();
-  const _ca = new THREE.Vector3(), _cb = new THREE.Vector3();
+
+  // Arrival ramps — the scroll-locked half of the handoff. The T1 seam arms
+  // this chapter at ~92 deg of camera azimuth past Mission (core/seams.js),
+  // where driveInspire's ArtCompute ramp (az 36..72) is ALREADY complete: the
+  // seam-gated fade therefore steps 0 -> 1 in a single frame, and the whole
+  // plume system used to ease in fully formed — the "new spores appear when I
+  // scroll" Hannah flagged. The chapter now multiplies each fade by its own
+  // azimuth ramp that begins strictly AFTER the arming azimuth, so every
+  // exit's effective reveal is continuous in scroll position (snap/?p=
+  // included), grows only as the camera actually earns the sector, and plays
+  // backward identically. All ramps saturate by az ~154, safely before the
+  // rest window (az ~157.8..160), so the settled Inspire rest is exactly
+  // reveal = 1 — the approved look. Ramp bounds are desktop-orbit absolute
+  // (mission az ~ -12 deg), like driveInspire's own; the ArtCompute ramp
+  // starts at 82 deg, 2 deg past desktop arming.
+  const ARR = [
+    { a0: 82,  a1: 116 },   // ArtCompute — the hero's right-drift, gathered first
+    { a0: 108, a1: 140 },   // Arca — revealed as the camera rounds the rear
+    { a0: 130, a1: 154 },   // 2RP — the drooped-margin sector, last
+  ];
+  const ARR_BAND = { a0: 80, a1: 100 };
+  const RAD2DEG = 180 / Math.PI;
+  function camAzDeg() {
+    const c = sceneApi.camera.position;
+    let d = Math.atan2(c.x, c.z) * RAD2DEG;
+    if (d < -90) d += 360;                 // rear-left reads 190..270
+    return d;
+  }
+  function arrOf(azDeg, rmp) {
+    let x = (azDeg - rmp.a0) / (rmp.a1 - rmp.a0);
+    x = x < 0 ? 0 : x > 1 ? 1 : x;
+    return x * x * (3 - 2 * x);
+  }
+  const eff = [0, 0, 0];                   // per-exit effective reveal, per frame
+  let effBand = 0;
+  function computeEff() {
+    const azDeg = camAzDeg();
+    for (let i = 0; i < 3; i++) eff[i] = exits[i].fade * arrOf(azDeg, ARR[i]);
+    effBand = gillBand.fade * arrOf(azDeg, ARR_BAND);
+  }
 
   // W3-B (gap g): initiative labels anchor on the PLUME BODY, not the rim
   // release lip. The lip projects into the lower third of the Inspire rest
@@ -854,15 +993,18 @@ export function createInspire(sceneApi) {
     snap() {
       for (const ex of exits) ex.fade = ex.target;
       gillBand.fade = gillBand.target;
+      computeEff();                 // camera is already placed by placeAt
       effActive = resolveActive();
       const c = sporeMat.uniforms.uCoh.value;
       for (let i = 0; i < 3; i++) {
         c.setComponent(i, (i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0));
         const st = streaks[i];
-        st.o = (i === effActive ? 0.42 : 0) * exits[i].fade;
+        st.o = (i === effActive ? 0.42 : 0) * eff[i];
         st.sprite.visible = st.o > 0.01;
+        for (const m of exits[i].mats) m.uniforms.uFade.value = eff[i];
       }
-      sporeMat.uniforms.uRev.value.set(exits[0].fade, exits[1].fade, exits[2].fade);
+      for (const m of gillBand.mats) m.uniforms.uFade.value = effBand;
+      sporeMat.uniforms.uRev.value.set(eff[0], eff[1], eff[2]);
     },
     /** T1 streaming seam: arm/retire the whole exit set. */
     setArmed(on) { armed = !!on; if (!on) api.setReveal(0, 0, 0, 0); },
@@ -922,19 +1064,24 @@ export function createInspire(sceneApi) {
   let traceStart = -1e9;
   sceneApi.addAnimator('spike-plumes', (t, dt) => {
     const k = Math.min(1, dt * 3.2);
-    let anyVisible = false;
+    for (const ex of exits) {
+      ex.fade += (ex.target - ex.fade) * k;
+      if (ex.fade < 0.012 && ex.target === 0) ex.fade = 0; // no exponential ghost tail
+    }
     gillBand.fade += (gillBand.target - gillBand.fade) * k;
     if (gillBand.fade < 0.012 && gillBand.target === 0) gillBand.fade = 0;
-    if (gillBand.fade > 0) anyVisible = true;
-    for (const m of gillBand.mats) { m.uniforms.uFade.value = gillBand.fade; m.uniforms.uTime.value = t; }
+    // effective reveals: seam-gated fade x scroll-locked arrival ramp — the
+    // single value every visual channel (mats, uRev/morph, shed dim, streaks,
+    // auto-active) reads from, so the whole handoff is continuous in p
+    computeEff();
+    let anyVisible = effBand > 0;
+    for (const m of gillBand.mats) { m.uniforms.uFade.value = effBand; m.uniforms.uTime.value = t; }
     effActive = resolveActive();
     for (let i = 0; i < 3; i++) {
       const ex = exits[i];
-      ex.fade += (ex.target - ex.fade) * k;
-      if (ex.fade < 0.012 && ex.target === 0) ex.fade = 0; // no exponential ghost tail
-      if (ex.fade > 0) anyVisible = true;
+      if (eff[i] > 0) anyVisible = true;
       for (const m of ex.mats) {
-        m.uniforms.uFade.value = ex.fade;
+        m.uniforms.uFade.value = eff[i];
         m.uniforms.uTime.value = t;
       }
       // Full coherence on hover AND on the selected exit (W4-E: an open card
@@ -946,19 +1093,22 @@ export function createInspire(sceneApi) {
       cohTarget[i] = (i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0);
     }
 
-    // gap b: hero ambient shed vs the ArtCompute plume — runs OUTSIDE the
-    // anyVisible gate so the exact restore fires when the leg retires
-    ambient.update(
-      exits[0].fade,
-      _ca.copy(artCorridor.a).applyMatrix4(sceneApi.groups.mushroom.matrixWorld),
-      _cb.copy(artCorridor.b).applyMatrix4(sceneApi.groups.mushroom.matrixWorld),
-    );
+    // The shed's half of the handoff — runs OUTSIDE the anyVisible gate so
+    // the exact restore fires when the leg retires. Region strength tracks
+    // each exit's effective reveal; endpoints ride the live mushroom matrix.
+    const mw = sceneApi.groups.mushroom.matrixWorld;
+    for (const rg of shedRegions) {
+      rg.a.copy(rg.la).applyMatrix4(mw);
+      rg.b.copy(rg.lb).applyMatrix4(mw);
+      rg.k = rg.gain * eff[rg.exit];
+    }
+    ambient.update(shedRegions);
 
     group.visible = anyVisible;
     if (!anyVisible) return;
     sporeMat.uniforms.uTime.value = t;
     coreMat.uniforms.uTime.value = t;
-    sporeMat.uniforms.uRev.value.set(exits[0].fade, exits[1].fade, exits[2].fade);
+    sporeMat.uniforms.uRev.value.set(eff[0], eff[1], eff[2]);
     const c = sporeMat.uniforms.uCoh.value;
     c.x += (cohTarget[0] - c.x) * k;
     c.y += (cohTarget[1] - c.y) * k;
@@ -989,7 +1139,7 @@ export function createInspire(sceneApi) {
 
     for (let i = 0; i < 3; i++) {
       const st = streaks[i];
-      const want = (i === effActive ? 0.42 : 0) * exits[i].fade;
+      const want = (i === effActive ? 0.42 : 0) * eff[i];
       st.o += (want - st.o) * Math.min(1, dt * 2.4);
       if (st.o < 0.02 && want === 0) st.o = 0;   // die cleanly, no lingering blade
       // a lens catching an exceptional source: slow breathing, slight shimmer
