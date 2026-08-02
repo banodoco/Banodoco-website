@@ -238,6 +238,97 @@ never hardcoded in the chapter page.
 
 ---
 
+# W4-C — Owned chapter production (Spike B ported into the live journey, 2026-08-02)
+
+**Measured:** Apple-silicon Mac, in-app pane (fronted tab, vsync live), Tier-1,
+`http://localhost:8137/journey-v6/?nointro=1&p=0.725`. Field authored against the
+REAL Owned leg (owned-leg.js samples director `poseAt` over p 0.660–0.872; 107-pt
+polyline). Files: `chapters/owned.js` + new `owned-leg.js` / `owned-substrate.js`
+/ `owned-portraits.js`. spike-b/ untouched.
+
+## Geometry / memory (armed state)
+
+| Element | Amount | Verts / px |
+|---|---:|---:|
+| Fine hyphae (2,700 far / 3,300 mid / 1,400 near) + soil-underside lid (560) | 7,400 strands | 56,544 line verts |
+| Rhizomorph cords (6 tapered tubes 64×6 + 7-filament bundles each; one climbs to the stipe, one runs out the exit corridor) | 6 cords | 4,914 verts |
+| Node-local strands (terminate at nodes; node↔node links; cord attachments) | 268 curves | 4,288 line verts |
+| 3D rim fibres (12/node × 3 segs) | 48 nodes | 3,456 verts |
+| Portrait planes (one indexed mesh) | 48 planes | 192 verts |
+| Cores + halos (2 Points layers) | 2×48 | 96 pts |
+| Soil aggregates (2 layers) + haze sprites | 134 pts + 12 sprites | — |
+| Ownership pods (3 nexus knots: strand bundle + core + halo) | 3 | ~1.6k line verts |
+| Growth front (fan beyond the exit, p-gated 0.775→0.81) | 40 strands | ~0.6k |
+| **Drawable objects when armed** | **45** | fully retired (`group.visible=false`) outside T3 arming |
+
+Atlases: busts 2048×1536, photos 2048×1536 (26-photo look-dev set, baked async
+through the spike treatment — never blocks boot; load failure degrades to
+procedural busts), anon 512×512. ≈25 MB RGBA before mips.
+
+## Runtime
+
+- **59.9 fps median (16.7 ms, vsync-locked) at the Owned rest**, fronted tab;
+  p95 34 ms attributable to shared-machine contention during parallel agent runs.
+- Zero console errors from the Owned chapter across placement, leg sweep
+  (p 0.696→0.858), pod waves, hover/select, card open/close, photo/anon
+  crossfades, consent toggle, resize 1600-wide ↔ 900×700, and return to p=0.
+  (Two logged shader errors in this period belong to the in-progress W4-B
+  `chapters/connect.js` — GLSL reserved word `patch`, its fragment shader —
+  which also blacks the composer once Connect arms. Not an Owned issue; flagged
+  to the Connect owner.)
+- Mission preservation intact: at p=0, nothing armed, hero fog (7,20), hero
+  pose exact, chapter group invisible.
+
+## Reachability (the grey-box gap, closed)
+
+- 19 nodes registered (3 pods + **all 16 contributors**; grey-box had 3+4).
+- All 16 contributors frame inside the rest frustum (`restVisible()` = 16/16).
+- 13 hotspots live at the rest pose (3 pods + 10 contributors; the other 6
+  in-frame but suppressed by copy-rect / edge margins). ≥10 requirement met.
+- Placement: 12 contributors stratified against the REST frustum cells, 4 in
+  drift frames; 32 ambient nodes cover the whole underground leg. Hard rules
+  carried verbatim: ≥3.0-unit clearance from every point of the leg polyline
+  (descent + rise included, with soil-safe push redirection), 3×3 frame-cell
+  stratification with near/mid/far depth pattern, top-centre forced deep,
+  size (0.34–0.58) + per-pair spacing jitter (1.70–2.12) against coin-rows.
+
+## Colour pipeline — REQUIRED READING for the grade-unification pass
+
+Spike B calibrated with **no OutputPass** (raw display-space additive sum). The
+live journey renders through the hero composer: RenderPass → UnrealBloom
+(0.62/0.45/0.1) → TAA → SpikeGradePass (Mission/Inspire leg only; uAmount = 0
+across Owned) → **OutputPass (ACES filmic, exposure 0.95, sRGB)**. Under ACES,
+dim additive values screen 2–4× brighter than the spike's raw path, so the port
+carries explicit compensation that unification must reconcile:
+
+- `EXPOSURE_LINES 0.30` on every additive line/sprite base opacity;
+  `EXPOSURE_PLANES 0.42` on portrait-plane alpha (uExposure) + rim/core/halo.
+- Cords: spike's 0.62 opacity factor → 0.34, fogDensity 0.010 → 0.020 (tubes
+  at min clearance read as frame-wide ribbons under ACES otherwise); cord
+  clearance raised 2.8 → 3.4 for the same reason (journey fov 54).
+- Plane shader constants: t.rgb 1.12 → 0.88, rim 0.10 → 0.07, core 0.06 → 0.04,
+  haze floor 0.55 → 0.38; defocus size growth 1.35 → 1.0; node sizes ~62% of
+  spike's. Halos 3.4×/0.06 → 2.5×/0.035; cores 0.10 → 0.062.
+- New **near-fade** `smoothstep(1.1, 2.9, viewDepth)` on all pulse-mat line
+  layers and node strands: anything grazing the lens dims away instead of
+  blazing flat (the near field belongs to defocus, not brightness).
+- The atlas treatment itself (62% desat, 0.90 amber multiply, edge burn,
+  feather 0.76) survives ACES ≈ unchanged — texture content round-trips
+  through sRGB decode/encode; only the additive constants shifted.
+
+## Leg audit (no-empty-frames)
+
+Sampled p = 0.696 / 0.702 / 0.706 / 0.725 / 0.745 / 0.788 / 0.815 / 0.845 /
+0.858 at 1600-wide and 900×700. Every frame holds composed structure (portraits
+at depth, cords, lit hyphae, lid, haze); T3 passes through the soil-underside
+lid + entry collar, T4 exits through the growth-front corridor with the OW-5
+pulse (fires crossing p 0.795 forward, re-arms below 0.765). Known soft spots
+(acceptable, noted for polish): bottom third at p 0.696–0.706 reads as dark
+deep-soil with sparse strands; a quiet mid-band stripe at p ~0.815 between the
+soil-line and the portrait belt.
+
+---
+
 # W4-A — Inspire production polish (chapters/inspire.js + inspire-ambient.js)
 
 **Measured:** 2026-08-02, Apple-silicon Mac, in-app browser pane ~800×718 CSS px @ DPR 1.75,
@@ -293,3 +384,269 @@ broader turbulent sheath, and gl_PointSize is pixel-based so a narrow pane
 (≤ 800 px) exaggerates apparent density/size. Judge sheath width at ≥ 1280 px,
 and treat any further tightening as a grade/taste call for the unification pass,
 not a W4-A defect.
+
+---
+
+# W4-D — Final-chapter production stage (Hannah's "hero joins the ring" revision, 2026-08-02)
+
+**Page:** `http://localhost:8137/journey-v6/index.html?p=…&steady=1`, in-app pane (hidden tab).
+**Scope:** `journey-v6/chapters/final.js` + new `final-world.js` / `final-ring.js` /
+`final-terrain.js` / `final-sky.js`, plus the sanctioned re-key of the director's
+Final leg (p ≥ 0.782 only). Measured with the parallel W4 builds live in the same
+tree (production Owned portrait field + product-systems footer both armed at the rest).
+
+## Chapter composition (build-time counts, from `journey.chapters.final.counts`)
+
+| Piece | Amount | Draws |
+|---|---:|---:|
+| Fairy ring: 9 built agarics + 2 far hints, merged line batch (build-time LOD by distance from the rest camera) | ~610 segs | 1 |
+| Ring glow points (halo + under-cap + core + base per body) | ~40 pts | 1 |
+| Primordia (dwell-driven buds, GPU grow) | 5 pts | 1 |
+| Surface strokes (kept side of the cut) | 1,040 segs | 1 |
+| Cut lip + face (continuous lip, ragged drops, strata ticks) | ~600 segs | 1 |
+| Lip beads + face aggregates | 260 pts | 1 |
+| Underground hyphae (colony + exposed section) | 1,700 segs | 1 |
+| Rhizomorph cords (6, double-stroked, cut ends flagged) | 110 segs + ends pts | 2 |
+| Growth-front arc (pulse carrier, aArc-addressed) | 130 segs | 1 |
+| Member↔front connectors (reveal-gated) | 36 segs | 1 |
+| Spore sky (GPU phase: plume-born + standing broad cloud) | 3,600 pts | 1 |
+| Forest horizon conifers (2 fogged distance bands) | ~1,150 segs | 1 |
+| Mist / horizon-glow / dark-pocket sprites | 9 sprites | 9 |
+| **Chapter total** | **~5.4k segs + ~3.9k pts** | **~22** |
+
+All lit geometry rides ONE shared shader pair (strand + point) with per-vertex
+aArc/aReveal/aTw/aBoost/aWave channels and one uniform block ticked per frame —
+zero per-frame CPU geometry work; the spores are a pure GPU phase shader
+(Spike A pattern). Fog uniforms are copied from `scene.fog` each frame, so the
+chapter renders inside the director's ramp exactly (rest fog measured 13.75/60.3,
+matching the pure-function prediction).
+
+## Whole-frame at the Final rest (accumulated `renderer.info`, autoReset off, post-render probe)
+
+| State (900×700 pane, DPR 2) | Draws | Lines | Points | Tris |
+|---|---:|---:|---:|---:|
+| Final rest p=0.925 — hero + production Owned field + Final stage + footer + grade | 104 | 82,933 | 28,224 | 17,578 |
+
+Baseline hero alone is 42 / 44.4k / 24.1k / 12.8k (BASELINE §4.3); the delta is
+shared between the parallel Owned production field (~33k line verts of hyphae)
+and this chapter (~5k segs + ~3.9k pts + ~22 draws). Draw-call total stays
+double-digit; no full-screen transparency was added; worst local overdraw is the
+under-cap glow stack at the near-right lip member (~4 sprite-points over <1% of
+frame).
+
+## Cadence caveat (same as BASELINE §2 / Spike A)
+
+The pane is a hidden tab: frames run only in capture bursts, so no honest fps
+median exists in this harness (a 2 s rAF probe caught 1 frame; in-burst deltas
+ran 8–33 ms). `renderer.getPixelRatio()` stayed 2 — the governor never engaged.
+Everything added is static merged geometry + one GPU point shader, with less
+per-frame CPU than Spike B's measured 60 fps state (which carried this same
+Owned field fronted). **Gap: one visible-tab session should confirm the rest-pose
+cadence**, as Spike A flagged for its own states.
+
+## Tier-2 levers (wired at build constants, not yet exercised)
+
+- Spores 3,600 → 1,800 via drawRange prefix (sources interleaved, stays balanced).
+- Hyphae 1,700 → ~900, surface 1,040 → ~600 (count constants).
+- Horizon far band + 4 of 9 sprites droppable; ring LOD floor already ~0.5.
+
+# D14 — Ring members rebuilt as individuated copies of the hero (2026-08-02)
+
+**Scope:** `journey-v6/chapters/final-ring.js` rewrite (members now generated
+from a parameterization of the hero's own form recipe — mushroom-scene.js §4
+cap form language, §6 gill cavity shading, §7 stem taper/flare — individuated
+per member across scale/growth stage, cap ratio, lean, rim waviness + droop +
+fold, gill density, stem thickness/curve, heat sector, glints, shed). Plus one
+shared-language parameter in `final-world.js`: per-member seeded `shed`
+strength, expressed to the sky by weighting `SPORE_SOURCES` via repetition
+(sky code untouched; spore count unchanged at 3,600).
+
+| Piece | Was (W4-D) | Now (D14) | Draws |
+|---|---:|---:|---:|
+| Fairy ring merged line batch (9 members + 2 far hints, 3-tier build-time LOD) | ~610 segs | 825 segs | 1 (unchanged) |
+| Ring glow points (halo/core/base + NEW per-member moisture glints, margin beads, shed trails) | ~40 pts | 94 pts | 1 (unchanged) |
+| Primordia | 5 authored / 4 surviving pts | unchanged | 1 |
+
+Chapter total moves ~5.4k → ~5.6k segs and ~3.9k → ~3.95k pts; draw calls
+unchanged (~22). Everything still rides the shared strand/point shader pair and
+the aArc/aReveal/aTw/aBoost/aWave channels — undarken, growth-front pulse,
+CTA wave and primordia untouched. Verified in-pane at p=0.85/0.88/0.90/0.925/1.0
+(cache-busted hard reloads, screenshot pumping): sequential kindle intact,
+hero at p=0 untouched, zero console errors.
+
+# D15 — Ring members densified to the hero's render (2026-08-02)
+
+**Trigger (Hannah, live review):** "The mushrooms there don't seem to be based
+on the main one — why do they have way worse texture?" D14 carried the hero's
+FORM recipe at ~825 segs total for nine members vs the hero's ~16k-seg line
+build — and the hero's texture IS its density. The performance caution behind
+that was unnecessary (BASELINE: whole frame vsync-locked with headroom on the
+M3, the only target device, D8).
+
+**Scope:** `journey-v6/chapters/final-ring.js` (buildMushroom rewritten around
+the hero's actual texture systems: §4 cap lattice grid + overlay net + node
+points + speckle motes, §6 gill fan with cavity-shading curve + 8% doubled
+veins + hot core, the 3-ring rim + depth-weighted front arc + lip + fringe
+ticks + margin beads, §7 stem lattice + wiggling vertical fibres with every
+fifth doubled, §8 ground-merge root flare on real groundY clipped at the cut
+lip) and one mechanism in `final-world.js`: `meta.mul`, a build-time color
+multiplier in makeBatch (== per-segment material opacity under additive
+blending), so ONE merged batch carries the hero's per-system opacities
+(cap 0.28 / gills 0.33 / rim 0.55 / stem 0.32 / roots 0.42). Hero §5 occlusion
+shells are mirrored WITHOUT new draws as build-time far-side damping against
+the rest camera (same precedent as the build-time LOD tiers). D14's seeded
+per-member individuation, reveal thresholds, growth-front/CTA boost channels,
+shed weighting, glints language, halo points, far hints and primordia are all
+unchanged.
+
+## Built density (from `journey.chapters.final.counts.ringMembers`)
+
+| Tier | Members | Segs each (was D14 ~90 avg) | Pts each | % of hero line build |
+|---|---|---:|---:|---:|
+| T0 near (dist<8) | i3 h1.7, i4 h1.5 | 4,144 / 3,760 | 438 / 398 | ~24% each |
+| T1 mid (<14) | i0, i1, i2, i5 | 2,133–2,996 | ~220 | ~13–18% |
+| T2 far | i6, i7, i8 | 863–1,168 | ~90 | ~5–7% |
+
+| Piece | Was (D14) | Now (D15) | Draws |
+|---|---:|---:|---:|
+| Fairy ring merged line batch | 825 segs | **21,280 segs** (~42.6k line verts) | 1 (unchanged) |
+| Ring glow points (adds lattice beads, node dots, speckle, gill core, rim/stem points) | 94 pts | **2,001 pts** | 1 (unchanged) |
+| Primordia | 4 pts | unchanged | 1 |
+
+## Whole-frame at the Final rest (accumulated renderer.info, autoReset off, 10 pumped frames, 1440×860)
+
+| State | Draws | Line segs | Points | Tris |
+|---|---:|---:|---:|---:|
+| p=0.925 rest, D15 | **104** | 103,667 | 30,187 | 17,578 |
+| (D14 reference) | 104 | 82,933 | 28,224 | 17,578 |
+
+Draw calls IDENTICAL — density lives inside the two existing merged batches.
+In-burst rAF deltas at the rest: median **16.7 ms (vsync-locked)**, p90 32.5 ms
+(burst hiccups, same 8–33 ms spread BASELINE §2 recorded). No evidence of
+median CPU frame cost >10 ms; per-frame CPU work is unchanged (static merged
+geometry, same uniform tick). Hidden-pane caveat stands as in BASELINE §2 —
+one visible-tab session should confirm cadence.
+
+Verified in-pane (cache-busted loads, screenshot pumping, 1440-wide and
+900×700): side-by-side at p=0.925 and p=0.90 reads as one material world —
+members show the hero's cap crumple, gill fans under lifted rims, stem
+striations and base flares at their distances; whisper state carries the
+density (faint full bodies, not lit diagrams); reveal partial state clean at
+p=0.87; reverse scrub clean; hero at p=0 untouched; zero console errors.
+
+## Tier-2 levers for the ring (cut in this order)
+
+1. capSpkPts + capBeadP motes (~600 pts) — invisible first.
+2. T1 ticks 160→80-equivalents and capSegs −25% (~1.5k segs).
+3. T2 members back toward sketch density (~2k segs — they are tiny in frame).
+4. gillSub 8→6 on T0, front-arc second pass off (~750 segs).
+Keep last: rim rings + gill fans (they carry each member's identity).
+
+---
+
+# W4-B — Connect chapter production (gill commons, 2026-08-02)
+
+**Measured:** headless Chromium (ANGLE Metal, `--use-angle=metal`, same rendering
+stack as the in-app pane) at **1440×900 DPR 1**, `?nointro=1&steady=1&p=0.49`.
+Method: `renderer.info` with `autoReset` off, reset at rAF head and read at the
+next rAF (true per-frame accumulation across the whole composer, not last-pass).
+Frame cadence via a 240-frame rAF histogram. The shared pane (615×317 CSS,
+DPR 2) was used for real-GPU parity spot-checks only.
+
+## Geometry (Tier 1, chamber armed)
+
+| Piece | Amount | Draws |
+|---|---:|---:|
+| Blade sheets — 3 instanced batches (28 primaries + 28 lamellulae + 16 tertiaries), grids 40×3 / 26×3 / 16×2, DoubleSide, cropped to the lit band (v ≤ 0.55 of depth) | 72 blades, 12,112 tris | 3 |
+| Free-edge polylines (the crisp light carrier — 1-px lines like the hero gills) | 2,120 segs | 1 |
+| Cross-veins (taut arcs, patchy, densified through the Community sector) | 605 segs | 1 |
+| Moisture beads (vein junctions + edge glints) | 123 pts | 1 |
+| Chamber spores (in-shader migration toward the rim → feeds Inspire) | 380 pts | 1 |
+| Haze sprites (far/front-left wall only) | 7 | 7 |
+| ADOS strands (14 × 11 segs) + knot tangle + core sprite | 154 + 60 segs | 3 |
+| Hivemind braid (5 strands × 44) + memory points | 220 segs + 5 pts | 2 |
+| **Chamber total** | ~3.16k line segs, 12.1k tris, 508 pts | **+19** |
+
+## Measured, per state
+
+| State | Draw calls | Tris | Line verts | Points | Cadence med (p95) |
+|---|---:|---:|---:|---:|---:|
+| Connect rest, armed, full chain | **51** | 24,956 | 47,520 | 4,708 | **16.7 ms (17.4)** — 60 fps locked |
+| Hero baseline (§4.3, for reference) | 41+1 | 12,828 | 44,377 | 24,090 | 16.7 ms |
+
+Points DROP by ~19k at the rest: the hero's mote/bead clouds (fake-DOF bokeh,
+frame-filling at chamber range) are **fully retired** (`visible = false`) once the
+eased chamber amount deepens past ~88% — dimming them to 6% still paid their entire
+raster cost, and that raster load is what tipped heavy frames into the Metal aborts
+below. They restore exactly (opacity AND visibility) as the amount eases out; the
+spore shed (4,200 pts) stays live throughout, as in the G2a spike. Between the
+retired clouds and the +19 chamber draws, the armed rest nets **+9 draw calls**
+over the hero baseline.
+
+## Stability — the TAA NaN soak (new verification, keep using it)
+
+Two distinct failure modes were found, fixed, and are now guarded in code:
+
+1. **`pow()` NaN**: varying interpolation can deliver a base a hair below zero
+   (e.g. `aAlong` at a strand's first vertex); `pow(-ε, 2.4)` is NaN by GLSL spec.
+   One NaN fragment spreads through the bloom mip chain, and the hero's
+   TemporalAccumulatePass then holds it FOREVER — `mix(x, NaN, 0.0)` is still NaN,
+   so the blend re-poisons its own history every frame. Symptom: most of the frame
+   goes black 1–2 s after the chamber arms. All shader `pow()` bases in the chapter
+   are clamped strictly positive; gaussians use the donor's `exp(-d*d/w²)` band form.
+2. **Metal command-buffer aborts under peak load**: with a heavy per-fragment
+   shader across 70+ stacked DoubleSide sheets (plus the hero's ballooned bokeh
+   quads underneath), rare frames aborted mid-pass and left a rectangular tile
+   region of the composer's HalfFloat target as garbage NaN bit patterns — same
+   permanent TAA blackout. Fixes: all smooth-along-the-blade math moved to the
+   VERTEX shader (fragment = 4 `exp()`s shaping light across v), sheets cropped to
+   the lit band, hero bokeh retired (above), and the blade fragment clamps its
+   varyings to domain + caps output at 48 — the worst possible bad frame is now a
+   finite one-frame shimmer that TAA absorbs.
+
+**Soak method** (recommended for any chapter that adds shaders): scan
+`composer.renderTarget1/2` as `Uint16Array` for half-float NaN bit patterns
+(`(v & 0x7C00) === 0x7C00 && (v & 0x03FF)`) every ~250 ms. Verified clean: 21 s
+static rest, 24 s continuous hover-storm across all three behaviours, entry/exit
+glides both directions. Zero console errors throughout. NOTE for grade
+unification / core: the TAA blend could self-heal from any future NaN with a
+one-line guard (sanitise history or use `w > 0 ? mix(...) : current`), and its
+history cannot be cleared by `validHistory` once poisoned — worth considering
+when the composer is next touched (core-owned; not changed by W4-B).
+
+## Composition / anchors
+
+- Copy is LEFT: the colonnade's sector behind the copy block (az ≈ 1.95 from the
+  rest camera) is a deliberately dark luminosity patch — reads as organic sector
+  patchiness, doubles as copy legibility.
+- Community = az 2.95 ± 0.36 (front-left wall, centre-frame at the rest), anchor
+  at the lit region's floor; ADOS = the knot at the gill/stem apex (az 3.35,
+  upper-centre); Hivemind = braided route lower-right, threading to the junction.
+- All three anchors verified visible (unsuppressed, in-frustum) at **1440×900,
+  430×932 and 375×812**. Hivemind's chip is orientation-aware (same route,
+  different anchor point): mid-route in landscape; the junction turn-in when
+  `camera.aspect < 1` — the only stretch of the route inside the portrait
+  frustum and clear of the portrait copy rect (GREYBOX-DECISIONS §23 follow-up).
+
+## Tier-2 proposals (not yet exercised)
+
+| Piece | Tier 1 | Tier 2 |
+|---|---:|---|
+| Blade sheets | 72 / 12.1k tris | drop tertiaries + halve lamellulae (~7k tris); grids 26×2 |
+| Edge polylines | 2,120 segs | ~1,200 (primaries full, secondaries halved) |
+| Veins | 605 segs | ~350 (keep Community sector dense) |
+| Spores | 380 | 220 |
+| Haze | 7 sprites | 4 |
+| Ambient exchanges | 3 regions | 2 (donor tier model) |
+
+## For grade unification (W4 optics pass)
+
+Raw render as instructed; material family is the hero palette via `heat()`.
+Notes: (a) chamber light is deliberately line-carried — if the unified grade adds
+halation, re-check the free-edge polylines first, they are the brightest thing in
+frame; (b) the blade under-glow (`uEdge` 0.26) and face haze (`uBase` 0.26) were
+tuned against the ACES OutputPass with bloom 0.62 — a grade that lifts near-blacks
+will need those two uniforms stepped down, they are the whole silk-vs-blade
+balance; (c) the fog constants in the chapter materials (`uFog` 0.26–0.34) fake
+depth falloff the scene fog can't provide at chamber range (scene fog near = 7);
+if grade unification re-parameterises scene fog inside T2, these can drop.

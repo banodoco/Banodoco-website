@@ -66,44 +66,65 @@ export function createFinalTerrain(sceneApi, uniforms) {
      ================================================================ */
   const cut = makeBatch();
   {
-    // the lip: warm broken strokes along the edge
-    const N = 120;
+    // the lip: a warm, nearly continuous bright edge — the soil-line the
+    // whole composition hangs on (the approved still's brightest terrain
+    // feature). Two passes: a continuous core + broken overhang ticks.
+    const N = 160;
     let prev = null;
     for (let i = 0; i <= N; i++) {
       const s = CUT_S_MIN + (i / N) * (CUT_S_MAX - CUT_S_MIN);
       const p = cutEdgePoint(s);
-      const v = [p.x + gauss() * 0.06, groundY(p.x, p.z) + 0.02 + gauss() * 0.02, p.z + gauss() * 0.06];
-      if (prev && rand() > 0.18) {  // broken, not a drawn contour
-        const t = 0.34 + rand() * 0.22;
+      const v = [p.x + gauss() * 0.05, groundY(p.x, p.z) + 0.02 + gauss() * 0.02, p.z + gauss() * 0.05];
+      if (prev && rand() > 0.08) {
+        const t = 0.55 + rand() * 0.2;
         cut.seg(prev[0], prev[1], prev[2], v[0], v[1], v[2], t, t,
           { tw: rand() * TAU, boost: 0.35, arc: arcOf(p.x, p.z) });
       }
+      // overhang ticks breaking over the edge
+      if (rand() < 0.3) {
+        const t = 0.4 + rand() * 0.2;
+        cut.seg(v[0], v[1], v[2],
+          v[0] - 0.2 - rand() * 0.3, v[1] - 0.1 - rand() * 0.25, v[2] + gauss() * 0.2,
+          t, t * 0.4, { tw: rand() * TAU });
+      }
       prev = v;
     }
-    // the face: vertical soil strokes hanging off the lip, warm at the top
-    // fading to dark — the section through the substrate
-    for (let i = 0; i < 150; i++) {
+    // the face: the section through the substrate. NOT a curtain of
+    // verticals — a mix of short ragged drops, horizontal strata ticks and
+    // root stubs, warm at the lip fading dark within ~2 units.
+    for (let i = 0; i < 130; i++) {
       const s = CUT_S_MIN + rand() * (CUT_S_MAX - CUT_S_MIN);
       const p = cutEdgePoint(s);
-      const x = p.x + gauss() * 0.18, z = p.z + gauss() * 0.18;
+      const x = p.x + gauss() * 0.2, z = p.z + gauss() * 0.2;
       const y0 = groundY(x, z);
-      const depth = 1.4 + rand() * 3.0;
-      const midY = y0 - depth * 0.45;
-      const t0 = 0.42 + rand() * 0.2;
-      cut.seg(x, y0, z, x + gauss() * 0.12, midY, z + gauss() * 0.12,
-        t0, t0 * 0.45, { tw: rand() * TAU });
-      cut.seg(x + gauss() * 0.12, midY, z + gauss() * 0.12,
-        x + gauss() * 0.22, y0 - depth, z + gauss() * 0.22,
-        t0 * 0.45, 0.06, { tw: rand() * TAU });
+      const depth = 0.9 + rand() * 1.9;
+      const t0 = 0.46 + rand() * 0.2;
+      cut.seg(x, y0, z, x + gauss() * 0.3, y0 - depth, z + gauss() * 0.3,
+        t0, 0.09, { tw: rand() * TAU });
+    }
+    // horizontal strata: broken layer lines a little below the lip
+    for (let i = 0; i < 90; i++) {
+      const s = CUT_S_MIN + rand() * (CUT_S_MAX - CUT_S_MIN);
+      const p = cutEdgePoint(s);
+      const d = 0.25 + Math.pow(rand(), 1.4) * 2.2;
+      const y = groundY(p.x, p.z) - d;
+      const len = 0.4 + rand() * 1.0;
+      const t0 = (0.34 + rand() * 0.16) * (1 - d * 0.28);
+      const dirS = rand() < 0.5 ? -1 : 1;
+      const q = cutEdgePoint(s + dirS * len);
+      cut.seg(p.x + gauss() * 0.1, y, p.z + gauss() * 0.1,
+        q.x + gauss() * 0.1, y + gauss() * 0.1, q.z + gauss() * 0.1,
+        t0, t0 * 0.6, { tw: rand() * TAU });
     }
   }
-  const cutMat = makeStrandMat(uniforms, 0.62);
+  const cutMat = makeStrandMat(uniforms, 0.72);
   const cutLines = new THREE.LineSegments(cut.geo(), cutMat);
   cutLines.frustumCulled = false;
   group.add(cutLines);
   counts.cutSegs = cut.segCount;
 
-  // soil aggregates: fine points peppering the lip + face
+  // soil aggregates: fine points peppering the lip + face, plus a row of
+  // brighter beads ALONG the lip itself (the still's glowing soil-line)
   const aggr = makeBatch();
   for (let i = 0; i < 190; i++) {
     const s = CUT_S_MIN + rand() * (CUT_S_MAX - CUT_S_MIN);
@@ -112,6 +133,13 @@ export function createFinalTerrain(sceneApi, uniforms) {
     const y = groundY(x, z) - Math.pow(rand(), 1.6) * 3.4 + 0.04;
     aggr.pt(x, y, z, 0.30 + rand() * 0.28, 0.018 + Math.pow(rand(), 2) * 0.05,
       { tw: rand() * TAU });
+  }
+  for (let i = 0; i < 70; i++) {
+    const s = CUT_S_MIN + rand() * (CUT_S_MAX - CUT_S_MIN);
+    const p = cutEdgePoint(s);
+    aggr.pt(p.x + gauss() * 0.08, groundY(p.x, p.z) + 0.03, p.z + gauss() * 0.08,
+      0.62 + rand() * 0.24, 0.07 + Math.pow(rand(), 2) * 0.1,
+      { tw: rand() * TAU, boost: 0.4, arc: arcOf(p.x, p.z) });
   }
   const glowTex = makeGlowTexture();
   const aggrMat = makePointsMat(uniforms, 0.6, glowTex);
@@ -156,7 +184,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
       placed++;
     }
   }
-  const hyphMat = makeStrandMat(uniforms, 0.5);
+  const hyphMat = makeStrandMat(uniforms, 0.62);
   const hyphLines = new THREE.LineSegments(hyph.geo(), hyphMat);
   hyphLines.frustumCulled = false;
   group.add(hyphLines);
@@ -232,9 +260,9 @@ export function createFinalTerrain(sceneApi, uniforms) {
       const x = RING_C.x + Math.cos(az) * r;
       const z = RING_C.z + Math.sin(az) * r;
       const y0 = -0.35 - rand() * 1.3;
-      const t = 0.34 + rand() * 0.18;
+      const t = 0.44 + rand() * 0.2;
       front.seg(x, y0, z, x + gauss() * 0.35, y0 + 0.35 + rand() * 0.4, z + gauss() * 0.35,
-        t, t * 1.6, { tw: rand() * TAU, boost: 1, arc, reveal: -1 });
+        t, t * 1.5, { tw: rand() * TAU, boost: 1, arc, reveal: -1 });
     }
   }
   const frontMat = makeStrandMat(uniforms, 0.66);
@@ -251,8 +279,10 @@ export function createFinalTerrain(sceneApi, uniforms) {
   const conn = makeBatch();
   for (const m of MEMBERS) {
     for (let k = 0; k < 2; k++) {
-      const fx = RING_C.x + Math.cos(m.az + gauss() * 0.06) * (m.r + 0.5 + gauss() * 0.3);
-      const fz = RING_C.z + Math.sin(m.az + gauss() * 0.06) * (m.r + 0.5 + gauss() * 0.3);
+      // rooted OFF-axis (never straight under the stipe): the strand reads
+      // as a diagonal tie into the front, not a light pillar under the body
+      const fx = RING_C.x + Math.cos(m.az + 0.10 + gauss() * 0.08) * (m.r + 1.0 + gauss() * 0.5);
+      const fz = RING_C.z + Math.sin(m.az + 0.10 + gauss() * 0.08) * (m.r + 1.0 + gauss() * 0.5);
       const fy = -0.9 - rand() * 0.7;
       const midX = (fx + m.x) / 2 + gauss() * 0.2;
       const midZ = (fz + m.z) / 2 + gauss() * 0.2;
@@ -262,7 +292,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
         0.42, 0.55, meta);
     }
   }
-  const connMat = makeStrandMat(uniforms, 0.55);
+  const connMat = makeStrandMat(uniforms, 0.4);
   const connLines = new THREE.LineSegments(conn.geo(), connMat);
   connLines.frustumCulled = false;
   group.add(connLines);

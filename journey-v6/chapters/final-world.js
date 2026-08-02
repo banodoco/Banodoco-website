@@ -47,16 +47,17 @@ export function arcOf(x, z) {
 // travels ONE way around the ring and closes beside the hero, so no two
 // members ever brighten simultaneously.
 //   az (deg about C), r, h (height), m (maturity 0..1)
+// The az ~140-275 sector is deliberately empty: the cutaway SLICES THROUGH
+// THE RING — that arc is below the soil-line, its colony exposed in section,
+// and the ring visibly continues beyond the lip (m9/m10 stand right on it).
 const MEMBER_SPEC = [
   { az: 38,  r: 7.2, h: 1.6, m: 0.45 },
   { az: 62,  r: 8.2, h: 2.8, m: 1.00 },   // mature
   { az: 84,  r: 7.8, h: 2.1, m: 0.75 },
   { az: 104, r: 7.3, h: 1.7, m: 0.55 },
-  { az: 123, r: 7.9, h: 1.5, m: 0.40 },   // near-right foreground, kept small
-  { az: 200, r: 5.3, h: 1.4, m: 0.40 },   // on the cut lip, frame-left
-  { az: 227, r: 6.3, h: 2.0, m: 0.70 },
-  { az: 252, r: 7.7, h: 2.7, m: 1.00 },   // mature
-  { az: 279, r: 8.3, h: 2.5, m: 0.95 },   // mature
+  { az: 123, r: 7.9, h: 1.5, m: 0.40 },   // near-right, on the lip, kept small
+  { az: 279, r: 8.3, h: 2.5, m: 0.95 },   // mature — stands on the far lip
+  { az: 291, r: 8.6, h: 2.6, m: 0.90 },   // mature
   { az: 303, r: 7.4, h: 2.2, m: 0.80 },
   { az: 327, r: 6.6, h: 1.3, m: 0.35 },   // young, closes the ring by the hero
 ];
@@ -66,13 +67,18 @@ const MEMBER_SPEC = [
 /* ------------------------------------------------------------------ */
 // An IRREGULAR cut line in plan (never a clean diagram edge): base line
 // n.(x,z) = d, wobbled along its tangent. kept side (soil + surface survive)
-// is cutVal > 0; the Final camera leg lives on the removed side, so the cut
-// face is always between the lens and the ring. The wobble lets the two
-// lip members stand on a promontory while the edge bows toward the camera
-// elsewhere.
-const CUT_N = { x: 0.98, z: 0.20 };          // ~unit, toward the kept side
-const CUT_D = -10.6;
-function wob(s) { return 1.35 * Math.sin(s * 0.32 + 1.2) + 0.8 * Math.sin(s * 0.13 + 4.0); }
+// is cutVal > 0; the Final camera leg lives on the removed side.
+//
+// The line is authored OBLIQUE to the rest gaze (derived from lip-distance =
+// 6 - 0.9 * screen-right in camera coords at the rest pose), so in frame the
+// soil-line enters at mid-height on the LEFT edge and falls diagonally to
+// below the bottom-right corner — FN-1.1's diagonal, with the cut face and
+// the exposed colony filling the lower-left wedge. The hero, the ring
+// centre and the az 279-123 arc all sit on the kept side; the near-left arc
+// is sliced away with the soil.
+const CUT_N = { x: 0.944, z: 0.331 };        // ~unit, toward the kept side
+const CUT_D = -7.82;
+function wob(s) { return 0.9 * Math.sin(s * 0.30 + 1.2) + 0.55 * Math.sin(s * 0.12 + 4.0); }
 
 export function cutVal(x, z) {
   const s = -CUT_N.z * x + CUT_N.x * z;
@@ -88,42 +94,52 @@ export function cutEdgePoint(s) {
   };
 }
 // Tangent span of the lip that can appear in frame from the Final leg.
-export const CUT_S_MIN = -16;
-export const CUT_S_MAX = 13;
+export const CUT_S_MIN = -14;
+export const CUT_S_MAX = 10;
 
 /* ------------------------------------------------------------------ */
 /* Members, resolved                                                   */
 /* ------------------------------------------------------------------ */
 // Build-time nudge: any member that lands off the kept side (the wobble is
 // authored, but authored blind) walks inward until it stands on soil with a
-// real margin. Deterministic — same result every boot.
-export const MEMBERS = MEMBER_SPEC.map((s, i) => {
+// real margin; a member that cannot keep ring radius >= 4.6 is dropped (it
+// belongs to the sliced-away arc). Deterministic — same result every boot.
+export const MEMBERS = MEMBER_SPEC.flatMap((s, i) => {
   const a = (s.az * Math.PI) / 180;
   let r = s.r;
   let x = RING_C.x + Math.cos(a) * r;
   let z = RING_C.z + Math.sin(a) * r;
   let guard = 0;
-  while (cutVal(x, z) < 0.35 && guard++ < 30) {
+  while (cutVal(x, z) < 0.35 && r > 4.6 && guard++ < 30) {
     r -= 0.15;
     x = RING_C.x + Math.cos(a) * r;
     z = RING_C.z + Math.sin(a) * r;
   }
+  if (cutVal(x, z) < 0.35) return [];
   const arc = arcOf(x, z);
-  return {
+  // Per-member spore-shed strength (D14 axis): mature bodies shed, each with
+  // its own seeded intensity; immature bodies not at all. Deterministic —
+  // seeded from the member index, no shared-stream order dependence.
+  const shed = s.m >= 0.55 ? 0.35 + 0.65 * makeRng(0x5eed + i * 7919)() : 0;
+  return [{
     i, x, z, r, az: a,
     gy: groundY(x, z),
     h: s.h,
     capR: s.h * (0.40 + 0.10 * s.m),
     m: s.m,
+    shed,
     arc,
     // reveal threshold on uPull: single-direction CCW sweep from the hero
     reveal: 0.08 + 0.80 * arc,
-  };
+  }];
 });
 
 // Members that shed spores (mature bodies only — and NEVER the hero: the hero
 // keeps its own ambient shed, and no stream may read as hero -> others).
-export const SPORE_SOURCES = MEMBERS.filter(m => m.m >= 0.55);
+// Weighted by per-member shed strength via repetition: the sky's uniform
+// source pick then samples strong shedders more often, with no sky changes.
+export const SPORE_SOURCES = MEMBERS.filter(m => m.shed > 0)
+  .flatMap(m => Array(1 + Math.round(m.shed * 2)).fill(m));
 
 /* ------------------------------------------------------------------ */
 /* Reveal driver                                                       */
@@ -185,9 +201,12 @@ const STRAND_VERT = /* glsl */ `
     b += aWave * (0.28 + 0.28 * sin(aArc * 12.6 - uTime * 0.42 + aTw)) * reveal;
     // slow twinkle, phase-scattered
     b *= 0.88 + 0.12 * sin(uTime * 0.9 + aTw);
-    vB = b;
     vColor = color;
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    // near-camera fade: the lens travels through clean air (Spike A G2a) —
+    // strokes brushing the camera during the rise soften instead of flaring
+    b *= smoothstep(1.2, 2.8, length(mv.xyz));
+    vB = b;
     vFog = -mv.z;
     gl_Position = projectionMatrix * mv;
   }
@@ -276,15 +295,22 @@ export function makePointsMat(uniforms, opacity, map) {
 /* ------------------------------------------------------------------ */
 /** Accumulates line segments / points with the five shared channels and
  *  emits one BufferGeometry — one draw call per batch, however many
- *  mushrooms/strands/trees it holds. */
+ *  mushrooms/strands/trees it holds.
+ *  meta.mul (default 1) is a build-time color multiplier: it scales the
+ *  heat-ramp RGB after lookup, which under additive blending is exactly a
+ *  per-segment material opacity. It lets one merged batch carry several of
+ *  the hero's per-system opacities (cap lattice 0.28 vs rim 0.55, etc. —
+ *  D15) without splitting into more draw calls. Callers that omit it are
+ *  unchanged. */
 export function makeBatch() {
   const pos = [], col = [], arc = [], rev = [], tw = [], boost = [], wave = [], size = [];
   const c = new THREE.Color();
   return {
     seg(ax, ay, az, bx, by, bz, ta, tb, meta) {
+      const mul = meta.mul ?? 1;
       pos.push(ax, ay, az, bx, by, bz);
-      heat(ta, c); col.push(c.r, c.g, c.b);
-      heat(tb, c); col.push(c.r, c.g, c.b);
+      heat(ta, c); col.push(c.r * mul, c.g * mul, c.b * mul);
+      heat(tb, c); col.push(c.r * mul, c.g * mul, c.b * mul);
       for (let k = 0; k < 2; k++) {
         arc.push(meta.arc ?? 0);
         rev.push(meta.reveal ?? -1);
@@ -294,8 +320,9 @@ export function makeBatch() {
       }
     },
     pt(x, y, z, tone, psize, meta) {
+      const mul = meta.mul ?? 1;
       pos.push(x, y, z);
-      heat(tone, c); col.push(c.r, c.g, c.b);
+      heat(tone, c); col.push(c.r * mul, c.g * mul, c.b * mul);
       arc.push(meta.arc ?? 0);
       rev.push(meta.reveal ?? -1);
       tw.push(meta.tw ?? 0);

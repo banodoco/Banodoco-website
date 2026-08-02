@@ -47,6 +47,14 @@ const PAL = {
 const EXPOSURE_LINES = 0.30;
 const EXPOSURE_PLANES = 0.42;
 
+// W4-E: how far a pod's nexus lifts while its card is OPEN, as a fraction of
+// the full hover emphasis. Deliberately short of 1 — selection is a held
+// "you are reading this one", not the hover's arrival gesture, and the pod
+// has to sit under a card without competing with it.
+const POD_SEL_LEVEL = 0.55;
+
+const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
+
 export function createOwned(sceneApi, content) {
   const group = new THREE.Group();
   group.name = 'journey-owned';
@@ -170,7 +178,11 @@ export function createOwned(sceneApi, content) {
     group.add(halo);
     return {
       ...spec, mat, coreMat, haloMat, core, halo,
-      hot: 0, target: 0, pulseP: rand(),
+      // `target` is the HOVER channel, `sel` the SELECTION channel (W4-E).
+      // They are held apart so a pointer leaving a pod whose card is open
+      // cannot drop the held emphasis — see the emphasis blend in the
+      // animator and setSelected below.
+      hot: 0, target: 0, sel: 0, pulseP: rand(),
       baseCore: (spec.primary ? 0.34 : 0.26) * EXPOSURE_LINES,
       baseHalo: (spec.primary ? 0.16 : 0.11) * EXPOSURE_LINES,
     };
@@ -248,9 +260,13 @@ export function createOwned(sceneApi, content) {
     substrate.update(dt, t);
     portraits.update(dt, t);
 
-    // pods: hover ease + per-pod inward pulse when hot
+    // pods: hover ease + per-pod inward pulse when hot. Hover and selection
+    // are separate channels blended by max(), so an open card holds the nexus
+    // at POD_SEL_LEVEL no matter where the pointer goes, and hovering the
+    // selected pod still takes it all the way to 1.
     for (const pd of pods) {
-      pd.hot += (pd.target - pd.hot) * Math.min(1, dt * 6);
+      const want = Math.max(pd.target, pd.sel * POD_SEL_LEVEL);
+      pd.hot += (want - pd.hot) * Math.min(1, dt * 6);
       pd.mat.uniforms.uFade.value = amount;
       pd.mat.uniforms.uTime.value = t;
       pd.pulseP += dt * (0.10 + pd.hot * 0.55);
@@ -266,15 +282,21 @@ export function createOwned(sceneApi, content) {
     }
 
     // growth front: slow upward travelling wave, uneven, never a loop you
-    // can count — plus the OW-5 exit pulse when the rise commits
-    frontMat.uniforms.uFade.value = amount;
+    // can count — plus the OW-5 exit pulse when the rise commits. The fan
+    // sits straight down the rest gaze (the exit corridor IS the gaze), so
+    // it is gated on p: invisible at the rest, breathing in through the
+    // drift (0.775-0.81) as the camera commits to the rise. Pure in p —
+    // reverse scrubbing restores the rest frame exactly.
+    const pNow = window.journey ? window.journey.p : 0;
+    const fg = smooth01((pNow - 0.775) / 0.035);
+    frontMat.uniforms.uFade.value = amount * fg;
     frontMat.uniforms.uTime.value = t;
     frontP += dt * (0.075 + 0.05 * (0.5 + 0.5 * H.noise3(t * 0.06, 3.3, 0)));
     if (frontP > 1.35) frontP = -0.2;
     frontMat.uniforms.uPulse.value = frontP;
     frontMat.uniforms.uPulseOn.value = 0.45;
 
-    const p = window.journey ? window.journey.p : 0;
+    const p = pNow;
     if (risePulseArmed && p > 0.795) {
       risePulseArmed = false;
       frontP = -0.05;                       // the front fires...
@@ -323,6 +345,30 @@ export function createOwned(sceneApi, content) {
       if (idx < 0) return;
       if (on) portraits.setHover(idx);
       else if (portraits.hoverIdx === idx) portraits.setHover(-1);
+    },
+
+    /** SELECTION channel (W4-E) — the symmetric half of setHot, called by
+     *  core/ui.js's notifySelect for every open/close path (click, key, deep
+     *  link, hashchange/Back, Escape, scroll-intent close). Its existence
+     *  retires ui.js's temporary `mod.portraits.setSelected(index)` bridge:
+     *  notifySelect prefers this method and never reaches the bridge branch.
+     *
+     *  Contributors take the same route the bridge took — indexOf(id) into
+     *  the portrait field's index-based selection, which drives the ember rim
+     *  (uSelIdx / uSelAmt). Pods hold their nexus at POD_SEL_LEVEL.
+     *
+     *  Selection deliberately fires NO claim pulse: the colony-wide wave and
+     *  the localized secondary wave are ARRIVAL gestures and stay in setHot.
+     *  A card that is open for a minute must not sit on a pulsing colony. */
+    setSelected(id, on) {
+      const pd = pods.find(p => p.id === id);
+      if (pd) { pd.sel = on ? 1 : 0; return; }
+      const idx = portraits.indexOf(id);
+      if (idx < 0) return;
+      // Guarded release, exactly like setHot: a stale close arriving after a
+      // retarget must not blank the newly selected portrait.
+      if (on) portraits.setSelected(idx);
+      else if (portraits.selIdx === idx) portraits.setSelected(-1);
     },
 
     nodeWorld(id) {

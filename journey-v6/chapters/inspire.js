@@ -764,6 +764,7 @@ export function createInspire(sceneApi) {
   });
 
   let active = -1;   // HOVER channel: set by the journey's hotspot proxies
+  let selected = -1; // SELECTION channel (W4-E): the exit whose card is open
   let armed = false; // T1 seam
 
   // W4-A gap c: the streak must live on "the currently active release point".
@@ -784,6 +785,17 @@ export function createInspire(sceneApi) {
     else if (settled) autoActive = 1;          // Arca at rest
     else if (exits[0].fade < 0.12 && exits[1].fade < 0.12 && exits[2].fade < 0.12) autoActive = -1;
     return autoActive;                          // hysteresis: else keep the last
+  }
+
+  // Which exit the streak sits on. Hover wins (it is the live pointer), then
+  // an open card, then the derived auto exit. While a card is open we do NOT
+  // fall through to computeAuto — the streak belongs to what is being read,
+  // and skipping the call leaves autoActive's hysteresis exactly where it was
+  // so release resumes the reveal cleanly.
+  function resolveActive() {
+    if (active >= 0) return active;
+    if (selected >= 0) return selected;
+    return computeAuto();
   }
 
   // W4-A gap b: hero ambient shed vs the ArtCompute plume. World corridor =
@@ -842,10 +854,10 @@ export function createInspire(sceneApi) {
     snap() {
       for (const ex of exits) ex.fade = ex.target;
       gillBand.fade = gillBand.target;
-      effActive = active >= 0 ? active : computeAuto();
+      effActive = resolveActive();
       const c = sporeMat.uniforms.uCoh.value;
       for (let i = 0; i < 3; i++) {
-        c.setComponent(i, i === active ? 1 : (i === effActive ? 0.35 : 0));
+        c.setComponent(i, (i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0));
         const st = streaks[i];
         st.o = (i === effActive ? 0.42 : 0) * exits[i].fade;
         st.sprite.visible = st.o > 0.01;
@@ -872,6 +884,27 @@ export function createInspire(sceneApi) {
      *  derived auto exit (see computeAuto). */
     setActive(i) { active = i; },
     get active() { return active; },
+    /** SELECTION channel (W4-E) — the symmetric half of the hover path,
+     *  called by core/ui.js's notifySelect for every open/close path (click,
+     *  key, deep link, hashchange/Back, Escape, scroll-intent close).
+     *
+     *  While an initiative's spotlight card is open its plume holds the
+     *  coherent/bright hover read — full uCoh plus the streak — and keeps it
+     *  when the pointer wanders off or onto another plume. The trace-back
+     *  band stays hover-only: it is a repeating arrival gesture, not a state
+     *  to sit in behind an open card.
+     *
+     *  Ids arrive journey-side ('tworp'), the geometry spells it '2rp' — the
+     *  same aliasing nodeWorld does. */
+    setSelected(id, on) {
+      const i = EXITS.findIndex(e => e.id === id || (id === 'tworp' && e.id === '2rp'));
+      if (i < 0) return;
+      // Guarded release: a stale close arriving after a retarget must not
+      // drop the plume that is now selected.
+      if (on) selected = i;
+      else if (selected === i) selected = -1;
+    },
+    get selected() { return selected; },
     /** The exit the streak actually sits on right now (hover or derived). */
     get effectiveActive() { return effActive; },
     /** World position of the active release point (for the lens focus hint). */
@@ -894,7 +927,7 @@ export function createInspire(sceneApi) {
     if (gillBand.fade < 0.012 && gillBand.target === 0) gillBand.fade = 0;
     if (gillBand.fade > 0) anyVisible = true;
     for (const m of gillBand.mats) { m.uniforms.uFade.value = gillBand.fade; m.uniforms.uTime.value = t; }
-    effActive = active >= 0 ? active : computeAuto();
+    effActive = resolveActive();
     for (let i = 0; i < 3; i++) {
       const ex = exits[i];
       ex.fade += (ex.target - ex.fade) * k;
@@ -904,9 +937,13 @@ export function createInspire(sceneApi) {
         m.uniforms.uFade.value = ex.fade;
         m.uniforms.uTime.value = t;
       }
-      // full coherence on hover; a restrained gather on the auto exit, so the
-      // lens always has ONE exceptional source without flattening the others
-      cohTarget[i] = (i === active) ? 1 : (i === effActive ? 0.35 : 0);
+      // Full coherence on hover AND on the selected exit (W4-E: an open card
+      // holds its plume gathered even after the pointer leaves — and because
+      // the two channels are OR'd, hovering a different plume lights that one
+      // without ever pulling the held one back down). A restrained gather on
+      // the auto exit, so the lens always has ONE exceptional source without
+      // flattening the others.
+      cohTarget[i] = (i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0);
     }
 
     // gap b: hero ambient shed vs the ArtCompute plume — runs OUTSIDE the

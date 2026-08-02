@@ -27,6 +27,134 @@ import {
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
 const smooth01 = x => { x = clamp01(x); return x * x * (3 - 2 * x); };
 
+/* ==========================================================================
+   INPUT OWNERSHIP  (a11y debt #1 — root cause, replacing the guard stack)
+   --------------------------------------------------------------------------
+   The travel model listens at WINDOW CAPTURE and preventDefault()s wheel,
+   touchmove and a set of keys. That is correct for the journey surface and
+   wrong for anything on the page that owns its own input: a focused button
+   whose activation key is Space (WCAG 2.1.1), a dialog that must not be
+   scrubbed out from under the reader, a bottom sheet that has to scroll
+   internally.
+
+   Two things were bolted on top of this over time — a selector-list Space
+   guard registered ahead of scroll.attach() in core/ui.js, and the GB-3.6
+   "first scroll intent closes the detail" rule doubling as an arrow-key
+   handler. Both are symptom fixes: they encode a list of class names in one
+   module about elements built in another, and they only cover the cases
+   somebody remembered.
+
+   The root cause is that scroll.js claimed input UNCONDITIONALLY and then
+   subtracted exceptions. It now does the opposite:
+
+     1. REGISTRATION, not selectors. A DOM layer that owns its own input
+        registers the element (claimInput) and unregisters it (releaseInput).
+        Wheel and touch inside a registered region are never travel and are
+        never preventDefault()ed, so the region scrolls natively. A region
+        registered `modal: true` additionally takes every travel KEY off the
+        table for as long as it is live — an open dialog card cannot be
+        scrubbed past, and arrow keys no longer close it as a side effect of
+        the scroll-intent rule.
+
+     2. CONTROLS-FIRST key dispatch. Before a key becomes travel, we ask
+        whether the focused thing already means something by it, using
+        PLATFORM semantics (what the HTML/ARIA spec says that element does
+        with that key) rather than a list of journey class names. Space on a
+        focused <button> or role="button" activates it; the scrolling keys
+        belong to a scrollable ancestor; text entry keeps everything. The
+        answer is therefore right for the hero's controls, the footer, a
+        future drawer and anything else, not just the elements one module
+        happened to enumerate.
+
+   Nothing below this block touches the snap/commit model, the scroll->p
+   spline, or any threshold. This is routing only.
+   ========================================================================== */
+
+/** Elements that own their own input while registered. Element -> {modal}. */
+const inputOwners = new Map();
+
+/** Declare that `el` (and its subtree) handles its own wheel/touch — and,
+ *  with `modal`, its own keys too. Idempotent. */
+export function claimInput(el, { modal = false } = {}) {
+  if (el) inputOwners.set(el, { modal: !!modal });
+}
+
+/** Hand input back to the journey. Safe to call when nothing is registered. */
+export function releaseInput(el) {
+  if (el) inputOwners.delete(el);
+}
+
+/** The owner record covering `node`, or null. Detached owners self-retire. */
+function ownerOf(node) {
+  if (!inputOwners.size || !node) return null;
+  for (const [el, opt] of inputOwners) {
+    if (!el.isConnected) { inputOwners.delete(el); continue; }
+    if (el === node || el.contains(node)) return opt;
+  }
+  return null;
+}
+
+/** True while any registered owner is modal (a dialog / bottom sheet). */
+function modalLive() {
+  for (const [el, opt] of inputOwners) {
+    if (!el.isConnected) { inputOwners.delete(el); continue; }
+    if (opt.modal) return true;
+  }
+  return false;
+}
+
+/* ---- platform key semantics (the "controls-first" half) ---- */
+
+// Keys whose default action is scrolling — a scrollable ancestor outranks the
+// journey for these, which is what makes a bottom sheet's internal scroll work
+// for the keyboard as well as for the finger.
+const SCROLLING_KEYS = new Set([
+  'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ', 'Spacebar',
+]);
+
+function isTextEntry(el) {
+  if (el.isContentEditable) return true;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'OPTION';
+}
+
+// Elements for which Space is the ACTIVATION key. Deliberately excludes
+// links: Space on an <a href> scrolls the page natively, so the journey is
+// the correct owner there (Enter activates a link, and Enter is not a travel
+// key). This is the spec's split, not a preference.
+function spaceActivates(el) {
+  const tag = el.tagName;
+  if (tag === 'BUTTON' || tag === 'SUMMARY') return true;
+  const r = el.getAttribute('role');
+  return r === 'button' || r === 'checkbox' || r === 'switch' || r === 'radio'
+      || r === 'menuitem' || r === 'menuitemcheckbox' || r === 'menuitemradio'
+      || r === 'tab' || r === 'option';
+}
+
+function scrollableAncestor(el) {
+  for (let n = el; n && n.nodeType === 1 && n !== document.body; n = n.parentElement) {
+    if (n.scrollHeight - n.clientHeight > 1) {
+      const oy = getComputedStyle(n).overflowY;
+      if (oy === 'auto' || oy === 'scroll') return n;
+    }
+  }
+  return null;
+}
+
+/** Controls-first: does the thing this key was delivered to already mean
+ *  something by it? Only a FOCUSED control can claim a key — a stray target
+ *  (a keydown on <body> while a button is merely hovered) cannot. */
+function targetOwnsKey(e) {
+  const t = e.target;
+  if (!t || t.nodeType !== 1) return false;
+  if (isTextEntry(t)) return true;
+  if (t !== document.activeElement) return false;
+  const space = e.key === ' ' || e.key === 'Spacebar';
+  if (space && spaceActivates(t)) return true;
+  if (SCROLLING_KEYS.has(e.key) && scrollableAncestor(t)) return true;
+  return false;
+}
+
 export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
   let lens = [];        // px allocated per chapter
   let edges = [];       // cumulative px at each chapter boundary
@@ -148,6 +276,9 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
 
   function onWheel(e) {
     if (!enabled) return;
+    // A registered owner (dialog card / bottom sheet) scrolls itself: no
+    // travel, and crucially no preventDefault, so the native scroll runs.
+    if (ownerOf(e.target)) return;
     let d = e.deltaY;
     if (e.deltaMode === 1) d *= WHEEL_LINE_PX;
     else if (e.deltaMode === 2) d *= window.innerHeight;
@@ -156,30 +287,45 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
   }
 
   let touchY = null;
-  function onTouchStart(e) { touchY = e.touches[0] ? e.touches[0].clientY : null; }
+  let touchOwned = false;   // this gesture began inside a registered owner
+  function onTouchStart(e) {
+    touchOwned = !!ownerOf(e.target);
+    // Ownership is decided ONCE per gesture, at touchstart: a drag that began
+    // inside a sheet stays the sheet's for its whole life even if the finger
+    // leaves the element, which is how native scrolling and drag-to-dismiss
+    // behave. Re-testing per touchmove would hand the journey a half-gesture.
+    touchY = !touchOwned && e.touches[0] ? e.touches[0].clientY : null;
+  }
   function onTouchMove(e) {
-    if (!enabled || touchY === null || !e.touches[0]) return;
+    if (!enabled || touchOwned || touchY === null || !e.touches[0]) return;
     const y = e.touches[0].clientY;
     const d = (touchY - y) * TOUCH_GAIN;
     touchY = y;
     if (e.cancelable) e.preventDefault();
     push(d, 'touch');
   }
-  function onTouchEnd() { touchY = null; }
+  function onTouchEnd() { touchY = null; touchOwned = false; }
 
   const KEYS = {
-    ArrowDown: 1, ArrowUp: -1, PageDown: 1, PageUp: -1, ' ': 1, Home: 'home', End: 'end',
+    ArrowDown: 1, ArrowUp: -1, PageDown: 1, PageUp: -1,
+    ' ': 1, Spacebar: 1, Home: 'home', End: 'end',
   };
   function onKey(e) {
     if (!enabled) return;
-    // never hijack typing or an activated control
-    const t = e.target;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     const k = KEYS[e.key];
     if (k === undefined) return;
+    if (e.defaultPrevented) return;
+    // 1. a modal owner is live: NONE of these are travel. This is what stops
+    //    an arrow press from scrubbing the journey behind an open card — and
+    //    from closing it, which used to happen because travel keys reached
+    //    push() and push() consumed the detail via onIntent (GB-3.6).
+    if (modalLive()) return;
+    // 2. controls-first: the focused control's own semantics win.
+    if (targetOwnsKey(e)) return;
     if (k === 'home') { e.preventDefault(); jump(0, 'key'); return; }
     if (k === 'end') { e.preventDefault(); jump(1, 'key'); return; }
-    const big = e.key === 'PageDown' || e.key === 'PageUp' || e.key === ' ';
+    const big = e.key === 'PageDown' || e.key === 'PageUp'
+      || e.key === ' ' || e.key === 'Spacebar';
     e.preventDefault();
     push(k * (big ? window.innerHeight * 0.78 : KEY_STEP_PX), 'key');
   }
@@ -302,6 +448,11 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     get commitP() { return NOSNAP ? null : commitTarget(pAt(v)); },
     /** QA: sign of the last manual delta. */
     get lastDir() { return lastDir; },
+    /** QA: is a registered modal owner (dialog card / bottom sheet) holding
+        the travel keys? */
+    get modalInput() { return modalLive(); },
+    /** QA: how many DOM regions currently own their own input. */
+    get inputOwners() { return inputOwners.size; },
     get nosnap() { return NOSNAP; },
     update,
     pAt,
