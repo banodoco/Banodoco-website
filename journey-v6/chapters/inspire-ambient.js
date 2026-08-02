@@ -54,7 +54,12 @@ export function createAmbientShedDimmer(sceneApi) {
      *  (0..1, already scaled by the exit's effective reveal). The caller keeps
      *  the region objects persistent and updates a/b/k in place each frame.
      *  All k <= ~0 restores the shed exactly. */
-    update(regions) {
+    /** globalK (0..1, optional): whole-shed hand-over — ride-through #3
+     *  (Hannah): the plumes must not ignite BESIDE a still-visible curtain;
+     *  as the exits' reveal saturates, the ENTIRE original drift cedes to the
+     *  structured system, not only the capsule corridors. Reversible: falls
+     *  back with reveal on the way home. */
+    update(regions, globalK = 0) {
       let n = 0;
       for (const rg of regions) {
         if (rg.k <= 0.004) continue;
@@ -65,7 +70,7 @@ export function createAmbientShedDimmer(sceneApi) {
         r0[n] = rg.r0; r1[n] = rg.r1; kk[n] = rg.k;
         n++;
       }
-      if (n === 0) { if (active) restore(); return; }
+      if (n === 0 && globalK <= 0.004) { if (active) restore(); return; }
       if (!pts && !collect()) return;
       active = true;
       const attr = pts.geometry.attributes.color;
@@ -87,7 +92,11 @@ export function createAmbientShedDimmer(sceneApi) {
             if (v > dim) dim = v;   // max, not sum: overlaps must not over-darken
           }
         }
-        const f = 1 - (dim > MAX_TOTAL_DIM ? MAX_TOTAL_DIM : dim);
+        if (dim > MAX_TOTAL_DIM) dim = MAX_TOTAL_DIM;
+        // the global hand-over may exceed the capsule cap: at full reveal the
+        // old curtain is gone (0.97) — the structured plumes ARE the spores now
+        const g = globalK * 0.97;
+        const f = 1 - (g > dim ? g : dim);
         col[i] = base[i] * f;
         col[i + 1] = base[i + 1] * f;
         col[i + 2] = base[i + 2] * f;

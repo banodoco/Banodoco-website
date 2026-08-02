@@ -1102,7 +1102,15 @@ export function createInspire(sceneApi) {
       rg.b.copy(rg.lb).applyMatrix4(mw);
       rg.k = rg.gain * eff[rg.exit];
     }
-    ambient.update(shedRegions);
+    // Ride-through #3 (Hannah): the plumes must not ignite BESIDE the old
+    // curtain — as the exits complete, the WHOLE shed cedes to the structured
+    // system. Keyed to the furthest-along exit so the hand-over finishes with
+    // the first plume and the curtain never sits next to it as a sibling.
+    const maxEff = Math.max(eff[0], eff[1], eff[2]);
+    let gk = (maxEff - 0.25) / 0.65;
+    gk = gk < 0 ? 0 : gk > 1 ? 1 : gk;
+    gk = gk * gk * (3 - 2 * gk);
+    ambient.update(shedRegions, gk);
 
     group.visible = anyVisible;
     if (!anyVisible) return;
