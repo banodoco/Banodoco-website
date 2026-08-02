@@ -58,7 +58,11 @@ export function createAmbientShedDimmer(sceneApi) {
      *  (Hannah): the plumes must not ignite BESIDE a still-visible curtain;
      *  as the exits' reveal saturates, the ENTIRE original drift cedes to the
      *  structured system, not only the capsule corridors. Reversible: falls
-     *  back with reveal on the way home. */
+     *  back with reveal on the way home.
+     *  Delta retime (Hannah's river-delta redesign, third note): the caller
+     *  now weights globalK across all three exits' reveals (0.50/0.28/0.22)
+     *  instead of keying it to the furthest-along exit, so the source curtain
+     *  visibly survives until the last rim current has taken over. */
     update(regions, globalK = 0) {
       let n = 0;
       for (const rg of regions) {
