@@ -54,7 +54,7 @@ export function bladeDepth(u) {
 /** Stiff in-plane wobble of the blade plane — one low bow, no flutter. */
 export function bladeWobble(u, seed) { return 0.010 * Math.sin(u * 7.0 + seed * 37.0); }
 /** High-frequency edge serration (multiplies depth): crispness, not drape. */
-export function bladeScallop(u, seed) { return Math.sin(u * 23.0 + seed * 40.0) * sm(0.15, 0.5, u); }
+export function bladeScallop(u, seed) { return Math.sin(u * 41.0 + seed * 40.0) * sm(0.15, 0.5, u); }
 
 export function bladeAz(spec, u) {
   return spec.az0 + spec.bend * (u - spec.uStart) + bladeWobble(u, spec.seed);
@@ -91,11 +91,16 @@ export const CAP_GLSL = /* glsl */`
     float m = max(0.0, (u - 0.78) / 0.22);
     return -(0.11 + 0.05*cos(a - 3.6)) * m * m;
   }
+  // pow() bases clamped strictly positive (>= 1e-5): pow with a zero or
+  // interpolation-negative base is undefined/NaN on this ANGLE Metal path,
+  // and one NaN fragment blacks the entire frame through the bloom mips.
+  // The clamp changes y by < 1e-9 — invisible, and identical in the JS
+  // mirror's smooth ranges.
   vec3 capUnderG(float u, float a){
     float r = max(u * rimRadG(a), 0.2);
     float edge = max(0.0, (u - 0.8) / 0.2); edge *= edge;
-    float y = 3.15 + 0.5*pow(max(0.0, 1.0 - u), 1.8) + 0.03
-            + rimYoffG(a)*pow(u, 1.6) + marginDroopG(u, a) - 0.11*edge;
+    float y = 3.15 + 0.5*pow(max(1.0 - u, 1e-5), 1.8) + 0.03
+            + rimYoffG(a)*pow(max(u, 1e-5), 1.6) + marginDroopG(u, a) - 0.11*edge;
     float x = cos(a)*r - 0.075*(1.0 - u*u);
     return vec3(x, y, sin(a)*r);
   }
@@ -107,7 +112,22 @@ export const CAP_GLSL = /* glsl */`
 `;
 
 /* ================================================================
-   Blade material — instanced sheets, edge-lit
+   Blade material — instanced sheets, edge-lit.
+
+   FRAGMENT COST NOTE (hard-won): the chamber is 70+ double-sided sheets
+   stacking across the whole frame — worst-case overdraw is enormous. An
+   early version of this material evaluated the regional glows, community /
+   ADOS / exit terms, twinkle, glints and striation PER FRAGMENT; under that
+   load the Metal command buffer intermittently aborted mid-pass and left a
+   rectangular tile region of the composer's HalfFloat target as garbage
+   (NaN bit patterns) — which the hero's temporal accumulation then blended
+   forward FOREVER (mix(x, NaN, 0.0) is still NaN), blacking most of the
+   frame a couple of seconds after the chamber armed. Everything smooth
+   along the blade is therefore evaluated ONCE PER VERTEX and shipped down
+   as three premultiplied colour varyings; the fragment shader is four
+   exp() calls that only shape light across v. Do not move work back into
+   the fragment shader without re-soaking the chamber (see W4-B in
+   BUDGETS.md, "TAA NaN soak").
    ================================================================ */
 function makeBladeMat(U) {
   return new THREE.ShaderMaterial({
@@ -118,11 +138,13 @@ function makeBladeMat(U) {
       // Light budget — tuned live against the Connect rest. uBase scales the
       // near-invisible face haze; uEdge the free-edge hairline (where the
       // chamber's light lives); uHot the semantic reveals.
-      uBase: { value: 0.62 },
-      uEdge: { value: 0.85 },
+      uBase: { value: 0.26 },
+      // the sheet's edge strip is only an UNDER-GLOW: the crisp light lives
+      // in the free-edge polylines (makeEdgeMat)
+      uEdge: { value: 0.26 },
       uHot: { value: 0.75 },
       uNear: { value: 0.62 },
-      uFog: { value: 0.16 },
+      uFog: { value: 0.34 },
       uColGold: { value: heat(0.52, new THREE.Color()).clone() },
       uColEdge: { value: heat(0.78, new THREE.Color()).clone() },
       uColHot: { value: heat(0.93, new THREE.Color()).clone() },
@@ -135,69 +157,61 @@ function makeBladeMat(U) {
       attribute vec4 iA;   // az0, uStart, depthScale, bend
       attribute vec4 iB;   // seed, bright, region, order
       attribute vec4 iC;   // lean, scallopAmp, bowAmp, patch
-      uniform float uTime, uFlex;
-      varying vec4 vA;     // u, v, az, dist
-      varying vec4 vB;     // seed, bright, region, order
-      varying vec3 vC;     // facing, patch, t
+      uniform float uTime, uFlex, uAmount, uBase, uEdge, uHot, uNear, uFog;
+      uniform vec3 uColGold, uColEdge, uColHot;
+      uniform vec2 uComm;                 // community amt, seq
+      uniform vec3 uAmbC, uAmbA, uAmbW;   // regional ambient exchanges
+      uniform vec3 uAdos;                 // afterglow amt, ring pos, knot az
+      uniform vec2 uExit;                 // exit pulse amt, head (u, rim->stem)
+      varying vec2 vV;                    // v, faceMask
+      varying vec3 vColFace;              // premultiplied face colour
+      varying vec3 vColEdge;              // premultiplied edge colour
+      varying vec3 vColHot;               // premultiplied reveal colour
       ${CAP_GLSL}
+      float regionGlow(float az, float c, float a, float w){
+        float d = az - c; d = atan(sin(d), cos(d));
+        return a * exp(-d*d/(w*w));
+      }
+      // gaussian band — NEVER pow() with a base that can go negative (donor rule)
+      float band(float x, float c, float w){ float d = (x - c) / w; return exp(-d*d); }
       void main() {
         float t = position.x, v = position.y;
         float u = mix(iA.y, 1.0, t);
-        float seed = iB.x;
+        float seed = iB.x, bright = iB.y, region = iB.z, order = iB.w;
         // stiff plane: constant bend + one low wobble + near-imperceptible
         // time flex at the free edge only (CN-4.2 micro-flex)
         float az = iA.x + iA.w*(u - iA.y) + 0.010*sin(u*7.0 + seed*37.0)
                  + uFlex * 0.006 * sin(uTime*0.23 + seed*6.2831 + u*2.2) * (1.0 - v);
         vec3 top = capUnderG(u, az);
         top.y -= 0.005;
-        float scal = 1.0 + iC.y * sin(u*23.0 + seed*40.0) * smoothstep(0.15, 0.5, u);
+        float scal = 1.0 + iC.y * sin(u*41.0 + seed*40.0) * smoothstep(0.15, 0.5, u);
         float d = depthOfG(u) * iA.z * scal;
+        // sheet cropped to the lit band near the free edge (see file note:
+        // the invisible upper body still costs raster; cropping halves the
+        // chamber's worst-case overdraw)
+        float vv = v * 0.55;
         vec3 p = top;
-        p.y -= d * (1.0 - v);
+        p.y -= d * (1.0 - vv);
         vec2 n2 = vec2(-sin(az), cos(az));
-        float off = iC.x * (1.0 - v) + iC.z * sin(3.14159 * v);
+        float off = iC.x * (1.0 - vv) + iC.z * sin(3.14159 * vv);
         p.x += n2.x * off; p.z += n2.y * off;
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        vec3 nv = normalize((modelViewMatrix * vec4(n2.x, 0.0, n2.y, 0.0)).xyz);
-        vA = vec4(u, v, az, length(mv.xyz));
-        vB = iB;
-        vC = vec3(abs(dot(nv, normalize(-mv.xyz))), iC.w, t);
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: /* glsl */`
-      uniform float uTime, uAmount, uBase, uEdge, uHot, uNear, uFog;
-      uniform vec3 uColGold, uColEdge, uColHot;
-      uniform vec2 uComm;                 // community amt, seq
-      uniform vec3 uAmbC, uAmbA, uAmbW;   // regional ambient exchanges
-      uniform vec3 uAdos;                 // afterglow amt, ring pos, knot az
-      uniform vec2 uExit;                 // exit pulse amt, head (u, rim->stem)
-      varying vec4 vA;
-      varying vec4 vB;
-      varying vec3 vC;
-      float regionGlow(float az, float c, float a, float w){
-        float d = az - c; d = atan(sin(d), cos(d));
-        return a * exp(-d*d/(w*w));
-      }
-      void main() {
-        float u = vA.x, v = vA.y, az = vA.z, dist = vA.w;
-        float seed = vB.x, bright = vB.y, region = vB.z, order = vB.w;
-        float facing = vC.x, patch = vC.y;
+        float dist = length(mv.xyz);
         // grazing sheets stack many-deep: suppress them (donor light budget)
-        float faceMask = mix(0.06, 1.0, facing);
-        float edge  = exp(-v*46.0);         // hairline free edge
-        float edgeW = exp(-v*10.0);         // narrow skirt, reveals only
-        // fibrous radial striation: tissue grain on the face, not gauze
-        float stri = 0.62 + 0.38*sin(u*150.0 + seed*61.0);
-        float face = (0.0026 + 0.011*exp(-v*2.6)) * faceMask * stri;
-        float ends = smoothstep(0.0, 0.10, vC.z) * (1.0 - 0.45*smoothstep(0.86, 1.0, u));
+        vec3 nv = normalize((modelViewMatrix * vec4(n2.x, 0.0, n2.y, 0.0)).xyz);
+        float facing = abs(dot(nv, -mv.xyz / max(dist, 1e-4)));
+        float faceMask = mix(0.018, 1.0, facing * facing);
+
+        /* ---- everything smooth along the blade, once per vertex ---- */
+        float ends = smoothstep(0.0, 0.10, t) * (1.0 - 0.45*smoothstep(0.86, 1.0, u));
         float nearFade = smoothstep(uNear*0.3, uNear, dist);
+        float fogK = exp(-uFog*uFog*dist*dist);
+        float gate = ends * nearFade * fogK * uAmount;
         float tw = 0.5 + 0.5*sin(uTime*(0.16 + fract(seed*7.31)*0.30) + seed*41.0);
         // moisture: sparse wet glints riding the free edge
         float wet = smoothstep(0.985, 1.0, sin(u*57.0 + seed*91.0)) * (0.35 + 0.65*tw);
         // cavity shading along the edge: warm inner, dimmer body, bright rim
-        float eProf = 0.62 + 0.38*u*u - 0.30*exp(-pow((u - 0.45)/0.24, 2.0));
-        // subtle thickness: a dim counter-lip just above the bright edge
-        float lip = exp(-pow((v - 0.045)/0.022, 2.0)) * 0.18;
+        float eProf = 0.62 + 0.38*u*u - 0.30*band(u, 0.45, 0.24);
         float amb = regionGlow(az, uAmbC.x, uAmbA.x, uAmbW.x)
                   + regionGlow(az, uAmbC.y, uAmbA.y, uAmbW.y)
                   + regionGlow(az, uAmbC.z, uAmbA.z, uAmbW.z);
@@ -208,18 +222,135 @@ function makeBladeMat(U) {
         // ADOS afterglow (CN-3.2): a ring spreading azimuthally from the knot
         // through the blades' inner (apex) ends
         float dAz = abs(atan(sin(az - uAdos.z), cos(az - uAdos.z)));
-        float ring = uAdos.x * exp(-pow((dAz - uAdos.y)/0.30, 2.0))
-                   * exp(-pow((u - 0.18)/0.26, 2.0));
+        float ring = uAdos.x * band(dAz, uAdos.y, 0.30) * band(u, 0.18, 0.26);
         // EXIT (CN-5.1): one inward wave toward the stipe-cap junction
-        float ex = uExit.x * exp(-pow((u - uExit.y)/0.10, 2.0));
-        float hotShape = 0.02*faceMask + 0.10*edgeW + 0.95*edge;
-        vec3 col = uColGold * (uBase * bright * patch * face * (0.80 + 0.20*tw))
-                 + uColEdge * (uEdge * bright * patch * eProf * (edge*(0.85 + 0.7*wet) + lip))
-                 + uColGold * (amb * 0.07 * (0.15*faceMask + 0.85*edgeW))
-                 + uColHot  * ((lit + ring + ex*0.55) * uHot * hotShape);
-        col *= ends * nearFade;
-        col *= exp(-uFog*uFog*dist*dist);
-        gl_FragColor = vec4(col * uAmount, 1.0);
+        float ex = uExit.x * band(u, uExit.y, 0.10);
+
+        // near-range hand-over: up close the 1-px edge polyline carries the
+        // light; the sheet's world-space strip fades back so it can never
+        // smear into ribbons at chamber range
+        float nearDamp = clamp(dist / 2.0, 0.22, 1.0);
+        vColFace = uColGold * (uBase * bright * iC.w * (0.80 + 0.20*tw) * faceMask * gate * clamp(dist / 1.6, 0.3, 1.0));
+        vColEdge = uColEdge * (uEdge * bright * iC.w * eProf * (0.85 + 0.7*wet) * gate * nearDamp);
+        // ambient exchanges ride the hot channel (its shape includes the wide
+        // edge band), tinted gold rather than near-white
+        vColHot  = uColHot * ((lit + ring + ex*0.55) * uHot * gate)
+                 + uColGold * (amb * 0.34 * gate);
+        vV = vec2(vv, faceMask);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    // Only the across-blade (v) shaping happens per fragment — four exp()s.
+    // See the cost note above: keep it this lean.
+    //
+    // THE CLAMPS ARE LOAD-BEARING. On this ANGLE Metal path, rare frames
+    // deliver garbage varying values into instanced draws; exp(-v*46) turns a
+    // negative-garbage v into +Inf, one Inf pixel becomes NaN in the bloom /
+    // TAA chain, and the hero's temporal accumulation then holds that NaN
+    // FOREVER (mix(x, NaN, 0.0) is NaN) — most of the frame goes black a
+    // second or two after the chamber arms. Clamping v to its true [0,1]
+    // domain and capping the output makes the worst possible bad frame a
+    // finite one-frame shimmer that TAA absorbs. Verified by a 20 s NaN soak
+    // of the composer targets (W4-B in BUDGETS.md).
+    fragmentShader: /* glsl */`
+      varying vec2 vV;
+      varying vec3 vColFace;
+      varying vec3 vColEdge;
+      varying vec3 vColHot;
+      void main() {
+        float v = clamp(vV.x, 0.0, 1.0);
+        float faceMask = clamp(vV.y, 0.0, 1.0);
+        float edge  = exp(-v*58.0);         // hairline free edge
+        float edgeW = exp(-v*12.0);         // narrow skirt, reveals only
+        float face = (0.0011 + 0.0056*exp(-v*5.2)) * smoothstep(0.56, 0.40, v);
+        // subtle thickness: a dim counter-lip just above the bright edge
+        float dLip = (v - 0.045) / 0.022;
+        float lip = exp(-dLip*dLip) * 0.12;
+        float hotShape = 0.014*faceMask + 0.07*edgeW + 0.95*edge;
+        vec3 col = vColFace * face
+                 + vColEdge * (edge + lip)
+                 + vColHot * hotShape;
+        gl_FragColor = vec4(min(max(col, vec3(0.0)), vec3(48.0)), 1.0);
+      }`,
+  });
+}
+
+/* ================================================================
+   Free-edge lines — THE light carrier of the colonnade.
+
+   The sheets alone read as silk: their shader "hairline" is a WORLD-space
+   strip, so up close it smears into a glowing ribbon under bloom. The
+   hero's own gills stay crisp under the same bloom because they are 1-px
+   LINES. So the blade's free edge is drawn twice: this 1-px polyline
+   carries the crisp light (exactly the spike-a/G2a read), and the sheet
+   keeps only a faint warm under-glow plus the serrated silhouette. The
+   polyline is placed with the same JS mirror (bladeEdgePt) the veins and
+   beads use, and applies the SAME micro-flex term as the sheet's vertex
+   shader, so line and tissue move as one.
+   ================================================================ */
+function makeEdgeMat(U) {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: U.uTime, uAmount: U.uAmount, uFlex: U.uFlex,
+      uComm: U.uComm, uAmbC: U.uAmbC, uAmbA: U.uAmbA, uAmbW: U.uAmbW,
+      uAdos: U.uAdos, uExit: U.uExit,
+      uBright: { value: 0.72 },
+      uHot: { value: 0.85 },
+      uNear: { value: 0.55 },
+      uFog: { value: 0.26 },
+      uColEdge: { value: heat(0.76, new THREE.Color()).clone() },
+      uColHot: { value: heat(0.93, new THREE.Color()).clone() },
+      uColGold: { value: heat(0.58, new THREE.Color()).clone() },
+    },
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexShader: /* glsl */`
+      attribute vec4 aE;    // u, seed, bright, region
+      attribute float aOrder;
+      uniform float uTime, uFlex, uAmount, uBright, uHot, uNear, uFog;
+      uniform vec3 uColEdge, uColHot, uColGold;
+      uniform vec2 uComm;
+      uniform vec3 uAmbC, uAmbA, uAmbW;
+      uniform vec3 uAdos;
+      uniform vec2 uExit;
+      varying vec3 vCol;
+      float regionGlow(float az, float c, float a, float w){
+        float d = az - c; d = atan(sin(d), cos(d));
+        return a * exp(-d*d/(w*w));
+      }
+      float band(float x, float c, float w){ float d = (x - c) / w; return exp(-d*d); }
+      void main() {
+        float u = aE.x, seed = aE.y, bright = aE.z, region = aE.w;
+        float az = atan(position.z, position.x);
+        // same micro-flex as the sheet edge (v = 0), small-angle rotation
+        float dAzF = uFlex * 0.006 * sin(uTime*0.23 + seed*6.2831 + u*2.2);
+        vec3 p = vec3(position.x - position.z*dAzF, position.y, position.z + position.x*dAzF);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        float dist = length(mv.xyz);
+        float tw = 0.5 + 0.5*sin(uTime*(0.16 + fract(seed*7.31)*0.30) + seed*41.0);
+        float wet = smoothstep(0.985, 1.0, sin(u*57.0 + seed*91.0)) * (0.35 + 0.65*tw);
+        float eProf = 0.62 + 0.38*u*u - 0.30*band(u, 0.45, 0.24);
+        float amb = regionGlow(az, uAmbC.x, uAmbA.x, uAmbW.x)
+                  + regionGlow(az, uAmbC.y, uAmbA.y, uAmbW.y)
+                  + regionGlow(az, uAmbC.z, uAmbA.z, uAmbW.z);
+        float lit = region > 0.5
+          ? uComm.x * smoothstep(aOrder - 0.12, aOrder + 0.05, uComm.y)
+          : 0.0;
+        float dAz = abs(atan(sin(az - uAdos.z), cos(az - uAdos.z)));
+        float ring = uAdos.x * band(dAz, uAdos.y, 0.30) * band(u, 0.18, 0.26);
+        float ex = uExit.x * band(u, uExit.y, 0.10);
+        float gate = smoothstep(uNear*0.3, uNear, dist)
+                   * exp(-uFog*uFog*dist*dist) * uAmount
+                   * clamp(dist / 1.3, 0.5, 1.0);
+        vCol = (uColEdge * (uBright * bright * eProf * (0.80 + 0.20*tw + 0.8*wet))
+              + uColGold * (amb * 0.45)
+              + uColHot * ((lit + ring + ex*0.6) * uHot)) * gate;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */`
+      varying vec3 vCol;
+      void main() {
+        gl_FragColor = vec4(min(max(vCol, vec3(0.0)), vec3(48.0)), 1.0);
       }`,
   });
 }
@@ -408,7 +539,13 @@ export function buildColonnade(group, U) {
   // sector luminosity patches — whole sectors stay dimmer (organic asymmetry)
   const patchOf = (az) => {
     const p = 0.5 + 0.5 * (0.6 * Math.sin(az * 1.7 + 0.8) + 0.4 * Math.sin(az * 3.3 + 2.9));
-    return 0.45 + 0.65 * p;
+    // one deliberately dark sector: the wall that sits behind the left copy
+    // block at the rest pose (az ~1.95 from the rest camera) stays quiet, so
+    // the heading floats on darkness — reads as organic patchiness, doubles
+    // as copy legibility
+    const d = Math.atan2(Math.sin(az - 1.95), Math.cos(az - 1.95));
+    const copyShadow = 1 - 0.62 * Math.exp(-(d * d) / (0.55 * 0.55));
+    return (0.45 + 0.65 * p) * copyShadow;
   };
 
   function spec(tier, az0, uStart, depthScale, brightMul) {
@@ -427,7 +564,7 @@ export function buildColonnade(group, U) {
       bright: (0.55 + rand() * 0.45) * brightMul,
       region, order,
       lean: (rand() - 0.5) * 0.05,
-      scallopAmp: 0.04 + rand() * 0.05,
+      scallopAmp: 0.008 + rand() * 0.012,
       bowAmp: (rand() - 0.5) * 0.06,
       patch: patchOf(azn),
     };
@@ -463,6 +600,44 @@ export function buildColonnade(group, U) {
     group.add(mesh);
     counts.blades += specs.length;
     counts.tris += specs.length * res[0] * res[1] * 2;
+  }
+
+  /* ---- crisp free-edge polylines (see makeEdgeMat note) ---- */
+  {
+    const ep = [], eA = [], eOrd = [];
+    const pushEdge = (specs, SEG) => {
+      for (const s of specs) {
+        let prev = null;
+        for (let k = 0; k <= SEG; k++) {
+          const t = k / SEG;
+          const u = s.uStart + t * (1 - s.uStart);
+          const P = bladeEdgePt(s, u);
+          // same taper as the sheet: fade in off the stem, dim into the margin
+          const endsK = smooth01(t / 0.10) * (1 - 0.45 * smooth01((u - 0.86) / 0.14));
+          const node = { P, u, b: s.bright * s.patch * endsK };
+          if (prev) {
+            ep.push(prev.P.x, prev.P.y, prev.P.z, P.x, P.y, P.z);
+            for (const n of [prev, node]) {
+              eA.push(n.u, s.seed, n.b, s.region);
+              eOrd.push(s.order);
+            }
+            counts.edgeSegs++;
+          }
+          prev = node;
+        }
+      }
+    };
+    counts.edgeSegs = 0;
+    pushEdge(primaries, 40);
+    pushEdge(secondaries, 26);
+    pushEdge(tertiaries, 16);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(ep, 3));
+    g.setAttribute('aE', new THREE.Float32BufferAttribute(eA, 4));
+    g.setAttribute('aOrder', new THREE.Float32BufferAttribute(eOrd, 1));
+    const lines = new THREE.LineSegments(g, makeEdgeMat(U));
+    lines.frustumCulled = false;
+    group.add(lines);
   }
 
   /* ---- cross-veins: taut, patchy, densified through the Community sector ---- */
@@ -569,8 +744,10 @@ export function buildColonnade(group, U) {
 
   /* ---- warm haze deep in the chamber: distance dissolves into ember, not black ---- */
   for (let i = 0; i < 7; i++) {
-    const a = 1.6 + i * 0.55 + gauss() * 0.2;
-    const r = 0.9 + rand() * 1.1;
+    // far (front-left) arc only, as seen from the Connect rest camera at
+    // az ~5.6: a near-side haze sprite becomes a frame-filling blob
+    const a = 1.7 + i * 0.32 + gauss() * 0.12;
+    const r = 1.1 + rand() * 0.9;
     const mat = new THREE.SpriteMaterial({
       map: glowTex,
       color: heat(0.42 + rand() * 0.1, tmpC).clone(),
@@ -582,7 +759,7 @@ export function buildColonnade(group, U) {
     s.position.set(p.x, p.y - 0.35 - rand() * 0.3, p.z);
     s.scale.set(1.6 + rand() * 1.4, 1.1 + rand() * 0.8, 1);
     group.add(s);
-    fadeMats.push({ m: mat, base: 0.05 + rand() * 0.035 });
+    fadeMats.push({ m: mat, base: 0.026 + rand() * 0.02 });
     counts.sprites++;
   }
 

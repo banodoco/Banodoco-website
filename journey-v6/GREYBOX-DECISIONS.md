@@ -433,3 +433,61 @@ forward even harder, drop `COMMIT_THRESHOLD` to 0.30 (one constant); if the long
 Mission→Inspire glide (~3 s worst case) feels leisurely rather than assured, raise
 `COMMIT_GLIDE_RATE` to 0.12 — at 0.10 it deliberately sits in "calm scroll" territory so
 the glide is indistinguishable from a patient visitor finishing the gesture themselves.
+
+## 23. Portrait camera poses (W4-F / PL-1.1) — core/portrait.js
+
+The grey-box's portrait handling was a formulaic back-off (dolly + fov as a
+linear function of aspect, uniform along the whole path). Replaced by an
+**authored per-rest portrait field**: `core/portrait.js` holds frame-relative
+offset keys (dolly `back`, camera `rise`/`truck`, re-aim `tgtUp`/`tgtRight`,
+`fov`) at each resting pose, interpolated between keys with zero-slope
+smoothstep and blended over `poseAt`'s landscape output by an aspect weight —
+**exactly 0 at aspect ≥ 1, 1 at aspect ≤ 0.75**, smooth between.
+
+- **Landscape is bit-identical.** `poseAt(p, out, hero, aspect = 1.6)`
+  applies the field inside the pure function; sampled 20 p-values before /
+  after at the default aspect: all 8 channels match to full float precision.
+- **Mission portrait is the hero's.** The field is zero at and below the
+  orbit start (p 0.040); at 375×812 the p = 0 camera measures
+  (0, 3.2, 11.6773) → (−0.15, 4.9137, 0), fov 64 — the hero page's own
+  `VIEWS.mobile` + aspect blend, i.e. Plate II row 1's "live mobile pose".
+- **poseAt stays pure**: aspect is a parameter, never read from a global, so
+  capture tooling can request either orientation from any window.
+  `?aspect=portrait` (or a number; `?aspect=landscape`) forces the field for
+  desktop review — verified: a 1280-wide window with `?aspect=portrait&p=0.26`
+  renders the authored portrait Inspire (fov 52, radius 13.25).
+- **Legs**: keys at 0.410 (pre-slip-under) and 0.622/0.700 (chamber turn +
+  stipe descent) pin the field near zero where clearances are tight — the
+  slip-under still passes UNDER the rim and the descent stays outside the
+  stipe; verified visually at p 0.15 / 0.43 / 0.66 / 0.87 in portrait.
+- **Authored rests** (verified 430×932 and 375×812): Inspire — crown ≈ 43%,
+  all three exit chips inside frame above the copy block, plumes run the full
+  sky (back 1.6, tgtUp measured against the 375 copy rect: ui hides chips
+  whose anchor falls inside it). Connect — taller colonnade, up-look kept;
+  dolly capped at 1.10 because the camera is inside the chamber. Owned —
+  claims own the top; portraits at many depths fill the lower two thirds,
+  chip stack given left-shift room at 375. Final — steeper soil diagonal,
+  hero slid right off the headline, ring stacked in depth.
+- **Open**: connect* was mid-rewrite (W4-B) during this pass — its node
+  anchors moved between loads and a placeholder black quad sat in the scene.
+  The framing is sound, but chip-level placement (esp. the hivemind anchor,
+  currently ~31° right of the rest gaze — outside any sane portrait hfov)
+  needs re-verification against the landed connect geometry, and possibly an
+  anchor or chip-treatment decision on the chapter/ui side.
+
+## 24. Selection contract (`setSelected(nodeId, on)`) — W4-E
+
+The symmetric half of `setHot`. `core/ui.js`'s `notifySelect` resolves the
+owning chapter through `window.journey.chapters` and calls it for every open
+and close path (click, Enter/Space, deep link, hashchange/Back, Escape,
+scroll-intent close). Landed on **Owned** — pods hold their nexus at 55% of
+the hover emphasis and contributors light the ember rim via the portrait
+field's index selection, with no claim pulse (that stays an arrival gesture) —
+and on **Inspire**, where an open spotlight card holds its exit's plume at
+full coherence plus the streak even after the pointer leaves. Both keep hover
+and selection as separate channels so neither clobbers the other. Landing the
+method on Owned retires ui.js's temporary `mod.portraits.setSelected(index)`
+bridge (its guard prefers the contract method). **Connect owes the same
+method** — it was mid-rewrite during this pass and was deliberately left
+alone; until it lands, Connect nodes open their cards with no geometry-side
+selected state. Final is exempt by design (no detail states).

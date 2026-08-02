@@ -20,6 +20,7 @@ import * as THREE from 'three';
 import {
   FOG_RAMP, HANDHELD, ORBIT_BREATH, SEAM_FOG_DIPS, CHAPTERS, restProgress,
 } from '../constants.js';
+import { applyPortrait } from './portrait.js';
 
 const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -163,8 +164,8 @@ const KEYS = [
   //     means 833-970 deg/p, in the ~964 family, lead-out during the drift
   //     at ~350); pitch rises to ~+9.5 through the substrate and eases down
   //     into the cutaway's -8.8 with a single crest, no nod; the recede
-  //     continues the arrival vector (both normalize to ~(-0.87, 0.46,
-  //     0.16)) so the rest is a pause on one continuing line. The gaze
+  //     continues the arrival vector (both normalize to ~(-0.91, 0.37,
+  //     0.17)) so the rest is a pause on one continuing line. The gaze
   //     sweeps ~176 deg around the horizon during the rise — past the dark
   //     outward field, across the far arc of the ring — and the hero slides
   //     into frame-right only during the settle, one lit body among the
@@ -174,8 +175,8 @@ const KEYS = [
   { p: 0.812, pos: V(-5.300, -1.02, 0.780), tgt: V(-7.52, -0.77, -2.06), fov: 53.5 },
   // T4 fires in here: the camera clears the soil-line at p ~ 0.86
   { p: 0.845, pos: V(-7.700, -0.20, 1.250), tgt: V(-8.28, 0.47, -2.91), fov: 52.5 },
-  { p: 0.878, pos: V(-10.200, 1.35, 1.800), tgt: V(-7.92, 2.28, -3.32), fov: 51 },
-  { p: 0.905, pos: V(-12.300, 2.55, 2.250), tgt: V(-5.71, 2.48, -3.28), fov: 48 },
+  { p: 0.878, pos: V(-10.200, 1.05, 1.800), tgt: V(-7.92, 1.98, -3.32), fov: 51 },
+  { p: 0.905, pos: V(-12.300, 1.75, 2.250), tgt: V(-5.71, 1.68, -3.28), fov: 48 },
   // --- FINAL rest: oblique cutaway recession from OUTSIDE the ring's west
   //     arc, gaze cutting across the ring chord. Shallow ~8.8 deg down-pitch
   //     puts the soil-line across the frame on a diagonal: fairy ring and
@@ -184,8 +185,8 @@ const KEYS = [
   //     members, never the centre of the composition. The near arc passes
   //     behind the camera (members cleared > 3 units off the path, Spike B's
   //     clearance rule). Tilt is PITCH ONLY, never roll.
-  { p: 0.925, pos: V(-13.90, 3.40, 2.550), tgt: V(-2.45, 1.48, -2.24), fov: 46, hold: true, note: 'final-rest' },
-  { p: 1.000, pos: V(-16.95, 5.02, 3.120), tgt: V(-4.66, 3.15, -1.11), fov: 44, hold: true, note: 'final-recede' },
+  { p: 0.925, pos: V(-14.72, 2.73, 2.700), tgt: V(-3.06, 0.83, -1.94), fov: 45.5, hold: true, note: 'final-rest' },
+  { p: 1.000, pos: V(-17.73, 3.95, 3.260), tgt: V(-5.44, 2.08, -0.97), fov: 44, hold: true, note: 'final-recede' },
 ];
 
 // Non-uniform Catmull-Rom tangents, zeroed at rest keys.
@@ -265,11 +266,18 @@ const _pose = { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 38 }
 
 /** Pure: journey progress -> camera pose. No state, no time, no randomness -
  *  which is exactly why the path reverses perfectly and why ?p= sampling is a
- *  valid audit of the whole route. */
-export function poseAt(p, out = _pose, hero = HERO) {
-  if (p <= ORBIT_P0) return orbitPose(0, out, hero);
-  if (p < ORBIT_P1) return orbitPose((p - ORBIT_P0) / (ORBIT_P1 - ORBIT_P0), out, hero);
-  return keyedPose(p, out);
+ *  valid audit of the whole route.
+ *
+ *  `aspect` selects the composition: >= 1 (the default) is the landscape
+ *  path, bit-identical to what this function has always returned; < 1 blends
+ *  in the authored portrait field (core/portrait.js, PL-1.1). Passed in, not
+ *  read from any global, so capture tooling can request either orientation
+ *  from any window. */
+export function poseAt(p, out = _pose, hero = HERO, aspect = 1.6) {
+  if (p <= ORBIT_P0) orbitPose(0, out, hero);
+  else if (p < ORBIT_P1) orbitPose((p - ORBIT_P0) / (ORBIT_P1 - ORBIT_P0), out, hero);
+  else keyedPose(p, out);
+  return applyPortrait(out, p, aspect);
 }
 
 /** Name of the nearest authored key - used by the QA audit, not by rendering. */
@@ -327,18 +335,18 @@ export function createDirector(sceneApi, { steady = false } = {}) {
     heroSnapshot.fov = hero.fov;
   }
 
-  /** Portrait re-composition: a tall frame cannot hold the landscape framing,
-   *  so back off along the view axis and open the fov a touch. Deliberate
-   *  re-composition, per the map's portrait column - never a squeezed desktop
-   *  frame. Applied to the keyed path only; the Mission pose is the hero's own
-   *  authored mobile composition and is left to the hero. */
-  function recomposeForPortrait(out, p) {
-    if (camera.aspect >= 1 || p <= ORBIT_P0) return;
-    const k = Math.min(1, (p - ORBIT_P0) / 0.05);        // ease the change in
-    const back = 1 + (0.30 - camera.aspect * 0.22) * k;
-    out.pos.sub(out.target).multiplyScalar(back).add(out.target);
-    out.fov = Math.min(out.fov + 6 * k, 64);
-  }
+  // Portrait re-composition lives in core/portrait.js (authored per-rest
+  // field, PL-1.1) and is blended inside poseAt itself. The director only
+  // decides WHICH aspect the frame is composed for: the real viewport's, or
+  // a QA override (?aspect=portrait forces the full portrait field in a wide
+  // window, for capture tooling and desktop review; a number forces that
+  // exact aspect; ?aspect=landscape pins the landscape path on a phone).
+  const qAspect = new URLSearchParams(location.search).get('aspect');
+  const forcedAspect =
+    qAspect === 'portrait' ? 0.55
+    : qAspect === 'landscape' ? 1.6
+    : qAspect !== null && isFinite(parseFloat(qAspect)) ? parseFloat(qAspect)
+    : null;
 
   /** Fog re-parameterisation for the Final pullback (adr-d3 seam T4), plus
    *  the W3-B seam dips (gap d). Everything here is pure in p, so reverse
@@ -407,8 +415,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
    *  animator, so a direct write wins; there is never a frame in which
    *  OrbitControls and the director disagree. */
   function apply(p, dt = 0) {
-    poseAt(p, pose, hero);
-    recomposeForPortrait(pose, p);
+    poseAt(p, pose, hero, forcedAspect ?? camera.aspect);
     applyHandheld(pose, p, dt);
     camera.position.copy(pose.pos);
     controls.target.copy(pose.target);
@@ -446,7 +453,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
 
   return {
     apply, setOwned,
-    poseAt: (p, out) => poseAt(p, out, hero),
+    poseAt: (p, out, aspect) => poseAt(p, out, hero, aspect),
     get owned() { return owned; },
     get pose() { return pose; },
     get heroPose() { return hero; },

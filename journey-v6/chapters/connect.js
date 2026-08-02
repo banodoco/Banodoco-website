@@ -81,6 +81,7 @@ export function createConnect(sceneApi) {
   const counts = {
     blades: col.counts.blades,
     tris: col.counts.tris,
+    edgeSegs: col.counts.edgeSegs,
     veinSegs: col.counts.veinSegs,
     beads: col.counts.beads,
     spores: col.counts.spores,
@@ -95,20 +96,39 @@ export function createConnect(sceneApi) {
      Node anchors — real structure, mushroom-local (sway-correct via
      matrixWorld in nodeWorld, exactly as the grey-box did).
      ================================================================ */
+  // Anchor placement is constrained by BOTH orientations (W4-F handoff,
+  // GREYBOX-DECISIONS §23): the portrait rest's half-hfov is ~15 deg and its
+  // copy block owns the middle band of the frame, so all three anchors must
+  // hold inside the narrow frustum AND clear of the portrait copy rect.
+  // Verified live at 430x932, 375x812 and 1440x900 (see W4-B in BUDGETS.md).
   const communityAnchor = (() => {
+    // at the lit region's floor: below the portrait copy rect, still inside
+    // the region the hover ignites
     const p = capUnderPt(0.62, COMM_AZ);
-    p.y -= bladeDepth(0.62) * 0.55;   // mid-blade, amid the lit region
+    p.y -= bladeDepth(0.62) * 1.30;
     return p;
   })();
-  const hiveAnchor = (() => {
-    const { p } = routePoint(0.45);
-    p.y += 0.15;
+  // Hivemind's chip anchors to a different point of the SAME route per
+  // orientation (the "anchor decision on the chapter side" §23 asked for):
+  // in landscape it sits mid-route in the open lower-right; in portrait that
+  // stretch is ~30 deg outside the narrow frustum and the copy rect owns the
+  // middle band, so the chip rides the junction turn-in instead — the only
+  // stretch of the route that is both in-frame and clear of the text.
+  const hiveAnchorLand = (() => {
+    const { p } = routePoint(0.82);
+    p.y -= 0.04;
+    return p;
+  })();
+  const hiveAnchorPort = (() => {
+    const { p } = routePoint(0.94);
     return p;
   })();
   const NODES = {
     community: communityAnchor,
     ados: KNOT.clone(),
-    hivemind: hiveAnchor,
+    get hivemind() {
+      return sceneApi.camera.aspect < 1 ? hiveAnchorPort : hiveAnchorLand;
+    },
   };
   const NODE_IDS = ['community', 'ados', 'hivemind'];   // narrative order
 
@@ -169,7 +189,7 @@ export function createConnect(sceneApi) {
         if (inOwn) return;                            // not our own
         if (o === sceneApi.groups.spores) return;     // keep the shed alive
         const u = o.material && o.material.uniforms && o.material.uniforms.uOpacity;
-        if (u) { dimmed.push({ u, base: u.value }); seen.add(o); }
+        if (u) { dimmed.push({ u, base: u.value, obj: o }); seen.add(o); }
       });
     }
   }
@@ -188,12 +208,21 @@ export function createConnect(sceneApi) {
     group.visible = amount > 0.003;
 
     // Hero bokeh: eased dim, deepened by camera proximity; exact restore at 0.
+    // Below ~12% the point clouds RETIRE COMPLETELY (visible = false): at
+    // chamber range the hero's fake-DOF balloons every mote into a frame-
+    // filling quad, and that raster load — stacked under the colonnade — is
+    // what pushed heavy frames into the Metal command-buffer aborts described
+    // in connect-blades.js. Dimming pays the full raster cost for 6% of the
+    // light; retiring pays nothing. Restored exactly on exit.
     collectHeroPoints();
     const cam = sceneApi.camera.position;
     const camRad = Math.hypot(cam.x, cam.z);
     const inside = sm(3.4, 2.3, camRad);
     const dimK = 1 - amount * (0.78 + 0.16 * inside);   // 22% armed -> ~6% at the rest
-    for (const d of dimmed) d.u.value = d.base * dimK;
+    for (const d of dimmed) {
+      d.u.value = d.base * dimK;
+      d.obj.visible = dimK > 0.12;
+    }
 
     if (!group.visible) return;
 

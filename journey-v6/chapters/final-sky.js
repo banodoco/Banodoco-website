@@ -47,14 +47,15 @@ export function createFinalSky(sceneApi, uniforms) {
     const aClump = new Float32Array(N_SPORE * 2);  // clump phase, peel flag
     const aGate = new Float32Array(N_SPORE * 2);   // reveal threshold, mode
     for (let i = 0; i < N_SPORE; i++) {
-      const highBand = rand() < 0.34;              // mode 1: standing cloud
+      const highBand = rand() < 0.42;              // mode 1: standing cloud
       let x, y, z, revealT;
       if (highBand) {
-        // aloft over the ring interior, biased downwind (+x) and frame-right
+        // aloft over the ring interior, biased downwind (+x, slightly +z) —
+        // the mass sweeps the frame's upper right, clear of the copy block
         const a = rand() * TAU, r = Math.pow(rand(), 0.6) * 13;
-        x = RING_C.x + Math.cos(a) * r + 2.5 + rand() * 6;
-        z = RING_C.z + Math.sin(a) * r * 0.9;
-        y = 4.5 + Math.pow(rand(), 0.8) * 9.5;
+        x = RING_C.x + Math.cos(a) * r + 2.5 + rand() * 6.5;
+        z = RING_C.z + Math.sin(a) * r * 0.9 + 1.0 + rand() * 4.5;
+        y = 3.2 + Math.pow(rand(), 0.85) * 8.5;
         revealT = -1;
       } else {
         const src = SPORE_SOURCES[Math.floor(rand() * SPORE_SOURCES.length)];
@@ -69,9 +70,10 @@ export function createFinalSky(sceneApi, uniforms) {
       aCycle[i * 4] = highBand ? 26 + rand() * 22 : 11 + rand() * 10;
       aCycle[i * 4 + 1] = rand();
       const szR = rand();
-      aCycle[i * 4 + 2] = szR < 0.72 ? 0.028 + rand() * 0.034
-                        : szR < 0.95 ? 0.062 + rand() * 0.04
-                        : 0.10 + rand() * 0.05;
+      const szBase = szR < 0.72 ? 0.028 + rand() * 0.034
+                   : szR < 0.95 ? 0.062 + rand() * 0.04
+                   : 0.10 + rand() * 0.05;
+      aCycle[i * 4 + 2] = szBase * (highBand ? 1.9 : 1.15);
       aCycle[i * 4 + 3] = Math.min(1, 0.5 + rand() * 0.36 + (szR > 0.95 ? 0.14 : 0));
       // 14 eddy clusters; a cluster id quantises the eddy phase so whole
       // groups wheel together — eddies, clusters, isolated points
@@ -144,7 +146,7 @@ export function createFinalSky(sceneApi, uniforms) {
         float life = mode > 0.5
           ? 0.55 + 0.45 * sin(uTime * 0.045 + aSeed * 2.7)
           : smoothstep(0.0, 0.07, t) * (1.0 - smoothstep(0.72, 1.0, t));
-        vAlpha = life * reveal * bandGate * (0.35 + 0.5 * h2);
+        vAlpha = life * reveal * bandGate * (0.35 + 0.5 * h2) * mix(1.0, 1.5, mode);
         vTone = aCycle.w;
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vFog = -mv.z;
@@ -166,7 +168,7 @@ export function createFinalSky(sceneApi, uniforms) {
         vec4 t = texture2D(uMap, gl_PointCoord);
         float fogF = clamp((uFogFar - vFog) / (uFogFar - uFogNear), 0.0, 1.0);
         vec3 col = mix(uHeatA, uHeatB, vTone);
-        gl_FragColor = vec4(col * t.a * vAlpha * uAmount * fogF * 1.8, 1.0);
+        gl_FragColor = vec4(col * t.a * vAlpha * uAmount * fogF * 2.2, 1.0);
       }
     `,
     blending: THREE.AdditiveBlending,
@@ -184,7 +186,7 @@ export function createFinalSky(sceneApi, uniforms) {
   {
     const head = (REST.headingDeg * Math.PI) / 180;
     for (const [band, distLo, distHi, n, tone] of [
-      [0, 26, 34, 22, 0.16], [1, 36, 46, 26, 0.12],
+      [0, 26, 34, 22, 0.30], [1, 36, 46, 26, 0.22],
     ]) {
       for (let i = 0; i < n; i++) {
         // spread across the frame; thinner on the far left where the copy
@@ -200,20 +202,28 @@ export function createFinalSky(sceneApi, uniforms) {
         const meta = { tw, reveal: -1 };
         // trunk
         trees.seg(x, gy, z, x + gauss() * 0.1, gy + h, z + gauss() * 0.1, tone, tone * 1.3, meta);
-        // chevron boughs
-        const NB = 4 + Math.floor(rand() * 3);
+        // conifer chevrons: symmetric drooping bough PAIRS, wide at the base
+        // narrowing to the crown — the silhouette, not a streak
+        const NB = 5 + Math.floor(rand() * 3);
+        // bough plane roughly facing the rest camera
+        const face = Math.atan2(REST.z - z, REST.x - x) + Math.PI / 2;
         for (let b = 0; b < NB; b++) {
-          const by = gy + h * (0.25 + 0.7 * (b / NB));
-          const bw = (1 - b / NB) * (0.8 + rand() * 0.9);
-          const ba = rand() * TAU;
-          trees.seg(x, by, z,
-            x + Math.cos(ba) * bw, by - bw * 0.45, z + Math.sin(ba) * bw,
-            tone * 1.2, tone * 0.5, meta);
+          const u = b / NB;
+          const by = gy + h * (0.18 + 0.78 * u);
+          const bw = (1 - u * 0.85) * (1.3 + rand() * 1.2);
+          for (const sgn of [-1, 1]) {
+            trees.seg(x, by, z,
+              x + Math.cos(face) * bw * sgn, by - bw * 0.55, z + Math.sin(face) * bw * sgn,
+              tone * 1.25, tone * 0.55, meta);
+          }
         }
+        // crown tip
+        trees.seg(x, gy + h, z, x + gauss() * 0.05, gy + h + 0.5 + rand() * 0.4, z + gauss() * 0.05,
+          tone * 1.3, tone * 0.6, meta);
       }
     }
   }
-  const treeMat = makeStrandMat(uniforms, 0.5);
+  const treeMat = makeStrandMat(uniforms, 0.7);
   const treeLines = new THREE.LineSegments(trees.geo(), treeMat);
   treeLines.frustumCulled = false;
   group.add(treeLines);

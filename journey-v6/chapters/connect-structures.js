@@ -100,8 +100,12 @@ export function buildStructures(group, U) {
         float d = a - head;
         float inflow = uIn * exp(-d*d/0.0052);
         float wake = uIn * 0.22 * exp(-abs(min(d, 0.0)) * 6.0) * step(d, 0.0);
-        // convergence is structural: strands brighten toward the knot at rest
-        float toward = 0.30 + 0.85 * pow(a, 2.4);
+        // convergence is structural: strands brighten toward the knot at rest.
+        // pow() base clamped strictly positive: varying interpolation can land
+        // microscopically below 0 at strand starts, and pow(neg, y) is NaN by
+        // spec — one NaN fragment blacks the whole frame through the bloom
+        // mips (found the hard way; see W4-B in BUDGETS.md).
+        float toward = 0.30 + 0.85 * pow(max(a, 1e-4), 2.4);
         vec3 col = uColGold * (uBase * toward * (0.55 + 0.45*tw))
                  + uColHot * (inflow + wake);
         col *= smoothstep(uNear*0.3, uNear, dist);
