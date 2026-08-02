@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spike B — Owned portrait look-dev</title>
+<style>
+  /* Chrome treatments cribbed from journey-v6/index.html (the hero page) so
+     this spike reads as the REAL Owned page: same palette variables, same
+     Inter/Didot pairing, same logo tracking, same .pill recipe. All DOM sits
+     ABOVE the canvas and is never touched by the grade. */
+  :root {
+    --gold:        #d9a441;
+    --gold-bright: #f0c877;
+    --parchment:   #f2ebdd;
+    --ink:         #f2ebdd;
+    --muted:       #c9bfa8;
+    --bg:          #0a0805;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stage { position: fixed; inset: 0; z-index: 0; }
+  canvas { display: block; }
+
+  /* soft top-centre scrim: buys the copy block contrast over the colony,
+     matching the dark headroom of the approved still */
+  .copy-scrim {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse 64% 44% at 50% 6%,
+      rgba(8, 6, 3, 0.66), rgba(8, 6, 3, 0.28) 55%, transparent 76%);
+  }
+
+  /* ---------- chrome layer ---------- */
+  .ui {
+    position: fixed; inset: 0; z-index: 4;
+    pointer-events: none;
+    display: flex; flex-direction: column;
+  }
+  .ui a, .ui button { pointer-events: auto; }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2.1rem 3.4rem;
+  }
+  .logo {
+    font-size: 1.05rem; font-weight: 600; letter-spacing: 0.42em;
+    color: var(--parchment); text-decoration: none;
+    transition: color 0.25s;
+  }
+  .logo:hover { color: var(--gold-bright); }
+
+  .navlinks { display: flex; gap: 2.4rem; }
+  .navlinks a {
+    font-size: 0.68rem; font-weight: 600;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: rgba(201, 191, 168, 0.62); text-decoration: none;
+    padding: 0.3rem 0.1rem; position: relative;
+    transition: color 0.25s;
+  }
+  .navlinks a:hover { color: var(--parchment); }
+  .navlinks a.active {
+    color: var(--gold-bright);
+    text-shadow: 0 0 14px rgba(240, 200, 119, 0.35);
+  }
+  .navlinks a.active::after {
+    content: ""; position: absolute; left: 15%; right: 15%; bottom: -3px;
+    height: 1px; background: rgba(240, 200, 119, 0.55);
+    box-shadow: 0 0 6px rgba(240, 200, 119, 0.5);
+  }
+
+  .nav-cta { display: flex; gap: 0.7rem; }
+  .pill {
+    color: var(--ink); text-decoration: none;
+    font-size: 0.78rem; font-weight: 500; letter-spacing: 0.04em;
+    padding: 0.5rem 1.35rem;
+    border: 1px solid rgba(242, 237, 225, 0.58); border-radius: 999px;
+    transition: border-color 0.25s, background 0.25s;
+  }
+  .pill:hover { border-color: var(--ink); background: rgba(242, 237, 225, 0.06); }
+
+  /* ---------- chapter copy block (locked strings, top-centre) ---------- */
+  #copy {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; margin-top: 1.2vh; gap: 1.35rem;
+  }
+  #copy h1 {
+    margin: 0;
+    font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    font-size: clamp(2.1rem, 4.4vw, 3.9rem);
+    line-height: 1.08; letter-spacing: 0.005em;
+    color: var(--parchment);
+    text-shadow: 0 2px 30px rgba(10, 6, 2, 0.9), 0 0 8px rgba(10, 6, 2, 0.6);
+  }
+  /* primary claim: the clearly-dominant pill, straight under the heading */
+  .pod { background: none; font-family: inherit; cursor: pointer; }
+  .pod.primary {
+    font-family: "Didot", "Playfair Display", Georgia, serif;
+    font-size: clamp(1.15rem, 1.8vw, 1.5rem); letter-spacing: 0.02em;
+    color: var(--parchment);
+    padding: 0.78rem 2.6rem;
+    border: 1px solid rgba(217, 164, 65, 0.62); border-radius: 999px;
+    background: rgba(12, 8, 3, 0.38);
+    transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  }
+  .pod.primary:hover {
+    border-color: var(--gold-bright);
+    background: rgba(24, 15, 4, 0.55);
+    box-shadow: 0 0 26px rgba(230, 175, 70, 0.30), inset 0 0 12px rgba(230, 175, 70, 0.08);
+  }
+  .pods { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+  .pod.secondary {
+    display: flex; flex-direction: column; gap: 0.22rem; align-items: center;
+    font-size: 0.84rem; font-weight: 500; letter-spacing: 0.03em;
+    color: var(--gold-bright);
+    padding: 0.62rem 1.35rem;
+    border: 1px solid rgba(217, 164, 65, 0.42); border-radius: 12px;
+    background: rgba(12, 8, 3, 0.34);
+    transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  }
+  .pod.secondary .detail {
+    font-size: 0.68rem; font-weight: 400; letter-spacing: 0.02em;
+    color: var(--muted);
+  }
+  .pod.secondary:hover {
+    border-color: rgba(240, 200, 119, 0.8);
+    background: rgba(22, 14, 4, 0.5);
+    box-shadow: 0 0 16px rgba(230, 175, 70, 0.22);
+  }
+
+  /* ---------- narrow / short windows ---------- */
+  @media (max-width: 1020px) {
+    nav { padding: 1.5rem 1.8rem; }
+    .navlinks { gap: 1.3rem; }
+    .navlinks a { font-size: 0.62rem; letter-spacing: 0.2em; }
+    .logo { font-size: 0.92rem; letter-spacing: 0.3em; }
+    .pill { padding: 0.42rem 1rem; font-size: 0.72rem; }
+  }
+  @media (max-height: 760px) {
+    nav { padding: 1.2rem 1.8rem; }
+    #copy { margin-top: 0.4vh; gap: 0.95rem; }
+    #copy h1 { font-size: clamp(1.8rem, 4vw, 2.9rem); }
+    .pod.primary { padding: 0.6rem 2.1rem; }
+  }
+
+  /* ---------- profile card ---------- */
+  #card {
+    position: fixed; z-index: 6; width: 248px;
+    padding: 14px 16px 12px;
+    background: rgba(18, 11, 5, 0.82);
+    border: 1px solid rgba(217, 164, 65, 0.32);
+    border-radius: 10px;
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+    color: #efe2cb;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.55);
+    opacity: 0; transform: translateY(6px) scale(0.98);
+    transition: opacity 0.28s ease, transform 0.28s ease;
+    pointer-events: none;
+  }
+  #card.open { opacity: 1; transform: none; pointer-events: auto; }
+  #card .name { font-size: 15px; letter-spacing: 0.02em; color: #f0c877; }
+  #card .role {
+    font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(255, 179, 107, 0.75); margin-top: 3px;
+  }
+  #card .blurb { font-size: 12px; line-height: 1.55; margin-top: 9px; color: rgba(239, 226, 203, 0.85); }
+  #card .close {
+    position: absolute; top: 6px; right: 9px; cursor: pointer;
+    color: rgba(240, 200, 135, 0.5); font-size: 15px; line-height: 1;
+    background: none; border: none; padding: 4px; font-family: inherit;
+  }
+  #card .close:hover { color: #f0c877; }
+
+  /* ---------- spike HUD ---------- */
+  #hud {
+    position: fixed; left: 12px; bottom: 12px; z-index: 5;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: 10.5px; line-height: 1.6;
+    color: rgba(240, 200, 135, 0.62);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    pointer-events: none; white-space: pre;
+  }
+  #hint {
+    position: fixed; right: 14px; bottom: 12px; z-index: 5;
+    font-size: 10.5px; letter-spacing: 0.06em;
+    color: rgba(240, 200, 135, 0.5);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    pointer-events: none; text-align: right; line-height: 1.7;
+  }
+  #hint b { color: rgba(240, 200, 135, 0.85); font-weight: 600; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "../../vendor/three/three.module.js",
+    "three/addons/": "../../vendor/three/addons/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="stage"></div>
+<div class="copy-scrim"></div>
+
+<div class="ui">
+  <nav>
+    <a class="logo" href="#">BANODOCO</a>
+    <div class="navlinks">
+      <a href="#">Mission</a>
+      <a href="#">Inspire</a>
+      <a href="#">Connect</a>
+      <a class="active" href="#" aria-current="page">Owned</a>
+    </div>
+    <div class="nav-cta">
+      <a class="pill" href="#">2RP</a>
+      <a class="pill" href="#">Discord</a>
+    </div>
+  </nav>
+
+  <header id="copy">
+    <h1>Owned by the ecosystem</h1>
+    <button id="pod-shared" class="pod primary" type="button">100% shared</button>
+    <div class="pods">
+      <button id="pod-monthly" class="pod secondary" type="button">
+        <span class="t">Granted 1% per month</span>
+      </button>
+      <button id="pod-split" class="pod secondary" type="button">
+        <span class="t">Split between different groups</span>
+        <span class="detail">artists, core engineers, and knowledge creators</span>
+      </button>
+    </div>
+  </header>
+</div>
+
+<div id="card" role="dialog" aria-modal="false" aria-hidden="true">
+  <button class="close" aria-label="Close">&times;</button>
+  <div class="name"></div>
+  <div class="role"></div>
+  <div class="blurb"></div>
+</div>
+
+<div id="hud"></div>
+<div id="hint"><b>[space]</b> glide &nbsp; <b>[g]</b> raw/finished &nbsp; <b>[p]</b> bust/photo/anon &nbsp; <b>[a]</b> anonymous &nbsp; <b>[d]</b> 16/48 nodes<br>hover a person &middot; click for profile &middot; hover the pods</div>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>

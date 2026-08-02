@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banodoco — helping the open-source AI art ecosystem thrive</title>
+<meta name="description" content="Banodoco builds tools, spaces, and shared infrastructure for the open-source AI art ecosystem. Static journey.">
+<!-- ==============================================================
+     TIER 3 — THE COMPLETE STATIC JOURNEY
+     12-platforms.md PL-2.4 / PL-3.3 / PL-3.4, ADR AR-4 (D5).
+
+     "Tier 3 communicates every piece of information with no WebGL
+      at all." — 12-platforms.md, Acceptance.
+
+     What this page is:
+       · The five chapter stills, captured FROM THE LIVE SCENE by
+         ../tools/capture.py. Not hand-authored artwork — that is the
+         whole point of ADR D5. Regenerate, never repaint.
+       · Every string in ../content/content.js, as real HTML: chapter
+         headings and support copy, the three Inspire spotlights, the
+         three Connect cards, the three ownership claims and their pod
+         explanations, the complete 16-person contributor index, and
+         the footer links / social / legal line.
+       · The same #/<chapter>[/<node>] routes as the live journey, so
+         a deep link handed to a Tier-3 visitor lands in the same place.
+
+     What this page is NOT:
+       · No <canvas>, no WebGL, no three.js, no scene module. Grep it.
+       · No ambient animation and no parallax (PL-2.4). The single
+         motion is a chapter-to-chapter crossfade of the stills, and
+         prefers-reduced-motion removes even that.
+       · Not JS-dependent for content. Every heading, paragraph, claim,
+         contributor and link below is authored HTML and is present with
+         scripting disabled. JS only adds the crossfade, routing, and
+         the collapse of the detail panels (which ship OPEN in markup —
+         progressive enhancement, so nothing hides if JS never runs).
+
+     Drift control (13-content-ops.md CO-2.2, "no duplicated strings"):
+       every content-bearing element carries data-src="<path in CONTENT>".
+       The guard at the bottom of this file imports ../content/content.js
+       and console.errors on any mismatch. content.js remains the single
+       source of truth; this page is checked against it, not trusted.
+       Run the guard at every gate — see ../tools/TIER-WIRING.md §4.
+
+     Typography and palette are the hero's (../index.html), unchanged,
+     so the G5 tier-identity review reads the same place at every tier.
+     ============================================================== -->
+<style>
+  :root {
+    --gold:        #d9a441;
+    --gold-bright: #f0c877;
+    --parchment:   #f2ebdd;
+    --ink:         #f2ebdd;
+    --muted:       #c9bfa8;
+    --bg:          #141008;
+    /* Panel behind every block of running text. Near-opaque on purpose:
+       the Connect and Owned stills are bright (mean luma 40 and 38), and
+       PL-2.3 forbids leaning on decorative glow for legibility. At 0.9
+       alpha over #0b0702 the body colour sits at ~12:1 — comfortably
+       past WCAG AA for both body and large text, on every still. */
+    --panel:       rgba(11, 7, 2, 0.9);
+    --panel-edge:  rgba(217, 164, 65, 0.22);
+  }
+  * { box-sizing: border-box; }
+  html {
+    scroll-behavior: smooth;
+    /* the fixed header must not cover a section we scroll a route to */
+    scroll-padding-top: 6.5rem;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+
+  /* ---------- skip link ---------- */
+  .skip {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 20;
+    padding: 0.9rem 1.4rem;
+    background: #0b0702;
+    color: var(--gold-bright);
+    border: 1px solid var(--gold);
+    text-decoration: none;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+  }
+  .skip:focus { left: 1rem; top: 1rem; }
+
+  /* ============================================================
+     THE STILLS — one fixed full-bleed layer per chapter, crossfaded.
+     aria-hidden: they are presentational, exactly as the live canvas is
+     (PL-2.1). Every fact they carry is also in the DOM below.
+     ============================================================ */
+  .stills {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: var(--bg);
+    pointer-events: none;
+  }
+  .still {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    transition: opacity 0.8s ease;
+  }
+  .still.on { opacity: 1; }
+  /* No-JS fallback: with no script to switch layers, show the Mission
+     still rather than a black page. JS clears this on boot. */
+  .no-js .still[data-chapter="mission"] { opacity: 1; }
+
+  .still[data-chapter="mission"] { background-image: url("captures/mission@1440x900.png"); }
+  .still[data-chapter="inspire"] { background-image: url("captures/inspire@1440x900.png"); }
+  .still[data-chapter="connect"] { background-image: url("captures/connect@1440x900.png"); }
+  .still[data-chapter="owned"]   { background-image: url("captures/owned@1440x900.png"); }
+  .still[data-chapter="final"]   { background-image: url("captures/final@1440x900.png"); }
+
+  /* Portrait phones get the deliberate portrait pose (PL-1.1) — the
+     430x932 capture, not the desktop frame squeezed into a phone. */
+  @media (max-width: 700px) and (orientation: portrait) {
+    .still[data-chapter="mission"] { background-image: url("captures/mission@430x932.png"); }
+    .still[data-chapter="inspire"] { background-image: url("captures/inspire@430x932.png"); }
+    .still[data-chapter="connect"] { background-image: url("captures/connect@430x932.png"); }
+    .still[data-chapter="owned"]   { background-image: url("captures/owned@430x932.png"); }
+    .still[data-chapter="final"]   { background-image: url("captures/final@430x932.png"); }
+  }
+
+  /* the hero's own grade furniture, so all three tiers read as one place */
+  .vignette, .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+  .vignette {
+    z-index: 0;
+    background: radial-gradient(ellipse 120% 105% at 62% 44%,
+      transparent 42%, rgba(8, 5, 1, 0.28) 76%, rgba(6, 4, 1, 0.52) 100%);
+  }
+  /* Grain is BAKED AND FROZEN — the anti-banding benefit with no motion,
+     per PL-2.4. It is a static SVG data URI, never animated. */
+  .grain {
+    z-index: 3;
+    opacity: 0.045;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 280px 280px;
+  }
+
+  /* ============================================================
+     HEADER + CHAPTER NAV
+     ============================================================ */
+  .top {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1.5rem 3.4rem;
+    background: linear-gradient(180deg, rgba(9, 6, 2, 0.92) 0%, rgba(9, 6, 2, 0.72) 62%, transparent 100%);
+  }
+  .logo {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.42em;
+    color: var(--parchment);
+    text-decoration: none;
+  }
+  .logo:hover { color: var(--gold-bright); }
+  .chapters { display: flex; gap: 1.9rem; }
+  .chapters a {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;              /* PL-1.4 touch target */
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .chapters a::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 100%;
+    bottom: 0.55rem;
+    height: 1px;
+    background: var(--gold);
+    transition: right 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .chapters a:hover { color: var(--parchment); }
+  .chapters a[aria-current="true"] { color: var(--gold-bright); }
+  .chapters a[aria-current="true"]::after { right: 0; }
+  .nav-cta { display: flex; gap: 0.7rem; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    padding: 0.4rem 1.35rem;
+    border: 1px solid rgba(242, 237, 225, 0.58);
+    border-radius: 999px;
+  }
+  .pill:hover { border-color: var(--ink); background: rgba(242, 237, 225, 0.06); }
+
+  /* ============================================================
+     CHAPTERS
+     ============================================================ */
+  main { position: relative; z-index: 1; }
+  .chapter {
+    display: flex;
+    align-items: center;
+    min-height: 100vh;
+    padding: 8rem 3.4rem 6rem;
+  }
+  .chapter > .inner {
+    width: min(46rem, 100%);
+    padding: 2.2rem 2.4rem 2.4rem;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 3px;
+  }
+  #ch-owned > .inner, #ch-final > .inner { width: min(58rem, 100%); }
+  .eyebrow {
+    margin: 0 0 0.9rem;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  h1, h2 {
+    margin: 0 0 1.1rem;
+    font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    line-height: 1.12;
+    color: var(--parchment);
+  }
+  h1 { font-size: clamp(2rem, 4.2vw, 3.6rem); }
+  h2 { font-size: clamp(1.8rem, 3.4vw, 2.9rem); }
+  .sub {
+    margin: 0 0 1.6rem;
+    max-width: 34rem;
+    font-size: 1.05rem;
+    color: var(--muted);
+  }
+
+  /* ---------- ownership claims (locked copy — do not paraphrase) ---------- */
+  .claims { margin: 0 0 2rem; padding: 0; list-style: none; }
+  .claims li { margin: 0 0 0.7rem; }
+  .claim-t { font-size: 1.15rem; letter-spacing: 0.02em; color: var(--gold-bright); }
+  .claims li.primary .claim-t { font-size: 1.6rem; }
+  .claim-d { display: block; font-size: 0.9rem; color: var(--muted); }
+
+  /* ---------- node list + detail panels ---------- */
+  .nodes { margin: 0; padding: 0; list-style: none; }
+  .node {
+    margin: 0 0 0.9rem;
+    border-top: 1px solid rgba(217, 164, 65, 0.2);
+    padding-top: 0.9rem;
+  }
+  .node-h { margin: 0; }
+  .node-t {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.35rem 0;
+    background: none;
+    border: 0;
+    color: var(--gold-bright);
+    font-family: "Didot", "Playfair Display", Georgia, serif;
+    font-size: 1.35rem;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+  }
+  .node-t::before {
+    content: "";
+    flex: none;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: rgba(240, 200, 119, 0.6);
+    box-shadow: 0 0 8px rgba(240, 170, 60, 0.45);
+  }
+  .node-t[aria-expanded="true"]::before,
+  .node-t:hover::before { background: rgba(255, 226, 160, 1); }
+  .node-t .chev { margin-left: auto; font-size: 0.8rem; color: var(--muted); }
+  .node-t[aria-expanded="true"] .chev { color: var(--gold-bright); }
+  .node-short { margin: 0.1rem 0 0.6rem 1.7rem; font-size: 0.94rem; color: var(--muted); }
+  .node-d { margin: 0 0 0.4rem 1.7rem; }
+  .node-d[hidden] { display: none; }
+  .node-d p { margin: 0 0 0.7rem; font-size: 0.95rem; color: var(--muted); max-width: 36rem; }
+  .node-d .claim { color: var(--gold-bright); font-size: 1.02rem; }
+  .node-d .status {
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    color: rgba(201, 191, 168, 0.82);
+  }
+  .node-d .go {
+    display: inline-block;
+    margin-bottom: 0.4rem;
+    color: var(--gold-bright);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.6);
+  }
+  .node-d:focus-visible { outline: 1px solid var(--gold); outline-offset: 6px; }
+
+  /* ---------- contributor index (OW-4.5) ---------- */
+  .contributors {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 0.9rem;
+  }
+  .contributors li {
+    padding: 0.8rem 0.9rem;
+    border: 1px solid rgba(217, 164, 65, 0.16);
+    border-radius: 3px;
+  }
+  .contributors li:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; }
+  .c-name { display: block; color: var(--parchment); font-size: 0.98rem; }
+  .c-role {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .c-blurb { display: block; font-size: 0.85rem; color: var(--muted); }
+  .index-note { margin: 0 0 1.1rem; font-size: 0.88rem; color: var(--muted); }
+
+  /* ---------- footer ---------- */
+  .site-footer {
+    position: relative;
+    z-index: 1;
+    padding: 3rem 3.4rem 4rem;
+    background: rgba(7, 5, 1, 0.94);
+    border-top: 1px solid rgba(217, 164, 65, 0.2);
+  }
+  .site-footer .fwrap { width: min(58rem, 100%); }
+  .site-footer h2 {
+    font-size: 1.1rem;
+    font-family: inherit;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1rem;
+  }
+  .flinks { display: flex; flex-wrap: wrap; gap: 0.4rem 2rem; margin: 0 0 1.4rem; padding: 0; list-style: none; }
+  .flinks a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--parchment);
+    text-decoration: none;
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.45);
+  }
+  .flinks a:hover { color: var(--gold-bright); }
+  .legal { margin: 0; max-width: 46rem; font-size: 0.8rem; color: var(--muted); }
+  .tier-note {
+    margin: 1.6rem 0 0;
+    max-width: 46rem;
+    font-size: 0.78rem;
+    color: rgba(201, 191, 168, 0.75);
+  }
+  .tier-note a { color: var(--gold-bright); }
+
+  /* ---------- focus visibility (BASELINE §7 records the hero has none) ---------- */
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 3px;
+  }
+  /* A route lands focus on the arrived <section> so the tab order resumes
+     there. A ring around a full-viewport section reads as a rendering fault,
+     and the scroll itself is the arrival cue — so this one target is silent. */
+  .chapter:focus, .chapter:focus-visible { outline: none; }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width: 900px) {
+    .top { padding: 1rem 6vw; gap: 0.6rem 1rem; }
+    .chapters { gap: 1.1rem; order: 3; width: 100%; flex-wrap: wrap; }
+    .chapters a { font-size: 0.64rem; letter-spacing: 0.16em; }
+    .logo { font-size: 0.9rem; letter-spacing: 0.3em; }
+    .pill { padding: 0.35rem 1rem; font-size: 0.72rem; }
+    .chapter { padding: 10.5rem 6vw 4rem; min-height: auto; }
+    .chapter > .inner { padding: 1.6rem 1.4rem 1.8rem; }
+    .site-footer { padding: 2.5rem 6vw 3.5rem; }
+    html { scroll-padding-top: 10rem; }
+    .node-short, .node-d { margin-left: 0; }
+  }
+
+  /* ============================================================
+     REDUCED MOTION — PL-2.4. This page is already the reduced-motion
+     destination, so it removes its own last piece of motion: the
+     crossfade becomes an instant switch, and smooth scrolling stops.
+     ============================================================ */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .still { transition: none; }
+    .chapters a::after { transition: none; }
+  }
+</style>
+</head>
+<body class="no-js">
+
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- Presentational only (PL-2.1): the stills carry no information that is
+     not also in the document below. -->
+<div class="stills" aria-hidden="true">
+  <div class="still" data-chapter="mission"></div>
+  <div class="still" data-chapter="inspire"></div>
+  <div class="still" data-chapter="connect"></div>
+  <div class="still" data-chapter="owned"></div>
+  <div class="still" data-chapter="final"></div>
+</div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="logo" href="#/mission">BANODOCO</a>
+  <nav class="chapters" aria-label="Journey chapters">
+    <!-- Four nav entries, not five: the epilogue is not a peer chapter and has
+         no nav item (content.js chapters.final.nav === null, 10-chapter-final.md).
+         Owned stays current through the epilogue, matching the live journey. -->
+    <a href="#/mission" data-nav="mission" data-src="chapters.mission.nav">Mission</a>
+    <a href="#/inspire" data-nav="inspire" data-src="chapters.inspire.nav">Inspire</a>
+    <a href="#/connect" data-nav="connect" data-src="chapters.connect.nav">Connect</a>
+    <a href="#/owned"   data-nav="owned"   data-src="chapters.owned.nav">Owned</a>
+  </nav>
+  <div class="nav-cta">
+    <a class="pill" href="#" data-placeholder>2RP</a>
+    <a class="pill" href="#" data-placeholder>Discord</a>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ========================= MISSION ========================= -->
+  <section class="chapter" id="ch-mission" data-chapter="mission" aria-labelledby="h-mission" tabindex="-1">
+    <div class="inner">
+      <p class="eyebrow">Chapter 01 — Mission</p>
+      <h1 id="h-mission" data-src="chapters.mission.heading">We’re working to help the open-source AI art ecosystem thrive.</h1>
+      <p class="sub" data-src="chapters.mission.sub">Banodoco builds tools, spaces, and shared infrastructure for the open-source AI art ecosystem.</p>
+    </div>
+  </section>
+
+  <!-- ========================= INSPIRE ========================= -->
+  <section class="chapter" id="ch-inspire" data-chapter="inspire" aria-labelledby="h-inspire" tabindex="-1">
+    <div class="inner">
+      <p class="eyebrow">Chapter 02 — Inspire</p>
+      <h2 id="h-inspire" data-src="chapters.inspire.heading">Inspire and empower.</h2>
+      <p class="sub" data-src="chapters.inspire.sub">Banodoco helps people push open models beyond their expected limits through challenges, compute, and rigorous research, turning breakthrough ideas into a thriving commons.</p>
+
+      <ul class="nodes">
+        <li class="node" id="node-arca">
+          <h3 class="node-h">
+            <button class="node-t" type="button" id="t-arca" aria-expanded="true" aria-controls="d-arca">
+              <span data-src="nodes.arca.label">Arca Gidan Prize</span><span class="chev" aria-hidden="true">▾</span>
+            </button>
+          </h3>
+          <p class="node-short" data-src="nodes.arca.short">A competition pushing open-source AI art further. [PLACEHOLDER]</p>
+          <div class="node-d" id="d-arca" role="region" aria-labelledby="t-arca" tabindex="-1">
+            <p data-src="nodes.arca.spotlight.body.0">This is placeholder summary copy standing in for the Arca Gidan Prize spotlight until Content/Ops drafts real copy and Peter approves it before G4. [PLACEHOLDER]</p>
+            <p data-src="nodes.arca.spotlight.body.1">It exists here only to hold the spotlight layout together — treat every claim in this paragraph as unverified filler, not a description of the actual prize. [PLACEHOLDER]</p>
+            <p class="status" data-src="nodes.arca.spotlight.status">Status: to be confirmed by Banodoco [PLACEHOLDER]</p>
+            <a class="go" href="#" data-placeholder data-src="nodes.arca.spotlight.link.label">Learn more</a>
+          </div>
+        </li>
+
+        <li class="node" id="node-artcompute">
+          <h3 class="node-h">
+            <button class="node-t" type="button" id="t-artcompute" aria-expanded="true" aria-controls="d-artcompute">
+              <span data-src="nodes.artcompute.label">ArtCompute</span><span class="chev" aria-hidden="true">▾</span>
+            </button>
+          </h3>
+          <p class="node-short" data-src="nodes.artcompute.short">Practical compute for ambitious creators. [PLACEHOLDER]</p>
+          <div class="node-d" id="d-artcompute" role="region" aria-labelledby="t-artcompute" tabindex="-1">
+            <p data-src="nodes.artcompute.spotlight.body.0">This is placeholder summary copy standing in for the ArtCompute spotlight until Content/Ops drafts real copy and Peter approves it before G4. [PLACEHOLDER]</p>
+            <p data-src="nodes.artcompute.spotlight.body.1">Nothing in this paragraph — including the framing of what ArtCompute offers — should be read as confirmed program detail. [PLACEHOLDER]</p>
+            <p class="status" data-src="nodes.artcompute.spotlight.status">Status: to be confirmed by Banodoco [PLACEHOLDER]</p>
+            <a class="go" href="#" data-placeholder data-src="nodes.artcompute.spotlight.link.label">Learn more</a>
+          </div>
+        </li>
+
+        <li class="node" id="node-tworp">
+          <h3 class="node-h">
+            <button class="node-t" type="button" id="t-tworp" aria-expanded="true" aria-controls="d-tworp">
+              <span data-src="nodes.tworp.label">2RP</span><span class="chev" aria-hidden="true">▾</span>
+            </button>
+          </h3>
+          <p class="node-short" data-src="nodes.tworp.short">Rigorous research in AI art. [PLACEHOLDER]</p>
+          <div class="node-d" id="d-tworp" role="region" aria-labelledby="t-tworp" tabindex="-1">
+            <p data-src="nodes.tworp.spotlight.body.0">This is placeholder summary copy standing in for the 2RP spotlight until Content/Ops drafts real copy and Peter approves it before G4. [PLACEHOLDER]</p>
+            <p data-src="nodes.tworp.spotlight.body.1">Per 07-chapter-inspire.md IN-4.3, this contextual spotlight is a distinct behaviour from the persistent top-right 2RP control, which must keep opening the publication directly. [PLACEHOLDER]</p>
+            <p class="status" data-src="nodes.tworp.spotlight.status">Status: to be confirmed by Banodoco [PLACEHOLDER]</p>
+            <a class="go" href="#" data-placeholder data-src="nodes.tworp.spotlight.link.label">Read the publication</a>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ========================= CONNECT ========================= -->
+  <section class="chapter" id="ch-connect" data-chapter="connect" aria-labelledby="h-connect" tabindex="-1">
+    <div class="inner">
+      <p class="eyebrow">Chapter 03 — Connect</p>
+      <h2 id="h-connect" data-src="chapters.connect.heading">Connect the ecosystem.</h2>
+      <p class="sub" data-src="chapters.connect.sub">Banodoco brings together artists, builders, and shared knowledge to grow a living network for open-source AI art.</p>
+
+      <ul class="nodes">
+        <li class="node" id="node-community">
+          <h3 class="node-h">
+            <button class="node-t" type="button" id="t-community" aria-expanded="true" aria-controls="d-community">
+              <span data-src="nodes.community.label">Community</span><span class="chev" aria-hidden="true">▾</span>
+            </button>
+          </h3>
+          <p class="node-short" data-src="nodes.community.short">The connected commons. [PLACEHOLDER]</p>
+          <div class="node-d" id="d-community" role="region" aria-labelledby="t-community" tabindex="-1">
+            <p data-src="nodes.community.card.body.0">This is placeholder card copy standing in for the Community structure until Content/Ops drafts and Peter approves real copy. [PLACEHOLDER]</p>
+            <p data-src="nodes.community.card.body.1">Treat this description as a layout stand-in only, not a finished description of the community. [PLACEHOLDER]</p>
+          </div>
+        </li>
+
+        <li class="node" id="node-ados">
+          <h3 class="node-h">
+            <button class="node-t" type="button" id="t-ados" aria-expanded="true" aria-controls="d-ados">
+              <span data-src="nodes.ados.label">ADOS</span><span class="chev" aria-hidden="true">▾</span>
+            </button>
+          </h3>
+          <p class="node-short" data-src="nodes.ados.short">Where online becomes in-person. [PLACEHOLDER]</p>
+          <div class="node-d" id="d-ados" role="region" aria-labelledby="t-ados" tabindex="-1">
+            <p data-src="nodes.ados.card.body.0">This is placeholder card copy standing in for the ADOS structure until Content/Ops drafts and Peter approves real copy. [PLACEHOLDER]</p>
+            <p data-src="nodes.ados.card.body.1">Treat this description as a layout stand-in only, not a finished description of ADOS. [PLACEHOLDER]</p>
+          </div>
+        </li>
+
+        <li class="node" id="node-hivemind">
+          <h3 class="node-h">
+            <button class="node-t" type="button" id="t-hivemind" aria-expanded="true" aria-controls="d-hivemind">
+              <span data-src="nodes.hivemind.label">Hivemind</span><span class="chev" aria-hidden="true">▾</span>
+            </button>
+          </h3>
+          <p class="node-short" data-src="nodes.hivemind.short">Persistent shared memory. [PLACEHOLDER]</p>
+          <div class="node-d" id="d-hivemind" role="region" aria-labelledby="t-hivemind" tabindex="-1">
+            <p data-src="nodes.hivemind.card.body.0">This is placeholder card copy standing in for the Hivemind structure until Content/Ops drafts and Peter approves real copy. [PLACEHOLDER]</p>
+            <p data-src="nodes.hivemind.card.body.1">Treat this description as a layout stand-in only, not a finished description of Hivemind. [PLACEHOLDER]</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ========================= OWNED ========================= -->
+  <section class="chapter" id="ch-owned" data-chapter="owned" aria-labelledby="h-owned" tabindex="-1">
+    <div class="inner">
+      <p class="eyebrow">Chapter 04 — Owned</p>
+      <h2 id="h-owned" data-src="chapters.owned.heading">Owned by the ecosystem</h2>
+
+      <!-- The three claims are LOCKED COPY (13-content-ops.md "Owned claims").
+           Do not paraphrase, reorder, or soften them. -->
+      <ul class="claims">
+        <li class="primary"><span class="claim-t" data-src="chapters.owned.claims.0.text">100% shared</span></li>
+        <li><span class="claim-t" data-src="chapters.owned.claims.1.text">Granted 1% per month</span></li>
+        <li>
+          <span class="claim-t" data-src="chapters.owned.claims.2.text">Split between different groups</span>
+          <span class="claim-d" data-src="chapters.owned.claims.2.detail">artists, core engineers, and knowledge creators</span>
+        </li>
+      </ul>
+
+      <h3 class="eyebrow" style="margin-top:0.4rem">How ownership works</h3>
+      <ul class="nodes">
+        <li class="node" id="node-pod-shared">
+          <h4 class="node-h">
+            <button class="node-t" type="button" id="t-pod-shared" aria-expanded="true" aria-controls="d-pod-shared">
+              <span data-src="nodes.pod-shared.card.title">100% shared</span><span class="chev" aria-hidden="true">▾</span>
+            </button>
+          </h4>
+          <p class="node-short" data-src="nodes.pod-shared.short">The dominant principle.</p>
+          <div class="node-d" id="d-pod-shared" role="region" aria-labelledby="t-pod-shared" tabindex="-1">
+            <p class="claim" data-src="nodes.pod-shared.card.claim">100% shared</p>
+            <p data-src="nodes.pod-shared.card.body.0">Ownership of Banodoco is 100% shared with the people who build it.</p>
+            <p data-src="nodes.pod-shared.card.body.1">This explanatory sentence is placeholder phrasing around the locked claim above, pending Content/Ops draft and Peter approval. [PLACEHOLDER]</p>
+          </div>
+        </li>
+
+        <li class="node" id="node-pod-monthly">
+          <h4 class="node-h">
+            <button class="node-t" type="button" id="t-pod-monthly" aria-expanded="true" aria-controls="d-pod-monthly">
+              <span data-src="nodes.pod-monthly.card.title">Granted 1% per month</span><span class="chev" aria-hidden="true">▾</span>
+            </button>
+          </h4>
+          <p class="node-short" data-src="nodes.pod-monthly.short">Gradual distribution over time.</p>
+          <div class="node-d" id="d-pod-monthly" role="region" aria-labelledby="t-pod-monthly" tabindex="-1">
+            <p class="claim" data-src="nodes.pod-monthly.card.claim">Granted 1% per month</p>
+            <p data-src="nodes.pod-monthly.card.body.0">Ownership is granted 1% per month, gradually, over time.</p>
+            <p data-src="nodes.pod-monthly.card.body.1">This explanatory sentence is placeholder phrasing around the locked claim above, pending Content/Ops draft and Peter approval. [PLACEHOLDER]</p>
+          </div>
+        </li>
+
+        <li class="node" id="node-pod-split">
+          <h4 class="node-h">
+            <button class="node-t" type="button" id="t-pod-split" aria-expanded="true" aria-controls="d-pod-split">
+              <span data-src="nodes.pod-split.card.title">Split between different groups</span><span class="chev" aria-hidden="true">▾</span>
+            </button>
+          </h4>
+          <p class="node-short" data-src="nodes.pod-split.short">Artists, core engineers, knowledge creators.</p>
+          <div class="node-d" id="d-pod-split" role="region" aria-labelledby="t-pod-split" tabindex="-1">
+            <p class="claim">
+              <span data-src="nodes.pod-split.card.claim">Split between different groups</span> —
+              <span data-src="nodes.pod-split.card.claimDetail">artists, core engineers, and knowledge creators</span>
+            </p>
+            <p data-src="nodes.pod-split.card.body.0">Shared ownership is split between different groups: artists, core engineers, and knowledge creators.</p>
+            <p data-src="nodes.pod-split.card.body.1">This explanatory sentence is placeholder phrasing around the locked claim above, pending Content/Ops draft and Peter approval. [PLACEHOLDER]</p>
+          </div>
+        </li>
+      </ul>
+
+      <!-- OW-4.5 / PL-1.5: the complete contributor list as an accessible index.
+           Tier 1/2 show a portrait field; Tier 3 shows the field capture above
+           plus this list, which is the authoritative, crawlable version.
+           Every entry is the anonymous ember-node fallback (consent: false,
+           CO-1.4 / OW-4.4) — real names arrive through the consent pipeline
+           and are gated in code by consent: true, never by editing rows. -->
+      <h3 class="eyebrow" id="h-contributors" style="margin-top:2rem">Contributor index</h3>
+      <p class="index-note">16 contributors. Nobody has completed the consent pipeline yet, so every entry below is listed anonymously by role.</p>
+      <ul class="contributors" aria-labelledby="h-contributors">
+        <li id="node-contributor-0" tabindex="-1"><span class="c-name" data-src="contributors.0.name">Contributor</span><span class="c-role" data-src="contributors.0.role">Artist</span><span class="c-blurb" data-src="contributors.0.blurb">A placeholder contribution note for an anonymous artist, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-1" tabindex="-1"><span class="c-name" data-src="contributors.1.name">Contributor</span><span class="c-role" data-src="contributors.1.role">Artist</span><span class="c-blurb" data-src="contributors.1.blurb">A placeholder contribution note for an anonymous artist, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-2" tabindex="-1"><span class="c-name" data-src="contributors.2.name">Contributor</span><span class="c-role" data-src="contributors.2.role">Artist</span><span class="c-blurb" data-src="contributors.2.blurb">A placeholder contribution note for an anonymous artist, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-3" tabindex="-1"><span class="c-name" data-src="contributors.3.name">Contributor</span><span class="c-role" data-src="contributors.3.role">Artist</span><span class="c-blurb" data-src="contributors.3.blurb">A placeholder contribution note for an anonymous artist, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-4" tabindex="-1"><span class="c-name" data-src="contributors.4.name">Contributor</span><span class="c-role" data-src="contributors.4.role">Core Engineer</span><span class="c-blurb" data-src="contributors.4.blurb">A placeholder contribution note for an anonymous core engineer, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-5" tabindex="-1"><span class="c-name" data-src="contributors.5.name">Contributor</span><span class="c-role" data-src="contributors.5.role">Core Engineer</span><span class="c-blurb" data-src="contributors.5.blurb">A placeholder contribution note for an anonymous core engineer, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-6" tabindex="-1"><span class="c-name" data-src="contributors.6.name">Contributor</span><span class="c-role" data-src="contributors.6.role">Core Engineer</span><span class="c-blurb" data-src="contributors.6.blurb">A placeholder contribution note for an anonymous core engineer, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-7" tabindex="-1"><span class="c-name" data-src="contributors.7.name">Contributor</span><span class="c-role" data-src="contributors.7.role">Core Engineer</span><span class="c-blurb" data-src="contributors.7.blurb">A placeholder contribution note for an anonymous core engineer, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-8" tabindex="-1"><span class="c-name" data-src="contributors.8.name">Contributor</span><span class="c-role" data-src="contributors.8.role">Knowledge Creator</span><span class="c-blurb" data-src="contributors.8.blurb">A placeholder contribution note for an anonymous knowledge creator, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-9" tabindex="-1"><span class="c-name" data-src="contributors.9.name">Contributor</span><span class="c-role" data-src="contributors.9.role">Knowledge Creator</span><span class="c-blurb" data-src="contributors.9.blurb">A placeholder contribution note for an anonymous knowledge creator, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-10" tabindex="-1"><span class="c-name" data-src="contributors.10.name">Contributor</span><span class="c-role" data-src="contributors.10.role">Knowledge Creator</span><span class="c-blurb" data-src="contributors.10.blurb">A placeholder contribution note for an anonymous knowledge creator, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-11" tabindex="-1"><span class="c-name" data-src="contributors.11.name">Contributor</span><span class="c-role" data-src="contributors.11.role">Knowledge Creator</span><span class="c-blurb" data-src="contributors.11.blurb">A placeholder contribution note for an anonymous knowledge creator, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-12" tabindex="-1"><span class="c-name" data-src="contributors.12.name">Contributor</span><span class="c-role" data-src="contributors.12.role">Researcher</span><span class="c-blurb" data-src="contributors.12.blurb">A placeholder contribution note for an anonymous researcher, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-13" tabindex="-1"><span class="c-name" data-src="contributors.13.name">Contributor</span><span class="c-role" data-src="contributors.13.role">Researcher</span><span class="c-blurb" data-src="contributors.13.blurb">A placeholder contribution note for an anonymous researcher, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-14" tabindex="-1"><span class="c-name" data-src="contributors.14.name">Contributor</span><span class="c-role" data-src="contributors.14.role">Researcher</span><span class="c-blurb" data-src="contributors.14.blurb">A placeholder contribution note for an anonymous researcher, pending consent. [PLACEHOLDER]</span></li>
+        <li id="node-contributor-15" tabindex="-1"><span class="c-name" data-src="contributors.15.name">Contributor</span><span class="c-role" data-src="contributors.15.role">Researcher</span><span class="c-blurb" data-src="contributors.15.blurb">A placeholder contribution note for an anonymous researcher, pending consent. [PLACEHOLDER]</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ========================= FINAL / EPILOGUE ========================= -->
+  <!-- Not a sixth peer chapter (10-chapter-final.md): route only, no nav item,
+       no detail states. Owned stays the current nav entry here. -->
+  <section class="chapter" id="ch-final" data-chapter="final" aria-labelledby="h-final" tabindex="-1">
+    <div class="inner">
+      <p class="eyebrow">Epilogue</p>
+      <h2 id="h-final" data-src="chapters.final.heading">We’re working to accelerate the second renaissance.</h2>
+      <p class="sub" data-src="chapters.final.sub">Banodoco exists to help new tools, communities, and ideas spread — so one thriving ecosystem becomes many.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="fwrap">
+    <h2 id="h-footer">Banodoco</h2>
+    <ul class="flinks" aria-label="Site links">
+      <li><a href="#" data-placeholder data-src="footer.links.0.label">banodoco.ai</a></li>
+      <li><a href="#" data-placeholder data-src="footer.links.1.label">2RP</a></li>
+      <li><a href="#" data-placeholder data-src="footer.links.2.label">Contact</a></li>
+    </ul>
+    <ul class="flinks" aria-label="Social">
+      <li><a href="#" data-placeholder data-src="footer.social.0.label">Discord</a></li>
+      <li><a href="#" data-placeholder data-src="footer.social.1.label">GitHub</a></li>
+    </ul>
+    <p class="legal" data-src="footer.legal">© 2026 Banodoco. Ownership: 100% shared, granted at 1% per month, split between different groups (artists, core engineers, and knowledge creators). This legal line is placeholder text pending Legal/Peter review. [PLACEHOLDER]</p>
+    <p class="tier-note">
+      You are viewing the static journey. It carries the same chapters, the same
+      copy, and the same links as the interactive version, using stills captured
+      from it. <a href="../index.html">Open the interactive journey</a>.
+    </p>
+  </div>
+</footer>
+
+<script>
+/* ==================================================================
+   Tier-3 behaviour. Three jobs, no more:
+     1. crossfade the chapter stills as sections pass the viewport middle
+     2. the #/<chapter>[/<node>] routes, same scheme as the live journey
+     3. collapse the detail panels (they ship OPEN — see the head comment)
+   No canvas, no WebGL, no ambient animation, no parallax.
+   Plain classic script: this must run even if module loading is what
+   broke the interactive tier.
+   ================================================================== */
+(function () {
+  'use strict';
+  document.body.classList.remove('no-js');
+
+  var CHAPTERS = ['mission', 'inspire', 'connect', 'owned', 'final'];
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  var stills = {}, sections = {}, navLinks = {};
+  CHAPTERS.forEach(function (id) {
+    stills[id] = document.querySelector('.still[data-chapter="' + id + '"]');
+    sections[id] = document.getElementById('ch-' + id);
+    var n = document.querySelector('.chapters a[data-nav="' + id + '"]');
+    if (n) navLinks[id] = n;
+  });
+
+  /* ---------------- chapter state ---------------- */
+  var current = null;
+  function setChapter(id, writeHash) {
+    if (CHAPTERS.indexOf(id) < 0) return;
+    if (id === current) return;
+    current = id;
+    CHAPTERS.forEach(function (c) {
+      if (stills[c]) stills[c].classList.toggle('on', c === id);
+    });
+    // Owned stays the current nav entry through the epilogue, exactly as the
+    // live journey does (core/ui.js: active = chapterId === 'final' ? 'owned').
+    var active = id === 'final' ? 'owned' : id;
+    for (var k in navLinks) {
+      if (k === active) navLinks[k].setAttribute('aria-current', 'true');
+      else navLinks[k].removeAttribute('aria-current');
+    }
+    if (writeHash && !openNode) {
+      // replaceState, never push: scrolling must not fill the back stack
+      // (adr-d6 write policy).
+      try { history.replaceState(null, '', '#/' + id); } catch (e) {}
+    }
+  }
+
+  /* ---------------- detail panels ---------------- */
+  var openNode = null;
+
+  function panelFor(nodeId) { return document.getElementById('d-' + nodeId); }
+  function triggerFor(nodeId) { return document.getElementById('t-' + nodeId); }
+
+  function setPanel(nodeId, open, focusIt) {
+    var panel = panelFor(nodeId), trig = triggerFor(nodeId);
+    if (!panel || !trig) return false;
+    panel.hidden = !open;
+    trig.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open && focusIt) panel.focus();
+    return true;
+  }
+
+  function openDetail(nodeId, opts) {
+    opts = opts || {};
+    // contributor rows are index entries, not panels: focus the row itself
+    var row = document.getElementById('node-' + nodeId);
+    if (!panelFor(nodeId)) {
+      if (row) {
+        openNode = null;
+        row.scrollIntoView({ block: 'center' });
+        row.focus();
+        return true;
+      }
+      return false;
+    }
+    if (openNode && openNode !== nodeId) setPanel(openNode, false, false);
+    if (!setPanel(nodeId, true, opts.focus !== false)) return false;
+    openNode = nodeId;
+    var ch = chapterOfNode(nodeId);
+    var target = '#/' + ch + '/' + nodeId;
+    if (location.hash !== target) {
+      // opening a detail is a destination: it pushes, so Back closes it
+      try { opts.replace ? history.replaceState(null, '', target)
+                         : history.pushState(null, '', target); } catch (e) {}
+    }
+    return true;
+  }
+
+  function closeDetail(returnFocus) {
+    if (!openNode) return;
+    var id = openNode;
+    openNode = null;
+    setPanel(id, false, false);
+    if (returnFocus) { var t = triggerFor(id); if (t) t.focus(); }
+    var ch = chapterOfNode(id);
+    try { history.replaceState(null, '', '#/' + ch); } catch (e) {}
+  }
+
+  function chapterOfNode(nodeId) {
+    var el = document.getElementById('node-' + nodeId) || panelFor(nodeId);
+    while (el && el !== document.body) {
+      if (el.dataset && el.dataset.chapter) return el.dataset.chapter;
+      el = el.parentNode;
+    }
+    return current || 'mission';
+  }
+
+  // Collapse every panel now that JS is running. They are authored open so a
+  // no-JS / no-module visitor still reads all of it.
+  Array.prototype.forEach.call(document.querySelectorAll('.node-t'), function (btn) {
+    var id = btn.id.replace(/^t-/, '');
+    setPanel(id, false, false);
+    btn.addEventListener('click', function () {
+      if (openNode === id) closeDetail(false);
+      else openDetail(id, { focus: false });
+    });
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && openNode) { e.preventDefault(); closeDetail(true); }
+  });
+
+  /* ---------------- routing: #/<chapter>[/<node>] ---------------- */
+  // Same normalisation the live journey applies (journey.js normaliseNode):
+  // the ADR spells the 2RP node "2rp" and contributors "person-N".
+  function normaliseNode(chapter, node) {
+    if (!node) return null;
+    if (node === '2rp') node = 'tworp';
+    var m = /^person-(\d+)$/.exec(node);
+    if (m) node = 'contributor-' + m[1];
+    if (chapter === 'final') return null;   // the epilogue has no detail state
+    return node;
+  }
+
+  function parseHash() {
+    var h = (location.hash || '').replace(/^#\/?/, '');
+    if (!h) return { chapter: null, node: null };
+    var parts = h.split('/');
+    var chapter = parts[0];
+    if (CHAPTERS.indexOf(chapter) < 0) return { chapter: null, node: null, unknown: true };
+    return { chapter: chapter, node: normaliseNode(chapter, parts[1] || null) };
+  }
+
+  var applyingRoute = false;
+  function applyRoute(initial) {
+    var r = parseHash();
+    if (r.unknown) {
+      // Normalise and actually GO there — a silent replaceState would leave the
+      // address bar saying #/mission while the page sat wherever it was.
+      try { history.replaceState(null, '', '#/mission'); } catch (e) {}
+      r = { chapter: 'mission', node: null };
+    }
+    if (!r.chapter) return;
+    applyingRoute = true;
+    var sec = sections[r.chapter];
+    if (sec) {
+      // initial load: jump. Later navigations honour the CSS scroll-behavior,
+      // which reduced-motion has already switched to `auto`.
+      if (initial) {
+        var prev = document.documentElement.style.scrollBehavior;
+        document.documentElement.style.scrollBehavior = 'auto';
+        sec.scrollIntoView();
+        document.documentElement.style.scrollBehavior = prev;
+      } else {
+        sec.scrollIntoView();
+      }
+      setChapter(r.chapter, false);
+    }
+    if (r.node) {
+      openDetail(r.node, { replace: true, focus: true });
+    } else {
+      if (openNode) { var o = openNode; openNode = null; setPanel(o, false, false); }
+      // A chapter route is a destination too: move focus to the section so a
+      // keyboard or screen-reader visitor arrives WHERE the page scrolled,
+      // instead of continuing to tab from wherever focus happened to be
+      // (PL-2.2 — keyboard order follows the narrative).
+      if (sec && !initial) sec.focus({ preventScroll: true });
+    }
+    setTimeout(function () { applyingRoute = false; }, 400);
+  }
+
+  window.addEventListener('hashchange', function () { applyRoute(false); });
+
+  // Nav clicks: let the hash change, then applyRoute handles scroll + state.
+  Array.prototype.forEach.call(document.querySelectorAll('.chapters a, .logo'), function (a) {
+    a.addEventListener('click', function (e) {
+      var id = (a.getAttribute('href') || '').replace('#/', '');
+      if (CHAPTERS.indexOf(id) < 0) return;
+      e.preventDefault();
+      if (openNode) { var o = openNode; openNode = null; setPanel(o, false, false); }
+      if (location.hash === '#/' + id) applyRoute(false);
+      else location.hash = '#/' + id;
+    });
+  });
+
+  // Placeholder destinations (every href in content.js is '#' per D10). Left as
+  // real anchors so they are announced and crawled, but a click must not blow
+  // away the route. Remove this handler when the real URLs land.
+  Array.prototype.forEach.call(document.querySelectorAll('a[data-placeholder]'), function (a) {
+    a.addEventListener('click', function (e) {
+      if (a.getAttribute('href') === '#') e.preventDefault();
+    });
+  });
+
+  /* ---------------- scroll -> chapter (crossfade) ---------------- */
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      if (applyingRoute) {
+        // still track the still/nav, just do not fight the route for the hash
+        entries.forEach(function (en) {
+          if (en.isIntersecting) setChapter(en.target.dataset.chapter, false);
+        });
+        return;
+      }
+      entries.forEach(function (en) {
+        if (en.isIntersecting) setChapter(en.target.dataset.chapter, true);
+      });
+    }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+    CHAPTERS.forEach(function (id) { if (sections[id]) io.observe(sections[id]); });
+  } else {
+    // no IntersectionObserver: fall back to a cheap scroll probe
+    var onScroll = function () {
+      var mid = window.innerHeight / 2, best = null;
+      CHAPTERS.forEach(function (id) {
+        var s = sections[id]; if (!s) return;
+        var r = s.getBoundingClientRect();
+        if (r.top <= mid && r.bottom >= mid) best = id;
+      });
+      if (best) setChapter(best, !applyingRoute);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  /* ---------------- boot ---------------- */
+  setChapter('mission', false);
+  if (location.hash) applyRoute(true);
+  else { try { history.replaceState(null, '', '#/mission'); } catch (e) {} }
+
+  // Small handle for QA parity with window.journey on the live page.
+  window.staticJourney = {
+    version: 'tier3-static',
+    get chapter() { return current; },
+    get detail() { return openNode; },
+    goTo: function (id) { location.hash = '#/' + id; },
+    open: function (id) { return openDetail(id, {}); },
+    close: function () { closeDetail(false); },
+  };
+}());
+</script>
+
+<script type="module">
+/* ==================================================================
+   DRIFT GUARD — enforces 13-content-ops.md CO-2.2 ("one content source
+   governs everything ... no duplicated strings") for a page that must
+   also work with scripting off.
+
+   The copy above is authored HTML so it survives with no JS. This guard
+   imports the single source of truth and asserts, element by element,
+   that every data-src path still matches. Any drift is a console.error
+   naming the path, the expected string and the rendered one.
+
+   It is diagnostic only: it never rewrites the page, so a failure here
+   can never change what a visitor reads. Run it at every gate — the
+   check is "zero console errors on this page" (see tools/TIER-WIRING.md §4).
+
+   If this module fails to load (old browser, blocked module), the page is
+   unaffected: everything above is a classic script and plain markup.
+   ================================================================== */
+import { CONTENT } from '../content/content.js';
+
+const norm = (s) => String(s).replace(/\s+/g, ' ').trim();
+
+function resolve(path) {
+  let cur = CONTENT;
+  for (const key of path.split('.')) {
+    if (cur == null) return undefined;
+    cur = Array.isArray(cur) ? cur[Number(key)] : cur[key];
+  }
+  return cur;
+}
+
+let checked = 0;
+const problems = [];
+for (const el of document.querySelectorAll('[data-src]')) {
+  const path = el.dataset.src;
+  const expected = resolve(path);
+  checked++;
+  if (expected === undefined || expected === null) {
+    problems.push(`${path} — no such path in CONTENT (rendered: "${norm(el.textContent).slice(0, 60)}…")`);
+    continue;
+  }
+  if (norm(expected) !== norm(el.textContent)) {
+    problems.push(`${path}\n     content.js: "${norm(expected)}"\n     this page : "${norm(el.textContent)}"`);
+  }
+}
+
+// Coverage: every contributor and every footer link must appear in the index.
+const rendered = new Set([...document.querySelectorAll('[data-src]')].map(e => e.dataset.src));
+CONTENT.contributors.forEach((c, i) => {
+  for (const f of ['name', 'role', 'blurb']) {
+    if (!rendered.has(`contributors.${i}.${f}`)) problems.push(`MISSING contributors.${i}.${f} — the Tier-3 index is incomplete`);
+  }
+});
+['links', 'social'].forEach((group) => {
+  CONTENT.footer[group].forEach((_, i) => {
+    if (!rendered.has(`footer.${group}.${i}.label`)) problems.push(`MISSING footer.${group}.${i}.label`);
+  });
+});
+for (const id of Object.keys(CONTENT.nodes)) {
+  if (!document.getElementById('node-' + id)) problems.push(`MISSING node section for "${id}" — Tier 3 must show every named node`);
+}
+
+if (problems.length) {
+  console.error('[tier3] CONTENT DRIFT — %d problem(s) across %d checked strings:\n  · %s',
+    problems.length, checked, problems.join('\n  · '));
+} else {
+  console.info('[tier3] content in sync with ../content/content.js — %d strings, %d contributors, %d nodes',
+    checked, CONTENT.contributors.length, Object.keys(CONTENT.nodes).length);
+}
+</script>
+</body>
+</html>
