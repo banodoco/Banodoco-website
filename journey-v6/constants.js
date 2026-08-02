@@ -102,8 +102,16 @@ export const COMMIT_THRESHOLD  = 0.35; // fraction of the inter-rest p-span,
 export const COMMIT_GLIDE_RATE = 0.10; // p/s cruise — ~2x a calm read scroll,
                                        // ~4.5x under MAX_SCRUB_RATE, so the
                                        // glide is assured but never a fling
-export const COMMIT_RAMP_S     = 0.35; // s ease-in from standstill to cruise —
-                                       // the glide starts as a decision, not a yank
+export const COMMIT_BLEND_K    = 6.0;  // 1/s — the glide's rate eases from the
+                                       // INHERITED gesture rate toward cruise
+                                       // (exponential blend). The glide does not
+                                       // ramp from standstill: it seeds with the
+                                       // perceived rate at engage, so the commit
+                                       // carries the visitor's own motion to
+                                       // completion instead of stop-then-restart.
+                                       // ~63% of the gap closed in 165 ms, ~95%
+                                       // by 0.5 s — same felt attack as the old
+                                       // 0.35 s smoothstep ramp, minus the pause.
 
 // Fast scroll must take the SAME accelerated path, never a cut: the smoothed
 // progress is speed-limited, so a flung trackpad still traverses every frame

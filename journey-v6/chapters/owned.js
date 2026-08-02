@@ -109,11 +109,17 @@ export function createOwned(sceneApi, content) {
   // Visual hierarchy per the approved still: 100% shared clearly primary
   // (centre of the colony, largest, nearest) but not overwhelming the
   // network; secondaries smaller/lower, legible.
-  const POD_SPEC = [
-    { id: 'pod-shared', pos: restPlace(0.02, -0.34, 6.2), scale: 0.62, primary: true },
-    { id: 'pod-monthly', pos: restPlace(-0.56, -0.56, 5.4), scale: 0.44 },
-    { id: 'pod-split', pos: restPlace(0.56, -0.52, 5.8), scale: 0.42 },
-  ];
+  // Ride-through #2 (Hannah): the claims live ONCE, as page copy under the
+  // "Owned by the ecosystem" heading — the in-scene pod nexuses ("bulbs") and
+  // their chips are removed. POD_SPEC is intentionally empty: no geometry, no
+  // hotspots, no chips; the claim pulses survive via trigger() below, fired
+  // from the DOM claim blocks on hover.
+  const POD_SPEC = [];
+  const CLAIM_CENTRES = {
+    primary: restPlace(0.02, -0.34, 6.2),
+    monthly: restPlace(-0.56, -0.56, 5.4),
+    split: restPlace(0.56, -0.52, 5.8),
+  };
   const glowTex = H.glowSprite(PAL.ember, 64);
   const coreTex = H.softDisc(64);
   const pods = POD_SPEC.map((spec, pi) => {
@@ -360,6 +366,21 @@ export function createOwned(sceneApi, content) {
      *  Selection deliberately fires NO claim pulse: the colony-wide wave and
      *  the localized secondary wave are ARRIVAL gestures and stay in setHot.
      *  A card that is open for a minute must not sit on a pulsing colony. */
+    /** Claim pulses (handoff OW-3 behaviour, re-hosted on the DOM claim blocks
+     *  after the in-scene pods were removed): 'claimPrimary' = one broad slow
+     *  wave through the full colony; 'claimMonthly' / 'claimSplit' = smaller
+     *  localized responses at their old nexus centres. */
+    trigger(name) {
+      if (name === 'claimPrimary') {
+        portraits.wavePulse(colonyCentre, { speed: 3.4, width: 3.2, maxR: 30, amp: 1.0 });
+        substrate.surge();
+      } else if (name === 'claimMonthly') {
+        portraits.wavePulse(CLAIM_CENTRES.monthly, { speed: 3.2, width: 2.0, maxR: 6.5, amp: 0.85 });
+      } else if (name === 'claimSplit') {
+        portraits.wavePulse(CLAIM_CENTRES.split, { speed: 3.2, width: 2.0, maxR: 6.5, amp: 0.85 });
+      }
+    },
+
     setSelected(id, on) {
       const pd = pods.find(p => p.id === id);
       if (pd) { pd.sel = on ? 1 : 0; return; }
@@ -369,6 +390,33 @@ export function createOwned(sceneApi, content) {
       // retarget must not blank the newly selected portrait.
       if (on) portraits.setSelected(idx);
       else if (portraits.selIdx === idx) portraits.setSelected(-1);
+    },
+
+    /** LABEL POLICY (core/ui.js registration contract).
+     *
+     *  The three ownership pods keep the default chip: their claims are the
+     *  chapter's message and belong to the resting composition — page
+     *  furniture, always readable. Returning nothing for them leaves them
+     *  exactly as they were.
+     *
+     *  The sixteen contributors do not. Sixteen role tags standing over
+     *  sixteen faces reads as a tag cloud and buries the thing the chapter
+     *  is actually about — the faces, the ember rims, the strands between
+     *  them. So each contributor asks for `labelOnHover`: no chip at rest,
+     *  and the chip appears (hover, keyboard focus or the first tap of the
+     *  touch model — ui.js treats all three as the same `hot` state) naming
+     *  the person AND what they contributed, which is the question pointing
+     *  at a face asks. Names are placeholders until the consent pipeline
+     *  lands (CO-1.4 / OW-4.4); the shape is already right.
+     *
+     *  The accessible name carries the same string whether or not the chip
+     *  is drawn, so this costs an AT user nothing (ui.js sets aria-label).
+     */
+    labelPolicy(id) {
+      const c = contributors.find(x => x.id === id);
+      if (!c) return null;                 // pods (and anything else): default
+      const text = [c.name, c.role].filter(Boolean).join(' · ');
+      return { labelOnHover: true, label: text || id };
     },
 
     nodeWorld(id) {

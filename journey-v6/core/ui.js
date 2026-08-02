@@ -68,6 +68,63 @@ function el(tag, cls, text) {
 
 function smoothA(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); }
 
+/* --------------------------------------------------------------------------
+   LABEL POLICY (hotspot registration contract, W4-F)
+
+   By default a hotspot's chip — dot + text — is part of the resting
+   composition: it is visible whenever the hotspot is, and hover/focus only
+   brighten it. That is right for page furniture (Inspire's three callouts,
+   Connect's structures, Owned's three ownership pods carrying the claims).
+
+   It is wrong for a FIELD of people. Sixteen contributor chips standing over
+   sixteen faces is a tag cloud, not a colony; the faces, embers and strands
+   are the composition and the tag is the answer to a question the visitor
+   asked by pointing at someone. So a registration may ask for a chip that
+   only exists while the node is HOT:
+
+       ui.addHotspot({ id, chapter, world, label, labelOnHover: true })
+
+   and — because a chapter does not always own its own registrar (journey.js
+   registers from `nodeIds` and is read-only in this lane) — the identical
+   per-node flag is reachable from the CHAPTER CONTRACT:
+
+       chapterModule.labelPolicy(nodeId)
+         -> { labelOnHover: true, label: 'Name · Role' }   // hover-only chip
+         -> null | undefined                               // default, untouched
+
+   Resolved lazily (window.journey publishes its chapter modules after
+   registration), per node, once. No chapter or node id appears in this file:
+   any chapter can adopt it, and a chapter that never grows the method keeps
+   exactly the behaviour it has today.
+
+   `hot` is already the union of hover, keyboard focus and the touch-armed
+   state (see the touch-model note below), so keying the chip off it gives
+   focus/touch parity for free — the same rule that lights the dot reveals
+   the label.
+   -------------------------------------------------------------------------- */
+const LABEL_POLICY_STYLE_ID = 'j-hot-label-policy';
+
+function ensureLabelPolicyStyles() {
+  if (typeof document === 'undefined' || document.getElementById(LABEL_POLICY_STYLE_ID)) return;
+  const s = document.createElement('style');
+  s.id = LABEL_POLICY_STYLE_ID;
+  // Injected rather than authored in index.html so the behaviour ships with
+  // the contract that defines it. Specificity is one class above the base
+  // `.j-hot:is(:hover, .hot, :focus-visible)` treatment, so the hot state
+  // wins in both directions. The chip's chrome (pill, dot, text) fades as
+  // ONE object on the same 0.3s the rest of the hotspot uses; the button box
+  // itself keeps its size and hit area, so a hover target never moves or
+  // resizes as its label arrives.
+  s.textContent = [
+    '.j-hot.label-hover { background: transparent; }',
+    '.j-hot.label-hover > * { opacity: 0; transition: opacity 0.3s; }',
+    '.j-hot.label-hover:is(:hover, .hot, :focus-visible) { background: rgba(18, 12, 4, 0.6); }',
+    '.j-hot.label-hover:is(:hover, .hot, :focus-visible) > * { opacity: 1; }',
+    '@media (prefers-reduced-motion: reduce) { .j-hot.label-hover > * { transition: none; } }',
+  ].join('\n');
+  document.head.appendChild(s);
+}
+
 function bandOpacity(p, band) {
   if (!band) return 0;
   const { lo, hi } = band;
@@ -133,12 +190,21 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     if (data.sub) b.appendChild(el('p', 'j-sub', data.sub));
     if (data.claims) {
       const ul = el('ul', 'j-claims');
-      for (const cl of data.claims) {
+      // Ride-through #2: the in-scene ownership pods are gone — the DOM claim
+      // blocks are now the single home of the claims, and they host the
+      // handoff's claim pulses: hovering the primary sends one broad slow wave
+      // through the whole colony, the secondaries answer locally.
+      const TRIG = ['claimPrimary', 'claimMonthly', 'claimSplit'];
+      data.claims.forEach((cl, ci) => {
         const li = el('li', `j-claim ${cl.tier}`);
         li.appendChild(el('span', 'j-claim-t', cl.text));
         if (cl.detail) li.appendChild(el('span', 'j-claim-d', cl.detail));
+        li.addEventListener('pointerenter', () => {
+          const mod = window.journey && window.journey.chapters && window.journey.chapters[c.id];
+          if (mod && typeof mod.trigger === 'function') mod.trigger(TRIG[ci] || 'claimPrimary');
+        });
         ul.appendChild(li);
-      }
+      });
       b.appendChild(ul);
     }
     copyHost.appendChild(b);
@@ -189,9 +255,49 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     }
   }, { capture: true });
 
+  /* ---- label policy plumbing (see the note at module scope) ---- */
+  let policyPending = false;
+
+  function applyLabelPolicy(h, pol) {
+    if (!pol) return;
+    if (typeof pol.label === 'string' && pol.label) {
+      h.label = pol.label;
+      h.labelEl.textContent = pol.label;
+    }
+    h.labelOnHover = !!pol.labelOnHover;
+    h.btn.classList.toggle('label-hover', h.labelOnHover);
+    // AT parity (the whole point): the chip may be invisible for most of its
+    // life, the ACCESSIBLE NAME never is. A screen reader hears the same
+    // "Name · Role" a pointer reveals, at rest and while hot alike. Set for
+    // every policied node, hover-only or not, so the name is stated rather
+    // than inherited from text whose visibility this file is now changing.
+    h.btn.setAttribute('aria-label', h.label);
+    if (h.labelOnHover) ensureLabelPolicyStyles();
+  }
+
+  /** Ask each chapter module, once, what it wants for its own nodes.
+   *  window.journey (and with it the chapter modules) is published AFTER
+   *  registration, so this runs from the frame loop until it can succeed. */
+  function resolveLabelPolicies() {
+    const mods = (typeof window !== 'undefined' && window.journey) ? window.journey.chapters : null;
+    if (!mods) return;                       // not published yet — try next frame
+    let left = false;
+    for (const h of hotspots) {
+      if (h.policyDone) continue;
+      const mod = mods[h.chapter];
+      if (!mod) { left = true; continue; }   // chapter not mounted yet
+      h.policyDone = true;
+      if (typeof mod.labelPolicy === 'function') applyLabelPolicy(h, mod.labelPolicy(h.id));
+    }
+    policyPending = left;
+  }
+
   /** Register a named node. `world()` returns a THREE.Vector3 or null.
-   *  Registration order within a chapter is the label stagger order. */
-  function addHotspot({ id, chapter, label, world }) {
+   *  Registration order within a chapter is the label stagger order.
+   *  `labelOnHover` (optional) opts this node into the hover-only chip — see
+   *  the LABEL POLICY note above; a chapter can set the same flag per node
+   *  through its own `labelPolicy(id)`. */
+  function addHotspot({ id, chapter, label, world, labelOnHover }) {
     const stagger = hotspots.filter(h => h.chapter === chapter).length;
     const btn = el('button', 'j-hot');
     btn.type = 'button';
@@ -203,13 +309,21 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     // exists from the first render, not only after the first open.
     btn.setAttribute('aria-expanded', 'false');
     btn.appendChild(el('i', 'j-hot-dot'));
-    btn.appendChild(el('span', 'j-hot-label', label));
+    const labelEl = el('span', 'j-hot-label', label);
+    btn.appendChild(labelEl);
 
     const h = {
       id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false,
       hover: false, focused: false, armed: false, hot: false,
       pointer: null,      // pointerType of the gesture in flight
+      label, labelEl,
+      labelOnHover: false,
+      // a registration that states the flag outright is already resolved; one
+      // that says nothing asks its chapter, once, on the next frame.
+      policyDone: labelOnHover !== undefined,
     };
+    if (labelOnHover !== undefined) applyLabelPolicy(h, { labelOnHover });
+    else policyPending = true;
     // one visual, three reasons — see the touch-model note above
     h.refresh = () => {
       const on = h.hover || h.focused || h.armed;
@@ -541,6 +655,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   let pSpeed = 0;             // smoothed |dp/dt|, p per second
 
   function update(p, chapterId, camera, dt = 0) {
+    // one-shot, on the first frame the chapter modules are reachable
+    if (policyPending) resolveLabelPolicies();
     // nav: hidden at the hero rest, persistent from the first travel on
     const show = p > 0.004;
     if (show !== navShown) { navWrap.classList.toggle('on', show); navShown = show; }
