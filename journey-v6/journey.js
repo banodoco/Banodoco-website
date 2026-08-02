@@ -308,7 +308,12 @@ export function boot(opts = {}) {
     if (p < 0.40) { if (chapters.inspire.armed) focus = chapters.inspire.activeWorld(); }
     else if (p < 0.62) { if (chapters.connect.armed) focus = chapters.connect.nodeWorld('ados'); }
     else if (p < 0.87) { if (chapters.owned.armed) focus = chapters.owned.nodeWorld('pod-shared'); }
-    else if (chapters.final.armed) focus = FINAL_FOCUS;
+    else if (chapters.final.armed) {
+      // live growth-front position when the pulse is travelling (final.js
+      // frontWorld(), declutter round); the static nearest-member hint
+      // remains the fallback while the front rests
+      focus = (chapters.final.frontWorld && chapters.final.frontWorld()) || FINAL_FOCUS;
+    }
     lens.setFocusHint(focus);
 
     const ch = chapterAt(p);

@@ -64,8 +64,10 @@ import {
 } from './final-world.js';
 import { makeGlowTexture } from '../core/anatomy.js';
 
-// The Final rest camera, for build-time LOD only (mirrors director key).
-const REST_CAM = { x: -13.9, z: 2.55 };
+// The Final rest camera, for build-time LOD + occlusion only (mirrors the
+// director's p=0.925 key exactly; declutter round corrected the stale
+// -13.9/2.55 and added y for the new elevation occlusion below).
+const REST_CAM = { x: -14.72, y: 2.73, z: 2.70 };
 
 /* ------------------------------------------------------------------ */
 /* The hero's form recipe, parameterized (D14)                          */
@@ -98,16 +100,20 @@ function memberParams(m) {
     // cap-diameter-to-dome-height ratio, gated by growth stage: young caps
     // stay closed (narrow rim, tall dome), mature caps open toward the
     // hero's flat bell — then a seeded spread on top so age isn't a lookup
-    rimScale: (0.60 + 0.40 * Math.pow(mat, 0.8)) * (0.90 + r() * 0.24),
-    domeH: H_CAP_H * (1 + 0.55 * young) * (0.80 + r() * 0.45),
+    // Declutter round: individuation spreads tightened toward the hero's own
+    // proportions — "same species, different individuals". The extremes of
+    // the old spreads (very flat-wide or very tall-narrow caps, hard wave
+    // harmonics) were reading as different KINDS, not different individuals.
+    rimScale: (0.62 + 0.38 * Math.pow(mat, 0.8)) * (0.92 + r() * 0.18),
+    domeH: H_CAP_H * (1 + 0.45 * young) * (0.88 + r() * 0.28),
     // rim waviness: the hero's three harmonics re-weighted + re-phased
-    dAmp: 0.09 * (0.6 + r() * 1.1),
-    w2: 0.045 * (0.5 + r() * 1.5), p2: r() * TAU,
-    w3: 0.018 * (0.5 + r() * 1.7), p3: r() * TAU,
+    dAmp: 0.09 * (0.7 + r() * 0.8),
+    w2: 0.045 * (0.6 + r() * 1.1), p2: r() * TAU,
+    w3: 0.018 * (0.6 + r() * 1.2), p3: r() * TAU,
     // droop asymmetry (rim height modulation) + margin roll, curled harder
     // on young caps; some members carry the hero's one crisp fold accent
-    yAmp: 0.16 * (0.6 + r() * 1.0), p4: r() * TAU,
-    droopK: (0.7 + r() * 0.8) * (1 + 0.8 * young),
+    yAmp: 0.16 * (0.65 + r() * 0.7), p4: r() * TAU,
+    droopK: (0.75 + r() * 0.6) * (1 + 0.5 * young),
     fold: r() < 0.6 ? { az: r() * TAU, d: 0.08 + r() * 0.12, w: 0.25 + r() * 0.25 } : null,
     // cap-surface lumps (the hero's dents-and-swells pair, re-phased)
     lumpQ1: r() * TAU, lumpQ2: r() * TAU, lumpK: 0.7 + r() * 0.8,
@@ -135,31 +141,37 @@ function memberParams(m) {
 // lands each T0 member at ~25-30% of that, T1 ~15%, T2 ~7% (before the
 // per-member size factor), which reads as the same material at their
 // distances from the rest pose.
+// Declutter round: T0 nudged up and T1/T2 raised substantially — the far
+// (frame-LEFT) arc members were the sketchiest bodies in frame, which read
+// both as "a different kind of mushroom" and as a left-of-frame hole. The
+// ROOT counts move the other way: the root flares were the floor's worst
+// countable-stroke offender, so each member keeps only 1-2 short stubs and
+// its ground-merge is now carried by soft base glow pools (see buildMushroom).
 const TIERS = [
   { // T0 — near (dist < 8): the members Hannah is looking straight at
-    capRings: 14, capSegs: 64, capNodes: 44, capBeadP: 0.10, capSpkPts: 80,
-    gillN: 96, gillSub: 8, gillCorePts: 24,
-    rimSeg: 120, ticks: 160, tickBeadP: 0.30, rimPts: 26,
+    capRings: 15, capSegs: 68, capNodes: 44, capBeadP: 0.10, capSpkPts: 80,
+    gillN: 100, gillSub: 8, gillCorePts: 24,
+    rimSeg: 126, ticks: 165, tickBeadP: 0.30, rimPts: 26,
     stemRings: 19, stemSegs: 15, stemPtP: 0.10,
-    fibN: 22, fibSeg: 14,
-    roots: 5, rootSteps: 6,
-    glints: 14 },
+    fibN: 24, fibSeg: 14,
+    roots: 2, rootSteps: 3,
+    glints: 12 },
   { // T1 — mid (dist < 14)
-    capRings: 10, capSegs: 52, capNodes: 26, capBeadP: 0.07, capSpkPts: 40,
-    gillN: 66, gillSub: 6, gillCorePts: 14,
-    rimSeg: 84, ticks: 80, tickBeadP: 0.25, rimPts: 14,
-    stemRings: 13, stemSegs: 11, stemPtP: 0.07,
-    fibN: 14, fibSeg: 10,
-    roots: 4, rootSteps: 5,
+    capRings: 12, capSegs: 58, capNodes: 30, capBeadP: 0.08, capSpkPts: 48,
+    gillN: 78, gillSub: 7, gillCorePts: 16,
+    rimSeg: 96, ticks: 100, tickBeadP: 0.25, rimPts: 16,
+    stemRings: 14, stemSegs: 12, stemPtP: 0.08,
+    fibN: 17, fibSeg: 11,
+    roots: 2, rootSteps: 3,
     glints: 8 },
-  { // T2 — far
-    capRings: 7, capSegs: 32, capNodes: 12, capBeadP: 0.05, capSpkPts: 16,
-    gillN: 32, gillSub: 5, gillCorePts: 7,
-    rimSeg: 56, ticks: 30, tickBeadP: 0.20, rimPts: 7,
-    stemRings: 9, stemSegs: 9, stemPtP: 0.05,
-    fibN: 10, fibSeg: 8,
-    roots: 3, rootSteps: 4,
-    glints: 4 },
+  { // T2 — far (the visible frame-left arc lives here)
+    capRings: 9, capSegs: 44, capNodes: 18, capBeadP: 0.06, capSpkPts: 24,
+    gillN: 48, gillSub: 5, gillCorePts: 10,
+    rimSeg: 72, ticks: 50, tickBeadP: 0.20, rimPts: 10,
+    stemRings: 11, stemSegs: 10, stemPtP: 0.06,
+    fibN: 13, fibSeg: 9,
+    roots: 1, rootSteps: 2,
+    glints: 6 },
 ];
 
 // Per-system luminance: the hero's material opacities carried per segment
@@ -227,6 +239,15 @@ export function createFinalRing(sceneApi, uniforms) {
     const camA = Math.atan2(REST_CAM.z - m.z, REST_CAM.x - m.x);
     const occlS = (a) => 0.28 + 0.72 * smoothstep(-0.55, 0.45, Math.cos(a - camA));
     const occlM = (a) => 0.60 + 0.40 * smoothstep(-0.60, 0.40, Math.cos(a - camA));
+    // ELEVATION occlusion (declutter round): the hero's §5 shells also hide
+    // the gills and the stem interior when a cap is seen from ABOVE — the
+    // missing piece that made the short near members read as open glowing
+    // bowls (a different creature) instead of solid caps. Baked against the
+    // rest camera like everything else here: underVis is 1 side-on and falls
+    // toward 0.12 as the lens looks down past the rim plane.
+    const rimWorldY = m.gy + P.s * (H_TOTAL - P.domeH);
+    const elev = (REST_CAM.y - rimWorldY) / Math.max(dist, 1e-3);
+    const underVis = 1 - smoothstep(0.02, 0.30, elev) * 0.88;
 
     /* -- the recipe's form functions, member-tuned (hero §4, local units) -- */
     const capY = H_TOTAL - P.domeH;               // apex stays at scale height
@@ -294,10 +315,12 @@ export function createFinalRing(sceneApi, uniforms) {
         const yT = i / R;
         for (let j = 0; j < S; j++) {
           const pl = grid[i][j], a = pl[3];
-          // hero shading: azimuthal sheen + warm throat, warm base
+          // hero shading: azimuthal sheen + warm throat, warm base; the
+          // upper lattice ducks under the cap when seen from above
           const base = 0.22 + 0.15 * Math.abs(Math.sin((j / S) * TAU - 0.3)) + r() * 0.07;
+          const uvK = 1 - (1 - underVis) * smoothstep(0.55, 0.95, yT);
           const b = (base + (yT > 0.85 ? 0.15 : 0) + (yT < 0.12 ? 0.08 : 0))
-                  * heatK(a) * occlS(a);
+                  * heatK(a) * occlS(a) * uvK;
           const p = w(pl[0], pl[1], pl[2]);
           if (r() < 0.5) {
             const q = grid[i][(j + 1) % S];
@@ -326,8 +349,9 @@ export function createFinalRing(sceneApi, uniforms) {
           const p = w(q[0], q[1], q[2]);
           const pD = w(q[0] + 0.009, q[1], q[2]);
           if (pv) {
-            const b0 = (bF + g() * 0.04) * heatK(aPrev) * occlS(aPrev);
-            const b1 = (bF + g() * 0.04) * heatK(a) * occlS(a);
+            const uvF = 1 - (1 - underVis) * smoothstep(0.55, 0.95, y / stemTop);
+            const b0 = (bF + g() * 0.04) * heatK(aPrev) * occlS(aPrev) * uvF;
+            const b1 = (bF + g() * 0.04) * heatK(a) * occlS(a) * uvF;
             segW(pv, p, b0, b1, f * 1.3, M_FIB);
             if (f % 5 === 0)   // heavier structural strand
               segW(pvD, pD, b0 * 0.8, b1 * 0.8, f * 1.3 + 0.5, M_FIB);
@@ -480,7 +504,7 @@ export function createFinalRing(sceneApi, uniforms) {
         const wig = g() * 0.02;
         const boost = r() < 0.08 ? 0.18 : 0;
         const u0 = 0.06 + r() * 0.09;              // feathered inner attach
-        const hk = heatK(a0) * occlS(a0);
+        const hk = heatK(a0) * occlS(a0) * underVis;
         let pv = null, pvD = null, tp = 0;
         for (let k = 0; k <= SUB; k++) {
           const t = k / SUB, u = u0 + t * (1 - u0);
@@ -501,52 +525,43 @@ export function createFinalRing(sceneApi, uniforms) {
           pv = p; pvD = pD; tp = t;
         }
       }
-      // hot core where the gills meet the stem apex
+      // hot core where the gills meet the stem apex (hidden from above,
+      // like the gills themselves)
       for (let k = 0; k < C.gillCorePts; k++) {
         const a = r() * TAU;
         const q = underPt(0.06 + r() * 0.14, a);
-        ptW(w(q[0], q[1] + g() * 0.02, q[2]), (0.48 + r() * 0.15) * occlS(a),
+        ptW(w(q[0], q[1] + g() * 0.02, q[2]),
+          (0.48 + r() * 0.15) * occlS(a) * underVis,
           s * (0.035 + r() * 0.04), k * 1.1, M_CORE);
       }
     }
 
-    /* ==== §8 base — ground-merge root flare walking real groundY(),
-            forking, beaded, clipped at the cutaway lip ==== */
+    /* ==== §8 base — ground merge (declutter round). The old forking,
+            beaded root WALKS were the floor's worst countable strokes
+            ("messy lines... especially along the forest floor"): up to
+            ~40 wandering segments per member, radiating in every
+            direction. Each member now keeps only C.roots SHORT stubs —
+            enough to seat the stem in the soil — and the ground-merge
+            mass moves to soft base glow POOLS (below, in the glow batch,
+            reveal-gated with the member): atmosphere, not strokes. ==== */
     {
-      const rs = Math.pow(s, 0.7);   // reach scales sub-linearly: small
-                                     // bodies still show a visible merge
+      const rs = Math.pow(s, 0.7);
       for (let k = 0; k < C.roots; k++) {
         const a = r() * TAU;
         let dirA = a;
         let px = m.x + Math.cos(a) * 0.32 * s;
         let pz = m.z + Math.sin(a) * 0.32 * s;
-        let py = m.gy + (0.10 + r() * 0.14) * s;
-        let h = 0.56 + r() * 0.15;
+        let py = m.gy + (0.08 + r() * 0.10) * s;
+        let h = 0.42 + r() * 0.12;
         for (let st = 0; st < C.rootSteps; st++) {
-          dirA += g() * 0.35;
-          const len = (0.2 + r() * 0.25) * rs;
+          dirA += g() * 0.25;
+          const len = (0.14 + r() * 0.16) * rs;
           const qx = px + Math.cos(dirA) * len, qz = pz + Math.sin(dirA) * len;
           if (cutVal(qx, qz) < 0.4) break;   // never off the soil lip
           const qy = Math.max(groundY(qx, qz), py - (0.04 + r() * 0.06) * rs);
-          lines.seg(px, py, pz, qx, qy, qz, h * 0.85, h * 0.8,
+          lines.seg(px, py, pz, qx, qy, qz, h * 0.85, h * 0.75,
             { ...meta, tw: P.tw0 + 9 + k, mul: M_ROOT });
-          if (r() < 0.4)
-            glows.pt(qx, qy + 0.01, qz, Math.min(h * 1.4, 0.95),
-              s * (0.016 + r() * r() * 0.05),
-              { ...meta, tw: P.tw0 + 9 + k + st, mul: M_BEAD });
-          px = qx; py = qy; pz = qz; h *= 0.93;
-          if (r() < 0.25) {   // fork into a thinner branch
-            let bA = dirA + g() * 1.1, bx = px, by = py, bz = pz, bh = h * 0.8;
-            for (let t2 = 0; t2 < 3; t2++) {
-              const bl = (0.15 + r() * 0.2) * rs;
-              const cx = bx + Math.cos(bA) * bl, cz = bz + Math.sin(bA) * bl;
-              if (cutVal(cx, cz) < 0.4) break;
-              const cy = Math.max(groundY(cx, cz), by - 0.06 * rs);
-              lines.seg(bx, by, bz, cx, cy, cz, bh, bh * 0.85,
-                { ...meta, tw: P.tw0 + 11 + k, mul: M_ROOT });
-              bx = cx; by = cy; bz = cz; bh *= 0.8; bA += g() * 0.5;
-            }
-          }
+          px = qx; py = qy; pz = qz; h *= 0.9;
         }
       }
     }
@@ -577,19 +592,32 @@ export function createFinalRing(sceneApi, uniforms) {
       }
     }
 
-    /* -- glow points: body halo + under-cap ember core + base ember.
-          The halo is what makes a body read as BIOLUMINESCENT at 15 units
-          (the approved still's mushrooms are soft lamps, not wireframes).
-          Unchanged language; centres follow the tilted cap. -- */
+    /* -- glow points (declutter round): body halo + under-cap ember +
+          base ground pools. The halo still makes a body read as
+          BIOLUMINESCENT at distance, but the old centre-blob stack
+          (heart at 3x capR + a bright cavity readable THROUGH the cap
+          from above) made members look like glass lamps with a bulb
+          inside — a different creature from the hero's solid dark-topped
+          cap. Now: heart smaller and quieter, cavity/core carry the same
+          elevation occlusion as the gills they light, and the base ember
+          grows into two soft GROUND POOLS that replace the root flares'
+          visual mass (merged into the same batch + reveal channel:
+          zero new draws, kindles with its member). -- */
     const heart = w(0.10 * cd, capY + P.domeH * 0.35, 0.10 * sd);
     const cavity = w(0.05 * cd, capY + 0.10, 0.05 * sd);
-    glows.pt(heart[0], heart[1], heart[2], 0.48, m.capR * (3.0 + 0.6 * m.m),
+    glows.pt(heart[0], heart[1], heart[2], 0.36, m.capR * (2.1 + 0.5 * m.m),
       { ...meta, tw: P.tw0 + 1 });
-    glows.pt(cavity[0], cavity[1], cavity[2], 0.68 + 0.12 * m.m,
+    glows.pt(cavity[0], cavity[1], cavity[2],
+      (0.68 + 0.12 * m.m) * (0.25 + 0.75 * underVis),
       m.capR * (1.35 + 0.35 * m.m), { ...meta, tw: P.tw0 });
-    glows.pt(cavity[0], cavity[1] - 0.02, cavity[2], 0.88, m.capR * 0.5,
-      { ...meta, tw: P.tw0 + 2 });
-    glows.pt(m.x, m.gy + 0.05, m.z, 0.5, m.capR * 0.35, { ...meta, tw: P.tw0 + 3 });
+    glows.pt(cavity[0], cavity[1] - 0.02, cavity[2], 0.88 * underVis,
+      m.capR * 0.5, { ...meta, tw: P.tw0 + 2 });
+    // ground-glow pools: the member's light meeting the soil
+    glows.pt(m.x, m.gy + 0.04, m.z, 0.42, m.capR * 1.05,
+      { ...meta, tw: P.tw0 + 3 });
+    glows.pt(m.x + Math.cos(P.leanDir) * 0.18 * s, m.gy + 0.03,
+      m.z + Math.sin(P.leanDir) * 0.18 * s, 0.26, m.capR * 2.1,
+      { ...meta, tw: P.tw0 + 3.7 });
 
     memberStats.push({
       i: m.i, tier: T, h: m.h,
@@ -599,25 +627,19 @@ export function createFinalRing(sceneApi, uniforms) {
 
   for (const m of MEMBERS) buildMushroom(m);
 
-  // Two faint far-side continuation hints beyond the visible arc (the map's
-  // "(the ring continues on the far side)") — deliberately dim and small.
-  for (const [azDeg, r, h] of [[14, 9.6, 1.3], [50, 10.4, 1.5]]) {
+  // Declutter round: the two schematic far-side "continuation hint"
+  // octagons are GONE. With the floor cleaned they read as floating rings
+  // beside the hero — countable artifacts, not mushrooms. The sliced arc +
+  // the members standing on the far lip already say "the ring continues";
+  // two soft ground glows keep a breath of light where the hints stood.
+  for (const [azDeg, r] of [[14, 9.6], [50, 10.4]]) {
     const a = (azDeg * Math.PI) / 180;
     const x = RING_C.x + Math.cos(a) * r, z = RING_C.z + Math.sin(a) * r;
     if (Math.hypot(x, z) < 3.4 || cutVal(x, z) < 0.35) continue;
     const gy = groundY(x, z);
     const arc = arcOf(x, z);
     const meta = { arc, reveal: 0.08 + 0.80 * arc, boost: 0.5, tw: rand() * TAU };
-    lines.seg(x, gy, z, x + gauss() * 0.03, gy + h, z + gauss() * 0.03, 0.26, 0.4, meta);
-    const capR = h * 0.4;
-    let pv = null;
-    for (let k = 0; k <= 8; k++) {
-      const aa = (k / 8) * TAU;
-      const v = [x + Math.cos(aa) * capR, gy + h - 0.04, z + Math.sin(aa) * capR];
-      if (pv) lines.seg(pv[0], pv[1], pv[2], v[0], v[1], v[2], 0.42, 0.42, meta);
-      pv = v;
-    }
-    glows.pt(x, gy + h - 0.02, z, 0.55, capR * 0.6, meta);
+    glows.pt(x, gy + 0.05, z, 0.34, 0.55, meta);
   }
 
   const strandMat = makeStrandMat(uniforms, 1.15);

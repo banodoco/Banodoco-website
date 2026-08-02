@@ -51,11 +51,17 @@ export function arcOf(x, z) {
 // THE RING — that arc is below the soil-line, its colony exposed in section,
 // and the ring visibly continues beyond the lip (m9/m10 stand right on it).
 const MEMBER_SPEC = [
-  { az: 38,  r: 7.2, h: 1.6, m: 0.45 },
+  // m1 raised with the near pair (declutter round): at h 1.6 the rest
+  // camera looked down onto it and it read as a floating rim ellipse
+  { az: 38,  r: 7.2, h: 2.0, m: 0.55 },
   { az: 62,  r: 8.2, h: 2.8, m: 1.00 },   // mature
   { az: 84,  r: 7.8, h: 2.1, m: 0.75 },
-  { az: 104, r: 7.3, h: 1.7, m: 0.55 },
-  { az: 123, r: 7.9, h: 1.5, m: 0.40 },   // near-right, on the lip, kept small
+  // The two near members (declutter round): raised so the rest camera
+  // (y 2.73) sees them side-on like every other body, not down into an
+  // open bowl — Hannah's "the first mushroom looks different" was partly
+  // these two reading as lit cups from above.
+  { az: 104, r: 7.3, h: 2.0, m: 0.55 },
+  { az: 123, r: 7.9, h: 1.85, m: 0.40 },  // near-right, on the lip
   { az: 279, r: 8.3, h: 2.5, m: 0.95 },   // mature — stands on the far lip
   { az: 291, r: 8.6, h: 2.6, m: 0.90 },   // mature
   { az: 303, r: 7.4, h: 2.2, m: 0.80 },
@@ -76,7 +82,7 @@ const MEMBER_SPEC = [
 // the exposed colony filling the lower-left wedge. The hero, the ring
 // centre and the az 279-123 arc all sit on the kept side; the near-left arc
 // is sliced away with the soil.
-const CUT_N = { x: 0.944, z: 0.331 };        // ~unit, toward the kept side
+export const CUT_N = { x: 0.944, z: 0.331 }; // ~unit, toward the kept side
 const CUT_D = -7.82;
 function wob(s) { return 0.9 * Math.sin(s * 0.30 + 1.2) + 0.55 * Math.sin(s * 0.12 + 4.0); }
 
