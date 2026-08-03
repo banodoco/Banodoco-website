@@ -247,19 +247,36 @@ export function boot(opts = {}) {
      ================================================================ */
   let lastChapter = null;
 
+  // Error isolation for the spine's own subsystem calls (M5). The organism's
+  // frame loop already isolates whole animators, but everything below runs
+  // INSIDE the one 'journey' animator — an exception in a single chapter's
+  // drive() would otherwise disable scroll, nav and copy along with it.
+  // guarded() latches per name: first throw logs the error once and disables
+  // that subsystem; every later call is skipped; the rest of the frame runs.
+  const deadSystems = new Set();
+  function guarded(name, fn) {
+    if (deadSystems.has(name)) return;
+    try { fn(); }
+    catch (err) {
+      deadSystems.add(name);
+      console.error(`[journey] '${name}' threw and was disabled — the ride continues without it:`, err);
+    }
+  }
+
   function applyFrame(p, dt) {
     const owned = p > 0.0008;
     director.setOwned(owned);
-    if (owned) director.apply(p, dt);
+    if (owned) guarded('director', () => director.apply(p, dt));
 
-    seams.update(p);
+    guarded('seams', () => seams.update(p));
     // Chapter-owned choreography (M4): any chapter exposing drive(p) runs it
     // here, after the seams have armed/retired it. Inspire's reveal drive
     // lives in chapters/inspire/index.js now — the spine knows no chapter's
-    // internals.
+    // internals. Each chapter is guarded individually: one broken chapter is
+    // dropped, the others keep driving.
     for (const id in chapters) {
       const mod = chapters[id];
-      if (mod.drive) mod.drive(p);
+      if (mod.drive) guarded(`chapter:${id}.drive`, () => mod.drive(p));
     }
 
     // Optics (W5): ONE finishing language across the whole journey. The lens
@@ -268,19 +285,21 @@ export function boot(opts = {}) {
     // active Inspire exit, ADOS knot, primary ownership nexus, and on the
     // Final leg the nearest lit ring member — the "selected fairy-ring
     // highlight", since the travelling front has no exposed world position).
-    lens.update(p);
-    let focus = null;
-    // Focal-source handoff points: shortly (+0.02) after each chapter's range
-    // begins, route-derived (M4; shipped values 0.40 / 0.62 / 0.87).
-    if (p < startOf('connect') + 0.02) { if (chapters.inspire.armed) focus = chapters.inspire.activeWorld(); }
-    else if (p < startOf('owned') + 0.02) { if (chapters.connect.armed) focus = chapters.connect.nodeWorld('ados'); }
-    else if (p < startOf('final') + 0.02) { if (chapters.owned.armed) focus = chapters.owned.nodeWorld('pod-shared'); }
-    else if (chapters.final.armed) {
-      // the Final chapter owns its focal anatomy (M4): the travelling
-      // growth front while it runs, else its own rest-member hint
-      focus = chapters.final.focusWorld();
-    }
-    lens.setFocusHint(focus);
+    guarded('lens', () => {
+      lens.update(p);
+      let focus = null;
+      // Focal-source handoff points: shortly (+0.02) after each chapter's range
+      // begins, route-derived (M4; shipped values 0.40 / 0.62 / 0.87).
+      if (p < startOf('connect') + 0.02) { if (chapters.inspire.armed) focus = chapters.inspire.activeWorld(); }
+      else if (p < startOf('owned') + 0.02) { if (chapters.connect.armed) focus = chapters.connect.nodeWorld('ados'); }
+      else if (p < startOf('final') + 0.02) { if (chapters.owned.armed) focus = chapters.owned.nodeWorld('pod-shared'); }
+      else if (chapters.final.armed) {
+        // the Final chapter owns its focal anatomy (M4): the travelling
+        // growth front while it runs, else its own rest-member hint
+        focus = chapters.final.focusWorld();
+      }
+      lens.setFocusHint(focus);
+    });
 
     const ch = chapterAt(p);
     // Hero furniture releases as the journey leaves the Mission composition.
@@ -296,7 +315,7 @@ export function boot(opts = {}) {
       f.style.pointerEvents = heroA < 0.05 ? 'none' : '';
     }
 
-    ui.update(p, ch.id, sceneApi.camera, dt);
+    guarded('ui', () => ui.update(p, ch.id, sceneApi.camera, dt));
 
     // Scrubbing must not fill the back stack (adr-d6 write policy)
     if (ch.id !== lastChapter) {
@@ -344,10 +363,12 @@ export function boot(opts = {}) {
     // opens, then place the camera in the same tick so a hidden-tab capture
     // (which only runs frames in bursts) sees the finished frame
     applyFrame(p, 0);
-    seams.update(p);
+    guarded('seams', () => seams.update(p));
     // any chapter with a snap() gets its eased states jumped to their
     // targets (deep links / hidden-tab capture; today only Inspire has one)
-    for (const id in chapters) { if (chapters[id].snap) chapters[id].snap(); }
+    for (const id in chapters) {
+      if (chapters[id].snap) guarded(`chapter:${id}.snap`, () => chapters[id].snap());
+    }
     applyFrame(p, 0);
     lastChapter = chapterAt(p).id;
     if (detail) setTimeout(() => openDetail(detail, null), DEEP_LINK_DETAIL_DELAY_MS);
