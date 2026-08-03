@@ -12,6 +12,26 @@
 import { createScene } from './organism/organism.js?v=1785427900';
 import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF, FREE_CAM } from './flags.js';
 
+// --- a11y: skip link (M5) ---
+// The journey owns the ENTIRE hash namespace for chapter routing
+// (journey/state.js parseHash treats any hash it doesn't recognise as
+// unknown and rewrites it to #/mission — journey.js boot, state.js's
+// hashchange listener) — so a plain native `href="#site-nav"` fragment
+// jump would get stomped mid-flight: the browser's own "focus the fragment
+// target" behaviour races the router's rewrite, and the router wins. Move
+// focus programmatically instead; the href stays real markup (works with
+// JS disabled, and is a correct fallback if this listener ever fails to
+// attach) but a normal click never lets the browser touch location.hash.
+const skipLink = document.querySelector('.skip-link');
+if (skipLink) {
+  skipLink.addEventListener('click', (e) => {
+    const target = document.querySelector(skipLink.getAttribute('href'));
+    if (!target) return;
+    e.preventDefault();
+    target.focus();
+  });
+}
+
 // --- responsive camera compositions, keyed by mode ---
 const VIEWS = {
   desktop: { panX: -2.4, camY: 2.25, camZ: 10.4, targetY: 2.6,  fov: 38 },
