@@ -78,9 +78,11 @@ export function createAmbientShedDimmer(sceneApi) {
      *  where f is the classic dim factor (capsules / global / history — which
      *  therefore now applies to the UNCONVERTED share only), cv[i] is the
      *  dot's conversion and pw[i] its plume brightness term (path envelope x
-     *  gain x (1 - detail fade)), both pure functions of the effective
-     *  reveals. tk = { cv, pw, any }. Restore discipline unchanged: base is
-     *  still restored byte-exact when every channel goes quiet. */
+     *  knot-pearl cadence x gain — final unification: no (1 - detail fade)
+     *  factor any more, the dots keep the braid through the rest), both pure
+     *  functions of the effective reveals. tk = { cv, pw, any }. Restore
+     *  discipline unchanged: base is still restored byte-exact when every
+     *  channel goes quiet. */
     update(regions, globalK = 0, grad = null, tk = null) {
       let n = 0;
       for (const rg of regions) {

@@ -18,12 +18,13 @@
 //     boot, later in the hero's insertion-ordered animator Map — verified
 //     empirically, see BUDGETS.md TK entry) and, for each CONVERTED particle,
 //     overwrites its position with lerp(heroPos, braidPos, conv).
-//   - `braidPos` is a CPU port of the spore vertex shader's staged path in
-//     inspire.js §4 (born between gills -> lateral -> rim walk / curl ->
+//   - `braidPos` is a CPU port of the staged path of inspire.js's former §4
+//     spore shader (born between gills -> lateral -> rim walk / curl ->
 //     braided rise), same gates (mig / rg) driven by the same effective
 //     reveals, evaluated in cap-local space and pushed through the live
-//     mushroom matrix — so the dots land EXACTLY where the GPU detail system
-//     will later fade in.
+//     mushroom matrix. (Final unification: that GPU system is deleted — this
+//     port is the braid's only implementation on dots; the core ribbons in
+//     inspire.js share the same winding math in their own shader.)
 //   - `conv` is a hash-staggered pure function of the destination exit's
 //     effective reveal: reverse scroll plays the whole conversion backward,
 //     scrub-safe at any speed, nothing time-integrated.
@@ -39,14 +40,17 @@
 //     arrays) — restore discipline unchanged.
 //
 // Brightness contract (fed to inspire-ambient.js each frame):
-//   F = shedDim * (1 - conv) + PLUME_GAIN * env * conv * (1 - det)
+//   F = shedDim * (1 - conv) + PLUME_GAIN * env * conv
 // where `env` is the ported path alpha envelope (walk pulses, rise draw-on,
-// cycle-wrap fades) and `det` is the exit's GPU detail fade. A converting dot
-// hands its ambient look over to its plume look; as the co-located GPU detail
-// system fades in near the rest (det -> 1) the dot eases its plume brightness
-// back out on the SAME curve, so total density stays constant to the eye.
-// At rest (conv = 1, det = 1) the converted dots are dark and the GPU system
-// carries the approved frame alone. All pure in (eff, det, time).
+// cycle-wrap fades) TIMES the full knot-pearl cadence. A converting dot hands
+// its ambient look over to its plume look and KEEPS it: the (1 - det)
+// hand-back to the GPU detail layer is gone with that layer (final
+// unification, Hannah 2026-08-03 evening — the layer's late fade-in was
+// still a stream swap). At rest (conv = 1) the converted dots ARE the
+// approved frame: the travelling pearls (pow(.5+.5*sin(h*7.3+sp*1.9
+// -t*.55),4), per-exit EXITS[].knot gains, core-cohort weighting — the same
+// cadence the deleted shader ran) live as brightness modulation of these
+// same dots. All pure in (eff, time).
 import {
   makeRng, gaussOf, capUnderPt, rimRad, rimYoff, EXITS, LEAN_DIR, CAP_Y,
 } from '../core/anatomy.js';
@@ -80,12 +84,17 @@ export function createSporeTakeover(sceneApi) {
   // own deterministic stream — must not consume the hero's or inspire.js's
   const rand = makeRng(9127);
   const gauss = () => gaussOf(rand);
+  // SECOND stream for the core cohort (final unification): the cohort was
+  // added after Hannah approved the takeover's per-particle assignments,
+  // which are shaped by the FIRST stream's exact draw order — a separate
+  // stream keeps every existing assignment byte-identical.
+  const randC = makeRng(3187);
 
   let N = 0, pts = null, inited = false, wasActive = false;
   // per-particle STATIC assignment (filled at init)
   let exIdx, stag, oR, oAz, oY, az0, azS2, rimRi, rimYi, rimRs, rimYs,
       offR, offY, spanA, s1a, s2a, s3a, riseA, leanA, curlA, spA,
-      perA, ph0A, h1A, h2A, sdA, dropA, knotA;
+      perA, ph0A, h1A, h2A, sdA, dropA, knotA, coreA;
   // per-particle DYNAMIC state
   let heroP, lastW, writ;
   // the dimmer feed (read by inspire-ambient.js): cv = conv, pw = plume term
@@ -112,7 +121,7 @@ export function createSporeTakeover(sceneApi) {
     curlA = new Float32Array(N); spA = new Float32Array(N);
     perA = new Float32Array(N); ph0A = new Float32Array(N);
     h1A = new Float32Array(N); h2A = new Float32Array(N); sdA = new Float32Array(N);
-    knotA = new Float32Array(N);
+    knotA = new Float32Array(N); coreA = new Float32Array(N);
     heroP = new Float32Array(N * 3); lastW = new Float32Array(N * 3);
     writ = new Uint8Array(N);
     feed.cv = new Float32Array(N);
@@ -165,6 +174,11 @@ export function createSporeTakeover(sceneApi) {
       ph0A[i] = rand();
       h1A[i] = rand(); h2A[i] = rand(); sdA[i] = rand() * 1000;
       knotA[i] = spec.knot;
+      // core cohort (ported from the deleted GPU layer, W4-A gap a): ~32% of
+      // dots ride TIGHT on their winding strand and carry the knot cadence
+      // hottest, so each braid resolves as a defined sinuous core at rest.
+      const coreR = randC();
+      coreA[i] = coreR < 0.32 ? 0.55 + randC() * 0.45 : 0.0;
 
       // stage boundaries (shader math, coh = 0 — the takeover carries no
       // hover coherence; that stays a GPU-detail behavior)
@@ -183,9 +197,10 @@ export function createSporeTakeover(sceneApi) {
 
   /** Per-frame drive, called from inspire.js's 'spike-plumes' animator —
    *  AFTER the hero's spore-drift has integrated the buffer this frame.
-   *  eff: per-exit effective reveals; det: per-exit GPU detail fades;
-   *  mw: groups.mushroom.matrixWorld; leanScale: the live uLean damp. */
-  function update(eff, det, tNow, mw, leanScale) {
+   *  eff: per-exit effective reveals; mw: groups.mushroom.matrixWorld;
+   *  leanScale: the live uLean damp. (The det parameter is gone with the
+   *  GPU detail layer — the dots never hand the braid to anything.) */
+  function update(eff, tNow, mw, leanScale) {
     const drive = eff[0] > 1e-4 || eff[1] > 1e-4 || eff[2] > 1e-4;
     if (!drive && !wasActive) { feed.any = false; return; }
     if (!inited && !init()) { feed.any = false; return; }
@@ -319,24 +334,34 @@ export function createSporeTakeover(sceneApi) {
         } else {
           const h = Math.pow(u3, 0.6 + h1 * 0.5);
           y = rimY + 0.10 + h * riseA[i];
-          // SHEATH = 0.72, core cohort = 0 (the winding-core identity stays
-          // with the GPU detail system); winding terms shared verbatim
+          // SHEATH = 0.72; winding terms shared verbatim with the ribbons.
+          // FINAL UNIFICATION: the winding-core identity now lives HERE —
+          // core-cohort dots damp their scatter (tight, the deleted shader's
+          // mix(1.0, 0.30, core)) so each braid resolves as a defined
+          // sinuous line inside the loose sheath the majority carries.
+          const core = coreA[i];
+          const tight = 1 - 0.70 * core;
           az = a0 + curl
              + 0.13 * Math.sin(h * 5.1 + sp)
              + 0.07 * Math.sin(h * 9.7 + sp * 2.3 + tNow * 0.21)
-             + 0.03 * Math.sin(tNow * 0.13 + sd * 3.7) * u3 * 0.72;
+             + 0.03 * Math.sin(tNow * 0.13 + sd * 3.7) * u3 * tight * 0.72;
           r = rimR + 0.05
             + 0.10 * Math.sin(h * 4.3 + sp * 1.7)
             + 0.05 * Math.sin(tNow * 0.17 + sd * 2.3)
-            + (h1 - 0.5) * 0.09 * (0.4 + h) * 0.72
+            + (h1 - 0.5) * 0.09 * (0.4 + h) * tight * 0.72
             + h * 0.14;
           xLean = leanScale * leanA[i] * h * h * riseA[i] * 0.62;
           zLean = leanScale * leanA[i] * h * h * riseA[i] * 0.105;
-          // knot cadence, damped: the dots carry the pearls' rhythm softly
-          // until the detail system takes them over
+          // knot cadence at FULL strength (the deleted GPU layer's exact
+          // pearls): hot dots travelling UP the core with the flow, per-exit
+          // gain from the anatomy map, hottest on the core cohort. This is
+          // the rest look's richness, carried by the same dots — brightness
+          // modulation only, reversible, pure in (eff, time).
           const kn0 = 0.5 + 0.5 * Math.sin(h * 7.3 + sp * 1.9 - tNow * 0.55);
           const kn = kn0 * kn0 * kn0 * kn0;
-          env = eu * (1 - ss(0.62, 1, u3)) * (1 + 0.45 * knotA[i] * kn);
+          const knotV = knotA[i] * kn * (0.30 + 0.70 * core);
+          env = eu * (1 - ss(0.62, 1, u3))
+              * (1 + 0.28 * core + 1.15 * knotV);
         }
         // migrant rise draw-on gate (rl inert for the resident and at rev 1)
         const rl = rg * 1.12;
@@ -359,10 +384,9 @@ export function createSporeTakeover(sceneApi) {
       wroteAny = true;
 
       // brightness feed: plume term (ambient term is (1 - conv), applied by
-      // the dimmer). (1 - det): as the co-located GPU detail fades in, the
-      // dot eases its plume brightness back out on the same curve.
-      const detE = det[e];
-      pw[i] = PLUME_GAIN * env * conv * (1 - detE);
+      // the dimmer). No det hand-back any more: the converted dots keep the
+      // braid — and its pearls — through the rest, permanently.
+      pw[i] = PLUME_GAIN * env * conv;
     }
 
     if (wroteAny) attr.needsUpdate = true;
