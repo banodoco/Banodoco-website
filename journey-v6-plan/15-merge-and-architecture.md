@@ -73,6 +73,11 @@ glowshroom/
 │   ├── intro.js                ← growth choreography + accelerate() (clock-skew becomes an API)
 │   └── furniture.js            ← callouts/scrim/spill with linked opacity+hit-test state
 ├── journey/
+│   ├── route.js                ← THE route manifest: ordered chapter list with
+│   │                             durations, rest stops, nav anchors. Every
+│   │                             global number (scroll ranges, snap targets,
+│   │                             seam positions, nav jumps) is DERIVED from
+│   │                             this one list — never hand-authored twice.
 │   ├── state.js  scroll.js  director.js  seams.js  lens.js  ui.js
 │   └── chapters/
 │       ├── inspire/            ← chapter = one folder: choreography + anatomy + geometry
@@ -100,11 +105,19 @@ Key inversions vs today:
   requests modes through the driver seat; it brings no particles of its own.
   The 5,100-particle GPU layer either merges into this system's detail mode
   or is deleted. Two-population bugs become unrepresentable.
-- **Chapters own their camera legs.** `director.js` becomes a composer that
-  sequences chapter-owned legs and guarantees the global motion language
-  (handheld, seams, no-roll), instead of a monolith holding every key. The
-  Inspire restage (camera goes *to the stream*) is then a chapter-local
-  truth, physically adjacent to the exits it frames.
+- **Chapters own their camera legs, keyed in leg-local time.** `director.js`
+  becomes a composer that sequences chapter-owned legs and guarantees the
+  global motion language (handheld, seams, no-roll), instead of a monolith
+  holding every key. Camera keys inside a leg are authored in 0..1 *leg
+  time*, never in global p — so re-timing, reordering, or inserting a
+  chapter never invalidates another chapter's keys. The Inspire restage
+  (camera goes *to the stream*) is then a chapter-local truth, physically
+  adjacent to the exits it frames.
+- **The route is data (`route.js`).** One ordered manifest declares the
+  chapters, their relative durations, and their rest stops; scroll ranges,
+  snap-commit targets, seams, and nav anchors are all computed from it.
+  Adding a chapter, a mid-chapter stop, or reordering the ride is an edit
+  to one list plus one folder — nothing downstream is touched by hand.
 - **`furniture.js` fixes the class of the hover-trap bug**: opacity and
   hit-testability become one state, changed together, by construction.
 - **`intro.js` absorbs the fast-forward**: clock-skewing from outside becomes
@@ -161,7 +174,7 @@ the ride. Do not start the merge with a red review outstanding.
 | **M1 promote** | `journey-v6/index.html` becomes `glowshroom/index.html`; `golden-mushroom-page.html` moves to `archive/` with a redirect stub; `/journey/` old build keeps its red banner in `archive/`. All internal paths re-based. | Site serves at `/`; old URLs redirect; full ride green |
 | **M2 organism extraction** | `mushroom-scene.js` → `organism/` modules **without behaviour change** (mechanical split; exports unchanged plus the new seats). | BASELINE regression oracle passes (structural counts + frozen-intro perceptual diff); p=0 checksum |
 | **M3 spore housing** | §3's remainder: absorb the takeover/dimmer logic into `organism/spores.js` (the GPU layer is already deleted, live); bake Hannah's dialed T as the shipped default (keep the dial behind a QA flag). | The Hannah-sentence test, human-verified; checksum; rest frame at her T |
-| **M4 chapter foldering** | Chapters become folders owning camera+anatomy+geometry; director becomes composer; anatomy mirrors deduped (one source of sector truth); **migrate `driveInspire` out of journey.js** (Inspire's reveal drive is currently split across two files — exactly the split rule 3 bans). | Full-journey scrub audit (the 31-point suite) green both directions |
+| **M4 chapter foldering** | Chapters become folders owning camera+anatomy+geometry; director becomes composer; **`route.js` manifest built and all global numbers (scroll ranges, snap targets, seams, nav anchors) derived from it; camera keys re-based to leg-local time**; anatomy mirrors deduped (one source of sector truth); **migrate `driveInspire` out of journey.js** (Inspire's reveal drive is currently split across two files — exactly the split rule 3 bans). | Full-journey scrub audit (the 31-point suite) green both directions; the §5 extension drills pass |
 | **M5 debt burn-down** | The catalogued leftovers: **delete the dead flight machinery in journeyState (all navigation is direct jumps now)**; frame-loop error isolation (one bad chapter can't freeze UI); scroll.js key-routing edge cases; hero `:focus-visible` styles + skip link; `?capture=` freeze param; **a no-self-ignition + locus audit of Connect/Owned/Final's on-screen transitions** (their occluded streaming is exempt; anything visible when it arms is not); a taste-dial registry (one pattern for TRANSFORM-class knobs); D11 wiring once decided; delete `assets/test-portraits/` before any public deploy (consent rule). | Each item checked off in EXECUTION.md |
 | **M6 repo merge** | Push the full local history to `origin/main` (needs the fresh token). Tag `journey-v6-merged`. CI hook: `capture.py` + regression check on every scene-touching commit. | Push succeeds; tags on origin |
 
@@ -172,7 +185,26 @@ behaviour-changing steps must name the change).
 
 ---
 
-## 5. What stays beautiful afterwards (maintenance invariants)
+## 5. Extendibility contract (the structure's exam)
+
+The merge is only done if these four moves are each a small, local edit.
+They double as M4's acceptance drills — do the first two for real on a
+scratch branch before calling M4 green:
+
+| You want to… | What you touch | What you must NOT have to touch |
+|---|---|---|
+| **Change a chapter's camera path** | that chapter's `camera.js` (keys in leg-local 0..1 time) | any other chapter, the director, scroll, nav |
+| **Add a rest stop / point of interest** | the chapter's leg (declare the stop in its contract) + `route.js` if it's a snap target | snap logic, nav — both derive stops from the manifest |
+| **Add motion** (a new chapter-specific move, or a global texture like handheld) | chapter-local: its `camera.js`. Global: one layer in the director's fixed composition order — **base leg → chapter modifiers → global language (handheld, seams, no-roll) → lens** | shader/particle systems, other layers; the composition order itself is frozen and documented |
+| **Add a whole chapter** | one new folder implementing the contract + one line in `route.js` | every existing chapter's ranges and keys (durations are relative; p-ranges renormalize automatically); direct-jump nav picks the new anchor up from the manifest |
+
+Two consequences worth stating: rest stops and anchors are *declared by
+chapters, computed by the spine* — the scroll/snap/nav trio never grows
+per-chapter special cases; and because keys are leg-local, camera taste
+work (the thing most likely to be revisited) is always a one-file edit
+reviewable in isolation.
+
+## 6. What stays beautiful afterwards (maintenance invariants)
 
 - A new chapter = a new folder implementing the contract + its own camera
   leg. It gets organism access only through seats. If it needs a new seat,
