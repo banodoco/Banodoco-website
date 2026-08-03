@@ -211,7 +211,11 @@ function taaFrame() {
   // rebuild the clean projection, then push it off-centre by a subpixel step
   camera.updateProjectionMatrix();
   const db = renderer.getDrawingBufferSize(_taaDb);
-  const j = _jitterSeq[_jitterI++ % _jitterSeq.length];
+  // Frozen (M5 ?capture=): one fixed jitter sample. The accumulation then
+  // blends identical frames and converges to a single exact image — pixel-
+  // stable across any two shutter times — instead of orbiting the 8-sample
+  // Halton cycle forever.
+  const j = _frozenT !== null ? _jitterSeq[0] : _jitterSeq[_jitterI++ % _jitterSeq.length];
   // ±0.4px, not the full ±0.5: accumulated jitter is a blur kernel over the
   // whole image, and the last tenth of a pixel buys almost no extra moiré
   // suppression while visibly softening static detail
@@ -1676,6 +1680,17 @@ setupIntro(ctx);
 
 const clock = new THREE.Clock();
 let _prevT = 0;
+// Deterministic freeze (M5, ?capture=): while frozen, every animator sees
+// t = the latched value and dt = 0 — one shared clock is the ONLY time
+// source the frame loop hands out, so freezing it freezes every time-driven
+// system at once (breeze sway, spore drift, shimmer/uniform-time, tap
+// ringdown, highlight breathing, chapter phases, handheld — all take t/dt
+// from this loop). dt = 0 is already the systems' documented "place, don't
+// advance" convention (deep links use it), so nothing needs a second flag.
+// taaFrame() additionally holds the Halton jitter on one fixed sample so
+// the temporal accumulation converges to a single exact image instead of
+// cycling through the 8-sample orbit.
+let _frozenT = null;
 // Error isolation (M5): one throwing animator must not take the frame down
 // with it — before this, an exception skipped every later animator AND the
 // composer render, freezing the picture while the error spammed once per
@@ -1686,9 +1701,10 @@ let _prevT = 0;
 const _animFailed = new Set();
 function animate() {
   requestAnimationFrame(animate);
-  const t = clock.getElapsedTime();
-  const dt = Math.min(0.05, Math.max(0, t - _prevT));
-  _prevT = t;
+  let t = clock.getElapsedTime();
+  let dt = Math.min(0.05, Math.max(0, t - _prevT));
+  _prevT = t;   // tracked on the raw clock, so resuming never produces a dt spike
+  if (_frozenT !== null) { t = _frozenT; dt = 0; }
 
   for (const [name, fn] of animators) {
     try { fn(t, dt); }
@@ -1819,6 +1835,13 @@ return {
   /** Register a per-frame callback `fn(t, dt)` run every frame before the composer renders;
    *  returns an unregister function. This is the hook a scroll-driven camera dive should use. */
   addAnimator,
+  /** Freeze the frame loop's shared clock (M5, ?capture=): every animator
+   *  sees t = `seconds` and dt = 0 until released, and the TAA jitter holds
+   *  one sample, so the whole scene — sway, drift, shimmer, chapter phases —
+   *  parks at one deterministic phase and renders pixel-stable frames.
+   *  `freezeTime(0)` freezes at the t = 0 phase; `freezeTime(null)` resumes
+   *  live time (no dt spike — the raw clock keeps being tracked). */
+  freezeTime(seconds = 0) { _frozenT = seconds === null ? null : +seconds || 0; },
   /** The spore SYSTEM handle (merge doc §3) — the same dots as
    *  `groups.spores`, plus `shedSpores` and the driver seat: a journey
    *  chapter claims it with `setDriver({ exits })` and passes per-frame

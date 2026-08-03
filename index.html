@@ -709,8 +709,11 @@ const TRACKS = {
 // The entry choreography (see the ENTRY comment in the CSS) hangs off the
 // scene's 3.4s grow-in; honor reduced-motion, and let ?nointro=1 skip the
 // whole sequence for design-review screenshots of the settled page.
+// ?capture=<p> (M5) implies nointro: a frozen still has no choreography.
+const captureQ = new URLSearchParams(location.search).get('capture');
 const skipIntro = matchMedia('(prefers-reduced-motion: reduce)').matches
-  || new URLSearchParams(location.search).get('nointro');
+  || new URLSearchParams(location.search).get('nointro')
+  || captureQ !== null;
 if (skipIntro) {
   const st = document.createElement('style');
   st.textContent = '#stage, .spill, nav, h1 .hl, .sub, .cta, .co, .co * { animation: none !important; }';
@@ -738,6 +741,12 @@ const sceneApi = createScene({
 });
 
 document.body.classList.add('mode-' + currentMode);
+
+// ?capture=<p> (M5): freeze the organism's shared clock at the t = 0 phase
+// before the journey boots — every time-driven system (sway, drift, shimmer,
+// TAA jitter) parks deterministically so capture.py gets pixel-stable
+// frames. The journey half (jumping to exactly p) is in journey.js.
+if (captureQ !== null) sceneApi.freezeTime(0);
 
 // --- mode switching: re-frame the camera and re-anchor the trackers on breakpoint change ---
 function applyMode(mode) {
@@ -1448,7 +1457,8 @@ if (stage && !freeCam) {
 const HERO_INTRO_MS = 7600; // scene 5.4s + the three callouts settling
 
 const skipIntro = matchMedia('(prefers-reduced-motion: reduce)').matches
-  || new URLSearchParams(location.search).get('nointro');
+  || new URLSearchParams(location.search).get('nointro')
+  || new URLSearchParams(location.search).get('capture') !== null; // M5: capture implies nointro
 const frozen = new URLSearchParams(location.search).get('introat') !== null;
 
 function loadJourney() {
