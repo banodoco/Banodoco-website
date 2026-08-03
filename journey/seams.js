@@ -9,6 +9,7 @@
 // T4 are natural occlusions the camera path already produces; nothing is drawn
 // over the frame to hide them (no veils - that is the retired donor model).
 
+import { startOf, endOf } from './route.js';
 import {
   THRESHOLD_HYSTERESIS_WORLD as HYS_W,
   THRESHOLD_HYSTERESIS_DEG as HYS_DEG,
@@ -17,6 +18,19 @@ import {
 import { capUnderPt, rimRad, groundY } from './anatomy.js';
 
 const DEG = Math.PI / 180;
+
+// p-windows that back the camera predicates up, expressed against the route
+// manifest so a re-timed route carries them along (M4). Values are the
+// shipped literals; each offset is authored against the camera path.
+const T1_RELAX_IN = startOf('connect') + 0.06;    // 0.44 — path has dropped under the rim
+const T1_RELAX_OUT = startOf('connect') + 0.08;   // 0.46
+const CONNECT_HOLD_LO = startOf('connect') + 0.02; // 0.40 — chamber armed through the leg
+const CONNECT_HOLD_HI = startOf('owned') + 0.03;   // 0.63
+const OWNED_HOLD_LO = startOf('owned') + 0.03;     // 0.63 — colony held through the Final rise
+const OWNED_HOLD_HI = endOf('final') - 0.03;       // 0.97
+const FINAL_MIN = startOf('final');                // 0.85 — rise/cutaway can only arm past here
+const FINAL_RELEASE = startOf('final') - 0.02;     // 0.83
+const FINAL_HOLD = startOf('final') - 0.005;       // 0.845
 
 export function createSeams({ camera, chapters, missionAz = -0.213 }) {
   const state = {
@@ -54,8 +68,8 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
     // the cap on its way to Connect.
     {
       const d = Math.abs(((az - missionAz + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) / DEG;
-      const inside = d > 48 - HYS_DEG && p < 0.44;
-      const outside = d < 48 - HYS_DEG * 2 || p > 0.46;
+      const inside = d > 48 - HYS_DEG && p < T1_RELAX_IN;
+      const outside = d < 48 - HYS_DEG * 2 || p > T1_RELAX_OUT;
       const on = gate('rear-cap', inside, outside, now);
       chapters.inspire.setArmed(on);
     }
@@ -71,7 +85,7 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
       const inside = y < under - HYS_W && y > floor + HYS_W && rad < rimRad(capAz);
       const outside = y > under + HYS_W || y < floor - HYS_W || rad > rimRad(capAz) + 0.35;
       const on = gate('cap-occludes', inside, outside, now);
-      chapters.connect.setArmed(on || (p > 0.40 && p < 0.63));
+      chapters.connect.setArmed(on || (p > CONNECT_HOLD_LO && p < CONNECT_HOLD_HI));
     }
 
     // T3 - soil crossing
@@ -82,17 +96,17 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
       const on = gate('soil-line', inside, outside, now);
       // keep the volume armed through the Final rise so the colony below the
       // cutaway is still there when the camera looks back down at it
-      chapters.owned.setArmed(on || (p > 0.63 && p < 0.97));
+      chapters.owned.setArmed(on || (p > OWNED_HOLD_LO && p < OWNED_HOLD_HI));
     }
 
     // T4 - rise / cutaway: above the ground line while travelling outward
     {
       const g = groundY(x, z);
       const outward = p >= lastP - 1e-6;
-      const inside = y > g + 0.5 && p > 0.85 && outward;
-      const outside = y < g + 0.5 - HYS_W || p < 0.83;
+      const inside = y > g + 0.5 && p > FINAL_MIN && outward;
+      const outside = y < g + 0.5 - HYS_W || p < FINAL_RELEASE;
       const on = gate('rise-cutaway', inside, outside, now);
-      chapters.final.setArmed(on || p > 0.845);
+      chapters.final.setArmed(on || p > FINAL_HOLD);
     }
 
     lastP = p;

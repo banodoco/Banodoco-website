@@ -31,9 +31,9 @@ import { createFinal } from './chapters/final.js';
 import { MEMBERS } from './chapters/final-world.js';
 import { CONTENT } from '../content/content.js';
 import {
-  CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, HERO_INTRO_MS,
-  DEEP_LINK_DETAIL_DELAY_MS,
-} from './constants.js';
+  CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, startOf, endOf,
+} from './route.js';
+import { HERO_INTRO_MS, DEEP_LINK_DETAIL_DELAY_MS } from './constants.js';
 
 const DEG = Math.PI / 180;
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
@@ -263,14 +263,16 @@ export function boot(opts = {}) {
     // gill band -> ArtCompute -> Arca Gidan -> 2RP, then a hold through the rest
     let a = sm(36, 72), b = sm(76, 112), c = sm(104, 142), band = sm(20, 46);
     // under the cap the plumes are behind us: retire them into the seam
-    const out = 1 - smooth01((p - 0.355) / 0.06);
+    // (route-derived: 0.025 before the Inspire range ends; shipped 0.355)
+    const out = 1 - smooth01((p - (endOf('inspire') - 0.025)) / 0.06);
     chapters.inspire.setReveal(a * out, b * out, c * out, band * out);
     // Swarm isolation fix (2026-08-03): the GPU detail layer may only sharpen
-    // on the final approach to the Inspire rest (0.235->0.253) — through the
-    // whole orbit the hero's own converted dots carry the braids alone. Pure
-    // in p; reverse drops detail first, handing the braids back to the dots.
+    // on the final approach to the Inspire rest (rest-0.025 -> rest-0.007,
+    // shipped 0.235->0.253) — through the whole orbit the hero's own
+    // converted dots carry the braids alone. Pure in p; reverse drops detail
+    // first, handing the braids back to the dots.
     if (chapters.inspire.setRestProx) {
-      chapters.inspire.setRestProx(smooth01((p - 0.235) / 0.018) * out);
+      chapters.inspire.setRestProx(smooth01((p - (restProgress('inspire') - 0.025)) / 0.018) * out);
     }
   }
 
@@ -309,9 +311,11 @@ export function boot(opts = {}) {
     // highlight", since the travelling front has no exposed world position).
     lens.update(p);
     let focus = null;
-    if (p < 0.40) { if (chapters.inspire.armed) focus = chapters.inspire.activeWorld(); }
-    else if (p < 0.62) { if (chapters.connect.armed) focus = chapters.connect.nodeWorld('ados'); }
-    else if (p < 0.87) { if (chapters.owned.armed) focus = chapters.owned.nodeWorld('pod-shared'); }
+    // Focal-source handoff points: shortly (+0.02) after each chapter's range
+    // begins, route-derived (M4; shipped values 0.40 / 0.62 / 0.87).
+    if (p < startOf('connect') + 0.02) { if (chapters.inspire.armed) focus = chapters.inspire.activeWorld(); }
+    else if (p < startOf('owned') + 0.02) { if (chapters.connect.armed) focus = chapters.connect.nodeWorld('ados'); }
+    else if (p < startOf('final') + 0.02) { if (chapters.owned.armed) focus = chapters.owned.nodeWorld('pod-shared'); }
     else if (chapters.final.armed) {
       // live growth-front position when the pulse is travelling (final.js
       // frontWorld(), declutter round); the static nearest-member hint
