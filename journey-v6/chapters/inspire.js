@@ -1064,6 +1064,9 @@ export function createInspire(sceneApi) {
   // exactly as, and exactly where, the structured plume brightens — and
   // unwinds the same way in reverse.
   const ambient = createAmbientShedDimmer(sceneApi);
+  // scratch for the history-dissolve gradient (ride-through #5)
+  const _capC = new THREE.Vector3();
+  const _grad = { sx: 0, sy: 0, sz: 0, d0: 1, d1: 3, k: 0 };
   const shedRegions = (() => {
     const list = [];
     const driftLen = [4.8, 3.2, 2.6];   // ArtCompute rides the hero's full carry
@@ -1325,7 +1328,21 @@ export function createInspire(sceneApi) {
     // reveals: reverse scroll re-inflates the curtain the same way.
     const S3 = (x) => { x = (x - 0.25) / 0.65; x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
     const gk = 0.50 * S3(eff[0]) + 0.28 * S3(eff[1]) + 0.22 * S3(eff[2]);
-    ambient.update(shedRegions, gk);
+    // Ride-through #5 (Hannah, "still two sources"): the shed's FAR-DOWNWIND
+    // history — old spores that drifted away long before the orbit — hangs in
+    // the sky as a detached cloud while the braid grows at the rim. It is not
+    // the source; it dissolves EARLY (with the first arrival), distance-graded
+    // from the cap centre, while the near-rim live stream follows `gk` above
+    // and is absorbed by the braid. One stream, no history-ghost.
+    let hk = (eff[0] - 0.02) / 0.22;
+    hk = hk < 0 ? 0 : hk > 1 ? 1 : hk;
+    hk = hk * hk * (3 - 2 * hk);
+    _capC.set(0, sceneApi.consts.CAP_Y, 0).applyMatrix4(mw);
+    _grad.sx = _capC.x; _grad.sy = _capC.y; _grad.sz = _capC.z;
+    _grad.d0 = sceneApi.consts.CAP_R * 1.2;
+    _grad.d1 = sceneApi.consts.CAP_R * 2.6;
+    _grad.k = hk;
+    ambient.update(shedRegions, gk, _grad);
 
     group.visible = anyVisible;
     if (!anyVisible) return;
