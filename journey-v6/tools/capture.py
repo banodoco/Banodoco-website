@@ -42,7 +42,7 @@
 # ⚠ TODO — PIXEL STABILITY BLOCKS ON THE `?capture=` FREEZE (NOT YET IN THE BUILD)
 # ------------------------------------------------------------------------------
 # As of 2026-08-02 the live build has NO `?capture=<pose>` parameter — grep
-# journey-v6/{index.html,journey.js,constants.js,core,chapters} for "capture="
+# the site's index.html and journey-v6/{journey.js,constants.js,core,chapters} for "capture="
 # and you get only event-listener `{capture: true}` hits. The scene is therefore
 # in permanent motion while the shutter is open:
 #
@@ -93,7 +93,7 @@ JOURNEY_DIR = os.path.dirname(HERE)                      # .../glowshroom/journe
 OUT_DIR = os.path.join(JOURNEY_DIR, "static", "captures")
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-BASE_URL = "http://localhost:8137/journey-v6/index.html"
+BASE_URL = "http://localhost:8137/index.html"  # M1: promoted to the site root
 
 # The golden list — the five resting poses (12-platforms.md tier table, ADR D5).
 # `chapter` is what window.journey.chapter must report before the shutter fires.

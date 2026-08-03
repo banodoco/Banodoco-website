@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banodoco — helping the open-source AI art ecosystem thrive</title>
+<style>
+  :root {
+    --gold:        #d9a441;
+    --gold-bright: #f0c877;
+    --gold-dim:    #8a6a2f;
+    --ink:         #f6f1e6;
+    --muted:       #b3aa9c;
+    --bg:          #000;
+    --nav-h: 5rem;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* --- 3D stage: full bleed, behind everything ---------------------------- */
+  #stage {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+
+  /* The copy sits over the network, so the left third gets a gentle scrim to
+     keep the headline legible without a hard-edged box. */
+  #scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(100deg, #000 0%, rgba(0,0,0,.88) 26%, rgba(0,0,0,.45) 45%, rgba(0,0,0,0) 62%),
+      radial-gradient(120% 80% at 50% 0%, rgba(0,0,0,.75) 0%, rgba(0,0,0,0) 45%);
+  }
+
+  /* --- Chrome ------------------------------------------------------------- */
+  .layer { position: fixed; z-index: 2; }
+
+  nav {
+    top: 0; left: 0; right: 0;
+    height: var(--nav-h);
+    display: flex;
+    align-items: center;
+    gap: clamp(1.5rem, 4vw, 4rem);
+    padding: 0 clamp(1.5rem, 3.2vw, 3.4rem);
+  }
+
+  .wordmark {
+    font-size: clamp(.95rem, 1.15vw, 1.2rem);
+    letter-spacing: .34em;
+    font-weight: 500;
+    color: var(--gold-bright);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: clamp(1.1rem, 2.6vw, 2.9rem);
+    margin-left: clamp(1rem, 4vw, 5rem);
+  }
+  .nav-links a {
+    color: var(--gold);
+    text-decoration: none;
+    font-size: .72rem;
+    letter-spacing: .19em;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: .4rem 0;
+    position: relative;
+    transition: color .25s ease;
+  }
+  .nav-links a::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 100%; bottom: 0;
+    height: 1px;
+    background: var(--gold-bright);
+    transition: right .3s cubic-bezier(.2,.7,.3,1);
+  }
+  .nav-links a:hover { color: var(--gold-bright); }
+  .nav-links a:hover::after { right: 0; }
+
+  .nav-actions { margin-left: auto; display: flex; gap: .7rem; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .5em;
+    border: 1px solid var(--gold-dim);
+    border-radius: 999px;
+    color: var(--gold);
+    text-decoration: none;
+    font-size: .74rem;
+    letter-spacing: .1em;
+    padding: .55em 1.35em;
+    background: rgba(0,0,0,.35);
+    transition: border-color .25s ease, color .25s ease, box-shadow .35s ease, background .25s ease;
+  }
+  .pill:hover {
+    color: var(--gold-bright);
+    border-color: var(--gold);
+    background: rgba(217,164,65,.07);
+    box-shadow: 0 0 26px rgba(217,164,65,.16);
+  }
+
+  /* --- Hero copy ---------------------------------------------------------- */
+  main {
+    top: 0; left: 0; bottom: 0;
+    width: min(52vw, 46rem);
+    padding: var(--nav-h) clamp(1.5rem, 3.2vw, 3.4rem) 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  h1 {
+    font-family: "Didot", "Bodoni 72", "Playfair Display", "Times New Roman", Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(2.4rem, 4.35vw, 4.6rem);
+    line-height: 1.06;
+    letter-spacing: -.005em;
+    margin: 0 0 clamp(1.4rem, 2.4vw, 2.2rem);
+    max-width: 13ch;
+  }
+
+  .lede {
+    margin: 0 0 clamp(1.8rem, 3vw, 2.6rem);
+    max-width: 30ch;
+    color: var(--muted);
+    font-size: clamp(.95rem, 1.05vw, 1.12rem);
+    line-height: 1.62;
+  }
+
+  .cta {
+    align-self: flex-start;
+    padding: 1.05em 2.1em;
+    font-size: .78rem;
+    letter-spacing: .17em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .cta .arrow { transition: transform .3s cubic-bezier(.2,.7,.3,1); }
+  .cta:hover .arrow { transform: translateX(.3em); }
+
+  /* --- Entrance ----------------------------------------------------------- */
+  .rise { opacity: 0; transform: translateY(14px); }
+  body.ready .rise {
+    opacity: 1;
+    transform: none;
+    transition: opacity .9s ease, transform .9s cubic-bezier(.2,.7,.3,1);
+  }
+  body.ready h1.rise      { transition-delay: .15s; }
+  body.ready .lede.rise   { transition-delay: .30s; }
+  body.ready .cta.rise    { transition-delay: .45s; }
+  body.ready nav.rise     { transition-delay: .05s; }
+
+  .hint {
+    position: fixed;
+    right: clamp(1.5rem, 3.2vw, 3.4rem);
+    bottom: 1.6rem;
+    z-index: 2;
+    font-size: .64rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    opacity: .8;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise, body.ready .rise { transition: none; opacity: 1; transform: none; }
+  }
+
+  /* --- Narrow screens: copy over art, art centred ------------------------- */
+  @media (max-aspect-ratio: 21/20), (max-width: 860px) {
+    main {
+      width: 100%;
+      justify-content: flex-start;
+      padding-top: calc(var(--nav-h) + 3vh);
+    }
+    h1 { max-width: 16ch; }
+    #scrim {
+      background:
+        linear-gradient(180deg, #000 0%, rgba(0,0,0,.86) 34%, rgba(0,0,0,.25) 56%, rgba(0,0,0,0) 72%),
+        radial-gradient(120% 60% at 50% 100%, rgba(0,0,0,.5), rgba(0,0,0,0) 60%);
+    }
+    .nav-links { display: none; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="stage"></div>
+  <div id="scrim"></div>
+
+  <nav class="layer rise">
+    <a class="wordmark" href="#">BANODOCO</a>
+    <div class="nav-links">
+      <a href="#">Mission</a>
+      <a href="#">Equip</a>
+      <a href="#">Connect</a>
+      <a href="#">Inspire</a>
+      <a href="#">Owned</a>
+    </div>
+    <div class="nav-actions">
+      <a class="pill" href="#">2RP</a>
+      <a class="pill" href="#">Discord</a>
+    </div>
+  </nav>
+
+  <main class="layer">
+    <h1 class="rise">We&rsquo;re working to help the open-source AI art ecosystem thrive.</h1>
+    <p class="lede rise">Banodoco builds tools, spaces, and shared infrastructure for the open-source AI art ecosystem.</p>
+    <a class="pill cta rise" href="#">Explore the ecosystem <span class="arrow">&rarr;</span></a>
+  </main>
+
+  <div class="hint">Move to stir the mycelium &middot; click to send a pulse</div>
+
+  <script type="module" src="./src/hero.js"></script>
+</body>
+</html>

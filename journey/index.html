@@ -2,147 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Banodoco — one organism, one continuous journey</title>
-<meta name="description" content="Banodoco builds tools, spaces, and shared infrastructure for the open-source AI art ecosystem.">
-<link rel="stylesheet" href="journey.css?v=7">
-<script type="importmap">
-{
-  "imports": {
-    "three": "../vendor/three/three.module.js",
-    "three/addons/": "../vendor/three/addons/"
-  }
-}
-</script>
+<title>Moved</title>
+<meta http-equiv="refresh" content="0; url=/">
+<link rel="canonical" href="/">
 </head>
 <body>
-<!-- ORCHESTRATOR 2026-08-03: this is the FROZEN OLD reference build (pre-v6).
-     Reviews happen on /journey-v6/ — banner added so nobody reviews this one
-     by accident (URL autocomplete trap). -->
-<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#7a1f1f;color:#f2ebdd;font:600 14px/1.4 -apple-system,sans-serif;padding:10px 16px;text-align:center;">
-  OLD REFERENCE BUILD — the current site is at
-  <a href="/journey-v6/" style="color:#f0c877;">localhost:8137/journey-v6/</a>
-</div>
-
-<!-- Loading: the seed-spark belongs to the fiction -->
-<div id="loader" aria-hidden="true">
-  <div id="loader-organism">
-    <span class="seed"></span>
-    <span class="roots"></span>
-    <span class="sprout"></span>
-    <span class="cap"></span>
-  </div>
-</div>
-
-<!-- 3D stage (presentational; the DOM below is the real document) -->
-<div id="stage" aria-hidden="true"></div>
-
-<!-- scroll length driver -->
-<div id="scroll-spacer" aria-hidden="true"></div>
-
-<!-- persistent navigation -->
-<header id="nav">
-  <a id="wordmark" href="#/mission" data-chapter="mission">Banodoco</a>
-  <nav aria-label="Journey chapters">
-    <a href="#/mission" data-chapter="mission">Mission</a>
-    <a href="#/equip" data-chapter="equip">Equip</a>
-    <a href="#/connect" data-chapter="connect">Connect</a>
-    <a href="#/inspire" data-chapter="inspire">Inspire</a>
-    <a href="#/owned" data-chapter="owned">Owned</a>
-  </nav>
-  <div id="destinations" role="group" aria-label="Ecosystem destinations">
-    <a href="https://banodoco.ai/2rp" target="_blank" rel="noopener">2RP</a>
-    <a href="https://discord.gg/eKQm3uHKx2" target="_blank" rel="noopener">Discord</a>
-  </div>
-</header>
-
-<!-- chapter copy: real DOM, narrative order -->
-<main id="copy-root">
-
-  <section class="copy copy--left is-visible" data-chapter="mission" aria-labelledby="h-mission">
-    <p class="kicker">Mission</p>
-    <h1 id="h-mission">We’re working to help the open-source AI art ecosystem thrive.</h1>
-    <p>Banodoco builds tools, spaces, and shared infrastructure for the open-source AI art ecosystem.</p>
-    <p class="cta-row"><a id="cta-explore" class="cta" href="#/equip">Explore the ecosystem</a></p>
-  </section>
-
-  <section class="copy copy--right" data-chapter="equip" aria-labelledby="h-equip">
-    <p class="kicker">Equip</p>
-    <h2 id="h-equip">Equip the ecosystem.</h2>
-    <p>Banodoco builds tools that help the community push open models further — expanding what is possible and what remains open.</p>
-    <div class="node-holder" data-node-details="pype arnold astrid"></div>
-  </section>
-
-  <section class="copy copy--left" data-chapter="connect" aria-labelledby="h-connect">
-    <p class="kicker">Connect</p>
-    <h2 id="h-connect">Connect the ecosystem.</h2>
-    <p>Banodoco brings together artists, builders, and shared knowledge to grow a living network for open-source AI art.</p>
-    <div class="node-holder" data-node-details="community ados hivemind"></div>
-  </section>
-
-  <section class="copy copy--bottom" data-chapter="inspire" aria-labelledby="h-inspire">
-    <p class="kicker">Inspire</p>
-    <h2 id="h-inspire">Inspire and empower.</h2>
-    <p>Banodoco helps people push open models beyond their expected limits through challenges, compute, and rigorous research, turning breakthrough ideas into a thriving commons.</p>
-    <div class="node-holder" data-node-details="arca artcompute tworp"></div>
-  </section>
-
-  <section class="copy copy--top" data-chapter="owned" aria-labelledby="h-owned">
-    <p class="kicker">Owned</p>
-    <h2 id="h-owned">Owned by the people who build it.</h2>
-    <p><strong>100% shared.</strong> Granted at 1% per month — split between artists, core engineers, and knowledge creators.</p>
-    <div class="node-holder" data-node-details="pod-shared pod-monthly pod-split"></div>
-    <div class="node-holder" data-node-details="contributors"></div>
-  </section>
-
-  <section class="copy copy--upperleft" data-chapter="final" aria-labelledby="h-final">
-    <p class="kicker">Epilogue</p>
-    <h2 id="h-final">We’re working to accelerate the second renaissance.</h2>
-    <p>Banodoco exists to help new tools, communities, and ideas spread — so one thriving ecosystem becomes many.</p>
-    <p class="cta-row"><a id="cta-final" class="cta" href="https://discord.gg/eKQm3uHKx2" target="_blank" rel="noopener">Join the ecosystem</a></p>
-  </section>
-
-</main>
-
-<!-- projected node buttons live here -->
-<div id="node-layer" aria-hidden="false"></div>
-
-<!-- detail drawer (desktop) / bottom sheet (touch) -->
-<div id="scrim" hidden></div>
-<aside id="drawer" role="dialog" aria-modal="false" hidden>
-  <div class="sheet-grip" aria-hidden="true"></div>
-  <button id="drawer-close" type="button" aria-label="Close details">×</button>
-  <div id="drawer-content"></div>
-</aside>
-
-<div id="scroll-hint" aria-hidden="true"><span></span>Scroll to travel</div>
-<div id="debug-raw" hidden>RAW — press g for finished</div>
-
-<footer id="footer">
-  <div class="footer-grid">
-    <div>
-      <h3>Banodoco</h3>
-      <p>One organism. One continuous circuit. Tools, spaces, and shared infrastructure for the open-source AI art ecosystem.</p>
-    </div>
-    <div>
-      <h3>Journey</h3>
-      <a href="#/mission">Mission</a><a href="#/equip">Equip</a><a href="#/connect">Connect</a><a href="#/inspire">Inspire</a><a href="#/owned">Owned</a>
-    </div>
-    <div>
-      <h3>Ecosystem</h3>
-      <a href="https://discord.gg/eKQm3uHKx2" target="_blank" rel="noopener">Discord</a>
-      <a href="https://github.com/banodoco" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://banodoco.ai/2rp" target="_blank" rel="noopener">2RP — Publication</a>
-      <a href="https://banodoco.ai" target="_blank" rel="noopener">About Banodoco</a>
-    </div>
-    <div>
-      <h3>Contact</h3>
-      <a href="mailto:hello@banodoco.ai">hello@banodoco.ai</a>
-      <p class="legal">© 2026 Banodoco. Ownership: 100% shared, granted at 1% per month, split between artists, core engineers, and knowledge creators.</p>
-    </div>
-  </div>
-</footer>
-
-<script type="module" src="core/main.js?v=8"></script>
+<!-- M1 promote (journey-v6-plan/15-merge-and-architecture.md): this old,
+     pre-v6 journey build moved to archive/journey/ (its index.html still
+     carries the red OLD REFERENCE BUILD banner, untouched). The site now
+     serves the current journey at /. -->
+<p>This page has moved. If you are not redirected automatically, <a href="/">go to the site</a>.</p>
 </body>
 </html>
