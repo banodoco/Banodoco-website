@@ -63,7 +63,15 @@ export function createAmbientShedDimmer(sceneApi) {
      *  now weights globalK across all three exits' reveals (0.50/0.28/0.22)
      *  instead of keying it to the furthest-along exit, so the source curtain
      *  visibly survives until the last rim current has taken over. */
-    update(regions, globalK = 0) {
+    /** grad (optional): distance-graded early dim for the DOWNWIND HISTORY —
+     *  ride-through #5 (Hannah, "why are there still two sources"): the shed's
+     *  far-drifted old spores hang in the sky as a detached cloud while the
+     *  braid grows at the rim, reading as a second population. They are the
+     *  stream's HISTORY, not its source: they dissolve early (keyed to the
+     *  first arrival), while the near-rim live stream follows the slower
+     *  weighted hand-over. { sx,sy,sz: cap-centre world; d0,d1: distance
+     *  band; k: 0..1 strength of the far dim }. */
+    update(regions, globalK = 0, grad = null) {
       let n = 0;
       for (const rg of regions) {
         if (rg.k <= 0.004) continue;
@@ -74,7 +82,8 @@ export function createAmbientShedDimmer(sceneApi) {
         r0[n] = rg.r0; r1[n] = rg.r1; kk[n] = rg.k;
         n++;
       }
-      if (n === 0 && globalK <= 0.004) { if (active) restore(); return; }
+      const gradOn = grad && grad.k > 0.004;
+      if (n === 0 && globalK <= 0.004 && !gradOn) { if (active) restore(); return; }
       if (!pts && !collect()) return;
       active = true;
       const attr = pts.geometry.attributes.color;
@@ -99,7 +108,16 @@ export function createAmbientShedDimmer(sceneApi) {
         if (dim > MAX_TOTAL_DIM) dim = MAX_TOTAL_DIM;
         // the global hand-over may exceed the capsule cap: at full reveal the
         // old curtain is gone (0.97) — the structured plumes ARE the spores now
-        const g = globalK * 0.97;
+        let g = globalK * 0.97;
+        if (gradOn) {
+          const hx = x - grad.sx, hy = y - grad.sy, hz = z - grad.sz;
+          const hd = Math.sqrt(hx * hx + hy * hy + hz * hz);
+          let hf = (hd - grad.d0) / (grad.d1 - grad.d0);
+          hf = hf < 0 ? 0 : hf > 1 ? 1 : hf;
+          hf = hf * hf * (3 - 2 * hf);
+          const gh = grad.k * hf * 0.97;   // history dissolves; source survives
+          if (gh > g) g = gh;
+        }
         const f = 1 - (g > dim ? g : dim);
         col[i] = base[i] * f;
         col[i + 1] = base[i + 1] * f;
