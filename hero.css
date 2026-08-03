@@ -1,0 +1,575 @@
+/* hero.css — the hero/Mission page composition: everything that styles the
+   markup index.html itself carries (stage, spill/scrim/vignette/grain, nav,
+   hero copy, CTA, the three world-tracked callouts) plus the ENTRY
+   choreography and its fast-forward compression classes. Moved verbatim from
+   index.html's inline <style> at the M5 shell step — the journey layer's
+   styles live in journey/site.css (linked AFTER this file; keep that order,
+   the cascade was authored against it). */
+  :root {
+    --gold:        #d9a441;
+    --gold-bright: #f0c877;
+    --parchment:   #f2ebdd;
+    --ink:         #f2ebdd;
+    --muted:       #c9bfa8;
+    --bg:          #141008;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ============================================================
+     ENTRY — one choreography, keyed to the growth timelapse.
+     The scene grows over 4.2s in the order a real agaric does
+     (see the entry choreography in organism/intro.js):
+       0.0-1.7s   ground network converges on the base
+       1.6-3.8s   stalk climbs in two SLOW waves: verticals, then lattice
+       3.1-4.4s   under-cap double loop: gill sweep, then rim ring
+       4.1-4.8s   cap top surface inks in       -> light spill on the page
+       3.9-5.4s   the spore plume gathers
+       5.55s+     the callouts boot up in numbered order: 01, 02, 03
+     Every delay below is tuned against those beats — change one, move all.
+     QA: ?introat=0.55 freezes scene AND page at that progress. ?nointro=1
+     skips the whole entry.
+     ============================================================ */
+
+  /* --- 3D stage: full bleed, behind everything --- */
+  #stage {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    animation: stage-bloom 0.9s ease both;
+  }
+  @keyframes stage-bloom {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  #stage canvas { display: block; cursor: grab; }
+  #stage canvas:active { cursor: grabbing; }
+
+  /* --- light spill: the mushroom's glow touches the page ---
+     one warm bloom spilling from the specimen toward the text column,
+     one low ground-glow warming the CTA area from below.
+     Arrives as the cap ignites — the page warms because the mushroom lit. */
+  .spill {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 58% 62% at 66% 46%, rgba(255, 190, 95, 0.075), transparent 70%),
+      radial-gradient(ellipse 44% 26% at 20% 90%, rgba(255, 175, 80, 0.055), transparent 72%);
+    animation: spill-in 1.6s ease 3.8s both;
+  }
+  @keyframes spill-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* --- feathered scrim: buys text contrast, survives camera motion --- */
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(100deg,
+      rgba(14, 10, 4, 0.55) 0%,
+      rgba(14, 10, 4, 0.32) 30%,
+      rgba(14, 10, 4, 0) 58%);
+  }
+
+  /* --- vignette: corners settle, lighter zone biased toward the mushroom --- */
+  .vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse 120% 105% at 62% 44%,
+      transparent 42%,
+      rgba(8, 5, 1, 0.28) 76%,
+      rgba(6, 4, 1, 0.52) 100%);
+  }
+
+  /* --- grain: 2–4% paper texture over everything, kills the flat digital black --- */
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.045;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 280px 280px;
+  }
+
+  /* --- UI overlay: clicks fall through to the canvas except on controls --- */
+  .ui {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .ui a, .ui button { pointer-events: auto; }
+
+  /* --- nav --- */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2.1rem 3.4rem;
+    animation: fade-on 0.9s ease 0.15s both;
+  }
+  .logo {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.42em;
+    color: var(--parchment);
+    text-decoration: none;
+    transition: color 0.25s;
+  }
+  .logo:hover { color: var(--gold-bright); }
+  .nav-cta { display: flex; gap: 0.7rem; }
+  .pill {
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 0.5rem 1.35rem;
+    border: 1px solid rgba(242, 237, 225, 0.58);
+    border-radius: 999px;
+    transition: border-color 0.25s, background 0.25s;
+  }
+  .pill:hover { border-color: var(--ink); background: rgba(242, 237, 225, 0.06); }
+
+  /* --- hero --- */
+  .hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 44rem;
+    padding: 0 0 12vh 5.2vw;
+  }
+  h1 {
+    margin: 0 0 1.35rem;
+    font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    font-size: clamp(2.5rem, 4.4vw, 4.25rem);
+    line-height: 1.1;
+    letter-spacing: 0.005em;
+    color: var(--parchment);
+    text-shadow: 0 2px 30px rgba(10, 6, 2, 0.9), 0 0 8px rgba(10, 6, 2, 0.6);
+  }
+  h1 .hl {
+    display: block;
+    white-space: nowrap; /* each line is set deliberately — never rewrap */
+    /* hero copy arrives with the page itself — the same quiet fade as the
+       nav, no choreography; the specimen draws behind it */
+    animation: fade-on 0.9s ease 0.15s both;
+  }
+  h1 em {
+    font-style: italic;
+    letter-spacing: 0.01em;
+  }
+  .sub {
+    margin: 0 0 2.2rem;
+    max-width: 24rem;
+    font-size: 1.06rem;
+    line-height: 1.6;
+    font-weight: 400;
+    color: var(--muted);
+    text-shadow: 0 1px 18px rgba(10, 6, 2, 0.9), 0 0 6px rgba(10, 6, 2, 0.7);
+    animation: fade-on 0.9s ease 0.15s both;
+  }
+  /* serif body A/B — toggle with the B key or ?body=serif */
+  body.body-serif .sub {
+    font-family: "EB Garamond", Garamond, "Iowan Old Style", Georgia, serif;
+    font-size: 1.13rem;
+    line-height: 1.65;
+  }
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: fit-content;
+    color: var(--gold-bright);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    padding: 1.02rem 1.9rem;
+    border: 1px solid rgba(217, 164, 65, 0.8);
+    outline: 1px solid rgba(217, 164, 65, 0.35);
+    outline-offset: 3px;
+    border-radius: 999px;
+    background: rgba(14, 9, 2, 0.4);
+    transition: border-color 0.15s, outline-color 0.15s, background 0.15s, box-shadow 0.15s;
+    animation: fade-on 0.9s ease 0.15s both;
+  }
+  .cta .arr {
+    display: inline-block;
+    transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .cta-short { display: none; }
+  .cta:hover {
+    border-color: var(--gold-bright);
+    outline-color: rgba(240, 200, 119, 0.55);
+    background: rgba(28, 18, 4, 0.6);
+    box-shadow: 0 0 28px rgba(230, 175, 70, 0.28), inset 0 0 14px rgba(230, 175, 70, 0.08);
+  }
+  .cta:hover .arr { transform: translateX(3px); }
+
+  /* --- the ink family: page elements are DRAWN like the specimen ---
+     Nothing slides. Text wipes in left-to-right (the direction it is read,
+     the direction the leaders draw), arriving as a soft ink-bleed that
+     settles sharp. Wipes end on clip-path:none so held end states never
+     clip text-shadows or hover glows. */
+  @keyframes fade-on {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes ink {
+    0%   { opacity: 0; clip-path: inset(-30% 105% -40% -5%); filter: blur(5px); }
+    25%  { opacity: 1; }
+    88%  { clip-path: inset(-30% -12% -40% -5%); filter: blur(0px); }
+    100% { opacity: 1; clip-path: none; filter: none; }
+  }
+  @keyframes cta-ink {
+    0%   { opacity: 0; clip-path: inset(-8px 105% -8px -8px round 999px); }
+    30%  { opacity: 1; }
+    62%  { clip-path: inset(-8px -8px -8px -8px round 999px); box-shadow: none; }
+    78%  { box-shadow: 0 0 30px rgba(230, 175, 70, 0.4), inset 0 0 14px rgba(230, 175, 70, 0.14); }
+    100% { clip-path: none; box-shadow: none; }
+  }
+
+  /* --- HUD callouts: world-tracked annotations on the specimen ---
+     idle: barely-there hairlines aligned to the anatomy.
+     hover: the leader lights up node→label, the ring pulses, the
+     label catches the light. Minority Report, but candlelit. */
+  .callouts {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .callout {
+    position: absolute;
+    top: 0;
+    left: 0;
+    will-change: transform;
+  }
+  /* --- callout entry: once the specimen finishes drawing (4.2s), the three
+     annotations boot up in NUMBERED order — 01, 02, 03 — each a little
+     instrument powering on: node pops, ring pings once, leader draws itself
+     node->label, label fades in as its number flickers alive. Every part
+     hangs off one per-callout delay (--d), and every keyframe ENDS at the
+     resting style, so reduced-motion / ?nointro just shows the final state. */
+  #co-inspire { --d: 5.55s; }
+  #co-equip   { --d: 6.20s; }
+  #co-connect { --d: 6.85s; }
+  .co { animation: co-on 0.2s ease both; animation-delay: var(--d); }
+  @keyframes co-on { from { opacity: 0; } to { opacity: 1; } }
+  .co .core {
+    animation: core-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: var(--d);
+  }
+  @keyframes core-pop {
+    0%   { transform: scale(0); }
+    55%  { transform: scale(1.7); box-shadow: 0 0 12px rgba(255, 200, 100, 0.9); }
+    100% { transform: scale(1); }
+  }
+  .co .ring {
+    animation: ring-ping 0.7s ease-out both;
+    animation-delay: calc(var(--d) + 0.08s);
+  }
+  @keyframes ring-ping {
+    0%   { opacity: 0.9; transform: scale(0.35); }
+    100% { opacity: 0;   transform: scale(1.5); }
+  }
+  .co .lead {
+    stroke-dasharray: 100;
+    animation: lead-draw 0.4s ease both;
+    animation-delay: calc(var(--d) + 0.1s);
+  }
+  @keyframes lead-draw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+  .co .tag {
+    animation: tag-in 0.4s ease both;
+    animation-delay: calc(var(--d) + 0.2s);
+  }
+  @keyframes tag-in {
+    from { opacity: 0; letter-spacing: 0.4em; }
+    to   { opacity: 1; letter-spacing: 0.3em; }
+  }
+  .co .tag .no {
+    animation: no-flicker 0.5s steps(1, end) both;
+    animation-delay: calc(var(--d) + 0.2s);
+  }
+  @keyframes no-flicker {
+    0%   { opacity: 0; }
+    30%  { opacity: 1; }
+    45%  { opacity: 0.35; }
+    60%  { opacity: 1; }
+    100% { opacity: 1; }
+  }
+
+  .co .core {
+    position: absolute;
+    width: 5px; height: 5px;
+    margin: -2.5px 0 0 -2.5px;
+    border-radius: 50%;
+    background: rgba(240, 200, 119, 0.55);
+    transition: background 0.3s, box-shadow 0.45s;
+  }
+  .co .ring {
+    position: absolute;
+    width: 22px; height: 22px;
+    margin: -11px 0 0 -11px;
+    border: 1px solid rgba(240, 200, 119, 0.9);
+    border-radius: 50%;
+    opacity: 0;
+    transform: scale(0.4);
+    transition: opacity 0.35s, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .co svg.alt, .co svg.tall { display: none; }
+  .co svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1px; height: 1px;
+    overflow: visible;
+  }
+  .co .lead {
+    fill: none;
+    stroke: rgba(217, 164, 65, 0.30);
+    stroke-width: 1;
+    transition: stroke 0.45s;
+  }
+  .co .lit {
+    fill: none;
+    stroke: rgba(255, 216, 140, 0.95);
+    stroke-width: 1;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    filter: drop-shadow(0 0 4px rgba(240, 190, 90, 0.8));
+    transition: stroke-dashoffset 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .co .tag {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    pointer-events: auto;
+    padding: 0.5rem 0.7rem;
+    text-decoration: none;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    white-space: nowrap;
+    color: rgba(201, 191, 168, 0.48);
+    background: rgba(12, 8, 3, 0.22);
+    border-radius: 2px;
+    text-shadow: 0 1px 10px rgba(10, 6, 2, 0.9);
+    transition: color 0.4s, letter-spacing 0.4s, text-shadow 0.4s;
+  }
+  .co .tag .row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55em;
+    margin-right: -0.3em; /* absorb the trailing letter-space so text centres true */
+  }
+  .co .tag .no {
+    font-size: 0.5rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    color: rgba(217, 164, 65, 0.4);
+    transition: color 0.4s;
+  }
+  /* corner brackets: hidden at rest. On hover they LOCK IN clockwise —
+     tl, tr, br, bl — each snapping to its corner with a small overshoot,
+     like a reticle acquiring the label. Deactivation snaps back as one. */
+  .co .ck {
+    position: absolute;
+    width: 7px; height: 7px;
+    opacity: 0;
+    pointer-events: none;
+    --ckc: rgba(240, 200, 119, 0.85);
+    transition: opacity 0.14s, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .co .ck.tl { top: 0;    left: 0;  border-top: 1px solid var(--ckc);    border-left: 1px solid var(--ckc);  transform: translate(7px, 7px)   scale(0.4); }
+  .co .ck.tr { top: 0;    right: 0; border-top: 1px solid var(--ckc);    border-right: 1px solid var(--ckc); transform: translate(-7px, 7px)  scale(0.4); }
+  .co .ck.br { bottom: 0; right: 0; border-bottom: 1px solid var(--ckc); border-right: 1px solid var(--ckc); transform: translate(-7px, -7px) scale(0.4); }
+  .co .ck.bl { bottom: 0; left: 0;  border-bottom: 1px solid var(--ckc); border-left: 1px solid var(--ckc);  transform: translate(7px, -7px)  scale(0.4); }
+  .co:is(:hover, .force) .core {
+    background: rgba(255, 226, 160, 1);
+    box-shadow: 0 0 10px rgba(255, 200, 100, 0.9), 0 0 26px rgba(240, 170, 60, 0.5);
+  }
+  .co:is(:hover, .force) .ring {
+    opacity: 1;
+    transform: scale(1);
+    animation: co-pulse 1.7s cubic-bezier(0.25, 0.6, 0.4, 1) 0.35s infinite;
+  }
+  @keyframes co-pulse {
+    0%   { opacity: 0.85; transform: scale(0.55); }
+    70%  { opacity: 0;    transform: scale(1.45); }
+    100% { opacity: 0;    transform: scale(1.45); }
+  }
+  .co:is(:hover, .force) .lit { stroke-dashoffset: 0; }
+  .co:is(:hover, .force) .lead { stroke: rgba(217, 164, 65, 0.5); }
+  .co:is(:hover, .force) .tag {
+    color: var(--gold-bright);
+    background: rgba(18, 12, 4, 0.55);
+    letter-spacing: 0.34em;
+    text-shadow: 0 0 12px rgba(240, 190, 90, 0.55);
+  }
+  .co:is(:hover, .force) .tag .no { color: rgba(240, 200, 119, 0.85); }
+  .co:is(:hover, .force) .ck {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+    transition: opacity 0.12s, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .co:is(:hover, .force) .ck.tr { transition-delay: 0.05s; }
+  .co:is(:hover, .force) .ck.br { transition-delay: 0.10s; }
+  .co:is(:hover, .force) .ck.bl { transition-delay: 0.15s; }
+
+  .co .tag .soon {
+    display: block;
+    max-height: 0;
+    margin-top: 0;
+    overflow: hidden;
+    opacity: 0;
+    font-family: "Didot", "Playfair Display", Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: rgba(228, 182, 102, 0.9);
+    transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+                margin-top 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s;
+  }
+  .co:is(:hover, .force) .tag .soon {
+    max-height: 1.4em;
+    margin-top: 0.28em;
+    opacity: 1;
+    transition-delay: 0.1s;
+  }
+
+  /* desktop has the headroom for a longer leader, which lifts the INSPIRE
+     label clear of the cap while its node stays down in the spore stream */
+  @media (min-width: 901px) and (min-height: 561px) {
+    #co-inspire svg.std { display: none; }
+    #co-inspire svg.tall { display: block; }
+    #co-inspire .tag { top: -62px; } /* flush with the top of the leader */
+  }
+
+  /* per-callout leader geometry: where the tag sits relative to the node */
+  #co-connect .tag { left: 92px; top: -52px; transform: translateY(-50%); }
+  #co-inspire .tag { left: 0; top: -58px; transform: translate(-50%, -100%); }
+  #co-equip   .tag { left: -82px; top: -28px; transform: translate(-100%, 0); }
+
+  /* --- touch affordance: no hover on touch devices, so idle state gets a
+     visibility boost and taps toggle the lit state via JS (.force class) --- */
+  @media (hover: none) {
+    .co .tag { color: rgba(201, 191, 168, 0.72); }
+    .co .lead { stroke: rgba(217, 164, 65, 0.45); }
+    .co .core { background: rgba(240, 200, 119, 0.8); }
+  }
+
+  /* ============================================================
+     RESPONSIVE — stacked portrait layout (tablet + mobile)
+     ============================================================ */
+  @media (max-width: 900px) and (orientation: portrait) {
+    .hero {
+      justify-content: flex-start;
+      padding: 6vh 7vw 0;
+      max-width: none;
+    }
+    h1 { font-size: clamp(2.1rem, 6.2vw, 3.4rem); }
+    .sub { font-size: 1rem; }
+    .scrim {
+      background: linear-gradient(180deg,
+        rgba(14, 10, 4, 0.6) 0%,
+        rgba(14, 10, 4, 0.25) 38%,
+        transparent 62%);
+    }
+    .vignette {
+      background: radial-gradient(ellipse 130% 100% at 50% 62%,
+        transparent 40%,
+        rgba(8, 5, 1, 0.3) 78%,
+        rgba(6, 4, 1, 0.55) 100%);
+    }
+    .spill {
+      background: radial-gradient(ellipse 90% 50% at 50% 62%, rgba(255, 190, 95, 0.07), transparent 70%);
+    }
+    nav { padding: 1.6rem 7vw; }
+  }
+
+  /* ============================================================
+     RESPONSIVE — mobile portrait
+     ============================================================ */
+  @media (max-width: 620px) and (orientation: portrait) {
+    nav { padding: 1.3rem 6vw; }
+    .logo { font-size: 0.92rem; letter-spacing: 0.3em; }
+    .pill { padding: 0.42rem 1rem; font-size: 0.72rem; }
+    .hero { padding: 5vh 7vw 0; }
+    h1 { font-size: clamp(1.7rem, 7.2vw, 2.5rem); margin-bottom: 1.1rem; }
+    .sub { font-size: 0.98rem; margin-bottom: 1.8rem; }
+    .cta { font-size: 0.74rem; padding: 0.9rem 1.5rem; }
+    .cta-full { display: none; }
+    .cta-short { display: inline; }
+
+    .co { transform: scale(0.88); transform-origin: 0 0; }
+    .co .tag { font-size: 0.6rem; }
+
+    /* CONNECT keeps its label on the right here, on a compact leader so it
+       still clears the screen edge on narrow phones */
+    #co-connect svg.std { display: none; }
+    #co-connect svg.alt { display: block; }
+    #co-connect .tag { left: 68px; top: -40px; transform: translateY(-50%); }
+
+    /* small or short phones: tighten the text stack */
+    @media (max-height: 700px) {
+      nav { padding: 1rem 6vw; }
+      .hero { padding-top: 3vh; }
+      h1 { font-size: clamp(1.45rem, 6.6vw, 2rem); margin-bottom: 0.85rem; }
+      .sub { font-size: 0.88rem; margin-bottom: 1.3rem; line-height: 1.5; }
+      .cta { font-size: 0.7rem; padding: 0.75rem 1.25rem; }
+    }
+
+    /* INSPIRE uses the same vertical drop-leader at every size (see base rule) */
+  }
+
+  /* ============================================================
+     RESPONSIVE — short-height (phone landscape / short windows):
+     keep the desktop side-by-side composition, just compress it
+     ============================================================ */
+  @media (max-height: 560px) {
+    nav { padding: 1.1rem 3.4rem; }
+    h1 { font-size: clamp(1.7rem, 3.4vw, 2.6rem); margin-bottom: 0.9rem; }
+    .sub { margin-bottom: 1.3rem; font-size: 0.95rem; }
+    .cta { padding: 0.8rem 1.4rem; }
+    .hero { padding-bottom: 5vh; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #stage, .spill, nav, h1 .hl, .sub, .cta, .co, .co *, .co:is(:hover, .force) .ring { animation: none; }
+    .co { opacity: 1; }
+    .cta .arr { transition: none; }
+    .co .lit, .co .ring, .co .tag, .co .ck { transition: none; }
+  }
+
+/* --- intro fast-forward (scroll during the entry choreography): the CSS
+   half of the intro compresses to match the clock-skewed scene grow-in
+   (organism/intro.js accelerate() — main.js adds body.intro-fast when the
+   skew engages). The 01/02/03 callouts keep a quick version of their 1-2-3
+   sequence. --- */
+body.intro-fast .spill { animation-delay: 0.1s !important; animation-duration: 0.35s !important; }
+body.intro-fast .co { animation-duration: 0.16s !important; }
+body.intro-fast #co-inspire { --d: 0.30s; }
+body.intro-fast #co-equip   { --d: 0.44s; }
+body.intro-fast #co-connect { --d: 0.58s; }

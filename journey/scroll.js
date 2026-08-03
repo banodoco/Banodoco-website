@@ -4,11 +4,11 @@
 //   * the hero page is `overflow: hidden` and must stay that way - adding a
 //     spacer changes document height, can mint a scrollbar, and therefore
 //     changes the canvas aspect the hero regression screenshot was taken at;
-//   * the input shield in index.html already intercepts wheel on #stage at
-//     capture phase (passive, so it cannot preventDefault). A window-level
-//     capture listener runs BEFORE the shield, so scroll capture and the
-//     shield coexist without either being weakened: the shield still keeps
-//     wheel/drag away from OrbitControls, we still see every delta;
+//   * OrbitControls never competes for these gestures: in journey mode the
+//     organism's input policy (organism.js setInputPolicy, M5 — replacing
+//     the old DOM event shield) turns off user orbit/zoom/pan at the
+//     source, so this window-level capture listener sees every delta and
+//     nothing downstream claims it;
 //   * soft snap magnetism has to be able to move the position at any moment.
 //     Fighting native momentum scrolling with window.scrollTo() is the
 //     classic way to get a stuttering, non-reversible scrub.
