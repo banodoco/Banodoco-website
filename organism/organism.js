@@ -553,6 +553,12 @@ const ctx = {
   makePoints, makeLines, makeDenseLines,
   drawU, drawWin,
   capUnderPt, groundY, breeze,
+  // cap form language the spore system's braid modes are authored against:
+  // the organism's OWN functions — the journey's anatomy.js mirror exists
+  // for chapter geometry, but spore behaviour reads the one truth here.
+  // (rimRad/rimYoff are hoisted function declarations; the TDZ-bound consts
+  // LEAN_DIR/CAP_Y are assigned onto ctx right after §4 declares them.)
+  rimRad, rimYoff, LEAN_DIR: 0, CAP_Y: 0,
   scene, camera, renderer, controls,
   tiltX, leanZ, trackers, intro,
   swayCos: 1, swaySin: 0,
@@ -615,6 +621,10 @@ function capUnderPt(u, a) { // gill skirt underside — shallow, so the cap keep
   const x = Math.cos(a) * r - 0.075 * (1 - u * u);
   return new THREE.Vector3(x, y, Math.sin(a) * r);
 }
+
+// form-language consts for the extracted spore system (see the ctx note)
+ctx.LEAN_DIR = LEAN_DIR;
+ctx.CAP_Y = CAP_Y;
 
 const mushroom = new THREE.Group();
 scene.add(mushroom);
@@ -1464,7 +1474,7 @@ ctx.groundGroup = groundGroup;
 
 // =====================================================================
 // 10. SPORE CLOUD — moved to organism/spores.js at M2 (creation, drift
-// integrator, shedSpores, and the M3 driver seat). Called here at the exact
+// integrator, shedSpores, and the driver seat). Called here at the exact
 // position the inline block held, so the deterministic RNG stream — and with
 // it every spore position/color/size — is byte-identical.
 // =====================================================================
@@ -1792,10 +1802,12 @@ return {
   /** Register a per-frame callback `fn(t, dt)` run every frame before the composer renders;
    *  returns an unregister function. This is the hook a scroll-driven camera dive should use. */
   addAnimator,
-  /** M2 seat stub (merge doc §3): the spore SYSTEM handle — the same dots as
-   *  `groups.spores`, plus `shedSpores` and the inert `driver`/`setDriver`
-   *  seat the journey claims at M3. Unclaimed (driver: null) it does nothing;
-   *  the ambient drift is byte-identical to the pre-split hero. */
+  /** The spore SYSTEM handle (merge doc §3) — the same dots as
+   *  `groups.spores`, plus `shedSpores` and the driver seat: a journey
+   *  chapter claims it with `setDriver({ exits })` and passes per-frame
+   *  intent through the returned handle's `drive()`. Unclaimed
+   *  (driver: null) the seat does nothing by construction and the ambient
+   *  drift is byte-identical to the frozen hero. */
   spores: sporeSys,
 };
 

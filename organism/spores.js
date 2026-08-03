@@ -14,8 +14,18 @@ import * as THREE from 'three';
 // a consequence of the wind, not a shape we drew.
 export function createSpores(ctx) {
   const { rand, gauss, pushC, makePoints, capUnderPt, tiltX, leanZ, scene } = ctx;
+  // cap form language for the driven modes (split/braid paths are authored
+  // against the organism's own rim, not a mirror)
+  const { rimRad, rimYoff } = ctx;
 
-  const BREEZE_DIR = new THREE.Vector3(1.0, 0.62, 0.17).normalize();
+  // The one wind. The driven braid modes below rise along THIS vector's own
+  // ratios (D17 locus law: organization happens IN PLACE, inside the drift's
+  // diagonal envelope) — so the axis is derived here, from the raw components,
+  // and can never diverge from the drift that carries the ambient shed.
+  const BZX = 1.0, BZY = 0.62, BZZ = 0.17;
+  const BREEZE_DIR = new THREE.Vector3(BZX, BZY, BZZ).normalize();
+  const DRIFT_RX = BZX / BZY;   // braid-rise x advance per unit of rise (y)
+  const DRIFT_RZ = BZZ / BZY;   // braid-rise z advance per unit of rise (y)
   let sporePts, sporeVel = [], sporeOrigin, sporeAge;
   {
     const pp = [], pc = [], ps = [], org = [];
@@ -76,9 +86,11 @@ export function createSpores(ctx) {
   // Called by organism.js at the exact position the inline block held in
   // mushroom-scene.js. ORDERING CONSTRAINT (load-bearing): 'spore-drift'
   // must be registered AFTER 'breeze' (it reads ctx.swayCos/swaySin written
-  // by 'breeze' earlier in the same frame) and BEFORE the journey layer's
-  // animators — the journey's takeover overwrites spore positions after this
-  // integrator runs, and that render-order relationship is proven load-bearing.
+  // by 'breeze' earlier in the same frame) and BEFORE any journey-layer
+  // animator — the seated driver's steering (seat.drive, called from the
+  // chapter's own animator later in the same frame) applies on top of the
+  // freshly-integrated positions, before render. Drift writes, steering
+  // blends, render sees the sum: that order is proven load-bearing.
   function registerDrift() {
     const { breeze, camera, addAnimator } = ctx;
 
@@ -102,6 +114,13 @@ export function createSpores(ctx) {
     const _mwDir = new THREE.Vector3(), _mwRight = new THREE.Vector3(), _mwUp = new THREE.Vector3();
 
     addAnimator('spore-drift', (t, dt) => {
+      // Seat watchdog (restore discipline is structural, not promised): if a
+      // claimed driver stopped calling drive() — chapter torn down, journey
+      // frame error — the system itself hands every steered dot back and
+      // restores the colors byte-exact within one frame. The primary release
+      // path is still drive() easing its channels to zero.
+      frameNo++;
+      if (lastDriveFrame >= 0 && lastDriveFrame < frameNo - 1) releaseSeat();
       // sway state for this frame, written by 'breeze' earlier in the frame
       const swayCos = ctx.swayCos, swaySin = ctx.swaySin;
       const gust = 0.72 + 0.28 * breeze(t);   // gusts surge the drift as the body leans
@@ -186,16 +205,558 @@ export function createSpores(ctx) {
     });
   }
 
+  // =====================================================================
+  // 10d. DRIVER SEAT — the journey's steering and dimming, as modes of
+  // THESE dots (merge doc §3): one spore population, whatever it is doing.
+  // =====================================================================
+  // The seam rule: SPORE BEHAVIOUR lives here; the chapter keeps its anatomy
+  // and intent. A driver claims the seat once with the static exit geometry
+  // (setDriver({ exits }) -> seat handle) and then, every frame, passes
+  // intent through seat.drive({...}) — reveal scalars, dim regions, the
+  // TRANSFORM taste value. The chapter never touches position/color buffers;
+  // conservation and reversibility are properties of THIS system:
+  //
+  //   drift (ambient)  — the integrator above; byte-identical when the seat
+  //                      is quiet. It ALWAYS runs: steering is a per-frame
+  //                      blend applied on top of the fresh drift positions.
+  //   split / braid    — steer(): each dot slides from its own drift onto a
+  //                      staged path (born between gills -> lateral -> rim
+  //                      walk / curl -> braided rise along the drift's own
+  //                      lean, DRIFT_RX/RZ — D17). Pure in (eff, time, T);
+  //                      scrub-safe, nothing time-integrated.
+  //   detail           — the same dots decorated: knot-pearl cadence and
+  //                      core-cohort brightness ride the dimmer's per-dot
+  //                      feed (cv/pw). No second population exists.
+  //
+  // RESTORE DISCIPLINE (structural): positions restore by ceasing — a
+  // per-dot shadow of the TRUE hero position (heroP) absorbs what the drift
+  // integrator adds each frame, and a dot whose conversion reaches zero is
+  // handed back at that shadow. Colors restore byte-exact from the one base
+  // copy captured before the first dim. Both run from ONE release path
+  // (releaseSeat), reached three ways: every channel easing to ~0 inside
+  // drive(), the driver releasing the seat (setDriver(null)), or the
+  // watchdog in 'spore-drift' noticing a claimed driver went silent.
+
+  // -- deterministic streams for the per-dot path assignments. Same LCG
+  // family as the hero's own rand (organism.js §1); own seeds, so they can
+  // never consume the hero's stream. Seeds preserve the Hannah-approved
+  // assignments byte-for-byte (first stream 9127; the core cohort was added
+  // after those assignments were approved, hence its own stream 3187).
+  function makeRng(seed) {
+    let s = seed >>> 0;
+    return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  }
+  const gaussOf = (r) => (r() + r() + r() + r() - 2) / 2;
+
+  const TAU = Math.PI * 2, PI = Math.PI;
+  const ss = (a, b, x) => {
+    x = (x - a) / (b - a);
+    x = x < 0 ? 0 : x > 1 ? 1 : x;
+    return x * x * (3 - 2 * x);
+  };
+  // rim underside height at azimuth a — mirrors capUnderPt(1, a).y without
+  // allocating a Vector3 in the hot loop
+  const { LEAN_DIR, CAP_Y } = ctx;
+  function rimYof(a) {
+    return CAP_Y + 0.03 + rimYoff(a) - (0.11 + 0.05 * Math.cos(a - LEAN_DIR)) - 0.11;
+  }
+
+  const N_GILL_CHANNELS = 230;            // the organism's gill count (§5)
+  const CHANNEL = TAU / N_GILL_CHANNELS;
+  // Exit weighting, delta order: the one visible stream feeds the source
+  // exit first and hardest (0.50), then the second (0.28), then the third.
+  const W_EXIT0 = 0.50, W_EXIT1 = 0.78; // cumulative: <0.50 -> 0, <0.78 -> 1, else 2
+  // How much brighter a fully-performing dot reads than its base shed color.
+  const PLUME_GAIN = 1.35;
+  // Taste-dial pearl floor: the knot-pearl richness never scales below this
+  // share, so a faint sparkle keeps the labels' anchors alive even near T = 0.
+  const PEARL_FLOOR = 0.18;
+  // A hero recycle (or any teleport) moves a dot far more than one drift frame.
+  const TELEPORT2 = 0.09; // (0.3 units)^2
+  // Overlapping dim regions never fully erase a spore.
+  const MAX_TOTAL_DIM = 0.85;
+
+  // seat bookkeeping (watchdog contract with 'spore-drift' above)
+  let frameNo = 0, lastDriveFrame = -1;
+  let exits = null;                       // claim: static exit geometry/anchors
+
+  // ---- steer state (split/braid modes) ----
+  const randT = makeRng(9127);
+  const gaussT = () => gaussOf(randT);
+  const randC = makeRng(3187);            // core cohort — own stream (see above)
+  let N = 0, inited = false, wasActive = false;
+  // per-dot STATIC assignment (filled at initSteer)
+  let exIdx, stag, oR, oAz, oY, az0, azS2, rimRi, rimYi, rimRs, rimYs,
+      offR, offY, spanA, s1a, s2a, s3a, riseA, leanA, curlA, spA,
+      perA, ph0A, h1A, h2A, sdA, dropA, knotA, coreA;
+  // per-dot DYNAMIC state
+  let heroP, lastW, writ;
+  // the dimmer feed: cv = conversion, pw = plume brightness term
+  const feed = { cv: null, pw: null, any: false };
+
+  // ---- dim state (color mode) ----
+  let colorBase = null, dimActive = false;
+  // scratch: per-region scalars, rebuilt each drive (regions.length ~9; flat
+  // parallel arrays so the 4,200-dot loop touches no objects)
+  const ax = [], ay = [], az = [], bx = [], by = [], bz = [], ab2 = [],
+        r0 = [], r1 = [], kk = [];
+
+  // ?tkdbg=1 — perf + animator-order probe hooks (QA)
+  const dbg = typeof location !== 'undefined' && location.search.includes('tkdbg');
+  let perfAcc = 0, perfN = 0;
+
+  function initSteer() {
+    if (!exits || exits.length < 3) return false;
+    N = sporePts.geometry.attributes.position.count;
+    exIdx = new Uint8Array(N); dropA = new Uint8Array(N);
+    stag = new Float32Array(N);
+    oR = new Float32Array(N); oAz = new Float32Array(N); oY = new Float32Array(N);
+    az0 = new Float32Array(N); azS2 = new Float32Array(N);
+    rimRi = new Float32Array(N); rimYi = new Float32Array(N);
+    rimRs = new Float32Array(N); rimYs = new Float32Array(N);
+    offR = new Float32Array(N); offY = new Float32Array(N);
+    spanA = new Float32Array(N);
+    s1a = new Float32Array(N); s2a = new Float32Array(N); s3a = new Float32Array(N);
+    riseA = new Float32Array(N); leanA = new Float32Array(N);
+    curlA = new Float32Array(N); spA = new Float32Array(N);
+    perA = new Float32Array(N); ph0A = new Float32Array(N);
+    h1A = new Float32Array(N); h2A = new Float32Array(N); sdA = new Float32Array(N);
+    knotA = new Float32Array(N); coreA = new Float32Array(N);
+    heroP = new Float32Array(N * 3); lastW = new Float32Array(N * 3);
+    writ = new Uint8Array(N);
+    feed.cv = new Float32Array(N);
+    feed.pw = new Float32Array(N);
+
+    for (let i = 0; i < N; i++) {
+      // destination exit, weighted toward the source stream's own plume
+      const wr = randT();
+      const e = wr < W_EXIT0 ? 0 : wr < W_EXIT1 ? 1 : 2;
+      const spec = exits[e];
+      exIdx[i] = e;
+      stag[i] = randT();
+
+      // destination lane, snapped between real gill channels
+      const lane = Math.round((gaussT() * 0.34) / CHANNEL) * CHANNEL
+                 + (randT() - 0.5) * CHANNEL * 0.4;
+      const a = spec.az + lane;
+      az0[i] = a;
+
+      // birth point — ALWAYS in the source wedge (the delta rule): exit 0's
+      // own lane IS the source sector; migrants get their own source lane
+      const srcLane = Math.round((gaussT() * 0.34) / CHANNEL) * CHANNEL
+                    + (randT() - 0.5) * CHANNEL * 0.4;
+      const aBirth = e === 0 ? a : exits[0].az + srcLane;
+      const u0 = 0.48 + Math.pow(randT(), 0.8) * 0.34;
+      const o = capUnderPt(u0, aBirth);
+      o.y -= 0.015 + randT() * 0.05;
+      oR[i] = Math.hypot(o.x, o.z);
+      oAz[i] = Math.atan2(o.z, o.x);
+      oY[i] = o.y;
+
+      rimRi[i] = rimRad(a) + 0.03 + randT() * 0.10;
+      rimYi[i] = rimYof(a) - 0.02 + randT() * 0.06;
+      rimRs[i] = rimRad(aBirth) + 0.05;
+      rimYs[i] = rimYof(aBirth);
+      offR[i] = rimRi[i] - rimRad(a);
+      offY[i] = rimYi[i] - rimYof(a);
+
+      const isDrop = randT() < 0.15;
+      dropA[i] = isDrop ? 1 : 0;
+      riseA[i] = isDrop ? (0.5 + randT() * 1.1)
+                        : spec.riseMin + randT() * (spec.riseMax - spec.riseMin);
+      // D17: every plume rises along the breeze axis at ~full strength (the
+      // organized column must OVERLAY the drift envelope) — per-dot jitter
+      // only. The rand draw is KEPT and remapped (0.8..1.25 -> 0.94..1.06)
+      // so every later assignment in this stream stays byte-identical.
+      leanA[i] = 0.94 + ((0.8 + randT() * 0.45) - 0.8) * 0.2667;
+      const strand = i % 9 < 3 ? 0 : (i % 9 < 6 ? 1 : 2);
+      curlA[i] = (strand - 1) * 0.30 + gaussT() * 0.09;
+      spA[i] = strand * 2.094 + gaussT() * 0.3;
+
+      perA[i] = 7.0 + randT() * 8.5;
+      ph0A[i] = randT();
+      h1A[i] = randT(); h2A[i] = randT(); sdA[i] = randT() * 1000;
+      knotA[i] = spec.knot;
+      // core cohort: ~32% of dots ride TIGHT on their winding strand and
+      // carry the knot cadence hottest, so each braid resolves as a defined
+      // sinuous core at rest.
+      const coreR = randC();
+      coreA[i] = coreR < 0.32 ? 0.55 + randC() * 0.45 : 0.0;
+
+      // stage boundaries (coh = 0 — steering carries no hover coherence)
+      const migF = e > 0;
+      azS2[i] = aBirth + (h1A[i] - 0.5) * 0.05;
+      spanA[i] = (a + curlA[i]) - azS2[i];
+      s1a[i] = migF ? 0.10 : 0.16;
+      s2a[i] = migF ? 0.24 : 0.40;
+      s3a[i] = migF
+        ? s2a[i] + 0.12 + 0.10 * Math.abs(spanA[i]) + (h2A[i] - 0.5) * 0.06
+        : Math.min(0.86, s2a[i] + 0.10 + h2A[i] * 0.22);
+    }
+    inited = true;
+    return true;
+  }
+
+  /** split/braid steering — runs inside drive(), i.e. from the driver's own
+   *  animator, AFTER 'spore-drift' has integrated the buffer this frame.
+   *  eff: per-exit effective reveals; mw: the mushroom's matrixWorld;
+   *  leanScale: the live lean damp; T: the TRANSFORM taste value (0..1 —
+   *  1 = full reorganization; conv, not conv*T, stays the choreography /
+   *  cease gate, so restore discipline is identical at every T). */
+  function steer(eff, tNow, mw, leanScale, transform) {
+    const drive = eff[0] > 1e-4 || eff[1] > 1e-4 || eff[2] > 1e-4;
+    if (!drive && !wasActive) { feed.any = false; return; }
+    if (!inited && !initSteer()) { feed.any = false; return; }
+    const T = transform < 0 ? 0 : transform > 1 ? 1 : transform;
+    const pearlScale = PEARL_FLOOR + (1 - PEARL_FLOOR) * T;
+
+    const t0 = dbg ? performance.now() : 0;
+    const attr = sporePts.geometry.attributes.position;
+    const arr = attr.array;
+
+    if (!wasActive) {
+      // first live frame: the buffer is pure hero state — prime the shadow
+      heroP.set(arr); lastW.set(arr);
+    }
+
+    // per-exit gates
+    const mE = mw.elements;
+    const cv = feed.cv, pw = feed.pw;
+    let anyConv = false, wroteAny = false;
+    const rev0 = eff[0], rev1 = eff[1], rev2 = eff[2];
+    const mig1 = ss(0, 0.55, rev1), mig2 = ss(0, 0.55, rev2);
+    const rg1 = ss(0.55, 1, rev1), rg2 = ss(0.55, 1, rev2);
+
+    for (let i = 0; i < N; i++) {
+      const i3 = i * 3;
+      // ---- hero shadow: absorb what spore-drift added since our last write.
+      // A teleport (the drift recycling a spent spore to its gill origin) is
+      // accepted as the dot's new hero home.
+      let bx2 = arr[i3], by2 = arr[i3 + 1], bz2 = arr[i3 + 2];
+      let dx = bx2 - lastW[i3], dy = by2 - lastW[i3 + 1], dz = bz2 - lastW[i3 + 2];
+      if (dx * dx + dy * dy + dz * dz > TELEPORT2) {
+        heroP[i3] = bx2; heroP[i3 + 1] = by2; heroP[i3 + 2] = bz2;
+      } else {
+        heroP[i3] += dx; heroP[i3 + 1] += dy; heroP[i3 + 2] += dz;
+      }
+
+      const e = exIdx[i];
+      const rev = e === 0 ? rev0 : e === 1 ? rev1 : rev2;
+      // conversion: hash-staggered pure function of the exit's reveal.
+      // Migrants complete by rev 0.55 (the walk front's arrival); the
+      // resident stream keeps a wider stagger and completes by rev 0.80.
+      const conv = e === 0
+        ? ss(0, 0.35, rev - stag[i] * 0.45)
+        : ss(0, 0.30, rev - stag[i] * 0.25);
+      // taste dial: cvT is how far the dot actually leaves its drift (and
+      // the dimmer's ambient mix); conv keeps the choreography/cease gate.
+      const cvT = conv * T;
+      cv[i] = cvT;
+      if (conv <= 0) {
+        pw[i] = 0;
+        if (writ[i]) {
+          // steered last frame, conversion just reached zero: hand the
+          // BUFFER back at the true hero position, then cease — the drift
+          // integrator re-owns the dot from there. (RESTORE BY CEASING.)
+          writ[i] = 0;
+          arr[i3] = heroP[i3]; arr[i3 + 1] = heroP[i3 + 1]; arr[i3 + 2] = heroP[i3 + 2];
+          lastW[i3] = arr[i3]; lastW[i3 + 1] = arr[i3 + 1]; lastW[i3 + 2] = arr[i3 + 2];
+          wroteAny = true;
+        } else {
+          // hero-owned: track exactly (no float accumulation drift)
+          heroP[i3] = bx2; heroP[i3 + 1] = by2; heroP[i3 + 2] = bz2;
+          lastW[i3] = bx2; lastW[i3 + 1] = by2; lastW[i3 + 2] = bz2;
+        }
+        continue;
+      }
+      anyConv = true;
+      writ[i] = 1;
+
+      // ---- staged path: born between gills -> lateral -> rim walk / curl
+      // -> braided rise along the drift axis (split/braid modes)
+      const migF = e > 0;
+      const mig = e === 1 ? mig1 : mig2;
+      const rg = e === 0 ? 1 : (e === 1 ? rg1 : rg2);
+      const h1 = h1A[i], h2 = h2A[i], sd = sdA[i], sp = spA[i];
+      const s1 = s1a[i], s2 = s2a[i], s3 = s3a[i];
+      const rimR = rimRi[i], rimY = rimYi[i], a0 = az0[i], curl = curlA[i];
+      let t = tNow / perA[i] + ph0A[i]; t -= Math.floor(t);
+
+      let r, y, azP, env;
+      let xLean = 0, zLean = 0;
+      if (t < s1) {
+        // born between the gills, shimmering in place
+        const u0 = t / s1;
+        r = oR[i] + Math.sin(tNow * 0.5 + sd) * 0.03;
+        y = oY[i] - 0.05 * u0 + Math.sin(tNow * 0.6 + sd * 1.3) * 0.015;
+        azP = oAz[i] + Math.sin(tNow * 0.35 + sd * 2.1) * 0.012;
+        env = ss(0, 0.45, u0) * 0.85 * (migF ? 0.72 : 1) * T;
+      } else if (t < s2) {
+        // lateral travel between the lamellae toward the margin
+        const u1s = (t - s1) / (s2 - s1);
+        const u1 = u1s * u1s * (3 - 2 * u1s);
+        const rT = migF ? rimRs[i] : rimR;
+        const yT = migF ? rimYs[i] + (rimY - rimYof(a0)) : rimY;
+        r = oR[i] + (rT - oR[i]) * u1;
+        const yA = oY[i] - 0.05;
+        y = yA + (yT - yA) * u1 - 0.10 * Math.sin(u1 * PI);
+        const azA = oAz[i] + (h1 - 0.5) * 0.05 * u1;
+        azP = migF ? azA + (azS2[i] - azA) * u1 : azA;
+        env = 0.95 * (migF ? 0.72 : 1) * T;
+      } else if (t < s3) {
+        const u2 = (t - s2) / (s3 - s2);
+        if (migF) {
+          // rim migration — the delta current walking the real rim, clamped
+          // at the reveal's advancing front (split mode)
+          const wSm = u2 * u2 * (3 - 2 * u2);
+          const w = u2 + (wSm - u2) * 0.35;
+          let wFront = mig * 1.12 - h1 * 0.10;
+          wFront = wFront < 0 ? 0 : wFront > 1 ? 1 : wFront;
+          const we = w < wFront ? w : wFront;
+          azP = azS2[i] + spanA[i] * we;
+          const bobE = Math.sin(PI * we);
+          r = rimRad(azP) + 0.05 + offR[i] * we
+            + Math.sin(we * 9 + sp) * 0.07 * bobE;
+          y = rimYof(azP) + offY[i] + 0.10 * ss(0.72, 1, we)
+            + Math.sin(we * 12 + sp * 1.3 + tNow * 0.4) * 0.05 * bobE;
+          const pl = 0.5 + 0.5 * Math.sin(we * 7 - tNow * 0.9 + sp);
+          env = (0.55 + 0.45 * pl * pl) * (1 - ss(0, 0.10, w - wFront)) * T;
+        } else {
+          // resident plume: curl around the rim margin
+          azP = a0 + curl * u2;
+          const loops = 1 + h2 * 1.2;
+          r = rimR + 0.05 + Math.sin(u2 * PI * loops + sp) * 0.10;
+          y = rimY + Math.sin(u2 * PI * loops * 0.7 + 1 + sp) * 0.08 + 0.10 * u2;
+          env = T;
+        }
+      } else {
+        // braided rise (or sinking drop)
+        const u3 = (t - s3) / (1 - s3);
+        const eu = ss(0, 0.10, u3);
+        if (dropA[i]) {
+          y = rimY + 0.10 - u3 * u3 * riseA[i];
+          azP = a0 + curl + (h1 - 0.5) * 0.3 * u3;
+          r = rimR + 0.05 + u3 * (0.3 + h2 * 0.4);
+          env = eu * (1 - ss(0.45, 0.95, u3)) * 0.5 * T;
+        } else {
+          const h = Math.pow(u3, 0.6 + h1 * 0.5);
+          y = rimY + 0.10 + h * riseA[i];
+          // core-cohort dots damp their scatter (tight) so each braid
+          // resolves as a defined sinuous line inside the loose sheath the
+          // majority carries; tightening is part of the reorganization, so
+          // it scales with T
+          const core = coreA[i];
+          const tight = 1 - 0.70 * core * T;
+          azP = a0 + curl
+             + 0.13 * Math.sin(h * 5.1 + sp)
+             + 0.07 * Math.sin(h * 9.7 + sp * 2.3 + tNow * 0.21)
+             + 0.03 * Math.sin(tNow * 0.13 + sd * 3.7) * u3 * tight * 0.72;
+          r = rimR + 0.05
+            + 0.10 * Math.sin(h * 4.3 + sp * 1.7)
+            + 0.05 * Math.sin(tNow * 0.17 + sd * 2.3)
+            + (h1 - 0.5) * 0.09 * (0.4 + h) * tight * 0.72
+            + h * 0.14;
+          // D17: LINEAR in h along the drift's own ratios — a straight
+          // diagonal matching the carry, never standing the column upright
+          xLean = leanScale * leanA[i] * h * riseA[i] * DRIFT_RX;
+          zLean = leanScale * leanA[i] * h * riseA[i] * DRIFT_RZ;
+          // knot cadence (detail mode): hot dots travelling UP the core with
+          // the flow, per-exit gain, hottest on the core cohort — brightness
+          // modulation only, reversible, pure in (eff, time).
+          const kn0 = 0.5 + 0.5 * Math.sin(h * 7.3 + sp * 1.9 - tNow * 0.55);
+          const kn = kn0 * kn0 * kn0 * kn0;
+          const knotV = knotA[i] * kn * (0.30 + 0.70 * core);
+          // at T = 1 this is exactly (1 + 0.28*core + 1.15*knotV); toward
+          // T = 0 the body term dies with T while the pearl richness keeps
+          // the PEARL_FLOOR share — the faint sparkle that stays.
+          env = eu * (1 - ss(0.62, 1, u3))
+              * (T + (0.28 * core + 1.15 * knotV) * pearlScale);
+        }
+        // migrant rise draw-on gate (rl inert for the resident and at rev 1)
+        const rl = rg * 1.12;
+        const g0 = rl - 0.10 > 0 ? rl - 0.10 : 0;
+        env *= 1 - ss(g0, rl + 0.001, u3);
+      }
+
+      // cap-local -> world through the live mushroom matrix
+      const lx = Math.cos(azP) * r + xLean, ly = y, lz = Math.sin(azP) * r + zLean;
+      const wx = mE[0] * lx + mE[4] * ly + mE[8] * lz + mE[12];
+      const wy = mE[1] * lx + mE[5] * ly + mE[9] * lz + mE[13];
+      const wz = mE[2] * lx + mE[6] * ly + mE[10] * lz + mE[14];
+
+      // the SAME dot slides from its own drift onto the path — by cvT, the
+      // taste-dialled blend: at low T it bows toward the braid and keeps most
+      // of its natural drift; at T = 1 it converts fully
+      const px = heroP[i3] + (wx - heroP[i3]) * cvT;
+      const py = heroP[i3 + 1] + (wy - heroP[i3 + 1]) * cvT;
+      const pz = heroP[i3 + 2] + (wz - heroP[i3 + 2]) * cvT;
+      arr[i3] = px; arr[i3 + 1] = py; arr[i3 + 2] = pz;
+      lastW[i3] = px; lastW[i3 + 1] = py; lastW[i3 + 2] = pz;
+      wroteAny = true;
+
+      // brightness feed: plume term (the ambient term is (1 - cvT), applied
+      // by the dim pass). Deliberately conv (not cvT): env already carries T
+      // for the body brightness, and near T = 0 the pearl floor must still
+      // ride the conversion stagger.
+      pw[i] = PLUME_GAIN * env * conv;
+    }
+
+    if (wroteAny) attr.needsUpdate = true;
+    feed.any = anyConv;
+    wasActive = drive || anyConv;
+
+    if (dbg) {
+      perfAcc += performance.now() - t0; perfN++;
+      if (perfN >= 60) {
+        window.__tkPerf = +(perfAcc / perfN).toFixed(3);
+        perfAcc = 0; perfN = 0;
+      }
+      window.__tkLast0 = arr[0]; // animator-order probe: must survive to render
+    }
+  }
+
+  // ---- color mode: per-region dim + per-dot handover, byte-exact restore ----
+  function restoreColors() {
+    const attr = sporePts.geometry.attributes.color;
+    attr.array.set(colorBase);                          // verbatim
+    attr.needsUpdate = true;
+    dimActive = false;
+  }
+
+  /** regions: [{ a, b, r0, r1, k }] — world-space capsule from a to b, full
+   *  dim inside r0, feathered to untouched at r1, strength k (0..1, already
+   *  scaled by the driver's reveal x taste). globalK: whole-shed hand-over.
+   *  grad: { sx,sy,sz, d0,d1, k } distance-graded history dissolve. The
+   *  per-dot exchange rides the steer feed:  F = f * (1 - cv[i]) + pw[i]
+   *  — a converting dot swaps its ambient look for its plume look; the dim
+   *  channels apply to the unconverted share only. All channels ~0 restores
+   *  the base colors byte-exact. */
+  function dim(regions, globalK, grad) {
+    const tk = feed;
+    let n = 0;
+    if (regions) for (const rg of regions) {
+      if (rg.k <= 0.004) continue;
+      ax[n] = rg.a.x; ay[n] = rg.a.y; az[n] = rg.a.z;
+      const dx = rg.b.x - rg.a.x, dy = rg.b.y - rg.a.y, dz = rg.b.z - rg.a.z;
+      bx[n] = dx; by[n] = dy; bz[n] = dz;
+      ab2[n] = Math.max(dx * dx + dy * dy + dz * dz, 1e-6);
+      r0[n] = rg.r0; r1[n] = rg.r1; kk[n] = rg.k;
+      n++;
+    }
+    const gradOn = grad && grad.k > 0.004;
+    const tkOn = tk && tk.any && tk.cv;
+    if (n === 0 && globalK <= 0.004 && !gradOn && !tkOn) { if (dimActive) restoreColors(); return; }
+    if (!colorBase) colorBase = sporePts.geometry.attributes.color.array.slice(); // the ONE base copy
+    dimActive = true;
+    const attr = sporePts.geometry.attributes.color;
+    const col = attr.array;
+    const pos = sporePts.geometry.attributes.position.array;
+    const tcv = tkOn ? tk.cv : null, tpw = tkOn ? tk.pw : null;
+    let pi = 0;
+    for (let i = 0; i < col.length; i += 3, pi++) {
+      const x = pos[i], y = pos[i + 1], z = pos[i + 2];
+      let dimV = 0;
+      for (let j = 0; j < n; j++) {
+        const px = x - ax[j], py = y - ay[j], pz = z - az[j];
+        let t = (px * bx[j] + py * by[j] + pz * bz[j]) / ab2[j];
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const dx = px - bx[j] * t, dy = py - by[j] * t, dz = pz - bz[j] * t;
+        const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (d < r1[j]) {
+          let s = d <= r0[j] ? 1 : 1 - (d - r0[j]) / (r1[j] - r0[j]);
+          s = s * s * (3 - 2 * s);
+          const v = kk[j] * s;
+          if (v > dimV) dimV = v;   // max, not sum: overlaps must not over-darken
+        }
+      }
+      if (dimV > MAX_TOTAL_DIM) dimV = MAX_TOTAL_DIM;
+      // the global hand-over may exceed the capsule cap: at full reveal the
+      // old curtain is gone (0.97) — the organized braid IS the shed now
+      let g = globalK * 0.97;
+      if (gradOn) {
+        const hx = x - grad.sx, hy = y - grad.sy, hz = z - grad.sz;
+        const hd = Math.sqrt(hx * hx + hy * hy + hz * hz);
+        let hf = (hd - grad.d0) / (grad.d1 - grad.d0);
+        hf = hf < 0 ? 0 : hf > 1 ? 1 : hf;
+        hf = hf * hf * (3 - 2 * hf);
+        const gh = grad.k * hf * 0.97;   // history dissolves; source survives
+        if (gh > g) g = gh;
+      }
+      let f = 1 - (g > dimV ? g : dimV);
+      // per-dot exchange: a converting dot swaps its ambient look for its
+      // plume look; near T = 0 cv is ~0 but the pearl FLOOR still sparkles
+      // through pw — so pw alone can open the branch.
+      if (tkOn) {
+        const c = tcv[pi];
+        const w = tpw[pi];
+        if (c > 0.0005 || w > 0.0005) f = f * (1 - c) + w;
+      }
+      col[i] = colorBase[i] * f;
+      col[i + 1] = colorBase[i + 1] * f;
+      col[i + 2] = colorBase[i + 2] * f;
+    }
+    attr.needsUpdate = true;
+  }
+
+  // ---- the ONE release path (see the header note) ----
+  function releaseSeat() {
+    lastDriveFrame = -1;
+    if (inited && wasActive) {
+      const attr = sporePts.geometry.attributes.position;
+      const arr = attr.array;
+      let wrote = false;
+      for (let i = 0; i < N; i++) {
+        if (!writ[i]) continue;
+        const i3 = i * 3;
+        writ[i] = 0;
+        arr[i3] = heroP[i3]; arr[i3 + 1] = heroP[i3 + 1]; arr[i3 + 2] = heroP[i3 + 2];
+        lastW[i3] = arr[i3]; lastW[i3 + 1] = arr[i3 + 1]; lastW[i3 + 2] = arr[i3 + 2];
+        wrote = true;
+      }
+      if (wrote) attr.needsUpdate = true;
+    }
+    wasActive = false;
+    feed.any = false;
+    if (dimActive) restoreColors();
+  }
+
+  /** The driver's per-frame hand on the seat. Called from the driver's own
+   *  animator — i.e. AFTER 'spore-drift' integrated this frame (the journey's
+   *  animators register after the organism's; see the ordering comment on
+   *  registerDrift). Position steering runs first, then the color pass reads
+   *  its per-dot feed — same frame, one call. */
+  const seat = {
+    drive({ eff, time, matrixWorld, leanScale = 1, transform = 1,
+            regions = null, globalK = 0, grad = null }) {
+      if (!system.driver) return;   // released seat: the handle is inert
+      lastDriveFrame = frameNo;
+      if (eff) steer(eff, time, matrixWorld, leanScale, transform);
+      dim(regions, globalK, grad);
+    },
+    /** QA: the per-dot conversion/brightness feed (?tkdbg adds perf probes). */
+    feed,
+    get active() { return wasActive; },
+    get n() { return N; },
+  };
+
   const system = {
     sporePts, sporeOrigin, sporeAge, sporeVel, BREEZE_DIR,
     shedSpores, registerDrift,
-    // ---- driver seat (M2 stub; merge doc §3) ----
-    // The journey claims this seat at M3 to drive braid/split/detail as
-    // first-class modes of THESE dots. null = pure ambient drift — today's
-    // behaviour, byte-identical. Nothing reads the seat yet; while unclaimed
-    // it does NOTHING by construction.
+    // ---- driver seat (merge doc §3) ----
+    // ONE driver at a time claims the seat with its static exit geometry and
+    // gets the seat handle back; releasing (setDriver(null)) — like going
+    // quiet, or silent — restores the dots to pure ambient drift, colors
+    // byte-exact. Unclaimed, the seat does nothing by construction.
     driver: null,
-    setDriver(d) { system.driver = d; },
+    setDriver(d) {
+      if (system.driver && system.driver !== d) releaseSeat();
+      system.driver = d || null;
+      if (!d) { releaseSeat(); return null; }
+      // static claim: exit geometry/anchors ({ az, riseMin, riseMax, knot }
+      // per exit) — the chapter's anatomy, passed as intent, never imported.
+      exits = d.exits;
+      return seat;
+    },
   };
   return system;
 }
