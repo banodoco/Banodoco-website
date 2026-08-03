@@ -251,10 +251,14 @@ export function boot(opts = {}) {
     let azDeg = Math.atan2(cam.x, cam.z) / DEG;
     if (azDeg < -90) azDeg += 360;                    // rear-left reads 190..270
     if (!chapters.inspire.armed) { chapters.inspire.setReveal(0, 0, 0, 0); return; }
-    // plume cores must never stream along the view ray: damp the +x breeze
-    // lean while the camera crosses the +x sector
-    const belly = Math.min(smooth01((azDeg - 40) / 30), 1 - smooth01((azDeg - 115) / 30));
-    chapters.inspire.setLeanScale && chapters.inspire.setLeanScale(1 - 0.45 * Math.max(0, belly));
+    // D17 locus law (Hannah, round 8): the braid rises along the stream's own
+    // drift axis and must OVERLAY the drift envelope at every camera angle.
+    // The old belly clamp damped the +x lean mid-orbit (to keep cores off the
+    // view ray), which moved the organized column off the stream's locus —
+    // exactly the "it switches place" read. Retired in favour of locus
+    // fidelity: lean is always full; near-lens protection stays with the
+    // shaders' near-camera fade (vNear), never with re-uprighting geometry.
+    chapters.inspire.setLeanScale && chapters.inspire.setLeanScale(1);
     const sm = (a, b) => clamp01((azDeg - a) / (b - a));
     // gill band -> ArtCompute -> Arca Gidan -> 2RP, then a hold through the rest
     let a = sm(36, 72), b = sm(76, 112), c = sm(104, 142), band = sm(20, 46);

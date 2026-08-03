@@ -82,12 +82,67 @@ const N_GILL_CHANNELS = 230;                 // the hero's gill count
 const CHANNEL = TAU / N_GILL_CHANNELS;
 const FOG_NEAR = 7.0, FOG_FAR = 20.0;
 const BREEZE = new THREE.Vector3(1.0, 0.62, 0.17).normalize();
+// D17 RE-AXIS (Hannah, round 8 — the locus half of the note): the organized
+// braid must occupy the SAME diagonal volume as the hero's visible drift
+// column (BREEZE_DIR (1.0, 0.62, 0.17): per unit of rise the drift advances
+// x by RX and z by RZ). Everything that rises — converted dots (takeover),
+// ribbons, wisp guides, the shed's rise-corridor capsule, the label anchors —
+// shares these ratios, so organization tightens the column IN PLACE instead
+// of relocating it to an upright rim column (the "it switched" read).
+const DRIFT_RX = 1.0 / 0.62;
+const DRIFT_RZ = 0.17 / 0.62;
 
 const tmpC = new THREE.Color();
 
+/* ----------------------------------------------------------------------
+   MASTER TASTE DIAL — TRANSFORM (T), Hannah's own knob (2026-08-03,
+   review round 8). Seven rounds in, the note is still "the stream
+   transforms into a different thing when I rotate around" — and it is
+   the STREAM's choreography (drift reorganizing into designed braided
+   plumes), confirmed by direct question. Rather than guess the right
+   intensity an eighth time, the WHOLE reorganization scales coherently
+   from one live scalar T (0..1):
+     - dot path blend toward the braid (takeover: lerp by conv * T;
+       rim-walks scale, never sever)         inspire-takeover.js
+     - core-cohort scatter tightening (x T)  inspire-takeover.js
+     - pearl brightness gain (x T, floored)  inspire-takeover.js
+     - core-ribbon opacity (x ribScaleOf(T): effectively gone < ~0.2)
+     - furniture (source filaments, beads, wisps, rim currents) x T
+     - shed hand-over dims (capsules / global / history) x T
+     - residual coherence x T; streak x (STREAK_FLOOR + rest * T) — the
+       streak keeps a modest floor because it anchors the active label
+   T = 1 is EXACTLY the current build (i.e. with the D17 re-axis below —
+   every scale law hits 1); T = 0 leaves the hero's stream
+   visually untouched (labels, the streak's floor glint and a faint
+   pearl sparkle remain). Every channel stays a pure function of
+   (eff, time, T): changing T mid-scrub re-scales live with no state
+   corruption, and the p = 0 byte-exact restore is untouched (every T
+   channel multiplies an Inspire-leg drive that is already zero at p=0).
+   Controls: [ / ] step 0.05 (persisted); ?t=0.45 sets at load; load
+   order query > localStorage('journey-v6.transform') > default 0.30.
+   A small aria-hidden readout (bottom-left) shows while adjusting.
+   ---------------------------------------------------------------------- */
+const T_DEFAULT = 0.30;
+const T_STEP = 0.05;
+const T_LS_KEY = 'journey-v6.transform';
+const STREAK_FLOOR = 0.25;
+const CORE_OPACITY = 0.62;               // the ribbons' authored opacity
+const clampT = (v) => {
+  v = v < 0 ? 0 : v > 1 ? 1 : v;
+  return Math.round(v * 100) / 100;      // kill float-step residue (0.05 grid)
+};
+// ribbons: x T with an extra low-end gate so they are effectively gone below
+// ~0.2 (a designed continuous core is the strongest "different thing" read).
+// ribScaleOf(1) = 1 exactly; >= 0.3 it is plain T.
+const ribScaleOf = (t) => {
+  let x = (t - 0.08) / 0.22;
+  x = x < 0 ? 0 : x > 1 ? 1 : x;
+  return t * x * x * (3 - 2 * x);
+};
+
 // ---------- shared faint-line material (sources / wisps / cap flow) ----------
 function makeStrandMat(opacity, flow) {
-  return new THREE.ShaderMaterial({
+  const m = new THREE.ShaderMaterial({
     uniforms: {
       uOpacity: { value: opacity },
       uFade: { value: 0 },
@@ -162,6 +217,11 @@ function makeStrandMat(opacity, flow) {
     transparent: true,
     depthWrite: false,
   });
+  // taste dial: remember the authored opacity so the per-frame T scaling has
+  // a stable base (uOpacity = baseOpacity * T; uFade keeps the draw-on
+  // choreography untouched — intensity scales, staging does not truncate)
+  m.userData.baseOpacity = opacity;
+  return m;
 }
 
 function strandGeo(positions, colors, progs) {
@@ -189,6 +249,64 @@ export function createInspire(sceneApi) {
   // counts.spores is gone with the GPU layer (final unification): the
   // chapter adds no particles of its own — the hero's 4,200 dots are it.
   const counts = { sourceSegs: 0, wispSegs: 0, beads: 0, coreSegs: 0, rimSegs: 0 };
+
+  /* ---- master TRANSFORM dial state (see the block comment at module scope).
+     Load order: ?t= query param > localStorage > default. Neither load path
+     writes localStorage — only an interactive [ / ] adjustment persists, so a
+     one-off ?t= trial never silently overwrites Hannah's saved setting. ---- */
+  const tState = { t: T_DEFAULT };
+  try {
+    const qv = parseFloat(new URLSearchParams(location.search).get('t'));
+    if (Number.isFinite(qv)) tState.t = clampT(qv);
+    else {
+      const sv = parseFloat(localStorage.getItem(T_LS_KEY));
+      if (Number.isFinite(sv)) tState.t = clampT(sv);
+    }
+  } catch { /* no location/localStorage (tests, privacy mode): default */ }
+
+  // small unobtrusive readout, bottom-left, journey styling, out of the a11y
+  // tree (it is a taste tool, not content); shows on change, fades ~1.5s
+  // after the last adjustment. Built lazily — zero DOM until first use.
+  let dialEl = null, dialVal = null, dialTimer = null;
+  function showDial() {
+    if (typeof document === 'undefined') return;
+    if (!dialEl) {
+      if (!document.getElementById('j-tdial-style')) {
+        const st = document.createElement('style');
+        st.id = 'j-tdial-style';
+        st.textContent = [
+          '.j-tdial { position: fixed; left: 2.4vw; bottom: 3.2vh; z-index: 40;',
+          '  font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;',
+          '  color: var(--muted, #c9bfa8); opacity: 0; transition: opacity 0.35s;',
+          '  pointer-events: none; user-select: none; }',
+          '.j-tdial b { color: var(--gold-bright, #f0c877); font-weight: 400; }',
+        ].join('\n');
+        document.head.appendChild(st);
+      }
+      dialEl = document.createElement('div');
+      dialEl.className = 'j-tdial';
+      dialEl.setAttribute('aria-hidden', 'true');
+      dialEl.append('transform ');
+      dialVal = document.createElement('b');
+      dialEl.appendChild(dialVal);
+      document.body.appendChild(dialEl);
+    }
+    dialVal.textContent = tState.t.toFixed(2);
+    dialEl.style.opacity = 1;
+    if (dialTimer) clearTimeout(dialTimer);
+    dialTimer = setTimeout(() => { dialEl.style.opacity = 0; dialTimer = null; }, 1500);
+  }
+
+  // [ / ] adjust T in 0.05 steps, clamped 0..1 (same raw-listener seam as
+  // journey.js's [g]; scroll.js's controls-first dispatch never claims these)
+  if (typeof addEventListener === 'function') {
+    addEventListener('keydown', (e) => {
+      if (e.key !== '[' && e.key !== ']') return;
+      const tgt = e.target;
+      if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable)) return;
+      api.setTransform(tState.t + (e.key === ']' ? T_STEP : -T_STEP), { persist: true });
+    });
+  }
 
   // per-exit fade drivers (sequential reveal). The old 4th channel (backlit
   // gill band) is GONE per D16: it was a self-igniting filler for the long
@@ -328,7 +446,7 @@ export function createInspire(sceneApi) {
         centimetre of new line grows out of the stream.
      ================================================================ */
   for (const ex of exits) {
-    const { az, riseMin, riseMax, lean } = ex.spec;
+    const { az, riseMin, riseMax } = ex.spec;   // spec.lean retired by D17
     const isMig = ex !== exits[0];
     const azSrcBase = EXITS[0].az;
     const lp = [], lc = [], lg = [];
@@ -363,14 +481,14 @@ export function createInspire(sceneApi) {
             const aa = a0 + curl * k;
             const rr = rimR + 0.06 + 0.10 * Math.sin(k * Math.PI);
             p = new THREE.Vector3(Math.cos(aa) * rr, rim.y + 0.10 * k + 0.06 * Math.sin(k * 6 + sp), Math.sin(aa) * rr);
-          } else {                            // braided rise, leaning +x
+          } else {                            // braided rise along the drift axis (D17)
             const k = (t - 0.58) / 0.42;
             const aa = a0 + curl + 0.30 * Math.sin(k * 4.2 + sp);
             const rr = rimR + 0.06 + 0.22 * Math.sin(k * 3.1 + sp * 1.7);
-            const y = rim.y + 0.10 + k * k * rise;
+            const y = rim.y + 0.10 + k * rise;
             p = new THREE.Vector3(Math.cos(aa) * rr, y, Math.sin(aa) * rr);
-            p.x += BREEZE.x * lean * k * k * rise * 0.8;
-            p.z += BREEZE.z * lean * k * k * rise * 0.8;
+            p.x += DRIFT_RX * k * rise;
+            p.z += DRIFT_RZ * k * rise;
           }
         } else {
           // MIGRANT (D16): born in the SOURCE wedge -> source margin -> rim
@@ -397,14 +515,14 @@ export function createInspire(sceneApi) {
             const aa = a0 + curl * k;
             const rr = rimR + 0.06 + 0.10 * Math.sin(k * Math.PI);
             p = new THREE.Vector3(Math.cos(aa) * rr, rim.y + 0.10 * k + 0.06 * Math.sin(k * 6 + sp), Math.sin(aa) * rr);
-          } else {                            // braided rise, leaning +x
+          } else {                            // braided rise along the drift axis (D17)
             const k = (t - 0.66) / 0.34;
             const aa = a0 + curl + 0.30 * Math.sin(k * 4.2 + sp);
             const rr = rimR + 0.06 + 0.22 * Math.sin(k * 3.1 + sp * 1.7);
-            const y = rim.y + 0.10 + k * k * rise;
+            const y = rim.y + 0.10 + k * rise;
             p = new THREE.Vector3(Math.cos(aa) * rr, y, Math.sin(aa) * rr);
-            p.x += BREEZE.x * lean * k * k * rise * 0.8;
-            p.z += BREEZE.z * lean * k * k * rise * 0.8;
+            p.x += DRIFT_RX * k * rise;
+            p.z += DRIFT_RZ * k * rise;
           }
         }
         pts.push({ p, t });
@@ -541,7 +659,8 @@ export function createInspire(sceneApi) {
       uTime: { value: 0 },
       uLean,      // shared with the takeover's CPU port via setLeanScale,
                   // or ribbon and converted-dot braid would split
-      uOpacity: { value: 0.62 },
+      // taste dial: driven per-frame as CORE_OPACITY * ribScaleOf(T)
+      uOpacity: { value: CORE_OPACITY },
       uRev,       // reveal drives ribbon draw-on
       uCoh,       // hover coherence
       // D16 + final unification: uDet is the rest-proximity condensation
@@ -553,7 +672,10 @@ export function createInspire(sceneApi) {
       // on this same gate is deleted; the ribbons are all uDet drives now.)
       uDet,
       uKnot,
-      uLeanP: { value: new THREE.Vector3(EXITS[0].lean, EXITS[1].lean, EXITS[2].lean) },
+      // D17 re-axis: all three plumes ride the one breeze axis at full
+      // strength (1,1,1 = the mean of the dots' per-particle leanA jitter);
+      // spec.lean no longer scales the rise axis anywhere.
+      uLeanP: { value: new THREE.Vector3(1, 1, 1) },
       uToneP: { value: new THREE.Vector3(EXITS[0].tone, EXITS[1].tone, EXITS[2].tone) },
       uTrace: { value: 9.0 },
       uTraceAmp: { value: new THREE.Vector3(0, 0, 0) },
@@ -600,8 +722,10 @@ export function createInspire(sceneApi) {
                 + (0.10 * sin(h * 4.3 + sp * 1.7) + 0.05 * sin(uTime * 0.17 + sp * 2.3)) * settle
                 + h * 0.14;
         float y = rimY + 0.10 + h * rise;
-        float xL = uLean * lnP * h * h * rise * 0.62;
-        float zL = uLean * lnP * h * h * rise * 0.105;
+        // D17 re-axis: linear in h along the breeze ratios — the ribbon
+        // threads the LEANED braid (same law as the converted dots)
+        float xL = uLean * lnP * h * rise * 1.6129;
+        float zL = uLean * lnP * h * rise * 0.27419;
         vec3 p = vec3(cos(az) * r + xL, y, sin(az) * r + zL);
         // knot cadence (same phase as the spores) + rise envelope
         float kn = pow(0.5 + 0.5 * sin(h * 7.3 + sp * 1.9 - uTime * 0.55), 4.0) * kg;
@@ -800,10 +924,12 @@ export function createInspire(sceneApi) {
       const rimR = rimRad(spec.az) + 0.08;
       const rim = capUnderPt(1.0, spec.az);
       const lip = lipAt(spec.az);
+      // D17 re-axis: the rise corridor's top follows the leaned braid, so the
+      // shed dim tracks where the organized column actually lives
       const top = new THREE.Vector3(
-        Math.cos(spec.az) * (rimR + 0.19) + spec.lean * rise * 0.62,
+        Math.cos(spec.az) * (rimR + 0.19) + rise * DRIFT_RX,
         rim.y + 0.10 + rise,
-        Math.sin(spec.az) * (rimR + 0.19) + spec.lean * rise * 0.105,
+        Math.sin(spec.az) * (rimR + 0.19) + rise * DRIFT_RZ,
       );
       const homeAz = i === 0 ? spec.az : srcAz;   // where this plume is BORN
       const srcLip = i === 0 ? lip.clone() : lipAt(srcAz);
@@ -879,12 +1005,13 @@ export function createInspire(sceneApi) {
   // its own initiative's sky sector per Plate II and clear of the editorial
   // block, so all three are readable at the rest.
   const LABEL_LIFT = 0.55;      // fraction of the plume's mid rise
-  const LABEL_LEAN = 0.45;      // fraction of the spores' own breeze lean
-  const breezeXZ = new THREE.Vector3(BREEZE.x, 0, BREEZE.z).normalize();
+  // D17 re-axis: the plume body is a breeze-axis diagonal now, so each chip
+  // rides its own plume's centreline at the same fractional lift as before —
+  // the anchor moves WITH the geometry, the labels themselves are unchanged.
   const labelOffsets = EXITS.map(spec => {
     const rise = (spec.riseMin + spec.riseMax) / 2;
-    return breezeXZ.clone().multiplyScalar(spec.lean * rise * LABEL_LEAN)
-      .add(new THREE.Vector3(0, rise * LABEL_LIFT, 0));
+    const yLift = rise * LABEL_LIFT;
+    return new THREE.Vector3(DRIFT_RX * yLift, yLift, DRIFT_RZ * yLift);
   });
 
   const _wv = new THREE.Vector3();
@@ -894,6 +1021,19 @@ export function createInspire(sceneApi) {
     exits: EXITS,
     /** QA handle: the same-particle takeover (conv/brightness feed, perf). */
     _takeover: takeover,
+    /** MASTER TASTE DIAL (see the block comment at module scope). Sets the
+     *  live TRANSFORM scalar, clamped 0..1; persist writes it to
+     *  localStorage('journey-v6.transform') — the keys pass persist: true,
+     *  programmatic/QA calls default to a session-only change. Pure re-scale:
+     *  every channel is a function of (eff, time, T), so this is safe at any
+     *  p, mid-scrub included. */
+    setTransform(v, { persist = false } = {}) {
+      tState.t = clampT(v);
+      if (persist) { try { localStorage.setItem(T_LS_KEY, String(tState.t)); } catch { /* privacy mode: session-only */ } }
+      showDial();
+      return tState.t;
+    },
+    get transform() { return tState.t; },
     /** Tier hook, kept for API compatibility. The tierable 5,100-spore GPU
      *  layer is deleted (final unification): the chapter's particles ARE the
      *  hero's 4,200 shed dots, whose count is the hero's own budget. */
@@ -923,19 +1063,29 @@ export function createInspire(sceneApi) {
       for (const ex of exits) ex.fade = ex.target;
       computeEff();                 // camera is already placed by placeAt
       effActive = resolveActive();
+      const T = tState.t;           // taste dial: same scalings as the animator
+      const stkScale = STREAK_FLOOR + (1 - STREAK_FLOOR) * T;
       const c = uCoh.value;
       for (let i = 0; i < 3; i++) {
-        c.setComponent(i, (i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0));
+        c.setComponent(i, ((i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0)) * T);
         const st = streaks[i];
-        st.o = (i === effActive ? 0.42 : 0) * furnOf(i);
+        st.o = (i === effActive ? 0.42 : 0) * furnOf(i) * stkScale;
         st.sprite.visible = st.o > 0.01;
         for (const m of exits[i].mats) {
-          m.uniforms.uFade.value = m === exits[i].wispMat ? eff[i] : furnOf(i);
+          const fadeV = m === exits[i].wispMat ? eff[i] : furnOf(i);
+          if (m.uniforms.uOpacity) {
+            m.uniforms.uFade.value = fadeV;
+            m.uniforms.uOpacity.value = m.userData.baseOpacity * T;
+          } else {
+            m.uniforms.uFade.value = fadeV * T;   // beads: see the animator note
+          }
         }
       }
       const [fA, fB] = linkFades();
       rimLinks[0].mat.uniforms.uFade.value = fA;
       rimLinks[1].mat.uniforms.uFade.value = fB;
+      for (const l of rimLinks) l.mat.uniforms.uOpacity.value = l.mat.userData.baseOpacity * T;
+      coreMat.uniforms.uOpacity.value = CORE_OPACITY * ribScaleOf(T);
       uRev.value.set(eff[0], eff[1], eff[2]);
       computeDet();
       uDet.value.set(det[0], det[1], det[2]);
@@ -1001,6 +1151,10 @@ export function createInspire(sceneApi) {
   let traceStart = -1e9;
   sceneApi.addAnimator('spike-plumes', (t, dt) => {
     const k = Math.min(1, dt * 3.2);
+    // taste dial: one scalar, read once per frame, scales every channel of
+    // the stream's reorganization below (pure: no eased/integrated T state)
+    const T = tState.t;
+    const stkScale = STREAK_FLOOR + (1 - STREAK_FLOOR) * T;
     for (const ex of exits) {
       ex.fade += (ex.target - ex.fade) * k;
       if (ex.fade < 0.012 && ex.target === 0) ex.fade = 0; // no exponential ghost tail
@@ -1018,7 +1172,11 @@ export function createInspire(sceneApi) {
       if (fA > 0 || fB > 0) anyVisible = true;
       rimLinks[0].mat.uniforms.uFade.value = fA;
       rimLinks[1].mat.uniforms.uFade.value = fB;
-      for (const l of rimLinks) l.mat.uniforms.uTime.value = t;
+      for (const l of rimLinks) {
+        l.mat.uniforms.uTime.value = t;
+        // taste dial: brightness x T; uFade keeps the walking-front draw-on
+        l.mat.uniforms.uOpacity.value = l.mat.userData.baseOpacity * T;
+      }
     }
     for (let i = 0; i < 3; i++) {
       const ex = exits[i];
@@ -1028,7 +1186,17 @@ export function createInspire(sceneApi) {
         // wisps draw on with eff itself — their tip tracks the live current
         // walking out of the stream (D16); destination furniture waits for
         // the current's arrival (furnOf) and lights lip-first (uFrom).
-        m.uniforms.uFade.value = m === ex.wispMat ? eff[i] : fv;
+        const fadeV = m === ex.wispMat ? eff[i] : fv;
+        if (m.uniforms.uOpacity) {
+          // taste dial: strand brightness x T, choreography via uFade intact
+          m.uniforms.uFade.value = fadeV;
+          m.uniforms.uOpacity.value = m.userData.baseOpacity * T;
+        } else {
+          // beads have no opacity uniform; uFade is both their hash-stagger
+          // threshold and their brightness, so x T = fewer, fainter embers —
+          // a coherent "less designed" read at low T (exactly 1 at T = 1)
+          m.uniforms.uFade.value = fadeV * T;
+        }
         m.uniforms.uTime.value = t;
       }
       // Full coherence on hover AND on the selected exit (W4-E: an open card
@@ -1037,7 +1205,8 @@ export function createInspire(sceneApi) {
       // without ever pulling the held one back down). A restrained gather on
       // the auto exit, so the lens always has ONE exceptional source without
       // flattening the others.
-      cohTarget[i] = (i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0);
+      // Taste dial: residual coherence is part of the designed gather — x T.
+      cohTarget[i] = ((i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0)) * T;
     }
 
     // The shed's half of the handoff — runs OUTSIDE the anyVisible gate so
@@ -1047,7 +1216,9 @@ export function createInspire(sceneApi) {
     for (const rg of shedRegions) {
       rg.a.copy(rg.la).applyMatrix4(mw);
       rg.b.copy(rg.lb).applyMatrix4(mw);
-      rg.k = rg.gain * eff[rg.exit];
+      // taste dial: the shed only cedes as far as the braid actually takes
+      // over — every dim channel scales with the same T as the takeover
+      rg.k = rg.gain * eff[rg.exit] * T;
     }
     // Ride-through #3 (Hannah): the plumes must not ignite BESIDE the old
     // curtain — as the exits complete, the WHOLE shed cedes to the structured
@@ -1058,7 +1229,9 @@ export function createInspire(sceneApi) {
     // delta has visibly taken over. Still a pure function of the effective
     // reveals: reverse scroll re-inflates the curtain the same way.
     const S3 = (x) => { x = (x - 0.25) / 0.65; x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
-    const gk = 0.50 * S3(eff[0]) + 0.28 * S3(eff[1]) + 0.22 * S3(eff[2]);
+    // taste dial: the whole-shed cede scales with T — at T = 0 the curtain
+    // never dims at all (the stream stays exactly the hero's)
+    const gk = (0.50 * S3(eff[0]) + 0.28 * S3(eff[1]) + 0.22 * S3(eff[2])) * T;
     // Ride-through #5 (Hannah, "still two sources"): the shed's FAR-DOWNWIND
     // history — old spores that drifted away long before the orbit — hangs in
     // the sky as a detached cloud while the braid grows at the rim. It is not
@@ -1072,19 +1245,22 @@ export function createInspire(sceneApi) {
     _grad.sx = _capC.x; _grad.sy = _capC.y; _grad.sz = _capC.z;
     _grad.d0 = sceneApi.consts.CAP_R * 1.2;
     _grad.d1 = sceneApi.consts.CAP_R * 2.6;
-    _grad.k = hk;
+    _grad.k = hk * T;   // taste dial: history dissolve is a dim channel too
     // Same-particle takeover: steer the hero's own dots (runs OUTSIDE the
     // anyVisible gate, like the dimmer, so the release path always executes;
     // it must run AFTER the shed's positions were integrated this frame and
     // BEFORE ambient.update reads its per-particle feed).
     computeDet();
     uDet.value.set(det[0], det[1], det[2]);
-    takeover.update(eff, t, mw, uLean.value);
+    takeover.update(eff, t, mw, uLean.value, T);
     ambient.update(shedRegions, gk, _grad, takeover.feed);
 
     group.visible = anyVisible;
     if (!anyVisible) return;
     coreMat.uniforms.uTime.value = t;
+    // taste dial: ribbon opacity — effectively gone below T ~0.2, exactly
+    // the authored CORE_OPACITY at T = 1 (draw-on/det staging untouched)
+    coreMat.uniforms.uOpacity.value = CORE_OPACITY * ribScaleOf(T);
     uRev.value.set(eff[0], eff[1], eff[2]);
     const c = uCoh.value;
     c.x += (cohTarget[0] - c.x) * k;
@@ -1116,7 +1292,9 @@ export function createInspire(sceneApi) {
 
     for (let i = 0; i < 3; i++) {
       const st = streaks[i];
-      const want = (i === effActive ? 0.42 : 0) * furnOf(i);
+      // taste dial: the streak keeps a modest floor even at T = 0 — it is
+      // the active label's living anchor (see stkScale above)
+      const want = (i === effActive ? 0.42 : 0) * furnOf(i) * stkScale;
       st.o += (want - st.o) * Math.min(1, dt * 2.4);
       if (st.o < 0.02 && want === 0) st.o = 0;   // die cleanly, no lingering blade
       // a lens catching an exceptional source: slow breathing, slight shimmer

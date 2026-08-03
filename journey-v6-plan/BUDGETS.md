@@ -1343,3 +1343,108 @@ same dots, never a replacement.
 - Connect entry: p 0.49 chapter=connect composition intact; return clean.
 - Zero console errors / unhandled rejections across all runs (error +
   rejection + console.error hooks injected before load).
+
+# MASTER TASTE DIAL — TRANSFORM (2026-08-03, round 8)
+
+After seven review rounds the note is unchanged — "the stream transforms into
+a different thing when I rotate around" (confirmed: THE STREAM's choreography,
+drift reorganizing into designed braided plumes — not the mushroom or scene).
+Instead of an eighth guess, the transformation intensity is now Hannah's own
+live knob: one master scalar T (0..1, default **0.30**) scaling every element
+of the stream's reorganization coherently.
+
+## What T scales (all pure in (eff, time, T))
+
+| Channel | Law | File |
+|---|---|---|
+| Dot path blend | pos = lerp(heroPos, braidPos, conv x T) — dots bow toward the braid at low T; rim-walks scale, never sever (conv stays the cease gate) | inspire-takeover.js |
+| Core-cohort tightening | tight = 1 - 0.70 x core x T | inspire-takeover.js |
+| Pearl brightness | rise env = base x (T + rich x (0.18 + 0.82 T)) — 0.18 floor keeps a faint sparkle / living label anchors near T=0; other stage envelopes x T | inspire-takeover.js |
+| Ambient mix | dimmer feed cv = conv x T; pw-only branch opened in inspire-ambient so the floor sparkle lands at cv~0 | inspire-ambient.js |
+| Ribbon opacity | CORE_OPACITY x ribScaleOf(T) = T x smoothstep(0.08, 0.30, T) — effectively gone below ~0.2, exact at T=1 | inspire.js |
+| Furniture | strand mats (sources 0.5 / wisps 0.15 / rim links 0.12): uOpacity = base x T, uFade choreography untouched; beads: uFade x T (fewer + fainter) | inspire.js |
+| Shed hand-over | capsule dims rg.k x T, global cede gk x T, history dissolve grad.k x T | inspire.js |
+| Coherence | cohTarget x T (hover/selected/auto gather + trace amps follow) | inspire.js |
+| Streak | want x (0.25 + 0.75 T) — modest floor kept: it anchors the active label | inspire.js |
+
+T = 1 reproduces the previous build exactly (all scale laws hit 1). T = 0:
+the hero's stream visually untouched + labels + faint pearl sparkle + the
+streak's floor glint. snap() applies identical scalings for ?p= captures.
+
+## Controls & persistence
+
+- Keys `[` / `]`: step 0.05, clamped 0..1, persisted to
+  **localStorage['journey-v6.transform']** (how Hannah's chosen value is read
+  back). Editable-target-guarded.
+- `?t=0.45` sets at load. Load order: query > localStorage > default 0.30.
+  Load paths never write storage — only interactive keys persist.
+- Readout: `.j-tdial` bottom-left ("TRANSFORM 0.45"), aria-hidden,
+  pointer-events none, journey palette (muted/gold-bright), shows on change
+  and fades ~1.5 s after the last adjustment. Zero DOM until first use.
+- API: journey.chapters.inspire.setTransform(v, {persist}) / .transform.
+
+## Purity / restore
+
+Changing T mid-scrub re-scales the live frame (no eased or integrated T
+state; the takeover's hero-shadow discipline is unchanged at every T). p = 0
+restore path untouched: every T channel multiplies an Inspire-leg drive that
+is already zero at p = 0.
+
+# D17 RE-AXIS — the braid rises along the stream's own drift axis (2026-08-03, round 8b)
+
+Hannah's clarified diagnosis, mid-build: the residual "it SWITCHED" was a
+spatial LOCUS JUMP — the hero's visible stream is a diagonal column along
+BREEZE_DIR (1.0, 0.62, 0.17), ~58 deg off vertical, but the braids rose
+near-vertically from the rim lip (belly clamp damping the lean further), so
+organizing RELOCATED the bright column from the drift envelope to an upright
+rim column. Same dots, different place: a switch regardless of particle
+continuity.
+
+## Changes
+
+- inspire-takeover.js: rise displacement is LINEAR in h along the breeze
+  ratios (DRIFT_RX = 1.0/0.62, DRIFT_RZ = 0.17/0.62) instead of the old
+  h^2 x 0.62/0.105 J-curve; per-particle lean ~1 +/- 6% for ALL exits (the
+  rand() draw kept and remapped 0.8..1.25 -> 0.94..1.06, so every later
+  per-particle assignment stays byte-identical); spec.lean retired from the
+  rise axis.
+- inspire.js: ribbon shader uses the same linear breeze-ratio law (uLeanP
+  (1,1,1)) so ribbons thread the leaned braid; wisp guides' rise sections
+  re-authored linear along the axis; the shed's rise-corridor capsule top
+  follows the leaned braid; label anchors ride each plume's leaned
+  centreline at the same fractional lift (labels themselves unchanged).
+- journey.js driveInspire: the belly clamp is RETIRED (setLeanScale(1)
+  always) — locus law outranks the no-streaming-at-lens note; near-lens
+  protection stays with the shaders' near-camera fade. Verified by eye at
+  mid-orbit and rest: nothing streams at the lens at the new angles.
+- T = 1 is therefore the previous build EXCEPT the leaned braid (sanctioned
+  new look); every T-scaling law still hits exactly 1 at T = 1.
+
+## Locus verification (headless CDP, 1440x900, ?nosnap=1, fixed camera;
+   bright-dot mass = screen-projected shed dots >= 35% of max luminance,
+   5-95 percentile box)
+
+- Mid-orbit (p = 0.19): T=1 bright box 100% contained in the T=0 drift
+  envelope box (and in its 1-99 box); box-centre shift 15.7 px (~1% frame).
+- Rest: T=1 box 91% inside the T=0 1-99 envelope (64% inside the dense 5-95
+  core — the tallest braid tips reach the envelope's sparse downwind fringe,
+  which the drift itself populates).
+- Through the orbit at fixed T=0.3 (p 0.145 -> 0.258): the bright-mass
+  centroid never hands off — the single 113-123 px step at p~0.196 is the
+  CAMERA's own move (the fixed cap-centre anchor jumps 113.8 px in the same
+  step, ?steady=1; relative stream-vs-frame motion ~10 px); all other
+  steps are <= ~35 px growth of the same mass as the currents extend.
+
+## Dial + restore verification (same harness)
+
+- Default 0.30 on clean boot; ?t=0.45 wins over localStorage; [ ] steps
+  0.05 (0.30 -> ]] -> 0.40 -> [ -> 0.35), persisted ('journey-v6.transform');
+  reload without ?t resumes the persisted value; setTransform clamps (1.4 ->
+  1, -0.2 -> 0). Readout: "transform 0.40", aria-hidden, bottom-left, fades
+  ~1.5 s after the last change (verified with pumped frames; computed
+  opacity 1 -> 0.10 mid-fade -> 0).
+- Checksums: boot 7789.45663 at T=0.1 AND T=1.0; after full round trips
+  (0 -> 0.10 -> 0.19 -> 0.26 -> 0.19 -> 0.10 -> 0): sum 7789.45663,
+  elementwise diffs 0, both T values. Mid-scrub T flips at p=0.19
+  (1 -> 0.6 -> 0.05 -> 0.9 -> 0.3 -> 1) then home: diffs 0.
+- Zero console errors / unhandled rejections across every page and run.

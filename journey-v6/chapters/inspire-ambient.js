@@ -135,10 +135,13 @@ export function createAmbientShedDimmer(sceneApi) {
         }
         let f = 1 - (g > dim ? g : dim);
         // same-particle takeover: a converting dot swaps its ambient look for
-        // its plume look; dim/history apply to the unconverted share only
+        // its plume look; dim/history apply to the unconverted share only.
+        // Taste dial: near T = 0 the conversion share cv is ~0 but the pearl
+        // FLOOR still sparkles through pw — so pw alone can open the branch.
         if (tkOn) {
           const c = tcv[pi];
-          if (c > 0.0005) f = f * (1 - c) + tpw[pi];
+          const w = tpw[pi];
+          if (c > 0.0005 || w > 0.0005) f = f * (1 - c) + w;
         }
         col[i] = base[i] * f;
         col[i + 1] = base[i + 1] * f;
