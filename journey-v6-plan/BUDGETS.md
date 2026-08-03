@@ -1056,3 +1056,125 @@ labels + streak) with the new restrained rim river; fresh deep-link boot to the 
 clean; hero p = 0 shed color checksum byte-exact after full forward + reverse
 (7789.45663, plus session index-weighted 3928.41656); **zero new console errors** across
 all loads and scrubs (the only buffer entries are pre-cache-bust stale-module lines).
+
+---
+
+# TK — Same-particle takeover, Inspire (Hannah's fifth spore note, 2026-08-03 — definitive rebuild)
+
+**Trigger (Hannah, stated exactly, fifth note on the same perception):** "When I view the
+zoomed-out hero, there's spores coming out on the right side. When I scroll into Inspire,
+MORE spores appear behind that, and those are the ones we zoom in on. We should only have
+ONE spores — the ones visible on the right side — and we should animate/activate THEM when
+we scroll over to them, not make new ones appear."
+
+**Root truth acknowledged:** every prior round (drift-morph seeding, delta rim-walk,
+history dissolve) was still a CROSSFADE between two particle systems — the hero's 4,200
+CPU shed dimming while the chapter's separate 5,100-spore GPU system faded in. However
+synchronized, new points joined the scene. This round removes the second system from the
+transition entirely.
+
+**Scope:** new `chapters/inspire-takeover.js`; `chapters/inspire.js` (uDet detail gate,
+drift-morph block excised, takeover drive); `chapters/inspire-ambient.js` (per-particle
+brightness handover feed). journey.js, core/, mushroom-scene.js, other chapters untouched.
+
+## Architecture (all pure in effective reveal / detail fade / time — reversible, scrub-safe)
+
+1. **The hero's own dots perform the transition.** Each frame the hero's `spore-drift`
+   animator integrates the shed buffer as always (mushroom-scene.js never edited); the
+   chapter's 'spike-plumes' animator — registered later in the insertion-ordered Map, so
+   it runs after — then overwrites each CONVERTED particle's position with
+   `lerp(heroPos, braidPos, conv)`. `braidPos` is a CPU port of the spore vertex shader's
+   staged path (born between gills → lateral → rim walk / curl → braided rise, drop
+   cohort included), same `mig`/`rg` gates on the same per-exit effective reveals,
+   evaluated cap-local and pushed through the live mushroom matrix (rides sway/bend).
+   Per-particle assignment: destination exit weighted 0.50/0.28/0.22 (delta order),
+   births ALL in the source wedge, Arca/2RP routed along the rim-walk path — the delta
+   narrative is preserved, performed by the actual dots.
+2. **conv** = hash-staggered smoothstep of the destination exit's reveal (residents
+   saturate by eff 0.80, migrants by 0.55 — the walk-front's arrival). Pure function:
+   reverse scroll plays the conversion backward; `?nosnap=1` fine stepping and commit-
+   glide traversal both verified.
+3. **Restore by ceasing, against an integrator.** The hero integrates whatever we wrote,
+   so a per-particle shadow of the TRUE hero position is delta-tracked (teleports — the
+   hero recycling a spent spore — are accepted as the new hero home). When a particle's
+   conv returns to 0 (ease OR deep-link jump) the buffer is handed back at the shadow
+   position and the module stops writing; `spore-drift` re-owns it with no pop. Ages,
+   origins, velocities never touched.
+4. **Brightness contract** (fed per-frame into the ambient dimmer):
+   `F = shedDim * (1 − conv) + PLUME_GAIN(1.35) * env * conv * (1 − det)` — a converting
+   dot swaps ambient look for plume look (env = ported path alpha envelope: walk pulses,
+   draw-on gates, cycle-wrap fades). Capsule dims, global hand-over and the history-
+   dissolve gradient now apply to the UNCONVERTED share only. Byte-exact color restore
+   discipline unchanged.
+5. **The GPU system is now the rest-density DETAIL layer only.** Its drift-morph handoff
+   block is excised (every particle always on its staged path); its alpha is gated by a
+   new per-exit `uDet = smoothstep(0.85, 0.995, eff)` — dark through the whole
+   transition, fading in CO-LOCATED (identical staged math) only after conversion has
+   saturated, while the converted dots ease their plume brightness out on the same
+   curve — density constant to the eye. At eff = 1, det = 1: the approved rest look is
+   the same math (knot pearls, core ribbons, sheath, streak all GPU as approved).
+   Ribbons/beads draw-on gates unchanged.
+
+## Empirical animator-order proof
+
+Tail probe animator (registered last) sampling `arr[0]` just before render vs the value
+the takeover wrote that frame: **12/12 consecutive frames identical (d = 0.000000)** —
+the takeover's writes survive to render, i.e. it runs after `spore-drift`, every frame.
+(Map insertion order: hero animators at scene creation, journey chapters at boot.)
+
+## 8-point scrub narrative (own tab, no-store server, screenshot-pumped; ?nosnap=1&steady=1)
+
+- p .10 (az 27): baseline — ONE stream off the back-right rim. All channels 0.
+- p .15 (az 72): camera swings; same one stream, larger. Still all 0.
+- p .16 (az 83): ignition begins (eff0 .001) — nothing visible changes yet.
+- p .165 (az 88): eff0 .079 — 336 of the hero's own dots converting; the stream's
+  near-rim dots begin organizing. det = 0: the GPU contributes NOTHING.
+- p .17 (az 93): eff0 .248, 1,149 dots converting — the curtain visibly reorganizes.
+- p .175 (az 98): eff0 .466, 2,072 converting / 563 saturated — braid forming from the
+  same dots, wisps drawing on. det still 0.
+- p .183 (az 107): eff0 .808 — **a fully formed ArtCompute braid carried entirely by
+  2,072 hero dots, zero GPU spores** (det = 0). The critical frame.
+- p .19 (az 114): eff0 .985 → det0 .986 — GPU detail fades in co-located; dots hand
+  brightness back (maxPw .17). No visible seam.
+- p .217–.238 (az 139–155, in-motion — the .20–.245 band cannot park, per RD): Arca
+  current walks the rim and rises (eff1 .985/det1 1), 2RP current peeling (eff2
+  .16→.84, det2 0 — 2RP braid carried by hero dots while in motion).
+- p .26 (az 160): rest — det [1,1,1], maxPw 0, all 4,200 converted and dark; approved
+  frame (three braids, labels, streak, copy) carried by the GPU alone. [g] toggles clean.
+- Reverse over the same targets: det2 1→.109 hands the 2RP braid back to the dots,
+  currents retreat, braid re-dissolves into the curtain, p .16 reverse frame matches
+  forward. Normal-scroll (no nosnap) full journey forward to Owned and back: continuous
+  both ways, commit-glide included.
+
+## Cost
+
+- CPU: worst case (all 4,200 converted, full path eval + write) **0.83 ms/frame**
+  measured in-page; zero when the leg is quiet (early return); unconverted dots take a
+  copy-only fast path. Flat typed arrays, no per-frame allocation.
+- GPU: drift block removed from the spore vertex shader (net ALU savings); +1 vec3
+  uniform. No new draw calls, no new geometry, no new particles anywhere.
+- Dimmer loop unchanged in class; +2 Float32Array reads per particle when the takeover
+  is live.
+
+## Verified
+
+Pristine boot p=0 shed color checksum 7789.45663 (index-weighted 3848.11288); byte-exact
+after fine forward+reverse scrub AND after the normal-scroll full-journey round trip —
+both twice. Zero console errors across every load, scrub, traversal and [g] toggle of
+the session. Deep-link `?p=0.26` boots to the approved rest (fades converge over ~1.5 s
+wall-clock as designed — same easing note as RD).
+
+## The honest answer
+
+"If Hannah watches the right-side spores while scrolling in, will she ever see a spore
+appear that wasn't already there?" — **During the entire transition, no**: every moving
+dot on screen from az 82 to conversion saturation IS one of the hero's 4,200, and the
+walk/rise are performed by those dots alone. Two qualified moments remain: (1) near the
+rest (eff .85→1, ~4° of orbit) the GPU detail layer fades in co-located while the dots
+hand back brightness on the same curve — density holds, but it is a fade-in of finer
+detail (pearls, ribbon cores, +900 effective dust) at the same braid positions; watched
+frame-by-frame it reads as the braid sharpening, not as new spores arriving somewhere
+new. (2) The under-rim furniture (filaments, beads, wisps, rim links) remains authored
+line/bead geometry with its approved draw-on gates — structures igniting, not spores
+appearing. If Hannah still perceives (1) as "more spores", the next knob is a single
+constant (DET window / PLUME_GAIN) — the architecture no longer fights her.
