@@ -389,7 +389,18 @@ export function boot(opts = {}) {
 
   const qp = q.get('p');
   const qpose = q.get('pose');
-  if (qp !== null) {
+  const qcapture = q.get('capture');
+  if (qcapture !== null) {
+    // ?capture=<p> (M5): pixel-stable stills for capture.py. The page
+    // bootstrap already froze the organism's clock at the t = 0 phase and
+    // skipped the intro; here the journey places itself at exactly p (a
+    // chapter id is accepted and means that chapter's rest, so capture
+    // tooling can keep speaking pose names). Everything runs the dt = 0
+    // deep-link path, so eased states snap and then hold.
+    placeAt(CHAPTER_IDS.includes(qcapture)
+      ? restProgress(qcapture)
+      : clamp01(parseFloat(qcapture) || 0));
+  } else if (qp !== null) {
     placeAt(clamp01(parseFloat(qp) || 0));
   } else if (qpose && CHAPTER_IDS.includes(qpose)) {
     placeAt(restProgress(qpose));
