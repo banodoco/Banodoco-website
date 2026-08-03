@@ -66,8 +66,15 @@ export function boot(opts = {}) {
 
   // [g] — raw (post-bloom hero baseline) vs finished, everywhere. Same key
   // as the approved spike; the raw reference at p=0 IS the hero's own look.
+  // Guarded like every raw-listener key seam (M5): a modified chord is a
+  // browser shortcut (Cmd+G = find next), and a key typed into a text-entry
+  // control is content — neither may toggle the grade.
   addEventListener('keydown', (e) => {
-    if (e.key === 'g' || e.key === 'G') lens.setEnabled(!lens.enabled);
+    if (e.key !== 'g' && e.key !== 'G') return;
+    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    lens.setEnabled(!lens.enabled);
   });
 
   const chapters = {

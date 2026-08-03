@@ -325,6 +325,15 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     const k = KEYS[e.key];
     if (k === undefined) return;
     if (e.defaultPrevented) return;
+    // 0. a MODIFIED key is a browser/OS shortcut, never travel: Cmd+ArrowDown
+    //    is End on macOS, Alt+Arrow is history in some browsers, Ctrl+Space is
+    //    an input-source switch. Claiming (and preventDefault-ing) those keys
+    //    would eat platform chords over the journey surface. Shift is exempt —
+    //    Shift+Space is the platform's own scroll-up idiom, which IS travel
+    //    intent; it maps to the same forward step as plain Space (deliberate:
+    //    the journey has one axis and PageUp/ArrowUp already travel back).
+    //    Keys delivered mid-IME-composition belong to the composer, not us.
+    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
     // 1. a modal owner is live: NONE of these are travel. This is what stops
     //    an arrow press from scrubbing the journey behind an open card — and
     //    from closing it, which used to happen because travel keys reached

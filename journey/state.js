@@ -42,6 +42,9 @@ export function createJourneyState({ onNavigate = null, onFlightCancel = null } 
   window.addEventListener('wheel', cancelFlight, { capture: true, passive: true });
   window.addEventListener('touchmove', cancelFlight, { capture: true, passive: true });
   window.addEventListener('keydown', (e) => {
+    // Mirror scroll.js's dispatch: a modified chord is a browser shortcut,
+    // not scroll intent, so it must not cancel a running flight (M5).
+    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
     if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(e.key)) cancelFlight();
   }, { capture: true });
 

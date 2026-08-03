@@ -320,6 +320,9 @@ export function createInspire(sceneApi) {
   if (qaDial && typeof addEventListener === 'function') {
     addEventListener('keydown', (e) => {
       if (e.key !== '[' && e.key !== ']') return;
+      // Cmd+[ / Cmd+] are the browser's own Back/Forward — a modified chord
+      // must never also move the dial (M5 key-routing pass).
+      if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
       const tgt = e.target;
       if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable)) return;
       api.setTransform(tState.t + (e.key === ']' ? T_STEP : -T_STEP), { persist: true });
