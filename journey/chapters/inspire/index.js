@@ -77,6 +77,8 @@ import {
 } from '../../anatomy.js';
 import { EXITS } from './anatomy.js';
 import { endOf, restProgress } from '../../route.js';
+import { createDial } from '../../dial.js';
+import { T_QA_ACTIVE, T_QS_VALUE, getTransformStorage, setTransformStorage } from '../../../flags.js';
 
 const TAU = Math.PI * 2;
 const N_GILL_CHANNELS = 230;                 // the hero's gill count
@@ -134,13 +136,10 @@ const tmpC = new THREE.Color();
 // constant and cite the decision entry here.
 const T_SHIPPED = 0.30;
 const T_STEP = 0.05;
-const T_LS_KEY = 'journey-v6.transform';
 const STREAK_FLOOR = 0.25;
 const CORE_OPACITY = 0.62;               // the ribbons' authored opacity
-const clampT = (v) => {
-  v = v < 0 ? 0 : v > 1 ? 1 : v;
-  return Math.round(v * 100) / 100;      // kill float-step residue (0.05 grid)
-};
+// clamping/grid-snap now lives in ../../dial.js (createDial), which this
+// module's tDial instance owns — see the master TRANSFORM state block below.
 // ribbons: x T with an extra low-end gate so they are effectively gone below
 // ~0.2 (a designed continuous core is the strongest "different thing" read).
 // ribScaleOf(1) = 1 exactly; >= 0.3 it is plain T.
@@ -261,75 +260,24 @@ export function createInspire(sceneApi) {
   const counts = { sourceSegs: 0, wispSegs: 0, beads: 0, coreSegs: 0, rimSegs: 0 };
 
   /* ---- master TRANSFORM state (see the block comment at module scope).
-     SHIPPED: the baked T_SHIPPED, nothing else consulted. QA (?t= present):
-     the query value if it parses, else the last persisted QA value, else the
-     baked default. Only an interactive [ / ] adjustment (QA-only) writes
-     localStorage, so a one-off ?t= trial never silently overwrites a saved
-     QA setting — and the shipped path never even reads the key. ---- */
-  let qaDial = false;
-  const tState = { t: T_SHIPPED };
-  try {
-    const qs = new URLSearchParams(location.search);
-    qaDial = qs.has('t');
-    if (qaDial) {
-      const qv = parseFloat(qs.get('t'));
-      if (Number.isFinite(qv)) tState.t = clampT(qv);
-      else {
-        const sv = parseFloat(localStorage.getItem(T_LS_KEY));
-        if (Number.isFinite(sv)) tState.t = clampT(sv);
-      }
-    }
-  } catch { /* no location/localStorage (tests, privacy mode): shipped T */ }
-
-  // small unobtrusive readout, bottom-left, journey styling, out of the a11y
-  // tree (it is a taste tool, not content). QA-only: on a plain load this DOM
-  // never exists — the function gates on the ?t= flag and nothing else calls
-  // it. In QA mode it appears at boot and stays visible (no fade): the whole
-  // point of the session is reading the number.
-  let dialEl = null, dialVal = null;
-  function showDial() {
-    if (!qaDial || typeof document === 'undefined') return;
-    if (!dialEl) {
-      if (!document.getElementById('j-tdial-style')) {
-        const st = document.createElement('style');
-        st.id = 'j-tdial-style';
-        st.textContent = [
-          '.j-tdial { position: fixed; left: 2.4vw; bottom: 3.2vh; z-index: 40;',
-          '  font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;',
-          '  color: var(--muted, #c9bfa8); opacity: 0; transition: opacity 0.35s;',
-          '  pointer-events: none; user-select: none; }',
-          '.j-tdial b { color: var(--gold-bright, #f0c877); font-weight: 400; }',
-        ].join('\n');
-        document.head.appendChild(st);
-      }
-      dialEl = document.createElement('div');
-      dialEl.className = 'j-tdial';
-      dialEl.setAttribute('aria-hidden', 'true');
-      dialEl.append('transform ');
-      dialVal = document.createElement('b');
-      dialEl.appendChild(dialVal);
-      document.body.appendChild(dialEl);
-    }
-    dialVal.textContent = tState.t.toFixed(2);
-    dialEl.style.opacity = 1;
-  }
-
-  // [ / ] adjust T in 0.05 steps, clamped 0..1 (same raw-listener seam as
-  // journey.js's [g]; scroll.js's controls-first dispatch never claims
-  // these). QA-only: the listener is not even registered on a plain load.
-  if (qaDial && typeof addEventListener === 'function') {
-    addEventListener('keydown', (e) => {
-      if (e.key !== '[' && e.key !== ']') return;
-      // Cmd+[ / Cmd+] are the browser's own Back/Forward — a modified chord
-      // must never also move the dial (M5 key-routing pass).
-      if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
-      const tgt = e.target;
-      if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable)) return;
-      api.setTransform(tState.t + (e.key === ']' ? T_STEP : -T_STEP), { persist: true });
-    });
-    // QA boot: surface the live value immediately
-    showDial();
-  }
+     Re-implemented on the taste-dial registry (../../dial.js, M5): SHIPPED
+     runs T_SHIPPED, nothing else consulted; QA (?t= present) reads the
+     query value if it parses, else the last persisted QA value, else the
+     baked default; [ / ] steps 0.05, clamped 0..1, and only an interactive
+     adjustment writes storage. dial.js owns the mechanism (clamp, keys,
+     readout, persistence) — this call site owns only TRANSFORM's numbers.
+     flags.js (THE flag registry) is the sole reader of ?t= / localStorage;
+     dial.js never touches either directly. */
+  const tDial = createDial({
+    name: 'transform',
+    shipped: T_SHIPPED,
+    min: 0, max: 1, step: T_STEP,
+    keys: ['[', ']'],
+    active: T_QA_ACTIVE,
+    qsValue: T_QS_VALUE,
+    loadStored: getTransformStorage,
+    saveStored: setTransformStorage,
+  });
 
   // per-exit fade drivers (sequential reveal). The old 4th channel (backlit
   // gill band) is GONE per D16: it was a self-igniting filler for the long
@@ -1051,19 +999,15 @@ export function createInspire(sceneApi) {
      *  feed; ?tkdbg adds perf + animator-order probes). */
     _sporeSeat: sporeSeat,
     /** MASTER TASTE DIAL (see the block comment at module scope). Sets the
-     *  live TRANSFORM scalar, clamped 0..1. persist writes it to
-     *  localStorage('journey-v6.transform') — QA mode only (?t= present;
+     *  live TRANSFORM scalar, clamped 0..1, via ../../dial.js — which
+     *  persists it through flags.js's getTransformStorage/setTransformStorage
+     *  (localStorage key 'journey.transform') — QA mode only (?t= present;
      *  the shipped path neither reads nor writes the key). The [ / ] keys
      *  pass persist: true; programmatic calls default to session-only.
      *  Pure re-scale: every channel is a function of (eff, time, T), so
      *  this is safe at any p, mid-scrub included. */
-    setTransform(v, { persist = false } = {}) {
-      tState.t = clampT(v);
-      if (persist && qaDial) { try { localStorage.setItem(T_LS_KEY, String(tState.t)); } catch { /* privacy mode: session-only */ } }
-      showDial();
-      return tState.t;
-    },
-    get transform() { return tState.t; },
+    setTransform(v, opts) { return tDial.set(v, opts); },
+    get transform() { return tDial.value; },
     /** Tier hook, kept for API compatibility. The tierable 5,100-spore GPU
      *  layer is deleted (final unification): the chapter's particles ARE the
      *  hero's 4,200 shed dots, whose count is the hero's own budget. */
@@ -1093,7 +1037,7 @@ export function createInspire(sceneApi) {
       for (const ex of exits) ex.fade = ex.target;
       computeEff();                 // camera is already placed by placeAt
       effActive = resolveActive();
-      const T = tState.t;           // taste dial: same scalings as the animator
+      const T = tDial.value;        // taste dial: same scalings as the animator
       const stkScale = STREAK_FLOOR + (1 - STREAK_FLOOR) * T;
       const c = uCoh.value;
       for (let i = 0; i < 3; i++) {
@@ -1217,7 +1161,7 @@ export function createInspire(sceneApi) {
     const k = Math.min(1, dt * 3.2);
     // taste dial: one scalar, read once per frame, scales every channel of
     // the stream's reorganization below (pure: no eased/integrated T state)
-    const T = tState.t;
+    const T = tDial.value;
     const stkScale = STREAK_FLOOR + (1 - STREAK_FLOOR) * T;
     for (const ex of exits) {
       ex.fade += (ex.target - ex.fade) * k;
