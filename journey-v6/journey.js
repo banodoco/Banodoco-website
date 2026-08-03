@@ -230,18 +230,11 @@ export function boot(opts = {}) {
     }
     detailPushed = false;   // arriving via the hash: the entry is not ours
     if (r.sameChapter) return;
-    // adjacent chapters fly the spatial route; non-adjacent jump (a
-    // full-journey flight on a Back press reads as a hang)
-    const from = CHAPTER_IDS.indexOf(chapterAt(journey.progress).id);
-    const to = CHAPTER_IDS.indexOf(r.chapter);
-    if (Math.abs(to - from) <= 1) {
-      journey.flyToChapter(r.chapter);          // the surface follows the flight
-    } else {
-      // non-adjacent: jump. A full-journey flight on a Back press reads as a hang.
-      journey.jumpToChapter(r.chapter);
-      scroll.setProgress(restProgress(r.chapter));
-      applyFrame(journey.progress, 0);
-    }
+    // Every route-driven chapter change is a DIRECT jump (D16 restage found
+    // the legacy adjacent-chapter flight left the camera stuck with runaway y
+    // on Back-to-Mission; direct jumps are also what Hannah asked nav to be).
+    // The flight system is now unused by every path.
+    directJumpTo(r.chapter);
   }
 
   /* ================================================================

@@ -43,15 +43,19 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
     const az = Math.atan2(x, z);                     // same convention as the director
     const capAz = Math.atan2(z, x);                  // anatomy convention (cos a, ., sin a)
 
-    // T1 - rear-cap reveal: azimuth passes ~100 deg from the Mission azimuth
-    // while above the rim. The journey's own progress is an equally valid
+    // T1 - stream-side reveal (D16 restage: the orbit is now a ~90 deg swing
+    // toward the visible stream, so the old ~100 deg rear threshold would
+    // never be crossed). Arms once the azimuth passes ~48 deg from the
+    // Mission azimuth — comfortably before the reveal ramps begin (az ~34 in
+    // desktop-absolute terms = ~46 deg past Mission) and far outside the
+    // orbit-breath wobble. The journey's own progress is an equally valid
     // driver, but the ADR specifies the camera predicate, so that is what
-    // runs; p only supplies the "above the rim" relaxation once the path has
-    // dropped under the cap on its way to Connect.
+    // runs; p only supplies the relaxation once the path has dropped under
+    // the cap on its way to Connect.
     {
       const d = Math.abs(((az - missionAz + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) / DEG;
-      const inside = d > 100 - HYS_DEG && p < 0.44;
-      const outside = d < 100 - HYS_DEG * 2 || p > 0.46;
+      const inside = d > 48 - HYS_DEG && p < 0.44;
+      const outside = d < 48 - HYS_DEG * 2 || p > 0.46;
       const on = gate('rear-cap', inside, outside, now);
       chapters.inspire.setArmed(on);
     }

@@ -68,15 +68,13 @@ const KEYS = [
   // composition, and the orbit must lift off from it without a step.
   { p: 0.040, ...ZERO },
 
-  // INSPIRE (rest 0.26) — Plate II: "crown low, plumes run the full height,
-  // chips stacked", copy bottom. The crown settles just above the bottom
-  // copy block (mid-frame, clear of it), the three plumes own the tall sky
-  // above; the dolly-back pulls the exit chips inside the narrow frame.
-  // (measured at 375×812, the tighter frame: exit anchors land x 42/208/319,
-  // y 368-406 — all three chips inside the frame AND above the copy block
-  // (top y 458; ui hides any chip whose anchor falls inside the copy rect);
-  // crown ≈ 43%, bright front rim ≈ 55%, soil line disappears behind copy.)
-  { p: 0.260, back: 1.60, rise: 0.60, truck: 0, tgtUp: 0.10, tgtRight: 0.45, fov: 14 },
+  // INSPIRE (rest 0.26, D16 stream-side restage) — crown low-left, the
+  // stream's release point and the three clustered plumes mid-frame, chips
+  // above the copy. The dolly-back pulls the cluster inside the narrow
+  // frame; the stronger tgtRight (vs the old rear rest) slides the whole
+  // cluster off the right edge so all three chips — Arca's is the widest —
+  // land fully inside at 430×932, above the bottom copy block.
+  { p: 0.260, back: 1.60, rise: 0.60, truck: 0, tgtUp: 0.10, tgtRight: 1.05, fov: 14 },
 
   // Slip-under approach: bleed the field off BEFORE the rim so the camera
   // still passes beneath the lifted rim, not above it.
