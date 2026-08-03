@@ -5,7 +5,7 @@
 // colonnade (connect-frame.js), the orbit director and the budget HUD.
 // Review states: [1] hero pose · [2] Inspire rest · [3] Connect frame ·
 // [space] play the orbit · [g] raw/finished · [e] streak exit · [h] HUD.
-import { createScene } from '../../mushroom-scene.js';
+import { createScene } from '../../organism/organism.js';
 import { createLens } from './lens.js';
 import { createPlumes } from './plumes.js';
 import { createConnectFrame } from './connect-frame.js';

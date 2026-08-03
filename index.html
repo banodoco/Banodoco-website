@@ -26,7 +26,7 @@
   /* ============================================================
      ENTRY — one choreography, keyed to the growth timelapse.
      The scene grows over 4.2s in the order a real agaric does
-     (see introStateAt in mushroom-scene.js):
+     (see the entry choreography in organism/intro.js):
        0.0-1.7s   ground network converges on the base
        1.6-3.8s   stalk climbs in two SLOW waves: verticals, then lattice
        3.1-4.4s   under-cap double loop: gill sweep, then rim ring
@@ -627,7 +627,7 @@
   </div>
 
 <script type="module">
-import { createScene } from './mushroom-scene.js?v=1785427900';
+import { createScene } from './organism/organism.js?v=1785427900';
 
 // --- responsive camera compositions, keyed by mode ---
 const VIEWS = {
@@ -825,8 +825,11 @@ addEventListener('keydown', (e) => {
      v6-prepromote for that state). M1 promoted this file to the
      site root and archived the old hero page (now
      archive/golden-mushroom-page.html, frozen and non-runnable).
-     The hero still renders from the SAME mushroom-scene.js; nothing
-     about it is duplicated, patched, or re-timed here.
+     The hero renders from organism/ (mushroom-scene.js split into
+     organism.js/spores.js/intro.js/furniture.js at merge step M2,
+     zero behaviour change; the pre-split file is archived at
+     archive/mushroom-scene.js); nothing about it is duplicated,
+     patched, or re-timed here.
 
      This script loads ./journey-v6/journey.js only AFTER the hero
      entry choreography has finished (scene grow-in 5.4s, callouts
@@ -1463,7 +1466,7 @@ const bootTimer = setTimeout(() => {
 /* ============================================================
    INTRO FAST-FORWARD (ride-through #4, Hannah): scrolling during
    the entry choreography must never be a locked door. The scene's
-   grow-in runs on the wall clock (mushroom-scene 'intro-draw'
+   grow-in runs on the wall clock (organism/intro.js 'intro-draw'
    reads performance.now() live each frame), so skewing the clock
    fast-forwards the ENTIRE intro through its own real math —
    growth, ember release, shell restore — in ~0.5s. The page's CSS
