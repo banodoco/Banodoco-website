@@ -3,7 +3,7 @@
 **Task:** W4-F (platforms), second half. **Written:** 2026-08-02.
 **Status of this half:** the Tier-3 *pipeline* and the Tier-3 *page* exist and
 are verified. **Nothing in the live build routes to them yet** — by design. The
-live page (`journey-v6/index.html`, `journey.js`, `core/`) was owned by a
+live page (`index.html`, `journey.js`, `core/`) was owned by a
 parallel motion pass while this was written, so not one byte of it was touched.
 
 This document is the handover: the exact edits the integrator makes, in the
@@ -11,9 +11,9 @@ files they own, once the motion pass has landed.
 
 | Built this pass | Path |
 |---|---|
-| Capture pipeline | `journey-v6/tools/capture.py` |
-| Ten chapter stills + manifest | `journey-v6/static/captures/` |
-| The complete static journey | `journey-v6/static/index.html` |
+| Capture pipeline | `tools/capture.py` |
+| Ten chapter stills + manifest | `static/captures/` |
+| The complete static journey | `static/index.html` |
 
 Everything below is ordered by what blocks what. **§1 and §2 are the two items
 that actually block G5;** §3–§6 are correctness and hygiene.
@@ -31,7 +31,7 @@ empty `#stage`. Tier 3 now exists; it needs three doors into it.
 ### 1.1 Where the probe goes
 
 A **classic** `<script>` (not `type="module"`) in `<head>` of
-`journey-v6/index.html`, *before* the importmap and before the module that
+`index.html`, *before* the importmap and before the module that
 imports `../mushroom-scene.js`. It must be inline: the hero's regression budget
 allows +4 requests and +10 % bytes (BASELINE.md §8), and this should spend
 none of either.
@@ -64,7 +64,7 @@ review (PL-3.4) needs to put all three side by side.
 
 The capability probe passes on machines where context creation still fails
 later (driver blocklists, exhausted GPU memory, headless VMs). Wrap the
-`createScene(...)` call in `journey-v6/index.html`:
+`createScene(...)` call in `index.html`:
 
 ```js
 let sceneApi;
@@ -177,10 +177,10 @@ gate (G2a, G3, G4, G5) and before any merge that touches scene code:
 
 ```bash
 # 1. regenerate the Tier-3 stills from the live scene (~40 s, 10 PNGs)
-python3 journey-v6/tools/capture.py
+python3 tools/capture.py
 
 # 2. drift check — advisory today, a real gate once ?capture= lands
-python3 journey-v6/tools/capture.py --check
+python3 tools/capture.py --check
 ```
 
 Prerequisite for both: the static server already running —
@@ -188,7 +188,7 @@ Prerequisite for both: the static server already running —
 and refuses with the exact command if it is not up; it never starts or stops it.
 
 **Third check, and do not skip it:** open
-`http://localhost:8137/journey-v6/static/` and confirm the console says
+`http://localhost:8137/static/` and confirm the console says
 
 ```
 [tier3] content in sync with ../content/content.js — N strings, 16 contributors, 9 nodes
@@ -240,14 +240,14 @@ check.** When `git` returns, both commands become a pre-push hook unchanged.
    it lands the watchdog in §3 has nothing to demote *to*, so §3 is a spec, not
    a wiring job.
 7. **`?tier=1` / `?tier=3` do not exist yet** — they arrive with §1.1. Until
-   then Tier 3 is reachable only by typing `/journey-v6/static/`.
+   then Tier 3 is reachable only by typing `/static/`.
 
 ---
 
 ## 6. What was verified, and how
 
 Headless Chrome over CDP (own instance — the shared browser pane was at its tab
-cap), 1280×800 and 430×932, against `http://localhost:8137/journey-v6/static/`.
+cap), 1280×800 and 430×932, against `http://localhost:8137/static/`.
 
 - **Zero `<canvas>` elements, zero console errors/warnings** at both sizes, on
   load and after exercising every route.

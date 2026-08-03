@@ -18,7 +18,7 @@
 // this module ever reading journey state.
 
 import * as THREE from 'three';
-import { makeRng, gaussOf, heat, groundY } from '../core/anatomy.js';
+import { makeRng, gaussOf, heat, groundY } from '../anatomy.js';
 
 export const TAU = Math.PI * 2;
 export { makeRng, gaussOf, heat, groundY };

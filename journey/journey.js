@@ -9,27 +9,27 @@
 // pose, same fog, same OrbitControls state, same DOM. The journey nav, copy
 // blocks and hotspots are all at opacity 0 there.
 //
-//   scroll model      core/scroll.js    virtual, per-chapter allocations
-//   progress + routes core/journeyState.js
-//   camera path       core/director.js  Spike A orbit + keyed path
-//   streaming seams   core/seams.js     T1..T4, hysteresis + dwell
-//   optics            core/lens.js      unified grade, full journey (W5)
-//   DOM               core/ui.js        nav, copy, cards, hotspot proxies
+//   scroll model      scroll.js    virtual, per-chapter allocations
+//   progress + routes state.js
+//   camera path       director.js  Spike A orbit + keyed path
+//   streaming seams   seams.js     T1..T4, hysteresis + dwell
+//   optics            lens.js      unified grade, full journey (W5)
+//   DOM               ui.js        nav, copy, cards, hotspot proxies
 //   geometry          chapters/*.js
 
 import * as THREE from 'three';
-import { createJourneyState } from './core/journeyState.js';
-import { createScrollModel } from './core/scroll.js';
-import { createDirector } from './core/director.js';
-import { createSeams } from './core/seams.js';
-import { createLens } from './core/lens.js';
-import { createUI } from './core/ui.js';
+import { createJourneyState } from './state.js';
+import { createScrollModel } from './scroll.js';
+import { createDirector } from './director.js';
+import { createSeams } from './seams.js';
+import { createLens } from './lens.js';
+import { createUI } from './ui.js';
 import { createInspire } from './chapters/inspire.js';
 import { createConnect } from './chapters/connect.js';
 import { createOwned } from './chapters/owned.js';
 import { createFinal } from './chapters/final.js';
 import { MEMBERS } from './chapters/final-world.js';
-import { CONTENT } from './content/content.js';
+import { CONTENT } from '../content/content.js';
 import {
   CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, HERO_INTRO_MS,
   DEEP_LINK_DETAIL_DELAY_MS,

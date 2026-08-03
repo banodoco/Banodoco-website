@@ -20,7 +20,7 @@
 //                it leaving memory-points and an after-trace that stays lit
 //                for seconds after the pulse has passed.
 import * as THREE from 'three';
-import { makeRng, gaussOf, heat, capUnderPt } from '../core/anatomy.js';
+import { makeRng, gaussOf, heat, capUnderPt } from '../anatomy.js';
 import { TAU, bladeDepth } from './connect-blades.js';
 
 const V3 = THREE.Vector3;

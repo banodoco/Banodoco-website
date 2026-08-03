@@ -23,7 +23,7 @@ import {
   COMMIT_THRESHOLD, COMMIT_GLIDE_RATE, COMMIT_BLEND_K,
   WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K,
   restProgress,
-} from '../constants.js';
+} from './constants.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
 

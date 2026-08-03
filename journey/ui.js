@@ -17,7 +17,7 @@ import {
   COPY_OUT_K, COPY_IN_K, COPY_SETTLE_LO, COPY_SETTLE_HI,
   COPY_TRAVEL_LO, COPY_TRAVEL_HI,
   HOTSPOT_STAGGER_MS, HOTSPOT_IN_K, HOTSPOT_OUT_K,
-} from '../constants.js';
+} from './constants.js';
 
 /* --------------------------------------------------------------------------
    NOTE (a11y debt #1, closed): W4-E shipped a module-scope keydown guard here

@@ -13,7 +13,7 @@ import {
   THRESHOLD_HYSTERESIS_WORLD as HYS_W,
   THRESHOLD_HYSTERESIS_DEG as HYS_DEG,
   THRESHOLD_MIN_DWELL_MS as DWELL,
-} from '../constants.js';
+} from './constants.js';
 import { capUnderPt, rimRad, groundY } from './anatomy.js';
 
 const DEG = Math.PI / 180;

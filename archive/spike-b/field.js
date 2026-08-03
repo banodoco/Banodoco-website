@@ -8,7 +8,7 @@
 // perceptible whole-field loop. Waves live on the cords; hyphae twinkle
 // asynchronously per strand.
 import * as THREE from 'three';
-import * as H from '../lib/helpers.js';
+import * as H from '../../journey/lib/helpers.js';
 
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;

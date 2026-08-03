@@ -56,7 +56,7 @@
 //     Tier-1 only, per the donor tier model and the LA-7 proposal).
 import * as THREE from 'three';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { SEAM_FOG_DIPS } from '../constants.js';
+import { SEAM_FOG_DIPS } from './constants.js';
 
 const GradeShader = {
   name: 'SpikeGradePass',

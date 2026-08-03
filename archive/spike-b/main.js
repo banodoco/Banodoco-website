@@ -3,9 +3,9 @@
 //       [a] anonymous toggle, [d] 16 vs 48 node density, [b] HUD.
 // QA:   ?u=0.35 freezes the arc at that parameter; window.__setU(v) too.
 import * as THREE from 'three';
-import * as H from '../lib/helpers.js';
-import { CONTENT } from '../content/content.js';
-import { TEST_PORTRAITS } from '../assets/test-portraits/manifest.js';
+import * as H from '../../journey/lib/helpers.js';
+import { CONTENT } from '../../content/content.js';
+import { TEST_PORTRAITS } from '../../assets/test-portraits/manifest.js';
 import { buildField } from './field.js';
 import { buildPortraitField } from './portraits.js';
 import { createOptics } from './optics.js';
