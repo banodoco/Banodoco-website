@@ -5,10 +5,11 @@
 //
 // Two parameterisations, joined with matching zero velocity at p = 0.26:
 //
-//   p <= 0.26  the Mission -> Inspire leg, which is Spike A's APPROVED orbit
-//              spline (rear three-quarter, target pins to the cap early,
-//              constant radius until the last 20%, no roll, ~172 deg, never a
-//              revolution). Adapted here, not imported from spike-a/.
+//   p <= 0.26  the Mission -> Inspire leg: Spike A's approved orbit GESTURE
+//              (target pins to the cap early, constant radius until the last
+//              20%, no roll, gentle late push-in) re-aimed per D16 — a ~90 deg
+//              swing RIGHT toward the hero's visible spore stream, never away
+//              from it. Adapted here, not imported from spike-a/.
 //   p >= 0.26  a keyed path sampled with non-uniform Catmull-Rom / Hermite,
 //              with tangents forced to zero at every resting pose so each
 //              composition eases in and eases out with no velocity step.
@@ -37,11 +38,18 @@ export const HERO = {
   target: V(-2.4, 2.6, 0),
   fov: 38,
 };
-// Inspire rest: rear three-quarter, ~20 deg right of dead-rear (Plate II).
-export const INSPIRE = { az: 160 * DEG, r: 8.3, y: 3.25, target: V(0.15, 3.6, 0), fov: 38 };
+// Inspire rest — RESTAGED per D16 (Hannah, 2026-08-03): no longer the rear
+// three-quarter. The camera swings RIGHT, toward the hero's one visible
+// stream (the shed released at cap az ~5.83, carried +x by the breeze), and
+// rests on the stream-side rim so the spores the visitor was already watching
+// are the spores the chapter organizes. ~90 deg of swing instead of ~172; the
+// stream stays in frame essentially the whole leg. Gesture qualities kept:
+// no roll, early target pin, constant radius, gentle push-in in the last 20%.
+export const INSPIRE = { az: 78 * DEG, r: 9.1, y: 3.25, target: V(1.15, 3.95, -0.40), fov: 38 };
 
 const SWING_Y = 2.9;              // Plate II: "cam y 2.25 -> ~2.9"
-const PIN = V(0, 3.3, 0);         // cap-centre lock during the swing
+const PIN = V(0.5, 3.4, -0.1);    // cap lock, biased a touch toward the stream
+                                  // side so the visible plume never leaves frame
 const PUSH_START = 0.80;          // the push-in lives ONLY in the last 20%
 
 // The orbit occupies p in [ORBIT_P0, ORBIT_P1]. Below ORBIT_P0 the camera is
@@ -117,17 +125,20 @@ function orbitPose(s, out, hero = HERO) {
    camera eases into and out of. Rest anchors are exactly restProgress(id):
    inspire 0.26, connect 0.49, owned 0.725, final 0.925.                     */
 const KEYS = [
-  // --- INSPIRE rest, and the drift that holds it ---
-  { p: 0.260, pos: V(2.839, 3.25, -7.800), tgt: V(0.15, 3.60, 0.00), fov: 38, hold: true, note: 'inspire-rest' },
-  { p: 0.312, pos: V(2.930, 3.30, -7.180), tgt: V(0.32, 3.56, -0.18), fov: 38.5, note: 'inspire-rest-drift' },
-  // --- follow ONE plume backward + downward around the rim (GB-2.1) ---
-  // The guide plume is the back-right ArtCompute exit (cap az 5.50), whose
-  // rim release point sits at ~(1.58, 2.98, -1.57): the path descends along
-  // the plume toward it, so the cap climbs the frame and occludes the sky.
-  { p: 0.362, pos: V(2.980, 3.34, -5.150), tgt: V(1.00, 3.28, -1.00), fov: 42 },
-  { p: 0.410, pos: V(2.760, 3.10, -3.400), tgt: V(1.28, 3.02, -1.28), fov: 48 },
-  // T2 fires in here: under the lifted rear-right rim, the entry side
-  { p: 0.446, pos: V(2.130, 2.72, -2.320), tgt: V(0.55, 3.16, -0.75), fov: 55 },
+  // --- INSPIRE rest, and the drift that holds it (D16 restage: the rest is
+  //     on the STREAM side, az ~78 deg — pos = (sin az, ., cos az) * 8.3) ---
+  { p: 0.260, pos: V(8.901, 3.25, 1.892), tgt: V(1.15, 3.95, -0.40), fov: 38, hold: true, note: 'inspire-rest' },
+  { p: 0.312, pos: V(8.300, 3.22, 1.500), tgt: V(1.30, 3.80, -0.50), fov: 38.5, note: 'inspire-rest-drift' },
+  // --- follow ONE plume backward + downward toward its release rim (GB-2.1,
+  //     re-keyed for D16) --- the guide plume is ArtCompute — the hero's own
+  //     visible stream, cap az ~5.83, rim release ~(1.97, 3.0, -0.95): the
+  //     path descends along the stream toward its release point, so the cap
+  //     climbs the frame and occludes the sky exactly as before, just from
+  //     the stream side.
+  { p: 0.362, pos: V(5.600, 3.05, 0.550), tgt: V(1.70, 3.30, -0.75), fov: 42 },
+  { p: 0.410, pos: V(3.550, 2.85, -0.350), tgt: V(1.90, 3.05, -1.00), fov: 48 },
+  // T2 fires in here: slipping under the lifted rim beside the stream release
+  { p: 0.446, pos: V(2.300, 2.62, -1.300), tgt: V(0.60, 3.14, -0.70), fov: 55 },
   { p: 0.470, pos: V(1.700, 2.40, -1.600), tgt: V(-0.60, 3.34, 0.05), fov: 58 },
   // --- CONNECT rest: wide low angle in the chamber, looking up ~18 deg ---
   { p: 0.490, pos: V(1.430, 2.15, -1.170), tgt: V(-1.50, 3.50, 0.40), fov: 60, hold: true, note: 'connect-rest' },

@@ -1,10 +1,10 @@
 // journey-v6 — INSPIRE chapter geometry: the three spore exits.
 // Adapted from spike-a/plumes.js (approved at G2a) into the grey-box build:
 // the spike stays frozen, this is the copy the journey drives. Changes vs the
-// spike: the 4th reveal channel (the backlit gill band) is wired through
-// setReveal(), the sequential reveal is driven from journey progress + camera
+// spike: the sequential reveal is driven from journey progress + camera
 // azimuth here rather than by the spike's director, and the group arms/retires
-// on the T1 seam.
+// on the T1 seam. (The spike's 4th channel — the backlit gill band — was
+// removed by the D16 restage; see below.)
 // Three spore-exit regions on the REAR rim of the real hero cap. Behaviour
 // adapted from journey/chapters/inspire.js (staged GPU phase shader) but
 // re-parameterised against the hero's actual anatomy via anatomy.js:
@@ -35,11 +35,26 @@
 //      plume brightens — now per particle via the takeover's feed — and
 //      restores it byte-exactly at p = 0.
 //
+// D16 RESTAGE (Hannah, 2026-08-03, after six rejected fixes): the exits now
+// CLUSTER at the hero's one visible stream (anatomy.js EXITS — ArtCompute IS
+// the stream at cap az ~5.83; Arca ~31 deg rearward, 2RP ~24 deg frontward
+// along the rim), and the orbit is a short swing TOWARD that stream
+// (director.js). The unified no-self-ignition principle is binding: during
+// the whole Mission->Inspire leg nothing may go invisible -> visible unless
+// it was already visible at the hero pose or visibly GROWS OUT of the stream
+// (draw-on along the feed direction, fed by the stream's own dots/currents).
+// Consequences in this file: the backlit gill band (a self-igniting filler
+// for the old 172-deg orbit's sparse middle) and the cap-surface flow strips
+// (self-igniting glow on the dome top, fed by nothing) are REMOVED; migrant
+// destination filaments draw on lip-first (from where the rim current
+// arrives); migrant wisps are re-authored to trace the actual walk from the
+// source; ribbon cores join the rest-proximity detail gate.
+//
 // RIVER DELTA (Hannah, 2026-08-02, third note — the definitive fix): the hero
 // shows exactly ONE visible stream, the shed spilling from under the
 // back-right rim (ArtCompute's sector). So nothing may ever be BORN in the
 // Arca or 2RP sectors — however gently it fades in, a population appearing
-// rear-centre or back-left reads as a newcomer. Instead the one stream SPLITS:
+// away from the stream reads as a newcomer. Instead the one stream SPLITS:
 //   - every Arca and 2RP particle is born in the SOURCE sector (same under-rim
 //     wedge the visitor has been watching) and, as its plume's reveal rises, a
 //     visible current of them peels off and WALKS THE RIM — hugging the real
@@ -55,8 +70,8 @@
 // entry points, same braid math, same knots, ribbons and streak.
 import * as THREE from 'three';
 import {
-  makeRng, gaussOf, heat, capUnderPt, capTopPt, rimRad,
-  makeGlowTexture, makeStreakTexture, EXITS, LEAN_DIR,
+  makeRng, gaussOf, heat, capUnderPt, rimRad,
+  makeGlowTexture, makeStreakTexture, EXITS,
 } from '../core/anatomy.js';
 import { createAmbientShedDimmer } from './inspire-ambient.js';
 import { createSporeTakeover } from './inspire-takeover.js';
@@ -82,6 +97,12 @@ function makeStrandMat(opacity, flow) {
       // uTraceAmp its brightness. Driven per-exit from the animator.
       uTrace: { value: 9.0 },
       uTraceAmp: { value: 0 },
+      // D16 draw-on direction: 0 = grow from aProg 0 toward 1 (inner -> lip,
+      // the stream's own outward flow), 1 = grow from aProg 1 toward 0 (lip
+      // -> inner: a migrant destination lights up FROM the point the rim
+      // current arrives at, spreading upstream into its gills — visibility
+      // always enters from the feed).
+      uFrom: { value: 0 },
       fogNear: { value: FOG_NEAR },
       fogFar: { value: FOG_FAR },
     },
@@ -96,6 +117,7 @@ function makeStrandMat(opacity, flow) {
       uniform float uTrace;
       uniform float uTraceAmp;
       uniform float uFade;
+      uniform float uFrom;
       void main() {
         vColor = color;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -110,11 +132,13 @@ function makeStrandMat(opacity, flow) {
         float band = exp(-pow((aProg - (1.0 - uTrace)) * 11.0, 2.0));
         vBright = mix(1.0, wave, uFlow) + uTraceAmp * band;
         // draw-on (ride-through #2, one-population rule): a strand GROWS from
-        // its origin as the drift organizes — a full-length line appearing at
-        // once reads as a new spore source. Saturates past uFade = 1 so the
-        // approved rest look is untouched.
+        // its feed end as the drift organizes — a full-length line appearing
+        // at once reads as a new spore source. uFrom selects which end is the
+        // feed (D16). Saturates past uFade = 1 so the approved rest look is
+        // untouched.
+        float prog = mix(aProg, 1.0 - aProg, uFrom);
         float lead = uFade * 1.12;
-        vBright *= 1.0 - smoothstep(max(lead - 0.10, 0.0), lead + 0.001, aProg);
+        vBright *= 1.0 - smoothstep(max(lead - 0.10, 0.0), lead + 0.001, prog);
         gl_Position = projectionMatrix * mv;
       }
     `,
@@ -161,15 +185,14 @@ export function createInspire(sceneApi) {
 
   const glowTex = makeGlowTexture();
   const streakTex = makeStreakTexture();
-  const counts = { sourceSegs: 0, wispSegs: 0, flowSegs: 0, gillSegs: 0, beads: 0, spores: 0, coreSegs: 0, rimSegs: 0 };
+  const counts = { sourceSegs: 0, wispSegs: 0, beads: 0, spores: 0, coreSegs: 0, rimSegs: 0 };
 
-  // per-exit fade drivers (sequential reveal)
+  // per-exit fade drivers (sequential reveal). The old 4th channel (backlit
+  // gill band) is GONE per D16: it was a self-igniting filler for the long
+  // orbit's sparse middle, in a sector unrelated to the stream — the exact
+  // "new spores appear at the back" read. The short stream-side leg has no
+  // sparse middle and the no-self-ignition principle bans the element.
   const exits = EXITS.map((spec) => ({ spec, fade: 0, target: 0, mats: [] }));
-  // v2: a 4th reveal channel — the backlit gill band on the LIFTED rim
-  // (cap a ~ LEAN_DIR - pi ~ 26 deg), which faces the camera through the
-  // az 60..120 middle of the swing. Not an exit: no plume, no chip — just
-  // the under-rim filaments igniting so the middle of the arc has structure.
-  const gillBand = { fade: 0, target: 0, mats: [] };
 
   /* ================================================================
      1. UNDER-RIM SOURCE GEOMETRY — brightened gill filaments + embers
@@ -216,6 +239,11 @@ export function createInspire(sceneApi) {
       }
     }
     const mat = makeStrandMat(0.5, 1.0); // sources carry the travelling flow
+    // D16: a migrant destination's filaments light lip-first — visibility
+    // spreads upstream from where the rim current physically arrives. The
+    // source exit keeps inner->lip (its wedge underlies the already-visible
+    // stream; either way it is a brightening of what the visitor sees).
+    if (ex !== exits[0]) mat.uniforms.uFrom.value = 1;
     ex.mats.push(mat);
     ex.srcMat = mat;                     // trace-back target (rim -> inner gills)
     group.add(new THREE.LineSegments(strandGeo(lp, lc, lg), mat));
@@ -288,72 +316,24 @@ export function createInspire(sceneApi) {
   }
 
   /* ================================================================
-     1b. BACKLIT GILL BAND on the lifted rim (v2, sparse-middle fix) —
-         brightened between-gill filaments spanning the gill-exposed
-         sector the map calls "the entry side". Faint, wide, no plume.
-     ================================================================ */
-  {
-    const az0 = LEAN_DIR - Math.PI;           // the lifted-rim centre, ~26 deg
-    const lp = [], lc = [], lg = [];
-    const bp = [], bc = [], bs = [];
-    const N_FIL = 46;
-    for (let f = 0; f < N_FIL; f++) {
-      const lane = Math.round((gauss() * 0.60) / CHANNEL) * CHANNEL
-                 + (rand() - 0.5) * CHANNEL * 0.35;
-      const a = az0 + lane;
-      const u0 = 0.50 + rand() * 0.26;
-      const wig = gauss() * 0.012;
-      const SEG = 5;
-      let prev = null, prevU = 0;
-      for (let s = 0; s <= SEG; s++) {
-        const t = s / SEG;
-        const u = u0 + t * (1.0 - u0);
-        const p = capUnderPt(u, a + wig * Math.sin(t * Math.PI));
-        p.y -= 0.008 + 0.012 * rand();
-        if (prev) {
-          lp.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-          const b0 = 0.26 + 0.46 * prevU, b1 = 0.26 + 0.46 * t;
-          heat(b0, tmpC); lc.push(tmpC.r, tmpC.g, tmpC.b);
-          heat(b1, tmpC); lc.push(tmpC.r, tmpC.g, tmpC.b);
-          lg.push(prevU, t);
-          counts.gillSegs++;
-        }
-        prev = p; prevU = t;
-      }
-      if (rand() < 0.30) {
-        const p = capUnderPt(0.985 + rand() * 0.03, a);
-        p.y -= 0.01;
-        bp.push(p.x, p.y, p.z);
-        heat(0.60 + rand() * 0.20, tmpC);
-        bc.push(tmpC.r, tmpC.g, tmpC.b);
-        bs.push(0.016 + Math.pow(rand(), 2) * 0.034);
-        counts.beads++;
-      }
-    }
-    const mat = makeStrandMat(0.34, 1.0);
-    gillBand.mats.push(mat);
-    group.add(new THREE.LineSegments(strandGeo(lp, lc, lg), mat));
-    const bGeo = new THREE.BufferGeometry();
-    bGeo.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3));
-    bGeo.setAttribute('color', new THREE.Float32BufferAttribute(bc, 3));
-    bGeo.setAttribute('psize', new THREE.Float32BufferAttribute(bs, 1));
-    const bMat = makeBeadMat();
-    gillBand.mats.push(bMat);
-    group.add(new THREE.Points(bGeo, bMat));
-  }
-
-  /* ================================================================
-     2. AUTHORED AIRFLOW — faint wisp guides tracing the actual path:
-        between-gills -> rim -> curl -> rise. The air made visible.
+     2. AUTHORED AIRFLOW — faint wisp guides tracing the ACTUAL path
+        each exit's spores take (D16). The resident exit's wisps run
+        between-gills -> rim -> curl -> rise, inside the visible
+        stream. A MIGRANT exit's wisps start in the SOURCE wedge and
+        WALK THE RIM to the release sector before curling and rising —
+        so when they draw on (tip tracking the live current) every
+        centimetre of new line grows out of the stream.
      ================================================================ */
   for (const ex of exits) {
     const { az, riseMin, riseMax, lean } = ex.spec;
+    const isMig = ex !== exits[0];
+    const azSrcBase = EXITS[0].az;
     const lp = [], lc = [], lg = [];
     const N_WISP = 4;
     for (let w = 0; w < N_WISP; w++) {
       const a0 = az + gauss() * 0.16;
+      const aS = isMig ? azSrcBase + gauss() * 0.14 : a0;   // where it is BORN
       const u0 = 0.55 + rand() * 0.18;
-      const o = capUnderPt(u0, a0);
       const rim = capUnderPt(1.0, a0);
       const rimR = rimRad(a0);
       const curl = (0.55 + rand() * 0.5) * (rand() < 0.5 ? 1 : -1) * 0.5;
@@ -364,28 +344,65 @@ export function createInspire(sceneApi) {
       for (let s = 0; s <= SEG; s++) {
         const t = s / SEG;
         let p;
-        if (t < 0.22) {                       // between the gills, drifting out
-          const k = t / 0.22;
-          p = capUnderPt(u0 + (1 - u0) * k * 0.45, a0 + 0.02 * Math.sin(k * 3));
-          p.y -= 0.02 + 0.05 * k;
-        } else if (t < 0.42) {                // lateral travel to the margin
-          const k = (t - 0.22) / 0.2;
-          const u = u0 + (1 - u0) * (0.45 + 0.55 * k);
-          p = capUnderPt(u, a0);
-          p.y -= 0.07 * (1 - k) + 0.02;
-        } else if (t < 0.58) {                // curl around the rim
-          const k = (t - 0.42) / 0.16;
-          const aa = a0 + curl * k;
-          const rr = rimR + 0.06 + 0.10 * Math.sin(k * Math.PI);
-          p = new THREE.Vector3(Math.cos(aa) * rr, rim.y + 0.10 * k + 0.06 * Math.sin(k * 6 + sp), Math.sin(aa) * rr);
-        } else {                              // braided rise, leaning +x
-          const k = (t - 0.58) / 0.42;
-          const aa = a0 + curl + 0.30 * Math.sin(k * 4.2 + sp);
-          const rr = rimR + 0.06 + 0.22 * Math.sin(k * 3.1 + sp * 1.7);
-          const y = rim.y + 0.10 + k * k * rise;
-          p = new THREE.Vector3(Math.cos(aa) * rr, y, Math.sin(aa) * rr);
-          p.x += BREEZE.x * lean * k * k * rise * 0.8;
-          p.z += BREEZE.z * lean * k * k * rise * 0.8;
+        if (!isMig) {
+          // RESIDENT (the stream itself): between-gills -> margin -> curl -> rise
+          if (t < 0.22) {                     // between the gills, drifting out
+            const k = t / 0.22;
+            p = capUnderPt(u0 + (1 - u0) * k * 0.45, a0 + 0.02 * Math.sin(k * 3));
+            p.y -= 0.02 + 0.05 * k;
+          } else if (t < 0.42) {              // lateral travel to the margin
+            const k = (t - 0.22) / 0.2;
+            const u = u0 + (1 - u0) * (0.45 + 0.55 * k);
+            p = capUnderPt(u, a0);
+            p.y -= 0.07 * (1 - k) + 0.02;
+          } else if (t < 0.58) {              // curl around the rim
+            const k = (t - 0.42) / 0.16;
+            const aa = a0 + curl * k;
+            const rr = rimR + 0.06 + 0.10 * Math.sin(k * Math.PI);
+            p = new THREE.Vector3(Math.cos(aa) * rr, rim.y + 0.10 * k + 0.06 * Math.sin(k * 6 + sp), Math.sin(aa) * rr);
+          } else {                            // braided rise, leaning +x
+            const k = (t - 0.58) / 0.42;
+            const aa = a0 + curl + 0.30 * Math.sin(k * 4.2 + sp);
+            const rr = rimR + 0.06 + 0.22 * Math.sin(k * 3.1 + sp * 1.7);
+            const y = rim.y + 0.10 + k * k * rise;
+            p = new THREE.Vector3(Math.cos(aa) * rr, y, Math.sin(aa) * rr);
+            p.x += BREEZE.x * lean * k * k * rise * 0.8;
+            p.z += BREEZE.z * lean * k * k * rise * 0.8;
+          }
+        } else {
+          // MIGRANT (D16): born in the SOURCE wedge -> source margin -> rim
+          // WALK to the release sector -> curl -> rise. Draw-on along t means
+          // the line only ever extends out of the stream, along the walk.
+          if (t < 0.12) {                     // between the SOURCE gills
+            const k = t / 0.12;
+            p = capUnderPt(u0 + (1 - u0) * k * 0.45, aS + 0.02 * Math.sin(k * 3));
+            p.y -= 0.02 + 0.05 * k;
+          } else if (t < 0.26) {              // lateral to the source margin
+            const k = (t - 0.12) / 0.14;
+            const u = u0 + (1 - u0) * (0.45 + 0.55 * k);
+            p = capUnderPt(u, aS);
+            p.y -= 0.07 * (1 - k) + 0.02;
+          } else if (t < 0.55) {              // WALK the real rim, source -> release
+            const k = (t - 0.26) / 0.29;
+            const aa = aS + (a0 - aS) * k;
+            const rr = rimRad(aa) + 0.06 + 0.06 * Math.sin(k * 7 + sp);
+            const rw = capUnderPt(1.0, aa);
+            p = new THREE.Vector3(Math.cos(aa) * rr,
+              rw.y + 0.04 + 0.04 * Math.sin(k * 11 + sp * 1.3), Math.sin(aa) * rr);
+          } else if (t < 0.66) {              // curl at the release sector
+            const k = (t - 0.55) / 0.11;
+            const aa = a0 + curl * k;
+            const rr = rimR + 0.06 + 0.10 * Math.sin(k * Math.PI);
+            p = new THREE.Vector3(Math.cos(aa) * rr, rim.y + 0.10 * k + 0.06 * Math.sin(k * 6 + sp), Math.sin(aa) * rr);
+          } else {                            // braided rise, leaning +x
+            const k = (t - 0.66) / 0.34;
+            const aa = a0 + curl + 0.30 * Math.sin(k * 4.2 + sp);
+            const rr = rimR + 0.06 + 0.22 * Math.sin(k * 3.1 + sp * 1.7);
+            const y = rim.y + 0.10 + k * k * rise;
+            p = new THREE.Vector3(Math.cos(aa) * rr, y, Math.sin(aa) * rr);
+            p.x += BREEZE.x * lean * k * k * rise * 0.8;
+            p.z += BREEZE.z * lean * k * k * rise * 0.8;
+          }
         }
         pts.push({ p, t });
       }
@@ -418,9 +435,12 @@ export function createInspire(sceneApi) {
   const rimLinks = [];
   {
     const SEGL = 34, N_LINE = 3;
+    // D16: the cluster straddles the source, so the delta BRANCHES — one
+    // short current rearward to Arca, one frontward to 2RP. (The old chain
+    // source -> Arca -> 2RP assumed all three lay one way around the rim.)
     const linkSpecs = [
-      { from: EXITS[0].az, to: EXITS[1].az },   // source -> Arca (rear-centre)
-      { from: EXITS[1].az, to: EXITS[2].az },   // …continuing on -> 2RP (back-left)
+      { from: EXITS[0].az, to: EXITS[1].az },   // source -> Arca (rearward)
+      { from: EXITS[0].az, to: EXITS[2].az },   // source -> 2RP (frontward)
     ];
     for (const lk of linkSpecs) {
       const lp = [], lc = [], lg = [];
@@ -455,57 +475,25 @@ export function createInspire(sceneApi) {
       rimLinks.push({ mat });
     }
   }
-  // The strands' draw-on follows the walking front. mig mirrors the shader's
-  // smoothstep(0, 0.55, rev); MIG_SPLIT is where 2RP's longer walk passes the
-  // Arca sector, so link B only begins once a current actually continues past.
-  const MIG_SPLIT = Math.abs(EXITS[1].az - EXITS[0].az)
-                  / Math.abs(EXITS[2].az - EXITS[0].az);
+  // The strands' draw-on follows each branch's own walking front (mig mirrors
+  // the shader's smoothstep(0, 0.55, rev)); the two branches are independent
+  // now that the delta forks both ways from the source (D16).
   function migOf(e) {
     let x = e / 0.55; x = x < 0 ? 0 : x > 1 ? 1 : x;
     return x * x * (3 - 2 * x);
   }
   function linkFades() {
-    const m1 = migOf(eff[1]), m2 = migOf(eff[2]);
-    const fA = Math.max(m1, Math.min(m2 / MIG_SPLIT, 1));
-    let fB = (m2 - MIG_SPLIT) / (1 - MIG_SPLIT);
-    fB = fB < 0 ? 0 : fB > 1 ? 1 : fB;
-    return [fA, fB];
+    return [migOf(eff[1]), migOf(eff[2])];
   }
 
   /* ================================================================
-     3. CAP-SURFACE FLOW — a faint travelling glow on the rear dome,
-        flowing toward each exit sector (handoff: "the cap surface
-        carries a faint travelling bioluminescent flow")
+     3. (REMOVED, D16) CAP-SURFACE FLOW — the faint travelling glow
+        strips on the dome top self-ignited: nothing feeds the cap TOP
+        from the under-rim stream, so however gently they faded in they
+        were new luminous structure appearing from nowhere. Banned by
+        the no-self-ignition principle; the handoff's "cap carries a
+        faint flow" idea is deferred until it can be stream-fed.
      ================================================================ */
-  for (const ex of exits) {
-    const { az } = ex.spec;
-    const lp = [], lc = [], lg = [];
-    const N_STRIP = 7;
-    for (let f = 0; f < N_STRIP; f++) {
-      const a = az + gauss() * 0.22;
-      const wig = gauss() * 0.03;
-      const SEG = 9;
-      let prev = null, prevT = 0;
-      for (let s = 0; s <= SEG; s++) {
-        const t = s / SEG;
-        const u = 0.38 + t * 0.64;
-        const p = capTopPt(u, a + wig * Math.sin(t * 2.2));
-        p.y += 0.015;
-        if (prev) {
-          lp.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-          const b0 = 0.24 + 0.3 * prevT, b1 = 0.24 + 0.3 * t;
-          heat(b0, tmpC); lc.push(tmpC.r, tmpC.g, tmpC.b);
-          heat(b1, tmpC); lc.push(tmpC.r, tmpC.g, tmpC.b);
-          lg.push(prevT, t);
-          counts.flowSegs++;
-        }
-        prev = p; prevT = t;
-      }
-    }
-    const mat = makeStrandMat(0.12, 1.0);
-    ex.mats.push(mat);
-    group.add(new THREE.LineSegments(strandGeo(lp, lc, lg), mat));
-  }
 
   /* ================================================================
      4. SPORES — staged GPU phase shader on real anatomy.
@@ -855,6 +843,12 @@ export function createInspire(sceneApi) {
       uOpacity: { value: 0.62 },
       uRev: sporeMat.uniforms.uRev,        // shared: reveal drives both
       uCoh: sporeMat.uniforms.uCoh,        // shared: hover coherence too
+      // D16: ribbons join the rest-proximity detail gate. A continuous hot
+      // core igniting mid-orbit was self-ignition (the converted hero dots
+      // carry the braid alone until the rest approach); sharing uDet makes
+      // the ribbon condense co-located WITH the detail layer — a sharpening
+      // of the already-visible braid, never a new structure.
+      uDet: sporeMat.uniforms.uDet,
       uKnot: sporeMat.uniforms.uKnot,
       uLeanP: { value: new THREE.Vector3(EXITS[0].lean, EXITS[1].lean, EXITS[2].lean) },
       uToneP: { value: new THREE.Vector3(EXITS[0].tone, EXITS[1].tone, EXITS[2].tone) },
@@ -873,6 +867,7 @@ export function createInspire(sceneApi) {
       uniform float uLean;
       uniform vec3 uRev;
       uniform vec3 uCoh;
+      uniform vec3 uDet;
       uniform vec3 uKnot;
       uniform vec3 uLeanP;
       uniform vec3 uToneP;
@@ -887,6 +882,7 @@ export function createInspire(sceneApi) {
         float rimR = aRimC.x, rimY = aRimC.y, az0 = aRimC.z;
         float rev  = plume < 0.5 ? uRev.x  : (plume < 1.5 ? uRev.y  : uRev.z);
         float coh  = plume < 0.5 ? uCoh.x  : (plume < 1.5 ? uCoh.y  : uCoh.z);
+        float det  = plume < 0.5 ? uDet.x  : (plume < 1.5 ? uDet.y  : uDet.z);
         float kg   = plume < 0.5 ? uKnot.x : (plume < 1.5 ? uKnot.y : uKnot.z);
         float lnP  = plume < 0.5 ? uLeanP.x: (plume < 1.5 ? uLeanP.y: uLeanP.z);
         float tone = plume < 0.5 ? uToneP.x: (plume < 1.5 ? uToneP.y: uToneP.z);
@@ -922,7 +918,9 @@ export function createInspire(sceneApi) {
         float grow = smoothstep(mix(0.5, 0.62, step(0.5, plume)), 1.0, rev);
         float lead = grow * 1.12;
         float mg = grow * (1.0 - smoothstep(max(lead - 0.10, 0.0), lead + 0.001, h));
-        vBright = env * rev * mg * ((0.30 + 0.85 * kn) * (1.0 + 0.6 * coh) + tAmp * band);
+        // det gate (D16): the ribbon exists only as part of the co-located
+        // rest-detail layer — exactly 1 at the settled rest, 0 mid-orbit.
+        vBright = env * rev * det * mg * ((0.30 + 0.85 * kn) * (1.0 + 0.6 * coh) + tAmp * band);
         vTone = min(1.0, tone + 0.12 + 0.30 * kn);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vFogDepth = -mv.z;
@@ -1125,32 +1123,23 @@ export function createInspire(sceneApi) {
     return list;
   })();
 
-  // Arrival ramps — the scroll-locked half of the handoff. The T1 seam arms
-  // this chapter at ~92 deg of camera azimuth past Mission (core/seams.js),
-  // where driveInspire's ArtCompute ramp (az 36..72) is ALREADY complete: the
-  // seam-gated fade therefore steps 0 -> 1 in a single frame, and the whole
-  // plume system used to ease in fully formed — the "new spores appear when I
-  // scroll" Hannah flagged. The chapter now multiplies each fade by its own
-  // azimuth ramp that begins strictly AFTER the arming azimuth, so every
-  // exit's effective reveal is continuous in scroll position (snap/?p=
-  // included), grows only as the camera actually earns the sector, and plays
-  // backward identically. All ramps saturate by az ~154, safely before the
-  // rest window (az ~157.8..160), so the settled Inspire rest is exactly
-  // reveal = 1 — the approved look. Ramp bounds are desktop-orbit absolute
-  // (mission az ~ -12 deg), like driveInspire's own; the ArtCompute ramp
-  // starts at 82 deg, 2 deg past desktop arming.
+  // Arrival ramps — the scroll-locked half of the handoff, re-keyed for the
+  // D16 orbit (a ~90 deg swing, hero az ~-12 -> rest az 78). The chapter
+  // multiplies each seam-gated fade by its own azimuth ramp so every exit's
+  // effective reveal is continuous in scroll position (snap/?p= included),
+  // grows only as the camera actually travels toward the stream, and plays
+  // backward identically. Sequence: the stream itself organizes first
+  // (ArtCompute), then the Arca current peels rearward, then 2RP frontward.
+  // All ramps saturate by az ~74, safely before the rest (az 78), so the
+  // settled Inspire rest is exactly reveal = 1. Bounds are desktop-orbit
+  // absolute (mission az ~ -12 deg), like driveInspire's own fade (az
+  // 36..72); T1 arms at ~48 deg past Mission (az ~36) — at or before the
+  // first ramp, so nothing can step on arming.
   const ARR = [
-    { a0: 82,  a1: 116 },   // ArtCompute — the hero's right-drift, gathered first
-    { a0: 108, a1: 140 },   // Arca — revealed as the camera rounds the rear
-    { a0: 130, a1: 154 },   // 2RP — the drooped-margin sector, last
+    { a0: 34, a1: 60 },   // ArtCompute — the visible stream, gathered first
+    { a0: 46, a1: 68 },   // Arca — its current peels off rearward
+    { a0: 54, a1: 74 },   // 2RP — the frontward branch, last
   ];
-  // Swarm census finding (2026-08-03): this band's ramp STRADDLED the T1
-  // arming azimuth (~88-92 deg) while every sibling ramp was deliberately
-  // moved past it — so the 46 backlit filaments + ember beads snapped on
-  // almost instantly at arming, in a different sector from the one stream:
-  // the literal "more spores appear behind". Now strictly after arming, in
-  // family with ARR[0] (82-116).
-  const ARR_BAND = { a0: 96, a1: 118 };
   const RAD2DEG = 180 / Math.PI;
   function camAzDeg() {
     const c = sceneApi.camera.position;
@@ -1164,18 +1153,19 @@ export function createInspire(sceneApi) {
     return x * x * (3 - 2 * x);
   }
   const eff = [0, 0, 0];                   // per-exit effective reveal, per frame
-  let effBand = 0;
   function computeEff() {
     const azDeg = camAzDeg();
     for (let i = 0; i < 3; i++) eff[i] = exits[i].fade * arrOf(azDeg, ARR[i]);
-    effBand = gillBand.fade * arrOf(azDeg, ARR_BAND);
   }
   // Delta retime for the DESTINATION furniture (under-rim filaments, beads,
-  // wisps, cap flow, streak) of the migrating exits: it ignites only as their
-  // rim current actually arrives (rev's second half — the front completes at
-  // rev 0.55), never before, so no local structure suggests a local birth.
-  // Exit 0 is the source itself and keeps its full-reveal drive. All three
-  // read exactly 1 at eff = 1: the approved rest is untouched.
+  // streak) of the migrating exits: it ignites only as their rim current
+  // actually arrives (rev's second half — the front completes at rev 0.55),
+  // never before, so no local structure suggests a local birth — and it draws
+  // on lip-first (uFrom), spreading upstream from the arrival point. Exit 0
+  // is the source itself and keeps its full-reveal drive. All three read
+  // exactly 1 at eff = 1. (Wisps are NOT furnOf-driven any more: their fade
+  // is eff itself, so their drawn tip tracks the live walking current out of
+  // the stream — see the animator.)
   function furnOf(i) {
     if (i === 0) return eff[0];
     let x = (eff[i] - 0.55) / 0.45; x = x < 0 ? 0 : x > 1 ? 1 : x;
@@ -1210,10 +1200,17 @@ export function createInspire(sceneApi) {
       sporeGeo.setDrawRange(0, t === 2 ? SPORE_TIER2 : SPORE_FULL);
       counts.spores = t === 2 ? SPORE_TIER2 : SPORE_FULL;
     },
-    /** Sequential reveal, 0..1 per exit in EXITS order, plus the gill band. */
+    /** Reveal drive. D16: journey.js still calls this with its legacy
+     *  four-channel azimuth ramps (keyed to the OLD 172-deg orbit — b, c and
+     *  band never complete on the short leg, and journey.js is outside this
+     *  restage's file scope), so the chapter takes the MASTER drive — the
+     *  furthest-along channel, which on the new leg is `a` (az 36..72,
+     *  saturating before the rest) times the retire envelope — and applies
+     *  its own per-exit sequencing via the ARR azimuth ramps above. The
+     *  seam-gate contract is unchanged: setArmed(false) zeroes everything. */
     setReveal(a, b, c, band = 0) {
-      exits[0].target = a; exits[1].target = b; exits[2].target = c;
-      gillBand.target = band;
+      const m = Math.max(a, b, c, band);
+      exits[0].target = m; exits[1].target = m; exits[2].target = m;
     },
     /** Rest proximity 0..1 (pure in journey progress, set by driveInspire):
      *  gates the GPU detail layer to the final approach of the rest pose. */
@@ -1223,7 +1220,6 @@ export function createInspire(sceneApi) {
      *  coherence and the streak so a ?p= capture sees the settled frame. */
     snap() {
       for (const ex of exits) ex.fade = ex.target;
-      gillBand.fade = gillBand.target;
       computeEff();                 // camera is already placed by placeAt
       effActive = resolveActive();
       const c = sporeMat.uniforms.uCoh.value;
@@ -1232,9 +1228,10 @@ export function createInspire(sceneApi) {
         const st = streaks[i];
         st.o = (i === effActive ? 0.42 : 0) * furnOf(i);
         st.sprite.visible = st.o > 0.01;
-        for (const m of exits[i].mats) m.uniforms.uFade.value = furnOf(i);
+        for (const m of exits[i].mats) {
+          m.uniforms.uFade.value = m === exits[i].wispMat ? eff[i] : furnOf(i);
+        }
       }
-      for (const m of gillBand.mats) m.uniforms.uFade.value = effBand;
       const [fA, fB] = linkFades();
       rimLinks[0].mat.uniforms.uFade.value = fA;
       rimLinks[1].mat.uniforms.uFade.value = fB;
@@ -1307,14 +1304,11 @@ export function createInspire(sceneApi) {
       ex.fade += (ex.target - ex.fade) * k;
       if (ex.fade < 0.012 && ex.target === 0) ex.fade = 0; // no exponential ghost tail
     }
-    gillBand.fade += (gillBand.target - gillBand.fade) * k;
-    if (gillBand.fade < 0.012 && gillBand.target === 0) gillBand.fade = 0;
     // effective reveals: seam-gated fade x scroll-locked arrival ramp — the
     // single value every visual channel (mats, uRev/morph, shed dim, streaks,
     // auto-active) reads from, so the whole handoff is continuous in p
     computeEff();
-    let anyVisible = effBand > 0;
-    for (const m of gillBand.mats) { m.uniforms.uFade.value = effBand; m.uniforms.uTime.value = t; }
+    let anyVisible = false;
     effActive = resolveActive();
     // rim delta currents: guide strands extend with the walking spore front
     // and persist (fade 1) at rest
@@ -1330,7 +1324,10 @@ export function createInspire(sceneApi) {
       if (eff[i] > 0) anyVisible = true;
       const fv = furnOf(i);
       for (const m of ex.mats) {
-        m.uniforms.uFade.value = fv;
+        // wisps draw on with eff itself — their tip tracks the live current
+        // walking out of the stream (D16); destination furniture waits for
+        // the current's arrival (furnOf) and lights lip-first (uFrom).
+        m.uniforms.uFade.value = m === ex.wispMat ? eff[i] : fv;
         m.uniforms.uTime.value = t;
       }
       // Full coherence on hover AND on the selected exit (W4-E: an open card

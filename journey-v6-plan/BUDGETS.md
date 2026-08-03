@@ -1178,3 +1178,98 @@ new. (2) The under-rim furniture (filaments, beads, wisps, rim links) remains au
 line/bead geometry with its approved draw-on gates — structures igniting, not spores
 appearing. If Hannah still perceives (1) as "more spores", the next knob is a single
 constant (DET window / PLUME_GAIN) — the architecture no longer fights her.
+
+---
+
+# D16 — Inspire restage to the stream (2026-08-03, fable)
+
+Hannah's structural direction after six rejected fixes: (a) the orbit went to the
+REAR while the hero's one visible stream lives on the RIGHT; (b) a family of
+furnOf/eff-gated elements SELF-IGNITED back there. Unified binding principle:
+during Mission->Inspire nothing may go invisible->visible unless pre-lit at the
+hero or visibly grown out of the stream (draw-on along the feed direction).
+In practice everything shipped stream-fed; nothing pre-lit (the p=0 hero frame
+is untouched).
+
+## Restage (Prong A)
+
+- `core/anatomy.js` EXITS re-anchored as a tight cluster at the visible stream
+  (hero callout anchor (3.24, 3.97, -0.50) back-projected along BREEZE to cap az
+  ~5.83): ArtCompute **5.83** (IS the stream), Arca **5.28** (-31.5 deg, rearward
+  branch, tallest), 2RP **6.25** (+24 deg, frontward branch). Delta now FORKS
+  both ways from the source (rim links source->Arca and source->2RP; walk spans
+  0.55 / 0.42 rad vs the old 0.88 / 1.72).
+- `core/director.js` Inspire leg: INSPIRE rest az **78 deg**, r 9.1, y 3.25,
+  tgt (1.15, 3.95, -0.40), fov 38 — a ~90 deg swing RIGHT toward the stream
+  (was ~172 deg to the rear). Same approved gesture: early pin (biased to the
+  stream side), constant radius, no roll, push-in in the last 20%, trapezoid +
+  breath timing untouched. The stream stays in frame the entire leg (verified
+  frame-by-frame az -12..78). T2 entry keys (p 0.312-0.446) re-keyed because the
+  old rear approach was geometrically unreachable from the new rest — documented
+  director change beyond the leg: the slip-under now follows the ArtCompute
+  stream down to its release rim (keys 0.362/0.410/0.446); 0.470 onward and the
+  Connect rest are byte-untouched. Connect entry verified (frames 0.30-0.49).
+- `core/seams.js` T1 azimuth 100 -> **48 deg** past Mission (arms az ~28, before
+  the first reveal ramp at az 34; disarm hysteresis unchanged). Note
+  constants.js THRESHOLDS still says deltaDeg 100 — documentation only, seams.js
+  never imported it (pre-existing).
+- `core/portrait.js` Inspire key: tgtRight 0.45 -> **1.05** (slides the
+  clustered chips fully inside 430x932; Arca's chip is the widest), other
+  fields unchanged. Verified: all three chips inside with margin, above copy.
+- Reveal drive: journey.js untouched (out of scope). Its legacy 4-channel
+  ramps are keyed to the old orbit, so `inspire.setReveal` now takes the MASTER
+  drive (max of the channels x retire envelope) and applies its own per-exit
+  sequencing via re-keyed ARR ramps: AC 34-60, Arca 46-68, 2RP 54-74 (all
+  saturate before the rest az 78; T1 arming precedes the first ramp so nothing
+  steps).
+
+## No-self-ignition reclassification (Prong B)
+
+| element | class | how it becomes visible |
+|---|---|---|
+| hero shed 4,200 dots | already visible | same-particle takeover unchanged (conv staggers, restore-by-ceasing) |
+| under-rim source filaments+beads, exit 0 | stream-fed | brightening inside the visible stream's own wedge; draw-on inner->lip with eff0 |
+| under-rim filaments+beads, Arca/2RP | stream-fed | furnOf gate (only after the rim current arrives, eff>=0.55) AND new `uFrom` draw-direction: lights **lip-first**, spreading upstream from the exact point the current reaches |
+| airflow wisps, exit 0 | stream-fed | draw-on along the path with eff0 (tip tracks the organizing stream) |
+| airflow wisps, Arca/2RP | stream-fed | **re-authored geometry**: born in the SOURCE wedge -> source margin -> rim WALK to the release sector -> curl -> rise; fade = eff (not furnOf) so the drawn tip tracks the live walking current out of the stream |
+| rim delta currents (links) | stream-fed | draw-on from the source along each branch with its own mig front (independent branches now) |
+| 5,100-spore GPU detail layer | co-located sharpening | unchanged rest-prox det gate (p 0.235-0.253, retiming not needed — rest p still 0.26); verified det=[0,0,0] through the whole swing, [1,1,1] only at the rest approach |
+| core ribbons (9) | co-located sharpening | **now share uDet**: condense only with the detail layer at the rest, growing bottom-up; previously rev-gated (could ignite mid-orbit) — that was self-ignition, closed |
+| anamorphic streak | stream-fed | lives on the active release lip; exit 0's grows at the visible stream's lip with eff0, migrants gated by furnOf (post-arrival) |
+| backlit gill band (46 filaments + beads) | **REMOVED** | self-igniting filler for the old orbit's sparse middle, wrong sector; banned |
+| cap-surface flow (21 strips) | **REMOVED** | dome-top glow fed by nothing; banned (handoff idea deferred until stream-feedable) |
+
+Structural deltas: counts.gillSegs / counts.flowSegs gone (-230 gill-band segs,
+-189 flow segs, -~14 band beads); RNG draw order after the removed blocks
+shifts the surviving furniture's per-strand randomness (sanctioned — the rest
+look is restaged by D16 anyway). p=0 renders zero of this (group hidden,
+nothing pre-lit): hero structural anchors unchanged.
+
+## Ten-point audit (Hannah's sentence, forward AND reverse)
+
+Headless CDP harness (scratchpad qa_inspire.py; capture.py-style, 1440x900 +
+430x932): parked frames at p 0/.06/.09/.11/.13/.15/.17/.19 + in-motion tail
+.20/.21/.22/.23/.24/.25/.258/.26, reverse .245/.22/.19/.16/.13/.09/0.
+"Did ANYTHING become visible that neither was visible at the hero nor visibly
+grew out of the stream?" — **NO at every point.** Frame narrative: az<34 hero
+only; az 43 the stream's own lip brightens/organizes; az 54 the braid rises
+from that lip out of the ceding curtain; az 60-74 the two rim currents extend
+out of the stream along the real rim (contiguous luminosity, both branches);
+p .235-.253 co-located sharpening (pearls/ribbons/dust at the same braid
+positions); rest = three labelled braids + streak + bottom copy. Reverse plays
+the same states backward and re-merges into the one stream.
+
+## Verified
+
+- p=0 shed checksum **7789.45663** at boot; byte-exact (0 diffs) after full
+  forward+reverse scrub; zero console errors/exceptions across every run.
+- Portrait 430x932 rest: all three chips legible inside the frame, above copy;
+  landscape rest holds the quality bar (labels, streak, copy).
+- Connect entry from the new rest: p .26->.49 continuous, retire completes by
+  .42, T1 disarms by .46, Connect rest byte-identical composition.
+- KNOWN PRE-EXISTING BUG (not introduced here, confirmed via git-stash A/B):
+  nav FLIGHT back to Mission (flyTo) leaves the camera stuck at the Inspire
+  pose with runaway y, which keeps T1 armed and the shed modulated at p=0.
+  Scrubbed/placed returns are byte-exact; only the flyTo('mission') path fails,
+  on the old build too (old pose (2.77,19.7,-7.59), new (8.9,15.6,1.89)).
+  Flagged as a separate task (camera handback in director/hero interplay).
