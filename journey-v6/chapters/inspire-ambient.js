@@ -70,8 +70,18 @@ export function createAmbientShedDimmer(sceneApi) {
      *  stream's HISTORY, not its source: they dissolve early (keyed to the
      *  first arrival), while the near-rim live stream follows the slower
      *  weighted hand-over. { sx,sy,sz: cap-centre world; d0,d1: distance
-     *  band; k: 0..1 strength of the far dim }. */
-    update(regions, globalK = 0, grad = null) {
+     *  band; k: 0..1 strength of the far dim }.
+     *  TAKEOVER FEED (Hannah's fifth note, 2026-08-03): with the same-particle
+     *  takeover (inspire-takeover.js) the shed's own dots PERFORM the plumes,
+     *  so brightness is handed over per particle, not only per region:
+     *    F = f * (1 - cv[i]) + pw[i]
+     *  where f is the classic dim factor (capsules / global / history — which
+     *  therefore now applies to the UNCONVERTED share only), cv[i] is the
+     *  dot's conversion and pw[i] its plume brightness term (path envelope x
+     *  gain x (1 - detail fade)), both pure functions of the effective
+     *  reveals. tk = { cv, pw, any }. Restore discipline unchanged: base is
+     *  still restored byte-exact when every channel goes quiet. */
+    update(regions, globalK = 0, grad = null, tk = null) {
       let n = 0;
       for (const rg of regions) {
         if (rg.k <= 0.004) continue;
@@ -83,13 +93,16 @@ export function createAmbientShedDimmer(sceneApi) {
         n++;
       }
       const gradOn = grad && grad.k > 0.004;
-      if (n === 0 && globalK <= 0.004 && !gradOn) { if (active) restore(); return; }
+      const tkOn = tk && tk.any && tk.cv;
+      if (n === 0 && globalK <= 0.004 && !gradOn && !tkOn) { if (active) restore(); return; }
       if (!pts && !collect()) return;
       active = true;
       const attr = pts.geometry.attributes.color;
       const col = attr.array;
       const pos = pts.geometry.attributes.position.array;
-      for (let i = 0; i < col.length; i += 3) {
+      const tcv = tkOn ? tk.cv : null, tpw = tkOn ? tk.pw : null;
+      let pi = 0;
+      for (let i = 0; i < col.length; i += 3, pi++) {
         const x = pos[i], y = pos[i + 1], z = pos[i + 2];
         let dim = 0;
         for (let j = 0; j < n; j++) {
@@ -118,7 +131,13 @@ export function createAmbientShedDimmer(sceneApi) {
           const gh = grad.k * hf * 0.97;   // history dissolves; source survives
           if (gh > g) g = gh;
         }
-        const f = 1 - (g > dim ? g : dim);
+        let f = 1 - (g > dim ? g : dim);
+        // same-particle takeover: a converting dot swaps its ambient look for
+        // its plume look; dim/history apply to the unconverted share only
+        if (tkOn) {
+          const c = tcv[pi];
+          if (c > 0.0005) f = f * (1 - c) + tpw[pi];
+        }
         col[i] = base[i] * f;
         col[i + 1] = base[i + 1] * f;
         col[i + 2] = base[i + 2] * f;

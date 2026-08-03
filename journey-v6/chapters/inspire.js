@@ -21,11 +21,19 @@
 // reveal, time) so reverse scroll plays the transformation backward:
 //   1. arrival ramps (see ARR below) make each exit's reveal continuous in
 //      scroll position instead of stepping at the T1 seam;
-//   2. the spore vertex shader's handoff block starts every particle as a
-//      member of the hero's drift (same origins, same breeze law) and gathers
-//      it onto the staged braid as the reveal rises;
+//   2. SAME-PARTICLE TAKEOVER (Hannah's fifth note, 2026-08-03 — the
+//      definitive rebuild, inspire-takeover.js): the transition is performed
+//      by the hero's OWN 4,200 shed dots. Every prior round still crossfaded
+//      two particle systems; now the takeover steers the actual dots onto the
+//      braid paths (a CPU port of this file's staged shader math), and THIS
+//      file's 5,100-spore GPU system no longer participates in the transition
+//      at all — it stays dark (uDet = 0) until the conversion has saturated
+//      near the rest, then fades in CO-LOCATED (same staged math, same gates)
+//      to supply the approved rest look's full density and detail while the
+//      converted dots ease their plume brightness back out on the same curve;
 //   3. inspire-ambient.js dims the hero shed as-and-where the structured
-//      plume brightens, and restores it byte-exactly at p = 0.
+//      plume brightens — now per particle via the takeover's feed — and
+//      restores it byte-exactly at p = 0.
 //
 // RIVER DELTA (Hannah, 2026-08-02, third note — the definitive fix): the hero
 // shows exactly ONE visible stream, the shed spilling from under the
@@ -51,6 +59,7 @@ import {
   makeGlowTexture, makeStreakTexture, EXITS, LEAN_DIR,
 } from '../core/anatomy.js';
 import { createAmbientShedDimmer } from './inspire-ambient.js';
+import { createSporeTakeover } from './inspire-takeover.js';
 
 const TAU = Math.PI * 2;
 const N_GILL_CHANNELS = 230;                 // the hero's gill count
@@ -585,6 +594,9 @@ export function createInspire(sceneApi) {
       uMap: { value: glowTex },
       uLean: { value: 1.0 },
       uRev: { value: new THREE.Vector3(0, 0, 0) },
+      // per-exit DETAIL fade (same-particle takeover): this system is the
+      // rest-density detail layer now, dark until conversion saturates
+      uDet: { value: new THREE.Vector3(0, 0, 0) },
       uCoh: { value: new THREE.Vector3(0, 0, 0) },
       // per-plume knot-cadence gain (W4-A gap a), from the anatomy map
       uKnot: { value: new THREE.Vector3(EXITS[0].knot, EXITS[1].knot, EXITS[2].knot) },
@@ -602,6 +614,7 @@ export function createInspire(sceneApi) {
       uniform float uTime;
       uniform float uLean;
       uniform vec3 uRev;
+      uniform vec3 uDet;
       uniform vec3 uCoh;
       uniform vec3 uKnot;
       varying float vAlpha;
@@ -609,9 +622,6 @@ export function createInspire(sceneApi) {
       varying float vFogDepth;
       varying float vShrink;
       float hash(float n) { return fract(sin(n) * 43758.5453); }
-      // the hero scene's one air current (mushroom-scene §10b), normalized —
-      // the drift state below must move on the same wind the visitor watched
-      const vec3 SHED_BREEZE = vec3(0.8414, 0.5217, 0.1430);
       // real rim anatomy in-shader (byte-mirrors core/anatomy.js rimRad and
       // capUnderPt(1, a)): the delta migration must HUG the actual rim as its
       // azimuth changes, not a circle of constant radius
@@ -632,6 +642,7 @@ export function createInspire(sceneApi) {
         float seed = aMisc.y;
         float core = aMisc.z;
         float rev = plume < 0.5 ? uRev.x : (plume < 1.5 ? uRev.y : uRev.z);
+        float det = plume < 0.5 ? uDet.x : (plume < 1.5 ? uDet.y : uDet.z);
         float coh = plume < 0.5 ? uCoh.x : (plume < 1.5 ? uCoh.y : uCoh.z);
         float knotG = plume < 0.5 ? uKnot.x : (plume < 1.5 ? uKnot.y : uKnot.z);
         float settle = 1.0 - 0.4 * coh;
@@ -773,47 +784,25 @@ export function createInspire(sceneApi) {
         }
         p = vec3(cos(az) * r + xLean, y, sin(az) * r + zLean);
 
-        // ---- ONE-POPULATION HANDOFF (Hannah's conceptual-continuity note,
-        // 2026-08-02). Before this plume's reveal, the particle is a member of
-        // the hero's ambient shed: same under-cap origin, dropped clear of the
-        // gills and carried +x by the same breeze law the visitor watched
-        // during Mission (mushroom-scene §10: travel grows with age, scatter
-        // spreads with travel). As the reveal rises, each particle — at its
-        // own staggered moment — gathers out of that drift onto its staged
-        // gill -> rim -> braid path, so the drift continuously BECOMES the
-        // structured plume; the shed dimmer (inspire-ambient.js) hands the
-        // hero curtain's density over in the same regions at the same rate.
-        // Everything is a pure function of (reveal, time): reverse scroll
-        // plays the same transformation backward. At rev = 1 the mix is
-        // exactly 1 — the approved Inspire rest look is untouched.
-        float dh1 = hash(seed * 3.31), dh2 = hash(seed * 5.77);
-        float dh3 = hash(seed * 7.13), dh4 = hash(seed * 2.09);
-        float spread = 0.07 + t * 0.78;
-        vec3 driftP = position
-                    + vec3(-0.03, -0.05 - 0.55 * pow(dh4, 1.5), 0.0)
-                    + SHED_BREEZE * (t * 5.0)
-                    + (vec3(dh1, dh2, dh3) - 0.5) * spread * vec3(2.0, 1.5, 1.2);
-        // drift alpha mirrors the shed's envelope: born at the gills, thinning
-        // downwind; both ends sit at ~0 so the cycle wrap is invisible in
-        // every mix state
-        float driftA = 0.8 * smoothstep(0.0, 0.06, t)
-                     * (1.0 - smoothstep(0.55, 0.95, t));
-        // Migrants gather out of the drift EARLY in their window (complete by
-        // rev ~ 0.55) so the rim walk is populated while the front advances;
-        // the resident plume keeps the approved wide stagger. Both reach
-        // exactly 1 at rev = 1.
-        float mi = smoothstep(0.0, mix(0.45, 0.30, migF),
-                              rev - hash(seed * 17.77) * mix(0.55, 0.28, migF));
-        p = mix(driftP, p, mi);
-        alpha = mix(driftA, alpha, mi);
-        knotV *= mi;   // knot pearls are a property of the organized braid
-
+        // ---- SAME-PARTICLE TAKEOVER (Hannah's fifth note, 2026-08-03): the
+        // old drift-morph handoff block is GONE. This system no longer
+        // participates in the transition — the hero's own shed dots perform
+        // it (inspire-takeover.js, a CPU port of the staged math above).
+        // Every particle here sits on its staged path at all times and is
+        // gated by uDet, the per-exit DETAIL fade: dark until the takeover's
+        // conversion has saturated near the rest (det rises 0.85 -> 0.995 of
+        // effective reveal), then fading in exactly CO-LOCATED with the
+        // converted dots — same rim entries, same braid math, same gates —
+        // while those dots ease their plume brightness back out on the same
+        // curve. At rev = 1, det = 1: the approved rest look is untouched.
+        // Reverse scroll fades this detail layer out first, handing the braid
+        // back to the converted dots, then the takeover unwinds.
+        //
         // knot + core brightening applied OUTSIDE the clamp so hot pearls can
         // exceed the base envelope; heat tone shifts toward near-white at
-        // knots. The structural gains ride the morph: a particle still in the
-        // drift carries no core/knot identity yet.
-        vAlpha = clamp(alpha, 0.0, 1.0) * rev
-               * (1.0 + 0.5 * coh) * (1.0 + (0.28 * core + 1.15 * knotV) * mi);
+        // knots.
+        vAlpha = clamp(alpha, 0.0, 1.0) * det
+               * (1.0 + 0.5 * coh) * (1.0 + 0.28 * core + 1.15 * knotV);
         vTone = min(1.0, aCycle.w + 0.34 * knotV);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vFogDepth = -mv.z;
@@ -1064,6 +1053,25 @@ export function createInspire(sceneApi) {
   // exactly as, and exactly where, the structured plume brightens — and
   // unwinds the same way in reverse.
   const ambient = createAmbientShedDimmer(sceneApi);
+  // SAME-PARTICLE TAKEOVER (Hannah's fifth note, 2026-08-03): the hero's own
+  // shed dots perform the whole transition; driven from this chapter's
+  // animator every frame (which runs AFTER the hero's spore-drift — journey
+  // animators were registered later in the insertion-ordered Map), and its
+  // per-particle conv/brightness feed rides into ambient.update below.
+  const takeover = createSporeTakeover(sceneApi);
+  // Per-exit DETAIL fade: the GPU spore system's only remaining gate. It
+  // begins strictly after every conversion curve has saturated (resident by
+  // eff 0.80, migrants by 0.55) and reads exactly 1 at eff = 1, so the
+  // approved rest is byte-the-same math and the fade-in is co-located with
+  // fully-converted dots. Pure in eff: reverse inverts the hand-back.
+  const det = [0, 0, 0];
+  function computeDet() {
+    for (let i = 0; i < 3; i++) {
+      let x = (eff[i] - 0.85) / 0.145;
+      x = x < 0 ? 0 : x > 1 ? 1 : x;
+      det[i] = x * x * (3 - 2 * x);
+    }
+  }
   // scratch for the history-dissolve gradient (ride-through #5)
   const _capC = new THREE.Vector3();
   const _grad = { sx: 0, sy: 0, sz: 0, d0: 1, d1: 3, k: 0 };
@@ -1181,6 +1189,8 @@ export function createInspire(sceneApi) {
     counts,
     exits: EXITS,
     sporeGeo,
+    /** QA handle: the same-particle takeover (conv/brightness feed, perf). */
+    _takeover: takeover,
     setTier(t) {
       sporeGeo.setDrawRange(0, t === 2 ? SPORE_TIER2 : SPORE_FULL);
       counts.spores = t === 2 ? SPORE_TIER2 : SPORE_FULL;
@@ -1211,6 +1221,11 @@ export function createInspire(sceneApi) {
       rimLinks[0].mat.uniforms.uFade.value = fA;
       rimLinks[1].mat.uniforms.uFade.value = fB;
       sporeMat.uniforms.uRev.value.set(eff[0], eff[1], eff[2]);
+      computeDet();
+      sporeMat.uniforms.uDet.value.set(det[0], det[1], det[2]);
+      // takeover positions are pure in (eff, time): the next pumped frame's
+      // animator applies them with no temporal easing, so a ?p= capture sees
+      // the settled conversion.
     },
     /** T1 streaming seam: arm/retire the whole exit set. */
     setArmed(on) { armed = !!on; if (!on) api.setReveal(0, 0, 0, 0); },
@@ -1342,7 +1357,14 @@ export function createInspire(sceneApi) {
     _grad.d0 = sceneApi.consts.CAP_R * 1.2;
     _grad.d1 = sceneApi.consts.CAP_R * 2.6;
     _grad.k = hk;
-    ambient.update(shedRegions, gk, _grad);
+    // Same-particle takeover: steer the hero's own dots (runs OUTSIDE the
+    // anyVisible gate, like the dimmer, so the release path always executes;
+    // it must run AFTER the shed's positions were integrated this frame and
+    // BEFORE ambient.update reads its per-particle feed).
+    computeDet();
+    sporeMat.uniforms.uDet.value.set(det[0], det[1], det[2]);
+    takeover.update(eff, det, t, mw, sporeMat.uniforms.uLean.value);
+    ambient.update(shedRegions, gk, _grad, takeover.feed);
 
     group.visible = anyVisible;
     if (!anyVisible) return;
