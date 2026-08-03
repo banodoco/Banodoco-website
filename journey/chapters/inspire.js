@@ -74,7 +74,7 @@ import * as THREE from 'three';
 import {
   makeRng, gaussOf, heat, capUnderPt, rimRad,
   makeGlowTexture, makeStreakTexture, EXITS,
-} from '../core/anatomy.js';
+} from '../anatomy.js';
 
 const TAU = Math.PI * 2;
 const N_GILL_CHANNELS = 230;                 // the hero's gill count

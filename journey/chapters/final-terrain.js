@@ -17,7 +17,7 @@ import {
   TAU, RING_C, MEMBERS, arcOf, cutVal, cutEdgePoint, CUT_N, CUT_S_MIN, CUT_S_MAX,
   makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, makePointsMat, makeUniforms,
 } from './final-world.js';
-import { makeGlowTexture } from '../core/anatomy.js';
+import { makeGlowTexture } from '../anatomy.js';
 
 export function createFinalTerrain(sceneApi, uniforms) {
   const rand = makeRng(41719);

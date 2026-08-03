@@ -33,7 +33,7 @@
 // residual at the chamber rest, back out symmetrically on exit. The hero's
 // spore shed stays live (it feeds the plume-follow entry).
 import * as THREE from 'three';
-import { makeRng, capUnderPt } from '../core/anatomy.js';
+import { makeRng, capUnderPt } from '../anatomy.js';
 import {
   buildColonnade, bladeDepth, smooth01, COMM_AZ,
 } from './connect-blades.js';

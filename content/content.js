@@ -19,7 +19,7 @@
 // marked PLACEHOLDER, no live modules)." Every placeholder string contains
 // the literal token "PLACEHOLDER" so it is greppable:
 //
-//   grep -rn PLACEHOLDER journey-v6/content/content.js
+//   grep -rn PLACEHOLDER content/content.js
 //
 // Equip/PYPE/Arnold/Astrid are deferred out of this active build — their
 // donor content is preserved in ./content-archive-deferred.js, not

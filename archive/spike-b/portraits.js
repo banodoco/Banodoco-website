@@ -16,7 +16,7 @@
 //
 // Strand/rim/core shader treatment adapted from donor journey/chapters/owned.js.
 import * as THREE from 'three';
-import * as H from '../lib/helpers.js';
+import * as H from '../../journey/lib/helpers.js';
 
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;

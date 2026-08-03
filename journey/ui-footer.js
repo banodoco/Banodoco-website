@@ -35,7 +35,7 @@
 
 import { CONTENT } from '../content/content.js';
 import { claimInput, releaseInput } from './scroll.js';
-import { CHAPTERS } from '../constants.js';
+import { CHAPTERS } from './constants.js';
 
 // Reveal band, in absolute journey progress. Both edges sit above the
 // commit threshold (0.951) so the band is unreachable as an idle state.

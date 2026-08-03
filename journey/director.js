@@ -20,7 +20,7 @@
 import * as THREE from 'three';
 import {
   FOG_RAMP, HANDHELD, ORBIT_BREATH, SEAM_FOG_DIPS, CHAPTERS, restProgress,
-} from '../constants.js';
+} from './constants.js';
 import { applyPortrait } from './portrait.js';
 
 const DEG = Math.PI / 180;

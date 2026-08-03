@@ -820,7 +820,7 @@ addEventListener('keydown', (e) => {
      JOURNEY v6 BOOTSTRAP - additive, and deliberately inert.
      Everything above this comment was, before merge step M1, a
      byte-faithful copy of ../golden-mushroom-page.html living one
-     directory deeper at journey-v6/index.html (see
+     directory deeper at journey-v6/index.html — now journey/ (see
      journey-v6-plan/15-merge-and-architecture.md and tag
      v6-prepromote for that state). M1 promoted this file to the
      site root and archived the old hero page (now
@@ -831,7 +831,7 @@ addEventListener('keydown', (e) => {
      archive/mushroom-scene.js); nothing about it is duplicated,
      patched, or re-timed here.
 
-     This script loads ./journey-v6/journey.js only AFTER the hero
+     This script loads ./journey/journey.js only AFTER the hero
      entry choreography has finished (scene grow-in 5.4s, callouts
      boot through ~7.55s - see the ENTRY comment in the CSS), so the
      journey can never compete with the intro for frame time.
@@ -1452,7 +1452,7 @@ const skipIntro = matchMedia('(prefers-reduced-motion: reduce)').matches
 const frozen = new URLSearchParams(location.search).get('introat') !== null;
 
 function loadJourney() {
-  import('./journey-v6/journey.js')
+  import('./journey/journey.js')
     .then(m => m.boot({ heroIntroSkipped: !!skipIntro, heroFrozen: frozen }))
     .catch(err => console.error('[journey-v6] failed to load', err));
 }

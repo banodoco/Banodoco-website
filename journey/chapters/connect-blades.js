@@ -31,7 +31,7 @@
 import * as THREE from 'three';
 import {
   makeRng, gaussOf, heat, capUnderPt, rimRad, makeGlowTexture,
-} from '../core/anatomy.js';
+} from '../anatomy.js';
 
 export const TAU = Math.PI * 2;
 const tmpC = new THREE.Color();

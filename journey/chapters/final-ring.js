@@ -62,7 +62,7 @@ import {
   TAU, MEMBERS, RING_C, arcOf, cutVal,
   makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat,
 } from './final-world.js';
-import { makeGlowTexture } from '../core/anatomy.js';
+import { makeGlowTexture } from '../anatomy.js';
 
 // The Final rest camera, for build-time LOD + occlusion only (mirrors the
 // director's p=0.925 key exactly; declutter round corrected the stale

@@ -19,7 +19,7 @@
 import {
   CHAPTERS, CHAPTER_IDS, chapterAt, localProgress, restProgress,
   SMOOTH_K, SMOOTH_K_FLIGHT, FLIGHT_BASE_S, FLIGHT_SPAN_S, MAX_SCRUB_RATE,
-} from '../constants.js';
+} from './constants.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
 
