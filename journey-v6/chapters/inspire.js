@@ -1135,7 +1135,13 @@ export function createInspire(sceneApi) {
     { a0: 108, a1: 140 },   // Arca — revealed as the camera rounds the rear
     { a0: 130, a1: 154 },   // 2RP — the drooped-margin sector, last
   ];
-  const ARR_BAND = { a0: 80, a1: 100 };
+  // Swarm census finding (2026-08-03): this band's ramp STRADDLED the T1
+  // arming azimuth (~88-92 deg) while every sibling ramp was deliberately
+  // moved past it — so the 46 backlit filaments + ember beads snapped on
+  // almost instantly at arming, in a different sector from the one stream:
+  // the literal "more spores appear behind". Now strictly after arming, in
+  // family with ARR[0] (82-116).
+  const ARR_BAND = { a0: 96, a1: 118 };
   const RAD2DEG = 180 / Math.PI;
   function camAzDeg() {
     const c = sceneApi.camera.position;

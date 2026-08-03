@@ -319,7 +319,16 @@ export function boot(opts = {}) {
     const ch = chapterAt(p);
     // Hero furniture releases as the journey leaves the Mission composition.
     const heroA = 1 - smooth01((p - 0.006) / 0.05);
-    for (const f of heroFurniture) f.style.opacity = heroA;
+    // Swarm census finding (2026-08-03): opacity-0 elements are still
+    // hit-testable — a cursor parked over the faded 01-INSPIRE callout kept
+    // driving sceneApi.setHighlight('spores') via the hero page's own hover
+    // bindings, flaring the old curtain up to ~2x with a breathing pulse at
+    // exactly the moment it should cede. Faded furniture must leave the hit
+    // tree, not just the eye.
+    for (const f of heroFurniture) {
+      f.style.opacity = heroA;
+      f.style.pointerEvents = heroA < 0.05 ? 'none' : '';
+    }
 
     ui.update(p, ch.id, sceneApi.camera, dt);
 
