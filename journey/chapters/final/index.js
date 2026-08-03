@@ -32,10 +32,11 @@
 // Parented to `scene` (adr-d3): the field does not sway.
 
 import * as THREE from 'three';
-import { makeUniforms, pullOf, makeRng, TAU, RING_C, HERO_AZ } from './final-world.js';
-import { createFinalRing } from './final-ring.js';
-import { createFinalTerrain } from './final-terrain.js';
-import { createFinalSky } from './final-sky.js';
+import { makeUniforms, pullOf, makeRng, TAU, RING_C, HERO_AZ, MEMBERS } from './world.js';
+import { createFinalRing } from './ring.js';
+import { createFinalTerrain } from './terrain.js';
+import { createFinalSky } from './sky.js';
+import { CAMERA } from './camera.js';
 
 export function createFinal(sceneApi) {
   const group = new THREE.Group();
@@ -221,6 +222,27 @@ export function createFinal(sceneApi) {
       RING_C.x + Math.cos(az) * r, -0.5, RING_C.z + Math.sin(az) * r);
   }
 
+  /* ---- Final-leg halation focus fallback (migrated from journey.js, M4:
+     the chapter owns its own focal anatomy): the nearest mature ring member
+     IN FRONT of the Final rest camera — its own camera.js's 'final-rest'
+     key, so the reference can never drift from the authored leg — is the
+     frame's focal highlight ("selected fairy-ring highlights", handoff)
+     while the travelling front rests. Deterministic; ring members are
+     scene-parented and never move. */
+  const REST_FOCUS = (() => {
+    const rk = CAMERA.keys.find(k => k.note === 'final-rest');
+    const cam = rk.pos, dir = rk.tgt.clone().sub(cam).normalize();
+    let best = null, score = Infinity;
+    const v = new THREE.Vector3();
+    for (const m of MEMBERS) {
+      v.set(m.x - cam.x, 0, m.z - cam.z);
+      if (v.x * dir.x + v.z * dir.z <= 0 || m.m < 0.55) continue;  // behind / immature
+      const dd = v.length();
+      if (dd < score) { score = dd; best = m; }
+    }
+    return best ? new THREE.Vector3(best.x, best.gy + best.h * 0.82, best.z) : null;
+  })();
+
   return {
     group,
     nodeIds: [],   // the epilogue has no detail state by design (adr-d6)
@@ -231,6 +253,9 @@ export function createFinal(sceneApi) {
     nodeWorld() { return null; },
     /** Live growth-front position for the halation focus hint (or null). */
     frontWorld,
+    /** The focal source for the lens: the travelling front when it runs,
+     *  else the static nearest-member hint at the rest. */
+    focusWorld() { return frontWorld() || REST_FOCUS; },
     /** FN-3.1 — closing-CTA hook. Donor trigger names preserved. */
     trigger(name) { if (name === 'ctaPulse' || name === 'ringPulse') fireCta(); },
     /** QA introspection */

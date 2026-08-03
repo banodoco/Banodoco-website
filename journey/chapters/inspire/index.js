@@ -73,8 +73,10 @@
 import * as THREE from 'three';
 import {
   makeRng, gaussOf, heat, capUnderPt, rimRad,
-  makeGlowTexture, makeStreakTexture, EXITS,
-} from '../anatomy.js';
+  makeGlowTexture, makeStreakTexture,
+} from '../../anatomy.js';
+import { EXITS } from './anatomy.js';
+import { endOf, restProgress } from '../../route.js';
 
 const TAU = Math.PI * 2;
 const N_GILL_CHANNELS = 230;                 // the hero's gill count
@@ -1121,6 +1123,40 @@ export function createInspire(sceneApi) {
     /** T1 streaming seam: arm/retire the whole exit set. */
     setArmed(on) { armed = !!on; if (!on) api.setReveal(0, 0, 0, 0); },
     get armed() { return armed; },
+    /** Per-frame reveal drive (migrated from journey.js's driveInspire, M4:
+     *  the chapter owns its own choreography — merge doc rule 3). The three
+     *  exit regions reveal SEQUENTIALLY during the orbit and then stay
+     *  visible together at rest (GB-1.3). Driven off the real camera
+     *  azimuth, exactly as Spike A reviewed it, so manual poses and QA
+     *  jumps arm the same way a scroll does. Called by the journey's frame
+     *  loop for every chapter that exposes drive(p). */
+    drive(p) {
+      const azDeg = camAzDeg();
+      if (!armed) { api.setReveal(0, 0, 0, 0); return; }
+      // D17 locus law (Hannah, round 8): the braid rises along the stream's
+      // own drift axis and must OVERLAY the drift envelope at every camera
+      // angle. The old belly clamp damped the +x lean mid-orbit (to keep
+      // cores off the view ray), which moved the organized column off the
+      // stream's locus — exactly the "it switches place" read. Retired in
+      // favour of locus fidelity: lean is always full; near-lens protection
+      // stays with the shaders' near-camera fade (vNear), never with
+      // re-uprighting geometry.
+      api.setLeanScale(1);
+      const smz = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
+      const sm = (a, b) => { const x = (azDeg - a) / (b - a); return x < 0 ? 0 : x > 1 ? 1 : x; };
+      // gill band -> ArtCompute -> Arca Gidan -> 2RP, then a hold through the rest
+      const a = sm(36, 72), b = sm(76, 112), c = sm(104, 142), band = sm(20, 46);
+      // under the cap the plumes are behind us: retire them into the seam
+      // (route-derived: 0.025 before the Inspire range ends; shipped 0.355)
+      const out = 1 - smz((p - (endOf('inspire') - 0.025)) / 0.06);
+      api.setReveal(a * out, b * out, c * out, band * out);
+      // Swarm isolation fix (2026-08-03): detail may only sharpen on the
+      // final approach to the rest (rest-0.025 -> rest-0.007, shipped
+      // 0.235->0.253) — through the whole orbit the hero's own converted
+      // dots carry the braids alone. Pure in p; reverse drops detail first,
+      // handing the braids back to the dots.
+      api.setRestProx(smz((p - (restProgress('inspire') - 0.025)) / 0.018) * out);
+    },
     /** Node id -> world position of its label anchor: mid-plume, above the
      *  release lip (W3-B gap g — see labelOffsets above). */
     nodeWorld(id) {

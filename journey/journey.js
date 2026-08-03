@@ -17,25 +17,22 @@
 //   DOM               ui.js        nav, copy, cards, hotspot proxies
 //   geometry          chapters/*.js
 
-import * as THREE from 'three';
 import { createJourneyState } from './state.js';
 import { createScrollModel } from './scroll.js';
 import { createDirector } from './director.js';
 import { createSeams } from './seams.js';
 import { createLens } from './lens.js';
 import { createUI } from './ui.js';
-import { createInspire } from './chapters/inspire.js';
-import { createConnect } from './chapters/connect.js';
-import { createOwned } from './chapters/owned.js';
-import { createFinal } from './chapters/final.js';
-import { MEMBERS } from './chapters/final-world.js';
+import { createInspire } from './chapters/inspire/index.js';
+import { createConnect } from './chapters/connect/index.js';
+import { createOwned } from './chapters/owned/index.js';
+import { createFinal } from './chapters/final/index.js';
 import { CONTENT } from '../content/content.js';
 import {
-  CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, startOf, endOf,
+  CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, startOf,
 } from './route.js';
 import { HERO_INTRO_MS, DEEP_LINK_DETAIL_DELAY_MS } from './constants.js';
 
-const DEG = Math.PI / 180;
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
@@ -242,66 +239,20 @@ export function boot(opts = {}) {
      ================================================================ */
   let lastChapter = null;
 
-  /** Inspire's three exit regions reveal SEQUENTIALLY during the orbit and
-   *  then stay visible together at rest (GB-1.3). Driven off the real camera
-   *  azimuth, exactly as Spike A reviewed it, so manual poses and QA jumps
-   *  arm the same way a scroll does. */
-  function driveInspire(p) {
-    const cam = sceneApi.camera.position;
-    let azDeg = Math.atan2(cam.x, cam.z) / DEG;
-    if (azDeg < -90) azDeg += 360;                    // rear-left reads 190..270
-    if (!chapters.inspire.armed) { chapters.inspire.setReveal(0, 0, 0, 0); return; }
-    // D17 locus law (Hannah, round 8): the braid rises along the stream's own
-    // drift axis and must OVERLAY the drift envelope at every camera angle.
-    // The old belly clamp damped the +x lean mid-orbit (to keep cores off the
-    // view ray), which moved the organized column off the stream's locus —
-    // exactly the "it switches place" read. Retired in favour of locus
-    // fidelity: lean is always full; near-lens protection stays with the
-    // shaders' near-camera fade (vNear), never with re-uprighting geometry.
-    chapters.inspire.setLeanScale && chapters.inspire.setLeanScale(1);
-    const sm = (a, b) => clamp01((azDeg - a) / (b - a));
-    // gill band -> ArtCompute -> Arca Gidan -> 2RP, then a hold through the rest
-    let a = sm(36, 72), b = sm(76, 112), c = sm(104, 142), band = sm(20, 46);
-    // under the cap the plumes are behind us: retire them into the seam
-    // (route-derived: 0.025 before the Inspire range ends; shipped 0.355)
-    const out = 1 - smooth01((p - (endOf('inspire') - 0.025)) / 0.06);
-    chapters.inspire.setReveal(a * out, b * out, c * out, band * out);
-    // Swarm isolation fix (2026-08-03): the GPU detail layer may only sharpen
-    // on the final approach to the Inspire rest (rest-0.025 -> rest-0.007,
-    // shipped 0.235->0.253) — through the whole orbit the hero's own
-    // converted dots carry the braids alone. Pure in p; reverse drops detail
-    // first, handing the braids back to the dots.
-    if (chapters.inspire.setRestProx) {
-      chapters.inspire.setRestProx(smooth01((p - (restProgress('inspire') - 0.025)) / 0.018) * out);
-    }
-  }
-
-  // Final-leg halation focus: the nearest mature ring member IN FRONT of the
-  // Final rest camera (director key p=0.925, pos(-14.72,2.73,2.70) ->
-  // tgt(-3.06,0.83,-1.94)) — its under-cap glow is the frame's focal
-  // highlight ("selected fairy-ring highlights", handoff). Deterministic;
-  // ring members are scene-parented and never move.
-  const FINAL_FOCUS = (() => {
-    const cam = new THREE.Vector3(-14.72, 2.73, 2.70);
-    const dir = new THREE.Vector3(-3.06, 0.83, -1.94).sub(cam).normalize();
-    let best = null, score = Infinity;
-    const v = new THREE.Vector3();
-    for (const m of MEMBERS) {
-      v.set(m.x - cam.x, 0, m.z - cam.z);
-      if (v.x * dir.x + v.z * dir.z <= 0 || m.m < 0.55) continue;  // behind / immature
-      const dd = v.length();
-      if (dd < score) { score = dd; best = m; }
-    }
-    return best ? new THREE.Vector3(best.x, best.gy + best.h * 0.82, best.z) : null;
-  })();
-
   function applyFrame(p, dt) {
     const owned = p > 0.0008;
     director.setOwned(owned);
     if (owned) director.apply(p, dt);
 
     seams.update(p);
-    driveInspire(p);
+    // Chapter-owned choreography (M4): any chapter exposing drive(p) runs it
+    // here, after the seams have armed/retired it. Inspire's reveal drive
+    // lives in chapters/inspire/index.js now — the spine knows no chapter's
+    // internals.
+    for (const id in chapters) {
+      const mod = chapters[id];
+      if (mod.drive) mod.drive(p);
+    }
 
     // Optics (W5): ONE finishing language across the whole journey. The lens
     // owns the per-leg parameter curve; the journey supplies progress and the
@@ -317,10 +268,9 @@ export function boot(opts = {}) {
     else if (p < startOf('owned') + 0.02) { if (chapters.connect.armed) focus = chapters.connect.nodeWorld('ados'); }
     else if (p < startOf('final') + 0.02) { if (chapters.owned.armed) focus = chapters.owned.nodeWorld('pod-shared'); }
     else if (chapters.final.armed) {
-      // live growth-front position when the pulse is travelling (final.js
-      // frontWorld(), declutter round); the static nearest-member hint
-      // remains the fallback while the front rests
-      focus = (chapters.final.frontWorld && chapters.final.frontWorld()) || FINAL_FOCUS;
+      // the Final chapter owns its focal anatomy (M4): the travelling
+      // growth front while it runs, else its own rest-member hint
+      focus = chapters.final.focusWorld();
     }
     lens.setFocusHint(focus);
 
@@ -387,7 +337,9 @@ export function boot(opts = {}) {
     // (which only runs frames in bursts) sees the finished frame
     applyFrame(p, 0);
     seams.update(p);
-    chapters.inspire.snap();
+    // any chapter with a snap() gets its eased states jumped to their
+    // targets (deep links / hidden-tab capture; today only Inspire has one)
+    for (const id in chapters) { if (chapters[id].snap) chapters[id].snap(); }
     applyFrame(p, 0);
     lastChapter = chapterAt(p).id;
     if (detail) setTimeout(() => openDetail(detail, null), DEEP_LINK_DETAIL_DELAY_MS);

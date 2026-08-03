@@ -22,8 +22,8 @@ import * as THREE from 'three';
 import {
   TAU, RING_C, SPORE_SOURCES,
   makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, makePointsMat,
-} from './final-world.js';
-import { makeGlowTexture } from '../anatomy.js';
+} from './world.js';
+import { makeGlowTexture } from '../../anatomy.js';
 
 // Final rest camera (build-time composition anchor, mirrors director key).
 const REST = { x: -13.9, y: 3.4, z: 2.55, headingDeg: -22.7 };

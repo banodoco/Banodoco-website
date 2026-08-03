@@ -61,23 +61,30 @@ import * as THREE from 'three';
 import {
   TAU, MEMBERS, RING_C, arcOf, cutVal,
   makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat,
-} from './final-world.js';
-import { makeGlowTexture } from '../anatomy.js';
+} from './world.js';
+import { makeGlowTexture, CAP_Y, CAP_R, CAP_H } from '../../anatomy.js';
+import { CAMERA } from './camera.js';
 
-// The Final rest camera, for build-time LOD + occlusion only (mirrors the
-// director's p=0.925 key exactly; declutter round corrected the stale
-// -13.9/2.55 and added y for the new elevation occlusion below).
-const REST_CAM = { x: -14.72, y: 2.73, z: 2.70 };
+// The Final rest camera, for build-time LOD + occlusion only. M4 dedupe:
+// read from the chapter's OWN camera leg ('final-rest' hold key) instead of
+// mirroring the numbers — the reference can never drift from the authored
+// pose again. (The declutter round's stale -13.9/2.55 mirror was exactly
+// this class of bug.)
+const REST_CAM = (() => {
+  const k = CAMERA.keys.find(k => k.note === 'final-rest');
+  return { x: k.pos.x, y: k.pos.y, z: k.pos.z };
+})();
 
 /* ------------------------------------------------------------------ */
 /* The hero's form recipe, parameterized (D14)                          */
 /* ------------------------------------------------------------------ */
-// Hero constants (mushroom-scene.js §4): the scale reference for every
-// member. A member's world scale is m.h / H_TOTAL, so its apex lands at
-// its authored height.
-const H_CAP_R = 2.35;      // hero rim radius
-const H_CAP_H = 1.22;      // hero dome height above rim
-const H_TOTAL = 3.15 + H_CAP_H;   // hero apex height (CAP_Y + CAP_H)
+// Hero constants — the scale reference for every member. A member's world
+// scale is m.h / H_TOTAL, so its apex lands at its authored height.
+// M4 dedupe: read from the ONE form-language mirror (journey/anatomy.js)
+// instead of re-stating the numbers here.
+const H_CAP_R = CAP_R;            // hero rim radius (2.35)
+const H_CAP_H = CAP_H;            // hero dome height above rim (1.22)
+const H_TOTAL = CAP_Y + H_CAP_H;  // hero apex height
 
 function angWrap(d) { return Math.atan2(Math.sin(d), Math.cos(d)); }
 function smoothstep(e0, e1, x) {
