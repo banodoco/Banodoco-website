@@ -32,6 +32,7 @@ import {
   CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, startOf,
 } from './route.js';
 import { HERO_INTRO_MS, DEEP_LINK_DETAIL_DELAY_MS } from './constants.js';
+import { STEADY, P as P_FLAG, POSE as POSE_FLAG, CAPTURE } from '../flags.js';
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -48,8 +49,6 @@ export function boot(opts = {}) {
     return null;
   }
 
-  const q = new URLSearchParams(location.search);
-
   /* ================================================================
      State, scroll, camera
      ================================================================ */
@@ -59,8 +58,9 @@ export function boot(opts = {}) {
   });
 
   // ?steady=1 kills the documentary handheld layer (QA: pose sampling at
-  // arbitrary p must be reproducible frame-to-frame).
-  const director = createDirector(sceneApi, { steady: q.get('steady') === '1' });
+  // arbitrary p must be reproducible frame-to-frame). (parsed once, in
+  // ../flags.js — THE flag registry)
+  const director = createDirector(sceneApi, { steady: STEADY });
   const lens = createLens(sceneApi);
   lens.update(0);   // the unified grade covers the full journey; amount stays 1
 
@@ -387,9 +387,9 @@ export function boot(opts = {}) {
     if (detail) setTimeout(() => openDetail(detail, null), DEEP_LINK_DETAIL_DELAY_MS);
   }
 
-  const qp = q.get('p');
-  const qpose = q.get('pose');
-  const qcapture = q.get('capture');
+  const qp = P_FLAG;
+  const qpose = POSE_FLAG;
+  const qcapture = CAPTURE;
   if (qcapture !== null) {
     // ?capture=<p> (M5): pixel-stable stills for capture.py. The page
     // bootstrap already froze the organism's clock at the t = 0 phase and

@@ -10,6 +10,7 @@
 // journey/site.css. Zero behaviour change intended anywhere in this move.
 
 import { createScene } from './organism/organism.js?v=1785427900';
+import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF, FREE_CAM } from './flags.js';
 
 // --- responsive camera compositions, keyed by mode ---
 const VIEWS = {
@@ -92,9 +93,9 @@ const TRACKS = {
 // scene's 3.4s grow-in; honor reduced-motion, and let ?nointro=1 skip the
 // whole sequence for design-review screenshots of the settled page.
 // ?capture=<p> (M5) implies nointro: a frozen still has no choreography.
-const captureQ = new URLSearchParams(location.search).get('capture');
+const captureQ = CAPTURE;
 const skipIntro = matchMedia('(prefers-reduced-motion: reduce)').matches
-  || new URLSearchParams(location.search).get('nointro')
+  || NOINTRO
   || captureQ !== null;
 if (skipIntro) {
   const st = document.createElement('style');
@@ -104,7 +105,7 @@ if (skipIntro) {
 
 // ?introat=P freezes the page half of the choreography at progress P (0..1);
 // the scene half freezes itself off the same param (see introStateAt)
-const introAt = new URLSearchParams(location.search).get('introat');
+const introAt = INTROAT;
 if (introAt !== null) {
   addEventListener('load', () => {
     const ms = Math.min(1, Math.max(0, parseFloat(introAt) || 0)) * 5400;
@@ -180,7 +181,7 @@ for (const [id, region] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co
 
 // --- design-review / QA query params ---
 // ?hl=spores|stem|ground forces a region highlight (design review / QA)
-const hlq = new URLSearchParams(location.search).get('hl');
+const hlq = HL;
 if (hlq) sceneApi.setHighlight(hlq, true);
 
 // The journey extension needs the scene handle (groups, consts, addAnimator,
@@ -192,7 +193,7 @@ window.sceneApi = sceneApi;
 
 // ?lit=1 forces all callouts into their hover state (design review / QA);
 // transitions are snapped so the forced state renders instantly
-if (new URLSearchParams(location.search).get('lit')) {
+if (LIT) {
   const st = document.createElement('style');
   st.textContent = '.co * { transition: none !important; }';
   document.head.appendChild(st);
@@ -200,7 +201,7 @@ if (new URLSearchParams(location.search).get('lit')) {
 }
 
 // serif body A/B for design review: press B, or load with ?body=serif
-if (new URLSearchParams(location.search).get('body') === 'serif')
+if (BODY_SERIF)
   document.body.classList.add('body-serif');
 addEventListener('keydown', (e) => {
   if (e.key !== 'b' && e.key !== 'B') return;
@@ -224,7 +225,7 @@ addEventListener('keydown', (e) => {
 // reach the organism's own tap handler; DOM links/nav are untouched.
 // ?free=1 keeps the hero's fully interactive camera (and the grab cursor,
 // via body.free-cam in journey/site.css).
-const freeCam = new URLSearchParams(location.search).get('free');
+const freeCam = FREE_CAM;
 if (freeCam) document.body.classList.add('free-cam');
 else sceneApi.setInputPolicy('journey');
 
