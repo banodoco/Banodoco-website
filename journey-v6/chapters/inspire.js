@@ -22,19 +22,20 @@
 //   1. arrival ramps (see ARR below) make each exit's reveal continuous in
 //      scroll position instead of stepping at the T1 seam;
 //   2. SAME-PARTICLE TAKEOVER (Hannah's fifth note, 2026-08-03; completed by
-//      the FINAL UNIFICATION the same evening): the whole leg — transition
-//      AND rest — is performed by the hero's OWN 4,200 shed dots
-//      (inspire-takeover.js, a CPU port of the staged braid math). The
-//      5,100-spore GPU detail layer that used to fade in on the rest
+//      the FINAL UNIFICATION the same evening; the spore system's own
+//      split/braid modes — organism/spores.js): the whole leg —
+//      transition AND rest — is performed by the hero's OWN 4,200 shed dots.
+//      The 5,100-spore GPU detail layer that used to fade in on the rest
 //      approach is DELETED: even co-located and det-gated it was still a
 //      swap to a visibly different stream ("it stays in the same spot, but
 //      it switches to a completely different stream"). The rest richness is
-//      now a DECORATION of the same dots — the knot-pearl cadence rides the
-//      takeover's brightness feed at full strength, core cohort included —
-//      plus the det-gated core ribbons, which grow and never replace;
-//   3. inspire-ambient.js dims the hero shed as-and-where the structured
-//      plume brightens — now per particle via the takeover's feed — and
-//      restores it byte-exactly at p = 0.
+//      a DECORATION of the same dots — the knot-pearl cadence rides the
+//      system's per-dot brightness feed at full strength, core cohort
+//      included — plus the det-gated core ribbons, which grow, never replace;
+//   3. the spore system's color mode dims the hero shed as-and-where the
+//      structured plume brightens — per particle, via its own feed — and
+//      restores it byte-exactly at p = 0. This chapter only passes intent
+//      through the driver seat (see the seat claim below).
 //
 // D16 RESTAGE (Hannah, 2026-08-03, after six rejected fixes): the exits now
 // CLUSTER at the hero's one visible stream (anatomy.js EXITS — ArtCompute IS
@@ -74,8 +75,6 @@ import {
   makeRng, gaussOf, heat, capUnderPt, rimRad,
   makeGlowTexture, makeStreakTexture, EXITS,
 } from '../core/anatomy.js';
-import { createAmbientShedDimmer } from './inspire-ambient.js';
-import { createSporeTakeover } from './inspire-takeover.js';
 
 const TAU = Math.PI * 2;
 const N_GILL_CHANNELS = 230;                 // the hero's gill count
@@ -102,27 +101,36 @@ const tmpC = new THREE.Color();
    plumes), confirmed by direct question. Rather than guess the right
    intensity an eighth time, the WHOLE reorganization scales coherently
    from one live scalar T (0..1):
-     - dot path blend toward the braid (takeover: lerp by conv * T;
-       rim-walks scale, never sever)         inspire-takeover.js
-     - core-cohort scatter tightening (x T)  inspire-takeover.js
-     - pearl brightness gain (x T, floored)  inspire-takeover.js
+     - dot path blend toward the braid (lerp by conv * T;
+       rim-walks scale, never sever)         organism/spores.js (steer)
+     - core-cohort scatter tightening (x T)  organism/spores.js (steer)
+     - pearl brightness gain (x T, floored)  organism/spores.js (steer)
      - core-ribbon opacity (x ribScaleOf(T): effectively gone < ~0.2)
      - furniture (source filaments, beads, wisps, rim currents) x T
      - shed hand-over dims (capsules / global / history) x T
      - residual coherence x T; streak x (STREAK_FLOOR + rest * T) — the
        streak keeps a modest floor because it anchors the active label
-   T = 1 is EXACTLY the current build (i.e. with the D17 re-axis below —
+   T = 1 is EXACTLY the full build (i.e. with the D17 re-axis below —
    every scale law hits 1); T = 0 leaves the hero's stream
    visually untouched (labels, the streak's floor glint and a faint
    pearl sparkle remain). Every channel stays a pure function of
    (eff, time, T): changing T mid-scrub re-scales live with no state
    corruption, and the p = 0 byte-exact restore is untouched (every T
    channel multiplies an Inspire-leg drive that is already zero at p=0).
-   Controls: [ / ] step 0.05 (persisted); ?t=0.45 sets at load; load
-   order query > localStorage('journey-v6.transform') > default 0.30.
-   A small aria-hidden readout (bottom-left) shows while adjusting.
+   Baked (merge doc §1 rule 6): the SHIPPED path runs T_SHIPPED and
+   reads neither the query nor localStorage. The dial is a QA tool now,
+   activated only when ?t= is present in the URL: ?t=0.45 sets T at
+   load (?t alone recalls the last persisted QA value), [ / ] step
+   0.05 and persist, and a small aria-hidden readout (bottom-left)
+   stays visible while in QA mode. Plain loads build none of it.
    ---------------------------------------------------------------------- */
-const T_DEFAULT = 0.30;
+// T_SHIPPED — the TRANSFORM value the site ships with. PROVENANCE: as of M3
+// (2026-08-03) DECISIONS.md records no chosen T — the dial build's EXECUTION
+// entry ends "awaiting Hannah's ride + her chosen T" — so the shipped value
+// stays that build's code default, 0.30 (a deliberately restrained first
+// offer, not a measured choice). When Hannah records her number, change THIS
+// constant and cite the decision entry here.
+const T_SHIPPED = 0.30;
 const T_STEP = 0.05;
 const T_LS_KEY = 'journey-v6.transform';
 const STREAK_FLOOR = 0.25;
@@ -250,26 +258,35 @@ export function createInspire(sceneApi) {
   // chapter adds no particles of its own — the hero's 4,200 dots are it.
   const counts = { sourceSegs: 0, wispSegs: 0, beads: 0, coreSegs: 0, rimSegs: 0 };
 
-  /* ---- master TRANSFORM dial state (see the block comment at module scope).
-     Load order: ?t= query param > localStorage > default. Neither load path
-     writes localStorage — only an interactive [ / ] adjustment persists, so a
-     one-off ?t= trial never silently overwrites Hannah's saved setting. ---- */
-  const tState = { t: T_DEFAULT };
+  /* ---- master TRANSFORM state (see the block comment at module scope).
+     SHIPPED: the baked T_SHIPPED, nothing else consulted. QA (?t= present):
+     the query value if it parses, else the last persisted QA value, else the
+     baked default. Only an interactive [ / ] adjustment (QA-only) writes
+     localStorage, so a one-off ?t= trial never silently overwrites a saved
+     QA setting — and the shipped path never even reads the key. ---- */
+  let qaDial = false;
+  const tState = { t: T_SHIPPED };
   try {
-    const qv = parseFloat(new URLSearchParams(location.search).get('t'));
-    if (Number.isFinite(qv)) tState.t = clampT(qv);
-    else {
-      const sv = parseFloat(localStorage.getItem(T_LS_KEY));
-      if (Number.isFinite(sv)) tState.t = clampT(sv);
+    const qs = new URLSearchParams(location.search);
+    qaDial = qs.has('t');
+    if (qaDial) {
+      const qv = parseFloat(qs.get('t'));
+      if (Number.isFinite(qv)) tState.t = clampT(qv);
+      else {
+        const sv = parseFloat(localStorage.getItem(T_LS_KEY));
+        if (Number.isFinite(sv)) tState.t = clampT(sv);
+      }
     }
-  } catch { /* no location/localStorage (tests, privacy mode): default */ }
+  } catch { /* no location/localStorage (tests, privacy mode): shipped T */ }
 
   // small unobtrusive readout, bottom-left, journey styling, out of the a11y
-  // tree (it is a taste tool, not content); shows on change, fades ~1.5s
-  // after the last adjustment. Built lazily — zero DOM until first use.
-  let dialEl = null, dialVal = null, dialTimer = null;
+  // tree (it is a taste tool, not content). QA-only: on a plain load this DOM
+  // never exists — the function gates on the ?t= flag and nothing else calls
+  // it. In QA mode it appears at boot and stays visible (no fade): the whole
+  // point of the session is reading the number.
+  let dialEl = null, dialVal = null;
   function showDial() {
-    if (typeof document === 'undefined') return;
+    if (!qaDial || typeof document === 'undefined') return;
     if (!dialEl) {
       if (!document.getElementById('j-tdial-style')) {
         const st = document.createElement('style');
@@ -293,19 +310,20 @@ export function createInspire(sceneApi) {
     }
     dialVal.textContent = tState.t.toFixed(2);
     dialEl.style.opacity = 1;
-    if (dialTimer) clearTimeout(dialTimer);
-    dialTimer = setTimeout(() => { dialEl.style.opacity = 0; dialTimer = null; }, 1500);
   }
 
   // [ / ] adjust T in 0.05 steps, clamped 0..1 (same raw-listener seam as
-  // journey.js's [g]; scroll.js's controls-first dispatch never claims these)
-  if (typeof addEventListener === 'function') {
+  // journey.js's [g]; scroll.js's controls-first dispatch never claims
+  // these). QA-only: the listener is not even registered on a plain load.
+  if (qaDial && typeof addEventListener === 'function') {
     addEventListener('keydown', (e) => {
       if (e.key !== '[' && e.key !== ']') return;
       const tgt = e.target;
       if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable)) return;
       api.setTransform(tState.t + (e.key === ']' ? T_STEP : -T_STEP), { persist: true });
     });
+    // QA boot: surface the live value immediately
+    showDial();
   }
 
   // per-exit fade drivers (sequential reveal). The old 4th channel (backlit
@@ -628,9 +646,9 @@ export function createInspire(sceneApi) {
         plan (15-merge-and-architecture.md section 3) the hero's own
         dots now carry the stream from Mission through the rest,
         permanently; the rest-pose richness is achieved by DECORATING
-        those same dots — the knot-pearl cadence rides the takeover's
-        per-particle brightness feed (inspire-takeover.js, full
-        strength now, core cohort included) — never by replacing them.
+        those same dots — the knot-pearl cadence rides the spore
+        system's per-dot brightness feed (organism/spores.js, full
+        strength, core cohort included) — never by replacing them.
         The rest frame reads slightly sparser (4,200 vs 5,100):
         sanctioned; compensated by pearl brightness and the ribbons.
         The core ribbons (4b) STAY — they draw on visibly and swap
@@ -877,13 +895,18 @@ export function createInspire(sceneApi) {
   // strength k = gain * that exit's EFFECTIVE reveal, so the dim grows
   // exactly as, and exactly where, the structured plume brightens — and
   // unwinds the same way in reverse.
-  const ambient = createAmbientShedDimmer(sceneApi);
-  // SAME-PARTICLE TAKEOVER (Hannah's fifth note, 2026-08-03): the hero's own
-  // shed dots perform the whole transition; driven from this chapter's
-  // animator every frame (which runs AFTER the hero's spore-drift — journey
-  // animators were registered later in the insertion-ordered Map), and its
-  // per-particle conv/brightness feed rides into ambient.update below.
-  const takeover = createSporeTakeover(sceneApi);
+  // The same-particle takeover and the shed dimmer are MODES OF THE SPORE
+  // SYSTEM (merge doc §3), living in organism/spores.js behind the driver
+  // seat. The chapter claims the seat once with its exit anatomy
+  // (EXITS — az/rise/knot, the anchors this chapter stages the leg around)
+  // and passes intent through seat.drive() each frame: per-exit effective
+  // reveals, the dim regions/global/history channels, and the TRANSFORM
+  // taste value. The hero's own 4,200 dots perform the whole transition —
+  // steered by the system itself, after its own drift integrator (this
+  // chapter's animator runs later in the insertion-ordered Map, which is
+  // when drive() is called). No buffer is touched from this file;
+  // conservation and byte-exact restore are the spore system's own.
+  const sporeSeat = sceneApi.spores.setDriver({ exits: EXITS });
   // Per-exit DETAIL fade — FINAL UNIFICATION (Hannah, 2026-08-03 evening):
   // the 5,100-spore GPU layer this gate used to open is DELETED. Even with
   // the rest-proximity gating the layer's late fade-in was a swap — the
@@ -1019,17 +1042,19 @@ export function createInspire(sceneApi) {
     group,
     counts,
     exits: EXITS,
-    /** QA handle: the same-particle takeover (conv/brightness feed, perf). */
-    _takeover: takeover,
+    /** QA handle: the spore-system driver seat (per-dot conv/brightness
+     *  feed; ?tkdbg adds perf + animator-order probes). */
+    _sporeSeat: sporeSeat,
     /** MASTER TASTE DIAL (see the block comment at module scope). Sets the
-     *  live TRANSFORM scalar, clamped 0..1; persist writes it to
-     *  localStorage('journey-v6.transform') — the keys pass persist: true,
-     *  programmatic/QA calls default to a session-only change. Pure re-scale:
-     *  every channel is a function of (eff, time, T), so this is safe at any
-     *  p, mid-scrub included. */
+     *  live TRANSFORM scalar, clamped 0..1. persist writes it to
+     *  localStorage('journey-v6.transform') — QA mode only (?t= present;
+     *  the shipped path neither reads nor writes the key). The [ / ] keys
+     *  pass persist: true; programmatic calls default to session-only.
+     *  Pure re-scale: every channel is a function of (eff, time, T), so
+     *  this is safe at any p, mid-scrub included. */
     setTransform(v, { persist = false } = {}) {
       tState.t = clampT(v);
-      if (persist) { try { localStorage.setItem(T_LS_KEY, String(tState.t)); } catch { /* privacy mode: session-only */ } }
+      if (persist && qaDial) { try { localStorage.setItem(T_LS_KEY, String(tState.t)); } catch { /* privacy mode: session-only */ } }
       showDial();
       return tState.t;
     },
@@ -1246,14 +1271,17 @@ export function createInspire(sceneApi) {
     _grad.d0 = sceneApi.consts.CAP_R * 1.2;
     _grad.d1 = sceneApi.consts.CAP_R * 2.6;
     _grad.k = hk * T;   // taste dial: history dissolve is a dim channel too
-    // Same-particle takeover: steer the hero's own dots (runs OUTSIDE the
-    // anyVisible gate, like the dimmer, so the release path always executes;
-    // it must run AFTER the shed's positions were integrated this frame and
-    // BEFORE ambient.update reads its per-particle feed).
+    // The seat, driven (runs OUTSIDE the anyVisible gate so the release path
+    // always executes): one call carries the whole frame's intent — the
+    // system steers its own dots first, then its color pass reads the
+    // per-dot feed. This animator runs after the organism's 'spore-drift',
+    // which is the ordering the steering blend depends on.
     computeDet();
     uDet.value.set(det[0], det[1], det[2]);
-    takeover.update(eff, t, mw, uLean.value, T);
-    ambient.update(shedRegions, gk, _grad, takeover.feed);
+    sporeSeat.drive({
+      eff, time: t, matrixWorld: mw, leanScale: uLean.value, transform: T,
+      regions: shedRegions, globalK: gk, grad: _grad,
+    });
 
     group.visible = anyVisible;
     if (!anyVisible) return;
