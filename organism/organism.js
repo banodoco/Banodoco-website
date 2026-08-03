@@ -1676,13 +1676,30 @@ setupIntro(ctx);
 
 const clock = new THREE.Clock();
 let _prevT = 0;
+// Error isolation (M5): one throwing animator must not take the frame down
+// with it — before this, an exception skipped every later animator AND the
+// composer render, freezing the picture while the error spammed once per
+// frame. A throwing animator is now logged ONCE (by name, with its error)
+// and unregistered, so everything after it — including the journey's own
+// scroll/nav/UI animator — keeps running. Registering the same name again
+// (addAnimator replaces in place) re-arms it.
+const _animFailed = new Set();
 function animate() {
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
   const dt = Math.min(0.05, Math.max(0, t - _prevT));
   _prevT = t;
 
-  for (const fn of animators.values()) fn(t, dt);
+  for (const [name, fn] of animators) {
+    try { fn(t, dt); }
+    catch (err) {
+      animators.delete(name);   // deleting the CURRENT entry mid-iteration is safe for a Map
+      if (!_animFailed.has(name)) {
+        _animFailed.add(name);
+        console.error(`[organism] animator '${name}' threw and was disabled — the frame loop continues without it:`, err);
+      }
+    }
+  }
 
   taaFrame(); // jitter last, after controls/tweens have settled the camera
   composer.render();
