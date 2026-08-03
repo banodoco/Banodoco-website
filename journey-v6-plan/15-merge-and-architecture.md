@@ -42,8 +42,20 @@ couldn't perceive what a human with a mouse and motion perception sees.
    camera goes" and "what lights up" can never be authored against different
    truths.
 4. **Nothing self-ignites** (Hannah's law, D16): visible things brighten or
-   grow from visible things. Fade-in-from-nothing is a banned primitive.
-5. **Human-sentence acceptance.** Every merge gate includes at least one
+   grow from visible things. Fade-in-from-nothing is a banned primitive
+   *on screen* — streaming a chapter in behind genuine occlusion (under the
+   cap, below the soil) is exempt, because the viewer cannot watch it happen.
+5. **State changes happen in place** (the locus law, D17): when a visual
+   idea changes state — drift organizing into braids, bodies kindling — the
+   light stays in the volume it already occupied. Identity lives in *where
+   the light is*; relocation reads as replacement, however continuous the
+   particles.
+6. **Taste is a dialed number, not a guess.** Perceptual intensities
+   (TRANSFORM, handheld amplitude, commit blend, snap bias) are named
+   constants with live dials for the taste owner; the shipped default is the
+   number she chose, recorded in the decision log. Eight rebuilt guesses
+   taught us this one.
+7. **Human-sentence acceptance.** Every merge gate includes at least one
    test phrased in the taste owner's own words, checked by a human or by a
    harness that can actually perceive it (cursor present, motion rendered).
 
@@ -117,18 +129,24 @@ organism.spores = createSpores({
 - `split/braid` — the takeover's steering, promoted from buffer-overwriting
   to first-class mode. Conservation and reversibility are properties of the
   system, not promises of an external patch.
-- `detail` — the rest-pose sharpening (pearls/ribbons), implemented as a
-  brightening/structuring of the same dots (or a strictly co-located overlay
-  owned by *this file*, gated on rest proximity — the D16 rule enforced at
-  the API boundary: a mode transition may only brighten or re-route existing
-  dots).
+- `detail` — pearls as per-dot brightness, ribbons as grown lines, scaled by
+  the TRANSFORM dial; braid axes follow the drift's own lean (locus law).
 - Under-rim furniture becomes `braid`-mode adornment that grows along the
   paths the dots actually travel — it cannot ignite independently because it
   has no independent existence.
 
+**Status update (2026-08-03): the hard half of §3 already happened live.**
+The 5,100-dot GPU layer is deleted; pearls run as brightness on the real
+dots; braids are re-axised in place (D17); intensity is Hannah's dial
+(TRANSFORM, `localStorage journey-v6.transform`). What §3 still owes at M3
+is *housing*: moving the takeover/dimmer logic from external
+buffer-overwriters into `organism/spores.js` as the system itself, and
+baking Hannah's chosen T as the shipped default.
+
 **Acceptance for §3, in Hannah's words:** watching the right-side spores
-while scrolling in, you never see a spore appear that wasn't already there —
-now true by construction, not by six patches.
+while scrolling in, you never see a spore appear that wasn't already there,
+and the stream never becomes a different thing or a different place — held
+by construction and by the locus measurements, at her chosen intensity.
 
 ---
 
@@ -142,9 +160,9 @@ the ride. Do not start the merge with a red review outstanding.
 | **M0 tag** | Tag current state (`v6-prepromote`); final tarball snapshot. | Tags exist |
 | **M1 promote** | `journey-v6/index.html` becomes `glowshroom/index.html`; `golden-mushroom-page.html` moves to `archive/` with a redirect stub; `/journey/` old build keeps its red banner in `archive/`. All internal paths re-based. | Site serves at `/`; old URLs redirect; full ride green |
 | **M2 organism extraction** | `mushroom-scene.js` → `organism/` modules **without behaviour change** (mechanical split; exports unchanged plus the new seats). | BASELINE regression oracle passes (structural counts + frozen-intro perceptual diff); p=0 checksum |
-| **M3 spore unification** | §3. Delete the takeover/dimmer reach-ins after their logic is absorbed; delete or absorb the GPU layer. | The Hannah-sentence test, human-verified; checksum; rest frame vs approved |
-| **M4 chapter foldering** | Chapters become folders owning camera+anatomy+geometry; director becomes composer; anatomy mirrors deduped (one source of sector truth). | Full-journey scrub audit (the 31-point suite) green both directions |
-| **M5 debt burn-down** | The catalogued leftovers: frame-loop error isolation (one bad chapter can't freeze UI), scroll.js key-routing edge cases, hero `:focus-visible` styles + skip link, `?capture=` freeze param, D11 wiring once decided, delete `assets/test-portraits/` before any public deploy (consent rule). | Each item checked off in EXECUTION.md |
+| **M3 spore housing** | §3's remainder: absorb the takeover/dimmer logic into `organism/spores.js` (the GPU layer is already deleted, live); bake Hannah's dialed T as the shipped default (keep the dial behind a QA flag). | The Hannah-sentence test, human-verified; checksum; rest frame at her T |
+| **M4 chapter foldering** | Chapters become folders owning camera+anatomy+geometry; director becomes composer; anatomy mirrors deduped (one source of sector truth); **migrate `driveInspire` out of journey.js** (Inspire's reveal drive is currently split across two files — exactly the split rule 3 bans). | Full-journey scrub audit (the 31-point suite) green both directions |
+| **M5 debt burn-down** | The catalogued leftovers: **delete the dead flight machinery in journeyState (all navigation is direct jumps now)**; frame-loop error isolation (one bad chapter can't freeze UI); scroll.js key-routing edge cases; hero `:focus-visible` styles + skip link; `?capture=` freeze param; **a no-self-ignition + locus audit of Connect/Owned/Final's on-screen transitions** (their occluded streaming is exempt; anything visible when it arms is not); a taste-dial registry (one pattern for TRANSFORM-class knobs); D11 wiring once decided; delete `assets/test-portraits/` before any public deploy (consent rule). | Each item checked off in EXECUTION.md |
 | **M6 repo merge** | Push the full local history to `origin/main` (needs the fresh token). Tag `journey-v6-merged`. CI hook: `capture.py` + regression check on every scene-touching commit. | Push succeeds; tags on origin |
 
 Rules while merging: one step per commit series; every step reversible by
