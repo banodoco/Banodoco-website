@@ -51,6 +51,25 @@
 // -t*.55),4), per-exit EXITS[].knot gains, core-cohort weighting — the same
 // cadence the deleted shader ran) live as brightness modulation of these
 // same dots. All pure in (eff, time).
+//
+// MASTER TASTE DIAL (Hannah, 2026-08-03, review round 8): update() now takes
+// a `transform` scalar T (0..1) — the one live knob scaling how far the
+// stream reorganizes (see the dial block in inspire.js). In this file T
+// scales three things, all still pure in (eff, time, T):
+//   - the position blend: pos = lerp(heroPos, braidPos, conv * T) — at low T
+//     the dots only BOW toward the braid/rim-walk paths, keeping most of
+//     their natural drift (the rim-walk choreography scales, never severs:
+//     the path math always runs, the blend is what shrinks);
+//   - the core cohort's scatter tightening: tight = 1 - 0.70 * core * T;
+//   - the pearl/richness brightness: the rise stage's (1 + rich) multiplier
+//     becomes (T + rich * pearlScale) with pearlScale floored at PEARL_FLOOR,
+//     so even near T = 0 a faint knot-pearl sparkle rides the (position-
+//     untouched) dots and the labels keep living anchors. All other stage
+//     envelopes scale by plain T.
+// T = 1 reproduces the current build exactly (current = with the D17
+// re-axis below; every scale law hits 1). conv (not conv * T) stays the
+// choreography/cease gate, so the hero-shadow restore discipline is
+// unchanged at every T, and the p = 0 byte-exact restore is untouched.
 import {
   makeRng, gaussOf, capUnderPt, rimRad, rimYoff, EXITS, LEAN_DIR, CAP_Y,
 } from '../core/anatomy.js';
@@ -65,8 +84,23 @@ const CHANNEL = TAU / N_GILL_CHANNELS;
 const W_EXIT0 = 0.50, W_EXIT1 = 0.78; // cumulative: <0.50 -> 0, <0.78 -> 1, else 2
 // How much brighter a fully-performing dot reads than its base shed color.
 const PLUME_GAIN = 1.35;
+// Taste-dial pearl floor: the knot-pearl richness never scales below this
+// share, so a faint sparkle keeps the labels' anchors alive even near T = 0.
+const PEARL_FLOOR = 0.18;
 // A hero recycle (or any teleport) moves a dot far more than one drift frame.
 const TELEPORT2 = 0.09; // (0.3 units)^2
+// D17 RE-AXIS (Hannah, round 8 — the locus half of the note): the hero's
+// visible stream is a DIAGONAL column along BREEZE_DIR (1.0, 0.62, 0.17) —
+// the hero scatters and carries every shed dot along that axis. The old braid
+// rose near-vertically from the rim lip, so organizing RELOCATED the bright
+// column from the diagonal drift envelope to an upright rim column — same
+// dots, different place in space, which read as a switch regardless of
+// particle continuity. The braided rise now runs along the stream's own
+// drift axis: per unit of rise (y), the centreline advances x by RX and z by
+// RZ — the exact breeze ratios — so organization is the diagonal column
+// tightening and sparkling IN PLACE, never standing up.
+const DRIFT_RX = 1.0 / 0.62;   // BREEZE_DIR.x / BREEZE_DIR.y
+const DRIFT_RZ = 0.17 / 0.62;  // BREEZE_DIR.z / BREEZE_DIR.y
 
 const ss = (a, b, x) => {
   x = (x - a) / (b - a);
@@ -165,7 +199,12 @@ export function createSporeTakeover(sceneApi) {
       dropA[i] = isDrop ? 1 : 0;
       riseA[i] = isDrop ? (0.5 + rand() * 1.1)
                         : spec.riseMin + rand() * (spec.riseMax - spec.riseMin);
-      leanA[i] = spec.lean * (0.8 + rand() * 0.45);
+      // D17 re-axis: every plume rises along the breeze axis at ~full
+      // strength (the organized column must OVERLAY the drift envelope), so
+      // spec.lean no longer scales the axis — per-particle jitter only. The
+      // rand() draw is KEPT and remapped (0.8..1.25 -> 0.94..1.06) so every
+      // later assignment in this stream stays byte-identical.
+      leanA[i] = 0.94 + ((0.8 + rand() * 0.45) - 0.8) * 0.2667;
       const strand = i % 9 < 3 ? 0 : (i % 9 < 6 ? 1 : 2);
       curlA[i] = (strand - 1) * 0.30 + gauss() * 0.09;
       spA[i] = strand * 2.094 + gauss() * 0.3;
@@ -198,12 +237,16 @@ export function createSporeTakeover(sceneApi) {
   /** Per-frame drive, called from inspire.js's 'spike-plumes' animator —
    *  AFTER the hero's spore-drift has integrated the buffer this frame.
    *  eff: per-exit effective reveals; mw: groups.mushroom.matrixWorld;
-   *  leanScale: the live uLean damp. (The det parameter is gone with the
-   *  GPU detail layer — the dots never hand the braid to anything.) */
-  function update(eff, tNow, mw, leanScale) {
+   *  leanScale: the live uLean damp; transform: the master taste dial T
+   *  (0..1, see the header note — 1 = the previous build exactly). (The det
+   *  parameter is gone with the GPU detail layer — the dots never hand the
+   *  braid to anything.) */
+  function update(eff, tNow, mw, leanScale, transform = 1) {
     const drive = eff[0] > 1e-4 || eff[1] > 1e-4 || eff[2] > 1e-4;
     if (!drive && !wasActive) { feed.any = false; return; }
     if (!inited && !init()) { feed.any = false; return; }
+    const T = transform < 0 ? 0 : transform > 1 ? 1 : transform;
+    const pearlScale = PEARL_FLOOR + (1 - PEARL_FLOOR) * T;
 
     const t0 = dbg ? performance.now() : 0;
     const attr = pts.geometry.attributes.position;
@@ -244,7 +287,11 @@ export function createSporeTakeover(sceneApi) {
       const conv = e === 0
         ? ss(0, 0.35, rev - stag[i] * 0.45)
         : ss(0, 0.30, rev - stag[i] * 0.25);
-      cv[i] = conv;
+      // taste dial: the blend the dot ACTS on. conv keeps the choreography /
+      // cease gate (restore discipline identical at every T); cvT is how far
+      // the dot actually leaves its drift, and the dimmer's ambient mix.
+      const cvT = conv * T;
+      cv[i] = cvT;
       if (conv <= 0) {
         pw[i] = 0;
         if (writ[i]) {
@@ -283,7 +330,7 @@ export function createSporeTakeover(sceneApi) {
         r = oR[i] + Math.sin(tNow * 0.5 + sd) * 0.03;
         y = oY[i] - 0.05 * u0 + Math.sin(tNow * 0.6 + sd * 1.3) * 0.015;
         az = oAz[i] + Math.sin(tNow * 0.35 + sd * 2.1) * 0.012;
-        env = ss(0, 0.45, u0) * 0.85 * (migF ? 0.72 : 1);
+        env = ss(0, 0.45, u0) * 0.85 * (migF ? 0.72 : 1) * T;
       } else if (t < s2) {
         // lateral travel between the lamellae toward the margin
         const u1s = (t - s1) / (s2 - s1);
@@ -295,7 +342,7 @@ export function createSporeTakeover(sceneApi) {
         y = yA + (yT - yA) * u1 - 0.10 * Math.sin(u1 * PI);
         const azA = oAz[i] + (h1 - 0.5) * 0.05 * u1;
         az = migF ? azA + (azS2[i] - azA) * u1 : azA;
-        env = 0.95 * (migF ? 0.72 : 1);
+        env = 0.95 * (migF ? 0.72 : 1) * T;
       } else if (t < s3) {
         const u2 = (t - s2) / (s3 - s2);
         if (migF) {
@@ -313,14 +360,14 @@ export function createSporeTakeover(sceneApi) {
           y = rimYof(az) + offY[i] + 0.10 * ss(0.72, 1, we)
             + Math.sin(we * 12 + sp * 1.3 + tNow * 0.4) * 0.05 * bobE;
           const pl = 0.5 + 0.5 * Math.sin(we * 7 - tNow * 0.9 + sp);
-          env = (0.55 + 0.45 * pl * pl) * (1 - ss(0, 0.10, w - wFront));
+          env = (0.55 + 0.45 * pl * pl) * (1 - ss(0, 0.10, w - wFront)) * T;
         } else {
           // resident plume: curl around the rim margin
           az = a0 + curl * u2;
           const loops = 1 + h2 * 1.2;
           r = rimR + 0.05 + Math.sin(u2 * PI * loops + sp) * 0.10;
           y = rimY + Math.sin(u2 * PI * loops * 0.7 + 1 + sp) * 0.08 + 0.10 * u2;
-          env = 1;
+          env = T;
         }
       } else {
         // braided rise (or sinking drop)
@@ -330,7 +377,7 @@ export function createSporeTakeover(sceneApi) {
           y = rimY + 0.10 - u3 * u3 * riseA[i];
           az = a0 + curl + (h1 - 0.5) * 0.3 * u3;
           r = rimR + 0.05 + u3 * (0.3 + h2 * 0.4);
-          env = eu * (1 - ss(0.45, 0.95, u3)) * 0.5;
+          env = eu * (1 - ss(0.45, 0.95, u3)) * 0.5 * T;
         } else {
           const h = Math.pow(u3, 0.6 + h1 * 0.5);
           y = rimY + 0.10 + h * riseA[i];
@@ -339,8 +386,9 @@ export function createSporeTakeover(sceneApi) {
           // core-cohort dots damp their scatter (tight, the deleted shader's
           // mix(1.0, 0.30, core)) so each braid resolves as a defined
           // sinuous line inside the loose sheath the majority carries.
+          // taste dial: tightening is part of the reorganization — it scales
           const core = coreA[i];
-          const tight = 1 - 0.70 * core;
+          const tight = 1 - 0.70 * core * T;
           az = a0 + curl
              + 0.13 * Math.sin(h * 5.1 + sp)
              + 0.07 * Math.sin(h * 9.7 + sp * 2.3 + tNow * 0.21)
@@ -350,8 +398,11 @@ export function createSporeTakeover(sceneApi) {
             + 0.05 * Math.sin(tNow * 0.17 + sd * 2.3)
             + (h1 - 0.5) * 0.09 * (0.4 + h) * tight * 0.72
             + h * 0.14;
-          xLean = leanScale * leanA[i] * h * h * riseA[i] * 0.62;
-          zLean = leanScale * leanA[i] * h * h * riseA[i] * 0.105;
+          // D17 re-axis: LINEAR in h along the breeze ratios — a straight
+          // diagonal matching the drift carry, not the old J-curve that stood
+          // the column upright for most of its height
+          xLean = leanScale * leanA[i] * h * riseA[i] * DRIFT_RX;
+          zLean = leanScale * leanA[i] * h * riseA[i] * DRIFT_RZ;
           // knot cadence at FULL strength (the deleted GPU layer's exact
           // pearls): hot dots travelling UP the core with the flow, per-exit
           // gain from the anatomy map, hottest on the core cohort. This is
@@ -360,8 +411,11 @@ export function createSporeTakeover(sceneApi) {
           const kn0 = 0.5 + 0.5 * Math.sin(h * 7.3 + sp * 1.9 - tNow * 0.55);
           const kn = kn0 * kn0 * kn0 * kn0;
           const knotV = knotA[i] * kn * (0.30 + 0.70 * core);
+          // taste dial: at T = 1 this is exactly (1 + 0.28*core + 1.15*knotV);
+          // toward T = 0 the body term dies with T while the pearl richness
+          // keeps the PEARL_FLOOR share — the faint sparkle that stays.
           env = eu * (1 - ss(0.62, 1, u3))
-              * (1 + 0.28 * core + 1.15 * knotV);
+              * (T + (0.28 * core + 1.15 * knotV) * pearlScale);
         }
         // migrant rise draw-on gate (rl inert for the resident and at rev 1)
         const rl = rg * 1.12;
@@ -375,17 +429,21 @@ export function createSporeTakeover(sceneApi) {
       const wy = mE[1] * lx + mE[5] * ly + mE[9] * lz + mE[13];
       const wz = mE[2] * lx + mE[6] * ly + mE[10] * lz + mE[14];
 
-      // the SAME dot slides from its own drift onto the path
-      const px = heroP[i3] + (wx - heroP[i3]) * conv;
-      const py = heroP[i3 + 1] + (wy - heroP[i3 + 1]) * conv;
-      const pz = heroP[i3 + 2] + (wz - heroP[i3 + 2]) * conv;
+      // the SAME dot slides from its own drift onto the path — by cvT, the
+      // taste-dialled blend: at low T it bows toward the braid and keeps most
+      // of its natural drift; at T = 1 it converts fully, as before
+      const px = heroP[i3] + (wx - heroP[i3]) * cvT;
+      const py = heroP[i3 + 1] + (wy - heroP[i3 + 1]) * cvT;
+      const pz = heroP[i3 + 2] + (wz - heroP[i3 + 2]) * cvT;
       arr[i3] = px; arr[i3 + 1] = py; arr[i3 + 2] = pz;
       lastW[i3] = px; lastW[i3 + 1] = py; lastW[i3 + 2] = pz;
       wroteAny = true;
 
-      // brightness feed: plume term (ambient term is (1 - conv), applied by
+      // brightness feed: plume term (ambient term is (1 - cvT), applied by
       // the dimmer). No det hand-back any more: the converted dots keep the
-      // braid — and its pearls — through the rest, permanently.
+      // braid — and its pearls — through the rest, permanently. Deliberately
+      // conv (not cvT): env already carries T for the body brightness, and
+      // near T = 0 the pearl floor must still ride the conversion stagger.
       pw[i] = PLUME_GAIN * env * conv;
     }
 
