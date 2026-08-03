@@ -11,8 +11,8 @@
 // p 0.725 (pos (-0.4,-1.4,0.3), gaze -X, fov 54) -> glide/drift -> rise,
 // clearing the soil at p ~0.858 into the Final cutaway.
 import * as THREE from 'three';
-import { poseAt } from '../director.js';
-import { groundY } from '../anatomy.js';
+import { poseAt } from '../../director.js';
+import { groundY } from '../../anatomy.js';
 
 const clamp = THREE.MathUtils.clamp;
 

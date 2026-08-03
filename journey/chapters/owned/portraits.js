@@ -30,9 +30,9 @@
 //     here are the LOOK-DEV ONLY test set (assets/test-portraits, never
 //     ship); anonymous mode stays one call away (setMode('anonymous')).
 import * as THREE from 'three';
-import * as H from '../lib/helpers.js';
-import { TEST_PORTRAITS } from '../../assets/test-portraits/manifest.js';
-import { UG_P0, UG_P1, REST_P } from './owned-leg.js';
+import * as H from '../../lib/helpers.js';
+import { TEST_PORTRAITS } from '../../../assets/test-portraits/manifest.js';
+import { UG_P0, UG_P1, REST_P } from './leg.js';
 
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;

@@ -19,7 +19,7 @@
 // for the T3 streaming seam, and clamps that keep every element below the
 // real groundY().
 import * as THREE from 'three';
-import * as H from '../lib/helpers.js';
+import * as H from '../../lib/helpers.js';
 
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;

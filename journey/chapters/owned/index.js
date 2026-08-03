@@ -28,10 +28,10 @@
 // still's darkness UNDER the hero pipeline; they are the numbers the
 // unification pass needs to reconcile, recorded in BUDGETS.md (W4-C).
 import * as THREE from 'three';
-import { buildLeg } from './owned-leg.js';
-import { buildSubstrate, makeFadePulseMat } from './owned-substrate.js';
-import { buildPortraitField } from './owned-portraits.js';
-import * as H from '../lib/helpers.js';
+import { buildLeg } from './leg.js';
+import { buildSubstrate, makeFadePulseMat } from './substrate.js';
+import { buildPortraitField } from './portraits.js';
+import * as H from '../../lib/helpers.js';
 
 const PAL = {
   gold: 0xd9a441,
