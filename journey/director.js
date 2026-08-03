@@ -321,6 +321,23 @@ export function createDirector(sceneApi, { steady = false } = {}) {
     return pose;
   }
 
+  /** Write the hero snapshot to the camera. The p=0 restore in setOwned()
+   *  is a ONE-SHOT — nothing re-writes the camera on later frames while the
+   *  director is un-owned. That is correct alone, but any layer that keeps
+   *  composing onto the camera after the restore (the direct-jump camBlend)
+   *  must be able to re-assert the restored pose each frame first, or it
+   *  ends up composing onto its own previous output (the M4-found stuck
+   *  camera). Exposed for exactly that caller. */
+  function applyHeroPose() {
+    camera.position.copy(heroSnapshot.pos);
+    controls.target.copy(heroSnapshot.target);
+    if (camera.fov !== heroSnapshot.fov) {
+      camera.fov = heroSnapshot.fov;
+      camera.updateProjectionMatrix();
+    }
+    camera.lookAt(heroSnapshot.target);
+  }
+
   function setOwned(on) {
     on = !!on;
     if (on === owned) return;
@@ -330,13 +347,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
     if (!on) {
       // Hand back exactly what the hero had: no tween, no re-frame, no drift.
       if (pendingView) { rawSetView(pendingView, 0); pendingView = null; }
-      else {
-        camera.position.copy(heroSnapshot.pos);
-        controls.target.copy(heroSnapshot.target);
-        camera.fov = heroSnapshot.fov;
-        camera.updateProjectionMatrix();
-        camera.lookAt(heroSnapshot.target);
-      }
+      else applyHeroPose();
       if (scene.fog) { scene.fog.near = baseFogNear; scene.fog.far = baseFogFar; }
     }
   }
@@ -344,7 +355,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
   captureHero(null);
 
   return {
-    apply, setOwned,
+    apply, setOwned, applyHeroPose,
     poseAt: (p, out, aspect) => poseAt(p, out, hero, aspect),
     get owned() { return owned; },
     get pose() { return pose; },

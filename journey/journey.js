@@ -340,6 +340,19 @@ export function boot(opts = {}) {
         const f = Math.min(camBlend.t / camBlend.dur, 1);
         const e = f * f * f * (f * (f * 6 - 15) + 10);   // smootherstep, C2 ends
         const cam = sceneApi.camera, ctl = sceneApi.controls;
+        // The blend composes onto the DESTINATION pose read live from the
+        // camera — valid only if something wrote that pose this frame. While
+        // the director owns the camera (p past the hero band) its apply()
+        // above did; at p = 0 the hero restore is a ONE-SHOT inside
+        // setOwned(false), so on every later blend frame the camera still
+        // holds the blend's own previous output — lerping toward it fed the
+        // blend back into itself and parked the camera near the jump's
+        // start pose plus the lift arc (the M4-found stuck camera:
+        // end-hold -> Mission froze at ~(-15.9, 16.3, 2.6) fov 44).
+        // Re-assert the completed restore first, so the blend lands ON it
+        // and can never outlive or overwrite it. Composition order is
+        // preserved: destination writer first, blend on top, blend ends.
+        if (!director.owned) director.applyHeroPose();
         cam.position.lerpVectors(camBlend.pos0, cam.position, e);
         cam.position.y += Math.sin(Math.PI * f) * camBlend.lift;
         ctl.target.lerpVectors(camBlend.tgt0, ctl.target, e);
