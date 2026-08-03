@@ -1,37 +1,50 @@
-// journey-v6 — camera director. ONE continuous, reversible path through the
-// five resting poses of the approved camera map (journey-v6-plan/map/
-// page2-camera.html), authored in the hero's own world coordinates against
-// real anatomy (adr-d3-world-layout.md: one organism, five vantages).
+// journey/director.js — the camera COMPOSER (M4).
 //
-// Two parameterisations, joined with matching zero velocity at p = 0.26:
+// Chapters own their camera legs (chapters/<id>/camera.js — keys authored in
+// LEG-LOCAL 0..1 time, plus Inspire's analytic arrival gesture); the director
+// owns none of them. It sequences the legs per route.js and guarantees the
+// global motion language. The composition order is FIXED and documented
+// (merge doc §5 — adding motion means one chapter file, or ONE layer here,
+// never a re-ordering):
 //
-//   p <= 0.26  the Mission -> Inspire leg: Spike A's approved orbit GESTURE
-//              (target pins to the cap early, constant radius until the last
-//              20%, no roll, gentle late push-in) re-aimed per D16 — a ~90 deg
-//              swing RIGHT toward the hero's visible spore stream, never away
-//              from it. Adapted here, not imported from spike-a/.
-//   p >= 0.26  a keyed path sampled with non-uniform Catmull-Rom / Hermite,
-//              with tangents forced to zero at every resting pose so each
-//              composition eases in and eases out with no velocity step.
+//   1. BASE LEG        the chapter-owned path: Inspire's arrival gesture for
+//                      p below its rest, else the Hermite spline through the
+//                      concatenated chapter key legs (re-based to global p).
+//   2. CHAPTER MODIFIERS  (none shipped today — a chapter-local offset layer
+//                      would compose here, before the global language.)
+//   3. GLOBAL LANGUAGE portrait re-composition (aspect field, portrait.js);
+//                      documentary handheld (zero at every route stop);
+//                      seam fog dips + the T4 fog ramp; NO ROLL, anywhere.
+//   4. LENS            the finishing grade (lens.js) — applied by the frame
+//                      loop after the pose, same order every frame.
 //
-// Nothing in this file cuts. Every value is a pure function of p, which is
-// what makes reverse scrubbing identical to forward scrubbing.
+// ONE continuous, reversible path through the resting poses of the approved
+// camera map (journey-v6-plan/map/page2-camera.html), in the hero's own
+// world coordinates: the two parameterisations join with matching zero
+// velocity at the Inspire rest, and hold keys force zero tangents so every
+// rest eases in and out with no velocity step. Nothing in this file cuts.
+// Every value is a pure function of p, which is what makes reverse scrubbing
+// identical to forward scrubbing.
 
 import * as THREE from 'three';
-import { REST_STOPS, TERMINAL_P, restProgress } from './route.js';
-import {
-  FOG_RAMP, HANDHELD, ORBIT_BREATH, SEAM_FOG_DIPS,
-} from './constants.js';
+import { CHAPTERS, REST_STOPS, TERMINAL_P, restProgress } from './route.js';
+import { FOG_RAMP, HANDHELD, SEAM_FOG_DIPS } from './constants.js';
 import { applyPortrait } from './portrait.js';
+import { CAMERA as INSPIRE_CAM } from './chapters/inspire/camera.js';
+import { CAMERA as CONNECT_CAM } from './chapters/connect/camera.js';
+import { CAMERA as OWNED_CAM } from './chapters/owned/camera.js';
+import { CAMERA as FINAL_CAM } from './chapters/final/camera.js';
 
 const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 /* ================================================================
-   1. Mission -> Inspire: Spike A's orbit, adapted
+   1. The composed base path
    ================================================================ */
 // Hero desktop pose, cylindrical about the stipe axis. These are the numbers
-// the hero page actually boots with (panX -2.4 => x = 0.15 - 2.4).
+// the hero page actually boots with (panX -2.4 => x = 0.15 - 2.4). Mission's
+// "leg" IS this pose — the composer's boundary condition, refreshed live
+// from whatever responsive composition booted (see captureHero below).
 export const HERO = {
   az: Math.atan2(-2.25, 10.4),   // ~ -0.213 rad
   r: Math.hypot(2.25, 10.4),     // ~ 10.64
@@ -39,167 +52,31 @@ export const HERO = {
   target: V(-2.4, 2.6, 0),
   fov: 38,
 };
-// Inspire rest — RESTAGED per D16 (Hannah, 2026-08-03): no longer the rear
-// three-quarter. The camera swings RIGHT, toward the hero's one visible
-// stream (the shed released at cap az ~5.83, carried +x by the breeze), and
-// rests on the stream-side rim so the spores the visitor was already watching
-// are the spores the chapter organizes. ~90 deg of swing instead of ~172; the
-// stream stays in frame essentially the whole leg. Gesture qualities kept:
-// no roll, early target pin, constant radius, gentle push-in in the last 20%.
-export const INSPIRE = { az: 78 * DEG, r: 9.1, y: 3.25, target: V(1.15, 3.95, -0.40), fov: 38 };
 
-const SWING_Y = 2.9;              // Plate II: "cam y 2.25 -> ~2.9"
-const PIN = V(0.5, 3.4, -0.1);    // cap lock, biased a touch toward the stream
-                                  // side so the visible plume never leaves frame
-const PUSH_START = 0.80;          // the push-in lives ONLY in the last 20%
+// The arrival gesture lands ON the Inspire rest; below this p the base path
+// is the gesture, above it the keyed spline. Derived from the manifest.
+const ARRIVAL_END = restProgress('inspire');
 
-// The orbit occupies p in [ORBIT_P0, ORBIT_P1]. Below ORBIT_P0 the camera is
-// the hero pose EXACTLY - that dead band is what makes #/mission and a cold
-// load render the frozen hero composition, pixel for pixel. It is kept short
-// (~1 vh of scroll) because scrolling through a band where nothing moves is
-// dead weight; the "restrained flow toward the cap" the map asks for is the
-// ramp at the head of the orbit itself, where the target pins to the cap and
-// the camera lifts while the azimuth has barely started to turn.
-export const ORBIT_P0 = 0.040;
-export const ORBIT_P1 = restProgress('inspire');   // the orbit lands ON the rest (route.js)
+// Chapter legs -> ONE global key list: each chapter's leg-local key times
+// re-base to global p through its route span (p = start + t * span — the
+// exact inverse of the authoring transform, so the composed key positions
+// are bit-identical to the retired global table). Concatenation order is
+// route order; within a leg, authored order. Tangents are then computed
+// GLOBALLY, exactly as before — neighbouring keys across a chapter boundary
+// still shape each other's tangents, so the path through a seam is the same
+// curve it always was.
+const CHAPTER_CAMERAS = {
+  inspire: INSPIRE_CAM, connect: CONNECT_CAM, owned: OWNED_CAM, final: FINAL_CAM,
+};
 
-function smooth01(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
-
-// Trapezoidal velocity profile: smoothstep ramps at both ends, CONSTANT rate
-// through the middle. Peak rate = 1/(1 - RAMP) = ~1.22x the mean.
-//
-// This replaces the cubic easeInOut Spike A used on the orbit azimuth. That
-// ease peaks at 3x its own mean, which is fine for a 20 s autoplay but is
-// exactly what the spike's own v2 note asked NOT to happen ("slower, constant
-// angular feel") - and under a scrub it put a 145 deg/s whip in the middle of
-// the swing at ordinary scroll speed. Measured peak here: ~39 deg/s. The
-// SHAPE of the approved orbit (rear three-quarter, early target pin, constant
-// radius, push-in in the last 20%, no roll) is unchanged; only the timing
-// profile along it is, and timing is the grey-box's decision to make (05 GB-3).
-const RAMP = 0.18;
-function trapEase(s) {
-  s = s < 0 ? 0 : s > 1 ? 1 : s;
-  const norm = 1 - RAMP;
-  const ramp = (u) => RAMP * (u * u * u - (u * u * u * u) / 2);   // integral of smoothstep
-  if (s < RAMP) return ramp(s / RAMP) / norm;
-  if (s > 1 - RAMP) return 1 - ramp((1 - s) / RAMP) / norm;
-  return (RAMP / 2 + (s - RAMP)) / norm;
-}
-
-// W3-B gap b: the plateau breathes. A conveyor-constant swing is analytically
-// correct and feels machined; a real operator's pan drifts a few percent
-// around its mean. The deviation is windowed to zero (value AND derivative)
-// inside both ramps, so the ends, the zero-velocity joins and the rest poses
-// are untouched, and its peak slope (amp * 2pi * cycles ~= 0.107) is far
-// below the plateau slope (~1.22), so azimuth stays strictly monotonic —
-// no new whip, no reversal.
-function azEase(s) {
-  s = s < 0 ? 0 : s > 1 ? 1 : s;
-  const w = smooth01(s / RAMP) * smooth01((1 - s) / RAMP);
-  return trapEase(s)
-    + ORBIT_BREATH.amp * Math.sin(2 * Math.PI * ORBIT_BREATH.cycles * s) * w;
-}
-
-const _ot = new THREE.Vector3();
-// `hero` is injected so the orbit can start from the LIVE hero pose of
-// whatever responsive composition booted (desktop / deskNarrow / compact /
-// tablet / mobile). The module default is the authored desktop pose, which is
-// what the pure QA sampler uses.
-function orbitPose(s, out, hero = HERO) {
-  const e = azEase(s);
-  const az = hero.az + (INSPIRE.az - hero.az) * e;
-  const pin = smooth01(s / 0.22);                              // target locks on the cap early
-  const push = smooth01((s - PUSH_START) / (1 - PUSH_START));  // deferred push-in
-  const lift = smooth01((s - 0.06) / 0.58);                    // gentle rise to swing height
-  const r = hero.r + (INSPIRE.r - hero.r) * push;              // CONSTANT radius until s = 0.8
-  const y = hero.y + (SWING_Y - hero.y) * lift + (INSPIRE.y - SWING_Y) * push;
-  out.pos.set(Math.sin(az) * r, y, Math.cos(az) * r);
-  out.target.copy(_ot.lerpVectors(hero.target, PIN, pin).lerp(INSPIRE.target, push));
-  out.fov = hero.fov + (INSPIRE.fov - hero.fov) * push;
-  return out;
-}
-
-/* ================================================================
-   2. Inspire -> Connect -> Owned -> Final: keyed path
-   ================================================================
-   `hold: true` forces a zero tangent, i.e. the pose is a resting pose the
-   camera eases into and out of. Rest anchors are exactly restProgress(id):
-   inspire 0.26, connect 0.49, owned 0.725, final 0.925.                     */
-const KEYS = [
-  // --- INSPIRE rest, and the drift that holds it (D16 restage: the rest is
-  //     on the STREAM side, az ~78 deg — pos = (sin az, ., cos az) * 8.3) ---
-  { p: 0.260, pos: V(8.901, 3.25, 1.892), tgt: V(1.15, 3.95, -0.40), fov: 38, hold: true, note: 'inspire-rest' },
-  { p: 0.312, pos: V(8.300, 3.22, 1.500), tgt: V(1.30, 3.80, -0.50), fov: 38.5, note: 'inspire-rest-drift' },
-  // --- follow ONE plume backward + downward toward its release rim (GB-2.1,
-  //     re-keyed for D16) --- the guide plume is ArtCompute — the hero's own
-  //     visible stream, cap az ~5.83, rim release ~(1.97, 3.0, -0.95): the
-  //     path descends along the stream toward its release point, so the cap
-  //     climbs the frame and occludes the sky exactly as before, just from
-  //     the stream side.
-  { p: 0.362, pos: V(5.600, 3.05, 0.550), tgt: V(1.70, 3.30, -0.75), fov: 42 },
-  { p: 0.410, pos: V(3.550, 2.85, -0.350), tgt: V(1.90, 3.05, -1.00), fov: 48 },
-  // T2 fires in here: slipping under the lifted rim beside the stream release
-  { p: 0.446, pos: V(2.300, 2.62, -1.300), tgt: V(0.60, 3.14, -0.70), fov: 55 },
-  { p: 0.470, pos: V(1.700, 2.40, -1.600), tgt: V(-0.60, 3.34, 0.05), fov: 58 },
-  // --- CONNECT rest: wide low angle in the chamber, looking up ~18 deg ---
-  { p: 0.490, pos: V(1.430, 2.15, -1.170), tgt: V(-1.50, 3.50, 0.40), fov: 60, hold: true, note: 'connect-rest' },
-  { p: 0.532, pos: V(1.280, 2.16, -1.030), tgt: V(-1.62, 3.48, 0.56), fov: 60, note: 'connect-rest-drift' },
-  // --- lateral across the chamber to the stipe-cap junction (GB-2.2) ---
-  // The gaze has to travel ~90 deg of PITCH between "looking up in the
-  // chamber" and "looking down the stipe". That turn is spread deliberately
-  // across p 0.575-0.690 (~11% of the journey, ~1.5 vh of scroll) so it reads
-  // as a tilt, not a whip: the measured peak stays near 1.2 k deg per unit p,
-  // i.e. ~90 deg/s at an ordinary scroll speed.
-  { p: 0.575, pos: V(0.960, 2.06, -0.200), tgt: V(-0.85, 3.32, 0.90), fov: 58 },  // pitch +31
-  { p: 0.600, pos: V(0.880, 2.00, 0.420), tgt: V(-0.60, 2.90, 1.30), fov: 55 },   // pitch +28
-  { p: 0.622, pos: V(0.920, 1.80, 0.800), tgt: V(-0.55, 2.10, 1.55), fov: 53 },   // pitch +10
-  // --- EXTERIOR stipe-side descent. Horizontal radius never drops below ~1.2
-  //     while stem radius is <= 0.69, so the camera is always OUTSIDE the
-  //     stipe - the deferred Equip interior is never entered.
-  { p: 0.645, pos: V(0.940, 1.42, 0.940), tgt: V(-0.30, 1.20, 1.35), fov: 51 },   // pitch -10
-  { p: 0.668, pos: V(0.920, 0.85, 0.920), tgt: V(-0.10, 0.10, 1.00), fov: 50 },   // pitch -36
-  // T3 soil-line crossing lands at p ~ 0.693
-  { p: 0.690, pos: V(0.860, 0.15, 0.860), tgt: V(-0.10, -0.85, 0.70), fov: 50 },  // pitch -46
-  // levelling into the glide: spread over three keys so the pitch comes up at
-  // ~60 deg/s rather than the ~96 deg/s a two-key version measured
-  { p: 0.700, pos: V(0.720, -0.42, 0.720), tgt: V(-0.70, -1.30, 0.42), fov: 51 }, // pitch -31
-  { p: 0.710, pos: V(0.420, -0.92, 0.580), tgt: V(-1.35, -1.52, 0.34), fov: 52 }, // pitch -19
-  { p: 0.718, pos: V(0.050, -1.22, 0.420), tgt: V(-2.20, -1.55, 0.24), fov: 53 }, // pitch -8
-  // --- OWNED rest: the underground glide, drifting -X away from the stipe ---
-  { p: 0.725, pos: V(-0.400, -1.40, 0.300), tgt: V(-3.20, -1.45, 0.10), fov: 54, hold: true, note: 'owned-rest' },
-  // --- growth-front rise-tilt-recede: ONE continuous gesture (W3-B gap c),
-  //     RE-AIMED for W4-D (Hannah's direction: the hero organism is PART of
-  //     the Final scene — the pullback reveals the whole fairy ring with the
-  //     hero on its arc, so the previous "keep the hero out of frame" intent
-  //     is reversed). The gesture qualities the review approved are kept:
-  //     one continuous rise-tilt-recede; yaw spread nearly evenly (interval
-  //     means 833-970 deg/p, in the ~964 family, lead-out during the drift
-  //     at ~350); pitch rises to ~+9.5 through the substrate and eases down
-  //     into the cutaway's -8.8 with a single crest, no nod; the recede
-  //     continues the arrival vector (both normalize to ~(-0.91, 0.37,
-  //     0.17)) so the rest is a pause on one continuing line. The gaze
-  //     sweeps ~176 deg around the horizon during the rise — past the dark
-  //     outward field, across the far arc of the ring — and the hero slides
-  //     into frame-right only during the settle, one lit body among the
-  //     others (chapters/final-world.js places the ring about RING_C
-  //     (-6, -0.8) with the hero ON the arc).
-  { p: 0.782, pos: V(-3.300, -1.40, 0.350), tgt: V(-6.22, -1.46, -0.95), fov: 54, note: 'owned-rest-drift' },
-  { p: 0.812, pos: V(-5.300, -1.02, 0.780), tgt: V(-7.52, -0.77, -2.06), fov: 53.5 },
-  // T4 fires in here: the camera clears the soil-line at p ~ 0.86
-  { p: 0.845, pos: V(-7.700, -0.20, 1.250), tgt: V(-8.28, 0.47, -2.91), fov: 52.5 },
-  { p: 0.878, pos: V(-10.200, 1.05, 1.800), tgt: V(-7.92, 1.98, -3.32), fov: 51 },
-  { p: 0.905, pos: V(-12.300, 1.75, 2.250), tgt: V(-5.71, 1.68, -3.28), fov: 48 },
-  // --- FINAL rest: oblique cutaway recession from OUTSIDE the ring's west
-  //     arc, gaze cutting across the ring chord. Shallow ~8.8 deg down-pitch
-  //     puts the soil-line across the frame on a diagonal: fairy ring and
-  //     spore sky above it, the colony in section below, the hero organism
-  //     ~12.6 deg right of centre at 14.8 units — in family with the mature
-  //     members, never the centre of the composition. The near arc passes
-  //     behind the camera (members cleared > 3 units off the path, Spike B's
-  //     clearance rule). Tilt is PITCH ONLY, never roll.
-  { p: 0.925, pos: V(-14.72, 2.73, 2.700), tgt: V(-3.06, 0.83, -1.94), fov: 45.5, hold: true, note: 'final-rest' },
-  { p: 1.000, pos: V(-17.73, 3.95, 3.260), tgt: V(-5.44, 2.08, -0.97), fov: 44, hold: true, note: 'final-recede' },
-];
+const KEYS = CHAPTERS.flatMap((c) => {
+  const cam = CHAPTER_CAMERAS[c.id];
+  if (!cam || !cam.keys) return [];
+  return cam.keys.map((k) => ({
+    p: c.start + k.t * (c.end - c.start),
+    pos: k.pos, tgt: k.tgt, fov: k.fov, hold: !!k.hold, note: k.note,
+  }));
+});
 
 // Non-uniform Catmull-Rom tangents, zeroed at rest keys.
 const TAN = KEYS.map((k, i) => {
@@ -241,7 +118,7 @@ function keyedPose(p, out) {
 }
 
 /* ================================================================
-   2b. Documentary handheld layer (W3-B gap a)
+   2. Documentary handheld layer (W3-B gap a — global language)
    ================================================================ */
 // A seeded sine bank — deterministic, reproducible, no Math.random anywhere.
 // Three incommensurate frequencies per channel inside 0.045-0.27 Hz (periods
@@ -283,20 +160,18 @@ const _pose = { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 38 }
  *
  *  `aspect` selects the composition: >= 1 (the default) is the landscape
  *  path, bit-identical to what this function has always returned; < 1 blends
- *  in the authored portrait field (core/portrait.js, PL-1.1). Passed in, not
+ *  in the authored portrait field (portrait.js, PL-1.1). Passed in, not
  *  read from any global, so capture tooling can request either orientation
  *  from any window. */
 export function poseAt(p, out = _pose, hero = HERO, aspect = 1.6) {
-  if (p <= ORBIT_P0) orbitPose(0, out, hero);
-  else if (p < ORBIT_P1) orbitPose((p - ORBIT_P0) / (ORBIT_P1 - ORBIT_P0), out, hero);
+  if (p < ARRIVAL_END) INSPIRE_CAM.arrival(p / ARRIVAL_END, out, hero);
   else keyedPose(p, out);
   return applyPortrait(out, p, aspect);
 }
 
 /** Name of the nearest authored key - used by the QA audit, not by rendering. */
 export function poseNameAt(p) {
-  if (p <= ORBIT_P0) return 'mission-rest (hero pose, exact)';
-  if (p < ORBIT_P1) return `orbit s=${((p - ORBIT_P0) / (ORBIT_P1 - ORBIT_P0)).toFixed(2)}`;
+  if (p < ARRIVAL_END) return INSPIRE_CAM.arrivalName(p / ARRIVAL_END);
   let best = KEYS[0], d = Infinity;
   for (const k of KEYS) { const dd = Math.abs(k.p - p); if (dd < d) { d = dd; best = k; } }
   return `${best.note || 'travel'} (nearest key p=${best.p})`;
@@ -320,10 +195,10 @@ export function createDirector(sceneApi, { steady = false } = {}) {
     return rawSetView(v, secs);
   };
 
-  // The orbit must start from the composition that actually booted, not from
-  // the authored desktop numbers - otherwise the first scroll on a phone would
-  // snap the framing. Captured live from the hero, refreshed on every
-  // breakpoint change, frozen while the journey owns the camera.
+  // The arrival gesture must start from the composition that actually booted,
+  // not from the authored desktop numbers - otherwise the first scroll on a
+  // phone would snap the framing. Captured live from the hero, refreshed on
+  // every breakpoint change, frozen while the journey owns the camera.
   const hero = { az: HERO.az, r: HERO.r, y: HERO.y, target: HERO.target.clone(), fov: HERO.fov };
   const heroSnapshot = { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 38 };
   function captureHero(view) {
@@ -348,10 +223,10 @@ export function createDirector(sceneApi, { steady = false } = {}) {
     heroSnapshot.fov = hero.fov;
   }
 
-  // Portrait re-composition lives in core/portrait.js (authored per-rest
-  // field, PL-1.1) and is blended inside poseAt itself. The director only
-  // decides WHICH aspect the frame is composed for: the real viewport's, or
-  // a QA override (?aspect=portrait forces the full portrait field in a wide
+  // Portrait re-composition lives in portrait.js (authored per-rest field,
+  // PL-1.1) and is blended inside poseAt itself. The director only decides
+  // WHICH aspect the frame is composed for: the real viewport's, or a QA
+  // override (?aspect=portrait forces the full portrait field in a wide
   // window, for capture tooling and desktop review; a number forces that
   // exact aspect; ?aspect=landscape pins the landscape path on a phone).
   const qAspect = new URLSearchParams(location.search).get('aspect');
@@ -360,6 +235,8 @@ export function createDirector(sceneApi, { steady = false } = {}) {
     : qAspect === 'landscape' ? 1.6
     : qAspect !== null && isFinite(parseFloat(qAspect)) ? parseFloat(qAspect)
     : null;
+
+  const smooth01 = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
 
   /** Fog re-parameterisation for the Final pullback (adr-d3 seam T4), plus
    *  the W3-B seam dips (gap d). Everything here is pure in p, so reverse
@@ -424,7 +301,9 @@ export function createDirector(sceneApi, { steady = false } = {}) {
        .addScaledVector(_up2, hhSample(HH_BANK.py, hhT) * pAmp);
   }
 
-  /** Apply the pose for progress p. Runs after the hero's own 'controls'
+  /** Apply the pose for progress p — the fixed composition order (see the
+   *  file header): base leg (+ portrait, inside poseAt) -> handheld -> the
+   *  no-roll camera write -> fog. Runs after the hero's own 'controls'
    *  animator, so a direct write wins; there is never a frame in which
    *  OrbitControls and the director disagree. */
   function apply(p, dt = 0) {
