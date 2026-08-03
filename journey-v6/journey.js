@@ -268,6 +268,13 @@ export function boot(opts = {}) {
     // under the cap the plumes are behind us: retire them into the seam
     const out = 1 - smooth01((p - 0.355) / 0.06);
     chapters.inspire.setReveal(a * out, b * out, c * out, band * out);
+    // Swarm isolation fix (2026-08-03): the GPU detail layer may only sharpen
+    // on the final approach to the Inspire rest (0.235->0.253) — through the
+    // whole orbit the hero's own converted dots carry the braids alone. Pure
+    // in p; reverse drops detail first, handing the braids back to the dots.
+    if (chapters.inspire.setRestProx) {
+      chapters.inspire.setRestProx(smooth01((p - 0.235) / 0.018) * out);
+    }
   }
 
   // Final-leg halation focus: the nearest mature ring member IN FRONT of the
