@@ -3,6 +3,7 @@
 // createScene closure at merge step M2 with zero behaviour change; all
 // formerly-closure state arrives through `ctx` (built in organism.js).
 import * as THREE from 'three';
+import { TKDBG } from '../flags.js';
 
 // =====================================================================
 // 10. SPORE CLOUD — shed from the gill surface across the cap's back side
@@ -302,7 +303,8 @@ export function createSpores(ctx) {
         r0 = [], r1 = [], kk = [];
 
   // ?tkdbg=1 — perf + animator-order probe hooks (QA)
-  const dbg = typeof location !== 'undefined' && location.search.includes('tkdbg');
+  // (parsed once, in ../flags.js — THE flag registry)
+  const dbg = TKDBG;
   let perfAcc = 0, perfN = 0;
 
   function initSteer() {

@@ -19,6 +19,7 @@
 // to a chapter, so the path is reversible at any point and at any speed.
 
 import { CHAPTERS, REST_STOPS, TERMINAL_P } from './route.js';
+import { NOSNAP } from '../flags.js';
 import {
   SNAP_ENGAGE_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
   COMMIT_THRESHOLD, COMMIT_GLIDE_RATE, COMMIT_BLEND_K,
@@ -177,8 +178,7 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
 
   // ?nosnap=1 disables commit-resolution entirely (restores the band-limited
   // W3-A soft snap) so ?p= deep-scrub QA can park at arbitrary positions.
-  const NOSNAP = typeof location !== 'undefined'
-    && new URLSearchParams(location.search).get('nosnap') === '1';
+  // (parsed once, in ../flags.js — THE flag registry)
 
   // ---- scroll px -> p, as a MONOTONE C1 spline through the allocation knots.
   //

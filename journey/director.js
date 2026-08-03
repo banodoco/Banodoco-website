@@ -34,6 +34,7 @@ import { CAMERA as INSPIRE_CAM } from './chapters/inspire/camera.js';
 import { CAMERA as CONNECT_CAM } from './chapters/connect/camera.js';
 import { CAMERA as OWNED_CAM } from './chapters/owned/camera.js';
 import { CAMERA as FINAL_CAM } from './chapters/final/camera.js';
+import { ASPECT } from '../flags.js';
 
 const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -229,12 +230,8 @@ export function createDirector(sceneApi, { steady = false } = {}) {
   // override (?aspect=portrait forces the full portrait field in a wide
   // window, for capture tooling and desktop review; a number forces that
   // exact aspect; ?aspect=landscape pins the landscape path on a phone).
-  const qAspect = new URLSearchParams(location.search).get('aspect');
-  const forcedAspect =
-    qAspect === 'portrait' ? 0.55
-    : qAspect === 'landscape' ? 1.6
-    : qAspect !== null && isFinite(parseFloat(qAspect)) ? parseFloat(qAspect)
-    : null;
+  // (parsed once, in ../flags.js — THE flag registry)
+  const forcedAspect = ASPECT;
 
   const smooth01 = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
 

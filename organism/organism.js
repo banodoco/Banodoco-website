@@ -8,6 +8,7 @@ import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { createSpores } from './spores.js';
 import { setupIntro } from './intro.js';
 import { createHighlights, registerTrackers } from './furniture.js';
+import { NOTAA, NOFADE, DBG } from '../flags.js';
 
 // =====================================================================
 // TABLE OF CONTENTS (order as they appear below; M2 split the marked
@@ -191,7 +192,8 @@ class TemporalAccumulatePass extends Pass {
 }
 const taaPass = new TemporalAccumulatePass(_dbSize.width, _dbSize.height);
 // ?notaa=1 disables the accumulation, for A/B measuring it
-if (location.search.includes('notaa')) taaPass.enabled = false;
+// (parsed once, in ../flags.js — THE flag registry)
+if (NOTAA) taaPass.enabled = false;
 composer.addPass(taaPass);
 composer.addPass(new OutputPass());
 
@@ -476,7 +478,8 @@ function makeDenseLines(positions, colors, tangents, opacity = 1.0, tangents2 = 
       uOpacity: { value: opacity },
       uRes: { value: renderer.getDrawingBufferSize(new THREE.Vector2()) },
       // ?nofade=1 disables the coverage fade, for A/B measuring it
-      uFadeOn: { value: location.search.includes('nofade') ? 0 : 1 },
+      // (parsed once, in ../flags.js — THE flag registry)
+      uFadeOn: { value: NOFADE ? 0 : 1 },
       uProg: drawU,
       uWin: { value: new THREE.Vector2(-2, -1) },
       uClampY: { value: 1e3 },
@@ -1628,7 +1631,8 @@ addAnimator('uniform-time', (t) => {
 // direction the same gust is pushing the spores.
 // (swayCos/swaySin live on ctx since M2 — written here, read by spores.js.)
 // ?dbg=1 prints the live motion values — handy when tuning sway or a camera move
-const _dbg = location.search.includes('dbg')
+// (parsed once, in ../flags.js — THE flag registry)
+const _dbg = DBG
   ? (document.body.appendChild(Object.assign(document.createElement('div'), {
       style: 'position:fixed;left:8px;bottom:8px;z-index:9;color:#7f7;font:12px monospace' })))
   : null;

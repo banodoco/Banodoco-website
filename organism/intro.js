@@ -5,6 +5,7 @@
 // even with intro=0 it sets every object's draw window and the stem clamp,
 // exactly as the inline block did.
 import * as THREE from 'three';
+import { INTROAT } from '../flags.js';
 
 export function setupIntro(ctx) {
   const { scene, renderer, mushroom, stemGroup, groundGroup,
@@ -130,7 +131,8 @@ export function setupIntro(ctx) {
   }
 
   // ?introat=P (0..1) freezes the drawing at that progress for frame inspection
-  const _introAt = new URLSearchParams(location.search).get('introat');
+  // (parsed once, in ../flags.js — THE flag registry)
+  const _introAt = INTROAT;
   // Wall-clock moment the live intro started; stays null when the intro is
   // skipped or frozen, which is what makes accelerate() a safe no-op there.
   let introT0 = null;
