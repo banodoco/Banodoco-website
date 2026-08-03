@@ -22,7 +22,13 @@
 </script>
 </head>
 <body>
-  <div id="stage"></div>
+  <!-- M5 a11y: skip link, first focusable element on the page. The canvas
+       is decorative-interactive (see #stage's aria-label below) and the
+       three HUD callouts floating over it are page furniture, not content
+       — a keyboard visitor who doesn't want to tab through them can jump
+       straight to the real nav landmark. Off-screen until focused. -->
+  <a class="skip-link" href="#site-nav">Skip to content</a>
+  <div id="stage" role="img" aria-label="A glowing mushroom specimen, rendered in three dimensions against a dark studio backdrop"></div>
   <div class="spill"></div>
   <div class="scrim"></div>
   <div class="vignette"></div>
@@ -55,7 +61,7 @@
   </div>
 
   <div class="ui">
-    <nav>
+    <nav id="site-nav" tabindex="-1" aria-label="Primary">
       <a class="logo" href="#">BANODOCO</a>
       <div class="nav-cta">
         <a class="pill" href="#">2RP</a>

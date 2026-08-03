@@ -106,6 +106,34 @@
     background-size: 280px 280px;
   }
 
+  /* ============================================================
+     ACCESSIBILITY (M5 debt burn-down): skip link + :focus-visible for
+     every shell-level interactive element (nav, CTA — the journey layer's
+     own controls carry the matching treatment in journey/site.css; this
+     hero region was its own recorded a11y debt until now). Both use the
+     gold family so a focused element reads as clearly as a hovered one,
+     never relying on the browser's default focus ring against this dark
+     background. ============================================================ */
+  .skip-link {
+    position: fixed;
+    top: -4rem;
+    left: 1rem;
+    z-index: 100;
+    padding: 0.7rem 1.3rem;
+    background: var(--bg);
+    color: var(--gold-bright);
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    transition: top 0.2s ease;
+  }
+  /* :focus, not :focus-visible — the whole point of a skip link is that
+     the act of tabbing to it (always keyboard-driven) reveals it. */
+  .skip-link:focus { top: 1rem; }
+
   /* --- UI overlay: clicks fall through to the canvas except on controls --- */
   .ui {
     position: fixed;
@@ -147,6 +175,14 @@
     transition: border-color 0.25s, background 0.25s;
   }
   .pill:hover { border-color: var(--ink); background: rgba(242, 237, 225, 0.06); }
+  /* keyboard focus, gold family — matches journey/site.css's treatment for
+     every journey-layer control (.j-nav a:focus-visible etc). Covers .logo
+     and both .pill links (2RP, Discord). */
+  nav a:focus-visible {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
 
   /* --- hero --- */
   .hero {
@@ -225,6 +261,15 @@
     box-shadow: 0 0 28px rgba(230, 175, 70, 0.28), inset 0 0 14px rgba(230, 175, 70, 0.08);
   }
   .cta:hover .arr { transform: translateX(3px); }
+  /* keyboard focus: .cta already carries a permanent decorative outline
+     (above), so focus needs a visibly DIFFERENT ring, not the same one —
+     brighter, offset further out, same gold-bright as every other focus
+     treatment in this codebase. */
+  .cta:focus-visible {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 5px;
+    border-radius: 999px;
+  }
 
   /* --- the ink family: page elements are DRAWN like the specimen ---
      Nothing slides. Text wipes in left-to-right (the direction it is read,
