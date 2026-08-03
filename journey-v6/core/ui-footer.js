@@ -134,7 +134,14 @@ export function createFooter({ focusNav = null } = {}) {
   const note = el('p', 'j-foot-note');
   note.appendChild(document.createTextNode('Every chapter, every node and every link on this page also exists as a plain HTML document with no WebGL: '));
   const staticLink = el('a', null, 'the static journey');
-  staticLink.href = 'static/';
+  // Page-relative, not module-relative: this <a href> resolves against the
+  // DOCUMENT's URL when a user clicks it, not against this module's URL. The
+  // module lives in journey-v6/core/ but the page it renders into is the
+  // promoted site root (see journey-v6-plan/15-merge-and-architecture.md M1),
+  // so a bare 'static/' would resolve to /static/ instead of
+  // /journey-v6/static/. Resolve it off import.meta.url instead, which
+  // survives future directory renames the way a hand-written prefix would not.
+  staticLink.href = new URL('../static/', import.meta.url).href;
   note.appendChild(staticLink);
   note.appendChild(document.createTextNode('.'));
   wrap.appendChild(note);
