@@ -18,8 +18,9 @@
 // what makes reverse scrubbing identical to forward scrubbing.
 
 import * as THREE from 'three';
+import { REST_STOPS, TERMINAL_P, restProgress } from './route.js';
 import {
-  FOG_RAMP, HANDHELD, ORBIT_BREATH, SEAM_FOG_DIPS, CHAPTERS, restProgress,
+  FOG_RAMP, HANDHELD, ORBIT_BREATH, SEAM_FOG_DIPS,
 } from './constants.js';
 import { applyPortrait } from './portrait.js';
 
@@ -60,7 +61,7 @@ const PUSH_START = 0.80;          // the push-in lives ONLY in the last 20%
 // ramp at the head of the orbit itself, where the target pins to the cap and
 // the camera lifts while the azimuth has barely started to turn.
 export const ORBIT_P0 = 0.040;
-export const ORBIT_P1 = 0.260;    // == restProgress('inspire')
+export const ORBIT_P1 = restProgress('inspire');   // the orbit lands ON the rest (route.js)
 
 function smooth01(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
 
@@ -267,8 +268,9 @@ function hhSample(bank, t) {
 }
 // Rest anchors (plus the terminal hold): handheld amplitude is EXACTLY zero
 // within HANDHELD.restFadeP of each, so every rest pose stays byte-identical
-// and the 0 -> 1 -> 0 pose audit is unaffected.
-const HH_ANCHORS = CHAPTERS.map(c => restProgress(c.id)).concat([1]);
+// and the 0 -> 1 -> 0 pose audit is unaffected. Every declared route stop is
+// an anchor, so a chapter adding a mid-leg stop gets its handheld zero free.
+const HH_ANCHORS = [...REST_STOPS, TERMINAL_P];
 
 /* ================================================================
    3. The public pose function

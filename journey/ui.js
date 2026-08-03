@@ -12,8 +12,9 @@
 import { CONTENT } from '../content/content.js';
 import { createFooter } from './ui-footer.js';
 import { claimInput, releaseInput } from './scroll.js';
+import { CHAPTERS, navChapterAt } from './route.js';
 import {
-  CHAPTERS, COPY_BANDS, COPY_FADE_P,
+  COPY_BANDS, COPY_FADE_P,
   COPY_OUT_K, COPY_IN_K, COPY_SETTLE_LO, COPY_SETTLE_HI,
   COPY_TRAVEL_LO, COPY_TRAVEL_HI,
   HOTSPOT_STAGGER_MS, HOTSPOT_IN_K, HOTSPOT_OUT_K,
@@ -660,7 +661,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     // nav: hidden at the hero rest, persistent from the first travel on
     const show = p > 0.004;
     if (show !== navShown) { navWrap.classList.toggle('on', show); navShown = show; }
-    const active = chapterId === 'final' ? 'owned' : chapterId;   // Owned stays lit through Final
+    // A nav-less chapter (the Final epilogue) keeps the last nav'd chapter
+    // lit — derived from the manifest, not a hardcoded id pair (route.js).
+    const active = navChapterAt(p);
     for (const id in navLinks) {
       const on = id === active;
       navLinks[id].classList.toggle('active', on);

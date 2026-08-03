@@ -18,11 +18,11 @@
 // constants.js. Every input is a delta on v; nothing is ever a discrete step
 // to a chapter, so the path is reversible at any point and at any speed.
 
+import { CHAPTERS, REST_STOPS, TERMINAL_P } from './route.js';
 import {
-  CHAPTERS, SCROLL_VH, SNAP_ENGAGE_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
+  SNAP_ENGAGE_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
   COMMIT_THRESHOLD, COMMIT_GLIDE_RATE, COMMIT_BLEND_K,
   WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K,
-  restProgress,
 } from './constants.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -255,7 +255,7 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
   function measure() {
     const h = Math.max(320, window.innerHeight);
     const keepP = total > 0 ? pAt(v) : 0;
-    lens = CHAPTERS.map(c => (SCROLL_VH[c.id] || 2) * h);
+    lens = CHAPTERS.map(c => (c.scrollVh || 2) * h);   // allocations live in route.js
     total = lens.reduce((a, b) => a + b, 0);
     edges = [0];
     for (const L of lens) edges.push(edges[edges.length - 1] + L);
@@ -392,8 +392,10 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
 
      p = 1 is a resolution anchor too (the authored end-hold): a fling to the
      end must settle where it landed, never be tugged back to the Final rest. */
-  const ANCHORS = CHAPTERS.map(c => restProgress(c.id));
-  const RESOLVE_P = [...ANCHORS, 1].filter((a, i, arr) => i === 0 || a > arr[i - 1] + 1e-6);
+  // Every declared rest stop on the route is a resolution anchor (route.js —
+  // a chapter adding a mid-leg stop is picked up here with no edits).
+  const ANCHORS = REST_STOPS;
+  const RESOLVE_P = [...ANCHORS, TERMINAL_P].filter((a, i, arr) => i === 0 || a > arr[i - 1] + 1e-6);
 
   /** The pair of resolution anchors bracketing p. */
   function bracketAt(p) {

@@ -11,73 +11,13 @@
 /* ------------------------------------------------------------------ */
 /* Journey progress p in [0,1] -> chapters                             */
 /* ------------------------------------------------------------------ */
-// `rest` is the chapter-local position of the resting pose. It is REST_POSE
-// (mid-chapter) everywhere except Mission, whose rest is the frozen hero pose
-// at the very start of the range - the camera must not have moved at all when
-// a #/mission deep link or a cold load settles (06-mission-preservation.md).
-export const CHAPTERS = [
-  { id: 'mission', start: 0.00, end: 0.14, nav: 'Mission', rest: 0.00 },
-  { id: 'inspire', start: 0.14, end: 0.38, nav: 'Inspire' },
-  { id: 'connect', start: 0.38, end: 0.60, nav: 'Connect' },
-  { id: 'owned',   start: 0.60, end: 0.85, nav: 'Owned'   },
-  // The epilogue is not a sixth peer chapter: it keeps a route (#/final) but
-  // Owned stays the highlighted nav entry throughout the pullback (v6).
-  { id: 'final',   start: 0.85, end: 1.00, nav: null      },
-];
-
-export const CHAPTER_IDS = CHAPTERS.map(c => c.id);
-
-// Chapter-local progress band in which copy and node labels are shown, and
-// within which a chapter counts as "at rest" for deep links and captures.
-export const REST_LO = 0.20;
-export const REST_HI = 0.80;
-
-// Where a deep link or nav click lands inside a chapter.
-export const REST_POSE = 0.50;
-
-export function chapterAt(p) {
-  for (const c of CHAPTERS) if (p <= c.end) return c;
-  return CHAPTERS[CHAPTERS.length - 1];
-}
-
-export function localProgress(p, c) {
-  const t = (p - c.start) / (c.end - c.start);
-  return t < 0 ? 0 : t > 1 ? 1 : t;
-}
-
-export function restProgress(id) {
-  const c = CHAPTERS.find(c => c.id === id);
-  return c ? c.start + (c.end - c.start) * (c.rest ?? REST_POSE) : 0;
-}
-
-/* ------------------------------------------------------------------ */
-/* Scroll model (GB-3) - settled by the grey-box, logged at the motion */
-/* review. See GREYBOX-DECISIONS.md for the reasoning behind each.     */
-/* ------------------------------------------------------------------ */
-// Scroll distance ALLOCATED PER CHAPTER, in viewport heights. This is the
-// felt length of each chapter and is deliberately decoupled from the p spans
-// above (which parameterise MOTION, not effort): scroll -> p is piecewise
-// linear across these allocations, so re-timing a camera leg never changes
-// how far the visitor has to scroll, and vice versa.
-// Sized from the ORBIT, which is the slowest thing in the journey: Spike A
-// played it over 20 s and the review note was "slower, constant angular feel".
-// In a scrub the visitor sets the pace, so the allocation has to make an
-// ordinary scroll (~800 px/s) produce roughly a 4-5 s, ~40 deg/s orbit. That
-// fixes Inspire at 7.5 vh, and the other chapters are scaled to it by how much
-// camera work each one carries.
-//
-// Mission is deliberately NOT the shortest allocation even though it holds a
-// static pose for its first ~30%: the orbit starts inside the Mission range
-// (p 0.04), so a tight Mission allocation makes the first third of the orbit
-// travel faster than the rest. Measured: 3.5 vh keeps the whole swing within
-// ~10% of one angular rate.
-export const SCROLL_VH = {
-  mission: 3.5,   // ~1 vh of hero hold, then the restrained flow toward the cap
-  inspire: 7.5,   // the longest single move - the ~172 deg orbit
-  connect: 4.5,   // slip-under, the chamber, the lateral to the junction
-  owned:   5.0,   // stipe descent, soil crossing, the glide
-  final:   3.5,   // rise + recession
-};                // total ~24 vh
+// M4: the chapter table LIVES IN route.js now — one ordered manifest that
+// every global number (p-ranges, rest stops, snap anchors, nav entries,
+// scroll allocations, seam positions) derives from. This file keeps only
+// the feel/motion constants that are not per-chapter route data; the
+// seam/fog tables below are computed against the manifest so a re-timed
+// route carries them along.
+import { startOf, restProgress } from './route.js';
 
 // Virtual scroll (no native scroll surface: the hero page stays
 // overflow:hidden, so nothing about hero layout or rendering changes).
@@ -121,16 +61,18 @@ export const COMMIT_BLEND_K    = 6.0;  // 1/s — the glide's rate eases from th
 // Full journey minimum traverse ~= 2.2 s.
 export const MAX_SCRUB_RATE   = 0.45;  // p units per second
 
-// Absolute-p windows in which each chapter's DOM copy is shown. These are
-// NOT the constants.js rest band: copy may only appear once the composition
-// has come to rest and created its negative space (GB-3.3), which happens
-// later inside a chapter than the generic REST_LO.
+// Absolute-p windows in which each chapter's DOM copy is shown. Authored as
+// offsets from each chapter's REST (route.js) — the copy belongs to the rest
+// composition, so a re-timed route carries its window along. -1 / 2 are the
+// open-ended sentinels bandOpacity() understands (no fade at that edge).
+// Shipped values unchanged: mission hi 0.042; inspire 0.248..0.338; connect
+// 0.476..0.548; owned 0.716..0.792; final lo 0.914.
 export const COPY_BANDS = {
-  mission: { lo: -1,    hi: 0.042 },
-  inspire: { lo: 0.248, hi: 0.338 },
-  connect: { lo: 0.476, hi: 0.548 },
-  owned:   { lo: 0.716, hi: 0.792 },
-  final:   { lo: 0.914, hi: 2 },
+  mission: { lo: -1, hi: restProgress('mission') + 0.042 },
+  inspire: { lo: restProgress('inspire') - 0.012, hi: restProgress('inspire') + 0.078 },
+  connect: { lo: restProgress('connect') - 0.014, hi: restProgress('connect') + 0.058 },
+  owned:   { lo: restProgress('owned') - 0.009,   hi: restProgress('owned') + 0.067 },
+  final:   { lo: restProgress('final') - 0.011,   hi: 2 },
 };
 export const COPY_FADE_P = 0.020;      // fade width at each edge of a band
 
@@ -190,9 +132,13 @@ export const ORBIT_BREATH = { amp: 0.010, cycles: 1.7 };
 // Multiplicative dips on near/far; zero at every rest anchor, perfectly
 // reversible. T1 stays purely a streaming trigger (ADR: no visual), T4's
 // crossing is carried by the fog ramp opening below.
+// Centres are authored as leg-relative offsets from the manifest, so a
+// re-timed route carries the crossings with it. Shipped values: T2 at
+// connect.start + 0.056 = 0.436 (slip-under key p≈0.446), T3 at
+// owned.start + 0.093 = 0.693 (soil-line crossing).
 export const SEAM_FOG_DIPS = [
-  { c: 0.436, w: 0.035, near: 0.26, far: 0.34 },  // T2 slip-under
-  { c: 0.693, w: 0.026, near: 0.46, far: 0.52 },  // T3 soil crossing
+  { c: startOf('connect') + 0.056, w: 0.035, near: 0.26, far: 0.34 },  // T2 slip-under
+  { c: startOf('owned') + 0.093,   w: 0.026, near: 0.46, far: 0.52 },  // T3 soil crossing
 ];
 
 /* ------------------------------------------------------------------ */
@@ -208,9 +154,13 @@ export const SEAM_FOG_DIPS = [
 // crests the soil at ~0.858) and is still opening as the recession begins;
 // the near plane holds the substrate's thickness longer and releases late.
 // Both are fully open just after the Final rest so dwelling there reads calm.
+// Schedule endpoints are route-relative (the ramp belongs to the Owned->Final
+// legs): far opens from owned.start+0.18 (=0.78, during the rise) to the
+// final rest +0.02 (=0.945); near holds until final.start-0.015 (=0.835) and
+// is fully open at rest +0.03 (=0.955).
 export const FOG_RAMP = {
-  far:  62, farFromP:  0.78,  farToP:  0.945,
-  near: 15, nearFromP: 0.835, nearToP: 0.955,
+  far:  62, farFromP:  startOf('owned') + 0.18,   farToP:  restProgress('final') + 0.02,
+  near: 15, nearFromP: startOf('final') - 0.015,  nearToP: restProgress('final') + 0.03,
 };
 
 /* ------------------------------------------------------------------ */
@@ -223,7 +173,7 @@ export const THRESHOLDS = [
   { id: 'rear-cap',      arms: 'inspire', kind: 'azimuth', deltaDeg: 100 },
   { id: 'cap-occludes',  arms: 'connect', kind: 'under-cap' },
   { id: 'soil-line',     arms: 'owned',   kind: 'below-ground' },
-  { id: 'rise-cutaway',  arms: 'final',   kind: 'above-ground-outbound', minP: 0.85 },
+  { id: 'rise-cutaway',  arms: 'final',   kind: 'above-ground-outbound', minP: startOf('final') },
 ];
 
 // Hysteresis so a shaky scrub cannot strobe the streamer.

@@ -35,12 +35,14 @@
 
 import { CONTENT } from '../content/content.js';
 import { claimInput, releaseInput } from './scroll.js';
-import { CHAPTERS } from './constants.js';
+import { CHAPTERS, TERMINAL_P, restProgress } from './route.js';
 
-// Reveal band, in absolute journey progress. Both edges sit above the
-// commit threshold (0.951) so the band is unreachable as an idle state.
-export const FOOTER_LO = 0.955;
-export const FOOTER_HI = 0.992;
+// Reveal band, in absolute journey progress — anchored to the route's final
+// rest and the terminal end-hold (M4), shipped values 0.955 / 0.992. Both
+// edges sit above the commit threshold (0.951) so the band is unreachable as
+// an idle state.
+export const FOOTER_LO = restProgress('final') + 0.030;
+export const FOOTER_HI = TERMINAL_P - 0.008;
 
 // Above this the footer is a live document: focusable, exposed to AT.
 // Below it the element is inert, so a footer caught mid-travel can never

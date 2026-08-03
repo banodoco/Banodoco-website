@@ -56,6 +56,7 @@
 //     Tier-1 only, per the donor tier model and the LA-7 proposal).
 import * as THREE from 'three';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { startOf, endOf, restProgress } from './route.js';
 import { SEAM_FOG_DIPS } from './constants.js';
 
 const GradeShader = {
@@ -200,19 +201,22 @@ const GradeShader = {
    identity — the approved family at the hero pose and across the whole
    Mission/Inspire leg.                                                    */
 const LOOK_BASE = { gain: 1.0, lift: 1.0, warm: 0.0, hal: 1.0, vig: 0.34, grain: 0.030 };
+// Key positions are route-relative (M4): each look belongs to a LEG, so a
+// re-timed route carries the grade with it. Shipped p-values unchanged
+// (0.00 / 0.38 / 0.44 / 0.60 / 0.68 / 0.85 / 0.93 / 1.00).
 const LOOK_KEYS = [
   { p: 0.00, ...LOOK_BASE },                                    // Mission (G2a)
-  { p: 0.38, ...LOOK_BASE },                                    // Inspire leg end (G2a)
+  { p: endOf('inspire'), ...LOOK_BASE },                        // Inspire leg end (G2a)
   // Connect: halation restrained — the free-edge polylines are the
   // brightest element (W4-B note a); everything else stays at identity so
   // the uBase/uEdge balance tuned against ACES holds (note b).
-  { p: 0.44, gain: 1.0, lift: 1.0, warm: 0.10, hal: 0.62, vig: 0.35, grain: 0.031 },
-  { p: 0.60, gain: 1.0, lift: 1.0, warm: 0.10, hal: 0.62, vig: 0.35, grain: 0.031 },
+  { p: startOf('connect') + 0.06, gain: 1.0, lift: 1.0, warm: 0.10, hal: 0.62, vig: 0.35, grain: 0.031 },
+  { p: endOf('connect'), gain: 1.0, lift: 1.0, warm: 0.10, hal: 0.62, vig: 0.35, grain: 0.031 },
   // Owned: warm the near-black slightly underground; denser grain.
-  { p: 0.68, gain: 1.02, lift: 1.35, warm: 0.55, hal: 0.85, vig: 0.36, grain: 0.035 },
-  { p: 0.85, gain: 1.02, lift: 1.35, warm: 0.55, hal: 0.85, vig: 0.36, grain: 0.035 },
+  { p: startOf('owned') + 0.08, gain: 1.02, lift: 1.35, warm: 0.55, hal: 0.85, vig: 0.36, grain: 0.035 },
+  { p: endOf('owned'), gain: 1.02, lift: 1.35, warm: 0.55, hal: 0.85, vig: 0.36, grain: 0.035 },
   // Final: the grade ADDS the approved still's density/luminosity (W4-D).
-  { p: 0.93, gain: 1.14, lift: 1.18, warm: 0.30, hal: 1.25, vig: 0.29, grain: 0.030 },
+  { p: restProgress('final') + 0.005, gain: 1.14, lift: 1.18, warm: 0.30, hal: 1.25, vig: 0.29, grain: 0.030 },
   { p: 1.00, gain: 1.14, lift: 1.18, warm: 0.30, hal: 1.25, vig: 0.29, grain: 0.030 },
 ];
 const LIFT_BASE = new THREE.Vector3(0.0060, 0.0037, 0.0017);
