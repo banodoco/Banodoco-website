@@ -49,7 +49,7 @@ const sheetQuery = typeof matchMedia === 'function'
   ? matchMedia('(pointer: coarse), (max-width: 720px)')
   : { matches: false, addEventListener() {} };
 
-// Must outlast the .j-card opacity transition in index.html (0.3s) so the
+// Must outlast the .j-card opacity transition in journey/site.css (0.3s) so the
 // fade can actually play before the element is pulled out of the box tree.
 const CARD_FADE_MS = 340;
 
@@ -109,7 +109,7 @@ function ensureLabelPolicyStyles() {
   if (typeof document === 'undefined' || document.getElementById(LABEL_POLICY_STYLE_ID)) return;
   const s = document.createElement('style');
   s.id = LABEL_POLICY_STYLE_ID;
-  // Injected rather than authored in index.html so the behaviour ships with
+  // Injected rather than authored in the page stylesheet so the behaviour ships with
   // the contract that defines it. Specificity is one class above the base
   // `.j-hot:is(:hover, .hot, :focus-visible)` treatment, so the hot state
   // wins in both directions. The chip's chrome (pill, dot, text) fades as
@@ -245,7 +245,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   }
 
   // Tap anywhere that is not a hotspot clears the focus state — including the
-  // canvas, whose tap-pulse replay in index.html is unaffected (this listener
+  // canvas, whose tap handling (organism.js, journey input policy) is unaffected (this listener
   // observes, never cancels).
   document.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch' || !armed) return;
@@ -624,7 +624,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     card.inert = true;
     if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
     returnFocus = null;
-    // Reduced motion has no fade to protect (index.html drops the transition),
+    // Reduced motion has no fade to protect (journey/site.css drops the transition),
     // so it closes on the tick, exactly as before.
     if (reduceMotion.matches) finishClose();
     else fadeTimer = setTimeout(finishClose, CARD_FADE_MS);

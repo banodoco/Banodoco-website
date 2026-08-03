@@ -192,6 +192,7 @@ export const FLIGHT_SPAN_S   = 4.0;
 /* ------------------------------------------------------------------ */
 /* Hero handshake                                                      */
 /* ------------------------------------------------------------------ */
-// Kept in sync with the ENTRY choreography in index.html's CSS.
+// Kept in sync with the ENTRY choreography in hero.css (and main.js's own
+// HERO_INTRO_MS, which the page uses before this module ever loads).
 export const HERO_INTRO_MS = 7600;
 export const DEEP_LINK_DETAIL_DELAY_MS = 600; // settle at the pose, then open

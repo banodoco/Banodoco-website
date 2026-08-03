@@ -1,0 +1,568 @@
+/* journey/site.css — the journey layer's page styles: chapter nav, chapter
+   copy blocks, hotspot proxies, detail card / bottom sheet, footer + cue,
+   focus treatments, touch targets. None of these elements exist until
+   journey.js boots (journey/ui.js and ui-footer.js build them), so every
+   rule here is dead CSS until then — the hero's first paint is untouched by
+   construction. Moved verbatim from index.html's inline journey <style> at
+   the M5 shell step. Linked AFTER hero.css; keep that order. */
+
+/* journey-v6: the scene is a non-interactive backdrop here — the journey
+   owns scroll and pointer gestures via the organism's input policy
+   (organism.js setInputPolicy; ?free=1 keeps the hero's free camera). */
+body:not(.free-cam) #stage canvas { cursor: default; }
+body:not(.free-cam) #stage canvas:active { cursor: default; }
+
+  /* ============================================================
+     JOURNEY GREY-BOX (W3-A) — chapter nav, chapter copy, detail
+     cards, hotspot proxies.
+
+     NONE of these elements exist until journey.js boots (after the
+     hero entry choreography); core/ui.js builds them. So the hero's
+     first paint, TTI and Mission screenshot are untouched by
+     construction, and every rule below is dead CSS until then.
+     Everything starts at opacity 0 and is driven by journey
+     progress — at p = 0 the page is the hero, exactly.
+     ============================================================ */
+
+  /* --- chapter nav: lives inside the hero's own <nav>, styled like it --- */
+  .j-nav {
+    display: flex;
+    gap: 1.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.55s ease;
+    /* W4-E made this a real <nav> landmark, which puts it in reach of the
+       hero's BARE `nav {}` rule (padding + justify-content + the `fade-on`
+       entry animation). `animation: none` is the load-bearing one: fill-mode
+       `both` would pin opacity at the animation's end value and the chapter
+       nav would be lit at the Mission pose. Reset, don't inherit. */
+    padding: 0;
+    justify-content: flex-start;
+    animation: none;
+  }
+  .j-nav.on { opacity: 1; pointer-events: auto; }
+  .j-navlink {
+    position: relative;
+    color: rgba(201, 191, 168, 0.62);
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 12px rgba(10, 6, 2, 0.9);
+    transition: color 0.3s;
+  }
+  .j-navlink::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 100%;
+    bottom: -0.5rem;
+    height: 1px;
+    background: var(--gold);
+    transition: right 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* focus states visually equal hover states (PL-2.2) — and this rule stays
+     ABOVE `.active` so the active entry keeps its gold under both. */
+  .j-navlink:is(:hover, :focus-visible) { color: var(--parchment); }
+  .j-navlink.active { color: var(--gold-bright); }
+  .j-navlink.active::after { right: 0; }
+  /* the focus RING is the one shared journey treatment, further down */
+
+  /* --- chapter copy: stable at rests, released during major travel --- */
+  .j-copy { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+  .j-block {
+    position: absolute;
+    opacity: 0;
+    visibility: hidden;
+    max-width: 34rem;
+    /* each block carries its own local scrim so it never depends on the
+       hero's Mission-pose gradient, which releases as the journey starts */
+    padding: 1.6rem 2rem;
+  }
+  .j-block::before {
+    content: "";
+    position: absolute;
+    inset: -2.5rem -3.5rem;
+    z-index: -1;
+    background: radial-gradient(ellipse 62% 68% at 40% 50%, rgba(12, 8, 3, 0.66), transparent 72%);
+  }
+  .j-h {
+    margin: 0 0 1rem;
+    font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    font-size: clamp(1.9rem, 3.1vw, 3rem);
+    line-height: 1.12;
+    color: var(--parchment);
+    text-shadow: 0 2px 30px rgba(10, 6, 2, 0.9), 0 0 8px rgba(10, 6, 2, 0.6);
+  }
+  .j-sub {
+    margin: 0;
+    max-width: 26rem;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--muted);
+    text-shadow: 0 1px 18px rgba(10, 6, 2, 0.9);
+  }
+  .j-claims { margin: 0.4rem 0 0; padding: 0; list-style: none; }
+  .j-claim { margin: 0.5rem 0; pointer-events: auto; } /* hosts the claim pulses */
+  .j-claim-t {
+    font-size: 1.02rem;
+    letter-spacing: 0.03em;
+    color: var(--gold-bright);
+  }
+  .j-claim.primary .j-claim-t { font-size: 1.5rem; letter-spacing: 0.01em; }
+  .j-claim-d { display: block; font-size: 0.86rem; color: var(--muted); }
+
+  .j-block.pos-left       { left: 5.2vw; top: 50%; transform: translateY(-50%); }
+  .j-block.pos-bottom     { left: 50%; bottom: 8vh; transform: translateX(-50%); text-align: center; }
+  .j-block.pos-bottom .j-sub { margin: 0 auto; }
+  .j-block.pos-topcentre  { left: 50%; top: 15vh; transform: translateX(-50%); text-align: center; }
+  .j-block.pos-topcentre .j-claims { display: inline-block; text-align: center; }
+  .j-block.pos-upperleft  { left: 6vw; top: 16vh; }
+
+  /* --- hotspot proxies: hit-model correctness now, polish later --- */
+  .j-hotspots { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+  .j-hot {
+    position: absolute;
+    top: 0; left: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: -11px 0 0 -11px;
+    padding: 0.35rem 0.8rem 0.35rem 0.35rem;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    background: rgba(12, 8, 3, 0.3);
+    border: 0;
+    border-radius: 999px;
+    color: rgba(201, 191, 168, 0.72);
+    font: inherit;
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    text-shadow: 0 1px 10px rgba(10, 6, 2, 0.9);
+    transition: color 0.3s, background 0.3s;
+  }
+  .j-hot.vis { visibility: visible; pointer-events: auto; }
+  .j-hot-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: rgba(240, 200, 119, 0.6);
+    box-shadow: 0 0 8px rgba(240, 170, 60, 0.45);
+    transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
+  }
+  .j-hot:is(:hover, .hot, :focus-visible) { color: var(--gold-bright); background: rgba(18, 12, 4, 0.6); }
+  .j-hot:is(:hover, .hot, :focus-visible) .j-hot-dot {
+    background: rgba(255, 226, 160, 1);
+    transform: scale(1.35);
+    box-shadow: 0 0 12px rgba(255, 200, 100, 0.9), 0 0 28px rgba(240, 170, 60, 0.5);
+  }
+  /* .j-hot's focus RING is the shared journey treatment further down; the
+     colour/dot response above is what makes focus equal hover (PL-2.2). */
+
+  /* --- detail card --- */
+  .j-card {
+    position: fixed;
+    right: 3.4vw;
+    top: 50%;
+    z-index: 3;
+    width: min(25rem, 84vw);
+    max-height: 74vh;
+    overflow-y: auto;
+    padding: 1.9rem 1.9rem 1.7rem;
+    transform: translateY(-50%);
+    background: rgba(14, 9, 3, 0.9);
+    border: 1px solid rgba(217, 164, 65, 0.35);
+    border-radius: 3px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .j-card.open { opacity: 1; }
+  .j-card-x {
+    position: absolute;
+    top: 0.7rem; right: 0.8rem;
+    padding: 0.35rem 0.5rem;
+    background: none;
+    border: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .j-card-x:hover { color: var(--gold-bright); }
+  .j-card-h {
+    margin: 0 0 0.9rem;
+    font-family: "Didot", "Playfair Display", Georgia, serif;
+    font-weight: 400;
+    font-size: 1.5rem;
+    color: var(--parchment);
+  }
+  .j-card-claim { margin: 0 0 0.8rem; color: var(--gold-bright); font-size: 1.05rem; }
+  .j-card-p { margin: 0 0 0.8rem; font-size: 0.9rem; line-height: 1.6; color: var(--muted); }
+  .j-card-status { margin: 0.6rem 0 0.9rem; font-size: 0.75rem; letter-spacing: 0.05em; color: rgba(201, 191, 168, 0.62); }
+  .j-card-link {
+    display: inline-block;
+    color: var(--gold-bright);
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.5);
+  }
+
+  /* The polite live region (core/ui.js) — announced, never seen. `clip-path`
+     rather than display:none or visibility:hidden, both of which would take it
+     out of the a11y tree along with the announcement. */
+  .j-live {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ============================================================
+     BOTTOM SHEET (PL-1.3) — the same dialog, re-formed.
+
+     On a coarse pointer or a narrow viewport the detail card is not a
+     shrunken side panel: it comes up from the bottom edge, gets a grab
+     handle, and scrolls INSIDE itself. The shell stops scrolling and
+     becomes a flex column so the handle and the close control stay put
+     while the body moves under them — which is also what makes the
+     drag-to-dismiss gesture unambiguous (the handle never scrolls away).
+
+     core/ui.js adds `.sheet` at open time from the live pointer/viewport
+     condition, and registers the card with core/scroll.js's input-owner
+     registry so the journey's window-capture preventDefault leaves this
+     subtree alone and the native scroll below actually runs.
+     ============================================================ */
+  .j-card-grip { display: none; }
+
+  .j-card.sheet {
+    left: 0; right: 0; bottom: 0;
+    top: auto;
+    width: auto;
+    max-width: none;
+    max-height: min(78vh, 32rem);
+    transform: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;                       /* the BODY scrolls, not the shell */
+    padding: 0;
+    border-width: 1px 0 0;
+    border-radius: 16px 16px 0 0;
+    /* A side card sits beside the composition; a sheet sits ON it and covers
+       the chapter copy, so the 0.9 panel let two texts read through each
+       other. Opaque enough that the body copy keeps its authored contrast
+       (PL-2.3) without becoming a flat black slab. */
+    background: rgba(10, 7, 2, 0.975);
+    box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.6);
+    transition: opacity 0.3s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* 1:1 with the pointer while the finger is down — no easing to fight */
+  .j-card.sheet.dragging { transition: none; }
+
+  .j-card.sheet .j-card-grip {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;                       /* PL-1.4: a real drag target */
+    touch-action: none;                     /* the gesture is ours, not the page's */
+    cursor: grab;
+  }
+  .j-card.sheet.dragging .j-card-grip { cursor: grabbing; }
+  .j-card.sheet .j-card-grip::before {
+    content: "";
+    width: 44px; height: 4px;
+    border-radius: 99px;
+    background: rgba(217, 164, 65, 0.45);
+  }
+  .j-card.sheet .j-card-body {
+    flex: 1 1 auto;
+    min-height: 0;                          /* or the flex child refuses to scroll */
+    overflow-y: auto;
+    overscroll-behavior: contain;           /* no scroll chaining out to the journey */
+    -webkit-overflow-scrolling: touch;
+    /* the bottom padding is load-bearing, not decoration: the LAST control in
+       the body carries a 44px hit area that reaches ~22px below its text, and
+       a scroll container clips hit-testing at its own padding box. Without it
+       the final link's enlarged target is silently cut in half. */
+    padding: 0.1rem 1.5rem 1.5rem;
+  }
+  .j-card.sheet::after {                    /* safe-area / home-indicator gutter */
+    content: "";
+    flex: 0 0 auto;
+    height: max(1.1rem, env(safe-area-inset-bottom, 0px));
+  }
+  /* the close control sits IN the handle row, aligned to it, so the two read
+     as one header strip and the body starts immediately below both */
+  .j-card.sheet .j-card-x {
+    top: 0; right: 0.3rem;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; height: 44px;      /* PL-1.4, in the box rather than a pseudo:
+                                       a pseudo would overhang the sheet's own
+                                       right edge and land off-viewport */
+    padding: 0;
+  }
+
+  /* ============================================================
+     W4-E — post-epilogue footer + the rest-side cue (PS-5.1).
+
+     Built by core/ui-footer.js, which sets opacity and the small rise
+     PER FRAME from journey progress. There are deliberately no CSS
+     transitions on opacity/transform here: a transition would fight the
+     scrub (and would then have to be unwound for reduced motion). The
+     reduced-motion branch lives in JS — it drops the rise entirely and
+     switches the footer as a state rather than a fade.
+     ============================================================ */
+  .j-footer[hidden], .j-foot-cue[hidden] { display: none; }
+
+  .j-footer {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 4;
+    padding: 1.9rem 3.4rem 1.7rem;
+    max-height: 62vh;
+    overflow-y: auto;
+    opacity: 0;
+    background: rgba(7, 5, 1, 0.95);
+    border-top: 1px solid rgba(217, 164, 65, 0.22);
+  }
+  /* feathers the hard edge of the panel into the epilogue's dark field */
+  .j-footer::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 100%;
+    height: 5.5rem;
+    pointer-events: none;
+    background: linear-gradient(to top, rgba(7, 5, 1, 0.9), rgba(7, 5, 1, 0));
+  }
+  .j-foot-wrap { width: min(62rem, 100%); }
+  .j-foot-h {
+    margin: 0 0 0.9rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .j-foot-cols {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;    /* columns size to content, tops align */
+    gap: 0.2rem 3.2rem;
+    margin: 0 0 1rem;
+  }
+  .j-foot-cols > * { flex: 0 0 auto; }
+  /* same bare-`nav` reset as .j-nav above */
+  .j-foot-nav { display: block; padding: 0; animation: none; }
+  .j-foot-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1rem 1.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .j-foot-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;                 /* pointer target; 44px at <=900px */
+    color: var(--parchment);
+    text-decoration: none;
+    font-size: 0.86rem;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.4);
+    transition: color 0.3s, border-color 0.3s;
+  }
+  .j-foot-links a:is(:hover, :focus-visible) {
+    color: var(--gold-bright);
+    border-color: var(--gold-bright);
+  }
+  .j-foot-nav .j-foot-links a {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-bright);
+  }
+  .j-foot-note, .j-foot-legal {
+    margin: 0 0 0.7rem;
+    max-width: 46rem;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .j-foot-note a {
+    color: var(--gold-bright);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.5);
+    transition: border-color 0.3s;
+  }
+  .j-foot-note a:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
+  .j-foot-legal {
+    margin: 0;
+    color: rgba(201, 191, 168, 0.6);
+    font-size: 0.72rem;
+  }
+
+  /* The cue at the epilogue rest: the keyboard route to the footer, and the
+     only thing this layer puts over the epilogue composition. It rides the
+     epilogue copy's own opacity and retires as the footer arrives. */
+  .j-foot-cue {
+    position: fixed;
+    left: 50%;
+    /* the floor matters: a pure vh offset collapses to 0 in a degenerate
+       layout pass (a zero-height viewport during a resize or an unrendered
+       tab) and parks the cue against the top edge of the frame instead of
+       the bottom of the composition */
+    bottom: max(18px, 2.6vh);
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    transform: translateX(-50%);
+    opacity: 0;
+    background: none;
+    border: 0;
+    color: rgba(201, 191, 168, 0.66);
+    font: inherit;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 12px rgba(10, 6, 2, 0.9);
+    cursor: pointer;
+    transition: color 0.3s;
+  }
+  .j-foot-cue-arr {
+    width: 7px; height: 7px;
+    border-right: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform 0.3s;
+  }
+  .j-foot-cue:is(:hover, :focus-visible) { color: var(--gold-bright); }
+  .j-foot-cue:is(:hover, :focus-visible) .j-foot-cue-arr { transform: translateY(1px) rotate(45deg); }
+
+  /* --- focus visibility across the whole journey layer (PL-2.2) ---------
+     "Focus states visually equal hover states": every rule above pairs
+     :focus-visible with :hover. This is the ring on top of that, one
+     treatment for every journey control, matching the static journey. The
+     hero region is untouched — its own focus debt is recorded, not patched
+     from here. */
+  .j-nav a:focus-visible,
+  .j-hot:focus-visible,
+  .j-card :is(a, button):focus-visible,
+  .j-footer :is(a, button):focus-visible,
+  .j-foot-cue:focus-visible {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .j-card-x:is(:hover, :focus-visible) { color: var(--gold-bright); }
+  .j-card-link:is(:hover, :focus-visible) { border-bottom-color: var(--gold-bright); }
+
+  @media (max-width: 900px) {
+    .j-footer { padding: 1.8rem 6vw 1.6rem; }
+    .j-foot-cols { gap: 0.2rem 1.8rem; }
+    .j-foot-links a { min-height: 44px; }   /* PL-1.4 touch target */
+    .j-nav { gap: 1.1rem; }
+    .j-navlink { font-size: 0.62rem; letter-spacing: 0.14em; }
+    .j-block { max-width: none; width: 88vw; }
+    .j-block.pos-left, .j-block.pos-upperleft { left: 6vw; }
+    .j-block.pos-bottom, .j-block.pos-topcentre { left: 50%; }
+    .j-card { right: 50%; transform: translate(50%, -50%); }
+  }
+
+  /* ============================================================
+     PL-1.4 — 44px minimum touch targets.
+
+     "Decorative density may drop to preserve 44px minimum touch targets" —
+     but the targets themselves are grown WITHOUT growing the artwork. Each
+     control gets a transparent pseudo-element centred on it, sized to
+     max(its own box, 44px), so the hit area reaches the minimum while the
+     type, the pill and the dot render at exactly the size they were
+     designed at. `max()` means a control that is already big enough is not
+     given a hit area larger than itself, which would steal presses from
+     whatever sits next to it.
+
+     Same media condition as the bottom sheet (core/ui.js `sheetQuery`), so
+     the touch form and the touch targets are never out of step.
+     ============================================================ */
+  @media (pointer: coarse), (max-width: 720px) {
+    /* Only the controls that are `static` by default need a containing block.
+       .j-navlink is already relative, .j-hot and .j-card-x are absolute and
+       .j-foot-cue is fixed — a blanket `position: relative` here would
+       RESET those (equal specificity, later in the sheet) and, in the bottom
+       sheet, turn the close button into a full-width flex item. */
+    .j-foot-links a, .j-foot-note a, .j-card-link { position: relative; }
+    .j-navlink::before,
+    .j-hot::before,
+    .j-card-x::before,
+    .j-card-link::before,
+    .j-foot-cue::before,
+    .j-foot-links a::before,
+    .j-foot-note a::before {
+      content: "";
+      position: absolute;
+      left: 50%; top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+      /* hit area only: it must never paint, and it must never sit above the
+         control's own text for selection purposes */
+      background: none;
+      pointer-events: auto;
+    }
+    /* --- the chapter nav gets its own band ---------------------------------
+       The hero's <nav> is one flex row: wordmark | chapter nav | 2RP+Discord.
+       At 375px those three add up to ~556px, so the row overflowed and the
+       LAST chapter entry (Owned) plus both hero CTAs sat off-screen entirely
+       — an unreachable control, before any question of how big it is.
+
+       Lifting only `.j-nav` out of the flow fixes both halves at once: the
+       hero row falls back to wordmark + CTAs (~315px, fits), and the chapter
+       entries get a full-width line of their own with room for real targets.
+       The hero's own markup and rules are untouched — this moves the journey's
+       element, which is the one this layer owns. */
+    .j-nav {
+      position: fixed;
+      left: 0; right: 0;
+      top: 4.6rem;
+      z-index: 2;
+      gap: 0;
+      justify-content: center;
+    }
+    .j-navlink { padding: 0 0.6rem; }
+    /* the underline sits below the enlarged area, not inside it */
+    .j-navlink::after { left: 0.6rem; bottom: -0.5rem; }
+    .j-navlink.active::after { right: 0.6rem; }
+    .j-navlink:not(.active)::after { right: calc(100% - 0.6rem); }
+    /* the footer's link rows need the vertical room the bigger targets take */
+    .j-foot-links { gap: 0.35rem 1.6rem; }
+    .j-foot-cue { padding: 0.75rem 1rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .j-nav, .j-navlink, .j-navlink::after, .j-hot, .j-hot-dot, .j-card { transition: none; }
+    /* the sheet's own transition is more specific than the reset above, so it
+       is named here: reduced motion SNAPS — the drag still follows the finger
+       (direct manipulation), the release does not animate. */
+    .j-card.sheet { transition: none; }
+    /* W4-E: the footer's own reveal is JS-driven and already instant under
+       reduced motion; these are the hover/focus tweens on the same surfaces. */
+    .j-foot-links a, .j-foot-note a, .j-foot-cue, .j-foot-cue-arr { transition: none; }
+    .j-foot-cue:is(:hover, :focus-visible) .j-foot-cue-arr { transform: translateY(-2px) rotate(45deg); }
+  }

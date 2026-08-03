@@ -1676,7 +1676,8 @@ registerTrackers(ctx);
 // destructuring of groundGroup/stemGroup/mushroom/scene children is
 // order-sensitive) and after all animator registrations above, so the
 // 'intro-draw' animator lands last in the hero's registration order.
-setupIntro(ctx);
+// Returns the intro handle ({ accelerate }) exposed on the public API (M5).
+const introApi = setupIntro(ctx);
 
 const clock = new THREE.Clock();
 let _prevT = 0;
@@ -1758,6 +1759,31 @@ addAnimator('perf-governor', (t, dt) => {
   }
 });
 
+/** Input policy (M5 — replaces the page's DOM event shield, which was the
+ *  same reach-in class as buffer overwrites, aimed at input). Two modes:
+ *
+ *    'free'    — the library default: OrbitControls fully interactive, the
+ *                original hero-page behaviour (?free=1 keeps this).
+ *    'journey' — user orbit/zoom/pan are off AT THE SOURCE
+ *                (enableRotate/enableZoom/enablePan): OrbitControls' own
+ *                handlers bail before claiming the gesture or calling
+ *                preventDefault, so wheel/drag over the canvas fall through
+ *                to the page (the journey's scroll surface), while the tap
+ *                handler — a sibling listener with its own <=400 ms / <=7 px
+ *                tap discrimination, the same numbers the old shield
+ *                replayed — still receives every pointer pair, and DOM
+ *                links/nav are untouched.
+ *
+ *  Deliberately NOT controls.enabled: the director toggles that as camera
+ *  ownership moves (journey/director.js), and the two concerns must stay
+ *  orthogonal — policy gates USER gestures whichever layer owns the camera. */
+function setInputPolicy(mode) {
+  const free = mode !== 'journey';
+  controls.enableRotate = free;
+  controls.enableZoom = free;
+  controls.enablePan = free;
+}
+
 // ---- easing used by the view tween below ----
 function _cubicInOut(x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
 
@@ -1835,6 +1861,12 @@ return {
   /** Register a per-frame callback `fn(t, dt)` run every frame before the composer renders;
    *  returns an unregister function. This is the hook a scroll-driven camera dive should use. */
   addAnimator,
+  /** Input policy: 'journey' disables user orbit/zoom/pan at the source (taps and DOM stay
+   *  live); 'free' (default) is the fully interactive hero behaviour. See setInputPolicy above. */
+  setInputPolicy,
+  /** The entry choreography handle (organism/intro.js): `intro.accelerate({ totalMs })`
+   *  fast-forwards a running intro through its own real math via the clock skew. */
+  intro: introApi,
   /** Freeze the frame loop's shared clock (M5, ?capture=): every animator
    *  sees t = `seconds` and dt = 0 until released, and the TAA jitter holds
    *  one sample, so the whole scene — sway, drift, shimmer, chapter phases —

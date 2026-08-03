@@ -131,6 +131,9 @@ export function setupIntro(ctx) {
 
   // ?introat=P (0..1) freezes the drawing at that progress for frame inspection
   const _introAt = new URLSearchParams(location.search).get('introat');
+  // Wall-clock moment the live intro started; stays null when the intro is
+  // skipped or frozen, which is what makes accelerate() a safe no-op there.
+  let introT0 = null;
   if (_introAt !== null) {
     const p = Math.min(1, Math.max(0, parseFloat(_introAt) || 0));
     drawU.value = p;
@@ -141,9 +144,9 @@ export function setupIntro(ctx) {
     // Wall clock, not accumulated rAF dt: the page's CSS choreography runs on
     // the wall clock, and rAF stops entirely in a hidden tab — accumulating dt
     // would let the text finish while the specimen was still being drawn.
-    const t0 = performance.now();
+    introT0 = performance.now();
     addAnimator('intro-draw', () => {
-      const lived = (performance.now() - t0) / 1000;
+      const lived = (performance.now() - introT0) / 1000;
       if (lived >= intro) {
         // Don't snap to the parked value: glide uProg from 1 to 2 over 0.7s
         // so the stem's buried joint (held dark by the lid while drawing)
@@ -163,4 +166,45 @@ export function setupIntro(ctx) {
       shellsAt(lived / intro);
     });
   }
+
+  /* ---- accelerate(): the intro fast-forward (ride-through #4) -----------
+     Scrolling during the entry choreography must never be a locked door.
+     The grow-in above runs on the wall clock (performance.now() read live
+     each frame), so SKEWING THE CLOCK fast-forwards the ENTIRE intro
+     through its own real math — growth, ember release, shell restore — in
+     ~0.5 s. The skew is a constant offset once the ramp settles, so
+     performance.now() stays monotonic for every later consumer. This
+     mechanism lived as an inline script in index.html until the M5 shell
+     move; the intro owns its own clock trick now — the page merely wires
+     the trigger events and its CSS half (the body.intro-fast compression
+     classes ride with the hero stylesheet).
+
+     `totalMs` is the PAGE's total choreography length (scene grow-in plus
+     the callout boots plus the caller's settle margin) — the page knows
+     that number; the intro only knows its own seconds, hence the argument.
+     Returns true when the skew engaged; false when there is nothing to
+     accelerate (intro skipped/frozen/finished, or < 200 ms left — "intro
+     basically done anyway"), in which case the caller must not compress
+     its CSS half either. */
+  let accelerated = false;
+  function accelerate({ totalMs = intro * 1000 } = {}) {
+    if (accelerated || introT0 === null) return false;
+    const orig = performance.now.bind(performance);
+    const lived = orig() - introT0;
+    const remaining = Math.max(0, totalMs - lived);
+    if (remaining < 200) return false;
+    accelerated = true;
+    let skew = 0;
+    performance.now = () => orig() + skew;
+    const RAMP_MS = 480;
+    const rampT0 = orig();
+    (function ramp() {
+      const f = Math.min((orig() - rampT0) / RAMP_MS, 1);
+      skew = remaining * (f * f * (3 - 2 * f));   // smoothstep ramp — same feel as shipped
+      if (f < 1) requestAnimationFrame(ramp);
+    })();
+    return true;
+  }
+
+  return { accelerate };
 }

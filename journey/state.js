@@ -36,9 +36,8 @@ export function createJourneyState({ onNavigate = null, onFlightCancel = null } 
     flight = null;
     if (onFlightCancel) onFlightCancel();
   }
-  // Manual scroll intent cancels a nav flight immediately (GB-3.5). These are
-  // capture-phase so they fire even though the input shield stops propagation
-  // to the canvas.
+  // Manual scroll intent cancels a nav flight immediately (GB-3.5). These
+  // are capture-phase so they fire before any stopPropagation downstream.
   window.addEventListener('wheel', cancelFlight, { capture: true, passive: true });
   window.addEventListener('touchmove', cancelFlight, { capture: true, passive: true });
   window.addEventListener('keydown', (e) => {

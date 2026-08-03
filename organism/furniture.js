@@ -2,8 +2,8 @@
 // glow behind the hero callouts (§11) and the tracker projection that pins
 // the callout DOM to world anchors. Split out of the createScene closure at
 // merge step M2 with zero behaviour change; shared state arrives through
-// `ctx` (built in organism.js). The page's own inline shield / fast-forward
-// scripts are NOT here — they move at M5.
+// `ctx` (built in organism.js). The page's entry wiring lives in main.js;
+// the intro fast-forward is intro.js's accelerate() (M5).
 import * as THREE from 'three';
 
 // =====================================================================
