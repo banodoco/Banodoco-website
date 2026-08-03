@@ -1273,3 +1273,73 @@ the same states backward and re-merges into the one stream.
   Scrubbed/placed returns are byte-exact; only the flyTo('mission') path fails,
   on the old build too (old pose (2.77,19.7,-7.59), new (8.9,15.6,1.89)).
   Flagged as a separate task (camera handback in director/hero interplay).
+
+# FINAL UNIFICATION — GPU spore layer deleted (2026-08-03 evening, fable)
+
+Hannah's last two-system catch: at the rest approach the build still
+crossfaded her real stream (the hero's 4,200 takeover-steered dots) into the
+chapter's separate 5,100-dot GPU detail layer — same spot, visibly different
+stream (size cohorts, uHeatA/uHeatB palette, its own pearl cadence and
+sheath). "It stays in the same spot, but it switches to a completely
+different stream." Sanctioned fix per 15-merge-and-architecture.md §3: delete
+the layer from the live path; the hero's own dots carry the stream from
+Mission through the rest, permanently; rest richness is a DECORATION of the
+same dots, never a replacement.
+
+## Deleted (chapters/inspire.js)
+
+- §4 in full: the 5,100-spore BufferGeometry, sporeMat (staged phase shader,
+  uHeatA/uHeatB palette, its own size cohorts/knots/sheath), the THREE.Points,
+  SPORE_FULL/SPORE_TIER2 and counts.spores (setTier is a documented no-op;
+  the chapter now adds zero particles of its own — Points remaining in the
+  group are only the 3 bead strings, 27+32+24 = 83).
+- inspire-takeover.js: the (1 - det) plume-brightness hand-back — converted
+  dots no longer dim at the rest; they ARE the rest.
+
+## Ported (inspire-takeover.js — brightness only, no new geometry)
+
+- Knot-pearl cadence at FULL strength on the converted dots' feed (tk.pw ->
+  inspire-ambient F = f*(1-cv) + pw): kn = pow(.5+.5*sin(h*7.3 + sp*1.9
+  - t*.55), 4), per-exit gains EXITS[].knot, envelope x (1 + 0.28*core +
+  1.15*knotV), knotV = knot*kn*(0.30 + 0.70*core) — the deleted shader's
+  exact pearl math, expressed as brightness modulation of the same dots.
+  Pure in (eff, time); reverse-coherent by construction.
+- Core cohort (~32%, 0.55..1.0) with scatter tightening (tight = 1-0.70*core
+  on the two SHEATH scatter terms) so each braid resolves as a sinuous core
+  inside the loose sheath — same distribution as the deleted shader. Drawn
+  from a SEPARATE RNG stream (makeRng(3187)): every previously approved
+  per-particle assignment (seed 9127 draw order) is byte-identical.
+- psize NOT touched (judged unnecessary: pearls + ribbons carry the rest).
+
+## Kept
+
+- Core ribbons (9 LineSegments): draw-on unchanged, still gated on
+  uDet = eff-saturation x restProx — now a sharpening of the still-lit
+  converted-dot braid instead of an arriving GPU layer. Shared uniforms
+  (uLean/uRev/uCoh/uDet/uKnot/uHeatA/uHeatB) are standalone objects owned by
+  inspire.js now that sporeMat is gone.
+- journey.js setRestProx call site UNCHANGED (not no-oped): restProx is the
+  ribbons' condensation gate. journey.js was not edited.
+- All furniture (filaments/beads/wisps/rim links/streak), labels, copy,
+  hover/selection/trace-back, D16 staging, delta rim-walks BY THE DOTS.
+
+## Verified (headless CDP, capture.py machinery, 1440x900 + 430x932)
+
+- Fine scrub 0 -> 0.26 -> 0 (0.005 steps, parked frames through the old swap
+  window .240/.248/.252/.256/.258/.26) and a second 0.0025-step traversal:
+  at every point ONE stream with one identity. Parked in the final ~2 deg the
+  frame only gains ribbon condensation + pearls running along the SAME dots —
+  the before-build A/B (git worktree at 04a7d21, same harness) shows the old
+  identity flip to a whiter, denser second stream at .248 -> .256; the new
+  build shows none.
+- Rest frame honest verdict: same composition (three labelled braids, cores,
+  streak, copy; portrait chips legible), reads slightly sparser and a touch
+  warmer than the deleted layer's rest (4,200 vs 5,100, hero palette instead
+  of uHeatB near-white) — the sanctioned trade; pearls + ribbons carry the
+  richness. pwMax at rest ~3.2 (healthy pearl overdrive).
+- Checksums: boot 7789.45663; after forward+reverse fine scrub AND after the
+  full traversal AND after a hero->connect->hero pass: sum 7789.45663,
+  elementwise diff count 0 (byte-exact), every run.
+- Connect entry: p 0.49 chapter=connect composition intact; return clean.
+- Zero console errors / unhandled rejections across all runs (error +
+  rejection + console.error hooks injected before load).

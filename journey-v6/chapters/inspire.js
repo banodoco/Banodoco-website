@@ -21,16 +21,17 @@
 // reveal, time) so reverse scroll plays the transformation backward:
 //   1. arrival ramps (see ARR below) make each exit's reveal continuous in
 //      scroll position instead of stepping at the T1 seam;
-//   2. SAME-PARTICLE TAKEOVER (Hannah's fifth note, 2026-08-03 — the
-//      definitive rebuild, inspire-takeover.js): the transition is performed
-//      by the hero's OWN 4,200 shed dots. Every prior round still crossfaded
-//      two particle systems; now the takeover steers the actual dots onto the
-//      braid paths (a CPU port of this file's staged shader math), and THIS
-//      file's 5,100-spore GPU system no longer participates in the transition
-//      at all — it stays dark (uDet = 0) until the conversion has saturated
-//      near the rest, then fades in CO-LOCATED (same staged math, same gates)
-//      to supply the approved rest look's full density and detail while the
-//      converted dots ease their plume brightness back out on the same curve;
+//   2. SAME-PARTICLE TAKEOVER (Hannah's fifth note, 2026-08-03; completed by
+//      the FINAL UNIFICATION the same evening): the whole leg — transition
+//      AND rest — is performed by the hero's OWN 4,200 shed dots
+//      (inspire-takeover.js, a CPU port of the staged braid math). The
+//      5,100-spore GPU detail layer that used to fade in on the rest
+//      approach is DELETED: even co-located and det-gated it was still a
+//      swap to a visibly different stream ("it stays in the same spot, but
+//      it switches to a completely different stream"). The rest richness is
+//      now a DECORATION of the same dots — the knot-pearl cadence rides the
+//      takeover's brightness feed at full strength, core cohort included —
+//      plus the det-gated core ribbons, which grow and never replace;
 //   3. inspire-ambient.js dims the hero shed as-and-where the structured
 //      plume brightens — now per particle via the takeover's feed — and
 //      restores it byte-exactly at p = 0.
@@ -185,7 +186,9 @@ export function createInspire(sceneApi) {
 
   const glowTex = makeGlowTexture();
   const streakTex = makeStreakTexture();
-  const counts = { sourceSegs: 0, wispSegs: 0, beads: 0, spores: 0, coreSegs: 0, rimSegs: 0 };
+  // counts.spores is gone with the GPU layer (final unification): the
+  // chapter adds no particles of its own — the hero's 4,200 dots are it.
+  const counts = { sourceSegs: 0, wispSegs: 0, beads: 0, coreSegs: 0, rimSegs: 0 };
 
   // per-exit fade drivers (sequential reveal). The old 4th channel (backlit
   // gill band) is GONE per D16: it was a self-igniting filler for the long
@@ -496,335 +499,33 @@ export function createInspire(sceneApi) {
      ================================================================ */
 
   /* ================================================================
-     4. SPORES — staged GPU phase shader on real anatomy.
-        Round-robin across the three plumes (a Tier-2 drawRange prefix
-        stays plume-balanced, per the donor's lesson).
+     4. (DELETED, final unification — Hannah, 2026-08-03 evening): the
+        5,100-spore GPU detail layer is GONE from the live path. Even
+        gated to the last ~2 degrees before the rest, its fade-in was
+        still a swap: the hero's real stream (4,200 takeover-steered
+        dots) crossfading into a second, visibly different stream —
+        different size cohorts, uHeatA/uHeatB palette, its own
+        knot-pearl cadence and sheath. "It stays in the same spot, but
+        it switches to a completely different stream." Per the merge
+        plan (15-merge-and-architecture.md section 3) the hero's own
+        dots now carry the stream from Mission through the rest,
+        permanently; the rest-pose richness is achieved by DECORATING
+        those same dots — the knot-pearl cadence rides the takeover's
+        per-particle brightness feed (inspire-takeover.js, full
+        strength now, core cohort included) — never by replacing them.
+        The rest frame reads slightly sparser (4,200 vs 5,100):
+        sanctioned; compensated by pearl brightness and the ribbons.
+        The core ribbons (4b) STAY — they draw on visibly and swap
+        nothing — so the uniforms the two materials used to share are
+        now owned here, standalone.
      ================================================================ */
-  const SPORE_FULL = 5100;
-  const SPORE_TIER2 = 2550;
-  counts.spores = SPORE_FULL;
-  const sporeGeo = (() => {
-    const n = SPORE_FULL;
-    const position = new Float32Array(n * 3);   // origin point (between gills)
-    const aRim = new Float32Array(n * 3);       // (rimR, rimY, rimAz)
-    const aRise = new Float32Array(n * 4);      // (riseTop, lean, curl, strandPhase)
-    const aCycle = new Float32Array(n * 4);     // (period, phase0, size, tone)
-    const aMisc = new Float32Array(n * 4);      // (plume, seed, coreness, azSrc)
-    for (let i = 0; i < n; i++) {
-      const p = i % 3;
-      const spec = EXITS[p];
-      // destination lane: snapped between real gill channels, inner-to-mid
-      // skirt of the RELEASE sector (this shapes the approved braid entry)
-      const lane = Math.round((gauss() * 0.34) / CHANNEL) * CHANNEL
-                 + (rand() - 0.5) * CHANNEL * 0.4;
-      const a = spec.az + lane;
-      const u0 = 0.48 + Math.pow(rand(), 0.8) * 0.34;
-      // RIVER DELTA: the origin is NOT the release sector. Plume 0 (ArtCompute)
-      // is born in its own sector — which IS the hero's one visible stream —
-      // and the migrating plumes (Arca, 2RP) are born in that SAME source
-      // sector, on their own gill lanes, and walk the rim out to `a`.
-      const srcLane = Math.round((gauss2() * 0.34) / CHANNEL) * CHANNEL
-                    + (rand2() - 0.5) * CHANNEL * 0.4;
-      const aSrc = p === 0 ? a : EXITS[0].az + srcLane;
-      const o = capUnderPt(u0, aSrc);
-      o.y -= 0.015 + rand() * 0.05;
-      position[i * 3] = o.x; position[i * 3 + 1] = o.y; position[i * 3 + 2] = o.z;
-
-      const rim = capUnderPt(1.0, a);
-      const rr = rimRad(a) + 0.03 + rand() * 0.10;
-      aRim[i * 3] = rr;
-      aRim[i * 3 + 1] = rim.y - 0.02 + rand() * 0.06;
-      aRim[i * 3 + 2] = a;
-
-      const isDrop = rand() < 0.15;
-      const rise = spec.riseMin + rand() * (spec.riseMax - spec.riseMin);
-      aRise[i * 4] = isDrop ? -(0.5 + rand() * 1.1)      // sink below the rim
-                            : rise;                       // rise above it
-      aRise[i * 4 + 1] = spec.lean * (0.8 + rand() * 0.45);
-      // each plume is a braid of THREE winding cores, not a uniform tube:
-      // particles bunch onto one of three strands (quantized phase + curl),
-      // which is what makes the braid resolve at viewing distance
-      const strand = i % 9 < 3 ? 0 : (i % 9 < 6 ? 1 : 2);
-      aRise[i * 4 + 2] = (strand - 1) * 0.30 + gauss() * 0.09;  // rim curl per core
-      aRise[i * 4 + 3] = strand * 2.094 + gauss() * 0.3;        // braid phase per core
-
-      aCycle[i * 4] = 7.0 + rand() * 8.5;                 // period: many velocities
-      aCycle[i * 4 + 1] = rand();
-      // size cohorts: dust / mid / a few bright knots
-      const szR = rand();
-      aCycle[i * 4 + 2] = szR < 0.75 ? 0.026 + rand() * 0.032
-                        : szR < 0.96 ? 0.060 + rand() * 0.035
-                        : 0.090 + rand() * 0.050;
-      aCycle[i * 4 + 3] = Math.min(1, spec.tone + gauss() * 0.10 + (szR > 0.96 ? 0.2 : 0));
-
-      aMisc[i * 4] = p;
-      aMisc[i * 4 + 1] = rand() * 1000;
-      // W4-A gap a: a core cohort rides TIGHT on its winding strand — reduced
-      // scatter, hotter, carrying the knot cadence — so each braid resolves as
-      // a defined sinuous core (the approved still) instead of a soft column.
-      // The loose majority keeps the turbulent sheath around it.
-      const coreR = rand();
-      aMisc[i * 4 + 2] = coreR < 0.32 ? 0.55 + rand() * 0.45 : 0.0;
-      aMisc[i * 4 + 3] = aSrc;
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(position, 3));
-    geo.setAttribute('aRim', new THREE.BufferAttribute(aRim, 3));
-    geo.setAttribute('aRise', new THREE.BufferAttribute(aRise, 4));
-    geo.setAttribute('aCycle', new THREE.BufferAttribute(aCycle, 4));
-    geo.setAttribute('aMisc', new THREE.BufferAttribute(aMisc, 4));
-    return geo;
-  })();
-
-  const sporeMat = new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: { value: 0 },
-      uMap: { value: glowTex },
-      uLean: { value: 1.0 },
-      uRev: { value: new THREE.Vector3(0, 0, 0) },
-      // per-exit DETAIL fade (same-particle takeover): this system is the
-      // rest-density detail layer now, dark until conversion saturates
-      uDet: { value: new THREE.Vector3(0, 0, 0) },
-      uCoh: { value: new THREE.Vector3(0, 0, 0) },
-      // per-plume knot-cadence gain (W4-A gap a), from the anatomy map
-      uKnot: { value: new THREE.Vector3(EXITS[0].knot, EXITS[1].knot, EXITS[2].knot) },
-      uHeatA: { value: heat(0.55, new THREE.Color()).clone() },
-      uHeatB: { value: heat(0.92, new THREE.Color()).clone() },
-      fogNear: { value: FOG_NEAR },
-      fogFar: { value: FOG_FAR },
-    },
-    vertexShader: `
-      #define MIN_PT 1.7
-      attribute vec3 aRim;    // rimR, rimY, rimAz
-      attribute vec4 aRise;   // riseTop(+)/sink(-), lean, curl, strandPhase
-      attribute vec4 aCycle;  // period, phase0, size, tone
-      attribute vec4 aMisc;   // plume, seed, coreness, azSrc
-      uniform float uTime;
-      uniform float uLean;
-      uniform vec3 uRev;
-      uniform vec3 uDet;
-      uniform vec3 uCoh;
-      uniform vec3 uKnot;
-      varying float vAlpha;
-      varying float vTone;
-      varying float vFogDepth;
-      varying float vShrink;
-      float hash(float n) { return fract(sin(n) * 43758.5453); }
-      // real rim anatomy in-shader (byte-mirrors core/anatomy.js rimRad and
-      // capUnderPt(1, a)): the delta migration must HUG the actual rim as its
-      // azimuth changes, not a circle of constant radius
-      float rimRadG(float a) {
-        return 2.35 * (1.0 + 0.09 * cos(a - 3.6)
-                           + 0.045 * cos(2.0 * a - 1.1)
-                           + 0.018 * sin(3.0 * a + 4.1));
-      }
-      float rimYG(float a) {
-        float fold = exp(-pow(atan(sin(a - 5.3), cos(a - 5.3)) / 0.35, 2.0));
-        float yoff = -0.16 * cos(a - 3.6) + 0.05 * cos(2.0 * a + 0.7) - 0.13 * fold;
-        float droop = -(0.11 + 0.05 * cos(a - 3.6));
-        return 3.15 + 0.03 + yoff + droop - 0.11;
-      }
-
-      void main() {
-        float plume = aMisc.x;
-        float seed = aMisc.y;
-        float core = aMisc.z;
-        float rev = plume < 0.5 ? uRev.x : (plume < 1.5 ? uRev.y : uRev.z);
-        float det = plume < 0.5 ? uDet.x : (plume < 1.5 ? uDet.y : uDet.z);
-        float coh = plume < 0.5 ? uCoh.x : (plume < 1.5 ? uCoh.y : uCoh.z);
-        float knotG = plume < 0.5 ? uKnot.x : (plume < 1.5 ? uKnot.y : uKnot.z);
-        float settle = 1.0 - 0.4 * coh;
-        float knotV = 0.0;      // knot-cadence brightness, set in the rise stage
-
-        float t = fract(uTime / aCycle.x + aCycle.y);
-        float h1 = hash(seed * 12.9898);
-        float h2 = hash(seed * 78.233 + 1.0);
-        float rimR = aRim.x, rimY = aRim.y, az0 = aRim.z;
-        float isDrop = step(aRise.x, 0.0);
-        float riseTop = abs(aRise.x);
-        float lean = aRise.y, curl = aRise.z, sp = aRise.w;
-
-        // ---- RIVER DELTA (Hannah's third note): plumes 1 and 2 are MIGRANTS.
-        // They are born in the source sector (azSrc, the one stream the hero
-        // shows) and walk the rim to az0. The walk front is a pure function of
-        // this plume's reveal: rev 0..0.55 extends the current around the rim,
-        // rev 0.55..1 draws the rise on upward at the release point. Both
-        // gates saturate at rev = 1, so the approved rest braid is untouched
-        // and reverse scroll re-merges the delta into the one stream.
-        float azSrc = aMisc.w;
-        float migF = step(0.5, plume);
-        float mig = smoothstep(0.0, 0.55, rev);                 // walk-front extent
-        float rg = migF > 0.5 ? smoothstep(0.55, 1.0, rev) : 1.0; // rise draw-on
-        float s1 = mix(0.16, 0.10, migF);
-        float s2 = mix(0.40, 0.24, migF);
-        float azS2 = azSrc + (h1 - 0.5) * 0.05;                 // lateral-stage exit heading
-        float span = (az0 + curl) - azS2;                       // signed walk, incl. braid entry
-        float circleLen = (0.10 + h2 * 0.22) * mix(1.0, 0.62, coh);
-        float s3 = migF > 0.5
-          ? s2 + 0.12 + 0.10 * abs(span) + (h2 - 0.5) * 0.06
-          : min(0.86, s2 + circleLen);
-
-        vec3 p;
-        float alpha;
-        // cylindrical about the stipe axis
-        float r, y, az;
-        float xLean = 0.0, zLean = 0.0;
-        if (t < s1) {
-          // born between the gills: a slow shimmer in place, drifting down a
-          // hair. Migrants shimmer a touch dimmer — three plumes' worth of
-          // births now share the ONE source wedge, and it must glow, not blow out.
-          float u0 = t / s1;
-          r = length(position.xz) + sin(uTime * 0.5 + seed) * 0.03 * settle;
-          y = position.y - 0.05 * u0 + sin(uTime * 0.6 + seed * 1.3) * 0.015;
-          az = atan(position.z, position.x) + sin(uTime * 0.35 + seed * 2.1) * 0.012;
-          alpha = smoothstep(0.0, 0.45, u0) * 0.85 * mix(1.0, 0.72, migF);
-        } else if (t < s2) {
-          // lateral travel between the lamellae toward the margin — migrants
-          // head for the SOURCE sector's rim (their walk starts there), the
-          // resident plume for its own release rim, exactly as approved
-          float u1 = smoothstep(0.0, 1.0, (t - s1) / (s2 - s1));
-          float rT = migF > 0.5 ? rimRadG(azSrc) + 0.05 : rimR;
-          float yT = migF > 0.5 ? rimYG(azSrc) + (rimY - rimYG(az0)) : rimY;
-          r = mix(length(position.xz), rT, u1);
-          y = mix(position.y - 0.05, yT, u1) - 0.10 * sin(u1 * 3.14159) ;
-          az = mix(atan(position.z, position.x) + (h1 - 0.5) * 0.05 * u1,
-                   azS2, u1 * migF);
-          alpha = 0.95 * mix(1.0, 0.72, migF);
-        } else if (t < s3) {
-          float u2 = (t - s2) / max(s3 - s2, 1e-4);
-          if (migF > 0.5) {
-            // RIM MIGRATION — the delta current. The particle walks the real
-            // rim from the source sector to its release sector, clamped at
-            // the reveal's advancing front: the current visibly EXTENDS around
-            // the rim as the orbit progresses (and retreats in reverse).
-            // Travelling brightness pulses run with the flow so the current
-            // reads as moving spores, not a static string.
-            float w = mix(u2, u2 * u2 * (3.0 - 2.0 * u2), 0.35);
-            float wFront = clamp(mig * 1.12 - h1 * 0.10, 0.0, 1.0);
-            float we = min(w, wFront);
-            az = azS2 + span * we;
-            float offR = rimR - rimRadG(az0);
-            float offY = rimY - rimYG(az0);
-            float bobE = sin(3.14159 * we);       // wobble fades at both ends
-            r = rimRadG(az) + mix(0.05, offR + 0.05, we)
-              + sin(we * 9.0 + sp) * 0.07 * settle * bobE;
-            y = rimYG(az) + offY + 0.10 * smoothstep(0.72, 1.0, we)
-              + sin(we * 12.0 + sp * 1.3 + uTime * 0.4) * 0.05 * settle * bobE;
-            float pulse = pow(0.5 + 0.5 * sin(we * 7.0 - uTime * 0.9 + sp), 2.0);
-            alpha = (0.55 + 0.45 * pulse)
-                  * (1.0 - smoothstep(0.0, 0.10, w - wFront)); // the current's live tip
-          } else {
-            // resident plume: curl around the rim margin in local airflow
-            az = az0 + curl * u2 * mix(1.0, 0.5, coh);
-            float loops = 1.0 + h2 * 1.2;
-            r = rimR + 0.05 + sin(u2 * 3.14159 * loops + sp) * 0.10 * settle;
-            y = rimY + sin(u2 * 3.14159 * loops * 0.7 + 1.0 + sp) * 0.08 * settle + 0.10 * u2;
-            alpha = 1.0;
-          }
-        } else {
-          // braided rise (or sinking drop), carried by the +x breeze
-          float u3 = (t - s3) / max(1.0 - s3, 1e-4);
-          float eu = smoothstep(0.0, 0.10, u3);
-          if (isDrop > 0.5) {
-            y = rimY + 0.10 - u3 * u3 * riseTop;
-            az = az0 + curl + (h1 - 0.5) * 0.3 * u3;
-            r = rimR + 0.05 + u3 * (0.3 + h2 * 0.4);
-            alpha = eu * (1.0 - smoothstep(0.45, 0.95, u3)) * 0.5;
-          } else {
-            float h = pow(u3, 0.6 + h1 * 0.5);           // many rise velocities
-            y = rimY + 0.10 + h * riseTop;
-            // braid: coherent winding cores, jitter growing with height.
-            // Core-cohort particles (W4-A gap a) damp their own wander and
-            // scatter hard, so the winding core reads as a defined sinuous
-            // line inside the loose sheath the majority still carries.
-            // SHEATH is the W5 grade-unification taste knob (W4-A's open
-            // item): the approved still's sheaths are tighter columns, so
-            // the per-particle scatter is narrowed. ONLY the scatter terms
-            // carry it - the winding terms are shared verbatim with the
-            // core-ribbon shader (4b), which must keep threading the braid.
-            #define SHEATH 0.72
-            float tight = mix(1.0, 0.30, core);
-            az = az0 + curl
-               + (0.13 * sin(h * 5.1 + sp) + 0.07 * sin(h * 9.7 + sp * 2.3 + uTime * 0.21)) * settle
-               + 0.03 * sin(uTime * 0.13 + seed * 3.7) * u3 * tight * SHEATH;
-            r = rimR + 0.05
-              + (0.10 * sin(h * 4.3 + sp * 1.7) + 0.05 * sin(uTime * 0.17 + seed * 2.3)) * settle
-              + (h1 - 0.5) * 0.09 * (0.4 + h) * tight * SHEATH  // scatter around the core
-              + h * 0.14;
-            // uLean damps the +x breeze lean while the camera crosses the +x
-            // sector, so plume cores never stream along the view ray.
-            xLean = uLean * lean * h * h * riseTop * 0.62;
-            zLean = uLean * lean * h * h * riseTop * 0.105;
-            // knot cadence: hot pearls travelling UP the core with the flow
-            // (phase moves with +uTime along +h), strongest on core particles,
-            // per-plume gain from the anatomy map (Arca hottest)
-            float kn = pow(0.5 + 0.5 * sin(h * 7.3 + sp * 1.9 - uTime * 0.55), 4.0);
-            knotV = knotG * kn * (0.30 + 0.70 * core);
-            alpha = eu * (1.0 - smoothstep(0.62, 1.0, u3));
-          }
-          // migrating plumes: the rise (and its drop cohort) draws on UPWARD
-          // only once the current has arrived (rev's second half) — growing
-          // from the rim exactly like the core ribbons, never appearing
-          // full-height. rg = 1 for the resident plume, where the gate is
-          // inert (lead 1.12 clears every u3); at rev = 1 it is inert for all.
-          float rl = rg * 1.12;
-          alpha *= 1.0 - smoothstep(max(rl - 0.10, 0.0), rl + 0.001, u3);
-        }
-        p = vec3(cos(az) * r + xLean, y, sin(az) * r + zLean);
-
-        // ---- SAME-PARTICLE TAKEOVER (Hannah's fifth note, 2026-08-03): the
-        // old drift-morph handoff block is GONE. This system no longer
-        // participates in the transition — the hero's own shed dots perform
-        // it (inspire-takeover.js, a CPU port of the staged math above).
-        // Every particle here sits on its staged path at all times and is
-        // gated by uDet, the per-exit DETAIL fade: dark until the takeover's
-        // conversion has saturated near the rest (det rises 0.85 -> 0.995 of
-        // effective reveal), then fading in exactly CO-LOCATED with the
-        // converted dots — same rim entries, same braid math, same gates —
-        // while those dots ease their plume brightness back out on the same
-        // curve. At rev = 1, det = 1: the approved rest look is untouched.
-        // Reverse scroll fades this detail layer out first, handing the braid
-        // back to the converted dots, then the takeover unwinds.
-        //
-        // knot + core brightening applied OUTSIDE the clamp so hot pearls can
-        // exceed the base envelope; heat tone shifts toward near-white at
-        // knots.
-        vAlpha = clamp(alpha, 0.0, 1.0) * det
-               * (1.0 + 0.5 * coh) * (1.0 + 0.28 * core + 1.15 * knotV);
-        vTone = min(1.0, aCycle.w + 0.34 * knotV);
-        vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        vFogDepth = -mv.z;
-        float sz = aCycle.z * (1.0 + 0.25 * coh + 0.30 * knotV) * (300.0 / -mv.z);
-        vShrink = 1.0;
-        if (sz < MIN_PT) { vShrink = (sz * sz) / (MIN_PT * MIN_PT); sz = MIN_PT; }
-        gl_PointSize = sz;
-        gl_Position = projectionMatrix * mv;
-      }
-    `,
-    fragmentShader: `
-      uniform sampler2D uMap;
-      uniform vec3 uHeatA;
-      uniform vec3 uHeatB;
-      uniform float fogNear;
-      uniform float fogFar;
-      varying float vAlpha;
-      varying float vTone;
-      varying float vFogDepth;
-      varying float vShrink;
-      void main() {
-        vec4 t = texture2D(uMap, gl_PointCoord);
-        float fogF = clamp((fogFar - vFogDepth) / (fogFar - fogNear), 0.0, 1.0);
-        vec3 col = mix(uHeatA, uHeatB, vTone);
-        gl_FragColor = vec4(col * t.a * vAlpha * vShrink * fogF * 2.3, 1.0);
-      }
-    `,
-    blending: THREE.AdditiveBlending,
-    transparent: true,
-    depthWrite: false,
-  });
-  const sporePts = new THREE.Points(sporeGeo, sporeMat);
-  sporePts.frustumCulled = false;
-  group.add(sporePts);
+  const uLean = { value: 1.0 };
+  const uRev = { value: new THREE.Vector3(0, 0, 0) };
+  const uCoh = { value: new THREE.Vector3(0, 0, 0) };
+  const uDet = { value: new THREE.Vector3(0, 0, 0) };
+  const uKnot = { value: new THREE.Vector3(EXITS[0].knot, EXITS[1].knot, EXITS[2].knot) };
+  const uHeatA = { value: heat(0.55, new THREE.Color()).clone() };
+  const uHeatB = { value: heat(0.92, new THREE.Color()).clone() };
 
   /* ================================================================
      4b. CORE RIBBONS (W4-A gap a) — one live polyline per winding core
@@ -838,24 +539,26 @@ export function createInspire(sceneApi) {
   const coreMat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
-      uLean: sporeMat.uniforms.uLean,      // shared: setLeanScale damps both,
-                                           // or ribbon and strand would split
+      uLean,      // shared with the takeover's CPU port via setLeanScale,
+                  // or ribbon and converted-dot braid would split
       uOpacity: { value: 0.62 },
-      uRev: sporeMat.uniforms.uRev,        // shared: reveal drives both
-      uCoh: sporeMat.uniforms.uCoh,        // shared: hover coherence too
-      // D16: ribbons join the rest-proximity detail gate. A continuous hot
-      // core igniting mid-orbit was self-ignition (the converted hero dots
-      // carry the braid alone until the rest approach); sharing uDet makes
-      // the ribbon condense co-located WITH the detail layer — a sharpening
-      // of the already-visible braid, never a new structure.
-      uDet: sporeMat.uniforms.uDet,
-      uKnot: sporeMat.uniforms.uKnot,
+      uRev,       // reveal drives ribbon draw-on
+      uCoh,       // hover coherence
+      // D16 + final unification: uDet is the rest-proximity condensation
+      // gate. A continuous hot core igniting mid-orbit was self-ignition
+      // (the converted hero dots carry the braid alone through the orbit);
+      // det-gating makes the ribbon condense on the final approach as a
+      // sharpening of the already-visible, still-lit converted-dot braid —
+      // a growth, never a swap. (The GPU detail layer that used to fade in
+      // on this same gate is deleted; the ribbons are all uDet drives now.)
+      uDet,
+      uKnot,
       uLeanP: { value: new THREE.Vector3(EXITS[0].lean, EXITS[1].lean, EXITS[2].lean) },
       uToneP: { value: new THREE.Vector3(EXITS[0].tone, EXITS[1].tone, EXITS[2].tone) },
       uTrace: { value: 9.0 },
       uTraceAmp: { value: new THREE.Vector3(0, 0, 0) },
-      uHeatA: sporeMat.uniforms.uHeatA,
-      uHeatB: sporeMat.uniforms.uHeatB,
+      uHeatA,
+      uHeatB,
       fogNear: { value: FOG_NEAR },
       fogFar: { value: FOG_FAR },
     },
@@ -1057,20 +760,16 @@ export function createInspire(sceneApi) {
   // animators were registered later in the insertion-ordered Map), and its
   // per-particle conv/brightness feed rides into ambient.update below.
   const takeover = createSporeTakeover(sceneApi);
-  // Per-exit DETAIL fade: the GPU spore system's only remaining gate. It
-  // begins strictly after every conversion curve has saturated (resident by
-  // eff 0.80, migrants by 0.55) and reads exactly 1 at eff = 1, so the
-  // approved rest is byte-the-same math and the fade-in is co-located with
-  // fully-converted dots. Pure in eff: reverse inverts the hand-back.
+  // Per-exit DETAIL fade — FINAL UNIFICATION (Hannah, 2026-08-03 evening):
+  // the 5,100-spore GPU layer this gate used to open is DELETED. Even with
+  // the rest-proximity gating the layer's late fade-in was a swap — the
+  // hero's real stream crossfading into a second, visibly different stream
+  // at the same spot. det survives as the CORE RIBBONS' condensation gate
+  // only: eff-saturation (resident by 0.80, migrants by 0.55) x rest
+  // proximity, so the ribbons sharpen the still-lit converted-dot braid on
+  // the final approach, growing bottom-up, and hand back first in reverse.
+  // The converted dots NO LONGER dim against det — they ARE the rest.
   const det = [0, 0, 0];
-  // Swarm isolation finding (2026-08-03): eff races 0->1 in ~0.02p, so an
-  // eff-only det gate opened the 5,100-spore detail layer WHILE hero dots
-  // were still lit — a measured double-exposure at p 0.17-0.21 ("a second
-  // source appears behind"). det is now ALSO gated on REST PROXIMITY (driven
-  // from journey progress via setRestProx): the hero's own dots alone carry
-  // the braids through the entire orbit; detail sharpens co-located only on
-  // the final approach to the resting pose. Reverse: leaving the rest drops
-  // det first, handing the braids back to the dots before they release.
   let restProx = 0;
   function computeDet() {
     for (let i = 0; i < 3; i++) {
@@ -1193,13 +892,12 @@ export function createInspire(sceneApi) {
     group,
     counts,
     exits: EXITS,
-    sporeGeo,
     /** QA handle: the same-particle takeover (conv/brightness feed, perf). */
     _takeover: takeover,
-    setTier(t) {
-      sporeGeo.setDrawRange(0, t === 2 ? SPORE_TIER2 : SPORE_FULL);
-      counts.spores = t === 2 ? SPORE_TIER2 : SPORE_FULL;
-    },
+    /** Tier hook, kept for API compatibility. The tierable 5,100-spore GPU
+     *  layer is deleted (final unification): the chapter's particles ARE the
+     *  hero's 4,200 shed dots, whose count is the hero's own budget. */
+    setTier() {},
     /** Reveal drive. D16: journey.js still calls this with its legacy
      *  four-channel azimuth ramps (keyed to the OLD 172-deg orbit — b, c and
      *  band never complete on the short leg, and journey.js is outside this
@@ -1212,8 +910,11 @@ export function createInspire(sceneApi) {
       const m = Math.max(a, b, c, band);
       exits[0].target = m; exits[1].target = m; exits[2].target = m;
     },
-    /** Rest proximity 0..1 (pure in journey progress, set by driveInspire):
-     *  gates the GPU detail layer to the final approach of the rest pose. */
+    /** Rest proximity 0..1 (pure in journey progress, set by driveInspire).
+     *  Final unification: with the GPU detail layer deleted this now gates
+     *  ONLY the core ribbons' condensation (uDet) — kept, not no-oped,
+     *  because the ribbons' draw-on belongs to the final approach exactly
+     *  as audited; journey.js's call site is unchanged. */
     setRestProx(v) { restProx = v < 0 ? 0 : v > 1 ? 1 : v; },
     /** Jump the eased fades straight to their targets (review + QA helper —
      *  a hidden tab only runs frames during capture bursts). W4-A: also snaps
@@ -1222,7 +923,7 @@ export function createInspire(sceneApi) {
       for (const ex of exits) ex.fade = ex.target;
       computeEff();                 // camera is already placed by placeAt
       effActive = resolveActive();
-      const c = sporeMat.uniforms.uCoh.value;
+      const c = uCoh.value;
       for (let i = 0; i < 3; i++) {
         c.setComponent(i, (i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0));
         const st = streaks[i];
@@ -1235,9 +936,9 @@ export function createInspire(sceneApi) {
       const [fA, fB] = linkFades();
       rimLinks[0].mat.uniforms.uFade.value = fA;
       rimLinks[1].mat.uniforms.uFade.value = fB;
-      sporeMat.uniforms.uRev.value.set(eff[0], eff[1], eff[2]);
+      uRev.value.set(eff[0], eff[1], eff[2]);
       computeDet();
-      sporeMat.uniforms.uDet.value.set(det[0], det[1], det[2]);
+      uDet.value.set(det[0], det[1], det[2]);
       // takeover positions are pure in (eff, time): the next pumped frame's
       // animator applies them with no temporal easing, so a ?p= capture sees
       // the settled conversion.
@@ -1256,7 +957,7 @@ export function createInspire(sceneApi) {
     /** Damp the breeze lean (1 = full). Spike A's director called this but
      *  plumes.js never exported it - a live TypeError in spike-a/, fixed here
      *  rather than inherited; uLean was a declared-but-unused uniform. */
-    setLeanScale(v) { sporeMat.uniforms.uLean.value = v; },
+    setLeanScale(v) { uLean.value = v; },
     /** HOVER channel: the explicitly active exit (streak + full coherence +
      *  trace-back). -1 = none hovered; the streak then falls back to the
      *  derived auto exit (see computeAuto). */
@@ -1377,16 +1078,15 @@ export function createInspire(sceneApi) {
     // it must run AFTER the shed's positions were integrated this frame and
     // BEFORE ambient.update reads its per-particle feed).
     computeDet();
-    sporeMat.uniforms.uDet.value.set(det[0], det[1], det[2]);
-    takeover.update(eff, det, t, mw, sporeMat.uniforms.uLean.value);
+    uDet.value.set(det[0], det[1], det[2]);
+    takeover.update(eff, t, mw, uLean.value);
     ambient.update(shedRegions, gk, _grad, takeover.feed);
 
     group.visible = anyVisible;
     if (!anyVisible) return;
-    sporeMat.uniforms.uTime.value = t;
     coreMat.uniforms.uTime.value = t;
-    sporeMat.uniforms.uRev.value.set(eff[0], eff[1], eff[2]);
-    const c = sporeMat.uniforms.uCoh.value;
+    uRev.value.set(eff[0], eff[1], eff[2]);
+    const c = uCoh.value;
     c.x += (cohTarget[0] - c.x) * k;
     c.y += (cohTarget[1] - c.y) * k;
     c.z += (cohTarget[2] - c.z) * k;
