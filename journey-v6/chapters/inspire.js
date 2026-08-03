@@ -1065,11 +1065,20 @@ export function createInspire(sceneApi) {
   // approved rest is byte-the-same math and the fade-in is co-located with
   // fully-converted dots. Pure in eff: reverse inverts the hand-back.
   const det = [0, 0, 0];
+  // Swarm isolation finding (2026-08-03): eff races 0->1 in ~0.02p, so an
+  // eff-only det gate opened the 5,100-spore detail layer WHILE hero dots
+  // were still lit — a measured double-exposure at p 0.17-0.21 ("a second
+  // source appears behind"). det is now ALSO gated on REST PROXIMITY (driven
+  // from journey progress via setRestProx): the hero's own dots alone carry
+  // the braids through the entire orbit; detail sharpens co-located only on
+  // the final approach to the resting pose. Reverse: leaving the rest drops
+  // det first, handing the braids back to the dots before they release.
+  let restProx = 0;
   function computeDet() {
     for (let i = 0; i < 3; i++) {
       let x = (eff[i] - 0.85) / 0.145;
       x = x < 0 ? 0 : x > 1 ? 1 : x;
-      det[i] = x * x * (3 - 2 * x);
+      det[i] = x * x * (3 - 2 * x) * restProx;
     }
   }
   // scratch for the history-dissolve gradient (ride-through #5)
@@ -1206,6 +1215,9 @@ export function createInspire(sceneApi) {
       exits[0].target = a; exits[1].target = b; exits[2].target = c;
       gillBand.target = band;
     },
+    /** Rest proximity 0..1 (pure in journey progress, set by driveInspire):
+     *  gates the GPU detail layer to the final approach of the rest pose. */
+    setRestProx(v) { restProx = v < 0 ? 0 : v > 1 ? 1 : v; },
     /** Jump the eased fades straight to their targets (review + QA helper —
      *  a hidden tab only runs frames during capture bursts). W4-A: also snaps
      *  coherence and the streak so a ?p= capture sees the settled frame. */
