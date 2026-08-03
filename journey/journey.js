@@ -230,7 +230,8 @@ export function boot(opts = {}) {
     // Every route-driven chapter change is a DIRECT jump (D16 restage found
     // the legacy adjacent-chapter flight left the camera stuck with runaway y
     // on Back-to-Mission; direct jumps are also what Hannah asked nav to be).
-    // The flight system is now unused by every path.
+    // The flight system's ONE remaining caller is the footer cue's fly to the
+    // end-hold (ui-footer.js) — chapter travel never flies.
     directJumpTo(r.chapter);
   }
 

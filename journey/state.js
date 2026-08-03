@@ -81,6 +81,14 @@ export function createJourneyState({ onNavigate = null, onFlightCancel = null } 
   });
 
   /* ---------------- travel ---------------- */
+  // The flight is a PROGRESS tween (rawP travels the route; camera, seams,
+  // copy all follow as under a real scroll). Chapter navigation stopped using
+  // it in the D16 era — every nav/route change is a direct jump — but it is
+  // NOT dead: the footer cue (ui-footer.js reveal()) flies the epilogue rest
+  // -> end-hold so the footer RISES through its reveal band instead of
+  // popping, which is that control's documented behaviour. Keep flyTo, the
+  // cancel listeners and inFlight for that one caller; a chapter-level
+  // flyToChapter wrapper had no callers left and is deleted (M5).
   function flyTo(targetP) {
     const dur = FLIGHT_BASE_S + FLIGHT_SPAN_S * Math.abs(targetP - rawP);
     flight = { from: rawP, to: targetP, t: 0, dur };
@@ -123,7 +131,6 @@ export function createJourneyState({ onNavigate = null, onFlightCancel = null } 
     snapTo,
     jumpToChapter,
     flyTo,
-    flyToChapter(id) { flyTo(restProgress(id)); },
     cancelFlight,
     parseHash,
     writeRoute,
