@@ -268,6 +268,12 @@ export function createFinal(sceneApi) {
     /** T4 streaming seam. */
     setArmed(on) { amountTarget = on ? 1 : 0; },
     get armed() { return amountTarget > 0; },
+    /** Deep-link / frozen-capture snap (journey.js placeAt contract): jump
+     *  the eased arm state to its target so a dt=0 ride sees the finished
+     *  chapter. Before this, ?capture=final shot the epilogue DARK — amount
+     *  never integrated under the frozen clock, so the golden showed the
+     *  hero over an unlit floor instead of the composition being gated. */
+    snap() { amount = amountTarget; },
     setHot() {},
     nodeWorld() { return null; },
     /** Live growth-front position for the halation focus hint (or null). */

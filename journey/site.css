@@ -119,6 +119,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-block.pos-topcentre  { left: 50%; top: 15vh; transform: translateX(-50%); text-align: center; }
   .j-block.pos-topcentre .j-claims { display: inline-block; text-align: center; }
   .j-block.pos-upperleft  { left: 6vw; top: 16vh; }
+  /* Final restage (17-final-field.md): the epilogue copy floats on the dark
+     cutaway wedge in the lower-left corner, giving the upper frame to the
+     mushroom field. bottom clears the footer cue's band (2.6vh + its box). */
+  .j-block.pos-bottomleft { left: 5.2vw; bottom: 9vh; }
 
   /* --- hotspot proxies: hit-model correctness now, polish later --- */
   .j-hotspots { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
@@ -482,6 +486,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-navlink { font-size: 0.62rem; letter-spacing: 0.14em; }
     .j-block { max-width: none; width: 88vw; }
     .j-block.pos-left, .j-block.pos-upperleft { left: 6vw; }
+    .j-block.pos-bottomleft { left: 6vw; bottom: 11vh; }
     .j-block.pos-bottom, .j-block.pos-topcentre { left: 50%; }
     .j-card { right: 50%; transform: translate(50%, -50%); }
   }

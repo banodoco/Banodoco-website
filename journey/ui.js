@@ -60,7 +60,10 @@ const CHAPTER_POSITION = {
   // language as Inspire.
   connect: 'pos-bottom',
   owned: 'pos-topcentre',
-  final: 'pos-upperleft',
+  // Final restage (17-final-field.md, Hannah): the epilogue copy moves to the
+  // bottom-left corner — it floats on the dark cutaway wedge while the upper
+  // frame belongs to the fairy ring and the field behind it.
+  final: 'pos-bottomleft',
 };
 
 function el(tag, cls, text) {

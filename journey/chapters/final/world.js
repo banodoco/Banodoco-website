@@ -63,7 +63,12 @@ const MEMBER_SPEC = [
   { az: 104, r: 7.3, h: 2.0, m: 0.55 },
   { az: 123, r: 7.9, h: 1.85, m: 0.40 },  // near-right, on the lip
   { az: 279, r: 8.3, h: 2.5, m: 0.95 },   // mature — stands on the far lip
-  { az: 291, r: 8.6, h: 2.6, m: 0.90 },   // mature
+  // az 291 -> 297 (17-final-field.md): from the rest camera the 291 body sat
+  // on the SAME ray as the 279 one (plan angles −44.3 vs −44.7 deg) — two
+  // mature caps in one screen column summed into a single over-wide white
+  // "pancake", the worst of the lamp reads. Six degrees along the arc
+  // separates the silhouettes into a staggered pair; the ring stays a ring.
+  { az: 297, r: 8.6, h: 2.6, m: 0.90 },   // mature
   { az: 303, r: 7.4, h: 2.2, m: 0.80 },
   { az: 327, r: 6.6, h: 1.3, m: 0.35 },   // young, closes the ring by the hero
 ];
