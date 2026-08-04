@@ -23,7 +23,8 @@ import { NOSNAP } from '../flags.js';
 import {
   SNAP_ENGAGE_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
   COMMIT_THRESHOLD, COMMIT_GLIDE_RATE, COMMIT_BLEND_K,
-  COMMIT_HANDOFF_MS, COMMIT_HANDOFF_MIN,
+  COMMIT_HANDOFF_MS, COMMIT_HANDOFF_MIN, COMMIT_HANDOFF_FLOOR_MS,
+  COMMIT_CRUISE_MAX,
   WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K,
 } from './constants.js';
 
@@ -180,6 +181,7 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
   let pVel = 0;         // p/s, EMA of the raw surface rate (capped at MAX_SCRUB_RATE)
   let pPrev = null;     // pAt(v) last frame, for the EMA
   let pVelHold = 0;     // p/s, pVel AT RELEASE — the rate the gesture handed over
+  let pushGap = 0;      // ms, EMA of this gesture's inter-delta spacing (0 = none)
   let glide = null;     // active commit glide: { target, lo, hi } latched at engage
   let glideVel = 0;     // p/s, the glide's own (signed) rate
 
@@ -287,6 +289,15 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     v = Math.max(0, Math.min(total, v + dpx));
     if (dpx) lastDir = dpx > 0 ? 1 : -1;   // any new input cancels a commit glide
     glide = null;                          // instantly (via lastInput, below) and
+    // How fast is this gesture DELIVERING deltas? A stream (trackpad at 16 ms,
+    // a spun wheel) proves it has ended much sooner than a slow deliberate
+    // scroll can, so it earns a shorter handoff wait. Deltas further apart than
+    // SNAP_ENGAGE_MS are not one stream by the model's own definition of idle —
+    // that is a new gesture, so forget the old spacing rather than average
+    // across the pause.
+    const gapMs = performance.now() - lastInput;
+    pushGap = gapMs > SNAP_ENGAGE_MS ? 0
+      : (pushGap ? pushGap + (gapMs - pushGap) * 0.35 : gapMs);
     lastInput = performance.now();         // re-aims the next idle resolution
     // The rate the visitor is handing over, latched on EVERY delta so the last
     // one wins: this is what a with-the-motion handoff continues from, instead
@@ -410,14 +421,29 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
      Continuous on paper, stop -> pause -> restart on screen. So the WHEN moved:
      when the resolution already runs with the residual motion, the glide takes
      over COMMIT_HANDOFF_MS after the last delta and inherits the rate at
-     RELEASE (pVelHold) — one motion, gesture into glide, speeding up or slowing
-     down to cruise and carrying straight through to the rest.
+     RELEASE (pVelHold) — one motion, gesture into glide.
+
+     Fixing WHEN exposed the second half, and it was the same mistake one level
+     down. Taking over at the right speed is worthless if the glide then blends
+     AWAY from it: every commit eased to the nominal 0.10, so a release brisker
+     than nominal was met with an immediate brake — Hannah again, "it slows
+     while making the transition instead of continuing smoothly." Nominal was
+     being read as THE speed when it is only ever a FLOOR. So a with-the-motion
+     glide now LATCHES its cruise at engage:
+
+         cruise = clamp(|release rate|, COMMIT_GLIDE_RATE, COMMIT_CRUISE_MAX)
+
+     Released slower than nominal -> speed up to nominal (the original ask).
+     Released faster -> carry that speed the whole way, and the ONLY thing that
+     slows it is the SNAP_K landing brake, which now begins about cruise/SNAP_K
+     before the rest instead of a fixed distance. Nothing between the gesture and
+     the brake takes speed away.
 
      When the resolution runs AGAINST the residual motion (released just short
      of the threshold), there is no motion to continue — the move has to turn
-     around — so that keeps the full idle window and the live pVel seed, and the
-     same blend decelerates smoothly through zero and returns: a continuous
-     reversal, never a step.
+     around — so that keeps the full idle window, the live pVel seed AND the flat
+     nominal cruise: the same blend decelerates smoothly through zero and
+     returns. A reversal is the one place where slowing is the correct motion.
      The landing is unchanged: the toward-target step is capped by the
      critically-damped SNAP_K pull (every step <= remaining distance), so no
      overshoot and no bounce, ever; SNAP_DEAD_P settles exactly. The target
@@ -475,9 +501,17 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
    *  WHICH rest is picked is unaffected: with no input and no glide the surface
    *  is frozen, so p — and therefore bracketAt/pickTarget — is identical at both
    *  engage points. This moves the handover in time, never in space. */
+  /** How long to wait before a with-the-motion handoff: 2x this gesture's own
+   *  measured delta spacing, clamped. An isolated delta (no stream measured)
+   *  waits the full COMMIT_HANDOFF_MS. */
+  function handoffWaitMs() {
+    if (!pushGap) return COMMIT_HANDOFF_MS;
+    return Math.min(COMMIT_HANDOFF_MS, Math.max(COMMIT_HANDOFF_FLOOR_MS, pushGap * 2));
+  }
+
   function handoffReady(p, idle) {
     if (NOSNAP) return false;
-    if (idle < COMMIT_HANDOFF_MS) return false;
+    if (idle < handoffWaitMs()) return false;
     if (glide) return true;              // handed over already: never re-gate it
     // Something to continue: a rate, and a rate the VISITOR put there. The
     // direction test is lastDir, not sign(pVelHold), because pVelHold is latched
@@ -537,14 +571,30 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     // the visitor's own motion instead of restarting from zero.
     if (!glide) {
       const [lo, hi] = bracketAt(p);
-      glide = { target: pickTarget(p, lo, hi), lo, hi };
+      // An EARLY engage is exactly the with-the-motion case: handoffReady only
+      // returns true before SNAP_ENGAGE_MS when the resolution runs the way the
+      // visitor's own last delta did.
+      const withMotion = idle < SNAP_ENGAGE_MS;
       // Seed the rate. On an EARLY (with-the-motion) handoff, inherit the rate
       // at RELEASE: the decay since then is the model's own decision latency,
       // not anything the visitor did, and continuing from it is what makes the
       // takeover invisible. On the ordinary idle-window path — a reversal, a
       // standing start — inherit the LIVE estimate exactly as shipped: there the
       // decay IS the motion the visitor is watching.
-      glideVel = idle < SNAP_ENGAGE_MS ? pVelHold : pVel;
+      glideVel = withMotion ? pVelHold : pVel;
+      // LATCHED CRUISE. Blending every commit to the nominal rate meant a glide
+      // that took over from a brisk scroll immediately BRAKED to 0.10 — Hannah:
+      // "it slows while making the transition instead of continuing smoothly."
+      // Continuing the motion means the cruise is the visitor's own speed, so a
+      // with-the-motion commit latches max(release rate, nominal), capped: it
+      // can only speed a slow release UP to nominal (the original ask) and never
+      // slow a fast one DOWN. Only the SNAP_K landing brakes it into the rest.
+      // A reversal keeps the flat nominal cruise — decelerating through zero is
+      // the one place slowing IS the correct motion — as does a standing start.
+      const cruise = withMotion
+        ? Math.min(Math.max(Math.abs(glideVel), COMMIT_GLIDE_RATE), COMMIT_CRUISE_MAX)
+        : COMMIT_GLIDE_RATE;
+      glide = { target: pickTarget(p, lo, hi), lo, hi, cruise };
     }
     const { target, lo, hi } = glide;
     const dP = target - p;
@@ -555,7 +605,7 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     // Rate eases toward the signed cruise. If the inherited rate opposes the
     // resolution, this decelerates smoothly through zero — a continuous
     // reversal, never a step.
-    glideVel += (sgn * COMMIT_GLIDE_RATE - glideVel) * Math.min(1, dt * COMMIT_BLEND_K);
+    glideVel += (sgn * glide.cruise - glideVel) * Math.min(1, dt * COMMIT_BLEND_K);
     let step = glideVel * dt;
     // Damped landing cap, unchanged from the shipped profile: the toward-
     // target step never exceeds the critically-damped SNAP_K pull, and never
@@ -592,7 +642,7 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
         is not a scroll and carries no motion to inherit, so idle resolution
         falls back to the nearest rest from standstill (rests resolve to
         themselves — deep links / ?pose= are not disturbed). */
-    setProgress(p) { v = scrollFor(p); lastDir = 0; glide = null; glideVel = 0; pVel = 0; pVelHold = 0; pPrev = null; },
+    setProgress(p) { v = scrollFor(p); lastDir = 0; glide = null; glideVel = 0; pVel = 0; pVelHold = 0; pushGap = 0; pPrev = null; },
     /** Milliseconds since the last manual input (flight cancellation, QA). */
     get sinceInput() { return performance.now() - lastInput; },
     /** QA: the rest idle would resolve to from here (null under ?nosnap=1). */
@@ -608,6 +658,11 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     get gliding() { return !!glide; },
     /** QA: the running glide's own signed rate (p/s), 0 when not gliding. */
     get glideVel() { return glide ? glideVel : 0; },
+    /** QA: the cruise (p/s) this glide latched at engage — nominal for a
+        reversal / standing start, the visitor's own release rate (clamped to
+        [COMMIT_GLIDE_RATE, COMMIT_CRUISE_MAX]) for a with-the-motion commit.
+        The SNAP_K landing brake begins about cruise/SNAP_K before the rest. */
+    get glideCruise() { return glide ? glide.cruise : 0; },
     /** QA: is a registered modal owner (dialog card / bottom sheet) holding
         the travel keys? */
     get modalInput() { return modalLive(); },
