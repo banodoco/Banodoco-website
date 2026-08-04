@@ -39,9 +39,16 @@ export const COMMIT_THRESHOLD  = 0.35; // fraction of the inter-rest p-span,
                                        // idle commits onward instead of back.
                                        // 0.35 < 0.5 is the deliberate forward
                                        // bias: "push forward most of the time".
-export const COMMIT_GLIDE_RATE = 0.10; // p/s cruise — ~2x a calm read scroll,
-                                       // ~4.5x under MAX_SCRUB_RATE, so the
-                                       // glide is assured but never a fling
+export const COMMIT_GLIDE_RATE = 0.10; // p/s NOMINAL cruise — ~2x a calm read
+                                       // scroll, ~4.5x under MAX_SCRUB_RATE, so
+                                       // the glide is assured but never a fling.
+                                       // For a commit that runs WITH the visitor
+                                       // this is the FLOOR, not the speed: the
+                                       // glide latches max(release rate, this)
+                                       // so it can only ever speed a slow
+                                       // release up, never brake a fast one
+                                       // down. It is the flat cruise only for a
+                                       // reversal and a standing start.
 export const COMMIT_BLEND_K    = 6.0;  // 1/s — the glide's rate eases from the
                                        // INHERITED gesture rate toward cruise
                                        // (exponential blend). The glide does not
@@ -79,6 +86,23 @@ export const COMMIT_HANDOFF_MS  = 80;   // idle before a with-the-motion handoff
                                         // momentum tails 16 ms) so it can never
                                         // fire mid-gesture; ~2-5 frames, over
                                         // which the perceived rate is still live.
+export const COMMIT_HANDOFF_FLOOR_MS = 32; // the floor COMMIT_HANDOFF_MS anneals
+                                        // to for a fast delta STREAM. The 80 ms
+                                        // wait has to clear the slowest real
+                                        // gesture's inter-delta gap, but a
+                                        // trackpad streaming at 16 ms proves
+                                        // itself ended far sooner — and at speed
+                                        // those extra milliseconds of frozen
+                                        // surface cost the most rate, because
+                                        // the decay is proportional. So the wait
+                                        // is 2x the gesture's own measured
+                                        // spacing, clamped to
+                                        // [FLOOR_MS, COMMIT_HANDOFF_MS]: fast
+                                        // streams hand over in ~32 ms, a slow
+                                        // deliberate scroll still gets the full
+                                        // 80, and an isolated delta (no stream
+                                        // measured) always gets the full 80.
+                                        // ~1-2 frames; never below one frame.
 export const COMMIT_HANDOFF_MIN = 0.02; // p/s — below this there is no motion to
                                         // continue and the early handoff is not
                                         // offered (a lone wheel notch from rest
@@ -93,6 +117,14 @@ export const COMMIT_HANDOFF_MIN = 0.02; // p/s — below this there is no motion
 // never as a jump, and the limiter never engages during normal reading.
 // Full journey minimum traverse ~= 2.2 s.
 export const MAX_SCRUB_RATE   = 0.45;  // p units per second
+
+// Ceiling on a glide's LATCHED cruise (see scroll.js, glide.cruise). A commit
+// that inherits a fling must carry that speed, not brake to nominal — but it
+// must not inherit the whole scrub limiter either, or a hard fling would cross
+// a whole leg at teleport speed with no sense of travel. 0.7 x the limiter
+// leaves visible headroom under it, so a flung commit still reads as the fast
+// end of scrolling rather than as a cut.
+export const COMMIT_CRUISE_MAX = 0.7 * MAX_SCRUB_RATE;   // 0.315 p/s
 
 // Absolute-p windows in which each chapter's DOM copy is shown. Authored as
 // offsets from each chapter's REST (route.js) — the copy belongs to the rest
