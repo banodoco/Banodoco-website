@@ -184,6 +184,13 @@ for (const [id, region] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co
   el.addEventListener('mouseenter', () => sceneApi.setHighlight(region, true));
   el.addEventListener('mouseleave', () => sceneApi.setHighlight(region, false));
 
+  // EQUIP has no chapter yet (deferred) — its tag keeps the "coming soon"
+  // reveal but must never navigate or dirty the hash, unlike INSPIRE/CONNECT
+  // whose tags are plain #/<chapter> links the hash router picks up.
+  if (id === 'co-equip') {
+    el.querySelector('.tag').addEventListener('click', (e) => e.preventDefault());
+  }
+
   if (isTouch) {
     const co = el.querySelector('.co');
     const tag = el.querySelector('.tag');
