@@ -80,18 +80,24 @@ const KEYS = [
   // monotone Inspire->Connect zoom-out): the landscape leg no longer pushes
   // in toward the stream, so the old light back (1.14) here made the
   // PORTRAIT travel re-approach mid-leg while the landscape widened. The
-  // back now eases 1.60 -> 1.55 -> 1.42 between the two rests so portrait
-  // subject-distance and fov grow monotonically with the landscape's.
-  { p: 0.410, back: 1.55, rise: 0.16, truck: 0, tgtUp: 0.12, tgtRight: 0, fov: 12 },
+  // back eases 1.60 -> 1.55 -> 1.62 between the two rests so portrait
+  // subject-distance and fov grow monotonically with the landscape's; the
+  // tgtUp/tgtRight now lean a third of the way toward the re-composed
+  // Connect rest so the last 0.08 of the leg is a settle, not a lurch.
+  { p: 0.410, back: 1.55, rise: 0.28, truck: 0, tgtUp: 0.55, tgtRight: -0.12, fov: 11 },
 
-  // CONNECT (rest 0.49, ground panorama) — the tall frame stacks what the
-  // wide frame spreads: mushroom high, network low. Dolly back to hold the
-  // whole organism + the far hubs inside the narrow horizontal field, lift
-  // the eye a touch, and re-aim slightly up-left so the mushroom keeps the
-  // upper-left of the tall frame while the network runs beneath the centred
-  // copy block. (Per-orientation hub label anchors are the chapter's own
-  // affair — doc §3.)
-  { p: 0.490, back: 1.42, rise: 0.55, truck: 0, tgtUp: 0.30, tgtRight: -0.45, fov: 10 },
+  // CONNECT (rest 0.49, ground panorama) — re-authored 2026-08-04 for the
+  // top-left / top-right restage. The landscape frame gives the mushroom the
+  // upper-LEFT and the copy the upper-RIGHT; a 375-wide frame has no "beside",
+  // so portrait stacks the same three elements instead: copy across the top
+  // (pos-topright at 88vw), the mushroom in the middle-left band directly
+  // under it, and the three hubs fanned through the lower half. The strong
+  // tgtUp is what pushes the whole organism DOWN clear of the copy block, the
+  // rise keeps the ground plane open under it, and the dolly-back compresses
+  // the 56-deg landscape hub fan into the ~35-deg portrait frustum so all
+  // three hub cores stay inside the frame. (Per-orientation hub label anchors
+  // are the chapter's own affair — doc §3; only Discord still needs one.)
+  { p: 0.490, back: 1.62, rise: 1.50, truck: 0, tgtUp: 2.75, tgtRight: -0.30, fov: 8 },
 
   // The approach to the trunk + the exterior descent (0.575–0.718):
   // near-zero field — clearance to the stipe is small and the leg's whole

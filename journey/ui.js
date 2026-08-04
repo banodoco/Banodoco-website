@@ -55,10 +55,12 @@ const CARD_FADE_MS = 340;
 
 const CHAPTER_POSITION = {
   inspire: 'pos-bottom',
-  // D16 ground restage: the Connect copy is centred low over the in-world
-  // brightness well the strand shader carves for it (doc §3) — same position
-  // language as Inspire.
-  connect: 'pos-bottom',
+  // Connect restage (16-connect-ground-restage.md, Hannah 2026-08-04): the
+  // mushroom takes the TOP-LEFT, the copy takes the TOP-RIGHT, and the three
+  // hubs spread through the open diagonal band between them. The in-world
+  // brightness well the strand shader carves (connect/index.js uWell) moved
+  // with the copy — the calm dark zone sits behind the new rect.
+  connect: 'pos-topright',
   owned: 'pos-topcentre',
   // Final restage (17-final-field.md, Hannah): the epilogue copy moves to the
   // bottom-left corner — it floats on the dark cutaway wedge while the upper

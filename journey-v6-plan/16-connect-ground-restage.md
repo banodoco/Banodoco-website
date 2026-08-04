@@ -566,3 +566,215 @@ so reverse retires behind the same murk). Spot frames at p 0.55 / 0.62 /
 the tendrils, dive at the trunk, murk wipe, level-out. Goldens:
 `capture.py --check` worst MAE 0.00/255, all ten files, PASS (the ambient-
 home target drift measured below the 2-decimal floor).
+
+## Top-left / top-right restage (2026-08-04, Hannah's re-composition brief)
+
+**The brief.** "For Connect the ecosystem, figure out how to reorientate the
+scene such that the TEXT goes in the TOP RIGHT and the MUSHROOM in the TOP
+LEFT, with the three anchor points positioned throughout the sensible gap
+between. We may need to move both the camera and some of the points."
+
+**What moved.** Four things, authored together against the live frame: the
+copy block's position class, the rest camera, the three hub world positions,
+and the in-world brightness well. The chapter's meaning, route span, rest p,
+growth choreography, seam p-windows, hover/pulse behaviour, node ids and the
+`nodeWorld('ados')` lens handoff are all untouched.
+
+**1 — Copy to the top right.** New `pos-topright` in site.css, in the house
+style and mirroring `pos-upperleft`: `right: 5.2vw; top: 15vh;` plus
+`text-align: right` and `.j-sub { margin-left: auto }` so the type sets
+right-ragged with the ragged edge facing the open ground rather than the
+frame edge, and a mirrored local scrim (`ellipse ... at 60% 50%`, was 40%).
+Responsive variant alongside the other pos-* rules in the `max-width: 900px`
+block: `right: 6vw; top: 11vh` (the 11vh, against the others' unchanged
+values, is what buys the portrait mushroom its clearance below the block).
+`CHAPTER_POSITION.connect` points at it. Heading and sub strings untouched.
+
+**2 — Camera re-keyed (leg-local t -> global p).** The rest slides 0.38 world
+units further back ALONG THE EXISTING DIVE LINE (rest, drift, exit and
+owned/camera.js's t 0.0 key stay collinear on unit (0.9033, 0.1238, 0.4107)
+out of owned's (2.523, 1.654, 1.792) — the property the Connect->Owned
+"one continuous dive" pass established is preserved by construction), drops
+its gaze ~4.5 deg and swings the aim ~12 deg to camera-right while the fov
+opens 56 -> 62.
+
+    t 0.13636 -> p 0.410  pos (8.440, 2.84,  3.280)  tgt ( 1.160,  1.950, -1.550)  fov 48
+    t 0.30000 -> p 0.446  pos (8.280, 2.70,  3.720)  tgt ( 1.550,  0.850, -2.550)  fov 53
+    t 0.40909 -> p 0.470  pos (8.100, 2.55,  4.050)  tgt ( 1.830,  0.100, -3.280)  fov 58
+    t 0.50000 -> p 0.490  pos (7.943, 2.397, 4.256)  tgt ( 2.030, -0.450, -3.791)  fov 62   REST (hold)
+    t 0.69091 -> p 0.532  pos (7.085, 2.279, 3.866)  tgt ( 0.701, -0.483, -2.606)  fov 61.5 drift
+    t 0.88636 -> p 0.575  pos (3.987, 1.854, 2.458)  tgt (-1.029, -0.175, -1.322)  fov 54   exit
+
+At the rest the whole mushroom (cap + stem + base) projects to x 30..573,
+y 25..468 at 1440x900 — the frame's upper-left 40% x 52% — the horizon rises
+to y ~237 so the ground owns the lower two-thirds, and the diagonal band
+between mushroom and copy is all open ground. Monotone Inspire->Connect
+zoom-out is kept: camera-to-mushroom-axis distance 9.14 -> 9.20 -> 9.22 ->
+9.30 -> 9.52 and fov 44 -> 48 -> 53 -> 58 -> 62, both strictly increasing.
+Arc positions along the dive line: rest 6.00 (was 5.62), drift 5.05 (was
+4.92), exit 1.62 (bit-exact shipped) — the extra 0.38 units are spent in the
+slow creep, so the speed profile goes 22 -> 80 -> 65 u/p (was 17 -> 76 -> 65).
+Gaze walks yaw -126.3 -> -134.6 -> -143.0 -> -148.0 (owned t 0.0) with no
+derivative sign flips, and pitch descends -15.9 -> -16.9 -> -17.9 -> -18.5
+straight into Owned's single ~-26.5 valley.
+
+**3 — Hubs re-fanned through the gap.** All three moved; departure azimuths
+re-aimed to match, braid/meander language, spokes, knots, continuations,
+frame-exits, route ids and core scales unchanged.
+
+    ados      (2.45, gy,  2.85) az 0.86  ->  (3.40, gy,  2.60) az  0.65
+    hivemind  (1.38, gy, -3.05) az -1.07 ->  (5.00, gy, -2.60) az -0.48
+    discord   (5.35, gy, -3.45) az -0.57 ->  (7.80, gy, -1.80) az -0.15
+
+World radius 4.3 / 5.6 / 8.0 and camera radius 5.4 / 7.8 / 6.5 at the rest —
+near / mid / far, the narrative order. The three azimuths fan 37 / -27 / -8
+deg out of the stipe base so no two primaries run as a bundle, and every
+route still leaves the same base, so the network reads as ONE ecosystem;
+continuations and the four frame-exit strands still run past the hubs and
+off-frame. Screen at 1440x900: ADOS (276, 646) lower-left under the mushroom,
+Hivemind (886, 468) mid-frame under the copy, Discord (1198, 581) low right.
+Counts fell out at 2,061 line segments (448 primary + 238 secondary + 830
+hairline + 357 hub + 188 continuation, was 2,306) and 146 points (38 glints +
+108 particles, was 158) — the hairline/patch acceptance is a function of hub
+placement. Both well under the doc's 5k / 500 budgets.
+
+Portrait label anchors: ADOS's per-orientation anchor is RETIRED (its hub is
+now in-frame with room for its pill in both orientations, so
+`nodeWorld('ados')` is the hub everywhere again — which is what the lens
+focal handoff wants); Hivemind never had one; Discord keeps one, moved from
+route-t 0.50 to 0.25, because at 375 px its hub core sits only 10 px from the
+right edge and its 99 px pill cannot fit beside it.
+
+**4 — The brightness well, recomputed.** Unprojecting the NEW copy rect at
+the rest pose: the block proper straddles the horizon and its lowest rows
+land on ground 14.1–20 world units out — past the whole network, so a well
+centred on the headline itself would have nothing to quiet. Its local scrim
+(`::before`, inset -2.5rem/-3.5rem) reaches nearer: the scrim's bottom edge
+sweeps the ground from (0.5, -7.4) at the left corner through (5.4, -11.0) at
+centre to (10.3, -14.6) at the right. The well is centred on THAT band:
+`uWell (4.4, 1.4, 0.66, 1.9)` -> `(3.60, -12.20, 0.66, 5.40)`. Measured: up
+to 66% quieter under the headline's lower edge, 2.6% at the Hivemind hub and
+nil at Discord, so no beacon is touched. Moving it was not optional — the old
+centre (4.4, 1.4) projects to (541, 616) in the new frame, i.e. it was
+carving a dark hole in the middle of the open ground the restage exists to
+show.
+
+**5 — Portrait re-authored.** A 375-wide frame has no "beside", so portrait
+stacks the same three elements instead: copy across the top, mushroom in the
+middle-left band under it, hubs fanned through the lower half. Field keys:
+
+    p 0.410  back 1.55  rise 0.28  tgtUp 0.55  tgtRight -0.12  fov 11
+    p 0.490  back 1.62  rise 1.50  tgtUp 2.75  tgtRight -0.30  fov  8
+
+(the 0.410 key now leans a third of the way toward the rest so the last 0.08
+of the leg is a settle, not a lurch; back eases 1.60 -> 1.55 -> 1.62 so
+portrait subject-distance and fov still grow monotonically with the
+landscape's). The strong tgtUp is what pushes the organism clear of the copy
+block — tgtUp costs no camera motion at all, since applyPortrait sets the
+position before it re-aims — and the dolly-back compresses the 56-deg
+landscape hub fan into the ~35-deg portrait frustum so all three hub cores
+stay inside the frame.
+
+**Composition, measured (chip and copy bounding boxes in px).**
+
+    1440x900   mushroom  30, 25 .. 573, 468      copy  825, 135 .. 1365, 329
+               ados     265,635 .. 340, 658  hivemind 875,457 ..  981, 481
+               discord 1187,570 ..1286, 593
+               clearances  ados|copy 573  hivemind|copy 128  discord|copy 241
+                           ados|hive 557  hive|discord 224   ados|discord 848
+
+    1280x800   mushroom  27, 22 .. 510, 416      copy  726, 120 .. 1213, 308
+               clearances  ados|copy 489  hivemind|copy  97  discord|copy 197
+                           ados|hive 487  hive|discord 188   ados|discord 746
+
+    375x812    mushroom -57,339 .. 138, 511      copy   23,  89 ..  353, 327
+               ados      48,573 .. 122, 596  hivemind 255,504 ..  361, 527
+               discord   90,525 .. 189, 548
+               clearances  ados|copy 246  hivemind|copy 177  discord|copy 198
+                           ados|hive 141  hive|discord  66   ados|discord  25
+
+Nothing overlaps anywhere; nothing is off-viewport. Sway/handheld drift over
+60 live frames (~20 s) moves every chip by at most 1 px in each axis at all
+three sizes, so the worst-phase clearances are the table above to within
+1–2 px (worst sampled: 375x812 ados|discord 24 px). Spot-checked further:
+1920x1080 min clearance 140, 1366x768 min 82, 1024x768 min 94, 768x1024
+min 37 — all three chips present and clear at every one.
+
+**Rates and splices** (201-sample drift-aware scrub over p 0.300–0.760, rates
+differentiated against the ACTUAL journey.progress, both aspects; the numbers
+in brackets are the same measurement on the pre-restage tree):
+
+    landscape  restaged span 0.355–0.625:  yaw 358.3 deg/p @0.612 [355.5]
+                                           pitch 196.5 @0.614     [182.7]
+                                           speed  89.4 u/p @0.559 [ 86.8]
+               whole window:               yaw 429.9 @0.759 [429.9]
+                                           pitch 924.9 @0.713 [926.6]
+                                           speed  90.8 @0.720 [ 90.8]
+    portrait   restaged span:              yaw 346.1 @0.614 [338.0]
+                                           pitch 243.9 @0.612 [168.3]
+                                           speed 167.7 @0.554 [137.4]
+               whole window:               yaw 379.2 @0.759 [379.1]
+                                           pitch 572.8 @0.720 [575.1]
+
+Everything is an order of magnitude under the ~1.2k deg/unit-p house
+threshold. Roll is 0.000000 deg at every sample in both aspects. Sign flips:
+landscape yaw 2 / pitch 1 (baseline 1 / 1) — the extra one is a 0.079 deg
+wiggle at p 0.492, i.e. inside the rest hold where yaw is nominally constant;
+the other two sit at p 0.727, past the Owned rest and outside the restaged
+span. Splice continuity, position speed at the five samples straddling each
+boundary: p 0.38 reads 9.5 / 9.1 / 8.9 / 8.5 / 8.4 u/p (baseline 13.0 -> 12.3)
+and p 0.60 reads 60.8 / 59.5 / 58.4 / 57.3 / 55.6 (baseline 61.4 -> 55.6) —
+smooth ramps through both, no pose jump. Every position key from p 0.622 on
+is bit-exact shipped, so owned/leg.js's camPts sampling (p 0.660–0.872) and
+the hypha PRNG branches are untouched by construction.
+
+**Gates (measured).**
+
+1. Ignition / D16, instrumented on group-visibility flips at 0.0005 p steps
+   with a settle, both directions, both aspects: forward reveal p 0.4005
+   (landscape) / 0.4003 (portrait) with uGrow 0.0000, reverse vanish 0.3998
+   both with uGrow 0.0000 — zero extent at the arm edge, nothing fades in
+   over open ground. Forward retire 0.7053 / 0.7052 and reverse re-arm
+   0.7048 / 0.7048, both inside the Owned soil-crossing murk (0.692–0.712);
+   CONNECT_HOLD_HI 0.705 unchanged and still lawful. Frozen spot frames at
+   p 0.412 / 0.44 / 0.46 / 0.55 / 0.62 read as growth-from-base then
+   convergence-toward-the-trunk, front motion only.
+2. Hover, per hub: uRouteAmp [1.547, 0.553, 0.553] / [0.560, 1.545, 0.554] /
+   [0.554, 0.560, 1.545], hairline 0.702, eased return to [1, 1, 1] on
+   release. Click on the Hivemind chip opens the card (detail 'hivemind',
+   #/connect/hivemind). Deep links #/connect/ados|hivemind|discord all land;
+   legacy #/connect/community still normalises to discord.
+   nodeWorld('ados') = (3.400, 0.017, 2.600) — the hub, focal handoff intact.
+3. Console: full 0 -> 1 -> 0 rides at both aspects with console.error/warn/
+   onerror/unhandledrejection hooks — 0 entries. The rate scrubs and ignition
+   sweeps likewise logged 0.
+4. journey.debugState() at p 0.49: pose (7.943, 2.397, 4.256), fov 62,
+   radius 9.011, chapter connect, armed [connect], copy [connect],
+   detail null, hotspots [ados, hivemind, discord] once the stagger settles.
+5. Goldens: `--check` before the reshoot isolated the drift to the connect
+   pair (MAE 17.78 / 17.19; mission, inspire, owned, final all 0.00). Full
+   set re-shot frozen at the final tree in this commit, manifest provenance
+   noted — mission/inspire/final reproduced BYTE-IDENTICAL; owned@1440x900
+   came back with exactly ONE pixel differing by 1 (MAE 2.57e-7), the
+   documented ANGLE-Metal frozen-pipeline noise class, so the original bytes
+   were kept. `--check` at the final tree: worst MAE 0.00/255, PASS.
+
+**Residuals.**
+
+- Portrait dive speed at p 0.554 rises 137 -> 168 u/p (+22%). It is the price
+  of the deeper portrait dolly the new composition needs (back 1.42 -> 1.62,
+  rise 0.55 -> 1.50 at the rest, unwinding into the locked p 0.622 key). The
+  audited rates — pitch and yaw — are unchanged or better. A low-rise variant
+  (back 1.65, rise 0.05, tgtUp 3.25) was measured: it recovers ~7 u/p but
+  costs 5 px of chip clearance and crops more of the cap, so it was not taken.
+- Below ~1.4 viewport aspect (e.g. 1024x768) the cap begins to clip at the
+  left frame edge (mushroom box x0 -77 there). The composition is authored
+  for 16:10 / 16:9; all three chips stay present and clear at 4:3.
+- In portrait the cap is cropped ~30% at the left edge. That is the house
+  precedent (the shipped portrait golden clipped it too), and it is what buys
+  the mushroom its size in a 375-wide frame.
+- Discord's portrait chip rides its route rather than its hub (see §3). The
+  alternative — pulling the frame far enough left for its pill to fit beside
+  the hub — costs more than half the mushroom.
+- The p 0.63–0.69 bareness and the modest ambient arrival flare stand as
+  earlier passes left them.

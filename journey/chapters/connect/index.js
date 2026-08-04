@@ -65,11 +65,21 @@ export function createConnect(sceneApi) {
     uPulseHead: { value: new THREE.Vector3(-2, -2, -2) },
     uPulseAmp: { value: new THREE.Vector3(0, 0, 0) },
     uExit: { value: 0 },
-    // The copy brightness well (doc §3): the calm dark zone under the centred
-    // headline is made IN-WORLD — the network is quiet where the copy block
-    // projects at the rest pose. xy = world-xz centre, z = strength, w = radius.
-    // Authored against the live rest frame.
-    uWell: { value: new THREE.Vector4(4.4, 1.4, 0.66, 1.9) },
+    // The copy brightness well (doc §3): the calm dark zone under the headline
+    // is made IN-WORLD — the network is quiet where the copy block projects at
+    // the rest pose. xy = world-xz centre, z = strength, w = radius.
+    //
+    // RECOMPUTED for the top-right copy (2026-08-04). Unprojecting the new
+    // rect at the rest pose: the copy block proper straddles the horizon, and
+    // its lowest rows land on ground 14.1-20 world units out — past the whole
+    // network. Its local scrim (::before, inset -2.5rem/-3.5rem) reaches
+    // nearer: the scrim's bottom edge sweeps the ground from (0.5, -7.4) at
+    // the left corner through (5.4, -11.0) at centre. So the well is centred
+    // on THAT band — the stretch of far field that the copy actually sits on —
+    // rather than on the dead ground behind the headline. Measured effect at
+    // the rest: up to 66% quieter under the headline's lower edge, 2.6% at the
+    // Hivemind hub and nil at Discord, so no beacon is touched.
+    uWell: { value: new THREE.Vector4(3.60, -12.20, 0.66, 5.40) },
     uPartAmp: { value: 0 },
   };
 
@@ -91,14 +101,11 @@ export function createConnect(sceneApi) {
   Object.defineProperty(NODES, 'discord', {
     get() { return sceneApi.camera.aspect < 1 ? discordPort : net.hubMeta[2].pos; },
   });
-  // ADOS anchors per orientation too since its left-of-stem move (2026-08-04):
-  // in landscape the chip sits on the hub in the lower-left ground field; in
-  // portrait that world position projects inside the centred copy block, so
-  // the chip rides the route's upper stretch (tendrils.js PORT_T) instead.
-  const adosPort = net.hubMeta[0].portAnchor.clone();
-  Object.defineProperty(NODES, 'ados', {
-    get() { return sceneApi.camera.aspect < 1 ? adosPort : net.hubMeta[0].pos; },
-  });
+  // ADOS's per-orientation anchor RETIRED with the top-left/top-right restage
+  // (2026-08-04): the portrait pose now clears the copy block off the whole
+  // organism, so the ADOS hub itself is in-frame with room for its pill in
+  // both orientations. nodeWorld('ados') is therefore the hub in every
+  // orientation again — which is also what the lens focal handoff wants.
   const NODE_IDS = [...HUB_IDS];          // narrative order = reveal order = tab order
   const _nw = new THREE.Vector3();
 
