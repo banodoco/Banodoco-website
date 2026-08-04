@@ -25,7 +25,14 @@ const DEG = Math.PI / 180;
 const T1_RELAX_IN = startOf('connect') + 0.06;    // 0.44 — path has dropped under the rim
 const T1_RELAX_OUT = startOf('connect') + 0.08;   // 0.46
 const CONNECT_HOLD_LO = startOf('connect') + 0.02; // 0.40 — chamber armed through the leg
-const CONNECT_HOLD_HI = startOf('owned') + 0.03;   // 0.63
+// 0.705 (M5 ignition audit, D16): was startOf('owned')+0.03 = 0.63. The T2
+// floor predicate drops the chamber at y≈0.65 (~p 0.675) — in OPEN AIR above
+// the soil, with the blade tissue still framed overhead. Forward that is a
+// legal dim, but a REVERSE scrub re-armed there, and the tissue faded back in
+// from nothing on screen. The hold now covers to the soil-crossing murk
+// (camera inside the Owned lid material, p 0.692–0.712), so retire and
+// re-arm both happen behind genuine occlusion.
+const CONNECT_HOLD_HI = startOf('owned') + 0.105;  // 0.705
 const OWNED_HOLD_LO = startOf('owned') + 0.03;     // 0.63 — colony held through the Final rise
 const OWNED_HOLD_HI = endOf('final') - 0.03;       // 0.97
 const FINAL_MIN = startOf('final');                // 0.85 — rise/cutaway can only arm past here
