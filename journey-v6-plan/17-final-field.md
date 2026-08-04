@@ -115,3 +115,160 @@ read. Owned rest (p 0.725) and its golden: untouched, mask ≡ 1.
 - Footer focus handoff after a *synthetic* cue click landed on the skip
   link, not the first footer link; shipped behaviour, not touched here —
   retest with a real gesture before filing.
+
+---
+
+## 2026-08-04 — ONE SPECIES: the geometry left ring.js (18-one-species.md)
+
+**Status: SHIPPED (same-commit goldens).** Hannah, at the Final rest: the ring
+and field members read as a *different kind of mushroom* from the hero —
+flatter, parasol-like caps on skinnier stems. The lamp fix above had solved
+the LIGHT; this solves the FORM.
+
+### What was actually wrong
+
+`ring.js` did not copy the hero's form language — it carried a
+**parameterization** of it, and "individuation" was quietly authoring new
+species. Measured over the full seeded parameter space:
+
+| ratio | before (range) | hero / after (fixed) |
+|---|---|---|
+| rim radius / apex height | 0.3067 – 0.5914 | **0.5378** |
+| dome height / rim radius | 0.4211 – 1.4790 | **0.5191** |
+| stem radius (y=1) / rim radius | 0.0763 – 0.2430 | **0.1111** |
+
+A 3.5x spread on cap-flatness and a 3.2x spread on stem-thinness. Both of
+Hannah's words are in that table: a body could draw a dome 19% *shallower*
+than the hero's on a rim two-thirds its width (the parasol), while its stem
+came out 31% thinner than the hero's for its cap (the skinny stem). Four
+knobs did it — `rimScale`, `domeH`, `stemW`/`flareK` — plus a fifth, quieter
+one: the stem taper was renormalised against a **shortened stem top**
+(`capY + 0.18` = 3.33 against the hero's `STEM_TOP` = 3.9), which steepens
+the taper law itself. A sixth lived in `world.js`: `capR = h * (0.40 + 0.10 *
+maturity)`, an independent cap-width law up to 26% narrow, which also made
+maturity a SHAPE axis.
+
+### The restructure
+
+**New: `journey/chapters/final/species.js`** — `buildMushroom({ tier, seed,
+scale, azFacing, mat, shed, emit, mul, shade })`. All geometry sampled from
+the `anatomy.js` form functions, scaled uniformly. It never touches a THREE
+object and knows nothing about placement, batching or the reveal.
+
+**`anatomy.js`** gains the §7 stem law it was missing — `stemRadius(y)`,
+`stemAxis(y)`, `CAP_THROAT` — mirrored from organism.js byte-for-byte, with
+the mirror's provenance noted the way the §4 cap functions already are. (The
+throat is the *un-staged* vector: organism.js applies `tiltX`/`leanZ` to it,
+but those are how the one hero is framed for the camera, not anatomy.)
+
+**`ring.js` is now placement, and only placement.** What died: `topPt`,
+`underPt`, `stemR`, `stemAxis`, `rimRad`, `rimYoff`, `droop`, `lump`, the
+whole `TIERS` count table, and the `memberParams` knobs above — 726 lines
+changed, **net −355**. What it kept, unchanged in semantics: where bodies
+stand, the distance→tier ladder, the rest-camera shading (`heatK` / `occlS` /
+`occlM` / `underVis` / `crowdK` / `innerK`), the ground-merge root stubs
+(they walk on real `groundY`/`cutVal`, so they are terrain's business — they
+now seat against the species' own `STEM_BASE_R`), the two draw calls, and the
+`aReveal`/`uPull` choreography.
+
+The **cap-rim hints** went through the same builder too, on a `T_HINT` rung.
+They had been hand-rolled circles of radius `h * 0.45` — the last independent
+cap math in the chapter, and wrong twice over (a circle has none of the rim's
+waviness, and 0.45 is 16% narrow). Even the faintest thing in frame now
+traces the hero's rim.
+
+### The DETAIL table
+
+Six rows in `species.js`, one per rung — `ring-near`, `ring-mid`, `ring-far`,
+`field-near`, `field-far`, `hint`. Counts, probabilities, and extras flags
+(`rimStack`, `frontArc`, `cavityCore`, `pool2`, `shed`, `arcOnly`) all moved
+into it, including the four that used to be inline `T >= 2` / `T < 4`
+conditionals. **Tuning detail is now editing that table**, and it sits beside
+the one silhouette it traces.
+
+### What still varies per individual
+
+Only things that cannot change a proportion: **`azFacing`** (a rigid Y
+rotation — the hero's cap droop, its one crisp fold accent at az 5.3 and its
+rim harmonics travel with it, so every body presents a different profile of
+the same silhouette; this is what makes ~90 bodies of one shape read as ~90
+individuals), a **uniform scale** with ±9% natural variation folded into that
+same factor, a few degrees of whole-body lean, the heat sector, the twinkle
+phase, gill DENSITY, and the seeded stroke jitter.
+
+The lean band was trimmed `(0.04 + 0.11·r)` → `(0.03 + 0.06·r)`: at 11 deg a
+body tilted away from a lens that already looks DOWN on it opened its rim
+ellipse into a saucer, which reads as a different shape even though it is the
+same one. The hero's own staging tilt is ~0.058 rad total; the band now
+brackets it.
+
+### Numeric silhouette check (doc 18 §4.1)
+
+The builder's cap profile sampled at 12 u-stations, un-scaled, against
+`capUnderPt` references, for a T1 (`ring-near`, h 2.0, scale 0.4295) and a T4
+(`hint`, h 0.9, scale 0.2160) member. Azimuth 2.3197 rad:
+
+| u | r built | r ref | y built | y ref | dev |
+|---|---|---|---|---|---|
+| 0.000 | 0.257002 | 0.257002 | 3.680000 | 3.680000 | 0 |
+| 0.091 | 0.262793 | 0.262793 | 3.600820 | 3.600820 | 0 |
+| 0.182 | 0.465302 | 0.465302 | 3.527339 | 3.527339 | 0 |
+| 0.273 | 0.668530 | 0.668530 | 3.459792 | 3.459792 | 0 |
+| 0.364 | 0.871387 | 0.871387 | 3.398367 | 3.398367 | 0 |
+| 0.455 | 1.073612 | 1.073612 | 3.343262 | 3.343262 | 0 |
+| 0.545 | 1.275112 | 1.275112 | 3.294698 | 3.294698 | 0 |
+| 0.636 | 1.475847 | 1.475847 | 3.252939 | 3.252939 | 0 |
+| 0.727 | 1.675798 | 1.675798 | 3.218318 | 3.218318 | 0 |
+| 0.818 | 1.874955 | 1.874955 | 3.186628 | 3.186628 | 0 |
+| 0.909 | 2.073314 | 2.073314 | 3.096984 | 3.096984 | 0 |
+| 1.000 | 2.270873 | 2.270873 | 2.929187 | 2.929187 | 0 |
+
+**Both tiers produce this identical table** — worst deviation across all 24
+stations **1.27e-14 %** (double-precision noise), against the <1% bar. That
+is the point of the check being tautological: it is only tautological because
+there is no second copy of the math left to disagree.
+
+Corroborated end-to-end on EMITTED geometry: every cap-lattice stroke
+endpoint from a real `buildMushroom` run, un-scaled and un-rotated, sits on
+`capTopPt` with median |Δy| 0.025 / p95 0.089 hero units — the build's own
+authored jitter (grid y ±0.04, u ±0.02, a ±0.028), not form error.
+
+### Measured
+
+- **Geometry:** ring+field segs 36,241 → **36,092** (−149); glow pts 3,103 →
+  **3,082** (−21); **draw calls 102 → 102**; triangles unchanged (18,851).
+  Two DETAIL trims paid for the wider caps' longer rim rings: `field-far`
+  `fibSeg` 4→3 and `rimPts` 2→1, both sub-pixel at 24–36 units.
+- **Frame (Browser pane, 1280x800 @dpr1, best-of-3 p50, A/B in the same
+  session):** after 25.8 ms (38.8 fps) vs before 27.3 ms (36.6 fps). Run
+  spreads overlap (after 25.8/27.3/28.5, before 29.2/27.4/27.3) — the honest
+  reading is *no worse*, in the same noisy pane doc 17 measured in.
+- **Reveal purity (D16):** at every settled p in 0.80…1.0, sampled forward
+  then backward, `uPull` hysteresis is **exactly 0.000000** and `uPull ≡
+  pullOf(camera.x)` to 1e-6. At the arm (p 0.80–0.83) `uAmount` reaches 1
+  while `uPull` is still **0** — every body sits at its 7% ember whisper.
+  Dark at arm, no self-ignition, camera untouched (`camera.js`, `route.js`
+  and the copy strings have no diff).
+- **Console:** info-only over a full 0→1→0 ride.
+- **Gates:** `capture.py --check` before the re-shoot: the four non-final
+  poses at **MAE 0.00/255, 0.0% px>8, both sizes**; only `final` in the
+  FAIL-band (5.89 desktop / 2.05 mobile), which is the intended change.
+  `final@*` re-shot same-commit with manifest provenance. One stray pixel
+  (±1/255, R only) appeared in `owned@1440x900.png` on the re-shoot — GPU
+  last-bit noise in a chapter this change cannot reach (owned rests at p
+  0.725, final arms at 0.80); that golden was restored from HEAD so the
+  commit moves `final@*` and nothing else. Compositions checked at 1440x900
+  and 375x812.
+
+### Residuals
+
+- Members are seen from ABOVE at the rest while the hero is seen near rim
+  level, so a member shows its cap top where the hero shows its gill fan.
+  That is one organism at two angles (and `underVis`, the doc-17 elevation
+  occlusion that stopped near bodies reading as open glowing bowls, is what
+  holds it) — but it is the one remaining thing that could still be misread
+  as a difference in kind. Worth a look if Hannah raises it again; the fix
+  would be camera or member height, not form.
+- The frame-left near pair still sums to a hot streak under bloom. Slightly
+  calmer than before (wider caps spread the same strokes over more pixels),
+  still the brightest thing that is not the hero. Pre-existing; monitor.
