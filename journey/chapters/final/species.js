@@ -546,13 +546,22 @@ export function buildMushroom(o) {
   if (C.cavityCore)
     pt([cavity[0], cavity[1] - 0.02, cavity[2]], 0.68 * sh.underVis * sh.innerK,
       s * (0.70 + 0.175 * mat), 2.0, 1);
+  soilLights(o, C, s, mat, sh, B, pt, g, camF, ca, sa);
+}
+
+/* ---- the ground-merge lights: the two soft pools a body sits in, and the
+   mature body's short rising shed trail. Split out of the interior-light
+   section for ONE caller other than buildMushroom's own tail — the clone
+   path below. Called from the same position on the same rng stream, so the
+   species build is byte-unchanged. ---- */
+function soilLights(o, C, s, mat, sh, B, pt, g, camF, ca, sa) {
   pt([0, 0.04, 0], 0.42 * sh.innerK, s * (1.84 + 0.46 * mat), 3.0, 1);
   if (C.pool2)
     pt([s * 0.18 * ca, 0.03, s * 0.18 * sa], 0.26 * sh.innerK,
       s * (3.67 + 0.92 * mat), 3.7, 1);
 
-  /* ---- spore shed: mature bodies only, a short rising ember trail leaning
-     into the +x drift. Never the hero's. ---- */
+  /* spore shed: mature bodies only, leaning into the +x drift. Never the
+     hero's. */
   if (o.shed > 0 && C.shed > 0) {
     const nSh = C.shed;
     const e = FORM.under(1.0, camF + g() * 0.7);
@@ -563,6 +572,34 @@ export function buildMushroom(o) {
         s * (0.10 - 0.05 * t) * (0.5 + o.shed), 4 + k, 1);
     }
   }
+}
+
+/**
+ * The CLONE seat (clones.js). Where a literal clone of the hero organism
+ * stands, the species builder emits no tissue at all — the body IS the
+ * hero's own geometry under another matrix. What the clone cannot bring
+ * with it is the soil: the hero's §8 ground network is not part of the
+ * stem/cap subtree, so a clone with nothing under it floats. This emits
+ * exactly the ground-merge lights for that body, into the same shared batch
+ * where they cost no draw call, from the same table row the body would have
+ * been built from.
+ *
+ * Same option object as buildMushroom (tier / seed / scale / azFacing / mat
+ * / shed / emit / mul / shade) — placement never has to describe a body two
+ * different ways.
+ */
+export function buildCloneSeat(o) {
+  const C = DETAIL[o.tier];
+  const r = makeRng(o.seed);
+  const g = () => gaussOf(r);
+  const s = o.scale;
+  const mat = o.mat ?? 1;
+  const ca = Math.cos(o.azFacing), sa = Math.sin(o.azFacing);
+  const B = (p) => [s * (p[0] * ca - p[2] * sa), s * p[1], s * (p[0] * sa + p[2] * ca)];
+  const camF = (o.shade.camAz ?? 0) - o.azFacing;
+  const pt = (p, tone, psize, tw, mul) =>
+    o.emit.pt(p[0], p[1], p[2], tone, psize, tw, mul);
+  soilLights(o, C, s, mat, o.shade, B, pt, g, camF, ca, sa);
 }
 
 /** The uniform scale for an authored height, with the seeded natural

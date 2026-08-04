@@ -196,12 +196,39 @@ export function makeUniforms() {
     uTime:    { value: 0 },
     uFogNear: { value: 7 },
     uFogFar:  { value: 20 },
+    // ---- pointer response (interact.js + clones.js's easeHover) ----
+    // A batched member has no material of its own to brighten, so the two
+    // pointer channels are carried as an ID compare instead: aHot names the
+    // member a vertex belongs to, and exactly one member at a time can be
+    // the hovered one and one the tapped one. Two channels, not one, so a
+    // tap's one-shot pulse keeps decaying on the body you tapped after the
+    // pointer has moved on to another. Idle IDs are -1; aHot is -1 for
+    // everything that is not a fruiting body, and a geometry with no aHot
+    // attribute at all reads the WebGL generic default 0.0 — which is why
+    // member IDs start at 1 and never at 0.
+    uHotId:   { value: -1 },
+    uHotAmt:  { value: 0 },
+    uTapId:   { value: -1 },
+    uTapAmt:  { value: 0 },
   };
 }
+
+// The ID compare, shared by both shaders so the two batches answer a pointer
+// identically. `1.0 - step(0.5, |a - b|)` is an equality test on IDs that are
+// whole numbers, branch-free.
+const HOT_GLSL = /* glsl */ `
+  attribute float aHot;
+  uniform float uHotId, uHotAmt, uTapId, uTapAmt;
+  float hotAt() {
+    return uHotAmt * (1.0 - step(0.5, abs(aHot - uHotId)))
+         + uTapAmt * (1.0 - step(0.5, abs(aHot - uTapId)));
+  }
+`;
 
 const STRAND_VERT = /* glsl */ `
   attribute float aArc, aReveal, aTw, aBoost, aWave;
   uniform float uPull, uFront, uFrontOn, uCta, uCtaOn, uTime;
+  ${HOT_GLSL}
   varying vec3 vColor;
   varying float vB;
   varying float vFog;
@@ -220,6 +247,8 @@ const STRAND_VERT = /* glsl */ `
     b += aWave * (0.28 + 0.28 * sin(aArc * 12.6 - uTime * 0.42 + aTw)) * reveal;
     // slow twinkle, phase-scattered
     b *= 0.88 + 0.12 * sin(uTime * 0.9 + aTw);
+    // pointer response — the hero's §11 breathing glow, one member at a time
+    b *= 1.0 + hotAt();
     vColor = color;
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     // near-camera fade: the lens travels through clean air (Spike A G2a) —
@@ -258,6 +287,7 @@ const POINT_VERT = /* glsl */ `
   #define MIN_PT 1.7
   attribute float aArc, aReveal, aTw, aBoost, aWave, psize;
   uniform float uPull, uFront, uFrontOn, uCta, uCtaOn, uTime;
+  ${HOT_GLSL}
   varying vec3 vColor;
   varying float vB;
   varying float vFog;
@@ -271,6 +301,7 @@ const POINT_VERT = /* glsl */ `
     float dc = aArc - uCta;
     b += aBoost * uCtaOn * exp(-dc * dc * 200.0) * 1.1;
     b *= 0.86 + 0.14 * sin(uTime * 1.3 + aTw);
+    b *= 1.0 + hotAt();
     vB = b;
     vColor = color;
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -323,6 +354,7 @@ export function makePointsMat(uniforms, opacity, map) {
  *  unchanged. */
 export function makeBatch() {
   const pos = [], col = [], arc = [], rev = [], tw = [], boost = [], wave = [], size = [];
+  const hot = [];
   const c = new THREE.Color();
   return {
     seg(ax, ay, az, bx, by, bz, ta, tb, meta) {
@@ -336,6 +368,7 @@ export function makeBatch() {
         tw.push(meta.tw ?? 0);
         boost.push(meta.boost ?? 0);
         wave.push(meta.wave ?? 0);
+        hot.push(meta.hot ?? -1);
       }
     },
     pt(x, y, z, tone, psize, meta) {
@@ -347,6 +380,7 @@ export function makeBatch() {
       tw.push(meta.tw ?? 0);
       boost.push(meta.boost ?? 0);
       wave.push(meta.wave ?? 0);
+      hot.push(meta.hot ?? -1);
       size.push(psize);
     },
     geo(withSize = false) {
@@ -358,6 +392,9 @@ export function makeBatch() {
       g.setAttribute('aTw', new THREE.Float32BufferAttribute(tw, 1));
       g.setAttribute('aBoost', new THREE.Float32BufferAttribute(boost, 1));
       g.setAttribute('aWave', new THREE.Float32BufferAttribute(wave, 1));
+      // pointer-response member ID (-1 = not a fruiting body). Costs 4 bytes
+      // a vertex and no draws: the alternative was splitting the batch.
+      g.setAttribute('aHot', new THREE.Float32BufferAttribute(hot, 1));
       if (withSize) g.setAttribute('psize', new THREE.Float32BufferAttribute(size, 1));
       return g;
     },
