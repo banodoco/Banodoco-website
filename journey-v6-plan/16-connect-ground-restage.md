@@ -342,3 +342,99 @@ comment updated (the path now drops past the rim outside, same p).
 - Ambient pulse arrival flare on the hub cores is modest (+0.45 opacity);
   if Hannah wants the "hub brightens on arrival" beat louder, the knob is
   `P.flare` weighting in index.js.
+
+## Audit + taste pass (2026-08-04, independent adversarial audit)
+
+**Taste directive A — hub resting presence.** At the rest the three hub
+cores read barely brighter than junction glints (mockup wants unmistakable
+radial starburst convergences). Dialed, no new systems: resting core
+opacity 0.42 → 0.58 (cap 0.95 → 1.0 so hover +0.4 and arrival-flare +0.45
+still register above rest — measured: discord rest 0.58 → hover 0.98),
+core sprite scales ×~1.35 (0.34/0.30/0.27 → 0.46/0.40/0.36), spoke
+brightness 1.1 → 1.5, knot 1.35 → 1.6. Ignition/pulse/hover headroom
+preserved; halos stay controlled (destination-beacon, not lens-flare).
+
+**Taste directive B — ADOS/Hivemind separation.** At 1280×800 the ADOS
+chip sat 12 px above the copy top, directly over the headline centre.
+ADOS hub −x (2.85 → 2.50): clearance 12 → 23 px (1280×800), 45 px at
+1440×900, chip off the headline centre; pair distance 181 → 186 px with
+80 px vertical. Portrait 375×812 (pre-existing, worse than the shipped
+log recorded): Hivemind/Discord chips 3 px apart with Discord's pill
+10 px past the right viewport edge. Fixed: Discord portAnchor route-t
+0.60 → 0.50 (t 0.40 overlapped ADOS) + Hivemind −x (1.65 → 1.38; a −z
+nudge was tried and reverted — it pushed the portrait chip into the right
+edge). Final portrait: all pills fully in-frame (Discord right edge 355,
+20 px margin), Hivemind↔Discord gap 8 px, ADOS↔Discord 18 px horizontal,
+ADOS copy clearance 14 px. Sway displaces chips ≤ 2 px at this pose
+(sampled 112 frames over 40 s), so the clearances hold through phases.
+
+**Bug found + fixed — ghost pulse on continuations.** The travelling-pulse
+term is deliberately not tierBase-scaled, and continuation/frame-exit
+strands (tier 3) carry their route id with rAlong restarting 0 → 1 past
+the hub — so a base-departing pulse simultaneously lit the far side of
+the stage at full pulse brightness (wrong place AND wrong time). Fixed
+with a tier gate in the vertex shader (`if (tier > 2.5) pulse = 0.0`);
+spokes/knots (tier 0, rAlong 1.0) keep the arrival flare, secondaries
+(tier 1) keep the fork-spill.
+
+**Audit results (measured, 1280×800 + 375×812 unless noted).**
+
+1. D16 sweep 0.34→0.74→0.34 at 0.04 p/s, instrumented on group-visibility
+   flips: forward reveal at p 0.4018/0.4017 (land/port) with uGrow 0.0000;
+   forward retire 0.7065/0.7063 and reverse re-arm 0.7026/0.7037 — all
+   inside the Owned soil-murk (0.692–0.712); reverse vanish 0.398/0.3988
+   with uGrow 0. No fade over open ground either aspect; mid-growth spot
+   frames show front-motion only (ADOS starburst ignites first).
+2. Camera, 201-sample scrub (drift-aware: rates differentiated against
+   actual journey.progress — naive fixed-grid differentiation inflates
+   peaks ~7% and briefly read 1243 before correction): restaged span
+   peaks yaw 1164 °/p (p 0.631) / pitch 1157 (p 0.652) landscape, 1166 /
+   1144 portrait — under the ~1.2k threshold, matching the builder's
+   1167/994 claim in kind. Roll 0.0000° everywhere. Splice continuity:
+   position rates ramp smoothly through both boundaries (23→38 u/p across
+   p 0.38; 114→58 across 0.60), no jumps. Global pitch peak 1766/1778 °/p
+   at p 0.697 = the shipped soil-crossing, untouched.
+3. Hover/focus: uRouteAmp [1.55, 0.55, 0.55] with ados hot, hairline 0.7,
+   focused pulse head observed travelling (0.893, amp 2.0); eased return
+   to [1,1,1]; keyboard focus parity (hivemind focus → [0.55,1.55,0.55]);
+   tab order = DOM order = ados/hivemind/discord; click opens the card
+   (#/connect/hivemind, aria-expanded true), Escape closes (detail null).
+4. Deep links: #/connect/discord (card + 'Join the Discord' CTA),
+   legacy #/connect/community → discord, #/connect/ados
+   (nodeWorld('ados') = (2.50, 0.048, 0.25) — focal handoff intact),
+   cold #/connect renders grown (uGrow 1 via snap). ?capture=connect
+   stability: two frozen shots differ by ONE pixel/count (MAE 7.7e-7,
+   the known ANGLE-Metal noise class); mobile byte-identical.
+5. Shader statics re-reviewed: no pow(neg) (gaussians are exp(-d·d), JS
+   `**` on non-negative sines only), varyings clamped, output capped 48,
+   point alpha clamped. Soaks 20 s at rest + 20 s held at p 0.44: no
+   black frame, no TAA wash, zero console errors.
+6. Full 0→1→0 rides both aspects with console.error/warn/onerror hooks:
+   0 entries. (The two 'patch' reserved-word shader errors visible in the
+   tab's console history are stale pre-fix entries from the build
+   session, as the shipped log already noted.)
+7. Goldens: --check before reshoot isolated the change to the connect
+   pair (MAE 1.23/0.93, all others 0.00); full set re-shot frozen at the
+   final tree — mission/inspire/owned/final reproduced BYTE-IDENTICAL
+   (git-clean), connect pair intentionally new, manifest provenance
+   noted. --check at the final tree: worst MAE 0.00/255, PASS.
+8. Hero-web dim restore: base [0.36, 0.35, 0.95, 0.5, 0.42, 0.45, 0.95]
+   → armed-at-rest exactly base × KEEP [0.1512, 0.147, 0.57, 0.4,
+   0.2016, 0.234, 0.551] → after retire restored `===`-exact.
+
+**Audit residuals (not fixed, with reasons).**
+
+- Owned-descent pitch rate: the untouched t 0.18 → 0.272 stretch measures
+  up to ~1530 °/p locally (p 0.657) — nominal key-to-key is ~1130 and the
+  spline overshoots. An attempt to soften it by easing the two re-authored
+  keys' aims moved the spike to p 0.608 (1371–1398 °/p) instead of
+  removing it — Catmull-Rom tangents leak local fixes sideways — so the
+  keys were reverted byte-exact to the shipped restage. It sits outside
+  the restaged span, alongside the pre-existing 1766 soil-crossing peak.
+- Portrait Hivemind↔Discord chip gap is 8 px — the narrow frustum
+  genuinely cannot give three pills generous spacing without new UI
+  machinery (a label-side flip), which the doc forbids ("zero new UI
+  code"). All pills are now fully in-frame and non-overlapping, which the
+  shipped build's 3 px + 10 px edge-clip was not.
+- The p 0.63–0.69 bareness residual and the modest arrival flare stand
+  as the builder left them.

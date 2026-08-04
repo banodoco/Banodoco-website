@@ -239,7 +239,11 @@ export function createConnect(sceneApi) {
       hubIgnite[i] = sm(hm.along - 0.05, hm.along + 0.015, grow * 1.06);
       const core = net.cores[i];
       const a = amt[hm.id], flare = pulses[i].flare;
-      core.mat.opacity = amount * hubIgnite[i] * Math.min(0.95, 0.42 + 0.4 * a + 0.45 * flare);
+      // Resting identity raised (audit taste pass, 2026-08-04): each hub must
+      // read as an unmistakable destination-beacon AT REST, not only on
+      // pulse/hover — 0.58 resting, cap lifted to 1.0 so the hover (+0.4)
+      // and arrival-flare (+0.45) headroom still register above it.
+      core.mat.opacity = amount * hubIgnite[i] * Math.min(1.0, 0.58 + 0.4 * a + 0.45 * flare);
       core.sprite.scale.setScalar(core.baseScale * (1 + 0.18 * a + 0.22 * flare));
     }
   });
