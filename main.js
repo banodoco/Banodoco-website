@@ -104,8 +104,18 @@ let currentMode = getMode();
 const TRACKS = {
   connect: { pos: ANCHORS[currentMode].connect.slice(), el: document.getElementById('co-connect') },
   inspire: { pos: ANCHORS[currentMode].inspire.slice(), el: document.getElementById('co-inspire') },
-  // the stem sways, so this node rides the mushroom rather than sitting in static world space
-  equip:   { pos: ANCHORS[currentMode].equip.slice(),   el: document.getElementById('co-equip'), sway: true },
+  // STABLE CALLOUTS (Hannah, 2026-08-05): all three are static world anchors.
+  //
+  // equip used to carry `sway: true`, which pinned it to swayGroup.matrixWorld
+  // so it rode the breeze with the stalk — measured at 7.4-12.6 px of
+  // horizontal travel, and the one callout that visibly moved. Hannah asked for
+  // all three to hold still, so the flag is gone and this is now the anchor's
+  // REST position, which (swayGroup being rotation-only, at the origin) is also
+  // its sway pivot. The leader still lands on the stalk at every phase of the
+  // breeze — the stalk's own excursion at this height is ~0.054 world units,
+  // far narrower than the stalk. Full reasoning, measurements and the rejected
+  // alternatives are in organism/furniture.js registerTrackers.
+  equip:   { pos: ANCHORS[currentMode].equip.slice(),   el: document.getElementById('co-equip') },
 };
 
 // --- scene init ---
