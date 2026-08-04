@@ -205,6 +205,7 @@ export function createOwned(sceneApi, content) {
   const frontMat = makeFadePulseMat(PAL.goldBright, {
     baseOpacity: 0.16 * EXPOSURE_LINES, pulseColor: PAL.goldBright,
     pulseWidth: 0.16, twinkle: 0.34, fogDensity: 0.026,
+    growGate: true,   // M5 (D16): the fan draws on from its roots, see below
   });
   {
     const res = H.strandLines({
@@ -242,6 +243,20 @@ export function createOwned(sceneApi, content) {
   let frontP = 0;
   let risePulseArmed = true;
 
+  // M5 ignition audit (D16): the arrival REVEAL is keyed to progress, not to
+  // the arming clock. The T3 hold arms this chapter at p 0.63, but from there
+  // down to the soil the camera looks at the descent corridor in OPEN AIR and
+  // the additive field has no occluder — a time-based fade there is a watchable
+  // ignition (the whole colony, faces included, materialised from nothing in
+  // view; same both directions). The soil crossing (camera inside the lid
+  // murk, y 0 → −0.5) spans p ≈ 0.692–0.712: the mask completes exactly
+  // inside that material, so the field is streamed in behind genuine
+  // occlusion and is pre-lit when the camera emerges beneath the lid. Pure in
+  // p — reverse scrubbing retires it behind the same murk. Deep links land
+  // with the mask already at 1 (every rest and the Final rise are past it).
+  const ARRIVAL_LO = 0.692;
+  const ARRIVAL_W = 0.020;
+
   /* ================================================================
      Chapter state + per-frame
      ================================================================ */
@@ -252,7 +267,13 @@ export function createOwned(sceneApi, content) {
     const k = Math.min(1, dt * 2.6);
     amount += (amountTarget - amount) * k;
     if (amount < 0.004 && amountTarget === 0) amount = 0;
-    group.visible = amount > 0.003;
+    const pNow = window.journey ? window.journey.p : 0;
+    // arrival mask (see ARRIVAL_LO above): everything the chapter draws is
+    // scaled by amount * arrival, so the on-screen reveal lives inside the
+    // soil-crossing murk whatever the scrub speed or direction.
+    const arrival = smooth01((pNow - ARRIVAL_LO) / ARRIVAL_W);
+    const eff = amount * arrival;
+    group.visible = eff > 0.003;
     if (!group.visible) {
       substrate.setFade(0);
       portraits.setFade(0);
@@ -261,8 +282,8 @@ export function createOwned(sceneApi, content) {
       return;
     }
 
-    substrate.setFade(amount);
-    portraits.setFade(amount);
+    substrate.setFade(eff);
+    portraits.setFade(eff);
     substrate.update(dt, t);
     portraits.update(dt, t);
 
@@ -273,15 +294,15 @@ export function createOwned(sceneApi, content) {
     for (const pd of pods) {
       const want = Math.max(pd.target, pd.sel * POD_SEL_LEVEL);
       pd.hot += (want - pd.hot) * Math.min(1, dt * 6);
-      pd.mat.uniforms.uFade.value = amount;
+      pd.mat.uniforms.uFade.value = eff;
       pd.mat.uniforms.uTime.value = t;
       pd.pulseP += dt * (0.10 + pd.hot * 0.55);
       if (pd.pulseP > 1.3) pd.pulseP = -0.25;
       pd.mat.uniforms.uPulse.value = pd.pulseP;
       pd.mat.uniforms.uPulseOn.value = 0.30 + pd.hot * 0.9;
-      pd.coreMat.opacity = amount * pd.baseCore * (1 + 1.4 * pd.hot)
+      pd.coreMat.opacity = eff * pd.baseCore * (1 + 1.4 * pd.hot)
         * (0.9 + 0.1 * Math.sin(t * 0.7 + pd.pos.x));
-      pd.haloMat.opacity = amount * pd.baseHalo * (1 + 1.6 * pd.hot);
+      pd.haloMat.opacity = eff * pd.baseHalo * (1 + 1.6 * pd.hot);
       const sc = pd.scale * 0.9 * (1 + 0.22 * pd.hot);
       pd.core.scale.setScalar(sc);
       pd.halo.scale.setScalar(pd.scale * 3.2 * (1 + 0.30 * pd.hot));
@@ -290,12 +311,15 @@ export function createOwned(sceneApi, content) {
     // growth front: slow upward travelling wave, uneven, never a loop you
     // can count — plus the OW-5 exit pulse when the rise commits. The fan
     // sits straight down the rest gaze (the exit corridor IS the gaze), so
-    // it is gated on p: invisible at the rest, breathing in through the
-    // drift (0.775-0.81) as the camera commits to the rise. Pure in p —
-    // reverse scrubbing restores the rest frame exactly.
-    const pNow = window.journey ? window.journey.p : 0;
+    // it is gated on p: invisible at the rest, arriving through the drift
+    // (0.775-0.81) as the camera commits to the rise. Pure in p — reverse
+    // scrubbing restores the rest frame exactly. M5 ignition audit (D16):
+    // the arrival is a DRAW-ON, not a fade — uGrow extends each strand from
+    // its aAlong=0 root in the lit deep field up toward the soil, so the fan
+    // is visibly grown out of the colony instead of igniting in view.
     const fg = smooth01((pNow - 0.775) / 0.035);
-    frontMat.uniforms.uFade.value = amount * fg;
+    frontMat.uniforms.uFade.value = eff;
+    frontMat.uniforms.uGrow.value = fg * 1.15;
     frontMat.uniforms.uTime.value = t;
     frontP += dt * (0.075 + 0.05 * (0.5 + 0.5 * H.noise3(t * 0.06, 3.3, 0)));
     if (frontP > 1.35) frontP = -0.2;
