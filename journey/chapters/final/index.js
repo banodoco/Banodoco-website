@@ -133,9 +133,28 @@ export function createFinal(sceneApi) {
     heroDimActive = false;
   }
 
+  /* ---- rise mask (M5 ignition audit, D16) ----
+     The T4 hold arms this chapter at p 0.80, while the camera is still deep
+     in the Owned colony (x −4.4). Between there and the surface pierce
+     (x −8.06 at p 0.85) this mask runs 0 → 1 as a pure function of the pose
+     — the same discipline as uPull — so every fade the chapter owns (soil
+     slab dissolve, whisper bases, haze, sky, mist) COMPLETES underground,
+     behind the slab it is itself dissolving in, before anything above ground
+     can be seen. Combined with `amount` as a probabilistic OR: a fling that
+     outruns the arming clock still surfaces onto a finished world, because
+     the mask alone saturates the reveal. Reverse rides re-descend behind the
+     same slab and the mask retires everything in place. */
+  const riseOf = (camX) => {
+    const u = (-camX - 4.6) / 2.8;             // 0 at x −4.6, 1 by x −7.4
+    const c = u < 0 ? 0 : u > 1 ? 1 : u;
+    return c * c * (3 - 2 * c);
+  };
+
   sceneApi.addAnimator('journey-final', (t, dt) => {
     amount += (amountTarget - amount) * Math.min(1, dt * 2.2);
     if (amount < 0.004 && amountTarget === 0) amount = 0;
+    const rise = riseOf(sceneApi.camera.position.x);
+    const eff = 1 - (1 - amount) * (1 - rise);   // amount OR rise
     group.visible = amount > 0.003;
     if (!group.visible) {
       lastPull = pullOf(sceneApi.camera.position.x);
@@ -149,8 +168,8 @@ export function createFinal(sceneApi) {
     // pullback, reverses with it, restores exactly on retire
     collectHeroGround();
     const reachT = Math.max(0, Math.min(1, (pull - 0.25) / 0.45));
-    applyHeroDim(amount * reachT * reachT * (3 - 2 * reachT));
-    uniforms.uAmount.value = amount;
+    applyHeroDim(eff * reachT * reachT * (3 - 2 * reachT));
+    uniforms.uAmount.value = eff;
     uniforms.uPull.value = pull;
     uniforms.uTime.value = t;
     if (sceneApi.scene.fog) {
@@ -203,8 +222,8 @@ export function createFinal(sceneApi) {
     ring.setDwell(dwell);
 
     // sprite layers (outside the shared shader uniforms)
-    terrain.setAmount(amount);
-    sky.update(t, amount);
+    terrain.setAmount(eff);
+    sky.update(t, eff);
   });
 
   /* ---- growth-front world position (lens halation focus hint) ----

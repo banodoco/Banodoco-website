@@ -24,6 +24,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
   const gauss = () => gaussOf(rand);
   const group = new THREE.Group();
   const counts = {};
+  let soilDissolve = null;   // the slab's uSoilOn uniform (set below)
 
   /* ================================================================
      0. SOIL OCCLUDER (declutter round). Under additive blending every
@@ -81,14 +82,40 @@ export function createFinalTerrain(sceneApi, uniforms) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setIndex(idx);
-    const soilMat = new THREE.MeshBasicMaterial({
-      color: (sceneApi.scene.fog && sceneApi.scene.fog.color) || 0x000000,
+    // M5 ignition audit (D16): the slab used to appear with group.visible —
+    // a binary pop that blacked out the still-visible colony the instant the
+    // chapter armed, and un-occluded it just as instantly on a reverse ride.
+    // It is now a hashed-alpha dissolve: fragments discard where a screen-
+    // space hash exceeds uSoilOn, so the occlusion builds pixel-by-pixel
+    // (TAA integrates the stipple into a smooth swallow) while depth writes
+    // stay honest for the fragments that remain. At uSoilOn = 1 every
+    // fragment survives — identical to the old opaque MeshBasicMaterial.
+    // Driven by the orchestrator through setAmount (the rise mask), so the
+    // soil solidifies during the underground rise like fog thickening, never
+    // as a switch.
+    const soilMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uSoilOn: { value: 0 },
+        uSoilCol: { value: new THREE.Color(
+          (sceneApi.scene.fog && sceneApi.scene.fog.color) || 0x000000) },
+      },
+      vertexShader: /* glsl */`
+        void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: /* glsl */`
+        uniform float uSoilOn;
+        uniform vec3 uSoilCol;
+        void main() {
+          float h = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+          if (h > uSoilOn) discard;
+          gl_FragColor = vec4(uSoilCol, 1.0);
+        }`,
       side: THREE.DoubleSide,
     });
     const soil = new THREE.Mesh(g, soilMat);
     soil.frustumCulled = false;
     soil.renderOrder = -10;          // first among opaques
     group.add(soil);
+    soilDissolve = soilMat.uniforms.uSoilOn;
     counts.soilTris = idx.length / 3;
   }
 
@@ -457,7 +484,11 @@ export function createFinalTerrain(sceneApi, uniforms) {
   return {
     group,
     counts,
-    /** haze sprites cannot share the shader uniforms — fade them here */
-    setAmount(a) { for (const h of hazeSprites) h.mat.opacity = h.base * a; },
+    /** haze sprites cannot share the shader uniforms — fade them here; the
+     *  soil slab's hashed dissolve rides the same drive (M5, D16) */
+    setAmount(a) {
+      for (const h of hazeSprites) h.mat.opacity = h.base * a;
+      if (soilDissolve) soilDissolve.value = a;
+    },
   };
 }
