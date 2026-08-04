@@ -126,18 +126,18 @@ export const ORBIT_BREATH = { amp: 0.010, cycles: 1.7 };
 /* ------------------------------------------------------------------ */
 /* Seam crossings read as passing THROUGH something (W3-B, gap d)      */
 /* ------------------------------------------------------------------ */
-// Brief, pure-in-p fog thickenings centred on the two physical crossings the
-// path makes: T2 (the rim shadow closes over the lens as the camera slips
-// under the cap) and T3 (substrate swallows the frame on the soil crossing).
+// Brief, pure-in-p fog thickenings centred on the physical crossings the
+// path makes: the cap's shadow band (the camera drops past the rim's height
+// on the Connect descent — OUTSIDE it since the D16 ground restage, same p)
+// and T3 (substrate swallows the frame on the soil crossing).
 // Multiplicative dips on near/far; zero at every rest anchor, perfectly
 // reversible. T1 stays purely a streaming trigger (ADR: no visual), T4's
 // crossing is carried by the fog ramp opening below.
 // Centres are authored as leg-relative offsets from the manifest, so a
-// re-timed route carries the crossings with it. Shipped values: T2 at
-// connect.start + 0.056 = 0.436 (slip-under key p≈0.446), T3 at
-// owned.start + 0.093 = 0.693 (soil-line crossing).
+// re-timed route carries the crossings with it. Shipped values: rim-shadow
+// at connect.start + 0.056 = 0.436, T3 at owned.start + 0.093 = 0.693.
 export const SEAM_FOG_DIPS = [
-  { c: startOf('connect') + 0.056, w: 0.035, near: 0.26, far: 0.34 },  // T2 slip-under
+  { c: startOf('connect') + 0.056, w: 0.035, near: 0.26, far: 0.34 },  // rim-shadow drop
   { c: startOf('owned') + 0.093,   w: 0.026, near: 0.46, far: 0.52 },  // T3 soil crossing
 ];
 
@@ -171,7 +171,7 @@ export const FOG_RAMP = {
 // runtime from sceneApi.consts, because mushroom-scene.js owns them.
 export const THRESHOLDS = [
   { id: 'rear-cap',      arms: 'inspire', kind: 'azimuth', deltaDeg: 100 },
-  { id: 'cap-occludes',  arms: 'connect', kind: 'under-cap' },
+  { id: 'connect-window', arms: 'connect', kind: 'p-window' },   // D16 restage: pure p-window, no camera predicate
   { id: 'soil-line',     arms: 'owned',   kind: 'below-ground' },
   { id: 'rise-cutaway',  arms: 'final',   kind: 'above-ground-outbound', minP: startOf('final') },
 ];

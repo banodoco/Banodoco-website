@@ -158,6 +158,8 @@ export function boot(opts = {}) {
   function normaliseNode(chapterId, nodeId) {
     if (!nodeId) return null;
     if (nodeId === '2rp') nodeId = 'tworp';
+    if (nodeId === 'community') nodeId = 'discord';  // D16 ground restage: legacy deep links land
+
     const m = /^person-(\d+)$/.exec(nodeId);        // ADR spells the field person-N
     if (m) nodeId = `contributor-${m[1]}`;
     if (chapterId === 'final') return null;         // the epilogue has no detail state

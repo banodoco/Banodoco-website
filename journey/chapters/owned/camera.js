@@ -10,9 +10,12 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 export const CAMERA = {
   keys: [
-    // --- finishing the chamber -> stipe pitch turn (see connect/camera.js) ---
-    { t: 0.0,                 pos: V(0.880, 2.00, 0.420),  tgt: V(-0.60, 2.90, 1.30),  fov: 55 },  // p 0.600, pitch +28
-    { t: 0.08800000000000008, pos: V(0.920, 1.80, 0.800),  tgt: V(-0.55, 2.10, 1.55),  fov: 53 },  // p 0.622, pitch +10
+    // --- approach low toward the base (D16 ground restage, doc §5.3): the
+    //     Connect exit follows the tendrils home across the ground; these two
+    //     keys carry that approach in to the stipe side, joining the proven
+    //     exterior descent at t 0.18 (UNTOUCHED from there on) ---
+    { t: 0.0,                 pos: V(2.550, 1.64, 1.950),  tgt: V(-0.10, 1.05, 0.85),  fov: 52 },   // p 0.600
+    { t: 0.08800000000000008, pos: V(1.550, 1.52, 1.350),  tgt: V(-0.28, 1.15, 1.20),  fov: 51.5 }, // p 0.622
     // --- EXTERIOR stipe-side descent. Horizontal radius never drops below
     //     ~1.2 while stem radius is <= 0.69, so the camera is always OUTSIDE
     //     the stipe - the deferred Equip interior is never entered.
