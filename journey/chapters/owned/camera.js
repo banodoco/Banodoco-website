@@ -10,24 +10,43 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 export const CAMERA = {
   keys: [
-    // --- approach low toward the base (D16 ground restage, doc §5.3): the
-    //     Connect exit follows the tendrils home across the ground; these two
-    //     keys carry that approach in to the stipe side, joining the proven
-    //     exterior descent at t 0.18 (UNTOUCHED from there on) ---
-    { t: 0.0,                 pos: V(2.550, 1.64, 1.950),  tgt: V(-0.10, 1.05, 0.85),  fov: 52 },   // p 0.600
-    { t: 0.08800000000000008, pos: V(1.550, 1.52, 1.350),  tgt: V(-0.28, 1.15, 1.20),  fov: 51.5 }, // p 0.622
+    // --- the dive (re-keyed 2026-08-04; Hannah: Connect->Owned must read as
+    //     ONE continuous down-and-forward gesture — approach, dive, level
+    //     out). Only the GAZE is re-authored from t 0.088 on: gaze yaw walks
+    //     -122 -> -94 deg monotonically (the old aims overswung to -71 deg
+    //     mid-descent and came back) and gaze pitch bows through a single
+    //     ~-26 deg valley near t 0.27 instead of the old crest-dip-crest
+    //     (-8 -> -46 -> -1, which measured ~1530 and ~1800 deg/unit-p; the
+    //     re-aim measures ~910 peak).
+    //
+    //     POSITION KEYS FROM t 0.088 ON ARE PLACEMENT-LOCKED, BIT-EXACT:
+    //     owned/leg.js samples the director's POSITION spline over
+    //     p 0.660-0.872 (camPts) for every clearance rule — cords, hypha
+    //     culls (whose PRNG branches on camDist) and portrait pushes — so
+    //     moving any pos at t >= 0.088 reshuffles built geometry and the
+    //     goldens with it. Targets are freer: only frameAt(p >= 0.700)
+    //     consumers (a handful of ambient portrait homes) read the target
+    //     spline, a sub-threshold golden effect. The t 0.0 key position may
+    //     move (its influence ends before p 0.660).
+    { t: 0.0,                 pos: V(2.523, 1.654, 1.792), tgt: V(-1.176, 0.194, -0.519), fov: 52 },   // p 0.600, pitch -18.5 yaw -122
+    { t: 0.08800000000000008, pos: V(1.550, 1.52, 1.350),  tgt: V(-1.736, 0.046, -0.147), fov: 51.5 }, // p 0.622, pitch -22.2 yaw -114.5
     // --- EXTERIOR stipe-side descent. Horizontal radius never drops below
     //     ~1.2 while stem radius is <= 0.69, so the camera is always OUTSIDE
     //     the stipe - the deferred Equip interior is never entered.
-    { t: 0.18000000000000016, pos: V(0.940, 1.42, 0.940),  tgt: V(-0.30, 1.20, 1.35),  fov: 51 },  // p 0.645, pitch -10
-    { t: 0.27200000000000024, pos: V(0.920, 0.85, 0.920),  tgt: V(-0.10, 0.10, 1.00),  fov: 50 },  // p 0.668, pitch -36
-    // T3 soil-line crossing lands just past here
-    { t: 0.3599999999999999,  pos: V(0.860, 0.15, 0.860),  tgt: V(-0.10, -0.85, 0.70), fov: 50 },  // p 0.690, pitch -46
-    // levelling into the glide: spread over three keys so the pitch comes up
-    // at ~60 deg/s rather than the ~96 deg/s a two-key version measured
-    { t: 0.3999999999999999,  pos: V(0.720, -0.42, 0.720), tgt: V(-0.70, -1.30, 0.42), fov: 51 },  // p 0.700, pitch -31
-    { t: 0.43999999999999995, pos: V(0.420, -0.92, 0.580), tgt: V(-1.35, -1.52, 0.34), fov: 52 },  // p 0.710, pitch -19
-    { t: 0.472,               pos: V(0.050, -1.22, 0.420), tgt: V(-2.20, -1.55, 0.24), fov: 53 },  // p 0.718, pitch -8
+    { t: 0.18000000000000016, pos: V(0.940, 1.42, 0.940),  tgt: V(-1.901, -0.001, 0.044), fov: 51 },  // p 0.645, pitch -25.5 yaw -107.5
+    { t: 0.27200000000000024, pos: V(0.920, 0.85, 0.920),  tgt: V(-1.528, -0.399, 0.386), fov: 50 },  // p 0.668, pitch -26.5 yaw -102.3 (the valley)
+    // T3 soil-line crossing lands just past here (p ~0.692, unchanged: the
+    // position path through the murk is the shipped one, bit-exact)
+    { t: 0.3599999999999999,  pos: V(0.860, 0.15, 0.860),  tgt: V(-1.324, -0.788, 0.530), fov: 50 },  // p 0.690, pitch -23 yaw -98.6
+    // levelling into the glide: pitch recovers along one smooth ramp
+    // (-26.5 valley -> -1 at the rest, peak ~910 deg/unit-p measured). The
+    // yaw tail deliberately keeps ~+3.4 deg of rise after p 0.700 (all
+    // inside the murk): the portrait field's tgtRight ramp (0 -> 0.25 over
+    // 0.700-0.725) pulls ~-3.2 deg the other way, and a flatter landscape
+    // tail would let it reverse the portrait yaw mid-crossing.
+    { t: 0.3999999999999999,  pos: V(0.720, -0.42, 0.720), tgt: V(-1.537, -1.182, 0.427), fov: 51 },  // p 0.700, pitch -18.5 yaw -97.4
+    { t: 0.43999999999999995, pos: V(0.420, -0.92, 0.580), tgt: V(-2.012, -1.440, 0.329), fov: 52 },  // p 0.710, pitch -12 yaw -95.9
+    { t: 0.472,               pos: V(0.050, -1.22, 0.420), tgt: V(-2.629, -1.465, 0.195), fov: 53 },  // p 0.718, pitch -5.2 yaw -94.8
     // --- OWNED rest: the underground glide, drifting -X away from the stipe ---
     { t: 0.5,                 pos: V(-0.400, -1.40, 0.300), tgt: V(-3.20, -1.45, 0.10), fov: 54, hold: true, note: 'owned-rest' },   // p 0.725
     // --- growth-front rise-tilt-recede: ONE continuous gesture (W3-B gap c),

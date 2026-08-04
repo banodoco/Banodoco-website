@@ -507,3 +507,62 @@ full set re-shot frozen at the final tree — mission/inspire/owned/final
 reproduced BYTE-IDENTICAL (git-clean), connect pair intentionally new
 (the ADOS move is the only visible rest-frame change), manifest provenance
 noted; --check at the final tree: worst MAE 0.00/255, PASS.
+
+## Connect→Owned: one continuous dive (2026-08-04, Hannah's jerkiness complaint)
+
+**The complaint.** The travel from the Connect rest (p 0.49) to the Owned
+rest (p 0.725) felt jerky — "it goes in and then…". Measured, the complaint
+was three superimposed defects: (a) gaze yaw overswung from −132° through
+−71° — 38° PAST its −94° destination — then swung back through −102° to
+−94° (a crest-dip-crest whip across the trunk); (b) gaze pitch crested UP
+to −8.5°, dove to −46°, then whipped back to −1° — 1454 °/unit-p into the
+valley (the audit's ~1530 residual at p 0.657) and 1804 °/unit-p out of it
+(the ~1766–1802 soil-crossing residual at p 0.696); (c) camera speed spiked
+to 118 u/p right after the rest-drift (3.6 → 118 in 0.05 p).
+
+**The fix — gaze re-keyed, dive positions untouched.** The wider license
+(whole pre-rest Owned key list + Connect exit keys) turned out to be
+narrower than it looks: owned/leg.js samples the director's POSITION spline
+over p 0.660–0.872 (camPts) for every placement rule, and hypha culls
+PRNG-branch on camDist — so any position change at p ≥ 0.622 (tangent
+reach) reshuffles built geometry and the goldens. And frameAt(p ≥ 0.700)
+(ambient portrait homes) reads the TARGET spline, so late-key re-aims were
+kept modest. What shipped:
+
+- Positions: only the three placement-free keys moved — the Connect
+  rest-drift now creeps ALONG the dive line toward the trunk (the old one
+  backed away +z, forcing the exit to reverse it), and the Connect exit +
+  Owned t 0.0 keys ride the same straight approach line to the locked
+  p 0.622 key. Speed profile 0 → 87 → (locked dive) instead of 0 → 118;
+  every position key from p 0.622 on is bit-exact shipped (soil crossing
+  p 0.6922, min above-ground radius 1.193, murk window all unchanged by
+  construction).
+- Targets (every pre-rest key): yaw now walks −132° → −94° monotonically
+  (zero derivative sign flips, peak 356 °/p at p 0.612); pitch bows through
+  ONE valley (−11.3° → −26.6° at p 0.663 → −1°), peak rate 908 °/p at
+  p 0.713 (was 1804). The yaw tail deliberately keeps ~+3.4° of rise after
+  p 0.700 (inside the murk) so the portrait field's tgtRight ramp cannot
+  reverse portrait yaw mid-crossing.
+- FOVs: all shipped values kept, every key.
+
+**Measured (240-step drift-aware scrub, actual-p differentiation).**
+Landscape: pitch peak 1804 → 908 °/p, yaw peak 1168 → 356 °/p, speed peak
+118 → 93 u/p (the 93 is the shipped underground brake, positions
+bit-identical there); pitch one sign flip (the valley), yaw zero. Portrait
+(?aspect=portrait): pitch 572, yaw 339, one residual ±42 °/p yaw wiggle at
+p 0.704–0.721 — the portrait field's authored tgtRight ramp against the
+flat landscape tail, entirely inside the soil murk, sub-perceptual (the
+first cut measured −214 °/p before the tail re-tilt). The pre-existing
+portrait fov ramp (+3 → +10 over 0.700–0.725, ~540 °/p) is the shipped
+field, untouched, murk-covered.
+
+**Gates.** Ignition sweep (320-step, both directions): owned reveal ON
+p 0.6932 / OFF 0.6926, connect retire 0.7055 / re-arm 0.7046 — all inside
+the 0.692–0.712 murk, matching the shipped audit's placement; ARRIVAL_LO/
+CONNECT_HOLD_HI untouched. Live wheel ride 0.49 → 0.758 → 0.476:
+0 console errors/warnings, no visible pops (the owned mask is pure in p,
+so reverse retires behind the same murk). Spot frames at p 0.55 / 0.62 /
+0.67 / 0.697 / 0.706: the exit now reads as one gesture — approach along
+the tendrils, dive at the trunk, murk wipe, level-out. Goldens:
+`capture.py --check` worst MAE 0.00/255, all ten files, PASS (the ambient-
+home target drift measured below the 2-decimal floor).

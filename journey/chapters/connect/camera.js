@@ -35,9 +35,15 @@ export const CAMERA = {
     { t: 0.409090909090909,   pos: V(7.750, 2.43, 3.950), tgt: V(0.50, 0.65, -2.15), fov: 54.5 },                                    // p 0.470  d 9.64
     // --- CONNECT rest: low panorama — mushroom left, network right ---
     { t: 0.5,                 pos: V(7.600, 2.35, 4.100), tgt: V(0.45, 0.42, -2.35), fov: 56, hold: true, note: 'connect-rest' },    // p 0.490  d 9.82
-    { t: 0.6909090909090911,  pos: V(7.450, 2.34, 4.250), tgt: V(0.42, 0.43, -2.25), fov: 56, note: 'connect-rest-drift' },          // p 0.532
-    // --- exit toward the trunk: the camera follows the tendrils home; the
-    //     near-base stretch brightens (index.js uExit) as radius closes ---
-    { t: 0.8863636363636362,  pos: V(4.900, 1.95, 3.100), tgt: V(0.25, 0.80, -0.10), fov: 53 },                                      // p 0.575
+    // --- exit re-keyed 2026-08-04 (Hannah: Connect->Owned must read as ONE
+    //     continuous down-and-forward dive, no whip at the soil). The drift
+    //     already creeps along the dive line toward the trunk (the old drift
+    //     backed away +z, so the exit had to reverse it), and the exit key
+    //     rides the same line: from here to the Owned rest, gaze yaw walks
+    //     -132 -> -94 deg MONOTONICALLY (the old exit overswung to -71 and
+    //     came back) and gaze pitch bows through a single ~-26 deg valley.
+    //     The near-base stretch brightens (index.js uExit) as radius closes.
+    { t: 0.6909090909090911,  pos: V(6.968, 2.263, 3.813), tgt: V(0.150, 0.361, -2.220), fov: 56, note: 'connect-rest-drift' },      // p 0.532  pitch -11.8 yaw -131.5
+    { t: 0.8863636363636362,  pos: V(3.987, 1.854, 2.458), tgt: V(-0.846, 0.245, -1.250), fov: 53 },                                 // p 0.575  pitch -14.8 yaw -127.5
   ],
 };
