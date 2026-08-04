@@ -512,10 +512,14 @@
     #co-inspire .tag { top: -62px; } /* flush with the top of the leader */
   }
 
-  /* per-callout leader geometry: where the tag sits relative to the node */
-  #co-connect .tag { left: 92px; top: -52px; transform: translateY(-50%); }
+  /* per-callout leader geometry: where the tag sits relative to the node.
+     All three now share INSPIRE's pattern — a vertical leader rising from
+     the node, tag centered above its tip (bottom edge ~6px above the tip) —
+     but each keeps its OWN leader length so the three tags, at very
+     different node heights (spore stream / cap / ground), never collide. */
+  #co-connect .tag { left: 0; top: -46px; transform: translate(-50%, -100%); }
   #co-inspire .tag { left: 0; top: -58px; transform: translate(-50%, -100%); }
-  #co-equip   .tag { left: -82px; top: -28px; transform: translate(-100%, 0); }
+  #co-equip   .tag { left: 0; top: -40px; transform: translate(-50%, -100%); }
 
   /* --- touch affordance: no hover on touch devices, so idle state gets a
      visibility boost and taps toggle the lit state via JS (.force class) --- */
@@ -571,11 +575,11 @@
     .co { transform: scale(0.88); transform-origin: 0 0; }
     .co .tag { font-size: 0.6rem; }
 
-    /* CONNECT keeps its label on the right here, on a compact leader so it
-       still clears the screen edge on narrow phones */
+    /* CONNECT swaps to a shorter vertical leader here — same centered-above
+       pattern as the base rule, just compressed for the smaller viewport */
     #co-connect svg.std { display: none; }
     #co-connect svg.alt { display: block; }
-    #co-connect .tag { left: 68px; top: -40px; transform: translateY(-50%); }
+    #co-connect .tag { top: -37px; }
 
     /* small or short phones: tighten the text stack */
     @media (max-height: 700px) {
