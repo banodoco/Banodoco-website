@@ -438,3 +438,72 @@ spokes/knots (tier 0, rAlong 1.0) keep the arrival flare, secondaries
   shipped build's 3 px + 10 px edge-clip was not.
 - The p 0.63–0.69 bareness residual and the modest arrival flare stand
   as the builder left them.
+
+## Three approved changes (2026-08-04, Hannah's review of the shipped restage)
+
+**1 — ADOS hub LEFT of the mushroom (the mockup composition).** Hub world
+(2.50, gy, 0.25) → (2.45, gy, 2.85) — world (+x, +z) is the camera-left
+foreground at the rest pose — departure azimuth 0.20 → 0.86 so the primary
+route now leaves the stipe base and runs out past the LEFT of the stem into
+the lower-left ground field. Braid/meander language, spokes, knot, route id
+all unchanged (hover lift, pulses and the lens focal handoff follow the
+geometry; nodeWorld('ados') = (2.45, 0.017, 2.85)). Chip clearances at rest:
+1280×800 chip x 252–326 / y 594–617 vs copy block left edge 396 (70 px
+clear, chip ~145 px left of the stem-base projection at x 469); 1440×900
+chip 285–359 / 670–693 vs copy edge 450 (91 px clear); 375×812 the hub
+itself projects inside the portrait copy block, so ADOS now anchors
+per-orientation like Discord (tendrils.js PORT_T: route-t 0.25) — chip
+56–130 / 455–478, fully in-frame, 31 px above the copy top, no overlap with
+Hivemind (248@428) or Discord (256@459). Note: the ADOS route is now ~0.4
+world units longer than Hivemind's, so Hivemind's starburst ignites
+marginally before ADOS during growth — the stagger is still by construction.
+
+**2 — Mission→Inspire: ONE continuous arc.** arrival() re-shaped: the old
+staged gesture (target pin over s 0–0.22, constant radius, push-in + fov
+only past s 0.80, lift on its own curve) is replaced by one shared
+progression — azimuth keeps azEase (trapezoid + windowed orbit-breath,
+strictly monotonic), and radius, height, fov and gaze all ride the SAME
+trapezoid (trapEase, no breath on the dolly); the gaze is a quadratic
+bezier hero.target → INSPIRE.target bowed through the old PIN so the cap
+and plume stay framed mid-swing. No phase change anywhere. HARD constraints
+held: u ≤ ARRIVAL_DEAD is the hero pose EXACTLY (poses at p 0 and p 0.039
+identical; mission goldens byte-identical), u = 1 lands the Inspire rest
+exactly (INSPIRE constants untouched; inspire goldens byte-identical),
+azimuth strictly monotonic, no roll. Measured (401-sample scrub of the
+gesture span): desktop hero peak gaze-yaw 557 → 469 °/p (≈ old ~39 deg/s →
+~33 deg/s at the same ordinary scroll), peak pitch 117 → 18 °/p (the pin's
+early nod is gone); portrait hero yaw 482 → 440, pitch 223 → 64 °/p.
+
+**3 — Inspire→Connect: monotonic zoom-out.** The old exit pushed IN toward
+the stream (r 9.1 → 5.6, then Connect pulled back out to 8.6). Re-keyed:
+inspire drift/exit now recede (subject distance 8.11 → 8.32 → 8.48, fov
+38 → 39.5 → 44) and Connect's entry keys continue the same widening
+(d 8.83 → 9.32 → 9.64 → 9.82, fov 48 → 52 → 54.5 → 56) while the gaze
+slides off the cap (tgt y 3.95) down the stem to the ground network
+(tgt y 0.42). Both rest poses fixed (goldens byte-identical / connect pose
+confirmed). The portrait field key at p 0.410 was retuned to match (back
+1.14 → 1.55, fov 6 → 12 — the old value was authored for the inward path
+and made the portrait travel re-approach mid-leg). Measured (201-sample
+scrub, p 0.26–0.50): landscape subject-distance and fov STRICTLY monotone;
+portrait fov strictly monotone, distance monotone within a 0.026-world-unit
+flat spot (~0.2% of the 14-unit distance). Rates: landscape yaw 163 °/p
+(peak p 0.343) / pitch 107 (0.392); portrait 129 (0.413) / 115 (0.427) —
+all far under the ~1.2k threshold. Splice at p 0.38 is the same global
+spline as ever — position rate smooth through the boundary, no pose jump.
+
+**Gates.** Full 0→1→0 ride at ~0.043 p/s with console.error/warn hooks:
+0 entries, landscape and portrait (the two 'patch' errors in tab history
+remain the documented stale pre-fix entries). Instrumented reveal audit:
+forward reveal p 0.4016/0.4015 (land/port) with uGrow 0.0000, retire
+0.7066/0.7062 and re-arm 0.7024/0.7034 inside the Owned soil murk, reverse
+vanish 0.3968/0.3991 with uGrow 0 — no self-ignition, growth-from-base
+only. Hover with ados hot: uRouteAmp [1.55, 0.55, 0.55], focused pulse
+head travelling, eased return to [1,1,1]; #/connect/ados lands with the
+card open. debugState() at p 0.49: pose (7.6, 2.35, 4.1) fov 56, armed
+[connect], hotspots [ados, hivemind, discord]. 21 s held mid-growth +
+long rest parks: no TAA wash, no black frame. Goldens: pre-reshoot --check
+isolated the drift to the connect pair (MAE 2.56/2.25, all others 0.00);
+full set re-shot frozen at the final tree — mission/inspire/owned/final
+reproduced BYTE-IDENTICAL (git-clean), connect pair intentionally new
+(the ADOS move is the only visible rest-frame change), manifest provenance
+noted; --check at the final tree: worst MAE 0.00/255, PASS.

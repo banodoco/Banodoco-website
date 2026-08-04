@@ -8,8 +8,11 @@
 //            visible spore stream. Authored in GESTURE-LOCAL u (0 = the
 //            mission rest / hero pose, 1 = the Inspire rest); the composer
 //            maps global p over [0 .. restProgress('inspire')] onto u.
-//            Gesture qualities (frozen at G2a/D16 review): no roll, early
-//            target pin, constant radius, gentle push-in in the last 20%.
+//            Gesture qualities (re-shaped 2026-08-04, Hannah: "one smooth
+//            arc"): no roll, and radius / height / fov / target all evolve
+//            TOGETHER with the azimuth swing on one shared trapezoid ease —
+//            no early target pin, no deferred push-in, no phase change
+//            anywhere between the hero pose and the Inspire rest.
 //
 //   keys     the rest hold + rest drift + the first exit-follow key, in
 //            LEG-LOCAL t over the chapter's route span (0.14..0.38 on the
@@ -30,10 +33,12 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // stream stays in frame essentially the whole leg.
 export const INSPIRE = { az: 78 * DEG, r: 9.1, y: 3.25, target: V(1.15, 3.95, -0.40), fov: 38 };
 
-const SWING_Y = 2.9;              // Plate II: "cam y 2.25 -> ~2.9"
-const PIN = V(0.5, 3.4, -0.1);    // cap lock, biased a touch toward the stream
-                                  // side so the visible plume never leaves frame
-const PUSH_START = 0.80;          // the push-in lives ONLY in the last 20%
+// The gaze's mid-swing waypoint (was the old "early pin" target): the cap,
+// biased a touch toward the stream side so the visible plume never leaves
+// frame. Since the one-arc re-shape (2026-08-04) it is the CONTROL POINT of
+// a quadratic bezier hero.target -> INSPIRE.target — the gaze bows through
+// the cap continuously instead of locking onto it in the first 22%.
+const PIN = V(0.5, 3.4, -0.1);
 
 // Dead band at the head of the gesture: below this fraction of the arrival
 // the camera IS the hero pose exactly — what makes #/mission and a cold load
@@ -71,8 +76,6 @@ function azEase(s) {
     + ORBIT_BREATH.amp * Math.sin(2 * Math.PI * ORBIT_BREATH.cycles * s) * w;
 }
 
-const _ot = new THREE.Vector3();
-
 /** The arrival gesture. `u` is gesture-local (0 = mission rest, 1 = the
  *  Inspire rest); `hero` is the LIVE hero pose of whatever responsive
  *  composition booted (injected by the composer — the orbit must start from
@@ -80,16 +83,26 @@ const _ot = new THREE.Vector3();
 function arrival(u, out, hero) {
   let s = (u - ARRIVAL_DEAD) / (1 - ARRIVAL_DEAD);
   if (s < 0) s = 0;
+  // ONE shared progression (2026-08-04 re-shape): the azimuth keeps its
+  // trapezoid + windowed orbit-breath (azEase — strictly monotonic, breath
+  // zeroed at both ends), and radius, height, fov and gaze all ride the SAME
+  // trapezoid (trapEase, no breath — the dolly must not wobble). Position
+  // and gaze turn together the whole way: no pin phase, no push phase.
   const e = azEase(s);
+  const m = trapEase(s);
   const az = hero.az + (INSPIRE.az - hero.az) * e;
-  const pin = smooth01(s / 0.22);                              // target locks on the cap early
-  const push = smooth01((s - PUSH_START) / (1 - PUSH_START));  // deferred push-in
-  const lift = smooth01((s - 0.06) / 0.58);                    // gentle rise to swing height
-  const r = hero.r + (INSPIRE.r - hero.r) * push;              // CONSTANT radius until s = 0.8
-  const y = hero.y + (SWING_Y - hero.y) * lift + (INSPIRE.y - SWING_Y) * push;
+  const r = hero.r + (INSPIRE.r - hero.r) * m;
+  const y = hero.y + (INSPIRE.y - hero.y) * m;
   out.pos.set(Math.sin(az) * r, y, Math.cos(az) * r);
-  out.target.copy(_ot.lerpVectors(hero.target, PIN, pin).lerp(INSPIRE.target, push));
-  out.fov = hero.fov + (INSPIRE.fov - hero.fov) * push;
+  // Gaze: quadratic bezier hero.target -> INSPIRE.target bowed through PIN
+  // (the cap) — C1-continuous, endpoints exact, the plume framed mid-swing.
+  const w0 = (1 - m) * (1 - m), w1 = 2 * m * (1 - m), w2 = m * m;
+  out.target.set(
+    w0 * hero.target.x + w1 * PIN.x + w2 * INSPIRE.target.x,
+    w0 * hero.target.y + w1 * PIN.y + w2 * INSPIRE.target.y,
+    w0 * hero.target.z + w1 * PIN.z + w2 * INSPIRE.target.z,
+  );
+  out.fov = hero.fov + (INSPIRE.fov - hero.fov) * m;
   return out;
 }
 
@@ -104,15 +117,16 @@ export const CAMERA = {
   arrivalName,
   // --- INSPIRE rest, and the drift that holds it (D16 restage: the rest is
   //     on the STREAM side, az ~78 deg — pos = (sin az, ., cos az) * r) ---
-  // then: follow ONE plume backward + downward toward its release rim
-  // (GB-2.1, re-keyed for D16) — the guide plume is ArtCompute, the hero's
-  // own visible stream (cap az ~5.83, rim release ~(1.97, 3.0, -0.95)): the
-  // path descends along the stream toward its release point, so the cap
-  // climbs the frame and occludes the sky exactly as before, just from the
-  // stream side. (The descent continues in connect/camera.js.)
+  // then: ONE continuous widening toward the Connect ground rest (re-keyed
+  // 2026-08-04, Hannah: the old exit pushed IN toward the stream, r 9.1 ->
+  // ~5.6, and Connect pulled back OUT again — a felt zoom-in-then-out).
+  // From the rest the camera now sinks and recedes in a single monotone
+  // zoom-out: camera-to-subject distance and fov only ever grow, and the
+  // gaze slides off the cap down the stem toward the ground as the descent
+  // proceeds. (The widening continues seamlessly in connect/camera.js.)
   keys: [
-    { t: 0.5,                pos: V(8.901, 3.25, 1.892), tgt: V(1.15, 3.95, -0.40), fov: 38,   hold: true, note: 'inspire-rest' },   // p 0.260
-    { t: 0.7166666666666667, pos: V(8.300, 3.22, 1.500), tgt: V(1.30, 3.80, -0.50), fov: 38.5, note: 'inspire-rest-drift' },         // p 0.312
-    { t: 0.9249999999999999, pos: V(5.600, 3.05, 0.550), tgt: V(1.70, 3.30, -0.75), fov: 42 },                                       // p 0.362
+    { t: 0.5,                pos: V(8.901, 3.25, 1.892), tgt: V(1.15, 3.95, -0.40), fov: 38,   hold: true, note: 'inspire-rest' },   // p 0.260  d 8.11
+    { t: 0.7166666666666667, pos: V(8.950, 3.18, 2.150), tgt: V(1.10, 3.75, -0.55), fov: 39.5, note: 'inspire-rest-drift' },         // p 0.312  d 8.32
+    { t: 0.9249999999999999, pos: V(8.550, 2.95, 2.850), tgt: V(0.95, 2.90, -0.90), fov: 44 },                                       // p 0.362  d 8.48
   ],
 };

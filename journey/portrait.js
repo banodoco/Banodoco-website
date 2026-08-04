@@ -76,10 +76,13 @@ const KEYS = [
   // land fully inside at 430×932, above the bottom copy block.
   { p: 0.260, back: 1.60, rise: 0.60, truck: 0, tgtUp: 0.10, tgtRight: 1.05, fov: 14 },
 
-  // Ground-descent approach (D16 restage): the leg descends OUTSIDE the rim
-  // in open air, so the field can breathe earlier than the old slip-under —
-  // a light dolly-back keeps the cap inside the narrow frame on the way down.
-  { p: 0.410, back: 1.14, rise: 0.16, truck: 0, tgtUp: 0.12, tgtRight: 0, fov: 6 },
+  // Ground-descent approach (D16 restage; retuned 2026-08-04 for the
+  // monotone Inspire->Connect zoom-out): the landscape leg no longer pushes
+  // in toward the stream, so the old light back (1.14) here made the
+  // PORTRAIT travel re-approach mid-leg while the landscape widened. The
+  // back now eases 1.60 -> 1.55 -> 1.42 between the two rests so portrait
+  // subject-distance and fov grow monotonically with the landscape's.
+  { p: 0.410, back: 1.55, rise: 0.16, truck: 0, tgtUp: 0.12, tgtRight: 0, fov: 12 },
 
   // CONNECT (rest 0.49, ground panorama) — the tall frame stacks what the
   // wide frame spreads: mushroom high, network low. Dolly back to hold the

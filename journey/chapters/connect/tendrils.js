@@ -59,18 +59,20 @@ const sm = (a, b, x) => smooth01((x - a) / (b - a));
    (lower-centre-left of frame), Hivemind mid-frame upper-network,
    Discord far right. y is derived from the terrain law at build.
    ================================================================ */
-// Audit taste pass (2026-08-04): ADOS nudged −x (2.85 → 2.50) so its chip
-// clears the centred headline at 1280×800 (was 12 px above the copy top,
-// directly over the headline's centre; now ~23 px and off-centre) and the
-// ADOS/Hivemind pair reads wider centre-frame. Hivemind/Discord world
-// positions: a −z Hivemind nudge was tried and reverted (it pushed the
-// portrait chip into the right viewport edge); Hivemind takes a small −x
-// nudge instead (1.65 → 1.52), which lifts its portrait chip up-left and
-// opens the Hivemind/Discord gap at 375×812. Core scales raised ~1.35×
-// (with the resting-opacity lift in index.js) so each hub reads as a
-// destination-beacon at rest — controlled halo, not lens-flare.
+// ADOS moved LEFT of the mushroom (Hannah's mockup, 2026-08-04): the hub now
+// sits in the lower-left ground field — world (+x, +z) is the camera-left
+// foreground at the rest pose — with its own primary route running out of
+// the stipe base and past the LEFT of the stem. Chip lands clearly left of
+// the stem silhouette and fully clear of the centred copy block at 1280×800
+// and 1440×900 (the previous centre-frame spot put it under the headline).
+// Departure azimuth re-aimed to match (0.20 → 0.86); the braid/meander
+// language and the route id are unchanged. Hivemind/Discord keep their
+// audit-pass positions (1.65 → 1.38 −x nudge etc. — see git history).
+// Core scales ~1.35× (with the resting-opacity lift in index.js) so each
+// hub reads as a destination-beacon at rest — controlled halo, not
+// lens-flare.
 export const HUBS = {
-  ados:     { pos: new V3(2.50, 0, 0.25), az: 0.20, spokes: 13, coreScale: 0.46 },
+  ados:     { pos: new V3(2.45, 0, 2.85), az: 0.86, spokes: 13, coreScale: 0.46 },
   hivemind: { pos: new V3(1.38, 0, -3.05), az: -1.07, spokes: 11, coreScale: 0.40 },
   discord:  { pos: new V3(5.35, 0, -3.45), az: -0.57, spokes: 9,  coreScale: 0.36 },
 };
@@ -463,11 +465,14 @@ export function buildTendrils(group, U) {
     // narrow portrait frustum cannot always hold the hub itself, so a chip
     // may ride its route's in-frame stretch instead. The network is one
     // world-space build; only the ANCHOR is per-orientation.
-    // route-t 0.60 → 0.50 (audit taste pass): at 375×812 the t 0.60 anchor
-    // put Discord's chip 3 px under Hivemind's and its pill 10 px past the
-    // right viewport edge; t 0.40 overlapped the ADOS chip instead. t 0.50
-    // (with the Hivemind −x nudge above) clears chip, edge and copy.
-    const portAnchor = polyAt(R.poly, R.arcs, 0.50);
+    // Discord route-t 0.60 → 0.50 (audit taste pass): at 375×812 the t 0.60
+    // anchor put Discord's chip 3 px under Hivemind's and its pill 10 px past
+    // the right viewport edge; t 0.40 overlapped the ADOS chip instead.
+    // ADOS route-t 0.25 (left-of-stem move, 2026-08-04): the relocated hub
+    // projects INSIDE the portrait copy block (chip suppressed), so its chip
+    // rides the route's upper stretch down the left edge instead.
+    const PORT_T = { ados: 0.25, hivemind: 0.50, discord: 0.50 };
+    const portAnchor = polyAt(R.poly, R.arcs, PORT_T[R.id]);
     portAnchor.y = gy(portAnchor.x, portAnchor.z, 0.04);
     hubMeta.push({ id: R.id, pos: h.pos.clone(), along: hubAlong, route: ri, portAnchor });
 
