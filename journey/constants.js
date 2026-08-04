@@ -52,6 +52,39 @@ export const COMMIT_BLEND_K    = 6.0;  // 1/s — the glide's rate eases from th
                                        // ~63% of the gap closed in 165 ms, ~95%
                                        // by 0.5 s — same felt attack as the old
                                        // 0.35 s smoothstep ramp, minus the pause.
+// HANDOFF (the pause Hannah felt, measured 2026-08-04). Seeding the glide with
+// the perceived rate is only velocity-continuous if the handoff happens while
+// there is still a velocity. Waiting the full SNAP_ENGAGE_MS freezes the scroll
+// surface for 160 ms, during which the ON-SCREEN rate decays at SMOOTH_K —
+// measured on a normal 1.2 s gesture: 0.093 -> 0.042 p/s, a 55% loss — and the
+// glide then seeded from that corpse (0.050) and spent ~650 ms of COMMIT_BLEND_K
+// climbing back to cruise. Net: an ~800 ms sag in the middle of the move, felt
+// exactly as stop -> pause -> restart.
+//
+// So the handoff no longer waits for the idle window WHEN THE RESOLUTION IS
+// ALREADY GOING THE WAY THE VISITOR IS: it takes over a couple of frames after
+// the last delta, seeded with the rate at release. SNAP_ENGAGE_MS is unchanged
+// and still governs every other case — in particular a resolution that OPPOSES
+// the residual motion (released short of COMMIT_THRESHOLD, discrete wheel
+// notches early in a span) keeps the shipped 160 ms window, so the return leg
+// and the notch-by-notch feel are untouched.
+//
+// The scroll surface is FROZEN between the last input and either engage point
+// (no input, no glide), so p is bit-identical at both — bracketAt/pickTarget see
+// the same p and the direction rule picks the SAME rest. This changes when the
+// motion is handed over, never where it goes.
+export const COMMIT_HANDOFF_MS  = 80;   // idle before a with-the-motion handoff.
+                                        // Above any real gesture's inter-event
+                                        // gap (trackpad/wheel streams run 16 ms,
+                                        // momentum tails 16 ms) so it can never
+                                        // fire mid-gesture; ~2-5 frames, over
+                                        // which the perceived rate is still live.
+export const COMMIT_HANDOFF_MIN = 0.02; // p/s — below this there is no motion to
+                                        // continue and the early handoff is not
+                                        // offered (a lone wheel notch from rest
+                                        // is a standing start, not a gesture);
+                                        // such positions resolve on the ordinary
+                                        // SNAP_ENGAGE_MS window as before.
 
 // Fast scroll must take the SAME accelerated path, never a cut: the smoothed
 // progress is speed-limited, so a flung trackpad still traverses every frame
