@@ -91,6 +91,14 @@ export function createConnect(sceneApi) {
   Object.defineProperty(NODES, 'discord', {
     get() { return sceneApi.camera.aspect < 1 ? discordPort : net.hubMeta[2].pos; },
   });
+  // ADOS anchors per orientation too since its left-of-stem move (2026-08-04):
+  // in landscape the chip sits on the hub in the lower-left ground field; in
+  // portrait that world position projects inside the centred copy block, so
+  // the chip rides the route's upper stretch (tendrils.js PORT_T) instead.
+  const adosPort = net.hubMeta[0].portAnchor.clone();
+  Object.defineProperty(NODES, 'ados', {
+    get() { return sceneApi.camera.aspect < 1 ? adosPort : net.hubMeta[0].pos; },
+  });
   const NODE_IDS = [...HUB_IDS];          // narrative order = reveal order = tab order
   const _nw = new THREE.Vector3();
 
