@@ -59,10 +59,20 @@ const sm = (a, b, x) => smooth01((x - a) / (b - a));
    (lower-centre-left of frame), Hivemind mid-frame upper-network,
    Discord far right. y is derived from the terrain law at build.
    ================================================================ */
+// Audit taste pass (2026-08-04): ADOS nudged −x (2.85 → 2.50) so its chip
+// clears the centred headline at 1280×800 (was 12 px above the copy top,
+// directly over the headline's centre; now ~23 px and off-centre) and the
+// ADOS/Hivemind pair reads wider centre-frame. Hivemind/Discord world
+// positions: a −z Hivemind nudge was tried and reverted (it pushed the
+// portrait chip into the right viewport edge); Hivemind takes a small −x
+// nudge instead (1.65 → 1.52), which lifts its portrait chip up-left and
+// opens the Hivemind/Discord gap at 375×812. Core scales raised ~1.35×
+// (with the resting-opacity lift in index.js) so each hub reads as a
+// destination-beacon at rest — controlled halo, not lens-flare.
 export const HUBS = {
-  ados:     { pos: new V3(2.85, 0, 0.25), az: 0.20, spokes: 13, coreScale: 0.34 },
-  hivemind: { pos: new V3(1.65, 0, -3.05), az: -1.07, spokes: 11, coreScale: 0.30 },
-  discord:  { pos: new V3(5.35, 0, -3.45), az: -0.57, spokes: 9,  coreScale: 0.27 },
+  ados:     { pos: new V3(2.50, 0, 0.25), az: 0.20, spokes: 13, coreScale: 0.46 },
+  hivemind: { pos: new V3(1.38, 0, -3.05), az: -1.07, spokes: 11, coreScale: 0.40 },
+  discord:  { pos: new V3(5.35, 0, -3.45), az: -0.57, spokes: 9,  coreScale: 0.36 },
 };
 export const HUB_IDS = ['ados', 'hivemind', 'discord'];
 
@@ -130,6 +140,14 @@ function makeStrandMat(U) {
         if (route < 0.5)      { routeAmp = uRouteAmp.x; float d = (rAlong - uPulseHead.x) * 9.0; pulse = uPulseAmp.x * exp(-d * d); }
         else if (route < 1.5) { routeAmp = uRouteAmp.y; float d = (rAlong - uPulseHead.y) * 9.0; pulse = uPulseAmp.y * exp(-d * d); }
         else if (route < 2.5) { routeAmp = uRouteAmp.z; float d = (rAlong - uPulseHead.z) * 9.0; pulse = uPulseAmp.z * exp(-d * d); }
+        // Ghost-pulse fix (audit 2026-08-04): continuations/frame-exits carry
+        // their route's id (so hover lift reaches them) but restart rAlong at
+        // 0 past the hub — without this gate a base-departing pulse lit them
+        // simultaneously at the FAR side of the stage (and the pulse term is
+        // deliberately not tierBase-scaled, so it showed at full brightness).
+        // Pulses live on the route proper: primaries, spokes, knots (tier 0)
+        // and the fork-spill on secondaries (tier 1).
+        if (tier > 2.5) pulse = 0.0;
 
         /* ---- exit convergence: energy drains home into the root ---- */
         float nearBase = exp(-along * 5.5);
@@ -445,7 +463,11 @@ export function buildTendrils(group, U) {
     // narrow portrait frustum cannot always hold the hub itself, so a chip
     // may ride its route's in-frame stretch instead. The network is one
     // world-space build; only the ANCHOR is per-orientation.
-    const portAnchor = polyAt(R.poly, R.arcs, 0.60);
+    // route-t 0.60 → 0.50 (audit taste pass): at 375×812 the t 0.60 anchor
+    // put Discord's chip 3 px under Hivemind's and its pill 10 px past the
+    // right viewport edge; t 0.40 overlapped the ADOS chip instead. t 0.50
+    // (with the Hivemind −x nudge above) clears chip, edge and copy.
+    const portAnchor = polyAt(R.poly, R.arcs, 0.50);
     portAnchor.y = gy(portAnchor.x, portAnchor.z, 0.04);
     hubMeta.push({ id: R.id, pos: h.pos.clone(), along: hubAlong, route: ri, portAnchor });
 
@@ -465,9 +487,11 @@ export function buildTendrils(group, U) {
         p.y = gy(p.x, p.z, LIFT_LO + 0.02 * (1 - t) + 0.012 * t);
         if (prev) {
           // spokes carry the hub's along so they ignite as the front arrives;
-          // rAlong 1.0 = the hub end of the route (pulses land here)
+          // rAlong 1.0 = the hub end of the route (pulses land here).
+          // 1.1 → 1.5 (audit taste pass): the radial-spoke convergence is the
+          // hub's resting signature — it must read against the ambient web.
           pushSeg(prev, p, hubAlong + 0.012 * (1 - t), hubAlong + 0.012 * (1 - t), 1.0, 1.0, ri, 0, seed,
-            (0.5 + 0.5 * t) * 1.1, (0.5 + 0.5 * Math.min(t + 1 / SEG, 1)) * 1.1);
+            (0.5 + 0.5 * t) * 1.5, (0.5 + 0.5 * Math.min(t + 1 / SEG, 1)) * 1.5);
           counts.hubSegs++;
         }
         prev = p;
@@ -490,7 +514,9 @@ export function buildTendrils(group, U) {
           const p = new V3(h.pos.x + Math.cos(a) * rr, 0, h.pos.z + Math.sin(a) * rr);
           p.y = gy(p.x, p.z, 0.02 + 0.018 * Math.sin(a * 2 + seed * 7));
           if (prev) {
-            pushSeg(prev, p, hubAlong, hubAlong, 1.0, 1.0, ri, 0, seed, 1.35, 1.35);
+            // 1.35 → 1.6 (audit taste pass): the tight core knot anchors the
+            // starburst's centre of gravity at rest.
+            pushSeg(prev, p, hubAlong, hubAlong, 1.0, 1.0, ri, 0, seed, 1.6, 1.6);
             counts.hubSegs++;
           }
           prev = p;
