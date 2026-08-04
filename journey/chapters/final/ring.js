@@ -85,10 +85,13 @@ import {
   TAU, MEMBERS, RING_C, arcOf, cutVal,
   makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat,
 } from './world.js';
-import { makeGlowTexture, CAP_Y } from '../../anatomy.js';
+import { makeGlowTexture, CAP_Y, CAP_R } from '../../anatomy.js';
 import {
-  buildMushroom, scaleFor, DETAIL, HERO_MUL, STEM_BASE_R,
+  buildMushroom, buildCloneSeat, scaleFor, DETAIL, HERO_MUL, STEM_BASE_R,
+  HERO_H,
 } from './species.js';
+import { createClones, easeHover, hoverTerm, clickTerm, isWarm } from './clones.js';
+import { createPicker } from './interact.js';
 import { CAMERA } from './camera.js';
 
 // The Final rest camera, for build-time LOD + occlusion only. M4 dedupe:
@@ -145,6 +148,13 @@ function memberParams(m) {
     // heat distribution: which sector of THIS body runs hot, and how hard
     hotDir: r() * TAU, hotAmp: 0.15 + r() * 0.30,
     tw0: r() * TAU,
+    // Own sway phase/amplitude for the clone bodies — drawn from a SEPARATE
+    // seeded stream so adding them could not shift a single value the
+    // species build already draws from `r` (the root stubs read it next).
+    ...(() => {
+      const sr = makeRng(seed ^ 0x51a7);
+      return { swayPhase: sr() * 40, swayAmp: 0.55 + 0.55 * sr() };
+    })(),
   };
 }
 
@@ -173,6 +183,42 @@ const MUL = (() => {
   return m;
 })();
 
+/* ------------------------------------------------------------------ */
+/* The clone cutover (18-one-species.md, "Step back: clones")           */
+/* ------------------------------------------------------------------ */
+// CLONE_DIST is where the hero's own geometry stops and species.js takes
+// over. It is a screenshot judgement at the rest, and it was made twice:
+//
+//   18 units (the ring only, 9 bodies) LEFT A SEAM. The ring members reach
+//   16.9 and the nearest field body stands at 17.0 — the two constructions
+//   ended up shoulder to shoulder in the same depth band, where a species
+//   body is still ~90 px tall and reads as an open wire umbrella beside a
+//   solid one. Measured at 2x on the rest frame: unmistakable.
+//
+//   24 units (the ring plus the whole T3 field band) MOVES THE SEAM to the
+//   T3/T4 boundary — a luminance step the composition ALREADY has (doc 17
+//   drops stroke opacity 0.70 -> 0.52 across it) and a size step of about
+//   half, so the change of construction lands where the frame is already
+//   changing. Past 24 a body is under ~40 px of cap and the fog has taken
+//   most of it; there is nothing left to tell apart.
+//
+// The T4 band and the hint rung stay species, and always will: they are
+// where the detail ladder is supposed to be doing its job.
+const CLONE_DIST = 24;
+
+/** A clone's distance luminance. The clone set rides the CHAPTER's fog ramp
+ *  (clones.js, FOG) — 15 -> 62 at the rest, which barely dims anything
+ *  inside 24 units — so the depth cue has to be explicit, exactly as it is
+ *  for the species field. This lands a clone at the far end of the T3 band
+ *  on the same 0.70 the species T3 tier carries (ring.js's lumMul below),
+ *  so a clone at 23 and a species body at 25 sit at the same luminance and
+ *  the hierarchy the frame is composed around is unbroken: the hero is the
+ *  brightest thing in it because it is nearest-and-largest, not because
+ *  everything behind it was fogged out. */
+function cloneLum(dist) {
+  return 1 - 0.45 * smoothstep(8, 23, dist);
+}
+
 export function createFinalRing(sceneApi, uniforms) {
   const rand = makeRng(20260417);
   const gauss = () => gaussOf(rand);
@@ -182,6 +228,16 @@ export function createFinalRing(sceneApi, uniforms) {
   const glows = makeBatch();
   const memberStats = [];   // D15 QA: per-member built density
 
+  // The clone set (literal copies of the hero's own scene graph) and the
+  // pointer picker. Both are addressed per BODY, so both are fed from
+  // placeMushroom below — the one place that knows where a body stands.
+  const clones = createClones(sceneApi);
+  const picker = createPicker(sceneApi);
+  // Batched (species) bodies that answer the pointer: each carries an
+  // easeHover state and the member ID its vertices were stamped with.
+  const hotMembers = [];
+  let nextHotId = 1;          // 0 is the WebGL generic-attribute default
+
   /* ---- ONE BODY, PLACED ------------------------------------------------
      This function no longer draws a mushroom. It works out where a body
      stands, which detail rung it earns from the rest camera, how the frame
@@ -190,16 +246,33 @@ export function createFinalRing(sceneApi, uniforms) {
 
      tierOverride: the field passes its tier explicitly (its members are
      placed BY distance band, so the band is the tier); ring members keep the
-     measured 3-rung ladder. */
-  function placeMushroom(m, tierOverride) {
+     measured 3-rung ladder.
+
+     wantClone: this body is a RING body, so it is a literal clone of the
+     hero's own geometry rather than a species build (see CLONE_DIST above).
+     Everything below still runs for it — the pose, the tier, the shading,
+     the ground merge, the pick proxy — because all of that is placement's
+     work and identical either way; the only fork is whether the TISSUE comes
+     from species.js or from the hero. */
+  function placeMushroom(m, tierOverride, wantClone) {
     const P = memberParams(m);
     const dist = Math.hypot(m.x - REST_CAM.x, m.z - REST_CAM.z);
     const T = tierOverride != null ? tierOverride
       : dist < 8 ? 0 : dist < 14 ? 1 : 2;          // build-time LOD tier
     const C = DETAIL[T];
+    const asClone = !!wantClone && dist <= CLONE_DIST;
+    // Pointer response: a body answers the pointer if it is big enough on
+    // screen to aim at. The farthest hint rung is not — it is a 40-pixel
+    // rim arc dissolving into the fog, and a pick proxy there would light
+    // something the eye cannot even see it hit.
+    const pickable = T !== T_HINT;
+    // A SPECIES body lives inside a merged batch and has no material of its
+    // own, so its pointer glow is carried by an ID stamped onto its vertices
+    // (world.js aHot / uHotId). A CLONE owns its materials and needs none.
+    const hotId = (!asClone && pickable) ? nextHotId++ : -1;
     // field members answer the growth-front pulse only faintly (m.boost):
     // the RING is what breathes with the colony; the distance echoes it
-    const meta = { arc: m.arc, reveal: m.reveal, boost: m.boost ?? 1 };
+    const meta = { arc: m.arc, reveal: m.reveal, boost: m.boost ?? 1, hot: hotId };
     // distance damping (field only): additive strokes overlap in screen
     // space as bodies recede, so an undamped far cap sums to WHITE — a lamp
     // wall competing with the hero. lum drops the stroke tone down the heat
@@ -282,12 +355,42 @@ export function createFinalRing(sceneApi, uniforms) {
     const elev = (REST_CAM.y - rimWorldY) / Math.max(dist, 1e-3);
     const underVis = 1 - smoothstep(0.02, 0.30, elev) * 0.88;
 
-    buildMushroom({
+    /* -- THE BODY. One fork in the whole chapter: a ring body is the hero's
+          own geometry standing here (clones.js), everything beyond the moat
+          is a species build. The option object is the same either way —
+          placement describes a body once. -- */
+    const spec = {
       tier: T, seed: P.seed, scale: s, azFacing: P.azFacing,
       mat: m.m, shed: m.shed ?? 0,
       emit, mul: MUL,
       shade: { heatK, occlS, occlM, underVis, crowdK, innerK, camAz: camA },
-    });
+    };
+    let body = null;
+    if (asClone) {
+      // The clone brings no soil with it (the hero's §8 ground network is
+      // not in the stem/cap subtree), so the batch still carries this body's
+      // ground-merge pools and its shed trail — atmosphere, not tissue.
+      buildCloneSeat(spec);
+      body = clones.add({
+        x: m.x, z: m.z, gy: m.gy, s,
+        azFacing: P.azFacing, leanDir: P.leanDir, leanAmt: P.leanAmt,
+        arc: m.arc, reveal: m.reveal, boost: m.boost ?? 1,
+        tw0: P.tw0, phase: P.swayPhase, amp: P.swayAmp,
+        lum: cloneLum(dist),
+      });
+    } else {
+      buildMushroom(spec);
+      body = { hotId, reveal: m.reveal, h: 0, tgt: 0, clickT: 1e9 };
+      // only a body with a pick proxy can ever go hot, so only those cost a
+      // per-frame state visit — the twenty hints are not in this list
+      if (pickable) hotMembers.push(body);
+    }
+
+    /* -- the pick proxy: one invisible cone bracketing this body, in
+          interact.js's detached tree. Never rendered, never traversed. -- */
+    if (pickable) {
+      picker.add(m.x, m.gy, m.z, Math.max(s * CAP_R, 0.22), s * HERO_H, body);
+    }
 
     /* ==== §8 base — ground merge. Not species geometry: these stubs walk
             on the REAL terrain (groundY / cutVal), which is placement's
@@ -323,12 +426,20 @@ export function createFinalRing(sceneApi, uniforms) {
     }
 
     memberStats.push({
-      i: m.i, tier: T, h: m.h,
+      i: m.i, tier: T, h: m.h, clone: asClone, pickable,
+      dist: +dist.toFixed(2), scale: +s.toFixed(3),
+      // world anchor at the cap's rim plane — what a pointer aims at, and
+      // what the interaction gate projects to place a synthetic hover
+      aim: [+m.x.toFixed(3), +(m.gy + s * CAP_Y).toFixed(3), +m.z.toFixed(3)],
       segs: lines.segCount - seg0, pts: glows.ptCount - pt0,
     });
   }
 
-  for (const m of MEMBERS) placeMushroom(m);
+  // The ring: every member is a clone of the hero (18-one-species.md's step
+  // back). The hero itself is NOT in MEMBERS — it stands at the origin as the
+  // twelfth body and keeps its place on the arc; no clone is ever placed
+  // there, and none is built at its scale.
+  for (const m of MEMBERS) placeMushroom(m, null, true);
 
   /* ================================================================
      THE FIELD (17-final-field.md, Hannah): "a whole field of smaller,
@@ -399,7 +510,9 @@ export function createFinalRing(sceneApi, uniforms) {
         lumMul: tier === 3 ? 0.70 : 0.52,
         arc: arcOf(x, z),
         reveal: 0.45 + 0.37 * distFrac + fr() * 0.02,
-      }, tier);
+        // the near field band is close enough for its construction to read,
+        // so it is clones too — CLONE_DIST puts the seam at the T3/T4 step
+      }, tier, tier === 3);
       fieldStats[tier === 3 ? 't3' : 't4']++;
     }
 
@@ -462,6 +575,11 @@ export function createFinalRing(sceneApi, uniforms) {
   const ringGlows = new THREE.Points(glows.geo(true), glowMat);
   ringGlows.frustumCulled = false;
   group.add(ringGlows);
+
+  // The clone bodies. In the CHAPTER's group, never swayGroup: adr-d3 says
+  // the field does not ride the hero's wind, and each clone carries its own
+  // seeded breeze instead (clones.js update()).
+  group.add(clones.group);
 
   /* ---- primordia: tiny buds that surface during a long hold (FN-2.4).
        Time-compressed and subtle — soil-level ember points, no theatrical
@@ -553,13 +671,76 @@ export function createFinalRing(sceneApi, uniforms) {
   primordia.frustumCulled = false;
   group.add(primordia);
 
+  /* ================================================================
+     POINTER RESPONSE (18-one-species.md, "Step back: clones")
+     Hannah: the field mushrooms should answer a hover and a click the way
+     the hero does. The hero's answer is §11's region glow — an eased hot
+     value with a slow breathing pulse riding on the materials' base
+     opacities (organism/furniture.js createHighlights). Both kinds of body
+     here run that EXACT math, from clones.js's easeHover(): a clone applies
+     it to its own owned uOpacities inside clones.update(); a batched
+     species body has no material of its own, so its term is published as
+     the uHotAmt / uTapAmt uniform pair against the aHot ID its vertices
+     carry. One hovered body and one tapped body at a time — which is the
+     whole interaction, and costs no extra draw call either way.
+
+     Armed only while the epilogue is on screen AND the pullback has
+     actually delivered the field: below PICK_PULL the bodies are still
+     kindling out of the dark and must not answer a pointer they are not
+     visibly part of yet. Per body, accept() adds the same test on that
+     body's OWN reveal, so an unlit member at the far end of the sweep
+     cannot be lit early by a mouse — the D16 no-self-ignition law covers
+     the pointer too.
+     ================================================================ */
+  const PICK_PULL = 0.55;
+  const REVEAL_LIT = 0.35;      // this body's own smoothstep must be underway
+  const lit = (ref, pull) => (pull - ref.reveal) / 0.16 > REVEAL_LIT;
+  let hovered = null, tapped = null, wasOn = false;
+
+  function update(t, dt, active) {
+    const pull = uniforms.uPull.value;
+    const on = !!active && uniforms.uAmount.value > 0.5 && pull > PICK_PULL;
+    if (wasOn && !on) {
+      // going cold: drop every pointer state outright rather than easing it
+      // out over frames the retiring chapter will not run. Re-entry then
+      // starts from a body that is simply not hot.
+      for (const b of hotMembers) { b.h = 0; b.tgt = 0; b.clickT = 1e9; }
+      clones.cool();
+      hovered = null; tapped = null;
+    }
+    wasOn = on;
+    const { hover, tap } = picker.poll(dt, on, (ref) => lit(ref, pull));
+    if (tap) { tap.clickT = 0; tapped = tap; }
+    if (hover !== hovered) {
+      if (hovered) hovered.tgt = 0;
+      hovered = hover;
+      if (hovered) hovered.tgt = 1;
+    }
+    // batched bodies: ease every state that still has something to say, then
+    // publish the one hovered and the one tapped onto their shader channels
+    let hotAmt = 0, tapAmt = 0;
+    for (const b of hotMembers) {
+      if (!isWarm(b)) continue;
+      easeHover(b, t, dt);                 // advances h and clickT
+      if (b === hovered) { uniforms.uHotId.value = b.hotId; hotAmt = hoverTerm(b, t); }
+      if (b === tapped) { uniforms.uTapId.value = b.hotId; tapAmt = clickTerm(b); }
+    }
+    uniforms.uHotAmt.value = hotAmt;
+    uniforms.uTapAmt.value = tapAmt;
+    clones.update(t, dt, uniforms);
+  }
+
   return {
     group,
+    update,
     setDwell(s) { primUniforms.uDwell.value = s; },
+    dispose() { picker.dispose(); },
     counts: {
       ringSegs: lines.segCount, glowPts: glows.ptCount,
       primordia: primSize.length, ringMembers: memberStats,
       field: fieldStats,
+      clones: clones.counts, pickTargets: picker.count,
+      hotMembers: hotMembers.length,
     },
   };
 }

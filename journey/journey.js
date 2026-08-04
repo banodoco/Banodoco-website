@@ -433,6 +433,10 @@ export function boot(opts = {}) {
     scrollTo(p) { placeAt(clamp01(p)); return journey.progress; },
     /** QA: fly the spatial route, as a nav click does. */
     flyTo(id) { navigateTo(id); },
+    /** QA: a chapter's build-time counts (segments, points, bodies, draws
+     *  per body), or null. The budget A/Bs read this rather than counting
+     *  scene children by hand. */
+    counts(id) { const c = chapters[id]; return (c && c.counts) || null; },
     /** QA: one-line audit of everything a sample point should assert. */
     debugState() {
       const p = journey.progress;

@@ -41,6 +41,7 @@ import { CAMERA } from './camera.js';
 export function createFinal(sceneApi) {
   const group = new THREE.Group();
   group.visible = false;
+  group.userData.jFinal = true;   // QA handle: budget A/Bs isolate this leg
   sceneApi.scene.add(group);
 
   const uniforms = makeUniforms();
@@ -71,6 +72,7 @@ export function createFinal(sceneApi) {
   /* ---- primordia dwell: settled time at the Final rest ---- */
   let dwell = 0;
   let lastPull = 0;
+  let wasVisible = false;
 
   let amount = 0, amountTarget = 0;
 
@@ -159,8 +161,20 @@ export function createFinal(sceneApi) {
     if (!group.visible) {
       lastPull = pullOf(sceneApi.camera.position.x);
       if (heroDimActive) restoreHeroDim();   // byte-exact hand-back
+      if (wasVisible) {
+        // One last INACTIVE tick as the chapter goes dark, so the ring drops
+        // any hover it was holding and the clone bodies retire their
+        // opacities in place instead of freezing mid-kindle behind the
+        // camera. Once retired we stop ticking entirely — the epilogue costs
+        // nothing for the rest of the ride.
+        wasVisible = false;
+        uniforms.uAmount.value = eff;
+        uniforms.uPull.value = pullOf(sceneApi.camera.position.x);
+        ring.update(t, dt, false);
+      }
       return;
     }
+    wasVisible = true;
 
     // shared uniforms
     const pull = pullOf(sceneApi.camera.position.x);
@@ -220,6 +234,10 @@ export function createFinal(sceneApi) {
     dwell = settled ? dwell + dt : Math.max(0, dwell - dt * 0.5);
     lastPull = pull;
     ring.setDwell(dwell);
+
+    // the bodies: clone reveal + sway, and the pointer response for clones
+    // and batched members alike. Last, so it reads this frame's uniforms.
+    ring.update(t, dt, true);
 
     // sprite layers (outside the shared shader uniforms)
     terrain.setAmount(eff);
