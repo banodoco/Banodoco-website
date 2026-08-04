@@ -19,6 +19,7 @@
 
 import * as THREE from 'three';
 import { makeRng, gaussOf, heat, groundY } from '../../anatomy.js';
+import { CAP_R_OVER_H } from './species.js';
 
 export const TAU = Math.PI * 2;
 export { makeRng, gaussOf, heat, groundY };
@@ -136,7 +137,14 @@ export const MEMBERS = MEMBER_SPEC.flatMap((s, i) => {
     i, x, z, r, az: a,
     gy: groundY(x, z),
     h: s.h,
-    capR: s.h * (0.40 + 0.10 * s.m),
+    // Rim radius. 18-one-species.md: this was `h * (0.40 + 0.10 * maturity)`
+    // — an independent cap-width law that made every member's cap up to 26%
+    // too narrow for its height (the hero's own ratio is CAP_R / apex height
+    // = 0.5378) and made maturity a SHAPE axis. It is now the species' one
+    // cap-width law. Read by sky.js (spore emission disc) and by anything
+    // that needs a body's plan footprint; the bodies themselves get their
+    // rim from the form functions, never from this.
+    capR: s.h * CAP_R_OVER_H,
     m: s.m,
     shed,
     arc,

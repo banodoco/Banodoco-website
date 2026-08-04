@@ -86,6 +86,41 @@ export function capUnderPt(u, a) {
   return new THREE.Vector3(x, y, Math.sin(a) * r);
 }
 
+// ---------- stem form language (copied verbatim from mushroom-scene.js §7) ----------
+// The cap's THROAT — the hole the gills radiate from — is where the stem's
+// axis converges, so the two always meet. The hero computes it as
+//   new THREE.Vector3(-0.075, 3.66, 0)
+//     .applyEuler(new THREE.Euler(tiltX, 0, leanZ))
+//     .add(new THREE.Vector3(0, 0, -tiltX * 3.2))
+// but tiltX/leanZ are the hero's STAGING pose (how the one organism is framed
+// for the camera), not its anatomy — the same two angles the whole cap/stem
+// group is tilted by. The ANATOMICAL throat is the un-staged vector, which is
+// what a second body of the same species is built from.
+export const CAP_THROAT = { x: -0.075, y: 3.66, z: 0 };
+
+/** Stem radius at local height y (hero units). Byte-faithful mirror of
+ *  mushroom-scene.js §7 stemR(): a gentle taper over the full STEM_TOP, a
+ *  fast ground-merge flare at the base, and a slight flare back out into the
+ *  cap so the joint is buried rather than butted. NOTE the normalisation is
+ *  y / STEM_TOP (3.9) — renormalising the taper against a shorter stem is
+ *  exactly how a body stops being this species. */
+export function stemRadius(y) {
+  const t = y / STEM_TOP;
+  return 0.27 - 0.07 * t + 0.42 * Math.exp(-y / 0.26)
+       + 0.05 * Math.exp((y - STEM_TOP) / 0.35);
+}
+
+/** Stem axis offset [dx, dz] at local height y. Byte-faithful mirror of
+ *  mushroom-scene.js §7 stemAxis(): an organic curve low down that converges
+ *  onto the cap throat as it rises. */
+export function stemAxis(y) {
+  const w = Math.pow(Math.min(y / 3.6, 1), 2);
+  return [
+    (0.1 * Math.sin(y * 0.85 + 0.6) - 0.01 * y) * (1 - w) + CAP_THROAT.x * w,
+    (0.045 * Math.sin(y * 0.7 + 1.7)) * (1 - w) + CAP_THROAT.z * w,
+  ];
+}
+
 // ---------- ground undulation (mirrored from mushroom-scene.js section 8) ----------
 export function groundY(x, z) {
   return 0.02 * Math.sin(x * 1.3 + 2) + 0.03 * Math.sin(z * 0.9 + 5) + 0.02 * Math.sin((x + z) * 0.7)
