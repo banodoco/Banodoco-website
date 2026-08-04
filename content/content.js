@@ -142,18 +142,9 @@ export const CONTENT = {
       },
     },
 
-    // --- Connect chapter: three semantic structures (08-chapter-connect.md CN-2) ---
-    community: {
-      label: 'Community',
-      short: 'The connected commons. [PLACEHOLDER]',
-      card: {
-        title: 'Community',
-        body: [
-          'This is placeholder card copy standing in for the Community structure until Content/Ops drafts and Peter approves real copy. [PLACEHOLDER]',
-          'Treat this description as a layout stand-in only, not a finished description of the community. [PLACEHOLDER]',
-        ],
-      },
-    },
+    // --- Connect chapter: the three ground-network hubs (16-connect-ground-
+    // restage.md §2 — ADOS, Hivemind, Discord; `community` retired, with a
+    // legacy deep-link alias community -> discord in journey.js normaliseNode) ---
     ados: {
       label: 'ADOS',
       short: 'Where online becomes in-person. [PLACEHOLDER]',
@@ -174,6 +165,21 @@ export const CONTENT = {
           'This is placeholder card copy standing in for the Hivemind structure until Content/Ops drafts and Peter approves real copy. [PLACEHOLDER]',
           'Treat this description as a layout stand-in only, not a finished description of Hivemind. [PLACEHOLDER]',
         ],
+      },
+    },
+    discord: {
+      label: 'Discord',
+      short: 'The everyday door into the community. [PLACEHOLDER]',
+      card: {
+        title: 'Discord',
+        body: [
+          'This is placeholder card copy standing in for the Discord hub until Content/Ops drafts and Peter approves real copy. [PLACEHOLDER]',
+          'Treat this description as a layout stand-in only, not a finished description of the Discord community. [PLACEHOLDER]',
+        ],
+        link: { label: 'Join the Discord', href: '#' },
+        // TODO(Banodoco): PLACEHOLDER — same destination as the hero nav's
+        // Discord pill (index.html), which is itself an unconfirmed '#'.
+        // Wire BOTH to the real invite URL together before launch.
       },
     },
 

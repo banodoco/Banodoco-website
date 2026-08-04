@@ -55,7 +55,10 @@ const CARD_FADE_MS = 340;
 
 const CHAPTER_POSITION = {
   inspire: 'pos-bottom',
-  connect: 'pos-left',
+  // D16 ground restage: the Connect copy is centred low over the in-world
+  // brightness well the strand shader carves for it (doc §3) — same position
+  // language as Inspire.
+  connect: 'pos-bottom',
   owned: 'pos-topcentre',
   final: 'pos-upperleft',
 };
@@ -75,7 +78,7 @@ function smoothA(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x);
    By default a hotspot's chip — dot + text — is part of the resting
    composition: it is visible whenever the hotspot is, and hover/focus only
    brighten it. That is right for page furniture (Inspire's three callouts,
-   Connect's structures, Owned's three ownership pods carrying the claims).
+   Connect's network hubs, Owned's three ownership pods carrying the claims).
 
    It is wrong for a FIELD of people. Sixteen contributor chips standing over
    sixteen faces is a tag cloud, not a colony; the faces, embers and strands

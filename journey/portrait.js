@@ -76,23 +76,25 @@ const KEYS = [
   // land fully inside at 430×932, above the bottom copy block.
   { p: 0.260, back: 1.60, rise: 0.60, truck: 0, tgtUp: 0.10, tgtRight: 1.05, fov: 14 },
 
-  // Slip-under approach: bleed the field off BEFORE the rim so the camera
-  // still passes beneath the lifted rim, not above it.
-  { p: 0.410, back: 1.03, rise: 0.10, truck: 0, tgtUp: 0.25, tgtRight: 0, fov: 4 },
+  // Ground-descent approach (D16 restage): the leg descends OUTSIDE the rim
+  // in open air, so the field can breathe earlier than the old slip-under —
+  // a light dolly-back keeps the cap inside the narrow frame on the way down.
+  { p: 0.410, back: 1.14, rise: 0.16, truck: 0, tgtUp: 0.12, tgtRight: 0, fov: 6 },
 
-  // CONNECT (rest 0.49) — "taller colonnade; copy drops to the lower-left".
-  // Sink the eye a touch and look further up so the gill curtains run the
-  // full height; the dolly is deliberately small — the camera is INSIDE the
-  // chamber and backing off further would put the rim wall in front of the
-  // lens. tgtRight stays 0: connect* geometry is mid-rewrite (W4-B) and the
-  // node anchors are moving — re-verify chip placement once it lands.
-  { p: 0.490, back: 1.10, rise: -0.12, truck: 0, tgtUp: 0.50, tgtRight: 0, fov: 6 },
+  // CONNECT (rest 0.49, ground panorama) — the tall frame stacks what the
+  // wide frame spreads: mushroom high, network low. Dolly back to hold the
+  // whole organism + the far hubs inside the narrow horizontal field, lift
+  // the eye a touch, and re-aim slightly up-left so the mushroom keeps the
+  // upper-left of the tall frame while the network runs beneath the centred
+  // copy block. (Per-orientation hub label anchors are the chapter's own
+  // affair — doc §3.)
+  { p: 0.490, back: 1.42, rise: 0.55, truck: 0, tgtUp: 0.30, tgtRight: -0.45, fov: 10 },
 
-  // The 90° pitch-down to the stipe + the exterior descent (0.575–0.718):
+  // The approach to the trunk + the exterior descent (0.575–0.718):
   // near-zero field — clearance to the stipe is small and the leg's whole
-  // job is the turn itself. A whisper of fov keeps the frame from feeling
-  // suddenly narrower than the chamber.
-  { p: 0.622, back: 1.02, rise: 0, truck: 0, tgtUp: 0.10, tgtRight: 0, fov: 3 },
+  // job is the convergence itself. A whisper of fov keeps the frame from
+  // feeling suddenly narrower than the panorama.
+  { p: 0.622, back: 1.04, rise: 0.05, truck: 0, tgtUp: 0.05, tgtRight: 0, fov: 4 },
   { p: 0.700, back: 1.01, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 3 },
 
   // OWNED (rest 0.725) — copy claims the TOP-centre in portrait, so the

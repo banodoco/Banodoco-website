@@ -236,3 +236,109 @@ comment updated (the path now drops past the rim outside, same p).
   copy strings, flags.js keys.
 - The pre-commit capture gate stays armed — scene commits ship with their
   goldens, `SKIP_SCENE_CHECK` stays for doc-only emergencies.
+
+## Execution log (2026-08-04)
+
+**Built.** The gill chamber is gone; Connect is the ground network.
+
+- **Deleted:** `connect/blades.js` (colonnade/edges/veins/beads/spores/haze),
+  `connect/structures.js` (ADOS strands/knot, Hivemind braid, core sprite),
+  and all chamber machinery in `connect/index.js` (hero-point retirement,
+  uComm/uAdos/uExit chamber block, regional ambient exchanges). Git history
+  is the archive.
+- **New:** `connect/tendrils.js` — all geometry + shaders. `connect/index.js`
+  rebuilt as pure orchestrator with the same public API plus `drive(p)` and
+  `snap()` (snap is what makes the frozen `?capture=` frame render the grown
+  network — eased amounts cannot rise under `freezeTime`'s dt = 0).
+
+**Key numbers.**
+
+- Hubs (world): ADOS (2.85, gy, 0.25) · Hivemind (1.65, gy, −3.05) ·
+  Discord (5.35, gy, −3.45). Node order/tab order: ados, hivemind, discord.
+  Discord's chip anchors per orientation (hiveAnchorPort precedent): hub in
+  landscape, route-t 0.60 point in portrait (hub is ~25° outside the narrow
+  frustum at 375×812).
+- Camera keys (leg-local t → global p): descent outside the rim
+  t 0.136/0.30/0.409 → rest t 0.5 = pos (7.6, 2.35, 4.1), tgt (0.45, 0.42,
+  −2.35), fov 56, hold 'connect-rest' (p 0.490) → drift t 0.691 → exit
+  t 0.886 = (4.9, 1.95, 3.1) → Owned's re-authored first two keys
+  t 0.0 = (2.55, 1.64, 1.95) and t 0.088 = (1.55, 1.52, 1.35), joining the
+  untouched t 0.18 stipe-side descent. Portrait field keys re-authored at
+  p 0.410 / 0.490 (back 1.42, rise 0.55, tgtUp 0.30, tgtRight −0.45,
+  fov +10) / 0.622.
+- Growth window: leg-t 0.10 → 0.46 (p 0.402 → 0.481), front lead 1.06,
+  feather 0.05, tip glow fades at extent 1. Hubs ignite as the front reaches
+  their route-length along (ADOS → Hivemind → Discord by construction).
+- Counts: 2,306 line segments total (448 primary braid + 238 secondary +
+  1,050 hairline + 357 hub + 213 continuations/frame-exits) vs the chamber's
+  ~5k budget; 158 points (50 junction glints + 108 drift particles, ≤ 500
+  budget); 3 hub core sprites. One ShaderMaterial for all strands, one for
+  all points.
+- Ambient: per-route pulse clocks 9–14 s (staggered, never synced), pulse
+  traversal 2.6 s + 0.28 s/world-unit; hover = hot route ×1.55, unrelated
+  routes ×0.55 (the doc's number), hairline ×0.7, focused pulse on hot rise,
+  refire 4.5 s. Exit convergence pure in camera radius: sm(5.0 → 2.4).
+- Copy well (in-world calm zone, no overlays): world-xz centre (4.4, 1.4),
+  radius 1.9, strength 0.66 — measured by unprojecting the centred copy
+  block's rect onto the ground plane at the rest pose.
+- Hero-web undercoat dim while armed (collect/scale/restore-exact, Final
+  precedent): keeps [web 0.42, myc 0.42, mossPts 0.60, pools 0.80,
+  roots 0.48, ribbon 0.52, beads 0.58], reach = amount × sm(0.2, 0.8, grow),
+  byte-exact restore on retire.
+- Seams: T2 is a pure p-window — arm at startOf(connect)+0.02 = 0.40, hold
+  to startOf(owned)+0.105 = 0.705 (M5 ignition-audit value kept; retire and
+  re-arm stay inside the Owned soil-crossing murk). cap-occludes predicate,
+  its state row and its anatomy imports deleted; T1 p-relax values kept,
+  comments updated.
+- Content: `community` node replaced by `discord` (placeholder card in house
+  style + 'Join the Discord' CTA sharing the hero pill's '#' destination);
+  legacy alias community → discord in normaliseNode; static Tier-3 page
+  mirrored (node order ados/hivemind/discord).
+
+**Gates (measured).**
+
+1. `?capture=connect` renders (frozen pipeline, means 30.7/31.4, poses
+   confirmed); full forward+reverse ride 0→1→0 console-clean at 1280×800 and
+   375×812 (only stale pre-fix tab-history entries in the log; live build
+   compiles clean).
+2. D16 sweep 0.36→0.72→0.36 at 0.04 p/s: network has zero extent at the arm
+   boundary (verified parked at p 0.412: nothing on the ground), grows from
+   the base outward, retracts in reverse; retire/re-arm at 0.705 behind the
+   murk. No fade-in over open ground observed.
+3. Chips: all three visible and clear of copy at 1280×800 (ados/hivemind/
+   discord at (602,524)/(745,437)/(1078,491), copy top 548, none suppressed)
+   and at 375×812 (portrait anchors; ados clears the copy top by ~14 px).
+   Hover verified per hub (uRouteAmp [1.55, 0.55, 0.55] with ados hot;
+   focused pulse head observed travelling 0→1); click opens cards
+   (#/connect/hivemind); `#/connect/discord` and legacy `#/connect/community`
+   both land (community normalises to discord).
+4. Scrub audit (201 samples, both aspects): my re-authored span p 0.355–0.650
+   peaks yaw 1167°/p (p 0.632), pitch 994°/p — under the ~1.2k threshold and
+   better than the pre-restage baseline (1419°/p yaw at the old slip-under,
+   1215°/p pitch). The 1802°/p pitch at p 0.696 is the shipped soil-crossing
+   levelling in Owned's untouched keys (bit-identical to baseline).
+5. Goldens: full set re-shot frozen at the final tree, same commit; connect
+   pair intentionally new; mission/inspire/owned/final restored byte-identical
+   (the fresh inspire@1440x900 differed by ONE sub-threshold pixel,
+   MAE 2.6e-7 — frozen-pipeline GPU noise, original bytes kept).
+   `capture.py --check`: worst MAE 0.00/255, PASS.
+6. `journey.debugState()` at p 0.49: pose (7.6, 2.35, 4.1) fov 56,
+   armed = [connect], hotspots = [ados, hivemind, discord].
+7. NaN/TAA soak: 20 s+ parked at the rest and 20 s parked mid-growth
+   (p 0.45) — stable, no black frames, no wash. (During the build the doc's
+   §7 law was re-proven twice: a `pow(negative, 2.0)` in the pulse gaussian
+   and an 11-arg pushSeg called with 10 args — undefined → NaN in a
+   Float32 attribute — each produced the characteristic TAA-held gray wash;
+   both are documented in tendrils.js.)
+
+**Residuals.**
+
+- The p 0.63–0.69 stretch (Owned's untouched descent) reads barer than
+  before — the chamber used to fill the upper frame there; now it is ground
+  glide until the soil crossing. Lawful, but a future taste pass could let
+  the network's near-base stretch stay brighter longer.
+- The pre-existing 1802°/p pitch peak at the soil crossing predates this
+  restage (untouched keys, bit-identical to baseline) and remains.
+- Ambient pulse arrival flare on the hub cores is modest (+0.45 opacity);
+  if Hannah wants the "hub brightens on arrival" beat louder, the knob is
+  `P.flare` weighting in index.js.

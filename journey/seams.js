@@ -5,9 +5,13 @@
 // dwell before a reverse crossing retires anything. Crossing arms the next
 // chapter's assets and retires the previous chapter's high-detail geometry.
 //
-// T1 has no visual expression at all - it is a pure streaming trigger. T2/T3/
-// T4 are natural occlusions the camera path already produces; nothing is drawn
+// T1 has no visual expression at all - it is a pure streaming trigger. T3/T4
+// are natural occlusions the camera path already produces; nothing is drawn
 // over the frame to hide them (no veils - that is the retired donor model).
+// T2 (D16 ground restage) is a pure p-window whose visible reveal is growth
+// choreography — the camera stays outside the rim on the Connect leg, so
+// there is no cap occlusion to predicate on; the network is dark at arm and
+// fully grown before the window's high edge (see the block below).
 
 import { startOf, endOf } from './route.js';
 import {
@@ -15,23 +19,22 @@ import {
   THRESHOLD_HYSTERESIS_DEG as HYS_DEG,
   THRESHOLD_MIN_DWELL_MS as DWELL,
 } from './constants.js';
-import { capUnderPt, rimRad, groundY } from './anatomy.js';
+import { groundY } from './anatomy.js';
 
 const DEG = Math.PI / 180;
 
 // p-windows that back the camera predicates up, expressed against the route
 // manifest so a re-timed route carries them along (M4). Values are the
 // shipped literals; each offset is authored against the camera path.
-const T1_RELAX_IN = startOf('connect') + 0.06;    // 0.44 — path has dropped under the rim
+const T1_RELAX_IN = startOf('connect') + 0.06;    // 0.44 — path has dropped past the rim
+                                                  // (D16 ground restage: outside it, same p)
 const T1_RELAX_OUT = startOf('connect') + 0.08;   // 0.46
-const CONNECT_HOLD_LO = startOf('connect') + 0.02; // 0.40 — chamber armed through the leg
-// 0.705 (M5 ignition audit, D16): was startOf('owned')+0.03 = 0.63. The T2
-// floor predicate drops the chamber at y≈0.65 (~p 0.675) — in OPEN AIR above
-// the soil, with the blade tissue still framed overhead. Forward that is a
-// legal dim, but a REVERSE scrub re-armed there, and the tissue faded back in
-// from nothing on screen. The hold now covers to the soil-crossing murk
-// (camera inside the Owned lid material, p 0.692–0.712), so retire and
-// re-arm both happen behind genuine occlusion.
+const CONNECT_HOLD_LO = startOf('connect') + 0.02; // 0.40 — network armed through the leg
+// 0.705 (M5 ignition audit, D16 — value kept through the ground restage):
+// retire and re-arm both happen inside the Owned soil-crossing murk (camera
+// inside the lid material, p 0.692–0.712), i.e. behind genuine occlusion.
+// The surface network persists through the whole stipe descent and only
+// releases underground.
 const CONNECT_HOLD_HI = startOf('owned') + 0.105;  // 0.705
 const OWNED_HOLD_LO = startOf('owned') + 0.03;     // 0.63 — colony held through the Final rise
 // past-the-end (M5 ignition audit, D16): was endOf('final') − 0.03 = 0.97,
@@ -55,7 +58,6 @@ const FINAL_HOLD = startOf('final') - 0.05;        // 0.80
 export function createSeams({ camera, chapters, missionAz = -0.213 }) {
   const state = {
     'rear-cap': { on: false, t: 0 },
-    'cap-occludes': { on: false, t: 0 },
     'soil-line': { on: false, t: 0 },
     'rise-cutaway': { on: false, t: 0 },
   };
@@ -73,9 +75,7 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
   function update(p) {
     const now = performance.now();
     const { x, y, z } = camera.position;
-    const rad = Math.hypot(x, z);
     const az = Math.atan2(x, z);                     // same convention as the director
-    const capAz = Math.atan2(z, x);                  // anatomy convention (cos a, ., sin a)
 
     // T1 - stream-side reveal (D16 restage: the orbit is now a ~90 deg swing
     // toward the visible stream, so the old ~100 deg rear threshold would
@@ -94,19 +94,17 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
       chapters.inspire.setArmed(on);
     }
 
-    // T2 - the cap occludes the sky: under the gill surface AND inside the rim.
-    // The ADR's two clauses are not sufficient on their own: "below the cap and
-    // within the rim radius" is ALSO true of every point underground, which
-    // kept the gill chamber armed through the whole Owned glide. The chamber
-    // has a floor as well as a ceiling, so the predicate gets one.
-    {
-      const under = capUnderPt(1, capAz).y;
-      const floor = groundY(x, z) + 0.8;
-      const inside = y < under - HYS_W && y > floor + HYS_W && rad < rimRad(capAz);
-      const outside = y > under + HYS_W || y < floor - HYS_W || rad > rimRad(capAz) + 0.35;
-      const on = gate('cap-occludes', inside, outside, now);
-      chapters.connect.setArmed(on || (p > CONNECT_HOLD_LO && p < CONNECT_HOLD_HI));
-    }
+    // T2 - now a PURE p-window (D16 ground restage, doc §6). The old
+    // "cap-occludes" camera predicate is dead: the camera never goes under
+    // the cap any more — the Connect leg descends OUTSIDE the rim to the
+    // ground panorama. Arming is invisible by construction: the chapter is a
+    // zero-extent network at the window's low edge (growth choreography owns
+    // the visible reveal — the Final chapter's "dark at arm" precedent), and
+    // the high edge sits inside the Owned soil-crossing murk exactly as the
+    // M5 ignition audit placed it. No hysteresis needed: both edges are
+    // behind zero-visibility states, so a shaky scrub cannot strobe anything
+    // visible.
+    chapters.connect.setArmed(p > CONNECT_HOLD_LO && p < CONNECT_HOLD_HI);
 
     // T3 - soil crossing
     {
