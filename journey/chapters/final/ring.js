@@ -56,6 +56,15 @@
 // camera pulls back — Hannah's "undarken" — via the shared aReveal channel.
 // The whisper state carries the full density too: a dense body barely lit
 // reads as a body in the dark, where a sparse one lit read as a diagram.
+//
+// 17-final-field.md (this revision): the ladder gains two FIELD tiers (T3/T4)
+// and a farthest cap-rim-hint rung — 60+ smaller bodies of the same species
+// scattered beyond the ring into the fog, kindling outward after the ring as
+// uPull completes. Same builder, same two draws. Plus the anti-"glass lamp"
+// pass: per-tier interior-point damping (innerK), stroke-crowding damping on
+// the stem/gill systems (crowdK), and per-field-member luminance (lum/lumMul)
+// so distance reads as ember, not white. All build-time; the shaders are
+// untouched.
 
 import * as THREE from 'three';
 import {
@@ -72,7 +81,11 @@ import { CAMERA } from './camera.js';
 // this class of bug.)
 const REST_CAM = (() => {
   const k = CAMERA.keys.find(k => k.note === 'final-rest');
-  return { x: k.pos.x, y: k.pos.y, z: k.pos.z };
+  return {
+    x: k.pos.x, y: k.pos.y, z: k.pos.z,
+    // plan heading of the rest gaze — the field is composed about it
+    head: Math.atan2(k.tgt.z - k.pos.z, k.tgt.x - k.pos.x),
+  };
 })();
 
 /* ------------------------------------------------------------------ */
@@ -168,7 +181,7 @@ const TIERS = [
     gillN: 78, gillSub: 7, gillCorePts: 16,
     rimSeg: 96, ticks: 100, tickBeadP: 0.25, rimPts: 16,
     stemRings: 14, stemSegs: 12, stemPtP: 0.08,
-    fibN: 17, fibSeg: 11,
+    fibN: 13, fibSeg: 11,
     roots: 2, rootSteps: 3,
     glints: 8 },
   { // T2 — far (the visible frame-left arc lives here)
@@ -176,9 +189,30 @@ const TIERS = [
     gillN: 48, gillSub: 5, gillCorePts: 10,
     rimSeg: 72, ticks: 50, tickBeadP: 0.20, rimPts: 10,
     stemRings: 11, stemSegs: 10, stemPtP: 0.06,
-    fibN: 13, fibSeg: 9,
+    fibN: 9, fibSeg: 9,
     roots: 1, rootSteps: 2,
     glints: 6 },
+  // ---- FIELD tiers (17-final-field.md, Hannah: "a whole field of smaller,
+  // less-detailed mushrooms stretching into the distant background"). Same
+  // recipe, same builder, same two draws — the ladder just keeps walking
+  // down. Zero-count systems are skipped by the builder's guards.
+  { // T3 — field near (dist ~15-24): a legible small body — sparse cap
+    // lattice, 2-ring rim, a whisper of gills, latticed stem
+    capRings: 5, capSegs: 20, capNodes: 0, capBeadP: 0.04, capSpkPts: 8,
+    gillN: 12, gillSub: 4, gillCorePts: 4,
+    rimSeg: 40, ticks: 14, tickBeadP: 0.15, rimPts: 5,
+    stemRings: 6, stemSegs: 7, stemPtP: 0.05,
+    fibN: 7, fibSeg: 6,
+    roots: 0, rootSteps: 0,
+    glints: 2 },
+  { // T4 — field far (dist ~24-36): silhouette + rim light + a few fibres
+    capRings: 3, capSegs: 14, capNodes: 0, capBeadP: 0, capSpkPts: 0,
+    gillN: 0, gillSub: 0, gillCorePts: 0,
+    rimSeg: 24, ticks: 0, tickBeadP: 0, rimPts: 2,
+    stemRings: 3, stemSegs: 5, stemPtP: 0,
+    fibN: 4, fibSeg: 4,
+    roots: 0, rootSteps: 0,
+    glints: 0 },
 ];
 
 // Per-system luminance: the hero's material opacities carried per segment
@@ -206,14 +240,47 @@ export function createFinalRing(sceneApi, uniforms) {
   const glows = makeBatch();
   const memberStats = [];   // D15 QA: per-member built density
 
-  /* ---- one individuated copy of the hero, appended into the batches ---- */
-  function buildMushroom(m) {
+  /* ---- one individuated copy of the hero, appended into the batches ----
+     tierOverride: the field passes its tier explicitly (its members are
+     placed BY distance band, so the band is the tier); ring members keep
+     the measured 3-tier ladder. */
+  function buildMushroom(m, tierOverride) {
     const P = memberParams(m);
     const r = P.r, g = () => gaussOf(r);
     const dist = Math.hypot(m.x - REST_CAM.x, m.z - REST_CAM.z);
-    const T = dist < 8 ? 0 : dist < 14 ? 1 : 2;    // build-time LOD tier
+    const T = tierOverride != null ? tierOverride
+      : dist < 8 ? 0 : dist < 14 ? 1 : 2;          // build-time LOD tier
     const C = TIERS[T];
-    const meta = { arc: m.arc, reveal: m.reveal, boost: 1 };
+    // field members answer the growth-front pulse only faintly (m.boost):
+    // the RING is what breathes with the colony; the distance echoes it
+    const meta = { arc: m.arc, reveal: m.reveal, boost: m.boost ?? 1 };
+    // distance damping (field only): additive strokes overlap in screen
+    // space as bodies recede, so an undamped far cap sums to WHITE — a lamp
+    // wall competing with the hero. lum drops the stroke tone down the heat
+    // ramp (dimmer AND warmer — ember, the fog's own direction), lumMul
+    // scales the carried per-system opacity. Ring members pass neither.
+    const lumT = m.lum ?? 1;
+    const lumM = m.lumMul ?? 1;
+    // interior-light damping BY TIER (17-final-field.md): a body's inner
+    // POINT systems — gill core, stem motes, cavity/heart stack — overlap
+    // into one white column as the body shrinks on screen, which is the
+    // "glass lamp" that kept reading as a different species from the hero.
+    // The stroke systems (lattice, rim, gills, fibres) keep full tone: they
+    // ARE the shared identity. T0 bodies are big enough to stay untouched.
+    const innerK = [1, 0.55, 0.45, 0.5, 0.4][T];
+    // crowding compensation, same reasoning at stroke level: the stem's
+    // lattice+fibres and the gill fan live in a NARROW screen column that
+    // shrinks with distance, so their additive sum runs white on far bodies
+    // while the hero's identical strokes stay textured (they cover pixels).
+    // Cap lattice and rim spread wide and are spared — they are the read.
+    // (Measured, not guessed: an A/B with the interior POINTS zeroed left
+    // the lamp column intact — the column is stroke sum under bloom, and
+    // additive saturation eats gentle scaling. These values are sized to
+    // pull the pileup under the bloom knee at each tier's screen size.)
+    // (field tiers sit higher than T1/T2: their bodies are already lum/
+    // lumMul-damped, and a field stem dimmed twice left the rim floating —
+    // the "floating rim ellipse" artifact the declutter round outlawed)
+    const crowdK = [1, 0.52, 0.42, 0.78, 0.75][T];
     const s = P.s;
     // bigger members carry proportionally more strokes (density is per body
     // surface, and the tier already handles distance)
@@ -232,10 +299,11 @@ export function createFinalRing(sceneApi, uniforms) {
     };
     const segW = (p, q, ta, tb, tw, mul) =>
       lines.seg(p[0], p[1], p[2], q[0], q[1], q[2],
-        Math.min(ta, 0.95), Math.min(tb, 0.95), { ...meta, tw: P.tw0 + tw, mul });
+        Math.min(ta * lumT, 0.95), Math.min(tb * lumT, 0.95),
+        { ...meta, tw: P.tw0 + tw, mul: (mul ?? 1) * lumM });
     const ptW = (p, tone, psize, tw, mul) =>
-      glows.pt(p[0], p[1], p[2], Math.min(tone, 0.95), psize,
-        { ...meta, tw: P.tw0 + tw, mul });
+      glows.pt(p[0], p[1], p[2], Math.min(tone * lumT, 0.95), psize,
+        { ...meta, tw: P.tw0 + tw, mul: (mul ?? 1) * lumM });
     // heat distribution: this member's hot sector (the hero's own light lives
     // where the lifted rim exposes the gills — each copy picks its own side)
     const heatK = (a) => 1 + P.hotAmp * Math.cos(a - P.hotDir);
@@ -326,8 +394,11 @@ export function createFinalRing(sceneApi, uniforms) {
           // upper lattice ducks under the cap when seen from above
           const base = 0.22 + 0.15 * Math.abs(Math.sin((j / S) * TAU - 0.3)) + r() * 0.07;
           const uvK = 1 - (1 - underVis) * smoothstep(0.55, 0.95, yT);
-          const b = (base + (yT > 0.85 ? 0.15 : 0) + (yT < 0.12 ? 0.08 : 0))
-                  * heatK(a) * occlS(a) * uvK;
+          // the base-flare warmth (yT<0.12) is a near-body read; on far
+          // bodies it summed with the flare's own stroke crowd into the
+          // bright "foot" half of the lamp — T0 only
+          const b = (base + (yT > 0.85 ? 0.15 : 0) + (yT < 0.12 && T === 0 ? 0.08 : 0))
+                  * heatK(a) * occlS(a) * uvK * crowdK;
           const p = w(pl[0], pl[1], pl[2]);
           if (r() < 0.5) {
             const q = grid[i][(j + 1) % S];
@@ -338,11 +409,13 @@ export function createFinalRing(sceneApi, uniforms) {
             segW(p, w(q[0], q[1], q[2]), b, b, a + 3.6, M_STEM);
           }
           if (r() < C.stemPtP)
-            ptW(p, 0.5 + r() * 0.3, s * (0.015 + r() * 0.04), i + j, M_STEMPT);
+            ptW(p, (0.5 + r() * 0.3) * innerK, s * (0.015 + r() * 0.04),
+              i + j, M_STEMPT);
         }
       }
       // vertical fibres with the hero's wiggle; every fifth doubled heavier
-      const NF = Math.max(6, Math.round(C.fibN * sizeK)), FS = C.fibSeg;
+      const NF = C.fibN ? Math.max(4, Math.round(C.fibN * sizeK)) : 0;
+      const FS = C.fibSeg;
       for (let f = 0; f < NF; f++) {
         const a0 = (f / NF) * TAU + g() * 0.1;
         const bF = 0.26 + r() * 0.18;
@@ -357,13 +430,14 @@ export function createFinalRing(sceneApi, uniforms) {
           const pD = w(q[0] + 0.009, q[1], q[2]);
           if (pv) {
             const uvF = 1 - (1 - underVis) * smoothstep(0.55, 0.95, y / stemTop);
-            const b0 = (bF + g() * 0.04) * heatK(aPrev) * occlS(aPrev) * uvF;
-            const b1 = (bF + g() * 0.04) * heatK(a) * occlS(a) * uvF;
+            const b0 = (bF + g() * 0.04) * heatK(aPrev) * occlS(aPrev) * uvF * crowdK;
+            const b1 = (bF + g() * 0.04) * heatK(a) * occlS(a) * uvF * crowdK;
             segW(pv, p, b0, b1, f * 1.3, M_FIB);
             if (f % 5 === 0)   // heavier structural strand
               segW(pvD, pD, b0 * 0.8, b1 * 0.8, f * 1.3 + 0.5, M_FIB);
             if (r() < 0.09)
-              ptW(p, bF + 0.18, s * (0.012 + r() * 0.023), f + i, M_STEMPT);
+              ptW(p, (bF + 0.18) * innerK, s * (0.012 + r() * 0.023),
+                f + i, M_STEMPT);
           }
           pv = p; pvD = pD; aPrev = a;
         }
@@ -412,7 +486,8 @@ export function createFinalRing(sceneApi, uniforms) {
         }
       }
       // sparse bright overlay network + node dots riding the dome
-      const nN = Math.max(8, Math.round(C.capNodes * sizeK));
+      // (field tiers carry no overlay net: capNodes 0 skips it entirely)
+      const nN = C.capNodes ? Math.max(8, Math.round(C.capNodes * sizeK)) : 0;
       const nodes = [];
       for (let k = 0; k < nN; k++) {
         const u = Math.sqrt(r()) * 0.99, aa = r() * TAU;
@@ -448,7 +523,7 @@ export function createFinalRing(sceneApi, uniforms) {
     {
       const S = Math.max(20, Math.round(C.rimSeg * sizeK));
       const mB = 0.88 + 0.12 * m.m;   // mature rims run a touch hotter
-      const rings = T === 2
+      const rings = T >= 2
         ? [{ du: 1.005, dy: 0, b: 0.8 }, { lip: true, b: 0.6 }]
         : [{ du: 1.005, dy: 0, b: 0.8 },
            { du: 1.0,   dy: 0.035, b: 0.52 },
@@ -503,7 +578,7 @@ export function createFinalRing(sceneApi, uniforms) {
     /* ==== §6 GILLS — dense radial filaments, feathered attach, the
             cavity-shading curve, 8% doubled veins, hot core ==== */
     {
-      const N = Math.max(6, Math.round(C.gillN * P.gillD * sizeK));
+      const N = C.gillN ? Math.max(6, Math.round(C.gillN * P.gillD * sizeK)) : 0;
       const SUB = C.gillSub;
       const ph = r() * TAU;   // per-member fan phase
       for (let gi = 0; gi < N; gi++) {
@@ -511,7 +586,7 @@ export function createFinalRing(sceneApi, uniforms) {
         const wig = g() * 0.02;
         const boost = r() < 0.08 ? 0.18 : 0;
         const u0 = 0.06 + r() * 0.09;              // feathered inner attach
-        const hk = heatK(a0) * occlS(a0) * underVis;
+        const hk = heatK(a0) * occlS(a0) * underVis * crowdK;
         let pv = null, pvD = null, tp = 0;
         for (let k = 0; k <= SUB; k++) {
           const t = k / SUB, u = u0 + t * (1 - u0);
@@ -538,7 +613,7 @@ export function createFinalRing(sceneApi, uniforms) {
         const a = r() * TAU;
         const q = underPt(0.06 + r() * 0.14, a);
         ptW(w(q[0], q[1] + g() * 0.02, q[2]),
-          (0.48 + r() * 0.15) * occlS(a) * underVis,
+          (0.48 + r() * 0.15) * occlS(a) * underVis * innerK,
           s * (0.035 + r() * 0.04), k * 1.1, M_CORE);
       }
     }
@@ -578,8 +653,8 @@ export function createFinalRing(sceneApi, uniforms) {
     for (let k = 0; k < C.glints; k++) {
       const a = P.wetDir + g() * 0.6;
       const p = w(...topPt(0.8 + r() * 0.22, a));
-      glows.pt(p[0], p[1] + 0.01, p[2], 0.82 + r() * 0.12,
-        s * (0.05 + r() * 0.05), { ...meta, tw: P.tw0 + 2.3 * k });
+      glows.pt(p[0], p[1] + 0.01, p[2], (0.82 + r() * 0.12) * lumT,
+        s * (0.05 + r() * 0.05), { ...meta, tw: P.tw0 + 2.3 * k, mul: lumM });
     }
 
     /* -- per-member spore shed: mature bodies only, strength seeded in
@@ -610,21 +685,32 @@ export function createFinalRing(sceneApi, uniforms) {
           grows into two soft GROUND POOLS that replace the root flares'
           visual mass (merged into the same batch + reveal channel:
           zero new draws, kindles with its member). -- */
+    // 17-final-field.md (Hannah, third round of "the ring members read as a
+    // different design"): the surviving tell was the interior LAMP — heart +
+    // cavity + hot core stacked on the stem axis summed into a bright column
+    // the hero simply does not have. The hero's light lives in its RIM, its
+    // gill cavity and its lattice strokes; the halo only carries "biolumi-
+    // nescent" at distance. Heart and cavity drop to that supporting role.
     const heart = w(0.10 * cd, capY + P.domeH * 0.35, 0.10 * sd);
     const cavity = w(0.05 * cd, capY + 0.10, 0.05 * sd);
-    glows.pt(heart[0], heart[1], heart[2], 0.36, m.capR * (2.1 + 0.5 * m.m),
-      { ...meta, tw: P.tw0 + 1 });
+    glows.pt(heart[0], heart[1], heart[2], 0.29 * innerK * lumT,
+      m.capR * (1.55 + 0.40 * m.m), { ...meta, tw: P.tw0 + 1, mul: lumM });
     glows.pt(cavity[0], cavity[1], cavity[2],
-      (0.68 + 0.12 * m.m) * (0.25 + 0.75 * underVis),
-      m.capR * (1.35 + 0.35 * m.m), { ...meta, tw: P.tw0 });
-    glows.pt(cavity[0], cavity[1] - 0.02, cavity[2], 0.88 * underVis,
-      m.capR * 0.5, { ...meta, tw: P.tw0 + 2 });
-    // ground-glow pools: the member's light meeting the soil
-    glows.pt(m.x, m.gy + 0.04, m.z, 0.42, m.capR * 1.05,
-      { ...meta, tw: P.tw0 + 3 });
-    glows.pt(m.x + Math.cos(P.leanDir) * 0.18 * s, m.gy + 0.03,
-      m.z + Math.sin(P.leanDir) * 0.18 * s, 0.26, m.capR * 2.1,
-      { ...meta, tw: P.tw0 + 3.7 });
+      (0.50 + 0.10 * m.m) * (0.25 + 0.75 * underVis) * innerK * lumT,
+      m.capR * (0.95 + 0.22 * m.m), { ...meta, tw: P.tw0, mul: lumM });
+    if (T < 4)
+      glows.pt(cavity[0], cavity[1] - 0.02, cavity[2],
+        0.68 * underVis * innerK * lumT,
+        m.capR * 0.4, { ...meta, tw: P.tw0 + 2, mul: lumM });
+    // ground-glow pools: the member's light meeting the soil. innerK rides
+    // along — on far bodies the pool was summing with the base flare into a
+    // bright "foot ball", the lower half of the lamp read.
+    glows.pt(m.x, m.gy + 0.04, m.z, 0.42 * innerK * lumT, m.capR * 1.05,
+      { ...meta, tw: P.tw0 + 3, mul: lumM });
+    if (T < 4)
+      glows.pt(m.x + Math.cos(P.leanDir) * 0.18 * s, m.gy + 0.03,
+        m.z + Math.sin(P.leanDir) * 0.18 * s, 0.26 * innerK * lumT,
+        m.capR * 2.1, { ...meta, tw: P.tw0 + 3.7, mul: lumM });
 
     memberStats.push({
       i: m.i, tier: T, h: m.h,
@@ -633,6 +719,121 @@ export function createFinalRing(sceneApi, uniforms) {
   }
 
   for (const m of MEMBERS) buildMushroom(m);
+
+  /* ================================================================
+     THE FIELD (17-final-field.md, Hannah): "a whole field of smaller,
+     less-detailed mushrooms stretching into the distant background —
+     some smaller, some bigger — so it feels like a huge scale."
+     Same species, same builder, same two draws: every field body is a
+     buildMushroom() call on the T3/T4 rungs of the ladder, plus a
+     farthest rung of pure cap-rim hints. Composition is authored in the
+     REST FRAME: ~2/3 of the bodies stand on the frame-right side of the
+     rest gaze (the upper-right Hannah gave the field when the copy moved
+     to the bottom-left corner), the ring band keeps a 9.6-unit moat so
+     the fairy ring stays the subject, the hero keeps its clearance and
+     its airy sky sector (the trees' own gap), and everything stands on
+     kept soil — the cutaway wedge stays void.
+     Reveal: the kindling travels OUTWARD — near field kindles after the
+     ring (uPull 0.45+), the farthest hints complete only as the camera
+     settles at the rest. Pure in the pose like everything else here:
+     reverse rides retract the field back toward the ring.
+     ================================================================ */
+  const fieldStats = { t3: 0, t4: 0, hints: 0 };
+  {
+    const fr = makeRng(0xF1E1D);
+    const fg = () => gaussOf(fr);
+    const placed = [];
+    const want = { t3: 15, t4: 28 };
+    let idx = 0, guard = 0;
+    while ((fieldStats.t3 < want.t3 || fieldStats.t4 < want.t4) && guard++ < 6000) {
+      const right = fr() < 0.66;
+      const rel = right ? 0.03 + Math.pow(fr(), 0.9) * 0.60
+                        : -0.03 - Math.pow(fr(), 0.9) * 0.55;
+      // the frame-left arc of the RING is the composition's far anchor —
+      // field bodies on that side start deeper so they sit clearly behind it
+      const dist = (right ? 15 : 19) + Math.pow(fr(), 1.30) * (right ? 21 : 17);
+      const th = REST_CAM.head + rel;
+      const x = REST_CAM.x + Math.cos(th) * dist + fg() * 0.8;
+      const z = REST_CAM.z + Math.sin(th) * dist + fg() * 0.8;
+      if (cutVal(x, z) < 0.4) continue;               // kept soil only
+      if (Math.hypot(x - RING_C.x, z - RING_C.z) < 9.6) continue;  // ring moat
+      if (Math.hypot(x, z) < 4.0) continue;           // hero clearance
+      // the hero's sky sector stays airy (the trees leave the same gap)
+      if (rel > 0.10 && rel < 0.30 && dist > 24 && fr() < 0.5) continue;
+      let ok = true;
+      for (const q of placed)
+        if (Math.hypot(x - q[0], z - q[1]) < 1.15) { ok = false; break; }
+      if (!ok) continue;
+      const tier = dist < 24 ? 3 : 4;
+      if (tier === 3 && fieldStats.t3 >= want.t3) continue;
+      if (tier === 4 && fieldStats.t4 >= want.t4) continue;
+      // mostly smaller than the ring bodies; an occasional taller one so the
+      // field has its own elders ("some smaller, some bigger")
+      const h = (tier === 3 ? 0.9 + fr() * 1.3 : 0.7 + fr() * 1.1)
+              + (fr() < 0.12 ? 0.8 : 0);
+      const mat = 0.25 + fr() * 0.75;
+      const distFrac = Math.min(1, Math.max(0, (dist - 14) / 30));
+      placed.push([x, z]);
+      buildMushroom({
+        i: 100 + idx++,
+        x, z,
+        gy: groundY(x, z),
+        h,
+        capR: h * (0.40 + 0.10 * mat),
+        m: mat,
+        shed: 0,
+        boost: 0.25,
+        // brightness hierarchy (the field frames the hero, never buries it):
+        // tone slides down the heat ramp and stroke opacity falls with the
+        // distance band — far bodies are embers in the haze, not lamps
+        lum: tier === 3 ? 0.80 - 0.10 * distFrac : 0.68 - 0.10 * distFrac,
+        lumMul: tier === 3 ? 0.70 : 0.52,
+        arc: arcOf(x, z),
+        reveal: 0.45 + 0.37 * distFrac + fr() * 0.02,
+      }, tier);
+      fieldStats[tier === 3 ? 't3' : 't4']++;
+    }
+
+    // T5 — the farthest rung: cap-rim hints. A short front-facing rim arc
+    // (bright toward the lens, the "glowing rim" signature at its minimum
+    // legible density) + a cap ember + a soil pool. The fog does the rest —
+    // they dissolve into the warm haze exactly as the horizon does.
+    guard = 0;
+    while (fieldStats.hints < 20 && guard++ < 2000) {
+      const rel = -0.50 + fr() * 1.10;
+      const dist = 34 + fr() * 12;
+      const th = REST_CAM.head + rel;
+      const x = REST_CAM.x + Math.cos(th) * dist + fg() * 1.2;
+      const z = REST_CAM.z + Math.sin(th) * dist + fg() * 1.2;
+      if (cutVal(x, z) < 0.4) continue;
+      if (Math.hypot(x - RING_C.x, z - RING_C.z) < 9.6) continue;
+      if (rel > 0.10 && rel < 0.30 && fr() < 0.35) continue;   // hero sky gap
+      const h = 0.6 + fr() * 1.0;
+      const capR = h * 0.45;
+      const gy = groundY(x, z);
+      const meta = {
+        arc: arcOf(x, z), reveal: 0.80 + fr() * 0.04, boost: 0,
+        tw: fr() * TAU, mul: M_RIM,
+      };
+      const camA = Math.atan2(REST_CAM.z - z, REST_CAM.x - x);
+      const S = 8, span = 1.1;
+      let pv = null;
+      for (let k = 0; k <= S; k++) {
+        const a = camA - span + (k / S) * span * 2;
+        const p = [x + Math.cos(a) * capR, gy + h * 0.72 + fg() * 0.02,
+                   z + Math.sin(a) * capR];
+        if (pv) {
+          const t0 = 0.42 * (0.35 + 0.65 * Math.cos((a - camA) / span * 1.4));
+          lines.seg(pv[0], pv[1], pv[2], p[0], p[1], p[2], t0, t0, meta);
+        }
+        pv = p;
+      }
+      glows.pt(x, gy + h * 0.80, z, 0.34, capR * 0.9, { ...meta, mul: 1 });
+      glows.pt(x, gy + 0.03, z, 0.22, capR * 1.3,
+        { ...meta, tw: meta.tw + 2.1, mul: 1 });
+      fieldStats.hints++;
+    }
+  }
 
   // Declutter round: the two schematic far-side "continuation hint"
   // octagons are GONE. With the floor cleaned they read as floating rings
@@ -756,6 +957,7 @@ export function createFinalRing(sceneApi, uniforms) {
     counts: {
       ringSegs: lines.segCount, glowPts: glows.ptCount,
       primordia: primSize.length, ringMembers: memberStats,
+      field: fieldStats,
     },
   };
 }

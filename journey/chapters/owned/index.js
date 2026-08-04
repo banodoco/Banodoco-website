@@ -283,7 +283,22 @@ export function createOwned(sceneApi, content) {
     }
 
     substrate.setFade(eff);
-    portraits.setFade(eff);
+    // Final-surface mask (17-final-field.md, Hannah): the colony stays armed
+    // through the whole epilogue (OWNED_HOLD_HI past-the-end), and the Final
+    // cutaway deliberately exposes it in section — but the contributor FACES
+    // must not read inside the epilogue frame (they were surfacing as bright
+    // portrait blobs in the wedge corner). The substrate keeps its glow (the
+    // network below the lip is the composition's designed underground light);
+    // only the portrait field retires. Pure in p — p and the camera are a
+    // bijection on the leg, so this is a camera-keyed fade, not a timed one:
+    // it runs 0.815→0.845 and COMPLETES BEFORE the surface pierce (~0.850),
+    // i.e. while the lens is still climbing through the colony's dark upper
+    // reaches — measured: at 0.845 the old window still showed readable
+    // faces bottom-right of the surfacing frame. Reverse rides restore the
+    // faces through the same corridor as the camera re-enters the colony.
+    // Zero effect at the Owned rest (p 0.725 → mask 1) and on its golden.
+    const faceVis = 1 - smooth01((pNow - 0.815) / 0.030);
+    portraits.setFade(eff * faceVis);
     substrate.update(dt, t);
     portraits.update(dt, t);
 
