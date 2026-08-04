@@ -32,7 +32,9 @@
 // Parented to `scene` (adr-d3): the field does not sway.
 
 import * as THREE from 'three';
-import { makeUniforms, pullOf, makeRng, TAU, RING_C, HERO_AZ, MEMBERS } from './world.js';
+import {
+  makeUniforms, pullOf, pullRawOf, makeRng, TAU, RING_C, HERO_AZ, MEMBERS,
+} from './world.js';
 import { createFinalRing } from './ring.js';
 import { createFinalTerrain } from './terrain.js';
 import { createFinalSky } from './sky.js';
@@ -44,7 +46,10 @@ export function createFinal(sceneApi) {
   group.userData.jFinal = true;   // QA handle: budget A/Bs isolate this leg
   sceneApi.scene.add(group);
 
-  const uniforms = makeUniforms();
+  // sceneApi: makeUniforms harvests the HERO's own tap-pulse trio off its live
+  // materials, so a poke anywhere in this chapter plants the same wave the
+  // hero answers (world.js heroPulse).
+  const uniforms = makeUniforms(sceneApi);
   const ring = createFinalRing(sceneApi, uniforms);
   const terrain = createFinalTerrain(sceneApi, uniforms);
   const sky = createFinalSky(sceneApi, uniforms);
@@ -170,6 +175,7 @@ export function createFinal(sceneApi) {
         wasVisible = false;
         uniforms.uAmount.value = eff;
         uniforms.uPull.value = pullOf(sceneApi.camera.position.x);
+        uniforms.uPullRaw.value = pullRawOf(sceneApi.camera.position.x);
         ring.update(t, dt, false);
       }
       return;
@@ -185,6 +191,8 @@ export function createFinal(sceneApi) {
     applyHeroDim(eff * reachT * reachT * (3 - 2 * reachT));
     uniforms.uAmount.value = eff;
     uniforms.uPull.value = pull;
+    // the unclamped twin, for the clone entry-draw front (clones.js part B)
+    uniforms.uPullRaw.value = pullRawOf(sceneApi.camera.position.x);
     uniforms.uTime.value = t;
     if (sceneApi.scene.fog) {
       uniforms.uFogNear.value = sceneApi.scene.fog.near;
@@ -303,5 +311,8 @@ export function createFinal(sceneApi) {
     trigger(name) { if (name === 'ctaPulse' || name === 'ringPulse') fireCta(); },
     /** QA introspection */
     counts: { ...ring.counts, ...terrain.counts, ...sky.counts },
+    /** LIVE QA: the poke's own numbers, read now rather than at construction
+     *  (the spread above freezes anything it touches). */
+    pickStats: ring.pickStats,
   };
 }

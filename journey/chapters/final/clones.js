@@ -65,6 +65,7 @@
 // back into the hero's graph.
 
 import * as THREE from 'three';
+import { heroPulse } from './world.js';
 
 /* ---- the hero's §11 highlight language, shared with ring.js so species
    batch members breathe EXACTLY like clones do. furniture.js createHighlights:
@@ -115,12 +116,171 @@ function breeze(t) {
 
 const smooth01 = (x) => { const c = Math.max(0, Math.min(1, x)); return c * c * (3 - 2 * c); };
 
+/* ---- THE POKE, MECHANICAL HALF (organism/organism.js §10c) --------------
+   Hannah: "why is the touch-interaction on the new mushrooms different to the
+   OG one?" The hero's answer to a poke is not a brightness ramp — it is a
+   CANTILEVER. The stalk stands on an elastic root; a tap is an impulse at the
+   hit point; the torque r x F about the base kicks the body's angular
+   velocity, which then rings down as a lightly damped oscillator at the
+   stalk's own flutter frequency, riding ON TOP of the breeze rather than
+   replacing it.
+
+   These are §10c's numbers, unchanged. They are copied rather than imported
+   because organism/* is read-only and keeps them in a closure — the same
+   arrangement this file's breeze() already lives under.
+
+   The lever arm falls out of the cross product and is the whole character of
+   the move: a tap on the cap (r.y ~ 4) tips a body four times as far as one
+   low on the stem, and pressing one edge of the cap tips it toward that side.
+   That is why the hit point has to be REAL and not the axis of a proxy
+   collider — see interact.js's narrow phase.
+
+   UNITS. For a clone, r and F are taken in the body's OWN frame (root-local,
+   which is hero units because root.scale carries the clone's only scale), so
+   the impulse constant, the saturation clamp and the resulting ANGLE are
+   identical for every body whatever its size. A poked field mushroom leans by
+   the same number of degrees as the poked hero — which is what "the same way
+   the hero does" has to mean when the bodies are different sizes. */
+export const TAP_W = 2.3;      // ring frequency (rad/s) — the stalk's fine-flutter mode
+export const TAP_ZETA = 0.14;  // light damping: a few visible wobbles, settled in ~3s
+const TAP_IMP = 0.008;         // impulse -> angular velocity
+const TAP_MAX = 0.09;          // flesh, not a bell: repeated pokes saturate
+
+/** Advance one body's tap ring-down by dt. Shared with ring.js so the batched
+ *  species bodies ring down on the SAME integrator (semi-implicit Euler on the
+ *  damped spring — stable at these frequencies and frame rates, and it
+ *  conserves the impulse's feel). `st` is any object with {tx,tz,tvx,tvz}. */
+export function stepTap(st, dt) {
+  st.tvx += (-TAP_W * TAP_W * st.tx - 2 * TAP_ZETA * TAP_W * st.tvx) * dt;
+  st.tvz += (-TAP_W * TAP_W * st.tz - 2 * TAP_ZETA * TAP_W * st.tvz) * dt;
+  st.tx += st.tvx * dt;
+  st.tz += st.tvz * dt;
+}
+
+/** The impulse itself: hit point `r` and push direction `F`, both already in
+ *  the body's own frame and in hero units. organism §10c, line for line. */
+export function kickTap(st, r, F) {
+  st.tvx += TAP_IMP * (r.y * F.z - r.z * F.y);
+  st.tvz += TAP_IMP * (r.x * F.y - r.y * F.x);
+  const v = Math.hypot(st.tvx, st.tvz);
+  if (v > TAP_MAX) { st.tvx *= TAP_MAX / v; st.tvz *= TAP_MAX / v; }
+}
+
+/** True while a body is still ringing — lets a caller skip still bodies and
+ *  lets ring.js hand a wobble slot back the moment it has nothing to say. */
+export const isRinging = (st) =>
+  Math.abs(st.tx) > 1e-5 || Math.abs(st.tz) > 1e-5 ||
+  Math.abs(st.tvx) > 1e-5 || Math.abs(st.tvz) > 1e-5;
+
+/** Zero a tap state (retire, or a slot being reclaimed). */
+export function clearTap(st) { st.tx = 0; st.tz = 0; st.tvx = 0; st.tvz = 0; }
+
+/* ---- THE ENTRY, AS THE FIELD'S REVEAL (organism/organism.js DRAW_GLSL) ---
+   Hannah: "what about the entry animation, too heavy to run on them?" It is
+   not heavy at all — it was IMPOSSIBLE, for a reason that had nothing to do
+   with cost. A clone shared the hero's single `uProg` draw-progress uniform,
+   so all twenty-four bodies were pinned to whatever the hero's entry was
+   doing — and the hero's entry finished back on the hero page, parked at
+   uProg = 2. One uniform, one state, nothing left to draw.
+
+   Each clone now owns its uProg (ONE float per body per frame) while still
+   sharing every per-layer uWin — so the hero's authored choreography (stalk
+   verticals, then the lattice, then gills, rim, cap surfaces, the overlay net
+   last) replays per body, in the hero's own order, at whatever moment the
+   chapter's reveal front reaches that body.
+
+   THE LAW IT HAS TO OBEY (D16): nothing may fade in over open view; a draw-on
+   tied to the camera-pure front is lawful, a time-based one is not. So the
+   draw parameter is a pure function of uPull exactly like the kindle — the
+   SAME front, one step earlier, so a body finishes drawing just as its ember
+   whisper starts to come up. Reverse scrubs therefore un-draw it, stroke by
+   stroke, back into the dark.
+
+   The window span below is the union of the hero's own stem+cap windows
+   (intro.js WINDOWS: stemVerts opens at 0.296, overlayPts closes at 0.893) —
+   the clone carries no ground layers, so driving uProg across the full 0..1
+   would spend a third of the move on layers this body does not have. */
+const DRAW_LO = 0.296, DRAW_HI = 0.893;
+// How far AHEAD of a body's own kindle its drawing runs, and over how much of
+// uPull. Lead > REVEAL_W means the last stroke lands before the first ember,
+// so the shipped "unlit body in the dark" state is preserved exactly — the
+// body that was always there is now a body that INKED ITSELF IN and then was
+// always there.
+const DRAW_LEAD = 0.20, DRAW_W = 0.16;
+
+// organism's own injectDraw(), re-expressed for a clone's plain overlay-net
+// material. The hero grafts uProg/uWin/pulse into the stock line shader at
+// compile time and keeps the handle in userData; a clone rebuilds the
+// material (it needs an owned .opacity for the reveal write-port), so the
+// graft has to be redone here — pointed at THIS clone's uProg and the hero's
+// own uWin for that layer. Without it the overlay net is the one layer that
+// stands fully drawn while the cap lattice under it is still being stroked,
+// and the one layer that does not answer a poke's ripple.
+function injectCloneDraw(mat, uProg, uWin, pulse) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uProg = uProg;
+    sh.uniforms.uWin = uWin;
+    sh.uniforms.uPulseC = pulse.uPulseC;
+    sh.uniforms.uPulseT = pulse.uPulseT;
+    sh.uniforms.uPulseP = pulse.uPulseP;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>',
+        '#include <common>\n' +
+        'uniform float uProg;\nuniform vec2 uWin;\n' +
+        'attribute float aDraw;\nvarying float vDraw;\n' +
+        'uniform vec3 uPulseC;\nuniform float uPulseT;\nuniform vec3 uPulseP;\n' +
+        'varying float vPulse;\n' +
+        'float pulseAt(vec3 wp) {\n' +
+        '  float d = distance(wp, uPulseC);\n' +
+        '  float w = uPulseP.x * (0.15 + 0.21 * uPulseT);\n' +
+        '  float ring = exp(-pow((d - uPulseP.x * uPulseT) / w, 2.0));\n' +
+        '  return 1.0 + uPulseP.z * ring * exp(-1.15 * uPulseT) * exp(-d * uPulseP.y);\n' +
+        '}')
+      .replace('#include <begin_vertex>',
+        '#include <begin_vertex>\n' +
+        '{ float dp = clamp((uProg - uWin.x) / (uWin.y - uWin.x), 0.0, 1.0);\n' +
+        '  float head = smoothstep(0.0, 0.012, dp - aDraw);\n' +
+        '  float tip = smoothstep(0.03, 0.0, abs(dp - aDraw)) * smoothstep(0.0, 0.01, dp) * (1.0 - step(0.999, dp));\n' +
+        '  vDraw = head + tip * 1.7;\n' +
+        '  vPulse = pulseAt((modelMatrix * vec4(transformed, 1.0)).xyz); }');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vDraw;\nvarying float vPulse;')
+      .replace('#include <color_fragment>',
+        '#include <color_fragment>\ndiffuseColor.rgb *= vDraw * vPulse;');
+  };
+  // Same source for every clone, so three compiles ONE extra program for the
+  // whole set. A key distinct from the hero's 'draw-injected' keeps the two
+  // grafts from being confused for each other if organism's ever drifts.
+  mat.customProgramCacheKey = () => 'clone-draw-injected';
+}
+
 // Below this reveal value a clone's opaque shells are switched off: an unlit
 // body must read as a body in the dark, not as a silhouette cut out of the
 // haze behind it. 0.02 sits under the 7% ember whisper x the chapter's own
 // arm fade, so the shells arrive while the body is still underground behind
 // the dissolving soil slab (D16) and leave again on a reverse retract.
 const SHELL_ON = 0.02;
+
+// THE SECOND SHELL GATE, and the bug the entry draw walked straight into.
+//
+// SHELL_ON alone was sufficient while a body was always fully inked: dim the
+// strokes and you still had a dark body. With part B a body spends about a
+// fifth of uPull only PARTLY drawn — and its shells, which are opaque and
+// carry no draw state of their own, were standing there the whole time. A
+// mid-draw member read as a solid black mushroom cut out of the haze: the
+// exact silhouette SHELL_ON exists to prevent, arriving through the other
+// door. Caught on a scrub screenshot, not in review.
+//
+// organism/intro.js solves the same problem for the hero by FADING each shell
+// group in while its own region is being stroked (_shellFade: stem shells
+// over uProg 0.30..0.54, cap shells over 0.574..0.714). A clone SHARES the
+// hero's shell materials — sharing them outright is what buys a solid body
+// for free — so it cannot fade them; it can only switch its own copies on and
+// off. So it switches at the MIDPOINT of the hero's own fade, where the
+// region already carries ink: no shell ever appears over a blank region, and
+// no region is ever inked without its shell.
+const STEM_SHELL_AT = 0.42;   // = 0.30 + 0.24/2, intro.js's stem fade midpoint
+const CAP_SHELL_AT = 0.644;   // = 0.574 + 0.14/2, its cap fade midpoint
 
 /* ------------------------------------------------------------------ */
 /* Material cloning                                                    */
@@ -129,10 +289,27 @@ const SHELL_ON = 0.02;
 // Anything animated or global lands here; anything owned is created fresh.
 const SHARE = [
   'map', 'time',                          // glow sprite + shimmer clock
-  'uProg', 'uWin', 'uClampY',             // entry-draw state (parked post-intro)
+  'uWin',                                 // the hero's per-LAYER draw windows
   'uPulseC', 'uPulseT', 'uPulseP',        // the tap pulse — taps ripple into clones
   'uRes', 'uFadeOn',                      // coverage fade (resize keeps working)
 ];
+
+// NOT shared, and both for the entry draw (see DRAW_LO above):
+//
+//   uProg    OWNED PER BODY. This is the whole of part B: the draw progress
+//            is the one piece of entry state that has to differ per body for
+//            the field to reveal itself by drawing on. uWin stays shared, so
+//            the ORDER of the choreography is still the hero's.
+//   uClampY  owned by the CLONE SET (one object, all bodies). The hero parks
+//            its stem materials at 3.65 to stop the stipe inking against open
+//            sky before the cap exists, and the lid tests WORLD y — a metric
+//            that means nothing to a body standing at another place and
+//            scale. Every clone's stem happens to sit below 3.45 world y, so
+//            the lid is already inert for all of them; pinning it at 1e3
+//            makes that structural instead of a coincidence waiting for a
+//            taller member. The joint the hero's lid protects is covered on a
+//            clone by its own §5 cap shell, which is opaque from SHELL_ON.
+const CLAMP_OFF = 1e3;
 
 // THE ONE UNIFORM A CLONE MUST NOT INHERIT: fog.
 //
@@ -160,21 +337,24 @@ const SHARE = [
 // because everything else was fogged out.
 const FOG = ['fogNear', 'fogFar'];
 
-function shareUniforms(dst, src, fogU) {
+function shareUniforms(dst, src, fogU, own) {
   for (const k of SHARE) if (src.uniforms[k]) dst.uniforms[k] = src.uniforms[k];
   for (let i = 0; i < FOG.length; i++)
     if (src.uniforms[FOG[i]]) dst.uniforms[FOG[i]] = fogU[i];
+  // the entry-draw state this body owns (or the set owns) — see SHARE above
+  if (src.uniforms.uProg) dst.uniforms.uProg = own.uProg;
+  if (src.uniforms.uClampY) dst.uniforms.uClampY = own.uClampY;
 }
 
 const SZ_TAG = 'float sz = psize * vTw * (300.0 / -mv.z)';
 
-function clonePointsMat(src, s, dropped, fogU) {
+function clonePointsMat(src, s, dropped, fogU, own) {
   if (!src.vertexShader.includes(SZ_TAG) || !src.vertexShader.includes('uniform float time;')) {
     dropped.push('points');               // organism shader drifted: drop, never mis-size
     return null;
   }
   const m = src.clone();
-  shareUniforms(m, src, fogU);
+  shareUniforms(m, src, fogU, own);
   m.uniforms.uOpacity = { value: src.uniforms.uOpacity.value };
   m.uniforms.uScl = { value: s };
   m.vertexShader = m.vertexShader
@@ -183,9 +363,9 @@ function clonePointsMat(src, s, dropped, fogU) {
   return m;
 }
 
-function cloneDenseMat(src, fogU) {
+function cloneDenseMat(src, fogU, own) {
   const m = src.clone();
-  shareUniforms(m, src, fogU);
+  shareUniforms(m, src, fogU, own);
   m.uniforms.uOpacity = { value: src.uniforms.uOpacity.value };
   return m;
 }
@@ -203,6 +383,11 @@ export function createClones(sceneApi) {
   const dropped = [];
   // ONE fog pair for the whole clone set — see the FOG comment above.
   const fogU = [{ value: 7 }, { value: 20 }];
+  // ONE lid-off uniform for the whole clone set — see CLAMP_OFF above.
+  const clampU = { value: CLAMP_OFF };
+  // the hero's tap-pulse trio, for the overlay-net graft (the ShaderMaterial
+  // layers pick it up through SHARE off their own source material)
+  const pulse = heroPulse(sceneApi);
   let ownedMats = 0, sharedMeshes = 0, drawsPerBody = 0, foreign = 0;
 
   /* ---- WHAT IS AND IS NOT THE ORGANISM ------------------------------
@@ -241,12 +426,12 @@ export function createClones(sceneApi) {
   // MULTIPLIES stemGroup's uOpacity in place while it is hot, and a clone
   // built during one would bake the boosted value in as its resting
   // brightness. Do not move this build behind a lazy first-arm.
-  function cloneNode(o, mats, shells, s, count, root) {
+  function cloneNode(o, mats, shells, s, count, root, own) {
     let c;
     const m = o.material;
     if (!root && !isOrganismLeaf(o)) { foreign++; return null; }
     if (o.isPoints) {
-      const pm = clonePointsMat(m, s, dropped, fogU);
+      const pm = clonePointsMat(m, s, dropped, fogU, own);
       if (!pm) return null;
       mats.push({ u: pm.uniforms.uOpacity, base: m.uniforms.uOpacity.value });
       ownedMats++;
@@ -254,7 +439,7 @@ export function createClones(sceneApi) {
       if (count) drawsPerBody++;
     } else if (o.isLineSegments || o.isLine) {
       if (m.isShaderMaterial) {
-        const dm = cloneDenseMat(m, fogU);
+        const dm = cloneDenseMat(m, fogU, own);
         mats.push({ u: dm.uniforms.uOpacity, base: m.uniforms.uOpacity.value });
         ownedMats++;
         c = new THREE.LineSegments(o.geometry, dm);
@@ -263,6 +448,12 @@ export function createClones(sceneApi) {
           vertexColors: true, blending: THREE.AdditiveBlending,
           transparent: true, opacity: m.opacity, depthWrite: false,
         });
+        // the overlay net draws itself on and ripples with the rest of the
+        // body (injectCloneDraw) — the hero's graft, on this clone's uProg
+        // and the hero's own window for this layer
+        if (m.userData && m.userData.uWin) {
+          injectCloneDraw(bm, own.uProg, m.userData.uWin, pulse);
+        }
         mats.push({ m: bm, base: m.opacity });
         ownedMats++;
         c = new THREE.LineSegments(o.geometry, bm);
@@ -285,7 +476,7 @@ export function createClones(sceneApi) {
     // (capBend -> mushroom), so a root's group children are still spine
     for (const ch of o.children) {
       const cc = cloneNode(ch, mats, shells, s, count,
-        root && ch === sceneApi.groups.mushroom);
+        root && ch === sceneApi.groups.mushroom, own);
       if (cc) c.add(cc);
     }
     return c;
@@ -297,7 +488,11 @@ export function createClones(sceneApi) {
   function add({ x, z, gy, s, azFacing, leanDir, leanAmt,
                  arc, reveal, boost, tw0, phase, amp, lum }) {
     const mats = [];
-    const shells = [];
+    // two shell groups, because they arrive at two different moments of the
+    // draw (STEM_SHELL_AT / CAP_SHELL_AT). The split is free: cloneNode is
+    // already called once per spine root.
+    const stemShells = [];
+    const capShells = [];
     const root = new THREE.Group();
     root.position.set(x, gy, z);
     const qYaw = new THREE.Quaternion().setFromAxisAngle(UP, azFacing);
@@ -308,20 +503,55 @@ export function createClones(sceneApi) {
     const sway = new THREE.Group();                   // the animated pivot pair
     root.add(sway);
     const count = list.length === 0;                  // measure the first body only
-    const stemC = cloneNode(stemSrc, mats, shells, s, count, true);
-    const capBendC = cloneNode(capBendSrc, mats, shells, s, count, true);
+    // THIS BODY'S own entry-draw progress (part B). Parked at the hero's own
+    // "fully drawn" value so a body that is never reached by the front — and
+    // every body at boot, before the first update() — looks exactly as it
+    // always did.
+    const own = { uProg: { value: 2 }, uClampY: clampU };
+    const stemC = cloneNode(stemSrc, mats, stemShells, s, count, true, own);
+    const capBendC = cloneNode(capBendSrc, mats, capShells, s, count, true, own);
     capBendC.quaternion.identity();                   // strip the hero's live bend snapshot
     sway.add(stemC, capBendC);
     group.add(root);
     const c = {
-      root, sway, capBend: capBendC, mats, shells,
+      root, sway, capBend: capBendC, mats,
+      stemShells, capShells,
+      shells: stemShells.concat(capShells),           // interact.js's narrow phase
       x, z, gy, s,
       arc, reveal, boost, tw0, phase, amp, lum: lum ?? 1,
       h: 0, tgt: 0, clickT: 1e9,                      // hover/click state (easeHover)
-      v: -1, shellsOn: true,
+      tx: 0, tz: 0, tvx: 0, tvz: 0,                   // tap ring-down (stepTap)
+      uProg: own.uProg, prog: -1,                     // entry draw (part B)
+      v: -1, stemOn: true, capOn: true,
     };
     list.push(c);
     return c;
+  }
+
+  /** Poke one clone. `point` is the WORLD-space hit point (interact.js's
+   *  narrow phase against this body's own opaque shells, so it is a point ON
+   *  the mushroom, not the axis of a collider) and `dir` is the view ray the
+   *  finger pushes along — organism §10c's own two inputs.
+   *
+   *  Both are carried into the body's frame through root.matrixWorld, which
+   *  undoes the clone's place, yaw, lean AND scale in one step. What comes out
+   *  is hero-unit local coordinates: r.y ~ 4 at the cap, ~1 low on the stem,
+   *  exactly the numbers §10c's lever arm was tuned against. (The sway pivot
+   *  under root is deliberately NOT undone: the hero measures its own hit
+   *  point in the swayed world too, so leaving it in keeps the parity exact.)
+   *
+   *  Returns the local hit point, so the caller can apply the hero's own
+   *  cap-tap test (y > 2.8) in the units the hero applies it in. */
+  const _mi = new THREE.Matrix4();
+  const _rp = new THREE.Vector3();
+  const _rd = new THREE.Vector3();
+  function poke(c, point, dir) {
+    c.root.updateWorldMatrix(true, false);
+    _mi.copy(c.root.matrixWorld).invert();
+    _rp.copy(point).applyMatrix4(_mi);
+    _rd.copy(dir).transformDirection(_mi).normalize();
+    kickTap(c, _rp, _rd);
+    return _rp;
   }
 
   /** Per-frame drive: the chapter's reveal choreography (the exact shader
@@ -333,6 +563,13 @@ export function createClones(sceneApi) {
   function update(t, dt, uniforms) {
     const eff = uniforms.uAmount.value;
     const pull = uniforms.uPull.value;
+    // The draw front runs on the UNCLAMPED pull. pullOf() floors at 0 from
+    // camera x −8 back, which is the surface pierce — a body keyed to draw
+    // before then would arrive at the pierce already 80% inked and finish the
+    // rest in open view. On the raw value the near bodies do their whole
+    // drawing underground, behind the soil slab the chapter is dissolving,
+    // and only the far ones ink in over the opening field, which is the point.
+    const pullRaw = uniforms.uPullRaw.value;
     // the chapter's fog ramp, not the hero's fixed pair (see FOG above)
     fogU[0].value = uniforms.uFogNear.value;
     fogU[1].value = uniforms.uFogFar.value;
@@ -340,6 +577,20 @@ export function createClones(sceneApi) {
     const ct = uniforms.uCta.value, ctOn = uniforms.uCtaOn.value;
     for (const c of list) {
       const glow = easeHover(c, t, dt);
+      // ---- part B: this body draws ITSELF on as the front reaches it ----
+      // Pure in the pose, and ahead of the kindle by DRAW_LEAD so the body is
+      // finished before its first ember. At d = 1 the uniform is parked at the
+      // hero's own 2 — which is BYTE-IDENTICAL to holding it at DRAW_HI (dp
+      // saturates at 1 either way, the tip term is switched off by the same
+      // step(), and the lid is inert at CLAMP_OFF), so the rest frame is the
+      // shipped rest frame.
+      const d = smooth01((pullRaw - (c.reveal - DRAW_LEAD)) / DRAW_W);
+      let prog = c.uProg.value;
+      if (d !== c.prog) {
+        c.prog = d;
+        prog = d >= 1 ? 2 : DRAW_LO + d * (DRAW_HI - DRAW_LO);
+        c.uProg.value = prog;
+      }
       const rv = smooth01((pull - c.reveal) / 0.16);  // REVEAL_W
       let b = 0.07 + 0.93 * rv;                       // the 7% ember whisper
       const df = c.arc - fr;
@@ -354,17 +605,36 @@ export function createClones(sceneApi) {
           if (e.u) e.u.value = e.base * v;
           else e.m.opacity = Math.min(1, e.base * v);
         }
-        const on = v > SHELL_ON;
-        if (on !== c.shellsOn) {
-          c.shellsOn = on;
-          for (const sh of c.shells) sh.visible = on;
-        }
       }
-      // the two-pivot sway, phase-scattered so no two bodies nod together
+      // BOTH shell gates, every frame (they answer to two different drivers —
+      // the reveal AND the draw — and the reveal's own early-out above would
+      // otherwise strand the draw's half of the test)
+      const lit = v > SHELL_ON;
+      const stemOn = lit && prog >= STEM_SHELL_AT;
+      if (stemOn !== c.stemOn) {
+        c.stemOn = stemOn;
+        for (const sh of c.stemShells) sh.visible = stemOn;
+      }
+      const capOn = lit && prog >= CAP_SHELL_AT;
+      if (capOn !== c.capOn) {
+        c.capOn = capOn;
+        for (const sh of c.capShells) sh.visible = capOn;
+      }
+      // the two-pivot sway, phase-scattered so no two bodies nod together —
+      // with the tap ring-down integrated ON TOP, exactly as organism §10c's
+      // 'breeze' animator does it, so a poked clone keeps swaying while it
+      // recovers instead of freezing into a rigid wobble. The sway is damped
+      // per body (c.amp — adr-d3, "the field does not ride the hero's wind");
+      // the TAP is not. A poke is the visitor's own force, not the weather,
+      // and it answers at full strength on every body.
+      stepTap(c, dt);
       const w = breeze(t + c.phase);
-      c.sway.rotation.z = -w * 0.034 * c.amp;
-      c.sway.rotation.x = breeze(t * 0.93 + c.phase + 2.0) * 0.007 * c.amp;
-      c.capBend.rotation.z = -breeze(t + c.phase - 0.30) * 0.013 * c.amp;
+      c.sway.rotation.z = -w * 0.034 * c.amp + c.tz;
+      c.sway.rotation.x = breeze(t * 0.93 + c.phase + 2.0) * 0.007 * c.amp + c.tx;
+      // the head trails the stalk: the hero's own first-order Taylor step back
+      // along the tap's motion, at the hero's own 0.38 gain
+      c.capBend.rotation.z = -breeze(t + c.phase - 0.30) * 0.013 * c.amp
+                           + (c.tz - 0.30 * c.tvz) * 0.38;
     }
   }
 
@@ -372,11 +642,30 @@ export function createClones(sceneApi) {
    *  retires: the ease alone would need a dozen frames it is not going to
    *  get, and a body left part-hot re-enters the next ride mid-glow. */
   function cool() {
-    for (const c of list) { c.h = 0; c.tgt = 0; c.clickT = 1e9; }
+    for (const c of list) {
+      c.h = 0; c.tgt = 0; c.clickT = 1e9;
+      // the ring-down goes with it: a body left mid-wobble would re-enter the
+      // next ride still swinging from a poke nobody in that ride gave it
+      clearTap(c);
+      c.sway.rotation.z = 0; c.sway.rotation.x = 0;
+    }
+  }
+
+  /** LIVE QA: which bodies are still ringing from a poke, and by how many
+   *  degrees. The wobble is a few pixels at field scale by design (the hero's
+   *  ANGLE, not the hero's pixel throw), so a number is a better witness than
+   *  a screenshot when tuning it. */
+  function ringing() {
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      if (isRinging(c)) out.push({ i, deg: +(Math.hypot(c.tx, c.tz) * 57.3).toFixed(4) });
+    }
+    return out;
   }
 
   return {
-    group, add, update, cool,
+    group, add, update, cool, poke, ringing,
     get counts() {
       return {
         bodies: list.length, ownedMats, sharedMeshes,

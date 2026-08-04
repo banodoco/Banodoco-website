@@ -166,9 +166,13 @@ export const SPORE_SOURCES = MEMBERS.filter(m => m.shed > 0)
 /** Camera-x -> pull in [0,1]. 0 while underground / at the crest, ~0.98 at
  *  the Final rest (x -13.9), 1 by the recede. Monotone along the leg. */
 export function pullOf(camX) {
-  const u = (-camX - 8.0) / 6.0;
+  const u = pullRawOf(camX);
   return u < 0 ? 0 : u > 1 ? 1 : u;
 }
+/** The same map, UNCLAMPED. Negative while the camera is still below the
+ *  surface pierce (x > −8), which is where the near bodies' entry draw wants
+ *  to run — see clones.js DRAW_LEAD. */
+export function pullRawOf(camX) { return (-camX - 8.0) / 6.0; }
 export const REVEAL_W = 0.16;   // smoothstep width used by every shader
 
 /* ------------------------------------------------------------------ */
@@ -185,10 +189,57 @@ export const REVEAL_W = 0.16;   // smoothstep width used by every shader
 // re-parameterised scene fog by manual copy — robust against hidden-tab
 // capture bursts and any renderer fog-flag quirks.
 
-export function makeUniforms() {
+/** The hero's OWN tap-pulse uniform objects, harvested out of its live
+ *  materials (organism/organism.js §"tap pulse" shares one `pulseC`/`pulseT`/
+ *  `pulseP` trio across every glowing material it builds). organism/* is
+ *  read-only and does not export the trio, so we reach it the same way
+ *  clones.js does: off a material that already carries it.
+ *
+ *  Sharing the OBJECTS rather than copying the values is the whole point —
+ *  one write plants a wave that the hero, the clones, the batched species
+ *  bodies, the colony floor and the horizon all answer in the same tick, and
+ *  organism's own `tap-pulse` animator does the per-frame `uPulseT += dt` for
+ *  all of them. If the hero's shaders ever drift out from under this, the
+ *  fallback is an inert local trio parked at uPulseT = 1e3, where pulseAt()
+ *  is exactly 1.0 — the batch simply stops answering taps rather than
+ *  throwing. */
+export function heroPulse(sceneApi) {
+  let found = null;
+  const sway = sceneApi && sceneApi.groups && sceneApi.groups.sway;
+  if (sway) {
+    sway.traverse((o) => {
+      const u = o.material && o.material.uniforms;
+      if (!found && u && u.uPulseC && u.uPulseT && u.uPulseP) found = u;
+    });
+  }
+  return found
+    ? { uPulseC: found.uPulseC, uPulseT: found.uPulseT, uPulseP: found.uPulseP }
+    : {
+        uPulseC: { value: new THREE.Vector3() },
+        uPulseT: { value: 1e3 },
+        uPulseP: { value: new THREE.Vector3(2.6, 0.33, 1.4) },
+      };
+}
+
+// Idle value for the WOBBLE slot IDs. NOT -1: `aHot` defaults to -1 for every
+// vertex that is not a fruiting body (terrain, trees, root stubs, the ground
+// glows), so an idle slot parked at -1 would MATCH all of them. The glow
+// channels get away with -1 because their amplitude is zero when idle; a
+// wobble slot carries a rotation, and one stale radian on the terrain is a
+// whole floor sliding sideways. No member ID is ever -999.
+export const WOB_IDLE = -999;
+
+export function makeUniforms(sceneApi) {
   return {
+    // the hero's own tap-pulse trio, shared by object — see heroPulse()
+    ...heroPulse(sceneApi),
     uAmount:  { value: 0 },     // chapter fade (T4 arm/retire)
     uPull:    { value: 0 },     // camera-derived reveal driver
+    // The same driver UNCLAMPED below 0, for the clone entry-draw front only
+    // (clones.js, part B). Never reaches a shader — the draw is a CPU-side
+    // per-body uniform write — but it lives here because it is the same
+    // camera-pure quantity and belongs beside the one it is derived from.
+    uPullRaw: { value: 0 },
     uFront:   { value: -1 },    // growth-front pulse phase along arc
     uFrontOn: { value: 0 },
     uCta:     { value: -1 },    // CTA wave phase along arc
@@ -210,6 +261,24 @@ export function makeUniforms() {
     uHotAmt:  { value: 0 },
     uTapId:   { value: -1 },
     uTapAmt:  { value: 0 },
+    // ---- the poke's MECHANICAL half, for batched bodies (ring.js §POKE) ----
+    // A clone owns a scene-graph node and gets organism §10c's cantilever
+    // ring-down applied to its own sway pivot. A batched species body has no
+    // node — it is a few hundred vertices inside a shared draw — so its body
+    // rotation has to happen in the vertex shader, per tapped member, against
+    // the aHot ID its vertices already carry.
+    //
+    // TWO SLOTS, not one. The glow channels can afford a single hovered and a
+    // single tapped body because a stolen glow just stops glowing; a stolen
+    // WOBBLE snaps a body back to rest mid-ring-down, which reads as a
+    // glitch. Two slots cover poking a second body while the first still
+    // rings (the ring-down runs ~3 s), and ring.js always steals the QUIETER
+    // slot, so a third poke inside three seconds cuts off the wobble that had
+    // least left to say.
+    uWobId:   { value: new THREE.Vector2(WOB_IDLE, WOB_IDLE) },
+    uWobA:    { value: new THREE.Vector3() },   // slot 0 pivot (world, at the soil)
+    uWobB:    { value: new THREE.Vector3() },   // slot 1 pivot (world, at the soil)
+    uWobR:    { value: new THREE.Vector4() },   // (rx0, rz0, rx1, rz1) radians
   };
 }
 
@@ -225,10 +294,70 @@ const HOT_GLSL = /* glsl */ `
   }
 `;
 
+// organism/organism.js's PULSE_GLSL, VERBATIM. A tap plants uPulseC at the
+// touched point and rewinds uPulseT to 0; every glowing vertex answers by
+// distance — an expanding ring that BROADENS and dims as it travels, with a
+// range falloff so only the tapped neighbourhood responds. uPulseP shapes the
+// wave per tap: (2.6, 0.33, 1.4) is the floor ping's far-carrying swell,
+// (1.4, 1.5, 1.2) is a body poke's slow, short-range, gentle shiver.
+//
+// Parked at uPulseT = 1e3 the ring has long since died: exp(-1.15 * 1e3)
+// underflows to 0, so pulseAt() returns EXACTLY 1.0 and the rest frame is
+// untouched. That is what keeps this addition golden-safe.
+const PULSE_GLSL = /* glsl */ `
+  uniform vec3 uPulseC;
+  uniform float uPulseT;
+  uniform vec3 uPulseP; // x: wave speed, y: range falloff, z: amplitude
+  float pulseAt(vec3 wp) {
+    float d = distance(wp, uPulseC);
+    float w = uPulseP.x * (0.15 + 0.21 * uPulseT);
+    float ring = exp(-pow((d - uPulseP.x * uPulseT) / w, 2.0));
+    return 1.0 + uPulseP.z * ring * exp(-1.15 * uPulseT) * exp(-d * uPulseP.y);
+  }
+`;
+
+// The batched body's cantilever ring-down (see uWobId in makeUniforms).
+// organism §10c rotates the whole stalk about its root by (tap.x, tap.z) — a
+// small-angle rotation vector w = (rx, 0, rz) applied to the offset from the
+// base, so the displacement is the cross product w x r:
+//     (-rz*r.y,  rz*r.x - rx*r.z,  rx*r.y)
+// At the amplitudes this ring-down reaches (the saturating clamp's own
+// ceiling is |tap| ~ 0.039 rad) the small-angle form is accurate to under a
+// thousandth of a world unit, which at these distances is a ten-thousandth of
+// a pixel. Two unrolled slots, branch-free, on the same ID-compare idiom as
+// hotAt(). An idle slot costs one step() and a multiply by zero.
+const WOBBLE_GLSL = /* glsl */ `
+  uniform vec2 uWobId;
+  uniform vec3 uWobA, uWobB;
+  uniform vec4 uWobR;
+  vec3 wobbled(vec3 wp) {
+    vec3 d = vec3(0.0);
+    float m0 = 1.0 - step(0.5, abs(aHot - uWobId.x));
+    vec3 r0 = wp - uWobA;
+    d += m0 * vec3(-uWobR.y * r0.y, uWobR.y * r0.x - uWobR.x * r0.z, uWobR.x * r0.y);
+    float m1 = 1.0 - step(0.5, abs(aHot - uWobId.y));
+    vec3 r1 = wp - uWobB;
+    d += m1 * vec3(-uWobR.w * r1.y, uWobR.w * r1.x - uWobR.z * r1.z, uWobR.z * r1.y);
+    return wp + d;
+  }
+`;
+
+// WHY modelMatrix AND viewMatrix INSTEAD OF modelViewMatrix
+// ---------------------------------------------------------
+// Both halves of the poke are WORLD-space: the ripple measures distance from
+// a world point, and the wobble rotates about a world pivot. So the world
+// position has to exist before the view transform, and the view transform
+// then consumes the wobbled one. Every batch this shader serves hangs at
+// IDENTITY (the chapter group, the ring/terrain/sky groups and the meshes
+// inside them are never positioned), so modelMatrix is the identity matrix
+// and `viewMatrix * (I * p)` is bit-for-bit `modelViewMatrix * p` — the
+// goldens cannot move on this change alone.
 const STRAND_VERT = /* glsl */ `
   attribute float aArc, aReveal, aTw, aBoost, aWave;
   uniform float uPull, uFront, uFrontOn, uCta, uCtaOn, uTime;
   ${HOT_GLSL}
+  ${PULSE_GLSL}
+  ${WOBBLE_GLSL}
   varying vec3 vColor;
   varying float vB;
   varying float vFog;
@@ -250,7 +379,12 @@ const STRAND_VERT = /* glsl */ `
     // pointer response — the hero's §11 breathing glow, one member at a time
     b *= 1.0 + hotAt();
     vColor = color;
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    // the poke, both halves: the body swings about its own root (wobbled),
+    // and the light ripples out from under the fingertip (pulseAt) — the
+    // hero's own two answers, in the hero's own maths.
+    vec3 wp = wobbled((modelMatrix * vec4(position, 1.0)).xyz);
+    b *= pulseAt(wp);
+    vec4 mv = viewMatrix * vec4(wp, 1.0);
     // near-camera fade: the lens travels through clean air (Spike A G2a) —
     // strokes brushing the camera during the rise soften instead of flaring
     b *= smoothstep(1.2, 2.8, length(mv.xyz));
@@ -288,6 +422,8 @@ const POINT_VERT = /* glsl */ `
   attribute float aArc, aReveal, aTw, aBoost, aWave, psize;
   uniform float uPull, uFront, uFrontOn, uCta, uCtaOn, uTime;
   ${HOT_GLSL}
+  ${PULSE_GLSL}
+  ${WOBBLE_GLSL}
   varying vec3 vColor;
   varying float vB;
   varying float vFog;
@@ -302,9 +438,11 @@ const POINT_VERT = /* glsl */ `
     b += aBoost * uCtaOn * exp(-dc * dc * 200.0) * 1.1;
     b *= 0.86 + 0.14 * sin(uTime * 1.3 + aTw);
     b *= 1.0 + hotAt();
-    vB = b;
     vColor = color;
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vec3 wp = wobbled((modelMatrix * vec4(position, 1.0)).xyz);
+    b *= pulseAt(wp);
+    vB = b;
+    vec4 mv = viewMatrix * vec4(wp, 1.0);
     vFog = -mv.z;
     float sz = psize * (0.4 + 0.6 * reveal) * (300.0 / -mv.z);
     vShrink = 1.0;

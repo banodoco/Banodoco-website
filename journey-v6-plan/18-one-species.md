@@ -284,3 +284,331 @@ Verified by screenshot and by uniform readout at 1440x900:
 - Camera untouched. `mission` / `inspire` / `connect` / `owned` goldens
   re-shot **byte-identical** (MAE 0.00/255, 0.0% px > 8, both sizes).
   `final@*` re-shot in this commit with manifest provenance.
+
+---
+
+# 8 — Poke parity, and the entry animation as the field's reveal
+
+**Date:** 2026-08-04. **Asked by Hannah, two things, one sitting:**
+
+> "why is the touch-interaction on the new mushrooms different to the OG one?
+> make it the same; we could only switch it on once hovered if it's an
+> efficiency issue"
+
+> "what about the entry animation, too heavy to run on them?"
+
+Both turned out to be the same shape of problem: the field bodies were sharing
+the hero's *systems* but not the hero's *state*, and a system you cannot give
+state to can only do the one thing it is already doing.
+
+## 8.1 What the hero's poke actually is
+
+§6 above shipped the pointer response as §11's region glow. That is the
+**hover**. A **tap** on the hero is something else entirely —
+`organism/organism.js` §10c, "a fingertip poke, resolved as actual mechanics" —
+and it is FOUR things, of which the field bodies had none:
+
+| # | the hero (§10c) | the field bodies, before |
+|---|---|---|
+| 1 | **Mechanical wobble.** Stalk as a cantilever on an elastic root. The tap is an impulse at the hit point; torque r × F about the base kicks angular velocity (`tap.vx/vz`), ringing down as a damped oscillator (`TAP_W` 2.3 rad/s, `TAP_ZETA` 0.14 — a few visible wobbles, ~3 s), integrated ON TOP of the breeze so a poked mushroom keeps swaying while it recovers. The lever arm falls out of the cross product: a cap tap tips ~4× a low stem tap, and pressing one cap edge tips it that way. Saturating clamp 0.09 — flesh, not a bell. | nothing |
+| 2 | **Light ripple.** `pulseC` planted at the hit point, `pulseT` rewound to 0, `pulseP` = (1.4, 1.5, 1.2) — slow, short-range, gentle: a world-space radial wave through every glowing material, with range falloff. | nothing (the clones *shared* the uniforms but nobody ever wrote them for a field body) |
+| 3 | **Spores.** A cap tap (`hit.point.y > 2.8`) sheds 28 spores off the gills. | nothing |
+| 4 | **Haptic.** A 6 ms `navigator.vibrate` on touch pointers. | nothing |
+
+…plus a tap-vs-drag gesture gate (< 400 ms, < 7 px) and hit-testing against
+the REAL opaque body shells. What the field bodies answered with was a
+brightness boost (`uHotAmt` / `uTapAmt` / `uOpacity`) and nothing else. That
+IS the complaint, and it was exactly right.
+
+## 8.2 The bug underneath it (measured, then fixed)
+
+`organism/organism.js`'s `pointerup` listener is on `renderer.domElement` and
+fires **globally** — including all through the Final chapter, where the hero is
+one body in a field of seventy-two. Its hit test runs against the hero's own
+four shells, so a tap on a CLONE misses every one of them and falls through to
+the "missed the body → floor ping" branch, planting the fast, far-carrying
+mycelium swell (2.6, 0.33, 1.4) under the pointer. Measured live at the Final
+rest before any of this work, tapping the near clone at screen (1233, 575):
+
+```
+uPulseC = (-3.60, 0.07, 3.58)      a point on the FLOOR, 3 units short of the body
+uPulseP = (2.6, 0.33, 1.4)         the floor swell, not the body poke
+```
+
+So the field bodies were not merely silent — they were answering with the
+*wrong* wave, layered under the glow.
+
+`organism/*` is read-only, so the fix is entirely on the chapter side, and it
+is an ORDERING fix rather than a suppression. organism registers its listener
+when the scene is built; `interact.js` registers ours on the same element when
+the chapter is built, which is strictly later, so **ours runs second on every
+tap**. The chapter therefore resolves the tap SYNCHRONOUSLY inside the event
+(no throttle, no deferral to the animator) and re-plants the correct body poke
+over organism's floor swell before the frame renders. The wrong wave never
+reaches a pixel, and nothing is stopPropagation()'d, preventDefault()'d, or
+otherwise taken away from anyone.
+
+A tap that misses every body is left EXACTLY as organism wrote it, because
+there it is right: that *is* the floor ping.
+
+And a tap that lands on the HERO is left alone too. A ray to the hero can pass
+through a field body's proxy cone standing behind it, so before claiming a tap
+we cast the hero's four shells and yield if the hero is nearer. Verified: a
+hero tap at the Final rest plants (1.4, 1.5, 1.2) at (−2.12, 3.30, 0.40) — on
+the hero's own cap, organism's own doing — with our picker recording zero
+casts.
+
+## 8.3 Broad phase / narrow phase (Hannah's efficiency suggestion, measured)
+
+A cone tells you WHICH body. It does not tell you WHERE — and §10c's whole
+character is *where*: the lever arm is a cross product about the base, and the
+ripple is planted at the fingertip and dies within about a unit of it. A
+collider axis would give every poke the same nod.
+
+| phase | what it casts | when | measured cost |
+|---|---|---|---|
+| broad | all 52 proxy cones, detached tree | every hover poll (~14 Hz) + every tap | (unchanged from §6) |
+| narrow | ONE body's own four opaque shells, ~12,000 tris | only on a tap, only for the body the broad phase named | **2.83 ms mean over 31 casts**; first (cold, bounding volumes lazily built) 5.3–18 ms |
+
+Hannah's instinct was right and the number says why: at hover rates the narrow
+phase would cost ~14 × 2.83 ms = 40 ms/s of a core for nothing. Once per tap it
+is a twelfth of one frame at the rest, and no visitor can perceive it. So the
+split is broad-every-poll, narrow-on-tap-only — which is *stricter* than "only
+once hovered", and gets the true hit point where the physics needs it.
+
+Batched species bodies have no shells to cast against and keep the cone's own
+hit point, which is still a real point on a real surface at the right height.
+
+## 8.4 The species-batch boundary: there isn't one
+
+The honest options were (a) give batched bodies ripple + glow only and document
+the seam, or (b) promote pickable ones to clones — which at ~15 draws per body
+× 28 bodies is 400 extra draw calls and obviously not happening.
+
+Neither was needed. A batched body's rotation is expressible **in the vertex
+shader**: §10c's ring-down is a small-angle rotation vector ω = (rx, 0, rz)
+about the body's base, so the displacement is the cross product ω × r, unrolled
+over TWO slots against the `aHot` ID the vertices already carry (`world.js`
+`WOBBLE_GLSL`). At the amplitudes this ring-down reaches (the saturating
+clamp's own ceiling, ~0.039 rad) the small-angle form is accurate to under a
+ten-thousandth of a pixel at these distances.
+
+Two slots, not one: a stolen glow just stops glowing, but a stolen WOBBLE snaps
+a body back to rest mid-ring-down, which reads as a glitch. Two covers poking a
+second body while the first still rings; a third poke inside three seconds
+steals the QUIETER slot.
+
+Idle slots park at **−999**, not −1 — `aHot` defaults to −1 for every vertex
+that is not a fruiting body (terrain, trees, root stubs), so an idle slot at −1
+would match all of them. The glow channels get away with −1 only because their
+amplitude is zero when idle; a wobble slot carries a rotation, and one stale
+radian on the terrain is a whole floor sliding sideways.
+
+So a visitor who cannot know which construction they poked gets the same four
+answers either way. Measured on a T4 species body at 25 units (`uWobR`
+magnitude, degrees, sampled per frame):
+
+```
+0.00 →  0.14 → 0.28 → 0.37 → 0.44 → 0.485 → 0.50 (peak, t≈0.80 s)
+     →  0.008 (zero crossing, t≈1.6 s) → 0.32 (t≈2.4 s) → 0.01 (t≈3.4 s)
+```
+
+— a textbook damped oscillator settling in about three seconds, which is what
+§10c's constants say it should be.
+
+## 8.5 What scales, and what does not
+
+**The wobble ANGLE does not scale, and that is the point.** For a clone the
+impulse is resolved in the body's OWN frame (root-local, which is hero units
+because `root.scale` is the clone's only scale); for a batched body it is
+resolved in world axes with the lever arm divided by the body's scale. Either
+way a poked field mushroom leans by the same number of DEGREES as the poked
+hero — which is what "make it the same" has to mean when the bodies are
+different sizes. Peak measured ~0.5–0.7° on both constructions, which is also
+what the hero's own cap tap produces; it simply subtends fewer pixels out in
+the field, exactly as a real mushroom would.
+
+**The spore COUNT scales, the spore SIZE does not.** `round(28 × scale)`,
+floored at 10 — under about ten particles a shed stops reading as a puff and
+starts reading as three stray dots. Size is absolute: a spore is a spore, the
+same physical object on every fruiting body of one species. The first cut
+scaled size by the body too and it was invisible — 0.007–0.03 world units gave
+`gl_PointSize` 0.5–1.6 px at this camera's six-to-thirty-unit distances, under
+the point shader's own `MIN_PT` floor where `vShrink` dims them to a tenth. The
+shed fired, integrated and drifted correctly, and you could not see one pixel
+of it. Sizes now sit in the same band the chapter's spore SKY already uses at
+these distances.
+
+**And the release had to change.** A rap knocks the spores clear of the cap
+MARGIN before they fall. Not decoration: the Final rest camera sits ABOVE every
+field body's rim plane, so a body's own opaque §5 cap shell hides the entire
+gill space underneath it — a shed released straight down under the gills (what
+a spore really does, and what the first cut did) is emitted into a box the
+visitor cannot see into.
+
+## 8.6 The shed itself
+
+`journey/chapters/final/shed.js`, new. The hero's `shedSpores(n)` recycles
+particles of its own 4,200-spore cloud back to THEIR OWN gill origins — origins
+baked at the world origin — so calling it for a field body would puff the hero.
+And the chapter's spore sky is a closed-form GPU phase function of `uTime`:
+right for a standing drift, structurally incapable of an event at an arbitrary
+place and moment.
+
+So: one additive Points draw, a 256-particle ring buffer, integrated on the CPU
+only while something is alive and `visible = false` (no draw, no loop, no
+upload) the rest of the time — which is **every frame of every capture**, so
+the goldens cannot see it. Motion is `organism/spores.js`'s own language: drop
+clear of the gills first, then the one wind (BREEZE (1, 0.62, 0.17) normalised)
+takes over, handover measured in TIME not distance.
+
+## 8.7 Part B — the entry animation IS the field's reveal
+
+It was never too heavy. The clones **shared the hero's single `uProg`
+draw-progress uniform**, so all twenty-four bodies were pinned to whatever the
+hero's entry was doing — and the hero's entry finished back on the hero page,
+parked at `uProg = 2`. One uniform, one state, nothing left to draw. Cost was
+never the obstacle; state was.
+
+Each clone now owns its `uProg` — **one float per body per frame** — while
+still sharing every per-layer `uWin`, so the hero's authored choreography
+(stalk verticals, then the lattice, then gills, rim, cap surfaces, the overlay
+net last) replays per body, in the hero's own order, at the moment the
+chapter's reveal front reaches that body. Measured cost: **nil**. `uProg` was
+already uploaded per material every draw; only the object it points at changed,
+so there is not one extra uniform upload, not one extra draw call, and not one
+extra shader program. The fps at the Final rest, 8-second samples, 1440×900:
+
+| | mean ms | p50 | fps |
+|---|---|---|---|
+| before (HEAD 9e76bf4) | 37.44 / 37.25 | 36.7 / 36.2 | 26.7 / 26.8 |
+| after (both parts) | 37.62 / 36.40 | 36.9 / 35.1 | 26.6 / 27.5 |
+
+— inside run-to-run noise, in both directions.
+
+**The law it obeys.** D16 forbids anything fading in over open view; a draw-on
+tied to the camera-pure front is lawful, a time-based one is not. So the draw
+parameter is a pure function of `uPull` exactly like the kindle — the SAME
+front, one step earlier:
+
+```
+d = smoothstep((pullRaw − (reveal − 0.20)) / 0.16)
+uProg = d ≥ 1 ? 2 : 0.296 + d · (0.893 − 0.296)
+```
+
+`DRAW_LEAD` 0.20 > `REVEAL_W` 0.16, so the last stroke lands before the first
+ember: the shipped "unlit body in the dark" state is preserved exactly. The
+body that was always there is now a body that INKED ITSELF IN and *then* was
+always there. The 0.296…0.893 span is the union of the hero's own stem+cap
+windows (`intro.js` WINDOWS) — a clone carries no ground layers, so driving the
+full 0…1 would spend a third of the move on layers it does not have.
+
+`pullRaw` is `pullOf` UNCLAMPED below zero. On the clamped value the near
+bodies would arrive at the surface pierce already 84% inked and pop; on the raw
+value they do their whole drawing underground, behind the soil slab the chapter
+is itself dissolving.
+
+At `d = 1` the uniform parks at the hero's own 2, which is **byte-identical**
+to holding it at 0.893 (`dp` saturates at 1 either way, the tip ember is
+switched off by the same `step()`, and the lid is inert). That is why the rest
+frame did not move.
+
+Two more pieces the draw needed:
+
+- **`uClampY` is owned by the clone SET** (one object, value 1e3). The hero
+  parks its stem materials at 3.65 to stop the stipe inking against open sky
+  before the cap exists, and the lid tests WORLD y — a metric that means
+  nothing to a body standing at another place and scale. Every clone's stem
+  happens to sit below 3.45 world y, so the lid was already inert for all of
+  them; pinning it makes that structural instead of a coincidence waiting for a
+  taller member.
+- **The overlay net gets the hero's own graft.** A clone rebuilds that material
+  (it needs an owned `.opacity` for the reveal write-port), so
+  `injectCloneDraw` redoes organism's `injectDraw` pointed at this clone's
+  `uProg`. Without it the overlay net is the one layer that stands fully drawn
+  while the cap lattice under it is still being stroked — and the one layer
+  that does not answer a poke's ripple.
+
+### The bug part B walked into, caught on a scrub screenshot
+
+`SHELL_ON` was sufficient while a body was always fully inked: dim the strokes
+and you still had a dark body. With part B a body spends about a fifth of
+`uPull` only PARTLY drawn — and its shells, which are opaque and carry no draw
+state of their own, were standing there the whole time. **A mid-draw member
+read as a solid black mushroom cut out of the haze**: the exact silhouette
+`SHELL_ON` exists to prevent, arriving through the other door.
+
+`intro.js` solves the same problem for the hero by FADING each shell group in
+while its own region is being stroked (stem shells over `uProg` 0.30…0.54, cap
+shells over 0.574…0.714). A clone SHARES the hero's shell materials — sharing
+them outright is what buys a solid body for free — so it cannot fade them, only
+switch its own copies on and off. So it switches at the MIDPOINT of the hero's
+own fade, where the region already carries ink: `STEM_SHELL_AT` 0.42,
+`CAP_SHELL_AT` 0.644. No shell ever appears over a blank region, and no region
+is ever inked without its shell.
+
+Asserted, not eyeballed: across 50 scrub positions × 24 bodies (147 mid-draw
+body-samples observed), **0 violations** of `shell visible ⟹ uProg ≥ its own
+threshold`.
+
+### How reverse reads
+
+Correct, and it was the thing most at risk. Because the draw is pure in
+`pullRaw`, a reverse scrub un-draws each body stroke by stroke, in reverse
+buffer order, back into the dark — the tip ember runs backwards along the
+strokes it laid. Shot as a sequence (p 0.922 → 0.895 → 0.870 → 0.843): the
+field thins from the far arc inward, the shells leave with their own ink, and
+the near bodies are the last to go. No fade-in over open view in either
+direction.
+
+Direction-independence proved numerically: 12 scrub points from p 0.780 to
+1.000, visited ascending then descending, comparing every body's `uProg`:
+**0 mismatches**, and **0 drift** while held at any point (30 frames of hold,
+per point, per direction). Self-ignition-free by construction and by
+measurement.
+
+## 8.8 Gates
+
+- **Wobble is real** — screenshot sequence after a clone poke (t+0.089 /
+  +0.248 / +0.429 / +0.897 / +3.66) plus the per-frame angle trace; and the
+  species-body `uWobR` trace in §8.4. Both settle in ~3 s.
+- **Ripple** — mid-wave frame at t+0.089, with `uPulseC` on the narrow-phase
+  hit point (−9.28, 1.39, 3.13) and `uPulseP` (1.4, 1.5, 1.2).
+- **All four targets correct**, each verified by uniform readout:
+  | tapped | `uPulseP` | where | who answered |
+  |---|---|---|---|
+  | clone | (1.4, 1.5, 1.2) | narrow-phase point on its own shell | chapter (wobble + ripple + 11 spores) |
+  | species body | (1.4, 1.5, 1.2) | proxy point on the body | chapter (shader wobble slot id 2 + ripple + 10 spores) |
+  | hero | (1.4, 1.5, 1.2) | (−2.12, 3.30, 0.40), its own cap | organism; chapter recorded 0 casts |
+  | floor | (2.6, 0.33, 1.4) | (−9.71, −0.03, 0.59), ground | organism; chapter did not claim it |
+  **No wrong floor-swell on a body tap.**
+- **Touch path** (`pointerType: 'touch'`) — identical response, plus the hover
+  glow correctly dropped afterwards (a finger leaves no pointer behind it).
+- **Entry draw-on** — verified forward and reverse by screenshot sequence, and
+  by the 0-mismatch / 0-drift sweep above.
+- **Console clean over a full ride** (intro, p 0 → 1 → 0, 403 frames): the only
+  entry is the site's pre-existing `favicon.ico` 404.
+- **fps at the Final rest before/after** — table in §8.7. No measurable cost.
+- **Goldens** — `mission` / `inspire` / `connect` / `owned` **byte-identical**
+  (MAE 0.00/255, both sizes). `final@1440x900` 0.02/255 and `final@430x932`
+  0.01/255 — inside frozen-frame determinism noise (warn 0.50, fail 1.00), so
+  the rest frame did not move and no re-shoot was needed. Expected: every batch
+  this chapter draws hangs at IDENTITY, so the shaders' `viewMatrix ×
+  (modelMatrix × p)` is bit-for-bit the `modelViewMatrix × p` it replaced, and
+  a parked `uPulseT` of 1e3 makes `pulseAt()` return exactly 1.0.
+- Camera keys unchanged. Other chapters untouched. `scroll.js` still owns wheel
+  and touch; nothing here calls `preventDefault()` or `stopPropagation()`.
+
+## 8.9 Residuals
+
+- The wobble is angle-faithful, which means it subtends **2–5 px** on near
+  field bodies and under a pixel on the far T4 band. That is the honest reading
+  of "the same as the hero" and it is what a real mushroom would do — but if
+  Hannah wants the field to answer more visibly than the hero does, the single
+  knob is `TAP_IMP` in `clones.js` (currently §10c's own 0.008), and it would
+  be a deliberate departure from parity, not a fix.
+- The batched bodies get the stalk's ring-down but not the hero's `capBend`
+  TRAILING term (the cap whipping a beat late) — there is no second pivot in a
+  merged batch. At 25–35 units it is well under a pixel. Clones get it in full.
+- Only two batched bodies can wobble at once. A third poke inside three seconds
+  cuts the quieter one off.

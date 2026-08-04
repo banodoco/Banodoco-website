@@ -82,7 +82,7 @@
 
 import * as THREE from 'three';
 import {
-  TAU, MEMBERS, RING_C, arcOf, cutVal,
+  TAU, MEMBERS, RING_C, arcOf, cutVal, WOB_IDLE,
   makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat,
 } from './world.js';
 import { makeGlowTexture, CAP_Y, CAP_R } from '../../anatomy.js';
@@ -90,8 +90,12 @@ import {
   buildMushroom, buildCloneSeat, scaleFor, DETAIL, HERO_MUL, STEM_BASE_R,
   HERO_H,
 } from './species.js';
-import { createClones, easeHover, hoverTerm, clickTerm, isWarm } from './clones.js';
+import {
+  createClones, easeHover, hoverTerm, clickTerm, isWarm,
+  stepTap, kickTap, isRinging, clearTap, TAP_W,
+} from './clones.js';
 import { createPicker } from './interact.js';
+import { createShed } from './shed.js';
 import { CAMERA } from './camera.js';
 
 // The Final rest camera, for build-time LOD + occlusion only. M4 dedupe:
@@ -232,11 +236,24 @@ export function createFinalRing(sceneApi, uniforms) {
   // pointer picker. Both are addressed per BODY, so both are fed from
   // placeMushroom below — the one place that knows where a body stands.
   const clones = createClones(sceneApi);
-  const picker = createPicker(sceneApi);
+  // The poke's spore shed — one pooled Points draw for every body in the
+  // chapter, dark and unticked until something is actually poked.
+  const shed = createShed(uniforms);
   // Batched (species) bodies that answer the pointer: each carries an
-  // easeHover state and the member ID its vertices were stamped with.
+  // easeHover state, a §10c tap ring-down state, and the member ID its
+  // vertices were stamped with.
   const hotMembers = [];
   let nextHotId = 1;          // 0 is the WebGL generic-attribute default
+  // The picker's gate + the poke's answer are defined below §POINTER RESPONSE;
+  // this closure is what lets the picker resolve a tap synchronously inside
+  // the pointerup event (interact.js §ORDERING) while the state it needs still
+  // lives down there.
+  const gate = {
+    armed: () => pickOn,
+    accept: (ref) => lit(ref, uniforms.uPull.value),
+    onTap: (hit) => respond(hit),
+  };
+  const picker = createPicker(sceneApi, gate);
 
   /* ---- ONE BODY, PLACED ------------------------------------------------
      This function no longer draws a mushroom. It works out where a body
@@ -380,7 +397,15 @@ export function createFinalRing(sceneApi, uniforms) {
       });
     } else {
       buildMushroom(spec);
-      body = { hotId, reveal: m.reveal, h: 0, tgt: 0, clickT: 1e9 };
+      body = {
+        hotId, reveal: m.reveal,
+        h: 0, tgt: 0, clickT: 1e9,                    // hover/click (easeHover)
+        tx: 0, tz: 0, tvx: 0, tvz: 0,                 // tap ring-down (stepTap)
+        // where this body stands and how big it is: the wobble pivot, the
+        // shed's emission seat and the cap-tap test all need it, and a batched
+        // body has no node to read it off
+        x: m.x, gy: m.gy, z: m.z, s,
+      };
       // only a body with a pick proxy can ever go hot, so only those cost a
       // per-frame state visit — the twenty hints are not in this list
       if (pickable) hotMembers.push(body);
@@ -426,7 +451,7 @@ export function createFinalRing(sceneApi, uniforms) {
     }
 
     memberStats.push({
-      i: m.i, tier: T, h: m.h, clone: asClone, pickable,
+      i: m.i, tier: T, h: m.h, clone: asClone, pickable, hot: hotId,
       dist: +dist.toFixed(2), scale: +s.toFixed(3),
       // world anchor at the cap's rim plane — what a pointer aims at, and
       // what the interaction gate projects to place a synthetic hover
@@ -581,6 +606,11 @@ export function createFinalRing(sceneApi, uniforms) {
   // seeded breeze instead (clones.js update()).
   group.add(clones.group);
 
+  // The poke's spore shed. One Points draw, `visible = false` until a cap is
+  // actually rapped — so it is absent from every capture and from every frame
+  // of a ride nobody poked.
+  group.add(shed.group);
+
   /* ---- primordia: tiny buds that surface during a long hold (FN-2.4).
        Time-compressed and subtle — soil-level ember points, no theatrical
        sprouting. Driven by uDwell (seconds of settled dwell at the rest),
@@ -695,21 +725,114 @@ export function createFinalRing(sceneApi, uniforms) {
   const PICK_PULL = 0.55;
   const REVEAL_LIT = 0.35;      // this body's own smoothstep must be underway
   const lit = (ref, pull) => (pull - ref.reveal) / 0.16 > REVEAL_LIT;
-  let hovered = null, tapped = null, wasOn = false;
+  let hovered = null, tapped = null, wasOn = false, pickOn = false;
+
+  /* ---- THE POKE, ANSWERED (18-one-species.md, this revision) -------------
+     Hannah: "why is the touch-interaction on the new mushrooms different to
+     the OG one? make it the same." The hero's answer to a tap (organism §10c)
+     is FOUR things, and the field bodies had none of them — only a brightness
+     boost. All four are wired below, from the hero's own constants, for both
+     constructions:
+
+       1. the cantilever wobble, kicked by the torque r x F at the REAL hit
+          point (interact.js's narrow phase) — a clone gets it on its own sway
+          pivot, a batched body through the shader's wobble slots;
+       2. the light ripple, planted at the fingertip on the hero's OWN shared
+          pulse uniforms, so the poked body, its neighbours' near strokes, the
+          soil under it and the hero all answer the one wave;
+       3. the spore shed, for a cap tap, scaled to the body (shed.js);
+       4. the haptic tick, on touch pointers only.
+
+     Everything here runs INSIDE the pointerup event, which is what makes it
+     the last word on the frame — see interact.js §ORDERING for the bug that
+     buys. ---- */
+  const _r = new THREE.Vector3();
+  // The two shader wobble slots (world.js uWobId). uWobA / uWobB are the
+  // pivot vectors themselves — written in place, shared by every batch.
+  const wob = [
+    { body: null, pivot: uniforms.uWobA.value },
+    { body: null, pivot: uniforms.uWobB.value },
+  ];
+  /** Give this body a slot: its own if it already has one, else a free one,
+   *  else steal the QUIETER of the two — the wobble with least left to say
+   *  loses, never the one that was just started. */
+  function takeSlot(b) {
+    for (const s of wob) if (s.body === b) return s;
+    for (const s of wob) if (!s.body) { s.body = b; return s; }
+    const energy = (s) =>
+      Math.hypot(s.body.tx, s.body.tz) + Math.hypot(s.body.tvx, s.body.tvz) / TAP_W;
+    const s = energy(wob[0]) <= energy(wob[1]) ? wob[0] : wob[1];
+    clearTap(s.body);
+    s.body = b;
+    return s;
+  }
+
+  function respond({ ref, point, dir, touch }) {
+    // 1. MECHANICS. A clone resolves the impulse in its OWN frame (root-local,
+    //    hero units) and rings its own scene-graph pivot. A batched body has no
+    //    node, so its impulse is taken in WORLD axes with the lever arm scaled
+    //    back to hero units — the same law, in the frame its shader rotates in,
+    //    and the hero's own frame IS world, so the numbers agree.
+    let localY;
+    if (ref.root) {
+      localY = clones.poke(ref, point, dir).y;
+    } else {
+      const s = takeSlot(ref);
+      s.pivot.set(ref.x, ref.gy, ref.z);
+      _r.set((point.x - ref.x) / ref.s,
+             (point.y - ref.gy) / ref.s,
+             (point.z - ref.z) / ref.s);
+      kickTap(ref, _r, dir);
+      localY = _r.y;
+    }
+    // 2. LIGHT. The hero's own uniform objects (world.js heroPulse), so this
+    //    one write is the whole scene's answer — and it lands AFTER organism's
+    //    own handler has planted its floor swell, correcting it in place.
+    uniforms.uPulseC.value.copy(point);
+    uniforms.uPulseT.value = 0;
+    uniforms.uPulseP.value.set(1.4, 1.5, 1.2);   // slow, short-range, gentle
+    // 3. SPORES. §10c's own cap test (y > 2.8 in hero units), applied in hero
+    //    units on every body whatever its size.
+    if (localY > 2.8) shed.burst(ref.x, ref.gy, ref.z, ref.s);
+    // 4. HAPTIC. One soft tick where the platform offers one.
+    if (touch && navigator.vibrate) navigator.vibrate(6);
+  }
+
+  /** Advance both wobble slots and publish them. Idle slots park at WOB_IDLE
+   *  with a zero rotation — NOT at -1, which every non-body vertex carries. */
+  function driveWobble(dt) {
+    const ID = uniforms.uWobId.value, R = uniforms.uWobR.value;
+    for (let k = 0; k < 2; k++) {
+      const s = wob[k];
+      if (s.body) {
+        stepTap(s.body, dt);
+        if (!isRinging(s.body)) { clearTap(s.body); s.body = null; }
+      }
+      const b = s.body;
+      if (k === 0) { ID.x = b ? b.hotId : WOB_IDLE; R.x = b ? b.tx : 0; R.y = b ? b.tz : 0; }
+      else         { ID.y = b ? b.hotId : WOB_IDLE; R.z = b ? b.tx : 0; R.w = b ? b.tz : 0; }
+    }
+  }
 
   function update(t, dt, active) {
     const pull = uniforms.uPull.value;
     const on = !!active && uniforms.uAmount.value > 0.5 && pull > PICK_PULL;
+    pickOn = on;
     if (wasOn && !on) {
       // going cold: drop every pointer state outright rather than easing it
       // out over frames the retiring chapter will not run. Re-entry then
-      // starts from a body that is simply not hot.
-      for (const b of hotMembers) { b.h = 0; b.tgt = 0; b.clickT = 1e9; }
+      // starts from a body that is simply not hot — and not still swinging
+      // from a poke nobody in that ride gave it.
+      for (const b of hotMembers) { b.h = 0; b.tgt = 0; b.clickT = 1e9; clearTap(b); }
+      for (const s of wob) s.body = null;
       clones.cool();
+      shed.cool();
       hovered = null; tapped = null;
     }
     wasOn = on;
-    const { hover, tap } = picker.poll(dt, on, (ref) => lit(ref, pull));
+    driveWobble(dt);
+    shed.update(dt);
+    const { hover, tap } = picker.poll(dt, on);
     if (tap) { tap.clickT = 0; tapped = tap; }
     if (hover !== hovered) {
       if (hovered) hovered.tgt = 0;
@@ -742,5 +865,17 @@ export function createFinalRing(sceneApi, uniforms) {
       clones: clones.counts, pickTargets: picker.count,
       hotMembers: hotMembers.length,
     },
+    /** LIVE QA (never a `counts` field: index.js SPREADS counts once at
+     *  construction, which would freeze these at their boot values). The
+     *  broad/narrow split's measured cost and what the poke is doing now. */
+    pickStats: () => ({
+      narrowMs: picker.narrowMs, narrowCasts: picker.narrowN,
+      shedLive: shed.live,
+      clonesRinging: clones.ringing(),
+      wobble: wob.map(s => (s.body ? {
+        id: s.body.hotId,
+        deg: +(Math.hypot(s.body.tx, s.body.tz) * 57.3).toFixed(4),
+      } : null)),
+    }),
   };
 }
