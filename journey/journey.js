@@ -37,6 +37,50 @@ import { STEADY, P as P_FLAG, POSE as POSE_FLAG, CAPTURE } from '../flags.js';
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
+/* ================================================================
+   The nav jump's interpolation frame (see directJumpTo)
+   ================================================================
+   The organism stands ON the world Y axis — measured from the live scene:
+   the stipe occupies x = z = 0, y 0..3.9, radius <= 0.69 (anatomy.js
+   stemRadius), and the cap sits at y 2.43..4.37 out to r ~ 2.6 (anatomy.js
+   rimRad / capUnderPt). So "around the mushroom" is nothing more exotic than
+   cylindrical coordinates about that axis, and a camera move authored in
+   them is geometry-safe by construction rather than by correction. */
+const azOf = (v) => Math.atan2(v.x, v.z);
+const radOf = (v) => Math.hypot(v.x, v.z);
+
+/** Signed azimuth a -> b, always the short way round (|d| <= PI). Both inputs
+ *  come from atan2, so their difference is within +/-2PI and one wrap fixes it. */
+function azDelta(a, b) {
+  const d = azOf(b) - azOf(a);
+  return d > Math.PI ? d - 2 * Math.PI : d < -Math.PI ? d + 2 * Math.PI : d;
+}
+
+/** a -> b at ease e, interpolated AROUND the axis: azimuth the short way,
+ *  horizontal radius and height lerped independently. Two properties fall
+ *  straight out and are the whole reason for the form — the path's radius is
+ *  never below min(|a|, |b|) horizontally, and its height never leaves
+ *  [a.y, b.y]. A move between two poses that both clear the organism
+ *  therefore clears it the entire way, with no corrective arc to add. */
+function arcLerp(a, b, e, out) {
+  const rA = radOf(a), rB = radOf(b);
+  // A pose ON the axis has no azimuth of its own; borrow the other end's, so
+  // the move degrades to a pure radial one instead of to NaN. No shipped
+  // pose is nearer the axis than r = 0.5 (the Owned rest), but the camera is
+  // free geometry and this costs one comparison.
+  const az = rA < 1e-3 ? azOf(b) : rB < 1e-3 ? azOf(a) : azOf(a) + azDelta(a, b) * e;
+  const r = rA + (rB - rA) * e;
+  return out.set(Math.sin(az) * r, a.y + (b.y - a.y) * e, Math.cos(az) * r);
+}
+
+/** Length of that path — what a jump's duration is measured against. The
+ *  swept arc is taken at the mean radius, which is exact for a pure orbit and
+ *  within a few percent of the true spiral otherwise. */
+function arcLength(a, b) {
+  const rA = radOf(a), rB = radOf(b);
+  return Math.hypot(Math.abs(azDelta(a, b)) * 0.5 * (rA + rB), rB - rA, b.y - a.y);
+}
+
 let started = false;
 
 export function boot(opts = {}) {
@@ -176,10 +220,45 @@ export function boot(opts = {}) {
      run the camera through every section in between. Journey state snaps to
      the destination immediately (seams, copy, route, scroll surface all land
      there this tick — so a cancelling scroll hands control back exactly where
-     the state is, satisfying GB-3.5 trivially), while the CAMERA takes a short
-     straight blend from where it was to the destination pose, with a slight
-     lift arc so the straight line doesn't shave through geometry. */
+     the state is, satisfying GB-3.5 trivially), while the CAMERA takes ONE
+     short, direct move from where it was onto the destination pose.
+
+     "Direct" used to mean a straight-line lerp of the POSITION with a
+     sin(PI * f) vertical lift bowed over it, so the chord would not shave
+     through the body. Hannah, 2026-08-04: "it first does a weird little jump
+     — the camera should just transition directly." Two separate faults, both
+     measured on the live page before this change:
+
+       * the lift ran on LINEAR f while the position ran on smootherstep, so
+         its vertical velocity was full at f = 0 and the horizontal velocity
+         was zero. The move opened with a pure upward kick. Mission -> Owned
+         climbed 0.48 world units ABOVE its own highest endpoint inside the
+         first 180 ms, having travelled 0.001 of the way horizontally, then
+         came back down. Same discontinuity, mirrored, on landing.
+       * the blend moved the position and left the ORIENTATION the director
+         had just written for the destination pose. Frame one of every jump
+         therefore snapped the framing to the destination's stare while the
+         camera still stood at the start: measured 48.5 deg of instant whip on
+         Mission -> Connect, unwound over the following second.
+
+     Both are gone. The move is interpolated in the organism's own cylindrical
+     frame (arcLerp above) — azimuth the short way round the stipe axis, with
+     radius and height carried independently — so it curves AROUND the body
+     instead of bowing OVER it, and needs no lift to stay clear: the shipped
+     chord could not make that promise (Inspire -> Final passed r = 2.20
+     against a 2.18 rim radius, i.e. INSIDE the cap, which is exactly the
+     shave the lift existed to cover). Height is now a plain monotone lerp, so
+     there is no vertical excursion at all. Target and fov travel on the same
+     ease and the camera is re-aimed from where it actually is, so what
+     transitions is one continuous POSE rather than a position sliding under a
+     fixed stare. Timing is untouched — the same smootherstep and the same
+     duration law, now measured along the path actually travelled instead of
+     along a chord the camera no longer follows. */
   let camBlend = null;
+  // Scratch for the live destination pose, read fresh every blend frame.
+  const _dstPos = sceneApi.camera.position.clone();
+  const _dstTgt = sceneApi.controls.target.clone();
+
   function directJumpTo(chapterId) {
     const targetP = restProgress(chapterId);
     if (Math.abs(targetP - journey.progress) < 1e-4) return;
@@ -188,9 +267,8 @@ export function boot(opts = {}) {
     placeAt(targetP);                           // the deep-link settle: place, arm, never replay
     camBlend = {
       t: 0,
-      dur: 0.85 + 0.35 * Math.min(pos0.distanceTo(cam.position) / 20, 1),
+      dur: 0.85 + 0.35 * Math.min(arcLength(pos0, cam.position) / 20, 1),
       pos0, tgt0, fov0,
-      lift: Math.min(2.2, 0.10 * pos0.distanceTo(cam.position)),
     };
   }
 
@@ -355,10 +433,18 @@ export function boot(opts = {}) {
         // and can never outlive or overwrite it. Composition order is
         // preserved: destination writer first, blend on top, blend ends.
         if (!director.owned) director.applyHeroPose();
-        cam.position.lerpVectors(camBlend.pos0, cam.position, e);
-        cam.position.y += Math.sin(Math.PI * f) * camBlend.lift;
-        ctl.target.lerpVectors(camBlend.tgt0, ctl.target, e);
+        _dstPos.copy(cam.position);
+        _dstTgt.copy(ctl.target);
         const fv = camBlend.fov0 * (1 - e) + cam.fov * e;
+        arcLerp(camBlend.pos0, _dstPos, e, cam.position);
+        ctl.target.lerpVectors(camBlend.tgt0, _dstTgt, e);
+        // ONE pose travels. Re-aim from where the camera actually IS — without
+        // this the frame keeps the destination's orientation over a start-pose
+        // position, which is the whip described above. Same no-roll write the
+        // director makes, so the composition order is unchanged: destination
+        // writer first, blend on top, blend ends.
+        cam.up.set(0, 1, 0);
+        cam.lookAt(ctl.target);
         if (fv !== cam.fov) { cam.fov = fv; cam.updateProjectionMatrix(); }
         if (f >= 1) camBlend = null;
       }
