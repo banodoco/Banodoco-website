@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 # ==============================================================================
-# capture.py — Tier-3 stills, generated FROM THE LIVE SCENE.
+# capture.py — Tier-3 stills + CI regression gate, generated FROM THE LIVE
+# SCENE through the deterministic ?capture= freeze (frozen mode, default).
 #
-#   python3 tools/capture.py            # capture the golden list
-#   python3 tools/capture.py --check    # re-capture + diff (advisory)
+#   python3 tools/capture.py             # (re)shoot the golden list, frozen
+#   python3 tools/capture.py --check     # re-capture + diff vs goldens — REAL
+#                                         # gate: exit 1 on MAE > FAIL_MAE
 #   python3 tools/capture.py --pose inspire --size desktop
+#   python3 tools/capture.py --live      # old unfrozen scrub path (?pose=),
+#                                         # sanity-check only; --check --live
+#                                         # stays advisory (scene is noisy)
 #
 # Implements PL-3.3 and ADR AR-4 / D5 (adr-d5-tier3-captures.md): the Tier-3
 # fallback stills are screenshots of the shipping page, never hand-authored
@@ -39,34 +44,37 @@
 # injected at capture time lives in this script and dies with the tab.
 #
 # ------------------------------------------------------------------------------
-# ⚠ TODO — PIXEL STABILITY BLOCKS ON THE `?capture=` FREEZE (NOT YET IN THE BUILD)
+# FROZEN-CAPTURE ERA (M6, 2026-08-04) — see journey-v6-plan/15-merge-and-
+# architecture.md M6 row + EXECUTION.md's M6 entry for the full record.
 # ------------------------------------------------------------------------------
-# As of 2026-08-02 the live build has NO `?capture=<pose>` parameter — grep
-# the site's index.html and journey/{journey.js,constants.js,*.js,chapters} for "capture="
-# and you get only event-listener `{capture: true}` hits. The scene is therefore
-# in permanent motion while the shutter is open:
+# `?capture=<p | chapterId>` landed in the build at M5 (commit `3badf8b`):
+# main.js calls `sceneApi.freezeTime(0)` before the scene boots, which latches
+# every time-driven system (breeze/gust sway, the 4,200-spore drift integrator,
+# tap ring-down, handheld drift, region-highlight breathing, TAA's Halton
+# sample index) to a single fixed phase — nothing left advances after the
+# journey places itself at the requested progress with the dt=0 deep-link
+# path. Verified at M5: two CDP shutters 5 s apart at the same `?capture=`
+# URL are PIXEL-IDENTICAL (diff bbox None @1440x900).
 #
-#     breeze/gust sway  ·  4,200 drifting spores  ·  TAA (Halton 8) jitter
-#     handheld camera drift  ·  region-highlight breathing
+# This script now shoots through THAT path by default — `build_url()` emits
+# `?capture=<pose_id>` (pose ids are chapter ids, which the freeze accepts
+# directly and resolves to that chapter's rest progress) instead of the old
+# live-scrub `?pose=<id>`. Consequences:
 #
-# BASELINE.md §8 and the ADR both measured this: run-to-run variance is ~1-3 MAE
-# /255 with ~8% of pixels differing by >8, on IDENTICAL urls. That is not noise
-# this script can average away — it is the scene doing its job.
-#
-# Consequences, stated plainly:
-#   · These stills are CORRECT and SHIP-QUALITY for Tier 3. A visitor sees one
-#     frozen frame of a living scene, which is exactly the intent.
-#   · `--check` is ADVISORY ONLY. It prints MAE and %-differing and never
-#     returns a failing exit code, because a pass/fail gate on an unfrozen
-#     scene would fail 100% of the time and teach everyone to ignore it.
-#   · The moment `?capture=<pose>` lands (owner: the motion/core pass — see
-#     ../tools/TIER-WIRING.md §2 for exactly what it must freeze), do TWO
-#     things here: (a) add `capture=<pose>` to POSE_QUERY below, and (b) flip
-#     CHECK_IS_ADVISORY to False and enforce the ADR thresholds already encoded
-#     in FAIL_MAE / WARN_MAE. No other change is needed.
-#
-# DO NOT "fix" this by editing core/ to add the freeze from here. core/ is owned
-# by the motion pass; this file's boundary is tools/ + static/.
+#   · Goldens are REPRODUCIBLE pixel targets, not "one honest frame of a
+#     living scene" — the frozen frame IS the scene, held still.
+#   · `--check` is a REAL gate: CHECK_IS_ADVISORY is False in frozen mode,
+#     and a MAE over FAIL_MAE exits 1. The threshold is derived from measured
+#     frozen-frame determinism (shoot the same golden twice, back to back;
+#     see EXECUTION.md's M6 entry for the measured spread), not the old ADR
+#     percentages — those were sized for an unfrozen scene and are far too
+#     loose now.
+#   · The pre-freeze live-scrub path (`?nointro=1&pose=<id>`, ~1-3 MAE/255
+#     run-to-run noise by construction) is kept behind `--live` because it is
+#     cheap to keep and useful as a sanity check that the frozen and live
+#     rests actually agree visually — but it is never the golden source and
+#     `--check --live` stays advisory (an unfrozen scene cannot pass a tight
+#     pixel gate; see BASELINE.md §8).
 # ==============================================================================
 
 import argparse
@@ -116,19 +124,45 @@ SIZES = {
 }
 
 # Query params handed to the live page for every capture.
-#   nointro=1  skips the entry choreography (existing hero QA param)
-#   pose=<id>  pins journey progress to that chapter's resting p (journey.js)
-# TODO(freeze): append "capture": pose_id here once ?capture= exists.
-def POSE_QUERY(pose_id):
-    return {"nointro": "1", "pose": pose_id}
+#
+#   FROZEN (default): capture=<pose_id> — pose ids are chapter ids, which the
+#   ?capture= handler (journey.js) resolves via restProgress() to that
+#   chapter's exact rest progress, under the dt=0 deep-link path. main.js
+#   also freezes the organism's shared clock (freezeTime(0)) and skips the
+#   intro the moment it sees ?capture on the URL — one query param buys
+#   "place here, stop time, don't animate in."
+#
+#   LIVE (--live): nointro=1&pose=<id> — the pre-freeze scrub path. Journey
+#   progress is pinned but breeze/spores/TAA/handheld all keep running, so
+#   run-to-run variance is ~1-3 MAE/255 by construction (BASELINE.md §8).
+#   Kept only as a cheap sanity check that frozen and live rests agree.
+def POSE_QUERY(pose_id, live=False):
+    if live:
+        return {"nointro": "1", "pose": pose_id}
+    return {"capture": pose_id}
 
 
 # Seconds of real time to let the scene settle AFTER window.journey reports the
-# pose. Covers: the deep-link placeAt() double applyFrame, seam arming, the
-# inspire.snap(), TAA history filling (8 Halton samples), and the spore field
-# reaching its drift equilibrium. Measured: below ~1.5 s the TAA history is
-# visibly under-accumulated (thin, sparkly strands); 2.5 s is comfortably past.
-SETTLE_S = 2.5
+# pose, before the shutter fires.
+#
+# FROZEN mode: there is no accumulation left to wait for — freezeTime(0) pins
+# TAA to a single held Halton sample rather than accumulating over frames, so
+# the frame is exact as soon as it's painted. SETTLE_S_FROZEN only needs to
+# cover one rAF tick for the composer to actually paint the post-freeze,
+# post-hide-chrome state; measured empirically (capture.py --check twice
+# back to back at this settle: identical goldens, MAE 0.00/255 every file —
+# see EXECUTION.md's M6 entry for the full spread table). Kept well above
+# the minimum needed as cheap insurance, since it costs ~10s total across
+# the golden list.
+#
+# LIVE mode (--live): unchanged from the pre-freeze pipeline — covers the
+# deep-link placeAt() double applyFrame, seam arming, inspire.snap(), TAA
+# history filling (8 Halton samples), and the spore field reaching drift
+# equilibrium. Measured: below ~1.5s the TAA history is visibly
+# under-accumulated (thin, sparkly strands); 2.5s is comfortably past.
+SETTLE_S_FROZEN = 0.6
+SETTLE_S_LIVE = 2.5
+SETTLE_S = SETTLE_S_FROZEN   # kept as the default-mode alias other code reads
 
 READY_TIMEOUT_S = 25.0     # how long to wait for window.journey to reach the pose
 DPR = 1                    # --force-device-scale-factor. See --dpr.
@@ -145,10 +179,32 @@ HIDE_SELECTORS = [
     ".j-card",      # detail card
 ]
 
-# ADR D5 thresholds. Inert until the freeze lands — see the TODO banner.
-CHECK_IS_ADVISORY = True
-WARN_MAE = 0.5 * 255 / 100.0     # ADR: "warn > 0.5%"
-FAIL_MAE = 2.0 * 255 / 100.0     # ADR: "fail > 2%"
+# --check thresholds.
+#
+# FROZEN mode (default, real gate): derived from measured frozen-frame
+# determinism, NOT the old ADR percentages (those were sized for a scene in
+# permanent motion and are ~100x too loose to catch anything now that the
+# frame is reproducible). Method: shoot the golden list, then run --check
+# immediately after (re-shoots the same ?capture= URLs and diffs against the
+# goldens just written) — that IS "shoot the same golden twice." Measured
+# 2026-08-04 (see EXECUTION.md's M6 entry for the full per-file table): TWO
+# back-to-back `capture.py --check` runs against the freshly-shot goldens
+# (all 5 poses x 2 sizes = 10 files) reported MAE 0.00/255 and 0.0% px>8 on
+# EVERY file, both runs — the freeze really does produce a bit-identical
+# frame, not just a low-noise one. FROZEN_MEASURED_SPREAD is therefore 0.0
+# to the precision this script reports; FAIL_MAE = max(3x that spread,
+# floor 1.0) collapses to the floor, per the plan's own rule (M6 row) — the
+# floor exists precisely so a genuinely-zero measured spread doesn't produce
+# a zero-tolerance gate that trips on font-hinting/GPU-driver noise across
+# machines.
+FROZEN_MEASURED_SPREAD = 0.0        # measured, not a placeholder — see comment above
+FAIL_MAE_FROZEN = max(3.0 * FROZEN_MEASURED_SPREAD, 1.0)
+WARN_MAE_FROZEN = FAIL_MAE_FROZEN / 2.0
+
+# LIVE mode (--live, advisory only): the original ADR D5 percentages, sized
+# for an unfrozen, permanently-moving scene.
+WARN_MAE_LIVE = 0.5 * 255 / 100.0     # ADR: "warn > 0.5%"
+FAIL_MAE_LIVE = 2.0 * 255 / 100.0     # ADR: "fail > 2%"
 
 
 # ==============================================================================
@@ -349,8 +405,8 @@ def page_ws_url(port):
 # Capture
 # ==============================================================================
 
-def build_url(pose_id):
-    q = POSE_QUERY(pose_id)
+def build_url(pose_id, live=False):
+    q = POSE_QUERY(pose_id, live=live)
     return BASE_URL + "?" + "&".join("%s=%s" % (k, v) for k, v in q.items())
 
 
@@ -376,13 +432,13 @@ READY_JS = """
 """
 
 
-def capture_one(cdp, pose, size_key, hide_chrome, settle_s, verbose, quantize=False):
+def capture_one(cdp, pose, size_key, hide_chrome, settle_s, verbose, quantize=False, live=False):
     size = SIZES[size_key]
     cdp.call("Emulation.setDeviceMetricsOverride", {
         "width": size["w"], "height": size["h"],
         "deviceScaleFactor": DPR, "mobile": size["mobile"],
     })
-    url = build_url(pose["id"])
+    url = build_url(pose["id"], live=live)
     cdp.call("Page.navigate", {"url": url})
 
     # Readiness: the journey itself declares the pose. No sleep-and-hope.
@@ -403,8 +459,9 @@ def capture_one(cdp, pose, size_key, hide_chrome, settle_s, verbose, quantize=Fa
     if hide_chrome:
         cdp.eval(HIDE_JS % json.dumps(HIDE_SELECTORS))
 
-    # Settle. Everything below this line is the part that ?capture= will make
-    # unnecessary (see the TODO banner at the top of this file).
+    # Settle: in frozen mode this only needs to cover one paint after the
+    # freeze + chrome-hide land (see SETTLE_S_FROZEN's comment); in --live
+    # mode it's the full pre-freeze accumulation wait.
     time.sleep(settle_s)
 
     shot = cdp.call("Page.captureScreenshot", {
@@ -463,23 +520,45 @@ def mae(a_path, b_path):
 # main
 # ==============================================================================
 
+def git_head(cwd=None):
+    """Short-circuit to None on any git trouble — never blocks a capture run."""
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=cwd or HERE,
+            stderr=subprocess.DEVNULL,
+        )
+        return out.decode().strip()
+    except Exception:
+        return None
+
+
 def main():
     global DPR
-    ap = argparse.ArgumentParser(description="Tier-3 capture pipeline (PL-3.3 / ADR D5)")
+    ap = argparse.ArgumentParser(description="Tier-3 capture + CI regression gate (PL-3.3 / ADR D5 / M6)")
     ap.add_argument("--pose", action="append", help="pose id; repeatable (default: all five)")
     ap.add_argument("--size", action="append", choices=sorted(SIZES), help="viewport; repeatable (default: both)")
     ap.add_argument("--dpr", type=int, default=DPR, help="device scale factor (default 1)")
-    ap.add_argument("--settle", type=float, default=SETTLE_S, help="settle seconds after readiness (default %.1f)" % SETTLE_S)
+    ap.add_argument("--settle", type=float, default=None,
+                    help="settle seconds after readiness (default %.1f frozen / %.1f --live)"
+                         % (SETTLE_S_FROZEN, SETTLE_S_LIVE))
     ap.add_argument("--chrome", action="store_true", help="keep the page's own nav/copy/hotspots in the still")
     ap.add_argument("--quantize", action="store_true",
                     help="256-colour palette PNG: ~50%% smaller, MAE 1.10/255 (below scene noise)")
-    ap.add_argument("--check", action="store_true", help="re-capture beside the existing goldens and report drift (ADVISORY)")
+    ap.add_argument("--check", action="store_true", help="re-capture beside the existing goldens and report drift")
+    ap.add_argument("--live", action="store_true",
+                    help="use the pre-freeze scrub path (?pose=) instead of the ?capture= freeze; "
+                         "--check --live stays advisory (unfrozen scene, ~1-3 MAE noise by construction)")
+    ap.add_argument("--note", default=None, help="reason recorded in manifest.json (goldens run only)")
     ap.add_argument("--out", default=OUT_DIR, help="output directory")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
     DPR = args.dpr
     out_dir = args.out
+    settle = args.settle if args.settle is not None else (SETTLE_S_LIVE if args.live else SETTLE_S_FROZEN)
+    fail_mae = FAIL_MAE_LIVE if args.live else FAIL_MAE_FROZEN
+    warn_mae = WARN_MAE_LIVE if args.live else WARN_MAE_FROZEN
+    check_is_advisory = bool(args.live)   # frozen --check is a REAL gate; --live stays advisory
     poses = [p for p in POSES if not args.pose or p["id"] in args.pose]
     sizes = args.size or list(SIZES)
     if not poses:
@@ -505,8 +584,8 @@ def main():
 
     profile = tempfile.mkdtemp(prefix="capture-chrome-")
     port = free_port()
-    print("capture.py — %d pose(s) x %d size(s), dpr %d, settle %.1fs"
-          % (len(poses), len(sizes), DPR, args.settle))
+    print("capture.py — %d pose(s) x %d size(s), dpr %d, settle %.1fs, mode %s"
+          % (len(poses), len(sizes), DPR, settle, "LIVE (unfrozen)" if args.live else "FROZEN (?capture=)"))
     print("  source : %s" % BASE_URL)
     print("  output : %s" % out_dir)
     if not args.chrome:
@@ -526,7 +605,7 @@ def main():
                 try:
                     globals()["OUT_DIR"] = target_dir
                     r = capture_one(cdp, pose, size_key, not args.chrome,
-                                    args.settle, args.verbose, args.quantize)
+                                    settle, args.verbose, args.quantize, live=args.live)
                 finally:
                     globals()["OUT_DIR"] = saved_out
                 r["dir"] = target_dir
@@ -549,45 +628,82 @@ def main():
         shutil.rmtree(profile, ignore_errors=True)
 
     if args.check:
-        print("\n--- drift check (ADVISORY: the scene is not frozen; see file header) ---")
+        mode_line = ("ADVISORY: --live, scene is not frozen; see file header"
+                     if check_is_advisory else
+                     "REAL GATE: frozen captures, exit 1 on FAIL-band")
+        print("\n--- drift check (%s) ---" % mode_line)
         worst = 0.0
+        missing = False
+        failed = False
         for r in results:
             golden = os.path.join(out_dir, r["file"])
             fresh = os.path.join(check_dir, r["file"])
             if not os.path.exists(golden):
                 print("  · %-22s no golden on disk — run without --check first" % r["file"])
+                missing = True
                 continue
             m, pct = mae(golden, fresh)
             if m is None:
                 print("  · %-22s size mismatch" % r["file"])
+                failed = True
                 continue
             worst = max(worst, m)
-            band = "FAIL-band" if m > FAIL_MAE else ("warn-band" if m > WARN_MAE else "within")
+            is_fail = m > fail_mae
+            is_warn = (not is_fail) and m > warn_mae
+            band = "FAIL-band" if is_fail else ("warn-band" if is_warn else "within")
+            if is_fail:
+                failed = True
             print("  · %-22s MAE %5.2f/255  %5.1f%% px >8   [%s]" % (r["file"], m, pct, band))
-        print("\n  worst MAE %.2f/255. Thresholds warn>%.2f fail>%.2f." % (worst, WARN_MAE, FAIL_MAE))
-        if CHECK_IS_ADVISORY:
-            print("  Exit code forced to 0: unfrozen scene, per-run variance is ~1-3 MAE by")
-            print("  construction (BASELINE.md §8). Flip CHECK_IS_ADVISORY once ?capture= lands.")
+        print("\n  worst MAE %.2f/255. Thresholds warn>%.2f fail>%.2f." % (worst, warn_mae, fail_mae))
+        if check_is_advisory:
+            print("  Exit code forced to 0: --live scene is unfrozen, per-run variance is ~1-3 MAE")
+            print("  by construction (BASELINE.md §8). Drop --live for the real frozen gate.")
+            return 0
+        if missing:
+            print("  FAIL: golden(s) missing — run 'capture.py' (no --check) first.")
+            return 1
+        if failed:
+            print("  FAIL: drift exceeds the frozen-frame threshold — see FAIL-band rows above.")
+            return 1
+        print("  PASS: all captures within the frozen-frame determinism threshold.")
         return 0
 
     # ------------------------------------------------------------------
     # manifest.json — the Tier-3 page and any future <picture>/srcset wiring
     # read this instead of hard-coding filenames (ADR D5 "Where they land").
+    # Also the CI gate's provenance record: date + commit + why this golden
+    # set exists (M6, journey-v6-plan/15-merge-and-architecture.md).
     # ------------------------------------------------------------------
+    frozen = not args.live
     manifest = {
         "generated": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "commit": git_head(),
+        "reason": args.note or (
+            "pre-restage goldens retired; frozen-capture era begins (M6) — "
+            "shot through ?capture= at the merged, Hannah-era-approved tip"
+            if frozen else
+            "live (--live) sanity-check set, not a golden source"
+        ),
         "source": BASE_URL,
         "note": (
-            "Generated by tools/capture.py from the live scene. "
-            "Do not hand-edit these PNGs. The scene was NOT frozen at capture "
-            "time (?capture= does not exist yet), so these are one frame of a "
-            "moving scene, not a reproducible pixel target."
+            "Generated by tools/capture.py from the live scene through the "
+            "?capture= freeze (main.js freezeTime(0) + journey.js dt=0 "
+            "placement). Do not hand-edit these PNGs. Frozen frames are "
+            "reproducible pixel targets — see FAIL_MAE_FROZEN in this file "
+            "for the gate threshold and EXECUTION.md's M6 entry for how it "
+            "was measured."
+            if frozen else
+            "Generated by tools/capture.py --live from the live scene via "
+            "the pre-freeze scrub path. Do not hand-edit these PNGs. The "
+            "scene is NOT frozen at capture time, so these are one honest "
+            "frame of a moving scene, not a reproducible pixel target — "
+            "advisory sanity-check only, never the golden source."
         ),
-        "frozen": False,
+        "frozen": frozen,
         "dpr": DPR,
         "chromeHidden": not args.chrome,
         "quantized": bool(args.quantize),
-        "settleSeconds": args.settle,
+        "settleSeconds": settle,
         "poses": {},
     }
     for r in results:

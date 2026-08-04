@@ -1,0 +1,47 @@
+#!/bin/bash
+# Regression gate for scene-touching commits (merge doc §4 M6).
+# Install:  ln -sf ../../ados-paris/glowshroom/tools/pre-commit .git/hooks/pre-commit
+# (run from the repo root, /Users/hannahomalley/nigel)
+#
+# Scene-touching = anything staged under organism/ or journey/. For those
+# commits the site must be up on :8137 and capture.py --check (the FROZEN,
+# non-advisory gate — see tools/capture.py's header comment) must pass:
+# every golden/size pair within FAIL_MAE_FROZEN of the on-disk goldens at
+# static/captures/ (threshold + how it was measured: journey-v6-plan/
+# EXECUTION.md's M6 entry). Skip with SKIP_SCENE_CHECK=1 for doc-only
+# emergencies — never for code.
+
+STAGED=$(git diff --cached --name-only)
+echo "$STAGED" | grep -q "glowshroom/organism/\|glowshroom/journey/" || exit 0
+
+if [ -n "$SKIP_SCENE_CHECK" ]; then
+  echo "pre-commit: SKIP_SCENE_CHECK set — scene regression skipped" >&2
+  exit 0
+fi
+
+# Resolve the hook's real location via the repo root, not $0/BASH_SOURCE:
+# this file is installed as a SYMLINK at .git/hooks/pre-commit, and when git
+# execs a symlinked hook, $0 is the symlink path (.git/hooks/pre-commit) —
+# dirname "$0" would look for capture.py inside .git/hooks/ and fail. git
+# always runs hooks with cwd at the top of the working tree, so anchor off
+# `git rev-parse --show-toplevel` instead, which is symlink-proof.
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+CAPTURE_PY="$REPO_ROOT/ados-paris/glowshroom/tools/capture.py"
+
+if [ ! -f "$CAPTURE_PY" ]; then
+  echo "pre-commit: expected capture.py at $CAPTURE_PY — not found." >&2
+  echo "  (repo layout changed? update tools/pre-commit's CAPTURE_PY path.)" >&2
+  exit 1
+fi
+
+if ! curl -s -o /dev/null --max-time 2 http://localhost:8137/; then
+  echo "pre-commit: scene files staged but no server on :8137." >&2
+  echo "  Start it:  python3 $REPO_ROOT/ados-paris/glowshroom/serve.py" >&2
+  echo "  (or SKIP_SCENE_CHECK=1 to bypass — code commits should not.)" >&2
+  exit 1
+fi
+
+python3 "$CAPTURE_PY" --check || {
+  echo "pre-commit: capture regression failed — see output above." >&2
+  exit 1
+}
