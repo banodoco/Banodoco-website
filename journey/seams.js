@@ -42,7 +42,15 @@ const OWNED_HOLD_LO = startOf('owned') + 0.03;     // 0.63 — colony held throu
 const OWNED_HOLD_HI = endOf('final') + 0.01;       // 1.01 — never releases at the top
 const FINAL_MIN = startOf('final');                // 0.85 — rise/cutaway can only arm past here
 const FINAL_RELEASE = startOf('final') - 0.02;     // 0.83
-const FINAL_HOLD = startOf('final') - 0.005;       // 0.845
+// 0.80 (M5 ignition audit, D16): was startOf('final') − 0.005 = 0.845 — the
+// camera was 0.17 under the soil and surfaced 0.005p later, so the opaque
+// soil slab POPPED over the visible colony and the epilogue's additive
+// content was still time-fading in view after the surface crossing. Arming
+// at 0.80 gives the chapter the whole underground rise: its camera-keyed
+// rise mask (final/index.js) dissolves the slab in and completes every fade
+// before the camera pierces the surface. The chapter is dark at arm (mask 0)
+// so the earlier arm has no visible edge of its own.
+const FINAL_HOLD = startOf('final') - 0.05;        // 0.80
 
 export function createSeams({ camera, chapters, missionAz = -0.213 }) {
   const state = {
