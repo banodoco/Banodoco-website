@@ -119,6 +119,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-block.pos-topcentre  { left: 50%; top: 15vh; transform: translateX(-50%); text-align: center; }
   .j-block.pos-topcentre .j-claims { display: inline-block; text-align: center; }
   .j-block.pos-upperleft  { left: 6vw; top: 16vh; }
+  /* Connect restage (16-connect-ground-restage.md, Hannah): the chapter's copy
+     claims the TOP-RIGHT of the frame while the mushroom claims the top-left
+     and the tendril network spreads through the gap between them. Mirror of
+     pos-upperleft — the block hangs off the right margin and its type sets
+     right-ragged, so the ragged edge faces the open ground instead of the
+     frame edge. The local scrim's ellipse mirrors with it (60%, not 40%). */
+  .j-block.pos-topright   { right: 5.2vw; top: 15vh; text-align: right; }
+  .j-block.pos-topright .j-sub { margin-left: auto; }
+  .j-block.pos-topright::before {
+    background: radial-gradient(ellipse 62% 68% at 60% 50%, rgba(12, 8, 3, 0.66), transparent 72%);
+  }
   /* Final restage (17-final-field.md): the epilogue copy floats on the dark
      cutaway wedge in the lower-left corner, giving the upper frame to the
      mushroom field. bottom clears the footer cue's band (2.6vh + its box). */
@@ -487,6 +498,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-block { max-width: none; width: 88vw; }
     .j-block.pos-left, .j-block.pos-upperleft { left: 6vw; }
     .j-block.pos-bottomleft { left: 6vw; bottom: 11vh; }
+    .j-block.pos-topright   { right: 6vw; top: 11vh; }
     .j-block.pos-bottom, .j-block.pos-topcentre { left: 50%; }
     .j-card { right: 50%; transform: translate(50%, -50%); }
   }

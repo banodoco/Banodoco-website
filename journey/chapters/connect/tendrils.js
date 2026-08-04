@@ -71,10 +71,21 @@ const sm = (a, b, x) => smooth01((x - a) / (b - a));
 // Core scales ~1.35× (with the resting-opacity lift in index.js) so each
 // hub reads as a destination-beacon at rest — controlled halo, not
 // lens-flare.
+//
+// TOP-LEFT / TOP-RIGHT RESTAGE (Hannah, 2026-08-04): with the mushroom in the
+// frame's upper-left and the copy block in the upper-right, all three hubs are
+// re-placed to fan through the open diagonal band between them — the ground
+// that owns the lower two-thirds of the new rest frame. Authored against the
+// live frame (doc §3: "the frame is the spec") and checked at 1440x900,
+// 1280x800 and 375x812. Departure azimuths fan 37 / -27 / -8 deg out of the
+// stipe base so the three primaries leave in genuinely different directions
+// and never run as a bundle; the hubs land at world radius 4.3 / 5.6 / 8.0 —
+// near / mid / far, exactly the narrative order (ADOS the flagship nearest the
+// base, Discord the far everyday door).
 export const HUBS = {
-  ados:     { pos: new V3(2.45, 0, 2.85), az: 0.86, spokes: 13, coreScale: 0.46 },
-  hivemind: { pos: new V3(1.38, 0, -3.05), az: -1.07, spokes: 11, coreScale: 0.40 },
-  discord:  { pos: new V3(5.35, 0, -3.45), az: -0.57, spokes: 9,  coreScale: 0.36 },
+  ados:     { pos: new V3(3.40, 0, 2.60), az: 0.65, spokes: 13, coreScale: 0.46 },
+  hivemind: { pos: new V3(5.00, 0, -2.60), az: -0.48, spokes: 11, coreScale: 0.40 },
+  discord:  { pos: new V3(7.80, 0, -1.80), az: -0.15, spokes: 9,  coreScale: 0.36 },
 };
 export const HUB_IDS = ['ados', 'hivemind', 'discord'];
 
@@ -465,13 +476,14 @@ export function buildTendrils(group, U) {
     // narrow portrait frustum cannot always hold the hub itself, so a chip
     // may ride its route's in-frame stretch instead. The network is one
     // world-space build; only the ANCHOR is per-orientation.
-    // Discord route-t 0.60 → 0.50 (audit taste pass): at 375×812 the t 0.60
-    // anchor put Discord's chip 3 px under Hivemind's and its pill 10 px past
-    // the right viewport edge; t 0.40 overlapped the ADOS chip instead.
-    // ADOS route-t 0.25 (left-of-stem move, 2026-08-04): the relocated hub
-    // projects INSIDE the portrait copy block (chip suppressed), so its chip
-    // rides the route's upper stretch down the left edge instead.
-    const PORT_T = { ados: 0.25, hivemind: 0.50, discord: 0.50 };
+    // TOP-LEFT/TOP-RIGHT RESTAGE (2026-08-04): only DISCORD still needs one.
+    // At 375x812 all three hub cores are inside the frame, but Discord's sits
+    // 10 px from the right edge, so its pill (99 px, drawn to the right of the
+    // dot) would run off. Its chip rides route-t 0.25 instead — the stretch of
+    // Discord's own run that sits in the open lower-middle band, 24 px clear
+    // of the ADOS chip and 66 px clear of Hivemind's. ADOS and Hivemind anchor
+    // on their hubs in BOTH orientations now (t 1.00 = the route's hub end).
+    const PORT_T = { ados: 1.00, hivemind: 1.00, discord: 0.25 };
     const portAnchor = polyAt(R.poly, R.arcs, PORT_T[R.id]);
     portAnchor.y = gy(portAnchor.x, portAnchor.z, 0.04);
     hubMeta.push({ id: R.id, pos: h.pos.clone(), along: hubAlong, route: ri, portAnchor });
