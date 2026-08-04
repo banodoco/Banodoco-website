@@ -103,21 +103,23 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     color: var(--muted);
     text-shadow: 0 1px 18px rgba(10, 6, 2, 0.9);
   }
-  .j-claims { margin: 0.4rem 0 0; padding: 0; list-style: none; }
-  .j-claim { margin: 0.5rem 0; pointer-events: auto; } /* hosts the claim pulses */
-  .j-claim-t {
-    font-size: 1.02rem;
-    letter-spacing: 0.03em;
-    color: var(--gold-bright);
-  }
-  .j-claim.primary .j-claim-t { font-size: 1.5rem; letter-spacing: 0.01em; }
-  .j-claim-d { display: block; font-size: 0.86rem; color: var(--muted); }
+  /* The `.j-claim*` rules that stood here are gone with the Owned claims LIST
+     they styled (Hannah, 2026-08-05 — the claims are one prose `sub` now; see
+     content/content.js for the copy and the lock-override provenance). Owned
+     was the only chapter that ever had a claims list, so nothing else referred
+     to them and they would have been dead CSS.
+     What survives is the list's one BEHAVIOUR: hovering the copy pulses the
+     colony. `.j-copy` turns pointer-events off wholesale, so the line that
+     answers a hover opts back in. */
+  .j-sub.j-pulse { pointer-events: auto; }
 
   .j-block.pos-left       { left: 5.2vw; top: 50%; transform: translateY(-50%); }
   .j-block.pos-bottom     { left: 50%; bottom: 8vh; transform: translateX(-50%); text-align: center; }
   .j-block.pos-bottom .j-sub { margin: 0 auto; }
   .j-block.pos-topcentre  { left: 50%; top: 15vh; transform: translateX(-50%); text-align: center; }
-  .j-block.pos-topcentre .j-claims { display: inline-block; text-align: center; }
+  /* Owned's sub is centred prose now rather than a centred list, so it needs
+     the same auto margins the other centred position gives its sub. */
+  .j-block.pos-topcentre .j-sub { margin: 0 auto; }
   .j-block.pos-upperleft  { left: 6vw; top: 16vh; }
   /* Connect restage (16-connect-ground-restage.md, Hannah): the chapter's copy
      claims the TOP-RIGHT of the frame while the mushroom claims the top-left
@@ -134,6 +136,35 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      cutaway wedge in the lower-left corner, giving the upper frame to the
      mushroom field. bottom clears the footer cue's band (2.6vh + its box). */
   .j-block.pos-bottomleft { left: 5.2vw; bottom: 9vh; }
+
+  /* ============================================================
+     FINAL HEADING MEASURE (Hannah, 2026-08-05)
+
+     The epilogue h1 became "The open source ecosystem can accelerate
+     a 2nd Renaissance" (content/content.js, with the lock-override
+     provenance), and it has to WRAP TO TWO LINES. That is a measure
+     problem, not a font-size one, so it is solved here and the house
+     type scale in `.j-h` above is untouched at desktop sizes.
+
+     Measured, at the shipped font, for the balanced break
+     "The open source ecosystem can / accelerate a 2nd Renaissance":
+
+       viewport   font       natural 1-line   longest of the 2 lines
+       1440x900   44.64px    1232px           637px
+       1280x800   39.68px    1095px           566px
+
+     So the heading needs a measure of at least 637px to reach two
+     lines, and must stay well under 1232px or it collapses to one.
+     46rem (736px) of block minus 2rem padding a side = 672px of text
+     column sits in that window at BOTH desktop sizes, with ~35px of
+     headroom over the 1440 requirement — enough that font hinting or
+     a fallback serif cannot tip it to three lines.
+
+     The block only widens; it does not move. Its left edge and bottom
+     are unchanged, so it still floats on the same dark cutaway wedge
+     and still clears the footer cue.
+     ============================================================ */
+  .j-block.pos-bottomleft { max-width: 46rem; }
 
   /* --- hotspot proxies: hit-model correctness now, polish later --- */
   .j-hotspots { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
@@ -178,6 +209,70 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   /* .j-hot's focus RING is the shared journey treatment further down; the
      colour/dot response above is what makes focus equal hover (PL-2.2). */
+
+  /* ============================================================
+     NODE POPOVER (Hannah, 2026-08-05) — the detail, beside the chip.
+
+     Built by journey/ui.js (see the POPOVER block there for the
+     popover-vs-card decision and the a11y contract). It lives INSIDE
+     `.j-hotspots` on purpose, three ways at once: it inherits that
+     layer's stacking so it clears the chapter copy, it is hidden by
+     capture.py's existing `.j-hotspots` selector so no golden gains a
+     tooltip, and it can sit next to its own chip in the DOM, which is
+     what puts its link in the right place in the tab order.
+
+     Position comes from ui.js placePop() as a transform — the chip it
+     hangs off is world-tracked and moves, so this is re-placed per
+     frame and CSS must not fight it with a transition on transform.
+     ============================================================ */
+  .j-pop {
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 2;                 /* over the chips, under the card */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+    width: max-content;
+    max-width: min(19rem, 62vw);
+    padding: 0.85rem 1rem 0.9rem;
+    opacity: 0;
+    visibility: hidden;         /* also takes it out of the a11y tree when shut */
+    pointer-events: none;
+    background: rgba(14, 9, 3, 0.94);
+    border: 1px solid rgba(217, 164, 65, 0.3);
+    border-radius: 3px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+    text-align: left;           /* never inherit pos-topright's ragged-right */
+    /* the house 0.3s, on opacity only */
+    transition: opacity 0.3s ease;
+  }
+  .j-pop.open { opacity: 1; visibility: visible; pointer-events: auto; }
+  .j-pop-t {
+    font-family: "Didot", "Playfair Display", Georgia, serif;
+    font-weight: 400;
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
+    color: var(--parchment);
+  }
+  .j-pop-s {
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .j-pop-link {
+    margin-top: 0.15rem;
+    color: var(--gold-bright);
+    text-decoration: none;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.5);
+    transition: border-color 0.3s;
+  }
+  .j-pop-link[hidden] { display: none; }
+  .j-pop-link:is(:hover, :focus-visible) { border-bottom-color: var(--gold-bright); }
 
   /* --- detail card --- */
   .j-card {
@@ -479,6 +574,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      from here. */
   .j-nav a:focus-visible,
   .j-hot:focus-visible,
+  .j-pop a:focus-visible,
   .j-card :is(a, button):focus-visible,
   .j-footer :is(a, button):focus-visible,
   .j-foot-cue:focus-visible {
@@ -524,11 +620,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        .j-foot-cue is fixed — a blanket `position: relative` here would
        RESET those (equal specificity, later in the sheet) and, in the bottom
        sheet, turn the close button into a full-width flex item. */
-    .j-foot-links a, .j-foot-note a, .j-card-link { position: relative; }
+    .j-foot-links a, .j-foot-note a, .j-card-link, .j-pop-link { position: relative; }
     .j-navlink::before,
     .j-hot::before,
     .j-card-x::before,
     .j-card-link::before,
+    .j-pop-link::before,
     .j-foot-cue::before,
     .j-foot-links a::before,
     .j-foot-note a::before {
@@ -572,8 +669,45 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-foot-cue { padding: 0.75rem 1rem; }
   }
 
+  /* ============================================================
+     FINAL HEADING AT PHONE WIDTHS — a DELIBERATE step below the
+     house type scale, called out rather than slipped in.
+
+     Two lines is geometrically impossible here at the house size, and
+     the arithmetic is not close. Measured at 375x812: the heading's
+     natural single-line width is 839px at the house 1.9rem (30.4px)
+     floor, so the best possible two-line break needs 419px of column
+     and the balanced break needs 434px. A 375px-wide phone can offer
+     at most ~320px once the block's own padding is paid. No measure,
+     no rebalancing and no break point closes a 114px gap — only a
+     smaller font does.
+
+     So this is the one place the heading drops below the house scale,
+     and ONLY for this chapter, ONLY below 480px:
+
+       5.6vw  =>  21.0px at 375  (longest line ~300px into ~320px)
+                  24.1px at 430  (longest line ~344px into ~372px)
+
+     i.e. it tracks the viewport so the two-line promise holds across
+     the phone range instead of at one width. The block also widens to
+     94vw and trims its side padding, which is what buys the column the
+     font needs — the font was cut no further than the geometry forced.
+
+     FLAGGED FOR HANNAH: at 375 this renders the epilogue h1 at ~21px
+     against a 16px sub, so the heading/sub hierarchy is much flatter
+     on a phone than anywhere else. The alternative is keeping the full
+     1.9rem and letting it run to three lines. That is a design call,
+     not a technical one — this file implements the two-line
+     instruction as written, and the swap is one rule to undo.
+     ============================================================ */
+  @media (max-width: 480px) {
+    .j-block.pos-bottomleft { width: 94vw; padding-left: 1rem; padding-right: 1rem; }
+    .j-block.pos-bottomleft .j-h { font-size: clamp(1.15rem, 5.6vw, 1.75rem); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .j-nav, .j-navlink, .j-navlink::after, .j-hot, .j-hot-dot, .j-card { transition: none; }
+    .j-pop, .j-pop-link { transition: none; }
     /* the sheet's own transition is more specific than the reset above, so it
        is named here: reduced motion SNAPS — the drag still follows the finger
        (direct manipulation), the release does not animate. */

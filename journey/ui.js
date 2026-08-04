@@ -68,6 +68,20 @@ const CHAPTER_POSITION = {
   final: 'pos-bottomleft',
 };
 
+/* Chapters whose prose `sub` fires a scene response on hover.
+   Ride-through #2 gave the Owned claims list a job beyond copy: each <li>
+   pulsed the colony through the chapter's trigger(). Hannah's 2026-08-05
+   direction turned that list into one prose line (content/content.js), so the
+   behaviour moves with it — the whole sentence is now the claim, and it fires
+   the whole-colony wave. The two localized secondary pulses retired with the
+   list items they belonged to; chapters/owned/index.js still implements them,
+   unchanged, for any future caller.
+   Keyed by chapter like CHAPTER_POSITION above, so a chapter that wants one
+   says so here and every other chapter is untouched. */
+const CHAPTER_SUB_PULSE = {
+  owned: 'claimPrimary',
+};
+
 function el(tag, cls, text) {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -196,25 +210,19 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     const b = el('div', `j-block ${CHAPTER_POSITION[c.id] || 'pos-left'}`);
     b.dataset.chapter = c.id;
     b.appendChild(el('h2', 'j-h', data.heading));
-    if (data.sub) b.appendChild(el('p', 'j-sub', data.sub));
-    if (data.claims) {
-      const ul = el('ul', 'j-claims');
-      // Ride-through #2: the in-scene ownership pods are gone — the DOM claim
-      // blocks are now the single home of the claims, and they host the
-      // handoff's claim pulses: hovering the primary sends one broad slow wave
-      // through the whole colony, the secondaries answer locally.
-      const TRIG = ['claimPrimary', 'claimMonthly', 'claimSplit'];
-      data.claims.forEach((cl, ci) => {
-        const li = el('li', `j-claim ${cl.tier}`);
-        li.appendChild(el('span', 'j-claim-t', cl.text));
-        if (cl.detail) li.appendChild(el('span', 'j-claim-d', cl.detail));
-        li.addEventListener('pointerenter', () => {
+    if (data.sub) {
+      const sub = el('p', 'j-sub', data.sub);
+      const pulse = CHAPTER_SUB_PULSE[c.id];
+      if (pulse) {
+        // pointer-events are off for the whole `.j-copy` layer, so the one
+        // line that answers a hover has to opt back in (`.j-sub.j-pulse`).
+        sub.classList.add('j-pulse');
+        sub.addEventListener('pointerenter', () => {
           const mod = window.journey && window.journey.chapters && window.journey.chapters[c.id];
-          if (mod && typeof mod.trigger === 'function') mod.trigger(TRIG[ci] || 'claimPrimary');
+          if (mod && typeof mod.trigger === 'function') mod.trigger(pulse);
         });
-        ul.appendChild(li);
-      });
-      b.appendChild(ul);
+      }
+      b.appendChild(sub);
     }
     copyHost.appendChild(b);
     blocks[c.id] = b;
@@ -225,6 +233,262 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   const hotHost = el('div', 'j-hotspots');
   document.body.appendChild(hotHost);
   const hotspots = [];
+
+  /* ==========================================================================
+     THE NODE POPOVER (Hannah, 2026-08-05)
+
+     "When I hover over the items (2RP, Discord, etc.), it should reveal the
+     details upon hover next to where I'm hovering — right now it takes a click
+     and shows way over to the right."
+
+     Hovering a chip now reveals its detail BESIDE the chip. Below is the
+     decision that shapes everything else in this block.
+
+     ---- POPOVER vs CARD: the popover REPLACES the card for these nodes ----
+
+     The brief allowed either "popover previews, card details" or "the popover
+     is the whole disclosure." This build takes the second, because on this
+     content the first is not progressive disclosure — it is a downgrade.
+
+     Look at what each vessel can actually say about a node like 2RP:
+
+       popover:  '2RP' + 'Rigorous research in AI art.' + 'Read the publication'
+       card:     the same title, the same link, plus two paragraphs that open
+                 'This is placeholder summary copy standing in for the 2RP
+                 spotlight until Content/Ops drafts real copy' and a status line
+                 reading 'Status: to be confirmed'.
+
+     The popover carries every word of real content the node has. The card adds
+     only text that admits it is filler. So "hover to preview, click for more"
+     would promise more and deliver less — the weaker surface would win the
+     click, which is exactly the "two competing ideas" failure to avoid. One
+     gesture, one answer.
+
+     ---- which nodes ----
+
+     Eligibility is by CONTENT, not by id — no chapter or node id appears in
+     this file. A node qualifies if it has a `short` line to show. That cleanly
+     selects the six STRUCTURE chips Hannah named (Inspire's ArtCompute / Arca
+     Gidan Prize / 2RP, Connect's ADOS / Hivemind / Discord) and cleanly
+     excludes Owned's sixteen CONTRIBUTORS, who have no `short` — a person's
+     row is a name, a role and a blurb, which is a profile, not a caption.
+
+     That split is the LABEL POLICY distinction already drawn above (page
+     furniture vs a field of people), and it keeps one rule, not two: EVERY
+     chip reveals what it has on hover. A structure chip has a line of prose and
+     a link, so that is what appears beside it. A contributor chip's whole
+     content is its name and role, and revealing that on hover is precisely
+     what `labelOnHover` already does. Clicking a person still opens their
+     profile card, which is the only vessel that fits a profile.
+
+     ---- what CLICK does now ----
+
+     Click / Enter / Space PINS the popover instead of opening a card. Pinning
+     is what makes the popover usable by everyone rather than mouse-only: it
+     survives the pointer leaving, it puts the CTA link in the tab order, and it
+     is the second tap of the existing touch model. It also keeps the ROUTE
+     model whole — journey.js still funnels this through openCard(), still
+     writes #/chapter/node, still pushes one history entry, still closes on
+     Back / Escape / scroll-intent. A deep link therefore lands on the same
+     thing a click produces, which the split-vessel option could not offer.
+
+     ---- a11y contract ----
+
+     The chip stays the disclosure control. `aria-expanded` tracks the PINNED
+     state (via selectedNode/syncExpanded, so it is right on every path
+     including deep links). `aria-describedby` points at the short line while
+     the popover shows, so hovering and focusing announce the same sentence a
+     pointer sees — that is the description, while the chip's own label remains
+     its name. `aria-haspopup="dialog"` is dropped for these nodes because what
+     opens is no longer a dialog; contributors keep it, because theirs is.
+     Escape dismisses. Focus never moves off the chip: this is a non-modal
+     disclosure, so the popover is placed directly AFTER its chip in the DOM and
+     Tab simply walks into the link.
+     ========================================================================== */
+  const POP_GAP = 12;        // clearance between chip box and popover box
+  const POP_MARGIN = 10;     // hard minimum from any viewport edge
+  /* The popover stands POP_GAP away from its chip, so a pointer travelling
+     from one to the other crosses bare canvas — and the chip's pointerleave
+     lands BEFORE the popover's pointerenter. Hiding on that leave would pull
+     the popover out from under the pointer mid-journey and, because a shut
+     popover has pointer-events:none, make its link unreachable by mouse
+     entirely. So a hover-out schedules the hide instead of doing it, and
+     anything that re-opens cancels it. Long enough to cross 12px, short
+     enough not to feel sticky. */
+  const POP_HIDE_MS = 160;
+
+  const pop = el('aside', 'j-pop');
+  const popTitle = el('strong', 'j-pop-t');
+  // The description is the SHORT LINE only, not the whole popover: the title
+  // duplicates the chip's accessible name and the link is a control, and
+  // neither belongs in a description string.
+  const popShort = el('span', 'j-pop-s');
+  popShort.id = 'j-pop-s';
+  const popLink = el('a', 'j-pop-link');
+  // Out of the tab order until a popover is actually PINNED — it gains an href
+  // on first reveal, and an <a href> is tabbable by default.
+  popLink.tabIndex = -1;
+  pop.appendChild(popTitle);
+  pop.appendChild(popShort);
+  pop.appendChild(popLink);
+  hotHost.appendChild(pop);
+
+  let popNode = null;        // the hotspot the popover currently belongs to
+  let popPinned = false;     // committed (click / Enter / Space / deep link)
+  let popHover = false;      // pointer is inside the popover itself
+  let popDismissed = null;   // node id whose TRANSIENT popover Escape dismissed
+  let popHideTimer = null;
+  let hotSeq = 0;            // monotonic: which chip went hot most recently
+
+  function cancelPopHide() {
+    if (popHideTimer) { clearTimeout(popHideTimer); popHideTimer = null; }
+  }
+
+  /* Which chip the popover should follow when several are hot at once.
+     They genuinely can be: keyboard focus sits on one chip while the pointer
+     rests on another, and both are `hot` by the same OR that lights them.
+     Registration order would hand it to whichever was declared first, which
+     is arbitrary and usually wrong — the visitor's LAST action is the one
+     they are waiting on an answer for. */
+  function hottest() {
+    let best = null;
+    for (const h of hotspots) {
+      if (!h.hot || !h.preview) continue;
+      if (!best || h.hotSeq > best.hotSeq) best = h;
+    }
+    return best;
+  }
+
+  /** The popover's content for a node, or null if this node doesn't get one.
+   *  `short` is the qualifier — see the eligibility note above. */
+  function previewFor(nodeId) {
+    const node = CONTENT.nodes[nodeId];
+    if (!node || !node.short) return null;
+    const d = node.spotlight || node.card || {};
+    return { title: d.title || node.label, short: node.short, link: d.link || null };
+  }
+
+  /* Anchored beside the chip, flipping rather than clipping.
+
+     Horizontal is the real decision and it is made first: right of the chip by
+     default, LEFT if the popover would cross the right edge, and only if
+     neither side fits does it drop BELOW (a viewport narrower than chip +
+     popover + margins). Vertical is then just centring plus a clamp.
+
+     Why that order matters for "never covers its own chip": the two side
+     placements are horizontally DISJOINT from the chip by construction, so the
+     vertical clamp — which is what handles a chip near the top or bottom edge,
+     and is what makes a top-edge chip open downwards — can never slide the
+     popover over the chip it belongs to. Only the below/above fallback shares
+     the chip's columns, and that one is placed past the chip's own edge. */
+  function placePop() {
+    if (!popNode) return;
+    const c = popNode.btn.getBoundingClientRect();
+    const p = pop.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+
+    let x = c.right + POP_GAP;
+    let side = 'right';
+    if (x + p.width > vw - POP_MARGIN) {
+      x = c.left - POP_GAP - p.width;
+      side = 'left';
+      if (x < POP_MARGIN) side = 'below';
+    }
+
+    let y;
+    if (side === 'below') {
+      x = clamp(c.left, POP_MARGIN, Math.max(POP_MARGIN, vw - POP_MARGIN - p.width));
+      y = c.bottom + POP_GAP;
+      // no room under it either — go above, still clear of the chip
+      if (y + p.height > vh - POP_MARGIN) y = c.top - POP_GAP - p.height;
+    } else {
+      y = c.top + c.height / 2 - p.height / 2;
+      y = clamp(y, POP_MARGIN, Math.max(POP_MARGIN, vh - POP_MARGIN - p.height));
+    }
+
+    pop.dataset.side = side;
+    pop.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+  }
+
+  /** Point the popover at a hotspot and show it. */
+  function showPop(h) {
+    const d = h.preview;
+    if (!d) return;
+    if (popNode !== h) {
+      popTitle.textContent = d.title;
+      popShort.textContent = d.short;
+      if (d.link) {
+        popLink.textContent = d.link.label;
+        popLink.href = d.link.href || '#';
+        popLink.hidden = false;
+      } else {
+        popLink.hidden = true;
+      }
+      if (popNode) popNode.btn.removeAttribute('aria-describedby');
+      popNode = h;
+      // DOM order IS the tab order: sitting immediately after its chip means a
+      // pinned popover's link is simply the next Tab stop. The element is
+      // absolutely positioned, so moving it costs no layout.
+      h.btn.after(pop);
+    }
+    h.btn.setAttribute('aria-describedby', popShort.id);
+    pop.classList.add('open');
+    // a transient popover's link is reachable by pointer but stays out of the
+    // tab order — Tab belongs to the chips until the visitor commits
+    popLink.tabIndex = popPinned ? 0 : -1;
+    placePop();
+  }
+
+  function hidePop() {
+    cancelPopHide();
+    pop.classList.remove('open');
+    popLink.tabIndex = -1;
+    if (popNode) popNode.btn.removeAttribute('aria-describedby');
+    popNode = null;
+    popHover = false;
+  }
+
+  /** Which hotspot the popover SHOULD be showing, or null for none.
+   *  One function so the deferred hide below re-asks exactly the question
+   *  syncPop asked — an earlier version re-tested only `hottest()` there and
+   *  silently ignored `popDismissed`, which made Escape a no-op whenever focus
+   *  stayed on the chip (which is always, for a non-modal disclosure). */
+  function popTarget() {
+    if (popPinned && popNode) return popNode;
+    const hot = hottest();
+    if (hot && popDismissed !== hot.id) return hot;
+    return null;
+  }
+
+  /** The single place that decides what the popover shows. Pinned wins;
+   *  otherwise the hot chip; otherwise a pointer resting on the popover itself
+   *  holds it open, so a mouse can travel from the chip to the link. */
+  function syncPop() {
+    cancelPopHide();
+    const want = popTarget();
+    if (want) { showPop(want); return; }
+    if (popHover && popNode) return;           // pointer is in the popover
+    // Not an immediate hide — see POP_HIDE_MS. The decision is re-asked when
+    // the timer fires, so a pointer that has since landed on the popover (or
+    // on another chip) keeps it.
+    if (pop.classList.contains('open')) {
+      popHideTimer = setTimeout(() => {
+        popHideTimer = null;
+        if (!popTarget() && !popHover) hidePop();
+      }, POP_HIDE_MS);
+    } else hidePop();
+  }
+
+  pop.addEventListener('pointerenter', (e) => {
+    if (e.pointerType === 'touch') return;
+    popHover = true;
+  });
+  pop.addEventListener('pointerleave', (e) => {
+    if (e.pointerType === 'touch') return;
+    popHover = false;
+    syncPop();
+  });
 
   /* ---- the touch model (PL-1.2 / handoff) ----------------------------------
      "On touch, first tap focuses a node and reveals the desktop hover state;
@@ -256,8 +520,14 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   // canvas, whose tap handling (organism.js, journey input policy) is unaffected (this listener
   // observes, never cancels).
   document.addEventListener('pointerdown', (e) => {
+    const outside = !(e.target instanceof Node) || !hotHost.contains(e.target);
+    if (!outside) return;
+    // A pinned popover is non-modal, so pressing anywhere else dismisses it —
+    // for EVERY pointer type, not just touch (a mouse has no other way out
+    // besides Escape). Routed through onClose() so journey.js unwinds the
+    // route and the history entry with it.
+    if (popPinned) onClose();
     if (e.pointerType !== 'touch' || !armed) return;
-    if (e.target instanceof Node && hotHost.contains(e.target)) return;
     clearArmed();
     if (document.activeElement && hotHost.contains(document.activeElement)) {
       document.activeElement.blur();
@@ -312,7 +582,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     btn.type = 'button';
     btn.dataset.node = id;
     btn.dataset.chapter = chapter;
-    btn.setAttribute('aria-haspopup', 'dialog');
+    const preview = previewFor(id);
+    // A node that discloses a popover does NOT open a dialog, and saying so
+    // would be a lie to AT. `aria-expanded` (set just below) is the whole
+    // contract for a non-modal disclosure. Contributors still open a real modal
+    // card, so they keep the promise.
+    if (!preview) btn.setAttribute('aria-haspopup', 'dialog');
     // a11y debt #5: the hotspot is the disclosure control for its card, so it
     // must say whether that card is currently showing. Set here so the state
     // exists from the first render, not only after the first open.
@@ -326,6 +601,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       hover: false, focused: false, armed: false, hot: false,
       pointer: null,      // pointerType of the gesture in flight
       label, labelEl,
+      preview,            // popover content, or null — see the POPOVER block
+      hotSeq: 0,
       labelOnHover: false,
       // a registration that states the flag outright is already resolved; one
       // that says nothing asks its chapter, once, on the next frame.
@@ -340,6 +617,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       h.hot = on;
       btn.classList.toggle('hot', on);
       if (h.onHot) h.onHot(on);
+      if (on) h.hotSeq = ++hotSeq;      // newest hot chip wins — see hottest()
+      // Leaving the chip re-arms a popover Escape dismissed, so the next hover
+      // works again — the dismissal is of that one reveal, not of the node.
+      if (!on && popDismissed === h.id) popDismissed = null;
+      // The popover keys off the SAME `hot` state that lights the chip, which
+      // is what buys hover / keyboard-focus / touch-armed parity for free.
+      syncPop();
     };
 
     btn.addEventListener('pointerdown', (e) => { h.pointer = e.pointerType || 'mouse'; });
@@ -537,7 +821,40 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     }
   }
 
+  /** Commit the popover for `h`: it stays until Escape, Back, a scroll intent,
+   *  another node, or a press outside. journey.js drives this through
+   *  openCard() below, so the route, the single history entry and the
+   *  scroll-intent close all behave exactly as they do for the card. */
+  function pinPop(h, trigger) {
+    if (cardIsOpen) closeCard();          // one vessel at a time
+    const retarget = popPinned && popNode !== h;
+    popPinned = true;
+    popDismissed = null;
+    showPop(h);
+    // an armed chip has been acted on — the second tap was the commit
+    clearArmed();
+    if (selectedNode && selectedNode !== h.id) notifySelect(selectedNode, false);
+    selectedNode = h.id;
+    notifySelect(h.id, true);
+    syncExpanded();
+    returnFocus = trigger || returnFocus;
+    // Focus STAYS on the chip. It is the disclosure control, it is still on
+    // screen, and the popover sits next to it in the DOM — so Tab reaches the
+    // link without a focus move to unwind on close. This is the non-modal
+    // counterpart of the card's focus trap, not an omission of one.
+    if (trigger) trigger.focus({ preventScroll: true });
+    else announce(`${h.preview.title}. ${h.preview.short}`);
+    if (retarget) announce(`${h.preview.title}. ${h.preview.short}`);
+    return true;
+  }
+
   function openCard(nodeId, trigger) {
+    // Nodes that carry a popover are disclosed BESIDE their chip, never in the
+    // card — see the POPOVER block above for why the card is not also offered.
+    const ph = hotspots.find(x => x.id === nodeId && x.preview);
+    if (ph) return pinPop(ph, trigger);
+    // anything still using the card (contributor profiles) takes the frame back
+    if (popPinned) unpinPop({ restoreFocus: false });
     const node = CONTENT.nodes[nodeId]
       || CONTENT.contributors.find(c => c.id === nodeId);
     if (!node) return false;
@@ -619,7 +936,28 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     card.classList.remove('sheet', 'dragging');
   }
 
+  /** Release the pinned popover. The visual may live on as a transient reveal
+   *  if the pointer or focus is still on the chip — closing the DISCLOSURE and
+   *  hiding the box are different statements, and syncPop() settles which. */
+  function unpinPop({ restoreFocus = true } = {}) {
+    if (!popPinned) return;
+    popPinned = false;
+    popLink.tabIndex = -1;
+    if (selectedNode) { notifySelect(selectedNode, false); selectedNode = null; }
+    syncExpanded();
+    // A card opening right behind this one is about to take focus itself, so
+    // handing it back to the chip first would be a visible flicker to nowhere.
+    if (restoreFocus) {
+      if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
+      returnFocus = null;
+    }
+    syncPop();
+  }
+
   function closeCard() {
+    // journey.js closes "the detail" without caring which vessel it was; this
+    // is the popover's half of that one call.
+    unpinPop();
     if (!cardIsOpen) return;
     cardIsOpen = false;
     card.classList.remove('open');
@@ -639,7 +977,29 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   }
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && cardIsOpen) { e.preventDefault(); onClose(); }
+    if (e.key !== 'Escape') return;
+    if (cardIsOpen) { e.preventDefault(); onClose(); return; }
+    // A PINNED popover unwinds through journey.js like the card does, so Back
+    // and the route stay consistent. Escape must also suppress the TRANSIENT
+    // reveal on the way out: focus is still on the chip (that is where a
+    // non-modal disclosure leaves it), so without this the popover would
+    // unpin and immediately re-appear as a hover/focus reveal — an Escape
+    // that visibly does nothing. Leaving the chip re-arms it; see refresh().
+    if (popPinned) {
+      e.preventDefault();
+      if (popNode) popDismissed = popNode.id;
+      onClose();
+      return;
+    }
+    // A TRANSIENT popover is nobody's route state — Escape just takes the
+    // reveal away, and remembers not to re-show it while the chip stays hot
+    // (otherwise hover/focus would put it straight back and Escape would look
+    // broken). Leaving the chip re-arms it; see refresh().
+    if (popNode && pop.classList.contains('open')) {
+      e.preventDefault();
+      popDismissed = popNode.id;
+      hidePop();
+    }
   });
 
   /* ---------------- post-epilogue footer (PS-5.1) ---------------- */
@@ -679,9 +1039,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       if (on) navLinks[id].setAttribute('aria-current', 'true');
       else navLinks[id].removeAttribute('aria-current');
     }
+    // A pinned popover makes journey.js report a detail open — it is route
+    // state either way — but it is NOT modal: it sits beside a chip that must
+    // stay on screen under it, and it never claims the frame. So everything
+    // below that means "a dialog owns the page" asks for the MODAL detail, not
+    // merely an open one.
     const detailNow = isDetailOpen();
+    const modalDetail = detailNow && !popPinned;
     // invisible nav, or a modal dialog claiming the frame: out of the tab order
-    const navLive = show && !detailNow;
+    const navLive = show && !modalDetail;
     if (navWrap.inert === navLive) navWrap.inert = !navLive;
     // hero callouts follow journey.js's own fade of them (see construction)
     if (calloutsEl) {
@@ -726,7 +1092,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     // eased copy state (never the raw band), arrive AFTER the copy has
     // re-anchored, one per HOTSPOT_STAGGER_MS in narrative order (gap g),
     // and never show while a detail is open (the frame belongs to the detail)
-    const detail = detailNow;
+    const detail = modalDetail;
     const now = performance.now();
     for (const h of hotspots) {
       const gate = eased[h.chapter] || 0;
@@ -782,6 +1148,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       else h.btn.setAttribute('aria-hidden', 'true');
     }
 
+    // The popover is anchored to a chip that is itself world-tracked, so it has
+    // to be re-placed every frame or it would lag the organism's sway. If its
+    // chip has left the frame (travel, suppression behind copy, a modal card),
+    // the popover goes with it — an annotation with nothing to annotate.
+    if (popNode) {
+      if (!popNode.btn.classList.contains('vis')) hidePop();
+      else placePop();
+    }
+
     // the footer belongs to the end-hold; the cue rides the epilogue copy
     footer.update(p, eased.final || 0);
   }
@@ -802,7 +1177,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     get cardIsSheet() { return card.classList.contains('sheet'); },
     /** QA: the touch-armed (first-tap) hotspot id, or null. */
     get armedNode() { return armed ? armed.id : null; },
+    /** QA: the node whose popover is showing, or null. */
+    get popNode() { return popNode && pop.classList.contains('open') ? popNode.id : null; },
+    /** QA: is that popover pinned (committed) rather than a hover reveal? */
+    get popPinned() { return popPinned; },
     card,
+    pop,
     hotspots,
   };
 }

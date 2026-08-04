@@ -62,19 +62,42 @@ export const CONTENT = {
       // The locked copy table in 13 only carries the claims line; the heading
       // itself is locked in the chapter doc, so it is sourced from there.
       heading: 'Owned by the ecosystem',
-      // Owned has no single prose "sub" — copy position is top-centre and the
-      // three ownership claims (locked verbatim, 13-content-ops.md "Owned claims"
-      // row) carry the message instead. Do not paraphrase these.
-      claims: [
-        { id: 'pod-shared', text: '100% shared', tier: 'primary' },
-        { id: 'pod-monthly', text: 'Granted 1% per month', tier: 'secondary' },
-        {
-          id: 'pod-split',
-          text: 'Split between different groups',
-          detail: 'artists, core engineers, and knowledge creators',
-          tier: 'secondary',
-        },
-      ],
+      // LOCK OVERRIDE — Hannah, 2026-08-05, direction: "in Owned by the
+      // ecosystem, turn this stuff below the header into prose subtext like the
+      // other sections."
+      //
+      // PROVENANCE, kept deliberately rather than deleted. Until this date this
+      // chapter had no prose `sub`: the three ownership claims were a LIST
+      // (`claims: [...]`, rendered by journey/ui.js as `.j-claims`) and were
+      // locked verbatim by 13-content-ops.md's "Owned claims" row, annotated
+      // here "Do not paraphrase these." Hannah owns this copy and has overridden
+      // that lock knowingly. The three claim strings were:
+      //
+      //     ' 100% shared'                    (primary)
+      //     'Granted 1% per month'            (secondary)
+      //     'Split between different groups'  (secondary)
+      //       detail: 'artists, core engineers, and knowledge creators'
+      //
+      // The MEANING of all three is preserved intact in the single prose line
+      // below — 100% shared, granted 1% per month, split between those exact
+      // three groups. The one word added beyond the locked strings is
+      // "ownership", which names what the 1% per month actually is; the old
+      // list carried that by adjacency to the heading, a run-on sentence does
+      // not. Nothing was dropped or softened.
+      //
+      // The `claims` array itself is GONE, not merely unrendered, so there is
+      // one home for this copy and not two. Owned was the ONLY chapter that
+      // ever carried one, so journey/ui.js's `.j-claims` renderer and
+      // journey/site.css's `.j-claim*` rules went with it rather than staying
+      // as an unreachable branch and dead CSS.
+      //
+      // The claims list was not only copy: each `<li>` fired an Owned colony
+      // pulse on hover (ui.js -> chapters/owned/index.js `trigger()`). That
+      // behaviour is re-hosted on this prose line — see CHAPTER_SUB_PULSE in
+      // journey/ui.js. The whole sentence is now the claim, so it fires the
+      // whole-colony wave ('claimPrimary'); the two localized secondary pulses
+      // retired with the list they belonged to.
+      sub: 'Banodoco is 100% shared with the people who build it — ownership granted 1% per month, split between artists, core engineers, and knowledge creators.',
     },
     final: {
       // Per 10-chapter-final.md: "Not a sixth peer chapter — no nav item, no
@@ -84,7 +107,26 @@ export const CONTENT = {
       // source for the epilogue's heading/sub/document-title text.
       nav: null,
       // Locked verbatim — 13-content-ops.md locked copy table, "Final H" / Final sub".
-      heading: 'We’re working to accelerate the second renaissance.',
+      // The SUB below is still that locked string. The HEADING is not:
+      //
+      // LOCK OVERRIDE — Hannah, 2026-08-05, direction: change the Final
+      // section's h1 to exactly "The open source ecosystem can accelerate a 2nd
+      // Renaissance", kept to two lines like the description.
+      //
+      // PROVENANCE, kept deliberately rather than deleted. The previous heading,
+      // locked verbatim by 13-content-ops.md's "Final H" row, was:
+      //
+      //     'We’re working to accelerate the second renaissance.'
+      //
+      // Hannah owns this copy and overrode that lock knowingly. Set VERBATIM as
+      // she wrote it — note "open source" unhyphenated (the Mission heading uses
+      // "open‑source"), "2nd" as a numeral, and "Renaissance" capitalised. Those
+      // are her spellings, not typos to normalise; leave them.
+      //
+      // Two-line wrap is a LAYOUT promise, not a copy one, and is held in
+      // journey/site.css by the `.pos-bottomleft` measure — see the FINAL
+      // HEADING MEASURE block there before editing either side.
+      heading: 'The open source ecosystem can accelerate a 2nd Renaissance',
       sub: 'Banodoco exists to help new tools, communities, and ideas spread — so one thriving ecosystem becomes many.',
     },
   },
