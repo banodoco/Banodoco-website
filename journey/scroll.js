@@ -23,6 +23,7 @@ import { NOSNAP } from '../flags.js';
 import {
   SNAP_ENGAGE_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
   COMMIT_THRESHOLD, COMMIT_GLIDE_RATE, COMMIT_BLEND_K,
+  COMMIT_HANDOFF_MS, COMMIT_HANDOFF_MIN,
   WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K,
 } from './constants.js';
 
@@ -167,12 +168,18 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
 
   // Perceived-rate estimate + commit-glide state (velocity-continuous handoff).
   // pVel is an EMA of the raw surface's rate d(pAt(v))/dt, deliberately run at
-  // SMOOTH_K — the SAME constant journeyState uses to smooth p — so while input
-  // is idle pVel decays in lockstep with the on-screen rate. At commit engage
-  // it is therefore a faithful proxy for the motion the visitor is watching,
-  // and seeding the glide with it makes the takeover velocity-continuous.
+  // SMOOTH_K — the SAME constant journeyState uses to smooth p — so pVel tracks
+  // the on-screen rate rather than the raw delta stream, and is a faithful proxy
+  // for the motion the visitor is watching.
+  //
+  // It decays in lockstep with that on-screen rate, which is the catch: hold the
+  // handoff long enough and BOTH are dead, and seeding from pVel then continues
+  // a motion that has already stopped. That is why WHEN the glide engages is
+  // load-bearing (see handoffReady) and why pVelHold exists — the two together,
+  // not the seed alone, are what make the takeover continuous.
   let pVel = 0;         // p/s, EMA of the raw surface rate (capped at MAX_SCRUB_RATE)
   let pPrev = null;     // pAt(v) last frame, for the EMA
+  let pVelHold = 0;     // p/s, pVel AT RELEASE — the rate the gesture handed over
   let glide = null;     // active commit glide: { target, lo, hi } latched at engage
   let glideVel = 0;     // p/s, the glide's own (signed) rate
 
@@ -281,6 +288,12 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     if (dpx) lastDir = dpx > 0 ? 1 : -1;   // any new input cancels a commit glide
     glide = null;                          // instantly (via lastInput, below) and
     lastInput = performance.now();         // re-aims the next idle resolution
+    // The rate the visitor is handing over, latched on EVERY delta so the last
+    // one wins: this is what a with-the-motion handoff continues from, instead
+    // of whatever is left of pVel once the idle window has run its course.
+    // A lone delta from standstill latches ~0 (the previous frame's rate) and
+    // therefore offers no early handoff — a single wheel notch is not a gesture.
+    pVelHold = pVel;
     if (onDelta) onDelta(pAt(v));
   }
 
@@ -365,9 +378,10 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
      stuck in no man's land. That shouldn't be possible."
 
      While input is live the model stays fully scrubbed and reversible —
-     nothing here runs until SNAP_ENGAGE_MS of idle. On idle, the position
-     ALWAYS resolves to an anchor: the pair of rests bracketing p is found,
-     and the direction rule picks one —
+     nothing here runs until the input has stopped (SNAP_ENGAGE_MS of idle, or
+     COMMIT_HANDOFF_MS for a resolution that is already going the visitor's way;
+     see handoffReady). Once it has, the position ALWAYS resolves to an anchor:
+     the pair of rests bracketing p is found, and the direction rule picks one —
 
        travelling forward:  committed to the next rest once >= COMMIT_THRESHOLD
                             of the inter-rest span is behind you, else back;
@@ -383,14 +397,27 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
 
      Profile — VELOCITY-CONTINUOUS (Hannah's ride note: the commit "should
      continue smoothly from the motion of the previous one"). The glide does
-     not ramp from standstill: at engage it SEEDS its rate with pVel — the
-     perceived-rate estimate, which decayed through the idle window at the
-     same SMOOTH_K the on-screen motion did — and eases that rate toward the
-     signed COMMIT_GLIDE_RATE cruise (exponential blend, COMMIT_BLEND_K). The
-     visitor's gesture is carried to completion; there is never a
-     stop -> decide -> restart. When the resolution runs AGAINST the residual
-     motion (released just short of the threshold), the same blend decelerates
-     smoothly through zero and returns — a continuous reversal, never a step.
+     not ramp from standstill: at engage it SEEDS its rate with the perceived
+     rate and eases that toward the signed COMMIT_GLIDE_RATE cruise (exponential
+     blend, COMMIT_BLEND_K).
+
+     Seeding alone was NOT enough, and the honest record of why is worth more
+     than the claim was: while the model waited out SNAP_ENGAGE_MS the surface
+     was frozen, so the on-screen rate decayed at SMOOTH_K and pVel decayed with
+     it. The handoff was velocity-continuous with a motion that had already
+     nearly stopped — measured on an ordinary 1.2 s gesture, 0.093 -> 0.042 p/s
+     across the window, then ~650 ms of blend to climb back to the 0.10 cruise.
+     Continuous on paper, stop -> pause -> restart on screen. So the WHEN moved:
+     when the resolution already runs with the residual motion, the glide takes
+     over COMMIT_HANDOFF_MS after the last delta and inherits the rate at
+     RELEASE (pVelHold) — one motion, gesture into glide, speeding up or slowing
+     down to cruise and carrying straight through to the rest.
+
+     When the resolution runs AGAINST the residual motion (released just short
+     of the threshold), there is no motion to continue — the move has to turn
+     around — so that keeps the full idle window and the live pVel seed, and the
+     same blend decelerates smoothly through zero and returns: a continuous
+     reversal, never a step.
      The landing is unchanged: the toward-target step is capped by the
      critically-damped SNAP_K pull (every step <= remaining distance), so no
      overshoot and no bounce, ever; SNAP_DEAD_P settles exactly. The target
@@ -431,6 +458,43 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     return pickTarget(p, lo, hi);
   }
 
+  /** May the commit take over NOW, before the full SNAP_ENGAGE_MS idle window?
+   *
+   *  Only when the resolution is already going the way the visitor is. Then
+   *  waiting is pure dead time: the surface is frozen, the on-screen rate decays
+   *  at SMOOTH_K, and the glide restarts from the remains — the stop/pause/
+   *  restart. Handing over a couple of frames after the last delta instead makes
+   *  it ONE motion, gesture into glide.
+   *
+   *  When the resolution OPPOSES the residual motion (released short of
+   *  COMMIT_THRESHOLD, or a discrete notch early in a span) there is nothing to
+   *  continue — the move has to turn around — so those keep the shipped 160 ms
+   *  window and their shipped feel. Same for a standing start (|pVelHold| under
+   *  COMMIT_HANDOFF_MIN) and for ?nosnap=1, which never commits at all.
+   *
+   *  WHICH rest is picked is unaffected: with no input and no glide the surface
+   *  is frozen, so p — and therefore bracketAt/pickTarget — is identical at both
+   *  engage points. This moves the handover in time, never in space. */
+  function handoffReady(p, idle) {
+    if (NOSNAP) return false;
+    if (idle < COMMIT_HANDOFF_MS) return false;
+    if (glide) return true;              // handed over already: never re-gate it
+    // Something to continue: a rate, and a rate the VISITOR put there. The
+    // direction test is lastDir, not sign(pVelHold), because pVelHold is latched
+    // off the perceived rate and the perceived rate may belong to the model's
+    // own previous glide rather than to a gesture. Measured: under repeated
+    // wheel notches early in a span, each notch latched the residual of the
+    // BACKWARD glide between notches, which "agreed" with the backward
+    // resolution and bought it an extra 80 ms per notch — per-notch progress
+    // more than halved (0.0011 -> 0.00047 p) and the last notches went
+    // backwards. lastDir is the visitor's own last delta and cannot be
+    // impersonated by the glide.
+    if (Math.abs(pVelHold) < COMMIT_HANDOFF_MIN) return false;
+    if (!lastDir) return false;
+    const [lo, hi] = bracketAt(p);
+    return (pickTarget(p, lo, hi) - p) * lastDir > 0;
+  }
+
   function update(dt) {
     if (!enabled || total <= 0) return null;
     const p = pAt(v);
@@ -446,7 +510,8 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
       pVel += (capped - pVel) * Math.min(1, dt * SMOOTH_K);
       pPrev = p;
     } else if (pPrev === null) pPrev = p;
-    if (performance.now() - lastInput < SNAP_ENGAGE_MS) { glide = null; return p; }
+    const idle = performance.now() - lastInput;
+    if (idle < SNAP_ENGAGE_MS && !handoffReady(p, idle)) { glide = null; return p; }
 
     if (NOSNAP) {
       // Legacy W3-A soft snap: band-limited magnetism only, parks anywhere
@@ -473,7 +538,13 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     if (!glide) {
       const [lo, hi] = bracketAt(p);
       glide = { target: pickTarget(p, lo, hi), lo, hi };
-      glideVel = pVel;
+      // Seed the rate. On an EARLY (with-the-motion) handoff, inherit the rate
+      // at RELEASE: the decay since then is the model's own decision latency,
+      // not anything the visitor did, and continuing from it is what makes the
+      // takeover invisible. On the ordinary idle-window path — a reversal, a
+      // standing start — inherit the LIVE estimate exactly as shipped: there the
+      // decay IS the motion the visitor is watching.
+      glideVel = idle < SNAP_ENGAGE_MS ? pVelHold : pVel;
     }
     const { target, lo, hi } = glide;
     const dP = target - p;
@@ -521,7 +592,7 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
         is not a scroll and carries no motion to inherit, so idle resolution
         falls back to the nearest rest from standstill (rests resolve to
         themselves — deep links / ?pose= are not disturbed). */
-    setProgress(p) { v = scrollFor(p); lastDir = 0; glide = null; glideVel = 0; pVel = 0; pPrev = null; },
+    setProgress(p) { v = scrollFor(p); lastDir = 0; glide = null; glideVel = 0; pVel = 0; pVelHold = 0; pPrev = null; },
     /** Milliseconds since the last manual input (flight cancellation, QA). */
     get sinceInput() { return performance.now() - lastInput; },
     /** QA: the rest idle would resolve to from here (null under ?nosnap=1). */
@@ -530,6 +601,9 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     get lastDir() { return lastDir; },
     /** QA: perceived-rate estimate (p/s) — what a commit glide would inherit. */
     get pVel() { return pVel; },
+    /** QA: the rate (p/s) latched at the last manual delta — what an early,
+        with-the-motion handoff continues from. */
+    get pVelHold() { return pVelHold; },
     /** QA: is a commit glide currently latched and running? */
     get gliding() { return !!glide; },
     /** QA: the running glide's own signed rate (p/s), 0 when not gliding. */
