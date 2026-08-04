@@ -39,6 +39,50 @@ export const COMMIT_THRESHOLD  = 0.35; // fraction of the inter-rest p-span,
                                        // idle commits onward instead of back.
                                        // 0.35 < 0.5 is the deliberate forward
                                        // bias: "push forward most of the time".
+// FLICK CARRY (the stop Hannah kept feeling, measured 2026-08-05).
+//
+// COMMIT_THRESHOLD alone is a POSITION rule: it asks how far into the span you
+// got and ignores how fast you were going when you let go. A forward gesture
+// released short of it is therefore sent BACKWARD — and a backward resolution
+// after forward motion cannot be velocity-continuous by construction, because
+// the on-screen rate has to pass through zero to change sign. Measured on the
+// Inspire rest at 1280x800, a weak forward flick: screen motion 185 px/s ->
+// 6 px/s (a dead stop lasting ~100 ms) -> -101 px/s the other way. That is
+// exactly "slowing and stopping first", and no amount of handoff tuning can
+// remove it, because every handoff improvement is gated on the resolution
+// agreeing with the direction of travel and this resolution does not.
+//
+// So velocity joins position in deciding WHERE, not just how fast: a gesture
+// released above this rate resolves the way it was travelling, whatever
+// fraction of the span it reached. Below it, the position rule is unchanged.
+// This is the standard flick-to-advance rule (iOS paging, ViewPager, CSS
+// scroll-snap with momentum), stated once rather than tuned in.
+//
+// The number is a MEASURED separation, not a taste. Release rates at 1280x800:
+//
+//   1 wheel notch                   0.000     |  very weak flick   0.041
+//   2 notches @120 ms               0.013     |  weak flick        0.084
+//   4-8 notches @250-400 ms      <= 0.020     |  mid flick         0.151
+//   1 s slow deliberate drag        0.020     |  moderate flick    0.231
+//
+// 0.04 sits in the gap with ~2x margin either side: no notch cadence and no
+// slow deliberate drag can reach it (so a notch-by-notch reader is never flung
+// and a slow drag that stops still resolves by position), and no real flick
+// falls under it.
+export const COMMIT_CARRY_RATE = 0.04; // p/s at release, SIGNED against the
+                                       // visitor's own last delta direction —
+                                       // see scroll.js pickTarget. The sign
+                                       // guard matters: between notches the
+                                       // model's own backward glide leaves a
+                                       // residual in the perceived rate, and it
+                                       // is large (measured -0.064 p/s on the
+                                       // first notch at p = 0.30). A magnitude
+                                       // test would read that as a forward
+                                       // flick and advance a chapter on one
+                                       // notch. Requiring pVelHold * lastDir to
+                                       // clear the bar means only motion the
+                                       // VISITOR put there, going the way the
+                                       // visitor last went, can carry.
 export const COMMIT_GLIDE_RATE = 0.10; // p/s NOMINAL cruise — ~2x a calm read
                                        // scroll, ~4.5x under MAX_SCRUB_RATE, so
                                        // the glide is assured but never a fling.

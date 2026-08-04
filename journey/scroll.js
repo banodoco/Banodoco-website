@@ -22,7 +22,7 @@ import { CHAPTERS, REST_STOPS, TERMINAL_P } from './route.js';
 import { NOSNAP } from '../flags.js';
 import {
   SNAP_ENGAGE_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
-  COMMIT_THRESHOLD, COMMIT_GLIDE_RATE, COMMIT_BLEND_K,
+  COMMIT_THRESHOLD, COMMIT_CARRY_RATE, COMMIT_GLIDE_RATE, COMMIT_BLEND_K,
   COMMIT_HANDOFF_MS, COMMIT_HANDOFF_MIN, COMMIT_HANDOFF_FLOOR_MS,
   COMMIT_CRUISE_MAX,
   WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K,
@@ -180,7 +180,11 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
   // not the seed alone, are what make the takeover continuous.
   let pVel = 0;         // p/s, EMA of the raw surface rate (capped at MAX_SCRUB_RATE)
   let pPrev = null;     // pAt(v) last frame, for the EMA
-  let pVelHold = 0;     // p/s, pVel AT RELEASE — the rate the gesture handed over
+  let pVelHold = 0;     // p/s, pVel AT RELEASE — the rate the gesture handed
+                        // over. Latched on every delta, SPENT at engage: it
+                        // decides both how fast the commit starts and, through
+                        // COMMIT_CARRY_RATE, which rest it goes to, so it has
+                        // to be consumed or one flick buys every transition.
   let pushGap = 0;      // ms, EMA of this gesture's inter-delta spacing (0 = none)
   let glide = null;     // active commit glide: { target, lo, hi } latched at engage
   let glideVel = 0;     // p/s, the glide's own (signed) rate
@@ -395,12 +399,16 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
      the pair of rests bracketing p is found, and the direction rule picks one —
 
        travelling forward:  committed to the next rest once >= COMMIT_THRESHOLD
-                            of the inter-rest span is behind you, else back;
+                            of the inter-rest span is behind you OR the gesture
+                            was still travelling forward when you let go
+                            (>= COMMIT_CARRY_RATE); else back;
        travelling backward: mirrored (the rest being LEFT is the upper one);
        no direction yet (programmatic placement): nearest rest.
 
      COMMIT_THRESHOLD 0.35 < 0.5 is the forward bias — in your direction of
-     travel you commit early, against it you have to earn the return.
+     travel you commit early, against it you have to earn the return. The
+     COMMIT_CARRY_RATE term is what stops a real gesture ever being answered
+     with a reversal: see pickTarget.
 
      The glide is a scroll, not an animation: it moves v, and journey.js
      smooths/limits it exactly as it does a wheel delta, so copy release,
@@ -439,11 +447,22 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
      before the rest instead of a fixed distance. Nothing between the gesture and
      the brake takes speed away.
 
-     When the resolution runs AGAINST the residual motion (released just short
-     of the threshold), there is no motion to continue — the move has to turn
-     around — so that keeps the full idle window, the live pVel seed AND the flat
-     nominal cruise: the same blend decelerates smoothly through zero and
-     returns. A reversal is the one place where slowing is the correct motion.
+     Both of those repairs were gated on the resolution ALREADY agreeing with
+     the direction of travel — and the case Hannah kept feeling was the one
+     where it does not. The third and last piece was therefore not in the glide
+     at all but in the DECISION: a forward gesture released short of
+     COMMIT_THRESHOLD was sent backward, and a backward resolution after forward
+     motion has to cross zero on screen, so it is a stop by construction. That
+     is what COMMIT_CARRY_RATE removes (pickTarget) — after it, a resolution
+     that opposes the visitor's own motion only happens when there was barely
+     any motion to oppose.
+
+     When the resolution does run AGAINST the residual motion (a notch, a slow
+     drag that petered out), there is no motion to continue — the move has to
+     turn around — so that keeps the full idle window, the live pVel seed AND
+     the flat nominal cruise: the same blend decelerates smoothly through zero
+     and returns. A reversal is the one place where slowing is the correct
+     motion, and it is now reached only from a near standstill.
      The landing is unchanged: the toward-target step is capped by the
      critically-damped SNAP_K pull (every step <= remaining distance), so no
      overshoot and no bounce, ever; SNAP_DEAD_P settles exactly. The target
@@ -470,12 +489,43 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     return [lo, hi];
   }
 
-  /** The rest of [lo, hi] this position must resolve to, per the direction rule. */
+  /** Did the visitor's own last gesture hand over enough speed to CARRY?
+   *
+   *  pVelHold is the perceived rate latched at the last manual delta; lastDir
+   *  is the sign of that delta. The product is the component of the released
+   *  motion that runs the way the visitor was going — and it is deliberately a
+   *  SIGNED test, not a magnitude one. Between discrete notches the model's own
+   *  backward glide is what pVelHold sees (measured -0.064 p/s on the first
+   *  notch at p = 0.30, against lastDir = +1); a magnitude test would read that
+   *  borrowed rate as a forward flick and advance a whole chapter on one notch.
+   *  Only motion the visitor put there, going the way the visitor last went,
+   *  can carry. */
+  function carrying() { return pVelHold * lastDir >= COMMIT_CARRY_RATE; }
+
+  /** The rest of [lo, hi] this position must resolve to, per the direction rule.
+   *
+   *  TWO ways to commit onward, and the second is the fix for the stop Hannah
+   *  kept feeling (constants.js COMMIT_CARRY_RATE):
+   *
+   *    POSITION — you got COMMIT_THRESHOLD of the span behind you;
+   *    VELOCITY — you were still travelling when you let go (flick-to-advance).
+   *
+   *  Position alone sends a weak-but-real forward flick BACKWARD, and a
+   *  backward resolution after forward motion can never be velocity-continuous:
+   *  the on-screen rate has to cross zero to change sign, so the visitor sees
+   *  stop-then-restart no matter how well the handoff is tuned. Adding the
+   *  velocity term means a gesture that was going somewhere keeps going there,
+   *  and the glide's only job is to converge to the transition's cruise.
+   *
+   *  Below COMMIT_CARRY_RATE nothing changes: a notch-by-notch reader and a
+   *  slow deliberate drag that stops still resolve purely by position, so they
+   *  are never flung onward by a rate they did not ask for. */
   function pickTarget(p, lo, hi) {
     if (hi - lo < 1e-9) return lo;
     const f = (p - lo) / (hi - lo);          // fraction of the transition, in p
-    if (lastDir > 0) return f >= COMMIT_THRESHOLD ? hi : lo;
-    if (lastDir < 0) return (1 - f) >= COMMIT_THRESHOLD ? lo : hi;
+    const carry = carrying();
+    if (lastDir > 0) return (carry || f >= COMMIT_THRESHOLD) ? hi : lo;
+    if (lastDir < 0) return (carry || (1 - f) >= COMMIT_THRESHOLD) ? lo : hi;
     return f >= 0.5 ? hi : lo;               // placed, never scrolled: nearest
   }
 
@@ -531,7 +581,7 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
 
   function update(dt) {
     if (!enabled || total <= 0) return null;
-    const p = pAt(v);
+    let p = pAt(v);
     // Perceived-rate estimate, every frame (input live, idle, or gliding — a
     // glide interrupted by a nudge re-engages with its own motion inherited).
     // The instantaneous rate is capped at MAX_SCRUB_RATE because the on-screen
@@ -595,6 +645,57 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
         ? Math.min(Math.max(Math.abs(glideVel), COMMIT_GLIDE_RATE), COMMIT_CRUISE_MAX)
         : COMMIT_GLIDE_RATE;
       glide = { target: pickTarget(p, lo, hi), lo, hi, cruise };
+
+      // PAY BACK THE DEAD TIME. The surface is FROZEN between the last delta
+      // and this engage — no input, no glide — and what the visitor watches is
+      // not v but journeyState's smoothed p, which lags v through a first-order
+      // filter at SMOOTH_K. A frozen v therefore does not hold the picture
+      // still: the on-screen rate decays as e^(-SMOOTH_K * dead), so even the
+      // shortened 32-80 ms handoff arrives with 20-40% of the motion already
+      // bled off, and the glide has to climb back through it. Measured before
+      // this line, on a moderate forward commit: 1234 -> 664 -> 831 px/s, a 46%
+      // sag and recovery in the middle of the move. Seeding the glide with the
+      // rate at release fixes the VELOCITY at handover but not the GAP that
+      // velocity is carried in, and the eye only ever sees the gap.
+      //
+      // So the surface repays exactly the distance it owes: the rate it was
+      // released at, times the time it stood still. That restores v - p to the
+      // separation the released rate implies, and the smoothed motion comes out
+      // of the handoff at the speed it went in at, with no dead time to feel.
+      //
+      // It cannot change WHERE this resolves: the target and the bracketing
+      // span are latched on the line above, from the frozen p, before a single
+      // px is repaid. It only ever moves TOWARD that target (the sign test),
+      // and never more than halfway to it, so it can neither overshoot nor
+      // turn a long transition into a jump.
+      if (withMotion) {
+        const room = glide.target - p;
+        // withMotion already bounds idle below SNAP_ENGAGE_MS; the clamp keeps
+        // that bound local, so a later edit to withMotion cannot silently turn
+        // this into an unbounded jump.
+        const owed = glideVel * (Math.min(idle, SNAP_ENGAGE_MS) / 1000);
+        if (owed * room > 0) {
+          p += Math.abs(owed) < Math.abs(room) * 0.5 ? owed : room * 0.5;
+          v = scrollFor(p);
+          // The repayment is a correction to the GAP, not a frame of travel:
+          // the smoothed p the visitor watches does not jump, so the perceived-
+          // rate EMA must not see it as one frame's worth of rate either.
+          pPrev = p;
+        }
+      }
+      // SPEND THE FLICK. A gesture buys exactly ONE transition. Without this
+      // the released rate stays latched, and the moment the glide settles on
+      // its rest the very next frame resolves again — finds the same hot
+      // pVelHold, carries again, and departs for the rest beyond. Measured
+      // while building this: a single weak backward flick from the Connect rest
+      // walked 0.49 -> 0.26 -> and straight on past 0.14, never settling. The
+      // position rule was self-stabilising at a rest (a rest is always its own
+      // resolution); a velocity rule is not, so the velocity has to be consumed
+      // where it is used. The glide's target and cruise are already latched
+      // above, so clearing here changes nothing about the move now running —
+      // only that it cannot buy a second one. The next transition needs a new
+      // gesture, which is what a flick means.
+      pVelHold = 0;
     }
     const { target, lo, hi } = glide;
     const dP = target - p;
@@ -652,7 +753,9 @@ export function createScrollModel({ onDelta = null, onIntent = null } = {}) {
     /** QA: perceived-rate estimate (p/s) — what a commit glide would inherit. */
     get pVel() { return pVel; },
     /** QA: the rate (p/s) latched at the last manual delta — what an early,
-        with-the-motion handoff continues from. */
+        with-the-motion handoff continues from, and what COMMIT_CARRY_RATE
+        tests (signed against lastDir) to decide whether the gesture carries
+        onward. Zero once a commit has spent it. */
     get pVelHold() { return pVelHold; },
     /** QA: is a commit glide currently latched and running? */
     get gliding() { return !!glide; },
