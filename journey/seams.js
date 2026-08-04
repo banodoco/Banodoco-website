@@ -34,7 +34,12 @@ const CONNECT_HOLD_LO = startOf('connect') + 0.02; // 0.40 — chamber armed thr
 // re-arm both happen behind genuine occlusion.
 const CONNECT_HOLD_HI = startOf('owned') + 0.105;  // 0.705
 const OWNED_HOLD_LO = startOf('owned') + 0.03;     // 0.63 — colony held through the Final rise
-const OWNED_HOLD_HI = endOf('final') - 0.03;       // 0.97
+// past-the-end (M5 ignition audit, D16): was endOf('final') − 0.03 = 0.97,
+// which retired the colony DURING the end-hold — its faint glow in the
+// cutaway wedge faded out in view at 0.97 and re-ignited there on the way
+// back. The colony does not cease to exist while the visitor reads the
+// footer; the hold now covers the whole tail (p never exceeds 1).
+const OWNED_HOLD_HI = endOf('final') + 0.01;       // 1.01 — never releases at the top
 const FINAL_MIN = startOf('final');                // 0.85 — rise/cutaway can only arm past here
 const FINAL_RELEASE = startOf('final') - 0.02;     // 0.83
 const FINAL_HOLD = startOf('final') - 0.005;       // 0.845

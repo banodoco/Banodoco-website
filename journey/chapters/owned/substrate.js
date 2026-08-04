@@ -39,6 +39,11 @@ export function makeFadePulseMat(baseColor, opts = {}) {
       uPulseWidth: { value: opts.pulseWidth ?? 0.12 },
       uTwinkle: { value: opts.twinkle ?? 0.35 },
       uFogDensity: { value: opts.fogDensity ?? 0.0 },
+      // M5 ignition audit (D16): optional draw-on gate. A strand is visible
+      // where aAlong < uGrow (0.15 feathered tip), so a batch can GROW from
+      // its aAlong=0 roots instead of fading in whole. Default 2.0 = fully
+      // grown = inert for every existing user of this material.
+      uGrow: { value: 2.0 },
     },
     transparent: true,
     depthWrite: false,
@@ -56,7 +61,7 @@ export function makeFadePulseMat(baseColor, opts = {}) {
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */`
-      uniform float uTime, uPulse, uPulseOn, uFade, uBase, uPulseWidth, uTwinkle, uFogDensity;
+      uniform float uTime, uPulse, uPulseOn, uFade, uBase, uPulseWidth, uTwinkle, uFogDensity, uGrow;
       uniform vec3 uColor, uPulseColor;
       varying float vAlong, vStrand, vFogDepth;
       void main() {
@@ -71,7 +76,15 @@ export function makeFadePulseMat(baseColor, opts = {}) {
         // blazing into a flat ribbon (the near field belongs to defocus,
         // not brightness — same philosophy as the portrait blur band)
         col *= smoothstep(1.1, 2.9, vFogDepth);
-        gl_FragColor = vec4(col * uFade, 1.0);
+        ${opts.growGate ? `
+        // draw-on growth gate (M5 ignition audit, D16): visible where
+        // aAlong < uGrow, 0.15 feathered tip — the strand GROWS from its
+        // aAlong=0 root instead of fading in whole. Injected only for
+        // materials that ask (the Owned growth-front fan); every other
+        // user of this material compiles the exact pre-audit shader.
+        float grw = 1.0 - smoothstep(uGrow - 0.15, uGrow, vAlong);
+        gl_FragColor = vec4(col * uFade * grw, 1.0);` : `
+        gl_FragColor = vec4(col * uFade, 1.0);`}
       }`,
   });
 }
