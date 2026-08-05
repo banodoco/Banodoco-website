@@ -136,8 +136,12 @@ export function boot(opts = {}) {
 
   let detailNode = null;      // currently open node id, or null
 
+  // The scroll model reports nothing per-EVENT any more. It used to push the
+  // raw surface position straight into journeyState on every wheel delta,
+  // which only worked because state.js smoothed it afterwards; now that the
+  // controller owns the displayed position, the per-frame read below is the
+  // one and only path from scroll to state.
   const scroll = createScrollModel({
-    onDelta: (p) => journey.setProgress(p),
     // GB-3.6: an open detail consumes the first scroll intent; travel resumes
     // once the frame is clear.
     onIntent: () => {
