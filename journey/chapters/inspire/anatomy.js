@@ -10,26 +10,68 @@
 // system, anatomy + intent in the chapter).
 
 // The three spore-exit sectors, in hero cap azimuth (pos = (cos a, y, sin a)).
-// RESTAGED per D16 (Hannah, 2026-08-03, after six rejected fixes at the old
-// rear staging): the exits are a TIGHT CLUSTER at the hero's ONE visible
-// stream — the shed spilling from under the back-RIGHT rim and carried +x by
-// the breeze (its visible plume centres on world (3.24, 3.97, -0.50), the
-// hero page's own 01-INSPIRE callout anchor; back-projected along BREEZE_DIR
-// that plume releases from cap az ~5.83). Supersedes the map's rear-sector
-// staging (Plate I) for Inspire.
-//   - ArtCompute: exactly AT the visible stream — it IS the stream the
-//     visitor has been watching. Strongest lean, mid height.
-//   - Arca Gidan Prize: ~31 deg rearward along the rim — near neighbour, the
-//     tallest plume; fed by a short rim current peeling off the stream.
-//   - 2RP: ~24 deg frontward along the rim, at the right margin — lowest
-//     start, shortest rise; the other branch of the delta.
-// All three sit inside (or a hair past) the hero shed's own birth wedge
-// (a in [pi, 1.98pi]) and compose in ONE view of the right flank.
+//
+// D16 (2026-08-03) clustered the exits tightly at the hero's ONE visible
+// stream — ArtCompute exactly AT it (cap az ~5.83, back-projected along
+// BREEZE_DIR from the plume centred on world (3.24, 3.97, -0.50), the hero
+// page's own 01-INSPIRE callout anchor), with Arca ~31 deg and 2RP ~24 deg
+// away along the rim. That cluster is what this file supersedes.
+//
+// D18 SPREAD (Hannah, 2026-08-05: "there should be 3 visible streams of
+// spores ... it should be visible where they're coming from"). The D16
+// cluster CANNOT show three streams, and no camera angle fixes it. The reason
+// is geometric and it bounds every future restage of this chapter:
+//
+//   The spore steerer (organism/spores.js) gives every dot an angular offset
+//   of curl = (strand - 1) * 0.30 rad plus a winding wobble of about +/- 0.20,
+//   and it leans EVERY plume along the one breeze vector — xLean = leanScale *
+//   leanA * h * riseA * DRIFT_RX. So (a) each braid is ~1.0 rad wide at the
+//   rim and stays that wide all the way up, and (b) the three plumes are
+//   strictly PARALLEL: rise sets a plume's LENGTH, never its direction. Two
+//   plumes therefore overlap along their whole length unless their rim
+//   azimuths differ by more than the braid is wide. D16's gaps were 0.55 and
+//   0.42 rad against a ~1.0 rad braid, so the three interpenetrated: one
+//   cloud, by construction. The seat exposes only az / riseMin-Max / knot, so
+//   RIM AZIMUTH IS THE ONLY SEPARATION LEVER the chapter has.
+//
+// Measured at the rest pose (1440x900, minimum inter-plume screen gap; and the
+// smallest `facing` = how far a release lip has turned onto the camera-facing
+// rim, which is what makes its source readable):
+//   gap 1.05 rad -> 58 px, facing 0.30      gap 1.25 -> 94 px, facing 0.09
+//   gap 1.15 rad -> 79 px, facing 0.20      gap 1.35 -> 97 px, facing -0.01
+// 1.15 is the knee: past it the extra separation is bought by rolling a lip
+// behind the silhouette, which trades criterion 1 for criterion 3. Below it
+// the braids re-merge.
+//
+// WHICH LABEL SITS WHERE IS A LAYOUT CONSTRAINT, NOT A TASTE ONE. "Arca Gidan
+// Prize" is a 132 px chip; at 375 px wide its wrapper is 161 px, 43% of the
+// frame. With Arca on the RIGHTMOST plume its chip ran 88 px off the right
+// edge and no portrait field could recover it (every candidate in a 8,640-
+// point sweep failed). Arca therefore takes the DOWNWIND lip (6.98) where it
+// projects leftmost, and 2RP — a 27 px chip — takes the upwind one (4.68).
+// The physical plumes are unchanged by that swap; only the labels move.
+//   - ArtCompute: FROZEN at 5.83 — it is the hero's own visible stream, and
+//     the whole one-population claim rests on this number not moving. The
+//     steerer sends it 50% of the dots, so it is the densest braid.
+//   - Arca Gidan Prize: 1.15 rad downwind, releasing at the cap's screen-LEFT
+//     rim. Already over open sky, so it keeps the shortest rise — which also
+//     drops its label ~30 px clear of ArtCompute's, the last thing standing
+//     between the two chips at 375 px.
+//   - 2RP: 1.15 rad upwind, at the screen-RIGHT rim. Furthest upwind, so it
+//     has the most frame to cross before it clears the dome — hence the
+//     longest rise, and the hottest knot cadence.
+// Rises are shorter across the board than D16's: the same dot budget in less
+// length is what makes a plume read as a defined stream instead of a thin
+// scatter, and it keeps the band inside the frame.
+// Births are unaffected — every dot is still born in ArtCompute's wedge and
+// walks the rim out (the delta rule), so the birth-wedge constraint applies to
+// the SOURCE only; the two release sectors may sit outside it.
 // `knot` is the per-plume knot-cadence gain (W4-A gap a): how hard the bright
-// pearls along each winding core read. Arca — the tallest — carries the
-// hottest cadence, per the approved spike's own review note.
+// pearls along each winding core read. ArtCompute's is damped to 0.58 because
+// it already carries half the dots — without that the centre braid drowns the
+// two flanks and the frame reads as one plume with wings.
 export const EXITS = [
-  { id: 'artcompute', label: 'ArtCompute',       az: 5.83, riseMin: 2.3, riseMax: 3.0, lean: 0.52, tone: 0.66, knot: 0.70 },
-  { id: 'arca',       label: 'Arca Gidan Prize', az: 5.28, riseMin: 2.7, riseMax: 3.4, lean: 0.38, tone: 0.74, knot: 1.00 },
-  { id: '2rp',        label: '2RP',              az: 6.25, riseMin: 1.8, riseMax: 2.4, lean: 0.42, tone: 0.60, knot: 0.55 },
+  { id: 'artcompute',   label: 'ArtCompute',         az: 5.83, riseMin: 1.7, riseMax: 2.2, lean: 0.52, tone: 0.66, knot: 0.58 },
+  { id: 'arca',         label: 'Arca Gidan Prize',   az: 6.98, riseMin: 1.05, riseMax: 1.4, lean: 0.42, tone: 0.6, knot: 0.95 },
+  { id: '2rp',          label: '2RP',                az: 4.68, riseMin: 1.76, riseMax: 2.21, lean: 0.38, tone: 0.74, knot: 1.0 },
 ];

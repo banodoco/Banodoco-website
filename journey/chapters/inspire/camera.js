@@ -25,13 +25,46 @@ import { ORBIT_BREATH } from '../../constants.js';
 const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
-// Inspire rest — RESTAGED per D16 (Hannah, 2026-08-03): no longer the rear
-// three-quarter. The camera swings RIGHT, toward the hero's one visible
-// stream (the shed released at cap az ~5.83, carried +x by the breeze), and
-// rests on the stream-side rim so the spores the visitor was already watching
-// are the spores the chapter organizes. ~90 deg of swing instead of ~172; the
-// stream stays in frame essentially the whole leg.
-export const INSPIRE = { az: 78 * DEG, r: 9.1, y: 3.25, target: V(1.15, 3.95, -0.40), fov: 38 };
+// Inspire rest — D16 (Hannah, 2026-08-03) swung the camera RIGHT to az 78, off
+// the rear three-quarter and onto the stream-side rim, so the spores the
+// visitor was already watching are the spores the chapter organizes. D18
+// (Hannah, 2026-08-05) keeps that intent and carries it FURTHER round:
+// "reorientate ... a more advanced angle, such that the 3 streams coming from
+// the edge of the mushroom are defined and just above the hero text ... it
+// should be visible where they're coming from."
+//
+// WHY 115, AND WHY NOT FURTHER. Two quantities move against each other as the
+// azimuth grows, and they were both measured on the real projection (a 201-
+// sample drift-aware scrub of the rest, both aspects):
+//
+//   · LIP SPREAD. A rim point at cap azimuth `a` lands at screen-lateral
+//     R*cos(az + a) and at depth R*sin(az + a); it is on the camera-facing
+//     hemisphere only while sin(az + a) > 0. ArtCompute is frozen at a = 5.83
+//     (334 deg), so az 116 would put it exactly at the nearest rim point and
+//     both flanking lips symmetrically off it. That is the widest the three
+//     release points ever project.
+//   · BRAID OVERLAP. The plumes are strictly PARALLEL (anatomy.js explains
+//     why), so past a point extra azimuth stops separating them and starts
+//     laying them along one screen line. Measured minimum inter-plume screen
+//     gap at 1440x900, gaps held at 1.15 rad: az 110 -> 59 px, az 115 -> 79,
+//     az 120 -> 44, az 125 -> 35, az 130 -> 23, az 140 -> 3, az 150+ -> ~1.
+//     Past ~125 the lips also cross behind the silhouette (facing < 0).
+//
+// 115 is where those meet: 79 px of dark sky between adjacent braids, all
+// three lips still 0.20+ onto the near rim. Rotations of 95/100/105/110/120/
+// 125/130/140/150/160/175 were all scored and rejected — see 07-chapter-
+// inspire.md. Total arrival swing is now ~127 deg (hero az ~ -12 -> 115).
+//
+// THE EYE DROPS to y 2.0, below every release lip (the rim's world y runs
+// 2.42..3.32 around the ring, and the three exits sit at 2.55 / 2.92 / 3.11).
+// The lips are on the cap's UNDERSIDE: from above, the dome hides them and the
+// plumes cross the whole cap before clearing it. Measured share of plume mass
+// projecting inside the cap silhouette: y 2.9 -> 32%, y 2.5 -> 26%, y 2.0 ->
+// 15%, y 1.0 -> 8%. y 2.0 is the compromise — the sources read, and the exit
+// leg still only has to climb 0.9 to meet Connect at y 2.90 instead of 1.9.
+// r 11 (from 9.1) and fov 40 (from 38) hold the widened cluster inside the
+// frame without reaching the chapter's own fog (FOG_FAR 20).
+export const INSPIRE = { az: 115 * DEG, r: 11, y: 2, target: V(2.633, 3.244, -0.566), fov: 40 };
 
 // The gaze's mid-swing waypoint (was the old "early pin" target): the cap,
 // biased a touch toward the stream side so the visible plume never leaves
@@ -115,18 +148,38 @@ function arrivalName(u) {
 export const CAMERA = {
   arrival,
   arrivalName,
-  // --- INSPIRE rest, and the drift that holds it (D16 restage: the rest is
-  //     on the STREAM side, az ~78 deg — pos = (sin az, ., cos az) * r) ---
-  // then: ONE continuous widening toward the Connect ground rest (re-keyed
+  // --- INSPIRE rest, the drift that holds it, and the exit that hands off ---
+  //
+  // The rest key MUST equal INSPIRE exactly: the arrival gesture owns p below
+  // 0.26 and this keyed spline owns p at and above it, so any disagreement is
+  // a hard cut at the seam. (It has been one: a half-finished D18 pass moved
+  // INSPIRE and left this key on the old az 78, which snapped 37 deg of
+  // azimuth and 2.1 of height across a single frame. If you re-aim the rest,
+  // re-derive pos = (sin az, y, cos az) * r here in the same edit.)
+  //
+  // Then: ONE continuous widening toward the Connect ground rest (re-keyed
   // 2026-08-04, Hannah: the old exit pushed IN toward the stream, r 9.1 ->
   // ~5.6, and Connect pulled back OUT again — a felt zoom-in-then-out).
-  // From the rest the camera now sinks and recedes in a single monotone
-  // zoom-out: camera-to-subject distance and fov only ever grow, and the
-  // gaze slides off the cap down the stem toward the ground as the descent
-  // proceeds. (The widening continues seamlessly in connect/camera.js.)
+  // Connect's own first key is settled (f9e8317) at az 68.76 / y 2.90 /
+  // fov 48 / subject-distance 8.79, so these two keys are solved to MEET it:
+  // the gaze lerps toward Connect's target on a smoothstep, and each key's
+  // radius is then solved from the aimed target so the camera-to-subject
+  // DISTANCE grows monotonically — 8.49 -> 8.59 -> 8.71 -> 8.79 — rather than
+  // the radius doing so (a shrinking radius here is a wider framing, because
+  // the gaze is walking down the stem at the same time). fov 40 -> 48 grows
+  // with it. Residual: the Hermite bows 0.14 below its running-max distance
+  // around p 0.335 (1.7% of 8.5; 0.34 / 2.5% in portrait) — a wobble, not the
+  // old zoom-in, which was 38%.
+  //
+  // AZIMUTH TURNS ONCE, AT THE HOLD. The arrival climbs -12 -> 115 and this
+  // leg falls 115 -> 68.8 into Connect. That single reversal happens AT the
+  // rest key, where `hold: true` forces a zero tangent — the camera comes to a
+  // full stop before it turns, which is the only place a reversal can sit
+  // without reading as a whip. Everything after the rest is monotone: az
+  // 115 -> 103 -> 81 -> 68.8 -> 61.8 straight through the Connect rest.
   keys: [
-    { t: 0.5,                pos: V(8.901, 3.25, 1.892), tgt: V(1.15, 3.95, -0.40), fov: 38,   hold: true, note: 'inspire-rest' },   // p 0.260  d 8.11
-    { t: 0.7166666666666667, pos: V(8.950, 3.18, 2.150), tgt: V(1.10, 3.75, -0.55), fov: 39.5, note: 'inspire-rest-drift' },         // p 0.312  d 8.32
-    { t: 0.9249999999999999, pos: V(8.550, 2.95, 2.850), tgt: V(0.95, 2.90, -0.90), fov: 44 },                                       // p 0.362  d 8.48
+    { t: 0.5,                pos: V(9.9694, 2.0000, -4.6488), tgt: V(2.633, 3.244, -0.566), fov: 40,    hold: true, note: 'inspire-rest' },   // p 0.260  az 115.0  d 8.49
+    { t: 0.7166666666666667, pos: V(10.6540, 2.2490, -2.3000), tgt: V(2.219, 2.957, -0.842), fov: 42.22, note: 'inspire-rest-drift' },        // p 0.312  az 102.2  d 8.59
+    { t: 0.9249999999999999, pos: V(9.6610, 2.6830, 1.7150), tgt: V(1.501, 2.460, -1.322), fov: 46.07 },                                      // p 0.362  az  79.9  d 8.71
   ],
 };

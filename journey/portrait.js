@@ -68,13 +68,29 @@ const KEYS = [
   // composition, and the orbit must lift off from it without a step.
   { p: 0.040, ...ZERO },
 
-  // INSPIRE (rest 0.26, D16 stream-side restage) — crown low-left, the
-  // stream's release point and the three clustered plumes mid-frame, chips
-  // above the copy. The dolly-back pulls the cluster inside the narrow
-  // frame; the stronger tgtRight (vs the old rear rest) slides the whole
-  // cluster off the right edge so all three chips — Arca's is the widest —
-  // land fully inside at 430×932, above the bottom copy block.
-  { p: 0.260, back: 1.60, rise: 0.60, truck: 0, tgtUp: 0.10, tgtRight: 1.05, fov: 14 },
+  // INSPIRE (rest 0.26) — RE-AUTHORED for the D18 restage. The old field
+  // (back 1.60, rise 0.60, tgtRight 1.05, fov +14) was composed for the az 78
+  // rest and its tight plume cluster; against the az 115 rest it drove the
+  // whole organism off the left edge and clipped Arca's chip.
+  //
+  // The binding constraint in portrait is not the plumes, it is the CHIPS.
+  // "Arca Gidan Prize" is 132 px of text — 161 px of wrapper — in a 375 px
+  // frame, and it anchors to a plume. An 8,640-point sweep of this field found
+  // ZERO settings that fit all three chips while keeping all three plumes in
+  // frame, until anatomy.js moved Arca onto the downwind (screen-left) lip and
+  // 2RP's 27 px chip onto the upwind one. With that swap this field clears
+  // everything: plume union x 13..354 inside a 375 frame, chips 50..356, no
+  // chip-to-chip collision at either 375x812 or 430x932, and 29 px of dark sky
+  // between adjacent braids (the landscape figure is 79 px at 1440 — the same
+  // ~5% of frame width). The copy block starts at y 484; the plumes end at 455
+  // and the lowest chip at 394.
+  //
+  // back stays at 1.50, deliberately close to the 1.55 of the p 0.410 key
+  // below: portrait subject-distance is roughly landscape-distance x back, so
+  // a bigger dolly here would make the portrait travel ZOOM IN toward Connect
+  // while the landscape widened. 1.50 -> 1.55 keeps it growing (12.7 -> 13.6),
+  // and fov +13 keeps that growing too (53 -> 59).
+  { p: 0.260, back: 1.50, rise: -0.50, truck: -0.30, tgtUp: 0, tgtRight: 0.30, fov: 13 },
 
   // Ground-descent approach (D16 restage; retuned 2026-08-04 for the
   // monotone Inspire->Connect zoom-out): the landscape leg no longer pushes

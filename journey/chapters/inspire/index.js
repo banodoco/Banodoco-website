@@ -128,13 +128,37 @@ const tmpC = new THREE.Color();
    0.05 and persist, and a small aria-hidden readout (bottom-left)
    stays visible while in QA mode. Plain loads build none of it.
    ---------------------------------------------------------------------- */
-// T_SHIPPED — the TRANSFORM value the site ships with. PROVENANCE: as of M3
-// (2026-08-03) DECISIONS.md records no chosen T — the dial build's EXECUTION
-// entry ends "awaiting Hannah's ride + her chosen T" — so the shipped value
-// stays that build's code default, 0.30 (a deliberately restrained first
-// offer, not a measured choice). When Hannah records her number, change THIS
-// constant and cite the decision entry here.
-const T_SHIPPED = 0.30;
+// T_SHIPPED — the TRANSFORM value the site ships with.
+//
+// PROVENANCE. Through M3-M5 this stayed at 0.30: the dial build's own code
+// default, recorded there as "a deliberately restrained first offer, not a
+// measured choice", pending Hannah's ride. D18 (2026-08-05) is that ride, and
+// it retires 0.30 — because 0.30 cannot satisfy the brief at ANY camera angle.
+//
+// The reason is mechanical. Every dot's displacement onto its braid is
+// cvT = conv * T (organism/spores.js steer): at T = 0.30 a dot moves 30% of
+// the way from its free drift onto the designed path and keeps the rest of its
+// drift, so the three braids never resolve. Measured on the live 4,200-dot
+// buffer at the rest — horizontal density profile of the plume band, counting
+// separated lobes:
+//   T 0.30 -> 1 peak    T 0.65 -> 1 peak    T 0.85 -> 3 peaks
+//   T 0.50 -> 1 peak    T 0.80 -> 3 peaks   T 0.94 -> 3 peaks
+// One peak IS the "1 merged cloud" note, and it was there at every azimuth
+// tried. The three-lobe threshold is ~0.78; 0.85 sits above it with the
+// deepest valleys measured (peaks 0.33 / 1.00 / 0.28 of max, valleys 0.24 and
+// 0.23) without pushing the FURNITURE — the 56 source filaments per exit, the
+// wisp guides, the rim currents and the core ribbons, all of which also scale
+// with T — into the wiry, over-drawn look that T = 1.0 gives.
+//
+// TENSION WORTH KNOWING. T was introduced to RESTRAIN the reorganization,
+// after seven rounds of "the stream transforms into a different thing when I
+// rotate around". Raising it to 0.85 pushes back against that note, and it is
+// the one number in this restage most likely to want Hannah's own eye. The
+// dial is still live: ?t=0.55 (or [ / ]) rides any value without a rebuild.
+// If she wants the transformation calmer, lower THIS constant — but below
+// ~0.78 the three streams collapse back into one, so the honest trade is
+// fewer, softer streams, not the same three more quietly.
+const T_SHIPPED = 0.85;
 const T_STEP = 0.05;
 const STREAK_FLOOR = 0.25;
 const CORE_OPACITY = 0.62;               // the ribbons' authored opacity
@@ -925,21 +949,31 @@ export function createInspire(sceneApi) {
   })();
 
   // Arrival ramps — the scroll-locked half of the handoff, re-keyed for the
-  // D16 orbit (a ~90 deg swing, hero az ~-12 -> rest az 78). The chapter
+  // D18 orbit (a ~127 deg swing, hero az ~-12 -> rest az 115). The chapter
   // multiplies each seam-gated fade by its own azimuth ramp so every exit's
   // effective reveal is continuous in scroll position (snap/?p= included),
   // grows only as the camera actually travels toward the stream, and plays
   // backward identically. Sequence: the stream itself organizes first
-  // (ArtCompute), then the Arca current peels rearward, then 2RP frontward.
-  // All ramps saturate by az ~74, safely before the rest (az 78), so the
-  // settled Inspire rest is exactly reveal = 1. Bounds are desktop-orbit
-  // absolute (mission az ~ -12 deg), like driveInspire's own fade (az
-  // 36..72); T1 arms at ~48 deg past Mission (az ~36) — at or before the
-  // first ramp, so nothing can step on arming.
+  // (ArtCompute), then the Arca current peels off along the rim, then 2RP.
+  //
+  // WHY THEY ALL FINISH BY az ~74 NOW. These bounds are absolute camera
+  // azimuth, and D18 made azimuth non-monotone across the leg: the arrival
+  // climbs to 115 and the exit falls back to 68.8 to meet Connect. Anything
+  // still ramping above 74 would therefore run BACKWARD on the way out — the
+  // plumes would visibly dissolve while the visitor is still looking at them,
+  // which is the no-self-ignition rule played in reverse. Saturating every
+  // channel by 74 means the whole span the exit travels (115 down to ~83
+  // before the seam's own retire takes over at p 0.355) is flat at reveal = 1,
+  // so the only thing that ever fades the plumes out is `out` below. Verified
+  // by sampling all three effective reveals across p 0..0.42: no channel rises
+  // after it has fallen, at any point in the run.
+  //
+  // T1 arms at ~48 deg past Mission (az ~36) — after the first ramp opens, so
+  // arming can never step on it.
   const ARR = [
-    { a0: 34, a1: 60 },   // ArtCompute — the visible stream, gathered first
-    { a0: 46, a1: 68 },   // Arca — its current peels off rearward
-    { a0: 54, a1: 74 },   // 2RP — the frontward branch, last
+    { a0: 14, a1: 44 },   // ArtCompute — the visible stream, gathered first
+    { a0: 34, a1: 58 },   // Arca — its current peels off along the rim
+    { a0: 50, a1: 74 },   // 2RP — the far branch, last
   ];
   const RAD2DEG = 180 / Math.PI;
   function camAzDeg() {
@@ -1091,8 +1125,15 @@ export function createInspire(sceneApi) {
       api.setLeanScale(1);
       const smz = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
       const sm = (a, b) => { const x = (azDeg - a) / (b - a); return x < 0 ? 0 : x > 1 ? 1 : x; };
-      // gill band -> ArtCompute -> Arca Gidan -> 2RP, then a hold through the rest
-      const a = sm(36, 72), b = sm(76, 112), c = sm(104, 142), band = sm(20, 46);
+      // gill band -> ArtCompute -> Arca Gidan -> 2RP, then a hold through the rest.
+      // D18: pulled in from (36,72)/(76,112)/(104,142) to finish by az 78. The
+      // old top bounds were authored when the rest was az 78, which left Arca
+      // at 0.06 and 2RP at 0.00 reveal AT the rest — two of the three plumes
+      // were barely lit, and that (not just the staging) is why the frame read
+      // as one cloud. Carrying the camera to 115 made it worse, not better:
+      // 2RP would have reached only 0.29. Now all three are exactly 1 from
+      // az 78 through the rest and back down the exit.
+      const a = sm(18, 48), b = sm(38, 62), c = sm(54, 78), band = sm(5, 28);
       // under the cap the plumes are behind us: retire them into the seam
       // (route-derived: 0.025 before the Inspire range ends; shipped 0.355)
       const out = 1 - smz((p - (endOf('inspire') - 0.025)) / 0.06);
