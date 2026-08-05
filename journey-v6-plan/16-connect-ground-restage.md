@@ -778,3 +778,316 @@ the hypha PRNG branches are untouched by construction.
   the hub — costs more than half the mushroom.
 - The p 0.63–0.69 bareness and the modest ambient arrival flare stand as
   earlier passes left them.
+
+## Pre-existing paths + the raised eye (2026-08-05, Hannah's two changes)
+
+**The two asks.** (1) *"In the connect the ecosystem one, can you make it so
+the stuff that appears on the ground when you enter the section actually moves
+along the lines that are already there rather than creating new lines? Or at
+least make them match the lines that are there and be there before in a
+non-highlighted manner — currently it feels weird that they just appear."*
+(2) *"In connect the ecosystem, can you push the camera up a bit, so that the
+mushroom is more towards the middle of the page vertically."*
+
+### 1 — The model: the network is not grown, it is LIT
+
+The growth model of §4 is retired. It was the honest answer to D16 at the time
+— nothing may fade in over open view, so make the reveal *motion* — but making
+the reveal out of GEOMETRY APPEARING is precisely what made it read as
+conjured. The paths are now part of the world; arriving runs light along them.
+
+Two orthogonal gates replace the single `uGrow`:
+
+    uResolve   CAMERA-PURE (connect/index.js resolveNow()). Brings the QUIET,
+               un-highlighted paths out of the ground and takes them back.
+    uLit       PURE IN p (drive(p)). The travelling light: a soft front runs
+               base -> hubs along aAlong, lifting each strand from its quiet
+               level to its full one and kindling each hub core as it lands.
+
+A strand's brightness is `mix(uQuiet, 1.0, litMask) * uResolve`, with the
+tier contrast COMPRESSED while unlit (`uQuietTier` 0.55, tiers converging
+toward 0.42) so a resting path reads as web, not as a highway waiting to be
+switched on. `uQuiet` is 0.22. The hub convergence — the radial spokes and the
+core knot — carries a new tier **-1**, which is numerically tier 0 everywhere
+else in the shader (same `tierBase` ladder, same pulse rights, so nothing
+about the lit look changes) but goes to 0.22× the quiet level before its light
+arrives: a resting starburst at the ambient level read as a hub already lit,
+and the whole beat is that the hubs KINDLE as the light reaches them. The core
+glow sprites stay gated on `hubIgnite`, so they are the arrival itself.
+
+Ambient life, hover, pulses, the exit convergence and the hero-web dim are
+unchanged in kind; they now ride `amount x resolve` instead of `amount`.
+
+**Does it read as the same family as the hero's own web?** Measured, not
+eyeballed. Mean luminance of the lower-frame ground band (bottom 5–40% of the
+buffer, 1440x900), rendering the same frame four ways:
+
+    p 0.433 (paths fully resolved, light not yet departed)
+      background alone                     15.011
+      + hero ground web alone              +7.530
+      + the quiet paths                    +0.874   = 11.6% of the hero web
+      ground energy vs hero web alone       0.908x
+
+    p 0.490 (the rest, fully lit)
+      background alone                     19.619
+      + hero web (dimmed, as shipped)      +4.299
+      + the lit network                    +4.138
+      ground energy vs hero web alone       1.96x
+
+So in the quiet state the paths add an eighth of what the hero's web is
+already putting on the ground — and because the hero-web dim comes in with
+the same camera-pure resolve, the ground is 9% CALMER with the paths present
+than the undimmed hero web alone. That is the opposite of double exposure; it
+is why the quiet state reads as the hero's own web, organised.
+
+### 2 — The camera-pure resolve, and where its threshold sits
+
+`resolveNow()` reads ONE quantity off the live camera: `forward.y`, the
+downward component of its own look axis. No p, no clock, no state — so the
+paths resolve as the eye comes down onto the ground the way real ground detail
+does, dissolve back on the way out, and a reverse scrub retraces it exactly
+(the camera pose is itself a pure function of p). Band: `sin(-1.2 deg)` to
+`sin(-7.2 deg)`.
+
+    forward.y                     landscape          portrait
+      hero pose p 0              +0.0337 (1.9 up)   +0.1452 (8.4 up)   -> 0
+      minimum over p 0..0.35     +0.0337 (at p 0)   +0.0323 (at 0.20)  -> 0
+      Inspire rest p 0.26        +0.0863            +0.0477            -> 0
+      threshold                  -0.0209            -0.0209
+      first non-zero             p 0.3715           p 0.3685
+      fully resolved             p 0.4405           p 0.4405
+      Connect rest p 0.49        -0.1548            -0.1548
+
+**The hero-pose verdict: NOT VISIBLE, by three independent margins.** The
+closest either orientation comes to the threshold anywhere before Connect is
+0.053 in `forward.y` (~3.0 deg) — an order of magnitude more than the handheld
+layer's entire 0.34 deg peak wander, and handheld is EXACTLY zero within
+0.018 p of a rest anchor, so both protected frames are hard zeros with no
+jitter at all. Second, `group.visible` is gated on the resolve, so at the hero
+pose the network is not merely dark, it is not submitted. Third, seams.js does
+not arm the chapter below p 0.32, so p 0 and p 0.26 are outside the window
+entirely. Measured at the live hero pose: `armed []`, `connectVisible false`,
+`resolve 0`, hero ground-web opacities at their untouched base
+[0.36, 0.35, 0.95, 0.5, 0.42, 0.45, 0.95]. The mission goldens re-shot at the
+final tree came back with **zero differing pixels** at both sizes.
+
+A camera-to-network PROXIMITY factor was built first — it is the more literal
+reading of "resolves as you approach" — and had to be dropped. The portrait
+field dollies back 1.62x at this rest, so the portrait camera sits 13.59 world
+units from the network while the LANDSCAPE hero pose sits at 12.76: the
+portrait chapter is farther from the network than the frame it must stay dark
+on, and no single threshold separates them (normalising by fov does not fix
+it either — 37.1 vs 21.1 at the two hero poses, 19.4 at the portrait rest).
+The gaze drop is orientation-invariant by construction, because portrait.js
+re-aims the gaze rather than pointing it somewhere else.
+
+**Arming moved to p 0.32** (`startOf('connect') - 0.06`, was +0.02 = 0.40):
+the paths must pre-exist the reveal, so the group has to be armed before
+anything can resolve. Between 0.32 and 0.3715 the chapter is armed,
+`group.visible` is false and it costs no draws. `setArmed` now SNAPS `amount`
+to 1 on the arming edge (invisible by construction, since resolve is 0 there)
+and keeps the ease only on retire — which removes the one way a time-based
+fade could ever have been seen: a hard fling across the arm edge used to leave
+the eased amount still climbing while the paths came into view.
+
+**Light-travel window** leg-t 0.24 -> 0.487 (p 0.4328 -> 0.4871, was
+0.10 -> 0.46): the quiet paths are ~1.0 resolved by p 0.4405, the light leaves
+the base at 0.433 and lands on Discord just under the rest at 0.490.
+
+**The copy brightness well is retired to strength 0.** Raising the gaze walked
+the horizon down the frame (1440x900: y 241 -> 338) and the copy block with
+its scrim now sits entirely above it — re-unprojected, its bottom rows meet
+the ground 55–74 world units out and the scrim's bottom edge at 42, an order
+of magnitude past the farthest strand. There is nothing under the copy to
+quiet. Leaving the old well would have been actively wrong: (3.60, -12.20)
+now projects to (1012, 457) with its 5.4-unit radius spanning x 794..1336,
+y 430..502 — a dark hole through the middle of the open ground, the exact
+failure the 2026-08-04 recompute fixed. Centre/radius are kept at the copy's
+measured ground footprint (0.74, -37.68) so the machinery stays wired.
+
+### 3 — The camera: the eye rises 0.25 and the gaze lifts 7 deg
+
+Raising the camera with the target pinned does almost nothing (the two effects
+nearly cancel — measured ~12 px of subject travel per world unit of lift), and
+a rigid translation up pushes the near hubs off the bottom (ADOS would move
+284 px for the mushroom's 170). What works is the rig rising ALONG THE DIVE
+LINE while the gaze lifts with it.
+
+    t 0.13636 -> p 0.410  pos (8.4400, 2.9000, 3.2800)  tgt ( 1.140, 2.210, -1.563)  fov 48    pitch  -4.5
+    t 0.30000 -> p 0.446  pos (8.2800, 2.8200, 3.7200)  tgt ( 1.458, 1.576, -2.636)  fov 53    pitch  -7.6
+    t 0.40909 -> p 0.470  pos (8.1000, 2.7300, 4.0500)  tgt ( 1.674, 1.235, -3.462)  fov 58    pitch  -8.6
+    t 0.50000 -> p 0.490  pos (7.9430, 2.6470, 4.2560)  tgt ( 1.827, 1.028, -4.067)  fov 62    pitch  -8.91  REST
+    t 0.69091 -> p 0.532  pos (7.0846, 2.4897, 3.8657)  tgt ( 0.530, 0.403, -2.779)  fov 61.5  pitch -12.6   drift
+    t 0.88636 -> p 0.575  pos (3.9863, 1.9221, 2.4573)  tgt (-1.101, 0.119, -1.377)  fov 54    pitch -15.8   exit
+
+Positions changed in **y only**: rest +0.250, drift +0.211, exit +0.068, the
+approach keys +0.06/+0.12/+0.18 so the descent from the Inspire splice stays
+monotone (2.95 -> 2.90 -> 2.82 -> 2.73 -> 2.647). x and z are the shipped
+values to within 0.001, and the four keys — rest, drift, exit and
+owned/camera.js's t 0.0 — are still COLLINEAR on one straight dive to the
+trunk: new unit (0.89794, 0.16451, 0.40822) out of owned's
+(2.523, 1.654, 1.792), each key's own unit agreeing to 1e-4 (the shipped set
+agreed to 4e-4, so the "one continuous dive" property is preserved and
+slightly tighter). Arc fractions along the line are unchanged, so the speed
+profile is the shipped one. **owned/camera.js is untouched**, and every
+position key from p 0.622 on is bit-exact: the soil crossing measures
+p 0.6922 and the minimum above-ground radius 1.192, both the shipped values.
+
+Targets were re-pitched IN THE VERTICAL PLANE ONLY, so every key's YAW is
+bit-exact — the gaze still walks -123.6 -> -133.0 -> -139.5 -> -143.7 (rest)
+-> -135.4 -> -127.0 -> -122.0 (owned t 0.0) with no derivative sign flips
+after the rest. Pitch is now one monotone descent across the whole leg:
+-0.3 (inspire's last key) -> -4.5 -> -7.6 -> -8.6 -> -8.91 (rest) -> -12.6
+-> -15.8 -> -18.5 (owned t 0.0) -> owned's single ~-26.5 valley.
+
+Portrait re-tuned to match: the landscape leg now aims 5–7 deg higher on its
+own, so the field must add proportionally less. `tgtUp` 2.75 -> 1.50 at the
+rest and 0.55 -> 0.30 at p 0.410. Without this the portrait mushroom sank to
+0.59 of the tall frame AND the portrait gaze came out at only -4.7 deg, which
+left the camera-pure resolve at 0.66 instead of 1 at the portrait rest. At
+1.50 the portrait gaze is -8.91 deg — identical to the landscape rest, so the
+network resolves fully in both orientations — and the portrait stack is the
+shipped one.
+
+**Composition, measured (px, at the rest).** The mushroom's box centre lands
+at 0.419 of the frame height at EVERY landscape size (it is a pure
+pitch/fov property), up from 0.276 — and its left edge and width are
+untouched, so the upper-LEFT placement is exactly preserved. `pos-topright`
+re-verified: the copy is unchanged and now sits over sky rather than
+straddling the horizon.
+
+    1440x900   mushroom  79,160 ..  573,593   (cy 377 = 0.419)   copy 825,135 ..1365,329
+               ados     251,776 ..  326,800   hivemind 876,574 ..  982,597
+               discord 1198,700 .. 1297,723
+               clearances  ados|copy 670  hivemind|copy 245  discord|copy 371
+                           ados|hive 578  hive|discord 239   ados|discord 874
+
+    1280x800   mushroom  70,143 ..  511,528   (cy 336 = 0.419)   copy 726,120 ..1213,308
+               ados     222,689 ..  296,712   hivemind 777,509 ..  883,532
+               discord 1063,621 .. 1162,644
+               clearances  ados|copy 575  hivemind|copy 201  discord|copy 313
+                           ados|hive 506  hive|discord 201   ados|discord 768
+
+    375x812    mushroom -48,346 ..  137,524   (cy 435 = 0.536)   copy  23, 89 .. 353,327
+               ados      47,575 ..  121,598   hivemind 255,511 ..  361,534
+               discord   90,531 ..  189,554
+               clearances  ados|copy 248  hivemind|copy 184  discord|copy 204
+                           ados|hive 140  hive|discord  66   ados|discord  21
+
+Nothing overlaps, nothing is off-viewport. Spot-checked further: 1920x1080
+min clearance 279, 1366x768 min 181, 1024x768 min 189 (and the 4:3 cap clip
+improves, mushroom x0 -77 -> -35). Sway/handheld over 60 live frames (~9 s)
+at the rest moves every chip by at most 1 px in each axis, so the table holds
+to within a pixel through all phases.
+
+**Rates and splices** (drift-aware scrub, p pinned exactly per sample so
+differentiation is against the true progress; `?steady=1`; brackets are the
+shipped tree's numbers from the previous section's table).
+
+    landscape  restaged span 0.355–0.625:  yaw   358.2 deg/p @0.614 [358.3]
+                                           pitch 175.9        @0.611 [196.5]
+                                           speed  90.0 u/p    @0.560 [ 89.4]
+               whole window 0.30–0.76:     yaw   430.3        @0.760 [429.9]
+                                           pitch 902.3        @0.714 [924.9]
+                                           speed  90.4        @0.721 [ 90.8]
+    portrait   restaged span:              yaw   346.0        @0.614 [346.1]
+                                           pitch 175.9        @0.611 [243.9]
+                                           speed 169.2        @0.555 [167.7]
+               whole window:               yaw   379.5        @0.760 [379.2]
+                                           pitch 557.6        @0.721 [572.8]
+
+Everything is an order of magnitude under the ~1.2k deg/unit-p threshold, and
+the pitch peaks are BETTER than the shipped tree in both aspects. Roll is
+0.000000 deg at every sample in both orientations. Sign flips over the
+restaged span: yaw 1, pitch 0. Splice continuity, position speed at samples
+straddling each boundary: p 0.38 reads 9.2 / 8.9 / 8.6 / 8.4 / 8.2 / 8.1 u/p
+and p 0.60 reads 60.1 / 59.0 / 58.0 / 56.8 / 55.3 / 53.7 — smooth ramps
+through both, no pose jump.
+
+**Budget.** The question is what carrying the paths outside the old armed
+window costs, and the answer is structural: `group.visible` is gated on the
+camera-pure resolve, so between the new arm edge (0.32) and the resolve edge
+(0.3715) — and at the hero pose, and at the Inspire rest — the network
+submits 0 line segments, 0 points and 0 sprites. Verified live at p 0, 0.26,
+0.30 and 0.34: `connectVisible false`, counts zero. The per-frame cost there
+is one `getWorldDirection()` plus one smoothstep, then an early return before
+the 108-particle update. The span over which the network actually draws grows
+by exactly 0.0285 p (0.40 -> 0.3715), i.e. 2.9% of the ride, and the drawn set
+at the rest is unchanged from the shipped build: 2,061 line segments, 146
+points, 3 sprites, one ShaderMaterial for strands and one for points.
+Frame-time: this rig's paired measurement (composer.render + glReadPixels
+sync, network visible vs hidden on alternating renders at a fixed pose) has a
+±2 ms noise floor, which is larger than the effect. At the Connect rest the
+paired median delta is +0.2 to +1.3 ms with the network drawn (before-tree
+-0.5 to -0.3 ms — same geometry, same materials, same draw count, so the two
+are the same number inside the noise). At the hero pose, the Inspire rest and
+p 0.34 the paired delta is the noise floor itself (-0.8 to +0.5 ms), because
+nothing is drawn either way.
+
+**Gates (measured).**
+
+1. Ignition / D16, instrumented on group-visibility flips at 0.0005 p steps,
+   both directions, both aspects: forward reveal p 0.3730 (landscape) /
+   0.3730 (portrait) with `uLit` 0 and `uAmount` 0.00069; reverse vanish
+   0.3725 / 0.3725 with the same values — the flip happens at 0.07% of full
+   brightness and the two directions mirror within one step. Forward retire
+   0.7050 and reverse re-arm 0.7045, both inside the Owned soil-crossing murk
+   (0.692–0.712); `CONNECT_HOLD_HI` 0.705 unchanged and still lawful.
+   Reverse identity spot-check: arriving at p 0.452 from below and from above
+   gives bit-identical uniforms (`lit` 0.2863, cores [0,0,0]) and bit-identical
+   hero-web dim values.
+2. Arrival sequence, frozen spot frames at 1440x900: p 0.433 — the whole
+   route web is present and quiet, no hub is a beacon; p 0.452 — light out of
+   the base along paths that were already there, everything ahead still quiet;
+   p 0.470 — routes lit, ADOS and Hivemind kindled, Discord landing; p 0.490 —
+   the rest. Nothing appears at any step; the same frames reproduce in reverse.
+3. Chips: the table above, three viewport sizes plus four spot-checks. Hover
+   per hub: `uRouteAmp` [1.55, 0.55, 0.55] / [0.55, 1.55, 0.55] /
+   [0.55, 0.55, 1.55], hairline 0.70, eased return to [1, 1, 1] on release.
+   Click on the Hivemind chip opens the card (detail 'hivemind',
+   #/connect/hivemind, aria-expanded true), Escape closes (detail null).
+   Tab order ados, hivemind, discord. Deep links #/connect/ados|hivemind|
+   discord all land; legacy #/connect/community still normalises to discord
+   and a cold load renders fully lit (`uAmount` 1 via snap + resolve 1).
+   `nodeWorld('ados')` = (3.400, 0.017, 2.600) — the hub, focal handoff intact.
+4. Console: full 0 -> 1 -> 0 ride with console.error/warn/onerror/
+   unhandledrejection hooks — 0 entries. The sweeps, scrubs and soaks likewise
+   logged 0.
+5. Soaks: 22 s parked mid-light (p 0.455) and 22 s parked at the rest — no TAA
+   wash, no black frame, no errors; the ambient pulse clocks are alive at the
+   rest (an ADOS arrival flare was caught at core opacity 0.996).
+6. Goldens: `--check` before the reshoot isolated the drift to the connect
+   pair (MAE 19.93 / 5.14; mission, inspire, owned all 0.00, final 0.02/0.01 —
+   and that final wobble reproduces IDENTICALLY on the untouched tree, so it
+   is the pre-existing frozen-pipeline determinism class, not this change).
+   Full set re-shot frozen at the final tree in this commit, manifest
+   provenance noted. **mission reproduced with ZERO differing pixels at both
+   sizes**; inspire@1440x900 and owned@1440x900 came back with exactly ONE
+   pixel differing by 1, and final (both sizes) with the pre-existing wobble
+   (MAE 0.016/0.011, max 24/40, 0.008%/0.003% of pixels >8) — all four kept
+   their original bytes. The connect pair is intentionally new.
+   `capture.py --check` at the final tree: worst MAE 0.02/255, PASS.
+7. `journey.debugState()` at p 0.49: pose (7.943, 2.647, 4.256), fov 62,
+   radius 9.011, chapter connect, armed [connect], copy [connect],
+   detail null, hotspots [ados, hivemind, discord].
+
+**Residuals.**
+
+- The horizon rides down 241 -> 338 at 1440x900, so the ground owns the lower
+  ~62% of the rest frame instead of ~73%. That is the unavoidable price of
+  moving the mushroom to mid-frame: subject height and horizon height are
+  locked together by gaze pitch (measured ~14.5 px of subject travel per
+  degree at fov 62), and every alternative that decouples them — receding
+  along the dive line, lowering the eye and over-lifting the gaze — costs
+  either the mushroom's size and its left-third placement or the ADOS hub's
+  starburst off the bottom edge. The ground is still the frame's subject.
+- ADOS sits lowest in frame (chip y 776 of 900) and the outer ends of its
+  starburst spokes now run off the bottom edge at 1440x900. Read as the
+  network continuing past the frame, which is the chapter's own language, so
+  the hub was not moved.
+- The in-world brightness well is inert (strength 0) rather than deleted. If a
+  future recomposition ever puts the copy back over the network, its centre
+  and radius are already the measured footprint; only the strength needs
+  restoring.
+- The p 0.63–0.69 bareness and the pre-existing final-golden determinism
+  wobble stand as earlier passes left them.
