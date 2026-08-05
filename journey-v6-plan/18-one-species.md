@@ -612,3 +612,146 @@ measurement.
   merged batch. At 25–35 units it is well under a pixel. Clones get it in full.
 - Only two batched bodies can wobble at once. A third poke inside three seconds
   cuts the quieter one off.
+
+# 9 — Hover parity correction: the field stops lighting up — 2026-08-05
+
+Hannah, at the Final rest: **"when I hover over the mushrooms at the bottom
+they still light up."**
+
+She is right, and §6 and §8.4 above were wrong. Both were written to the brief
+"the field mushrooms should answer a hover and a click the way the hero does" —
+but nobody checked the premise, and the premise is false. **The hero's body has
+no hover response at all.** Its §11 region glow (`organism/furniture.js`
+`createHighlights` / `setHighlight`) is driven *exclusively* by hovering the
+three HUD callout labels in `main.js` (`co-inspire` → spores, `co-equip` →
+stem, `co-connect` → ground). Raycasting the hero's own body with a pointer
+does nothing whatsoever. The one gesture the hero's body answers is a **poke** —
+§10c's wobble, light ripple, cap-tap spore shed and haptic tick — and there is
+no brightness term anywhere in it.
+
+So "the way the hero does" means: **hovering a field mushroom does nothing;
+only a poke answers.** That is now what happens.
+
+## 9.1 What was removed
+
+| Where | Gone |
+|---|---|
+| `clones.js` | `HOVER_GAIN`, `CLICK_SECS`, `CLICK_GAIN`, `hoverTerm()`, `clickTerm()`, `easeHover()`, `isWarm()`; the per-body `{h, tgt, clickT}` state; the `(1 + glow)` factor on every clone's opacity write |
+| `world.js` | the whole `HOT_GLSL` block (`hotAt()` and the `uHotId` / `uHotAmt` / `uTapId` / `uTapAmt` uniform quartet); the `b *= 1.0 + hotAt();` line in **both** `STRAND_VERT` and `POINT_VERT` |
+| `ring.js` | the `hovered` / `tapped` slots, the hover-diff block, the per-frame glow-easing loop over every warm body, and the two uniform publishes |
+| `interact.js` | the `pointermove` and `pointerleave` listeners, the `RAY_S` throttle, the `px/py/dirty/acc` cursor state, the `hover` slot, `tapPending`/`tapTouch`, and **`poll()` entirely** — the picker now has no per-frame entry point and holds no state at all |
+
+The **click brightness swell went too**, not just the hover. §10c has no
+brightness term, so a tap-triggered glow had no hero counterpart either. The
+poke's four answers are the whole response, and `ring.js`'s §POKE comment now
+says "FOUR, and no fifth".
+
+**The DOM hotspot chips and their hover popovers (`e20f7ff`) are untouched** —
+those are UI labels, the same thing the hero's own callouts are, and Hannah is
+not objecting to them. Connect's three hub anchors keep their hover response
+for the same reason: they are labelled interactive nodes with chips, driven
+through `setHot` from `ui.js`, exactly the hero-callout precedent.
+
+## 9.2 The `aHot` channel survived, renamed, with its hazard intact
+
+The vertex channel did **not** die with the glow: the poke's shader wobble
+slots still need to name a body. It is renamed **`aBody`** (it names a body; it
+no longer has anything to do with heat), declared inside `WOBBLE_GLSL` — now
+its only reader — and `ring.js`'s `hotId` / `nextHotId` / `hotMembers` are
+`bodyId` / `nextBodyId` / `pokeMembers`.
+
+**The −999 discipline is unchanged and now load-bearing on its own.** `aBody`
+is −1 for every vertex that is not a fruiting body (terrain, trees, root stubs,
+ground glows), so an idle wobble slot parked at −1 would match all of them —
+and a wobble slot carries a *rotation*, so one stale radian on the terrain is a
+whole floor sliding sideways. That bug was found once already. `WOB_IDLE`
+stays −999; no member ID is ever −999. The old comment justified −999 partly by
+contrast with the glow channels ("they get away with −1 because their amplitude
+is zero when idle") — that clause is gone with them, and the constant now
+stands on the wobble's own reasoning.
+
+## 9.3 The tap resolves itself now (and it is cheaper)
+
+The narrow phase was gated on "the body currently hovered". With no hover to
+read, `onUp` resolves the body directly inside the `pointerup` event: broad
+phase (proxy cones) → hero-shell yield → narrow phase on the one hit candidate
+→ `gate.onTap`. Same work, same ordering guarantees (`interact.js` §ORDERING is
+untouched), one event.
+
+Measured at the Final rest, 52 proxy cones, this machine:
+
+| | before | after |
+|---|---|---|
+| broad phase, per pointer-move poll | **0.094 ms × ~11–14 Hz**, continuously, whether or not anything was ever tapped | **none — the listener is gone** |
+| broad phase, per tap | (also ran) | 0.164 ms (warm mean, 25 casts) |
+| narrow phase, per tap | 1.089 ms | 1.746 ms (warm mean, 13 casts) |
+| whole `pointerup` handler, clone tap | median 1.3 ms / mean 1.73 ms | median 1.9 ms / mean 1.69 ms |
+
+The tap path is unchanged in cost — it always did both phases inside the event.
+What went away is ~1.0–1.3 ms/s of main-thread time spent polling for a hover
+nobody asked for, for as long as the cursor moved over the epilogue.
+
+## 9.4 Gates
+
+- **Resting-uniform proof.** Pointer walked slowly across **ten known body
+  centres** (5 clones + 5 batched species bodies, screen positions projected
+  from each member's own `aim` anchor), dwelling 900 ms on each, 373 frames
+  sampled: `uWobId` held **exactly `[-999, -999]` on every frame**; the glow
+  uniforms are **absent from the shipped uniform set entirely** (`uHotAmt` /
+  `uTapAmt` / `uHotId` / `uTapId` no longer exist); and `pickStats()` was
+  **identical before and after the sweep — 2 broad casts, 1 narrow cast, i.e.
+  the picker did literally zero work while the pointer crossed ten mushrooms.**
+  For contrast, the same sweep before the change drove `uHotAmt` to **0.658**
+  across member ids 26/20/2, and multiplied one clone's ten material opacities
+  by **2.465×** (0.90 → 2.219).
+- **Clone-opacity control.** Sweep-window vs idle-window per-material maxima are
+  statistically indistinguishable from two idle windows (idle-vs-idle control:
+  top 1.634, median 0.9998; sweep-vs-idle: top 1.758, median 1.0001) — the
+  residual is the twinkle and camera drift, not a pointer.
+- **The poke, all four parts, both constructions.** Clone (member 4):
+  `uPulseP` **(1.4, 1.5, 1.2)** — the body-poke shape, never the floor ping's
+  (2.6, 0.33, 1.4) — `uPulseT` rewound 8.04 → 0.20; ring-down 0.251° → 0.409°
+  → 0.470° → **0.479° peak** → 0.418° → 0.276° → 0.126° → 0.061° → back up
+  through 0.185° → 0.272°, a clean damped oscillation through zero; 11 spores
+  shed. Batched species bodies: tapping `bodyId` 16 then 10 put them in wobble
+  slots — `uWobId` **[16, −999]** then **[16, 10]**, idle slot correctly parked
+  at −999 throughout — both ringing independently, 33 spores live.
+- **Touch path.** `pointerType: 'touch'` tap → `navigator.vibrate(6)` fired
+  (spied), ripple + wobble + spores identical, and nothing "hovered" first
+  because there is no hover to have.
+- **Wobble magnitude.** Poked cap apex swings **1.42 px** peak at the nearest
+  body — angle-faithful, as §8.9 already recorded. A number is the right
+  witness here; a screenshot pair at this amplitude is not legible, and that is
+  by design, not a regression.
+- **Hero regression (hero page).** Across all 276 hero material opacities:
+  pointer swept over the hero's **body** → max ratio **1.0000** (nothing
+  happens, as specified); hovering the **`co-equip` callout** → **1.5774** (the
+  stem region lights); releasing it → back to **1.0000**.
+- **Scrub p 0.78 → 1.0 → 0.78, both directions** (under `?steady=1`, which
+  exists for pose sampling): `uPull` hysteresis **0.0039**, clone `uProg`
+  (the entry draw-on) **0.0134**, `uAmount` **0.0171** — reversible to noise.
+  Draw-on reveal intact: `uProg` sweeps 0.296 (`DRAW_LO`) at p 0.78 → 2 (fully
+  drawn) at p 1.00 on all 240 clone materials. No self-ignition. The larger
+  clone-*opacity* spread (0.713) is **not** direction-dependence: standing still
+  at a single p with the camera never moving drifts **0.518** over the same gap,
+  so it is the twinkle plus the travelling growth-front pulse, both pre-existing
+  and both time-based by design.
+- **Console clean** over a full ride (p 0 → 1 → 0, pointer wandering over the
+  canvas the whole way): zero errors, zero warnings, zero rejections.
+- **Frame time at the Final rest**, fresh loads, like-for-like (the change was
+  stashed to measure the other arm): idle **39.61 → 38.70 ms** mean
+  (p50 39.3 → 37.7), pointer-sweep **41.33 → 41.40 ms**. Within this machine's
+  noise; removal costs nothing.
+- **Goldens.** `mission` / `inspire` / `connect` / `owned` **byte-identical**
+  (MAE 0.00/255, both sizes). `final@1440x900` 0.02/255, `final@430x932`
+  0.01/255 — inside frozen-frame determinism noise (warn 0.50, fail 1.00). The
+  resting look is unchanged by removing a hover state, so **no re-shoot and no
+  provenance entry**. `capture.py --check`: PASS, worst MAE 0.02/255.
+
+## 9.5 Residual
+
+`ring.js`'s `pokeMembers` sweep on retire (`for (const b of pokeMembers)
+clearTap(b)`) is belt-and-braces: only a body holding one of the two wobble
+slots can have non-zero tap state, and a slot is always released through
+`clearTap`. It is 28 visits once per retire, so it stays — but it is not
+load-bearing, and anyone tightening this loop should know that.

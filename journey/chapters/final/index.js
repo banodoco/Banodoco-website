@@ -168,10 +168,11 @@ export function createFinal(sceneApi) {
       if (heroDimActive) restoreHeroDim();   // byte-exact hand-back
       if (wasVisible) {
         // One last INACTIVE tick as the chapter goes dark, so the ring drops
-        // any hover it was holding and the clone bodies retire their
-        // opacities in place instead of freezing mid-kindle behind the
-        // camera. Once retired we stop ticking entirely — the epilogue costs
-        // nothing for the rest of the ride.
+        // any poke still ringing and the clone bodies retire their opacities
+        // in place instead of freezing mid-kindle behind the camera. It is
+        // also what parks pickOn false, which is the picker's only gate now
+        // that it holds no state of its own. Once retired we stop ticking
+        // entirely — the epilogue costs nothing for the rest of the ride.
         wasVisible = false;
         uniforms.uAmount.value = eff;
         uniforms.uPull.value = pullOf(sceneApi.camera.position.x);

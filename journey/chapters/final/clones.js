@@ -38,8 +38,8 @@
 //                and answers floor taps in sync with the hero for free —
 //                one uniform tick, N bodies. Only uOpacity is owned per
 //                clone: it is the write-port for the chapter's reveal
-//                choreography (uAmount x uPull whisper/kindle, D16-pure)
-//                and for the hover/click glow.
+//                choreography (uAmount x uPull whisper/kindle, D16-pure) —
+//                and for nothing else, since the pointer glow was removed.
 //              - the cap overlay net (LineBasicMaterial + injected draw):
 //                rebuilt plain. The injection only matters mid-intro; parked
 //                it is identity, and a fresh material gives the clone an
@@ -67,42 +67,25 @@
 import * as THREE from 'three';
 import { heroPulse } from './world.js';
 
-/* ---- the hero's §11 highlight language, shared with ring.js so species
-   batch members breathe EXACTLY like clones do. furniture.js createHighlights:
-   ease h += (tgt - h) * min(1, dt*5); boost 1 + h*(gain + gain*0.38*sin(t*3.1)).
-   Click adds a one-shot pulse envelope on the pulseDriver idiom (fire -> a
-   sine swell over CLICK_SECS, then inert). ---- */
-export const HOVER_GAIN = 0.85;   // the spores-region gain: legible at field distance
-export const CLICK_SECS = 1.4;
-export const CLICK_GAIN = 1.1;
+/* ---- NO POINTER GLOW. THE PARITY FACT (2026-08-05, Hannah: "when I hover
+   over the mushrooms at the bottom they still light up") -------------------
+   These bodies used to carry furniture.js's §11 highlight math — an eased hot
+   value with a breathing pulse, plus a one-shot click swell — driven by a
+   raycast against whatever was under the pointer. That was wrong, and it was
+   wrong on the only test that matters: the HERO DOES NOT DO IT. The hero's
+   body has no hover response at all. Its region glow is driven exclusively by
+   hovering the three HUD callout labels (main.js co-inspire / co-equip /
+   co-connect -> furniture.js setHighlight); raycasting the hero's own body
+   with a pointer does nothing whatsoever, and a tap is answered by §10c's
+   four-part poke — wobble, ripple, spores, haptic — with no brightness term
+   anywhere in it.
 
-/** furniture.js's breathing boost, as an additive term: h * (gain +
- *  gain*0.38*sin(t*3.1)). Split out because the batched species bodies
- *  publish hover and click on TWO shader channels (world.js uHotAmt /
- *  uTapAmt) so a tap's decay survives the pointer moving on, while a clone
- *  applies the sum to its own materials. */
-export const hoverTerm = (st, t) =>
-  st.h * (HOVER_GAIN + HOVER_GAIN * 0.38 * Math.sin(t * 3.1));
-
-/** The click pulse: one sine swell over CLICK_SECS, then inert (the hero's
- *  pulseDriver idiom). Zero once the envelope has run out. */
-export const clickTerm = (st) =>
-  st.clickT < CLICK_SECS
-    ? CLICK_GAIN * Math.sin(Math.min(st.clickT / CLICK_SECS, 1) * Math.PI)
-    : 0;
-
-/** Advance one member's hover/click state (st: {h, tgt, clickT}) and return
- *  the additive glow term x — callers apply `1 + x`. */
-export function easeHover(st, t, dt) {
-  st.h += (st.tgt - st.h) * Math.min(1, dt * 5);
-  if (st.h < 0.004 && st.tgt === 0) st.h = 0;
-  st.clickT += dt;
-  return hoverTerm(st, t) + clickTerm(st);
-}
-
-/** True while a state still has something to say — the caller can skip
- *  every cold body without touching it. */
-export const isWarm = (st) => st.h !== 0 || st.tgt !== 0 || st.clickT < CLICK_SECS;
+   So there is no hover state here and no click brightness either. A field
+   body answers a POKE and nothing else, which is exactly what the hero does.
+   The glow uniforms (uHotId/uHotAmt/uTapId/uTapAmt), the hotAt() shader term
+   and the whole hover half of interact.js went with this comment's ancestors.
+   Do not reintroduce a pointer glow on a scenery body without a hero
+   counterpart to point at. ---- */
 
 // Mirror of organism.js §10b breeze() — chapter-owned copy (organism is
 // read-only and its instance is private to the closure). Same three modes
@@ -421,11 +404,14 @@ export function createClones(sceneApi) {
    *  uScl patch (see clonePointsMat). Better a missing layer than a body
    *  wearing full-size sprites. */
   // `base` below is read off the HERO's live material. That is only safe
-  // because the clone set is built once, at chapter construction, before
-  // anything can be hovered — furniture.js's §11 stem-region highlight
-  // MULTIPLIES stemGroup's uOpacity in place while it is hot, and a clone
-  // built during one would bake the boosted value in as its resting
-  // brightness. Do not move this build behind a lazy first-arm.
+  // because the clone set is built once, at chapter construction, before any
+  // of the hero's own HUD CALLOUTS can be hovered — furniture.js's §11
+  // stem-region highlight MULTIPLIES stemGroup's uOpacity in place while
+  // `co-equip` is hot, and a clone built during one would bake the boosted
+  // value in as its resting brightness. (The callouts are the hero's only
+  // route to that highlight, and they are still live — it is the FIELD's
+  // pointer glow that is gone, not the hero's labels.) Do not move this
+  // build behind a lazy first-arm.
   function cloneNode(o, mats, shells, s, count, root, own) {
     let c;
     const m = o.material;
@@ -519,7 +505,6 @@ export function createClones(sceneApi) {
       shells: stemShells.concat(capShells),           // interact.js's narrow phase
       x, z, gy, s,
       arc, reveal, boost, tw0, phase, amp, lum: lum ?? 1,
-      h: 0, tgt: 0, clickT: 1e9,                      // hover/click state (easeHover)
       tx: 0, tz: 0, tvx: 0, tvz: 0,                   // tap ring-down (stepTap)
       uProg: own.uProg, prog: -1,                     // entry draw (part B)
       v: -1, stemOn: true, capOn: true,
@@ -556,8 +541,8 @@ export function createClones(sceneApi) {
 
   /** Per-frame drive: the chapter's reveal choreography (the exact shader
    *  law from world.js STRAND_VERT, evaluated per body on the CPU — one
-   *  scalar per clone instead of per vertex), the hover/click glow, and the
-   *  gentle sway. Reads the chapter's shared uniforms — pure in the pose
+   *  scalar per clone instead of per vertex) and the gentle sway. Reads the
+   *  chapter's shared uniforms — pure in the pose
    *  (uAmount/uPull) exactly like the batches, so reverse scrubs retract
    *  clones and nothing self-ignites (D16). */
   function update(t, dt, uniforms) {
@@ -576,7 +561,6 @@ export function createClones(sceneApi) {
     const fr = uniforms.uFront.value, frOn = uniforms.uFrontOn.value;
     const ct = uniforms.uCta.value, ctOn = uniforms.uCtaOn.value;
     for (const c of list) {
-      const glow = easeHover(c, t, dt);
       // ---- part B: this body draws ITSELF on as the front reaches it ----
       // Pure in the pose, and ahead of the kindle by DRAW_LEAD so the body is
       // finished before its first ember. At d = 1 the uniform is parked at the
@@ -598,7 +582,7 @@ export function createClones(sceneApi) {
       const dc = c.arc - ct;
       b += c.boost * ctOn * Math.exp(-dc * dc * 200) * 1.1;
       b *= 0.88 + 0.12 * Math.sin(t * 0.9 + c.tw0);   // strand twinkle
-      const v = eff * b * c.lum * (1 + glow);
+      const v = eff * b * c.lum;
       if (Math.abs(v - c.v) > 1e-4) {
         c.v = v;
         for (const e of c.mats) {
@@ -638,14 +622,12 @@ export function createClones(sceneApi) {
     }
   }
 
-  /** Drop every body's pointer state on the floor. Called when the chapter
-   *  retires: the ease alone would need a dozen frames it is not going to
-   *  get, and a body left part-hot re-enters the next ride mid-glow. */
+  /** Drop every body's poke state on the floor. Called when the chapter
+   *  retires: a body left mid-wobble would re-enter the next ride still
+   *  swinging from a poke nobody in that ride gave it, and the ring-down
+   *  alone would need a dozen frames it is not going to get. */
   function cool() {
     for (const c of list) {
-      c.h = 0; c.tgt = 0; c.clickT = 1e9;
-      // the ring-down goes with it: a body left mid-wobble would re-enter the
-      // next ride still swinging from a poke nobody in that ride gave it
       clearTap(c);
       c.sway.rotation.z = 0; c.sway.rotation.x = 0;
     }
