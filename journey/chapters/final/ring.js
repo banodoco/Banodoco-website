@@ -93,6 +93,9 @@ import {
 import {
   createClones, stepTap, kickTap, isRinging, clearTap, TAP_W,
 } from './clones.js';
+import {
+  bodyVariation, varyPoint, IDENTITY, capRadiusK, heightK, baseRadiusK,
+} from './variation.js';
 import { createPicker } from './interact.js';
 import { createShed } from './shed.js';
 import { CAMERA } from './camera.js';
@@ -127,12 +130,21 @@ function smoothstep(e0, e1, x) {
  *  reason the old rimScale / domeH / stemW / flareK / harmonic knobs are
  *  not in this list. The SHAPE comes from species.js; this is where the
  *  body stands and how the frame lights it. */
-function memberParams(m) {
+function memberParams(m, varyOn) {
   const seed = 0x5eed + m.i * 7919;
   const r = makeRng(seed);
   const mat = m.m;
+  // THIS BODY'S SHAPE (variation.js, 2026-08-05). Hannah: "make them each
+  // their own unique thing." Drawn from its OWN stream, so it cannot shift a
+  // single value the placement below already draws from `r`. The 2026-08-04
+  // note in this function — "nothing here can change a proportion" — is what
+  // this supersedes, and only here: the SHAPE now varies per individual, but
+  // it varies by one smooth map of the hero's own form, not by a second
+  // parameterisation of it. There is still no cap-dome or stem-taper math
+  // outside anatomy.js.
+  const V = varyOn ? bodyVariation(seed) : IDENTITY;
   return {
-    r, seed,
+    r, seed, V,
     // ONE uniform scale factor, natural variation folded into it
     s: scaleFor(m.h, seed),
     // rigid rotation about Y: this body's own facing. The hero's cap droop,
@@ -146,8 +158,10 @@ function memberParams(m) {
     // saucer, which reads as a different shape even though it is the same
     // one. The hero's own staging tilt is ~0.058 rad total (tiltX -0.05 /
     // leanZ -0.03); the band now brackets it.
+    // (the variation round widens this band by V.leanK, x0.8..x1.6 — still
+    // under the 11 deg that opened the rim into a saucer)
     leanDir: r() * TAU,
-    leanAmt: (0.03 + r() * 0.06) * (0.6 + 0.6 * mat),
+    leanAmt: (0.03 + r() * 0.06) * (0.6 + 0.6 * mat) * V.leanK,
     // heat distribution: which sector of THIS body runs hot, and how hard
     hotDir: r() * TAU, hotAmp: 0.15 + r() * 0.30,
     tw0: r() * TAU,
@@ -270,7 +284,7 @@ export function createFinalRing(sceneApi, uniforms) {
      work and identical either way; the only fork is whether the TISSUE comes
      from species.js or from the hero. */
   function placeMushroom(m, tierOverride, wantClone) {
-    const P = memberParams(m);
+    const P = memberParams(m, clones.varyOk);
     const dist = Math.hypot(m.x - REST_CAM.x, m.z - REST_CAM.z);
     const T = tierOverride != null ? tierOverride
       : dist < 8 ? 0 : dist < 14 ? 1 : 2;          // build-time LOD tier
@@ -325,7 +339,21 @@ export function createFinalRing(sceneApi, uniforms) {
           touch a proportion. -- */
     const cd = Math.cos(P.leanDir), sd = Math.sin(P.leanDir);
     const cF = Math.cos(P.leanAmt), sF = Math.sin(P.leanAmt);
+    /* VARIATION, species side (variation.js). This is the ONE funnel every
+       species stroke and point passes through, which is why the deformation
+       goes here and nowhere else: the far band gets exactly the consistency
+       argument the near band gets from sharing one uniform set — every layer
+       of a body, without exception, sees the same map.
+       species.js emits BODY-frame coordinates that are already multiplied by
+       `scale`, and the map is written in hero units, so divide out, map, and
+       multiply back. `si` is 1/s hoisted out of the inner loop. */
+    const V = P.V, si = 1 / s;
+    const _v = [0, 0, 0];
     const w = (px, py, pz) => {
+      if (V !== IDENTITY) {
+        varyPoint(V, px * si, py * si, pz * si, _v);
+        px = _v[0] * s; py = _v[1] * s; pz = _v[2] * s;
+      }
       const l = px * cd + pz * sd, t = -px * sd + pz * cd;
       const l2 = l * cF + py * sF, y2 = -l * sF + py * cF;
       return [m.x + (l2 * cd - t * sd), m.gy + y2, m.z + (l2 * sd + t * cd)];
@@ -366,7 +394,10 @@ export function createFinalRing(sceneApi, uniforms) {
     // (a different creature) instead of solid caps. The rim plane now sits
     // at the SPECIES' own rim height (CAP_Y in hero units) rather than at a
     // per-member dome height that no longer exists.
-    const rimWorldY = m.gy + s * CAP_Y;
+    // (the variation round stretches the stalk under the rim, so the rim
+    // plane rides P.V.stemH — the map pins it there exactly, whatever else
+    // the body does)
+    const rimWorldY = m.gy + s * CAP_Y * P.V.stemH;
     const elev = (REST_CAM.y - rimWorldY) / Math.max(dist, 1e-3);
     const underVis = 1 - smoothstep(0.02, 0.30, elev) * 0.88;
 
@@ -392,6 +423,7 @@ export function createFinalRing(sceneApi, uniforms) {
         arc: m.arc, reveal: m.reveal, boost: m.boost ?? 1,
         tw0: P.tw0, phase: P.swayPhase, amp: P.swayAmp,
         lum: cloneLum(dist),
+        vary: P.V,                                    // this body's own shape
       });
     } else {
       buildMushroom(spec);
@@ -411,7 +443,10 @@ export function createFinalRing(sceneApi, uniforms) {
     /* -- the pick proxy: one invisible cone bracketing this body, in
           interact.js's detached tree. Never rendered, never traversed. -- */
     if (pickable) {
-      picker.add(m.x, m.gy, m.z, Math.max(s * CAP_R, 0.22), s * HERO_H, body);
+      // the cone has to bracket the DEFORMED body, so it takes the map's own
+      // worst-case extents (rim crest, apex) rather than the nominal ones
+      picker.add(m.x, m.gy, m.z,
+        Math.max(s * CAP_R * capRadiusK(P.V), 0.22), s * HERO_H * heightK(P.V), body);
     }
 
     /* ==== §8 base — ground merge. Not species geometry: these stubs walk
@@ -426,12 +461,17 @@ export function createFinalRing(sceneApi, uniforms) {
             species.js emits: atmosphere, not strokes. ==== */
     {
       const rs = Math.pow(s, 0.7);
+      // the stubs seat against the stipe's soil-line radius, which the
+      // variation round widens per body (stemW + flare) — a bulbous-footed
+      // mushroom whose roots started inside its own flesh would read as a
+      // body sunk into the floor
+      const seatR = STEM_BASE_R * s * baseRadiusK(P.V);
       const r = P.r, g = () => gaussOf(r);
       for (let k = 0; k < C.roots; k++) {
         const a = r() * TAU;
         let dirA = a;
-        let px = m.x + Math.cos(a) * STEM_BASE_R * s;
-        let pz = m.z + Math.sin(a) * STEM_BASE_R * s;
+        let px = m.x + Math.cos(a) * seatR;
+        let pz = m.z + Math.sin(a) * seatR;
         let py = m.gy + (0.08 + r() * 0.10) * s;
         let h = 0.42 + r() * 0.12;
         for (let st = 0; st < C.rootSteps; st++) {
@@ -452,7 +492,7 @@ export function createFinalRing(sceneApi, uniforms) {
       dist: +dist.toFixed(2), scale: +s.toFixed(3),
       // world anchor at the cap's rim plane — what a pointer aims at, and
       // what the interaction gate projects to place a synthetic tap
-      aim: [+m.x.toFixed(3), +(m.gy + s * CAP_Y).toFixed(3), +m.z.toFixed(3)],
+      aim: [+m.x.toFixed(3), +(m.gy + s * CAP_Y * P.V.stemH).toFixed(3), +m.z.toFixed(3)],
       segs: lines.segCount - seg0, pts: glows.ptCount - pt0,
     });
   }

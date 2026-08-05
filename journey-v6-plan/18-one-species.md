@@ -755,3 +755,288 @@ clearTap(b)`) is belt-and-braces: only a body holding one of the two wobble
 slots can have non-zero tap state, and a slot is always released through
 `clearTap`. It is 28 visits once per retire, so it stays — but it is not
 load-bearing, and anyone tightening this loop should know that.
+
+---
+
+# 10 — Individuals, not copies: variation as a deformation
+
+**Date:** 2026-08-05. **Asked by Hannah, on the shipped field:**
+
+> "the mushrooms at the end seem too similar to one another, can you work on
+> mixing up a few elements of them like their cap size and shape, angles, etc.
+> the squiggles on the top of the cap, the stalk height, and base, etc. etc.
+> Make them each their own unique thing and make the whole piece work
+> cohesively"
+
+## 10.1 Why they were identical, and why that could not be undone
+
+She is describing the exact price of §7's step-back, and the price was worth
+paying twice over. A near member is a LITERAL CLONE: the hero's own
+`BufferGeometry` objects re-drawn under another matrix, sharing most of their
+uniforms with the hero's own instances. That is why round 3 finally read as the
+right creature after two rebuilds were rejected — and it is why every body in
+the near band is one shape. They *are* the same vertices. A uniform scale, a
+yaw and a few degrees of lean were the only things that had ever differed.
+
+So variation could not come from the build. Reintroducing a parametric builder
+for the near band is exactly what §7 threw out, and doc 18 §1's own table
+("size and detail vary; proportions do not") is what made the field uniform in
+the first place. The only remaining place to put an individual's identity is
+**between the shared vertex and the screen** — a per-body DEFORMATION, seeded
+from the body's index, applied in the vertex shader. New module:
+`journey/chapters/final/variation.js`.
+
+This supersedes §1's second row *only* for proportions, and it is worth being
+precise about what survives: the profile LAW is untouched. There is still one
+cap dome curve, one rim line, one margin droop and one stem taper, and they
+still live only in `anatomy.js` / the hero's own buffers. What varies now is
+the proportions that law is evaluated at.
+
+## 10.2 The axes and their ranges
+
+One seeded stream per body (`makeRng(seed ^ 0x2b1e)` — its own stream, like
+`scaleFor`'s `^0x9e37` and the sway's `^0x51a7`, so adding it could not shift a
+single value placement already draws). Measured spread over all 72 bodies:
+
+| axis | slot | measured range | reads as |
+|---|---|---|---|
+| `capW` | A.x | 0.841 – 1.159 | broad parasol / tight bell |
+| `capH` | A.y | 0.735 – 1.228 | flat plate / high dome |
+| `stemH` | A.z | 0.841 – 1.159 | squat / long-stalked |
+| `stemW` | A.w | 0.825 – 1.193 | thick / slender stipe |
+| `flare` | B.x | 0.051 – 0.287 | bulbous foot / clean foot |
+| `twist` | B.y | −0.317 – 0.319 rad | helical shear up the stalk |
+| `rimAmp` | B.z | 0.035 – 0.102 | the wavy margin, in plan |
+| `rimDrop` | B.w | 0.031 – 0.109 | ...and in height |
+| `crumpAmp` | D.x | 0.056 – 0.189 | the squiggles on the cap |
+| `rimLobes` / `crumpLobes` | C.x / C.z | 3–7 / 3–9 | how many waves |
+| `leanK` | (not in the map) | 0.814 – 1.596 | widens the existing lean |
+
+**Correlation is what keeps it a species.** `capW`/`capH` come from ONE `broad`
+draw, anti-correlated, and `stemH`/`stemW` from one `lanky` draw. In a colony a
+cap that spreads wide is also flatter, and a stalk that runs tall runs thinner.
+Rolling the four independently gave tall fat caps on tall fat stalks standing
+next to small thin ones — a menagerie, which is the failure mode Hannah's
+"work cohesively" names. A jitter term on the second of each pair stops the
+correlation reading as a rule.
+
+Two axes are deliberately low-frequency: `rimLobes` 3–7 and `crumpLobes` 3–9.
+A high harmonic on a cap this size reads as noise on the mesh rather than as
+the shape of the mushroom.
+
+`leanK` is not part of the map — it multiplies the whole-body lean that doc 18
+deliberately trimmed, widening it to ~9.5 deg worst case against the 11 deg
+that round's screenshots rejected for opening the rim ellipse into a saucer.
+
+## 10.3 The map, and the two masks that took the thinking
+
+`varyPt(p)`, in the BODY frame (soil at the origin, +y up, hero units):
+
+1. **vertical** — `mix(y·stemH, CAP_Y·stemH + (y−CAP_Y)·capH, mv)`
+2. **radial** — `mix(stemW + flare·e^(−1.9y), capW, mr)`
+3. **rim wave** — one harmonic, radial *and* vertical at the same lobe count
+   and phase, windowed on to the outer cap by `edge = smoothstep(0.35, 1.0, r/CAP_R)`
+4. **crumple** — an angular ripple in y over the dome, `× sin(π·u)` so it
+   vanishes at both the apex and the rim, where the rim wave takes over
+5. **twist** — `smoothstep(0, CAP_Y, y) · twist` about the axis
+
+The obvious formulation of (1) and (2) — "stretch below `CAP_Y`, scale the dome
+above it" — **shears the cap**, and the reason is worth recording. Stem and cap
+overlap heavily in HEIGHT: the stipe runs to `STEM_TOP` 3.9, buried in the cap
+so the joint is not butted, while the margin droops down past 2.9. Any mask
+that is a function of height alone hands the drooping margin a different map
+from the rim 0.25 units above it and pinches the cap edge. So:
+
+- `mr = smoothstep(0.55, 1.20, r)` — **radial**, for the radial factor. The
+  stem never exceeds r ≈ 0.56, a radial factor is a no-op near the axis anyway,
+  and the margin at (r 2.3, y 2.9) and the rim at (r 2.35, y 3.15) therefore
+  get the SAME factor. That is what stops the pinch.
+- `mv = max(mr, smoothstep(3.55, 3.95, y))` — the height term exists only for
+  the dome's centre, which sits at r = 0 and would otherwise be handed the
+  stalk's map and lose the cap-height axis entirely. Above 3.95 both terms
+  saturate, so the buried stem top and the apex share one map and the stalk can
+  never grow out through the cap.
+
+**Two fixed points, asserted rather than assumed** (`invariants()`, run over all
+72 bodies): the soil seat `varyPt(0,0,0) = (0,0,0)` **exactly** (max offset
+0.0), and the rim plane lands at `CAP_Y·stemH` at every azimuth whatever the
+masks do — because the two vertical maps are equal at `y = CAP_Y` by
+construction, so the blend cannot move it (max error **3.5e-10**).
+
+## 10.4 Injection, and the consistency that is the whole risk
+
+A body is fifteen drawables with thirteen materials. Deform the cap lattice and
+not the cap SHELL and the body's lit outline stops agreeing with its own opaque
+interior — a rim floating off a black cap, the most broken a thing in this
+scene can look. Four mechanisms hold the line:
+
+1. **One uniform set per body.** `varyUniforms(V)` is built once in
+   `clones.add()` and the SAME four objects (`uVarA`–`uVarD`) are handed to
+   every one of that body's materials. Not copied — the same object. A layer
+   cannot disagree with its neighbour even for a frame.
+2. **One frame, carried explicitly.** The first cut assumed the spine was flat
+   and the guard said otherwise, which is the argument for having written it:
+   **it is not**. `mushroom` carries the authored cap tilt (~8 deg about x) and
+   a residual offset, so cap leaves live in a tilted, translated frame while
+   stem leaves live in the body frame. Each layer therefore carries `uVarM` /
+   `uVarMI`, the exact matrix from ITS geometry frame to the body frame;
+   `varyPt` hops in, deforms, and hops back. `frameOf()` returns the parent's
+   frame object unchanged when a node adds no transform, so there are exactly
+   TWO frames per body, not fifteen.
+3. **Three injection sites, one function.** organism's own `ShaderMaterial`
+   sources are rewritten textually (`varyVertex`): every path to `position` —
+   including `position + tang` / `+ tang2`, the dense-line coverage fade's
+   neighbour probes — goes through `varyPt`, and a **residue check** refuses
+   the patch outright if any path to the raw attribute survives. The stock
+   `MeshBasicMaterial` shells and the rebuilt overlay net take the same GLSL
+   through `onBeforeCompile` at `#include <begin_vertex>`.
+4. **One guard, taken before the first body is built.** `probeVary()`
+   test-patches every distinct shader source the walk will meet and checks every
+   frame matrix is invertible. If ANY of them refuses, `varyOk` is false and
+   **nothing** is deformed — clones and species band together, since `ring.js`
+   reads `clones.varyOk` for both. Half a deformed body is not a degraded
+   outcome, it is a bug; the only safe fallback is none at all.
+
+**The shells had to stop being shared.** §2's table said "shared outright"; they
+are now cloned per body (2 materials × 24 = 48). Zero extra draw calls — same
+meshes, same count — and one extra program, since the cache key is constant
+across the set. It also fixes a latent bug the sharing carried: a shared shell
+material wears the hero's intro clipping plane and fade opacity, so a clone set
+built during the hero's grow-in would have baked those in. `cloneShellMat` pins
+the restored state explicitly.
+
+**The species band** takes the same map on the CPU, at the ONE funnel every
+distant stroke and point already passes through — `ring.js`'s `w()`. Same
+argument, same guarantee: no layer of a batched body can miss it, because there
+is no other way for a vertex to reach the batch. `species.js` emits body-frame
+coordinates already multiplied by `scale`, so `w()` divides out, maps, and
+multiplies back; the map's thresholds are hero units on both sides.
+
+Three placement values follow the map so the world still agrees with it: the
+pick proxy's radius and height (`capRadiusK` / `heightK` — the map's WORST case,
+so a cone always brackets its body), the ground-merge stubs' seat radius
+(`baseRadiusK`, or a bulbous-footed body's roots start inside its own flesh),
+and the rim-plane height used by the elevation-occlusion shading.
+
+## 10.5 How it composes with the poke and the draw-on
+
+Both compose by construction, and neither needed a line changed:
+
+- **The wobble.** For a CLONE the ring-down is a rotation of the `sway` GROUP,
+  which sits ABOVE every deformed leaf — the deformation is in the leaf's own
+  vertex shader, so the wobble rotates an already-deformed body. For a SPECIES
+  body `world.js`'s `WOBBLE_GLSL` rotates the final world position about the
+  body's stored base, and the CPU deformation happened at build time, upstream
+  of it. Neither path can fight the other; they are in series.
+- **The narrow phase** raycasts a body's real shells, which are deformed only in
+  the shader, so the CPU hit point is the UNDEFORMED surface — up to ~15% of cap
+  radius off on a strongly-deformed body. That is a lever arm and a ripple
+  centre, and neither is perceptible at that error. `interact.js` already falls
+  back to the broad phase's cone point when the shell cast misses, and the cone
+  is sized off the map's worst case, so a tap on the visible edge of a widened
+  cap still lands on that body.
+- **The draw-on entry** (§8) is a per-vertex `aDraw` ordering against the body's
+  own `uProg`; the deformation moves where a vertex IS, never when it inks. A
+  body draws itself on in the hero's authored order, in its own shape.
+- **The reveal choreography** is untouched: `uOpacity` per body, camera-pure in
+  `uPull`, D16 intact. The deformation is static per body — it has no time term
+  at all, so it cannot self-ignite anything.
+
+## 10.6 Budget
+
+Measured at the Final rest, 1280x800 dpr 1, `composer.render()` timed with
+`gl.finish()`, arms **interleaved in one headless session** through a temporary
+`&novary=1` switch (removed before commit):
+
+| | draw calls | line segs | points | triangles | programs |
+|---|---|---|---|---|---|
+| before | 396 | 402,273 | 84,313 | 278,127 | 28 |
+| after | **396** | **402,273** | **84,313** | **278,127** | **31** |
+
+Nothing the frame submits changed — the deformation moves vertices that were
+already being submitted. The three extra programs are the dense-line, point and
+shell variants of the graft; the patched source is identical across all 24
+bodies, so it is three for the whole set, not three per body.
+
+Render time is the honest part. This machine was heavily loaded throughout
+(load average 18–25, the live page open in a second browser), so the medians
+are noise; the minimum is the only robust statistic, since contention can only
+add time. Interleaved best-of-N minima across two runs (4 and 7 rounds):
+**plain 2.66 / 2.78 ms, varied 3.50 / 3.95 ms** — call it **+0.8 to +1.2 ms**
+at the rest, on a pose whose shipped envelope was 1.17–3.80 ms min inside a
+16.7 ms frame. For scale, a variant with the two dense-line
+tangent probes left UNDEFORMED (one `varyPt` per vertex instead of three)
+measured *worse* than the exact version in the same harness, which is the
+measurement telling you the deform is not where the time goes. The exact
+version therefore stands: no fidelity was traded for a number the machine
+cannot resolve.
+
+## 10.7 Gates
+
+- **Hannah's sentence, at the rest.** 1440x900, 1280x800, 375x812 and the
+  end-hold at each: every body reads as its own — the near-left one broad and
+  shallow with a visibly wavy margin, the one behind it high-domed, the
+  near-right wide and low on a lumpy cap, the far band varied in the same
+  language — and the field still hangs together as one colony. The hero keeps
+  the frame as the largest and the cleanest specimen.
+- **Outline vs solid, the risk this design is built around.** Verified two
+  ways. By eye at 2x on several bodies: the cap's dark interior tracks the
+  scalloped rim all the way round, with no far-side wires bleeding past it —
+  which is exactly what an undeformed shell under a deformed rim would look
+  like. And under STRESS: with every body forced to `capW` 1.55 / `capH` 0.50 /
+  `rimAmp` 0.30 / `crumpAmp` 0.45 (a temporary patch, reverted), the bodies are
+  grotesque and still **coherent** — lattice, gill fan, rim stack, stem mesh,
+  point clouds and all four opaque shells move as one surface. If any layer
+  were being left behind, that frame is where it would be unmissable.
+- **Invariants**, over all 72 bodies: soil seat offset **0.0** exactly, rim-pin
+  error **3.5e-10**.
+- **The hero is untouched**, checked structurally rather than by eye: walking
+  `groups.stem` and `groups.mushroom` finds **0** hero materials carrying a
+  `uVar*` uniform, **0** carrying a patched shader source, and both hero shell
+  materials still at `opacity 1 / transparent false / no clipping planes` with
+  no injected cache key. Nothing is written back into organism's graph;
+  everything is a clone.
+- **Slow scrub p 0.78 -> 1.00 -> 0.78**, 45 settled steps in one live session
+  (samples wait for `camera.position.x` to stop gliding — the first cut of this
+  gate sampled a moving camera and was measuring the glide): forward vs reverse
+  at the same p, worst `uProg` delta **0.000000**, worst camX **1e-4**. The
+  `uOpacity` spread of 0.51 is the pre-existing twinkle and growth-front pulse,
+  both time-based by design — §9's gate records the same thing.
+- **The draw-on entry, frozen ladder** (`?capture=<p>`, forward then reverse,
+  the deterministic path): dark at arm — p 0.80/0.82/0.84 are **24 undrawn, 0
+  shells, maxOp 0.0224** (the 7% ember whisper under the arm fade) — then
+  0.855 (3 drawing, 5 shells), 0.865 (3 drawing / 2 drawn, 17), 0.875 (5/5,
+  20), 0.890 (4/17, 80), 0.905 (1/23, 96). Forward and reverse land on the
+  **identical** state at every p, worst `maxOp` delta **0.000000**. No
+  self-ignition; a reverse scrub un-inks the field stroke by stroke.
+- **Poke.** Aimed at the most strongly deformed clone (body i=0, `capW` 1.140,
+  `capH` 0.766, `rimAmp` 0.097 on 5 lobes, `twist` 0.161): the narrow phase
+  cast that body's own shells (**1 cast, 8.5 ms**) and it rings down —
+  0.066 -> 0.461 -> 0.369 -> 0.037 -> 0.258 -> 0.281 -> 0.087 deg over 2.8 s,
+  the §10c oscillator sampled off-period. The wobble rotates the `sway` group
+  above the deformed leaves, so it reads exactly as it did before.
+- **Console clean** over a full ride (intro, forward and reverse scrub at
+  1440x900, trap installed before the app loads): **0 entries**.
+- **Goldens.** `mission` / `inspire` / `connect` / `owned` **byte-identical**
+  (MAE 0.00/255, 0.0% px > 8, both sizes) — which is the leak test that
+  matters, since `chapters/inspire` parents its own group onto the hero's
+  mushroom and would show any shared-material mutation immediately. `final@*`
+  measured 5.37 (desktop) / 1.75 (mobile) against the pre-variation goldens —
+  the intended change — and was re-shot in this commit with manifest
+  provenance.
+
+## 10.8 Residuals
+
+- The narrow phase's hit point is the UNDEFORMED shell (§10.5). Correct enough
+  for a lever arm and a ripple centre; if a future round wants it exact, the
+  map is analytically invertible only by iteration, so the cheap answer would
+  be a coarse deformed proxy mesh rather than an inverse.
+- `varyPt` is evaluated three times per dense-line vertex (the vertex and its
+  two coverage-fade neighbours). Measured, that is not where the time goes —
+  the one-call variant was no faster on this machine — but on a slower GPU it
+  is the first thing to try, and dropping the neighbour deform costs only
+  accuracy in the coverage fade, never in the silhouette.
+- `bodyVariation` draws from its own stream, so the numbers here are stable
+  under any future addition to the placement streams. They are NOT stable under
+  a change to `makeRng` or to `MEMBERS`' indices; if either moves, every body's
+  shape moves with it, and the `final@*` goldens go with them.
