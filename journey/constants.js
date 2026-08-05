@@ -21,7 +21,17 @@ import { startOf, restProgress } from './route.js';
 
 // Virtual scroll (no native scroll surface: the hero page stays
 // overflow:hidden, so nothing about hero layout or rendering changes).
-export const SNAP_ENGAGE_MS   = 160;   // input-idle before magnetism engages
+export const SNAP_ENGAGE_MS   = 160;   // input-idle after which a gesture is
+                                       // over. It no longer gates any MOTION:
+                                       // the resolution that runs the
+                                       // visitor's way is armed DURING the
+                                       // gesture, so nothing is frozen while
+                                       // this elapses (scroll.js, `live`). It
+                                       // decides only two things — when a
+                                       // gesture's peak rate stops being the
+                                       // speed floor and the latched cruise
+                                       // takes over, and when a resolution
+                                       // that OPPOSES the visitor may arm.
 export const SNAP_K           = 3.4;   // spring constant, 1/s, toward the rest
 export const SNAP_BAND        = 0.30;  // capture band, x chapter scroll length
 export const SNAP_DEAD_P      = 0.0015;// closer than this, settle exactly
@@ -29,130 +39,87 @@ export const WHEEL_LINE_PX    = 16;    // deltaMode 1 -> px
 export const TOUCH_GAIN       = 1.35;  // touch drag feels shorter than wheel
 export const KEY_STEP_PX      = 110;   // arrow keys
 // Commit resolution (G3 motion note): idling anywhere must resolve to a rest —
-// there is no p where stopping leaves you parked between chapters. While input
-// is live the model stays fully scrubbed and reversible; only on idle does the
-// position glide (through the SAME smoothing/limiter pipeline as a real
-// scroll) to the rest the direction rule picks. See scroll.js `commitTarget`.
+// there is no p where stopping leaves you parked between chapters. A gesture
+// that is going somewhere arms its resolution WHILE IT IS STILL RUNNING, so
+// the resolution's speed is already the floor under the motion before the
+// gesture's momentum tail decays; a resolution that opposes the visitor waits
+// out SNAP_ENGAGE_MS, because a reversal has nothing to continue. Scrubbing
+// itself is untouched and stays exact. See scroll.js `update`.
 export const COMMIT_THRESHOLD  = 0.35; // fraction of the inter-rest p-span,
                                        // measured from the rest being LEFT (in
                                        // the direction of travel), past which
                                        // idle commits onward instead of back.
                                        // 0.35 < 0.5 is the deliberate forward
                                        // bias: "push forward most of the time".
-// FLICK CARRY (the stop Hannah kept feeling, measured 2026-08-05).
+// FLICK CARRY — WHICH rest a gesture resolves to (scroll.js pickTarget).
 //
 // COMMIT_THRESHOLD alone is a POSITION rule: it asks how far into the span you
-// got and ignores how fast you were going when you let go. A forward gesture
-// released short of it is therefore sent BACKWARD — and a backward resolution
-// after forward motion cannot be velocity-continuous by construction, because
-// the on-screen rate has to pass through zero to change sign. Measured on the
-// Inspire rest at 1280x800, a weak forward flick: screen motion 185 px/s ->
-// 6 px/s (a dead stop lasting ~100 ms) -> -101 px/s the other way. That is
-// exactly "slowing and stopping first", and no amount of handoff tuning can
-// remove it, because every handoff improvement is gated on the resolution
-// agreeing with the direction of travel and this resolution does not.
+// got and ignores that you were going somewhere. A gesture released short of
+// it is sent BACKWARD, and a backward resolution after forward motion cannot
+// be velocity-continuous by construction — the on-screen rate has to pass
+// through zero to change sign. So velocity joined position in deciding where.
 //
-// So velocity joins position in deciding WHERE, not just how fast: a gesture
-// released above this rate resolves the way it was travelling, whatever
-// fraction of the span it reached. Below it, the position rule is unchanged.
-// This is the standard flick-to-advance rule (iOS paging, ViewPager, CSS
-// scroll-snap with momentum), stated once rather than tuned in.
+// The rule was right; its CURRENCY was wrong. It used to read the rate at the
+// gesture's LAST delta, and on a real trackpad the last delta is the smallest
+// one of the momentum tail, by construction — the tail decays to nothing
+// before it stops arriving. Measured at 1280x800 through the real listeners,
+// peak rate vs rate-at-last-delta, in milli-p/s:
 //
-// The number is a MEASURED separation, not a taste. Release rates at 1280x800:
+//     gesture              peak     at last delta
+//     weak flick + tail      30              12
+//     mid  flick + tail     109              19
+//     hard flick + tail     305              31
 //
-//   1 wheel notch                   0.000     |  very weak flick   0.041
-//   2 notches @120 ms               0.013     |  weak flick        0.084
-//   4-8 notches @250-400 ms      <= 0.020     |  mid flick         0.151
-//   1 s slow deliberate drag        0.020     |  moderate flick    0.231
+// A 0.305 p/s fling and a 0.030 p/s dribble hand over the same ~0.02-0.03 p/s.
+// No threshold on that number can separate them, which is why the release-rate
+// carry test fired essentially at random and why every fix denominated in it
+// was inert on real input.
 //
-// 0.04 sits in the gap with ~2x margin either side: no notch cadence and no
-// slow deliberate drag can reach it (so a notch-by-notch reader is never flung
-// and a slow drag that stops still resolves by position), and no real flick
-// falls under it.
-export const COMMIT_CARRY_RATE = 0.04; // p/s at release, SIGNED against the
-                                       // visitor's own last delta direction —
-                                       // see scroll.js pickTarget. The sign
-                                       // guard matters: between notches the
-                                       // model's own backward glide leaves a
-                                       // residual in the perceived rate, and it
-                                       // is large (measured -0.064 p/s on the
-                                       // first notch at p = 0.30). A magnitude
-                                       // test would read that as a forward
-                                       // flick and advance a chapter on one
-                                       // notch. Requiring pVelHold * lastDir to
-                                       // clear the bar means only motion the
-                                       // VISITOR put there, going the way the
-                                       // visitor last went, can carry.
+// So the test is no longer a rate at an instant. It asks what the gesture IS:
+//
+//   STREAM — a continuous delta stream (COMMIT_STREAM_MIN events, mean spacing
+//            within COMMIT_STREAM_GAP_MS). Every trackpad gesture and every
+//            spun wheel is one; a notch-by-notch reader never is, at any
+//            speed, because the notches are 100 ms+ apart. This is what keeps
+//            the reader judged purely by position, exactly as before.
+//   INTENT — the stream reached at least COMMIT_CARRY_RATE at its peak, so a
+//            stray two-frame twitch cannot buy a whole transition.
+//
+// Measured peaks (milli-p/s): 1 notch 0, 3 notches @120ms 23, 6 notches
+// @250ms 26, 1.0 s slow drag 30, 1.4 s slow drag 53, weak flick 30, mid 109,
+// hard 305. The stream test — not this number — is what excludes the notch
+// rows; 0.02 only has to sit under the weakest real gesture.
+export const COMMIT_CARRY_RATE = 0.02;  // p/s, the gesture's PEAK rate (see
+                                        // scroll.js gPeak), signed against the
+                                        // visitor's own last delta direction.
+export const COMMIT_STREAM_GAP_MS = 45; // mean inter-delta spacing at or below
+                                        // which a gesture counts as a stream.
+                                        // Trackpads and momentum tails run
+                                        // 8-16 ms; a reader's notches run
+                                        // 100-250 ms. ~2.5x margin either side.
+export const COMMIT_STREAM_MIN = 4;     // events. Below this there is no stream
+                                        // to measure and no gesture to carry.
 export const COMMIT_GLIDE_RATE = 0.10; // p/s NOMINAL cruise — ~2x a calm read
                                        // scroll, ~4.5x under MAX_SCRUB_RATE, so
-                                       // the glide is assured but never a fling.
-                                       // For a commit that runs WITH the visitor
-                                       // this is the FLOOR, not the speed: the
-                                       // glide latches max(release rate, this)
-                                       // so it can only ever speed a slow
-                                       // release up, never brake a fast one
-                                       // down. It is the flat cruise only for a
-                                       // reversal and a standing start.
-export const COMMIT_BLEND_K    = 6.0;  // 1/s — the glide's rate eases from the
-                                       // INHERITED gesture rate toward cruise
-                                       // (exponential blend). The glide does not
-                                       // ramp from standstill: it seeds with the
-                                       // perceived rate at engage, so the commit
-                                       // carries the visitor's own motion to
-                                       // completion instead of stop-then-restart.
-                                       // ~63% of the gap closed in 165 ms, ~95%
-                                       // by 0.5 s — same felt attack as the old
-                                       // 0.35 s smoothstep ramp, minus the pause.
-// HANDOFF (the pause Hannah felt, measured 2026-08-04). Seeding the glide with
-// the perceived rate is only velocity-continuous if the handoff happens while
-// there is still a velocity. Waiting the full SNAP_ENGAGE_MS freezes the scroll
-// surface for 160 ms, during which the ON-SCREEN rate decays at SMOOTH_K —
-// measured on a normal 1.2 s gesture: 0.093 -> 0.042 p/s, a 55% loss — and the
-// glide then seeded from that corpse (0.050) and spent ~650 ms of COMMIT_BLEND_K
-// climbing back to cruise. Net: an ~800 ms sag in the middle of the move, felt
-// exactly as stop -> pause -> restart.
-//
-// So the handoff no longer waits for the idle window WHEN THE RESOLUTION IS
-// ALREADY GOING THE WAY THE VISITOR IS: it takes over a couple of frames after
-// the last delta, seeded with the rate at release. SNAP_ENGAGE_MS is unchanged
-// and still governs every other case — in particular a resolution that OPPOSES
-// the residual motion (released short of COMMIT_THRESHOLD, discrete wheel
-// notches early in a span) keeps the shipped 160 ms window, so the return leg
-// and the notch-by-notch feel are untouched.
-//
-// The scroll surface is FROZEN between the last input and either engage point
-// (no input, no glide), so p is bit-identical at both — bracketAt/pickTarget see
-// the same p and the direction rule picks the SAME rest. This changes when the
-// motion is handed over, never where it goes.
-export const COMMIT_HANDOFF_MS  = 80;   // idle before a with-the-motion handoff.
-                                        // Above any real gesture's inter-event
-                                        // gap (trackpad/wheel streams run 16 ms,
-                                        // momentum tails 16 ms) so it can never
-                                        // fire mid-gesture; ~2-5 frames, over
-                                        // which the perceived rate is still live.
-export const COMMIT_HANDOFF_FLOOR_MS = 32; // the floor COMMIT_HANDOFF_MS anneals
-                                        // to for a fast delta STREAM. The 80 ms
-                                        // wait has to clear the slowest real
-                                        // gesture's inter-delta gap, but a
-                                        // trackpad streaming at 16 ms proves
-                                        // itself ended far sooner — and at speed
-                                        // those extra milliseconds of frozen
-                                        // surface cost the most rate, because
-                                        // the decay is proportional. So the wait
-                                        // is 2x the gesture's own measured
-                                        // spacing, clamped to
-                                        // [FLOOR_MS, COMMIT_HANDOFF_MS]: fast
-                                        // streams hand over in ~32 ms, a slow
-                                        // deliberate scroll still gets the full
-                                        // 80, and an isolated delta (no stream
-                                        // measured) always gets the full 80.
-                                        // ~1-2 frames; never below one frame.
-export const COMMIT_HANDOFF_MIN = 0.02; // p/s — below this there is no motion to
-                                        // continue and the early handoff is not
-                                        // offered (a lone wheel notch from rest
-                                        // is a standing start, not a gesture);
-                                        // such positions resolve on the ordinary
-                                        // SNAP_ENGAGE_MS window as before.
+                                       // the transition is assured but never a
+                                       // fling. It is a FLOOR, not the speed: a
+                                       // resolution that runs with the visitor
+                                       // cruises at max(the gesture's own peak
+                                       // rate, this), so it can only ever speed
+                                       // a gentle gesture UP to nominal, never
+                                       // brake a brisk one down. It is the flat
+                                       // cruise only for a reversal and a
+                                       // standing start, where there is no
+                                       // motion to continue.
+export const COMMIT_BLEND_K    = 6.0;  // 1/s — how fast the resolution's speed
+                                       // FLOOR eases from the gesture's own
+                                       // peak rate up to the latched cruise,
+                                       // once the gesture is over. It is the
+                                       // only ramp left in the model, it only
+                                       // ever runs upward, and it starts from
+                                       // the speed already on screen — so it
+                                       // can add speed and can never take any
+                                       // away. ~63% in 165 ms, ~95% by 0.5 s.
 
 // Fast scroll must take the SAME accelerated path, never a cut: the smoothed
 // progress is speed-limited, so a flung trackpad still traverses every frame
@@ -162,12 +129,12 @@ export const COMMIT_HANDOFF_MIN = 0.02; // p/s — below this there is no motion
 // Full journey minimum traverse ~= 2.2 s.
 export const MAX_SCRUB_RATE   = 0.45;  // p units per second
 
-// Ceiling on a glide's LATCHED cruise (see scroll.js, glide.cruise). A commit
-// that inherits a fling must carry that speed, not brake to nominal — but it
-// must not inherit the whole scrub limiter either, or a hard fling would cross
-// a whole leg at teleport speed with no sense of travel. 0.7 x the limiter
-// leaves visible headroom under it, so a flung commit still reads as the fast
-// end of scrolling rather than as a cut.
+// Ceiling on a resolution's latched cruise (scroll.js, intent.cruise). A
+// transition that carries a fling must keep that speed, not brake to nominal —
+// but it must not inherit the whole scrub limiter either, or a hard fling
+// would cross a whole leg at teleport speed with no sense of travel. 0.7 x the
+// limiter leaves visible headroom under it, so a flung transition still reads
+// as the fast end of scrolling rather than as a cut.
 export const COMMIT_CRUISE_MAX = 0.7 * MAX_SCRUB_RATE;   // 0.315 p/s
 
 // Absolute-p windows in which each chapter's DOM copy is shown. Authored as
@@ -293,6 +260,14 @@ export const THRESHOLD_MIN_DWELL_MS     = 250;   // before a reverse crossing re
 /* ------------------------------------------------------------------ */
 /* Motion / state smoothing                                            */
 /* ------------------------------------------------------------------ */
+// SMOOTH_K is the scrub servo's constant and it lives in ONE place: the scroll
+// controller (scroll.js), which owns the displayed position. state.js used to
+// smooth p a SECOND time on top of it, and that second filter is what made the
+// stop Hannah kept feeling structurally unavoidable: a first-order lag carries
+// no velocity state, so the instant its target stopped moving the on-screen
+// rate decayed as e^(-SMOOTH_K t) toward zero — every commit began by watching
+// the motion die, whatever the scroll model did next. state.js now smooths
+// only a nav FLIGHT (SMOOTH_K_FLIGHT), which has its own tween and no handoff.
 export const SMOOTH_K       = 6.5;  // progress smoothing, free scrubbing
 export const SMOOTH_K_FLIGHT = 10;  // during a nav-triggered flight
 export const FLIGHT_BASE_S   = 1.4; // flight duration = BASE + SPAN * distance

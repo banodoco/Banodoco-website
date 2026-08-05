@@ -8,8 +8,11 @@
 //     not change. The grey-box drives progress from a VIRTUAL scroll surface
 //     (core/scroll.js) which pushes deltas in through setProgress(); the state
 //     itself stays a pure smoothing + routing owner.
-//   * smoothed progress is speed-limited (MAX_SCRUB_RATE) so a flung scroll
-//     takes the same accelerated path instead of teleporting past frames.
+//   * it no longer smooths the scrubbed path at all. The scroll controller
+//     owns the displayed position (smoothing + speed limit, once), because a
+//     second first-order lag here had no velocity state and therefore decayed
+//     the on-screen rate to zero whenever input paused — see update() below.
+//     Only a nav FLIGHT is still smoothed and speed-limited here.
 //   * routing normalises the retired Equip routes (adr-d6-routes.md) and
 //     delegates the decision of HOW to travel to the host (fly vs jump vs
 //     stay put), because that is a camera concern, not a state concern.
@@ -20,7 +23,7 @@ import {
   CHAPTERS, CHAPTER_IDS, chapterAt, localProgress, restProgress,
 } from './route.js';
 import {
-  SMOOTH_K, SMOOTH_K_FLIGHT, FLIGHT_BASE_S, FLIGHT_SPAN_S, MAX_SCRUB_RATE,
+  SMOOTH_K_FLIGHT, FLIGHT_BASE_S, FLIGHT_SPAN_S, MAX_SCRUB_RATE,
 } from './constants.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -103,6 +106,21 @@ export function createJourneyState({ onNavigate = null, onFlightCancel = null } 
 
   function jumpToChapter(id) { snapTo(restProgress(id)); }
 
+  /* SMOOTHING LIVES IN ONE PLACE, AND IT IS NOT HERE.
+     This file used to run every scrubbed frame through a first-order lag on
+     top of the scroll model's own — and that second filter is exactly what
+     made the stop Hannah kept reporting structurally unavoidable. A
+     first-order lag holds no velocity state: its output rate is k * (rawP - p),
+     so the instant rawP stopped moving the rate on screen decayed as
+     e^(-k t) toward zero, every time, before any commit could begin. Three
+     separate repairs inside scroll.js could not reach it, because the
+     deceleration was happening downstream of all of them.
+     The scroll controller (scroll.js) now owns the displayed position: it
+     smooths at SMOOTH_K and speed-limits at MAX_SCRUB_RATE once, with the rate
+     as persistent state, and hands the finished number here. A nav FLIGHT is
+     the one motion this file still generates, so it keeps its own tween and
+     its own smoothing — a flight has a scheduled path and no handoff, so the
+     lag has nothing to swallow. */
   function update(dt) {
     if (flight) {
       flight.t += dt;
@@ -110,14 +128,14 @@ export function createJourneyState({ onNavigate = null, onFlightCancel = null } 
       const e = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
       rawP = clamp01(flight.from + (flight.to - flight.from) * e);
       if (f >= 1) flight = null;
+      let step = (rawP - p) * Math.min(dt * SMOOTH_K_FLIGHT, 1);
+      const cap = MAX_SCRUB_RATE * dt;
+      if (step > cap) step = cap; else if (step < -cap) step = -cap;
+      p += step;
+      if (Math.abs(rawP - p) < 0.00004) p = rawP;
+      return p;
     }
-    const k = flight ? SMOOTH_K_FLIGHT : SMOOTH_K;
-    let step = (rawP - p) * Math.min(dt * k, 1);
-    // speed limit: fast scroll traverses the same path, quickly (GB-3.4)
-    const cap = MAX_SCRUB_RATE * dt;
-    if (step > cap) step = cap; else if (step < -cap) step = -cap;
-    p += step;
-    if (Math.abs(rawP - p) < 0.00004) p = rawP;
+    p = rawP;
     return p;
   }
 
