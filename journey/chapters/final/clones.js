@@ -66,6 +66,7 @@
 
 import * as THREE from 'three';
 import { heroPulse } from './world.js';
+import { VARY_GLSL, varyUniforms, IDENTITY } from './variation.js';
 
 /* ---- NO POINTER GLOW. THE PARITY FACT (2026-08-05, Hannah: "when I hover
    over the mushrooms at the bottom they still light up") -------------------
@@ -199,16 +200,17 @@ const DRAW_LEAD = 0.20, DRAW_W = 0.16;
 // own uWin for that layer. Without it the overlay net is the one layer that
 // stands fully drawn while the cap lattice under it is still being stroked,
 // and the one layer that does not answer a poke's ripple.
-function injectCloneDraw(mat, uProg, uWin, pulse) {
+function injectCloneDraw(mat, uProg, uWin, pulse, own, frame, vary) {
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uProg = uProg;
     sh.uniforms.uWin = uWin;
     sh.uniforms.uPulseC = pulse.uPulseC;
     sh.uniforms.uPulseT = pulse.uPulseT;
     sh.uniforms.uPulseP = pulse.uPulseP;
+    if (vary) bindVary(sh.uniforms, own, frame);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>',
-        '#include <common>\n' +
+        '#include <common>\n' + (vary ? VARY_GLSL : '') +
         'uniform float uProg;\nuniform vec2 uWin;\n' +
         'attribute float aDraw;\nvarying float vDraw;\n' +
         'uniform vec3 uPulseC;\nuniform float uPulseT;\nuniform vec3 uPulseP;\n' +
@@ -221,6 +223,7 @@ function injectCloneDraw(mat, uProg, uWin, pulse) {
         '}')
       .replace('#include <begin_vertex>',
         '#include <begin_vertex>\n' +
+        (vary ? '  transformed = varyPt(transformed);\n' : '') +
         '{ float dp = clamp((uProg - uWin.x) / (uWin.y - uWin.x), 0.0, 1.0);\n' +
         '  float head = smoothstep(0.0, 0.012, dp - aDraw);\n' +
         '  float tip = smoothstep(0.03, 0.0, abs(dp - aDraw)) * smoothstep(0.0, 0.01, dp) * (1.0 - step(0.999, dp));\n' +
@@ -264,6 +267,145 @@ const SHELL_ON = 0.02;
 // no region is ever inked without its shell.
 const STEM_SHELL_AT = 0.42;   // = 0.30 + 0.24/2, intro.js's stem fade midpoint
 const CAP_SHELL_AT = 0.644;   // = 0.574 + 0.14/2, its cap fade midpoint
+
+/* ---- PER-BODY VARIATION (variation.js, 2026-08-05) ----------------------
+   Hannah, on the shipped field: "the mushrooms at the end seem too similar to
+   one another... make them each their own unique thing."
+
+   She is describing the price of the step-back above. A clone IS the hero's
+   vertices; a uniform scale, a yaw and a few degrees of lean are the only
+   things that have ever differed between two bodies. Variation therefore
+   cannot come from the build — the buffers are shared and must stay shared —
+   so it comes from a DEFORMATION: variation.js's `varyPt()`, one smooth map
+   of the body frame to itself, seeded per individual and evaluated in the
+   vertex shader.
+
+   THE WHOLE DIFFICULTY IS CONSISTENCY. A body here is fifteen drawables with
+   thirteen materials. Deform the cap lattice and not the cap SHELL and the
+   body's lit outline stops agreeing with its own opaque interior — a rim
+   floating off a black cap, which is the most broken a thing in this scene
+   can look. Three mechanisms hold the line, and they are the reason this
+   section is longer than the map itself:
+
+     1. ONE UNIFORM SET PER BODY. `varyUniforms(V)` is built once in add() and
+        the SAME four objects (uVarA..uVarD) are handed to every one of that
+        body's materials. Not copied — the same object. A layer cannot
+        disagree with its neighbour even for a frame, because there is nothing
+        to disagree with.
+     2. ONE FRAME, CARRIED EXPLICITLY. The map is written in the body frame
+        (soil at the origin, hero units), and a layer's geometry is NOT
+        necessarily in it. The first cut of this file assumed it was; the
+        guard below said otherwise, which is the argument for having written
+        the guard. `mushroom` carries the authored cap tilt (~8 deg about x)
+        and a residual offset, so cap leaves live in a tilted, translated
+        frame while stem leaves live in the body frame — and a map applied to
+        raw local coordinates would have meant two different things on the two
+        halves of one mushroom. Every layer therefore carries uVarM/uVarMI,
+        the exact matrix from ITS frame to the body frame; varyPt hops in,
+        deforms, and hops back. frameOf() reuses the parent's frame object
+        whenever a node adds no transform, so there are exactly TWO frames per
+        body, not fifteen.
+     3. ONE GUARD, TAKEN BEFORE THE FIRST BODY IS BUILT. `probeVary()` test-
+        patches every distinct shader source the walk will meet and checks
+        every frame matrix is invertible. If ANY of them refuses, `varyOk` is
+        false and NOTHING is deformed — clones and species band together, since
+        ring.js reads clones.varyOk for both. Half a deformed body is not a
+        degraded outcome, it is a bug; the only safe fallback is none at all.
+
+   The shells had to stop being shared for this. That is a real change to the
+   rules table above, and it costs 24 x ~2 extra MeshBasicMaterials — but zero
+   extra draw calls (same meshes, same count) and one extra program (the cache
+   key is constant across the set). It also fixes a latent bug it inherited:
+   a shared shell material carries the hero's intro clipping plane and fade
+   opacity, so a clone set built during the hero's grow-in would have baked
+   those in. cloneShellMat pins the restored state explicitly. ---- */
+
+// The three ways `position` reaches the pipeline in organism's own shaders.
+// Every one is rewritten to go through varyPt(); anything else reaching the
+// raw attribute would be an UNDEFORMED coordinate mixed into a deformed body,
+// so the patcher refuses rather than half-applying.
+function varyVertex(src) {
+  if (!src.includes('void main() {')) return null;
+  let n = src;
+  // the dense-line coverage fade measures the screen gap to the neighbouring
+  // line: deform the NEIGHBOUR too, or a stretched body reports its unstretched
+  // spacing and fades by the wrong amount
+  n = n.split('vec4(position + tang, 1.0)').join('vec4(varyPt(position + tang), 1.0)');
+  n = n.split('vec4(position + tang2, 1.0)').join('vec4(varyPt(position + tang2), 1.0)');
+  n = n.split('vec4(position, 1.0)').join('vec4(vPosD, 1.0)');
+  n = n.split('drawAt(position)').join('drawAt(vPosD)');
+  if (n === src) return null;                       // matched nothing: refuse
+  n = n.replace('void main() {',
+    VARY_GLSL + '\n      void main() {\n        vec3 vPosD = varyPt(position);');
+  // residue check: after removing the three legitimate varyPt() arguments,
+  // no path to the raw attribute may remain anywhere in the source
+  const residue = n
+    .split('varyPt(position + tang2)').join('')
+    .split('varyPt(position + tang)').join('')
+    .split('varyPt(position)').join('');
+  if (residue.includes('position')) return null;
+  return n;
+}
+
+const VARY_U = ['uVarA', 'uVarB', 'uVarC', 'uVarD'];
+/** Bind one layer's variation uniforms: the body's SHAPE (four objects shared
+ *  by every layer of the body — the consistency guarantee) and this layer's
+ *  own geometry FRAME (see VARY_GLSL's varyPt: the spine is not flat). */
+function bindVary(target, own, frame) {
+  for (const k of VARY_U) target[k] = own[k];
+  target.uVarM = frame.uVarM;
+  target.uVarMI = frame.uVarMI;
+}
+
+const IDENT_M = new THREE.Matrix4();
+const isIdentityM = (m) => {
+  const e = m.elements, I = IDENT_M.elements;
+  for (let i = 0; i < 16; i++) if (Math.abs(e[i] - I[i]) > 1e-9) return false;
+  return true;
+};
+/** The frame a node's geometry lives in, as the accumulated matrix from the
+ *  clone's own spine root. Returns the PARENT's frame object unchanged when
+ *  the node adds no transform, so the whole stem side shares one identity
+ *  frame and the whole cap side shares one tilted frame — two uniform pairs
+ *  per body, not fifteen. `bendRoot` mirrors cloneNode stripping capBend's
+ *  live bend snapshot: the frame must describe the clone, not the hero. */
+function frameOf(parent, o, bendRoot) {
+  const local = new THREE.Matrix4();
+  if (bendRoot) local.makeTranslation(o.position.x, o.position.y, o.position.z);
+  else local.compose(o.position, o.quaternion, o.scale);
+  if (isIdentityM(local)) return parent;
+  const m = parent.m.clone().multiply(local);
+  return {
+    m,
+    uVarM: { value: m },
+    uVarMI: { value: new THREE.Matrix4().copy(m).invert() },
+  };
+}
+/** The spine root's frame: identity, so uVarM and uVarMI can share one matrix
+ *  (identity is its own inverse). Every stem-side layer ends up on this pair. */
+const rootFrame = () => {
+  const m = new THREE.Matrix4();
+  return { m, uVarM: { value: m }, uVarMI: { value: m } };
+};
+
+/** The opaque shells: a per-body clone of the hero's MeshBasicMaterial with
+ *  the same map grafted into the stock shader. `transformed` is the stock
+ *  local position — varyPt's frame hop is what puts it in the body frame. */
+function cloneShellMat(src, own, frame) {
+  const m = src.clone();
+  // intro.js's shellsRestore() state, pinned rather than inherited — see the
+  // section header. A clone is never mid-grow-in.
+  m.opacity = 1; m.transparent = false; m.clippingPlanes = null;
+  m.onBeforeCompile = (sh) => {
+    bindVary(sh.uniforms, own, frame);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\n' + VARY_GLSL)
+      .replace('#include <begin_vertex>',
+        '#include <begin_vertex>\n  transformed = varyPt(transformed);');
+  };
+  m.customProgramCacheKey = () => 'clone-vary-shell';
+  return m;
+}
 
 /* ------------------------------------------------------------------ */
 /* Material cloning                                                    */
@@ -320,36 +462,39 @@ const CLAMP_OFF = 1e3;
 // because everything else was fogged out.
 const FOG = ['fogNear', 'fogFar'];
 
-function shareUniforms(dst, src, fogU, own) {
+function shareUniforms(dst, src, fogU, own, frame) {
   for (const k of SHARE) if (src.uniforms[k]) dst.uniforms[k] = src.uniforms[k];
   for (let i = 0; i < FOG.length; i++)
     if (src.uniforms[FOG[i]]) dst.uniforms[FOG[i]] = fogU[i];
   // the entry-draw state this body owns (or the set owns) — see SHARE above
   if (src.uniforms.uProg) dst.uniforms.uProg = own.uProg;
   if (src.uniforms.uClampY) dst.uniforms.uClampY = own.uClampY;
+  // this body's shape — the same four objects on every layer it owns
+  bindVary(dst.uniforms, own, frame);
 }
 
 const SZ_TAG = 'float sz = psize * vTw * (300.0 / -mv.z)';
 
-function clonePointsMat(src, s, dropped, fogU, own) {
+function clonePointsMat(src, s, dropped, fogU, own, frame, vary) {
   if (!src.vertexShader.includes(SZ_TAG) || !src.vertexShader.includes('uniform float time;')) {
     dropped.push('points');               // organism shader drifted: drop, never mis-size
     return null;
   }
   const m = src.clone();
-  shareUniforms(m, src, fogU, own);
+  shareUniforms(m, src, fogU, own, frame);
   m.uniforms.uOpacity = { value: src.uniforms.uOpacity.value };
   m.uniforms.uScl = { value: s };
-  m.vertexShader = m.vertexShader
+  m.vertexShader = (vary ? varyVertex(m.vertexShader) : m.vertexShader)
     .replace('uniform float time;', 'uniform float time;\n      uniform float uScl;')
     .replace(SZ_TAG, 'float sz = uScl * psize * vTw * (300.0 / -mv.z)');
   return m;
 }
 
-function cloneDenseMat(src, fogU, own) {
+function cloneDenseMat(src, fogU, own, frame, vary) {
   const m = src.clone();
-  shareUniforms(m, src, fogU, own);
+  shareUniforms(m, src, fogU, own, frame);
   m.uniforms.uOpacity = { value: src.uniforms.uOpacity.value };
+  if (vary) m.vertexShader = varyVertex(m.vertexShader);
   return m;
 }
 
@@ -371,7 +516,7 @@ export function createClones(sceneApi) {
   // the hero's tap-pulse trio, for the overlay-net graft (the ShaderMaterial
   // layers pick it up through SHARE off their own source material)
   const pulse = heroPulse(sceneApi);
-  let ownedMats = 0, sharedMeshes = 0, drawsPerBody = 0, foreign = 0;
+  let ownedMats = 0, shellMeshes = 0, shellMats = 0, drawsPerBody = 0, foreign = 0;
 
   /* ---- WHAT IS AND IS NOT THE ORGANISM ------------------------------
      The hero's groups are not private: chapters/inspire/index.js parents
@@ -395,6 +540,60 @@ export function createClones(sceneApi) {
     return false;
   }
 
+  /* ---- THE VARIATION GUARD, taken once, before the first body ------------
+     Two things have to be true for a deformation to be applied consistently
+     to all fifteen of a body's layers, and neither is this file's to assume:
+
+       1. every shader the walk will meet must accept the varyPt() rewrite
+          (varyVertex's residue check is the real test — a source that still
+          reaches the raw `position` anywhere would draw part of the body
+          undeformed);
+       2. every layer's geometry FRAME must be invertible, because varyPt hops
+          into the body frame through it and back. This is where the first cut
+          of the guard was wrong and said so out loud, which is the argument
+          for having written it: the spine is NOT flat. `mushroom` carries the
+          authored cap tilt (~8 deg about x) and a residual offset, so the cap
+          leaves sit in a tilted frame while the stem leaves sit in the body
+          frame — and a map applied to raw local coordinates would have meant
+          two different things on the two halves of one mushroom. The frames
+          are now carried explicitly (frameOf) and only their invertibility is
+          assumed here.
+
+     If either fails, varyOk is false and NO body is deformed. The failure
+     mode is the shipped one-shape field, never a body whose outline and
+     interior disagree. ---- */
+  function framesInvertible(o, acc, root, bendRoot) {
+    // exactly cloneNode's own walk: foreign subtrees are not copied, so they
+    // are not ours to measure either (chapters/inspire hangs a group with its
+    // own transform off groups.mushroom — see isOrganismLeaf)
+    if (!root && !isOrganismLeaf(o)) return true;
+    const here = frameOf(acc, o, bendRoot);
+    if (Math.abs(here.m.determinant()) < 1e-9) return false;
+    for (const ch of o.children) {
+      if (!framesInvertible(ch, here, root && ch === sceneApi.groups.mushroom, false)) return false;
+    }
+    return true;
+  }
+  function probeVary() {
+    if (!framesInvertible(stemSrc, rootFrame(), true, false)) return false;
+    if (!framesInvertible(capBendSrc, rootFrame(), true, true)) return false;
+    const seen = new Set();
+    let ok = true;
+    const visit = (o, root) => {
+      if (!root && !isOrganismLeaf(o)) return;         // foreign: not ours to patch
+      const m = o.material;
+      if (m && m.isShaderMaterial && !seen.has(m.vertexShader)) {
+        seen.add(m.vertexShader);
+        if (!varyVertex(m.vertexShader)) ok = false;
+      }
+      for (const ch of o.children) visit(ch, root && ch === sceneApi.groups.mushroom);
+    };
+    visit(stemSrc, true);
+    visit(capBendSrc, true);
+    return ok && seen.size > 0;
+  }
+  const varyOk = probeVary();
+
   /** Walk one root of the hero's graph and build this clone's copy of it.
    *  EVERY layer is kept — the beads, the speckles and the overlay net are
    *  the tissue this whole step-back is about, and the measured budget
@@ -412,12 +611,15 @@ export function createClones(sceneApi) {
   // route to that highlight, and they are still live — it is the FIELD's
   // pointer glow that is gone, not the hero's labels.) Do not move this
   // build behind a lazy first-arm.
-  function cloneNode(o, mats, shells, s, count, root, own) {
+  function cloneNode(o, mats, shells, s, count, root, own, frame) {
     let c;
     const m = o.material;
     if (!root && !isOrganismLeaf(o)) { foreign++; return null; }
+    // this node's geometry frame — inherited unchanged unless the node itself
+    // adds a transform (see frameOf). Two distinct frames per body in practice.
+    const fr = frameOf(frame, o, o === capBendSrc);
     if (o.isPoints) {
-      const pm = clonePointsMat(m, s, dropped, fogU, own);
+      const pm = clonePointsMat(m, s, dropped, fogU, own, fr, varyOk);
       if (!pm) return null;
       mats.push({ u: pm.uniforms.uOpacity, base: m.uniforms.uOpacity.value });
       ownedMats++;
@@ -425,7 +627,7 @@ export function createClones(sceneApi) {
       if (count) drawsPerBody++;
     } else if (o.isLineSegments || o.isLine) {
       if (m.isShaderMaterial) {
-        const dm = cloneDenseMat(m, fogU, own);
+        const dm = cloneDenseMat(m, fogU, own, fr, varyOk);
         mats.push({ u: dm.uniforms.uOpacity, base: m.uniforms.uOpacity.value });
         ownedMats++;
         c = new THREE.LineSegments(o.geometry, dm);
@@ -438,7 +640,7 @@ export function createClones(sceneApi) {
         // body (injectCloneDraw) — the hero's graft, on this clone's uProg
         // and the hero's own window for this layer
         if (m.userData && m.userData.uWin) {
-          injectCloneDraw(bm, own.uProg, m.userData.uWin, pulse);
+          injectCloneDraw(bm, own.uProg, m.userData.uWin, pulse, own, fr, varyOk);
         }
         mats.push({ m: bm, base: m.opacity });
         ownedMats++;
@@ -446,9 +648,19 @@ export function createClones(sceneApi) {
       }
       if (count) drawsPerBody++;
     } else if (o.isMesh) {
-      c = new THREE.Mesh(o.geometry, m);              // opaque occluder: share whole
+      // the opaque occluder. Shared outright until the variation round: a
+      // deformed body needs its SOLID to move with its outline, so the
+      // material is now this body's own (one clone per distinct source
+      // material per body — the §5 shells share one, the stem core has
+      // another). Same meshes, same draw count, one extra program.
+      let sm = m;
+      if (varyOk) {
+        sm = own.shellMats.get(m);
+        if (!sm) { sm = cloneShellMat(m, own, fr); own.shellMats.set(m, sm); shellMats++; }
+      }
+      c = new THREE.Mesh(o.geometry, sm);
       shells.push(c);
-      sharedMeshes++;
+      shellMeshes++;
       if (count) drawsPerBody++;
     } else {
       // only the spine (stemGroup, capBend, mushroom) is a Group here, and
@@ -462,7 +674,7 @@ export function createClones(sceneApi) {
     // (capBend -> mushroom), so a root's group children are still spine
     for (const ch of o.children) {
       const cc = cloneNode(ch, mats, shells, s, count,
-        root && ch === sceneApi.groups.mushroom, own);
+        root && ch === sceneApi.groups.mushroom, own, fr);
       if (cc) c.add(cc);
     }
     return c;
@@ -472,7 +684,7 @@ export function createClones(sceneApi) {
    *  memberParams — the same seeded stream the species build drew from, so
    *  a member keeps its shipped facing, lean and size. */
   function add({ x, z, gy, s, azFacing, leanDir, leanAmt,
-                 arc, reveal, boost, tw0, phase, amp, lum }) {
+                 arc, reveal, boost, tw0, phase, amp, lum, vary }) {
     const mats = [];
     // two shell groups, because they arrive at two different moments of the
     // draw (STEM_SHELL_AT / CAP_SHELL_AT). The split is free: cloneNode is
@@ -493,9 +705,17 @@ export function createClones(sceneApi) {
     // "fully drawn" value so a body that is never reached by the front — and
     // every body at boot, before the first update() — looks exactly as it
     // always did.
-    const own = { uProg: { value: 2 }, uClampY: clampU };
-    const stemC = cloneNode(stemSrc, mats, stemShells, s, count, true, own);
-    const capBendC = cloneNode(capBendSrc, mats, capShells, s, count, true, own);
+    // THIS BODY'S SHAPE (variation.js). Four uniform objects, created here and
+    // handed to every one of the fifteen materials below — see the variation
+    // section header: the sharing IS the consistency guarantee.
+    const own = {
+      uProg: { value: 2 }, uClampY: clampU,
+      shellMats: new Map(),
+      ...varyUniforms(varyOk ? (vary || IDENTITY) : IDENTITY),
+    };
+    const F0 = rootFrame();
+    const stemC = cloneNode(stemSrc, mats, stemShells, s, count, true, own, F0);
+    const capBendC = cloneNode(capBendSrc, mats, capShells, s, count, true, own, F0);
     capBendC.quaternion.identity();                   // strip the hero's live bend snapshot
     sway.add(stemC, capBendC);
     group.add(root);
@@ -648,10 +868,14 @@ export function createClones(sceneApi) {
 
   return {
     group, add, update, cool, poke, ringing,
+    /** Whether per-body variation survived the guard. ring.js reads it so the
+     *  species band varies exactly when the clone band does — one field, one
+     *  answer, never a near half that varies and a far half that does not. */
+    varyOk,
     get counts() {
       return {
-        bodies: list.length, ownedMats, sharedMeshes,
-        drawsPerBody, dropped: dropped.length, foreign,
+        bodies: list.length, ownedMats, shellMeshes, shellMats,
+        drawsPerBody, dropped: dropped.length, foreign, varyOk,
       };
     },
   };
