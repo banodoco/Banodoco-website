@@ -221,12 +221,13 @@ export function heroPulse(sceneApi) {
       };
 }
 
-// Idle value for the WOBBLE slot IDs. NOT -1: `aHot` defaults to -1 for every
+// Idle value for the WOBBLE slot IDs. NOT -1: `aBody` defaults to -1 for every
 // vertex that is not a fruiting body (terrain, trees, root stubs, the ground
-// glows), so an idle slot parked at -1 would MATCH all of them. The glow
-// channels get away with -1 because their amplitude is zero when idle; a
-// wobble slot carries a rotation, and one stale radian on the terrain is a
-// whole floor sliding sideways. No member ID is ever -999.
+// glows), so an idle slot parked at -1 would MATCH all of them — and a wobble
+// slot carries a ROTATION, so one stale radian on the terrain is a whole floor
+// sliding sideways. That bug was found and fixed once; the discipline outlived
+// the pointer glow that used to share the channel and is now the ONLY reason
+// this constant exists. No member ID is ever -999.
 export const WOB_IDLE = -999;
 
 export function makeUniforms(sceneApi) {
@@ -247,52 +248,26 @@ export function makeUniforms(sceneApi) {
     uTime:    { value: 0 },
     uFogNear: { value: 7 },
     uFogFar:  { value: 20 },
-    // ---- pointer response (interact.js + clones.js's easeHover) ----
-    // A batched member has no material of its own to brighten, so the two
-    // pointer channels are carried as an ID compare instead: aHot names the
-    // member a vertex belongs to, and exactly one member at a time can be
-    // the hovered one and one the tapped one. Two channels, not one, so a
-    // tap's one-shot pulse keeps decaying on the body you tapped after the
-    // pointer has moved on to another. Idle IDs are -1; aHot is -1 for
-    // everything that is not a fruiting body, and a geometry with no aHot
-    // attribute at all reads the WebGL generic default 0.0 — which is why
-    // member IDs start at 1 and never at 0.
-    uHotId:   { value: -1 },
-    uHotAmt:  { value: 0 },
-    uTapId:   { value: -1 },
-    uTapAmt:  { value: 0 },
-    // ---- the poke's MECHANICAL half, for batched bodies (ring.js §POKE) ----
+    // ---- the poke, for batched bodies (ring.js §POKE) ----
     // A clone owns a scene-graph node and gets organism §10c's cantilever
     // ring-down applied to its own sway pivot. A batched species body has no
     // node — it is a few hundred vertices inside a shared draw — so its body
     // rotation has to happen in the vertex shader, per tapped member, against
-    // the aHot ID its vertices already carry.
+    // the aBody ID its vertices carry. A geometry with no aBody attribute at
+    // all reads the WebGL generic default 0.0, which is why member IDs start
+    // at 1 and never at 0.
     //
-    // TWO SLOTS, not one. The glow channels can afford a single hovered and a
-    // single tapped body because a stolen glow just stops glowing; a stolen
-    // WOBBLE snaps a body back to rest mid-ring-down, which reads as a
-    // glitch. Two slots cover poking a second body while the first still
-    // rings (the ring-down runs ~3 s), and ring.js always steals the QUIETER
-    // slot, so a third poke inside three seconds cuts off the wobble that had
-    // least left to say.
+    // TWO SLOTS, not one. A stolen wobble snaps a body back to rest
+    // mid-ring-down, which reads as a glitch. Two slots cover poking a second
+    // body while the first still rings (the ring-down runs ~3 s), and ring.js
+    // always steals the QUIETER slot, so a third poke inside three seconds
+    // cuts off the wobble that had least left to say.
     uWobId:   { value: new THREE.Vector2(WOB_IDLE, WOB_IDLE) },
     uWobA:    { value: new THREE.Vector3() },   // slot 0 pivot (world, at the soil)
     uWobB:    { value: new THREE.Vector3() },   // slot 1 pivot (world, at the soil)
     uWobR:    { value: new THREE.Vector4() },   // (rx0, rz0, rx1, rz1) radians
   };
 }
-
-// The ID compare, shared by both shaders so the two batches answer a pointer
-// identically. `1.0 - step(0.5, |a - b|)` is an equality test on IDs that are
-// whole numbers, branch-free.
-const HOT_GLSL = /* glsl */ `
-  attribute float aHot;
-  uniform float uHotId, uHotAmt, uTapId, uTapAmt;
-  float hotAt() {
-    return uHotAmt * (1.0 - step(0.5, abs(aHot - uHotId)))
-         + uTapAmt * (1.0 - step(0.5, abs(aHot - uTapId)));
-  }
-`;
 
 // organism/organism.js's PULSE_GLSL, VERBATIM. A tap plants uPulseC at the
 // touched point and rewinds uPulseT to 0; every glowing vertex answers by
@@ -324,18 +299,24 @@ const PULSE_GLSL = /* glsl */ `
 // At the amplitudes this ring-down reaches (the saturating clamp's own
 // ceiling is |tap| ~ 0.039 rad) the small-angle form is accurate to under a
 // thousandth of a world unit, which at these distances is a ten-thousandth of
-// a pixel. Two unrolled slots, branch-free, on the same ID-compare idiom as
-// hotAt(). An idle slot costs one step() and a multiply by zero.
+// a pixel. Two unrolled slots, branch-free: `1.0 - step(0.5, |a - b|)` is an
+// equality test on IDs that are whole numbers. An idle slot costs one step()
+// and a multiply by zero.
+//
+// aBody is declared HERE because the wobble is the only thing left that reads
+// it. It used to be shared with a pointer-hover glow; that glow is gone (see
+// this file's makeBatch note and 18-one-species.md, 2026-08-05).
 const WOBBLE_GLSL = /* glsl */ `
+  attribute float aBody;
   uniform vec2 uWobId;
   uniform vec3 uWobA, uWobB;
   uniform vec4 uWobR;
   vec3 wobbled(vec3 wp) {
     vec3 d = vec3(0.0);
-    float m0 = 1.0 - step(0.5, abs(aHot - uWobId.x));
+    float m0 = 1.0 - step(0.5, abs(aBody - uWobId.x));
     vec3 r0 = wp - uWobA;
     d += m0 * vec3(-uWobR.y * r0.y, uWobR.y * r0.x - uWobR.x * r0.z, uWobR.x * r0.y);
-    float m1 = 1.0 - step(0.5, abs(aHot - uWobId.y));
+    float m1 = 1.0 - step(0.5, abs(aBody - uWobId.y));
     vec3 r1 = wp - uWobB;
     d += m1 * vec3(-uWobR.w * r1.y, uWobR.w * r1.x - uWobR.z * r1.z, uWobR.z * r1.y);
     return wp + d;
@@ -355,7 +336,6 @@ const WOBBLE_GLSL = /* glsl */ `
 const STRAND_VERT = /* glsl */ `
   attribute float aArc, aReveal, aTw, aBoost, aWave;
   uniform float uPull, uFront, uFrontOn, uCta, uCtaOn, uTime;
-  ${HOT_GLSL}
   ${PULSE_GLSL}
   ${WOBBLE_GLSL}
   varying vec3 vColor;
@@ -376,8 +356,6 @@ const STRAND_VERT = /* glsl */ `
     b += aWave * (0.28 + 0.28 * sin(aArc * 12.6 - uTime * 0.42 + aTw)) * reveal;
     // slow twinkle, phase-scattered
     b *= 0.88 + 0.12 * sin(uTime * 0.9 + aTw);
-    // pointer response — the hero's §11 breathing glow, one member at a time
-    b *= 1.0 + hotAt();
     vColor = color;
     // the poke, both halves: the body swings about its own root (wobbled),
     // and the light ripples out from under the fingertip (pulseAt) — the
@@ -421,7 +399,6 @@ const POINT_VERT = /* glsl */ `
   #define MIN_PT 1.7
   attribute float aArc, aReveal, aTw, aBoost, aWave, psize;
   uniform float uPull, uFront, uFrontOn, uCta, uCtaOn, uTime;
-  ${HOT_GLSL}
   ${PULSE_GLSL}
   ${WOBBLE_GLSL}
   varying vec3 vColor;
@@ -437,7 +414,6 @@ const POINT_VERT = /* glsl */ `
     float dc = aArc - uCta;
     b += aBoost * uCtaOn * exp(-dc * dc * 200.0) * 1.1;
     b *= 0.86 + 0.14 * sin(uTime * 1.3 + aTw);
-    b *= 1.0 + hotAt();
     vColor = color;
     vec3 wp = wobbled((modelMatrix * vec4(position, 1.0)).xyz);
     b *= pulseAt(wp);
@@ -492,7 +468,7 @@ export function makePointsMat(uniforms, opacity, map) {
  *  unchanged. */
 export function makeBatch() {
   const pos = [], col = [], arc = [], rev = [], tw = [], boost = [], wave = [], size = [];
-  const hot = [];
+  const body = [];
   const c = new THREE.Color();
   return {
     seg(ax, ay, az, bx, by, bz, ta, tb, meta) {
@@ -506,7 +482,7 @@ export function makeBatch() {
         tw.push(meta.tw ?? 0);
         boost.push(meta.boost ?? 0);
         wave.push(meta.wave ?? 0);
-        hot.push(meta.hot ?? -1);
+        body.push(meta.body ?? -1);
       }
     },
     pt(x, y, z, tone, psize, meta) {
@@ -518,7 +494,7 @@ export function makeBatch() {
       tw.push(meta.tw ?? 0);
       boost.push(meta.boost ?? 0);
       wave.push(meta.wave ?? 0);
-      hot.push(meta.hot ?? -1);
+      body.push(meta.body ?? -1);
       size.push(psize);
     },
     geo(withSize = false) {
@@ -530,9 +506,10 @@ export function makeBatch() {
       g.setAttribute('aTw', new THREE.Float32BufferAttribute(tw, 1));
       g.setAttribute('aBoost', new THREE.Float32BufferAttribute(boost, 1));
       g.setAttribute('aWave', new THREE.Float32BufferAttribute(wave, 1));
-      // pointer-response member ID (-1 = not a fruiting body). Costs 4 bytes
-      // a vertex and no draws: the alternative was splitting the batch.
-      g.setAttribute('aHot', new THREE.Float32BufferAttribute(hot, 1));
+      // Per-member body ID (-1 = not a fruiting body), read by the poke's
+      // wobble slots and nothing else. Costs 4 bytes a vertex and no draws:
+      // the alternative was splitting the batch.
+      g.setAttribute('aBody', new THREE.Float32BufferAttribute(body, 1));
       if (withSize) g.setAttribute('psize', new THREE.Float32BufferAttribute(size, 1));
       return g;
     },
