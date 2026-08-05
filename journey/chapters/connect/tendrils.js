@@ -38,11 +38,32 @@
 // false, frustumCulled false. Budget: segments well under the chamber's old
 // ~5k, points ≤ 500.
 //
-// GROWTH is the arrival (doc §4): index.js drives uGrow 0..1 (keyed to
-// leg-local progress); a soft front sweeps outward along aAlong (0 at the
-// stipe base, 1 at the farthest strand tip), tips leading with a slightly
-// brighter growing edge (uGrowEdge). At the arm boundaries the network has
-// zero extent — armed but invisible, the Final chapter's "dark at arm" law.
+// THE PATHS PRE-EXIST; ARRIVING LIGHTS THEM UP (2026-08-05, Hannah: "make it
+// so the stuff that appears on the ground when you enter the section actually
+// moves along the lines that are already there rather than creating new lines
+// ... currently it feels weird that they just appear"). The network is no
+// longer GROWN as geometry keyed to leg progress. Two gates now stack:
+//
+//   uAmount   arm x the CAMERA-PURE resolve (index.js computes the resolve
+//             from the camera's own gaze — no timeline, no p — and folds it
+//             into this one uniform). It is what brings the QUIET,
+//             un-highlighted paths out of the ground as the eye drops onto
+//             it, exactly the way real ground detail resolves as you come
+//             down to it, and dissolves them back on the way out. It is
+//             EXACTLY ZERO at the hero pose and at the Inspire rest, which is
+//             what keeps those protected frames untouched.
+//   uLit      the travelling LIGHT (pure in p, so reverse scrubs mirror): a
+//             soft front sweeps outward along aAlong (0 at the stipe base,
+//             1 at the farthest strand tip) lifting each strand from its
+//             quiet level to its full one, with a brighter head at the front
+//             (uHead). Nothing appears; the light simply arrives.
+//
+// So a strand's brightness is mix(uQuiet, 1.0, litMask) * uAmount, and the
+// tier contrast is compressed in the quiet state (uQuietTier) so the resting
+// network reads as ONE ambient web — the hero's own ground web (organism.js
+// §8) organised into three routes — rather than as three bright highways
+// waiting to be switched on. At the arm boundaries uResolve is 0: armed but
+// invisible, the Final chapter's "dark at arm" law, now camera-keyed.
 import * as THREE from 'three';
 import { makeRng, gaussOf, heat, groundY, makeGlowTexture } from '../../anatomy.js';
 
@@ -102,7 +123,9 @@ function makeStrandMat(U) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: U.uTime, uAmount: U.uAmount,
-      uGrow: U.uGrow, uGrowEdge: U.uGrowEdge,
+      uLit: U.uLit, uHead: U.uHead,
+      uQuiet: U.uQuiet,           // brightness of a path BEFORE the light reaches it
+      uQuietTier: U.uQuietTier,   // how far the quiet state flattens the tier contrast
       uRouteAmp: U.uRouteAmp,     // vec3: per-route brightness (hover lift / unrelated dim)
       uHairAmp: U.uHairAmp,       // hairline fill brightness (mild dim while any hub is hot)
       uPulseHead: U.uPulseHead,   // vec3: travelling pulse head per route (route-along 0..1; -2 parked)
@@ -120,9 +143,9 @@ function makeStrandMat(U) {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
-      attribute vec4 aA;   // along (global 0..1), routeAlong (0..1), route (0,1,2; 3 hairline; 4 continuation), tier (0 primary, 1 secondary, 2 hairline, 3 faded continuation)
+      attribute vec4 aA;   // along (global 0..1), routeAlong (0..1), route (0,1,2; 3 hairline; 4 continuation), tier (-1 hub convergence, 0 primary, 1 secondary, 2 hairline, 3 faded continuation)
       attribute vec3 aB;   // seed, bright, patch
-      uniform float uTime, uAmount, uGrow, uGrowEdge, uBase, uNear, uFar, uHairAmp;
+      uniform float uTime, uAmount, uLit, uHead, uQuiet, uQuietTier, uBase, uNear, uFar, uHairAmp;
       uniform vec3 uRouteAmp, uPulseHead, uPulseAmp;
       uniform float uExit;
       uniform vec4 uWell;
@@ -134,12 +157,15 @@ function makeStrandMat(U) {
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         float dist = length(mv.xyz);
 
-        /* ---- growth front (the arrival; also the no-self-ignition answer) ---- */
-        float head = uGrow * 1.06;                      // slight lead so uGrow=1 saturates every tip
-        float vis = 1.0 - smoothstep(head - 0.05, head + 0.004, along);
-        // the growing edge glows a touch brighter, fading once growth completes
+        /* ---- the travelling light (the arrival) ----
+           litMask is 1 where the light has already passed and 0 ahead of
+           it. It no longer gates EXISTENCE — the path is there either way —
+           it only lifts the strand from its quiet level to its lit one. ---- */
+        float head = uLit * 1.06;                       // slight lead so uLit=1 saturates every tip
+        float litMask = 1.0 - smoothstep(head - 0.05, head + 0.004, along);
+        // the arriving head glows a touch brighter, fading once the light lands
         float dTip = (along - head) / 0.028;
-        float tip = exp(-dTip * dTip) * uGrowEdge;
+        float tip = exp(-dTip * dTip) * uHead;
 
         /* ---- ambient shimmer (tw idiom, slow: 0.1–0.4 Hz) ---- */
         float tw = 0.5 + 0.5 * sin(uTime * (0.63 + fract(seed * 7.31) * 1.88) + seed * 41.0);
@@ -176,11 +202,29 @@ function makeStrandMat(U) {
         float tierBase = tier < 0.5 ? 1.0 : (tier < 1.5 ? 0.46 : (tier < 2.5 ? 0.20 : 0.26));
         // continuations thin toward their tips (they leave the stage, not end on it)
         if (tier > 2.5) tierBase *= 1.0 - 0.85 * smoothstep(0.55, 1.0, rAlong);
+        // UNLIT the tiers converge: a quiet path is just web, not a highway.
+        // LIT they separate again and the primaries read thicker by structure.
+        float tierNow = mix(mix(tierBase, 0.42, uQuietTier), tierBase, litMask);
 
-        float gate = vis * uAmount * distK * pat * well;
-        float b = uBase * bright * tierBase * routeAmp * (0.72 + 0.28 * tw) * (1.0 + exit);
+        // Hub convergence (tier -1: the radial spokes and the core knot).
+        // Numerically it is tier 0 everywhere else in this shader — the
+        // tierBase ladder and the tier > 2.5 gates both read it as primary —
+        // but it goes MUCH quieter than the rest of the web before its light
+        // lands, because a resting starburst at the ambient level would read
+        // as a hub already lit, and the whole point is that the hubs KINDLE
+        // as the light reaches them.
+        float quietHere = uQuiet * (tier < -0.5 ? 0.22 : 1.0);
+
+        // uAmount already carries the camera-pure resolve (index.js), so a
+        // path that has not resolved contributes exactly nothing.
+        float gate = uAmount * distK * pat * well;
+        float level = mix(quietHere, 1.0, litMask);
+        float b = uBase * bright * tierNow * routeAmp * (0.72 + 0.28 * tw) * (1.0 + exit) * level;
         vCol = uColDeep * (b * 0.5)
              + uColGold * (b * 0.62)
+             // NOT litMask-scaled: tip IS the arriving head and lives exactly
+             // where litMask is crossing zero (scaling it here erases it), and
+             // pulse/exit only ever fire on already-lit paths.
              + uColHot * ((tip * 1.4 + pulse + max(exit, 0.0) * 0.22 * nearBase) * bright * pat);
         vCol *= gate;
         gl_Position = projectionMatrix * mv;
@@ -202,8 +246,8 @@ function makeStrandMat(U) {
 function makePointMat(U, tex) {
   return new THREE.ShaderMaterial({
     uniforms: {
-      uTime: U.uTime, uAmount: U.uAmount, uGrow: U.uGrow,
-      uPartAmp: U.uPartAmp,      // particle visibility gate (extent > 0.9)
+      uTime: U.uTime, uAmount: U.uAmount, uLit: U.uLit, uQuiet: U.uQuiet,
+      uPartAmp: U.uPartAmp,      // particle visibility gate (fully lit only)
       uMap: { value: tex },
       uSize: { value: 30.0 },
       uCol: { value: heat(0.78, new THREE.Color()).clone() },
@@ -215,16 +259,18 @@ function makePointMat(U, tex) {
     vertexShader: /* glsl */`
       attribute vec4 aP;      // along, seed, kind, baseAlpha
       attribute float aLife;
-      uniform float uTime, uGrow, uSize, uPartAmp;
+      uniform float uTime, uLit, uQuiet, uSize, uPartAmp;
       varying vec2 vA;        // alpha, seed
       void main() {
         float along = aP.x, seed = aP.y, kind = aP.z, baseA = aP.w;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         float dist = length(mv.xyz);
-        float head = uGrow * 1.06;
-        float vis = 1.0 - smoothstep(head - 0.05, head + 0.004, along);
+        // junction glints follow the strands: quiet until the light passes,
+        // then full. (Particles ride uPartAmp, which only opens once lit.)
+        float head = uLit * 1.06;
+        float litMask = 1.0 - smoothstep(head - 0.05, head + 0.004, along);
         float tw = 0.5 + 0.5 * sin(uTime * (0.7 + fract(seed * 9.13) * 1.6) + seed * 57.0);
-        float a = baseA * vis * (0.45 + 0.55 * tw) * aLife;
+        float a = baseA * mix(uQuiet, 1.0, litMask) * (0.45 + 0.55 * tw) * aLife;
         a *= mix(1.0, uPartAmp, step(0.5, kind));
         a *= smoothstep(0.5, 1.1, dist);
         float sz = uSize * (0.6 + fract(seed * 5.7) * 0.8) / max(dist, 0.5);
@@ -507,7 +553,9 @@ export function buildTendrils(group, U) {
           // rAlong 1.0 = the hub end of the route (pulses land here).
           // 1.1 → 1.5 (audit taste pass): the radial-spoke convergence is the
           // hub's resting signature — it must read against the ambient web.
-          pushSeg(prev, p, hubAlong + 0.012 * (1 - t), hubAlong + 0.012 * (1 - t), 1.0, 1.0, ri, 0, seed,
+          // tier -1 = hub convergence: identical to tier 0 once lit (same
+          // tierBase, same pulse rights), far quieter before (see the shader).
+          pushSeg(prev, p, hubAlong + 0.012 * (1 - t), hubAlong + 0.012 * (1 - t), 1.0, 1.0, ri, -1, seed,
             (0.5 + 0.5 * t) * 1.5, (0.5 + 0.5 * Math.min(t + 1 / SEG, 1)) * 1.5);
           counts.hubSegs++;
         }
@@ -533,7 +581,7 @@ export function buildTendrils(group, U) {
           if (prev) {
             // 1.35 → 1.6 (audit taste pass): the tight core knot anchors the
             // starburst's centre of gravity at rest.
-            pushSeg(prev, p, hubAlong, hubAlong, 1.0, 1.0, ri, 0, seed, 1.6, 1.6);
+            pushSeg(prev, p, hubAlong, hubAlong, 1.0, 1.0, ri, -1, seed, 1.6, 1.6);
             counts.hubSegs++;
           }
           prev = p;

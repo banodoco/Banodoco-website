@@ -29,7 +29,15 @@ const DEG = Math.PI / 180;
 const T1_RELAX_IN = startOf('connect') + 0.06;    // 0.44 — path has dropped past the rim
                                                   // (D16 ground restage: outside it, same p)
 const T1_RELAX_OUT = startOf('connect') + 0.08;   // 0.46
-const CONNECT_HOLD_LO = startOf('connect') + 0.02; // 0.40 — network armed through the leg
+// 0.32 (was startOf('connect') + 0.02 = 0.40). The paths must PRE-EXIST the
+// chapter's reveal (2026-08-05: the network is no longer grown, it is lit),
+// so the group has to be armed well before anything can be seen. What makes
+// the earlier arm invisible — and free — is that the chapter's own visibility
+// is now CAMERA-PURE (connect/index.js resolveNow()): its resolve is exactly
+// 0 until the gaze has dropped past ~1.2 deg below level, which the path does
+// not reach until p ~0.372. Between 0.32 and 0.372 the chapter is armed,
+// group.visible is false and it costs no draws.
+const CONNECT_HOLD_LO = startOf('connect') - 0.06; // 0.32 — paths armed before they can resolve
 // 0.705 (M5 ignition audit, D16 — value kept through the ground restage):
 // retire and re-arm both happen inside the Owned soil-crossing murk (camera
 // inside the lid material, p 0.692–0.712), i.e. behind genuine occlusion.
@@ -94,16 +102,16 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
       chapters.inspire.setArmed(on);
     }
 
-    // T2 - now a PURE p-window (D16 ground restage, doc §6). The old
+    // T2 - a PURE p-window (D16 ground restage, doc §6). The old
     // "cap-occludes" camera predicate is dead: the camera never goes under
     // the cap any more — the Connect leg descends OUTSIDE the rim to the
-    // ground panorama. Arming is invisible by construction: the chapter is a
-    // zero-extent network at the window's low edge (growth choreography owns
-    // the visible reveal — the Final chapter's "dark at arm" precedent), and
-    // the high edge sits inside the Owned soil-crossing murk exactly as the
-    // M5 ignition audit placed it. No hysteresis needed: both edges are
-    // behind zero-visibility states, so a shaky scrub cannot strobe anything
-    // visible.
+    // ground panorama. Arming is invisible by construction: at the window's
+    // low edge the chapter's CAMERA-PURE resolve is exactly zero (2026-08-05;
+    // it used to be a zero-extent network — same "dark at arm" law, now
+    // keyed to the camera instead of to leg progress), and the high edge sits
+    // inside the Owned soil-crossing murk exactly as the M5 ignition audit
+    // placed it. No hysteresis needed: both edges are behind zero-visibility
+    // states, so a shaky scrub cannot strobe anything visible.
     chapters.connect.setArmed(p > CONNECT_HOLD_LO && p < CONNECT_HOLD_HI);
 
     // T3 - soil crossing

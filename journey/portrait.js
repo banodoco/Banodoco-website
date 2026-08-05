@@ -84,7 +84,12 @@ const KEYS = [
   // subject-distance and fov grow monotonically with the landscape's; the
   // tgtUp/tgtRight now lean a third of the way toward the re-composed
   // Connect rest so the last 0.08 of the leg is a settle, not a lurch.
-  { p: 0.410, back: 1.55, rise: 0.28, truck: 0, tgtUp: 0.55, tgtRight: -0.12, fov: 11 },
+  // tgtUp 0.55 -> 0.30 with the 2026-08-05 eye lift: the landscape leg now
+  // aims ~5-7 deg higher on its own, so the portrait field has to add
+  // proportionally less to reach the same portrait composition (and to keep
+  // the chapter's camera-pure resolve — which reads the GAZE — matching the
+  // landscape's).
+  { p: 0.410, back: 1.55, rise: 0.28, truck: 0, tgtUp: 0.30, tgtRight: -0.12, fov: 11 },
 
   // CONNECT (rest 0.49, ground panorama) — re-authored 2026-08-04 for the
   // top-left / top-right restage. The landscape frame gives the mushroom the
@@ -97,7 +102,16 @@ const KEYS = [
   // the 56-deg landscape hub fan into the ~35-deg portrait frustum so all
   // three hub cores stay inside the frame. (Per-orientation hub label anchors
   // are the chapter's own affair — doc §3; only Discord still needs one.)
-  { p: 0.490, back: 1.62, rise: 1.50, truck: 0, tgtUp: 2.75, tgtRight: -0.30, fov: 8 },
+  // tgtUp 2.75 -> 1.50 (2026-08-05, the eye lift): the landscape rest already
+  // aims 7 deg higher, so the old delta double-counted it — the portrait
+  // mushroom sank to 0.59 of the tall frame and, worse, the portrait gaze came
+  // out at only -4.7 deg, which left the chapter's camera-pure resolve at 0.66
+  // instead of 1 at the portrait rest. 1.50 restores BOTH: portrait gaze -8.9
+  // deg (matching the landscape rest exactly, so the network resolves fully in
+  // both orientations) and the shipped portrait stack — copy across the top,
+  // mushroom in the middle-left band under it, hubs fanned through the lower
+  // half. The strong-tgtUp reasoning below is unchanged, only its magnitude.
+  { p: 0.490, back: 1.62, rise: 1.50, truck: 0, tgtUp: 1.50, tgtRight: -0.30, fov: 8 },
 
   // The approach to the trunk + the exterior descent (0.575–0.718):
   // near-zero field — clearance to the stipe is small and the leg's whole
