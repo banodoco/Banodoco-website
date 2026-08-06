@@ -630,3 +630,176 @@ after. Its ambient 4,200-dot drift is the same code path. `mission@*` is
 byte-identical on disk and MAE **0.00/255** in the frozen check.
 
 ---
+
+## 2. The root canopy
+
+### The reading it has to produce
+
+Not sixty small root systems standing near each other. That answer was
+available and cheap — `ring.js` already gives every body a couple of §8 ground
+stubs — and it is wrong twice: per-body roots say *sixty organisms*, and
+scattering more short strokes across the floor is exactly the countable-stroke
+carpet the declutter round spent a whole pass deleting.
+
+So: **one network, and its structure carries the reading.** Every fruiting body
+in the chapter is a NODE of a single connected graph and the strands are its
+EDGES. A body does not have roots; the canopy has bodies.
+
+### Construction (`journey/chapters/final/canopy.js`, new)
+
+**Nodes — 169.** Node 0 is the HERO's own stipe base at the world origin. Then
+every body `ring.js` places, published through a new `ring.seats` (73 in all:
+the hero, 9 ring members, 43 field bodies, 20 far hints), seated at its own
+soil point with its own scale. Then **96 waypoints** — the network's own
+vertices, authored about the rest gaze out to the hint band, on kept soil,
+minimum-spaced 1.45 so they never clot. A graph over bodies alone is a
+constellation; the waypoints are what make it a fabric (OWNED's `substrate.js`
+§WEB makes exactly this argument for exactly this reason).
+
+**Edges — 413**, in three passes:
+
+1. **A Euclidean minimum spanning tree, Prim's, started at node 0.** This is
+   the only structural guarantee the file makes, and it is the one that
+   matters: exactly ONE component, so there is no island anywhere in the field
+   and no body standing on ground that leads nowhere — and it is rooted at the
+   hero, so every strand traces back to the organism the visitor has been
+   looking at all ride. "An extension of the one that surrounds the main
+   mushroom" as a data structure, not as a resemblance. O(N²) on 169 nodes:
+   ~29k comparisons, once, at build.
+2. **Short nearest-neighbour cross-links** (capped at 4.6 units). A tree has no
+   cycles and a network with no cycles reads as drainage; these are what make
+   it mesh.
+3. **Body-to-body links.** Every body also reaches its nearest neighbouring
+   BODY directly whenever one is within 7.2 units, so the frame carries
+   unbroken foot-to-foot runs — the connection Hannah's sentence is about.
+
+**Strands.** Each edge is CONNECT's ground tendril: a meandering surface run,
+4–14 segments, two harmonics of lateral wander windowed to zero at both ends so
+the strand meets its nodes *exactly*. The first cut used a third of the
+amplitude and one harmonic and read as a **triangulation** — long straight
+chords meeting at vertices, a diagram of a network rather than a network; the
+fix is CONNECT's own rule ("no straight runs, no right angles"). Each spine
+strand also throws 1–2 **hairlines**, three segments, dying out at an oblique
+angle — the hero's §8 mycelium threads, and what stops the canopy reading as a
+wireframe of itself. Every strand leaves each node at that node's own seat
+radius, so it starts at the edge of the stipe's footprint and not inside the
+flesh.
+
+**Junctions.** A glint at every wired node, sized by degree. **8 convergence
+hubs** — the house's hub grammar (CONNECT's radial spokes into a bright core,
+OWNED's starbursts) — placed only where the graph itself already converges
+(degree ≥ 5, inside 26 units), so they are punctuation, not furniture. And **54
+soft pools**: broad dim warm light on the network's own junctions, because the
+declutter round's finding was that a floor made of strokes is a carpet you can
+count and a floor made of broad soft light is ground. Most of the canopy's mass
+is there rather than in the line batch.
+
+**Terrain law.** Every vertex at `groundY(x, z) + 0.020–0.050`, the law CONNECT
+and the hero's own §8 web obey. A body is placed at `gy = groundY(x, z)`, so
+bodies meet the canopy at their feet **for free, at every body, with no
+per-body adjustment** — nothing floats and nothing sinks. Every sample is
+tested against `cutVal()`; a strand that would cross the lip straightens first
+and is dropped only if the straight run still leaves the soil (**0 dropped** as
+built). The cutaway wedge stays void.
+
+**Levels and depth.** Strand material opacity 0.62 against the terrain lip's
+0.72 and the ring's 1.15; brightest strand tone 0.30 against the lip's 0.55.
+Every tone carries a distance luminance `1 − 0.66·smoothstep(5, 34, d)` — the
+field's own `cloneLum` device, re-banded for a floor that runs from the hero's
+foot to the hint band at 46 units — and the shared strand shader carries the
+chapter's fog uniforms, so the canopy recedes with everything else instead of
+laying a bright mat under the frame. The field's bodies stay the subject.
+
+### Reveal wiring
+
+Camera-pure, on the chapter's existing law, with **no per-frame cost at all** —
+`canopy.js` has no `update()`. Every vertex carries `aReveal` on the same
+`uPull` the bodies kindle on:
+
+- A body seat's threshold is its own body's, **less `CANOPY_LEAD = 0.04`**, so
+  the ground under a mushroom is already alight when the mushroom comes up. The
+  canopy puts the body there, not the other way round.
+- A waypoint takes an inverse-distance blend of its three nearest seats, so the
+  ground between two members lights as those members light, not on a clock.
+- An edge's segments LERP between their two endpoints' thresholds, evaluated at
+  each segment's own midpoint. At ~0.5 world units a segment, the step is
+  15–30× narrower than the shader's own 0.16 reveal width, so what a viewer
+  sees is a **soft front running down the strand** from the body that kindled
+  first toward the one that has not — the front the bodies already use, seen in
+  the ground.
+
+Measured, 49 stops each way over p 0.845 → 0.965 → 0.845:
+
+- **Hysteresis 0.00000000** across every opposite-direction adjacent pair —
+  canopy luminance is single-valued in `uPull`, so a reverse scrub retracts it
+  exactly as it grew.
+- **0 non-monotone steps** sorted by `uPull` — nothing self-ignites.
+- **Dark at arm**: `uAmount` 0.000000 on every frame the chapter is not
+  visible; saturated at the rest and at the end hold.
+
+### Budget
+
+Measured at the Final rest, 1440×900 @dpr1, same probe both runs, canopy
+stashed out for the "before":
+
+| | draw calls | line primitives | points | triangles |
+|---|---|---|---|---|
+| before | 426 | 445,004 | 85,054 | 282,053 |
+| after  | **428** | **448,074** | **85,285** | 282,053 |
+| delta  | **+2** | +3,070 | +231 | 0 |
+
+The line delta is exactly `canopySegs` and the point delta exactly
+`canopyPts` — the whole canopy is **two draw calls**, one merged `LineSegments`
+and one merged `Points` on the chapter's own two shared materials, however many
+thousand segments it holds. No new program: both materials are `makeStrandMat`
+/ `makePointsMat` from `world.js`.
+
+Frame time, in-process A/B (visibility toggled every 1.4 s for 12 s so drift
+and thermals hit both arms equally): p50 **26.0 → 27.1 ms**, p90 42.5 → 44.9,
+mean 32.66 → 31.63. Same class; the mean is inside the noise in the *other*
+direction. Cross-run whole-process p50s: before 41.9 / 36.1, after 42.8 / 41.4.
+
+### Gates
+
+- **Reveal (D16):** above — 0 hysteresis, 0 self-ignition, dark at arm.
+- **Console:** full 0 → 1 → 0 ride, 450 frames including four pokes on four
+  different non-primary bodies (members 4, 5, 0, 8): **0 errors, 0 warnings, 0
+  non-finite values** in any chapter uniform, camera component or shed
+  position. `shedLive` 0 at retire.
+- **Compositions** reviewed at 1440×900, 1280×800 and 375×812, at the FINAL
+  rest and at the end hold. The copy block sits over the cutaway void and stays
+  legible at all three.
+- **`capture.py --check` PASS, worst MAE 0.04/255.** `mission@*`, `inspire@*`,
+  `connect@*`, `owned@*` **byte-identical on disk** (0.00, 0.00, 0.00,
+  0.00/0.04 — the 0.04 is this machine's frozen-frame noise and the files are
+  not in the diff at all). `final@*` legitimately moved (1.57 / 1.86 before the
+  re-shoot) and is re-shot in the same commit with manifest provenance.
+- **No regression** to the per-body deformation (66d1bed), the entry draw-on
+  and shell fade (070892c), the no-hover rule (0d9bcbd), the particle match
+  (836d373) or the conservation floor (b2c9584): none of those files is
+  touched, and `ring.js`'s only change is publishing seats it already computed.
+  Camera keys unchanged.
+
+### Residuals
+
+- **The hero's own §8 ground web is still dimmed to a whisper by
+  `index.js`'s `heroDim`** (KEEP 0.10 on the web and mycelium classes), which
+  is right for what that pass was fixing but means the join at the hero's foot
+  is carried by the canopy alone rather than by two networks meeting. It reads
+  well — the canopy IS the ground language at this camera now — but if Hannah
+  ever wants the hero's own crown to answer the field's, those KEEP values are
+  the knob, and they should move *with* the canopy's levels, not separately.
+- **The far half of the canopy is sparser than the near half** by construction
+  (waypoint distance is drawn `pow(rand, 1.15)` toward the camera, and the
+  distance luminance floors at 0.34). Deliberate — density out there would
+  fight the field's own tier ladder — but it does mean the canopy thins before
+  the bodies do.
+- **The graph is rebuilt from scratch every boot.** It is deterministic
+  (`makeRng(0xCA0BE)`, and `ring.seats` is a build product of an already
+  deterministic placement pass), and Prim's on 169 nodes is ~29k comparisons,
+  so this has never shown up in a load profile. Worth knowing if the field's
+  body count ever grows by an order of magnitude, since the MST is O(N²).
+- **Hub placement is a degree test, not a composition.** Eight is what the
+  graph happened to offer inside 26 units; if the waypoint seed ever changes,
+  the count and the places move. That is the honest trade for not authoring
+  them in the rest frame, and it is the right one while they are punctuation.

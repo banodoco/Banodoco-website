@@ -38,6 +38,7 @@ import {
 import { createFinalRing } from './ring.js';
 import { createFinalTerrain } from './terrain.js';
 import { createFinalSky } from './sky.js';
+import { createFinalCanopy } from './canopy.js';
 import { CAMERA } from './camera.js';
 
 export function createFinal(sceneApi) {
@@ -53,7 +54,15 @@ export function createFinal(sceneApi) {
   const ring = createFinalRing(sceneApi, uniforms);
   const terrain = createFinalTerrain(sceneApi, uniforms);
   const sky = createFinalSky(sceneApi, uniforms);
-  group.add(ring.group, terrain.group, sky.group);
+  // THE ROOT CANOPY (2026-08-07). Built after the ring because it is built
+  // FROM it: ring.seats is where every fruiting body in the chapter stands,
+  // and canopy.js lays one connected network over the lot, rooted at the
+  // hero's own foot. It carries no state and no update() — every vertex is
+  // on the chapter's shared aReveal/uPull law, so the whole thing kindles,
+  // breathes with the growth front and retracts on a reverse scrub through
+  // the same two uniforms the bodies use, with no per-frame cost at all.
+  const canopy = createFinalCanopy(uniforms, ring.seats);
+  group.add(canopy.group, ring.group, terrain.group, sky.group);
 
   /* ---- growth-front cycle: randomized duration + rest, one direction ---- */
   const cycleRand = makeRng(9182);
@@ -360,7 +369,7 @@ export function createFinal(sceneApi) {
     /** FN-3.1 — closing-CTA hook. Donor trigger names preserved. */
     trigger(name) { if (name === 'ctaPulse' || name === 'ringPulse') fireCta(); },
     /** QA introspection */
-    counts: { ...ring.counts, ...terrain.counts, ...sky.counts },
+    counts: { ...ring.counts, ...terrain.counts, ...sky.counts, ...canopy.counts },
     /** LIVE QA: the poke's own numbers, read now rather than at construction
      *  (the spread above freezes anything it touches). */
     pickStats: ring.pickStats,
