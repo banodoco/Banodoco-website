@@ -1,32 +1,84 @@
-// journey-v6 — OWNED substrate (W4-C): the volumetric mycelial field.
-// Port of the APPROVED Spike B treatment (spike-b/field.js) into the live
-// journey, re-authored against the journey's REAL Owned leg polyline
-// (owned-leg.js) instead of the spike's stand-alone arc. Copied + adapted,
-// never imported from spike-b/ (that tree stays frozen as the look-dev
-// record).
+// journey-v6 — OWNED substrate: THE ROOT WORLD (root-network restage,
+// 2026-08-06, journey-v6-plan/20-owned-root-network.md).
 //
-// Carried verbatim from the spike:
-//   - two-scale substrate density (low values are soil, not colony);
-//   - one coherent flow field so hyphae read as grown, not scattered;
-//   - three depth batches of fine hyphae (far volume fill / mid shell /
-//     near shell), shells sampled around the CAMERA POLYLINE;
-//   - five rhizomorph cords with independent travelling waves + filament
-//     bundle overlays (a rhizomorph is a bundle, not a pipe);
-//   - authored dark voids kept off-frame-centre, push-cleared off the path;
-//   - soil aggregates, amber haze backdrop, interaction-only colony surge.
-// New for the journey: a soil-underside lid (the frame is visibly UNDER
-// ground — the T3 crossing and the rise both pass through it), fade support
-// for the T3 streaming seam, and clamps that keep every element below the
-// real groundY().
+// WHAT THIS REPLACED AND WHY
+// --------------------------
+// Until this restage the chapter drew a volumetric mycelial COLONY spread
+// along a spine — cords, three depth batches of hyphae, voids, haze — and the
+// camera glided through the middle of it on a level gaze. That build was
+// faithful to 09-chapter-owned.md and it was, at the rest, a band of light
+// hugging the soil lid across the top of the frame with two-thirds of the
+// picture empty (the pre-restage owned golden is the record).
+//
+// Hannah's reference re-frames the section as one legible image:
+//
+//   · the mushroom's BASE enters the frame at TOP CENTRE — a bright
+//     convergence point at the top edge, the stalk's fibres gathering into it;
+//   · from that point a WIDE FAN of fine glowing root filaments descends and
+//     spreads outward, like a fountain or a willow — dense and bright where
+//     they leave the base, thinning and spreading as they fall;
+//   · the fan opens into a LUMINOUS NETWORK filling the lower two-thirds:
+//     fine amber threads, many small bright nodes where threads cross, and a
+//     scattering of brighter starburst convergence points;
+//   · the PEOPLE are those brightest intersections (portraits.js).
+//
+// So the organising idea is no longer "a slab of colony the camera flies
+// through" but "one root system, hanging from one point, seen from just under
+// it". Everything below is grown from `leg.CROWN`:
+//
+//   growRoot()      one filament: leaves the crown on an azimuth, droops
+//                   under a gravity term, meanders on fbm — a fountain arc,
+//                   not a straight spoke
+//   PRIMARIES       26 of them, azimuths spread by the golden angle. Roots
+//                   heading up the DEPTH axis (at the lens, or away down the
+//                   glide) are given extra initial dip so they duck below the
+//                   camera corridor; roots heading across it (±z, which is
+//                   frame left/right at the rest) stay shallow and fan wide.
+//                   That asymmetry is what makes the fan fill the frame
+//                   horizontally while leaving the flight path clear.
+//   SECONDARIES     branches off the primaries, same law, shorter
+//   HAIRS           very short fine filaments off the secondaries — the
+//                   "fine amber threads" density, and the thing that stops
+//                   the fan reading as a diagram
+//   LINKS           the WEB: bowed cross-connections between points on
+//                   DIFFERENT roots. This is what turns a fan into a network;
+//                   their endpoints are the "small bright nodes where threads
+//                   cross" (junction glints).
+//   HUBS            5 starburst convergence points, deliberately the same
+//                   visual family as CONNECT's hubs (chapters/connect/
+//                   tendrils.js: radial spokes + a tight knot + a glow core),
+//                   because the reference asks for that family by name and
+//                   the site should not grow a second language for it.
+//
+// Kept from the previous build because they were right and are orientation-
+// independent: the soil-underside lid (both crossings pass THROUGH it, which
+// is what keeps the seams reading as thresholds), the authored dark voids,
+// soil aggregates, the amber haze backdrop, the interaction-only colony
+// surge, and uFade on every layer for the T3 streaming seam.
+//
+// COLOUR-PIPELINE NOTE is unchanged: levels are calibrated for the hero
+// composer (UnrealBloom -> TAA -> OutputPass/ACES), via index.js's EXPOSURE_*.
 import * as THREE from 'three';
 import * as H from '../../lib/helpers.js';
 
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;
 
-/* Adapted copy of the spike's pulse material with one addition: uFade, the
-   T3 seam ramp (the whole chapter eases in/out, never switches). */
+/* Adapted copy of the spike's pulse material with two additions: uFade (the
+   T3 seam ramp — the whole chapter eases in/out, never switches) and an
+   optional near-fade window. The near-fade exists so a strand grazing the
+   lens softens away instead of blazing into a flat ribbon; the root fan
+   needs a TIGHTER window than the old colony did, because the crown itself
+   now sits 1.85 units from the rest camera and the default 1.1->2.9 ramp
+   would dim the picture's brightest point to a third of its level. */
 export function makeFadePulseMat(baseColor, opts = {}) {
+  const nf = opts.nearFade || [1.1, 2.9];
+  // alongTaper: brightness at aAlong = 1 relative to aAlong = 0. The root fan
+  // asks for this by name — "dense and bright where they leave the base,
+  // thinning and spreading as they fall" is a taper along the filament, not a
+  // depth fade, and doing it with fog instead would dim the far side of the
+  // frame rather than the ends of the roots. 1 = off (every prior caller).
+  const tp = opts.alongTaper ?? 1;
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
@@ -66,16 +118,16 @@ export function makeFadePulseMat(baseColor, opts = {}) {
       varying float vAlong, vStrand, vFogDepth;
       void main() {
         float tw = 0.5 + 0.5 * sin(uTime * (0.6 + vStrand * 1.7) + vStrand * 43.7);
-        float amb = uBase * (1.0 - uTwinkle + uTwinkle * tw);
+        float amb = uBase * (1.0 - uTwinkle + uTwinkle * tw)
+                  * mix(1.0, ${tp.toFixed(3)}, clamp(vAlong, 0.0, 1.0));
         float d = abs(vAlong - uPulse);
         float pulse = uPulseOn * exp(-d * d / (uPulseWidth * uPulseWidth));
         vec3 col = uColor * amb + uPulseColor * pulse;
         float fogF = 1.0 - exp(-uFogDensity * uFogDensity * vFogDepth * vFogDepth);
         col *= 1.0 - clamp(fogF, 0.0, 1.0);   // additive: depth fades to black
-        // near-fade: a strand grazing the lens softens away instead of
-        // blazing into a flat ribbon (the near field belongs to defocus,
-        // not brightness — same philosophy as the portrait blur band)
-        col *= smoothstep(1.1, 2.9, vFogDepth);
+        // near-fade: the near field belongs to defocus, not brightness —
+        // same philosophy as the portrait blur band.
+        col *= smoothstep(${nf[0].toFixed(3)}, ${nf[1].toFixed(3)}, vFogDepth);
         ${opts.growGate ? `
         // draw-on growth gate (M5 ignition audit, D16): visible where
         // aAlong < uGrow, 0.15 feathered tip — the strand GROWS from its
@@ -93,40 +145,56 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   const V3 = THREE.Vector3;
   const V = (x, y, z) => new V3(x, y, z);
   const group = new THREE.Group();
-  group.name = 'owned-substrate';
+  group.name = 'owned-rootworld';
   const timeMats = [];        // shader mats needing uTime + uFade
   const fadeSprites = [];     // {mat, base} plain materials faded by opacity
   const rndA = H.rng(90211);
-  const _tube = new V3();
 
   const {
-    camPts, camDist, nearestCamPt, RIGHT, UPN,
-    spineAt, clampUnder, groundY,
+    camDist, nearestCamPt, RIGHT, UPN, spineAt, clampUnder, groundY,
+    CROWN, restFrame,
   } = leg;
 
-  // World envelope of the underground volume (the journey's soil sits at
-  // groundY ~ 0; the colony lives in a slab under it, sized so the T3 entry
-  // column, the whole glide and the rise exit all sit well inside it).
-  const BX = [-17.5, 5.5], BY = [-6.8, -0.1], BZ = [-9.5, 9.5];
+  // World envelope. The root world hangs from the crown near the origin and
+  // trails -X along the glide, so the box is asymmetric: plenty of room in
+  // front of the rest camera, only a little behind it.
+  const BX = [-14.0, 6.0], BY = [-7.0, -0.05], BZ = [-8.5, 8.5];
 
-  // Two-scale substrate density — spike values, spike seeds.
+  // Two-scale substrate density — kept from the previous build (spike values,
+  // spike seeds): the ambient layers still ask it where soil ends and colony
+  // begins, so the filler never reads as an even wash.
   function substrate(x, y, z) {
     return H.fbm3(x * 0.052 + 3.1, y * 0.100 - 1.2, z * 0.052 - 1.7, 4) * 0.72
          + H.fbm3(x * 0.170 - 5.0, y * 0.230 + 2.2, z * 0.170 + 4.4, 3) * 0.28;
   }
 
+  /* ================================================================
+     Frame-relative directions (the frame is the spec, doc §3 house rule)
+     ================================================================ */
+  // Azimuth (atan2(z, x)) of the rest camera as seen FROM the crown, and of
+  // the glide the camera leaves on. Roots aimed along either of those two
+  // axes are the ones that would otherwise run down the flight corridor.
+  const CAM_AZ = Math.atan2(restFrame.pos.z - CROWN.z, restFrame.pos.x - CROWN.x);
+  const GLIDE_AZ = CAM_AZ + Math.PI;
+  const angDelta = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+
   /* ---------------- authored dark voids ----------------
-     Kept OFF frame-centre for the whole leg: the rest gaze runs down the
-     corridor toward -X, so voids live on the flanks and under the floor,
-     read obliquely, never entered. Push-cleared off the real polyline. */
+     Breathing room: the reference has clear dark gaps between the lit
+     clusters. Voids are placed on the flanks and under the floor of the
+     rest frame, never on the crown axis, and push-cleared off the polyline. */
   const VOIDS = [];
   {
+    // Sized and placed to miss the authored portrait arc (portraits.js
+    // REST_SITES): the arc's sites sit 5.5-12.5 units down the rest gaze and
+    // within ~7 units of it laterally, so the voids live further out and
+    // lower. A void that swallows a face makes the chapter push it out of the
+    // composition, which is the tail wagging the dog.
     const spots = [
-      { t: 0.10, r: 3.6, side: -1, u: -0.2, d: 8.5 },
-      { t: 0.30, r: 4.0, side: 1, u: 0.4, d: 8.8 },
-      { t: 0.46, r: 3.4, side: 0, u: -2.6, d: 0 },     // under the floor
-      { t: 0.60, r: 4.2, side: -1, u: 0.2, d: 9.0 },
-      { t: 0.80, r: 3.8, side: 1, u: -0.5, d: 8.6 },
+      { t: 0.20, r: 2.4, side: -1, u: -2.2, d: 9.2 },
+      { t: 0.38, r: 2.8, side: 1, u: -1.8, d: 9.6 },
+      { t: 0.52, r: 2.6, side: 0, u: -4.2, d: 0 },     // under the floor
+      { t: 0.70, r: 2.8, side: -1, u: -1.4, d: 10.4 },
+      { t: 0.86, r: 2.6, side: 1, u: -2.0, d: 9.8 },
     ];
     for (const s of spots) {
       const c = spineAt(s.t)
@@ -140,7 +208,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         if (away.lengthSq() < 0.001) away.copy(RIGHT);
         c.addScaledVector(away.normalize(), (s.r + 2.4) - cd + 0.2);
       }
-      if (c.y > -1.0) c.y = -1.0;                     // voids stay in the slab
+      if (c.y > -1.6) c.y = -1.6;                     // voids stay in the slab
       VOIDS.push({ c, r: s.r });
     }
   }
@@ -153,111 +221,735 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     return false;
   }
 
-  // One coherent flow field (spike verbatim), with a soil-ceiling reflection
-  // so strands near the lid flatten along it instead of poking through.
-  function flowStep(cur, i, step, out) {
-    const a = H.fbm3(cur.x * 0.110 + i * 0.013, cur.y * 0.140, cur.z * 0.110, 3) * TAU;
-    const b = H.fbm3(cur.z * 0.100 - 4.2, cur.x * 0.100 + 7.7, cur.y * 0.125, 3) * Math.PI * 0.62;
-    const cb = Math.cos(b);
-    out.set(
-      cur.x + Math.cos(a) * cb * step,
-      cur.y + Math.sin(b) * 0.72 * step,
-      cur.z + Math.sin(a) * cb * step,
-    );
-    const lid = groundY(out.x, out.z) - 0.16;
-    if (out.y > lid) out.y = lid - (out.y - lid) * 0.6;
-    if (out.y < BY[0]) out.y = BY[0] + (BY[0] - out.y) * 0.6;
-    return out;
+  /* ================================================================
+     THE ROOT FAN
+     ================================================================ */
+  // One filament. Integrated rather than parameterised: the direction leaves
+  // the crown at `dip0` below horizontal and is bent further down every step
+  // by a gravity term while fbm walks it sideways. That is what gives the
+  // fountain/willow silhouette — near the crown the filaments are still
+  // spreading outward, far from it they are falling.
+  const GRAV = 0.46;
+  function growRoot(start, dir0, len, seg, seed, meander = 0.24, sweep = null) {
+    const dir = dir0.clone().normalize();
+    const step = len / seg;
+    const pts = [start.clone()];
+    let pos = start.clone();
+    for (let j = 1; j <= seg; j++) {
+      const t = j / seg;
+      dir.y -= GRAV * step * (0.30 + 1.55 * t);
+      // a COHERENT lateral bend, per root. fbm meander is symmetric noise and
+      // averages out to a straight line at this scale; a jet only reads as a
+      // jet if it curves one way along its whole length.
+      if (sweep) dir.addScaledVector(sweep, step * (0.25 + 1.1 * t));
+      // meander grows with distance: near the crown the filaments are still
+      // leaving on their authored azimuth (which is what keeps the burst
+      // reading as a burst), far out they wander
+      const m = meander * (0.35 + 1.5 * t);
+      dir.x += H.fbm3(seed * 0.017 + t * 2.6, 1.3, 0.7, 3) * m;
+      dir.z += H.fbm3(2.9, seed * 0.013 + t * 2.4, 4.1, 3) * m;
+      dir.y += H.fbm3(5.1, 0.6, seed * 0.019 + t * 2.2, 3) * m * 0.55;
+      dir.normalize();
+      pos = pos.clone().addScaledVector(dir, step);
+      if (pos.y < BY[0]) { pos.y = BY[0] + (BY[0] - pos.y) * 0.35; dir.y = Math.abs(dir.y) * 0.12; }
+      pos.x = clamp(pos.x, BX[0], BX[1]);
+      pos.z = clamp(pos.z, BZ[0], BZ[1]);
+      clampUnder(pos, 0.12);
+      pts.push(pos);
+    }
+    return pts;
   }
 
-  /* ---------------- fine hyphae: three depth batches ---------------- */
-  const hyphae = [];
-  let hyphaeVerts = 0;
+  const primaries = [];     // [{ pts, az }] — the long fall
+  const skirt = [];         // [{ pts }] — the dense bright collar at the crown
+  const secondaries = [];   // [{ pts, parent }]
+  const N_PRIMARY = 66;
+  const N_SKIRT = 150;
+  const N_MID = 190;
+  {
+    const rnd = H.rng(4801);
+    const GOLD = Math.PI * (3 - Math.sqrt(5));
+    // duck the depth-axis roots: 1 when a root heads straight at the lens or
+    // straight down the glide, 0 when it fans across the frame. This is the
+    // single authored asymmetry that keeps the flight corridor clear while
+    // the fan still fills the frame left to right.
+    const duckOf = (az) => Math.max(0, 1 - angDelta(az, CAM_AZ) / 1.05) * 0.62
+                         + Math.max(0, 1 - angDelta(az, GLIDE_AZ) / 1.05) * 0.50;
+    for (let i = 0; i < N_PRIMARY; i++) {
+      const az = (i * GOLD + rnd() * 0.16) % TAU;
+      // Leaving the crown NEARLY HORIZONTALLY is what makes the silhouette a
+      // fountain instead of a firework: the arc has to happen in view. A root
+      // that starts steep is a straight line to the bottom of the frame; one
+      // that starts flat and is pulled over by GRAV within two or three units
+      // draws the willow curve the reference is made of.
+      const dip0 = 0.02 + rnd() * 0.20 + duckOf(az) * 0.85;
+      // roots running away down the glide are longer, so the colony stays
+      // grown all the way out to the rise instead of stopping behind us
+      const away = Math.max(0, Math.cos(az - GLIDE_AZ));
+      const len = (5.4 + rnd() * 5.6) * (1 + away * 0.85);
+      const dir0 = V(Math.cos(az) * Math.cos(dip0), -Math.sin(dip0), Math.sin(az) * Math.cos(dip0));
+      // the knot has extent: starting every root at the same point puts a
+      // hard vanishing singularity at top centre
+      const start = CROWN.clone().add(V(
+        (rnd() - 0.5) * 0.30, (rnd() - 0.5) * 0.22, (rnd() - 0.5) * 0.30));
+      const side = V(-Math.sin(az), 0, Math.cos(az));
+      const sweep = side.multiplyScalar((rnd() - 0.5) * 0.46);
+      primaries.push({ pts: growRoot(start, dir0, len, 16, 900 + i * 37, 0.34, sweep), az });
+    }
+    // The COLLAR: the reference's fountain is dense where it leaves the base
+    // and sparse where it falls. Long roots alone cannot do that — spacing
+    // them tightly enough at the crown makes them a solid mass further down.
+    // So the density near the crown is its own population, in two ranks:
+    //   · the inner collar (under 1.4 units) is the knot's own halo of
+    //     filaments. It has to stay short: at the rest the crown is 1.85
+    //     units from the lens, so a 3-unit filament there subtends most of
+    //     the frame and the collar reads as the firework it must not be;
+    //   · the outer rank (1.5-4.2) bridges the gap between that knot and the
+    //     long primaries, which is where the first build read as a handful of
+    //     bare rays crossing the headline.
+    for (let i = 0; i < N_SKIRT; i++) {
+      const az = (i * GOLD * 2.0 + rnd() * 0.5) % TAU;
+      const dip0 = 0.02 + rnd() * 0.75 + duckOf(az) * 0.7;
+      const len = 0.30 + rnd() * 1.05;
+      const dir0 = V(Math.cos(az) * Math.cos(dip0), -Math.sin(dip0), Math.sin(az) * Math.cos(dip0));
+      const start = CROWN.clone().add(V(
+        (rnd() - 0.5) * 0.34, (rnd() - 0.5) * 0.26, (rnd() - 0.5) * 0.34));
+      skirt.push({ pts: growRoot(start, dir0, len, 5, 15500 + i * 23, 0.20) });
+    }
+    for (let i = 0; i < N_MID; i++) {
+      const az = (i * GOLD * 3.0 + rnd() * 0.4) % TAU;
+      const dip0 = 0.02 + rnd() * 0.42 + duckOf(az) * 0.8;
+      const len = 1.5 + rnd() * 2.7;
+      const dir0 = V(Math.cos(az) * Math.cos(dip0), -Math.sin(dip0), Math.sin(az) * Math.cos(dip0));
+      const start = CROWN.clone().add(V(
+        (rnd() - 0.5) * 0.40, (rnd() - 0.5) * 0.30, (rnd() - 0.5) * 0.40));
+      const side = V(-Math.sin(az), 0, Math.cos(az));
+      skirt.push({
+        pts: growRoot(start, dir0, len, 9, 17700 + i * 19, 0.28,
+          side.multiplyScalar((rnd() - 0.5) * 0.34)),
+      });
+    }
+  }
+  {
+    const rnd = H.rng(5209);
+    primaries.forEach((pr, pi) => {
+      const n = 3 + Math.floor(rnd() * 4);
+      for (let k = 0; k < n; k++) {
+        const t = 0.24 + rnd() * 0.62;
+        const j = clamp(Math.round(t * (pr.pts.length - 1)), 1, pr.pts.length - 2);
+        const base = pr.pts[j];
+        if (base.y > -1.0) continue;
+        const tang = pr.pts[j + 1].clone().sub(pr.pts[j - 1]).normalize();
+        const side = V(-tang.z, 0, tang.x).normalize();
+        const dir0 = tang.clone()
+          .addScaledVector(side, (rnd() < 0.5 ? -1 : 1) * (0.7 + rnd() * 0.9))
+          .add(V(0, -(0.25 + rnd() * 0.5), 0));
+        const len = 1.4 + rnd() * 3.6;
+        const pts = growRoot(base, dir0, len, 8, 3300 + pi * 71 + k * 13, 0.34);
+        secondaries.push({ pts, parent: pi });
+      }
+    });
+  }
 
-  function hyphaBatch(spec) {
+  // Both generations draw in ONE batch. aAlong runs 0 at the crown end, so a
+  // travelling pulse reads as light leaving the base and running out along the
+  // roots — the same direction the fan grew.
+  let fanVerts = 0;
+  const fanMat = makeFadePulseMat(P.gold, {
+    baseOpacity: 0.36 * exposure, twinkle: 0.34, pulseWidth: 0.10,
+    pulseColor: P.goldBright, fogDensity: 0.042, nearFade: [0.55, 1.35],
+    alongTaper: 0.22,
+  });
+  {
+    const pos = [], along = [], strand = [];
+    const push = (list, sv, headroom) => {
+      list.forEach((r, ri) => {
+        const curve = H.catmull(r.pts);
+        const N = r.pts.length + 4;
+        let prev = curve.getPointAt(0);
+        for (let j = 1; j <= N; j++) {
+          const t = j / N;
+          const p = curve.getPointAt(t);
+          pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+          along.push(headroom + (1 - headroom) * (j - 1) / N, headroom + (1 - headroom) * t);
+          strand.push(sv(ri), sv(ri));
+          prev = p;
+        }
+      });
+    };
+    push(primaries, (ri) => ri / N_PRIMARY, 0);
+    // the collar shares the fan's along range but only its first third, so
+    // the taper leaves it bright: it IS the "dense and bright" end
+    push(skirt, (ri) => (ri % 23) / 23, 0);
+    push(secondaries, (ri) => 0.5 + (ri % 17) / 34, 0.30);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
+    geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
+    const lines = new THREE.LineSegments(geo, fanMat);
+    lines.frustumCulled = false;
+    lines.renderOrder = -4;
+    group.add(lines);
+    timeMats.push(fanMat);
+    fanVerts = pos.length / 3;
+  }
+
+  /* ---------------- hairs: the fine thread density ---------------- */
+  // Short filaments hanging off the secondaries. They carry most of the
+  // picture's "fine amber threads" read and none of its structure, so they
+  // are dimmer, thinner in depth and fogged harder.
+  let hairVerts = 0;
+  const hairMat = makeFadePulseMat(0xc19240, {
+    baseOpacity: 0.30 * exposure, twinkle: 0.60, pulseWidth: 0.10,
+    pulseColor: P.ember, fogDensity: 0.042, nearFade: [0.7, 1.8],
+  });
+  {
+    const src = [...secondaries, ...primaries];
     const res = H.strandLines({
-      count: spec.count, seed: spec.seed,
-      generator: (i, rand) => {
-        let x, y, z;
-        if (spec.rMax) {
-          // shell around the REAL leg polyline — the layers the lens brushes
-          // past wrap every moment of the traverse, descent and rise included
-          const s = rand();
-          const f = clamp(s, 0, 1) * (camPts.length - 1);
-          const i0 = Math.min(Math.floor(f), camPts.length - 2);
-          _tube.copy(camPts[i0]).lerp(camPts[i0 + 1], f - i0);
-          const a = rand() * TAU;
-          const b = (rand() - 0.5) * Math.PI;
-          const rr = spec.rMin + (spec.rMax - spec.rMin) * Math.sqrt(rand());
-          x = clamp(_tube.x + Math.cos(a) * Math.cos(b) * rr, BX[0], BX[1]);
-          y = _tube.y + Math.sin(b) * rr * 0.72;
-          z = clamp(_tube.z + Math.sin(a) * Math.cos(b) * rr * 0.85, BZ[0], BZ[1]);
-        } else {
-          x = BX[0] + rand() * (BX[1] - BX[0]);
-          y = BY[0] + rand() * (BY[1] - BY[0]);
-          z = BZ[0] + rand() * (BZ[1] - BZ[0]);
-          // the far layer stays out of the corridor the near layers own
-          if (camDist(x, y, z) < spec.gdMin && rand() < 0.78) return null;
-        }
-        y = Math.min(y, groundY(x, z) - 0.18);
-        if (y < BY[0]) y = BY[0] + rand() * 0.4;
-        if (inVoid(x, y, z)) return null;
-        const d = substrate(x, y, z);
-        if (d < spec.cut) return null;
-        if (d < spec.cut + 0.09 && rand() < 0.55) return null;
-        const len = spec.lenMin + rand() * (spec.lenMax - spec.lenMin);
-        const step = len / 4;
-        const pts = [V(x, y, z)];
-        let cur = pts[0];
-        for (let j = 0; j < 4; j++) {
-          cur = flowStep(cur, i + j * 0.37, step, new V3());
-          pts.push(cur);
-        }
-        return pts;
+      count: 2400, seed: 7717,
+      generator: (i, rnd) => {
+        const s = src[Math.floor(rnd() * src.length)];
+        const j = clamp(Math.floor(rnd() * (s.pts.length - 1)), 0, s.pts.length - 2);
+        const base = s.pts[j].clone().lerp(s.pts[j + 1], rnd());
+        if (base.y > -0.95) return null;
+        if (inVoid(base.x, base.y, base.z)) return null;
+        if (camDist(base.x, base.y, base.z) < 1.5) return null;
+        if (substrate(base.x, base.y, base.z) < -0.16) return null;
+        const a = rnd() * TAU;
+        const b = -(0.1 + rnd() * 1.2);
+        const dir0 = V(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b));
+        return growRoot(base, dir0, 0.5 + rnd() * 1.5, 4, 9000 + i * 7);
       },
     });
-    const mat = makeFadePulseMat(spec.color, {
-      baseOpacity: spec.base * exposure, twinkle: spec.twinkle, pulseWidth: 0.10,
-      pulseColor: spec.pulseColor, fogDensity: spec.fog,
-    });
-    const lines = new THREE.LineSegments(res.geometry, mat);
+    const lines = new THREE.LineSegments(res.geometry, hairMat);
     lines.frustumCulled = false;
-    lines.renderOrder = spec.order;
+    lines.renderOrder = -5;
     group.add(lines);
-    timeMats.push(mat);
-    hyphaeVerts += res.geometry.attributes.position.count;
-    hyphae.push({ lines, mat });
+    timeMats.push(hairMat);
+    hairVerts = res.geometry.attributes.position.count;
   }
 
-  // far: fills the slab, dissolving into the haze
-  hyphaBatch({
-    count: 2700, seed: 2201, cut: -0.13, gdMin: 4.6,
-    lenMin: 2.6, lenMax: 6.2, color: P.deepGold, pulseColor: P.ember,
-    base: 0.135, twinkle: 0.64, fog: 0.031, order: -6,
+  /* ================================================================
+     THE WEB — cross-links between different roots
+     ================================================================ */
+  // A fan is not a network, and root-to-root links alone are not one either:
+  // the roots diverge radially, so beyond four or five units from the crown
+  // there is nothing near enough to link to and the lower field stays empty —
+  // which is exactly what the first build of this restage looked like against
+  // the reference's dense lit web.
+  //
+  // So the network has its own NODES. They are seeded through the lower
+  // volume (authored in the rest frustum, with a tail spread along the glide
+  // so the field does not stop at the frame edge), spaced by a minimum
+  // distance, textured by the substrate density function so the web clumps and
+  // thins instead of tiling, and then each is wired to its nearest few
+  // neighbours. The fan's roots are wired INTO the nearest nodes, so the
+  // structure reads as one thing: light leaves the crown, runs down the roots
+  // and out through the mesh.
+  const netNodes = [];        // V3 — the network's own vertices
+  const linkNodes = [];       // V3 — everything that gets a glint
+  let webVerts = 0;
+  let netLinks = 0;
+  const webMat = makeFadePulseMat(P.gold, {
+    baseOpacity: 0.34 * exposure, twinkle: 0.46, pulseWidth: 0.12,
+    pulseColor: P.goldBright, fogDensity: 0.030, nearFade: [0.7, 1.8],
   });
-  // mid: the body of the colony, wrapped around the leg
-  hyphaBatch({
-    count: 3300, seed: 3307, cut: -0.08, rMin: 2.2, rMax: 11.5,
-    lenMin: 2.0, lenMax: 4.6, color: 0xc19240, pulseColor: P.goldBright,
-    base: 0.185, twinkle: 0.55, fog: 0.021, order: -5,
-  });
-  // near: sharp, hot, brushing past the lens (short steps — no jagged bolts)
-  hyphaBatch({
-    count: 1400, seed: 4409, cut: -0.08, rMin: 0.6, rMax: 6.2,
-    lenMin: 1.1, lenMax: 2.5, color: P.gold, pulseColor: P.goldBright,
-    base: 0.235, twinkle: 0.42, fog: 0.012, order: -4,
-  });
+  const rootPool = [];        // { p, key } sample points eligible for linking
+  {
+    const add = (list, tag) => list.forEach((r, ri) => {
+      for (let j = 1; j < r.pts.length; j++) {
+        const p = r.pts[j];
+        if (p.y > -1.35) continue;                    // stay under the corridor
+        rootPool.push({ p, key: `${tag}${ri}` });
+      }
+    });
+    add(primaries, 'p');
+    add(secondaries, 's');
 
-  /* ---------------- soil-underside lid ----------------
-     The ceiling of the underground volume, read from below as a dark
-     undulating grid of root-mat lines just beneath the real soil surface —
-     both crossings (T3 down, the rise up) pass THROUGH it, which is what
-     keeps the seams reading as thresholds rather than fades. */
+    const rf = restFrame;
+    const TANV = Math.tan(0.5 * rf.fov * Math.PI / 180);
+    const rnd = H.rng(6151);
+    const MIN_SEP = 0.72;
+    const NET_N = 430;
+    for (let guard = 0; netNodes.length < NET_N && guard < NET_N * 40; guard++) {
+      let p;
+      if (rnd() < 0.74) {
+        // authored in the REST FRUSTUM: the lower two-thirds is where the
+        // reference's network lives, so that is where the density is spent.
+        // cy is squared toward the bottom, and depth is biased near, so the
+        // mesh is denser and coarser low and finer high — which is also what
+        // reads as depth.
+        const cx = (rnd() * 2 - 1) * 1.15;
+        const u = rnd();
+        const cy = 0.34 - 1.45 * Math.pow(u, 0.72);
+        const d = 3.4 + Math.pow(rnd(), 0.8) * 15.5;
+        p = rf.pos.clone()
+          .addScaledVector(rf.fwd, d)
+          .addScaledVector(rf.right, cx * TANV * 1.6 * d)
+          .addScaledVector(rf.up, cy * TANV * d);
+      } else {
+        // and a tail along the glide so the mesh does not end at the frame
+        p = spineAt(rnd() * 1.05)
+          .addScaledVector(RIGHT, (rnd() - 0.5) * 17)
+          .addScaledVector(UPN, -(0.8 + rnd() * 4.4));
+      }
+      p.x = clamp(p.x, BX[0], BX[1]);
+      p.z = clamp(p.z, BZ[0], BZ[1]);
+      clampUnder(p, 0.5);
+      if (p.y > -1.95 || p.y < BY[0]) continue;       // below the flight corridor
+      if (camDist(p.x, p.y, p.z) < 2.6) continue;
+      if (inVoid(p.x, p.y, p.z)) continue;
+      if (substrate(p.x, p.y, p.z) < -0.22) continue; // clump and thin, never tile
+      let tooClose = false;
+      for (let i = 0; i < netNodes.length; i++) {
+        if (netNodes[i].distanceToSquared(p) < MIN_SEP * MIN_SEP) { tooClose = true; break; }
+      }
+      if (tooClose) continue;
+      netNodes.push(p);
+    }
+
+    const pos = [], along = [], strand = [];
+    const seen = new Set();
+    const link = (a, b, sv, sag) => {
+      const d = a.distanceTo(b);
+      const SEG = 5;
+      const bow = V((rnd() - 0.5) * d * 0.22, -(sag * d * (0.05 + rnd() * 0.22)), (rnd() - 0.5) * d * 0.22);
+      let prev = null;
+      for (let j = 0; j <= SEG; j++) {
+        const t = j / SEG;
+        const p = a.clone().lerp(b, t).addScaledVector(bow, Math.sin(Math.PI * t));
+        clampUnder(p, 0.12);
+        if (prev) {
+          pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+          along.push((j - 1) / SEG, t);
+          strand.push(sv, sv);
+        }
+        prev = p;
+      }
+      netLinks++;
+    };
+    // node -> nearest neighbours
+    netNodes.forEach((a, i) => {
+      const near = [];
+      for (let j = 0; j < netNodes.length; j++) {
+        if (j === i) continue;
+        const d2 = a.distanceToSquared(netNodes[j]);
+        if (d2 < 20.25) near.push({ j, d2 });        // within 4.5
+      }
+      near.sort((x, y) => x.d2 - y.d2);
+      const k = 2 + Math.floor(rnd() * 3);
+      for (let n = 0; n < Math.min(k, near.length); n++) {
+        const j = near[n].j;
+        const key = i < j ? `${i}_${j}` : `${j}_${i}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const mid = a.clone().lerp(netNodes[j], 0.5);
+        if (camDist(mid.x, mid.y, mid.z) < 2.4) continue;
+        link(a, netNodes[j], rnd(), 1);
+      }
+      linkNodes.push(a.clone());
+    });
+    // the fan feeds the mesh: every root sample gets a chance to reach the
+    // nearest node, so the two structures are one structure
+    for (let i = 0; i < rootPool.length; i += 2) {
+      const a = rootPool[i].p;
+      let best = null, bd = 9;
+      for (let j = 0; j < netNodes.length; j++) {
+        const d2 = a.distanceToSquared(netNodes[j]);
+        if (d2 < bd) { bd = d2; best = netNodes[j]; }
+      }
+      if (!best || bd < 0.09) continue;
+      if (rnd() > 0.44) continue;
+      const mid = a.clone().lerp(best, 0.5);
+      if (camDist(mid.x, mid.y, mid.z) < 2.4) continue;
+      link(a, best, rnd(), 0.6);
+      if (rnd() < 0.30) linkNodes.push(a.clone());
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
+    geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
+    const lines = new THREE.LineSegments(geo, webMat);
+    lines.frustumCulled = false;
+    lines.renderOrder = -4;
+    group.add(lines);
+    timeMats.push(webMat);
+    webVerts = pos.length / 3;
+  }
+
+  /* ---------------- junction glints ---------------- */
+  // "Many small bright nodes where threads cross." One Points draw, per-point
+  // twinkle on incommensurate frequencies so nothing beats in unison.
+  const glints = (() => {
+    const rnd = H.rng(8123);
+    const keep = linkNodes.filter(() => rnd() < 0.88);
+    const pos = new Float32Array(keep.length * 3);
+    const sizeA = new Float32Array(keep.length);
+    const seedA = new Float32Array(keep.length);
+    keep.forEach((p, i) => {
+      pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
+      sizeA[i] = 0.075 + rnd() * 0.155;
+      seedA[i] = rnd() * 31.7;
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
+    geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 }, uFade: { value: 0 },
+        uMap: { value: H.softDisc(64) },
+        uColor: { value: new THREE.Color(P.goldBright) },
+        uScale: { value: 260 }, uBaseA: { value: 0.72 * exposure },
+      },
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+      vertexShader: /* glsl */`
+        attribute float aSize; attribute float aSeed;
+        uniform float uScale;
+        varying float vSeed, vD;
+        void main() {
+          vSeed = aSeed;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vD = -mv.z;
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = uScale * aSize / max(-mv.z, 0.1);
+        }`,
+      fragmentShader: /* glsl */`
+        uniform sampler2D uMap; uniform vec3 uColor;
+        uniform float uTime, uBaseA, uFade;
+        varying float vSeed, vD;
+        void main() {
+          vec4 t = texture2D(uMap, gl_PointCoord);
+          float flick = 0.62 + 0.38 * sin(uTime * (0.29 + fract(vSeed) * 0.83) + vSeed * 9.1);
+          float depth = 1.0 - clamp((vD - 5.0) / 13.0, 0.0, 0.72);
+          float a = t.a * uBaseA * flick * depth * smoothstep(0.6, 1.6, vD);
+          gl_FragColor = vec4(uColor, clamp(a * uFade, 0.0, 1.0));
+        }`,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    pts.renderOrder = -3;
+    group.add(pts);
+    return { pts, mat, count: keep.length };
+  })();
+
+  /* ================================================================
+     THE CROWN — the convergence point at top centre
+     ================================================================ */
+  // A knot, not a body: fibres gathering UP into the stem base (cropped by
+  // the soil lid and by the top of the frame) over a tight radial burst and
+  // a hot core. Same grammar as CONNECT's hubs, one scale larger.
+  const crownMat = makeFadePulseMat(P.goldBright, {
+    baseOpacity: 0.62 * exposure, twinkle: 0.18, pulseWidth: 0.09,
+    pulseColor: 0xfff0d0, fogDensity: 0.010, nearFade: [0.35, 0.95],
+  });
+  let crownVerts = 0;
+  {
+    const rnd = H.rng(2711);
+    const pos = [], along = [], strand = [];
+    const seg = (a, b, t0, t1, sv) => {
+      pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
+      along.push(t0, t1); strand.push(sv, sv);
+    };
+    // (a) the gathering: fibres rising from the crown to the stem's foot,
+    //     converging as they climb. The lid crops them; the top of the frame
+    //     crops what the lid does not.
+    const foot = V(CROWN.x, groundY(CROWN.x, CROWN.z) + 0.16, CROWN.z);
+    for (let i = 0; i < 34; i++) {
+      const a0 = rnd() * TAU;
+      const r0 = 0.28 + rnd() * 0.62;
+      const start = V(CROWN.x + Math.cos(a0) * r0, CROWN.y - 0.10 - rnd() * 0.45, CROWN.z + Math.sin(a0) * r0);
+      const sv = rnd();
+      const N = 6;
+      let prev = start;
+      for (let j = 1; j <= N; j++) {
+        const t = j / N;
+        const e = H.easings.smooth(t);
+        const p = start.clone().lerp(foot, e);
+        const hump = Math.sin(Math.PI * t) * 0.16;
+        p.x += H.fbm3(i * 1.7, t * 3.1, 0.5, 2) * hump;
+        p.z += H.fbm3(0.9, i * 1.3, t * 3.4, 2) * hump;
+        seg(prev, p, (j - 1) / N, t, sv);
+        prev = p;
+      }
+    }
+    // (b) the radial burst: short spokes converging on the crown itself
+    for (let i = 0; i < 30; i++) {
+      const a0 = rnd() * TAU;
+      const b0 = (rnd() - 0.5) * Math.PI * 0.9;
+      const rr = 0.55 + rnd() * 0.95;
+      const start = V(
+        CROWN.x + Math.cos(a0) * Math.cos(b0) * rr,
+        CROWN.y + Math.sin(b0) * rr * 0.7,
+        CROWN.z + Math.sin(a0) * Math.cos(b0) * rr,
+      );
+      clampUnder(start, 0.10);
+      const sv = rnd();
+      const N = 5;
+      let prev = start;
+      for (let j = 1; j <= N; j++) {
+        const t = j / N;
+        const p = start.clone().lerp(CROWN, H.easings.smooth(t));
+        seg(prev, p, (j - 1) / N, t, sv);
+        prev = p;
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
+    geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
+    const lines = new THREE.LineSegments(geo, crownMat);
+    lines.frustumCulled = false;
+    lines.renderOrder = -2;
+    group.add(lines);
+    timeMats.push(crownMat);
+    crownVerts = pos.length / 3;
+  }
+
+  /* ================================================================
+     STARBURST HUBS — the reference's brighter convergence points
+     ================================================================ */
+  // Authored in the REST FRAME (the frame is the spec), then grounded into
+  // the field and cleared off the polyline. Positions avoid the copy block
+  // (top-centre) and the portrait sites (portraits.js REST_SITES).
+  const HUB_SITES = [
+    [-0.86, -0.34, 8.2, 1.00],
+    [0.82, -0.52, 6.6, 0.92],
+    [-0.20, -0.66, 6.2, 0.86],
+    [0.44, 0.12, 12.6, 0.72],
+    [-0.68, 0.16, 13.4, 0.66],
+  ];
+  const hubPos = [];
+  {
+    const rf = restFrame;
+    const TANV = Math.tan(0.5 * rf.fov * Math.PI / 180);
+    for (const [cx, cy, depth, sc] of HUB_SITES) {
+      const p = rf.pos.clone()
+        .addScaledVector(rf.fwd, depth)
+        .addScaledVector(rf.right, cx * TANV * 1.6 * depth)
+        .addScaledVector(rf.up, cy * TANV * depth);
+      clampUnder(p, 0.9);
+      for (let it = 0; it < 5; it++) {
+        const cd = camDist(p.x, p.y, p.z);
+        if (cd >= 2.8) break;
+        const away = p.clone().sub(nearestCamPt(p));
+        if (away.lengthSq() < 0.001) away.set(0, -1, 0);
+        away.normalize();
+        if (away.y > 0) away.y *= 0.25;
+        p.addScaledVector(away.normalize(), 2.85 - cd);
+        clampUnder(p, 0.9);
+      }
+      hubPos.push({ p, sc });
+    }
+  }
+  const hubMat = makeFadePulseMat(P.goldBright, {
+    baseOpacity: 0.46 * exposure, twinkle: 0.22, pulseWidth: 0.10,
+    pulseColor: 0xffe0ae, fogDensity: 0.022, nearFade: [0.7, 1.8],
+  });
+  let hubVerts = 0;
+  {
+    const rnd = H.rng(3391);
+    const pos = [], along = [], strand = [];
+    hubPos.forEach((h, hi) => {
+      const R = 0.55 * h.sc;
+      // radial convergence spokes (CONNECT's hub grammar, in 3D)
+      for (let s = 0; s < 15; s++) {
+        const a = (s / 15) * TAU + rnd() * 0.4;
+        const b = (rnd() - 0.5) * Math.PI * 0.8;
+        const rr = R * (1.8 + rnd() * 2.6);
+        const start = V(
+          h.p.x + Math.cos(a) * Math.cos(b) * rr,
+          h.p.y + Math.sin(b) * rr * 0.72,
+          h.p.z + Math.sin(a) * Math.cos(b) * rr,
+        );
+        clampUnder(start, 0.12);
+        const sv = rnd();
+        const N = 5;
+        let prev = start;
+        for (let j = 1; j <= N; j++) {
+          const t = j / N;
+          const p = start.clone().lerp(h.p, H.easings.smooth(t));
+          pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+          along.push((j - 1) / N, t); strand.push(sv, sv);
+          prev = p;
+        }
+      }
+      // the tight knot at the core
+      for (let k = 0; k < 6; k++) {
+        const a0 = rnd() * TAU, span = 1.6 + rnd() * 2.6;
+        const Rk = R * (0.16 + rnd() * 0.22);
+        const sv = rnd();
+        const N = 7;
+        let prev = null;
+        for (let j = 0; j <= N; j++) {
+          const t = j / N;
+          const a = a0 + t * span;
+          const p = V(
+            h.p.x + Math.cos(a) * Rk,
+            h.p.y + Math.sin(a * 1.7 + hi) * Rk * 0.5,
+            h.p.z + Math.sin(a) * Rk,
+          );
+          if (prev) {
+            pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+            along.push((j - 1) / N, t); strand.push(sv, sv);
+          }
+          prev = p;
+        }
+      }
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
+    geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
+    const lines = new THREE.LineSegments(geo, hubMat);
+    lines.frustumCulled = false;
+    lines.renderOrder = -2;
+    group.add(lines);
+    timeMats.push(hubMat);
+    hubVerts = pos.length / 3;
+  }
+
+  /* ---------------- cores + halos: crown and hubs, 2 Points draws ------- */
+  function coreLayer(map, color, mul, baseA, order) {
+    const list = [{ p: CROWN, sc: 1.9 }, ...hubPos];
+    const pos = new Float32Array(list.length * 3);
+    const sizeA = new Float32Array(list.length);
+    const seedA = new Float32Array(list.length);
+    list.forEach((h, i) => {
+      pos[i * 3] = h.p.x; pos[i * 3 + 1] = h.p.y; pos[i * 3 + 2] = h.p.z;
+      sizeA[i] = h.sc * mul;
+      seedA[i] = i * 3.7 + 1.1;
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
+    geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 }, uFade: { value: 0 }, uSurge: { value: 0 },
+        uMap: { value: map }, uColor: { value: new THREE.Color(color) },
+        uScale: { value: 240 }, uBaseA: { value: baseA * exposure },
+      },
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+      vertexShader: /* glsl */`
+        attribute float aSize; attribute float aSeed;
+        uniform float uScale, uSurge;
+        varying float vSeed, vD;
+        void main() {
+          vSeed = aSeed;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vD = -mv.z;
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = uScale * aSize * (1.0 + 0.22 * uSurge) / max(-mv.z, 0.1);
+        }`,
+      fragmentShader: /* glsl */`
+        uniform sampler2D uMap; uniform vec3 uColor;
+        uniform float uTime, uBaseA, uFade, uSurge;
+        varying float vSeed, vD;
+        void main() {
+          vec4 t = texture2D(uMap, gl_PointCoord);
+          float br = 0.86 + 0.14 * sin(uTime * (0.21 + fract(vSeed) * 0.33) + vSeed * 5.3);
+          float a = t.a * uBaseA * br * (1.0 + 0.9 * uSurge) * smoothstep(0.45, 1.25, vD);
+          gl_FragColor = vec4(uColor, clamp(a * uFade, 0.0, 1.0));
+        }`,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    pts.renderOrder = order;
+    group.add(pts);
+    return { pts, mat };
+  }
+  const cores = coreLayer(H.softDisc(64), 0xffe9c4, 0.30, 0.55, -1);
+  const halos = coreLayer(H.glowSprite(P.ember, 64), P.ember, 1.55, 0.26, -6);
+
+  /* ================================================================
+     THE SOIL CEILING — the frame's darkness, and the reason the crown
+     is the brightest thing in it
+     ================================================================ */
+  // The one genuinely NEW layer of the restage, and the one that made the
+  // composition work. Every lit thing in this scene is additive, so before
+  // this there was nothing between the underground camera and the hero's own
+  // surface mycelium: the ground network blazed straight through the soil
+  // across the top of the frame, brighter than the root world beneath it, and
+  // the picture's hierarchy was upside down (the pre-restage golden shows it —
+  // that band of light IS the surface web, seen from below through solid
+  // earth). The reference's top is near-black with one bright convergence.
+  //
+  // So: an actual opaque ceiling at the soil line, drawn ONLY from below —
+  // PlaneGeometry rotated so its normal points DOWN, FrontSide, so from above
+  // it is back-facing and culled. That single property is what keeps it out
+  // of the Final cutaway, which deliberately looks INTO the colony from above
+  // and must not meet a lid. It writes depth (renderOrder -30, before every
+  // additive layer in the scene), which is what lets it occlude the hero's
+  // ground group without touching organism/* — nothing here reads, writes or
+  // configures the hero's own objects; it simply stands between them and the
+  // lens, which is what a metre of soil does.
+  //
+  // Colour is warm near-black, not black: it reads as earth over the haze
+  // rather than as a hole punched in the frame. Opacity rides the chapter
+  // fade, so it arrives and retires inside the same murk window as everything
+  // else and reverse scrubs identically.
+  const ceiling = (() => {
+    const SEG = 44, SPAN = 78;
+    const geo = new THREE.PlaneGeometry(SPAN, SPAN, SEG, SEG);
+    geo.rotateX(Math.PI / 2);                 // normal -> -Y (visible from below)
+    const pa = geo.attributes.position;
+    for (let i = 0; i < pa.count; i++) {
+      pa.setY(i, groundY(pa.getX(i), pa.getZ(i)) - 0.07);
+    }
+    pa.needsUpdate = true;
+    geo.deleteAttribute('normal');
+    geo.deleteAttribute('uv');
+    // The ceiling's colour has to DISSOLVE with distance or it draws a hard
+    // horizontal rule across the frame: the soil plane's vanishing line is
+    // where its depth goes to infinity, so the strip just above the line is
+    // the FARTHEST ceiling there is, and a flat near-black plane meets the
+    // lit haze below the line at full contrast. Grading it toward the haze
+    // tone over 5->34 units makes the two meet at the same value and the
+    // boundary stops existing — which is what the reference's top looks like:
+    // dark that gets darker upward, no edge.
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uNear: { value: new THREE.Color(P.warmBlack ?? 0x0a0805) },
+        uFar: { value: new THREE.Color(0x241a10) },
+        uOpacity: { value: 0 },
+      },
+      transparent: true, depthWrite: true, fog: false, side: THREE.FrontSide,
+      vertexShader: /* glsl */`
+        varying float vD;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vD = -mv.z;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */`
+        uniform vec3 uNear, uFar;
+        uniform float uOpacity;
+        varying float vD;
+        void main() {
+          vec3 c = mix(uNear, uFar, smoothstep(5.0, 34.0, vD));
+          gl_FragColor = vec4(c, uOpacity);
+        }`,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.renderOrder = -30;
+    mesh.frustumCulled = false;
+    group.add(mesh);
+    return { mesh, mat };
+  })();
+
+  /* ---------------- soil-underside root mat ----------------
+     The ceiling's texture: an undulating mat of root lines just beneath it,
+     so the dark band overhead is grown earth rather than a flat card. Both
+     crossings (T3 down, the rise up) pass THROUGH it, which is what keeps the
+     seams reading as thresholds — and at the rest it is the band the crown
+     pierces. */
+  let lidVerts = 0;
   {
     const rand = H.rng(6633);
     const gauss = () => (rand() + rand() + rand() + rand() - 2) / 2;
     const res = H.strandLines({
-      count: 560, seed: 6633,
+      count: 620, seed: 6633,
       generator: () => {
         const x = BX[0] + rand() * (BX[1] - BX[0]);
         const z = BZ[0] + rand() * (BZ[1] - BZ[0]);
@@ -270,13 +962,13 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
           const t = j / 3;
           const px = x + Math.cos(a) * len * t + gauss() * 0.10;
           const pz = z + Math.sin(a) * len * t + gauss() * 0.10;
-          pts.push(V(px, groundY(px, pz) - 0.12 - Math.abs(gauss()) * 0.12, pz));
+          pts.push(V(px, Math.min(y0, groundY(px, pz) - 0.12 - Math.abs(gauss()) * 0.12), pz));
         }
         return pts;
       },
     });
     const mat = makeFadePulseMat(P.deepGold, {
-      baseOpacity: 0.16 * exposure, twinkle: 0.30, pulseWidth: 0.10,
+      baseOpacity: 0.20 * exposure, twinkle: 0.30, pulseWidth: 0.10,
       pulseColor: P.ember, fogDensity: 0.026,
     });
     const lines = new THREE.LineSegments(res.geometry, mat);
@@ -284,159 +976,52 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     lines.renderOrder = -6;
     group.add(lines);
     timeMats.push(mat);
-    hyphaeVerts += res.geometry.attributes.position.count;
+    lidVerts = res.geometry.attributes.position.count;
   }
 
-  /* ---------------- rhizomorph cords: slow travelling waves ---------------- */
-  function tubeStrand(points, opts, strandVal) {
-    const g = H.tubeFrom(points, opts);
-    const n = g.attributes.position.count;
-    const uv = g.attributes.uv;
-    const along = new Float32Array(n);
-    const st = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      along[i] = uv ? uv.getX(i) : 0;
-      st[i] = strandVal;
-    }
-    g.setAttribute('aAlong', new THREE.BufferAttribute(along, 1));
-    g.setAttribute('aStrand', new THREE.BufferAttribute(st, 1));
-    if (g.attributes.normal) g.deleteAttribute('normal');
-    if (g.attributes.uv) g.deleteAttribute('uv');
-    return g;
-  }
-
-  // Cords run the corridor at RIGHT/UPN offsets. The rest gaze looks DOWN
-  // the corridor (-X), so cords are given deliberate lateral travel — they
-  // cross the frame obliquely, passing above/below the camera path (never
-  // through it: the clearance push guards the polyline).
-  const CORD_SPECS = [
-    { seed: 6101, r0: -5.2, u0: -2.2, r1: -2.6, u1: 1.0, rad: 0.20,
-      col: P.gold, pulse: P.goldBright, bow: V(0.5, 1.4, -2.0), speed: 0.052, base: 0.40 },
-    { seed: 6203, r0: 4.6, u0: 1.6, r1: 2.8, u1: -2.4, rad: 0.15,
-      col: 0xb98a35, pulse: P.ember, bow: V(-1.0, -1.2, 1.8), speed: 0.038, base: 0.33 },
-    { seed: 6301, r0: -7.0, u0: 1.2, r1: -4.4, u1: -1.4, rad: 0.13,
-      col: P.deepGold, pulse: P.ember, bow: V(1.4, 1.0, 2.2), speed: 0.031, base: 0.30 },
-    { seed: 6407, r0: 3.2, u0: -3.2, r1: 5.2, u1: -2.0, rad: 0.11,
-      col: P.gold, pulse: P.goldBright, bow: V(-1.8, 0.8, -1.2), speed: 0.045, base: 0.28 },
-    // one cord climbs toward the organism above: it rises under the stipe at
-    // the entry end and stops just beneath the soil — the T3 descent passes
-    // alongside it, tying the underground to the mushroom overhead
-    { seed: 6521, r0: 2.6, u0: -2.0, r1: 1.6, u1: 3.5, rad: 0.17, tShort: 0.34,
-      col: P.goldBright, pulse: P.goldBright, bow: V(0.8, 0.4, -1.2), speed: 0.061, base: 0.42 },
-    // and one runs out along the EXIT corridor so the rise leaves through a
-    // live artery (OW-5: the pulse leaves along the active growth front)
-    { seed: 6617, r0: -1.8, u0: -1.6, r1: -3.0, u1: 1.8, rad: 0.14, tA: 0.52, tB: 1.10,
-      col: P.gold, pulse: P.goldBright, bow: V(0.6, 0.9, 1.4), speed: 0.049, base: 0.34 },
-  ];
-
-  const cords = [];
-  const cordPoints = [];
-  let cordVerts = 0;
-  CORD_SPECS.forEach((S, ci) => {
-    const rand = H.rng(S.seed);
-    const SEG = 11;
-    const tA = S.tA ?? -0.08;
-    const tB = S.tB ?? (S.tShort ?? 1.12);
-    const pts = [];
-    for (let j = 0; j <= SEG; j++) {
-      const t = j / SEG;
-      const gt = tA + t * (tB - tA);
-      const p = spineAt(gt)
-        .addScaledVector(RIGHT, S.r0 + (S.r1 - S.r0) * t)
-        .addScaledVector(UPN, S.u0 + (S.u1 - S.u0) * t);
-      const hump = Math.sin(Math.PI * t);
-      p.addScaledVector(S.bow, hump);
-      p.x += H.fbm3(t * 3.1 + ci * 5.3, 0.7, 2.1, 3) * 1.4;
-      p.y += H.fbm3(1.9, t * 3.4 + ci * 2.7, 0.4, 3) * 1.0;
-      p.z += H.fbm3(4.4, 0.3, t * 3.0 + ci * 4.1, 3) * 1.4;
-      clampUnder(p, S.tShort ? 0.22 : 0.35);
-      // corridor clearance: never let a thick cord brush the camera path.
-      // 3.4 (spike used 2.8): at the journey's fov 54 a tube at 2.8 still
-      // reads as a frame-wide flat ribbon.
-      const gd = camDist(p.x, p.y, p.z);
-      if (gd < 3.4) {
-        const nearest = nearestCamPt(p);
-        const push = (3.4 - gd) / Math.max(gd, 0.001);
-        p.set(
-          p.x + (p.x - nearest.x) * push,
-          p.y + (p.y - nearest.y) * push,
-          p.z + (p.z - nearest.z) * push,
-        );
-        clampUnder(p, 0.22);
-      }
-      pts.push(p);
-    }
-    cordPoints.push(pts);
-    const geo = tubeStrand(pts, {
-      radius: S.rad, radialSegments: 6, tubularSegments: 64, taper: 0.55 + rand() * 0.3,
-    }, ci / CORD_SPECS.length);
-    const mat = makeFadePulseMat(S.col, {
-      // 0.62 was the spike's display-space cord level; under the hero's
-      // ACES stack the tubes read as bright ribbons — cut to 0.34 and let
-      // depth sink faster (fogDensity 0.010 -> 0.020)
-      baseOpacity: S.base * 0.34 * exposure, twinkle: 0.14, pulseWidth: 0.075,
-      pulseColor: S.pulse, fogDensity: 0.020,
+  /* ---------------- far filler: the volume behind the network ---------- */
+  // Very dim, very fogged short strands scattered through the slab so the
+  // deep field is warm-textured rather than flat black behind the web.
+  let fillVerts = 0;
+  {
+    const mat = makeFadePulseMat(P.deepGold, {
+      baseOpacity: 0.15 * exposure, twinkle: 0.66, pulseWidth: 0.10,
+      pulseColor: P.ember, fogDensity: 0.038, nearFade: [1.4, 3.4],
     });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.frustumCulled = false;
-    group.add(mesh);
+    const res = H.strandLines({
+      count: 2000, seed: 2201,
+      generator: (i, rand) => {
+        const x = BX[0] + rand() * (BX[1] - BX[0]);
+        const y = BY[0] + rand() * (BY[1] - BY[0]);
+        const z = BZ[0] + rand() * (BZ[1] - BZ[0]);
+        if (camDist(x, y, z) < 4.2 && rand() < 0.85) return null;
+        const yy = Math.min(y, groundY(x, z) - 0.20);
+        if (inVoid(x, yy, z)) return null;
+        if (substrate(x, yy, z) < -0.12) return null;
+        const a = rand() * TAU;
+        const b = -(rand() * 1.1);
+        const dir0 = V(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b));
+        return growRoot(V(x, yy, z), dir0, 1.6 + rand() * 3.6, 5, 12000 + i * 3);
+      },
+    });
+    const lines = new THREE.LineSegments(res.geometry, mat);
+    lines.frustumCulled = false;
+    lines.renderOrder = -7;
+    group.add(lines);
     timeMats.push(mat);
-    cordVerts += geo.attributes.position.count;
+    fillVerts = res.geometry.attributes.position.count;
+  }
 
-    // filament overlay: a rhizomorph is a BUNDLE of hyphae, not a smooth
-    // pipe. Jittered polylines share the tube's material so waves ride them.
-    {
-      const curve = H.catmull(pts);
-      const FIL = 7, SAMP = 26;
-      const fpos = [], falong = [], fstrand = [];
-      for (let f = 0; f < FIL; f++) {
-        const phase = rand() * TAU;
-        const amp = S.rad * (0.8 + rand() * 2.2);
-        const wob = 1.5 + rand() * 2.5;
-        let prev = null;
-        for (let sIdx = 0; sIdx <= SAMP; sIdx++) {
-          const t = sIdx / SAMP;
-          const p = curve.getPointAt(t);
-          const a = phase + t * wob * TAU * 0.25;
-          p.x += Math.cos(a) * amp + H.fbm3(f * 3.7, t * 6.1 + ci, 2.2, 2) * S.rad * 1.6;
-          p.y += Math.sin(a) * amp * 0.8 + H.fbm3(1.3, f * 2.9, t * 5.7 + ci, 2) * S.rad * 1.3;
-          p.z += Math.sin(a + 1.7) * amp;
-          clampUnder(p, 0.18);
-          if (prev) {
-            fpos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-            falong.push((sIdx - 1) / SAMP, t);
-            fstrand.push(f / FIL, f / FIL);
-          }
-          prev = p;
-        }
-      }
-      const fg = new THREE.BufferGeometry();
-      fg.setAttribute('position', new THREE.Float32BufferAttribute(fpos, 3));
-      fg.setAttribute('aAlong', new THREE.Float32BufferAttribute(falong, 1));
-      fg.setAttribute('aStrand', new THREE.Float32BufferAttribute(fstrand, 1));
-      const lines = new THREE.LineSegments(fg, mat);
-      lines.frustumCulled = false;
-      group.add(lines);
-      cordVerts += fpos.length / 3;
-    }
-
-    cords.push({
-      mesh, mat, p: -0.2 - ci * 0.31, speed: S.speed, k: ci * 4.7 + 1.3,
-    });
-  });
-
+  /* ---------------- root lookup for portrait strand roots -------------- */
   function nearestCordPoint(p, rand) {
     let best = null, bestD = 1e9;
-    for (let c = 0; c < cordPoints.length; c++) {
-      const arr = cordPoints[c];
-      for (let j = 1; j < arr.length - 1; j++) {
-        const d = arr[j].distanceToSquared(p);
-        if (d < bestD) { bestD = d; best = arr[j]; }
-      }
+    for (let i = 0; i < rootPool.length; i++) {
+      const d = rootPool[i].p.distanceToSquared(p);
+      if (d < bestD) { bestD = d; best = rootPool[i].p; }
     }
-    if (!best || bestD > 100) return null;
+    if (!best || bestD > 42) return null;
     return best.clone().add(new V3(
-      (rand() - 0.5) * 0.6, (rand() - 0.5) * 0.5, (rand() - 0.5) * 0.6,
+      (rand() - 0.5) * 0.5, (rand() - 0.5) * 0.4, (rand() - 0.5) * 0.5,
     ));
   }
 
@@ -478,8 +1063,8 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
 
   /* ---------------- amber haze backdrop ----------------
      Very large, very dim ember glows deep in the volume: distant structure
-     dissolves into warm haze instead of pure black. Centres pushed low so
-     the glow hugs the colony — the Final cutaway reads soil-line above it. */
+     dissolves into warm haze instead of pure black, which is what gives the
+     reference its warm floor under the corner vignette. */
   {
     const rand = H.rng(5150);
     const place = (p, hot, op, sc) => {
@@ -500,37 +1085,47 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
       const t = 0.05 + rand() * 0.9;
       const side = rand() < 0.5 ? -1 : 1;
       const p = spineAt(t)
-        .addScaledVector(RIGHT, side * (10 + rand() * 9))
-        .addScaledVector(UPN, -1.5 + (rand() - 0.5) * 4);
-      if (p.y > -2.0) p.y = -2.0 - rand();
-      place(p, i % 3 === 0, 0.014 + rand() * 0.016, 9 + rand() * 8);
+        .addScaledVector(RIGHT, side * (8 + rand() * 9))
+        .addScaledVector(UPN, -2.0 + (rand() - 0.5) * 4);
+      if (p.y > -2.2) p.y = -2.2 - rand();
+      place(p, i % 3 === 0, 0.016 + rand() * 0.018, 9 + rand() * 8);
     }
     // below-floor glows so the bottom of frame dissolves into amber
     for (let i = 0; i < 4; i++) {
-      const t = 0.14 + rand() * 0.72;
+      const t = 0.10 + rand() * 0.66;
       const p = spineAt(t)
         .addScaledVector(RIGHT, (rand() - 0.5) * 8)
-        .addScaledVector(UPN, -(6.0 + rand() * 2.5));
-      place(p, i === 1, 0.012 + rand() * 0.012, 10 + rand() * 8);
+        .addScaledVector(UPN, -(5.4 + rand() * 2.5));
+      place(p, i === 1, 0.014 + rand() * 0.014, 10 + rand() * 8);
     }
   }
 
-  /* ---------------- colony surge (pod-hover response, OW-3) --------------
-     One broad slow pulse through the whole colony: every cord re-fires its
-     travelling wave in a stagger, and the hyphae depth batches run a single
-     quiet light-sweep along their strands, far layer last. Interaction-
+  /* ---------------- colony surge (claim-pulse response, OW-3) -----------
+     One broad slow wave through the whole root system: light leaves the
+     crown and runs OUT along the roots (aAlong 0 is the crown end), the web
+     answers a beat later, and the cores brighten under it. Interaction-
      triggered only — ambient behaviour stays loop-free. */
+  const pulseLayers = [
+    { mat: crownMat, delay: 0.00, amp: 0.55, speed: 0.62 },
+    { mat: fanMat, delay: 0.12, amp: 0.40, speed: 0.46 },
+    { mat: hubMat, delay: 0.34, amp: 0.34, speed: 0.55 },
+    { mat: webMat, delay: 0.46, amp: 0.26, speed: 0.50 },
+    { mat: hairMat, delay: 0.62, amp: 0.20, speed: 0.58 },
+  ];
   let surgeT = -1;
-  function surge() {
-    surgeT = 0;
-    cords.forEach((c, ci) => { c.p = -0.04 - ci * 0.22; c.boost = 1.0; });
-  }
+  let ambP = -0.3;
+  function surge() { surgeT = 0; }
 
   /* ---------------- frame update ---------------- */
   let fade = 0;
   function setFade(a) {
     fade = a;
     for (const m of timeMats) m.uniforms.uFade.value = a;
+    glints.mat.uniforms.uFade.value = a;
+    cores.mat.uniforms.uFade.value = a;
+    halos.mat.uniforms.uFade.value = a;
+    ceiling.mat.uniforms.uOpacity.value = a;
+    ceiling.mesh.visible = a > 0.004;
     for (const f of fadeSprites) f.mat.opacity = f.base * a;
   }
   setFade(0);
@@ -538,29 +1133,37 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   function update(dt, time) {
     if (fade <= 0) return;
     for (const m of timeMats) m.uniforms.uTime.value = time;
-    // rhizomorph cords: slow, uneven, independent travelling waves
-    for (const c of cords) {
-      const jitter = 0.55 + 0.8 * (0.5 + 0.5 * H.noise3(time * 0.07, c.k, 0));
-      c.p += dt * c.speed * (c.boost ? jitter * (1 + c.boost * 2.2) : jitter);
-      if (c.p > 1.28) c.p = -0.12 - rndA() * 0.85;
-      c.mat.uniforms.uPulse.value = c.p;
-      c.mat.uniforms.uPulseOn.value =
-        ((c.p > -0.1 && c.p < 1.2) ? 0.55 : 0) * (1 + (c.boost || 0) * 1.1);
-      if (c.boost) c.boost = c.boost < 0.02 ? 0 : c.boost * Math.exp(-dt * 0.5);
-    }
+    glints.mat.uniforms.uTime.value = time;
+    cores.mat.uniforms.uTime.value = time;
+    halos.mat.uniforms.uTime.value = time;
+
+    // ambient: a very slow, uneven wander of light down the primaries. Never
+    // a loop you can count — the phase is driven by a noise-modulated rate
+    // and restarts at a jittered negative offset.
+    ambP += dt * (0.030 + 0.026 * (0.5 + 0.5 * H.noise3(time * 0.043, 2.1, 0)));
+    if (ambP > 1.3) ambP = -0.28 - rndA() * 0.5;
+    fanMat.uniforms.uPulse.value = ambP;
+    fanMat.uniforms.uPulseOn.value = (ambP > -0.1 && ambP < 1.2) ? 0.16 : 0;
+
+    let surgeAmt = 0;
     if (surgeT >= 0) {
       surgeT += dt;
-      hyphae.forEach((hb, i) => {
-        const p = surgeT * 0.42 - i * 0.22;
-        const on = (p > 0 && p < 1) ? Math.sin(Math.PI * p) : 0;
-        hb.mat.uniforms.uPulse.value = clamp(p, 0, 1);
-        hb.mat.uniforms.uPulseOn.value = on * 0.24;
-      });
-      if (surgeT > 4.5) {
+      for (const L of pulseLayers) {
+        const p = (surgeT - L.delay) * L.speed;
+        const on = (p > -0.05 && p < 1.15) ? Math.sin(Math.PI * clamp(p, 0, 1)) : 0;
+        if (L.mat === fanMat && on <= 0) continue;   // fan keeps its ambient
+        L.mat.uniforms.uPulse.value = clamp(p, 0, 1);
+        L.mat.uniforms.uPulseOn.value = on * L.amp;
+      }
+      surgeAmt = Math.max(0, 1 - surgeT / 3.2);
+      if (surgeT > 3.4) {
         surgeT = -1;
-        for (const hb of hyphae) hb.mat.uniforms.uPulseOn.value = 0;
+        for (const L of pulseLayers) if (L.mat !== fanMat) L.mat.uniforms.uPulseOn.value = 0;
       }
     }
+    cores.mat.uniforms.uSurge.value = surgeAmt;
+    halos.mat.uniforms.uSurge.value = surgeAmt;
+
     // foreground soil parallax: near aggregates drift very slowly
     const drift = H.noise3(time * 0.031, 4.4, 0) * 0.10;
     aggNear.pts.position.set(drift, H.noise3(0, time * 0.027, 9.1) * 0.07, -drift * 0.6);
@@ -569,11 +1172,18 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   }
 
   return {
-    group, update, surge, setFade, cordPoints, nearestCordPoint, inVoid,
+    group, update, surge, setFade, nearestCordPoint, inVoid,
+    CROWN, hubs: hubPos.map(h => h.p.clone()),
     counts: {
-      hyphaeVerts, cordVerts, aggPoints,
-      hyphaeStrands: 2700 + 3300 + 1400,
-      cords: CORD_SPECS.length,
+      primaries: primaries.length,
+      skirt: skirt.length,
+      secondaries: secondaries.length,
+      fanVerts, hairVerts, webVerts, crownVerts, hubVerts, lidVerts, fillVerts,
+      glints: glints.count,
+      netNodes: netNodes.length,
+      netLinks,
+      hubs: hubPos.length,
+      aggPoints,
       voids: VOIDS.length,
     },
   };

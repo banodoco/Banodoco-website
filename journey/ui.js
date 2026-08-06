@@ -1094,6 +1094,16 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     // and never show while a detail is open (the frame belongs to the detail)
     const detail = modalDetail;
     const now = performance.now();
+    // Pill widths, measured in ONE pass before any transform is written this
+    // frame — interleaving the read with the writes below would force a
+    // reflow per chip. A chip is only measured while it is NOT flipped (the
+    // flip is a mirror, not a resize — row-reverse plus swapped padding is the
+    // same width — so the measurement is valid in either state). It is
+    // re-measured every frame rather than cached because a width taken on the
+    // first frame, before the stylesheet and the webfont have settled, reads
+    // short, and a flip computed from a short width puts the DOT off the
+    // frame instead of the label.
+    for (const h of hotspots) h.pillW = h.btn.offsetWidth;
     for (const h of hotspots) {
       const gate = eased[h.chapter] || 0;
       let want = gate > 0.72 && !detail;
@@ -1129,7 +1139,24 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
         if (h.armAt === null) h.armAt = now + h.stagger * HOTSPOT_STAGGER_MS;
         if (dt === 0) h.a = 1;
         else if (now >= h.armAt) h.a += (1 - h.a) * Math.min(1, dt * HOTSPOT_IN_K);
-        h.btn.style.transform = `translate(${sx}px, ${sy}px)`;
+        // Edge flip: the pill normally runs RIGHT of the dot, so a node near
+        // the right edge would reveal a clipped label on hover (the dot is
+        // placeable long before the label is). Mirror the pill about the dot
+        // when it would overrun, compensating the translate so the DOT stays
+        // exactly on its node. Hysteresis of 14px so a chip drifting on the
+        // organism's sway cannot chatter between the two sides.
+        const over = sx + h.pillW - 11 - (window.innerWidth - 12);
+        const flip = (h.flipped ? over > -14 : over > 0) && sx - h.pillW + 21 > 0;
+        if (flip !== h.flipped) { h.flipped = flip; h.btn.classList.toggle('flip', flip); }
+        let tx = flip ? sx + 21 - h.pillW : sx;
+        // Narrow viewports can leave a pill that fits on NEITHER side (a
+        // 232px label anchored at x 160 of 375). Nudge it in, but never far:
+        // past ~26px the dot stops reading as sitting on its node, and a
+        // truthful dot with a clipped tail beats a chip pointing at nothing.
+        const lo = 15, hi = window.innerWidth - 4 - h.pillW + 11;
+        const want2 = hi >= lo ? Math.min(Math.max(tx, lo), hi) : tx;
+        tx += Math.max(-26, Math.min(26, want2 - tx));
+        h.btn.style.transform = `translate(${tx}px, ${sy}px)`;
       } else {
         h.armAt = null;
         if (dt === 0) h.a = 0;

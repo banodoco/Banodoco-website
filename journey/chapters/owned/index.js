@@ -45,7 +45,16 @@ const PAL = {
 // glow layers need the strongest cut; textured portrait planes are closest
 // to a straight image and need the least.
 const EXPOSURE_LINES = 0.30;
-const EXPOSURE_PLANES = 0.42;
+// ROOT-NETWORK RESTAGE: 0.42 -> 0.76. Under the old composition the faces sat
+// against a lit ceiling band and 0.42 was as much as they could take before
+// they read as lanterns. Under the new one they sit against near-black soil
+// with the crown as the frame's brightest point, and at 0.42 the photo
+// treatment's edge-burn left them as dark discs with a rim — "bubbles", not
+// the reference's warm-lit faces. This is the level at which a face reads as
+// a face at every one of the three review sizes and still never competes with
+// the crown. (0.76 was measurably too far: the three nearest faces bloomed
+// into featureless orbs under UnrealBloom. 0.56 keeps the features.)
+const EXPOSURE_PLANES = 0.50;
 
 // W4-E: how far a pod's nexus lifts while its card is OPEN, as a fraction of
 // the full hover emphasis. Deliberately short of 1 — selection is a held
@@ -69,9 +78,15 @@ export function createOwned(sceneApi, content) {
   group.add(substrate.group);
 
   const contributors = (content && content.contributors) || [];
+  // ROOT-NETWORK RESTAGE: sixteen, not forty-eight. The reference asks for
+  // "roughly 14-16 PORTRAIT FACES ... with clear dark breathing room between
+  // them", and every one of the sixteen is a routable contributor, so the
+  // ambient filler nodes that used to pad the glide are gone with them — the
+  // glide is populated by the root network itself now, which is what it is
+  // for. See portraits.js REST_SITES for the authored arc.
   const portraits = buildPortraitField({
     leg, contributors, substrate, palette: PAL,
-    nodeCount: 48, exposure: EXPOSURE_PLANES,
+    nodeCount: contributors.length, exposure: EXPOSURE_PLANES,
   });
   group.add(portraits.group);
   // photos are the default read once the look-dev set lands (never blocks
@@ -115,10 +130,15 @@ export function createOwned(sceneApi, content) {
   // hotspots, no chips; the claim pulses survive via trigger() below, fired
   // from the DOM claim blocks on hover.
   const POD_SPEC = [];
+  // Claim-pulse epicentres, re-aimed onto the new composition: the primary
+  // claim answers from the CROWN (the wave then runs out along the roots, so
+  // "100% shared" reads as light leaving the root and reaching everyone),
+  // and the two secondaries answer locally, low-left and low-right, inside
+  // the portrait arc.
   const CLAIM_CENTRES = {
-    primary: restPlace(0.02, -0.34, 6.2),
-    monthly: restPlace(-0.56, -0.56, 5.4),
-    split: restPlace(0.56, -0.52, 5.8),
+    primary: leg.CROWN.clone(),
+    monthly: restPlace(-0.58, -0.52, 6.6),
+    split: restPlace(0.56, -0.50, 6.4),
   };
   const glowTex = H.glowSprite(PAL.ember, 64);
   const coreTex = H.softDisc(64);
@@ -193,7 +213,9 @@ export function createOwned(sceneApi, content) {
       baseHalo: (spec.primary ? 0.16 : 0.11) * EXPOSURE_LINES,
     };
   });
-  const colonyCentre = leg.spineAt(0.42).addScaledVector(leg.UPN, 0.4);
+  // The colony's centre of gravity IS the crown now — every root leaves it,
+  // so a wave launched there is the one wave that reaches the whole field.
+  const colonyCentre = leg.CROWN.clone();
 
   /* ================================================================
      Growth front (OW-5): the live rising edge the Final exit follows —
@@ -369,6 +391,25 @@ export function createOwned(sceneApi, content) {
     /** T3 streaming seam. */
     setArmed(on) { amountTarget = on ? 1 : 0; },
     get armed() { return amountTarget > 0; },
+
+    /** Jump the eased seam state to its target (journey.js placeAt calls this
+     *  on every chapter that has it: deep links and hidden-tab / frozen
+     *  capture, both of which run the dt = 0 path).
+     *
+     *  This chapter did not have one, and the omission was invisible until
+     *  the root-network restage went looking for it: `amount` only ever
+     *  approaches `amountTarget` by an eased step scaled by dt, so under
+     *  freezeTime(0) it stayed at 0 forever and the ENTIRE chapter drew
+     *  nothing. The pre-restage owned golden proves it — the only light in
+     *  that frame is CONNECT's surface network seen from underneath. Deep
+     *  links were merely lucky: live dt closes the ease in ~0.4 s, so the
+     *  section faded up a beat after the landing instead of being there.
+     *
+     *  Same one-liner Final uses; Inspire's and Connect's do more because
+     *  they carry more eased state. Pure state assignment — no reveal is
+     *  skipped, because the on-screen reveal is the p-keyed `arrival` mask
+     *  below, not this. */
+    snap() { amount = amountTarget; portraits.snap(); },
 
     setHot(id, on) {
       const pd = pods.find(p => p.id === id);
