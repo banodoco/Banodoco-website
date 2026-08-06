@@ -72,6 +72,11 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-copy { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
   .j-block {
     position: absolute;
+    /* Fallbacks only. ui.js writes both per arrival (armCopyEntry); without
+       them a `calc(var(--j-in) * …)` would resolve to an invalid duration and
+       take its whole `animation` shorthand down with it. */
+    --j-in: 620ms;
+    --j-in-wait: 500ms;
     opacity: 0;
     visibility: hidden;
     max-width: 34rem;
@@ -112,6 +117,52 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      colony. `.j-copy` turns pointer-events off wholesale, so the line that
      answers a hover opts back in. */
   .j-sub.j-pulse { pointer-events: auto; }
+
+  /* ============================================================
+     ARRIVING COPY (Hannah, 2026-08-07) — the nav-jump entry.
+
+     The block's OPACITY is not here: ui.js drives it as one envelope
+     placed inside the camera's blend (see armCopyEntry, and
+     COPY_JUMP_LEAD / COPY_JUMP_TAIL_S). What is here is the order the
+     parts inside it come up in, borrowed from the hero's callout boot
+     — the bed of shadow lights first, then the heading, then the sub:
+     a composition assembling, not a paragraph appearing.
+
+     Every duration is a fraction of `--j-in` and every delay carries
+     `--j-in-wait`, so the whole choreography stretches with the flight
+     and always closes INSIDE the envelope (the last part lands at 92%
+     of it, leaving the final beat as a pure settle of the whole block).
+
+     Nothing here may change the block's LAYOUT. ui.js reads
+     `getBoundingClientRect()` on these blocks every frame, for every
+     hotspot, to decide which chips the copy suppresses — so an entry
+     that animated width, letter-spacing or margin would both thrash
+     layout and make hotspots strobe through the arrival. Opacity and
+     child transforms only; a child's transform leaves its parent's
+     rect alone, which is exactly why the rise sits on `.j-h`/`.j-sub`
+     rather than on the block.
+
+     Each keyframe ENDS at the resting style, so the reduced-motion
+     rule at the foot of this file just turns them off (same contract
+     the hero's `.co` entry keeps in hero.css).
+     ============================================================ */
+  .j-block.j-arrive::before {
+    animation: j-bed-in calc(var(--j-in) * 0.40) ease both;
+    animation-delay: var(--j-in-wait);
+  }
+  @keyframes j-bed-in { from { opacity: 0; } to { opacity: 1; } }
+  .j-block.j-arrive .j-h {
+    animation: j-line-in calc(var(--j-in) * 0.66) cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--j-in-wait) + var(--j-in) * 0.12);
+  }
+  .j-block.j-arrive .j-sub {
+    animation: j-line-in calc(var(--j-in) * 0.66) cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--j-in-wait) + var(--j-in) * 0.26);
+  }
+  @keyframes j-line-in {
+    from { opacity: 0; transform: translateY(0.16em); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
   .j-block.pos-left       { left: 5.2vw; top: 50%; transform: translateY(-50%); }
   .j-block.pos-bottom     { left: 50%; bottom: 8vh; transform: translateX(-50%); text-align: center; }
@@ -288,8 +339,156 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     text-align: left;           /* never inherit pos-topright's ragged-right */
     /* the house 0.3s, on opacity only */
     transition: opacity 0.3s ease;
+    /* The resting clip, and the reason it is not `none`: the entry below
+       unfurls the panel with `clip-path`, and an animation ending at
+       `inset(0)` would leave the box-shadow permanently guillotined at the
+       border box. The bleed is wider than the shadow reaches (0 12px 34px),
+       so at rest this clips nothing at all — it exists only to give the
+       keyframes a resting value they can end ON. */
+    clip-path: inset(-70px -70px -70px -70px);
   }
   .j-pop.open { opacity: 1; visibility: visible; pointer-events: auto; }
+
+  /* ============================================================
+     POPOVER ENTRY (Hannah, 2026-08-07)
+
+     "Make the thing open with a nice cool understated but elegant
+     entry animation, similar to the one that shows when I hover over
+     Equip etc. on the hero mushrooms."
+
+     The reference is the `.co` callout boot in hero.css — the numbered
+     instrument powering on — so this is built from the same four
+     gestures rather than from a generic fade or slide:
+
+       hero `lead-draw`   a line that draws itself node -> label
+         here            the panel UNFURLS from the edge that faces its
+                         chip, its own gold border drawing across as the
+                         leading edge of the wipe. Direction is taken
+                         from `data-side`, which ui.js already sets from
+                         the flip-to-fit placement, so the panel always
+                         opens AWAY from the chip it belongs to — and
+                         the region nearest the chip is therefore the
+                         first part to become hittable, which is the
+                         half of this that matters for the pointer
+                         walking chip -> popover (see POP_GAP in ui.js).
+
+       hero `core-pop`    the node flares as it lands
+       hero `ring-ping`   a ring pings once and ends at nothing
+         here            a one-pixel FILAMENT on the contact edge lights,
+                         draws to full height, and goes out again — the
+                         connection to the chip, stated once. It ends at
+                         opacity 0, exactly as `ring-ping` does.
+
+       hero `no-flicker`  the small `01` gutters alive in hard steps
+         here            the link — the same typographic species, 0.66rem
+                         uppercase gold at 0.18em — takes the same
+                         `steps(1, end)` flicker, last of all.
+
+       hero `tag-in`      the label fades in as its number flickers
+         here            title then short line, staggered, opacity only.
+
+     WHAT IS DELIBERATELY ABSENT: any transform, any scale, and any
+     change of size. `transform` on `.j-pop` is ui.js's placement
+     channel, rewritten every frame from placePop() — a transition or
+     animation on it would fight the world-tracking. Scale would be
+     motion toward the viewer, which the hover-reliability work
+     (696e95d) exists to keep out of this element. And the panel's own
+     box never changes, so `placePop()`'s per-frame
+     `getBoundingClientRect()` reads a stable width and height right
+     through the entry: the popover cannot walk while it opens, and the
+     hit target it presents at 40 ms is in the same place as the one it
+     presents at rest.
+
+     Every keyframe ends at the element's resting style, so the
+     reduced-motion rule at the foot of this file simply switches them
+     off and the popover appears finished (hero.css's `.co` keeps the
+     same contract).
+     ============================================================ */
+  /* Two animations, because the vessel's LIGHT and its EXTENT are separate
+     statements: `j-pop-lamp` brings the panel up out of the dark over 0.26 s
+     while `j-pop-unfurl` walks its edge out from the chip over 0.4 s.
+     The lamp is not the `transition` above doing its job — it cannot be.
+     showPop() re-parents the popover next to its chip (`h.btn.after(pop)`,
+     which is what puts the pinned link in the right place in the tab order),
+     and a freshly inserted element has no previous computed style for a
+     transition to run FROM. That is why the shipped popover arrived at full
+     opacity on frame one with no ceremony at all: the 0.3 s transition only
+     ever ran on the way OUT. It still does, and hidePop() drops
+     `.j-pop-enter` before it drops `.open` so the animation is never holding
+     opacity down when the transition needs to take it. */
+  .j-pop.j-pop-enter {
+    animation:
+      j-pop-unfurl 0.4s cubic-bezier(0.22, 1, 0.36, 1) both,
+      j-pop-lamp 0.26s ease both;
+  }
+  @keyframes j-pop-unfurl {
+    from { clip-path: inset(-70px 100% -70px -70px); }
+    to   { clip-path: inset(-70px -70px -70px -70px); }
+  }
+  @keyframes j-pop-lamp { from { opacity: 0; } to { opacity: 1; } }
+  .j-pop.j-pop-enter[data-side="left"] { animation-name: j-pop-unfurl-l, j-pop-lamp; }
+  @keyframes j-pop-unfurl-l {
+    from { clip-path: inset(-70px -70px -70px 100%); }
+    to   { clip-path: inset(-70px -70px -70px -70px); }
+  }
+  .j-pop.j-pop-enter[data-side="below"] { animation-name: j-pop-unfurl-d, j-pop-lamp; }
+  @keyframes j-pop-unfurl-d {
+    from { clip-path: inset(-70px -70px 100% -70px); }
+    to   { clip-path: inset(-70px -70px -70px -70px); }
+  }
+
+  /* the contact filament — lit at rest is NOTHING, so opacity 0 both ends */
+  .j-pop::before {
+    content: "";
+    position: absolute;
+    top: -1px; bottom: -1px; left: -1px;
+    width: 1px;
+    opacity: 0;
+    pointer-events: none;
+    background: linear-gradient(to bottom,
+      transparent, rgba(255, 216, 140, 0.95) 24%,
+      rgba(255, 216, 140, 0.95) 76%, transparent);
+    box-shadow: 0 0 6px rgba(240, 190, 90, 0.7);
+  }
+  .j-pop[data-side="left"]::before { left: auto; right: -1px; }
+  .j-pop[data-side="below"]::before {
+    top: -1px; bottom: auto; left: -1px; right: -1px;
+    width: auto; height: 1px;
+    background: linear-gradient(to right,
+      transparent, rgba(255, 216, 140, 0.95) 24%,
+      rgba(255, 216, 140, 0.95) 76%, transparent);
+  }
+  .j-pop.j-pop-enter::before { animation: j-pop-filament 0.62s ease-out both; }
+  @keyframes j-pop-filament {
+    0%   { opacity: 0;    transform: scaleY(0.12); }
+    18%  { opacity: 0.95; transform: scaleY(0.72); }
+    30%  { opacity: 0.35; }
+    42%  { opacity: 1;    transform: scaleY(1); }
+    100% { opacity: 0;    transform: scaleY(1); }
+  }
+  .j-pop.j-pop-enter[data-side="below"]::before { animation-name: j-pop-filament-h; }
+  @keyframes j-pop-filament-h {
+    0%   { opacity: 0;    transform: scaleX(0.12); }
+    18%  { opacity: 0.95; transform: scaleX(0.72); }
+    30%  { opacity: 0.35; }
+    42%  { opacity: 1;    transform: scaleX(1); }
+    100% { opacity: 0;    transform: scaleX(1); }
+  }
+
+  .j-pop.j-pop-enter .j-pop-t { animation: j-pop-word 0.34s ease both; animation-delay: 0.10s; }
+  .j-pop.j-pop-enter .j-pop-s { animation: j-pop-word 0.34s ease both; animation-delay: 0.17s; }
+  @keyframes j-pop-word { from { opacity: 0; } to { opacity: 1; } }
+  .j-pop.j-pop-enter .j-pop-link {
+    animation: j-pop-strike 0.44s steps(1, end) both;
+    animation-delay: 0.24s;
+  }
+  @keyframes j-pop-strike {
+    0%   { opacity: 0; }
+    30%  { opacity: 1; }
+    45%  { opacity: 0.35; }
+    60%  { opacity: 1; }
+    100% { opacity: 1; }
+  }
   .j-pop-t {
     font-family: "Didot", "Playfair Display", Georgia, serif;
     font-weight: 400;
@@ -764,6 +963,22 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   @media (prefers-reduced-motion: reduce) {
     .j-nav, .j-navlink, .j-navlink::after, .j-hot, .j-hot-dot, .j-card { transition: none; }
     .j-pop, .j-pop-link { transition: none; }
+    /* The two 2026-08-07 entries. Both are authored so that every keyframe
+       ENDS at the element's resting style (hero.css's `.co` boot keeps the
+       same contract), so switching the animations off is the whole of the
+       reduced-motion path — the arriving copy and the opened popover are
+       simply already finished. The copy block's OPACITY envelope is not an
+       animation and is deliberately left running: it is a cross-fade, not
+       motion, it is the same fade the scroll path has always given copy, and
+       it is the entire reason a jump no longer pops. */
+    .j-block.j-arrive::before,
+    .j-block.j-arrive .j-h,
+    .j-block.j-arrive .j-sub,
+    .j-pop.j-pop-enter,
+    .j-pop.j-pop-enter::before,
+    .j-pop.j-pop-enter .j-pop-t,
+    .j-pop.j-pop-enter .j-pop-s,
+    .j-pop.j-pop-enter .j-pop-link { animation: none; }
     /* the sheet's own transition is more specific than the reset above, so it
        is named here: reduced motion SNAPS — the drag still follows the finger
        (direct manipulation), the release does not animate. */

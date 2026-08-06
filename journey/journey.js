@@ -287,11 +287,15 @@ export function boot(opts = {}) {
     const cam = sceneApi.camera, ctl = sceneApi.controls;
     const pos0 = cam.position.clone(), tgt0 = ctl.target.clone(), fov0 = cam.fov;
     placeAt(targetP);                           // the deep-link settle: place, arm, never replay
-    camBlend = {
-      t: 0,
-      dur: 0.85 + 0.35 * Math.min(arcLength(pos0, cam.position) / 20, 1),
-      pos0, tgt0, fov0,
-    };
+    const dur = 0.85 + 0.35 * Math.min(arcLength(pos0, cam.position) / 20, 1);
+    camBlend = { t: 0, dur, pos0, tgt0, fov0 };
+    // The destination's copy is timed against THIS move, not against the click
+    // (Hannah, 2026-08-07 — "the text for the new section INSTANTLY appears").
+    // The duration is only knowable here, after placeAt has let the director
+    // write the destination pose, which is why the hand-off is one call at the
+    // end of the jump rather than a constant in ui.js. See the copy-entry
+    // block there, and COPY_JUMP_LEAD / COPY_JUMP_TAIL_S.
+    guarded('ui', () => ui.armCopyEntry(chapterId, dur));
   }
 
   // True only when THIS session pushed the history entry for the open detail.
@@ -436,7 +440,13 @@ export function boot(opts = {}) {
     // camera glides straight from where it was onto the destination pose the
     // director just computed. Any manual input drops the blend instantly.
     if (camBlend) {
-      if (scroll.sinceInput < 50) { camBlend = null; }
+      // Manual input drops the blend — and with it the arrival the copy was
+      // being timed against. Handing the copy back to the scroll rule here
+      // (rather than letting the envelope play out over a camera that is no
+      // longer travelling) is what keeps the two from fighting: the scroll
+      // rule picks the block up at exactly the opacity the envelope had
+      // reached, so there is no step and no second animation.
+      if (scroll.sinceInput < 50) { camBlend = null; guarded('ui', () => ui.cancelCopyEntry()); }
       else {
         camBlend.t += dt;
         const f = Math.min(camBlend.t / camBlend.dur, 1);
