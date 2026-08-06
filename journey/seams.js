@@ -87,17 +87,36 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
 
     // T1 - stream-side reveal (D16 restage: the orbit is now a ~90 deg swing
     // toward the visible stream, so the old ~100 deg rear threshold would
-    // never be crossed). Arms once the azimuth passes ~48 deg from the
-    // Mission azimuth — comfortably before the reveal ramps begin (az ~34 in
-    // desktop-absolute terms = ~46 deg past Mission) and far outside the
-    // orbit-breath wobble. The journey's own progress is an equally valid
+    // never be crossed). The journey's own progress is an equally valid
     // driver, but the ADR specifies the camera predicate, so that is what
     // runs; p only supplies the relaxation once the path has dropped under
     // the cap on its way to Connect.
+    //
+    // THE THRESHOLD IS 34, AND IT IS DERIVED, NOT CHOSEN (2026-08-06). Arming
+    // must land where the chapter's own CAMERA-PURE reveal is exactly zero —
+    // the same law T2 states below, and the only thing that makes a seam
+    // invisible rather than merely small. Inspire's reveal is
+    // `sm(18, 48, az) * arrOf(az, 14, 44)` (chapters/inspire/index.js), so it
+    // is identically zero for absolute az <= 14, i.e. d <= 26.2 with Mission at
+    // az -12.21. With HYS_DEG = 8 the gate arms at d > 34 - 8 = 26 (az 13.8)
+    // and releases at d < 34 - 16 = 18 (az 5.8): BOTH edges sit on exact zero,
+    // with both factors of the product zero, so a shaky scrub cannot strobe
+    // anything visible either way.
+    //
+    // It used to be 48, which armed at d = 40 (az 28.1) — TEN DEGREES INSIDE an
+    // already-open ramp. 48 was correct when it was written: the ramps then
+    // began at az 36, exactly where it armed. Commit c6bbbab pulled them in to
+    // (18,48)/(38,62)/(54,78) to make the three streams resolve and did not
+    // move this number with them, so the gate started opening onto a reveal
+    // that was already ~15% up. Measured on the live buffer either side of that
+    // crossing: converted dots 0 -> 1975 in one gate, total shed luminance
+    // -22.2%, dots above 0.60 luminance -47%. That step is the "different
+    // stream of particles that appears" Hannah reported. Anything that re-keys
+    // those ramps must re-derive this number from them again.
     {
       const d = Math.abs(((az - missionAz + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) / DEG;
-      const inside = d > 48 - HYS_DEG && p < T1_RELAX_IN;
-      const outside = d < 48 - HYS_DEG * 2 || p > T1_RELAX_OUT;
+      const inside = d > 34 - HYS_DEG && p < T1_RELAX_IN;
+      const outside = d < 34 - HYS_DEG * 2 || p > T1_RELAX_OUT;
       const on = gate('rear-cap', inside, outside, now);
       chapters.inspire.setArmed(on);
     }

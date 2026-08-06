@@ -70,8 +70,28 @@
 // pearls along each winding core read. ArtCompute's is damped to 0.58 because
 // it already carries half the dots — without that the centre braid drowns the
 // two flanks and the frame reads as one plume with wings.
+// RISE SPREAD IS THE DENSITY DIAL (2026-08-06). Each plume's dots are handed a
+// rise drawn uniformly from [riseMin, riseMax], so the MEAN sets where the
+// plume ends — the composition, the chip clearance, the dome crossing — and the
+// SPREAD sets how concentrated it reads on the way there. Those are separable,
+// and until now only the mean was being used.
+//
+// This matters because the exit weighting is 50/28/22 (W_EXIT0 in
+// organism/spores.js, read-only), so ArtCompute has 2,100 dots against 2RP's
+// 924 and outshines both flanks however they are lit — the residual this file
+// has carried since D18. With the core ribbons retired (see index.js) the dots
+// are the only thing marking the three regions, so the flanks have to earn
+// their definition from density rather than from a drawn line through them.
+//
+// Every mean below is UNCHANGED to 3 decimal places, so no plume moves and the
+// approved D18 composition, label solve and clearances all still hold:
+//   ArtCompute 1.70-2.20 -> 1.55-2.35  mean 1.950 (spread x1.60: deliberately
+//     DIFFUSED, so the centre stops drowning the flanks)
+//   Arca       1.05-1.40 -> 1.13-1.32  mean 1.225 (spread x0.54: concentrated)
+//   2RP        1.76-2.21 -> 1.87-2.10  mean 1.985 (spread x0.51: concentrated,
+//     the weakest plume and the one that needed it most)
 export const EXITS = [
-  { id: 'artcompute',   label: 'ArtCompute',         az: 5.83, riseMin: 1.7, riseMax: 2.2, lean: 0.52, tone: 0.66, knot: 0.58 },
-  { id: 'arca',         label: 'Arca Gidan Prize',   az: 6.98, riseMin: 1.05, riseMax: 1.4, lean: 0.42, tone: 0.6, knot: 0.95 },
-  { id: '2rp',          label: '2RP',                az: 4.68, riseMin: 1.76, riseMax: 2.21, lean: 0.38, tone: 0.74, knot: 1.0 },
+  { id: 'artcompute',   label: 'ArtCompute',         az: 5.83, riseMin: 1.55, riseMax: 2.35, lean: 0.52, tone: 0.66, knot: 0.58 },
+  { id: 'arca',         label: 'Arca Gidan Prize',   az: 6.98, riseMin: 1.13, riseMax: 1.32, lean: 0.42, tone: 0.6, knot: 0.95 },
+  { id: '2rp',          label: '2RP',                az: 4.68, riseMin: 1.87, riseMax: 2.10, lean: 0.38, tone: 0.74, knot: 1.0 },
 ];

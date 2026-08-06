@@ -161,7 +161,15 @@ const tmpC = new THREE.Color();
 const T_SHIPPED = 0.85;
 const T_STEP = 0.05;
 const STREAK_FLOOR = 0.25;
-const CORE_OPACITY = 0.62;               // the ribbons' authored opacity
+// CORE RIBBONS — RETIRED (Hannah, 2026-08-06: "it looks like ARROWS ... the
+// arrows don't look like organic particles"). They were 648 drawn LineSegments
+// threading each braid at 0.53 opacity, and in the inspire golden they were the
+// long pale strokes arcing over the cap — the single loudest non-particulate
+// form in the frame, and a different substance from the warm dust the opening
+// view sheds. A continuous line cannot read as dust at any opacity, so this is
+// zero rather than a smaller number. The braid is carried by the dots alone,
+// which is what §3's one-population claim always said it was.
+const CORE_OPACITY = 0.0;
 // clamping/grid-snap now lives in ../../dial.js (createDial), which this
 // module's tDial instance owns — see the master TRANSFORM state block below.
 // ribbons: x T with an extra low-end gate so they are effectively gone below
@@ -799,6 +807,11 @@ export function createInspire(sceneApi) {
     g.setAttribute('aRimC', new THREE.Float32BufferAttribute(rArr, 3));
     const l = new THREE.LineSegments(g, coreMat);
     l.frustumCulled = false;                             // positions live in the shader
+    // RETIRED with CORE_OPACITY (see its note): kept built but never drawn, so
+    // the trace-back uniform writes below stay valid and the ribbon is one
+    // constant away from returning if the dots ever need help again. Marking it
+    // invisible — not just transparent — is what actually drops the draw call.
+    l.visible = false;
     group.add(l);
     return l;
   })();
@@ -1077,7 +1090,11 @@ export function createInspire(sceneApi) {
       for (let i = 0; i < 3; i++) {
         c.setComponent(i, ((i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0)) * T);
         const st = streaks[i];
-        st.o = (i === effActive ? 0.42 : 0) * furnOf(i) * stkScale;
+        // hover/selection only — MUST stay identical to the animator's `want`
+        // (see the note there). snap() is the path every frozen capture and
+        // every ?p= deep link takes, because dt = 0 freezes the animator's
+        // easing, so a law that lives in both places has to be changed in both.
+        st.o = ((i === active || i === selected) ? 0.42 : 0) * furnOf(i) * stkScale;
         st.sprite.visible = st.o > 0.01;
         for (const m of exits[i].mats) {
           const fadeV = m === exits[i].wispMat ? eff[i] : furnOf(i);
@@ -1258,43 +1275,45 @@ export function createInspire(sceneApi) {
       cohTarget[i] = ((i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0)) * T;
     }
 
-    // The shed's half of the handoff — runs OUTSIDE the anyVisible gate so
-    // the exact restore fires when the leg retires. Region strength tracks
-    // each exit's effective reveal; endpoints ride the live mushroom matrix.
+    // THE SHED DOES NOT CEDE ANY MORE — it is EMPHASIZED (Hannah, 2026-08-06:
+    // "there should be particles coming from EVERYWHERE, but they should just
+    // be MORE EMPHASIZED in three parts"). All three dim channels below are
+    // retired to zero, and the reason is arithmetic, not taste.
+    //
+    // organism/spores.js already performs the whole hand-over PER DOT, in the
+    // one line `f = f * (1 - cv) + pw`: a dot cedes exactly as much of its
+    // ambient look as it has actually converted, and gains exactly its own
+    // plume brightness. That is conservative by construction. Every channel
+    // here was a SECOND, whole-population hand-over stacked on top of it, and
+    // it double-counted against the dots that had not converted yet — they
+    // lost ambient light while gaining no plume light. Measured on the live
+    // buffer across the approach: total shed luminance 2746 (p 0.115) -> 1920
+    // (p 0.14), a 30% trough, with dots above 0.30 luminance falling 4200 ->
+    // 2426 before recovering. That trough IS "the particles that are there
+    // before kind of disappear, and then new particles appear".
+    //
+    // The three channels, and why each is zero rather than smaller:
+    //   regions — dimmed the shed exactly where each plume lives, i.e. it
+    //     cleared the background out from behind the emphasis. Under the new
+    //     model the surrounding shed is the SUBJECT, not the background.
+    //   globalK — dimmed the whole curtain to 3% at full reveal. It existed
+    //     for ride-through #3 ("the plumes must not ignite BESIDE the old
+    //     curtain"), which the per-dot exchange answers on its own.
+    //   grad — dissolved the far-downwind history. Those are real spores the
+    //     opening view sheds; deleting them is the disappearance by name.
+    // Zero is also the only value that is exactly reversible for free.
     const mw = sceneApi.groups.mushroom.matrixWorld;
     for (const rg of shedRegions) {
       rg.a.copy(rg.la).applyMatrix4(mw);
       rg.b.copy(rg.lb).applyMatrix4(mw);
-      // taste dial: the shed only cedes as far as the braid actually takes
-      // over — every dim channel scales with the same T as the takeover
-      rg.k = rg.gain * eff[rg.exit] * T;
+      rg.k = 0;
     }
-    // Ride-through #3 (Hannah): the plumes must not ignite BESIDE the old
-    // curtain — as the exits complete, the WHOLE shed cedes to the structured
-    // system. Delta retime (Hannah's third note): the hand-over is now WEIGHTED
-    // ACROSS the three phases instead of keyed to the furthest exit, so the
-    // original stream's curtain survives phase A at ~50% and only finishes
-    // ceding as the LAST current arrives — the source never dies before its
-    // delta has visibly taken over. Still a pure function of the effective
-    // reveals: reverse scroll re-inflates the curtain the same way.
-    const S3 = (x) => { x = (x - 0.25) / 0.65; x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
-    // taste dial: the whole-shed cede scales with T — at T = 0 the curtain
-    // never dims at all (the stream stays exactly the hero's)
-    const gk = (0.50 * S3(eff[0]) + 0.28 * S3(eff[1]) + 0.22 * S3(eff[2])) * T;
-    // Ride-through #5 (Hannah, "still two sources"): the shed's FAR-DOWNWIND
-    // history — old spores that drifted away long before the orbit — hangs in
-    // the sky as a detached cloud while the braid grows at the rim. It is not
-    // the source; it dissolves EARLY (with the first arrival), distance-graded
-    // from the cap centre, while the near-rim live stream follows `gk` above
-    // and is absorbed by the braid. One stream, no history-ghost.
-    let hk = (eff[0] - 0.02) / 0.22;
-    hk = hk < 0 ? 0 : hk > 1 ? 1 : hk;
-    hk = hk * hk * (3 - 2 * hk);
+    const gk = 0;
     _capC.set(0, sceneApi.consts.CAP_Y, 0).applyMatrix4(mw);
     _grad.sx = _capC.x; _grad.sy = _capC.y; _grad.sz = _capC.z;
     _grad.d0 = sceneApi.consts.CAP_R * 1.2;
     _grad.d1 = sceneApi.consts.CAP_R * 2.6;
-    _grad.k = hk * T;   // taste dial: history dissolve is a dim channel too
+    _grad.k = 0;
     // The seat, driven (runs OUTSIDE the anyVisible gate so the release path
     // always executes): one call carries the whole frame's intent — the
     // system steers its own dots first, then its color pass reads the
@@ -1344,9 +1363,17 @@ export function createInspire(sceneApi) {
 
     for (let i = 0; i < 3; i++) {
       const st = streaks[i];
+      // HOVER/SELECTION ONLY (Hannah, 2026-08-06). This sprite is a 12:1
+      // anamorphic blade — the hardest, whitest, least particulate form in the
+      // chapter — and it used to sit lit at the REST on the merely-derived auto
+      // exit, which is the white bar across the cap's left rim in the old
+      // inspire golden. It is a lens answering a poke, not a resting state, so
+      // the derived case is now zero and only a real hover or an open card
+      // lights it. The chips are unaffected: nodeWorld() anchors off
+      // streaks[i].localPos, a position, which exists whether or not it draws.
       // taste dial: the streak keeps a modest floor even at T = 0 — it is
       // the active label's living anchor (see stkScale above)
-      const want = (i === effActive ? 0.42 : 0) * furnOf(i) * stkScale;
+      const want = ((i === active || i === selected) ? 0.42 : 0) * furnOf(i) * stkScale;
       st.o += (want - st.o) * Math.min(1, dt * 2.4);
       if (st.o < 0.02 && want === 0) st.o = 0;   // die cleanly, no lingering blade
       // a lens catching an exceptional source: slow breathing, slight shimmer
