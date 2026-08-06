@@ -533,9 +533,38 @@ export function createInspire(sceneApi) {
       for (let s = 0; s < SEG; s++) {
         const A = pts[s], B = pts[s + 1];
         lp.push(A.p.x, A.p.y, A.p.z, B.p.x, B.p.y, B.p.z);
-        const fadeTop = (tt) => 1 - Math.pow(Math.max(0, (tt - 0.50) / 0.50), 1.15) * 0.95;
-        heat(0.52 * fadeTop(A.t) + 0.1, tmpC); lc.push(tmpC.r, tmpC.g, tmpC.b);
-        heat(0.52 * fadeTop(B.t) + 0.1, tmpC); lc.push(tmpC.r, tmpC.g, tmpC.b);
+        // THE WISP DIES WHERE THE DUST BEGINS (Hannah, 2026-08-06, third spore
+        // report: "these kind of weird arrows inside of them"). The old ramp
+        // faded to 0.05 and then added a +0.1 FLOOR, so the strand's colour
+        // bottomed out at heat(0.126) — and heat(0) is not black either, it is
+        // C_DARK 0x421c05. Under additive blending against an empty sky that
+        // floor is plainly visible: twelve continuous, perfectly smooth curves
+        // (4 wisps x 3 exits) climbing the full height of the shed, through
+        // and past the dust. In a 2.6x exposure of the inspire golden they are
+        // the most conspicuous thing in the frame, and they are the only
+        // continuous-line form left in open sky since the core ribbons went.
+        //
+        // This is the ribbon lesson again, in the same file: "a continuous
+        // line cannot read as dust at any opacity". So the fade now runs to
+        // LITERAL BLACK (multiplyScalar, not a walk down the heat ramp) and it
+        // completes at t = 0.70 — which is past every exit's rim walk and curl
+        // but before any of them starts to rise. The delta story the wisps
+        // exist to tell (born between the gills, out to the margin, walking
+        // the rim to the release sector) is untouched and still draws on with
+        // the live current; what is gone is the stroke crossing open sky,
+        // where the spores alone should carry the braid.
+        //
+        // A STATIC fade along the strand, baked into the vertex colours — the
+        // same at every frame, so this is not a fade-out over open view and
+        // reverse scrubs still mirror exactly.
+        const fadeTop = (tt) => {
+          let x = (tt - 0.50) / 0.20;
+          x = x < 0 ? 0 : x > 1 ? 1 : x;
+          return 1 - x * x * (3 - 2 * x);
+        };
+        const fa = fadeTop(A.t), fb = fadeTop(B.t);
+        heat(0.52 * fa + 0.1, tmpC).multiplyScalar(fa); lc.push(tmpC.r, tmpC.g, tmpC.b);
+        heat(0.52 * fb + 0.1, tmpC).multiplyScalar(fb); lc.push(tmpC.r, tmpC.g, tmpC.b);
         lg.push(A.t, B.t);
         counts.wispSegs++;
       }
