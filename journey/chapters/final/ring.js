@@ -244,6 +244,12 @@ export function createFinalRing(sceneApi, uniforms) {
   const lines = makeBatch();
   const glows = makeBatch();
   const memberStats = [];   // D15 QA: per-member built density
+  // WHERE EVERY BODY STANDS, published for canopy.js. Placement is this
+  // file's business and always has been, so the root canopy does not
+  // re-derive it: it is handed the seats and builds ONE graph over them (see
+  // canopy.js's header — a body is a node of the network, not the owner of a
+  // root system). Filled by placeMushroom for every rung including the hints.
+  const seats = [];
 
   // The clone set (literal copies of the hero's own scene graph) and the
   // pointer picker. Both are addressed per BODY, so both are fed from
@@ -486,6 +492,11 @@ export function createFinalRing(sceneApi, uniforms) {
         }
       }
     }
+
+    // this body's seat on the canopy: the soil point it stands on, its size
+    // (which sets how far out its strands leave the stipe's footprint) and
+    // the threshold it kindles at, so the ground under it can kindle with it
+    seats.push({ x: m.x, z: m.z, gy: m.gy, s, reveal: m.reveal, tier: T });
 
     memberStats.push({
       i: m.i, tier: T, h: m.h, clone: asClone, pickable, bodyId,
@@ -877,6 +888,10 @@ export function createFinalRing(sceneApi, uniforms) {
   return {
     group,
     update,
+    /** Every fruiting body's soil seat, for canopy.js. Read once, at
+     *  construction — members never move (world.js is deterministic and the
+     *  field is scene-parented), so this is a build product, not state. */
+    seats,
     setDwell(s) { primUniforms.uDwell.value = s; },
     dispose() { picker.dispose(); },
     counts: {
