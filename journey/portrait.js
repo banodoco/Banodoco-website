@@ -136,14 +136,22 @@ const KEYS = [
   { p: 0.622, back: 1.04, rise: 0.05, truck: 0, tgtUp: 0.05, tgtRight: 0, fov: 4 },
   { p: 0.700, back: 1.01, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 3 },
 
-  // OWNED (rest 0.725) — copy claims the TOP-centre in portrait, so the
-  // colony sits in the lower two-thirds: a slight up-tilt from the landscape
-  // glide drops the bright cord ceiling toward mid-frame (below the claims)
-  // and fills the deep field at the bottom; the dolly-back keeps the pod
-  // cluster inside the narrow horizontal field.
-  // (tgtRight nudges the pod cluster left of the right edge so the stacked
-  // chip labels have room to run at 375px width.)
-  { p: 0.725, back: 1.16, rise: 0.28, truck: 0, tgtUp: -0.16, tgtRight: 0.25, fov: 10 },
+  // OWNED (rest 0.725) — RE-KEYED for the root-network restage
+  // (20-owned-root-network.md). The landscape composition hangs on one thing:
+  // the root crown entering the frame at TOP CENTRE, at NDC (0, 0.92). The
+  // shipped portrait field was authored for the old level-gaze colony and
+  // pulled that apart in both axes — its dolly-back and +10 fov dropped the
+  // crown to NDC y 0.57 (mid-frame, buried behind the sub line) and its
+  // tgtRight 0.25, which existed to keep the retired POD CLUSTER off the
+  // right edge, slid it to NDC x -0.23.
+  //
+  // So: tgtRight to 0 (the pods it protected no longer exist, and the
+  // portrait arc is symmetric), a much smaller dolly-back, and the gaze
+  // dropped further (tgtUp -0.16 -> -0.28) so the frame keeps its lower
+  // two-thirds of network while the crown climbs back to the top edge.
+  // Measured at 375x812: crown NDC (0.000, 0.792) — top of frame, the
+  // headline overlapping the upper fan exactly as it does at 1440x900.
+  { p: 0.725, back: 1.08, rise: 0.18, truck: 0, tgtUp: -0.28, tgtRight: 0, fov: 6 },
 
   // FINAL (rest 0.925 → recede 1.0) — "steeper diagonal; copy top, ring
   // stacked in depth". Lift the eye and drop the gaze so the soil-line cuts

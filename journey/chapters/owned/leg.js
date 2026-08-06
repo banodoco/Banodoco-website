@@ -12,9 +12,27 @@
 // clearing the soil at p ~0.858 into the Final cutaway.
 import * as THREE from 'three';
 import { poseAt } from '../../director.js';
-import { groundY } from '../../anatomy.js';
+import { groundY, stemAxis } from '../../anatomy.js';
 
 const clamp = THREE.MathUtils.clamp;
+
+/** ROOT CROWN — the knot the whole chapter now hangs from (root-world
+ *  restage, 20-owned-root-network.md).
+ *
+ *  It is the hero's own stipe base, read from the SHARED form-language mirror
+ *  rather than guessed: stemAxis(0) is where the stem's axis meets the ground
+ *  plane, groundY() is the soil there, and the crown sits CROWN_DROP below it
+ *  — deep enough that the soil lid crops the fibres gathering up into the
+ *  stem (so the base "enters the frame" at the top edge instead of floating
+ *  in it), shallow enough to still read as the mushroom's own root.
+ *
+ *  organism/* is read-only and stays so: nothing here draws the mushroom, it
+ *  only asks the mirror where the mushroom's foot is. */
+export const CROWN_DROP = 0.61;
+export function crownPoint() {
+  const [ax, az] = stemAxis(0);
+  return new THREE.Vector3(ax, groundY(ax, az) - CROWN_DROP, az);
+}
 
 /** p-range sampled for clearance: a little beyond both soil crossings so
  *  nodes near the thresholds keep clearance from the approach frames too. */
@@ -80,13 +98,14 @@ export function buildLeg() {
     };
   }
 
-  // The colony SPINE: the content axis the substrate is grown along. It runs
-  // under the entry (below the stipe-side descent), through the glide, and
-  // past the rise exit so the substrate continues beyond both thresholds —
-  // the camera enters and leaves through the middle of grown structure,
+  // The colony SPINE: the content axis the ambient layers (haze, aggregates,
+  // far filler) are spread along. Since the root-world restage the STRUCTURE
+  // radiates from the crown instead — the spine is only the "and it keeps
+  // going that way" axis, running from under the crown out past the rise exit
+  // so the camera enters and leaves through the middle of grown structure,
   // never at its edge.
-  const SA = new THREE.Vector3(2.2, -1.35, 1.1);
-  const SB = new THREE.Vector3(-12.8, -2.1, -2.6);
+  const SA = new THREE.Vector3(1.0, -1.30, 0.6);
+  const SB = new THREE.Vector3(-11.5, -2.4, -1.4);
   const SD = SB.clone().sub(SA);
   const SLEN2 = SD.lengthSq();
   const SDIR = SD.clone().normalize();
@@ -126,6 +145,6 @@ export function buildLeg() {
   return {
     camPts, camPs, camDist, nearestCamPt, frameAt, restFrame, projectInto,
     SA, SB, SD, SLEN2, SDIR, RIGHT, UPN, spineDist, spineAt, clampUnder,
-    exitP, exitPt, groundY,
+    exitP, exitPt, groundY, CROWN: crownPoint(),
   };
 }

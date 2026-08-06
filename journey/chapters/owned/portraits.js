@@ -32,7 +32,7 @@
 import * as THREE from 'three';
 import * as H from '../../lib/helpers.js';
 import { TEST_PORTRAITS } from '../../../assets/test-portraits/manifest.js';
-import { UG_P0, UG_P1, REST_P } from './leg.js';
+import { REST_P } from './leg.js';
 
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;
@@ -490,93 +490,113 @@ export function buildPortraitField({
   const NODE_COUNT = nodeCount;
   const C_COUNT = contributors.length;          // routable, hoverable nodes
   group.name = 'owned-portraits-' + NODE_COUNT;
-  const { camPts, camDist, nearestCamPt, frameAt, restFrame, projectInto, clampUnder, groundY } = leg;
+  const { camDist, nearestCamPt, restFrame, projectInto, clampUnder, groundY } = leg;
   const { nearestCordPoint, inVoid } = substrate;
 
-  /* ---------------- placement: frame-cell stratification ----------------
-     Rev-2 rule, carried verbatim: each node gets a home moment on the REAL
-     leg and a cell of a 3x3 frustum grid at a near/mid/far depth pattern,
-     so edge/corner/depth coverage is authored, not hoped for.
-     Journey-specific split (the reachability fix):
-       - the C_COUNT routable contributors stratify against the REST pose
-         frustum primarily (12 of 16 literally in the rest frame; 4 in the
-         early drift frames, which share the rest's gaze direction) — a
-         healthy hoverable set at the rest is authored in;
-       - the remaining ambient nodes stratify across the WHOLE underground
-         leg so the glide and rise stay populated (coverage second). */
-  const CELLS = [
-    [-0.78, -0.70], [0.0, -0.70], [0.78, -0.70],
-    [-0.78, -0.12], [0.0, -0.12], [0.78, -0.12],
-    [-0.78, 0.42], [0.0, 0.42], [0.78, 0.42],
-  ];
-  const DEPTHS = [6.4, 3.4, 9.6, 5.4, 11.5, 7.6, 4.4, 10.2, 6.0, 8.8, 3.8, 12.5];
-  const DRIFT_PS = [0.762, 0.788, 0.812, 0.832];
+  /* ---------------- placement: AUTHORED IN THE REST FRAME ----------------
+     ROOT-NETWORK RESTAGE (2026-08-06, 20-owned-root-network.md).
 
-  const frameCache = new Map();
-  const homeFrame = (p) => {
-    const key = Math.round(p * 1000);
-    if (!frameCache.has(key)) frameCache.set(key, frameAt(p));
-    return frameCache.get(key);
-  };
+     The shipped build placed 48 nodes by frame-cell stratification across the
+     whole leg — 16 routable ones biased to the rest, 32 ambient ones for
+     glide coverage. Under the new composition that is the wrong instrument
+     twice over. First, the reference is explicit about the count: "roughly
+     14-16 PORTRAIT FACES", distributed "in a broad arc/oval across the
+     field, denser toward the lower half, with clear dark breathing room
+     between them" — 48 faces is a crowd, not a constellation, and the old
+     frame read as a wall of glowing lanterns. Second, a 3x3 grid cannot
+     author an arc; it authors a grid, and at this density that is exactly
+     what it looked like.
+
+     So the sixteen contributors ARE the field, and their positions are
+     authored one by one in the REST FRAME (ndcX, ndcY, depth, size) — the
+     house rule from the CONNECT restage: the frame is the spec. Read the
+     table as the picture it is:
+
+       · two far arms sweep up and outward at ndcY ~ +0.30, flanking the copy;
+       · the sides fill at ndcY ~ 0;
+       · the lower half carries nine of the sixteen, in two loose ranks;
+       · the three nearest sit lowest and read largest.
+
+     Depth falls as the row falls (13.0 at the top of the arc, 5.2 at the
+     bottom), which is what makes "larger and lower reads as nearer" true in
+     perspective rather than by drawing bigger sprites. Nothing is placed
+     inside the copy block's box (|ndcX| < 0.5, ndcY in +0.15..+0.80) at any
+     of the three review sizes.
+
+     The 3.0-unit camera-path clearance rule from Spike B rev 2 SURVIVES
+     unchanged below, and is now nearly free by construction: the camera
+     glides just under the soil and the whole network hangs below it, so
+     every site is already 3+ units under the flight line. The old build had
+     to fight that rule; this one satisfies it. */
+  const REST_SITES = [
+    // ndcX, ndcY, depth, size
+    [-0.70, 0.30, 12.4, 0.38],
+    [0.72, 0.28, 11.8, 0.38],
+    [-0.88, -0.03, 10.6, 0.39],
+    [0.88, -0.06, 10.2, 0.39],
+    [-0.58, 0.11, 11.6, 0.38],
+    [0.56, 0.09, 11.2, 0.38],
+    [-0.74, -0.32, 8.8, 0.42],
+    [0.76, -0.30, 8.4, 0.42],
+    [-0.26, -0.19, 9.8, 0.40],
+    [0.21, -0.24, 9.4, 0.41],
+    [-0.58, -0.47, 7.2, 0.44],
+    [0.56, -0.45, 7.0, 0.44],
+    [-0.05, -0.50, 8.0, 0.43],
+    [-0.84, -0.68, 6.2, 0.46],
+    [0.82, -0.64, 6.0, 0.46],
+    [0.28, -0.76, 5.6, 0.47],
+  ];
 
   const nodes = Array.from({ length: NODE_COUNT }, (_, i) => {
     const c = contributors[i % C_COUNT];
     const routable = i < C_COUNT;
     const rand = H.rng((((c.seed ?? (i + 1)) * 7919 + 17 + i * 977) | 0) >>> 0);
-    let homeP;
-    if (routable) {
-      homeP = i < C_COUNT - DRIFT_PS.length ? REST_P : DRIFT_PS[i - (C_COUNT - DRIFT_PS.length)];
-    } else {
-      const j = i - C_COUNT, n = NODE_COUNT - C_COUNT;
-      homeP = clamp(UG_P0 + ((j + 0.5) / n) * (UG_P1 - UG_P0)
-        + (rand() - 0.5) * (0.6 * (UG_P1 - UG_P0) / n), UG_P0, UG_P1);
-    }
-    const f = homeFrame(homeP);
-    // stride-4 walk through the 9 cells (gcd(4,9)=1): consecutive nodes land
-    // in scattered cells, and every cell is visited before any repeats
-    const cell = CELLS[(i * 4 + Math.floor(i / 9)) % 9];
-    let depth = DEPTHS[i % DEPTHS.length] * (0.85 + rand() * 0.30);
-    // the page copy owns top-centre: force that cell deep
-    if (Math.abs(cell[0]) < 0.4 && cell[1] > 0.3) depth = Math.max(depth, 10.0);
-    if (routable) depth = Math.min(depth, 12.0);   // hover targets stay legible
-    const jx = routable ? 0.24 : 0.34;
-    const jy = routable ? 0.22 : 0.30;
+    const site = REST_SITES[i % REST_SITES.length];
+    const f = restFrame;
     const TANV = Math.tan(0.5 * f.fov * Math.PI / 180);
-    const ASPECT = 1.55;
-    let pos = null;
-    for (let attempt = 0; attempt < 7 && !pos; attempt++) {
-      const cx = clamp(cell[0] + (rand() - 0.5) * jx, -0.84, 0.84);
-      const cy = cell[1] + (rand() - 0.5) * jy;
-      const d = depth * (attempt ? 0.88 + rand() * 0.28 : 1);
-      const p = f.pos.clone()
-        .addScaledVector(f.fwd, d)
-        .addScaledVector(f.right, cx * TANV * ASPECT * d)
-        .addScaledVector(f.up, cy * TANV * d);
-      p.x = clamp(p.x, -16.5, 5.0);
-      p.z = clamp(p.z, -9.0, 9.0);
-      clampUnder(p, 0.9);
-      if (!inVoid(p.x, p.y, p.z)) pos = p;
-    }
-    if (!pos) {
-      pos = f.pos.clone().addScaledVector(f.fwd, depth);
+    const ASPECT = 1.6;
+    // a hair of authored-position jitter so the arc never reads as a plotted
+    // curve, small enough that the composition above is what ships
+    const cx = site[0] + (rand() - 0.5) * 0.045;
+    const cy = site[1] + (rand() - 0.5) * 0.040;
+    const d = site[2] * (0.96 + rand() * 0.08);
+    const pos = f.pos.clone()
+      .addScaledVector(f.fwd, d)
+      .addScaledVector(f.right, cx * TANV * ASPECT * d)
+      .addScaledVector(f.up, cy * TANV * d);
+    pos.x = clamp(pos.x, -16.5, 5.0);
+    pos.z = clamp(pos.z, -9.0, 9.0);
+    clampUnder(pos, 0.9);
+    // a site that lands in an authored void is nudged SIDEWAYS out of it,
+    // never re-rolled and never dropped: the arc is the composition and the
+    // void is only seasoning. (The first pass pushed down 0.45 per iteration
+    // and moved two nodes half a frame south of where they were authored —
+    // measured NDC y -0.45 -> -0.88. Lateral, small, and capped.)
+    for (let guard = 0; guard < 4 && inVoid(pos.x, pos.y, pos.z); guard++) {
+      // INWARD, toward frame centre — an outward nudge walks edge sites off
+      // the frame (measured: authored 0.78 -> 0.96 ndc, past the chip layer's
+      // placeable margin).
+      pos.addScaledVector(f.right, (cx >= 0 ? -1 : 1) * 0.34)
+         .addScaledVector(f.up, -0.10);
       clampUnder(pos, 0.9);
     }
     return {
-      id: routable ? c.id : null, i, pos, content: c, routable, homeP,
-      // size/spacing jitter (rev-2): wider size spread than the first spike
-      // build, so density never reads as a "row of coins". Smaller than the
-      // spike's 0.55-0.81 — at the journey's fov 54 the spike sizes read as
-      // lanterns, the approved still's faces are small against the frame.
-      size: 0.34 + rand() * 0.24,
+      id: routable ? c.id : null, i, pos, content: c, routable, homeP: REST_P,
+      // size/spacing jitter (rev-2 rule, kept): a spread wide enough that
+      // density never reads as a "row of coins". The base size now comes
+      // from the authored table so scale tracks the arc.
+      size: site[3] * (0.92 + rand() * 0.20),
       seed: rand(),
       tilt: (rand() - 0.5) * 0.16,
-      strandCount: 3 + Math.floor(rand() * 3),
+      strandCount: 4 + Math.floor(rand() * 3),
       rand,
     };
   });
 
   // gentle separation pass — per-pair jittered minimum so spacing never
-  // settles into an even chain
+  // settles into an even chain. The authored arc already spaces them; this
+  // only catches the jitter's worst case.
   for (let pass = 0; pass < 3; pass++) {
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -619,28 +639,31 @@ export function buildPortraitField({
 
   // Rest reachability repair (the grey-box gap, fixed by construction and
   // then VERIFIED here): every routable node must project into the rest
-  // frame with margin for the hotspot layer (|ndc| <= 0.85) at a workable
-  // depth. Failures re-home to their cell in the rest frame at mid depth.
-  const TANV_R = Math.tan(0.5 * restFrame.fov * Math.PI / 180);
+  // frame with margin for the hotspot layer (|ndc| <= 0.97 in x, 0.90 in y —
+  // the arc deliberately runs wide, and a chip whose dot is at |x| 0.96 is
+  // still fully placeable because ui.js flips the pill inboard) at a workable
+  // depth. A failure is pulled straight back toward its authored site along
+  // the rest gaze rather than re-rolled somewhere else: the arc is authored,
+  // so the repair must preserve it.
   function restOk(nd) {
-    const pr = projectInto(restFrame, nd.pos);
-    return pr.z > 2.6 && pr.z < 15.5 && Math.abs(pr.x) <= 0.85 && Math.abs(pr.y) <= 0.85;
+    const pr = projectInto(restFrame, nd.pos, 1.6);
+    return pr.z > 2.6 && pr.z < 16.5 && Math.abs(pr.x) <= 0.97 && Math.abs(pr.y) <= 0.90;
   }
   for (const nd of nodes) {
     if (!nd.routable || restOk(nd)) continue;
-    const cell = CELLS[(nd.i * 4 + Math.floor(nd.i / 9)) % 9];
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const cx = clamp(cell[0] * 0.9 + (nd.rand() - 0.5) * 0.2, -0.8, 0.8);
-      const cy = clamp(cell[1] * 0.9 + (nd.rand() - 0.5) * 0.2, -0.8, 0.62);
-      const d = 5.0 + nd.rand() * 5.5;
+    const site = REST_SITES[nd.i % REST_SITES.length];
+    const TANV_R = Math.tan(0.5 * restFrame.fov * Math.PI / 180);
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const shrink = 1 - attempt * 0.06;
+      const d = site[2] * (1 - attempt * 0.05);
       const p = restFrame.pos.clone()
         .addScaledVector(restFrame.fwd, d)
-        .addScaledVector(restFrame.right, cx * TANV_R * 1.55 * d)
-        .addScaledVector(restFrame.up, cy * TANV_R * d);
+        .addScaledVector(restFrame.right, site[0] * shrink * TANV_R * 1.6 * d)
+        .addScaledVector(restFrame.up, site[1] * shrink * TANV_R * d);
       clampUnder(p, 0.35 + nd.size);
       if (camDist(p.x, p.y, p.z) < 3.0) continue;
       nd.pos.copy(p);
-      break;
+      if (restOk(nd)) break;
     }
     enforceClearance(nd);
   }
@@ -841,9 +864,14 @@ export function buildPortraitField({
         float rq = (r - 0.72) / 0.115;
         float rim = exp(-rq * rq);
         float boost = vH;
-        vec3 col = t.rgb * (0.88 + 0.30 * boost + 0.55 * vWv)
-          + uRim * rim * (0.07 + 0.80 * boost + 0.60 * vWv) * (1.0 - vSoft * 0.85)
-          + uCore * exp(-r * r * 8.0) * (0.04 + 0.24 * boost + 0.30 * vWv);
+        // 0.88 -> 1.12 on the image term and 0.07 -> 0.20 on the resting rim
+        // (root-network restage): the reference's people are "softly
+        // ringed/haloed with light", i.e. the ring is part of the RESTING
+        // read, not only the hover response. The hover deltas are unchanged,
+        // so hover still moves the same distance from a higher floor.
+        vec3 col = t.rgb * (1.12 + 0.30 * boost + 0.55 * vWv)
+          + uRim * rim * (0.20 + 0.80 * boost + 0.60 * vWv) * (1.0 - vSoft * 0.85)
+          + uCore * exp(-r * r * 8.0) * (0.07 + 0.24 * boost + 0.30 * vWv);
         // distant nodes emerge from amber haze rather than vanishing to black
         float haze = exp(-0.00135 * vDepth * vDepth);
         col = mix(uHaze * 0.38, col, clamp(haze + 0.14, 0.0, 1.0)) * flick;
@@ -1083,8 +1111,9 @@ export function buildPortraitField({
     group.add(pts);
     return { pts, mat };
   }
-  const cores = makeGlowPoints(H.softDisc(64), P.goldBright, 0.5, 0.062, 0.30, 3);
-  const halos = makeGlowPoints(H.glowSprite(P.ember, 64), P.ember, 2.5, 0.035, 0.18, -2);
+  // the halo each face sits inside; the core is the ember at its centre
+  const cores = makeGlowPoints(H.softDisc(64), P.goldBright, 0.5, 0.085, 0.30, 3);
+  const halos = makeGlowPoints(H.glowSprite(P.ember, 64), P.ember, 2.7, 0.058, 0.18, -2);
 
   /* ---------------- LOOK-DEV photo pipeline (async; never blocks boot) ---
      Photos are the test set in assets/test-portraits (README: never ship).
@@ -1210,6 +1239,27 @@ export function buildPortraitField({
     // pod-hover responses (OW-3): an expanding spherical wave in WORLD space.
     wavePulse(center, { speed = 3.6, width = 2.8, maxR = 30, amp = 1 } = {}) {
       wave = { c: center.clone(), r: -width * 0.6, speed, width, maxR, amp };
+    },
+    /** Jump the eased UI channels to their targets — the dt = 0 path (deep
+     *  links, hidden-tab and frozen capture), reached through the chapter's
+     *  snap().
+     *
+     *  uPhoto is DELIBERATELY not snapped. Under freezeTime(0) the photo
+     *  crossfade never advances, so the frozen captures render the PROCEDURAL
+     *  painted busts — and that is the behaviour we want to keep, not a bug to
+     *  fix: assets/test-portraits is a placeholder set that must never ship,
+     *  and static/captures/*.png is committed to the repo. Snapping it here
+     *  would bake real likenesses into a checked-in image. The live page still
+     *  crossfades to photos the moment they load, which is where they belong.
+     *  (The pre-deploy checklist item — delete the test portraits before any
+     *  public deploy — stands regardless.) */
+    snap() {
+      const u = portraitMat.uniforms;
+      u.uAnon.value = anonTarget;
+      hoverAmt = hoverIdx >= 0 ? 1 : 0;
+      selAmt = selIdx >= 0 ? 1 : 0;
+      u.uHoverIdx.value = hoverIdx; u.uHoverAmt.value = hoverAmt;
+      u.uSelIdx.value = selIdx; u.uSelAmt.value = selAmt;
     },
     setFade(a) {
       fade = a;

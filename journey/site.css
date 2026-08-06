@@ -194,6 +194,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     transition: color 0.3s, background 0.3s;
   }
   .j-hot.vis { visibility: visible; pointer-events: auto; }
+  /* Right-edge chips run their pill LEFT of the dot instead of off the frame
+     (ui.js measures and sets `.flip` + a compensating translate, so the dot
+     stays exactly on its node either way). Added for the Owned root-network
+     restage, whose portrait arc deliberately reaches |ndc x| 0.89 — but the
+     rule is general and inert for every chip that already fits. */
+  .j-hot.flip { flex-direction: row-reverse; padding: 0.35rem 0.35rem 0.35rem 0.8rem; }
   .j-hot-dot {
     width: 9px; height: 9px;
     border-radius: 50%;
