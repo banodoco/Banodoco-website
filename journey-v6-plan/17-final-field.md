@@ -556,3 +556,77 @@ correlation peak smears rather than moves.
 - The failed centroid/phase-correlation wind probe is kept in the scratchpad
   as a record of the control that killed it. It is not a usable gate; the
   A/B is.
+
+---
+
+# 2026-08-07 — The sparkles, and the root canopy
+
+Two reports on the epilogue, one commit apart in Hannah's reading of it:
+
+> "weird little sparkles drop from the non-primary mushrooms in the final view,
+> please fix that."
+
+> "in the final section, can you make it so all mushrooms have roots like the
+> main ones have — it should feel like they all exist on this giant
+> interconnected canopy similar to the one that surrounds the main one. It
+> should be an extension of the one that surrounds the main mushroom, like
+> literally a canopy."
+
+---
+
+## 1. The sparkles
+
+### What they were
+
+`journey/chapters/final/shed.js` — the POKE's spore shed, and specifically the
+one term of organism's integrator that this pool had no business running.
+
+The diagnosis is not a judgement call. Firing a synthetic poke at ring member
+4 and tracking every released particle for 1.2 s:
+
+| | particles | falling in world | moving down on screen | mean world Δy | mean screen Δy |
+|---|---|---|---|---|---|
+| **before** | 50 (4 pokes, members 4/5/0/8) | **50** | **50** | −0.083 | **+7.94 px** |
+| **after**  | 39 (same 4 pokes, same members) | **0** | **0** | +0.017 | **−1.64 px** |
+
+The drift the wind supplies over the same 1.2 s is 0.02–0.06 units, sideways.
+So the fall was not a component of the puff's motion — it *was* the puff's
+motion, at four times the wind's contribution and in the one direction the eye
+reads as wrong.
+
+The term is `- 0.0026 * (1 - w) * k`, `w = age / 1.6`, and it is
+`organism/spores.js`'s own, correct there: **the air under a cap is still**, so
+a fresh spore drops clear of the gills before the wind has any of it. `w` is
+that handover, and every term it gates — the fall, and the `0.45 + 0.55 w` ramp
+on the carry — is a statement about being inside the hymenium.
+
+`070892c` brought the integrator across whole (rightly: the previous complaint
+was that a poked field body *threw* its spores) but the same commit moved the
+release **seat** out to `u = 0.92 + rand()*0.20` of the rim — a band straddling
+and outside the margin — because the Final rest camera stands ~11° above every
+field body's rim plane and a puff seated where the hero seats one is emitted
+into a box the visitor cannot see into. That judgement is still right.
+
+But it means these particles are born **where a hero spore arrives** — clear of
+the gills, in open air past the margin — and then run the handover again, in
+full view. The hero's own fall is hidden behind its cap for its whole 1.6 s;
+this one was the first thing you saw. Same law, wrong moment of a spore's life
+for the place it is seated.
+
+### The fix
+
+A shed particle is born at the END of the handover: `w = 1` identically. The
+fall term is `1 - w = 0` and vanishes; the carry ramp saturates; the two
+turbulence modes run at full. Nothing is scaled and nothing is retuned — the
+seat, the release velocity, the gust, the size draw, the tone, the twinkle, the
+DOF band and the life window are untouched, and it is exactly what
+`organism/spores.js` does with a spore that has already dropped clear, i.e.
+every spore in the hero's plume outside its own margin.
+
+**The main model is unaffected, and measured so.** `organism/*` is not in the
+diff. The hero's own poke shed still falls at its own rate through its own cap
+— 28/28 particles, mean world Δy −0.092, +10.4 px on screen, before *and*
+after. Its ambient 4,200-dot drift is the same code path. `mission@*` is
+byte-identical on disk and MAE **0.00/255** in the frozen check.
+
+---

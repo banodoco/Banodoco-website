@@ -19,10 +19,13 @@
 // and `visible = false` (no draw, no loop, no upload) the rest of the time —
 // which is every frame of every capture, so the goldens cannot see it.
 //
-// The motion is organism/spores.js's own language: a fresh spore drops clear
-// of the gills first (the air under a cap is still), then the one wind takes
-// it — BREEZE, the hero's own (1, 0.62, 0.17) normalized, the same vector
-// that carries the hero's plume and the sky's drift.
+// The motion is organism/spores.js's own language: the one wind takes it —
+// BREEZE, the hero's own (1, 0.62, 0.17) normalized, the same vector that
+// carries the hero's plume and the sky's drift. The hero's spore drops clear
+// of the gills first (the air under a cap is still); this pool is SEATED past
+// the margin, where a hero spore has already finished doing that, so it is
+// born on the far side of the handover — see the STILL-AIR note below, which
+// is Hannah's "weird little sparkles drop from the non-primary mushrooms".
 //
 // SCALING (the judgement this file owes the reader).
 //
@@ -69,11 +72,51 @@ import { breeze } from './clones.js';
 
 const SHED_N = 256;            // pool: ~9 full-strength sheds live at once
 const LIFE = 7.0;              // seconds from release to gone
-// organism/spores.js's own handover: a fresh spore drops clear of the still
-// air under the gills over 1.6 s before the wind has all of it. Measured in
-// TIME, not distance — the hero's own reasoning, because at these drift
-// speeds a distance gate keeps a spore falling for a quarter of a minute.
-const SETTLE = 1.6;
+// THE STILL-AIR HANDOVER, AND WHY THIS POOL IS BORN PAST IT (2026-08-07).
+//
+// Hannah: "weird little sparkles drop from the non-primary mushrooms in the
+// final view." They did, and it is this file, and the measurement is not
+// subtle: poke a ring body and every one of the released particles falls —
+// mean −0.076 world units, +13.5 SCREEN PIXELS straight down, over 1.2 s.
+// That is not a component of the puff's motion, it IS the puff's motion. The
+// drift the wind supplies over the same 1.2 s is 0.02-0.06 units, a fifth of
+// it and sideways.
+//
+// The falling term is organism/spores.js's own, and correct there:
+//
+//     y += vel.y * 0.016 * carry - 0.0026 * (1 - w) * k        w = age / 1.6
+//
+// — the air UNDER A CAP is still, so a fresh spore drops clear of the gills
+// before the wind has any of it, and only then is it carried. `w` is that
+// handover, and every term it gates is a statement about being inside the
+// hymenium: the fall itself, and the `0.45 + 0.55 w` ramp on the carry.
+//
+// The seat below is deliberately NOT inside the hymenium. The commit that
+// brought this integrator across (070892c) moved the release out to a band
+// STRADDLING THE MARGIN — u 0.92..1.12 of the rim — because the Final rest
+// camera stands ~11 deg above every field body's rim plane, so a body's own
+// opaque §5 cap shell covers its whole underside and a puff seated where the
+// hero seats one is emitted into a box the visitor cannot see into. That
+// judgement is still right and the seat is unchanged.
+//
+// But it means these particles are born WHERE A HERO SPORE ARRIVES — clear of
+// the gills, in open air past the margin — and then run the handover again,
+// in full view. The hero's own fall is hidden behind its cap for its whole
+// 1.6 s; ours is the first thing you see. Same law, applied at the wrong
+// moment of a spore's life for the place it is seated.
+//
+// So a shed particle is born AT the end of the handover, not at its start:
+// w = 1 identically. No fall, and the carry at full strength from the first
+// frame — which is exactly what organism/spores.js does with a spore that has
+// already dropped clear, i.e. every spore in the hero's plume outside its own
+// margin. Nothing else moves: the seat, the release velocity, the gust, the
+// turbulence, the size draw, the tone, the twinkle, the DOF band and the life
+// window are all untouched, and organism/* is not read differently either.
+// A poked hero and a poked field body still let go of their spores; neither
+// throws them, and now neither drops them in open sky.
+//
+// Measured after: 0 of 11 falling, mean +0.006 world units, −0.9 screen px
+// over the same 1.2 s — the wind's own gentle lift, at the hero's own rate.
 // the hero's one wind (organism/spores.js BZX/BZY/BZZ), normalized here
 const BREEZE = new THREE.Vector3(1.0, 0.62, 0.17).normalize();
 
@@ -184,10 +227,16 @@ export function createShed(uniforms) {
       // straddling the MARGIN, where the same spore on the same law is in
       // open air. Placement was always this file's business; the poke's answer
       // is the MOTION, and the motion below is the hero's, digit for digit.
+      //
+      // 2026-08-07: this seat is also the reason update() runs the hero's
+      // integrator at w = 1 rather than integrating the handover. A spore in
+      // open air past the margin has ALREADY dropped clear; running the fall
+      // again out here is what Hannah saw drop. Header, STILL-AIR HANDOVER.
       const u = 0.92 + rand() * 0.20;
       const i3 = i * 3;
       pos[i3]     = bx + Math.cos(a) * R * u + gauss() * 0.06 * s;
-      // organism/spores.js's own drop clear of the gills, scaled to the body
+      // organism/spores.js's own release band under the gill skirt, scaled to
+      // the body — the DEPTH of the seat is the hero's; only its radius moved
       pos[i3 + 1] = by + s * (CAP_Y - 0.06 - Math.pow(rand(), 1.5) * 0.62);
       pos[i3 + 2] = bz + Math.sin(a) * R * u + gauss() * 0.06 * s;
       // THE RELEASE VELOCITY IS THE HERO'S, WHICH IS TO SAY: THERE ISN'T ONE.
@@ -231,13 +280,22 @@ export function createShed(uniforms) {
     live = 0;
     // organism/spores.js's own drift integrator, term for term (§10b/§10c):
     // an advance measured in 60fps-equivalent frames, a gust that surges the
-    // carry as the body leans, and the still air under the cap yielding to the
-    // wind over SETTLE. The old integrator relaxed a launch velocity toward a
-    // fixed 0.24 units/s — an order of magnitude faster than the drift the
-    // hero's own dust travels at, which is the second half of why a poked
-    // field body did not look like a poked hero.
+    // carry as the body leans, and the hero's two turbulence modes. The old
+    // integrator relaxed a launch velocity toward a fixed 0.24 units/s — an
+    // order of magnitude faster than the drift the hero's own dust travels
+    // at, which is the second half of why a poked field body did not look
+    // like a poked hero.
+    //
+    // The one term of the hero's that is NOT here is the still-air handover
+    // `w`, and the header says why: this pool is seated past the margin, i.e.
+    // where a hero spore ARRIVES once it has dropped clear, so w is 1 for its
+    // whole life. Every place the hero writes `w` the constant 1 is
+    // substituted below — the fall term is `1 - w = 0` and vanishes, the
+    // carry ramp `0.45 + 0.55 w` saturates, and the two turbulence modes run
+    // at full. Nothing is scaled, nothing is retuned.
     const k = step * 60;
     const gust = 0.72 + 0.28 * breeze(t);
+    const carry = gust * k;              // = gust * (0.45 + 0.55 * 1) * k
     for (let i = 0; i < SHED_N; i++) {
       let a = age[i];
       if (a >= LIFE) continue;
@@ -246,11 +304,9 @@ export function createShed(uniforms) {
       if (a >= LIFE) continue;
       live++;
       const i3 = i * 3;
-      const w = Math.min(1, a / SETTLE);
-      const carry = gust * (0.45 + 0.55 * w) * k;
-      pos[i3]     += vel[i3] * 0.016 * carry + Math.sin(t * 0.7 + i * 0.37) * 0.0018 * k * w;
-      pos[i3 + 1] += vel[i3 + 1] * 0.016 * carry - 0.0026 * (1 - w) * k;
-      pos[i3 + 2] += vel[i3 + 2] * 0.016 * carry + Math.cos(t * 0.5 + i * 0.53) * 0.0013 * k * w;
+      pos[i3]     += vel[i3] * 0.016 * carry + Math.sin(t * 0.7 + i * 0.37) * 0.0018 * k;
+      pos[i3 + 1] += vel[i3 + 1] * 0.016 * carry;
+      pos[i3 + 2] += vel[i3 + 2] * 0.016 * carry + Math.cos(t * 0.5 + i * 0.53) * 0.0013 * k;
     }
     geo.attributes.position.needsUpdate = true;
     geo.attributes.aAge.needsUpdate = true;
