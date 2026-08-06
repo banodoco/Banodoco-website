@@ -1040,3 +1040,331 @@ cannot resolve.
   under any future addition to the placement streams. They are NOT stable under
   a change to `makeRng` or to `MEMBERS`' indices; if either moves, every body's
   shape moves with it, and the `final@*` goldens go with them.
+
+---
+
+# 11 — The poke stops throwing, and the entry stops going black
+
+**Date:** 2026-08-06. **Asked by Hannah, two reports, one sitting, both about
+the FINAL field:**
+
+> "in the final section, when I press on the other mushrooms, they have this
+> kind of different effect on them. When I press them, there's this kind of
+> stuff that jumps out of the mushroom — can you stop that? They should all
+> have spores coming from them like the other one, but they shouldn't have a
+> different poke effect. They should have the same poke effect as the current
+> one."
+
+> "there's also a weird thing where they have a different entry animation when
+> they come in — they kind of turn black. It's just a weird thing. Why can't we
+> just make them one by one have the same entry animation as the main one does,
+> the hero of the page, so they kind of pop up like that, the same way, rather
+> than having a different animation effect."
+
+Both reproduce. Both are cases of this chapter answering a question the hero
+had already answered, in its own words instead of the hero's.
+
+## 11.1 Reproduction — (A), the thing that jumps out
+
+Poked the nearest clone (ring member 4, 6.15 units, scale 0.389) at the Final
+rest by dispatching the organism's own tap gesture at its projected `aim`, then
+tracked the eleven shed particles frame by frame out of the live buffers, and
+ran the identical measurement on the HERO's own §10c shed (`shedSpores(28)` at
+p 0) as the reference. Same metric both sides: mean per-particle speed, its
+component along the outward radius from the body's axis, and its vertical.
+
+| | field poke, at HEAD | hero §10c shed |
+|---|---|---|
+| release speed (age ~0.07 s) | **0.452** units/s | 0.141 |
+| ...its OUTWARD RADIAL part | **+0.268** units/s | +0.005 |
+| ...its vertical | **−0.361** units/s | −0.140 |
+| settled drift speed | 0.24 | 0.10 |
+| net travel by ~5 s | **1.145** units | 0.311 |
+| net RADIAL travel by ~5 s | **+0.560** units | +0.097 |
+| sprite size band (world units) | **0.063 – 0.153** | 0.019 – 0.090 |
+| rendered sprite, screen px p50 | **5.24** | 1.70 |
+
+**Fifty times the hero's outward velocity and three times its sprite.** A poked
+hero lets go of its spores; a poked field body threw them. "Stuff that jumps
+out of the mushroom" is a precise description of an impulse the hero does not
+have, and no amount of tuning it down makes it the same gesture.
+
+## 11.2 Reproduction — (B), the bodies that turn black
+
+Scrubbed p 0.80 → 0.94 on the live path (`?nosnap=1`, `scroll.setProgress`,
+holding each point until `camera.position.x` stops gliding — doc 10.7's own
+trap) and read, per body per stop: its draw progress, its brightest lit
+material, and whether its four opaque §5 shells were standing.
+
+They were, long before the body had any light of its own:
+
+| p | bodies with all shells opaque AND own light ≤ 0.12 |
+|---|---|
+| 0.850 | 1 |
+| 0.860 | 3 |
+| 0.865 | 4 |
+| 0.880 | 10 |
+| **0.885** | **15 of 24** |
+| 0.890 | 15 |
+| 0.905 | 3 |
+
+Confirmed in pixels, by hiding only those bodies' shells and re-shooting the
+same frame: at p 0.885 body 21's own screen footprint carries **24.5** mean
+luminance with its shells and **72.4** without — the shells are removing
+**66%** of the light in the body's own footprint while the body's brightest
+layer sits at **0.034**. Body 9 loses 55%, body 6 at p 0.905 loses 30%.
+
+And plainly, in the frame: the p 0.885 and p 0.905 stills show matte,
+lightless, opaque mushroom cutouts standing among the lit ones. That is
+Hannah's sentence, exactly.
+
+## 11.3 Root cause (A): the reference this file cited was deleted
+
+`chapters/final/shed.js` released a spore with an impulse — `out = 0.16 +
+rand()*0.16` along the radius and `−(0.26 + rand()*0.16)` downward — and then
+relaxed it over 1.4 s toward a fixed wind speed of **0.24 units/s**, which is
+an order of magnitude above the drift the hero's own dust travels at. Its
+sprite band was its own too, `0.045 + rand^1.6 * 0.115`.
+
+Both departures were argued for in the file's own header, and the argument
+pointed at **`sky.js szBase * 1.9`** — "the sizes sit in the same band the
+chapter's spore SKY already uses at these distances". **836d373 deleted that
+expression.** It put the chapter's entire spore sky on the hero's own size draw
+(`pow(rand,1.8)*0.072 + 0.019`), its `vShrink`, its twinkle and a re-banded
+depth-of-field, *precisely because* the old band rendered every dot at the
+`MIN_PT` floor at full brightness and read as a **starfield rather than as
+spores** — the finding that commit exists to record. `shed.js` was the one
+particle layer in the chapter not brought across, so its stated justification
+no longer existed and its numbers were left standing on nothing.
+
+The ejection is older than that (it shipped with e493737, to billow the shed
+clear of the cap so this chapter's high camera could see it). But size and
+motion together are what "different substance" means, and after 836d373 this
+file was the only thing in the frame still made of the old stuff.
+
+## 11.4 Root cause (B): the draw finished before the light started
+
+Two constants, working exactly as written, producing a state the hero never
+enters.
+
+1. **`DRAW_LEAD` 0.20 > `REVEAL_W` 0.16.** §8.7 set the entry draw to run a
+   whole reveal-width AHEAD of the kindle, so that "the last stroke lands
+   before the first ember" and the shipped unlit-body-in-the-dark composition
+   survived. Sound about the STATE; wrong about the ANIMATION. What it produced
+   was a body that inked itself in at the **7% ember whisper** — ink too faint
+   to see — and then stood there fully drawn and unlit.
+
+2. **The shells hard-switch, on a test the whisper already passes.**
+   `lit = v > SHELL_ON (0.02)`, and the 7% whisper alone puts `v` at 0.03–0.08
+   for every armed body. So `lit` is true from the moment the chapter arms, and
+   the only remaining gate is `prog ≥ 0.42 / 0.644` — crossed a whole
+   reveal-width before the body has any light. Four opaque `#040100` meshes,
+   full opacity, over a body at 3%.
+
+The hero has no such phase and cannot: on the landing page its strokes ink in
+at FULL opacity with the tip ember riding the drawing front, and `intro.js`
+FADES each shell group in *while its own region is being stroked*
+(`_shellFade`, stem over uProg 0.30…0.54, cap over 0.574…0.714). **The hero's
+ink is its light, and its solid follows its ink.**
+
+§8.7 could not copy the fade because a clone SHARED the hero's shell materials
+and could only switch its own copies on and off — hence the midpoint switch.
+**That constraint died at 66d1bed**, which gave every body its own two shell
+materials (`cloneShellMat`, 48 for the set) so a deformed body's solid could
+follow its own outline. The reason for the switch was gone; the switch stayed.
+
+## 11.5 What changed
+
+`shed.js`, `clones.js` (+ one line in `ring.js`, one comment in `world.js`).
+**`organism/*` is untouched** — both fixes are chapter-side, which is where
+they belong: neither is a defect in the organism's own accounting.
+
+**(A) The poke's shed is the hero's shed.**
+
+| | before | after |
+|---|---|---|
+| release velocity | radial `0.16–0.32` + down `0.26–0.42` | **none** — the hero's own `BREEZE_DIR * sp`, `sp` on [0.028, 0.083] |
+| integrator | relax toward a fixed 0.24 units/s over 1.4 s | organism/spores.js's own drift, term for term: `k = dt*60`, `gust = 0.72 + 0.28·breeze(t)`, `carry = gust·(0.45 + 0.55w)·k`, the `−0.0026·(1−w)·k` fall, both turbulence terms, `SETTLE` 1.6 s |
+| sprite size | `0.045 + rand^1.6 · 0.115` | **`0.019 + rand^1.8 · 0.072`** — the hero's own draw |
+| twinkle | none | the hero's `0.85 + 0.15·sin(t·1.4 + seed·7)`, on size AND light |
+| depth | none | the hero's DOF on sky.js's own band (`FOCAL_D` 10.5, `FOCAL_R` 14) |
+| gain | 2.2 | **2.4**, sky.js's `SPORE_GAIN` |
+| seat | `u` 0.72–1.00 of cap radius, under the gills | `u` **0.92–1.12** — a band straddling the MARGIN |
+
+`breeze()` is now exported from `clones.js` rather than mirrored a third time.
+
+**The seat is the one number here that is not the hero's, and it is deliberate.**
+The hero draws its release on `u = 0.55 + rand^0.6·0.45` of the cap — the whole
+hymenium — which is right for a lens at the hero's own rim level, looking
+straight into the gill space. The Final rest camera is not: it stands ~11° ABOVE
+the nearest member's rim plane, so a body's own opaque cap shell covers its
+entire underside and a release seated at u 0.6 is emitted into a box the
+visitor cannot see into. That was the true half of e493737's reasoning, and it
+is answered by moving the SEAT, not by inventing a launch. The poke's answer is
+the motion; placement was always this file's business.
+
+**(B) The entry is the hero's entry.**
+
+- **`DRAW_LEAD` is gone.** `d = smooth01((pullRaw − reveal) / 0.16)` — the draw
+  now runs on the kindle's own front at the kindle's own width, so a body inks
+  itself in AS it lights up. There is no drawn-and-dark window left to be black
+  in. Still pure in the camera-pure `pullRaw`, so reverse un-inks it exactly.
+- **The shells FADE, on intro.js's own windows**, read digit for digit off
+  `_shellFade` and applied to this body's own `prog`: stem over 0.30…0.54, cap
+  over 0.574…0.714, `transparent = k < 1; opacity = k; visible = k > 0`. At
+  k = 1 that is byte-identical to the shipped parked state, which is why the
+  rest frame does not move.
+- `SHELL_ON` stays as the outer gate, so a retracting body drops its shells
+  outright rather than easing over frames the retiring chapter will not run.
+- **The fade is guarded, not assumed.** `add()` collects each group's material
+  set and asserts (a) the materials are OURS — without the variation graft the
+  shells are the hero's own, shared outright, and writing `.opacity` on one
+  would reach into organism's graph — and (b) the two groups do not share a
+  material, or one region's fade would drive the other's. As built they cannot:
+  organism §5's three cap shells share one `MeshBasicMaterial` on `mushroom`
+  and the stem core has its own on `stemGroup`. If either test fails the body
+  falls back to the shipped midpoint switch. Never a half-applied fade.
+
+## 11.6 Measured
+
+**The poke, against the hero, same metric both sides:**
+
+| | before | **after** | hero |
+|---|---|---|---|
+| release speed | 0.452 | **0.145** | 0.141 |
+| outward radial | 0.268 | **0.0025** | 0.0052 |
+| vertical | −0.361 | **−0.144** | −0.140 |
+| net travel ~5 s | 1.145 | **0.259** | 0.311 |
+| net radial ~5 s | 0.560 | **0.062** | 0.068 |
+| sprite band | 0.063–0.153 | **0.019–0.075** | 0.019–0.090 |
+
+**And on screen**, in 836d373's own currency — the shipped shader's product
+evaluated over the live buffers at the Final rest:
+
+| | before | **after** | hero shed at p 0 |
+|---|---|---|---|
+| sprite, screen px p50 | 5.24 | **1.76** | **1.70** |
+| p95 | 8.74 | 5.20–6.45 | 2.27 |
+| per-particle output, mean | 0.95–1.42 | 0.56–0.78 | — |
+| screen energy (output × area) | 333–475 | 60–123 | — |
+
+The median sprite now sits on the point shader's own `MIN_PT` floor — which is
+where 95% of the hero's plume sits, at both ends of the ride — with a scatter
+of larger sparks from the DOF growth at the near band. The puff carries about a
+quarter of the light it did, which is the correction: it was over-sized and
+over-bright against a frame whose every other particle had been put on the
+hero's laws.
+
+**The entry, on the deterministic frozen ladder** (`?capture=<p>`, one page
+load per rung, 19 rungs 0.845–0.935, the same list visited ascending and then
+descending):
+
+| p | BEFORE undrawn/drawing/drawn · shells · **BLACK** | AFTER |
+|---|---|---|
+| 0.850 | 22/2/0 · 1 · **1** | 24/0/0 · 0 · **0** |
+| 0.860 | 20/3/1 · 3 · **3** | 24/0/0 · 0 · **0** |
+| 0.865 | 19/3/2 · 5 · **4** | 23/1/0 · 1 · **0** |
+| 0.880 | 4/15/5 · 15 · **10** | 19/3/2 · 5 · **0** |
+| 0.885 | 4/14/6 · 20 · **15** | 19/1/4 · 5 · **0** |
+| 0.890 | 3/4/17 · 20 · **15** | 18/1/5 · 6 · **0** |
+| 0.895 | 1/3/20 · 22 · **10** | 4/15/5 · 19 · **0** |
+| 0.905 | 0/1/23 · 24 · **3** | 3/4/17 · 21 · **0** |
+| 0.915+ | 0/0/24 · 24 · 0 | **identical** |
+
+- **Black body-samples across the ladder: 72 → 0.**
+- **Minimum own-light under a ≥50% opaque shell: 0.033 → 0.167.** Under a FULLY
+  opaque shell, over an 840-frame continuous ride: **0.029 → 0.216.**
+- **Dark at arm is stricter than before**: 24 undrawn through p 0.860 (was
+  p 0.845), because a body can no longer ink in ahead of its own light.
+- **Rows from p 0.915 are identical between the arms** — the rest frame is the
+  shipped rest frame.
+
+**One by one.** Continuous ride, every frame sampled from an animator
+registered after the chapter's, keyed on camera x — each body's draw front,
+from first stroke to last:
+
+```
+body  0  starts −9.05  half −9.48  done −9.91
+body  1        −9.36       −9.79       −10.22
+body  2        −9.66       −10.09      −10.55
+body  3        −9.91       −10.34      −10.78
+body  4        −10.22      −10.60      −11.07
+bodies 9…23    −11.12 … −11.59, in four distance sub-bands
+body  5        −12.28      −12.64      −13.25
+body  6        −12.66      −12.99      −13.51
+body  7        −12.64      −13.12      −13.51
+body  8        −12.99      −13.39      −13.89
+```
+
+Twenty-four bodies arriving in sequence over 4.8 units of camera travel, each
+taking ~0.9 units to ink itself in. Bodies at the same distance arrive
+together, which is what a radial front does.
+
+**Reverse mirrors exactly.** On the deterministic path, the same 19 rungs
+visited ascending then descending: worst draw delta **0.0**, worst opacity
+delta **0.0**, worst shell-opacity delta **0.0**, worst camera-x delta **0.0**
+— bit-identical on all 24 bodies at every rung, in both directions.
+
+*A note for whoever measures this next.* The live-scrub arm of this gate
+reported a ~0.1 "hysteresis" that is not one. On a moving scrub the chapter
+reads `camera.position.x` and writes `uProg` inside its own animator; anything
+sampling the two from outside that order reads them across a frame boundary,
+and the sign of that skew flips with direction — so it shows up doubled and
+looks exactly like hysteresis. Doc 10.7 hit the same trap from the other side
+("the first cut of this gate sampled a moving camera and was measuring the
+glide"). Sample settled, or on the frozen path, or not at all. Comparing raw
+`uProg` also reports a spurious 1.107 at the park discontinuity, since 2 and
+DRAW_HI 0.893 are byte-identical in the shader; compare the draw parameter.
+
+## 11.7 Gates
+
+- **Both symptoms reproduced first**, numerically and in pixels — §11.1, §11.2.
+- **Poke parity measured, not asserted**: the table in §11.6, field against
+  hero, in the same units, plus the on-screen sprite comparison. A still cannot
+  show motion, so neither claim rests on one.
+- **Entry ridden forward AND backward with per-frame sampling**: 840 frames,
+  732 with the chapter live, **0 frames with any body black**; plus the frozen
+  19-rung ladder in both orders at **0.0** delta.
+- **Console clean over a full ride** — p 0 → 1 → 0 with four pokes at the rest
+  (one a `pointerType: 'touch'`), trap installed before the app loads, 801
+  frames: **0 errors, 0 warnings, 0 rejections**, the two pre-existing info
+  lines only. **0 non-finite values** in any clone's `uProg` or any shed
+  particle across all 801 frames. `shed.cool()` verified: 21 live particles at
+  the rest, 0 after the reverse ride.
+- **`capture.py --check`: PASS, worst MAE 0.18/255** (warn 0.50, fail 1.00).
+  `mission` / `inspire` / `connect` / `owned` **0.00/255, byte-identical on
+  disk**. `final@1440x900` 0.18 and `final@430x932` 0.13 — and **the control
+  says those are not ours**: the identical check run on the unmodified tree
+  gives **exactly 0.18 / 0.13**. This machine's frozen-frame noise on the final
+  pose, not a moved frame. No golden moved, so no re-shoot and no provenance
+  entry.
+- **Nothing regressed**: b2c9584's conservation floor and 0d9bcbd's no-hover
+  rule are untouched (no brightness term was added anywhere); 66d1bed's
+  per-body deformation is untouched and is what MAKES the shell fade legal;
+  836d373's particle match is what part A finally extends to the last layer.
+  The reveal laws hold — camera-pure, dark at arm (stricter), reverse-retract
+  (bit-exact). No camera change.
+
+## 11.8 Residuals
+
+- **The puff is now as quiet as the hero's, because it is the hero's.** Eleven
+  hero-sized spores off a 0.389-scale body: median sprite at the `MIN_PT` floor
+  with about three of the eleven at 5–6 px. That is what a rap on a small
+  fruiting body of this species does, and it is what "like the other one"
+  asks for. If Hannah wants the field to answer more visibly than the hero
+  does, the knob is the count floor in `burst()` (currently 10) — and it would
+  be a deliberate departure from parity, not a fix. Do not reach for the size.
+- **The species BATCH bodies still have no draw-on** — they brighten but do not
+  ink in, because a merged batch has no per-body draw state. They sit at 25–35
+  units where a stroke is under a pixel, and §8.7 accepted the asymmetry
+  already; it is more visible now only in the sense that the clones' entry is
+  more visible. If it ever reads, the fix is an `aReveal`-keyed draw term in
+  `world.js`'s `STRAND_VERT`, not a promotion to clones.
+- **The stem shell fades in before the cap exists** (prog 0.30…0.54, with the
+  cap starting at 0.574), so its buried top is briefly a small dark cap against
+  the haze. The hero solves this with a rising clip plane (`intro.js`
+  `_stemClip`); a clone would need one world plane per body, since clipping
+  planes are world-space and every body stands at its own place, scale and
+  lean. Strictly better than what it replaces (which stood there at full
+  opacity), a few pixels at these distances, and left as the one piece of
+  intro.js's shell choreography not carried across.

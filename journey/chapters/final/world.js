@@ -170,8 +170,9 @@ export function pullOf(camX) {
   return u < 0 ? 0 : u > 1 ? 1 : u;
 }
 /** The same map, UNCLAMPED. Negative while the camera is still below the
- *  surface pierce (x > −8), which is where the near bodies' entry draw wants
- *  to run — see clones.js DRAW_LEAD. */
+ *  surface pierce (x > −8). The clones' entry draw runs on THIS rather than on
+ *  the clamped value so the front can never be flattened by the clamp — see
+ *  clones.js DRAW_W. */
 export function pullRawOf(camX) { return (-camX - 8.0) / 6.0; }
 export const REVEAL_W = 0.16;   // smoothstep width used by every shader
 

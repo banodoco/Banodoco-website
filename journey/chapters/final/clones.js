@@ -91,14 +91,23 @@ import { VARY_GLSL, varyUniforms, IDENTITY } from './variation.js';
 // Mirror of organism.js §10b breeze() — chapter-owned copy (organism is
 // read-only and its instance is private to the closure). Same three modes
 // under the same ~48s gust swell; clones run it phase-shifted and damped.
-function breeze(t) {
+export function breeze(t) {
   const gust = 0.55 + 0.45 * Math.sin(t * 0.13 + 0.6);
   return gust * (0.62 * Math.sin(t * 1.20)
                + 0.26 * Math.sin(t * 1.83 + 1.3)
                + 0.07 * Math.sin(t * 2.60 + 2.7));
 }
 
-const smooth01 = (x) => { const c = Math.max(0, Math.min(1, x)); return c * c * (3 - 2 * c); };
+const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+const smooth01 = (x) => { const c = clamp01(x); return c * c * (3 - 2 * c); };
+
+/** intro.js `_shellFade`, for a clone's own shell materials. Solidity follows
+ *  the ink: `k` is how far this region's stroking has got. At k = 1 the state
+ *  is byte-identical to the shipped parked one (opaque, not transparent). */
+function shellFade(meshes, mats, k) {
+  for (const m of mats) { m.transparent = k < 1; m.opacity = k; }
+  for (const sh of meshes) sh.visible = k > 0;
+}
 
 /* ---- THE POKE, MECHANICAL HALF (organism/organism.js §10c) --------------
    Hannah: "why is the touch-interaction on the new mushrooms different to the
@@ -175,22 +184,48 @@ export function clearTap(st) { st.tx = 0; st.tz = 0; st.tvx = 0; st.tvz = 0; }
 
    THE LAW IT HAS TO OBEY (D16): nothing may fade in over open view; a draw-on
    tied to the camera-pure front is lawful, a time-based one is not. So the
-   draw parameter is a pure function of uPull exactly like the kindle — the
-   SAME front, one step earlier, so a body finishes drawing just as its ember
-   whisper starts to come up. Reverse scrubs therefore un-draw it, stroke by
-   stroke, back into the dark.
+   draw parameter is a pure function of uPull exactly like the kindle — and
+   since 2026-08-06 it is the same front at the same width, so a body inks
+   itself in AS it lights up (see DRAW_W). Reverse scrubs therefore un-draw it,
+   stroke by stroke, back into the dark.
 
    The window span below is the union of the hero's own stem+cap windows
    (intro.js WINDOWS: stemVerts opens at 0.296, overlayPts closes at 0.893) —
    the clone carries no ground layers, so driving uProg across the full 0..1
    would spend a third of the move on layers this body does not have. */
 const DRAW_LO = 0.296, DRAW_HI = 0.893;
-// How far AHEAD of a body's own kindle its drawing runs, and over how much of
-// uPull. Lead > REVEAL_W means the last stroke lands before the first ember,
-// so the shipped "unlit body in the dark" state is preserved exactly — the
-// body that was always there is now a body that INKED ITSELF IN and then was
-// always there.
-const DRAW_LEAD = 0.20, DRAW_W = 0.16;
+// THE DRAW RUNS ON THE KINDLE'S OWN FRONT — not ahead of it (Hannah,
+// 2026-08-06: "they have a different entry animation when they come in — they
+// kind of turn black... why can't we just make them one by one have the same
+// entry animation as the main one does, the hero of the page, so they kind of
+// pop up like that").
+//
+// This constant used to be DRAW_LEAD 0.20 against REVEAL_W 0.16 — the draw
+// ran a whole reveal-width AHEAD of the kindle, so that "the last stroke lands
+// before the first ember" and the shipped unlit-body-in-the-dark state
+// survived. That reasoning was sound about the state and wrong about the
+// ANIMATION, and the animation is what a visitor watches. What it produced was
+// a body that inked itself in at the 7% ember whisper — near-invisible ink —
+// then stood there fully drawn and unlit while its opaque shells came up, and
+// only THEN lit. Measured at p 0.885: fifteen of twenty-four bodies at once
+// with all four shells opaque and their own brightest layer at 3-8%, the worst
+// of them subtracting 66% of the light from its own footprint. A near-black
+// mushroom standing in the haze is precisely "they kind of turn black".
+//
+// The hero has no such phase, and cannot: on the landing page its strokes ink
+// in at FULL brightness with the tip ember riding the drawing front, and
+// intro.js fades each shell group in WHILE its own region is being stroked.
+// The hero's ink IS its light. So the draw is now the SAME front as the
+// kindle, at the same width — a body inks itself in as it lights up, one by
+// one along the arc, and there is no window in which it is drawn and dark.
+//
+// Everything the lead was protecting is still protected, and by construction:
+// at the arm uPull is 0 and every body's reveal is >= 0.45, so d = 0 and the
+// field is undrawn and unlit (dark at arm, STRICTER than before — a body can
+// no longer ink in ahead of its own light). The draw is still a pure function
+// of the camera-pure pullRaw, so a reverse scrub un-inks each body stroke by
+// stroke exactly as it inked (D16).
+const DRAW_W = 0.16;           // = world.js REVEAL_W: one front, one width
 
 // organism's own injectDraw(), re-expressed for a clone's plain overlay-net
 // material. The hero grafts uProg/uWin/pulse into the stock line shader at
@@ -247,26 +282,33 @@ function injectCloneDraw(mat, uProg, uWin, pulse, own, frame, vary) {
 // the dissolving soil slab (D16) and leave again on a reverse retract.
 const SHELL_ON = 0.02;
 
-// THE SECOND SHELL GATE, and the bug the entry draw walked straight into.
+// THE SECOND SHELL GATE — now the HERO'S OWN FADE, not a switch.
 //
 // SHELL_ON alone was sufficient while a body was always fully inked: dim the
-// strokes and you still had a dark body. With part B a body spends about a
-// fifth of uPull only PARTLY drawn — and its shells, which are opaque and
-// carry no draw state of their own, were standing there the whole time. A
-// mid-draw member read as a solid black mushroom cut out of the haze: the
-// exact silhouette SHELL_ON exists to prevent, arriving through the other
-// door. Caught on a scrub screenshot, not in review.
+// strokes and you still had a dark body. Once a body spends part of uPull only
+// PARTLY drawn, its shells — opaque, and carrying no draw state of their own —
+// stand there the whole time, and a mid-draw member reads as a solid black
+// mushroom cut out of the haze.
 //
-// organism/intro.js solves the same problem for the hero by FADING each shell
-// group in while its own region is being stroked (_shellFade: stem shells
-// over uProg 0.30..0.54, cap shells over 0.574..0.714). A clone SHARES the
-// hero's shell materials — sharing them outright is what buys a solid body
-// for free — so it cannot fade them; it can only switch its own copies on and
-// off. So it switches at the MIDPOINT of the hero's own fade, where the
-// region already carries ink: no shell ever appears over a blank region, and
-// no region is ever inked without its shell.
-const STEM_SHELL_AT = 0.42;   // = 0.30 + 0.24/2, intro.js's stem fade midpoint
-const CAP_SHELL_AT = 0.644;   // = 0.574 + 0.14/2, its cap fade midpoint
+// organism/intro.js solves exactly this for the hero by FADING each shell
+// group in while its own region is being stroked (_shellFade: stem shells over
+// uProg 0.30..0.54, cap shells over 0.574..0.714), so solidity follows the
+// ink. The first answer here could not do that: a clone SHARED the hero's
+// shell materials, so it could only switch its own copies on and off, and it
+// switched at the MIDPOINT of each of the hero's fades.
+//
+// THAT CONSTRAINT IS GONE, and has been since the variation round (66d1bed):
+// a deformed body needs its SOLID to move with its outline, so `cloneShellMat`
+// gives every body its own two shell materials (48 for the set). They are the
+// clone's to fade, and a hard switch on a material nobody else can see was the
+// last reason a field body's entry did not look like the hero's. So these are
+// intro.js's own windows now, read digit for digit off _shellFade, applied to
+// THIS body's own draw progress. A shell never appears over a blank region, no
+// region is ever inked without its shell, and — the part the switch could not
+// give — the solid arrives GRADUALLY, under accumulating light, exactly as it
+// does on the landing page.
+const STEM_SHELL_LO = 0.30, STEM_SHELL_HI = 0.54;   // intro.js _shellFade, stem
+const CAP_SHELL_LO = 0.574, CAP_SHELL_HI = 0.714;   // intro.js _shellFade, cap
 
 /* ---- PER-BODY VARIATION (variation.js, 2026-08-05) ----------------------
    Hannah, on the shipped field: "the mushrooms at the end seem too similar to
@@ -687,7 +729,7 @@ export function createClones(sceneApi) {
                  arc, reveal, boost, tw0, phase, amp, lum, vary }) {
     const mats = [];
     // two shell groups, because they arrive at two different moments of the
-    // draw (STEM_SHELL_AT / CAP_SHELL_AT). The split is free: cloneNode is
+    // draw (STEM_SHELL_LO..HI / CAP_SHELL_LO..HI). The split is free: cloneNode is
     // already called once per spine root.
     const stemShells = [];
     const capShells = [];
@@ -719,15 +761,30 @@ export function createClones(sceneApi) {
     capBendC.quaternion.identity();                   // strip the hero's live bend snapshot
     sway.add(stemC, capBendC);
     group.add(root);
+    // THE TWO SHELL MATERIAL SETS, and the test that says whether this body may
+    // fade them. Two things have to hold. (1) The materials must be OURS:
+    // without the variation graft cloneShellMat is never reached and the shells
+    // are the hero's own, shared outright — writing .opacity on one of those
+    // would reach into organism's graph, which is the one thing this file may
+    // never do. (2) The two groups must not share a material, or one region's
+    // fade would drive the other's. As built they cannot: organism §5's three
+    // cap shells share one MeshBasicMaterial on `mushroom` and the stem core
+    // has its own on `stemGroup`. Asserted rather than assumed, because a
+    // future organism that merged them would otherwise fade a body's cap with
+    // its stipe and nobody would know why.
+    const stemShellMats = [...new Set(stemShells.map(m => m.material))];
+    const capShellMats = [...new Set(capShells.map(m => m.material))];
+    const ownShells = varyOk && stemShellMats.length > 0 && capShellMats.length > 0
+      && !stemShellMats.some(m => capShellMats.includes(m));
     const c = {
       root, sway, capBend: capBendC, mats,
-      stemShells, capShells,
+      stemShells, capShells, stemShellMats, capShellMats, ownShells,
       shells: stemShells.concat(capShells),           // interact.js's narrow phase
       x, z, gy, s,
       arc, reveal, boost, tw0, phase, amp, lum: lum ?? 1,
       tx: 0, tz: 0, tvx: 0, tvz: 0,                   // tap ring-down (stepTap)
       uProg: own.uProg, prog: -1,                     // entry draw (part B)
-      v: -1, stemOn: true, capOn: true,
+      v: -1, ks: -1, kc: -1,
     };
     list.push(c);
     return c;
@@ -782,13 +839,14 @@ export function createClones(sceneApi) {
     const ct = uniforms.uCta.value, ctOn = uniforms.uCtaOn.value;
     for (const c of list) {
       // ---- part B: this body draws ITSELF on as the front reaches it ----
-      // Pure in the pose, and ahead of the kindle by DRAW_LEAD so the body is
-      // finished before its first ember. At d = 1 the uniform is parked at the
-      // hero's own 2 — which is BYTE-IDENTICAL to holding it at DRAW_HI (dp
-      // saturates at 1 either way, the tip term is switched off by the same
-      // step(), and the lid is inert at CLAMP_OFF), so the rest frame is the
-      // shipped rest frame.
-      const d = smooth01((pullRaw - (c.reveal - DRAW_LEAD)) / DRAW_W);
+      // Pure in the pose, and on the KINDLE'S OWN front at the kindle's own
+      // width (see DRAW_W) — the ink and the light arrive together, which is
+      // the hero's relation and the whole of the entry-parity fix. At d = 1 the
+      // uniform is parked at the hero's own 2 — which is BYTE-IDENTICAL to
+      // holding it at DRAW_HI (dp saturates at 1 either way, the tip term is
+      // switched off by the same step(), and the lid is inert at CLAMP_OFF),
+      // so the rest frame is the shipped rest frame.
+      const d = smooth01((pullRaw - c.reveal) / DRAW_W);
       let prog = c.uProg.value;
       if (d !== c.prog) {
         c.prog = d;
@@ -812,17 +870,30 @@ export function createClones(sceneApi) {
       }
       // BOTH shell gates, every frame (they answer to two different drivers —
       // the reveal AND the draw — and the reveal's own early-out above would
-      // otherwise strand the draw's half of the test)
+      // otherwise strand the draw's half of the test). SHELL_ON stays the outer
+      // gate: a body the reveal has retracted drops its shells outright rather
+      // than easing them, so a reverse scrub leaves nothing standing.
       const lit = v > SHELL_ON;
-      const stemOn = lit && prog >= STEM_SHELL_AT;
-      if (stemOn !== c.stemOn) {
-        c.stemOn = stemOn;
-        for (const sh of c.stemShells) sh.visible = stemOn;
+      // intro.js's own fade windows, on THIS body's draw. Falls back to the
+      // shipped midpoint switch when the shells are not ours to write (see
+      // ownShells in add()) — the same behaviour, never a half-applied one.
+      let ks, kc;
+      if (c.ownShells) {
+        ks = lit ? clamp01((prog - STEM_SHELL_LO) / (STEM_SHELL_HI - STEM_SHELL_LO)) : 0;
+        kc = lit ? clamp01((prog - CAP_SHELL_LO) / (CAP_SHELL_HI - CAP_SHELL_LO)) : 0;
+      } else {
+        ks = lit && prog >= (STEM_SHELL_LO + STEM_SHELL_HI) / 2 ? 1 : 0;
+        kc = lit && prog >= (CAP_SHELL_LO + CAP_SHELL_HI) / 2 ? 1 : 0;
       }
-      const capOn = lit && prog >= CAP_SHELL_AT;
-      if (capOn !== c.capOn) {
-        c.capOn = capOn;
-        for (const sh of c.capShells) sh.visible = capOn;
+      if (ks !== c.ks) {
+        c.ks = ks;
+        if (c.ownShells) shellFade(c.stemShells, c.stemShellMats, ks);
+        else for (const sh of c.stemShells) sh.visible = ks > 0;
+      }
+      if (kc !== c.kc) {
+        c.kc = kc;
+        if (c.ownShells) shellFade(c.capShells, c.capShellMats, kc);
+        else for (const sh of c.capShells) sh.visible = kc > 0;
       }
       // the two-pivot sway, phase-scattered so no two bodies nod together —
       // with the tap ring-down integrated ON TOP, exactly as organism §10c's
