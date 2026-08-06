@@ -166,6 +166,38 @@ export const COPY_SETTLE_LO = 0.012; // p/s below which the camera counts as set
 export const COPY_SETTLE_HI = 0.062; // p/s above which fade-in is fully held
 export const COPY_TRAVEL_LO = 0.030; // p/s at which visible copy starts releasing
 export const COPY_TRAVEL_HI = 0.090; // p/s at which it is fully released
+/* ------------------------------------------------------------------ */
+/* Copy entry on a NAV JUMP (Hannah, 2026-08-07)                       */
+/* ------------------------------------------------------------------ */
+// "When I jump between sections, the text for the new section INSTANTLY
+// appears, but we should have some nice intro animation and proper timing."
+//
+// The constants above choreograph copy against SCROLL SPEED, which is the
+// right instrument for a scrub and the wrong one for a jump: a jump snaps
+// progress in a single dt = 0 tick, so |dp/dt| never rises, `settled` reads 1,
+// and the destination's copy is simply written at full opacity on the frame
+// the visitor clicked — a full second before the camera gets there.
+//
+// A jump therefore gets its own envelope, and the thing it is timed against
+// is the CAMERA ARRIVAL, not the click. journey.js hands ui.js the live
+// duration of the cylindrical blend it just armed (0.85 s plus up to 0.35 s of
+// path length — see directJumpTo), and the copy is placed inside that window:
+//
+//     start = dur * COPY_JUMP_LEAD      the words wait out the first ~55% of
+//                                       the move, so they arrive into a frame
+//                                       that is already recognisably the
+//                                       destination rather than racing it
+//     end   = dur + COPY_JUMP_TAIL      and finish a beat AFTER the camera
+//                                       stops, so the last thing that settles
+//                                       on screen is the sentence
+//
+// The entry's own duration falls out of those two (dur * 0.45 + TAIL, i.e.
+// 0.53 s on the shortest hop and 0.69 s on the longest) — a longer flight
+// buys a longer settle for free, which is what keeps the pair feeling like
+// one movement at both extremes.
+export const COPY_JUMP_LEAD   = 0.55;  // fraction of the camera blend spent waiting
+export const COPY_JUMP_TAIL_S = 0.15;  // s after the camera lands that the copy finishes
+
 // Hotspot labels arrive AFTER the copy has re-anchored, one at a time, in the
 // chapter's narrative reveal order — never as a simultaneous pop.
 export const HOTSPOT_STAGGER_MS = 150;

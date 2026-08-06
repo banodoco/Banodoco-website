@@ -18,6 +18,7 @@ import {
   COPY_OUT_K, COPY_IN_K, COPY_SETTLE_LO, COPY_SETTLE_HI,
   COPY_TRAVEL_LO, COPY_TRAVEL_HI,
   HOTSPOT_STAGGER_MS, HOTSPOT_IN_K, HOTSPOT_OUT_K,
+  COPY_JUMP_LEAD, COPY_JUMP_TAIL_S,
 } from './constants.js';
 
 /* --------------------------------------------------------------------------
@@ -98,6 +99,7 @@ function el(tag, cls, text) {
 }
 
 function smoothA(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); }
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /* --------------------------------------------------------------------------
    LABEL POLICY (hotspot registration contract, W4-F)
@@ -324,6 +326,16 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
      anything that re-opens cancels it. Long enough to cross 12px, short
      enough not to feel sticky. */
   const POP_HIDE_MS = 160;
+  /* The popover's entry (journey/site.css, POPOVER ENTRY) runs while
+     `.j-pop-enter` is set, and no longer. Scoping it to a class rather than to
+     `.open` is not decoration: the unfurl's direction is selected by
+     `data-side`, and placePop() re-decides that side every frame from live
+     geometry. Left on `.open`, a chip drifting across the flip threshold with
+     its popover pinned would swap animation-name on a finished animation and
+     replay the whole wipe, at rest, for no reason the visitor can see. The
+     class is dropped once the entry is spent, after which a side change is
+     inert. Covers the slowest part (the 0.62 s filament) with a little air. */
+  const POP_ENTER_MS = 700;
 
   const pop = el('aside', 'j-pop');
   const popTitle = el('strong', 'j-pop-t');
@@ -419,10 +431,40 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     pop.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
   }
 
+  let popEnterTimer = null;
+
+  /** Start (or restart) the entry choreography. Called only on a FRESH reveal
+   *  — a pointer that leaves a chip and comes back inside POP_HIDE_MS, or a
+   *  syncPop that re-asserts an already-open popover, must not re-play it. */
+  function runPopEntry() {
+    if (popEnterTimer) clearTimeout(popEnterTimer);
+    if (pop.classList.contains('j-pop-enter')) {
+      // chip-to-chip hop inside the entry window: the keyframes only restart
+      // if the class is genuinely absent for a style resolution, so force one
+      pop.classList.remove('j-pop-enter');
+      void pop.offsetWidth;
+    }
+    pop.classList.add('j-pop-enter');
+    popEnterTimer = setTimeout(() => {
+      popEnterTimer = null;
+      pop.classList.remove('j-pop-enter');
+    }, POP_ENTER_MS);
+  }
+
+  function stopPopEntry() {
+    if (popEnterTimer) { clearTimeout(popEnterTimer); popEnterTimer = null; }
+    pop.classList.remove('j-pop-enter');
+  }
+
   /** Point the popover at a hotspot and show it. */
   function showPop(h) {
     const d = h.preview;
     if (!d) return;
+    // A reveal is fresh when the popover is landing on a node it was not
+    // already showing, or when it was shut. Hover, keyboard focus and the
+    // touch arm all arrive here through the same `hot` state, so all three
+    // get the identical entry with nothing said about pointer type.
+    const fresh = popNode !== h || !pop.classList.contains('open');
     if (popNode !== h) {
       popTitle.textContent = d.title;
       popShort.textContent = d.short;
@@ -445,11 +487,16 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     // a transient popover's link is reachable by pointer but stays out of the
     // tab order — Tab belongs to the chips until the visitor commits
     popLink.tabIndex = popPinned ? 0 : -1;
+    // Place BEFORE arming the entry: the unfurl's direction comes from
+    // `data-side`, so the side has to be decided while the animation is still
+    // absent, or the first frame wipes the wrong way and corrects itself.
     placePop();
+    if (fresh) runPopEntry();
   }
 
   function hidePop() {
     cancelPopHide();
+    stopPopEntry();
     pop.classList.remove('open');
     popLink.tabIndex = -1;
     if (popNode) popNode.btn.removeAttribute('aria-describedby');
@@ -1084,6 +1131,98 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   let lastP = null;
   let pSpeed = 0;             // smoothed |dp/dt|, p per second
 
+  /* ---------------- the nav-jump copy entry (Hannah, 2026-08-07) ----------
+     A jump is invisible to everything above it. journey.js snaps progress in
+     one dt = 0 tick, so |dp/dt| never rises, `settled` reads 1, and the loop
+     below writes the destination's copy at full opacity on the click frame —
+     a whole second before the camera finishes arriving. That is the pop.
+
+     The fix is NOT a second opacity channel laid over the first. Two writers
+     on one style is exactly how a jump ends up leaving a block half-faded by
+     the scroll rule, so the envelope below drives `eased` ITSELF and is
+     defined to finish at the same value the scroll rule was heading for. When
+     it lets go, `eased[id] === target` already, so the scroll rule resumes on
+     the next frame with nothing to correct and nothing to re-animate.
+
+     `easedPrev` is what makes the OUTGOING copy behave too. placeAt() runs a
+     dt = 0 frame before journey.js can tell us anything, and dt = 0 means
+     "snap" — correctly, for a deep link or a capture. arm() undoes that one
+     snap by restoring the last TRAVELLED frame's values, which leaves the
+     chapter we are leaving at the opacity it actually had. It then releases on
+     the ordinary COPY_OUT_K rule (~0.15 s), the same release a scrub gives it.
+
+     See COPY_JUMP_LEAD / COPY_JUMP_TAIL_S for the timing model. */
+  const easedPrev = { ...eased };
+  let arrive = null;   // { id, t, lead, dur, own }
+
+  /** The one place a copy block's eased opacity reaches the DOM. */
+  function paintCopy(id, s) {
+    if (id === 'mission') {
+      if (!heroBlock) return;
+      heroBlock.style.opacity = s;
+      heroBlock.style.pointerEvents = s > 0.5 ? '' : 'none';
+      // pointer-events already left; visibility is the same statement for the
+      // keyboard and for AT (the hero CTA was focusable and readable at every
+      // chapter). '' at the Mission pose = the untouched hero.
+      heroBlock.style.visibility = s > 0.002 ? '' : 'hidden';
+    } else if (blocks[id]) {
+      blocks[id].style.opacity = s;
+      blocks[id].style.visibility = s > 0.002 ? 'visible' : 'hidden';
+    }
+  }
+
+  /** Copy entry for a chapter the camera is currently blending onto.
+   *  `blendDur` is journey.js's live camera-blend duration in seconds — the
+   *  entry is placed inside it, not alongside it. */
+  function armCopyEntry(id, blendDur) {
+    if (!(id in eased)) return;
+    for (const k in easedPrev) eased[k] = easedPrev[k];   // undo placeAt's snap
+    eased[id] = 0;
+    // …and undo it on screen too, in this same task. placeAt() has ALREADY
+    // painted the destination at full opacity by the time journey.js can call
+    // us, so leaving the correction to the next animator frame ships one
+    // rendered frame of exactly the pop this exists to remove. Measured: a
+    // 16 ms flash of the whole block at opacity 1 before the envelope took it
+    // back to 0.
+    for (const k in eased) paintCopy(k, eased[k]);
+    const lead = blendDur * COPY_JUMP_LEAD;
+    const dur = blendDur + COPY_JUMP_TAIL_S - lead;
+    endArrive();                                   // a jump can overtake a jump
+    arrive = { id, t: 0, lead, dur, own: true };
+    const b = blocks[id];
+    if (b) {
+      // The parts inside the block run on the CSS clock, started here so they
+      // share an origin with the envelope instead of chasing it a frame later.
+      // Both delays and durations are expressed against these two customs, so
+      // a longer flight stretches the whole choreography rather than opening a
+      // gap at the end of it.
+      b.style.setProperty('--j-in-wait', `${Math.round(lead * 1000)}ms`);
+      b.style.setProperty('--j-in', `${Math.round(dur * 1000)}ms`);
+      // restart even when the same block is re-armed mid-entry
+      b.classList.remove('j-arrive');
+      void b.offsetWidth;
+      b.classList.add('j-arrive');
+    }
+  }
+
+  /** The visitor took the wheel: journey.js has dropped the camera blend, so
+   *  the copy stops being timed against an arrival that is no longer coming.
+   *  Only the OPACITY authority is handed back — the block's inner keyframes
+   *  are left to finish, because every one of them ends at its resting style
+   *  and cutting them short is the only way to make them visible as a cut. */
+  function cancelCopyEntry() { if (arrive) arrive.own = false; }
+
+  /** The entry is over — spent, abandoned, or overtaken. Drops the class as
+   *  well as the state: `both` fill means a stale `.j-arrive` would leave
+   *  three elements holding a finished animation for the rest of the session.
+   *  Harmless to look at (every keyframe ends at the resting style, which is
+   *  the whole contract) and still wrong to leave lying around. */
+  function endArrive() {
+    if (!arrive) return;
+    if (blocks[arrive.id]) blocks[arrive.id].classList.remove('j-arrive');
+    arrive = null;
+  }
+
   function update(p, chapterId, camera, dt = 0) {
     // one-shot, on the first frame the chapter modules are reachable
     if (policyPending) resolveLabelPolicies();
@@ -1126,27 +1265,39 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     const travelHold = 1 - smoothA((pSpeed - COPY_TRAVEL_LO) / (COPY_TRAVEL_HI - COPY_TRAVEL_LO));
     const settled = 1 - smoothA((pSpeed - COPY_SETTLE_LO) / (COPY_SETTLE_HI - COPY_SETTLE_LO));
 
+    // Advance the jump entry before the loop reads it. It dies on a placement
+    // frame (a capture or deep link must still snap), and when the visitor has
+    // scrolled somewhere else entirely — the arrival it was timed against is
+    // then over in both cases.
+    if (arrive) {
+      if (dt === 0 || (chapterId !== arrive.id && arrive.own)) endArrive();
+      else {
+        arrive.t += dt;
+        if (arrive.t >= arrive.lead + arrive.dur) endArrive();
+      }
+    }
+    // The camera blend runs on smootherstep (journey.js); the copy uses the
+    // same C2 ease so the two read as one movement rather than two.
+    let arriveE = 0;
+    if (arrive && arrive.own) {
+      const f = clamp01((arrive.t - arrive.lead) / arrive.dur);
+      arriveE = f * f * f * (f * (f * 6 - 15) + 10);
+    }
+
     for (const id in eased) {
       const target = bandOpacity(p, COPY_BANDS[id]) * travelHold;
       let s = eased[id];
-      if (dt === 0) s = target;
+      if (arrive && arrive.own && id === arrive.id) s = target * arriveE;
+      else if (dt === 0) s = target;
       else if (target < s) s += (target - s) * Math.min(1, dt * COPY_OUT_K);
       else s += (target - s) * Math.min(1, dt * COPY_IN_K * settled);
       if (s < 0.001 && target === 0) s = 0;
       eased[id] = s;
-      if (id === 'mission') {
-        if (heroBlock) {
-          heroBlock.style.opacity = s;
-          heroBlock.style.pointerEvents = s > 0.5 ? '' : 'none';
-          // pointer-events already left; visibility is the same statement for
-          // the keyboard and for AT (the hero CTA was focusable and readable at
-          // every chapter). '' at the Mission pose = the untouched hero.
-          heroBlock.style.visibility = s > 0.002 ? '' : 'hidden';
-        }
-      } else if (blocks[id]) {
-        blocks[id].style.opacity = s;
-        blocks[id].style.visibility = s > 0.002 ? 'visible' : 'hidden';
-      }
+      // The snapshot the next arm() restores from is the last frame that
+      // actually TRAVELLED — a dt = 0 placement must not overwrite it, since
+      // undoing that very snap is the whole point of keeping it.
+      if (dt > 0) easedPrev[id] = s;
+      paintCopy(id, s);
     }
 
     // hotspots: they belong to the RESTING composition, so they follow the
@@ -1343,6 +1494,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
 
   return {
     update, addHotspot, addHoverZone, openCard, closeCard, footer,
+    armCopyEntry, cancelCopyEntry,
+    /** QA: the chapter whose copy is mid-entry, or null. */
+    get arrivingChapter() { return arrive ? arrive.id : null; },
     get cardOpen() { return cardIsOpen; },
     /** QA: is the card currently in its bottom-sheet form? */
     get cardIsSheet() { return card.classList.contains('sheet'); },
