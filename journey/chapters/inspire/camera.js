@@ -64,7 +64,54 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // leg still only has to climb 0.9 to meet Connect at y 2.90 instead of 1.9.
 // r 11 (from 9.1) and fov 40 (from 38) hold the widened cluster inside the
 // frame without reaching the chapter's own fog (FOG_FAR 20).
-export const INSPIRE = { az: 115 * DEG, r: 11, y: 2, target: V(2.633, 3.244, -0.566), fov: 40 };
+//
+// D19 (Hannah, 2026-08-06): "the cap of the mushroom should be just above the
+// text ... the head should be in the middle of that space vertically, and
+// horizontally aligned with the text. Right now it's a little bit off to the
+// right, and it's too far down." Measured at the rest, 1440x900: the cap
+// silhouette's centre sat at (815.7, 474.0) against a copy block whose top
+// edge is 608.5 and whose centre is 720 — i.e. +95.7 px right and +169.8 px
+// below the midpoint of the gap over the copy. Her read was exact.
+//
+// THE EYE DOES NOT MOVE. az, r and y are untouched; only `target` changes.
+// That is not economy for its own sake, it is what makes this reframe cheap
+// in every direction that matters:
+//
+//   · The reveal drive and the arming threshold are functions of camera
+//     AZIMUTH alone (index.js camAzDeg reads position.x/z). Holding az 115 —
+//     and holding r, which is the only other input to x/z — leaves az(p)
+//     bit-identical over the whole leg, so the ARR ramps, the drive() bounds
+//     and the 34-deg arming gate see exactly the run they were keyed to and
+//     the particle-continuity troughs closed in b2c9584 cannot re-open.
+//   · The lip-spread / braid-overlap balance that chose az 115 in the first
+//     place is a property of the azimuth, so it survives verbatim.
+//   · y 2.0 keeps the eye below every release lip, which is what makes the
+//     sources read (see THE EYE DROPS above). Panning is the one move that
+//     re-composes without spending that.
+//
+// WHY NOT WIDEN INSTEAD. Lifting the cap 170 px costs 7.5 deg of pitch, and
+// the alternatives to spending it on the gaze were all measured: dollying
+// back or opening the fov to hold more sky pushes the subject distance and
+// fov past Connect's settled first key (8.79 / 48), which turns the exit leg
+// from a widening into a push-IN — the exact regression the 2026-08-04 re-key
+// removed. Dropping the eye to y 0.4 keeps the horizon low on paper (639 vs
+// the shipped 633) but is worse on screen, not better: near ground is bright
+// ground, and it lays a lit band straight through the headline (measured mean
+// luminance of the lower band, x outside the copy column: shipped 21.1,
+// eye-drop 29.6, this pose 24.6).
+//
+// WHAT IT COSTS. Aiming 7.5 deg lower brings more of the root plane into the
+// bottom of the frame — the horizon runs from 633 to 463. That is the trade,
+// and it is the smallest of the three on offer. The braids are barely touched:
+// luminance-weighted centroid separation 214 px -> 206 px, and 2.8% of
+// ArtCompute's light (0% of Arca's, 0.2% of 2RP's) passes off the top edge.
+// All three release lips stay in frame with their facing unchanged at
+// 1.00 / 0.21 / 0.19.
+//
+// The target is the exact solve, not a hand-nudge: a 2x2 Newton on the gaze's
+// (right, up) offsets against the projected cap silhouette's bbox centre,
+// converged to 0.0 px horizontal / 0.1 px vertical at 1440x900.
+export const INSPIRE = { az: 115 * DEG, r: 11, y: 2, target: V(2.3349, 2.0903, -1.1016), fov: 40 };
 
 // The gaze's mid-swing waypoint (was the old "early pin" target): the cap,
 // biased a touch toward the stream side so the visible plume never leaves
@@ -177,9 +224,31 @@ export const CAMERA = {
   // full stop before it turns, which is the only place a reversal can sit
   // without reading as a whip. Everything after the rest is monotone: az
   // 115 -> 103 -> 81 -> 68.8 -> 61.8 straight through the Connect rest.
+  // D19 RE-SOLVE. Only the rest's GAZE moved, but a keyed spline does not care
+  // why an endpoint moved: leaving these two on the old targets would have put
+  // an 0.87-high upward flick into the first 0.05 of the exit, since the rest
+  // now aims at y 2.09 and the old drift key aimed at 2.957. So both are
+  // re-derived from the same rule that generated them, with the new endpoint:
+  //
+  //   s      = smoothstep((p - 0.26) / 0.15)   — 0 at the rest, 1 at Connect's
+  //            first key (p 0.410), which is settled (f9e8317) and untouched
+  //   tgt    = lerp(INSPIRE.target, connect-key1.target, s)
+  //   az/y/fov = lerp(rest, connect-key1, s)   — UNCHANGED, because the rest's
+  //            az/y/fov are unchanged: 102.18 / 2.2495 / 42.22 and
+  //            79.94 / 2.6825 / 46.07, the shipped values to the digit
+  //   r      = solved from the aimed target so camera-to-subject DISTANCE
+  //            grows monotonically, never the radius (a shrinking radius here
+  //            is a WIDER framing — the gaze is walking down the stem at the
+  //            same time)
+  //
+  // The distance ladder rebases on the new rest and keeps its shape:
+  // 8.42 -> 8.55 -> 8.69 -> 8.79, linear in the leg fraction with the same
+  // +0.018 lift on the third key the shipped ladder carried to offset the
+  // Hermite's bow. It starts 0.07 SHORTER than before (8.42 vs 8.49), so the
+  // widening into Connect is slightly longer than it was, never shorter.
   keys: [
-    { t: 0.5,                pos: V(9.9694, 2.0000, -4.6488), tgt: V(2.633, 3.244, -0.566), fov: 40,    hold: true, note: 'inspire-rest' },   // p 0.260  az 115.0  d 8.49
-    { t: 0.7166666666666667, pos: V(10.6540, 2.2490, -2.3000), tgt: V(2.219, 2.957, -0.842), fov: 42.22, note: 'inspire-rest-drift' },        // p 0.312  az 102.2  d 8.59
-    { t: 0.9249999999999999, pos: V(9.6610, 2.6830, 1.7150), tgt: V(1.501, 2.460, -1.322), fov: 46.07 },                                      // p 0.362  az  79.9  d 8.71
+    { t: 0.5,                pos: V(9.9694, 2.0000, -4.6488), tgt: V(2.3349, 2.0903, -1.1016), fov: 40,    hold: true, note: 'inspire-rest' },  // p 0.260  az 115.0  d 8.42
+    { t: 0.7166666666666667, pos: V(10.4866, 2.2495, -2.2641), tgt: V(2.0037, 2.1235, -1.2295), fov: 42.22, note: 'inspire-rest-drift' },       // p 0.312  az 102.2  d 8.55
+    { t: 0.9249999999999999, pos: V(9.5128, 2.6825, 1.6920), tgt: V(1.4289, 2.1811, -1.4515), fov: 46.07 },                                     // p 0.362  az  79.9  d 8.69
   ],
 };

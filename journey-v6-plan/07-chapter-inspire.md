@@ -728,3 +728,201 @@ identified; it is recorded, not resolved.
 - Frame time deliberately not reported: the only pane available was
   backgrounded and rAF-throttled, and a manufactured figure would be worse than
   none.
+
+---
+
+## 2026-08-06 (D19) — the cap over the copy: a re-aim, not a re-pose
+
+Hannah, looking at the Inspire rest: *"the cap of the mushroom should be just
+above the text ... see the space between the Inspire text and the top: the head
+of the mushroom should be in the middle of that space vertically. And
+horizontally it should be aligned with the text. Right now it's a little bit
+off to the right, and it's too far down."*
+
+Her read was exact. Measured at 1440x900, the copy block (`pos-bottom`, so its
+centre **is** the viewport centre — confirmed from the live rect, not from the
+CSS) has its top edge at y 608.5 and its centre at x 720. The midpoint of the
+gap above it is therefore y 304.2. The cap silhouette's centre sat at
+**(815.7, 474.0)**: **+95.7 px right, +169.8 px low**.
+
+"Cap centre" here means the centre of the projected bounding box of the cap
+surface — 4,680 samples of `capTopPt` and `capUnderPt` over a 180 x 13 grid,
+through the live mushroom matrix and the live camera. It is reproducible and it
+is what a viewer calls the head.
+
+### The pose
+
+```js
+export const INSPIRE = { az: 115 * DEG, r: 11, y: 2, target: V(2.3349, 2.0903, -1.1016), fov: 40 };
+```
+
+**Only `target` changed.** `az`, `r`, `y` and `fov` are the shipped values to
+the digit — the eye does not move, it only looks somewhere else. The target is
+a solve, not a nudge: a 2x2 Newton on the gaze's (view-right, world-up)
+offsets against the measured cap-centre error, converged in 12 iterations.
+
+That choice is the whole point of this entry, because it is what makes the
+change cheap in the one direction that was dangerous:
+
+> **The reveal drive and the arming gate are functions of camera AZIMUTH
+> alone.** `index.js camAzDeg()` reads `position.x` and `position.z`. Holding
+> `az` — and `r`, the only other input to those two — leaves `az(p)` unchanged
+> over the entire leg, so the `ARR` ramps, the `drive()` bounds and the 34-deg
+> arming threshold see exactly the run they were keyed to. The particle
+> continuity closed in `b2c9584` cannot re-open, because nothing it depends on
+> has been touched.
+
+That is not an argument, it is measured — see the trough table below.
+
+### What was rejected, and why
+
+Lifting the cap 170 px costs 7.5 deg of pitch. Three ways to spend it were
+measured on the real projection, not reasoned about:
+
+| approach | horizon | ground band mean lum | braid centroid sep | ArtCompute light lost off top | Connect join |
+|---|---|---|---|---|---|
+| shipped (cap at 474) | 633 | 21.1 | 214 px | 0% | — |
+| **re-aim (shipped eye, this pose)** | **463** | **24.6** | **206 px** | **2.8%** | **intact** |
+| widen (fov 48, r 11) | — | — | 164 px | — | scale 0.2668 vs Connect 0.2556 — leg becomes a hold |
+| dolly back (fov 45, r 12.5) | — | — | 151 px | — | **push-IN**, scale 0.2437 < 0.2556 |
+| drop the eye (y 0.4, fov 36) | 639 | **29.6** | 213 px | 11% | intact |
+
+The dolly-back row is the one that matters most: Connect's first key is settled
+(`f9e8317`) at subject distance 8.79 / fov 48, and the framing scale it implies
+is `1/(d·tan(fov/2))` = 0.2556. Any Inspire rest wider than that turns the exit
+leg from a widening into the re-approach the 2026-08-04 re-key removed.
+
+The eye-drop row is the interesting failure. On paper it is the best answer —
+it keeps the horizon *lower* than the shipped frame (639 vs 633) while hitting
+the composition. On screen it is the worst: **near ground is bright ground**,
+and it lays a lit band straight through the headline. Measured mean luminance
+of the lower band (rows 600–900, x outside the copy column): shipped 21.1,
+eye-drop **29.6**, the re-aim 24.6. The horizon's screen position is simply the
+wrong proxy for "how much ground is in the frame"; luminance is the right one.
+Recorded because it cost an hour and would cost it again.
+
+### Composition, measured
+
+| viewport | copy top | gap midpoint | cap centre | dx | dy |
+|---|---|---|---|---|---|
+| 1440x900 | 608.5 | (720.0, 304.2) | (720.0, 304.3) | **+0.0** | **+0.1** |
+| 1280x800 | 522.0 | (640.0, 261.0) | (640.0, 270.5) | **+0.0** | **+9.5** |
+| 375x812 (portrait) | 458.2 | (187.5, 229.1) | (187.1, 252.2) | **-0.4** | **+23.1** |
+| 430x932 (portrait) | 628.3 | (215.0, 314.1) | (214.5, 289.4) | **-0.5** | **-24.7** |
+
+**Tolerance: ±10 px horizontal, ±25 px vertical.** The horizontal axis can be
+held exactly and is, at every size, because `pos-bottom` centres the copy on
+the viewport centre and one gaze yaw satisfies all of them at once — so the
+tolerance there is really only the solver's own convergence, and 10 px is
+generous. The vertical axis cannot: the gap's midpoint is **not** a fixed
+fraction of the frame, because the copy block's height in the frame depends on
+how its prose wraps. Its top sits at 0.676 of the frame at 1440x900 and 0.653
+at 1280x800; in portrait the spread is much wider, 0.564 at 375x812 against
+0.674 at 430x932. One camera cannot hit two different fractions. 25 px is ~2.8%
+of a 900-tall frame and roughly a third of the cap's own height — below the
+threshold at which the cap stops reading as "centred in that space", which is
+the actual requirement.
+
+Landscape is fitted to 1440x900, the primary review size, leaving 1280x800 at
++9.5. Portrait is **balanced** rather than fitted (`portrait.js`, key p 0.260,
+`tgtUp` 0 -> **-1.378**, `tgtRight` 0.30 -> **0.258**): fitting 375x812 exactly
+put 430x932 at -44.8, so the value splits the residual to ±23.8 and takes the
+smallest worst case a single pose allows.
+
+### The exit keys had to move too
+
+Only the rest's gaze moved, but a keyed spline does not care why an endpoint
+moved. Leaving the two exit keys on their old targets would have put an 0.87-
+high **upward flick** into the first 0.05 of the exit — the rest now aims at
+y 2.09 and the old drift key aimed at 2.957. Both are re-derived from the rule
+that generated them, read back off the shipped numbers rather than guessed:
+
+```
+s        = smoothstep((p - 0.26) / 0.15)      0 at the rest, 1 at Connect's first key (p 0.410)
+tgt      = lerp(INSPIRE.target, connectKey1.target, s)
+az/y/fov = lerp(rest, connectKey1, s)         UNCHANGED — the rest's az/y/fov are unchanged
+r        = solved from the aimed target so camera-to-subject DISTANCE grows monotonically
+```
+
+Distance ladder rebased: **8.42 -> 8.55 -> 8.69 -> 8.79**, against the shipped
+8.49 -> 8.59 -> 8.71 -> 8.79. It starts 0.07 *shorter*, so the widening into
+Connect is slightly longer than it was, never shorter. `az`, `y` and `fov` at
+both keys come out at the shipped values to the digit (102.18 / 2.2495 / 42.22
+and 79.94 / 2.6825 / 46.07), which is the arithmetic confirming the decode.
+
+### Gates
+
+**Boundary troughs — identical, not merely no worse.** Same instrument, same
+201-sample sweeps, tree stashed and un-stashed between runs:
+
+| | before | after |
+|---|---|---|
+| Mission → Inspire trough (total shed light) | −0.19% | **−0.19%** |
+| … dots above 0.60 luminance | −0.45% | **−0.45%** |
+| Inspire → Connect trough | −8.72% | **−8.72%** |
+| … dots above 0.60 luminance | −16.95% | **−16.95%** |
+
+(These are this session's own reference — minimum against the straight line
+between the window endpoints — not the same statistic as the 2026-08-06
+−4.0% / −11.7% pair, which used a different reference. The point is the
+before/after column, measured like for like.)
+
+Why they are identical, confirmed rather than assumed: **max |azimuth
+before−after| over p 0..0.52 is 0.0427 deg**, and that residual is entirely the
+Hermite interpolating between the re-solved radii *between* keys — at every key
+and at the rest it is exactly 0. Max |total luminance difference| across the
+whole ride is 0.053 out of ~2,900 (0.002%), and the hot60 count differs by
+**0 dots at every one of the 105 samples**.
+
+- **Three streams still read.** Plume-axis minimum pair separation 196 -> 199.5
+  px (it went *up*: the new gaze changes the projection slightly). Luminance-
+  weighted braid centroid separation 214 -> 206 px. Light leaving the frame:
+  ArtCompute 2.8%, Arca 0.0%, 2RP 0.2%. All three release lips still in frame
+  with facing **1.00 / 0.21 / 0.19 — unchanged to the digit**, which is free:
+  facing depends only on where the eye is, and the eye did not move. Checked on
+  the pixels too, at 2.6x exposure against the old golden: same lobes, same
+  density, same sources. Column-luminance profiles at matched heights above the
+  cap top (40/80/120/160 px) give the same peak counts and the same valley
+  depths. What is gone is the ~85 px of sky above the shed that used to sit at
+  offsets 200–240; that band is now off the top edge.
+- **No self-ignition.** All four reveal channels are exactly 1 at the rest, and
+  no channel rises after it has fallen at any point in p 0..0.52. Forward vs
+  reverse over the full ride, 201 samples: **max |luminance difference| = 0**.
+- **Rate audit.** Peak rotation rate across Mission→Inspire→Connect, 201-sample
+  drift-aware scrub: **765.4 deg per unit p** landscape (818.7 before — the
+  reframe made it *slower*), 761.0 with the portrait field, 684.1 at 375x812.
+  All well under the ~1.2k ceiling. **Max roll 0.00000 deg** in all three.
+- **One continuous arc.** `arrival()`, `PIN`, `ARRIVAL_DEAD` and the trapezoid
+  eases are untouched; only the bezier's endpoint moved. The cap tracks
+  smoothly across the whole gesture — (1025, 350) at p 0 to (720, 304) at the
+  rest, with no jump at the p 0.26 seam (the rate peak sits at p 0.221, inside
+  the swing). p 0.00 and p 0.04 are identical: the dead-band passthrough holds.
+- **Connect join.** Perceptual widening measured as the cap's projected width
+  over p 0.26..0.49: 541.2 -> 491.0 px (9.3%), against 544.8 -> 491.0 (9.9%)
+  before. Both bow the same way — the Hermite residual already documented on
+  2026-08-04 — and the new keys bow **less**: largest single re-approach step
+  3.2 px before, **2.0 px** after.
+- **Console clean** over a full ride 0 -> 1 -> 0: the two expected
+  `[journey-lens]` / `[journey-v6]` info lines, **zero** warnings or errors.
+- **Labels.** All three chips still land on their braids and clear the copy at
+  1440x900: ArtCompute x 547..677 y 110..133, Arca Gidan Prize x 330..498
+  y 183..206, 2RP x 894..956 y 224..247. No chip-to-chip collision, 52 px of
+  clearance under the nav row, and each chip holds the same offset from its
+  braid's centroid it had before (the whole composition moved together).
+- **`capture.py --check` PASS.** `mission` **0.00 / 0.00 — byte-identical, not
+  in the changed set on disk**, connect 0.00 / 0.00, owned 0.00 / 0.00, final
+  0.18 / 0.13 (its own unchanged determinism noise). Only the `inspire` pair
+  moved — legitimately, and it is re-shot in this commit via
+  `python3 tools/capture.py --pose inspire` with `manifest.json` updated.
+
+### What was traded
+
+One thing, and it is the ground. Aiming 7.5 deg lower brings more of the root
+plane into the bottom of the frame: the horizon runs from 633 to 463, and the
+lower band's mean luminance from 21.1 to 24.6 (+17%). Inspire's frame is a sky
+frame and Connect's is the ground panorama, so this spends a little of
+Connect's arrival. It is the **smallest** of the three available trades — the
+alternatives cost either the Connect join outright or 40% more ground light —
+but it is a real cost and Hannah should see it rather than read about it. If
+she wants it back, the lever is the copy block: `bottom: 8vh` is what sets the
+gap, and raising the copy raises the midpoint the cap is pinned to.
