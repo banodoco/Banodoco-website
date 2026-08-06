@@ -246,9 +246,81 @@ export const CAMERA = {
   // +0.018 lift on the third key the shipped ladder carried to offset the
   // Hermite's bow. It starts 0.07 SHORTER than before (8.42 vs 8.49), so the
   // widening into Connect is slightly longer than it was, never shorter.
+  //
+  // ------------------------------------------------------------------
+  // D20 RE-KEY (2026-08-06, Hannah: "the camera motion from the inspire
+  // section to the connect one ... feels like a rotate and then jump back,
+  // but it should be one smooth rotation").
+  // ------------------------------------------------------------------
+  // The reversal was real and it was NOT in either angle channel. Gaze yaw
+  // and gaze pitch were both already monotone across the whole leg (zero
+  // derivative sign flips, measured) — which is why every angle-only audit
+  // before this one passed. It was in the COMPOSED frame:
+  //
+  //   d = gazeYaw - camAz + 180
+  //
+  // is the horizontal angle between the aim and the mushroom, i.e. where the
+  // subject actually sits across the frame. The orbit azimuth falls
+  // 115 -> 68.8 while the gaze yaw falls -65 -> -124, and over p 0.372-0.394
+  // the two fell at the SAME rate: d froze at -11.44 deg (advancing 0.7 deg
+  // per unit p, against 138 just before and 173 just after). A frozen angle
+  // inside a still-widening fov is a subject sliding BACK toward centre — so
+  // the mushroom stopped, drifted right and sank, and then swept left again.
+  // Measured on the projected cap silhouette at 1440x900: screen-x velocity
+  // -2982 px/unit-p (p 0.334) -> +94 RIGHTWARD (p 0.384) -> -3204 (p 0.432).
+  // Every other rate had the same crest-dip-crest through the same window:
+  // pitch -56.4 -> -14.4 -> -99.5, fov +86 -> +24 -> +266, orbit azimuth
+  // -504 -> -50, position speed 92 -> 9 u/p. The aim had overswung relative
+  // to the orbit and was unwinding — the same fault 2a27db7 cured on the
+  // Connect->Owned leg, in the one coordinate that hides it from an
+  // angle-only trace.
+  //
+  // Its origin is arithmetic, not intent: the D19 rule above lerps the two
+  // exit keys from the rest toward Connect's first key on a SMOOTHSTEP, and
+  // smoothstep flattens to zero slope at BOTH ends — so d, fov and pitch all
+  // came to a halt approaching p 0.410 exactly where Connect's own keys
+  // resume at full rate. (Before D19 the same rule was harmless: the rest
+  // aimed 0.87 higher, so the halt sat where the leg was slow anyway.)
+  //
+  // THE RE-KEY: gaze + fov only, on ONE shared ease. The two keys are
+  // re-derived from what the eye reads rather than from the world target —
+  // where the mushroom sits in the frame, and how wide the frame is:
+  //
+  //   x   = (p - 0.26) / 0.15        0 at the rest, 1 at Connect's key 1
+  //   s   = x^1.5                    zero slope at the rest (the `hold`),
+  //                                  1.5x mean slope at the join, which is
+  //                                  what meets Connect's own -179 deg/p
+  //   dx  = lerp(-0.079, -12.324, s) horizontal angle of the cap off the
+  //                                  frame axis (both ends are FIXED: the
+  //                                  approved rest, and settled Connect k1)
+  //   dy  = lerp( 5.354,   6.085, s) the same, vertically
+  //   fov = lerp(40, 48, s)
+  //   tgt = pos + dir(dx, dy) * d    d = the shipped ladder, 8.55 / 8.69,
+  //                                  kept to the digit
+  //
+  // POSITIONS ARE BIT-EXACT SHIPPED, deliberately and not incidentally: the
+  // Inspire reveal drive and the 34-deg arming gate are functions of camera
+  // AZIMUTH alone (index.js camAzDeg reads position.x/z), so holding pos
+  // holds az(p) to the last bit and the particle-continuity troughs closed
+  // in b2c9584 cannot re-open — proved by construction rather than measured
+  // and hoped for. fov and the gaze are free: nothing reads them on this leg.
+  //
+  // MEASURED (261-sample drift-aware scrub, p 0.26..0.52, both aspects):
+  //   subject screen-x backtrack   0.84 px -> 0.00 px, zero sign flips
+  //   slowest mid-leg screen sweep    1 px/p -> 1245 (peak 3211 -> 2965)
+  //   d advance through p 0.37-0.39   0.7 deg/p -> 74 (never below 48)
+  //   fov rate through p 0.38          +24 deg/p -> +65, and the interval
+  //                                    ladder is now strictly increasing:
+  //                                    31 / 57 / 73 / 139 / 208 / 200
+  //   yaw peak 640 -> 595, pitch peak 100 -> 99, zero sign flips in either
+  //   distance re-approach          0.095 -> 0.069
+  // Residual: the cap still SINKS ~13 px between the two poses before it
+  // rises 63. That is forced — the approved Inspire rest frames it at
+  // y 328 and settled Connect k1 at y 341 — so the vertical turns once, at
+  // Connect's own key, and nothing here can remove it without moving a rest.
   keys: [
-    { t: 0.5,                pos: V(9.9694, 2.0000, -4.6488), tgt: V(2.3349, 2.0903, -1.1016), fov: 40,    hold: true, note: 'inspire-rest' },  // p 0.260  az 115.0  d 8.42
-    { t: 0.7166666666666667, pos: V(10.4866, 2.2495, -2.2641), tgt: V(2.0037, 2.1235, -1.2295), fov: 42.22, note: 'inspire-rest-drift' },       // p 0.312  az 102.2  d 8.55
-    { t: 0.9249999999999999, pos: V(9.5128, 2.6825, 1.6920), tgt: V(1.4289, 2.1811, -1.4515), fov: 46.07 },                                     // p 0.362  az  79.9  d 8.69
+    { t: 0.5,                pos: V(9.9694, 2.0000, -4.6488), tgt: V(2.3349, 2.0903, -1.1016), fov: 40,    hold: true, note: 'inspire-rest' },  // p 0.260  az 115.0  d 8.42  dx  -0.08
+    { t: 0.7166666666666667, pos: V(10.4866, 2.2495, -2.2641), tgt: V(2.0571, 2.1443, -0.8376), fov: 41.63, note: 'inspire-rest-drift' },       // p 0.312  az 102.2  d 8.55  dx  -2.58  yaw -80.4
+    { t: 0.9249999999999999, pos: V(9.5128, 2.6825, 1.6920), tgt: V(1.2152, 2.2287, -0.8497), fov: 44.49 },                                     // p 0.362  az  79.9  d 8.69  dx  -6.95  yaw -107.0
   ],
 };
