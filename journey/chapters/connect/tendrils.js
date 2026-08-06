@@ -58,6 +58,19 @@
 //             quiet level to its full one, with a brighter head at the front
 //             (uHead). Nothing appears; the light simply arrives.
 //
+// ONE ROUTE AT A TIME (2026-08-06, Hannah: "make them happen ONE AT A TIME and
+// A LOT SLOWER ... it should feel like an ecosystem growing"). uLit/uHead are
+// now vec3 — ONE FRONT PER ROUTE — and every vertex carries the id of the
+// route whose front owns it (aB.w, the LIT ROUTE) alongside aA.z (which keeps
+// owning hover amp and pulses, and is 3 for the hairline fill). The hairline
+// inherits the lit route of the primary it was scattered around, so the fill
+// near a hub lights with that hub rather than as one flat sheet. uLitMax is
+// the along-distance each front must cover to saturate its own route's
+// farthest tip (measured at build, plus the front's own ramp width), so a
+// route's uLit runs a clean 0..1 no matter how long the route is, and
+// index.js can key the hub kindle off the same number.
+
+//
 // So a strand's brightness is mix(uQuiet, 1.0, litMask) * uAmount, and the
 // tier contrast is compressed in the quiet state (uQuietTier) so the resting
 // network reads as ONE ambient web — the hero's own ground web (organism.js
@@ -70,6 +83,21 @@ import { makeRng, gaussOf, heat, groundY, makeGlowTexture } from '../../anatomy.
 const TAU = Math.PI * 2;
 const V3 = THREE.Vector3;
 const tmpC = new THREE.Color();
+
+// THE SHAPE OF THE FRONT (in global-along units, so it is the same physical
+// softness on every route however long). FRONT_SOFT is the length of the
+// quiet->lit ramp trailing the head: it is what makes the arrival read as a
+// TRAIL kindling rather than a switch closing, and it was widened 0.05 -> 0.11
+// with the one-route-at-a-time re-time (2026-08-06) — a slower front wants a
+// longer gradient or it reads as a hard edge crawling across the ground.
+// FRONT_TIP is the half-width of the brighter head riding at the very front,
+// and is deliberately left near its shipped 0.028: the head runs hot enough to
+// blow white where it crosses a braid (it does so on the shipped build too),
+// and the slower front already holds it on screen longer, so widening it as
+// well turned an accent into a cold streak. The trail is the SOFT ramp's job;
+// the tip is only the glint that says where the light is right now.
+export const FRONT_SOFT = 0.11;
+export const FRONT_TIP = 0.032;
 
 function smooth01(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); }
 const sm = (a, b, x) => smooth01((x - a) / (b - a));
@@ -123,7 +151,8 @@ function makeStrandMat(U) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: U.uTime, uAmount: U.uAmount,
-      uLit: U.uLit, uHead: U.uHead,
+      uLit: U.uLit, uHead: U.uHead,   // vec3: one travelling front per route
+      uLitMax: U.uLitMax,         // vec3: along-distance each front covers at uLit = 1
       uQuiet: U.uQuiet,           // brightness of a path BEFORE the light reaches it
       uQuietTier: U.uQuietTier,   // how far the quiet state flattens the tier contrast
       uRouteAmp: U.uRouteAmp,     // vec3: per-route brightness (hover lift / unrelated dim)
@@ -138,14 +167,17 @@ function makeStrandMat(U) {
       uColDeep: { value: heat(0.46, new THREE.Color()).clone() },
       uColGold: { value: heat(0.64, new THREE.Color()).clone() },
       uColHot: { value: heat(0.92, new THREE.Color()).clone() },
+      uSoft: { value: FRONT_SOFT },
+      uTipW: { value: FRONT_TIP },
     },
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
       attribute vec4 aA;   // along (global 0..1), routeAlong (0..1), route (0,1,2; 3 hairline; 4 continuation), tier (-1 hub convergence, 0 primary, 1 secondary, 2 hairline, 3 faded continuation)
-      attribute vec3 aB;   // seed, bright, patch
-      uniform float uTime, uAmount, uLit, uHead, uQuiet, uQuietTier, uBase, uNear, uFar, uHairAmp;
+      attribute vec4 aB;   // seed, bright, patch, litRoute (0,1,2 — WHICH FRONT lights this vertex; hairline inherits its parent primary's)
+      uniform float uTime, uAmount, uQuiet, uQuietTier, uBase, uNear, uFar, uHairAmp, uSoft, uTipW;
+      uniform vec3 uLit, uHead, uLitMax;
       uniform vec3 uRouteAmp, uPulseHead, uPulseAmp;
       uniform float uExit;
       uniform vec4 uWell;
@@ -153,19 +185,30 @@ function makeStrandMat(U) {
       varying vec3 vCol;
       void main() {
         float along = aA.x, rAlong = aA.y, route = aA.z, tier = aA.w;
-        float seed = aB.x, bright = aB.y, pat = aB.z;
+        float seed = aB.x, bright = aB.y, pat = aB.z, litRoute = aB.w;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         float dist = length(mv.xyz);
 
         /* ---- the travelling light (the arrival) ----
-           litMask is 1 where the light has already passed and 0 ahead of
-           it. It no longer gates EXISTENCE — the path is there either way —
-           it only lifts the strand from its quiet level to its lit one. ---- */
-        float head = uLit * 1.06;                       // slight lead so uLit=1 saturates every tip
-        float litMask = 1.0 - smoothstep(head - 0.05, head + 0.004, along);
+           ONE FRONT PER ROUTE (2026-08-06): each route has its own uLit /
+           uHead / uLitMax, so the three light in sequence rather than as one
+           radial wave. Selected by if/else, never by dynamic vector index —
+           the house idiom (see the pulse block below), and the only form that
+           is safe on GLSL ES 1.0.
+           litMask is 1 where the light has already passed and 0 ahead of it.
+           It does not gate EXISTENCE — the path is there either way — it only
+           lifts the strand from its quiet level to its lit one. ---- */
+        float lit, headAmp, litMax;
+        if (litRoute < 0.5)      { lit = uLit.x; headAmp = uHead.x; litMax = uLitMax.x; }
+        else if (litRoute < 1.5) { lit = uLit.y; headAmp = uHead.y; litMax = uLitMax.y; }
+        else                     { lit = uLit.z; headAmp = uHead.z; litMax = uLitMax.z; }
+        // uLitMax already carries the ramp's own width as lead, so lit = 1
+        // saturates this route's farthest tip exactly (buildTendrils measures it).
+        float head = lit * litMax;
+        float litMask = 1.0 - smoothstep(head - uSoft, head + 0.004, along);
         // the arriving head glows a touch brighter, fading once the light lands
-        float dTip = (along - head) / 0.028;
-        float tip = exp(-dTip * dTip) * uHead;
+        float dTip = (along - head) / uTipW;
+        float tip = exp(-dTip * dTip) * headAmp;
 
         /* ---- ambient shimmer (tw idiom, slow: 0.1–0.4 Hz) ---- */
         float tw = 0.5 + 0.5 * sin(uTime * (0.63 + fract(seed * 7.31) * 1.88) + seed * 41.0);
@@ -241,12 +284,15 @@ function makeStrandMat(U) {
 }
 
 /** Points — junction glints + drifting particles share one material.
- *  aP = (along, seed, kind 0 glint / 1 particle, baseAlpha); aLife is a
- *  CPU-written per-frame window for the particles (1.0 for glints). */
+ *  aP = (along, seed, kind 0 glint / 1 particle, baseAlpha); aR is the LIT
+ *  ROUTE (which front lights this point — same law as the strands' aB.w);
+ *  aLife is a CPU-written per-frame window for the particles (1.0 for glints). */
 function makePointMat(U, tex) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: U.uTime, uAmount: U.uAmount, uLit: U.uLit, uQuiet: U.uQuiet,
+      uLitMax: U.uLitMax,
+      uSoft: { value: FRONT_SOFT },
       uPartAmp: U.uPartAmp,      // particle visibility gate (fully lit only)
       uMap: { value: tex },
       uSize: { value: 30.0 },
@@ -258,17 +304,24 @@ function makePointMat(U, tex) {
     blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
       attribute vec4 aP;      // along, seed, kind, baseAlpha
+      attribute float aR;     // lit route (0,1,2) — which front lights this point
       attribute float aLife;
-      uniform float uTime, uLit, uQuiet, uSize, uPartAmp;
+      uniform float uTime, uQuiet, uSize, uPartAmp, uSoft;
+      uniform vec3 uLit, uLitMax;
       varying vec2 vA;        // alpha, seed
       void main() {
         float along = aP.x, seed = aP.y, kind = aP.z, baseA = aP.w;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         float dist = length(mv.xyz);
-        // junction glints follow the strands: quiet until the light passes,
-        // then full. (Particles ride uPartAmp, which only opens once lit.)
-        float head = uLit * 1.06;
-        float litMask = 1.0 - smoothstep(head - 0.05, head + 0.004, along);
+        // junction glints follow the strands: quiet until their OWN route's
+        // light passes, then full. (Particles ride uPartAmp, which only opens
+        // once every route has landed.)
+        float lit, litMax;
+        if (aR < 0.5)      { lit = uLit.x; litMax = uLitMax.x; }
+        else if (aR < 1.5) { lit = uLit.y; litMax = uLitMax.y; }
+        else               { lit = uLit.z; litMax = uLitMax.z; }
+        float head = lit * litMax;
+        float litMask = 1.0 - smoothstep(head - uSoft, head + 0.004, along);
         float tw = 0.5 + 0.5 * sin(uTime * (0.7 + fract(seed * 9.13) * 1.6) + seed * 57.0);
         float a = baseA * mix(uQuiet, 1.0, litMask) * (0.45 + 0.55 * tw) * aLife;
         a *= mix(1.0, uPartAmp, step(0.5, kind));
@@ -357,20 +410,32 @@ export function buildTendrils(group, U) {
     return 0.42 + 0.66 * p;
   };
 
+  // How far each route's own light front has to travel to saturate its own
+  // farthest vertex — measured here rather than assumed, because
+  // continuations and frame-exit strands run past the hub by different
+  // amounts on each route. index.js keys the hub kindle off the same numbers.
+  const routeReach = [0, 0, 0];
+
   // strand buffers
   const sp = [], sA = [], sB = [];
-  function pushSeg(P0, P1, a0, a1, ra0, ra1, route, tier, seed, b0, b1) {
+  // `lr` is the LIT ROUTE — which front lights this segment. It equals `route`
+  // everywhere except the hairline fill, whose route id is 3 (that id owns the
+  // hover amp) but which lights with the primary it was scattered around.
+  function pushSeg(P0, P1, a0, a1, ra0, ra1, route, tier, seed, b0, b1, lr = route) {
     sp.push(P0.x, P0.y, P0.z, P1.x, P1.y, P1.z);
     sA.push(a0, ra0, route, tier, a1, ra1, route, tier);
     const pa = patchOf(P0.x, P0.z), pb = patchOf(P1.x, P1.z);
-    sB.push(seed, b0, pa, seed, b1, pb);
+    sB.push(seed, b0, pa, lr, seed, b1, pb, lr);
+    const far = a0 > a1 ? a0 : a1;
+    if (far > routeReach[lr]) routeReach[lr] = far;
   }
 
   // glint/particle buffers
-  const gp = [], gP = [];
-  function pushGlint(P, along, alpha) {
+  const gp = [], gP = [], gR = [];
+  function pushGlint(P, along, alpha, lr) {
     gp.push(P.x, P.y + 0.012, P.z);
     gP.push(along, rnd(), 0, alpha);
+    gR.push(lr);
     counts.glints++;
   }
 
@@ -471,8 +536,8 @@ export function buildTendrils(group, U) {
         }
         prev = { p, arc };
       }
-      if (rnd() < 0.7) pushGlint(P0, AL(t0 * R.len), 0.5 + rnd() * 0.4);
-      if (anastomose && rnd() < 0.7) pushGlint(end, AL(arc), 0.4 + rnd() * 0.4);
+      if (rnd() < 0.7) pushGlint(P0, AL(t0 * R.len), 0.5 + rnd() * 0.4, ri);
+      if (anastomose && rnd() < 0.7) pushGlint(end, AL(arc), 0.4 + rnd() * 0.4, ri);
     }
   });
 
@@ -480,7 +545,10 @@ export function buildTendrils(group, U) {
   {
     const N_TRY = 240;
     for (let i = 0; i < N_TRY; i++) {
-      const R = routes[Math.floor(rnd() * routes.length)];
+      // the fill lights with the primary it belongs to, so the web around a
+      // hub kindles with that hub instead of as one flat sheet
+      const rIdx = Math.floor(rnd() * routes.length);
+      const R = routes[rIdx];
       const t0 = 0.1 + rnd() * 0.85;
       const A = polyAt(R.poly, R.arcs, t0);
       // scatter around the route corridor
@@ -504,12 +572,12 @@ export function buildTendrils(group, U) {
         p.y = gy(p.x, p.z, LIFT_LO + rnd() * 0.012);
         if (prev) {
           arc += p.distanceTo(prev);
-          pushSeg(prev, p, along0, AL(arc), 0.5, 0.5, 3, 2, seed, 0.7 + rnd() * 0.3, 0.7 + rnd() * 0.3);
+          pushSeg(prev, p, along0, AL(arc), 0.5, 0.5, 3, 2, seed, 0.7 + rnd() * 0.3, 0.7 + rnd() * 0.3, rIdx);
           counts.hairSegs++;
         }
         prev = p;
       }
-      if (rnd() < 0.16) pushGlint(P0, along0, 0.3 + rnd() * 0.3);
+      if (rnd() < 0.16) pushGlint(P0, along0, 0.3 + rnd() * 0.3, rIdx);
     }
   }
 
@@ -657,7 +725,7 @@ export function buildTendrils(group, U) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
     g.setAttribute('aA', new THREE.Float32BufferAttribute(sA, 4));
-    g.setAttribute('aB', new THREE.Float32BufferAttribute(sB, 3));
+    g.setAttribute('aB', new THREE.Float32BufferAttribute(sB, 4));
     const lines = new THREE.LineSegments(g, strandMat);
     lines.frustumCulled = false;
     group.add(lines);
@@ -695,6 +763,7 @@ export function buildTendrils(group, U) {
       });
       gp.push(0, -10, 0);                  // parked; positioned by updateParticles
       gP.push(0, partData[i].seed, 1, 0.5 + rnd() * 0.4);
+      gR.push(ri);                         // a particle drifts on its own route
     }
     counts.particles = N_PART;
   }
@@ -702,6 +771,7 @@ export function buildTendrils(group, U) {
   const pointGeo = new THREE.BufferGeometry();
   pointGeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
   pointGeo.setAttribute('aP', new THREE.Float32BufferAttribute(gP, 4));
+  pointGeo.setAttribute('aR', new THREE.Float32BufferAttribute(gR, 1));
   const lifeArr = new Float32Array(gp.length / 3).fill(1);
   pointGeo.setAttribute('aLife', new THREE.BufferAttribute(lifeArr, 1));
   const pointMat = makePointMat(U, glowTex);
@@ -738,6 +808,19 @@ export function buildTendrils(group, U) {
   }
 
   const totalSegs = counts.primarySegs + counts.secondarySegs + counts.hairSegs + counts.hubSegs + counts.contSegs;
+
+  /* ---- publish each front's reach ----
+     A route's front must cover its farthest vertex PLUS the ramp's own width
+     before that vertex is fully lit (litMask needs `along <= head - uSoft`),
+     so the lead is the ramp, not a magic 1.06. With this in the uniform, every
+     route's uLit is a clean 0..1 whatever its length, and the hub kindle in
+     index.js can be keyed off `uLit * uLitMax` — the head's own position —
+     which is what makes the kindle land exactly as its trail's light arrives. */
+  U.uLitMax.value.set(
+    routeReach[0] + FRONT_SOFT + 0.01,
+    routeReach[1] + FRONT_SOFT + 0.01,
+    routeReach[2] + FRONT_SOFT + 0.01,
+  );
 
   return {
     counts: { ...counts, totalSegs, points: counts.glints + counts.particles },

@@ -1091,3 +1091,210 @@ nothing is drawn either way.
   restoring.
 - The p 0.63–0.69 bareness and the pre-existing final-golden determinism
   wobble stand as earlier passes left them.
+
+## One route at a time (2026-08-06, Hannah's "it feels like a rush")
+
+**The ask.** *"When I scroll into the connect ecosystem section, the way the
+three points light up — could you make them happen ONE AT A TIME and A LOT
+SLOWER? It should feel like there are trails that kind of light up, in an
+elegant way. Because right now it feels like a rush. It should feel like an
+ecosystem growing."*
+
+**Why it rushed.** The previous pass got the *model* right — the paths
+pre-exist and arriving LIGHTS them — but kept one front running against the
+GLOBAL `along` axis. One front on a radial axis means all three routes depart
+the stipe base on the same frame and the whole ecosystem resolves as a single
+expanding ring. Measured on the shipped tree (bisection to 1e-5 p, core
+opacity at half its resting cap as the kindle test):
+
+    SHIPPED           depart    route lit    hub kindles
+      ADOS            0.4335      0.4677        0.4538
+      Hivemind        0.4335      0.4701        0.4592
+      Discord         0.4335      0.4789        0.4661
+      whole arrival   0.4335 -> 0.4864          span 0.0529
+      kindle spread                             span 0.0123
+
+Three hubs inside 0.0123 p. At a deliberate scroll that is about a third of a
+second between the first hub and the last — which is not a sequence, it is one
+event with a slight blur on it. That is the rush.
+
+### The change: one front per route
+
+`uLit` / `uHead` / `uLitMax` are now **vec3, one component per route**, and
+every vertex carries the id of the front that owns it. That id is NOT `aA.z`
+(the existing route attribute, which keeps owning hover amp and pulse rights
+and is 3 for the hairline fill) but a new **`aB.w`, the LIT ROUTE** — so the
+hairline scattered around a primary lights with THAT primary, and the fill
+near a hub kindles with its hub instead of as one flat sheet. Points carry the
+same thing as `aR`; particles inherit the route they drift on. Selection is by
+`if`/`else` chain, never dynamic vector index — the house idiom the pulse block
+already uses, and the only form that is safe on GLSL ES 1.0.
+
+`uLitMax` is each front's measured reach: `buildTendrils` tracks the farthest
+`along` pushed for each lit route and publishes it plus the ramp width as
+lead. That does two things. Each route's `uLit` is a clean 0..1 whatever its
+length, and `uLit * uLitMax` IS the head's position on the global along axis —
+so `index.js` keys `hubIgnite` off exactly the expression the shader uses, and
+the kindle lands as its own trail's light arrives, by construction rather than
+by a tuned coincidence. The old `1.06` magic lead is gone.
+
+### The schedule
+
+    NEW               depart    route lit    duration   hub kindles
+      ADOS            0.4004      0.4315      0.0311      0.4134
+      Hivemind        0.4228      0.4561      0.0333      0.4398
+      Discord         0.4468      0.4866      0.0398      0.4698
+      whole arrival   0.4004 -> 0.4866        span 0.0862
+      kindle spread                           span 0.0564
+
+    total arrival   0.0529 -> 0.0862   1.63x
+    kindle spread   0.0123 -> 0.0564   4.58x
+    per-route reach (uLitMax)  0.8696 / 0.9318 / 1.1150
+
+**ORDER — ADOS, Hivemind, Discord (nearest to farthest).** Three reasons, and
+the third is the one that settles it.
+
+1. It is growth outward from the base, which is the metaphor asked for.
+2. It is already the chapter's order everywhere else: `NODE_IDS`, the tab
+   order, the chip order, the narrative order. The sequence the eye learns
+   watching the arrival is the sequence every other affordance uses.
+3. **Far-to-near is not available, because this chapter already owns that
+   gesture and means something else by it.** `uExit` converges the network's
+   energy back INTO the root as the camera walks to the trunk — light draining
+   home. An arrival that started at the frame edge and worked inward toward the
+   mushroom would be the exit gesture played forwards, and the two would blur
+   into each other across the Connect->Owned dive.
+
+On screen (1440x900) near-to-far also sweeps lower-left -> mid-right ->
+far-right, so the staging reads as one continuous outward motion across the
+open diagonal band rather than three unrelated flashes.
+
+**DURATION — proportional to each front's own reach**, so the light travels at
+ONE SPEED across the whole network (28.0 along-units per unit p on all three,
+measured; the shipped single front averaged 20.0). Equal slices were tried
+first and are wrong: Discord's run is 1.28x ADOS's, so an equal window makes
+the far light visibly whip while the near one ambles, and the network stops
+feeling like one substance.
+
+**OVERLAP — 0.30 of each window.** The next route departs the base while the
+previous is still running out past its hub, so the ground is never dead
+between beats, but each route still lands its own hub in clear air. Measured
+overlap regions: 0.4228–0.4315 and 0.4468–0.4561, i.e. 0.0087 and 0.0093 of p.
+At 0 it stutters into three separate events with a visible hole at each
+handover (both windows are smoothstepped, so their slow tail and slow head
+meet); past ~0.45 the three merge back toward the rush this change removes.
+
+**START — p 0.4004, not 0.4335.** The far end is pinned: p 0.490 is the
+section's reference still and must be FULLY lit, so everything is home by
+0.487. Slower therefore has to be bought at the front. p 0.400 sits 0.035
+after the quiet paths are unambiguously drawn (`group.visible` flips at
+p 0.365) so the eye has read the network as pre-existing before a strand of it
+is lit. The camera-pure resolve is 0.455 there and still climbing, which is
+the one thing worth care: a strand the light reaches at p 0.400 comes up to
+0.455 of full and keeps brightening as the resolve completes. Checked on
+screen at 1440x900 across p 0.390 / 0.400 / 0.409 / 0.418 — p 0.390 and 0.400
+are the same quiet web, and 0.409 reads as light landing on a dim ground, not
+as geometry arriving, because the geometry is demonstrably already in the
+frame before it.
+
+### The shape of the front — what actually makes it a trail
+
+Sequencing alone would have made each front FASTER, not slower: three fronts
+laid end to end in a budget only 1.63x larger each cover their route in less p
+than one simultaneous front did. The slowness Hannah asked for lives in the
+front's own profile, not in the schedule.
+
+    FRONT_SOFT   0.05 -> 0.11    the quiet->lit ramp trailing the head
+    FRONT_TIP    0.028 -> 0.032  half-width of the bright head
+    head peak    1.00 -> 0.55    uHead amplitude
+
+`FRONT_SOFT` is the one that matters. A given strand's own quiet->lit lift now
+takes **0.00393 p against 0.00250 — 1.57x slower** — even though the head
+travels 1.40x faster. That is the "trails that kind of light up": you watch a
+strand come up, rather than watch an edge cross it.
+
+The head was cut because it is multiplied into `uColHot` (near-white) at 1.4x.
+On the shipped fast front that was a flicker the eye read as speed; at this
+pace it became a cold white streak swiping across the ground — the loudest
+thing in the frame and the exact opposite of "elegant". Widening `FRONT_TIP`
+was tried first (0.042) and made it worse: more geometry inside the head at
+once, more additive overlap across a braid, a heavier streak. `FRONT_TIP` is
+therefore left essentially at its shipped value and the amplitude carries the
+change. Note the white head is NOT new — the shipped build blows white the
+same way where its head crosses a braid (verified by re-shooting HEAD at
+p 0.450); it was simply on screen for half as long.
+
+### Gates (measured)
+
+1. **Reverse mirroring, EXACT.** p 0.30 -> 0.55 forward then backward, 0.005
+   steps, p pinned per frame (true-p delta between the two passes 7.0e-5).
+   Over every DRAWN sample: **max delta in the three `uLit` components 0, max
+   delta in the three `hubIgnite` values 0.** Visibility flips agree exactly
+   in both directions (first drawn p 0.365 forward and reverse). The only
+   residual anywhere in the core sprites is the pre-existing time-based
+   ambient pulse flare, which is documented ambient life and not the arrival.
+   Samples where the group is NOT drawn are excluded on purpose: the animator
+   early-returns before writing uniforms there, so an undrawn frame carries a
+   stale value that no pixel ever sees.
+2. **No self-ignition.** At the first drawn frame (p 0.365) `uLit` is
+   [0, 0, 0] — the network arrives as a quiet web and nothing is lit until
+   0.4004, 0.035 of p later. Arm edges and the D16 argument are untouched;
+   this change moves no camera and no seam.
+3. **Rest fully lit at every size.** p 0.490 reads `uLit` [1, 1, 1], all three
+   cores at their 0.58 resting cap, at 1440x900, 1280x800 and 375x812.
+4. **Joins untouched.** p 0.375 / 0.380 / 0.385 all read `uLit` [0, 0, 0] —
+   the light has not departed anywhere near the section's low join. p 0.595 /
+   0.600 / 0.605 all read [1, 1, 1].
+5. **Ride, four speeds** (headless, drawn frames only, 1440x900):
+
+        p/frame    ADOS      Hivemind   Discord    kindles at
+        0.0006     51 fr     54 fr      64 fr      0.4138 / 0.4402 / 0.4701
+        0.0020     15 fr     16 fr      20 fr      0.4142 / 0.4402 / 0.4702
+        0.0080      3 fr      4 fr       5 fr      0.4162 / 0.4402 / 0.4722
+        0.0250      1 fr      1 fr       1 fr      0.4202 / 0.4452 / 0.4702
+
+   **Zero non-monotonic steps and zero non-finite values at every speed.** At
+   0.0006 p/frame (a slow deliberate scroll) the arrival runs ~142 frames,
+   about 2.4 s, with the three hubs kindling 0.44 s and 0.50 s apart — against
+   1.5 s and 0.34 s end-to-end on the shipped build. Even at a hard fling the
+   three still land on three consecutive frames IN ORDER: the sequence
+   degrades to a fast ripple, never to a simultaneous flash, because nothing
+   here reads a clock.
+6. **Hover / chips / deep links unchanged.** `uRouteAmp` [1.55, 0.55, 0.55] /
+   [0.55, 1.55, 0.55] / [0.55, 0.55, 1.55], hairline 0.70, eased return to
+   [1, 1, 1]. `nodeWorld('ados')` = (3.400, 0.017, 2.600). Deep links
+   #/connect, /ados, /hivemind, /discord all land at p 0.490 fully lit; legacy
+   /community still normalises to discord; Escape clears the detail; tab order
+   ados, hivemind, discord.
+7. **Console clean.** console.error/warn/onerror/unhandledrejection hooked
+   across a slow ride, a fast fling and a full 0 -> 1 -> 0 ride: **0 entries.**
+8. **Reference stills byte-identical.** `capture.py --check`, all five poses x
+   both sizes: **connect@1440x900 and connect@430x932 both MAE 0.00/255,
+   0.0% px >8** — the destination is genuinely untouched, which is the point
+   (this is a re-time of the approach, not of the frame it arrives at).
+   mission / inspire / owned also 0.00; final 0.18 / 0.13, the pre-existing
+   frozen-pipeline determinism wobble that reproduces on the untouched tree.
+   Worst 0.18 against warn 0.50 / fail 1.00, PASS. No golden was re-shot.
+
+### Residuals
+
+- The head still blows white where it crosses a braid at its brightest, and
+  most visibly as it lands on a hub (Discord at p ~0.472). It is much reduced
+  and it settles to gold by the rest, and it is the shipped build's own
+  behaviour rather than something this pass introduced — but if it is ever
+  wanted gone, the lever is `uColHot`'s weight in the strand shader's `tip`
+  term, not the amplitude, which is now doing about as much as it can.
+- The hero-web dim rides `litAvg`, so it now begins its deepening at p 0.400
+  instead of 0.4335. It is spread over a longer window and is therefore
+  gentler per unit p than before, but it does mean the far-field hairline
+  reads slightly quieter through 0.409–0.418 than the shipped build did at the
+  equivalent moment. Deliberate: attention concentrating on the lit route is
+  the effect wanted.
+- Each individual front's head is 1.40x faster than the shipped one, which is
+  arithmetic — three sequential fronts in a 1.63x budget cannot each be slower
+  than one simultaneous front. The perceived slowness is bought with
+  `FRONT_SOFT` and with the 4.58x wider kindle spread. If a genuinely slower
+  head is ever wanted, the only remaining budget is starting before p 0.400,
+  which means lighting a web that is under half resolved.
+- The p 0.63–0.69 bareness and the final-golden determinism wobble stand as
+  earlier passes left them.
