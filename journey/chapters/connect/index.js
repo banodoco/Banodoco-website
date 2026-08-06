@@ -25,9 +25,11 @@
 //            down to it (the house precedent; the Final chapter's camera-pure
 //            uPull). Reverse scrubs mirror it exactly because the camera pose
 //            is itself a pure function of p.
-//   lit      PURE IN p (drive(p)): the light front runs base -> hubs over
-//            leg t GROW_LO..GROW_HI, lifting each strand from its quiet
-//            level to its full one and kindling each hub core as it lands.
+//   lit      PURE IN p (drive(p)): the light. THREE fronts now, one per route
+//            (2026-08-06), running base -> hub -> off-stage in sequence —
+//            ADOS, then Hivemind, then Discord — each lifting its own strands
+//            from their quiet level to their full one and kindling its own hub
+//            core as it lands. See THE ARRIVAL SCHEDULE below.
 //
 // THE D16 LAW IS KEPT, and kept the same way: nothing fades in over open
 // view. `resolve` is EXACTLY 0 at the hero pose and at the Inspire rest in
@@ -37,7 +39,7 @@
 import * as THREE from 'three';
 import { makeRng } from '../../anatomy.js';
 import { startOf, endOf } from '../../route.js';
-import { buildTendrils, HUB_IDS } from './tendrils.js';
+import { buildTendrils, HUB_IDS, FRONT_SOFT } from './tendrils.js';
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const sm = (a, b, x) => smooth01((x - a) / (b - a));
@@ -56,12 +58,59 @@ function pulseDriver(dur) {
   };
 }
 
-// Light-travel window in leg-local t. Later than the old growth window
-// (0.10..0.46): the quiet paths must be established BEFORE the light runs,
-// and the camera-pure resolve is ~1 by leg t 0.27 (p 0.44). Here the light
-// leaves the base at p 0.433 and lands on Discord at p 0.487, just under the
-// rest at 0.490.
-const GROW_LO = 0.24, GROW_HI = 0.487;
+/* ================================================================
+   THE ARRIVAL SCHEDULE — one route at a time (2026-08-06)
+   ================================================================
+   Hannah: "the way the three points light up — could you make them happen ONE
+   AT A TIME and A LOT SLOWER? It should feel like there are trails that kind
+   of light up ... right now it feels like a rush. It should feel like an
+   ecosystem growing."
+
+   The old window was ONE front over leg-t 0.24..0.487 (p 0.4328..0.4871) run
+   against the GLOBAL along axis, so all three routes departed the base on the
+   same frame and the three hubs kindled 0.0181 p apart — the whole ecosystem
+   in a twelfth of a section. It read as a switch because it WAS one switch.
+
+   Now each route owns a front (tendrils.js, uLit/uHead/uLitMax are vec3) and
+   the three windows are laid end to end with a deliberate overlap:
+
+     ORDER: ADOS -> Hivemind -> Discord. Nearest, mid, far — light growing
+     outward from the base, which is also the chapter's narrative order, the
+     tab order and the chip order (NODE_IDS), so the sequence the eye learns
+     here is the sequence every other affordance already uses. On screen it
+     also sweeps the frame lower-left -> mid -> far-right, so the staging
+     reads as one continuous outward motion rather than three unrelated
+     flashes. (Far-to-near was tried on screen and reads backwards: the light
+     arrives at the edge of the world and works IN toward the mushroom, which
+     is drainage, not growth.)
+
+     DURATION: proportional to each front's own reach (tendrils.js measures
+     it), so the light travels at ONE SPEED across the whole network instead
+     of each route getting an equal slice and the long one whipping. Discord
+     therefore gets the longest window, which is right — it is the far door.
+
+     OVERLAP: 0.30 of a window. Enough that the next route departs the base
+     while the previous one is still running out past its hub, so the network
+     is never dead between beats; small enough that each route still lands its
+     own hub in clear air. At 0 it stutters into three separate events; past
+     ~0.45 the three merge back into the rush this change exists to remove.
+
+   START: leg-t 0.0909 (p 0.4000), not 0.24. Making the arrival slower means
+   starting EARLIER, because the far end is pinned — the rest frame at p 0.490
+   is the section's reference still and must be FULLY lit, so everything has to
+   be home by 0.487. p 0.400 is 0.0285 after the quiet paths first draw at all
+   (measured: group.visible flips at p 0.365, camera-pure resolve 0.019) and
+   0.035 after they are unambiguously a web, so the eye has read the network as
+   PRE-EXISTING before one strand of it is lit. The resolve is 0.455 there and
+   still climbing, which is the one thing worth being careful about: a strand
+   the light reaches at p 0.400 comes up to 0.455 of full and then keeps
+   brightening as the resolve completes. Checked on screen at 1440x900 across
+   p 0.400/0.409/0.418 — it reads as light landing on a dim ground, never as
+   geometry arriving, because the geometry is demonstrably already drawn in the
+   frame before it. Total arrival: 0.0871 p, up from 0.0543. */
+const LIGHT_LO = 0.0909;   // leg-t — p 0.4000, ADOS's light leaves the base
+const LIGHT_HI = 0.487;    // leg-t — p 0.4871, Discord's farthest tip saturates
+const LIGHT_OVERLAP = 0.30;
 
 /* ================================================================
    The camera-pure resolve (Change 1, 2026-08-05)
@@ -117,8 +166,13 @@ export function createConnect(sceneApi) {
   const U = {
     uTime: { value: 0 },
     uAmount: { value: 0 },      // arm x camera-pure resolve — the ONLY visibility gate
-    uLit: { value: 0 },         // travelling light front, 0..1, pure in p
-    uHead: { value: 0 },        // brightness of the arriving head while it travels
+    // ONE FRONT PER ROUTE (2026-08-06): x ADOS, y Hivemind, z Discord. Each is
+    // 0..1 and pure in p, so reverse scrubs still mirror exactly and a pause
+    // mid-arrival holds a coherent partial network.
+    uLit: { value: new THREE.Vector3(0, 0, 0) },
+    uHead: { value: new THREE.Vector3(0, 0, 0) },   // arriving head, per route
+    // filled by buildTendrils from the measured reach of each route
+    uLitMax: { value: new THREE.Vector3(1, 1, 1) },
     // The quiet, un-highlighted state of a path before the light reaches it.
     // 0.22 was measured against the hero's own ground web at the rest pose
     // (organism.js §8 web/moss lines): the routes read as the same ambient
@@ -155,6 +209,24 @@ export function createConnect(sceneApi) {
 
   const net = buildTendrils(group, U);
   const counts = net.counts;
+
+  /* ---- lay the three windows end to end (see THE ARRIVAL SCHEDULE above).
+     Durations are proportional to each front's measured reach, so the light
+     runs at one speed; each window starts (1 - overlap) of the way through
+     the previous one; the last one ends exactly on LIGHT_HI. ---- */
+  const LIT_WIN = (() => {
+    const reach = [U.uLitMax.value.x, U.uLitMax.value.y, U.uLitMax.value.z];
+    const k = (LIGHT_HI - LIGHT_LO) /
+      ((1 - LIGHT_OVERLAP) * (reach[0] + reach[1]) + reach[2]);
+    const out = [];
+    let s = LIGHT_LO;
+    for (let i = 0; i < 3; i++) {
+      const d = k * reach[i];
+      out.push([s, s + d]);
+      s += (1 - LIGHT_OVERLAP) * d;
+    }
+    return out;
+  })();
 
   /* ================================================================
      Node anchors — the hub cores. The group parents to the scene root,
@@ -243,7 +315,12 @@ export function createConnect(sceneApi) {
      Per-frame
      ================================================================ */
   let amount = 0, amountTarget = 0;
-  let lit = 0, head = 0;                  // written by drive(p) — pure in p
+  // written by drive(p) — pure in p. litR/headR are per route; litMin is "the
+  // slowest route" (the honest test for FULLY ARRIVED, which gates the
+  // particles and the ambient pulses) and litAvg is the network's overall
+  // arrival, which the hero-web dim rides.
+  const litR = [0, 0, 0], headR = [0, 0, 0];
+  let litMin = 0, litAvg = 0;
   let resolve = 0;                        // written per frame from the camera
   const hubIgnite = [0, 0, 0];
   const _fwd = new THREE.Vector3();
@@ -276,12 +353,12 @@ export function createConnect(sceneApi) {
     // lands — so the two webs never sum to double-exposure mush — and hands
     // the hero's own materials back byte-exactly on retire
     collectHeroWeb();
-    applyHeroDim(amount * resolve * (0.30 + 0.70 * sm(0.2, 0.8, lit)));
+    applyHeroDim(amount * resolve * (0.30 + 0.70 * sm(0.2, 0.8, litAvg)));
 
     U.uTime.value = t;
     U.uAmount.value = amount * resolve;
-    U.uLit.value = lit;
-    U.uHead.value = head;
+    U.uLit.value.set(litR[0], litR[1], litR[2]);
+    U.uHead.value.set(headR[0], headR[1], headR[2]);
 
     /* ---- eased hover amounts ---- */
     const ke = Math.min(1, dt * 5);
@@ -290,7 +367,7 @@ export function createConnect(sceneApi) {
     /* ---- ambient pulses: every 9–14 s per route, gated on extent > 0.9 ---- */
     for (const P of pulses) {
       P.driver.update(dt);
-      if (lit > 0.9) {
+      if (litMin > 0.9) {
         P.clock -= dt;
         if (P.clock <= 0) {
           if (!P.driver.active && !hot[P.id]) { P.driver.fire(); P.focus = 0; }
@@ -332,7 +409,7 @@ export function createConnect(sceneApi) {
     U.uExit.value = sm(5.0, 2.4, camRad) * amount * resolve;
 
     /* ---- particle field: sparse slow drift, gated on full extent ---- */
-    U.uPartAmp.value = sm(0.9, 1.0, lit);
+    U.uPartAmp.value = sm(0.9, 1.0, litMin);
     net.updateParticles(t);
 
     /* ---- hub cores: they KINDLE as the light reaches them (the strands,
@@ -340,7 +417,14 @@ export function createConnect(sceneApi) {
        arrival) + hover + pulse flare ---- */
     for (let i = 0; i < net.hubMeta.length; i++) {
       const hm = net.hubMeta[i];
-      hubIgnite[i] = sm(hm.along - 0.05, hm.along + 0.015, lit * 1.06);
+      // THE KINDLE LANDS WITH ITS OWN TRAIL. `litR[route] * uLitMax[route]` IS
+      // the head's position on the global along axis (the same expression the
+      // strand shader uses), so the core comes up exactly as its own route's
+      // light reaches the hub — never on a neighbour's front, never on a clock.
+      // The window is the front's own ramp width, so the core swells over the
+      // same distance the trail takes to lift.
+      const headAt = litR[hm.route] * U.uLitMax.value.getComponent(hm.route);
+      hubIgnite[i] = sm(hm.along - FRONT_SOFT, hm.along + 0.03, headAt);
       const core = net.cores[i];
       const a = amt[hm.id], flare = pulses[i].flare;
       // Resting identity raised (audit taste pass, 2026-08-04): each hub must
@@ -386,16 +470,34 @@ export function createConnect(sceneApi) {
     },
     /** The travelling light — pure in p, so scrubs reverse exactly.
      *  Forward: light leaves the stipe base and runs out along paths that are
-     *  already there, kindling each hub as it lands. Reverse: it withdraws
-     *  into the base and the routes go quiet again — they do not vanish.
+     *  already there, ONE ROUTE AT A TIME (ADOS, then Hivemind, then Discord,
+     *  windows overlapping by 0.30), kindling each hub as its own trail lands.
+     *  Reverse: each front withdraws into the base in the opposite order and
+     *  the routes go quiet again — they do not vanish. Nothing here reads a
+     *  clock or any state, so pausing mid-arrival holds a coherent partial
+     *  network and scrubbing back retraces it exactly.
      *  Past the leg (the p-window holds to owned.start + 0.105) the network
      *  stays fully lit; retire happens behind the Owned soil-crossing murk
      *  exactly as shipped (M5 values). */
     drive(p) {
       const legT = (p - SPAN_LO) / (SPAN_HI - SPAN_LO);
-      lit = sm(GROW_LO, GROW_HI, legT);
-      // the arriving head glows only while the light is actually travelling
-      head = lit > 0 && lit < 1 ? Math.sin(Math.PI * Math.min(Math.max(lit, 0), 1)) ** 0.6 : 0;
+      litMin = 1; litAvg = 0;
+      for (let i = 0; i < 3; i++) {
+        const L = sm(LIT_WIN[i][0], LIT_WIN[i][1], legT);
+        litR[i] = L;
+        // The arriving head glows only while THIS route's light is travelling.
+        // HEAD_PEAK 1.0 -> 0.55 with the re-time: the head is multiplied into
+        // uColHot (near-white) at 1.4x in the shader, which on the old fast
+        // front was a flicker you registered as speed and on a front running
+        // at half that speed became a cold white streak swiping across the
+        // ground — the loudest thing in the frame, and the opposite of the
+        // "elegant" this change is for. At 0.55 it is a warm brightening that
+        // says where the light is now, and the trailing SOFT ramp does the
+        // work of reading as a trail.
+        headR[i] = L > 0 && L < 1 ? 0.55 * Math.sin(Math.PI * L) ** 0.6 : 0;
+        if (L < litMin) litMin = L;
+        litAvg += L / 3;
+      }
     },
     /** Deep links / capture (placeAt): jump the eased arming to its target so
      *  a dt = 0 placement renders the finished state — the frozen ?capture=
