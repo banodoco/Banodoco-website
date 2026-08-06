@@ -181,3 +181,163 @@ per-exit fades → (18,48)/(38,62)/(54,78), band (5,28).
   thing when I rotate around" note that `T` was introduced to restrain. It is
   the number in this restage most likely to want Hannah's own eye; `?t=` still
   rides it live, and below ~0.78 the three streams collapse back into one.
+
+---
+
+## 2026-08-06 — The shed is EMPHASIZED, not replaced (Hannah)
+
+Hannah, on the ride into Inspire: *"it feels like there's a different stream of
+particles that appears … the particles that are there before kind of disappear,
+and then new particles appear, and it's just a really glitchy transition … the
+one that shows when you turn around, it looks like ARROWS. It looks kind of
+trashy as a result, because the arrows don't look like organic particles. And
+also — there should be particles coming from EVERYWHERE, but they should just be
+MORE EMPHASIZED in three parts."*
+
+Three complaints, one root: **the leg was authored as a REPLACEMENT.** The whole
+shed was dimmed away and a designed structure was drawn in its place. Every fix
+below is the same move — stop deleting the shed, and let the three regions be
+emphases *within* it.
+
+### Diagnosis, with the numbers that found it
+
+All figures are the live 4,200-dot buffer at 1440×900: luminance is Rec.709 on
+the colour attribute, "v30"/"v60" are dot counts above 0.30 / 0.60 luminance,
+"cvAct" is dots with conversion > 0.01 read off the seat's own per-dot feed.
+The sampling noise floor, from 8 repeats parked at the rest, is ±2.0% on total
+light, ±2.3% on v30, ±3.0% on v60.
+
+**1. The swap was a seam, and it was a regression.** `seams.js` armed T1 at
+`d > 48 - HYS_DEG` = 40.3° from Mission, i.e. absolute camera azimuth 28.1°. But
+the chapter's reveal is `sm(18,48,az) × arrOf(az,14,44)`, which starts opening at
+az 14. **Arming therefore landed ten degrees inside an already-open ramp.**
+Measured either side of that one crossing (p 0.115 → 0.118):
+
+| | before gate | after gate | Δ |
+|---|---|---|---|
+| converted dots | 0 | 1975 | **0 → 47% of the shed, in one gate** |
+| total shed luminance | 2746.2 | 2137.4 | **−22.2%** |
+| luminance P50 | 0.643 | 0.502 | −22.0% |
+| luminance P99 | 0.901 | 1.126 | **+25.0%** |
+| v30 | 4200 | 3530 | −16.0% |
+| v60 | 2475 | 1318 | **−47.4%** |
+
+48 was *correct when it was written* — the ramps then began at az 36, exactly
+where it armed, and the comment above it said so. **D18 (`c6bbbab`) pulled the
+ramps in to (18,48)/(38,62)/(54,78) to make the three streams resolve, and did
+not move the seam with them.** The stale comment asserting "arming can never step
+on it" survived and was false in both its numbers.
+
+**2. The disappearance was a light-budget trough, and it was double-counting.**
+`organism/spores.js` already performs the entire hand-over per dot, in one line:
+`f = f * (1 - cv) + pw` — a dot cedes exactly as much ambient look as it has
+converted and gains exactly its own plume brightness. That is conservative by
+construction. On top of it the chapter ran **three more whole-population dim
+channels** (`regions`, `globalK`, `grad`), which dimmed the dots that had *not*
+converted yet: they lost ambient light while gaining no plume light. Measured
+across the approach, total shed luminance fell **2746 → 1920 at p 0.14, a −30%
+trough**, with v30 collapsing 4200 → 2426 (−42%) before recovering. That trough
+is "the particles that are there before kind of disappear".
+
+**3. The arrows were not the dots — they were drawn line geometry.** Inventory
+at the rest: **648 core-ribbon `LineSegments` at 0.527 opacity**, 840 source-
+filament segments at 0.425, 360 wisp segments, 204 rim-link segments, and a
+**12:1 anamorphic streak sprite** (2.1 × 0.17) lit on the merely-derived auto
+exit. In the old golden these are the long pale strokes arcing over the cap and
+the hard white bar at the left rim — cooler-toned than the warm dust, and the
+only non-particulate forms in the frame. The dots contributed too: `PLUME_GAIN`
+plus the `kn⁴` pearl cadence on the tightened core cohort put luminance P99 at
+**1.45 (max 2.1) against the shed's own 0.90 ceiling**, +61%, which reads as
+specular streak heads rather than dust.
+
+**4. "Everywhere" was structurally impossible, and T is not the lever.**
+`initSteer` partitions **all 4,200 dots** across the three exits (50/28/22);
+measured `cvAct = 4200 / 4200` at the rest. Revealing three exits claims the
+entire shed — there is no ambient remainder by construction. And the obvious
+escape does not work: swept on the shipped build, T from 0.20 to 1.00 moved
+cap-azimuth sector occupancy only between 7 and 10 sectors (p 0 = 10) and
+luminance entropy between 1.94 and 2.14 nats (p 0 = 2.223) — i.e. **lowering T
+does not give the shed its spread back**, it only merges the three lobes into
+one (1 lobe at T ≤ 0.78, 3 from T ≥ 0.85, confirming D18's knee independently).
+T blurs the braids; it does not restore a shed.
+
+### The model as shipped: everywhere, emphasized in three
+
+- **The shed never cedes.** `regions`, `globalK` and `grad` are all zero. The
+  per-dot exchange in the spore system is the *only* hand-over, so brightness is
+  conserved dot by dot and the surrounding shed survives the whole transition.
+  Zero, not smaller: it is the only value that is exactly reversible for free.
+- **The emphasis is density, not deletion.** Each plume's dots draw a rise from
+  `[riseMin, riseMax]`; the **mean** sets where the plume ends (composition, chip
+  clearance, dome crossing) and the **spread** sets how concentrated it reads on
+  the way there. Those are separable and only the mean had been used. Every mean
+  is unchanged to three decimals — no plume moves — while the spread is re-dialled:
+  ArtCompute ×1.60 (deliberately diffused, so the 2,100-dot centre stops drowning
+  the flanks), Arca ×0.54 and 2RP ×0.51 (concentrated). This is what replaces the
+  ribbons as the thing that marks three regions.
+- **The seam is derived, not chosen.** T1's threshold is now 34, so it arms at
+  d 26 (az 13.8) and releases at d 18 (az 5.8) — **both edges where both factors
+  of the chapter's reveal product are exactly zero**, which is the same law T2
+  already states. Anything that re-keys those ramps must re-derive this number.
+- **Lines are not dust.** The core ribbons are retired (`CORE_OPACITY = 0` and
+  `visible = false`, so the draw call goes too) and the anamorphic streak is
+  hover/selection-only. A continuous line cannot read as dust at any opacity.
+
+### Measured after
+
+- **Arming is invisible.** At p 0.10 / az 16.5 the statistics are *identical* to
+  p 0: 2746.2 total, v30 4200, v60 2475, cvAct 0. No step at all.
+- **No trough.** Minimum total shed luminance across p 0 → 0.26 is **2643.8,
+  −3.7%** against the p 0 reference (was −30%). Minimum v60 **2372, −4.2%** (was
+  −47%). Minimum v30 **3473, −17.3%** (was −42%). Sampled at Δp 0.0025 the dips
+  are smooth ramps: worst adjacent step 7.6%, against a ±2% noise floor.
+- **The three streams survive.** Density profile of the plume band (48 bins,
+  y 90–470, averaged over 12 frames, three independent runs): **3 lobes at
+  495 / 765 / 975 px, relative 0.39 / 1.00 / 0.24, valleys 0.21 and 0.11.**
+  D18 measured 507 / 783 / 996, 0.36 / 1.00 / 0.28, valleys 0.21 and 0.21 — same
+  positions within 21 px, same weights, valleys as deep or deeper.
+- **Same composition, more substance.** Against the shipped build's own profile
+  the new one correlates at **Pearson r 0.990–0.997** (RMS 0.024–0.040 of peak)
+  over three y-bands — the shape Hannah approved is unchanged. What changed is
+  level: band light **+11%**, total light **+13%**, and contrast (weakest peak /
+  strongest gap) **0.604 vs 0.588**. The dim channels were never providing the
+  emphasis; they were only darkening everything.
+- **Ride.** Slow scrub p 0 → 0.45 → 0 at Δp 0.0025, 2,172 recorded frames: no
+  reveal channel re-rose after falling, on either leg (0.0000 on all six);
+  forward and backward agree to **0.001** across 203 matched positions; console
+  clean, zero errors or warnings.
+- **Cost.** Draw calls at the Inspire rest **55 → 53** (the ribbon `LineSegments`
+  and the resting streak sprite); 42 unchanged at Mission. Frame time is
+  display-locked at both ends (16.67 ms), so there is no measurable GPU delta to
+  report either way.
+- **References.** `capture.py --check`: mission **0.00 / 0.00**, connect
+  **0.00 / 0.00**, owned **0.00 / 0.00**, final **0.18 / 0.13** (its own
+  determinism noise, identical to the pre-change baseline). Only the inspire
+  pair was re-shot; the other eight PNGs are byte-identical by SHA-256 before and
+  after, and `manifest.json` was merged so they keep their original provenance.
+
+### Residual / open
+
+- **Two shallow troughs remain**, one per migrating exit: **−6.4%** total light
+  as Arca converts (p 0.140–0.1475) and **−4.4%** as 2RP does (p 0.1625–0.1675).
+  The mechanism is organism-side and the chapter cannot reach it: in `steer`, a
+  migrant's rise draw-on gate is `env *= 1 - ss(g0, rl + 0.001, u3)` with
+  `rl = rg * 1.12` and `rg = ss(0.55, 1, rev)`, so **every dot in a migrant's
+  braided-rise stage renders black until that exit's reveal passes 0.55** — while
+  `(1 - cv)` is already taking its ambient away. Half a migrant's cohort is in
+  that stage at any instant. Fixing it properly means letting the rise draw on
+  from the dot's own conversion rather than from a whole-exit threshold.
+- **A true "everywhere" reserve still needs the organism.** `initSteer` claims
+  100% of the dots for whatever exits are revealed, so there is no population
+  that stays on pure ambient drift while the three braids resolve. The minimal
+  honest change would be a claim field — `setDriver({ exits, shedShare })` — that
+  reserves a fraction of the 4,200 as never-steered: they would keep `cv = 0`
+  and `pw = 0`, the drift integrator would own them outright, and with the dim
+  channels already at zero they would render at full shed colour. That is the
+  literal reading of "particles coming from everywhere". What ships instead is
+  the perceptual reading: the shed is no longer deleted anywhere, so the field
+  between the emphases is continuous and lit.
+- **The flanks are still starved by `W_EXIT0`** (50/28/22, read-only): 2RP reads
+  at 0.24 of ArtCompute. Rise spread claws back what it can without moving any
+  plume; making the three genuinely equal still needs the exit weighting opened
+  up in the organism.
