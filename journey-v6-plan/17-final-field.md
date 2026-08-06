@@ -272,3 +272,287 @@ authored jitter (grid y ±0.04, u ±0.02, a ±0.028), not form error.
 - The frame-left near pair still sums to a hot streak under bloom. Slightly
   calmer than before (wider caps spread the same strokes over more pixels),
   still the brightest thing that is not the hero. Pre-existing; monitor.
+
+---
+
+## 2026-08-06 — ONE SUBSTANCE: the spores at both ends of the ride
+
+**Status: SHIPPED (same-commit `final@*` goldens).** Hannah, verbatim: *"the
+spores that are coming from the mushroom at the end feel perhaps different in
+character to the ones that are coming from the main one at the beginning, can
+you make them match and also make it so the colours of them work nicely, they
+should also react to the wind."*
+
+She is right, and for a reason worth naming plainly: **at the end you are not
+looking at the spores.** You are looking at a different particle system that
+had been built to sit in the same frame.
+
+### The diagnosis, measured
+
+All numbers at the Final rest (p 0.925, camera (−14.72, 2.73, 2.70), scene fog
+13.75 → 60.30), against the opening (p 0, camera (−2.25, 2.25, 10.40), fog
+7 → 20). Per-particle "output" below is the shader's own product —
+tone × opacity × fog × vShrink × DOF-dim — evaluated over every particle from
+the live buffers.
+
+**1. The FINAL frame's particulate is a second population, and it is the
+loud one.** `chapters/final/sky.js` draws its own 5,200-point GPU cloud.
+
+| at the Final rest | count | depth p50 | screen px p50 / p95 | mean output |
+|---|---|---|---|---|
+| `sky.js` cloud | 5,193 in frustum | 13.9 | 1.84 / 6.61 | **0.500** |
+| `organism/spores.js` shed | 4,200 | 17.2 | 1.70 / 3.06 | **0.109** |
+
+So ~82% of the particulate light in that frame was the chapter's layer.
+"The spores at the end" *are* these, and every way they differed from the
+hero's shed was a way the substance differed.
+
+**2. Size was the tell, and the mechanism is `vShrink`.** The hero's shed is
+mostly SUB-PIXEL — `psize` 0.019–0.091 world units, 0.5–2.4 px at its own
+camera — and the point shader holds anything under `MIN_PT` at 1.7 px while
+`vShrink` dims it by the area it lost. That is what makes the opening plume a
+sea of faint dust with a scattering of bright sparks. The sky layer ran
+`szBase * 1.9` **and never applied vShrink in its fragment at all**, so every
+dot, however small, rendered at full brightness and at the floor size. Evenly
+sized, evenly bright, scattered across the whole sky: a starfield. That is
+what the frame looked like, and it is the single biggest reason the two ends
+read as different stuff.
+
+**3. Colour was a two-point lerp across a piecewise ramp.** The layer mixed
+`heat(0.52)` and `heat(0.9)` by a tone drawn on [0.50, 1.00] — a straight
+line between two *samples* of `heat()`, which cuts the corners off the ramp's
+own knees at 0.65 and 0.88. Effective spread: about heat 0.71–0.90, a
+0.19-wide band that never reaches `C_WHITE`. The hero draws
+`0.64 + rand^1.4 · 0.36` **through** `heat()`: a 0.36-wide band with ~6% of
+the population above 0.88, where the ramp turns to white.
+
+**4. There was no wind.** The drift ran at a fixed rate along a FLAT
+`(0.975, 0, 0.16)`; the only time-varying motion was a 63–94 s eddy of ±1.5
+units — a slow lava-lamp swirl. The hero's shed is carried by `BREEZE_DIR`
+`(0.845, 0.524, 0.144)`, which *lifts*, at a speed the gust surges
+(`carry *= 0.72 + 0.28·breeze(t)`, organism/spores.js §10).
+
+**5. The hero's own shed was fogged out of the frame — clones.js's fog
+reversal, one file late.** `organism.js`'s `makePoints` latches
+`fogNear`/`fogFar` per material at construction, to the hero page's fixed
+7 → 20. The director opens the world to 13.75 → 60.30 across this leg and
+everything else in frame rides it — terrain, sky, the species batch, and the
+clone bodies, which `clones.js` had to take OFF the hero's pair for exactly
+this reason ("THE ONE UNIFORM A CLONE MUST NOT INHERIT: fog"). The shed never
+got the same treatment:
+
+| hero shed | fog pair | mean fog factor | mean output | above vis. floor |
+|---|---|---|---|---|
+| at p 0 | 7 → 20 | 0.672 | 0.518 | 4,200 / 4,200 |
+| at p 0.925, before | 7 → 20 | **0.159** | **0.109** | 2,206 / 4,200 |
+| at p 0.925, on the world's fog | 13.75 → 60.30 | 0.925 | 0.446 | 4,200 / 4,200 |
+
+The same cloud, 4.7x dimmer at the end for no reason a viewer can see — and
+a hard black wall at 20 units straight through a cloud that spans 13.1–20.7,
+so the far half of the hero's plume simply stopped in mid-air.
+
+**6. Camera distance is NOT the story.** The hero's shed sits at the `MIN_PT`
+floor for ~95% of its particles at *both* ends: screen px p50 = 1.70 at p 0
+and 1.70 at p 0.925. "The camera is just further away" would have predicted a
+size change; there isn't one. The size difference in frame was the sky
+layer's own 1.9x.
+
+**7. A latent pop, found on the way.** Mode 1's alpha was
+`0.55 + 0.45·sin(uTime·0.045 + seed·2.7)` — never zero, and unrelated to its
+drift phase `fract(uTime/period + phase)`. So a band particle teleported back
+to its birth point mid-cycle *while visible*. Survivable while it drifted
+flat; a visible fall once the wind lifts it.
+
+### What changed
+
+Everything is in `chapters/final/sky.js` except the fog handover, which is in
+`chapters/final/index.js`. `organism/*` is untouched — the shed is steered
+only through scene state the chapter already owns and restores, which is this
+file's own ground-network precedent twenty lines up.
+
+**CHARACTER — the hero's laws, not approximations of them.**
+
+| | before | after |
+|---|---|---|
+| sprite size | `szBase × 1.9` (band) / `× 1.15` | `pow(rand,1.8)·0.072 + 0.019` — the hero's own |
+| `vShrink` | computed, **never used** | applied in the fragment |
+| twinkle | none | `0.85 + 0.15·sin(t·1.4 + seed·7)`, on size **and** light |
+| depth | flat `1/d` | the hero's DOF, re-banded: `vBlur = clamp(|d − 10.5| / 14)`, size `× (1 + 1.35·vBlur)`, light `× (1 − 0.55·vBlur)` |
+| plume share | 40% | 54% |
+| source pick | uniform over the shed-weighted list | squared draw over the same list sorted NEAR-first |
+| plume carry | 4–8.5 flat + 6–13 rise | 4.4–7.4 along the one wind |
+| plume spread | full eddy + scatter | `× 0.25` |
+| life window | band on an unrelated sinusoid | both cohorts on their own phase |
+
+The DOF is the load-bearing one. A hero-sized spore 24 units out is 0.23 px,
+which `vShrink` crushes to 1.8% — with the hero's sizes and no DOF the far
+half of the cloud is not there, and the first cut went top-heavy and thin.
+`FOCAL_D = 10.5, FOCAL_R = 14.0` (the hero's own band is 9.5 / 8, sized for a
+lens two metres off one organism) puts `vBlur` at 1 by ~24.5 units, where the
+2.35x growth almost exactly cancels the `1/d` shrink: a 24-unit spore lands
+the same size on screen as an 11-unit one and 45% as bright. Same law, this
+chapter's composition. Depth then reads as brightness and fog, which is where
+this chapter already keeps it (`cloneLum`, the tier `lum` ladder).
+
+The near-first source draw is a density argument. There are only **seven**
+shedding bodies in frame, at 7.3–16.2 units. A plume is a density before it
+is anything else — the hero's is 4,200 particles in a cone four units across
+— and spreading the plume cohort evenly over seven bodies gives every one of
+them a plume too thin to read as more than haze. Half the cohort now lands on
+the nearest two, where a plume can be seen.
+
+**COLOUR — and why it works in *this* frame.**
+
+Baked per particle through `heat()` on the hero's own draw
+(`0.64 + rand^1.4·0.36`); `uHeatA`/`uHeatB` and the `vTone` varying are gone,
+replaced by a vertex colour attribute. `SPORE_GAIN` 2.2 → **2.4**, the hero
+point material's own `uOpacity` on the shed.
+
+The old palette's failure is specific to what this frame has become. A narrow
+pale-cream band reads as *sparkle* against near-empty darkness, which is the
+Mission frame — and that is presumably where it was judged. But doc 17 and
+doc 18 put a field of seventy-two warm amber bodies behind it, and against
+warm amber a cold cream population sitting in front of it reads as a
+*separate layer*: stars over a landscape, not spores in its air. The hero's
+own draw fixes it from both directions at once — the majority now sits in the
+amber the field itself is made of, so the dust belongs to the same light;
+and the top ~6% reaches white, which is the only part that needs to separate
+from the bodies, and does. Measured on the composite: sky-band mean RGB
+(52.1, 31.8, 13.0) → (49.3, 29.6, 11.6), R/B 4.01 → 4.25 — warmer, and
+6.6% less light in the band while the whole frame moves only −2.3% (35.99 →
+35.18). The light was redistributed, not removed.
+
+**WIND — one air current, the hero's law, in closed form.**
+
+The flat drift and the separate rise are gone into one `uWind`, the hero's own
+`(1, 0.62, 0.17)` normalized (the same three numbers `shed.js` already
+mirrors). The gust is the hero's speed law, integrated:
+
+```glsl
+float spd   = aCycle.w / aCycle.x;                        // units / second
+float carry = (aCycle.w * t + 0.28 * spd * breezeInt(uTime)) / 0.72;
+```
+
+`breeze()` is mirrored into GLSL beside `clones.js`'s JS copy, with the same
+provenance note. `breezeInt` is its quasi-static antiderivative: the ~48 s
+gust swell is 40x slower than the three sway modes, so carrying it as a factor
+and integrating the modes (amplitude / ω each) is accurate to a few percent —
+and it is what turns a SPEED law into a POSITION for a shader that has no
+frames to integrate over. The `1/0.72` renormalises the mean back to the
+shipped drift rate, so this adds a surge and does not quietly slow the cloud.
+`d/dt` of the term is exactly `0.28·spd·breeze(t)/0.72` — the hero's ±38%
+speed modulation, to the coefficient. Eddies halved (1.5/0.75/1.35 →
+0.75/0.38/0.68) now that the wind, not the swirl, carries the cloud.
+
+**One global wind, not seventy-two local ones.** The field's bodies each carry
+a seeded sway (`clones.js`), so a spore *could* answer the body it came from.
+It should not: a wind is one air current and the bodies' sways are RESPONSES
+to it, which is exactly why organism.js §10b shares one signal between the
+hero's stalk and the hero's spores ("what makes the motion read as air rather
+than as two unrelated animations"). Measured against the alternative: at the
+rest camera a field body's cap rim travels ~1 px through its entire sway, so a
+release point pinned to it buys nothing visible — while a mis-phased one (this
+shader has no per-body state; it would have to re-seed the phase) is a real
+error at the same scale. One wind, and the bodies lean in it.
+
+**THE HERO'S SHED, on the world's fog** (`index.js`). Collected once, ramped
+toward `scene.fog` by the same eased `reach` the ground-network dim already
+uses — pure in the camera pose, so a reverse scrub retracts it — and handed
+back verbatim on retire. At p = 0 the chapter is not visible, so the Mission
+frame cannot see this at all.
+
+### The wind measurement (measured, not asserted)
+
+A still cannot show motion, so this is two probes with a control between them.
+
+**The control matters more than the result.** The first method — track the
+isolated layer's lit-pixel centroid, or phase-correlate consecutive frames —
+was run against the HERO's shed, which is the reference implementation of this
+wind. It scored **r = 0.05**. A recycling spore population's birth/death churn
+is a far larger frame-to-frame signal than the gust, and the hero's cloud is
+in steady state so it barely translates at all. A method that cannot see the
+wind in the system that defines it cannot certify the system that copies it,
+so it was thrown away.
+
+**Hero shed** (live clock, real position buffer written by
+`organism/spores.js`'s own animator; per-particle along-`BREEZE_DIR` delta,
+trimmed 8% per tail to drop the recycle teleports, which are ~5-unit negative
+jumps against a ~0.0005-unit drift step):
+
+| | |
+|---|---|
+| frame pairs / clock span | 71 / 36.1 s |
+| mean along-wind speed | 0.03769 units/s |
+| speed peak-to-peak | 55.8% of mean |
+| **r(speed, breeze(t))** | **+0.9081** |
+
+**Sky layer** (frozen clock; the probe recompiles the material once with the
+gust's gain and phase on probe-owned uniforms, so the two frames differ by
+exactly one thing):
+
+| | |
+|---|---|
+| determinism control — same frozen state, re-rendered | MAE **0.0000**/255, max Δ **0** |
+| gust OFF → ON at the shipped 0.28, same state, same phase | MAE **0.5083**/255, max pixel Δ **152**/255 |
+| gain sweep K = 0.28 / 5.0 / 40 | MAE 0.508 / 0.815 / 0.728 (saturating) |
+| phase, sweeping the wind over 10.4 s | r(screen Δx, breezeInt) **+0.76**, r(screen Δy, breezeInt) **−0.77** — up-and-downwind along the breeze's screen projection |
+| amplitude, from the shipped buffers + the shipped `carry` read out of the live compiled shader | per-particle speed 0.148–0.655 (mean 0.341) units/s; offset **0.091 units peak / 0.182 ptp = 14.0 px at 1440×900**; `d/dt` = ±38% speed surge |
+
+Against a literal zero noise floor, a 0.5083 MAE with a 152/255 peak is not
+ambiguous. Note why phase correlation could give the *phase* but not the
+*magnitude*: the cloud spans 5–24 units, so one world-space offset projects to
+5–26 px — a depth-dependent shear, not a rigid translation, and the
+correlation peak smears rather than moves.
+
+### Measured
+
+- **Draw calls 860 → 860.** Triangles 565,702 → 565,702; points 169,086 →
+  169,086; programs 39 → 39. Nothing was added to the graph; one attribute was
+  repurposed (`aCycle.w`, tone → carry), one added (baked colour, 3 floats),
+  two uniforms deleted (`uHeatA`/`uHeatB`), one added (`uWind`). Net +2 floats
+  per particle = **+41.6 KB**.
+- **Frame (headless, 1280×800 @dpr1, 160 frames at the Final rest, same probe
+  both runs):** p50 **19.2 → 18.2 ms** (52.1 → 54.9 fps); p90 22.1 → 21.0;
+  p99 23.9 → 24.2. The honest reading is *no worse*.
+- **Hero shed at the Final rest:** mean fog factor 0.159 → **0.925**, mean
+  output 0.109 → **0.447**, particles above the visibility floor
+  2,206 → **4,200 of 4,200**. Against 0.518 at the opening, the end now sits
+  at **86%** of the opening's per-particle presence — the remainder being
+  genuine extra distance. At p 0 it is untouched: fog [7, 20], output 0.5175.
+- **Reveal purity (D16):** scrub 0.78 → 1.0 → 0.78, 13 stops each way.
+  `uAmount` hysteresis **0.000000 at every stop**; `uPull` hysteresis
+  0.000000 except 0.0023 / 0.0018 at p 0.85 / 0.87, where the camera itself
+  had not finished settling (`uPull` is a pure function of camera x);
+  shed-fog hysteresis **0.000** at the rest and at both ends, 0.018 of a
+  42-unit ramp at p 0.87. **Dark at arm holds**: at p 0.82 and 0.84 the
+  chapter is armed at `uAmount` 1.0 with `uPull` **0** and the hero's shed
+  still on [7, 20] — the fog handover cannot begin before the surface pierce.
+- **Poke:** cap taps on a field body fire the shed (`shedLive` 0 → 11 → 22 →
+  33 → 44 across four taps) and ring the clone down (`clonesRinging`
+  0.38–0.90 deg). No errors.
+- **Console:** info-only over a full 0 → 1 → 0 ride (2 info lines, 0 warnings,
+  0 errors). Scrub run likewise clean.
+- **Gates:** `capture.py --check` **PASS, worst MAE 0.00/255, all ten**.
+  `mission@*`, `inspire@*`, `connect@*`, `owned@*` byte-identical in git (not
+  in the commit's file list at all); `final@*` re-shot same-commit with
+  manifest provenance. Compositions reviewed at 1440×900 and 375×812.
+
+### Residuals
+
+- The sky's upper-left is darker than the shipped starfield. Deliberate — the
+  starfield was the complaint — but the band share (`highBand < 0.46`, was
+  0.60) is the one knob if Hannah wants more air back, and it costs nothing.
+- **The hero's own BODY is still on the hero page's 7 → 20 fog.** At 14.5
+  units that puts it at fog factor 0.42 while its shed now sits at 0.93. It
+  does not read as wrong (the body is far brighter per pixel and it is
+  supposed to hold the frame), but it is the same inversion `clones.js` names,
+  one level up. If the hero body is ever put on the world's ramp, these two
+  numbers want re-tuning together, not separately.
+- One global wind means a spore does not answer the body it came from.
+  Measured at ~1 px from the rest camera, so it is invisible today; if a
+  future camera ever comes close to a field body, revisit.
+- `sky.js` imports `makePointsMat` and does not use it. Pre-existing at HEAD,
+  left alone rather than churn a look-dev commit.
+- The failed centroid/phase-correlation wind probe is kept in the scratchpad
+  as a record of the control that killed it. It is not a usable gate; the
+  A/B is.
