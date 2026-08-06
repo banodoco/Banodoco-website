@@ -1298,3 +1298,54 @@ p 0.450); it was simply on screen for half as long.
   which means lighting a web that is under half resolved.
 - The p 0.63–0.69 bareness and the final-golden determinism wobble stand as
   earlier passes left them.
+
+---
+
+## 2026-08-06 (later) — the Inspire → Connect boundary is implicated in the spore extinction
+
+Hannah's third spore report names this boundary as **the worse of the two**
+("especially jarring moving from Inspire to Connect"). Reproduced and measured;
+full diagnosis and the required fix are in
+`07-chapter-inspire.md`, section "2026-08-06 (later)". The short version, for
+anyone working on this leg:
+
+**Nothing on the Connect side causes it.** Connect never claims the spore
+driver seat (`setDriver` is called only from `chapters/inspire/index.js:899`),
+its own particles are 108 ground glints on the tendril routes plus a 4,122-vertex
+strand mesh — all at ground level, none in the shed volume. The shed keeps one
+`Points` object of 4,200 dots at every p across the boundary, index-continuous,
+with no count step and no re-seed.
+
+**What does cause it is Inspire's retire envelope.** In `inspire/index.js`
+`drive(p)`:
+
+```js
+const out = 1 - smz((p - (endOf('inspire') - 0.025)) / 0.06);   // 0.355 → 0.415
+api.setReveal(a * out, b * out, c * out, band * out);
+```
+
+`out` pulls **all three exits down simultaneously**, so both migrant cohorts
+(exits 1 and 2 — 50% of the shed) sweep through the organism-side dead zone
+between "ambient surrendered" (rev ~0.30) and "plume light granted"
+(rev 0.55) **at the same time**. On the way *in* the two migrants cross that
+zone separately, giving two dips of −13.3% and −10.0%; here they cross together
+and the dips add:
+
+```
+p     0.365  0.370  0.375  0.380  0.385  0.390  0.395  0.400  0.410
+eff   0.926  0.844  0.741  0.624  0.500  0.376  0.259  0.156  0.020
+lum   3029   2973   2637   2308   2264   2274   2492   2731   2831
+```
+
+**−25.3%** total shed light, **−31.9%** in dots above 0.60 luminance, with
+**1,193 dots converted-and-black** at the trough (1,027 of them above y = 3.0
+in the braided rise) against a resting baseline of 240. Live unfrozen ride
+agrees: −25.8%.
+
+**Do not "fix" this by re-timing `out`.** Staggering the three exits' retirement
+so the migrants cross separately would halve the trough, but it only splits one
+violation into two smaller ones, and it would move the Connect arrival timing
+this document's own restage established (4146288). The fault is the organism's
+migrant rise draw-on gate, and the fix belongs there — a conservation floor so
+the gate never removes more light than the dot has already ceded. Until that
+lands, this boundary stays as it is.
