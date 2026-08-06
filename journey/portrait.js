@@ -90,7 +90,26 @@ const KEYS = [
   // a bigger dolly here would make the portrait travel ZOOM IN toward Connect
   // while the landscape widened. 1.50 -> 1.55 keeps it growing (12.7 -> 13.6),
   // and fov +13 keeps that growing too (53 -> 59).
-  { p: 0.260, back: 1.50, rise: -0.50, truck: -0.30, tgtUp: 0, tgtRight: 0.30, fov: 13 },
+  //
+  // D19 (Hannah, 2026-08-06) asks for the cap's centre at the midpoint of the
+  // gap over the copy in BOTH orientations, and portrait cannot inherit it:
+  // the landscape re-aim is a fixed world target, but the tall frame's copy
+  // block sits at a different fraction of the viewport, so the same gaze left
+  // the cap 113.9 px low at 375x812. This field's whole purpose is that
+  // mismatch, and tgtUp is the documented lever for it (the vertical re-aim).
+  // At portrait's own distance (8.42 x back = 12.6) and fov 53, -1.64 is
+  // exactly the 7.4 deg of pitch that 113.9 px is worth, and it lands 375x812
+  // at +5.5 px. But ONE portrait pose cannot serve both phone sizes: the copy
+  // block wraps to more lines in a 375-wide column than a 430-wide one, so its
+  // top edge sits at 0.564 of the frame at 375x812 and 0.674 at 430x932 — the
+  // gap's midpoint is a genuinely different place in the two frames, 0.282 vs
+  // 0.337 of frame height. -1.64 overshot 430x932 to -44.8.
+  //
+  // So the value is balanced rather than fitted: -1.378 splits the residual
+  // evenly, +23.8 px at 375x812 and -23.8 px at 430x932, which is the smallest
+  // worst case available to a single pose. tgtRight comes back a hair,
+  // 0.30 -> 0.258, for the 2.8 px the cap sat left of the copy's centre.
+  { p: 0.260, back: 1.50, rise: -0.50, truck: -0.30, tgtUp: -1.378, tgtRight: 0.258, fov: 13 },
 
   // Ground-descent approach (D16 restage; retuned 2026-08-04 for the
   // monotone Inspire->Connect zoom-out): the landscape leg no longer pushes
