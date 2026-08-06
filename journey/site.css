@@ -194,6 +194,42 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     transition: color 0.3s, background 0.3s;
   }
   .j-hot.vis { visibility: visible; pointer-events: auto; }
+  /* THE HIT PAD (2026-08-06, report A). A round target the size of the thing
+     the node draws, pinned to the node inside the button's own box — so the
+     edge-flip and the narrow-viewport nudge below move the LABEL and leave the
+     target on the face. Zero-sized, and therefore inert, for any chapter that
+     does not tell ui.js a node radius. */
+  .j-hot-hit {
+    position: absolute;
+    top: 11px;
+    left: var(--j-hit-x, 11px);
+    width: var(--j-hit, 0px);
+    height: var(--j-hit, 0px);
+    margin: 0;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: auto;
+  }
+  /* A hover-only chip shows NOTHING at rest, so its pill must not be a hit
+     surface then: an invisible 200-300px bar lying beside the node was most of
+     why the hit model and the picture disagreed. The pad still answers (it
+     sets pointer-events itself), and the moment the chip is hot the pill is
+     visible and interactive again, so a pointer can walk from the face onto
+     the label and on to the popover exactly as before. */
+  .j-hot.label-hover.vis { pointer-events: none; }
+  .j-hot.label-hover.vis:is(:hover, .hot, :focus-visible) { pointer-events: auto; }
+  /* A hover zone is a hover target that is part of the scene, not the UI:
+     no chip, no label, no tab stop, nothing drawn. See ui.addHoverZone. */
+  .j-hotzones { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .j-hotzone {
+    position: absolute;
+    top: 0; left: 0;
+    border-radius: 50%;
+    margin: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .j-hotzone.vis { visibility: visible; pointer-events: auto; }
   /* Right-edge chips run their pill LEFT of the dot instead of off the frame
      (ui.js measures and sets `.flip` + a compensating translate, so the dot
      stays exactly on its node either way). Added for the Owned root-network
@@ -645,6 +681,20 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
          control's own text for selection purposes */
       background: none;
       pointer-events: auto;
+    }
+    /* ...with one exception, added 2026-08-06 (report A, the mobile half).
+       A hover-only chip draws NOTHING at rest, so `max(100%, 44px)` on its
+       pill is a 306x44 invisible bar lying beside the node — and because this
+       rule states `pointer-events: auto` outright, it overrode the pill's own
+       `none` and put that bar back on top of the neighbouring node's face.
+       Measured at 375x812: contributor-8's pad was covered by contributor-9's,
+       2 of 13 sample points on the drawn face reached the right chip.
+       While the chip shows nothing, the target is the node's own pad, which
+       ui.js floors at 44px under this same query so PL-1.4 still holds. The
+       moment the chip is hot — showing a label worth aiming at — its full
+       touch target comes back. */
+    .j-hot.label-hover:not(:hover):not(.hot):not(:focus-visible)::before {
+      pointer-events: none;
     }
     /* --- the chapter nav gets its own band ---------------------------------
        The hero's <nav> is one flex row: wordmark | chapter nav | 2RP+Discord.

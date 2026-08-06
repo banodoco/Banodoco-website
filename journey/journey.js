@@ -174,8 +174,23 @@ export function boot(opts = {}) {
       const h = ui.addHotspot({
         id, chapter: chapterId, label,
         world: () => mod.nodeWorld(id),
+        // Optional (2026-08-06, report A): the world radius of what this node
+        // DRAWS, so its chip's hit target can be the node itself rather than
+        // the label pill beside it. A chapter that does not implement
+        // nodeRadius keeps the pill-only hit model unchanged.
+        radius: typeof mod.nodeRadius === 'function' ? () => mod.nodeRadius(id) : undefined,
       });
       h.onHot = (on) => mod.setHot && mod.setHot(id, on);
+    }
+  }
+  /** Scene-owned hover targets with no chip — see ui.addHoverZone. */
+  function registerHoverZones(chapterId, mod) {
+    if (typeof mod.hoverZones !== 'function') return;
+    for (const z of mod.hoverZones()) {
+      ui.addHoverZone({
+        id: z.id, chapter: chapterId, world: z.world, radius: z.radius,
+        onHot: (on) => mod.setHot && mod.setHot(z.id, on),
+      });
     }
   }
   // registration order = narrative reveal order (ArtCompute -> Arca -> 2RP,
@@ -189,6 +204,9 @@ export function boot(opts = {}) {
   });
   registerHotspots('connect', chapters.connect.nodeIds, chapters.connect);
   registerHotspots('owned', chapters.owned.nodeIds, chapters.owned);
+  for (const id of ['inspire', 'connect', 'owned', 'final']) {
+    if (chapters[id]) registerHoverZones(id, chapters[id]);
+  }
 
   // The hero's own furniture: the world-tracked callouts and the hero scrim /
   // spill are Mission-pose compositions, so they release as the journey leaves

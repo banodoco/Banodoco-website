@@ -72,15 +72,23 @@ const CHAPTER_POSITION = {
    Ride-through #2 gave the Owned claims list a job beyond copy: each <li>
    pulsed the colony through the chapter's trigger(). Hannah's 2026-08-05
    direction turned that list into one prose line (content/content.js), so the
-   behaviour moves with it — the whole sentence is now the claim, and it fires
-   the whole-colony wave. The two localized secondary pulses retired with the
-   list items they belonged to; chapters/owned/index.js still implements them,
-   unchanged, for any future caller.
-   Keyed by chapter like CHAPTER_POSITION above, so a chapter that wants one
-   says so here and every other chapter is untouched. */
-const CHAPTER_SUB_PULSE = {
-  owned: 'claimPrimary',
-};
+   behaviour moved with it — the whole sentence became the claim, and it fired
+   the whole-colony wave.
+
+   RETIRED for Owned, 2026-08-06 (Hannah, report C). Measured, that prose line
+   is a 416x77 px box at the dead centre of the frame, between the crown at
+   the top and the portrait arc below it — i.e. squarely on the route a
+   pointer takes to reach a face. Every crossing fired substrate.surge() and a
+   30-unit colony wave, so the whole root system lit at moments that felt
+   arbitrary: "the roots ALL light up when I'm hovering over below randomly,
+   but this should only happen when I hover over the TOP root thing." The
+   response now belongs to the crown, as a HOVER ZONE (see addHoverZone below
+   and chapters/owned/index.js hoverZones()).
+
+   The mechanism stays: it is keyed by chapter, so a chapter that wants one
+   says so here and every other chapter is untouched. Nothing asks for one
+   today. */
+const CHAPTER_SUB_PULSE = {};
 
 function el(tag, cls, text) {
   const n = document.createElement(tag);
@@ -576,7 +584,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
    *  `labelOnHover` (optional) opts this node into the hover-only chip — see
    *  the LABEL POLICY note above; a chapter can set the same flag per node
    *  through its own `labelPolicy(id)`. */
-  function addHotspot({ id, chapter, label, world, labelOnHover }) {
+  function addHotspot({ id, chapter, label, world, labelOnHover, radius }) {
     const stagger = hotspots.filter(h => h.chapter === chapter).length;
     const btn = el('button', 'j-hot');
     btn.type = 'button';
@@ -595,9 +603,22 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     btn.appendChild(el('i', 'j-hot-dot'));
     const labelEl = el('span', 'j-hot-label', label);
     btn.appendChild(labelEl);
+    // THE HIT PAD (2026-08-06, report A). A round hit surface the size of the
+    // thing the node draws, pinned to the node itself rather than to the pill
+    // — the pill flips and nudges to keep a label on frame, and the target you
+    // aim at must not move when it does. Zero-sized (and so inert) unless the
+    // chapter supplies a radius; the pill is then the whole hit model, exactly
+    // as before. It is a CHILD of the button, so every existing listener,
+    // :hover rule and focus behaviour keeps working untouched: pointer events
+    // on the pad fire enter/leave on the button as its ancestor.
+    const hitEl = el('i', 'j-hot-hit');
+    hitEl.setAttribute('aria-hidden', 'true');
+    btn.appendChild(hitEl);
 
     const h = {
       id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false,
+      radius: typeof radius === 'function' ? radius : null,
+      hitEl, hitR: 0,
       hover: false, focused: false, armed: false, hot: false,
       pointer: null,      // pointerType of the gesture in flight
       label, labelEl,
@@ -665,6 +686,46 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     hotHost.appendChild(btn);
     hotspots.push(h);
     return h;
+  }
+
+  /* ---------------- hover zones (report C) ----------------
+     A piece of the SCENE that answers a pointer, with no chip, no label, no
+     card and no tab stop. The crown of Owned's root network is the first and
+     only one: hovering it runs the wave through the whole system, which is
+     the response that used to fire off a prose line in the middle of the
+     frame every time a pointer crossed it on the way somewhere else.
+
+     Deliberately not a hotspot. A hotspot is a named node with content behind
+     it and a place in the tab order; a zone carries no information at all, so
+     it earns neither. It is pointer-only by the same reasoning that made the
+     prose-line pulse pointer-only, and it replaces that, so nothing regresses
+     for a keyboard: there was never anything there to reach. */
+  /* Zones live in their OWN fixed host, at z-index 0, deliberately BELOW the
+     hero's `.ui` layer (z-index 1) — and therefore below the chapter nav.
+     The chips' host is also z-index 1 but later in the DOM, so a chip still
+     wins a tie with the nav exactly as it always has. This matters: the crown
+     zone is 246 px across at 1440x900 and the chapter nav sits inside it. In
+     the hotspot host it swallowed every nav link (measured — elementFromPoint
+     over "Connect" returned the zone). A zone is scenery; anything the page
+     actually offers you outranks it. */
+  const zoneHost = el('div', 'j-hotzones');
+  document.body.appendChild(zoneHost);
+  const hoverZones = [];
+  function addHoverZone({ id, chapter, world, radius, onHot }) {
+    const zEl = el('i', 'j-hotzone');
+    zEl.setAttribute('aria-hidden', 'true');
+    zoneHost.appendChild(zEl);
+    const z = { id, chapter, world, radius: radius || 0.3, onHot, el: zEl, live: false, hot: false, r: 0 };
+    zEl.addEventListener('pointerenter', (e) => {
+      if (e.pointerType === 'touch' || z.hot) return;
+      z.hot = true; z.onHot(true);
+    });
+    zEl.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'touch' || !z.hot) return;
+      z.hot = false; z.onHot(false);
+    });
+    hoverZones.push(z);
+    return z;
   }
 
   /* ---------------- detail card ---------------- */
@@ -1104,16 +1165,33 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     // short, and a flip computed from a short width puts the DOT off the
     // frame instead of the label.
     for (const h of hotspots) h.pillW = h.btn.offsetWidth;
+    // px per world unit at a given depth, for the hit pads below. The
+    // denominator is the VIEW-SPACE depth, not the radial distance: an
+    // off-axis node is nearer the image plane than its distance suggests
+    // (cos 38 deg at |ndc x| 0.9), and sizing a pad by distance would make it
+    // ~20% too small at exactly the edge of the frame where it matters most.
+    const tanHalf = Math.tan(camera.fov * Math.PI / 360);
+    const cm = camera.matrixWorld.elements;
+    const cpx = cm[12], cpy = cm[13], cpz = cm[14];
+    const fx = -cm[8], fy = -cm[9], fz = -cm[10];
+    const viewDepth = (v) => (v.x - cpx) * fx + (v.y - cpy) * fy + (v.z - cpz) * fz;
     for (const h of hotspots) {
       const gate = eased[h.chapter] || 0;
       let want = gate > 0.72 && !detail;
       let w = want ? h.world() : null;
       let sx = 0, sy = 0;
+      h.hitRaw = 0;
       if (w) {
         const v = w.clone().project(camera);
-        // behind the camera, or too near the frame edge to carry a readable
-        // label without clipping
-        if (v.z > 1 || Math.abs(v.x) > 0.92 || Math.abs(v.y) > 0.9) {
+        // Behind the camera, or too near the frame edge to be placeable.
+        // A chip with a HIT PAD gets the wider bound: the old 0.92/0.90 was
+        // sized for a pill that had to carry a readable label from its dot,
+        // but a pad chip's target is the dot's own circle and the pill flips
+        // or nudges around it. It mattered — Owned's arc reaches |ndc x| 0.912
+        // by construction, 0.008 from silently having no hotspot at all.
+        const bx = h.radius ? 0.97 : 0.92;
+        const by = h.radius ? 0.94 : 0.9;
+        if (v.z > 1 || Math.abs(v.x) > bx || Math.abs(v.y) > by) {
           w = null;
         } else {
           sx = (v.x * 0.5 + 0.5) * window.innerWidth;
@@ -1157,7 +1235,21 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
         const want2 = hi >= lo ? Math.min(Math.max(tx, lo), hi) : tx;
         tx += Math.max(-26, Math.min(26, want2 - tx));
         h.btn.style.transform = `translate(${tx}px, ${sy}px)`;
+        // The pad is placed against the NODE, in the button's own coordinates,
+        // so the flip above and the nudge above it move the label and leave
+        // the target where the thing is drawn. (`margin: -11px 0 0 -11px` on
+        // .j-hot is why the node sits at local (sx - tx + 11, 11).)
+        if (h.radius) {
+          const worldR = h.radius() || 0;
+          if (worldR > 0) {
+            const d = Math.max(0.05, viewDepth(w));
+            h.hitRaw = worldR * (window.innerHeight * 0.5) / (d * tanHalf);
+          }
+          h.hitEl.style.setProperty('--j-hit-x', `${(sx - tx + 11).toFixed(1)}px`);
+        }
+        h.sx = sx; h.sy = sy;
       } else {
+        h.hitRaw = 0;
         h.armAt = null;
         if (dt === 0) h.a = 0;
         else { h.a += (0 - h.a) * Math.min(1, dt * HOTSPOT_OUT_K); if (h.a < 0.02) h.a = 0; }
@@ -1173,6 +1265,58 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       h.btn.tabIndex = want && vis ? 0 : -1;
       if (want && vis) h.btn.removeAttribute('aria-hidden');
       else h.btn.setAttribute('aria-hidden', 'true');
+    }
+
+    /* HIT PAD SIZING, second pass — writes only, so it costs no reflow.
+       A pad is as big as its node draws, with two limits:
+         · it may never reach more than 48% of the way to the nearest other
+           live pad, or two neighbours would fight over the same pixels and
+           the answer would depend on DOM order rather than on aim;
+         · a floor of 15 px, because a far node still has to be catchable —
+           22 px (a 44 px target) under the same media query PL-1.4 uses, so
+           the pad carries the touch minimum the pill no longer does there —
+           and a ceiling of 56 px, because a foreground face that fills a
+           sixth of the frame does not get to own a sixth of the pointer. */
+    const padFloor = sheetQuery.matches ? 22 : 15;
+    const padded = hotspots.filter(h => h.hitRaw > 0 && h.a > 0.015);
+    for (const h of padded) {
+      let cap = 56;
+      for (const o of padded) {
+        if (o === h) continue;
+        cap = Math.min(cap, Math.hypot(o.sx - h.sx, o.sy - h.sy) * 0.48);
+      }
+      h.hitR = Math.max(padFloor, Math.min(h.hitRaw, cap));
+      h.hitEl.style.setProperty('--j-hit', `${(h.hitR * 2).toFixed(1)}px`);
+    }
+    for (const h of hotspots) {
+      if (h.hitRaw > 0 && h.a > 0.015) continue;
+      if (h.hitR !== 0) { h.hitR = 0; h.hitEl.style.setProperty('--j-hit', '0px'); }
+    }
+
+    /* HOVER ZONES: scene-owned hover targets with no chip (report C). Same
+       projection, same gate, none of the chip machinery. */
+    for (const z of hoverZones) {
+      const gate = eased[z.chapter] || 0;
+      let live = gate > 0.72 && !detail;
+      if (live) {
+        const w = z.world();
+        const v = w ? w.clone().project(camera) : null;
+        if (!v || v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) live = false;
+        else {
+          const d = Math.max(0.05, viewDepth(w));
+          const r = Math.max(18, Math.min(140, z.radius * (window.innerHeight * 0.5) / (d * tanHalf)));
+          const zx = (v.x * 0.5 + 0.5) * window.innerWidth;
+          const zy = (-v.y * 0.5 + 0.5) * window.innerHeight;
+          z.el.style.transform = `translate(${(zx - r).toFixed(1)}px, ${(zy - r).toFixed(1)}px)`;
+          z.el.style.width = z.el.style.height = `${(r * 2).toFixed(1)}px`;
+          z.r = r;
+        }
+      }
+      if (live !== z.live) {
+        z.live = live;
+        z.el.classList.toggle('vis', live);
+        if (!live && z.hot) { z.hot = false; z.onHot(false); }
+      }
     }
 
     // The popover is anchored to a chip that is itself world-tracked, so it has
@@ -1198,7 +1342,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   }
 
   return {
-    update, addHotspot, openCard, closeCard, footer,
+    update, addHotspot, addHoverZone, openCard, closeCard, footer,
     get cardOpen() { return cardIsOpen; },
     /** QA: is the card currently in its bottom-sheet form? */
     get cardIsSheet() { return card.classList.contains('sheet'); },
