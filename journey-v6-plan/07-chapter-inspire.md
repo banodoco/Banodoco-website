@@ -341,3 +341,231 @@ T blurs the braids; it does not restore a shed.
   at 0.24 of ArtCompute. Rise spread claws back what it can without moving any
   plume; making the three genuinely equal still needs the exit weighting opened
   up in the organism.
+
+---
+
+## 2026-08-06 (later) — Hannah's third report: it is not identity, it is extinction
+
+Hannah reported the spore discontinuity a **third** time, now across **two**
+boundaries (Mission → Inspire, and Inspire → Connect, "especially jarring").
+This pass reproduced both on the current tree (HEAD `3868d09`, clean) and
+measured them before touching anything. No scene code was changed — the
+mechanism is organism-side and the chapter genuinely cannot reach it. See
+"What is needed" below.
+
+### Method
+
+`?capture=` freeze mode + `journey.scrollTo(p)` makes the whole scene a **pure
+function of p** (`_frozenT` sets `dt = 0`). Verified: five round-trips to
+p = 0 and back to p = 0.16 produced **bit-identical** position buffers
+(max per-dot difference 0.000, 0 dots differing) and identical luminance
+(2914 every time). Every number below is therefore a property of p, not of
+frame order or scroll history. The live unfrozen ride was then re-measured and
+agrees (see "Live confirmation").
+
+### 1. Reproduction
+
+| Symptom | Reproduces? |
+|---|---|
+| Mission → Inspire: "they become different spores… they jump in awkwardly" | **Yes** |
+| Inspire → Connect: "they switch again to different spores, really rapidly" | **Yes, and it is the worse of the two** |
+| "weird arrows inside of them" | **Partly** — see §4. The forms retired at 7963d0b stay retired; other elongated forms remain. |
+
+### 2. Are they different particles? No. Measured.
+
+**One population, one object, continuous identity.** A full scene-graph
+inventory of every drawn object at p 0.26, 0.37 and 0.385 finds exactly **one**
+spore-drawing object in the shed volume — `Points`, **4,200 vertices, at every
+p**. There is no second particle object in that volume to swap with, nothing is
+hidden or shown at either boundary, and nothing is re-seeded. Index-tracked
+against the p = 0 hero buffer, dot *i* is the same dot throughout:
+
+| p | 0.10 | 0.12 | 0.14 | 0.16 | 0.18 | 0.26 | 0.385 |
+|---|---|---|---|---|---|---|---|
+| dots drawn | 4200 | 4200 | 4200 | 4200 | 4200 | 4200 | 4200 |
+| dots displaced > 0.05 from their own hero position | 0 | 1941 | 3209 | 3948 | 4199 | 4199 | — |
+| p95 displacement from hero | 0 | 2.64 | 3.42 | 3.81 | 4.09 | 4.09 | — |
+
+Both curves are **monotone**. No count step, no re-seed, no population swap at
+either boundary. **The answer to Hannah's question is: the same particles.**
+
+### 3. What she is actually seeing: converted dots rendering black
+
+The fault is not identity, it is **conservation of light**. In `steer()`
+(`organism/spores.js`) a migrant dot's ambient shed colour is surrendered as it
+converts —
+
+```js
+conv = ss(0, 0.30, rev - stag[i] * 0.25)   // complete by rev ~0.30–0.55
+// dim(): f = f * (1 - cv) + pw            // cv = conv * T, T = 0.85
+```
+
+— but its plume light is not granted until the **migrant rise draw-on gate**
+opens, which does not begin until rev **0.55**:
+
+```js
+const rl = rg * 1.12;                      // rg = ss(0.55, 1, rev) for e > 0
+const g0 = rl - 0.10 > 0 ? rl - 0.10 : 0;
+env *= 1 - ss(g0, rl + 0.001, u3);         // rg = 0  =>  env = 0
+```
+
+Between those two thresholds a migrant dot has given up **85%** of its ambient
+light and been granted **none** of its plume light. It is drawn black.
+
+The reason this hits so much of the field is that a dot's **stage** is a
+free-running per-dot clock (`t = tNow / perA[i] + ph0A[i]`, period 7–15.5 s),
+completely independent of the reveal. The draw-on gate assumed dots enter the
+rise only after the walk front arrives; in fact **~60% of a migrant cohort is
+in the braided-rise stage at any instant, at any reveal**. So the gate
+extinguishes them wherever they happen to be.
+
+**Per-dot proof.** Counting dots that are both displaced > 0.5 from hero
+(converted) and below 25% of their own p = 0 luminance (dark):
+
+| p | what is crossing | dark **and** converted | of those, above y = 3.0 | median y |
+|---|---|---|---|---|
+| 0.26 (Inspire rest) | nothing — baseline | **240** | 176 | 3.34 |
+| 0.147 | Arca, eff = 0.58 | **754** | 699 | 3.84 |
+| 0.167 | 2RP, eff = 0.535 | **676** | 509 | 3.47 |
+| **0.385 (→ Connect)** | **both migrants together, eff = 0.50** | **1193** | **1027** | 3.74 |
+
+Dark dots are *precisely* the converted ones (754 of 760; 1193 of 1197) and
+they sit high in the braided rise, exactly as predicted. At the Connect
+boundary **28% of the whole shed is extinguished in mid-air**, 5.0× the
+resting baseline.
+
+A population that goes dark and comes back on **is** perceived as a different
+population. That is the whole of Hannah's report, both halves.
+
+### 4. Total-light traces (frozen, Δp = 0.002 / 0.005)
+
+Mission → Inspire — **two** troughs, one per migrating exit, each centred where
+that exit's reveal ≈ 0.55:
+
+```
+p     0.129  0.135  0.141  0.147  0.155  0.161  0.167  0.175  0.183
+eff1  0.001  0.096  0.310  0.580  0.901  1.000  1.000  1.000  1.000
+eff2  0      0      0      0      0.052  0.255  0.535  0.878  1.000
+lum   3022   3006   2730   2621   3023   2864   2722   3024   3029
+```
+Arca dip **3022 → 2621 = −13.3%**; 2RP dip **3023 → 2722 = −10.0%**.
+The resident exit (eff0) shows **no** dip — `rg = 1` makes the gate inert for
+it, which is itself the proof of the mechanism.
+
+Inspire → Connect — **one trough, twice as deep**, because the retire envelope
+`out` pulls all three exits down *simultaneously*, so both migrant cohorts
+(50% of the shed) cross the dead zone together:
+
+```
+p     0.365  0.370  0.375  0.380  0.385  0.390  0.395  0.400  0.410
+eff   0.926  0.844  0.741  0.624  0.500  0.376  0.259  0.156  0.020
+lum   3029   2973   2637   2308   2264   2274   2492   2731   2831
+hot60 2879   2834   2480   2150   2091   1962   2094   2453   2704
+```
+**3029 → 2264 = −25.3%** total light; dots above 0.60 luminance
+**2879 → 1962 = −31.9%**. Recovery to the hero baseline (2831) by p 0.410.
+This is why she singles this boundary out.
+
+**Live confirmation** (unfrozen, `?nointro=1&nosnap=1`, same ride): 3050 at
+p 0.365 → **2263** at p 0.385 → 2831 at p 0.410, i.e. **−25.8%**. The frozen
+and live measurements agree to 0.5%, so this is not a freeze artefact.
+
+### 5. Why 7963d0b did not fix it
+
+That commit was right about what it looked at. It measured across the **arming
+gate** (p 0.115 → 0.14) and fixed a genuine whole-population double-dim there,
+−30% → −3.7%. Re-measured now, that fix is **holding**: p 0.10 → 0.14 shows
+lum 2831 → 2794 (−1.3%) with the converted-dot count rising smoothly 0 → 3209,
+no step at the arm. Both extinction troughs sit **downstream** of that window
+(0.147, 0.167) and the Connect one (0.385) was never in any measured window —
+the commit message says as much. The residual note at the end of the previous
+section named this exact mechanism and named the right fix; what it missed is
+that **the same gate fires again, twice as hard, at the retire.**
+
+### 6. The arrows
+
+The forms retired at 7963d0b **stay retired**, confirmed in the live inventory:
+`CORE_OPACITY = 0.0` (the 648-segment ribbons draw nothing) and no `Sprite` is
+drawn at the Inspire rest at all (the 12:1 anamorphic streaks are
+hover/selection-only, `visible = false`).
+
+Ruled out as the source of a *per-particle* arrow: the spore sprite is an
+isotropic 64px radial gradient (`makeGlowTexture`), and the spore shader has no
+motion-stretch, streak or tail term — `gl_PointSize` is a scalar, so a spore
+cannot be drawn elongated or directional.
+
+What remains elongated in the shed volume at the Inspire rest is **chapter
+furniture, all `LineSegments`** — 1,404 drawn segments threading the plume:
+
+| form | objects | segments | effective opacity (× T = 0.85) |
+|---|---|---|---|
+| wisp guides (4 continuous 30-segment curves per exit) | 3 | 360 | 0.109 |
+| source filaments under the cap | 3 | 840 | **0.361** |
+| rim delta links | 2 | 204 | 0.087 |
+
+In a 3× crop of the `inspire` golden these read as smooth continuous strokes
+arcing up through the dust — the same substance-mismatch class as the retired
+ribbons, at lower opacity. That is the best-evidenced candidate for what she is
+still calling arrows.
+
+**Honest gap:** a second hypothesis — that the rim-walk front clamp
+(`we = w < wFront ? w : wFront`) piles migrating dots onto a single azimuth and
+draws a hard-edged dart sweeping around the rim — was tested with a cap-local
+azimuth histogram and the test was **underpowered** (the rim band caught only
+15–38 dots, peak/mean ~15–24 at every p including the rest, so it discriminates
+nothing). It is neither confirmed nor excluded and should be retested with a
+correct rim band before anyone acts on it.
+
+### 7. What is needed (organism-side; `organism/*` is read-only)
+
+There is **no chapter-side fix**, and this was checked rather than assumed:
+
+- The chapter's only per-exit lever is the scalar `eff[i]`. Both `conv` (which
+  takes the ambient away) and `rg` (which grants the plume light) are pure
+  internal functions of **that same scalar**, with `conv` completing at
+  0.30–0.55 and `rg` only starting at 0.55. They cannot be separated from
+  outside, and `eff` must pass through the dead zone continuously.
+- The three dim channels can only ever **reduce** light
+  (`f = 1 - max(g, dimV)`, then `f = f * (1 - cv) + pw`). There is no channel
+  that adds light back. They are already at zero.
+- `transform` scales `cv` and `env` together, so lowering it shallows the
+  trough — but T = 0.85 is Hannah's dialed value and below ~0.78 the three
+  streams collapse into one (see the `T_SHIPPED` note above).
+
+The minimal change, in `steer()`, is a **conservation floor**: the draw-on gate
+must never remove more light than the dot has already ceded.
+
+```js
+const rl = rg * 1.12;
+const g0 = rl - 0.10 > 0 ? rl - 0.10 : 0;
+const drawOn = 1 - ss(g0, rl + 0.001, u3);
+env *= drawOn + (1 - drawOn) * cvT;   // a dot keeps at least the share it gave up
+```
+
+At rev = 1 the gate is already inert, so this is a **no-op at both the Inspire
+rest and p = 0** — the `mission` and `inspire` goldens are untouched by
+construction. It is pure in (eff, time, T), scrub-safe, reversible, and does
+not touch restore discipline. The alternative — keying the rise draw-on to
+`mig` (which completes at 0.55, in step with conversion) instead of to `rg`
+(which starts at 0.55) — is equally small and arguably truer to the intent.
+
+**Deliberately not done as a substitute:** staggering the retire envelope so
+the two migrants cross the dead zone separately would halve the Connect trough
+(−25% → roughly −13%), but it leaves the mechanism intact, still breaks
+Hannah's one-population rule, and would move the Connect arrival timing
+(4146288). A smaller violation is still a violation.
+
+### Gates (tree as found — no scene code changed)
+
+- `python3 tools/capture.py --check`: **PASS**. mission **0.00 / 0.00**,
+  inspire 0.00 / 0.00, connect 0.00 / 0.00, owned 0.00 / 0.00, final
+  0.18 / 0.13 (its own determinism noise). Worst MAE 0.18/255 against
+  warn > 0.50. `mission` is byte-identical.
+- Console clean over a full ride: two expected `[journey-lens]` /
+  `[journey-v6]` info lines per load, **zero** warnings or errors.
+- Determinism: 5/5 bit-identical buffer repeats at p 0.16 via p = 0 round-trip.
+- Drawn objects: 35 at the Inspire rest, 40 at the Connect approach; unchanged,
+  since nothing was edited. Frame time was **not** measured — the review pane
+  ran backgrounded and rAF was throttled to ~2 Hz, which makes any timing
+  number from this session meaningless. No code changed, so before/after is
+  identical by construction.
