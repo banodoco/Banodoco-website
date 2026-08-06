@@ -926,3 +926,217 @@ alternatives cost either the Connect join outright or 40% more ground light —
 but it is a real cost and Hannah should see it rather than read about it. If
 she wants it back, the lever is the copy block: `bottom: 8vh` is what sets the
 gap, and raising the copy raises the midpoint the cap is pinned to.
+
+---
+
+## 2026-08-06 (D20) — Inspire→Connect: one continuous rotation
+
+Hannah, on the travel out of the Inspire rest: *"the camera motion from the
+inspire section to the connect one doesn't feel smooth — it feels like a
+rotate and then jump back, but it should be one smooth rotation."*
+
+### Read this before you measure anything
+
+**Gaze yaw and gaze pitch were both already monotone across the whole leg —
+zero derivative sign flips, in both aspects — and the subject still reversed
+on screen.** Every angle-only audit this project has run would have passed
+this leg, and the previous three did. If you trace `dyaw`/`dpitch`, see them
+clean, and conclude there is no bug, you have reproduced the exact mistake
+that let this ship. The reversal is not in either channel; it is in the
+composition of the two.
+
+The quantity that matters is where the subject sits **across the frame**:
+
+```
+d = gazeYaw - camAz + 180        horizontal angle of the mushroom off the frame axis
+```
+
+Both terms fall through this leg — the orbit azimuth 115° → 68.8°, the gaze
+yaw −65° → −124° — so each looks like a clean monotone sweep on its own. But
+over **p 0.372–0.394 they fell at the same rate**, and their difference
+stopped: d froze at −11.44°, advancing **0.7 °/unit-p** against 138 just
+before it and 173 just after. A frozen angle inside a still-opening fov is a
+subject sliding *back toward centre*. The mushroom stopped, drifted right and
+sank, and then swept left again — Hannah's "rotate and then jump back".
+
+This is the same fault `2a27db7` cured on the Connect→Owned leg (the aim
+overswinging its destination and unwinding), expressed in the one coordinate
+that hides it from a per-channel trace: the aim had overswung **relative to
+the orbit**, not relative to the world.
+
+### Measured before (261-sample drift-aware scrub, p 0.26–0.52, `?steady=1`, 1440x900)
+
+Screen figures are the projected cap-rim silhouette's bbox centre, and the
+stipe base as an independent check.
+
+| | before |
+|---|---|
+| subject screen-x | 718.1 → **493.1 (p 0.376)** → **494.0 (p 0.390)** → 320.8 |
+| … velocity | −2982 px/p (p 0.334) → **+94 RIGHTWARD (p 0.384)** → −3204 (p 0.432) |
+| … sign flips / backtrack | **2** / 0.84 px (stipe base: 2 / 1.8 px) |
+| slowest mid-leg sweep | **1 px/p** (a dead stop) |
+| d advance, p 0.376–0.390 | **0.7 °/p** |
+| gaze pitch rate | −56.4 (0.336) → **−14.4 (0.382)** → −99.5 (0.428) |
+| fov rate | +86 (0.336) → **+24 (0.382)** → +266 |
+| orbit azimuth rate | −504 (0.340) → **−50 (0.434)** |
+| position speed | 92.4 (0.336) → **9.0 (0.434)** → 18.1 u/p |
+| yaw / pitch sign flips | **0 / 0** ← the trap |
+| distance re-approach | 0.095 |
+
+The gaze target overswings in all three axes — x 2.3349 → **1.140** (0.687
+past its 1.827 destination) → 1.827; y **rises** 2.0903 → 2.2572 (p 0.396)
+before descending to 1.028; z −1.102 → −1.463 → −1.442 → −4.067 — but that is
+a symptom, not the fault: the x overswing is Connect's own settled key list,
+and the angles stay monotone through all of it.
+
+**Where it came from.** The D19 rule above lerps the two exit keys from the
+rest toward Connect's first key on a **smoothstep**, and smoothstep flattens
+to zero slope at *both* ends. So d, fov and pitch all coasted to a halt
+arriving at p 0.410 — exactly where Connect's own keys resume at full rate
+(−179 °/p). Before D19 the same rule was harmless: the rest aimed 0.87
+higher, which put the halt where the leg was slow anyway.
+
+### The re-key — gaze and fov only, on one shared ease
+
+Both keys are re-derived from what the eye reads rather than from the world
+target. `x = (p − 0.26)/0.15`, `s = x^1.5` — zero slope at the rest (which
+the `hold` key forces anyway), 1.5x mean slope at the join, which is what
+meets Connect's −179 °/p without a step:
+
+```
+dx  = lerp(-0.079, -12.324, s)    horizontal angle of the cap off the frame axis
+dy  = lerp( 5.354,   6.085, s)    the same, vertically
+fov = lerp(40, 48, s)
+tgt = pos + dir(dx, dy) * d       d = the shipped ladder, 8.55 / 8.69, kept to the digit
+```
+
+Both endpoints are fixed and neither moved: the approved Inspire rest
+(`ca7a769`) and Connect's settled first key (`f9e8317` + the 2026-08-05 eye
+lift). The exponent was chosen by measurement, not taste — a 2,700-point
+sweep over (d-ease, vertical-ease, fov-ease, blend, two target distances)
+found a broad plateau, 175 of which cleared every hard constraint; 1.5 sits
+in the middle of it and lets one number describe all three schedules.
+
+| key | before | after |
+|---|---|---|
+| drift p 0.312 | tgt (2.0037, 2.1235, −1.2295) fov 42.22 | tgt **(2.0571, 2.1443, −0.8376)** fov **41.63** |
+| exit p 0.362 | tgt (1.4289, 2.1811, −1.4515) fov 46.07 | tgt **(1.2152, 2.2287, −0.8497)** fov **44.49** |
+
+**Every `pos` is byte-identical, deliberately.** The Inspire reveal drive and
+the 34-deg arming gate are functions of camera AZIMUTH alone (`index.js`
+`camAzDeg` reads `position.x/z`), so holding the positions holds `az(p)` to
+the last bit and the particle-continuity troughs closed in `b2c9584` cannot
+re-open. That is a proof, not a measurement (see Gates).
+
+### Measured after
+
+| | before | after |
+|---|---|---|
+| subject screen-x backtrack | 0.84 px, **2 flips** | **0.00 px, 0 flips** |
+| stipe-base screen-x backtrack | 1.8 px, 2 flips | **0.00 px, 0 flips** |
+| slowest mid-leg sweep | **1 px/p** | **1247 px/p** (peak 3211 → 2964) |
+| slowest d advance | **0.7 °/p** | **58.4 °/p** (p 0.291); ≈93 through the old stall |
+| fov rate at p 0.38 | **+24 °/p** | **+65 °/p** |
+| fov interval ladder | 42.7 / 77.0 / **40.2** / 138.9 / 208 / 200 | **31.4 / 57.1 / 73.2** / 138.9 / 208 / 200 |
+| gaze yaw peak / flips | 640.4 / 0 | **594.4 / 0** |
+| gaze pitch peak / flips | 99.6 / 0 | **98.8 / 0** |
+| distance re-approach | 0.095 | **0.069** |
+| subject relative size wobble | 5.37% | **4.87%** |
+| roll | 0.000000 | **0.000000** |
+
+The cap's screen track is now one migration with no pause anywhere:
+718 → 691 (p 0.312) → 624 (0.362) → 547 (0.38) → 481 (0.41) → 398 (0.44) →
+321 (the Connect rest). Portrait (`?aspect=portrait`): screen-x backtrack
+0.00 px, 0 flips; leg rotation peak 576.5 °/p.
+
+### Gates
+
+- **Boundary troughs — the structural argument first, because it is the
+  stronger evidence.** Every `pos` in the diff is byte-identical; `camAz(p)`
+  is therefore identical (measured max |Δ| **3.4e-7 deg** on a full-precision
+  key row). The reveal ramps are `sm(18,48)/sm(38,62)/sm(54,78)/sm(5,28)` on
+  `camAzDeg`, slope 1/30 per degree, so a 3.4e-7 deg azimuth difference moves
+  any channel by **≤1.1e-8**; the arming gate reads the same azimuth. The
+  spore colour is pure in (reveal, time, T). The reveals cannot have moved,
+  so the troughs cannot have moved.
+  The like-for-like sweep agrees but **cannot resolve a change at this
+  precision, and should not be read as if it could** (41 samples per window,
+  live-frame — the frozen `?capture=` path latches the spore integrator so the
+  colour buffer never updates, so this measurement is unavoidably
+  time-contaminated):
+
+  | | before | after |
+  |---|---|---|
+  | Mission → Inspire trough (total shed light) | −0.48% | −0.25% |
+  | … dots above 0.60 luminance | −0.37% | −0.43% |
+  | Inspire → Connect trough | −8.46% | −9.07% |
+  | … dots above 0.60 luminance | −17.01% | −16.85% |
+
+  The differences run in both directions and are **smaller than the
+  instrument's own run-to-run noise**: the window ENDPOINTS, which are the
+  same pose in both runs and must be identical, differ by 1–2% (2959.6 vs
+  2903.9; 2931.4 vs 2950.4). Treat the table as "nothing gross happened" and
+  the azimuth identity as the actual gate.
+- **Rate + roll audit**, 601-sample drift-aware, p 0–0.60, Mission→Inspire→
+  Connect. Peak composed rotation **765.4 °/unit-p landscape (unchanged, at
+  p 0.220)** and **761.3 portrait (unchanged, at p 0.220)** — the peak lives
+  in the arrival gesture, which this change does not touch; both reproduce
+  D19's reported 765.4 / 761.0 to the digit. Well under the ~1.2k ceiling.
+  **Max roll 0.000000 deg** in both aspects. Leg-only composed peak: 596.3
+  landscape / 576.5 portrait.
+- **Joins.** p 0.38 is a chapter boundary with no key on it — the director
+  concatenates the legs into ONE global key list and computes tangents
+  globally, so there is nothing there to be discontinuous; measured, the
+  rates pass through it smoothly (fov +65 °/p either side, d ≈ −93 °/p). Into
+  the leg from the rest, the `hold` key's zero tangent still holds: every
+  rate leaves the rest at 0 and the first key's interval mean is the smallest
+  of the four.
+- **Reverse mirrors exactly.** Forward vs reverse over the full ride, 201
+  points: **max position error 0.00e+0, max target error 0.00e+0**, fov
+  8.28e-4 — which is the director's own 0.001 fov write deadband
+  (`apply()` skips the write below it), shipped behaviour, not this change.
+- **Nothing fades in over open view.** No opacity or reveal schedule was
+  touched; the only edited values are two `tgt` vectors and two `fov` scalars.
+- **Console clean.** The two expected info lines per load
+  (`[journey-lens]`, `[journey-v6]`), zero application errors or warnings
+  across slow and fast rides in both directions. (Chrome compositor
+  `GL_INVALID_OPERATION: invalid mailbox name / texture is not a shared
+  image` warnings appear in the pane around reloads and viewport resizes;
+  they are browser-level, not from this codebase.)
+- **`capture.py --check` PASS**, worst MAE 0.18/255. `mission` 0.00/0.00,
+  **`inspire` 0.00/0.00 — the approved rest framing is untouched, which is
+  the point**, `connect` 0.00/0.00, `owned` 0.00/0.00, `final` 0.18/0.13 (its
+  own unchanged determinism noise). All ten golden PNGs are unmodified on
+  disk; nothing was re-shot.
+- **Three streams still read.** All three chips (ArtCompute, Arca Gidan
+  Prize, 2RP) still land on their braids at p 0.312 with the streams
+  distinct. The rest itself is byte-identical, so the approved legibility is
+  preserved by construction.
+
+### Residual / open
+
+- **The cap sinks ~13 px before it rises 63.** cy runs 328 → 341 → 280, so
+  the vertical turns once, at p 0.410. This is **forced**: the approved
+  Inspire rest frames the cap at y 328 and Connect's settled first key at
+  y 341, and both are fixed. Total downward travel is 16.15 px against a
+  theoretical floor of 13.3; the worst single run improved 15.00 → 13.25.
+  Removing it entirely means moving a rest, which is out of scope.
+- **Portrait gaze pitch reverses twice on the leg, by 0.047 deg.** Before:
+  2 flips at p 0.361/0.390. After: 2 flips at p 0.365/0.383. **Pre-existing,
+  not introduced** — it is the portrait field's own `tgtUp` ramp between its
+  p 0.260 and p 0.410 keys beating against the landscape pitch, the same
+  class as the ±42 °/p portrait yaw wiggle recorded as a residual in
+  `2a27db7`. At fov 57 over 900 px it is sub-pixel.
+- **The subject still grows ~4.9% mid-leg** (relative angular size, down from
+  5.37%). Driving it to the forced 2.2% floor requires the fov to copy the
+  cap's angular-diameter curve, which reintroduces a rate dip at p 0.36 —
+  measured: blend 1.0 gives 2.72% push-in but a 94.7 → 44.9 °/p fov rate dip.
+  The pure ease was chosen instead because a strictly increasing fov ladder
+  is what keeps the widening from pausing, and the push-in is a pre-existing
+  residual rather than a regression.
+- **The leg is more back-loaded than it was.** d now covers 21% of its travel
+  in the first third (was 76%), because the rate has to ramp from a standstill
+  at the rest to the −179 °/p Connect resumes at, and only −12.245 deg are
+  available to do it in. That is structural given both endpoints are fixed;
+  it reads as a build rather than a lurch, but it is a change in character
+  and Hannah should be the judge of it.
