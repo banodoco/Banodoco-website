@@ -137,7 +137,53 @@ export function createFinal(sceneApi) {
       else d.m.opacity = d.base;
       d.o.visible = d.vis;
     }
+    if (shedFog) {
+      shedFog.near.value = shedFog.n0;
+      shedFog.far.value = shedFog.f0;
+    }
     heroDimActive = false;
+  }
+
+  /* ---- the hero's own shed, on the world's fog (2026-08-06) ----------------
+     Hannah: the spores at the end feel like a different substance from the
+     ones at the beginning. Most of that lives in this chapter's own sky layer
+     (sky.js's header has the diagnosis and the four fixes), but one part of
+     it is the hero's REAL shed, and it is the same bug clones.js already
+     names in capitals: THE ONE UNIFORM A CLONE MUST NOT INHERIT IS FOG.
+
+     organism/organism.js's makePoints latches `fogNear`/`fogFar` per material
+     at construction, to the hero page's fixed 7 -> 20. The director opens the
+     world to 13.75 -> 60.3 across this leg and every other thing in frame
+     rides that ramp — terrain, sky, the species batch, and the clone bodies,
+     which had to be taken OFF the hero's pair for exactly this reason. The
+     4,200-particle shed was never given the same treatment, so at the rest:
+
+       · mean per-particle output 0.109, against 0.518 at the opening — the
+         same cloud, 4.7x dimmer, for no reason a viewer can see;
+       · on the world's own fog it would be 0.446, i.e. its own fog pair costs
+         it 4.1x while the soil under it keeps its light;
+       · and a hard black wall at 20 units cuts a cloud that spans 13.1-20.7
+         clean in half. The hero's plume literally stops mid-air.
+
+     So the shed rides the chapter's ramp here, by the same eased `reach` the
+     ground-network dim uses (pure in the camera pose, so reverse scrubs
+     retract it), and hands the two numbers back verbatim on retire. The
+     material is the organism's; the VALUES are scene state for the length of
+     one leg, which is the Connect-chapter precedent this file already runs on
+     twenty lines above. Nothing inside organism/ is touched, and at p = 0 the
+     chapter is not visible, so the Mission frame cannot see this at all. */
+  let shedFog = null;
+  function collectShedFog() {
+    if (shedFog) return;
+    const sp = sceneApi.groups && sceneApi.groups.spores;
+    const u = sp && sp.material && sp.material.uniforms;
+    if (!u || !u.fogNear || !u.fogFar) return;   // shader drifted: do nothing
+    shedFog = { near: u.fogNear, far: u.fogFar, n0: u.fogNear.value, f0: u.fogFar.value };
+  }
+  function applyShedFog(reach) {
+    if (!shedFog || !sceneApi.scene.fog) return;
+    shedFog.near.value = shedFog.n0 + (sceneApi.scene.fog.near - shedFog.n0) * reach;
+    shedFog.far.value = shedFog.f0 + (sceneApi.scene.fog.far - shedFog.f0) * reach;
   }
 
   /* ---- rise mask (M5 ignition audit, D16) ----
@@ -188,8 +234,11 @@ export function createFinal(sceneApi) {
     // hero floor-network dim rides amount x pull — eases in with the
     // pullback, reverses with it, restores exactly on retire
     collectHeroGround();
+    collectShedFog();
     const reachT = Math.max(0, Math.min(1, (pull - 0.25) / 0.45));
-    applyHeroDim(eff * reachT * reachT * (3 - 2 * reachT));
+    const reach = eff * reachT * reachT * (3 - 2 * reachT);
+    applyHeroDim(reach);
+    applyShedFog(reach);
     uniforms.uAmount.value = eff;
     uniforms.uPull.value = pull;
     // the unclamped twin, for the clone entry-draw front (clones.js part B)
