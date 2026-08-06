@@ -24,8 +24,7 @@
 // it — BREEZE, the hero's own (1, 0.62, 0.17) normalized, the same vector
 // that carries the hero's plume and the sky's drift.
 //
-// SCALING (the judgement this file owes the reader, and the one place the
-// first cut was wrong).
+// SCALING (the judgement this file owes the reader).
 //
 // COUNT scales with the body. The hero sheds 28 for a body 4.37 units tall; a
 // field body sheds round(28 * scale), floored at 10 — under about ten
@@ -33,30 +32,48 @@
 // dots, which is worse than not answering at all. That is the honest axis: a
 // bigger fruiting body has more hymenium, so it drops more spores.
 //
-// SIZE DOES NOT. The first cut scaled the sprites by the body too, and
-// measured on a poked near clone that put every spore at 0.007-0.03 world
-// units — gl_PointSize 0.5-1.6 px at the rest camera's six-to-thirty-unit
-// distances, i.e. under the point shader's own MIN_PT floor, where vShrink
-// dims them to a tenth. The shed fired, integrated and drifted correctly, and
-// you could not see one pixel of it. Two mistakes in one: a spore is a SPORE
-// — it is the same physical object on every fruiting body of one species, it
-// does not shrink with the mushroom — and the whole field is an order of
-// magnitude further from this camera than the hero is from its own. So the
-// sizes are absolute, and sit in the same band the chapter's spore SKY
-// already uses at these distances (sky.js szBase * 1.9), which is what makes
-// a poke's puff read as more of the drift the frame is already full of.
-const SZ_MIN = 0.045, SZ_SPAN = 0.115;
-// and the same brightness multiplier the sky's own cloud carries — without it
-// this material sits ~2x under everything else additive in the frame
-const SHED_GAIN = 2.2;
+// SIZE DOES NOT. A spore is a SPORE — the same physical object on every
+// fruiting body of one species, it does not shrink with the mushroom. So the
+// sizes are absolute, and they are now the HERO'S OWN DRAW, digit for digit
+// (organism/spores.js: `pow(rand, 1.8) * 0.072 + 0.019`).
+//
+// THE SIZE BAND USED TO BE THIS FILE'S OWN, AND THAT WAS THE BUG (Hannah,
+// 2026-08-06: "there's this kind of stuff that jumps out of the mushroom...
+// they should all have spores coming from them like the other one"). It ran
+// 0.045 + rand^1.6 * 0.115 — up to 3.3x the hero's sprite — and justified
+// itself by pointing at `sky.js szBase * 1.9`. Commit 836d373 DELETED that
+// expression: it put the chapter's whole spore sky on the hero's own size
+// draw, its vShrink, its twinkle and a re-banded depth-of-field, precisely
+// because the old band rendered every dot at the MIN_PT floor at full
+// brightness and read as a STARFIELD rather than as spores. This file was the
+// one particle layer left behind, so its stated reference no longer existed.
+// It is brought across here, whole: same constants, same twinkle, same DOF
+// band, same gain. One substance at both ends of the ride, and one substance
+// across this frame.
+const SZ_MIN = 0.019, SZ_SPAN = 0.072, SZ_POW = 1.8;
+// sky.js FOCAL_D / FOCAL_R: this chapter's own focal band for the hero's DOF
+// law. A hero-sized spore 24 units out is 0.23 px, which vShrink crushes to
+// 1.8%; the 2.35x growth at vBlur = 1 almost exactly cancels the 1/d shrink,
+// so a far spore lands the same size on screen as a near one and 45% as
+// bright. Depth reads as brightness and fog, which is where this chapter
+// keeps it everywhere else (cloneLum, the tier lum ladder).
+const FOCAL_D = 10.5, FOCAL_R = 14.0;
+// the same brightness multiplier the sky's own cloud carries (sky.js
+// SPORE_GAIN) — the hero point material's own uOpacity on the shed
+const SHED_GAIN = 2.4;
 
 import * as THREE from 'three';
 import { makeGlowTexture, CAP_Y, CAP_R } from '../../anatomy.js';
 import { makeRng, gaussOf, heat } from './world.js';
+import { breeze } from './clones.js';
 
 const SHED_N = 256;            // pool: ~9 full-strength sheds live at once
 const LIFE = 7.0;              // seconds from release to gone
-const SETTLE = 1.4;            // seconds of falling before the wind has it
+// organism/spores.js's own handover: a fresh spore drops clear of the still
+// air under the gills over 1.6 s before the wind has all of it. Measured in
+// TIME, not distance — the hero's own reasoning, because at these drift
+// speeds a distance gate keeps a spore falling for a quarter of a minute.
+const SETTLE = 1.6;
 // the hero's one wind (organism/spores.js BZX/BZY/BZZ), normalized here
 const BREEZE = new THREE.Vector3(1.0, 0.62, 0.17).normalize();
 
@@ -69,12 +86,15 @@ export function createShed(uniforms) {
   const size = new Float32Array(SHED_N);
   const age = new Float32Array(SHED_N).fill(LIFE + 1);   // all dead at boot
   const col = new Float32Array(SHED_N * 3);
+  // per-particle seed: the hero's twinkle phase (organism.js makePoints vTw)
+  const seed = new Float32Array(SHED_N);
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.setAttribute('psize', new THREE.BufferAttribute(size, 1));
   geo.setAttribute('aAge', new THREE.BufferAttribute(age, 1));
+  geo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
 
   const mat = new THREE.ShaderMaterial({
     uniforms: {
@@ -82,13 +102,15 @@ export function createShed(uniforms) {
       uAmount: uniforms.uAmount,
       uFogNear: uniforms.uFogNear,
       uFogFar: uniforms.uFogFar,
+      uTime: uniforms.uTime,
     },
     vertexShader: /* glsl */ `
       #define MIN_PT 1.7
       #define LIFE ${LIFE.toFixed(1)}
-      attribute float psize, aAge;
+      uniform float uTime;
+      attribute float psize, aAge, aSeed;
       varying vec3 vColor;
-      varying float vA, vFog, vShrink;
+      varying float vA, vFog, vShrink, vBlur, vTw;
       void main() {
         float u = aAge / LIFE;
         // in over the first breath, out over the last third
@@ -97,7 +119,13 @@ export function createShed(uniforms) {
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         vFog = -mv.z;
         vA *= smoothstep(1.2, 2.8, length(mv.xyz));
-        float sz = psize * (300.0 / -mv.z);
+        // The hero's own twinkle (organism.js makePoints: vTw), which rides
+        // BOTH gl_PointSize and the fragment's brightness there, so it is
+        // carried to both here — exactly as sky.js carries it.
+        vTw = 0.85 + 0.15 * sin(uTime * 1.4 + aSeed * 7.0);
+        // ...and the hero's depth-of-field on this chapter's focal band.
+        vBlur = clamp(abs(vFog - ${FOCAL_D.toFixed(1)}) / ${FOCAL_R.toFixed(1)}, 0.0, 1.0);
+        float sz = psize * vTw * (300.0 / -mv.z) * (1.0 + 1.35 * vBlur);
         vShrink = 1.0;
         if (sz < MIN_PT) { vShrink = (sz * sz) / (MIN_PT * MIN_PT); sz = MIN_PT; }
         gl_PointSize = sz;
@@ -108,11 +136,12 @@ export function createShed(uniforms) {
       uniform sampler2D uMap;
       uniform float uAmount, uFogNear, uFogFar;
       varying vec3 vColor;
-      varying float vA, vFog, vShrink;
+      varying float vA, vFog, vShrink, vBlur, vTw;
       void main() {
         vec4 t = texture2D(uMap, gl_PointCoord);
         float fogF = clamp((uFogFar - vFog) / (uFogFar - uFogNear), 0.0, 1.0);
-        gl_FragColor = vec4(vColor * t.a * vA * uAmount * fogF * vShrink * ${SHED_GAIN.toFixed(1)}, 1.0);
+        gl_FragColor = vec4(vColor * t.a * vTw * vA * uAmount * fogF * vShrink
+                            * (1.0 - 0.55 * vBlur) * ${SHED_GAIN.toFixed(1)}, 1.0);
       }
     `,
     vertexColors: true,
@@ -142,45 +171,73 @@ export function createShed(uniforms) {
       const i = cursor; cursor = (cursor + 1) % SHED_N;
       if (age[i] >= LIFE) live++;        // reviving a dead slot, not a live one
       const a = rand() * Math.PI * 2;
-      const u = 0.72 + Math.pow(rand(), 0.6) * 0.28;  // outer gills carry most surface
+      // THE SEAT, and the one thing here that is NOT the hero's own number.
+      //
+      // The hero draws its release radius on u = 0.55 + rand^0.6 * 0.45 of the
+      // cap — the whole hymenium, weighted outward. That is right for a lens
+      // sitting at the hero's own rim level, which sees straight into the gill
+      // space. The Final rest camera does not: it stands ABOVE every field
+      // body's rim plane (~11 deg of elevation on the nearest member), so a
+      // body's own opaque §5 cap shell covers its entire underside, and a
+      // release seated at u 0.6 is emitted into a box the visitor cannot see
+      // into. So the seat — and ONLY the seat — is moved out to a band
+      // straddling the MARGIN, where the same spore on the same law is in
+      // open air. Placement was always this file's business; the poke's answer
+      // is the MOTION, and the motion below is the hero's, digit for digit.
+      const u = 0.92 + rand() * 0.20;
       const i3 = i * 3;
-      pos[i3]     = bx + Math.cos(a) * R * u + gauss() * 0.02;
-      pos[i3 + 1] = by + s * (CAP_Y - 0.10) - Math.pow(rand(), 1.5) * 0.45 * s;
-      pos[i3 + 2] = bz + Math.sin(a) * R * u + gauss() * 0.02;
-      // OUT, then down, then the wind. The release itself has to billow past
-      // the cap MARGIN, and this is not decoration: the Final rest camera sits
-      // ABOVE every field body's rim plane, so its own opaque §5 cap shell
-      // hides the whole gill space underneath it. A shed released straight
-      // down under the gills — which is what a spore really does, and what the
-      // first cut did — is emitted into a box the visitor cannot see into, and
-      // reads as no answer at all. So a rap knocks them clear of the margin
-      // first, which is also the truer picture of what a rap does.
-      // Out far enough to clear the rim in about a second, DOWN harder than
-      // out so the puff lands against the dark floor beside the stem instead
-      // of over the body's own lit cap, where a dozen four-pixel motes are
-      // simply lost. Then the wind (below) lifts them back up past the margin.
-      const out = 0.16 + rand() * 0.16;
-      vel[i3]     = Math.cos(a) * out + gauss() * 0.03;
-      vel[i3 + 1] = -(0.26 + rand() * 0.16);
-      vel[i3 + 2] = Math.sin(a) * out + gauss() * 0.03;
-      // absolute world-unit sprite size — see the SIZE DOES NOT note above
-      size[i]     = SZ_MIN + Math.pow(rand(), 1.6) * SZ_SPAN;
+      pos[i3]     = bx + Math.cos(a) * R * u + gauss() * 0.06 * s;
+      // organism/spores.js's own drop clear of the gills, scaled to the body
+      pos[i3 + 1] = by + s * (CAP_Y - 0.06 - Math.pow(rand(), 1.5) * 0.62);
+      pos[i3 + 2] = bz + Math.sin(a) * R * u + gauss() * 0.06 * s;
+      // THE RELEASE VELOCITY IS THE HERO'S, WHICH IS TO SAY: THERE ISN'T ONE.
+      //
+      // This is the whole of Hannah's complaint. The first cut fired a spore
+      // OUT along the radius (0.16-0.32 units/s) and DOWN harder still
+      // (0.26-0.42), to billow it clear of the cap before the wind took over.
+      // Measured against the hero's own shed, that is 38x the hero's outward
+      // speed and 3x its total; a poked field body ejected its spores while a
+      // poked hero simply let go of them. "Stuff that jumps out of the
+      // mushroom" is an exact description of an impulse the hero does not
+      // have, and no amount of tuning it down makes it the same GESTURE.
+      //
+      // organism/spores.js gives a re-released spore no impulse at all: it
+      // carries the drift velocity it was born with — BREEZE_DIR * sp, sp on
+      // [0.028, 0.083] — and the integrator below simply holds the wind off it
+      // while it falls clear. Same three numbers here.
+      const sp = 0.028 + rand() * 0.055;
+      vel[i3]     = BREEZE.x * sp;
+      vel[i3 + 1] = BREEZE.y * sp + rand() * 0.012;
+      vel[i3 + 2] = BREEZE.z * sp + gauss() * 0.008;
+      // absolute world-unit sprite size, the hero's own draw — see above
+      size[i]     = SZ_MIN + Math.pow(rand(), SZ_POW) * SZ_SPAN;
+      seed[i]     = rand();
       age[i]      = 0;
       heat(0.64 + Math.pow(rand(), 1.4) * 0.36, c);
       col[i3] = c.r; col[i3 + 1] = c.g; col[i3 + 2] = c.b;
     }
     geo.attributes.color.needsUpdate = true;
     geo.attributes.psize.needsUpdate = true;
+    geo.attributes.aSeed.needsUpdate = true;
     points.visible = true;
   }
 
   /** Integrate. Returns immediately — no loop, no upload, no draw — whenever
    *  nothing is alive, which is every frame of every capture and almost every
    *  frame of a ride. */
-  function update(dt) {
+  function update(t, dt) {
     if (!live) return;
     const step = Math.min(dt, 0.033);
     live = 0;
+    // organism/spores.js's own drift integrator, term for term (§10b/§10c):
+    // an advance measured in 60fps-equivalent frames, a gust that surges the
+    // carry as the body leans, and the still air under the cap yielding to the
+    // wind over SETTLE. The old integrator relaxed a launch velocity toward a
+    // fixed 0.24 units/s — an order of magnitude faster than the drift the
+    // hero's own dust travels at, which is the second half of why a poked
+    // field body did not look like a poked hero.
+    const k = step * 60;
+    const gust = 0.72 + 0.28 * breeze(t);
     for (let i = 0; i < SHED_N; i++) {
       let a = age[i];
       if (a >= LIFE) continue;
@@ -189,19 +246,11 @@ export function createShed(uniforms) {
       if (a >= LIFE) continue;
       live++;
       const i3 = i * 3;
-      // the handover from the still air under the cap to the one wind is
-      // measured in TIME, not distance (organism/spores.js's own reasoning:
-      // at these drift speeds a distance gate keeps a spore falling for a
-      // quarter of a minute)
       const w = Math.min(1, a / SETTLE);
-      const sp = 0.24 * (0.4 + 0.6 * w);
-      const k = w * step * 2.2;
-      vel[i3]     += (BREEZE.x * sp - vel[i3]) * k;
-      vel[i3 + 1] += (BREEZE.y * sp - vel[i3 + 1]) * k;
-      vel[i3 + 2] += (BREEZE.z * sp - vel[i3 + 2]) * k;
-      pos[i3]     += vel[i3] * step;
-      pos[i3 + 1] += vel[i3 + 1] * step;
-      pos[i3 + 2] += vel[i3 + 2] * step;
+      const carry = gust * (0.45 + 0.55 * w) * k;
+      pos[i3]     += vel[i3] * 0.016 * carry + Math.sin(t * 0.7 + i * 0.37) * 0.0018 * k * w;
+      pos[i3 + 1] += vel[i3 + 1] * 0.016 * carry - 0.0026 * (1 - w) * k;
+      pos[i3 + 2] += vel[i3 + 2] * 0.016 * carry + Math.cos(t * 0.5 + i * 0.53) * 0.0013 * k * w;
     }
     geo.attributes.position.needsUpdate = true;
     geo.attributes.aAge.needsUpdate = true;

@@ -870,7 +870,7 @@ export function createFinalRing(sceneApi, uniforms) {
     }
     wasOn = on;
     driveWobble(dt);
-    shed.update(dt);
+    shed.update(t, dt);
     clones.update(t, dt, uniforms);
   }
 
