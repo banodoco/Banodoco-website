@@ -698,11 +698,19 @@ export function buildPortraitField({
     pts[segs].copy(target);   // terminate exactly at the node
     nodeStrandSpecs.push({ pts, node: nodeIdx, strand: strandVal });
   }
-  function addLocalStrands(target, nodeIdx, count, seed, minLen, maxLen, cordBias) {
+  function addLocalStrands(target, nodeIdx, count, seed, minLen, maxLen, cordBias, anchors) {
     const rand = H.rng(seed >>> 0);
     for (let k = 0; k < count; k++) {
       let start = null;
       if (rand() < cordBias) start = nearestCordPoint(target, rand);
+      // WHERE THIS FACE IS WIRED INTO THE ROOT WORLD (2026-08-06, report C).
+      // `nearestCordPoint` returns a point ON the substrate's own root pool —
+      // i.e. this strand does not merely end near a root, it starts on one.
+      // Recording those points is what lets substrate.assignOwners() find the
+      // face's LOCAL filaments by walking the network graph out from them,
+      // instead of guessing by distance. Strands that rolled a free-space
+      // start (55% of them) are not anchors and are not recorded.
+      if (start && anchors) anchors.push(start.clone());
       if (!start) {
         const a = rand() * TAU;
         const b = (rand() - 0.5) * Math.PI * 0.85;
@@ -718,7 +726,8 @@ export function buildPortraitField({
     }
   }
   for (const n of nodes) {
-    addLocalStrands(n.pos, n.i, n.strandCount, 8100 + n.i * 173, 1.7, 4.2, 0.45);
+    n.anchors = [];
+    addLocalStrands(n.pos, n.i, n.strandCount, 8100 + n.i * 173, 1.7, 4.2, 0.45, n.anchors);
   }
   // node-to-node links: people are woven into EACH OTHER's networks —
   // each node reaches its nearest neighbour(s), endpoints exact at both.
@@ -821,7 +830,19 @@ export function buildPortraitField({
         vWv = exp(-wd * wd / (uWaveW * uWaveW)) * uWaveAmt;
 
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        mv.z += vH * 0.62;                       // hover: step forward in depth
+        // HOVER STAYS IN PLACE (Hannah, 2026-08-06 — report B, and the cause
+        // of report A). This line used to read "mv.z += vH * 0.62": the plane
+        // stepped 0.62 view units toward the lens on hover. A view-space step
+        // toward the camera is not a translation on screen of zero — it is a
+        // RADIAL magnification about the frame centre, so the node slid
+        // OUTWARD from where it was drawn, by an amount proportional to its
+        // eccentricity: measured 13 px at ndc x 0.05 and 87 px at ndc x 0.89,
+        // 1440x900. The hit target never moved with it, so the further out a
+        // face sat the further the picture disagreed with the pointer — which
+        // is exactly why the EDGE faces were the worst ones to hover.
+        // The emphasis is now entirely in place: a centred scale (below), the
+        // ember ring and the image/core terms in the fragment shader, and the
+        // node's own local strands. Nothing about hover moves a node.
         float dist = max(-mv.z, 0.05);
         // defocus band (rev-2 retune): only true near passes (< ~5) soften;
         // the mid field reads crisp like the approved still
@@ -832,7 +853,11 @@ export function buildPortraitField({
         float ca = cos(ang), sa = sin(ang);
         vec2 c = vec2(aCorner.x * ca - aCorner.y * sa, aCorner.x * sa + aCorner.y * ca);
         float breath = 1.0 + 0.010 * sin(uTime * (0.14 + fract(aSeed) * 0.21) + aSeed * 7.0);
-        float size = aSize * breath * (1.0 + 0.13 * vH) * (1.0 + nearBlur * 1.0);
+        // 0.13 -> 0.20: the retired depth step bought 8-12% of apparent growth
+        // on its own (a node 0.62 nearer at depth 5.6-12.4). Folding that into
+        // the CENTRED scale keeps the hover reading as strong as it was while
+        // leaving the node's centre exactly where it is drawn at rest.
+        float size = aSize * breath * (1.0 + 0.20 * vH) * (1.0 + nearBlur * 1.0);
         mv.xy += c * size;
         vDepth = dist;
         gl_Position = projectionMatrix * mv;
@@ -966,7 +991,7 @@ export function buildPortraitField({
         float wd = distance(position, uWaveC) - uWaveR;
         vWv = exp(-wd * wd / (uWaveW * uWaveW)) * uWaveAmt;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        mv.z += vH * 0.62;
+        // in place, like the plane it rings — see the portrait shader's note
         float dist = max(-mv.z, 0.05);
         float nearBlur = (1.0 - smoothstep(2.2, 5.0, dist)) * (1.0 - vH * 0.45);
         vSoft = nearBlur; vDepth = dist;
@@ -974,7 +999,7 @@ export function buildPortraitField({
         float ang = sin(uTime * (0.20 + aSeed * 0.47) + aSeed * 11.3) * 0.05;
         float ca = cos(ang), sa = sin(ang);
         vec2 o = vec2(aOff.x * ca - aOff.y * sa, aOff.x * sa + aOff.y * ca);
-        mv.xy += o * (1.0 + 0.11 * vH) * (1.0 + nearBlur * 1.0);
+        mv.xy += o * (1.0 + 0.18 * vH) * (1.0 + nearBlur * 1.0);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */`
@@ -1073,9 +1098,10 @@ export function buildPortraitField({
           float wd = distance(position, uWaveC) - uWaveR;
           vWv = exp(-wd * wd / (uWaveW * uWaveW)) * uWaveAmt;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          mv.z += vH * 0.62;
+          // in place — the core and halo grow about the node, they do not
+          // travel toward the lens (see the portrait shader's note)
           gl_Position = projectionMatrix * mv;
-          gl_PointSize = uScale * aSize * (1.0 + 0.35 * vH + 0.18 * vWv) / max(-mv.z, 0.1);
+          gl_PointSize = uScale * aSize * (1.0 + 0.42 * vH + 0.18 * vWv) / max(-mv.z, 0.1);
         }`,
       fragmentShader: /* glsl */`
         uniform sampler2D uMap;
@@ -1201,6 +1227,16 @@ export function buildPortraitField({
       const nd = nodes.find(n => n.id === id);
       return nd ? nd.pos.clone() : null;
     },
+    /** World-space radius of the DRAWN face — the ember ring, not the quad.
+     *  The quad's half-extent is `size`; the atlas draws its disc at 0.36 of
+     *  the cell, i.e. 0.72 of the half-extent, and the shader's rim ring sits
+     *  at the same 0.72. 0.80 takes in the ring itself and the fray just
+     *  outside it. ui.js turns this into the chip's hit radius, which is the
+     *  whole point: the thing you can hover is the thing you can see. */
+    radiusOf(id) {
+      const nd = nodes.find(n => n.id === id);
+      return nd ? nd.size * 0.80 : 0;
+    },
     /** QA: routable nodes that frame at the rest pose (the reachability audit). */
     restVisible() {
       return nodes.filter(n => n.routable && restOk(n)).map(n => n.id);
@@ -1271,6 +1307,12 @@ export function buildPortraitField({
     },
     get hoverIdx() { return hoverIdx; },
     get selIdx() { return selIdx; },
+    // The node the field is currently answering, and how strongly — the same
+    // pair `update()` feeds its own layers, exposed so the substrate's local
+    // strand lighting can answer the identical node at the identical strength
+    // (chapters/owned/index.js).
+    get activeIdx() { return hoverIdx >= 0 ? hoverIdx : selIdx; },
+    get activeAmt() { return Math.max(hoverAmt, selAmt * 0.85); },
 
     update(dt, time) {
       if (fade <= 0 && !wave) return;

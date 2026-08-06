@@ -384,3 +384,259 @@ Honestly, and in order of how much it bothers me:
 5. **The crown's burst is slightly lens-flare-ish** at 1440x900 — a touch more
    radial symmetry than the reference's, which reads more like fibres and less
    like a star.
+
+---
+
+# 2026-08-06 (later) — the pointer pass
+
+Three reports from Hannah, one job. They share a root: **the hit model and the
+picture were two different pictures**, and the hover response was staged at the
+wrong scale.
+
+> (A) "When I hover over the items, they don't reliably open… especially the
+> edge ones. It feels like [the hit area] is in a different point to where they
+> actually show. Maybe that's related to the jump out issue as well."
+>
+> (B) "they shouldn't jump out the way they do — they should stay in place."
+>
+> (C) "the roots ALL light up when I'm hovering over below randomly, but this
+> should only happen when I hover over the TOP root thing."
+
+Her hunch in (A) was right, and it was only half the story.
+
+## A.1 — the measured hit-area error, and its two causes
+
+Files: `journey/ui.js`, `journey/site.css`, `chapters/owned/index.js`.
+
+Measured at the rest (p 0.725), sixteen nodes, thirteen sample points taken
+across each **drawn** face (its centre, eight at 0.6 of the ember-ring radius,
+four at 0.9), asking `document.elementFromPoint` which chip — if any — answers
+there. "Hit-centre error" is the distance from the drawn node to the centre of
+the region that actually answers the pointer.
+
+| | 1440x900 | 1280x800 | 375x812 |
+|---|---|---|---|
+| chips placed | 16 | 16 | 4 |
+| hit-centre error, mean / max | **115.7 / 141.8 px** | 115.6 / 141.7 | 121.4 / 143.2 |
+| sample points that reach the right chip | **74 / 208 (36%)** | 86 / 208 (41%) | 32 / 52 (62%) |
+| faces answering across their whole disc | 0 / 16 | 0 / 16 | 0 / 4 |
+| worst nodes | c13 c14 c15 — **2 / 13** | c13 c14 c15 — 2 / 13 | c8 — 2 / 13 |
+
+**Cause 1: the chip's hit surface was the pill.** `.j-hot` is a flex pill —
+dot, then label — 23 px tall and 202–306 px wide, anchored so the *dot* sits on
+the node and the label runs off to one side. The face it stands for is a disc
+18–50 px in radius. So the region that answered was a thin bar mostly lying on
+bare canvas next to the face, and the face itself was live only in the 11 px
+band the pill happened to cross. And because Owned's chips are `labelOnHover`,
+that bar **draws nothing at rest**: it is an invisible 300 px target beside the
+thing you are aiming at. Hannah's "a different point to where they actually
+show" is exactly the 116 px in the table.
+
+The worst cases are the near/low faces, which is also why they read as "the
+edge ones": their discs are the biggest (50 px radius against 11 px of pill
+half-height), and at 375 the arc's outermost chips are the ones whose flipped
+pills lie across their neighbours.
+
+**Cause 2, on touch: PL-1.4's own target.** Under `(pointer: coarse), (max-width:
+720px)`, `.j-hot::before` grows every control to `max(100%, 44px)` and states
+`pointer-events: auto` outright — which overrode the pill's own `none` and put
+a **306 x 44 invisible bar** back over the neighbouring node's face. At 375x812
+contributor-9's bar covered contributor-8's face: 2 of 13.
+
+**Cause 3 was (B)**, below: once hovered, the drawn face left the hit target.
+
+### What replaced it
+
+A **hit pad**: a round target the size of the thing the node draws, pinned to
+the node inside the chip's own box.
+
+- Chapters may now implement `nodeRadius(id)` — the world radius of the drawn
+  mark. Owned returns `size * 0.80`, the ember ring plus its fray. `ui.js`
+  projects it against the **view-space depth** (not the radial distance: at
+  |ndc x| 0.9 that is a 20% difference, at exactly the edge of the frame where
+  it matters most) and writes it to a circular child element, `.j-hot-hit`.
+  A chapter that does not implement `nodeRadius` gets a zero-sized pad and the
+  pill-only hit model, unchanged — verified on Connect and Inspire.
+- The pad is positioned **against the node**, not against the pill, so the
+  edge-flip and the ≤26 px narrow-viewport nudge move the *label* and leave the
+  target on the face. This is visible in the after table: at 375 contributor-12's
+  dot is still nudged 21 px off its node, and its hit target is 0.27 px off it.
+- A hover-only chip's pill is `pointer-events: none` until it is hot, and the
+  PL-1.4 pseudo-target is switched off for the same span — so nothing invisible
+  is ever a hit surface. The instant the chip is hot, both come back, so the
+  walk from face → label → popover is what it always was. The pad carries the
+  44 px touch minimum in the meantime (`ui.js` floors it at r 22 under the same
+  media query PL-1.4 uses).
+- Pads are capped at 48% of the distance to the nearest live pad and at r 56,
+  so two neighbours can never argue, and a foreground face that fills a sixth
+  of the frame does not own a sixth of the pointer.
+- The placement bound relaxes 0.92/0.90 → **0.97/0.94 for pad chips only**. The
+  arc reaches |ndc x| 0.912 by construction: contributor-13 was 0.008 from
+  having no hotspot at all. Measured, no chip count changes at any of the three
+  sizes; the cliff edge does.
+
+| after | 1440x900 | 1280x800 | 375x812 |
+|---|---|---|---|
+| chips placed | 16 | 16 | 4 |
+| hit-centre error, mean / max | **0.40 / 0.40 px** | 0.22 / 0.22 | 0.25 / 0.27 |
+| sample points that reach the right chip | **208 / 208** | 208 / 208 | 52 / 52 |
+| faces answering across their whole disc | 16 / 16 | 16 / 16 | 4 / 4 |
+| pad radius range | 20.0–55.1 px | 17.8–49.0 | 22.0–40.1 |
+
+The residual 0.2–0.5 px is the `toFixed(1)` rounding on the CSS custom property.
+
+## B — what replaced the jump
+
+`chapters/owned/portraits.js`. Three vertex shaders — the portrait planes, the
+3D rim fibres and the ember core/halo points — each carried
+
+    mv.z += vH * 0.62;   // hover: step forward in depth
+
+A step toward the camera in view space is not a null move on screen: it is a
+**radial magnification about the frame centre**, so the node slid *outward* from
+where it was drawn, by an amount that grows with eccentricity. Measured, the
+drawn face moved:
+
+    mean 37.7 px, max 86.6 px   (1440x900)
+    mean 33.5 px, max 77.0 px   (1280x800)
+    mean 25.7 px, max 54.9 px   (375x812)
+
+and the maxima are contributor-14 (ndc x +0.89, 86.6 px) and contributor-13
+(ndc x −0.91, 80.4 px) — the two furthest out. The hit target did not move with
+it. So this is not merely (B): **it is the eccentricity term in (A)**, and it is
+why the edge faces were the worst ones to hover. Hannah connected the two
+reports herself and she was right.
+
+All three lines are gone. The emphasis is now entirely in place:
+
+- a **centred scale**, 0.13 → 0.20 on the plane and 0.11 → 0.18 on the rim
+  fibres. The retired depth step bought 8–12% of apparent growth on its own (a
+  node 0.62 nearer at depth 5.6–12.4); folding that into a scale about the
+  node's own centre keeps the response as strong as it was and moves nothing.
+- the core/halo points grow 0.35 → 0.42, about the node.
+- the ember ring, the image term and the core term in the fragment shader are
+  untouched, as is the node's own strand response.
+
+This is light, an in-place ring and an in-place scale — nothing else. It is not
+the hover glow 0d9bcbd deliberately removed from the Final field bodies: that
+was a glow added to bodies that had none, this is the *removal* of a translation
+from an emphasis Owned has always had.
+
+**Measured after:** the drawn quad's projected centre, computed from the live
+uniforms through the shader's own arithmetic at hover 0 and hover 1, moves
+**0.00 px on every one of the sixteen nodes at all three viewports.** The four
+corners are symmetric about the node, so the scale cannot move the centre, and
+`mv.z` no longer depends on `vH`. (`grep "mv\.z *+="` over the chapter returns
+one line: this note.)
+
+## C — how strand ownership is derived
+
+The root response had exactly one setting: **all**. Two halves were wrong.
+
+**The trigger was in the wrong place.** `ui.js`'s `CHAPTER_SUB_PULSE.owned`
+fired `trigger('claimPrimary')` — `substrate.surge()` plus a 30-unit colony
+wave — from `pointerenter` on the chapter's prose sub line. Measured, that line
+is a **416 x 77 px box at (512, 277)**: dead centre of the frame, between the
+crown above and the portrait arc below, squarely on the route a pointer takes
+to reach a face. Every crossing lit the whole root system. "Randomly", exactly.
+
+It now belongs to the crown, as a **hover zone** — a hover target that is part
+of the scene: no chip, no label, no card, no tab stop, nothing drawn.
+`chapters/owned/index.js` declares one (`hoverZones()`, id `root-crown`, world
+radius 0.25 — the crown is only 1.85 units from the lens, so that is ~123 px at
+1440x900: the convergence knot and its collar, and not the headline 30 px
+below it). Zones live in their own fixed host at **z-index 0, below the hero's
+`.ui` layer**, because the crown zone is 246 px across and the chapter nav sits
+inside it — in the hotspot host it swallowed every nav link. Verified: all four
+nav links hit-test to themselves at all three sizes.
+
+Being pointer-only costs nothing that was not already lost: the prose-line
+pulse it replaces was pointer-only too, and neither carries information.
+
+**A face had no root response at all.** Hovering one lit the *portrait* layer's
+own strands and left the mesh untouched. So the substrate needed to know which
+of its filaments belong to whom — and it can be **answered**, because the build
+already records what joins what:
+
+1. `portraits.js` grows each face's local strands from real points on the fan:
+   45% of them start at `substrate.nearestCordPoint()`, which returns a sample
+   from `rootPool` — the strand starts *on* a root, not near one. Those points
+   are now recorded as the face's **anchors**.
+2. The web's root→mesh links are built from those same `rootPool` samples
+   (`link(rootSample, netNodes[j])`), so an anchor **identifies** a mesh vertex
+   the face is genuinely wired to.
+3. The node→node links give `webAdj`, a graph over the 430 mesh vertices.
+
+`substrate.assignOwners(faces)` therefore seeds a walk at the mesh vertices each
+face's own strands reach, spreads it 3 hops along that graph, and lets the
+sixteen compete — first to reach a vertex, at the lowest hop count, owns it. A
+**Voronoi in graph distance over a graph the chapter built**, not a radius
+search. The only distances involved are the anchor↔link-end match (an identity
+test with 0.9 of slack for the jitter `nearestCordPoint` adds) and two caps.
+A mesh link belongs to a face when both its ends do; a root→mesh link belongs to
+whoever owns the mesh end, because that link *is* the fan reaching that vertex.
+A face with no anchor at all (its strands all rolled a free-space start) seeds
+on its single nearest vertex and the same walk does the rest.
+
+Two caps keep it local, and both were earned by measurement. The uncapped walk
+gave a **4-to-160** spread: a face standing in a dense patch lit 11% of the whole
+network, which stops reading as "these are mine". With `OWN_MAX_R 4.5` world
+units and `OWN_MAX_LINKS 55` (a face past the cap keeps its **nearest** links,
+so what is dropped is always outermost):
+
+    links owned per face   6 … 55   (mean 27)   of 1 436 in the mesh
+                           i.e. 0.4% … 3.8% each; 432 owned in total
+    world extent per face  1.94 … 4.34 units  (mean 3.58)
+
+The two responses, read off the live uniforms:
+
+| | hover a FACE (c9) | hover the CROWN |
+|---|---|---|
+| web `uOwner` / `uOwnerAmt` | **9 / 0.97** | −999 / 0 |
+| crown pulse | 0 | 0.512 |
+| fan pulse | 0.16 (its ambient) | 0.263 → 0.362 |
+| hub pulse | 0 | 0.156 → 0.306 |
+| web pulse | 0 | 0.063 → 0.259 |
+| hair pulse | 0 | 0 → 0.200 |
+
+That is the model Hannah asked for: hovering a face lights **28 filaments inside
+4.3 units of it and nothing else**; hovering the crown runs the wave out through
+crown → fan → hubs → web → hairs, all 1 436 links and the whole fan with them,
+and settles back to nothing. Hovering the prose line now fires nothing at all.
+
+## Gates
+
+    hit-centre error   116 px mean -> 0.4 px       (3 viewports, table above)
+    hover reliability  74/208 -> 208/208 pts       1440x900
+                       86/208 -> 208/208            1280x800
+                       32/52  -> 52/52              375x812
+    every node, every viewport: 13/13 of its own face answers, edges included
+    drawn displacement on hover   max 86.6 px -> 0.00 px, all 16, all sizes
+    local vs global    6-55 links (max extent 4.34u) vs 1 436 links + fan
+    console            full ride 0 -> 1 -> 0 at 0.01 steps: 0 errors, 0 warnings
+    contract           click -> #/owned/contributor-13 + card + selIdx 13;
+                       Escape -> #/owned + selIdx -1; nodeIds unchanged
+    other chapters     Connect/Inspire chips: pad 0 px, pill hit unchanged
+    chapter nav        all 4 links hit-test to themselves at all 3 sizes
+    goldens            capture.py --check PASS, worst MAE 0.18 (final,
+                       pre-existing and unchanged). mission 0.00/0.00.
+                       NOTHING re-shot — all ten PNGs byte-identical, twice.
+
+Reveal laws, the 0.692–0.712 murk crossing, the FINAL splice, `nodeIds` and the
+card/popover contract are all untouched; no camera key moved.
+
+## Residuals
+
+1. **The crown zone is pointer-only.** So was the prose-line pulse it replaces,
+   and it carries no information — but the crown is now the one part of the
+   composition that answers a mouse and not a keyboard.
+2. **Ownership is uneven by design.** Six links at the sparse end, 55 at the
+   cap. A face in a thin patch of mesh has a quieter answer than one in a dense
+   patch, which is honest but not uniform; its own portrait strands carry the
+   response there.
+3. **375 still places 4 of 16 chips** — unchanged, and still waiting on the
+   bottom-sheet index (§9.4). The pad makes the four that are placed reliable;
+   it does not reach the twelve that are not.
+4. `mv.z` no longer moves on hover, but the **near-field defocus** still
+   softens by `1 - vH * 0.45`. That is a blur change, not a position change,
+   and it is left as it was.

@@ -62,6 +62,14 @@ const EXPOSURE_PLANES = 0.50;
 // has to sit under a card without competing with it.
 const POD_SEL_LEVEL = 0.55;
 
+// The crown hover zone (report C). Its world radius is small because the
+// crown is NEAR — 1.85 units from the lens at the rest — so 0.25 units
+// subtends about 110 px at 1440x900, which is the bright convergence knot and
+// its collar and nothing else. Larger reaches the headline; smaller stops
+// reading as "the root thing at the top".
+const CROWN_ZONE_ID = 'root-crown';
+const CROWN_ZONE_R = 0.25;
+
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 
 export function createOwned(sceneApi, content) {
@@ -89,6 +97,10 @@ export function createOwned(sceneApi, content) {
     nodeCount: contributors.length, exposure: EXPOSURE_PLANES,
   });
   group.add(portraits.group);
+  // Report C: hand the substrate each face's real attachment points so the
+  // mesh can work out which of its filaments belong to whom. Build-time, once
+  // — see substrate.assignOwners for how ownership is derived.
+  substrate.assignOwners(portraits.nodes.map(n => ({ pos: n.pos, anchors: n.anchors })));
   // photos are the default read once the look-dev set lands (never blocks
   // boot; a failed load leaves the procedural busts, and anonymous stays one
   // call away — setPortraitMode('anonymous'))
@@ -323,6 +335,11 @@ export function createOwned(sceneApi, content) {
     portraits.setFade(eff * faceVis);
     substrate.update(dt, t);
     portraits.update(dt, t);
+    // The mesh answers the SAME node the portrait field is answering, at the
+    // same eased strength — hovering a face lights that face's own filaments
+    // and nothing else in the network. `faceVis` rides along so the epilogue
+    // retires the local lighting with the faces it belongs to.
+    substrate.setActiveNode(portraits.activeIdx, portraits.activeAmt * faceVis);
 
     // pods: hover ease + per-pod inward pulse when hot. Hover and selection
     // are separate channels blended by max(), so an open card holds the nexus
@@ -412,6 +429,20 @@ export function createOwned(sceneApi, content) {
     snap() { amount = amountTarget; portraits.snap(); },
 
     setHot(id, on) {
+      // THE CROWN — the one hover that answers with the WHOLE root system
+      // (Hannah, 2026-08-06, report C). This response used to hang off the
+      // chapter's prose sub line, a 416x77 box in the middle of the frame
+      // that a pointer travelling down to the faces crosses by accident: the
+      // entire network flashed at what felt like random moments. It belongs
+      // to the structure it describes. Every root leaves the crown, so a wave
+      // launched there is the only one that legitimately reaches everyone.
+      if (id === CROWN_ZONE_ID) {
+        if (on) {
+          portraits.wavePulse(colonyCentre, { speed: 3.4, width: 3.2, maxR: 30, amp: 1.0 });
+          substrate.surge();
+        }
+        return;
+      }
       const pd = pods.find(p => p.id === id);
       if (pd) {
         pd.target = on ? 1 : 0;
@@ -502,7 +533,47 @@ export function createOwned(sceneApi, content) {
     nodeWorld(id) {
       const pd = pods.find(p => p.id === id);
       if (pd) return _w.copy(pd.pos).clone();
+      if (id === CROWN_ZONE_ID) return leg.CROWN.clone();
       return portraits.worldOf(id);
+    },
+
+    /** HIT RADIUS (core/ui.js hotspot contract, 2026-08-06 — report A).
+     *
+     *  World-space radius of the thing this node DRAWS. ui.js projects it and
+     *  gives the chip a round hit pad that size, centred exactly on the node.
+     *
+     *  Before this the chip's hit surface was the pill itself: a 23 px-tall
+     *  bar running 200-306 px to one side of the node, and for these
+     *  hover-only chips it was INVISIBLE at rest. So the region that answered
+     *  the pointer had almost nothing to do with the region that showed a
+     *  face — measured 116 px of mean offset between the two centres, and
+     *  only 74 of 208 sample points taken across the drawn faces landed on
+     *  the right chip at 1440x900. The worst were the near/edge faces, whose
+     *  discs are biggest (up to 50 px radius against a 11 px half-height of
+     *  pill): 2 of 13 points. Hannah: "it feels like it is in a different
+     *  point to where they actually show."
+     *
+     *  A chapter that does not implement this keeps the pill-only hit model
+     *  exactly as it was. */
+    nodeRadius(id) {
+      if (id === CROWN_ZONE_ID) return CROWN_ZONE_R;
+      return portraits.radiusOf(id);
+    },
+
+    /** HOVER ZONES (core/ui.js, 2026-08-06 — report C).
+     *
+     *  A zone is a hover target with no chip, no label, no card and no tab
+     *  stop: a piece of the SCENE that answers a pointer. The crown is one —
+     *  "the top root thing", in Hannah's words — and it is the only thing
+     *  entitled to light the whole network.
+     *
+     *  It is deliberately not a hotspot: a hotspot is a named node with a
+     *  card behind it, and the crown is not a contributor, has no content and
+     *  must not enter the tab order ahead of the sixteen people who do. Like
+     *  the prose-line pulse it replaces, it is a pointer-only flourish; the
+     *  information it carries is nil, so nothing is lost to a keyboard. */
+    hoverZones() {
+      return [{ id: CROWN_ZONE_ID, world: () => leg.CROWN.clone(), radius: CROWN_ZONE_R }];
     },
 
     /** 'procedural' | 'photo' | 'anonymous' — anonymous is one call away. */
