@@ -1349,3 +1349,26 @@ this document's own restage established (4146288). The fault is the organism's
 migrant rise draw-on gate, and the fix belongs there — a conservation floor so
 the gate never removes more light than the dot has already ceded. Until that
 lands, this boundary stays as it is.
+
+### 2026-08-06 (later still) — fixed organism-side; this leg's timing untouched
+
+The conservation floor landed in `organism/spores.js` (see
+`07-chapter-inspire.md`, "the conservation floor, applied"). At this boundary:
+
+| | before | after |
+|---|---|---|
+| total shed light trough | −25.3% | **−11.7%** |
+| dots above 0.60 luminance | −31.9% | **−17.7%** |
+| converted-and-black dots at p 0.385 | 1193 | **195** (resting baseline 240) |
+
+The extinction cohort is gone — no dot goes dark at this boundary any more.
+The residual −11.7% is a smooth sag while half the population is mid-exchange
+between its ambient and plume looks, not a blackout; dots in the 25–60%
+luminance band stay flat across the crossing.
+
+**This leg's timing is untouched, as intended.** Nothing in
+`journey/chapters/connect/` was edited, and the retire envelope `out`, the
+`endOf('inspire')` offset and every arrival window are exactly as the restage
+left them — `connect` golden re-checks at MAE 0.00/0.00 both sizes. The
+staggered-retire alternative this document warned against was not taken; the
+fault was organism-side and was fixed there.

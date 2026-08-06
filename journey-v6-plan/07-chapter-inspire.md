@@ -569,3 +569,162 @@ Hannah's one-population rule, and would move the Connect arrival timing
   ran backgrounded and rAF was throttled to ~2 Hz, which makes any timing
   number from this session meaningless. No code changed, so before/after is
   identical by construction.
+
+---
+
+## 2026-08-06 (later still) — the conservation floor, applied
+
+The read-only hold on `organism/*` was lifted for this fix, with the reasoning
+recorded here because it is the useful part: **that rule exists to stop
+CHAPTERS reaching in and writing the organism's buffers** — the driver/seat
+architecture of `15-merge-and-architecture.md` §3. It was never meant to freeze
+the organism's own internal light accounting against a genuine defect. A dot
+surrendering ambient light it is never granted back is a bug in the module that
+owns that accounting, so `spores.js` **is** the correct home for the fix;
+patching it chapter-side would have been the actual architecture violation.
+
+### What changed
+
+Two functional lines in `organism/spores.js` `steer()`, plus the wisp colour
+ramp in this chapter. Nothing else:
+
+```js
+const drawOn = 1 - ss(g0, rl + 0.001, u3);
+env *= drawOn + (1 - drawOn) * cvT;      // was: env *= 1 - ss(g0, rl + 0.001, u3)
+```
+
+### The no-op claim, proved rather than asserted
+
+At rev 1 (and for the resident exit at every rev) `rg = 1`, so `rl = 1.12`,
+`g0 = 1.02`, and `u3 <= 1` makes `ss()` clamp to **exactly** 0. `drawOn` is
+exactly 1 and the expression collapses to `env *= 1`. Two independent
+confirmations:
+
+- `capture.py --check` **before** the wisp change: mission 0.00/0.00,
+  **inspire 0.00/0.00**, connect 0.00/0.00, owned 0.00/0.00. The inspire
+  golden is the one that would have moved had the term not been identity at
+  reveal 1; it did not move by a single quantisation step.
+- In the like-for-like p-sweep below, every row where a reveal is 0 or 1 reads
+  **+0.0%**: p 0.125–0.133, 0.175–0.185, 0.330–0.365 and 0.405–0.465 are
+  identical to the digit, before and after.
+
+Both traces were re-measured at the same 1440x900 headless viewport through
+CDP. The first pass compared a 1440x900 run against a browser-pane run at a
+different aspect, which shifts the camera azimuth and therefore the reveals —
+a confound; the numbers below are the corrected apples-to-apples comparison,
+which is why the "before" figures differ slightly from the section above.
+
+### After numbers
+
+| | before | after |
+|---|---|---|
+| Mission → Inspire trough (total shed light) | **−13.5%** | **−4.0%** |
+| … dots above 0.60 luminance | −16.8% | −8.3% |
+| Inspire → Connect trough | **−25.3%** | **−11.7%** |
+| … dots above 0.60 luminance | −31.9% | −17.7% |
+
+Dark-and-converted dots — the single best indicator, since these are the dots
+that had ceded their ambient and been given nothing back:
+
+| p | before | after | resting baseline |
+|---|---|---|---|
+| 0.26 (Inspire rest) | 240 | **240** | 240 |
+| 0.147 (Arca) | 711 | **193** | 240 |
+| 0.167 (2RP) | 676 | **243** | 240 |
+| **0.385 (→ Connect)** | **1193** | **195** | 240 |
+
+The excess cohort is **gone**: every transition point now sits at or below the
+resting baseline. At the new residual trough (p 0.395) there are **18** such
+dots, and at p 0.400 there are **zero**. The rest frame is untouched at 240.
+
+### Honest assessment against "no perceptible dip"
+
+**Mission → Inspire: achieved.** −4.0% total light is below the threshold at
+which a global luminance change on a sparse particle field is noticeable during
+motion, and the largest single-step change on a slow scrub is 2.9%.
+
+**Inspire → Connect: improved, not eliminated.** −11.7% remains. But its
+*character* has changed, which is the part that matters for Hannah's report: it
+is no longer a cohort blinking out and back (1193 dots → 195), it is a gentle
+sag in total light while half the population is mid-exchange between its
+ambient look and its plume look. Dots in the 25–60% luminance band stay flat at
+~230–325 right across the boundary, comparable to the rest state's 309 — i.e.
+nothing goes dark, things merely pass through dimmer. That is lighting on one
+population, which is exactly what her rule permits.
+
+The residual is the arithmetic of the exchange itself: a dot's contribution is
+`(1 - conv*T)*ambient + PLUME_GAIN*env*conv`, and `env` is shaped by the
+plume's own envelope (`eu` at the bottom of the rise, the 0.62–1 fade at the
+top). Dots at either end of that envelope give up more ambient than their plume
+returns. At full conversion this nets positive (rest = 3029 vs hero 2831), but
+mid-transition it sags. Flattening it completely means reshaping the plume's
+brightness envelope, which would change the approved Inspire rest frame. Not
+done, and not recommended without Hannah looking at it.
+
+### The arrows — found and retired
+
+The 1,404 LineSegments were the right suspects, and the wisps specifically. At
+2.6x exposure on the inspire golden, **twelve** perfectly smooth continuous
+curves (4 wisps x 3 exits) climb the full height of the shed, through and past
+the dust — the most conspicuous thing in the frame and the only
+continuous-line form left in open sky since the core ribbons went.
+
+They survived to the top because of a floor: the ramp faded to 0.05 and then
+added `+ 0.1`, so the strand bottomed out at `heat(0.126)` — and `heat(0)` is
+not black either, it is `C_DARK` `0x421c05`. Under additive blending against an
+empty sky that floor is plainly visible.
+
+Fixed by fading the wisp to **literal black** (`multiplyScalar`, not a walk
+down the heat ramp), completing at `t = 0.70` — past every exit's rim walk and
+curl, before any of them starts to rise. The delta story the wisps exist to
+tell (born between the gills, out to the margin, walking the rim to the release
+sector) is untouched and still draws on with the live current; what is gone is
+the stroke crossing open sky. A **static** fade baked into the vertex colours,
+so it is not a fade-out over open view and reverse scrubs still mirror.
+
+Verified on screen: at the same 2.6x exposure every one of the twelve curves is
+gone and the dust is unchanged — same particles, same brightness, same
+distribution.
+
+The rim-walk pile-up hypothesis from the previous section **remains open**. Its
+test was underpowered and re-testing it was not needed once the wisps were
+identified; it is recorded, not resolved.
+
+### Gates
+
+- **Reverse mirrors exactly.** Forward vs reverse over the full ride
+  (p 0 → 1 → 0, dp = 0.005, 201 points): **max |lum difference| = 0**,
+  **max |hot60 difference| = 0**. Also 0 at dp = 0.0025 over both boundaries
+  (161 points) and at dp = 0.02 fast scrub (21 points), and max |azimuth
+  difference| 0.000 deg. Guaranteed by construction — the fix is pure in
+  (eff, time, T) with no state — and confirmed by measurement.
+- **Slow and fast scroll.** Max single-step luminance change 2.9% at
+  dp = 0.0025, 5.0% at dp = 0.02, 4.5% over the full ride. No step, no flash.
+- **No self-ignition.** The floor is scaled by `cvT`, which is ~0 wherever
+  `conv` is ~0, so at the arming gate the expression is unchanged — arming
+  stays invisible and the derived 34-deg threshold keeps its meaning. The wisp
+  change is a static spatial fade, not a temporal one.
+- **Console clean**, zero errors or warnings over a full ride; **0 non-finite
+  values** in the position and colour buffers across 402 sampled frames.
+- **`capture.py --check` PASS.** mission **0.00 / 0.00 — byte-identical on
+  disk** (the file is not in the changed set), connect 0.00 / 0.00, owned
+  0.00 / 0.00, final 0.18 / 0.13 (unchanged determinism noise).
+- **References.** Only the `inspire` pair legitimately moved, and only because
+  of the wisp retirement; both sizes re-shot **in this commit** via
+  `python3 tools/capture.py --pose inspire`, `manifest.json` updated. The other
+  eight PNGs are untouched.
+- **No regressions.** The diff is two functional lines in `spores.js` plus the
+  wisp colour ramp — verified by reading the diff, not assumed:
+  - *Three legible Inspire streams (c6bbbab)* — the ARR ramps and the reveal
+    drive are untouched; the streams resolve exactly as approved.
+  - *Final particle match (836d373)* — `final` golden unchanged at its own
+    noise floor, and the seat is quiescent past p 0.415 (`eff` = 0), so
+    `steer()` does not run during Final at all.
+  - *Connect arrival timing (4146288)* — nothing in `chapters/connect/` was
+    touched, and no timing window was edited: `out`, `endOf('inspire')` and the
+    retire envelope are exactly as they were. This is why the staggered-retire
+    alternative was rejected in the previous section — it would have moved
+    precisely this. `connect` golden 0.00 / 0.00.
+- Frame time deliberately not reported: the only pane available was
+  backgrounded and rAF-throttled, and a manufactured figure would be worse than
+  none.

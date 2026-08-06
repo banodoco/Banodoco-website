@@ -574,10 +574,38 @@ export function createSpores(ctx) {
           env = eu * (1 - ss(0.62, 1, u3))
               * (T + (0.28 * core + 1.15 * knotV) * pearlScale);
         }
-        // migrant rise draw-on gate (rl inert for the resident and at rev 1)
+        // migrant rise draw-on gate (rl inert for the resident and at rev 1),
+        // WITH A CONSERVATION FLOOR (2026-08-06, Hannah's third spore report).
+        //
+        // The gate may never take away more light than the dot has already
+        // ceded. dim() runs `f = f * (1 - cv) + pw`, so a dot surrenders cvT
+        // of its ambient shed colour as it converts — complete by rev ~0.30.
+        // But rg only STARTS granting plume light at rev 0.55, and a dot's
+        // stage is a free-running per-dot clock (t = tNow/perA + ph0A),
+        // wholly independent of the reveal — so ~60% of a migrant cohort sits
+        // in this branch at ANY reveal, not just after its walk front lands.
+        // Ungated, every one of them rendered BLACK through that window:
+        // 1,193 converted-and-dark dots at p 0.385 against a resting baseline
+        // of 240, a -25.3% hole in the shed. Light leaving the volume and
+        // coming back IS what "they become different spores" describes.
+        //
+        // Floored, a dot keeps at least the share of its plume light matching
+        // the ambient it gave up, so the exchange is conservative per dot at
+        // every reveal — the same law dim()'s own `f * (1 - cv) + pw` states.
+        // The draw-on choreography survives on the unconverted share: at low
+        // rev, conv (and so cvT) is ~0, the floor is ~0 and the gate is as it
+        // was, which is what keeps arming invisible.
+        //
+        // IDENTITY AT rev 1: rg = 1 -> rl = 1.12, g0 = 1.02, and u3 <= 1, so
+        // ss() clamps to exactly 0 and drawOn is exactly 1 — the expression
+        // collapses to `env *= 1`. The Inspire rest and p = 0 are therefore
+        // untouched bit-for-bit, not merely approximately. Same for the
+        // resident exit, whose rg is the literal 1 at every reveal.
+        // See journey-v6-plan/07-chapter-inspire.md, 2026-08-06 (later).
         const rl = rg * 1.12;
         const g0 = rl - 0.10 > 0 ? rl - 0.10 : 0;
-        env *= 1 - ss(g0, rl + 0.001, u3);
+        const drawOn = 1 - ss(g0, rl + 0.001, u3);
+        env *= drawOn + (1 - drawOn) * cvT;
       }
 
       // cap-local -> world through the live mushroom matrix
