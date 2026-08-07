@@ -606,6 +606,49 @@
     .hero { padding-bottom: 5vh; }
   }
 
+  /* ============================================================
+     PL-1.4 IN THE HERO ROW (2026-08-07 mobile pass).
+
+     The journey layer has carried 44px minimum touch targets since
+     PL-1.4 (journey/site.css), by the same method used here: a
+     transparent pseudo-element centred on the control, sized to
+     max(its own box, 44px), so the HIT AREA reaches the minimum
+     while the artwork renders at exactly the size it was designed
+     at. The hero's own row was never brought into that rule and
+     was the last thing on any mobile screen still under the line —
+     measured at 375x812 and 430x932, `2RP` is 58x28 and `Discord`
+     80x28, i.e. 16px short in height on every single view of the
+     site, since the row is fixed and rides the whole journey.
+     `.cta` measured 328x43 on a landscape phone, 1px short, and
+     the wordmark `.logo` — a real link to the site root, live at
+     every chapter — measured 122x17.
+
+     Deliberately a pad and not a bigger pill: growing the pills
+     would move the nav row's bottom edge, and that edge is the top
+     of the band Inspire's portrait camera is balanced against
+     (journey/portrait.js, the p 0.260 key). A transparent pad
+     changes no furniture, so no camera field goes stale and no
+     captured reference can move — .ui is hidden at capture in any
+     case, but the point is that nothing MOVED, not that nothing
+     was photographed.
+
+     Same media condition as the journey layer's PL-1.4 block, so
+     the two halves of one rule can never drift apart.
+     ============================================================ */
+  @media (pointer: coarse), (max-width: 720px), (max-height: 560px) {
+    .pill, .cta, .logo { position: relative; }
+    .pill::before, .cta::before, .logo::before {
+      content: "";
+      position: absolute;
+      left: 50%; top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+      background: none;          /* hit area only: it must never paint */
+      pointer-events: auto;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     #stage, .spill, nav, h1 .hl, .sub, .cta, .co, .co *, .co:is(:hover, .force) .ring { animation: none; }
     .co { opacity: 1; }
