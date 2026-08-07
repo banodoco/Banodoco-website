@@ -155,12 +155,46 @@ export function createSpores(ctx) {
       const pos = sporePts.geometry.attributes.position;
       const arr = pos.array; // raw typed array: the getter/setter API costs real
                              // time at 4200 spores x 60fps in the hottest JS loop
+      // THE DRIFT INTEGRATES THE DOT'S OWN AMBIENT STATE, NEVER THE STEERED
+      // BUFFER (2026-08-07, Hannah's fourth spore report — the systemic half).
+      //
+      // While the seat holds a dot, `arr` is not that dot's drift position: it
+      // is heroP blended toward a braid path, and at the shipped taste value
+      // (T = 0.85) the braid is 85% of it. Integrating THAT and handing the
+      // difference back to heroP works only for the parts of this loop that
+      // are position-independent. The recycle test below is not: it asks
+      // whether the dot has left the volume, and asked of a braid position it
+      // fires on dots whose ambient selves never went anywhere near a bound.
+      // Measured at the Inspire rest, the shed fully converted, spores
+      // recycled per 1.6 s ran 5 (hero-only, at the Mission rest) -> ~130 —
+      // a ~25x false recycle rate, every one of which teleported that dot's
+      // heroP to its gill origin (steer accepts a jump past TELEPORT2 as the
+      // dot's new hero home) and reset its sporeAge. The ambient population
+      // was therefore being quietly rewritten by the act of driving the
+      // chapter: after one round trip through Inspire, 10.6% of the shed sat
+      // in a different cell of an 8^3 spatial histogram than a page that had
+      // never left the Connect rest, against 2.3% for simply waiting the same
+      // wall time there. And because heroP is 15% of a converted dot's
+      // rendered position, that rewrite is not bookkeeping — it is on screen.
+      //
+      // So a dot the seat is holding has its ambient state carried in heroP
+      // and `arr` is left alone (steer overwrites it later this same frame
+      // anyway); every other dot integrates `arr` exactly as it always did.
+      // steer()'s hero-shadow differencing needs no change and degenerates
+      // correctly: for a held dot `arr` is untouched here, so its delta is
+      // exactly zero and the shadow it maintains is the one written above.
+      // Handover is continuous in both directions — the frame a dot converts,
+      // writ is still 0 here and heroP == arr; the frame it ceases, steer has
+      // already written arr = heroP and cleared writ.
+      const held = inited ? writ : null;
       for (let i = 0; i < pos.count; i++) {
         const i3 = i * 3;
         // the gills that release this spore are swaying, so its origin swings too
         const gx = sporeOrigin[i3] * swayCos - sporeOrigin[i3 + 1] * swaySin;
         const gy = sporeOrigin[i3] * swaySin + sporeOrigin[i3 + 1] * swayCos;
-        let x = arr[i3], y = arr[i3 + 1], z = arr[i3 + 2];
+        const own = held !== null && held[i] === 1; // the seat holds this dot
+        const src = own ? heroP : arr;
+        let x = src[i3], y = src[i3 + 1], z = src[i3 + 2];
         // Under the cap the air is still, so a fresh spore drops clear of the gills
         // before the wind takes hold. That handover is measured in TIME, not in
         // distance travelled: the drift is slow enough (~0.06 units/s) that a
@@ -200,7 +234,7 @@ export function createSpores(ctx) {
         if (x > 6.8 || y > 7.6 || y < 0.2 || x < gx - 2.5) {
           x = gx; y = gy; z = sporeOrigin[i3 + 2]; sporeAge[i] = 0;
         }
-        arr[i3] = x; arr[i3 + 1] = y; arr[i3 + 2] = z;
+        src[i3] = x; src[i3 + 1] = y; src[i3 + 2] = z;
       }
       pos.needsUpdate = true;
     });

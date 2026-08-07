@@ -1784,3 +1784,222 @@ means moving the walk front itself — `mig`, both `CONV_*_MIG`, `RG_OPEN`, and
 same 0.55. Four coupled constants, each with an identity to preserve at rev 1.
 That is a separable piece of work with its own verification burden, and it is
 where the remaining margin is.
+
+## 2026-08-07 (D22) — the shed had no hysteresis; the REVEAL did
+
+Hannah's fourth report on this family, and the first about the reverse
+direction:
+
+> "When I go from Connect to Inspire, all the spores rearrange weirdly. I
+> really feel like there must be some weird inconsistencies with how we manage
+> the spores for the main mushroom."
+
+Every prior fix in this family was measured and tuned FORWARD. Her instinct
+that this is systemic rather than local is correct, and this section is the
+structural audit it asked for rather than another single-boundary patch.
+
+**It reproduces.** Riding backward from the Connect rest at a deliberate wheel
+rate, the shed enters its conversion on a visibly different schedule than the
+one it left on: total shed luminance dips to 2647 (−3.6% against the resting
+2746) as `nConv` goes 0 → 1,714 in twelve frames, and the population centroid
+moves 0.11 world units inside single frames around p 0.37.
+
+### The measurement that names it
+
+Positions cannot be the metric here, and that is worth stating before the
+numbers. A dot's stage on its braid path rides a free-running per-dot clock
+(`t = tNow / perA[i] + ph0A[i]`), so the braid genuinely flows with wall time:
+holding p at the Inspire rest and simply waiting 9 s moves 2,177 of 4,200 dots
+by more than a world unit, mean displacement 1.35. That clock is an exact
+function of absolute time, not an integration, so it is identical forward and
+backward — it is the plume being alive, and it stays. It also swamps any
+position difference, which is why it hid this for four rounds.
+
+**`cv` — the per-dot conversion — is the structural quantity**, because it is a
+pure function of the exit's effective reveal and the dot's own static hash. So
+ride p 0.10 ↔ 0.50 at a deliberate rate and difference the whole per-dot state
+at matched p, with a same-direction control:
+
+| p | eff fwd | eff rev | dots with Δcv > 0.05 | Δcv > 0.25 | control: fwd vs fwd |
+|---|---|---|---|---|---|
+| 0.30 | 0.999 | 0.950 | 163 | 0 | **0** (Δcv max 0.0000) |
+| 0.34 | 1.000 | 0.781 | 646 | 539 | **0** (0.0000) |
+| 0.37 | 0.971 | 0.379 | 2,414 | 2,083 | **0** (0.0007) |
+| 0.40 | 0.609 | 0.024 | **3,570** | 3,463 | **0** (0.0009) |
+
+Two forward passes over the same span agree to `Δcv max 0.0009`. The
+conversion was perfectly reproducible ALONG a direction and never reproducible
+ACROSS one. At p 0.40 the same scroll position carried reveals differing by a
+factor of **26**, and 85% of the shed sat at a different conversion. That gap
+is what "all the spores rearrange weirdly" is.
+
+### Root cause 1 — the reveal was a first-order lag
+
+`journey/chapters/inspire/index.js`:
+
+```js
+ex.fade += (ex.target - ex.fade) * k;     // k = min(1, dt * 3.2)
+```
+
+A ~0.31 s lag on the ONE number every visual channel of the handoff reads
+(`eff = fade * arrOf(az)`). A lag always TRAILS: it trails HIGH when the target
+falls and LOW when it rises. `out` collapses the reveal across Δp 0.06 — about
+0.67 s at a deliberate rate, comparable to the time constant — so forward and
+reverse sat on opposite sides of the true value through the whole boundary.
+
+`target` was already everything the ease pretended to smooth: `max(a, b, c,
+band) * out`, four smoothsteps of camera azimuth and p, and azimuth is itself
+C1 in p (the director's Hermite spline). **The fix is `ex.fade = ex.target`.**
+
+Three things make that safe, and each was checked rather than assumed:
+
+- **The seam cannot show.** `setArmed(false)` snaps target to 0, but T1 is
+  derived (`seams.js`, `2fdb4e6`) so that BOTH its edges sit where the reveal
+  is already exactly zero — it arms at az 4.79 against an onset of 5, and
+  releases either at az < −3.21 (`arrOf` = 0) or at p > 0.46, where `out` has
+  been 0 since p 0.415. The snap has nothing to snap.
+- **It is a no-op at every landing frame.** `snap()` — the path every `?p=`
+  deep link and every `?capture=` golden takes — has always done exactly
+  `ex.fade = ex.target`. The scrub now agrees with the still instead of
+  lagging behind it. `capture.py --check` reports MAE **0.00/255** on all ten
+  goldens, `inspire@*` and `mission@*` included.
+- **The exponential ghost is gone.** The old `if (fade < 0.012) fade = 0` guard
+  left a residual reveal of 0.001–0.003 sitting at the Mission rest after any
+  ride through Inspire. It now reads exactly 0.000.
+
+### Root cause 2 — the drift integrator was recycling the STEERED buffer
+
+The systemic half, and the one that answers "how we manage the spores".
+
+`organism/spores.js`'s drift integrator ran its whole loop on `arr`. But while
+the seat holds a dot, `arr` is not that dot's drift position: it is `heroP`
+blended toward a braid path, and at the shipped taste value (`T_SHIPPED` 0.85)
+the braid is **85%** of it. Differencing that back into `heroP` works for the
+parts of the loop that are position-independent. The recycle test is not:
+
+```js
+if (x > 6.8 || y > 7.6 || y < 0.2 || x < gx - 2.5) { …recycle… }
+```
+
+That envelope is authored for the AMBIENT plume, which is shed from the back
+half of the gills and blown +x. The braid deliberately puts dots all around the
+rim, including upwind of `gx − 2.5`. So the test fired on dots whose ambient
+selves had gone nowhere near a bound. Measured as recycles per 1.6 s (via
+`sporeAge`, which resets to 0 on one):
+
+| | before | after |
+|---|---|---|
+| Mission rest (hero only, the true ambient rate) | 4 | 2 |
+| **Inspire rest (shed fully converted)** | **127** | **2** |
+| peak over a deliberate ride, forward | 149 | 9 |
+| peak over a deliberate ride, reverse | 147 | 14 |
+
+A **~30x false recycle rate**, and every one of them teleported that dot's
+`heroP` to its gill origin — `steer()` accepts a jump past `TELEPORT2` as the
+dot's new hero home — and reset its `sporeAge`. The ambient population was
+being quietly rewritten by the act of driving the chapter, and because `heroP`
+is 15% of a converted dot's rendered position, that rewrite was on screen.
+
+**The fix:** a dot the seat is holding has its ambient state carried in
+`heroP`, and `arr` is left alone (steer overwrites it later in the same frame
+anyway). Every other dot integrates `arr` exactly as it always did. Five lines:
+
+```js
+const held = inited ? writ : null;
+…
+const own = held !== null && held[i] === 1;
+const src = own ? heroP : arr;
+let x = src[i3], …
+…
+src[i3] = x; …
+```
+
+`steer()` needs no change and degenerates correctly: for a held dot `arr` is
+untouched by drift, so its measured delta is exactly zero and the shadow it
+maintains is the one the drift loop just wrote. Handover is continuous both
+ways — the frame a dot converts, `writ` is still 0 and `heroP == arr`; the
+frame it ceases, steer has already written `arr = heroP` and cleared `writ`.
+
+### What the audit checked and CLEARED
+
+Stating these matters as much as the two findings:
+
+- **`exIdx[i]` and every per-dot draw** (`stag`, `stagW`, `perA`, `ph0A`,
+  `h1A/h2A/sdA`, `coreA`, the stage boundaries) are computed once in
+  `initSteer()` behind an `inited` guard and are never recomputed. No random
+  draw is ever re-taken. *Latent hazard, not a live one:* `setDriver` replaces
+  `exits` without clearing `inited`, so a second driver claiming the seat with
+  different exit geometry would silently inherit the first one's assignments.
+  Only Inspire claims the seat today, so nothing is wrong; it is written down
+  here because it would not announce itself.
+- **The free-running per-dot stage clock** (`t = tNow / perA + ph0A`) — an
+  exact function of absolute time, not an integration. Identical in both
+  directions. Legitimate, and kept.
+- **`colorBase`** is captured once, before any dim, from pristine colours; the
+  byte-exact restore holds (`sumLum` returns to 2746.2 at every rest, both
+  directions, after any ride).
+- **`sporeAge`** integrates, but only the corrupted recycle path was resetting
+  it abnormally; fixing the source fixes it.
+- **Seam hysteresis** (T1's `gate()`, the dwell) is deliberate and stays. It
+  never reached the particles once the reveal became pure, because both its
+  edges sit on exact zero.
+- **`connect/tendrils.js`**'s own 108 drifting particles — a genuine second
+  source, built once at chapter build; no per-frame integrator in it.
+- **`uCoh` and the streak opacity** are still eased (`+= (target - v) * k`),
+  and `computeAuto()` still carries deliberate hysteresis. These are hover and
+  selection channels driven by the pointer, not by scroll, and no shed dot's
+  `cv`/`pw`/position reads them. Left alone — noted as a residual, since it
+  means chapter FURNITURE is still not a pure function of p.
+
+### Forward vs reverse, after
+
+Arriving at exactly the same p from below and from above, pinned and settled:
+
+| p | Δcv mean | Δcv max | dots with Δcv > 0.05 |
+|---|---|---|---|
+| 0.30 | 0.000000 | **0.000000** | 0 |
+| 0.34 | 0.000000 | **0.000000** | 0 |
+| 0.37 | 0.000739 | 0.00641 | **0** |
+| 0.40 | 0.001288 | 0.00462 | **0** |
+| 0.41 | 0.000017 | 0.00028 | **0** |
+
+**Not one dot in 4,200 differs by more than 0.05 at any matched p**, against
+3,570 before. The residual at 0.37/0.40 is fully explained by the pin's own p
+resolution: the two samples differ by ~1e-4 in p, and `deff/dp ≈ 16` there
+times `dcv/drev ≈ 6.8 × T` predicts Δcv ≈ 0.0046 — which is the measured
+`cv_max` to two figures. A brisk reverse approach agrees with a deliberate one
+to the same tolerance, so the reveal is now rate-independent as well as
+direction-independent.
+
+### The three prior commits, re-measured
+
+| metric | before | after |
+|---|---|---|
+| `b2c9584` dark-and-converted (lum < 0.15), Inspire rest | 225 | 238 |
+| dark-and-converted, peak over a ride | 234–248 | 239–248 |
+| dark-and-converted at lum < 0.05 (the black-in-air case) | 0 | 0 |
+| boundary trough, deliberate fwd / rev | −3.52% / −3.53% | −3.44% / −3.79% |
+| boundary trough, brisk fwd / rev | −2.35% / −3.73% | −3.86% / −3.33% |
+| `9e2a277`/`2fdb4e6` arrival, deliberate fwd / rev | 3217 / 2950 ms | 3100 / 3100 ms |
+| arrival, brisk fwd / rev | 1133 / 967 ms | 1033 / 1033 ms |
+| three streams at the rest (`eff`) | [1, 1, 1] | [1, 1, 1] |
+| rest legibility: dots above lum 0.60 / 1.00 | 2713 / 683 | 2716 / 708 |
+
+All within run-to-run variance, and the arrival is now **symmetric**: forward
+and reverse deliver the same 3100 ms deliberate / 1033 ms brisk, where before
+they differed by 9% and 17%. Both remain an order of magnitude above the
+~150 ms at which a luminance change reads as a cut, so `9e2a277` and `2fdb4e6`
+are intact. Nothing fades in over open view; nothing was re-keyed.
+
+### Residuals
+
+- Chapter furniture (`uCoh`, streak opacity, `computeAuto`'s hysteresis) is
+  still time-eased. Pointer-driven, so it does not break the scroll invariant,
+  but it is the same class of thing.
+- `setDriver` does not clear `inited`, as above.
+- The ambient-fingerprint test (an 8³ spatial histogram of the shed at the
+  Connect rest, fresh vs after a round trip) could not resolve the improvement:
+  round trip 14.4% → 14.7%, wait-only control 12.3% → 10.9%, i.e. the natural
+  drift churn over the same wall time is the same size as the effect. The
+  recycle-rate collapse (127 → 2) is the direct evidence; the histogram is
+  reported here only so it is not silently dropped.

@@ -1315,10 +1315,47 @@ export function createInspire(sceneApi) {
     // the stream's reorganization below (pure: no eased/integrated T state)
     const T = tDial.value;
     const stkScale = STREAK_FLOOR + (1 - STREAK_FLOOR) * T;
-    for (const ex of exits) {
-      ex.fade += (ex.target - ex.fade) * k;
-      if (ex.fade < 0.012 && ex.target === 0) ex.fade = 0; // no exponential ghost tail
-    }
+    // THE REVEAL IS A POSITION, NOT A DESTINATION (2026-08-07, Hannah's
+    // fourth spore report — the first about the REVERSE direction).
+    //
+    // This used to be a first-order lag, `ex.fade += (ex.target - ex.fade) * k`
+    // with k = min(1, dt * 3.2) — a ~0.31 s time constant on the ONE number
+    // every visual channel of the handoff reads. A lag always TRAILS, so it
+    // trails HIGH when the target is falling and LOW when it is rising: the
+    // same scroll position therefore carried two different reveals depending
+    // on which way the visitor arrived. Measured on the live buffer, riding
+    // p 0.10 <-> 0.50 at a deliberate rate (see 07-chapter-inspire.md):
+    //
+    //     p        eff forward   eff reverse    dots whose conversion differs
+    //     0.30        0.999         0.950              163 / 4200
+    //     0.34        1.000         0.781              646
+    //     0.37        0.971         0.379            2,414
+    //     0.40        0.609         0.024            3,570  (3,463 by > 0.25)
+    //
+    // Two forward passes over the same span agreed to cv_max 0.0009 — the
+    // conversion is perfectly reproducible along a direction and was never
+    // reproducible ACROSS one. That gap IS "all the spores rearrange weirdly"
+    // going Connect -> Inspire: the shed re-enters its conversion on a
+    // different schedule than the one it left on.
+    //
+    // `target` is already everything the ease was pretending to smooth: it is
+    // max(a, b, c, band) * out, four smoothsteps of camera azimuth and p, and
+    // azimuth is itself a C1 function of p (the director's Hermite spline).
+    // So assigning it straight through is C1-continuous in p, with no step to
+    // soften anywhere — and it is what makes the reveal a pure function of
+    // scroll position, which is the whole invariant.
+    //
+    // THE SEAM STILL CANNOT SHOW. setArmed(false) snaps target to 0, but the
+    // T1 gate is derived (seams.js) so that BOTH its edges sit where the
+    // reveal is already exactly zero: it arms at az 4.79 against an onset of
+    // 5, and it releases either at az < -3.21 (arrOf = 0) or at p > 0.46,
+    // where `out` has been 0 since p 0.415. The snap has nothing to snap.
+    //
+    // AND IT IS A NO-OP AT EVERY LANDING FRAME: snap() — the path every ?p=
+    // deep link and every ?capture= golden takes — has always done exactly
+    // `ex.fade = ex.target`. The scrub now agrees with the still instead of
+    // lagging behind it.
+    for (const ex of exits) ex.fade = ex.target;
     // effective reveals: seam-gated fade x scroll-locked arrival ramp — the
     // single value every visual channel (mats, uRev/morph, shed dim, streaks,
     // auto-active) reads from, so the whole handoff is continuous in p
