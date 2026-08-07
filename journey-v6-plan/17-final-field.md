@@ -803,3 +803,125 @@ direction. Cross-run whole-process p50s: before 41.9 / 36.1, after 42.8 / 41.4.
   graph happened to offer inside 26 units; if the waypoint seed ever changes,
   the count and the places move. That is the honest trade for not authoring
   them in the rest frame, and it is the right one while they are punctuation.
+
+---
+
+## 2026-08-07 — Owned → Final: one withdrawal, not a fly-past and a whip
+
+**Status: SHIPPED (goldens byte-identical — nothing built moved).** Hannah,
+on the leg from the Owned rest into the Final rest: *"the scroll from that to
+the previous section feels a little bit weird — it feels like it should be
+zooming out or reversing, but it doesn't… like a weird jumpy thing. What if
+it zoomed out and went up instead?"*
+
+### The measured fault
+
+Drift-aware scrub, 261 samples over p 0.70–0.96, both aspects, `?steady=1`,
+sampling actual `journey.progress` rather than a requested grid (the requested
+grid drifts up to 0.0019 — enough to alias a rate peak).
+
+The two rests **mandate a gaze reversal**. The Owned rest looks −X (yaw
+−72.9°, straight up the root crown); the Final rest looks +X (yaw +68.3°, back
+across the ring chord). That is 141.2° of turn that has to be spent somewhere,
+and where it was spent was the whole problem:
+
+| | shipped |
+|---|---|
+| yaw complete by p 0.878 (surface is p ~0.858) | **70%** |
+| yaw peak rate, landscape / portrait | **1334** @ p 0.911 / **1378** deg per unit p |
+| optical flow peak, 1440×900 | **21,848 px/p** @ p 0.912, against ~12–13k mid-leg |
+| optical flow into the rest (p 0.886 → 0.906) | 12,986 → 15,437 — **rising** |
+| pitch excursion | +10.8° @ 0.866 → −8.6°, peak **602 deg/p** |
+| fov across the first key | 58 → 54, i.e. **magnifying 8.7%** while the camera closed |
+
+So the camera flew forward through the colony looking where it was going, and
+then **whipped sideways by 42° exactly while the field was revealing**, over
+budget (~1.2k) and accelerating into the rest. The reveal was being delivered
+by a pan. That is the "jumpy thing": a pan reads as being dragged across a
+scene, never as withdrawing from one.
+
+Two supporting faults fell out of the same measurement. The ring centre's
+on-screen speed dropped to **45 px/p** with 4 near-frozen samples — the
+composed-frame fault from the Inspire→Connect leg (e95820a), where orbit and
+gaze fall at the same rate and the subject stalls on screen. And p 0.83–0.87
+was a near-black frame with nothing in it.
+
+### The re-key (constraint tier (a) — gaze and fov only)
+
+`owned/leg.js` samples the director's **position** spline over p 0.660–0.872
+for every clearance rule, and `final/index.js`'s reveal front is
+`pullOf(camera.position.x)`. The spline is global Hermite with non-uniform
+Catmull-Rom tangents, so a key's influence reaches past its own interval: the
+tangent at p 0.878 is `(pos[0.905] − pos[0.845])/h` and shapes the segment
+0.845–0.878, which is **inside** the sampled window. Checked key by key,
+**no position key between the two rests is free** — tier (b) does not exist
+here. So positions were left bit-exact and only `tgt` and `fov` moved, on
+five keys: owned t 0.728 / 0.848 / 0.98 and final t 0.1867 / 0.3667. Both
+rests untouched.
+
+The same 141.2° is now spent **early and underground**, where the frame is a
+homogeneous network and a turn reads as turning to look back the way you came.
+
+| metric (p 0.725→0.925) | before | after |
+|---|---|---|
+| yaw complete by p 0.878 | 70% | **91%** |
+| yaw peak rate, landscape | 1334 @ 0.911 | **1070** @ 0.795 |
+| yaw peak rate, portrait | 1378 @ 0.911 | **1051** @ 0.795 |
+| yaw rate sign flips | 1 | **0** |
+| pitch peak rate, landscape / portrait | 602 / 356 | **288 / 164** |
+| pitch excursion | 19.4° | **7.6°** |
+| fov peak rate, landscape | 167 | **114** |
+| fov rate sign flips, portrait | 2 | **0** |
+| optical flow peak, 1440×900 | 21,848 @ 0.912 | **12,876** @ 0.762 |
+| optical flow peak, 375×812 | 11,988 @ 0.911 | **7,152** @ 0.761 |
+| flow into the rest (0.886 → 0.906) | 12,986 → 15,437 (rising) | **6,913 → 5,796 (falling)** |
+| hero cap behind the camera | p 0.748–0.841 (94/200) | **0.747–0.807 (61/200)** |
+| crown behind the camera | 0.752–0.845 (94/200) | **0.753–0.804 (52/200)** |
+| ring-centre screen speed, min | 45 px/p (4 frozen samples) | **281 px/p (1)** |
+| roll, everywhere, both aspects | 0 | **0** |
+
+The leg now decelerates into the rest instead of accelerating into it, which
+is what "settling" means measurably. And the reveal reads the way Hannah
+described it: you surface at p 0.866 **at the foot of the very mushroom whose
+roots you were under**, it stands full-height in frame at 0.890, and then it
+recedes into the field by the rest — the pull-back is what reveals the others.
+The old p 0.83–0.87 dead frame now carries the receding colony and the
+soil-line diagonal.
+
+### Reveal-law re-verification
+
+Positions are bit-exact (position digest identical to 6 dp at all 11 probe
+points), so the reveal front `pullOf(camera.position.x)`, the rise mask, the
+T3/T4 soil crossings (`seams.js` reads `camera.position` only), the murk
+windows and the fog ramps (pure in p) are **unchanged by construction, not by
+inspection**. What changed is only which part of the front the lens sees.
+Checked anyway: dark at arm (p 0.812, chapter armed at 0.80 — nothing above
+ground has ignited), no self-ignition, canopy and bodies still kindle from the
+near ground outward, and reverse scrubbing reproduces `poseAt(actual p)` to
+3.6e-4 in **both** directions (3.66e-4 forward, 3.62e-4 reverse — symmetric,
+so no hysteresis), with the reveal front matching to 1.2e-4.
+
+`capture.py --check`: all 10 goldens PASS, worst MAE 0.04/255 against
+warn 0.50 / fail 1.00, and **no capture file is in the diff** — `owned@*`,
+`final@*` and `mission` are byte-identical on disk, which is the proof that
+nothing built moved. Console clean over a full 0→1→0 ride plus six fast
+scrubs through the leg.
+
+### Residuals
+
+- **The path still passes within 0.82 units of the root crown at p 0.751.**
+  Distance to the crown falls 1.85 → 0.82 before growing to 15.37, and the
+  crown's apparent scale *rises* at up to +103 per unit p around p 0.746 —
+  a genuine push-in inside the pull-back, and the reason the crown leaves the
+  **top** of the frame 26 thousandths of p after the rest instead of receding
+  from it. This is pure position and cannot be re-aimed away: a gaze that
+  tracks a point you fly past has unbounded angular rate at closest approach.
+- **The camera sinks before it rises**: y goes −1.180 at the rest → −1.403 at
+  p 0.778 → +2.73. Hannah asked for "up"; the first 27% of the leg is down.
+
+Both live inside p 0.660–0.872, which `owned/leg.js` samples for every
+clearance rule, so fixing them means re-pathing the corridor the colony was
+grown around — an Owned restage with a re-shot `owned@*`, not a camera re-key.
+Worth doing deliberately if the push-in still reads once the whip is gone; it
+was not worth spending the just-landed root-crown staging (81a9861, eea3ffe,
+696e95d) on speculatively inside this pass.

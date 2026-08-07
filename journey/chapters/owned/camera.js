@@ -81,23 +81,51 @@ export const CAMERA = {
     // --- OWNED rest: under the root, the crown at top centre, the fan
     //     descending into the portrait network below ---
     { t: 0.5,                 pos: V(1.730, -1.180, 0.560), tgt: V(-1.298, -1.625, -0.373), fov: 58, hold: true, note: 'owned-rest' },   // p 0.725
-    // --- growth-front rise-tilt-recede: ONE continuous gesture (W3-B gap c),
-    //     RE-AIMED for W4-D (Hannah's direction: the hero organism is PART of
-    //     the Final scene — the pullback reveals the whole fairy ring with the
-    //     hero on its arc). Gesture qualities the review approved are kept:
-    //     one continuous rise-tilt-recede; yaw spread nearly evenly (interval
-    //     means 833-970 deg/p, lead-out during the drift at ~350); pitch
-    //     rises to ~+9.5 through the substrate and eases down into the
-    //     cutaway's -8.8 with a single crest, no nod; the recede continues
-    //     the arrival vector (both normalize to ~(-0.91, 0.37, 0.17)) so the
-    //     rest is a pause on one continuing line. The gaze sweeps ~176 deg
-    //     around the horizon during the rise; the hero slides into
-    //     frame-right only during the settle, one lit body among the others
-    //     (chapters/final-world.js places the ring about RING_C (-6, -0.8)
-    //     with the hero ON the arc). The rise continues in final/camera.js.
-    { t: 0.7280000000000002,  pos: V(-3.300, -1.40, 0.350), tgt: V(-6.22, -1.46, -0.95), fov: 54, note: 'owned-rest-drift' },        // p 0.782
-    { t: 0.8480000000000003,  pos: V(-5.300, -1.02, 0.780), tgt: V(-7.52, -0.77, -2.06), fov: 53.5 },                                // p 0.812
+    // --- growth-front rise-tilt-recede, RE-AIMED AGAIN (2026-08-07,
+    //     17-final-field.md; Hannah: "the transition from Owned to the final
+    //     section feels unnatural, like a weird jumpy thing — what if it
+    //     zoomed out and went up instead?").
+    //
+    //     WHAT WAS WRONG. The two rests between them MANDATE a gaze reversal:
+    //     the Owned rest looks -X (yaw -72.9, straight at the root crown) and
+    //     the Final rest looks +X (yaw +68.3, back across the ring chord).
+    //     That is 141 deg of turn that has to be spent somewhere. The shipped
+    //     leg spent it LATE — only 70% done by p 0.878, with the last 42 deg
+    //     crammed into p 0.878-0.925 at a peak of 1334 deg/p (over the 1.2k
+    //     budget) and an optical-flow crest of 21.8k px/p at p 0.9115 against
+    //     ~12-13k mid-leg. So the camera flew forward through the colony
+    //     looking where it was going, and then WHIPPED sideways exactly while
+    //     the field was revealing. That whip is the "jumpy thing": the reveal
+    //     was delivered by a pan, which reads as being dragged, not as
+    //     withdrawing.
+    //
+    //     THE RE-KEY. The same 141 deg is now spent EARLY and underground,
+    //     where the frame is a homogeneous network and a turn reads as
+    //     turning to look back the way you came. Yaw is monotone (zero sign
+    //     flips) and ~91% complete by p 0.878, so the camera surfaces already
+    //     facing the field and the last 0.047 of p only eases 13 deg home.
+    //     Peak rate 1070 deg/p at p 0.794, inside budget. Pitch keeps ONE
+    //     shallow crest but its excursion drops from 19 deg (+10.8 -> -8.6,
+    //     peak 601 deg/p) to 7 deg (-1.0 -> -8.6, peak 288). And fov stops
+    //     fighting the recede: it used to drop 58 -> 54 across this key,
+    //     MAGNIFYING by 8.7% just as the camera closed on the crown; it now
+    //     holds wide (57.2) through that stretch and eases later, peak
+    //     114 deg/p against 166.
+    //
+    //     POSITIONS ARE BIT-EXACT — every key below keeps the shipped pos.
+    //     That is not politeness, it is the constraint: owned/leg.js samples
+    //     the director's POSITION spline over p 0.660-0.872 for every
+    //     clearance rule, and final/index.js's reveal front is pullOf(camera
+    //     .position.x). Holding pos fixed means the built colony and the
+    //     reveal front are unchanged by construction, so this re-key can only
+    //     move where the lens is POINTED. (The residual it therefore cannot
+    //     fix is documented in 17-final-field.md: the path still passes
+    //     within 0.82 units of the crown at p 0.751, so the crown leaves the
+    //     top of frame instead of receding. That is a position fault inside
+    //     the placement-bearing window and restaging it is a colony rebuild.)
+    { t: 0.7280000000000002,  pos: V(-3.300, -1.40, 0.350), tgt: V(-4.979, -1.808, -2.808), fov: 57.2, note: 'owned-rest-drift' },   // p 0.782, pitch -6.5 yaw -28
+    { t: 0.8480000000000003,  pos: V(-5.300, -1.02, 0.780), tgt: V(-5.136, -1.389, -3.903), fov: 55.2 },                             // p 0.812, pitch -4.5 yaw +2
     // T4 fires in here: the camera clears the soil-line at p ~ 0.86
-    { t: 0.98,                pos: V(-7.700, -0.20, 1.250), tgt: V(-8.28, 0.47, -2.91), fov: 52.5 },                                 // p 0.845
+    { t: 0.98,                pos: V(-7.700, -0.20, 1.250), tgt: V(-4.653, -0.466, -4.028), fov: 52.8 },                             // p 0.845, pitch -2.5 yaw +30
   ],
 };

@@ -11,9 +11,16 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 export const CAMERA = {
   keys: [
     // --- the rise continues (from owned/camera.js's T4 keys) into the
-    //     pullback ---
-    { t: 0.18666666666666681, pos: V(-10.200, 1.05, 1.800), tgt: V(-7.92, 1.98, -3.32), fov: 51 },   // p 0.878
-    { t: 0.3666666666666669,  pos: V(-12.300, 1.75, 2.250), tgt: V(-5.71, 1.68, -3.28), fov: 48 },   // p 0.905
+    //     pullback. RE-AIMED 2026-08-07 with the Owned post-rest keys — the
+    //     141-deg gaze reversal the two rests mandate now finishes
+    //     underground, so these two keys are a SETTLE, not a pan: yaw is
+    //     already 91% of the way home at p 0.878 and only eases the last
+    //     13 deg into the rest (peak 1070 deg/p across the whole leg, against
+    //     1334 shipped). Positions bit-exact — the reveal front is
+    //     pullOf(camera.position.x) and the ring/field are built from the
+    //     'final-rest' key below, so neither moves. See 17-final-field.md. ---
+    { t: 0.18666666666666681, pos: V(-10.200, 1.05, 1.800), tgt: V(-3.976, 0.912, -3.063), fov: 50 },   // p 0.878, pitch -1.0 yaw +52
+    { t: 0.3666666666666669,  pos: V(-12.300, 1.75, 2.250), tgt: V(-3.329, 0.958, -2.321), fov: 47.2 }, // p 0.905, pitch -4.5 yaw +63
     // --- FINAL rest: oblique cutaway recession from OUTSIDE the ring's west
     //     arc, gaze cutting across the ring chord. Shallow ~8.8 deg
     //     down-pitch puts the soil-line across the frame on a diagonal:
