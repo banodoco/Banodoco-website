@@ -167,6 +167,15 @@ export const CONTENT = {
       // Two-line wrap is a LAYOUT promise, not a copy one, and is held in
       // journey/site.css by the `.pos-bottomleft` measure — see the FINAL
       // HEADING MEASURE block there before editing either side.
+      //
+      // The promise is DESKTOP-ONLY as of the 2026-08-07 mobile pass. Two
+      // lines is geometrically unreachable at phone widths at the house type
+      // scale (the balanced break needs 434px of column; a 375px phone can
+      // offer ~320px), and buying it cost a font step-down that flattened the
+      // heading/sub hierarchy to 1.31 where every other chapter runs 1.90. So
+      // below 480px this heading keeps the house scale and runs to four
+      // balanced lines instead. See journey/site.css's FINAL HEADING AT PHONE
+      // WIDTHS block and journey-v6-plan/24-mobile-pass.md §Final.
       heading: 'The open source ecosystem can accelerate a 2nd Renaissance',
       sub: 'Banodoco exists to help new tools, communities, and ideas spread — so one thriving ecosystem becomes many.',
     },

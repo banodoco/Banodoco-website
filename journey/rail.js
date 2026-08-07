@@ -292,16 +292,30 @@ export function createRail({ onNav, announce = null } = {}) {
     return touchOpen || root.matches(':hover') || root.contains(document.activeElement);
   }
 
+  /* The touch-expanded rail is also announced on <body> (2026-08-07 mobile
+     pass), the same way `openMenu` announces itself with `j-menu-on`.
+     journey/site.css uses it to step the chapter copy back while the rail is
+     held open: at 375 the band unavoidably lies across the copy, and an opaque
+     panel over a fully-lit sentence reads as a slab dropped on the page,
+     whereas dimming what is behind it reads as the navigator taking the floor.
+     Set from the TOUCH path only, so hover and keyboard focus on a desktop are
+     completely unaffected — nothing about the three states changes here. */
+  function announceOpen(on) {
+    document.body.classList.toggle('j-rail-on', on);
+  }
+
   function collapse() {
     if (!touchOpen) return;
     touchOpen = false;
     root.classList.remove('j-rail-open');
+    announceOpen(false);
   }
 
   root.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch' || touchOpen) return;
     touchOpen = true;
     root.classList.add('j-rail-open');
+    announceOpen(true);
     // The tap that opened the rail must not also follow the link under it.
     swallowClick = true;
     setTimeout(() => { swallowClick = false; }, 500);
