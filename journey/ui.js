@@ -11,8 +11,9 @@
 
 import { CONTENT } from '../content/content.js';
 import { createFooter } from './ui-footer.js';
+import { createRail } from './rail.js';
 import { claimInput, releaseInput } from './scroll.js';
-import { CHAPTERS, navChapterAt } from './route.js';
+import { CHAPTERS } from './route.js';
 import {
   COPY_BANDS, COPY_FADE_P,
   COPY_OUT_K, COPY_IN_K, COPY_SETTLE_LO, COPY_SETTLE_HI,
@@ -171,33 +172,16 @@ function bandOpacity(p, band) {
 }
 
 export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
-  /* ---------------- persistent nav ---------------- */
-  // Rendered into the hero's own <nav>, between the wordmark and the 2RP /
-  // Discord pair, and styled like it. Hidden at p = 0 so the Mission
-  // composition is byte-identical to the hero; it fades in with the first
-  // travel and is then persistent for the rest of the journey.
-  // It is a real <nav> landmark with its own label (PL-2.1): nesting inside
-  // the hero's <nav> is valid and means the journey's chapter list is named
-  // and reachable by landmark navigation without editing any hero markup.
-  const navHost = document.querySelector('.ui nav');
-  const navWrap = el('nav', 'j-nav');
-  navWrap.setAttribute('aria-label', 'Journey chapters');
-  // Hidden at the Mission pose is an OPACITY state, and opacity 0 is still
-  // focusable — before W4-E the very first Tab on the untouched hero landed on
-  // four invisible chapter links. `inert` makes the visual and the hit/tab
-  // model agree; it is released the moment the nav fades in.
-  navWrap.inert = true;
-  const navLinks = {};
-  for (const c of CHAPTERS) {
-    if (!c.nav) continue;                       // Final has no nav entry (v6)
-    const a = el('a', 'j-navlink', c.nav);
-    a.href = `#/${c.id}`;
-    a.dataset.chapter = c.id;
-    a.addEventListener('click', (e) => { e.preventDefault(); onNav(c.id); });
-    navWrap.appendChild(a);
-    navLinks[c.id] = a;
-  }
-  if (navHost) navHost.insertBefore(navWrap, navHost.querySelector('.nav-cta'));
+  /* ---------------- the side navigator ---------------- */
+  // Hannah, 2026-08-07: the chapter list left the hero's <nav> row and became
+  // a side rail with a full menu behind it. journey/rail.js owns the whole
+  // component — its three states, its symbols, its dialog. This module keeps
+  // exactly two relationships with it: it drives its per-frame update from
+  // inside the one update() the frame loop already calls, and it hands it the
+  // live region below so a chapter change has somewhere to be announced.
+  // The hero's own <nav> — wordmark, 2RP, Discord — is no longer touched at
+  // all by this module; the rail is a sibling landmark on <body>.
+  const rail = createRail({ onNav, announce: (m) => announce(m) });
 
   // The canvas is presentational: every word it carries also exists in the DOM
   // built by this module (PL-2.1 / PS-5.2). Set at journey boot rather than in
@@ -1240,11 +1224,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
 
   /* ---------------- post-epilogue footer (PS-5.1) ---------------- */
   const footer = createFooter({
-    focusNav: (id) => { const a = navLinks[id]; if (a && !navWrap.inert) a.focus(); },
+    focusNav: (id) => rail.focusChapter(id),
   });
 
   /* ---------------- per-frame ---------------- */
-  let navShown = false;
 
   // W3-B (gap e): copy choreography. The COPY_BANDS say WHERE copy may live;
   // this layer decides WHEN. Copy releases the moment travel begins (fast
@@ -1365,19 +1348,6 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   function update(p, chapterId, camera, dt = 0) {
     // one-shot, on the first frame the chapter modules are reachable
     if (policyPending) resolveLabelPolicies();
-    // nav: hidden at the hero rest, persistent from the first travel on
-    const show = p > 0.004;
-    if (show !== navShown) { navWrap.classList.toggle('on', show); navShown = show; }
-    // A nav-less chapter (the Final epilogue) keeps the last nav'd chapter
-    // lit — derived from the manifest, not a hardcoded id pair (route.js).
-    const active = navChapterAt(p);
-    for (const id in navLinks) {
-      const on = id === active;
-      navLinks[id].classList.toggle('active', on);
-      // the class is the paint; aria-current is what a screen reader hears
-      if (on) navLinks[id].setAttribute('aria-current', 'true');
-      else navLinks[id].removeAttribute('aria-current');
-    }
     // A pinned popover makes journey.js report a detail open — it is route
     // state either way — but it is NOT modal: it sits beside a chip that must
     // stay on screen under it, and it never claims the frame. So everything
@@ -1385,9 +1355,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     // merely an open one.
     const detailNow = isDetailOpen();
     const modalDetail = detailNow && !popPinned;
-    // invisible nav, or a modal dialog claiming the frame: out of the tab order
-    const navLive = show && !modalDetail;
-    if (navWrap.inert === navLive) navWrap.inert = !navLive;
+    // The side navigator: reveal latch, resting symbol, current entry and the
+    // tab-order state, all decided in one place (journey/rail.js).
+    rail.update(p, { modalDetail });
     // hero callouts follow journey.js's own fade of them (see construction)
     if (calloutsEl) {
       const cLive = p <= 0.01;
@@ -1632,7 +1602,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   }
 
   return {
-    update, addHotspot, addHoverZone, openCard, closeCard, footer,
+    update, addHotspot, addHoverZone, openCard, closeCard, footer, rail,
     armCopyEntry, cancelCopyEntry,
     /** QA: the chapter whose copy is mid-entry, or null. */
     get arrivingChapter() { return arrive ? arrive.id : null; },

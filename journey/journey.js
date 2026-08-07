@@ -559,7 +559,7 @@ export function boot(opts = {}) {
     debugState() {
       const p = journey.progress;
       const c = sceneApi.camera;
-      const active = document.querySelector('.j-navlink.active');
+      const active = document.querySelector('.j-rail-slot.active .j-rail-item');
       const copy = [];
       for (const b of document.querySelectorAll('.j-block')) {
         if (parseFloat(b.style.opacity || 0) > 0.02) copy.push(b.dataset.chapter);
