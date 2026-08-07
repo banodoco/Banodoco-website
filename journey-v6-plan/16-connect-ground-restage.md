@@ -1372,3 +1372,92 @@ luminance band stay flat across the crossing.
 left them — `connect` golden re-checks at MAE 0.00/0.00 both sizes. The
 staggered-retire alternative this document warned against was not taken; the
 fault was organism-side and was fixed there.
+
+---
+
+## 2026-08-07 — Hannah re-reports the rush; measured, it is already fixed
+
+**The ask, verbatim.** *"When I scroll in to the connect ecosystem, the three
+things appear along the ground, but they appear really fast all at once, whereas
+they should be more gradual in growth... one, two, three, and they should feel
+like they're growing, still reasonably fast but a lot slower than they are right
+now. You might already have this in an earlier task."*
+
+**Verdict: she was reading an older build. Nothing changed here.** Her own last
+sentence is the correct one. This is the same complaint the `4146288` restage
+above answered, and that restage is live, intact, and does what she is asking
+for. The two hypotheses were separated by measurement rather than by reading the
+diff, because a shipped constant proves only that a file says something.
+
+### 1. The restage is live
+
+`LIGHT_LO 0.0909` / `LIGHT_HI 0.487` / `LIGHT_OVERLAP 0.30` / `FRONT_SOFT 0.11`
+are on disk, and `4146288` is the **last commit to touch either
+`connect/index.js` or `connect/tendrils.js`** — nothing since has regressed it.
+More usefully, the behaviour was read off the running page rather than the
+source: stepping p in 0.000625 increments and watching `uLit`, the three fronts
+depart at **p 0.4006 / 0.4231 / 0.4469**, against the restage's designed
+0.4004 / 0.4228 / 0.4468. It is running.
+
+### 2. What it feels like, in seconds
+
+The honest test is not p, it is wall-clock at a speed a person actually scrolls.
+Three rides driven by real `wheel` events through the shipped capture listeners,
+timing every frame, `uLit` sampled per frame:
+
+| ride | px/s | arrival wall-clock | hub 1→2 | hub 2→3 | one route's own quiet→lit lift |
+|---|---|---|---|---|---|
+| deliberate | 618 | **2.33 s** | **0.68 s** | **0.72 s** | 0.82 / 0.83 / 0.97 s |
+| moderate | 1,659 | 0.89 s | 0.27 s | 0.29 s | 0.30 / 0.33 / 0.38 s |
+| brisk | 3,851 | 0.40 s | 0.11 s | 0.13 s | 0.15 / 0.15 / 0.17 s |
+
+At a deliberate scroll the three hubs land **two-thirds of a second apart**
+across a **2.3 second** arrival, and each individual route takes **~0.85 s** to
+come up from quiet to lit. That is one, two, three, and it is growth.
+
+Set against what she describes — "really fast all at once" — the pre-restage
+build is the exact match: all three routes departed the base on the same frame
+at p 0.4335 and all three hubs kindled inside 0.0123 p, which at the same 618
+px/s is **all three inside 0.34 s**, with no sequence in them at all.
+
+Frames shot at p 0.400 / 0.414 / 0.427 / 0.440 / 0.455 / 0.470 / 0.487 confirm
+it spatially: quiet web, one trail out to the near-left hub, that hub burning
+while the second front runs right, two hubs lit while the third front runs to
+the far edge, all three home. Each beat has its own frame.
+
+### 3. So nothing was changed
+
+Going slower still would have to be bought at the front — p 0.490 is a frozen
+reference still and must be fully lit — and the only budget there is the lead
+that makes the network read as **pre-existing** before a strand of it is lit.
+That budget just got smaller for an unrelated reason (see below), and spending
+it to fix a complaint the build already answers would trade a real property for
+no gain.
+
+**`connect@1440x900` and `connect@430x932` are 0.00/0.00 MAE. No connect file
+was edited and no connect golden was re-shot.**
+
+### One thing that DID move, from the other side
+
+The same batch's Inspire re-framing (`07-chapter-inspire.md`, 2026-08-07 D21)
+aims the Inspire rest 7.5 deg higher. This chapter's resolve is **camera-pure**
+— `sm(GAZE_HI, GAZE_LO, forward.y)` — so a higher aim delays it:
+
+| | shipped | after D21 |
+|---|---|---|
+| `group.visible` flips (landscape) | p 0.3256 | **p 0.3500** |
+| fronts depart | 0.4006 / 0.4231 / 0.4469 | **identical** |
+| lead: web drawn → first light | 0.075 p | **0.051 p** |
+| resolve at the **portrait** Inspire rest | **0.2982** | **0.0000** |
+
+The arrival schedule is p-pure and does not move at all. The lead narrows to
+0.051, still well above the 0.035 this restage set as its own requirement, but
+**this is now the binding constraint on ever starting the arrival earlier** and
+anyone reaching for that budget should read this row first.
+
+The last line is a fix, not a cost. This file's own header says the resolve is
+"EXACTLY 0 at the hero pose and at the Inspire rest"; on the shipped build it
+was **0.2982 at the portrait Inspire rest**, and only the arm gate
+(`amount > 0.003`, p 0.32) kept the ground network off screen there. D21's pose
+puts `forward.y` back to +0.0217 and the resolve back to exactly 0, restoring
+the stated invariant in both orientations.
