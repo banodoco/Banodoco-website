@@ -98,6 +98,47 @@ export const CONTENT = {
       // whole-colony wave ('claimPrimary'); the two localized secondary pulses
       // retired with the list they belonged to.
       sub: 'Banodoco is 100% shared with the people who build it — ownership granted 1% per month, split between artists, core engineers, and knowledge creators.',
+      // ACTIONS — the chapter's own control pair (Hannah, 2026-08-07).
+      //
+      // Declared as CONTENT, not as markup, because journey/ui.js must not
+      // know that "owned" is the chapter with buttons — the same rule the
+      // label policy and the popover eligibility already keep. Any chapter
+      // that grows an `actions` array gets a pair; every chapter that does
+      // not is untouched.
+      //
+      //   kind   'link'   -> a real <a href>      (a destination)
+      //   kind   'button' -> a real <button>      (an in-page behaviour)
+      //   weight 'primary' | 'explore'            -> the two visual weights
+      //   action                                  -> chapter contract trigger()
+      //
+      // Order is TAB order and reading order: the destination first.
+      actions: [
+        {
+          id: 'owned-learn',
+          kind: 'link',
+          weight: 'primary',
+          label: 'Learn more',
+          href: '#',
+          // TODO(Banodoco): PLACEHOLDER — confirm the real destination URL for
+          // "Owned by the ecosystem" (the ownership / contributor page) before
+          // launch. Same convention as the spotlight links above: '#' plus this
+          // note. No URL is confirmed, so none is invented here; the donor
+          // build's https://banodoco.ai guess is NOT a confirmation.
+        },
+        {
+          id: 'owned-remix',
+          kind: 'button',
+          weight: 'explore',
+          label: 'Remix',
+          glyph: 'nodes',
+          // Chapter-contract trigger name (chapters/owned/index.js trigger()).
+          action: 'remixPortraits',
+          // Fallback live-region text. The chapter's trigger() returns its own
+          // sentence (it knows which arrangement it landed on); this is only
+          // used if it returns nothing.
+          announce: 'Contributor portraits remixed.',
+        },
+      ],
     },
     final: {
       // Per 10-chapter-final.md: "Not a sixth peer chapter — no nav item, no

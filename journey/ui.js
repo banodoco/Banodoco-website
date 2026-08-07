@@ -91,6 +91,8 @@ const CHAPTER_POSITION = {
    today. */
 const CHAPTER_SUB_PULSE = {};
 
+const NS_SVG = 'http://www.w3.org/2000/svg';
+
 function el(tag, cls, text) {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -214,6 +216,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   const copyHost = el('div', 'j-copy');
   document.body.appendChild(copyHost);
   const blocks = {};
+  const actionRows = {};       // chapterId -> its `.j-actions` row, if it has one
   for (const c of CHAPTERS) {
     const data = CONTENT.chapters[c.id];
     if (!data || c.id === 'mission') continue;   // Mission is the hero's own DOM
@@ -234,10 +237,135 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       }
       b.appendChild(sub);
     }
+    if (Array.isArray(data.actions) && data.actions.length) {
+      // cached on the element: paintCopy reaches for it every frame, for every
+      // chapter, and a per-frame querySelector for a node we already hold is a
+      // reflow risk for nothing.
+      actionRows[c.id] = b.appendChild(buildActions(c.id, data.actions));
+    }
     copyHost.appendChild(b);
     blocks[c.id] = b;
   }
   const heroBlock = document.querySelector('.ui .hero');
+
+  /* ==========================================================================
+     THE CHAPTER ACTION PAIR (Hannah, 2026-08-07)
+
+     "there should be a button that says 'Learn more', and then next to it
+      there should be like a remix button ... make them work nicely together"
+
+     A chapter that declares `actions` in content/content.js gets a row of
+     controls under its copy. Nothing here names a chapter or an action: the
+     content says WHAT the controls are, this says HOW they are built and
+     wired, journey/site.css says how they look, and the chapter module's
+     `trigger(name)` says what a button DOES. Same separation the label policy
+     and the popover eligibility already keep — a second chapter can grow a
+     pair tomorrow without touching this file.
+
+     ---- semantics ----
+
+     `kind: 'link'` is a real <a href>, `kind: 'button'` a real <button
+     type="button">. Both, never a div: the link must offer "open in new tab"
+     and the button must answer Space as well as Enter, and neither behaviour
+     is worth re-implementing. They sit in the DOM in the order content
+     declares, which is therefore the tab order, and they are inside the copy
+     block so Tab reaches them straight after the prose they belong to and
+     before the hotspot layer that follows the block in the DOM.
+
+     ---- reachability ----
+
+     `.j-copy` is pointer-events:none wholesale, so the row opts back in — and
+     only the PILLS do, not the row's box, which is why the gap between them
+     is not a live surface sitting over the portrait field. The row is also
+     `inert` unless its block is more than half faded in (see paintCopy): a
+     block at opacity 0.08 mid-travel must not be clickable or tabbable, and
+     `visibility:hidden` alone only covers the last 0.2% of that fade.
+
+     ---- the trigger contract ----
+
+     `mod.trigger(name)` may return nothing (every pre-existing caller does),
+     or an object:  { announce?: string, busyMs?: number }.
+     `announce` goes to the polite live region — a scene change with no focus
+     move is otherwise silent to a screen reader. `busyMs` holds the control
+     disabled and lit for the length of the response, so the button cannot be
+     re-fired into the middle of its own transition.
+     ========================================================================== */
+
+  /** The 'nodes' glyph: three points and the filament joining them — the
+   *  smallest possible drawing of the thing a remix rearranges. Presentational
+   *  (the button's text is its accessible name), so aria-hidden. */
+  function nodesGlyph() {
+    const svg = document.createElementNS(NS_SVG, 'svg');
+    svg.setAttribute('class', 'j-act-glyph');
+    svg.setAttribute('viewBox', '0 0 14 14');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    const link = document.createElementNS(NS_SVG, 'path');
+    link.setAttribute('class', 'j-act-link');
+    link.setAttribute('d', 'M2.5 10.2 L7 3.4 L11.5 9.2');
+    svg.appendChild(link);
+    [[2.5, 10.2], [7, 3.4], [11.5, 9.2]].forEach(([cx, cy], k) => {
+      const c = document.createElementNS(NS_SVG, 'circle');
+      c.setAttribute('class', `j-act-node n${k + 1}`);
+      c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', '1.55');
+      svg.appendChild(c);
+    });
+    return svg;
+  }
+
+  function buildActions(chapterId, specs) {
+    const row = el('div', 'j-actions');
+    // The row is furniture around two named controls, not a landmark and not a
+    // list — it carries no role. Its children carry the whole meaning.
+    for (const spec of specs) {
+      const isLink = spec.kind === 'link';
+      const node = el(isLink ? 'a' : 'button', `j-act j-act-${spec.weight || 'primary'}`);
+      if (isLink) {
+        node.href = spec.href || '#';
+      } else {
+        node.type = 'button';
+      }
+      if (spec.id) node.dataset.action = spec.id;
+      if (spec.glyph === 'nodes') node.appendChild(nodesGlyph());
+      node.appendChild(el('span', 'j-act-t', spec.label));
+      if (!isLink && spec.action) {
+        let busyUntil = 0;
+        let busyTimer = null;
+        node.addEventListener('click', () => {
+          if (performance.now() < busyUntil) return;
+          const mod = window.journey && window.journey.chapters
+            && window.journey.chapters[chapterId];
+          const res = (mod && typeof mod.trigger === 'function')
+            ? mod.trigger(spec.action) : null;
+          const msg = (res && typeof res.announce === 'string') ? res.announce : spec.announce;
+          if (msg) announce(msg);
+          // The busy window is the SCENE's, reported by the chapter — the
+          // button's own lit state is the visitor's receipt that the thing
+          // they asked for is happening out in the field.
+          const ms = (res && typeof res.busyMs === 'number') ? res.busyMs : 0;
+          if (ms > 0) {
+            busyUntil = performance.now() + ms;
+            node.classList.add('busy');
+            // aria-disabled, NOT the `disabled` attribute. A real `disabled`
+            // blurs the element the instant it is set, so a keyboard visitor
+            // who pressed Enter would be thrown back to <body> and have to
+            // Tab in again for a second go. This keeps focus exactly where the
+            // visitor put it, announces the control as unavailable, and the
+            // guard above is what actually refuses the second press.
+            node.setAttribute('aria-disabled', 'true');
+            if (busyTimer) clearTimeout(busyTimer);
+            busyTimer = setTimeout(() => {
+              busyTimer = null;
+              node.classList.remove('busy');
+              node.removeAttribute('aria-disabled');
+            }, ms);
+          }
+        });
+      }
+      row.appendChild(node);
+    }
+    return row;
+  }
 
   /* ---------------- hotspot proxies ---------------- */
   const hotHost = el('div', 'j-hotspots');
@@ -1168,6 +1296,17 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     } else if (blocks[id]) {
       blocks[id].style.opacity = s;
       blocks[id].style.visibility = s > 0.002 ? 'visible' : 'hidden';
+      // A chapter's action pair is the only INTERACTIVE thing in the copy
+      // layer, so it is the only thing for which "mostly faded out" is not
+      // good enough. `visibility` above covers the last 0.2% of the fade; a
+      // block sitting at 0.08 through a scrub is still a live click target
+      // and still a tab stop without this. Same statement the nav makes about
+      // itself: the hit model and the tab order agree with the picture.
+      const row = actionRows[id];
+      if (row) {
+        const rowLive = s > 0.5;
+        if (row.inert === rowLive) row.inert = !rowLive;
+      }
     }
   }
 

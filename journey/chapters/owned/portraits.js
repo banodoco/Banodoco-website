@@ -674,8 +674,9 @@ export function buildPortraitField({
   const ROWS = Math.ceil(NODE_COUNT / COLS);
   const cellUV = (i) => [(i % COLS) / COLS, 1 - (Math.floor(i / COLS) + 1) / ROWS];
 
-  const bustSeeds = nodes.map((nd, i) => (nd.content.seed ?? i + 1) * 131 + i * 7);
-  const atlasA = makeAtlas(NODE_COUNT, COLS, CELL, drawBust, bustSeeds);
+  // arrangement 0 (`bustSeedsFor` lives with the remix machinery below, so the
+  // seed rule has one home and the build-time atlas is simply its first call)
+  const atlasA = makeAtlas(NODE_COUNT, COLS, CELL, drawBust, bustSeedsFor(0));
   const anonSeeds = [11, 23, 37, 53];
   const atlasB = makeAtlas(4, 2, CELL, drawAnonGlyph, anonSeeds);
 
@@ -781,6 +782,25 @@ export function buildPortraitField({
       uMapA: { value: atlasA },
       uMapP: { value: atlasA },     // becomes the photo atlas when it lands
       uMapB: { value: atlasB },
+      // REMIX (Hannah, 2026-08-07). The *2 slots hold the INCOMING arrangement
+      // during a swap; uSwap is the one clock that drives the whole field, and
+      // aSwapD is each node's place in the wave. At rest uSwap is 0 and the *2
+      // slots are never sampled — which is also why a frozen capture is
+      // untouched by any of this.
+      uMapA2: { value: atlasA },
+      uMapP2: { value: atlasA },
+      uSwap: { value: 0 },
+      uSwapSpan: { value: 0.34 },   // each node's own crossfade, as a fraction
+      // The flare's GATE, and it starts at 0 for a reason worth recording. The
+      // per-node flare is a Gaussian on the distance from the node's own
+      // crossing, and a Gaussian is never exactly zero: at uSwap = 0 the node
+      // whose delay is 0 sits one sigma out and evaluates to exp(-2.4) = 0.091.
+      // Left ungated that is a permanent 9% ember lift on one contributor at
+      // the resting composition — enough to move a frozen golden and, worse,
+      // to make one face quietly hotter than its neighbours forever. The
+      // uniform is 0 whenever no swap is running (see promoteSwap), 1 during
+      // one, and 0 under prefers-reduced-motion.
+      uSwapFlare: { value: 0 },
       uAnon: { value: 0 },
       uPhoto: { value: 0 },
       uCellAP: { value: new THREE.Vector2(1 / COLS, 1 / ROWS) },
@@ -809,15 +829,29 @@ export function buildPortraitField({
       attribute float aSize;
       attribute float aTilt;
       attribute float aAnonF;
+      attribute float aSwapD;
       uniform float uTime, uHoverIdx, uHoverAmt, uSelIdx, uSelAmt;
       uniform float uWaveR, uWaveW, uWaveAmt;
+      uniform float uSwap, uSwapSpan, uSwapFlare;
       uniform vec3 uWaveC;
       uniform vec2 uCellAP;
       varying vec2 vUvA, vUvB;
       varying vec2 vQ;
-      varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF;
+      varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF, vSwap, vFlare;
       void main() {
         vQ = aCorner;
+        // THE WAVE. aSwapD is this node's normalised place in the order the
+        // swap travels (distance out from the crown, see SWAP ORDER below), so
+        // every node's crossfade is the same uSwapSpan-long window, opened at
+        // a different moment by the one clock. Span 1 = the whole field turns
+        // over together, which is the reduced-motion setting.
+        float span = max(uSwapSpan, 0.001);
+        float d0 = aSwapD * (1.0 - span);
+        vSwap = smoothstep(d0, d0 + span, uSwap);
+        // …and a flare centred on the node's own crossing, so the change
+        // happens INSIDE a flush of ember rather than being watched happening.
+        float fq = (uSwap - (d0 + span * 0.5)) / (span * 0.5);
+        vFlare = exp(-fq * fq * 2.4) * uSwapFlare;
         vec2 half01 = aCorner * 0.5 + 0.5;
         vUvA = half01 * uCellAP + aCellA;
         vUvB = half01 * 0.5 + aCellB;
@@ -863,22 +897,31 @@ export function buildPortraitField({
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */`
-      uniform sampler2D uMapA, uMapP, uMapB;
+      uniform sampler2D uMapA, uMapP, uMapB, uMapA2, uMapP2;
       uniform vec3 uRim, uCore, uHaze;
       uniform float uTime, uOpacity, uAnon, uPhoto, uExposure;
       varying vec2 vUvA, vUvB;
       varying vec2 vQ;
-      varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF;
+      varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF, vSwap, vFlare;
       void main() {
         float r = length(vQ);
         if (r > 1.30) discard;
         // foreground defocus is a REAL blur: force lower mips as vSoft rises
         float lod = vSoft * 5.5;
+        // and the swap dissolves THROUGH soft focus: both the outgoing and the
+        // incoming image lose definition together at the middle of the node's
+        // crossfade and the new one comes back sharp. A straight A/B mix of two
+        // sharp faces reads as a jump cut; this reads as a focus pull.
+        float slod = lod + vFlare * 1.7;
         // three-way content: procedural bust -> real photo -> anonymous glyph
         // (vAnonF is the per-node consent gate: it forces the glyph even in
         // photo mode when enforcement is on)
         float anon = max(uAnon, vAnonF);
-        vec4 tAP = mix(texture2D(uMapA, vUvA, lod), texture2D(uMapP, vUvA, lod), uPhoto);
+        vec4 tA = mix(texture2D(uMapA, vUvA, slod), texture2D(uMapA2, vUvA, slod), vSwap);
+        vec4 tP = mix(texture2D(uMapP, vUvA, slod), texture2D(uMapP2, vUvA, slod), vSwap);
+        vec4 tAP = mix(tA, tP, uPhoto);
+        // the anonymous glyph is identity, not arrangement — a remix never
+        // touches it, so it keeps the plain lod
         vec4 t = mix(tAP, texture2D(uMapB, vUvB, lod), anon);
         float soft = exp(-r * r * 1.7);
         float mask = mix(t.a, soft * 0.72, vSoft * 0.88);
@@ -894,17 +937,74 @@ export function buildPortraitField({
         // ringed/haloed with light", i.e. the ring is part of the RESTING
         // read, not only the hover response. The hover deltas are unchanged,
         // so hover still moves the same distance from a higher floor.
-        vec3 col = t.rgb * (1.12 + 0.30 * boost + 0.55 * vWv)
-          + uRim * rim * (0.20 + 0.80 * boost + 0.60 * vWv) * (1.0 - vSoft * 0.85)
-          + uCore * exp(-r * r * 8.0) * (0.07 + 0.24 * boost + 0.30 * vWv);
+        // The swap's own light: the ember RING answers first and hardest (it
+        // is the node's edge, so the change reads as arriving from the network
+        // around the face) with a much smaller lift in the core and almost
+        // none in the image.
+        //
+        // These levels were cut from a first pass (0.22 / 0.85 / 0.26) after
+        // shooting the swap at 375x812. The flare and the colony wave the
+        // chapter fires are deliberately SIMULTANEOUS, so their contributions
+        // add on the same pixels — and at phone size the only faces on screen
+        // are the three or four NEAREST, which are already the largest and
+        // brightest things in the frame. Measured on that shot, the image term
+        // ran 1.12 -> 1.89 and the near faces bloomed to featureless orbs under
+        // UnrealBloom: exactly the failure EXPOSURE_PLANES was tuned against
+        // (see index.js). The RING is what should carry a swap anyway — the
+        // face has to stay a face while it is being exchanged.
+        vec3 col = t.rgb * (1.12 + 0.30 * boost + 0.55 * vWv + 0.10 * vFlare)
+          + uRim * rim * (0.20 + 0.80 * boost + 0.60 * vWv + 0.62 * vFlare) * (1.0 - vSoft * 0.85)
+          + uCore * exp(-r * r * 8.0) * (0.07 + 0.24 * boost + 0.30 * vWv + 0.15 * vFlare);
         // distant nodes emerge from amber haze rather than vanishing to black
         float haze = exp(-0.00135 * vDepth * vDepth);
         col = mix(uHaze * 0.38, col, clamp(haze + 0.14, 0.0, 1.0)) * flick;
         float alpha = mask * (1.0 - vSoft * 0.85) * (0.35 + 0.75 * haze) * uOpacity * uExposure;
-        alpha = clamp(alpha * (1.0 + 0.22 * vWv), 0.0, 1.0);
+        alpha = clamp(alpha * (1.0 + 0.22 * vWv + 0.12 * vFlare), 0.0, 1.0);
         gl_FragColor = vec4(col, alpha);
       }`,
   });
+
+  /* ---------------- SWAP ORDER: the wave the remix travels on -------------
+     A remix that cut all sixteen faces at once would read as a page reload of
+     the field. This orders it as a wave OUT FROM THE CROWN, which is the one
+     epicentre the chapter already recognises: every root leaves the crown, so
+     a change that starts there and runs outward is the network redistributing
+     rather than the browser repainting (chapters/owned/index.js setHot fires
+     the same gesture from the same point on a crown hover, and substrate
+     surge() runs crown -> out along the roots underneath it).
+
+     Measured IN THE REST FRAME, not in world space, and that is the decision
+     worth recording. In world space the nodes nearest the crown are the
+     NEAR-CAMERA ones — the crown sits 1.85 units off the lens — so a
+     world-space order starts the wave on the three big foreground faces at the
+     BOTTOM of the picture. Shot and compared: the visitor presses a button at
+     top-centre and the answer begins at the far bottom edge, running back up
+     the frame while the substrate's own surge runs the other way down the
+     roots. Two waves crossing reads as noise. Ordered by distance from the
+     crown AS DRAWN, the wave starts under the button, sweeps out along both
+     arms and settles at the low corners — one direction, the same one the
+     roots and the copy already establish. The house rule from the CONNECT and
+     root-network restages, again: the frame is the spec.
+
+     A small deterministic jitter keeps it off a clean expanding ring:
+     near-equidistant nodes turn over a beat apart, so the field reads as
+     thinking rather than counting. */
+  const swapEpicentre = (leg.CROWN ? leg.CROWN.clone() : nodes[0].pos.clone());
+  const swapDelays = (() => {
+    const crownNdc = projectInto(restFrame, swapEpicentre, 1.6);
+    const d = nodes.map((nd) => {
+      const p = projectInto(restFrame, nd.pos, 1.6);
+      // x by the same 1.6 the placement table uses, so "distance" is the
+      // distance the eye sees rather than the one the NDC cube reports
+      return Math.hypot((p.x - crownNdc.x) * 1.6, p.y - crownNdc.y);
+    });
+    const lo = Math.min(...d), hi = Math.max(...d);
+    const spread = (hi - lo) || 1;
+    return nodes.map((nd, i) => clamp((d[i] - lo) / spread + (nd.seed - 0.5) * 0.11, 0, 1));
+  })();
+  // World radius for the colony wave index.js fires alongside the swap — that
+  // one IS a spherical wave in the world, so it keeps world units.
+  const swapMaxR = Math.max(...nodes.map(nd => nd.pos.distanceTo(swapEpicentre)));
 
   const portraits = (() => {
     const n = NODE_COUNT;
@@ -917,6 +1017,7 @@ export function buildPortraitField({
     const sizeA = new Float32Array(n * 4);
     const tiltA = new Float32Array(n * 4);
     const anonF = new Float32Array(n * 4);
+    const swapD = new Float32Array(n * 4);
     const idx = new Uint16Array(n * 6);
     const CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
     nodes.forEach((nd, i) => {
@@ -932,6 +1033,7 @@ export function buildPortraitField({
         nodeA[v] = i; seedA[v] = nd.seed * 9.7 + i * 1.31;
         sizeA[v] = nd.size; tiltA[v] = nd.tilt;
         anonF[v] = 0;    // consent enforcement writes 1s via setConsentEnforced
+        swapD[v] = swapDelays[i];
       }
       const o = i * 4;
       idx.set([o, o + 1, o + 2, o, o + 2, o + 3], i * 6);
@@ -946,6 +1048,7 @@ export function buildPortraitField({
     geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
     geo.setAttribute('aTilt', new THREE.BufferAttribute(tiltA, 1));
     geo.setAttribute('aAnonF', new THREE.BufferAttribute(anonF, 1));
+    geo.setAttribute('aSwapD', new THREE.BufferAttribute(swapD, 1));
     geo.setIndex(new THREE.BufferAttribute(idx, 1));
     const mesh = new THREE.Mesh(geo, portraitMat);
     mesh.frustumCulled = false;
@@ -1146,8 +1249,8 @@ export function buildPortraitField({
      Resolved against import.meta.url so the chapter works from the journey
      page's own base. On success the photo atlas is baked through the spike
      treatment and photo mode becomes available; on failure the field simply
-     stays procedural. */
-  let photosAvailable = false;
+     stays procedural. (`photosAvailable` / `photoSet` and the arrangement
+     bakers live just below, with the remix machinery they belong to.) */
   async function loadPhotos() {
     const base = new URL(TEST_PORTRAITS.base, import.meta.url);
     const load = (name) => new Promise((res, rej) => {
@@ -1164,31 +1267,80 @@ export function buildPortraitField({
       large: TEST_PORTRAITS.large,
     };
   }
+  /* ---------------- ARRANGEMENTS: what a remix actually re-deals ----------
+     REMIX (Hannah, 2026-08-07) — see 20-owned-root-network.md.
+
+     THE PORTRAIT-SET SITUATION, stated where the code lives. There is exactly
+     ONE image set in this repo: assets/test-portraits, 20 small + 6 large,
+     LOOK-DEV ONLY, with a standing pre-deploy rule that it is deleted before
+     any public deploy (its README, and the snap() note above). No second set
+     of real likenesses may be added to satisfy a remix button, and none has
+     been. So the mechanism below is built GENERAL — an arrangement index that
+     re-derives every node's source image and its whole treatment — and driven,
+     for now, from the one set there is. Point `variantSpecs` at a second
+     manifest the day a consented set exists and the button gains real new
+     faces with no other change. It genuinely swaps: 16 nodes drawn from 26
+     images, so an arrangement moves most of the field to a different face and
+     re-lights all of it.
+
+     Arrangement 0 is byte-identical to what shipped before this feature (the
+     stride/offset pair at v=0 is the old `i * 7 + 3`, and every other term
+     reduces to its old form), so nothing about the resting composition, the
+     goldens or the look-dev calibration moves.
+
+     Strides are all coprime with the 20-image small pool, so each is a
+     different permutation rather than a rotation of the last. */
+  const V_STRIDE = [7, 9, 3, 11, 13, 17, 19];
+  const V_OFFSET = [3, 11, 5, 17, 2, 13, 8];
+
+  let photosAvailable = false;
+  let photoSet = null;        // { images, small, large } once loaded
+  let largeRank = null;       // node index -> rank among the nearest, or absent
+
+  function photoSpecs(v) {
+    const st = V_STRIDE[v % V_STRIDE.length];
+    const of = V_OFFSET[v % V_OFFSET.length];
+    return nodes.map((nd, i) => {
+      const lr = largeRank.get(i);
+      const k = i * st + of;
+      // large 512-source photos stay on the nodes nearest the camera path (a
+      // 256px source on a foreground plane reads soft); which of the large
+      // images each of them gets rotates with the arrangement.
+      const img = lr != null
+        ? photoSet.images[photoSet.large[(lr + v) % photoSet.large.length]]
+        : photoSet.images[photoSet.small[k % photoSet.small.length]];
+      const pass = lr != null ? 0 : Math.floor(k / photoSet.small.length);
+      return {
+        img,
+        mirror: (pass + v + ((i * 13 + v * 5) % 7 < 3 ? 1 : 0)) % 2 === 1,
+        exposure: 0.90 + ((i * 29 + v * 7) % 13) / 13 * 0.26,
+        warmth: ((i * 17 + v * 3) % 11) / 11,
+        seed: 5000 + i * 37 + v * 911,
+      };
+    });
+  }
+  function bustSeedsFor(v) {
+    return nodes.map((nd, i) => (nd.content.seed ?? i + 1) * 131 + i * 7 + v * 9973);
+  }
+  function bakeBusts(v) {
+    return v === 0 ? atlasA : makeAtlas(NODE_COUNT, COLS, CELL, drawBust, bustSeedsFor(v));
+  }
+  function bakePhotos(v) {
+    return photoSet ? makeAtlas(NODE_COUNT, COLS, CELL, drawPhotoCell, photoSpecs(v)) : null;
+  }
+
   const photosReady = loadPhotos().then((photos) => {
-    // large 512-source photos to the nodes nearest the camera path (the
-    // foreground planes), the small pool everywhere else, deterministic
-    // mirror / exposure / warmth variation — spike rev-1 scheme verbatim.
+    photoSet = photos;
     const byNearness = nodes
       .map((nd) => ({ i: nd.i, gd: camDist(nd.pos.x, nd.pos.y, nd.pos.z) }))
       .sort((a, b) => a.gd - b.gd);
-    const largeRank = new Map();
+    largeRank = new Map();
     byNearness.slice(0, photos.large.length).forEach((e, rank) => largeRank.set(e.i, rank));
-    const specs = nodes.map((nd, i) => {
-      const lr = largeRank.get(i);
-      const img = lr != null
-        ? photos.images[photos.large[lr]]
-        : photos.images[photos.small[(i * 7 + 3) % photos.small.length]];
-      const pass = lr != null ? 0 : Math.floor((i * 7 + 3) / photos.small.length);
-      return {
-        img,
-        mirror: (pass + ((i * 13) % 7 < 3 ? 1 : 0)) % 2 === 1,
-        exposure: 0.90 + ((i * 29) % 13) / 13 * 0.26,
-        warmth: ((i * 17) % 11) / 11,
-        seed: 5000 + i * 37,
-      };
-    });
-    portraitMat.uniforms.uMapP.value = makeAtlas(NODE_COUNT, COLS, CELL, drawPhotoCell, specs);
+    portraitMat.uniforms.uMapP.value = bakePhotos(0);
     photosAvailable = true;
+    // and start the NEXT arrangement warming while nothing is happening, so
+    // the first press of Remix is a swap and not a bake (see prepareNext).
+    schedulePrepare();
     return true;
   }).catch((e) => {
     console.warn('[owned] test photos unavailable — staying procedural:', e.message);
@@ -1201,6 +1353,67 @@ export function buildPortraitField({
   let anonTarget = 0, photoTarget = 0;
   let wave = null;
   let fade = 0;
+
+  /* ---------------- the remix swap ----------------
+     One clock (uSwap 0 -> 1) opened at a different moment per node by aSwapD.
+     While it runs, uMap*2 hold the incoming arrangement; when it lands, the
+     incoming becomes current, uSwap drops back to 0 and the retired atlases
+     are released. Nothing here touches placement, size, strands or camera —
+     the field is exactly the field it was, wearing different faces. */
+  const SWAP_MS = 1250;
+  const SWAP_MS_REDUCED = 320;
+  const SWAP_SPAN = 0.34;          // each node's own crossfade, as a fraction
+  const reduceMotion = typeof matchMedia === 'function'
+    ? matchMedia('(prefers-reduced-motion: reduce)')
+    : { matches: false };
+  let variant = 0;
+  let pending = null;              // { v, bust, photo } — warmed ahead of the press
+  let prepareTimer = null;
+  let swap = null;                 // { t, dur }
+
+  /** Bake the arrangement after the current one. Called on an idle beat after
+   *  the photos land and again after every completed swap, so a press is never
+   *  waiting on two canvas atlases; called inline from remix() only if the
+   *  visitor got there first. */
+  function prepareNext() {
+    const v = variant + 1;
+    if (pending && pending.v === v && (!photoSet || pending.photo)) return;
+    if (pending) { retire(pending.bust); retire(pending.photo); }
+    pending = { v, bust: bakeBusts(v), photo: bakePhotos(v) };
+  }
+  function schedulePrepare() {
+    if (prepareTimer) return;
+    const run = () => { prepareTimer = null; prepareNext(); };
+    prepareTimer = typeof requestIdleCallback === 'function'
+      ? requestIdleCallback(run, { timeout: 1500 })
+      : setTimeout(run, 400);
+  }
+
+  /** Release a canvas texture, unless it is still wired to something. The two
+   *  build-time atlases are never released: atlasA is arrangement 0's busts and
+   *  is also uMapP's stand-in until the photos land, and atlasB is the
+   *  anonymous glyph sheet, which a remix has no business touching. */
+  function retire(tex) {
+    if (!tex || tex === atlasA || tex === atlasB) return;
+    const u = portraitMat.uniforms;
+    if (tex === u.uMapA.value || tex === u.uMapP.value
+      || tex === u.uMapA2.value || tex === u.uMapP2.value) return;
+    tex.dispose();
+  }
+
+  /** The incoming arrangement becomes the resting one. */
+  function promoteSwap() {
+    const u = portraitMat.uniforms;
+    const oldBust = u.uMapA.value, oldPhoto = u.uMapP.value;
+    u.uMapA.value = u.uMapA2.value;
+    u.uMapP.value = u.uMapP2.value;
+    u.uSwap.value = 0;
+    u.uSwapFlare.value = 0;    // back to an exactly-unlit resting field
+    swap = null;
+    if (oldBust !== u.uMapA.value) retire(oldBust);
+    if (oldPhoto !== u.uMapP.value) retire(oldPhoto);
+    schedulePrepare();
+  }
 
   const timeMats = [portraitMat, rimMat, cores.mat, halos.mat, nodeStrands.mat];
   const waveMats = timeMats;   // every node layer answers the wave
@@ -1276,6 +1489,68 @@ export function buildPortraitField({
     wavePulse(center, { speed = 3.6, width = 2.8, maxR = 30, amp = 1 } = {}) {
       wave = { c: center.clone(), r: -width * 0.6, speed, width, maxR, amp };
     },
+
+    /** REMIX: re-deal the field's faces (Hannah, 2026-08-07).
+     *
+     *  Returns the shape the caller needs to answer in the scene and in the
+     *  DOM — { arrangement, ms, epicentre, maxR, speed } — or null if a swap
+     *  is already running. `speed` is the world-units/sec a wave must travel
+     *  to keep pace with the node order, so the strand/rim/halo response the
+     *  chapter fires arrives at each face as that face turns over.
+     *
+     *  Under prefers-reduced-motion the span opens to 1: every node's window
+     *  is the whole clock, so the field cross-fades as one over a third of a
+     *  second, with the per-node ember flare off. Same start state, same end
+     *  state, no travelling motion. */
+    remix() {
+      if (swap) return null;
+      const reduced = !!reduceMotion.matches;
+      if (!pending || pending.v !== variant + 1 || (photoSet && !pending.photo)) {
+        if (prepareTimer) {
+          if (typeof cancelIdleCallback === 'function') cancelIdleCallback(prepareTimer);
+          else clearTimeout(prepareTimer);
+          prepareTimer = null;
+        }
+        prepareNext();
+      }
+      const u = portraitMat.uniforms;
+      u.uMapA2.value = pending.bust;
+      // With no photo set the material's two channels are the same sheet, the
+      // way they are at boot before the photos land — so a procedural-only
+      // build still genuinely remixes (different busts) instead of no-oping.
+      u.uMapP2.value = pending.photo || pending.bust;
+      u.uSwapSpan.value = reduced ? 1 : SWAP_SPAN;
+      u.uSwapFlare.value = reduced ? 0 : 1;
+      u.uSwap.value = 0;
+      variant = pending.v;
+      pending = null;
+      const dur = (reduced ? SWAP_MS_REDUCED : SWAP_MS) / 1000;
+      swap = { t: 0, dur };
+      return {
+        arrangement: variant,
+        ms: Math.round(dur * 1000),
+        epicentre: swapEpicentre.clone(),
+        maxR: swapMaxR,
+        // the wave has to cross the field in the stretch of the clock the node
+        // order actually occupies (1 - span), or it outruns its own faces
+        speed: swapMaxR / Math.max(0.12, dur * (reduced ? 1 : 1 - SWAP_SPAN)),
+      };
+    },
+
+    /** Advance the swap clock. Deliberately NOT inside update(): the chapter
+     *  stops calling update the moment the group goes invisible, and a visitor
+     *  who presses Remix and immediately scrolls out would otherwise come back
+     *  to a field frozen half-way between two arrangements. Called from the
+     *  chapter animator ahead of its own visibility gate. */
+    tickSwap(dt) {
+      if (!swap) return;
+      swap.t += dt;
+      const f = swap.t / swap.dur;
+      portraitMat.uniforms.uSwap.value = f < 1 ? f : 1;
+      if (f >= 1) promoteSwap();
+    },
+    get swapping() { return !!swap; },
+    get arrangement() { return variant; },
     /** Jump the eased UI channels to their targets — the dt = 0 path (deep
      *  links, hidden-tab and frozen capture), reached through the chapter's
      *  snap().

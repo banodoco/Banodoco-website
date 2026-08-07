@@ -119,6 +119,167 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-sub.j-pulse { pointer-events: auto; }
 
   /* ============================================================
+     THE ACTION PAIR (Hannah, 2026-08-07)
+
+     "a button that says 'Learn more', and then next to it ... a
+      remix button ... make them work nicely together visually."
+
+     ONE SILHOUETTE, TWO WEIGHTS. Both controls are the hero nav's
+     `.pill` — same height, same 999px radius, same 0.78rem/0.04em
+     type, same 0.5rem/1.35rem box, same 0.7rem gap the `.nav-cta`
+     pair uses. That is what makes them read as one object: the
+     site already has a button and this is it, twice.
+
+     What separates them is not shape or size but LIGHT, and the
+     split is deliberate about which kind each one gets:
+
+       · Learn more  — the conventional action, so it carries
+         CONTRAST. Parchment hairline at full strength plus a 4.5%
+         parchment wash, i.e. the hero `.pill` with its interior
+         lit. First in the row, so it is first in reading order and
+         first in the tab order too.
+
+       · Remix       — the exploratory one, so it carries
+         BEHAVIOUR. Gold hairline at 0.34 and gold ink at 0.82:
+         measurably quieter at rest, and the only one of the two
+         that is alive — a three-node glyph whose filament draws
+         and whose points light in sequence on hover, and which
+         runs a travelling spark while the field is actually
+         swapping. It earns attention by moving, not by shouting.
+
+     Neither is a SOLID fill, and that is a composition decision
+     rather than a taste one: this chapter is staged so the crown
+     is the brightest point in the frame (chapters/owned/index.js
+     EXPOSURE_PLANES note). A filled parchment button dropped at
+     top-centre would take that job away from the scene.
+
+     MOTION belongs to the hero's `.co` "instrument powering on"
+     family — sequenced parts, each keyframe ending at the resting
+     style, so the reduced-motion rule at the foot of this file is
+     just `animation: none`.
+     ============================================================ */
+  .j-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;                 /* the hero `.nav-cta` gap, verbatim */
+    margin: 1.5rem 0 0;
+    /* `.j-copy` turns pointer-events off wholesale. Only the PILLS opt back
+       in — never this row — so the gap between them, and the dead space either
+       side of them, stay transparent to the portrait field's hit pads. */
+    pointer-events: none;
+  }
+  .j-block.pos-topcentre .j-actions,
+  .j-block.pos-bottom    .j-actions { justify-content: center; }
+  .j-block.pos-topright  .j-actions { justify-content: flex-end; }
+
+  .j-act {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    margin: 0;
+    padding: 0.5rem 1.35rem;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    white-space: nowrap;
+    text-decoration: none;
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+    transition: color 0.25s, border-color 0.25s, background 0.25s;
+  }
+  .j-act-primary {
+    color: var(--parchment);
+    border: 1px solid rgba(242, 237, 225, 0.58);
+    background: rgba(242, 237, 225, 0.045);
+    text-shadow: 0 1px 14px rgba(10, 6, 2, 0.9);
+  }
+  .j-act-primary:is(:hover, :focus-visible) {
+    border-color: var(--parchment);
+    background: rgba(242, 237, 225, 0.10);
+  }
+  .j-act-explore {
+    color: rgba(217, 164, 65, 0.82);
+    border: 1px solid rgba(217, 164, 65, 0.34);
+    text-shadow: 0 1px 14px rgba(10, 6, 2, 0.9);
+  }
+  .j-act-explore:is(:hover, :focus-visible) {
+    color: var(--gold-bright);
+    border-color: rgba(240, 200, 119, 0.68);
+    background: rgba(217, 164, 65, 0.07);
+  }
+  /* Held while the scene is answering (ui.js `busyMs` from the chapter's
+     trigger). aria-disabled, not `disabled` — see ui.js — so the cursor and
+     the ink have to say "not now" on their own. */
+  .j-act[aria-disabled="true"] { cursor: default; }
+  .j-act-explore.busy {
+    color: var(--gold-bright);
+    border-color: rgba(240, 200, 119, 0.68);
+    background: rgba(217, 164, 65, 0.07);
+  }
+
+  /* --- the remix glyph: three points and the filament between them --- */
+  .j-act-glyph { width: 13px; height: 13px; flex: none; overflow: visible; }
+  .j-act-link {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.42;
+    stroke-dasharray: 22;
+    stroke-dashoffset: 22;         /* unlit at rest, like `.co .lit` */
+    transition: stroke-dashoffset 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s;
+  }
+  .j-act-node {
+    fill: currentColor;
+    opacity: 0.5;
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: opacity 0.28s;
+  }
+  .j-act-explore:is(:hover, :focus-visible) .j-act-link { stroke-dashoffset: 0; opacity: 0.7; }
+  .j-act-explore:is(:hover, :focus-visible) .j-act-node { opacity: 1; }
+  /* the points light 1 -> 2 -> 3 along the filament, the callout boot's
+     numbered order at glyph scale */
+  .j-act-explore:is(:hover, :focus-visible) .j-act-node { animation: j-act-lit 0.34s ease both; }
+  .j-act-explore:is(:hover, :focus-visible) .n2 { animation-delay: 0.08s; }
+  .j-act-explore:is(:hover, :focus-visible) .n3 { animation-delay: 0.16s; }
+  @keyframes j-act-lit {
+    from { opacity: 0.5; transform: scale(0.55); }
+    to   { opacity: 1;   transform: scale(1); }
+  }
+  /* …and while the field is swapping, the same three points carry a spark
+     round the glyph, once per node-wave, for as long as the wave runs. */
+  .j-act-explore.busy .j-act-link { stroke-dashoffset: 0; opacity: 0.7; }
+  .j-act-explore.busy .j-act-node { animation: j-act-spark 0.62s ease-in-out infinite; }
+  .j-act-explore.busy .n2 { animation-delay: 0.12s; }
+  .j-act-explore.busy .n3 { animation-delay: 0.24s; }
+  @keyframes j-act-spark {
+    0%   { opacity: 0.45; transform: scale(0.8); }
+    40%  { opacity: 1;    transform: scale(1.35); }
+    100% { opacity: 0.45; transform: scale(0.8); }
+  }
+
+  /* --- entry: the pair is the LAST part of the arriving copy ------------
+     Same envelope as the heading and the sub above (`--j-in-wait` +
+     fractions of `--j-in`), so a longer flight stretches it with
+     everything else. The two pills START in hierarchy order — primary,
+     then explore — and are timed to SETTLE together on the same frame, at
+     92% of the envelope, which is exactly where the sub lands. They arrive
+     as one object that assembled in order, which is what they are. */
+  .j-block.j-arrive .j-act {
+    animation: j-line-in calc(var(--j-in) * var(--j-act-dur, 0.52))
+               cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--j-in-wait) + var(--j-in) * var(--j-act-lead, 0.40));
+  }
+  .j-block.j-arrive .j-act:nth-child(2) { --j-act-lead: 0.47; --j-act-dur: 0.45; }
+
+  /* ============================================================
      ARRIVING COPY (Hannah, 2026-08-07) — the nav-jump entry.
 
      The block's OPACITY is not here: ui.js drives it as one envelope
@@ -814,6 +975,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      hero region is untouched — its own focus debt is recorded, not patched
      from here. */
   .j-nav a:focus-visible,
+  .j-act:focus-visible,
   .j-hot:focus-visible,
   .j-pop a:focus-visible,
   .j-card :is(a, button):focus-visible,
@@ -823,6 +985,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     outline-offset: 3px;
     border-radius: 2px;
   }
+  /* The shared ring above sets `border-radius: 2px`, which is right for the
+     square controls it was written for and would flatten a pill. The outline
+     follows the element's radius, so the pair states its own. */
+  .j-act:focus-visible { border-radius: 999px; }
   .j-card-x:is(:hover, :focus-visible) { color: var(--gold-bright); }
   .j-card-link:is(:hover, :focus-visible) { border-bottom-color: var(--gold-bright); }
 
@@ -830,6 +996,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-footer { padding: 1.8rem 6vw 1.6rem; }
     .j-foot-cols { gap: 0.2rem 1.8rem; }
     .j-foot-links a { min-height: 44px; }   /* PL-1.4 touch target */
+    /* PL-1.4 again: the pair's desktop box is ~37px tall. The pills keep their
+       silhouette and gain the touch minimum in height only, so they still read
+       as the hero's pill rather than as two slabs. */
+    .j-act { min-height: 44px; }
     .j-nav { gap: 1.1rem; }
     .j-navlink { font-size: 0.62rem; letter-spacing: 0.14em; }
     .j-block { max-width: none; width: 88vw; }
@@ -958,11 +1128,16 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   @media (max-width: 480px) {
     .j-block.pos-bottomleft { width: 94vw; padding-left: 1rem; padding-right: 1rem; }
     .j-block.pos-bottomleft .j-h { font-size: clamp(1.15rem, 5.6vw, 1.75rem); }
+    /* the hero makes the same trim to `.pill` at this width — the pair follows
+       its own vocabulary rather than inventing a second phone size */
+    .j-act { padding: 0.42rem 1.1rem; font-size: 0.72rem; }
+    .j-actions { margin-top: 1.25rem; gap: 0.6rem; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .j-nav, .j-navlink, .j-navlink::after, .j-hot, .j-hot-dot, .j-card { transition: none; }
     .j-pop, .j-pop-link { transition: none; }
+    .j-act, .j-act-link, .j-act-node { transition: none; }
     /* The two 2026-08-07 entries. Both are authored so that every keyframe
        ENDS at the element's resting style (hero.css's `.co` boot keeps the
        same contract), so switching the animations off is the whole of the
@@ -974,6 +1149,16 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-block.j-arrive::before,
     .j-block.j-arrive .j-h,
     .j-block.j-arrive .j-sub,
+    /* The action pair, 2026-08-07. Its entry keeps the same contract (every
+       keyframe ends at the resting style), so switching it off leaves the
+       pills already arrived. The glyph's hover sequence does too — the static
+       hover rule above it already states opacity 1 at scale 1. The `.busy`
+       spark is an infinite loop with no resting end and is simply removed,
+       exactly as hero.css removes `.co`'s `co-pulse`; the button still says
+       it is working through its held colour. */
+    .j-block.j-arrive .j-act,
+    .j-act-explore:is(:hover, :focus-visible) .j-act-node,
+    .j-act-explore.busy .j-act-node,
     .j-pop.j-pop-enter,
     .j-pop.j-pop-enter::before,
     .j-pop.j-pop-enter .j-pop-t,
