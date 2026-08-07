@@ -925,3 +925,215 @@ grown around — an Owned restage with a re-shot `owned@*`, not a camera re-key.
 Worth doing deliberately if the push-in still reads once the whip is gone; it
 was not worth spending the just-landed root-crown staging (81a9861, eea3ffe,
 696e95d) on speculatively inside this pass.
+
+---
+
+## 2026-08-07 (pass 2) — Owned → Final: the push-in was in the path, not the aim
+
+**Status: SHIPPED (`owned@*` and `final@*` re-shot — the colony legitimately
+moved).** Hannah, on the same leg, asking for the larger job: *"what if the
+actual effect was more of a reverse and out to show the mushrooms?… what if it
+zoomed out and went up instead?"*
+
+Pass 1 (`1d0f5e0`) fixed the WHIP by re-aiming gaze and fov with every position
+key held bit-exact, and closed by documenting two faults it had proved it could
+not reach. This pass is those two faults.
+
+### The two faults, re-measured
+
+Drift-aware scrub sampling actual `journey.progress`, plus an analytic route
+through the same key list that reproduces `director.poseAt` to **1.8e-15 in
+both aspects** — so the before/after tables below are exact, not sampled
+approximations, and the "before" path could be measured without reverting
+anything.
+
+| | before (L) | before (P) |
+|---|---|---|
+| distance to the root crown | 1.852 → **0.820 @ p 0.751** → 15.373 | 2.042 → **0.695 @ p 0.753** → 16.705 |
+| samples where distance DECREASES | 53 | 56 |
+| worst closing rate | **−62 /p** | **−74 /p** |
+| crown apparent scale: rising samples | 52 | 56 |
+| max scale rise | **+44,677 /p** | **+54,488 /p** |
+| the crown leaves frame | **out of the TOP, p 0.7325** | **out of the TOP, p 0.740** |
+| its size when it leaves | **8% BIGGER than at the rest** | **37% BIGGER** |
+| camera height | −1.180 → **−1.403 @ p 0.7785** → 2.73 | −0.964 → **−1.034 @ 0.7625** → 4.232 |
+| samples where y SINKS | 107 | 75 |
+
+So the leg asked to "zoom out and go up" spent its first stretch getting
+**closer and lower**, and the subject left the frame by going over the lens.
+
+### Why re-aiming could never have fixed it
+
+The Owned rest sits at x +1.73, the crown at x +0.06, the Final rest at
+x −14.72. **The crown is between the two frozen rests**, so the x-gap must pass
+through zero. The shipped path ran almost straight down the x axis, so when the
+x-gap collapsed the entire distance collapsed with it — a fly-past. A gaze that
+tracks a point you fly past has unbounded angular rate at closest approach,
+which is exactly why pass 1's constraint tier (a) could not touch it.
+
+### The re-path
+
+**Distance lost in x has to be banked in z before the crossing, and banked
+permanently.** Two candidate families were built and measured against the real
+spline:
+
+- **A straight dolly back along −gaze (+X)** — the most literal reading of
+  "reverse". Measured and **rejected**: it buys distance and then gives all of
+  it back on the way past. The crown re-magnified at +50/p over p 0.752–0.767
+  and a second closest approach appeared where the first one had been (36
+  decreasing samples, worst rate −29). Backing up is transient; only an offset
+  the path never gives back is permanent.
+- **A lateral swing in z** — kept. z ends at +2.70 at the Final rest anyway, so
+  the leg spends z the world already had, only earlier: out to **3.11** while
+  the x-gap closes, then home to the frozen 2.700, on **one hump** (a single
+  sign change in z across the whole leg).
+
+One key was **added** at owned t 0.60 (p 0.750, `withdraw`). The rest's `hold`
+forces a zero tangent, so with nothing inside the first 0.025 of p the leg left
+the rest already committed to the old run; this key is what lets the swing start
+while the camera is still close enough for it to matter.
+
+| key (global p) | shipped pos | re-pathed pos |
+|---|---|---|
+| 0.725 `owned-rest` | (1.730, −1.180, 0.560) | **frozen** |
+| 0.750 `withdraw` | — | **(1.200, −1.16, 2.250)** ← new |
+| 0.782 `owned-rest-drift` | (−3.300, −1.40, 0.350) | (−1.200, −1.12, 3.000) |
+| 0.812 | (−5.300, −1.02, 0.780) | (−4.600, −1.00, 3.100) |
+| 0.845 | (−7.700, −0.20, 1.250) | (−7.700, −0.40, 2.950) |
+| 0.878 | (−10.200, 1.05, 1.800) | (−10.200, 1.05, 2.850) |
+| 0.905 | (−12.300, 1.75, 2.250) | (−12.300, 1.85, 2.780) |
+| 0.925 `final-rest` | (−14.72, 2.73, 2.700) | **frozen** |
+| 1.000 `final-recede` | (−17.73, 3.95, 3.260) | **frozen** |
+
+**x at the three reveal-bearing keys is bit-exact** (−7.700 / −10.200 /
+−12.300). final's reveal front is `pullOf(camera.position.x)` and its rise mask
+is `riseOf(` the same `)`, so holding x holds the reveal schedule.
+
+**Pass 1's gaze is carried, not re-authored.** Every moved key keeps pass 1's
+yaw and pitch to 0.1° and its gaze length; only the eye's place moved. The
+tangent coupling pass 1 identified was honoured by evaluating every candidate
+through the real global Hermite rather than segment by segment.
+
+**The y schedule is the shipped one with the dip taken out, not a steeper
+climb.** Lifting y harder underground was measured and rejected: portrait's own
+`rise` offset stacks on top, and it pierced the soil at p 0.817 with final's
+rise mask only **11%** open, against 58% shipped. Held down, portrait pierces at
+p 0.829 with the mask **69%** open — better than shipped.
+
+### After
+
+Both faults are gone, and gone **exactly**: at 20,001 samples per aspect
+(step 1e-5 in p) over p 0.725–0.925 there are **zero** negative distance steps,
+**zero** negative height steps and **zero** positive x steps. Not "small" —
+none.
+
+| | before L | after L | before P | after P |
+|---|---|---|---|---|
+| distance minimum | 0.820 @ 0.751 | **1.852 @ 0.725 (the rest)** | 0.695 @ 0.753 | **2.042 @ 0.725** |
+| distance-decreasing samples | 53 | **0** | 56 | **0** |
+| height minimum | −1.403 @ 0.7785 | **−1.180 @ 0.725 (the rest)** | −1.034 @ 0.7625 | **−0.964 @ 0.725** |
+| sinking samples | 107 | **0** | 75 | **0** |
+| crown scale rising samples | 52 | **0** | 56 | **0** |
+| max scale rise | +44,677 | **−24 (always falling)** | +54,488 | **−17** |
+| crown leaves frame | TOP @ 0.7325 | **RIGHT @ 0.7635** | TOP @ 0.740 | **RIGHT @ 0.7375** |
+| its size when it leaves | 8% bigger | **31% smaller** | 37% bigger | **9% smaller** |
+| crown NDC y, rest → exit | 0.92 → 1.0 (over the top) | **0.92 → 0.72 (down into frame)** | 0.79 → 0.99 | **0.79 → 0.75** |
+| yaw total / peak | −141.2 / 1070 | −141.2 / **1064** | −139.7 / 1051 | −139.7 / **1042** |
+| yaw sign flips | 1 | 1 | 1 | 1 |
+| pitch excursion / peak | 7.8 / 288 | 8.1 / 288 | 5.1 / 164 | **4.3** / 164 |
+| fov peak | 114 | 114 | 110 | 110 |
+| optical flow peak (median px/p) | 43,305 @ 0.8025 | **26,016 @ 0.7925** | 30,445 | **19,597** |
+| flow into the rest | 9411 → 8587 (falling) | 7390 → 6687 (falling) | falling | falling |
+| ring-centre min screen speed | 89 (1 frozen) | **146 (0 frozen)** | 70 (1) | **93 (1)** |
+| path speed peak | 178 @ 0.913 | **173** | 194 | **189** |
+| roll, everywhere | 0 | **0** | 0 | **0** |
+
+The crown now **recedes into the frame** — NDC y 0.92 → 0.72, shrinking 31% —
+before the turn carries it out the right edge, where it used to be gone over the
+top by p 0.7325 having grown 8%. That is the whole of what Hannah asked for,
+stated as a measurement.
+
+### The rebuilt colony
+
+`owned/leg.js` samples the position spline over p 0.660–0.872, so the colony
+regrew around the new corridor. Same scan, same sampling, shipped vs re-pathed:
+
+| | shipped | re-pathed |
+|---|---|---|
+| min clearance, geometry → lens path | 0.095 @ p 0.742 | **0.129 @ p 0.694** |
+| sampled vertices within 1.0 unit of the path | **1060** | **117** (−89%) |
+| within 0.5 unit | **201** | **15** (−93%) |
+| objects / total verts | 31 / 88,360 | 31 / 88,022 |
+| samples above ground | 14 (0.14%) | 14 (0.14%) |
+| bbox | x[−39,39] y[−16.31,5.62] z[−39,39] | identical |
+| voids / hubs / primaries / secondaries / skirt / net nodes | 5 / 5 / 66 / 292 / 340 / 430 | identical |
+| portraits: planes / routable / strand curves | 16 / 16 / 106 | identical |
+| fan / lid / crown verts | 18,684 / 7,440 / 708 | identical |
+| fill / hair / web verts, glints, netLinks | 16,392 / 23,400 / 14,360, 563, 1436 | 16,296 / 23,160 / 14,370, 551, 1437 |
+
+The structure is the same structure — every count that is authored rather than
+clearance-driven is **identical**, and only the clearance-driven layers moved,
+which is the exact signature of "same rules, new corridor". Nothing collapsed,
+nothing floats (the above-ground fraction is unchanged), and the extent is
+identical to the decimetre.
+
+The corridor is also **measurably cleaner than the one it replaced**: 89% fewer
+vertices within a unit of the lens, 93% fewer within half a unit. The closest
+approach is now at p 0.694 — inside the dive, a stretch this pass did not
+touch. The old path was the one crowding geometry, because it flew through the
+densest part of the root mass; the new one swings out of it.
+
+### Reveal-law re-verification
+
+The reveal is camera-pure, so re-pathing changes what reveals when. Checked on
+the live build, with real frames between jumps (the uniforms are ticked by the
+animator, not by `scrollTo`):
+
+- **Dark at arm.** final arms at p 0.80. Measured there: `uPull` 0,
+  `uPullRaw` −0.796, rise mask 0, `group.visible` false until 0.797 and
+  `uAmount` easing from 0 — the chapter switches on with **every reveal driver
+  at exactly zero**. It is still 0 at p 0.81, where the shipped path had already
+  opened the mask to 0.105.
+- **No self-ignition.** `uPull` stays exactly 0 until the camera reaches
+  x −8 (p ≈ 0.850), then sweeps 0.047 → 0.123 → 0.172 → 0.294 → 0.393 → 0.539
+  → 0.760 → 1.0: monotone, single-direction.
+- **Every fade completes underground.** The rise mask reaches 1.0 at p 0.845
+  with the camera still 0.40 under the soil; the pierce is at p 0.8555. Margin
+  0.011 against the shipped 0.0095.
+- **Kindling order.** Lit materials climb 271 → 287 → 293 → 303 → 312 → 321 →
+  381 → 391 across the leg — progressive, near ground outward, no step.
+- **Soil / murk windows.** The path at **p ≤ 0.725 is bit-identical** to the
+  shipped path (max difference exactly 0 over 4,001 samples; the two paths first
+  differ at p 0.72525). The rest key's `hold` zeroes its tangent, so the dive,
+  the T3 crossing at p ~0.693, the 0.692–0.712 murk window and `CONNECT_HOLD_HI`
+  0.705 are unchanged **by construction**, verified numerically.
+- **Reverse scrubbing.** Over a forward and a reverse ride of the leg, camera
+  position and target reproduce `poseAt(actual p)` with **max error exactly 0**
+  in both directions; fov matches to 9.7e-4, which is the director's own
+  `> 0.001` fov write deadband and is symmetric between the rides. The residual
+  forward-vs-reverse difference (0.09 in position) is entirely accounted for by
+  scroll quantisation moving the actual p by up to 1.1e-3 between rides — the
+  pose is a pure function of p and has no hysteresis.
+- **Fog** is pure in p and unchanged: near 7 → 13.75, far 20 → 60.3, monotone.
+
+`capture.py --check` and the re-shot references are recorded in the commit.
+Console clean over a full 0 → 1 → 0 ride plus six fast scrubs through the leg in
+both directions; the only console entry is the browser's own `/favicon.ico` 404,
+which predates this work and is not requested by page code.
+
+### Residuals
+
+- **The crown still leaves by the side rather than shrinking to a point.** It
+  has to: the two rests mandate 141.2° of turn, and pass 1 established that the
+  turn must be spent early and underground or it reads as a whip over the
+  reveal. The turn carries the crown out of frame at p 0.7635 whatever the path
+  does. What changed is that it now leaves *smaller and lower* than it was at
+  the rest instead of *bigger and over the top*.
+- **The terminal speed bump at p 0.913 survives** (173 units/p, against 178
+  shipped). It is a property of the frozen `final-rest` hold: 2.4 units of x in
+  the last 0.020 of p with a zero end-tangent. Reducing it means moving the
+  p 0.905 key's x, which would advance the reveal front near the rest. Left
+  alone; it is marginally better than shipped and the optical flow — the thing
+  actually seen — decays into the rest in both aspects.
+- **Portrait keeps one near-frozen ring-centre sample** (93 px/p, against 70
+  shipped). Same sample as before this pass, improved but not removed.

@@ -81,51 +81,98 @@ export const CAMERA = {
     // --- OWNED rest: under the root, the crown at top centre, the fan
     //     descending into the portrait network below ---
     { t: 0.5,                 pos: V(1.730, -1.180, 0.560), tgt: V(-1.298, -1.625, -0.373), fov: 58, hold: true, note: 'owned-rest' },   // p 0.725
-    // --- growth-front rise-tilt-recede, RE-AIMED AGAIN (2026-08-07,
-    //     17-final-field.md; Hannah: "the transition from Owned to the final
-    //     section feels unnatural, like a weird jumpy thing — what if it
-    //     zoomed out and went up instead?").
+    // --- growth-front rise-tilt-recede, RE-PATHED (2026-08-07 pass 2,
+    //     17-final-field.md; Hannah: "what if the actual effect was more of a
+    //     reverse and out to show the mushrooms… what if it zoomed out and
+    //     went up instead?").
     //
-    //     WHAT WAS WRONG. The two rests between them MANDATE a gaze reversal:
-    //     the Owned rest looks -X (yaw -72.9, straight at the root crown) and
-    //     the Final rest looks +X (yaw +68.3, back across the ring chord).
-    //     That is 141 deg of turn that has to be spent somewhere. The shipped
-    //     leg spent it LATE — only 70% done by p 0.878, with the last 42 deg
-    //     crammed into p 0.878-0.925 at a peak of 1334 deg/p (over the 1.2k
-    //     budget) and an optical-flow crest of 21.8k px/p at p 0.9115 against
-    //     ~12-13k mid-leg. So the camera flew forward through the colony
-    //     looking where it was going, and then WHIPPED sideways exactly while
-    //     the field was revealing. That whip is the "jumpy thing": the reveal
-    //     was delivered by a pan, which reads as being dragged, not as
-    //     withdrawing.
+    //     Pass 1 (1d0f5e0) re-aimed gaze and fov and fixed the WHIP, but left
+    //     two faults it could not reach because they are PURE POSITION:
+    //     the path passed within 0.82 units of the root crown at p 0.751
+    //     (distance 1.85 -> 0.82 -> 15.37, apparent scale RISING +44k/p) so
+    //     the crown left the TOP of frame at p 0.7325 instead of receding;
+    //     and y sank -1.180 -> -1.403 before climbing, so the first 27% of a
+    //     leg asked to go "up" went down.
     //
-    //     THE RE-KEY. The same 141 deg is now spent EARLY and underground,
-    //     where the frame is a homogeneous network and a turn reads as
-    //     turning to look back the way you came. Yaw is monotone (zero sign
-    //     flips) and ~91% complete by p 0.878, so the camera surfaces already
-    //     facing the field and the last 0.047 of p only eases 13 deg home.
-    //     Peak rate 1070 deg/p at p 0.794, inside budget. Pitch keeps ONE
-    //     shallow crest but its excursion drops from 19 deg (+10.8 -> -8.6,
-    //     peak 601 deg/p) to 7 deg (-1.0 -> -8.6, peak 288). And fov stops
-    //     fighting the recede: it used to drop 58 -> 54 across this key,
-    //     MAGNIFYING by 8.7% just as the camera closed on the crown; it now
-    //     holds wide (57.2) through that stretch and eases later, peak
-    //     114 deg/p against 166.
+    //     WHY THE OLD PATH HAD TO PUSH IN. The Owned rest sits at x +1.73,
+    //     the crown at x +0.06, the Final rest at x -14.72 — the crown is
+    //     BETWEEN the two rests, so the x-gap must pass through zero. The old
+    //     path ran almost straight down the x axis, so when the x-gap
+    //     collapsed the whole distance collapsed with it: a fly-past, and a
+    //     gaze tracking a point you fly past has unbounded angular rate at
+    //     closest approach. That is why re-aiming could not fix it.
     //
-    //     POSITIONS ARE BIT-EXACT — every key below keeps the shipped pos.
-    //     That is not politeness, it is the constraint: owned/leg.js samples
+    //     THE FIX IS LATERAL, AND IT IS THE ONLY KIND THAT WORKS. Distance
+    //     lost in x has to be already banked in z BEFORE the crossing, and it
+    //     has to be banked PERMANENTLY — a straight dolly back along -gaze
+    //     (+X) was measured and rejected: it buys distance and then gives it
+    //     all back on the way past, re-magnifying the crown +50/p over
+    //     p 0.752-0.767 and putting a second closest approach where the first
+    //     one was. z is the only axis whose offset survives, because the
+    //     Final rest already sits at z +2.70. So the leg now swings OUT to
+    //     z 3.11 while it crosses, on ONE hump (a single sign change in z),
+    //     and comes home to the frozen 2.700. Nothing is invented: the leg
+    //     spends z the world already had, just earlier.
+    //
+    //     Measured over p 0.725-0.925 at 20,001 samples per aspect (step 1e-5
+    //     in p), landscape AND portrait: ZERO negative distance steps, ZERO
+    //     negative height steps, ZERO positive x steps. Not "small" — none.
+    //     The distance minimum IS the rest and the height minimum IS the rest,
+    //     so there is no closest approach and no sink anywhere on the leg, and
+    //     holding x monotone keeps pullOf/riseOf single-direction. The crown's
+    //     apparent scale never rises once (0 samples, against 52, and its peak
+    //     rate is -24/p — always falling). It now recedes INTO frame — NDC y
+    //     0.92 -> 0.72, shrinking 31%
+    //     — before the turn carries it out the RIGHT edge at p 0.7635, where
+    //     it used to be gone out of the TOP by p 0.7325, 8% BIGGER than it
+    //     was at the rest.
+    //
+    //     WHAT IS HELD. x at the three reveal-bearing keys is BIT-EXACT
+    //     (-7.700 / -10.200 / -12.300): final's reveal front is
+    //     pullOf(camera.position.x) and its rise mask is riseOf(the same), so
+    //     holding x holds the reveal schedule. The soil crossing lands at
+    //     p 0.8555 against 0.8495. Both rests are untouched. Pass 1's gaze
+    //     schedule is CARRIED, not re-authored: every key below keeps pass
+    //     1's yaw and pitch to 0.1 deg and its gaze length, so the 141.2 deg
+    //     reversal is still spent early and underground (yaw peak 1064 deg/p,
+    //     against pass 1's 1070) — only the eye's place moved.
+    //
+    //     POSITION KEYS FROM HERE ARE PLACEMENT-BEARING: owned/leg.js samples
     //     the director's POSITION spline over p 0.660-0.872 for every
-    //     clearance rule, and final/index.js's reveal front is pullOf(camera
-    //     .position.x). Holding pos fixed means the built colony and the
-    //     reveal front are unchanged by construction, so this re-key can only
-    //     move where the lens is POINTED. (The residual it therefore cannot
-    //     fix is documented in 17-final-field.md: the path still passes
-    //     within 0.82 units of the crown at p 0.751, so the crown leaves the
-    //     top of frame instead of receding. That is a position fault inside
-    //     the placement-bearing window and restaging it is a colony rebuild.)
-    { t: 0.7280000000000002,  pos: V(-3.300, -1.40, 0.350), tgt: V(-4.979, -1.808, -2.808), fov: 57.2, note: 'owned-rest-drift' },   // p 0.782, pitch -6.5 yaw -28
-    { t: 0.8480000000000003,  pos: V(-5.300, -1.02, 0.780), tgt: V(-5.136, -1.389, -3.903), fov: 55.2 },                             // p 0.812, pitch -4.5 yaw +2
-    // T4 fires in here: the camera clears the soil-line at p ~ 0.86
-    { t: 0.98,                pos: V(-7.700, -0.20, 1.250), tgt: V(-4.653, -0.466, -4.028), fov: 52.8 },                             // p 0.845, pitch -2.5 yaw +30
+    //     clearance rule, so this re-path necessarily regrows the colony
+    //     around the new corridor — which is the point, and why owned@* is
+    //     re-shot in this commit. The rest key's zero tangent (hold) means
+    //     nothing at p <= 0.725 moves: the dive, the T3 crossing and the
+    //     Owned rest composition are bit-exact.
+    //
+    //     THE GAZE, unchanged in intent from pass 1: the two rests MANDATE a
+    //     141.2 deg reversal (Owned looks -X straight up the root crown,
+    //     Final looks +X back across the ring chord), and it is spent EARLY
+    //     and underground, where the frame is a homogeneous network and a
+    //     turn reads as turning to look back the way you came. Yaw stays
+    //     monotone with zero sign flips, ~88% complete by p 0.878, so the
+    //     camera surfaces already facing the field and the last stretch only
+    //     eases home. fov still holds wide through the recede instead of
+    //     fighting it.
+    //
+    //     THE WITHDRAW KEY (t 0.60) IS NEW. The rest's hold forces a zero
+    //     tangent, so without a key inside the first 0.025 of p the leg left
+    //     the rest already committed to the old straight-down-x run. This key
+    //     is what lets the swing start while the camera is still close.
+    //
+    //     THE Y SCHEDULE IS THE SHIPPED ONE WITH THE DIP TAKEN OUT, not a
+    //     steeper climb: -1.180 -> -1.16 -> -1.12 -> -1.00 -> -0.40 and then
+    //     the real rise. Lifting y harder underground was measured and
+    //     rejected — portrait's own `rise` offset stacks on top of it, and it
+    //     pierced the soil at p 0.817 with final's rise mask only 11% open,
+    //     against 58% shipped. Held down like this, portrait pierces at
+    //     p 0.829 with the mask 69% open, BETTER than the shipped 0.823/58%,
+    //     while landscape still clears at mask 1.0. Monotone is the ask; a
+    //     race to the surface is not.
+    { t: 0.6000000000000001,  pos: V(1.200, -1.16, 2.250),  tgt: V(-1.503, -1.595, 0.674),  fov: 57.9, note: 'withdraw' },          // p 0.750, pitch -7.9 yaw -120.2
+    { t: 0.7280000000000002,  pos: V(-1.200, -1.12, 3.000), tgt: V(-2.879, -1.528, -0.158), fov: 57.2, note: 'owned-rest-drift' },  // p 0.782, pitch -6.5 yaw -152.0
+    { t: 0.8480000000000003,  pos: V(-4.600, -1.00, 3.100), tgt: V(-4.436, -1.369, -1.583), fov: 55.2 },                            // p 0.812, pitch -4.5 yaw +178.0
+    // T4 fires in here: the camera clears the soil-line at p ~ 0.856
+    { t: 0.98,                pos: V(-7.700, -0.40, 2.950), tgt: V(-4.653, -0.666, -2.328), fov: 52.8 },                            // p 0.845, pitch -2.5 yaw +150.0
   ],
 };
