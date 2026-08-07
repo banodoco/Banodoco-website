@@ -1461,3 +1461,186 @@ was **0.2982 at the portrait Inspire rest**, and only the arm gate
 (`amount > 0.003`, p 0.32) kept the ground network off screen there. D21's pose
 puts `forward.y` back to +0.0217 and the resolve back to exactly 0, restoring
 the stated invariant in both orientations.
+
+---
+
+## 2026-08-07 (later) — a lot more gradual: the gradient, not the schedule
+
+**The ask, verbatim.** *"Can you make the Connect the ecosystem entry animation
+thing run a lot slower — meaning the way the ground lights up, that should
+happen a lot more gradually."*
+
+This is the **third** report on this timing. The section above
+(`2026-08-07 — Hannah re-reports the rush`) measured the shipped build, found
+`4146288` live and doing what it says, and concluded she had been riding an
+older tree. She is now asking again *on the current tree*, so that conclusion
+is spent: the shipped pace is simply still too fast for her, and the honest
+reading of her sentence is that the complaint was never really about the
+schedule. **"The way the ground lights up"** is a rate, not a duration.
+
+### 1. The schedule is nearly out of road, and it is worth saying by how much
+
+Both ends are pinned and the measurement says so exactly.
+
+| bound | value | what sets it |
+|---|---|---|
+| far end | leg-t 0.487 (p 0.4871) | p 0.490 is the section's frozen reference still and must be fully lit |
+| first draw | **p 0.3500** | the camera-pure resolve: `group.visible` needs `resolve > 0.0004`, and `forward.y` does not cross `GAZE_HI` before then |
+| required lead | 0.035 of p | the restage's own requirement: the eye must read the web as PRE-EXISTING |
+| ⇒ earliest start | **p 0.3850** | 0.3500 + 0.035 |
+
+So the whole schedule can grow from 0.0868 to 0.1021 of p — **1.18x, and that
+is all of it.** Confirmed against the clock rather than assumed: at a
+deliberate 600 px/s the arrival runs at 0.0315 of p per second through this
+stretch, so 0.1021 of p is 3.24 s and the shipped build already spent 2.69 s of
+it. There was about half a second in the schedule, total.
+
+Two ways of finding more were tried and rejected:
+
+- **Raise `LIGHT_OVERLAP`.** It works arithmetically — a larger overlap packs
+  the three windows into less p, so each may be longer — but it buys slower
+  fronts by making the three routes more *simultaneous*, which is the rush the
+  whole line of work exists to remove.
+- **Move `GAZE_HI` so the network resolves earlier.** This is the only way to
+  open the front of the budget, and it is not for sale: the margin it would
+  spend is what keeps the resolve **exactly 0 at the portrait Inspire rest** —
+  0.0426 of `forward.y` against a 0.0059 handheld wander, a protected frame,
+  and a property `93723f0` had to restore. That commit is also why the lead is
+  only 0.051 to begin with (it moved the first draw p 0.3256 → 0.3500).
+
+Starting at p 0.3850 is safe, and for a reason more specific than the 0.035
+rule. Shot at 1440x900 at p 0.370 / 0.380 / 0.385: the ground is
+unambiguously a drawn web at all three, because the **hero's own root web is at
+full brightness there and has been since p 0** — Connect's quiet routes are an
+organisation of it, not a replacement for it, and they are themselves at 0.26
+of resolve by 0.385. The first metres of ADOS's run are over exactly that
+ground: the densest, longest-drawn part of the frame.
+
+### 2. The gradient is where the change lives
+
+    FRONT_SOFT   0.11 -> 0.32     the quiet->lit ramp trailing the head
+    LIGHT_LO     0.0909 -> 0.022727 (leg-t)   p 0.4002 -> p 0.3850
+    EASE_MIX     (new) 0.55       linear/smoothstep blend for the front's pace
+
+`FRONT_SOFT` is the whole answer. It sets how long a **given patch of ground**
+takes to come up from quiet to lit — which is precisely the thing her sentence
+names — and unlike the schedule it has room. It is bounded above, but by
+geometry rather than taste: `hubIgnite` opens each core over this same width,
+and ADOS's hub sits only **0.42 along-units** from the base, so a wider ramp
+would have the nearest core kindling on the frame its front departs. The kindle
+therefore carries a floor (`max(along * 0.5, along - FRONT_SOFT)`), inert at
+any ramp narrow enough not to need it and binding only on ADOS at 0.32.
+
+`EASE_MIX` is free. Each front ran on a plain smoothstep, which peaks at 1.5x
+its own mean speed halfway through and falls to zero at both ends — so the
+arrival had a crawl-rush-crawl pulse whose *fastest* moment was the middle of a
+run, which is exactly where the hub kindles and where the eye is. Blending 55%
+smoothstep with 45% linear drops the peak to 1.275x and leaves the ends at
+0.45x. Zero terminal velocity was not worth protecting: at t = 0 the head sits
+at along 0 with nothing lifted behind it, and at t = 1 it is already past the
+farthest tip. Both ends do their work through `FRONT_SOFT`. Fully linear was
+tried and is worse — the departure grows a visible edge.
+
+### 3. Measured
+
+    p-WINDOWS            before                after
+      ADOS depart        0.4002                0.3850
+      ADOS saturate      0.4312                0.4233
+      Hivemind depart    0.4225                0.4118
+      Hivemind saturate  0.4560                0.4517
+      Discord depart     0.4461                0.4394
+      Discord saturate   0.4870                0.4871
+      whole arrival      0.0868 of p           0.1021 of p     1.18x
+      hub kindles        0.4141/0.4393/0.4695  0.4062/0.4271/0.4608
+      core swell window  0.0025/0.0019/0.0017  0.0125/0.0040/0.0050  2.1-5.0x
+      per-route reach    0.870/0.932/1.115     1.080/1.142/1.325
+
+**The headline number is not in that table.** A strand's own quiet→lit lift:
+
+| | before | after | |
+|---|---|---|---|
+| at the front's mean speed | 0.00392 of p | **0.01126** | **2.87x** |
+| at its fastest moment | 0.00261 | **0.00890** | **3.41x** |
+| in seconds, deliberate scroll | 0.12 s | **0.36 s** | |
+| ...at the fastest moment | 0.082 s | **0.28 s** | |
+
+A tenth of a second is a wipe. A third of a second is a thing you watch happen.
+
+    WALL CLOCK        rate      arrival   hub 1->2  hub 2->3   per-route windows
+      before      600 px/s      2.69 s     0.84 s    0.92 s    1.04 / 1.08 / 1.19 s
+      after       600 px/s      3.26 s     0.87 s    1.04 s    1.30 / 1.28 / 1.42 s
+      before     3600 px/s      0.46 s     0.13 s    0.17 s    0.18 / 0.18 / 0.19 s
+      after      3600 px/s      0.55 s     0.17 s    0.13 s    0.21 / 0.22 / 0.23 s
+
+Rides are real `wheel` events dispatched through the shipped capture listeners,
+every frame timed, `uLit` and the three core opacities sampled per frame.
+
+The kindle spread is essentially unchanged (0.0554 → 0.0546) and that is
+correct, not a miss: the sequence was already right at 4.58x after `4146288`.
+What changed is that each core now **swells** over 2–5x more p instead of
+snapping on, which is the same complaint answered at the hub that
+`FRONT_SOFT` answers on the ground.
+
+### 4. Gates
+
+1. **Reference stills byte-identical.** `capture.py --check`, all five poses ×
+   both sizes: **worst MAE 0.00/255, 0.0% px >8. PASS.** Every golden,
+   including `final`, at exactly 0.00 — this is a re-time of the approach, not
+   of the frame it arrives at, and no golden was re-shot.
+2. **Reverse mirrors exactly.** Continuous forward-then-backward scrub at
+   400 px/s through real wheel events, every frame sampled, compared at matched
+   p by interpolation:
+
+   | size | max Δ`uLit` | max Δ core (arm fully open) | first drawn p fwd / rev |
+   |---|---|---|---|
+   | 1440x900 | 1.20e-3 | 5.50e-4 | 0.3465 / 0.3495 |
+   | 1280x800 | 1.21e-3 | 3.62e-4 | 0.3472 / 0.3517 |
+   | 375x812 | 2.61e-4 | 2.16e-4 | 0.3385 / 0.3388 |
+
+   The residuals are linear-interpolation error between frames 3.4e-4 of p
+   apart; `uLit` is pure in p and cannot hysterese. The first-drawn-p spread is
+   the eased `amount` at the arm edge, which is shipped, documented behaviour
+   (arming snaps, retiring eases).
+
+   *For whoever measures this next:* two sampling traps here, both of which
+   read as hysteresis and neither of which is. (a) Under `?nosnap=1` the legacy
+   band-limited magnetism drags an unattended progress toward the nearest rest,
+   so a value read in a second CDP round-trip is a **future** frame — pin p
+   every frame and sample inside the pinned one. (b) The chapter's animator is
+   registered **before** `journey`'s, so `uLit` is written from the `litR` that
+   `drive()` computed on the *previous* frame; pairing it with this frame's p
+   is a one-frame lag whose sign flips with direction and therefore shows up
+   doubled. It cost 4.2e-2 of apparent hysteresis until the pairing was fixed.
+   `18-one-species.md` §11.6 records the same trap from the other side.
+3. **No self-ignition.** Across both scrub directions at all three sizes, no
+   drawn frame below p 0.3840 carries any `uLit` above 1e-4. The web arrives as
+   a quiet web at p 0.350 and nothing is lit for 0.035 of p after it.
+4. **Rest fully lit at every size.** p 0.490 reads `uLit` [1, 1, 1] and all
+   three cores at their 0.58 resting cap at 1440x900, 1280x800 and 375x812.
+5. **Monotone, finite.** Zero non-monotonic steps in any `uLit` component
+   across the arrival and zero non-finite values in `uLit` / `uHead` / core
+   opacity, over every sweep and both scrub directions.
+6. **Console clean.** `console.error` / `warn` / `onerror` /
+   `unhandledrejection` trapped **before the app loads**, then a full
+   0 → 1 → 0 ride: **929 frames, 0 entries.**
+7. **Staging shot.** 1440x900 at p 0.3850 / 0.4000 / 0.4150 / 0.4300 / 0.4450 /
+   0.4600 / 0.4750 / 0.4871. Quiet web; a soft glow growing out of the stipe
+   base with no visible edge to it; ADOS's run lit and its hub burning while
+   the second front leaves; two hubs lit and the third front out to the far
+   right; all three home. Each beat still owns its own frame, and the 0.4150
+   frame is the one that shows the change — a long soft gradient through the
+   ground web rather than a bright line crossing it.
+
+### Residuals
+
+- **The schedule is now spent.** 0.1021 of p is the whole distance between the
+  first draw plus its required lead and the frozen rest. Anyone asked to slow
+  this again has `FRONT_SOFT` (bounded at ~0.42 by ADOS's own run, and already
+  at 0.32) and nothing else, unless `GAZE_HI` or the p 0.490 rest moves — and
+  the first of those costs a protected frame.
+- The white head is quieter than it was (it is on screen longer but the same
+  0.55 amplitude over a wider, dimmer ramp) and still blows out where it
+  crosses a braid at a hub landing. Unchanged from `4146288`; the lever is
+  still `uColHot`'s weight in the `tip` term.
+- The hero-web dim rides `litAvg`, so it now begins at p 0.385 rather than
+  0.400 and is gentler per unit p again. Same deliberate trade as before.

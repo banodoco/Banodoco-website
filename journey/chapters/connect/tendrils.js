@@ -90,13 +90,33 @@ const tmpC = new THREE.Color();
 // TRAIL kindling rather than a switch closing, and it was widened 0.05 -> 0.11
 // with the one-route-at-a-time re-time (2026-08-06) — a slower front wants a
 // longer gradient or it reads as a hard edge crawling across the ground.
+//
+// 0.11 -> 0.32 (2026-08-07, Hannah's THIRD report on this timing: "the way the
+// ground lights up, that should happen a lot more gradually"). This is the one
+// lever with real headroom left. The total p-window is very nearly pinned —
+// the Connect rest at p 0.490 is a frozen reference still that must be fully
+// lit, and the earliest the light may start is bounded by the camera-pure
+// resolve, which does not draw the network at all before p 0.3500 — so the
+// whole schedule can only be stretched ~1.17x. But how long a GIVEN PATCH OF
+// GROUND takes to come up from quiet to lit is set by this ramp against the
+// head's speed, and that is what "gradually" actually names. At 0.11 a strand
+// lifted over 0.0040 of p — about a tenth of a second at a deliberate scroll,
+// which is a wipe, not a growth. At 0.32 it lifts over 0.0110, near 0.30 s.
+//
+// It is bounded above, and not by taste: `hubIgnite` in index.js opens the
+// core over this same width (the kindle must land with its own trail), and
+// ADOS's hub sits only 0.42 along-units from the base, so a ramp wider than
+// that would have the nearest hub already kindling as its front departs. The
+// kindle therefore carries a floor of its own (see index.js) and this value is
+// kept comfortably under ADOS's run.
+//
 // FRONT_TIP is the half-width of the brighter head riding at the very front,
 // and is deliberately left near its shipped 0.028: the head runs hot enough to
 // blow white where it crosses a braid (it does so on the shipped build too),
 // and the slower front already holds it on screen longer, so widening it as
 // well turned an accent into a cold streak. The trail is the SOFT ramp's job;
 // the tip is only the glint that says where the light is right now.
-export const FRONT_SOFT = 0.11;
+export const FRONT_SOFT = 0.32;
 export const FRONT_TIP = 0.032;
 
 function smooth01(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); }
