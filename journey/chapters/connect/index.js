@@ -107,10 +107,85 @@ function pulseDriver(dur) {
    brightening as the resolve completes. Checked on screen at 1440x900 across
    p 0.400/0.409/0.418 — it reads as light landing on a dim ground, never as
    geometry arriving, because the geometry is demonstrably already drawn in the
-   frame before it. Total arrival: 0.0871 p, up from 0.0543. */
-const LIGHT_LO = 0.0909;   // leg-t — p 0.4000, ADOS's light leaves the base
+   frame before it. Total arrival: 0.0871 p, up from 0.0543.
+
+   A LOT MORE GRADUAL (2026-08-07, Hannah's THIRD report on this timing: "make
+   the Connect the ecosystem entry animation thing run a lot slower — meaning
+   the way the ground lights up, that should happen a lot more gradually").
+
+   The previous pass (4146288) was measured live and confirmed shipped, and she
+   is asking again on that build, so the shipped pace is simply still too fast.
+   Two budgets were opened, and they are very different sizes:
+
+   1. THE SCHEDULE. Nearly pinned, and it is worth stating exactly by what.
+      The far end cannot move: p 0.490 is the section's frozen reference still
+      and must be FULLY lit, so the last tip still has to saturate by leg-t
+      0.487. So the only budget is at the front, and the front is bounded by
+      the CAMERA-PURE RESOLVE — the network is not drawn at all until the
+      camera's gaze has dropped enough to resolve it, which on the current
+      build is p 0.3500 (it was p 0.3256 before 93723f0 raised the Inspire
+      aim; that commit is what made this budget small). The light may not start
+      before the eye has read the web as PRE-EXISTING, and the restage set that
+      lead at 0.035 of p. 0.3500 + 0.035 = 0.3850, and that is exactly where
+      the light now leaves the base — the true earliest start, bounded by the
+      resolve's own first draw, not by taste. Shot at 1440x900 across
+      0.370 / 0.380 / 0.385: the ground is unambiguously a drawn web at all
+      three (the hero's own root web is at full brightness there from p 0, and
+      Connect's quiet routes are on top of it at 0.26 of resolve by 0.385), and
+      the first metres of ADOS's run are over exactly that ground — the
+      densest, oldest-drawn part of the frame. Total arrival 0.0862 -> 0.1021
+      of p, 1.18x. That is all the schedule has.
+
+   2. THE GRADIENT. This is where the change actually lives, and it has room.
+      What "the ground lights up gradually" names is how long a given patch of
+      ground takes to come up from quiet to lit, which is FRONT_SOFT against
+      the head's speed — not the length of the schedule. FRONT_SOFT 0.11 ->
+      0.32 (tendrils.js) takes a strand's own lift from 0.0040 to 0.0110 of p,
+      2.75x, and the hub cores swell over the same widened window because the
+      kindle is keyed to the same ramp. Combined with the 1.18x schedule, every
+      visible rate in the arrival is between 1.2x and 2.8x slower and nothing
+      about the staging changed: still one route at a time, still nearest to
+      farthest, still pure in p.
+
+   Tried and rejected: raising LIGHT_OVERLAP to buy slower fronts out of a
+   fixed budget (it works arithmetically — a bigger overlap packs the three
+   windows into less p, so each may be longer — but it does so by making the
+   three routes more simultaneous, which is the rush this whole line of work
+   exists to remove); and moving GAZE_HI to make the network resolve earlier
+   and open the front budget (it eats the margin that keeps the resolve exactly
+   0 at the portrait Inspire rest, which is a protected frame — 0.0426 of
+   forward.y against a 0.0059 handheld wander, and not for sale). */
+const LIGHT_LO = 0.022727; // leg-t — p 0.3850, ADOS's light leaves the base
 const LIGHT_HI = 0.487;    // leg-t — p 0.4871, Discord's farthest tip saturates
 const LIGHT_OVERLAP = 0.30;
+
+/* THE FRONT'S OWN PACE INSIDE ITS WINDOW (2026-08-07, with the above).
+   Each front ran on a plain smoothstep, whose speed peaks at 1.5x its own
+   average halfway through and falls to zero at both ends. Laid end to end with
+   a 0.30 overlap that gives the arrival a crawl-rush-crawl pulse: the slowest
+   moments are the handovers (one window's dying tail against the next one's
+   waking head) and the fastest is the middle of a run — which is exactly where
+   the hub kindles and where the eye is. Averaging it out is free (it costs no
+   p at all) and it is the honest reading of "gradually": the light should move
+   at ONE pace, not sprint through the part you are watching.
+
+   f(t) = (1 - B)*t + B*smoothstep(t) — a linear ramp with the smoothstep
+   blended in for its eased ends. At B = 0.55 the peak drops 1.500x -> 1.275x
+   of the mean and the ends leave/land at 0.45x rather than 0. Zero terminal
+   velocity is not worth protecting here: at t = 0 the head sits at along 0
+   where the trailing ramp has not lifted anything yet, and at t = 1 it is
+   already past the farthest tip, so both ends are doing their work through
+   FRONT_SOFT, not through the head's speed. Fully linear (B = 0) was tried and
+   is worse — the departure gets a visible edge to it. */
+const EASE_MIX = 0.55;
+// CLAMPS FIRST. smooth01 clamps its own input; the linear term does not, and
+// an unclamped one would drive uLit negative before the window and past 1
+// after it — which in the shader is a head running backwards down the route
+// before it departs, and a rest frame lit past saturation.
+const frontEase = (x) => {
+  x = x < 0 ? 0 : x > 1 ? 1 : x;
+  return (1 - EASE_MIX) * x + EASE_MIX * smooth01(x);
+};
 
 /* ================================================================
    The camera-pure resolve (Change 1, 2026-08-05)
@@ -423,8 +498,21 @@ export function createConnect(sceneApi) {
       // light reaches the hub — never on a neighbour's front, never on a clock.
       // The window is the front's own ramp width, so the core swells over the
       // same distance the trail takes to lift.
+      // THE KINDLE CARRIES A FLOOR (2026-08-07, with FRONT_SOFT 0.11 -> 0.32).
+      // The kindle window IS the front's own ramp width, which is what makes
+      // the core swell over exactly the distance its trail takes to lift — but
+      // ADOS's hub sits only 0.42 along-units from the base, so once the ramp
+      // is wider than about that, `hm.along - FRONT_SOFT` goes negative and the
+      // nearest core would already be kindling on the frame its front departs:
+      // a hub lit before its light left, which is the one thing this whole
+      // staging exists to prevent. The floor keeps the kindle inside the second
+      // half of the run on every route however wide the ramp gets, and it is
+      // INERT at any ramp narrow enough not to need it (at 0.32 it binds only
+      // on ADOS, by 0.076 of along; Hivemind and Discord are far enough out
+      // that the ramp alone still starts them late).
       const headAt = litR[hm.route] * U.uLitMax.value.getComponent(hm.route);
-      hubIgnite[i] = sm(hm.along - FRONT_SOFT, hm.along + 0.03, headAt);
+      hubIgnite[i] = sm(Math.max(hm.along * 0.5, hm.along - FRONT_SOFT),
+                        hm.along + 0.03, headAt);
       const core = net.cores[i];
       const a = amt[hm.id], flare = pulses[i].flare;
       // Resting identity raised (audit taste pass, 2026-08-04): each hub must
@@ -483,7 +571,8 @@ export function createConnect(sceneApi) {
       const legT = (p - SPAN_LO) / (SPAN_HI - SPAN_LO);
       litMin = 1; litAvg = 0;
       for (let i = 0; i < 3; i++) {
-        const L = sm(LIT_WIN[i][0], LIT_WIN[i][1], legT);
+        // frontEase, not smoothstep: one pace across the run (see EASE_MIX).
+        const L = frontEase((legT - LIT_WIN[i][0]) / (LIT_WIN[i][1] - LIT_WIN[i][0]));
         litR[i] = L;
         // The arriving head glows only while THIS route's light is travelling.
         // HEAD_PEAK 1.0 -> 0.55 with the re-time: the head is multiplied into
