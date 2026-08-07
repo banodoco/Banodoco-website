@@ -1370,3 +1370,186 @@ clips less. Neither was the reason for the change; both are why it is cheap.
   residuals D19 left (+9.5 and ±23.8).
 - **The stipe still crosses the headline.** It always has; nothing here changes
   it, and at this offset the crossing is slightly shorter than it was.
+
+## 2026-08-07 — "they just flash up": the arrival was a switch, not a growth
+
+Hannah, on entering Inspire: *"why when I go into Inspire does it feel like they
+just flash up and weirdly appear?"*
+
+Not a second population and not a dip — the emphasis she approved in `c6bbbab`
+arrives too fast. This section records what was measured, what the cause turned
+out to be (**not** what a first pass had concluded), and what changed.
+
+### The instrument
+
+A frozen, exactly reversible per-dot probe against the live page at 1440x900:
+place with `journey.scrollTo(p)`, hold the organism clock at `freezeTime(0)` so
+every dot's free-running stage phase is the same at every sample, then read
+`sceneApi.spores.sporePts`'s colour and position buffers directly. Luminance is
+Rec.709 on the vertex colour; since `dim()` writes `col = colorBase * f`, the
+per-dot *ratio* to its own p = 0 luminance is exactly `f`, independent of the
+weighting — so the "dark" test is instrument-free.
+
+Two controls say the instrument is the same one the earlier sections used:
+p = 0 and the Inspire rest reproduce to the digit across reloads, and the
+`b2c9584` boundary troughs come back as **−3.90%** and **−11.71%** against that
+section's published −4.0% and −11.7%.
+
+### What it actually is — the correction
+
+A prior investigation named the **migrant draw-on gate** (`rl`/`g0`/`drawOn`,
+below the braided-rise branch) as the cause, on the argument that `rg` is one
+number per exit per frame and therefore sweeps the whole cohort's clocks in
+lockstep. That argument about the gate is **correct**, and the gate has been
+fixed here too — but it is not what Hannah is seeing, because **the gate is not
+running during the event she reported.**
+
+The per-exit effective reveals, measured through `seat.drive()`:
+
+| p | eff[0] resident | eff[1] Arca | eff[2] 2RP |
+|---|---|---|---|
+| 0.1075 | 0.105 | **0** | **0** |
+| 0.115 | 0.330 | **0** | **0** |
+| 0.125 | 0.683 | **0** | **0** |
+| 0.130 | 0.830 | 0.022 | **0** |
+| 0.1425 | 1.000 | 0.432 | 0 |
+
+The steepest rise — dots above luminance 1.0 going **0 → 387** — lands entirely
+inside p 0.1075–0.130, where *both migrant reveals are exactly zero*. No migrant
+dot has any conversion there, so no migrant dot reaches the gate. Every one of
+those 387 dots belongs to the **resident** exit (ArtCompute), and the resident's
+`rg` is the literal `1` at every reveal — its gate never fires, by construction.
+
+The real cause is simpler and one level up: **`pw = PLUME_GAIN * env * conv`**,
+so a dot's brightness rides its conversion ramp, and that ramp's per-dot
+stagger was the population's entire arrival spread. It was **0.45 of reveal**
+wide for the resident (`ss(0, 0.35, rev - stag*0.45)`), against a reveal that
+crosses its whole range in **0.045 of p**. The cohort therefore delivered 80% of
+its amplitude in Δp ≈ 0.0098 — about **one degree of camera azimuth**, which at
+a brisk scroll is three rendered frames. That is a switch.
+
+`b2c9584`'s conservation floor is a contributing factor exactly as suspected —
+it makes previously-gated dots brighten as ∝ conv² rather than sitting at zero,
+which concentrates more of the total gain into that same window. It is not
+reverted; it fixed a real defect and its metrics are re-checked below.
+
+### The fix — three changes, all in `organism/spores.js`
+
+1. **Widen the conversion stagger to the choreography's limit.** Resident
+   `ss(0, 0.35, rev - stag*0.45)` → `ss(0, 0.26, rev - sw*0.74)`: the cohort now
+   spans the **whole** reveal instead of its first 45%, completing at exactly
+   rev 1. Migrants `ss(0, 0.30, rev - stag*0.25)` → `ss(0, 0.22, rev - sw*0.33)`,
+   still complete at exactly rev 0.55 where their walk front lands.
+
+2. **Pre-warp the stagger against the reveal's own shape** (`stagW`, built once
+   in `initSteer`). A stagger uniform in *reveal* is not uniform on *screen*:
+   the chapter drives each reveal as a smoothstep of progress, so it crawls at
+   both ends and sprints through the middle, re-clustering a flat stagger into
+   the middle third of the scroll. Warping the hash through the same smoothstep
+   puts proportionally more dots where the reveal is slow. `stag` itself is
+   untouched, so every other assignment that reads it keeps its approved value.
+   This is worth as much as change 1 — see the table.
+
+3. **Stagger the migrant draw-on gate per dot**, which is the prior
+   investigation's own prescription and remains right on its merits: `rg` was
+   one number per exit, now `ss(0.55 - sw*0.42, 1, rev)`. The gate's soft edge
+   also widens from 0.10 to `GATE_WIDE` 0.25, with `GATE_TOP` raised 1.12 → 1.30
+   so that `GATE_TOP - GATE_WIDE ≥ 1` keeps the rev-1 clamp exact.
+
+**Nothing here is an approximation at the rest.** Every ramp reaches exactly 1
+at its stated reveal for every dot, so `env *= 1` and `conv = 1` hold literally.
+
+### Before / after
+
+Rate of brightening, scored on "dots above luminance 1.0" mapped onto two
+**recorded real wheel gestures** (the traces are unchanged by the fix — nothing
+here touches scroll — so the same p(t) drives both columns):
+
+| | before | stagger only | **stagger + warp** |
+|---|---|---|---|
+| first surge 10→90%, deliberate | 114 ms / 6 fr | 180 ms / 10 fr | **221 ms / 12 fr** |
+| first surge 10→90%, brisk | 56 ms / 3 fr | 79 ms / 5 fr | **103 ms / 6 fr** |
+| peak dots per 60 Hz frame, deliberate | 54.2 | 31.5 | **30.7** |
+| peak dots per 60 Hz frame, brisk | 127.4 | 74.5 | **71.9** |
+| peak dots per 50 ms, deliberate | 161.3 | 95.3 | **87.8** |
+| peak dots per 50 ms, brisk | 322.9 | 223.1 | **186.2** |
+| peak dots per 100 ms, deliberate | 288.0 | 187.8 | **155.9** |
+
+The steepest single step of the trace, per unit p, runs **36,400 → 20,000
+dots**, and the curve's shape changes from an S with a hard middle to very
+nearly a straight line — per-step deltas across the resident's arrival are now
+22/50/47/30/44/30/35/30/34/40/19 against 30/64/91/83/68/37/11/1 before. There is
+no longer a peak to shave; the remaining spread is bounded by the reveal's own
+p-width.
+
+**Honest limit.** The rise is now roughly twice as long in wall clock at both
+speeds, and the peak rate is down ~44%. At a *brisk* scroll the first surge is
+6 frames — better than 3, but still inside the 5–7 band the brief named. That
+residual is structural and lives **outside** this file: the resident's reveal
+occupies Δp 0.045, so at `MAX_SCRUB_RATE` 0.45 p/s the entire arrival cannot
+take longer than ~100 ms however it is distributed. Spreading it further means
+spending more journey progress on the reveal, which is the chapter's
+camera-driven mapping (`journey/chapters/inspire/camera.js`) and out of scope
+here. Anyone who wants the rest of it should start there — and note that
+p 0.1825–0.26 is already all rest, so the budget exists.
+
+### `b2c9584` re-measured — no regression, small improvement
+
+Dark **and** converted (displaced > 0.5 from hero, below 25% of own p = 0
+luminance), same run, same instrument:
+
+| p | before | after | resting baseline |
+|---|---|---|---|
+| 0.147 (Arca) | 196 | **198** | 243 / 245 |
+| 0.167 (2RP) | 246 | **248** | 243 / 245 |
+| 0.26 (Inspire rest) | 243 | **245** | — |
+| **0.385 (→ Connect)** | 196 | **180** | 243 / 245 |
+
+(The two baselines differ by 2 counts because the hero drift state is
+path-dependent across reloads; read each column against its own. Normalised,
+0.147 and 0.167 are *identical* before and after, and 0.385 improves from −47 to
+−65 relative to baseline.) Every transition point still sits at or below the
+resting baseline — the excess cohort `b2c9584` removed has not come back.
+
+Boundary troughs, total shed light, local drawdown from the preceding peak:
+
+| | before | after |
+|---|---|---|
+| Mission → Inspire | −3.90% | **−1.81%** |
+| Inspire → Connect | −11.71% | **−9.59%** |
+
+Both improve, which is the expected sign: spreading the arrival keeps light in
+the population across the window instead of concentrating and then releasing it.
+
+### Gates
+
+- **`capture.py --check` PASS**, worst MAE **0.04/255** (owned mobile, its own
+  determinism noise, unchanged). **`mission` 0.00/0.00 — byte-identical**, as the
+  brief requires. `inspire@1440x900` and `inspire@430x932` are also **0.00** —
+  the Inspire goldens did **not** move, so nothing was re-shot and no provenance
+  entry was needed. `connect`, `owned` desktop and `final` all 0.00.
+- **Three streams still legible at the rest.** Guaranteed by the above rather
+  than merely observed: the rest frame is pixel-identical to the approved
+  `c6bbbab`/`ca7a769` golden. Confirmed on screen at 1440x900 — three distinct
+  rising braids off the rim, each still carrying its chip's anchor dot.
+- **Reverse scrubs mirror exactly.** Forward-arrived vs reverse-arrived per-dot
+  luminance across 21 sample points spanning p 0.10–0.20: **max difference 0**.
+- **Nothing fades in over open view.** Arming is unchanged: at low reveal `conv`
+  and so `cvT` are ~0, the conservation floor is ~0, and the gate is as it was.
+- **Console clean** over a full ride — slow forward, fast forward to the
+  epilogue, fast back, slow back to p = 0, all five chapters reached and p
+  returning to exactly 0. Two expected info lines per load, zero application
+  errors or warnings.
+- **Cost.** One extra `Float32Array(N)` built once, and the per-dot `rg`
+  smoothstep replaces a hoisted lookup — 4,200 iterations of three flops in a
+  loop that already runs several `Math.sin` per dot.
+
+### Also found, deliberately not fixed here
+
+At the **Inspire → Connect** boundary there *is* a genuine second particle
+system, unlike at Mission → Inspire. `journey/chapters/connect/tendrils.js`
+builds its own **108 drifting particles plus glints**, chapter-owned, with its
+own CPU integrator, becoming visible around p ≈ 0.365. That is a real second
+source of dots at that boundary and it is deliberate — recorded here so the next
+person measuring particle counts across that seam is not surprised by it, and
+does not mistake it for the shed gaining or losing population.
