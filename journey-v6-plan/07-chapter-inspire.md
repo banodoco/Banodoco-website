@@ -1553,3 +1553,234 @@ own CPU integrator, becoming visible around p ≈ 0.365. That is a real second
 source of dots at that boundary and it is deliberate — recorded here so the next
 person measuring particle counts across that seam is not surprised by it, and
 does not mistake it for the shed gaining or losing population.
+
+## 2026-08-07 (later) — the ramps were finishing early: spending the rest of the swing
+
+`9e2a277` spread each cohort's brightening across the whole of its own reveal
+and then stopped, because that is all a dot can do. Its residual was structural:
+the resident's reveal occupied Δp 0.045, so at `MAX_SCRUB_RATE` 0.45 p/s the
+entire arrival could not last longer than ~100 ms however its amplitude was
+distributed, and under ~150 ms a luminance change reads as a cut. This section
+spends more scroll progress on the arrival, which is what that residual asked
+for.
+
+### Where the budget was — and where it was not
+
+`9e2a277` pointed at **p 0.1825–0.26**, which is indeed all rest. That budget
+turns out to be **unspendable**, and saying so is half the finding.
+
+The reveals are functions of camera AZIMUTH. p 0.1825–0.26 is the stretch of
+the arrival above **az 78**, and no ramp may finish above ~83: the arrival
+climbs to az 115 and the exit leg falls back through it to meet Connect, so a
+ramp still open up there would run BACKWARD in view on the way out. That is the
+rule D18 wrote when it pulled the old bounds in, and it caps every ramp's top
+regardless of how much p sits above it. The 0.0775 of progress between the end
+of the cascade and the Inspire rest is progress the camera spends going
+somewhere the reveal is not allowed to follow.
+
+Re-shaping `az(p)` was measured as the alternative, since that is the other way
+to move p into the band. It is worth very little. The arrival spends 0.22 of p
+on 127.2 deg, so a perfectly uniform sweep — no departure ramp, no settle,
+which is not a real option — would give the cascade band 0.135 against the
+0.111 it already has. Modelled honestly (trapezoid ramp 0.18 → 0.10, and a
+two-plateau profile that slows the band and accelerates the empty tail), the
+whole family buys **0.5 to 1 frame** on the worst stream, and the two-plateau
+variants pay for it by raising the peak azimuth rate 767 → 912 deg/unit-p. It
+was rejected: `camera.js` is untouched, byte for byte.
+
+**The budget that was spendable was inside the ramps themselves.** The
+resident's window was az 14..44. It *saturated at 44* and then sat flat for the
+34 further degrees the cascade still had before the ceiling. Every ramp was
+finishing early and idling. Nothing had to move for that budget to exist — it
+only had to be claimed.
+
+### The change
+
+`journey/chapters/inspire/index.js`, the `ARR` ramps:
+
+| exit | before | after | window |
+|---|---|---|---|
+| ArtCompute | az 14 → 44 | **az 5 → 78** | 30 → 73 deg |
+| Arca | az 34 → 58 | **az 17 → 78** | 24 → 61 deg |
+| 2RP | az 50 → 74 | **az 29 → 78** | 24 → 49 deg |
+
+Every ramp now runs to the ceiling and the **sequence is carried by the onsets
+alone**. The three streams still enter in the authored order and are always
+visibly at different stages — at az 40 they stand at 0.47 / 0.32 / 0.13 — but
+each one now spends every remaining degree of the swing growing instead of
+stopping.
+
+The resident's onset moves to **az 5** because that is the master drive's own
+onset (`band = sm(5, 28)`); the reveal is a product of the two, so nothing can
+begin earlier, and putting it exactly there costs nothing and makes the seam
+derivation exact.
+
+`drive()`'s `a`/`b`/`c` channels are re-keyed to mirror the new windows. They
+are **inert** and were inert before: `setReveal` takes `max(a, b, c, band)` and
+`band` is the steepest of the four from az -37.7 upward, so the master drive is
+`sm(5, 28)` exactly. Verified rather than asserted — `max(a,b,c,band) - band`
+is **0.000e+0** at every 0.01 deg over az -40..120. They are re-keyed so the
+master's onset stays 5 whichever of them someone edits next, because the T1
+derivation rests on it.
+
+**Spacing is 12 deg, and smaller is better here.** All three windows end at 78,
+so every degree of spacing is a degree taken off the later streams. Measured
+per cohort (frames carrying 80% of that cohort's amplitude, `MAX_SCRUB_RATE`):
+
+| spacing | ArtCompute | Arca | 2RP | conservation drawdown |
+|---|---|---|---|---|
+| shipped 20/16 | 4 | 2 | 2 | −2.10% |
+| **12 (this)** | **7** | **5** | **3** | −1.97% |
+| 18 | 7 | 4 | 3 | −1.50% |
+| 21 | 7 | 4 | 2 | −0.84% |
+
+### The re-derived T1 threshold: 34 → 25
+
+Arming must land where the reveal product is exactly zero. The product is
+`master(az) * arrOf(az, ARR[i])`; the master is `sm(5, 28)` and the earliest
+onset is az 5, so **both factors are identically zero for az ≤ 5** — which is
+d ≤ 17.2 with Mission at az -12.2076. With `HYS_DEG` 8:
+
+```
+arm      d > T - 8    ->  az > T - 20.2076   must be <= 5        ->  T <= 25.21
+release  d < T - 16   ->  az < T - 28.2076   must be > -12.2076  ->  T > 16
+```
+
+T = **25** is the top of that window rounded down to the integer the shipped
+numbers are written in, leaving the arm edge 0.21 deg below the bound — exactly
+the margin 34 left against its own bound of 14. Evaluated:
+
+| edge | az | eff[0] | eff[1] | eff[2] |
+|---|---|---|---|---|
+| arm, d > 17 | 4.7924 | **0.000e+0** | **0.000e+0** | **0.000e+0** |
+| release, d < 9 | -3.2076 | **0.000e+0** | **0.000e+0** | **0.000e+0** |
+
+Both factors are zero at the arm edge (master 0.000e+0, arr0 0.000e+0), the
+release edge is reachable (az -3.21 > the hero pose's -12.21, so a reverse
+scrub does retire), and the gate is not armed at the hero pose (d = 0 is not
+> 17).
+
+### Before / after
+
+Same frozen per-dot instrument as `9e2a277` — `journey.scrollTo(p)`,
+`freezeTime(0)`, Rec.709 on the vertex colour buffer — but run in a **real
+headless Chrome via `capture.py`'s own CDP client**, because the browser pane
+in this session was hidden (`document.hidden`), which throttles rAF and makes
+live frame timing meaningless. The instrument reproduces `9e2a277`'s published
+`eff` table to ±0.004 and its p = 0 baseline to the digit.
+
+**Per-cohort.** Dots crossing luminance 1.0, split three ways by cap-local
+azimuth at the rest (the same coordinate `spores.js` assigns lanes in; the
+three cohorts partition exactly, 475 + 167 + 48 = 690). Scored as *frames
+carrying 80% of that cohort's own amplitude*, which is the brief's language:
+
+| cohort | deliberate 0.21 p/s | brisk 0.35 p/s | fastest 0.45 p/s |
+|---|---|---|---|
+| ArtCompute | 9 → **14** fr (150 → 233 ms) | 5 → **9** fr (83 → 150 ms) | 4 → **7** fr (67 → 117 ms) |
+| Arca | 4 → **9** fr (67 → 150 ms) | 3 → **6** fr (50 → 100 ms) | 2 → **5** fr (33 → 83 ms) |
+| 2RP | 3 → **6** fr (50 → 100 ms) | 2 → **4** fr (33 → 67 ms) | 2 → **3** fr (33 → 50 ms) |
+
+**Structural — each reveal's full p-width**, the quantity `9e2a277` named as
+the bound:
+
+| exit | Δp | deliberate | brisk | fastest |
+|---|---|---|---|---|
+| ArtCompute | 0.044 → **0.101** | 209 → **481** ms | 126 → **289** ms | 98 → **224** ms (5.9 → **13.5** fr) |
+| Arca | 0.032 → **0.084** | 152 → **400** ms | 91 → **240** ms | 71 → **187** ms |
+| 2RP | 0.030 → **0.066** | 143 → **314** ms | 86 → **189** ms | 67 → **147** ms |
+
+**Trajectory and steepness.** Per-step deltas of the count trace over
+p 0.10–0.19 in equal steps go from front-loaded to late-and-even:
+
+```
+before  0  58  98  92  76  63  62  74  32  25  63  46  1  0  0
+after   0  13  61  42  51  53  84  99  89  73  92  28  4  1  0
+```
+
+Steepest **d(luminance)/dp 17,860 → 11,230 (−37%)**; steepest d(count)/dp
+26,000 → 22,000, and its location moves from p 0.113 (the very start of the
+rise, where a step is most visible) to p 0.140.
+
+### `b2c9584` re-measured
+
+Dark **and** converted — displaced > 0.5 from its own p = 0 position and below
+25% of its own p = 0 luminance. Resting baseline 243:
+
+| p | before | after |
+|---|---|---|
+| 0.147 (Arca) | 196 | **206** |
+| 0.167 (2RP) | 246 | **233** |
+| 0.26 (Inspire rest) | 243 | **243** |
+| 0.385 (→ Connect) | 180 | **176** |
+
+Every transition point sits at or below the resting baseline. p 0.167 is an
+outright improvement: it was **above** baseline before (246 vs 243) and is now
+comfortably under.
+
+Boundary troughs — total shed light, local drawdown from the preceding peak:
+
+| | before | after |
+|---|---|---|
+| Mission → Inspire | −2.10% | **−1.97%** |
+| Inspire → Connect | −9.48% | **−9.44%** |
+
+Both improve. **One honest cost, recorded rather than buried:** the arrival's
+total shed light now dips **1.51% below its own pre-arrival baseline** around
+p 0.140, where it previously never went under it. The cause is real and
+specific — a migrant dot's conversion completes at rev 0.55 (the walk front)
+but its draw-on gate only completes near rev 0.96, so it has ceded its ambient
+share before its plume light is fully granted. That gap existed before; the old
+sequencing *hid* it, because each cohort's deficit was covered by the previous
+cohort's already-completed gain. Widening the windows overlaps the cohorts and
+exposes it. Measured against the metric `b2c9584` actually published — drawdown
+from the preceding peak — it is still an improvement, and the deficit is
+bounded (a gated dot keeps 0.85 of its plume term, not zero).
+
+### Gates
+
+- **`capture.py --check` PASS**, worst MAE **0.00/255** across all ten goldens.
+  `mission` **0.00/0.00 — byte-identical**; `inspire@1440x900` and
+  `inspire@430x932` **0.00**, and the desktop still's diff bbox against the
+  golden is **None** — zero differing pixels. Nothing was re-shot. The frozen
+  Inspire rest pose is untouched, as required.
+- **Three streams legible at the rest.** Guaranteed by the pixel-identity
+  above and confirmed on the still: three distinct rising braids off the rim
+  with dark sky between them.
+- **Rate + roll, both aspects.** Peak |daz/dp| **766.9** deg/unit-p landscape,
+  **740.6** portrait — unchanged, and `camera.js` is byte-identical so this is
+  true by construction. Azimuth strictly monotone, **0** sign flips, both
+  aspects. Max roll residual **5.55e-17** (camera right-vector y, over p 0..1).
+- **Nothing fades in over open view; no self-ignition.** No reveal channel
+  rises after it has fallen, at any point over p 0..0.42, in either aspect
+  (**0** occurrences). Arming is dark by construction — see the table above.
+- **Reverse scrubs mirror exactly.** Forward-arrived vs reverse-arrived
+  per-dot luminance across 21 points spanning p 0.060–0.200: **max difference
+  0**, at every point.
+- **Console clean over a full ride** — slow forward, fast back, fast forward,
+  slow back. All five chapters reached, p returns to exactly 0, **zero** errors
+  or warnings.
+- **Cost.** None. Six numbers changed.
+
+### Residual — and where the next person should start
+
+**2RP still lands 80% of its amplitude in 3 frames at `MAX_SCRUB_RATE`** (up
+from 2, and 4 frames at a brisk scroll). All three streams improve, and the
+first surge — the one Hannah reported — clears the 5–7 frame band at a brisk
+scroll with margin. But the two migrant streams are now bounded by something
+this section cannot reach, and it is worth naming precisely because it is the
+exact analogue of what `9e2a277` handed over:
+
+A migrant's brightness is dominated by `conv`, and `conv` completes at
+**rev 0.55** because that is where its walk front lands (`mig = ss(0, 0.55,
+rev)` in `organism/spores.js`, and `CONV_RAMP_MIG + CONV_STAG_MIG = 0.55` was
+set to match). So a migrant delivers its amplitude in the **first ~53%** of its
+window no matter how wide the window is. The draw-on gate carries the rest, but
+it only swings env between 0.85 and 1.0 — about 15% of the change.
+
+That bounds the migrants at roughly 7–8 frames even with **zero** onset
+spacing, which is why widening alone cannot finish the job for them. Moving it
+means moving the walk front itself — `mig`, both `CONV_*_MIG`, `RG_OPEN`, and
+`furnOf`'s `(eff - 0.55) / 0.45` retime in the chapter, which is keyed to the
+same 0.55. Four coupled constants, each with an identity to preserve at rev 1.
+That is a separable piece of work with its own verification burden, and it is
+where the remaining margin is.

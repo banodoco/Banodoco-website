@@ -92,16 +92,29 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
     // runs; p only supplies the relaxation once the path has dropped under
     // the cap on its way to Connect.
     //
-    // THE THRESHOLD IS 34, AND IT IS DERIVED, NOT CHOSEN (2026-08-06). Arming
+    // THE THRESHOLD IS 25, AND IT IS DERIVED, NOT CHOSEN (2026-08-07; it was
+    // 34 against the pre-2026-08-07 ramps, by this same derivation). Arming
     // must land where the chapter's own CAMERA-PURE reveal is exactly zero —
     // the same law T2 states below, and the only thing that makes a seam
-    // invisible rather than merely small. Inspire's reveal is
-    // `sm(18, 48, az) * arrOf(az, 14, 44)` (chapters/inspire/index.js), so it
-    // is identically zero for absolute az <= 14, i.e. d <= 26.2 with Mission at
-    // az -12.21. With HYS_DEG = 8 the gate arms at d > 34 - 8 = 26 (az 13.8)
-    // and releases at d < 34 - 16 = 18 (az 5.8): BOTH edges sit on exact zero,
-    // with both factors of the product zero, so a shaky scrub cannot strobe
-    // anything visible either way.
+    // invisible rather than merely small.
+    //
+    // Inspire's reveal is a PRODUCT, `master(az) * arrOf(az, ARR[i])`
+    // (chapters/inspire/index.js). The master is max(a, b, c, band) and `band`
+    // is the steepest of the four above az -37.7, so the master is sm(5, 28);
+    // the earliest ARR onset is az 5. Both factors are therefore identically
+    // zero for az <= 5 — which is d <= 17.2, with Mission at az -12.2076.
+    //
+    // Solve the gate's own edges against that bound, with HYS_DEG = 8:
+    //   arm     d > T - 8    ->  az > T - 20.2076   must be <= 5  ->  T <= 25.21
+    //   release d < T - 16   ->  az < T - 28.2076   must be > -12.2076 (the
+    //                            hero pose, d = 0) or it can never release
+    //                                                          ->  T > 16
+    // T = 25 is the top of that window rounded down to the integer the
+    // shipped numbers are written in, and it leaves the arm edge 0.21 deg
+    // below the bound — the same margin 34 left against its own bound of 14.
+    // Arms at d > 17 (az 4.79), releases at d < 9 (az -3.21). BOTH edges sit
+    // on exact zero with both factors of the product zero, so a shaky scrub
+    // cannot strobe anything visible either way, in either direction.
     //
     // It used to be 48, which armed at d = 40 (az 28.1) — TEN DEGREES INSIDE an
     // already-open ramp. 48 was correct when it was written: the ramps then
@@ -115,8 +128,8 @@ export function createSeams({ camera, chapters, missionAz = -0.213 }) {
     // those ramps must re-derive this number from them again.
     {
       const d = Math.abs(((az - missionAz + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) / DEG;
-      const inside = d > 34 - HYS_DEG && p < T1_RELAX_IN;
-      const outside = d < 34 - HYS_DEG * 2 || p > T1_RELAX_OUT;
+      const inside = d > 25 - HYS_DEG && p < T1_RELAX_IN;
+      const outside = d < 25 - HYS_DEG * 2 || p > T1_RELAX_OUT;
       const on = gate('rear-cap', inside, outside, now);
       chapters.inspire.setArmed(on);
     }
