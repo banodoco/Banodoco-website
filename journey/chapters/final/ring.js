@@ -538,6 +538,50 @@ export function createFinalRing(sceneApi, uniforms) {
     const fg = () => gaussOf(fr);
     const placed = [];
     const want = { t3: 15, t4: 28 };
+
+    /* ---- THE FIELD'S ARRIVAL ORDER, RE-SPACED (2026-08-07) ---------------
+       Hannah: "in the final position, can you make it so the mushrooms
+       animate in slower one at a time in a nice elegant manner."
+
+       The stagger was the whole of the problem, and it was arithmetic, not
+       taste. `reveal` was a straight line on DEPTH across the field's full
+       15..45 range — but only the bodies inside CLONE_DIST are CLONES, and
+       clones are the only bodies that draw themselves on. So the fifteen
+       drawn field bodies all lived in the first third of that line and
+       received reveal thresholds inside 0.0795 of uPull, against a draw width
+       of 0.16 — every one of them spent 80% of its arrival overlapping every
+       other. Measured on the shipped tree, the twenty-four drawn bodies sat
+       at 0.148 0.201 0.250 0.294 0.337 · 0.489 0.514 0.515 0.519 0.521 0.523
+       0.532 0.537 0.539 0.543 0.551 0.551 0.560 0.560 0.568 · 0.683 0.723
+       0.737 0.790 — five ring members, then FIFTEEN bodies inside a fifth of
+       a draw width, then four more. That middle block is the "wave that reads
+       as simultaneous"; it is not a slow arrival, it is one arrival with
+       fifteen bodies in it.
+
+       Each band is now spread across ITS OWN population by rank (see the rank
+       pass after the placement loop): the drawn bodies get REV_LO..REV_KNEE,
+       0.029 of uPull apart for fifteen bodies — 4.7x the shipped spacing, and
+       enough that consecutive bodies are visibly at different stages — and the
+       batched far band keeps a tail of its own out to REV_HI. Order is still
+       depth order, so the front still travels strictly OUTWARD; only the
+       pacing changed.
+
+       REV_HI is not a taste number: the light reads the CLAMPED uPull, which
+       saturates at 1.0, so a body with a threshold past 1 − REVEAL_W never
+       reaches full brightness at all. 0.84 is that ceiling, and the cap-rim
+       hints already sit on it.
+
+       ORDER — near to far, kept. It was already the field's order and it is
+       the right one: the front travels outward from the hero, so the bodies
+       nearest the ring (whose construction actually reads at this camera)
+       arrive first and the haze band fills in behind them. Far-to-near was
+       not considered seriously here for the same reason it was rejected in
+       Connect — a front that starts at the horizon and works inward is
+       drainage, and this chapter's whole gesture is a colony opening out. */
+    const CLONE_DIST = 24;               // the T3/T4 seam: clones are nearer than this
+    const REV_LO = 0.30, REV_KNEE = 0.72, REV_HI = 0.84;
+    const REV_JIT = 0.005;               // keeps the ladder off a metronome; 17% of the spacing
+    const cand = [];                     // placements, held for the rank pass
     let idx = 0, guard = 0;
     while ((fieldStats.t3 < want.t3 || fieldStats.t4 < want.t4) && guard++ < 6000) {
       const right = fr() < 0.66;
@@ -558,7 +602,7 @@ export function createFinalRing(sceneApi, uniforms) {
       for (const q of placed)
         if (Math.hypot(x - q[0], z - q[1]) < 1.15) { ok = false; break; }
       if (!ok) continue;
-      const tier = dist < 24 ? 3 : 4;
+      const tier = dist < CLONE_DIST ? 3 : 4;
       if (tier === 3 && fieldStats.t3 >= want.t3) continue;
       if (tier === 4 && fieldStats.t4 >= want.t4) continue;
       // mostly smaller than the ring bodies; an occasional taller one so the
@@ -567,8 +611,14 @@ export function createFinalRing(sceneApi, uniforms) {
               + (fr() < 0.12 ? 0.8 : 0);
       const mat = 0.25 + fr() * 0.75;
       const distFrac = Math.min(1, Math.max(0, (dist - 14) / 30));
+      // The jitter's own draw stays HERE, at exactly the point in the fr()
+      // stream it was consumed before, so every placement downstream of it —
+      // and therefore the whole field's geometry, and therefore the Final
+      // golden — is bit-for-bit what it was. Only what the number is used for
+      // has changed (see the rank pass below).
+      const jit = fr() * REV_JIT;
       placed.push([x, z]);
-      placeMushroom({
+      cand.push({
         i: 100 + idx++,
         x, z,
         gy: groundY(x, z),
@@ -582,11 +632,41 @@ export function createFinalRing(sceneApi, uniforms) {
         lum: tier === 3 ? 0.80 - 0.10 * distFrac : 0.68 - 0.10 * distFrac,
         lumMul: tier === 3 ? 0.70 : 0.52,
         arc: arcOf(x, z),
-        reveal: 0.45 + 0.37 * distFrac + fr() * 0.02,
+        // reveal is assigned in the rank pass below, not here
+        dist, tier, jit,
         // the near field band is close enough for its construction to read,
         // so it is clones too — CLONE_DIST puts the seam at the T3/T4 step
-      }, tier, tier === 3);
+      });
       fieldStats[tier === 3 ? 't3' : 't4']++;
+    }
+
+    /* ---- THE RANK PASS -------------------------------------------------
+       Spacing the arrivals by DEPTH is not enough, because the depths
+       themselves are clumped: `dist` is drawn as base + rand^1.30 * range,
+       and that exponent piles the population up at the near end on purpose
+       (a field wants more bodies close than far). Ten of the fifteen drawn
+       bodies land inside four units of each other, so any straight function
+       of depth hands them near-identical thresholds however wide the band is
+       — re-running the kneed map alone still left five of them inside 0.013.
+
+       So the ORDER comes from depth and the SPACING comes from rank: sort
+       each band by depth and lay its members out evenly across the band. The
+       arrival order is exactly the order depth gives — near to far, the
+       front travelling outward, nothing about the reading changed — and
+       consecutive bodies are now 0.029 of uPull apart instead of 0.006.
+
+       The bands are laid out in PLACEMENT order afterwards, so `rand` is
+       consumed in precisely the sequence it was before and no body moves,
+       changes size, or changes shape. Only its threshold does. */
+    {
+      const band = (list, lo, hi) => {
+        list.sort((a, b) => a.dist - b.dist);
+        const n = list.length;
+        list.forEach((c, k) => { c.reveal = lo + (hi - lo) * (n > 1 ? k / (n - 1) : 0) + c.jit; });
+      };
+      band(cand.filter(c => c.tier === 3), REV_LO, REV_KNEE - REV_JIT);
+      band(cand.filter(c => c.tier === 4), REV_KNEE, REV_HI - REV_JIT);
+      for (const c of cand) placeMushroom(c, c.tier, c.tier === 3);
     }
 
     // The farthest rung: cap-rim HINTS. A short front-facing rim arc
