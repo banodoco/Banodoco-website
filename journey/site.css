@@ -1362,6 +1362,244 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-foot-cue:is(:hover, :focus-visible) { color: var(--gold-bright); }
   .j-foot-cue:is(:hover, :focus-visible) .j-foot-cue-arr { transform: translateY(1px) rotate(45deg); }
 
+  /* ============================================================
+     THE NODE INDEX (journey/ui-index.js, 24-mobile-pass.md).
+
+     Owned's arc is 3.5x wider than a phone's portrait frustum, so
+     twelve of sixteen contributors project off-frame there. The
+     composition stays exactly as authored; this is the other way
+     in, and it borrows rather than invents:
+
+       · the CONTROL is the footer cue's vocabulary (small caps,
+         letterspaced, a hairline chevron) because it makes the
+         same kind of offer — "there is more of this, over here";
+       · the SHEET is `.j-card.sheet`'s form — grip, header strip,
+         a body that scrolls inside itself, the same radius, the
+         same near-opaque ground — because a phone should not
+         learn two bottom sheets from one site.
+
+     It is a separate element rather than a mode of `.j-card` for
+     one reason that matters: a row OPENS a card, so the two have
+     to be able to exist a moment apart while focus moves between
+     them. Sharing an element would have made that a re-render of
+     the thing you were standing on.
+     ============================================================ */
+  /* Out of the block's flow — see the note in ui-index.js `buildControl`. The
+     block's border box is the hotspot-suppression rect, so the index must not
+     enlarge it: an in-flow control hid two of the four contributors the frame
+     could still place. `top: 100%` hangs the row directly under the copy it
+     belongs to; `left/right: 0` gives it the block's own measure so the button
+     inside it inherits the block's `text-align` and needs no alignment rule. */
+  .j-index-cue-row {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    margin-top: 0.55rem;
+  }
+  .j-index-cue-row[hidden] { display: none; }
+  .j-index-cue {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.5rem 0;
+    background: none;
+    border: 0;
+    color: rgba(201, 191, 168, 0.66);
+    font: inherit;
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    /* `.j-copy` is pointer-events:none wholesale, so anything live inside a
+       block opts back in — exactly as `.j-act` and `.j-sub.j-pulse` do. */
+    pointer-events: auto;
+    transition: color 0.3s;
+  }
+  .j-index-cue[hidden] { display: none; }
+  .j-index-cue-arr {
+    width: 7px; height: 7px;
+    border-right: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform 0.3s;
+  }
+  .j-index-cue:is(:hover, :focus-visible) { color: var(--gold-bright); }
+  .j-index-cue:is(:hover, :focus-visible) .j-index-cue-arr { transform: translateY(1px) rotate(45deg); }
+  /* No alignment rule of its own, deliberately. The control is `inline-flex`,
+     so it sits on a line box and inherits whichever `text-align` its block
+     already states — centre at `pos-topcentre` / `pos-bottom`, right at
+     `pos-topright`, left elsewhere. An earlier pass made `.j-block` a flex
+     column to align it explicitly; that changed the layout mode of every
+     chapter's copy at every viewport to position one small control, which is
+     exactly the kind of blast radius this file should not accept. */
+
+  .j-index-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    opacity: 0;
+    background: rgba(4, 3, 1, 0.62);
+    transition: opacity 0.3s ease;
+  }
+  .j-index-scrim.open { opacity: 1; }
+  .j-index-scrim[hidden] { display: none; }
+
+  .j-index {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    max-height: min(82vh, 40rem);
+    overflow: hidden;                       /* the BODY scrolls, not the shell */
+    opacity: 0;
+    background: rgba(10, 7, 2, 0.975);
+    border: 1px solid rgba(217, 164, 65, 0.35);
+    border-width: 1px 0 0;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.6);
+    transition: opacity 0.3s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .j-index.open { opacity: 1; }
+  .j-index[hidden] { display: none; }
+  .j-index.dragging { transition: none; }   /* 1:1 with the finger */
+
+  /* On a wide viewport it is a centred panel rather than a full-bleed sheet —
+     a 1440px-wide list of 16 short rows is a bad use of a frame. The form is
+     still the sheet's, so nothing new has to be learned either way. */
+  @media (min-width: 721px) {
+    .j-index {
+      left: 50%; right: auto;
+      bottom: 0;
+      width: min(34rem, 92vw);
+      transform: translateX(-50%);
+      border-width: 1px 1px 0;
+      border-radius: 16px 16px 0 0;
+    }
+    .j-index.dragging { transform: translateX(-50%); }
+  }
+
+  .j-index-grip {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;                       /* PL-1.4: a real drag target */
+    touch-action: none;                     /* the gesture is ours */
+    cursor: grab;
+  }
+  .j-index.dragging .j-index-grip { cursor: grabbing; }
+  .j-index-grip::before {
+    content: "";
+    width: 44px; height: 4px;
+    border-radius: 99px;
+    background: rgba(217, 164, 65, 0.45);
+  }
+  /* in the handle row, so the two read as one header strip — the same
+     arrangement `.j-card.sheet .j-card-x` settled on */
+  .j-index-x {
+    position: absolute;
+    top: 0; right: 0.3rem;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; height: 44px;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .j-index-x:is(:hover, :focus-visible) { color: var(--gold-bright); }
+
+  .j-index-body {
+    flex: 1 1 auto;
+    min-height: 0;                          /* or the flex child refuses to scroll */
+    overflow-y: auto;
+    overscroll-behavior: contain;           /* no chaining out to the journey */
+    -webkit-overflow-scrolling: touch;
+    /* the bottom padding is load-bearing: the last row carries a 44px hit
+       area, and a scroll container clips hit-testing at its padding box */
+    padding: 0.1rem 1.5rem 1.5rem;
+  }
+  .j-index::after {                         /* safe-area / home-indicator gutter */
+    content: "";
+    flex: 0 0 auto;
+    height: max(1.1rem, env(safe-area-inset-bottom, 0px));
+  }
+  .j-index-h {
+    margin: 0 0 0.5rem;
+    font-family: "Didot", "Playfair Display", Georgia, serif;
+    font-weight: 400;
+    font-size: 1.5rem;
+    color: var(--parchment);
+  }
+  .j-index-lede {
+    margin: 0 0 1.4rem;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+  .j-index-lede[hidden] { display: none; }
+  .j-index-group { margin: 0 0 1.35rem; }
+  .j-index-gh {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin: 0 0 0.35rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.18);
+    font: inherit;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold-bright);
+  }
+  .j-index-gh-n {
+    margin-left: auto;
+    color: rgba(201, 191, 168, 0.5);
+    letter-spacing: 0.1em;
+  }
+  .j-index-list { margin: 0; padding: 0; list-style: none; }
+  .j-index-row {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    width: 100%;
+    min-height: 44px;                       /* PL-1.4, in the box: a list row
+                                               has the width to simply BE the
+                                               target rather than grow a pad */
+    padding: 0.3rem 0.2rem;
+    background: none;
+    border: 0;
+    color: var(--parchment);
+    font: inherit;
+    font-size: 0.92rem;
+    text-align: left;
+    cursor: pointer;
+    transition: color 0.25s, background 0.25s;
+  }
+  .j-index-row:is(:hover, :focus-visible) {
+    background: rgba(217, 164, 65, 0.07);
+    color: var(--gold-bright);
+  }
+  /* Derived from manifest order, exactly as the rail menu's "01 · Mission" is
+     (23-side-navigator.md §5) — it is what makes two rows carrying the same
+     authored name distinguishable without this file writing a name for anyone. */
+  .j-index-n {
+    flex: 0 0 auto;
+    min-width: 1.6em;
+    color: rgba(201, 191, 168, 0.42);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    font-variant-numeric: tabular-nums;
+  }
+
   /* --- focus visibility across the whole journey layer (PL-2.2) ---------
      "Focus states visually equal hover states": every rule above pairs
      :focus-visible with :hover. This is the ring on top of that, one
@@ -1375,6 +1613,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-pop a:focus-visible,
   .j-card :is(a, button):focus-visible,
   .j-footer :is(a, button):focus-visible,
+  .j-index :is(a, button):focus-visible,
+  .j-index-cue:focus-visible,
   .j-foot-cue:focus-visible {
     outline: 2px solid var(--gold-bright);
     outline-offset: 3px;
@@ -1427,6 +1667,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        construction (see .j-rail-item) and need nothing from this block. */
     .j-foot-links a, .j-foot-note a, .j-card-link, .j-pop-link { position: relative; }
     .j-menu-links a { position: relative; }
+    /* The index cue is small caps on a hairline chevron — 28px tall by design,
+       like the footer cue it borrows from, so it takes the same pad rather
+       than a bigger box. (The sheet's own controls need none: a row, the grip
+       and the close button are all 44px in the box already.) */
+    .j-index-cue { position: relative; }
+    .j-index-cue::before,
     .j-menu-links a::before,
     .j-hot::before,
     .j-card-x::before,
@@ -1487,54 +1733,159 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     }
     .j-rail-name { font-size: 0.58rem; letter-spacing: 0.22em; }
     .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-name { letter-spacing: 0.18em; }
+    /* THE COMPOSITION STEPS BACK (2026-08-07 mobile pass).
+
+       The panel above stops the copy reading THROUGH the rail; it does not
+       stop the copy reading AROUND it, and at 375 that is what the band
+       actually looks like — a hard-edged rectangle laid across the middle of
+       five lines of prose, with words chopped at both ends of it. The panel
+       was solving legibility. This solves composition: while the rail is held
+       open, the chapter copy steps back and the navigator has the frame.
+
+       `.j-copy` is the HOST element, which carries no inline opacity — the
+       per-block opacities that journey/ui.js writes every frame are on the
+       `.j-block` children, so this composes with them instead of fighting
+       them, and nothing in the frame loop has to learn about the rail.
+
+       Body class rather than `:has()`: journey/rail.js announces the
+       touch-expanded state on <body> exactly as `openMenu` announces itself,
+       which is this component's own existing idiom. Set from the touch path
+       only, so a desktop hover is untouched. */
+    .j-copy { transition: opacity 0.28s ease; }
+    body.j-rail-on .j-copy { opacity: 0.14; }
     /* the footer's link rows need the vertical room the bigger targets take */
     .j-foot-links { gap: 0.35rem 1.6rem; }
     .j-foot-cue { padding: 0.75rem 1rem; }
   }
 
   /* ============================================================
-     FINAL HEADING AT PHONE WIDTHS — a DELIBERATE step below the
-     house type scale, called out rather than slipped in.
+     FINAL HEADING AT PHONE WIDTHS — THREE LINES AT THE HOUSE SCALE.
+     (2026-08-07 mobile pass. Supersedes the two-line step-down that
+     shipped here, and answers the question that rule flagged.)
 
-     Two lines is geometrically impossible here at the house size, and
-     the arithmetic is not close. Measured at 375x812: the heading's
-     natural single-line width is 839px at the house 1.9rem (30.4px)
-     floor, so the best possible two-line break needs 419px of column
-     and the balanced break needs 434px. A 375px-wide phone can offer
-     at most ~320px once the block's own padding is paid. No measure,
-     no rebalancing and no break point closes a 114px gap — only a
-     smaller font does.
+     The geometry the old rule measured is still true and worth
+     keeping on the record: at 375x812 the heading's natural
+     single-line width is 839px at the house 1.9rem (30.4px) floor,
+     the best possible TWO-line break needs 419px of column and the
+     balanced one 434px, and a 375px phone can offer ~320px once the
+     block's padding is paid. Two lines really is unreachable here.
 
-     So this is the one place the heading drops below the house scale,
-     and ONLY for this chapter, ONLY below 480px:
+     What was wrong was the conclusion. Buying two lines cost a
+     font step-down to 5.6vw — 21.0px at 375 — against a 16px sub,
+     i.e. a heading/sub ratio of 1.31 where every other chapter on
+     the same phone runs 30.4/16 = 1.90. The epilogue is the one
+     place the site raises its voice, and it was arriving in the
+     smallest display type on the page. A reader does not count
+     lines; they read hierarchy, and that hierarchy was gone.
 
-       5.6vw  =>  21.0px at 375  (longest line ~300px into ~320px)
-                  24.1px at 430  (longest line ~344px into ~372px)
+     So the line count gives way instead. The heading keeps the
+     house clamp, which floors at 1.9rem across the whole phone
+     range, and runs to THREE lines:
 
-     i.e. it tracks the viewport so the two-line promise holds across
-     the phone range instead of at one width. The block also widens to
-     94vw and trims its side padding, which is what buys the column the
-     font needs — the font was cut no further than the geometry forced.
+       375:  30.4px, 3 lines, longest ~285px into 320px of column
+       430:  30.4px, 3 lines, longest ~330px into 372px of column
 
-     FLAGGED FOR HANNAH: at 375 this renders the epilogue h1 at ~21px
-     against a 16px sub, so the heading/sub hierarchy is much flatter
-     on a phone than anywhere else. The alternative is keeping the full
-     1.9rem and letting it run to three lines. That is a design call,
-     not a technical one — this file implements the two-line
-     instruction as written, and the swap is one rule to undo.
+     `text-wrap: balance` is what makes three lines read as a
+     stanza rather than as two long lines and a stub — it is also
+     what fixes the landscape-phone rag, which broke 601px / 229px
+     before this. Scoped to the phone/short queries: desktop's own
+     two-line break is already even and is left exactly as shipped.
+
+     The block still widens to 94vw with trimmed side padding —
+     that is what keeps three lines from becoming four. `pos-
+     bottomleft` is anchored by its BOTTOM edge, so the taller
+     heading grows upward into open sky and the block's bottom, the
+     footer cue under it and the safe area are all where they were.
      ============================================================ */
   @media (max-width: 480px) {
-    .j-block.pos-bottomleft { width: 94vw; padding-left: 1rem; padding-right: 1rem; }
-    .j-block.pos-bottomleft .j-h { font-size: clamp(1.15rem, 5.6vw, 1.75rem); }
+    /* THE RAIL'S LANE. `pos-bottomleft` is the site's only LEFT-ALIGNED copy
+       block, and the taller heading above brings its first line up into the
+       band the side navigator rests in — measured at 375x812, the heading's
+       first glyph starts at x 39 and the resting mark occupies x 14..38 at
+       y 465..478. One pixel apart, and only by luck.
+
+       23-side-navigator.md §8 made exactly this call for the static tier
+       ("`.chapter` gained an 11rem left gutter") on the grounds that Tier 1's
+       blocks "sit out in the middle of a full-bleed scene and never come near
+       the rail". That was true of a 21px two-line epilogue. It is not true of
+       this one, so Tier 1 takes the same medicine at phone widths, sized to
+       the resting tile (44px) plus air rather than to the expanded band —
+       expanding is a deliberate, transient tap and is already a panel over the
+       composition by design.
+
+       It costs nothing: the greedy break is set by the longest word group
+       (230px), so widening the left padding from 1rem to 3.2rem leaves 289px
+       of column against a 230px longest line. Same four lines, same balance,
+       the mark simply has the margin to itself. */
+    .j-block.pos-bottomleft { width: 94vw; padding-left: 3.2rem; padding-right: 1rem; }
+    .j-block.pos-bottomleft .j-h { text-wrap: balance; }
     /* the hero makes the same trim to `.pill` at this width — the pair follows
        its own vocabulary rather than inventing a second phone size */
     .j-act { padding: 0.42rem 1.1rem; font-size: 0.72rem; }
     .j-actions { margin-top: 1.25rem; gap: 0.6rem; }
   }
 
+  /* ============================================================
+     THE LANDSCAPE PHONE (2026-08-07 mobile pass).
+
+     A phone on its side is not a small desktop and not a tall
+     phone: it is ~812x375, and the only scarce axis is HEIGHT.
+     Everything above this point sizes the copy off WIDTH, so at
+     812 the `max-width: 900px` rule handed the block 88vw = 715px
+     of a 812px frame while the viewport had 375px of height to
+     give — a block 246px tall, 66% of the frame, centred in it.
+
+     That is not only a bad picture. `.j-block`'s BOX is what
+     ui.js's hotspot suppression tests against, and the box is
+     much wider than the text inside it (the sub is capped at
+     26rem and centres). Measured at 812x375 before this rule:
+     Owned projected 16 of 16 contributors inside the frame — the
+     landscape frustum is wide enough for the whole arc, the one
+     orientation where it is — and then SUPPRESSED 13 of them
+     behind a copy box whose right two-fifths was empty padding.
+     The best composition on the site for that chapter was the one
+     you could interact with least.
+
+     So the block stops taking width it has no text for. 34rem is
+     the `.j-sub` measure (26rem) plus its padding, i.e. the width
+     the copy actually occupies, and the heading rebalances into
+     it. Height is unchanged: this buys the frame's flanks back,
+     which is exactly where the arc's outer nodes live.
+
+     Keyed on height + orientation rather than on `pointer:
+     coarse`, because the shape of the frame is the problem — a
+     short desktop window has it too and gets the same answer.
+     ============================================================ */
+  @media (max-height: 520px) and (orientation: landscape) {
+    .j-block { width: min(88vw, 34rem); }
+    .j-block.pos-bottomleft { width: min(88vw, 40rem); max-width: 40rem; }
+    .j-block .j-h { text-wrap: balance; }
+    /* the vertical rhythm pays for the short frame, not the type size:
+       the copy stays at the house scale and simply sits tighter */
+    .j-h { margin-bottom: 0.6rem; }
+    .j-actions { margin-top: 1rem; }
+    .j-block.pos-bottom { bottom: 6vh; }
+    .j-block.pos-topright, .j-block.pos-topcentre { top: 8vh; }
+    .j-block.pos-bottomleft { bottom: 7vh; }
+    /* the rail's band is taller than a 375px frame once every slot is
+       named; let it use the height it has and no more */
+    .j-rail-inner::before { inset: -1.2rem -2.2rem -1.2rem -2rem; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .j-hot, .j-hot-dot, .j-card { transition: none; }
     .j-pop, .j-pop-link { transition: none; }
+    /* The node index (journey/ui-index.js). Every rule in it is a transition
+       that ENDS at the element's resting style — the sheet at opacity 1 and no
+       translate, a row at its hover colour only while hovered — so switching
+       them all off leaves both states intact and instant. `closeSheet` also
+       skips its fade timeout under reduced motion, so `hidden` lands in the
+       same task rather than 340ms after a fade that never ran. */
+    .j-index, .j-index-scrim, .j-index-row, .j-index-cue,
+    .j-index-cue-arr, .j-index-x { transition: none; }
+    /* the rail's step-back is a state change, not a dissolve — the end state
+       (copy at 0.14 while held open, full when not) is intact and instant */
+    .j-copy { transition: none; }
     /* The side navigator, 2026-08-07. Every rule in it is a transition that
        ENDS at the element's expanded resting style, so switching them all off
        leaves the three states intact and instant: the rail still shows one

@@ -63,6 +63,31 @@ function el(tag, cls, text) {
 
 function smooth01(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); }
 
+/** How much of the footer is present at `p`, 0..1. Pure in p — no state, no
+ *  time — so a reverse scrub retires it through exactly the values it arrived
+ *  on, which is the house law for anything the camera can be scrubbed past.
+ *
+ *  Exported because the epilogue COPY has to know: the footer rises over the
+ *  same lower band of the frame the `pos-bottomleft` block occupies, and until
+ *  the 2026-08-07 mobile pass the two simply overlapped — the block stayed at
+ *  full opacity underneath a 0.95-alpha panel and read through it as ghost
+ *  text. journey/ui.js multiplies the epilogue block by the same retirement
+ *  curve the CUE already used (see `update`), so the copy, its cue and the
+ *  footer are one composition handing over to another rather than two layers
+ *  competing for the same pixels. */
+export function footerAmountAt(p) {
+  if (p <= FOOTER_LO) return 0;
+  if (p >= FOOTER_HI) return 1;
+  const t = (p - FOOTER_LO) / (FOOTER_HI - FOOTER_LO);
+  // reduced motion: a state change, not a rise
+  return reduceMotion.matches ? (t >= 0.5 ? 1 : 0) : smooth01(t);
+}
+
+/** The factor the epilogue copy (and its cue) are scaled by as the footer
+ *  arrives. One expression, one home: the cue has always used it and the
+ *  block now shares it, so they can never retire at different rates. */
+export function epilogueRetire(p) { return 1 - smooth01(footerAmountAt(p) * 2.5); }
+
 function linkList(cls, label, items) {
   const ul = el('ul', cls);
   ul.setAttribute('aria-label', label);
@@ -181,13 +206,7 @@ export function createFooter({ focusNav = null } = {}) {
   let cueLive = null;
   let lastA = 0;
 
-  function amountFor(p) {
-    if (p <= FOOTER_LO) return 0;
-    if (p >= FOOTER_HI) return 1;
-    const t = (p - FOOTER_LO) / (FOOTER_HI - FOOTER_LO);
-    // reduced motion: a state change, not a rise
-    return reduceMotion.matches ? (t >= 0.5 ? 1 : 0) : smooth01(t);
-  }
+  const amountFor = footerAmountAt;      // module scope; see the note there
 
   function firstFocusable() {
     return root.querySelector('a[href], button:not([disabled])');
@@ -213,7 +232,10 @@ export function createFooter({ focusNav = null } = {}) {
     // the visitor's own focus has somewhere real to hand it to in the same
     // frame — the cue is the way back in, and landing there beats landing on
     // <body> at the top of the document.
-    const ca = finalCopy * (1 - smooth01(a * 2.5));
+    // `epilogueRetire` is this expression's home now — the epilogue COPY is
+    // scaled by the identical factor in journey/ui.js, so the cue can never
+    // outlive the block it belongs to.
+    const ca = finalCopy * epilogueRetire(p);
     cue.style.opacity = ca;
     const cueWant = ca > 0.02;
     if (cueWant !== cueShown) { cue.hidden = !cueWant; cueShown = cueWant; }

@@ -10,7 +10,8 @@
 // preservation.md), so this module fades that block rather than duplicating it.
 
 import { CONTENT } from '../content/content.js';
-import { createFooter } from './ui-footer.js';
+import { createFooter, epilogueRetire } from './ui-footer.js';
+import { createNodeIndex } from './ui-index.js';
 import { createRail } from './rail.js';
 import { claimInput, releaseInput } from './scroll.js';
 import { CHAPTERS } from './route.js';
@@ -91,6 +92,29 @@ const CHAPTER_POSITION = {
    says so here and every other chapter is untouched. Nothing asks for one
    today. */
 const CHAPTER_SUB_PULSE = {};
+
+/* Chapters that offer a NODE INDEX — the list form of their own node field
+   (journey/ui-index.js, 24-mobile-pass.md).
+
+   Keyed by chapter for the same reason CHAPTER_SUB_PULSE and CHAPTER_POSITION
+   are: this file says HOW the thing is built and wired, and one short table
+   says which chapters want one. Nothing else in the pipeline names a chapter.
+
+   `title` is the structural word for the collection — `content.js` calls the
+   array `contributors`, so "Contributors" is the data's own word for itself,
+   not new copy (the same justification 23-side-navigator.md §5 used to title
+   the epilogue's menu entry). `groupBy` names the field of `CONTENT.nodes[id]`
+   the list is sectioned on; the group headings are that field's values
+   VERBATIM. The lede is the chapter's own `sub`, which for Owned happens to be
+   the sentence that names the very groups the list is sectioned by.
+
+   WHEN it appears is not stated here and is not a viewport guess: ui.js's
+   frame loop counts how many of the chapter's routable nodes the frame is
+   actually placing, and the control appears only when that count falls short.
+   Desktop places all sixteen and never sees it. */
+const CHAPTER_INDEX = {
+  owned: { title: 'Contributors', groupBy: 'role' },
+};
 
 const NS_SVG = 'http://www.w3.org/2000/svg';
 
@@ -931,6 +955,103 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     liveTimer = setTimeout(() => { live.textContent = msg; liveTimer = null; }, 60);
   }
 
+  /* ==========================================================================
+     THE NODE INDEX (24-mobile-pass.md; owed by 20-owned-root-network.md §9.4)
+
+     Owned's arc is authored in the landscape rest frame and is 3.5x wider than
+     a phone's portrait frustum, so twelve of its sixteen contributors project
+     off-frame and two more sit behind the copy — measured at 375x812, TWO of
+     sixteen were reachable. The composition is not the bug and is not touched;
+     what was missing is the other way in. journey/ui-index.js is that way, and
+     everything about when it appears is decided here, from what the frame is
+     actually doing rather than from a viewport guess.
+     ========================================================================== */
+  const nodeIndex = createNodeIndex({
+    // The SAME funnel a chip click uses — route, history entry, selection and
+    // the detail card all follow from it. This module knows nothing about any
+    // of that, which is the point.
+    onOpen: (id, trigger) => onOpen(id, trigger),
+    // Light the node out in the field. Deliberately `h.onHot` and not
+    // `h.refresh()`: refresh also toggles the chip's own `.hot` class and asks
+    // the popover to sync, and a chip that is off-frame has no popover to
+    // show and no pill to light. The scene response is the whole intent.
+    onHot: (id, on) => {
+      const h = hotspots.find(x => x.id === id);
+      if (h && h.onHot) h.onHot(on);
+    },
+    announce: (m) => announce(m),
+  });
+
+  const indexControls = {};        // chapterId -> the cue button in its block
+  /* Has this chapter been seen failing to place all of its nodes at THIS
+     viewport? A latch, not a per-frame test: the count moves with the
+     organism's sway and with the copy's fade, and a control that appeared and
+     vanished under the visitor's thumb would be worse than no control. Set
+     once the chapter's copy is more than half in (i.e. we are at its rest, not
+     mid-travel), cleared on resize because the whole question is geometric. */
+  const indexNeed = {};
+
+  for (const id in blocks) {
+    const spec = CHAPTER_INDEX[id];
+    if (!spec) continue;
+    const ctl = nodeIndex.buildControl(spec.title, (btn) => openIndex(id, btn));
+    // After the action row, so Tab reaches the chapter's own controls first
+    // and this last — it is the quietest thing in the block and the least
+    // likely to be what a reader wants.
+    blocks[id].appendChild(ctl);
+    indexControls[id] = ctl;
+    ctl.hidden = true;
+  }
+
+  /** Every routable node of a chapter, in registration order (= the chapter's
+   *  narrative order), with the two strings the list needs. Read at OPEN time,
+   *  never cached: label policies resolve a frame or two after boot. */
+  function indexEntries(chapterId) {
+    const spec = CHAPTER_INDEX[chapterId] || {};
+    return hotspots
+      .filter(h => h.chapter === chapterId)
+      .map((h) => {
+        // The SAME two-step resolution openCard() makes. Contributor rows are
+        // not in `CONTENT.nodes` — they live in `CONTENT.contributors`, which
+        // is where their `name` and `role` are — and a lookup that only asked
+        // the first map silently fell back to the chip's composed label and
+        // produced sixteen ungrouped rows reading "Contributor · Artist".
+        const n = CONTENT.nodes[h.id]
+          || CONTENT.contributors.find(c => c.id === h.id)
+          || {};
+        return {
+          id: h.id,
+          // the node's authored name, or the chip's own accessible name if it
+          // has no `name` field — never a string composed here
+          name: n.name || n.label || h.label,
+          group: spec.groupBy ? (n[spec.groupBy] || '') : '',
+        };
+      });
+  }
+
+  function openIndex(chapterId, trigger) {
+    const spec = CHAPTER_INDEX[chapterId];
+    if (!spec) return;
+    const data = CONTENT.chapters[chapterId] || {};
+    nodeIndex.open({
+      title: spec.title,
+      // The chapter's own support line. For Owned it is the sentence that
+      // names the groups this list is sectioned by, which is why the list
+      // needs no lede of its own written for it.
+      lede: data.sub || '',
+      entries: indexEntries(chapterId),
+    }, trigger);
+  }
+
+  // Geometry changed: re-ask the question from scratch rather than carrying a
+  // latch set on a viewport that no longer exists.
+  const resetIndexNeed = () => {
+    for (const k in indexNeed) delete indexNeed[k];
+    for (const id in indexControls) indexControls[id].hidden = true;
+  };
+  window.addEventListener('resize', resetIndexNeed);
+  window.addEventListener('orientationchange', resetIndexNeed);
+
   // Focus trap. The card's own controls are the whole world while it is open,
   // so Tab cycles inside it instead of walking out into a nav the dialog has
   // just declared inert. Shift+Tab wraps the other way.
@@ -1266,8 +1387,38 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   const easedPrev = { ...eased };
   let arrive = null;   // { id, t, lead, dur, own }
 
+  /* THE EPILOGUE HANDOVER (2026-08-07 mobile pass).
+
+     `pos-bottomleft` — the epilogue's block — and the footer occupy the same
+     lower band of the frame, and both were at full strength at the end-hold.
+     The footer is a 0.95-alpha panel, so the heading and sub read straight
+     through it as ghost text lying under the link rows. Measured before:
+
+       1440x900   footer y 680..900, block y 575..819  — 139px of overlap
+        375x812   footer y 412..812, block y 532..723  — the block ENTIRELY
+                                                          behind the panel
+        430x932   footer y 617..932, block y 632..830  — likewise
+
+     A phone is where it is unmissable (the footer is 49% of the frame there
+     and swallows the whole block), but the defect is the same shape at every
+     width, so the fix is too — a mobile-only version would have been a second
+     rule for one bug. Desktop's picture changes at exactly one place in the
+     ride, p > 0.955, and changes by losing text that should not have been
+     legible there.
+
+     `epilogueRetire` is the cue's own long-standing expression, now shared
+     (journey/ui-footer.js). Pure in p, so a reverse scrub brings the block
+     back through the same values; and zero at and below p 0.955, so the
+     epilogue REST at 0.925 — the captured pose — is untouched. */
+  let epilogueVeil = 1;
+
   /** The one place a copy block's eased opacity reaches the DOM. */
   function paintCopy(id, s) {
+    // The epilogue's block is the only one that shares its band with the
+    // footer, so it is the only one that hands over. Applied here rather than
+    // to `eased.final` itself: that value still gates the cue, the hotspots
+    // and the arrival envelope, none of which should learn about the footer.
+    if (id === 'final') s *= epilogueVeil;
     if (id === 'mission') {
       if (!heroBlock) return;
       heroBlock.style.opacity = s;
@@ -1289,6 +1440,14 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       if (row) {
         const rowLive = s > 0.5;
         if (row.inert === rowLive) row.inert = !rowLive;
+      }
+      // The index control is the block's other live surface and takes the same
+      // rule — it is a sibling of the action row, not a child, so it does not
+      // inherit the line above.
+      const ctl = indexControls[id];
+      if (ctl) {
+        const ctlLive = s > 0.5;
+        if (ctl.inert === ctlLive) ctl.inert = !ctlLive;
       }
     }
   }
@@ -1370,6 +1529,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       pSpeed = 0;             // placed, not travelled
     }
     lastP = p;
+    // Decided before the copy loop paints, so the handover and the eased
+    // opacity land in the same frame rather than one behind each other.
+    epilogueVeil = epilogueRetire(p);
     // moving fast releases copy even inside its band; arriving slow lets it in
     const travelHold = 1 - smoothA((pSpeed - COPY_TRAVEL_LO) / (COPY_TRAVEL_HI - COPY_TRAVEL_LO));
     const settled = 1 - smoothA((pSpeed - COPY_SETTLE_LO) / (COPY_SETTLE_HI - COPY_SETTLE_LO));
@@ -1473,6 +1635,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
         }
       }
       want = want && !!w;
+      // What the FRAME can place, cached for the index's reachability rule
+      // below. Deliberately `want` and not `vis`: `vis` is still climbing
+      // through the arrival stagger for a second after a landing, and counting
+      // that would have latched an index open on a desktop that places
+      // everything perfectly well.
+      h.placeable = want;
       if (want) {
         if (h.armAt === null) h.armAt = now + h.stagger * HOTSPOT_STAGGER_MS;
         if (dt === 0) h.a = 1;
@@ -1525,6 +1693,33 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       h.btn.tabIndex = want && vis ? 0 : -1;
       if (want && vis) h.btn.removeAttribute('aria-hidden');
       else h.btn.setAttribute('aria-hidden', 'true');
+    }
+
+    /* THE INDEX'S REACHABILITY RULE.
+
+       "Can this frame reach everything this chapter has?" — asked of the live
+       projection, once per chapter, and only until the answer is no. A chapter
+       that places all of its nodes never grows a control; one that cannot
+       grows it and keeps it for as long as the viewport is what it is.
+
+       Skipped while a detail is open (every hotspot is deliberately unplaceable
+       then — the frame belongs to the dialog) and until the chapter's copy is
+       more than half in, which is the cheapest available statement of "we are
+       at this chapter's rest, not travelling through it". */
+    if (!detail) {
+      for (const cid in CHAPTER_INDEX) {
+        if (indexNeed[cid] || (eased[cid] || 0) <= 0.5) continue;
+        let total = 0, reachable = 0;
+        for (const h of hotspots) {
+          if (h.chapter !== cid) continue;
+          total++;
+          if (h.placeable) reachable++;
+        }
+        if (total > 0 && reachable < total) {
+          indexNeed[cid] = true;
+          if (indexControls[cid]) indexControls[cid].hidden = false;
+        }
+      }
     }
 
     /* HIT PAD SIZING, second pass — writes only, so it costs no reflow.
