@@ -298,6 +298,12 @@ export function createOwned(sceneApi, content) {
   const _w = new THREE.Vector3();
 
   sceneApi.addAnimator('journey-owned', (t, dt) => {
+    // The remix swap advances AHEAD of the visibility gate below (see
+    // portraits.tickSwap): a visitor who presses Remix and immediately scrubs
+    // away must not come back to a field stopped half-way between two
+    // arrangements. It writes one uniform and does nothing at all when no swap
+    // is running, so it costs the resting frame nothing.
+    portraits.tickSwap(dt);
     const k = Math.min(1, dt * 2.6);
     amount += (amountTarget - amount) * k;
     if (amount < 0.004 && amountTarget === 0) amount = 0;
@@ -489,7 +495,37 @@ export function createOwned(sceneApi, content) {
         portraits.wavePulse(CLAIM_CENTRES.monthly, { speed: 3.2, width: 2.0, maxR: 6.5, amp: 0.85 });
       } else if (name === 'claimSplit') {
         portraits.wavePulse(CLAIM_CENTRES.split, { speed: 3.2, width: 2.0, maxR: 6.5, amp: 0.85 });
+      } else if (name === 'remixPortraits') {
+        /* REMIX (Hannah, 2026-08-07) — the copy block's second button.
+           The field re-deals its faces (portraits.remix()) and the COLONY
+           answers along with it: a wave launched from the same epicentre the
+           swap is ordered by, at the speed the swap travels, so each face's
+           strands, ember rim and halo light as that face turns over. The
+           substrate surges underneath it, exactly as it does for the crown.
+           One gesture, one wave, sixteen faces changing inside it — not
+           sixteen simultaneous cuts and not a page-wide flash.
+
+           The return value is the trigger contract journey/ui.js reads:
+           `announce` for the polite live region (nothing moves focus, so this
+           is the only way the change is not silent) and `busyMs` to hold the
+           button lit and unpressable for exactly as long as the field is
+           actually turning over. */
+        const r = portraits.remix();
+        if (!r) return null;               // a swap is already running
+        // amp 0.62, not the crown hover's 1.0. That gesture is the wave ALONE;
+        // this one lands on the same pixels as the per-node swap flare, and
+        // shot at 375x812 the two together washed the near faces out. The
+        // crown's own response is unchanged — this is the remix's dose.
+        portraits.wavePulse(r.epicentre, {
+          speed: r.speed, width: 3.0, maxR: r.maxR + 4, amp: 0.62,
+        });
+        substrate.surge();
+        return {
+          announce: `Contributor portraits remixed — arrangement ${r.arrangement}.`,
+          busyMs: r.ms,
+        };
       }
+      return null;
     },
 
     setSelected(id, on) {

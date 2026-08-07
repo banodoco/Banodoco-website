@@ -640,3 +640,254 @@ card/popover contract are all untouched; no camera key moved.
 4. `mv.z` no longer moves on hover, but the **near-field defocus** still
    softens by `1 - vH * 0.45`. That is a blur change, not a position change,
    and it is left as it was.
+
+---
+
+# 2026-08-07 — the action pair, and Remix
+
+> "we should have a kind of button below the text that's like a remix button.
+> Well, first of all there should be a button that says 'Learn more', and then
+> next to it there should be like a remix button. And we should figure out how
+> to make them work nicely together visually. And basically the remix one just
+> switches out the photos for a bunch of other photos."
+> — Hannah
+
+The first genuinely new feature this chapter has grown since the restage.
+Everything else on this page is a defect record.
+
+## D — the pair
+
+### D.1 One silhouette, two weights
+
+Both controls are the hero nav's `.pill`, unchanged: 999px radius,
+`0.5rem 1.35rem`, 0.78rem/500/0.04em, and the `0.7rem` gap `.nav-cta` already
+uses between 2RP and Discord. Nothing about the shape, the size or the type is
+new. That is the whole of "work nicely together visually" — the site already
+has a button, and this is it, twice, in a row.
+
+They are told apart by LIGHT, and the split is deliberate about which kind each
+one gets:
+
+| | **Learn more** | **Remix** |
+|---|---|---|
+| role | the conventional destination | the exploratory instrument |
+| border | `rgba(242,237,225,0.58)` parchment | `rgba(217,164,65,0.34)` gold |
+| ink | `--parchment` | `rgba(217,164,65,0.82)` |
+| interior | 4.5% parchment wash | none |
+| carries | **contrast** | **behaviour** |
+| position | first — reading order and tab order | second |
+
+So the primary is the louder object at rest and wins the glance, which is what
+a primary action is for; the secondary is measurably quieter and is the only
+one of the two that is *alive* — a three-node glyph whose filament draws itself
+and whose points light 1→2→3 on hover, and which carries a travelling spark for
+exactly as long as the field is turning over. It earns attention by moving
+rather than by shouting, which is the right currency for a control whose
+promise is "try this and see."
+
+**Neither is a solid fill**, and that is a composition decision rather than a
+taste one. This chapter is staged so the crown is the brightest point in the
+frame (see `EXPOSURE_PLANES` in `chapters/owned/index.js`). A filled parchment
+button parked at top-centre would quietly take that job away from the scene.
+
+### D.2 Where it lives, and what it is made of
+
+Declared as **content**, not markup:
+
+```js
+CONTENT.chapters.owned.actions = [
+  { id, kind: 'link',   weight: 'primary', label: 'Learn more', href },
+  { id, kind: 'button', weight: 'explore', label: 'Remix', glyph, action, announce },
+]
+```
+
+`journey/ui.js` renders any chapter that declares an `actions` array and knows
+nothing about which chapter that is — the same rule the label policy and the
+popover eligibility already keep. `kind: 'link'` is a real `<a href>` and
+`kind: 'button'` a real `<button type="button">`; never a div, so "open in new
+tab" and Space-as-well-as-Enter come for free.
+
+**Learn more's destination is not confirmed.** It is wired `href: '#'` with a
+`TODO(Banodoco): PLACEHOLDER` naming what has to be confirmed before launch —
+the house convention every spotlight link in `content/content.js` already uses.
+No URL was invented; the donor build's `https://banodoco.ai` guess is explicitly
+recorded as *not* a confirmation.
+
+### D.3 The entry
+
+The pair is the last part of the arriving copy, inside the same envelope
+`armCopyEntry` drives (`--j-in-wait` + fractions of `--j-in`), so a longer
+flight stretches it with everything else:
+
+    bed      0.00 -> 0.40 of --j-in
+    heading  0.12 -> 0.78
+    sub      0.26 -> 0.92
+    Learn more 0.40 -> 0.92        <- new
+    Remix      0.47 -> 0.92        <- new
+
+The two pills **start** in hierarchy order and are timed to **settle on the same
+frame**, at 92% of the envelope — exactly where the sub already lands, so the
+d1ecc23 contract ("the last part lands at 92%, leaving the final beat as a pure
+settle") is kept rather than extended. They arrive as one object that assembled
+in order, which is what they are. Measured live on a nav jump: `--j-in-wait`
+0.594s, `--j-in` 0.636s, Learn more `delay 0.8484s / dur 0.3307s` = W + 0.92D.
+
+Every keyframe ends at the resting style, so the reduced-motion rule is
+`animation: none` and nothing else — same contract as hero.css's `.co` boot.
+
+### D.4 a11y and the hit model
+
+- Tab order, measured: `… 2RP, Discord, **Learn more, Remix**, 16 contributor
+  chips`. The pair sits after the nav and before the field, which is where the
+  prose it belongs to sits.
+- `:focus-visible` gets the shared journey ring, with one override: that rule
+  sets `border-radius: 2px` for the square controls it was written for, so the
+  pair restates `999px` and the ring stays a pill.
+- The row is **`inert`** unless its block is more than half faded in.
+  `visibility:hidden` only covers the last 0.2% of the copy fade; without the
+  gate a block at opacity 0.08 mid-scrub is a live click target and a tab stop.
+  Verified: `rowInert` true through a nav-jump arrival, false once settled,
+  true again the moment you leave.
+- Busy uses **`aria-disabled`, not `disabled`**. A real `disabled` blurs the
+  element the instant it is set, so a keyboard visitor who pressed Enter would
+  be thrown back to `<body>`. Measured: focus stays on the button across the
+  whole swap.
+- The swap is announced to the polite live region that already exists in
+  `ui.js` — "Contributor portraits remixed — arrangement 2." Nothing moves
+  focus, so without this the change is silent.
+- `pointer-events` is on the **pills only**, never the row, so the gap between
+  them and the space either side stay transparent to the portrait field.
+
+## E — the swap
+
+### E.1 Arrangements
+
+There is exactly ONE image set in this repo: `assets/test-portraits`, 20 small +
+6 large, LOOK-DEV ONLY, under a standing rule that it is deleted before any
+public deploy. **No new likenesses of real people were added**, and none may be
+to satisfy a button.
+
+So Remix advances an **arrangement index** that re-derives every node's source
+image and its whole treatment — mirror, exposure, warmth, grain seed, and for
+the procedural busts the bust seed. Sixteen nodes drawn from 26 images, with
+strides chosen coprime to the 20-image small pool so each arrangement is a
+different permutation rather than a rotation of the last, and the six large
+sources rotating across the six nearest planes. Measured: five consecutive
+arrangements produced five distinct atlas hashes, and a single press changes
+**16 of 16** atlas cells.
+
+Arrangement 0 is byte-identical to what shipped before this feature — at `v=0`
+every term reduces to the old expression — so the resting composition, the
+goldens and the look-dev calibration are untouched.
+
+**What is still needed:** a second REAL set. The mechanism is general and set-
+shaped: point the arrangement bakers at a second manifest and the button gains
+genuinely new faces with no other change. Until a consented set exists this is a
+re-deal of one set, which is honest but is not what "a bunch of other photos"
+will finally mean. **The consent gate (`setConsentEnforced`, OW-4.4) and the
+pre-deploy deletion rule both stand unchanged and apply to any set that
+replaces this one.**
+
+### E.2 The transition
+
+One clock, `uSwap` 0→1 over 1250 ms, opened at a different moment per node by a
+per-vertex `aSwapD`; each node's own crossfade is a 0.34 window inside it. Two
+extra atlas slots (`uMapA2` / `uMapP2`) hold the incoming arrangement, and on
+landing the incoming becomes current, `uSwap` drops to 0 and the retired
+canvases are released. The next arrangement is baked on an idle callback after
+each swap, so a press is a swap and never a bake.
+
+Three things make it a transition rather than a cut:
+
+1. **It dissolves through soft focus.** Both images take `lod + vFlare*1.7`, so
+   they lose definition together at the middle of the crossing and the new face
+   comes back sharp. A straight A/B mix of two sharp faces is a jump cut.
+2. **Each node flares as it crosses** — a Gaussian on the distance from its own
+   moment, weighted onto the ember RING first (0.62), the core second (0.15) and
+   the image barely at all (0.10). The face has to stay a face while it is being
+   exchanged.
+3. **The colony answers with it.** `wavePulse` from the same epicentre at the
+   speed the swap travels, plus `substrate.surge()` — so each face's strands,
+   rim and halo light as that face turns over. It is the crown-hover gesture,
+   at the remix's own dose.
+
+**The order is measured in the REST FRAME, not in world space**, and that is the
+decision worth recording. In world space the nodes nearest the crown are the
+NEAR-CAMERA ones (the crown sits 1.85 units off the lens), so a world-space
+order starts the wave on the three big foreground faces at the BOTTOM of the
+picture. Shot and compared: the visitor presses a button at top-centre and the
+answer begins at the far bottom edge, running back up the frame while the
+substrate's own surge runs the other way down the roots — two waves crossing,
+which reads as noise. Ordered by distance from the crown *as drawn*, the wave
+starts under the button, sweeps out along both arms and settles at the low
+corners. One direction, the one the roots and the copy already establish. The
+frame is the spec, again.
+
+Sampled at `uSwap = 0.5`: six nodes have not started, two are mid-crossing at
+0.23/0.28, and six are complete. It is a wave, not a fade.
+
+**Reduced motion** opens the span to 1 — every node's window is the whole clock
+— drops the flare to 0 and runs 320 ms. Same start state, same end state, no
+travelling motion.
+
+**The flare's gate starts at 0, and that was a real defect caught before the
+gate ran.** A Gaussian is never exactly zero: at `uSwap = 0` the node whose
+delay is 0 sits one sigma out and evaluates to `exp(-2.4) = 0.091`. Left
+ungated that is a permanent 9% ember lift on one contributor at rest — enough to
+move a frozen golden, and worse, to make one face quietly hotter than its
+neighbours forever. `uSwapFlare` is 0 whenever no swap is running.
+
+**The clock ticks outside the chapter's visibility gate.** Press Remix and
+scrub away immediately and the swap still lands; verified by leaving mid-swap on
+a nav jump and coming back to a completed arrangement, not a half-mixed field.
+
+## Gates
+
+    swap is real        16/16 atlas cells changed per press; 5 consecutive
+                        arrangements -> 5 distinct atlas hashes
+    stagger runs        uSwap 0->1 over 1250 ms sampled every 100 ms; at 0.5,
+                        6 nodes unstarted / 2 mid / 6 complete
+    reduced motion      span 1, flare 0, 320 ms, 16/16 changed, uSwap back to
+                        0, busy + aria-disabled cleared, resting styles
+                        (opacity 1 / transform none / animation none)
+    keyboard            Tab order …2RP, Discord, Learn more, Remix, 16 chips;
+                        Enter fires the swap and FOCUS SURVIVES it; two presses
+                        mid-swap refused (arrangement holds)
+    touch               pointerdown/up/click at 375x812 fires it; pills are
+                        44px tall under the PL-1.4 query
+    hit pads            nearest live pad to either pill: 111.7px (1440x900),
+                        118.1px (1280x800), 56.8px (375x812). No overlap.
+                        Every sample point on both pills hit-tests to the pill.
+    no suppression      chips live/tabbable WITH the pair vs with it removed
+                        from layout: 16/16 vs 16/16 (1440 and 1280), 2/2 vs 2/2
+                        (375, the pre-existing mobile framing issue). Δ 0.
+    copy entry          --j-in-wait 0.594s, --j-in 0.636s, pills 0.40/0.47 ->
+                        0.92 of the envelope, settling with the sub
+    inert gate          rowInert true through arrival, false at rest, true on
+                        leaving
+    console             full wheel ride mission -> owned (remix) -> final ->
+                        mission -> owned (remix) -> final: 0 errors, 0 warnings
+    goldens             capture.py --check PASS. Nine of ten MAE 0.00;
+                        owned@430x932 0.04, PROVEN PRE-EXISTING by re-running
+                        the check against HEAD's scene files (same 0.04).
+                        NOTHING re-shot.
+
+No camera key moved, no scene geometry moved, no placement changed. 696e95d's
+hit pad, no-translation-on-hover and localised-root hover are untouched.
+
+## Residuals
+
+1. **One image set.** The remix is a re-deal, not a second cast. The mechanism
+   is set-shaped and ready; a consented second set is the missing input, and the
+   pre-deploy deletion rule for `assets/test-portraits` stands.
+2. **`Learn more` goes nowhere** — `href: '#'` plus a TODO. It is in the tab
+   order and it is a real link, so it will behave the moment a URL exists.
+3. **Arrangements cycle.** Stride/offset pairs have period 7 and the large
+   rotation period 6, so the small-pool permutation repeats every 7 presses
+   (with different mirror/exposure/warmth each time). With one set of 26 images
+   that is a ceiling, not a bug; a second set raises it.
+4. **375 still shows 4 of 16 faces** (§9.4, unchanged). Remix reads clearly
+   there — all four visible faces cross and the network lights — but it is
+   remixing a field the visitor can mostly not see.
+5. **The pair is the only interactive copy on the site.** `paintCopy`'s inert
+   gate is written generally, but it has exactly one client today.
