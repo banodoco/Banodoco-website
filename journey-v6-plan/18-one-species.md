@@ -1368,3 +1368,229 @@ DRAW_HI 0.893 are byte-identical in the shader; compare the draw parameter.
   lean. Strictly better than what it replaces (which stood there at full
   opacity), a few pixels at these distances, and left as the one piece of
   intro.js's shell choreography not carried across.
+
+---
+
+## 12. One at a time (2026-08-07, Hannah's "slower, one at a time")
+
+**The ask, verbatim.** *"See in the final position, can you make it so the
+mushrooms animate in slower one at a time in a nice elegant manner."*
+
+§11.5 gave every clone the hero's own entry — it inks itself in as it lights
+up, on the camera-pure front, and §11.6's ride table read *"twenty-four bodies
+arriving in sequence over 4.8 units of camera travel, each taking ~0.9 units to
+ink itself in."* That table is true and it is also where this complaint was
+hiding: it reports the ENDPOINTS and never the spacing.
+
+### 12.1 It was not a sequence. Fifteen of the twenty-four were one event
+
+Every drawn body's threshold, recovered exactly rather than read off the
+source. `prog = DRAW_LO + d·(DRAW_HI − DRAW_LO)` and
+`d = smooth01((pullRaw − reveal)/DRAW_W)`, and `smooth01` inverts in closed
+form, so a single mid-draw sample gives a body's `reveal` to full precision; a
+ladder of frozen `?capture=` rungs covers all twenty-four. Shipped tree:
+
+```
+ring    0.148 0.201 0.250 0.294 0.337
+field   0.489 0.514 0.515 0.519 0.521 0.523 0.532 0.537 0.539
+        0.543 0.551 0.551 0.560 0.560 0.568
+ring    0.683 0.723 0.737 0.790
+```
+
+**Fifteen bodies inside 0.0795 of uPull, against a draw width of 0.16.** They
+overlap each other by 80%. Median gap between consecutive field arrivals:
+**0.005**. On the frozen ladder that reads as a wave with a hard edge on both
+sides of it:
+
+| p | undrawn / drawing / drawn |
+|---|---|
+| 0.890 | 18 / **1** / 5 |
+| 0.895 | 4 / **15** / 5 |
+| 0.900 | 4 / **15** / 5 |
+| 0.905 | 3 / **3** / 18 |
+
+Fourteen bodies start inside one 0.005 rung and twelve finish inside another.
+That is not twenty-four arrivals, it is three: a near group, a wave, a far
+group. "Rather than as a wave that reads as simultaneous" is exactly right.
+
+**The cause is arithmetic, not taste.** `reveal` was a straight line on DEPTH
+across the field's whole 15..45 range — but only bodies inside `CLONE_DIST`
+(24) are clones, and clones are the only bodies that draw themselves on. So all
+fifteen drawn field bodies lived in the first third of that line. And the depth
+distribution makes it worse: `dist = base + rand^1.30 · range` deliberately
+piles the population up at the near end (a field wants more bodies close than
+far), so ten of the fifteen land within four units of each other. **Re-running
+the map with a knee at the clone seam was tried first and is not enough** — it
+still left five bodies inside 0.013, because a monotone function of a clumped
+input is a clumped output whatever its slope.
+
+### 12.2 Order from depth, spacing from rank
+
+So the two are separated. Each band is sorted by depth and its members laid out
+**evenly across the band by rank**:
+
+```js
+band(cand.filter(c => c.tier === 3), REV_LO, REV_KNEE - REV_JIT);   // the drawn band
+band(cand.filter(c => c.tier === 4), REV_KNEE, REV_HI - REV_JIT);   // the batched tail
+```
+
+The arrival order is exactly the order depth gives, so nothing about the
+reading changes — but consecutive bodies are now evenly separated:
+
+```
+0.148 0.201 0.250 0.294 0.300 0.331 0.337 0.362 0.390 0.420 0.450 0.482
+0.512 0.539 0.572 0.601 0.626 0.660 0.683 0.689 0.715 0.723 0.737 0.790
+```
+
+| | before | after | |
+|---|---|---|---|
+| median gap, all 24 | 0.008 | **0.027** | 3.4x |
+| median gap, the drawn field band | 0.005 | **0.029** | **5.7x** |
+| smallest gap anywhere | 0.0008 | **0.006** | |
+| most bodies starting in one 0.005 rung | **14** | **4** | |
+| most bodies finishing in one rung | **13** | **5** | |
+
+**ORDER — near to far, kept, and it is the right one.** It was already the
+field's order; the front travels outward from the hero, so the bodies nearest
+the ring (whose construction actually reads at this camera) arrive first and
+the haze band fills in behind them. Judged on screen at p 0.870 / 0.880 /
+0.890 / 0.900 / 0.910 / 0.920: the outward reading is legible frame to frame,
+and at 0.890 two individual bodies are visibly at different stages in an
+otherwise empty field — which is the whole ask, in one still. Far-to-near was
+not seriously considered, for the reason Connect rejected it: a front that
+starts at the horizon and works inward is drainage, and this chapter's gesture
+is a colony opening out.
+
+Three constants and a `REV_JIT` that is now 17% of the spacing rather than four
+times it. The jitter's own `fr()` draw stays at exactly the point in the stream
+it was consumed before, and the bands are laid out in PLACEMENT order
+afterwards, so `rand` is consumed in precisely the sequence it was: **no body
+moves, changes size, or changes shape. Only its threshold does** — which the
+byte-identical `final` goldens then prove rather than assert.
+
+### 12.3 `DRAW_W` 0.16 → 0.28, and why that is not a regression of `070892c`
+
+Each body's own ink is now wider than its light. §11.5 set `DRAW_W = REVEAL_W`
+so "the ink and the light arrive together", and this looks like a walk-back of
+it. It is the opposite, on the test that section itself used: **the hero**. On
+the landing page the hero's strokes ink in at FULL opacity with the tip ember
+riding the drawing front — the hero is never a dim body being drawn, it is a
+lit body still drawing. A clone that comes up to its light over the first 0.16
+and keeps inking for another 0.12 is doing what the hero does.
+
+Every guarantee `070892c` bought is strictly **stronger**. The failure it fixed
+was a body DRAWN AND DARK — the draw running *ahead* of the light — and
+widening the draw moves the other way:
+
+| | before | after |
+|---|---|---|
+| own light when the cap shell begins to fade in (`prog` 0.574) | 0.466 of its reveal | **0.925** |
+| min own-light under a fully opaque shell, frozen ladder | 0.262 | **0.460** |
+| black body-samples across the ladder | 0 | **0** |
+| bodies undrawn at p 0.860 | 24 | **24** |
+
+**The ceiling is measured, not chosen.** The last body's threshold is 0.7898
+and the camera-pure `pullRaw` reaches **1.1200** at the Final rest, so the draw
+has 0.330 to finish in; 0.28 lands it at 1.070, p 0.9194 against a rest at
+p 0.9250. The rest frame must see `d = 1` exactly — below it the last overlay
+strokes are missing and the tip ember is still on — and the byte-identical
+`final@1440x900` golden is the proof that it does.
+
+Note this headroom exists because of the leg re-path (`8b71687`) and did not
+before: §11.6's own table has the last body finishing at camera x −13.89 with
+the rest at −13.9. Re-measured, the rest camera now sits at x −14.72 with the
+approach accelerating into it, which is where the 0.33 came from. The far end
+was NOT free before this batch and should be re-measured again if that leg
+moves.
+
+`REVEAL_W` is untouched, so **`2f4c2f1`'s canopy stays exactly coupled**: seats
+still kindle `CANOPY_LEAD` 0.04 ahead of their own body's threshold, which is
+still a quarter of the light's own width, and the seats moved with their bodies
+because they read `s.reveal`.
+
+### 12.4 Measured
+
+    WALL CLOCK          rate      whole field   per-body draw (median)   gap between starts (median)
+      before        600 px/s        1.86 s       0.42 s  (0.21-0.54)          0.036 s
+      after         600 px/s        2.00 s       0.58 s  (0.36-0.87)          0.067 s
+      before       3600 px/s        0.36 s       0.07 s  (0.04-0.11)          0.000 s
+      after        3600 px/s        0.38 s       0.11 s  (0.05-0.15)          0.000 s
+
+    24/24 bodies fully drawn by the end of the ride at every rate.
+
+Per-body draw is 1.38x slower in seconds rather than the 1.75x `DRAW_W` grew,
+because the widened window reaches into the part of the leg where the camera
+accelerates hardest (12 → 25 units of `pullRaw` per unit p between p 0.90 and
+p 0.918). That acceleration is the camera's, it is pure in the pose, and it is
+not this file's to flatten.
+
+Concurrency on the frozen ladder — the number this change is really about:
+
+| p | before | after |
+|---|---|---|
+| 0.870 | 21 / 3 / 0 | 21 / 3 / 0 |
+| 0.880 | 19 / 3 / 2 | 16 / 8 / 0 |
+| 0.890 | 18 / 1 / 5 | 12 / 10 / 2 |
+| 0.895 | 4 / **15** / 5 | 10 / 10 / 4 |
+| 0.900 | 4 / **15** / 5 | 7 / 9 / 8 |
+| 0.905 | 3 / 3 / 18 | 4 / 10 / 10 |
+| 0.910 | 0 / 4 / 20 | 0 / 10 / 14 |
+| 0.920 | 0 / 0 / 24 | 0 / 0 / 24 |
+
+Before, the `drawing` column spikes and collapses. After it sits near ten for a
+quarter of the leg while the `undrawn` column drains two or three at a time —
+a queue, not a wave.
+
+### 12.5 Gates
+
+- **Reference stills byte-identical.** `capture.py --check`, five poses × two
+  sizes: **worst MAE 0.00/255. PASS.** `final@1440x900` and `final@430x932`
+  both exactly 0.00 — which simultaneously proves the field geometry did not
+  move (the `rand` stream was preserved) and that every body is fully arrived
+  at the rest. No golden re-shot.
+- **Reverse un-inks, and dark at arm holds both ways.** Continuous
+  forward-then-backward scrub at 250 px/s through real wheel events, every
+  frame, every body:
+
+  | size | max per-body draw Δ at matched p | max draw below p 0.850 fwd / rev | fully drawn at the rest |
+  |---|---|---|---|
+  | 1440x900 | 6.75e-3 | 0.0 / 0.0 | 24/24 |
+  | 1280x800 | 9.52e-3 | 0.0 / 0.0 | 24/24 |
+  | 375x812 | 9.64e-3 | 0.0 / 0.0 | 24/24 |
+
+  The residual is interpolation between frames; the draw is pure in `pullRaw`.
+  **Zero** non-finite `uProg` values in any pass.
+- **No black body.** 19-rung frozen ladder p 0.845–0.935: **0 black
+  body-samples**, min own-light under a fully opaque shell **0.460** (0.262 on
+  the shipped tree).
+- **Console clean.** Trap installed before the app loads, full 0 → 1 → 0 ride:
+  **929 frames, 0 errors, 0 warnings, 0 rejections.**
+- **Screenshot sequence** at 1440x900, p 0.870 → 0.920, in §12.2.
+- **Nothing regressed.** `2f4c2f1`'s canopy is untouched and still coupled
+  (`REVEAL_W` and `CANOPY_LEAD` unchanged); `070892c`'s shell fade and its
+  no-black-body invariant are strictly stronger; `66d1bed`'s per-body shell
+  materials are what make the fade legal and are untouched; the particle work
+  (`e2bd6e8` / `2fdb4e6` / `9e2a277` / `b2c9584`) is not in this path;
+  `8b71687`'s leg is untouched and was re-measured rather than assumed. No
+  camera change.
+
+### 12.6 Residuals
+
+- **§11.8's stem-shell note is now more visible, for the same reason
+  everything else is.** The stem shell fades in over `prog` 0.30…0.54 while the
+  cap does not start until 0.574, so a mid-draw body is briefly a stalk with a
+  small dark cap-less top against the haze. A 1.75x wider draw holds that state
+  1.75x longer, and it is legible at p 0.890 on a near body. The fix is still
+  `intro.js`'s rising clip plane, still one world plane per body, and still not
+  worth it at these distances — but it is closer to worth it than it was.
+- **The batched T4 band still has no draw-on** and now shares a narrower tail
+  (REV_KNEE..REV_HI, 0.12 against the shipped 0.15) so its kindle is slightly
+  more grouped than it was. It is 25–45 units out in fog and it only brightens,
+  so this reads as haze filling rather than as bodies arriving. If it ever
+  reads, the fix is §11.8's `aReveal`-keyed draw term in `world.js`, not a
+  wider tail — the tail cannot grow without pushing past the 0.84 ceiling the
+  clamped `uPull` imposes.
+- **The draw is now 84% of the distance from the last threshold to the rest.**
+  0.28 of an available 0.330. Anyone widening it further, or moving the Final
+  rest, or re-pathing this leg again, must re-measure `pullRaw` at p 0.925
+  first; below `d = 1` the rest frame changes and the golden will say so.

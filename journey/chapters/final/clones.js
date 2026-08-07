@@ -225,7 +225,28 @@ const DRAW_LO = 0.296, DRAW_HI = 0.893;
 // no longer ink in ahead of its own light). The draw is still a pure function
 // of the camera-pure pullRaw, so a reverse scrub un-inks each body stroke by
 // stroke exactly as it inked (D16).
-const DRAW_W = 0.16;           // = world.js REVEAL_W: one front, one width
+//
+// 0.16 -> 0.28 (2026-08-07, Hannah: "in the final position, can you make it so
+// the mushrooms animate in slower one at a time in a nice elegant manner").
+// The draw no longer matches REVEAL_W exactly; it is now the SAME FRONT, at
+// the same threshold, running WIDER than the light. That reads as a promotion
+// rather than a regression of 070892c, because the relation it moves toward is
+// still the hero's: on the landing page the hero's strokes ink in at FULL
+// opacity with the tip ember riding the drawing front — the hero is never a
+// dim body being drawn, it is a lit body still drawing. So a clone that has
+// come up to its light in the first 0.16 and then keeps inking for another
+// 0.12 is doing exactly what the hero does. Every guarantee 070892c bought is
+// strictly stronger, not weaker: the failure it fixed was a body DRAWN AND
+// DARK (draw ahead of light), and widening the draw moves in the opposite
+// direction — at the moment the cap shell begins to fade in (prog 0.574, i.e.
+// 47% of the draw) the body is now at 93% of its own light instead of 47%.
+//
+// The ceiling is measured, not chosen: the last body's threshold is 0.7898 and
+// the camera-pure pullRaw reaches 1.1200 at the Final rest, so the draw has
+// 0.330 to finish in and 0.28 lands it at 1.070 — p 0.9194 against a rest at
+// p 0.9250. The rest frame must see d = 1 exactly (below it the last overlay
+// strokes are missing and the tip ember is still on), and it does, with room.
+const DRAW_W = 0.28;           // the kindle's own front, run wider than its light
 
 // organism's own injectDraw(), re-expressed for a clone's plain overlay-net
 // material. The hero grafts uProg/uWin/pulse into the stock line shader at
