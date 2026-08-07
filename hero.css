@@ -176,8 +176,9 @@
   }
   .pill:hover { border-color: var(--ink); background: rgba(242, 237, 225, 0.06); }
   /* keyboard focus, gold family — matches journey/site.css's treatment for
-     every journey-layer control (.j-nav a:focus-visible etc). Covers .logo
-     and both .pill links (2RP, Discord). */
+     every journey-layer control (.j-rail / .j-menu :focus-visible etc).
+     Covers .logo and both .pill links (2RP, Discord); the chapter list is no
+     longer in this row at all (it is the side navigator, journey/rail.js). */
   nav a:focus-visible {
     outline: 2px solid var(--gold-bright);
     outline-offset: 3px;

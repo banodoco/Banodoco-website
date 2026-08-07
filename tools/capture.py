@@ -172,11 +172,19 @@ DPR = 1                    # --force-device-scale-factor. See --dpr.
 # them into the image would duplicate all the copy on screen.
 # `--chrome` keeps them, which is what a full-page regression golden wants.
 HIDE_SELECTORS = [
-    ".ui",          # hero nav + wordmark + h1 + sub + CTA, and the journey nav
+    ".ui",          # hero nav + wordmark + h1 + sub + CTA
     ".callouts",    # the three world-tracked hero callouts
     ".j-copy",      # journey chapter copy blocks
     ".j-hotspots",  # node hotspot proxies
     ".j-card",      # detail card
+    # The side navigator (journey/rail.js, 2026-08-07) and its menu. It used to
+    # be inside `.ui` as the `.j-nav` row and was covered by the first entry;
+    # it is a sibling landmark on <body> now, so it needs naming. Tier 3
+    # renders its own copy of the rail as real HTML over the still, exactly as
+    # it does for the nav row this replaced, so a baked-in one would double it.
+    ".j-rail",
+    ".j-menu",
+    ".j-menu-scrim",
 ]
 
 # --check thresholds.

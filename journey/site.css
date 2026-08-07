@@ -24,49 +24,438 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      progress — at p = 0 the page is the hero, exactly.
      ============================================================ */
 
-  /* --- chapter nav: lives inside the hero's own <nav>, styled like it --- */
-  .j-nav {
+  /* ============================================================
+     THE SIDE NAVIGATOR (Hannah, 2026-08-07) — journey/rail.js.
+
+     Replaces the `.j-nav` row that used to sit in the hero's own
+     <nav> between the wordmark and the 2RP / Discord pair, and the
+     static tier's `.chapters` row with it. The wordmark and the pill
+     pair are untouched: they get the top rule to themselves now.
+
+     ---- THE LAYOUT DECISION: LEFT, NOT RIGHT ----
+
+     The right flank is already spoken for. `.j-card` is fixed at
+     `right: 3.4vw; top: 50%` and is 400px wide at 1440 — i.e. the
+     detail card occupies exactly the band a right-hand rail would
+     want, and the node popover prefers the right of its chip and
+     flips left only at the edge. The left flank carries the wordmark
+     at the top and then nothing until `.pos-bottomleft` at the
+     bottom, so a band centred vertically on the left is the one
+     stretch of frame no other element claims at any chapter.
+
+     ---- THE MOTION DECISION: NOTHING MOVES ----
+
+     The slots are in their final positions at all times. Expanding is
+     the OTHER slots turning on around the one already showing; the
+     resting symbol does not shift by a pixel, so the thing the
+     pointer is on when the rail opens is still under the pointer
+     after it opens. That is also why the resting symbol's vertical
+     position tracks the journey — Mission sits near the top of the
+     band and Owned near the bottom — which is a free reading of
+     progress that costs no ink.
+
+     The gestures are the hero's `.co` callout boot (hero.css), the
+     same family the node popovers took in d1ecc23:
+
+       hero `co-on` / `tag-in`   the symbols and their names fade up in
+                                 rail order on a per-slot delay (--k),
+                                 names arriving from a wider letter-
+                                 spacing exactly as `.co .tag` does.
+       hero `.co .ck`            the current section wears the reticle:
+                                 four corner brackets locking in
+                                 clockwise, with the same overshoot
+                                 curve and the same 0.05s cascade.
+       hero `lead-draw`          the menu control's filaments draw
+                                 themselves left to right, last of all.
+
+     Every rule ends at the element's resting style, so the
+     reduced-motion block at the foot of this file switches the
+     transitions off and the expanded rail is simply already open.
+     ============================================================ */
+  .j-rail {
+    position: fixed;
+    left: 0;
+    top: 0; bottom: 0;
+    z-index: 4;                 /* over copy + hotspots, under the card */
+    /* Centred by FLEX, not by `top:50%` + `translateY(-50%)`: a transform on
+       an ancestor becomes the containing block for `position: fixed`
+       descendants, and this component grows fixed children (the static tier's
+       twin holds its menu panel INSIDE the rail, where the transform version
+       clipped it to the rail's own box). Same layout, no trap.
+       It is also a real <nav> landmark, which puts it in reach of the hero's
+       BARE `nav {}` rule (hero.css: flex + `padding: 2.1rem 3.4rem` + the
+       `fade-on` entry animation). `animation: none` is the load-bearing one —
+       fill-mode `both` would pin opacity at the animation's END value and the
+       rail would be lit at the Mission pose, moving the reference frame.
+       Reset, don't inherit; exactly the care the old `.j-nav` took. */
     display: flex;
-    gap: 1.9rem;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.55s ease;
-    /* W4-E made this a real <nav> landmark, which puts it in reach of the
-       hero's BARE `nav {}` rule (padding + justify-content + the `fade-on`
-       entry animation). `animation: none` is the load-bearing one: fill-mode
-       `both` would pin opacity at the animation's end value and the chapter
-       nav would be lit at the Mission pose. Reset, don't inherit. */
-    padding: 0;
+    align-items: center;
     justify-content: flex-start;
+    padding: 0;
     animation: none;
+    /* The container is inert to the pointer; only the tiles are live. That is
+       what keeps the resting state honest — a 44px symbol is the only thing
+       on the flank that answers a pointer, not a 240px invisible column. */
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.55s ease;
   }
-  .j-nav.on { opacity: 1; pointer-events: auto; }
-  .j-navlink {
+  /* `.on` is the first-travel reveal (latched — see rail.js). `:focus-within`
+     overrides it unconditionally: at the Mission pose the rail is dark but NOT
+     inert, so the first Tab brings it up rather than landing on nothing. The
+     captured Mission frame has no focus, so it is unaffected. */
+  .j-rail.on,
+  .j-rail:focus-within { opacity: 1; }
+
+  .j-rail-inner {
     position: relative;
-    color: rgba(201, 191, 168, 0.62);
-    text-decoration: none;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    text-shadow: 0 1px 12px rgba(10, 6, 2, 0.9);
-    transition: color 0.3s;
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0;
   }
-  .j-navlink::after {
+  /* A local scrim, so names stay legible over a bright chapter (Connect's
+     ground, Owned's colony) without the rail carrying a panel at rest. It
+     exists only while the rail is expanded. */
+  .j-rail-inner::before {
     content: "";
     position: absolute;
-    left: 0; right: 100%;
-    bottom: -0.5rem;
-    height: 1px;
-    background: var(--gold);
-    transition: right 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    /* The vertical inset is the FEATHER'S ROOM. The mask below fades over a
+       fixed 34px, so the box has to extend at least that far past the first
+       and last tile or the fade eats the top and bottom names — measured at
+       375x812, where a percentage feather put MISSION and EPILOGUE outside
+       the dark and straight onto the chapter copy. */
+    inset: -2.8rem -2.6rem -2.8rem -2rem;
+    z-index: -1;
+    opacity: 0;
+    background: linear-gradient(to right, rgba(9, 6, 2, 0.95) 58%, rgba(9, 6, 2, 0));
+    /* The horizontal falloff is the gradient; the vertical falloff is a mask,
+       because a scrim with a hard top and bottom edge reads as a PANEL laid
+       over the composition and this is meant to read as the frame simply
+       getting darker where the rail is. Feathered on three sides; the fourth
+       is the viewport edge. */
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 34px, #000 calc(100% - 34px), transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 34px, #000 calc(100% - 34px), transparent);
+    transition: opacity 0.35s ease;
   }
-  /* focus states visually equal hover states (PL-2.2) — and this rule stays
-     ABOVE `.active` so the active entry keeps its gold under both. */
-  .j-navlink:is(:hover, :focus-visible) { color: var(--parchment); }
-  .j-navlink.active { color: var(--gold-bright); }
-  .j-navlink.active::after { right: 0; }
-  /* the focus RING is the one shared journey treatment, further down */
+
+  .j-rail-list { display: block; margin: 0; padding: 0; list-style: none; }
+
+  .j-rail-slot { display: block; }
+
+  .j-rail-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    /* 44px, the PL-1.4 minimum, and the tiles ABUT: a pointer travelling from
+       the resting symbol to a neighbour never crosses dead space, so the
+       expansion cannot collapse under a moving cursor. */
+    height: 44px;
+    padding: 0 1rem 0 1.1rem;
+    color: rgba(201, 191, 168, 0.52);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  a.j-rail-item, .j-rail-menu { pointer-events: none; }
+  .j-rail.on a.j-rail-item,
+  .j-rail.on .j-rail-menu,
+  .j-rail:focus-within a.j-rail-item,
+  .j-rail:focus-within .j-rail-menu { pointer-events: auto; }
+  /* …but at rest only the CURRENT tile is live; the rest are turned off below
+     and take their hit area with them. */
+  .j-rail:not(:hover):not(:focus-within):not(.j-rail-open)
+    .j-rail-slot:not(.now) a.j-rail-item { pointer-events: none; }
+  .j-rail:not(:hover):not(:focus-within):not(.j-rail-open)
+    .j-rail-menu { pointer-events: none; }
+
+  .j-rail-mark {
+    position: relative;
+    flex: 0 0 auto;
+    display: block;
+    width: 24px; height: 24px;
+  }
+  /* 24px in a 22-unit box: a shade over 1:1, so a unit of symbol geometry is
+     about a pixel and the smallest authored dot (r 0.6) still rasterises as a
+     dot. See the radius note in journey/symbols.js. */
+  .j-sym { display: block; width: 24px; height: 24px; overflow: visible; }
+  .j-sym path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* Anything the scene renders as a lit point — spores, hubs, bodies, the
+     crown — is a filled dot here, so the marks read as light on dark rather
+     than as outline drawings. */
+  .j-sym circle { fill: currentColor; stroke: none; }
+
+  .j-rail-name {
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-shadow: 0 1px 12px rgba(10, 6, 2, 0.9);
+    /* the hero's `tag-in`: wider tracking on the way in, settling as it lands */
+    opacity: 0;
+    transition: opacity 0.34s ease, letter-spacing 0.34s ease;
+  }
+
+  /* ---- RESTING: one symbol, the scene on screen ---- */
+  .j-rail-slot { opacity: 0; transition: opacity 0.34s ease; }
+  .j-rail-slot.now { opacity: 1; }
+  .j-rail-slot.now .j-rail-item { color: rgba(228, 182, 102, 0.82); }
+  .j-rail-menu { opacity: 0; transition: opacity 0.34s ease; }
+
+  /* ---- EXPANDED: hover, keyboard focus, or the first touch ---- */
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-inner::before { opacity: 1; }
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot,
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-menu {
+    opacity: 1;
+    /* the callout boot's per-item cascade, top to bottom */
+    transition-delay: calc(var(--k, 0) * 0.045s);
+  }
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-name {
+    opacity: 1;
+    letter-spacing: 0.24em;
+    transition-delay: calc(var(--k, 0) * 0.045s + 0.06s);
+  }
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-item {
+    color: rgba(201, 191, 168, 0.62);
+  }
+  /* the current section, clearly marked — gold, and wearing the reticle */
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rail-item,
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.now .j-rail-item {
+    color: var(--gold-bright);
+  }
+  /* focus states visually equal hover states (PL-2.2) */
+  .j-rail-item:is(:hover, :focus-visible) { color: var(--parchment); }
+  .j-rail-slot.active .j-rail-item:is(:hover, :focus-visible),
+  .j-rail-slot.now .j-rail-item:is(:hover, :focus-visible) { color: var(--gold-bright); }
+  .j-rail-slot.now .j-sym { filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.4)); }
+
+  /* the epilogue echo: present, dimmer, and not a control (see rail.js) */
+  .j-rail-echo .j-rail-item { cursor: default; }
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-echo:not(.now) .j-rail-item {
+    color: rgba(201, 191, 168, 0.32);
+  }
+
+  /* ---- the reticle: hero.css's `.co .ck`, on the current symbol ---- */
+  .j-rail-ret { position: absolute; inset: -5px; display: block; pointer-events: none; }
+  .j-rck {
+    position: absolute;
+    width: 6px; height: 6px;
+    opacity: 0;
+    --rck: rgba(240, 200, 119, 0.85);
+    transition: opacity 0.14s, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .j-rck.tl { top: 0;    left: 0;  border-top: 1px solid var(--rck);    border-left: 1px solid var(--rck);  transform: translate(6px, 6px)   scale(0.4); }
+  .j-rck.tr { top: 0;    right: 0; border-top: 1px solid var(--rck);    border-right: 1px solid var(--rck); transform: translate(-6px, 6px)  scale(0.4); }
+  .j-rck.br { bottom: 0; right: 0; border-bottom: 1px solid var(--rck); border-right: 1px solid var(--rck); transform: translate(-6px, -6px) scale(0.4); }
+  .j-rck.bl { bottom: 0; left: 0;  border-bottom: 1px solid var(--rck); border-left: 1px solid var(--rck);  transform: translate(6px, -6px)  scale(0.4); }
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+    transition: opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--k, 0) * 0.045s + 0.1s),
+                transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--k, 0) * 0.045s + 0.1s);
+  }
+  /* …locking in clockwise, tl -> tr -> br -> bl, as the hero's do */
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.tr { transition-delay: calc(var(--k, 0) * 0.045s + 0.15s); }
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.br { transition-delay: calc(var(--k, 0) * 0.045s + 0.20s); }
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.bl { transition-delay: calc(var(--k, 0) * 0.045s + 0.25s); }
+
+  /* ---- the menu control: the prominent one ---- */
+  .j-rail-menu {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    height: 44px;
+    margin-top: 0.55rem;
+    padding: 0 1.05rem 0 1.1rem;
+    background: rgba(18, 12, 4, 0.5);
+    border: 1px solid rgba(217, 164, 65, 0.42);
+    border-left: 0;
+    border-radius: 0 999px 999px 0;
+    color: var(--gold-bright);
+    font: inherit;
+    cursor: pointer;
+    transition: opacity 0.34s ease, color 0.3s, border-color 0.3s, background 0.3s;
+  }
+  /* the hairline above it — the rail's own list ends, and a control begins */
+  .j-rail-menu::before {
+    content: "";
+    position: absolute;
+    left: 1.1rem; right: 1.4rem;
+    top: -0.3rem;
+    height: 1px;
+    background: rgba(217, 164, 65, 0.24);
+  }
+  .j-rail-menu .j-rail-name {
+    /* the control is prominent: it keeps its name at rest inside the expanded
+       state rather than earning it on a second hover */
+    font-weight: 700;
+    color: var(--gold-bright);
+  }
+  .j-rail-menu:is(:hover, :focus-visible) {
+    color: #ffe6ac;
+    border-color: var(--gold-bright);
+    background: rgba(24, 16, 5, 0.72);
+  }
+  /* hero `lead-draw`: the contents filaments draw themselves as the control
+     arrives, then stay drawn. */
+  .j-rail-menu .j-sym path {
+    stroke-dasharray: 12;
+    stroke-dashoffset: 12;
+    transition: stroke-dashoffset 0.4s ease;
+  }
+  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-menu .j-sym path {
+    stroke-dashoffset: 0;
+    transition-delay: calc(var(--k, 0) * 0.045s + 0.08s);
+  }
+
+  /* ============================================================
+     THE SIDE MENU — the overview, as a real modal dialog.
+     Content source and the two flagged gaps: see journey/rail.js.
+     ============================================================ */
+  .j-menu-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 6;
+    opacity: 0;
+    background: rgba(5, 3, 1, 0.62);
+    transition: opacity 0.3s ease;
+  }
+  .j-menu-scrim.open { opacity: 1; }
+
+  .j-menu {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    z-index: 7;
+    width: min(27rem, 92vw);
+    padding: 2.6rem 2.2rem 2.4rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* OPAQUE, deliberately. At 0.97 the hero's wordmark ghosted through the
+       panel's own heading, and the obvious fix — a backdrop-filter blur — asks
+       for a full-frame blur every frame over a live WebGL scene that is
+       already the page's whole frame budget. A dialog does not need to be
+       translucent; the scrim behind it is what says there is still a page
+       under here. */
+    background: #0b0702;
+    border-right: 1px solid rgba(217, 164, 65, 0.3);
+    box-shadow: 24px 0 70px rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    /* it arrives from the edge the rail lives on — the same statement the
+       popover's unfurl makes about where a panel comes from */
+    transform: translateX(-14px);
+    transition: opacity 0.3s ease, transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .j-menu.open { opacity: 1; transform: translateX(0); }
+
+  .j-menu-x {
+    position: absolute;
+    top: 0.8rem; right: 0.9rem;
+    padding: 0.4rem 0.5rem;
+    background: none;
+    border: 0;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.3s;
+  }
+  .j-menu-x:is(:hover, :focus-visible) { color: var(--gold-bright); }
+
+  .j-menu-h {
+    margin: 0 0 0.9rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .j-menu-lede {
+    margin: 0 0 1.9rem;
+    font-size: 0.86rem;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+
+  /* same bare-`nav` reset the rail and the footer take (hero.css `nav {}`) */
+  .j-menu-nav { display: block; padding: 0; animation: none; }
+  .j-menu-list { margin: 0; padding: 0; list-style: none; }
+  .j-menu-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.85rem 0.6rem 0.85rem 0;
+    border-top: 1px solid rgba(217, 164, 65, 0.16);
+    color: var(--parchment);
+    text-decoration: none;
+    transition: color 0.3s, background 0.3s;
+  }
+  .j-menu-list li:last-child .j-menu-item { border-bottom: 1px solid rgba(217, 164, 65, 0.16); }
+  .j-menu-mark { flex: 0 0 auto; margin-top: 0.15rem; color: rgba(217, 164, 65, 0.66); transition: color 0.3s; }
+  .j-menu-txt { display: block; }
+  .j-menu-no {
+    display: inline-block;
+    margin-right: 0.6em;
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    color: rgba(217, 164, 65, 0.5);
+  }
+  .j-menu-name {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+  .j-menu-line {
+    display: block;
+    margin-top: 0.3rem;
+    font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+    font-size: 1rem;
+    line-height: 1.32;
+    color: var(--muted);
+  }
+  .j-menu-item:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
+  .j-menu-item:is(:hover, :focus-visible) .j-menu-mark { color: var(--gold-bright); }
+  .j-menu-item[aria-current="true"] { color: var(--gold-bright); }
+  .j-menu-item[aria-current="true"] .j-menu-mark { color: var(--gold-bright); }
+  .j-menu-item[aria-current="true"] .j-menu-no { color: var(--gold-bright); }
+
+  .j-menu-else { margin-top: 1.9rem; }
+  .j-menu-eh {
+    margin: 0 0 0.7rem;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(217, 164, 65, 0.75);
+  }
+  .j-menu-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .j-menu-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    color: var(--parchment);
+    text-decoration: none;
+    font-size: 0.82rem;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.4);
+    transition: color 0.3s, border-color 0.3s;
+  }
+  .j-menu-links a:is(:hover, :focus-visible) { color: var(--gold-bright); border-color: var(--gold-bright); }
 
   /* --- chapter copy: stable at rests, released during major travel --- */
   .j-copy { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
@@ -877,7 +1266,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     margin: 0 0 1rem;
   }
   .j-foot-cols > * { flex: 0 0 auto; }
-  /* same bare-`nav` reset as .j-nav above */
+  /* The footer's chapter list is a bare <nav>, so it is in reach of the hero's
+     own `nav {}` rule (padding + justify-content + the `fade-on` entry
+     animation). `animation: none` is the load-bearing one: fill-mode `both`
+     would pin its opacity at the animation's end value. Reset, don't inherit.
+     (The side navigator is a <nav> too and takes the same care — see
+     `.j-rail`, which states its own position, padding and opacity outright.) */
   .j-foot-nav { display: block; padding: 0; animation: none; }
   .j-foot-links {
     display: flex;
@@ -974,7 +1368,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      treatment for every journey control, matching the static journey. The
      hero region is untouched — its own focus debt is recorded, not patched
      from here. */
-  .j-nav a:focus-visible,
+  .j-rail :is(a, button):focus-visible,
+  .j-menu :is(a, button):focus-visible,
   .j-act:focus-visible,
   .j-hot:focus-visible,
   .j-pop a:focus-visible,
@@ -1000,8 +1395,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        silhouette and gain the touch minimum in height only, so they still read
        as the hero's pill rather than as two slabs. */
     .j-act { min-height: 44px; }
-    .j-nav { gap: 1.1rem; }
-    .j-navlink { font-size: 0.62rem; letter-spacing: 0.14em; }
     .j-block { max-width: none; width: 88vw; }
     .j-block.pos-left, .j-block.pos-upperleft { left: 6vw; }
     .j-block.pos-bottomleft { left: 6vw; bottom: 11vh; }
@@ -1027,12 +1420,14 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      ============================================================ */
   @media (pointer: coarse), (max-width: 720px) {
     /* Only the controls that are `static` by default need a containing block.
-       .j-navlink is already relative, .j-hot and .j-card-x are absolute and
-       .j-foot-cue is fixed — a blanket `position: relative` here would
-       RESET those (equal specificity, later in the sheet) and, in the bottom
-       sheet, turn the close button into a full-width flex item. */
+       .j-hot and .j-card-x are absolute and .j-foot-cue is fixed — a blanket
+       `position: relative` here would RESET those (equal specificity, later in
+       the sheet) and, in the bottom sheet, turn the close button into a
+       full-width flex item. The side navigator's own tiles are 44px tall by
+       construction (see .j-rail-item) and need nothing from this block. */
     .j-foot-links a, .j-foot-note a, .j-card-link, .j-pop-link { position: relative; }
-    .j-navlink::before,
+    .j-menu-links a { position: relative; }
+    .j-menu-links a::before,
     .j-hot::before,
     .j-card-x::before,
     .j-card-link::before,
@@ -1065,30 +1460,33 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-hot.label-hover:not(:hover):not(.hot):not(:focus-visible)::before {
       pointer-events: none;
     }
-    /* --- the chapter nav gets its own band ---------------------------------
-       The hero's <nav> is one flex row: wordmark | chapter nav | 2RP+Discord.
-       At 375px those three add up to ~556px, so the row overflowed and the
-       LAST chapter entry (Owned) plus both hero CTAs sat off-screen entirely
-       — an unreachable control, before any question of how big it is.
+    /* --- the side navigator at phone widths ---------------------------------
+       The rail was the FIX for this query's original problem, not a new
+       victim of it: the old `.j-nav` sat in the hero's one flex row
+       (wordmark | chapters | 2RP+Discord), which added up to ~556px at 375
+       and pushed the last chapter entry and both hero CTAs off-screen
+       entirely. It needed a fixed full-width band of its own to be reachable
+       at all. A side rail is off that row by construction, so the hero row is
+       back to wordmark + CTAs (~315px, fits) with nothing lifted out of it.
 
-       Lifting only `.j-nav` out of the flow fixes both halves at once: the
-       hero row falls back to wordmark + CTAs (~315px, fits), and the chapter
-       entries get a full-width line of their own with room for real targets.
-       The hero's own markup and rules are untouched — this moves the journey's
-       element, which is the one this layer owns. */
-    .j-nav {
-      position: fixed;
-      left: 0; right: 0;
-      top: 4.6rem;
-      z-index: 2;
-      gap: 0;
-      justify-content: center;
+       What phone width does change is the EXPANSION. There is no hover here,
+       so the expanded state is always a deliberate tap (rail.js's touch
+       model), and while it is open it is a panel over the composition rather
+       than a hint beside it — hence the fuller scrim and the slightly tighter
+       band. Deliberately NOT solved here: the broader mobile layout pass. */
+    .j-rail-item, .j-rail-menu { padding-left: 0.9rem; }
+    .j-rail-inner::before {
+      inset: -2.8rem -2.2rem -2.8rem -2rem;
+      /* FULLY opaque under the tiles, not merely dark. At 375 the expanded
+         band unavoidably lies across the chapter copy — there is no width
+         left to sit beside it — so it stops pretending to be a scrim and
+         becomes a panel for as long as the visitor holds it open. At 0.96 the
+         copy ghosted through the names; measured, "Learn more" was still
+         legible under CONNECT. */
+      background: linear-gradient(to right, #090602 76%, rgba(9, 6, 2, 0));
     }
-    .j-navlink { padding: 0 0.6rem; }
-    /* the underline sits below the enlarged area, not inside it */
-    .j-navlink::after { left: 0.6rem; bottom: -0.5rem; }
-    .j-navlink.active::after { right: 0.6rem; }
-    .j-navlink:not(.active)::after { right: calc(100% - 0.6rem); }
+    .j-rail-name { font-size: 0.58rem; letter-spacing: 0.22em; }
+    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-name { letter-spacing: 0.18em; }
     /* the footer's link rows need the vertical room the bigger targets take */
     .j-foot-links { gap: 0.35rem 1.6rem; }
     .j-foot-cue { padding: 0.75rem 1rem; }
@@ -1135,8 +1533,31 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .j-nav, .j-navlink, .j-navlink::after, .j-hot, .j-hot-dot, .j-card { transition: none; }
+    .j-hot, .j-hot-dot, .j-card { transition: none; }
     .j-pop, .j-pop-link { transition: none; }
+    /* The side navigator, 2026-08-07. Every rule in it is a transition that
+       ENDS at the element's expanded resting style, so switching them all off
+       leaves the three states intact and instant: the rail still shows one
+       symbol at rest, still shows all of them under hover / focus / tap, the
+       reticle is simply already locked in, the menu's filaments already drawn,
+       and the panel already arrived. Nothing here is load-bearing motion. */
+    .j-rail, .j-rail-slot, .j-rail-item, .j-rail-name, .j-rail-menu,
+    .j-rail-inner::before, .j-rail-menu .j-sym path,
+    .j-menu, .j-menu-scrim, .j-menu-x, .j-menu-item, .j-menu-mark,
+    .j-menu-links a { transition: none; }
+    /* the reticle's clockwise cascade is delay, not duration — kill both */
+    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck,
+    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.tr,
+    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.br,
+    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.bl {
+      transition: none;
+      transition-delay: 0s;
+    }
+    .j-rck { transition: none; }
+    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot,
+    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-menu,
+    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-name,
+    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-menu .j-sym path { transition-delay: 0s; }
     .j-act, .j-act-link, .j-act-node { transition: none; }
     /* The two 2026-08-07 entries. Both are authored so that every keyframe
        ENDS at the element's resting style (hero.css's `.co` boot keeps the

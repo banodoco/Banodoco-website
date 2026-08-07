@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Section symbols — contact sheet</title>
+<!-- A look-at sheet for journey/symbols.js. Not shipped to visitors and not
+     linked from anywhere: it renders every mark at the size it is drawn (22px)
+     and at 6x, against the site's own ground, so the geometry can be judged
+     without squinting at a live rail. Same role page1-anatomy.html and
+     page2-camera.html play for the camera map. -->
+<style>
+  :root { --gold: #d9a441; --gold-bright: #f0c877; --muted: #c9bfa8; }
+  body {
+    margin: 0; padding: 3rem;
+    background: #0e0a04; color: var(--muted);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  }
+  h1 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold); margin: 0 0 2.4rem; }
+  .row { display: flex; align-items: center; gap: 2.5rem; padding: 0.7rem 0; border-top: 1px solid rgba(217,164,65,0.16); }
+  .big, .small { color: var(--gold-bright); }
+  .big svg { width: 108px; height: 108px; overflow: visible; }
+  .small svg { width: 24px; height: 24px; overflow: visible; }
+  .dim { color: rgba(201,191,168,0.52); }
+  svg path { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+  .big svg path { stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .small svg path { stroke-width: 1; }
+  svg circle { fill: currentColor; stroke: none; }
+  .meta b { display: block; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold-bright); }
+  .meta span { font-size: 0.86rem; }
+</style>
+</head>
+<body>
+<h1>Section symbols — journey/symbols.js</h1>
+<div id="sheet"></div>
+<script type="module">
+import { SYMBOLS, buildSymbol } from '../../journey/symbols.js';
+const sheet = document.getElementById('sheet');
+for (const id of Object.keys(SYMBOLS)) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  const big = document.createElement('div'); big.className = 'big'; big.appendChild(buildSymbol(id));
+  const sm = document.createElement('div'); sm.className = 'small'; sm.appendChild(buildSymbol(id));
+  const smd = document.createElement('div'); smd.className = 'small dim'; smd.appendChild(buildSymbol(id));
+  const meta = document.createElement('div'); meta.className = 'meta';
+  meta.innerHTML = `<b>${id}</b><span>${SYMBOLS[id].label}</span>`;
+  row.append(big, sm, smd, meta);
+  sheet.appendChild(row);
+}
+</script>
+</body>
+</html>
