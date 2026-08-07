@@ -272,6 +272,28 @@ export function createSpores(ctx) {
   // Taste-dial pearl floor: the knot-pearl richness never scales below this
   // share, so a faint sparkle keeps the labels' anchors alive even near T = 0.
   const PEARL_FLOOR = 0.18;
+  // ---- ARRIVAL SPREAD (2026-08-07, Hannah's "they just flash up" report) ----
+  // A stream's light must arrive as growth, not as a switch. Both of the
+  // ramps that carry a dot's brightness are therefore spread across as much
+  // of that exit's reveal as their choreography allows, both riding the SAME
+  // per-dot hash (stagW, the reveal-warped stagger built in initSteer) — the
+  // spread is what makes a cohort read as arriving rather than appearing.
+  // Every one of these is exact at reveal 1, which is what keeps the Inspire
+  // rest and p = 0 bit-identical.
+  //   CONV_*  — the conversion ramp: RAMP is one dot's own span, STAG the
+  //             span of starts across the cohort. RAMP + STAG = the reveal at
+  //             which the last dot completes (resident 1.00; the migrants must
+  //             be done when their walk front lands, so 0.55).
+  //   RG_*    — the migrant draw-on gate's opening. OPEN is the reveal at
+  //             which the LAST dot's gate starts to travel, STAG how far
+  //             earlier the first one's does. All reach 1 at reveal 1.
+  //   GATE_*  — the gate's own window in u3: TOP scales the sweep, WIDE is the
+  //             soft edge. TOP - WIDE must stay >= 1 or the rest stops being
+  //             an identity (u3 <= 1 has to clamp the smoothstep to zero).
+  const CONV_RAMP_RES = 0.26, CONV_STAG_RES = 0.74;
+  const CONV_RAMP_MIG = 0.22, CONV_STAG_MIG = 0.33;
+  const RG_OPEN = 0.55, RG_STAG = 0.42;
+  const GATE_TOP = 1.30, GATE_WIDE = 0.25;
   // A hero recycle (or any teleport) moves a dot far more than one drift frame.
   const TELEPORT2 = 0.09; // (0.3 units)^2
   // Overlapping dim regions never fully erase a spore.
@@ -287,7 +309,7 @@ export function createSpores(ctx) {
   const randC = makeRng(3187);            // core cohort — own stream (see above)
   let N = 0, inited = false, wasActive = false;
   // per-dot STATIC assignment (filled at initSteer)
-  let exIdx, stag, oR, oAz, oY, az0, azS2, rimRi, rimYi, rimRs, rimYs,
+  let exIdx, stag, stagW, oR, oAz, oY, az0, azS2, rimRi, rimYi, rimRs, rimYs,
       offR, offY, spanA, s1a, s2a, s3a, riseA, leanA, curlA, spA,
       perA, ph0A, h1A, h2A, sdA, dropA, knotA, coreA;
   // per-dot DYNAMIC state
@@ -311,7 +333,7 @@ export function createSpores(ctx) {
     if (!exits || exits.length < 3) return false;
     N = sporePts.geometry.attributes.position.count;
     exIdx = new Uint8Array(N); dropA = new Uint8Array(N);
-    stag = new Float32Array(N);
+    stag = new Float32Array(N); stagW = new Float32Array(N);
     oR = new Float32Array(N); oAz = new Float32Array(N); oY = new Float32Array(N);
     az0 = new Float32Array(N); azS2 = new Float32Array(N);
     rimRi = new Float32Array(N); rimYi = new Float32Array(N);
@@ -336,6 +358,16 @@ export function createSpores(ctx) {
       const spec = exits[e];
       exIdx[i] = e;
       stag[i] = randT();
+      // ARRIVAL SPREAD, second half: a stagger that is uniform in REVEAL is
+      // not uniform on SCREEN, because the chapter drives each exit's reveal
+      // as a smoothstep of progress — the reveal crawls at both ends and
+      // sprints through the middle, so a flat stagger piles most of the
+      // cohort's crossings into the middle third of the scroll. Pre-warping
+      // the hash through the same smoothstep puts proportionally more dots
+      // where the reveal is slow, which is what makes the arrival even in the
+      // thing the visitor actually experiences: time. stag itself is left
+      // alone — every other assignment that reads it keeps its approved value.
+      stagW[i] = stag[i] * stag[i] * (3 - 2 * stag[i]);
 
       // destination lane, snapped between real gill channels
       const lane = Math.round((gaussT() * 0.34) / CHANNEL) * CHANNEL
@@ -427,7 +459,6 @@ export function createSpores(ctx) {
     let anyConv = false, wroteAny = false;
     const rev0 = eff[0], rev1 = eff[1], rev2 = eff[2];
     const mig1 = ss(0, 0.55, rev1), mig2 = ss(0, 0.55, rev2);
-    const rg1 = ss(0.55, 1, rev1), rg2 = ss(0.55, 1, rev2);
 
     for (let i = 0; i < N; i++) {
       const i3 = i * 3;
@@ -444,12 +475,19 @@ export function createSpores(ctx) {
 
       const e = exIdx[i];
       const rev = e === 0 ? rev0 : e === 1 ? rev1 : rev2;
-      // conversion: hash-staggered pure function of the exit's reveal.
-      // Migrants complete by rev 0.55 (the walk front's arrival); the
-      // resident stream keeps a wider stagger and completes by rev 0.80.
+      // conversion: hash-staggered pure function of the exit's reveal, and
+      // the ramp the dot's brightness rides (pw = GAIN * env * conv). The
+      // stagger is therefore the population's arrival spread, not a detail:
+      // a dot's own crossing is invisible, a cohort crossing together is the
+      // flash. Both spans are pushed to the limit their choreography allows
+      // — the resident to the full reveal, the migrants to the walk front's
+      // arrival at rev 0.55 — so the crossings are as spread as the
+      // choreography can carry. Both still complete exactly at their stated
+      // reveal for every dot, so nothing about the rest frame moves.
+      const sw = stagW[i];
       const conv = e === 0
-        ? ss(0, 0.35, rev - stag[i] * 0.45)
-        : ss(0, 0.30, rev - stag[i] * 0.25);
+        ? ss(0, CONV_RAMP_RES, rev - sw * CONV_STAG_RES)
+        : ss(0, CONV_RAMP_MIG, rev - sw * CONV_STAG_MIG);
       // taste dial: cvT is how far the dot actually leaves its drift (and
       // the dimmer's ambient mix); conv keeps the choreography/cease gate.
       const cvT = conv * T;
@@ -478,7 +516,10 @@ export function createSpores(ctx) {
       // -> braided rise along the drift axis (split/braid modes)
       const migF = e > 0;
       const mig = e === 1 ? mig1 : mig2;
-      const rg = e === 0 ? 1 : (e === 1 ? rg1 : rg2);
+      // per-dot draw-on progress (the gate below). The resident's is the
+      // literal 1 at every reveal; a migrant dot opens its gate on its OWN
+      // share of the reveal, RG_STAG earlier at sw = 1 than at sw = 0.
+      const rg = e === 0 ? 1 : ss(RG_OPEN - sw * RG_STAG, 1, rev);
       const h1 = h1A[i], h2 = h2A[i], sd = sdA[i], sp = spA[i];
       const s1 = s1a[i], s2 = s2a[i], s3 = s3a[i];
       const rimR = rimRi[i], rimY = rimYi[i], a0 = az0[i], curl = curlA[i];
@@ -580,7 +621,7 @@ export function createSpores(ctx) {
         // The gate may never take away more light than the dot has already
         // ceded. dim() runs `f = f * (1 - cv) + pw`, so a dot surrenders cvT
         // of its ambient shed colour as it converts — complete by rev ~0.30.
-        // But rg only STARTS granting plume light at rev 0.55, and a dot's
+        // But rg only STARTS granting plume light near rev 0.55, and a dot's
         // stage is a free-running per-dot clock (t = tNow/perA + ph0A),
         // wholly independent of the reveal — so ~60% of a migrant cohort sits
         // in this branch at ANY reveal, not just after its walk front lands.
@@ -596,14 +637,23 @@ export function createSpores(ctx) {
         // rev, conv (and so cvT) is ~0, the floor is ~0 and the gate is as it
         // was, which is what keeps arming invisible.
         //
-        // IDENTITY AT rev 1: rg = 1 -> rl = 1.12, g0 = 1.02, and u3 <= 1, so
-        // ss() clamps to exactly 0 and drawOn is exactly 1 — the expression
-        // collapses to `env *= 1`. The Inspire rest and p = 0 are therefore
-        // untouched bit-for-bit, not merely approximately. Same for the
-        // resident exit, whose rg is the literal 1 at every reveal.
-        // See journey-v6-plan/07-chapter-inspire.md, 2026-08-06 (later).
-        const rl = rg * 1.12;
-        const g0 = rl - 0.10 > 0 ? rl - 0.10 : 0;
+        // SPREAD, NOT LOCKSTEP (2026-08-07). rg used to be one number per
+        // exit per frame, so the window [g0, rl] swept every dot's clock
+        // together: near the steep part of the sweep the whole cohort crossed
+        // inside ~0.027 of reveal — a wipe, which is what a switch looks like.
+        // rg is now per-dot (RG_STAG above), and the window's soft edge is
+        // GATE_WIDE rather than 0.10, so a dot's own crossing is gentler and
+        // the cohort's are spread. It still draws ON, it just draws.
+        //
+        // IDENTITY AT rev 1: rg = 1 -> rl = GATE_TOP = 1.30, g0 = 1.05, and
+        // u3 <= 1, so ss() clamps to exactly 0 and drawOn is exactly 1 — the
+        // expression collapses to `env *= 1`. The Inspire rest and p = 0 are
+        // therefore untouched bit-for-bit, not merely approximately. Same for
+        // the resident exit, whose rg is the literal 1 at every reveal. This
+        // is why GATE_TOP - GATE_WIDE must stay >= 1.
+        // See journey-v6-plan/07-chapter-inspire.md, 2026-08-06 and 08-07.
+        const rl = rg * GATE_TOP;
+        const g0 = rl - GATE_WIDE > 0 ? rl - GATE_WIDE : 0;
         const drawOn = 1 - ss(g0, rl + 0.001, u3);
         env *= drawOn + (1 - drawOn) * cvT;
       }
