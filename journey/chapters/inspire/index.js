@@ -1010,12 +1010,67 @@ export function createInspire(sceneApi) {
   // by sampling all three effective reveals across p 0..0.42: no channel rises
   // after it has fallen, at any point in the run.
   //
-  // T1 arms at ~48 deg past Mission (az ~36) — after the first ramp opens, so
-  // arming can never step on it.
+  // T1 arms where the reveal PRODUCT is still exactly zero — az 4.79 against
+  // an onset of 5 — so arming can never step on a ramp. That threshold is
+  // derived from these bounds; see seams.js, and re-derive it if they move.
+  //
+  // ---- EVERY RAMP RUNS TO THE CEILING (2026-08-07) ----------------------
+  // Hannah's "they just flash up" survived `9e2a277`: that commit spread each
+  // cohort's brightening across the WHOLE of its reveal, which is all a dot
+  // can do, and then ran into the reveal's own p-width. The resident's window
+  // was az 14..44, and the arrival crosses 30 deg of azimuth in Δp 0.044 — so
+  // at MAX_SCRUB_RATE the entire arrival could not last longer than ~97 ms
+  // however its amplitude was distributed. Under ~150 ms a luminance change
+  // reads as a cut, not a fade, so the cohort could still land as a flash.
+  //
+  // WHERE THE BUDGET WAS, AND WHERE IT WAS NOT. `9e2a277`'s note pointed at
+  // p 0.1825–0.26, which is indeed all rest — but that region is all ABOVE
+  // az 78, and no ramp may finish above ~83: the arrival climbs to 115 and the
+  // exit leg falls back through it to meet Connect, so a ramp still open up
+  // there would run BACKWARD in view on the way out (the rule stated below
+  // this block, and the reason D18 pulled the old bounds in). That budget is
+  // unspendable. The budget that IS spendable was inside these very numbers:
+  // the resident's ramp SATURATED at az 44 and then sat flat for the 34
+  // further degrees the cascade had left before the ceiling. Every ramp was
+  // finishing early and idling.
+  //
+  // So every ramp now runs to the ceiling and the sequence is carried by the
+  // ONSETS alone. That is the whole change: the three streams still enter in
+  // the authored order (the visible stream gathers first, the Arca current
+  // peels off along the rim, 2RP last) and are always visibly at different
+  // stages — at az 40 they stand at 0.47 / 0.32 / 0.13 — but each one now
+  // spends every remaining degree of the swing growing instead of stopping.
+  // The resident's window goes 30 -> 73 deg, Δp 0.044 -> 0.101 (measured).
+  //
+  // ONSETS. 5 / 17 / 29. The first is the master drive's own onset (the
+  // `band` channel, sm(5, 28) in drive() below) — the reveal is a product of
+  // the two, so nothing can begin before 5, and putting the resident exactly
+  // there costs nothing and makes the seam derivation exact: BOTH factors are
+  // zero at az <= 5.
+  //
+  // 12 deg is the SMALLEST spacing that still reads as an order, and small is
+  // what this wants: the three windows all end at 78, so every degree of
+  // spacing is a degree taken off the later streams. Measured per cohort
+  // (dots crossing luminance 1.0, split by cap-local azimuth at the rest;
+  // frames carrying 80% of that cohort's amplitude, at MAX_SCRUB_RATE),
+  // widening the spacing costs the tail and buys nothing:
+  //
+  //     spacing      ArtCompute   Arca   2RP     conservation drawdown
+  //     12 (this)         7         5     3            -1.97%
+  //     18                7         4     3            -1.50%
+  //     21                7         4     2            -0.84%
+  //     shipped 20/16     4         2     2            -2.10%
+  //
+  // Every cohort improves against shipped at every spacing; 12 is simply the
+  // best of them, and it is also where the two migrant streams stop being the
+  // worst thing on screen. See 07-chapter-inspire.md (2026-08-07, later).
+  //
+  // CEILING 78, unchanged and still the binding constraint — it is the number
+  // D18 chose for the reversal rule above, kept to the digit.
   const ARR = [
-    { a0: 14, a1: 44 },   // ArtCompute — the visible stream, gathered first
-    { a0: 34, a1: 58 },   // Arca — its current peels off along the rim
-    { a0: 50, a1: 74 },   // 2RP — the far branch, last
+    { a0: 5,  a1: 78 },   // ArtCompute — the visible stream, gathered first
+    { a0: 17, a1: 78 },   // Arca — its current peels off along the rim
+    { a0: 29, a1: 78 },   // 2RP — the far branch, last
   ];
   const RAD2DEG = 180 / Math.PI;
   function camAzDeg() {
@@ -1179,7 +1234,17 @@ export function createInspire(sceneApi) {
       // as one cloud. Carrying the camera to 115 made it worse, not better:
       // 2RP would have reached only 0.29. Now all three are exactly 1 from
       // az 78 through the rest and back down the exit.
-      const a = sm(18, 48), b = sm(38, 62), c = sm(54, 78), band = sm(5, 28);
+      //
+      // THESE FOUR ARE ONE NUMBER. setReveal takes max(a, b, c, band) and
+      // gives every exit the same `target`; the per-exit shaping is the ARR
+      // ramps above, applied in computeEff. `band` is the steepest of the
+      // four from az -37.7 upward, so the master drive IS sm(5, 28) — a, b
+      // and c never bind. They are kept, and re-keyed here to the ARR windows
+      // they mirror, so that the master's onset stays 5 no matter which of
+      // them someone edits next: the T1 derivation in seams.js rests on the
+      // master being zero below az 5, and a channel that opened earlier would
+      // silently move it.
+      const a = sm(5, 78), b = sm(17, 78), c = sm(29, 78), band = sm(5, 28);
       // under the cap the plumes are behind us: retire them into the seam
       // (route-derived: 0.025 before the Inspire range ends; shipped 0.355)
       const out = 1 - smz((p - (endOf('inspire') - 0.025)) / 0.06);
