@@ -1140,3 +1140,233 @@ The cap's screen track is now one migration with no pause anywhere:
   available to do it in. That is structural given both endpoints are fixed;
   it reads as a build rather than a lurch, but it is a change in character
   and Hannah should be the judge of it.
+
+---
+
+## 2026-08-07 (D21) — the same rule, anchored to furniture the page draws
+
+Hannah, on the framing `ca7a769` shipped: *"for the inspire section, can you
+push the mushroom down a bit so the page feels more balanced — use your vision
+to judge where."*
+
+### What was wrong with D19, precisely
+
+D19's construction was right and its **anchors** were wrong. It centred the cap
+between **y 0** — the top of the viewport — and **y 608.4** — the top of the
+copy block's *padding box*. Neither of those is a thing a viewer can see. The
+page draws a nav across the top whose lowest element (the `2RP` / `Discord`
+pills) bottoms at **y 66.1**, and the copy's first visible mark is the headline
+glyph, whose cap-height top is **y 641.0** — the `h2`'s rect starts at 634.0 and
+the 7.0 px is the font's internal leading. So D19 centred the cap in a band with
+66 px of invisible furniture stapled to its top and 33 px of invisible padding
+stapled to its bottom, and the two errors did not cancel: they both pushed the
+midpoint up.
+
+Anchored to what the page draws, the band is **[66.1, 641.0]** and its midpoint
+is **353.6**, which is **49.3 px below** where D19 put the cap. That is the
+whole change. It is not a taste correction applied on top of a rule; it is the
+same rule with its inputs read off the rendered frame instead of off the CSS.
+
+The check that it is the right band: at the new pose the frame's two voids come
+out **equal to a tenth of a pixel** — 179.3 px of sky between the nav and the
+top of the cap, 179.4 px of dark between the cap's rim and the headline.
+
+### Why not further, even though all the plume is above the cap
+
+Measured, not assumed. The subject's luminance-weighted centroid — mushroom and
+plume together, everything above the geometric horizon, sky floor subtracted —
+sits **61 px higher than the cap's bbox centre at every offset tested**:
+
+| cap centre | 304.2 (D19) | 334.2 | **353.5** | 374.2 | 394.2 |
+|---|---|---|---|---|---|
+| subject ink centroid | 252.0 | 275.4 | **292.1** | 309.2 | 326.5 |
+| void above cap (from nav) | 129.2 | 159.8 | **179.3** | 200.3 | 220.5 |
+| void below cap (to glyph) | 227.8 | 198.4 | **179.4** | 158.9 | 139.1 |
+
+Centring the **ink** rather than the head would want the cap at y 414 — sitting
+on the headline. That criterion over-weights a diffuse low-contrast scatter that
+deliberately spills off the top edge. Hannah's language in D19 and again here is
+about *the mushroom* and *the head*; the plume is context. Anchor the head, and
+let the plume be the air.
+
+The four offsets above were also read on screen at 1440x900, which is what
+settled it. **+90** crowds the copy — 139 px of clearance and a stipe with
+nothing left of it. **+70** inverts the two voids, 200 above against 159 below,
+and reads bottom-heavy in exactly the way D19 read top-heavy. **+30** is a real
+improvement and still leaves the cap's void the largest single empty area in the
+frame. **+49.3** is where the two voids cross.
+
+### The pose
+
+```js
+export const INSPIRE = { az: 115 * DEG, r: 11, y: 2, target: V(2.3371, 2.4199, -1.1052), fov: 40 };
+```
+
+**`az`, `r`, `y` and `fov` are the shipped values to the digit for the third
+re-key running.** The eye does not move; it looks somewhere else. That is not
+economy, it is the safety argument, and here it is measured rather than argued:
+over p 0..0.60, **max |Δ camera azimuth| is exactly 0 and max |Δ position| is
+exactly 0** in landscape, on a 601-sample full-precision row. The Inspire reveal
+drive and the 34-deg arming gate are functions of camera azimuth alone
+(`index.js camAzDeg` reads `position.x/z`), so the reveals are bit-identical and
+the particle-continuity troughs closed in `b2c9584` cannot move. There is no
+sweep to report because there is no difference to resolve.
+
+**Correction to D20's blanket claim.** D20 wrote "every `pos` is byte-identical"
+without qualification. That is true in landscape and **false in portrait**: the
+portrait field dollies about the *landscape target* (`portrait.js applyPortrait`:
+`pos = target - fwd * back`), so moving the target moves the portrait eye.
+Measured here: **max |Δ az| 0.0052 deg, max |Δ pos| 0.165** world units, almost
+all of it along the view axis. The reveal ramps are `sm(…)` on `camAzDeg` with
+slope 1/30 per degree, so 0.0052 deg moves any reveal channel by **≤1.7e-4**,
+and the 34-deg arming gate is crossed at hundreds of deg per unit p. Negligible,
+but it should have said so, and D19 had the same exposure unrecorded.
+
+### Composition, measured
+
+Landscape is **fitted** to 1440x900, the primary review size. Portrait is
+**balanced** between the two phone sizes, because one pose cannot serve both.
+
+| viewport | nav bottom | headline glyph top | band midpoint | cap centre | dx | dy |
+|---|---|---|---|---|---|---|
+| 1440x900 | 66.1 | 641.0 | (720.0, 353.6) | (720.0, 353.5) | **+0.0** | **-0.1** |
+| 1280x800 | 66.1 | 553.0 | (640.0, 309.6) | (640.0, 314.2) | **+0.0** | **+4.7** |
+| 375x812 (portrait) | 93.1 | 489.0 | (187.5, 291.1) | (187.2, 310.6) | **-0.3** | **+19.5** |
+| 430x932 (portrait) | 93.1 | 659.0 | (215.0, 376.1) | (214.6, 356.5) | **-0.4** | **-19.6** |
+
+Every glyph top in that table is read off the rendered PNG (first row in the
+copy column with text-bright pixels), not computed: 641 / 553 / 489 / 659. The
+1280x800 and 375x812 frames were shot for the purpose through a scratch harness
+that appends to `capture.py`'s `SIZES` at import time — the shipped tool is not
+edited and its two golden sizes are unchanged.
+
+**The portrait band's top is not the landscape band's top.** It is y 93.1 in
+both phone frames, and it is the **active nav link's underline**, not the pills.
+The nav stacks in portrait — pills on top ending at 49.7, links below ending at
+85.1, and the 1 px `.active::after` rule hangs 8 px under its link. In landscape
+the same rule sits at 64.6 and the pills' 66.1 wins. Reading "the bottom of the
+nav" off one orientation and reusing the number in the other would have been
+wrong by 27 px.
+
+Portrait residuals are ±19.6, **better than the ±23.8 D19 balanced to**. That is
+luck rather than skill: the two phone sizes' band midpoints happen to sit closer
+together as a fraction of frame height (0.358 vs 0.403) than their copy-block
+tops did (0.564 vs 0.674). `tgtRight` is untouched — nothing horizontal moved.
+
+### The exit keys, re-derived from the D20 rule
+
+Only the rest's gaze moved, and a keyed spline does not care why an endpoint
+moved. Both exit keys are re-derived from the rule D20 authored, with the new
+rest. **The decode was re-proved before it was re-used**: run on the *shipped*
+rest it reproduces the shipped key targets to all four decimals — `2.0571 /
+2.1443 / -0.8376` and `1.2152 / 2.2287 / -0.8497` — and the Connect endpoint
+comes back at `-12.3239 / +6.0850` against the `-12.324 / 6.085` written into
+the file. Only then was the new rest fed in.
+
+| key | before | after |
+|---|---|---|
+| rest p 0.260 | dx -0.079, dy **+5.354** | dx **-0.095**, dy **+3.112** |
+| drift p 0.312 | tgt (2.0571, 2.1443, -0.8376) | tgt **(2.0576, 2.4106, -0.8396)** |
+| exit p 0.362 | tgt (1.2152, 2.2287, -0.8497) | tgt **(1.2093, 2.3779, -0.8526)** |
+
+Everything else is untouched, and deliberately so: every `pos` is byte-identical,
+both `fov` values stay at 41.63 / 44.49 (fov is `lerp(40, 48, s)` and never read
+the rest's gaze), and the distance ladder rebases to 8.4253 -> 8.55 -> 8.69 ->
+8.788 — **the same digits it already carried**.
+
+**A residual D20 recorded as forced is now gone.** D20 had to accept that the cap
+*sinks ~13 px before it rises 63*, because the approved rest framed it above
+Connect's settled first key and the vertical had to turn once. The rest now sits
+**below** Connect's key, so `dy` climbs 3.112 -> 6.085 with nothing to unwind.
+Measured over the leg at 1440x900: **vertical backtrack 8.64 px -> 0.00, sign
+flips 3 -> 0.** The cap rises monotonically from the rest to the Connect rest.
+
+### Gates
+
+All figures from one instrument — a drift-aware scrub of `director.poseAt` (pure
+in p and aspect), cap-rim silhouette bbox centre, tree swapped between runs so
+before and after are like for like.
+
+- **Reveal continuity.** Landscape `camAz(p)` and `pos(p)` differ by **exactly
+  0** over p 0..0.60. Nothing that reads them can have moved. Portrait differs
+  by 0.0052 deg / ≤1.7e-4 of a reveal channel (above).
+- **Leg, p 0.26–0.49.** Screen-x backtrack **0.00 px, 0 sign flips** in both
+  aspects, unchanged from D20. Screen-y backtrack **8.64 -> 0.00 px, 3 -> 0
+  flips** landscape; portrait 4.47 -> 6.59 px, 2 -> 2 flips (the pre-existing
+  `tgtUp`-ramp wobble D20 recorded, sub-pixel at fov 53). Slowest mid-leg sweep
+  31.3 -> 31.1 px/p, peak 2925 -> 2923. Distance re-approach 0.0694 -> 0.0710
+  landscape (0.02% of 8.5), 0.0275 -> **0.0248** portrait.
+- **Rate + roll**, 601-sample, p 0..0.60, Mission->Inspire->Connect. Composed
+  rotation peak **766.0 -> 763.1 deg/unit-p landscape** and **761.9 -> 758.2
+  portrait**, both still at p 0.221 in the arrival gesture, both **improved**,
+  both far under the ~1.2k ceiling. **Max roll 0.000000 deg** in both aspects.
+  Leg-only peak 596.4 -> 598.3 landscape, 576.6 -> 579.7 portrait.
+- **Arrival reversals unchanged.** The single vertical turn in the arrival stays
+  a single turn, landscape 1 -> 1 flip (moving p 0.14 -> 0.166); portrait 2 -> 2.
+  Nothing new was introduced, the existing one just lands lower.
+- **Reverse mirrors exactly.** Forward vs reverse over the full ride, 201
+  points: **max position, target and fov error all 0.00e+0** in both aspects.
+  (`poseAt` is pure; D20's 8.28e-4 fov figure was the director's `apply()` write
+  deadband, which this does not touch.)
+- **Nothing fades in over open view.** No opacity or reveal schedule was edited:
+  the diff is four `tgt` vectors and one portrait `tgtUp`.
+- **Three streams still read, and read better.** Share of each braid's vertices
+  passing off the frame edge: **0 / 10.00 / 0.83 % -> 0 / 5.83 / 0.00 %** —
+  strictly better on all three, which is the direct consequence of aiming
+  higher. Inter-braid screen separations 99.0 / 207.5 -> **98.7 / 206.4 px**
+  (-0.3% / -0.5%). All three release lips stay in frame and their facing is
+  unchanged at 1.00 / 0.21 / 0.19 **by construction** — facing depends only on
+  where the eye is, and the eye did not move.
+- **Chips clear the copy.** At 1440x900 the three land at y 161-185 (ArtCompute),
+  233-256 (Arca Gidan Prize) and 274-297 (2RP), against a copy block starting at
+  608 — clearances 423 / 352 / 311 px. No chip-to-chip overlap: x 333-501,
+  548-679, 892-955. Each dot still sits on its own braid. Portrait verified on
+  screen at both phone sizes.
+- **Console clean.** The two expected info lines per load (`[journey-lens]`,
+  `[journey-v6]`), zero application errors or warnings across a slow
+  Mission->Inspire->Connect scrub forward and backward. The one 404 in the log
+  is `/favicon.ico`, which the dev server has never served.
+- **`capture.py --check` PASS**, worst MAE **0.04/255** (owned mobile, its own
+  determinism noise). `mission` **0.00/0.00 — byte-identical, which the brief
+  requires**; `connect`, `owned`, `final` all 0.00. Only `inspire@1440x900` and
+  `inspire@430x932` were re-shot, with provenance in `manifest.json`.
+
+### What it gives back
+
+D19 spent the ground to lift the cap: the horizon ran 633 -> 463 and the lower
+band brightened 17%. Aiming higher pitches some of that back down the frame.
+
+| | D19 | D21 |
+|---|---|---|
+| horizon, 1440x900 | 463.3 | **511.7** |
+| horizon, 1280x800 | 411.8 | **454.8** |
+| lower-band mean luminance | 24.80 | **24.62** |
+| light off the top edge (mean of rows 0-3) | 18.39 | **16.63** |
+
+48 of the 170 px D19 spent come back, and the plume that was clipping at the top
+clips less. Neither was the reason for the change; both are why it is cheap.
+
+### Residual / open
+
+- **Connect's paths now become visible 0.024 of p later.** The camera-pure
+  resolve reads `forward.y`, and aiming higher delays it: `group.visible` flips
+  at **p 0.3500** against the shipped 0.3256 (measured live, 0.000625 steps).
+  Connect's own arrival is p-pure and does **not** move — the three fronts still
+  depart at 0.4006 / 0.4231 / 0.4469 to the digit — so the lead the `4146288`
+  restage bought, "the web must read as pre-existing before a strand of it is
+  lit", narrows from 0.075 to **0.051** of p. That is still comfortably above
+  the 0.035 that restage set as its own requirement, and the `connect` golden is
+  0.00/0.00, but it is now the binding constraint on ever starting Connect's
+  arrival earlier, and anyone who wants that budget should read this line first.
+- **It also FIXES a portrait violation nobody had noticed.** On the shipped
+  build the camera-pure resolve was **0.2982 at the portrait Inspire rest** —
+  not the "exactly 0 at the Inspire rest" the connect chapter's own header
+  claims. Only the arm gate (`amount > 0.003`, p 0.32) kept it off screen. The
+  new pose puts `forward.y` at +0.0217 there and the resolve back to exactly 0,
+  restoring the stated invariant.
+- **1280x800 sits +4.7 px low** and portrait ±19.6. Both are inherent: the
+  band's midpoint is not a fixed fraction of the frame, because the copy's
+  height in the frame depends on how its prose wraps. Both are better than the
+  residuals D19 left (+9.5 and ±23.8).
+- **The stipe still crosses the headline.** It always has; nothing here changes
+  it, and at this offset the crossing is slightly shorter than it was.

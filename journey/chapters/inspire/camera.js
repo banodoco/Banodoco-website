@@ -109,9 +109,37 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // 1.00 / 0.21 / 0.19.
 //
 // The target is the exact solve, not a hand-nudge: a 2x2 Newton on the gaze's
-// (right, up) offsets against the projected cap silhouette's bbox centre,
-// converged to 0.0 px horizontal / 0.1 px vertical at 1440x900.
-export const INSPIRE = { az: 115 * DEG, r: 11, y: 2, target: V(2.3349, 2.0903, -1.1016), fov: 40 };
+// (right, up) offsets against the projected cap silhouette's bbox centre.
+//
+// D21 (Hannah, 2026-08-07): "for the inspire section, can you push the
+// mushroom down a bit so the page feels more balanced." D19's construction was
+// right and its ANCHORS were wrong. It centred the cap between the top of the
+// VIEWPORT (y 0) and the top of the copy BLOCK (y 608.4, which is the block's
+// padding box, not its text). Neither edge is a thing a viewer sees. What a
+// viewer sees is the nav — logo / links / pills, bottom edge y 66.1 — and the
+// first glyph of the headline, whose cap-height top is y 641.0 (the h2's rect
+// starts at 634.0; the 7.0 px is the font's internal leading, and it scales
+// with font-size: 0.1568 x fs, which is how the other viewports are derived).
+// Anchored to the furniture the page actually draws, the band is [66.1, 641.0]
+// and its midpoint is 353.5 — 49.3 px below where D19 put the cap. Same rule,
+// honest anchors, and the frame's two voids come out EQUAL: 179.4 px of sky
+// above the cap, 179.4 px of dark between the cap's rim and the headline.
+//
+// WHY NOT FURTHER, even though the plume is all above the cap. The subject's
+// luminance-weighted centroid (mushroom + plume, everything above the horizon)
+// sits 61 px HIGHER than the cap's bbox centre at every offset tested, so
+// centring the INK rather than the head would want the cap at y 414 — sitting
+// on the headline. Measured at +30 / +50 / +70 / +90 px and read on screen:
+// +90 crowds the copy (139 px of clearance) and shortens the stipe to nothing,
+// +70 inverts the two voids (200 above / 159 below). The plume is context that
+// deliberately spills off the top edge; the head is the subject. Anchor the
+// head, and let the plume be air.
+//
+// IT ALSO REPAYS SOME OF D19's GROUND. Aiming higher pitches the horizon back
+// DOWN the frame: 463.3 -> 511.7 at 1440x900, recovering 48 of the 170 px D19
+// spent, and the lower-band mean luminance falls 24.80 -> 24.62. Light lost
+// off the top edge falls with it (mean of rows 0-3: 18.39 -> 16.63).
+export const INSPIRE = { az: 115 * DEG, r: 11, y: 2, target: V(2.3371, 2.4199, -1.1052), fov: 40 };
 
 // The gaze's mid-swing waypoint (was the old "early pin" target): the cap,
 // biased a touch toward the stream side so the visible plume never leaves
@@ -318,9 +346,37 @@ export const CAMERA = {
   // rises 63. That is forced — the approved Inspire rest frames it at
   // y 328 and settled Connect k1 at y 341 — so the vertical turns once, at
   // Connect's own key, and nothing here can remove it without moving a rest.
+  //
+  // ------------------------------------------------------------------
+  // D21 RE-DERIVE (2026-08-07, Hannah: "push the mushroom down a bit so the
+  // page feels more balanced").
+  // ------------------------------------------------------------------
+  // Only the rest's GAZE moved again, so the same thing is true as at D19:
+  // a keyed spline does not care why an endpoint moved. Both exit keys are
+  // re-derived from the D20 rule above with the new rest, and NOTHING ELSE
+  // changes — every `pos` is byte-identical for the third re-key running,
+  // `d` stays 8.55 / 8.69 (the ladder rebases to 8.4253 -> 8.55 -> 8.69 ->
+  // 8.788 and rounds to the same digits), and both `fov` values are
+  // untouched at 41.63 / 44.49 because fov = lerp(40, 48, s) never read the
+  // rest's gaze. Only `dy` moves, and only because the rest's own dy did:
+  //
+  //   dx  rest -0.079 -> -0.095   (the cap is still on the frame centreline)
+  //   dy  rest +5.354 -> +3.112   (the cap now sits lower in the rest frame)
+  //
+  // The decode was re-proved before it was re-used: running the rule on the
+  // SHIPPED rest reproduces the shipped key targets to all four decimals
+  // (2.0571 / 2.1443 / -0.8376 and 1.2152 / 2.2287 / -0.8497), and the
+  // connect-side endpoint comes back at -12.3239 / +6.0850 against the
+  // -12.324 / 6.085 written above.
+  //
+  // A RESIDUAL D20 RECORDED AS FORCED IS NOW GONE. D20 had to accept that
+  // the cap SINKS ~13 px before it rises, because the approved rest framed
+  // it above Connect's settled first key and the vertical had to turn once.
+  // The rest is now BELOW Connect's key, so dy climbs 3.112 -> 6.085 with
+  // nothing to unwind: the cap rises monotonically across the whole leg.
   keys: [
-    { t: 0.5,                pos: V(9.9694, 2.0000, -4.6488), tgt: V(2.3349, 2.0903, -1.1016), fov: 40,    hold: true, note: 'inspire-rest' },  // p 0.260  az 115.0  d 8.42  dx  -0.08
-    { t: 0.7166666666666667, pos: V(10.4866, 2.2495, -2.2641), tgt: V(2.0571, 2.1443, -0.8376), fov: 41.63, note: 'inspire-rest-drift' },       // p 0.312  az 102.2  d 8.55  dx  -2.58  yaw -80.4
-    { t: 0.9249999999999999, pos: V(9.5128, 2.6825, 1.6920), tgt: V(1.2152, 2.2287, -0.8497), fov: 44.49 },                                     // p 0.362  az  79.9  d 8.69  dx  -6.95  yaw -107.0
+    { t: 0.5,                pos: V(9.9694, 2.0000, -4.6488), tgt: V(2.3371, 2.4199, -1.1052), fov: 40,    hold: true, note: 'inspire-rest' },  // p 0.260  az 115.0  d 8.43  dx  -0.10  dy +3.11
+    { t: 0.7166666666666667, pos: V(10.4866, 2.2495, -2.2641), tgt: V(2.0576, 2.4106, -0.8396), fov: 41.63, note: 'inspire-rest-drift' },       // p 0.312  az 102.2  d 8.55  dx  -2.59  dy +3.72  yaw -80.4
+    { t: 0.9249999999999999, pos: V(9.5128, 2.6825, 1.6920), tgt: V(1.2093, 2.3779, -0.8526), fov: 44.49 },                                     // p 0.362  az  79.9  d 8.69  dx  -6.95  dy +4.78  yaw -107.0
   ],
 };

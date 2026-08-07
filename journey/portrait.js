@@ -109,7 +109,30 @@ const KEYS = [
   // evenly, +23.8 px at 375x812 and -23.8 px at 430x932, which is the smallest
   // worst case available to a single pose. tgtRight comes back a hair,
   // 0.30 -> 0.258, for the 2.8 px the cap sat left of the copy's centre.
-  { p: 0.260, back: 1.50, rise: -0.50, truck: -0.30, tgtUp: -1.378, tgtRight: 0.258, fov: 13 },
+  //
+  // D21 (2026-08-07) re-anchors the landscape band to the furniture the page
+  // actually draws — nav bottom to headline glyph top, not viewport top to the
+  // copy block's padding — and pushes the cap 49.3 px down. Portrait inherits
+  // the landscape target, so it moved down by itself and this offset has to
+  // come back up to meet the SAME re-anchored band in the tall frames.
+  //
+  // The portrait band is NOT the landscape one scaled. Its bottom is the
+  // headline's first glyph, read off the rendered frame: y 489.0 at 375x812
+  // and 659.0 at 430x932. Its top is y 93.1 in BOTH — and it is the active
+  // nav link's underline, not the pills. The nav stacks in portrait (pills on
+  // top at 49.7, links below at 85.1) where it is one row in landscape, so the
+  // lowest thing the nav draws is the 1 px rule the `.active` ::after hangs
+  // 8 px under its link. In landscape the same rule sits at 64.6, above the
+  // pills' 66.1, and the pills win. Midpoints: 291.05 and 376.05.
+  //
+  // Balanced the same way and by the same argument, tgtUp -1.378 -> -0.856:
+  // +19.5 px at 375x812 and -19.6 px at 430x932. That is a SMALLER worst case
+  // than the pose it replaces (±23.8), which is the one piece of luck in this
+  // edit — the two phone sizes' band midpoints sit closer together in
+  // frame-fraction terms (0.358 vs 0.403) than their copy tops did (0.564 vs
+  // 0.674). tgtRight is untouched: the horizontal never moved, and the cap is
+  // still 187.17 / 214.62 against frame centres 187.5 / 215.
+  { p: 0.260, back: 1.50, rise: -0.50, truck: -0.30, tgtUp: -0.856, tgtRight: 0.258, fov: 13 },
 
   // Ground-descent approach (D16 restage; retuned 2026-08-04 for the
   // monotone Inspire->Connect zoom-out): the landscape leg no longer pushes
