@@ -148,10 +148,67 @@ export const MEMBERS = MEMBER_SPEC.flatMap((s, i) => {
     m: s.m,
     shed,
     arc,
-    // reveal threshold on uPull: single-direction CCW sweep from the hero
+    // reveal threshold on uPull: single-direction CCW sweep from the hero.
+    // Assigned in the ladder pass below (order from arc, spacing from the
+    // authored ladder) — a placeholder here so the shape of the record is
+    // complete either way.
     reveal: 0.08 + 0.80 * arc,
   }];
 });
+
+/* ---- THE RING'S ARRIVAL LADDER (2026-08-09) --------------------------
+   Hannah: "the mushrooms should light up a lot more gradually... one at a
+   time — like a town of Christmas trees lighting up."
+
+   `reveal = 0.08 + 0.80 * arc` was affine in arc, but the members' arcs are
+   clumped (five on the near lip inside a third of a turn, four on the far
+   lip, the sliced-away arc empty between them) — so the near five kindled
+   0.053 of uPull apart while the camera was crossing that range at ~12
+   units of uPull per unit p: five arrivals inside a quarter second at a
+   deliberate scroll. Same disease ring.js's rank pass cured in the field
+   (18-one-species.md §12), same cure: ORDER stays the single-direction CCW
+   sweep from the hero — members sorted by arc keep exactly the order the
+   old line gave them — but SPACING comes from an authored ladder, laid out
+   in p (what the wheel and the eye actually traverse) and converted to
+   uPull through the measured camera curve of the Owned→Final leg
+   (§13 of 18-one-species.md has the curve and the derivation).
+
+   The ladder opens sparse and tightens: the first members are singles a
+   beat apart — each one its own event — and the far-lip four close the
+   show just before the rest. Members are the FIRST rungs of the merged
+   24-slot ladder (ring.js's field ladder fills the rest), so the whole
+   chapter arrives on one authored timeline.
+
+   sweepReveal() interpolates the same re-timed sweep for every non-member
+   consumer of the old formula (the continuation glow pools), so an
+   arc-keyed pool still kindles exactly between the members it sits
+   between. Piecewise-linear and monotone in arc: cord vertices between two
+   members still light strictly member-to-member, only on the new clock. */
+const RING_LADDER = [0.0966, 0.1734, 0.2388, 0.2944, 0.4315,
+                     0.7173, 0.7861, 0.8124, 0.8379];
+// The guard: the ladder is authored against today's nine members. If the
+// build ever drops one (the inward-walk can), the rank map would silently
+// hand every later member the wrong rung — so the whole sweep, members and
+// interpolated consumers alike, falls back to the affine law instead of a
+// half-applied ladder.
+const SWEEP_PTS = MEMBERS.length === RING_LADDER.length
+  ? MEMBERS.map(m => m.arc).sort((a, b) => a - b)
+      .map((a, i) => [a, RING_LADDER[i]])
+  : null;
+export function sweepReveal(arc) {
+  const pts = SWEEP_PTS;
+  if (!pts) return 0.08 + 0.80 * arc;
+  if (arc <= pts[0][0]) return pts[0][1];
+  if (arc >= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
+  for (let i = 1; i < pts.length; i++) {
+    if (arc <= pts[i][0]) {
+      const [a0, r0] = pts[i - 1], [a1, r1] = pts[i];
+      return r0 + (r1 - r0) * ((arc - a0) / (a1 - a0));
+    }
+  }
+  return pts[pts.length - 1][1];
+}
+for (const m of MEMBERS) m.reveal = sweepReveal(m.arc);
 
 // Members that shed spores (mature bodies only — and NEVER the hero: the hero
 // keeps its own ambient shed, and no stream may read as hero -> others).
@@ -172,7 +229,7 @@ export function pullOf(camX) {
 /** The same map, UNCLAMPED. Negative while the camera is still below the
  *  surface pierce (x > −8). The clones' entry draw runs on THIS rather than on
  *  the clamped value so the front can never be flattened by the clamp — see
- *  clones.js DRAW_W. */
+ *  clones.js DRAW_W_HI/LO. */
 export function pullRawOf(camX) { return (-camX - 8.0) / 6.0; }
 export const REVEAL_W = 0.16;   // smoothstep width used by every shader
 

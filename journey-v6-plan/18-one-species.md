@@ -1594,3 +1594,186 @@ a queue, not a wave.
   0.28 of an available 0.330. Anyone widening it further, or moving the Final
   rest, or re-pathing this leg again, must re-measure `pullRaw` at p 0.925
   first; below `d = 1` the rest frame changes and the golden will say so.
+
+## 13. A town of Christmas trees (2026-08-09, Hannah's "one at a time")
+
+**The ask, verbatim.** *"In the Final section, the mushrooms should light up
+a lot more gradually. It should be, like, one at a time — like a Christmas
+tree, like a town of Christmas trees lighting up."*
+
+§12 separated order from spacing and was right about the arithmetic; Hannah
+has seen the result and wants it considerably further. Re-measured, §12's
+remaining disease is the CLOCK, in two halves.
+
+### 13.1 The road is 500 pixels, and §12's ladder spent it unevenly
+
+The whole arrival lives between the soil-line clearing (~p 0.856) and the
+rest (p 0.925) — about 0.06 of progress, ~500 px of wheel travel at this
+leg's ~9,000 px per unit p. That is the road, all of it; no threshold
+choreography can add pavement (see 13.6). What the choreography CAN decide
+is how the road is spent, and §12 spent it badly twice over:
+
+- **Even in uPull is uneven in p.** The camera accelerates from ~12 to ~25
+  units of `pullRaw` per unit p into the rest, so §12's evenly-spaced
+  thresholds compressed on screen: start gaps of 0.0044 p at the head,
+  0.0004 at the tail. On the shipped tree the last TEN drawn bodies started
+  inside an eighth of a second at a deliberate 600 px/s ride, and two of
+  them started at literally the same frame at a brisk one.
+- **A single `DRAW_W` = 0.28 against gaps of ~0.03 means ~10 bodies
+  mid-draw at any moment of the middle.** Measured peak: **12 of 24**
+  simultaneously mid-draw at p 0.905. Individually slow, collectively an
+  ooze — no arrival is an event because every arrival is background to
+  nine others.
+
+### 13.2 The ladder: authored in p, sparse head, tightening tail
+
+All twenty-four drawn bodies (nine ring members + fifteen field clones) now
+sit on ONE authored 24-slot ladder. Slots are authored in **p** — gaps of
+7.5 → 1.2 millip, scaled to the window p 0.8560 → 0.9105 — and converted to
+uPull thresholds through the measured camera curve (`journey-v6-plan`
+scratch measurements, 2026-08-09; re-derive by sampling
+`journey.scrollTo(p)` → `camera.position.x` if the leg ever moves). The
+shape is an accelerando: the first four arrivals are singles 150-180 ms
+apart at a deliberate ride — each one its own event, the "one at a time"
+the ask names — and the gaps tighten as the town fills, closing at a steady
+~35 ms with no §12 machine-gun collapse (min gap 0.0009 p vs 0.0004).
+
+- **Ring** (world.js `RING_LADDER` + `sweepReveal()`): order untouched —
+  the single-direction CCW sweep from the hero — but the five near-lip
+  members now OPEN the show as spaced singles (slots 0-3, 6) and the four
+  far-lip members CLOSE it (slots 18, 21-23), last threshold 0.8379 just
+  under the 0.84 light ceiling. `sweepReveal()` interpolates the re-timed
+  sweep for the two continuation glow pools, monotone in arc, so cords and
+  pools stay member-coherent. Guard: if a member is ever dropped at build,
+  the whole sweep falls back to the old affine law rather than half-apply.
+- **Field** (ring.js `FIELD_LADDER` + `PERM`): the fifteen T3 clones take
+  the other slots in a **scattered order** — the authored permutation
+  [0, 14, 7, 3, 11, 5, 13, 1, 9, 4, 12, 2, 10, 6, 8] over depth ranks,
+  jumps of 4-14 ranks between consecutive arrivals.
+- **T4 batch and the cap-rim hints: untouched** (rank tail 0.72..0.835,
+  hints 0.80-0.84). Haze may arrive as weather.
+
+**ORDER — scatter, reversing §12's near-to-far.** §12 kept depth order
+arguing the front travels outward; on screen that IS a sweep, and a sweep
+is what a town is not. A town lights in no order at all. Judged on the
+ladder: consecutive arrivals now land far / middle / near / far, and no
+two consecutive arrivals are neighbours. Two authored exceptions: slot 0
+is the NEAREST body — the biggest thing in the composition, whose §11.8
+stalk-under-dark-cap mid-draw state must play out while it is still half
+out of frame (measured at p 0.894: on a mid-window slot it stood as a
+quarter-frame near-black dome in the open view; the shipped tree had the
+same state on the same body, but earlier and half-framed) — and slot 1 is
+the FARTHEST, the town's first light across the valley.
+
+### 13.3 The kindling: a taper, not a constant (`DRAW_W_HI/LO`)
+
+One width cannot serve both ends of an accelerando. The opening singles
+have the road to themselves and deserve the long kindling; the closing
+fills land 35 ms apart, where a 0.28-wide draw is ten overlapping oozes and
+a 0.12-wide draw is a pop — and a pop reads as an EVENT even when it
+overlaps its neighbours. So each body's width is now a pure function of its
+own threshold: `drawWOf(reveal)`, linear 0.26 → 0.12 across reveal
+0.10 → 0.84. This is also what frees the tail at all: 0.8379 + 0.12
+finishes at pullRaw 0.958, far inside the 1.1200 at the rest, where + 0.26
+would leave 0.02.
+
+`070892c` gets strictly STRONGER: the draw still starts AT the light's own
+threshold (never ahead — ink can never precede ember), and the narrower
+late widths pull the ink closer to the light: minimum own-light under a
+fully opaque cap shell rises from §12's 0.460 to ~0.84 (worst late body).
+`2f4c2f1` canopy: untouched and still coupled — seats read `s.reveal`, so
+they moved with their bodies; `CANOPY_LEAD` 0.04 and `REVEAL_W` 0.16
+unchanged; earliest seat 0.0966 − 0.04 stays above the canopy's 0.03 floor.
+
+### 13.4 The arrival bloom (`BLOOM_A`)
+
+A Christmas tree coming on is a discrete event with a beginning and an end;
+a monotone ramp has neither. Each body now flares to **1.35x** its resting
+brightness as its draw completes and settles by `d = 1` exactly — the
+house's own onset, hero.css `core-pop` (overshoot, settle; the instrument
+powering on), translated to luminance. Shape:
+`1 + BLOOM_A * smooth01((d−0.30)/0.45) * (1 − smooth01((d−0.75)/0.25))` —
+zero at d = 0 and d ≥ 1, so every frozen rest frame is untouched (goldens
+prove it, §13.5). Pure in the pose: a reverse scrub re-runs the flare
+mirror-exact on the way out; D16 asks for exact retraction, not asymmetry.
+Verified live by an A/B at p 0.900 with `BLOOM_A` 0 vs 0.35: the diff is
+exactly the three bodies then mid-take (max Δ 51/255 on the flaring one),
+zero on everything settled.
+
+### 13.5 Measured
+
+Both ladders evaluated on the SAME recorded rides (the wheel-driver's
+wall-clock varies run to run; p-space numbers are frozen-exact):
+
+    STRUCTURE (frozen map)             §12 (6d37205)        §13
+      starts span (p)                  0.8601..0.9086   0.8560..0.9105
+      all fully drawn by (p)           0.9199           0.9150
+      min start gap (p)                0.0004           0.0009
+      PEAK bodies mid-draw             12               9
+      per-body draw width              0.28 flat        0.26 -> 0.12 taper
+
+    600 px/s (deliberate)              §12              §13
+      whole field                      2.37 s           2.33 s
+      first three start gaps           0.12 0.12 0.11   0.18 0.15 0.14
+      last three start gaps            .016 .026 .081   .031 .039 .038
+      per-body draw median (range)     0.67 (0.39-1.17) 0.38 (0.16-1.02)
+
+    3600 px/s (brisk)                  §12              §13
+      whole field                      0.55 s           0.54 s
+      min start gap                    0.000 s          0.001 s
+      last three gaps                  .000 .000 .005   .003 .006 .005
+
+    24/24 drawn at every rate, both ladders.
+
+The point is the distribution, not the totals: same road, but §13 spends it
+as an accelerando — wide singles first, a steady quickening, no collision —
+and the peak-simultaneity drop plus the taper means what overlaps late is
+quick pops, not slow oozes. On the ladder stills (p 0.876 → 0.912) each
+rung shows 1-3 bodies visibly at DIFFERENT stages against an accumulating
+town, where §12's rungs 0.895-0.905 showed ten half-drawn at once.
+
+### 13.6 The road itself — reported, out of scope
+
+The image Hannah names wants more than 500 px of wheel. The window is
+bounded by the soil-line clearing (nothing visible before ~p 0.856) and the
+frozen rest (everything arrived by 0.925); both walls are camera facts, not
+threshold facts. Options, all route/camera work, none taken here: a longer
+or slower Owned→Final approach (more p between pierce and rest), or moving
+the Final rest later. Either moves `restProgress`, every `?capture=` rung
+and the goldens. The end-hold (p 0.925-1.0, ~675 px of held rest) is the
+obvious donor if this is ever wanted: even a third of it would double the
+arrival road.
+
+### 13.7 Gates
+
+- **Ten frozen references byte-identical** — `capture.py --check`, five
+  poses x two sizes, worst MAE **0.00/255. PASS.** Proves the rand stream
+  (geometry) is untouched, every body is fully arrived at the rest, and
+  the bloom is exactly zero there.
+- **Mirror** — frozen-clock scrub p 0.78 → 1.0 → 0.78 through
+  `journey.scrollTo` at 0.002 steps, screenshots at ten matched rungs both
+  directions: worst MAE **0.008/255** (sub-noise). No hysteresis, no
+  self-ignition; p 0.820/0.855 frames are root-network dark.
+- **Jump** — `flyTo('final')` from the landing page lands p 0.9250,
+  chapter `final`, full composition (a8d4518's blend suppression intact).
+- **Console** — full ride 0 → end → 0 under real wheel events: **0
+  errors, 0 warnings, 0 rejections.**
+- **QA hook** — `chapters.final.seats` now exposes every body's
+  `{x, z, gy, s, reveal, tier}` so the next pass reads the ladder instead
+  of inverting frozen uProg samples.
+
+### 13.8 Residuals
+
+- **§11.8's stalk-under-dark-cap state remains**, and the two authored
+  PERM exceptions are containment for its worst case (the nearest body),
+  not a cure. The cure is still intro.js's rising clip plane, still not
+  taken. The near-lip ring member (az 123) shows the related dark-dome
+  read at p 0.894-0.906 exactly as the shipped tree did.
+- **The wall-clock ride harness varies run to run** (headless frame
+  scheduling); treat ride seconds as one-ride comparisons and the frozen
+  p-tables as ground truth.
+- **The ladder constants bake the measured camera curve.** Anyone
+  re-pathing the Owned→Final leg, moving the rest, or touching
+  `pullRawOf` must re-derive `RING_LADDER` / `FIELD_LADDER` (sample
+  `scrollTo(p)` → camera x, map slots through it) — the goldens and the
+  0.84 light ceiling will catch a stale ladder, but only at its ends.

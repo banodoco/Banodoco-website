@@ -186,7 +186,7 @@ export function clearTap(st) { st.tx = 0; st.tz = 0; st.tvx = 0; st.tvz = 0; }
    tied to the camera-pure front is lawful, a time-based one is not. So the
    draw parameter is a pure function of uPull exactly like the kindle — and
    since 2026-08-06 it is the same front at the same width, so a body inks
-   itself in AS it lights up (see DRAW_W). Reverse scrubs therefore un-draw it,
+   itself in AS it lights up (see DRAW_W_HI/LO). Reverse scrubs un-draw it,
    stroke by stroke, back into the dark.
 
    The window span below is the union of the hero's own stem+cap windows
@@ -226,27 +226,40 @@ const DRAW_LO = 0.296, DRAW_HI = 0.893;
 // of the camera-pure pullRaw, so a reverse scrub un-inks each body stroke by
 // stroke exactly as it inked (D16).
 //
-// 0.16 -> 0.28 (2026-08-07, Hannah: "in the final position, can you make it so
-// the mushrooms animate in slower one at a time in a nice elegant manner").
-// The draw no longer matches REVEAL_W exactly; it is now the SAME FRONT, at
-// the same threshold, running WIDER than the light. That reads as a promotion
-// rather than a regression of 070892c, because the relation it moves toward is
-// still the hero's: on the landing page the hero's strokes ink in at FULL
-// opacity with the tip ember riding the drawing front — the hero is never a
-// dim body being drawn, it is a lit body still drawing. So a clone that has
-// come up to its light in the first 0.16 and then keeps inking for another
-// 0.12 is doing exactly what the hero does. Every guarantee 070892c bought is
-// strictly stronger, not weaker: the failure it fixed was a body DRAWN AND
-// DARK (draw ahead of light), and widening the draw moves in the opposite
-// direction — at the moment the cap shell begins to fade in (prog 0.574, i.e.
-// 47% of the draw) the body is now at 93% of its own light instead of 47%.
+// 0.16 -> 0.28 (2026-08-07, "animate in slower one at a time"), then a single
+// constant -> the per-body taper below (2026-08-09, "one at a time — like a
+// town of Christmas trees lighting up"). The draw is still the SAME FRONT at
+// the same threshold, running wider than the light — the hero's relation: on
+// the landing page the hero's strokes ink in at FULL opacity with the tip
+// ember riding the drawing front; it is never a dim body being drawn, it is a
+// lit body still drawing. Every guarantee 070892c bought stays: the failure
+// it fixed was a body DRAWN AND DARK (draw ahead of light), and every width
+// in the taper keeps the draw at or behind the light's own pace.
 //
-// The ceiling is measured, not chosen: the last body's threshold is 0.7898 and
-// the camera-pure pullRaw reaches 1.1200 at the Final rest, so the draw has
-// 0.330 to finish in and 0.28 lands it at 1.070 — p 0.9194 against a rest at
-// p 0.9250. The rest frame must see d = 1 exactly (below it the last overlay
-// strokes are missing and the tip ember is still on), and it does, with room.
-const DRAW_W = 0.28;           // the kindle's own front, run wider than its light
+// WHY A TAPER AND NOT A CONSTANT. The arrival ladder is now authored in p
+// (ring.js FIELD_LADDER / world.js RING_LADDER: sparse opening singles,
+// tightening as the town fills), and the camera crosses uPull ever faster
+// into the rest — so a single width means the OPENING arrivals, which have
+// the whole road to themselves, draw no slower than the CLOSING ones, which
+// land a fifth of a second apart. The taper gives the early singles a long,
+// watchable kindling (0.26 of pullRaw, ~a third of a second at a deliberate
+// scroll) and lets the late fills snap in (0.12 — quick pops read as events
+// even when they overlap; slow oozes just read as a wave), and it is what
+// frees the ladder's tail at all: the last rung starts at 0.8379 and
+// 0.8379 + 0.12 = 0.958 finishes far inside the 1.1200 the camera-pure
+// pullRaw reaches at the rest, where + 0.26 would leave no margin. The width
+// is a pure function of the body's own threshold — one more constant per
+// body, computed once, nothing time-based, reverse scrubs unchanged (D16).
+const DRAW_W_HI = 0.26;        // the opening singles' own kindling width
+const DRAW_W_LO = 0.12;        // the closing fills' — a pop, not an ooze
+const drawWOf = (reveal) => {
+  const t = Math.min(1, Math.max(0, (reveal - 0.10) / (0.84 - 0.10)));
+  return DRAW_W_HI - (DRAW_W_HI - DRAW_W_LO) * t;
+};
+// Arrival-bloom strength: peak brightness over resting level as a body's
+// draw completes (see the bloom term in update()). The shape is borrowed
+// from hero.css core-pop — overshoot, then settle to the resting style.
+const BLOOM_A = 0.35;
 
 // organism's own injectDraw(), re-expressed for a clone's plain overlay-net
 // material. The hero grafts uProg/uWin/pulse into the stock line shader at
@@ -803,6 +816,7 @@ export function createClones(sceneApi) {
       shells: stemShells.concat(capShells),           // interact.js's narrow phase
       x, z, gy, s,
       arc, reveal, boost, tw0, phase, amp, lum: lum ?? 1,
+      drawW: drawWOf(reveal),                         // this body's own kindling width
       tx: 0, tz: 0, tvx: 0, tvz: 0,                   // tap ring-down (stepTap)
       uProg: own.uProg, prog: -1,                     // entry draw (part B)
       v: -1, ks: -1, kc: -1,
@@ -861,13 +875,13 @@ export function createClones(sceneApi) {
     for (const c of list) {
       // ---- part B: this body draws ITSELF on as the front reaches it ----
       // Pure in the pose, and on the KINDLE'S OWN front at the kindle's own
-      // width (see DRAW_W) — the ink and the light arrive together, which is
+      // width (see DRAW_W_HI/LO) — the ink and the light arrive together, which is
       // the hero's relation and the whole of the entry-parity fix. At d = 1 the
       // uniform is parked at the hero's own 2 — which is BYTE-IDENTICAL to
       // holding it at DRAW_HI (dp saturates at 1 either way, the tip term is
       // switched off by the same step(), and the lid is inert at CLAMP_OFF),
       // so the rest frame is the shipped rest frame.
-      const d = smooth01((pullRaw - c.reveal) / DRAW_W);
+      const d = smooth01((pullRaw - c.reveal) / c.drawW);
       let prog = c.uProg.value;
       if (d !== c.prog) {
         c.prog = d;
@@ -875,7 +889,16 @@ export function createClones(sceneApi) {
         c.uProg.value = prog;
       }
       const rv = smooth01((pull - c.reveal) / 0.16);  // REVEAL_W
-      let b = 0.07 + 0.93 * rv;                       // the 7% ember whisper
+      // The arrival bloom — the house's own onset (hero.css core-pop: the
+      // callout node overshoots and settles, the instrument powering on).
+      // A body flares ~1.35x over its resting level as its draw completes,
+      // then settles by d = 1 exactly — so every frozen rest frame, where
+      // every drawn body sits at d = 1, is untouched. Pure in the pose:
+      // a reverse scrub re-runs the flare mirror-exact on the way out
+      // (D16 asks for exact retraction, not for asymmetry).
+      const bloom = 1 + BLOOM_A
+        * smooth01((d - 0.30) / 0.45) * (1 - smooth01((d - 0.75) / 0.25));
+      let b = (0.07 + 0.93 * rv) * bloom;             // the 7% ember whisper
       const df = c.arc - fr;
       b += c.boost * frOn * Math.exp(-df * df * 260) * (0.30 + 0.60 * rv);
       const dc = c.arc - ct;
