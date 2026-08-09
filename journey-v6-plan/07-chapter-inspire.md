@@ -2969,3 +2969,181 @@ levels are cadence-sensitive; D25's own note says compare like-for-like
 only). The shipped tree is byte-identical to `336f31d`; `capture.py
 --check` PASS, worst MAE 0.00/255, all ten goldens, after the candidate
 was stashed. Nothing regressed because nothing shipped.
+
+---
+
+## 2026-08-09 (D27) — Hannah's trade, landed: the wind now goes where the streams are
+
+D26 ended at a stop-and-report: the lighting-only model delivered the
+motionless boundary exactly, and then had nothing to light in two of the
+three sectors, because the ambient wind never carried dust there. Hannah
+chose the trade this section ships: **the landing gives way — reshape the
+wind so dust genuinely reaches all three sectors.** The D26 candidate is
+restored from its patch and is now the shipped model; this section is the
+wind reshape on top of it, the craft pass that keeps the landing beautiful,
+and the measurements.
+
+### The wind reshape — two halves, both p-independent, both organism-side
+
+1. **The release arc** (`organism/spores.js`, seed block). The old arc
+   `[π, 1.98π]`, biased hard toward the lee, fed one sector: measured
+   2,422 / 24 / 429 dots within 0.55 u of the ArtCompute / Arca / 2RP rise
+   spines. The hymenium now sheds around a wider sweep of the margin —
+   one smooth single-peaked density (peak az 5.90 at the lee, ArtCompute's
+   side; tapered tails through 2RP's az 4.68 and Arca's az 6.98, reaching
+   ~zero at 3.20 and 7.45) sampled by inverse-CDF from the SAME single
+   `rand()` draw the old mapping consumed — the hero stream's downstream
+   consumers are byte-identical, which is why `owned@*` did not move by a
+   single byte (see Gates).
+2. **The lee filaments** (`organism/spores.js`, drift integrator). Wind
+   past a bluff cap organizes its shed into standing lee filaments. Three
+   weak line-attractors — base at each exit's rim lip, direction
+   BREEZE_DIR, the same axis the D17 locus law already derives every rise
+   from — apply a gentle lateral contraction (λ = 0.10/s inside a ~0.9 u
+   gaussian catch, basin capped at 1.5 u, ramped to zero over the first
+   10% of each filament so the near-lip curtain stays a diffuse shed) to
+   every dot, everywhere, at every p, forever. The stationary density now
+   genuinely carries three soft streams; the chapter's lighting picks them
+   out. The seed block integrates the same rule over each dot's own
+   estimated transit (per-filament dwell scales 0.03/0.10/0.18, calibrated
+   against the measured live equilibrium) so the frozen landing is the
+   wind's own shape, not a start-up transient.
+
+Corridor occupancy within 0.55 u of the rise spines: **seeded
+1,380 / 503 / 425; live equilibrium ~1,050–1,150 / ~390–430 / ~330–500**
+(the equilibrium band is the drift's own recycle/gust fluctuation), against
+2,422 / 24 / 429 before. All three sectors are fed; ArtCompute stays the
+densest, as approved.
+
+### Emphasis retune (the candidate's starved-field dials, re-dialled for a fed field)
+
+- Rise catchments re-tightened: `R1_RIS_E` [0.34, 1.10, 0.72] →
+  **[0.34, 0.55, 0.48]** (wide catchments on a populated field light a
+  wash, not a stream); cores [0.14, 0.24, 0.20]; boosts [1.15, 1.34, 1.24].
+- Radial feather squared (the lanes converge toward the breeze's vanishing
+  point in projection; the soft skirt was smearing the gaps).
+- Tip fade 0.80→1.0 became **0.70→1.0** — the positional plume's own top
+  fade, read off steer()'s 0.62–1 rise fade: the light lets go exactly
+  where the old braid's density did, so the converging upper third never
+  merges the three lanes.
+- Knot cadence spatial frequency 11 → **26** per arc: ~2.5 crests ride
+  each lane at any instant — a single travelling crest reads as a pulse,
+  several at once read as a beaded stream. Body/knot split re-weighted
+  (GAIN_BODY 1.15, GAIN_KNOT 4.6 concentrated on the core: 0.10 floor,
+  was 0.35); sprite swell keyed to the core beads.
+- Region dims: weights back near the candidate's (rise 0.46 / wedge 0.25 /
+  downwind 0.24 / walk 0.22), rise core r0 0.72, and the drive late-gated —
+  `ss(0.55, 1, eff) × eff × T`, not eff² — after a first pass at deepened
+  dims measured a **−19…−27% total-light trough** mid-transition (the
+  2026-08-06 offense class, caught by the gate and rolled back). The
+  density filaments carve the valleys now; the recede only finishes them.
+- Emphasis bounding reject R_BOUND 2.1 → 1.45 (sized to the tightened
+  tubes; the fine scan admits ~half the dots it did).
+
+### The requirement, re-proved on the shipped wind (capture.py's own CDP client, headless 1440×900)
+
+Ambient holds (8 s, 3-frame rolling mean population speed): Connect rest
+peak 0.158 u/s, p50 0.095; Inspire rest 0.157 / 0.096; landing
+0.193 / 0.107 (its own gill-recycle churn: 95 dots > 1 u in 8 s).
+
+| crossing | 0.10 p/s peak / p50 | 0.45 p/s peak / p50 |
+|---|---|---|
+| Mission → Inspire | 0.179 / 0.120 | 0.151 / 0.116 |
+| Inspire → Mission | 0.171 / 0.101 | 0.122 / 0.102 |
+| Inspire → Connect | 0.245 / 0.119 | 0.150 / 0.111 |
+| Connect → Inspire | 0.237 / 0.110 | 0.169 / 0.119 |
+
+Every crossing, both boundaries, both directions, both rates, sits inside
+the ambient holds' own band. Matched-pin round trips (per-dot |Δposition|
+between two visits to the same p, 0.10 p/s):
+
+| pin | Δt | p25 / p50 / p75 / p90 / p99 | >1 u | p50 ÷ Δt |
+|---|---|---|---|---|
+| p 0.42 | 3.5 s | 0.196 / 0.258 / 0.352 / 0.425 / 5.82 | 61 | 0.074 u/s |
+| p 0.36 | 2.3 s | 0.140 / 0.181 / 0.248 / 0.299 / 0.38 | 41 | 0.079 u/s |
+| p 0.30 | 0.9 s | 0.063 / 0.081 / 0.111 / 0.134 / 0.15 | 15 | 0.090 u/s |
+| p 0.14 (Mission side) | 3.0 s | 0.173 / 0.226 / 0.306 / 0.369 / 6.05 | 73 | 0.075 u/s |
+| p 0.08 (Mission side) | 1.3 s | 0.081 / 0.104 / 0.139 / 0.168 / 0.20 | 34 | 0.080 u/s |
+
+The distributions ARE ambient drift × elapsed time (holds' p50 ≈ 0.095
+u/s); the p99/>1u tails are the drift's own gill recycles, present in the
+holds at the same rate. It is the same code path — arithmetic confirmed by
+measurement.
+
+### The three streams at the rest
+
+At the live equilibrium (t ≥ 150 s), 1440×900: three separate rising
+streams of dust — Arca left, ArtCompute centre (the densest), 2RP right —
+each a streaky filament of the one wind with dark sky between, pearls
+riding the lanes, chips on their streams. Screenshots in the D27 session
+record. Portrait (375×812, 430×932): **two streams read cleanly in open
+sky; 2RP is marked by its chip and a dust cluster at its release, with
+only a faint rise at the frame edge.** That is strictly more than the
+pre-D27 baseline showed in portrait (one merged fan), and the limiter is
+the D19-balanced portrait pose, untouched by this change. Recorded as a
+known portrait limitation, not hidden.
+
+### Gates
+
+- **Frozen determinism:** 5/5 round trips (0.26 → 0 → 0.16) bit-identical
+  buffers; forward vs reverse over 26 matched pins, max |Δ luminance|
+  **0.0**; per-exit emphasis single-humped, saturating by p 0.22, retiring
+  to exactly 0 — no self-ignition, mirrors exact.
+- **Restore discipline:** after full rides 0 → 1 → 0, total ambient
+  luminance returns to **exactly 2746.2** (the byte-exact base) at p 0.
+- **Total light through the transitions:** monotone between the ambient
+  level (2746) and the rest's own figure/ground level (~2350, −14% — the
+  approved rest look, re-shot in `inspire@*`); worst transient below the
+  travelling endpoint **−1.2%** (2026-08-06 offense −25.3%; D26 candidate
+  −5.5%). The first-pass deepened dims that measured −19…−27% were rolled
+  back before shipping.
+- **Cold-entry hitch:** worst first-crossing frame 68–119 ms across three
+  trials — inside HEAD's own 83–184 ms spread measured like-for-like in
+  the same headless environment (the class is pre-existing; the D25 warm
+  path is untouched and the refit machinery is deleted with the position
+  channel).
+- **Console:** zero errors, zero warnings — frozen sweeps, live rides both
+  directions, cold entries, hover/leave on the live hotspots.
+- **Conservation:** dark dots (luminance < 0.16): **0**, at p 0.147 /
+  0.167 / 0.26 / 0.385 — the dark-and-converted class is empty by
+  construction (pw ≥ cv) and by measurement.
+- **Cost:** emphasis loop 2.5–3.3 ms/frame at the rest (was ~3.5 in the
+  candidate; steer was ~1.15). The R_BOUND cut bought ~25%; further work
+  belongs to a dedicated pass if it ever shows on the frame budget
+  (display-locked 16.7 ms in every ride measured here).
+- **References:** re-shot **all four moved poses in this commit** with
+  manifest provenance: `mission@*` (0.51 / 0.93 MAE — the authorized
+  landing change), `inspire@*` (2.87 / 2.84 — the re-lit, wind-fed rest),
+  `connect@*` (4.06 / 1.70) and `final@*` (0.48 / 0.54). `owned@*` is
+  **0.00 / 0.00 byte-identical** (the one pose whose frame holds no sky).
+  The connect/final moves were **investigated before re-shooting**, per
+  the brief: with the spore Points hidden, the current tree and HEAD
+  render connect/final/mission **pixel-identical** (0 differing pixels on
+  connect; 3 px at 1/255 on mission — TAA noise), so every changed pixel
+  in those goldens is the shed itself, and the shed is the authorized
+  change. A p-independent field is visible from every framing that shows
+  sky; connect/final could only have stayed byte-identical by keeping the
+  boundary-dependent field this fix exists to remove.
+
+### Honest residuals
+
+- **Seed vs equilibrium:** the seeded cloud sits slightly sharper than the
+  live equilibrium in the primary corridor (1,380 vs ~1,100 within
+  0.55 u); the field relaxes over ~2 minutes, always in the softening
+  direction, at ≤ 0.04 u/s — under the ambient drift's own p50. The
+  frozen goldens bake the seed state and are self-consistent; a visitor
+  who parks on one frame for two minutes sees the middle stream breathe
+  slightly softer. Tightening this further means either a better
+  closed-form transit model or seeding by direct integration; neither is
+  needed at the current visual level.
+- **The rest carries −14% total shed light** vs the ambient base (the
+  figure/ground recede at full reveal). The old braid rest carried +10%,
+  from condensed density. The pearls carry the emphasis now; if Hannah
+  wants the rest brighter overall, GAIN_BODY and the rise dim weight are
+  the two dials, in that order.
+- **Portrait 2RP** as above — D19 pose is the limiter.
+- **The wind's filament azimuths duplicate the chapter's exit anatomy**
+  (5.83 / 6.98 / 4.68, rise maxima) in `organism/spores.js` (`FIL_AZ`),
+  because the organism cannot import chapter anatomy (M3 seam rule). The
+  coupling is documented at both ends; if an exit ever moves, both files
+  move together.

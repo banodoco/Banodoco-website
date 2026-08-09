@@ -90,6 +90,13 @@
 //   Arca       1.05-1.40 -> 1.13-1.32  mean 1.225 (spread x0.54: concentrated)
 //   2RP        1.76-2.21 -> 1.87-2.10  mean 1.985 (spread x0.51: concentrated,
 //     the weakest plume and the one that needed it most)
+// D27 (2026-08-09) COUPLING: the WIND now condenses the ambient shed along
+// three standing lee filaments at exactly these azimuths and rise maxima
+// (organism/spores.js FIL_AZ / FIL_RISEMAX — the organism cannot import this
+// file, M3 seam rule, so the numbers are duplicated there). The exits were
+// authored AT the wind's filaments (D16 back-projected ArtCompute from the
+// hero's own stream); if an exit ever moves, BOTH files move together or the
+// lighting will be aimed at a lane the wind no longer feeds.
 export const EXITS = [
   { id: 'artcompute',   label: 'ArtCompute',         az: 5.83, riseMin: 1.55, riseMax: 2.35, lean: 0.52, tone: 0.66, knot: 0.58 },
   { id: 'arca',         label: 'Arca Gidan Prize',   az: 6.98, riseMin: 1.13, riseMax: 1.32, lean: 0.42, tone: 0.6, knot: 0.95 },
