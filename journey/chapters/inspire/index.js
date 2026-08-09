@@ -880,6 +880,49 @@ export function createInspire(sceneApi) {
     return { sprite: s, mat, localPos: s.position.clone(), o: 0 };
   });
 
+  /* ================================================================
+     5b. RELEASE-LIP GLOWS (2026-08-09, owner's brief item 1: "light up
+         three specific points along the relevant edge of the mushroom").
+         WHAT: one compact soft warm glow sprite sitting exactly on each
+         exit's release lip — the same rim anchor the streak uses, so the
+         three lit points ARE the three release points and nothing else.
+         WHY a separate element: the streak (5) is hover/selection only
+         since 2026-08-06, so at the settled rest NOTHING marked the three
+         points on the edge; the braids read as sky structure with no
+         visible attachment to the cap. These are the attachment — small,
+         soft and round (glowTex, additive), the opposite substance to the
+         12:1 anamorphic blade, so they read as the edge glowing rather
+         than as another drawn form.
+         REVEAL: each glow rides its OWN exit's destination-furniture law
+         (furnOf) — exit 0 on eff[0], the migrants gated on their rim
+         current's arrival — so a lip never lights before the current that
+         feeds it reaches it (no-self-ignition), all three are exactly 1
+         at the Inspire rest, and all three are 0 outside the section.
+         PURE IN (eff, T): direct assignment, no temporal easing, so a
+         reverse scrub mirrors the forward one exactly (the reveal-is-a-
+         position rule in the animator). x T so the glows belong to the
+         taste dial's one reorganization like every other furniture channel.
+         DUALITY: the law lives in BOTH the animator's per-exit loop AND
+         snap() — snap() is the path every frozen capture and every ?p=
+         deep link takes (dt = 0 freezes the animator), so a law in one
+         place only would be missing from every still. See the note above
+         st.o in snap().
+     ================================================================ */
+  const lipGlows = exits.map((ex, i) => {
+    const mat = new THREE.SpriteMaterial({
+      map: glowTex,
+      color: heat(0.78, new THREE.Color()).clone(),
+      transparent: true, opacity: 0, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const s = new THREE.Sprite(mat);
+    s.scale.set(0.70, 0.70, 1);
+    s.position.copy(streaks[i].localPos);   // the exact lip anchor (see 5)
+    s.visible = false;
+    group.add(s);
+    return { sprite: s, mat };
+  });
+
   let active = -1;   // HOVER channel: set by the journey's hotspot proxies
   let selected = -1; // SELECTION channel (W4-E): the exit whose card is open
   let armed = false; // T1 seam
@@ -1205,6 +1248,13 @@ export function createInspire(sceneApi) {
         // easing, so a law that lives in both places has to be changed in both.
         st.o = ((i === active || i === selected) ? 0.42 : 0) * furnOf(i) * stkScale;
         st.sprite.visible = st.o > 0.01;
+        // release-lip glow (5b): the SAME pure law as the animator. No `t`
+        // flows through snap(), so the animator's small breathing multiplier
+        // is simply omitted — it is decoration, and identity at rest is
+        // carried by o itself, which is what both paths compute.
+        const lo = 0.22 * furnOf(i) * T;
+        lipGlows[i].sprite.visible = lo > 0.01;
+        lipGlows[i].mat.opacity = lo;
         for (const m of exits[i].mats) {
           const fadeV = m === exits[i].wispMat ? eff[i] : furnOf(i);
           if (m.uniforms.uOpacity) {
@@ -1496,7 +1546,10 @@ export function createInspire(sceneApi) {
     // per-dot light, whose stagger opens across the whole reveal. Measured
     // before this gate: total-light trough -19..-27% mid-transition (the
     // 2026-08-06 offense class); after: see D27 in 07-chapter-inspire.md.
-    const DIM_ROLE = { 0: 0.46, 1: 0.25, 2: 0.24, 3: 0.22 }; // rise/wedge/downwind/walk
+    // 2026-08-09: rise 0.46 → 0.50 — with FIL_LAM softened the valleys
+    // need one more step of figure/ground from the recede (still late-
+    // gated, still capped; the shed recedes, it never reads as deleted).
+    const DIM_ROLE = { 0: 0.54, 1: 0.25, 2: 0.24, 3: 0.22 }; // rise/wedge/downwind/walk
     for (const rg of shedRegions) {
       rg.a.copy(rg.la).applyMatrix4(mw);
       rg.b.copy(rg.lb).applyMatrix4(mw);
@@ -1584,6 +1637,17 @@ export function createInspire(sceneApi) {
       st.sprite.visible = st.o > 0.01;
       const w = 2.1 * (1 + 0.06 * Math.sin(t * 2.7 + i));
       st.sprite.scale.set(w, 0.17, 1);
+      // RELEASE-LIP GLOW (5b) — the three lit points on the edge. PURE in
+      // (eff, T), assigned directly: no first-order lag anywhere in this
+      // law, so the reverse scrub mirrors the forward one exactly (the
+      // reveal-is-a-position rule above). MUST stay identical to snap()'s
+      // copy of it — snap() is the frozen-capture / ?p= path. The sine is
+      // the streak's own shimmer convention, decoration only; snap() drops
+      // it because no `t` flows there.
+      const lg = lipGlows[i];
+      const lo = 0.22 * furnOf(i) * T;
+      lg.sprite.visible = lo > 0.01;
+      lg.mat.opacity = lo * (0.9 + 0.1 * Math.sin(t * 1.3 + i * 2.1));
     }
   });
 

@@ -3147,3 +3147,85 @@ known portrait limitation, not hidden.
   because the organism cannot import chapter anatomy (M3 seam rule). The
   coupling is documented at both ends; if an exit ever moves, both files
   move together.
+
+---
+
+## 2026-08-10 — D28: the braid softens, the light carries the three (Hannah's written brief, items 1–2)
+
+Hannah's brief, in her own structure: (1) in Inspire, light three specific
+points along the relevant edge and brighten the spores of those three
+channels, while the rest of the side keeps shedding — "three highlighted
+pathways within one organic spore field, not three isolated streams";
+(2) outside Inspire the pathways must dim right down — Connect currently
+reads "decorated with persistent bright lights"; the baseline field must
+not read as three fixed streams.
+
+### What the diagnosis found
+
+- **The seat is already structurally silent outside Inspire.** The per-exit
+  retire envelopes (out0/out1/out2) zero every reveal by p 0.430, the seat's
+  release path restores colors/sizes byte-exact, and the emphasis cannot
+  fire in Connect or the Epilogue. Verified in code and by the golden diffs:
+  what Hannah sees outside Inspire is not the routes.
+- **What persists everywhere is D27's lee-filament DENSITY bias** —
+  λ = 0.100 condensed the shed hard enough that the Final pullback showed
+  two-three distinct white lumps over the hero's cap ("three distinct
+  clouds", her item 3), and the baseline carried a stronger three-stream
+  scaffold than "weather" wants.
+- **Connect's glitter is the shed itself at close range**: the tone draw
+  `0.64 + rand^1.4 · 0.36` put ~1 dot in 5 above tone 0.9 (near-white),
+  and the close Connect camera renders the top size tail at full
+  brightness — additive stacking does the rest. Not the routes, not
+  tendrils' 108 ground particles (measured dim), not the hub stars (the
+  network's own design language, untouched).
+- **In Inspire the opposite failing**: at the D27 gains the rest frame read
+  as ONE broad fan — under-legible for the chapter whose job is three
+  channels — and nothing marked the three release points on the edge.
+
+### The moves (one balance, tuned on pixels)
+
+- `organism/spores.js` **FIL_LAM 0.100 → 0.060**: the wind keeps a whisper
+  of three-stream occupancy for the light to pick out; the far view reads
+  as one irregular wind. Global, scroll-independent by construction.
+- **Tone white-tail 1.4 → 1.9**, in all three mirrors of the one substance
+  (`organism/spores.js`, `final/sky.js` TONE_POW, `final/shed.js`): the
+  near-white share thins ~1-in-5 → ~1-in-8; the amber body is untouched.
+  This is what softens Connect's "Christmas lights" and warms the
+  Epilogue's white clumps, without touching any chapter-specific state.
+- **Emphasis gains re-balanced for the thinner substrate**:
+  GAIN_BODY 1.15 → 1.40, GAIN_KNOT 4.6 → 6.2, GAIN_SIZE 1.15 → 1.45,
+  Inspire rise-dim DIM_ROLE 0.46 → 0.54. The radii stay tight (the D27
+  wash guard); the lift lands on the winding cores and pearls.
+- **Three lip-glow anchors** (`inspire/index.js` §5b): one small soft
+  sprite per exit at the release lip, law `o = 0.22 · furnOf(i) · T`,
+  identical in the animator and snap(), no easing — pure in (eff, T), so
+  reverse scrubs mirror and frozen captures agree. Fully lit at the rest,
+  exactly zero outside the section (furnOf rides eff). Scale 0.70 — an
+  ember concentration, not a headlight; first cut (0.30 / 0.85) read as
+  two headlights and was pulled back on sight. At the rest camera two of
+  the three lips sit on the visible silhouette edge; Arca's shows through
+  the wireframe cap as a soft under-cap brightening.
+
+### The requirement, re-proved on the softened wind
+
+Same instrument as D26/D27 (capture.py's CDP client, live page, 1440×900;
+3-frame rolling population speed, statistics computed in-page). Ambient
+holds this session: peak 0.115–0.157 u/s, p50 0.099–0.125.
+
+| crossing | 0.10 p/s peak / p50 | 0.45 p/s peak / p50 |
+|---|---|---|
+| Mission → Inspire | 0.124 / 0.104 | 0.128 / 0.109 |
+| Inspire → Mission | 0.135 / 0.109 | 0.149 / 0.121 |
+| Inspire → Connect | 0.151 / 0.117 | 0.143 / 0.116 |
+| Connect → Inspire | 0.155 / 0.125 | 0.137 / 0.122 |
+
+Every ride inside the same-session ambient band — crossings remain
+motionless on the retuned wind.
+
+### Goldens
+
+mission / inspire / connect / final re-shot deliberately in this commit
+(provenance in manifest.json). Pre-reshoot drift: inspire 1.46/1.23 MAE,
+connect 1.57/0.97, mission 0.15/0.27, final 0.24/0.31 — the deliberate
+changes and nothing else. **owned@\* untouched at MAE 0.00, byte-identical
+in git.** `--check` passes at 0.00 after the reshoot.
