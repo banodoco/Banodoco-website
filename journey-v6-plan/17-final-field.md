@@ -1341,3 +1341,98 @@ whichever way it goes. The end-hold is a hold.
   ends of it resolve to the same frame, so it cannot strand the visitor — but
   if it ever reads as "stuck", the lever is Final's `scrollVh` in route.js,
   not another camera key.
+---
+
+## 2026-08-09 — THE FIELD BODY'S POKE: the ring the hero never had
+
+**Hannah:** *"In the final section, when I tap the other mushrooms, some other thing comes out from underneath them — looks like a different kind of spore thing that pops out when I tap them. We shouldn't have this."*
+
+The poke's motion had been brought to the hero's twice (070892c: the 50x
+outward speed and the 3.3x sprites; e1b1e2b: the behind-the-cap fall term
+running in open air). What was left was the SEAT, and it was measured rather
+than eyeballed — 326 hero releases against 224 field releases at s = 1, both
+read straight out of the live buffers:
+
+| axis | main model §10c | field body, BEFORE | field body, AFTER |
+|---|---|---|---|
+| azimuth from downwind, median | −59.5° | +46.9° | −62.1° |
+| azimuth, p10 / p90 | −128.5° / −19.4° | −132.1° / — (full circle) | −132.1° / −22.8° |
+| fraction on one side of the skirt | 1.000 | 0.536 (i.e. uniform) | 1.000 |
+| position within its own radial band | 0.27 / 0.63 / 0.93 | uniform | 0.28 / 0.68 / 0.97 |
+| height below `CAP_Y`, p10 / med / p90 | 0.16 / 0.51 / 0.87 | 0.06 / 0.28 / 0.66 | 0.24 / 0.62 / 1.07 |
+| sprite size, p10 / med / p90 | 0.021 / 0.042 / 0.080 | (already matched) | 0.021 / 0.035 / 0.075 |
+| tone (mean RGB) | 0.964 / 0.617 / 0.319 | (already matched) | 0.963 / 0.612 / 0.314 |
+
+Azimuth histogram, 30° bins, downwind at 0 — after the fix the two agree
+bin-for-bin and both are empty over the whole far half:
+
+```
+hero  [0.046 0.092 0.132 0.221 0.273 0.236 | 0 0 0 0 0 0]
+field [0.036 0.112 0.138 0.241 0.290 0.183 | 0 0 0 0 0 0]
+```
+
+**What it was:** a uniform 360° draw against a FLAT disc at `s * CAP_R`, at a
+FLAT height `s * CAP_Y`. So a poked field body emitted a closed RING at the
+rim — a halo all the way round, which the hero has never had; the hero lets
+go of a downwind CRESCENT. Worse, because the real margin droops (`anatomy.js`
+`marginDroop` plus the −0.11 edge term put it ~0.2 below `CAP_Y` at the rim),
+the shallowest of those releases were seated inside the cap flesh rather than
+under it.
+
+**Fix:** the seat is now the hero's own, evaluated through the SHARED cap law
+— `anatomy.js capUnderPt()`, the same function `organism/organism.js` seats
+its 4,200 on and the same one `species.js` builds these bodies' caps from:
+
+```js
+const a = Math.PI * (1.0 + 0.98 * Math.pow(rand(), 0.45));  // the hero's, verbatim
+const u = 0.92 + Math.pow(rand(), 0.6) * 0.20;              // his weighting, our band
+const e = capUnderPt(u, a);
+e.y -= 0.06 + Math.pow(rand(), 1.5) * 0.62;                 // his drop, verbatim
+```
+
+**What is scaled, and why.** Two things and only two. (a) The whole seat
+multiplies by `s`, the body's uniform scale — it is a position ON a body, so
+a half-size body releases from a half-size hymenium. That is the same reason
+the SIZES do not scale: a spore is a spore. (b) The band `u` stays 0.92..1.12
+instead of the hero's 0.55..1.00, for the reason it was chosen originally —
+the Final rest camera stands ~11° above every field body's rim plane, so an
+opaque §5 cap shell covers the whole underside and the hero's u 0.6 would emit
+into a box the visitor cannot see into. The hero's outward WEIGHTING
+(`rand^0.6`) comes across onto that band, so the release is a skirt thinning
+outward as his is, not a wire. Azimuth is taken in world axes because the
+hero's draw is justified by the WIND, which is one vector for the whole field
+— and it lands the same way for the lens, since this half faces away from the
+Final rest camera exactly as the hero's faces away from Mission's.
+
+### Gates (2)
+
+- The table and histogram above.
+- **End to end**: a synthetic tap on a clone at the Final rest takes
+  `pickStats().shedLive` 0 → 13 (= `round(28 × s)` for that body), with the
+  narrow phase hitting and the clone ringing.
+- **Console** clean over a full 0→1→0 ride that pokes six field bodies.
+- **`capture.py --check` PASS, worst MAE 0.00/255** — the shed is
+  `visible = false` on every frozen frame by construction.
+
+### Residuals
+
+- **The shed keeps the chapter's DOF band, not the hero's** (`FOCAL_D 10.5 /
+  FOCAL_R 14.0` against `makePoints`'s `9.5 / 8.0`). Deliberate and
+  unchanged: it is `sky.js`'s band, and matching the hero exactly would put
+  the poke's spores on a different depth law from the spore sky they land
+  among. Measured cost at 12 units: ~20% smaller and ~14% brighter than the
+  hero's law would draw them.
+- **The field seat does not carry the body's cap tilt/lean**, where the hero
+  applies `capXf`/`capOff` to its own. The pool is scene-space and the bodies'
+  lean is a per-body rigid transform the shed has no handle on. Sub-degree
+  effect at these scales; noted rather than fixed.
+- **A field poke still ADDS particles where the hero's RECYCLES them.** The
+  hero's 28 are already on screen and teleport back to their gill origins, so
+  a hero poke is brightness-neutral; a field body has no ambient cloud, so its
+  pool must be born (and must die — `LIFE` 7 s with the entry/exit envelope).
+  Structural, not tunable.
+- **The still-air handover stays substituted at w = 1** (e1b1e2b): measured
+  over 1.2 s, the hero's fresh releases fall (mean dy −0.084, 25 of 25) and
+  the field's do not (mean dy +0.033, 0 of 28). That is the whole point of
+  the seat being past the margin, and Hannah's earlier report; it is a
+  deliberate departure, not a residual difference in the emission.
