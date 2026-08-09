@@ -587,97 +587,211 @@ export function createSpores(ctx) {
     out[2] = mEl[2] * lx + mEl[6] * ly + mEl[10] * lz + mEl[14];
   }
 
-  function refitSlots(eff, tNow, leanScale, mEl) {
-    // per exit cohort: eligible = conv <= 0 under THIS frame's reveal,
-    // computed exactly as the steer loop will compute it below.
-    const tR0 = dbg ? performance.now() : 0;
+  // D25: the refit is a BUDGETED, RESUMABLE JOB — queued at engage, advanced
+  // a bounded slice per frame, applied atomically per exit — because even
+  // optimized matching is real work (the one-shot version measured 360 ms at
+  // a Connect-side engage before the D25 rewrites, and a single engage-frame
+  // spike is exactly the hitch class this pass exists to remove). Three
+  // properties make the slicing safe:
+  //   · it only runs while EVERY reveal is exactly 0 (the floor's quiet
+  //     runway), so no dot's eligibility can change under a pending job and
+  //     no partially-applied pairing can ever pop a converting dot;
+  //   · a still-unrefit dot at conv 0 renders nothing from its slot tuple,
+  //     so the stagger is invisible by the same argument as the refit;
+  //   · if light begins before the queue drains (only possible at a hard
+  //     brisk scrub), the remaining slices are ABANDONED un-applied and
+  //     those cohorts keep their RNG pairing — the same graceful tail D24
+  //     already shipped for dots whose conv had begun at engage.
+  let refitQueue = null;   // exits still to job, source first
+  let refitJob = null;     // the in-flight exit job
+
+  function refitBuild(e, tNow, leanScale, mEl) {
+    // eligible = conv <= 0 under a zero reveal — i.e. the whole cohort;
+    // computed with the same expression the steer loop uses, so the two can
+    // never disagree about who is convertible.
     const p3 = [0, 0, 0];
-    for (let e = 0; e < 3; e++) {
-      const rev = eff[e];
-      const mig = e > 0 ? ss(0, 0.55, rev) : 0;
-      const idx = [];
-      for (let i = 0; i < N; i++) {
-        if (exIdx[i] !== e) continue;
-        const conv = e === 0
-          ? ss(0, CONV_RAMP_RES, rev - stagW[i] * CONV_STAG_RES)
-          : ss(0, CONV_RAMP_MIG, rev - stagW[i] * CONV_STAG_MIG);
-        if (conv <= 0) idx.push(i);
-      }
-      const n = idx.length;
-      if (n < 2) continue;
-      // slot world points (of each member's CURRENT slot) + a coarse grid
-      const sx = new Float32Array(n), sy = new Float32Array(n), sz = new Float32Array(n);
-      const grid = new Map();
-      for (let k = 0; k < n; k++) {
-        slotPoint(idx[k], mig, tNow, leanScale, mEl, p3);
-        sx[k] = p3[0]; sy[k] = p3[1]; sz[k] = p3[2];
-        const key = Math.floor(p3[0]) + ',' + Math.floor(p3[1]) + ',' + Math.floor(p3[2]);
-        let cell = grid.get(key);
-        if (!cell) grid.set(key, cell = []);
-        cell.push(k);
-      }
-      // greedy nearest-free-slot match, dot order fixed (deterministic)
-      const used = new Uint8Array(n);
-      const srcOf = new Int32Array(n);
-      for (let k = 0; k < n; k++) {
-        const i3 = idx[k] * 3;
-        const hx = heroP[i3], hy = heroP[i3 + 1], hz = heroP[i3 + 2];
-        const cx = Math.floor(hx), cy = Math.floor(hy), cz = Math.floor(hz);
-        let best = -1, bd = Infinity;
-        let foundAt = -1;
-        for (let ring = 0; ring <= 4; ring++) {
-          if (foundAt >= 0 && ring > foundAt + 1) break;  // one guard ring past first hit
-          for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) for (let dz = -ring; dz <= ring; dz++) {
-            if (Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)) !== ring) continue;
-            const cell = grid.get((cx + dx) + ',' + (cy + dy) + ',' + (cz + dz));
-            if (!cell) continue;
-            for (const j of cell) {
-              if (used[j]) continue;
-              const ddx = sx[j] - hx, ddy = sy[j] - hy, ddz = sz[j] - hz;
-              const d2 = ddx * ddx + ddy * ddy + ddz * ddz;
-              if (d2 < bd) { bd = d2; best = j; }
-            }
-          }
-          if (best >= 0 && foundAt < 0) foundAt = ring;
-        }
-        if (best < 0) {
-          // sparse tail: linear scan of what is left
-          for (let j = 0; j < n; j++) {
+    const idx = [];
+    for (let i = 0; i < N; i++) {
+      if (exIdx[i] !== e) continue;
+      const conv = e === 0
+        ? ss(0, CONV_RAMP_RES, 0 - stagW[i] * CONV_STAG_RES)
+        : ss(0, CONV_RAMP_MIG, 0 - stagW[i] * CONV_STAG_MIG);
+      if (conv <= 0) idx.push(i);
+    }
+    const n = idx.length;
+    if (n < 2) return null;
+    // slot world points (of each member's CURRENT slot, at reveal 0 — the
+    // walk fronts are parked at the source, which is where an unlit slot
+    // genuinely sits) + a dense linked-cell grid over the slot cloud's own
+    // bbox, integer arithmetic only: head[cell] -> first slot, next[slot]
+    // -> chain; consumed slots stay in their chain and are skipped by
+    // `used` (cells are short — a lazy skip beats restructuring).
+    const sx = new Float32Array(n), sy = new Float32Array(n), sz = new Float32Array(n);
+    let mnx = Infinity, mny = Infinity, mnz = Infinity,
+        mxx = -Infinity, mxy = -Infinity, mxz = -Infinity;
+    for (let k = 0; k < n; k++) {
+      slotPoint(idx[k], 0, tNow, leanScale, mEl, p3);
+      sx[k] = p3[0]; sy[k] = p3[1]; sz[k] = p3[2];
+      if (p3[0] < mnx) mnx = p3[0]; if (p3[0] > mxx) mxx = p3[0];
+      if (p3[1] < mny) mny = p3[1]; if (p3[1] > mxy) mxy = p3[1];
+      if (p3[2] < mnz) mnz = p3[2]; if (p3[2] > mxz) mxz = p3[2];
+    }
+    const gx0 = Math.floor(mnx), gy0 = Math.floor(mny), gz0 = Math.floor(mnz);
+    const nx = Math.floor(mxx) - gx0 + 1,
+          ny = Math.floor(mxy) - gy0 + 1,
+          nz = Math.floor(mxz) - gz0 + 1;
+    const head = new Int32Array(nx * ny * nz).fill(-1);
+    const next = new Int32Array(n);
+    for (let k = 0; k < n; k++) {
+      const c = (Math.floor(sx[k]) - gx0)
+              + (Math.floor(sy[k]) - gy0) * nx
+              + (Math.floor(sz[k]) - gz0) * nx * ny;
+      next[k] = head[c]; head[c] = k;
+    }
+    const freeList = new Int32Array(n), freePos = new Int32Array(n);
+    for (let k = 0; k < n; k++) { freeList[k] = k; freePos[k] = k; }
+    return {
+      e, n, k: 0, idx, sx, sy, sz,
+      gx0, gy0, gz0, nx, ny, nz, head, next,
+      used: new Uint8Array(n), freeList, freePos, freeN: n,
+      srcOf: new Int32Array(n),
+    };
+  }
+
+  // greedy nearest-free-slot match, dot order fixed (deterministic), up to
+  // `budget` dots per call. Ring limit 2: once the near field is consumed
+  // most dots have no free slot within reach anyway, so deeper rings were
+  // ~1,225 cube probes per dot of wasted work before the fallback ran
+  // regardless; the free-list fallback is exact and scans only what is
+  // actually still free.
+  function refitMatch(job, budget) {
+    const { n, idx, sx, sy, sz, gx0, gy0, gz0, nx, ny, nz, head, next,
+            used, freeList, freePos, srcOf } = job;
+    const kEnd = Math.min(n, job.k + budget);
+    let freeN = job.freeN;
+    for (let k = job.k; k < kEnd; k++) {
+      const i3 = idx[k] * 3;
+      const hx = heroP[i3], hy = heroP[i3 + 1], hz = heroP[i3 + 2];
+      const cx = Math.floor(hx) - gx0, cy = Math.floor(hy) - gy0, cz = Math.floor(hz) - gz0;
+      let best = -1, bd = Infinity;
+      let foundAt = -1;
+      for (let ring = 0; ring <= 2; ring++) {
+        if (foundAt >= 0 && ring > foundAt + 1) break;  // one guard ring past first hit
+        for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) for (let dz = -ring; dz <= ring; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)) !== ring) continue;
+          const px2 = cx + dx, py2 = cy + dy, pz2 = cz + dz;
+          if (px2 < 0 || px2 >= nx || py2 < 0 || py2 >= ny || pz2 < 0 || pz2 >= nz) continue;
+          for (let j = head[px2 + py2 * nx + pz2 * nx * ny]; j >= 0; j = next[j]) {
             if (used[j]) continue;
             const ddx = sx[j] - hx, ddy = sy[j] - hy, ddz = sz[j] - hz;
             const d2 = ddx * ddx + ddy * ddy + ddz * ddz;
             if (d2 < bd) { bd = d2; best = j; }
           }
         }
-        used[best] = 1; srcOf[k] = best;
+        if (best >= 0 && foundAt < 0) foundAt = ring;
       }
-      if (dbg) {
-        // ?tkdbg=1 — matching quality probe (QA only)
-        let pre = 0, post = 0, far = 0;
-        for (let k = 0; k < n; k++) {
-          const i3 = idx[k] * 3;
-          const hx = heroP[i3], hy = heroP[i3 + 1], hz = heroP[i3 + 2];
-          let d = Math.hypot(sx[k] - hx, sy[k] - hy, sz[k] - hz);
-          pre += d;
-          const j = srcOf[k];
-          d = Math.hypot(sx[j] - hx, sy[j] - hy, sz[j] - hz);
-          post += d; if (d > 1) far++;
+      if (best < 0) {
+        // sparse tail: scan only what is actually still free
+        for (let fi = 0; fi < freeN; fi++) {
+          const j = freeList[fi];
+          const ddx = sx[j] - hx, ddy = sy[j] - hy, ddz = sz[j] - hz;
+          const d2 = ddx * ddx + ddy * ddy + ddz * ddz;
+          if (d2 < bd) { bd = d2; best = j; }
         }
-        (window.__refit = window.__refit || []).push(
-          { e, n, pre: +(pre / n).toFixed(3), post: +(post / n).toFixed(3), far });
       }
-      // apply the permutation to the slot tuple — the dot keeps its identity
-      // (exIdx, stag, stagW, heroP, writ, lastCv); the slot geometry moves.
-      const tuple = [az0, azS2, spanA, oR, oAz, oY, rimRi, rimYi, rimRs, rimYs,
-                     offR, offY, s1a, s2a, s3a, riseA, leanA, curlA, spA,
-                     perA, ph0A, h1A, h2A, sdA, dropA, knotA, coreA];
-      const tmp = new Array(n);
-      for (const A of tuple) {
-        for (let k = 0; k < n; k++) tmp[k] = A[idx[k]];
-        for (let k = 0; k < n; k++) A[idx[k]] = tmp[srcOf[k]];
+      used[best] = 1;
+      const fp = freePos[best], lastF = freeList[freeN - 1];
+      freeList[fp] = lastF; freePos[lastF] = fp; freeN--;
+      srcOf[k] = best;
+    }
+    job.freeN = freeN;
+    job.k = kEnd;
+    return job.k >= n;
+  }
+
+  function refitApply(job) {
+    const { e, n, idx, sx, sy, sz, srcOf } = job;
+    if (dbg) {
+      // ?tkdbg=1 — matching quality probe (QA only)
+      let pre = 0, post = 0, far = 0;
+      for (let k = 0; k < n; k++) {
+        const i3 = idx[k] * 3;
+        const hx = heroP[i3], hy = heroP[i3 + 1], hz = heroP[i3 + 2];
+        let d = Math.hypot(sx[k] - hx, sy[k] - hy, sz[k] - hz);
+        pre += d;
+        const j = srcOf[k];
+        d = Math.hypot(sx[j] - hx, sy[j] - hy, sz[j] - hz);
+        post += d; if (d > 1) far++;
+      }
+      (window.__refit = window.__refit || []).push(
+        { e, n, pre: +(pre / n).toFixed(3), post: +(post / n).toFixed(3), far });
+    }
+    // apply the permutation to the slot tuple — the dot keeps its identity
+    // (exIdx, stag, stagW, writ, lastCv); the slot geometry moves.
+    const tuple = [az0, azS2, spanA, oR, oAz, oY, rimRi, rimYi, rimRs, rimYs,
+                   offR, offY, s1a, s2a, s3a, riseA, leanA, curlA, spA,
+                   perA, ph0A, h1A, h2A, sdA, dropA, knotA, coreA];
+    const tmp = new Array(n);
+    for (const A of tuple) {
+      for (let k = 0; k < n; k++) tmp[k] = A[idx[k]];
+      for (let k = 0; k < n; k++) A[idx[k]] = tmp[srcOf[k]];
+    }
+    // RENDER-INVARIANT APPLY (D25). Under the standing floor a conv-0 dot is
+    // no longer parked on heroP — it renders at heroP + (slot − heroP)·fl —
+    // so a bare tuple swap would jump it by fl·(newSlot − oldSlot) in one
+    // frame: measured 5.8 u/s of unlit convulsion in the runway before this
+    // rebase existed. Same algebra as retire-in-place: choose heroP' so the
+    // rendered position is unchanged by the swap,
+    //     heroP' = heroP + (oldPt − newPt) · fl / (1 − fl),
+    // where oldPt/newPt are the dot's slot points before/after the
+    // permutation (from the job's own table; a few frames stale, which
+    // bounds the residual at fl · the slot's drift over those frames —
+    // orders below perception). fl ≤ FLOOR_B·T ≈ 0.30, so the division is
+    // tame; at fl = 0 this is exactly a no-op, byte for byte.
+    const fl = job.fl || 0;
+    if (fl > 1e-5) {
+      const g = fl / (1 - fl);
+      for (let k = 0; k < n; k++) {
+        const i3 = idx[k] * 3;
+        const j = srcOf[k];
+        heroP[i3]     += (sx[k] - sx[j]) * g;
+        heroP[i3 + 1] += (sy[k] - sy[j]) * g;
+        heroP[i3 + 2] += (sz[k] - sz[j]) * g;
       }
     }
-    if (dbg) window.__tkRefitMs = +(performance.now() - tR0).toFixed(2);
+  }
+
+  const REFIT_BUDGET = 1100;  // dots matched per frame — a few ms worst case
+
+  function refitStep(eff, tNow, leanScale, mEl, fl) {
+    if (!refitQueue && !refitJob) return;
+    if (eff[0] > 0 || eff[1] > 0 || eff[2] > 0) {
+      // light has begun: abandon what has not been APPLIED — eligibility is
+      // frozen-by-zero-reveal no longer, and a tuple swap under a converting
+      // dot would pop it. Whole exits already applied stay applied.
+      refitQueue = null; refitJob = null;
+      return;
+    }
+    const tR0 = dbg ? performance.now() : 0;
+    // one work unit per frame: build THEN a first match slice in the same
+    // call, apply the moment a job completes — the whole queue drains in
+    // five frames (2 + 2 + 1), which fits inside even the MAX_SCRUB_RATE
+    // backward runway (engage -> first light ~6.5 frames), so the migrant
+    // cohorts are no longer abandoned at a brisk entry.
+    if (!refitJob) {
+      const e = refitQueue.shift();
+      if (!refitQueue.length) refitQueue = null;
+      refitJob = refitBuild(e, tNow, leanScale, mEl);
+    }
+    if (refitJob && refitMatch(refitJob, REFIT_BUDGET)) {
+      refitJob.fl = fl;                                 // render-invariant rebase
+      refitApply(refitJob);                             // atomic apply
+      refitJob = null;
+    }
+    if (dbg) {
+      window.__tkRefitMs = +((window.__tkRefitMs || 0)
+        + (performance.now() - tR0)).toFixed(2);
+    }
   }
 
   /** split/braid steering — runs inside drive(), i.e. from the driver's own
@@ -685,12 +799,36 @@ export function createSpores(ctx) {
    *  eff: per-exit effective reveals; mw: the mushroom's matrixWorld;
    *  leanScale: the live lean damp; T: the TRANSFORM taste value (0..1 —
    *  1 = full reorganization; conv, not conv*T, stays the choreography /
-   *  cease gate, so restore discipline is identical at every T). */
-  function steer(eff, tNow, mw, leanScale, transform, gather) {
-    const drive = eff[0] > 1e-4 || eff[1] > 1e-4 || eff[2] > 1e-4;
+   *  cease gate, so restore discipline is identical at every T).
+   *
+   *  floor: THE STANDING ROUTE-RIDE (2026-08-09, Hannah's seventh report:
+   *  "a completely different stream of spores ... appears when I enter the
+   *  Inspire section"). Six rounds of fixes each made the boundary
+   *  transform smaller, and none could remove it, because the model itself
+   *  held two unrelated arrangements — a free drift and a designed braid —
+   *  and asked a reveal to swap between them at a section edge. The floor
+   *  retires that dualism: inside the chapter's reach (a pure-in-p window
+   *  the driver passes, ramped in across the QUIET approach runways on
+   *  both sides, zero at every rest that has a golden) the shed's dots are
+   *  ALWAYS partly on their routes — position drawn `floor` of the way to
+   *  their slot paths, and therefore already carrying the routes' living
+   *  motion — before, during and after anything lights. Entering Inspire
+   *  no longer builds the braid out of a foreign cloud; it tightens and
+   *  lights routes the dots were already travelling. The blend composes as
+   *  a LERP, cvP = fl·(1−conv·gather) + T·(conv·gather), so conv = 1 gives
+   *  exactly T (the rest golden is bit-identical by arithmetic, not by
+   *  tolerance) and conv = 0 gives exactly fl. Lighting still rides conv
+   *  alone — a floored dot at conv 0 renders at its full ambient colour —
+   *  so the floor is position/motion only and can never self-ignite. */
+  function steer(eff, tNow, mw, leanScale, transform, gather, floor) {
+    const fl0 = floor === undefined ? 0 : floor < 0 ? 0 : floor > 1 ? 1 : floor;
+    const drive = eff[0] > 1e-4 || eff[1] > 1e-4 || eff[2] > 1e-4 || fl0 > 1e-4;
     if (!drive && !wasActive) { feed.any = false; return; }
     if (!inited && !initSteer()) { feed.any = false; return; }
     const T = transform < 0 ? 0 : transform > 1 ? 1 : transform;
+    // The floor is part of the reorganization, so it rides the taste dial
+    // too: at T = 0 the shed never leaves its free drift, at any floor.
+    const fl = fl0 * T;
     // THE GATHER DRIVE (D24): the POSITION blend's own schedule, 1 at every
     // rest and landing frame, riding a much wider scroll window than the
     // reveal on the chapter's exit side. Lighting stays on eff exactly as
@@ -707,12 +845,18 @@ export function createSpores(ctx) {
 
     if (!wasActive) {
       // first live frame: the buffer is pure hero state — prime the shadow,
-      // then re-pair every still-unconverted dot with the nearest free slot
-      // of its own exit (ARRIVE NEARBY, D24 — see refitSlots above; a no-op
-      // at every landing frame, where conv is already 1 for every dot).
+      // then queue the re-pairing of every still-unconverted dot with the
+      // nearest free slot of its own exit (ARRIVE NEARBY, D24; budgeted and
+      // sliced across the floor's quiet runway, D25 — see refitStep above.
+      // The queue only ever RUNS while every reveal is 0, so at a landing
+      // frame — where the reveal is already 1 — it is dropped whole on the
+      // first step and the goldens see the RNG pairing they were shot with).
       heroP.set(arr); lastW.set(arr); lastCv.fill(0);
-      refitSlots(eff, tNow, leanScale, mw.elements);
+      if (dbg) window.__tkRefitMs = 0;
+      refitQueue = [0, 1, 2];
+      refitJob = null;
     }
+    refitStep(eff, tNow, leanScale, mw.elements, fl);
 
     // per-exit gates
     const mE = mw.elements;
@@ -752,12 +896,16 @@ export function createSpores(ctx) {
       // taste dial: cvL is the LIGHTING conversion (the dimmer's ambient
       // mix — pure in (eff, hash), the D22 gate); cvP is the POSITION
       // conversion — how far the dot has actually left its drift — which
-      // additionally rides the gather schedule (D24). conv keeps the
-      // choreography/cease gate.
+      // additionally rides the gather schedule (D24) and never falls below
+      // the standing route-ride floor (D25). The lerp form makes conv = 1
+      // exactly T and conv = 0 exactly fl — see the steer() doc. conv
+      // keeps the choreography/cease gate; a dot releases to the drift
+      // only where BOTH its conversion and the floor are zero.
       const cvL = conv * T;
-      const cvP = cvL * gT;
+      const cg = conv * gT;
+      const cvP = fl * (1 - cg) + T * cg;
       cv[i] = cvL;
-      if (conv <= 0) {
+      if (conv <= 0 && fl <= 1e-4) {
         pw[i] = 0;
         if (writ[i]) {
           // steered last frame, conversion just reached zero: hand the dot
@@ -779,7 +927,8 @@ export function createSpores(ctx) {
         }
         continue;
       }
-      anyConv = true;
+      if (conv > 0) anyConv = true;   // the lighting feed's gate: floored-
+                                      // but-unconverted dots carry no light
       writ[i] = 1;
 
       // ---- staged path: born between gills -> lateral -> rim walk / curl
@@ -1090,6 +1239,8 @@ export function createSpores(ctx) {
   // ---- the ONE release path (see the header note) ----
   function releaseSeat() {
     lastDriveFrame = -1;
+    refitQueue = null;   // a released seat abandons any un-run refit slices
+    refitJob = null;
     if (inited && wasActive) {
       // RETIRE IN PLACE (2026-08-09): a released dot is handed to the drift
       // wherever it stands — the buffer is not touched, its position becomes
@@ -1118,12 +1269,19 @@ export function createSpores(ctx) {
    *  its per-dot feed — same frame, one call. */
   const seat = {
     drive({ eff, time, matrixWorld, leanScale = 1, transform = 1, gather = 1,
-            regions = null, globalK = 0, grad = null }) {
+            floor = 0, regions = null, globalK = 0, grad = null }) {
       if (!system.driver) return;   // released seat: the handle is inert
       lastDriveFrame = frameNo;
-      if (eff) steer(eff, time, matrixWorld, leanScale, transform, gather);
+      if (eff) steer(eff, time, matrixWorld, leanScale, transform, gather, floor);
       dim(regions, globalK, grad);
     },
+    /** Warm-up (D25): allocate and assign the per-dot steering state at
+     *  page load instead of on the first mid-scroll frame that needs it —
+     *  initSteer() used to run inside the crossing itself and its cost
+     *  landed as a hitch at the exact seam Hannah kept reporting. Pure
+     *  allocation + the same deterministic RNG draws; a no-op if already
+     *  initialized. */
+    prime() { if (!inited) initSteer(); },
     /** QA: the per-dot conversion/brightness feed (?tkdbg adds perf probes). */
     feed,
     get active() { return wasActive; },

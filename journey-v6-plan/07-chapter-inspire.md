@@ -2519,3 +2519,256 @@ of the ride. Decaying the offset converges whatever the node does.
   (one visual, three reasons — `ui.js` `refresh()`), and it means a tabbed
   chip is as steady to read as a hovered one; noted because it is a behaviour
   change for the keyboard path that nobody reported.
+
+---
+
+## 2026-08-09 (D25) — the seventh report is not a bug in the model; it IS the model
+
+Hannah's seventh report in this family, now explicitly asking for a rethink:
+
+> "There still seems to be a completely different stream of spores or
+> something that appears when I enter the Inspire section that causes a lot
+> of jankiness. Can you try to understand what this might be? How could we
+> rethink this so it doesn't look like it changes completely when I move
+> into it, from above or below?"
+
+Six rounds — `b2c9584`, `9e2a277`, `2fdb4e6`, `e2bd6e8`, `30fd839`,
+`4feb006` — each fixed a real defect, each was measured, and each reduced
+the symptom without removing it. This section records why that was
+inevitable, what was measured before anything was changed, the model that
+shipped, and the evidence.
+
+### Why six rounds of refinement could not remove it
+
+The model held **two unrelated arrangements of the same 4,200 dots** — a
+free wind-blown drift and a designed braid — and asked a reveal to swap
+between them at a section edge. Every prior fix refined the SWAP: conserve
+its light (b2c9584), stagger its cohorts (9e2a277), widen its ramps
+(2fdb4e6), purify its schedule (e2bd6e8), absorb its fall (30fd839), pace
+and re-pair its rise (4feb006). After all six, position was continuous,
+light was conserved, the schedule was pure — and the field still reads as
+replaced, because three channels still switch **as a category, at the
+seam**, measured at HEAD on the live 4,200-dot buffer (1440x900 headless,
+`?nointro=1&steady=1&nosnap=1`, capture.py's own CDP client):
+
+1. **The hot class.** The ambient shed has **zero** dots above luminance
+   1.0, at every p, ever (its own P99 is ~0.90). The lit braid carries
+   **~700** (17% of the shed — PLUME_GAIN x the kn⁴ cadence). Every entry
+   therefore marches a sixth of the population into a luminance class that
+   does not exist in the state being left — h10 ran 0 → 674 in **Δp 0.041**
+   entering from Connect, where the ARR azimuth ramps are already saturated
+   and the single shared `out` envelope (Δp 0.06, all three exits at once)
+   was the whole schedule. The Mission side got its cascade in `2fdb4e6`;
+   the Connect side never had one.
+2. **The motion signature.** Ambient drift: 0.09 u/s, coherence 0.4-0.5
+   (slow, downwind, together). Braid alive: 1.3-1.9 u/s, coherence
+   0.02-0.15 (fast, cycling, independent). Sustained — not the transport
+   spike, the STANDING character — swaps 14-20x across the same seam, both
+   directions. Dust that begins to stream IS "a different stream of
+   spores", at zero position error.
+3. **Literal jank.** On a cold page, the first crossing froze: **267 ms +
+   118 ms** frames at p ≈ 0.09 entering from Mission, **415 ms** at
+   p ≈ 0.407 entering from Connect (fresh deep link), 150 ms at p 0.355
+   forward. Lazy shader compilation of the chapter groups' programs at
+   first visibility, lazy `initSteer`, and `refitSlots` — whose greedy
+   matcher degenerates from the Connect side (downwind cloud vs
+   source-bunched slots) and measured **360 ms in one frame** at engage.
+   The freeze lands at the exact scroll position where the field
+   transforms, every session, both directions.
+
+That is the whole of the seventh report: a category switch in appearance
+and motion, stapled to a real frame freeze, at a section edge. No pacing
+of the old swap removes any of the three.
+
+### The model shipped: the routes are part of the world; arriving lights them
+
+The Connect chapter already solved this shape of problem once (`f9e8317`):
+the paths exist quietly as part of the world, and arriving only lights
+them. This is that model for the shed, in three parts:
+
+- **The standing route-ride floor** (`FLOOR_B = 0.35`, chapter-side;
+  `floor` through the seat; `organism/spores.js` composes the position
+  blend as the LERP `cvP = fl·(1 − conv·g) + T·(conv·g)`). Inside the
+  chapter's reach the dots are ALWAYS drawn 0.35·T ≈ 0.30 of the way onto
+  their slot paths — so they already carry the routes' living motion,
+  faintly, before, during and after anything lights. The floor ramps in
+  across the QUIET runways on both sides (p 0.015 → 0.085 before the
+  earliest reveal onset at az 5 ≈ p 0.105; p 0.478 → 0.415 between the
+  Connect rest and the first light at 0.430), pure in p, monotone per leg,
+  position/motion only — a floored dot at conv 0 renders its full ambient
+  colour, so the floor cannot self-ignite. 0.35 sits deliberately under
+  the ~0.78 lobe threshold from the D18 T sweep: the unlit field still
+  reads as ONE diffuse wind-blown plume (verified on screen at p 0.081 —
+  no three-column spoiler at ambience), while the reveal's remaining
+  travel drops by a third and — the real point — entering now TIGHTENS a
+  flow that already exists instead of conjuring one. Ramp pacing measured
+  on a continuous ride from p 0: peak 1.15 u/s at coherence ~0.5, unlit —
+  braid-alive scale, an order under the old boundary transport.
+- **The Connect side gets its cascade** (per-exit retire envelopes
+  replacing the one shared `out`): ArtCompute 0.352 → 0.430, Arca
+  0.358 → 0.418, 2RP 0.365 → 0.405. The source stream is widest and last
+  out — forward, the migrants hand back first and the visible stream
+  lingers (the delta played backward); entering from Connect, the source
+  organizes first, then Arca peels off, then 2RP — the same authored order
+  as the Mission-side ARR cascade. All three are exactly 1 at the rest and
+  through p 0.35 (the approved framing never dims) and exactly 0 by 0.430,
+  inside T1's re-arm edge at p 0.44 and release at 0.46 — the seam
+  derivation stands unchanged. The gather widens to 0.315 → 0.425 to pace
+  the condensation under the new window.
+- **Nothing compiles, allocates or matches at the boundary any more.**
+  `seat.prime()` runs `initSteer` at chapter build; journey boot warms
+  every chapter's GPU programs (`compileAsync`, KHR parallel) and then
+  first-draws each chapter group once into a small offscreen target in
+  per-chapter idle slices (one all-at-once warm render measured ~150 ms —
+  sliced so no task exceeds a few tens of ms); the D24 refit is rebuilt as
+  a **budgeted, resumable job** — dense linked-cell grid (integer keys),
+  swap-removed free list, 1,100 dots matched per frame, one exit applied
+  atomically at a time, run only while every reveal is exactly 0 and
+  abandoned un-applied if light begins first. 360 ms in one frame → 29 ms
+  across ~10 frames, same matching quality (post-refit mean dot-to-slot
+  1.21 / 1.88 / 1.84 u against D24's 1.20 / 1.93 / 1.89). And because a
+  conv-0 dot under the floor is no longer parked on `heroP`, the apply is
+  made **render-invariant**: `heroP' = heroP + (oldPt − newPt)·fl/(1−fl)`,
+  the retire-in-place algebra again — without it the tuple swap jumped the
+  runway at 5.8 u/s (measured, then removed: runway peak back to the
+  ramp's own 1.1 u/s).
+
+Identity at every landing frame is arithmetic, not tolerance: the lerp is
+exactly `T` at conv 1 (rest golden), the floor is exactly 0 at p = 0, at
+the Connect rest and beyond (their goldens), and the refit queue drops
+whole at any landing frame because the reveal is already 1 there.
+
+### Rejected, with reasons
+
+- **Making the ambient drift itself follow the routes at all times,
+  everywhere** (the literal "always travel their three routes"): the
+  landing view's live stationary distribution is the seeded scatter plus
+  the shipped integrator; a route-following field has a different
+  stationary distribution, so the landing would visibly evolve over the
+  first minute, on the hero frame this project froze first (`06-mission-
+  preservation.md`). The floor gets the same invariant inside the
+  chapter's reach without touching the drift law: `heroP` still integrates
+  the byte-identical ambient rules, and the rendered bias collapses to
+  zero outside the window.
+- **Conversion gated at the dot's own rebirth** (join the braid only at
+  the gill source, flow-through instead of transport): ambient turnover
+  through the source is minutes, and forcing it means teleporting mid-sky
+  dots to the gills — a de-ignition in open view. Rejected on the D18 law.
+- **A never-steered reserve / bimodal T** (the "shedShare" residual from
+  2026-08-06): both change the approved rest arrangement — the inspire
+  golden moves. Out of scope by the brief's own rule ("stop and report
+  before re-shooting"); not needed once the emphasis reads as lighting.
+- **Floor above the lobe threshold** (≥ 0.5): the unlit field starts
+  resolving into columns — the routes must stay a bias, not a channel.
+- **Slew-limiting or time-easing any of it**: rate-dependence, rejected on
+  `e2bd6e8`'s precedent without re-litigating.
+- **Widening the Connect-side window past 0.430**: T1 re-arms backward at
+  p 0.44 (`seams.js`, derived) and the Connect approach owns the frame
+  from there; the lighting window is structurally boxed to [0.35, 0.435].
+  The cascade spends the whole box; the box itself is a settled trade.
+
+### Before / after — all four crossings, one instrument, stashed-tree A/B
+
+3-frame rolling population speed, full-buffer, like-for-like runs (the
+"before" column re-measured on the stashed HEAD tree in the same session,
+same machine load — the D23/D24-era published numbers were shot on a
+2x-slower headless cadence and are not directly comparable):
+
+| crossing, deliberate 0.10 p/s | before | after |
+|---|---|---|
+| Mission → Inspire, lit-window peak | 6.22 u/s | **5.06 u/s** |
+| … quiet-runway peak (unlit) | 0.11 u/s | **1.15 u/s — the floor ramp, by design** |
+| Connect → Inspire, lit-window peak | 2.44 u/s | **1.85 u/s** |
+| Inspire → Mission peak | 1.56 u/s | **1.57 u/s** |
+| Inspire → Connect peak | 1.49 u/s | **1.40 u/s** |
+| Connect-side h10 (hot-class) arrival | 0 → 674 in Δp 0.041, onset 0.403 | 0 → 709 in **Δp 0.050, onset 0.415, sequenced, peak step −35%/unit p** |
+| Mission-side h10 rise 10→90% | Δp 0.046, max step 53/frame | **Δp 0.047, max step 48/frame — untouched** |
+
+Fresh-page brisk entries (0.45 p/s, `MAX_SCRUB_RATE`, 3 trials each, both
+trees, the gesture as Hannah actually makes it):
+
+| | before | after |
+|---|---|---|
+| Mission → Inspire peak | 18.7 / 22.0 / 19.8 u/s | **13.3 / 12.9 / 13.3 u/s (−35%)** |
+| Connect → Inspire peak | 8.0 / 16.6 / 3.5 u/s (wild) | **10.6 / 8.4 / 10.1 u/s (stable)** |
+| … median screen flow at peak | 2,169–3,211 px/s | **625–1,145 px/s (−3x)** |
+
+Frame time through the crossings (light probe, dt only, fresh pages):
+
+| scenario | before (max frame) | after |
+|---|---|---|
+| COLD Mission → Inspire | **267 ms** (+118, +100) | **35 ms** |
+| COLD Connect → Inspire (deep link) | **415 ms** | **35 ms** |
+| warm crossings, both directions | 50–184 ms spikes | **≤ 35 ms** |
+| every scenario, median | — | 16.7 ms (display-locked) |
+
+Baselines re-anchored: ambient drift 0.09–0.11 u/s; braid alive at the
+rest p50 1.29 u/s, peak 1.65; the floor's standing motion sits at ~0.2 u/s
+ambient-side of the window and blends smoothly into braid-alive inside it.
+
+### The six prior commits, re-measured on the shipped tree
+
+| metric | result |
+|---|---|
+| `b2c9584` dark-and-converted at p 0.147 / 0.167 / 0.26 / 0.385 | **203 / 231 / 226 / 193** — all at or under the resting band (225–248); 0.385 well under |
+| `9e2a277` + `2fdb4e6` Mission-side arrival | ramps untouched byte-for-byte; h10 rise Δp 0.046 → 0.047, max step 53 → 48 |
+| `e2bd6e8` fwd/rev per-dot Δcv at pins 0.30/0.34/0.37/0.40 | **0.00000 exact, 0 dots > 0.05, all four pins** |
+| `30fd839` outbound retire (Inspire → Connect) | peak 1.40–1.81 u/s, net 0.35–0.90 u — at/under the before column |
+| `4feb006` inbound gather (Connect → Inspire) | deliberate peak 2.44 → **1.85**; brisk screen flow **−3x**; refit quality preserved (above) |
+| `c6bbbab` three streams at the rest | `inspire@*` goldens **0.00 / 0.00 — byte-identical**, which is the strongest possible form of the gate |
+
+### Gates
+
+- **`capture.py --check` PASS, worst MAE 0.00/255 on all ten goldens.**
+  `mission@*` byte-identical (floor is 0 at p = 0 and the drift law is
+  untouched); `inspire@*` byte-identical (lerp = exactly T at conv 1; the
+  refit queue drops whole at reveal 1); `connect@*`, `owned@*`, `final@*`
+  0.00. Nothing re-shot; `manifest.json` untouched.
+- **Console clean** over full p 0 → 1 → 0 rides and every reproduction
+  ride: zero warnings, zero errors, zero exceptions.
+- **No self-ignition.** Total conversion mass is single-humped in both
+  directions (0 re-dips on the rise, 0 re-rises on the fall, 208/190
+  sampled frames); every retire envelope and the floor are monotone per
+  leg by construction; the floor drives position only.
+- **Reverse mirrors.** cv exact at all pins (above); position
+  path-dependence remains deliberate (D23/D24 doctrine, now including the
+  floor's engage-time refit and the render-invariant rebase, which edits
+  `heroP` without moving a rendered dot).
+- **Restore discipline.** p returns to exactly 0; total ambient luminance
+  returns to exactly 2746.2 (the byte-exact base) after every ride.
+- **T1/T2 derivations stand**: reveal still zero at both T1 edges (master
+  zero below az 5 at arm; every envelope zero from p 0.430 < relax edges).
+- **Cost.** Steer's per-frame loop shape unchanged (one lerp replaces one
+  multiply); the floor keeps the seat active over p 0.015–0.478 (~1 ms
+  class, previously ~0.09–0.46); refit ≤ ~3 ms/frame for ≤ 10 frames per
+  engage; boot warm runs once, off the critical path, in idle slices.
+
+### Residuals / open
+
+- **Placements are still placements.** A nav jump or deep link landing
+  inside the window engages the floor (and at a rest, the full braid) in
+  one frame — the whole page teleports on a placement, and that contract
+  (`placeAt`, "place, never replay") predates this work. Noted because the
+  floor makes the engage frame *technically* a position step for unlit
+  dots; it is invisible inside a full-scene jump.
+- **The measurement harness discovered the idle resolution glides p toward
+  the nearest rest even under `?nosnap=1`** during any settled hold via
+  `setProgress` placements. Harness-side re-assertion fixed the
+  instrument; whether `?nosnap=1` SHOULD suppress that glide is a QA-flag
+  question left open — it does not affect visitors.
+- **The brisk refit depends on its runway arithmetic**: 5 frames of work
+  against ~6.5 frames of quiet at `MAX_SCRUB_RATE` 0.45. If the scrub
+  clamp or the route timing ever changes, re-derive (the failure mode is
+  graceful — abandoned cohorts keep RNG pairing — but the gather pays it).
+- **The hot class still arrives**; it is the approved emphasis. What
+  changed is that it arrives sequenced on both sides, onto a field whose
+  structure and motion no longer switch underneath it, with no frame
+  hitch stapled to it. If Hannah still reads the *lighting* itself as "a
+  different stream", the next lever is tonal — bringing the braid's peak
+  luminance class down toward the shed's own ceiling — and that is a
+  taste call on the approved rest frame, hers to make, not a defect.
+- The instrument's environment ran at half cadence during part of this
+  session (earlier published D23/D24 peaks were shot on that slower
+  cadence); every before/after pair in this section was re-measured
+  like-for-like in one session, stashed-tree A/B, and the fresh-page brisk
+  table is the one to trust for absolute levels.
