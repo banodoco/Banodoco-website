@@ -23,9 +23,9 @@
 // DERIVED, NOT LISTED
 // ===========================================================================
 // Nothing here names a chapter or a node. The rail's slots come from
-// route.js's CHAPTERS in manifest order; which of them is a LINK is decided
-// by whether the manifest gave it a `nav`; which one reads current is
-// `navChapterAt(p)`. The panel's per-section item lists come from
+// route.js's CHAPTERS in manifest order; every one is a LINK (every chapter
+// has a route — see THE EPILOGUE); which one reads current is `chapterAt(p)`.
+// The panel's per-section item lists come from
 // CONTENT.nodes, grouped by each node's own `chapter` field in insertion
 // (= narrative) order. A chapter added to ROUTE, or a node added to CONTENT,
 // appears here without an edit to this file.
@@ -62,16 +62,21 @@
 // ===========================================================================
 // THE EPILOGUE
 // ===========================================================================
-// The Final chapter has a route and no nav entry, deliberately (route.js,
-// 10-chapter-final.md); the last nav'd chapter stays current through it. As
-// in the first build:
+// The Final chapter has a route and no nav entry (route.js, 10-chapter-
+// final.md). The first redux rendered its slot as an aria-hidden <span> echo
+// — and that echo was a 44px hole in the fan: it never matched the
+// `a.j-rail-item` pointer-events rules, so a pointer crossing it left the
+// control (collapsing the fan) and a click on it fell through to whatever
+// stood behind (measured 2026-08-09: the resting menu button — Hannah's
+// "the Epilogue button isn't clickable, and it closes when I hover").
 //
-//   · the rail's LINKS and `aria-current` are unchanged by the epilogue —
-//     four links, Owned current, exactly what navChapterAt(p) says.
-//   · the RESTING SYMBOL is `chapterAt(p)`, so out in the field the rail
-//     shows the field. The epilogue's slot is a plain <span>, aria-hidden: a
-//     visual echo of where the camera is. The a11y statement is made in the
-//     PANEL, which lists the epilogue as a real entry and marks it current.
+// It is now a REAL LINK, like every other slot: the chapter has a route, the
+// panel already navigates to it, and a tile you can see and point at must be
+// a tile you can press. `nav: null` still keeps it out of nowhere else; here
+// it only means the slot speaks with the echo's quieter voice
+// (`.j-rail-echo`). `aria-current` follows `chapterAt(p)` — with all five
+// slots linked, the rail can finally say "you are in the epilogue" itself,
+// exactly as the panel always could.
 //
 // ===========================================================================
 // p = 0 AND THE MISSION REFERENCE
@@ -84,7 +89,7 @@
 // from the first build; the reasoning lives in 23-side-navigator.md §9.
 
 import { CONTENT } from '../content/content.js';
-import { CHAPTERS, chapterAt, navChapterAt } from './route.js';
+import { CHAPTERS, chapterAt } from './route.js';
 import { buildSymbol } from './symbols.js';
 import { claimInput, releaseInput } from './scroll.js';
 
@@ -134,37 +139,38 @@ export function createRail({ onNav } = {}) {
   const list = el('ul', 'j-rail-list');
   inner.appendChild(list);
 
-  const slots = [];      // { id, li, item, isLink }
-  const links = {};      // chapterId -> <a>, for the nav'd chapters only
+  const slots = [];      // { id, li, item }
+  const links = {};      // chapterId -> <a> — all five; see THE EPILOGUE
 
   CHAPTERS.forEach((c, i) => {
     const li = el('li', 'j-rail-slot');
     li.dataset.chapter = c.id;
     li.style.setProperty('--i', String(i));
 
-    const isLink = !!c.nav;
-    const item = el(isLink ? 'a' : 'span', 'j-rail-item');
-    if (isLink) {
-      item.href = `#/${c.id}`;
-      item.dataset.chapter = c.id;
-      item.addEventListener('click', (e) => { e.preventDefault(); collapse(); onNav(c.id); });
-      links[c.id] = item;
-    } else {
-      // The epilogue echo — see THE EPILOGUE above.
-      li.classList.add('j-rail-echo');
-      li.setAttribute('aria-hidden', 'true');
-    }
+    // Every slot is a real link: every chapter has a route, and a tile a
+    // pointer can reach must be a tile a pointer can press (THE EPILOGUE).
+    const item = el('a', 'j-rail-item');
+    item.href = `#/${c.id}`;
+    item.dataset.chapter = c.id;
+    // Collapse the TOUCH state only: a second tap acted, the arming is spent.
+    // The hover fan deliberately stays — the pointer is still on the control,
+    // and it folds on pointer-leave (Hannah, 2026-08-09: close on de-hover,
+    // not on click-elsewhere).
+    item.addEventListener('click', (e) => { e.preventDefault(); collapseTouch(); onNav(c.id); });
+    links[c.id] = item;
+    // The nav-less chapter keeps the echo's quieter voice, as a style only.
+    if (!c.nav) li.classList.add('j-rail-echo');
 
     const mark = el('span', 'j-rail-mark');
     mark.appendChild(buildSymbol(c.id));
-    if (isLink) mark.appendChild(reticle());
+    mark.appendChild(reticle());
     item.appendChild(mark);
     item.appendChild(el('span', 'j-rail-name',
       (CONTENT.chapters[c.id] || {}).nav || c.nav || 'Epilogue'));
 
     li.appendChild(item);
     list.appendChild(li);
-    slots.push({ id: c.id, li, item, isLink });
+    slots.push({ id: c.id, li, item });
   });
 
   /* ---- the menu control: the second resting symbol ---- */
@@ -323,19 +329,34 @@ export function createRail({ onNav } = {}) {
                  because the brief separates the two resting controls: the fan
                  opens from the SECTION symbol, and pointing at the menu mark
                  must not unfold the sections. A bare :hover on the root could
-                 not tell them apart. Entering the list opens; leaving the
-                 whole control closes — so an open fan survives the pointer
-                 travelling across it, including down to the menu mark.
-       keyboard  the root's `:focus-within`, in CSS.
+                 not tell them apart. Entering the list opens — after a short
+                 DWELL (HOT_INTENT_MS): the fan slides the menu mark down to
+                 hold the foot of the stack, so a pointer merely TRANSITING
+                 the current mark on its way to the menu must not unfold it
+                 (measured 2026-08-09: the transit expansion moved the menu
+                 out from under the aimed click). Leaving the whole control
+                 closes — an open fan survives the pointer travelling across
+                 it, including down to the menu mark.
+       keyboard  the root's `:has(:focus-visible)`, in CSS. NOT
+                 `:focus-within`: a mouse click focuses what it presses, and
+                 that focus must neither expand the fan (it moved the menu
+                 button between mousedown and mouseup — the first click
+                 never landed) nor hold the fan open after the pointer has
+                 left (Hannah's "doesn't go away until I click somewhere
+                 else"). `:focus-visible` is exactly the keyboard half.
        touch     `.j-rail-open`: first tap expands, second acts — the model
                  this site already uses for its hotspot chips, decided per
-                 INTERACTION from the live pointerType, never a boot sniff. */
+                 INTERACTION from the live pointerType, never a boot sniff.
+                 A tap on the MENU mark never arms the fan: the menu is the
+                 other resting control, and its first tap opens the panel. */
+  const HOT_INTENT_MS = 120;
   let touchOpen = false;
   let swallowClick = false;
   let hotOpen = false;
+  let hotTimer = 0;
 
   function expanded() {
-    return touchOpen || hotOpen || root.contains(document.activeElement);
+    return touchOpen || hotOpen || !!root.querySelector(':focus-visible');
   }
 
   /* The touch-expanded rail is announced on <body> (2026-08-07 mobile pass):
@@ -346,12 +367,16 @@ export function createRail({ onNav } = {}) {
     document.body.classList.toggle('j-rail-on', on);
   }
 
+  function collapseTouch() {
+    if (!touchOpen) return;
+    touchOpen = false;
+    root.classList.remove('j-rail-open');
+    announceOpen(false);
+  }
+
   function collapse() {
-    if (touchOpen) {
-      touchOpen = false;
-      root.classList.remove('j-rail-open');
-      announceOpen(false);
-    }
+    collapseTouch();
+    clearTimeout(hotTimer);
     if (hotOpen) {
       hotOpen = false;
       root.classList.remove('j-rail-hot');
@@ -360,17 +385,36 @@ export function createRail({ onNav } = {}) {
 
   list.addEventListener('pointerenter', (e) => {
     if (e.pointerType === 'touch' || hotOpen) return;
-    hotOpen = true;
-    root.classList.add('j-rail-hot');
+    // Dwell before unfolding — see the header note. A pointer that is only
+    // passing through the current mark on its way to the menu mark is gone
+    // well inside HOT_INTENT_MS, and the menu stays where it was aimed at.
+    clearTimeout(hotTimer);
+    hotTimer = setTimeout(() => {
+      hotOpen = true;
+      root.classList.add('j-rail-hot');
+    }, HOT_INTENT_MS);
+  });
+  // Leaving the LIST cancels a pending unfold (the pointer went on to the
+  // menu mark, or away); leaving the whole CONTROL folds an open fan.
+  list.addEventListener('pointerleave', (e) => {
+    if (e.pointerType === 'touch') return;
+    clearTimeout(hotTimer);
   });
   inner.addEventListener('pointerleave', (e) => {
-    if (e.pointerType === 'touch' || !hotOpen) return;
+    if (e.pointerType === 'touch') return;
+    clearTimeout(hotTimer);
+    if (!hotOpen) return;
     hotOpen = false;
     root.classList.remove('j-rail-hot');
   });
 
   root.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch' || touchOpen) return;
+    // The menu mark is the OTHER resting control: its first tap opens the
+    // panel (see the menu's own pointerdown below), so it must not spend the
+    // tap on arming the fan — and arming would slide the button out from
+    // under the very tap that pressed it (measured 2026-08-09).
+    if (e.target instanceof Node && menuBtn.contains(e.target)) return;
     touchOpen = true;
     root.classList.add('j-rail-open');
     announceOpen(true);
@@ -463,6 +507,21 @@ export function createRail({ onNav } = {}) {
     scrim.hidden = true;
   }
 
+  /* The menu opens on POINTERDOWN, not on click — the way an OS menu bar
+     does. The button is a control that can be in motion (it slides down to
+     hold the foot of an opening fan), and a click needs press and release to
+     land on the same node: any motion in between loses it (measured
+     2026-08-09 — the first click opened nothing). The press is the intent;
+     acting on it makes the button clickable throughout its motion. The
+     preventDefault keeps the press from also focusing the button, so focus
+     goes where openMenu sends it (the close control) and stays there.
+     The click listener remains for the keyboard: Enter/Space synthesise a
+     click with no pointerdown before it, and openMenu() itself is guarded
+     against running twice. */
+  menuBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    openMenu(menuBtn);
+  });
   menuBtn.addEventListener('click', () => openMenu(menuBtn));
   menuClose.addEventListener('click', () => closeMenu());
   scrim.addEventListener('click', () => closeMenu());
@@ -526,11 +585,15 @@ export function createRail({ onNav } = {}) {
         else menuLinks[id].removeAttribute('aria-current');
       }
     }
-    const activeNext = navChapterAt(p);
-    if (activeNext !== activeId) {
-      activeId = activeNext;
+    // With all five slots linked (THE EPILOGUE), the marked entry and the
+    // scene on screen are the same statement: `aria-current` and the reticle
+    // follow chapterAt(p) — the rail itself can now say "you are in the
+    // epilogue", as the panel always could. (navChapterAt, which held the
+    // last NAV'D chapter current through the epilogue, served the four-link
+    // rail; nothing here needs it any more.)
+    if (nowNext !== activeId) {
+      activeId = nowNext;
       for (const s of slots) {
-        if (!s.isLink) continue;
         const on = s.id === activeId;
         s.li.classList.toggle('active', on);
         if (on) s.item.setAttribute('aria-current', 'true');

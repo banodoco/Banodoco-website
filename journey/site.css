@@ -142,6 +142,35 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     mask-image: linear-gradient(to bottom, transparent, #000 34px, #000 calc(100% - 34px), transparent);
     transition: opacity 0.35s ease;
   }
+  /* THE RESTING HALO (Hannah, 2026-08-09: "sometimes the side menu thing is
+     invisible … it's on top of a similarly coloured mushroom"). The two
+     resting marks are gold line-work over a scene made of gold line-work; on
+     the epilogue's lit field the current mark simply vanished. Same recipe as
+     the expanded band above — a gradient falloff with a masked feather, the
+     frame darkening at its edge, NOT a card — but sized to the two resting
+     marks alone and a shade quieter. It fades out as the expanded band fades
+     in, so the darkening simply grows with the fan rather than doubling
+     under it. (The marks additionally carry their own dark rim — see the
+     .j-sym filter below — which is what keeps the glyph itself crisp where
+     even the halo sits on bright ground.) */
+  .j-rail-inner::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    z-index: -1;
+    width: 4.6rem;
+    /* the resting pair: current mark at -22..22, menu mark at 30..74, plus
+       the same 2.4rem feather room the expanded band reserves */
+    top: calc(-22px - 2.4rem);
+    height: calc(96px + 4.8rem);
+    background: linear-gradient(to left, rgba(9, 6, 2, 0.62) 20%, rgba(9, 6, 2, 0));
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 38px, #000 calc(100% - 38px), transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 38px, #000 calc(100% - 38px), transparent);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .j-rail.on .j-rail-inner::after { opacity: 1; }
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-inner::after { opacity: 0; }
 
   .j-rail-list { display: block; margin: 0; padding: 0; list-style: none; }
 
@@ -182,8 +211,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-rail:focus-within a.j-rail-item,
   .j-rail:focus-within .j-rail-menu { pointer-events: auto; }
   /* …but at rest only the CURRENT tile is live in the stack; the rest are
-     folded behind it and take their hit areas with them. */
-  .j-rail:not(.j-rail-hot):not(:focus-within):not(.j-rail-open)
+     folded behind it and take their hit areas with them. The negation is the
+     exact complement of the expanded-state `:is()` below — `:has(:focus-
+     visible)`, not `:focus-within`, so a click-focused link neither keeps
+     folded tiles hit-testable nor holds the fan (keyboard focus does both,
+     deliberately). */
+  .j-rail:not(.j-rail-hot):not(.j-rail-open):not(:has(:focus-visible))
     .j-rail-slot:not(.now) .j-rail-item { pointer-events: none; }
 
   .j-rail-mark {
@@ -194,8 +227,15 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   /* 24px in a 22-unit box: a shade over 1:1, so a unit of symbol geometry is
      about a pixel and the smallest authored dot (r 0.6) still rasterises as a
-     dot. See the radius note in journey/symbols.js. */
-  .j-sym { display: block; width: 24px; height: 24px; overflow: visible; }
+     dot. See the radius note in journey/symbols.js.
+     The dark rim is the marks carrying their own contrast (the other half of
+     the resting-halo note above): a tight dark halo behind every stroke, so
+     gold line-work stays a drawn glyph even directly over the scene's own
+     gold line-work. */
+  .j-sym {
+    display: block; width: 24px; height: 24px; overflow: visible;
+    filter: drop-shadow(0 0 1px rgba(9, 6, 2, 0.95)) drop-shadow(0 0 3px rgba(9, 6, 2, 0.6));
+  }
   .j-sym path {
     fill: none;
     stroke: currentColor;
@@ -244,20 +284,24 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 
   /* ---- RESTING: the current mark, lit ---- */
   .j-rail-slot.now .j-rail-item { color: rgba(228, 182, 102, 0.82); }
-  .j-rail-slot.now .j-sym { filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.4)); }
+  /* the rim rides under the glow — `filter` replaces, it does not compose */
+  .j-rail-slot.now .j-sym {
+    filter: drop-shadow(0 0 1px rgba(9, 6, 2, 0.95)) drop-shadow(0 0 3px rgba(9, 6, 2, 0.6))
+            drop-shadow(0 0 5px rgba(240, 190, 90, 0.4));
+  }
 
   /* ---- EXPANDED: hover on the section mark, keyboard focus, or the tap ---- */
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-inner::before { opacity: 1; }
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot {
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-inner::before { opacity: 1; }
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot {
     opacity: 1;
     transform: translateY(calc((var(--i, 0) - var(--cur, 0)) * 44px));
   }
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-item {
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-item {
     color: rgba(201, 191, 168, 0.62);
   }
   /* the current section, clearly marked — gold, and wearing the reticle */
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rail-item,
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.now .j-rail-item {
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rail-item,
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.now .j-rail-item {
     color: var(--gold-bright);
   }
   /* focus states visually equal hover states (PL-2.2) */
@@ -265,10 +309,15 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-rail-slot.active .j-rail-item:is(:hover, :focus-visible),
   .j-rail-slot.now .j-rail-item:is(:hover, :focus-visible) { color: var(--gold-bright); }
 
-  /* the epilogue echo: present, dimmer, and not a control (see rail.js) */
-  .j-rail-echo .j-rail-item { cursor: default; }
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-echo:not(.now) .j-rail-item {
-    color: rgba(201, 191, 168, 0.32);
+  /* the epilogue: a real control with the echo's quieter voice (rail.js,
+     THE EPILOGUE) — dimmer in the fan than its peers, but it answers a
+     hover and a focus exactly as they do, because it takes a click. */
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-echo:not(.now) .j-rail-item {
+    color: rgba(201, 191, 168, 0.42);
+  }
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+    .j-rail-echo:not(.now) .j-rail-item:is(:hover, :focus-visible) {
+    color: var(--parchment);
   }
 
   /* ---- the reticle: hero.css's `.co .ck`, on the current symbol ---- */
@@ -284,16 +333,16 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-rck.tr { top: 0;    right: 0; border-top: 1px solid var(--rck);    border-right: 1px solid var(--rck); transform: translate(-6px, 6px)  scale(0.4); }
   .j-rck.br { bottom: 0; right: 0; border-bottom: 1px solid var(--rck); border-right: 1px solid var(--rck); transform: translate(-6px, -6px) scale(0.4); }
   .j-rck.bl { bottom: 0; left: 0;  border-bottom: 1px solid var(--rck); border-left: 1px solid var(--rck);  transform: translate(6px, -6px)  scale(0.4); }
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck {
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck {
     opacity: 1;
     transform: translate(0, 0) scale(1);
     transition: opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--d, 0) * 0.035s + 0.1s),
                 transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--d, 0) * 0.035s + 0.1s);
   }
   /* …locking in clockwise, tl -> tr -> br -> bl, as the hero's do */
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.tr { transition-delay: calc(var(--d, 0) * 0.035s + 0.15s); }
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.br { transition-delay: calc(var(--d, 0) * 0.035s + 0.20s); }
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.bl { transition-delay: calc(var(--d, 0) * 0.035s + 0.25s); }
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck.tr { transition-delay: calc(var(--d, 0) * 0.035s + 0.15s); }
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck.br { transition-delay: calc(var(--d, 0) * 0.035s + 0.20s); }
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck.bl { transition-delay: calc(var(--d, 0) * 0.035s + 0.25s); }
 
   /* ---- the menu control: the SECOND resting symbol ----
      Beside the current mark at rest (one tile below, past a hairline), and
@@ -316,7 +365,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     transform: translateY(52px);
     transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s;
   }
-  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-menu {
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-menu {
     transform: translateY(calc((var(--n, 5) - 1 - var(--cur, 0)) * 44px + 52px));
   }
   /* the hairline between the two jobs: sections above, the site's own
@@ -330,6 +379,21 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     height: 1px;
     transform: translateX(-50%);
     background: rgba(217, 164, 65, 0.26);
+  }
+  /* …and the hairline's 8px of breathing room is bridged for the POINTER: a
+     hit pad riding the button, so travelling from the stack (or the resting
+     mark) down past the hairline never crosses dead space — dead space under
+     a moving pointer is a pointerleave, and a pointerleave folds the fan
+     (measured 2026-08-09, the Epilogue report). Pseudo-elements hit-test as
+     part of their element, so this costs no extra node and follows the
+     button through both states. */
+  .j-rail-menu::after {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
   }
   .j-rail-menu:is(:hover, :focus-visible) { color: var(--gold-bright); }
   /* hero `lead-draw`: the contents filaments draw themselves as the rail
@@ -1860,14 +1924,14 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        reticle is simply already locked in, the menu's filaments already drawn,
        and the panel already arrived. Nothing here is load-bearing motion. */
     .j-rail, .j-rail-slot, .j-rail-item, .j-rail-name, .j-rail-menu,
-    .j-rail-inner::before, .j-rail-menu .j-sym path,
+    .j-rail-inner::before, .j-rail-inner::after, .j-rail-menu .j-sym path,
     .j-menu, .j-menu-scrim, .j-menu-x, .j-menu-item, .j-menu-mark,
     .j-menu-links a, .j-menu-ia, .j-menu-note a { transition: none; }
     /* the reticle's clockwise cascade is delay, not duration — kill both */
-    .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck,
-    .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.tr,
-    .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.br,
-    .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.bl {
+    .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck,
+    .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck.tr,
+    .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck.br,
+    .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck.bl {
       transition: none;
       transition-delay: 0s;
     }
