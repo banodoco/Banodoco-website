@@ -236,30 +236,80 @@ const DRAW_LO = 0.296, DRAW_HI = 0.893;
 // it fixed was a body DRAWN AND DARK (draw ahead of light), and every width
 // in the taper keeps the draw at or behind the light's own pace.
 //
-// WHY A TAPER AND NOT A CONSTANT. The arrival ladder is now authored in p
-// (ring.js FIELD_LADDER / world.js RING_LADDER: sparse opening singles,
-// tightening as the town fills), and the camera crosses uPull ever faster
-// into the rest — so a single width means the OPENING arrivals, which have
-// the whole road to themselves, draw no slower than the CLOSING ones, which
-// land a fifth of a second apart. The taper gives the early singles a long,
-// watchable kindling (0.26 of pullRaw, ~a third of a second at a deliberate
-// scroll) and lets the late fills snap in (0.12 — quick pops read as events
-// even when they overlap; slow oozes just read as a wave), and it is what
-// frees the ladder's tail at all: the last rung starts at 0.8379 and
-// 0.8379 + 0.12 = 0.958 finishes far inside the 1.1200 the camera-pure
-// pullRaw reaches at the rest, where + 0.26 would leave no margin. The width
-// is a pure function of the body's own threshold — one more constant per
-// body, computed once, nothing time-based, reverse scrubs unchanged (D16).
-const DRAW_W_HI = 0.26;        // the opening singles' own kindling width
-const DRAW_W_LO = 0.12;        // the closing fills' — a pop, not an ooze
+// THE TAPER, RE-CUT ON THE WON ROAD (2026-08-09 second pass, Hannah:
+// "slower... one at a time... like something CHARGING UP, as opposed to the
+// way it flashes in"). The first cut of this taper ran 0.26 -> 0.12 and its
+// own comment admitted what the narrow end was: "quick pops read as events".
+// The pops are what Hannah is calling flashes — over half the field was
+// authored to have NO BUILD at all, because the road between the last
+// threshold and the rest could not fit one. That road problem is now solved
+// where it lived, in the route: the Final rest moved p 0.925 -> 0.97
+// (route.js / camera.js, this commit) and the camera crosses the closing
+// thresholds at a THIRD of its old rate — so a narrower-than-opening width
+// is still, in scroll terms, a LONGER build. 0.26 -> 0.15 across the ladder
+// gives every body in the chapter 140-235 px of wheel to arrive over
+// (the shipped tree gave the closers 40), and the closing rungs' 0.15
+// is what keeps the last starts inside the driver's range: the final rung
+// 0.9511 + 0.151 finishes at 1.102, under the 1.1200 the camera-pure
+// pullRaw delivers at the rest. The width is still a pure function of the
+// body's own threshold — computed once, nothing time-based, reverse scrubs
+// unchanged (D16).
+const DRAW_W_HI = 0.26;        // the opening singles' kindling width
+const DRAW_W_LO = 0.15;        // the closing fills' — narrower in uPull, LONGER in wheel
 const drawWOf = (reveal) => {
-  const t = Math.min(1, Math.max(0, (reveal - 0.10) / (0.84 - 0.10)));
+  const t = Math.min(1, Math.max(0, (reveal - 0.10) / (0.96 - 0.10)));
   return DRAW_W_HI - (DRAW_W_HI - DRAW_W_LO) * t;
 };
-// Arrival-bloom strength: peak brightness over resting level as a body's
-// draw completes (see the bloom term in update()). The shape is borrowed
-// from hero.css core-pop — overshoot, then settle to the resting style.
+
+/* ---- THE ARRIVAL CHARACTER: CHARGE, TAKE, SETTLE (2026-08-09 §14) --------
+   One body's whole arrival, as a pure function of its own clock
+   s = (pullRaw − reveal) / drawW:
+
+     CHARGE  s 0.00-0.62   The ember gathers. Brightness climbs the whisper
+                           floor to CHARGE_LVL on an accelerating curve
+                           (g², slow first, leaning forward), while the
+                           strokes ink themselves in and the breathing
+                           deepens (see the twinkle-depth term in update()).
+                           A thing charging is visibly DRAWING POWER before
+                           it lights: dim, assembling, breathing harder.
+     TAKE    s 0.58-0.88   The knee. Brightness accelerates through the
+                           charge level to full with the bloom overshoot
+                           riding it — hero.css core-pop's own move (scale
+                           0 -> 1.7 -> 1, the instrument powering on),
+                           translated to luminance: rise, overshoot, land.
+     SETTLE  s 0.88-1.00   The overshoot decays to the resting style; the
+                           breathing eases back to the house 0.12; at s = 1
+                           the body is byte-identical to a rest-frame body.
+
+   The shipped curve was a single smoothstep at fixed width — which at the
+   closing rungs' compressed widths concentrated the entire rise into a few
+   frames: a flash. The charge/take split is what "charging up" means here:
+   most of the window is a visible build at ember level, and the actual
+   lighting is one committed move near the end of it.
+
+   The ink now spans the whole window too (d completes at INK_SPAN of s, so
+   the last strokes land inside the take — the tip ember rides into the
+   flare, the hero's own relation: a lit body still drawing, never a drawn
+   body waiting dark). 070892c's guarantee holds by construction: the ink
+   still starts AT the light's own threshold and never ahead of it, and a
+   body under a fully-opaque cap shell (prog 0.714, s ≈ 0.60) sits at the
+   crest of its charge, ~0.35 of full — five times the ember whisper, one
+   beat before its take — never the near-black §11.5 outlawed. Everything
+   is pure in the pose; reverse scrubs run the charge and the take backwards
+   mirror-exact (D16). ---- */
+const INK_SPAN = 0.85;         // ink completes here — the take finishes the drawing
+const CHARGE_END = 0.62;       // the charge crests...
+const CHARGE_LVL = 0.30;       // ...at this fraction of full light
+const TAKE_LO = 0.58, TAKE_HI = 0.88;   // the knee: charge hands over to the take
+// Arrival-bloom strength: peak brightness over resting level as the take
+// lands (the bloom term in update()). The shape is hero.css core-pop —
+// overshoot, then settle to the resting style — timed to ride the take.
 const BLOOM_A = 0.35;
+// How much deeper the house twinkle breathes while a body charges (0.12 at
+// rest and before arrival — the shipped depth — up to 0.12 + FLICKER_A at
+// the crest of the charge). Depth is pure in the pose; only the carrier is
+// the shared clock, exactly as the shipped twinkle already was.
+const FLICKER_A = 0.10;
 
 // organism's own injectDraw(), re-expressed for a clone's plain overlay-net
 // material. The hero grafts uProg/uWin/pulse into the stock line shader at
@@ -335,14 +385,26 @@ const SHELL_ON = 0.02;
 // a deformed body needs its SOLID to move with its outline, so `cloneShellMat`
 // gives every body its own two shell materials (48 for the set). They are the
 // clone's to fade, and a hard switch on a material nobody else can see was the
-// last reason a field body's entry did not look like the hero's. So these are
-// intro.js's own windows now, read digit for digit off _shellFade, applied to
-// THIS body's own draw progress. A shell never appears over a blank region, no
-// region is ever inked without its shell, and — the part the switch could not
-// give — the solid arrives GRADUALLY, under accumulating light, exactly as it
-// does on the landing page.
-const STEM_SHELL_LO = 0.30, STEM_SHELL_HI = 0.54;   // intro.js _shellFade, stem
-const CAP_SHELL_LO = 0.574, CAP_SHELL_HI = 0.714;   // intro.js _shellFade, cap
+// last reason a field body's entry did not look like the hero's.
+//
+// RE-TIMED ONTO THE ARRIVAL CLOCK (2026-08-09 §14). The windows used to be
+// intro.js's own prog windows (stem 0.30..0.54, cap 0.574..0.714 of draw
+// progress) — solidity followed the INK. Under the charge/take law that
+// placed a fully opaque cap over a body still at its ember charge, and on a
+// far, fog-dimmed member the ember strokes vanish before the silhouette
+// does: measured on the §14 ladder at p 0.944, two mature far-lip members
+// stood as BLACK CAPS in an otherwise lit town — §11.5's "they kind of turn
+// black", resurfaced by the wider windows. So solidity now follows the
+// TAKE, on the same clock everything else here runs on: a charging body is
+// the hero's own wireframe breathing at ember level — visibly a thing
+// still forming — and it becomes FLESH as it lights, the stem leading, the
+// cap landing with the take itself. The brief x-ray state this admits is
+// the charge's own language (the strokes are already inked under it, so
+// nothing is ever a blank region wearing a shell), and the black-cap state
+// is impossible by construction: a cap is only ever solid while its light
+// is committed.
+const STEM_SHELL_LO = 0.40, STEM_SHELL_HI = 0.58;   // s-window: stem solidifies pre-take
+const CAP_SHELL_LO = 0.60, CAP_SHELL_HI = 0.80;     // s-window: cap lands WITH the take
 
 /* ---- PER-BODY VARIATION (variation.js, 2026-08-05) ----------------------
    Hannah, on the shipped field: "the mushrooms at the end seem too similar to
@@ -873,37 +935,57 @@ export function createClones(sceneApi) {
     const fr = uniforms.uFront.value, frOn = uniforms.uFrontOn.value;
     const ct = uniforms.uCta.value, ctOn = uniforms.uCtaOn.value;
     for (const c of list) {
+      // ---- this body's own arrival clock (§14: charge, take, settle) ----
+      // s is pure in the pose: the camera-pure front, on this body's own
+      // window. Everything below is a function of s (plus the shared
+      // twinkle carrier the resting field already runs on), so a reverse
+      // scrub runs the whole arrival backwards mirror-exact (D16).
+      const s = (pullRaw - c.reveal) / c.drawW;
       // ---- part B: this body draws ITSELF on as the front reaches it ----
-      // Pure in the pose, and on the KINDLE'S OWN front at the kindle's own
-      // width (see DRAW_W_HI/LO) — the ink and the light arrive together, which is
-      // the hero's relation and the whole of the entry-parity fix. At d = 1 the
-      // uniform is parked at the hero's own 2 — which is BYTE-IDENTICAL to
-      // holding it at DRAW_HI (dp saturates at 1 either way, the tip term is
-      // switched off by the same step(), and the lid is inert at CLAMP_OFF),
-      // so the rest frame is the shipped rest frame.
-      const d = smooth01((pullRaw - c.reveal) / c.drawW);
+      // The ink spans the window and completes at INK_SPAN — the last
+      // strokes land inside the take, the tip ember riding into the flare
+      // (a lit body still drawing, the hero's relation). At d = 1 the
+      // uniform is parked at the hero's own 2 — BYTE-IDENTICAL to holding
+      // it at DRAW_HI (dp saturates at 1 either way, the tip term is
+      // switched off by the same step(), and the lid is inert at
+      // CLAMP_OFF), so the rest frame is the shipped rest frame.
+      const d = smooth01(s / INK_SPAN);
       let prog = c.uProg.value;
       if (d !== c.prog) {
         c.prog = d;
         prog = d >= 1 ? 2 : DRAW_LO + d * (DRAW_HI - DRAW_LO);
         c.uProg.value = prog;
       }
-      const rv = smooth01((pull - c.reveal) / 0.16);  // REVEAL_W
+      // ---- the light: charge -> take -> settle (see the §14 block) ----
+      // g² is the charge: slow first, leaning forward — gathering. The
+      // take is one committed smoothstep through the knee; the charge
+      // hands over linearly so the curve never dips. At s >= 1 this is
+      // exactly 1 and at s <= 0 exactly 0: the rest frame and the dark
+      // frame are both the shipped states.
+      const g = smooth01(s / CHARGE_END);
+      const take = smooth01((s - TAKE_LO) / (TAKE_HI - TAKE_LO));
+      const lum01 = CHARGE_LVL * g * g * (1 - take) + take;
       // The arrival bloom — the house's own onset (hero.css core-pop: the
       // callout node overshoots and settles, the instrument powering on).
-      // A body flares ~1.35x over its resting level as its draw completes,
-      // then settles by d = 1 exactly — so every frozen rest frame, where
-      // every drawn body sits at d = 1, is untouched. Pure in the pose:
-      // a reverse scrub re-runs the flare mirror-exact on the way out
-      // (D16 asks for exact retraction, not for asymmetry).
+      // The flare now rides the TAKE itself — it peaks as the body commits
+      // and is fully decayed by s = 1, so every frozen rest frame, where
+      // every drawn body sits past s = 1, is untouched.
       const bloom = 1 + BLOOM_A
-        * smooth01((d - 0.30) / 0.45) * (1 - smooth01((d - 0.75) / 0.25));
-      let b = (0.07 + 0.93 * rv) * bloom;             // the 7% ember whisper
+        * smooth01((s - 0.60) / 0.22) * (1 - smooth01((s - 0.86) / 0.14));
+      let b = (0.07 + 0.93 * lum01) * bloom;          // the 7% ember whisper
       const df = c.arc - fr;
-      b += c.boost * frOn * Math.exp(-df * df * 260) * (0.30 + 0.60 * rv);
+      b += c.boost * frOn * Math.exp(-df * df * 260) * (0.30 + 0.60 * lum01);
       const dc = c.arc - ct;
       b += c.boost * ctOn * Math.exp(-dc * dc * 200) * 1.1;
-      b *= 0.88 + 0.12 * Math.sin(t * 0.9 + c.tw0);   // strand twinkle
+      // The house twinkle, breathing DEEPER through the charge (0.12 at
+      // rest and in the dark — the shipped depth exactly — up to 0.22 at
+      // the charge's crest, easing home through the take). A charging thing
+      // visibly draws power; a settled thing holds its light steady. The
+      // depth is pure in the pose; the carrier is the same shared clock
+      // the resting twinkle has always run on, so the frozen mirror is
+      // untouched and the rest frame is byte-identical.
+      const dep = 0.12 + FLICKER_A * g * (1 - take);
+      b *= (1 - dep) + dep * Math.sin(t * 0.9 + c.tw0);   // strand twinkle
       const v = eff * b * c.lum;
       if (Math.abs(v - c.v) > 1e-4) {
         c.v = v;
@@ -918,16 +1000,18 @@ export function createClones(sceneApi) {
       // gate: a body the reveal has retracted drops its shells outright rather
       // than easing them, so a reverse scrub leaves nothing standing.
       const lit = v > SHELL_ON;
-      // intro.js's own fade windows, on THIS body's draw. Falls back to the
-      // shipped midpoint switch when the shells are not ours to write (see
-      // ownShells in add()) — the same behaviour, never a half-applied one.
+      // The §14 shell windows, on THIS body's arrival clock (see the
+      // STEM/CAP_SHELL comment: solidity follows the take, so a charging
+      // body can never stand as a black cap). Falls back to the midpoint
+      // switch when the shells are not ours to write (see ownShells in
+      // add()) — the same behaviour, never a half-applied one.
       let ks, kc;
       if (c.ownShells) {
-        ks = lit ? clamp01((prog - STEM_SHELL_LO) / (STEM_SHELL_HI - STEM_SHELL_LO)) : 0;
-        kc = lit ? clamp01((prog - CAP_SHELL_LO) / (CAP_SHELL_HI - CAP_SHELL_LO)) : 0;
+        ks = lit ? clamp01((s - STEM_SHELL_LO) / (STEM_SHELL_HI - STEM_SHELL_LO)) : 0;
+        kc = lit ? clamp01((s - CAP_SHELL_LO) / (CAP_SHELL_HI - CAP_SHELL_LO)) : 0;
       } else {
-        ks = lit && prog >= (STEM_SHELL_LO + STEM_SHELL_HI) / 2 ? 1 : 0;
-        kc = lit && prog >= (CAP_SHELL_LO + CAP_SHELL_HI) / 2 ? 1 : 0;
+        ks = lit && s >= (STEM_SHELL_LO + STEM_SHELL_HI) / 2 ? 1 : 0;
+        kc = lit && s >= (CAP_SHELL_LO + CAP_SHELL_HI) / 2 ? 1 : 0;
       }
       if (ks !== c.ks) {
         c.ks = ks;

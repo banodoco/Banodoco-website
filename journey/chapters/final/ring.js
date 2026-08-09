@@ -579,19 +579,27 @@ export function createFinalRing(sceneApi, uniforms) {
        lens; it reads as haze filling in behind the town, and haze may
        arrive as weather rather than as trees.
 
-       REV_HI is not a taste number: the light reads the CLAMPED uPull,
-       which saturates at 1.0, so a body with a threshold past 1 − REVEAL_W
-       never reaches full brightness at all. 0.84 is that ceiling; the last
-       ladder rung (0.8379, a far-lip ring member) sits just under it. */
+       REV_HI is not a taste number: the light reads the CLAMPED uPull, so
+       a body with a threshold past PULL_MAX − REVEAL_W never reaches full
+       brightness at all. That ceiling was 0.84 while the clamp sat at 1.0;
+       with the rest at p 0.97 and PULL_MAX at the rest's own 1.12
+       (world.js, 2026-08-09 §14) it is 0.96 — so the T4 weather-tail now
+       stretches to 0.94 and fills in behind the town across the WHOLE
+       lengthened arrival instead of finishing while the drawn bodies were
+       still opening. Last T4 threshold 0.94 − jit finishes its light at
+       ~1.10, inside the rest's 1.12. */
     const CLONE_DIST = 24;               // the T3/T4 seam: clones are nearer than this
-    const REV_KNEE = 0.72, REV_HI = 0.84;
+    const REV_KNEE = 0.72, REV_HI = 0.94;
     const REV_JIT = 0.005;               // keeps the ladder off a metronome
     // The fifteen field slots of the merged 24-slot ladder, in arrival
-    // order (p 0.876 → 0.907 at today's leg; the ring's nine take the
-    // other slots — four opening singles, one mid, four closing).
-    const FIELD_LADDER = [0.3459, 0.3920, 0.4663, 0.4970, 0.5251,
-                          0.5506, 0.5747, 0.5973, 0.6184, 0.6390,
-                          0.6592, 0.6788, 0.6977, 0.7379, 0.7616];
+    // order (starts p 0.884 → 0.931 on the §14 leg; the ring's nine take
+    // the other slots — four opening singles, one mid, four closing).
+    // RE-DERIVED 2026-08-09 §14 with the rest at p 0.97: same slot
+    // structure, same PERM, re-laid in p across the won road and converted
+    // through the §14 measured camera curve.
+    const FIELD_LADDER = [0.4116, 0.4789, 0.5937, 0.6383, 0.6748,
+                          0.7042, 0.7277, 0.7495, 0.7708, 0.7914,
+                          0.8112, 0.8306, 0.8495, 0.8856, 0.9027];
     const cand = [];                     // placements, held for the rank pass
     let idx = 0, guard = 0;
     while ((fieldStats.t3 < want.t3 || fieldStats.t4 < want.t4) && guard++ < 6000) {
@@ -872,7 +880,13 @@ export function createFinalRing(sceneApi, uniforms) {
      ================================================================ */
   const PICK_PULL = 0.55;
   const REVEAL_LIT = 0.35;      // this body's own smoothstep must be underway
-  const lit = (ref, pull) => (pull - ref.reveal) / 0.16 > REVEAL_LIT;
+  // A clone's arrival runs on its OWN window (clones.js drawW — the §14
+  // charge/take law), so its poke gate reads the same clock: past 0.5 the
+  // charge has crested and the take is beginning, which is when a body is
+  // visibly part of the scene. Batched bodies keep the shader-law gate.
+  const lit = (ref, pull) => ref.drawW
+    ? (uniforms.uPullRaw.value - ref.reveal) / ref.drawW > 0.5
+    : (pull - ref.reveal) / 0.16 > REVEAL_LIT;
   let wasOn = false, pickOn = false;
 
   /* ---- THE POKE, ANSWERED (18-one-species.md, this revision) -------------

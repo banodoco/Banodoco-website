@@ -179,13 +179,24 @@ export const MEMBERS = MEMBER_SPEC.flatMap((s, i) => {
    24-slot ladder (ring.js's field ladder fills the rest), so the whole
    chapter arrives on one authored timeline.
 
+   RE-DERIVED 2026-08-09 second pass ("charging up", §14): the Final rest
+   moved p 0.925 -> 0.97 (route.js + camera.js, same commit) and the leg's
+   x -12.3 -> -14.72 approach now takes 0.065 of p where it took 0.020, so
+   every rung was re-laid on the NEW measured curve (sample scrollTo(p) ->
+   camera.x; §14 has the table). Slots are authored in p — starts
+   p 0.856 -> 0.933, gaps 7.0 -> 2.0 millip, same accelerando shape, same
+   nine slots of the same merged 24 — and converted to uPull through that
+   curve. The late rungs now stand past the OLD 0.84 light ceiling, which
+   is exactly what PULL_MAX (below) makes legal: the last rung 0.9511
+   finishes its light at 1.1111, inside the 1.1200 the rest delivers.
+
    sweepReveal() interpolates the same re-timed sweep for every non-member
    consumer of the old formula (the continuation glow pools), so an
    arc-keyed pool still kindles exactly between the members it sits
    between. Piecewise-linear and monotone in arc: cord vertices between two
    members still light strictly member-to-member, only on the new clock. */
-const RING_LADDER = [0.0966, 0.1734, 0.2388, 0.2944, 0.4315,
-                     0.7173, 0.7861, 0.8124, 0.8379];
+const RING_LADDER = [0.0966, 0.1833, 0.2638, 0.3406, 0.5401,
+                     0.8678, 0.9192, 0.9353, 0.9511];
 // The guard: the ladder is authored against today's nine members. If the
 // build ever drops one (the inward-walk can), the rank map would silently
 // hand every later member the wrong rung — so the whole sweep, members and
@@ -220,11 +231,27 @@ export const SPORE_SOURCES = MEMBERS.filter(m => m.shed > 0)
 /* ------------------------------------------------------------------ */
 /* Reveal driver                                                       */
 /* ------------------------------------------------------------------ */
-/** Camera-x -> pull in [0,1]. 0 while underground / at the crest, ~0.98 at
- *  the Final rest (x -13.9), 1 by the recede. Monotone along the leg. */
+// The clamp ceiling. It used to be 1.0 — an arbitrary normalisation that
+// quietly imposed a LIGHT CEILING of 1 − REVEAL_W = 0.84 on every threshold
+// in the chapter: a body keyed past it could never finish brightening,
+// because the driver saturated before its smoothstep did. 2026-08-09
+// (Hannah's "charging up", 18-one-species.md §14) the Final rest moved to
+// p 0.97 and the arrival ladder spread across the road that bought — and
+// the ladder's late rungs need thresholds up to ~0.95. The ceiling is now
+// the value the camera-pure driver actually reaches at the rest
+// (x −14.72 -> 1.1200), so "fully revealed at the rest" is a property of
+// the pose again, not of a clamp. Safe by inspection: every consumer of
+// uPull is a saturating smoothstep (world.js STRAND/POINT_VERT, sky.js
+// aGate/bandGate, canopy vertices) or a low-threshold gate (PICK_PULL 0.55,
+// reach 0.25..0.70, dwell 0.88), so for every SHIPPED threshold (all
+// <= 0.84) the values 1.0 and 1.12 are indistinguishable — behaviour below
+// u = 1.0 is bit-identical, and above it only the new late rungs differ.
+export const PULL_MAX = 1.12;
+/** Camera-x -> pull in [0, PULL_MAX]. 0 while underground / at the crest,
+ *  exactly PULL_MAX at the Final rest. Monotone along the leg. */
 export function pullOf(camX) {
   const u = pullRawOf(camX);
-  return u < 0 ? 0 : u > 1 ? 1 : u;
+  return u < 0 ? 0 : u > PULL_MAX ? PULL_MAX : u;
 }
 /** The same map, UNCLAMPED. Negative while the camera is still below the
  *  surface pierce (x > −8). The clones' entry draw runs on THIS rather than on

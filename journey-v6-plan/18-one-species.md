@@ -1777,3 +1777,187 @@ arrival road.
   `pullRawOf` must re-derive `RING_LADDER` / `FIELD_LADDER` (sample
   `scrollTo(p)` → camera x, map slots through it) — the goldens and the
   0.84 light ceiling will catch a stale ladder, but only at its ends.
+
+## 14. Charging up (2026-08-09, Hannah's "charging up, not flashes in")
+
+**The ask, verbatim.** *"When you scroll into the Final section, could you
+make the way the mushrooms light up be a lot slower — like they should each
+come in one at a time? It should feel kind of like something CHARGING UP,
+as opposed to the way it flashes in right now."*
+
+Third pass on this moment. §12 fixed the spacing arithmetic, §13 fixed the
+clock — and §13.3 wrote down, in its own words, what was still wrong:
+to fit the tail inside the road it tapered the per-body width down to
+0.12, "a pop, not an ooze," on the theory that quick pops read as events.
+Hannah's word for those pops is "flashes." Measured on the shipped tree,
+the closing bodies' entire luminance rise — first glow to full — happened
+in **37-48 px of wheel** (13 px of it below half-light: two to three
+frames at a deliberate scroll), against 73-190 px for the openers. And
+the closers never even flared: the §13 bloom was keyed to the DRAW, which
+at the narrow widths outran the fixed-width light, so the overshoot had
+decayed before the light arrived — peak luminance 1.00 exactly. No build,
+no overshoot: a flash, by construction. The disease was never the ladder;
+it was that **half the field had no road to build on.**
+
+### 14.1 The road, won from the end-hold
+
+§13.6 named the donor and could not spend it: the end-hold, p 0.925 → 1.0,
+~675 px of wheel holding a frame that (since `585dad8`) does not move at
+all — measured this pass at camera-x flat to 1e-4 across the whole
+stretch. Spent now, at the route level, where it belonged:
+
+- **route.js**: Final `stops: [0.8]` (was the 0.5 default) — the rest
+  moves p 0.925 → **0.97**. The shipped-value assert's `rests` entry
+  updated deliberately, with this diff in front of it. Every derived
+  consumer (nav landings, `?capture=final`, FOG_RAMP, lens grade key,
+  copy band, snap anchors, handheld zeros) moved by derivation, none by
+  hand.
+- **final/camera.js**: ONLY the rest hold key's t moves (0.5 → 0.8). The
+  two travel keys hold their p and poses, so the p 0.878 key's tangent —
+  which reads the p 0.905 key, not the rest — is unchanged, and the seam
+  segment from Owned is bit-identical: measured max |camera.x| drift for
+  every p ≤ 0.878 after the edit, **0.0 exactly**. owned/leg.js samples
+  only p ≤ 0.872 for colony clearance, so the Owned colony cannot have
+  moved — and the `owned@*` goldens (below) prove it didn't.
+- The x −12.3 → −14.72 approach now takes **0.065 of p where it took
+  0.020**; the reveal driver crosses the closing thresholds at a third of
+  its old rate. Arrival road ~500 → **~850 px**; end-hold keeps ~270 px
+  and still resolves at p = 1 (both anchors render the rest composition;
+  fog completes its settle by rest + 0.03 exactly as it always did).
+- **portrait.js**: the Final key was a hard-coded `p: 0.925` — one of the
+  two documented absolute-p violations — and would have completed the
+  Final portrait composition mid-approach. It now rides
+  `restProgress('final')`. Values untouched; `final@430x932` shows the
+  same composition at the new rest. owned/leg.js needed no change
+  (checked, and now says so in place).
+- **world.js `PULL_MAX`**: the reveal clamp's ceiling 1.0 → 1.12 (the
+  value the driver actually reaches at the rest). The old normalisation
+  silently imposed the 0.84 light ceiling §13 kept bumping into; every
+  consumer of `uPull` is a saturating smoothstep or a low gate, so for
+  every shipped threshold the two ceilings are indistinguishable — and
+  the ladder's late rungs (to 0.9511) become legal, as does a longer T4
+  weather-tail (REV_HI 0.84 → 0.94: the haze now fills in behind the town
+  across the whole lengthened arrival).
+
+### 14.2 The character: charge, take, settle
+
+What "charging up" means here, authored per body on its own clock
+s = (pullRaw − reveal) / drawW — all of it pure in the pose, D16 exact in
+reverse:
+
+- **CHARGE (s 0.00–0.62)** — the ember gathers: brightness climbs the 7%
+  whisper toward 0.30 of full on an accelerating g² curve while the
+  strokes ink themselves in, and the house twinkle breathes DEEPER
+  (depth 0.12 → 0.22 at the crest, easing home through the take — depth
+  pure in the pose, carrier the same shared clock, so the frozen mirror
+  and the rest frame are untouched). A charging thing visibly draws
+  power before it lights.
+- **TAKE (s 0.58–0.88)** — the knee: one committed smoothstep through the
+  charge level to full, the §13 bloom re-timed to ride it (hero.css
+  `core-pop`: rise, overshoot 1.35x, land). This is the arrival event.
+- **SETTLE (s 0.88–1.00)** — the overshoot decays; at s = 1 the body is
+  byte-identical to a rest-frame body.
+
+The ink spans the window and completes at s 0.85 (INK_SPAN) — the last
+strokes land inside the take, tip ember riding into the flare: a lit body
+still drawing, never a drawn body waiting dark. `070892c` holds: the ink
+still starts AT the light's threshold, never ahead.
+
+**The shells moved onto the same clock.** The intro-window shell fade
+(solidity follows the ink) placed a fully opaque cap over a body still at
+ember — and on a far fog-dimmed member the strokes vanish before the
+silhouette does: at p 0.944 on the first cut of this ladder, two mature
+far-lip members stood as BLACK CAPS in a lit town, §11.5's "turn black"
+resurfaced by the wider windows. Solidity now follows the TAKE (stem
+s 0.40–0.58, cap s 0.60–0.80): a charging body is the hero's own
+wireframe breathing at ember level, and becomes flesh as it lights. The
+black-cap state is impossible by construction, and §11.8's
+stalk-under-dark-cap residual dissolves with it — the cap above a solid
+stalk is now wire, not void. Re-shot the ladder: zero black caps at any
+rung.
+
+### 14.3 The ladder, re-laid on the won road
+
+Same 24 slots, same ring/field interleave (four ring openers + one mid,
+four ring closers), same scattered PERM, same two authored exceptions —
+re-timed in p across starts 0.856 → 0.933 (gaps 7.0 → 2.0 millip, the
+same accelerando shape with a fatter tail) and converted through the NEW
+measured camera curve (`scrollTo(p)` → camera.x, this section's tables).
+Width taper re-cut 0.26 → 0.15 (was → 0.12): narrower in uPull at the
+tail, but at a third the crossing rate that is 141–235 px of wheel per
+body against the shipped 40–190.
+
+    SINGLE BODY (an early and a late rung, luminance vs wheel)
+                          first glow -> half   half -> full   total   peak
+      §13 early (0.1734)        31 px             42 px       73 px   1.35
+      §13 late  (0.8124)        13 px             24 px       37 px   1.00  <- the flash
+      §14 early (0.1833)        63 px             29 px       92 px   1.33
+      §14 late  (0.9353)        70 px             35 px      105 px   1.34
+
+    One shape for the whole ladder now: every body builds ~2x longer than
+    it takes, then overshoots and settles. The §13 tree had two species of
+    arrival; the §14 tree has one, which is what "each come in one at a
+    time" needed the ladder to be saying.
+
+    STRUCTURE                          §13 (shipped)      §14
+      starts span (p)                  0.8560..0.9105   0.8560..0.9330
+      all fully drawn by (p)           0.9150           0.9591  (rest 0.970)
+      min / med start gap (p)          0.0009 / 0.0019  0.0016 / 0.0030
+      per-body draw road (px)          40..190          141..235
+      PEAK bodies mid-draw             9                10
+      PEAK bodies mid-TAKE             (n/a — no take)  3-4
+      per-body peak luminance          1.00..1.35       1.33..1.35 all
+
+    Mid-draw concurrency rose by one — but §14's "mid-draw" is mostly
+    bodies at ember charge, which overlap the way a town's windows warm
+    together; the EVENTS (takes) run 3-4 deep at the very tail and
+    singly at the head. On the rung stills (a/b series, 0.858 → 0.970)
+    every frame shows bodies at visibly different stages: wire-dim,
+    charging, taking, settled.
+
+### 14.4 Gates
+
+- **Goldens**: `capture.py --check`, five poses x two sizes — mission /
+  inspire / connect / owned all **0.00/255 against their pre-change
+  files** (the route edit provably moved nothing outside Final);
+  `final@*` re-shot deliberately in the same commit (manifest note has
+  the provenance: rest pose bit-identical at −14.72/2.73/2.700 fov 45.5,
+  frame differs by the later fog-settle sample and the §14 arrival
+  state), then **0.00/255 reproducible**.
+- **Mirror**: frozen-clock scrub 0.78 → 1.0 → 0.78 at 0.002 steps,
+  eleven matched rungs both directions: worst MAE **0.014/255**
+  (sub-noise). Dark below the arm both ways; no self-ignition.
+- **Jump**: cold landing → `flyTo('final')` lands p 0.970, chapter
+  `final`, full composition, console clean; the mid-blend frame composes
+  on the camera alone (a8d4518 intact — bodies revealing under the lens,
+  no full-composition flash).
+- **Console**: real-wheel ride 0 → 1 → 0 on a live clock: **0 errors,
+  0 warnings, 0 rejections**.
+- **End-hold**: camera-x flat to 1e-4 across 0.97 → 1.0; p = 1 renders
+  the rest composition with the fog settled, and a scroll into the tail
+  resolves to it.
+- **Nothing regressed**: 6e28eff spores ride saturating gates
+  (indifferent to PULL_MAX); 585dad8's hold semantics kept at the new
+  rest; 45a6628 / 8b71687 legs untouched (seam parity measured 0.0);
+  66d1bed's per-body shells are what made the shell re-timing possible;
+  2f4c2f1 canopy still coupled — seats read `s.reveal`, moved with their
+  bodies, `CANOPY_LEAD` 0.04 and the shader's 0.16 width unchanged,
+  earliest seat 0.0566 above the 0.03 floor, latest completes at u 1.07
+  inside the rest's 1.12.
+
+### 14.5 Residuals
+
+- **The wall-clock px/p figure (~9,000)** is §13's measurement, reused
+  for the px columns; the scroll spline was not re-measured. The p-space
+  numbers are frozen-exact.
+- **The T4 weather-tail and the hints still have no draw-on**, unchanged
+  — at 25–45 units in fog they arrive as weather, and now they do it
+  across the whole window instead of finishing early.
+- **The charge's x-ray state** (wire cap over a solid stalk, s
+  0.58–0.60) is the deliberate replacement for the black-cap state; on a
+  very near body it is briefly legible as construction. It is the
+  hero's own pre-shell intro language and reads as the charge — but it
+  is a taste call Hannah has not yet seen named.
+- **Anyone moving the rest again** re-derives the ladders through a fresh
+  curve measurement exactly as before — and now also re-checks
+  `PULL_MAX` (it bakes the rest's camera-x) and the T4 REV_HI margin.

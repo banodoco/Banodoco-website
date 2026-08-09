@@ -39,7 +39,21 @@ export const CAMERA = {
     //     composition. The near arc passes behind the camera (members
     //     cleared > 3 units off the path, Spike B's clearance rule). Tilt is
     //     PITCH ONLY, never roll.
-    { t: 0.5000000000000003,  pos: V(-14.72, 2.73, 2.700),  tgt: V(-3.06, 0.83, -1.94), fov: 45.5, hold: true, note: 'final-rest' },   // p 0.925
+    //
+    //     t 0.5 -> 0.8 (2026-08-09, Hannah's "charging up" — 18-one-species
+    //     §14): the rest POSE is bit-identical, it just lands at p 0.97
+    //     instead of 0.925 (route.js stops [0.8], the same edit). The
+    //     approach x -12.3 -> -14.72 now takes 0.065 of p where it took
+    //     0.020, which is the road the arrival ladder spends. ONLY this
+    //     key's t moved: the two travel keys above hold their p AND their
+    //     poses, so the p 0.878 key's tangent (which reads the p 0.905 key,
+    //     not this one) is unchanged, the seam segment from Owned is
+    //     bit-identical below p 0.878, and owned/leg.js's clearance sampling
+    //     (p <= 0.872) cannot see this edit. The p 0.905 key's own tangent
+    //     DOES read this key's p — that softens the approach curve between
+    //     0.878 and 0.905 slightly, which is mid-travel and belongs to this
+    //     re-pace. ---
+    { t: 0.8,  pos: V(-14.72, 2.73, 2.700),  tgt: V(-3.06, 0.83, -1.94), fov: 45.5, hold: true, note: 'final-rest' },   // p 0.970
     // --- THE LEG ENDS HERE. There used to be a second hold key at t = 1.0
     //     ('final-recede', pos -17.73/3.95/3.260, tgt -5.44/2.08/-0.97, fov
     //     44) that kept pulling the camera back across the whole second half
@@ -54,25 +68,25 @@ export const CAMERA = {
     //     the very bottom of the ride, with nothing in it to frame.
     //
     //     With the key gone, keyedPose() clamps to the last key, so every
-    //     p >= 0.925 renders the Final rest EXACTLY: the epilogue rest is the
+    //     p past the rest renders the Final rest EXACTLY: the epilogue rest is the
     //     resting composition, and the end-hold is a true hold of it. That is
     //     what the redux already declared ("the epilogue now simply holds its
     //     composition there") — this file was the last place it wasn't true.
     //
     //     What remains past the rest is therefore intentional and small: the
-    //     fog finishes its settle (near 13.75 -> 15, far 60.3 -> 62, done by
-    //     p ~0.96) over a camera that no longer moves, and then the route
-    //     holds to its full stop at TERMINAL_P. Both p = 0.925 and p = 1 are
-    //     snap-commit anchors and now render the same frame, so a scroll into
-    //     the tail resolves to the resting composition whichever way it goes.
+    //     fog finishes its settle (constants.js FOG_RAMP, keyed off
+    //     restProgress so it moved with the rest — done by rest + 0.03) over
+    //     a camera that no longer moves, and then the route holds to its
+    //     full stop at TERMINAL_P. Both the rest and p = 1 are snap-commit
+    //     anchors and render the same composition, so a scroll into the
+    //     tail resolves to the resting composition whichever way it goes.
     //
-    //     Nothing before the rest moved: the p 0.905 key's Catmull-Rom
-    //     tangent reads KEYS[i-1]/KEYS[i+1] = the p 0.878 and p 0.925 keys,
-    //     neither of which changed, and the rest key's own tangent was
-    //     already zero (hold: true). Camera parity p <= 0.925 is bit-exact,
-    //     and the `final` golden — shot at restProgress('final') = 0.925 —
-    //     is byte-identical. Also held by holding the pose: uPull/uPullRaw
-    //     (functions of camera.x), so the reveal schedule no longer keeps
-    //     running past the resting frame either.
+    //     (Historical, from the recede's deletion: nothing before the then-
+    //     rest moved, and the `final` golden of that era was byte-identical.
+    //     The rest has since moved to p 0.97 — see the rest key's comment —
+    //     and its golden was re-shot with provenance in the same commit.)
+    //     Still held by holding the pose: uPull/uPullRaw are functions of
+    //     camera.x, so the reveal schedule does not run past the resting
+    //     frame.
   ],
 };
