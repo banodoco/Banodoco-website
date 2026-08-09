@@ -2003,3 +2003,202 @@ are intact. Nothing fades in over open view; nothing was re-keyed.
   drift churn over the same wall time is the same size as the effect. The
   recycle-rate collapse (127 → 2) is the direct evidence; the histogram is
   reported here only so it is not silently dropped.
+
+---
+
+## 2026-08-09 (D23) — the field arrived; the RETIRE was still a removal van
+
+Hannah's fifth report in this family, and the first that names position
+rather than light:
+
+> "WHEN I GO FROM INSPIRE TO CONNECT THE SPORES STILL SHIFT WEIRDLY, LIKE
+> THEY MOVE POSITION TO WORK FOR THE NEXT SECTION, IT LOOKS AWKWARD."
+
+Every prior fix here addressed brightness — conservation, stagger, ramp
+width, hysteresis. She is describing **physical rearrangement**, and she is
+right: it was there, it was measured, and it was the retire.
+
+### The instrument
+
+`tools/capture.py`'s own CDP client driving a headless 1440x900 page
+(`?nointro=1&steady=1&nosnap=1`), riding `scroll.setProgress` per rAF at a
+fixed p-rate — deliberate 0.10 p/s and brisk 0.45 p/s (`MAX_SCRUB_RATE`) —
+with all metrics computed in-page per frame over the full 4,200-dot buffer:
+per-dot displacement per frame, direction coherence (|Σd| / Σ|d|), median
+screen-space flow with the SAME camera applied to both endpoints (so camera
+motion cancels and only particle motion counts), fraction of dots inside the
+frustum, and the colour-buffer sums the earlier sections used. Hannah's own
+pane was 534x317 at measurement time and cannot be trusted for rates;
+nothing here was measured through it. Motion baselines, same instrument:
+
+| | population mean speed | median screen flow | coherence |
+|---|---|---|---|
+| ambient drift (Mission / Connect rest) | 0.09 u/s | 7–8 px/s | 0.39 (slow, downwind) |
+| braid alive, holding the Inspire rest | 1.29 u/s | 127 px/s | **0.02–0.15** |
+
+The braid is full of motion (the per-dot stage clocks), but it is
+*incoherent* — the pattern stands still while individuals cycle. That is
+what "alive" looks like. Coherent population motion is what "rearranging"
+looks like.
+
+### It reproduces, and it is the unwind
+
+`steer()` renders every converted dot at `heroP + (path − heroP) · cvT`.
+On the exit leg the reveal collapses across **Δp ≈ 0.039** (p 0.372–0.411:
+`out` falls from p 0.355 and the camera drops below the ARR ceiling az 78 at
+p ≈ 0.372), so cvT falls 0.85 → 0 and every dot travels ~85% of its path
+displacement back toward its old drift position. Riding forward through the
+boundary, before:
+
+| | deliberate | brisk |
+|---|---|---|
+| peak population speed through the collapse | **19.2 u/s** | **38.0 u/s** |
+| … as multiples of braid-alive / ambient | 15x / 213x | 29x / 422x |
+| sustained through the falling window | 3–11 u/s | 7–38 u/s |
+| median screen flow at peak | **2,256 px/s** | 4,398 px/s |
+| direction coherence at peak | **0.40** | 0.39 |
+| net per-dot travel across the window, mean / max | 2.20 u / 6.8 u | 2.18 u / 6.7 u |
+| dots moving > 1 u net | **3,512 / 4,200** | 3,507 |
+| travel per unit p through the collapse | ~50 u/p | ~50 u/p |
+| dots on screen while it happens | 83–97% | 85–95% |
+
+At a deliberate rate the entire return trip fits in ~0.4 s, at 15–29x the
+speed of everything else the shed ever does, with the whole population
+moving the same way (coherence 0.40 against the braid's 0.02–0.15), centred
+mid-frame around screen (720, 265) — the cap is on screen for the whole leg
+(D20's own track: 624 → 321 px). Reverse rides show the mirrored wind-up at
+25–33 u/s. And **no retiming can hide it**: the shed never leaves the frame
+on this leg, and the D18 ceiling rule already bans a reveal running backward
+in open view — the retire IS a reveal running backward, expressed in
+position. `connect/tendrils.js` was checked and cleared: its 108 particles
+ride `uPartAmp = sm(0.9, 1.0, litMin)`, which only opens as the ground
+network reaches full light near p 0.487 — nothing of Connect's second
+source exists on screen during the p 0.372–0.411 event.
+
+### The fix — retire in place (`organism/spores.js` only)
+
+The invariant Hannah has asked for five times over: one population,
+continuous, whose appearance changes by **lighting**, not by rearrangement.
+The rising half already obeys a version of it (the arrival gather is the
+approved, motivated gesture). The falling half now does too, exactly:
+
+- **A falling cvT moves the dot's ambient home, not the dot.** When a dot's
+  cvT drops below last frame's (`lastCv`, new per-dot Float32Array), heroP
+  is re-based so the rendered position is unchanged by the fall:
+  `heroP' = path + (heroP − path) · (1 − c0) / (1 − cvT)`. Frame over
+  frame the dot then carries only its drift share and its live path share —
+  precisely what a dot at *constant* conversion shows. The braid does not
+  march home; it is simply lit less, then left drifting.
+- **Ceasing hands back in place.** The conv ≤ 0 release branch and
+  `releaseSeat()` now adopt the buffer position as the dot's ambient home
+  (`heroP = arr`) instead of writing `arr = heroP`. This is also the
+  discrete-jump-safe face of the absorb: however much conversion a fast
+  scrub drops in one frame, the dot stays put. (It also retires a latent
+  teleport: the watchdog / driver-swap path used to snap every
+  still-converted dot by cvT of its displacement in one frame.)
+- **A rising cvT is untouched**, so every landing frame is bit-identical:
+  lastCv primes at 0 and rises monotonically to any rest, deep link or
+  `?capture=`, and the absorb branch never runs there.
+
+The ambient positions are not sacred. The braid lives inside the drift's
+own diagonal envelope by the D17 locus law, and measured at the full rest
+only **7 of 4,200** braid positions sit outside the drift's recycle bounds
+(all on the upwind `x < gx − 2.5` bound, worst −2.96) — so handing dots
+back where they stand costs at most a handful of background recycles, at
+the ambient rate's own scale (2 per 1.6 s).
+
+**Alternatives weighed and rejected:**
+
+- *Unwind more gradually* (stretch the collapse over the whole exit leg,
+  re-derive T1): the shed is on screen the whole way, so this dilutes the
+  migration (~6 u/s deliberate at the maximum stretch) without changing its
+  nature, breaks D18's no-backward-ramp-in-view law openly, and starts
+  dissolving the streams while the visitor is still at the rest.
+- *Retire before the camera turns away*: same law, worse seat — the
+  dissolution lands dead-centre in the approved rest framing.
+- *Slew-limiting the blend* (cap per-frame position change): makes position
+  rate-dependent, which un-does exactly the rate-independence D22 bought.
+
+### After, same instrument
+
+| | deliberate | brisk |
+|---|---|---|
+| peak population speed through the collapse | 19.2 → **2.06 u/s** | 38.0 → **1.84 u/s** |
+| sustained through the falling window | 3–11 → **1.0 u/s** | 7–38 → **1.5 u/s** |
+| median screen flow at peak | 2,256 → **216 px/s** | 4,398 → **212 px/s** |
+| direction coherence at peak | 0.40 → **0.18** | 0.39 → **0.08** |
+| net per-dot travel across the window, mean | 2.20 → **0.82 u** | 2.18 → **0.32 u** |
+| dots moving > 1 u net | 3,512 → **924** | 3,507 → **332** |
+
+The after numbers are the braid-alive baseline: 1.0–2.1 u/s against the
+rest's own 1.29 u/s, coherence back in the alive band, and the residual net
+travel is the stage clocks cycling over the ride's wall time plus ambient
+drift — not migration. Riding the boundary at both speeds, nothing moves
+but the light: the streams dim through the handoff exactly as before, and
+the dots those streams were made of are simply the shed again, drifting on
+from where the braid left them, relaxing over the following ~30–60 s of
+drift. Re-entering Inspire from Connect after a forward pass re-lights and
+re-gathers from those braid-shaped homes at 2–5 u/s, coherence ~0.15 (was
+10–12 u/s at 0.40).
+
+### What position path-dependence now means, stated plainly
+
+cv is still a pure function of (reveal, per-dot hash) — measured per dot at
+pinned p 0.37 and 0.40 from both directions, before-build vs after-build:
+**max |Δcv| = 0.0000** on all four pins, so D22's forward/reverse agreement
+gate is untouched to the bit. Positions were never pure in p (the drift
+integrates, the stage clocks free-run), and this change makes their
+path-dependence *deliberate*: after a ride through Inspire the shed's
+ambient homes keep the braid's shape, unlit, dispersing under drift. That
+lingering shape is inside the drift envelope (D17), carries ambient colour
+(byte-exact restore holds), and is the honest version of "the same spores" —
+they really are wherever you last saw them.
+
+### The four prior commits, re-measured (one instrument, before → after)
+
+| metric | before | after |
+|---|---|---|
+| `b2c9584` dark-and-converted, Inspire rest (live sample) | 214 | 244 (D22 band 225–248) |
+| … peak over boundary rides | 240–283 | 243–286 |
+| boundary trough, deliberate fwd / rev | −3.6% / −4.1% | −3.1% / −3.7% |
+| boundary trough, brisk fwd / rev | −3.4% / −4.1% | −3.2% / −2.0% |
+| `9e2a277`/`2fdb4e6` arrival: per-dot cv(p) schedule | — | **bit-identical** (pins, 4x max Δ 0.0000) |
+| arrival 10–90% on this harness, deliberate / brisk | 433 / 135 ms | 567 / 183 ms (pacing noise; code path untouched) |
+| `e2bd6e8` fwd/rev per-dot Δcv at pinned p | 0.0000 | **0.0000** |
+| … drift recycles per frame over rides | 0–1 | 0–1 |
+| three streams at the rest: screen-x density profile | — | corr 0.943 fresh, **0.926 after a full round trip** |
+| rest legibility, dots > 0.60 / > 1.00 luminance (live sample) | 2441 / 526 | 2395 / 494 (cadence phase; frozen rest bit-identical) |
+
+### Gates
+
+- **`capture.py --check` PASS, worst MAE 0.00/255 on all ten goldens** —
+  `mission@*` 0.00 (byte-identical, the required proof), `inspire@*` 0.00
+  (the landing-frame no-op is exact, not approximate), `connect@*`,
+  `owned@*`, `final@*` 0.00.
+- **Console clean** over a full p 0 → 1 → 0 ride: the two expected info
+  lines, zero warnings, zero errors.
+- **Nothing fades in over open view**: no opacity, reveal or colour
+  schedule was touched — the diff is position bookkeeping only.
+- **Camera untouched**: no key, ramp, seam or route value changed;
+  `journey/` has no diff.
+- Reverse scrubs: cv agreement exact (above); the visible reverse gesture
+  is now hand-back-in-place both ways, which is the same lighting-only law
+  forward and backward.
+
+### Residuals
+
+- **A fresh page deep-linked at/past Connect, scrubbed backward into
+  Inspire, still gathers from the diffuse cloud** at 9–11 u/s (coh 0.38) —
+  exactly the before-fix behaviour, unchanged by this change, because a
+  rising conversion must move dots or the braid never forms. It is the
+  arrival gesture played from the near side, compressed into the exit leg's
+  reveal window. If it ever draws a report, the lever is the reveal
+  schedule on the exit side (chapter file), not the spore system.
+- Under live handheld camera jitter (steady off), cv wiggles a few 1e-4 per
+  frame, so the absorb ratchets ambient homes toward the braid while a
+  visitor parks mid-arrival — bounded by the braid−home distance, inside
+  the D17 envelope, and each step is orders below perception. Noted so
+  nobody rediscovers it as a mystery drift.
+- The QA transform dial (`?t=`, `[`/`]`) now absorbs on lowering rather
+  than sliding dots home — calmer than before, but a QA-visible behaviour
+  change worth one line here.

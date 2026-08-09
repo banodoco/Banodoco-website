@@ -184,8 +184,9 @@ export function createSpores(ctx) {
       // correctly: for a held dot `arr` is untouched here, so its delta is
       // exactly zero and the shadow it maintains is the one written above.
       // Handover is continuous in both directions — the frame a dot converts,
-      // writ is still 0 here and heroP == arr; the frame it ceases, steer has
-      // already written arr = heroP and cleared writ.
+      // writ is still 0 here and heroP == arr; the frame it ceases, steer
+      // adopts the buffer position as the dot's ambient home (retire in
+      // place, 2026-08-09) and clears writ, so heroP == arr again.
       const held = inited ? writ : null;
       for (let i = 0; i < pos.count; i++) {
         const i3 = i * 3;
@@ -263,10 +264,20 @@ export function createSpores(ctx) {
   //                      core-cohort brightness ride the dimmer's per-dot
   //                      feed (cv/pw). No second population exists.
   //
-  // RESTORE DISCIPLINE (structural): positions restore by ceasing — a
-  // per-dot shadow of the TRUE hero position (heroP) absorbs what the drift
-  // integrator adds each frame, and a dot whose conversion reaches zero is
-  // handed back at that shadow. Colors restore byte-exact from the one base
+  // RESTORE DISCIPLINE (structural): positions restore by ceasing IN PLACE
+  // (2026-08-09, Hannah's fifth spore report — "they MOVE POSITION to work
+  // for the next section"). A per-dot shadow of the dot's ambient home
+  // (heroP) absorbs what the drift integrator adds each frame; while the
+  // dot's conversion RISES it travels from that home onto its path (the
+  // arrival gather, approved), but when its conversion FALLS the lost
+  // displacement is absorbed INTO the home instead of travelled back — the
+  // rendered dot does not move for the fall, and a dot whose conversion
+  // reaches zero is handed to the drift wherever performing left it. The
+  // ambient positions are not sacred (the braid lives inside the drift's
+  // own envelope by the D17 locus law, and measured at the full rest only
+  // 7 of 4,200 braid positions sit outside the drift bounds); what IS
+  // sacred is that a falling reveal changes LIGHTING, never position — the
+  // one-population invariant. Colors restore byte-exact from the one base
   // copy captured before the first dim. Both run from ONE release path
   // (releaseSeat), reached three ways: every channel easing to ~0 inside
   // drive(), the driver releasing the seat (setDriver(null)), or the
@@ -347,7 +358,7 @@ export function createSpores(ctx) {
       offR, offY, spanA, s1a, s2a, s3a, riseA, leanA, curlA, spA,
       perA, ph0A, h1A, h2A, sdA, dropA, knotA, coreA;
   // per-dot DYNAMIC state
-  let heroP, lastW, writ;
+  let heroP, lastW, writ, lastCv;
   // the dimmer feed: cv = conversion, pw = plume brightness term
   const feed = { cv: null, pw: null, any: false };
 
@@ -382,6 +393,7 @@ export function createSpores(ctx) {
     knotA = new Float32Array(N); coreA = new Float32Array(N);
     heroP = new Float32Array(N * 3); lastW = new Float32Array(N * 3);
     writ = new Uint8Array(N);
+    lastCv = new Float32Array(N);   // last frame's cvT — the retire-in-place edge detector
     feed.cv = new Float32Array(N);
     feed.pw = new Float32Array(N);
 
@@ -484,7 +496,7 @@ export function createSpores(ctx) {
 
     if (!wasActive) {
       // first live frame: the buffer is pure hero state — prime the shadow
-      heroP.set(arr); lastW.set(arr);
+      heroP.set(arr); lastW.set(arr); lastCv.fill(0);
     }
 
     // per-exit gates
@@ -529,13 +541,18 @@ export function createSpores(ctx) {
       if (conv <= 0) {
         pw[i] = 0;
         if (writ[i]) {
-          // steered last frame, conversion just reached zero: hand the
-          // BUFFER back at the true hero position, then cease — the drift
-          // integrator re-owns the dot from there. (RESTORE BY CEASING.)
+          // steered last frame, conversion just reached zero: hand the dot
+          // back IN PLACE — the buffer already holds where performing left
+          // it, so ceasing is adopting that position as the dot's ambient
+          // home and letting the drift re-own it from there. Nothing is
+          // written and nothing moves. This is also the discrete-jump-safe
+          // face of the absorb below: however much conversion a fast scrub
+          // dropped in one frame, the dot stays put. (RETIRE IN PLACE,
+          // 2026-08-09 — Hannah's fifth spore report.)
           writ[i] = 0;
-          arr[i3] = heroP[i3]; arr[i3 + 1] = heroP[i3 + 1]; arr[i3 + 2] = heroP[i3 + 2];
-          lastW[i3] = arr[i3]; lastW[i3 + 1] = arr[i3 + 1]; lastW[i3 + 2] = arr[i3 + 2];
-          wroteAny = true;
+          lastCv[i] = 0;
+          heroP[i3] = bx2; heroP[i3 + 1] = by2; heroP[i3 + 2] = bz2;
+          lastW[i3] = bx2; lastW[i3 + 1] = by2; lastW[i3 + 2] = bz2;
         } else {
           // hero-owned: track exactly (no float accumulation drift)
           heroP[i3] = bx2; heroP[i3 + 1] = by2; heroP[i3 + 2] = bz2;
@@ -698,6 +715,43 @@ export function createSpores(ctx) {
       const wy = mE[1] * lx + mE[5] * ly + mE[9] * lz + mE[13];
       const wz = mE[2] * lx + mE[6] * ly + mE[10] * lz + mE[14];
 
+      // ---- RETIRE IN PLACE (2026-08-09, Hannah's fifth spore report:
+      // "the spores still shift weirdly, like they MOVE POSITION to work
+      // for the next section"). The blend below renders the dot at
+      // heroP + (path - heroP) * cvT, so a FALLING cvT used to march every
+      // converted dot physically back toward its old drift position —
+      // measured riding Inspire -> Connect, the whole population moved at
+      // up to 19 u/s deliberate / 38 u/s brisk (the braid's own living
+      // motion is ~1.3 u/s, ambient drift ~0.09 u/s) at direction
+      // coherence 0.40, in open view, over the Δp ≈ 0.04 the exit leg
+      // collapses the reveal in. That return trip IS the rearrangement
+      // she keeps reporting, and no retiming can hide it: the shed never
+      // leaves the frame on this leg, and D18's own rule bans a ramp
+      // running backward in view.
+      //
+      // So the fall is absorbed instead: when cvT drops, the ambient home
+      // moves toward the path by exactly the share the blend is about to
+      // give back — solve heroP' from
+      //     heroP' + (path - heroP') * cvT  ==  heroP + (path - heroP) * c0
+      // (same path point), i.e. heroP' = path + (heroP - path) * f with
+      // f = (1 - c0) / (1 - cvT) — and the rendered position does not move
+      // for the fall AT ALL: frame-over-frame it carries only its drift
+      // share and its live path share, exactly what a dot at constant
+      // conversion shows. A RISING cvT is untouched — the arrival gather
+      // stays the approved gesture — so at every landing frame (rest,
+      // ?p=, ?capture=) lastCv rises monotonically from the prime's 0 and
+      // this branch never runs: the rest frames are bit-identical.
+      // cv itself stays a pure function of (reveal, hash) — the D22
+      // forward/reverse agreement gate is untouched.
+      const c0 = lastCv[i];
+      if (cvT < c0) {
+        const f = (1 - c0) / (1 - cvT);
+        heroP[i3]     = wx + (heroP[i3]     - wx) * f;
+        heroP[i3 + 1] = wy + (heroP[i3 + 1] - wy) * f;
+        heroP[i3 + 2] = wz + (heroP[i3 + 2] - wz) * f;
+      }
+      lastCv[i] = cvT;
+
       // the SAME dot slides from its own drift onto the path — by cvT, the
       // taste-dialled blend: at low T it bows toward the braid and keeps most
       // of its natural drift; at T = 1 it converts fully
@@ -816,18 +870,20 @@ export function createSpores(ctx) {
   function releaseSeat() {
     lastDriveFrame = -1;
     if (inited && wasActive) {
-      const attr = sporePts.geometry.attributes.position;
-      const arr = attr.array;
-      let wrote = false;
+      // RETIRE IN PLACE (2026-08-09): a released dot is handed to the drift
+      // wherever it stands — the buffer is not touched, its position becomes
+      // the dot's ambient home. (This path used to write arr = heroP, which
+      // teleported every still-converted dot by cvT of its displacement in
+      // one frame if the watchdog or a driver swap fired mid-reveal.)
+      const arr = sporePts.geometry.attributes.position.array;
       for (let i = 0; i < N; i++) {
         if (!writ[i]) continue;
         const i3 = i * 3;
         writ[i] = 0;
-        arr[i3] = heroP[i3]; arr[i3 + 1] = heroP[i3 + 1]; arr[i3 + 2] = heroP[i3 + 2];
+        lastCv[i] = 0;
+        heroP[i3] = arr[i3]; heroP[i3 + 1] = arr[i3 + 1]; heroP[i3 + 2] = arr[i3 + 2];
         lastW[i3] = arr[i3]; lastW[i3 + 1] = arr[i3 + 1]; lastW[i3 + 2] = arr[i3 + 2];
-        wrote = true;
       }
-      if (wrote) attr.needsUpdate = true;
     }
     wasActive = false;
     feed.any = false;
@@ -859,7 +915,7 @@ export function createSpores(ctx) {
     // ---- driver seat (merge doc §3) ----
     // ONE driver at a time claims the seat with its static exit geometry and
     // gets the seat handle back; releasing (setDriver(null)) — like going
-    // quiet, or silent — restores the dots to pure ambient drift, colors
+    // quiet, or silent — hands the dots to ambient drift IN PLACE, colors
     // byte-exact. Unclaimed, the seat does nothing by construction.
     driver: null,
     setDriver(d) {
