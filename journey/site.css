@@ -349,15 +349,38 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      tier pointer and the legal line all live here now. Content
      source: see journey/rail.js.
      ============================================================ */
+  /* THE HIT MODEL FOR EVERY FULL-FRAME OVERLAY (2026-08-09 — see the poke
+     regression note in journey-v6-plan/25-navigation-redux.md).
+
+     This scrim, the panel below it and the node-index scrim are the only
+     surfaces on this page big enough to cover the CANVAS, and the canvas is
+     the whole interaction: organism.js §10c reads a tap off it (the poke —
+     wobble, ripple, spores, haptic) and journey/chapters/final/interact.js
+     reads the field bodies off the same element. An invisible one of these
+     left hit-testable does not look like anything at all; it silently eats
+     every pointerdown on the frame, and the site simply stops answering
+     touch. That is exactly what happened once already (9e674d3).
+
+     So hit-testability follows the VISIBLE state, declaratively: these
+     surfaces are inert unless they carry `.open`, which is the same class
+     that makes them visible. `hidden` is still managed in JS and still
+     right — it is now a second belt rather than the only one. An overlay
+     that is not open cannot take a pointer even if its `hidden` bookkeeping
+     is wrong, missing, or forgotten by the next overlay built to this
+     pattern. tools/inputgates.js asserts it. */
   .j-menu-scrim {
     position: fixed;
     inset: 0;
     z-index: 6;
     opacity: 0;
+    pointer-events: none;
     background: rgba(5, 3, 1, 0.62);
     transition: opacity 0.3s ease;
   }
-  .j-menu-scrim.open { opacity: 1; }
+  .j-menu-scrim.open { opacity: 1; pointer-events: auto; }
+  /* the explicit belt the index scrim already carried, for parity: the UA
+     `[hidden]` rule is one author `display` declaration away from being lost */
+  .j-menu-scrim[hidden] { display: none; }
 
   .j-menu {
     position: fixed;
@@ -377,12 +400,16 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     border-left: 1px solid rgba(217, 164, 65, 0.3);
     box-shadow: -24px 0 70px rgba(0, 0, 0, 0.6);
     opacity: 0;
+    /* 92vw on a phone: full height, nearly full width. Inert unless open —
+       see the hit-model note above the scrim. */
+    pointer-events: none;
     /* it arrives from the edge the rail lives on — the same statement the
        popover's unfurl makes about where a panel comes from */
     transform: translateX(14px);
     transition: opacity 0.3s ease, transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .j-menu.open { opacity: 1; transform: translateX(0); }
+  .j-menu.open { opacity: 1; transform: translateX(0); pointer-events: auto; }
+  .j-menu[hidden] { display: none; }
 
   .j-menu-x {
     position: absolute;
@@ -1373,15 +1400,19 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      chapter's copy at every viewport to position one small control, which is
      exactly the kind of blast radius this file should not accept. */
 
+  /* Inert unless open — the hit model stated over .j-menu-scrim. This is the
+     surface that took the canvas's pointers out on 2026-08-09; `hidden` alone
+     was the only thing holding it off, and for one commit it was not set. */
   .j-index-scrim {
     position: fixed;
     inset: 0;
     z-index: 5;
     opacity: 0;
+    pointer-events: none;
     background: rgba(4, 3, 1, 0.62);
     transition: opacity 0.3s ease;
   }
-  .j-index-scrim.open { opacity: 1; }
+  .j-index-scrim.open { opacity: 1; pointer-events: auto; }
   .j-index-scrim[hidden] { display: none; }
 
   .j-index {
@@ -1393,6 +1424,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     max-height: min(82vh, 40rem);
     overflow: hidden;                       /* the BODY scrolls, not the shell */
     opacity: 0;
+    /* 82vh of a phone: inert unless open, same hit model as the scrims */
+    pointer-events: none;
     background: rgba(10, 7, 2, 0.975);
     border: 1px solid rgba(217, 164, 65, 0.35);
     border-width: 1px 0 0;
@@ -1400,7 +1433,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.6);
     transition: opacity 0.3s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .j-index.open { opacity: 1; }
+  .j-index.open { opacity: 1; pointer-events: auto; }
   .j-index[hidden] { display: none; }
   .j-index.dragging { transition: none; }   /* 1:1 with the finger */
 

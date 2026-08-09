@@ -328,3 +328,131 @@ first build, worth folding into any future mobile pass.
   structural).
 * The 375 chip-behind-the-band note in §7 — cosmetic, for the next mobile
   pass.
+
+---
+
+## 10. 2026-08-09 (later) — the poke came back: overlays are now inert unless open
+
+**Reported:** Hannah, straight after the redux landed. *"All the touch gestures
+also seem to be broken right now … I mean like when I used to tap a mushroom it
+would act like it had received physical contact and light up, same with the
+ground."*
+
+**Files:** `journey/site.css` (four selectors), `tools/inputgates.js` (new,
+QA-only, not shipped).
+
+### What she was describing
+
+The POKE — `organism/organism.js` §10c. A `pointerdown`/`pointerup` pair on
+`renderer.domElement`, gesture-gated to a tap (≤400 ms, ≤7 px), raycast against
+the opaque body shells: an impulse torque rings the stalk down as a damped
+oscillator, a short-range light ripple is planted at the fingertip, a cap tap
+sheds spores, a touch pointer gets a 6 ms haptic tick; a miss plants the
+far-carrying floor wave instead. `journey/chapters/final/interact.js` resolves
+the epilogue's field bodies off the *same* element, second on the same event.
+
+### What interfered
+
+Not the poke, and not the navigation component. **`.j-index-scrim`** — the
+node-index scrim from 24-mobile-pass. `position: fixed; inset: 0; z-index: 5;
+opacity: 0`, and **no `pointer-events` declaration at all**, so it defaulted to
+`auto`. An invisible full-viewport surface, hit-testable from boot, sitting over
+the canvas. Every `pointerdown` on the frame landed on it; `organism`'s handler
+never ran, and neither did the field picker.
+
+`9e674d3` had already removed the live instance an hour earlier, by giving the
+element `hidden` at birth. That commit is correct and stays. But it patched the
+*instance*, not the *mechanism*: the only thing standing between this page and a
+completely dead canvas was one JS assignment, and the redux had just cloned the
+same pattern twice more — `.j-menu-scrim` (z 6, full viewport) and `.j-menu`
+(z 7, `top:0;bottom:0`, `min(29rem, 92vw)` — nearly a whole phone). Neither
+carried a `pointer-events` rule either; `.j-menu-scrim` did not even carry the
+explicit `[hidden] { display: none }` belt that `.j-index-scrim` had. The next
+overlay built to this pattern would have taken the canvas out again.
+
+Measured, at HEAD, by stripping `hidden` from the scrims as they are created —
+i.e. running the exact pre-fix code — on a cold load at 1440×900:
+
+```
+scrims:  pe=auto  z=5 / z=6   box=[1440,900]
+cap    mouse  DEAD  down/up=0/0  top=DIV.j-menu-scrim
+cap    touch  DEAD  down/up=0/0  top=DIV.j-menu-scrim
+ground mouse  DEAD  down/up=0/0  top=DIV.j-menu-scrim
+ground touch  DEAD  down/up=0/0  top=DIV.j-menu-scrim
+```
+
+The canvas received **zero** pointer events. That is Hannah's report exactly:
+body and ground, mouse and touch, nothing lights up.
+
+### Why it was not caught
+
+Because every gate this repo has was blind to it, by construction:
+
+* **It moves no pixel.** The element is `opacity: 0`. `capture.py --check`
+  reported 10/10 at MAE 0.00 while the site was completely untappable — and
+  still does now. A frozen-frame gate cannot see a hit-test.
+* **It throws nothing.** The console stayed clean; no handler errored, they
+  simply were never called.
+* **It belongs to no component.** The defect is a property of the whole
+  viewport, so neither the navigator's own review nor the poke's own review
+  had reason to look at it. The redux was reviewed against the redux.
+* **The one visible symptom was attributed and fixed in isolation.** 9e674d3
+  found it via the rail's *hover* expansion failing, fixed that, and had no
+  reason to suspect the canvas underneath was the bigger casualty.
+
+### What now guarantees the canvas keeps its pointer events
+
+**Hit-testability follows the visible state, declaratively.** The four
+full-frame overlays are `pointer-events: none` in their base rule and
+`pointer-events: auto` only under `.open` — the same class that makes them
+visible, added and removed in the same synchronous task as `hidden`:
+
+| Selector | closed | open |
+|---|---|---|
+| `.j-menu-scrim` | `none` | `auto` |
+| `.j-menu` | `none` | `auto` |
+| `.j-index-scrim` | `none` | `auto` |
+| `.j-index` | `none` | `auto` |
+
+`hidden` is still managed in JS and still correct; it is now a **second** belt
+rather than the only one. `.j-menu-scrim` and `.j-menu` also gained the explicit
+`[hidden] { display: none }` rule for parity with `.j-index-scrim`. An overlay
+that is not open cannot take a pointer even if its `hidden` bookkeeping is
+wrong, missing, or forgotten by whoever builds the next one.
+
+`tools/inputgates.js` (QA-only, nothing imports it — same shape as
+`tools/scrollgates.js`) asserts it, and asserts it *against sabotage*:
+
+* **G1** the canvas owns the frame at rest — no element covering ≥12% of the
+  viewport beats it. (The threshold is the point: the hero's HUD links, the
+  rail and the hotspot chips are *supposed* to be on top, and a gate that
+  flags them gets ignored.)
+* **G2** the same, with `hidden` stripped from all four overlays. This is the
+  guarantee under test: the pre-fix state must now be survivable.
+* **G3** the poke actually fires — read off the scene's own shared pulse
+  uniforms (`uPulseT` back to 0, `uPulseP` = (1.4,1.5,1.2) body /
+  (2.6,0.33,1.4) floor), for body and ground, mouse and touch. A ground pixel
+  is allowed to answer `body` where FINAL's field picker corrects organism's
+  floor swell (interact.js §ORDERING) — requiring `ground` there would assert
+  a bug.
+* **G4/G5** each overlay is inert while closed, live while open, and inert
+  again after.
+
+### Gate results
+
+| Gate | Result |
+|---|---|
+| References | **PASS.** 10/10 at MAE **0.00**/255, all ten frozen frames byte-identical, `mission` included. The change is invisible by construction: the overlays are `display:none` at every captured pose, so `pointer-events` on them cannot reach a pixel. |
+| Input gates | **PASS** at 1440×900 and 375×812, and at the FINAL rest. G2 confirms the canvas keeps the frame with `hidden` stripped (`pe=none` on all four). |
+| Poke — main model | **PASS.** cap / stem / ground × mouse / touch, at 1440×900 and 375×812, at mission, inspire, connect and final. Measured on the pulse uniforms with the clock armed past decay, plus the breeze-free ring-down residual `0.034·rot.x + 0.007·rot.z` (the breeze terms cancel exactly). At Owned the hero body is behind the camera — no pixel to tap, as designed. |
+| Poke — FINAL field | **PASS**, both pointer types, both viewports, via the chapter's own `pickStats()`: at a field-body pixel, mouse ×5 → broad +5 / narrow +5, touch ×5 → broad +5 / narrow +5; 12 distinct field bodies poked per pointer type at 1440×900, `clonesRinging` non-empty. |
+| Input surface walked | **PASS.** Rail hover-expand + collapse + click-to-navigate (after first travel — `.on` is a one-way latch, so the rail is deliberately inert at the Mission pose); menu open on a real click, panel and scrim both hit-testable while open, `modalInput` claimed, native wheel scrolling inside the panel (`scrollTop` 287/400), focus trap holding, scrim-click close, Escape close, input released (`inputOwners` 0); skip link; hotspot chips (hover opens the popover, click **pins** it — `openCard()` routes preview nodes to `pinPop`, so a card is not the contract); Owned face-node hit pads taking `pointerenter`/`leave` 1/1; the live face chip opening the card; `Learn more`/`Remix` pills live whenever their row is not `inert`; wheel scrubbing; touch-drag scrubbing measured *during* the gesture (p 0 → 0.041, then correctly resolved home — 672 px is well under the commit distance). |
+| Console | **CLEAN** over full rides at both viewports (console.error/warn + uncaught + rejections captured from document start). |
+| A/B against the pristine sheet | Chips, popovers, cards and action pills produce **byte-identical** state before and after the change. |
+
+### Residual
+
+* At Owned the one 246 px hover zone sits over part of the visible floor, so a
+  ground tap there opens the node instead of pinging the mycelium. That is the
+  hit pad doing its job (1325 of 1487 sampled ground pixels remain free) and
+  predates this work — noted, not changed.
