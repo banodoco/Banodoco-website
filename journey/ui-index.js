@@ -115,6 +115,13 @@ export function createNodeIndex({ onOpen, onHot, announce }) {
 
   const scrim = el('div', 'j-index-scrim');
   scrim.setAttribute('aria-hidden', 'true');
+  // `hidden` from birth, exactly as the menu scrim is (rail.js). Without it
+  // the element is an INVISIBLE full-viewport surface at z-index 5 with
+  // default pointer-events — it hit-tested over everything beneath it
+  // (measured 2026-08-09: elementFromPoint over the navigator returned this
+  // scrim, and the rail's hover expansion never fired). openSheet() already
+  // clears it; closeSheet() already restores it.
+  scrim.hidden = true;
 
   document.body.appendChild(scrim);
   document.body.appendChild(sheet);
