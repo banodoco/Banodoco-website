@@ -39,7 +39,9 @@ export const ROUTE = [
 
 // The authored end-hold: p = 1 is a resolution anchor of its own (a fling to
 // the end settles there, never tugged back to the Final rest) and a handheld
-// zero. The footer band lives against it (ui-footer.js).
+// zero. (The footer band used to live against it; the footer is gone —
+// navigation redux, 2026-08-09 — and the end-hold stays, because it is the
+// route's own full stop, not the footer's.)
 export const TERMINAL_P = 1;
 
 /* ------------------------------------------------------------------ */

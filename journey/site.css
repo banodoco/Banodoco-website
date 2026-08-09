@@ -1,10 +1,11 @@
-/* journey/site.css — the journey layer's page styles: chapter nav, chapter
-   copy blocks, hotspot proxies, detail card / bottom sheet, footer + cue,
-   focus treatments, touch targets. None of these elements exist until
-   journey.js boots (journey/ui.js and ui-footer.js build them), so every
-   rule here is dead CSS until then — the hero's first paint is untouched by
-   construction. Moved verbatim from index.html's inline journey <style> at
-   the M5 shell step. Linked AFTER hero.css; keep that order. */
+/* journey/site.css — the journey layer's page styles: the right-side
+   navigator + its site-map panel, chapter copy blocks, hotspot proxies,
+   detail card / bottom sheet, focus treatments, touch targets. None of these
+   elements exist until journey.js boots (journey/ui.js and rail.js build
+   them), so every rule here is dead CSS until then — the hero's first paint
+   is untouched by construction. Moved verbatim from index.html's inline
+   journey <style> at the M5 shell step. Linked AFTER hero.css; keep that
+   order. */
 
 /* journey-v6: the scene is a non-interactive backdrop here — the journey
    owns scroll and pointer gestures via the organism's input policy
@@ -25,77 +26,73 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      ============================================================ */
 
   /* ============================================================
-     THE SIDE NAVIGATOR (Hannah, 2026-08-07) — journey/rail.js.
+     THE RIGHT-SIDE NAVIGATOR (Hannah, 2026-08-09 redux) —
+     journey/rail.js. First built 2026-08-07 on the left flank;
+     the redux moves it to the right, gives the resting state TWO
+     symbols (current section + menu), and folds the old footer's
+     whole job into the menu panel.
 
-     Replaces the `.j-nav` row that used to sit in the hero's own
-     <nav> between the wordmark and the 2RP / Discord pair, and the
-     static tier's `.chapters` row with it. The wordmark and the pill
-     pair are untouched: they get the top rule to themselves now.
+     ---- THE LAYOUT DECISION: ANCHORED ON THE CURRENT MARK ----
 
-     ---- THE LAYOUT DECISION: LEFT, NOT RIGHT ----
+     The control is a fixed instrument: the current section's mark
+     sits at the vertical centre of the right edge at every chapter,
+     with the menu mark directly below it. Expanding does not move
+     either the visitor's pointer target or the control's home —
+     the OTHER sections' marks fan out from behind the current one
+     to their manifest positions (slot i at (--i - --cur) tiles from
+     the anchor), and the menu mark slides down to hold the foot of
+     the stack. Collapse folds them back in. The geometry is three
+     custom properties (--i per slot, --cur / --n on the root), so
+     the whole choreography is authored here and rail.js only states
+     where the visitor is.
 
-     The right flank is already spoken for. `.j-card` is fixed at
-     `right: 3.4vw; top: 50%` and is 400px wide at 1440 — i.e. the
-     detail card occupies exactly the band a right-hand rail would
-     want, and the node popover prefers the right of its chip and
-     flips left only at the edge. The left flank carries the wordmark
-     at the top and then nothing until `.pos-bottomleft` at the
-     bottom, so a band centred vertically on the left is the one
-     stretch of frame no other element claims at any chapter.
+     The detail card also stands on this flank (`.j-card`, right:
+     3.4vw). While a modal detail is open the rail is already inert
+     (rail.js update); `.dim` is the visual half of that statement.
 
-     ---- THE MOTION DECISION: NOTHING MOVES ----
-
-     The slots are in their final positions at all times. Expanding is
-     the OTHER slots turning on around the one already showing; the
-     resting symbol does not shift by a pixel, so the thing the
-     pointer is on when the rail opens is still under the pointer
-     after it opens. That is also why the resting symbol's vertical
-     position tracks the journey — Mission sits near the top of the
-     band and Owned near the bottom — which is a free reading of
-     progress that costs no ink.
+     ---- THE MOTION FAMILY ----
 
      The gestures are the hero's `.co` callout boot (hero.css), the
      same family the node popovers took in d1ecc23:
 
-       hero `co-on` / `tag-in`   the symbols and their names fade up in
-                                 rail order on a per-slot delay (--k),
-                                 names arriving from a wider letter-
-                                 spacing exactly as `.co .tag` does.
-       hero `.co .ck`            the current section wears the reticle:
-                                 four corner brackets locking in
-                                 clockwise, with the same overshoot
-                                 curve and the same 0.05s cascade.
-       hero `lead-draw`          the menu control's filaments draw
-                                 themselves left to right, last of all.
+       hero `co-on` / `tag-in`   marks slide out on a per-distance
+                                 delay (--d); a pointed-at name
+                                 arrives from a wider letter-spacing
+                                 exactly as `.co .tag` does.
+       hero `.co .ck`            the current section wears the
+                                 reticle: four corner brackets
+                                 locking in clockwise with the same
+                                 overshoot curve.
+       hero `lead-draw`          the menu mark's filaments draw
+                                 themselves as the rail first
+                                 reveals, and stay drawn.
 
      Every rule ends at the element's resting style, so the
      reduced-motion block at the foot of this file switches the
-     transitions off and the expanded rail is simply already open.
+     transitions off and each state is simply already there.
      ============================================================ */
   .j-rail {
     position: fixed;
-    left: 0;
+    right: 0;
     top: 0; bottom: 0;
     z-index: 4;                 /* over copy + hotspots, under the card */
     /* Centred by FLEX, not by `top:50%` + `translateY(-50%)`: a transform on
        an ancestor becomes the containing block for `position: fixed`
-       descendants, and this component grows fixed children (the static tier's
-       twin holds its menu panel INSIDE the rail, where the transform version
-       clipped it to the rail's own box). Same layout, no trap.
-       It is also a real <nav> landmark, which puts it in reach of the hero's
-       BARE `nav {}` rule (hero.css: flex + `padding: 2.1rem 3.4rem` + the
-       `fade-on` entry animation). `animation: none` is the load-bearing one —
-       fill-mode `both` would pin opacity at the animation's END value and the
-       rail would be lit at the Mission pose, moving the reference frame.
-       Reset, don't inherit; exactly the care the old `.j-nav` took. */
+       descendants (the static tier's twin holds its menu panel INSIDE the
+       rail, where the transform version clipped it). Same layout, no trap.
+       It is also a real <nav> landmark, in reach of the hero's BARE `nav {}`
+       rule (hero.css: flex + padding + the `fade-on` entry animation).
+       `animation: none` is the load-bearing reset — fill-mode `both` would
+       pin opacity at the animation's END value and light the rail at the
+       Mission pose, moving the reference frame. */
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     padding: 0;
     animation: none;
     /* The container is inert to the pointer; only the tiles are live. That is
-       what keeps the resting state honest — a 44px symbol is the only thing
-       on the flank that answers a pointer, not a 240px invisible column. */
+       what keeps the resting state honest — two 44px symbols are the only
+       things on the flank that answer a pointer, not a full-height column. */
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.55s ease;
@@ -106,33 +103,41 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      captured Mission frame has no focus, so it is unaffected. */
   .j-rail.on,
   .j-rail:focus-within { opacity: 1; }
+  /* A modal detail owns the frame — and this same flank. The rail is already
+     inert (rail.js); this is the picture agreeing with the hit model. */
+  .j-rail.on.dim { opacity: 0.1; }
 
+  /* The anchor: a zero-height point at the vertical centre of the right
+     edge. Every slot and the menu mark position themselves off it. */
   .j-rail-inner {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    padding: 0.5rem 0;
+    width: 52px;
+    height: 0;
   }
-  /* A local scrim, so names stay legible over a bright chapter (Connect's
-     ground, Owned's colony) without the rail carrying a panel at rest. It
-     exists only while the rail is expanded. */
+  /* A local scrim so marks and names stay legible over a bright chapter
+     (Connect's lit ground, Owned's colony). It exists only while the rail is
+     expanded, and it is sized by the same custom properties that place the
+     slots, so it always covers exactly the fanned stack. */
   .j-rail-inner::before {
     content: "";
     position: absolute;
-    /* The vertical inset is the FEATHER'S ROOM. The mask below fades over a
-       fixed 34px, so the box has to extend at least that far past the first
-       and last tile or the fade eats the top and bottom names — measured at
-       375x812, where a percentage feather put MISSION and EPILOGUE outside
-       the dark and straight onto the chapter copy. */
-    inset: -2.8rem -2.6rem -2.8rem -2rem;
+    right: 0;
+    width: 6rem;
+    /* the 2.4rem overhangs are the FEATHER'S ROOM: the mask fades over a
+       fixed 34px and needs the box to extend past the first and last tile */
+    top: calc(var(--cur, 0) * -44px - 22px - 2.4rem);
+    height: calc(var(--n, 5) * 44px + 52px + 4.8rem);
     z-index: -1;
     opacity: 0;
-    background: linear-gradient(to right, rgba(9, 6, 2, 0.95) 58%, rgba(9, 6, 2, 0));
-    /* The horizontal falloff is the gradient; the vertical falloff is a mask,
-       because a scrim with a hard top and bottom edge reads as a PANEL laid
-       over the composition and this is meant to read as the frame simply
-       getting darker where the rail is. Feathered on three sides; the fourth
-       is the viewport edge. */
+    /* Quieter than the first build's 0.95/58%: the names carry their own
+       scrim pills now, so this band's only job is the MARKS' legibility over
+       a bright chapter — solid early, then a long falloff, so it reads as
+       the frame darkening at the edge rather than as a docked panel. */
+    background: linear-gradient(to left, rgba(9, 6, 2, 0.82) 22%, rgba(9, 6, 2, 0));
+    /* horizontal falloff is the gradient; vertical falloff is a mask, because
+       a scrim with hard top and bottom edges reads as a PANEL laid over the
+       composition, and this should read as the frame simply getting darker
+       where the rail is. */
     -webkit-mask-image: linear-gradient(to bottom, transparent, #000 34px, #000 calc(100% - 34px), transparent);
     mask-image: linear-gradient(to bottom, transparent, #000 34px, #000 calc(100% - 34px), transparent);
     transition: opacity 0.35s ease;
@@ -140,18 +145,33 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 
   .j-rail-list { display: block; margin: 0; padding: 0; list-style: none; }
 
-  .j-rail-slot { display: block; }
+  /* ---- the fan ----
+     Collapsed, every slot sits AT the anchor, stacked behind the current one
+     (opacity 0, hit area off). Expanded, each slides to (--i - --cur) tiles
+     from the anchor — so the current mark, which is the thing the pointer is
+     on when the fan opens, does not move by a pixel in either direction. */
+  .j-rail-slot {
+    position: absolute;
+    top: -22px; right: 0;
+    opacity: 0;
+    transform: translateY(0);
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.3s ease;
+    /* the callout boot's cascade, nearest first — distance, not list order */
+    transition-delay: calc(var(--d, 0) * 0.035s);
+  }
+  .j-rail-slot.now { opacity: 1; }
 
   .j-rail-item {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 0.85rem;
-    /* 44px, the PL-1.4 minimum, and the tiles ABUT: a pointer travelling from
-       the resting symbol to a neighbour never crosses dead space, so the
+    justify-content: center;
+    /* 44px tall (PL-1.4) and the tiles ABUT when fanned: a pointer travelling
+       from the resting symbol to a neighbour never crosses dead space, so the
        expansion cannot collapse under a moving cursor. */
+    width: 52px;
     height: 44px;
-    padding: 0 1rem 0 1.1rem;
     color: rgba(201, 191, 168, 0.52);
     text-decoration: none;
     transition: color 0.3s;
@@ -161,12 +181,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-rail.on .j-rail-menu,
   .j-rail:focus-within a.j-rail-item,
   .j-rail:focus-within .j-rail-menu { pointer-events: auto; }
-  /* …but at rest only the CURRENT tile is live; the rest are turned off below
-     and take their hit area with them. */
-  .j-rail:not(:hover):not(:focus-within):not(.j-rail-open)
-    .j-rail-slot:not(.now) a.j-rail-item { pointer-events: none; }
-  .j-rail:not(:hover):not(:focus-within):not(.j-rail-open)
-    .j-rail-menu { pointer-events: none; }
+  /* …but at rest only the CURRENT tile is live in the stack; the rest are
+     folded behind it and take their hit areas with them. */
+  .j-rail:not(.j-rail-hot):not(:focus-within):not(.j-rail-open)
+    .j-rail-slot:not(.now) .j-rail-item { pointer-events: none; }
 
   .j-rail-mark {
     position: relative;
@@ -190,54 +208,66 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      than as outline drawings. */
   .j-sym circle { fill: currentColor; stroke: none; }
 
+  /* ---- the names: revealed per mark, to the LEFT of the stack ----
+     "Hovering an individual symbol reveals the name of that section." The
+     name is a label, not a target (pointer-events none), carried on its own
+     small scrim pill so it stays legible over any chapter without asking the
+     whole flank for a panel. */
   .j-rail-name {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 0.1rem;
+    padding: 0.34rem 0.7rem;
+    border-radius: 2px;
+    background: rgba(9, 6, 2, 0.85);
     font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.3em;
     text-transform: uppercase;
     white-space: nowrap;
-    text-shadow: 0 1px 12px rgba(10, 6, 2, 0.9);
+    color: var(--parchment);
+    pointer-events: none;
     /* the hero's `tag-in`: wider tracking on the way in, settling as it lands */
     opacity: 0;
-    transition: opacity 0.34s ease, letter-spacing 0.34s ease;
+    transition: opacity 0.24s ease, letter-spacing 0.24s ease;
   }
-
-  /* ---- RESTING: one symbol, the scene on screen ---- */
-  .j-rail-slot { opacity: 0; transition: opacity 0.34s ease; }
-  .j-rail-slot.now { opacity: 1; }
-  .j-rail-slot.now .j-rail-item { color: rgba(228, 182, 102, 0.82); }
-  .j-rail-menu { opacity: 0; transition: opacity 0.34s ease; }
-
-  /* ---- EXPANDED: hover, keyboard focus, or the first touch ---- */
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-inner::before { opacity: 1; }
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot,
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-menu {
-    opacity: 1;
-    /* the callout boot's per-item cascade, top to bottom */
-    transition-delay: calc(var(--k, 0) * 0.045s);
-  }
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-name {
+  .j-rail-item:is(:hover, :focus-visible) .j-rail-name,
+  .j-rail-menu:is(:hover, :focus-visible) .j-rail-name {
     opacity: 1;
     letter-spacing: 0.24em;
-    transition-delay: calc(var(--k, 0) * 0.045s + 0.06s);
   }
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-item {
+  /* Touch has no hover to reveal names one at a time, so the deliberate tap
+     that opens the fan brings every name with it. */
+  .j-rail-open .j-rail-name { opacity: 1; letter-spacing: 0.24em; }
+
+  /* ---- RESTING: the current mark, lit ---- */
+  .j-rail-slot.now .j-rail-item { color: rgba(228, 182, 102, 0.82); }
+  .j-rail-slot.now .j-sym { filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.4)); }
+
+  /* ---- EXPANDED: hover on the section mark, keyboard focus, or the tap ---- */
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-inner::before { opacity: 1; }
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot {
+    opacity: 1;
+    transform: translateY(calc((var(--i, 0) - var(--cur, 0)) * 44px));
+  }
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-item {
     color: rgba(201, 191, 168, 0.62);
   }
   /* the current section, clearly marked — gold, and wearing the reticle */
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rail-item,
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.now .j-rail-item {
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rail-item,
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.now .j-rail-item {
     color: var(--gold-bright);
   }
   /* focus states visually equal hover states (PL-2.2) */
   .j-rail-item:is(:hover, :focus-visible) { color: var(--parchment); }
   .j-rail-slot.active .j-rail-item:is(:hover, :focus-visible),
   .j-rail-slot.now .j-rail-item:is(:hover, :focus-visible) { color: var(--gold-bright); }
-  .j-rail-slot.now .j-sym { filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.4)); }
 
   /* the epilogue echo: present, dimmer, and not a control (see rail.js) */
   .j-rail-echo .j-rail-item { cursor: default; }
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-echo:not(.now) .j-rail-item {
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-echo:not(.now) .j-rail-item {
     color: rgba(201, 191, 168, 0.32);
   }
 
@@ -254,70 +284,70 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-rck.tr { top: 0;    right: 0; border-top: 1px solid var(--rck);    border-right: 1px solid var(--rck); transform: translate(-6px, 6px)  scale(0.4); }
   .j-rck.br { bottom: 0; right: 0; border-bottom: 1px solid var(--rck); border-right: 1px solid var(--rck); transform: translate(-6px, -6px) scale(0.4); }
   .j-rck.bl { bottom: 0; left: 0;  border-bottom: 1px solid var(--rck); border-left: 1px solid var(--rck);  transform: translate(6px, -6px)  scale(0.4); }
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck {
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck {
     opacity: 1;
     transform: translate(0, 0) scale(1);
-    transition: opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--k, 0) * 0.045s + 0.1s),
-                transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--k, 0) * 0.045s + 0.1s);
+    transition: opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--d, 0) * 0.035s + 0.1s),
+                transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--d, 0) * 0.035s + 0.1s);
   }
   /* …locking in clockwise, tl -> tr -> br -> bl, as the hero's do */
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.tr { transition-delay: calc(var(--k, 0) * 0.045s + 0.15s); }
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.br { transition-delay: calc(var(--k, 0) * 0.045s + 0.20s); }
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.bl { transition-delay: calc(var(--k, 0) * 0.045s + 0.25s); }
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.tr { transition-delay: calc(var(--d, 0) * 0.035s + 0.15s); }
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.br { transition-delay: calc(var(--d, 0) * 0.035s + 0.20s); }
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.bl { transition-delay: calc(var(--d, 0) * 0.035s + 0.25s); }
 
-  /* ---- the menu control: the prominent one ---- */
+  /* ---- the menu control: the SECOND resting symbol ----
+     Beside the current mark at rest (one tile below, past a hairline), and
+     holding the foot of the stack while the fan is open. A bare glyph, a
+     shade dimmer than the current mark — present, not loud. */
   .j-rail-menu {
-    position: relative;
+    position: absolute;
+    top: -22px; right: 0;
     display: flex;
     align-items: center;
-    gap: 0.85rem;
+    justify-content: center;
+    width: 52px;
     height: 44px;
-    margin-top: 0.55rem;
-    padding: 0 1.05rem 0 1.1rem;
-    background: rgba(18, 12, 4, 0.5);
-    border: 1px solid rgba(217, 164, 65, 0.42);
-    border-left: 0;
-    border-radius: 0 999px 999px 0;
-    color: var(--gold-bright);
+    padding: 0;
+    background: none;
+    border: 0;
+    color: rgba(217, 164, 65, 0.6);
     font: inherit;
     cursor: pointer;
-    transition: opacity 0.34s ease, color 0.3s, border-color 0.3s, background 0.3s;
+    transform: translateY(52px);
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s;
   }
-  /* the hairline above it — the rail's own list ends, and a control begins */
+  .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-menu {
+    transform: translateY(calc((var(--n, 5) - 1 - var(--cur, 0)) * 44px + 52px));
+  }
+  /* the hairline between the two jobs: sections above, the site's own
+     contents below. It rides the menu mark through both states. */
   .j-rail-menu::before {
     content: "";
     position: absolute;
-    left: 1.1rem; right: 1.4rem;
-    top: -0.3rem;
+    top: -4px;
+    left: 50%;
+    width: 24px;
     height: 1px;
-    background: rgba(217, 164, 65, 0.24);
+    transform: translateX(-50%);
+    background: rgba(217, 164, 65, 0.26);
   }
-  .j-rail-menu .j-rail-name {
-    /* the control is prominent: it keeps its name at rest inside the expanded
-       state rather than earning it on a second hover */
-    font-weight: 700;
-    color: var(--gold-bright);
-  }
-  .j-rail-menu:is(:hover, :focus-visible) {
-    color: #ffe6ac;
-    border-color: var(--gold-bright);
-    background: rgba(24, 16, 5, 0.72);
-  }
-  /* hero `lead-draw`: the contents filaments draw themselves as the control
-     arrives, then stay drawn. */
+  .j-rail-menu:is(:hover, :focus-visible) { color: var(--gold-bright); }
+  /* hero `lead-draw`: the contents filaments draw themselves as the rail
+     first reveals, then stay drawn — the instrument powering on. */
   .j-rail-menu .j-sym path {
     stroke-dasharray: 12;
     stroke-dashoffset: 12;
-    transition: stroke-dashoffset 0.4s ease;
+    transition: stroke-dashoffset 0.4s ease 0.3s;
   }
-  .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-menu .j-sym path {
-    stroke-dashoffset: 0;
-    transition-delay: calc(var(--k, 0) * 0.045s + 0.08s);
-  }
+  .j-rail.on .j-rail-menu .j-sym path,
+  .j-rail:focus-within .j-rail-menu .j-sym path { stroke-dashoffset: 0; }
 
   /* ============================================================
-     THE SIDE MENU — the overview, as a real modal dialog.
-     Content source and the two flagged gaps: see journey/rail.js.
+     THE SITE-MAP PANEL — the whole site as a page, from the right.
+     Replaces the post-epilogue footer (removed 2026-08-09): chapter
+     deep links, per-section contents, outbound links, the static-
+     tier pointer and the legal line all live here now. Content
+     source: see journey/rail.js.
      ============================================================ */
   .j-menu-scrim {
     position: fixed;
@@ -331,9 +361,9 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 
   .j-menu {
     position: fixed;
-    left: 0; top: 0; bottom: 0;
+    right: 0; top: 0; bottom: 0;
     z-index: 7;
-    width: min(27rem, 92vw);
+    width: min(29rem, 92vw);
     padding: 2.6rem 2.2rem 2.4rem;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -344,12 +374,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        translucent; the scrim behind it is what says there is still a page
        under here. */
     background: #0b0702;
-    border-right: 1px solid rgba(217, 164, 65, 0.3);
-    box-shadow: 24px 0 70px rgba(0, 0, 0, 0.6);
+    border-left: 1px solid rgba(217, 164, 65, 0.3);
+    box-shadow: -24px 0 70px rgba(0, 0, 0, 0.6);
     opacity: 0;
     /* it arrives from the edge the rail lives on — the same statement the
        popover's unfurl makes about where a panel comes from */
-    transform: translateX(-14px);
+    transform: translateX(14px);
     transition: opacity 0.3s ease, transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .j-menu.open { opacity: 1; transform: translateX(0); }
@@ -378,26 +408,26 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     color: var(--gold);
   }
   .j-menu-lede {
-    margin: 0 0 1.9rem;
+    margin: 0 0 1.7rem;
     font-size: 0.86rem;
     line-height: 1.65;
     color: var(--muted);
   }
 
-  /* same bare-`nav` reset the rail and the footer take (hero.css `nav {}`) */
+  /* same bare-`nav` reset the rail takes (hero.css `nav {}`) */
   .j-menu-nav { display: block; padding: 0; animation: none; }
   .j-menu-list { margin: 0; padding: 0; list-style: none; }
+  .j-menu-list > li { border-top: 1px solid rgba(217, 164, 65, 0.16); }
+  .j-menu-list > li:last-child { border-bottom: 1px solid rgba(217, 164, 65, 0.16); }
   .j-menu-item {
     display: flex;
     align-items: flex-start;
     gap: 1rem;
-    padding: 0.85rem 0.6rem 0.85rem 0;
-    border-top: 1px solid rgba(217, 164, 65, 0.16);
+    padding: 0.85rem 0.6rem 0.7rem 0;
     color: var(--parchment);
     text-decoration: none;
     transition: color 0.3s, background 0.3s;
   }
-  .j-menu-list li:last-child .j-menu-item { border-bottom: 1px solid rgba(217, 164, 65, 0.16); }
   .j-menu-mark { flex: 0 0 auto; margin-top: 0.15rem; color: rgba(217, 164, 65, 0.66); transition: color 0.3s; }
   .j-menu-txt { display: block; }
   .j-menu-no {
@@ -428,7 +458,38 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-menu-item[aria-current="true"] .j-menu-mark { color: var(--gold-bright); }
   .j-menu-item[aria-current="true"] .j-menu-no { color: var(--gold-bright); }
 
-  .j-menu-else { margin-top: 1.9rem; }
+  /* ---- a section's contents: item — one sentence → primary link ----
+     Indented to the section text's own column (mark 22px + 1rem gap), so the
+     map reads as an outline: section, then what lives inside it. */
+  .j-menu-sub {
+    margin: 0;
+    padding: 0 0.6rem 0.9rem 2.4rem;
+    list-style: none;
+  }
+  .j-menu-row {
+    margin: 0 0 0.5rem;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+  .j-menu-row:last-child { margin-bottom: 0; }
+  .j-menu-il {
+    color: var(--parchment);
+    font-weight: 600;
+  }
+  .j-menu-il::after { content: " — "; color: rgba(201, 191, 168, 0.45); font-weight: 400; }
+  .j-menu-ia {
+    margin-left: 0.45em;
+    color: var(--gold-bright);
+    text-decoration: none;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.4);
+    transition: border-color 0.3s;
+  }
+  .j-menu-ia::after { content: " \2192"; }
+  .j-menu-ia:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
+
+  .j-menu-else { margin-top: 1.7rem; }
   .j-menu-eh {
     margin: 0 0 0.7rem;
     font-size: 0.62rem;
@@ -456,6 +517,28 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     transition: color 0.3s, border-color 0.3s;
   }
   .j-menu-links a:is(:hover, :focus-visible) { color: var(--gold-bright); border-color: var(--gold-bright); }
+
+  /* the static-tier pointer and the legal line — the footer's last two
+     residents, in the footer's own small muted voice */
+  .j-menu-note {
+    margin: 1.5rem 0 0.7rem;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .j-menu-note a {
+    color: var(--gold-bright);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.5);
+    transition: border-color 0.3s;
+  }
+  .j-menu-note a:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
+  .j-menu-legal {
+    margin: 0;
+    font-size: 0.7rem;
+    line-height: 1.6;
+    color: rgba(201, 191, 168, 0.6);
+  }
 
   /* --- chapter copy: stable at rests, released during major travel --- */
   .j-copy { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
@@ -735,7 +818,9 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   /* Final restage (17-final-field.md): the epilogue copy floats on the dark
      cutaway wedge in the lower-left corner, giving the upper frame to the
-     mushroom field. bottom clears the footer cue's band (2.6vh + its box). */
+     mushroom field. (The 9vh bottom was chosen to clear the footer cue's
+     band; the cue is gone — navigation redux, 2026-08-09 — and the offset
+     stays because the composition was signed off with it.) */
   .j-block.pos-bottomleft { left: 5.2vw; bottom: 9vh; }
 
   /* ============================================================
@@ -762,8 +847,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      a fallback serif cannot tip it to three lines.
 
      The block only widens; it does not move. Its left edge and bottom
-     are unchanged, so it still floats on the same dark cutaway wedge
-     and still clears the footer cue.
+     are unchanged, so it still floats on the same dark cutaway wedge.
      ============================================================ */
   .j-block.pos-bottomleft { max-width: 46rem; }
 
@@ -1218,151 +1302,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
 
   /* ============================================================
-     W4-E — post-epilogue footer + the rest-side cue (PS-5.1).
-
-     Built by core/ui-footer.js, which sets opacity and the small rise
-     PER FRAME from journey progress. There are deliberately no CSS
-     transitions on opacity/transform here: a transition would fight the
-     scrub (and would then have to be unwound for reduced motion). The
-     reduced-motion branch lives in JS — it drops the rise entirely and
-     switches the footer as a state rather than a fade.
-     ============================================================ */
-  .j-footer[hidden], .j-foot-cue[hidden] { display: none; }
-
-  .j-footer {
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    z-index: 4;
-    padding: 1.9rem 3.4rem 1.7rem;
-    max-height: 62vh;
-    overflow-y: auto;
-    opacity: 0;
-    background: rgba(7, 5, 1, 0.95);
-    border-top: 1px solid rgba(217, 164, 65, 0.22);
-  }
-  /* feathers the hard edge of the panel into the epilogue's dark field */
-  .j-footer::before {
-    content: "";
-    position: absolute;
-    left: 0; right: 0; bottom: 100%;
-    height: 5.5rem;
-    pointer-events: none;
-    background: linear-gradient(to top, rgba(7, 5, 1, 0.9), rgba(7, 5, 1, 0));
-  }
-  .j-foot-wrap { width: min(62rem, 100%); }
-  .j-foot-h {
-    margin: 0 0 0.9rem;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.26em;
-    text-transform: uppercase;
-    color: var(--gold);
-  }
-  .j-foot-cols {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;    /* columns size to content, tops align */
-    gap: 0.2rem 3.2rem;
-    margin: 0 0 1rem;
-  }
-  .j-foot-cols > * { flex: 0 0 auto; }
-  /* The footer's chapter list is a bare <nav>, so it is in reach of the hero's
-     own `nav {}` rule (padding + justify-content + the `fade-on` entry
-     animation). `animation: none` is the load-bearing one: fill-mode `both`
-     would pin its opacity at the animation's end value. Reset, don't inherit.
-     (The side navigator is a <nav> too and takes the same care — see
-     `.j-rail`, which states its own position, padding and opacity outright.) */
-  .j-foot-nav { display: block; padding: 0; animation: none; }
-  .j-foot-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.1rem 1.6rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .j-foot-links a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 30px;                 /* pointer target; 44px at <=900px */
-    color: var(--parchment);
-    text-decoration: none;
-    font-size: 0.86rem;
-    border-bottom: 1px solid rgba(217, 164, 65, 0.4);
-    transition: color 0.3s, border-color 0.3s;
-  }
-  .j-foot-links a:is(:hover, :focus-visible) {
-    color: var(--gold-bright);
-    border-color: var(--gold-bright);
-  }
-  .j-foot-nav .j-foot-links a {
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--gold-bright);
-  }
-  .j-foot-note, .j-foot-legal {
-    margin: 0 0 0.7rem;
-    max-width: 46rem;
-    font-size: 0.78rem;
-    line-height: 1.6;
-    color: var(--muted);
-  }
-  .j-foot-note a {
-    color: var(--gold-bright);
-    text-decoration: none;
-    border-bottom: 1px solid rgba(217, 164, 65, 0.5);
-    transition: border-color 0.3s;
-  }
-  .j-foot-note a:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
-  .j-foot-legal {
-    margin: 0;
-    color: rgba(201, 191, 168, 0.6);
-    font-size: 0.72rem;
-  }
-
-  /* The cue at the epilogue rest: the keyboard route to the footer, and the
-     only thing this layer puts over the epilogue composition. It rides the
-     epilogue copy's own opacity and retires as the footer arrives. */
-  .j-foot-cue {
-    position: fixed;
-    left: 50%;
-    /* the floor matters: a pure vh offset collapses to 0 in a degenerate
-       layout pass (a zero-height viewport during a resize or an unrendered
-       tab) and parks the cue against the top edge of the frame instead of
-       the bottom of the composition */
-    bottom: max(18px, 2.6vh);
-    z-index: 2;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.5rem 0.9rem;
-    transform: translateX(-50%);
-    opacity: 0;
-    background: none;
-    border: 0;
-    color: rgba(201, 191, 168, 0.66);
-    font: inherit;
-    font-size: 0.62rem;
-    font-weight: 600;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    text-shadow: 0 1px 12px rgba(10, 6, 2, 0.9);
-    cursor: pointer;
-    transition: color 0.3s;
-  }
-  .j-foot-cue-arr {
-    width: 7px; height: 7px;
-    border-right: 1px solid currentColor;
-    border-bottom: 1px solid currentColor;
-    transform: translateY(-2px) rotate(45deg);
-    transition: transform 0.3s;
-  }
-  .j-foot-cue:is(:hover, :focus-visible) { color: var(--gold-bright); }
-  .j-foot-cue:is(:hover, :focus-visible) .j-foot-cue-arr { transform: translateY(1px) rotate(45deg); }
-
-  /* ============================================================
      THE NODE INDEX (journey/ui-index.js, 24-mobile-pass.md).
 
      Owned's arc is 3.5x wider than a phone's portrait frustum, so
@@ -1612,10 +1551,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-hot:focus-visible,
   .j-pop a:focus-visible,
   .j-card :is(a, button):focus-visible,
-  .j-footer :is(a, button):focus-visible,
   .j-index :is(a, button):focus-visible,
-  .j-index-cue:focus-visible,
-  .j-foot-cue:focus-visible {
+  .j-index-cue:focus-visible {
     outline: 2px solid var(--gold-bright);
     outline-offset: 3px;
     border-radius: 2px;
@@ -1628,9 +1565,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-card-link:is(:hover, :focus-visible) { border-bottom-color: var(--gold-bright); }
 
   @media (max-width: 900px) {
-    .j-footer { padding: 1.8rem 6vw 1.6rem; }
-    .j-foot-cols { gap: 0.2rem 1.8rem; }
-    .j-foot-links a { min-height: 44px; }   /* PL-1.4 touch target */
     /* PL-1.4 again: the pair's desktop box is ~37px tall. The pills keep their
        silhouette and gain the touch minimum in height only, so they still read
        as the hero's pill rather than as two slabs. */
@@ -1660,27 +1594,26 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      ============================================================ */
   @media (pointer: coarse), (max-width: 720px) {
     /* Only the controls that are `static` by default need a containing block.
-       .j-hot and .j-card-x are absolute and .j-foot-cue is fixed — a blanket
-       `position: relative` here would RESET those (equal specificity, later in
-       the sheet) and, in the bottom sheet, turn the close button into a
-       full-width flex item. The side navigator's own tiles are 44px tall by
-       construction (see .j-rail-item) and need nothing from this block. */
-    .j-foot-links a, .j-foot-note a, .j-card-link, .j-pop-link { position: relative; }
-    .j-menu-links a { position: relative; }
-    /* The index cue is small caps on a hairline chevron — 28px tall by design,
-       like the footer cue it borrows from, so it takes the same pad rather
-       than a bigger box. (The sheet's own controls need none: a row, the grip
-       and the close button are all 44px in the box already.) */
+       .j-hot and .j-card-x are absolute — a blanket `position: relative` here
+       would RESET those (equal specificity, later in the sheet) and, in the
+       bottom sheet, turn the close button into a full-width flex item. The
+       side navigator's own tiles are 44px tall by construction (see
+       .j-rail-item) and need nothing from this block. */
+    .j-card-link, .j-pop-link { position: relative; }
+    .j-menu-links a, .j-menu-ia, .j-menu-note a { position: relative; }
+    /* The index cue is small caps on a hairline chevron — 28px tall by
+       design, so it takes the same pad rather than a bigger box. (The sheet's
+       own controls need none: a row, the grip and the close button are all
+       44px in the box already.) */
     .j-index-cue { position: relative; }
     .j-index-cue::before,
     .j-menu-links a::before,
+    .j-menu-ia::before,
+    .j-menu-note a::before,
     .j-hot::before,
     .j-card-x::before,
     .j-card-link::before,
-    .j-pop-link::before,
-    .j-foot-cue::before,
-    .j-foot-links a::before,
-    .j-foot-note a::before {
+    .j-pop-link::before {
       content: "";
       position: absolute;
       left: 50%; top: 50%;
@@ -1717,22 +1650,23 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 
        What phone width does change is the EXPANSION. There is no hover here,
        so the expanded state is always a deliberate tap (rail.js's touch
-       model), and while it is open it is a panel over the composition rather
-       than a hint beside it — hence the fuller scrim and the slightly tighter
-       band. Deliberately NOT solved here: the broader mobile layout pass. */
-    .j-rail-item, .j-rail-menu { padding-left: 0.9rem; }
+       model), every name arrives with it (no hover to reveal them one at a
+       time), and while it is open the band is a panel over the composition
+       rather than a hint beside it — hence the fuller scrim and the tighter
+       tracking. Deliberately NOT solved here: the broader mobile layout pass. */
     .j-rail-inner::before {
-      inset: -2.8rem -2.2rem -2.8rem -2rem;
       /* FULLY opaque under the tiles, not merely dark. At 375 the expanded
          band unavoidably lies across the chapter copy — there is no width
          left to sit beside it — so it stops pretending to be a scrim and
          becomes a panel for as long as the visitor holds it open. At 0.96 the
          copy ghosted through the names; measured, "Learn more" was still
          legible under CONNECT. */
-      background: linear-gradient(to right, #090602 76%, rgba(9, 6, 2, 0));
+      background: linear-gradient(to left, #090602 76%, rgba(9, 6, 2, 0));
     }
     .j-rail-name { font-size: 0.58rem; letter-spacing: 0.22em; }
-    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-name { letter-spacing: 0.18em; }
+    .j-rail-item:is(:hover, :focus-visible) .j-rail-name,
+    .j-rail-menu:is(:hover, :focus-visible) .j-rail-name,
+    .j-rail-open .j-rail-name { letter-spacing: 0.18em; }
     /* THE COMPOSITION STEPS BACK (2026-08-07 mobile pass).
 
        The panel above stops the copy reading THROUGH the rail; it does not
@@ -1753,9 +1687,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        only, so a desktop hover is untouched. */
     .j-copy { transition: opacity 0.28s ease; }
     body.j-rail-on .j-copy { opacity: 0.14; }
-    /* the footer's link rows need the vertical room the bigger targets take */
-    .j-foot-links { gap: 0.35rem 1.6rem; }
-    .j-foot-cue { padding: 0.75rem 1rem; }
   }
 
   /* ============================================================
@@ -1867,9 +1798,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-block.pos-bottom { bottom: 6vh; }
     .j-block.pos-topright, .j-block.pos-topcentre { top: 8vh; }
     .j-block.pos-bottomleft { bottom: 7vh; }
-    /* the rail's band is taller than a 375px frame once every slot is
-       named; let it use the height it has and no more */
-    .j-rail-inner::before { inset: -1.2rem -2.2rem -1.2rem -2rem; }
+    /* the fanned band is taller than a short frame; trim the feather's
+       overhang so the scrim spends its height on the tiles, not the air */
+    .j-rail-inner::before {
+      top: calc(var(--cur, 0) * -44px - 22px - 1.2rem);
+      height: calc(var(--n, 5) * 44px + 52px + 2.4rem);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1895,20 +1829,19 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail, .j-rail-slot, .j-rail-item, .j-rail-name, .j-rail-menu,
     .j-rail-inner::before, .j-rail-menu .j-sym path,
     .j-menu, .j-menu-scrim, .j-menu-x, .j-menu-item, .j-menu-mark,
-    .j-menu-links a { transition: none; }
+    .j-menu-links a, .j-menu-ia, .j-menu-note a { transition: none; }
     /* the reticle's clockwise cascade is delay, not duration — kill both */
-    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck,
-    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.tr,
-    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.br,
-    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.bl {
+    .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck,
+    .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.tr,
+    .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.br,
+    .j-rail:is(.j-rail-hot, :focus-within, .j-rail-open) .j-rail-slot.active .j-rck.bl {
       transition: none;
       transition-delay: 0s;
     }
     .j-rck { transition: none; }
-    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-slot,
-    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-menu,
-    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-name,
-    .j-rail:is(:hover, :focus-within, .j-rail-open) .j-rail-menu .j-sym path { transition-delay: 0s; }
+    .j-rail-slot, .j-rail-menu { transition-delay: 0s; }
+    .j-rail.on .j-rail-menu .j-sym path,
+    .j-rail:focus-within .j-rail-menu .j-sym path { transition-delay: 0s; }
     .j-act, .j-act-link, .j-act-node { transition: none; }
     /* The two 2026-08-07 entries. Both are authored so that every keyframe
        ENDS at the element's resting style (hero.css's `.co` boot keeps the
@@ -1940,8 +1873,4 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        is named here: reduced motion SNAPS — the drag still follows the finger
        (direct manipulation), the release does not animate. */
     .j-card.sheet { transition: none; }
-    /* W4-E: the footer's own reveal is JS-driven and already instant under
-       reduced motion; these are the hover/focus tweens on the same surfaces. */
-    .j-foot-links a, .j-foot-note a, .j-foot-cue, .j-foot-cue-arr { transition: none; }
-    .j-foot-cue:is(:hover, :focus-visible) .j-foot-cue-arr { transform: translateY(-2px) rotate(45deg); }
   }

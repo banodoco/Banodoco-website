@@ -20,7 +20,7 @@
          headings and support copy, the three Inspire spotlights, the
          three Connect cards, the three ownership claims and their pod
          explanations, the complete 16-person contributor index, and
-         the footer links / social / legal line.
+         the site links / social / legal line (in the site-map menu).
        · The same #/<chapter>[/<node>] routes as the live journey, so
          a deep link handed to a Tier-3 visitor lands in the same place.
 
@@ -193,22 +193,30 @@
   .pill:hover { border-color: var(--ink); background: rgba(242, 237, 225, 0.06); }
 
   /* ============================================================
-     THE SIDE NAVIGATOR — Tier 3's copy of journey/rail.js.
+     THE RIGHT-SIDE NAVIGATOR — Tier 3's copy of journey/rail.js
+     (2026-08-09 redux; first built left-side 2026-08-07).
 
      Same component, same three states, same symbols (the marks are
      authored below from journey/symbols.js and the drift guard at the
      foot of this file asserts they still match, exactly as it does for
-     the copy). Replaces the `.chapters` row that used to sit in the
-     header; the wordmark and the 2RP / Discord pair are unchanged.
+     the copy). The resting state is TWO symbols at the vertical centre
+     of the right edge — the current section's mark and the menu mark —
+     and the fan is ANCHORED on the current mark: slot i sits at
+     (--i - --cur) tiles from the anchor, so the mark the pointer is on
+     never moves when the rest fan out from behind it. The menu panel
+     is the whole SITE MAP: sections, their contents, outbound links,
+     the tier note and the legal line. There is no separate footer on
+     this page any more — the panel replaced it here exactly as it did
+     on the live tier.
 
-     TWO DELIBERATE DIVERGENCES FROM TIER 1, both forced by this page's
-     own contract ("Not JS-dependent for content ... the page is
+     THREE DELIBERATE DIVERGENCES FROM TIER 1, all forced by this
+     page's own contract ("Not JS-dependent for content ... the page is
      complete with no JS at all"):
 
        1. NO REVEAL LATCH. Tier 1 keeps the rail dark at the Mission
           pose so the captured reference frame does not move. There is
           no captured frame here — the still IS the capture — so the
-          rail is simply always present, exactly as `.chapters` was.
+          rail is simply always present.
 
        2. THE MENU IS A <details>. Tier 1's is a modal dialog with a
           focus trap, which needs script. A <details>/<summary> is a
@@ -219,108 +227,129 @@
           <summary> becomes the panel's header — which is what keeps a
           no-JS visitor's way out visible and clickable.
 
-     The expansion is :hover / :focus-within only: no script, and no
-     touch-arming branch (Tier 1's `.j-rail-open`). A tap on a phone
-     therefore follows the link under it rather than expanding first,
-     which is the right trade for a page whose whole content is already
-     one scroll away below.
+       3. EXPANSION IS :hover / :focus-within ONLY — no script, and no
+          touch-arming branch (Tier 1's `.j-rail-open`). A tap on a
+          phone therefore follows the link under it rather than
+          expanding first, which is the right trade for a page whose
+          whole content is already one scroll away below. The fan
+          opens from the LIST's hover (pointing at the menu mark does
+          not unfold the sections), matching Tier 1's separation of
+          the two resting controls.
+
+     NO-JS: `.now`, `--cur` and `aria-current` need script, and without
+     them the resting state would be a stack of invisible marks. So
+     under `.no-js` the rail ships EXPANDED — every section visible,
+     named and linked — with `--cur` defaulting to 2 so the fan hangs
+     centred. Mission is also authored `class="rail-slot now"` so the
+     first scripted paint is right before the scroll observer speaks.
      ============================================================ */
   .rail {
     position: fixed;
-    left: 0;
+    right: 0;
     top: 0; bottom: 0;
     z-index: 5;
-    /* Centred by FLEX, not by `top:50%` + `translateY(-50%)`. A transform on
-       an ancestor becomes the containing block for `position: fixed`
-       descendants, and the open menu below is exactly that — it would have
-       been positioned against this 260px rail instead of against the
-       viewport, and rendered as a clipped stub. */
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    /* the fan geometry — JS keeps --cur current; 2 centres the no-JS fan */
+    --cur: 2;
+    --n: 5;
     pointer-events: none;
   }
-  .rail-inner { position: relative; display: flex; flex-direction: column; padding: 0.5rem 0; }
+  .rail-inner { position: relative; width: 52px; height: 0; }
   .rail-inner::before {
     content: "";
     position: absolute;
-    /* -2.8rem is the feather's room: the mask fades over a fixed 34px and must
-       not reach the first or last tile. See journey/site.css. */
-    inset: -2.8rem -2.6rem -2.8rem -2rem;
+    right: 0;
+    width: 6rem;
+    top: calc(var(--cur) * -44px - 22px - 2.4rem);
+    height: calc(var(--n) * 44px + 52px + 4.8rem);
     z-index: -1;
     opacity: 0;
-    background: linear-gradient(to right, rgba(9, 6, 2, 0.95) 58%, rgba(9, 6, 2, 0));
+    background: linear-gradient(to left, rgba(9, 6, 2, 0.82) 22%, rgba(9, 6, 2, 0));
     -webkit-mask-image: linear-gradient(to bottom, transparent, #000 34px, #000 calc(100% - 34px), transparent);
     mask-image: linear-gradient(to bottom, transparent, #000 34px, #000 calc(100% - 34px), transparent);
     transition: opacity 0.35s ease;
   }
   .rail-list { display: block; margin: 0; padding: 0; list-style: none; }
+  .rail-slot {
+    position: absolute;
+    top: -22px; right: 0;
+    opacity: 0;
+    transform: translateY(0);
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+    transition-delay: calc(var(--d, 0) * 0.035s);
+  }
+  .rail-slot.now { opacity: 1; }
   .rail-item {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 0.85rem;
-    height: 44px;                       /* PL-1.4, and the tiles ABUT */
-    padding: 0 1rem 0 1.1rem;
+    justify-content: center;
+    width: 52px;
+    height: 44px;
     color: rgba(201, 191, 168, 0.52);
     text-decoration: none;
     transition: color 0.3s;
   }
   a.rail-item, .rail-menu { pointer-events: auto; }
-  /* `body:not(.no-js)` is not decoration: this pair is far more specific than
-     the .no-js overrides below, so without the guard a scripting-disabled
-     visitor would see the whole rail and be able to click none of it. */
-  body:not(.no-js) .rail:not(:hover):not(:focus-within) .rail-slot:not(.now) a.rail-item,
-  body:not(.no-js) .rail:not(:hover):not(:focus-within) .rail-menu { pointer-events: none; }
+  /* At rest only the CURRENT tile is live in the stack — the collapse rules
+     are body:not(.no-js)-guarded so a scripting-disabled visitor can click
+     everything the always-expanded rail shows. */
+  body:not(.no-js) .rail:not(:focus-within) .rail-list:not(:hover)
+    .rail-slot:not(.now) a.rail-item { pointer-events: none; }
   .rail-mark { position: relative; flex: 0 0 auto; display: block; width: 24px; height: 24px; }
   .sym { display: block; width: 24px; height: 24px; overflow: visible; }
   .sym path { fill: none; stroke: currentColor; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
   .sym circle { fill: currentColor; stroke: none; }
+
+  /* the names: revealed per mark, on their own scrim pills to the left */
   .rail-name {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 0.1rem;
+    padding: 0.34rem 0.7rem;
+    border-radius: 2px;
+    background: rgba(9, 6, 2, 0.85);
     font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.3em;
     text-transform: uppercase;
     white-space: nowrap;
-    text-shadow: 0 1px 12px rgba(10, 6, 2, 0.9);
+    color: var(--parchment);
+    pointer-events: none;
     opacity: 0;
-    transition: opacity 0.34s ease, letter-spacing 0.34s ease;
+    transition: opacity 0.24s ease, letter-spacing 0.24s ease;
   }
-  /* RESTING: one symbol, the section on screen */
-  .rail-slot { opacity: 0; transition: opacity 0.34s ease; }
-  .rail-slot.now { opacity: 1; }
-  /* NO-JS: `.now` and `aria-current` are the only things on this page that
-     need script, and without them the resting state would be an empty rail —
-     the one way this component could fail the page's "complete with no JS at
-     all" contract. With no script it simply ships EXPANDED: every section
-     visible, named and linked, which is the honest fallback for a navigator
-     that cannot know where you are. JS removes `.no-js` on boot. */
-  .no-js .rail-slot,
-  .no-js .rail-menu { opacity: 1; }
-  .no-js .rail-name { opacity: 1; letter-spacing: 0.24em; }
-  .no-js .rail-inner::before { opacity: 1; }
-  .no-js .rail-menu .sym path { stroke-dashoffset: 0; }
+  .rail-item:is(:hover, :focus-visible) .rail-name,
+  .rail-menu:is(:hover, :focus-visible) .rail-name { opacity: 1; letter-spacing: 0.24em; }
+
+  /* RESTING: the current mark, lit */
   .rail-slot.now .rail-item { color: rgba(228, 182, 102, 0.82); }
   .rail-slot.now .sym { filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.4)); }
-  .rail-menu { opacity: 0; transition: opacity 0.34s ease; }
-  /* EXPANDED */
-  .rail:is(:hover, :focus-within) .rail-inner::before { opacity: 1; }
-  .rail:is(:hover, :focus-within) .rail-slot,
-  .rail:is(:hover, :focus-within) .rail-menu {
+
+  /* EXPANDED: hover on the section stack, or keyboard focus anywhere */
+  .rail:focus-within .rail-inner::before,
+  .rail-inner:has(.rail-list:hover)::before { opacity: 1; }
+  .rail:focus-within .rail-slot,
+  .rail-list:hover .rail-slot {
     opacity: 1;
-    transition-delay: calc(var(--k, 0) * 0.045s);
+    transform: translateY(calc((var(--i, 0) - var(--cur)) * 44px));
   }
-  .rail:is(:hover, :focus-within) .rail-name {
-    opacity: 1;
-    letter-spacing: 0.24em;
-    transition-delay: calc(var(--k, 0) * 0.045s + 0.06s);
-  }
-  .rail:is(:hover, :focus-within) .rail-item { color: rgba(201, 191, 168, 0.62); }
-  .rail:is(:hover, :focus-within) .rail-slot.now .rail-item,
-  .rail:is(:hover, :focus-within) .rail-slot a[aria-current="true"] { color: var(--gold-bright); }
+  .rail:focus-within .rail-item,
+  .rail-list:hover .rail-item { color: rgba(201, 191, 168, 0.62); }
+  .rail:focus-within .rail-slot.now .rail-item,
+  .rail-list:hover .rail-slot.now .rail-item,
+  .rail:focus-within .rail-slot a[aria-current="true"],
+  .rail-list:hover .rail-slot a[aria-current="true"] { color: var(--gold-bright); }
   .rail-item:is(:hover, :focus-visible) { color: var(--parchment); }
   .rail-echo .rail-item { cursor: default; }
-  .rail:is(:hover, :focus-within) .rail-echo:not(.now) .rail-item { color: rgba(201, 191, 168, 0.32); }
-  /* the reticle, on the current entry — hero.css's `.co .ck`, as Tier 1 */
+  .rail:focus-within .rail-echo:not(.now) .rail-item,
+  .rail-list:hover .rail-echo:not(.now) .rail-item { color: rgba(201, 191, 168, 0.32); }
+
+  /* the reticle on the current entry, exactly Tier 1's */
   .rail-ret { position: absolute; inset: -5px; display: block; pointer-events: none; }
   .rck {
     position: absolute;
@@ -333,85 +362,99 @@
   .rck.tr { top: 0;    right: 0; border-top: 1px solid var(--rck);    border-right: 1px solid var(--rck); transform: translate(-6px, 6px)  scale(0.4); }
   .rck.br { bottom: 0; right: 0; border-bottom: 1px solid var(--rck); border-right: 1px solid var(--rck); transform: translate(-6px, -6px) scale(0.4); }
   .rck.bl { bottom: 0; left: 0;  border-bottom: 1px solid var(--rck); border-left: 1px solid var(--rck);  transform: translate(6px, -6px)  scale(0.4); }
-  .rail:is(:hover, :focus-within) a[aria-current="true"] .rck {
+  .rail:focus-within a[aria-current="true"] .rck,
+  .rail-list:hover a[aria-current="true"] .rck {
     opacity: 1;
     transform: translate(0, 0) scale(1);
-    transition: opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--k, 0) * 0.045s + 0.1s),
-                transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--k, 0) * 0.045s + 0.1s);
+    transition: opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--d, 0) * 0.035s + 0.1s),
+                transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--d, 0) * 0.035s + 0.1s);
   }
-  .rail:is(:hover, :focus-within) a[aria-current="true"] .rck.tr { transition-delay: calc(var(--k, 0) * 0.045s + 0.15s); }
-  .rail:is(:hover, :focus-within) a[aria-current="true"] .rck.br { transition-delay: calc(var(--k, 0) * 0.045s + 0.20s); }
-  .rail:is(:hover, :focus-within) a[aria-current="true"] .rck.bl { transition-delay: calc(var(--k, 0) * 0.045s + 0.25s); }
+  .rail:focus-within a[aria-current="true"] .rck.tr,
+  .rail-list:hover a[aria-current="true"] .rck.tr { transition-delay: calc(var(--d, 0) * 0.035s + 0.15s); }
+  .rail:focus-within a[aria-current="true"] .rck.br,
+  .rail-list:hover a[aria-current="true"] .rck.br { transition-delay: calc(var(--d, 0) * 0.035s + 0.20s); }
+  .rail:focus-within a[aria-current="true"] .rck.bl,
+  .rail-list:hover a[aria-current="true"] .rck.bl { transition-delay: calc(var(--d, 0) * 0.035s + 0.25s); }
 
-  /* ---------- the menu control and its panel ---------- */
-  .rail-menu-wrap { position: relative; }
+  /* ---- the menu control: the second resting symbol ---- */
+  .rail-menu-wrap {
+    position: absolute;
+    top: -22px; right: 0;
+    transform: translateY(52px);
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .rail:focus-within .rail-menu-wrap,
+  .rail-inner:has(.rail-list:hover) .rail-menu-wrap {
+    transform: translateY(calc((var(--n) - 1 - var(--cur)) * 44px + 52px));
+  }
   .rail-menu {
-    position: relative;
     display: flex;
     align-items: center;
-    gap: 0.85rem;
+    justify-content: center;
+    width: 52px;
     height: 44px;
-    margin-top: 0.55rem;
-    padding: 0 1.05rem 0 1.1rem;
-    background: rgba(18, 12, 4, 0.5);
-    border: 1px solid rgba(217, 164, 65, 0.42);
-    border-left: 0;
-    border-radius: 0 999px 999px 0;
-    color: var(--gold-bright);
+    color: rgba(217, 164, 65, 0.6);
     cursor: pointer;
-    list-style: none;                    /* kill the disclosure triangle */
-    transition: opacity 0.34s ease, color 0.3s, border-color 0.3s, background 0.3s;
+    list-style: none;
+    transition: color 0.3s;
   }
   .rail-menu::-webkit-details-marker { display: none; }
   .rail-menu::before {
     content: "";
     position: absolute;
-    left: 1.1rem; right: 1.4rem;
-    top: -0.3rem;
+    top: -4px;
+    left: 50%;
+    width: 24px;
     height: 1px;
-    background: rgba(217, 164, 65, 0.24);
+    transform: translateX(-50%);
+    background: rgba(217, 164, 65, 0.26);
   }
-  .rail-menu .rail-name { font-weight: 700; color: var(--gold-bright); }
-  .rail-menu:is(:hover, :focus-visible) {
-    color: #ffe6ac;
-    border-color: var(--gold-bright);
-    background: rgba(24, 16, 5, 0.72);
-  }
-  .rail-menu .sym path { stroke-dasharray: 12; stroke-dashoffset: 12; transition: stroke-dashoffset 0.4s ease; }
-  .rail:is(:hover, :focus-within) .rail-menu .sym path {
-    stroke-dashoffset: 0;
-    transition-delay: calc(var(--k, 0) * 0.045s + 0.08s);
-  }
+  .rail-menu:is(:hover, :focus-visible) { color: var(--gold-bright); }
 
-  /* OPEN: the <details> itself becomes the panel, and its <summary> becomes
-     the panel's header row — so the control that closes it is on top of it and
-     needs no script to work. */
+  /* OPEN: the <details> itself becomes the panel — from the RIGHT — and its
+     <summary> becomes the panel's header row, so the control that closes it
+     is on top of it and needs no script to work. `transform: none` is
+     load-bearing: a transformed ancestor would become the containing block
+     for this fixed panel and clip it to the rail (the gotcha recorded in
+     23-side-navigator.md §8). */
   .rail-menu-wrap[open] {
     position: fixed;
-    left: 0; top: 0; bottom: 0;
+    right: 0; top: 0; bottom: 0;
+    left: auto;
+    transform: none;
     z-index: 7;
-    width: min(27rem, 92vw);
+    width: min(29rem, 92vw);
     padding: 1.1rem 2.2rem 2.4rem;
     overflow-y: auto;
     overscroll-behavior: contain;
     background: #0b0702;
-    border-right: 1px solid rgba(217, 164, 65, 0.3);
-    box-shadow: 24px 0 70px rgba(0, 0, 0, 0.6);
+    border-left: 1px solid rgba(217, 164, 65, 0.3);
+    box-shadow: -24px 0 70px rgba(0, 0, 0, 0.6);
     pointer-events: auto;
   }
   .rail-menu-wrap[open] .rail-menu {
-    opacity: 1;
+    width: auto;
     margin: 0 0 1.4rem;
-    padding: 0 1.05rem 0 0.9rem;
+    padding: 0.4rem 0.9rem 0.4rem 1.05rem;
     border-radius: 999px;
-    border-left: 1px solid rgba(217, 164, 65, 0.42);
+    border: 1px solid rgba(217, 164, 65, 0.42);
     justify-content: space-between;
+    gap: 0.85rem;
   }
   .rail-menu-wrap[open] .rail-menu::before { display: none; }
-  .rail-menu-wrap[open] .rail-name { opacity: 1; letter-spacing: 0.24em; }
+  .rail-menu-wrap[open] .rail-name {
+    position: static;
+    transform: none;
+    background: none;
+    padding: 0;
+    margin: 0;
+    opacity: 1;
+    letter-spacing: 0.24em;
+    font-weight: 700;
+    color: var(--gold-bright);
+  }
   .rail-menu-x { display: none; margin-left: auto; font-size: 0.9rem; line-height: 1; }
   .rail-menu-wrap[open] .rail-menu-x { display: inline; }
-  .rail-menu-wrap[open] .rail-menu .sym path { stroke-dashoffset: 0; }
   /* the scrim: present only while open, and only useful with JS (which wires
      the click-to-close); with no JS it is simply the dimming behind the panel */
   .menu-scrim {
@@ -424,20 +467,20 @@
   .rail-menu-wrap[open] .menu-scrim { display: block; }
 
   .menu-h { margin: 0 0 0.9rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold); }
-  .menu-lede { margin: 0 0 1.9rem; font-size: 0.86rem; line-height: 1.65; color: var(--muted); }
+  .menu-lede { margin: 0 0 1.7rem; font-size: 0.86rem; line-height: 1.65; color: var(--muted); }
   .menu-nav { display: block; }
   .menu-list { margin: 0; padding: 0; list-style: none; }
+  .menu-list > li { border-top: 1px solid rgba(217, 164, 65, 0.16); }
+  .menu-list > li:last-child { border-bottom: 1px solid rgba(217, 164, 65, 0.16); }
   .menu-item {
     display: flex;
     align-items: flex-start;
     gap: 1rem;
-    padding: 0.85rem 0.6rem 0.85rem 0;
-    border-top: 1px solid rgba(217, 164, 65, 0.16);
+    padding: 0.85rem 0.6rem 0.7rem 0;
     color: var(--parchment);
     text-decoration: none;
     transition: color 0.3s, background 0.3s;
   }
-  .menu-list li:last-child .menu-item { border-bottom: 1px solid rgba(217, 164, 65, 0.16); }
   .menu-mark { flex: 0 0 auto; margin-top: 0.15rem; color: rgba(217, 164, 65, 0.66); transition: color 0.3s; }
   .menu-no { display: inline-block; margin-right: 0.6em; font-size: 0.58rem; font-weight: 500; letter-spacing: 0.14em; color: rgba(217, 164, 65, 0.5); }
   .menu-name { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; }
@@ -454,7 +497,24 @@
   .menu-item[aria-current="true"],
   .menu-item[aria-current="true"] .menu-mark,
   .menu-item[aria-current="true"] .menu-no { color: var(--gold-bright); }
-  .menu-else { margin-top: 1.9rem; }
+
+  /* a section's contents: item — one sentence → primary link */
+  .menu-sub { margin: 0; padding: 0 0.6rem 0.9rem 2.4rem; list-style: none; }
+  .menu-row { margin: 0 0 0.5rem; font-size: 0.8rem; line-height: 1.55; color: var(--muted); }
+  .menu-row:last-child { margin-bottom: 0; }
+  .menu-il { color: var(--parchment); font-weight: 600; }
+  .menu-il::after { content: " — "; color: rgba(201, 191, 168, 0.45); font-weight: 400; }
+  .menu-ia {
+    margin-left: 0.45em;
+    color: var(--gold-bright);
+    text-decoration: none;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.4);
+  }
+  .menu-ia::after { content: " \2192"; }
+  .menu-ia:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
+
+  .menu-else { margin-top: 1.7rem; }
   .menu-eh { margin: 0 0 0.7rem; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(217, 164, 65, 0.75); }
   .menu-links { display: flex; flex-wrap: wrap; gap: 0.2rem 1.5rem; margin: 0; padding: 0; list-style: none; }
   .menu-links a {
@@ -468,6 +528,25 @@
   }
   .menu-links a:is(:hover, :focus-visible) { color: var(--gold-bright); border-color: var(--gold-bright); }
 
+  /* the tier note and the legal line — the old footer's last residents */
+  .menu-note { margin: 1.5rem 0 0.7rem; font-size: 0.78rem; line-height: 1.6; color: var(--muted); }
+  .menu-note a { color: var(--gold-bright); }
+  .menu-legal { margin: 0; font-size: 0.7rem; line-height: 1.6; color: rgba(201, 191, 168, 0.6); }
+
+  /* NO-JS: the honest fallback for a navigator that cannot know where you
+     are — permanently expanded, every section visible, named and linked. */
+  .no-js .rail-slot,
+  .no-js .rail-menu-wrap:not([open]) {
+    opacity: 1;
+    transform: translateY(calc((var(--i, 0) - var(--cur)) * 44px));
+  }
+  .no-js .rail-menu-wrap:not([open]) {
+    transform: translateY(calc((var(--n) - 1 - var(--cur)) * 44px + 52px));
+  }
+  .no-js .rail-name { opacity: 1; letter-spacing: 0.24em; }
+  .no-js .rail-inner::before { opacity: 1; }
+  .no-js .rail-item { color: rgba(201, 191, 168, 0.62); }
+
   /* ============================================================
      CHAPTERS
      ============================================================ */
@@ -476,13 +555,14 @@
     display: flex;
     align-items: center;
     min-height: 100vh;
-    /* The left gutter is the side navigator's. Tier 1's chapter copy sits out
-       in the middle of a full-bleed scene and never comes near the rail; here
-       the content is a document flush to the page, so the expanded rail would
-       lie across the start of every line. Giving it a lane is cheaper and
-       cleaner than making the scrim opaque enough to win a fight with the
-       panel underneath it. */
-    padding: 8rem 3.4rem 6rem 11rem;
+    /* The right gutter is the side navigator's (right flank since the
+       2026-08-09 redux). Tier 1's chapter copy sits out in the middle of a
+       full-bleed scene and never comes near the rail; here the content is a
+       document flush to the page, so the expanded rail (and its name pills,
+       which grow leftward) would lie across the end of every line. Giving it
+       a lane is cheaper and cleaner than making the scrim opaque enough to
+       win a fight with the panel underneath it. */
+    padding: 8rem 11rem 6rem 3.4rem;
   }
   .chapter > .inner {
     width: min(46rem, 100%);
@@ -610,43 +690,6 @@
   .c-blurb { display: block; font-size: 0.85rem; color: var(--muted); }
   .index-note { margin: 0 0 1.1rem; font-size: 0.88rem; color: var(--muted); }
 
-  /* ---------- footer ---------- */
-  .site-footer {
-    position: relative;
-    z-index: 1;
-    padding: 3rem 3.4rem 4rem;
-    background: rgba(7, 5, 1, 0.94);
-    border-top: 1px solid rgba(217, 164, 65, 0.2);
-  }
-  .site-footer .fwrap { width: min(58rem, 100%); }
-  .site-footer h2 {
-    font-size: 1.1rem;
-    font-family: inherit;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 1rem;
-  }
-  .flinks { display: flex; flex-wrap: wrap; gap: 0.4rem 2rem; margin: 0 0 1.4rem; padding: 0; list-style: none; }
-  .flinks a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    color: var(--parchment);
-    text-decoration: none;
-    font-size: 0.9rem;
-    border-bottom: 1px solid rgba(217, 164, 65, 0.45);
-  }
-  .flinks a:hover { color: var(--gold-bright); }
-  .legal { margin: 0; max-width: 46rem; font-size: 0.8rem; color: var(--muted); }
-  .tier-note {
-    margin: 1.6rem 0 0;
-    max-width: 46rem;
-    font-size: 0.78rem;
-    color: rgba(201, 191, 168, 0.75);
-  }
-  .tier-note a { color: var(--gold-bright); }
-
   /* ---------- focus visibility (BASELINE §7 records the hero has none) ---------- */
   a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
     outline: 2px solid var(--gold-bright);
@@ -667,27 +710,26 @@
     /* The header is wordmark + CTAs now (~315px at 375), so the chapter row no
        longer has to wrap onto a third line and the sections no longer have to
        clear it — hence the smaller top padding and scroll offset. */
-    .chapter { padding: 7rem 6vw 4rem 4.2rem; min-height: auto; }
+    .chapter { padding: 7rem 4.2rem 4rem 6vw; min-height: auto; }
     .chapter > .inner { padding: 1.6rem 1.4rem 1.8rem; }
-    .site-footer { padding: 2.5rem 6vw 3.5rem; }
     html { scroll-padding-top: 6.5rem; }
     .node-short, .node-d { margin-left: 0; }
-    /* The rail sits over the left edge of the section panels at phone widths.
-       The panels are the page's content and they win, so the rail keeps only
-       the width its resting symbol needs and its names ride over the panel
-       (against the fuller scrim) only while it is deliberately expanded. */
-    .rail-item, .rail-menu { padding-left: 0.9rem; }
+    /* The rail sits over the right edge of the section panels at phone
+       widths. The panels are the page's content and they win, so the rail
+       keeps only the width its resting symbols need, and its names ride over
+       the panel (against the fuller scrim) only while it is deliberately
+       expanded. */
     .rail-name { font-size: 0.58rem; letter-spacing: 0.22em; }
-    .rail:is(:hover, :focus-within) .rail-name { letter-spacing: 0.18em; }
+    .rail-item:is(:hover, :focus-visible) .rail-name,
+    .rail-menu:is(:hover, :focus-visible) .rail-name { letter-spacing: 0.18em; }
     .rail-inner::before {
-      inset: -2.8rem -2.2rem -2.8rem -2rem;
       /* FULLY opaque under the tiles, not merely dark. At 375 the expanded
          band unavoidably lies across the chapter copy — there is no width
          left to sit beside it — so it stops pretending to be a scrim and
          becomes a panel for as long as the visitor holds it open. At 0.96 the
          copy ghosted through the names; measured, "Learn more" was still
          legible under CONNECT. */
-      background: linear-gradient(to right, #090602 76%, rgba(9, 6, 2, 0));
+      background: linear-gradient(to left, #090602 76%, rgba(9, 6, 2, 0));
     }
   }
 
@@ -704,19 +746,21 @@
        three states intact and instant — one symbol at rest, all of them under
        hover / focus, the reticle already locked in, the menu's filaments
        already drawn. Same contract as the live tier's. */
-    .rail-slot, .rail-item, .rail-name, .rail-menu, .rail-inner::before,
-    .rail-menu .sym path, .rck, .menu-item, .menu-mark, .menu-links a { transition: none; }
-    .rail:is(:hover, :focus-within) .rail-slot,
-    .rail:is(:hover, :focus-within) .rail-menu,
-    .rail:is(:hover, :focus-within) .rail-name,
-    .rail:is(:hover, :focus-within) .rail-menu .sym path,
-    .rail:is(:hover, :focus-within) a[aria-current="true"] .rck,
-    .rail:is(:hover, :focus-within) a[aria-current="true"] .rck.tr,
-    .rail:is(:hover, :focus-within) a[aria-current="true"] .rck.br,
-    .rail:is(:hover, :focus-within) a[aria-current="true"] .rck.bl {
+    .rail-slot, .rail-item, .rail-name, .rail-menu, .rail-menu-wrap,
+    .rail-inner::before, .rck,
+    .menu-item, .menu-mark, .menu-links a, .menu-ia, .menu-note a { transition: none; }
+    .rail:focus-within a[aria-current="true"] .rck,
+    .rail-list:hover a[aria-current="true"] .rck,
+    .rail:focus-within a[aria-current="true"] .rck.tr,
+    .rail-list:hover a[aria-current="true"] .rck.tr,
+    .rail:focus-within a[aria-current="true"] .rck.br,
+    .rail-list:hover a[aria-current="true"] .rck.br,
+    .rail:focus-within a[aria-current="true"] .rck.bl,
+    .rail-list:hover a[aria-current="true"] .rck.bl {
       transition: none;
       transition-delay: 0s;
     }
+    .rail-slot, .rail-menu-wrap { transition-delay: 0s; }
   }
 </style>
 </head>
@@ -765,7 +809,7 @@
       <!-- Mission is authored as `now` so the resting symbol is correct on the
            first paint, before the scroll observer has said anything — and so a
            no-JS visitor lands on a rail that is already marked. -->
-      <li class="rail-slot now" data-chapter="mission" style="--k:0">
+      <li class="rail-slot now" data-chapter="mission" style="--i:0">
         <a class="rail-item" href="#/mission" data-nav="mission">
           <span class="rail-mark">
             <svg class="sym" data-sym="mission" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.4 10.6 Q11 2.9 18.6 10.6"/><path d="M3.4 10.6 H18.6"/><path d="M9.8 10.6 V15.9 Q9.8 18.4 7.1 18.9"/><path d="M12.2 10.6 V15.9 Q12.2 18.4 14.9 18.9"/><path d="M2.2 18.9 H19.8"/></svg>
@@ -774,7 +818,7 @@
           <span class="rail-name" data-src="chapters.mission.nav">Mission</span>
         </a>
       </li>
-      <li class="rail-slot" data-chapter="inspire" style="--k:1">
+      <li class="rail-slot" data-chapter="inspire" style="--i:1">
         <a class="rail-item" href="#/inspire" data-nav="inspire">
           <span class="rail-mark">
             <svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="6.6" cy="10.4" r="0.95"/><circle cx="4.8" cy="8.8" r="0.82"/><circle cx="6.6" cy="7.4" r="0.68"/><circle cx="4" cy="6" r="0.7"/><circle cx="5.8" cy="4.2" r="0.58"/></svg>
@@ -783,7 +827,7 @@
           <span class="rail-name" data-src="chapters.inspire.nav">Inspire</span>
         </a>
       </li>
-      <li class="rail-slot" data-chapter="connect" style="--k:2">
+      <li class="rail-slot" data-chapter="connect" style="--i:2">
         <a class="rail-item" href="#/connect" data-nav="connect">
           <span class="rail-mark">
             <svg class="sym" data-sym="connect" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.8 8.4 H20.2"/><path d="M1.6 17.6 L6.2 14.8 L12.4 17.2 L17.8 13.2 L20.4 14.2"/><path d="M6.2 14.8 L9.4 10.0"/><path d="M17.8 13.2 L15.2 9.6"/><circle cx="6.2" cy="14.8" r="1.2"/><circle cx="12.4" cy="17.2" r="1"/><circle cx="17.8" cy="13.2" r="1.15"/></svg>
@@ -792,7 +836,7 @@
           <span class="rail-name" data-src="chapters.connect.nav">Connect</span>
         </a>
       </li>
-      <li class="rail-slot" data-chapter="owned" style="--k:3">
+      <li class="rail-slot" data-chapter="owned" style="--i:3">
         <a class="rail-item" href="#/owned" data-nav="owned">
           <span class="rail-mark">
             <svg class="sym" data-sym="owned" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle cx="11" cy="3.6" r="1.35"/><path d="M11 3.6 L3.4 15.6"/><path d="M11 3.6 L8.2 17.8"/><path d="M11 3.6 L13.8 17.8"/><path d="M11 3.6 L18.6 15.6"/><circle cx="3.4" cy="15.6" r="0.9"/><circle cx="8.2" cy="17.8" r="1.05"/><circle cx="13.8" cy="17.8" r="1.05"/><circle cx="18.6" cy="15.6" r="0.9"/></svg>
@@ -801,7 +845,7 @@
           <span class="rail-name" data-src="chapters.owned.nav">Owned</span>
         </a>
       </li>
-      <li class="rail-slot rail-echo" data-chapter="final" style="--k:4" aria-hidden="true">
+      <li class="rail-slot rail-echo" data-chapter="final" style="--i:4" aria-hidden="true">
         <span class="rail-item">
           <span class="rail-mark">
             <svg class="sym" data-sym="final" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.6 17.2 H20.4"/><path d="M8.2 11.4 Q12.4 6.2 16.6 11.4"/><path d="M8.2 11.4 H16.6"/><path d="M12.4 11.4 V17.2"/><path d="M2.0 13.8 Q4.8 10.6 7.6 13.8"/><path d="M4.8 13.8 V17.2"/><path d="M16.4 14.6 Q18.4 12.4 20.4 14.6"/><path d="M18.4 14.6 V17.2"/></svg>
@@ -812,7 +856,7 @@
     </ul>
 
     <details class="rail-menu-wrap" id="site-menu">
-      <summary class="rail-menu" style="--k:5">
+      <summary class="rail-menu">
         <span class="rail-mark">
           <svg class="sym" data-sym="menu" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle cx="4.2" cy="6.4" r="0.85"/><path d="M7.6 6.4 H18.4"/><circle cx="4.2" cy="11" r="0.85"/><path d="M7.6 11 H18.4"/><circle cx="4.2" cy="15.6" r="0.85"/><path d="M7.6 15.6 H16.2"/></svg>
         </span>
@@ -833,15 +877,33 @@
           <li><a class="menu-item" href="#/inspire" data-menu="inspire">
             <span class="menu-mark"><svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="6.6" cy="10.4" r="0.95"/><circle cx="4.8" cy="8.8" r="0.82"/><circle cx="6.6" cy="7.4" r="0.68"/><circle cx="4" cy="6" r="0.7"/><circle cx="5.8" cy="4.2" r="0.58"/></svg></span>
             <span class="menu-txt"><span class="menu-no">02</span><span class="menu-name">Inspire</span><span class="menu-line" data-src="chapters.inspire.heading">Inspire and empower.</span></span>
-          </a></li>
+          </a>
+          <!-- The section's contents: item — one sentence → primary link.
+               Same derivation as Tier 1 (nodes grouped by their `chapter`
+               field, insertion order); every string is data-src'd. -->
+          <ul class="menu-sub">
+            <li class="menu-row"><span class="menu-il" data-src="nodes.arca.label">Arca Gidan Prize</span><span class="menu-is" data-src="nodes.arca.short">A competition pushing open-source AI art further. [PLACEHOLDER]</span> <a class="menu-ia" href="#" data-placeholder data-src="nodes.arca.spotlight.link.label">Learn more</a></li>
+            <li class="menu-row"><span class="menu-il" data-src="nodes.artcompute.label">ArtCompute</span><span class="menu-is" data-src="nodes.artcompute.short">Practical compute for ambitious creators. [PLACEHOLDER]</span> <a class="menu-ia" href="#" data-placeholder data-src="nodes.artcompute.spotlight.link.label">Learn more</a></li>
+            <li class="menu-row"><span class="menu-il" data-src="nodes.tworp.label">2RP</span><span class="menu-is" data-src="nodes.tworp.short">Rigorous research in AI art. [PLACEHOLDER]</span> <a class="menu-ia" href="#" data-placeholder data-src="nodes.tworp.spotlight.link.label">Read the publication</a></li>
+          </ul></li>
           <li><a class="menu-item" href="#/connect" data-menu="connect">
             <span class="menu-mark"><svg class="sym" data-sym="connect" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.8 8.4 H20.2"/><path d="M1.6 17.6 L6.2 14.8 L12.4 17.2 L17.8 13.2 L20.4 14.2"/><path d="M6.2 14.8 L9.4 10.0"/><path d="M17.8 13.2 L15.2 9.6"/><circle cx="6.2" cy="14.8" r="1.2"/><circle cx="12.4" cy="17.2" r="1"/><circle cx="17.8" cy="13.2" r="1.15"/></svg></span>
             <span class="menu-txt"><span class="menu-no">03</span><span class="menu-name">Connect</span><span class="menu-line" data-src="chapters.connect.heading">Connect the ecosystem.</span></span>
-          </a></li>
+          </a>
+          <ul class="menu-sub">
+            <li class="menu-row"><span class="menu-il" data-src="nodes.ados.label">ADOS</span><span class="menu-is" data-src="nodes.ados.short">Where online becomes in-person. [PLACEHOLDER]</span></li>
+            <li class="menu-row"><span class="menu-il" data-src="nodes.hivemind.label">Hivemind</span><span class="menu-is" data-src="nodes.hivemind.short">Persistent shared memory. [PLACEHOLDER]</span></li>
+            <li class="menu-row"><span class="menu-il" data-src="nodes.discord.label">Discord</span><span class="menu-is" data-src="nodes.discord.short">The everyday door into the community. [PLACEHOLDER]</span> <a class="menu-ia" href="#" data-placeholder data-src="nodes.discord.card.link.label">Join the Discord</a></li>
+          </ul></li>
           <li><a class="menu-item" href="#/owned" data-menu="owned">
             <span class="menu-mark"><svg class="sym" data-sym="owned" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle cx="11" cy="3.6" r="1.35"/><path d="M11 3.6 L3.4 15.6"/><path d="M11 3.6 L8.2 17.8"/><path d="M11 3.6 L13.8 17.8"/><path d="M11 3.6 L18.6 15.6"/><circle cx="3.4" cy="15.6" r="0.9"/><circle cx="8.2" cy="17.8" r="1.05"/><circle cx="13.8" cy="17.8" r="1.05"/><circle cx="18.6" cy="15.6" r="0.9"/></svg></span>
             <span class="menu-txt"><span class="menu-no">04</span><span class="menu-name">Owned</span><span class="menu-line" data-src="chapters.owned.heading">Owned by the ecosystem</span></span>
-          </a></li>
+          </a>
+          <ul class="menu-sub">
+            <li class="menu-row"><span class="menu-il" data-src="nodes.pod-shared.label">100% shared</span><span class="menu-is" data-src="nodes.pod-shared.short">The dominant principle.</span></li>
+            <li class="menu-row"><span class="menu-il" data-src="nodes.pod-monthly.label">Granted 1% per month</span><span class="menu-is" data-src="nodes.pod-monthly.short">Gradual distribution over time.</span></li>
+            <li class="menu-row"><span class="menu-il" data-src="nodes.pod-split.label">Split between groups</span><span class="menu-is" data-src="nodes.pod-split.short">Artists, core engineers, knowledge creators.</span></li>
+          </ul></li>
           <!-- "Epilogue" is route.js's and 10-chapter-final.md's own structural
                word for this chapter, used because chapters.final.nav is null BY
                DESIGN. Its heading and its route are real content. -->
@@ -854,13 +916,19 @@
       <div class="menu-else">
         <h3 class="menu-eh" id="menu-eh">Elsewhere</h3>
         <ul class="menu-links" aria-labelledby="menu-eh">
-          <li><a href="#" data-placeholder data-src="footer.links.0.label">banodoco.ai</a></li>
-          <li><a href="#" data-placeholder data-src="footer.links.1.label">2RP</a></li>
-          <li><a href="#" data-placeholder data-src="footer.links.2.label">Contact</a></li>
-          <li><a href="#" data-placeholder data-src="footer.social.0.label">Discord</a></li>
-          <li><a href="#" data-placeholder data-src="footer.social.1.label">GitHub</a></li>
+          <li><a href="#" data-placeholder data-src="site.links.0.label">banodoco.ai</a></li>
+          <li><a href="#" data-placeholder data-src="site.links.1.label">2RP</a></li>
+          <li><a href="#" data-placeholder data-src="site.links.2.label">Contact</a></li>
+          <li><a href="#" data-placeholder data-src="site.social.0.label">Discord</a></li>
+          <li><a href="#" data-placeholder data-src="site.social.1.label">GitHub</a></li>
         </ul>
       </div>
+      <p class="menu-note">
+        You are viewing the static journey. It carries the same chapters, the
+        same copy, and the same links as the interactive version, using stills
+        captured from it. <a href="/">Open the interactive journey</a>.
+      </p>
+      <p class="menu-legal" data-src="site.legal">© 2026 Banodoco. Ownership: 100% shared, granted at 1% per month, split between different groups (artists, core engineers, and knowledge creators). This legal line is placeholder text pending Legal/Peter review. [PLACEHOLDER]</p>
     </details>
   </div>
 </nav>
@@ -1088,26 +1156,9 @@
   </section>
 </main>
 
-<footer class="site-footer">
-  <div class="fwrap">
-    <h2 id="h-footer">Banodoco</h2>
-    <ul class="flinks" aria-label="Site links">
-      <li><a href="#" data-placeholder data-src="footer.links.0.label">banodoco.ai</a></li>
-      <li><a href="#" data-placeholder data-src="footer.links.1.label">2RP</a></li>
-      <li><a href="#" data-placeholder data-src="footer.links.2.label">Contact</a></li>
-    </ul>
-    <ul class="flinks" aria-label="Social">
-      <li><a href="#" data-placeholder data-src="footer.social.0.label">Discord</a></li>
-      <li><a href="#" data-placeholder data-src="footer.social.1.label">GitHub</a></li>
-    </ul>
-    <p class="legal" data-src="footer.legal">© 2026 Banodoco. Ownership: 100% shared, granted at 1% per month, split between different groups (artists, core engineers, and knowledge creators). This legal line is placeholder text pending Legal/Peter review. [PLACEHOLDER]</p>
-    <p class="tier-note">
-      You are viewing the static journey. It carries the same chapters, the same
-      copy, and the same links as the interactive version, using stills captured
-      from it. <a href="/">Open the interactive journey</a>.
-    </p>
-  </div>
-</footer>
+<!-- No separate footer: the navigation redux (2026-08-09) moved the site's
+     links, the legal line and the tier note into the site-map menu above,
+     exactly as the live tier folded its footer into the rail's panel. -->
 
 <script>
 /* ==================================================================
@@ -1138,11 +1189,18 @@
 
   /* ---------------- chapter state ---------------- */
   var current = null;
+  var railEl = document.querySelector('.rail');
   function setChapter(id, writeHash) {
     if (CHAPTERS.indexOf(id) < 0) return;
     if (id === current) return;
     current = id;
-    CHAPTERS.forEach(function (c) {
+    // The fan is anchored on the current slot (--cur), and each slot carries
+    // its distance (--d) for the expansion stagger — the same three custom
+    // properties Tier 1's rail.js writes.
+    var cur = CHAPTERS.indexOf(id);
+    if (railEl) railEl.style.setProperty('--cur', String(cur));
+    CHAPTERS.forEach(function (c, i) {
+      if (railSlots[c]) railSlots[c].style.setProperty('--d', String(Math.abs(i - cur)));
       if (stills[c]) stills[c].classList.toggle('on', c === id);
       // The rail's RESTING symbol is the section on screen — including the
       // epilogue, which has no nav entry but does have a scene. Same split the
@@ -1453,7 +1511,7 @@ for (const el of document.querySelectorAll('[data-src]')) {
   }
 }
 
-// Coverage: every contributor and every footer link must appear in the index.
+// Coverage: every contributor and every site link must appear in the index.
 const rendered = new Set([...document.querySelectorAll('[data-src]')].map(e => e.dataset.src));
 CONTENT.contributors.forEach((c, i) => {
   for (const f of ['name', 'role', 'blurb']) {
@@ -1461,10 +1519,18 @@ CONTENT.contributors.forEach((c, i) => {
   }
 });
 ['links', 'social'].forEach((group) => {
-  CONTENT.footer[group].forEach((_, i) => {
-    if (!rendered.has(`footer.${group}.${i}.label`)) problems.push(`MISSING footer.${group}.${i}.label`);
+  CONTENT.site[group].forEach((_, i) => {
+    if (!rendered.has(`site.${group}.${i}.label`)) problems.push(`MISSING site.${group}.${i}.label`);
   });
 });
+// ...and every node the site-map menu should list (nodes with a `chapter`)
+// must have its label and short line in the menu, so the panel really is the
+// map of everything (navigation redux, 2026-08-09).
+for (const [id, n] of Object.entries(CONTENT.nodes)) {
+  if (!n.chapter) continue;
+  if (!rendered.has(`nodes.${id}.label`)) problems.push(`MISSING nodes.${id}.label — the site-map menu is incomplete`);
+  if (n.short && !rendered.has(`nodes.${id}.short`)) problems.push(`MISSING nodes.${id}.short — the site-map menu is incomplete`);
+}
 for (const id of Object.keys(CONTENT.nodes)) {
   if (!document.getElementById('node-' + id)) problems.push(`MISSING node section for "${id}" — Tier 3 must show every named node`);
 }

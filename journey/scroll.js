@@ -64,9 +64,9 @@ const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
         with that key) rather than a list of journey class names. Space on a
         focused <button> or role="button" activates it; the scrolling keys
         belong to a scrollable ancestor; text entry keeps everything. The
-        answer is therefore right for the hero's controls, the footer, a
-        future drawer and anything else, not just the elements one module
-        happened to enumerate.
+        answer is therefore right for the hero's controls, the navigator's
+        panel, a future drawer and anything else, not just the elements one
+        module happened to enumerate.
 
    Nothing below this block touches the snap/commit model, the scroll->p
    spline, or any threshold. This is routing only.
@@ -796,7 +796,7 @@ export function createScrollModel({ onIntent = null } = {}) {
       p = clamp01(q); v = scrollFor(p); carry = 0;
       vel = 0; intent = null; lastDir = 0; newGesture();
     },
-    /** Milliseconds since the last manual input (flight cancellation, QA). */
+    /** Milliseconds since the last manual input (QA). */
     get sinceInput() { return performance.now() - lastInput; },
     /** QA: the rest idle would resolve to from here (null under ?nosnap=1). */
     get commitP() { return NOSNAP ? null : commitTarget(p); },
