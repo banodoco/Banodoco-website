@@ -25,6 +25,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
   const group = new THREE.Group();
   const counts = {};
   let soilDissolve = null;   // the slab's uSoilOn uniform (set below)
+  let soilUnder = null;      // the slab's uUnder uniform (set below)
 
   /* ================================================================
      0. SOIL OCCLUDER (declutter round). Under additive blending every
@@ -93,9 +94,21 @@ export function createFinalTerrain(sceneApi, uniforms) {
     // Driven by the orchestrator through setAmount (the rise mask), so the
     // soil solidifies during the underground rise like fog thickening, never
     // as a switch.
+    // High-detail transit pass (2026-08-09): the slab is fog-colored so that
+    // FROM ABOVE it reads as distance haze under the surface. FROM BELOW —
+    // the whole underground stretch of the Owned→Final leg, p ~0.80-0.855 —
+    // that same constant color made its silhouette read as torn floating
+    // cardboard plates against the black sky ("half-constructed"). uUnder
+    // (0 above ground, 1 below; pure in the camera pose, driven by index.js)
+    // sinks the slab toward warm near-black while the lens is underground,
+    // so overhead it reads as OWNED's dark soil lid — a ceiling of earth,
+    // not a stage flat — and it returns to fog tone by the time the camera
+    // has pierced and can ever see its far side. The rest frame has
+    // uUnder = 0 and is untouched by construction.
     const soilMat = new THREE.ShaderMaterial({
       uniforms: {
         uSoilOn: { value: 0 },
+        uUnder: { value: 0 },
         uSoilCol: { value: new THREE.Color(
           (sceneApi.scene.fog && sceneApi.scene.fog.color) || 0x000000) },
       },
@@ -103,11 +116,12 @@ export function createFinalTerrain(sceneApi, uniforms) {
         void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
       fragmentShader: /* glsl */`
         uniform float uSoilOn;
+        uniform float uUnder;
         uniform vec3 uSoilCol;
         void main() {
           float h = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
           if (h > uSoilOn) discard;
-          gl_FragColor = vec4(uSoilCol, 1.0);
+          gl_FragColor = vec4(mix(uSoilCol, uSoilCol * 0.10, uUnder), 1.0);
         }`,
       side: THREE.DoubleSide,
     });
@@ -116,6 +130,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
     soil.renderOrder = -10;          // first among opaques
     group.add(soil);
     soilDissolve = soilMat.uniforms.uSoilOn;
+    soilUnder = soilMat.uniforms.uUnder;
     counts.soilTris = idx.length / 3;
   }
 
@@ -200,21 +215,54 @@ export function createFinalTerrain(sceneApi, uniforms) {
     // the face: the section through the substrate. Declutter round: the
     // 130-drop scratch curtain halved and dimmed — the LIP is the statement,
     // the face falls to darkness fast.
+    //
+    // High-detail transit pass (2026-08-09): the drops were single straight
+    // segments, y0 -> y0 - depth, at constant tone until a hard tail — from
+    // the rest they read as a fringe of parallel HANGING WIRES off the lip
+    // (Hannah: "stuff hanging off the edge of the fairy ring"), and in close
+    // passage (p 0.865-0.895, frame left) as loose cables. Each drop is now
+    // a three-segment ROOTLET: it leaves the lip, curves back toward the cut
+    // face (along -CUT_N, so it hugs the section wall instead of dangling in
+    // the void), sways along the lip tangent, dims to near-nothing by its
+    // tip, and ends with a dim oblique root-tip flick — the strand ends by
+    // TURNING and dissolving, never by stopping mid-air. Depth is biased
+    // short; only a few reach past a unit.
     for (let i = 0; i < 60; i++) {
       const s = CUT_S_MIN + rand() * (CUT_S_MAX - CUT_S_MIN);
       const p = cutEdgePoint(s);
       const x = p.x + gauss() * 0.2, z = p.z + gauss() * 0.2;
       const y0 = groundY(x, z);
-      const depth = 0.7 + rand() * 1.4;
+      const depth = 0.5 + Math.pow(rand(), 1.7) * 1.5;
       const t0 = 0.34 + rand() * 0.16;
-      cut.seg(x, y0, z, x + gauss() * 0.3, y0 - depth, z + gauss() * 0.3,
-        t0, 0.07, { tw: rand() * TAU });
+      const tw = rand() * TAU;
+      const swayS = gauss() * 0.26;                 // along the lip tangent
+      const hugN = -(0.08 + rand() * 0.18);         // back toward the face
+      const SEG = 3;
+      let px = x, py = y0, pz = z;
+      for (let k = 1; k <= SEG; k++) {
+        const f = k / SEG;
+        const ease = f * (0.55 + 0.45 * f);         // accelerating fall
+        const nx = x + (-CUT_N.z) * swayS * f + CUT_N.x * hugN * f * f + gauss() * 0.05;
+        const nz = z + CUT_N.x * swayS * f + CUT_N.z * hugN * f * f + gauss() * 0.05;
+        const ny = y0 - depth * ease;
+        cut.seg(px, py, pz, nx, ny, nz,
+          t0 * (1 - ((k - 1) / SEG) * 0.85), t0 * (1 - f * 0.85), { tw });
+        px = nx; py = ny; pz = nz;
+      }
+      // root-tip flick: a last dim oblique turn, dying out
+      cut.seg(px, py, pz,
+        px + gauss() * 0.16 + CUT_N.x * hugN * 0.4,
+        py - 0.05 - rand() * 0.10,
+        pz + gauss() * 0.16 + CUT_N.z * hugN * 0.4,
+        t0 * 0.15, 0.02, { tw });
     }
-    // horizontal strata: broken layer lines a little below the lip
-    for (let i = 0; i < 40; i++) {
+    // horizontal strata: broken layer lines a little below the lip. Transit
+    // pass: a few more, biased shallower, so the rootlet curtain reads as
+    // threading through bedded soil rather than hanging in front of nothing.
+    for (let i = 0; i < 54; i++) {
       const s = CUT_S_MIN + rand() * (CUT_S_MAX - CUT_S_MIN);
       const p = cutEdgePoint(s);
-      const d = 0.25 + Math.pow(rand(), 1.4) * 2.2;
+      const d = 0.25 + Math.pow(rand(), 1.6) * 2.2;
       const y = groundY(p.x, p.z) - d;
       const len = 0.4 + rand() * 1.0;
       const t0 = (0.34 + rand() * 0.16) * (1 - d * 0.28);
@@ -286,92 +334,64 @@ export function createFinalTerrain(sceneApi, uniforms) {
   counts.aggrPts = aggr.ptCount;
 
   /* ================================================================
-     3. Underground colony: fine hyphae everywhere beneath the ring
-        interior AND exposed in the void the cut opens — the pre-
-        existing wider organism the fruiting bodies emerge from.
-     ================================================================ */
-  // Declutter round: 850 -> 380 scribbles, dimmer and pushed DEEPER — under
-  // additive blending every underground stroke reads THROUGH the soil as a
-  // stray line lying on the floor, so the fine-hyphae texture is halved and
-  // sunk while the cords + colony glow pools carry the network reading.
-  const hyph = makeBatch();
-  {
-    let placed = 0, guard = 0;
-    while (placed < 380 && guard++ < 6000) {
-      const a = rand() * TAU;
-      const r = Math.pow(rand(), 0.7) * 11.5;
-      let x = RING_C.x + Math.cos(a) * r;
-      let z = RING_C.z + Math.sin(a) * r;
-      // hyphae live under kept soil AND stand exposed in the void near the
-      // face (the section view) — but thin out far from the cut on the void
-      // side so the removed area still reads as absence
-      const cv = cutVal(x, z);
-      if (cv < -3.4 && rand() < 0.85) continue;
-      let y = -0.55 - Math.pow(rand(), 1.4) * 3.5;
-      // dark pockets stay dark (two authored voids)
-      if (Math.hypot(x + 3.4, y + 2.4, z - 3.0) < 1.5) continue;
-      if (Math.hypot(x + 8.6, y + 2.0, z + 4.6) < 1.4) continue;
-      const bright = 0.10 + rand() * 0.17;
-      const SEG = 2;
-      let px = x, py = y, pz = z;
-      const arc = arcOf(x, z);
-      for (let sgi = 0; sgi < SEG; sgi++) {
-        const nx = px + gauss() * 0.8, ny = py + gauss() * 0.4, nz = pz + gauss() * 0.8;
-        hyph.seg(px, py, pz, nx, Math.min(-0.45, ny), nz,
-          bright, bright * (0.5 + rand() * 0.5),
-          { tw: rand() * TAU, boost: 0.3, arc });
-        px = nx; py = Math.min(-0.45, ny); pz = nz;
-      }
-      placed++;
-    }
-  }
-  const hyphMat = makeStrandMat(uniforms, 0.62);
-  const hyphLines = new THREE.LineSegments(hyph.geo(), hyphMat);
-  hyphLines.frustumCulled = false;
-  group.add(hyphLines);
-  counts.hyphSegs = hyph.segCount;
-
-  /* ================================================================
      4. Rhizomorph cords: 6 thicker polylines radiating outward from
         the colony interior, crossing under the growth front; two head
         toward the camera side and are CUT at the face — bright section
         ends visible in the wedge. Slow outward waves via aWave.
+        (Built before §3 since the transit pass seeds hyphal twigs on
+        real cord samples — the fine threads leave the arteries.)
      ================================================================ */
+  // High-detail transit pass (2026-08-09): the Owned→Final camera crosses
+  // this colony at close range (p ~0.80-0.855), where two authored-for-the-
+  // rest choices fell apart. (1) The double stroke was a CONSTANT vertical
+  // 0.055 offset — at 12 units it reads as thickness, at 3 it reads as tram
+  // rails. The gap now breathes along the cord's length (0.024-0.056, two
+  // incommensurate harmonics) and the twin runs at 0.78 of the main tone, so
+  // the pair reads as one braided cord with a lit core. (2) 13 segments over
+  // ~10 units left visible kinks; the walk now takes 26 half-steps with the
+  // per-step jitter halved — same path family, same endpoints, half the
+  // elbow angle.
   const cords = makeBatch();
   const cordEnds = [];
   const cordNodes = [];   // declutter round: lit junctions along the cords
+  const cordPts = [];     // transit pass: samples the hyphal twigs grow from
   {
     const CORD_AZ = [12, 68, 118, 195, 250, 310];   // deg about C; 195/250 cross the void
     CORD_AZ.forEach((azDeg, ci) => {
       const a0 = (azDeg * Math.PI) / 180 + gauss() * 0.08;
       let x = RING_C.x + Math.cos(a0) * 1.2, z = RING_C.z + Math.sin(a0) * 1.2;
       let y = -1.1 - rand() * 1.2;
-      const SEG = 13;
+      const SEG = 26;
       const bright = 0.4 + rand() * 0.2;
       const tw0 = rand() * TAU;
       let px = x, py = y, pz = z;
       for (let s = 1; s <= SEG; s++) {
         const t = s / SEG;
         const rr = 1.2 + t * (8.6 + rand() * 1.6);
-        const aa = a0 + Math.sin(t * 2.6 + ci) * 0.16 + gauss() * 0.02;
+        const aa = a0 + Math.sin(t * 2.6 + ci) * 0.16 + gauss() * 0.01;
         x = RING_C.x + Math.cos(aa) * rr;
         z = RING_C.z + Math.sin(aa) * rr;
-        y = Math.min(-0.5, y + gauss() * 0.32 - 0.06);
+        y = Math.min(-0.5, y + gauss() * 0.16 - 0.03);
         // cords under the void get cut at the face: stop and mark the end
         if (cutVal(x, z) < 0.2 && cutVal(px, pz) >= 0.2) {
           cordEnds.push([px, py, pz]);
           break;
         }
-        // double stroke = thickness reading
-        for (const off of [0, 0.055]) {
+        // double stroke = thickness reading; the gap breathes (see header)
+        const gap = 0.040 + 0.016 * Math.sin(t * 7.3 + ci * 2.1)
+                  + 0.008 * Math.sin(t * 17.9 + tw0);
+        let strokeI = 0;
+        for (const off of [0, gap]) {
+          const dim = strokeI++ === 0 ? 1 : 0.78;
           cords.seg(px, py + off, pz, x, y + off, z,
-            bright * (1 - t * 0.45), bright * (1 - (t + 1 / SEG) * 0.45),
+            bright * (1 - t * 0.45) * dim, bright * (1 - (t + 1 / SEG) * 0.45) * dim,
             { tw: tw0, wave: 1, arc: t, boost: 0.15 });
         }
         // lit junction nodes riding the cord (the approved still's network
         // is bright connected cords with glowing nodes — glow, not strokes)
-        if (rand() < 0.3)
+        if (rand() < 0.15)
           cordNodes.push([x, y + 0.03, z, bright * (1 - t * 0.35)]);
+        cordPts.push([x, y, z, bright * (1 - t * 0.45)]);
         px = x; py = y; pz = z;
       }
     });
@@ -381,6 +401,107 @@ export function createFinalTerrain(sceneApi, uniforms) {
   cordLines.frustumCulled = false;
   group.add(cordLines);
   counts.cordSegs = cords.segCount;
+
+  /* ================================================================
+     3. Underground colony: fine hyphae everywhere beneath the ring
+        interior AND exposed in the void the cut opens — the pre-
+        existing wider organism the fruiting bodies emerge from.
+     ================================================================ */
+  // Declutter round: 850 -> 380 scribbles, dimmer and pushed DEEPER — under
+  // additive blending every underground stroke reads THROUGH the soil as a
+  // stray line lying on the floor, so the fine-hyphae texture is halved and
+  // sunk while the cords + colony glow pools carry the network reading.
+  //
+  // High-detail transit pass (2026-08-09): the scribbles were 2 segments of
+  // pure gauss noise — at the rest's 12 units they read as texture, but the
+  // camera now CROSSES this field and each one resolved as a disconnected
+  // floating dash ("broken lines... half-constructed"). Three changes, same
+  // light budget:
+  //   · FILAMENTS, not scribbles: 5 half-length steps with a persistent
+  //     heading (momentum 0.68) and a tail that dims to 20% — a thread that
+  //     travels and dissolves, never a dash that stops.
+  //   · TWIGS: 150 short threads seeded ON cordPts — the fine field visibly
+  //     leaves the arteries, so close passage reads as one organism.
+  //   · THE VOID EDGE DISSOLVES: survival beyond the cut face now decays
+  //     with distance (none past ~2.6 units) and the survivors dim with
+  //     depth into the void, so the removed side fades to true absence
+  //     instead of stranding bright floaters in open black (the rest
+  //     frame's lower-left).
+  const hyph = makeBatch();
+  {
+    let placed = 0, guard = 0;
+    while (placed < 300 && guard++ < 9000) {
+      const a = rand() * TAU;
+      const r = Math.pow(rand(), 0.7) * 11.5;
+      let x = RING_C.x + Math.cos(a) * r;
+      let z = RING_C.z + Math.sin(a) * r;
+      // hyphae live under kept soil AND stand exposed in the void near the
+      // face (the section view) — density decays into the void (see header)
+      const cv = cutVal(x, z);
+      if (cv < 0 && rand() < Math.min(0.96, -cv / 2.6)) continue;
+      let y = -0.55 - Math.pow(rand(), 1.4) * 3.5;
+      // dark pockets stay dark (two authored voids)
+      if (Math.hypot(x + 3.4, y + 2.4, z - 3.0) < 1.5) continue;
+      if (Math.hypot(x + 8.6, y + 2.0, z + 4.6) < 1.4) continue;
+      const voidDim = cv < 0 ? Math.max(0.4, 1 + cv * 0.24) : 1;
+      const bright = (0.11 + rand() * 0.17) * voidDim;
+      const SEG = 5;
+      let px = x, py = y, pz = z;
+      // persistent heading: a filament that travels, not a scribble
+      let hx = gauss(), hy = gauss() * 0.35, hz = gauss();
+      const hl = Math.hypot(hx, hy, hz) || 1;
+      hx /= hl; hy /= hl; hz /= hl;
+      const arc = arcOf(x, z);
+      const tw = rand() * TAU;
+      for (let sgi = 0; sgi < SEG; sgi++) {
+        const step = 0.42 + rand() * 0.22;
+        hx = hx * 0.68 + gauss() * 0.32;
+        hy = hy * 0.68 + gauss() * 0.13;
+        hz = hz * 0.68 + gauss() * 0.32;
+        const nl = Math.hypot(hx, hy, hz) || 1;
+        hx /= nl; hy /= nl; hz /= nl;
+        const nx = px + hx * step;
+        const ny = Math.min(-0.45, py + hy * step);
+        const nz = pz + hz * step;
+        const f0 = 1 - (sgi / SEG) * 0.8, f1 = 1 - ((sgi + 1) / SEG) * 0.8;
+        hyph.seg(px, py, pz, nx, ny, nz,
+          bright * f0, bright * f1,
+          { tw, boost: 0.3, arc });
+        px = nx; py = ny; pz = nz;
+      }
+      placed++;
+    }
+    // the twigs: fine threads leaving the arteries (see header)
+    for (let i = 0; i < 150 && cordPts.length; i++) {
+      const cp = cordPts[(rand() * cordPts.length) | 0];
+      const tone = Math.min(0.24, cp[3] * (0.45 + rand() * 0.3));
+      const tw = rand() * TAU;
+      let px = cp[0], py = cp[1], pz = cp[2];
+      let hx = gauss(), hy = -Math.abs(gauss()) * 0.5, hz = gauss();
+      const hl = Math.hypot(hx, hy, hz) || 1;
+      hx /= hl; hy /= hl; hz /= hl;
+      const arc = arcOf(px, pz);
+      for (let k = 0; k < 2; k++) {
+        const step = 0.22 + rand() * 0.20;
+        hx = hx * 0.7 + gauss() * 0.3;
+        hy = hy * 0.7 + gauss() * 0.18;
+        hz = hz * 0.7 + gauss() * 0.3;
+        const nl = Math.hypot(hx, hy, hz) || 1;
+        const nx = px + (hx / nl) * step;
+        const ny = Math.min(-0.45, py + (hy / nl) * step);
+        const nz = pz + (hz / nl) * step;
+        hyph.seg(px, py, pz, nx, ny, nz,
+          tone * (1 - k * 0.5), tone * (0.5 - k * 0.35),
+          { tw, boost: 0.3, arc });
+        px = nx; py = ny; pz = nz;
+      }
+    }
+  }
+  const hyphMat = makeStrandMat(uniforms, 0.62);
+  const hyphLines = new THREE.LineSegments(hyph.geo(), hyphMat);
+  hyphLines.frustumCulled = false;
+  group.add(hyphLines);
+  counts.hyphSegs = hyph.segCount;
 
   // bright cut-cord section ends on the face + the lit junctions
   const ends = makeBatch();
@@ -402,9 +523,17 @@ export function createFinalTerrain(sceneApi, uniforms) {
   // the old rises poked through the soil as "grass" spikes around the
   // members. The pulse's brightness now mostly rides the glow carriers
   // added to the aggregate batch above.
+  // High-detail transit pass (2026-08-09): the 72 rises were isolated ticks —
+  // the camera now crosses the arc at close range (p ~0.81-0.84) and a row of
+  // disconnected vertical dashes is exactly the "broken lines" read. The base
+  // points are now CHAINED: each rise's foot links to the next around the arc
+  // (closing the loop) at half the rise tone, so the front is a continuous
+  // undulating line the rises grow from — "the live edge of the colony" as
+  // one edge, and the travelling pulse now runs along an unbroken carrier.
   const front = makeBatch();
   {
     const N = 72;
+    const feet = [];
     for (let i = 0; i < N; i++) {
       const arc = i / N;
       const az = arc * TAU + Math.atan2(0.8, 6.0);   // arc 0 = the hero azimuth
@@ -417,6 +546,14 @@ export function createFinalTerrain(sceneApi, uniforms) {
       front.seg(x, y0, z,
         x + gauss() * 0.3, Math.min(-0.2, y0 + 0.22 + rand() * 0.26), z + gauss() * 0.3,
         t, t * 1.5, { tw: rand() * TAU, boost: 1, arc, reveal: -1 });
+      feet.push([x, y0, z, t, arc]);
+    }
+    for (let i = 0; i < N; i++) {
+      const a = feet[i], b = feet[(i + 1) % N];
+      const arcMid = i + 1 === N ? 0 : (a[4] + b[4]) * 0.5;   // wrap: land on 0
+      front.seg(a[0], a[1], a[2], b[0], b[1], b[2],
+        a[3] * 0.5, b[3] * 0.5,
+        { tw: rand() * TAU, boost: 1, arc: arcMid, reveal: -1 });
     }
   }
   const frontMat = makeStrandMat(uniforms, 0.66);
@@ -485,10 +622,14 @@ export function createFinalTerrain(sceneApi, uniforms) {
     group,
     counts,
     /** haze sprites cannot share the shader uniforms — fade them here; the
-     *  soil slab's hashed dissolve rides the same drive (M5, D16) */
-    setAmount(a) {
+     *  soil slab's hashed dissolve rides the same drive (M5, D16).
+     *  `under` (transit pass): 1 while the camera is below the soil line,
+     *  0 above — darkens the slab's underside so the overhead earth reads
+     *  as a ceiling, not a stage flat. Pure in the camera pose (index.js). */
+    setAmount(a, under = 0) {
       for (const h of hazeSprites) h.mat.opacity = h.base * a;
       if (soilDissolve) soilDissolve.value = a;
+      if (soilUnder) soilUnder.value = under;
     },
   };
 }

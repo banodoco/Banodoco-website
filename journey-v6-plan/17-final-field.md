@@ -1137,3 +1137,139 @@ which predates this work and is not requested by page code.
   actually seen — decays into the rest in both aspects.
 - **Portrait keeps one near-frozen ring-centre sample** (93 px/p, against 70
   shipped). Same sample as before this pass, improved but not removed.
+
+---
+
+## 2026-08-09 — The transit pass: the passage is the composition too
+
+**Status: SHIPPED (`final@*` re-shot — the cutaway wedge and colony detail
+legitimately moved; all other goldens byte-identical on disk).** Hannah, on
+the Owned→Final leg: *"halfway through the transition you see a lot of janky,
+half-complete kind of things… a lot of broken lines that are visible halfway…
+it shouldn't feel like you're seeing the back of a world, the unfinished part
+of a closet."* And on the epilogue itself: *"some loose edges in the Final
+section — stuff hanging off the edge of the fairy ring."*
+
+She was right, and the root cause is one sentence: **everything she was
+looking at was authored to be read from the rest frames, and 8b71687's
+re-path put the camera INSIDE it.** The colony under the fairy ring was tuned
+to be glimpsed through the cutaway from 12+ units away; the leg now crosses
+it at 1–3 units (p ~0.80–0.855), where texture resolves into its parts.
+
+### The inventory — measured by toggling one system at a time at p 0.825
+
+Dense frozen rides (24 frames, p 0.72→0.955, 1440×900 + 375×812) localised
+the jank to p 0.80–0.855 plus the rest's lower-left wedge; per-system
+visibility toggles through a CDP probe then attributed every artifact. The
+OWNED side of the passage (its web, fan, portraits) needed nothing — with
+FINAL hidden, every frame through the dive reads as coherent web.
+
+1. **Hyphae read as broken dashes** (p 0.80–0.85, whole frame;
+   `terrain.js` §3). 380 scribbles of 2 pure-gauss segments each — at 12
+   units, texture; at 2, disconnected floating scratches. This was the bulk
+   of the "broken lines".
+2. **Rhizomorph cords read as tram rails** (p 0.80–0.85, mid-frame;
+   §4). The double stroke was a CONSTANT vertical 0.055 offset — thickness at
+   a distance, two machined parallel rails up close — over 13 visibly kinked
+   segments.
+3. **The growth front read as a row of dropped stitches** (p 0.81–0.84,
+   crossing mid-frame; §5). 72 isolated vertical ticks along the arc with
+   nothing joining them.
+4. **The soil slab read as torn cardboard overhead** (p 0.80–0.85, top
+   third; §0). The occluder is fog-colored so the KEPT side reads as haze
+   from above — but from BELOW, where the whole underground crossing looks
+   at it, that constant color silhouetted its irregular boundary against the
+   black sky as floating angular plates. On mobile its near edge cut the
+   frame as a hard bright-edged beam.
+5. **The cut face read as hanging wires** (the rest frame's lower-left,
+   and close-up at p 0.865–0.895 frame-left; §2). The 60 "face drops" were
+   single dead-straight segments at near-constant tone — a fringe of
+   parallel cables dangling off the lip into the void. This is the "stuff
+   hanging off the edge of the fairy ring", verbatim.
+6. **Stranded floaters in the open void** (rest frame lower-left; §3's
+   cull). Hyphae survived the void cull at 15% ANY distance past 3.4 units
+   from the face, so bright dashes floated disconnected in open black.
+
+### What changed (`final/terrain.js`, + one uniform through `final/index.js`)
+
+- **Hyphae are filaments now, not scribbles**: 300 strands of 5 half-length
+  steps with a persistent heading (momentum 0.68) and a tail that dims to
+  20% — threads that travel and dissolve, never dashes that stop — plus 150
+  short twigs seeded ON real cord samples (`cordPts`), so the fine field
+  visibly leaves the arteries. The cords are therefore built before the
+  hyphae; batch order among additive draws is visually free.
+- **Cords braid**: 26 half-steps (halved per-step jitter — same path family,
+  half the elbow angle), and the twin stroke's gap breathes along the length
+  (0.024–0.056, two incommensurate harmonics) at 0.78 of the main tone: one
+  organic cord with a lit core, not two rails.
+- **The front is chained**: every rise's foot links to the next around the
+  arc (closing the loop) at half tone, so the "live edge of the colony" is
+  one continuous undulating carrier and the travelling pulse finally runs on
+  an unbroken line.
+- **The slab darkens its underside**: a `uUnder` uniform (1 below the soil
+  line, 0 once the lens stands 0.9 above it; smoothstep of camera height
+  minus `groundY`, i.e. pure in the pose) sinks the slab color to 10% while
+  the camera is underground. Overhead earth now reads as OWNED's dark lid —
+  a ceiling, not a stage flat — and the fog tone is restored before the far
+  side can ever be seen. At both rests `uUnder` is 0 by construction.
+- **The face curtain is rootlets**: each drop is now 3 segments easing into
+  the fall, swaying along the lip tangent, curving BACK toward the section
+  wall (along −CUT_N), dimming 85% by the tip and ending in a dim oblique
+  root-tip flick — it ends by turning and dissolving, never by stopping.
+  Depth biased short. Strata 40 → 54, biased shallower, so the rootlets
+  visibly thread bedded soil.
+- **The void edge dissolves**: hyphae survival now decays continuously with
+  distance past the cut face (none beyond ~2.6 units) and survivors dim with
+  void depth — the removed side fades to true absence.
+
+Untouched, deliberately: the OWNED chapter (all four of its goldens are
+byte-identical), every camera key, the reveal thresholds, the T3/T4 seams,
+sky.js (the conifer whispers are the approved horizon), ring.js, canopy.js,
+clones.js, species.js.
+
+### Budget (1440×900 @dpr1, renderer.info accumulated across all composer
+passes, 180-frame medians, same probe both arms; before = stashed HEAD)
+
+| | draw calls | line segs | points | tris | p50 ms | p90 ms |
+|---|---|---|---|---|---|---|
+| OWNED rest 0.725, before | 56 | 70,963 | 22,296 | 4,753 | 26.9 | 33.7 |
+| OWNED rest 0.725, after  | **56** | **70,963** | **22,296** | **4,753** | 27.4 | 32.7 |
+| transit 0.815, before | 201 | 249,654 | 54,116 | 12,285 | 27.3 | 31.5 |
+| transit 0.815, after  | **201** | 251,070 | 54,108 | 12,285 | 26.7 | 31.5 |
+| transit 0.845, before | 238 | 303,983 | 63,416 | 18,045 | 26.3 | 30.3 |
+| transit 0.845, after  | **238** | 305,399 | 63,408 | 18,045 | 26.7 | 29.6 |
+| FINAL rest 0.925, before | 428 | 447,911 | 85,273 | 282,053 | 30.8 | 35.9 |
+| FINAL rest 0.925, after  | **428** | 449,327 | 85,265 | 282,053 | 31.0 | 35.7 |
+
++1,416 line segments inside existing batched draws, **zero** new draw calls,
+frame time flat, and the OWNED rest is bit-identical in every counter.
+
+### Gates
+
+- **Mirror**: 66-stop live scrub 0.70→0.96 and back (settled samples, real
+  scroll): pose and every reveal uniform (`uPull`, `uAmount`, `uSoilOn`,
+  `uUnder`) reproduce as pure functions of p in both directions.
+- **No self-ignition**: `uPull` exactly 0 on every underground sample,
+  monotone along the forward ride; `uUnder` monotone non-increasing.
+- **Console**: clean over a full 0→1→0 ride at 0.02 steps.
+- **`capture.py --check` PASS**, worst MAE 0.00/255, all ten. `final@*`
+  re-shot in this commit with manifest provenance; `mission@*`, `inspire@*`,
+  `connect@*`, `owned@*` byte-identical on disk. (A full-golden trial run
+  showed `inspire@*` drifting by MAE 0.0007–0.0015 — this machine's known
+  frozen-frame noise, nothing in the diff touches it — so the committed
+  inspire files are HEAD's own bytes, untouched.)
+
+### Residuals
+
+- **The section wall's upper edge is still a straightish seam** where the
+  darkened slab meets lit colony behind it (~p 0.805–0.845, mid-frame). It
+  now reads as architecture (a cut face) rather than jank; a wobbled face
+  sheet would finish it.
+- **The far cords still show as doubled lines at distance** (frame-left,
+  p 0.805–0.825) — the braid reads at mid-range and close; at 15+ units two
+  strokes 0.04 apart still fuse into one bright line only intermittently.
+- **The conifer whispers** behind the field still read as bare chevron
+  skeletons when crossed at p 0.855–0.895. They are the approved horizon
+  language at both rests and were left alone; if Hannah ever wants the
+  transit view of them enriched, that is sky.js's tree builder, not this
+  pass.
