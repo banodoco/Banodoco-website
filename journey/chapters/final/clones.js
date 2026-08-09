@@ -254,8 +254,18 @@ const DRAW_LO = 0.296, DRAW_HI = 0.893;
 // pullRaw delivers at the rest. The width is still a pure function of the
 // body's own threshold — computed once, nothing time-based, reverse scrubs
 // unchanged (D16).
-const DRAW_W_HI = 0.26;        // the opening singles' kindling width
-const DRAW_W_LO = 0.15;        // the closing fills' — narrower in uPull, LONGER in wheel
+// 2026-08-10 (Hannah's brief item 3, with route.js's scrollVh 3.5 -> 6.0):
+// the kindling widens on top of the chapter's 1.71x wall-clock stretch, so
+// a single body's charge-and-take breathes instead of snapping. The width
+// goes to the openers and the mid-ladder; the LATE taper is bound by the
+// rest itself — the ring ladder's last rung (reveal 0.9511, a CLONE like
+// the rest of the ring) must sit past s = 1 at pullRaw 1.12, so
+// drawW(0.9511) must stay under 0.169. LO 0.16 gives s = 1.045 there
+// (margin 0.045) — every body byte-settled at the rest, final@* goldens
+// untouched. (A first cut at LO 0.19 put that body mid-bloom in the rest
+// frame — caught by the golden gate at MAE 0.28.)
+const DRAW_W_HI = 0.32;        // the opening singles' kindling width
+const DRAW_W_LO = 0.16;        // the closing fills' — narrower in uPull, LONGER in wheel
 const drawWOf = (reveal) => {
   const t = Math.min(1, Math.max(0, (reveal - 0.10) / (0.96 - 0.10)));
   return DRAW_W_HI - (DRAW_W_HI - DRAW_W_LO) * t;

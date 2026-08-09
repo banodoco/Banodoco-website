@@ -300,7 +300,14 @@ export function createFinalSky(sceneApi, uniforms) {
         float reveal = aGate.x < -0.5 ? 1.0
                      : smoothstep(aGate.x, aGate.x + 0.16, uPull);
         // the broad band forms as the sky opens
-        float bandGate = mode > 0.5 ? smoothstep(0.30, 0.72, uPull) : 1.0;
+        // band window 0.30-0.72 -> 0.34-0.96 (2026-08-10, Hannah's brief
+        // item 3): the broad band used to be fully formed by uPull 0.72 —
+        // well before the town had half-kindled — which front-loaded the
+        // sky and made the whole arrival read abrupt. It now forms across
+        // the entire kindle ladder and finishes with the last bodies
+        // (REV_HI 0.94), still saturated well before the rest's 1.12, so
+        // the rest frame (and final@* goldens) are untouched.
+        float bandGate = mode > 0.5 ? smoothstep(0.34, 0.96, uPull) : 1.0;
         float t = fract(uTime / aCycle.x + aCycle.y);
         float h1 = hash(aSeed * 12.9898), h2 = hash(aSeed * 78.233 + 1.0);
         vec3 p = position;
