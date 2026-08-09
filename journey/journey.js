@@ -100,6 +100,30 @@ export function boot(opts = {}) {
     onNavigate: (r) => handleRoute(r),
   });
 
+  /* ================================================================
+     THE SPINE'S ANIMATOR IS REGISTERED FIRST, ON PURPOSE
+     ================================================================
+     Animators run in insertion order (organism.js keeps them in a Map), and
+     every chapter registers one of its own the moment it is constructed —
+     'journey-final', 'journey-connect', 'journey-owned', 'spike-plumes'.
+     Registering the spine here, BEFORE createLens and before `chapters`,
+     makes it the first thing to run each frame, which is what lets it be the
+     only writer of the camera: by the time any chapter animator (or the
+     lens's focus projection) reads `camera.position`, the pose it reads is
+     the pose that frame will actually present.
+
+     Before 2026-08-09 the spine went last. On the first frame of a nav jump
+     that meant every chapter animator read the DESTINATION pose placeAt had
+     just written, computed its reveal against it, and was then overwritten by
+     the spine's camera blend — so the frame that rendered composited a
+     fully-arrived chapter with a not-yet-arrived camera. See the frame-order
+     block above applyFrame for the whole mechanism and the measurements.
+
+     spineFrame is a hoisted function declaration; nothing in it runs until
+     the first rAF, long after boot() has finished defining what it closes
+     over. */
+  sceneApi.addAnimator('journey', (t, dt) => spineFrame(t, dt));
+
   // ?steady=1 kills the documentary handheld layer (QA: pose sampling at
   // arbitrary p must be reproducible frame-to-frame). (parsed once, in
   // ../flags.js — THE flag registry)
@@ -284,10 +308,37 @@ export function boot(opts = {}) {
     const targetP = restProgress(chapterId);
     if (Math.abs(targetP - journey.progress) < 1e-4) return;
     const cam = sceneApi.camera, ctl = sceneApi.controls;
+    const fog = sceneApi.scene.fog;
     const pos0 = cam.position.clone(), tgt0 = ctl.target.clone(), fov0 = cam.fov;
-    placeAt(targetP);                           // the deep-link settle: place, arm, never replay
+    const fogN0 = fog ? fog.near : 0, fogF0 = fog ? fog.far : 0;
+    // A jump overtakes a jump: drop the old blend BEFORE placing, so the
+    // placement's own dt = 0 frames are not stepped by it (the blend now runs
+    // inside applyFrame — see the frame-order block there). The new blend
+    // starts from where the old one had actually reached, which pos0 above
+    // has already captured.
+    camBlend = null;
+    // Place, arm, never replay — but WITHOUT the eased-state snap. A jump is
+    // not a placement: the camera is about to travel, so the chapters' eased
+    // arm states must not be thrown to their destination values while it does.
+    // The snap is deferred to the landing (endCamBlend), which is the frame
+    // the journey's state and the camera agree again. This is the WebGL half
+    // of what ui.armCopyEntry already does for the copy layer.
+    placeAt(targetP, { snap: false });
     const dur = 0.85 + 0.35 * Math.min(arcLength(pos0, cam.position) / 20, 1);
-    camBlend = { t: 0, dur, pos0, tgt0, fov0 };
+    // THE FOG TRAVELS WITH THE CAMERA (2026-08-09). The director keys fog off
+    // p, so a jump threw the whole world's depth to the destination's ramp on
+    // the click frame while the camera still stood at the origin: measured on
+    // Mission -> Final, the Mission pose rendered 3.6/255 brighter the instant
+    // the click landed — the hero's own 7 -> 20 replaced by the epilogue's
+    // 13.75 -> 60.3, so everything the Mission composition fogs to black came
+    // up out of the dark and then travelled. Same fault as the reveal, in the
+    // one parameter that is not geometry. Both ends are read here, not per
+    // frame: p does not move during a jump, so the destination ramp is a
+    // constant, and reading it live would feed the blend back into itself at
+    // p = 0 exactly as the position once did (the M4 stuck camera).
+    const fogN1 = fog ? fog.near : 0, fogF1 = fog ? fog.far : 0;
+    camBlend = { t: 0, dur, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1 };
+    setBlending(true);
     // The destination's copy is timed against THIS move, not against the click
     // (Hannah, 2026-08-07 — "the text for the new section INSTANTLY appears").
     // The duration is only knowable here, after placeAt has let the director
@@ -370,10 +421,51 @@ export function boot(opts = {}) {
     }
   }
 
+  /* ================================================================
+     FRAME ORDER: THE CAMERA IS FINISHED BEFORE ANYTHING READS IT
+     ================================================================
+     Everything below the camera block reads the camera — the seams' T1/T3/T4
+     predicates, every chapter's drive(), the lens's focus projection, the
+     UI's hotspot projection — and so does every chapter's own animator, which
+     the registration order at the top of boot() puts after this one. There is
+     therefore exactly one place the pose may be written: here, at the top,
+     and it must be COMPLETE before the first reader runs.
+
+     That is a new rule as of 2026-08-09, and it is the fix for Hannah's
+     "weird flash" on a nav jump (25-navigation-redux.md). A jump is a DIRECT
+     jump: placeAt snaps journey state to the destination and the director
+     writes the destination POSE, then the camera blend carries the camera
+     back to where it actually was and eases it across. The blend used to run
+     at the END of this animator, after every one of those readers and after
+     every chapter animator. So on the first frame of a jump they all read the
+     destination pose — a pose that was about to be overwritten in the same
+     frame, and never rendered. Measured on Mission -> Final: 210,051
+     triangles submitted on that frame against 12,829 at the Mission rest,
+     with Final's reveal fully kindled over a camera still standing at
+     Mission. One frame of the arrived epilogue, composited onto the departure
+     camera. THAT is the flash.
+
+     Stepping the blend here instead costs nothing and removes the whole
+     class: a reader can no longer see a pose that is not the presented one.
+     placeAt's own dt = 0 frames run with no blend in flight (directJumpTo
+     drops it before placing), so deep links, ?p=, ?pose= and the frozen
+     ?capture= path are untouched — they place, and this block does nothing. */
   function applyFrame(p, dt) {
     const owned = p > 0.0008;
     director.setOwned(owned);
     if (owned) guarded('director', () => director.apply(p, dt));
+    // ...and then the jump's blend composes onto that written pose. Not
+    // guarded() by name: a latched-dead blend would strand `camBlend` and
+    // leave the chapters detached for the rest of the session, so a throw
+    // abandons the blend instead — the camera keeps the destination pose the
+    // director just wrote, which is where the jump was going anyway.
+    if (camBlend) {
+      try { stepCamBlend(dt); }
+      catch (err) {
+        console.error('[journey] camera blend threw — the jump lands directly:', err);
+        endCamBlend();
+      }
+    }
 
     guarded('seams', () => seams.update(p));
     // Chapter-owned choreography (M4): any chapter exposing drive(p) runs it
@@ -431,57 +523,98 @@ export function boot(opts = {}) {
     }
   }
 
-  sceneApi.addAnimator('journey', (t, dt) => {
+  /** One step of the direct-jump camera blend. Runs INSIDE applyFrame, right
+   *  after the director has written the destination pose and before anything
+   *  reads the camera — see the frame-order block above applyFrame. State is
+   *  already AT the destination; the camera glides straight from where it was
+   *  onto that pose. Any manual input drops the blend instantly. */
+  function stepCamBlend(dt) {
+    // Manual input drops the blend — and with it the arrival the copy was
+    // being timed against. Handing the copy back to the scroll rule here
+    // (rather than letting the envelope play out over a camera that is no
+    // longer travelling) is what keeps the two from fighting: the scroll
+    // rule picks the block up at exactly the opacity the envelope had
+    // reached, so there is no step and no second animation.
+    if (scroll.sinceInput < 50) {
+      endCamBlend();
+      guarded('ui', () => ui.cancelCopyEntry());
+      return;
+    }
+    camBlend.t += dt;
+    const f = Math.min(camBlend.t / camBlend.dur, 1);
+    const e = f * f * f * (f * (f * 6 - 15) + 10);   // smootherstep, C2 ends
+    const cam = sceneApi.camera, ctl = sceneApi.controls;
+    // The blend composes onto the DESTINATION pose read live from the
+    // camera — valid only if something wrote that pose this frame. While
+    // the director owns the camera (p past the hero band) its apply()
+    // above did; at p = 0 the hero restore is a ONE-SHOT inside
+    // setOwned(false), so on every later blend frame the camera still
+    // holds the blend's own previous output — lerping toward it fed the
+    // blend back into itself and parked the camera near the jump's
+    // start pose plus the lift arc (the M4-found stuck camera:
+    // end-hold -> Mission froze at ~(-15.9, 16.3, 2.6) fov 44).
+    // Re-assert the completed restore first, so the blend lands ON it
+    // and can never outlive or overwrite it. Composition order is
+    // preserved: destination writer first, blend on top, blend ends.
+    if (!director.owned) director.applyHeroPose();
+    _dstPos.copy(cam.position);
+    _dstTgt.copy(ctl.target);
+    const fv = camBlend.fov0 * (1 - e) + cam.fov * e;
+    arcLerp(camBlend.pos0, _dstPos, e, cam.position);
+    ctl.target.lerpVectors(camBlend.tgt0, _dstTgt, e);
+    // ONE pose travels. Re-aim from where the camera actually IS — without
+    // this the frame keeps the destination's orientation over a start-pose
+    // position, which is the whip described above. Same no-roll write the
+    // director makes, so the composition order is unchanged: destination
+    // writer first, blend on top, blend ends.
+    cam.up.set(0, 1, 0);
+    cam.lookAt(ctl.target);
+    if (fv !== cam.fov) { cam.fov = fv; cam.updateProjectionMatrix(); }
+    // ...and the depth of the world travels on the same ease (see directJumpTo).
+    if (camBlend.fog) {
+      camBlend.fog.near = camBlend.fogN0 + (camBlend.fogN1 - camBlend.fogN0) * e;
+      camBlend.fog.far = camBlend.fogF0 + (camBlend.fogF1 - camBlend.fogF0) * e;
+    }
+    if (f >= 1) endCamBlend();
+  }
+
+  /** The blend is over — landed, cancelled, or abandoned. The camera and the
+   *  journey's state agree again from here, so this is where the placement
+   *  snap directJumpTo deferred finally happens: the arrival frame is exactly
+   *  the frame a deep link to the same chapter would have placed. */
+  function endCamBlend() {
+    camBlend = null;
+    setBlending(false);
+    snapChapters();
+  }
+
+  /** Tell every chapter that owns the distinction whether the journey's state
+   *  and the camera currently DISAGREE — i.e. a jump has snapped the state to
+   *  the destination while the camera is still travelling toward it. A chapter
+   *  in that window may trust only its camera-pure terms. Optional: a chapter
+   *  whose reveal is a product of camera-pure factors (Connect's
+   *  `amount * resolve`, Inspire's `master(az) * arr(az)`) self-corrects on
+   *  the first blend frame and does not implement this. */
+  function setBlending(on) {
+    for (const id in chapters) {
+      const mod = chapters[id];
+      if (mod.setBlending) guarded(`chapter:${id}.setBlending`, () => mod.setBlending(on));
+    }
+  }
+
+  /** Jump every chapter's eased state to its target (the placeAt contract). */
+  function snapChapters() {
+    for (const id in chapters) {
+      if (chapters[id].snap) guarded(`chapter:${id}.snap`, () => chapters[id].snap());
+    }
+  }
+
+  function spineFrame(t, dt) {
     scroll.update(dt);
     journey.setProgress(scroll.progress);
     const p = journey.update(dt);
     applyFrame(p, dt);
-    // direct-jump camera blend: state is already AT the destination; the
-    // camera glides straight from where it was onto the destination pose the
-    // director just computed. Any manual input drops the blend instantly.
-    if (camBlend) {
-      // Manual input drops the blend — and with it the arrival the copy was
-      // being timed against. Handing the copy back to the scroll rule here
-      // (rather than letting the envelope play out over a camera that is no
-      // longer travelling) is what keeps the two from fighting: the scroll
-      // rule picks the block up at exactly the opacity the envelope had
-      // reached, so there is no step and no second animation.
-      if (scroll.sinceInput < 50) { camBlend = null; guarded('ui', () => ui.cancelCopyEntry()); }
-      else {
-        camBlend.t += dt;
-        const f = Math.min(camBlend.t / camBlend.dur, 1);
-        const e = f * f * f * (f * (f * 6 - 15) + 10);   // smootherstep, C2 ends
-        const cam = sceneApi.camera, ctl = sceneApi.controls;
-        // The blend composes onto the DESTINATION pose read live from the
-        // camera — valid only if something wrote that pose this frame. While
-        // the director owns the camera (p past the hero band) its apply()
-        // above did; at p = 0 the hero restore is a ONE-SHOT inside
-        // setOwned(false), so on every later blend frame the camera still
-        // holds the blend's own previous output — lerping toward it fed the
-        // blend back into itself and parked the camera near the jump's
-        // start pose plus the lift arc (the M4-found stuck camera:
-        // end-hold -> Mission froze at ~(-15.9, 16.3, 2.6) fov 44).
-        // Re-assert the completed restore first, so the blend lands ON it
-        // and can never outlive or overwrite it. Composition order is
-        // preserved: destination writer first, blend on top, blend ends.
-        if (!director.owned) director.applyHeroPose();
-        _dstPos.copy(cam.position);
-        _dstTgt.copy(ctl.target);
-        const fv = camBlend.fov0 * (1 - e) + cam.fov * e;
-        arcLerp(camBlend.pos0, _dstPos, e, cam.position);
-        ctl.target.lerpVectors(camBlend.tgt0, _dstTgt, e);
-        // ONE pose travels. Re-aim from where the camera actually IS — without
-        // this the frame keeps the destination's orientation over a start-pose
-        // position, which is the whip described above. Same no-roll write the
-        // director makes, so the composition order is unchanged: destination
-        // writer first, blend on top, blend ends.
-        cam.up.set(0, 1, 0);
-        cam.lookAt(ctl.target);
-        if (fv !== cam.fov) { cam.fov = fv; cam.updateProjectionMatrix(); }
-        if (f >= 1) camBlend = null;
-      }
-    }
-  });
+  }
 
   /* ================================================================
      Deep links (place, never replay) + QA affordances
@@ -489,7 +622,15 @@ export function boot(opts = {}) {
   const route = journey.parseHash();
   if (route.unknown) history.replaceState(null, '', '#/mission');
 
-  function placeAt(p, { detail = null } = {}) {
+  /** Place the journey at p in one tick. `snap` is the PLACEMENT contract —
+   *  every eased chapter state jumps to its target so a dt = 0 ride (deep
+   *  link, ?p=, ?pose=, hidden-tab ?capture= burst) renders the finished
+   *  frame. A nav JUMP passes snap: false: there the camera is about to
+   *  travel for the best part of a second, and throwing the chapters to their
+   *  arrived states while it does is what left the epilogue composed over a
+   *  Mission camera. directJumpTo hands the snap to endCamBlend instead, so
+   *  the landing frame is still exactly the placed one. */
+  function placeAt(p, { detail = null, snap = true } = {}) {
     journey.snapTo(p);
     scroll.setProgress(p);
     // force every seam up to and including the target to arm before anything
@@ -497,11 +638,7 @@ export function boot(opts = {}) {
     // (which only runs frames in bursts) sees the finished frame
     applyFrame(p, 0);
     guarded('seams', () => seams.update(p));
-    // any chapter with a snap() gets its eased states jumped to their
-    // targets (deep links / hidden-tab capture; today only Inspire has one)
-    for (const id in chapters) {
-      if (chapters[id].snap) guarded(`chapter:${id}.snap`, () => chapters[id].snap());
-    }
+    if (snap) snapChapters();
     applyFrame(p, 0);
     lastChapter = chapterAt(p).id;
     if (detail) setTimeout(() => openDetail(detail, null), DEEP_LINK_DETAIL_DELAY_MS);
