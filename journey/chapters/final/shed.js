@@ -35,6 +35,11 @@
 // dots, which is worse than not answering at all. That is the honest axis: a
 // bigger fruiting body has more hymenium, so it drops more spores.
 //
+// THE SEAT scales, for the same reason: it is a position ON a body, so the
+// whole of it multiplies by `s` and a half-size body releases from a half-size
+// hymenium. What does NOT scale with it is the BAND the seat is drawn from —
+// see burst().
+//
 // SIZE DOES NOT. A spore is a SPORE — the same physical object on every
 // fruiting body of one species, it does not shrink with the mushroom. So the
 // sizes are absolute, and they are now the HERO'S OWN DRAW, digit for digit
@@ -66,7 +71,7 @@ const FOCAL_D = 10.5, FOCAL_R = 14.0;
 const SHED_GAIN = 2.4;
 
 import * as THREE from 'three';
-import { makeGlowTexture, CAP_Y, CAP_R } from '../../anatomy.js';
+import { makeGlowTexture, CAP_Y, capUnderPt } from '../../anatomy.js';
 import { makeRng, gaussOf, heat } from './world.js';
 import { breeze } from './clones.js';
 
@@ -97,7 +102,12 @@ const LIFE = 7.0;              // seconds from release to gone
 // camera stands ~11 deg above every field body's rim plane, so a body's own
 // opaque §5 cap shell covers its whole underside and a puff seated where the
 // hero seats one is emitted into a box the visitor cannot see into. That
-// judgement is still right and the seat is unchanged.
+// judgement is still right and the BAND is unchanged. (Everything else about
+// the seat was brought to the hero's own law on 2026-08-09 — the azimuth was
+// a full 360 deg ring where the hero's is a downwind crescent, the radius was
+// uniform where the hero's is weighted outward, and the height was a flat
+// plane where the hero's follows the real drooping margin. See THE SEAT in
+// burst() below for the measurements.)
 //
 // But it means these particles are born WHERE A HERO SPORE ARRIVES — clear of
 // the gills, in open air past the margin — and then run the handover again,
@@ -209,36 +219,86 @@ export function createShed(uniforms) {
    *  way from the same place under their caps. */
   function burst(bx, by, bz, s) {
     const n = Math.max(10, Math.round(28 * s));
-    const R = s * CAP_R;                 // this body's rim, by the one cap law
     for (let k = 0; k < n; k++) {
       const i = cursor; cursor = (cursor + 1) % SHED_N;
       if (age[i] >= LIFE) live++;        // reviving a dead slot, not a live one
-      const a = rand() * Math.PI * 2;
-      // THE SEAT, and the one thing here that is NOT the hero's own number.
+      // THE SEAT — the hero's own, on the one band this camera can see into.
       //
-      // The hero draws its release radius on u = 0.55 + rand^0.6 * 0.45 of the
-      // cap — the whole hymenium, weighted outward. That is right for a lens
-      // sitting at the hero's own rim level, which sees straight into the gill
-      // space. The Final rest camera does not: it stands ABOVE every field
-      // body's rim plane (~11 deg of elevation on the nearest member), so a
-      // body's own opaque §5 cap shell covers its entire underside, and a
-      // release seated at u 0.6 is emitted into a box the visitor cannot see
-      // into. So the seat — and ONLY the seat — is moved out to a band
-      // straddling the MARGIN, where the same spore on the same law is in
-      // open air. Placement was always this file's business; the poke's answer
-      // is the MOTION, and the motion below is the hero's, digit for digit.
+      // WHAT THIS USED TO BE, AND WHY IT READ AS A DIFFERENT SUBSTANCE
+      // (Hannah, 2026-08-09: "some other thing comes out from underneath them
+      // — looks like a different kind of spore thing that pops out"). The
+      // release was drawn on `a = rand() * 2PI` and `u = 0.92 + rand() * 0.20`
+      // against a FLAT disc at s * CAP_R, at a FLAT height s * CAP_Y. Three
+      // measured departures from §10c, all of them in the placement:
+      //
+      //   azimuth   uniform over the whole 360 deg, against the hero's
+      //             `PI * (1 + 0.98 * rand^0.45)` — one HALF of the skirt,
+      //             weighted into the downwind quarter. Measured over 28
+      //             releases: hero 79% in the downwind half and every sample
+      //             on one side (-172..-13 deg off downwind); field 54%, i.e.
+      //             uniform, spanning the full -141..+180. A poked hero let go
+      //             of a downwind CRESCENT; a poked field body emitted a
+      //             closed RING all the way round the rim. That is the "comes
+      //             out from underneath them" — it is a halo, and the hero has
+      //             never had one.
+      //   radius    uniform 0.92..1.12, against the hero's outward-weighted
+      //             draw. A uniform band is a wire; the hero's is a skirt.
+      //   height    a flat plane 0.06..0.68 below the nominal CAP_Y, against
+      //             the hero's own drop below the REAL gill surface at that
+      //             (u, a). Measured: hero releases hang 0.07..1.21 below
+      //             CAP_Y (median 0.54), field 0.06..0.66 (median 0.28) — and
+      //             because the real margin droops (anatomy.js marginDroop +
+      //             the -0.11 edge term put it ~0.2 below CAP_Y at the rim),
+      //             the shallowest of those releases were seated INSIDE the
+      //             cap flesh, not under it.
+      //
+      // So the seat is now the hero's, evaluated through THE SHARED CAP LAW
+      // — anatomy.js capUnderPt(), the same function organism/organism.js
+      // seats its own 4,200 on and the same one species.js builds these very
+      // bodies' caps from. One species, one hymenium, one release.
+      //
+      // WHAT IS SCALED, AND WHY. Two things, and only two:
+      //
+      //   · The whole seat multiplies by `s`, the body's uniform scale in hero
+      //     units. It is a POSITION ON A BODY, so it scales with the body —
+      //     the same reason the sizes below do NOT (a spore is a spore; see
+      //     the SCALING note in the header).
+      //   · `u` keeps its band 0.92..1.12 instead of the hero's 0.55..1.00,
+      //     for the reason that band was chosen in the first place: the Final
+      //     rest camera stands ABOVE every field body's rim plane (~11 deg of
+      //     elevation on the nearest member), so a body's own opaque §5 cap
+      //     shell covers its entire underside and a release seated at the
+      //     hero's u 0.6 is emitted into a box the visitor cannot see into.
+      //     The hero's own lens sits at its rim level and looks straight into
+      //     the gill space; ours does not. So the BAND moves out to straddle
+      //     the margin — and the hero's outward WEIGHTING (rand^0.6) comes
+      //     with it, remapped onto that band, so the release is a skirt
+      //     thinning outward exactly as the hero's is, not a wire.
+      //
+      // The azimuth is taken in WORLD axes and not in each body's own, which
+      // is the frame that actually generalises: the hero's draw is justified
+      // by the WIND (the downwind quarter is the one whose curtain clears the
+      // margin into open air) and the wind is one world vector for every body
+      // in the field. It also lands the same way for the lens — the hero
+      // sheds off the half facing away from the Mission camera, and this half
+      // faces away from the Final rest camera. The batched bodies carry no
+      // rigid yaw in any case (their variation is the shader's, VARY_GLSL),
+      // so there is no body frame to miss.
       //
       // 2026-08-07: this seat is also the reason update() runs the hero's
       // integrator at w = 1 rather than integrating the handover. A spore in
       // open air past the margin has ALREADY dropped clear; running the fall
       // again out here is what Hannah saw drop. Header, STILL-AIR HANDOVER.
-      const u = 0.92 + rand() * 0.20;
+      const a = Math.PI * (1.0 + 0.98 * Math.pow(rand(), 0.45));
+      const u = 0.92 + Math.pow(rand(), 0.6) * 0.20;
+      const e = capUnderPt(u, a);
+      // organism/spores.js's own drop out of the gill skirt, verbatim: they
+      // fall clear of the gills first. Applied to the REAL underside height.
+      e.y -= 0.06 + Math.pow(rand(), 1.5) * 0.62;
       const i3 = i * 3;
-      pos[i3]     = bx + Math.cos(a) * R * u + gauss() * 0.06 * s;
-      // organism/spores.js's own release band under the gill skirt, scaled to
-      // the body — the DEPTH of the seat is the hero's; only its radius moved
-      pos[i3 + 1] = by + s * (CAP_Y - 0.06 - Math.pow(rand(), 1.5) * 0.62);
-      pos[i3 + 2] = bz + Math.sin(a) * R * u + gauss() * 0.06 * s;
+      pos[i3]     = bx + s * e.x + gauss() * 0.06 * s;
+      pos[i3 + 1] = by + s * e.y;
+      pos[i3 + 2] = bz + s * e.z + gauss() * 0.06 * s;
       // THE RELEASE VELOCITY IS THE HERO'S, WHICH IS TO SAY: THERE ISN'T ONE.
       //
       // This is the whole of Hannah's complaint. The first cut fired a spore
