@@ -213,12 +213,50 @@ export function createFinal(sceneApi) {
     return c * c * (3 - 2 * c);
   };
 
+  /* ---- the jump window: state says arrived, the camera says otherwise ----
+     `amount` is the T4 arm, and the arm is driven by journey PROGRESS. On a
+     nav jump progress snaps to the destination in one tick while the camera
+     takes the best part of a second to get there, so for that window `amount`
+     is not evidence about the pose — and the OR above lets it pin `eff` wide
+     open regardless of `rise`. That is the second half of Hannah's "weird
+     flash" (25-navigation-redux.md): even with the camera read fixed, a jump
+     to Final composed the whole epilogue — soil slab, colony, sky, mist — at
+     full uAmount over a camera still standing at Mission, while the per-vertex
+     kindle (which DOES track the camera) held every body at its ember floor.
+     Measured: +3,900 to +8,100 triangles of epilogue drawn at the departure
+     pose, and the frame ~6.6/255 brighter than the Mission rest, for the whole
+     blend.
+
+     So while a blend is in flight the chapter composes on its CAMERA-PURE
+     term alone. `rise` is exactly the right one: it already means "the lens
+     has climbed into this chapter's territory", it is 0 at every other
+     chapter's rest (their camera x is -2.25 .. +9.97, all well above the
+     -4.6 onset) and 1 at this one's, and it is the same mask the ordinary
+     underground approach composes on. The result is that a jump to Final
+     reveals exactly as the scrub does — nothing until the lens passes
+     x -4.6, then the slab dissolving in, then the bodies kindling on uPull —
+     and a jump AWAY from Final retires it the same way, in reverse, instead
+     of vanishing the whole field on the click frame.
+
+     Off a blend this is byte-for-byte the shipped composition, including the
+     visibility gate: `flag ? … : …` and not a blend of the two. Deep links,
+     ?p= and the frozen ?capture= path never blend, so every golden is
+     untouched by construction. */
+  let blending = false;
+
   sceneApi.addAnimator('journey-final', (t, dt) => {
     amount += (amountTarget - amount) * Math.min(1, dt * 2.2);
     if (amount < 0.004 && amountTarget === 0) amount = 0;
     const rise = riseOf(sceneApi.camera.position.x);
-    const eff = 1 - (1 - amount) * (1 - rise);   // amount OR rise
-    group.visible = amount > 0.003;
+    const eff = blending ? rise : 1 - (1 - amount) * (1 - rise);   // amount OR rise
+    // Still gated by the arm — `rise` says where the lens is, not which
+    // chapter owns the frame, and the lens is below the onset on every other
+    // leg anyway. `amountTarget > 0` keeps an arriving jump live before the
+    // ease has moved; `amount > 0.003` keeps a departing one live while it
+    // retires on the camera.
+    group.visible = blending
+      ? (amountTarget > 0 || amount > 0.003) && eff > 0.003
+      : amount > 0.003;
     if (!group.visible) {
       lastPull = pullOf(sceneApi.camera.position.x);
       if (heroDimActive) restoreHeroDim();   // byte-exact hand-back
@@ -363,6 +401,10 @@ export function createFinal(sceneApi) {
     /** T4 streaming seam. */
     setArmed(on) { amountTarget = on ? 1 : 0; },
     get armed() { return amountTarget > 0; },
+    /** journey.js: a nav jump's camera blend is in flight, so the journey's
+     *  state and the camera disagree — compose on the camera alone until it
+     *  lands. See the block above the animator. */
+    setBlending(on) { blending = !!on; },
     /** Deep-link / frozen-capture snap (journey.js placeAt contract): jump
      *  the eased arm state to its target so a dt=0 ride sees the finished
      *  chapter. Before this, ?capture=final shot the epilogue DARK — amount

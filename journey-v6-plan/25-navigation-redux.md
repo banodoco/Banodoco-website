@@ -635,3 +635,223 @@ five pre-existing §11-of-23 errors.
   external URLs).
 * `navChapterAt` (route.js) now has no callers; kept as documented manifest
   API.
+
+---
+
+## 12. 2026-08-09 (later still) — the jump's flash: the camera was read before it was written
+
+**Reported:** Hannah, on Mission → Final. *"A weird flash — a bunch of stuff
+flashes up for a moment, that looks maybe like the fully progressed view shown
+right away and then disappears, and then it goes through the transition. It
+feels like there's something glitchy happening."*
+
+Three phases, three separate causes, all of them the same underlying mistake:
+**things that describe the CAMERA were being computed from journey state that
+had already snapped to the destination.**
+
+**Files:** `journey/journey.js`, `journey/chapters/final/index.js`. Nothing
+else; no chapter's reveal law changed, and no golden moved.
+
+### The mechanism, measured
+
+A nav jump is deliberately a DIRECT jump (§ the `directJumpTo` block): journey
+state snaps to the destination in one tick — seams, copy, route, scroll surface
+all land there — while the camera takes one short blend from where it stood.
+Inside `placeAt`, `applyFrame` calls `director.apply(p)`, which WRITES the live
+camera to the destination pose, and `snap()` then throws every chapter's eased
+arm state to its target. Only after `placeAt` returns was `camBlend` armed, and
+the blend ran at the very END of the `'journey'` animator.
+
+Everything in between therefore read a pose that was about to be overwritten in
+the same frame and never rendered:
+
+1. **The flash.** `chapters.final = createFinal(...)` registers `'journey-final'`
+   at boot, BEFORE the spine registers `'journey'`. Animators run in insertion
+   order, so Final ran FIRST every frame and read whatever `camera.position`
+   held — on the first frame after the click, the un-corrected DESTINATION pose.
+   It computed a fully-kindled reveal; the spine's blend then put the camera
+   back near Mission; the frame that rendered composited the arrived epilogue
+   onto the departure camera. Measured on the live page, headless at 1440×900,
+   reading `renderer.info` and the drawing buffer per frame:
+
+   | Mission → Final, first rendered frame | before | Mission rest |
+   |---|---|---|
+   | draw calls | **336** | 42 |
+   | triangles | **210,051** | 12,829 |
+   | `uPull` / kindled fraction | **1.000 / 1.000** | 0 / 0 |
+   | camera x | −2.252 (Mission) | −2.250 |
+
+   16× the geometry of the pose being rendered, for one frame. Inspire → Final
+   and Connect → Final measured 219,167 and 234,051 the same way.
+
+2. **The disappearance.** Final composes `eff = 1 − (1 − amount)(1 − rise)` —
+   an OR, not a product. `snap()` pins `amount = 1` (the T4 seam arms Final on
+   the pure p-window `p > 0.80`, which the destination p 0.925 satisfies
+   unconditionally), so `eff` was pinned wide open for the WHOLE blend no matter
+   what the camera said. Meanwhile the per-vertex kindle
+   (`smoothstep(aReveal, aReveal + 0.16, uPull)`) does track the camera, and the
+   camera spends most of the blend far outside the pullback range — so every
+   body collapsed to its 7% ember floor while the slab, colony, sky and mist
+   stayed at full `uAmount`. That is the "disappears": not the epilogue leaving,
+   the epilogue standing there unlit at the wrong pose.
+
+3. **The transition.** The blend's tail finally brought the camera into range
+   and the field genuinely re-revealed. That part was always correct — it only
+   read as a third phase because of the two before it.
+
+Contrast: Connect composes `uAmount = amount * resolve` and Inspire
+`master(az) * arr(az)`, both products of camera-pure factors, so their identical
+stale read self-corrects inside one frame. Final's OR is what turned a one-frame
+artifact into a multi-hundred-millisecond collapse-and-recover, and Mission →
+Final is the longest jump in the route, which maximises both halves.
+
+### The fix — the class, then the instance
+
+**(1) The camera is finished before anything reads it** (`journey.js`). The
+blend moved out of the tail of the `'journey'` animator and INTO `applyFrame`,
+immediately after `director.apply(p)` writes the destination pose and before the
+first reader. And the spine's animator is now registered at the top of `boot()`,
+before `createLens` and before `chapters`, so it runs ahead of every chapter's
+own animator. Together those two lines make the pose a single-writer quantity:
+the seams' T1/T3/T4 predicates, every chapter's `drive(p)`, the lens's focus
+projection, the UI's hotspot projection and all four chapter animators now read
+the pose the frame will actually present.
+
+This is the CLASS fix. The same stale-read shape exists in Connect, Inspire and
+Owned and was harmless only by luck of their gating maths; it is now
+structurally unreachable rather than accidentally survivable.
+
+**(2) A jump is not a placement** (`journey.js`). `placeAt` gained
+`{ snap }`. Placements — deep links, `?p=`, `?pose=`, the frozen `?capture=`
+burst — keep snapping, because a dt = 0 ride must render the finished frame.
+A nav jump passes `snap: false` and the snap is DEFERRED to `endCamBlend`, the
+frame the camera lands. This is the WebGL half of what `ui.armCopyEntry`
+(`d1ecc23`) already does for the copy layer, and it fixes the outgoing mirror of
+the bug too: leaving Final used to delete the entire 282,053-triangle epilogue
+on the click frame while the camera was still standing in it.
+
+**(3) Final composes on the camera while the camera disagrees with the state**
+(`final/index.js`). New optional chapter method `setBlending(on)`, called by the
+spine when a blend arms, cancels or lands. While it is set, Final drops the
+`amount` term and composes on `rise` alone — its own camera-pure "the lens has
+climbed into this chapter's territory" mask, which is 0 at every other chapter's
+rest (their camera x runs −2.25 … +9.97, all above the −4.6 onset) and 1 at its
+own. `group.visible` follows `eff` for that window instead of `amount`. Off a
+blend it is `flag ? … : …` — byte-for-byte the shipped composition, which is why
+no golden moves.
+
+Connect and Inspire do not implement `setBlending`: their reveals are products
+of camera-pure factors and (1) is sufficient for them. Owned does not either —
+see the residuals.
+
+**(4) The fog travels with the camera** (`journey.js`). The director keys fog
+off p, so a jump also threw the world's whole depth to the destination ramp on
+the click frame. Both ends are captured once in `directJumpTo` (p does not move
+during a jump, so the destination ramp is a constant, and reading it live would
+feed the blend back into itself at p = 0 exactly as the position once did) and
+interpolated on the blend's own ease, beside fov.
+
+This one was A/B'd on its own, because it is the departure direction's own
+version of "and then it disappears". Final → Mission, the click frame, camera
+essentially unmoved (x −14.720 → −14.714):
+
+| Final → Mission, click frame | luminance | fog |
+|---|---|---|
+| origin (Final rest) | 67.24 | 13.75 / 60.30 |
+| fog snapped (the shipped behaviour) | **32.16** | 7.00 / 20.00 |
+| fog on the blend's ease | **61.00** | 13.74 / 60.27 |
+
+Slamming near/far to the hero's 7 / 20 blacks out everything past 20 units while
+the camera is still standing in a 60-unit-deep field: **−35.1/255, a 52% drop,
+in one frame, with nothing moved.** On the ease it is −6.4, and even that is
+mostly the lens grade step below (gain 1.1387 → 1.0000) plus Owned's colony
+leaving. Fog is a camera-relative quantity — it is a function of distance FROM
+THE LENS — so writing the destination's ramp over the origin's pose is the same
+category of error as writing the destination's reveal over it.
+
+### Before / after, per frame
+
+Mission → Final, the same measurement either side. `tris` and `lum` are the
+frame actually rendered; `lum` is mean luminance of a 1440×240 centre band read
+straight off the drawing buffer after `composer.render()`.
+
+| dt (ms) | before: tris / uPull / kindle | after: tris / uPull / kindle | cam x |
+|---|---|---|---|
+| rest (origin) | 12,829 / 0 / 0 | 12,829 / 0 / 0 | −2.25 |
+| first frame | **210,051 / 1.000 / 1.000** | 16,757 / 0 / 0 | −2.26 |
+| ~300 | 18,051 / 0 / 0 | 16,757 / 0 / 0 | −2.33 |
+| ~600 | 18,051 / 0 / 0 | 16,755 / 0 / 0 | −4.64 |
+| ~660 | 18,049 / 0 / 0 | 18,049 / 0 / 0 (Final first drawn) | −5.56 |
+| ~1,000 | 18,051 / 0.14 / 0.004 | 18,051 / 0.15 / 0.006 | −8.9 |
+| landing | 282,053 / 1.0 / 1.0 | 282,053 / 1.0 / 1.0 | −14.72 |
+
+After the fix the epilogue is first submitted at camera x = −5.56 — just past
+the −4.6 `rise` onset, which is exactly where the ordinary scrub reveals it —
+and kindles across x −8 → −14 on `uPull`, exactly as the scrub does. The jump
+now shows what a fast ride shows, at the pose it is actually standing at.
+
+The departure mirrors it. Final → Connect, after: the epilogue holds at 278,133
+triangles and kindle 1.000 while the camera is still at x −14.7, then retires
+progressively — 273,335 → 178,967 → 66,451 → 14,131 — and goes dark at
+x = −4.24, the same onset in reverse. Before, it was gone in one frame at
+x = −14.72.
+
+### What was deliberately NOT changed
+
+* **Final's OR itself.** `amount OR rise` exists so a fling that outruns the
+  arming clock still surfaces onto a finished world. It is correct whenever the
+  camera is on the path p describes; the only state in which it is not is a jump
+  blend, and that state now has a name. Rewriting it as a product would have
+  re-timed the ordinary underground approach for no gain.
+* **The seams.** T1/T3/T4 are hybrids of camera predicates and p-windows, and
+  the p-windows are what arm a destination chapter on the click frame. Making
+  them camera-coherent during a blend is not tractable without inventing a
+  p-inverse of the director's spline; the arm is cheap and dark, and the
+  composition on top of it is now camera-pure where it can be.
+* **The lens grade.** `lens.update(p)` is a pure p → look curve, and it snaps:
+  gain 1.0000 → 1.1387 on the click frame of Mission → Final, worth +3.8/255 in
+  the centre band for the length of the blend. Left alone deliberately — unlike
+  fog, the grade is not a camera-relative quantity, it is the leg's finishing
+  look, and the state has legitimately arrived. Recorded here with its number so
+  the next person can overrule it on taste rather than rediscover it.
+
+### Gate results
+
+| Gate | Result |
+|---|---|
+| Flash gone (Mission → Final) | **PASS.** First 400 ms peak: 210,051 → 16,757 triangles; kindled fraction 1.000 → 0.000. Over the origin's own resting draw: +197,222 → **+3,928**. |
+| Same, Inspire/Connect/Owned → Final | **PASS.** +206,338 → +3,926 · +221,216 → +3,924 · +37,290 → +12,000 (Owned's origin rest draws only 4,753: the lens is under the soil). Kindled fraction 1.000 → 0.000 on all four. |
+| Jumps to Connect / Inspire | **PASS.** First-400 ms peak equals the origin rest exactly (over-origin 0 or −6 triangles) from every origin. |
+| Every jump lands | **PASS.** All 20 origin × destination pairs land on the right chapter, p and pose exact (e.g. Final `p=0.9250 [-14.72, 2.73, 2.7]`), twice over: once in the measured sweep, once in a 40-jump interaction pass. |
+| Deep links / `?p=` / `?pose=` / `?capture=` | **PASS.** `#/final`, `#/connect/ados`, `?p=0.70`, `?pose=owned`, `?capture=final`, `?capture=inspire`, `?capture=0.83` all place at the right chapter and p. Two of them place somewhere other than the naive expectation — `?p=0.70` resolves to the Owned rest at 0.725 (commit-resolution, and it does so with `&nosnap=1` too), and `?capture=0.83` reports chapter `owned` because 0.83 is below `startOf('final')` — both verified IDENTICAL on unmodified HEAD before being written down as passes. |
+| References | **PASS.** `capture.py --check`: 10/10 at **MAE 0.00/255**, zero px > 8 — all ten frozen frames byte-identical. |
+| Departure coherence | **PASS.** Final → Mission click frame: luminance 67.24 → 32.16 before (a 52% crash at an unmoved camera), 67.36 → 61.00 after. Final → Connect: the epilogue holds at 278,133 triangles and retires to dark at x = −4.24 instead of vanishing in one frame at x = −14.72. |
+| Full ride | **PASS.** Forward wheel ride reaches p = 1 at the end-hold; reverse ride returns to p = 0 with the hero pose exact (−2.25, 2.25, 10.4), fog restored to 7/20, lens gain back to 1.00, nothing armed. |
+| Console | **CLEAN** (error/warn + uncaught + rejections trapped from document start) over the full forward+reverse ride, all 40 jumps, and every placement URL. |
+
+### Residuals
+
+* **The destination chapter still ARMS on the click frame**, because the seam
+  that arms it is p-driven. With the deferred snap that is now an eased entry
+  rather than a pop, and each chapter's own camera-pure factor bounds its
+  brightness — but the geometry is submitted. Measured: **+3,928 triangles** of
+  Owned colony drawn at the departure pose on any jump to Owned or Final
+  (Owned's arrival mask is p-pure by design — "p and the camera are a bijection
+  on the leg" — and that bijection is exactly what a jump breaks); **+17,200**
+  of Connect network at the Final rest on Final → Connect, fading up from ~0
+  over ~0.35 s. Frame luminance falls throughout both, so nothing reads as
+  appearing. A camera-pure substitute for Owned's mask was designed and
+  rejected: the colony is legitimately visible from ABOVE ground through the
+  Final cutaway, so any "below the soil line" test would have gone dark for the
+  whole Mission → Final blend and then popped at the landing.
+* **Owned's colony leaves in one frame on a jump AWAY from Final** (−3,920
+  triangles at an unmoved camera), for the same p-pure reason. Pre-existing, not
+  introduced here, and the smaller half of the same argument.
+* One frame of Final → Connect submits 299,253 triangles against 282,053 at the
+  Final rest (+6%): the clones' entry-draw front re-running as `uPullRaw` falls.
+  Camera-pure and identical to what a reverse scrub does through the same pose;
+  frame luminance is falling (63.1 → 60.2) across it.
+* `?capture=` and every deep link go through `placeAt` with `snap: true`
+  unchanged, so the frozen-capture path is untouched by all four changes — the
+  reason the ten references are byte-identical rather than merely within
+  threshold.
