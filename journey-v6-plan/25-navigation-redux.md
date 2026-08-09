@@ -456,3 +456,182 @@ wrong, missing, or forgotten by whoever builds the next one.
   ground tap there opens the node instead of pinging the mycelium. That is the
   hit pad doing its job (1325 of 1487 sampled ground pixels remain free) and
   predates this work — noted, not changed.
+
+---
+
+## 11. 2026-08-09 (later again) — four reports from Hannah: the fan's dead spots, the fleeing menu, the sticky fan, the vanishing rest
+
+**Reported:** Hannah, same day, after using the shipped component. "Generally
+looking very good … starting to feel quite nice" — these are refinements of a
+component that stays as built, not a rebuild.
+
+**Files:** `journey/rail.js`, `journey/site.css`, `static/index.html`.
+`journey/route.js` untouched (`navChapterAt` simply lost its one caller and
+stays as documented API).
+
+Every cause below was REPRODUCED and measured headless over capture.py's own
+CDP client before anything was changed, and re-measured after.
+
+### (1) "The Epilogue button isn't clickable, and it closes when I try to hover over it"
+
+Two defects wearing one report:
+
+* **The Epilogue tile was an aria-hidden `<span>` echo** (§1's deliberate
+  design), and every pointer-events-enabling rule says `a.j-rail-item` — so
+  the tile was a **44px dead hole in the fan**. Measured, walking a pointer
+  down the open fan at owned: `elementFromPoint` returned `CANVAS` across
+  y 474–482, the control saw `pointerleave`, and `.j-rail-hot` dropped —
+  the fan folded exactly as she approached the tile. Worse: after the fold,
+  the RESTING MENU BUTTON sits under that very region (480–524), so her
+  click "on the Epilogue" opened the site-map panel instead.
+* **An 8px gap between the last tile and the menu mark** (the hairline's
+  breathing room) was a second, thinner instance of the same class: dead
+  space inside a control is a `pointerleave` under a moving pointer.
+
+**Fix:** the epilogue slot is a **real link** — every chapter has a route,
+the panel already navigated to it, and a tile a pointer can reach must be a
+tile a pointer can press. It keeps the echo's quieter voice (`.j-rail-echo`,
+now 0.42 in the fan, hover to parchment) and, with all five slots linked, the
+rail's `aria-current` and reticle now follow `chapterAt(p)` — the rail can
+finally say "you are in the epilogue" itself, as the panel always could. The
+hairline gap is bridged by a hit pad riding the menu button
+(`.j-rail-menu::after`, 8px, both states). Verified: the walk down the fan
+holds `hot` at every sampled y; a click, a touch second-tap and a keyboard
+Enter on the tile all land at `#/final` with exactly one `aria-current`.
+
+### (2) "The first click just doesn't actually open the menu — it opens the expanded version"
+
+Measured, in one line: **the menu button moved between mousedown and
+mouseup.** On mouse, the press focused the button, `:focus-within` was one of
+the fan's expansion conditions, the fan opened, and the button slid down to
+hold the foot of the stack — mouseup landed on empty air, so no click event
+was ever delivered. Literally "the first click opens the expanded version".
+On touch it was the arming tap: `pointerdown` on ANY rail point (menu button
+included) armed `.j-rail-open`, the button slid, and the tap's click died on
+a moved target.
+
+**Fix, three parts, all serving one law — *the control you are pressing does
+not move, and if it moves anyway, pressing it still works*:**
+
+* **Focus no longer expands the fan** — see (3); mousedown can't shove the
+  button any more.
+* **A touch press on the menu button never arms the fan** — the menu is the
+  *other* resting control; its first tap is for the panel.
+* **The menu opens on `pointerdown`** — the way an OS menu bar does. The
+  press is the intent; acting on the press makes the button clickable
+  throughout any motion. `preventDefault` keeps the press's focus where
+  `openMenu` sends it; the `click` listener stays for Enter/Space, guarded.
+* Plus **hover intent** (`HOT_INTENT_MS = 120`): the fan unfolds on dwell,
+  not on transit, so a pointer merely crossing the current mark on its way
+  to the menu leaves the menu where it was aimed.
+
+Verified: from rest, one mouse click and one touch tap each open the panel —
+including a click landing while the button was measurably mid-slide.
+
+### (3) "After I clicked, it doesn't go away until I click somewhere else"
+
+The fan's expansion conditions included `:focus-within`, and a mouse click
+focuses the link it presses — so a *non-visible* focus held the fan open
+until something else took focus. The `:focus-within` was deliberate (§4: a
+keyboard visitor's fan must never fold under them) but it conflated the two
+input worlds.
+
+**Fix: `:has(:focus-visible)` replaces `:focus-within` in every expansion
+selector, both tiers.** `:focus-visible` is exactly the keyboard half of
+focus: Tab into the rail still opens and HOLDS the fan (verified: a pointer
+sweep across and off the open fan does not fold it while a link keeps
+keyboard focus), while a click's focus neither opens nor holds it. Section
+clicks also stopped force-collapsing the hover fan — the pointer is still on
+the control, so the fan now stays until it leaves (her words: "go away upon
+de-hover"), and the touch state alone is collapsed by a navigating tap. The
+resting hit-gate negation (`:not(...)`) mirrors the same three conditions, so
+a click-focused rail can't keep folded tiles hit-testable.
+
+### (4) "Sometimes the side menu thing is invisible … it's on top of a similarly coloured mushroom" — the taste call
+
+The resting control is gold line-work over a scene made of gold line-work; on
+the epilogue's lit field the current mark simply vanished (screenshotted: at
+the Final rest the mark sits directly on the bright cap's wireframe). §7's
+pass-3 conclusion — "the two-glyph rest needs nothing added" — was measured
+over Owned's colony and did not survive the epilogue's field. Hannah asked
+for judgement, suggesting a resting scrim. Four candidates were built and
+screenshotted over the brightest frames (Connect's ground, Owned's colony,
+the Final field) and the darkest (Mission's sky), at 1440×900, 1280×800 and
+375×812:
+
+* **A — the marks carry their own contrast:** a tight dark rim under every
+  glyph (two stacked `drop-shadow`s, 1px @ 0.95 + 3px @ 0.6, riding UNDER
+  the current mark's existing gold glow — `filter` replaces, it does not
+  compose). Crisp, zero furniture; but the menu mark still fought the cap's
+  rim at Final, and a rim alone can't calm a busy field behind a stroke.
+* **B — a resting halo:** the expanded band's own recipe (gradient falloff,
+  masked feather — "the frame darkening at its edge") sized to the two
+  resting marks alone and quieter (0.62 vs 0.82, 4.6rem vs 6rem). It fades
+  out as the band fades in, so the darkening *grows with the fan* rather
+  than doubling under it. Legible, in-language; but the glyph itself still
+  sat soft on the brightest pixels.
+* **C = A + B — CHOSEN.** The halo calms the field; the rim keeps the glyph
+  a drawn thing. Screenshotted over every chapter at all three sizes:
+  legible everywhere, and the rest still reads as two symbols in weather,
+  not a docked widget.
+* **D — a backdrop-filter puck (blur + darken behind the marks) — REJECTED
+  on sight:** a rounded rectangle floating on the scene is exactly the
+  generic web furniture this component has avoided twice already (§7's
+  "docked panel", 23's fixed stack). Also a per-frame compositing cost over
+  a live WebGL canvas.
+* **A hairline rule down the edge — REJECTED without building:** it fails
+  the actual defect (a 1px line adds no legibility to a 24px glyph on a lit
+  cap) and adds permanent chrome to every quiet frame that never needed it.
+
+Both tiers carry the treatment (`.j-rail-inner::after` + `.j-sym` filter /
+`.rail-inner::after` + `.sym` filter; the static tier's halo is always-on —
+it has no reveal latch — and off under `.no-js`, where the expanded band is
+already up). The reduced-motion blocks kill the halo's transition with the
+band's. The frozen references cannot see any of it: `.j-rail` is in
+capture.py's HIDE_SELECTORS, and `--check` confirms **10/10 at MAE 0.00/255**.
+
+### The static twin
+
+Same four fixes, same shapes: the epilogue slot is an `<a href="#/final">`
+(navLinks picks it up by `data-nav`, `setChapter` drops its owned-stays-
+current special case); every `.rail:focus-within` became
+`.rail:has(:focus-visible)`; the closed summary opens on `pointerdown` (with
+a one-shot click swallow so the same press's native toggle can't snap it
+shut — keyboard activation passes untouched, no-JS keeps the pure native
+toggle); Tier 1's hover intent appears as an enter-only 0.12s
+`transition-delay` on the menu-wrap (reads as the stagger's last step;
+reduced-motion re-zeroes it at matching specificity); the hairline hit pad
+exists in its closed state only, since the open summary is the panel's
+header row. Drift guard after all of it: 145 strings + 11 symbols, only the
+five pre-existing §11-of-23 errors.
+
+### Gate results
+
+| Gate | Result |
+|---|---|
+| (1) | **PASS.** Mouse click, touch second-tap and keyboard Enter on the Epilogue tile all land at `#/final` (p 0.9250); `elementFromPoint` holds the control at every sampled y down the fan; exactly one `aria-current` in rail and panel, reticle on the epilogue at its rest. |
+| (2) | **PASS.** Single mouse click and single touch tap from rest each open the panel — the mouse click verified landing while the button was mid-slide (rect y 480→490 at press). |
+| (3) | **PASS.** Pointer: click → fan holds while hovered → folds on leave (slot transform back to identity). Keyboard: fan opens on focus, survives a pointer sweep on/off, Escape-close returns focus to the menu button and the fan correctly stays for the keyboard. |
+| (4) | Screenshots of rest + fan over all five chapters at 1440×900, 1280×800, 375×812, before and after; legible at every one. |
+| References | **PASS.** `capture.py --check`: 10/10 at MAE 0.00/255, zero px > 8 — all ten frozen frames byte-identical. |
+| Input gates | **PASS** (`tools/inputgates.js` G1–G5) at 1440×900, 375×812 and the Final rest: canvas owns the frame, overlays inert-unless-`.open` even with `hidden` stripped — 6903c4a's guarantee intact. |
+| Poke | **PASS.** Main model body and ground, mouse and touch, both viewports (G3); Final FIELD bodies via the chapter's own `pickStats()`: mouse → broad 4 / narrow 1 / 1 clone ringing; touch → broad 8 / narrow 2. |
+| Keyboard | **PASS.** Tab order now `skip → wordmark → 2RP → Discord → Mission → Inspire → Connect → Owned → Epilogue → Menu → hotspots`; Enter opens the panel with focus on close; trap wraps both ways (Shift+Tab from close → the static-journey link; Tab from there → close); Escape restores focus. |
+| Reduced motion | **PASS** (emulated): fan instant and complete (0s durations, halo included), menu instant, close on the tick. |
+| Touch model | **PASS** at 1440 and 375: first tap arms, second acts, tap-away collapses, menu single-tap opens, scrim tap closes. |
+| Console | **CLEAN** over a 402-point scrub ride plus the full interaction pass, both tiers (error/warn + uncaught + rejections from document start). |
+| Both tiers | Static: drift guard 5 pre-existing errors only; epilogue link navigates with `aria-current`; fan folds on de-hover after a click; summary opens on one press; Escape closes; no-JS renders the expanded five-name rail with the band up and the halo off. |
+
+### Residuals
+
+* A pointer that DWELLS on the current mark (> 120ms) en route to the menu
+  still opens the fan and slides the menu to the stack's foot — that is the
+  fan working as designed; the press-to-open makes even that button
+  catchable in flight. Only a click aimed from memory at the old resting
+  spot, issued after the fan has fully opened, now lands on the Epilogue
+  tile instead — the tile the visitor is looking at when it happens.
+* The §7/§9 residuals stand (placeholder tokens in the panel, the 375
+  chip-behind-the-band note, the five Tier-3 drift errors, the missing
+  external URLs).
+* `navChapterAt` (route.js) now has no callers; kept as documented manifest
+  API.

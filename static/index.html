@@ -227,14 +227,21 @@
           <summary> becomes the panel's header — which is what keeps a
           no-JS visitor's way out visible and clickable.
 
-       3. EXPANSION IS :hover / :focus-within ONLY — no script, and no
-          touch-arming branch (Tier 1's `.j-rail-open`). A tap on a
-          phone therefore follows the link under it rather than
+       3. EXPANSION IS :hover / :has(:focus-visible) ONLY — no script,
+          and no touch-arming branch (Tier 1's `.j-rail-open`). A tap
+          on a phone therefore follows the link under it rather than
           expanding first, which is the right trade for a page whose
           whole content is already one scroll away below. The fan
           opens from the LIST's hover (pointing at the menu mark does
           not unfold the sections), matching Tier 1's separation of
-          the two resting controls.
+          the two resting controls. `:focus-visible`, NOT
+          `:focus-within` (2026-08-09, matching Tier 1): a mouse
+          click's focus must neither unfold the fan — it slid the
+          menu mark out from under its own first click — nor hold the
+          fan open after the pointer leaves. Keyboard focus does both,
+          deliberately. Tier 1's pointer hover-intent (rail.js
+          HOT_INTENT_MS) appears here as the menu-wrap's enter-only
+          transition-delay.
 
      NO-JS: `.now`, `--cur` and `aria-current` need script, and without
      them the resting state would be a stack of invisible marks. So
@@ -271,6 +278,28 @@
     mask-image: linear-gradient(to bottom, transparent, #000 34px, #000 calc(100% - 34px), transparent);
     transition: opacity 0.35s ease;
   }
+  /* THE RESTING HALO — Tier 1's .j-rail-inner::after (2026-08-09 visibility
+     fix), same recipe as the expanded band but sized to the two resting
+     marks and quieter. Always on (this tier has no reveal latch); fades out
+     as the expanded band fades in; off under .no-js, where the rail ships
+     expanded and the band is already up. */
+  .rail-inner::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    z-index: -1;
+    width: 4.6rem;
+    top: calc(-22px - 2.4rem);
+    height: calc(96px + 4.8rem);
+    background: linear-gradient(to left, rgba(9, 6, 2, 0.62) 20%, rgba(9, 6, 2, 0));
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 38px, #000 calc(100% - 38px), transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 38px, #000 calc(100% - 38px), transparent);
+    opacity: 1;
+    transition: opacity 0.35s ease;
+  }
+  .rail:has(:focus-visible) .rail-inner::after,
+  .rail-inner:has(.rail-list:hover)::after,
+  .no-js .rail-inner::after { opacity: 0; }
   .rail-list { display: block; margin: 0; padding: 0; list-style: none; }
   .rail-slot {
     position: absolute;
@@ -296,10 +325,15 @@
   /* At rest only the CURRENT tile is live in the stack — the collapse rules
      are body:not(.no-js)-guarded so a scripting-disabled visitor can click
      everything the always-expanded rail shows. */
-  body:not(.no-js) .rail:not(:focus-within) .rail-list:not(:hover)
+  body:not(.no-js) .rail:not(:has(:focus-visible)) .rail-list:not(:hover)
     .rail-slot:not(.now) a.rail-item { pointer-events: none; }
   .rail-mark { position: relative; flex: 0 0 auto; display: block; width: 24px; height: 24px; }
-  .sym { display: block; width: 24px; height: 24px; overflow: visible; }
+  /* the dark rim: the marks carry their own contrast over the stills' bright
+     line-work (Tier 1's .j-sym filter, 2026-08-09 visibility fix) */
+  .sym {
+    display: block; width: 24px; height: 24px; overflow: visible;
+    filter: drop-shadow(0 0 1px rgba(9, 6, 2, 0.95)) drop-shadow(0 0 3px rgba(9, 6, 2, 0.6));
+  }
   .sym path { fill: none; stroke: currentColor; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
   .sym circle { fill: currentColor; stroke: none; }
 
@@ -328,26 +362,34 @@
 
   /* RESTING: the current mark, lit */
   .rail-slot.now .rail-item { color: rgba(228, 182, 102, 0.82); }
-  .rail-slot.now .sym { filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.4)); }
+  /* the rim rides under the glow — `filter` replaces, it does not compose */
+  .rail-slot.now .sym {
+    filter: drop-shadow(0 0 1px rgba(9, 6, 2, 0.95)) drop-shadow(0 0 3px rgba(9, 6, 2, 0.6))
+            drop-shadow(0 0 5px rgba(240, 190, 90, 0.4));
+  }
 
   /* EXPANDED: hover on the section stack, or keyboard focus anywhere */
-  .rail:focus-within .rail-inner::before,
+  .rail:has(:focus-visible) .rail-inner::before,
   .rail-inner:has(.rail-list:hover)::before { opacity: 1; }
-  .rail:focus-within .rail-slot,
+  .rail:has(:focus-visible) .rail-slot,
   .rail-list:hover .rail-slot {
     opacity: 1;
     transform: translateY(calc((var(--i, 0) - var(--cur)) * 44px));
   }
-  .rail:focus-within .rail-item,
+  .rail:has(:focus-visible) .rail-item,
   .rail-list:hover .rail-item { color: rgba(201, 191, 168, 0.62); }
-  .rail:focus-within .rail-slot.now .rail-item,
+  .rail:has(:focus-visible) .rail-slot.now .rail-item,
   .rail-list:hover .rail-slot.now .rail-item,
-  .rail:focus-within .rail-slot a[aria-current="true"],
+  .rail:has(:focus-visible) .rail-slot a[aria-current="true"],
   .rail-list:hover .rail-slot a[aria-current="true"] { color: var(--gold-bright); }
   .rail-item:is(:hover, :focus-visible) { color: var(--parchment); }
-  .rail-echo .rail-item { cursor: default; }
-  .rail:focus-within .rail-echo:not(.now) .rail-item,
-  .rail-list:hover .rail-echo:not(.now) .rail-item { color: rgba(201, 191, 168, 0.32); }
+  /* the epilogue: a real control with the echo's quieter voice — dimmer in
+     the fan than its peers, but it answers a hover and a focus exactly as
+     they do, because it takes a click (Tier 1, THE EPILOGUE) */
+  .rail:has(:focus-visible) .rail-echo:not(.now) .rail-item,
+  .rail-list:hover .rail-echo:not(.now) .rail-item { color: rgba(201, 191, 168, 0.42); }
+  .rail:has(:focus-visible) .rail-echo:not(.now) .rail-item:is(:hover, :focus-visible),
+  .rail-list:hover .rail-echo:not(.now) .rail-item:is(:hover, :focus-visible) { color: var(--parchment); }
 
   /* the reticle on the current entry, exactly Tier 1's */
   .rail-ret { position: absolute; inset: -5px; display: block; pointer-events: none; }
@@ -362,18 +404,18 @@
   .rck.tr { top: 0;    right: 0; border-top: 1px solid var(--rck);    border-right: 1px solid var(--rck); transform: translate(-6px, 6px)  scale(0.4); }
   .rck.br { bottom: 0; right: 0; border-bottom: 1px solid var(--rck); border-right: 1px solid var(--rck); transform: translate(-6px, -6px) scale(0.4); }
   .rck.bl { bottom: 0; left: 0;  border-bottom: 1px solid var(--rck); border-left: 1px solid var(--rck);  transform: translate(6px, -6px)  scale(0.4); }
-  .rail:focus-within a[aria-current="true"] .rck,
+  .rail:has(:focus-visible) a[aria-current="true"] .rck,
   .rail-list:hover a[aria-current="true"] .rck {
     opacity: 1;
     transform: translate(0, 0) scale(1);
     transition: opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--d, 0) * 0.035s + 0.1s),
                 transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--d, 0) * 0.035s + 0.1s);
   }
-  .rail:focus-within a[aria-current="true"] .rck.tr,
+  .rail:has(:focus-visible) a[aria-current="true"] .rck.tr,
   .rail-list:hover a[aria-current="true"] .rck.tr { transition-delay: calc(var(--d, 0) * 0.035s + 0.15s); }
-  .rail:focus-within a[aria-current="true"] .rck.br,
+  .rail:has(:focus-visible) a[aria-current="true"] .rck.br,
   .rail-list:hover a[aria-current="true"] .rck.br { transition-delay: calc(var(--d, 0) * 0.035s + 0.20s); }
-  .rail:focus-within a[aria-current="true"] .rck.bl,
+  .rail:has(:focus-visible) a[aria-current="true"] .rck.bl,
   .rail-list:hover a[aria-current="true"] .rck.bl { transition-delay: calc(var(--d, 0) * 0.035s + 0.25s); }
 
   /* ---- the menu control: the second resting symbol ---- */
@@ -383,9 +425,16 @@
     transform: translateY(52px);
     transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .rail:focus-within .rail-menu-wrap,
+  .rail:has(:focus-visible) .rail-menu-wrap,
   .rail-inner:has(.rail-list:hover) .rail-menu-wrap {
     transform: translateY(calc((var(--n) - 1 - var(--cur)) * 44px + 52px));
+    /* pure-CSS hover intent (Tier 1 does this in rail.js, HOT_INTENT_MS): the
+       menu mark holds its resting place for a beat, so a pointer merely
+       TRANSITING the stack on its way to it still finds it where it was
+       aimed. Enter-only — the base rule above has no delay, so it slides
+       home the instant the fan folds. It reads as the stagger's last step:
+       the tiles already arrive at up to 4 x 0.035s. */
+    transition-delay: 0.12s;
   }
   .rail-menu {
     display: flex;
@@ -408,6 +457,18 @@
     height: 1px;
     transform: translateX(-50%);
     background: rgba(217, 164, 65, 0.26);
+  }
+  /* the hairline's 8px of breathing room, bridged for the pointer — Tier 1's
+     .j-rail-menu::after hit pad (2026-08-09): dead space under a travelling
+     pointer un-hovers the fan. Closed state only; open, the summary is the
+     panel's header row and needs no pad. */
+  .rail-menu-wrap:not([open]) .rail-menu::after {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
   }
   .rail-menu:is(:hover, :focus-visible) { color: var(--gold-bright); }
 
@@ -747,20 +808,24 @@
        hover / focus, the reticle already locked in, the menu's filaments
        already drawn. Same contract as the live tier's. */
     .rail-slot, .rail-item, .rail-name, .rail-menu, .rail-menu-wrap,
-    .rail-inner::before, .rck,
+    .rail-inner::before, .rail-inner::after, .rck,
     .menu-item, .menu-mark, .menu-links a, .menu-ia, .menu-note a { transition: none; }
-    .rail:focus-within a[aria-current="true"] .rck,
+    .rail:has(:focus-visible) a[aria-current="true"] .rck,
     .rail-list:hover a[aria-current="true"] .rck,
-    .rail:focus-within a[aria-current="true"] .rck.tr,
+    .rail:has(:focus-visible) a[aria-current="true"] .rck.tr,
     .rail-list:hover a[aria-current="true"] .rck.tr,
-    .rail:focus-within a[aria-current="true"] .rck.br,
+    .rail:has(:focus-visible) a[aria-current="true"] .rck.br,
     .rail-list:hover a[aria-current="true"] .rck.br,
-    .rail:focus-within a[aria-current="true"] .rck.bl,
+    .rail:has(:focus-visible) a[aria-current="true"] .rck.bl,
     .rail-list:hover a[aria-current="true"] .rck.bl {
       transition: none;
       transition-delay: 0s;
     }
     .rail-slot, .rail-menu-wrap { transition-delay: 0s; }
+    /* the hover-intent delay outranks the blanket kill above — repeat it at
+       the enter rule's own specificity */
+    .rail:has(:focus-visible) .rail-menu-wrap,
+    .rail-inner:has(.rail-list:hover) .rail-menu-wrap { transition-delay: 0s; }
   }
 </style>
 </head>
@@ -796,12 +861,14 @@
      drift guard at the foot of this file — same arrangement the copy
      has with ../content/content.js.
 
-     FOUR nav entries, not five: the epilogue is not a peer chapter and
-     has no nav item (content.js chapters.final.nav === null,
-     10-chapter-final.md). It gets an aria-hidden ECHO slot so the
-     resting symbol can show the field you are actually looking at, and
-     a real entry in the menu, which is where it can be named properly.
-     Owned stays aria-current through it, matching the live journey.
+     FIVE links (2026-08-09 fix): the epilogue is not a peer chapter
+     (content.js chapters.final.nav === null keeps it out of headings
+     and numbering), but its slot is a REAL LINK — the first build's
+     aria-hidden <span> echo was a 44px dead hole in the fan that a
+     pointer fell through and a click could not press (the live tier's
+     rail.js, THE EPILOGUE, records the measurement). It keeps the
+     echo's quieter voice (`rail-echo`) and takes aria-current when
+     you are in the epilogue, matching the live journey.
      ============================================================== -->
 <nav class="rail" aria-label="Journey sections">
   <div class="rail-inner">
@@ -845,13 +912,14 @@
           <span class="rail-name" data-src="chapters.owned.nav">Owned</span>
         </a>
       </li>
-      <li class="rail-slot rail-echo" data-chapter="final" style="--i:4" aria-hidden="true">
-        <span class="rail-item">
+      <li class="rail-slot rail-echo" data-chapter="final" style="--i:4">
+        <a class="rail-item" href="#/final" data-nav="final">
           <span class="rail-mark">
             <svg class="sym" data-sym="final" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.6 17.2 H20.4"/><path d="M8.2 11.4 Q12.4 6.2 16.6 11.4"/><path d="M8.2 11.4 H16.6"/><path d="M12.4 11.4 V17.2"/><path d="M2.0 13.8 Q4.8 10.6 7.6 13.8"/><path d="M4.8 13.8 V17.2"/><path d="M16.4 14.6 Q18.4 12.4 20.4 14.6"/><path d="M18.4 14.6 V17.2"/></svg>
+            <i class="rail-ret" aria-hidden="true"><b class="rck tl"></b><b class="rck tr"></b><b class="rck br"></b><b class="rck bl"></b></i>
           </span>
           <span class="rail-name">Epilogue</span>
-        </span>
+        </a>
       </li>
     </ul>
 
@@ -1213,12 +1281,11 @@
         else menuLinks[c].removeAttribute('aria-current');
       }
     });
-    // Owned stays the current nav entry through the epilogue, exactly as the
-    // live journey does (route.js navChapterAt: the nearest earlier chapter
-    // that has a nav entry).
-    var active = id === 'final' ? 'owned' : id;
+    // With all five slots linked (2026-08-09 — the epilogue is a real rail
+    // link now, matching the live tier), the marked entry IS the section on
+    // screen: the rail itself can say "you are in the epilogue".
     for (var k in navLinks) {
-      if (k === active) navLinks[k].setAttribute('aria-current', 'true');
+      if (k === id) navLinks[k].setAttribute('aria-current', 'true');
       else navLinks[k].removeAttribute('aria-current');
     }
     if (writeHash && !openNode) {
@@ -1427,11 +1494,33 @@
        · Pressing the scrim closes it.
        · Following a section link inside it closes it, so the visitor does not
          land on a chapter behind a panel that is still covering it.
+       · The CLOSED summary opens on pointerdown (2026-08-09, mirroring the
+         live tier's menu button): the mark can be sliding to the fan's foot
+         when it is pressed, and a click needs press and release on the same
+         node — any motion in between loses it. The press is the intent.
+         Open, the summary is the panel's header row and keeps its native
+         click toggle; with no script, the native toggle is the whole story.
 
      Nothing here is required for the menu to open, be read, or be navigated. */
   var menuWrap = document.getElementById('site-menu');
   if (menuWrap) {
     var menuSummary = menuWrap.querySelector('summary');
+    var openedByPress = 0;
+    if (menuSummary) {
+      menuSummary.addEventListener('pointerdown', function (e) {
+        if (menuWrap.open) return;                  // header row: native toggle
+        e.preventDefault();                         // keep focus for the keyboard
+        menuWrap.open = true;
+        openedByPress = Date.now();
+        menuSummary.focus();
+      });
+      // the same press's click would native-toggle the panel straight back
+      // shut — swallow that one click and no other (keyboard activation has
+      // no pointerdown before it and passes untouched)
+      menuSummary.addEventListener('click', function (e) {
+        if (Date.now() - openedByPress < 600) { e.preventDefault(); openedByPress = 0; }
+      });
+    }
     var closeMenu = function (focusBack) {
       if (!menuWrap.open) return;
       menuWrap.open = false;
