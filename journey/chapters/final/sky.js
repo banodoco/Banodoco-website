@@ -118,8 +118,10 @@ const SZ_MIN = 0.019, SZ_SPAN = 0.072, SZ_POW = 1.8;
 // and the depth cue moves into brightness and fog, which is where the rest of
 // this chapter already keeps it (clones.js's cloneLum, ring.js's tier lum).
 const FOCAL_D = 10.5, FOCAL_R = 14.0;
-// Tone: the hero shed's own draw, `0.64 + pow(rand,1.4)*0.36`, through heat().
-const TONE_MIN = 0.64, TONE_SPAN = 0.36, TONE_POW = 1.4;
+// Tone: the hero shed's own draw, `0.64 + pow(rand,1.9)*0.36`, through heat().
+// (1.4 → 1.9 on 2026-08-09 with the hero's own draw — the white top-tail
+// thinned across the one substance; see organism/spores.js.)
+const TONE_MIN = 0.64, TONE_SPAN = 0.36, TONE_POW = 1.9;
 // The hero's point material carries uOpacity 2.4 on the shed. Same number.
 const SPORE_GAIN = 2.4;
 

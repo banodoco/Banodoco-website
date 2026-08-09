@@ -322,7 +322,9 @@ export function createShed(uniforms) {
       size[i]     = SZ_MIN + Math.pow(rand(), SZ_POW) * SZ_SPAN;
       seed[i]     = rand();
       age[i]      = 0;
-      heat(0.64 + Math.pow(rand(), 1.4) * 0.36, c);
+      // the hero's own tone draw (pow 1.4 → 1.9 on 2026-08-09, with
+      // organism/spores.js and sky.js — one substance, one white tail)
+      heat(0.64 + Math.pow(rand(), 1.9) * 0.36, c);
       col[i3] = c.r; col[i3 + 1] = c.g; col[i3 + 2] = c.b;
     }
     geo.attributes.color.needsUpdate = true;

@@ -44,14 +44,23 @@ export function createSpores(ctx) {
   // sit ±1.15 rad along the rim (D18); the chapter's exit anatomy is
   // authored AT these filaments — if one ever moves, both files move
   // (journey/chapters/inspire/anatomy.js documents the same numbers).
-  // λ = 0.100/s with a ~0.9 u gaussian catch (basin capped at 1.5 u so
-  // no filament drains a whole flank): an e-fold takes ~10 s of
+  // λ = 0.060/s with a ~0.9 u gaussian catch (basin capped at 1.5 u so
+  // no filament drains a whole flank): an e-fold takes ~17 s of
   // transit, so the near-lip curtain stays a diffuse shed (the ramp below
   // holds the first ~10% of each filament at zero) and the condensation
   // arrives gradually with height — streaky smoke, not drawn columns.
+  // 2026-08-09 (Hannah's brief, item 3): λ 0.100 → 0.060. At the Final
+  // pullback the 0.100 catch condensed the shed into two-three distinct
+  // white lumps over the cap — "three distinct clouds", the exact
+  // three-plumes read D27 existed to avoid, reappearing as DENSITY at
+  // distance. 0.060 keeps a soft occupancy bias for Inspire's lighting to
+  // pick out (the lanes' legibility is compensated in the emphasis gains,
+  // GAIN_BODY/GAIN_KNOT below) while the far view reads as one irregular
+  // wind. Same law everywhere, at every scroll position — the softening
+  // is global, so positions remain scroll-independent by construction.
   const FIL_AZ = [5.83, 6.98, 4.68];
   const FIL_RISEMAX = [2.35, 1.32, 2.10]; // = EXITS riseMax (anatomy.js)
-  const FIL_LAM = 0.100, FIL_SIG2 = 0.81, FIL_R2 = 2.25;
+  const FIL_LAM = 0.060, FIL_SIG2 = 0.81, FIL_R2 = 2.25;
   const FIL_SEED_T = [0.03, 0.10, 0.18]; // per-filament seed-transit scale, calibrated to the live equilibrium (see D27)
   let filPX, filPY, filPZ, filSMax;        // built with the seed block below
   const filUX = BREEZE_DIR.x, filUY = BREEZE_DIR.y, filUZ = BREEZE_DIR.z;
@@ -156,7 +165,15 @@ export function createSpores(ctx) {
       let px = e.x + BREEZE_DIR.x * travel + gauss() * spread;
       let py = e.y + BREEZE_DIR.y * travel + gauss() * spread * 0.72;
       let pz = e.z + BREEZE_DIR.z * travel + gauss() * spread * 0.6;
-      pushC(pc, 0.64 + Math.pow(rand(), 1.4) * 0.36);
+      // tone pow 1.4 → 1.9 (2026-08-09, Hannah's brief items 2/3): the 1.4
+      // draw put ~1 dot in 5 above tone 0.9 — near-white — and under
+      // additive stacking the close Connect framing and the far Final
+      // pullback both read as decorated glitter rather than warm dust.
+      // 1.9 thins the white tail (~1 in 8) and leaves the amber body of
+      // the distribution untouched. ONE SUBSTANCE: sky.js TONE_POW and
+      // final/shed.js's own draw mirror this number — all three move
+      // together or the species splits.
+      pushC(pc, 0.64 + Math.pow(rand(), 1.9) * 0.36);
       ps.push(Math.pow(rand(), 1.8) * 0.072 + 0.019);
       const sp = 0.028 + rand() * 0.055;
       sporeVel.push(BREEZE_DIR.x * sp,
@@ -497,11 +514,19 @@ export function createSpores(ctx) {
   // the tight winding spines (R_CORE), where projected scatter is small
   // enough to read as a filament. A big body gain on a 0.5 u tube lights a
   // wash; beads on a 0.2 u core light a line.
-  const GAIN_BODY = 1.15;
-  const GAIN_KNOT = 4.6;
+  // 2026-08-09 (Hannah's brief, item 1): 1.15/4.6 → 1.40/5.4. With the lee
+  // filaments softened (FIL_LAM 0.060) the lanes' density substrate is
+  // thinner, and at the D27 values the Inspire rest read as ONE broad fan
+  // with barely-discernible streaks — under-legible for the chapter whose
+  // whole job is three channels. The radii stay tight (the wash guard),
+  // so the lift lands on the winding cores where the lane read lives.
+  const GAIN_BODY = 1.40;
+  const GAIN_KNOT = 6.2;
   const BOOST_E = [1.15, 1.34, 1.24];
   // Sprite swell, keyed to the core beads (see pw below).
-  const GAIN_SIZE = 1.15;
+  // (1.15 → 1.45 with the 2026-08-09 legibility pass: the beads that carry
+  // the lane read swell a step further; off-core dots barely move.)
+  const GAIN_SIZE = 1.45;
   // Taste-dial pearl floor (kept): the knot-pearl richness never scales
   // below this share, so a faint sparkle keeps the labels' anchors alive
   // even near T = 0.
