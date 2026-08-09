@@ -2772,3 +2772,200 @@ ambient-side of the window and blends smoothly into braid-alive inside it.
   cadence); every before/after pair in this section was re-measured
   like-for-like in one session, stashed-tree A/B, and the fresh-page brisk
   table is the one to trust for absolute levels.
+
+---
+
+## 2026-08-09 (D26) — the eighth report taken literally: zero is the only constant, and one density field cannot pose twice
+
+Hannah's eighth report in this family, stated as an absolute:
+
+> "When I scroll from Inspire to Connect and back, it seems like spores
+> still have their positions reset crudely. It looks like shit. They
+> shouldn't EVER switch positions based on a move — emphasis should just
+> be changed."
+
+Read as a specification: **the particles' positions must not depend on
+which section you are in; crossing a boundary may change only how they are
+lit.** She is right that D25 did not deliver it: the standing floor made
+the position blend a lerp `cvP = fl·(1−cg) + T·cg` from `fl ≈ 0.30` up to
+`T = 0.85` — and a lerp whose endpoints differ IS a position change at the
+boundary, by construction. ~59% of each dot's drift-to-braid distance was
+still travelled on entry and given back on exit, however well paced.
+
+This session did the work the specification demands — made the blend a
+single constant — and this section records the result: **the only constant
+that satisfies the landing is zero, and at zero, two of the three streams
+have nothing to light.** No constant serves both poses. This is the
+brief's named stop-and-report case, not a ninth partial fix, and the
+decision it surfaces belongs to Hannah (and, for the hero frame, Peter —
+`06-mission-preservation.md` names him for any visual exception).
+
+### The candidate built: blend ≡ 0, emphasis carried entirely by light
+
+`organism/spores.js` was restructured (preserved as a patch + stash, see
+"Where the candidate lives" below; NOT shipped):
+
+- **The seat never writes positions.** The drift integrator is the sole
+  owner of the buffer at every p, both directions, every taste value. All
+  reconciliation machinery — heroP/lastW/writ shadows, retire-in-place,
+  the D24 engage refit, the D25 floor, the gather drive — deleted with the
+  steering, not disabled.
+- **The three routes become a lighting field.** Each exit's chain (source
+  wedge → rim walk → braided rise along DRIFT_RX/RZ, three winding strands
+  at half the braid's old curl) is sampled per frame as ~20 world-space
+  capsules; every dot's proximity to the *lit portion* of a chain sets its
+  exchange (cv), brightness (pw ≥ cv, so emphasis only ever adds — the
+  b2c9584 conservation law strengthened to monotone), and sprite swell
+  (psize gains a byte-exact-restoring base copy beside color's). The
+  reveal opens each chain from the source outward (draw-on along the feed,
+  identical at rev 1 by arithmetic), staggered per dot by the same warped
+  hash (arrival is growth, not a switch). A knot-pearl cadence travels
+  along the lane as a *wave of light* with deliberately small per-dot
+  phase jitter — coherent light along a path, carried by dots the wind
+  happens to have there. The region-dim capsules return re-weighted
+  (rise 0.60 / wedge 0.30 / walk 0.25 / downwind 0.22, riding eff²·T so
+  they lag the light) for figure/ground, plus a 0.30 far-history grad.
+- Reveal schedules (ARR cascade, per-exit retire envelopes), T1/T2
+  derivations, warming, camera: untouched.
+
+### The requirement, delivered exactly — measured
+
+One instrument (capture.py's own CDP client, headless 1440×900,
+`?nointro=1&steady=1&nosnap=1`, ~30 fps cadence — same-session A/B, HEAD
+vs candidate). Ambient baseline (hold at Connect rest): 3-frame peak
+0.135 u/s, p50 0.093, net 8 s drift mean 0.38 u. Braid-alive at HEAD rest:
+p50 1.24 u/s.
+
+Population speed through the crossings (3-frame rolling; net per-dot
+travel across the ride window):
+
+| crossing | HEAD peak / net mean / dots>1u | candidate peak / net mean / dots>1u |
+|---|---|---|
+| Connect→Inspire 0.10 p/s | 3.10 u/s / 2.10 u / 3,403 | **0.117 u/s / 0.19 u / 4** |
+| Connect→Inspire 0.45 p/s | 7.30 u/s / 2.02 u / 3,228 | **0.119 u/s / 0.05 u / 2** |
+| Inspire→Connect 0.10 | 1.58 u/s / 0.98 u / 1,326 | **0.116 u/s / 0.22 u / 3** |
+| Inspire→Connect 0.45 | 1.66 u/s / 0.44 u / 462 | **0.095 u/s / 0.11 u / 1** |
+| Mission→Inspire 0.10 | 6.42 u/s / 2.15 u / 3,516 | **0.102 u/s / 0.23 u / 2** |
+| Mission→Inspire 0.45 | — | **0.096 u/s / 0.09 u / 0** |
+
+Every candidate crossing sits INSIDE the ambient hold's own band (its
+peak-of-peaks 0.119 < the hold's 0.135). The dots-over-1u are the drift's
+own gill recycles. Matched-pin round trip (0.49 → 0.26 → 0.49 at
+0.10 p/s, per-dot |Δposition| between the two visits to the same p):
+
+| pin | Δt | p25 / p50 / p75 / p90 / p99 | dots > 1 u | ambient drift · Δt |
+|---|---|---|---|---|
+| p 0.42 | 3.9 s | 0.22 / 0.29 / 0.39 / 0.46 / 0.54 | 5 | 0.36 |
+| p 0.36 | 2.7 s | 0.17 / 0.22 / 0.30 / 0.36 / 0.42 | 4 | 0.25 |
+| p 0.30 | 1.5 s | 0.11 / 0.14 / 0.19 / 0.22 / 0.26 | 3 | 0.14 |
+
+The distribution IS the ambient drift over the elapsed wall time — it is
+the same code path, so this is arithmetic confirmed by measurement, not a
+tuning result. Frozen-capture gate on the candidate tree: **mission,
+connect, owned, final all 0.00/255 byte-identical**; only `inspire@*`
+moves (3.67 / 3.77 MAE — the re-lit rest, the one pixel change in the
+whole journey). Console clean over every ride. Total-light trough
+entering: −5.5% (shipped band −5.9/−6.7%; the 2026-08-06 offense was
+−25.3%). Emphasis loop ~3.5 ms/frame at the rest (steer was ~1.15 —
+would need its own pass if this ever ships).
+
+### Why it still fails the rest — and why no other constant exists
+
+**A constant blend means the rest and the landing render the SAME density
+field** (modulo minutes of statistically-stationary drift). That is the
+whole point — it is what makes the boundary motionless — and it is also a
+theorem with teeth: the approved landing (one visible stream, spilling
+from the back-right rim, carried +x by the one wind) and the approved rest
+(three visible streams at az 5.83 / 6.98 / 4.68) demand different fields.
+Measured occupancy of the drift cloud at the rest, dots within r of each
+exit's rise spines:
+
+| r | ArtCompute | Arca | 2RP |
+|---|---|---|---|
+| 0.55 u | 2,422 | **24** | 429 |
+| 0.80 u | 3,166 | **133** | 879 |
+| 1.20 u | 3,595 | **514** | 1,702 |
+
+The wind never crosses Arca's front-left sector. Worse: only **14 dots**
+project within 40 px of Arca's entire lane in SCREEN space at ANY depth —
+so no lighting geometry, projective tricks included, can draw that stream
+out of this field. On the candidate's best tuning (per-exit catchments
+0.34/1.10/0.72 u, per-exit boosts, coherent cadence, region contrast):
+ArtCompute reads as a lit lane (~700–1,000 carriers), 2RP is a sparse
+glitter trail (~580), Arca is absent (~150 faint dots). Rest counts
+h>0.6 / h>1.0: 1,173 / 536 against the braid rest's 2,716 / 708.
+
+The intermediate constants close the gap from neither side:
+- Positional legibility needs `cvP ≥ ~0.78` (the D18 lobe sweep — 1 peak
+  at 0.65, 3 at 0.80). A constant 0.78 puts the same three-lobed
+  organization in the landing frame.
+- At C = 0.5, the Arca cohort's median dot still sits ~0.95 u off its slot
+  (D24's measured pairing distances × (1−C)) — outside a stream-tight
+  tube — while the landing already carries C·(braid-alive 1.3–1.9 u/s)
+  ≈ 0.7 u/s of standing route-cycling motion, 7× ambient, at the hero
+  frame, forever.
+- Any C > 0 breaks `mission@*` byte-identity outright (rendered p = 0
+  moves), rescuable only by inverse-seeding the frozen frame — the exact
+  scheme D25 rejected because the live landing then diverges from its own
+  golden over the first minute.
+
+So: **either the landing frame gives way, or the streams do.** There is
+no third setting of the constant.
+
+### The trade, stated for the decision
+
+1. **Landing gives way** — reshape the ambient wind/seeding (globally,
+   p-independent) so the shed genuinely flows past all three sectors.
+   Positions then never depend on section AND three streams light up
+   honestly. Cost: the hero frame changes — the one-visible-stream
+   composition, the D16/D18 river-delta story built on it, `mission@*`,
+   and `06-mission-preservation.md`'s do-not-touch list (micro-life:
+   under-cap spore drift). That doc names **Peter** for any visual
+   exception on the hero. Also re-derives the D21 cap re-aim and the label
+   solve if plume balance shifts.
+2. **Streams give way** — ship the candidate: a motionless boundary,
+   ArtCompute as *the* lit stream, 2RP a sparse trail, Arca carried by
+   its chip, furniture and a faint glitter. Cost: the D18 requirement
+   ("there should be 3 visible streams") is no longer met by the dots;
+   `inspire@*` re-shot to a materially thinner rest.
+3. **Neither** — keep D25's shipped model (tree restored to it): the
+   boundary still moves ~59% of the drift-to-braid distance, paced at the
+   approved arrival's own rate. This is the state Hannah just rejected.
+
+### Where the candidate lives
+
+- `journey-v6-plan/source/d26-lighting-only-candidate.patch` — the full
+  diff against `336f31d` (organism/spores.js + chapters/inspire/index.js).
+- A git stash with the same content ("D26 lighting-only candidate…").
+- Apply the patch and `capture.py --pose inspire` re-shoots the rest; the
+  other eight goldens stay 0.00 by construction.
+
+### Rejected along the way
+
+- **Depth-bending the flank lanes** to run through the fan volume while
+  projecting onto the lip→label screen path: killed by measurement (the
+  14-dots-in-projection number) before its wrong-wind physics had to be
+  argued.
+- **Furniture-carried flank streams** (boosting filaments/beads to stand
+  in for dots): a stream made of non-shed substance is the exact
+  "different stream" read this family of reports began with (the retired
+  ribbons/ARROWS).
+- **Per-cohort constants** (Arca's dots permanently drawn to its route):
+  p-independent, so it honours the letter of the requirement — and puts a
+  permanent Arca-ward filament in the hero frame, which is option 1
+  wearing a mask.
+- **Global/graded dims at 2026-08-06 strengths** to force contrast: the
+  disappearance-by-name objection stands; the candidate uses 0.60/0.30/
+  0.25/0.22 lagging weights and keeps the trough at −5.5%.
+
+### The seven prior commits, re-measured at HEAD this session
+
+Same instrument, before any change: ambient 0.09–0.10 u/s (published
+0.09–0.11 ✓); braid-alive p50 1.24 (band 1.14–1.32 ✓); dark-and-converted
+class and cv purity untouched by this session (no scene change shipped);
+outbound retire peak 1.58/1.66 u/s and inbound 3.10/7.30 u/s at this
+cadence — the D25-published levels for this class of ride (their absolute
+levels are cadence-sensitive; D25's own note says compare like-for-like
+only). The shipped tree is byte-identical to `336f31d`; `capture.py
+--check` PASS, worst MAE 0.00/255, all ten goldens, after the candidate
+was stashed. Nothing regressed because nothing shipped.
