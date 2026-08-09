@@ -34,7 +34,20 @@ export const ROUTE = [
   { id: 'owned',   span: 25, nav: 'Owned',   scrollVh: 5.0 },
   // The epilogue is not a sixth peer chapter: it keeps a route (#/final) but
   // no nav entry — the LAST nav'd chapter stays highlighted through it (v6).
-  { id: 'final',   span: 15, nav: null,      scrollVh: 3.5 },
+  //
+  // stops [0.8], not the DEFAULT_STOP (2026-08-09, Hannah's "charging up"):
+  // the Final rest moves 0.925 -> 0.97. The old mid-chapter rest left the
+  // whole second half of the chapter — p 0.925..1.0, ~675 px of wheel — as a
+  // held frame with nothing to hold for (585dad8 removed the recede that used
+  // to spend it), while the field's arrival was compressed into ~500 px in
+  // front of it. That dead road is now spent ON the arrival: the camera leg's
+  // approach stretches to the new rest (chapters/final/camera.js re-times the
+  // rest key only — the two travel keys hold, so nothing before p 0.878
+  // moves and the Owned colony's leg sampling is untouched), and the arrival
+  // ladder is re-authored across it (18-one-species.md §14). The end-hold
+  // 0.97..1.0 (~270 px) remains a true hold: p = 1 stays a resolution anchor
+  // and renders the rest composition.
+  { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 3.5 },
 ];
 
 // The authored end-hold: p = 1 is a resolution anchor of its own (a fling to
@@ -120,11 +133,14 @@ export function navChapterAt(p) {
 // silently moved the shipped route (renormalizing IS allowed — then this
 // table is updated deliberately, with the diff in front of the reviewer).
 {
+  // Final rest 0.5 -> 0.8 of its span (0.925 -> 0.97): deliberate, 2026-08-09
+  // — the arrival-road rebalance (see the ROUTE entry's comment). Every other
+  // value is the shipped table, unchanged.
   const LEGACY = {
     starts: [0.00, 0.14, 0.38, 0.60, 0.85],
     ends:   [0.14, 0.38, 0.60, 0.85, 1.00],
     rests:  [0.00, 0.14 + (0.38 - 0.14) * 0.5, 0.38 + (0.60 - 0.38) * 0.5,
-             0.60 + (0.85 - 0.60) * 0.5, 0.85 + (1.00 - 0.85) * 0.5],
+             0.60 + (0.85 - 0.60) * 0.5, 0.85 + (1.00 - 0.85) * 0.8],
   };
   const TOL = 1e-12;
   let worst = 0;

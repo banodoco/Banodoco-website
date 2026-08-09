@@ -37,6 +37,8 @@
 // DOM reads — so reverse scrubbing is exact and capture tooling can request
 // either orientation from any window (?aspect=portrait, wired in director).
 
+import { restProgress } from './route.js';
+
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 
 /* ------------------------------------------------------------------ */
@@ -60,7 +62,7 @@ export function portraitWeight(aspect) {
 // stipe descent must stay outside the stipe — clearance there is ~0.5 world
 // units, so those legs run the field near zero and let it bloom at the rest).
 // p values reference director.js: ORBIT_P0 0.040, rests 0.26 / 0.49 / 0.725 /
-// 0.925, descent keys 0.622–0.718.
+// restProgress('final') (0.97 since §14), descent keys 0.622–0.718.
 const ZERO = { back: 1, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 0 };
 
 const KEYS = [
@@ -195,13 +197,20 @@ const KEYS = [
   // headline overlapping the upper fan exactly as it does at 1440x900.
   { p: 0.725, back: 1.08, rise: 0.18, truck: 0, tgtUp: -0.28, tgtRight: 0, fov: 6 },
 
-  // FINAL (rest 0.925 → recede 1.0) — "steeper diagonal; copy top, ring
-  // stacked in depth". Lift the eye and drop the gaze so the soil-line cuts
-  // a steeper diagonal; the small rightward frame-shift (tgtRight < 0 aims
-  // left of the hero, sliding it toward the right edge) keeps the headline
-  // clear of the hero's cap. The recede carries the same offsets so the
-  // epilogue stays one continuing line.
-  { p: 0.925, back: 1.08, rise: 1.35, truck: 0, tgtUp: -0.45, tgtRight: -0.35, fov: 8 },
+  // FINAL (rest → end-hold) — "steeper diagonal; copy top, ring stacked in
+  // depth". Lift the eye and drop the gaze so the soil-line cuts a steeper
+  // diagonal; the small rightward frame-shift (tgtRight < 0 aims left of
+  // the hero, sliding it toward the right edge) keeps the headline clear of
+  // the hero's cap. The end-hold carries the same offsets so the epilogue
+  // stays one continuing line.
+  //
+  // The key rides restProgress('final') instead of a literal (2026-08-09
+  // §14, when the rest moved 0.925 -> 0.97 and a stale literal here would
+  // have completed the Final portrait composition mid-approach): this file
+  // was one of the two documented absolute-p violations of route.js's
+  // ownership, and for this key it no longer is. The composition VALUES are
+  // unchanged — only where the field lands them follows the route now.
+  { p: restProgress('final'), back: 1.08, rise: 1.35, truck: 0, tgtUp: -0.45, tgtRight: -0.35, fov: 8 },
   { p: 1.000, back: 1.08, rise: 1.35, truck: 0, tgtUp: -0.45, tgtRight: -0.35, fov: 8 },
 ];
 

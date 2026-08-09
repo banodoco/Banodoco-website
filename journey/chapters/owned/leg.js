@@ -35,7 +35,14 @@ export function crownPoint() {
 }
 
 /** p-range sampled for clearance: a little beyond both soil crossings so
- *  nodes near the thresholds keep clearance from the approach frames too. */
+ *  nodes near the thresholds keep clearance from the approach frames too.
+ *  (Checked against the 2026-08-09 §14 Final-rest move: the Final leg's
+ *  travel keys at p 0.878 / 0.905 did not move, so every pose this file
+ *  samples — all p <= 0.872, i.e. strictly before the first Final key —
+ *  is bit-identical under the re-timed rest. Measured: max |camera.x|
+ *  drift 0.0 across the sampled range. If a future edit moves either
+ *  travel key, this range samples a changed approach and the colony
+ *  placement moves with it — re-measure before assuming.) */
 export const LEG_P0 = 0.660;
 export const LEG_P1 = 0.872;
 /** p-range in which the camera is actually underground (portrait homes). */
