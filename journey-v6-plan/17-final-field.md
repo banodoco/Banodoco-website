@@ -1273,3 +1273,71 @@ frame time flat, and the OWNED rest is bit-identical in every counter.
   language at both rests and were left alone; if Hannah ever wants the
   transit view of them enriched, that is sky.js's tree builder, not this
   pass.
+---
+
+## 2026-08-09 — THE END OF THE RIDE: a footer key with no footer under it
+
+**Hannah:** *"I seem to be able to still scroll out to a more zoomed-out version of it at the very bottom as well. I think this is a hangover of the old view that we had."*
+
+**She was describing a footer key with no footer under it.** The Final leg
+carried a SECOND hold key past the rest — `final-recede` at leg-local t = 1.0
+(p 1.000), `pos (-17.73, 3.95, 3.260)`, `tgt (-5.44, 2.08, -0.97)`, fov 44.
+Measured across the tail before the fix:
+
+| p | camera x | y | radius | fov | pull |
+|---|---|---|---|---|---|
+| 0.925 (rest) | −14.720 | 2.730 | 14.966 | 45.50 | 1.120 |
+| 0.950 | −15.501 | 3.058 | 15.759 | 45.11 | 1.250 |
+| 0.975 | −16.950 | 3.645 | 17.233 | 44.39 | 1.492 |
+| 1.000 (end-hold) | −17.730 | 3.950 | 18.027 | 44.00 | 1.622 |
+
+— a further 20% of recession and +1.22 of lift spread over ~1,575 px of
+scroll (half of Final's 3.5 vh at a 21,600 px route), reachable simply by
+keeping going at the bottom. Nothing else moved out there: the copy band
+holds (`hi: 2`), no hotspots, the same seams armed, and the lens saturates by
+p 0.95.
+
+**Provenance is explicit in this file.** The 2026-08-03 residual list above
+reads: *"The end-hold recede runs the field at full kindle and the near-right
+field bodies sit a touch hot **behind the footer**."* The recede existed to
+back the composition off so the "Site Information" band could rise over it
+through p 0.955..1. The footer was deleted in the navigation redux (26ca8d3,
+25-navigation-redux.md §2), which also removed `epilogueRetire`/`epilogueVeil`
+and the flight system whose last caller was the footer cue — and which states
+outright that "the epilogue now simply holds its composition there". The
+camera leg was the one place that was not made true.
+
+**Fix:** delete the key. `journey/chapters/final/camera.js` now ends on
+`final-rest`, and `director.js`'s `keyedPose()` clamps past the last key, so
+every p ≥ 0.925 renders the Final rest EXACTLY.
+
+**What is reachable past the rest now, and why it is intentional:** the fog
+finishes its settle (near 13.75 → 15, far 60.3 → 62, complete by p ≈ 0.96)
+over a camera that no longer moves, and then the route holds to `TERMINAL_P`.
+Both p = 0.925 and p = 1 are snap-commit resolution anchors and now render the
+same frame, so a scroll into the tail resolves onto the resting composition
+whichever way it goes. The end-hold is a hold.
+
+### Gates (1)
+
+- **Camera parity**: `poseAt()` sampled at 401 points across the whole route,
+  12 significant digits, before vs after — **max abs diff 0.0 for every
+  p ≤ 0.925**. First divergence at p 0.9275; max 3.01 units, at p = 1, which
+  is the removed recede. Nothing before the rest moved, as expected: the
+  p 0.905 key's Catmull-Rom tangent reads the p 0.878 and p 0.925 keys and
+  the rest key's own tangent was already zeroed by `hold: true`.
+- **Field completeness at the hold**: all 9 members are fully inked at the
+  rest (min per-body draw `d` = 1.000 at `uPullRaw` 1.120; max `reveal`
+  0.790, `DRAW_W` 0.28), so freezing the reveal schedule with the pose leaves
+  nothing mid-kindle.
+- **`capture.py --check` PASS, worst MAE 0.00/255, all ten** — `final@*` is
+  shot at `restProgress('final')` = 0.925, which did not move, so no golden
+  needed re-shooting and none was touched.
+
+### Residuals
+
+- **The end-hold is now ~1,575 px of scroll in which only the fog moves**
+  (and only for its first third). That is the route's own full stop and both
+  ends of it resolve to the same frame, so it cannot strand the visitor — but
+  if it ever reads as "stuck", the lever is Final's `scrollVh` in route.js,
+  not another camera key.

@@ -40,6 +40,39 @@ export const CAMERA = {
     //     cleared > 3 units off the path, Spike B's clearance rule). Tilt is
     //     PITCH ONLY, never roll.
     { t: 0.5000000000000003,  pos: V(-14.72, 2.73, 2.700),  tgt: V(-3.06, 0.83, -1.94), fov: 45.5, hold: true, note: 'final-rest' },   // p 0.925
-    { t: 1.0,                 pos: V(-17.73, 3.95, 3.260),  tgt: V(-5.44, 2.08, -0.97), fov: 44,   hold: true, note: 'final-recede' }, // p 1.000
+    // --- THE LEG ENDS HERE. There used to be a second hold key at t = 1.0
+    //     ('final-recede', pos -17.73/3.95/3.260, tgt -5.44/2.08/-0.97, fov
+    //     44) that kept pulling the camera back across the whole second half
+    //     of the chapter — radius 14.97 -> 18.03 and y +1.22 over ~1,575 px
+    //     of scroll. It was the FOOTER's framing key: the "Site Information"
+    //     band rose over the composition through p 0.955..1 and the recede
+    //     backed the field off to make room for it (17-final-field.md,
+    //     2026-08-03 residual: "the near-right field bodies sit a touch hot
+    //     behind the footer"). The footer was deleted in the navigation redux
+    //     (26ca8d3, 25-navigation-redux.md §2) and the recede was not — so a
+    //     stale, more zoomed-out framing of the epilogue stayed reachable at
+    //     the very bottom of the ride, with nothing in it to frame.
+    //
+    //     With the key gone, keyedPose() clamps to the last key, so every
+    //     p >= 0.925 renders the Final rest EXACTLY: the epilogue rest is the
+    //     resting composition, and the end-hold is a true hold of it. That is
+    //     what the redux already declared ("the epilogue now simply holds its
+    //     composition there") — this file was the last place it wasn't true.
+    //
+    //     What remains past the rest is therefore intentional and small: the
+    //     fog finishes its settle (near 13.75 -> 15, far 60.3 -> 62, done by
+    //     p ~0.96) over a camera that no longer moves, and then the route
+    //     holds to its full stop at TERMINAL_P. Both p = 0.925 and p = 1 are
+    //     snap-commit anchors and now render the same frame, so a scroll into
+    //     the tail resolves to the resting composition whichever way it goes.
+    //
+    //     Nothing before the rest moved: the p 0.905 key's Catmull-Rom
+    //     tangent reads KEYS[i-1]/KEYS[i+1] = the p 0.878 and p 0.925 keys,
+    //     neither of which changed, and the rest key's own tangent was
+    //     already zero (hold: true). Camera parity p <= 0.925 is bit-exact,
+    //     and the `final` golden — shot at restProgress('final') = 0.925 —
+    //     is byte-identical. Also held by holding the pose: uPull/uPullRaw
+    //     (functions of camera.x), so the reveal schedule no longer keeps
+    //     running past the resting frame either.
   ],
 };
