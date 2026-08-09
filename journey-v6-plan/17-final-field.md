@@ -1436,3 +1436,83 @@ Final rest camera exactly as the hero's faces away from Mission's.
   the field's do not (mean dy +0.033, 0 of 28). That is the whole point of
   the seat being past the margin, and Hannah's earlier report; it is a
   deliberate departure, not a residual difference in the emission.
+
+---
+
+## 2026-08-10 — §15: the Epilogue breathes (Hannah's written brief, item 3)
+
+Her item 3, in four parts: the main mushroom's emission reads as three
+distinct clouds; the other mushrooms' spores feel like a different
+particle system; a tap on a field body emits mismatched "sprinkles" the
+hero doesn't have; and the arrival illumination is too fast and abrupt —
+the FOURTH pacing request on this arrival.
+
+### The three clouds (fixed in the species commit, ce91bc2)
+
+The lumps were D27's lee filaments condensing the hero's 4,200-dot shed
+hard enough that the pullback read the density catch as two-three white
+cotton balls over the cap. FIL_LAM 0.100 → 0.060 dissolves them into one
+broader irregular spray, and the tone white-tail thinning (1.4 → 1.9,
+applied identically here in sky.js and shed.js — the one-substance rule)
+warms what remains. Judged on before/after stills at the Final rest and
+p 0.905: one wind, irregular density, no plumbing. The same commit is
+what dims the three channels outside Inspire — see 07-chapter-inspire.md
+D28 for the full account and the boundary re-proof.
+
+### The tap "sprinkles" — an inventory, and a finding
+
+Everything a field-body tap fires (interact.js onUp → ring.js respond,
+ring.js:934-963): (1) the cantilever wobble impulse (clones kickTap /
+takeSlot), (2) the shared light ripple (uPulse*), (3) the spore shed —
+`shed.burst()` at ring.js:960, gated to caps above localY 2.8 — and
+(4) a 6 ms haptic tick. The wobble, ripple and haptic are 1:1 ports of
+the hero's own §10c handler.
+
+**The falling-sprinkle effect no longer exists as a separate system.** It
+was this same shed.js, before the parity work: the pre-070892c launch
+impulse ("jumps out of the mushroom"), the pre-e1b1e2b still-air fall
+(measured −0.076 u, +13.5 px straight down — "sparkles drop"), and the
+pre-2db4a2b 360° ring seat ("comes out from underneath them"). Those
+three commits fixed it IN PLACE rather than adding a second effect
+beside it, so there is nothing left to delete that is not the matched
+shed itself. Re-verified on this tree, live tap test (headless CDP,
+frames at +0.25/0.7/1.4/2.4 s): a tapped field body wobbles, ripples,
+and lets go of a wind-borne crescent — nothing falls; and by
+construction the integrator has no downward term (`vel.y = BREEZE.y·sp +
+rand()·0.012`, strictly ≥ 0; update() runs at w = 1, the fall term is
+`1 − w = 0`). The brief item is satisfied by keeping the parity shed and
+confirming the mismatched effect is gone — removing `shed.burst` would
+delete the very parity Hannah asked to preserve.
+
+### The pacing — where the fourth pass found road
+
+The end-hold was spent in 336f31d and stays spent: p 0.97 → 1.0 is 0.03
+wide and fully claimed by FOG_RAMP's own tail. What remained:
+
+- **`route.js` Final `scrollVh` 3.5 → 6.0** — the same p-progression over
+  1.71× the physical scroll. No p-value, camera key, ladder rung or
+  golden moves; the page grows 24.0 → 26.5 vh (+10%).
+- **`clones.js` DRAW_W 0.26/0.15 → 0.32/0.16** — each body's own
+  kindling widens (+23% openers, tapering to +8% at the last rungs,
+  where the REST binds it: the ring ladder's last rung at reveal 0.9511
+  must sit past s = 1 at pullRaw 1.12, so drawW there must stay under
+  0.169. A first cut at LO 0.19 put that body mid-bloom in the rest
+  frame — caught by the golden gate at MAE 0.28 and pulled back.)
+- **`sky.js` drift-band gate 0.30-0.72 → 0.34-0.96 uPull** — untouched
+  through all three prior passes, the band was fully formed before the
+  town had half-kindled, front-loading the sky. It now forms across the
+  whole ladder and finishes with the last bodies (REV_HI 0.94), still
+  saturated well before the rest's 1.12.
+
+Wall-clock, at one viewport-height per second of physical scroll: the
+whole arrival (first rung p 0.856 → rest 0.97) 2.66 s → 4.56 s; a single
+opener's kindle ~0.20 s → ~0.42 s; a late rung ~0.23 s → ~0.42 s. At the
+0.45 p/s flick ceiling the p-side arithmetic is unchanged by scrollVh
+(0.25 s) — the flick is bounded by MAX_SCRUB_RATE, not by page height —
+but the wider DRAW_W still softens each body's own curve inside it.
+If a fifth pass ever wants more: the honest next lever is moving chapter
+boundaries, which renormalizes every chapter's mapping. Everything here
+stays a pure function of the pose; the rest frame is byte-identical
+(final@* --check 0.00 after the LO fix; owned untouched at 0.00).
+
+Console over a full 0 → 1 → 0 ride: clean (0 entries).

@@ -47,7 +47,17 @@ export const ROUTE = [
   // ladder is re-authored across it (18-one-species.md §14). The end-hold
   // 0.97..1.0 (~270 px) remains a true hold: p = 1 stays a resolution anchor
   // and renders the rest composition.
-  { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 3.5 },
+  // scrollVh 3.5 -> 6.0 (2026-08-10, Hannah's brief item 3 — the FOURTH
+  // pass on this arrival's pacing, and the end-hold road is already spent
+  // (336f31d). This is the one lever left that buys real wall-clock
+  // without moving a single p-value, camera key, ladder rung or golden:
+  // the same p-progression stretches over 1.71x the physical scroll, so
+  // the whole kindle sequence — and everything else in the chapter —
+  // slows by that factor at any fixed scroll speed. Cost: the page grows
+  // 24.0 -> 26.5 vh (+10%). If it must slow further still, the honest
+  // next step is moving chapter boundaries, which renormalizes every
+  // chapter's mapping — say no to that lightly.)
+  { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 6.0 },
 ];
 
 // The authored end-hold: p = 1 is a resolution anchor of its own (a fling to
