@@ -17,6 +17,7 @@
 //   DOM               ui.js        nav, copy, cards, hotspot proxies
 //   geometry          chapters/*.js
 
+import * as THREE from 'three';
 import { createJourneyState } from './state.js';
 import { createScrollModel } from './scroll.js';
 import { createDirector } from './director.js';
@@ -727,6 +728,63 @@ export function boot(opts = {}) {
     },
   };
   window.journey = state;
+
+  // Warm every chapter's GPU work while the page is idle (D25). The chapter
+  // groups build hidden, and their first visible frame used to pay for
+  // shader compilation, buffer upload and first-draw state all at once —
+  // which is always mid-scroll, at a chapter seam, and measured 100-400 ms
+  // on a cold page at exactly the Inspire boundary (both directions): the
+  // literal "jankiness" of Hannah's seventh spore report. Two steps:
+  //   1. compileAsync — three walks the WHOLE graph (invisible objects
+  //      included) and rides KHR_parallel_shader_compile, so the driver
+  //      links every program off the critical path;
+  //   2. one warm render to a small offscreen target with the chapter
+  //      groups force-visible — buffers upload and first-draw state runs.
+  //      Safe by construction: every chapter's content is dark at boot
+  //      (fades/reveals all zero, additive materials draw black), the
+  //      target is offscreen, and each chapter's animator recomputes its
+  //      own group.visible every frame, so the forced flags cannot leak.
+  // Failure at any step is harmless — the old lazy path remains — so this
+  // is fire-and-forget.
+  const warmPrograms = () => {
+    const r = sceneApi.renderer;
+    if (!r) return;
+    const idle = (fn) => (typeof requestIdleCallback === 'function'
+      ? requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 250));
+    // one chapter per idle slice: a single all-chapters warm render measured
+    // ~150 ms (it is the first draw of everything at once), which could land
+    // as its own hitch if a ?nointro QA ride started immediately — the very
+    // artifact this exists to remove. Per-chapter slices bound each task.
+    const queue = Object.keys(chapters);
+    const warmNext = () => {
+      const id = queue.shift();
+      if (!id) return;
+      try {
+        const g = chapters[id] && chapters[id].group;
+        const wasVisible = g ? g.visible : true;
+        if (g) g.visible = true;
+        const rt = new THREE.WebGLRenderTarget(64, 64);
+        const prev = r.getRenderTarget();
+        r.setRenderTarget(rt);
+        r.render(sceneApi.scene, sceneApi.camera);
+        r.setRenderTarget(prev);
+        rt.dispose();
+        if (g) g.visible = wasVisible;
+      } catch (e) { /* lazy first-draw remains the fallback */ }
+      if (queue.length) idle(warmNext);
+    };
+    try {
+      if (r.compileAsync) {
+        r.compileAsync(sceneApi.scene, sceneApi.camera).then(
+          () => idle(warmNext), () => idle(warmNext));
+      } else {
+        if (r.compile) r.compile(sceneApi.scene, sceneApi.camera);
+        idle(warmNext);
+      }
+    } catch (e) { idle(warmNext); }
+  };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(warmPrograms, { timeout: 1200 });
+  else setTimeout(warmPrograms, 400);
 
   console.info(
     '[journey-v6] grey-box ready — %d chapters, p %s, scroll %dpx, route %s',

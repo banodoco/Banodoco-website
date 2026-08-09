@@ -160,6 +160,29 @@ const tmpC = new THREE.Color();
 // fewer, softer streams, not the same three more quietly.
 const T_SHIPPED = 0.85;
 const T_STEP = 0.05;
+// THE STANDING ROUTE-RIDE FLOOR (D25, 2026-08-09 — Hannah's seventh report:
+// "a completely different stream of spores or something that appears when I
+// enter the Inspire section ... it changes completely when I move into it,
+// from above or below"). Six rounds of boundary fixes (b2c9584 … 4feb006)
+// each refined the same model — a free drift REPLACED by a designed braid at
+// a section edge — and the population still had to transform at the seam.
+// The Connect chapter solved this exact shape of problem once already
+// (f9e8317): the paths exist quietly as part of the world, and arriving only
+// LIGHTS them. This is that model for the shed: inside the chapter's reach
+// the dots always ride their three routes a little (position drawn
+// FLOOR_B·T of the way onto their slot paths, so they also carry the routes'
+// living motion), ramped in across the QUIET runways on both sides — well
+// before any lighting on the Mission side, and between the Connect rest and
+// the first light on the Connect side. Entering Inspire then tightens and
+// lights routes the dust was already travelling instead of conjuring a new
+// arrangement. 0.35 is deliberately under the ~0.78 lobe threshold measured
+// in the T sweep (T_SHIPPED provenance above): at this level the unlit field
+// still reads as ONE diffuse wind-blown plume — the routes are a bias, not a
+// visible channel — while the reveal's remaining travel (fl -> T) drops by a
+// third. Zero at p = 0, at the Connect rest and beyond, so every golden
+// landing is untouched by construction (the spore system composes the blend
+// as a lerp that is exactly T at conv 1 and exactly fl at conv 0).
+const FLOOR_B = 0.35;
 const STREAK_FLOOR = 0.25;
 // CORE RIBBONS — RETIRED (Hannah, 2026-08-06: "it looks like ARROWS ... the
 // arrows don't look like organic particles"). They were 648 drawn LineSegments
@@ -870,6 +893,7 @@ export function createInspire(sceneApi) {
   let selected = -1; // SELECTION channel (W4-E): the exit whose card is open
   let armed = false; // T1 seam
   let gatherDrive = 1; // D24: the position blend's own schedule (see drive())
+  let floorDrive = 0;  // D25: the standing route-ride floor (see FLOOR_B)
 
   // W4-A gap c: the streak must live on "the currently active release point".
   // Hover is the explicit channel; when nothing is hovered we derive one —
@@ -927,6 +951,12 @@ export function createInspire(sceneApi) {
   // when drive() is called). No buffer is touched from this file;
   // conservation and byte-exact restore are the spore system's own.
   const sporeSeat = sceneApi.spores.setDriver({ exits: EXITS });
+  // D25: allocate + assign the per-dot steering state NOW, at chapter build,
+  // instead of on the first mid-scroll frame that needs it — initSteer's
+  // cost used to land as part of a 100-400 ms hitch at the exact crossing
+  // Hannah reported as "a lot of jankiness" (measured; the rest of that
+  // hitch was first-use shader compilation, warmed in journey.js boot).
+  if (sporeSeat.prime) sporeSeat.prime();
   // Per-exit DETAIL fade — FINAL UNIFICATION (Hannah, 2026-08-03 evening):
   // the 5,100-spore GPU layer this gate used to open is DELETED. Even with
   // the rest-proximity gating the layer's late fade-in was a swap — the
@@ -1215,6 +1245,48 @@ export function createInspire(sceneApi) {
      *  loop for every chapter that exposes drive(p). */
     drive(p) {
       const azDeg = camAzDeg();
+      const smz = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
+      const end = endOf('inspire');
+      // THE STANDING ROUTE-RIDE FLOOR (D25 — see FLOOR_B above). Pure in p,
+      // computed BEFORE the armed gate because its window is deliberately
+      // wider than T1's: it rises across the Mission-side runway
+      // (p 0.015 -> 0.085, fully on before the earliest reveal onset at
+      // az 5 ~ p 0.105) and falls across the Connect-side runway
+      // (end + 0.035 -> end + 0.098, i.e. 0.415 -> 0.478, zero with margin
+      // before the Connect rest at 0.487 — the long tail is what buys the
+      // sliced refit its frames at a MAX_SCRUB_RATE backward entry).
+      // Monotone per leg, so it can never re-rise on a one-directional
+      // ride; position/motion only, so the no-self-ignition law is
+      // untouched. Falling is absorbed in place (D23) — the ramps are only
+      // ever VISIBLE as a gentle, unlit gathering on the way in, at well
+      // under the braid's own living rate.
+      floorDrive = FLOOR_B
+        * smz((p - 0.015) / 0.070)
+        * (1 - smz((p - (end + 0.035)) / 0.063));
+      // THE GATHER DRIVE (D24), widened to overlap the new staggered
+      // retire: falls end - 0.065 -> end + 0.045 (0.315 -> 0.425). Inbound
+      // from Connect the lighting now begins at ~0.430 (out0 below), so the
+      // field lights first, then condenses — the same staging the Mission
+      // side has always had.
+      const gather = 1 - smz((p - (end - 0.065)) / 0.110);
+      gatherDrive = gather;
+      // PER-EXIT RETIRE ENVELOPES (D25). `out` used to be ONE scalar,
+      // 0.355 -> 0.415, shared by all three exits — so entering from the
+      // Connect side (where the ARR azimuth ramps are already ~saturated)
+      // the ENTIRE emphasis crossed in Δp 0.06, all three streams at once:
+      // the exact switch 2fdb4e6 removed from the Mission side, still
+      // shipping on this one. The retire is now a cascade in p, mirroring
+      // the ARR cascade in azimuth, with the SOURCE stream widest and last
+      // out — so riding forward the migrants hand back first and the
+      // visible stream lingers (the delta played backward), and riding in
+      // from Connect the source organizes first, then Arca peels off, then
+      // 2RP: the same authored order as the Mission-side arrival. All three
+      // are exactly 1 at the rest and through p 0.35 (the approved framing
+      // never dims), and exactly 0 by 0.430 — inside T1's re-arm edge at
+      // p 0.44 and its release at 0.46, so the seam derivation stands.
+      const out0 = 1 - smz((p - (end - 0.028)) / 0.078);   // ArtCompute 0.352 -> 0.430
+      const out1 = 1 - smz((p - (end - 0.022)) / 0.060);   // Arca       0.358 -> 0.418
+      const out2 = 1 - smz((p - (end - 0.015)) / 0.040);   // 2RP        0.365 -> 0.405
       if (!armed) { api.setReveal(0, 0, 0, 0); return; }
       // D17 locus law (Hannah, round 8): the braid rises along the stream's
       // own drift axis and must OVERLAY the drift envelope at every camera
@@ -1225,7 +1297,6 @@ export function createInspire(sceneApi) {
       // stays with the shaders' near-camera fade (vNear), never with
       // re-uprighting geometry.
       api.setLeanScale(1);
-      const smz = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
       const sm = (a, b) => { const x = (azDeg - a) / (b - a); return x < 0 ? 0 : x > 1 ? 1 : x; };
       // gill band -> ArtCompute -> Arca Gidan -> 2RP, then a hold through the rest.
       // D18: pulled in from (36,72)/(76,112)/(104,142) to finish by az 78. The
@@ -1246,35 +1317,23 @@ export function createInspire(sceneApi) {
       // master being zero below az 5, and a channel that opened earlier would
       // silently move it.
       const a = sm(5, 78), b = sm(17, 78), c = sm(29, 78), band = sm(5, 28);
-      // under the cap the plumes are behind us: retire them into the seam
-      // (route-derived: 0.025 before the Inspire range ends; shipped 0.355)
-      const out = 1 - smz((p - (endOf('inspire') - 0.025)) / 0.06);
-      api.setReveal(a * out, b * out, c * out, band * out);
-      // THE GATHER DRIVE (D24, Hannah's sixth spore report: "it particularly
-      // happens when I scroll BACK to the Inspire section from the Connect").
-      // The spore system's POSITION blend rides this on top of the reveal;
-      // LIGHTING stays on eff exactly as before. It is 1 through the whole
-      // rest framing (the director's rest-drift key sits at p 0.312) and
-      // falls to 0 across p 0.315 -> 0.415 — reaching zero exactly where
-      // `out` does (endOf + 0.035), so the seat still goes fully quiet at
-      // the same p and the T1 seam derivation is untouched. Forward, the
-      // fall is invisible: a falling position blend is absorbed in place
-      // (retire in place, D23). Its one visible effect is INBOUND: entering
-      // from the Connect side, the reveal window is only Δp ≈ 0.04 wide
-      // (out x the ARR ceiling), and the whole shed used to gather onto the
-      // braid inside it at 12-46 u/s — the D23 residual, now reported. The
-      // gather spreads that same travel across Δp 0.10, which paces it at
-      // the approved Mission-side arrival gesture's own rate. Pure in p,
-      // monotone per leg — it can never re-rise after falling on a
-      // one-directional ride, so the no-self-ignition law holds.
-      const gather = 1 - smz((p - (endOf('inspire') - 0.065)) / 0.100);
-      gatherDrive = gather;
+      // under the cap the plumes are behind us: retire them into the seam,
+      // now on the PER-EXIT envelopes computed above (D25) — the master
+      // drive is still max(a, b, c, band); each exit's target carries its
+      // own retire so the Connect side has the same sequenced arrival the
+      // ARR ramps give the Mission side. setReveal keeps its contract for
+      // the seam gate (setArmed(false) zeroes everything).
+      const m = Math.max(a, b, c, band);
+      exits[0].target = m * out0;
+      exits[1].target = m * out1;
+      exits[2].target = m * out2;
       // Swarm isolation fix (2026-08-03): detail may only sharpen on the
       // final approach to the rest (rest-0.025 -> rest-0.007, shipped
       // 0.235->0.253) — through the whole orbit the hero's own converted
       // dots carry the braids alone. Pure in p; reverse drops detail first,
-      // handing the braids back to the dots.
-      api.setRestProx(smz((p - (restProgress('inspire') - 0.025)) / 0.018) * out);
+      // handing the braids back to the dots. Rides the SOURCE envelope
+      // (out0, the widest) now that the retire is per-exit.
+      api.setRestProx(smz((p - (restProgress('inspire') - 0.025)) / 0.018) * out0);
     },
     /** Node id -> world position of its label anchor: mid-plume, above the
      *  release lip (W3-B gap g — see labelOffsets above). */
@@ -1369,7 +1428,8 @@ export function createInspire(sceneApi) {
     // T1 gate is derived (seams.js) so that BOTH its edges sit where the
     // reveal is already exactly zero: it arms at az 4.79 against an onset of
     // 5, and it releases either at az < -3.21 (arrOf = 0) or at p > 0.46,
-    // where `out` has been 0 since p 0.415. The snap has nothing to snap.
+    // where every retire envelope has been 0 since p 0.430 (out0, the
+    // widest — D25). The snap has nothing to snap.
     //
     // AND IT IS A NO-OP AT EVERY LANDING FRAME: snap() — the path every ?p=
     // deep link and every ?capture= golden takes — has always done exactly
@@ -1474,7 +1534,7 @@ export function createInspire(sceneApi) {
     uDet.value.set(det[0], det[1], det[2]);
     sporeSeat.drive({
       eff, time: t, matrixWorld: mw, leanScale: uLean.value, transform: T,
-      gather: gatherDrive,
+      gather: gatherDrive, floor: floorDrive,
       regions: shedRegions, globalK: gk, grad: _grad,
     });
 
