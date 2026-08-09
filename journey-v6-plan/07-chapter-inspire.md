@@ -2414,3 +2414,108 @@ boundary forward than D23 shipped.
 - The `slotPoint` evaluator is a wobble-free mirror of `steer()`'s staged
   path. If the choreography is re-authored, it should be updated in the
   same commit; divergence degrades matching quality only.
+
+---
+
+## 2026-08-09 — THE HOVER HOLD: a chip stops riding the wind while you are on it
+
+Hannah: *"when I'm hovering over the items like Arca Gidan Prize, ArtCompute,
+2RP — can you make it so that it stays in place so it doesn't actually move
+when I'm hovering over it? Right now they get moved by the wind and stuff, and
+if they're being moved when I hover it causes a weird shudder."*
+
+### What was happening
+
+She is right about the cause, and the measurement says the wind is the whole
+of it. A chip is projected every frame from a world anchor (`ui.js`, the
+hotspot loop); Inspire's three anchor mid-plume, on the streak head the breeze
+is carrying (`labelOffsets` / `nodeWorld`, this chapter's index.js). Traced at
+the Inspire rest over 12 s at 1440×900, decomposed by re-projecting a FIXED
+world point through the same live camera:
+
+| chip | total wander | of which the CAMERA | max step between frames |
+|---|---|---|---|
+| artcompute | 29.5 × 41.5 px | 0.65 × 0.62 px | 2.72 px |
+| arca | 28.3 × 29.0 px | 0.65 × 0.62 px | 2.07 px |
+| tworp | 14.8 × 12.6 px | 0.65 × 0.62 px | 1.07 px |
+
+98% of it is the anchor, not the lens — the handheld layer is zeroed at every
+route rest, so the camera's contribution at a rest is essentially nil. A 41 px
+target that slides out from under the pointer is not a target; that is the
+shudder.
+
+**Connect's hubs and Owned's faces do NOT have it.** Same mechanism, but their
+anchors are static world points: traced the same way, `ados` and
+`contributor-0` wander 0.65 × 0.62 px — the camera-only floor, i.e. nothing.
+The fix is in the shared loop, so they get it anyway; they simply had nothing
+to be fixed.
+
+### What it does now
+
+A HOT chip — hover, keyboard focus or touch-armed, i.e. the same `hot` state
+the chip's own lit read runs on, so all three channels get the same answer —
+freezes its **world anchor**, not its screen position. Freezing the anchor is
+what keeps it honest: the chip stops riding the wind but keeps riding the
+LENS, so a wheel scroll or a nav jump under a held hover still carries it with
+the scene instead of pinning it to the glass.
+
+Everything downstream derives from the same `w` — the dot, the pill's flip and
+nudge hysteresis, the hit pad's centre AND its projected radius, the copy-rect
+suppression test, and `placePop()` off the chip's own rect — so they all hold
+still together and none of them can disagree about where the node is.
+
+`constants.js` gains `HOTSPOT_HOLD_HOME_K = 6.0`; `ui.js` gains
+`holdAnchor()` and two per-hotspot fields (`holdAt`, `holdOff`).
+
+**It cannot drift out of alignment on a long hover.** The anchor's motion is a
+bounded oscillation, not a drift: traced over 24 s, the live anchor's distance
+from a fixed one runs 0 → 39 px → 0 with a ~5 s period and returns under 1 px
+four times. The held chip's error is bounded by the swing, never accumulates,
+and the node keeps coming back to it.
+
+**Release is a movement, not a jump, and it provably ends.** Going cold turns
+the held point into an OFFSET which then decays geometrically to zero and is
+dropped. Deliberately not a lerp of the held point toward the live one: the
+live one is moving, and a first-order lag chasing a moving target settles at a
+nonzero steady-state error (measured here — the anchor's typical 0.27 px/frame
+against a 0.1/frame gain parks the chip ~2.7 px behind its node, forever). A
+chip hovered once would have carried a permanent low-pass filter for the rest
+of the ride. Decaying the offset converges whatever the node does.
+
+### Gates
+
+- **Held trace, artcompute, 6 s each phase**: free 29.5 × 41.5 px, max frame
+  step 2.89 px → **held 0.65 × 0.62 px, max frame step 0.70 px**. The residual
+  is exactly the camera-only figure above: 100% of the scene-driven motion is
+  gone and only the lens is left, which is the intent. Released: tracking
+  again, hold dropped (`holdAt`/`holdOff` both null).
+- **Popover (d1ecc23) not regressed**: `ui.popNode` reports the hovered node
+  while hot on both `artcompute` and `ados`; it is re-placed each frame off a
+  chip that is now still, which is the condition it was designed for.
+  `contributor-0` correctly reports none — contributors open a card, not a
+  popover.
+- **Hit pad (696e95d) not regressed**: `contributor-0` holds `hitR` 21.82 px
+  / `--j-hit: 43.6px` / a 44×44 pad, `hitR_range` 0.000 while held (the pad
+  does not breathe either, because its depth comes off the same held anchor),
+  and `elementFromPoint` at the pad's centre resolves inside the button.
+- **Frozen path untouched**: `dt === 0` (deep link, `?p=`, the `?capture=`
+  freeze) drops any hold outright and nothing is hot there.
+  **`capture.py --check` PASS, worst MAE 0.00/255, all ten goldens.**
+- **Console** clean over a full 0→1→0 ride that hovers and releases every chip
+  in all three chapters; p = 0 restores the hero pose exactly
+  (−2.25, 2.25, 10.4), fov 38, fog 7/20, nothing armed, no hold left over.
+
+### Residuals
+
+- **A held chip can sit up to ~39 px off its node** at the worst phase of the
+  plume's swing (Inspire only — the other two chapters' anchors do not move).
+  That is the same 39 px the chip used to travel THROUGH while the pointer was
+  on it; holding it is what was asked for, and the oscillation brings the node
+  back rather than walking away from it. If it ever wants tightening, the
+  lever is the anchor itself (a smoothed plume sample in this chapter's
+  `nodeWorld`), not the hold — but that would move the resting composition and
+  the goldens with it.
+- **The hold is on `hot`, so keyboard focus freezes a chip too.** Deliberate
+  (one visual, three reasons — `ui.js` `refresh()`), and it means a tabbed
+  chip is as steady to read as a hovered one; noted because it is a behaviour
+  change for the keyboard path that nobody reported.
