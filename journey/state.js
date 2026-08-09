@@ -12,7 +12,6 @@
 //     owns the displayed position (smoothing + speed limit, once), because a
 //     second first-order lag here had no velocity state and therefore decayed
 //     the on-screen rate to zero whenever input paused — see update() below.
-//     Only a nav FLIGHT is still smoothed and speed-limited here.
 //   * routing normalises the retired Equip routes (adr-d6-routes.md) and
 //     delegates the decision of HOW to travel to the host (fly vs jump vs
 //     stay put), because that is a camera concern, not a state concern.
@@ -22,33 +21,13 @@
 import {
   CHAPTERS, CHAPTER_IDS, chapterAt, localProgress, restProgress,
 } from './route.js';
-import {
-  SMOOTH_K_FLIGHT, FLIGHT_BASE_S, FLIGHT_SPAN_S, MAX_SCRUB_RATE,
-} from './constants.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-export function createJourneyState({ onNavigate = null, onFlightCancel = null } = {}) {
-  let p = 0;          // smoothed progress - what the camera will read
+export function createJourneyState({ onNavigate = null } = {}) {
+  let p = 0;          // displayed progress - what the camera will read
   let rawP = 0;       // instantaneous target
-  let flight = null;  // { from, to, t, dur }
   let suppressRoute = 0;
-
-  function cancelFlight() {
-    if (!flight) return;
-    flight = null;
-    if (onFlightCancel) onFlightCancel();
-  }
-  // Manual scroll intent cancels a nav flight immediately (GB-3.5). These
-  // are capture-phase so they fire before any stopPropagation downstream.
-  window.addEventListener('wheel', cancelFlight, { capture: true, passive: true });
-  window.addEventListener('touchmove', cancelFlight, { capture: true, passive: true });
-  window.addEventListener('keydown', (e) => {
-    // Mirror scroll.js's dispatch: a modified chord is a browser shortcut,
-    // not scroll intent, so it must not cancel a running flight (M5).
-    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
-    if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(e.key)) cancelFlight();
-  }, { capture: true });
 
   /* ---------------- routing ---------------- */
   function parseHash() {
@@ -86,23 +65,17 @@ export function createJourneyState({ onNavigate = null, onFlightCancel = null } 
   });
 
   /* ---------------- travel ---------------- */
-  // The flight is a PROGRESS tween (rawP travels the route; camera, seams,
-  // copy all follow as under a real scroll). Chapter navigation stopped using
-  // it in the D16 era — every nav/route change is a direct jump — but it is
-  // NOT dead: the footer cue (ui-footer.js reveal()) flies the epilogue rest
-  // -> end-hold so the footer RISES through its reveal band instead of
-  // popping, which is that control's documented behaviour. Keep flyTo, the
-  // cancel listeners and inFlight for that one caller; a chapter-level
-  // flyToChapter wrapper had no callers left and is deleted (M5).
-  function flyTo(targetP) {
-    const dur = FLIGHT_BASE_S + FLIGHT_SPAN_S * Math.abs(targetP - rawP);
-    flight = { from: rawP, to: targetP, t: 0, dur };
-  }
+  // There is no flight system any more. It was a PROGRESS tween whose last
+  // caller was the footer cue's fly to the end-hold; the footer and its cue
+  // were removed by the navigation redux (Hannah, 2026-08-09 — their content
+  // lives in journey/rail.js's site-map panel now), and the tween, its
+  // cancel listeners and inFlight went with them. Chapter navigation stopped
+  // flying in the D16 era: every nav/route change is a direct jump.
 
   function setProgress(v) { rawP = clamp01(v); }
 
   /** Place progress with no travel at all (deep links: place, never replay). */
-  function snapTo(v) { rawP = clamp01(v); p = rawP; flight = null; }
+  function snapTo(v) { rawP = clamp01(v); p = rawP; }
 
   function jumpToChapter(id) { snapTo(restProgress(id)); }
 
@@ -116,25 +89,11 @@ export function createJourneyState({ onNavigate = null, onFlightCancel = null } 
      separate repairs inside scroll.js could not reach it, because the
      deceleration was happening downstream of all of them.
      The scroll controller (scroll.js) now owns the displayed position: it
-     smooths at SMOOTH_K and speed-limits at MAX_SCRUB_RATE once, with the rate
-     as persistent state, and hands the finished number here. A nav FLIGHT is
-     the one motion this file still generates, so it keeps its own tween and
-     its own smoothing — a flight has a scheduled path and no handoff, so the
-     lag has nothing to swallow. */
-  function update(dt) {
-    if (flight) {
-      flight.t += dt;
-      const f = Math.min(flight.t / flight.dur, 1);
-      const e = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
-      rawP = clamp01(flight.from + (flight.to - flight.from) * e);
-      if (f >= 1) flight = null;
-      let step = (rawP - p) * Math.min(dt * SMOOTH_K_FLIGHT, 1);
-      const cap = MAX_SCRUB_RATE * dt;
-      if (step > cap) step = cap; else if (step < -cap) step = -cap;
-      p += step;
-      if (Math.abs(rawP - p) < 0.00004) p = rawP;
-      return p;
-    }
+     smooths at SMOOTH_K and speed-limits at MAX_SCRUB_RATE once, with the
+     rate as persistent state, and hands the finished number here. This file
+     generates no motion of its own at all — the flight tween, the last
+     motion it kept, retired with the footer cue (see the travel note above). */
+  function update() {
     p = rawP;
     return p;
   }
@@ -143,15 +102,12 @@ export function createJourneyState({ onNavigate = null, onFlightCancel = null } 
     update,
     get progress() { return p; },
     get raw() { return rawP; },
-    get inFlight() { return !!flight; },
     get chapters() { return CHAPTERS; },
     chapterAt: () => chapterAt(p),
     localProgress: () => localProgress(p, chapterAt(p)),
     setProgress,
     snapTo,
     jumpToChapter,
-    flyTo,
-    cancelFlight,
     parseHash,
     writeRoute,
   };

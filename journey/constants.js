@@ -299,11 +299,9 @@ export const THRESHOLD_MIN_DWELL_MS     = 250;   // before a reverse crossing re
 // no velocity state, so the instant its target stopped moving the on-screen
 // rate decayed as e^(-SMOOTH_K t) toward zero — every commit began by watching
 // the motion die, whatever the scroll model did next. state.js now smooths
-// only a nav FLIGHT (SMOOTH_K_FLIGHT), which has its own tween and no handoff.
+// nothing at all: the flight tween (its last motion) retired with the footer
+// cue in the 2026-08-09 navigation redux.
 export const SMOOTH_K       = 6.5;  // progress smoothing, free scrubbing
-export const SMOOTH_K_FLIGHT = 10;  // during a nav-triggered flight
-export const FLIGHT_BASE_S   = 1.4; // flight duration = BASE + SPAN * distance
-export const FLIGHT_SPAN_S   = 4.0;
 
 /* ------------------------------------------------------------------ */
 /* Hero handshake                                                      */

@@ -10,7 +10,6 @@
 // preservation.md), so this module fades that block rather than duplicating it.
 
 import { CONTENT } from '../content/content.js';
-import { createFooter, epilogueRetire } from './ui-footer.js';
 import { createNodeIndex } from './ui-index.js';
 import { createRail } from './rail.js';
 import { claimInput, releaseInput } from './scroll.js';
@@ -197,15 +196,15 @@ function bandOpacity(p, band) {
 
 export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   /* ---------------- the side navigator ---------------- */
-  // Hannah, 2026-08-07: the chapter list left the hero's <nav> row and became
-  // a side rail with a full menu behind it. journey/rail.js owns the whole
-  // component — its three states, its symbols, its dialog. This module keeps
-  // exactly two relationships with it: it drives its per-frame update from
-  // inside the one update() the frame loop already calls, and it hands it the
-  // live region below so a chapter change has somewhere to be announced.
+  // Hannah, 2026-08-07 / redux 2026-08-09: the chapter list left the hero's
+  // <nav> row and became a side rail with a site-map panel behind it — now on
+  // the RIGHT flank, carrying the removed footer's whole job (journey/rail.js
+  // owns the component: its three states, its symbols, its dialog). This
+  // module keeps exactly one relationship with it: it drives its per-frame
+  // update from inside the one update() the frame loop already calls.
   // The hero's own <nav> — wordmark, 2RP, Discord — is no longer touched at
   // all by this module; the rail is a sibling landmark on <body>.
-  const rail = createRail({ onNav, announce: (m) => announce(m) });
+  const rail = createRail({ onNav });
 
   // The canvas is presentational: every word it carries also exists in the DOM
   // built by this module (PL-2.1 / PS-5.2). Set at journey boot rather than in
@@ -1126,9 +1125,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
      (handleRoute), Escape, and the scroll-intent close. Nothing else needs to
      know about selection.
 
-     Chapter modules are reached the same way the footer reaches travel —
-     through window.journey's public handle — because journey.js is read-only
-     in this lane and does not pass them to createUI(). */
+     Chapter modules are reached through window.journey's public handle,
+     because journey.js is read-only in this lane and does not pass them to
+     createUI(). */
   let selectedNode = null;
 
   function chapterModuleFor(nodeId) {
@@ -1343,11 +1342,6 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     }
   });
 
-  /* ---------------- post-epilogue footer (PS-5.1) ---------------- */
-  const footer = createFooter({
-    focusNav: (id) => rail.focusChapter(id),
-  });
-
   /* ---------------- per-frame ---------------- */
 
   // W3-B (gap e): copy choreography. The COPY_BANDS say WHERE copy may live;
@@ -1387,38 +1381,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   const easedPrev = { ...eased };
   let arrive = null;   // { id, t, lead, dur, own }
 
-  /* THE EPILOGUE HANDOVER (2026-08-07 mobile pass).
-
-     `pos-bottomleft` — the epilogue's block — and the footer occupy the same
-     lower band of the frame, and both were at full strength at the end-hold.
-     The footer is a 0.95-alpha panel, so the heading and sub read straight
-     through it as ghost text lying under the link rows. Measured before:
-
-       1440x900   footer y 680..900, block y 575..819  — 139px of overlap
-        375x812   footer y 412..812, block y 532..723  — the block ENTIRELY
-                                                          behind the panel
-        430x932   footer y 617..932, block y 632..830  — likewise
-
-     A phone is where it is unmissable (the footer is 49% of the frame there
-     and swallows the whole block), but the defect is the same shape at every
-     width, so the fix is too — a mobile-only version would have been a second
-     rule for one bug. Desktop's picture changes at exactly one place in the
-     ride, p > 0.955, and changes by losing text that should not have been
-     legible there.
-
-     `epilogueRetire` is the cue's own long-standing expression, now shared
-     (journey/ui-footer.js). Pure in p, so a reverse scrub brings the block
-     back through the same values; and zero at and below p 0.955, so the
-     epilogue REST at 0.925 — the captured pose — is untouched. */
-  let epilogueVeil = 1;
-
-  /** The one place a copy block's eased opacity reaches the DOM. */
+  /** The one place a copy block's eased opacity reaches the DOM.
+      (Until the 2026-08-09 navigation redux this multiplied the epilogue's
+      block by `epilogueRetire` so it could hand the lower frame to the
+      arriving footer. The footer is gone — its content lives in the rail's
+      site-map panel — so the epilogue copy now simply holds through the
+      end-hold, which its own band (hi: 2) always said it could.) */
   function paintCopy(id, s) {
-    // The epilogue's block is the only one that shares its band with the
-    // footer, so it is the only one that hands over. Applied here rather than
-    // to `eased.final` itself: that value still gates the cue, the hotspots
-    // and the arrival envelope, none of which should learn about the footer.
-    if (id === 'final') s *= epilogueVeil;
     if (id === 'mission') {
       if (!heroBlock) return;
       heroBlock.style.opacity = s;
@@ -1529,9 +1498,6 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       pSpeed = 0;             // placed, not travelled
     }
     lastP = p;
-    // Decided before the copy loop paints, so the handover and the eased
-    // opacity land in the same frame rather than one behind each other.
-    epilogueVeil = epilogueRetire(p);
     // moving fast releases copy even inside its band; arriving slow lets it in
     const travelHold = 1 - smoothA((pSpeed - COPY_TRAVEL_LO) / (COPY_TRAVEL_HI - COPY_TRAVEL_LO));
     const settled = 1 - smoothA((pSpeed - COPY_SETTLE_LO) / (COPY_SETTLE_HI - COPY_SETTLE_LO));
@@ -1782,9 +1748,6 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       if (!popNode.btn.classList.contains('vis')) hidePop();
       else placePop();
     }
-
-    // the footer belongs to the end-hold; the cue rides the epilogue copy
-    footer.update(p, eased.final || 0);
   }
 
   // An orientation change or a window resize across the 720px line while a
@@ -1797,7 +1760,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   }
 
   return {
-    update, addHotspot, addHoverZone, openCard, closeCard, footer, rail,
+    update, addHotspot, addHoverZone, openCard, closeCard, rail,
     armCopyEntry, cancelCopyEntry,
     /** QA: the chapter whose copy is mid-entry, or null. */
     get arrivingChapter() { return arrive ? arrive.id : null; },

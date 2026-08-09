@@ -98,7 +98,6 @@ export function boot(opts = {}) {
      ================================================================ */
   const journey = createJourneyState({
     onNavigate: (r) => handleRoute(r),
-    onFlightCancel: () => { /* manual scroll won: nothing else to undo */ },
   });
 
   // ?steady=1 kills the documentary handheld layer (QA: pose sampling at
@@ -343,8 +342,10 @@ export function boot(opts = {}) {
     // Every route-driven chapter change is a DIRECT jump (D16 restage found
     // the legacy adjacent-chapter flight left the camera stuck with runaway y
     // on Back-to-Mission; direct jumps are also what Hannah asked nav to be).
-    // The flight system's ONE remaining caller is the footer cue's fly to the
-    // end-hold (ui-footer.js) — chapter travel never flies.
+    // The flight system's last caller was the footer cue's fly to the
+    // end-hold; the cue went with the footer (navigation redux, 2026-08-09)
+    // and the flight system went with it — nothing travels but the scrub and
+    // the direct jump's own camera blend.
     directJumpTo(r.chapter);
   }
 
@@ -432,8 +433,7 @@ export function boot(opts = {}) {
 
   sceneApi.addAnimator('journey', (t, dt) => {
     scroll.update(dt);
-    if (!journey.inFlight) journey.setProgress(scroll.progress);
-    else scroll.setProgress(journey.raw);            // keep the surface under the flight
+    journey.setProgress(scroll.progress);
     const p = journey.update(dt);
     applyFrame(p, dt);
     // direct-jump camera blend: state is already AT the destination; the
@@ -549,7 +549,9 @@ export function boot(opts = {}) {
     get detail() { return detailNode; },
     /** QA: jump progress with no travel and no replay. */
     scrollTo(p) { placeAt(clamp01(p)); return journey.progress; },
-    /** QA: fly the spatial route, as a nav click does. */
+    /** QA: navigate to a chapter exactly as a nav click does (direct jump
+     *  with the camera blend). The name predates the flight system's removal
+     *  and is kept so existing QA scripts still run. */
     flyTo(id) { navigateTo(id); },
     /** QA: a chapter's build-time counts (segments, points, bodies, draws
      *  per body), or null. The budget A/Bs read this rather than counting

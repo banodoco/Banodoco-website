@@ -177,11 +177,14 @@ HIDE_SELECTORS = [
     ".j-copy",      # journey chapter copy blocks
     ".j-hotspots",  # node hotspot proxies
     ".j-card",      # detail card
-    # The side navigator (journey/rail.js, 2026-08-07) and its menu. It used to
-    # be inside `.ui` as the `.j-nav` row and was covered by the first entry;
-    # it is a sibling landmark on <body> now, so it needs naming. Tier 3
-    # renders its own copy of the rail as real HTML over the still, exactly as
-    # it does for the nav row this replaced, so a baked-in one would double it.
+    # The right-side navigator (journey/rail.js; 2026-08-09 redux of the
+    # 2026-08-07 side rail) and its site-map panel. It used to be inside `.ui`
+    # as the `.j-nav` row and was covered by the first entry; it is a sibling
+    # landmark on <body> now, so it needs naming. Tier 3 renders its own copy
+    # of the rail as real HTML over the still, exactly as it does for the nav
+    # row this replaced, so a baked-in one would double it. (The old footer
+    # and its epilogue cue were removed by the same redux — nothing of theirs
+    # is left to hide.)
     ".j-rail",
     ".j-menu",
     ".j-menu-scrim",

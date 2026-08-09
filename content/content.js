@@ -2,7 +2,7 @@
 // (Mission, Inspire, Connect, Owned, Final/epilogue).
 //
 // Single source of truth for chapter copy, node copy, contributor profiles,
-// and footer links — per journey-v6-plan/13-content-ops.md, CO-2.2:
+// and the site's outbound links — per journey-v6-plan/13-content-ops.md, CO-2.2:
 // "One content source governs everything: node labels, accessible text,
 // routes, drawers, profiles, footer entries, and Tier-3/fallback metadata.
 // No duplicated strings."
@@ -181,9 +181,16 @@ export const CONTENT = {
     },
   },
 
+  // Each node names its own chapter (`chapter:`). Added for the navigation
+  // redux (Hannah, 2026-08-09): the right-side navigator's site-map panel
+  // lists every chapter's nodes, and the chapter⇄node grouping used to exist
+  // only as comments here and as registration order in journey.js — neither
+  // of which a menu can read. Insertion order within a chapter is narrative
+  // order, exactly as it is for hotspot registration.
   nodes: {
     // --- Inspire chapter: three spore-exit spotlights (07-chapter-inspire.md IN-1.2) ---
     arca: {
+      chapter: 'inspire',
       label: 'Arca Gidan Prize',
       short: 'A competition pushing open-source AI art further. [PLACEHOLDER]',
       spotlight: {
@@ -204,6 +211,7 @@ export const CONTENT = {
       },
     },
     artcompute: {
+      chapter: 'inspire',
       label: 'ArtCompute',
       short: 'Practical compute for ambitious creators. [PLACEHOLDER]',
       spotlight: {
@@ -219,6 +227,7 @@ export const CONTENT = {
       },
     },
     tworp: {
+      chapter: 'inspire',
       label: '2RP',
       short: 'Rigorous research in AI art. [PLACEHOLDER]',
       spotlight: {
@@ -238,6 +247,7 @@ export const CONTENT = {
     // restage.md §2 — ADOS, Hivemind, Discord; `community` retired, with a
     // legacy deep-link alias community -> discord in journey.js normaliseNode) ---
     ados: {
+      chapter: 'connect',
       label: 'ADOS',
       short: 'Where online becomes in-person. [PLACEHOLDER]',
       card: {
@@ -249,6 +259,7 @@ export const CONTENT = {
       },
     },
     hivemind: {
+      chapter: 'connect',
       label: 'Hivemind',
       short: 'Persistent shared memory. [PLACEHOLDER]',
       card: {
@@ -260,6 +271,7 @@ export const CONTENT = {
       },
     },
     discord: {
+      chapter: 'connect',
       label: 'Discord',
       short: 'The everyday door into the community. [PLACEHOLDER]',
       card: {
@@ -282,6 +294,7 @@ export const CONTENT = {
     // (which restate/expand the claim) are placeholder pending Peter's copy
     // approval, so those are the parts marked [PLACEHOLDER].
     'pod-shared': {
+      chapter: 'owned',
       label: '100% shared',
       short: 'The dominant principle.',
       card: {
@@ -295,6 +308,7 @@ export const CONTENT = {
       },
     },
     'pod-monthly': {
+      chapter: 'owned',
       label: 'Granted 1% per month',
       short: 'Gradual distribution over time.',
       card: {
@@ -308,6 +322,7 @@ export const CONTENT = {
       },
     },
     'pod-split': {
+      chapter: 'owned',
       label: 'Split between groups',
       short: 'Artists, core engineers, knowledge creators.',
       card: {
@@ -356,11 +371,18 @@ export const CONTENT = {
     { id: 'contributor-15', name: 'Contributor', role: 'Researcher', blurb: 'A placeholder contribution note for an anonymous researcher, pending consent. [PLACEHOLDER]', consent: false, seed: 30 },
   ],
 
-  // --- Final/epilogue footer (10-chapter-final.md FN-3.2: "a conventional
-  // footer follows: plain-text links, social, contact, legal, crawlable
-  // index"). All hrefs are '#' per D10 until Banodoco supplies confirmed
+  // --- The site's outbound links + legal line.
+  //
+  // PROVENANCE: this key was `footer` and held the post-epilogue footer's
+  // content (10-chapter-final.md FN-3.2). The navigation redux (Hannah,
+  // 2026-08-09) removed that footer; these links and the legal line now live
+  // in the right-side navigator's site-map panel (journey/rail.js) and in the
+  // static tier's copy of it. Renamed `site` because that is what it is now:
+  // the site's own outbound destinations, not a footer's.
+  //
+  // All hrefs are '#' per D10 until Banodoco supplies confirmed
   // destinations. TODO comments capture what each link is meant to become.
-  footer: {
+  site: {
     links: [
       { label: 'banodoco.ai', href: '#' },
       // TODO(Banodoco): PLACEHOLDER — confirm and wire the real banodoco.ai

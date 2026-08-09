@@ -48,8 +48,8 @@ const OWNED_HOLD_LO = startOf('owned') + 0.03;     // 0.63 — colony held throu
 // past-the-end (M5 ignition audit, D16): was endOf('final') − 0.03 = 0.97,
 // which retired the colony DURING the end-hold — its faint glow in the
 // cutaway wedge faded out in view at 0.97 and re-ignited there on the way
-// back. The colony does not cease to exist while the visitor reads the
-// footer; the hold now covers the whole tail (p never exceeds 1).
+// back. The colony does not cease to exist while the visitor sits at the
+// end-hold; the hold now covers the whole tail (p never exceeds 1).
 const OWNED_HOLD_HI = endOf('final') + 0.01;       // 1.01 — never releases at the top
 const FINAL_MIN = startOf('final');                // 0.85 — rise/cutaway can only arm past here
 const FINAL_RELEASE = startOf('final') - 0.02;     // 0.83
