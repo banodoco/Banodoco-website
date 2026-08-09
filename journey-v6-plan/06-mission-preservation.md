@@ -34,3 +34,34 @@
 
 ## Acceptance
 - Every gate: regression check green, or a logged, Peter-approved exception describing exactly what changed and why continuity required it.
+
+## Logged exceptions
+
+### 2026-08-09 — D27: the hero's under-cap spore drift is reshaped (Hannah's call, overriding this doc)
+
+**What changed:** the ambient shed's wind — the release arc widened from
+`[π, 1.98π]` to a smooth single-peaked sweep `[3.20, 7.45]`, and three
+permanent lee filaments (weak line-attractors along the breeze at the
+Inspire exits' rim lips) added to the drift integrator. The landing
+composition therefore changed: the one visible stream off the back rim is
+now a slightly wider shed whose dust wraps both flanks and carries three
+soft streaks. `mission@*` goldens re-shot (0.51 / 0.93 MAE); with the
+spore cloud hidden the hero frame is pixel-identical to its pre-change
+self, so the exception is confined to the "under-cap spore drift"
+micro-life item on the do-not-touch list. Hero geometry, materials,
+camera, copy, nav, CTA, intro and responsive/fallback paths untouched.
+
+**Why:** Hannah's eighth spore report ("they shouldn't EVER switch
+positions based on a move — emphasis should just be changed") is only
+structurally satisfiable if the particles' positions never depend on the
+scroll section. D26 proved the lighting-only model works but that the old
+wind never carried dust to two of the three Inspire stream sectors — one
+density field cannot serve both the old landing and the three-stream
+rest. Hannah chose to reshape the wind and accept the landing change
+(D26 "the trade, stated for the decision", option 1; her decision
+recorded in the D27 brief). This doc names Peter for visual exceptions on
+the hero; that sign-off is Hannah's to obtain and was directed by her —
+recorded here so the next reader is not misled by the do-not-touch list.
+
+**Full record:** `07-chapter-inspire.md` D27 (measurements, gates,
+residuals).

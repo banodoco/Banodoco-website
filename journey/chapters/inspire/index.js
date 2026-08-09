@@ -160,29 +160,20 @@ const tmpC = new THREE.Color();
 // fewer, softer streams, not the same three more quietly.
 const T_SHIPPED = 0.85;
 const T_STEP = 0.05;
-// THE STANDING ROUTE-RIDE FLOOR (D25, 2026-08-09 — Hannah's seventh report:
-// "a completely different stream of spores or something that appears when I
-// enter the Inspire section ... it changes completely when I move into it,
-// from above or below"). Six rounds of boundary fixes (b2c9584 … 4feb006)
-// each refined the same model — a free drift REPLACED by a designed braid at
-// a section edge — and the population still had to transform at the seam.
-// The Connect chapter solved this exact shape of problem once already
-// (f9e8317): the paths exist quietly as part of the world, and arriving only
-// LIGHTS them. This is that model for the shed: inside the chapter's reach
-// the dots always ride their three routes a little (position drawn
-// FLOOR_B·T of the way onto their slot paths, so they also carry the routes'
-// living motion), ramped in across the QUIET runways on both sides — well
-// before any lighting on the Mission side, and between the Connect rest and
-// the first light on the Connect side. Entering Inspire then tightens and
-// lights routes the dust was already travelling instead of conjuring a new
-// arrangement. 0.35 is deliberately under the ~0.78 lobe threshold measured
-// in the T sweep (T_SHIPPED provenance above): at this level the unlit field
-// still reads as ONE diffuse wind-blown plume — the routes are a bias, not a
-// visible channel — while the reveal's remaining travel (fl -> T) drops by a
-// third. Zero at p = 0, at the Connect rest and beyond, so every golden
-// landing is untouched by construction (the spore system composes the blend
-// as a lerp that is exactly T at conv 1 and exactly fl at conv 0).
-const FLOOR_B = 0.35;
+// D26 (2026-08-09, Hannah's eighth report: "They shouldn't EVER switch
+// positions based on a move — emphasis should just be changed"): the
+// position channel is DELETED from the spore system. The dots belong to the
+// wind at every scroll position; the three streams are carried by LIGHT — a
+// per-dot emphasis field along the route chains, computed by the seat from
+// the same per-exit reveals this chapter has always driven. D25's standing
+// route-ride floor (FLOOR_B) and D24's gather drive existed to pace the
+// position blend across the boundary; with no position blend there is
+// nothing left to pace, and both are retired WITH the model, not tuned to
+// zero. (The T provenance note above predates D26: the three-lobe density
+// sweep it cites was measured on the positional braid. T now scales the
+// emphasis — brightness, cadence, coherence, furniture — and the three
+// streams' legibility lives in the lighting radii/gains in
+// organism/spores.js.)
 const STREAK_FLOOR = 0.25;
 // CORE RIBBONS — RETIRED (Hannah, 2026-08-06: "it looks like ARROWS ... the
 // arrows don't look like organic particles"). They were 648 drawn LineSegments
@@ -892,8 +883,6 @@ export function createInspire(sceneApi) {
   let active = -1;   // HOVER channel: set by the journey's hotspot proxies
   let selected = -1; // SELECTION channel (W4-E): the exit whose card is open
   let armed = false; // T1 seam
-  let gatherDrive = 1; // D24: the position blend's own schedule (see drive())
-  let floorDrive = 0;  // D25: the standing route-ride floor (see FLOOR_B)
 
   // W4-A gap c: the streak must live on "the currently active release point".
   // Hover is the explicit channel; when nothing is hovered we derive one —
@@ -1009,13 +998,18 @@ export function createInspire(sceneApi) {
       const inner = capUnderPt(0.52, homeAz);
       inner.y -= 0.12;
       const tail = srcLip.clone().addScaledVector(BREEZE, driftLen[i]);
-      // rise corridor keeps W4-A's approved ArtCompute radii/gain
-      list.push({ exit: i, la: lip,             lb: top,  r0: 0.65, r1: 2.05, gain: 0.78 });
-      list.push({ exit: i, la: inner,           lb: srcLip.clone(), r0: 0.50, r1: 1.45, gain: 0.55 });
-      list.push({ exit: i, la: srcLip.clone(),  lb: tail, r0: 1.00, r1: 2.60, gain: i === 0 ? 0.52 : 0.40 });
+      // rise corridor; role indexes the D26 contrast weights (see DIM_ROLE
+      // in the animator). D27: the full-strength core (r0) is widened to
+      // reach the inter-lane gap (~1.4 u at the rim) — with the release arc
+      // feeding every sector, the valleys between the lit lanes are ambient
+      // dust at its own brightness, and only a recede that actually covers
+      // the gap can carve the three-stream read out of one continuous field.
+      list.push({ exit: i, role: 0, la: lip,             lb: top,  r0: 0.72, r1: 2.05, gain: 0.78 });
+      list.push({ exit: i, role: 1, la: inner,           lb: srcLip.clone(), r0: 0.50, r1: 1.45, gain: 0.55 });
+      list.push({ exit: i, role: 2, la: srcLip.clone(),  lb: tail, r0: 1.00, r1: 2.60, gain: i === 0 ? 0.52 : 0.40 });
       // migration corridor: source lip -> release lip (rim arc sagitta stays
       // inside r1 for both spans)
-      if (i > 0) list.push({ exit: i, la: srcLip.clone(), lb: lip.clone(), r0: 0.50, r1: 1.35, gain: 0.35 });
+      if (i > 0) list.push({ exit: i, role: 3, la: srcLip.clone(), lb: lip.clone(), r0: 0.50, r1: 1.35, gain: 0.35 });
     }
     for (const rg of list) { rg.a = new THREE.Vector3(); rg.b = new THREE.Vector3(); rg.k = 0; }
     return list;
@@ -1247,29 +1241,10 @@ export function createInspire(sceneApi) {
       const azDeg = camAzDeg();
       const smz = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
       const end = endOf('inspire');
-      // THE STANDING ROUTE-RIDE FLOOR (D25 — see FLOOR_B above). Pure in p,
-      // computed BEFORE the armed gate because its window is deliberately
-      // wider than T1's: it rises across the Mission-side runway
-      // (p 0.015 -> 0.085, fully on before the earliest reveal onset at
-      // az 5 ~ p 0.105) and falls across the Connect-side runway
-      // (end + 0.035 -> end + 0.098, i.e. 0.415 -> 0.478, zero with margin
-      // before the Connect rest at 0.487 — the long tail is what buys the
-      // sliced refit its frames at a MAX_SCRUB_RATE backward entry).
-      // Monotone per leg, so it can never re-rise on a one-directional
-      // ride; position/motion only, so the no-self-ignition law is
-      // untouched. Falling is absorbed in place (D23) — the ramps are only
-      // ever VISIBLE as a gentle, unlit gathering on the way in, at well
-      // under the braid's own living rate.
-      floorDrive = FLOOR_B
-        * smz((p - 0.015) / 0.070)
-        * (1 - smz((p - (end + 0.035)) / 0.063));
-      // THE GATHER DRIVE (D24), widened to overlap the new staggered
-      // retire: falls end - 0.065 -> end + 0.045 (0.315 -> 0.425). Inbound
-      // from Connect the lighting now begins at ~0.430 (out0 below), so the
-      // field lights first, then condenses — the same staging the Mission
-      // side has always had.
-      const gather = 1 - smz((p - (end - 0.065)) / 0.110);
-      gatherDrive = gather;
+      // D26: the position channel is deleted (see the note at T_SHIPPED),
+      // so the floor (D25) and gather (D24) drives are gone with it — the
+      // reveal envelopes below are the WHOLE choreography, and they drive
+      // lighting only.
       // PER-EXIT RETIRE ENVELOPES (D25). `out` used to be ONE scalar,
       // 0.355 -> 0.415, shared by all three exits — so entering from the
       // Connect side (where the ARR azimuth ramps are already ~saturated)
@@ -1486,45 +1461,61 @@ export function createInspire(sceneApi) {
       cohTarget[i] = ((i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0)) * T;
     }
 
-    // THE SHED DOES NOT CEDE ANY MORE — it is EMPHASIZED (Hannah, 2026-08-06:
-    // "there should be particles coming from EVERYWHERE, but they should just
-    // be MORE EMPHASIZED in three parts"). All three dim channels below are
-    // retired to zero, and the reason is arithmetic, not taste.
-    //
-    // organism/spores.js already performs the whole hand-over PER DOT, in the
-    // one line `f = f * (1 - cv) + pw`: a dot cedes exactly as much of its
-    // ambient look as it has actually converted, and gains exactly its own
-    // plume brightness. That is conservative by construction. Every channel
-    // here was a SECOND, whole-population hand-over stacked on top of it, and
-    // it double-counted against the dots that had not converted yet — they
-    // lost ambient light while gaining no plume light. Measured on the live
-    // buffer across the approach: total shed luminance 2746 (p 0.115) -> 1920
-    // (p 0.14), a 30% trough, with dots above 0.30 luminance falling 4200 ->
-    // 2426 before recovering. That trough IS "the particles that are there
-    // before kind of disappear, and then new particles appear".
-    //
-    // The three channels, and why each is zero rather than smaller:
-    //   regions — dimmed the shed exactly where each plume lives, i.e. it
-    //     cleared the background out from behind the emphasis. Under the new
-    //     model the surrounding shed is the SUBJECT, not the background.
-    //   globalK — dimmed the whole curtain to 3% at full reveal. It existed
-    //     for ride-through #3 ("the plumes must not ignite BESIDE the old
-    //     curtain"), which the per-dot exchange answers on its own.
-    //   grad — dissolved the far-downwind history. Those are real spores the
-    //     opening view sheds; deleting them is the disappearance by name.
-    // Zero is also the only value that is exactly reversible for free.
+    // THE SHED IS EMPHASIZED, AND EMPHASIS HAS TWO SIDES (D26). Hannah,
+    // 2026-08-06: "there should be particles coming from EVERYWHERE, but
+    // they should just be MORE EMPHASIZED in three parts" — and 2026-08-09:
+    // "they shouldn't EVER switch positions based on a move — emphasis
+    // should just be changed." Under D26 the dots never leave the wind, so
+    // the three streams can no longer earn contrast from DENSITY (the old
+    // model emptied the sky by condensing every dot onto the braids). The
+    // only contrast left is lighting's own: the lanes brighten (the seat's
+    // per-dot feed) and the shed immediately AROUND them recedes a step —
+    // the same figure/ground move a stage light makes. So the region
+    // capsules return, re-purposed and re-weighted:
+    //   · the rise corridors carry most of it (the lanes live there);
+    //   · the origin wedge and walk corridors take a light touch;
+    //   · the downwind history capsules take the lightest — the far fan is
+    //     the opening view's own shed and must never read as deleted
+    //     (2026-08-06's "disappearance by name" stands).
+    // The 2026-08-06 trough (total luminance −30% mid-approach — "the
+    // particles that are there before kind of disappear") came from dims
+    // that LED the emphasis. These LAG it: k rides eff² x T, so the recede
+    // arrives after the lanes are already carrying light. globalK and grad
+    // stay 0. All channels are pure in (eff, T) — exactly reversible.
     const mw = sceneApi.groups.mushroom.matrixWorld;
+    // D27: with the release arc feeding all three corridors, the valleys
+    // between the lit lanes are ambient dust at its own 0.6-0.9 luminance —
+    // the figure/ground recede is the only thing that can carve them (the
+    // old model carved them with DENSITY, by emptying the gaps). Deepened
+    // rise/downwind weights, still lagging eff² x T, still capped by
+    // MAX_TOTAL_DIM — the shed recedes a step; it never reads as deleted.
+    // D27 (second pass): with the lee filaments condensing real density
+    // into the lanes, the recede only needs to FINISH the valleys, not dig
+    // them — weights back near the D26 candidate's, and the drive is gated
+    // late (ss(0.55, 1, eff) x eff, not eff²): the dim must never lead the
+    // per-dot light, whose stagger opens across the whole reveal. Measured
+    // before this gate: total-light trough -19..-27% mid-transition (the
+    // 2026-08-06 offense class); after: see D27 in 07-chapter-inspire.md.
+    const DIM_ROLE = { 0: 0.46, 1: 0.25, 2: 0.24, 3: 0.22 }; // rise/wedge/downwind/walk
     for (const rg of shedRegions) {
       rg.a.copy(rg.la).applyMatrix4(mw);
       rg.b.copy(rg.lb).applyMatrix4(mw);
-      rg.k = 0;
+      const ee = eff[rg.exit];
+      const smzl = ee < 0.55 ? 0 : ((ee - 0.55) / 0.45);
+      rg.k = DIM_ROLE[rg.role] * (smzl * smzl * (3 - 2 * smzl)) * ee * T;
     }
     const gk = 0;
     _capC.set(0, sceneApi.consts.CAP_Y, 0).applyMatrix4(mw);
     _grad.sx = _capC.x; _grad.sy = _capC.y; _grad.sz = _capC.z;
     _grad.d0 = sceneApi.consts.CAP_R * 1.2;
     _grad.d1 = sceneApi.consts.CAP_R * 2.6;
-    _grad.k = 0;
+    // D26: a MILD far-history recede (0.97-strength grad was 2026-08-06's
+    // "disappearance by name" and stays retired; 0.30, lagging the reveal
+    // like the region capsules, only asks the far fan to yield figure/ground
+    // to the lit lanes — the source and the near shed keep their light).
+    const effMin = Math.min(eff[0], eff[1], eff[2]);
+    const gz = effMin < 0.55 ? 0 : ((effMin - 0.55) / 0.45);
+    _grad.k = 0.24 * (gz * gz * (3 - 2 * gz)) * effMin * T;
     // The seat, driven (runs OUTSIDE the anyVisible gate so the release path
     // always executes): one call carries the whole frame's intent — the
     // system steers its own dots first, then its color pass reads the
@@ -1534,7 +1525,6 @@ export function createInspire(sceneApi) {
     uDet.value.set(det[0], det[1], det[2]);
     sporeSeat.drive({
       eff, time: t, matrixWorld: mw, leanScale: uLean.value, transform: T,
-      gather: gatherDrive, floor: floorDrive,
       regions: shedRegions, globalK: gk, grad: _grad,
     });
 
