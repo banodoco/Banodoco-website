@@ -34,6 +34,7 @@
 import * as THREE from 'three';
 import {
   makeUniforms, pullOf, pullRawOf, makeRng, TAU, RING_C, HERO_AZ, MEMBERS,
+  groundY,
 } from './world.js';
 import { createFinalRing } from './ring.js';
 import { createFinalTerrain } from './terrain.js';
@@ -306,8 +307,17 @@ export function createFinal(sceneApi) {
     // and batched members alike. Last, so it reads this frame's uniforms.
     ring.update(t, dt, true);
 
-    // sprite layers (outside the shared shader uniforms)
-    terrain.setAmount(eff);
+    // sprite layers (outside the shared shader uniforms).
+    // `under` (transit pass, 2026-08-09): how far the lens is below the soil
+    // line — 1 deep underground, 0 once it stands 0.9 above ground. Drives
+    // the soil slab's underside toward near-black so the earth overhead
+    // reads as a dark ceiling during the Owned→Final crossing, and hands the
+    // fog tone back before the far side can ever be seen. Pure in the camera
+    // pose, so reverse scrubs retrace it exactly.
+    const cp = sceneApi.camera.position;
+    const cy = cp.y - groundY(cp.x, cp.z);
+    const uu = 1 - Math.max(0, Math.min(1, (cy + 0.1) / 1.0));
+    terrain.setAmount(eff, uu * uu * (3 - 2 * uu));
     sky.update(t, eff);
   });
 
