@@ -869,6 +869,7 @@ export function createInspire(sceneApi) {
   let active = -1;   // HOVER channel: set by the journey's hotspot proxies
   let selected = -1; // SELECTION channel (W4-E): the exit whose card is open
   let armed = false; // T1 seam
+  let gatherDrive = 1; // D24: the position blend's own schedule (see drive())
 
   // W4-A gap c: the streak must live on "the currently active release point".
   // Hover is the explicit channel; when nothing is hovered we derive one —
@@ -1249,6 +1250,25 @@ export function createInspire(sceneApi) {
       // (route-derived: 0.025 before the Inspire range ends; shipped 0.355)
       const out = 1 - smz((p - (endOf('inspire') - 0.025)) / 0.06);
       api.setReveal(a * out, b * out, c * out, band * out);
+      // THE GATHER DRIVE (D24, Hannah's sixth spore report: "it particularly
+      // happens when I scroll BACK to the Inspire section from the Connect").
+      // The spore system's POSITION blend rides this on top of the reveal;
+      // LIGHTING stays on eff exactly as before. It is 1 through the whole
+      // rest framing (the director's rest-drift key sits at p 0.312) and
+      // falls to 0 across p 0.315 -> 0.415 — reaching zero exactly where
+      // `out` does (endOf + 0.035), so the seat still goes fully quiet at
+      // the same p and the T1 seam derivation is untouched. Forward, the
+      // fall is invisible: a falling position blend is absorbed in place
+      // (retire in place, D23). Its one visible effect is INBOUND: entering
+      // from the Connect side, the reveal window is only Δp ≈ 0.04 wide
+      // (out x the ARR ceiling), and the whole shed used to gather onto the
+      // braid inside it at 12-46 u/s — the D23 residual, now reported. The
+      // gather spreads that same travel across Δp 0.10, which paces it at
+      // the approved Mission-side arrival gesture's own rate. Pure in p,
+      // monotone per leg — it can never re-rise after falling on a
+      // one-directional ride, so the no-self-ignition law holds.
+      const gather = 1 - smz((p - (endOf('inspire') - 0.065)) / 0.100);
+      gatherDrive = gather;
       // Swarm isolation fix (2026-08-03): detail may only sharpen on the
       // final approach to the rest (rest-0.025 -> rest-0.007, shipped
       // 0.235->0.253) — through the whole orbit the hero's own converted
@@ -1454,6 +1474,7 @@ export function createInspire(sceneApi) {
     uDet.value.set(det[0], det[1], det[2]);
     sporeSeat.drive({
       eff, time: t, matrixWorld: mw, leanScale: uLean.value, transform: T,
+      gather: gatherDrive,
       regions: shedRegions, globalK: gk, grad: _grad,
     });
 

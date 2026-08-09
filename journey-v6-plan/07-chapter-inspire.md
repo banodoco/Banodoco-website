@@ -2202,3 +2202,215 @@ they really are wherever you last saw them.
 - The QA transform dial (`?t=`, `[`/`]`) now absorbs on lowering rather
   than sliding dots home — calmer than before, but a QA-visible behaviour
   change worth one line here.
+
+---
+
+## 2026-08-09 (D24) — coming home gathers like arriving, not like moving day
+
+Hannah's sixth report in this family, pinning the direction D23's residual
+predicted:
+
+> "The spores still shift/rearrange awkwardly at the Inspire/Connect
+> boundary … it particularly happens when I scroll BACK to the Inspire
+> section from the Connect."
+
+D23 retired the outbound half (a falling reveal changes lighting only) and
+recorded, verbatim: *"a fresh deep-link at/past Connect scrubbed backward
+still gathers from the diffuse cloud at 9–11 u/s (pre-existing, unchanged —
+the arrival gesture from the near side; lever is the chapter's exit-side
+reveal schedule if ever reported)."* This is that report.
+
+### Instrument
+
+D23's, rebuilt on `tools/capture.py`'s own CDP client: headless 1440x900
+(`?nointro=1&steady=1&nosnap=1`), riding `scroll.setProgress` per rAF at
+0.10 p/s (deliberate) and 0.45 p/s (brisk, `MAX_SCRUB_RATE`), all metrics
+in-page per frame over the full 4,200-dot buffer. Baselines re-measured to
+anchor comparability: ambient drift **0.09–0.10 u/s** (D23: 0.09), braid
+alive at the rest **1.14–1.32 u/s** p25–p75, coherence ≤ 0.28 (D23: 1.29 at
+0.02–0.15). Peak speeds below are 3-frame rolling unless marked (1f) — the
+journey applies a scrub's p-step one frame after it is set, so a
+single-frame peak lands on catch-up frames with 3 ms deltas and reads high
+by an order of magnitude. The measurement harness's own artifact, named so
+nobody chases it.
+
+### Reproduction (fresh deep link at p 0.50, scrubbed backward)
+
+| | deliberate | brisk |
+|---|---|---|
+| peak population speed (1f) | **12.6 u/s** | **46.1 u/s** |
+| … as multiples of braid-alive / ambient | 10x / 130x | 36x / 480x |
+| sustained p25 / p50 / p75 | 1.15 / 2.08 / **4.59 u/s** | 0.15 / 8.86 / **20.2 u/s** |
+| direction coherence at peak | **0.38** | 0.36 |
+| net per-dot travel across the window, mean / max | **2.18 u** / 7.0 | 2.17 u / 7.0 |
+| dots moving > 1 u net | **3,513 / 4,200** | 3,497 |
+| travel per unit p | ~51 u/p | ~51 u/p |
+| dots on screen while it happens | 82–99% | 83–98% |
+
+The whole shed converges onto the braid paths inside the exit leg's
+Δp ≈ 0.04 reveal window (`out` falls p 0.355→0.415, the ARR ceiling az 78
+crosses at p ≈ 0.372), at 10x the braid's own living motion, coherently,
+in open view. The mirror of what D23 removed.
+
+### The calibration that set the target
+
+The same instrument was pointed at the APPROVED gesture — a fresh page
+riding forward from Mission into Inspire, the arrival Hannah signed off:
+
+| approved entry (fwd) | deliberate | brisk |
+|---|---|---|
+| peak (1f) | 7.2–8.2 u/s | 16.4 u/s |
+| sustained p50 / p75 | 1.32 / 2.13 u/s | 1.42 / 10.7 u/s |
+| coherence max | 0.44–0.55 | 0.60 |
+| net travel mean / dots > 1 u | **2.01 u / 3,308** | 1.63 u / 2,612 |
+| window | Δp ≈ 0.17 | Δp ≈ 0.17 |
+
+So the approved arrival is NOT still — it is the same class of directed
+gather, at the same net travel, spread over 4x the scroll. The offense
+inbound was never the gesture; it was the compression. The target is
+therefore parity with this table, not with the braid-alive floor.
+
+### The fix — two halves that compose
+
+**1. Arrive nearby (`organism/spores.js`).** The dot-to-slot pairing was
+frozen at `initSteer` from an RNG stream — convention, never geometry. At
+every seat ENGAGE (the `!wasActive` prime), each still-unconverted dot is
+re-paired with the nearest free slot of its own exit cohort (grid-hashed
+greedy nearest, deterministic order, one-time cost 0.4–0.5 ms). A swap
+between two conv = 0 dots is invisible at the swap frame by construction
+(the cease branch renders nothing from the slot tuple), converted dots are
+never touched, swaps are exit-local so `exIdx`/`stag`/`stagW` stay with the
+dot — which is what keeps cv a pure function of (reveal, hash) and the D22
+gate exact. Measured matching (?tkdbg probe): mean dot-to-slot distance
+2.17 / 2.83 / 2.68 u per exit before, **1.20 / 1.93 / 1.89 u** after.
+Not further: the braid at any instant is a filament set inside a
+volumetric cloud, so any bijection has a **transport floor** — re-pairing
+alone cut net travel only 2.18 → 1.79 u. Necessary, not sufficient.
+
+**2. The gather drive (`chapters/inspire/index.js` → seat).** The position
+blend's schedule is split from the lighting's. Lighting rides `eff`
+untouched. The blend rides `cvP = conv * T * gather`, where `gather` is a
+new per-frame drive, pure in p: 1 through the whole rest framing, falling
+to 0 across **p 0.315 → 0.415** (route-derived, `endOf('inspire') − 0.065`
+to `+ 0.035` — reaching zero exactly where `out` does, so the seat goes
+quiet at the same p and the T1 seam derivation stands). Forward, the fall
+is invisible: a falling position blend is absorbed in place (D23), so the
+braid dims exactly as before while its living motion quiets — measured
+1.36 → 0.09 u/s across the leg, a smooth ramp, no step. Inbound, the same
+Δp 0.10 window paces the transport share at the approved gesture's rate.
+The conservation floor in the draw-on gate stays on `cvL = conv * T` — the
+lighting share — because it must match what `dim()` takes.
+
+### After, same instrument
+
+| inbound (rev) | deliberate | brisk |
+|---|---|---|
+| peak population speed (3-frame) | 12.6 → **3.3 u/s** | 46.1 → **19.3 u/s** |
+| sustained p50 / p75 | 2.08 / 4.59 → **2.28 / 2.90** | 8.86 / 20.2 → **8.18 / 12.1** |
+| coherence at peak | 0.38 → 0.42 | 0.36 → 0.50 |
+| net per-dot travel, mean | 2.18 → **1.90 u** | 2.17 → **1.66 u** |
+| dots moving > 1 u net | 3,513 → 3,064 | 3,497 → 2,646 |
+| travel per unit p | ~51 → **~19 u/p** | ~51 → ~17 u/p |
+
+Against the approved entry's own row: deliberate inbound now peaks BELOW
+the approved gesture (3.3 vs 7.2–8.2) at the same coherence class and the
+same net travel; brisk is at parity (19.3 vs 16.4 peak, 12.1 vs 10.7 p75,
+1.66 vs 1.63 u net). The dots still move — they must, the streams have to
+end on their paths — but they move the way the approved arrival moves,
+paced over Δp 0.10 instead of crammed into 0.04. On screen (8-step
+backward scrub strip, p 0.42 → 0.30): the shed lights in place as a
+diffuse emphasis, brightens, and condenses gradually while the camera
+swings — the three braids resolve by the rest. No beat where the field
+reorganizes.
+
+### Rejected, with reasons
+
+- **Widening the exit-side reveal schedule** (the lever D23's residual
+  named): `eff` carries LIGHTING. Stretching `out` drags the streams'
+  dimming into Connect's approach (its first key is p 0.410, rest 0.487)
+  or starts the dissolution inside the approved rest framing — D23
+  rejected that seat once already — and forces a T1 re-derivation, all to
+  buy at most ~2x. Splitting position from lighting buys 2.3x with the
+  forward look untouched.
+- **Re-pairing alone**: transport floor, measured above. Kept, but only as
+  half the fix.
+- **Phase-matching** (choosing `ph0A` freely so each slot's path point
+  lands beside its dot): the best distance coverage of all — the path
+  curve spans the whole envelope — but it skews the stage-clock phase
+  distribution the approved rest depends on (uniform), and the skew
+  persists for a full period (7–15.5 s) after a backward arrival parks at
+  the rest. Rest legibility is not for sale.
+- **Gather while off-screen / occluded**: not available. 82–99% of the
+  population is on screen through the entire window (measured, both
+  directions — same finding as D23).
+- **Slew-limiting the blend**: rate-dependence; rejected on D22/D23's
+  precedent without re-litigating.
+
+### The five prior commits, re-measured
+
+| metric | before (this session) | after |
+|---|---|---|
+| `b2c9584` dark-and-converted, Inspire rest | 204–242 (D22 band 225–248) | **208–242** |
+| … at the Connect end of a forward ride | 0 | **0** |
+| boundary trough, deliberate fwd / rev (endpoint-line ref, stashed-tree A/B) | −5.9% / −6.7% | **−5.9% / −6.6%** |
+| boundary trough, brisk fwd / rev | −6.5% / −7.8% | **−6.8% / −5.6%** |
+| `9e2a277`/`2fdb4e6` arrival 10–90%, deliberate / brisk | 783 / 174 ms | **802 / 132 ms** (pacing noise; ramps untouched) |
+| `e2bd6e8` fwd/rev per-dot Δcv at pins 0.30/0.34/0.37/0.40 | 0.0000 | **0.00000 exact, 0 dots > 0.05** |
+| … drift recycles per frame, full 0→1→0 ride | 0–1 | **avg 0.026, max 3** (ambient ~2 / 1.6 s) |
+| `30fd839` outbound retire, peak / net / dots > 1 u (deliberate) | 2.06 u/s / 0.82 u / 924 | **1.05 u/s / 0.24 u / 281** |
+| … brisk | 1.84 u/s / 0.32 u / 332 | **0.88 u/s / 0.07 u / 38** |
+| three streams at the rest, hot60 / hot100 | 2716 / 708 (D22) | fresh **2701 / 698**, after backward arrival **2721 / 719** |
+| screen-x density profile corr vs fresh | 0.926–0.943 (D23) | round trip **0.990**, backward arrival **0.970** |
+
+The outbound retire IMPROVED: the gather damp quiets the braid's cycling
+progressively before the dim, so even less residual motion crosses the
+boundary forward than D23 shipped.
+
+### Gates
+
+- **`capture.py --check` PASS, worst MAE 0.00/255 on all ten goldens.**
+  No golden was re-shot: `mission@*` and `inspire@*` are the files already
+  on disk, byte-identical, and the fresh captures match them to 0.00 —
+  the landing-frame no-op is exact. At reveal 1 every dot's conv is 1, so
+  zero dots are refit-eligible and `gather` is 1 at every rest: both new
+  mechanisms collapse to identity at every landing frame by construction,
+  and the gate confirms it on pixels.
+- **Console clean** over a full p 0 → 1 → 0 ride and over every
+  reproduction ride, both directions, both rates: zero warnings, zero
+  errors.
+- **Nothing fades in over open view; no self-ignition**: no lighting,
+  reveal or colour schedule changed — `eff`, the ARR ramps, `out`, the
+  dim exchange and `pw` are byte-identical code paths. `gather` is
+  monotone per leg and drives position only.
+- **Camera untouched**: no key, ramp, seam or route value changed.
+- **Forward/reverse mirror**: cv agreement exact (table above); position
+  path-dependence remains deliberate (D23) and now includes the engage
+  refit, same class as `heroP`.
+- **Cost**: refit 0.4–0.5 ms once per seat engage; steer per-frame
+  1.15 ms (`?tkdbg`), unchanged loop shape — one extra multiply per dot.
+
+### Residuals
+
+- **Brisk inbound still peaks ~19 u/s (3-frame)** — but the approved entry
+  gesture itself peaks 16.4 u/s at `MAX_SCRUB_RATE`; at the scroll clamp,
+  travel/time is bounded below by net travel over window time for any
+  schedule. Parity with the approved gesture is the design target this
+  pass adopted; going below it means less net travel, which means less
+  braid, which is a taste call for Hannah, not a bug.
+- **The forward exit leg's braid life now quiets progressively**
+  (1.36 → 0.09 u/s across p 0.315 → 0.415) while the streams dim. Smooth,
+  measured, and arguably the calmer read — but it is a visible-in-principle
+  change to the forward leg, recorded here so it is traceable to this
+  commit if it ever draws a note.
+- **A minority of dots keep their RNG slots at brisk engages**: dots whose
+  conv is already > 0 on the engage frame (the reveal can step ~0.05–0.2
+  in one brisk frame) are ineligible for refit by design — swapping a
+  partly-converted dot would pop it. ~5–15% of the shed at 60 fps; they
+  gather from wherever they are, paced by the same gather drive.
+- **The slot matching is greedy in dot-index order** — early dots get the
+  nearest slots, the tail takes what remains (the far counts in the probe
+  table). An optimal-transport assignment would shave the residual, at
+  real cost and for a gesture that now reads correctly. Not pursued.
+- The `slotPoint` evaluator is a wobble-free mirror of `steer()`'s staged
+  path. If the choreography is re-authored, it should be updated in the
+  same commit; divergence degrades matching quality only.
