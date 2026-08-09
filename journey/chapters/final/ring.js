@@ -82,7 +82,7 @@
 
 import * as THREE from 'three';
 import {
-  TAU, MEMBERS, RING_C, arcOf, cutVal, WOB_IDLE,
+  TAU, MEMBERS, RING_C, arcOf, cutVal, WOB_IDLE, sweepReveal,
   makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat,
 } from './world.js';
 import { makeGlowTexture, CAP_Y, CAP_R } from '../../anatomy.js';
@@ -539,48 +539,59 @@ export function createFinalRing(sceneApi, uniforms) {
     const placed = [];
     const want = { t3: 15, t4: 28 };
 
-    /* ---- THE FIELD'S ARRIVAL ORDER, RE-SPACED (2026-08-07) ---------------
-       Hannah: "in the final position, can you make it so the mushrooms
-       animate in slower one at a time in a nice elegant manner."
+    /* ---- THE FIELD'S ARRIVAL: SCATTERED ON AN AUTHORED LADDER (2026-08-09)
+       Hannah: "the mushrooms should light up a lot more gradually. It
+       should be, like, one at a time — like a Christmas tree, like a town
+       of Christmas trees lighting up."
 
-       The stagger was the whole of the problem, and it was arithmetic, not
-       taste. `reveal` was a straight line on DEPTH across the field's full
-       15..45 range — but only the bodies inside CLONE_DIST are CLONES, and
-       clones are the only bodies that draw themselves on. So the fifteen
-       drawn field bodies all lived in the first third of that line and
-       received reveal thresholds inside 0.0795 of uPull, against a draw width
-       of 0.16 — every one of them spent 80% of its arrival overlapping every
-       other. Measured on the shipped tree, the twenty-four drawn bodies sat
-       at 0.148 0.201 0.250 0.294 0.337 · 0.489 0.514 0.515 0.519 0.521 0.523
-       0.532 0.537 0.539 0.543 0.551 0.551 0.560 0.560 0.568 · 0.683 0.723
-       0.737 0.790 — five ring members, then FIFTEEN bodies inside a fifth of
-       a draw width, then four more. That middle block is the "wave that reads
-       as simultaneous"; it is not a slow arrival, it is one arrival with
-       fifteen bodies in it.
+       §12 (2026-08-07) separated order from spacing — rank instead of
+       clumped depth — and it was right about the arithmetic and still
+       wrong about the clock. Even rank spacing is even in uPULL, and the
+       camera does not cross uPull evenly: it accelerates from ~12 to ~25
+       units of uPull per unit p into the rest, so a ladder even in uPull
+       machine-guns at the end — the last ten arrivals landed inside an
+       eighth of a second at a deliberate scroll, and twelve bodies were
+       mid-draw at the peak. A wave with good intentions is still a wave.
 
-       Each band is now spread across ITS OWN population by rank (see the rank
-       pass after the placement loop): the drawn bodies get REV_LO..REV_KNEE,
-       0.029 of uPull apart for fifteen bodies — 4.7x the shipped spacing, and
-       enough that consecutive bodies are visibly at different stages — and the
-       batched far band keeps a tail of its own out to REV_HI. Order is still
-       depth order, so the front still travels strictly OUTWARD; only the
-       pacing changed.
+       So the ladder is now authored in P — the axis the wheel and the eye
+       actually traverse — and converted to uPull thresholds through the
+       measured camera curve of this leg (18-one-species.md §13: curve,
+       derivation, and the before/after tables). FIELD_LADDER below is that
+       conversion, baked: arrival slots for the fifteen drawn field bodies,
+       interleaved with the ring's own re-timed sweep (world.js
+       RING_LADDER) so the whole chapter arrives on ONE 24-slot timeline
+       that opens sparse — the first arrivals are singles a beat apart,
+       each its own event — and tightens as the town fills toward the rest.
 
-       REV_HI is not a taste number: the light reads the CLAMPED uPull, which
-       saturates at 1.0, so a body with a threshold past 1 − REVEAL_W never
-       reaches full brightness at all. 0.84 is that ceiling, and the cap-rim
-       hints already sit on it.
+       ORDER — scattered, no longer near-to-far. §12 kept depth order on
+       the argument that the front travels outward from the hero; measured
+       on screen that is exactly what it looked like — a sweep — and a
+       sweep is what "a town of Christmas trees lighting up" is not. A town
+       lights in no order at all: a window here, a porch across the valley,
+       two more behind you. The stride-7 walk over the depth ranks below
+       (7 is coprime to 15, so every rank is visited once) sends each
+       consecutive arrival to a different band of the field — far, middle,
+       near, far again — which reads as scatter while staying fully
+       deterministic and consuming NOTHING from the rand stream.
 
-       ORDER — near to far, kept. It was already the field's order and it is
-       the right one: the front travels outward from the hero, so the bodies
-       nearest the ring (whose construction actually reads at this camera)
-       arrive first and the haze band fills in behind them. Far-to-near was
-       not considered seriously here for the same reason it was rejected in
-       Connect — a front that starts at the horizon and works inward is
-       drainage, and this chapter's whole gesture is a colony opening out. */
+       The batched far band (T4) keeps its own rank-spread tail out to
+       REV_HI: it has no draw-on and 25-45 units of fog between it and the
+       lens; it reads as haze filling in behind the town, and haze may
+       arrive as weather rather than as trees.
+
+       REV_HI is not a taste number: the light reads the CLAMPED uPull,
+       which saturates at 1.0, so a body with a threshold past 1 − REVEAL_W
+       never reaches full brightness at all. 0.84 is that ceiling; the last
+       ladder rung (0.8379, a far-lip ring member) sits just under it. */
     const CLONE_DIST = 24;               // the T3/T4 seam: clones are nearer than this
-    const REV_LO = 0.30, REV_KNEE = 0.72, REV_HI = 0.84;
-    const REV_JIT = 0.005;               // keeps the ladder off a metronome; 17% of the spacing
+    const REV_KNEE = 0.72, REV_HI = 0.84;
+    const REV_JIT = 0.005;               // keeps the ladder off a metronome
+    // The fifteen field slots of the merged 24-slot ladder, in arrival
+    // order (p 0.876 → 0.907 at today's leg; the ring's nine take the
+    // other slots — four opening singles, one mid, four closing).
+    const FIELD_LADDER = [0.3459, 0.3920, 0.4663, 0.4970, 0.5251,
+                          0.5506, 0.5747, 0.5973, 0.6184, 0.6390,
+                          0.6592, 0.6788, 0.6977, 0.7379, 0.7616];
     const cand = [];                     // placements, held for the rank pass
     let idx = 0, guard = 0;
     while ((fieldStats.t3 < want.t3 || fieldStats.t4 < want.t4) && guard++ < 6000) {
@@ -640,32 +651,40 @@ export function createFinalRing(sceneApi, uniforms) {
       fieldStats[tier === 3 ? 't3' : 't4']++;
     }
 
-    /* ---- THE RANK PASS -------------------------------------------------
-       Spacing the arrivals by DEPTH is not enough, because the depths
-       themselves are clumped: `dist` is drawn as base + rand^1.30 * range,
-       and that exponent piles the population up at the near end on purpose
-       (a field wants more bodies close than far). Ten of the fifteen drawn
-       bodies land inside four units of each other, so any straight function
-       of depth hands them near-identical thresholds however wide the band is
-       — re-running the kneed map alone still left five of them inside 0.013.
+    /* ---- THE LADDER PASS -----------------------------------------------
+       The drawn band: sort by depth (deterministic), then hand each
+       arrival slot a depth rank from the authored permutation below — a
+       stride walk that sends consecutive arrivals to different bands of
+       the field (jumps of 4-14 ranks), with two authored exceptions at the
+       head. Slot 0 is the NEAREST body: it is the biggest thing in the
+       composition, and §11.8's stem-before-cap residual makes a mid-draw
+       body briefly a stalk under a dark cap — at this body's screen size
+       that state must play out early, while the camera is still close and
+       the body sits half out of frame, not in the middle of the open view
+       (measured on the ladder at p 0.894: a near-black dome the size of a
+       quarter of the frame — the shipped tree had the same state on the
+       same body at the same rung, so this is containment, not regression).
+       Slot 1 is the FARTHEST drawn body — the town's first light across
+       the valley, above the soil line and unmissable while the near
+       arrival is still half-framed.
 
-       So the ORDER comes from depth and the SPACING comes from rank: sort
-       each band by depth and lay its members out evenly across the band. The
-       arrival order is exactly the order depth gives — near to far, the
-       front travelling outward, nothing about the reading changed — and
-       consecutive bodies are now 0.029 of uPull apart instead of 0.006.
+       The batched far band keeps §12's rank spread across its own tail.
 
        The bands are laid out in PLACEMENT order afterwards, so `rand` is
        consumed in precisely the sequence it was before and no body moves,
        changes size, or changes shape. Only its threshold does. */
     {
-      const band = (list, lo, hi) => {
-        list.sort((a, b) => a.dist - b.dist);
-        const n = list.length;
-        list.forEach((c, k) => { c.reveal = lo + (hi - lo) * (n > 1 ? k / (n - 1) : 0) + c.jit; });
-      };
-      band(cand.filter(c => c.tier === 3), REV_LO, REV_KNEE - REV_JIT);
-      band(cand.filter(c => c.tier === 4), REV_KNEE, REV_HI - REV_JIT);
+      const t3 = cand.filter(c => c.tier === 3).sort((a, b) => a.dist - b.dist);
+      const PERM = [0, 14, 7, 3, 11, 5, 13, 1, 9, 4, 12, 2, 10, 6, 8];
+      FIELD_LADDER.forEach((rv, k) => {
+        const r = PERM[k];
+        t3[r].reveal = rv + t3[r].jit;
+      });
+      const t4 = cand.filter(c => c.tier === 4).sort((a, b) => a.dist - b.dist);
+      t4.forEach((c, k) => {
+        c.reveal = REV_KNEE + (REV_HI - REV_JIT - REV_KNEE)
+                 * (t4.length > 1 ? k / (t4.length - 1) : 0) + c.jit;
+      });
       for (const c of cand) placeMushroom(c, c.tier, c.tier === 3);
     }
 
@@ -714,7 +733,9 @@ export function createFinalRing(sceneApi, uniforms) {
     if (Math.hypot(x, z) < 3.4 || cutVal(x, z) < 0.35) continue;
     const gy = groundY(x, z);
     const arc = arcOf(x, z);
-    const meta = { arc, reveal: 0.08 + 0.80 * arc, boost: 0.5, tw: rand() * TAU };
+    // sweepReveal: the ring's re-timed CCW ladder (world.js) — the pool
+    // still kindles exactly between the members it stands between.
+    const meta = { arc, reveal: sweepReveal(arc), boost: 0.5, tw: rand() * TAU };
     glows.pt(x, gy + 0.05, z, 0.34, 0.55, meta);
   }
 

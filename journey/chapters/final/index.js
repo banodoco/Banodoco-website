@@ -422,6 +422,12 @@ export function createFinal(sceneApi) {
     trigger(name) { if (name === 'ctaPulse' || name === 'ringPulse') fireCta(); },
     /** QA introspection */
     counts: { ...ring.counts, ...terrain.counts, ...sky.counts, ...canopy.counts },
+    /** QA: every fruiting body's seat ({x, z, gy, s, reveal, tier}) — the
+     *  arrival-pacing measurements (18-one-species.md §12/§13) read the
+     *  reveal ladder here instead of recovering each threshold by inverting
+     *  frozen uProg samples. A build product, never state: seats are filled
+     *  once by placeMushroom and bodies never move. */
+    seats: ring.seats,
     /** LIVE QA: the poke's own numbers, read now rather than at construction
      *  (the spread above freezes anything it touches). */
     pickStats: ring.pickStats,
