@@ -18,7 +18,7 @@ import {
   COPY_BANDS, COPY_FADE_P,
   COPY_OUT_K, COPY_IN_K, COPY_SETTLE_LO, COPY_SETTLE_HI,
   COPY_TRAVEL_LO, COPY_TRAVEL_HI,
-  HOTSPOT_STAGGER_MS, HOTSPOT_IN_K, HOTSPOT_OUT_K,
+  HOTSPOT_STAGGER_MS, HOTSPOT_IN_K, HOTSPOT_OUT_K, HOTSPOT_HOLD_HOME_K,
   COPY_JUMP_LEAD, COPY_JUMP_TAIL_S,
 } from './constants.js';
 
@@ -801,6 +801,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false,
       radius: typeof radius === 'function' ? radius : null,
       hitEl, hitR: 0,
+      holdAt: null,       // world anchor held still while hot — see holdAnchor()
+      holdOff: null,      // ...decaying back to zero once it goes cold
       hover: false, focused: false, armed: false, hot: false,
       pointer: null,      // pointerType of the gesture in flight
       label, labelEl,
@@ -868,6 +870,80 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     hotHost.appendChild(btn);
     hotspots.push(h);
     return h;
+  }
+
+  /* ---------------- THE HOVER HOLD (2026-08-09) ----------------
+     Hannah: "when I'm hovering over an individual item, can you make it so
+     that it stays in place… right now they get moved by the wind and stuff,
+     and if they're being moved when I hover it causes a weird shudder."
+
+     She is exactly right about the cause, and the measurement says the wind
+     is the WHOLE of it. A chip is projected every frame from a world anchor
+     that rides the scene — Inspire's three anchor mid-plume, on the streak
+     head that the breeze is carrying (chapters/inspire/index.js labelOffsets)
+     — so the chip is only as still as the thing it annotates. Traced at the
+     Inspire rest over 12 s, 1440x900:
+
+       chip         total wander        of which the CAMERA
+       artcompute   29.5 x 41.5 px      0.65 x 0.62 px
+       arca         28.3 x 29.0 px      0.65 x 0.62 px
+       tworp        14.8 x 12.6 px      0.65 x 0.62 px
+
+     — up to 2.7 px of movement between consecutive frames, and 98% of it is
+     the anchor, not the lens. A 41 px target that keeps sliding out from
+     under the pointer is not a target; that is the shudder.
+
+     So a HOT chip (hover, keyboard focus or touch-armed — the same `hot` the
+     chip's own lit state runs on, so all three channels get the same answer)
+     freezes its WORLD ANCHOR, not its screen position. Freezing the anchor is
+     what keeps the chip honest: it stops riding the wind but keeps riding the
+     LENS, so a wheel scroll or a nav jump under a held hover still carries the
+     chip with the scene instead of pinning it to the glass. Everything
+     downstream is derived from the same `w` — the dot, the pill's flip and
+     nudge, the hit pad's centre AND its projected radius, the copy-rect
+     suppression test, and placePop() off the chip's own rect — so all of them
+     hold still together, and none of them can disagree about where the node
+     is. The pad (696e95d) and the popover (d1ecc23) are untouched: they are
+     downstream of this, and a still chip is the condition they were both
+     designed for.
+
+     IT CANNOT DRIFT OUT OF ALIGNMENT WITH A LONG HOVER. The anchor's motion
+     is a bounded oscillation, not a drift: traced over 24 s the live anchor's
+     distance from a fixed one runs 0 -> 39 px -> 0 with a ~5 s period and
+     returns to under 1 px four times. So the held chip's error is bounded by
+     the swing, never accumulates, and the node keeps coming back to it.
+
+     RELEASE IS A MOVEMENT, NOT A JUMP. Going cold does not restore the live
+     anchor in one frame. The hold becomes an OFFSET — where the chip is minus
+     where its node now is — and that offset decays geometrically to zero, so
+     the chip glides back onto its node and is then dropped entirely.
+
+     The offset, and not a lerp of the held point toward the live one, because
+     the live one is MOVING: a first-order lag chasing a moving target settles
+     at a nonzero steady-state error (measured here: the anchor's typical
+     0.27 px/frame against a 0.1/frame gain parks the chip ~2.7 px behind its
+     node, forever). A chip that had been hovered once would then have carried
+     a permanent low-pass filter for the rest of the ride. Decaying the offset
+     instead converges on zero whatever the node is doing, and the hold is
+     released outright below 0.001 world units (~0.14 px).
+
+     dt === 0 is the placement path (deep link, ?p=, the ?capture= freeze):
+     nothing is hot there and any hold is dropped outright, so every frozen
+     golden is bit-identical by construction. */
+  function holdAnchor(h, live, dt) {
+    if (!live) { h.holdAt = h.holdOff = null; return null; }
+    if (h.hot) {
+      h.holdOff = null;
+      if (!h.holdAt) h.holdAt = live.clone();
+      return h.holdAt;
+    }
+    // the frame the hover ends, the held POINT becomes a held OFFSET
+    if (h.holdAt) { h.holdOff = h.holdAt.sub(live); h.holdAt = null; }
+    if (!h.holdOff) return live;
+    if (dt === 0) { h.holdOff = null; return live; }
+    h.holdOff.multiplyScalar(Math.max(0, 1 - dt * HOTSPOT_HOLD_HOME_K));
+    if (h.holdOff.lengthSq() < 1e-6) { h.holdOff = null; return live; }
+    return h.holdOff.clone().add(live);
   }
 
   /* ---------------- hover zones (report C) ----------------
@@ -1567,6 +1643,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       const gate = eased[h.chapter] || 0;
       let want = gate > 0.72 && !detail;
       let w = want ? h.world() : null;
+      w = holdAnchor(h, w, dt);
       let sx = 0, sy = 0;
       h.hitRaw = 0;
       if (w) {

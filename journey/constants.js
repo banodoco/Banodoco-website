@@ -204,6 +204,14 @@ export const HOTSPOT_STAGGER_MS = 150;
 export const HOTSPOT_IN_K       = 3.2;
 export const HOTSPOT_OUT_K      = 9.0;
 
+// A HOT chip holds its world anchor still (ui.js, THE HOVER HOLD): the thing a
+// chip annotates rides the scene's own motion, and a target that moves under
+// the pointer is a target you cannot rest on. When the chip goes cold the held
+// anchor does not snap back — it glides home at this rate, so releasing a hover
+// is a movement and not a jump. 6.0 puts it inside ~0.4 s from the worst
+// measured departure, comfortably under the 9.0 the chip's own fade runs at.
+export const HOTSPOT_HOLD_HOME_K = 6.0;
+
 /* ------------------------------------------------------------------ */
 /* Documentary handheld layer (W3-B, gap a)                            */
 /* ------------------------------------------------------------------ */
