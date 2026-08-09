@@ -477,17 +477,228 @@ export function createSpores(ctx) {
     return true;
   }
 
+  // ---- ARRIVE NEARBY (2026-08-09, D24 — Hannah's sixth spore report:
+  // "it particularly happens when I scroll BACK to the Inspire section
+  // from the Connect"). ----------------------------------------------------
+  //
+  // Retire-in-place (D23) made the FALLING half of the reveal lighting-only,
+  // and its residual named this half: a rising conversion must move dots or
+  // the braid never forms, so a fresh page entering Inspire from the Connect
+  // side gathered the whole shed from the diffuse cloud across the exit
+  // leg's ~Δp 0.04 reveal window — measured 12.6 u/s deliberate / 46 u/s
+  // brisk at direction coherence 0.38, net 2.18 u per dot, 3,513 of 4,200
+  // dots over a unit, in open view. The same mass migration D23 removed,
+  // mirrored.
+  //
+  // Some travel is inherent: the dot must END on its braid path or the three
+  // streams never read (c6bbbab), and it is inherent in AGGREGATE too — the
+  // braid at any instant is a concentrated filament set inside a volumetric
+  // cloud, so ANY dot-to-slot bijection has a transport floor (measured:
+  // nearest-free-slot matching cuts mean travel 2.18 -> 1.79 u, not to
+  // zero). The fix is therefore two halves that compose:
+  //   1. ARRIVE NEARBY (here): the dot-to-slot pairing was frozen at
+  //      initSteer from an RNG stream — pure convention, never geometry.
+  //      At every seat ENGAGE (the !wasActive prime, the frame conversion
+  //      begins from quiet), each still-unconverted dot is re-paired with
+  //      the nearest free slot of its own exit, so the assignment absorbs
+  //      the local share of the travel.
+  //   2. THE GATHER DRIVE (chapter-side, passed into steer below): the
+  //      transport share that remains is paced over ~2.3x the scroll, which
+  //      lands the inbound gather at the approved Mission-side arrival
+  //      gesture's own measured rate (see the D24 doc for the table).
+  //
+  // Why this is safe, stated as invariants rather than hopes:
+  //   · A swap between two dots with conv = 0 is INVISIBLE at the swap
+  //     frame by construction: the steer loop's cease branch renders
+  //     nothing from the slot tuple while conv <= 0. Converted dots are
+  //     never touched (eligibility is conv <= 0, computed exactly as the
+  //     loop below computes it), so no rendered position changes on the
+  //     refit frame — bit-identical, not approximately.
+  //   · cv purity (the D22 forward/reverse gate) holds by construction:
+  //     conv reads ONLY exIdx + stagW + eff, and those stay with the DOT.
+  //     Only the slot GEOMETRY moves (path, stage clock, cohort dressing).
+  //     Swaps are exit-local, so exIdx is untouched and the 50/28/22 exit
+  //     weighting, the delta rule and the sequential cascade are exact.
+  //   · The braid at any reveal is the same SET of slot paths as before —
+  //     the pairing is the only thing that changes — so the three streams'
+  //     structure (density profile, core cohort, knot cadence) is
+  //     unchanged; only which dot carries which strand differs.
+  //   · Landing frames are byte-identical: a ?capture=/?p= deep link at the
+  //     rest engages at reveal 1, where every dot's conv is already 1 —
+  //     zero eligible dots, refit is a no-op, the inspire golden does not
+  //     move. At p = 0 the seat never engages at all (mission untouched).
+  //
+  // The path evaluator below is a POSITION-ONLY, WOBBLE-FREE mirror of the
+  // staged path in steer() — a matching heuristic, not a render path. If
+  // steer()'s choreography moves, this only needs to stay roughly true:
+  // divergence costs matching quality (a slightly longer settle), never
+  // correctness. See journey-v6-plan/07-chapter-inspire.md, D24.
+  function slotPoint(i, mig, tNow, leanScale, mEl, out) {
+    const migF = exIdx[i] > 0;
+    const h1 = h1A[i], h2 = h2A[i];
+    const s1 = s1a[i], s2 = s2a[i], s3 = s3a[i];
+    const rimR = rimRi[i], rimY = rimYi[i], a0 = az0[i], curl = curlA[i];
+    let t = tNow / perA[i] + ph0A[i]; t -= Math.floor(t);
+    let r, y, azP, xLean = 0, zLean = 0;
+    if (t < s1) {
+      r = oR[i]; y = oY[i]; azP = oAz[i];
+    } else if (t < s2) {
+      const u1s = (t - s1) / (s2 - s1);
+      const u1 = u1s * u1s * (3 - 2 * u1s);
+      const rT = migF ? rimRs[i] : rimR;
+      const yT = migF ? rimYs[i] + (rimY - rimYof(a0)) : rimY;
+      r = oR[i] + (rT - oR[i]) * u1;
+      y = (oY[i] - 0.05) + (yT - (oY[i] - 0.05)) * u1;
+      azP = migF ? oAz[i] + (azS2[i] - oAz[i]) * u1 : oAz[i];
+    } else if (t < s3) {
+      const u2 = (t - s2) / (s3 - s2);
+      if (migF) {
+        const wSm = u2 * u2 * (3 - 2 * u2);
+        const w = u2 + (wSm - u2) * 0.35;
+        let wFront = mig * 1.12 - h1 * 0.10;
+        wFront = wFront < 0 ? 0 : wFront > 1 ? 1 : wFront;
+        const we = w < wFront ? w : wFront;
+        azP = azS2[i] + spanA[i] * we;
+        r = rimRad(azP) + 0.05 + offR[i] * we;
+        y = rimYof(azP) + offY[i] + 0.10 * ss(0.72, 1, we);
+      } else {
+        azP = a0 + curl * u2;
+        r = rimR + 0.05;
+        y = rimY + 0.10 * u2;
+      }
+    } else {
+      const u3 = (t - s3) / (1 - s3);
+      if (dropA[i]) {
+        y = rimY + 0.10 - u3 * u3 * riseA[i];
+        azP = a0 + curl + (h1 - 0.5) * 0.3 * u3;
+        r = rimR + 0.05 + u3 * (0.3 + h2 * 0.4);
+      } else {
+        const h = Math.pow(u3, 0.6 + h1 * 0.5);
+        y = rimY + 0.10 + h * riseA[i];
+        azP = a0 + curl;
+        r = rimR + 0.05 + h * 0.14;
+        xLean = leanScale * leanA[i] * h * riseA[i] * DRIFT_RX;
+        zLean = leanScale * leanA[i] * h * riseA[i] * DRIFT_RZ;
+      }
+    }
+    const lx = Math.cos(azP) * r + xLean, ly = y, lz = Math.sin(azP) * r + zLean;
+    out[0] = mEl[0] * lx + mEl[4] * ly + mEl[8] * lz + mEl[12];
+    out[1] = mEl[1] * lx + mEl[5] * ly + mEl[9] * lz + mEl[13];
+    out[2] = mEl[2] * lx + mEl[6] * ly + mEl[10] * lz + mEl[14];
+  }
+
+  function refitSlots(eff, tNow, leanScale, mEl) {
+    // per exit cohort: eligible = conv <= 0 under THIS frame's reveal,
+    // computed exactly as the steer loop will compute it below.
+    const tR0 = dbg ? performance.now() : 0;
+    const p3 = [0, 0, 0];
+    for (let e = 0; e < 3; e++) {
+      const rev = eff[e];
+      const mig = e > 0 ? ss(0, 0.55, rev) : 0;
+      const idx = [];
+      for (let i = 0; i < N; i++) {
+        if (exIdx[i] !== e) continue;
+        const conv = e === 0
+          ? ss(0, CONV_RAMP_RES, rev - stagW[i] * CONV_STAG_RES)
+          : ss(0, CONV_RAMP_MIG, rev - stagW[i] * CONV_STAG_MIG);
+        if (conv <= 0) idx.push(i);
+      }
+      const n = idx.length;
+      if (n < 2) continue;
+      // slot world points (of each member's CURRENT slot) + a coarse grid
+      const sx = new Float32Array(n), sy = new Float32Array(n), sz = new Float32Array(n);
+      const grid = new Map();
+      for (let k = 0; k < n; k++) {
+        slotPoint(idx[k], mig, tNow, leanScale, mEl, p3);
+        sx[k] = p3[0]; sy[k] = p3[1]; sz[k] = p3[2];
+        const key = Math.floor(p3[0]) + ',' + Math.floor(p3[1]) + ',' + Math.floor(p3[2]);
+        let cell = grid.get(key);
+        if (!cell) grid.set(key, cell = []);
+        cell.push(k);
+      }
+      // greedy nearest-free-slot match, dot order fixed (deterministic)
+      const used = new Uint8Array(n);
+      const srcOf = new Int32Array(n);
+      for (let k = 0; k < n; k++) {
+        const i3 = idx[k] * 3;
+        const hx = heroP[i3], hy = heroP[i3 + 1], hz = heroP[i3 + 2];
+        const cx = Math.floor(hx), cy = Math.floor(hy), cz = Math.floor(hz);
+        let best = -1, bd = Infinity;
+        let foundAt = -1;
+        for (let ring = 0; ring <= 4; ring++) {
+          if (foundAt >= 0 && ring > foundAt + 1) break;  // one guard ring past first hit
+          for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) for (let dz = -ring; dz <= ring; dz++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)) !== ring) continue;
+            const cell = grid.get((cx + dx) + ',' + (cy + dy) + ',' + (cz + dz));
+            if (!cell) continue;
+            for (const j of cell) {
+              if (used[j]) continue;
+              const ddx = sx[j] - hx, ddy = sy[j] - hy, ddz = sz[j] - hz;
+              const d2 = ddx * ddx + ddy * ddy + ddz * ddz;
+              if (d2 < bd) { bd = d2; best = j; }
+            }
+          }
+          if (best >= 0 && foundAt < 0) foundAt = ring;
+        }
+        if (best < 0) {
+          // sparse tail: linear scan of what is left
+          for (let j = 0; j < n; j++) {
+            if (used[j]) continue;
+            const ddx = sx[j] - hx, ddy = sy[j] - hy, ddz = sz[j] - hz;
+            const d2 = ddx * ddx + ddy * ddy + ddz * ddz;
+            if (d2 < bd) { bd = d2; best = j; }
+          }
+        }
+        used[best] = 1; srcOf[k] = best;
+      }
+      if (dbg) {
+        // ?tkdbg=1 — matching quality probe (QA only)
+        let pre = 0, post = 0, far = 0;
+        for (let k = 0; k < n; k++) {
+          const i3 = idx[k] * 3;
+          const hx = heroP[i3], hy = heroP[i3 + 1], hz = heroP[i3 + 2];
+          let d = Math.hypot(sx[k] - hx, sy[k] - hy, sz[k] - hz);
+          pre += d;
+          const j = srcOf[k];
+          d = Math.hypot(sx[j] - hx, sy[j] - hy, sz[j] - hz);
+          post += d; if (d > 1) far++;
+        }
+        (window.__refit = window.__refit || []).push(
+          { e, n, pre: +(pre / n).toFixed(3), post: +(post / n).toFixed(3), far });
+      }
+      // apply the permutation to the slot tuple — the dot keeps its identity
+      // (exIdx, stag, stagW, heroP, writ, lastCv); the slot geometry moves.
+      const tuple = [az0, azS2, spanA, oR, oAz, oY, rimRi, rimYi, rimRs, rimYs,
+                     offR, offY, s1a, s2a, s3a, riseA, leanA, curlA, spA,
+                     perA, ph0A, h1A, h2A, sdA, dropA, knotA, coreA];
+      const tmp = new Array(n);
+      for (const A of tuple) {
+        for (let k = 0; k < n; k++) tmp[k] = A[idx[k]];
+        for (let k = 0; k < n; k++) A[idx[k]] = tmp[srcOf[k]];
+      }
+    }
+    if (dbg) window.__tkRefitMs = +(performance.now() - tR0).toFixed(2);
+  }
+
   /** split/braid steering — runs inside drive(), i.e. from the driver's own
    *  animator, AFTER 'spore-drift' has integrated the buffer this frame.
    *  eff: per-exit effective reveals; mw: the mushroom's matrixWorld;
    *  leanScale: the live lean damp; T: the TRANSFORM taste value (0..1 —
    *  1 = full reorganization; conv, not conv*T, stays the choreography /
    *  cease gate, so restore discipline is identical at every T). */
-  function steer(eff, tNow, mw, leanScale, transform) {
+  function steer(eff, tNow, mw, leanScale, transform, gather) {
     const drive = eff[0] > 1e-4 || eff[1] > 1e-4 || eff[2] > 1e-4;
     if (!drive && !wasActive) { feed.any = false; return; }
     if (!inited && !initSteer()) { feed.any = false; return; }
     const T = transform < 0 ? 0 : transform > 1 ? 1 : transform;
+    // THE GATHER DRIVE (D24): the POSITION blend's own schedule, 1 at every
+    // rest and landing frame, riding a much wider scroll window than the
+    // reveal on the chapter's exit side. Lighting stays on eff exactly as
+    // shipped; only how far a dot has PHYSICALLY travelled onto its slot
+    // rides conv * T * gather. Forward (gather falling) this is invisible —
+    // a falling position blend is absorbed in place (D23) — so its entire
+    // visible effect is to spread the INBOUND gather over ~2.3x the scroll.
+    const gT = gather === undefined ? 1 : gather < 0 ? 0 : gather > 1 ? 1 : gather;
     const pearlScale = PEARL_FLOOR + (1 - PEARL_FLOOR) * T;
 
     const t0 = dbg ? performance.now() : 0;
@@ -495,8 +706,12 @@ export function createSpores(ctx) {
     const arr = attr.array;
 
     if (!wasActive) {
-      // first live frame: the buffer is pure hero state — prime the shadow
+      // first live frame: the buffer is pure hero state — prime the shadow,
+      // then re-pair every still-unconverted dot with the nearest free slot
+      // of its own exit (ARRIVE NEARBY, D24 — see refitSlots above; a no-op
+      // at every landing frame, where conv is already 1 for every dot).
       heroP.set(arr); lastW.set(arr); lastCv.fill(0);
+      refitSlots(eff, tNow, leanScale, mw.elements);
     }
 
     // per-exit gates
@@ -534,10 +749,14 @@ export function createSpores(ctx) {
       const conv = e === 0
         ? ss(0, CONV_RAMP_RES, rev - sw * CONV_STAG_RES)
         : ss(0, CONV_RAMP_MIG, rev - sw * CONV_STAG_MIG);
-      // taste dial: cvT is how far the dot actually leaves its drift (and
-      // the dimmer's ambient mix); conv keeps the choreography/cease gate.
-      const cvT = conv * T;
-      cv[i] = cvT;
+      // taste dial: cvL is the LIGHTING conversion (the dimmer's ambient
+      // mix — pure in (eff, hash), the D22 gate); cvP is the POSITION
+      // conversion — how far the dot has actually left its drift — which
+      // additionally rides the gather schedule (D24). conv keeps the
+      // choreography/cease gate.
+      const cvL = conv * T;
+      const cvP = cvL * gT;
+      cv[i] = cvL;
       if (conv <= 0) {
         pw[i] = 0;
         if (writ[i]) {
@@ -706,7 +925,7 @@ export function createSpores(ctx) {
         const rl = rg * GATE_TOP;
         const g0 = rl - GATE_WIDE > 0 ? rl - GATE_WIDE : 0;
         const drawOn = 1 - ss(g0, rl + 0.001, u3);
-        env *= drawOn + (1 - drawOn) * cvT;
+        env *= drawOn + (1 - drawOn) * cvL;
       }
 
       // cap-local -> world through the live mushroom matrix
@@ -718,7 +937,8 @@ export function createSpores(ctx) {
       // ---- RETIRE IN PLACE (2026-08-09, Hannah's fifth spore report:
       // "the spores still shift weirdly, like they MOVE POSITION to work
       // for the next section"). The blend below renders the dot at
-      // heroP + (path - heroP) * cvT, so a FALLING cvT used to march every
+      // heroP + (path - heroP) * cvP, so a FALLING position blend used to
+      // march every
       // converted dot physically back toward its old drift position —
       // measured riding Inspire -> Connect, the whole population moved at
       // up to 19 u/s deliberate / 38 u/s brisk (the braid's own living
@@ -729,35 +949,36 @@ export function createSpores(ctx) {
       // leaves the frame on this leg, and D18's own rule bans a ramp
       // running backward in view.
       //
-      // So the fall is absorbed instead: when cvT drops, the ambient home
+      // So the fall is absorbed instead: when cvP drops, the ambient home
       // moves toward the path by exactly the share the blend is about to
       // give back — solve heroP' from
-      //     heroP' + (path - heroP') * cvT  ==  heroP + (path - heroP) * c0
+      //     heroP' + (path - heroP') * cvP  ==  heroP + (path - heroP) * c0
       // (same path point), i.e. heroP' = path + (heroP - path) * f with
-      // f = (1 - c0) / (1 - cvT) — and the rendered position does not move
+      // f = (1 - c0) / (1 - cvP) — and the rendered position does not move
       // for the fall AT ALL: frame-over-frame it carries only its drift
       // share and its live path share, exactly what a dot at constant
-      // conversion shows. A RISING cvT is untouched — the arrival gather
-      // stays the approved gesture — so at every landing frame (rest,
-      // ?p=, ?capture=) lastCv rises monotonically from the prime's 0 and
-      // this branch never runs: the rest frames are bit-identical.
-      // cv itself stays a pure function of (reveal, hash) — the D22
-      // forward/reverse agreement gate is untouched.
+      // conversion shows. A RISING cvP is untouched — the arrival gather
+      // stays the approved gesture, paced by the gather drive (D24) — so
+      // at every landing frame (rest, ?p=, ?capture=) lastCv rises
+      // monotonically from the prime's 0 and this branch never runs: the
+      // rest frames are bit-identical. cv (the lighting feed) stays a pure
+      // function of (reveal, hash) — the D22 forward/reverse agreement
+      // gate is untouched.
       const c0 = lastCv[i];
-      if (cvT < c0) {
-        const f = (1 - c0) / (1 - cvT);
+      if (cvP < c0) {
+        const f = (1 - c0) / (1 - cvP);
         heroP[i3]     = wx + (heroP[i3]     - wx) * f;
         heroP[i3 + 1] = wy + (heroP[i3 + 1] - wy) * f;
         heroP[i3 + 2] = wz + (heroP[i3 + 2] - wz) * f;
       }
-      lastCv[i] = cvT;
+      lastCv[i] = cvP;
 
-      // the SAME dot slides from its own drift onto the path — by cvT, the
-      // taste-dialled blend: at low T it bows toward the braid and keeps most
-      // of its natural drift; at T = 1 it converts fully
-      const px = heroP[i3] + (wx - heroP[i3]) * cvT;
-      const py = heroP[i3 + 1] + (wy - heroP[i3 + 1]) * cvT;
-      const pz = heroP[i3 + 2] + (wz - heroP[i3 + 2]) * cvT;
+      // the SAME dot slides from its own drift onto the path — by cvP, the
+      // taste-dialled, gather-paced blend: at low T it bows toward the braid
+      // and keeps most of its natural drift; at T = 1 it converts fully
+      const px = heroP[i3] + (wx - heroP[i3]) * cvP;
+      const py = heroP[i3 + 1] + (wy - heroP[i3 + 1]) * cvP;
+      const pz = heroP[i3 + 2] + (wz - heroP[i3 + 2]) * cvP;
       arr[i3] = px; arr[i3 + 1] = py; arr[i3 + 2] = pz;
       lastW[i3] = px; lastW[i3 + 1] = py; lastW[i3 + 2] = pz;
       wroteAny = true;
@@ -896,11 +1117,11 @@ export function createSpores(ctx) {
    *  registerDrift). Position steering runs first, then the color pass reads
    *  its per-dot feed — same frame, one call. */
   const seat = {
-    drive({ eff, time, matrixWorld, leanScale = 1, transform = 1,
+    drive({ eff, time, matrixWorld, leanScale = 1, transform = 1, gather = 1,
             regions = null, globalK = 0, grad = null }) {
       if (!system.driver) return;   // released seat: the handle is inert
       lastDriveFrame = frameNo;
-      if (eff) steer(eff, time, matrixWorld, leanScale, transform);
+      if (eff) steer(eff, time, matrixWorld, leanScale, transform, gather);
       dim(regions, globalK, grad);
     },
     /** QA: the per-dot conversion/brightness feed (?tkdbg adds perf probes). */
