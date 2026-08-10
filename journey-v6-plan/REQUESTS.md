@@ -14,6 +14,14 @@ Status: **done** (shipped, gated) · **open** (not started) · **running**
 
 | # | Request | Notes |
 |---|---|---|
+| 62 | **Inspire→Connect should be ONE dramatic movement.** Reads as two separate movements, feels stilted; wants the character of the hero→Inspire arrival. | The leg has been worked twice (`6acceac` monotone zoom-out, `e95820a` composed-frame stall). This is a new complaint: it reads as two gestures, not one. |
+| 63 | **Remove 2RP from the header only.** Leave the 2RP node in Inspire. | She corrected herself mid-sentence to be explicit that Inspire keeps it. |
+| 64 | **Connect ground lighting at ~a third of current speed.** | FOURTH request on this pacing. `c77fb00` reported Connect's schedule fully spent (0.1021 p is the whole distance from first-draw to the frozen rest), so this needs more road — a route/rest change. |
+| 65 | **Owned portraits: put colour back in.** Too much has been sapped out. | Keep them integrated with the warm palette. |
+| 58 | **Inspire labels should point at the lit rim edge**, not the area above. | The lip-glow embers from `ce91bc2` are the points to indicate. D28 notes Arca's lip is partly occluded at the rest camera. |
+| 59 | **Three glowing lines still visible after Inspire**, clearly in the Epilogue. | Strong suspicion: `d42c9a8`'s three lee filaments are permanent by design (that permanence is what made crossings motionless), so any lighting reveals the lanes everywhere. Resolving it must not regress the motionless boundary. |
+| 60 | **Epilogue tap still drops sparkles off the body.** | **Refutes** the previous pass's "already gone" verdict. Look wider than the shed — the clones carry the main model's five point layers, and its tap ripple makes motes glint. |
+| 61 | **Final field at ~quarter speed**, both per-body kindle and overall progression. | FIFTH pacing request. `5401820` said a further slowdown needs chapter-boundary moves; those are authorized. |
 | 47 | **End-hold: stale zoomed-out view still reachable.** At the very bottom you can still scroll out to a more zoomed-out view. | Hannah thinks it is a hangover of the old footer/end-hold; likely left by removing the Site Information band and the flight system. |
 | 48 | **Final: mushrooms light one at a time, like a town of Christmas trees.** Much more gradual than now. | Taste/pacing. Builds on the stagger widened in `0965a73`; she wants it considerably further. |
 | 49 | **Final: tapping a field body emits a different spore effect.** Something pops out from underneath; should be identical to the main mushroom's response. | Regression or leftover despite `070892c` / `e1b1e2b`. |
