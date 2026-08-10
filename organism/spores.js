@@ -61,8 +61,52 @@ export function createSpores(ctx) {
   const FIL_AZ = [5.83, 6.98, 4.68];
   const FIL_RISEMAX = [2.35, 1.32, 2.10]; // = EXITS riseMax (anatomy.js)
   const FIL_LAM = 0.060, FIL_SIG2 = 0.81, FIL_R2 = 2.25;
-  const FIL_SEED_T = [0.03, 0.10, 0.18]; // per-filament seed-transit scale, calibrated to the live equilibrium (see D27)
+  // ---- D29 (2026-08-10, Hannah's Epilogue report: "three lines of glowing
+  // spores coming from the main mushroom" at the Final pullback). Measured
+  // at the Epilogue pose, live equilibrium: the D28-softened catch still
+  // organised the whole plume — lane occupancy within 0.30 u of the three
+  // axes was 1,023 / 255 / 370 dots against 507 / 18 / 0 at a control
+  // rotated half-way between the lanes, and the lanes TIGHTENED with
+  // height (rms lateral 0.80 u at the lip → 0.31 u four units up),
+  // because the catch ran the full transit and contraction accumulates.
+  // Against dark sky at the pullback, a 0.3 u-wide density core IS a
+  // drawn line — no chapter lighting involved (hiding the shed Points
+  // removes all three; the seat stays structurally silent outside
+  // Inspire, re-confirmed).
+  //
+  // The resolution keeps D27's trade — the wind, not the section, owns
+  // the organisation, so every boundary stays motionless — and gives the
+  // weather the vertical structure real lee filaments have: a near-wake
+  // that DOES NOT extend forever. Two moves, both global, both
+  // p-independent:
+  //
+  //   1. THE CATCH RELEASES ALONG ITS OWN LENGTH (FIL_FADE0/1): the
+  //      contraction runs full only through the band Inspire actually
+  //      lights (the rise corridors; the emphasis tip-fade begins at arc
+  //      0.70 ≈ 0.55 of sMax) and lets go smoothly by 0.82 of sMax — the
+  //      +0.6-rise extension above the lit lane top is retired with it.
+  //      Near the rim, where Inspire frames the three ways out, the lane
+  //      bias is untouched; the upper plume stops being actively drawn
+  //      into lines.
+  //   2. UPPER-AIR DECOHERENCE (DISP_*): above the lanes' tops the
+  //      near-wake breaks up — each dot carries its own fixed lateral
+  //      drift direction (hash of its index, in the plane ⊥ the wind),
+  //      applied at DISP_RATE under a world-height gate. Contraction
+  //      inherited from the window disperses back into one irregular
+  //      cloud over the remaining transit, which is what a wake does
+  //      downstream. Deterministic per dot, a pure function of (time,
+  //      wind) like every other term here — crossings stay motionless by
+  //      construction, same code path at every p.
+  //
+  // The seed block mirrors both (the filStep profile is shared; the
+  // decoherence is integrated in closed form over each dot's own climb),
+  // so the frozen landing stays at the live wind's stationary shape.
+  const FIL_FADE0 = 0.34, FIL_FADE1 = 0.60; // catch release window, in s/sMax
+  const DISP_RATE = 0.016;                  // u/s upper-air lateral drift
+  const DISP_Y0 = 4.2, DISP_Y1 = 5.6;       // world-y gate (above the lit lanes)
+  const FIL_SEED_T = [0.75, 0.55, 1.60]; // per-filament seed-transit scale, re-calibrated to the D29 live equilibrium (see D27/D29)
   let filPX, filPY, filPZ, filSMax;        // built with the seed block below
+  let dispDir;                             // D29 per-dot decoherence directions
   const filUX = BREEZE_DIR.x, filUY = BREEZE_DIR.y, filUZ = BREEZE_DIR.z;
   let sporePts, sporeVel = [], sporeOrigin, sporeAge;
   {
@@ -87,10 +131,37 @@ export function createSpores(ctx) {
         filSMax[e] = (FIL_RISEMAX[e] + 0.6) / filUY;
       }
     }
+    // D29: per-dot decoherence directions — a fixed unit vector in the plane
+    // ⊥ the wind, golden-angle-hashed on the dot's own index. Deterministic,
+    // consumes no draws from the seeded stream.
+    {
+      const e1 = new THREE.Vector3(0, 1, 0).cross(BREEZE_DIR).normalize();
+      const e2 = new THREE.Vector3().crossVectors(BREEZE_DIR, e1).normalize();
+      dispDir = new Float32Array(4200 * 3);
+      for (let i = 0; i < 4200; i++) {
+        const ph = i * 2.3999632297;
+        const c = Math.cos(ph), s = Math.sin(ph);
+        dispDir[i * 3]     = c * e1.x + s * e2.x;
+        dispDir[i * 3 + 1] = c * e1.y + s * e2.y;
+        dispDir[i * 3 + 2] = c * e1.z + s * e2.z;
+      }
+    }
+    // the along-filament catch profile: the D27 onset ramp × the D29
+    // release window, one function so the seed's path average below and
+    // the live integrator can never disagree about the law
+    const filProf = (bs) => {
+      let q = (bs - 0.10) / 0.40; q = q < 0 ? 0 : q > 1 ? 1 : q;
+      let qd = (FIL_FADE1 - bs) / (FIL_FADE1 - FIL_FADE0);
+      qd = qd < 0 ? 0 : qd > 1 ? 1 : qd;
+      return q * q * (3 - 2 * q) * (qd * qd * (3 - 2 * qd));
+    };
     // one lateral contraction step toward the nearest filament — THE same
     // rule the integrator applies each frame; the seed block below iterates
-    // it so the seeded scatter sits at the wind's own stationary shape
-    const filStep = (x, y, z, sFrac, dt) => {
+    // it so the seeded scatter sits at the wind's own stationary shape.
+    // profOv >= 0 replaces the along-arc profile (the seed passes its own
+    // PATH AVERAGE — see the D29 note in the seed block); -1 derives it
+    // from the dot's current position, the live law exactly.
+    const filStep = (x, y, z, profOv, dt) => {
       let bd2 = FIL_R2, blx = 0, bly = 0, blz = 0, bs = 0;
       for (let e = 0; e < 3; e++) {
         const wx = x - filPX[e], wy = y - filPY[e], wz = z - filPZ[e];
@@ -98,11 +169,10 @@ export function createSpores(ctx) {
         if (s < 0 || s > filSMax[e]) continue;
         const lx = wx - s * filUX, ly = wy - s * filUY, lz = wz - s * filUZ;
         const d2 = lx * lx + ly * ly + lz * lz;
-        if (d2 < bd2) { bd2 = d2; blx = lx; bly = ly; blz = lz; bs = sFrac >= 0 ? sFrac : s / filSMax[e]; }
+        if (d2 < bd2) { bd2 = d2; blx = lx; bly = ly; blz = lz; bs = s / filSMax[e]; }
       }
       if (bd2 >= FIL_R2) return [x, y, z];
-      let q = (bs - 0.10) / 0.40; q = q < 0 ? 0 : q > 1 ? 1 : q;
-      const ramp = q * q * (3 - 2 * q);
+      const ramp = profOv >= 0 ? profOv : filProf(bs);
       let lam = FIL_LAM * Math.exp(-bd2 / FIL_SIG2) * ramp * dt;
       if (lam > 0.9) lam = 0.9;
       return [x - blx * lam, y - bly * lam, z - blz * lam];
@@ -193,22 +263,52 @@ export function createSpores(ctx) {
         // nearest filament decides the per-filament dwell scale (the lee
         // corridor is a thoroughfare — dust transits it — while the flank
         // corridors hold their catch longer)
-        let ne = 0, nd = 1e9;
+        let ne = 0, nd = 1e9, nbs = 0;
         for (let e2 = 0; e2 < 3; e2++) {
           const wx = px - filPX[e2], wy = py - filPY[e2], wz = pz - filPZ[e2];
           const sfr = wx * filUX + wy * filUY + wz * filUZ;
           if (sfr < 0 || sfr > filSMax[e2]) continue;
           const lx = wx - sfr * filUX, ly = wy - sfr * filUY, lz = wz - sfr * filUZ;
           const d2f = lx * lx + ly * ly + lz * lz;
-          if (d2f < nd) { nd = d2f; ne = e2; }
+          if (d2f < nd) { nd = d2f; ne = e2; nbs = sfr / filSMax[e2]; }
+        }
+        // D29: the iteration holds the dot at its FINAL arc position, where
+        // the release window may already have let go even though most of
+        // its transit ran inside the catch — evaluating the profile there
+        // would zero the whole history. So the profile is averaged over the
+        // dot's own path 0..bs_final (numerically; filProf is smooth) and
+        // applied as one constant, which is the closed form of "the catch
+        // it actually flew through".
+        let profAvg = 0;
+        if (nbs > 1e-6) {
+          const S = 16;
+          for (let j = 0; j < S; j++) profAvg += filProf(nbs * (j + 0.5) / S);
+          profAvg /= S;
         }
         let t = travel / (sp * 0.826) * FIL_SEED_T[ne];
         if (t > 120) t = 120;
         const steps = 12, dt = t / steps;
         for (let j = 0; j < steps; j++) {
-          const r = filStep(px, py, pz, -1, dt);
+          const r = filStep(px, py, pz, profAvg, dt);
           px = r[0]; py = r[1]; pz = r[2];
         }
+      }
+      // D29: the decoherence, in closed form over this dot's own climb —
+      // DISP_RATE × (time spent above the gate), the gate integrated
+      // analytically over the height it has risen through (∫smoothstep =
+      // q³ − q⁴/2 across the ramp, then linear above it), at the dot's own
+      // rise speed. Same law the integrator applies live, so the seeded
+      // upper plume sits where the running wind holds it.
+      if (py > DISP_Y0) {
+        const y1 = Math.min(py, DISP_Y1);
+        const qq = (y1 - DISP_Y0) / (DISP_Y1 - DISP_Y0);
+        let I = (qq * qq * qq - qq * qq * qq * qq / 2) * (DISP_Y1 - DISP_Y0);
+        if (py > DISP_Y1) I += py - DISP_Y1;
+        const rv = sp * 0.826 * BREEZE_DIR.y;   // this dot's own rise speed
+        let tAb = I / rv;
+        if (tAb > 150) tAb = 150;
+        const o = tAb * DISP_RATE, k3 = k * 3;
+        px += dispDir[k3] * o; py += dispDir[k3 + 1] * o; pz += dispDir[k3 + 2] * o;
       }
       pp.push(px, py, pz);
     }
@@ -368,9 +468,23 @@ export function createSpores(ctx) {
           }
           if (bd2 < FIL_R2) {
             let q = (bs - 0.10) / 0.40; q = q < 0 ? 0 : q > 1 ? 1 : q;
-            const lam = FIL_LAM * Math.exp(-bd2 / FIL_SIG2) * (q * q * (3 - 2 * q)) * dts * w;
+            // D29 release window — same profile as the seed's filStep
+            let qd = (FIL_FADE1 - bs) / (FIL_FADE1 - FIL_FADE0);
+            qd = qd < 0 ? 0 : qd > 1 ? 1 : qd;
+            const lam = FIL_LAM * Math.exp(-bd2 / FIL_SIG2)
+              * (q * q * (3 - 2 * q)) * (qd * qd * (3 - 2 * qd)) * dts * w;
             x -= blx * lam; y -= bly * lam; z -= blz * lam;
           }
+        }
+        // D29 UPPER-AIR DECOHERENCE (see the note at the top): above the
+        // lanes' tops each dot drifts along its own fixed lateral direction,
+        // dissolving the near-wake's inherited organisation back into one
+        // irregular cloud. Frozen frames untouched by construction (dts = 0).
+        if (y > DISP_Y0) {
+          let qg = (y - DISP_Y0) / (DISP_Y1 - DISP_Y0);
+          if (qg > 1) qg = 1;
+          const dq = qg * qg * (3 - 2 * qg) * DISP_RATE * dts * w;
+          x += dispDir[i3] * dq; y += dispDir[i3 + 1] * dq; z += dispDir[i3 + 2] * dq;
         }
         if (fall > 0) {
           const g = fall * dts;

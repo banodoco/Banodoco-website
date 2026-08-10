@@ -3229,3 +3229,126 @@ mission / inspire / connect / final re-shot deliberately in this commit
 connect 1.57/0.97, mission 0.15/0.27, final 0.24/0.31 — the deliberate
 changes and nothing else. **owned@\* untouched at MAE 0.00, byte-identical
 in git.** `--check` passes at 0.00 after the reshoot.
+
+---
+
+## 2026-08-10 — D29: the near-wake ends, and the Epilogue gets its sky back (Hannah's report, refuting D28's "resolved")
+
+Hannah, after D28 shipped: "It still seems as though the spores continue to
+glow after I've left the Inspire and Empower section. If you look at the
+Epilogue, you can clearly see three lines of glowing spores coming from the
+main mushroom."
+
+### What the diagnosis found (headless CDP at the Epilogue pose, live wind)
+
+D28's verdict — the seat is structurally silent outside Inspire — was
+re-confirmed and is **not what she is seeing**. Hiding the hero's spore
+Points at the Epilogue removes all three lines outright: they are the
+**4,200-dot shed itself, organised into three density lanes by D27's lee
+filaments**, which run at every scroll position by design (that permanence
+is the motionless-boundary trade). D28 softened the catch (λ 0.100 → 0.060)
+but left it running the FULL length of every filament, and contraction
+accumulates over transit:
+
+- Occupancy within 0.30 u of the three filament axes at the live
+  equilibrium: **1,023 / 255 / 370** dots, against **507 / 18 / 0** at a
+  control rotated half-way between the lanes — the space between two of the
+  lanes was nearly empty.
+- The lanes **tighten with height**: rms lateral distance along the primary
+  filament fell 0.80 u at the lip → **0.31 u** four units up. Against dark
+  sky at the pullback, a 0.3 u-wide density core over a ~2 u lane spacing
+  is a drawn line. No lighting is involved — the shed's own tone under
+  additive stacking is enough once the density is a line.
+
+### The resolution — the wind keeps the lanes, and also an atmosphere
+
+The tension held explicitly: the boundary-motionless property NEEDS the
+organisation to be the wind's own, everywhere, at every p — so the fix
+changes what the wind IS, globally, rather than gating anything on scroll.
+Real lee filaments are a NEAR-wake: they exist behind the obstacle and
+break up downstream. Two moves in `organism/spores.js`, both p-free:
+
+1. **The catch releases along its own length** (`FIL_FADE0/1` = 0.34/0.60
+   of each filament's sMax, one shared `filProf()`): full contraction
+   through the band Inspire's emphasis actually lights, smoothly gone just
+   above each lane's lit top. The near-rim occupancy bias the chapter's
+   light picks out is untouched.
+2. **Upper-air decoherence** (`DISP_RATE` 0.016 u/s under a world-height
+   gate `DISP_Y0/1` = 4.2/5.6): above the lanes' tops each dot drifts along
+   its own fixed lateral direction (golden-angle hash of its index, in the
+   plane ⊥ the wind), dissolving inherited organisation back into one
+   irregular cloud over the remaining transit. Deterministic, pure in
+   (time, wind) — same code path at every p, so crossings stay motionless
+   by construction.
+
+The seed mirrors both. The old closed form evaluated the catch at the dot's
+FINAL arc position, where the release window would have zeroed the history
+it actually flew through, so the seed now **averages `filProf` analytically
+over each dot's own path** and integrates the decoherence in closed form
+over its climb (∫smoothstep = q³ − q⁴/2). `FIL_SEED_T` re-calibrated
+[0.03, 0.10, 0.18] → **[0.75, 0.55, 1.60]** (the path average removed the
+overstatement the old scales were compensating for). Seed vs 100 s live
+equilibrium after: inWin030 **667/161/227 vs 669/162/230** — the frozen
+landing sits on the running wind's own stationary shape, and the residual
+relaxation stays in the softening direction.
+
+### After, measured at the Epilogue
+
+- Occupancy within 0.30 u: 1,023/255/370 → **669/162/230** (control
+  409/16/0 — the bias Inspire lights survives; the emptiness between lanes
+  is gone from the upper plume).
+- rms lateral along the primary lane, upper bands: 0.31/0.39 → **0.52–0.80**
+  — the plume's top is diffuse cloud, not a line.
+- Stills (session record, live equilibrium, 1440×900 and 375×812): the
+  three drawn lines are gone; the hero carries one irregular spray, denser
+  where the wind is. The Inspire rest still reads its streams: near-rim
+  organisation intact, streams dissolving upward exactly where the
+  emphasis tip-fade (arc 0.70) already lets the light go.
+
+### The requirement, re-proved (same instrument as D26/D27/D28)
+
+Live page `?nointro=1&steady=1&nosnap=1`, 1440×900, capture.py's CDP
+client, 3-frame rolling population speed normalised by the integrator's
+own clamped step (cadence-independent; identical numbers to the D28
+instrument at its ~30 fps cadence). Ambient holds this session: peaks
+0.127–0.227 u/s, p50 0.099–0.110.
+
+| crossing | 0.10 p/s peak / p50 | 0.45 p/s peak / p50 |
+|---|---|---|
+| Mission → Inspire | 0.201 / 0.111 | 0.123 / 0.095 |
+| Inspire → Mission | 0.123 / 0.099 | 0.116 / 0.116 |
+| Inspire → Connect | 0.207 / 0.127 | 0.195 / 0.097 |
+| Connect → Inspire | 0.174 / 0.131 | 0.144 / 0.130 |
+
+Every crossing inside the holds' own band. Matched-pin round trip
+(0.19 → 0.06 → 0.19 at 0.10 p/s, through the Inspire rest stop and the
+Mission boundary twice) against a parked control over the SAME wall time:
+per-dot |Δposition| p50 **0.215 vs the control's 0.275**, p99 0.407 vs
+0.453, >1 u 17 vs 20 — the trip IS the ambient drift, measured against
+itself with cadence cancelled.
+
+### Gates
+
+- **Isolation:** frozen `?capture=` frames with the spore Points hidden,
+  HEAD vs this tree: final 6 px at 1/255, inspire 104 px at 1/255 (TAA
+  noise class), MAE 0.0000 — every visible change is the shed.
+- **Console:** zero errors/warnings over full rides 0 → 0.97 → 0 at 0.25
+  and 0.45 p/s, hooks on console.error/warn + window error/rejection.
+- **References:** mission / inspire / connect / final re-shot deliberately
+  in this commit (provenance in manifest.json). Pre-reshoot drift:
+  inspire 1.48/1.30 MAE, connect 1.92/1.22, mission 0.16/0.23, final
+  0.25/0.30 — the wind and nothing else. **owned@\* untouched,
+  byte-identical in git.** `--check` passes at 0.00 after the reshoot.
+
+### Honest residuals
+
+- The frozen final golden moved only 0.25 MAE because the seed's upper
+  plume was already soft; the drawn lines Hannah saw were the LIVE
+  equilibrium sharpening over ~2 minutes of parked wind. The seed
+  re-calibration closes that gap (seed ≈ equilibrium above), so what the
+  golden shows is now also what a parked visitor sees.
+- The Inspire streams' upper thirds are softer than D28 shipped, by
+  design — the release window ends where the tip-fade was already letting
+  the light go. If Hannah wants the streams to carry higher, FIL_FADE0/1
+  are the dials, at the direct cost of line-ness returning to the
+  Epilogue's sky.
