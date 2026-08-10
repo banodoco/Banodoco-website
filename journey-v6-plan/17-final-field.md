@@ -1516,3 +1516,67 @@ stays a pure function of the pose; the rest frame is byte-identical
 (final@* --check 0.00 after the LO fix; owned untouched at 0.00).
 
 Console over a full 0 → 1 → 0 ride: clean (0 entries).
+
+---
+
+## 2026-08-10 (2) — the tap "sparkles" named: the ripple was world-sized on a body that is not
+
+Hannah, refuting the same-day inventory's "already gone": "when I tap a
+mushroom, these little sparkles come off the bottom... little sparkles
+that float off the bottom side of the mushroom that aren't — they don't
+look like the same spores. It looks like something else."
+
+### Reproduced, and named
+
+Headless tap on the nearest ring clone (i 4, scale 0.389, dist 6.15),
+frames at +0.25/0.7/1.4/2.4 s: at +0.25 s the WHOLE body lights —
+cap glints, stem column, base flare, and the floor around the base — and
+over the next second the glinting crawls down and off the underside.
+The inventory was right about the list (wobble, ripple, shed, haptic) and
+wrong about the geometry of one item on it. The ripple's constants are
+WORLD-sized: `pulseAt`'s range falloff `exp(-1.5·d)` and 1.4 u/s wave
+speed are tuned on the 4.4-unit hero, where a cap tap dies within about a
+unit of the fingertip and never reaches the stem base. A 0.39-scale body
+fits ENTIRELY inside that footprint — so one cap tap glinted every point
+layer on the clone's underside (stem motes, bead cloud, gill points — the
+five layers a clone carries because it is the hero's own geometry), plus
+the batch's soil pools and shed trail under the body and the canopy's
+junction glints around it (all batch materials answer `pulseAt`). White
+doubled-brightness points, swelling (the organism point shaders ride
+`vTw` into `gl_PointSize`), moving with the wobble and lighting in an
+expanding wave across the floor: "little sparkles that float off the
+bottom side", exactly, and not spores — glints. The hero provably never
+shows it: its own tap at the same pose lights its upper cap only
+(A/B diffs in the session record).
+
+Ablations that pinned it: the same tap with the shed pool hidden still
+showed the bottom sparkles (not the shed); the same tap with the pulse
+parked showed none of them (the ripple, and only the ripple).
+
+### The fix (`ring.js` respond, one write)
+
+`uPulseP.set(1.4·s, 1.5/s, 1.2)` — wave speed scales by the tapped body's
+uniform scale, range falloff by its inverse, amplitude untouched. The
+ripple is now the hero's own response measured in the body's units:
+geometrically similar, dying at the same fraction of the body, at full
+strength (a tap is the visitor's own force, like the wobble). At s = 1
+the numbers are byte-identical to the hero's constants, and the hero's
+own handler (organism §10c) is untouched. The floor under a small body
+stays as dark as the floor under the hero's cap; neighbours no longer
+answer another body's tap.
+
+**The matched spore shed stays**, whole — the 070892c/e1b1e2b/2db4a2b
+parity work is untouched; a tapped cap still lets go of its wind-borne
+crescent.
+
+### Verified
+
+- Uniform trace: clone tap writes (0.544, 3.86, 1.2); hero tap writes
+  (1.4, 1.5, 1.2) — the same law at the two scales.
+- Frame series after: cap-local ripple + wobble + shed, stem/base/floor
+  dark. Side-by-side +0.25 s diffs (hero vs clone, each normalised to its
+  own body): the same footprint — upper cap lit, everything below
+  untouched — on both.
+- Console clean across taps on a near clone, a far species body, the
+  hero, and the floor.
+- No golden moves: taps do not exist in frozen frames; `--check` 0.00.
