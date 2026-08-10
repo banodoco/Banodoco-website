@@ -952,9 +952,30 @@ export function createFinalRing(sceneApi, uniforms) {
     // 2. LIGHT. The hero's own uniform objects (world.js heroPulse), so this
     //    one write is the whole scene's answer — and it lands AFTER organism's
     //    own handler has planted its floor swell, correcting it in place.
+    //
+    //    SCALED TO THE BODY (2026-08-10, Hannah: "little sparkles that float
+    //    off the bottom side of the mushroom... they don't look like the same
+    //    spores"). The hero's constants are WORLD-sized: wave speed 1.4 u/s,
+    //    range falloff exp(-1.5·d) — tuned so a cap tap's ring dies within
+    //    about a unit of the fingertip and never reaches the hero's own stem
+    //    base four units below. On a 0.3-0.5-scale field body those same
+    //    world units cover the WHOLE body plus the floor under it, so one
+    //    cap tap glinted every point layer on the underside (stem motes,
+    //    bead cloud, base pools) AND the batch's soil lights and canopy
+    //    junctions around the base — a wave of white sparkles crawling off
+    //    the bottom of the body, which the hero provably never shows
+    //    (measured: at +0.25 s a stock tap lit the tapped clone cap-to-
+    //    ground-flare; the hero's identical tap leaves everything below its
+    //    upper cap untouched). Speed scales BY s and falloff by 1/s, so the
+    //    ripple is the hero's own response measured in the body's units —
+    //    geometrically similar, dying at the same fraction of the body —
+    //    and the floor under a small body stays as dark as the floor under
+    //    the hero's cap. s = 1 would reproduce the hero's numbers exactly;
+    //    the amplitude is untouched (a tap is the visitor's own force and
+    //    answers at full strength on every body, like the wobble).
     uniforms.uPulseC.value.copy(point);
     uniforms.uPulseT.value = 0;
-    uniforms.uPulseP.value.set(1.4, 1.5, 1.2);   // slow, short-range, gentle
+    uniforms.uPulseP.value.set(1.4 * ref.s, 1.5 / ref.s, 1.2); // the hero's tap, in this body's units
     // 3. SPORES. §10c's own cap test (y > 2.8 in hero units), applied in hero
     //    units on every body whatever its size.
     if (localY > 2.8) shed.burst(ref.x, ref.gy, ref.z, ref.s);
