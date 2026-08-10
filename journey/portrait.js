@@ -149,9 +149,19 @@ const KEYS = [
   // proportionally less to reach the same portrait composition (and to keep
   // the chapter's camera-pure resolve — which reads the GAZE — matching the
   // landscape's).
-  { p: 0.410, back: 1.55, rise: 0.28, truck: 0, tgtUp: 0.30, tgtRight: -0.12, fov: 11 },
+  //
+  // The key RIDES THE LEG, not a literal (2026-08-10, when the Connect rest
+  // moved 0.490 -> 0.5230 with route.js stops [0.65] and the travel became
+  // the one-movement approach gesture): this file was the other documented
+  // absolute-p violation of route.js's ownership, and for these two keys it
+  // no longer is. The mid-leg key keeps its authored position IN LEG TERMS —
+  // 0.652 of the way from the Inspire rest to the Connect rest, exactly the
+  // fraction (0.410 - 0.26) / (0.49 - 0.26) the shipped literal encoded.
+  { p: restProgress('inspire') + 0.652 * (restProgress('connect') - restProgress('inspire')),
+    back: 1.55, rise: 0.28, truck: 0, tgtUp: 0.30, tgtRight: -0.12, fov: 11 },
 
-  // CONNECT (rest 0.49, ground panorama) — re-authored 2026-08-04 for the
+  // CONNECT (rest restProgress('connect') — 0.5230 since the 2026-08-10 stop
+  // move; ground panorama) — re-authored 2026-08-04 for the
   // top-left / top-right restage. The landscape frame gives the mushroom the
   // upper-LEFT and the copy the upper-RIGHT; a 375-wide frame has no "beside",
   // so portrait stacks the same three elements instead: copy across the top
@@ -171,7 +181,7 @@ const KEYS = [
   // both orientations) and the shipped portrait stack — copy across the top,
   // mushroom in the middle-left band under it, hubs fanned through the lower
   // half. The strong-tgtUp reasoning below is unchanged, only its magnitude.
-  { p: 0.490, back: 1.62, rise: 1.50, truck: 0, tgtUp: 1.50, tgtRight: -0.30, fov: 8 },
+  { p: restProgress('connect'), back: 1.62, rise: 1.50, truck: 0, tgtUp: 1.50, tgtRight: -0.30, fov: 8 },
 
   // The approach to the trunk + the exterior descent (0.575–0.718):
   // near-zero field — clearance to the stipe is small and the leg's whole

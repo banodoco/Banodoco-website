@@ -55,8 +55,16 @@ export const HERO = {
 };
 
 // The arrival gesture lands ON the Inspire rest; below this p the base path
-// is the gesture, above it the keyed spline. Derived from the manifest.
+// is the gesture. From there to the Connect rest the base path is a SECOND
+// analytic gesture — connect/camera.js approach(), the 2026-08-10 "one
+// movement" re-shape (Hannah: the Inspire -> Connect travel must read like
+// the hero -> Inspire arrival — one gesture, not a swing then a zoom). Above
+// that, the keyed spline. All derived from the manifest; the three
+// parameterisations join with matching zero velocity at both rests (the
+// arrival and the approach end on zero-slope trapezoid ramps, and the rest
+// keys are holds with zero tangents).
 const ARRIVAL_END = restProgress('inspire');
+const APPROACH_END = restProgress('connect');
 
 // Chapter legs -> ONE global key list: each chapter's leg-local key times
 // re-base to global p through its route span (p = start + t * span — the
@@ -166,13 +174,18 @@ const _pose = { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 38 }
  *  from any window. */
 export function poseAt(p, out = _pose, hero = HERO, aspect = 1.6) {
   if (p < ARRIVAL_END) INSPIRE_CAM.arrival(p / ARRIVAL_END, out, hero);
-  else keyedPose(p, out);
+  else if (p < APPROACH_END) {
+    CONNECT_CAM.approach((p - ARRIVAL_END) / (APPROACH_END - ARRIVAL_END), out);
+  } else keyedPose(p, out);
   return applyPortrait(out, p, aspect);
 }
 
 /** Name of the nearest authored key - used by the QA audit, not by rendering. */
 export function poseNameAt(p) {
   if (p < ARRIVAL_END) return INSPIRE_CAM.arrivalName(p / ARRIVAL_END);
+  if (p < APPROACH_END) {
+    return CONNECT_CAM.approachName((p - ARRIVAL_END) / (APPROACH_END - ARRIVAL_END));
+  }
   let best = KEYS[0], d = Infinity;
   for (const k of KEYS) { const dd = Math.abs(k.p - p); if (dd < d) { d = dd; best = k; } }
   return `${best.note || 'travel'} (nearest key p=${best.p})`;

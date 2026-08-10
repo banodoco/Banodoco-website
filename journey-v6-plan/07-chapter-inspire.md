@@ -3352,3 +3352,127 @@ itself with cadence cancelled.
   the light go. If Hannah wants the streams to carry higher, FIL_FADE0/1
   are the dials, at the direct cost of line-ness returning to the
   Epilogue's sky.
+
+## 2026-08-10 — ONE MOVEMENT: the Inspire → Connect travel becomes the arrival's own shape (Hannah's brief, item 1)
+
+**The ask, verbatim.** *"The transition from Inspire and Empower to Connect
+the Ecosystem feels a little bit stilted — it's like two separate movements.
+Could you figure out how to make that into one smooth movement? It feels like
+it could just naturally be one, more dramatic camera movement — like the one
+from the hero to the Inspire and Empower section, similar to that."*
+
+Third complaint on this leg, each on a different fault: `6acceac` cured a
+re-approach in the DISTANCE channel (the zoom-in-then-out), `e95820a` cured a
+stall in the composed frame angle d = gazeYaw − camAz + 180 (the subject
+freezing mid-leg). Both channels were monotone on the tree she rode — her
+complaint this time is about GESTURE, and she names the reference.
+
+### The diagnosis: two envelopes, two peaks
+
+Measured (401-sample drift-aware trace of the shipped tree, landscape,
+window p 0.26 → 0.49):
+
+    position speed   0 at the rest -> PEAK 92 u/p at p 0.337
+                     -> 43 by 0.38 -> ~10 u/p through 0.42-0.44
+                     -> a ~17 u/p shelf -> 0 at the rest.  ONE EARLY HUMP.
+    fov rate         ~30-60 deg/p through the swing
+                     -> 124 / 159 / 221 / 253 deg/p, PEAK at p 0.477.
+                     ONE LATE HUMP.
+    yaw rate         peak 594 deg/p at 0.338, falling to a ~250-270 shelf.
+
+No single channel reverses — every prior audit passed — but the two
+ENVELOPES peak 0.14 of p apart with a 9x speed trough between them: the eye
+reads a swing that ends (position-led, dead by p 0.42), then a zoom that
+starts (fov-led, peaking at 0.477). Two movements, exactly as reported. The
+reference she names is a mechanism, not a mood: the Mission → Inspire
+arrival rides azimuth, radius, height, fov and gaze on ONE shared
+trapezoidal ease, so every envelope peaks together. This leg was a keyed
+spline through two station keys (rest-drift, exit) plus Connect's three
+approach keys — five stations, each with its own local tangent shape, and
+no shared profile anywhere.
+
+### The re-shape: the whole travel is one analytic gesture
+
+`connect/camera.js approach(u)` (the destination owns its arrival — the
+inspire/camera.js arrival() precedent), composed by the director over
+p [restProgress('inspire') .. restProgress('connect')] exactly as the
+arrival is composed below the Inspire rest. All channels ride the arrival's
+own trapezoid (RAMP 0.18, peak 1.22x mean): az 115 -> 61.81 deg on azEase
+(trapezoid + windowed orbit-breath, strictly monotonic), r 11 -> 9.011,
+y 2.0 -> 2.647, fov 40 -> 62 on the plain trapezoid, gaze on a quadratic
+bezier INSPIRE.target -> rest target bowed through PIN2 (1.0, 1.8, −1.8),
+the mid stem. Because az, fov and the gaze are affine in one shared ease,
+d is monotone BY CONSTRUCTION and the e95820a fault class cannot re-open.
+The retired keys: inspire's rest-drift + exit (t 0.7167 / 0.9250) and
+Connect's three approach keys. The rest keys stay, bit-exact — the gesture
+derives its endpoints from INSPIRE and from Connect's rest key, so a seam
+disagreement is impossible rather than checked-for (the D18 lesson).
+
+The rest slides to leg-t 0.65 — route.js stops [0.65], p 0.490 -> 0.5230,
+SAME approved pose — and connect scrollVh 4.5 -> 10.0. One allocation
+decision with brief item 2 (the ground-lighting pace, its fifth request)
+and item 3; the reasoning is in EXECUTION.md 2026-08-10 and
+16-connect-ground-restage.md. The dive keys keep their shipped poses on
+the same dive line and re-space onto leg-t 0.77 / 0.91 (p 0.5494 / 0.5802);
+every owned/camera.js key and every pose at p ≥ 0.6225 is bit-identical
+(measured: max |Δ| exactly 0 over the trace grid — owned/leg.js samples
+p 0.660-0.872, so the colony cannot have moved; owned@* goldens 0.00).
+
+### After, measured (321-sample traces, both aspects)
+
+    landscape (p 0.26 -> 0.523)
+      speed        0 -> ~42-47 u/p plateau (peak 47.0 @ 0.408) -> 0.  ONE HUMP.
+      yaw          peak 385 deg/p @ 0.404, same plateau           }
+      pitch        peak 61 deg/p                                  } all peak
+      fov          102 deg/p flat through the plateau             } TOGETHER
+      d            monotone, one hump (peak 142 deg/p @ 0.305), zero stalls
+      subject-dist 8.425 -> 10.454, one 0.002-unit flat spot inside the
+                   first ramp (0.02%; the shipped tree's own bow was 0.14)
+      roll         0 everywhere (director law)
+    portrait
+      speed        one plateau ~68-81 u/p, peak 81 @ 0.473 (the authored
+                   portrait dolly-back blooming toward the rest)
+      dist         12.63 -> 16.94 STRICTLY monotone, zero sign flips
+      yaw/pitch    379 / 59 deg/p peaks
+    rates everywhere an order of magnitude under the ~1.2k deg/p threshold.
+
+Wall-clock: the gesture now spans ~10.3 vh of scroll (3.75 in Inspire's
+allocation + 6.5 in Connect's) against ~6.0 before — statelier, and the
+PCHIP gain ramp across the boundary means it eases out as it lands, the
+arrival's own manner.
+
+### Gates
+
+- **Rides**: full 0 -> 1 -> 0 real-wheel rides at 1440x900 and 375x812,
+  console.error/warn/exception hooks: 0 entries (sub-agent battery,
+  2026-08-10). Frozen frame series through the leg both aspects read as one
+  continuous sweep; rest frames at both ends composed correctly.
+- **Boundary spores (D26-D29 instrument, ~11 fps cadence normalised by the
+  integrator's 0.033 s clamp)**: crossing population speed Inspire→Connect
+  0.155/0.113 (peak/p50, 0.10 p/s) and 0.131/0.111 (0.45 p/s), reverse
+  0.141/0.111 and 0.145/0.116 — all inside the same session's ambient-hold
+  band (holds: 0.142/0.100 Inspire, 0.132/0.100 Connect). Total shed light
+  through the crossing: monotone 2324 -> 2464, worst dip 0.00% at 0.05 and
+  0.20 p/s (an early −3.38% reading reproduced as a probe settling artifact,
+  not a travel property; reverse worst −0.45%). Restore discipline: total
+  ambient luminance at p 0 identical before/after the rides (2464.3).
+- **Inspire arrival untouched**: poses p ≤ 0.26 identical to the shipped
+  tree (trace delta ≤ 1.4e-5, the fov write-threshold hysteresis class);
+  mission/inspire goldens 0.00.
+- **az-gate ordering preserved**: under the new leg az stays above 78 until
+  p 0.434, so the ARR ramps are saturated through the whole per-exit retire
+  cascade (0.352-0.430) exactly as the D25 design assumes, with MORE margin
+  than the shipped tree; T1's p-relax (0.44/0.46) still lands on reveal = 0.
+
+### Residuals
+
+- The landscape subject-distance flat spot (0.002 u inside the first ramp)
+  is an order of magnitude under the shipped tree's own 0.14 bow; not worth
+  a PIN2 chase.
+- The portrait speed plateau peaks late (81 u/p at 0.473) because the
+  authored portrait field blooms toward the rest; it is one hump and slower
+  on screen than the shipped tree at every point (scroll gain 2.22x), so it
+  was left as authored.
+- Mid-leg copy: the Inspire block fades out by p 0.338 and Connect's fades
+  in at 0.509 — the long copyless travel is deliberate (it is the movement
+  she asked to feel).

@@ -154,9 +154,36 @@ function pulseDriver(dur) {
    exists to remove); and moving GAZE_HI to make the network resolve earlier
    and open the front budget (it eats the margin that keeps the resolve exactly
    0 at the portrait Inspire rest, which is a protected frame — 0.0426 of
-   forward.y against a 0.0059 handheld wander, and not for sale). */
-const LIGHT_LO = 0.022727; // leg-t — p 0.3850, ADOS's light leaves the base
-const LIGHT_HI = 0.487;    // leg-t — p 0.4871, Discord's farthest tip saturates
+   forward.y against a 0.0059 handheld wander, and not for sale).
+
+   A THIRD OF THE SPEED (2026-08-10, Hannah's FIFTH request on this pacing:
+   "the way the light from the ground lights up — could you make that work a
+   lot slower... maybe a third of the current speed"). The previous pass
+   reported the schedule FULLY SPENT, and it was — inside the old route. The
+   road comes from route.js this time (both edits authorised, planned as one
+   allocation with the Final chapter's — see EXECUTION.md 2026-08-10):
+
+     · the rest stop moves to leg-t 0.65 (stops [0.65]): the SAME approved
+       pose at p 0.5230 instead of 0.490, handing the arrival the road the
+       dive never needed (the dive keys re-space; camera.js);
+     · scrollVh 4.5 -> 10.0: 2.22x wall-clock per unit p at any scroll speed;
+     · the leg itself is the new one-movement approach gesture (camera.js),
+       whose gaze bow hands the camera-pure resolve its first draw at
+       p 0.351 landscape / 0.336 portrait (measured, 321-sample trace).
+
+   The window bounds re-derive by the SAME laws as before, against the new
+   leg: first draw p 0.3510 + the restage's 0.035 pre-existence lead =
+   p 0.3860 -> LIGHT_LO leg-t 0.0273; the rest at p 0.5230 keeps the same
+   0.0029-p fully-lit margin -> LIGHT_HI leg-t 0.637 (p 0.5201). Total
+   arrival 0.1021 -> 0.1341 of p (1.31x), times 2.22x scroll = 2.92x
+   wall-clock — and every per-patch and per-hub rate rides the same stretch
+   (the fronts' head speed in along-units per p falls 1.31x, so FRONT_SOFT's
+   quiet->lit lift and the kindle swell widen with it). Measured at a
+   deliberate 600 px/s: whole arrival 3.3 s -> ~9.6 s, a patch's own lift
+   0.36 s -> ~1.05 s. FRONT_SOFT, EASE_MIX, LIGHT_OVERLAP and the staging
+   are untouched — this is a re-time, not a re-choreography. */
+const LIGHT_LO = 0.0273;   // leg-t — p 0.3860, ADOS's light leaves the base
+const LIGHT_HI = 0.637;    // leg-t — p 0.5201, Discord's farthest tip saturates
 const LIGHT_OVERLAP = 0.30;
 
 /* THE FRONT'S OWN PACE INSIDE ITS WINDOW (2026-08-07, with the above).
