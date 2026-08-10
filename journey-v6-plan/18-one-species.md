@@ -1961,3 +1961,86 @@ body against the shipped 40–190.
 - **Anyone moving the rest again** re-derives the ladders through a fresh
   curve measurement exactly as before — and now also re-checks
   `PULL_MAX` (it bakes the rest's camera-x) and the T4 REV_HI margin.
+
+## 15. A quarter the speed, honestly accounted (2026-08-10, Hannah's brief item 3 — the FIFTH pass)
+
+**The ask, verbatim.** *"In the Final section, when it lights up, could you
+make it light up a lot slower — both in terms of its individual light-up
+and its overall progression. Maybe a quarter the speed on both."*
+
+After `5401820` (the fourth pass): arrival 4.4-4.6 s at 1 vh/s, single-body
+kindle ~0.6 s over its whole window, bought with scrollVh 3.5 → 6.0 — and
+that pass said further slowdown needs chapter-boundary moves. Boundary
+moves were authorised this time, evaluated, and REJECTED on arithmetic:
+scroll and p are decoupled by design, so moving a span renormalizes every
+chapter's mapping (and rebuilds the Owned colony if the Owned boundary
+moves) while buying zero wall-clock — wall-clock = scrollVh × the
+arrival's leg-fraction, and the arrival already owns ~76% of the chapter
+(soil-clearing leg-t 0.04 → rest 0.8; the end-hold's 0.2 was spent in
+336f31d and the fog ramp claims what remains). scrollVh IS the whole
+overall-axis lever. What shipped, as half of the one route allocation
+planned with the Connect items (EXECUTION.md 2026-08-10):
+
+- **route.js Final scrollVh 6.0 → 12.0** — no p-value, camera key, ladder
+  rung or golden moves. Page 32.0 → 38.0 vh.
+- **clones.js DRAW_W 0.32/0.16 → 0.50/0.16**, plus a structural
+  REST_MARGIN clamp (`min(taper, PULL_MAX − 0.004 − reveal)`). The two
+  levers are NOT redundant: measured against the live pull curve and the
+  real PCHIP spline, the scroll stretch is far from uniform in p — the
+  knot at the Owned boundary dilutes the gain under the OPENING rungs
+  while the terminal end concentrates it under the closers. Route alone:
+  openers 1.76x, closers 2.6x. With the width raise the ladder levels.
+
+### Measured (live pull curve p 0.845-0.9705 at 0.0005 steps + spline replica that reproduces the fourth pass's own published times to within 3%)
+
+    WHOLE PROGRESSION (first rung crossed p 0.8564 -> rest 0.970), 1 vh/s
+      §14+5401820 (scrollVh 6)      4.41 s
+      this pass   (scrollVh 12)     8.19 s      1.86x
+
+    SINGLE BODY (whole charge+take window, wheel-seconds at 1 vh/s)
+      reveal   0.0966   0.1833   0.5401   0.8124   0.9353   0.9511
+      before     0.66     0.62     0.82     1.03     1.26     1.41
+      after      1.35     1.30     1.74     2.11     3.37     ~3.6
+      ratio      2.05x    2.10x    2.11x    2.05x    2.68x    ~2.6x
+
+    All-drawn moves 0.9591 -> 0.9655 of p (live ride confirms 0.9654),
+    still inside the rest; the last rung finishes at pullRaw 1.1146,
+    margin 0.0054 under the 1.12 the rest delivers.
+
+**The honest shortfall.** The ask was 4x on both axes. Delivered: ~1.9x
+overall, ~2.05-2.7x per body. What bounds it: (a) the overall axis is
+scroll — 4x would demand roughly +18 vh MORE page for this one chapter's
+arrival (a 26.5 → ~50 vh page across the two briefs), declined as page
+bloat and recorded here rather than silently spent; (b) the per-body tail
+is pinned by the frozen rest — a closing rung's s = 1 must land under the
+pullRaw 1.12 the rest camera delivers, so its width cannot pass ~0.169
+whatever the taper says (the REST_MARGIN clamp now makes that structural).
+If a sixth pass ever wants the full 4x, the levers that remain are the
+page itself, or un-freezing the Final rest composition — say no to both
+lightly.
+
+### Gates
+
+- **Goldens**: `capture.py --check` after both edits — all ten within the
+  frozen gate (worst MAE 0.01, the known wobble class; final@* at 0.00
+  exactly): every body byte-settled at the rest, bloom exactly zero there.
+- **Mirror**: frozen-clock scrub 0.78 → 1.0 → 0.78 through the ?capture
+  freeze, screenshots at seven matched rungs both directions: worst rung
+  MAE 0.0057 (p 0.800, sub-noise; all arrival rungs 0.0000). Dark below
+  the arm both ways; no self-ignition.
+- **Ladder stills** (p 0.858-0.970): every frame shows bodies at visibly
+  different stages — wire-dim, charging, taking, settled — against an
+  accumulating town; the charge/take/settle character survives the wider
+  windows (takes overlap ~one gap deeper at the head than §14; charge
+  overlap is the "windows warming together" §14 already accepted).
+- **Ride**: live-wheel ride through the chapter completes with 24/24
+  drawn and settled by p 0.9654; console clean both directions (the full
+  0 → 1 → 0 ride battery ran at the Connect commit on this same tree).
+  Ride WALL-CLOCK on this rig understates the surface arithmetic — the
+  commit-resolution assist inflated by headless frame jitter (the D29
+  cadence caveat's scroll-side cousin); the published numbers are surface
+  arithmetic, which reproduces the fourth pass's own published times.
+- **Owned colony**: untouched by construction (no camera key moved; the
+  owned@* goldens are the proof, 0.00).
+- **sky.js drift band**: untouched — its 0.34-0.96 uPull gate spans the
+  re-timed ladder exactly as 5401820 left it (u-space, not p-space).

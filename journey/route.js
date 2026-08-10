@@ -71,11 +71,20 @@ export const ROUTE = [
   // without moving a single p-value, camera key, ladder rung or golden:
   // the same p-progression stretches over 1.71x the physical scroll, so
   // the whole kindle sequence — and everything else in the chapter —
-  // slows by that factor at any fixed scroll speed. Cost: the page grows
-  // 24.0 -> 26.5 vh (+10%). If it must slow further still, the honest
-  // next step is moving chapter boundaries, which renormalizes every
-  // chapter's mapping — say no to that lightly.)
-  { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 6.0 },
+  // slows by that factor at any fixed scroll speed.
+  // scrollVh 6.0 -> 12.0 (2026-08-10 later, the FIFTH pass — "a quarter
+  // the speed on both axes". Same lever, doubled again, as half of the one
+  // route allocation planned with the Connect items (EXECUTION.md
+  // 2026-08-10): still no p-value, camera key, ladder rung or golden
+  // moves. Boundary/span moves were considered and rejected — scroll and
+  // p are decoupled by design, so a span change renormalizes every
+  // chapter's mapping while buying zero wall-clock; and the arrival
+  // already owns ~76% of the chapter's leg, so scrollVh IS the whole
+  // overall-axis lever. This delivers 2.0x overall (4x would need
+  // ~+18 vh more page for one chapter — declined, recorded in
+  // 18-one-species.md §15); the per-body axis gets the rest from
+  // clones.js DRAW_W. Page grows 32.0 -> 38.0 vh.)
+  { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 12.0 },
 ];
 
 // The authored end-hold: p = 1 is a resolution anchor of its own (a fling to

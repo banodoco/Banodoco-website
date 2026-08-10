@@ -65,7 +65,7 @@
 // back into the hero's graph.
 
 import * as THREE from 'three';
-import { heroPulse } from './world.js';
+import { heroPulse, PULL_MAX } from './world.js';
 import { VARY_GLSL, varyUniforms, IDENTITY } from './variation.js';
 
 /* ---- NO POINTER GLOW. THE PARITY FACT (2026-08-05, Hannah: "when I hover
@@ -264,11 +264,37 @@ const DRAW_LO = 0.296, DRAW_HI = 0.893;
 // (margin 0.045) — every body byte-settled at the rest, final@* goldens
 // untouched. (A first cut at LO 0.19 put that body mid-bloom in the rest
 // frame — caught by the golden gate at MAE 0.28.)
-const DRAW_W_HI = 0.32;        // the opening singles' kindling width
+//
+// 2026-08-10 (later — Hannah's FIFTH pass on this arrival: "light up a lot
+// slower — both its individual light-up and its overall progression, maybe
+// a quarter the speed on both"). The overall axis is bought at the route:
+// scrollVh 6.0 -> 12.0 (route.js — no p-value, ladder rung, camera key or
+// golden moves). The individual axis is bought here, on top of it:
+// HI 0.32 -> 0.50, LO kept at 0.16 — and the two are NOT redundant,
+// because the scroll stretch is not uniform in p: the PCHIP knot at the
+// Owned boundary dilutes the gain under the OPENING rungs (p ~0.86-0.90)
+// while the terminal end concentrates it under the CLOSERS. Measured
+// against the live pull curve and the real spline (18-one-species.md §15):
+// route alone gave openers 1.76x and closers 2.6x; the width raise levels
+// the ladder at ~2.05-2.7x per body. The tail still CANNOT widen much:
+// the last rung's s = 1 must land under the pullRaw 1.12 the rest
+// delivers — at LO 0.16 the taper puts rung 0.9511 at width 0.1635,
+// finishing 1.1146 (margin 0.0054; every body byte-settled at the rest,
+// the golden gate is the proof). The explicit REST_MARGIN clamp makes the
+// bound structural rather than a property of today's ladder: if a future
+// ladder pushes a rung later, its width gives way before the rest frame
+// does. Honest shortfall, recorded in 18-one-species.md §15: the ask was
+// 4x on both axes; 4x overall via scroll alone would grow the page by
+// ~+18 vh more for this one chapter, and the per-body tail is pinned by
+// the frozen rest — this pass delivers ~1.9x overall and ~2.1-2.7x per
+// body, and says so rather than spending the page on it.
+const DRAW_W_HI = 0.50;        // the opening singles' kindling width
 const DRAW_W_LO = 0.16;        // the closing fills' — narrower in uPull, LONGER in wheel
+const REST_MARGIN = 0.004;     // s = 1 must land this far under PULL_MAX
 const drawWOf = (reveal) => {
   const t = Math.min(1, Math.max(0, (reveal - 0.10) / (0.96 - 0.10)));
-  return DRAW_W_HI - (DRAW_W_HI - DRAW_W_LO) * t;
+  const w = DRAW_W_HI - (DRAW_W_HI - DRAW_W_LO) * t;
+  return Math.min(w, PULL_MAX - REST_MARGIN - reveal);
 };
 
 /* ---- THE ARRIVAL CHARACTER: CHARGE, TAKE, SETTLE (2026-08-09 §14) --------
