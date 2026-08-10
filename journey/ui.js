@@ -19,6 +19,7 @@ import {
   COPY_OUT_K, COPY_IN_K, COPY_SETTLE_LO, COPY_SETTLE_HI,
   COPY_TRAVEL_LO, COPY_TRAVEL_HI,
   HOTSPOT_STAGGER_MS, HOTSPOT_IN_K, HOTSPOT_OUT_K, HOTSPOT_HOLD_HOME_K,
+  HOTSPOT_DODGE_GAP, HOTSPOT_DODGE_MAX,
   COPY_JUMP_LEAD, COPY_JUMP_TAIL_S,
 } from './constants.js';
 
@@ -803,6 +804,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       hitEl, hitR: 0,
       holdAt: null,       // world anchor held still while hot — see holdAnchor()
       holdOff: null,      // ...decaying back to zero once it goes cold
+      pendX: 0,           // this frame's resolved translate-x, written post-loop
+      dodgeY: 0,          // pill raise from the collision dodge (label only —
+      dodgePrev: 0,       // the dot is pinned back by --j-dot-dy)
       hover: false, focused: false, armed: false, hot: false,
       pointer: null,      // pointerType of the gesture in flight
       label, labelEl,
@@ -929,7 +933,19 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
 
      dt === 0 is the placement path (deep link, ?p=, the ?capture= freeze):
      nothing is hot there and any hold is dropped outright, so every frozen
-     golden is bit-identical by construction. */
+     golden is bit-identical by construction.
+
+     2026-08-10 ADDENDUM: Hannah generalised the request — chips and their
+     markers should never ride the wind in ANY state — and the fix landed at
+     the SOURCE: Inspire's nodeWorld() now anchors each chip to its release
+     lip at the mushroom's REST pose (wind rotations zeroed — see the
+     mushroomRestMatrix block in chapters/inspire/index.js), and Connect's
+     hubs and Owned's faces were static world points all along. So every
+     live anchor this loop reads is now constant, all states sit at the
+     camera-only floor (measured 0.65 x 0.62 px over 12 s in all three
+     chapters), and this hold is a GUARD: it costs nothing against a static
+     anchor and keeps the hot state honest if any future chapter registers a
+     moving one. */
   function holdAnchor(h, live, dt) {
     if (!live) { h.holdAt = h.holdOff = null; return null; }
     if (h.hot) {
@@ -1628,7 +1644,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     // first frame, before the stylesheet and the webfont have settled, reads
     // short, and a flip computed from a short width puts the DOT off the
     // frame instead of the label.
-    for (const h of hotspots) h.pillW = h.btn.offsetWidth;
+    for (const h of hotspots) { h.pillW = h.btn.offsetWidth; h.pillH = h.btn.offsetHeight; }
     // px per world unit at a given depth, for the hit pads below. The
     // denominator is the VIEW-SPACE depth, not the radial distance: an
     // off-axis node is nearer the image plane than its distance suggests
@@ -1705,7 +1721,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
         const lo = 15, hi = window.innerWidth - 4 - h.pillW + 11;
         const want2 = hi >= lo ? Math.min(Math.max(tx, lo), hi) : tx;
         tx += Math.max(-26, Math.min(26, want2 - tx));
-        h.btn.style.transform = `translate(${tx}px, ${sy}px)`;
+        // The transform itself is written AFTER the loop, once every placed
+        // pill's rect is known — see the PILL COLLISION DODGE pass below.
+        h.pendX = tx;
         // The pad is placed against the NODE, in the button's own coordinates,
         // so the flip above and the nudge above it move the label and leave
         // the target where the thing is drawn. (`margin: -11px 0 0 -11px` on
@@ -1736,6 +1754,53 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       h.btn.tabIndex = want && vis ? 0 : -1;
       if (want && vis) h.btn.removeAttribute('aria-hidden');
       else h.btn.setAttribute('aria-hidden', 'true');
+    }
+
+    /* PILL COLLISION DODGE (2026-08-10). With every anchor now a static
+       world point (see the 2026-08-10 addendum on the hover hold above), two
+       resting pills can sit in permanent overlap: at 375x812 Inspire's lip
+       anchors project 125 px apart while Arca's pill runs 168 px, so its tail
+       lay across ArtCompute's dot (measured 43 x 11 px of rect overlap, the
+       label text passing ~1 px above the dot). The dots are the truth — each
+       marks a lit release lip — so the LABEL is what moves: the upper pill of
+       an overlapping pair is raised just clear of the lower one, and the dot
+       is pinned back onto its node by the compensating --j-dot-dy translate
+       (the same one the hit pad's `top` reads, so pad and dot cannot
+       disagree). Chips are processed bottom-of-frame first, each resolved
+       against the already-final pills below it, which makes the pass exact in
+       one sweep for any chain that raises upward. Pure in this frame's
+       geometry — no eased state, so dt = 0 places the dodged frame outright
+       and a ?p= deep link is bit-stable. It applies in every state — hover
+       included — because with static anchors the dodge is itself static, so
+       nothing ever shifts under a pointer; labelOnHover chips (Owned's
+       faces) carry no resting pill, so they neither dodge nor cause one, and
+       cross-chapter pairs never co-place (the copy gate is exclusive). */
+    const placed = hotspots.filter(h => h.placeable && !h.labelOnHover);
+    placed.sort((a, b) => b.sy - a.sy);          // bottom of the frame first
+    const resolved = [];
+    for (const h of placed) {
+      let dy = 0;
+      const x0 = h.pendX - 11, x1 = x0 + h.pillW;
+      for (const f of resolved) {
+        if (f.chapter !== h.chapter) continue;
+        const fx0 = f.pendX - 11, fx1 = fx0 + f.pillW;
+        if (x1 <= fx0 || fx1 <= x0) continue;
+        const fTop = f.sy - 11 - f.dodgeY;
+        const myBot = h.sy - 11 - dy + h.pillH;
+        const need = myBot + HOTSPOT_DODGE_GAP - fTop;
+        if (need > 0) dy = Math.min(dy + need, HOTSPOT_DODGE_MAX);
+      }
+      h.dodgeY = dy;
+      resolved.push(h);
+    }
+    for (const h of hotspots) {
+      if (!h.placeable) continue;
+      h.btn.style.transform = `translate(${h.pendX}px, ${(h.sy - h.dodgeY).toFixed(1)}px)`;
+      if (h.dodgeY !== h.dodgePrev) {
+        h.dodgePrev = h.dodgeY;
+        if (h.dodgeY) h.btn.style.setProperty('--j-dot-dy', `${h.dodgeY.toFixed(1)}px`);
+        else h.btn.style.removeProperty('--j-dot-dy');
+      }
     }
 
     /* THE INDEX'S REACHABILITY RULE.
