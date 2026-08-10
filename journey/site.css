@@ -1765,8 +1765,24 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
          left to sit beside it — so it stops pretending to be a scrim and
          becomes a panel for as long as the visitor holds it open. At 0.96 the
          copy ghosted through the names; measured, "Learn more" was still
-         legible under CONNECT. */
-      background: linear-gradient(to left, #090602 76%, rgba(9, 6, 2, 0));
+         legible under CONNECT.
+
+         SIZED TO THE ICON COLUMN (2026-08-10). Hannah: "the black thing that
+         shows over the open menu spreads out far too much to the left — it
+         should just cover the icons." At the inherited 6rem the opaque run
+         reached 73 px from the edge and its feather 96 px — nearly twice the
+         52 px tile column, a black flag flying left of the marks (measured at
+         375x812: opaque to x 302, feather to x 279, tiles at x 323..375).
+         4rem puts the opaque run (68%) at 43.5 px — the tiles' own footprint
+         with the marks at x -38..-14 fully inside — and the feather's end at
+         64 px. The names never needed it: each carries its own 0.85 scrim
+         pill (the desktop mechanism), and the chapter copy behind them is at
+         0.14 while the fan is open (body.j-rail-on below), so the band's only
+         remaining job at phone width is exactly the marks — same as the
+         resting halo it grows out of. The legibility win from 48b7795 stays:
+         the run under the tiles is still #090602, opaque, not merely dark. */
+      width: 4rem;
+      background: linear-gradient(to left, #090602 68%, rgba(9, 6, 2, 0));
     }
     .j-rail-name { font-size: 0.58rem; letter-spacing: 0.22em; }
     .j-rail-item:is(:hover, :focus-visible) .j-rail-name,
@@ -1792,6 +1808,15 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        only, so a desktop hover is untouched. */
     .j-copy { transition: opacity 0.28s ease; }
     body.j-rail-on .j-copy { opacity: 0.14; }
+    /* The chips step back with the copy (2026-08-10, with the band's re-size
+       above): the 6rem panel used to happen to bury any chip pill near the
+       right edge; sized to the icons, the band no longer pretends to solve
+       what the step-back actually solves. Same value, same transition, and
+       the hit model is untouched — while the fan is open a tap outside the
+       rail collapses it first (rail.js's document pointerdown), so a dimmed
+       chip was never reachable under the open fan anyway. */
+    .j-hotspots { transition: opacity 0.28s ease; }
+    body.j-rail-on .j-hotspots { opacity: 0.14; }
   }
 
   /* ============================================================

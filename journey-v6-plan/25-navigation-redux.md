@@ -893,3 +893,77 @@ The tier-3 content drift guard reports the same 5 PRE-EXISTING drifts
 before and after this change (Owned's claims-became-prose and the Final
 heading never propagated to the static page — logged as its own task); the
 tworp strings edited here check clean among its 145.
+
+---
+
+## 2026-08-10 — The mobile backing covers the icons, and only the icons (register #66)
+
+Hannah: *"On mobile — when I open up my main menu, the black thing that shows
+over the open menu spreads out far too much to the left. It should just cover
+the icons, it shouldn't spread out to the left."*
+
+### What was actually oversized
+
+Reproduced at 375x812 and 430x932 over the bright Connect rest. The candidates
+the brief named, checked one by one:
+
+- **The site-map panel + its scrim**: not it. The panel is `min(29rem, 92vw)`
+  (345 px at 375) and the `.j-menu-scrim` only shows in the ~30 px sliver
+  beside it — nothing there "spreads left".
+- **The resting halo** (`.j-rail-inner::after`, 4.6rem): not it — sized to
+  the two marks, soft falloff, and the resting frame reads correctly.
+- **The expanded band** (`.j-rail-inner::before`) — **this one.** At phone
+  widths the 2026-08-07 mobile pass had turned it into an opaque panel
+  (`#090602 76%`) while keeping the inherited 6rem width: opaque black to
+  73 px from the edge, feather to 96 px — nearly twice the 52 px tile
+  column, with the fan's name pills floating beyond it. That composite is
+  the "black thing" (measured at 375x812: opaque to x 302, feather to
+  x 279, tiles at x 323..375, name pills reaching x ~240).
+
+### The fix
+
+The band's phone-width override is now **sized to the icon column**: `width:
+4rem`, opaque run 68% (= 43.5 px, the tiles' own footprint — marks at
+x −38..−14 — fully inside), feather ending at 64 px. The two jobs it was
+over-serving were already covered by their own mechanisms: every name pill
+carries its own 0.85 scrim (the desktop mechanism, untouched), and the
+chapter copy steps back to 0.14 while the fan is open (`body.j-rail-on`).
+One addition with the re-size: **the chip layer steps back with the copy**
+(`body.j-rail-on .j-hotspots`, same 0.14, same transition) — the wide panel
+used to happen to bury any chip pill near the right edge (Connect's
+Hivemind), and the band should not be wide for that reason either. Hit
+model untouched: while the fan is open, a tap outside the rail collapses it
+first (rail.js's document-level pointerdown), so a dimmed chip was never
+reachable under the open fan anyway.
+
+`48b7795`'s legibility win stays whole: the resting halo is untouched, the
+glyphs keep their drawn dark rims, and the band under the tiles is still
+fully opaque `#090602` — just no wider than the thing it protects.
+
+### First-tap verification (the second half of the brief)
+
+Simulated real `pointerType: 'touch'` taps headless at 375x812:
+
+- **First tap on the MENU mark** → the panel opens on that tap
+  (`menuOpen: true`, fan NOT armed) — the `48b7795` model holds on touch:
+  menuBtn opens on pointerdown, and the rail's arming handler explicitly
+  skips taps inside the menu mark.
+- **First tap on a section mark** → arms the fan (`j-rail-open` +
+  `body.j-rail-on`), second tap navigates; a tap anywhere else collapses.
+- **Panel a11y intact**: focus moves into the panel on open, Escape closes
+  it, focus returns to the menu mark (`opened/focusWasInside/closed/
+  focusBackOnMark` all true).
+
+### Gates
+
+- `tools/inputgates.js` battery: **G1-G5 all PASS** at 1440x900 AND 375x812
+  (canvas owns the frame at rest, overlays inert with `hidden` stripped,
+  poke fires body+ground on mouse+touch, per-overlay closed=none/open=auto,
+  restored after close) — `6903c4a` holds.
+- Full real-wheel ride 0 → 1 → 0 at 1440x900 with error/warn/uncaught/
+  rejection hooks from document start: **0 entries** (favicon.ico 404
+  excluded as pre-existing server noise), finalP exactly 0.
+- `capture.py --check`: PASS, all 10 goldens within threshold (the rail is
+  DOM chrome, hidden at capture; the scene is untouched).
+- Before/after screenshots: resting / armed fan / open panel at 375x812 and
+  armed fan at 430x932.
