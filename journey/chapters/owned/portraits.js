@@ -89,10 +89,16 @@ function drawEmbedEdge(g, cx, cy, R, r) {
   g.globalCompositeOperation = 'source-over';
 }
 
-function grainAndGrade(g, ox, oy, CELL, cx, cy, R, r) {
+// `unify` is the strength of the amber wash. It stays 0.33 for the procedural
+// busts and the anonymous glyphs — they are PAINTED in the palette already, so
+// the wash only seasons them, and the frozen goldens render exactly those two
+// paths. Only the photo cell passes a lower figure (PHOTO_GRADE.unify): a
+// source-atop fill is a straight lerp toward ONE colour, so at 0.33 it is the
+// single largest hue-collapsing term in the photo pipeline. See PHOTO_GRADE.
+function grainAndGrade(g, ox, oy, CELL, cx, cy, R, r, unify = 0.33) {
   // amber unify — everything drawn so far pulls toward the palette
   g.globalCompositeOperation = 'source-atop';
-  g.fillStyle = 'rgba(196,124,48,0.33)';
+  g.fillStyle = `rgba(196,124,48,${unify})`;
   g.fillRect(ox, oy, CELL, CELL);
   // upper-left key bloom
   const bloom = g.createRadialGradient(cx - R * 0.55, cy - R * 0.65, R * 0.05, cx - R * 0.55, cy - R * 0.65, R * 1.4);
@@ -125,9 +131,80 @@ function softMask(g, ox, oy, CELL, cx, cy, R, feather = 0.86) {
   g.globalCompositeOperation = 'source-over';
 }
 
+/* THE PHOTO GRADE, IN ONE PLACE (Hannah, 2026-08-11 — "the colour is sapped
+   too much from them; could you put the colour in a little bit more").
+
+   WHY SATURATION WAS THE WRONG NUMBER TO CHASE. Measured at the Owned rest
+   before this pass (1440x900, frozen frame with uPhoto forced to 1, sampled
+   over the inner 0.62 of each of the sixteen drawn discs), luminance-weighted
+   HSV saturation was already 0.569 and Lab chroma already 41.4 — HIGH. The
+   faces were not short of saturation. They were short of DIFFERENT colours:
+   within-face Lab hue circular variance measured 0.0050, and across the
+   sixteen the mean hues spanned 3.4 degrees. Skin, hair, cloth and backdrop
+   had all landed on one 66-79 degree amber, which is the definition of a sepia
+   print. That is also why ride-through #2 (0.62/0.90 -> 0.40/0.72) did not fix
+   the read: it lightened the cast without giving anything back its own hue.
+
+   So the number this grade is tuned against is a RATIO — the common amber cast
+   over the colour variation around it, both luminance-weighted, per face:
+
+     cast       mean Lab chroma
+     variation  RMS distance of each pixel's (a*,b*) from the face's own mean
+
+   The source photographs run about 1.9:1. The shipped grade turned that into
+   7.9:1, measured across all sixteen baked atlas cells. This pass lands 5.4:1.
+
+   WHAT ACTUALLY COLLAPSED IT. Instrumenting the chain stage by stage on four
+   source images showed one step doing nearly all of the damage: the step-2
+   amber MULTIPLY took hue variance from 0.106 to 0.0046 on m11 and from 0.494
+   to 0.0070 on w44, a 20-70x collapse in a single operation. Not because it
+   destroys the photo's chroma — because it INDUCES about 25-35 chroma of its
+   own, in one fixed direction, on top of source images that only carry 11-22.
+   The photo's colour is swamped, not removed.
+
+   The obvious move — weaken the multiply — was tried and rejected by eye. At
+   amber 0.36 the discs lost their ember glow and read as cool photographic
+   cut-outs pasted onto the field, which is the exact failure this treatment
+   exists to prevent. The multiply IS the palette tie, so it barely moves.
+   What moves instead are the terms that were throwing the photo's own colour
+   away BEFORE and AFTER the multiply, where the cost is variation and the
+   benefit was never the glow:
+
+     desat     the step-1 saturation-blend fill. Pure loss: it removes source
+               chroma outright, and the multiply then supplies far more amber
+               than it took out. 0.40 -> 0.06.
+     amber     alpha of the step-2 amber multiply — the palette tie. Left
+               nearly alone on purpose. 0.72 -> 0.64.
+     burnMute  how far the step-5 edge-burn gradient is pulled toward its own
+               luma. The burn's job is DARKENING; it was also toning, and a
+               multiply by an amber factor is precisely a sepia operation.
+               0 (the original stops) -> 0.70.
+     unify     alpha of grainAndGrade's source-atop wash — a straight lerp
+               toward one solid colour. 0.33 -> 0.16 FOR PHOTOS ONLY; the
+               procedural busts and the anonymous glyphs keep 0.33, so the
+               frozen goldens are byte-identical (see grainAndGrade).
+
+   Result across the sixteen baked cells: cast 41.9 -> 40.8 (-2.7%, i.e. the
+   warmth stays), variation 5.27 -> 7.59 (+44%), within-face hue variance
+   0.0015 -> 0.0050 (+233%), HSV saturation 0.630 -> 0.591 (it FALLS, and that
+   is the point — less of one colour, more of several).
+
+   Deliberately NOT touched: the burn's luminance profile, the warm-black lift,
+   the ember rim arcs, the face key light, the grain, the mask feather, and
+   every shader term. The faces have to stay inside near-black / deep-brown /
+   amber-gold and read as nodes in the network, not as photographs pasted on
+   top — this is a correction, not a reversal. */
+const PHOTO_GRADE = Object.freeze({
+  desat: 0.06,
+  amber: 0.64,
+  unify: 0.16,
+  burnMute: 0.70,
+});
+
 // Real-photo treatment (LOOK-DEV ONLY; assets/test-portraits, never ship).
-// Spike-calibrated pipeline: 62% desaturation -> 0.90 amber multiply ->
-// warm-black lift -> edge burn -> unify/grain -> mask feather 0.76 -> edge.
+// Spike-calibrated pipeline: desaturation -> amber multiply -> warm-black
+// lift -> edge burn -> unify/grain -> mask feather 0.76 -> edge. The four
+// grade strengths live in PHOTO_GRADE above.
 function drawPhotoCell(g, ox, oy, CELL, spec) {
   const { img, mirror, exposure, warmth, seed } = spec;
   const r = H.rng(((seed * 3319 + 811) | 0) >>> 0);
@@ -146,14 +223,13 @@ function drawPhotoCell(g, ox, oy, CELL, spec) {
   g.restore();
 
   // 1. partial desaturation — kill the cool studio colour cast
-  //    (ride-through #2: Hannah judged 0.62/0.90 "too faded" — faces keep more
-  //    of their own colour now; the ember rim + grade still tie them in)
+  //    (0.62 -> 0.40 at ride-through #2, -> PHOTO_GRADE.desat now)
   g.globalCompositeOperation = 'saturation';
-  g.fillStyle = 'rgba(128,128,128,0.40)';
+  g.fillStyle = `rgba(128,128,128,${PHOTO_GRADE.desat})`;
   g.fillRect(ox, oy, CELL, CELL);
   // 2. amber multiply — the main push into the palette
   g.globalCompositeOperation = 'multiply';
-  g.fillStyle = `rgba(226,${(150 + warmth * 22) | 0},${(86 + warmth * 20) | 0},0.72)`;
+  g.fillStyle = `rgba(226,${(150 + warmth * 22) | 0},${(86 + warmth * 20) | 0},${PHOTO_GRADE.amber})`;
   g.fillRect(ox, oy, CELL, CELL);
   // 3. deterministic exposure trim (density variation)
   if (exposure < 1) {
@@ -166,13 +242,30 @@ function drawPhotoCell(g, ox, oy, CELL, spec) {
   g.fillStyle = `rgba(58,30,12,${exposure > 1 ? 0.26 : 0.16})`;
   g.fillRect(ox, oy, CELL, CELL);
   // 5. edge burn — crush bright studio backgrounds so only the person holds
-  // light and the disc melts into the dark substrate before the ember arcs
+  // light and the disc melts into the dark substrate before the ember arcs.
+  //
+  // The burn was doing TWO jobs and only one of them was wanted. Darkening is
+  // the job: that is the vignette, and it is untouched below. But it darkened
+  // through a strongly amber gradient, and a multiply by an amber factor is
+  // exactly the sepia-toning operation — it scales blue down about three times
+  // harder than red, so a neutral becomes orange and a cool tone becomes a
+  // warm one. Stacked on the amber multiply in step 2, that is what flattened
+  // sixteen different people onto one hue. `burnMute` pulls each stop toward
+  // its own Rec.709 luma, which holds the gradient's DARKNESS constant to
+  // within a value or two while taking the hue rotation out of it. The face
+  // still warms — steps 2, 4 and 6 and the ember rim all still run — it just
+  // no longer warms by destroying the blue channel. (1 = the original stops.)
   g.globalCompositeOperation = 'multiply';
   const burn = g.createRadialGradient(cx, cy - R * 0.08, R * 0.30, cx, cy, R);
+  const mute = (c) => {
+    const y = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    const k = PHOTO_GRADE.burnMute;
+    return `rgba(${(c[0] + (y - c[0]) * k) | 0},${(c[1] + (y - c[1]) * k) | 0},${(c[2] + (y - c[2]) * k) | 0},1)`;
+  };
   burn.addColorStop(0, 'rgba(255,255,255,1)');
-  burn.addColorStop(0.58, 'rgba(206,172,140,1)');
-  burn.addColorStop(0.85, 'rgba(96,62,32,1)');
-  burn.addColorStop(1, 'rgba(34,20,10,1)');
+  burn.addColorStop(0.58, mute([206, 172, 140]));
+  burn.addColorStop(0.85, mute([96, 62, 32]));
+  burn.addColorStop(1, mute([34, 20, 10]));
   g.fillStyle = burn;
   g.fillRect(ox, oy, CELL, CELL);
   // and give the face itself back a touch of ember key light
@@ -185,7 +278,7 @@ function drawPhotoCell(g, ox, oy, CELL, spec) {
   g.globalCompositeOperation = 'source-over';
   g.restore();   // circle clip off
 
-  grainAndGrade(g, ox, oy, CELL, cx, cy, R, r);
+  grainAndGrade(g, ox, oy, CELL, cx, cy, R, r, PHOTO_GRADE.unify);
   softMask(g, ox, oy, CELL, cx, cy, R, 0.76);   // wider feather than the busts
   drawEmbedEdge(g, cx, cy, R, r);
   g.restore();

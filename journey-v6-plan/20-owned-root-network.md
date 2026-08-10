@@ -891,3 +891,162 @@ hit pad, no-translation-on-hover and localised-root hover are untouched.
    remixing a field the visitor can mostly not see.
 5. **The pair is the only interactive copy on the site.** `paintCopy`'s inert
    gate is written generally, but it has exactly one client today.
+
+---
+
+# F — the photo grade (2026-08-11)
+
+> "In the Owned by the ecosystem section, the profile pictures — the colour is
+> sapped too much from them. Could you put the colour in a little bit more?"
+> — Hannah
+
+## F.1 Saturation was not the problem
+
+The instinct is to reach for the desaturation term, and that instinct is what
+made the previous pass ineffective. Measured at the Owned rest before this one
+(1440x900, frozen `?capture=owned` with `uPhoto` forced to 1, sampled over the
+inner 0.62 of each of the sixteen drawn discs):
+
+| | before |
+|---|---|
+| luminance-weighted HSV saturation | **0.569** |
+| luminance-weighted Lab chroma | **41.4** |
+| within-face Lab hue circular variance | **0.0050** |
+| spread of the sixteen mean hues | **3.4 degrees** |
+
+Saturation was already high. The amber cast *is* a saturated colour, so pouring
+more amber on raises every saturation number you might tune against while
+making the problem worse. What the faces had lost was not colour but *different*
+colours: at a hue variance of 0.005, skin, hair, cloth and backdrop had all
+landed on one 66-79 degree amber. That is a sepia print. It is also why
+ride-through #2 (`0.62/0.90 -> 0.40/0.72`) did not land — it lightened the cast
+without giving anything back its own hue.
+
+So the figure this grade is now tuned against is a **ratio**, per face, both
+terms luminance-weighted:
+
+* **cast** — mean Lab chroma;
+* **variation** — RMS distance of each pixel's `(a*,b*)` from that face's own mean.
+
+The source photographs run about **1.9:1**. The shipped grade produced **7.9:1**.
+
+## F.2 One stage was doing nearly all of the damage
+
+The chain was instrumented stage by stage on four source images, measuring hue
+variance after each operation. It is not a diffuse problem:
+
+| stage | m11 | w17 | w44 | hi26 |
+|---|---|---|---|---|
+| 0 source | 0.106 | 0.056 | 0.494 | 0.364 |
+| 1 desaturate | 0.107 | 0.058 | 0.497 | 0.367 |
+| **2 amber multiply** | **0.005** | **0.036** | **0.007** | **0.008** |
+| 4 warm-black lift | 0.004 | 0.016 | 0.006 | 0.007 |
+| 5 edge burn | 0.002 | 0.011 | 0.004 | 0.004 |
+| 7 unify wash | 0.001 | 0.002 | 0.002 | 0.001 |
+
+Step 2 collapses hue variance 20-70x on its own. The mechanism is worth stating
+because it is counter-intuitive: the multiply does not *remove* the photo's
+chroma, it **swamps** it. It induces roughly 25-35 chroma of its own in one
+fixed direction, on top of source images that only carry 11-22. Everything the
+photograph had to say about colour is still in there, drowned.
+
+## F.3 Why the multiply is nonetheless the term that barely moves
+
+The obvious fix — weaken step 2 — was tried, rendered and **rejected by eye**.
+At `amber 0.36` the discs lose their ember glow and read as cool photographic
+cut-outs pasted onto the field: precisely the failure this treatment exists to
+prevent, and a reversal rather than the correction that was asked for. The
+multiply *is* the palette tie.
+
+What moved instead are the terms that were discarding the photograph's own
+colour before and after the multiply, where the cost is variation and the
+benefit was never the glow. All four now live in one frozen `PHOTO_GRADE`
+object at the top of `portraits.js`, so the next person tunes an object rather
+than hunting four call sites.
+
+| | was | now | what it is |
+|---|---|---|---|
+| `desat` | 0.40 | **0.06** | step-1 saturation fill. Pure loss — it strips source chroma, and step 2 then supplies far more amber than it took out. |
+| `amber` | 0.72 | **0.64** | step-2 multiply alpha. The palette tie. Left nearly alone on purpose. |
+| `burnMute` | 0 | **0.70** | how far each step-5 edge-burn stop is pulled toward its own Rec.709 luma. |
+| `unify` | 0.33 | **0.16** | `grainAndGrade`'s source-atop wash. **Photos only.** |
+
+`burnMute` deserves its own line. The edge burn was doing two jobs and only one
+was wanted. Darkening is the job — that is the vignette that melts the disc into
+the substrate, and its luminance profile is untouched. But it darkened *through*
+a strongly amber gradient, and a multiply by an amber factor is exactly the
+sepia-toning operation: it scales blue about three times harder than red, so a
+neutral becomes orange. Muting each stop toward its own luma holds the
+gradient's darkness to within a value or two while taking the hue rotation out.
+
+## F.4 The busts are deliberately unchanged
+
+`grainAndGrade` gained a defaulted `unify` argument. The procedural busts and
+the anonymous spore-print glyphs keep **0.33**; only `drawPhotoCell` passes the
+lower figure. This is not incidental — the busts are *painted in the palette
+already*, they were never what Hannah was looking at, and the frozen goldens
+render exactly those two paths (see §7). `owned@1440x900` and `owned@430x932`
+are byte-identical after this change, which is the correct outcome and the
+proof that the bust path was not touched.
+
+## F.5 Result
+
+Measured across all sixteen baked atlas cells — the treatment itself, before
+the shader, bloom and strand light add their own common amber on top:
+
+| | before | after | |
+|---|---|---|---|
+| cast (Lab chroma) | 41.90 | 40.75 | **-2.7%** — the warmth stays |
+| variation | 5.27 | 7.59 | **+44%** |
+| cast : variation | 7.9 : 1 | 5.4 : 1 | (source photos: 1.9 : 1) |
+| within-face hue variance | 0.0015 | 0.0050 | **+233%** |
+| HSV saturation | 0.630 | 0.591 | **-6%**, and that is the point |
+
+On the rendered frame at the Owned rest, where bloom and the strand field add
+common amber over the top, the same move reads as cast:variation 8.3:1 -> 6.9:1
+and hue variance 0.0050 -> 0.0062 at 1440x900.
+
+**By eye**, which is what actually decided it: hair now reads dark brown and
+near-black instead of amber; the pale shirt on the nearest contributor reads as
+cloth rather than as more face; eyes and beards separate from skin; and the
+three largest faces no longer share one skin tone. The ember rim arcs, the halo,
+the warm chamber behind each person, the vignette and the overall amber key are
+all visually unchanged, so the discs still read as lit nodes in the network
+rather than as photographs laid over it. It is a correction, not a reversal.
+
+## Gates
+
+    goldens             capture.py --check PASS, worst MAE 0.01/255 across all
+                        ten. owned@1440x900 and owned@430x932 both 0.00 —
+                        byte-identical, as intended (F.4). Nothing re-shot.
+    remix               grade holds across three arrangements: cast:variation
+                        5.4 / 5.5 / 5.5 : 1, cast 40.75 / 40.06 / 40.84. The
+                        per-arrangement re-derivation of source image, mirror,
+                        exposure, warmth and grain seed is untouched.
+    console             cold load -> full forward ride (mission -> inspire ->
+                        connect -> owned -> final) -> full reverse ride ->
+                        flyTo owned -> two Remix presses -> contributor hover:
+                        0 errors, 0 warnings.
+    screenshots         Owned rest before/after at 1440x900 and 375x812, plus
+                        a 3-face close crop at desktop.
+    untouched           No camera key, no scene geometry, no placement, no
+                        shader term, no timing. 696e95d's hit pads and
+                        localised root hover, eea3ffe's pair, and 851c77a's
+                        still chips and markers are all unmodified — the change
+                        is four numbers and a muted gradient inside one
+                        canvas-atlas painting function.
+
+## Residuals
+
+1. **The test set is thin, and one image is greyscale.** `hi12.jpg` measures
+   satL 0.0000 — it is a black-and-white photograph, so no grade can give it a
+   skin tone, and it occupies one of the six large slots that land on the
+   nearest, largest discs. The rest carry only 11-22 chroma. The ceiling here is
+   set by the placeholder imagery, not by the treatment; the pre-deploy deletion
+   rule for `assets/test-portraits` stands and a consented set would lift it.
+2. **The frozen goldens still cannot see this.** By design (§7, F.4) — captures
+   render the busts. Any future review of the photo look has to happen on the
+   live page or through a rig that forces `uPhoto`, as this pass did.
+3. **`cast : variation` is a new figure with two data points.** 7.9:1 read as
+   sepia and 5.4:1 reads as people, on this image set at this exposure. It is a
+   useful instrument, not a calibrated one.
