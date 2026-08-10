@@ -125,7 +125,8 @@ export function createRail({ onNav } = {}) {
   /* THE RAIL                                                            */
   /* ------------------------------------------------------------------ */
   // A real <nav> landmark with its own label, a sibling of the hero's <nav>
-  // on <body>. The hero's wordmark and its 2RP / Discord pair are untouched.
+  // on <body>. The hero's wordmark and its Discord pill are untouched
+  // (2RP left that row 2026-08-10; the Inspire node keeps it).
   const root = el('nav', 'j-rail');
   root.setAttribute('aria-label', 'Journey sections');
   // The fan geometry: every slot's position is (--i - --cur) tiles from the
@@ -203,8 +204,8 @@ export function createRail({ onNav } = {}) {
                     popover shows, [PLACEHOLDER] tokens and all.
        item link    nodes.<id>.spotlight.link / .card.link, where one exists.
                     Every href is '#' per D10 — no external URL on this site
-                    is confirmed yet (including the hero's own 2RP / Discord
-                    pills). The panel carries the authored labels and waits.
+                    is confirmed yet (including the hero's own Discord
+                    pill). The panel carries the authored labels and waits.
        elsewhere    site.links + site.social (the renamed footer content)
        static note  the sentence ui-footer.js shipped, verbatim
        legal        site.legal */

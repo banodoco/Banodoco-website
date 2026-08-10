@@ -855,3 +855,41 @@ x = −14.72.
   unchanged, so the frozen-capture path is untouched by all four changes — the
   reason the ten references are byte-identical rather than merely within
   threshold.
+
+---
+
+## 2026-08-10 — 2RP leaves the header (register #63)
+
+Hannah: *"Can we remove 2RP from the header? … Let's just remove the header
+[control], but leave it in the Inspire and Empower section."*
+
+One control gone from one row, in both tiers; the 2RP CONTENT is all still
+where it was. What changed and what deliberately did not:
+
+- **Gone**: the `2RP` pill in the live header's `.nav-cta` (index.html) and
+  its Tier-3 twin (static/index.html). Discord stays; the row is
+  logo-left / one-pill-right and needs no CSS change (`.pill` and `.nav-cta`
+  are shared rules, nothing was sized to the pair).
+- **Kept, by her own words**: the 2RP node in Inspire — chip, popover,
+  spotlight — untouched; the site menu's outbound `2RP` link
+  (`site.links`, both tiers) — that list is the navigator panel's
+  destinations, not the header.
+- **Un-dangled**: the tworp spotlight's placeholder body referenced "the
+  persistent top-right 2RP control", which would have become a printed lie —
+  reworded (content.js + the static mirror, verbatim-identical for the
+  tier-3 drift guard) to point at the site menu's link instead. Comment
+  references to "both pills / the 2RP-Discord pair" updated in hero.css
+  (x2) and rail.js (x2).
+
+Proof of clean removal — `grep -n 2RP index.html static/index.html` leaves:
+index.html three comment lines only; static/index.html the two comment
+lines, the Inspire menu-row/spotlight strings (nodes.tworp.*), the
+site.links entry, and the `2rp` deep-link alias comment. `class="pill"`
+occurs exactly once per tier (Discord). Verified on screen at 1440x900:
+both headers render BANODOCO + Discord; the open site-map panel still lists
+2RP under 02 INSPIRE with "Read the publication" and in the site links.
+
+The tier-3 content drift guard reports the same 5 PRE-EXISTING drifts
+before and after this change (Owned's claims-became-prose and the Final
+heading never propagated to the static page — logged as its own task); the
+tworp strings edited here check clean among its 145.

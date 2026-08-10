@@ -177,7 +177,8 @@
   .pill:hover { border-color: var(--ink); background: rgba(242, 237, 225, 0.06); }
   /* keyboard focus, gold family — matches journey/site.css's treatment for
      every journey-layer control (.j-rail / .j-menu :focus-visible etc).
-     Covers .logo and both .pill links (2RP, Discord); the chapter list is no
+     Covers .logo and the .pill link (Discord — 2RP left the header
+     2026-08-10, by request); the chapter list is no
      longer in this row at all (it is the side navigator, journey/rail.js). */
   nav a:focus-visible {
     outline: 2px solid var(--gold-bright);
@@ -616,8 +617,9 @@
      while the artwork renders at exactly the size it was designed
      at. The hero's own row was never brought into that rule and
      was the last thing on any mobile screen still under the line —
-     measured at 375x812 and 430x932, `2RP` is 58x28 and `Discord`
-     80x28, i.e. 16px short in height on every single view of the
+     measured at 375x812 and 430x932, `Discord` is 80x28 (and `2RP`,
+     still in the row when this was measured, 58x28 — it left the
+     header 2026-08-10), i.e. 16px short in height on every single view of the
      site, since the row is fixed and rides the whole journey.
      `.cta` measured 328x43 on a landscape phone, 1px short, and
      the wordmark `.logo` — a real link to the site root, live at
