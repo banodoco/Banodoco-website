@@ -15,19 +15,14 @@ Status: **done** (shipped, gated) · **open** (not started) · **running**
 | # | Request | Notes |
 |---|---|---|
 | 62 | **Inspire→Connect should be ONE dramatic movement.** Reads as two separate movements, feels stilted; wants the character of the hero→Inspire arrival. | The leg has been worked twice (`6acceac` monotone zoom-out, `e95820a` composed-frame stall). This is a new complaint: it reads as two gestures, not one. |
-| 63 | **Remove 2RP from the header only.** Leave the 2RP node in Inspire. | She corrected herself mid-sentence to be explicit that Inspire keeps it. |
 | 64 | **Connect ground lighting at ~a third of current speed.** | FOURTH request on this pacing. `c77fb00` reported Connect's schedule fully spent (0.1021 p is the whole distance from first-draw to the frozen rest), so this needs more road — a route/rest change. |
 | 65 | **Owned portraits: put colour back in.** Too much has been sapped out. | Keep them integrated with the warm palette. |
-| 66 | **Mobile: the navigator's dark backing spreads far too far LEFT when the menu opens.** It should cover only the icons. | Also verify the first-tap behaviour on mobile — `48b7795` fixed first-click-opens-menu on desktop using a tap-to-arm model on touch; confirm a first tap does the right thing. |
-| 67 | **Section item chips AND their markers should never move with the wind** — 2RP, Discord, ArtCompute, Arca, ADOS, Hivemind, the Owned faces. Stay in one place. | Generalises `6d37205`, which froze a chip's world anchor only while hovered. That fix established the right distinction: stop riding the wind, keep riding the camera. Apply permanently, and to the marker as well as the label. |
-| 58 | **Inspire labels should point at the lit rim edge**, not the area above. | The lip-glow embers from `ce91bc2` are the points to indicate. D28 notes Arca's lip is partly occluded at the rest camera. |
 | 59 | **Three glowing lines still visible after Inspire**, clearly in the Epilogue. | Strong suspicion: `d42c9a8`'s three lee filaments are permanent by design (that permanence is what made crossings motionless), so any lighting reveals the lanes everywhere. Resolving it must not regress the motionless boundary. |
 | 60 | **Epilogue tap still drops sparkles off the body.** | **Refutes** the previous pass's "already gone" verdict. Look wider than the shed — the clones carry the main model's five point layers, and its tap ripple makes motes glint. |
 | 61 | **Final field at ~quarter speed**, both per-body kindle and overall progression. | FIFTH pacing request. `5401820` said a further slowdown needs chapter-boundary moves; those are authorized. |
 | 47 | **End-hold: stale zoomed-out view still reachable.** At the very bottom you can still scroll out to a more zoomed-out view. | Hannah thinks it is a hangover of the old footer/end-hold; likely left by removing the Site Information band and the flight system. |
 | 48 | **Final: mushrooms light one at a time, like a town of Christmas trees.** Much more gradual than now. | Taste/pacing. Builds on the stagger widened in `0965a73`; she wants it considerably further. |
 | 49 | **Final: tapping a field body emits a different spore effect.** Something pops out from underneath; should be identical to the main mushroom's response. | Regression or leftover despite `070892c` / `e1b1e2b`. |
-| 50 | **Hovered items should stop moving in the wind.** Arca Gidan Prize, ArtCompute, 2RP judder when hovered because they keep drifting. | Should hold still while hovered. |
 | 52 | **Mission → Final jump flashes the end state.** A burst that looks like the fully-progressed epilogue appears, vanishes, then the transition runs. | Investigation dispatched. |
 
 ## Waiting on Hannah
@@ -51,6 +46,8 @@ Status: **done** (shipped, gated) · **open** (not started) · **running**
 | 44 | Menu button's first click should open the menu | `48b7795` |
 | 45 | Fan should collapse on de-hover after a click | `48b7795` |
 | 46 | Rail needs a backing so it stays visible over bright frames | `48b7795` |
+| 63 | Remove 2RP from the header only; Inspire keeps its node | `6e828d2` |
+| 66 | Mobile: the expanded backing covers only the icons; first tap on the menu mark verified to open the panel on touch | `09a0c39` |
 
 ### Spores (the long thread)
 | # | Request | Landed |
@@ -129,6 +126,9 @@ Status: **done** (shipped, gated) · **open** (not started) · **running**
 | — | New Final heading, two lines | `e20f7ff` |
 | 30 | Make every mobile layout elegant | `75082e6`, `0bdb4df` |
 | 41 | Tap/poke response broken (regression) | `6903c4a` |
+| 50 | Hovered items should stop moving in the wind | `6d37205` (hover), subsumed by `851c77a` (all states) |
+| 58 | Inspire labels point at the lit rim edge (the `ce91bc2` embers) | `851c77a` |
+| 67 | Chips and their markers never ride the wind, any state, any chapter | `851c77a` |
 
 ### Process
 | Request | Outcome |
