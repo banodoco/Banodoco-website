@@ -977,7 +977,11 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      does not tell ui.js a node radius. */
   .j-hot-hit {
     position: absolute;
-    top: 11px;
+    /* --j-dot-dy is the PILL COLLISION DODGE's compensation (ui.js): when a
+       pill is raised clear of a neighbour, the dot and the pad stay pinned on
+       the node by the same offset, so the visible marker and the hit surface
+       cannot disagree with the anchor. 0 for every un-dodged chip. */
+    top: calc(11px + var(--j-dot-dy, 0px));
     left: var(--j-hit-x, 11px);
     width: var(--j-hit, 0px);
     height: var(--j-hit, 0px);
@@ -1017,12 +1021,16 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     border-radius: 50%;
     background: rgba(240, 200, 119, 0.6);
     box-shadow: 0 0 8px rgba(240, 170, 60, 0.45);
+    /* the collision dodge's pin — see .j-hot-hit above. The dot rides the
+       pill's flex row, so a raised pill would carry it off its node; this
+       puts it back, visually, without touching the layout. */
+    transform: translateY(var(--j-dot-dy, 0px));
     transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
   }
   .j-hot:is(:hover, .hot, :focus-visible) { color: var(--gold-bright); background: rgba(18, 12, 4, 0.6); }
   .j-hot:is(:hover, .hot, :focus-visible) .j-hot-dot {
     background: rgba(255, 226, 160, 1);
-    transform: scale(1.35);
+    transform: translateY(var(--j-dot-dy, 0px)) scale(1.35);
     box-shadow: 0 0 12px rgba(255, 200, 100, 0.9), 0 0 28px rgba(240, 170, 60, 0.5);
   }
   /* .j-hot's focus RING is the shared journey treatment further down; the

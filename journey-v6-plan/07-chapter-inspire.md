@@ -3476,3 +3476,106 @@ arrival's own manner.
 - Mid-leg copy: the Inspire block fades out by p 0.338 and Connect's fades
   in at 0.509 — the long copyless travel is deliberate (it is the movement
   she asked to feel).
+
+---
+
+## 2026-08-10 — Chips hold still in every state, and point at the lit rim
+
+Two of Hannah's requests, shipped as one change because they are one anchor:
+
+- *"See the way the items that show in each section (2RP, Discord, etc.)
+  move with the wind — can you make them and their marker instead stay in
+  one place?"* (register #67, generalising the hover-only hold `6d37205`)
+- *"For the Inspire section, can you make it so that the labels … are
+  pointing at the edge of the mushroom, so they're pointing at the part
+  where it's actually lighting up, not the part above?"* (register #58)
+
+### Measured first (12 s traces at each chapter's rest, 1440x900)
+
+The wind was ONLY ever in Inspire. Per-chip screen wander, against the
+camera-only floor (a fixed world point re-projected through the live lens):
+
+    chapter   chip            wander            camera floor
+    inspire   artcompute      29.5 x 41.5 px    0.65 x 0.62 px
+    inspire   arca            28.3 x 29.0 px         "
+    inspire   tworp           14.8 x 12.6 px         "
+    connect   ados/hivemind/  0.65 x 0.62 px    — already AT the floor
+              discord
+    owned     all 16 faces    0.65 x 0.62 px    — already AT the floor
+
+— identical numbers to `6d37205`'s trace, which had already established that
+Connect's hubs and Owned's faces are static world points. So "all chips and
+markers" reduces to Inspire's three, whose anchor rode mid-plume on the
+breeze-carried streak head (the W3-B `labelOffsets`).
+
+### The anchor: the lit release lip, at its REST pose
+
+`ce91bc2`'s three lip-glow embers are the lit points Hannah is pointing at,
+and W3-B's reason for NOT anchoring there is stale: it measured the lips
+projecting into the bottom-centre copy rect, but after `ca7a769` (cap
+centred) and `93723f0` (mushroom pushed down) the three lips project 145+ px
+clear of the copy block at 1440x900. So `nodeWorld()` now returns
+`streaks[i].localPos` — the exact lip anchor the ember itself sits on —
+through a REST matrix instead of the live `mushroom.matrixWorld`.
+
+The rest matrix is the `e20f7ff` move (the hero's EQUIP callout): anchor to
+the sway pivot, not the swaying tip. `swayGroup` carries rotation only about
+the origin and `capBend` carries the throat translation plus a rotation-only
+bend, so with both wind rotations zeroed the chain collapses to
+`T(capBend.position) * mushroom.matrix` — computed once, cached
+(`mushroomRestMatrix()` in chapters/inspire/index.js).
+
+**It does not lie about what it points at.** The ember sprite draws 86-100 px
+across on screen at the rest camera (0.70 world units at view depth
+8.7-10.0) while its breeze swing is 7.7-18.8 px of total range (±4-10 px
+about the rest point) — the pinned dot sits inside the lit glow at every
+phase of the gust. Same argument, same numbers game, as `e20f7ff`'s stalk.
+
+D28's note (Arca's lip partly occluded by the wireframe at the rest camera)
+was checked on screen: the ember's additive flare is far larger than the
+occluding lines and visibly blooms around the chip dot at 1440x900, 1280x800
+and 375x812, so the label never reads as pointing at nothing. No geometry
+change needed.
+
+### The dodge: labels move, markers do not
+
+With every anchor now static, two resting pills can sit in PERMANENT
+overlap. At 375x812 the three lips project 125 px apart while Arca's pill
+runs 168 px: its tail lay across ArtCompute's dot (43 x 11 px of rect
+overlap, the label text passing ~1 px above the dot). Fix in ui.js (PILL
+COLLISION DODGE): the transform write moved after the placement loop; the
+upper pill of an overlapping same-chapter pair raises just clear of the
+lower (`HOTSPOT_DODGE_GAP` 4 px, capped at `HOTSPOT_DODGE_MAX` 26 px — the
+horizontal nudge's own attachment budget), and the DOT is pinned back onto
+its node by a compensating `--j-dot-dy` translate that the hit pad's `top`
+reads too. Pure in the frame's geometry (no eased state): dt = 0 places the
+dodged frame outright, and with static anchors the dodge is itself static,
+so nothing ever shifts under a pointer — hover included. labelOnHover chips
+(Owned's 16) carry no resting pill and are excluded on both sides.
+
+### After, measured
+
+- **Wind hold**: all three Inspire chips at 0.65 x 0.62 px over 12 s
+  (max frame step 0.70 px) — the camera-only floor, exactly Connect's and
+  Owned's figure. Connect and Owned re-verified unchanged.
+- **Anchors on the lit points**: dots at (713.5, 378), (449.2, 349),
+  (986.3, 451) against ember centres (718, 372), (455, 344), (989, 452) —
+  within the sway amplitude of the rest point, on the glow at every size.
+- **Clearance** (chip pair gaps / worst chip-to-copy):
+  - 1440x900: all pairs ≥ 5.5 px apart (arca/artcompute dy 5.5 with dx
+    96.2; others ≥ 96 px); copy clearance 145.5-247.5 px.
+  - 1280x800: pairs ≥ 2.3 px dy with dx ≥ 66.9; copy 109.1-199.8 px.
+  - 375x812: arca dodges 14.8 px up → artcompute/arca gap 3.8 px, no rect
+    overlaps anywhere; copy 90.7-153.4 px.
+- **Interaction**: elementFromPoint at every dot's VISUAL position (dodged
+  included) lands inside its button; hover opens the popover (`d1ecc23`
+  path) and the chip's transform is stable while hot; Owned's pads
+  (`696e95d`) untouched — they read the same `--j-dot-dy` and it is 0 there.
+- **Goldens**: `capture.py --check` PASS, worst MAE 0.01/255 (chips are DOM
+  chrome, hidden in captures; the scene is untouched by construction).
+- Console: clean at the rest and through hover/release (the only entry is
+  the pre-existing `favicon.ico` 404).
+
+The hover hold (`6d37205`) stays in place as a guard — against a static
+anchor it is a no-op by construction, and it keeps the hot state honest if a
+future chapter registers a moving anchor.

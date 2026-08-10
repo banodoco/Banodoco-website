@@ -1172,22 +1172,53 @@ export function createInspire(sceneApi) {
     return x * x * (3 - 2 * x);
   }
 
-  // W3-B (gap g): initiative labels anchor on the PLUME BODY, not the rim
-  // release lip. The lip projects into the lower third of the Inspire rest
-  // frame — exactly where the bottom-centre copy lives — so two of the three
-  // labels were suppressed by the copy rect. Mid-plume (lifted along the rise,
-  // leaned with the breeze like the spores themselves) keeps each chip inside
-  // its own initiative's sky sector per Plate II and clear of the editorial
-  // block, so all three are readable at the rest.
-  const LABEL_LIFT = 0.55;      // fraction of the plume's mid rise
-  // D17 re-axis: the plume body is a breeze-axis diagonal now, so each chip
-  // rides its own plume's centreline at the same fractional lift as before —
-  // the anchor moves WITH the geometry, the labels themselves are unchanged.
-  const labelOffsets = EXITS.map(spec => {
-    const rise = (spec.riseMin + spec.riseMax) / 2;
-    const yLift = rise * LABEL_LIFT;
-    return new THREE.Vector3(DRIFT_RX * yLift, yLift, DRIFT_RZ * yLift);
-  });
+  // LABEL ANCHORS: the LIT RELEASE LIP, held at its REST pose (2026-08-10).
+  //
+  // Hannah: "make it so that the labels are pointing at the edge of the
+  // mushroom — the part where it's actually lighting up, not the part above"
+  // — and, the same day, "the items and their marker should stay in one
+  // place", i.e. never ride the wind in ANY state (the generalisation of
+  // 6d37205's hover-only hold).
+  //
+  // Both are one change here. The old anchor was mid-plume (W3-B's
+  // labelOffsets lifted the chip 55% up the rise, leaned with the breeze) for
+  // a reason that is now stale: W3-B measured the lip projecting into the
+  // bottom-centre copy rect, but the compositions have moved since (ca7a769
+  // re-centred the cap, 93723f0 pushed the mushroom down) and the three lips
+  // now project 157+ px CLEAR of the copy block at 1440x900 (lips at
+  // y 344-452 against copy top 608.5; measured 2026-08-10). So the chip can
+  // sit where the content is: on the lip-glow ember (ce91bc2) — the lit point
+  // the label names.
+  //
+  // WHY THE REST POSE and not the live lip: the ember is a child of the
+  // swaying cap, and at the Inspire rest it wanders 14.5x20.7 / 18.8x18.4 /
+  // 7.7x4.7 px (ArtCompute/Arca/2RP, 12 s trace) — the exact motion Hannah
+  // wants gone. The hero's EQUIP callout answered this in e20f7ff: anchor to
+  // the sway PIVOT, not the swaying tip. Here that means the lip's world
+  // position with both wind rotations zeroed — swayGroup (organism.js
+  // 'breeze') carries rotation only about the origin, capBend carries the
+  // throat translation plus a rotation-only bend, and the mushroom's own
+  // local transform is static, so the rest matrix collapses to
+  // T(capBend.position) * mushroom.matrix. It does not lie about what it
+  // points at: the ember draws ~86-100 px across on screen and its breeze
+  // swing is +-7-10 px, so the held dot stays inside the lit glow at every
+  // phase of the gust — same argument, same numbers game, as e20f7ff's stalk.
+  //
+  // Measured after (12 s at the rest, 1440x900): every chip holds at
+  // 0.65 x 0.62 px — the camera-only floor, identical to Connect's hubs and
+  // Owned's faces, whose anchors were always static. See
+  // 07-chapter-inspire.md (2026-08-10).
+  let restMat = null;
+  function mushroomRestMatrix() {
+    if (restMat) return restMat;
+    const mush = sceneApi.groups.mushroom;
+    const capBend = mush.parent;          // pivot at the throat (rotation-only in wind)
+    mush.updateMatrix();                  // local matrix: static tilt/lean, set once
+    restMat = new THREE.Matrix4()
+      .makeTranslation(capBend.position.x, capBend.position.y, capBend.position.z)
+      .multiply(mush.matrix);
+    return restMat;
+  }
 
   const _wv = new THREE.Vector3();
   const api = {
@@ -1360,13 +1391,13 @@ export function createInspire(sceneApi) {
       // (out0, the widest) now that the retire is per-exit.
       api.setRestProx(smz((p - (restProgress('inspire') - 0.025)) / 0.018) * out0);
     },
-    /** Node id -> world position of its label anchor: mid-plume, above the
-     *  release lip (W3-B gap g — see labelOffsets above). */
+    /** Node id -> world position of its label anchor: the lit release lip
+     *  (the ce91bc2 ember), at its REST pose so the chip never rides the
+     *  wind — see the mushroomRestMatrix block above. */
     nodeWorld(id) {
       const i = EXITS.findIndex(e => e.id === id || (id === 'tworp' && e.id === '2rp'));
       if (i < 0) return null;
-      return streaks[i].localPos.clone().add(labelOffsets[i])
-        .applyMatrix4(sceneApi.groups.mushroom.matrixWorld);
+      return streaks[i].localPos.clone().applyMatrix4(mushroomRestMatrix());
     },
     /** Damp the breeze lean (1 = full). Spike A's director called this but
      *  plumes.js never exported it - a live TypeError in spike-a/, fixed here

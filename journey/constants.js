@@ -212,6 +212,17 @@ export const HOTSPOT_OUT_K      = 9.0;
 // measured departure, comfortably under the 9.0 the chip's own fade runs at.
 export const HOTSPOT_HOLD_HOME_K = 6.0;
 
+// PILL COLLISION DODGE (2026-08-10). Two resting pills that overlap raise the
+// upper one just clear of the lower — the DOT stays pinned on its node via a
+// compensating CSS translate (--j-dot-dy), so the label moves and the marker
+// does not lie. Exists for Inspire at phone widths: the three lip anchors
+// project 125 px apart there and Arca's full label is 168 px, so Arca's tail
+// crossed ArtCompute's dot (measured 43 x 11 px of pill overlap at 375x812).
+// GAP is the cleared daylight between the two pill rects; MAX matches the
+// horizontal nudge's own "past ~26 px the label stops reading as attached".
+export const HOTSPOT_DODGE_GAP = 4;
+export const HOTSPOT_DODGE_MAX = 26;
+
 /* ------------------------------------------------------------------ */
 /* Documentary handheld layer (W3-B, gap a)                            */
 /* ------------------------------------------------------------------ */
