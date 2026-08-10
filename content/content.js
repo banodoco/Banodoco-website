@@ -234,7 +234,7 @@ export const CONTENT = {
         title: '2RP',
         body: [
           'This is placeholder summary copy standing in for the 2RP spotlight until Content/Ops drafts real copy and Peter approves it before G4. [PLACEHOLDER]',
-          'Per 07-chapter-inspire.md IN-4.3, this contextual spotlight is a distinct behaviour from the persistent top-right 2RP control, which must keep opening the publication directly. [PLACEHOLDER]',
+          'Per 07-chapter-inspire.md IN-4.3, this contextual spotlight is a distinct behaviour from the site menu’s 2RP link, which must keep opening the publication directly. (The header’s own 2RP control was removed 2026-08-10.) [PLACEHOLDER]',
         ],
         status: 'Status: to be confirmed by Banodoco [PLACEHOLDER]',
         link: { label: 'Read the publication', href: '#' },
