@@ -1644,3 +1644,107 @@ snapping on, which is the same complaint answered at the hub that
   still `uColHot`'s weight in the `tip` term.
 - The hero-web dim rides `litAvg`, so it now begins at p 0.385 rather than
   0.400 and is gentler per unit p again. Same deliberate trade as before.
+
+---
+
+## 2026-08-10 — a third of the speed: the road the fourth pass said did not exist (Hannah's brief, item 2)
+
+**The ask, verbatim.** *"When I go into the Connect ecosystem, the way the
+light from the ground lights up — could you make that work a lot slower as
+well, so it feels more dramatic? Right now it flashes up really quickly. It
+should be at maybe a third of the current speed."*
+
+FIFTH request on this pacing. The 2026-08-07 pass above ended with "the
+schedule is now spent", and inside the old route it was: 0.1021 of p was the
+entire distance between the camera-pure resolve's first draw (p 0.3500)
+plus the 0.035 pre-existence lead and the frozen rest at p 0.490. This pass
+was authorised to move the route, and the road comes from three places,
+planned as ONE allocation with brief items 1 and 3 (EXECUTION.md
+2026-08-10):
+
+1. **The rest stop moves inside its own chapter** — route.js `stops [0.65]`,
+   rest p 0.490 → 0.5230, the SAME approved pose (camera.js re-keys the
+   hold to t 0.65; the dive keys keep their shipped poses on the same dive
+   line, re-spaced t 0.77 / 0.91; owned/camera.js and every pose p ≥ 0.6225
+   bit-identical, owned/leg.js's sampled range untouched). The arrival
+   gains the 0.033 of p the dive never needed — in wall-clock the dive is
+   still SLOWER than shipped (2.22x scroll gain against 1.43x p
+   compression).
+2. **scrollVh 4.5 → 10.0** — 2.22x wall-clock per unit p at any fixed
+   scroll speed. Page 26.5 → 32.0 vh at this commit (item 3 adds Final's
+   share separately).
+3. **The one-movement approach gesture** (brief item 1, camera.js) hands
+   the resolve its first draw at p 0.3510 landscape / 0.3360 portrait —
+   measured on the built gesture, the gaze bow (PIN2 y 1.8, the mid stem)
+   aiming the eye at the ground earlier than the old keyed exit did.
+
+The window bounds re-derive by the SAME laws as every prior pass:
+LIGHT_LO = first draw 0.3510 + 0.035 lead = p 0.3860 (leg-t 0.0273);
+LIGHT_HI keeps the rest's 0.0029-p fully-lit margin = leg-t 0.637
+(p 0.5201). FRONT_SOFT 0.32, EASE_MIX 0.55, LIGHT_OVERLAP 0.30, the
+one-route-at-a-time staging, the kindle floor — all untouched. This is a
+re-time, not a re-choreography.
+
+### Measured (0.0015-p instrumented sweep, live page, frame-accurate)
+
+    SCHEDULE               before (c77fb00)   after
+      first drawn          p 0.3500           p 0.3530
+      ADOS depart          0.3850             0.3875
+      ADOS saturate        0.4233             0.4370
+      Hivemind depart      0.4118             0.4220
+      Hivemind saturate    0.4517             0.4730
+      Discord depart       0.4394             0.4595
+      Discord saturate     0.4871             0.5210
+      whole arrival        0.1021 of p        0.1335 of p     1.31x
+      hub kindles          0.4062/0.4271/     0.4055/0.4430/
+                           0.4608             0.4850  (spread 0.0546 -> 0.0795)
+      rest                 fully lit, cores 0.58, uLit [1,1,1] at p 0.5230
+      light before lead    none (max uLit < 1e-4 below p 0.3855, both
+                           directions, both aspects — sub-agent mirror gate)
+
+    WALL-CLOCK at a deliberate 600 px/s (PCHIP surface arithmetic, which
+    reproduces the fourth pass's own measured 3.26 s exactly)
+      whole arrival        3.26 s             10.37 s         3.18x
+      a patch's own lift   0.38 s             1.00 s          2.6x
+      hub-to-hub           0.87 / 1.04 s      ~2.3 / ~2.5 s
+
+    A live-wheel ride on this rig measured 6.3 s for the arrival — the
+    commit-resolution assist (scroll.js carry) inflated by headless frame
+    jitter spending gesture-peak floors; at 60 fps the assist's
+    contribution at a steady deliberate rate is ~zero (the fourth pass's
+    ride equalled its surface arithmetic on the same instrument class).
+
+  So: the schedule is 3.2x slower end to end, each patch of ground takes
+  ~2.6x longer to come up (the front is still bounded by the resolve +
+  lead — a patch cannot slow past what the pre-existence law allows), the
+  three hubs land one-two-three about 2.4 s apart at a deliberate scroll.
+
+### Gates
+
+- Mirror scrub p 0.30 → 0.545 → 0.30, 0.0025 steps, both aspects: max
+  |Δ uLit| 4.0e-3, max |Δ core| 1.3e-2 (grid-pairing residual at the
+  kindle knee, sub-visual), first-drawn p agrees fwd/rev, zero light below
+  p 0.386 either direction. No self-ignition anywhere.
+- Console: 0 errors / warnings / exceptions over full real-wheel rides
+  both aspects.
+- Rest compositions at 1440x900 / 1280x800 / 375x812: all three chips
+  in-frame, clear of the copy block (min clearance 184 px), debugState at
+  the rest: pose (7.943, 2.647, 4.256), fov 62, armed [connect], hotspots
+  ados/hivemind/discord. Deep links #/connect, /discord, legacy /community
+  and flyTo('connect') all land p 0.5230 with correct detail.
+- References: `capture.py --check` at this tree — all ten goldens within
+  the frozen gate (worst MAE 0.01, the known wobble class): the rest's
+  frame at its NEW p reproduces the approved composition pixel-for-pixel.
+  The connect pair re-shot deliberately in this commit with manifest
+  provenance for the rest-p move (bytes equivalent; the pose did not
+  change, its address did).
+
+### Residuals
+
+- The whole-arrival slowdown is 3.2x against the asked "about a third";
+  the per-patch lift is 2.6x — its front is pinned by the pre-existence
+  lead, which is not for sale (the fourth pass's reasoning stands).
+- The commit-assist can compress the felt arrival for a visitor who keeps
+  a momentum stream running across the whole window; the floor is the
+  gesture's own peak, so a genuinely deliberate reader is unaffected.
+- The hero-web dim still rides litAvg and now begins at p 0.386.

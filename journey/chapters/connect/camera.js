@@ -1,104 +1,182 @@
 // chapters/connect/camera.js — CONNECT's camera leg (M4: chapters own their
 // legs; the director composes them per route.js).
 //
-// GROUND RESTAGE (16-connect-ground-restage.md §5): the leg no longer slips
-// under the rim into the gill chamber. Re-keyed 2026-08-04 (Hannah: the
-// Inspire->Connect travel must read as ONE monotonic zoom-out): from
-// inspire/camera.js's last key (p 0.362: pos (8.55, 2.95, 2.85), tgt
-// (0.95, 2.9, -0.9), fov 44) the camera keeps receding and sinking OUTSIDE
-// the rim — camera-to-subject distance and fov only ever grow from the
-// Inspire rest to the Connect rest, no re-approach anywhere — while the
-// gaze slides off the cap down the stem to the base and out across the
-// ground as the network starts to grow. The exit follows the tendrils home
-// toward the trunk, ending near owned/camera.js's entry — the cleanest
-// narrative joint in the ride: after watching the surface network, the
-// camera follows it to the root and dives underground.
+// ONE MOVEMENT (2026-08-10, Hannah: "the transition from Inspire and Empower
+// to Connect the Ecosystem feels a little bit stilted — it's like two
+// separate movements... it could just naturally be one, more dramatic camera
+// movement — like the one from the hero to the Inspire and Empower section").
 //
-// TOP-LEFT / TOP-RIGHT RESTAGE (2026-08-04, Hannah: "the TEXT goes in the
-// TOP RIGHT and the MUSHROOM in the TOP LEFT, with the three anchor points
-// positioned throughout the sensible gap between"). The rest frame is
-// re-composed, not re-invented: the camera keeps the SAME straight dive
-// line toward the trunk (see the exit note below) but slides 0.38 world
-// units further back along it, drops its gaze ~4.5 deg and swings the aim
-// ~12 deg to camera-right while the fov opens 56 -> 62. Consequences at the
-// rest, measured at 1440x900: the whole mushroom (cap + stem + base) lands
-// in the frame's upper-left (box x 31..573, y 26..467 — left 40%, top 52%),
-// the horizon rises to y ~237 so the ground plane owns the lower two-thirds,
-// and the open diagonal band from the lower-left to the mid-right — the gap
-// between the mushroom and the top-right copy block — is all ground for the
-// three hubs to sit in (tendrils.js HUBS).
+// She named the reference exactly, and the reference is a MECHANISM, not a
+// mood: the Mission -> Inspire arrival (inspire/camera.js arrival()) rides
+// every channel — azimuth, radius, height, fov, gaze — on ONE shared
+// trapezoidal ease, so all of them peak together and land together. This leg
+// was the opposite, and measured so (401-sample drift-aware trace, 2026-08-10,
+// journey-v6-plan/07-chapter-inspire.md): position speed was a single EARLY
+// hump — 0 at the rest, peak 92 u/p at p 0.337, collapsed to ~10 u/p by
+// p 0.43 — while the fov rate was a single LATE hump — ~30 deg/p through the
+// swing, peaking at 253 deg/p at p 0.477, right where the position had died.
+// Two channels, two peaks, a 9x speed trough between them: the eye reads a
+// swing that ends, then a zoom that starts. Two movements, exactly as
+// reported. (This is a different fault from the two this leg already had
+// fixed: 6acceac cured a re-approach in the DISTANCE channel, e95820a a
+// stall in the composed frame angle d — both were monotone here. The humps
+// were never in any one channel's direction; they were in the ENVELOPES.)
 //
-// EYE RAISED (2026-08-05, Hannah: "in connect the ecosystem, can you push the
-// camera up a bit, so that the mushroom is more towards the middle of the
-// page vertically"). The mushroom was riding the top edge — its box centred
-// at y 248 of 900 (0.28 of frame) with the cap clipped against y 0. Two
-// things move together here, because the eye alone cannot do it: raising the
-// camera with the target pinned only steepens the gaze and pushes the subject
-// FURTHER up (the two effects nearly cancel — measured ~12 px per world unit
-// of lift). So the whole rig rises 0.25 world units ALONG THE DIVE LINE and
-// the gaze lifts 7 deg with it: rest pitch -15.9 -> -8.9. Measured at
-// 1440x900 the mushroom box moves 45,19..570,477 -> 79,160..575,594 —
-// centre y 248 -> 377, i.e. 0.28 -> 0.42 of the frame, cap clear of the top
-// edge by 160 px — while its LEFT edge and its width are untouched, so the
-// upper-left placement the restage above authored is exactly preserved. The
-// horizon rides down 241 -> 338 (ground still owns the lower ~62% instead of
-// ~73%), and all three hubs travel down with the ground, staying spread
-// through the same open diagonal band.
+// THE FIX IS THE REFERENCE'S OWN SHAPE. The whole travel — Inspire rest
+// (p 0.260) to Connect rest (p 0.5230) — is now ONE analytic gesture,
+// approach() below, composed by the director exactly as it composes the
+// arrival (director.js: arrival | approach | keyed spline). All channels
+// ride the arrival's own trapezoid (RAMP 0.18, peak 1.22x mean):
 //
-// The lift is spent as +y ONLY: rest, drift and exit keep their shipped x/z
-// to within 0.001 and stay COLLINEAR with owned/camera.js's t 0.0 key on one
-// straight dive (new unit (0.89794, 0.16451, 0.40822) out of owned's
-// (2.523, 1.654, 1.792); each key's own unit agrees to 1e-4, tighter than the
-// shipped set's 4e-4). The approach keys rise with it (2.90 / 2.82 / 2.73)
-// so the descent from the Inspire splice stays monotone in y, and every gaze
-// on the leg is re-pitched onto one monotone descent — -0.3 (inspire's last
-// key) -> -4.5 -> -7.6 -> -8.6 -> -8.9 (rest) -> -12.6 -> -15.8 -> -18.5
-// (owned t 0.0) -> owned's single ~-26.5 valley — with each key's YAW kept
-// bit-exact (targets are re-pitched in the vertical plane only).
+//   az     INSPIRE.az (115 deg) -> the rest's 61.81, on azEase — trapezoid
+//          plus the same windowed orbit-breath the arrival carries, strictly
+//          monotonic, breath zeroed (value AND slope) inside both ramps;
+//   r, y   11 -> 9.0107, 2.0 -> 2.647, on the plain trapezoid (the dolly
+//          must not wobble — arrival law);
+//   fov    40 -> 62, SAME trapezoid — this is what kills the late hump: the
+//          widening now happens WITH the swing, not after it;
+//   gaze   quadratic bezier INSPIRE.target -> rest target, bowed through
+//          PIN2 (the upper stem) so the gaze slides off the cap, down the
+//          stem, out to the ground network in one bow — C1, endpoints exact.
+//
+// Because az, fov and the gaze all ride affine(one shared ease), the
+// composed-frame angle d = gazeYaw - camAz + 180 is monotone BY CONSTRUCTION
+// (the e95820a fault cannot re-open), and every channel's rate profile is the
+// same trapezoid — one hump, shared. Measured on the built gesture (see
+// 07-chapter-inspire.md, 2026-08-10): one speed hump peaking mid-leg, fov
+// and yaw peaking with it, subject distance 8.43 -> 10.40 monotone.
+//
+// BOTH ENDPOINTS ARE THE FROZEN APPROVED POSES, imported/derived rather than
+// copied: u = 0 is INSPIRE (the same constants the arrival lands on — the
+// D19 lesson: a seam disagreement is a hard cut), u = 1 is REST_KEY's pose
+// exactly, which is also the keyed spline's first key (hold, zero tangent),
+// so the gesture hands over with matching zero velocity. The trapezoid's
+// zero-slope ends give both rests their ease-in/ease-out.
+//
+// THE REST SITS AT LEG-t 0.65 (route.js stops [0.65], 2026-08-10): the same
+// pose at p 0.5230 instead of 0.490. The 0.15 of leg the dive gives up is
+// spent on the approach — which is where the chapter's own ground-lighting
+// arrival lives (index.js LIGHT_LO/HI), the FIFTH pacing request on that
+// arrival. The dive keys below keep their shipped POSES (the straight dive
+// line to the trunk, collinear with owned/camera.js's t 0.0 key, is the
+// "one continuous dive" invariant) and only re-space in t; every owned key
+// and the p 0.622+ spline (owned/leg.js's sampled range) are untouched.
 //
 // Keys are authored in LEG-LOCAL t over the chapter's route span (0.38..0.60
 // on the shipped route; global p in comments) — never in global p, so
 // re-timing or inserting chapters never invalidates them (merge doc §5).
 import * as THREE from 'three';
+import { ORBIT_BREATH } from '../../constants.js';
+import { INSPIRE } from '../inspire/camera.js';
 
+const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
+// --- CONNECT rest: mushroom upper-LEFT, copy upper-RIGHT (ui.js
+//     CHAPTER_POSITION.connect = 'pos-topright'), the ground plane and its
+//     three hubs spread through the diagonal band between them. Pose
+//     unchanged since the 2026-08-05 eye lift; p 0.490 -> 0.5230 with the
+//     2026-08-10 stop move (route.js), same frame. ---
+const REST_KEY = {
+  t: 0.65,
+  pos: V(7.943, 2.647, 4.256),
+  tgt: V(1.827, 1.028, -4.067),
+  fov: 62,
+  hold: true,
+  note: 'connect-rest',
+};
+
+// The approach gesture's two ends, derived — never copied — from the poses
+// they must match: INSPIRE (the arrival's landing) and REST_KEY (the keyed
+// spline's first hold).
+const A1 = {
+  az: Math.atan2(REST_KEY.pos.x, REST_KEY.pos.z),
+  r: Math.hypot(REST_KEY.pos.x, REST_KEY.pos.z),
+  y: REST_KEY.pos.y,
+  fov: REST_KEY.fov,
+};
+
+// The gaze's mid-bow control point: the mid stem, a touch toward the
+// stream side — the cap stays composed while the aim walks down the stem to
+// the ground network (the same PIN idea the arrival's bezier uses). Chosen
+// against the live frame: subject distance stays strictly monotone
+// (8.43 -> 10.45, one 0.002-unit flat spot inside the first ramp) and the
+// mid-leg frame holds the whole organism while the ground rises into the
+// lower two-thirds. y sits at the mid stem rather than the cap line
+// (2.1 -> 1.8): the bow aims the gaze downward EARLIER, which is what hands
+// the chapter's camera-pure resolve its first draw at p ~0.36 — the front
+// bound of the ground-lighting schedule (index.js LIGHT_LO) — while the
+// composed frame keeps the cap inside the upper half throughout.
+const PIN2 = V(1.0, 1.8, -1.8);
+
+function smooth01(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
+
+// The arrival's trapezoidal velocity profile, verbatim (inspire/camera.js):
+// smoothstep ramps at both ends, CONSTANT rate through the middle, peak
+// 1/(1 - RAMP) = ~1.22x the mean. One profile, every channel.
+const RAMP = 0.18;
+function trapEase(s) {
+  s = s < 0 ? 0 : s > 1 ? 1 : s;
+  const norm = 1 - RAMP;
+  const ramp = (u) => RAMP * (u * u * u - (u * u * u * u) / 2);   // integral of smoothstep
+  if (s < RAMP) return ramp(s / RAMP) / norm;
+  if (s > 1 - RAMP) return 1 - ramp((1 - s) / RAMP) / norm;
+  return (RAMP / 2 + (s - RAMP)) / norm;
+}
+
+// The plateau breathes (W3-B gap b), exactly as the arrival's does: windowed
+// to zero (value AND derivative) inside both ramps, azimuth strictly
+// monotonic, the ends and both rest poses untouched.
+function azEase(s) {
+  s = s < 0 ? 0 : s > 1 ? 1 : s;
+  const w = smooth01(s / RAMP) * smooth01((1 - s) / RAMP);
+  return trapEase(s)
+    + ORBIT_BREATH.amp * Math.sin(2 * Math.PI * ORBIT_BREATH.cycles * s) * w;
+}
+
+/** The Inspire -> Connect gesture. `u` is gesture-local (0 = the Inspire
+ *  rest, 1 = the Connect rest); the composer maps global p over
+ *  [restProgress('inspire') .. restProgress('connect')] onto u. */
+function approach(u, out) {
+  const e = azEase(u);
+  const m = trapEase(u);
+  const az = INSPIRE.az + (A1.az - INSPIRE.az) * e;
+  const r = INSPIRE.r + (A1.r - INSPIRE.r) * m;
+  const y = INSPIRE.y + (A1.y - INSPIRE.y) * m;
+  out.pos.set(Math.sin(az) * r, y, Math.cos(az) * r);
+  // Gaze: quadratic bezier INSPIRE.target -> REST_KEY.tgt bowed through PIN2
+  // — C1-continuous, endpoints exact, the organism framed mid-swing while
+  // the aim walks down the stem to the ground.
+  const w0 = (1 - m) * (1 - m), w1 = 2 * m * (1 - m), w2 = m * m;
+  out.target.set(
+    w0 * INSPIRE.target.x + w1 * PIN2.x + w2 * REST_KEY.tgt.x,
+    w0 * INSPIRE.target.y + w1 * PIN2.y + w2 * REST_KEY.tgt.y,
+    w0 * INSPIRE.target.z + w1 * PIN2.z + w2 * REST_KEY.tgt.z,
+  );
+  out.fov = INSPIRE.fov + (A1.fov - INSPIRE.fov) * m;
+  return out;
+}
+
+/** QA: a human-readable name for a gesture-local u (composer's poseNameAt). */
+function approachName(u) {
+  return `approach s=${Math.max(0, Math.min(1, u)).toFixed(2)}`;
+}
+
 export const CAMERA = {
+  approach,
+  approachName,
   keys: [
-    // --- descent OUTSIDE the rim: one continuous widening from the Inspire
-    //     rest (monotone subject-distance + fov — no re-approach), the gaze
-    //     walking down the stem toward the base; the first tendrils leave
-    //     the base in frame as the growth window opens (leg t 0.10) ---
-    { t: 0.13636363636363624, pos: V(8.440, 2.90, 3.280), tgt: V(1.140, 2.210, -1.563), fov: 48 },                                   // p 0.410  pitch -4.5  yaw -123.56
-    { t: 0.30000000000000004, pos: V(8.280, 2.82, 3.720), tgt: V(1.458, 1.576, -2.636), fov: 53 },                                   // p 0.446  pitch -7.6  yaw -132.97
-    { t: 0.409090909090909,   pos: V(8.100, 2.73, 4.050), tgt: V(1.674, 1.235, -3.462), fov: 58 },                                   // p 0.470  pitch -8.6  yaw -139.46
-    // --- CONNECT rest: mushroom upper-LEFT, copy upper-RIGHT (ui.js
-    //     CHAPTER_POSITION.connect = 'pos-topright'), the ground plane and
-    //     its three hubs spread through the diagonal band between them.
-    //     Eye raised 2026-08-05 (see the header note): +0.25 along the dive
-    //     line and +7 deg of gaze, which drops the mushroom from 0.28 to
-    //     0.42 of the frame height without moving it off the left third. ---
-    { t: 0.5,                 pos: V(7.943, 2.647, 4.256), tgt: V(1.827, 1.028, -4.067), fov: 62, hold: true, note: 'connect-rest' }, // p 0.490  pitch -8.91 yaw -143.69
-    // --- exit re-keyed 2026-08-04 (Hannah: Connect->Owned must read as ONE
-    //     continuous down-and-forward dive, no whip at the soil). The drift
-    //     already creeps along the dive line toward the trunk (the old drift
-    //     backed away +z, so the exit had to reverse it), and the exit key
-    //     rides the same line: from here to the Owned rest, gaze yaw walks
-    //     -132 -> -94 deg MONOTONICALLY (the old exit overswung to -71 and
-    //     came back) and gaze pitch bows through a single ~-26 deg valley.
-    //     The near-base stretch brightens (index.js uExit) as radius closes.
-    //
-    //     THE DIVE LINE IS PRESERVED. rest, drift, exit and owned/camera.js's
-    //     t 0.0 key are all COLLINEAR on the straight approach to the trunk
-    //     (unit (0.9033, 0.1238, 0.4107) out of owned's (2.523, 1.654, 1.792));
-    //     the top-left/top-right restage only slid the rest from arc 5.62 to
-    //     6.00 along that same line and re-spaced the drift (4.92 -> 5.05) so
-    //     the extra 0.38 units are spent in the slow creep, not in the dive.
-    //     Speed profile 22 -> 80 -> 65 u/p (was 17 -> 76 -> 65). Gaze walks
-    //     yaw -126.3 -> -134.6 -> -143.0 -> -148.0 (owned t 0.0) with zero
-    //     derivative sign flips, and pitch descends -15.9 -> -16.9 -> -17.9
-    //     -> -18.5 straight into owned's single ~-26.5 valley — no crest-dip.
-    { t: 0.6909090909090911,  pos: V(7.0846, 2.4897, 3.8657), tgt: V(0.530, 0.403, -2.779), fov: 61.5, note: 'connect-rest-drift' }, // p 0.532  pitch -12.6 yaw -135.39
-    { t: 0.8863636363636362,  pos: V(3.9863, 1.9221, 2.4572), tgt: V(-1.101, 0.119, -1.377), fov: 54 },                              // p 0.575  pitch -15.8 yaw -127.00
+    REST_KEY,                                                                                                         // p 0.5230  pitch -8.91 yaw -143.69  (hold)
+    // --- exit: the "one continuous dive" (2026-08-04) — POSES bit-exact
+    //     shipped, re-spaced in t for the 0.65 rest (2026-08-10). The drift
+    //     creeps ALONG the dive line toward the trunk; the exit rides the
+    //     same straight line to owned/camera.js's t 0.0 key (2.523, 1.654,
+    //     1.792); gaze yaw walks -143.7 -> -148 monotonically and pitch
+    //     descends -8.9 -> -18.5 straight into Owned's single ~-26.5 valley.
+    //     Segment speeds 36 -> 112 -> 82 u/p (shipped 22 -> 80 -> 65 over
+    //     1.43x the p) — and in wall-clock the dive is SLOWER than shipped
+    //     everywhere (scrollVh 4.5 -> 10.0 outweighs the p compression). ---
+    { t: 0.77, pos: V(7.0846, 2.4897, 3.8657), tgt: V(0.530, 0.403, -2.779), fov: 61.5, note: 'connect-rest-drift' }, // p 0.5494  pitch -12.6 yaw -135.39
+    { t: 0.91, pos: V(3.9863, 1.9221, 2.4572), tgt: V(-1.101, 0.119, -1.377), fov: 54 },                              // p 0.5802  pitch -15.8 yaw -127.00
   ],
 };

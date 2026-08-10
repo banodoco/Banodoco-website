@@ -374,9 +374,21 @@ export const CAMERA = {
   // it above Connect's settled first key and the vertical had to turn once.
   // The rest is now BELOW Connect's key, so dy climbs 3.112 -> 6.085 with
   // nothing to unwind: the cap rises monotonically across the whole leg.
+  // ------------------------------------------------------------------
+  // ONE MOVEMENT (2026-08-10, Hannah's brief item 1). The rest-drift and
+  // exit keys that used to live here (t 0.7167 / 0.9250 — the D19/D20/D21
+  // re-derivations above) are RETIRED: the whole Inspire -> Connect travel
+  // is now one analytic gesture, connect/camera.js approach(), composed by
+  // the director over p [restProgress('inspire') .. restProgress('connect')]
+  // exactly as the arrival is composed below the rest. The D20/D21 rules
+  // remain above as the record of why the keyed form kept failing the
+  // composed frame: two keyed stations gave the leg two envelopes (an early
+  // position hump, a late fov hump — measured in 07-chapter-inspire.md,
+  // 2026-08-10), and the cure is the arrival's own shape: every channel on
+  // ONE shared trapezoid. The rest key stays: it is the arrival's landing
+  // and the gesture's departure, and any disagreement between the three
+  // parameterisations is a hard cut at the seam (the D18 lesson above).
   keys: [
     { t: 0.5,                pos: V(9.9694, 2.0000, -4.6488), tgt: V(2.3371, 2.4199, -1.1052), fov: 40,    hold: true, note: 'inspire-rest' },  // p 0.260  az 115.0  d 8.43  dx  -0.10  dy +3.11
-    { t: 0.7166666666666667, pos: V(10.4866, 2.2495, -2.2641), tgt: V(2.0576, 2.4106, -0.8396), fov: 41.63, note: 'inspire-rest-drift' },       // p 0.312  az 102.2  d 8.55  dx  -2.59  dy +3.72  yaw -80.4
-    { t: 0.9249999999999999, pos: V(9.5128, 2.6825, 1.6920), tgt: V(1.2093, 2.3779, -0.8526), fov: 44.49 },                                     // p 0.362  az  79.9  d 8.69  dx  -6.95  dy +4.78  yaw -107.0
   ],
 };

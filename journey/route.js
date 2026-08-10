@@ -30,7 +30,25 @@ export const DEFAULT_STOP = 0.5;      // mid-chapter rest (was REST_POSE)
 export const ROUTE = [
   { id: 'mission', span: 14, nav: 'Mission', stops: [0.0], scrollVh: 3.5 },
   { id: 'inspire', span: 24, nav: 'Inspire', scrollVh: 7.5 },
-  { id: 'connect', span: 22, nav: 'Connect', scrollVh: 4.5 },
+  // stops [0.65], not the DEFAULT_STOP, and scrollVh 4.5 -> 10.0 (2026-08-10,
+  // Hannah's brief items 1-2 — the FIFTH pass on the ground-lighting pace, and
+  // the light schedule was reported FULLY SPENT at the fourth (c77fb00):
+  // 0.1021 of p was the whole distance between the camera-pure resolve's
+  // first draw (p 0.3500) plus its 0.035 pre-existence lead and the frozen
+  // rest at p 0.490. Both authorised levers are pulled here, together:
+  //   · the rest slides to leg-t 0.65 (p 0.490 -> 0.5230) — the SAME approved
+  //     pose (connect/camera.js re-keys the hold to t 0.65; references
+  //     re-shot same-commit, byte-checked), which hands the arrival another
+  //     0.033 of p that used to belong to the dive. The dive keys re-space
+  //     onto the remaining 0.35 of leg (same dive line, same owned keys).
+  //   · scrollVh 4.5 -> 10.0 stretches the chapter's wall-clock 2.22x at any
+  //     fixed scroll speed.
+  //   Net: the ground-lighting arrival runs ~3x its former wall-clock, which
+  //   is the "about a third of the current speed" asked for. The same road
+  //   also carries brief item 1: the Inspire->Connect travel is now ONE
+  //   analytic gesture (connect/camera.js approach()) and the extra scroll
+  //   is what lets it breathe. Page cost: +5.5 vh.
+  { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 10.0 },
   { id: 'owned',   span: 25, nav: 'Owned',   scrollVh: 5.0 },
   // The epilogue is not a sixth peer chapter: it keeps a route (#/final) but
   // no nav entry — the LAST nav'd chapter stays highlighted through it (v6).
@@ -149,7 +167,10 @@ export function navChapterAt(p) {
   const LEGACY = {
     starts: [0.00, 0.14, 0.38, 0.60, 0.85],
     ends:   [0.14, 0.38, 0.60, 0.85, 1.00],
-    rests:  [0.00, 0.14 + (0.38 - 0.14) * 0.5, 0.38 + (0.60 - 0.38) * 0.5,
+    // Connect rest 0.5 -> 0.65 of its span (0.490 -> 0.5230): deliberate,
+    // 2026-08-10 — the ground-lighting road rebalance (see the ROUTE entry's
+    // comment; same pose, references re-shot same-commit).
+    rests:  [0.00, 0.14 + (0.38 - 0.14) * 0.5, 0.38 + (0.60 - 0.38) * 0.65,
              0.60 + (0.85 - 0.60) * 0.5, 0.85 + (1.00 - 0.85) * 0.8],
   };
   const TOL = 1e-12;
