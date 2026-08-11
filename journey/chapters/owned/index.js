@@ -318,6 +318,48 @@ export function createOwned(sceneApi, content) {
   const SINK_D = 0.94;
   const KEEP_X0 = 4.6, KEEP_XW = 0.8;
 
+  // THE SOIL HORIZON'S TWO CAMERA-PURE TERMS (2026-08-11 — Hannah, on the
+  // Connect -> Owned crossing: "the ground should be RICHER as we're going
+  // into it"). Both are functions of camera DEPTH BELOW SOIL alone, exactly
+  // like `sink` above, so fc1e151's law is carried, not bent: what shows the
+  // earth is the lens being in it. Full derivation and the measurement that
+  // motivates them: substrate.js, the ceiling's own note.
+  //
+  //   LID_D    the lid goes solid 0.14 units under, not over SINK_D's 0.94.
+  //            A metre of soil is opaque the moment your eye is beneath it;
+  //            the shipped tree left it 90% TRANSPARENT at depth 0.2, which
+  //            is what let the above-ground world graze through the crossing
+  //            and then vanish in one step. 0.14 spans p 0.6927 -> 0.6957 on
+  //            the dive — three frames at scroll speed, i.e. a threshold.
+  //   PASS_*   the horizon layers are lit while the lens is INSIDE them:
+  //            up by depth 0.06, held to 0.60, back to 0 by 0.90. PASS_ON is
+  //            DELIBERATELY SHORTER THAN LID_D: the soil the lens has entered
+  //            reads before the lid above it finishes closing, so the crossing
+  //            is a hand-off with an overlap rather than a gap. At 0.16 (the
+  //            first build) the two completed together and the frame still
+  //            stepped 33 -> 22 in 0.002 of p.
+  //
+  //            PASS_HI IS SET BY THE SHALLOWEST REST, NOT THE LANDSCAPE ONE.
+  //            The Owned rest is a different pose per aspect — portrait.js
+  //            re-composes it — and MEASURED at the three shipped viewports
+  //            the rest depth is 1.207 (1440x900) but only 0.987 (430x932 and
+  //            375x812, fov 64, pitch -15.4). The first build used 1.15,
+  //            which left the horizon 47% LIT at the portrait rest and moved
+  //            owned@430x932 by MAE 0.73 (1.9% px>8, all of it in the top four
+  //            tenths of the frame). 0.90 clears the shallower rest by 0.087,
+  //            so PASS_HI < every rest depth is the frozen-composition
+  //            guarantee on EVERY aspect: no rest can contain one felt strand
+  //            or one grain, and both owned goldens are untouched (measured
+  //            0.00 / 0.00 after).
+  //
+  //            It also lands the choreography where it belongs. Depth 0.60 ->
+  //            0.90 is p 0.7035 -> 0.7107 on the dive, and SINK_D puts the
+  //            colony at 70% -> 97% across exactly that stretch: the horizon
+  //            hands over to the root world as the root world arrives, so the
+  //            soil owns the murk window (0.692-0.712) and nothing else does.
+  const LID_D = 0.14;
+  const PASS_ON = 0.06, PASS_HOLD = 0.60, PASS_HI = 0.90;
+
   /* ================================================================
      Chapter state + per-frame
      ================================================================ */
@@ -352,13 +394,21 @@ export function createOwned(sceneApi, content) {
     // takes: scrub, reverse scrub, or a nav jump's blend. The camera is final
     // for this frame by the spine-first animator order (journey.js).
     const cp = sceneApi.camera.position;
-    const sink = smooth01((leg.groundY(cp.x, cp.z) - cp.y) / SINK_D);
+    const depth = leg.groundY(cp.x, cp.z) - cp.y;
+    const sink = smooth01(depth / SINK_D);
     const keep = smooth01((-cp.x - KEEP_X0) / KEEP_XW);
     const arrival = Math.max(sink, keep);
     const eff = amount * arrival;
-    group.visible = eff > 0.003;
+    // The soil horizon rides its own two depth terms (see LID_D / PASS_* ),
+    // both 0 above ground, so they can only ADD inside the crossing.
+    const lidA = amount * smooth01(depth / LID_D);
+    const passA = amount * smooth01(depth / PASS_ON)
+                * (1 - smooth01((depth - PASS_HOLD) / (PASS_HI - PASS_HOLD)));
+    group.visible = Math.max(eff, lidA, passA) > 0.003;
     if (!group.visible) {
       substrate.setFade(0);
+      substrate.setLid(0);
+      substrate.setPassage(0);
       portraits.setFade(0);
       frontMat.uniforms.uFade.value = 0;
       for (const pd of pods) { pd.mat.uniforms.uFade.value = 0; }
@@ -366,6 +416,8 @@ export function createOwned(sceneApi, content) {
     }
 
     substrate.setFade(eff);
+    substrate.setLid(lidA);
+    substrate.setPassage(passA);
     // Final-surface mask (17-final-field.md, Hannah): the colony stays armed
     // through the whole epilogue (OWNED_HOLD_HI past-the-end), and the Final
     // cutaway deliberately exposes it in section — but the contributor FACES
