@@ -63,7 +63,13 @@
 
   <div class="ui">
     <nav id="site-nav" tabindex="-1" aria-label="Primary">
-      <a class="logo" href="#">BANODOCO</a>
+      <!-- THE WORDMARK BECAME THE MARK 2026-08-11 (Hannah: "use it as the logo
+           instead of the BANODOCO text"). The isometric wireframe B is a
+           RASTER (assets/brand/), so it arrives as a MASK on this <i> and the
+           colour is painted in CSS — hero.css .logo/.logo .mark has the why.
+           Empty element, aria-hidden: the link carries the name the visible
+           word used to, exactly as the Discord control beside it does. -->
+      <a class="logo" href="#" aria-label="Banodoco"><i class="mark" aria-hidden="true"></i></a>
       <div class="nav-cta">
         <!-- 2RP left this row 2026-08-10 (Hannah: "remove it from the header,
              leave it in the Inspire section") — the 2RP node in Inspire and

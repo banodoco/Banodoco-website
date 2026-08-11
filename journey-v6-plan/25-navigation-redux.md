@@ -1249,3 +1249,191 @@ than a disappearance.
 **The destination is still nobody's.** `href="#"` — still the unconfirmed
 placeholder, still marked in both tiers' comments and `data-placeholder` in
 Tier 3.
+
+---
+
+## 2026-08-11 (later still) — The wordmark becomes the mark (Hannah: "Can you crop this properly and then use it as the logo instead of the BANODOCO text? … And maybe the Discord logo needs a ring around it in the top right or something.")
+
+**Files:** `index.html`, `hero.css`, `static/index.html`, `tools/build-mark.py`
+(new), `assets/brand/` (new).
+
+The word `BANODOCO` is gone from both tiers. In its place is the mark Hannah
+supplied: an **isometric wireframe capital B**, drawn as glowing amber line
+art, cropped to its ink and cut out on the source's own alpha.
+
+### The treatment: a mask, not an image
+
+The central fact about the asset is that it is **taller than it is wide**
+(814x1112, aspect 0.732) where the thing it replaces was a long thin word.
+The second fact is that it arrived **amber** — already lit.
+
+It ships as a **CSS mask painted with `currentColor`**, not as an `<img>`.
+Two reasons that are really one:
+
+1. **State.** `5762167` established that *gold is this site's lit state* and
+   that spending it at rest is what made the old Discord badge shout. The
+   control at the other end of this row rests in parchment and lifts to
+   `--gold-bright` on hover and keyboard focus. A baked amber raster is lit at
+   rest and has **nowhere to go when you touch it** — the row would have had
+   one control that answers and one that cannot. Masked, the B is the same ink
+   as its neighbour and lifts with it. The two ends are peers in colour and in
+   behaviour, not merely in size.
+2. **Bytes.** Only the alpha channel is needed, so what ships is grayscale +
+   alpha at **2.9–9.7 kB** instead of the 28–155 kB colour cutouts.
+
+The full-page frame settled it: the page's centre is a glowing amber wireframe
+mushroom. **An amber B competes with the specimen; a parchment B lets it
+lead** — and the mark's own wireframe language then rhymes with the specimen
+instead of shouting over it. Rest alpha is **0.82**, measured against the
+neighbouring 0.74: the B is a lattice of many thin lines where the clyde is
+one closed outline, so the same alpha reads lighter on it and went ghostly.
+
+**Masking on alpha, not luminance**, was also measured. The master's RGB
+carries a lighting gradient (bright near faces, dark far ones); a luminance
+mask drops the far faces almost entirely and the drawing comes apart into an
+illustration with holes. On alpha every line holds the same hairline the `.co`
+leaders and the Discord outline are drawn at — which is what makes it read as
+a *mark* and not a picture of one. Nothing was traced or re-drawn.
+
+`tools/build-mark.py` derives the masks from the master and `--check`s them
+byte-for-byte, so the raster step is reproducible rather than folkloric.
+
+### The size, and how the row's edge survived it
+
+Shot in the real row at 30/33/36/40/44/48. **Under 36 the interior lattice
+mushes** and it stops being a drawing; **over 44 it owns the frame**. The word
+it replaces was 17px of cap height spread over 140px — matching that would
+have been both unreadable and, oddly, still too heavy.
+
+**40px** at desktop, **34px** portrait (-15%, close to the word's own
+1.05rem -> 0.92rem step). At 40 the mark is 29.27px wide against the Discord
+outline's 26 — nearly the same footprint at nearly the same weight, at
+opposite ends of the row.
+
+The row's bottom edge is camera-balanced, and 40 > the 33px band. Rather than
+redistribute nav padding (five rules, five magic numbers, fragile), **the mark
+overflows its box symmetrically**: `.logo` keeps the band's exact height and
+the ink hangs 3.5px past it top and bottom. Padding is whitespace and nav's
+height is still `max(33, 33)`, so **navBottom is arithmetically untouched** —
+verified identical in every state and at every breakpoint.
+
+| | before | after |
+|---|---|---|
+| navBottom @1440x900 | 100.1875 | **100.1875** |
+| navBottom @1280x800 | 100.1875 | **100.1875** |
+| navBottom @375x812 | 70.03125 | **70.03125** |
+| navBottom @430x932 | 70.03125 | **70.03125** |
+| logo box @desktop | 122x17 (text) | 29.27x33 |
+| logo ink @desktop | 122x17 | **29.27x40** |
+| logo ink @375 | 121.53x17 | **24.88x34** |
+| Discord ink @desktop | 20x15.16 | **26x19.71** |
+| Discord ink @375 | 18x13.64 | **22x16.67** |
+| touch target, both | 44x44 | **44x44** |
+| bytes @1x / 2x / 3x | 0 | **2 983 / 4 777 / 9 729** |
+
+Because navBottom never moved, **Inspire's portrait framing never moved**:
+`inspire@430x932` came back at MAE 0.00/255, which is the direct proof.
+
+### The hit pad had to leave PL-1.4
+
+PL-1.4 pads `.pill, .cta, .logo` to 44px, but only on coarse pointers, and it
+sizes on `max(100%, 44px)` — **the element's box**. Correct while the logo was
+a word, whose box *is* its ink. Wrong now: on a desktop pointer the top and
+bottom 3.5px of the drawing would have been **visible but not hoverable**. So
+`.logo` carries its own pad, unconditionally, sized to the **ink**
+(`max(var(--mark-h), 44px)`). Hit-tested at all four extremes of the ink at
+both breakpoints: all four resolve to the link. This is a superset of PL-1.4,
+not an exception to it — still >= 44x44 everywhere, just enforced in one place.
+
+The **focus ring** moved for the mirror-image of `5762167`'s reason. There the
+`<a>` was *taller* than its glyph; here it is *shorter* — 33px of box under
+40px of drawing — so the shared `nav a:focus-visible` ring cut across the B.
+It cannot hang on `.mark` either: **`mask` clips an element's own outline away
+with everything else it paints**, so the ring would simply not draw. A pseudo
+sized to the ink is drawn outside the masked box and hugs the drawing exactly.
+
+### The Discord ring: tried, shot, rejected — and what was done instead
+
+Hannah asked for one, and the case had genuinely changed since `5762167` took
+the old one off: both ends of the row are marks now rather than a mark and a
+word, so a ring could have read as a **matched frame** rather than a badge. It
+was worth shooting rather than assuming. Shot at **30, 34 and 40px diameter**,
+hairline, unfilled, same `currentColor`, beside the 40px B.
+
+**All three failed, the same way:**
+
+- **A circle is a closed shape.** After `5762167` there is not one enclosed
+  form left in this header — the B is open wireframe, the clyde is open
+  outline, the `.co` leaders and the `.cta` are open line. The ring puts the
+  only closed contour on the page back in the corner it was removed from, and
+  it reads as a **button** again. That *is* the dominance she objected to,
+  arriving by a slightly quieter road.
+- **It inverts the hierarchy.** At 34 and 40 the eye goes to the *ring* before
+  the *logo*, because a circle in an otherwise angular field is the strongest
+  figure in it. The logo has to lead the row.
+- **The geometries fight.** The B is all 30/60/90 edges and flat faces; a true
+  circle shares no vocabulary with it. The pair looked assembled from two
+  different kits.
+
+**But the instinct behind the request was right.** What she was reading is
+that the row changed underneath that control: it used to answer a 140x17 word
+and now answers a 29x40 drawing, and at 20px the clyde had become the smaller
+*order* of object — the eye stopped treating the two ends as a pair. So the
+remedy is a **rebalance, not an enclosure**: **20 -> 26px** at desktop,
+**18 -> 22px** portrait (both -15%, the same step the mark takes, so the two
+ends hold their proportion at every breakpoint). Everything `5762167`
+established is intact — official path, unfilled, 1px `vector-effect` stroke,
+no disc, flush to the margin, 33px box. 26px of open outline is a long way
+from the lit filled disc she called excessively dominant.
+
+### Tier 3
+
+Same treatment, same files, same three resolutions one directory up. Its row
+is **not** camera-balanced (nothing downstream is framed against it), so there
+the box is simply the touch target — `min-height: 44px` — and the mark sits
+inside it rather than overflowing it.
+
+### Gates
+
+- **Before/after header shots at 1440x900, 1280x800 and 375x812**, in rest,
+  hover and focus, for *both* controls; mobile at actual size and zoomed.
+- **navBottom byte-identical at all four breakpoints** (table above), in every
+  interaction state, and `inspire@430x932` at MAE 0.00 — the portrait
+  composition is provably untouched, so no camera field went stale.
+- **Accessible name survives**: AX name `"Banodoco"` from `aria-label`, the
+  `<i class="mark">` is `aria-hidden="true"`, no text and no `<img>`. Mirrors
+  the Discord control exactly. Reached on **tab hop 5** with real Tab
+  keypresses (skip link -> 03/01/02 callouts -> logo -> Discord),
+  `:focus-visible` matching, gold ring painting, in both tiers.
+- **Touch target at 375: 44x44**, and all four extremes of the *ink*
+  hit-test to the link at both breakpoints.
+- **`prefers-reduced-motion`**: `transition: none` on both marks; rest and lit
+  states intact and instant.
+- **Bytes**: exactly **one** raster fetched per breakpoint —
+  `mask-48` (2 983 B) at 1x, `mask-64` (4 777 B) at 2x, `mask-96` (9 729 B) at
+  3x. `image-set` verified live; a plain `url()` is declared *first* as the
+  fallback, because a dropped `image-set` would otherwise paint the element as
+  a **solid parchment rectangle**.
+- **Tier 3 drift checker: 5 problems — the same 5 that were already there.**
+  No sixth.
+- **Console over a full ride** (`mission -> final -> mission`) at all four
+  breakpoints: **clean**, 0 errors / warnings / uncaught / rejections.
+- **`capture.py --check`: PASS.** Nine of ten frozen references byte-identical;
+  `owned@*` at MAE 0.02/255, **confirmed pre-existing** by re-running the gate
+  with these changes stashed at `5762167` and getting the identical 0.02. The
+  header is DOM chrome and is hidden at capture, so nothing here can reach it.
+
+### Residuals
+
+- The Discord destination is **still nobody's** — `href="#"`, still the
+  unconfirmed placeholder in both tiers.
+- The four colour downscales that came with the master
+  (`mark-b-{512,256,160,96}.png`) are **not committed**: they are derived
+  intermediates the mask pipeline supersedes, and shipping ~2.1 MB of unused
+  raster into a page whose whole language is vector would be the wrong trade.
+  The master is kept (losslessly re-encoded, 1.30 -> 1.20 MB) and everything
+  served is regenerable from it via `tools/build-mark.py`.
+- The mark is a **raster in a vector page**. At 3x it is a 9.7 kB fetch, which
+  is cheap, but a true vector B would be cheaper still and would never need an
+  `image-set`. Tracing was rejected as lossy against artwork this fine; if a
+  vector master ever exists, `.logo .mark` is the only rule that changes.
