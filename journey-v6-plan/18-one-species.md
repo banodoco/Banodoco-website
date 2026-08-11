@@ -2155,3 +2155,182 @@ transition at the same cruise in either direction.
 2. `gesturePeak` (QA getter) now reports at the current bracket's span
    slope and `gesturePeakPx` exposes the raw measurement; scrollprobe's
    `pvh` column reads the converted value.
+
+## 17. The end-hold was the bound, not the page (2026-08-11, Hannah's SIXTH request on this moment)
+
+**The ask, verbatim.** *"Can you make the mushrooms lighting up when I enter
+the Final section happen a lot slower too?"*
+
+Six requests. §15 delivered 1.86x overall and 2.05–2.7x per body, said the
+ask had been 4x, and named the bound: *"the levers that remain are the page
+itself, or un-freezing the Final rest composition — say no to both lightly."*
+That was wrong about where the road went, and the error is worth stating
+plainly because it had been costing every previous pass.
+
+### The measurement §15 did not take: where the chapter's scroll actually lands
+
+The Final chapter had 12.0 vh. The arrival (first rung crossed at p 0.8560 →
+the rest at 0.9700) got **8.33** of it. The other 3.47 vh went to the
+**end-hold**, p 0.97 → 1.0 — a held frame, `hold: true` on the rest camera
+key, nothing on screen that moves. Three and a half screens of wheel for a
+picture that does not change.
+
+Worse, that share GROWS with every raise, because the spline's only knots
+were chapter boundaries: give the chapter more scroll and PCHIP hands the
+flat terminal end its cut. Costed on the live spline:
+
+    Final scrollVh (the §15 lever, extended)   arrival    end-hold   page
+      12  (shipped)                             8.33 vh    3.47 vh   38.0
+      16                                        9.75       6.04      42.0
+      20                                       12.18       7.55      46.0
+      24                                       14.62       9.05      50.0
+
+**A 12 vh page cost, for one chapter, buys 1.75x.** That is the curve §15
+was climbing when it declared the page the bound. The page was never the
+bound; the end-hold was.
+
+### What changed — the route learns where its own scroll goes
+
+`journey/route.js` gains two declarations, and `journey/scroll.js` builds its
+spline from them. No p-value, span, stop, camera key, ladder rung, `DRAW_W`,
+`REST_MARGIN` or golden moves.
+
+1. **`segVh`** — a chapter may split its `scrollVh` across the sub-segments
+   its own `stops` delimit, putting a spline knot at each rest. Final
+   declares `segVh: [17.0, 0.6]`: the arrival takes 17.0 and the end-hold
+   0.6. The end-hold stays a true hold and p = 1 stays a resolution anchor
+   — it just stops charging admission.
+
+2. **`shape: { seg: 0, k: [2.219, 0.451] }`** — the arrival segment's two end
+   tangents are pinned to fixed MULTIPLES of its own mean slope. This is the
+   part that makes the change a *stretch* rather than a *re-timing*, and it
+   was not optional:
+
+   - **Without it**, the knot's tangent comes from its neighbours, and the
+     neighbours here are a chapter running at 20 vh per unit p and a hold
+     running at 20, while the arrival runs at 142. Pinning only the hold knot
+     put a **trough** in the arrival's gain — it fell to 0.0026 p/vh at
+     p 0.95 and rose again into the rest, i.e. a stall at the climax followed
+     by a re-acceleration — and stretched the ladder 1.48x at the openers
+     against 2.39x at the closers. Letting PCHIP have the knot outright was
+     worse: some bodies came out **0.53x, i.e. FASTER than before**.
+   - **With it**, a cubic Hermite whose end tangents scale with its own mean
+     slope has a normalised gain curve independent of how much scroll it is
+     given. The k values are not invented — they are the shipped spline's
+     own, measured on it (the arrival's end tangents were 2.219x and 0.451x
+     its mean slope). Re-imposing them makes the new curve the old curve,
+     scaled.
+
+3. Funding: **1.9 vh of the growth is paid for by the Inspire trim** that
+   Hannah's other brief item asked for (16-connect-ground-restage.md,
+   2026-08-11). Page 38.00 → **41.85 vh**, +3.85.
+
+### Measured (live pull curve p 0.845–0.9995 at 0.0005 steps, 72 seats read from `chapters.final.seats`, scroll read from the live `scrollFor`)
+
+    WHOLE PROGRESSION (first rung crossed p 0.8560 -> rest p 0.9700), 1 vh/s
+      §15 / 22ce47d  (scrollVh 12)      8.33 s
+      this pass      (segVh 17.0/0.6)  16.60 s      1.99x
+
+    PER-BODY (whole charge+take window, wheel-seconds at 1 vh/s, n = 72)
+                     min     p50     max
+      before        1.42    2.17    3.62
+      after         2.84    4.33    7.20
+      ratio         2.00x   1.99x   1.99x
+
+    Per-body stretch across ALL 72 bodies: min 1.991x, max 1.995x
+    — a spread of 0.2%.
+
+That last line is the point of the `shape` pin, and it is something no
+previous pass on this moment managed: §15's own numbers ran 2.05x to 2.68x
+across the ladder and needed a `DRAW_W` widening to level it. Here the
+per-body axis is bought **entirely from scroll**, so §12/§13's "one at a
+time" is preserved exactly rather than traded against a wider kindling
+window — a wider window makes neighbours overlap, and scroll does not.
+
+Unchanged by construction, and verified: every rung's `p_start`/`p_end` is
+the same double it was (first rung 0.8560 → 0.8943, last 0.9330 → 0.9641);
+`pullRaw(p)` is byte-identical before and after at every sample; the last
+rung still finishes at 1.1146 under PULL_MAX 1.12 (margin 0.0054); the field
+is all-drawn at p 0.9641, inside the rest.
+
+### Is it "a lot" this time?
+
+Against §14 (`5401820`), the pass Hannah was looking at when she asked for a
+quarter the speed: the whole progression was 4.41 s and is now 16.60 s —
+**3.76x** — and a single body's window was 0.62–1.41 s and is now 2.84–7.20 s,
+**4.6x–5.1x**. The per-body axis has therefore passed the "quarter the speed"
+she named two passes ago; the overall axis is at 3.8x of it.
+
+### What still bounds it, if a seventh pass comes
+
+The end-hold reclaim is a one-off — it is spent, and there is no second dead
+stretch on this chapter. From here the levers are, honestly:
+
+- **the page.** With the shape pinned, the arrival's wall-clock is now
+  exactly proportional to its `segVh`, with no leakage: 2.5x total would be
+  ~21.3 vh (page ~46), 3x ~25.6 vh (page ~50). That is a real, linear,
+  predictable price, which it was not before this pass.
+- **the rest's `pullRaw` ceiling**, unchanged: a closing rung's s = 1 must
+  land under the 1.12 the rest camera delivers, so `drawWOf` cannot widen the
+  tail past ~0.169 (`REST_MARGIN` makes it structural). This bounds the
+  per-body axis in p — but no longer in wall-clock, since scroll now scales
+  it cleanly.
+- **the chapter's p-span**, still worth nothing: scroll and p are decoupled,
+  so moving `span` renormalises every chapter's mapping and buys zero
+  wall-clock. §15 was right about this one.
+- **un-freezing the Final rest composition** — still say no lightly.
+
+### Gates
+
+- **Goldens**: `capture.py --check` — all ten within the frozen gate, worst
+  MAE **0.02/255** (owned@*, the known wobble class; final@* 0.00 exactly).
+  Every body byte-settled at the rest, bloom exactly zero there. No
+  reference moved, so none was re-shot.
+- **Mirror**: frozen-clock scrub p 0.84 → 1.0 → 0.84 through `?capture`,
+  15 matched samples both directions: worst MAE **0.0126/255**, 0.0000
+  across the whole ladder. Exact mirroring, no self-ignition.
+- **Dark at arm**: `pullRaw` at p 0.8450 / 0.8500 / 0.8550 / 0.8560 is
+  −0.0493 / +0.0192 / +0.0840 / +0.0966 against a lowest ladder reveal of
+  0.0966 — nothing is lit or inked before its own threshold, and the curve
+  is identical to the shipped one.
+- **End-hold** (its own check, because the reclaim is what could break it):
+  from the Final rest a hard fling lands **1.000000** and holds; four
+  notches forward resolve to 1, not back to 0.97; parked at 1 and idle it
+  stays; a 60-delta ride from 0.90 reaches 1; backward out of it returns to
+  0.97. Hold road is 545.6 px.
+- **Scroll invariants**: `tools/scrollgates.js`, default and `?nosnap=1` —
+  every line at or better than the shipped tree's own run.
+- **Ride**: full real-wheel 0 → 1 → 0, 1034 frames, reaches 1.0000 and
+  returns to 0.0005; plus all five nav jumps. Console **0 errors, 0
+  warnings**.
+- **Rests**: all five composed at 1440x900, 1280x800 and 375x812, each
+  landing on its exact frozen p.
+- **The two p-literal files**: `journey/portrait.js` and
+  `chapters/owned/leg.js` need no edit, and that is provable rather than
+  hopeful — `span` and `stops` were not touched, so every derived p is the
+  same double, and neither file is a function of scroll. The route's
+  shipped-value assert is silent (unchanged, deliberately — see its
+  comment), the Owned colony's sampled window `LEG_P0..LEG_P1`
+  (0.660–0.872) is unmoved, and the owned@* goldens are the proof at
+  0.02/255.
+
+### Two tool repairs this change forced
+
+Both in `tools/scrollgates.js` / `journey/scroll.js`, both found by running
+the battery against the shipped tree side by side rather than reading the
+new output alone:
+
+1. **R5 had stopped testing the end-hold.** It flung 4320 px from p 0.925;
+   once the arrival's road doubled, that no longer reached p 0.97, so the
+   gate "passed" while never touching the end-hold. It now departs from the
+   route's last rest (`REST_STOPS`), so it cannot drift with an allocation
+   again. (R6's anchor list was the stale literal `[…0.49…0.925…]` and had
+   been reporting the two CURRENT rests as off-anchor stops ever since they
+   moved; it reads the route now too. R6: "off-anchor stops: none".)
+2. **`lengthAtP` scaled the `?nosnap=1` magnet band by the CHAPTER.** With
+   Inspire's tail trimmed to 2.1 vh inside a 5.6 vh chapter, a chapter-wide
+   band swallowed p = 0.36 and the deep-scrub flag could no longer park
+   where it was told (N1 read 0.2666 against the shipped 0.3600). The band
+   is meant to be a fraction of the road you are on; it now measures the
+   segment. N1 restored to 0.3600, and nosnap E1 tightened from 0.00e+0 to
+   -5.6e-17.

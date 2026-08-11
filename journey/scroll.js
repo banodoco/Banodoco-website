@@ -18,7 +18,7 @@
 // constants.js. Every input is a delta on v; nothing is ever a discrete step
 // to a chapter, so the path is reversible at any point and at any speed.
 
-import { CHAPTERS, REST_STOPS, TERMINAL_P } from './route.js';
+import { CHAPTERS, SEGMENTS, REST_STOPS, TERMINAL_P } from './route.js';
 import { NOSNAP } from '../flags.js';
 import {
   SNAP_ENGAGE_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
@@ -158,7 +158,8 @@ function targetOwnsKey(e) {
 }
 
 export function createScrollModel({ onIntent = null } = {}) {
-  let lens = [];        // px allocated per chapter
+  let lens = [];        // px allocated per chapter (snap band, lengthAtP)
+  let segLens = [];     // px allocated per route SEGMENT — the spline's knots
   let edges = [];       // cumulative px at each chapter boundary
   let total = 0;
   let v = 0;            // virtual scroll position, px — the visitor's own
@@ -242,14 +243,21 @@ export function createScrollModel({ onIntent = null } = {}) {
   // PCHIP (Fritsch-Carlson) keeps the allocations honest (each chapter still
   // costs its own scroll distance) while making the gain continuous, so no
   // camera move ever changes speed because of where a chapter label starts.
+  //
+  // The knots are the ROUTE'S SEGMENTS (route.js SEGMENTS), not its chapters:
+  // a chapter that declares `segVh` puts a knot at each of its own rest stops
+  // too, which is how the Final end-hold can be given 0.6 vh while its arrival
+  // takes 17.0 (2026-08-11). A chapter that declares nothing is still exactly
+  // one segment, so this list is bit-identical to the old chapter list for
+  // every such chapter.
   let kx = [], ky = [], km = [];
   let invX = [], invY = [];   // sampled inverse, for p -> px
 
   function buildSpline() {
     kx = [0]; ky = [0];
-    for (let i = 0; i < CHAPTERS.length; i++) {
-      kx.push(kx[i] + lens[i]);
-      ky.push(CHAPTERS[i].end);
+    for (let i = 0; i < SEGMENTS.length; i++) {
+      kx.push(kx[i] + segLens[i]);
+      ky.push(SEGMENTS[i].end);
     }
     const n = kx.length - 1;
     const h = [], d = [];
@@ -262,6 +270,30 @@ export function createScrollModel({ onIntent = null } = {}) {
       let m = (d[i - 1] + d[i]) / 2;
       const lim = 3 * Math.min(Math.abs(d[i - 1]), Math.abs(d[i]));
       km[i] = Math.sign(m) * Math.min(Math.abs(m), lim);
+    }
+    /* A DECLARED SHAPE OVERRIDES THE INFERRED TANGENTS (route.js `shape`).
+       Fritsch-Carlson derives a knot's tangent from its NEIGHBOURS' densities,
+       which is right when the allocations are comparable and wrong when the
+       route deliberately makes them differ by 10x: the Final arrival sits
+       between a chapter at 20 vh per unit p and a hold at 20, while itself
+       running at 142, so its own curve was being dictated from both ends by
+       roads it has nothing to do with. Re-imposing k0/k1 as multiples of the
+       SEGMENT'S OWN mean slope makes its normalised gain curve independent of
+       how much scroll it is given — so raising its allocation is a pure
+       stretch, and every p-interval inside it slows by the same factor
+       (measured: 0.2% spread across 72 bodies, 18-one-species.md §17).
+
+       Monotonicity is still enforced, and it still binds: a Hermite segment is
+       monotone while its end tangents stay within 3x its mean slope, so the
+       clamp below keeps a mis-typed k from minting a spline that runs
+       backwards. It is a guard, not a shaper — today's k values pass it
+       untouched. */
+    for (let i = 0; i < n; i++) {
+      const k = SEGMENTS[i].k;
+      if (!k) continue;
+      const lim = 3 * Math.abs(d[i]);
+      km[i] = Math.sign(d[i]) * Math.min(Math.abs(k[0] * d[i]), lim);
+      km[i + 1] = Math.sign(d[i]) * Math.min(Math.abs(k[1] * d[i]), lim);
     }
     // sampled inverse for scrollFor()
     const S = 1024;
@@ -306,6 +338,9 @@ export function createScrollModel({ onIntent = null } = {}) {
     const keepP = total > 0 ? clamp01(pAt(v) + carry) : 0;
     carry = 0;
     lens = CHAPTERS.map(c => (c.scrollVh || 2) * h);   // allocations live in route.js
+    // ...and the spline's own knots are the SUB-segment allocations, which for
+    // a chapter that declares no `segVh` is just that same one number.
+    segLens = SEGMENTS.map(s => (s.vh || 2) * h);
     total = lens.reduce((a, b) => a + b, 0);
     edges = [0];
     for (const L of lens) edges.push(edges[edges.length - 1] + L);
@@ -313,12 +348,22 @@ export function createScrollModel({ onIntent = null } = {}) {
     v = scrollFor(keepP);
   }
 
-  /** Chapter scroll length (px) at a given p - the snap band scales with it. */
+  /** Scroll length (px) of the road at a given p — the ?nosnap=1 magnet band
+   *  scales with it, and nothing else reads it.
+   *
+   *  THE SEGMENT, not the chapter (2026-08-11). The band is meant to be "a
+   *  fraction of the road you are on", and while a chapter was one segment
+   *  those were the same sentence. They stopped being: with the Inspire tail
+   *  trimmed to 2.1 vh inside a 5.6 vh chapter, a chapter-wide band reached
+   *  most of the way across the tail and swallowed p = 0.36 — the deep-scrub
+   *  flag's own gate (scrollgates N1) parked at 0.2666 instead of 0.3600,
+   *  i.e. ?p= could no longer stop where it was told. Measuring the band
+   *  against the segment restores it and states the intent exactly. */
   function lengthAtP(p) {
-    for (let i = 0; i < CHAPTERS.length; i++) {
-      if (p <= CHAPTERS[i].end || i === CHAPTERS.length - 1) return lens[i];
+    for (let i = 0; i < SEGMENTS.length; i++) {
+      if (p <= SEGMENTS[i].end || i === SEGMENTS.length - 1) return segLens[i];
     }
-    return lens[lens.length - 1];
+    return segLens[segLens.length - 1];
   }
 
   /* ---------------- input ---------------- */
