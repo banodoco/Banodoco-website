@@ -1363,3 +1363,145 @@ size — sixteen rows grouped by role, each opening the contributor card
 through the same `onOpen` funnel the chips use. One existing control, no
 new chrome, and the mobile claim "100% shared with the people who build
 it" gets its sixteen faces back.
+
+## 2026-08-11 — THE SOIL HORIZON: the crossing had a hole in it, and the soil had no interior
+
+Hannah, on the Connect → Owned transition: *"about halfway through the
+transition — when it's going between the levels of the ground — there's a
+weird patch… I think we need the transition point, the ground, to be RICHER
+as we're going into it."* Her attached still: sparse amber lines over
+near-black with a few glowing portraits — thin and unfinished.
+
+### The diagnosis: an occlusion STEP against a reveal RAMP
+
+Measured on the shipped tree with a dense frozen strip (`?capture=<p>`, step
+**0.001**, 1440x900). The crossing is not a gradual thinning, it is a cliff in
+**one 0.001 step**, between p 0.694 and p 0.695 (the soil crossing is p 0.6927):
+
+| | p 0.694 | p 0.695 |
+|---|---|---|
+| lit pixels (lum > 24) | 49.2 % | **19.9 %** |
+| p95 luminance | 90.7 | **26.6** |
+| mean luminance | 32.6 | **19.4** |
+| top-30 %-of-frame mean | 59.9 | **18.0** |
+
+The mechanism is a mismatch of *shapes*, and it is structural rather than a
+tuning error:
+
+1. the **above-ground world collapses to a grazing sliver** the instant the
+   lens passes the soil plane — a STEP;
+2. the **colony below is revealed by camera depth over 0.94 units**
+   (`SINK_D`, `fc1e151`) — a RAMP, so it is **8 %** up at that moment;
+3. between the step and the ramp the frame holds nothing, and the one thing
+   reliably in it — the soil ceiling — was **a flat near-black card at 8 %
+   opacity**, because its own opacity rode `eff` and therefore rode `SINK_D`.
+
+Point 3 is worth stating plainly: **the shipped soil did not occlude.** At
+depth 0.2 the lid was 90 % transparent, which is the opposite of what
+`fc1e151` declared ("the lid material occludes until you are through it").
+
+### What shipped — three changes that only work together
+
+Either of the first two alone is *worse* than shipped: opacity alone makes the
+hole blacker, texture alone is texture at 8 %.
+
+- **The lid goes solid on crossing, not on sink.** `ceiling.uOpacity` now rides
+  the chapter arm times `LID_D = 0.14` units of depth, split out of `setFade`
+  into its own `setLid`. Still camera-pure, still 0 above ground, still
+  back-face-culled from above (so the Final cutaway is untouched by
+  construction), still exactly mirrored on a reverse ride.
+- **The earth gets a face.** The ceiling shader gains a two-octave world-space
+  mottle (clods) plus a finer grain, **added as warm value** rather than
+  multiplied into a near-black.
+- **THE SOIL HORIZON** — the metre of earth the lens passes *through*: `FELT`
+  (5,200 drooping rootlets in depth 0.10–1.90, one strand in seven a long
+  `FEEDER` bearing on the crown) and `GRAIN` (4,200 mineral flecks). Two draw
+  calls, driven by `passage`, a depth band.
+
+### Three numbers that were arrived at the hard way
+
+- **Density belongs on the corridor, not across the box.** The first build
+  scattered both layers over `BX`/`BZ` like every other ambient layer here and
+  bought almost nothing (crossing mean 19.4 → 20.8): a contact-range medium at
+  ~2.5 strands per unit² puts seventy strands in everything the lens can see.
+  Rejection-sampling against `leg.camDist` (the same polyline every clearance
+  rule in this chapter measures against) is what made it a picture.
+- **Grain needs its own shader, not `PointsMaterial`.** A size-attenuated soft
+  disc passed at contact range *balloons* — a grain 0.25 units off the lens
+  drew a 60 px disc and the crossing read as **bokeh**, champagne bubbles in
+  front of the network. The fix needs a hard clamp on projected size, a
+  near-fade, and a distance fog; none is available on `PointsMaterial`.
+- **`PASS_HI` is set by the SHALLOWEST rest, not the landscape one.** The Owned
+  rest is a different pose per aspect. Measured at the three shipped viewports:
+  depth **1.207** at 1440x900 but only **0.987** at 430x932 and 375x812 (fov 64,
+  pitch −15.4). The first build used 1.15 — safe on landscape, and it left the
+  horizon **47 % lit at the portrait rest**, moving `owned@430x932` by MAE 0.73
+  (1.9 % px>8, all of it in the top four tenths). `PASS_HI = 0.90` clears the
+  shallower rest by 0.087, so *no* rest on *any* aspect can contain one felt
+  strand or one grain.
+
+The ceiling texture is protected by a **geometric argument, not a taste
+setting**: it dies at 3.00 units, and the nearest ceiling fragment that can be
+in frame at all is **3.563** units (1440x900) / **3.695** (portrait). Measured,
+not assumed.
+
+The choreography also lands where it belongs. Depth 0.60 → 0.90 is p 0.7035 →
+0.7107, and `SINK_D` puts the colony at 70 % → 97 % across exactly that
+stretch: **the horizon hands over to the root world as the root world
+arrives**, so the soil owns the murk window (0.692–0.712) and nothing else does.
+
+### Results
+
+| p | metric | before | after |
+|---|---|---|---|
+| 0.695/0.696 (1440x900) | lit pixels | 19.9 % | **36.8 %** |
+| | p95 luminance | 26.6 | **35.7** |
+| | mean | 19.4 | **22.9** |
+| | pure-black pixels | 1.3 % | **0.0 %** |
+| 0.696 (375x812) | lit pixels | 26.4 % | **41.9 %** |
+| | p95 luminance | 29.0 | **39.7** |
+| | pure-black pixels | 3.0 % | **0.1 %** |
+
+### Verification
+
+- **Goldens**: all ten within; `owned@1440x900` and `owned@430x932` both **MAE
+  0.03 / 0.0 % px>8** (unstructured, max 10/255 on a single pixel — float
+  accumulation order, not a visible change). Every other golden 0.00.
+- **Mirroring and self-ignition**: the live uniforms swept forward then reverse
+  over p 0.600–0.900 at step 0.001 (301 samples) are **bit-identical**
+  (worst delta 0.000e+00, both terms). **Zero** frames with the camera at or
+  above the soil and any horizon term > 0.
+- **Terms live over p 0.6930 – 0.8540** — precisely the underground stretch,
+  from the dive's crossing to the rise's pierce.
+- **Camera untouched**: no key moved, so the soil crossing stays at p 0.6927,
+  the murk window 0.692–0.712 and `CONNECT_HOLD_HI` 0.705 are as shipped,
+  `owned/leg.js`'s sampled window (p 0.660–0.872) sees a bit-identical spline
+  and the colony is not regrown. Rates and roll are the shipped ones by
+  construction (roll 0.000 at every sample, both aspects).
+- **Console clean** over a full forward + reverse ride (241 steps each way,
+  live, page-side hook on error/warn/onerror/unhandledrejection): **0 events**.
+- **Budget** (1440x900, draw calls / median composer submit):
+
+  | point | before | after |
+  |---|---|---|
+  | Connect rest | 47 / 0.4 ms | 47 / 0.3 ms |
+  | **crossing 1 (p 0.696)** | 62 / 0.4 ms | **64 / 0.4 ms** |
+  | **Owned rest** | 55 / 0.2 ms | **55 / 0.2 ms** |
+  | crossing 2 (p 0.830) | 217 / 0.8 ms | 219 / 0.6 ms |
+  | Final rest | 428 / 1.1 ms | **427 / 1.2 ms** |
+
+  `setPassage` hides both objects outside the band, so the horizon is **free
+  everywhere it is not the picture** — both rests return to the shipped count
+  exactly, and the Final rest drops one call and 3,872 triangles because the
+  ceiling is no longer submitted above ground.
+
+### Residual
+
+Just before the crossing (p 0.685–0.692, ~0.008 of p, above ground) the lens
+passes within ~0.2 units of the soil plane and a **hard-edged flat orange
+wedge** fills a third of the frame. Isolation places it in the hero's own
+ground group (`scene.children[0]`, `organism/*`) — hiding that group removes
+it, hiding any single child does not — and `organism/*` is read-only for
+journey work. It is above ground, so the soil horizon cannot reach it. Named
+here for whoever owns the hero: it is the most literal instance of Hannah's
+"the edges are kind of visible" still on this leg.

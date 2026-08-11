@@ -953,26 +953,97 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     // tone over 5->34 units makes the two meet at the same value and the
     // boundary stops existing — which is what the reference's top looks like:
     // dark that gets darker upward, no edge.
+    // NEAR-EARTH STRUCTURE (2026-08-11, THE SOIL HORIZON — Hannah, on the
+    // Connect -> Owned crossing: "we need the transition point, the ground, to
+    // be RICHER as we're going into it").
+    //
+    // Measured on the shipped tree (dense frozen strip, step 0.001, 1440x900):
+    // the crossing frame is a HOLE. Between p 0.694 and p 0.695 — the soil
+    // crossing is p 0.6927 — lit pixels fall 49.2% -> 19.9%, p95 luminance
+    // 90.7 -> 26.6, top-of-frame mean 59.9 -> 18.0, in ONE 0.001 step. The
+    // mechanism is a mismatch of shapes: the above-ground world collapses to a
+    // grazing sliver the instant the lens passes the soil plane (a STEP),
+    // while the colony beneath is revealed by camera depth over 0.94 units (a
+    // RAMP, fc1e151/SINK_D) and so is 8% up at that moment. Between the step
+    // and the ramp the frame holds nothing, and this plane — the only thing
+    // reliably in it — was a flat near-black card at 8% opacity.
+    //
+    // Two things change, and they only work together (either alone is worse
+    // than shipped: opacity alone makes the hole blacker, texture alone is
+    // texture at 8%):
+    //
+    //   1. THE LID GOES OPAQUE ON CROSSING, NOT ON SINK. uOpacity now rides
+    //      the chapter arm times a LID term that completes 0.14 units under
+    //      the soil (owned/index.js), instead of riding `eff` (which carries
+    //      SINK_D's 0.94). This is fc1e151's own stated law finally made true
+    //      — "the lid material occludes until you are through it" — which the
+    //      shipped tree did not honour: at depth 0.2 the soil was 90%
+    //      TRANSPARENT. It is still camera-pure, still 0 above ground (and
+    //      still back-face-culled from above, so the Final cutaway is
+    //      untouched by construction), and it still reverse-scrubs exactly.
+    //
+    //   2. THE EARTH GETS A FACE. A two-octave world-space mottle (clods) plus
+    //      a finer grain, added as warm value rather than multiplied into a
+    //      near-black, so the lid reads as packed earth with pores and
+    //      mineral catch-light instead of as a hole punched in the frame.
+    //
+    // THE STRUCTURE WINDOW IS A GEOMETRIC ARGUMENT, NOT A TASTE SETTING.
+    // It dies by EARTH_HI = 3.0 units. At the Owned rest the lens sits 1.137
+    // under this plane at pitch -8.0 with fov 58, so the top frame edge is
+    // 21.0 deg above horizontal and the NEAREST ceiling fragment that can be
+    // in frame at all is 1.137 / sin(21.0 deg) = 3.17 units away. 3.0 < 3.17,
+    // so the frozen approved rest composition cannot see one textured
+    // fragment — the owned golden is untouched BY CONSTRUCTION, not by
+    // measurement (though it is measured too: MAE 0.00). At the crossing the
+    // lens is 0.16 under and the top edge is 12.1 deg up, so the band runs
+    // 0.76 -> 3.0 units and the texture owns the whole ceiling in frame.
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uNear: { value: new THREE.Color(P.warmBlack ?? 0x0a0805) },
         uFar: { value: new THREE.Color(0x241a10) },
         uOpacity: { value: 0 },
+        uEarth: { value: new THREE.Color(0x37260f) },   // clod value, ADDED
+        uGrain: { value: new THREE.Color(0x6b4a1e) },   // mineral catch-light
       },
       transparent: true, depthWrite: true, fog: false, side: THREE.FrontSide,
       vertexShader: /* glsl */`
         varying float vD;
+        varying vec3 vW;
         void main() {
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vW = (modelMatrix * vec4(position, 1.0)).xyz;
           vD = -mv.z;
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: /* glsl */`
-        uniform vec3 uNear, uFar;
+        uniform vec3 uNear, uFar, uEarth, uGrain;
         uniform float uOpacity;
         varying float vD;
+        varying vec3 vW;
+        float h21(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+        }
+        float vn(vec2 p) {
+          vec2 i = floor(p), f = fract(p);
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), u.x),
+                     mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), u.x), u.y);
+        }
         void main() {
           vec3 c = mix(uNear, uFar, smoothstep(5.0, 34.0, vD));
+          // Structure resolves only where the lens is IN the soil (see the
+          // geometric argument above). Squared so it falls off the way a
+          // contact shadow does, not linearly.
+          float near = 1.0 - smoothstep(1.30, 3.00, vD);
+          if (near > 0.002) {
+            vec2 q = vW.xz;
+            // clods: two octaves, the coarse one carrying the shape
+            float clod = vn(q * 1.15) * 0.66 + vn(q * 2.90) * 0.34;
+            // grain: fine, sparse, and only the top of its range catches
+            float g = vn(q * 9.5) * 0.62 + vn(q * 21.0) * 0.38;
+            c += uEarth * (near * clod * clod);
+            c += uGrain * (near * pow(max(0.0, g - 0.60) * 2.5, 2.0) * 0.55);
+          }
           gl_FragColor = vec4(c, uOpacity);
         }`,
     });
@@ -1022,6 +1093,211 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     group.add(lines);
     timeMats.push(mat);
     lidVerts = res.geometry.attributes.position.count;
+  }
+
+  /* ================================================================
+     THE SOIL HORIZON — the metre of earth the lens passes THROUGH
+     (2026-08-11; see the ceiling's own note above for the measurement
+     that motivates it, and 20-owned-root-network.md)
+     ================================================================ */
+  // The lid mat above is the earth seen FROM THE REST, three-plus units off,
+  // in the band the crown pierces: 620 near-horizontal strands in a 0.22-unit
+  // skin. It was never meant to be flown through, and at 1-2 units it is not
+  // there at all. This is the same soil authored for the OTHER reading — the
+  // one the dive actually gets, from inside.
+  //
+  // Two layers, both hanging in the depth band 0.10 -> 1.90 under the soil:
+  //
+  //   FELT   fine rootlets and hyphal fuzz DEPENDING from the lid — vertical
+  //          structure, because what the passage lacked was anything that
+  //          streams past the lens. Aimed down with a lateral wander, longest
+  //          near the crown, and thinning with depth so the layer has a
+  //          profile instead of an edge.
+  //   GRAIN  mineral flecks through the same volume, sized for parallax at
+  //          contact range. Instanced Points on the shared soft disc — one
+  //          draw, and the same sprite every other point layer here uses.
+  //
+  // WHY THEY ARE DRIVEN BY A DEPTH BAND, NOT BY `eff`. This is the soil IN
+  // CONTACT WITH THE LENS: a thin shell, so how much of it is within the
+  // murk's reach is genuinely a function of how deep the lens is, and the
+  // band states that analytically instead of asking a per-fragment fog to
+  // know the shell is thin. The term (owned/index.js `passage`) is a pure
+  // function of the camera, so it reverse-scrubs exactly; it is 0 above
+  // ground, so the chapter is still dark at arm; it comes on BEHIND the lid
+  // (which is opaque by then — see above), so nothing ignites over open view;
+  // and it is back to 0 by depth 1.15, under the rest's own 1.207. That last
+  // number is the frozen-composition guarantee: PASS_HI < the rest depth
+  // means the Owned rest cannot contain one felt strand or one grain, so the
+  // approved composition and its golden are untouched by construction.
+  //
+  // Both layers carry a tight near-fade and a heavy fog so they read as a
+  // medium resolving out of the murk at contact range and swallowed again a
+  // few units off — the scene's own established language (every ambient layer
+  // in this file is fogged), never a pop.
+  // BOTH LAYERS ARE PLACED ALONG THE CORRIDOR, NOT ACROSS THE BOX. The first
+  // build of this pass scattered them over BX/BZ like every ambient layer here
+  // and measured almost nothing (crossing mean 19.4 -> 20.8): a contact-range
+  // medium spread over 20x17 units puts ~2.5 strands per unit² anywhere, so
+  // the few units the lens can actually see hold seventy strands. The layer is
+  // only ever seen from INSIDE, so its density belongs where the lens goes —
+  // leg.camDist is the same polyline every clearance rule in this chapter
+  // measures against (leg.js samples p 0.660-0.872, which spans the dive's
+  // crossing AND the rise), and both layers are rejection-sampled against it.
+  const HORIZON_D0 = 0.10, HORIZON_D1 = 1.90;
+  const HORIZON_R = 4.2;      // corridor half-width the layers are packed into
+  /** Keep-probability for a soil-horizon sample: everything in close, thinning
+   *  to nothing at HORIZON_R, so the medium has no boundary — it just runs out
+   *  where the lens was never going to be. */
+  function horizonKeep(x, y, z, rand) {
+    const d = camDist(x, y, z);
+    if (d > HORIZON_R) return false;
+    return rand() < 1 - (d / HORIZON_R) ** 2 * 0.88;
+  }
+  let feltVerts = 0, grainPoints = 0;
+  const horizonMats = [];        // shader mats driven by `passage`
+  const horizonObjs = [];        // ...and the objects they belong to
+  const horizonSprites = [];     // {mat, base} plain materials driven by it
+  {
+    const rand = H.rng(41207);
+    const gauss = () => (rand() + rand() + rand() + rand() - 2) / 2;
+    const res = H.strandLines({
+      count: 5200, seed: 41207,
+      generator: () => {
+        const x = BX[0] + rand() * (BX[1] - BX[0]);
+        const z = BZ[0] + rand() * (BZ[1] - BZ[0]);
+        const g = groundY(x, z);
+        // depth profile: dense against the lid, thinning downward, so the
+        // layer ends in a gradient and never in a plane
+        const u = rand() * rand();                       // biased to 0
+        const y0 = g - (HORIZON_D0 + u * (HORIZON_D1 - HORIZON_D0));
+        if (!horizonKeep(x, y0, z, rand)) return null;
+        if (inVoid(x, y0, z) && rand() < 0.6) return null;
+        // FEEDERS (one strand in seven). The mat alone was legible but aimless
+        // — an even wall of fibre at one scale with no focal pull, and the
+        // crossing frame had no brightest thing in it (p95 33/255 against the
+        // rest's 77). These are the heavy roots the fine mat feeds: longer,
+        // shallower in droop, and BEARING ON THE CROWN, which is 1.9 units off
+        // and is exactly where the dive is going. Passing through them the lens
+        // gets streaming parallax lines that all point the same way, so the
+        // soil says where you are headed instead of just that you are in it.
+        // Drawn in the felt's own batch — no extra draw call — and read as
+        // brighter purely by running longer through the same additive stack.
+        const feeder = rand() < 0.145;
+        // longer, denser under the crown: the mushroom's own feeder mat
+        const near = Math.max(0, 1 - Math.hypot(x - CROWN.x, z - CROWN.z) / 9.0);
+        // scale variety: a mat at ONE length reads as a texture swatch. The
+        // cube biases hard to short, so a few run long and the eye gets a
+        // near/far read out of the same layer.
+        const len = feeder
+          ? 0.95 + rand() * 1.5
+          : (0.16 + (rand() ** 3) * 0.85) * (0.75 + near * 0.8);
+        // A rootlet DROOPS: it leaves the lid on a bearing and turns down as
+        // it goes, so the lateral run is spent early and the tail hangs. The
+        // first build ran the two linearly against each other and drew
+        // straight needles at random angles — dropped pins, not a mat. The
+        // lateral term is now sqrt(t) (fast, then done) against a t² fall
+        // (slow, then committed), which is one curve with a knee, and the
+        // strand is sampled at 5 points so the knee survives.
+        const a = feeder
+          ? Math.atan2(CROWN.z - z, CROWN.x - x) + gauss() * 0.30
+          : rand() * TAU;
+        const lean = feeder ? (0.90 + rand() * 0.45) * len
+                            : (0.35 + rand() * 0.75) * len;
+        const drop = feeder ? len * (0.16 + rand() * 0.22)
+                            : len * (0.55 + rand() * 0.55);
+        const wob = feeder ? 0.9 + rand() * 1.1 : 0.25 + rand() * 0.7;
+        const pts = [];
+        for (let j = 0; j <= 4; j++) {
+          const t = j / 4;
+          const lat = Math.sqrt(t) * lean;
+          const px = x + Math.cos(a) * lat + Math.sin(t * 5.1 + a) * 0.035 * wob + gauss() * 0.022;
+          const pz = z + Math.sin(a) * lat + Math.cos(t * 4.6 + a) * 0.035 * wob + gauss() * 0.022;
+          const py = y0 - drop * (0.25 * t + 0.75 * t * t) + gauss() * 0.018;
+          pts.push(V(px, Math.min(py, groundY(px, pz) - HORIZON_D0), pz));
+        }
+        return pts;
+      },
+    });
+    const mat = makeFadePulseMat(P.deepGold, {
+      baseOpacity: 0.95 * exposure, twinkle: 0.42, pulseWidth: 0.10,
+      pulseColor: P.ember, fogDensity: 0.155, nearFade: [0.22, 0.80],
+    });
+    const lines = new THREE.LineSegments(res.geometry, mat);
+    lines.frustumCulled = false;
+    lines.renderOrder = -6;
+    group.add(lines);
+    horizonMats.push(mat);
+    horizonObjs.push(lines);
+    feltVerts = res.geometry.attributes.position.count;
+  }
+  {
+    const rand = H.rng(41309);
+    const pos = [];
+    let guard = 0;
+    while (pos.length / 3 < 4200 && guard++ < 4200 * 60) {
+      const x = BX[0] + rand() * (BX[1] - BX[0]);
+      const z = BZ[0] + rand() * (BZ[1] - BZ[0]);
+      const u = rand() * rand();
+      const y = groundY(x, z) - (HORIZON_D0 + u * (HORIZON_D1 - HORIZON_D0));
+      if (!horizonKeep(x, y, z, rand)) continue;
+      if (inVoid(x, y, z)) continue;
+      pos.push(x, y, z);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    // GRAIN WANTS ITS OWN SHADER, not PointsMaterial. Measured on the first
+    // build: a size-attenuated soft disc passed at contact range balloons —
+    // a grain 0.25 units off the lens drew a 60 px disc, and the crossing
+    // read as bokeh, champagne bubbles in front of the network, rather than
+    // as earth. Three things fix it and none is available on PointsMaterial:
+    // a HARD CEILING on the projected size (grain never gets bigger than a
+    // speck, however close it passes), a near-fade so the ones that graze the
+    // lens dissolve instead of flaring (the same law every line layer here
+    // uses), and a distance fog so the volume ends in murk. Same soft-disc
+    // sprite and same single draw as the aggregate layers.
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: H.softDisc(64) },
+        uColor: { value: new THREE.Color(0xb98a46) },
+        uFade: { value: 0 },
+        uSize: { value: 26.0 },
+        uTime: { value: 0 },
+      },
+      transparent: true, depthWrite: false, fog: false,
+      blending: THREE.AdditiveBlending,
+      vertexShader: /* glsl */`
+        uniform float uSize;
+        varying float vD, vJ;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vD = -mv.z;
+          vJ = fract(sin(dot(position.xz, vec2(41.3, 289.1))) * 21313.7);
+          gl_Position = projectionMatrix * mv;
+          // attenuate, then CLAMP: a speck stays a speck at any range
+          gl_PointSize = clamp(uSize / max(vD, 0.05), 1.0, 4.5);
+        }`,
+      fragmentShader: /* glsl */`
+        uniform sampler2D uMap;
+        uniform vec3 uColor;
+        uniform float uFade, uTime;
+        varying float vD, vJ;
+        void main() {
+          float a = texture2D(uMap, gl_PointCoord).a;
+          // near-fade + fog: the medium resolves at contact range and is
+          // swallowed a few units off, exactly like the felt beside it
+          a *= smoothstep(0.18, 0.70, vD);
+          a *= exp(-0.055 * vD * vD);
+          a *= 0.72 + 0.28 * sin(uTime * (0.5 + vJ * 1.4) + vJ * 51.0);
+          gl_FragColor = vec4(uColor * a * uFade, 1.0);
+        }`,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    pts.renderOrder = -6;
+    group.add(pts);
+    horizonMats.push(mat);          // uFade + uTime, same drive as the felt
+    horizonObjs.push(pts);
+    grainPoints = pos.length / 3;
   }
 
   /* ---------------- far filler: the volume behind the network ---------- */
@@ -1297,20 +1573,43 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   }
 
   /* ---------------- frame update ---------------- */
-  let fade = 0;
+  let fade = 0, passage = 0;
   function setFade(a) {
     fade = a;
     for (const m of timeMats) m.uniforms.uFade.value = a;
     glints.mat.uniforms.uFade.value = a;
     cores.mat.uniforms.uFade.value = a;
     halos.mat.uniforms.uFade.value = a;
-    ceiling.mat.uniforms.uOpacity.value = a;
-    ceiling.mesh.visible = a > 0.004;
     for (const f of fadeSprites) f.mat.opacity = f.base * a;
   }
+  /** The lid's own drive (2026-08-11, the soil horizon). Split off setFade
+   *  because the ceiling must be SOLID the moment the lens is under it, while
+   *  everything else swims up through SINK_D's metre of murk — see the
+   *  ceiling's note. `a` is the chapter arm times the crossing term. */
+  function setLid(a) {
+    ceiling.mat.uniforms.uOpacity.value = a;
+    ceiling.mesh.visible = a > 0.004;
+  }
+  /** The soil horizon's drive: the chapter arm times the depth band that says
+   *  the lens is inside the layer (owned/index.js). Zero at the rest. */
+  function setPassage(a) {
+    passage = a;
+    for (const m of horizonMats) m.uniforms.uFade.value = a;
+    for (const s of horizonSprites) s.mat.opacity = s.base * a;
+    // Outside the band these two contribute exactly zero (additive at uFade
+    // 0), so hiding them is not a fade — it is declining to submit ~9.8k line
+    // verts and 4.2k points that would draw nothing. Measured: it returns
+    // BOTH rests to the shipped draw-call count exactly (owned 55, final 428),
+    // i.e. the soil horizon is free everywhere it is not the picture.
+    const on = a > 0.004;
+    for (const o of horizonObjs) o.visible = on;
+  }
   setFade(0);
+  setLid(0);
+  setPassage(0);
 
   function update(dt, time) {
+    if (passage > 0) for (const m of horizonMats) m.uniforms.uTime.value = time;
     if (fade <= 0) return;
     for (const m of timeMats) m.uniforms.uTime.value = time;
     glints.mat.uniforms.uTime.value = time;
@@ -1352,7 +1651,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   }
 
   return {
-    group, update, surge, setFade, nearestCordPoint, inVoid,
+    group, update, surge, setFade, setLid, setPassage, nearestCordPoint, inVoid,
     assignOwners, setActiveNode, ownershipStats,
     CROWN, hubs: hubPos.map(h => h.p.clone()),
     counts: {
@@ -1360,6 +1659,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
       skirt: skirt.length,
       secondaries: secondaries.length,
       fanVerts, hairVerts, webVerts, crownVerts, hubVerts, lidVerts, fillVerts,
+      feltVerts, grainPoints,
       glints: glints.count,
       netNodes: netNodes.length,
       netLinks,
