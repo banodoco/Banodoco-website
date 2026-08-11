@@ -1050,3 +1050,157 @@ rather than as photographs laid over it. It is a correction, not a reversal.
 3. **`cast : variation` is a new figure with two data points.** 7.9:1 read as
    sepia and 5.4:1 reads as people, on this image set at this exposure. It is a
    useful instrument, not a calibrated one.
+
+---
+
+## 2026-08-11 — ONE MOVEMENT, SECOND LEG: the Connect → Owned travel becomes a single arc below the ground (Hannah's report)
+
+**The ask, verbatim.** *"The transition from Connect to Owned feels a little
+choppy — how could we make it smoother? Right now it feels like 3 movements
+but it should be 1.5. It slowly arcs below the ground."*
+
+Third complaint on this leg. `2a27db7` cured the gaze whip at the soil
+(38-deg yaw overswing, the 1804 deg/p pitch snap) by re-aiming targets over
+bit-exact positions; that fix held — the whip was still gone on the tree she
+rode. What she is describing now is GESTURE, the same disease the
+Inspire → Connect leg had (07-chapter-inspire.md 2026-08-10, `0701653`), and
+the diagnosis instrument is the same: per-channel envelopes across the whole
+travel, looking for humps that peak at different times.
+
+### The diagnosis: three envelopes, three peaks
+
+Measured (521-sample drift-aware trace of the shipped tree, ACTUAL
+journey.progress recorded per sample, drift 0.0, `?steady=1`, landscape,
+window p 0.50 → 0.76):
+
+    1. THE DIVE     pos speed 0 at the rest -> PEAK 124.7 u/p at p 0.567,
+                    fov rate -285 deg/p riding it (a zoom-IN: 62 -> 51.8),
+                    collapsed 8.3x to ~15 u/p by p 0.612.
+    2. THE CRAWL    p 0.61-0.69: speed 15 -> 38 u/p, the crown's on-screen
+                    velocity nearly ZERO (0.22 NDC/p at 0.632), fov REVERSED
+                    (+20 deg/p) — the frame all but stops, then creeps down
+                    the stipe.
+    3. THE PLUNGE   a second speed hump, 63 u/p at 0.696, with pitch rate
+                    +520 deg/p and fov rate +157 peaking together just after
+                    the soil crossing, dying at the rest.
+
+    portrait: same structure, amplified by the portrait field's collapse —
+    speed 235.6 u/p at 0.565, fov 70 -> 66 -> 64 non-monotone, pitch 517.
+
+Three envelope groups peaking at 0.567 / ~0.67 / 0.70 — three movements,
+exactly as counted. And one channel broken alone: fov ran 62 → 51.8 → 58, a
+zoom-in then a zoom-out — movement segmentation in a single channel.
+
+The surgical option — re-shaping only p < 0.622 and keeping the
+placement-bearing keys — was measured and rejected: the head must average
+~65 u/p to cover its 6.4 units while the frozen mid-section crawls at
+15-18 u/p, an irreducible 3-4x trough. Still two movements. This leg needed
+the full one-gesture treatment, colony consequences and all.
+
+### The re-shape: dive(u), the destination owning its arrival
+
+`owned/camera.js dive(u)` (the `approach()` precedent's own law), composed by
+the director over p [restProgress('connect') .. restProgress('owned')] =
+[0.5230 .. 0.725] as the route's third analytic gesture:
+
+    az, r   61.81 -> 72.05 deg, 9.011 -> 1.818, on ONE asymmetric trapezoid
+            (smoothstep ramp-in over 0.40 of the leg — the slow start out of
+            the rest — plateau to 0.70, ramp-out landing flat at 0.94);
+    y       2.647 -> -1.180 on a LATE-SURGING monotone ease (velocity grows
+            as smoothstep² to u 0.91, brief hold, zero-slope landing): the
+            arc steepens CONTINUOUSLY into the soil. The 0.91/0.925 pair is
+            what pins the T3 crossing (below);
+    fov     62 -> 58 on the same sinking ease — MONOTONE, max 51 deg/p; the
+            widening arrives with the ground, not after the dolly;
+    gaze    quadratic bezier CONNECT rest target -> OWNED rest target bowed
+            through PIN3 (-0.2, 0.35, -1.2), the stipe base, eased by the
+            MEAN of the two eases — the aim leads the dolly early and the
+            sink late.
+
+Both endpoints derive from the frozen rest constants (CONNECT's keys[0] is
+imported; u = 1 is this file's own REST key), so seam disagreement is
+impossible; every ease is zero-slope at both ends and both rests are holds,
+so the gesture hands over with matching zero velocity. Retired: connect's
+two travel keys (t 0.77/0.91) and owned's eight descent keys (t 0.0-0.472).
+Every key at t >= 0.5 is bit-exact — the rest's hold tangent is zero and the
+withdraw key's tangent derives from the rest + drift keys only, so the whole
+approved withdraw/rise path (17-final-field.md) and every pose at p >= 0.725
+are unchanged by construction.
+
+### After, measured (521-sample traces, both aspects, drift 0.0)
+
+    landscape (p 0.523 -> 0.725)
+      speed        ONE envelope: 0 -> ramp -> 58-68 u/p plateau (peak 68.2
+                   at p 0.668) -> monotone decay through the crossing -> 0.
+                   No trough anywhere.
+      yaw          strictly monotone, peak 442 deg/p at 0.684   } same
+      pitch        ONE valley, -20.1 deg (was -26.5), recovery  } single
+                   peak 462 deg/p (was 520)                     } gesture
+      fov          MONOTONE 62 -> 58, max 51 deg/p (was -285/+157)
+      dist         10.45 -> 3.20, monotone (worst re-approach 0.0005 u/step)
+      crown NDC    velocity grows continuously 0 -> 42/p — no dead zone
+                   (the shipped tree died to 0.22/p mid-leg)
+      roll         0 everywhere (5.6e-17; director law)
+    portrait
+      speed        one dominant hump, 142.5 u/p at 0.578 (was 235.6), a 15%
+                   secondary breath at 0.664 where the authored portrait
+                   field's collapse ends; pitch peak 390 (was 517); the
+                   field's own +6 fov at the rest now rises 2.1 deg at
+                   ~85 deg/p (was 6 deg at ~240).
+    rates          everywhere under the ~1.2k deg/p threshold; the -985
+                   yaw at p 0.760 is the withdraw leg, bit-identical to the
+                   shipped tree (outside this change).
+
+Movement count: the arc (1) plus the murk-mandated quick-sink easing into
+the rest (0.5) — the sink is the same arc still steepening, not a new
+envelope. 1.5, as ordered.
+
+### The soil crossing and the colony
+
+- **Crossing**: p 0.6924 landscape / 0.6927 portrait (shipped: 0.6926 /
+  0.6928) — inside the 0.692-0.712 murk window, ARRIVAL_LO's mask still
+  ~0.003 at the crossing, y(0.712) = -0.91 (shipped -0.98), well under the
+  lid's own 0 -> -0.5 thickness. CONNECT_HOLD_HI 0.705 and the T3 fog dip
+  (centre 0.693) stay lawful; no seam constant moved.
+- **Colony**: owned/leg.js's sampled window (p 0.660-0.872) regrew its
+  0.660-0.723 half around the new corridor — and the outcome is
+  sub-threshold: the corridors only differ meaningfully ABOVE the soil,
+  where no colony content lives (everything is clamped under), and
+  underground they converge at the pinned crossing and the same rest.
+  capture.py --check: ALL TEN goldens within the frozen-frame determinism
+  threshold, worst MAE 0.02/255 (owned@) — NO reference re-shoot needed.
+  Frozen frame series through the leg both aspects: colony intact, crown
+  top-centre at the rest, no clipping, no floaters, no holes.
+
+### Gates
+
+- **Rides**: full 0 -> 1 -> 0 scrubs and real-wheel rides (slow: 140 ticks
+  at 240 px; brisk: 30 at 1600 px), both directions, console
+  error/warn/exception hooks: 0 entries, both aspects. p advances smoothly
+  (max per-frame step 0.015 at brisk speed; one direction flip total — the
+  snap-commit settle, designed).
+- **Mirror**: 201/401-sample forward vs reverse scrubs — position and
+  target bit-exact (delta 0.0), fov within the 0.001-deg write-threshold
+  hysteresis class. The T3 arm gate's dwell (THRESHOLD_MIN_DWELL_MS) shows
+  as a transient arm difference only under instantaneous no-frame scrubs —
+  the designed debounce, identical on the shipped tree.
+- **Direct jump**: flyTo('owned') lands the exact rest pose (1.73, -1.18,
+  0.56 / fov 58), owned armed, hotspots up, 0 errors.
+- **Goldens**: capture.py --check PASS, worst 0.02/255 (thresholds
+  warn > 0.50, fail > 1.00). All references byte-stable; none re-shot.
+- **rStipe** >= 1.751 both aspects (the interior law; shipped min 1.751).
+
+### Residuals
+
+1. **Subject distance eases back 0.06 u (1.9%) over the final 0.02 of p**
+   as the pitch settles onto the rest — the bezier's tail crossing the
+   sink. An order of magnitude under anything visible; not worth a PIN
+   chase.
+2. **The portrait secondary breath (15% at 0.664)** is the authored
+   portrait field's collapse ending, not the base gesture — re-keying the
+   field's 0.622/0.700 literals for the wider corridor could smooth it
+   further; left as authored.
+3. **The connect ground network now stays in frame longer** during the
+   descent (wider fov, farther corridor) before retiring behind the murk at
+   0.705 — reviewed in the frame series and kept: it is what makes the
+   travel read as one place sinking away rather than three shots.

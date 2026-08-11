@@ -7,9 +7,13 @@
 // measures against the REAL journey leg, sampled from the director's pure
 // poseAt(p). director.js is imported read-only; nothing here mutates it.
 //
-// The leg: T3 soil crossing at p ~0.693 -> level-out -> OWNED rest at
-// p 0.725 (pos (-0.4,-1.4,0.3), gaze -X, fov 54) -> glide/drift -> rise,
-// clearing the soil at p ~0.858 into the Final cutaway.
+// The leg: the dive() gesture's single arc (owned/camera.js, 2026-08-11 —
+// its sinking ease pins the T3 soil crossing at p ~0.692) -> OWNED rest at
+// p 0.725 -> glide/drift -> rise, clearing the soil at p ~0.856 into the
+// Final cutaway. (The 2026-08-11 gesture deliberately replaced the keyed
+// stipe-side crawl, so everything this file derives for p < 0.725 regrew
+// around the new corridor in that commit; samples at p >= 0.725 were
+// bit-exact by the rest key's hold.)
 import * as THREE from 'three';
 import { poseAt } from '../../director.js';
 import { groundY, stemAxis } from '../../anatomy.js';

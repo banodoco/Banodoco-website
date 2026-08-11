@@ -166,17 +166,12 @@ export const CAMERA = {
   approach,
   approachName,
   keys: [
+    // The travel OUT of this rest — the old drift + exit keys (t 0.77/0.91,
+    // the 2026-08-04 "one continuous dive") — was retired 2026-08-11: the
+    // whole Connect -> Owned leg is now owned/camera.js's dive() gesture
+    // (Hannah: "3 movements but it should be 1.5"), which derives its u = 0
+    // endpoint from THIS key. The director never evaluates the keyed spline
+    // between the two rests.
     REST_KEY,                                                                                                         // p 0.5230  pitch -8.91 yaw -143.69  (hold)
-    // --- exit: the "one continuous dive" (2026-08-04) — POSES bit-exact
-    //     shipped, re-spaced in t for the 0.65 rest (2026-08-10). The drift
-    //     creeps ALONG the dive line toward the trunk; the exit rides the
-    //     same straight line to owned/camera.js's t 0.0 key (2.523, 1.654,
-    //     1.792); gaze yaw walks -143.7 -> -148 monotonically and pitch
-    //     descends -8.9 -> -18.5 straight into Owned's single ~-26.5 valley.
-    //     Segment speeds 36 -> 112 -> 82 u/p (shipped 22 -> 80 -> 65 over
-    //     1.43x the p) — and in wall-clock the dive is SLOWER than shipped
-    //     everywhere (scrollVh 4.5 -> 10.0 outweighs the p compression). ---
-    { t: 0.77, pos: V(7.0846, 2.4897, 3.8657), tgt: V(0.530, 0.403, -2.779), fov: 61.5, note: 'connect-rest-drift' }, // p 0.5494  pitch -12.6 yaw -135.39
-    { t: 0.91, pos: V(3.9863, 1.9221, 2.4572), tgt: V(-1.101, 0.119, -1.377), fov: 54 },                              // p 0.5802  pitch -15.8 yaw -127.00
   ],
 };

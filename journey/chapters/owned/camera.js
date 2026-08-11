@@ -1,14 +1,193 @@
 // chapters/owned/camera.js — OWNED's camera leg (M4: chapters own their
 // legs; the director composes them per route.js).
 //
+// ONE MOVEMENT, SECOND LEG (2026-08-11, Hannah: "the transition from Connect
+// to Owned feels a little choppy — how could we make it smoother? Right now
+// it feels like 3 movements but it should be 1.5. It slowly arcs below the
+// ground.").
+//
+// Measured (521-sample drift-aware trace, journey-v6-plan/
+// 20-owned-root-network.md 2026-08-11), the leg WAS three envelopes:
+//
+//   1. THE DIVE      pos speed 0 -> 124.7 u/p at p 0.567 with fov rate
+//                    -285 deg/p riding it (a zoom-IN), collapsed 8.3x to
+//                    ~15 u/p by p 0.612;
+//   2. THE CRAWL     p 0.61-0.69: speed 15-38 u/p, the crown's on-screen
+//                    velocity near zero (0.22/p at 0.632), fov REVERSED
+//                    direction (+20 deg/p) — the frame all but stops, then
+//                    creeps down the stipe;
+//   3. THE PLUNGE    a second speed hump (63 u/p at 0.696) with pitch rate
+//                    +520 and fov rate +157 peaking together after the soil
+//                    crossing, dying at the rest.
+//
+// Three envelope groups peaking at 0.567 / ~0.67 / 0.70, and one channel
+// broken on its own: fov ran 62 -> 51.8 -> 58, a zoom-in then a zoom-out.
+// (This is a different fault from 2a27db7, which cured the GAZE whip at the
+// soil by re-aiming targets over bit-exact positions — that fix's intent,
+// aim monotone through the join, is carried into the gesture below.)
+//
+// THE WHOLE TRAVEL IS NOW ONE ANALYTIC GESTURE — dive() below, the
+// destination owning its arrival exactly like connect/camera.js approach()
+// (the 2026-08-10 precedent) — composed by the director over
+// p [restProgress('connect') .. restProgress('owned')]:
+//
+//   az, r   61.81 -> 72.05 deg, 9.011 -> 1.818, on ONE asymmetric trapezoid
+//           (ramp-in 0.40 of the leg — the slow start out of the rest that
+//           "slowly" asks for — plateau to 0.70, ramp-out done by 0.94);
+//   y       2.647 -> -1.180 on a LATE-SURGING monotone ease (velocity grows
+//           as smoothstep^2 to u 0.91, then hands off to a zero-slope
+//           landing): the arc steepens continuously into the soil, which is
+//           what pins the T3 crossing at p 0.6924 (shipped: 0.6926, murk
+//           window 0.692-0.712, owned/index.js ARRIVAL_LO; y at p 0.712 is
+//           -0.91, under the lid's own 0 -> -0.5 thickness, so the arm/
+//           retire swap stays behind genuine occlusion);
+//   fov     62 -> 58 on the SAME sinking ease — MONOTONE, the widening
+//           arriving with the ground instead of a zoom-in-then-out;
+//   gaze    quadratic bezier CONNECT rest target -> rest target, bowed
+//           through PIN3 (the stipe base), eased by the MEAN of the two
+//           eases above — the aim leads the dolly early and the sink late,
+//           which is what keeps pitch to a single -20.1 deg valley
+//           (shipped: -26.5) and its recovery at 462 deg/p (shipped: 520).
+//
+// Measured on the built gesture: ONE speed envelope — 0 -> a 59-68 u/p
+// plateau (peak 68.4 at p 0.667) -> a monotone decay through the crossing
+// to 0 at the rest. No trough anywhere. Yaw strictly monotone (peak 442
+// deg/p), subject distance 10.45 -> 3.20 with zero re-approach beyond
+// 0.0005 u/step, radius and height strictly monotone, roll zero.
+//
+// BOTH ENDPOINTS ARE THE FROZEN APPROVED POSES, derived rather than copied:
+// u = 0 reconstructs CONNECT's rest hold (imported), u = 1 this file's own
+// REST key — a seam disagreement is impossible rather than checked-for.
+// Both ends land with zero velocity (every ease is zero-slope at 0 and 1;
+// both rest keys are holds).
+//
+// THE RETIRED KEYS: connect's two travel keys (t 0.77/0.91) and this file's
+// five descent keys (t 0.0/0.088/0.18/0.272/0.36/0.40/0.44/0.472). Their
+// corridor — the close stipe-hugging crawl — is replaced by the gesture's
+// wider single arc, so owned/leg.js's sampled window (p 0.660-0.872; the
+// 0.660-0.723 half of it) DELIBERATELY regrows the colony around the new
+// corridor and owned@* is re-shot in this commit. Every key at and past the
+// rest (t >= 0.5) is bit-exact: the rest's hold tangent is zero and the
+// withdraw key's tangent derives from the rest + drift keys only, so the
+// whole approved withdraw/rise path (17-final-field.md) and every sample at
+// p >= 0.725 are unchanged by construction.
+//
 // Keys are authored in LEG-LOCAL t over the chapter's route span (0.60..0.85
 // on the shipped route; global p in comments) — never in global p, so
 // re-timing or inserting chapters never invalidates them (merge doc §5).
 import * as THREE from 'three';
+import { CAMERA as CONNECT_CAM } from '../connect/camera.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
+// --- OWNED rest: under the root, the crown at top centre, the fan
+//     descending into the portrait network below (root-world restage,
+//     20-owned-root-network.md). Frozen approved pose. ---
+const REST_KEY = {
+  t: 0.5,
+  pos: V(1.730, -1.180, 0.560),
+  tgt: V(-1.298, -1.625, -0.373),
+  fov: 58,
+  hold: true,
+  note: 'owned-rest',
+};
+
+// The gesture's two ends, derived — never copied — from the poses they must
+// match: CONNECT's rest hold (its keys[0]) and REST_KEY above.
+const C0 = CONNECT_CAM.keys[0];
+const D0 = {
+  az: Math.atan2(C0.pos.x, C0.pos.z),
+  r: Math.hypot(C0.pos.x, C0.pos.z),
+  y: C0.pos.y,
+  fov: C0.fov,
+};
+const D1 = {
+  az: Math.atan2(REST_KEY.pos.x, REST_KEY.pos.z),
+  r: Math.hypot(REST_KEY.pos.x, REST_KEY.pos.z),
+  y: REST_KEY.pos.y,
+  fov: REST_KEY.fov,
+};
+
+// The gaze's mid-bow control point: the stipe base. The bow slides the aim
+// off the ground network, in to the trunk's foot, and down onto the root
+// crown in one curve; chosen against the live frame so subject distance
+// falls strictly (10.45 -> 3.20) and pitch bows through one gentle valley.
+const PIN3 = V(-0.2, 0.35, -1.2);
+
+// ∫ smoothstep — the trapezoid family's closed-form ramp (S(1) = 1/2).
+function iS(x) {
+  x = x < 0 ? 0 : x > 1 ? 1 : x;
+  const x3 = x * x * x;
+  return x3 - x3 * x / 2;
+}
+// ∫ smoothstep² — the surge's slow-growing onset (T(1) = 13/35).
+function iT(x) {
+  x = x < 0 ? 0 : x > 1 ? 1 : x;
+  const x5 = x * x * x * x * x;
+  return 1.8 * x5 - 2 * x5 * x + (4 / 7) * x5 * x * x;
+}
+
+// Master ease (az, r, and half the gaze): asymmetric trapezoid velocity —
+// smoothstep ramp-in over [0, 0.40], constant to 0.70, ramp-out landing at
+// 0.94, flat (arrived) after. C1, zero slope at both ends.
+const MA = 0.40, MB = 0.70, MC = 0.94;
+const M_NORM = MA / 2 + (MB - MA) + (MC - MB) / 2;
+function easeM(u) {
+  u = u < 0 ? 0 : u > 1 ? 1 : u;
+  let i;
+  if (u < MA) i = MA * iS(u / MA);
+  else if (u < MB) i = MA / 2 + (u - MA);
+  else if (u < MC) i = MA / 2 + (MB - MA) + (MC - MB) * (0.5 - iS((MC - u) / (MC - MB)));
+  else i = M_NORM;
+  return i / M_NORM;
+}
+
+// Sinking ease (y, fov, half the gaze): velocity grows as smoothstep² over
+// [0, 0.91] — the continuously steepening arc — holds to 0.925, then a
+// smoothstep ramp lands it at zero slope on the rest. C1. The 0.91/0.925
+// pair is what pins the soil crossing at p 0.6924 with y(0.712) = -0.91.
+const YA = 0.91, YB = 0.925;
+const Y_NORM = YA * (13 / 35) + (YB - YA) + (1 - YB) / 2;
+function easeY(u) {
+  u = u < 0 ? 0 : u > 1 ? 1 : u;
+  let i;
+  if (u < YA) i = YA * iT(u / YA);
+  else if (u < YB) i = YA * (13 / 35) + (u - YA);
+  else i = YA * (13 / 35) + (YB - YA) + (1 - YB) * (0.5 - iS((1 - u) / (1 - YB)));
+  return i / Y_NORM;
+}
+
+/** The Connect -> Owned gesture. `u` is gesture-local (0 = the Connect rest,
+ *  1 = the Owned rest); the composer maps global p over
+ *  [restProgress('connect') .. restProgress('owned')] onto u. */
+function dive(u, out) {
+  const e = easeM(u);
+  const h = easeY(u);
+  const az = D0.az + (D1.az - D0.az) * e;
+  const r = D0.r + (D1.r - D0.r) * e;
+  const y = D0.y + (D1.y - D0.y) * h;
+  out.pos.set(Math.sin(az) * r, y, Math.cos(az) * r);
+  // Gaze: bezier C0.tgt -> REST_KEY.tgt through PIN3, eased by the mean of
+  // the dolly and the sink so the aim walks with both.
+  const g = (e + h) / 2;
+  const w0 = (1 - g) * (1 - g), w1 = 2 * g * (1 - g), w2 = g * g;
+  out.target.set(
+    w0 * C0.tgt.x + w1 * PIN3.x + w2 * REST_KEY.tgt.x,
+    w0 * C0.tgt.y + w1 * PIN3.y + w2 * REST_KEY.tgt.y,
+    w0 * C0.tgt.z + w1 * PIN3.z + w2 * REST_KEY.tgt.z,
+  );
+  out.fov = D0.fov + (D1.fov - D0.fov) * h;
+  return out;
+}
+
+/** QA: a human-readable name for a gesture-local u (composer's poseNameAt). */
+function diveName(u) {
+  return `dive s=${Math.max(0, Math.min(1, u)).toFixed(2)}`;
+}
+
 export const CAMERA = {
+  dive,
+  diveName,
   keys: [
     // --- ROOT-WORLD RESTAGE (2026-08-06, 20-owned-root-network.md; Hannah's
     //     reference: the mushroom's BASE enters the top of the frame, a wide
@@ -38,49 +217,17 @@ export const CAMERA = {
     //          (just off the top edge) to 0.920 (entering the frame at the
     //          top edge, exactly as described) and widens the fan.
     //
-    //     The DIVE is re-pathed to arrive there: it now sinks on the stipe's
-    //     +X/+Z side at radius ~1.8-2.5 instead of closing to ~1.3, so there
-    //     is no x reversal anywhere (x walks 2.523 -> 1.730 monotonically and
-    //     keeps walking -X after the rest). The Y SCHEDULE IS UNTOUCHED at
-    //     t 0.360 / 0.400 / 0.440 (0.15 / -0.42 / -0.92), which is what pins
-    //     the T3 soil crossing where it has always been (p ~0.693, inside the
-    //     0.692-0.712 murk window; CONNECT_HOLD_HI 0.705 stays lawful).
+    //     (The restage's keyed descent — the exterior stipe-side crawl that
+    //     arrived at this rest — was retired 2026-08-11 for the dive()
+    //     gesture above; its Y-schedule's one load-bearing property, the T3
+    //     soil crossing at p ~0.692, is carried by the gesture's sinking
+    //     ease. The rest pose itself is unchanged, bit-exact.)
     //
-    //     GAZE, re-authored end to end and now MONOTONE through the whole
-    //     join: yaw -135 (connect drift) -> -127 -> -122 (t 0.0) -> -119 ->
-    //     -116 -> -113.5 -> -111.5 -> -110 -> -108.7 -> -107.8 -> -107.1
-    //     (rest) -> -114 (drift) -> ... The shipped leg swung UP to -94 at
-    //     the rest and back down; the restage removes that 13-deg overswing.
-    //     Pitch keeps its single valley (-18.5 -> -26.5 at t 0.272 -> -8 at
-    //     the rest -> -1.2 -> +10.7), so the descent still bows through one
-    //     dip and never nods.
-    //
-    //     POSITION KEYS AT t >= 0.088 ARE PLACEMENT-BEARING: owned/leg.js
-    //     samples the director's POSITION spline over p 0.660-0.872 (camPts)
-    //     for every clearance rule, so this restage necessarily rebuilds the
-    //     chapter's geometry — which is the point. The t 0.728 / 0.848 / 0.98
-    //     keys are UNTOUCHED, bit-exact, so the pose at p >= 0.845 (the whole
-    //     FINAL splice) is unchanged by construction. The t 0.0 key is
-    //     untouched too, so CONNECT's exit stays collinear with the dive.
-    { t: 0.0,                 pos: V(2.523, 1.654, 1.792), tgt: V(-1.176, 0.194, -0.519), fov: 52 },   // p 0.600, pitch -18.5 yaw -122
-    { t: 0.08800000000000008, pos: V(2.230, 1.520, 1.430), tgt: V(-0.361, 0.311, -0.006), fov: 52 },   // p 0.622, pitch -22.2 yaw -119.0
-    // --- EXTERIOR stipe-side descent. Horizontal radius never drops below
-    //     ~1.8 while stem radius is <= 0.69, so the camera is always OUTSIDE
-    //     the stipe - the deferred Equip interior is never entered.
-    { t: 0.18000000000000016, pos: V(2.010, 1.420, 1.150), tgt: V(-0.586, 0.042, -0.116), fov: 52.5 }, // p 0.645, pitch -25.5 yaw -116.0
-    { t: 0.27200000000000024, pos: V(1.895, 0.850, 0.965), tgt: V(-0.731, -0.578, -0.177), fov: 53 },  // p 0.668, pitch -26.5 yaw -113.5 (the valley)
-    // T3 soil-line crossing lands just past here (p ~0.693: the Y schedule
-    // through the murk is the shipped one, key for key)
-    { t: 0.3599999999999999,  pos: V(1.820, 0.150, 0.830), tgt: V(-0.921, -1.100, -0.250), fov: 54 },  // p 0.690, pitch -23.0 yaw -111.5
-    // levelling into the glide: pitch recovers along one smooth ramp
-    // (-26.5 valley -> -8 at the rest) while the fov opens toward 58, so the
-    // root crown rises into the top of frame as the murk clears.
-    { t: 0.3999999999999999,  pos: V(1.790, -0.420, 0.760), tgt: V(-1.062, -1.435, -0.278), fov: 55 },  // p 0.700, pitch -18.5 yaw -110.0
-    { t: 0.43999999999999995, pos: V(1.762, -0.920, 0.680), tgt: V(-1.185, -1.667, -0.318), fov: 56.5 },// p 0.710, pitch -13.5 yaw -108.7
-    { t: 0.472,               pos: V(1.742, -1.100, 0.610), tgt: V(-1.254, -1.683, -0.352), fov: 57.5 },// p 0.718, pitch -10.5 yaw -107.8
-    // --- OWNED rest: under the root, the crown at top centre, the fan
-    //     descending into the portrait network below ---
-    { t: 0.5,                 pos: V(1.730, -1.180, 0.560), tgt: V(-1.298, -1.625, -0.373), fov: 58, hold: true, note: 'owned-rest' },   // p 0.725
+    // --- The descent to the rest is the dive() gesture above (2026-08-11,
+    //     "one movement"): the director never evaluates the keyed spline
+    //     below the rest, and the rest's hold (zero tangent) means the keys
+    //     from here on are shaped by each other alone. ---
+    REST_KEY,                                                                                                                            // p 0.725
     // --- growth-front rise-tilt-recede, RE-PATHED (2026-08-07 pass 2,
     //     17-final-field.md; Hannah: "what if the actual effect was more of a
     //     reverse and out to show the mushrooms… what if it zoomed out and
