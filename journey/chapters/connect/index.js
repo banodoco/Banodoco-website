@@ -27,9 +27,9 @@
 //            is itself a pure function of p.
 //   lit      PURE IN p (drive(p)): the light. THREE fronts now, one per route
 //            (2026-08-06), running base -> hub -> off-stage in sequence —
-//            ADOS, then Hivemind, then Discord — each lifting its own strands
-//            from their quiet level to their full one and kindling its own hub
-//            core as it lands. See THE ARRIVAL SCHEDULE below.
+//            Hivemind, then Discord, then ADOS (2026-08-11) — each lifting its
+//            own strands from their quiet level to their full one and kindling
+//            its own hub core as it lands. See THE ARRIVAL SCHEDULE below.
 //
 // THE D16 LAW IS KEPT, and kept the same way: nothing fades in over open
 // view. `resolve` is EXACTLY 0 at the hero pose and at the Inspire rest in
@@ -83,6 +83,10 @@ function pulseDriver(dur) {
      flashes. (Far-to-near was tried on screen and reads backwards: the light
      arrives at the edge of the world and works IN toward the mushroom, which
      is drainage, not growth.)
+       SUPERSEDED 2026-08-11 — see ADOS LAST below. Hannah reported ADOS
+       arriving first as "comes in right away"; the order is now Hivemind ->
+       Discord -> ADOS. The DURATION and OVERLAP laws in the two paragraphs
+       under this one are unchanged and still govern; only the sequence did.
 
      DURATION: proportional to each front's own reach (tendrils.js measures
      it), so the light travels at ONE SPEED across the whole network instead
@@ -182,9 +186,109 @@ function pulseDriver(dur) {
    deliberate 600 px/s: whole arrival 3.3 s -> ~9.6 s, a patch's own lift
    0.36 s -> ~1.05 s. FRONT_SOFT, EASE_MIX, LIGHT_OVERLAP and the staging
    are untouched — this is a re-time, not a re-choreography. */
-const LIGHT_LO = 0.0273;   // leg-t — p 0.3860, ADOS's light leaves the base
-const LIGHT_HI = 0.637;    // leg-t — p 0.5201, Discord's farthest tip saturates
+const LIGHT_LO = 0.0273;   // leg-t — p 0.3860, the first route's light leaves the base
+const LIGHT_HI = 0.637;    // leg-t — p 0.5201, the last route's farthest tip saturates
 const LIGHT_OVERLAP = 0.30;
+
+/* ADOS LAST (2026-08-11, Hannah: "the ADOS item and line seems to come in
+   right away, but it should be sequenced after the other two — talking about
+   the light line and dot").
+
+   ORDER: HIVEMIND -> DISCORD -> ADOS. Route indices, not ids, because
+   everything downstream of LIT_WIN is indexed by route.
+
+   Why THIS order and not the other one that ends on ADOS. Discord ->
+   Hivemind -> ADOS is monotonically far-to-near, and this chapter already
+   owns that gesture and means something else by it: `uExit` converges the
+   network's light back INTO the root as the camera walks to the trunk on the
+   Connect->Owned dive, which is drainage. A monotone inward arrival is that
+   gesture played forwards and the two would blur across the dive. Hivemind ->
+   Discord -> ADOS is not monotone in either direction, so it cannot be
+   confused with the exit — it opens OUTWARD from mid-frame to the far door
+   and then lands home on the near one. Every front still departs the stipe
+   base and runs outward along its own route; only which hub is next changed.
+
+   Why it reads. The chapter is Connect the community: the wider community
+   lights first (Hivemind mid-frame, then Discord at the far right), and the
+   last thing the light reaches is ADOS — the event itself, nearest the eye
+   and the largest of the three on screen (rest pose, 1440x900: Hivemind
+   (887, 585) -> Discord (1209, 711) -> ADOS (262, 788)). The finale is the
+   node the chapter is actually about, and it lands where the eye ends up.
+
+   THE SCHEDULE IS NOT REBALANCED, and that is a measured decision rather
+   than a default. The order is the only edit: DURATION is still proportional
+   to each front's own reach (one head speed everywhere), OVERLAP is still
+   0.30, LIGHT_LO/LIGHT_HI are untouched. Because the last window's reach
+   enters the normaliser undiscounted and ADOS's is the smallest of the
+   three, putting it last makes k slightly LARGER, so all three windows come
+   out a shade longer than they were shipped (Hivemind 0.0555 -> 0.0566,
+   Discord 0.0627 -> 0.0654, ADOS 0.0509 -> 0.0523 of p), and the arrival as
+   a whole is the same length it was BY CONSTRUCTION — LIGHT_LO and LIGHT_HI
+   did not move, so the arrival still runs p 0.3860 -> 0.5203, 10.4 s at a
+   deliberate 600 px/s on the surface spline, and only its interior
+   re-sequenced. Nothing
+   in this chapter got faster, which after five rounds of "slower" is the
+   property worth protecting above every other consideration here.
+
+   THE SHORT ROUTE IS PAID FOR BY THE MOVE ITSELF, which is why no weight is
+   needed. ADOS's hub sits at 0.42 of a 0.75-unit reach — 56% of its own run
+   — against Discord's 0.70 of 1.00 (71%), so at equal head speed its front
+   reaches its hub proportionally sooner, and in p its approach (depart ->
+   dot full) is indeed the shortest of the three: 0.0207 against Discord's
+   0.0353. But p is not what a visitor feels; scroll px are. The Connect
+   leg's PCHIP allocation is not uniform, and the finale slot sits in a
+   COSTLIER stretch of it, so measured on the surface spline at a deliberate
+   600 px/s the same 0.0207 is 1.80 s — against Hivemind's 1.65 s and
+   Discord's 2.92 s, i.e. the middle of the three, and 1.45x longer than
+   ADOS's own approach was as the shipped opener (1.24 s). Moving ADOS last
+   BOUGHT it the reading time; it did not cost it any.
+
+   A FINALE WEIGHT WAS STILL BUILT AND MEASURED, then rejected. It evens the
+   hub rhythm (gaps 0.0456 / 0.0321 in p at weight 1.00; 0.0409 / 0.0331 at
+   1.30; 0.0377 / 0.0338 at 1.55) but it can only lengthen the finale by
+   taking p from the other two, and at 1.55 Hivemind's window falls 17% and
+   Discord's 15% BELOW their shipped lengths — two of three routes made
+   materially faster to buy a rhythm nicety on the third, in the one part of
+   this site with a five-request history of "slower". Rejected on that
+   alone, and the rhythm did not need it: in wall-clock the gaps are 3.55 s
+   and 2.82 s against the shipped 3.11 s and 3.93 s — the same 1.26 ratio,
+   closing in rather than opening out. The shipped arrival widened toward
+   the far door; this one tightens toward home. Both are cadences; only one
+   of them ends on the node the chapter is about.
+
+   The finale's other gain is free: its run-out plays NEAR THE CAMERA. Every
+   window ends with the front running past its hub into the continuations,
+   and the last route's tail is the only one no following route covers —
+   2.41 s here against Discord's 2.16 s as the shipped finale, so barely
+   longer. But Discord's tail ran out at the far right, small and distant,
+   while ADOS's runs out bottom-left across the nearest, largest ground in
+   the frame. The arrival now ENDS on its most legible motion. And the gap
+   between the last two dots is not empty: ADOS's own front departs the base
+   0.0153 p after Discord's dot lands, so the arrival's six beats (depart/dot
+   x 3) fall at p 0.3860, 0.4071, 0.4231, 0.4527, 0.4680, 0.4848 — far more
+   even than the hub-only reading suggests.
+
+   THE KINDLE FLOOR is kept exactly as c77fb00 set it and was re-checked in
+   this slot, since it exists for ADOS specifically. It still binds only on
+   ADOS (along*0.5 = 0.21 against along - FRONT_SOFT = 0.10) and it still
+   does the thing it was added to do: ADOS's core reads exactly zero for the
+   first 24% of its window — 0.0126 of p, ~1.0 s at a deliberate scroll —
+   so the light is unambiguously travelling before the dot exists, and the
+   dot then swells to full over the following 0.0081 p as the front lands.
+   Verified on screen at 1440x900 (p 0.472 front running, no dot; p 0.482
+   core 0.12; p 0.490 core 0.58).
+
+   THE CHIPS DO NOT FOLLOW. NODE_IDS stays [ados, hivemind, discord], which
+   is the chip stagger order, the roving tab order and the deep-link order.
+   They are a different medium answering a different question: the chips are
+   the RESTING composition's labels, gated on the copy (they arrive p 0.516 ->
+   0.523, after the light is home) and staggered 150 ms apart, so all three
+   are up inside 300 ms — a garnish, not a competing sequence. Their order is
+   importance (ADOS is the event this page exists for, and it must lead the
+   tab order); the light's order is geography and cadence. Read together they
+   hand off rather than contradict: the last hub the light reaches is the
+   first one the page names. */
+const LIGHT_ORDER = [1, 2, 0];       // hivemind, discord, ados
 
 /* THE FRONT'S OWN PACE INSIDE ITS WINDOW (2026-08-07, with the above).
    Each front ran on a plain smoothstep, whose speed peaks at 1.5x its own
@@ -312,19 +416,23 @@ export function createConnect(sceneApi) {
   const net = buildTendrils(group, U);
   const counts = net.counts;
 
-  /* ---- lay the three windows end to end (see THE ARRIVAL SCHEDULE above).
-     Durations are proportional to each front's measured reach, so the light
-     runs at one speed; each window starts (1 - overlap) of the way through
-     the previous one; the last one ends exactly on LIGHT_HI. ---- */
+  /* ---- lay the three windows end to end in LIGHT_ORDER (see THE ARRIVAL
+     SCHEDULE above). Durations are proportional to each front's measured
+     reach, so the light runs at one speed; each window starts (1 - overlap)
+     of the way through the previous one; the last one ends exactly on
+     LIGHT_HI. Indexed BY ROUTE on the way out (drive(p) reads
+     LIT_WIN[route]), so nothing downstream needs to know the order.
+     Build-time constant and pure in p. ---- */
   const LIT_WIN = (() => {
     const reach = [U.uLitMax.value.x, U.uLitMax.value.y, U.uLitMax.value.z];
+    const w = LIGHT_ORDER.map(r => reach[r]);
     const k = (LIGHT_HI - LIGHT_LO) /
-      ((1 - LIGHT_OVERLAP) * (reach[0] + reach[1]) + reach[2]);
-    const out = [];
+      ((1 - LIGHT_OVERLAP) * (w[0] + w[1]) + w[2]);
+    const out = [null, null, null];
     let s = LIGHT_LO;
-    for (let i = 0; i < 3; i++) {
-      const d = k * reach[i];
-      out.push([s, s + d]);
+    for (let n = 0; n < 3; n++) {
+      const d = k * w[n];
+      out[LIGHT_ORDER[n]] = [s, s + d];
       s += (1 - LIGHT_OVERLAP) * d;
     }
     return out;
@@ -585,7 +693,7 @@ export function createConnect(sceneApi) {
     },
     /** The travelling light — pure in p, so scrubs reverse exactly.
      *  Forward: light leaves the stipe base and runs out along paths that are
-     *  already there, ONE ROUTE AT A TIME (ADOS, then Hivemind, then Discord,
+     *  already there, ONE ROUTE AT A TIME (Hivemind, then Discord, then ADOS,
      *  windows overlapping by 0.30), kindling each hub as its own trail lands.
      *  Reverse: each front withdraws into the base in the opposite order and
      *  the routes go quiet again — they do not vanish. Nothing here reads a

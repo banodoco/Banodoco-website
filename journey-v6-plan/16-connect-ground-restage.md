@@ -1748,3 +1748,188 @@ re-time, not a re-choreography.
   a momentum stream running across the whole window; the floor is the
   gesture's own peak, so a genuinely deliberate reader is unaffected.
 - The hero-web dim still rides litAvg and now begins at p 0.386.
+
+---
+
+## 2026-08-11 — ADOS last: the finale is the node the chapter is about
+
+**The ask, verbatim.** *"In Connect the community, the ADOS item and line
+seems to come in right away, but it should be sequenced after the other two.
+Talking about the light line and dot."*
+
+Sixth request on this arrival, and the first one about ORDER rather than
+pace. `4146288` chose nearest → farthest (ADOS, Hivemind, Discord) and
+defended it three ways; two of those defences survive this pass and one does
+not.
+
+### The order shipped: HIVEMIND → DISCORD → ADOS
+
+Not Discord → Hivemind → ADOS, which is the other order ending on ADOS.
+That one is monotone far-to-near, and `4146288`'s third argument still
+stands: this chapter already owns that gesture and means drainage by it
+(`uExit` converges the network's light back INTO the root as the camera walks
+to the trunk on the Connect→Owned dive), so a monotone inward arrival is the
+exit played forwards and the two would blur across the dive. Hivemind →
+Discord → ADOS is monotone in neither direction, so it cannot be confused
+with the exit at all. Every front still departs the stipe base and runs
+OUTWARD along its own route; only which hub is next changed.
+
+What it reads as: the chapter is *Connect the community*. The wider community
+lights first — Hivemind mid-frame, then Discord at the far door — and the
+last thing the light reaches is ADOS, the event itself, nearest the eye and
+the largest of the three on screen. Rest pose at 1440x900 the three hubs sit
+at Hivemind (887, 585) → Discord (1209, 711) → ADOS (262, 788): out to the
+middle, out to the far right, then home to the near one. The finale lands
+where the eye ends up.
+
+`4146288`'s argument 1 (growth outward from the base) is spent by the ask
+itself. Argument 2 (the order matches `NODE_IDS`/tab/chip order) is answered
+below rather than obeyed.
+
+### The schedule is NOT rebalanced, and that is measured
+
+The order is the only edit. `LIGHT_LO` / `LIGHT_HI` / `LIGHT_OVERLAP`,
+duration ∝ reach (one head speed), `FRONT_SOFT`, `EASE_MIX` and the kindle
+floor are all untouched. `LIT_WIN` is now built in `LIGHT_ORDER` and indexed
+back out by route, so `drive(p)` and everything downstream are unchanged and
+still pure in p.
+
+Because the LAST window's reach enters the normaliser undiscounted and ADOS's
+is the smallest of the three, putting it last makes `k` slightly larger — so
+all three windows come out a shade LONGER than shipped. Nothing in this
+chapter got faster, which after five rounds of "slower" is the property worth
+protecting above everything else here.
+
+**A finale duration weight was built and measured, then rejected.** In p,
+ADOS's approach (depart → dot full) is the shortest of the three, because its
+hub sits at 0.42 of a 0.75-unit reach (56% of its own run) against Discord's
+0.70 of 1.00 (71%). A per-route weight fixes the hub rhythm — gaps 0.0456 /
+0.0321 of p at weight 1.00, 0.0409 / 0.0331 at 1.30, 0.0377 / 0.0338 at 1.55
+— but it can only lengthen the finale by taking p from the other two, and at
+1.55 Hivemind's window falls 17% and Discord's 15% BELOW their shipped
+lengths. Two of three routes made materially faster to buy a rhythm nicety on
+the third, here of all places. Rejected.
+
+It was not needed, for two measured reasons:
+
+1. **p is not what a visitor feels; scroll px are.** The Connect leg's PCHIP
+   allocation is not uniform and the finale slot sits in a costlier stretch.
+   On the surface spline at a deliberate 600 px/s, ADOS's 0.0207 p approach
+   is **1.80 s** — against Hivemind's 1.65 s and Discord's 2.92 s, i.e. the
+   middle of the three, and **1.45x longer than ADOS's own approach was as
+   the shipped opener** (1.24 s). Moving ADOS last BOUGHT it its reading
+   time; it did not cost any.
+2. **The rhythm is the shipped rhythm, mirrored.** Hub-to-hub in wall-clock:
+   3.55 s / 2.82 s against the shipped 3.11 s / 3.93 s — the same 1.26
+   ratio, closing in rather than opening out. The shipped arrival widened
+   toward the far door; this one tightens toward home.
+
+The finale's other gain is free: its run-out plays NEAR THE CAMERA. Every
+window ends with the front running past its hub into the continuations, and
+the last route's tail is the only one no following route covers — 2.41 s here
+against Discord's 2.16 s as the shipped finale, so barely longer. But
+Discord's tail ran out at the far right, small and distant, while ADOS's runs
+out bottom-left across the nearest, largest ground in the frame. The arrival
+now ENDS on its most legible motion.
+
+### The kindle floor: re-checked, kept
+
+`c77fb00` added the floor `max(along*0.5, along - FRONT_SOFT)` because at
+`FRONT_SOFT` 0.32 ADOS's hub (along 0.42) would otherwise kindle on the frame
+its front departed. It exists for ADOS specifically, so it was re-checked in
+the finale slot. It still binds only on ADOS (0.21 against `along - 0.32` =
+0.10), and it still does its job: ADOS's core reads **exactly zero for the
+first 24% of its window** — 0.0126 of p, ~1.10 s at a deliberate scroll —
+then swells to full over the following 0.0082 p as the front lands. On screen
+at 1440x900: p 0.4740 front visibly running down-left with no dot; p 0.4805
+core 0.057; p 0.4850 core 0.452; p 0.4890 core 0.58.
+
+### The chips do NOT follow — deliberate
+
+`NODE_IDS` stays `[ados, hivemind, discord]`: the chip stagger order, the
+roving tab order, the deep-link order. They are a different medium answering
+a different question. The chips are the RESTING composition's labels, gated
+on the copy (measured: they arrive p 0.516 → 0.523, after the light is home)
+and staggered `HOTSPOT_STAGGER_MS` = 150 ms apart, so all three are up inside
+300 ms — a garnish, not a competing sequence. Their order is IMPORTANCE
+(ADOS is the event this page exists for, and it must lead the tab order for
+a11y); the light's order is geography and cadence. Read together they hand
+off rather than contradict: the last hub the light reaches is the first one
+the page names.
+
+### The timing table (measured, 0.0015-p instrumented sweep, live page)
+
+Scroll progress; kindle is the hub core's own swell (0 → full). Wall-clock
+from the PCHIP surface spline at a deliberate 600 px/s — the same arithmetic
+that reproduces the 2026-08-10 pass's 10.37 s (this instrument reads 10.42 s
+for the same shipped span).
+
+    BEFORE (0b7ce1c)      depart   dot 0%   dot 100%   saturate   window
+      1  ADOS             0.3855   0.3979   0.4056     0.4365     0.0509
+      2  Hivemind         0.4200   0.4368   0.4465     0.4755     0.0555
+      3  Discord          0.4577   0.4806   0.4917     0.5203     0.0627
+      hub-to-hub (p)              0.0400 / 0.0444   (opens out 1.11x)
+      hub-to-hub (s)              3.11 / 3.93       (opens out 1.26x)
+      ADOS depart -> dot          0.0201 p  =  1.24 s
+
+    AFTER                 depart   dot 0%   dot 100%   saturate   window
+      1  Hivemind         0.3860   0.4019   0.4120     0.4410     0.0550
+      2  Discord          0.4231   0.4471   0.4584     0.4886     0.0655
+      3  ADOS             0.4680   0.4805   0.4887     0.5203     0.0523
+      hub-to-hub (p)              0.0456 / 0.0321   (closes in 1.42x)
+      hub-to-hub (s)              3.55 / 2.82       (closes in 1.26x)
+      ADOS depart -> dot          0.0207 p  =  1.80 s   (1.45x)
+
+    whole arrival   p 0.3860 -> 0.5203 in both, 10.4 s at 600 px/s —
+                    LIGHT_LO/LIGHT_HI did not move; only the interior
+                    re-sequenced. Per-route reach (uLitMax) unchanged at
+                    1.0796 / 1.1418 / 1.3250.
+
+Departures/dots in wall-clock, the six beats of the arrival, after:
+Hivemind departs 0 s, dot at 1.65 s; Discord departs 2.45 s, dot at 5.36 s;
+ADOS departs 6.21 s, dot at 8.01 s; last tip home at 10.42 s.
+
+### Gates
+
+1. **Mirror scrub, both directions.** p 0.300 → 0.545 → 0.300, 0.0025 steps,
+   p pinned per frame, 1440x900: over every drawn sample **max |Δ uLit|
+   1.2e-3, max |Δ hubIgnite| 3.7e-3** (the grid-pairing residual at the
+   kindle knee, sub-visual, and tighter than `c77fb00`'s own 4.0e-3 /
+   1.3e-2). No self-ignition: **max uLit below p 0.3855 is exactly 0** in
+   both directions. Two samples disagree on `group.visible` at the far edge
+   of the retire tail (p 0.3500); that is the eased arming `amount`
+   (0.00103 against the 0.003 draw gate), it **reproduces identically on the
+   untouched tree** (verified by stashing this change and re-running the
+   same probe), and it is not the light.
+2. **Rest fully lit at every size.** p 0.5230 reads `uLit` [1, 1, 1] and all
+   three cores at their 0.58 resting cap at **1440x900, 1280x800 and
+   375x812**.
+3. **Console clean.** console.error / warn / onerror / unhandledrejection
+   hooked across a full 0 → 1 → 0 ride at all three sizes: **0 entries**.
+4. **Screenshot sequence, 1440x900** (p / uLit / cores):
+   0.4200 [0, .69, 0] / [0, .47, 0] — Hivemind only;
+   0.4620 [0, 1, .70] / [0, .58, .58] — Hivemind and Discord home, ADOS dark;
+   0.4740 [.08, 1, .85] / [0, .58, .58] — ADOS's light visibly travelling,
+   no dot; 0.4850 [.31, 1, .99] / [.45, .58, .58] — the dot kindling;
+   0.4890 [.39, 1, 1] / [.58, .58, .58] — full; 0.5230 [1, 1, 1].
+5. **References.** `capture.py --check`, all five poses x both sizes:
+   **connect@1440x900 and connect@430x932 both MAE 0.00/255, 0.0% px >8** —
+   byte-equivalent, which is the point (the rest is fully lit either way).
+   Worst across the whole list 0.02 (owned, the known determinism wobble)
+   against warn 0.50 / fail 1.00. **PASS.** No golden re-shot.
+
+### Residuals
+
+- The hub rhythm now closes in (1.42x in p) where it used to open out
+  (1.11x). In wall-clock the two are the same 1.26 ratio in opposite
+  directions, so this is a cadence rather than a defect — but it is the one
+  thing a future pass might want to even, and the lever (a per-route
+  duration weight) is measured above along with its price.
+- ADOS's tail is 2.41 s of light running out past the last dot with no other
+  event in the frame. That is 0.25 s longer than the shipped finale's and it
+  plays much nearer the camera, but it is still the quietest stretch of the
+  arrival.
+- Everything `c77fb00` and the 2026-08-10 pass left standing stands: the
+  per-patch lift is still bounded by the pre-existence lead, the hero-web dim
+  still rides `litAvg` from p 0.386, and the commit-resolution assist can
+  still compress the felt arrival for a visitor holding a momentum stream.
