@@ -277,19 +277,46 @@ export function createOwned(sceneApi, content) {
   let frontP = 0;
   let risePulseArmed = true;
 
-  // M5 ignition audit (D16): the arrival REVEAL is keyed to progress, not to
-  // the arming clock. The T3 hold arms this chapter at p 0.63, but from there
-  // down to the soil the camera looks at the descent corridor in OPEN AIR and
-  // the additive field has no occluder — a time-based fade there is a watchable
-  // ignition (the whole colony, faces included, materialised from nothing in
-  // view; same both directions). The soil crossing (camera inside the lid
-  // murk, y 0 → −0.5) spans p ≈ 0.692–0.712: the mask completes exactly
-  // inside that material, so the field is streamed in behind genuine
-  // occlusion and is pre-lit when the camera emerges beneath the lid. Pure in
-  // p — reverse scrubbing retires it behind the same murk. Deep links land
-  // with the mask already at 1 (every rest and the Final rise are past it).
-  const ARRIVAL_LO = 0.692;
-  const ARRIVAL_W = 0.020;
+  // THE SOIL IS THE REVEAL — CAMERA-PURE (2026-08-11, Hannah: "make it so
+  // that they're always there, but are only visible when I go below the
+  // surface"). The root world EXISTS for the whole armed window; what shows
+  // it is the LENS being under the soil, not the chapter being reached.
+  //
+  // This replaces the M5-era p-window (ARRIVAL_LO 0.692, width 0.020). That
+  // window was calibrated to the soil-crossing murk ON THE LEG — p and the
+  // camera are a bijection there, so scrubbing was already honest — but a
+  // nav jump snaps p to the destination while the camera is still most of a
+  // second away, and for that whole blend the window read "arrived": the
+  // colony faded up over the OPEN above-ground view (jump into Owned), and a
+  // jump toward Final lit it through solid terrain with Final's slab not yet
+  // drawn. Same class of fault Connect retired in f9e8317 ("the paths were
+  // always there; arriving lights them") and Final in a8d4518's rise mask:
+  // the cure is composing on the CAMERA alone, so no setBlending hook is
+  // needed — the reveal self-corrects on the first blend frame.
+  //
+  // Two camera-pure terms, max()ed:
+  //
+  //   sink   how deep the lens is below the soil line, completing at 0.94
+  //          units under. 0.94 is measured equivalence, not a new choice:
+  //          the shipped p-window 0.692–0.712 spans camera depth 0 → 0.942
+  //          on the leg (p→depth is linear there to ~3%), so on every scrub
+  //          this term reproduces the approved murk reveal and every golden
+  //          (all rests sit at depth ≥ 1.2, sink = 1). Off the leg it is
+  //          the honest statement: the lid material occludes until you are
+  //          through it, whatever path the camera took.
+  //   keep   the Final-cutaway hold: above ground the colony may only be
+  //          seen through the epilogue's own cutaway, so this term rides
+  //          the SAME camera-x family as Final's riseOf (onset x −4.6 — 0
+  //          at every other chapter's rest and along every jump arc between
+  //          them, measured x ≥ −2.25). It must saturate by x −5.4: the
+  //          rise's sink starts easing at depth 0.94 (p 0.821, x −5.47),
+  //          and keep reaching 1 first is what keeps max() pinned at 1
+  //          through the whole surfacing — measured min 0.9993 across
+  //          p 0.78–0.87 at 1e-3 steps. Reverse rides re-enter through the
+  //          same two terms in mirror, and a jump away from Owned retires
+  //          the colony up through the murk instead of on the click.
+  const SINK_D = 0.94;
+  const KEEP_X0 = 4.6, KEEP_XW = 0.8;
 
   /* ================================================================
      Chapter state + per-frame
@@ -304,14 +331,30 @@ export function createOwned(sceneApi, content) {
     // arrangements. It writes one uniform and does nothing at all when no swap
     // is running, so it costs the resting frame nothing.
     portraits.tickSwap(dt);
-    const k = Math.min(1, dt * 2.6);
+    // Arm ease at 6.0, not the old 2.6. With the reveal camera-pure (below),
+    // the only place this ease can be SEEN at all is inside a nav jump's
+    // blend: the T3/p-window arming edges all sit where sink and keep are
+    // both 0 (measured — the earliest sink>0 on the leg is p 0.6924, 0.06 of
+    // p after the arm at 0.63), so scrubbing never shows it at any speed. At
+    // 2.6 a jump into Owned pierced the murk with amount ~0.87 and the
+    // landing snap stepped the settled colony up ~6% in one frame; at 6.0
+    // amount is ≥0.99 by the earliest pierce a jump blend can make
+    // (0.85 s dur), and the landing step is sub-1% — under the frame's own
+    // twinkle amplitude.
+    const k = Math.min(1, dt * 6.0);
     amount += (amountTarget - amount) * k;
     if (amount < 0.004 && amountTarget === 0) amount = 0;
     const pNow = window.journey ? window.journey.p : 0;
-    // arrival mask (see ARRIVAL_LO above): everything the chapter draws is
-    // scaled by amount * arrival, so the on-screen reveal lives inside the
-    // soil-crossing murk whatever the scrub speed or direction.
-    const arrival = smooth01((pNow - ARRIVAL_LO) / ARRIVAL_W);
+    // arrival mask (see SINK_D above): everything the chapter draws is scaled
+    // by amount * arrival, and arrival is a pure function of the CAMERA — the
+    // soil murk on the way under, the Final cutaway's territory above — so
+    // the on-screen reveal is the geometry occluding, whatever path the lens
+    // takes: scrub, reverse scrub, or a nav jump's blend. The camera is final
+    // for this frame by the spine-first animator order (journey.js).
+    const cp = sceneApi.camera.position;
+    const sink = smooth01((leg.groundY(cp.x, cp.z) - cp.y) / SINK_D);
+    const keep = smooth01((-cp.x - KEEP_X0) / KEEP_XW);
+    const arrival = Math.max(sink, keep);
     const eff = amount * arrival;
     group.visible = eff > 0.003;
     if (!group.visible) {
@@ -430,8 +473,8 @@ export function createOwned(sceneApi, content) {
      *
      *  Same one-liner Final uses; Inspire's and Connect's do more because
      *  they carry more eased state. Pure state assignment — no reveal is
-     *  skipped, because the on-screen reveal is the p-keyed `arrival` mask
-     *  below, not this. */
+     *  skipped, because the on-screen reveal is the camera-pure `arrival`
+     *  mask in the animator (sink/keep), not this. */
     snap() { amount = amountTarget; portraits.snap(); },
 
     setHot(id, on) {
