@@ -45,12 +45,22 @@ export const KEY_STEP_PX      = 110;   // arrow keys
 // gesture's momentum tail decays; a resolution that opposes the visitor waits
 // out SNAP_ENGAGE_MS, because a reversal has nothing to continue. Scrubbing
 // itself is untouched and stays exact. See scroll.js `update`.
-export const COMMIT_THRESHOLD  = 0.35; // fraction of the inter-rest p-span,
+export const COMMIT_THRESHOLD  = 0.35; // fraction of the inter-rest span,
                                        // measured from the rest being LEFT (in
                                        // the direction of travel), past which
                                        // idle commits onward instead of back.
                                        // 0.35 < 0.5 is the deliberate forward
                                        // bias: "push forward most of the time".
+                                       // Fraction OF THE SCROLL SURFACE, not of
+                                       // p (2026-08-11): the Owned<->Final span
+                                       // costs ~2.5 vh of wheel on one side of
+                                       // the allocation boundary and ~9.6 vh on
+                                       // the other, so a p-fraction asked one
+                                       // direction for 4x the physical scroll
+                                       // (measured: 1.6 vh forward vs 6.9 vh
+                                       // backward to the same 35%). In px both
+                                       // directions pay the same share of the
+                                       // same road. See scroll.js pickTarget.
 // FLICK CARRY — WHICH rest a gesture resolves to (scroll.js pickTarget).
 //
 // COMMIT_THRESHOLD alone is a POSITION rule: it asks how far into the span you
@@ -92,6 +102,18 @@ export const COMMIT_THRESHOLD  = 0.35; // fraction of the inter-rest p-span,
 export const COMMIT_CARRY_RATE = 0.02;  // p/s, the gesture's PEAK rate (see
                                         // scroll.js gPeak), signed against the
                                         // visitor's own last delta direction.
+                                        // The peak is MEASURED in surface px/s
+                                        // and converted at the resolution
+                                        // span's own mean slope (2026-08-11):
+                                        // at the local slope, one finger read
+                                        // 9x weaker leaving the Final rest
+                                        // backward than leaving Owned forward
+                                        // (15,460 vs 143,670 px/p), so real
+                                        // backward flicks landed under this
+                                        // floor and were resolved BACK to the
+                                        // rest they were leaving. At the span
+                                        // slope the two directions read one
+                                        // finger identically.
 export const COMMIT_STREAM_GAP_MS = 45; // mean inter-delta spacing at or below
                                         // which a gesture counts as a stream.
                                         // Trackpads and momentum tails run
