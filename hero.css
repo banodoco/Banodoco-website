@@ -506,22 +506,31 @@
     transition-delay: 0.1s;
   }
 
-  /* desktop has the headroom for a longer leader, which lifts the INSPIRE
-     label clear of the cap while its node stays down in the spore stream */
+  /* per-callout leader geometry: where the tag sits relative to the node.
+     The set hangs down the RIGHT side of the frame (Hannah, 2026-08-11) —
+     one descending column: 01 at the plume, 02 off the stem, 03 at the
+     ground, every leader an elbow in the old drawn-instrument language
+     (short diagonal off the node, then a horizontal run into the tag).
+     EQUIP and CONNECT read right-out of their nodes; INSPIRE's node
+     already sits at the frame's right edge, so its elbow reaches back
+     inward — same vocabulary, and the tag stays inside the rail's band.
+     EQUIP is TOP-anchored (no translateY) so its "coming soon" reveal
+     drops below the row instead of shoving the label off the leader.
+     Base shapes are the SMALL-frame ones (mobile portrait + compact
+     landscape); the desktop block below swaps INSPIRE's longer reach. */
+  #co-connect .tag { left: 76px;  top: -24px; transform: translateY(-50%); }
+  #co-inspire .tag { left: -76px; top: -70px; transform: translate(-100%, -50%); }
+  #co-equip   .tag { left: 146px; top: -28px; }
+
+  /* desktop has the headroom for a longer reach, which lifts the INSPIRE
+     label clear of the cap rim while its node stays out in the plume.
+     AFTER the base rules on purpose: same specificity, source order is
+     what lets this one win. */
   @media (min-width: 901px) and (min-height: 561px) {
     #co-inspire svg.std { display: none; }
     #co-inspire svg.tall { display: block; }
-    #co-inspire .tag { top: -62px; } /* flush with the top of the leader */
+    #co-inspire .tag { left: -106px; top: -52px; } /* 6px shy of the leader's reach */
   }
-
-  /* per-callout leader geometry: where the tag sits relative to the node.
-     All three now share INSPIRE's pattern — a vertical leader rising from
-     the node, tag centered above its tip (bottom edge ~6px above the tip) —
-     but each keeps its OWN leader length so the three tags, at very
-     different node heights (spore stream / cap / ground), never collide. */
-  #co-connect .tag { left: 0; top: -46px; transform: translate(-50%, -100%); }
-  #co-inspire .tag { left: 0; top: -58px; transform: translate(-50%, -100%); }
-  #co-equip   .tag { left: 0; top: -40px; transform: translate(-50%, -100%); }
 
   /* --- touch affordance: no hover on touch devices, so idle state gets a
      visibility boost and taps toggle the lit state via JS (.force class) --- */
@@ -577,11 +586,15 @@
     .co { transform: scale(0.88); transform-origin: 0 0; }
     .co .tag { font-size: 0.6rem; }
 
-    /* CONNECT swaps to a shorter vertical leader here — same centered-above
-       pattern as the base rule, just compressed for the smaller viewport */
+    /* CONNECT and EQUIP swap to shorter elbows here — same right-hanging
+       pattern as the base rules, compressed so neither tag leaves the
+       frame or wanders into the rail's band on a 375px screen */
     #co-connect svg.std { display: none; }
     #co-connect svg.alt { display: block; }
-    #co-connect .tag { top: -37px; }
+    #co-connect .tag { left: 54px; top: -16px; }
+    #co-equip svg.std { display: none; }
+    #co-equip svg.alt { display: block; }
+    #co-equip .tag { left: 46px; top: -43px; }
 
     /* small or short phones: tighten the text stack */
     @media (max-height: 700px) {
@@ -592,7 +605,7 @@
       .cta { font-size: 0.7rem; padding: 0.75rem 1.25rem; }
     }
 
-    /* INSPIRE uses the same vertical drop-leader at every size (see base rule) */
+    /* INSPIRE already carries the small-frame steep elbow (see base rule) */
   }
 
   /* ============================================================
@@ -605,6 +618,18 @@
     .sub { margin-bottom: 1.3rem; font-size: 0.95rem; }
     .cta { padding: 0.8rem 1.4rem; }
     .hero { padding-bottom: 5vh; }
+
+    /* EQUIP's and CONNECT's nodes sit only ~40px apart in this squashed
+       frame, so the full-reach elbows stack their tags into one accidental
+       two-row block. Swap both to the short elbows — EQUIP's rises, CONNECT's
+       stays low — so the pair separates vertically (and EQUIP's "coming
+       soon" reveal has room to drop without touching CONNECT). */
+    #co-equip svg.std { display: none; }
+    #co-equip svg.alt { display: block; }
+    #co-equip .tag { left: 46px; top: -44px; }
+    #co-connect svg.std { display: none; }
+    #co-connect svg.alt { display: block; }
+    #co-connect .tag { left: 54px; top: -16px; }
   }
 
   /* ============================================================
