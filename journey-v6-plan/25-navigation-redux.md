@@ -1116,3 +1116,136 @@ Gates: header shot at 1440x900, 1280x800 and 375x812 in rest/hover/focus;
 console over a full ride (wheel 0 -> 1.000 -> 0.001) 0 errors/warnings —
 the two pre-existing boot info lines only; `capture.py --check` PASS (the
 header is DOM chrome, hidden at capture — no reference moved).
+
+## 2026-08-11 (later) — The mark becomes an outline (Hannah: "make it be an outline of the Discord logo — keep tweaking it until it looks nice. Right now it's excessively dominant, especially on mobile. Make it ELEGANT.")
+
+The mark shipped this morning was a filled clyde on a ringed, lit disc. That
+is **two enclosed shapes**, and they were the only opaque things on a page
+whose entire language is fine glowing line — the wireframe specimen, the
+`.co` leader lines, the `.cta`'s hairline, the letterspaced wordmark. It read
+as an app badge stuck onto the frame. On a phone, where the row is
+proportionally larger and the scene behind it thinner, it took the top of the
+composition outright.
+
+**The treatment.** No disc, no ground, no fill. The official clyde path is
+left **unfilled and stroked** — the same `d`, never redrawn; recognisability
+was never in question — at the 1px `.co .lead` / `.co .lit` are drawn at.
+`vector-effect: non-scaling-stroke` holds that 1px true whatever the glyph is
+scaled to, so the weight is stated once and means the same thing at every
+size. `overflow: visible` on the `<svg>` is load-bearing: the box is exactly
+the viewBox and would otherwise clip the outer half of the stroke.
+
+The mark's own subpaths do the work — the outer silhouette becomes one drawn
+contour, the two eye counters become two small rings. Nothing was redesigned.
+
+**Colour: parchment at rest, gold when lit.** Gold is this site's LIT state
+everywhere else (`.co`'s rest hairline lighting on hover, the CTA, every
+`:focus-visible` ring); spending it at rest is most of what made the badge
+shout. So the mark rests in parchment and lifts to `--gold-bright` with the
+`.co .lit` drop-shadow on hover/focus — a `filter` now rather than a
+`box-shadow`, since there is no box left to light.
+
+**Rest alpha was measured, not guessed.** Shot at 0.58 / 0.66 / 0.74 / 0.82 in
+the real row, at actual size, 1440 and 375@2x. 0.58 is the old text pill's
+BORDER alpha and was the tempting "same hairline value" answer — but that
+pill also carried a FULL-parchment *word*, so matching only its border
+undersells the control and it goes ghostly. 0.82 starts to rival the
+wordmark. **0.74** is where the mark's stroke reads at the same density as
+BANODOCO's letter strokes: the two sit in the row as peers, which is the
+whole point.
+
+**Mobile got its own numbers**, since that is where she flagged it. The ink
+shrinks with the wordmark (1.05rem -> 0.92rem is -12%; 20px -> 18px is -10%)
+and **the stroke shrinks with it, 1px -> 0.9px** — a 1px line on a smaller
+glyph is a bigger *fraction* of it and coarsens, which is exactly the failure
+the brief warned about. At DPR 2-3 (a real phone) 0.9px is 1.8-2.7 device px,
+crisper than the DPR-1 stills below.
+
+### Tried and rejected
+
+- **Keeping the ring, outlining only the glyph.** Shot it first. The ring is
+  what makes it read as a badge — an outlined face inside a circle is still a
+  disc with something in it. Rejected on sight.
+- **Gold at rest** (`--gold` 0.62). Warmer and it *does* echo the `.co`
+  leaders — but the callouts are IN the scene, world-tracked, part of the
+  specimen's light; the header is page chrome, and its wordmark and pill
+  border were always parchment. Gold at rest also pre-spends the lit state and
+  visibly pulls the eye. Rejected.
+- **19px ink** (the old glyph's size). Too small once unfilled — the eye rings
+  crowd and the lower jaw muddies. **25px** draws cleanest but is a larger
+  footprint than the badge it replaces, which loses the argument. 20px is the
+  ink that reads.
+- **A transparent border** instead of `border: 0`. The base `.pill`'s 1px is
+  still LAYOUT under `box-sizing: border-box`: a transparent one silently ate
+  2px off the ink (measured 20x15 where 22 was declared) and pushed the mark a
+  pixel off the margin. Caught by measuring, not by looking.
+- **The focus ring on the box.** The `<a>` is 20x33 — it has to be, the row's
+  edge is camera-balanced — while the mark is 20x15, so the shared ring came
+  out a tall portrait rectangle around a wide little face. That is the
+  enclosing-shape problem this pass removed, handed back on focus. The ring now
+  hangs on the `<svg>` (26x21 at the shared 3px offset); same colour, same
+  width, same offset, different element.
+
+### The row's edge never moved
+
+Height is still EXACTLY the text pill's computed height — 33px desktop,
+28.44px portrait — because the nav row's bottom is the top of the band
+Inspire's portrait camera is balanced against (the PL-1.4 note in hero.css).
+**Only the ink changed.** Width now follows the ink rather than being a 33px
+square, so with the disc gone the ink *is* the visual edge and it sits flush
+to the margin the wordmark starts at (right edge 1385.6 = 1440 - 3.4rem;
+352.5 = 375 - 6vw).
+
+| | before | after |
+|---|---|---|
+| navBottom @1440x900 | 100.1875 | **100.1875** |
+| navBottom @1280x800 | 100.1875 | **100.1875** |
+| navBottom @375x812 | 70.03125 | **70.03125** |
+| box @desktop | 33x33 | 20x33 |
+| box @375 | 28.44x28.44 | 18x28.4375 |
+| ink @desktop | 19x14.39 (filled) | 20x15.16 (1px stroke) |
+| ink @375 | 17x12.88 (filled) | 18x13.64 (0.9px stroke) |
+| touch target @375 | 44x44 (PL-1.4 pad) | **44x44 (PL-1.4 pad)** |
+
+### Tier 3
+
+Same treatment, and it picks up the **PL-1.4 pad** it never needed before: its
+box used to be 44px square and got the touch minimum for free, but the ink is
+20px now and the box follows it, so a transparent 44x44 `::before` carries the
+target in both tiers.
+
+One latent bug fell out and is fixed: inside `@media (max-width: 900px)`,
+`.pill` re-pads to `1rem` at the same specificity as the base `.pill-ic` and
+*later in source*, so it won — 32px of horizontal padding against a 20px
+border-box left the content box negative and **the svg measured 0.00x0.00**,
+i.e. the mark vanished entirely below 900px. `padding: 0` is now restated in
+that block. (hero.css's portrait block already restated it, which is why the
+live tier never showed this.) The old 44px box masked it as a squeeze rather
+than a disappearance.
+
+### Gates
+
+- Shot at **1440x900, 1280x800 and 375x812** in rest / hover / focus, before
+  and after, actual size and zoomed.
+- **navBottom byte-identical** at all three (table above); `inspire@430x932`
+  drifted 0.00/255, so the portrait composition is provably untouched.
+- **A11y, verified headless with real Tab keypresses** (not `element.focus()`):
+  AX role `link`, AX name `"Discord"`, svg `aria-hidden="true"` /
+  `focusable="false"`. Live tier reaches the control on hop 6 (skip link ->
+  03/01/02 callouts -> wordmark -> mark), Tier 3 on hop 3. `:focus-visible`
+  matches and the gold ring paints on the glyph in both tiers at both sizes.
+- **Touch target measured at 375**: `::before` 44x44px, both tiers.
+- **`prefers-reduced-motion`**: `transition: none / 0s` in both tiers at both
+  sizes, with rest AND lit colour/filter both intact and instant.
+- **Tier 3 drift checker: 5 problems — the same 5 that were already there**
+  (4 `chapters.owned.claims.*` paths, 1 `chapters.final.heading` mismatch).
+  No sixth.
+- **Console over a full ride** (`mission -> final -> mission`, wheel both
+  directions): 0 errors / warnings / uncaught / rejections; the two
+  pre-existing boot info lines only.
+- **`capture.py --check`: PASS**, worst MAE 0.02/255 — the header is DOM
+  chrome and is hidden at capture, so all ten frozen references stayed put.
+
+**The destination is still nobody's.** `href="#"` — still the unconfirmed
+placeholder, still marked in both tiers' comments and `data-placeholder` in
+Tier 3.

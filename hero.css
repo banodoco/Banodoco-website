@@ -175,44 +175,74 @@
     transition: border-color 0.25s, background 0.25s;
   }
   .pill:hover { border-color: var(--ink); background: rgba(242, 237, 225, 0.06); }
-  /* THE DISCORD MARK (2026-08-11, Hannah: "make the Discord thing in the top
-     right be the Discord icon with an appropriate styling/lighting on it").
-     The word gives way to the mark, in the site's own light: a near-black,
-     deep-brown ground (lit faintly from the upper left, where the specimen's
-     glow reaches the row) inside an AMBER-GOLD hairline, the glyph itself in
-     parchment. Hover and keyboard focus warm the hairline and the mark to
-     gold-bright with a soft spill — the callouts' own state grammar (a rest
-     hairline that LIGHTS, .co's lead->lit), no new choreography, and the
-     0.25s transition every other nav control keeps.
-     THE BOX IS 33px TALL ON PURPOSE — the same computed height as the text
-     pill it replaces (94.8x33 measured), because the nav row's bottom edge is
-     the top of the band Inspire's portrait camera is balanced against (see
-     the PL-1.4 note below): the control may change its word, never the row's
-     edge. The 44px touch minimum stays where it always was, on the PL-1.4
-     transparent pad. The glyph is the real Discord mark, not a redraw —
-     recognisability is the point — and the <a> carries aria-label="Discord"
-     now that the visible word is gone. */
+  /* THE DISCORD MARK — AN OUTLINE (2026-08-11, Hannah: "make it be an outline
+     of the Discord logo ... right now it's excessively dominant, especially on
+     mobile. Make it ELEGANT." Supersedes the filled-glyph-in-a-ringed-disc of
+     58a63c3.)
+     WHAT WAS WRONG: a solid glyph inside a lit circle is TWO enclosed shapes,
+     and they were the only opaque things on a page whose entire language is
+     fine glowing line — the wireframe specimen, the .co leaders, the .cta's
+     hairline. It read as an app badge stuck onto the frame, and on a phone,
+     where the row is proportionally larger and the scene behind it thinner,
+     it took the top of the composition.
+     WHAT IT IS NOW: no disc, no ground, no fill. The clyde is STROKED — the
+     real mark's own path, never redrawn, just unfilled — so the control IS
+     the mark, at the same 1px the .co leader lines are drawn at
+     (vector-effect keeps that 1px true whatever the glyph is scaled to;
+     overflow must be visible or the box clips the outer half of the stroke).
+     Parchment at rest, a shade under the wordmark it stands beside, because
+     GOLD IS THIS SITE'S LIT STATE — spending it at rest is most of what made
+     the old badge shout. Hover and keyboard focus lift it to --gold-bright
+     with the .co .lit drop-shadow (a filter now, not a box-shadow: there is
+     no box left to light), on the nav row's existing 0.25s.
+     THE BOX STILL HOLDS THE ROW'S EDGE — height is EXACTLY the text pill's
+     computed 33px (28.44px portrait), because the nav row's bottom is the top
+     of the band Inspire's portrait camera is balanced against (the PL-1.4
+     note below). Only the INK moved. Width is now the ink's own width rather
+     than a 33px square, so the mark sits flush to the 3.4rem margin the
+     wordmark starts at — with the circle gone, the ink is the visual edge.
+     The 44px touch minimum stays where it always was, on the PL-1.4 pad. */
   .pill-ic {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 33px;
+    justify-content: flex-end;
+    width: 20px;
     height: 33px;
     padding: 0;
-    border-color: rgba(217, 164, 65, 0.52);            /* --gold, hairline */
-    background: radial-gradient(120% 120% at 34% 26%,
-                rgba(64, 44, 18, 0.88), rgba(18, 12, 5, 0.94) 68%);
-    color: rgba(242, 237, 225, 0.92);                  /* parchment mark */
-    transition: border-color 0.25s, color 0.25s, box-shadow 0.25s;
+    /* border: 0, not a transparent border — the base .pill's 1px is still
+       LAYOUT under box-sizing: border-box, so a transparent one silently ate
+       2px off the ink and pushed the mark a pixel off the margin. */
+    border: 0;
+    background: none;
+    color: rgba(242, 237, 225, 0.74);   /* see the note above the hover rule */
+    transition: color 0.25s, filter 0.25s;
   }
-  .pill-ic svg { width: 19px; height: auto; display: block; }
+  .pill-ic svg {
+    width: 20px;
+    height: auto;
+    display: block;
+    overflow: visible;                  /* else the box clips the stroke */
+  }
+  .pill-ic svg path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1;                    /* .co .lead / .co .lit weight */
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: round;
+  }
+  /* REST ALPHA, measured not guessed: shot at 0.58 / 0.66 / 0.74 / 0.82 in
+     the real row at actual size, 1440 and 375@2x. 0.58 is the old .pill
+     BORDER's alpha and was the tempting answer, but that pill also held a
+     FULL-parchment word — matching only the border undersells the control and
+     it goes ghostly. 0.82 starts to rival the wordmark. 0.74 is where the
+     mark's stroke reads at the same density as BANODOCO's letter strokes, so
+     the two sit in the row as peers — which is the whole point: a quiet
+     hairline beside a quiet wordmark, not a badge beside a wordmark.
+     The base .pill's hover paints a border and a wash; there is no box here. */
   .pill-ic:is(:hover, :focus-visible) {
-    border-color: var(--gold-bright);
+    background: none;
     color: var(--gold-bright);
-    background: radial-gradient(120% 120% at 34% 26%,
-                rgba(64, 44, 18, 0.88), rgba(18, 12, 5, 0.94) 68%);
-    box-shadow: 0 0 16px rgba(217, 164, 65, 0.20),
-                inset 0 0 9px rgba(217, 164, 65, 0.16);
+    filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.55));
   }
   /* keyboard focus, gold family — matches journey/site.css's treatment for
      every journey-layer control (.j-rail / .j-menu :focus-visible etc).
@@ -224,10 +254,20 @@
     outline-offset: 3px;
     border-radius: 2px;
   }
-  /* The shared ring above sets border-radius: 2px, right for the square-ish
-     controls it was written for; a circle states its own (the .j-act
-     precedent in journey/site.css). */
-  .pill-ic:focus-visible { border-radius: 999px; }
+  /* THE RING GOES ON THE GLYPH, NOT THE BOX. The shared rule above draws on
+     the <a>, which is 20x33 — it has to be, the row's bottom edge is camera-
+     balanced — while the mark inside it is 20x15. Drawn on the box, the ring
+     came out a tall portrait rectangle around a wide little face: it read as
+     a button, which is the enclosing-shape problem this whole pass removed,
+     handed back on focus. Drawn on the svg it hugs the ink (26x21 with the
+     shared 3px offset) and the control still looks like a mark. Same colour,
+     same width, same offset — only the element it hangs on changed. */
+  .pill-ic:focus-visible { outline: none; }
+  .pill-ic:focus-visible svg {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
 
   /* --- hero --- */
   .hero {
@@ -619,11 +659,17 @@
     nav { padding: 1.3rem 6vw; }
     .logo { font-size: 0.92rem; letter-spacing: 0.3em; }
     .pill { padding: 0.42rem 1rem; font-size: 0.72rem; }
-    /* same rule as the text pill it replaced: hold the row's computed height
-       (28.44px measured on the text pill at this query — the row's bottom
-       edge must not move), let the PL-1.4 pad below carry the 44px minimum */
-    .pill-ic { width: 28.44px; height: 28.44px; padding: 0; }
-    .pill-ic svg { width: 17px; }
+    /* HEIGHT is still the text pill's computed 28.44px at this query — the
+       row's bottom edge must not move, whatever the ink does. Width follows
+       the ink so the mark sits flush to the 6vw margin.
+       The ink shrinks with the wordmark (1.05rem -> 0.92rem is -12%; 20 -> 18
+       is -10%), which is where Hannah felt the old badge worst. A 1px stroke on
+       a SMALLER glyph is a BIGGER fraction of it, so the stroke comes down
+       with it — 0.9px here keeps the line optically the same hairline it is at
+       1440 instead of letting it coarsen on the smallest frame. */
+    .pill-ic { width: 18px; height: 28.44px; padding: 0; }
+    .pill-ic svg { width: 18px; }
+    .pill-ic svg path { stroke-width: 0.9; }
     .hero { padding: 5vh 7vw 0; }
     h1 { font-size: clamp(1.7rem, 7.2vw, 2.5rem); margin-bottom: 1.1rem; }
     .sub { font-size: 0.98rem; margin-bottom: 1.8rem; }
@@ -730,7 +776,8 @@
     .cta .arr { transition: none; }
     .co .lit, .co .ring, .co .tag, .co .ck { transition: none; }
     /* the Discord mark's warm-up is a transition ENDING at its resting or
-       lit style, so switching it off leaves both states intact and instant */
+       lit style, so switching it off leaves both states intact and instant
+       (colour + the lit drop-shadow — there is no box-shadow on it now) */
     .pill-ic { transition: none; }
   }
 
