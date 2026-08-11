@@ -75,7 +75,9 @@ window.__inputGates = async function () {
     };
     const notCanvas = blockers;
 
-    const OVERLAYS = ['.j-menu-scrim', '.j-menu', '.j-index-scrim', '.j-index'];
+    // (.j-index / .j-index-scrim left this list 2026-08-11 with the node
+    // index itself — the Contributors cue and its sheet were removed.)
+    const OVERLAYS = ['.j-menu-scrim', '.j-menu'];
 
     // ---- G1 the canvas owns the frame at rest ----
     const g1 = notCanvas();
