@@ -967,3 +967,109 @@ Simulated real `pointerType: 'touch'` taps headless at 375x812:
   DOM chrome, hidden at capture; the scene is untouched).
 - Before/after screenshots: resting / armed fan / open panel at 375x812 and
   armed fan at 430x932.
+
+---
+
+## 2026-08-11 — The hero callouts hang down the right side
+
+Hannah, on the landing frame's balance (voice, transcribed): *"Move the
+EQUIP sign so it's pointing over from the right side… move the CONNECT sign
+over to its right as well… it would feel more balanced if they were all
+coming down the right side, basically, in terms of the balance with the
+actual page."*
+
+This supersedes `a089e40`'s placement (all three tags centred above their
+nodes on vertical leaders) while keeping everything else that commit and
+`e20f7ff` established: tags as links, EQUIP inert with its "coming soon"
+reveal, and all three anchors static — no wind.
+
+### The placement as authored
+
+All three callouts return to the pre-`a089e40` **elbow language** — a short
+diagonal off the node, then a horizontal run into the tag — but authored as
+one system descending the frame's right side, balancing the hero copy on
+the left:
+
+- **01 INSPIRE** — its node already sits at the right edge, out in the
+  spore plume, so its elbow is the one that reaches back *inward*
+  (`L-32,-52 H-100` on desktop): the tag tops the column, above the cap
+  rim. This also fixes two latent defects: at 1440x900 the old centred tag
+  clipped the viewport (right edge 1450 > 1440) and entered the navigator
+  band; at 430x932 it overlapped the rail mark's row.
+- **02 EQUIP** — the sign Hannah pointed at: elbow comes in *from the
+  right* (`L26,-14 H140`), tag right of the stem, roughly level with its
+  node. The tag is **top-anchored** (no translateY) so the "coming soon"
+  reveal drops below the label row instead of re-centring the box and
+  shoving the row off the leader.
+- **03 CONNECT** — elbow up-right off the ground node (`L30,-24 H70`),
+  tag at the bottom of the column, `translateY(-50%)` on the run.
+
+Leader shapes per breakpoint (every path keeps `pathLength="100"`, so
+`lead-draw`/`.lit` dash geometry is untouched at any length):
+
+| callout | desktop (min 901x561) | small frames (base) | via |
+|---|---|---|---|
+| INSPIRE | `L-32,-52 H-100`, tag -106/-52 | `L-18,-70 H-70`, tag -76/-70 | svg.tall / svg.std |
+| EQUIP | `L26,-14 H140`, tag 146/-28 | `L16,-30 H40`, tag 46/-43 (mobile), 46/-44 (compact) | svg.std / svg.alt |
+| CONNECT | `L30,-24 H70`, tag 76/-24 | `L20,-16 H48`, tag 54/-16 | svg.std / svg.alt |
+
+The desktop INSPIRE media block now sits AFTER the base per-callout rules —
+same specificity, source order decides, and in the old file the earlier
+placement meant the `tall` tag offset silently never won (only the svg swap
+did). EQUIP gained an `svg.alt` (it had one shape at every size); the
+mobile-portrait block swaps EQUIP and CONNECT to the short elbows, and the
+compact-landscape block (`max-height: 560px`) now does the same — see
+"tried and rejected".
+
+### Tried and rejected
+
+- **A shared screen-x column for the three tags** — impossible with
+  world-tracked nodes: offsets are per-node, node x varies with aspect
+  inside each camera mode, so exact alignment can't be authored in CSS.
+  The set is instead a *convention* column (left edges 1183–1216 at
+  1440x900), which reads aligned without fighting the projection.
+- **All three leaders pointing the same direction** — INSPIRE's node hugs
+  the right edge; a rightward elbow would leave the frame. Its mirrored
+  elbow keeps the vocabulary (diagonal + horizontal run) while the *tags*
+  do the aligning.
+- **EQUIP `translateY(-50%)` like CONNECT** — the reveal would grow the
+  box symmetrically and lift the label row ~9px off the leader run on
+  every hover. Top-anchoring pins the row and spends the growth downward.
+- **Keeping compact landscape on the full-reach elbows** — at 844x390 the
+  EQUIP and CONNECT nodes are ~40px apart and the tags stacked into one
+  accidental two-row block, 3px apart, with EQUIP's reveal overlapping
+  CONNECT. Short elbows + EQUIP's steeper rise separate them (27px at
+  rest, 10px with the reveal open).
+- **First mobile INSPIRE pass at dy-62** — the label row grazed the cap
+  rim at 430x932; dy-70 clears it while keeping 17px under the CTA at
+  375x812 and 22px under the nav at 844x390.
+
+### Measured clearances (rest / hover-forced)
+
+- **1440x900**: rail band 95/111/58px (01/02/03), rail mark never
+  approached; tag-to-tag 301 and 194px (177 with EQUIP's reveal open);
+  nav row to 01: 121px; hero copy right edge 704 vs leftmost tag 1183.
+- **1280x800**: rail band 91/66/25px (22 hover); tag-to-tag 269 and 169px
+  (152 hover); nav to 01: 89px.
+- **375x812**: tag-to-tag 124 and 99px (84 hover); CTA to 01: 17px (the
+  tight one, deliberate — the strip between CTA and cap apex is the only
+  clean air on a phone); EQUIP's edge kisses the rail band's invisible
+  x-range (+1px) and CONNECT enters it by 7-10px, both 270px+ below the
+  rail's mark — no ink, no hit-area contact (rail is pointer-events:none
+  outside its slots, slots live at the vertical centre).
+
+### Gates
+
+- Entry choreography: `lead-draw` runs on the elbows (dashoffset sampled
+  in flight mid-boot, 0 at rest); numbered 01→02→03 boot order untouched.
+- INSPIRE → `#/inspire` and CONNECT → `#/connect` verified headless,
+  Back returns to `#/mission` both times; EQUIP click leaves hash and
+  chapter untouched, reveal opens/closes on tap (`hover: none` emulated,
+  force toggles on, off, and exclusively).
+- Keyboard: tags tabbable (tabIndex 0), focus lands.
+- Reduced-motion: `animation: none`, callouts opacity 1, leaders at
+  dashoffset 0, tags in final position.
+- Console over a full ride (real wheel 14 notches + every chapter by hash
+  and home): 0 errors/warnings/rejections.
+- `capture.py --check`: PASS, worst MAE 0.02/255 — `.callouts` is hidden
+  at capture, the frozen `mission@*` goldens did not move.
