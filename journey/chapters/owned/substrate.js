@@ -1004,6 +1004,8 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         uOpacity: { value: 0 },
         uEarth: { value: new THREE.Color(0x37260f) },   // clod value, ADDED
         uGrain: { value: new THREE.Color(0x6b4a1e) },   // mineral catch-light
+        // REACH (2026-08-11, the Owned -> Final traverse). See setLid.
+        uReach: { value: 0 },
       },
       transparent: true, depthWrite: true, fog: false, side: THREE.FrontSide,
       vertexShader: /* glsl */`
@@ -1017,7 +1019,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         }`,
       fragmentShader: /* glsl */`
         uniform vec3 uNear, uFar, uEarth, uGrain;
-        uniform float uOpacity;
+        uniform float uOpacity, uReach;
         varying float vD;
         varying vec3 vW;
         float h21(vec2 p) {
@@ -1032,17 +1034,24 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         void main() {
           vec3 c = mix(uNear, uFar, smoothstep(5.0, 34.0, vD));
           // Structure resolves only where the lens is IN the soil (see the
-          // geometric argument above). Squared so it falls off the way a
-          // contact shadow does, not linearly.
-          float near = 1.0 - smoothstep(1.30, 3.00, vD);
+          // geometric argument above). uReach opens the window out along the
+          // Owned -> Final traverse, where this lid is the ONLY thing in the
+          // top third of the frame and 3.00 units leaves it bare; it is 0 at
+          // both rests by construction, so the geometric guarantee stands.
+          // The far half of the reach carries the COARSE octave only — at 8
+          // units the fine grain is below a pixel and would alias, while broad
+          // clod shadow is what earth actually shows at that range.
+          float hi = mix(3.00, 8.60, uReach);
+          float near = 1.0 - smoothstep(1.30, hi, vD);
           if (near > 0.002) {
             vec2 q = vW.xz;
             // clods: two octaves, the coarse one carrying the shape
             float clod = vn(q * 1.15) * 0.66 + vn(q * 2.90) * 0.34;
             // grain: fine, sparse, and only the top of its range catches
             float g = vn(q * 9.5) * 0.62 + vn(q * 21.0) * 0.38;
+            float fine = 1.0 - smoothstep(1.30, 3.00, vD);
             c += uEarth * (near * clod * clod);
-            c += uGrain * (near * pow(max(0.0, g - 0.60) * 2.5, 2.0) * 0.55);
+            c += uGrain * (fine * pow(max(0.0, g - 0.60) * 2.5, 2.0) * 0.55);
           }
           gl_FragColor = vec4(c, uOpacity);
         }`,
@@ -1586,8 +1595,18 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
    *  because the ceiling must be SOLID the moment the lens is under it, while
    *  everything else swims up through SINK_D's metre of murk — see the
    *  ceiling's note. `a` is the chapter arm times the crossing term. */
-  function setLid(a) {
+  /** `reach` (2026-08-11) opens the ceiling's structure window from 3.00 to
+   *  8.60 units. It is keyed on DISTANCE FROM THE CROWN (owned/index.js),
+   *  which is the one quantity that separates the two situations: at both
+   *  Owned rests the lens sits 1.85 / 2.06 units off the crown and the lid
+   *  overhead is DRESSED — the crown's own fan blazes across it — so 3.00 is
+   *  right and the frozen composition is protected; out along the Owned ->
+   *  Final traverse the lens is 3.5-10 units off, nothing lights the lid, and
+   *  at 3.00 the top third of the frame measured a mean luminance of 10.3/255
+   *  (Hannah: "there's kind of black, weird blackness above the top"). */
+  function setLid(a, reach = 0) {
     ceiling.mat.uniforms.uOpacity.value = a;
+    ceiling.mat.uniforms.uReach.value = reach;
     ceiling.mesh.visible = a > 0.004;
   }
   /** The soil horizon's drive: the chapter arm times the depth band that says

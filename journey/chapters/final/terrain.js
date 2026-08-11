@@ -25,7 +25,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
   const group = new THREE.Group();
   const counts = {};
   let soilDissolve = null;   // the slab's uSoilOn uniform (set below)
-  let soilUnder = null;      // the slab's uUnder uniform (set below)
+  let soilBuried = null;     // the slab's uBuried uniform (set below)
 
   /* ================================================================
      0. SOIL OCCLUDER (declutter round). Under additive blending every
@@ -105,10 +105,43 @@ export function createFinalTerrain(sceneApi, uniforms) {
     // not a stage flat — and it returns to fog tone by the time the camera
     // has pierced and can ever see its far side. The rest frame has
     // uUnder = 0 and is untouched by construction.
+    // BURIED (2026-08-11, 17-final-field.md — Hannah, on Owned → Final: "the
+    // side gets cropped off, I think, from the side of the fairy ring… it's in
+    // an awkward state"). The 2026-08-09 note above says the leg's underground
+    // stretch is spent looking at this plate's underside, and it treated that
+    // by re-TINTING it. Measured, the situation is worse than a tint can
+    // reach, and the measurement is the whole finding:
+    //
+    //   THE LEG IS BURIED IN THE KEPT SIDE FOR EVERY UNDERGROUND FRAME.
+    //   Scanning cutVal along p 0.725–0.970 (41 samples): cutVal runs
+    //   +10.06 → +0.56 across p 0.725–0.854 — POSITIVE, i.e. the kept side —
+    //   and only crosses zero at p ≈ 0.862, which is AFTER the lens has
+    //   already pierced the surface at p 0.8555. The file header's "the Final
+    //   camera leg lives entirely on the removed side" is true of the REST and
+    //   the approach; it is false of the whole underground traverse.
+    //
+    // So for p 0.725–0.855 this mesh is not a ceiling overhead — it is the
+    // SECTION WALL standing between a buried lens and everything the chapter
+    // draws, plus a horizontal plate whose own extent is the horizon. Hiding
+    // it at p 0.83 restores a coherent, even underground volume; leaving it
+    // gives the hard-edged dark wall down the middle of Hannah's "awkward
+    // state", and no widening of the plate's span fixes that (measured: ±8 →
+    // ±46 on the tangent and 27 → 66 units of depth moved pure-black pixels
+    // by 0.1% — the edge was never the point, the wall was).
+    //
+    // It is therefore DISSOLVED while the lens is buried, on the same hashed
+    // stipple uSoilOn already uses, driven by uBuried — a pure function of
+    // camera depth (index.js). This is the exact mirror of OWNED's ceiling
+    // being FrontSide-from-below: each soil surface draws only from the side
+    // it is FOR. Nothing is lost, because everything this occluder exists to
+    // stop ("underground strokes read THROUGH the surface as a stray line
+    // lying ON the floor") is a from-ABOVE fault, and above ground uBuried is
+    // 0 and this material compiles to the shipped one exactly — the rest, the
+    // whole approach and both Final goldens are untouched by construction.
     const soilMat = new THREE.ShaderMaterial({
       uniforms: {
         uSoilOn: { value: 0 },
-        uUnder: { value: 0 },
+        uBuried: { value: 0 },
         uSoilCol: { value: new THREE.Color(
           (sceneApi.scene.fog && sceneApi.scene.fog.color) || 0x000000) },
       },
@@ -116,12 +149,15 @@ export function createFinalTerrain(sceneApi, uniforms) {
         void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
       fragmentShader: /* glsl */`
         uniform float uSoilOn;
-        uniform float uUnder;
+        uniform float uBuried;
         uniform vec3 uSoilCol;
         void main() {
           float h = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+          // ONE stipple window, two edges: uSoilOn builds the occlusion on
+          // arm (D16), uBuried takes it away again as the lens goes under.
           if (h > uSoilOn) discard;
-          gl_FragColor = vec4(mix(uSoilCol, uSoilCol * 0.10, uUnder), 1.0);
+          if (h < uBuried) discard;
+          gl_FragColor = vec4(uSoilCol, 1.0);
         }`,
       side: THREE.DoubleSide,
     });
@@ -130,7 +166,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
     soil.renderOrder = -10;          // first among opaques
     group.add(soil);
     soilDissolve = soilMat.uniforms.uSoilOn;
-    soilUnder = soilMat.uniforms.uUnder;
+    soilBuried = soilMat.uniforms.uBuried;
     counts.soilTris = idx.length / 3;
   }
 
@@ -623,13 +659,18 @@ export function createFinalTerrain(sceneApi, uniforms) {
     counts,
     /** haze sprites cannot share the shader uniforms — fade them here; the
      *  soil slab's hashed dissolve rides the same drive (M5, D16).
-     *  `under` (transit pass): 1 while the camera is below the soil line,
-     *  0 above — darkens the slab's underside so the overhead earth reads
-     *  as a ceiling, not a stage flat. Pure in the camera pose (index.js). */
-    setAmount(a, under = 0) {
+     *  `buried` (2026-08-11): dissolves the slab away entirely while the lens
+     *  is UNDER the soil, where this mesh can only be the section wall in
+     *  front of it — see the material's own note. Camera-pure, so reverse
+     *  rides retrace it exactly. It REPLACES the 2026-08-09 `under` tint,
+     *  which is retired with it. */
+    setAmount(a) {
       for (const h of hazeSprites) h.mat.opacity = h.base * a;
       if (soilDissolve) soilDissolve.value = a;
-      if (soilUnder) soilUnder.value = under;
     },
+    /** ONE float, written every frame whatever the chapter is doing — see
+     *  index.js. Kept off setAmount so the retired epilogue still costs
+     *  nothing per frame beyond this single assignment. */
+    setBuried(v) { if (soilBuried) soilBuried.value = v; },
   };
 }

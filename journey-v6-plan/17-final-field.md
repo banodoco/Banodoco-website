@@ -1580,3 +1580,155 @@ crescent.
 - Console clean across taps on a near clone, a far species body, the
   hero, and the floor.
 - No golden moves: taps do not exist in frozen frames; `--check` 0.00.
+
+## 2026-08-11 — Owned → Final: the leg is BURIED, and the section wall was standing in front of it
+
+Hannah, on the Owned → Final transition: *"towards the back end when it's in
+an in-between state. The side gets cropped off, I think, from the side of the
+fairy ring… there's kind of black, weird blackness above the top… we probably
+need a better trajectory."*
+
+### The measurement that reframed the whole thing
+
+Scanning `cutVal` along the leg (41 samples, p 0.725–0.970) says something this
+file's own header denies:
+
+| p | x | depth | cutVal | side |
+|---|---|---|---|---|
+| 0.725 | +1.73 | 1.207 | **+10.06** | kept (buried) |
+| 0.800 | −3.23 | 1.133 | **+6.05** | kept (buried) |
+| 0.854 | −8.40 | 0.053 | **+0.56** | kept (buried) |
+| 0.862 | −8.95 | −0.10 | ~0 | crosses, **already above ground** |
+| 0.970 | −14.72 | −2.680 | −5.98 | removed (open) |
+
+**Every underground frame of this leg is on the KEPT side.** terrain.js's
+header — "the Final camera leg lives entirely on the removed side" — is true of
+the rest and the approach and false of the whole traverse: the lens pierces the
+surface at p 0.8555 *inside the kept soil*, and only crosses the cut line
+laterally at p ≈ 0.862, above ground.
+
+So for p 0.725–0.855 the soil slab is not a ceiling overhead. It is **the
+section wall standing between a buried lens and everything the chapter draws**,
+plus a horizontal plate whose own extent is the horizon. That is the hard-edged
+dark wall down the middle of Hannah's "awkward state", and it is the reason the
+frame's left third — the direction of travel — measured 35–49 % pure black.
+
+### What was tried and rejected
+
+- **Widening the plate.** Rendering the slab alone through the traverse shows
+  its arc END as a hard stepped silhouette at p 0.81/0.83/0.85, so the span
+  (authored ±8 around `CUT_S_MIN/MAX`, sized for the above-ground lip) looked
+  like the culprit. Taking it to ±46 on the tangent and 27 → 66 units of depth,
+  plus a distance grade on the underside, moved pure-black pixels by **0.1 %**.
+  Reverted: the edge was never the point, the wall was.
+- **Re-pathing the rise.** The obvious trajectory answer — get shallow early so
+  the lens leaves the dead skim layer — is **impossible under the invariants**,
+  and the measurement says so cleanly. `8b71687` requires y strictly monotone
+  (zero negative height steps). Any depth bought early is therefore kept, so
+  shallow-early forces pierce-early: reaching depth 0.75 at p 0.785 pins
+  y ≥ −0.654, against the shipped −0.954 at p 0.815. Portrait makes it worse,
+  not better — portrait.js already lifts the lens by +0.216 at the rest growing
+  to +0.835 by p 0.855, so portrait pierces at **p 0.833** against landscape's
+  0.855. **With the pierce fixed and y monotone, the current y schedule is
+  close to the only one available.** The path was never the fault.
+
+### What shipped
+
+1. **The slab dissolves while the lens is buried** (`uBuried`, a pure function
+   of camera depth, on the same hashed stipple `uSoilOn` already uses). This is
+   the exact mirror of OWNED's ceiling being FrontSide-from-below: each soil
+   surface draws only from the side it is FOR. Nothing is lost — everything the
+   occluder exists to stop ("underground strokes read THROUGH the surface as a
+   stray line lying ON the floor") is a from-ABOVE fault.
+2. **`uUnder` is retired.** The 2026-08-09 tint existed only to make the
+   slab's underside bearable; with the underside gone it had nothing left to
+   fix and one thing left to break — at the pierce the lens stands ON the soil
+   line with `under` still 0.96, so the surface it has just broken through
+   filled the lower half of frame as a **black plate** (10.7 % of the frame
+   pure black). Retiring it cannot touch either Final golden: `under` was
+   already 0 at the rest.
+3. **`reach`** (owned/index.js, keyed on the lens's distance from the CROWN)
+   opens both the ceiling's near-earth structure window (3.00 → 8.60 units) and
+   the soil horizon's passage band (closing at depth 0.90 → 1.75). Near the
+   crown the lid overhead is DRESSED — the crown's own fan blazes across it —
+   so the narrow window is right and the frozen composition is protected; out
+   along the traverse nothing lights the lid and the lens runs at depth
+   1.15–1.23 for 0.08 of p. Measured crown distance is **1.85** (landscape rest)
+   and **2.06** (portrait rest), both under `REACH_R0` 2.40, so **reach is 0 at
+   every rest by measurement** and both goldens are untouched.
+
+### Results (1440x900 / 375x812, against the shipped tree)
+
+| p | metric | before | after |
+|---|---|---|---|
+| 0.800 | pure-black px | 19.4 % | **1.6 %** |
+| | lit px | 20.3 % | **37.9 %** |
+| | top-30 % mean | 10.21 | **16.88** |
+| 0.815 | pure-black px | 19.9 % | **1.8 %** |
+| 0.830 | pure-black px | 18.4 % | **1.7 %** |
+| | lit px | 21.7 % | **31.8 %** |
+| 0.8555 (pierce) | pure-black px | 10.7 % | **0.0 %** |
+| | mean | 27.85 | **32.00** |
+| 0.800 (375x812) | pure-black px | 11.9 % | **0.2 %** |
+| | lit px | 27.0 % | **53.1 %** |
+| 0.815 (375x812) | pure-black px | 15.6 % | **0.1 %** |
+
+Pure black across the whole traverse falls from **9–23 %** to **≤ 6 %**
+(landscape) and **≤ 1.3 %** (portrait).
+
+### On "the side gets cropped off, from the side of the fairy ring"
+
+Taken at source, as the brief asked. The ring's cut edge does **not** end
+abruptly and does not want dissolving into distance: it is the approved
+diagonal soil-line, and in the rest frame it reads correctly, with its lip
+strokes and hanging fibres. What ended abruptly, and what cropped the frame,
+was the **slab and its section wall** — the fairy ring's cut side, hard-edged,
+sitting across the middle of the picture through exactly the "in-between
+state" she described. That is fixed at source above, by not drawing it where it
+can only be an occluder.
+
+### Verification
+
+- **A latched uniform, found and fixed by the audit.** `uBuried` written inside
+  the chapter's visibility gate LATCHES whenever the epilogue stops ticking: a
+  reverse ride retires it at p ≈ 0.80 with the lens still 1.1 under the soil,
+  leaving buried = 1 for every p below, against 0 on the way out. No frame ever
+  rendered the stale value (the animator runs spine-first and rewrites it before
+  any frame the group is drawn for), but the state was dishonest and the sweep
+  could not tell it from real hysteresis. It is now one float written every
+  frame outside `setAmount`, so the retired epilogue still costs nothing.
+- **Mirroring**: forward then reverse over p 0.720–0.970 at step 0.001 (251
+  samples), all four soil terms **bit-identical** — `lid`, `reach`, `grain`,
+  `buried` all 0.000e+00.
+- **Self-ignition**: 0 frames with the camera at or above the soil and any
+  horizon or buried term > 0. `uBuried` live over p 0.7200–0.8540 exactly.
+- **Rate and roll**, 601 samples per leg per aspect: peak yaw **1063.7** deg/p
+  (1440x900) / **1047.5** (375x812) on Owned → Final, against the shipped 1064
+  and the ~1.2k ceiling; peak pitch 468.9 / 391.4 on Connect → Owned; **|roll|
+  max exactly 0.000000** on both legs at both aspects. `8b71687`'s invariants
+  re-measured and intact: **0 negative height steps and 0 positive x steps** on
+  Owned → Final at both aspects.
+- **The colony is not regrown, by construction**: the changed-file set is
+  `owned/{index,substrate}.js` and `final/{index,terrain}.js` — no camera, leg,
+  route or director file is touched, so `owned/leg.js` samples a bit-identical
+  position spline over p 0.660–0.872 and no `owned@*` reference moves. The soil
+  crossing stays at p 0.6927, the rise's pierce at p 0.8555, and the murk window
+  0.692–0.712 with `CONNECT_HOLD_HI` 0.705 is as shipped.
+- **Goldens**: all ten within; both Final 0.00, both Owned 0.03 (unstructured).
+- **Console**: 0 error/warn/exception events over a full forward + reverse ride.
+- **Budget** (1440x900): this crossing adds **zero draw calls**. Connect rest
+  47, Owned rest 55, crossing 2 219 (the +2 is the soil horizon from the
+  previous commit), Final rest **427 against the shipped 428** and 278,181
+  triangles against 282,053 — the ceiling is no longer submitted above ground.
+  Median composer submit unchanged at every point (0.2–1.3 ms).
+
+### Residuals
+
+- **The late sag, p 0.885–0.910** (mean 27.1, lit 34.4 %) — Hannah's "maybe
+  three quarters of the way there". It is not an artifact: the frame is a
+  legible landscape, and the dip is the FIELD still kindling, because the reveal
+  is `pullOf(camera.x)` and is deliberately paced (`6282080`, `a8d4518`).
+  Touching it means touching the arrival ladder, which is out of scope here.
+- The **hero ground group's orange wedge** at p 0.685–0.692 (see
+  20-owned-root-network.md) is unrelated to this leg but is the other place
+  Hannah's "the edges are kind of visible" still applies.
