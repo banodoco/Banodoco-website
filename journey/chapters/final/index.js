@@ -84,6 +84,16 @@ export function createFinal(sceneApi) {
   document.addEventListener('pointerover', onOver);
   document.addEventListener('focusin', onOver);
 
+  /** BURIED (2026-08-11): 1 once the lens is 0.25 units under the soil, 0 at
+   *  the surface and above. A pure function of the camera pose, so it reverse-
+   *  scrubs exactly and a nav jump lands on the honest value with no state to
+   *  carry. See the note at its call site and terrain.js's material. */
+  function buriedOf(pos) {
+    const cy = pos.y - groundY(pos.x, pos.z);
+    const b = Math.max(0, Math.min(1, -cy / 0.25));
+    return b * b * (3 - 2 * b);
+  }
+
   /* ---- primordia dwell: settled time at the Final rest ---- */
   let dwell = 0;
   let lastPull = 0;
@@ -247,6 +257,18 @@ export function createFinal(sceneApi) {
   sceneApi.addAnimator('journey-final', (t, dt) => {
     amount += (amountTarget - amount) * Math.min(1, dt * 2.2);
     if (amount < 0.004 && amountTarget === 0) amount = 0;
+    // The soil slab's `buried` dissolve is written EVERY frame, before the
+    // visibility gate and outside setAmount — it is one float, and it is the
+    // only way the term is genuinely stateless. Written inside the gate it
+    // LATCHES whenever the chapter stops ticking: a reverse ride retires the
+    // epilogue at p ~0.80 with the lens still 1.1 under the soil, leaving
+    // buried = 1 for every p below that, against 0 on the way out. No frame
+    // ever RENDERS the stale value (the group is invisible, and the animator
+    // runs spine-first and rewrites it before any frame the group is drawn
+    // for), but a forward/reverse uniform sweep then reports a full 1.0
+    // mismatch that cannot be told apart from real hysteresis. Written here,
+    // the sweep measures 0.000e+00 and the audit means what it says.
+    terrain.setBuried(buriedOf(sceneApi.camera.position));
     const rise = riseOf(sceneApi.camera.position.x);
     const eff = blending ? rise : 1 - (1 - amount) * (1 - rise);   // amount OR rise
     // Still gated by the arm — `rise` says where the lens is, not which
@@ -346,16 +368,29 @@ export function createFinal(sceneApi) {
     ring.update(t, dt, true);
 
     // sprite layers (outside the shared shader uniforms).
-    // `under` (transit pass, 2026-08-09): how far the lens is below the soil
-    // line — 1 deep underground, 0 once it stands 0.9 above ground. Drives
-    // the soil slab's underside toward near-black so the earth overhead
-    // reads as a dark ceiling during the Owned→Final crossing, and hands the
-    // fog tone back before the far side can ever be seen. Pure in the camera
-    // pose, so reverse scrubs retrace it exactly.
-    const cp = sceneApi.camera.position;
-    const cy = cp.y - groundY(cp.x, cp.z);
-    const uu = 1 - Math.max(0, Math.min(1, (cy + 0.1) / 1.0));
-    terrain.setAmount(eff, uu * uu * (3 - 2 * uu));
+    // `buried` (2026-08-11): 1 once the lens is 0.25 under the soil, 0 at the
+    // surface and above. MEASURED along p 0.725–0.970, every underground frame
+    // of this leg is on the KEPT side (cutVal +10.06 → +0.56, crossing zero
+    // only at p ≈ 0.862, AFTER the pierce at 0.8555) — so while this term is
+    // up, the soil slab can only be the section wall standing in front of a
+    // buried lens, and it dissolves. See terrain.js's material note.
+    //
+    // IT REPLACES the 2026-08-09 `under` tint, which is retired here. That
+    // term sank the slab toward near-black over the 0.9 units EITHER side of
+    // the soil line, to make its underside bearable; with the underside gone
+    // it has nothing left to fix and one thing left to break — at the pierce
+    // (p 0.8555) the lens stands ON the soil line with `under` still at 0.96,
+    // so the surface it has just broken through filled the lower half of the
+    // frame as a BLACK PLATE (10.7% of the frame pure black). Fog tone above
+    // ground is what the slab was designed for and what its rest frame has
+    // always had — `under` was already 0 at the Final rest (the lens stands
+    // 2.68 up), so retiring it cannot touch either Final golden.
+    //
+    // 0.25 units, not 0.9: the slab must be back the instant the lens
+    // surfaces, because above ground is where it does its job (stopping
+    // underground strokes reading as lines on the floor). Camera-pure, so
+    // reverse rides retrace it exactly.
+    terrain.setAmount(eff);
     sky.update(t, eff);
   });
 

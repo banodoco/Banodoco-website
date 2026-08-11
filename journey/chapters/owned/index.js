@@ -359,6 +359,13 @@ export function createOwned(sceneApi, content) {
   //            soil owns the murk window (0.692-0.712) and nothing else does.
   const LID_D = 0.14;
   const PASS_ON = 0.06, PASS_HOLD = 0.60, PASS_HI = 0.90;
+  // REACH: how far the ceiling's near-earth structure resolves, keyed on the
+  // lens's distance from the CROWN (substrate.js setLid has the reasoning).
+  // Measured: 1.85 at the landscape Owned rest and 2.06 at the portrait one,
+  // both under REACH_R0, so both frozen compositions see reach = 0 exactly;
+  // along the Owned -> Final traverse it runs 3.5 -> 10 and saturates.
+  const REACH_R0 = 2.40, REACH_RW = 1.60;
+  const PASS_HOLD_FAR = 1.30, PASS_HI_FAR = 1.75;
 
   /* ================================================================
      Chapter state + per-frame
@@ -402,12 +409,24 @@ export function createOwned(sceneApi, content) {
     // The soil horizon rides its own two depth terms (see LID_D / PASS_* ),
     // both 0 above ground, so they can only ADD inside the crossing.
     const lidA = amount * smooth01(depth / LID_D);
+    // REACH also widens the PASSAGE BAND, for the same reason and with the
+    // same guarantee. Near the crown the band must close under the rest depth
+    // (0.987 portrait / 1.207 landscape) or it shows in a frozen composition;
+    // out along the Owned -> Final traverse there is no rest to protect, the
+    // lens runs at depth 1.15-1.23 for 0.08 of p, and closing at 0.90 left
+    // the soil horizon DARK across exactly the stretch Hannah called an
+    // awkward state. reach is 0 at both rests by measurement (1.85 / 2.06
+    // against REACH_R0 2.40), so the band there is bit-identical to the
+    // narrow one and both goldens are untouched.
+    const reach = smooth01((cp.distanceTo(leg.CROWN) - REACH_R0) / REACH_RW);
+    const passHold = PASS_HOLD + (PASS_HOLD_FAR - PASS_HOLD) * reach;
+    const passHi = PASS_HI + (PASS_HI_FAR - PASS_HI) * reach;
     const passA = amount * smooth01(depth / PASS_ON)
-                * (1 - smooth01((depth - PASS_HOLD) / (PASS_HI - PASS_HOLD)));
+                * (1 - smooth01((depth - passHold) / (passHi - passHold)));
     group.visible = Math.max(eff, lidA, passA) > 0.003;
     if (!group.visible) {
       substrate.setFade(0);
-      substrate.setLid(0);
+      substrate.setLid(0, 0);
       substrate.setPassage(0);
       portraits.setFade(0);
       frontMat.uniforms.uFade.value = 0;
@@ -416,7 +435,7 @@ export function createOwned(sceneApi, content) {
     }
 
     substrate.setFade(eff);
-    substrate.setLid(lidA);
+    substrate.setLid(lidA, reach);
     substrate.setPassage(passA);
     // Final-surface mask (17-final-field.md, Hannah): the colony stays armed
     // through the whole epilogue (OWNED_HOLD_HI past-the-end), and the Final
