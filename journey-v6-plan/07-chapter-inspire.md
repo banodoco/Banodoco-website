@@ -3579,3 +3579,52 @@ so nothing ever shifts under a pointer — hover included. labelOnHover chips
 The hover hold (`6d37205`) stays in place as a guard — against a static
 anchor it is a no-op by construction, and it keeps the hot state honest if a
 future chapter registers a moving anchor.
+
+## 2026-08-11 — The embers themselves hold still (Hannah: "the dots ... MOVE around with the wind, and pulse ... they should stay STABLE in the one place")
+
+`851c77a` froze the CHIPS — every DOM dot measured at the 0.65 x 0.62 px
+camera-only floor — but what it pinned them TO was still alive: the
+release-lip embers (`ce91cb2`'s 5b sprites) stayed children of the swaying
+cap and kept a x(0.9 + 0.1 sin) breathing term. What Hannah is seeing is
+the IN-SCENE marker drifting around its own pinned label dot.
+
+Measured first (16 s at the Inspire rest, 1440x900, sprite-level trace —
+world position projected per frame, 961 samples):
+
+- lip embers (ArtCompute / Arca / 2RP): **14.5 x 20.8 / 18.9 x 18.4 /
+  7.7 x 4.7 px** of breeze wander, opacity swinging **±22%** about 0.187.
+
+The fix lands at the same anchor the chips use: the sprites now parent to
+the SCENE (a `lipHolder` group mirroring `group.visible` every frame — the
+seam gate keeps working under `freezeTime`, where animators still run) at
+`streaks[i].localPos` through `mushroomRestMatrix()`, which moved above
+section 5b so it exists at build time. The breathing multiplier is gone
+from the animator, so the animator and `snap()` now compute the literally
+identical `0.22 * furnOf(i) * T` — the reveal law is unchanged in form
+(pure in (eff, T), reverse-scrub-mirroring by construction) and the two
+paths can no longer drift apart.
+
+The life is not deleted, it is left where it already lives: the braids,
+wisps and spore streams around each lip shimmer on their own clocks — a
+110 px pixel window centred on the lip still shows 5-14 px of centroid
+motion from THAT light — but the marker itself now holds.
+
+After, measured (12 s, 721 samples, same trace): all three embers at
+**0.650 x 0.620 px** (the camera-only floor), opacity swing **0.00%**.
+
+Goldens: the frozen wind phase is not the rest pose, so pinning moved the
+embers a few px in the stills — inspire@1440x900 / inspire@430x932 re-shot
+deliberately (MAE against old goldens 0.06/0.04, provenance in
+manifest.json); every other golden 0.00-0.02, untouched. `--check` PASS,
+worst 0.02/255.
+
+Same pass, same day, the other two chapters' markers (measured with the
+same rig): Connect's hub cores held position but FLARED — opacity
+0.58 -> 1.00 (**69% swing**) with a +22% scale swell every 9-14 s as the
+ambient route pulse landed. The flare no longer reaches the core (the dot
+holds at 0.58 + hover; the travelling strand pulse is untouched — the
+network still breathes, its destinations hold; 16-connect-ground-restage.md
+2026-08-11). Owned's per-face ember dots (cores + halos) flickered
+**±20%** on their own clocks; their flick is now frozen at its t = 0 phase
+(per-node level kept, clock removed; the faces, rims and strands keep
+their living light). Neither change moves a frozen golden.

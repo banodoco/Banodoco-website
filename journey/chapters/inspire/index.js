@@ -880,6 +880,25 @@ export function createInspire(sceneApi) {
     return { sprite: s, mat, localPos: s.position.clone(), o: 0 };
   });
 
+  // THE REST MATRIX (851c77a): a lip's world position with both wind
+  // rotations zeroed — swayGroup is rotation-only about the origin, capBend
+  // is the throat translation plus a rotation-only bend, and the mushroom's
+  // own local transform is static, so the chain collapses to
+  // T(capBend.position) * mushroom.matrix. Computed once, cached. Declared
+  // HERE because the release-lip glows (5b) pin to it at build time; the
+  // full WHY — the chips came first — is the comment above nodeWorld().
+  let restMat = null;
+  function mushroomRestMatrix() {
+    if (restMat) return restMat;
+    const mush = sceneApi.groups.mushroom;
+    const capBend = mush.parent;          // pivot at the throat (rotation-only in wind)
+    mush.updateMatrix();                  // local matrix: static tilt/lean, set once
+    restMat = new THREE.Matrix4()
+      .makeTranslation(capBend.position.x, capBend.position.y, capBend.position.z)
+      .multiply(mush.matrix);
+    return restMat;
+  }
+
   /* ================================================================
      5b. RELEASE-LIP GLOWS (2026-08-09, owner's brief item 1: "light up
          three specific points along the relevant edge of the mushroom").
@@ -907,7 +926,27 @@ export function createInspire(sceneApi) {
          deep link takes (dt = 0 freezes the animator), so a law in one
          place only would be missing from every still. See the note above
          st.o in snap().
+         HELD STILL (2026-08-11, Hannah: the dots "should stay STABLE in
+         the one place, not move"). Two changes, one intent:
+           1. POSITION — the sprite parents to the SCENE, not the swaying
+              cap, at the lip's REST position (mushroomRestMatrix above,
+              the same anchor 851c77a pinned the chip dot to). Measured
+              before: 7.1x13.4 / 11.0x16.6 / 3.4x5.2 px of breeze wander
+              over 16 s at the rest — the ember drifted around the very
+              dot that names it.
+           2. BRIGHTNESS — no breathing term in either path (the animator
+              used to carry x(0.9 + 0.1 sin); snap() never did). The two
+              laws are now literally identical, and the ember holds one
+              level at the rest.
+         The life is not deleted, it is LEFT WHERE IT ALREADY LIVES: the
+         braids, wisps and the spore streams around the lip all shimmer
+         on their own clocks — the marker is the one thing that holds.
+         lipHolder mirrors group.visible every frame (animators still run
+         under freezeTime), so the seam gate keeps working.
      ================================================================ */
+  const lipHolder = new THREE.Group();
+  lipHolder.visible = false;
+  sceneApi.scene.add(lipHolder);
   const lipGlows = exits.map((ex, i) => {
     const mat = new THREE.SpriteMaterial({
       map: glowTex,
@@ -917,9 +956,10 @@ export function createInspire(sceneApi) {
     });
     const s = new THREE.Sprite(mat);
     s.scale.set(0.70, 0.70, 1);
-    s.position.copy(streaks[i].localPos);   // the exact lip anchor (see 5)
+    // the exact lip anchor (see 5), at its REST pose — held out of the wind
+    s.position.copy(streaks[i].localPos).applyMatrix4(mushroomRestMatrix());
     s.visible = false;
-    group.add(s);
+    lipHolder.add(s);
     return { sprite: s, mat };
   });
 
@@ -1208,17 +1248,9 @@ export function createInspire(sceneApi) {
   // 0.65 x 0.62 px — the camera-only floor, identical to Connect's hubs and
   // Owned's faces, whose anchors were always static. See
   // 07-chapter-inspire.md (2026-08-10).
-  let restMat = null;
-  function mushroomRestMatrix() {
-    if (restMat) return restMat;
-    const mush = sceneApi.groups.mushroom;
-    const capBend = mush.parent;          // pivot at the throat (rotation-only in wind)
-    mush.updateMatrix();                  // local matrix: static tilt/lean, set once
-    restMat = new THREE.Matrix4()
-      .makeTranslation(capBend.position.x, capBend.position.y, capBend.position.z)
-      .multiply(mush.matrix);
-    return restMat;
-  }
+  //
+  // (mushroomRestMatrix itself now lives above section 5b: since 2026-08-11
+  // the embers pin to the same rest anchor as the chips that name them.)
 
   const _wv = new THREE.Vector3();
   const api = {
@@ -1279,10 +1311,9 @@ export function createInspire(sceneApi) {
         // easing, so a law that lives in both places has to be changed in both.
         st.o = ((i === active || i === selected) ? 0.42 : 0) * furnOf(i) * stkScale;
         st.sprite.visible = st.o > 0.01;
-        // release-lip glow (5b): the SAME pure law as the animator. No `t`
-        // flows through snap(), so the animator's small breathing multiplier
-        // is simply omitted — it is decoration, and identity at rest is
-        // carried by o itself, which is what both paths compute.
+        // release-lip glow (5b): the SAME pure law as the animator — since
+        // 2026-08-11 literally the same expression (the animator's breathing
+        // multiplier is gone; the ember holds one level, see 5b).
         const lo = 0.22 * furnOf(i) * T;
         lipGlows[i].sprite.visible = lo > 0.01;
         lipGlows[i].mat.opacity = lo;
@@ -1613,6 +1644,8 @@ export function createInspire(sceneApi) {
     });
 
     group.visible = anyVisible;
+    lipHolder.visible = anyVisible;   // the embers live outside the swaying
+                                      // group (5b, held still) but keep its gate
     if (!anyVisible) return;
     coreMat.uniforms.uTime.value = t;
     // taste dial: ribbon opacity — effectively gone below T ~0.2, exactly
@@ -1672,13 +1705,15 @@ export function createInspire(sceneApi) {
       // (eff, T), assigned directly: no first-order lag anywhere in this
       // law, so the reverse scrub mirrors the forward one exactly (the
       // reveal-is-a-position rule above). MUST stay identical to snap()'s
-      // copy of it — snap() is the frozen-capture / ?p= path. The sine is
-      // the streak's own shimmer convention, decoration only; snap() drops
-      // it because no `t` flows there.
+      // copy of it — snap() is the frozen-capture / ?p= path. HELD STILL
+      // (2026-08-11): the old x(0.9 + 0.1 sin) breathing is gone — the
+      // ember is the marker and the marker holds one level; the shimmer
+      // stays with the braids and streams around it. Animator and snap()
+      // now compute the identical value.
       const lg = lipGlows[i];
       const lo = 0.22 * furnOf(i) * T;
       lg.sprite.visible = lo > 0.01;
-      lg.mat.opacity = lo * (0.9 + 0.1 * Math.sin(t * 1.3 + i * 2.1));
+      lg.mat.opacity = lo;
     }
   });
 

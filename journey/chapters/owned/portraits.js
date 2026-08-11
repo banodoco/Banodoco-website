@@ -1264,7 +1264,6 @@ export function buildPortraitField({
   function makeGlowPoints(map, color, sizeMul, baseA, hoverA, order) {
     const mat = new THREE.ShaderMaterial({
       uniforms: {
-        uTime: { value: 0 },
         uMap: { value: map },
         uColor: { value: new THREE.Color(color) },
         uHoverIdx: { value: -999 }, uHoverAmt: { value: 0 },
@@ -1284,7 +1283,7 @@ export function buildPortraitField({
         attribute float aSize;
         attribute float aSeed;
         attribute float aNode;
-        uniform float uTime, uHoverIdx, uHoverAmt, uScale;
+        uniform float uHoverIdx, uHoverAmt, uScale;
         uniform float uWaveR, uWaveW, uWaveAmt;
         uniform vec3 uWaveC;
         varying float vSeed, vH, vWv;
@@ -1302,11 +1301,17 @@ export function buildPortraitField({
       fragmentShader: /* glsl */`
         uniform sampler2D uMap;
         uniform vec3 uColor;
-        uniform float uTime, uBaseA, uHoverA, uFade;
+        uniform float uBaseA, uHoverA, uFade;
         varying float vSeed, vH, vWv;
         void main() {
           vec4 t = texture2D(uMap, gl_PointCoord);
-          float flick = 0.80 + 0.20 * sin(uTime * (0.33 + vSeed * 0.71) + vSeed * 13.7);
+          // HELD STILL (2026-08-11): this used to be a live flicker,
+          // 0.80 + 0.20 sin(uTime * (0.33 + vSeed * 0.71) + vSeed * 13.7) —
+          // a 12-28% brightness swing measured ON THE DOTS at the rest. The
+          // clock is gone; the SAME expression at its t = 0 phase keeps every
+          // node's individual level (no army of identical dots, and the frozen
+          // goldens — which always rendered uTime = 0 — are byte-identical).
+          float flick = 0.80 + 0.20 * sin(vSeed * 13.7);
           float a = t.a * (uBaseA + uHoverA * vH) * flick * (1.0 + 1.3 * vWv);
           gl_FragColor = vec4(uColor, clamp(a * uFade, 0.0, 1.0));
         }`,
@@ -1508,8 +1513,14 @@ export function buildPortraitField({
     schedulePrepare();
   }
 
-  const timeMats = [portraitMat, rimMat, cores.mat, halos.mat, nodeStrands.mat];
-  const waveMats = timeMats;   // every node layer answers the wave
+  // HELD STILL (2026-08-11, Hannah: the node dots must not pulse): the glow
+  // points (cores + halos — the per-face ember DOTS) left timeMats. Their
+  // flick is frozen at its own t = 0 phase in the shader (see makeGlowPoints),
+  // so no clock reaches them any more; they still answer the remix wave and
+  // hover, which are events, not cycles. The faces, rims and strands keep
+  // their living light — the life stays in the surround, the marker holds.
+  const timeMats = [portraitMat, rimMat, nodeStrands.mat];
+  const waveMats = [portraitMat, rimMat, cores.mat, halos.mat, nodeStrands.mat];   // every node layer answers the wave
 
   const api = {
     group, nodes,

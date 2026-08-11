@@ -1933,3 +1933,27 @@ ADOS departs 6.21 s, dot at 8.01 s; last tip home at 10.42 s.
   per-patch lift is still bounded by the pre-existence lead, the hero-web dim
   still rides `litAvg` from p 0.386, and the commit-resolution assist can
   still compress the felt arrival for a visitor holding a momentum stream.
+
+## 2026-08-11 — The hub cores stop answering the clock (held-still markers pass)
+
+Hannah: the node dots "pulse ... but they should stay STABLE in the one
+place". Measured at the Connect rest (16 s sprite-level trace, 961
+samples): all three hub cores held POSITION at the 0.65 x 0.62 px
+camera-only floor — their anchors were always static — but the ambient
+route pulse landed ON the dot as a flare: opacity 0.58 -> 1.00 (**69%
+swing**) and scale x1.22, decaying over ~2 s, every 9-14 s per route.
+
+The flare is removed at the core (`P.flare` bookkeeping deleted; the core
+line is now `0.58 + 0.4 * hover`, scale `1 + 0.18 * hover`). What stays:
+
+- the travelling pulse itself (uPulseHead/uPulseAmp) — the light still
+  runs the route every 9-14 s, and on hover; the life lives in the strand,
+  the destination holds;
+- the hover lift and swell — the visitor's own hand, not an ambient clock;
+- the kindle (hubIgnite) — reveal choreography, pure in progress, exactly
+  1 at the rest.
+
+After (12 s, 721 samples): opacity swing **0.00%**, scale constant,
+position at the floor. The frozen goldens never saw the flare (drivers
+are clock-gated and dt = 0 never fires them), so connect@* are untouched
+byte-for-byte — `--check` MAE 0.00.

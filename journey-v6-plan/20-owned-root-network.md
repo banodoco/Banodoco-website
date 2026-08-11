@@ -1299,3 +1299,28 @@ itself fading in on the same family — for a few frames mid-swing the two are
 each ~half-lit. Strictly better than the shipped full-lit colony over bare
 terrain, and the honest reading of "the cutaway world is arriving"; noted in
 case a future pass wants the slab to lead the colony by a fixed margin.
+
+## 2026-08-11 — The ember dots stop flickering (held-still markers pass)
+
+Part of the same pass as 07-chapter-inspire.md / 16-connect-ground-restage.md
+(2026-08-11): Hannah wants the node markers stable. Owned's sixteen faces
+each carry an ember CORE at their centre and a broad HALO behind them
+(portraits.js `makeGlowPoints`), and both ran a live flicker —
+`0.80 + 0.20 sin(uTime ...)`, i.e. **±20%** of brightness on the dot's own
+clock (a 44 px pixel window per face measured 12-28% of combined swing at
+the rest).
+
+The clock is removed from the DOTS only: the flick expression is frozen at
+its own t = 0 phase (`0.80 + 0.20 sin(vSeed * 13.7)`), which keeps every
+node's individual resting level — no army of identical dots — and matches
+what the frozen goldens always rendered (uTime was 0 there), so owned@*
+stay untouched (--check MAE 0.02, GPU constant-folding noise). cores.mat
+and halos.mat left `timeMats`; they still answer the remix WAVE and hover,
+which are events, not cycles.
+
+Deliberately KEPT alive: the faces' own independent flicker (±14%, two
+incommensurate rates), the rim light, the node strands and the substrate
+waves — that is the "grown, not pinned" life of the field, and it is the
+surround, not the marker. If Hannah reads the FACES as pulsing too, that
+term (`flick` in the portrait fragment shader) is the next candidate — but
+a face is a portrait, not a dot, so it was left with its light.
