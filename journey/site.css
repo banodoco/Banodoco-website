@@ -907,6 +907,33 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-block.pos-topright::before {
     background: radial-gradient(ellipse 62% 68% at 60% 50%, rgba(12, 8, 3, 0.66), transparent 72%);
   }
+
+  /* ============================================================
+     CONNECT MEASURE (Hannah, 2026-08-11)
+
+     The chapter heading became "Connect the community." (content/
+     content.js, with the lock-override provenance). One word, and
+     it does not fit where the old one did:
+
+       viewport   font       "Connect the ecosystem."  "…community."
+       1440x900   44.64px    476px                     494px
+
+     The block's column was 476px — 34rem of block less 2rem of
+     padding a side — which the outgoing heading filled to the
+     pixel. The incoming one overruns it by 18px, and a heading
+     that has always set one line would have arrived in two.
+
+     So the block widens to 38rem (608px), giving 544px of column:
+     50px of headroom over the heading at 1440, where there was
+     none at all before. The house type scale in `.j-h` is
+     untouched, exactly as it was for the Final heading.
+
+     The block only widens; it does not move. It is anchored by its
+     RIGHT edge (`right: 5.2vw`) and sets right-ragged, so the
+     extra width is taken on the left, into the open ground the
+     restage gave it, and the type's own edge is where it was.
+     ============================================================ */
+  .j-block.pos-topright { max-width: 38rem; }
   /* Final restage (17-final-field.md): the epilogue copy floats on the dark
      cutaway wedge in the lower-left corner, giving the upper frame to the
      mushroom field. (The 9vh bottom was chosen to clear the footer cue's
@@ -941,6 +968,82 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      are unchanged, so it still floats on the same dark cutaway wedge.
      ============================================================ */
   .j-block.pos-bottomleft { max-width: 46rem; }
+
+  /* ============================================================
+     CONNECT AND FINAL SUB MEASURE (Hannah, 2026-08-11)
+
+     "Make that over two lines instead of three" — said of the
+     Final sub and then of the Connect sub. Both set THREE lines
+     against the house `.j-sub` measure of 26rem (416px), and both
+     are now two. Same shape of answer as the Final heading's:
+     measure and copy, never the type scale.
+
+     TWO LEVERS, IN THAT ORDER.
+
+     1. COPY, for Final only. The line was rewritten to Hannah's
+        sense (see content/content.js). Written long it is 147
+        characters and needs 544px of column to break in two;
+        written as shipped it is 120 and needs 448px. Connect's sub
+        is a locked string she did not ask to change, so it was not
+        touched — it needs 448px as it stands.
+
+     2. MEASURE. Both subs are released from 26rem to the column
+        their block already owns:
+
+          block            column   sub measure   needs   headroom
+          pos-topright     544px    34rem 544px   448px   96px
+          pos-bottomleft   672px    36rem 576px   448px   128px
+
+        Neither block is WIDENED for the sub — both ceilings were
+        already set by the heading over it, and a sub cannot push
+        past one. `pos-bottomleft` has held 672px of column since
+        the FINAL HEADING MEASURE above and its sub stops 96px
+        short of that, so that block's rendered width is genuinely
+        unchanged. `pos-topright`'s ceiling is the 38rem its new
+        heading needed; its sub takes that column to the pixel, so
+        the block renders 608px where the heading alone would have
+        asked for 558px. That is width the block was already
+        permitted, spent on text rather than left as padding. The
+        block is right-anchored, so the difference is taken on the
+        left and the type's own edge and rag do not move.
+
+     The headroom is the point of the wider figure. `.j-sub` names
+     Inter first and NOTHING IN THIS BUILD LOADS A WEBFONT
+     (`document.fonts` is empty), so what a visitor actually gets is
+     wherever their machine falls in the stack — SF here, Segoe UI
+     on Windows, Arial at the wide end. A measure sized to the 448px
+     requirement would be a two-line promise that only held on the
+     developer's font. These hold to ~+20%.
+
+     WHY `text-wrap: balance` COMES WITH THE WIDTH. Greedy wrapping
+     spends a wide measure on a long first line and a stub:
+
+       Final,   greedy  @576px   534px / 312px
+       Connect, greedy  @544px   536px / 282px
+
+     which is two lines by the count and a line-and-a-half by eye.
+     Balanced, both settle into a pair — 447/399 and 394/423 — and,
+     because balance minimises the longest line rather than filling
+     to the measure, the RENDERED result is identical at 480px and
+     at 576px. That is what makes the headroom above free: it buys
+     tolerance without widening the text the reader sees.
+
+     Scoped to these two blocks. Mission, Inspire and Owned keep the
+     26rem measure and the greedy break they shipped with.
+
+     DESKTOP ONLY, and deliberately so. Below 900px the block takes
+     its width from the viewport (88vw / 94vw), leaving ~266px of
+     column at Connect and ~285px at Final on a 375px phone, against
+     lines whose natural widths are 822px and 850px. Two lines is
+     unreachable there by a factor of three, and the only lever left
+     would be the type scale — which is the one this site does not
+     pull. Both subs run to four balanced lines at phone widths,
+     under headings that already made the same trade for the same
+     reason (see FINAL HEADING AT PHONE WIDTHS below, and
+     journey-v6-plan/24-mobile-pass.md §Final).
+     ============================================================ */
+  .j-block.pos-topright   .j-sub { max-width: 34rem; text-wrap: balance; }
+  .j-block.pos-bottomleft .j-sub { max-width: 36rem; text-wrap: balance; }
 
   /* --- hotspot proxies: hit-model correctness now, polish later --- */
   .j-hotspots { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
