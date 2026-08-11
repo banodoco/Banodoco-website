@@ -1503,250 +1503,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     padding: 0;
   }
 
-  /* ============================================================
-     THE NODE INDEX (journey/ui-index.js, 24-mobile-pass.md).
-
-     Owned's arc is 3.5x wider than a phone's portrait frustum, so
-     twelve of sixteen contributors project off-frame there. The
-     composition stays exactly as authored; this is the other way
-     in, and it borrows rather than invents:
-
-       · the CONTROL is the footer cue's vocabulary (small caps,
-         letterspaced, a hairline chevron) because it makes the
-         same kind of offer — "there is more of this, over here";
-       · the SHEET is `.j-card.sheet`'s form — grip, header strip,
-         a body that scrolls inside itself, the same radius, the
-         same near-opaque ground — because a phone should not
-         learn two bottom sheets from one site.
-
-     It is a separate element rather than a mode of `.j-card` for
-     one reason that matters: a row OPENS a card, so the two have
-     to be able to exist a moment apart while focus moves between
-     them. Sharing an element would have made that a re-render of
-     the thing you were standing on.
-     ============================================================ */
-  /* Out of the block's flow — see the note in ui-index.js `buildControl`. The
-     block's border box is the hotspot-suppression rect, so the index must not
-     enlarge it: an in-flow control hid two of the four contributors the frame
-     could still place. `top: 100%` hangs the row directly under the copy it
-     belongs to; `left/right: 0` gives it the block's own measure so the button
-     inside it inherits the block's `text-align` and needs no alignment rule. */
-  .j-index-cue-row {
-    position: absolute;
-    top: 100%;
-    left: 0; right: 0;
-    margin-top: 0.55rem;
-  }
-  .j-index-cue-row[hidden] { display: none; }
-  .j-index-cue {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-    padding: 0.5rem 0;
-    background: none;
-    border: 0;
-    color: rgba(201, 191, 168, 0.66);
-    font: inherit;
-    font-size: 0.64rem;
-    font-weight: 600;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    cursor: pointer;
-    /* `.j-copy` is pointer-events:none wholesale, so anything live inside a
-       block opts back in — exactly as `.j-act` and `.j-sub.j-pulse` do. */
-    pointer-events: auto;
-    transition: color 0.3s;
-  }
-  .j-index-cue[hidden] { display: none; }
-  .j-index-cue-arr {
-    width: 7px; height: 7px;
-    border-right: 1px solid currentColor;
-    border-bottom: 1px solid currentColor;
-    transform: translateY(-2px) rotate(45deg);
-    transition: transform 0.3s;
-  }
-  .j-index-cue:is(:hover, :focus-visible) { color: var(--gold-bright); }
-  .j-index-cue:is(:hover, :focus-visible) .j-index-cue-arr { transform: translateY(1px) rotate(45deg); }
-  /* No alignment rule of its own, deliberately. The control is `inline-flex`,
-     so it sits on a line box and inherits whichever `text-align` its block
-     already states — centre at `pos-topcentre` / `pos-bottom`, right at
-     `pos-topright`, left elsewhere. An earlier pass made `.j-block` a flex
-     column to align it explicitly; that changed the layout mode of every
-     chapter's copy at every viewport to position one small control, which is
-     exactly the kind of blast radius this file should not accept. */
-
-  /* Inert unless open — the hit model stated over .j-menu-scrim. This is the
-     surface that took the canvas's pointers out on 2026-08-09; `hidden` alone
-     was the only thing holding it off, and for one commit it was not set. */
-  .j-index-scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 5;
-    opacity: 0;
-    pointer-events: none;
-    background: rgba(4, 3, 1, 0.62);
-    transition: opacity 0.3s ease;
-  }
-  .j-index-scrim.open { opacity: 1; pointer-events: auto; }
-  .j-index-scrim[hidden] { display: none; }
-
-  .j-index {
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    z-index: 6;
-    display: flex;
-    flex-direction: column;
-    max-height: min(82vh, 40rem);
-    overflow: hidden;                       /* the BODY scrolls, not the shell */
-    opacity: 0;
-    /* 82vh of a phone: inert unless open, same hit model as the scrims */
-    pointer-events: none;
-    background: rgba(10, 7, 2, 0.975);
-    border: 1px solid rgba(217, 164, 65, 0.35);
-    border-width: 1px 0 0;
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.6);
-    transition: opacity 0.3s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .j-index.open { opacity: 1; pointer-events: auto; }
-  .j-index[hidden] { display: none; }
-  .j-index.dragging { transition: none; }   /* 1:1 with the finger */
-
-  /* On a wide viewport it is a centred panel rather than a full-bleed sheet —
-     a 1440px-wide list of 16 short rows is a bad use of a frame. The form is
-     still the sheet's, so nothing new has to be learned either way. */
-  @media (min-width: 721px) {
-    .j-index {
-      left: 50%; right: auto;
-      bottom: 0;
-      width: min(34rem, 92vw);
-      transform: translateX(-50%);
-      border-width: 1px 1px 0;
-      border-radius: 16px 16px 0 0;
-    }
-    .j-index.dragging { transform: translateX(-50%); }
-  }
-
-  .j-index-grip {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;                       /* PL-1.4: a real drag target */
-    touch-action: none;                     /* the gesture is ours */
-    cursor: grab;
-  }
-  .j-index.dragging .j-index-grip { cursor: grabbing; }
-  .j-index-grip::before {
-    content: "";
-    width: 44px; height: 4px;
-    border-radius: 99px;
-    background: rgba(217, 164, 65, 0.45);
-  }
-  /* in the handle row, so the two read as one header strip — the same
-     arrangement `.j-card.sheet .j-card-x` settled on */
-  .j-index-x {
-    position: absolute;
-    top: 0; right: 0.3rem;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px; height: 44px;
-    padding: 0;
-    background: none;
-    border: 0;
-    color: var(--muted);
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  .j-index-x:is(:hover, :focus-visible) { color: var(--gold-bright); }
-
-  .j-index-body {
-    flex: 1 1 auto;
-    min-height: 0;                          /* or the flex child refuses to scroll */
-    overflow-y: auto;
-    overscroll-behavior: contain;           /* no chaining out to the journey */
-    -webkit-overflow-scrolling: touch;
-    /* the bottom padding is load-bearing: the last row carries a 44px hit
-       area, and a scroll container clips hit-testing at its padding box */
-    padding: 0.1rem 1.5rem 1.5rem;
-  }
-  .j-index::after {                         /* safe-area / home-indicator gutter */
-    content: "";
-    flex: 0 0 auto;
-    height: max(1.1rem, env(safe-area-inset-bottom, 0px));
-  }
-  .j-index-h {
-    margin: 0 0 0.5rem;
-    font-family: "Didot", "Playfair Display", Georgia, serif;
-    font-weight: 400;
-    font-size: 1.5rem;
-    color: var(--parchment);
-  }
-  .j-index-lede {
-    margin: 0 0 1.4rem;
-    font-size: 0.85rem;
-    line-height: 1.55;
-    color: var(--muted);
-  }
-  .j-index-lede[hidden] { display: none; }
-  .j-index-group { margin: 0 0 1.35rem; }
-  .j-index-gh {
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-    margin: 0 0 0.35rem;
-    padding-bottom: 0.35rem;
-    border-bottom: 1px solid rgba(217, 164, 65, 0.18);
-    font: inherit;
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--gold-bright);
-  }
-  .j-index-gh-n {
-    margin-left: auto;
-    color: rgba(201, 191, 168, 0.5);
-    letter-spacing: 0.1em;
-  }
-  .j-index-list { margin: 0; padding: 0; list-style: none; }
-  .j-index-row {
-    display: flex;
-    align-items: center;
-    gap: 0.9rem;
-    width: 100%;
-    min-height: 44px;                       /* PL-1.4, in the box: a list row
-                                               has the width to simply BE the
-                                               target rather than grow a pad */
-    padding: 0.3rem 0.2rem;
-    background: none;
-    border: 0;
-    color: var(--parchment);
-    font: inherit;
-    font-size: 0.92rem;
-    text-align: left;
-    cursor: pointer;
-    transition: color 0.25s, background 0.25s;
-  }
-  .j-index-row:is(:hover, :focus-visible) {
-    background: rgba(217, 164, 65, 0.07);
-    color: var(--gold-bright);
-  }
-  /* Derived from manifest order, exactly as the rail menu's "01 · Mission" is
-     (23-side-navigator.md §5) — it is what makes two rows carrying the same
-     authored name distinguishable without this file writing a name for anyone. */
-  .j-index-n {
-    flex: 0 0 auto;
-    min-width: 1.6em;
-    color: rgba(201, 191, 168, 0.42);
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    font-variant-numeric: tabular-nums;
-  }
-
   /* --- focus visibility across the whole journey layer (PL-2.2) ---------
      "Focus states visually equal hover states": every rule above pairs
      :focus-visible with :hover. This is the ring on top of that, one
@@ -1758,9 +1514,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-act:focus-visible,
   .j-hot:focus-visible,
   .j-pop a:focus-visible,
-  .j-card :is(a, button):focus-visible,
-  .j-index :is(a, button):focus-visible,
-  .j-index-cue:focus-visible {
+  .j-card :is(a, button):focus-visible {
     outline: 2px solid var(--gold-bright);
     outline-offset: 3px;
     border-radius: 2px;
@@ -1809,12 +1563,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        .j-rail-item) and need nothing from this block. */
     .j-card-link, .j-pop-link { position: relative; }
     .j-menu-links a, .j-menu-ia, .j-menu-note a { position: relative; }
-    /* The index cue is small caps on a hairline chevron — 28px tall by
-       design, so it takes the same pad rather than a bigger box. (The sheet's
-       own controls need none: a row, the grip and the close button are all
-       44px in the box already.) */
-    .j-index-cue { position: relative; }
-    .j-index-cue::before,
     .j-menu-links a::before,
     .j-menu-ia::before,
     .j-menu-note a::before,
@@ -2042,14 +1790,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   @media (prefers-reduced-motion: reduce) {
     .j-hot, .j-hot-dot, .j-card { transition: none; }
     .j-pop, .j-pop-link { transition: none; }
-    /* The node index (journey/ui-index.js). Every rule in it is a transition
-       that ENDS at the element's resting style — the sheet at opacity 1 and no
-       translate, a row at its hover colour only while hovered — so switching
-       them all off leaves both states intact and instant. `closeSheet` also
-       skips its fade timeout under reduced motion, so `hidden` lands in the
-       same task rather than 340ms after a fade that never ran. */
-    .j-index, .j-index-scrim, .j-index-row, .j-index-cue,
-    .j-index-cue-arr, .j-index-x { transition: none; }
     /* the rail's step-back is a state change, not a dissolve — the end state
        (copy at 0.14 while held open, full when not) is intact and instant */
     .j-copy { transition: none; }

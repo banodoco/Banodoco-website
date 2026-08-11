@@ -1324,3 +1324,42 @@ waves — that is the "grown, not pinned" life of the field, and it is the
 surround, not the marker. If Hannah reads the FACES as pulsing too, that
 term (`flick` in the portrait fragment shader) is the next candidate — but
 a face is a portrait, not a dot, so it was left with its light.
+
+## 2026-08-11 — The Contributors button is removed (Hannah's request), and what that costs on a phone
+
+Hannah: "Remove the 'Contributors' button in the Owned by the Ecosystem
+section." Done — and since `CHAPTER_INDEX` had exactly one entry, the
+button was the only door into the whole node-index feature
+(journey/ui-index.js, 24-mobile-pass.md), so the clean removal takes the
+feature with it: ui-index.js deleted; ui.js loses the import, the
+`CHAPTER_INDEX` table, the wiring block (createNodeIndex, indexControls,
+indexNeed, openIndex, indexEntries, the resize/orientation latch resets),
+the cue's inert coupling and the frame-loop reachability rule
+(`h.placeable` itself stays — the pill placement and hit pads read it);
+site.css loses every `.j-index*` rule including the shared focus-ring and
+PL-1.4 / reduced-motion entries; tools/inputgates.js drops the two index
+selectors from its overlay gate (G2/G3 tolerate absence by construction).
+The static tier never carried the control — grep proves both tiers clean.
+The Owned copy block now ends on the Learn more / Remix pair (`eea3ffe`),
+which reads balanced at 1440x900 and 375x812 (shot before/after).
+
+Worth recording: the cue was SHOWING at 1440x900 too — the reachability
+latch is one-way and fires on any frame that fails to place a node (a
+detail-open or travel frame qualifies eventually), which is why Hannah met
+a control the design intended for phones. The latch's own logic made the
+desktop sighting inevitable; had the bug been fixed instead, she might
+never have asked.
+
+THE COST, stated plainly (this is OW-4.5's debt reopening): the portrait
+arc is authored in the landscape rest frame, and at 375x812 only ~2-4 of
+the sixteen contributors project on-frame — the index WAS the only mobile
+route to the other twelve-to-fourteen, and the only listable form for a
+screen reader. Deep links (`#/owned/contributor-N`) still resolve, but
+nothing on a phone offers them.
+
+PROPOSAL (not built — Hannah's call): fold the roster into the Owned
+"Learn more" card, which is already a modal dialog reachable at every
+size — sixteen rows grouped by role, each opening the contributor card
+through the same `onOpen` funnel the chips use. One existing control, no
+new chrome, and the mobile claim "100% shared with the people who build
+it" gets its sixteen faces back.
