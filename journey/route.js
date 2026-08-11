@@ -24,12 +24,59 @@
 // GREYBOX-DECISIONS.md). Deliberately decoupled from `span`: scroll -> p is
 // a monotone spline through these allocations (scroll.js), so re-timing a
 // camera leg never changes how far the visitor scrolls.
+//
+// `segVh` (optional) splits that scroll ACROSS THE CHAPTER'S OWN STOPS —
+// n stops delimit n + 1 sub-segments, and this array says what each one
+// costs (it must sum to `scrollVh`). Until 2026-08-11 the spline's only
+// knots were chapter boundaries, so where the scroll landed INSIDE a
+// chapter was whatever PCHIP happened to do with the neighbours'
+// densities — and it was doing something expensive: the Final chapter's
+// end-hold (p 0.97..1.0, a held frame with a `hold: true` camera key and
+// nothing to watch) was quietly taking 3.47 of the chapter's 12.0 vh, and
+// TAKING A GROWING SHARE OF EVERY RAISE. That is why the fourth and fifth
+// passes on the Final arrival bought so little for so much page: measured
+// on the shipped spline, scrollVh 12 -> 24 (a 12 vh page cost, for ONE
+// chapter) moved the arrival only 1.75x, because the hold absorbed the
+// rest. Declaring the split reclaims it: the hold is now 0.6 vh, and
+// road bought for the arrival reaches the arrival.
+//
+// `shape` (optional) pins one sub-segment's two end tangents to fixed
+// MULTIPLES of that segment's own mean slope: `{ seg, k: [k0, k1] }`. This
+// is what makes a re-allocation a pure STRETCH instead of a re-timing.
+// A cubic Hermite whose end tangents scale with its mean slope has an
+// identical normalised gain curve however much scroll it is given, so
+// every p-interval inside it costs the same MULTIPLE of what it used to —
+// which is exactly what "slower, and nothing else changes" has to mean.
+// Without it, a knot's tangent comes from its neighbours: pinning only the
+// hold knot left the arrival's gain with a TROUGH (it fell to 0.0026 p/vh
+// at p 0.95 and rose again into the rest — a stall at the climax, then a
+// re-acceleration), and the ladder stretched 1.48x at the openers against
+// 2.39x at the closers. With the shape pinned, the per-body spread across
+// all 72 bodies is 0.2% (18-one-species.md §17).
 
 export const DEFAULT_STOP = 0.5;      // mid-chapter rest (was REST_POSE)
 
 export const ROUTE = [
   { id: 'mission', span: 14, nav: 'Mission', stops: [0.0], scrollVh: 3.5 },
-  { id: 'inspire', span: 24, nav: 'Inspire', scrollVh: 7.5 },
+  // scrollVh 7.5 -> 5.6, ALL of it out of the tail (2026-08-11, Hannah's
+  // brief item 2 — "make the speed of the transition from Connect to
+  // Inspire be a little bit faster"). That travel is the Inspire rest
+  // (p 0.26) to the Connect rest (p 0.5230) and it cost 11.31 vh, but only
+  // its first stretch is free to trim: the ground-lighting schedule owns
+  // p 0.3510 (the network's first draw) onward and was slowed ~3.2x on
+  // purpose two passes ago (c77fb00, 0701653) — it keeps its road exactly.
+  // So the trim is taken from the chapter's SECOND sub-segment only, where
+  // the leg is pure travel with nothing lighting:
+  //   · seg 0 (p 0.14..0.26, the Mission -> Inspire arrival) UNCHANGED at
+  //     3.5 vh — nobody asked for that half and it does not move;
+  //   · seg 1 (p 0.26..0.38) 4.01 -> 2.1 vh.
+  // Measured: the whole travel 11.31 -> 9.40 vh (0.83x, 17% faster), of
+  // which the pure-travel head p 0.26..0.3510 goes 2.97 -> 1.52 and the
+  // network's pre-existence draw-in lead p 0.3510..0.3860 goes 1.27 ->
+  // 0.74. The ground lighting itself (LIGHT_LO..LIGHT_HI, p 0.3860 ->
+  // 0.5201 — connect/index.js) measures 6.94 -> 7.01 vh, 1.011x: kept.
+  // (16-connect-ground-restage.md, 2026-08-11.)
+  { id: 'inspire', span: 24, nav: 'Inspire', scrollVh: 5.6, segVh: [3.5, 2.1] },
   // stops [0.65], not the DEFAULT_STOP, and scrollVh 4.5 -> 10.0 (2026-08-10,
   // Hannah's brief items 1-2 — the FIFTH pass on the ground-lighting pace, and
   // the light schedule was reported FULLY SPENT at the fourth (c77fb00):
@@ -48,7 +95,17 @@ export const ROUTE = [
   //   also carries brief item 1: the Inspire->Connect travel is now ONE
   //   analytic gesture (connect/camera.js approach()) and the extra scroll
   //   is what lets it breathe. Page cost: +5.5 vh.
-  { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 10.0 },
+  //   scrollVh 10.0 -> 10.15 with an explicit segVh (2026-08-11, the same
+  //   brief): the total barely moves, but the SPLIT is now declared rather
+  //   than inferred, because the Inspire trim above changes the tangent at
+  //   this chapter's opening knot and would otherwise have shifted road
+  //   from the ground lighting into the dive. seg 0 (p 0.38..0.5230, the
+  //   arrival Hannah slowed and wants kept) holds 7.30 vh — the 7.295 the
+  //   shipped spline gave it; seg 1 (0.5230..0.60, the Connect -> Owned
+  //   dive, 86883b9's one arc) takes 2.85 so the dive measures 5.12 vh
+  //   against its shipped 5.15 — 0.993x, i.e. unchanged.
+  { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 10.15,
+    segVh: [7.30, 2.85] },
   { id: 'owned',   span: 25, nav: 'Owned',   scrollVh: 5.0 },
   // The epilogue is not a sixth peer chapter: it keeps a route (#/final) but
   // no nav entry — the LAST nav'd chapter stays highlighted through it (v6).
@@ -84,7 +141,37 @@ export const ROUTE = [
   // ~+18 vh more page for one chapter — declined, recorded in
   // 18-one-species.md §15); the per-body axis gets the rest from
   // clones.js DRAW_W. Page grows 32.0 -> 38.0 vh.)
-  { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 12.0 },
+  // scrollVh 12.0 -> 17.6, declared as segVh [17.0, 0.6] with the arrival's
+  // shape pinned (2026-08-11, Hannah's SIXTH request on this moment: "can
+  // you make the mushrooms lighting up when I enter the Final section
+  // happen a lot slower too"). The fifth pass reported the ask as 4x and
+  // delivered 1.86x, and named the page as the bound. The page was not the
+  // whole bound — the END-HOLD was. p 0.97..1.0 is a held frame, and it was
+  // taking 3.47 vh of the chapter's 12.0 and 29% of every raise on top:
+  // that is why scrollVh 12 -> 24 (the fifth pass's lever, doubled again)
+  // buys only 1.75x for +12 vh of page. Reclaiming it costs nothing that
+  // shows:
+  //   · seg 0 (p 0.85..0.97, the whole arrival) 8.53 -> 17.0 vh;
+  //   · seg 1 (p 0.97..1.0, the end-hold) 3.47 -> 0.6 vh. It stays a true
+  //     hold and p = 1 stays a resolution anchor — a fling to the end still
+  //     settles there — it just stops charging the visitor three screens of
+  //     wheel for a frame that does not move.
+  //   · `shape` holds the arrival's own gain curve while it stretches. The
+  //     k values ARE the shipped spline's: measured on it, the arrival's
+  //     end tangents were 2.219x and 0.451x its mean slope, and re-imposing
+  //     those ratios makes the new curve the old curve scaled. That is what
+  //     turns this from a re-timing into a stretch — see the `shape` note
+  //     at the top of the file.
+  // Measured (live pull curve + the spline, 18-one-species.md §17): the
+  // whole progression 8.33 -> 16.61 vh, 1.99x, and EVERY ONE of the 72
+  // bodies' charge-and-take windows 1.99x, spread 0.2%. No p-value, camera
+  // key, ladder rung, DRAW_W or golden moves — the per-body axis is bought
+  // entirely from scroll this time, so §12/§13's "one at a time" is
+  // preserved exactly rather than traded against a wider kindling window.
+  // Page 38.00 -> 41.85 vh, +3.85, of which 1.9 is paid for by the Inspire
+  // trim above.
+  { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 17.6,
+    segVh: [17.0, 0.6], shape: { seg: 0, k: [2.219, 0.451] } },
 ];
 
 // The authored end-hold: p = 1 is a resolution anchor of its own (a fling to
@@ -112,6 +199,8 @@ export const CHAPTERS = (() => {
       end,
       nav: c.nav,
       scrollVh: c.scrollVh,
+      segVh: c.segVh || null,
+      shape: c.shape || null,
       // chapter-local rest fractions, and their absolute p positions.
       // rest-p arithmetic is exactly the shipped restProgress() formula, so
       // the derived doubles are bit-identical to the pre-manifest build.
@@ -123,6 +212,41 @@ export const CHAPTERS = (() => {
 })();
 
 export const CHAPTER_IDS = CHAPTERS.map((c) => c.id);
+
+/** THE SCROLL SPLINE'S KNOT LIST — one entry per sub-segment, in route order.
+ *
+ *  Until 2026-08-11 scroll.js built its knots straight from CHAPTERS, so a
+ *  chapter was one segment and the only knots were chapter boundaries. It now
+ *  reads this instead, so a chapter that declares `segVh` contributes one knot
+ *  per stop as well. A chapter that declares nothing yields exactly one
+ *  segment ending at its own `end` — bit-identical to the old list, which is
+ *  why Mission and Owned are untouched by this change.
+ *
+ *  `end`  the p this segment finishes at (a chapter boundary, or a rest stop)
+ *  `vh`   its scroll allocation
+ *  `k`    optional [k0, k1] tangent multipliers for THIS segment's two knots,
+ *         as multiples of its own mean slope (see `shape` at the top).
+ */
+export const SEGMENTS = CHAPTERS.flatMap((c) => {
+  if (!c.segVh || c.segVh.length < 2) {
+    return [{ id: c.id, end: c.end, vh: c.scrollVh, k: null }];
+  }
+  // sub-segment i runs to stop i, and the last one to the chapter's end.
+  const ends = [...c.stops, c.end];
+  if (c.segVh.length !== ends.length) {
+    console.error('[route]', c.id, 'declares', c.segVh.length, 'segVh entries for',
+      ends.length, 'sub-segments (stops + 1) — the spline will be wrong.');
+  }
+  const sum = c.segVh.reduce((a, b) => a + b, 0);
+  if (Math.abs(sum - c.scrollVh) > 1e-9) {
+    console.error('[route]', c.id, 'segVh sums to', sum, 'but scrollVh is',
+      c.scrollVh, '— the chapter would cost a different distance than it says.');
+  }
+  return c.segVh.map((vh, i) => ({
+    id: c.id, end: ends[i], vh,
+    k: c.shape && c.shape.seg === i ? c.shape.k : null,
+  }));
+});
 
 /** Every rest stop on the route, in order — snap-commit anchors, handheld
  *  zeros and nav landings all read THIS list (plus TERMINAL_P where the
@@ -170,6 +294,18 @@ export function navChapterAt(p) {
 // silently moved the shipped route (renormalizing IS allowed — then this
 // table is updated deliberately, with the diff in front of the reviewer).
 {
+  // NOT UPDATED by the 2026-08-11 re-allocation, deliberately, and that is the
+  // headline of that change: `span` and `stops` were not touched, so every
+  // derived p is the same double it was. scrollVh/segVh/shape move WHEEL
+  // distance only. This matters beyond the assert — journey/portrait.js and
+  // chapters/owned/leg.js both carry absolute p literals (portrait keys at
+  // p 0.040/0.622/0.700/0.725; leg.js LEG_P0 0.660, LEG_P1 0.872, UG_P0/P1,
+  // REST_P 0.725), and the Owned colony is BUILT from samples over
+  // LEG_P0..LEG_P1. A span move would have silently re-pointed all of it at
+  // the wrong route; a scroll move cannot, because nothing in either file is
+  // a function of scroll. Verified after the edit: this assert silent, and
+  // the owned@* goldens byte-identical.
+  //
   // Final rest 0.5 -> 0.8 of its span (0.925 -> 0.97): deliberate, 2026-08-09
   // — the arrival-road rebalance (see the ROUTE entry's comment). Every other
   // value is the shipped table, unchanged.

@@ -1957,3 +1957,143 @@ After (12 s, 721 samples): opacity swing **0.00%**, scale constant,
 position at the floor. The frozen goldens never saw the flare (drivers
 are clock-gated and dt = 0 never fires them), so connect@* are untouched
 byte-for-byte — `--check` MAE 0.00.
+
+## 2026-08-11 — A little faster to Connect, and the ground lighting does not pay for it (Hannah's brief, item 2)
+
+**The ask, verbatim.** *"Make the speed of the transition from Connect to
+Inspire be a little bit faster too."*
+
+She named it backwards, so both directions were established first, then
+both were measured — the direction the words point is not always the
+direction the complaint lives in, and `043d66d` is the reason to check.
+
+### The leg, and why only part of it is available
+
+The travel is the Inspire rest (p 0.26) to the Connect rest (p 0.5230),
+and on the shipped tree it cost **11.31 vh** — the longest single stretch
+on the route. Two passes ago it was deliberately made that long: the
+ground-lighting arrival was slowed ~3.2x across `c77fb00` and `0701653`,
+half of it bought by Connect's `scrollVh` 4.5 → 10.0. Trimming the leg
+and keeping that slowdown are only in conflict if the leg is treated as
+one thing. It is not. Measured in scroll, at 900 px of viewport:
+
+| stretch | p | shipped | what is on screen |
+|---|---|---|---|
+| head | 0.2600 → 0.3510 | **2.97 vh** | pure travel — the network is not drawn yet |
+| lead | 0.3510 → 0.3860 | **1.27 vh** | the network draws itself in (the pre-existence lead) |
+| light | 0.3860 → 0.5201 | **6.94 vh** | LIGHT_LO → LIGHT_HI: the arrival Hannah slowed |
+| settle | 0.5201 → 0.5230 | 0.13 vh | the fully-lit margin into the rest |
+
+61% of the leg is the thing that must not move. The trim comes from the
+other 39%, and from the head first.
+
+### What changed — one number in the route, plus a declared split
+
+Nothing in this chapter's own files moved: no camera key, no LIGHT_LO /
+LIGHT_HI, no FRONT_SOFT, no schedule, no p-value anywhere on the route.
+The whole item is `journey/route.js`:
+
+- **Inspire `scrollVh` 7.5 → 5.6, declared as `segVh: [3.5, 2.1]`.** The
+  chapter's stop (its rest, p 0.26) now splits its allocation, so the trim
+  can be taken from the tail alone. Seg 0 — the Mission → Inspire arrival,
+  which nobody asked about — holds 3.5 vh unchanged. Seg 1 goes 4.01 → 2.1.
+- **Connect `scrollVh` 10.0 → 10.15, declared as `segVh: [7.30, 2.85]`.**
+  The total barely moves; the split is what matters. Trimming Inspire's
+  tail steepens the tangent at this chapter's opening knot, and left
+  inferred it would have quietly moved road out of the ground lighting and
+  into the dive. Declaring it holds seg 0 at the 7.30 vh the shipped
+  spline gave it.
+
+(The mechanism itself — `segVh`, and the sub-segment knots it puts in the
+scroll spline — is described in route.js and in 18-one-species.md §17,
+which is the other half of the same allocation.)
+
+### Measured — road, both directions
+
+Scroll cost is direction-symmetric by construction (one spline), and the
+screen-motion-per-scroll-pixel profile is a pure function of p, so the
+ROAD is identical forwards and backwards. Re-verified: optical flow across
+the leg runs 0.026 → 0.247 → 0.002 screen-px per scroll-px, the same curve
+either way, mean 0.0659.
+
+| stretch | before | after | |
+|---|---|---|---|
+| whole travel | 11.31 vh | **9.40 vh** | **0.83x — 17% faster** |
+| head | 2.97 | 1.52 | 0.51x |
+| lead | 1.27 | 0.74 | 0.59x |
+| **light (LIGHT_LO→HI)** | **6.94** | **7.01** | **1.011x — kept** |
+| Mission → Inspire | 6.99 | 7.00 | 1.001x — untouched |
+| Connect → Owned dive | 5.15 | 5.12 | 0.993x — untouched |
+
+At a deliberate 1 vh/s the ride to Connect is 11.31 s → 9.40 s.
+
+### Measured — real gestures, both directions
+
+Identical mirrored gestures (70 px deltas, 180 ms drive + a decaying
+momentum tail, dispatched on the input clock through the live capture
+listeners; headless rig, so these are valid as BEFORE/AFTER pairs on one
+rig, not as absolute seconds — the D29 cadence caveat).
+
+| leg | before fwd | before back | after fwd | after back |
+|---|---|---|---|---|
+| **inspire ↔ connect** | 3.17 s | 3.30 s | **2.50 s** | **2.90 s** |
+| mission ↔ inspire | 2.37 | 2.46 | 2.37 | 2.53 |
+| connect ↔ owned | 1.97 | 1.84 | 1.97 | 1.83 |
+| owned ↔ final | 2.73 | 3.20 | 2.87 | 3.60 |
+
+Both directions of the asked-about leg got faster, so the answer does not
+depend on which one she meant.
+
+### The `043d66d` class of asymmetry is absent here — checked, not assumed
+
+That commit's fault was structural: gesture strength was denominated in p
+at the LOCAL spline slope, so the identical finger measured 9x weaker
+leaving the Final rest backward, fell under the flick-carry floor, and the
+backward ride never arrived at all. Tested on this leg:
+
+- `gesturePeakPx` for the mirrored gestures: **3850.6 forward / 3778.8
+  backward** — 1.9% apart, i.e. one finger, one answer. (The p-denominated
+  number that caused `043d66d` would have differed by the ratio of the
+  span's end slopes, which here is 2.4x.)
+- Every gesture ARRIVES in both directions, at every rest, in both the
+  before and after runs. No "never arrives", no against-motion glide back.
+- `COMMIT_THRESHOLD` is a fraction of the span's SCROLL distance since
+  `043d66d`, so both directions pay 35% of the same road; scrollgates R3b
+  shows the notch reader stepping and returning cleanly.
+
+### Residual, honestly
+
+The two directions are not equal: 2.50 s forward against 2.90 s backward
+(repeat runs 2.50/2.53/2.70 and 2.90/2.87/2.90, so the 0.3 s is real and
+not rig noise). It is not the `043d66d` fault — it is the leg's own gain
+profile, mirrored. The Inspire end of this span is now ~2.4x steeper in p
+per scroll pixel than the Connect end (the ground-lighting deceleration is
+what makes the Connect end flat, and it is deliberate), so the same
+gesture converts to more p when it starts at the Inspire end. Forward
+therefore spends more of the span inside the gesture and less on the
+cruise. The shipped tree had the same asymmetry in the same direction at
+4%; the trim raised it to 12% by steepening the Inspire end further.
+
+This is the same class §16 explicitly declined to equalise on the
+Final ↔ Owned span ("the camera easing OUT of the rest it eased into"),
+and the lever if it ever matters is the Inspire split ratio — moving
+`segVh` toward `[3.2, 2.4]` flattens it, at the cost of speeding up the
+Mission → Inspire arrival that nobody asked about.
+
+### Gates
+
+- `capture.py --check`: PASS, all ten goldens, worst MAE 0.02/255 (the
+  known owned wobble class). No reference moved — this change touches no
+  rendering path and no p-value.
+- Connect rest composed at 1440x900, 1280x800 and 375x812: all three land
+  at p 0.5230 exactly, network fully lit, all three markers present in
+  `6afd508`'s order, copy placed.
+- Mirror scrub p 0.26 → 0.5230 → 0.26 through the `?capture` freeze,
+  13 matched samples: worst MAE **0.0232/255**, and 0.0000 across the
+  whole ground-lighting stretch. Exact mirroring.
+- `tools/scrollgates.js`, default and `?nosnap=1`: every invariant at or
+  better than the shipped tree's own output (E2/E3 1.0000, nosnap E1
+  -5.6e-17, R1 exact return, R4 overshoot 0, R5 end-hold holds, R6 visits
+  every anchor and parks nowhere else).
+- Full real-wheel ride 0 → 1 → 0 (1034 frames) plus all five nav jumps:
+  console **0 errors, 0 warnings**.
