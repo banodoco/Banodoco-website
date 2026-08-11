@@ -257,8 +257,7 @@ export function boot(opts = {}) {
   }
 
   function navigateTo(chapterId) {
-    closeDetail({ silent: true });
-    journey.writeRoute(chapterId, null, { push: true });   // the visitor chose to travel
+    closeDetail();
     directJumpTo(chapterId);
   }
 
@@ -349,47 +348,41 @@ export function boot(opts = {}) {
     guarded('ui', () => ui.armCopyEntry(chapterId, dur));
   }
 
-  // True only when THIS session pushed the history entry for the open detail.
-  // A deep-link landing already sits on #/chapter/node with nothing of ours
-  // behind it, so closing must not history.back() - that would walk off the
-  // page entirely.
-  let detailPushed = false;
-
+  /* THE DETAIL NO LONGER HAS A HISTORY ENTRY (2026-08-11 — the URL is not a
+     route any more; see state.js). Opening a card used to pushState
+     `#/<chapter>/<node>` and closing used to spend that entry with
+     history.back(), which needed a `detailPushed` flag to tell "we pushed
+     this" from "we arrived on it" — the latter had nothing of ours behind it,
+     so Back would have walked the visitor off the page. With nothing pushed
+     there is nothing to spend and nothing to distinguish: every close, from
+     every path (the X, Escape, a press outside, the scroll intent, a nav
+     jump), closes the card DIRECTLY. history.back() is not called anywhere in
+     this build. */
   function openDetail(nodeId, trigger) {
     nodeId = normaliseNode(NODE_CHAPTER[nodeId] || chapterAt(journey.progress).id, nodeId);
     if (!nodeId) return;
-    const ch = NODE_CHAPTER[nodeId] || chapterAt(journey.progress).id;
     if (!ui.openCard(nodeId, trigger)) return;
-    // one Back should not walk a chain of drawers: retargeting an already-open
-    // detail replaces, only the first open pushes
-    const target = `#/${ch}/${nodeId}`;
-    const willPush = !detailNode && location.hash !== target;
-    journey.writeRoute(ch, nodeId, { push: willPush });
-    if (willPush) detailPushed = true;
     detailNode = nodeId;
   }
 
-  function closeDetail({ silent = false } = {}) {
+  function closeDetail() {
     if (!detailNode) return;
-    const ch = NODE_CHAPTER[detailNode] || chapterAt(journey.progress).id;
-    const onOwnEntry = detailPushed && location.hash === `#/${ch}/${detailNode}`;
     detailNode = null;
-    detailPushed = false;
     ui.closeCard();
-    if (silent) return;
-    if (onOwnEntry) history.back();                   // consume the entry the open pushed
-    else journey.writeRoute(ch, null);
   }
 
+  /** An inbound route — a hash that arrived in the address bar after boot.
+   *  state.js has already taken it back out of the URL by the time this runs;
+   *  all that is left is to honour it. (The boot chain below handles the
+   *  arrival case, which is the common one.) */
   function handleRoute(r) {
     const node = normaliseNode(r.chapter, r.node);
     if (node) {
       if (node !== detailNode) { detailNode = node; ui.openCard(node, null); }
     } else if (detailNode) {
       detailNode = null;
-      ui.closeCard();                                  // Back closes the detail first
+      ui.closeCard();                                  // a chapter route closes the detail first
     }
-    detailPushed = false;   // arriving via the hash: the entry is not ours
     if (r.sameChapter) return;
     // Every route-driven chapter change is a DIRECT jump (D16 restage found
     // the legacy adjacent-chapter flight left the camera stuck with runaway y
@@ -404,7 +397,9 @@ export function boot(opts = {}) {
   /* ================================================================
      Per-frame
      ================================================================ */
-  let lastChapter = null;
+  // (`lastChapter` lived here: the edge-detector for the route write applyFrame
+  // used to make on every chapter crossing. The write is gone — see the block
+  // at the foot of applyFrame — and it had no other reader.)
 
   // Error isolation for the spine's own subsystem calls (M5). The organism's
   // frame loop already isolates whole animators, but everything below runs
@@ -517,11 +512,13 @@ export function boot(opts = {}) {
 
     guarded('ui', () => ui.update(p, ch.id, sceneApi.camera, dt));
 
-    // Scrubbing must not fill the back stack (adr-d6 write policy)
-    if (ch.id !== lastChapter) {
-      lastChapter = ch.id;
-      if (!detailNode) journey.writeRoute(ch.id, null);
-    }
+    /* THE RIDE WRITES NOTHING (2026-08-11, Hannah's brief). A chapter change
+       used to replaceState `#/<chapter>` from right here, every time the
+       scrub crossed a boundary — the visible symptom she reported, and the
+       reason the address bar flickered through four routes on one wheel
+       gesture. The crossing is still detected where it matters (ui.js's copy
+       bands, seams.js, the rail's `chapterAt(p)`); it simply no longer has an
+       opinion about the URL. Nothing replaces this block. */
   }
 
   /** One step of the direct-jump camera blend. Runs INSIDE applyFrame, right
@@ -620,8 +617,17 @@ export function boot(opts = {}) {
   /* ================================================================
      Deep links (place, never replay) + QA affordances
      ================================================================ */
+  /* INBOUND ONLY, AND READ EXACTLY ONCE. The URL is still a way IN — someone
+     handed `#/owned/contributor-3` still lands on that card — but it stops
+     being a place the site writes to, so it is read here, at boot, and then
+     erased (journey.clearRoute() at the foot of this chain). An unknown or
+     retired route no longer normalises to `#/mission`: there is no route to
+     normalise TO, so it simply falls through to the cold-load branch and the
+     hash is dropped with everything else. */
   const route = journey.parseHash();
-  if (route.unknown) history.replaceState(null, '', '#/mission');
+  // A hero callout pressed before the journey booted (main.js) — the same
+  // intent the browser used to record for us by writing the hash.
+  const entry = opts.entry && CHAPTER_IDS.includes(opts.entry) ? opts.entry : null;
 
   /** Place the journey at p in one tick. `snap` is the PLACEMENT contract —
    *  every eased chapter state jumps to its target so a dt = 0 ride (deep
@@ -641,7 +647,6 @@ export function boot(opts = {}) {
     guarded('seams', () => seams.update(p));
     if (snap) snapChapters();
     applyFrame(p, 0);
-    lastChapter = chapterAt(p).id;
     if (detail) setTimeout(() => openDetail(detail, null), DEEP_LINK_DETAIL_DELAY_MS);
   }
 
@@ -661,17 +666,28 @@ export function boot(opts = {}) {
   } else if (qp !== null) {
     placeAt(clamp01(parseFloat(qp) || 0));
   } else if (qpose && CHAPTER_IDS.includes(qpose)) {
+    // ?pose= places and no longer echoes itself into the hash: the flag is
+    // already in the URL, and writing the route beside it was the one QA path
+    // that dirtied a clean address bar on purpose.
     placeAt(restProgress(qpose));
-    journey.writeRoute(qpose, null);
+  } else if (entry) {
+    placeAt(restProgress(entry));
   } else if (route.chapter) {
     placeAt(restProgress(route.chapter), { detail: normaliseNode(route.chapter, route.node) });
   } else {
-    // cold load, or a legacy/unknown route normalised to #/mission: p = 0, the
-    // director never takes the camera, and one applyFrame settles the DOM
-    // state deterministically instead of leaving it to CSS defaults
-    history.replaceState(null, '', '#/mission');
+    // cold load, or a legacy/unknown route: p = 0, the director never takes the
+    // camera, and one applyFrame settles the DOM state deterministically
+    // instead of leaving it to CSS defaults
     placeAt(0);
   }
+  // ...and the URL is clean from here on, whichever branch ran. replaceState,
+  // so the deep link is not a redirect: no reload, no second history entry,
+  // and the visitor's first Back still leaves for wherever they came from.
+  // Runs AFTER the placement, so an arriving route is spent before it is
+  // erased — including the card a `#/<chapter>/<node>` link opens, which
+  // placeAt schedules DEEP_LINK_DETAIL_DELAY_MS later off the value it has
+  // already read.
+  journey.clearRoute();
 
   /* ================================================================
      Public handle

@@ -1437,3 +1437,136 @@ inside it rather than overflowing it.
   is cheap, but a true vector B would be cheaper still and would never need an
   `image-set`. Tracing was rejected as lossy against artwork this fine; if a
   vector master ever exists, `.logo .mark` is the only rule that changes.
+
+---
+
+## 2026-08-11 — The URL stops being a route: the hash goes, inbound links stay
+
+> "When we go into a new section, let's NOT append this hashtag thing to the
+> URL — `http://localhost:8137/#/connect` — and if they do have it, let's strip
+> it out. It destroys our journey." — Hannah
+
+The address bar was a **live readout of the scrub**. Crossing a chapter
+boundary called `writeRoute` from inside `applyFrame`, so one wheel gesture
+from Mission to the epilogue rewrote the URL four times, and every nav press
+pushed a history entry on top. The route system was never designed as
+decoration — it carried four separate jobs — so the removal had to be decided
+job by job rather than by deleting the writer and seeing what broke.
+
+### What the hash used to do, and what replaced each job
+
+| Job | Was | Now |
+|---|---|---|
+| **1. Scroll-driven section changes** | `applyFrame`'s tail edge-detected `chapterAt(p)` against `lastChapter` and `replaceState`d `#/<chapter>` — the thing Hannah reported | **Nothing.** The block and its `lastChapter` edge-detector are gone. The crossing is still detected where it does work — ui.js's copy bands, seams.js, the rail's own `chapterAt(p)` — it simply no longer has an opinion about the URL. |
+| **2. Nav clicks push a history entry** | `navigateTo` called `writeRoute(id, null, { push: true })`, so Back stepped back through the ride | **Nothing.** `navigateTo` closes any open detail and jumps. Back leaves the site — see the decision below. |
+| **3. Detail cards write `#/<chapter>/<node>` and close via Back** | `openDetail` pushed the entry, `closeDetail` spent it with `history.back()`, and a `detailPushed` flag distinguished "we pushed this" from "we arrived on it" so a deep-linked card did not walk the visitor off the page | **Direct close.** With nothing pushed there is nothing to spend and nothing to distinguish: `detailPushed` and the `history.back()` are both gone, and every close path — the X, Escape, a press outside, the scroll intent, a nav jump — runs the same `ui.closeCard()`. `history.back()` is not called anywhere in the build. |
+| **4. Deep links** | `parseHash` at boot placed the journey and opened the node's card | **Kept, and then cleaned.** The boot chain still reads the hash once, still normalises the retired routes (`community` → `discord`, `person-N` → `contributor-N`, `2rp` → `tworp`), still places and still opens the card — and then `journey.clearRoute()` strips the hash with `replaceState`. Not a redirect: no reload, no second history entry. |
+
+`state.js`'s `writeRoute` is replaced by `clearRoute`, which only ever
+**deletes** (`location.pathname + location.search`, so `?p=`, `?pose=` and
+`?capture=` are untouched). The `hashchange` listener survives for one reason:
+a hash can still *appear* after boot — pasted into the address bar — and it is
+treated exactly like an arrival, honoured and then taken back out. So the
+promise is not "we stop writing"; it is **the URL never keeps a route, however
+it got one**.
+
+### Every caller, checked
+
+- **The rail and its site-map panel** (`rail.js`) already navigated by
+  handler: both `.j-rail-item` and `.j-menu-item` are real `<a href="#/id">`
+  elements whose click handlers `preventDefault()` and call `onNav`. The hrefs
+  are **kept** — they cost nothing, they keep the tiles real links for the
+  keyboard, and a middle-click opens a tab that arrives as an inbound deep
+  link and is cleaned on arrival.
+- **The hero callouts** (`index.html`, made into `#/inspire` / `#/connect`
+  links in `a089e40`) were the one place where **the navigation *was* the
+  href**: the browser wrote the hash and the router picked up the
+  `hashchange`. They now navigate through `window.journey.flyTo` in main.js
+  (a direct camera jump, as the rail's tiles do), and a click that lands
+  *before* the journey has booted is held in `pendingEntry` and handed to
+  `boot({ entry })` — the same intent the browser used to record for us.
+  `#co-equip` is unchanged (deferred chapter, `preventDefault` only).
+- **`?pose=`** no longer echoes itself into the hash. It was the one QA path
+  that dirtied a clean address bar on purpose.
+- **The static tier** (`static/index.html`) is **untouched, deliberately.**
+  Its hash *is* its navigation and its no-JS contract; it is a separate plain
+  HTML document, not the ride Hannah was describing.
+
+### The Back button — the decision
+
+**Back leaves the site**, and nothing in the ride touches the back stack.
+
+That is the honest consequence of what she asked for: with no entry pushed,
+there is no entry to go back to. It is also normal behaviour for a
+single-page experience, and it removes the failure the `detailPushed` flag
+existed to paper over — there is now no code path that can call
+`history.back()` and walk a visitor off the page. Measured: five nav presses,
+a card open and a card close leave `history.length` **unchanged** at 4.
+
+The alternative — keep pushing entries for nav and cards, strip only the
+scroll-driven writes — was rejected. It would have kept a *hidden* stack the
+URL no longer explains: Back would undo travel the visitor cannot see
+recorded anywhere, which is a worse contract than "Back leaves", not a better
+one.
+
+### The trade, stated plainly
+
+- **No shareable link to a section or a card.** Riding to Connect and copying
+  the address bar gives the landing page. The links still *work* inbound —
+  `#/connect`, `#/owned/contributor-3` and the legacy `#/connect/community`
+  all place correctly — so anything already written down, bookmarked or
+  authored in the markup keeps working; the site just stops *producing* them.
+- **Back no longer steps through the ride.** One press leaves.
+- A sensible middle exists and is exactly what shipped for the inbound half:
+  **accept deep links inbound, never write them outbound.** The half that is
+  genuinely lost is *outbound* — there is no way to hand someone a link to a
+  contributor card without hand-writing the hash. If that ever matters, a
+  "copy link" control on the card is the right shape for it: an explicit act,
+  not a URL that rewrites itself under the visitor.
+
+### Gate results
+
+- **Full ride by scroll**, Mission → Inspire → Connect → Owned → Final
+  (p 0 → 0.972, all four boundaries crossed): the URL never changed, and a
+  wrapper over `pushState` / `replaceState` / `back` recorded **zero calls**.
+- **All ten nav destinations** — five rail tiles, five site-map entries —
+  reach their chapter's rest with the URL unchanged and no history call. One
+  real trusted pointer click through the panel's CONNECT entry verified the
+  same (p 0.523, panel closed, URL clean).
+- **Cards**: opened by pointer (chip and portrait), by keyboard, and by deep
+  link; closed by Escape, by the X, by a press outside and by the scroll
+  intent. Focus restores to the originating chip in every pointer/keyboard
+  case, the modal card's trap and live region are untouched, and no path
+  writes or pops history.
+- **Deep links**: `#/connect` (cold load) → Connect rest, URL cleaned to `/`;
+  `#/owned/contributor-3` → Owned rest with the card open and focus on its
+  close control, URL cleaned; legacy `#/connect/community` → Connect rest with
+  the **discord** node open, URL cleaned. All three by `replaceState`:
+  `history.length` does not grow.
+- **Back from a clean state**: leaves to the previous document and lands as a
+  normal cold load (p = 0, Mission, empty hash) — no stranding, no stale
+  route.
+- **`?p=0.62`** → p 0.620 (Owned); **`?pose=inspire`** → p 0.260 with the flag
+  intact and no hash written; **`?capture=connect`** → p 0.523, hash empty.
+- **Hero callouts**: CONNECT and INSPIRE both jump (p 0.523 / 0.260) with a
+  clean URL; a CONNECT press *before* boot lands the journey in Connect when
+  it boots.
+- **Console over a full ride**: clean — no site errors, and the boot line now
+  reads `route (none)`.
+- **`python3 tools/capture.py --check`: PASS.** Eight of ten frozen
+  references at MAE 0.00/255; `owned@*` at 0.03, **confirmed pre-existing** by
+  re-running the gate with these changes stashed at `bc5a89f` and getting the
+  identical 0.03. No golden file is modified.
+
+### Residuals
+
+- **`scroll.js:453` throws on a wheel event whose `target` is not a Node.**
+  `ownerOf(e.target)` calls `el.contains(node)`, which rejects `window`. Not
+  reachable by real input (a user's wheel always targets an element) and it
+  only fires while an input owner is registered, i.e. while a card or the menu
+  is open — but a synthetic `window.dispatchEvent(new WheelEvent(...))` in QA
+  hits it every time. Pre-existing; found while driving this pass's gates.
+- **The hrefs in the markup now describe a destination the site never writes.**
+  That is deliberate (they are the middle-click affordance and the a11y
+  contract), but it means `#/connect` is discoverable only by inspecting a
+  link, never by riding to it.

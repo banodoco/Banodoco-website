@@ -1441,7 +1441,7 @@ export function createInspire(sceneApi) {
     get active() { return active; },
     /** SELECTION channel (W4-E) — the symmetric half of the hover path,
      *  called by core/ui.js's notifySelect for every open/close path (click,
-     *  key, deep link, hashchange/Back, Escape, scroll-intent close).
+     *  key, deep link, inbound route, Escape, scroll-intent close).
      *
      *  While an initiative's spotlight card is open its plume holds the
      *  coherent/bright hover read — full uCoh plus the streak — and keeps it

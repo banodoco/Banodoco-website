@@ -42,24 +42,40 @@ export function createJourneyState({ onNavigate = null } = {}) {
     return { chapter, node, unknown: null };
   }
 
-  function writeRoute(chapterId, nodeId, { push = false } = {}) {
-    const h = nodeId ? `#/${chapterId}/${nodeId}` : `#/${chapterId}`;
-    if (location.hash === h) return;
+  /* THE ROUTE IS INBOUND ONLY (2026-08-11, Hannah: "when we go into a new
+     section, let's NOT append this hashtag thing to the URL ... and if they do
+     have it, let's strip it out. It destroys our journey.").
+     writeRoute() is gone. Nothing the visitor does — scrolling, pressing a nav
+     tile, opening or closing a card — writes to the URL any more, so there is
+     no pushState anywhere and no history entry the ride owns. What survives is
+     the READ: a URL that ARRIVES carrying `#/connect` or `#/owned/contributor-3`
+     still places the journey there (journey.js's boot chain), and the hash is
+     then removed. clearRoute() is the only writer left in the codebase, and it
+     only ever DELETES. */
+
+  /** Strip whatever route the URL is carrying. replaceState, never a
+   *  navigation: no reload, no new history entry, and the QA flags (?p=,
+   *  ?pose=, ?capture=) survive untouched because only the hash is dropped. */
+  function clearRoute() {
+    if (!location.hash) return;
     suppressRoute++;
-    if (push) history.pushState(null, '', h);
-    else history.replaceState(null, '', h);
-    // pushState/replaceState do not fire hashchange, but a queued one from an
-    // earlier user gesture might still land; release on the next task.
+    history.replaceState(null, '', location.pathname + location.search);
+    // replaceState does not fire hashchange, but a queued one from an earlier
+    // user gesture might still land; release on the next task.
     setTimeout(() => { suppressRoute--; }, 0);
   }
 
+  // A hash can still APPEAR after boot — pasted into the address bar, or an
+  // in-page link that reaches the browser (none ship today: every nav control
+  // preventDefault()s and calls the host). Treat it exactly like an arrival:
+  // honour it, then take it back out of the URL.
   window.addEventListener('hashchange', () => {
     if (suppressRoute > 0) return;
     const r = parseHash();
-    if (r.unknown) { history.replaceState(null, '', '#/mission'); return; }
-    if (!r.chapter) return;
-    // Back out of a detail inside the current chapter must not yank the
-    // camera; the host decides fly vs jump for a real chapter change.
+    clearRoute();
+    if (r.unknown || !r.chapter) return;
+    // A detail route inside the current chapter must not yank the camera; the
+    // host decides jump vs stay put for a real chapter change.
     r.sameChapter = chapterAt(p).id === r.chapter;
     if (onNavigate) onNavigate(r);
   });
@@ -109,6 +125,6 @@ export function createJourneyState({ onNavigate = null } = {}) {
     snapTo,
     jumpToChapter,
     parseHash,
-    writeRoute,
+    clearRoute,
   };
 }
