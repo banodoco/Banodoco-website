@@ -474,7 +474,6 @@ export function createConnect(sceneApi) {
     driver: pulseDriver(2.6 + net.routes[i].len * 0.28),   // longer routes take longer
     clock: 4 + rnd() * 8,                                  // staggered first fires
     focus: 0,                                              // 1 while the pulse is hover-focused
-    flare: 0,                                              // hub brightening on arrival
   }));
 
   /* ================================================================
@@ -589,9 +588,14 @@ export function createConnect(sceneApi) {
         refire[P.id] -= dt;
         if (refire[P.id] <= 0 && !P.driver.active) { P.driver.fire(); P.focus = 1; refire[P.id] = 4.5; }
       } else refire[P.id] = 0;
-      // arrival: the hub brightens briefly as the pulse lands, then relaxes
-      if (P.driver.active && P.driver.value > 0.9) P.flare = Math.max(P.flare, sm(0.9, 1.0, P.driver.value));
-      P.flare = Math.max(0, P.flare - dt * 0.55);
+      // The ambient pulse used to land as a FLARE on the hub core (+0.45
+      // opacity, +0.22 scale, ~2 s decay). HELD STILL (2026-08-11, Hannah:
+      // the dots "pulse ... but they should stay STABLE"): the marker no
+      // longer answers — the travelling light on the strand is the life,
+      // measured 16-27% of brightness swing ON THE DOT before this change
+      // and the camera-only floor after. The pulse itself is untouched:
+      // it still runs the route (uPulseHead/uPulseAmp below), so the
+      // network breathes while its destinations hold.
     }
     U.uPulseHead.value.set(
       pulses[0].driver.active ? pulses[0].driver.value : -2,
@@ -624,7 +628,7 @@ export function createConnect(sceneApi) {
 
     /* ---- hub cores: they KINDLE as the light reaches them (the strands,
        spokes and knot are already there quietly; the core glow is the
-       arrival) + hover + pulse flare ---- */
+       arrival) + hover ---- */
     for (let i = 0; i < net.hubMeta.length; i++) {
       const hm = net.hubMeta[i];
       // THE KINDLE LANDS WITH ITS OWN TRAIL. `litR[route] * uLitMax[route]` IS
@@ -649,13 +653,16 @@ export function createConnect(sceneApi) {
       hubIgnite[i] = sm(Math.max(hm.along * 0.5, hm.along - FRONT_SOFT),
                         hm.along + 0.03, headAt);
       const core = net.cores[i];
-      const a = amt[hm.id], flare = pulses[i].flare;
+      const a = amt[hm.id];
       // Resting identity raised (audit taste pass, 2026-08-04): each hub must
       // read as an unmistakable destination-beacon AT REST, not only on
-      // pulse/hover — 0.58 resting, cap lifted to 1.0 so the hover (+0.4)
-      // and arrival-flare (+0.45) headroom still register above it.
-      core.mat.opacity = amount * resolve * hubIgnite[i] * Math.min(1.0, 0.58 + 0.4 * a + 0.45 * flare);
-      core.sprite.scale.setScalar(core.baseScale * (1 + 0.18 * a + 0.22 * flare));
+      // hover — 0.58 resting, cap lifted to 1.0 so the hover (+0.4) headroom
+      // still registers above it. The arrival flare left this line
+      // 2026-08-11 (held still — see the pulse loop above): hover is the
+      // visitor's own hand and stays; the ambient clock no longer moves
+      // the marker.
+      core.mat.opacity = amount * resolve * hubIgnite[i] * Math.min(1.0, 0.58 + 0.4 * a);
+      core.sprite.scale.setScalar(core.baseScale * (1 + 0.18 * a));
     }
   });
 
