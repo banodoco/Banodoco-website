@@ -409,10 +409,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
      is what makes the popover usable by everyone rather than mouse-only: it
      survives the pointer leaving, it puts the CTA link in the tab order, and it
      is the second tap of the existing touch model. It also keeps the ROUTE
-     model whole — journey.js still funnels this through openCard(), still
-     writes #/chapter/node, still pushes one history entry, still closes on
-     Back / Escape / scroll-intent. A deep link therefore lands on the same
-     thing a click produces, which the split-vessel option could not offer.
+     model whole — journey.js still funnels this through openCard(), and still
+     closes on Escape / a press outside / scroll-intent. A deep link therefore
+     lands on the same thing a click produces, which the split-vessel option
+     could not offer. (It USED to write #/chapter/node and push a history entry
+     the close would spend with Back. Neither happens as of 2026-08-11: the
+     ride writes nothing to the URL, so every close is direct — journey.js
+     closeDetail.)
 
      ---- a11y contract ----
 
@@ -691,8 +694,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     if (!outside) return;
     // A pinned popover is non-modal, so pressing anywhere else dismisses it —
     // for EVERY pointer type, not just touch (a mouse has no other way out
-    // besides Escape). Routed through onClose() so journey.js unwinds the
-    // route and the history entry with it.
+    // besides Escape). Routed through onClose() so journey.js unwinds its own
+    // detail state with it.
     if (popPinned) onClose();
     if (e.pointerType !== 'touch' || !armed) return;
     clearArmed();
@@ -1093,9 +1096,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
 
      One pair of calls covers every path because journey.js funnels ALL opens
      through openCard() and ALL closes through closeCard(): pointer click,
-     Enter/Space, deep link (placeAt -> openDetail), hashchange/Back
-     (handleRoute), Escape, and the scroll-intent close. Nothing else needs to
-     know about selection.
+     Enter/Space, deep link (placeAt -> openDetail), an inbound route
+     (handleRoute), Escape, a press outside, and the scroll-intent close.
+     Nothing else needs to know about selection.
 
      Chapter modules are reached through window.journey's public handle,
      because journey.js is read-only in this lane and does not pass them to
@@ -1126,17 +1129,17 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
 
   /** a11y debt #5: exactly the hotspot whose card is showing reports expanded.
    *  Driven off `selectedNode`, so it is correct for every open path — click,
-   *  key, deep link, hashchange — not just the ones that pass a trigger. */
+   *  key, deep link, inbound route — not just the ones that pass a trigger. */
   function syncExpanded() {
     for (const h of hotspots) {
       h.btn.setAttribute('aria-expanded', h.id === selectedNode ? 'true' : 'false');
     }
   }
 
-  /** Commit the popover for `h`: it stays until Escape, Back, a scroll intent,
+  /** Commit the popover for `h`: it stays until Escape, a scroll intent,
    *  another node, or a press outside. journey.js drives this through
-   *  openCard() below, so the route, the single history entry and the
-   *  scroll-intent close all behave exactly as they do for the card. */
+   *  openCard() below, so every close behaves exactly as it does for the
+   *  card. */
   function pinPop(h, trigger) {
     if (cardIsOpen) closeCard();          // one vessel at a time
     const retarget = popPinned && popNode !== h;
@@ -1291,8 +1294,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (cardIsOpen) { e.preventDefault(); onClose(); return; }
-    // A PINNED popover unwinds through journey.js like the card does, so Back
-    // and the route stay consistent. Escape must also suppress the TRANSIENT
+    // A PINNED popover unwinds through journey.js like the card does, so the
+    // detail state stays consistent. Escape must also suppress the TRANSIENT
     // reveal on the way out: focus is still on the chip (that is where a
     // non-modal disclosure leaves it), so without this the popover would
     // unpin and immediately re-appear as a hover/focus reveal — an Escape

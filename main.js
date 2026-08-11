@@ -13,15 +13,15 @@ import { createScene } from './organism/organism.js?v=1785427900';
 import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF, FREE_CAM } from './flags.js';
 
 // --- a11y: skip link (M5) ---
-// The journey owns the ENTIRE hash namespace for chapter routing
-// (journey/state.js parseHash treats any hash it doesn't recognise as
-// unknown and rewrites it to #/mission — journey.js boot, state.js's
-// hashchange listener) — so a plain native `href="#site-nav"` fragment
-// jump would get stomped mid-flight: the browser's own "focus the fragment
-// target" behaviour races the router's rewrite, and the router wins. Move
-// focus programmatically instead; the href stays real markup (works with
-// JS disabled, and is a correct fallback if this listener ever fails to
-// attach) but a normal click never lets the browser touch location.hash.
+// The journey owns the ENTIRE hash namespace, and as of 2026-08-11 it owns it
+// by EMPTYING it: any hash that arrives is read once and stripped
+// (journey/state.js clearRoute + its hashchange listener). So a plain native
+// `href="#site-nav"` fragment jump would get stomped mid-flight — the
+// browser's own "focus the fragment target" behaviour races the strip, and
+// the visitor is left with neither the focus nor the fragment. Move focus
+// programmatically instead; the href stays real markup (works with JS
+// disabled, and is a correct fallback if this listener ever fails to attach)
+// but a normal click never lets the browser touch location.hash.
 const skipLink = document.querySelector('.skip-link');
 if (skipLink) {
   skipLink.addEventListener('click', (e) => {
@@ -187,6 +187,13 @@ addEventListener('resize', () => {
   }, 150);
 });
 
+// A hero callout pressed before the journey module has booted. The browser
+// used to record this intent for us — the tag was a plain `#/<chapter>` link,
+// so a click wrote the hash and boot read it back as a deep link. Nothing
+// writes the URL any more (Hannah, 2026-08-11), so the intent is held here and
+// handed to boot() instead. See journey/journey.js's `entry`.
+let pendingEntry = null;
+
 // hovering a callout gently lights its region of the specimen
 const isTouch = matchMedia('(hover: none)').matches;
 for (const [id, region] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co-connect', 'ground']]) {
@@ -195,10 +202,27 @@ for (const [id, region] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co
   el.addEventListener('mouseleave', () => sceneApi.setHighlight(region, false));
 
   // EQUIP has no chapter yet (deferred) — its tag keeps the "coming soon"
-  // reveal but must never navigate or dirty the hash, unlike INSPIRE/CONNECT
-  // whose tags are plain #/<chapter> links the hash router picks up.
+  // reveal but must never navigate.
   if (id === 'co-equip') {
     el.querySelector('.tag').addEventListener('click', (e) => e.preventDefault());
+  }
+
+  // INSPIRE / CONNECT enter the journey at that chapter. Until 2026-08-11 the
+  // NAVIGATION WAS THE HREF: these two tags were made real `#/<chapter>` links
+  // in a089e40 and the hash router picked the resulting hashchange up — which
+  // is precisely the URL write Hannah asked to remove. They navigate through
+  // the journey's own handle now, exactly as the rail's tiles do (a direct
+  // camera jump, not a placement), and the href stays in the markup: it costs
+  // nothing, it keeps the control a real link for the keyboard and for
+  // "open in new tab", and a tab opened that way arrives as an inbound deep
+  // link — placed on arrival, then cleaned.
+  if (!isTouch && (id === 'co-inspire' || id === 'co-connect')) {
+    const chapter = id.slice(3);
+    el.querySelector('.tag').addEventListener('click', (e) => {
+      e.preventDefault();
+      if (window.journey) window.journey.flyTo(chapter);
+      else pendingEntry = chapter;
+    });
   }
 
   if (isTouch) {
@@ -273,7 +297,7 @@ const frozen = introAt !== null;
 
 function loadJourney() {
   import('./journey/journey.js')
-    .then(m => m.boot({ heroIntroSkipped: !!skipIntro, heroFrozen: frozen }))
+    .then(m => m.boot({ heroIntroSkipped: !!skipIntro, heroFrozen: frozen, entry: pendingEntry }))
     .catch(err => console.error('[journey-v6] failed to load', err));
 }
 

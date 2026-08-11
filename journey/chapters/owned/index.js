@@ -586,7 +586,7 @@ export function createOwned(sceneApi, content) {
 
     /** SELECTION channel (W4-E) — the symmetric half of setHot, called by
      *  core/ui.js's notifySelect for every open/close path (click, key, deep
-     *  link, hashchange/Back, Escape, scroll-intent close). Its existence
+     *  link, inbound route, Escape, scroll-intent close). Its existence
      *  retires ui.js's temporary `mod.portraits.setSelected(index)` bridge:
      *  notifySelect prefers this method and never reaches the bridge branch.
      *
