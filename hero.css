@@ -153,15 +153,144 @@
     padding: 2.1rem 3.4rem;
     animation: fade-on 0.9s ease 0.15s both;
   }
+  /* THE WORDMARK IS NOW THE MARK (2026-08-11, Hannah: "use it as the logo
+     instead of the BANODOCO text ... you may need to change the colour and
+     size to align it nicely with the page").
+     THE INK: an isometric wireframe B, supplied as glowing amber line art on
+     transparency. It is applied as a MASK and painted with `currentColor`
+     rather than dropped in as an <img>, for two reasons that are really one.
+     (1) STATE. The control opposite it (.pill-ic) is parchment at rest and
+     lifts to --gold-bright on hover and keyboard focus, because GOLD IS THIS
+     SITE'S LIT STATE — the note above .pill-ic is the long version. A baked
+     amber raster is lit at rest and has nowhere to go when you touch it; the
+     row would have one control that answers and one that cannot. Masked, the
+     B is the same ink as its neighbour and lifts with it, so the two ends of
+     the row are peers in colour and in behaviour, not just in size.
+     (2) BYTES. Only the alpha channel is needed, so the shipped rasters are
+     grayscale+alpha (2.9-9.7 kB) instead of the 28-155 kB colour cutouts.
+     The alpha carries the drawing's own glow falloff, so the hairline keeps
+     its soft edge — nothing is re-drawn or traced.
+     Masking on ALPHA and not on luminance was measured: the source's RGB
+     holds a lighting gradient (bright near faces, dark far ones), and a
+     luminance mask drops the far faces almost entirely — the drawing came
+     apart into an illustration with holes. On alpha, every line is the same
+     hairline the .co leaders and the Discord outline are drawn at, which is
+     what makes it read as a MARK and not a picture of one.
+     THE BOX HOLDS THE ROW'S EDGE. `height` here is the .pill's computed 33px
+     — the same number .pill-ic holds and for the same reason: the nav row's
+     bottom is the top of the band Inspire's portrait camera is balanced
+     against (the PL-1.4 note below). The mark itself is TALLER than 33px and
+     overflows this box symmetrically, which costs the layout nothing —
+     padding is whitespace, nav's height is still max(33, 33) — so navBottom
+     is untouched at every breakpoint and no camera field goes stale.
+     SIZE: see the --mark-h note below. */
   .logo {
-    font-size: 1.05rem;
-    font-weight: 600;
-    letter-spacing: 0.42em;
-    color: var(--parchment);
+    --mark-h: 40px;
+    display: inline-flex;
+    align-items: center;
+    position: relative;                 /* for the hit pad below */
+    height: 33px;
+    color: rgba(242, 237, 225, 0.82);   /* see the rest-alpha note below */
     text-decoration: none;
-    transition: color 0.25s;
+    transition: color 0.25s, filter 0.25s;
   }
-  .logo:hover { color: var(--gold-bright); }
+  /* THE HIT PAD, AND WHY IT LEFT THE SHARED PL-1.4 BLOCK (see that note near
+     the bottom of this file). PL-1.4 pads `.pill, .cta, .logo` to a 44px
+     minimum, but only under coarse-pointer / small-viewport conditions, and
+     it sizes on `max(100%, 44px)` — the ELEMENT's box. That was exactly right
+     while the logo was a word, whose box IS its ink. It is wrong now: the
+     mark deliberately overflows its 33px box (that is what holds navBottom),
+     so on a desktop pointer the top and bottom 3.5px of the drawing would
+     have been visible but not hoverable or clickable — ink you can see and
+     cannot hit. So `.logo` keeps its own pad, unconditionally, sized to the
+     INK rather than the box. It resolves to 44x44 at both breakpoints today;
+     writing the height as max(var(--mark-h), 44px) means it stays correct on
+     its own if the mark is ever taken past 44. Everything PL-1.4 guaranteed
+     still holds here — this is a superset of it, not an exception to it. */
+  .logo::before {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: max(100%, 44px);
+    height: max(var(--mark-h), 44px);
+    transform: translate(-50%, -50%);
+    background: none;                   /* hit area only: it must never paint */
+    pointer-events: auto;
+  }
+  /* THE MARK'S HEIGHT. The word it replaces was 17px of cap height spread
+     over 140px of tracked-out width — a long, thin, low-density thing. A mark
+     is compact and dense, so matching the word's 17px would have been both
+     unreadable (the interior lattice mushes below ~30px) and, oddly, still
+     too heavy. Shot in the real row at 30/33/36/40/44/48: under 36 the
+     drawing stops being a drawing, over 44 it starts to own the frame and
+     crowd the hero beneath it. 40 is where the B is unmistakably the
+     three-dimensional object it is and still reads as quiet furniture — it
+     overhangs the 33px band by 3.5px top and bottom, which is what gives the
+     row its new breath without moving a single layout edge.
+     WIDTH is the source's own aspect, 814/1112 = 0.732, so the ink is never
+     distorted; at 40px tall the mark is 29px wide, against the Discord
+     outline's 20px. Nearly the same footprint at nearly the same weight, at
+     opposite ends of the row. */
+  .logo .mark {
+    display: block;
+    width: calc(var(--mark-h) * 0.732);
+    height: var(--mark-h);
+    background: currentColor;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-position: center;  mask-position: center;
+    -webkit-mask-size: contain;     mask-size: contain;
+    /* Plain url() FIRST, image-set second, deliberately: if a browser cannot
+       parse image-set the whole declaration is dropped and the url() above
+       still masks. Without the fallback the element would paint as a solid
+       parchment RECTANGLE — the one failure mode worth engineering against.
+       Resolutions are picked for the RENDERED size, not the file's: 29px of
+       ink needs 29/58/87 device px at 1x/2x/3x, so 48/64/96 are the smallest
+       masks that stay oversampled at each. */
+    -webkit-mask-image: url("./assets/brand/mark-b-mask-48.png");
+    mask-image: url("./assets/brand/mark-b-mask-48.png");
+    -webkit-mask-image: -webkit-image-set(
+      url("./assets/brand/mark-b-mask-48.png") 1x,
+      url("./assets/brand/mark-b-mask-64.png") 2x,
+      url("./assets/brand/mark-b-mask-96.png") 3x);
+    mask-image: image-set(
+      url("./assets/brand/mark-b-mask-48.png") 1x,
+      url("./assets/brand/mark-b-mask-64.png") 2x,
+      url("./assets/brand/mark-b-mask-96.png") 3x);
+  }
+  /* REST ALPHA, measured the same way .pill-ic's 0.74 was. The B is a lattice
+     of many thin lines where the Discord clyde is one closed outline, so the
+     same alpha reads LIGHTER on it — matched at 0.74 the mark went slightly
+     ghostly beside its neighbour. 0.82 is where the two read at the same
+     density in the row. Full parchment (what the word had) is too much: the
+     word spent its weight across 140px, the mark concentrates it in 29. */
+  .logo:is(:hover, :focus-visible) {
+    color: var(--gold-bright);
+    filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.55));
+  }
+  /* THE RING GOES ON THE INK, the same call 5762167 made for .pill-ic and for
+     the same reason, arrived at from the opposite direction. There the <a> was
+     TALLER than its glyph and the shared `nav a:focus-visible` ring came out a
+     portrait rectangle round a wide little face; here the <a> is SHORTER than
+     its mark — 33px of box under 40px of drawing — so the shared ring would
+     have cut across the B, crossing the artwork it is meant to indicate.
+     Neither the box nor the mark itself can carry it: `mask` clips an element's
+     own outline away with everything else it paints, so a ring on .mark would
+     simply not draw. A pseudo-element sized to the ink is drawn OUTSIDE the
+     masked box and hugs the drawing exactly (29x40 at the shared 3px offset).
+     Same colour, same width, same offset as every other control in the row. */
+  .logo:focus-visible { outline: none; }
+  .logo:focus-visible::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: calc(var(--mark-h) * 0.732);
+    height: var(--mark-h);
+    transform: translate(-50%, -50%);
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 3px;
+    border-radius: 2px;
+    pointer-events: none;
+  }
   .nav-cta { display: flex; gap: 0.7rem; }
   .pill {
     color: var(--ink);
@@ -200,13 +329,27 @@
      of the band Inspire's portrait camera is balanced against (the PL-1.4
      note below). Only the INK moved. Width is now the ink's own width rather
      than a 33px square, so the mark sits flush to the 3.4rem margin the
-     wordmark starts at — with the circle gone, the ink is the visual edge.
-     The 44px touch minimum stays where it always was, on the PL-1.4 pad. */
+     logo starts at — with the circle gone, the ink is the visual edge.
+     The 44px touch minimum stays where it always was, on the PL-1.4 pad.
+
+     REBALANCED 20px -> 26px, 2026-08-11, when the wordmark became the mark.
+     Hannah, on seeing the B: "maybe the Discord logo needs a ring around it
+     in the top right or something." The instinct was right and the remedy
+     was not — see the ring note below. What she was reading is that the row
+     changed underneath this control: it used to answer a 140x17 word, a long
+     thin low-density thing, and it now answers a 29x40 compact drawing. At
+     20px the clyde had become the smaller order of object in the row, and
+     the eye stopped treating the two ends as a pair. 26px is where they read
+     as peers again. Nothing else about the control moves: still the official
+     path, still unfilled, still stroked at the 1px the .co leaders use, still
+     no disc, still flush to the margin, still a 33px box. This is a size, not
+     a return of the badge — 26px of open outline is a long way from the lit
+     filled disc of 58a63c3 that she called excessively dominant. */
   .pill-ic {
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
-    width: 20px;
+    width: 26px;
     height: 33px;
     padding: 0;
     /* border: 0, not a transparent border — the base .pill's 1px is still
@@ -218,7 +361,7 @@
     transition: color 0.25s, filter 0.25s;
   }
   .pill-ic svg {
-    width: 20px;
+    width: 26px;
     height: auto;
     display: block;
     overflow: visible;                  /* else the box clips the stroke */
@@ -230,14 +373,42 @@
     vector-effect: non-scaling-stroke;
     stroke-linejoin: round;
   }
+  /* THE RING: TRIED, SHOT, REJECTED (2026-08-11).
+     Hannah asked for one — "maybe the Discord logo needs a ring around it in
+     the top right or something" — and the case for it had genuinely changed
+     since 5762167 took the old one off: both ends of the row are marks now,
+     not a mark and a word, so a ring could have read as a matched FRAME
+     rather than as a badge. It was worth shooting rather than assuming.
+     Shot at 30, 34 and 40px diameter, hairline, unfilled, same currentColor,
+     beside the 40px B at 1440 and at 375. All three failed, the same way:
+     · A circle is a CLOSED shape. After 5762167 there is not one enclosed
+       form left in this header — the B is open wireframe, the clyde is open
+       outline, the .co leaders and the .cta are open line. The ring puts the
+       only closed contour on the page back in the corner it was removed from,
+       and it reads as a button again. That IS the dominance she objected to,
+       arriving by a slightly quieter road.
+     · It inverts the hierarchy. At 34 and 40 the eye goes to the RING before
+       it goes to the logo, because a circle in an otherwise angular field is
+       the strongest figure in it. The logo has to lead the row.
+     · The geometries fight. The B is an isometric wireframe — all 30/60/90
+       edges and flat faces. A true circle shares no vocabulary with it; the
+       pair looked assembled from two different kits.
+     What she was actually seeing — a right end gone light against the new
+     left end — is real, and is fixed by the 20 -> 26px rebalance above, which
+     buys the weight without buying an enclosing shape. */
+
   /* REST ALPHA, measured not guessed: shot at 0.58 / 0.66 / 0.74 / 0.82 in
      the real row at actual size, 1440 and 375@2x. 0.58 is the old .pill
      BORDER's alpha and was the tempting answer, but that pill also held a
      FULL-parchment word — matching only the border undersells the control and
-     it goes ghostly. 0.82 starts to rival the wordmark. 0.74 is where the
-     mark's stroke reads at the same density as BANODOCO's letter strokes, so
-     the two sit in the row as peers — which is the whole point: a quiet
-     hairline beside a quiet wordmark, not a badge beside a wordmark.
+     it goes ghostly. 0.82 started to rival the WORD that used to stand
+     opposite it, and 0.74 was where this stroke read at the same density as
+     BANODOCO's letter strokes, so the two sat in the row as peers. The word is
+     gone (2026-08-11) and 0.74 still holds against what replaced it: the B is
+     painted at 0.82 because a lattice of many thin lines reads lighter than
+     one closed outline at the same alpha. Both ends measured, in the row, at
+     actual size — the point is unchanged, a quiet hairline beside a quiet
+     hairline, not a badge beside anything.
      The base .pill's hover paints a border and a wash; there is no box here. */
   .pill-ic:is(:hover, :focus-visible) {
     background: none;
@@ -657,18 +828,30 @@
      ============================================================ */
   @media (max-width: 620px) and (orientation: portrait) {
     nav { padding: 1.3rem 6vw; }
-    .logo { font-size: 0.92rem; letter-spacing: 0.3em; }
+    /* HEIGHT is the .pill's computed 28.44px at this query, the number that
+       holds navBottom at 70.03125 — same contract .pill-ic keeps below. The
+       MARK steps 40 -> 34 (-15%), close to the step the word it replaced took
+       (1.05rem -> 0.92rem, -12%): a phone header is proportionally taller, so
+       the mark may take more of the row here than it does at 1440, but not
+       much more. Shot at 30/32/34/36 at actual size on a 375 frame — 30 and
+       32 go timid and the lattice starts to close up, 36 fills the row edge
+       to edge. 34 keeps the drawing legible and the row still airy, which
+       matters most HERE: mobile is where Hannah found the old header
+       "excessively dominant". */
+    .logo { --mark-h: 34px; height: 28.4375px; }
     .pill { padding: 0.42rem 1rem; font-size: 0.72rem; }
     /* HEIGHT is still the text pill's computed 28.44px at this query — the
        row's bottom edge must not move, whatever the ink does. Width follows
        the ink so the mark sits flush to the 6vw margin.
-       The ink shrinks with the wordmark (1.05rem -> 0.92rem is -12%; 20 -> 18
-       is -10%), which is where Hannah felt the old badge worst. A 1px stroke on
-       a SMALLER glyph is a BIGGER fraction of it, so the stroke comes down
+       The ink steps down with the mark beside it — 26 -> 22 here is -15%, the
+       same step .logo's 40 -> 34 takes — which keeps the two ends in the same
+       proportion to each other at every breakpoint, and keeps this control
+       modest on the frame where Hannah felt the old badge worst. A 1px stroke
+       on a SMALLER glyph is a BIGGER fraction of it, so the stroke comes down
        with it — 0.9px here keeps the line optically the same hairline it is at
        1440 instead of letting it coarsen on the smallest frame. */
-    .pill-ic { width: 18px; height: 28.44px; padding: 0; }
-    .pill-ic svg { width: 18px; }
+    .pill-ic { width: 22px; height: 28.44px; padding: 0; }
+    .pill-ic svg { width: 22px; }
     .pill-ic svg path { stroke-width: 0.9; }
     .hero { padding: 5vh 7vw 0; }
     h1 { font-size: clamp(1.7rem, 7.2vw, 2.5rem); margin-bottom: 1.1rem; }
@@ -741,7 +924,7 @@
      header 2026-08-10), i.e. 16px short in height on every single view of the
      site, since the row is fixed and rides the whole journey.
      `.cta` measured 328x43 on a landscape phone, 1px short, and
-     the wordmark `.logo` — a real link to the site root, live at
+     the then-wordmark `.logo` — a real link to the site root, live at
      every chapter — measured 122x17.
 
      Deliberately a pad and not a bigger pill: growing the pills
@@ -757,8 +940,14 @@
      the two halves of one rule can never drift apart.
      ============================================================ */
   @media (pointer: coarse), (max-width: 720px), (max-height: 560px) {
-    .pill, .cta, .logo { position: relative; }
-    .pill::before, .cta::before, .logo::before {
+    /* `.logo` LEFT THIS LIST 2026-08-11: its ink now overflows its box, so a
+       pad sized on the box is the wrong pad and a pad that only exists on
+       coarse pointers is the wrong scope. It carries its own, unconditional,
+       sized to the ink — see the note on `.logo::before` above. It is still
+       >= 44x44 at every breakpoint, so PL-1.4's guarantee is unbroken; it is
+       simply enforced in one place instead of two. */
+    .pill, .cta { position: relative; }
+    .pill::before, .cta::before {
       content: "";
       position: absolute;
       left: 50%; top: 50%;
@@ -775,10 +964,12 @@
     .co { opacity: 1; }
     .cta .arr { transition: none; }
     .co .lit, .co .ring, .co .tag, .co .ck { transition: none; }
-    /* the Discord mark's warm-up is a transition ENDING at its resting or
-       lit style, so switching it off leaves both states intact and instant
-       (colour + the lit drop-shadow — there is no box-shadow on it now) */
-    .pill-ic { transition: none; }
+    /* Both marks' warm-up is a transition ENDING at its resting or lit style,
+       so switching it off leaves both states intact and instant (colour + the
+       lit drop-shadow — there is no box-shadow on either of them now). .logo
+       joined this list when it stopped being a word and started carrying the
+       same colour+filter lift its neighbour does. */
+    .pill-ic, .logo { transition: none; }
   }
 
 /* --- intro fast-forward (scroll during the entry choreography): the CSS

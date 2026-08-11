@@ -169,14 +169,76 @@
     padding: 1.5rem 3.4rem;
     background: linear-gradient(180deg, rgba(9, 6, 2, 0.92) 0%, rgba(9, 6, 2, 0.72) 62%, transparent 100%);
   }
+  /* THE WORDMARK IS NOW THE MARK (2026-08-11) — Tier 3's copy of the live
+     header's logo (hero.css .logo), which stopped being the word BANODOCO the
+     same day: an isometric wireframe B, supplied as amber line art, applied
+     here as a MASK and painted with currentColor rather than dropped in as an
+     <img>. The long version of why is in hero.css; the short version is that
+     the mark has to be able to LIFT — parchment at rest, --gold-bright when
+     lit, exactly like the Discord outline it faces — and a baked amber raster
+     is already lit and has nowhere to go. Masking on the alpha channel also
+     means the shipped rasters are grayscale+alpha at 3-10 kB rather than the
+     28-155 kB colour cutouts, which matters more here than anywhere: this is
+     the tier that has to render with no JS and no WebGL.
+     THE BOX: unlike the live tier this row is NOT camera-balanced (nothing
+     downstream is framed against it), so the box is simply the touch target —
+     min-height 44px, the same minimum .pill carries — and the mark sits
+     inside it rather than overflowing it. */
   .logo {
-    font-size: 1.05rem;
-    font-weight: 600;
-    letter-spacing: 0.42em;
-    color: var(--parchment);
+    --mark-h: 40px;
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    min-height: 44px;
+    color: rgba(242, 237, 225, 0.82);
     text-decoration: none;
+    transition: color 0.25s, filter 0.25s;
   }
-  .logo:hover { color: var(--gold-bright); }
+  .logo .mark {
+    display: block;
+    width: calc(var(--mark-h) * 0.732);
+    height: var(--mark-h);
+    background: currentColor;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-position: center;  mask-position: center;
+    -webkit-mask-size: contain;     mask-size: contain;
+    /* plain url() first, image-set second: a browser that cannot parse
+       image-set drops that declaration and still gets a mask. Without the
+       fallback the element would paint as a solid parchment rectangle.
+       Mirrors hero.css — same files, same resolutions, one tier up. */
+    -webkit-mask-image: url("../assets/brand/mark-b-mask-48.png");
+    mask-image: url("../assets/brand/mark-b-mask-48.png");
+    -webkit-mask-image: -webkit-image-set(
+      url("../assets/brand/mark-b-mask-48.png") 1x,
+      url("../assets/brand/mark-b-mask-64.png") 2x,
+      url("../assets/brand/mark-b-mask-96.png") 3x);
+    mask-image: image-set(
+      url("../assets/brand/mark-b-mask-48.png") 1x,
+      url("../assets/brand/mark-b-mask-64.png") 2x,
+      url("../assets/brand/mark-b-mask-96.png") 3x);
+  }
+  .logo:is(:hover, :focus-visible) {
+    color: var(--gold-bright);
+    filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.55));
+  }
+  /* the ring hangs on the INK, not the box — the box is 44px tall to carry the
+     touch target and the mark is 40, so the shared a:focus-visible ring came
+     out loose around it. `mask` clips an element's own outline away with
+     everything else it paints, so it cannot hang on .mark either; a pseudo is
+     drawn outside the masked box and hugs the drawing. Mirrors hero.css. */
+  .logo:focus-visible { outline: none; }
+  .logo:focus-visible::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: calc(var(--mark-h) * 0.732);
+    height: var(--mark-h);
+    transform: translate(-50%, -50%);
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 3px;
+    border-radius: 2px;
+    pointer-events: none;
+  }
   .nav-cta { display: flex; gap: 0.7rem; }
   .pill {
     display: inline-flex;
@@ -202,14 +264,14 @@
      overflow: visible keeps the box off the outer half of the stroke.
      THE TOUCH TARGET: the live hero can't grow its control (its row height is
      camera-balanced), so it carries the 44px minimum on a transparent PL-1.4
-     pad. This tier used to get it free from a 44px box — but the ink is 20px
+     pad. This tier used to get it free from a 44px box — but the ink is 26px
      now and the box follows it, so the mark sits flush to the 3.4rem margin
-     the wordmark starts at. So Tier 3 adopts the same PL-1.4 pad, and the
+     the logo starts at. So Tier 3 adopts the same PL-1.4 pad, and the
      44px target is unchanged in both tiers. */
   .pill-ic {
     position: relative;
     justify-content: flex-end;
-    width: 20px;
+    width: 26px;                /* rebalanced against the B that replaced the word; see hero.css */
     height: 44px;
     padding: 0;
     /* border: 0, not a transparent border — .pill's 1px is still LAYOUT under
@@ -219,7 +281,7 @@
     color: rgba(242, 237, 225, 0.74);
     transition: color 0.25s, filter 0.25s;
   }
-  .pill-ic::before {          /* PL-1.4 pad: 44px target, 20px of ink */
+  .pill-ic::before {          /* PL-1.4 pad: 44px target, 26px of ink */
     content: "";
     position: absolute;
     top: 50%;
@@ -228,7 +290,7 @@
     height: 44px;
     transform: translate(-50%, -50%);
   }
-  .pill-ic svg { width: 20px; height: auto; display: block; overflow: visible; }
+  .pill-ic svg { width: 26px; height: auto; display: block; overflow: visible; }
   .pill-ic svg path {
     fill: none;
     stroke: currentColor;
@@ -241,8 +303,8 @@
     color: var(--gold-bright);
     filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.55));
   }
-  /* the ring hangs on the GLYPH, not the box — the box is 20x44 (it carries
-     the touch target) and the mark is 20x15, so a ring on the box is a tall
+  /* the ring hangs on the GLYPH, not the box — the box is 26x44 (it carries
+     the touch target) and the mark is 26x20, so a ring on the box is a tall
      rectangle around a wide little face, i.e. the enclosing shape this pass
      removed, handed back on focus. Same colour/width/offset as the shared
      nav ring; only the element it hangs on changed. Mirrors hero.css. */
@@ -827,21 +889,22 @@
      ============================================================ */
   @media (max-width: 900px) {
     .top { padding: 1rem 6vw; gap: 0.6rem 1rem; }
-    .logo { font-size: 0.9rem; letter-spacing: 0.3em; }
+    .logo { --mark-h: 34px; }
     .pill { padding: 0.35rem 1rem; font-size: 0.72rem; }
-    /* the mark shrinks with the wordmark, and its stroke shrinks with it — a
-       1px line on a smaller glyph is a bigger fraction of it and coarsens.
-       Same pair of numbers as the live tier's portrait query.
+    /* both marks step down together, and the Discord outline's stroke steps
+       with it — a 1px line on a smaller glyph is a bigger fraction of it and
+       coarsens. Same pair of numbers as the live tier's portrait query
+       (40 -> 34 and 26 -> 22, both -15%).
        padding: 0 IS LOAD-BEARING and has to be restated here: `.pill` above
        re-pads to 1rem at this query, same specificity as the base `.pill-ic`
        and later in source, so it wins — 32px of horizontal padding against a
-       20px border-box left the content box NEGATIVE and the svg measured
+       22px border-box left the content box NEGATIVE and the svg measured
        0.00x0.00, i.e. the mark vanished below 900px. (hero.css's portrait
        block already restates it, which is why the live tier never showed it.) */
-    .pill-ic { width: 18px; padding: 0; }
-    .pill-ic svg { width: 18px; }
+    .pill-ic { width: 22px; padding: 0; }
+    .pill-ic svg { width: 22px; }
     .pill-ic svg path { stroke-width: 0.9; }
-    /* The header is wordmark + CTAs now (~315px at 375), so the chapter row no
+    /* The header is the mark + CTAs now (~250px at 375), so the chapter row no
        longer has to wrap onto a third line and the sections no longer have to
        clear it — hence the smaller top padding and scroll offset. */
     .chapter { padding: 7rem 4.2rem 4rem 6vw; min-height: auto; }
@@ -922,7 +985,12 @@
 <div class="grain" aria-hidden="true"></div>
 
 <header class="top">
-  <a class="logo" href="#/mission">BANODOCO</a>
+  <!-- THE WORDMARK BECAME THE MARK 2026-08-11 — Tier 3's copy of the live
+       header's logo. Empty element, aria-hidden: the isometric B arrives as a
+       CSS mask (see .logo in the stylesheet above), so there is no text and no
+       <img>, and the link carries the name the visible word used to — exactly
+       as the Discord control at the other end of this row does. -->
+  <a class="logo" href="#/mission" aria-label="Banodoco"><i class="mark" aria-hidden="true"></i></a>
   <div class="nav-cta">
     <!-- 2RP left this row 2026-08-10, matching the live tier's header —
          the Inspire section entry and the site menu's 2RP link remain.
@@ -1517,7 +1585,7 @@
 
   // Nav clicks: let the hash change, then applyRoute handles scroll + state.
   // Every chapter link on the page — the rail's four, the menu's five
-  // (including the epilogue) and the wordmark.
+  // (including the epilogue) and the logo mark.
   Array.prototype.forEach.call(document.querySelectorAll('.rail-item[href], .menu-item, .logo'), function (a) {
     a.addEventListener('click', function (e) {
       var id = (a.getAttribute('href') || '').replace('#/', '');
