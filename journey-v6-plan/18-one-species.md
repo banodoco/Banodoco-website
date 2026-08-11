@@ -2044,3 +2044,114 @@ lightly.
   owned@* goldens are the proof, 0.00).
 - **sky.js drift band**: untouched — its 0.34-0.96 uPull gate spans the
   re-timed ladder exactly as 5401820 left it (u-space, not p-space).
+
+## 16. The road back costs the same road (2026-08-11, Hannah: "scrolling back from Final to Owned is far slower than forward")
+
+### The diagnosis — measured before anything moved
+
+Two candidate causes were named up front: the leg's authored deceleration
+into the Final rest (§14/§15 — deliberate, kept), and the §15 route
+re-allocation (Final scrollVh 6 → 12 — Hannah's ask, kept). Neither is the
+dominant fault. The scroll CONTROLLER is: every one of its directional
+questions was denominated in p at the LOCAL spline slope, and §15 made the
+two ends of this span speak slopes 9x apart.
+
+The numbers (headless CDP, real wheel events through the live listeners;
+mirrored gestures, identical px, opposite sign):
+
+- **Scroll gain at the two departure rests**: 15,460 px per unit p leaving
+  Owned forward; 143,670 px per unit p leaving Final backward (the 12 vh
+  allocation times the PCHIP tangent flattening into the 0.97 knot). Ratio
+  **9.3x**.
+- **The same finger, measured 9x apart**: a brisk flick peaked
+  `gPeak` 0.166 p/s leaving Owned forward, **0.018 p/s** leaving Final
+  backward — under the 0.02 flick-carry floor, so backward gestures were
+  never credited as flicks.
+- **The position rule then asked backward for 4x the wheel**: 35% of the
+  p-span is ~1.6 vh of scrolling from the Owned side but **~6.9 vh** from
+  the Final side; and every pause > 160 ms mid-march latched an
+  against-motion resolution that glided the visitor BACK up to 0.97.
+- **Net, on the shipped tree**: a brisk backward flick, a deliberate
+  backward drag, and eight backward notches from the Final rest ALL ended
+  back at p 0.97 — the ride never arrived at all — while their forward
+  mirrors arrived in 2.2–3.4 s. Median on-screen flow over the first 2 s
+  of an honest backward gesture: **1 px/s** (vs ~480 forward).
+
+Per-scroll-pixel screen motion itself (screen-px per scroll-px, the
+optical-flow metric scrollprobe measures) is a pure function of p and
+therefore identical in both directions — it runs 0.9 near the dive, 0.2
+through the rise, 0.002 at the Final rest's tail. That profile is §15's
+authored pacing and its mirror, and it did not move.
+
+### The fix — the gesture is measured in its own pixels
+
+`journey/scroll.js` (+ two constants comments; no constant VALUE changed,
+no camera key, no scrollVh, no spline, and the scrub servo untouched):
+
+1. **`gPeak`/`inRate` are measured in surface px/s** — the applied wheel
+   delta over its own gap, the visitor's own unit — instead of p/s at the
+   local slope.
+2. **Spent at the span's own mean slope**: `spanSlope(lo, hi) =
+   (hi − lo) / (px(hi) − px(lo))`. The carry test, the live floor and the
+   latched cruise all convert through it, so both directions of one span
+   read one finger identically; uniform-allocation spans have
+   spanSlope ≈ local slope and keep their shipped behaviour.
+3. **The position rule reads the surface**: `COMMIT_THRESHOLD` is now a
+   fraction of the span's SCROLL distance, so both directions pay 35% of
+   the same road (placements' "nearest" becomes px-nearest — the rest the
+   visitor is fewer wheel-turns from).
+
+### Measured after
+
+Same mirrored gestures, same rig:
+
+| gesture across Owned↔Final | before fwd | before back | after fwd | after back |
+|---|---|---|---|---|
+| brisk flick | 2.19 s | **never arrives** | 3.04 s | 3.34 s |
+| deliberate drag | 3.42 s | **never arrives** | 3.64 s | 3.96 s |
+| hard fling | 1.68 s (cruise 0.297) | 3.62 s (cruise 0.10) | 2.16 s (cruise 0.130) | 2.53 s (cruise 0.129) |
+| measured `gPeak`, identical finger | 0.166 / 0.018 | | 0.065 / 0.064 | |
+
+Every other span, both directions, brisk flick: mission↔inspire 2.95/2.96 s
+(was 2.78/3.20), inspire↔connect 3.43/3.49 (was 3.25/3.55), connect↔owned
+2.36/2.24 (was 2.85/1.92 — the same asymmetry existed there, inverted, and
+is gone). The forward hard fling across this leg no longer cruises at
+0.297 p/s — that number was the fling measured at the steep departure
+slope, i.e. exactly the §15 pacing being blasted through; at the span's
+own slope it is worth 0.130, and a fling still reads as travel
+(COMMIT_CRUISE_MAX untouched, reachable by a harder throw).
+
+What is deliberately NOT equalised: the first seconds of the backward ride
+still show less screen motion than the forward ride's first seconds
+(105 vs 501 px/s median at brisk) — that is the §14 deceleration profile
+mirrored, the camera easing OUT of the rest it eased into, and flattening
+it would undo the authored arrival. The asymmetry Hannah felt — the ride
+that never comes — is gone: one honest gesture now buys the same
+transition at the same cruise in either direction.
+
+### Gates
+
+- `tools/scrollgates.js` full battery, default AND ?nosnap=1: every
+  invariant identical to the shipped tree's own output (E2/E3 1.0000,
+  R1 exact return, R3 notch reader stepped not fought, R4 overshoot 0,
+  R5 end-hold holds, R6 full ride visits every anchor; E1's small
+  resolution-live delta matches the shipped build's to 1e-4 class).
+- Full real-wheel ride 0 → 1 → 0 plus all five nav jumps: console 0
+  errors / 0 warnings.
+- `capture.py --check`: PASS, all ten goldens, worst MAE 0.02/255 — no
+  reference moved (the change touches no rendering path).
+- Cadence caveat (D29's scroll-side cousin, §15): times above are
+  wall-clock on the ~11 fps headless rig — valid as BEFORE/AFTER pairs on
+  the same rig; the before/after deltas, not the absolute seconds, are the
+  finding.
+
+### Residuals
+
+1. A notch-by-notch reader crossing this span now needs 35% of 12.1 vh
+   (~4.2 vh) in EITHER direction before idle carries them onward — forward
+   that is more wheel than the shipped 1.6 vh. Symmetric and
+   span-proportional by design; if a future pass wants notch readers
+   carried earlier, the lever is COMMIT_THRESHOLD itself, not the unit.
+2. `gesturePeak` (QA getter) now reports at the current bracket's span
+   slope and `gesturePeakPx` exposes the raw measurement; scrollprobe's
+   `pvh` column reads the converted value.

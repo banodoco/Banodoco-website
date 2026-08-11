@@ -182,14 +182,33 @@ export function createScrollModel({ onIntent = null } = {}) {
                         // they are, and they cross exactly where they are
                         // equal. Continuity is a property of the expression,
                         // not of a seed anyone has to remember to set.
-  let gPeak = 0;        // p/s, SIGNED high-water mark of inRate this gesture —
-                        // THE GESTURE'S STRENGTH. Its peak and never its last
-                        // value: a momentum tail's final delta is its smallest
-                        // by construction, so the rate at release is the same
-                        // ~0.03 p/s whether the flick was hard or feeble, and
+  let gPeak = 0;        // SURFACE px/s, SIGNED high-water mark of inRate this
+                        // gesture — THE GESTURE'S STRENGTH. Its peak and never
+                        // its last value: a momentum tail's final delta is its
+                        // smallest by construction, so the rate at release is
+                        // the same whether the flick was hard or feeble, and
                         // every earlier fix that read it was reading a corpse.
-  let inRate = 0;       // p/s, EMA of THE VISITOR'S OWN rate, measured on the
-                        // input clock in push() — see there for why not here
+                        //
+                        // PX, NOT p (2026-08-11, Hannah: "scrolling back from
+                        // Final to Owned is far slower than forward"). The
+                        // p-rate was the local spline slope times the finger,
+                        // and the slope at the two ends of a re-allocated span
+                        // is not the same number: measured at the shipped
+                        // route, 15,460 px/p leaving the Owned rest forward
+                        // against 143,670 px/p leaving the Final rest backward
+                        // — the identical finger measured 9x weaker one way.
+                        // A brisk backward flick peaked 0.018 p/s, under the
+                        // 0.02 carry floor, so backward gestures were never
+                        // credited as flicks, and the resolution answered them
+                        // with a glide BACK to the rest they were leaving. The
+                        // gesture is now measured in the visitor's own unit —
+                        // the pixels they scrolled — and converted to p at the
+                        // RESOLUTION SPAN'S mean slope where it is spent
+                        // (pickTarget / the intent latch), so both directions
+                        // of one span read one finger identically.
+  let inRate = 0;       // surface px/s, EMA of THE VISITOR'S OWN rate, measured
+                        // on the input clock in push() — see there for why not
+                        // here
   let gapEma = 0;       // ms, EMA of this gesture's inter-delta spacing
   let gCount = 0;       // deltas in this gesture — with gapEma, the stream test
   let intent = null;    // the latched resolution:
@@ -321,7 +340,7 @@ export function createScrollModel({ onIntent = null } = {}) {
     gapEma = gapEma ? gapEma + (gapMs - gapEma) * 0.35 : (gCount ? gapMs : 0);
     gCount++;
     lastInput = now;
-    const before = pAt(v);
+    const vBefore = v;
     v = Math.max(0, Math.min(total, v + dpx));
     if (dpx) {
       const dir = dpx > 0 ? 1 : -1;
@@ -344,10 +363,20 @@ export function createScrollModel({ onIntent = null } = {}) {
              the visitor was actually sustaining, which lengthened every drag
              by that much. Each delta divided by its OWN gap has no such term.
          The first delta of a gesture is skipped: its gap belongs to whatever
-         came before, so a lone notch measures zero and is not a flick. */
+         came before, so a lone notch measures zero and is not a flick.
+
+         Measured in SURFACE PX (the applied delta — clamped at the route's
+         ends, so leaning on an edge measures zero), not in p: the p-rate
+         carried the local spline slope inside it, which is what made one
+         finger read 9x weaker leaving the Final rest backward than leaving
+         the Owned rest forward (see gPeak above). No clamp here — the old
+         clampRate bounded the p-rate; the px peak is bounded where it is
+         SPENT (the cruise clamp, the brake, and the final clampRate on
+         vel), and the carry test only asks "at least", where an outlier
+         high reading is indistinguishable from a hard fling. */
       if (gCount > 1 && gapMs > 0) {
         const gs = Math.min(gapMs, SNAP_ENGAGE_MS) / 1000;
-        const inst = clampRate((pAt(v) - before) / gs);
+        const inst = (v - vBefore) / gs;
         inRate += (inst - inRate) * Math.min(1, gs * SMOOTH_K);
         if (inRate * dir > gPeak * dir) gPeak = inRate;
       }
@@ -560,6 +589,19 @@ export function createScrollModel({ onIntent = null } = {}) {
     return [lo, hi];
   }
 
+  /** A span's mean slope, p per surface px — THE conversion between the
+   *  gesture's own unit (the pixels the visitor scrolled, gPeak) and the p
+   *  the resolution spends. One number per span, identical from both ends,
+   *  which is the whole point: the local slope at a span's two rests can
+   *  differ 9x (the Owned/Final re-allocation), and every threshold that was
+   *  denominated in the LOCAL p-rate silently asked one direction for 9x the
+   *  finger. Uniform-allocation spans have spanSlope ~= local slope, so their
+   *  behaviour is unchanged. */
+  function spanSlope(lo, hi) {
+    const d = scrollFor(hi) - scrollFor(lo);
+    return d > 1e-6 ? (hi - lo) / d : 0;
+  }
+
   /** Is the visitor's current gesture a STREAM going somewhere — i.e. a thing
    *  that should carry to the next rest whatever fraction of the span it
    *  reached?
@@ -578,19 +620,36 @@ export function createScrollModel({ onIntent = null } = {}) {
    *  COMMIT_CARRY_RATE survives only as an anti-twitch floor on the gesture's
    *  PEAK rate: a two-frame stray cannot buy a whole transition. It is not
    *  what excludes the notches — the stream test is. */
-  function carrying() {
+  function carrying(slope) {
     if (gCount < COMMIT_STREAM_MIN) return false;
     if (!gapEma || gapEma > COMMIT_STREAM_GAP_MS) return false;
-    return gPeak * lastDir >= COMMIT_CARRY_RATE;
+    // The px peak, converted at the span it would be spent on. One finger,
+    // one answer, both directions — COMMIT_CARRY_RATE keeps its p/s meaning
+    // at the span's own scale.
+    return gPeak * slope * lastDir >= COMMIT_CARRY_RATE;
   }
 
   /** The rest of [lo, hi] this position must resolve to, per the direction
    *  rule: POSITION (you got COMMIT_THRESHOLD of the span behind you) or
-   *  VELOCITY (you were making a real gesture that way — carrying()). */
+   *  VELOCITY (you were making a real gesture that way — carrying()).
+   *
+   *  The position fraction is measured on the SCROLL SURFACE, not in p
+   *  (2026-08-11, the same directional audit as gPeak above): the span
+   *  between the Owned and Final rests costs ~2.5 vh of wheel on the Owned
+   *  side of the boundary and ~9.6 vh on the Final side, so 35% of the
+   *  p-span was ~1.6 vh of scrolling forward but ~6.9 vh backward — the
+   *  backward reader ground through 4x the physical scroll before idle
+   *  would stop resolving them BACK to the rest they were leaving (and a
+   *  measured eight-notch backward ride never escaped at all). In px the
+   *  rule asks both directions for the same 35% of the same road. For a
+   *  placement (no direction) "nearest" becomes px-nearest — the rest the
+   *  visitor is fewer wheel-turns from, which is what nearest feels like. */
   function pickTarget(q, lo, hi) {
     if (hi - lo < 1e-9) return lo;
-    const f = (q - lo) / (hi - lo);          // fraction of the transition, in p
-    const flick = carrying();
+    const pxLo = scrollFor(lo), pxHi = scrollFor(hi);
+    const span = pxHi - pxLo;
+    const f = span > 1e-6 ? (scrollFor(q) - pxLo) / span : 0.5;
+    const flick = carrying(span > 1e-6 ? (hi - lo) / span : 0);
     if (lastDir > 0) return (flick || f >= COMMIT_THRESHOLD) ? hi : lo;
     if (lastDir < 0) return (flick || (1 - f) >= COMMIT_THRESHOLD) ? lo : hi;
     return f >= 0.5 ? hi : lo;               // placed, never scrolled: nearest
@@ -666,23 +725,27 @@ export function createScrollModel({ onIntent = null } = {}) {
         const dir = target > p ? 1 : target < p ? -1 : 0;
         const onward = dir !== 0 && dir === lastDir;
         if (onward) {
-          // With the motion: arm NOW, floored at the gesture's own peak, so
-          // the floor is under the motion before the momentum tail decays.
-          intent = { target, lo, hi, dir, floor: Math.abs(gPeak), cruise: null };
+          // With the motion: arm NOW, floored at the gesture's own peak —
+          // the px peak, spent at this span's own slope (see spanSlope) —
+          // so the floor is under the motion before the momentum tail
+          // decays.
+          const sl = spanSlope(lo, hi);
+          intent = { target, lo, hi, dir, slope: sl, floor: Math.abs(gPeak) * sl, cruise: null };
         } else if (!live && dir !== 0) {
           // Against the motion (or from a placement): nothing to continue, so
           // this one does wait out the idle window and starts from rest at the
           // flat nominal cruise. Decelerating through zero is the one place
           // where slowing down IS the correct motion.
-          intent = { target, lo, hi, dir, floor: 0, cruise: COMMIT_GLIDE_RATE };
+          intent = { target, lo, hi, dir, slope: spanSlope(lo, hi), floor: 0, cruise: COMMIT_GLIDE_RATE };
           gPeak = 0;
         }
       }
       if (intent && intent.cruise === null) {
         if (live) {
-          // Still going: the floor tracks the gesture's peak, so it can never
-          // exceed what the finger already achieved and can never run away.
-          intent.floor = Math.abs(gPeak);
+          // Still going: the floor tracks the gesture's peak (converted at
+          // the span's slope), so it can never exceed what one finger's
+          // strength is worth on this road and can never run away.
+          intent.floor = Math.abs(gPeak) * intent.slope;
         } else {
           // THE GESTURE IS OVER. Its peak becomes the transition's cruise: at
           // least nominal, so a gentle gesture still completes the move at a
@@ -692,7 +755,7 @@ export function createScrollModel({ onIntent = null } = {}) {
           // at a rest the way a position rule is, so the velocity has to be
           // consumed where it is used, or one flick buys the whole route.
           intent.cruise = Math.min(
-            Math.max(Math.abs(gPeak), COMMIT_GLIDE_RATE), COMMIT_CRUISE_MAX);
+            Math.max(Math.abs(gPeak) * intent.slope, COMMIT_GLIDE_RATE), COMMIT_CRUISE_MAX);
           gPeak = 0;
         }
       }
@@ -806,10 +869,17 @@ export function createScrollModel({ onIntent = null } = {}) {
         number whose continuity across the end of a gesture is the whole point
         of the design. */
     get rate() { return vel; },
-    /** QA: the SIGNED high-water mark (p/s) of the scrub rate this gesture has
-        asked for. What pickTarget tests, and what becomes the transition's
-        cruise. Zero once a resolution has spent it. */
-    get gesturePeak() { return gPeak; },
+    /** QA: the SIGNED high-water mark of the rate this gesture has asked for,
+        converted to p/s at the CURRENT bracket's span slope (the unit every
+        threshold is stated in; the raw measurement is surface px/s — see
+        gesturePeakPx). What pickTarget tests, and what becomes the
+        transition's cruise. Zero once a resolution has spent it. */
+    get gesturePeak() {
+      const [lo, hi] = bracketAt(p);
+      return gPeak * spanSlope(lo, hi);
+    },
+    /** QA: the same high-water mark in the gesture's own unit, surface px/s. */
+    get gesturePeakPx() { return gPeak; },
     /** QA: is this gesture a delta STREAM (a trackpad/drag/spun wheel rather
         than discrete notches)? The flick-carry test. */
     get streaming() { return gCount >= COMMIT_STREAM_MIN && !!gapEma && gapEma <= COMMIT_STREAM_GAP_MS; },
