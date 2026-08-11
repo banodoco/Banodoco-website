@@ -175,6 +175,45 @@
     transition: border-color 0.25s, background 0.25s;
   }
   .pill:hover { border-color: var(--ink); background: rgba(242, 237, 225, 0.06); }
+  /* THE DISCORD MARK (2026-08-11, Hannah: "make the Discord thing in the top
+     right be the Discord icon with an appropriate styling/lighting on it").
+     The word gives way to the mark, in the site's own light: a near-black,
+     deep-brown ground (lit faintly from the upper left, where the specimen's
+     glow reaches the row) inside an AMBER-GOLD hairline, the glyph itself in
+     parchment. Hover and keyboard focus warm the hairline and the mark to
+     gold-bright with a soft spill — the callouts' own state grammar (a rest
+     hairline that LIGHTS, .co's lead->lit), no new choreography, and the
+     0.25s transition every other nav control keeps.
+     THE BOX IS 33px TALL ON PURPOSE — the same computed height as the text
+     pill it replaces (94.8x33 measured), because the nav row's bottom edge is
+     the top of the band Inspire's portrait camera is balanced against (see
+     the PL-1.4 note below): the control may change its word, never the row's
+     edge. The 44px touch minimum stays where it always was, on the PL-1.4
+     transparent pad. The glyph is the real Discord mark, not a redraw —
+     recognisability is the point — and the <a> carries aria-label="Discord"
+     now that the visible word is gone. */
+  .pill-ic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 33px;
+    height: 33px;
+    padding: 0;
+    border-color: rgba(217, 164, 65, 0.52);            /* --gold, hairline */
+    background: radial-gradient(120% 120% at 34% 26%,
+                rgba(64, 44, 18, 0.88), rgba(18, 12, 5, 0.94) 68%);
+    color: rgba(242, 237, 225, 0.92);                  /* parchment mark */
+    transition: border-color 0.25s, color 0.25s, box-shadow 0.25s;
+  }
+  .pill-ic svg { width: 19px; height: auto; display: block; }
+  .pill-ic:is(:hover, :focus-visible) {
+    border-color: var(--gold-bright);
+    color: var(--gold-bright);
+    background: radial-gradient(120% 120% at 34% 26%,
+                rgba(64, 44, 18, 0.88), rgba(18, 12, 5, 0.94) 68%);
+    box-shadow: 0 0 16px rgba(217, 164, 65, 0.20),
+                inset 0 0 9px rgba(217, 164, 65, 0.16);
+  }
   /* keyboard focus, gold family — matches journey/site.css's treatment for
      every journey-layer control (.j-rail / .j-menu :focus-visible etc).
      Covers .logo and the .pill link (Discord — 2RP left the header
@@ -185,6 +224,10 @@
     outline-offset: 3px;
     border-radius: 2px;
   }
+  /* The shared ring above sets border-radius: 2px, right for the square-ish
+     controls it was written for; a circle states its own (the .j-act
+     precedent in journey/site.css). */
+  .pill-ic:focus-visible { border-radius: 999px; }
 
   /* --- hero --- */
   .hero {
@@ -576,6 +619,11 @@
     nav { padding: 1.3rem 6vw; }
     .logo { font-size: 0.92rem; letter-spacing: 0.3em; }
     .pill { padding: 0.42rem 1rem; font-size: 0.72rem; }
+    /* same rule as the text pill it replaced: hold the row's computed height
+       (28.44px measured on the text pill at this query — the row's bottom
+       edge must not move), let the PL-1.4 pad below carry the 44px minimum */
+    .pill-ic { width: 28.44px; height: 28.44px; padding: 0; }
+    .pill-ic svg { width: 17px; }
     .hero { padding: 5vh 7vw 0; }
     h1 { font-size: clamp(1.7rem, 7.2vw, 2.5rem); margin-bottom: 1.1rem; }
     .sub { font-size: 0.98rem; margin-bottom: 1.8rem; }
@@ -681,6 +729,9 @@
     .co { opacity: 1; }
     .cta .arr { transition: none; }
     .co .lit, .co .ring, .co .tag, .co .ck { transition: none; }
+    /* the Discord mark's warm-up is a transition ENDING at its resting or
+       lit style, so switching it off leaves both states intact and instant */
+    .pill-ic { transition: none; }
   }
 
 /* --- intro fast-forward (scroll during the entry choreography): the CSS

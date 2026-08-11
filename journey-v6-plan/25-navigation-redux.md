@@ -1073,3 +1073,46 @@ compact-landscape block (`max-height: 560px`) now does the same — see
   and home): 0 errors/warnings/rejections.
 - `capture.py --check`: PASS, worst MAE 0.02/255 — `.callouts` is hidden
   at capture, the frozen `mission@*` goldens did not move.
+
+## 2026-08-11 — The word becomes the mark (Hannah: "make the Discord thing in the top right be the Discord icon with an appropriate styling/lighting on it")
+
+Both tiers' headers now carry the Discord MARK — the real clyde, inlined as
+SVG (no build step, no icon system), never redrawn — in place of the word.
+The `.pill` contract stays (it is still the header's one control beside the
+wordmark, `6e828d2`); a `.pill-ic` modifier restates it as a circle in the
+site's light:
+
+- **ground**: near-black deep brown, lit faintly from the upper left where
+  the specimen's glow reaches the row (a radial, not a flat fill);
+- **hairline**: amber-gold (`--gold` at 0.52) — the one warm hairline in
+  the header, which is what marks it as the lit control;
+- **glyph**: parchment at rest; hover/keyboard-focus warm hairline and mark
+  to `--gold-bright` with a soft box-shadow spill — the `.co` callouts'
+  rest-hairline -> lit-gold state grammar, on the nav row's existing 0.25s
+  transition. No new choreography; `prefers-reduced-motion` sets
+  `transition: none` in both tiers (states intact, instant).
+
+**The box holds the row's edge.** The live hero's nav bottom is the top of
+the band Inspire's portrait camera is balanced against (the PL-1.4 note in
+hero.css), so the circle is EXACTLY the text pill's computed height —
+33px at desktop, 28.44px under the portrait query — and the 44px touch
+minimum stays on the PL-1.4 transparent pad, measured live (`::before`
+44x44px at 375x812). navBottom before/after: 100.1875 / 100.1875 (desktop),
+70.03125 / 70.03125 (portrait) — byte-identical. Tier 3's pill already
+carried its minimum in the box, so its circle is simply 44px.
+
+**A11y**: the visible word is gone, so the `<a>` carries
+`aria-label="Discord"` in both tiers and the svg is `aria-hidden`
+/ `focusable="false"`. Verified headless: accessible name present, Tab
+reaches the control, `:focus-visible` shows the shared gold ring — which
+sets `border-radius: 2px` for the square controls it was written for, so
+`.pill-ic:focus-visible` restates `999px` (the `.j-act` precedent).
+
+**The destination is still nobody's.** `href="#"` — the placeholder it has
+carried since the header was built; no real invite URL has been supplied.
+Marked in both tiers' comments (and `data-placeholder` in Tier 3).
+
+Gates: header shot at 1440x900, 1280x800 and 375x812 in rest/hover/focus;
+console over a full ride (wheel 0 -> 1.000 -> 0.001) 0 errors/warnings —
+the two pre-existing boot info lines only; `capture.py --check` PASS (the
+header is DOM chrome, hidden at capture — no reference moved).
