@@ -1204,3 +1204,98 @@ envelope. 1.5, as ordered.
    descent (wider fov, farther corridor) before retiring behind the murk at
    0.705 — reviewed in the frame series and kept: it is what makes the
    travel read as one place sinking away rather than three shots.
+
+---
+
+# 2026-08-11 (later) — the soil does the hiding
+
+Hannah: *"When I jump multiple sections into the Owned section, the roots
+appear right away, as soon as I press that button. Could you make it so that
+they're always there, but are only visible when I go below the surface? …
+sometimes when I press the button between those two sections, they become
+visible."*
+
+## The fault
+
+The chapter's reveal was `amount * arrival` with `arrival` a **p-window**
+(0.692–0.712, the M5 ignition audit). On the leg that window IS the soil
+murk — p and the camera are a bijection there — so scrubbing was already
+honest. A nav jump is not on the leg: `placeAt` snaps p to the destination
+while the camera is still most of a second away, so `arrival` read 1 (every
+rest is past the window) and the time-eased `amount` faded the whole colony
+up **over the open above-ground view**. Measured on the shipped tree,
+per-frame fade vs camera depth during three jumps (headless CDP, ~11 fps
+cadence — counts are frames at that cadence, the wall-clock span is ~2 s
+each):
+
+| jump | frames with fade > 0.01 while the camera was above the soil and outside the cutaway's territory |
+|---|---|
+| Connect → Owned | 24 |
+| Mission → Owned | 22 |
+| Connect → Final | 23 |
+
+The third row is Hannah's "between those two sections": a jump toward Final
+lit the colony through solid terrain with Final's slab not yet drawn (Final
+suppresses itself during a blend since a8d4518; the colony did not).
+
+## The fix — compose on the camera alone
+
+Same law Connect adopted in f9e8317 (*the paths were always there; arriving
+lights them*) and Final in its rise mask: the reveal is now a **pure function
+of the camera pose**, so it needs no `setBlending` hook — it self-corrects on
+the first blend frame, on every path the camera can take.
+
+```
+sink = smooth01((groundY(cam.x, cam.z) − cam.y) / 0.94)   // the murk
+keep = smooth01((−cam.x − 4.6) / 0.8)                     // the cutaway hold
+arrival = max(sink, keep)
+```
+
+- **`sink`** — how deep the lens is below the soil line. 0.94 is measured
+  equivalence, not a new choice: the shipped p-window spans camera depth
+  0 → 0.942 on the leg (p → depth linear there to ~3 %), so every scrub
+  reproduces the approved murk reveal. Worst |new − old| along the whole leg:
+  **0.038, at p 0.700** — inside the near-black murk; **0.000 everywhere
+  outside the window**.
+- **`keep`** — above ground the colony may only be seen through the Final
+  cutaway, so this term rides the same camera-x family as Final's `riseOf`
+  (onset x −4.6; 0 at every other chapter's rest and along every jump arc
+  between them). It saturates by x −5.4 because the rise's `sink` starts
+  easing at depth 0.94 (p 0.821, x −5.47): measured min of the max() across
+  p 0.78–0.87 at 1e-3 steps is **0.9993** — no dip through the surfacing.
+- The arm ease tightened 2.6 → 6.0. With the reveal camera-pure, the ease is
+  invisible on every scrub (earliest sink > 0 is p 0.6924, 0.06 of p after
+  the arm at 0.63); the only place it showed was inside a jump blend, where
+  2.6 left the landing snap a ~6 % one-frame step. At 6.0 the step is < 1 %.
+
+## Existence vs. cost
+
+"Always there" is the *visibility law*, not a draw obligation: above ground,
+away from the cutaway, the colony is genuinely occluded, so `group.visible`
+still drops and the chapter costs nothing — the reveal gates COST without
+gating the occlusion story. Measured at every rest, before → after
+**bit-identical**: mission 42 calls / 12,829 tris / 44,377 lines / 24,090
+points both builds (inspire, connect likewise; frame times within noise).
+
+## Gates
+
+- **Jumps** (Connect→Owned, Mission→Owned, Connect→Final, Final→Owned,
+  Owned→Final): **0 frames** of fade > 0.01 while above soil outside the
+  cutaway territory, all five rides. First non-zero fade on a jump into
+  Owned is at depth **+0.09–0.15 under the soil**, completing through the
+  murk (fade 0.99 by depth 0.92), landing step ≤ 0.6 %.
+- **Mirror**: forward vs reverse placement sweep p 0.60 → 1.00 at 0.002
+  steps: worst |fwd − rev| fade = **0** (pure function of pose).
+- **Console**: 0 errors / warnings over the jump rides and a full
+  0 → 1 → 0 ride.
+- **Goldens**: `capture.py --check` PASS, all ten within threshold, worst
+  MAE 0.02/255. **No reference moved.**
+
+## Residual
+
+During a jump toward Final the colony now arrives with the cutaway's own
+x-territory (keep ramps 0 → 1 across x −4.6 → −5.4) while Final's slab is
+itself fading in on the same family — for a few frames mid-swing the two are
+each ~half-lit. Strictly better than the shipped full-lit colony over bare
+terrain, and the honest reading of "the cutaway world is arriving"; noted in
+case a future pass wants the slab to lead the colony by a fixed margin.
