@@ -52,8 +52,42 @@ export const CONTENT = {
     },
     connect: {
       nav: 'Connect',
-      // Locked verbatim — 13-content-ops.md locked copy table, "Connect H" / "Connect sub".
-      heading: 'Connect the ecosystem.',
+      // Locked verbatim — 13-content-ops.md locked copy table, "Connect H" /
+      // "Connect sub". The SUB below is still that locked string, unedited.
+      // The HEADING is not:
+      //
+      // LOCK OVERRIDE — Hannah, 2026-08-11, direction: "change the title to
+      // 'Connect the community'".
+      //
+      // PROVENANCE, kept deliberately rather than deleted. The previous
+      // heading, locked verbatim by 13-content-ops.md's "Connect H" row, was:
+      //
+      //     'Connect the ecosystem.'
+      //
+      // Hannah owns this copy and overrode that lock knowingly. One word moves
+      // — ecosystem -> community — and nothing else about the string does.
+      //
+      // THE FULL STOP IS KEPT, and that is a judgement, not a transcription.
+      // The direction arrived as voice, which cannot carry a trailing period,
+      // and she asked for a title change rather than for an exact string (the
+      // 2026-08-05 Final override, by contrast, dictated its string verbatim
+      // and got its unhyphenated "open source" and numeral "2nd" respected for
+      // exactly that reason). The site's short chapter headings all close with
+      // a stop — "Inspire and empower." and Mission's H1 — so dropping it here
+      // would be a second, unasked-for change to the one string she named.
+      //
+      // The word swap costs 18px: at 1440 this heading sets 476px as
+      // "ecosystem" and 494px as "community", which overran the measure the
+      // block used to have and broke a one-line heading in two. See the
+      // CONNECT MEASURE block in journey/site.css — the block widened, the
+      // type scale did not move.
+      heading: 'Connect the community.',
+      // Locked string, unedited — but its LINE COUNT is now a promise: two
+      // lines, not three (Hannah, 2026-08-11, same direction: "make the
+      // Connect the ecosystem one over two lines as well"). That is a layout
+      // problem, not a copy one, and not a single character of the locked
+      // string was spent on it. Held in journey/site.css by the CONNECT
+      // MEASURE block; desktop-only, as the Final sub's is.
       sub: 'Banodoco brings together artists, builders, and shared knowledge to grow a living network for open-source AI art.',
     },
     owned: {
@@ -177,7 +211,53 @@ export const CONTENT = {
       // balanced lines instead. See journey/site.css's FINAL HEADING AT PHONE
       // WIDTHS block and journey-v6-plan/24-mobile-pass.md §Final.
       heading: 'The open source ecosystem can accelerate a 2nd Renaissance',
-      sub: 'Banodoco exists to help new tools, communities, and ideas spread — so one thriving ecosystem becomes many.',
+      // LOCK OVERRIDE — Hannah, 2026-08-11. The sub above was described as
+      // "still that locked string" until this date; it is not any more.
+      //
+      // Direction, transcribed from voice: "something along the lines of — 'a
+      // thriving open AI art ecosystem'… a world in which the AI art ecosystem
+      // thrives would really be one in which humans and artificial
+      // intelligence maximise their collective creative potential. Say
+      // something like that, and then make that over two lines instead of
+      // three."
+      //
+      // PROVENANCE, kept deliberately rather than deleted. The previous sub,
+      // locked verbatim by 13-content-ops.md's "Final sub" row, was:
+      //
+      //     'Banodoco exists to help new tools, communities, and ideas spread
+      //      — so one thriving ecosystem becomes many.'
+      //
+      // Hannah owns this copy and overrode that lock knowingly. She gave the
+      // SENSE and asked for it to be written properly, so this is a drafted
+      // line, not a transcription — the one place in this file where that is
+      // true, and the reason her words are quoted in full above.
+      //
+      // WHAT WAS TIGHTENED, and what was not. Her sentence is a conditional
+      // identity: a world where X holds is a world where Y holds. Written out
+      // ("A world in which the open AI art ecosystem thrives is one in which
+      // humans and artificial intelligence maximise their collective creative
+      // potential") that is 147 characters and spends 28 of them on saying
+      // "a world in which … is one in which". "When X, Y" is the same claim in
+      // one move. Every load-bearing term survives untouched and in her order:
+      // open · AI art ecosystem · thrives · humans and artificial intelligence
+      // · maximise · their collective creative potential. Note "artificial
+      // intelligence" is spelled out where the same sentence abbreviates "AI
+      // art" — that contrast is hers and is deliberately kept.
+      //
+      // The 28 characters are not a style preference; they are the two-line
+      // promise. At the shipped font this line needs 448px of column to break
+      // in two and the long form needs 544px, and 448px is what leaves the
+      // measure enough headroom to survive the fallback font (nothing in this
+      // stack is a webfont — see the CONNECT/FINAL SUB MEASURE block in
+      // journey/site.css). Copy gave way; the type scale did not move, exactly
+      // as it did not for the heading above.
+      //
+      // Two lines is a DESKTOP promise, on the same terms and for the same
+      // reason as the heading's: at 375px the block can offer ~285px of column
+      // and this line sets 850px, so two lines is geometrically unreachable
+      // without a font step-down that would flatten the hierarchy. It runs to
+      // four balanced lines at phone widths instead, under the heading's four.
+      sub: 'When the open AI art ecosystem thrives, humans and artificial intelligence maximise their collective creative potential.',
     },
   },
 

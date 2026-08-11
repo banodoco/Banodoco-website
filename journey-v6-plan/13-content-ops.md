@@ -283,3 +283,134 @@ visitors least well served by one.
 - Slow scroll to a rest still breathes copy in over ~2.3 s with a largest frame
   step of 0.018 and no `.j-arrive` anywhere — the scroll path is untouched, and
   the two never both run.
+
+---
+
+## 2026-08-11 — Three lock overrides: Connect's title, and two subs onto two lines (Hannah)
+
+One direction, transcribed from voice, carrying three changes:
+
+> "For the h2 of the Final section, can you have something that says something
+> along the lines of — 'a thriving open AI art ecosystem'… a world in which the
+> AI art ecosystem thrives would really be one in which humans and artificial
+> intelligence maximise their collective creative potential. Say something like
+> that, and then make that over two lines instead of three. And could you also
+> make the Connect the ecosystem one over two lines as well — and change the
+> title to 'Connect the community'."
+
+**Files:** `content/content.js` (the three strings plus their provenance),
+`journey/site.css` (CONNECT MEASURE, CONNECT AND FINAL SUB MEASURE),
+`static/index.html` (the Tier-3 twin of the two changed-in-place strings).
+No scene, camera, route or interaction change.
+
+### The retired strings, verbatim
+
+Three rows of the locked copy table above are now overridden. The table is
+left as it stands — it is the record of what was locked, and these are the
+overrides against it, the same arrangement the 2026-08-05 Final H override
+uses. Retired, in full:
+
+| Row | Retired string |
+|---|---|
+| Connect H | `Connect the ecosystem.` |
+| Final sub | `Banodoco exists to help new tools, communities, and ideas spread — so one thriving ecosystem becomes many.` |
+
+`Connect sub` is **not** in that table's retired list: the string is unchanged
+to the byte. Only its rendered line count moved, and that was bought in CSS.
+
+### What shipped
+
+| Where | String |
+|---|---|
+| Connect H | `Connect the community.` |
+| Connect sub | `Banodoco brings together artists, builders, and shared knowledge to grow a living network for open-source AI art.` (unchanged) |
+| Final sub | `When the open AI art ecosystem thrives, humans and artificial intelligence maximise their collective creative potential.` |
+
+### The three judgements
+
+**1. Connect's full stop is kept.** The direction arrived as voice, which
+cannot carry a trailing period, and it asked for a *title change* rather than
+for an exact string — unlike the 2026-08-05 Final H override, which dictated
+its string and so got its unhyphenated "open source" and numeral "2nd"
+preserved as written. The site's short chapter headings close with a stop
+("Inspire and empower.", Mission's H1), so dropping it would have been a
+second, unasked-for change to the one string she named. One word moves.
+
+**2. The Final sub is drafted, not transcribed.** She gave the sense and asked
+for it to be written properly. Her sentence is a conditional identity — a
+world where X holds is a world where Y holds — and written out it runs 147
+characters, 28 of them spent on "a world in which … is one in which". "When X,
+Y" is the same claim in one move. Every load-bearing term survives in her
+order: open · AI art ecosystem · thrives · humans and artificial intelligence ·
+maximise · their collective creative potential. "Artificial intelligence" stays
+spelled out where the same sentence abbreviates "AI art"; that contrast is hers.
+
+Those 28 characters are not taste, they are the two-line promise: written long
+the line needs 544px of column to break in two, written as shipped it needs
+448px, and 448px is what leaves the measure enough headroom to survive the
+fallback font. **Copy gave way; the type scale did not** — the principle the
+Final heading established on 2026-08-07, applied here to a sub.
+
+**3. Two lines is a desktop promise.** Held at 1440x900 and 1280x800; at
+375x812 both subs run to four lines. That is not a shortfall against the ask so
+much as the ask meeting geometry: at phone widths the blocks offer ~266px
+(Connect) and ~285px (Final) of column against natural line widths of 822px and
+850px, so two lines is short by a factor of three and the only remaining lever
+is the type scale. Both subs ran to **four lines at 375 before this change as
+well** — the phone line count is unchanged in both sections; the lines are
+merely balanced now rather than greedy.
+
+### Where the line count is actually held
+
+`journey/site.css`, two blocks, both position-scoped so Mission, Inspire and
+Owned keep the 26rem house measure and the greedy break they shipped with:
+
+- **CONNECT MEASURE** — the block to 38rem. Not a line-count fix: "Connect the
+  community." sets 494px at 1440 against "Connect the ecosystem."'s 476px, and
+  the old column was 476px exactly, so the heading would have broken in two.
+  The block is right-anchored and right-ragged, so it takes the width on its
+  left and the type's own edge does not move.
+- **CONNECT AND FINAL SUB MEASURE** — the two subs released from 26rem to the
+  column their block already owns (34rem and 36rem), plus `text-wrap: balance`.
+  Neither block is *widened* for a sub — both ceilings were already set by the
+  heading above it. Final's block is unchanged outright (its sub stops 96px
+  short of the column); Connect's renders 608px rather than the 558px its
+  heading alone would ask for, which is width the 38rem ceiling already
+  permitted, spent on text instead of padding, and taken on the left because
+  the block is right-anchored. Balance is what makes the wider measure
+  free: it minimises the longest line rather than filling to the measure, so
+  the rendered result is identical at 480px and at 576px, and the extra width
+  is pure fallback-font tolerance. Nothing in this build loads a webfont
+  (`document.fonts` is empty), so that tolerance is not hypothetical.
+
+### The site-map panel
+
+No change needed, and verified rather than assumed. `journey/rail.js` builds
+each menu row from `chapters.<id>.nav` (the name) and `chapters.<id>.heading`
+(the line), so row 03 picked up "Connect the community." on its own. The
+panel's own label is `chapters.connect.nav` = "Connect", which is still what
+the section is called — only the heading names the community — so it stays.
+
+### Gates
+
+- **Rendered line counts**, measured off the live DOM (element height / computed
+  line-height), both sections at all three sizes:
+
+  | | 1440x900 | 1280x800 | 375x812 |
+  |---|---|---|---|
+  | Connect H | 1 | 1 | 2 (was 2) |
+  | Connect sub | **2** | **2** | 4 (was 4) |
+  | Final H | 2 | 2 | 4 (unchanged) |
+  | Final sub | **2** | **2** | 4 (was 4) |
+
+- **Tier-3 drift checker** — 5 problems across 145 checked strings and 11
+  symbols, byte-identical to the 5 that were there before this change (the four
+  `chapters.owned.claims.*` paths and the stale `chapters.final.heading`). **No
+  sixth.** Those five are pre-existing and were deliberately not touched here.
+- **Console clean** over a full ride: the wheel road down through all five
+  chapters and eight nav jumps covering Connect and Final twice each — two
+  `[info]` lines, zero errors, zero warnings.
+- `python3 tools/capture.py --check` — **PASS**, all ten frozen goldens, worst
+  MAE 0.02/255 against a 1.00 fail threshold. The capture CSS hides DOM copy,
+  so a copy change cannot reach a still; all ten stayed byte-stable, as they
+  should have.
