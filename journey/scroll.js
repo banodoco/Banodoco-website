@@ -212,8 +212,55 @@ export function createScrollModel({ onIntent = null } = {}) {
                         // here
   let gapEma = 0;       // ms, EMA of this gesture's inter-delta spacing
   let gCount = 0;       // deltas in this gesture — with gapEma, the stream test
+  let gSerial = 0;      // WHICH gesture. A resolution is armed by one gesture
+                        // and can outlive it: these transitions are seconds
+                        // long (a 2500 px/s flick on the Mission span measures
+                        // 3.4 s), so the visitor can easily begin a second
+                        // gesture while the first one's move is still flying.
+                        // "One gesture buys one transition" has to mean the
+                        // gesture that ARMED this resolution — spending
+                        // whatever gPeak happens to be current at the arrival
+                        // would eat the newer gesture's strength and answer it
+                        // with the older gesture's destination.
   let intent = null;    // the latched resolution:
                         // { target, lo, hi, dir, floor, cruise|null }
+  let answeredP = null; // THE ANCHOR THIS GESTURE HAS ALREADY BEEN ANSWERED AT
+  let answeredDir = 0;  // (2026-08-12, Hannah: "sometimes when I scroll into
+                        // Owned it shifts left as if immediately progressing to
+                        // the next section. Any way to make it settle there
+                        // unless the user has done an additional scroll?")
+                        //
+                        // One gesture buys one transition. That invariant used
+                        // to be enforced in exactly one place — spending gPeak
+                        // when the resolution LANDED on its target — and that
+                        // place was unreachable in the case that needed it. The
+                        // landing ran only while the resolution was the faster
+                        // of the two terms, and it stops being the faster the
+                        // moment the visitor's own surface passes the anchor:
+                        // the brake is |target - p| * SNAP_K while the servo is
+                        // (surf - p) * SMOOTH_K, so with surf past the target
+                        // the servo wins by construction, all the way in. The
+                        // controller then took the undriven branch, p sailed
+                        // THROUGH the rest with the gesture's strength intact,
+                        // and the momentum tail — deltas the finger stopped
+                        // producing a second ago — re-earned gPeak within one
+                        // frame and bought the next section too. Measured at
+                        // the shipped route: crossing Owned at t = 1.550 s with
+                        // gPeak zeroed, and gPeak back to 1875 px/s at t =
+                        // 1.567 s against a 1763 px/s carry threshold — 1.06x,
+                        // which is why it was intermittent.
+                        //
+                        // So the anchor a gesture is answered at becomes a WALL
+                        // on the surface for the REST OF THAT GESTURE, and the
+                        // gesture cannot be credited with a flick again until
+                        // it ends. `newGesture()` — a 160 ms gap, a reversal, a
+                        // placement — is the model's own definition of "an
+                        // additional scroll", so it is exactly what clears it.
+                        // Distance already scrolled is not banked against the
+                        // next section: the driven landing has always absorbed
+                        // its surplus this way (`ns` clamped, then folded), and
+                        // this only extends that to the case where the servo
+                        // happens to be the faster term.
   let carry = 0;        // p the RESOLUTION has contributed on top of v. Held
                         // apart from v, rather than written into it every
                         // frame, for one reason: scrollFor() is a sampled
@@ -368,7 +415,13 @@ export function createScrollModel({ onIntent = null } = {}) {
 
   /* ---------------- input ---------------- */
   /** Begin a fresh gesture: forget everything measured about the last one. */
-  function newGesture() { gapEma = 0; gCount = 0; gPeak = 0; inRate = 0; }
+  function newGesture() {
+    gapEma = 0; gCount = 0; gPeak = 0; inRate = 0; gSerial++;
+    // ...and the wall the LAST gesture was answered at. This is the only place
+    // it is released, which is what makes "an additional scroll" the exact
+    // condition Hannah asked for: a 160 ms gap, a reversal, or a placement.
+    answeredP = null; answeredDir = 0;
+  }
 
   function push(dpx, kind) {
     if (!enabled) return;
@@ -535,7 +588,7 @@ export function createScrollModel({ onIntent = null } = {}) {
     // floor stays nominal: the servo is at the limiter and outruns it the whole
     // way, so this only ever supplies the SNAP_K landing.
     intent = dir === 0 ? null : {
-      target, dir, cruise: COMMIT_GLIDE_RATE, floor: COMMIT_GLIDE_RATE,
+      target, dir, from: p, g: gSerial, cruise: COMMIT_GLIDE_RATE, floor: COMMIT_GLIDE_RATE,
       lo: Math.min(p, target), hi: Math.max(p, target),
     };
   }
@@ -666,6 +719,9 @@ export function createScrollModel({ onIntent = null } = {}) {
    *  PEAK rate: a two-frame stray cannot buy a whole transition. It is not
    *  what excludes the notches — the stream test is. */
   function carrying(slope) {
+    // Already answered: this gesture has had its transition. Its remaining
+    // deltas are a momentum tail, not an ask.
+    if (answeredP !== null) return false;
     if (gCount < COMMIT_STREAM_MIN) return false;
     if (!gapEma || gapEma > COMMIT_STREAM_GAP_MS) return false;
     // The px peak, converted at the span it would be spent on. One finger,
@@ -740,7 +796,16 @@ export function createScrollModel({ onIntent = null } = {}) {
        speed-limited. Bit-for-bit the law that used to live in state.js; it is
        still the only thing that moves the picture while anyone is scrubbing,
        so scrubbing is unchanged, exact and reversible. */
-    const surf = clamp01(pAt(v) + carry);
+    let surf = clamp01(pAt(v) + carry);
+    /* THE WALL. Once this gesture has been answered at an anchor, its own
+       surface may not pass that anchor — the leftover deltas are folded into
+       `carry` instead, exactly as the driven landing has always folded its
+       surplus, so v never runs away behind the picture and there is nothing
+       stored up to jump when the wall is released. */
+    if (answeredP !== null) {
+      const w = answeredDir > 0 ? Math.min(surf, answeredP) : Math.max(surf, answeredP);
+      if (w !== surf) { carry += w - surf; surf = w; }
+    }
     const servo = clampRate((surf - p) * Math.min(1, dt * SMOOTH_K) / dt);
 
     /* 2. THE RESOLUTION. Armed the moment it is known — which, when it runs
@@ -775,13 +840,15 @@ export function createScrollModel({ onIntent = null } = {}) {
           // so the floor is under the motion before the momentum tail
           // decays.
           const sl = spanSlope(lo, hi);
-          intent = { target, lo, hi, dir, slope: sl, floor: Math.abs(gPeak) * sl, cruise: null };
+          intent = { target, lo, hi, dir, from: p, g: gSerial, slope: sl,
+            floor: Math.abs(gPeak) * sl, cruise: null };
         } else if (!live && dir !== 0) {
           // Against the motion (or from a placement): nothing to continue, so
           // this one does wait out the idle window and starts from rest at the
           // flat nominal cruise. Decelerating through zero is the one place
           // where slowing down IS the correct motion.
-          intent = { target, lo, hi, dir, slope: spanSlope(lo, hi), floor: 0, cruise: COMMIT_GLIDE_RATE };
+          intent = { target, lo, hi, dir, from: p, g: gSerial, slope: spanSlope(lo, hi),
+            floor: 0, cruise: COMMIT_GLIDE_RATE };
           gPeak = 0;
         }
       }
@@ -807,7 +874,7 @@ export function createScrollModel({ onIntent = null } = {}) {
     }
 
     /* 3. ONE DESIRED RATE. */
-    let rate = servo, driven = false;
+    let rate = servo;
     if (intent) {
       if (intent.cruise !== null) {
         // The only ramp in the model, and it only ever runs UP: from the speed
@@ -819,13 +886,20 @@ export function createScrollModel({ onIntent = null } = {}) {
       // rest, which is what makes the arrival asymptotic and overshoot-free.
       const brake = Math.abs(intent.target - p) * SNAP_K;
       const drive = intent.dir * Math.min(intent.floor, brake);
-      if (drive * intent.dir > servo * intent.dir) { rate = drive; driven = true; }
+      if (drive * intent.dir > servo * intent.dir) rate = drive;
     }
     vel = clampRate(rate);
 
-    /* 4. INTEGRATE. */
+    /* 4. INTEGRATE.
+       THE ANCHOR IS A WALL WHENEVER A RESOLUTION IS LATCHED — not only while
+       the resolution happens to be the faster of the two terms. That gate used
+       to be `driven`, and it is exactly wrong: the servo overtakes the brake
+       precisely when the visitor's surface has run past the anchor, i.e. in the
+       one case where the arrival most needs to be noticed. Nothing else changes
+       — when the servo is the driver, `vel === servo` exactly, so `extra` is 0
+       and this block reduces to what the plain-scrub branch used to do. */
     let np = p + vel * dt;
-    if (driven) {
+    if (intent) {
       // Never past the anchor, and settle exactly on it.
       if (intent.dir > 0 ? np >= intent.target : np <= intent.target) np = intent.target;
       if (Math.abs(intent.target - np) < SNAP_DEAD_P) np = intent.target;
@@ -843,12 +917,11 @@ export function createScrollModel({ onIntent = null } = {}) {
       // gesture came back 3.8e-3 short instead of exactly where it started.
       const extra = (vel - servo) * dt;
       let ns = surf + extra;
-      // While the resolution is the thing driving, the surface may not run past
-      // the anchor it is driving to — that is what keeps the landing asymptotic
-      // once the servo takes the last of it. (A gesture strong enough to carry
-      // the surface past the anchor on its own is never `driven`: its servo
-      // outruns the floor, so it falls to the branch below and goes on to the
-      // next span, exactly as a long scroll should.)
+      // The surface may not run past the anchor this resolution is going to —
+      // that is what keeps the landing asymptotic once the servo takes the last
+      // of it, and (since 2026-08-12) what stops a gesture whose own surface
+      // has already overtaken the anchor from carrying its strength straight
+      // through the rest. Surplus scroll is absorbed into `carry`, never banked.
       ns = intent.dir > 0 ? Math.min(ns, intent.target) : Math.max(ns, intent.target);
       carry += ns - surf;
       p = np;
@@ -863,9 +936,33 @@ export function createScrollModel({ onIntent = null } = {}) {
         // its rate when the glide ENGAGED, which is a moment that does not
         // exist here, and spending it when the cruise latches is not enough
         // because a short transition can complete before the gesture is over.)
-        // A gesture that is genuinely still running simply re-earns it from its
-        // own next deltas, within a frame or two.
-        gPeak = 0;
+        // ZEROING gPeak IS NOT ENOUGH ON ITS OWN, and that is the 2026-08-12
+        // finding: gPeak is drawn from `inRate`, which a still-running gesture
+        // does not reset, so a momentum tail refilled it the very next frame
+        // (measured 0 -> 1875 px/s in 17 ms). The gesture has to be RETIRED,
+        // not just de-rated — hence the wall, which holds until newGesture().
+        //
+        // ONLY IF THIS RESOLUTION ACTUALLY DELIVERED A TRANSITION. A resolution
+        // can be armed to an anchor the visitor is already standing on:
+        // scrollFor() is a SAMPLED inverse, so a placement's own p -> px -> p
+        // round-trip lands ~3e-6 below the anchor, and the position rule then
+        // quite correctly resolves that hair forward. Answering a gesture with
+        // a 3e-6 move would retire it before it had moved at all — measured,
+        // it pinned a 2500 px/s flick to the Final rest and the End anchor
+        // became unreachable. A real transition is at least 0.03 of p (the
+        // shortest span on the route), so SNAP_DEAD_P separates the two by 20x
+        // and the float artefact by 500x.
+        // ...and only the gesture that ARMED it is answered. A second flick
+        // delivered while this move was still flying is a separate ask that has
+        // not been paid yet: consuming it here would spend it on a destination
+        // it did not choose, and then the wall would hold it there. Measured
+        // before the serial: two deliberate flicks 300 ms apart bought ONE
+        // section, because the first transition took 3.4 s and swallowed the
+        // second flick whole.
+        if (intent.g === gSerial && Math.abs(intent.target - intent.from) > SNAP_DEAD_P) {
+          gPeak = 0;
+          answeredP = intent.target; answeredDir = intent.dir;
+        }
         fold(); intent = null; vel = 0;
       }
     } else {
@@ -930,6 +1027,10 @@ export function createScrollModel({ onIntent = null } = {}) {
     get streaming() { return gCount >= COMMIT_STREAM_MIN && !!gapEma && gapEma <= COMMIT_STREAM_GAP_MS; },
     /** QA: is a resolution latched and driving? */
     get resolving() { return !!intent; },
+    /** QA: the anchor this gesture has already been answered at — the wall its
+        remaining deltas cannot pass, released only by an additional scroll
+        (newGesture). null while the gesture still has a transition to spend. */
+    get answeredAt() { return answeredP; },
     /** QA: the latched resolution's speed FLOOR (p/s) right now — the gesture's
         own peak while the gesture is live, easing to the latched cruise once it
         is over. The SNAP_K landing brake begins about floor/SNAP_K before the
