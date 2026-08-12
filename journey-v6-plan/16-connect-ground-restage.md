@@ -2097,3 +2097,239 @@ Mission → Inspire arrival that nobody asked about.
   every anchor and parks nowhere else).
 - Full real-wheel ride 0 → 1 → 0 (1034 frames) plus all five nav jumps:
   console **0 errors, 0 warnings**.
+
+## 2026-08-12 — The rest is rebalanced: the ground comes up, the cap goes out
+
+Hannah: *"The area below the 'Connected Community' text feels empty and the
+composition is unbalanced. Fix by moving the mushroom further out of frame,
+lowering the camera, or both. No prescribed values. Use visual judgment:
+render it, look at it, adjust until the frame feels balanced, and iterate."*
+
+She is describing one hole, and it is measurable. At 1440x900 the copy block
+ends at y 303 and the first ground content inside the copy's own x-span
+(757..1365) does not appear until y 557 — **254 px, 28.2% of the frame
+height, of nothing at all**, directly under the words. The frame read as three
+bands with a gap in the middle of the interesting one: bright organism upper
+left, copy upper right, network fan across the bottom, and a void between the
+copy and the fan.
+
+### What the two levers actually do, measured
+
+Both of her levers move the same thing, and only one of them moves it the way
+the complaint needs.
+
+**The aim is what fills the void.** Dropping the gaze target walks the whole
+world UP the frame — the ground's far edge rises toward the copy and the cap
+leaves through the top, which is her "further out of frame" and her "empty
+area" in one gesture. Measured at 1440x900, eye held at the shipped 2.647:
+
+| tgt.y | 1.028 (shipped) | 0.30 | -0.30 | -0.70 | -1.00 | -1.30 | -1.60 |
+|---|---|---|---|---|---|---|---|
+| void under copy | **254 px** | 203 | 162 | 137 | 115 | 97 | 76 |
+| widest ribbon | 6.5 px | 7.6 | **15.0** | 14.5 | 14.2 | 13.9 | 13.6 |
+
+**The eye height is what keeps it clean**, and that is the surprise in the
+table above. Past about tgt.y -0.3 two of the organism's own ROOT RIBBONS
+(organism.js §8) walk into the bottom-left corner at 14-15 screen px wide and
+read as flat opaque planks laid on the network — nothing like the drawn web
+around them. That is not this pose's bug. `nearFade(z)` tapers those ribbons
+as a function of world z alone, authored for the HERO camera, which sits on
++Z; its own comment says the point is that "ribbons thin out near the camera
+so they never project as wide bars". This chapter's camera stands at x 7.9,
+off that axis, so it can stand close to a ribbon the fade thinks is far away.
+Fixing `nearFade` would move the hero's own ground and every protected frame
+with it, so the pose has to avoid the ribbons instead — and lowering the EYE
+is what does that, by seeing the near ground at a grazing angle:
+
+| eye y, at tgt.y -0.7 | 1.80 | **2.00** | 2.15 | 2.30 | 2.647 (shipped) | 3.20 | 3.70 |
+|---|---|---|---|---|---|---|---|
+| widest ribbon | 7.4 px | **7.6** | 7.7 | 7.8 | 14.5 | 13.2 | 10.0 |
+| ribbons ≥ 10 px | 0 | **0** | 0 | 0 | 2 | 2 | 1 |
+| void under copy | 118 px | **121** | 125 | 127 | 137 | 149 | 161 |
+| under-copy fill | 0.115 | **0.112** | 0.102 | 0.097 | 0.093 | 0.087 | 0.083 |
+
+Pulling the camera BACK instead (radius x1.15 / x1.30) also clears the
+ribbons, but it shrinks everything: under-copy fill falls to 0.080 / 0.060 and
+mean frame luminance to 32.3 / 28.4 against the shipped 38.0. It buys the
+clean corner by emptying the frame, which is the complaint again.
+
+### Shipped
+
+```
+eye  (7.943, 2.647, 4.256) -> (7.943, 2.0,  4.256)     pitch -8.91 -> -14.65 deg
+aim  (1.827, 1.028, -4.067) -> (1.827, -0.7, -4.067)
+fov  62 -> 62 (untouched)
+```
+
+| 1440x900 | before | after | |
+|---|---|---|---|
+| void under the copy | 254 px | **121 px** | 28.2% -> 13.4% of frame height |
+| under-copy lit fill | 0.095 | **0.112** | more network in the band, not just a slid frame |
+| luminance centroid y | 0.452 | **0.422** | |
+| widest root ribbon | 6.5 px | 7.6 px | 0 over 10 px, before and after |
+
+The eye now sits at exactly `INSPIRE.y`, so the gesture's HEIGHT channel is a
+constant: the leg is a swing, a close and a gaze that walks down. The lowering
+Hannah asked for is real but it is delivered against the PREVIOUS rest
+(2.647 -> 2.0), not by moving the eye mid-gesture.
+
+### Rejected
+
+- **Trucking the aim right** (tgt.x 1.827 -> 3.4 / 5.0) to push the mushroom
+  further out sideways. It closes the void further (112 / 107 px) but empties
+  the band it exists to fill — under-copy fill 0.084 / 0.068 — because the
+  frame pans onto the sparse far side, and it drags the luminance centroid
+  LEFT (0.414 -> 0.386 / 0.380). It makes the left-heaviness worse, which is
+  the actual complaint.
+- **fov 68** — reopens the wide-ribbon corner. **fov 56** — neutral on every
+  metric. fov stays 62.
+- **Aiming to -1.3 / -1.6 with the low eye.** Closes the void to 97 / 76 px,
+  but the cap is cut below its own rim and the hub fan compresses toward the
+  horizon: the chips' vertical spread falls and the "three hubs fanned through
+  the open diagonal" that this chapter was staged around stops reading. -0.7
+  is the deepest aim that keeps the fan.
+
+### The pre-existence lead had to be bought back
+
+Lowering the eye made the camera LESS pitched down through the middle of the
+leg (the same gaze bow aimed from lower is a shallower look), so the
+camera-pure resolve's first draw moved LATER — 0.3514 -> 0.3547 — and the lead
+between the first draw and `LIGHT_LO` fell to **0.0313**, under the restage's
+0.035 floor. Two ways out, and only one of them is allowed:
+
+- move `LIGHT_LO` to 0.3897. Restores the lead by making the whole ground
+  arrival **2.7% faster**. After five separate requests for "slower", this is
+  the one direction the chapter may never move. Rejected outright.
+- move `PIN2`, the gaze bezier's bow control point, which shifts the resolve
+  without touching either endpoint, the schedule, or any channel's ease.
+
+`PIN2.y` 1.8 -> **1.65**:
+
+| PIN2.y | 1.80 | **1.65** | 1.50 | 1.35 | 1.20 |
+|---|---|---|---|---|---|
+| first draw p | 0.3547 | **0.3488** | 0.3435 | 0.3389 | 0.3343 |
+| lead vs LIGHT_LO 0.3860 | 0.0313 | **0.0372** | 0.0425 | 0.0471 | 0.0517 |
+
+1.65 is the shallowest that clears the floor with margin, and it also clears
+the shipped tree's own 0.0346. `LIGHT_LO`, `LIGHT_HI`, `LIGHT_OVERLAP`,
+`FRONT_SOFT`, `EASE_MIX` and `LIGHT_ORDER` are all untouched — the arrival is
+the same length, the same order and the same per-patch gradient it was.
+
+| | before | after |
+|---|---|---|
+| first draw, landscape | p 0.3514 | p 0.3488 |
+| lead, landscape | 0.0346 | **0.0372** |
+| first draw, portrait | p 0.3382 | p 0.3376 |
+| lead, portrait | 0.0478 | **0.0484** |
+| arm (p 0.32) margin in fwd.y, landscape | 0.0324 | **0.0345** |
+| arm (p 0.32) margin in fwd.y, portrait | 0.0133 | **0.0154** |
+
+The arm margins went UP in both orientations, for the same reason the lead
+went down: the mid-leg look is shallower. So the D16 hazard the arm window
+guards against — `amount` is eased in TIME, so a first draw creeping back to
+the arm edge would turn arming into a visible fade — got further away, not
+closer.
+
+### D16, re-measured on the protected frames
+
+`resolve` is **exactly 0.000000** at the hero pose (p 0) and at the Inspire
+rest (p 0.26) in BOTH orientations, and `group.visible` is false at every
+sample up to and including the arm edge. Landscape holds fwd.y +0.0136 at
+p 0.32 against a -0.0209 threshold; portrait holds -0.0055, i.e. 0.0154 of
+margin against the handheld layer's whole 0.0059 peak wander.
+
+### The gesture is still one motion
+
+`approach()` was audited channel by channel against the shipped one, 2000
+samples:
+
+| | before | after |
+|---|---|---|
+| subject distance | 8.4253 -> 10.4546 | 8.4253 -> **10.6756** |
+| worst against-step in it | -3.09e-05 | **-2.48e-05** |
+| composed frame angle d | -0.095 -> -25.507 | **unchanged** |
+| speed peak / mean | 1.297 | **1.297** |
+| fov rate peak | 26.8 deg/u | **26.8 deg/u** |
+| yaw rate peak | 101.3 deg/u | **101.3 deg/u** |
+
+Every channel still rides the one shared trapezoid, so the shape of the move
+is not merely similar, it is the same function with a different endpoint. The
+only against-steps in the subject distance are the orbit-breath ripple, and
+they are SMALLER than the shipped gesture's own. On the live path: yaw peak
+389.5 deg/p (was 389.7), position peak 47.51 u/p (was 47.60), roll exactly 0.
+
+### Chip clearances, all three sizes
+
+Nothing collides and nothing comes close to colliding. The chips ride UP with
+the ground, so their distance to the copy shrinks and their distance to the
+bottom edge grows — ADOS in particular was 101 px off the bottom edge at
+1440x900 and is now 285.
+
+| | 1440x900 | 1280x800 | 375x812 |
+|---|---|---|---|
+| chip↔chip, min | 239 -> **228** | 202 -> **191** | 21 -> **20** |
+| chip↔copy, min | 271 -> **133** | 226 -> **103** | 184 -> **125** |
+| ADOS bottom-edge | 101 -> **285** | 88 -> **252** | 215 -> **275** |
+
+375x812 is portrait, where the offset field dominates and the composition is
+almost unchanged; its 20 px ADOS↔Discord gap is the shipped tree's own 21 and
+is not a product of this change.
+
+### The dive out of the rest, and the pin it moved
+
+`owned/camera.js` derives the dive's `u = 0` endpoint from THIS key, so
+dropping the eye shortened the dive's whole sink (D0.y 2.647 -> 2.0 against
+the same D1.y -1.18). The same `easeY` therefore reaches y = 0 earlier and the
+**soil crossing moved p 0.69318 -> 0.68805**. The T3 murk is pure in p and was
+pinned to that crossing; left alone, the camera entered the soil at 90.9% of
+the murk's depth and the swallow then peaked after it was already under.
+
+Fixed at the registration, not at the arc: `SEAM_FOG_DIPS` T3 centre
+`startOf('owned') + 0.093 -> + 0.088`. The murk peak is back ON the crossing
+(fog.far 9.601 at both, 100% of peak depth), and `easeY` — which carries the
+one continuous arc `86883b9` rebuilt the dive for — is untouched. No rest
+anchor sits inside either fog band, so the fog at every reference frame is
+identical.
+
+Dive leg after the re-pin: yaw peak 445.4 deg/p (unchanged), pitch peak 473.4
+-> 344.6, position peak 69.20 -> 65.81 u/p, roll 0, fog at the rest [7, 20]
+exactly as before. Everything at p >= 0.725 is bit-identical — the Owned rest
+key never moved.
+
+### owned@* moved too, and that is `leg.js` doing what it says
+
+`owned/leg.js` builds the chapter's colony against the camera polyline it
+actually travels, sampled over p 0.660..0.872, and warns in as many words: *"If
+a future edit moves either travel key, this range samples a changed approach
+and the colony placement moves with it — re-measure before assuming."*
+Re-measured: max camera drift over that range is **0.4275 units at p 0.6604**,
+decaying to exactly 0 at the rest and 0 everywhere past it. The colony shifts
+with it, which shows up as `owned@1440x900` MAE 0.32/255 and
+`owned@430x932` 0.40/255 against the old goldens — an 8x-amplified diff is
+nothing but fine hyphae and cords moving a pixel. Both are re-shot in this
+commit alongside `connect@*`.
+
+### Gates
+
+- **`capture.py --check`: PASS**, worst MAE 0.01/255 across all ten goldens
+  after the re-shoot. Before the re-shoot it read exactly the two intended
+  families and nothing else: connect 20.93 / 11.38, owned 0.32 / 0.40,
+  mission and inspire 0.00, final 0.01. `final@*` and `inspire@430x932` were
+  rewritten by the full-set shoot at MAE 0.0000-0.0148 (a 1x1-pixel bbox on
+  inspire) and have been restored to HEAD, so this commit's PNG diff is
+  exactly connect@* + owned@*.
+- **Mirror scrub, both directions.** Inspire→Connect at 1440x900, 17 matched
+  pairs: worst MAE **0.0000/255**, max channel difference **0**. Same leg at
+  375x812, 13 pairs: **0.0000**. Connect→Owned dive, 15 pairs: worst 0.0130 —
+  and the shipped tree measures 0.0142 on the same two frames at the Connect
+  end of that leg, so the residual is pre-existing and slightly smaller now.
+  No self-ignition anywhere.
+- **Root ribbons across the whole leg**, not just the rest: widest ribbon in
+  frame 8.1 px at the Inspire end falling to 7.6 at the rest, against the
+  shipped leg's identical 8.1 -> 6.5. **Zero** ribbons over 10 px at any p, in
+  either tree.
+- **`tools/scrollgates.js`**, default: E2/E3 1.0000, R1 settles 0.260000,
+  R4 overshoot 4.00e-6, R5 end-hold 1.000000, R6 rides 0.26/0.523/0.725/0.97/1
+  up and back with **no off-anchor stops**. With `?nosnap=1`: E1 **0.00e+0**.
+- **Console over a full ride**: 1420 frames of real wheel 0 -> 1 -> 0 plus all
+  five nav jumps (each landing on its own rest): **0 errors, 0 warnings**.

@@ -285,9 +285,24 @@ export const ORBIT_BREATH = { amp: 0.010, cycles: 1.7 };
 // Centres are authored as leg-relative offsets from the manifest, so a
 // re-timed route carries the crossings with it. Shipped values: rim-shadow
 // at connect.start + 0.056 = 0.436, T3 at owned.start + 0.093 = 0.693.
+//
+// T3 0.093 -> 0.088 (2026-08-12, with the Connect rest rebalance). The offset
+// is not a taste value: it PINS the murk's peak to the frame where the camera
+// physically passes through y = 0, and owned/camera.js says so ("the 0.91 /
+// 0.925 pair is what pins the soil crossing"). Dropping the Connect rest's eye
+// to 2.0 shortened the dive's whole sink (D0.y 2.647 -> 2.0 against the same
+// D1.y -1.18), so the SAME easeY reaches y = 0 earlier: the crossing moved
+// p 0.69318 -> 0.68805. Left at 0.093 the camera entered the soil at 90.9% of
+// the murk's depth (fog.far 10.556 against the peak's 9.602) and the murk then
+// peaked after it was already under — the swallow arriving a beat late. 0.088
+// puts the peak back ON the crossing. Re-pinning HERE rather than reshaping
+// easeY is deliberate: easeY carries the "one continuous arc" the dive was
+// rebuilt for (86883b9), and this is a one-number registration fix that leaves
+// the arc untouched. No rest anchor is inside either band, so no reference
+// still moves.
 export const SEAM_FOG_DIPS = [
   { c: startOf('connect') + 0.056, w: 0.035, near: 0.26, far: 0.34 },  // rim-shadow drop
-  { c: startOf('owned') + 0.093,   w: 0.026, near: 0.46, far: 0.52 },  // T3 soil crossing
+  { c: startOf('owned') + 0.088,   w: 0.026, near: 0.46, far: 0.52 },  // T3 soil crossing
 ];
 
 /* ------------------------------------------------------------------ */
