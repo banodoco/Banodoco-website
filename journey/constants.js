@@ -32,6 +32,74 @@ export const SNAP_ENGAGE_MS   = 160;   // input-idle after which a gesture is
                                        // speed floor and the latched cruise
                                        // takes over, and when a resolution
                                        // that OPPOSES the visitor may arm.
+                                       // It no longer decides the third thing
+                                       // it briefly did (2026-08-12): how long
+                                       // the arrival wall holds. That is
+                                       // ARRIVAL_HOLD_MS below, and the split
+                                       // matters in BOTH directions — a reader
+                                       // notching at 100-140 ms relies on this
+                                       // window staying 160 ms (inside it the
+                                       // resolution that would drag them back
+                                       // to the rest they are leaving cannot
+                                       // arm, so their notches accumulate),
+                                       // while the wall wants to come down long
+                                       // before that.
+export const ARRIVAL_HOLD_MS  = 90;    // THE INTERACTION THRESHOLD (2026-08-12,
+                                       // Hannah: "make this extremely short —
+                                       // potentially only a tiny fraction of a
+                                       // second... it should feel like a subtle
+                                       // interaction threshold, not like the
+                                       // site has temporarily stopped
+                                       // responding").
+                                       //
+                                       // b0227bd made the anchor a gesture is
+                                       // answered at a WALL until that gesture
+                                       // ends, and read "ends" off the only
+                                       // idle constant there was —
+                                       // SNAP_ENGAGE_MS, 160 ms. That is much
+                                       // more stillness than the job needs. The
+                                       // wall has exactly one duty: separate a
+                                       // gesture that never stopped from one
+                                       // that did. It does not need to agree
+                                       // with when a gesture's PEAK stops being
+                                       // the speed floor, which is what 160 ms
+                                       // is actually for and what the flick
+                                       // (90920fa) and the notch reader are
+                                       // tuned against — so it no longer
+                                       // borrows it.
+                                       //
+                                       // THE FLOOR IS MEASURED, not guessed.
+                                       // Chrome coalesces wheel events to about
+                                       // one per frame for a non-passive
+                                       // listener, so the delivered spacing of
+                                       // a continuous gesture is the SITE'S OWN
+                                       // FRAME TIME, whatever the device emits.
+                                       // 3630 delivered gaps over 49 Chrome-
+                                       // paced streams (7 speeds x 7 places on
+                                       // the route, live site, headful): p50
+                                       // 22.4, p90 29.4, p95 32.2, p99 40.1 ms.
+                                       // On the contended headless cadence,
+                                       // 3370 gaps: p50 24.3, p95 33.0.
+                                       // Exceedance is FLAT from 90 ms up — the
+                                       // only gaps above it are >200 ms frame
+                                       // hitches, which break a gesture at
+                                       // 160 ms exactly as they do at 90, so
+                                       // this costs nothing that 160 was buying
+                                       // (0.055% of gaps at both).
+                                       //
+                                       // THE MARGIN IS STRUCTURAL, not fitted:
+                                       // 90 is 2x COMMIT_STREAM_GAP_MS, the
+                                       // model's OWN ceiling on the mean
+                                       // spacing of a gesture that is allowed
+                                       // to carry. A gesture that cannot hold a
+                                       // 45 ms mean cannot buy a second section
+                                       // at all, so the wall never has to hold
+                                       // against one; and a gesture that can
+                                       // would have to throw a single gap at
+                                       // twice its own permitted mean to slip
+                                       // through. Against the measurement that
+                                       // is 2.24x the p99 real gap and 2.7x the
+                                       // p95 on the slower cadence.
 export const SNAP_K           = 3.4;   // spring constant, 1/s, toward the rest
 export const SNAP_BAND        = 0.30;  // capture band, x chapter scroll length
 export const SNAP_DEAD_P      = 0.0015;// closer than this, settle exactly
