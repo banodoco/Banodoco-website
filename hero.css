@@ -186,11 +186,49 @@
      SIZE: see the --mark-h note below. */
   .logo {
     --mark-h: 40px;
+    /* GOLD IS THE LOGO'S RESTING COLOUR NOW (2026-08-12, Hannah: "Gold becomes
+       its resting colour: a lighter gold at rest, deepening to a heavier,
+       richer gold on hover ... Pick the two tones by eye against the actual
+       background").
+       This OVERRIDES 8b29670's call, recorded in the mask note above — that
+       the B should rest in parchment and lift to gold because gold is this
+       site's lit state, and spending it at rest is what had made the old
+       Discord badge shout. Her decision, for this control; the reasoning still
+       holds everywhere else and .pill-ic below is untouched.
+
+       THE TWO TONES, shot in the real row on the real background at 1440,
+       1280 and 375, at actual size, against the alternatives (parchment .82,
+       #f0c877, #eec27f, #e9c489, #e6bd6e, #d9a441, #cf9a33, #e0a838, #e8b04a):
+
+       REST #e6bd6e. "Lighter gold" has a floor — it must still read as gold.
+       In Lab the giveaway is b*: the light candidates run #e9c489 at 34.5 and
+       #eec27f at 39.5, and both go creamy against this near-black ground —
+       they drift back toward the parchment family and look, exactly as she
+       warned, washed out. #e6bd6e holds b* 45.1 at L* 78.7: unmistakably gold,
+       and still the lighter of the pair.
+       It is deliberately NOT --gold-bright. That token is the site's LIT
+       state — it is what every other control, .pill-ic included, reaches only
+       on hover — so resting the logo in it would leave the mark permanently
+       wearing its neighbour's hover colour, and leave the hover nowhere
+       brighter to go. A rest tone of its own keeps the token's meaning intact.
+
+       HOVER #e0a838. Every gold-to-gold step is small next to what this
+       control used to do (parchment -> gold measured dE 39.3); the widest
+       honest step available here is dE 19.2, and this is it. It is also the
+       right KIND of step: a*/b* climb 5.2->10.3 and 45.1->62.4 while L* only
+       falls 78.7->72.3. So it deepens by SATURATION rather than by going dark,
+       which is what "heavier, richer" describes — #d9a441 (dE 15.0) and
+       #cf9a33 (dL -11.7) both spend more of the change on dimming and read
+       duller rather than richer.
+       The glow below is what keeps a DEEPENING hover from reading as a
+       dimming one: the ink concentrates as the light around it comes up. On a
+       lattice of hairlines that halo carries most of the perceived lift, which
+       is why the hover tone can afford to go down in lightness at all. */
     display: inline-flex;
     align-items: center;
     position: relative;                 /* for the hit pad below */
     height: 33px;
-    color: rgba(242, 237, 225, 0.82);   /* see the rest-alpha note below */
+    color: #e6bd6e;
     text-decoration: none;
     transition: color 0.25s, filter 0.25s;
   }
@@ -257,14 +295,18 @@
       url("./assets/brand/mark-b-mask-64.png") 2x,
       url("./assets/brand/mark-b-mask-96.png") 3x);
   }
-  /* REST ALPHA, measured the same way .pill-ic's 0.74 was. The B is a lattice
-     of many thin lines where the Discord clyde is one closed outline, so the
-     same alpha reads LIGHTER on it — matched at 0.74 the mark went slightly
-     ghostly beside its neighbour. 0.82 is where the two read at the same
-     density in the row. Full parchment (what the word had) is too much: the
-     word spent its weight across 140px, the mark concentrates it in 29. */
+  /* (The rest ALPHA this note used to explain is gone with the parchment: the
+     0.82 that matched the B's lattice to .pill-ic's closed outline was solving
+     a problem — two controls sharing one ink — that the gold rest ends. The
+     tone is now opaque and chosen on its own terms; see the block above.)
+     THE PAIR IS NO LONGER MATCHED, AND THAT IS THE KNOWN COST. .pill-ic still
+     rests in parchment and lifts to --gold-bright, so at rest the row is one
+     gold mark and one parchment mark, and on hover the two lift in opposite
+     directions — the logo deepens, the Discord mark brightens. Both readings
+     are recorded in 25-navigation-redux.md (2026-08-12) for whenever the pair
+     is looked at again; nothing here presumes the answer. */
   .logo:is(:hover, :focus-visible) {
-    color: var(--gold-bright);
+    color: #e0a838;
     filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.55));
   }
   /* THE RING GOES ON THE INK, the same call 5762167 made for .pill-ic and for
