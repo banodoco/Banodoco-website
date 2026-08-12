@@ -97,6 +97,84 @@ import { claimInput, releaseInput } from './scroll.js';
    Same threshold the old nav used, kept so the fade-in reads identically. */
 const SHOW_P = 0.004;
 
+/* ===========================================================================
+   THE CLUSTER (Hannah, 2026-08-12) — the fan stops being a column
+   ===========================================================================
+   "the items should wrap around the menu button in an L shape. Slot order,
+    following a continuous path around the button: (1) directly above the
+    button — always the active section; (2) to the left; (3) bottom-left
+    diagonal; (4) directly below; (5) bottom-right diagonal ... If there are
+    more sections than slots, continue the path clockwise past slot 5 to the
+    right and top-right positions."
+
+   The seven named positions are the eight cells of a 3x3 grid around the
+   button, minus the top-left one — which the path never rests in and only
+   ever passes THROUGH (see the leg from slot 1 to slot 2). Written here as
+   polar coordinates rather than as a (col, row) table, because the geometry
+   the brief describes is a RING and everything the component has to do with
+   it — unfurl, rotate, fold — is an angle:
+
+     angle   0deg is straight up from the button; it increases clockwise, the
+             convention CSS's own `ray()` and conic gradients use. The path
+             the brief names therefore runs NEGATIVE, and the whole ring is
+             one monotone sweep: 0, -90, -135, -180, -225, -270, -315, and
+             -360 is slot 1 again. Any two consecutive slots are one step
+             apart on that sweep, so "shifts along the path" is a subtraction.
+
+     radius   is NOT stored: it is derived in the stylesheet from the angle by
+             the square law (see `--rad` in site.css), which is what puts the
+             axis cells one pitch out and the diagonal cells a pitch and a
+             half — and, more importantly, makes travel between any two cells
+             follow the SQUARE'S OWN PERIMETER. An item shifting more than one
+             slot therefore tracks through the cells in between instead of
+             cutting the chord across the button.
+
+   `col`/`row` are carried only so the name pills can clear their neighbours;
+   nothing positions a tile with them. */
+const RING = [
+  // [col, row, angle]         slot  position
+  [0, -1, 0],                // 1    directly above the button — the active one
+  [-1, 0, -90],              // 2    to the left
+  [-1, 1, -135],             // 3    bottom-left diagonal
+  [0, 1, -180],              // 4    directly below
+  [1, 1, -225],              // 5    bottom-right diagonal
+  [1, 0, -270],              // 6    right          } the overflow continuation,
+  [1, -1, -315],             // 7    top-right      } unused at five chapters
+];
+
+/* ---- how far each cell's NAME PILL has to be held off ---------------------
+   A pill hangs off the LEFT of the tile it names, so in a block three cells
+   wide it would be drawn straight over whatever shares its row. The first
+   cluster build paid for that with one flat offset — every pill pushed out to
+   the cluster's left edge — which cleared the collision and cost slot 1, the
+   pill a visitor sees most (it is the active section, and it is the mark the
+   pointer is on when the cluster opens), a whole empty cell of separation from
+   its own mark. Shot 2026-08-12 at 1440 and at 375: the label read as floating
+   in the frame rather than as belonging to the drawing beside it.
+
+   The real constraint is per ROW, not per cluster: a pill only has to clear
+   what is actually to its left in its own row. The top row's left cell is the
+   one the path never rests in — always empty, at five chapters or at seven —
+   so slot 1's pill can sit directly against its mark, and every other pill
+   still lands on the cluster's left edge because their rows really are full.
+
+   Derived, so it stays true if the manifest grows: `pill` counts the cells
+   between this one and the leftmost OCCUPIED cell of its row (the button
+   included — it occupies the middle of row 0). At five chapters this is
+   [0, 0, 0, 1, 2] and the menu's is 1; at seven, slots 6 and 7 come out 2 and
+   1, each clearing exactly the neighbours it has grown. */
+function pillClearance(n) {
+  const cells = RING.slice(0, Math.min(n, RING.length));
+  const minCol = new Map([[0, 0]]);          // the button: row 0, col 0
+  for (const [c, r] of cells) {
+    minCol.set(r, Math.min(minCol.has(r) ? minCol.get(r) : c, c));
+  }
+  return {
+    slot: RING.map(([c, r]) => c - (minCol.has(r) ? minCol.get(r) : c)),
+    menu: 0 - minCol.get(0),
+  };
+}
+
 function el(tag, cls, text) {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -133,6 +211,12 @@ export function createRail({ onNav } = {}) {
   // anchor, so the whole choreography lives in the stylesheet and JS only
   // states where the visitor is.
   root.style.setProperty('--n', String(CHAPTERS.length));
+  // ...and the CLUSTER geometry is the same statement in polar form. The ring
+  // holds seven cells; a manifest that outgrew it would have two chapters
+  // resting in one cell, so the component says so and the stylesheet keeps the
+  // column for every context. Derived, like everything else here — a sixth
+  // chapter needs no edit, an eighth needs no bug report.
+  if (CHAPTERS.length > RING.length) root.classList.add('j-rail-column');
 
   const inner = el('div', 'j-rail-inner');
   root.appendChild(inner);
@@ -382,6 +466,17 @@ export function createRail({ onNav } = {}) {
       hotOpen = false;
       root.classList.remove('j-rail-hot');
     }
+    foldedSync();
+  }
+
+  /* A folded cluster has no angles — the stylesheet stacks every slot behind
+     the current mark and stops reading `--ang-to` at all — so the moment the
+     control folds, the accumulated turn is spent and the ring goes back to its
+     canonical reading. Without this a cluster that had been rotated would
+     unfurl the way it last turned rather than the way it always unfurls: the
+     same picture, arrived at backwards. Cheap, and it only runs on a fold. */
+  function foldedSync() {
+    if (!expanded()) writeAngles(curIndex);
   }
 
   list.addEventListener('pointerenter', (e) => {
@@ -407,7 +502,14 @@ export function createRail({ onNav } = {}) {
     if (!hotOpen) return;
     hotOpen = false;
     root.classList.remove('j-rail-hot');
+    foldedSync();
   });
+  // The keyboard's own fold: `:has(:focus-visible)` holds the cluster open in
+  // CSS with nothing for JS to clear, so the ring is re-read when focus leaves
+  // the control. Deferred one tick because focusout fires BEFORE the focus has
+  // landed anywhere, and a Tab from one tile to the next would otherwise look
+  // like a fold.
+  root.addEventListener('focusout', () => { setTimeout(foldedSync, 0); });
 
   root.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch' || touchOpen) return;
@@ -558,6 +660,76 @@ export function createRail({ onNav } = {}) {
   let activeId = null;
   let dimmed = null;
 
+  /* ---- the cluster's angles ----------------------------------------------
+     One UNWRAPPED angle per slot, in degrees. Unwrapped is the whole point:
+     the stylesheet interpolates `--ang` linearly, so the number written here
+     is what decides WHICH WAY ROUND THE BUTTON an item travels, and a value
+     folded back into [-360, 0) every time would make that choice for us — and
+     make it wrong exactly once per rotation, sending the slot that leaves the
+     head of the path back across the button instead of on round it.
+
+     Each shift takes the SHORT way to the new cell, which is also the
+     consistent way: when the active section advances by one, every item's
+     ring index drops by one, so slot 2 -> slot 1 is +90, every other
+     neighbour step is +45, and the item leaving slot 1 wraps to the tail —
+     +135 through the two overflow cells, clockwise, the same direction as
+     everything else. One rotation, no item crossing the middle.
+
+     While the cluster is FOLDED the stylesheet pins `--ang` to 0 for every
+     slot (they are all stacked behind the current mark, where an angle has no
+     meaning), so the value written here is invisible and is re-canonicalised
+     instead of accumulated. That is what keeps an unfold from spinning
+     through whole revolutions a visitor never saw wound up. */
+  const angleOf = CHAPTERS.map(() => 0);
+  const PILL = pillClearance(CHAPTERS.length);
+  // The button sits in the middle of row 0 and its own pill has to clear
+  // whatever grew to its left, exactly as a slot's does. Constant — the hub is
+  // the one cell that never changes row — so it is written once.
+  menuBtn.style.setProperty('--pill', String(PILL.menu));
+  let curIndex = 0;
+  let turnTimer = 0;
+
+  function writeAngles(cur) {
+    curIndex = cur;
+    const n = CHAPTERS.length;
+    const live = expanded();
+    slots.forEach((s, i) => {
+      const k = ((i - cur) % n + n) % n;
+      const cell = RING[k] || RING[RING.length - 1];
+      if (!live) angleOf[i] = cell[2];
+      else {
+        let d = (cell[2] - angleOf[i]) % 360;
+        if (d > 180) d -= 360;
+        else if (d <= -180) d += 360;
+        angleOf[i] += d;
+      }
+      s.li.style.setProperty('--ang-to', angleOf[i] + 'deg');
+      s.li.style.setProperty('--ring', String(k));
+      s.li.style.setProperty('--col', String(cell[0]));
+      s.li.style.setProperty('--row', String(cell[1]));
+      s.li.style.setProperty('--pill', String(PILL.slot[k] || 0));
+    });
+
+    /* THE NAMES SIT OUT THE TURN. A pill names the mark it hangs off, and for
+       the length of a rotation no mark is anywhere in particular — every one
+       of them is mid-flight between two cells, and a label tracking a glyph
+       across the face of the button is reading out a position rather than
+       naming a thing. So the pills are simply out while the ring turns.
+       What this is NOT (measured 2026-08-12, and worth recording because the
+       first build claimed the opposite): Chrome does re-hit-test :hover when
+       the layout moves under a stationary pointer. Held still on slot 1
+       through connect -> owned, the pill went out, and came back reading
+       OWNED — the section that had arrived under the cursor — not a stale
+       CONNECT carried round to the far side. The suppression is therefore
+       cosmetic, covering the transit, not a correctness fix; the 460ms is
+       sized to outlast the 420ms angle transition and nothing more. */
+    if (live) {
+      root.classList.add('j-rail-turn');
+      clearTimeout(turnTimer);
+      turnTimer = setTimeout(() => root.classList.remove('j-rail-turn'), 460);
+    }
+  }
+
   function update(p, { modalDetail = false } = {}) {
     if (p > SHOW_P) revealed = true;
 
@@ -578,6 +750,8 @@ export function createRail({ onNav } = {}) {
         s.li.classList.toggle('now', s.id === nowId);
         s.li.style.setProperty('--d', String(Math.abs(i - cur)));
       });
+      // ...and the same move stated as a rotation, for the cluster geometry.
+      writeAngles(cur);
       // The PANEL's list marks the chapter you are actually in — it follows
       // `now`, not `active`, because it is the one surface that can name the
       // epilogue, and Owned -> Final changes `now` without changing `active`.
