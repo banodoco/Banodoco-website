@@ -209,6 +209,14 @@ let _jitterI = 0;
 const _taaDb = new THREE.Vector2();
 const _taaPrevPos = new THREE.Vector3();
 const _taaPrevQuat = new THREE.Quaternion();
+// The projection EXACTLY as it stood before this frame's jitter went in —
+// captured here rather than reconstructed downstream, because this is the one
+// place in the program where the clean matrix actually exists. Published for
+// anything that pins a DOM element to a world point (steadyProject() below).
+// Seeded from the camera's current projection so the very first frame — whose
+// animators run BEFORE taaFrame() has ever executed — projects through a real
+// lens rather than through an identity matrix.
+const _steadyProj = new THREE.Matrix4().copy(camera.projectionMatrix);
 function taaFrame() {
   // rebuild the clean projection, then push it off-centre by a subpixel step
   camera.updateProjectionMatrix();
@@ -218,6 +226,9 @@ function taaFrame() {
   // stable across any two shutter times — instead of orbiting the 8-sample
   // Halton cycle forever.
   const j = _frozenT !== null ? _jitterSeq[0] : _jitterSeq[_jitterI++ % _jitterSeq.length];
+  // Last look at the clean matrix before it is perturbed — everything that
+  // pins DOM to a world point projects through this copy (steadyProject()).
+  _steadyProj.copy(camera.projectionMatrix);
   // ±0.4px, not the full ±0.5: accumulated jitter is a blur kernel over the
   // whole image, and the last tenth of a pixel buys almost no extra moiré
   // suppression while visibly softening static detail
@@ -234,6 +245,60 @@ function taaFrame() {
   taaPass.weight = 0.6 * Math.exp(-motion * 150);
   _taaPrevPos.copy(camera.position);
   _taaPrevQuat.copy(camera.quaternion);
+}
+
+// =====================================================================
+// STEADY PROJECTION — the lens the DOM is allowed to measure through
+// =====================================================================
+// taaFrame() runs LAST in the frame, after every animator and before
+// composer.render(). That ordering is right for rendering and wrong for
+// anything that PINS a DOM element to a world point: those consumers run
+// during the animator phase, so they read a projection matrix still carrying
+// the PREVIOUS frame's Halton offset. The offset changes every frame, so a
+// bit-static camera looking at a bit-static world point still produced a DOM
+// position that moved — a period-8 sub-pixel tremor at the frame rate.
+//
+// Measured (2026-08-12, 1440x900, 12 s traces at all three chapter rests, on
+// the live path with breeze/spores/handheld running):
+//
+//   camera.position   range <= 3.2e-7 world units      -> < 1e-5 px
+//   camera.fov        range 0                          -> 0 px
+//   camera.quaternion range <= 1.0e-8                  -> < 1e-4 px
+//   projectionMatrix  e[8] range 9.028e-4, e[9] 1.383e-3
+//
+// and the whole of the tremor falls out of that last line alone:
+//   e[8]: Halton(2) spans 0.8125 over its 8 samples, x 1.6 / 1440 = 9.028e-4
+//   e[9]: Halton(3) spans 0.7778 over its 8 samples, x 1.6 /  900 = 1.383e-3
+// Screen x is (ndc.x * 0.5 + 0.5) * w and clip.x carries e[8] * viewZ, so the
+// perspective divide turns d(e[8]) straight into -d(ndc.x): 9.028e-4 * 720 =
+// 0.650 px across, 1.383e-3 * 450 = 0.622 px down. Confirmed empirically —
+// chip x against the previous frame's e[8] correlates -1.0007 with a slope of
+// -720.0 px per unit, i.e. exactly -(innerWidth / 2), and the trace autocorr-
+// elates +1.00 at lag 8 with exactly 8 distinct positions.
+//
+// So this is the whole budget, not a floor: nothing else contributes.
+//
+// The undo is `_steadyProj`, snapshotted in taaFrame() one line before the
+// jitter goes in — the genuine pre-jitter matrix, so there is no subtraction
+// to be approximate about and no assumption that the true skew is zero (a
+// camera that one day wants a real view offset keeps it). Everything else the
+// projection carries — a live orbit, a setView() fov ease, an anchor that is
+// genuinely travelling — is still fully present, because the snapshot is taken
+// after updateProjectionMatrix() and nothing but the two jitter terms is
+// dropped. Labels track a moving camera faithfully; they just stop shivering
+// when it is still.
+//
+// Taken once per frame rather than rebuilt per call, and that is load-bearing
+// rather than tidiness: a per-call version (Matrix4 copy x 16 chips x 60 Hz)
+// measurably shifted the frozen TAA accumulation and moved owned@430x932 by
+// MAE 0.13/255 against its golden. Per frame, all ten goldens stay 0.00.
+/** World point -> NDC through the jitter-free projection. Same contract as
+ *  THREE's `Vector3.project(camera)` (mutates `v`, returns it), so it is a
+ *  drop-in at any DOM-pinning call site. */
+function steadyProject(v) {
+  // matrixWorldInverse is affine (w stays 1); the second applyMatrix4 does the
+  // perspective divide — exactly the two steps project() itself takes.
+  return v.applyMatrix4(camera.matrixWorldInverse).applyMatrix4(_steadyProj);
 }
 
 // =====================================================================
@@ -566,7 +631,7 @@ const ctx = {
   // (rimRad/rimYoff are hoisted function declarations; the TDZ-bound consts
   // LEAN_DIR/CAP_Y are assigned onto ctx right after §4 declares them.)
   rimRad, rimYoff, LEAN_DIR: 0, CAP_Y: 0,
-  scene, camera, renderer, controls,
+  scene, camera, renderer, controls, steadyProject,
   tiltX, leanZ, trackers, intro,
   swayCos: 1, swaySin: 0,
   // assigned when they come into existence below:
@@ -1851,6 +1916,13 @@ return {
   composer,
   /** The OrbitControls instance attached to `camera`. */
   controls,
+  /** Project a WORLD point to NDC through the camera's projection with the TAA
+   *  jitter taken back out — the same contract as `Vector3.project(camera)`
+   *  (mutates and returns the vector). Anything pinning DOM to a world point
+   *  must use this rather than `project()`: the raw matrix carries a per-frame
+   *  sub-pixel Halton offset that renders correctly but measures wrong. See
+   *  the STEADY PROJECTION note above taaFrame() for the measured budget. */
+  steadyProject,
   /** Top-level scene-graph groups, for anything that wants to target one part of the specimen —
    *  e.g. a scroll-driven dive that moves the camera through `groups.ground` toward the roots. */
   groups: { mushroom, stem: stemGroup, sway: swayGroup, ground: groundGroup, spores: sporePts },

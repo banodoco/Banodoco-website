@@ -247,6 +247,10 @@ export function boot(opts = {}) {
     onOpen: (nodeId, trigger) => openDetail(nodeId, trigger),
     onClose: () => closeDetail(),
     isDetailOpen: () => !!detailNode,
+    // The chips pin DOM to world points, so they measure through the scene's
+    // jitter-free lens rather than the raw one the renderer is mid-way through
+    // perturbing (organism.js, STEADY PROJECTION).
+    project: sceneApi.steadyProject,
   });
 
   // hotspot proxies, one per named node (GB-4.1)

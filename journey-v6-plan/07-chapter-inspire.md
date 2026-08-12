@@ -3628,3 +3628,165 @@ network still breathes, its destinations hold; 16-connect-ground-restage.md
 **±20%** on their own clocks; their flick is now frozen at its t = 0 phase
 (per-node level kept, clock removed; the faces, rims and strands keep
 their living light). Neither change moves a frozen golden.
+
+---
+
+## 2026-08-12 — The 0.65 px "camera-only floor" was never the camera
+
+Hannah, on the chips in every section (Arca Gidan Prize, ArtCompute, 2RP and
+their equivalents): *"they appear to be gently shuddering/shivering in place
+after they have entered … once settled, the labels remain pixel-stable."* With
+the explicit instruction to root-cause it rather than mask it.
+
+Two earlier passes had already measured this exact number and signed it off:
+`851c77a` (chips stop riding the wind) and `7e256aa` (in-scene markers pinned)
+both landed on **0.65 x 0.62 px** and both recorded it as *"the camera-only
+floor, i.e. nothing."* That reading was wrong twice over — it is not the
+camera, and it is not a floor. It is one component, it is 100% of the residual,
+and it is removable exactly.
+
+### The measurement (1440x900, live path, 12 s / ~720 frames at each rest)
+
+Per-frame screen position of every chip, read off the DOM transform the page
+actually wrote:
+
+| chapter | chips | range x | range y | per-frame alternation | net drift |
+|---|---|---|---|---|---|
+| inspire | arca, artcompute, tworp | 0.650 px | 0.60-0.70 px | **100%** | 0.000 px |
+| connect | ados, hivemind, discord | 0.650 px | 0.60-0.70 px | **100%** | 0.000 px |
+| owned   | all 16 contributors      | 0.650 px | 0.60-0.70 px | **100%** | 0.000 px |
+
+The pattern names the culprit on its own. The sign of the frame-to-frame delta
+flips on **every** frame; the trace autocorrelates **+1.00 at lag 8** and holds
+exactly **8 distinct positions**; net drift over 12 s is **zero**. That is not
+an unconverged ease (which drifts), not rounding (which random-walks) and not
+scene motion (which is smooth). It is an 8-sample cycle at the frame rate —
+7.5 Hz of shiver at 60 fps, which is precisely what "shivering in place" is.
+
+### The attribution budget — the whole of it
+
+Isolated by elimination, at the same rests:
+
+| component | contribution | how it was ruled in or out |
+|---|---|---|
+| **TAA Halton jitter, read one frame late** | **0.650 px x, 0.622 px y — 100%** | see below |
+| documentary handheld | **0 px** | `?steady=1` — trace unchanged at 0.650 px. (Expected: handheld amplitude is exactly zero within `restFadeP` of every anchor.) |
+| TAA *accumulation pass* | **0 px** | `?notaa=1` — trace unchanged at 0.650 px. The pass is not the problem; `taaFrame()`'s matrix write is, and that runs whether or not the pass is enabled. |
+| camera pose / fov / orientation | **< 1e-4 px** | `camera.position` range <= 3.2e-7 world units, `fov` range **0**, `quaternion` range <= 1.0e-8 over 720 frames. The camera is bit-static at rest. |
+| unconverged easing | **0 px** | net drift 0.000 px over 12 s, at every chip. |
+| per-frame rounding | **0 px of motion** | y goes through `toFixed(1)` and x does not — which is why range y quantises to 0.6/0.7 while range x is exactly 0.650. Rounding *bins* the jitter; it does not create it. |
+
+**The mechanism.** `taaFrame()` runs LAST in the frame — after every animator,
+immediately before `composer.render()` — and pushes a Halton(2,3) sub-pixel
+offset into `camera.projectionMatrix.elements[8]` and `[9]`. That ordering is
+correct for rendering and wrong for anything that pins DOM to a world point,
+because those consumers run during the animator phase and therefore read the
+**previous** frame's offset. The offset changes every frame, so a bit-static
+camera looking at a bit-static world point still produced a moving DOM
+position.
+
+The arithmetic closes to four significant figures, predicted and measured:
+
+    e[8] range = Halton(2) span 0.8125 x 1.6 / 1440 = 9.028e-4   (measured 9.028e-4)
+    e[9] range = Halton(3) span 0.7778 x 1.6 /  900 = 1.383e-3   (measured 1.383e-3)
+
+    clip.x carries e[8]*viewZ, so the perspective divide turns d(e[8]) into
+    -d(ndc.x) exactly:  9.028e-4 x 720 = 0.650 px across
+                        1.383e-3 x 450 = 0.622 px down
+
+and empirically: chip x regressed against the **previous** frame's `e[8]`
+correlates **-1.0007** with slope **-720.0 px per unit** — exactly
+`-(innerWidth / 2)`. Against the *same* frame's `e[8]` the correlation is only
++0.75, which is the one-frame lateness stated as a number.
+
+This is the same defect `e20f7ff` found and fixed for the hero callouts. The
+journey's chips were simply never given the undo.
+
+### The fix — the undo moves to where the clean matrix actually exists
+
+`taaFrame()` now snapshots the projection into `_steadyProj` one line *before*
+it jitters it, and the scene publishes `steadyProject(v)` — same contract as
+THREE's `Vector3.project(camera)`, so it is a drop-in. `journey.js` hands it to
+`createUI({ project })`; the chip loop in `ui.js` uses it.
+
+Three things this deliberately is not:
+
+- **Not a reconstruction.** `furniture.js` used to rebuild the clean matrix by
+  zeroing `elements[8]/[9]`. That is correct for this camera (`makePerspective`
+  on a symmetric frustum gives exactly 0 for both) but it assumes a fact about
+  the camera at a site that does not own the camera. It now calls
+  `steadyProject` too — one owner instead of two, and the genuine pre-jitter
+  matrix rather than an assumption about it.
+- **Not per call.** The snapshot is taken once per frame. A per-call version
+  (Matrix4 copy x N chips x 60 Hz) was written first and rejected.
+- **Not a damper, a rounding or a freeze.** Only the two jittered elements are
+  dropped. A real camera move, a `setView()` fov ease and a genuinely moving
+  anchor all still come through at full fidelity.
+
+### Result (same rig, same rests)
+
+| chapter | before | after |
+|---|---|---|
+| inspire | 0.650 x 0.620 px, alternating every frame | **0.0000 x 0.0000 px** — bit-identical transform, 505 consecutive frames |
+| connect | 0.650 x 0.620 px | **0.0000 x 0.0000 px** — 505 frames |
+| owned   | 0.650 x 0.620 px | **<= 0.010 px** — see below |
+
+Owned does not reach exactly zero and should not: its camera carries a genuine
+float residual (`position` range 1.6e-5 world units, from the root-network
+animation touching matrices), and the chips now track it **faithfully** instead
+of burying it under 65x more jitter. 0.01 px is a hundredth of a pixel and it
+is real motion, not tremor.
+
+**Visual confirmation over time**, not one frame: the WebGL canvas hidden so
+the DOM chip layer is the only thing that can move, 16 screenshots across each
+rest, every consecutive pair differenced and every frame differenced against
+the first.
+
+    before   inspire  max |diff| 140/255      connect  139/255     owned  0/255*
+    after    inspire  max |diff|   0/255      connect    0/255     owned  0/255
+             (spans 78.9 s / 14.1 s / 15.0 s)
+
+\* Owned reads 0 before as well as after because its 16 contributor chips are
+`labelOnHover` — `.j-hot.label-hover > *` is `opacity: 0` at rest, so they had
+nothing on screen to shiver. Their transforms were moving the full 0.650 px all
+along; the visible defect was Inspire's and Connect's, which is exactly the set
+Hannah named.
+
+### The one place the jitter was left in, on purpose
+
+Hover zones (`ui.js`'s `hoverZones` loop) keep the raw projection. A zone is a
+pointer target with **no pixels** — `.j-hotzone` sets geometry, visibility and
+pointer-events and paints nothing — so steadying it is invisible by
+construction, while it measurably costs a frozen golden.
+
+Bisected: Owned's crown zone is a 203.8 px circle inside `.j-hotzones`, a
+`position: fixed; inset: 0` layer stacked over the canvas. Steadying it moved
+that child by 0.2 px (`translate(113px, -5.1px)` -> `-4.9px`) and shifted
+**owned@430x932 by MAE 0.13/255 spread over the whole frame** — a compositor
+rounding artifact, not a scene change: `debugState()`, both camera matrices,
+fog, pose and every lens uniform were dumped under both builds and are
+bit-identical, and a 60 px shove of the whole chip layer changes the capture by
+literally zero pixels. Chips steady + zones raw restores all ten goldens to
+0.00. The residual it keeps is a 0.65 px wobble on a 204 px target, which
+cannot flicker a hover in practice. If a zone ever grows something that paints,
+that is the line to change.
+
+`lens.js`'s `uFocusUv` also still projects raw. It is a render-space consumer
+feeding a slowly-varying radial field inside the frame the jitter belongs to,
+not a DOM pin — out of scope here, and noted rather than silently left.
+
+### Gates
+
+- Per-frame trace before/after with amplitude, frequency and budget: above.
+- Differenced sequences at all three rests: 0/255, spans 14-79 s.
+- Entrance animation intact: all chips arrive and ease (55-95 frames of
+  intermediate opacity each, never a snap); stagger spread 1287 ms (connect),
+  3316 ms (owned).
+- Hover intact: chip goes hot, popover opens and dismisses on leave, and the
+  transform is **bit-identical across 3.2 s of held hover** (`6d37205` holds).
+- Anchors still truthful: every chip landed within **0.067 px** of its former
+  time-averaged position — i.e. at the centre of the tremor it used to
+  describe. Nothing points anywhere new.
+- Console clean over a full ride (601-step scrub out and back, all five nav
+  jumps, plus a wrap): **0** errors or warnings.
+- `capture.py --check`: all ten frozen references **0.00/255**.
