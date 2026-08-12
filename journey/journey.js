@@ -32,7 +32,10 @@ import { CONTENT } from '../content/content.js';
 import {
   CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, startOf,
 } from './route.js';
-import { HERO_INTRO_MS, DEEP_LINK_DETAIL_DELAY_MS } from './constants.js';
+import {
+  HERO_INTRO_MS, DEEP_LINK_DETAIL_DELAY_MS,
+  COPY_JUMP_LEAD, COPY_JUMP_TAIL_S, COPY_IN_K,
+} from './constants.js';
 import { STEADY, P as P_FLAG, POSE as POSE_FLAG, CAPTURE } from '../flags.js';
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
@@ -298,10 +301,145 @@ export function boot(opts = {}) {
     if (chapters[id]) registerHoverZones(id, chapters[id]);
   }
 
-  // The hero's own furniture: the world-tracked callouts and the hero scrim /
-  // spill are Mission-pose compositions, so they release as the journey leaves
-  // the hero and come back on the way in. Untouched at p = 0.
+  /* ================================================================
+     THE HERO FURNITURE — ONE AUTHORITY
+     ================================================================
+     The world-tracked callouts and the hero scrim / spill are Mission-pose
+     compositions, so they release as the journey leaves the hero and come
+     back on the way in. Untouched at p = 0.
+
+     ONE CONDITION DECIDES WHETHER THEY ARE THERE (2026-08-12, Hannah: "the
+     hero labels currently flash into view immediately and then disappear,
+     before later appearing again ... there should be a single authoritative
+     condition controlling their visibility"). Before this there were three
+     writers with two different clocks, and they disagreed for the whole
+     length of a jump:
+
+       1. THIS loop, keyed to `p` alone. `p` is journey STATE, and a nav jump
+          snaps state to the destination in one dt = 0 tick (directJumpTo)
+          while the camera takes 0.85-4.00 s to get there. So the furniture
+          was written to full opacity on the CLICK frame. Measured through the
+          logo from each rest, 1440x900: labels reached alpha 1 one frame
+          after the click (t = 146-314 ms, the click itself landing at ~120)
+          against camera landings at 1178, 1300, 1218 and 1538 ms — and at
+          140 ms against 3938 on the scroll wrap, which is 3.8 s of hero
+          furniture riding a camera that is somewhere else entirely.
+          THIS is the writer that made them appear early.
+       2. organism/furniture.js's tracker projection, keyed to the CAMERA:
+          `visibility = z < 1`. Honest, and the only one of the three that
+          was — but with (1) holding the container open it was doing its
+          frustum cull IN FRONT OF THE VISITOR. From the Owned rest the
+          INSPIRE anchor sits behind the camera plane, so the trace shows
+          exactly the sentence Hannah wrote: visible at 155 ms, gone at 167 ms
+          (one frame), back at 461 ms, camera still 700 ms away. THAT is the
+          disappear-and-reappear. It is a cull, not a reveal, and it needs no
+          change: hold the container shut for the flight and the whole flicker
+          happens inside something nobody can see.
+       3. ui.js's `calloutsEl.inert = !(p <= 0.01)`, keyed to `p` — the same
+          fault in the a11y channel, handing three off-screen links to the tab
+          order a second early. It has moved HERE, onto the same scalar, so
+          the picture and the tab order can no longer be timed differently.
+
+     The condition is therefore: PRESENCE x ARRIVAL.
+
+       presence(p)  the shipped composition term, byte-for-byte. It owns the
+                    scrub in both directions, so leaving the hero releases
+                    exactly as before and scrolling back up returns exactly
+                    as before — neither route has a camera that disagrees.
+       arrival      the missing half. 0 while a jump is flying INTO the hero,
+                    easing to 1 on the same envelope and the same C2 ease the
+                    destination copy already uses (d1ecc23 / COPY_JUMP_LEAD /
+                    COPY_JUMP_TAIL_S), so the furniture and the sentence it
+                    frames arrive as one movement. 1 at every other moment,
+                    which is why a cold load, a deep link and every ?capture=
+                    still are bit-identical to before: none of them has a
+                    blend in flight, so this term is not in play.
+
+     AND THE LOAD-TIME CSS ENTRANCE? It stays, and it stays subordinate. The
+     1-2-3 instrument power-up in hero.css (`co-on` .. `no-flicker`, --d
+     5.55/6.20/6.85 s) is the PAGE's entrance, not the SECTION's, and the two
+     systems were never really in competition — they multiply. What made them
+     read as independent is that this side had no notion of "the hero has been
+     arrived at", so it asserted presence at moments the entrance had never
+     sanctioned. Giving it that notion is the whole fix. Re-running the
+     power-up on every logo click was considered and rejected: the hero COPY
+     does not re-run its ink wipes on arrival either (ui.js builds no
+     'mission' block by construction), the callouts are that copy's furniture,
+     and a 1.5 s boot sequence every time the home control is pressed would
+     make the mark feel heavy. One authority over whether they are there; the
+     load choreography stays the load's. */
   const heroFurniture = ['.callouts', '.scrim', '.spill'].map(s => document.querySelector(s)).filter(Boolean);
+  const calloutsEl = document.querySelector('.callouts');
+
+  let heroEntry = null;   // { t, lead, dur } while a jump is flying INTO the hero
+  let heroGate = 1;       // the eased arrival term; 1 = the hero is ours to show
+
+  const heroPresence = (p) => 1 - smooth01((p - 0.006) / 0.05);
+
+  /** The ONE place the hero furniture's visibility reaches the DOM. */
+  function paintHeroFurniture(a) {
+    for (const f of heroFurniture) {
+      f.style.opacity = a;
+      // Swarm census finding (2026-08-03): opacity-0 elements are still
+      // hit-testable — a cursor parked over the faded 01-INSPIRE callout kept
+      // driving sceneApi.setHighlight('spores') via the hero page's own hover
+      // bindings, flaring the old curtain up to ~2x with a breathing pulse at
+      // exactly the moment it should cede. Faded furniture must leave the hit
+      // tree, not just the eye.
+      f.style.pointerEvents = a < 0.05 ? 'none' : '';
+    }
+    // ...and the tab order says the same thing, from the same number. It used
+    // to be a second threshold on raw `p` over in ui.js, which is how three
+    // invisible links stayed tabbable through a whole jump.
+    if (calloutsEl) {
+      const live = a >= 0.05;
+      if (calloutsEl.inert === live) calloutsEl.inert = !live;
+    }
+  }
+
+  /** Arm the arrival term for a jump. Called for EVERY jump: a jump to
+   *  anywhere else has no hero arrival to time, so it simply clears the term
+   *  (invisibly — presence is 0 at the destination the same tick).
+   *
+   *  The repaint is not optional. placeAt() has ALREADY run two dt = 0
+   *  applyFrame passes by the time directJumpTo can call us, so the furniture
+   *  is sitting at full opacity right now; leaving the correction to the next
+   *  animator frame ships one rendered frame of exactly the flash this exists
+   *  to remove. Same reasoning, same shape, as ui.js's armCopyEntry. */
+  function armHeroEntry(chapterId, blendDur) {
+    if (chapterId !== 'mission') { heroEntry = null; heroGate = 1; }
+    else {
+      const lead = blendDur * COPY_JUMP_LEAD;
+      heroEntry = { t: 0, lead, dur: blendDur + COPY_JUMP_TAIL_S - lead };
+      heroGate = 0;
+    }
+    paintHeroFurniture(heroPresence(journey.progress) * heroGate);
+  }
+
+  /** The visitor took the wheel: the arrival this was timed against is not
+   *  coming. Only the AUTHORITY is dropped, never the value — the gate then
+   *  relaxes back on COPY_IN_K below, so the furniture breathes in from
+   *  wherever the envelope had reached instead of snapping. (The copy layer
+   *  hands back to its scroll rule for the same reason; here there is no
+   *  second rule to hand back to, so the relaxation is the handback.) */
+  function cancelHeroEntry() { heroEntry = null; }
+
+  /** One step of the arrival term. */
+  function stepHeroEntry(dt) {
+    // A placement is not an arrival: a deep link, a ?capture= still or a QA
+    // scrollTo must snap, exactly as the copy's entry dies on dt === 0.
+    if (dt === 0) { heroEntry = null; heroGate = 1; return heroGate; }
+    if (heroEntry) {
+      heroEntry.t += dt;
+      const f = clamp01((heroEntry.t - heroEntry.lead) / heroEntry.dur);
+      heroGate = f * f * f * (f * (f * 6 - 15) + 10);   // the blend's own C2 ease
+      if (heroEntry.t >= heroEntry.lead + heroEntry.dur) { heroEntry = null; heroGate = 1; }
+    } else if (heroGate < 1) {
+      heroGate += (1 - heroGate) * Math.min(1, dt * COPY_IN_K);
+      if (heroGate > 0.999) heroGate = 1;
+    }
+    return heroGate;
+  }
 
   // Explore CTA hands off into the journey (GB-1.1): one restrained flow
   // toward the cap, then the orbit. No reset, no reload.
@@ -441,6 +579,11 @@ export function boot(opts = {}) {
     // end of the jump rather than a constant in ui.js. See the copy-entry
     // block there, and COPY_JUMP_LEAD / COPY_JUMP_TAIL_S.
     guarded('ui', () => ui.armCopyEntry(chapterId, dur));
+    // ...and the hero's own furniture is timed against the same move, for the
+    // same reason and on the same envelope. It is the third member of the
+    // family a8d4518 (chapter geometry) and d1ecc23 (section copy) opened, and
+    // the only one that had never been given a ticket.
+    armHeroEntry(chapterId, dur);
   }
 
   /* THE DETAIL NO LONGER HAS A HISTORY ENTRY (2026-08-11 — the URL is not a
@@ -592,18 +735,10 @@ export function boot(opts = {}) {
     });
 
     const ch = chapterAt(p);
-    // Hero furniture releases as the journey leaves the Mission composition.
-    const heroA = 1 - smooth01((p - 0.006) / 0.05);
-    // Swarm census finding (2026-08-03): opacity-0 elements are still
-    // hit-testable — a cursor parked over the faded 01-INSPIRE callout kept
-    // driving sceneApi.setHighlight('spores') via the hero page's own hover
-    // bindings, flaring the old curtain up to ~2x with a breathing pulse at
-    // exactly the moment it should cede. Faded furniture must leave the hit
-    // tree, not just the eye.
-    for (const f of heroFurniture) {
-      f.style.opacity = heroA;
-      f.style.pointerEvents = heroA < 0.05 ? 'none' : '';
-    }
+    // Hero furniture releases as the journey leaves the Mission composition,
+    // and comes back only once the camera has actually got here. PRESENCE x
+    // ARRIVAL, one writer — see THE HERO FURNITURE block in boot().
+    paintHeroFurniture(heroPresence(p) * stepHeroEntry(dt));
 
     guarded('ui', () => ui.update(p, ch.id, sceneApi.camera, dt));
 
@@ -631,6 +766,7 @@ export function boot(opts = {}) {
     if (scroll.sinceInput < 50) {
       endCamBlend();
       guarded('ui', () => ui.cancelCopyEntry());
+      cancelHeroEntry();
       return;
     }
     camBlend.t += dt;

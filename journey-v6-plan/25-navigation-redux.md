@@ -1830,3 +1830,200 @@ a note is left in `main.js` for whenever the ride gains free scrolling.
   harmless for QA, but it makes any measurement taken through that flag near a
   chapter rest untrustworthy unless the settle is checked — as it was here,
   twice, before the reading was believed.
+
+## 2026-08-12 (later) — The hero furniture arrives with the camera, and gets one owner
+
+Hannah: *"There is a sequencing issue with the hero / first-section labels …
+the hero labels currently flash into view immediately and then disappear,
+before later appearing again as part of the proper section sequence. … There
+should be a single authoritative condition controlling their visibility,
+aligned with the proper hero load/entrance sequence."*
+
+She also asked for the structural cause rather than a delay, and guessed the
+shape of it correctly: *"the labels are reacting to the destination section
+becoming active before the actual camera/section entrance sequence has
+completed."*
+
+### The instrumented diagnosis — three writers, two clocks
+
+Traced frame by frame at 1440×900 through a rAF sampler registered after the
+scene's own animators, so every row is the state that frame actually
+presented: container opacity, per-callout `visibility`, the `.co` / `.tag`
+keyframe opacities multiplied into one effective on-screen alpha, `inert`, `p`
+and the live camera position. Run through a logo click from each of the four
+rests, the rail from each rest, the site-map panel, a real wheel scrub upward,
+and the scroll wrap.
+
+Three things write these elements, and they do not share a clock:
+
+1. **`journey.js` `applyFrame`'s `heroFurniture` loop** — `opacity = 1 -
+   smooth01((p - 0.006) / 0.05)`, a pure function of `p`. `p` is journey
+   STATE, and a nav jump snaps state to the destination in a single `dt = 0`
+   tick (`directJumpTo`) while the camera takes 0.85–4.00 s to follow. So the
+   furniture was written to **full opacity on the click frame**. Measured
+   onsets against camera landings:
+
+   | route | labels reach α 1 | camera lands | early by |
+   |---|---|---|---|
+   | logo ← Inspire | 314 ms | 1538 ms | 1.22 s |
+   | logo ← Connect | 291 ms | 1300 ms | 1.01 s |
+   | logo ← Owned   | 155 ms | 1177 ms | 1.02 s |
+   | logo ← Final   | 146 ms | 1218 ms | 1.07 s |
+   | rail ← any     | 179–240 ms | 1246–1373 ms | ~1.1 s |
+   | site-map ← Final | 1370 ms | 2480 ms | 1.11 s |
+   | **scroll wrap** | **140 ms** | **3938 ms** | **3.80 s** |
+
+   (The click lands at t ≈ 120 ms in every trace; scrolling up is honest —
+   1076 ms against a 1076 ms landing — because a scrub has no camera that
+   disagrees.) **This is the writer that made them appear early.**
+
+2. **`organism/furniture.js`'s tracker projection** — `visibility = z < 1`,
+   keyed to the CAMERA. The only one of the three that was honest, and with
+   (1) holding the container open it was doing its frustum cull in front of
+   the visitor. From the **Owned** rest the INSPIRE anchor sits behind the
+   camera plane, and the trace is Hannah's sentence verbatim:
+
+   ```
+   t=155  p 0.725→0   boxA 0→1   inspire α 1   visibility visible
+   t=167  p 0         boxA 1     inspire α 0   visibility hidden   ← one frame later
+   … 294 ms of nothing …
+   t=461  p 0         boxA 1     inspire α 1   visibility visible  ← camera still 716 ms away
+   ```
+
+   Visible, gone one frame later, back 300 ms afterwards, all of it before the
+   camera arrives. It is a **cull, not a reveal**, and it needed no change:
+   hold the container shut for the flight and the whole flicker happens inside
+   something nobody can see. `d46e6bb`'s jitter-free projection is untouched.
+
+3. **`ui.js`'s `calloutsEl.inert = !(p <= 0.01)`** — keyed to `p`, so the same
+   fault in the a11y channel: three off-screen links handed to the tab order
+   on the click frame and held there for the whole jump (`inert` false at
+   t = 155 ms above).
+
+(1) and (3) trust journey state, which snaps. (2) trusts the camera, which
+travels. Neither is wrong on its own; there was simply **no owner**. This is
+the third instance of the same class — `a8d4518` fixed it for chapter
+geometry, `d1ecc23` for the section copy — and the hero's own furniture had
+never been given a ticket.
+
+### The single authoritative condition
+
+> **PRESENCE × ARRIVAL**, computed once and written by one function,
+> `journey.js`'s `paintHeroFurniture`.
+
+- **`presence(p)`** is the shipped composition term, byte for byte:
+  `1 - smooth01((p - 0.006) / 0.05)`. It owns the scrub in both directions, so
+  leaving the hero releases exactly as before and scrolling back up returns
+  exactly as before — neither route has a camera that disagrees, so neither
+  route needed changing, and the measured traces confirm both are identical.
+- **`arrival`** is the missing half: 0 while a jump is flying *into* the hero,
+  easing to 1 on the same envelope and the same C2 ease the destination copy
+  already uses (`COPY_JUMP_LEAD` 0.55 / `COPY_JUMP_TAIL_S` 0.15 s), so the
+  furniture and the sentence it frames arrive as one movement rather than two.
+  It is 1 at every other moment — which is why a cold load, a deep link and
+  every `?capture=` still are unchanged: none of them has a blend in flight.
+
+`inert` moved onto that same number, thresholded identically to
+`pointer-events` (α ≥ 0.05), so the picture, the hit tree and the tab order
+are now one statement rather than three differently-timed ones. Nothing about
+the callouts is written from `ui.js` any more.
+
+Two details that are not optional:
+
+- **The arm repaints in the same task.** `placeAt()` has already run two
+  `dt = 0` `applyFrame` passes by the time `directJumpTo` can call
+  `armHeroEntry`, so the furniture is sitting at full opacity right then;
+  deferring the correction to the next animator frame ships one rendered frame
+  of exactly the flash being removed. Same reasoning and same shape as
+  `ui.armCopyEntry`.
+- **Manual input hands back continuously.** `stepCamBlend`'s input drop calls
+  `cancelHeroEntry()`, which releases the *authority* but never the *value* —
+  the gate then relaxes to 1 on `COPY_IN_K`, so the furniture breathes in from
+  wherever the envelope had reached instead of snapping.
+
+### Should the CSS entrance and the JS write remain two systems?
+
+**They stop being independent, but the load choreography stays the load's.**
+The 1-2-3 instrument power-up in `hero.css` (`co-on` … `no-flicker`,
+`--d` 5.55 / 6.20 / 6.85 s) and the per-frame opacity write were never really
+competing — they multiply. What made them read as two systems is that the JS
+side had no notion of *"the hero has been arrived at"*, so it asserted
+presence at moments the entrance had never sanctioned. Giving it that notion
+is the entire fix; the JS scalar is now unconditionally on top, and the
+keyframes are a member of it rather than a peer.
+
+Re-running the power-up on every arrival was considered and **rejected**: the
+hero COPY does not re-run its ink wipes on arrival either (`ui.js` builds no
+`mission` block, by construction), the callouts are that copy's furniture, and
+a 1.5 s boot sequence every time the home control is pressed would make the
+mark feel heavy. The power-up is the *page's* entrance, not the *section's*.
+One authority over whether they are there; one choreography for how they first
+appear.
+
+### Gate results
+
+- **Frame-by-frame trace, before and after, per arrival route** — logo from
+  Inspire / Connect / Owned / Final, rail from all four, the site-map panel,
+  a real wheel scrub upward, and the scroll wrap (`2c22844`). After: the
+  container holds **0 through the whole lead** on every jump, the ramp opens
+  at ~70 % of the flight and settles at α 1 a beat *after* the camera stops
+  (e.g. Final: α 0.006 at 783 ms, 0.084 at 874 ms, 0.93 at 1239 ms, 0.992 at
+  1315 ms, camera landing 1217 ms). **One run, peak 1.000, `flash: false` on
+  every route and every callout** — including the two that previously showed a
+  genuine two-run flash (logo ← Owned, rail ← Owned).
+- **The wrap**, traced over a 4.4 s window to cover its 4.00 s flight: on at
+  2729 ms, settling at 1 — against 140 ms before. Its arrival is the biggest
+  single win on the page.
+- **Scrolling up is untouched**: 1006–1076 ms onset against a 1020–1076 ms
+  landing, before and after.
+- **Leaving the hero is untouched**: traced rail → Final from the Mission
+  rest, before and after — `boxA` 1 → 0 and `inert` false → true on the click
+  frame in both, settled tail `{0}` / `{true}` in both.
+- **Cold load unchanged**: real 9 s load trace, no flags. Label onsets
+  5513 / 6162 / 6813 ms before → 5498 / 6149 / 6802 ms after (−15 / −13 /
+  −11 ms, i.e. under one frame of navigation-timing jitter; the authored
+  650 ms spacing is preserved to 651 / 653 ms). Container opacity is `{1}` and
+  `inert` is `{false}` for the entire load — the journey layer never touches
+  it.
+- **Reduced motion** (`prefers-reduced-motion: reduce`, emulated): labels at
+  α 1 on the first sampled frame (19.9 ms) — the CSS entrance is off and they
+  simply *are* there, which is the contract. Leaving releases them to 0 and
+  `inert`; coming home gates 0 → 1 correctly. No keyframe was added or
+  changed.
+- **Placement survives**: `2e6ed4b`'s right-side hang, `e20f7ff`'s no-wind
+  hold, and the click behaviour — `#/inspire` and `#/connect` hrefs live
+  (INSPIRE clicked → `chapter === 'inspire'`), EQUIP still `#` with its
+  `.soon` reveal present and inert.
+- **Console over a full ride** — cold-ish load, every nav surface, both
+  directions of scrub, the wrap, the menu, a callout click and two logo
+  presses: **clean**, no warning, error, uncaught exception or rejection.
+  Final `debugState` at rest: `p 0`, `mission`, hash empty, hero pose.
+- **`python3 tools/capture.py --check`: PASS** — all ten frozen references at
+  **MAE 0.00/255**, `mission@*` included. No golden file modified (SHA-256 of
+  all ten identical before and after).
+
+### Residuals
+
+- **Leaving the hero still snaps.** `presence(p)` drops the furniture to 0 on
+  the click frame of an outbound jump, while the camera is still standing at
+  the Mission pose — the mirror image of the fault just fixed, and the same
+  shape. It was explicitly held out of scope ("leaving the hero releases them
+  as it does now") and it reads far better than the inbound case did, because
+  a fast release is what departure is supposed to feel like. It is still
+  logically the same asymmetry and is the obvious next thing to look at.
+- **The arrival reveal is simultaneous, not numbered.** All three come in
+  together on one envelope, which is what the scrub has always done and what
+  makes the arrival consistent with it. A staggered 01-02-03 arrival that
+  echoed the boot-up was deliberately not invented here; if it is wanted it is
+  a design call, not a bug fix.
+- **A deep link to a later chapter still shows the boot-up first.** On a cold
+  load of `#/inspire` the CSS entrance runs over the hero at 5.5–6.9 s and the
+  journey then places at Inspire at 7.6 s, so the callouts appear and are
+  removed. Pre-existing, untouched by this change, and outside the reported
+  fault — but it is the one remaining place the load choreography and the
+  journey's placement disagree about who the page belongs to.
+- **`cam_land` in the traces is a floor, not a stopwatch.** The documentary
+  handheld layer never fully stops, so the "camera landed" column is derived
+  from a 2 mm/frame motion threshold and can read late on long flights. Every
+  before/after comparison above is drawn from the same detector, so the
+  deltas are sound; the absolute landings are ±1 frame at best.
