@@ -71,35 +71,59 @@ let tgt=null,ov=0;
 for(let i=0;i<260;i++){await nf(); if(S.resolveTarget!==null)tgt=S.resolveTarget; if(tgt!==null&&J.p>tgt)ov=Math.max(ov,J.p-tgt);}
 out.push(`R4 hard flick target ${tgt} settled ${J.p.toFixed(6)} overshoot ${ov.toExponential(2)}`);
 
-// R5 end-hold. Departs from the FINAL REST, not from a p literal ahead of it:
-// this gate's property is "a fling into the end-hold settles where it landed
-// and is never tugged back to the Final rest", and starting short of the rest
-// made it a test of whether one fling happens to span the arrival as well.
-// It stopped being the latter on 2026-08-11, when the arrival's road doubled
-// (route.js segVh) and the same 4320 px fling from 0.925 no longer reached
-// 0.97 — the gate still "passed" while no longer touching the end-hold at all.
-// Anchored to the route, it cannot drift with an allocation again.
-await rest(REST_STOPS[REST_STOPS.length-1]);
-for(let i=0;i<18;i++){wheel(240); await nf();} await settle(3200);
-out.push(`R5 fling to end ${J.p.toFixed(6)}`);
+// R5 THE LOOP (2026-08-12). This gate used to read "a fling into the end-hold
+// settles where it landed and is never tugged back to the Final rest". The
+// route is now a loop and that premise is gone: past the last REST, a flick is
+// a WRAP, because p 0.97..1.0 is a held frame (identical pose at both ends —
+// only the fog moves) and spending a whole gesture crossing it would be the
+// "second scroll at the edge" the loop exists to remove. The end-hold keeps its
+// anchor for scrub, ?p= and End; it is simply not where a flick stops. So the
+// property under test becomes the loop's own: ONE flick past the last rest
+// lands on the FIRST, one flick before the first lands on the LAST, each takes
+// exactly one gesture, and a notch reader is never flung round the seam.
+const FIRST=REST_STOPS[0], LAST=REST_STOPS[REST_STOPS.length-1];
+await rest(LAST);
+for(let i=0;i<18;i++){wheel(240); await nf();} await settle(4800);
+const w1=J.p;
+await rest(FIRST);
+for(let i=0;i<18;i++){wheel(-240); await nf();} await settle(4800);
+const w2=J.p;
+// ...and the notch reader, who must reach the end-hold rather than wrap.
+await rest(LAST);
+for(let i=0;i<6;i++){wheel(120); await settle(240);} await settle(1400);
+out.push(`R5 loop: fling past last -> ${w1.toFixed(6)} (want ${FIRST.toFixed(6)}) | `
+  +`fling before first -> ${w2.toFixed(6)} (want ${LAST.toFixed(6)}) | `
+  +`notches past last -> ${J.p.toFixed(4)} (want 1.0000, the end-hold)`);
 
 // R6 every anchor reachable, 0 -> 1 -> 0, and nothing parks between rests.
 // The anchor list is READ FROM THE ROUTE (it used to be the literal
 // [0,0.26,0.49,0.725,0.925,1], which went stale when the Connect rest moved to
 // 0.5230 and the Final rest to 0.97 — so this gate had been reporting the two
 // CURRENT rests as "off-anchor stops" ever since).
+// The ride is now a LAP: forward from the first rest it visits every anchor and
+// WRAPS home, and backward it does the same in reverse. The break is therefore
+// "arrived back where we started", not "hit p = 1" (2026-08-12, the loop).
 const RESTS=[...REST_STOPS,1];
 await rest(0); const seen=[];
 for(let leg=0;leg<12;leg++){
   for(let i=0;i<10;i++){wheel(110); await nf();}
   for(let i=0;i<300;i++){await nf(); if(!S.resolving&&Math.abs(S.rate)<1e-6)break;}
-  seen.push(+J.p.toFixed(4)); if(J.p>=1)break;
+  // ...and a beat between legs, because a reader takes one. Without it the
+  // next leg's first delta lands inside SNAP_ENGAGE_MS of the last one and is
+  // the SAME gesture by the model's own definition — which the WRAP exposes:
+  // it completes in a frame at the p level (the 4 s camera blend is not the
+  // scroll model's business), so the settle test above returns at once and the
+  // legs run together. Every other leg happened to hide this behind a
+  // multi-second transition.
+  await settle(240);
+  seen.push(+J.p.toFixed(4)); if(seen.length>1&&J.p<=0)break;
 }
 const back=[];
 for(let leg=0;leg<12;leg++){
   for(let i=0;i<10;i++){wheel(-110); await nf();}
   for(let i=0;i<300;i++){await nf(); if(!S.resolving&&Math.abs(S.rate)<1e-6)break;}
-  back.push(+J.p.toFixed(4)); if(J.p<=0)break;
+  await settle(240);
+  back.push(+J.p.toFixed(4)); if(back.length>1&&J.p<=0)break;
 }
 const bad=[...seen,...back].filter(x=>!RESTS.some(r=>Math.abs(r-x)<1e-3));
 out.push(`R6 ride up ${seen.join(' ')} | down ${back.join(' ')} | off-anchor stops: ${bad.length?bad.join(','):'none'}`);

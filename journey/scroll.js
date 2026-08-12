@@ -157,7 +157,7 @@ function targetOwnsKey(e) {
   return false;
 }
 
-export function createScrollModel({ onIntent = null } = {}) {
+export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   let lens = [];        // px allocated per chapter (snap band, lengthAtP)
   let segLens = [];     // px allocated per route SEGMENT — the spline's knots
   let edges = [];       // cumulative px at each chapter boundary
@@ -438,7 +438,6 @@ export function createScrollModel({ onIntent = null } = {}) {
     gapEma = gapEma ? gapEma + (gapMs - gapEma) * 0.35 : (gCount ? gapMs : 0);
     gCount++;
     lastInput = now;
-    const vBefore = v;
     v = Math.max(0, Math.min(total, v + dpx));
     if (dpx) {
       const dir = dpx > 0 ? 1 : -1;
@@ -474,7 +473,16 @@ export function createScrollModel({ onIntent = null } = {}) {
          high reading is indistinguishable from a hard fling. */
       if (gCount > 1 && gapMs > 0) {
         const gs = Math.min(gapMs, SNAP_ENGAGE_MS) / 1000;
-        const inst = (v - vBefore) / gs;
+        /* THE RAW DELTA, NOT THE APPLIED ONE (2026-08-12, the loop). This read
+           the APPLIED delta — clamped at v = 0 and v = total — so that leaning
+           on a dead edge measured zero. With the route closed into a loop
+           those two positions are the only places the clamp ever bites, and
+           they are no longer dead: they are where the wrap happens. Measuring
+           the applied delta there would make the wrap the one transition the
+           visitor could never build enough gesture for, which is the opposite
+           of the threshold parity it is supposed to have. Everywhere else on
+           the route the two numbers are the same number. */
+        const inst = dpx / gs;
         inRate += (inst - inRate) * Math.min(1, gs * SMOOTH_K);
         if (inRate * dir > gPeak * dir) gPeak = inRate;
       }
@@ -813,6 +821,69 @@ export function createScrollModel({ onIntent = null } = {}) {
        gPeak, is measured in push() — on the input clock, from the deltas.) */
     if (NOSNAP) intent = null;
     else {
+      /* THE ROUTE IS A LOOP (2026-08-12, Hannah: "scrolling up from the first
+         section wraps to the last; scrolling down from the last wraps to the
+         first"). It is resolved HERE, in the model's own resolution step,
+         rather than bolted on as an edge handler — that is what makes the
+         wrap trigger on the same gesture threshold as any section change,
+         with no edge resistance and no second scroll. Past the last rest going
+         forward, or at the first going back, the thing the gesture resolves to
+         is simply the anchor on the other side of the seam.
+
+         THE LAST *REST*, not the terminal anchor. p 0.97..1.0 is the authored
+         end-hold and it is a HELD FRAME — measured, the camera pose at p 1 is
+         identical to the pose at p 0.97 in position, target and fov; only the
+         fog moves, 14.3/60.9 -> 15/62. Requiring a gesture to cross it before
+         the wrap could fire would spend a whole scroll on a move with nothing
+         on screen to show for it, which is exactly the "second scroll at the
+         edge" the brief rules out. The end-hold keeps its anchor for scrub,
+         ?p= and Home/End; it is simply no longer something a FLICK stops at.
+
+         The threshold is the span's own, by the same rule every other
+         resolution uses: the road immediately beyond the rest being left —
+         [0.97, 1] going forward (363 px/s) and [0, 0.26] going back (485
+         px/s). So the gesture that used to carry Final -> end-hold is exactly
+         the gesture that now wraps, and nothing got harder. */
+      const lastRest = ANCHORS[ANCHORS.length - 1];
+      const term = RESOLVE_P[RESOLVE_P.length - 1];
+      if (onWrap && answeredP === null && lastDir !== 0) {
+        const fwd = lastDir > 0 && p >= lastRest - SNAP_DEAD_P;
+        const back = lastDir < 0 && p <= ANCHORS[0] + SNAP_DEAD_P;
+        /* A resolution already heading for the END-HOLD does not block the
+           wrap, and that exception is load-bearing. The end-hold is 545 px
+           wide, so COMMIT_THRESHOLD of it is 191 px: a hard flick carries the
+           displayed position across that in three frames, while the stream
+           test cannot qualify until it has seen COMMIT_STREAM_MIN = 4 deltas.
+           The position rule therefore latched first and the HARDER the flick
+           the more reliably it did — measured, 110 px/frame wrapped and
+           240 px/frame stopped dead on the held frame. Nothing else is let
+           through: a gesture that is not a stream still cannot wrap, so the
+           notch reader keeps the end-hold exactly as before. */
+        const free = !intent || (fwd && intent.target === term);
+        if ((fwd || back) && free) {
+          const [lo, hi] = fwd ? [lastRest, term] : [RESOLVE_P[0], RESOLVE_P[1]];
+          if (carrying(spanSlope(lo, hi))) {
+            const dir = lastDir;
+            intent = null;
+            // The jump places the surface at the destination (setProgress ->
+            // newGesture), so the wall has to be re-stated AFTER it: one
+            // gesture buys one section change, and a wrap is a section change.
+            onWrap(dir);
+            gPeak = 0;
+            // ...and the gesture is still the same gesture, still going the
+            // same way. setProgress() clears lastDir because a PLACEMENT
+            // carries no motion — true of a deep link, false of a wrap, which
+            // is a placement performed in the middle of a live gesture. Left
+            // at 0 the visitor's very next delta reads as a direction change,
+            // mints a fresh gesture, and releases the wall the line below just
+            // set: measured, one flick wrapped 0 -> 0.97 and then carried
+            // straight on to the Owned rest.
+            lastDir = dir;
+            answeredP = p; answeredDir = dir;
+            return clamp01(p);
+          }
+        }
+      }
       // A gesture that carries p out of the latched span has outgrown this
       // resolution: re-decide from where it now is, so a long scroll crosses
       // as many transitions as it earns.
