@@ -1732,3 +1732,231 @@ can only be an occluder.
 - The **hero ground group's orange wedge** at p 0.685–0.692 (see
   20-owned-root-network.md) is unrelated to this leg but is the other place
   Hannah's "the edges are kind of visible" still applies.
+
+---
+
+## 2026-08-12 — Owned → Final: it was never the camera. The leg straddles a 7x step in scroll density
+
+Hannah, on the Owned rest → Final rest leg: *"Smooth the 'Owned by the
+ecosystem' → final section transition. The move currently reads as two motions,
+or one motion with two speeds. It feels jilted rather than continuous…
+Investigate first rather than assuming a cause… The goal is that it reads as
+one continuous motion."*
+
+She asked for the diagnosis before the fix, and the diagnosis inverted the
+obvious suspect: **the camera path is already one gesture. The scroll→progress
+mapping is what breaks it into two.**
+
+### The camera, cleared first
+
+Measured live off `director.poseAt` (drift-aware, both aspects, 20,001 samples
+across p 0.725–0.970). Two metrics were tried and one of them lied, which is
+worth recording because it nearly sent this pass at the wrong target:
+
+- A **fixed-depth** optical-flow probe (rays at 3 / 8 / 20 units) reports a
+  violent second surge — at 8 units the flow runs 14.10 at p 0.763, collapses
+  2.1x to 6.63 at p 0.803, then *re-accelerates 2.8x* to 18.41 at p 0.859.
+  That reads exactly like the `0701653` two-envelope fault.
+- It is an **artifact**. The scene's depth scale is not fixed across this leg:
+  subject distance runs 3.20 → 12.69, a 4x change, as the camera leaves a root
+  network at arm's length and surfaces onto a field at 12+ units. Holding the
+  probe depth still while the content's depth quadruples manufactures a surge
+  that nothing on screen has.
+
+Measured against **its own subject distance**, the camera is one envelope:
+
+| channel | crest | after the crest |
+|---|---|---|
+| gaze rotation | 34.18 at **p 0.7888** | monotone decay to 0 |
+| parallax (v⊥/dist) | 54.24 at **p 0.7953** | monotone decay to 0 |
+| combined density | 88.3 at **p 0.792** | monotone decay to 0 |
+
+The two channels crest 0.0065 of p apart — they are the *same* gesture, not a
+swing followed by a zoom. The only blemish is a **−16 % density dip at
+p 0.752** (75.3 → 63.4 → 88.3), which is the `withdraw` key's own position-speed
+trough: its Catmull-Rom tangent is 66.8 u/p against neighbouring segment means
+of 70.8 and 78.6, so speed reads 95 → 66.8 → 94.5. Real, small, and left alone —
+see Residuals.
+
+Per-channel audit over the leg, 20,001 samples, both aspects — all unchanged by
+this pass, since nothing here touches a camera file:
+
+| | landscape | portrait |
+|---|---|---|
+| max yaw rate | 1064 °/unit-p | 1048 |
+| yaw sign flips | **0** | **0** |
+| yaw total | −141.2° | −139.7° |
+| max pitch rate | 159 | 110 |
+| max fov rate | 122.5 | 111.6 |
+| roll | **0** | **0** |
+| negative crown-distance steps | **0** | **0** |
+| negative height steps | **0** | **0** |
+| positive x steps | **0** | **0** |
+
+### The scroll, which is the actual fault
+
+`journey/scroll.js` builds a monotone PCHIP through `route.js` `SEGMENTS`. The
+replica used for this pass was validated against the live `pAt` first: **worst
+absolute error 0 across all 13,392 px** — bit-exact, not approximate.
+
+| segment | p range | vh | mean gain (milli-p per vh) |
+|---|---|---|---|
+| owned | 0.60 → 0.85 | 5.0 | **50.00** |
+| final seg 0 (the arrival) | 0.85 → 0.97 | 17.0 | **7.06** |
+
+A **7.08x step in allocation density**, and it sits in the *middle* of one
+continuous camera move. Worse, `final`'s `shape` (`k0 = 2.219`) pins the knot
+they share at p 0.85 to 2.219 × the *arrival's* mean = **15.66** mp/vh — which
+is only **0.31x of Owned's own mean**. scroll.js writes `km` at both knots of a
+shaped segment in segment order, so the arrival's opening tangent *dictates
+Owned's closing tangent*. Owned had no choice but to spend its progress early
+and collapse into the join: gain **62.2 mp/vh at the rest → 15.7 at p 0.85**.
+
+The consequence, stated without any flow model at all — the p reached at each of
+15 **equal 421 px scroll steps** across the leg:
+
+```
+before  0.725  0.8009  0.8483  0.8679  0.8849  0.8996  0.9122  0.9230 …
+```
+
+The first step alone covers **31 % of the leg's p**; two steps of fifteen reach
+p 0.848, and the remaining thirteen share what is left. On-screen motion per
+pixel of scroll spiked to **13.95 and fell to 2.45 inside the first 15 % of the
+road** — peak-over-plateau **12.6**. Half the leg's visible motion was delivered
+in the first **7.1 %** of its scroll, 90 % in the first 26.5 %.
+
+**Which cause dominates, in one line:** the gain varies **19.9x** across the leg
+(62.2 → 3.13 mp/vh) while the camera's own motion density varies about **1.5x**
+and is single-humped. The scroll is not a contributing factor, it is the fault.
+
+The frame strip confirmed it: shot at equal scroll steps, frame 0 → 1 threw away
+the entire Owned composition (root crown at top centre → deep in the network),
+and frames 2 → 3 went from buried at the soil line to fully surfaced with the
+hero organism revealed — **the whole surfacing inside one scroll step of
+fifteen**, with the remaining 73 % of the road spent on the field kindling.
+
+### What shipped — one entry in `route.js`, no geometry
+
+```js
+{ id: 'owned', span: 25, nav: 'Owned', scrollVh: 9.27,
+  segVh: [2.27, 7.00], shape: { seg: 1, k: [1.6, 0.877] } },
+```
+
+- **seg 0 (p 0.60–0.725)** declared at the **2.27 vh the shipped spline was
+  already inferring**, so `86883b9`'s Connect → Owned dive still measures
+  **5.12 vh** end to end, keeps its 23.3 mp/vh gain at the Connect rest, and
+  gains no trough (jilt 1.000 before and after).
+- **seg 1 (p 0.725–0.85)** 2.73 → **7.00 vh**. Its mean becomes 17.86 mp/vh
+  against the 15.66 it must hand over — a **level handoff instead of a 3.2x
+  cliff**.
+- **`k0 = 1.6`** holds the departure tangent at 28.6 mp/vh: low enough that the
+  leg stops front-loading, high enough that the withdraw-key dip stays masked.
+  This is a real trade-off and it was swept — `k0 ≤ 1.2` flattens the
+  distribution further but *un-masks* the p 0.752 camera dip, pushing the
+  stall-then-surge back up to 1.24–1.70.
+- **`k1 = 0.877`** is 15.66 / 17.86 — it asks for precisely the value the
+  arrival's own `k0` already pins at that shared knot. The declarations agree by
+  design; the arrival's wins by loop order. (Verified inert: changing it moves
+  nothing.)
+
+### Results
+
+| | before | after |
+|---|---|---|
+| peak-over-plateau (motion per px) | **12.6** | **1.89** |
+| worst stall-then-surge on the leg | **1.230** (at p 0.7509) | **1.038** |
+| scroll fraction carrying 50 % of the motion | 7.1 % | **16.2 %** |
+| scroll fraction carrying 90 % | 26.5 % | **39.6 %** |
+| gain at the Owned rest | 62.2 mp/vh | 28.6 |
+| leg length | 19.73 vh | 24.00 vh |
+| page | 41.85 vh | **46.12 vh** (+4.27) |
+
+Equal-scroll steps, after — the surfacing now takes four steps where it took two:
+
+```
+after   0.725  0.7644  0.7940  0.8181  0.8409  0.8649  0.8857  0.9031 …
+```
+
+**Ridden, at the visitor's own frame rate** (constant wheel rate, on-screen
+motion per *frame*, 12 buckets across the leg, milli-NDC):
+
+```
+deliberate (30 px/frame)
+  before  325 181  67  36  15  8.9 6.5 4.2 2.6 1.5 0.8 0.35   peak/mid 49.9
+  after   117 130 103  78  58  27  9.6 6.1 3.8 2.0 1.0 0.40   peak/mid 13.5
+
+brisk (110 px/frame)
+  before  439 612 564 376 214  70  32  19  11  8.1 6.3 2.0    peak/mid 19.0
+  after   228 351 437 340 251 209  83  31  16 10  5.0 3.1     peak/mid  5.3
+```
+
+Before, at a deliberate speed the move **starts at maximum and collapses 22x
+inside the first quarter of the leg** — a lurch, then five seconds of near
+stillness. After, it eases *up* to its peak in the second bucket and decays
+smoothly from there. Both speeds are strictly single-peaked with a monotone
+decay and zero re-acceleration. It reads as one move that starts, carries, and
+settles — which is what was asked for.
+
+### The arrival is untouched — checked, not asserted
+
+The Final arrival's gain curve **as a function of distance into the segment is
+bit-identical**: worst |Δp| **3.3e-16** across its whole 17.0 vh. Its length,
+mean slope and both `k` values are unchanged, so `6282080`'s 1.99x survives by
+construction. Re-measured anyway, on the live pull curve:
+
+- whole kindle progression (pull 0 → `PULL_MAX`): **17.081 → 17.083 vh, ratio
+  1.0001**;
+- per-body charge-and-take windows: **ratio exactly 1.0000** at every threshold
+  ≥ 0.08. Only the single earliest opener (threshold 0, whose window starts at
+  p 0.8486, just inside the re-allocated segment) reads 1.0088 — **+0.9 %, in
+  the slower direction**. Spread 0.88 %.
+
+### Gates
+
+- `python3 tools/capture.py --check` — **PASS, exit 0**, worst MAE 0.03/255
+  (warn 0.50, fail 1.00). The 0.03 on `owned` is **deterministic and
+  pre-existing**: HEAD reads the same 0.03 against the stored goldens. This pass
+  contributes zero — no golden moves, because no p-value, camera key or piece of
+  geometry moves.
+- **Camera mirroring bit-exact**: `poseAt` evaluated ascending vs descending
+  across the leg, 28,007 samples per aspect, **0 non-bit-identical values,
+  worst delta exactly 0**, both aspects.
+- **State mirroring**: placed at identical p from below and from above, 6 of 8
+  checkpoints (0.80–0.95, covering the whole surfacing and arrival) are
+  **exactly 0** on pose, fov, fog, radius, copy and armed. The two near the rest
+  differ only by a ~3e-4 sub-rounding placement drift, not hysteresis.
+- **Scroll gates, resolution live**: E2 1.0143 / E3 1.0250; R1 out-and-back
+  0.260000 from 0.259993; R2 control back in one frame; R4 hard flick
+  **overshoot 0.00e+0**; R5 fling to end 1.000000; **R6 full 0→1→0 visits every
+  anchor (0.26, 0.523, 0.725, 0.97, 1) with off-anchor stops: none.**
+- **Scroll gates, `?nosnap=1`**: E1 out-and-back surface delta **0.00e+0**, E2
+  and E3 ratios **1.0000** exactly, N1 parks at 0.3600 with `commitP` null.
+- **Deep-scrub parking improved.** The Owned rest's magnet band shrinks from
+  ~0.093 to ~0.060 of p, because the band is `SNAP_BAND × segment px` and the
+  segment now buys more px per unit p. On HEAD, p 0.74/0.76/0.78/**0.80** are
+  all swallowed to 0.725; after, only 0.74/0.76 are, and 0.78/0.80/0.84/0.88
+  park **exactly**.
+- **Console clean** over a full 0 → 1 → 0 ride driven by real wheel events —
+  zero errors, zero warnings, zero unhandled rejections.
+- No roll anywhere (exactly 0, both aspects); all rates far under the ~1.2k
+  °/unit-p ceiling.
+
+### Residuals
+
+- **The withdraw-key speed dip, p 0.752** (−16 % in motion density; position
+  speed 95 → 66.8 → 94.5 u/p). It is a genuine camera fault and it is *why*
+  `k0` could not go lower than ~1.5. It was **not** chased: the dip is set by
+  the `withdraw` key's Catmull-Rom tangent, its position keys sit inside
+  `owned/leg.js`'s sampled window (`LEG_P0` 0.660 – `LEG_P1` 0.872), and any
+  move there regrows the colony and forces a re-shoot of `owned@*` — a content
+  change out of all proportion to a 3.8 % residual wobble that the shipped `k0`
+  already masks. If it is ever taken on, note that **gaze and fov keys after the
+  rest are free**: every consumer of `buildLeg`'s `frameAt` reads only
+  `restFrame` at the frozen p 0.725, so only `pos` is placement-bearing.
+- **The leg's second half is still the quieter one**, and deliberately so: the
+  Final arrival is a near-still camera over a slow kindling field, paced at
+  Hannah's repeated request. This pass balanced the *camera's* motion across the
+  road; it did not, and should not, flatten the arrival.
+- Owned seg 0's internal distribution shifts slightly (its `f50` 0.864 → 0.826)
+  because `km` at p 0.725 drops from 62.2 to 28.6 mp/vh. The dive's total,
+  its gain at the Connect rest, and its jilt (1.000) are all unchanged.

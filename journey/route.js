@@ -53,6 +53,18 @@
 // re-acceleration), and the ladder stretched 1.48x at the openers against
 // 2.39x at the closers. With the shape pinned, the per-body spread across
 // all 72 bodies is 0.2% (18-one-species.md §17).
+//
+// A PINNED KNOT IS SHARED WITH THE SEGMENT BEFORE IT, and that is the whole
+// story of the 2026-08-12 pass below. scroll.js applies these overrides in
+// segment order, writing km at BOTH of a shaped segment's knots, so where two
+// adjacent segments both declare `k`, the LATER one wins at the knot they
+// share. Pinning a segment's opening tangent therefore dictates the CLOSING
+// tangent of its neighbour — and if that neighbour's own mean slope is far
+// away from the pinned value, the neighbour has to spend its progress early
+// and collapse into the join. That is a scroll-side fault that no amount of
+// camera work can reach: a geometrically smooth path over a stepped gain
+// still reads as two speeds. Declare the incoming segment's allocation so its
+// mean slope lands NEAR the pin, and the join stops being a cliff.
 
 export const DEFAULT_STOP = 0.5;      // mid-chapter rest (was REST_POSE)
 
@@ -106,7 +118,69 @@ export const ROUTE = [
   //   against its shipped 5.15 — 0.993x, i.e. unchanged.
   { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 10.15,
     segVh: [7.30, 2.85] },
-  { id: 'owned',   span: 25, nav: 'Owned',   scrollVh: 5.0 },
+  // scrollVh 5.0 -> 9.27, declared as segVh [2.27, 7.00] with the POST-REST
+  // sub-segment's shape pinned (2026-08-12, Hannah: "the move currently reads
+  // as two motions, or one motion with two speeds. It feels jilted rather than
+  // continuous"). The leg she means is the Owned rest (p 0.725) to the Final
+  // rest (p 0.97), and the fault was NOT in the camera.
+  //
+  // WHAT WAS MEASURED (17-final-field.md 2026-08-12; live traces, both
+  // aspects, the scroll spline replicated bit-exactly — worst |Δp| 0 over all
+  // 13,392 px). Against its own subject distance the camera path is already
+  // ONE envelope: rotation crests at p 0.7888, parallax at p 0.7953, and the
+  // combined density crests 88.3 at p 0.792 and decays monotonically to zero
+  // at the rest. The scroll did the damage:
+  //
+  //   · this chapter ran at a mean 50.0 milli-p per vh while the Final
+  //     arrival next door runs at 7.06 — a 7.08x step in allocation density,
+  //     sitting in the MIDDLE of one continuous camera move;
+  //   · `shape` on that arrival pins their shared knot at p 0.85 to 2.219x
+  //     the ARRIVAL's mean, i.e. 15.66 mp/vh — only 0.31x of THIS chapter's
+  //     own mean. So Owned had to dump its progress early and collapse into
+  //     the join: gain 62.2 mp/vh at the rest, 15.7 at p 0.85.
+  //
+  // The visitor felt exactly that. In 15 equal scroll steps across the leg,
+  // the FIRST step covered p 0.725 -> 0.8009 (31% of the leg) and the second
+  // reached 0.8483 — the whole underground swing and the surfacing were spent
+  // in 2 steps of 15, and the remaining 13 shared what was left. On-screen
+  // motion per pixel of scroll spiked to 13.95 and fell to 2.45 within the
+  // first 15% of the road: peak-over-plateau 12.6, i.e. two speeds.
+  //
+  // THE FIX IS ROAD, NOT GEOMETRY. Nothing in the camera, the reveal or the
+  // arrival moves. The chapter simply stops spending its whole allocation
+  // before the join:
+  //   · seg 0 (p 0.60..0.725, the tail of the Connect -> Owned dive) is
+  //     declared at 2.27 vh — the 2.27 the shipped spline was already giving
+  //     it, so 86883b9's one arc still measures 5.12 vh end to end, its gain
+  //     at the Connect rest is the same 23.3, and it gains no trough;
+  //   · seg 1 (p 0.725..0.85, the swing Hannah is watching) 2.73 -> 7.00 vh,
+  //     which puts its mean at 17.86 mp/vh against the 15.66 it must hand over
+  //     at p 0.85 — a level handoff instead of a 3.2x cliff;
+  //   · `shape` k0 = 1.6 holds the departure tangent at 28.6 mp/vh. Low enough
+  //     that the leg no longer front-loads, high enough that the camera's own
+  //     -16% speed dip at the withdraw key (p 0.750) stays masked rather than
+  //     surfacing as a hitch — see the residual in 17-final-field.md. k1 =
+  //     0.877 is 15.66/17.86, i.e. it ASKS for precisely the value the
+  //     arrival's own k0 already pins at that shared knot; the two
+  //     declarations agree by design, and the arrival's wins by loop order.
+  //
+  // Measured after: on-screen motion per pixel goes 0.21 -> 4.64 -> 4.47 ->
+  // 4.18 -> 3.12 -> 2.70 -> 2.46 -> 1.82 -> 1.38 -> 0.76 -> ... -> 0. One
+  // rise, one broad crest, one monotone decay — peak-over-plateau 12.6 -> 1.89
+  // and the worst stall-then-surge anywhere on the leg 1.230 -> 1.038. The 15
+  // equal scroll steps now read 0.725 / 0.7644 / 0.794 / 0.8181 / 0.8409 /
+  // 0.8649 / 0.8857 / ... — the surfacing takes four steps where it took two.
+  //
+  // THE ARRIVAL IS UNTOUCHED, and that is checked rather than asserted: the
+  // Final arrival's gain curve as a function of distance INTO the segment is
+  // bit-identical before and after (worst |Δp| 3.3e-16 over its whole 17.0
+  // vh), because its length, its mean slope and both its k values are
+  // unchanged. 6282080's 1.99x survives by construction, not by measurement.
+  // No p-value, span, stop, camera key, ladder rung or golden moves — only
+  // wheel distance, which nothing in portrait.js or owned/leg.js reads.
+  // Page 41.85 -> 46.12 vh, +4.27.
+  { id: 'owned',   span: 25, nav: 'Owned',   scrollVh: 9.27,
+    segVh: [2.27, 7.00], shape: { seg: 1, k: [1.6, 0.877] } },
   // The epilogue is not a sixth peer chapter: it keeps a route (#/final) but
   // no nav entry — the LAST nav'd chapter stays highlighted through it (v6).
   //
