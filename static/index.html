@@ -174,9 +174,13 @@
      same day: an isometric wireframe B, supplied as amber line art, applied
      here as a MASK and painted with currentColor rather than dropped in as an
      <img>. The long version of why is in hero.css; the short version is that
-     the mark has to be able to LIFT — parchment at rest, --gold-bright when
-     lit, exactly like the Discord outline it faces — and a baked amber raster
-     is already lit and has nowhere to go. Masking on the alpha channel also
+     the mark has to be able to LIFT, and a baked amber raster is already lit
+     and has nowhere to go. What it lifts FROM changed 2026-08-12 (Hannah:
+     gold is the logo's resting colour now) — #e6bd6e at rest, deepening to
+     #e0a838 when lit, the two tones chosen in the live row and mirrored here
+     so the tiers do not drift. The Discord outline it faces still rests in
+     parchment; hero.css carries the note on what that does to the pair.
+     Masking on the alpha channel also
      means the shipped rasters are grayscale+alpha at 3-10 kB rather than the
      28-155 kB colour cutouts, which matters more here than anywhere: this is
      the tier that has to render with no JS and no WebGL.
@@ -190,7 +194,7 @@
     align-items: center;
     position: relative;
     min-height: 44px;
-    color: rgba(242, 237, 225, 0.82);
+    color: #e6bd6e;
     text-decoration: none;
     transition: color 0.25s, filter 0.25s;
   }
@@ -218,7 +222,7 @@
       url("../assets/brand/mark-b-mask-96.png") 3x);
   }
   .logo:is(:hover, :focus-visible) {
-    color: var(--gold-bright);
+    color: #e0a838;
     filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.55));
   }
   /* the ring hangs on the INK, not the box — the box is 44px tall to carry the
