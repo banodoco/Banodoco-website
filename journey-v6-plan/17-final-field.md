@@ -1960,3 +1960,265 @@ construction. Re-measured anyway, on the live pull curve:
 - Owned seg 0's internal distribution shifts slightly (its `f50` 0.864 → 0.826)
   because `km` at p 0.725 drops from 62.2 to 28.6 mp/vh. The dive's total,
   its gain at the Connect rest, and its jilt (1.000) are all unchanged.
+
+## 2026-08-12 — §18: the ring stops short of the left edge, and it is an angle, not a width
+
+Hannah: *"On the final section at large viewport widths, the ring terminates
+short of the left edge and leaves dead space that reads as an accidental crop.
+Extend the ring so it continues to and bleeds past the left edge. Target and
+test at MacBook Pro logical widths, 1512px and 1728px, and apply from roughly
+1440px upwards. Left side only, unless the result looks lopsided, in which case
+match on the right."*
+
+### The measured cause is not width — it is aspect, and that is why she sees it
+
+Everything in this chapter is composed in the REST FRAME as an offset `rel`
+from `REST_CAM.head`. The frame's own left edge sits at a `rel` that depends
+only on the ASPECT (the vertical fov is fixed at 45.5), so the honest question
+is not "how wide is the window" but "how far around does the frame reach":
+
+| viewport | aspect | left edge at rel | field's left limit | gap |
+|---|---|---|---|---|
+| 1024x768 | 1.333 | -0.500 | -0.58 | **bleeds** |
+| 1440x900 | 1.600 | -0.591 | -0.58 | 8 px |
+| 1512x982 | 1.539 | -0.573 | -0.58 | bleeds |
+| 1728x1117 | 1.547 | -0.576 | -0.58 | bleeds |
+| **1512x860** | **1.758** | **-0.645** | -0.58 | **~100 px** |
+| **1728x980** | **1.763** | **-0.647** | -0.58 | **~110 px** |
+
+The field's left arm has always been `rel = -0.03 - fr()^0.9 * 0.55`, i.e. it
+stops dead at **-0.58**, and the hint rung at -0.50. At the review size the
+edge sits at -0.591 and that limit lands 8 px outside the frame, so the band
+reads as running off it. Give the window a real browser's aspect — a 14" or
+16" MacBook Pro at 1512 or 1728 logical px is ~1.76 once the browser chrome
+comes out of the height — and the same -0.58 lands a hundred pixels INSIDE the
+frame, with the last body standing whole and a hard-edged empty column beside
+it. That is the accidental crop, and it is why it is visible on her machine
+and not in the golden.
+
+Note the two tall MacBook aspects (1512x982, 1728x1117 — the full logical
+panel, no browser chrome) do NOT show it. The problem needs both a MacBook
+width and a browser's height, which is exactly the case she is looking at.
+
+Measured on the frame itself — lit-pixel density in the body band (y 30-58% of
+frame, threshold 55/255) over the outer 120 px of each side, and the first
+column from each edge carrying sustained content:
+
+| | left 120 px | right 120 px | left/right | first lit column from left |
+|---|---|---|---|---|
+| 1024x768 | 0.639 | 0.556 | 115% | 0 |
+| 1440x900 | 0.293 | 0.493 | 59% | 0 |
+| 1512x860 | 0.245 | 0.496 | 49% | **17 px** |
+| 1728x980 | 0.178 | 0.425 | **42%** | **25 px** |
+
+The right edge has never had the problem, and for a structural reason: three
+ring members sit at rel +0.67 / +0.80 / +0.86 (screen x 1787 / 2050 / 2173 at
+1728x980), so the right bleeds past the edge at every aspect there is.
+
+### Why the RING itself cannot be extended
+
+The frame-left arc is the az 279 -> 327 sector. Further left along the arc is
+az < 279 — which is exactly the az ~140-275 sector `world.js` deliberately
+leaves empty because **the cutaway slices through the ring there**. Those
+bodies are not missing; they are below the soil-line by authorship, and the
+whole lower-left wedge is built from the cut face that exposes them. Putting
+fruiting bodies back on that arc would contradict the chapter's own section
+drawing. `cutVal` at az 265, r 8.3 is -5.06: there is no soil there at all.
+
+So the continuation has to come from the FIELD, which is already what occupies
+the band between the last ring body (screen x 365 at 1728x980) and the edge.
+
+### And the cutaway sizes the band — this reach is not a taste value
+
+`cutVal` over the left wedge at the rest, by (rel, distance). Placeable soil
+is >= 0.4:
+
+| rel | soil begins at dist |
+|---|---|
+| -0.55 | 18 |
+| -0.60 | 22 |
+| -0.65 | 26 |
+| -0.70 | 26 (and 42+) |
+| -0.75 | 46 only |
+| -0.80 | **none at any distance** |
+
+There is no ground to stand on past about **rel -0.72**. So the band is
+rel [-0.72, -0.55] and that is every metre of kept soil on that side. It
+happens to be enough: the frame edge is at -0.647 at both target widths, so
+bodies from -0.65 outward land at screen x 0 and beyond — the shipped band now
+runs out to **screen x -119** — and it overlaps the existing field's own -0.58
+limit so the two read as one population with no seam.
+
+The near-left (dist < 22) is doubly unavailable: it is where the cut face is,
+and it is where the COPY BLOCK sits. Which is why the field was authored to
+start deeper on that side in the first place ("field bodies on that side start
+deeper so they sit clearly behind it").
+
+### What shipped
+
+A LEFT EXTENSION block in `ring.js`, after the hint rung, inside the field's
+own scope:
+
+- **16 bodies**, rel `-0.55 - xr()^0.85 * 0.17` (-0.72..-0.55), dist
+  `CLONE_DIST + xr()^1.70 * 15` (24..39, near-weighted), pruned by the same
+  `cutVal >= 0.4`, the same 9.6-unit ring moat and the same 1.15-unit spacing
+  against `placed` that the field already uses.
+- **6 far hints** on the same band, because the hint rung stopped at -0.50 and
+  the far haze had the same edge the bodies did.
+
+**Tier.** Every one lands at dist >= `CLONE_DIST` by construction — the cut
+leaves no soil nearer than 22 on this side and the band starts at 24 — so they
+are all T4 under the field's own `dist < CLONE_DIST ? 3 : 4` rule, which IS
+the right rung for their distance. Nothing was added to the T3 clone rung or
+to its fifteen-slot `FIELD_LADDER`; both are untouched, and the clone count is
+unchanged at 24.
+
+**Arrival.** They join the T4 weather-tail: thresholds spread by depth rank
+across the same `[REV_KNEE 0.72, REV_HI 0.94]` the existing far band uses, so
+they interleave with it rather than arriving as a block. Measured on the
+built scene (25 bodies at rel <= -0.549, which is the extension plus the three
+pre-existing bodies in the overlap):
+
+| p | 0.80 (arm) | 0.85 | 0.89 | 0.91 | 0.925 | 0.94 | 0.95 | **0.960** | 0.97 (rest) |
+|---|---|---|---|---|---|---|---|---|---|
+| uPull | 0 | 0.019 | 0.536 | 0.759 | 0.886 | 1.003 | 1.064 | 1.105 | 1.120 |
+| bodies fully dark | **25** | **25** | **25** | 21 | 5 | 0 | 0 | 0 | 0 |
+| bodies fully lit | 0 | 0 | 0 | 0 | 1 | 17 | 21 | **25** | **25** |
+
+Dark at the arm and for the whole first half of the leg, arriving one band at
+a time from p 0.91, and **every body fully arrived by p 0.960 — a tenth of the
+leg before the rest.** Reveal range 0.7226..0.9362, inside REV_HI, so the last
+one finishes its light at ~1.10 against `PULL_MAX` 1.12. Retraction on a
+reverse scrub is free: `aReveal` is read against the camera-pure `uPull`.
+
+**Canopy.** They go through `placeMushroom`, so they land in `seats` and
+`canopy.js` makes them nodes of the one graph like every other body — no body
+in this chapter has roots of its own and these do not either. Node count
+169 -> 191, edges 413 -> 456.
+
+**The stream is its own.** A fresh `makeRng(0x1EF7ED6E)`, and the block runs
+after every existing draw, so not one shipped body moves, changes size,
+changes shape or changes threshold. `placed` is deliberately shared so the
+extension keeps its spacing from the bodies already there.
+
+### Width-conditional? No — always present, never gated
+
+The scene is one 3D world and these bodies are built at boot like every other
+body; at narrow aspects they are simply outside the frustum. Gating them on
+viewport width was considered and rejected, for reasons that are structural
+rather than stylistic:
+
+- `canopy.js` lays a minimum spanning tree over EVERY body in the chapter, so
+  a body that existed only above 1440px would rewire strands that are visible
+  below it. The graph cannot be a function of the window.
+- The arrival ladder's slots are authored constants against a fixed
+  population; a width-dependent body count makes them width-dependent.
+- The reveal is camera-pure by law. It must not become window-pure.
+- The Final goldens would become width-dependent, and `capture.py` shoots two
+  sizes.
+- A resize would have to rebuild the whole chapter.
+
+The measurements below show this is also the honest answer empirically: the
+change does exactly nothing at the aspects that never had the problem.
+
+### Result
+
+| viewport | aspect | left-120 density | first lit column from left |
+|---|---|---|---|
+| 1024x768 | 1.333 | 0.639 -> 0.627 | 0 -> 0 |
+| 1440x900 | 1.600 | 0.293 -> **0.309** | 0 -> 0 |
+| 1512x982 | 1.539 | 0.276 -> 0.271 | 0 -> 0 |
+| 1728x1117 | 1.547 | 0.262 -> 0.258 | 0 -> 0 |
+| **1512x860** | 1.758 | 0.245 -> **0.335** (+37%) | **17 -> 0** |
+| **1728x980** | 1.763 | 0.178 -> **0.263** (+48%) | **25 -> 0** |
+
+The dead column is gone at both target widths, the band now runs off the left
+edge (leftmost body at screen x -119), and the aspects that never had the
+problem move by under 2% — which is canopy re-routing, not bodies.
+
+**Left only.** The right already bleeds past the edge at every aspect, so
+there is nothing there to fix; matching it would cost budget for a problem
+that does not exist. The frame is not lopsided after the change — the left is
+still lighter than the right, but that is the authored composition (copy
+bottom-left, field weighted upper-right, and the near-left ground cut away),
+not a crop.
+
+**Rejected:** a first pass at 9 bodies with an even distance spread closed the
+dead column but only lifted the left-120 density to 0.247 at 1728x980; the
+shipped 16 with a near-weighted distance and a slightly higher elder chance
+(0.12 -> 0.20) gets to 0.263 for the same zero draw calls. Also rejected:
+reaching in to dist 20-24 for bigger bodies — that band is the copy block's
+and the cut face's, and a body there would be a T3 clone at 15 draws each.
+
+### Budget, at the Final rest, 1728x980
+
+| | before | after | |
+|---|---|---|---|
+| **draw calls** | **430** | **430** | unchanged — the new bodies merge into the two existing batched draws |
+| geometries | 73 | 73 | |
+| visible drawables | 417 | 417 | |
+| line primitives drawn | 449,177 | 451,908 | **+2,731, +0.61%** |
+| points drawn | 85,425 | 85,535 | +110, +0.13% |
+| triangles | 278,183 | 278,183 | unchanged |
+| batched body segs | 4,322 | 6,840 | the field's own build |
+| glow points | 247 | 335 | |
+| canopy nodes / edges / segs | 169 / 413 / 3,070 | 191 / 456 / 3,283 | |
+| bodies in the chapter | 73 | 95 | |
+| clone bodies | 24 | 24 | **no new clones** |
+| field t3 / t4 / hints | 15 / 28 / 20 | 15 / 44 / 26 | |
+| frame ms p50 | 2.0 | 1.5 - 1.8 | 3 runs |
+| frame ms p90 | 6.3 | 3.5 - 4.9 | 3 runs |
+
+Zero new draw calls is the number that matters: every added body is a species
+build on the T4 / hint rungs, which merge into the same `LineSegments` +
+`Points` pair the whole field already shares.
+
+### Copy clearance
+
+The extension's feet sit at screen y 350-491 against a copy block whose top
+edge is at y 601 (1440x900), 559 (1512x860) and 612 (1728x980). **Zero
+overlaps** at all three, tested against every body's full silhouette (cap top
+to stem foot) with a 40 px margin.
+
+### final@* moved, and so did the canopy behind it
+
+`final@1440x900` MAE 1.41/255 and `final@430x932` 1.78/255 against the old
+goldens; both re-shot in this commit. The mobile portrait moving at all is
+worth naming, because no extension body is anywhere near that frustum: it is
+the CANOPY. `canopy.js` samples its 96 waypoints with a minimum-separation
+test against every node placed so far, bodies included, so 22 new bodies
+change which candidates are rejected and the graph re-lays. An 8x-amplified
+diff is entirely strands and junction glints — no body moved, nothing is
+missing, the graph is still one component rooted at the hero.
+
+That is the canopy doing exactly what it is for. Freezing the old edges would
+mean giving the new bodies a different kind of attachment from everyone
+else's, which is the "sixty small root systems" reading this file's header
+rejects in its first paragraph. One graph over every body, or it is not a
+canopy.
+
+Nothing outside the chapter moved: mission, inspire, connect and owned all
+read MAE 0.00/255.
+
+### Gates
+
+- **`capture.py --check`: PASS**, worst MAE 0.00/255 over all ten goldens
+  after the re-shoot. Before it, exactly the two intended files were in the
+  FAIL band and the other eight read 0.00.
+- **Mirror scrub** Owned rest -> Final rest -> back, 17 matched pairs at
+  1728x980: **0.0000/255 with max channel difference 0 across the whole Final
+  half (p 0.817 -> 0.97)**, which is every frame the extension is in. The
+  1.61 residual at the p 0.725-0.786 head of the leg is the Owned chapter's
+  underground state and measures **1.6144 on the pre-change tree too** —
+  identical to four decimal places, so it is pre-existing and untouched.
+  No self-ignition anywhere.
+- **Arrival**: dark at the arm and through p 0.89, all 25 fully arrived by
+  p 0.960 (table above).
+- **`tools/scrollgates.js`**: E2/E3 1.0000, R1 settles 0.260000, R4 overshoot
+  4.01e-6, R5 end-hold 1.000000, R6 visits every anchor both ways with no
+  off-anchor stops.
+- **Console over a full ride**: 1420 frames of real wheel 0 -> 1 -> 0 plus all
+  five nav jumps: **0 errors, 0 warnings**.
+- **Narrow widths unbroken**: 1024x768 and the 375x812 portrait re-shot and
+  compared — the composition is what it was, and the left edge there still
+  bleeds as it always did.

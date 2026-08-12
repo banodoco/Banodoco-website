@@ -728,6 +728,163 @@ export function createFinalRing(sceneApi, uniforms) {
       }, T_HINT);
       fieldStats.hints++;
     }
+
+    /* ================================================================
+       THE LEFT EXTENSION (2026-08-12, Hannah): "on the final section at
+       large viewport widths, the ring terminates short of the left edge
+       and leaves dead space that reads as an accidental crop. Extend the
+       ring so it continues to and bleeds past the left edge."
+       ================================================================
+       MEASURED CAUSE, and it is an angle, not a width. Everything in this
+       chapter is composed in the REST FRAME as an offset `rel` from
+       REST_CAM.head, and the frame's own left edge sits at a rel that
+       depends only on ASPECT:
+
+         aspect 1.600 (1440x900)   left edge at rel -0.591
+         aspect 1.758 (1512x860)   left edge at rel -0.645
+         aspect 1.763 (1728x980)   left edge at rel -0.647
+
+       The field's left arm has always stopped at `rel = -0.03 - fr()^0.9 *
+       0.55`, i.e. **-0.58**, and the hint rung at -0.50. At 1440x900 that
+       -0.58 lands 8 px inside the edge and the band reads as running off
+       it. Give the window a browser's real aspect — a 14" or 16" MacBook
+       Pro at 1512 or 1728 logical px is ~1.76 once the browser chrome is
+       taken out of the height — and the same -0.58 lands ~100 px INSIDE
+       the frame, with the last body standing whole and a hard-edged
+       hundred-pixel column of nothing to its left. That is Hannah's
+       accidental crop, and it is why she sees it at her widths and not at
+       the review size. The frame-right side has no such limit: three ring
+       members sit at rel +0.67 / +0.80 / +0.86, all of them past the right
+       edge at every aspect, so the right has always bled and only the left
+       has ever stopped.
+
+       WHY THE RING ITSELF CANNOT BE EXTENDED. The frame-left arc is the az
+       279 -> 327 sector; further left along the arc is az < 279, which is
+       exactly the az ~140-275 sector the CUTAWAY SLICES AWAY (world.js).
+       Those bodies are not missing, they are below the soil-line by
+       authorship, and putting fruiting bodies back there would contradict
+       the cut face the whole lower-left wedge is built from. So the
+       continuation has to come from the FIELD — which is already what
+       occupies the band between the last ring body (screen x 365 at
+       1728x980) and the edge.
+
+       AND THE CUTAWAY BOUNDS IT, which is the number that sized this band.
+       cutVal over the left wedge, at the rest:
+
+         rel -0.55   soil from dist 18      rel -0.70   soil from dist 26
+         rel -0.60   soil from dist 22      rel -0.75   soil only at 46
+         rel -0.65   soil from dist 26      rel -0.80   none at any distance
+
+       There is no ground to stand on past about rel -0.72, so the band
+       below is rel [-0.72, -0.55] and the reach is not a taste choice: it
+       is every metre of kept soil there is on that side. It happens to be
+       enough — the frame edge is at -0.647, so bodies from -0.65 outward
+       land at screen x 0 and beyond, and the band bleeds past the edge at
+       every aspect up to 1.85 while overlapping the existing field's own
+       -0.58 limit so the two read as one population with no seam.
+
+       ALWAYS PRESENT, NEVER GATED ON WIDTH. These bodies are built at boot
+       like every other body and are simply outside the frustum at narrow
+       aspects. Gating them on viewport width was considered and is wrong
+       here for reasons that are structural, not stylistic: canopy.js lays a
+       minimum spanning tree over EVERY body in the chapter, so a body that
+       exists only above 1440px would rewire strands that are visible below
+       it; the arrival ladder's slots are authored constants against a fixed
+       population; the reveal is camera-pure and must not become
+       window-pure; the Final goldens would become width-dependent; and a
+       resize would have to rebuild the chapter. One world, one build.
+
+       TIER. Every body here lands at dist >= CLONE_DIST by construction —
+       the cut leaves no soil nearer than 22 on this side and the band
+       starts at 24 — so they are all T4, which IS the right rung for their
+       distance under the same `dist < CLONE_DIST ? 3 : 4` rule the rest of
+       the field uses. Nothing is added to the T3 clone rung or to its
+       fifteen-slot FIELD_LADDER, both of which stay exactly as they were.
+
+       ARRIVAL. They join the T4 weather-tail: thresholds spread by depth
+       rank across the same [REV_KNEE, REV_HI] the existing far band uses,
+       so they interleave with it rather than arriving as a block, they are
+       fully arrived well inside the rest's PULL_MAX, they are dark at the
+       arm, and they retract stroke-for-stroke on a reverse scrub because
+       aReveal is read against the camera-pure uPull like everything else.
+
+       THE STREAM IS ITS OWN. A fresh rng, and this block runs AFTER every
+       existing draw, so not one shipped body moves, changes size, changes
+       shape or changes threshold. `placed` is deliberately shared, so the
+       extension keeps its 1.15-unit spacing from the bodies already there.
+       Left side only: the right already bleeds, and matching it there would
+       add cost for a problem that does not exist. */
+    {
+      const xr = makeRng(0x1EF7ED6E);          // 'left edge'
+      const xg = () => gaussOf(xr);
+      const WANT = 16;
+      const cand = [];
+      let g2 = 0;
+      while (cand.length < WANT && g2++ < 4000) {
+        const rel = -0.55 - Math.pow(xr(), 0.85) * 0.17;      // -0.72 .. -0.55
+        const dist = CLONE_DIST + Math.pow(xr(), 1.70) * 15;  // 24 .. 39, near-weighted
+        const th = REST_CAM.head + rel;
+        const x = REST_CAM.x + Math.cos(th) * dist + xg() * 0.8;
+        const z = REST_CAM.z + Math.sin(th) * dist + xg() * 0.8;
+        if (cutVal(x, z) < 0.4) continue;                     // kept soil only
+        if (Math.hypot(x - RING_C.x, z - RING_C.z) < 9.6) continue;   // ring moat
+        let ok = true;
+        for (const q of placed)
+          if (Math.hypot(x - q[0], z - q[1]) < 1.15) { ok = false; break; }
+        if (!ok) continue;
+        placed.push([x, z]);
+        const distFrac = Math.min(1, Math.max(0, (dist - 14) / 30));
+        cand.push({
+          i: 700 + cand.length,
+          x, z,
+          gy: groundY(x, z),
+          h: 0.7 + xr() * 1.1 + (xr() < 0.20 ? 0.9 : 0),
+          m: 0.25 + xr() * 0.75,
+          shed: 0,
+          boost: 0.25,
+          lum: 0.68 - 0.10 * distFrac,
+          lumMul: 0.52,
+          arc: arcOf(x, z),
+          dist,
+          jit: xr() * REV_JIT,
+        });
+      }
+      // interleave with the existing T4 tail: same range, same by-depth rank
+      cand.sort((a, b) => a.dist - b.dist);
+      cand.forEach((c, k) => {
+        c.reveal = REV_KNEE + (REV_HI - REV_JIT - REV_KNEE)
+                 * (cand.length > 1 ? k / (cand.length - 1) : 0) + c.jit;
+        placeMushroom(c, 4, false);
+        fieldStats.t4++;
+        fieldStats.left = (fieldStats.left || 0) + 1;
+      });
+
+      // and the horizon behind them: the hint rung stops at rel -0.50, so
+      // the far haze has the same edge the bodies did. Same band, same rung.
+      let g3 = 0;
+      while ((fieldStats.leftHints || 0) < 6 && g3++ < 2000) {
+        const rel = -0.55 - xr() * 0.17;
+        const dist = 34 + xr() * 12;
+        const th = REST_CAM.head + rel;
+        const x = REST_CAM.x + Math.cos(th) * dist + xg() * 1.2;
+        const z = REST_CAM.z + Math.sin(th) * dist + xg() * 1.2;
+        if (cutVal(x, z) < 0.4) continue;
+        if (Math.hypot(x - RING_C.x, z - RING_C.z) < 9.6) continue;
+        placeMushroom({
+          i: 960 + (fieldStats.leftHints || 0),
+          x, z,
+          gy: groundY(x, z),
+          h: 0.6 + xr() * 1.0,
+          m: 0.5,
+          shed: 0,
+          boost: 0,
+          arc: arcOf(x, z),
+          reveal: 0.80 + xr() * 0.04,
+        }, T_HINT);
+        fieldStats.hints++;
+        fieldStats.leftHints = (fieldStats.leftHints || 0) + 1;
+      }
+    }
   }
 
   // Declutter round: the two schematic far-side "continuation hint"
