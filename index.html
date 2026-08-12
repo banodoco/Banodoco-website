@@ -68,8 +68,18 @@
            RASTER (assets/brand/), so it arrives as a MASK on this <i> and the
            colour is painted in CSS — hero.css .logo/.logo .mark has the why.
            Empty element, aria-hidden: the link carries the name the visible
-           word used to, exactly as the Discord control beside it does. -->
-      <a class="logo" href="#" aria-label="Banodoco"><i class="mark" aria-hidden="true"></i></a>
+           word used to, exactly as the Discord control beside it does.
+           THE HREF IS A REAL DESTINATION as of 2026-08-12 (Hannah: "Make
+           clicking the logo in the top left also travel to the hero view") —
+           the mark is a home control now, and `#/mission` is where home is.
+           The click is intercepted in main.js and travels through the
+           journey's own handle, so nothing is written to the URL; the href is
+           kept for exactly the reasons the hero callouts keep theirs (a real
+           link for the keyboard and for "open in new tab", arriving as an
+           inbound deep link that boot places and then cleans). It also puts
+           this tier back in step with the static one, whose logo has pointed
+           at #/mission and acted as a home control since it shipped. -->
+      <a class="logo" href="#/mission" aria-label="Banodoco"><i class="mark" aria-hidden="true"></i></a>
       <div class="nav-cta">
         <!-- 2RP left this row 2026-08-10 (Hannah: "remove it from the header,
              leave it in the Inspire section") — the 2RP node in Inspire and

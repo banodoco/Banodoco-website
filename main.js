@@ -194,6 +194,54 @@ addEventListener('resize', () => {
 // handed to boot() instead. See journey/journey.js's `entry`.
 let pendingEntry = null;
 
+/* THE LOGO IS A HOME CONTROL (2026-08-12, Hannah: "Make clicking the logo in
+   the top left also travel to the hero view.")
+
+   THROUGH THE JOURNEY, NOT THROUGH THE URL. 239d6c7 removed hash routing
+   outright — the ride writes nothing and the visitor's first Back still leaves
+   the site — so this cannot be an href that navigates. It goes through
+   window.journey.flyTo, the same handle the rail's tiles and the two hero
+   callouts above already use, which means it inherits the whole jump for free
+   and by construction rather than by re-implementation: the cylindrical arc
+   (043a1f2), the destination copy keyed off the arrival (d1ecc23), the
+   destination chapter suppressed through the blend (a8d4518), and the rail's
+   active mark following chapterAt(p) on the next frame.
+
+   NO isTouch GATE, unlike the callouts. Those two are gated because on touch
+   their tags do something else entirely (they arm the region highlight); the
+   logo has no second job. A home control is a home control on every device,
+   and the keyboard gets it for nothing — this is a real <a> and Enter fires
+   `click`, so pointer, touch and keyboard all arrive down this one path.
+
+   ALREADY AT THE HERO — nothing extra is guarded here, and it took measuring
+   to be sure of that rather than assuming it either way.
+   The worry is real in principle: a jump hides the destination chapter's copy
+   for the whole camera blend (a8d4518) and fades it in on arrival (d1ecc23),
+   so a jump that travels almost nowhere would blank the hero copy you are
+   already reading and hand it back a second later. Shot with the hero block's
+   opacity sampled every 40ms, that is exactly what a click at p = 0.02 does:
+   1.00 straight to 0.00, still 0.00 two seconds later.
+   It is also not a state this site can be in. The scroll surface RESTS ONLY AT
+   CHAPTER POSES — wheeled in from a cold load it settles at 0.0000 (10 and 16
+   notches, hero copy still 1.00) or at 0.2600 in Inspire (24 notches and up),
+   with nothing in between; p = 0.02 exists only under the QA ?p= flag, and the
+   surface was actively settling out of it while it was being measured. So
+   "already at the hero" always means p = 0 exactly, where directJumpTo's own
+   1e-4 refusal fires first. Measured at the hero: camera position unchanged to
+   four decimals with zero spread across the whole window, fov unchanged, hero
+   copy pinned at 1.000, URL still clean. The press is a true no-op — which is
+   the right answer for a home control you are already home in, and it costs no
+   special case. If the ride ever gains free scrolling, this is the note to
+   come back to. */
+const logoLink = document.querySelector('.logo');
+if (logoLink) {
+  logoLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (window.journey) window.journey.flyTo('mission');
+    else pendingEntry = 'mission';
+  });
+}
+
 // hovering a callout gently lights its region of the specimen
 const isTouch = matchMedia('(hover: none)').matches;
 for (const [id, region] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co-connect', 'ground']]) {
