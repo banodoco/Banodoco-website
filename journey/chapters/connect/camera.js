@@ -31,8 +31,13 @@
 //   az     INSPIRE.az (115 deg) -> the rest's 61.81, on azEase — trapezoid
 //          plus the same windowed orbit-breath the arrival carries, strictly
 //          monotonic, breath zeroed (value AND slope) inside both ramps;
-//   r, y   11 -> 9.0107, 2.0 -> 2.647, on the plain trapezoid (the dolly
-//          must not wobble — arrival law);
+//   r, y   11 -> 9.0107, 2.0 -> 2.0, on the plain trapezoid (the dolly
+//          must not wobble — arrival law). Since the 2026-08-12 rebalance the
+//          HEIGHT channel is a constant: the rest sits at the eye height the
+//          Inspire rest already established, so the leg is a swing, a close
+//          and a gaze that walks down — and the "lower camera" Hannah asked
+//          for is delivered against the PREVIOUS rest (2.647 -> 2.0), not by
+//          moving the eye mid-gesture;
 //   fov    40 -> 62, SAME trapezoid — this is what kills the late hump: the
 //          widening now happens WITH the swing, not after it;
 //   gaze   quadratic bezier INSPIRE.target -> rest target, bowed through
@@ -72,15 +77,53 @@ import { INSPIRE } from '../inspire/camera.js';
 const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
-// --- CONNECT rest: mushroom upper-LEFT, copy upper-RIGHT (ui.js
-//     CHAPTER_POSITION.connect = 'pos-topright'), the ground plane and its
-//     three hubs spread through the diagonal band between them. Pose
-//     unchanged since the 2026-08-05 eye lift; p 0.490 -> 0.5230 with the
-//     2026-08-10 stop move (route.js), same frame. ---
+/* --- CONNECT rest: mushroom upper-LEFT and now CROPPED BY THE TOP EDGE, copy
+   upper-RIGHT (ui.js CHAPTER_POSITION.connect = 'pos-topright'), the ground
+   plane and its three hubs spread through the diagonal band between them.
+
+   REBALANCED 2026-08-12 (Hannah: "the area below the 'Connected Community'
+   text feels empty and the composition is unbalanced. Fix by moving the
+   mushroom further out of frame, lowering the camera, or both"). Both levers
+   are pulled, and they are the same lever twice:
+
+     eye  2.647 -> 2.0   the camera comes DOWN, to the height the Inspire rest
+                         already sits at (INSPIRE.y), so the height channel is
+                         now constant across the gesture;
+     aim  1.028 -> -0.7  the gaze drops 1.73 units BELOW the ground plane, which
+                         is what actually fills the frame: pitch -8.91 ->
+                         -14.65 deg, so the ground rises up the frame and the
+                         cap leaves through the top.
+
+   MEASURED at 1440x900 (the void is the dark gap between the copy block's
+   bottom edge and the first ground content inside the copy's own x-span):
+
+     void under the copy   254 px (28.2% of frame height) -> 121 px (13.4%)
+     under-copy lit fill   0.095 -> 0.112
+     luminance centroid y  0.452 -> 0.422 of frame height
+
+   WHY NOT FURTHER. Aiming past about -0.3 with the eye left at 2.647 walks two
+   of the organism's ROOT RIBBONS (organism.js §8) into the bottom-left corner
+   at 14-15 screen px wide, where they read as flat opaque planks. That is not
+   a bug in this pose: nearFade(z) tapers those ribbons for the HERO camera's
+   +Z axis only ("ribbons thin out near the camera so they never project as
+   wide bars"), and this chapter's camera stands off that axis, so it can get
+   close to a full-width one. Dropping the EYE is what fixes it — at 2.0 the
+   near ground is seen at a grazing angle and the widest ribbon in frame is
+   7.6 px against the shipped pose's own 6.5, with none at all over 10 px.
+   Measured across the aim/height grid; the eye height is the binding
+   constraint, not the aim, which is why the aim can go as deep as it does.
+
+   Also tried and rejected: trucking the aim right to push the mushroom further
+   out sideways (tgt.x 1.827 -> 3.4 / 5.0). It closes the void a little more
+   (112 / 107 px) but empties the band it is supposed to fill — the under-copy
+   fill falls to 0.084 / 0.068 because the frame pans onto the sparse far side
+   — and it drags the luminance centroid LEFT (0.414 -> 0.386 / 0.380), i.e. it
+   makes the left-heaviness worse, which is the actual complaint. fov 68 brings
+   the wide ribbons back; fov 56 is neutral. fov is untouched at 62. --- */
 const REST_KEY = {
   t: 0.65,
-  pos: V(7.943, 2.647, 4.256),
-  tgt: V(1.827, 1.028, -4.067),
+  pos: V(7.943, 2.0, 4.256),
+  tgt: V(1.827, -0.7, -4.067),
   fov: 62,
   hold: true,
   note: 'connect-rest',
@@ -100,14 +143,44 @@ const A1 = {
 // stream side — the cap stays composed while the aim walks down the stem to
 // the ground network (the same PIN idea the arrival's bezier uses). Chosen
 // against the live frame: subject distance stays strictly monotone
-// (8.43 -> 10.45, one 0.002-unit flat spot inside the first ramp) and the
+// (8.43 -> 10.68, the only against-steps being the orbit-breath ripple at
+// 2.8e-05 units, the same class and size the shipped gesture carries) and the
 // mid-leg frame holds the whole organism while the ground rises into the
 // lower two-thirds. y sits at the mid stem rather than the cap line
-// (2.1 -> 1.8): the bow aims the gaze downward EARLIER, which is what hands
-// the chapter's camera-pure resolve its first draw at p ~0.36 — the front
-// bound of the ground-lighting schedule (index.js LIGHT_LO) — while the
+// (2.1 -> 1.8 -> 1.65): the bow aims the gaze downward EARLIER, which is what
+// hands the chapter's camera-pure resolve its first draw at p ~0.35 — the
+// front bound of the ground-lighting schedule (index.js LIGHT_LO) — while the
 // composed frame keeps the cap inside the upper half throughout.
-const PIN2 = V(1.0, 1.8, -1.8);
+//
+// 1.8 -> 1.65 (2026-08-12, with the rest rebalance above) BUYS BACK THE
+// PRE-EXISTENCE LEAD, and nothing else. Dropping the eye to 2.0 makes the
+// camera LESS pitched down through the middle of the leg than the 2.647 pose
+// was (the gaze bow is aimed from lower, so the same control point is a
+// shallower look), which pushed the camera-pure resolve's first draw 0.3514 ->
+// 0.3547 and cut the lead the restage measured at 0.035 to 0.0313. The lead is
+// the D16 guarantee that the visitor reads the web as PRE-EXISTING before one
+// strand of it is lit, so it is not negotiable; the schedule is the other
+// thing that is not negotiable (five requests for "slower" — moving LIGHT_LO
+// to 0.3897 would have restored the lead by making the whole arrival 2.7%
+// FASTER, which is the one direction this chapter may never move).
+//
+// PIN2.y is the free lever between those two: it moves the resolve without
+// touching either endpoint, the schedule, or any channel's ease — approach()'s
+// speed profile, peak/mean and every rate peak are bit-identical across the
+// sweep below. Measured, first draw / lead against LIGHT_LO's fixed p 0.3860:
+//
+//     PIN2.y   1.80     1.65     1.50     1.35     1.20
+//     first    0.3547   0.3488   0.3435   0.3389   0.3343
+//     lead     0.0313   0.0372   0.0425   0.0471   0.0517
+//
+// 1.65 is the shallowest that clears the floor with margin (0.0372 against
+// 0.035, and against the shipped tree's own 0.0346). Going deeper is free on
+// the lead but walks the mid-leg gaze off the stem early for no gain, and the
+// arm window is the other bound: seams.js arms this chapter at p 0.32, and
+// the `amount` ramp there is eased in TIME, so a first draw that creeps back
+// toward 0.32 would turn the arm into a visible fade. 1.65 keeps 0.029 of p
+// between the arm and the first draw — the shipped tree's own 0.031.
+const PIN2 = V(1.0, 1.65, -1.8);
 
 function smooth01(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
 
