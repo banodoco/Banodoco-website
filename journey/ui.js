@@ -202,12 +202,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   const stage = document.getElementById('stage');
   if (stage) stage.setAttribute('aria-hidden', 'true');
 
-  // The hero's world-tracked callouts are a Mission-pose composition that
-  // journey.js fades to opacity 0 as travel starts (its `heroFurniture` loop).
-  // Their <a class="tag"> tags stayed tabbable at every chapter, so the tab
-  // order carried three invisible links everywhere. Mirror the fade the same
-  // way the nav does — visual state and tab order agree, nothing moves.
-  const calloutsEl = document.querySelector('.callouts');
+  // THE HERO CALLOUTS ARE NOT OURS (2026-08-12). Their tab order used to be
+  // decided here, from a second threshold on raw `p` — which is how three
+  // invisible links stayed tabbable for the whole length of a nav jump, the
+  // a11y half of the flash Hannah reported. The whole Mission composition
+  // (callouts, scrim, spill: opacity, hit tree AND tab order) now has one
+  // owner, journey.js's paintHeroFurniture — see THE HERO FURNITURE block
+  // there. Nothing about the callouts is written from this module any more.
 
   /* ---------------- chapter copy ---------------- */
   const copyHost = el('div', 'j-copy');
@@ -1466,11 +1467,6 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // The side navigator: reveal latch, resting symbol, current entry and the
     // tab-order state, all decided in one place (journey/rail.js).
     rail.update(p, { modalDetail });
-    // hero callouts follow journey.js's own fade of them (see construction)
-    if (calloutsEl) {
-      const cLive = p <= 0.01;
-      if (calloutsEl.inert === cLive) calloutsEl.inert = !cLive;
-    }
 
     if (dt > 0 && lastP !== null) {
       pSpeed += (Math.abs(p - lastP) / dt - pSpeed) * Math.min(1, dt * 5);
