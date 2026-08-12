@@ -1570,3 +1570,263 @@ one.
   That is deliberate (they are the middle-click affordance and the a11y
   contract), but it means `#/connect` is discoverable only by inspecting a
   link, never by riding to it.
+
+---
+
+## 2026-08-12 — The fan wraps the button; the logo rests gold and becomes the way home
+
+Three requests in one pass, two of them explicitly judgement work: *"Do not
+build this from the spec alone … The description sets the structure, visual
+judgment sets the details."*
+
+**Provenance note.** This pass began with an unclean tree: `journey/rail.js`
+and `journey/site.css` carried 378 uncommitted lines dated the same day and
+already implementing most of Task A, from an interrupted earlier session. The
+brief said the tree was clean, so this is recorded rather than passed over.
+The work was kept — its geometry is right and its reasoning is sound — but
+every empirical claim in its comments was re-measured rather than trusted, and
+two of them turned out to be false (below). Both were corrected in place. The
+inherited state is preserved at `scratchpad/INHERITED.patch` for the session.
+
+### A — the cluster
+
+The brief's ring, implemented as written: seven cells, being the 3×3 grid
+around the button minus the top-left one the path never rests in; slot 1
+directly above and always the active section; then left, bottom-left, below,
+bottom-right, and the overflow continuing to right and top-right. Position is
+polar — one animated angle per slot with the radius derived from it by the
+square law `pitch / max(|cos a|, |sin a|)` — so an item shifting more than one
+cell tracks the square's own perimeter *through* the cells between rather than
+cutting the chord across the button. A chapter change is one monotone
+rotation: every item steps clockwise, and the item leaving slot 1 continues
+clockwise through the two empty overflow cells to the tail rather than
+crossing the middle. `rail.js` falls back to the shipped column if a manifest
+ever outgrows the seven cells.
+
+The column is untouched and still ships for touch: the cluster is written
+under `(hover: hover)`, which is the negation of *"where hover does not
+exist"*. Everything outside geometry is shared — the 120 ms dwell, the
+`pointerdown` menu, the touch arming, the `:has(:focus-visible)` keyboard
+state, the halo, the reticle.
+
+**What the hard-won behaviours became.** The fan no longer anchors on the
+current mark; it anchors on the **button**, which in this geometry never moves
+at all. That is a replacement, not a loss, and it is strictly better: the
+column had to slide the button down to hold the foot of an opening stack, and
+that motion is precisely what lost its first click (`26ca8d3` → `48b7795`).
+The cost is that the resting pair now sits with the button on the viewport
+centre and the current mark a pitch above it, rather than the mark on centre —
+the open cluster is balanced about the centre instead, which is the right
+trade for a block. The 44 px abutment promise, the 120 ms dwell and the
+`pointerdown` menu all carry over unchanged.
+
+**Refined by eye, after shooting.**
+
+1. **The cells did not tile.** A pitch-wide, 44 px-tall tile leaves a 4 px
+   seam per row in a grid that is a pitch in *both* axes. Measured travelling
+   the pointer straight down from slot 1 to the button: at y = 424 and y = 426
+   nothing matched `.j-rail-item:hover`. The fan survived (the cluster's pad
+   keeps the pointer inside `.j-rail-inner`) but the name pill blinked out on
+   every vertical traverse. Tiles are now the pitch square — 48 px, so the
+   44 px touch minimum is a floor this clears rather than meets — the anchor
+   moved to half a tile so the taller cell does not hang the cluster low, and
+   the hairline moved onto the seam the square cells create, where it lands
+   exactly halfway through the 24 px of clear air between the two glyphs.
+   After: `:hover` unbroken across every traverse in both axes.
+
+2. **The names cleared the whole cluster instead of their own row.** One flat
+   offset pushed every pill out to the cluster's left edge. That is necessary
+   for the full rows and wrong for slot 1, which is the pill a visitor sees
+   most — it is the active section, and it is the mark the pointer is on when
+   the cluster opens — and it left the label an empty cell away from its own
+   mark, reading as floating rather than as belonging. `pillClearance()` now
+   counts cells to the leftmost *occupied* cell of each row, so slot 1 sits
+   against its mark (the top row's left cell is the one the path never uses,
+   at five chapters or at seven) while the three full-row pills still land on
+   one line. Derived, so six and seven chapters come out right without an
+   edit. Measured after: slot 1 at 5 px from its own tile, rings 1–4 all on
+   the cluster edge at x = 1289.
+
+3. **The pill then touched the reticle.** Slot 1 is the tile that wears
+   things — the reticle at inset −5 px, and a focus ring at the shared 3 px
+   offset lands in the same place. At the first build's 0.3 rem (4.8 px) the
+   pill's edge and the bracket were touching, and it read as a collision.
+   0.72 rem puts ~6 px of air past the bracket.
+
+4. **Three names drew in one heap.** `.j-rail-open` — the touch arming —
+   reveals every name at once, which a single file can do and a cluster
+   cannot. On the one machine that matches `(hover: hover)` *and* can set that
+   class (a 2-in-1 in touch mode), the three bottom-row pills all drew at
+   y = 486.8 (x = 1207.8 / 1211.5 / 1201.6), with the epilogue's and the
+   button's overlapping a row above. In cluster geometry the blanket reveal is
+   withdrawn and the active section's name stands in for it — the one pill
+   that cannot collide, in the top row over the cell the path never uses.
+   Pointing and keyboard focus are untouched.
+
+**Two inherited claims corrected.** The first build's prose said the tiles
+abutted at a 44 px pitch (they did not — the pitch was 48 and the tiles 44),
+and that `:hover` does not re-evaluate under a stationary pointer when the
+layout moves beneath it. The second is false in Chrome and was worth
+recording: held still on slot 1 through Connect → Owned, the pill went out and
+came back reading **OWNED**, the section that had arrived under the cursor —
+not a stale CONNECT carried round to the far side. The turn suppression is
+kept, restated as what it actually is: cosmetic cover for the transit, not a
+correctness fix, with its 460 ms sized to outlast the 420 ms angle transition.
+
+**Tab order stays manifest order,** not ring order. Ring order is distance
+from the active section and therefore reshuffles on every navigation, which is
+a WCAG 2.4.3 focus-order smell; manifest order is the narrative order and
+preserves meaning.
+
+### B — the logo rests gold
+
+This **overrides `8b29670`**, which deliberately rested the B in parchment and
+lifted it to gold on the reasoning that gold is this site's *lit* state and
+spending it at rest is what had made the earlier Discord badge shout. Hannah's
+call, for this control; the reasoning is untouched elsewhere and `.pill-ic` is
+not edited. The mark is a CSS mask painted with `currentColor`, so this is two
+colour values and no new asset.
+
+Shot in the real row on the real background at 1440, 1280 and 375, at actual
+size, against parchment .82, `#f0c877`, `#eec27f`, `#e9c489`, `#e6bd6e`,
+`#d9a441`, `#cf9a33`, `#e0a838` and `#e8b04a`.
+
+**Rest `#e6bd6e`.** "Lighter gold" has a floor: it must still read as gold,
+and in Lab the giveaway is b\*. The lighter candidates run `#e9c489` at 34.5
+and `#eec27f` at 39.5, and both go creamy against this near-black ground —
+they drift back into the parchment family and look exactly as washed out as
+she warned. `#e6bd6e` holds b\* 45.1 at L\* 78.7. It is deliberately **not**
+`--gold-bright`: that token is what every other control reaches only on hover,
+so resting in it would leave the logo permanently wearing its neighbour's lit
+colour, with nowhere brighter to go.
+
+**Hover `#e0a838`.** Every gold-to-gold step is small next to what this
+control used to do — parchment → gold measures ΔE 39.3, and the widest honest
+step available inside gold is ΔE 19.2. It is also the right *kind* of step:
+a\* and b\* climb 5.2 → 10.3 and 45.1 → 62.4 while L\* falls only
+78.7 → 72.3, so it deepens by **saturation** rather than by going dark, which
+is what "heavier, richer" describes. `--gold` `#d9a441` (ΔE 15.0) and
+`#cf9a33` (ΔL −11.7) spend more of the change on dimming and read duller
+rather than richer. The existing glow is what keeps a deepening hover from
+reading as a dimming one; on a lattice of hairlines that halo carries most of
+the perceived lift, which is why the hover tone can afford to lose lightness
+at all.
+
+Both tiers moved together — `static/index.html` carries its own copy of these
+rules and would otherwise have become a sixth drift error.
+
+#### On the pair — reported, not acted on
+
+Only the logo was in scope, so nothing was changed on `.pill-ic`; this is the
+reading.
+
+- **At rest the row is one gold mark and one parchment mark.** This reads as
+  *hierarchy*, not as a mismatch, and it is arguably an improvement: this
+  file's own ring note (2026-08-11) already concluded that "the logo has to
+  lead the row", and until now the only thing making that true was size. The
+  peerage `5762167` engineered was peerage of *ink*, and the row can lose it
+  without losing composure.
+- **The real incoherence is the lit states, which now point in opposite
+  directions.** The logo deepens (L\* 78.7 → 72.3); `.pill-ic` brightens
+  (parchment → `#f0c877`, L\* ≈ 79 → 82.5). So hovering the Discord mark makes
+  the *secondary* control momentarily lighter and more brilliant than the
+  resting primary one, and the row has two different grammars for "lit".
+- **The logo's hover is also now a much smaller event than its neighbour's** —
+  ΔE 19.2 against `.pill-ic`'s ΔE 40.7, roughly half the perceptual step.
+- **Smallest fix, if she wants one:** take `.pill-ic`'s lit tone to the logo's
+  `#e0a838` and leave its parchment rest alone. One grammar for "lit", the
+  new rest hierarchy preserved, and no return of gold-at-rest to the corner
+  `58a63c3` was called out for.
+
+### C — the logo travels home
+
+Through `window.journey.flyTo`, the handle the rail's tiles and the two hero
+callouts already use — not an href, because `239d6c7` removed hash routing
+outright and the ride writes nothing. Going through the shared handle means
+the jump is inherited by construction rather than re-implemented: the
+cylindrical arc (`043a1f2`), the destination copy keyed off the arrival
+(`d1ecc23`), the destination chapter suppressed through the blend
+(`a8d4518`), and the rail's active mark following `chapterAt(p)`.
+
+The href becomes the honest `#/mission` rather than the placeholder `#`, kept
+for the reasons the callouts keep theirs — a real link for the keyboard and
+for "open in new tab", arriving as an inbound deep link that boot places and
+then cleans. It also puts Tier 1 back in step with Tier 3, whose logo has
+pointed at `#/mission` and acted as a home control since it shipped. No
+`isTouch` gate, unlike the callouts: those are gated because their tags do
+something else entirely on touch, and the logo has no second job.
+
+**"It must not fire in a way that feels like a jolt when the visitor is
+already at the hero."** Measured in both directions, because the worry is real
+in principle: a jump blanks the destination's copy for the whole blend, so a
+jump travelling almost nowhere would take away the hero copy being read and
+hand it back a second later. Sampling the hero block's opacity every 40 ms, a
+click at p = 0.02 does exactly that — 1.00 straight to 0.00, still 0.00 two
+seconds later.
+
+But **p = 0.02 is not a state this site can be in.** The scroll surface rests
+only at chapter poses: wheeled from a cold load it settles at 0.0000 (10 and
+16 notches, hero copy still 1.00) or at 0.2600 in Inspire (24 notches and up),
+with nothing in between. 0.02 exists only under the QA `?p=` flag, and the
+surface was actively settling out of it even while it was being measured — the
+first two attempts at this measurement disagreed with each other for exactly
+that reason. So "already at the hero" always means p = 0, where
+`directJumpTo`'s own 1e-4 refusal fires first. No special case was added, and
+a note is left in `main.js` for whenever the ride gains free scrolling.
+
+### Gates
+
+- **Cluster shot at rest, hovered and mid-shift** at 1440×900, 1280×800 and
+  375×812. Cells land exactly on the ring at every size (1440: slot 1
+  (1366, 402), slot 2 (1318, 450), slots 3–5 across y = 498 at x = 1318 /
+  1366 / 1414, hub (1366, 450)). Mid-rotation frames captured by driving CDP's
+  Animation domain at 0.09× playback: the wrapping item is visibly outside the
+  hub travelling the perimeter, every other item stepping one cell the same
+  way round.
+- **`:hover` continuity**: unbroken on every sampled pixel from slot 1 through
+  the hub to slot 4, and straight across the bottom row.
+- **Keyboard**: all five tiles and the button reachable, each 48×48, each
+  `:focus-visible`, cluster held open by `:has(:focus-visible)`, name shown
+  per focused tile, `aria-current` on the active one, Enter navigating
+  (Owned focused → `window.journey.chapter === 'owned'`).
+- **Reduced motion**: every ring index at its final cell within 50 ms of a
+  chapter change — lands correctly, no animation.
+- **Touch unchanged** at 375×812 with `(hover: hover)` false: single file at
+  x = 349, 44 px pitch (318 / 362 / 406 / 450 / 494), 52×44 tiles, all six
+  names revealed on the arming tap — i.e. exactly the shipped column.
+- **Hit model (`6903c4a`)**: the only full-viewport hit-testable elements
+  while closed are the stage `div` and the `CANVAS`; sampled points across the
+  frame all resolve to `CANVAS`, so the poke still works.
+- **Logo, both states**, shot at all three sizes; computed colour
+  `rgb(230,189,110)` → `rgb(224,168,56)` in both tiers.
+- **Logo travel**: to the hero from Inspire, Connect, Owned and Final by
+  pointer; from Owned by keyboard (Tab to a focus-visible logo, Enter); from
+  Connect by tap at 375×812. Every landing p = 0, chapter `mission`, rail
+  active mark `mission`, `location.hash` empty throughout. 40–63 sampled
+  frames per blend with the camera radius travelling (1.82 → 10.64 from
+  Owned), so the arc runs and nothing snaps. At the hero: camera unchanged to
+  four decimals with zero spread, fov unchanged, hero copy pinned at 1.000.
+- **Console over a full ride** — scroll both ways, all five chapters by
+  `flyTo`, the cluster opened and traversed, the menu opened and closed by
+  Escape, both logo presses: **clean**, and the URL never left
+  `http://localhost:8137/index.html`.
+- **`python3 tools/capture.py --check`: PASS** — all ten frozen references at
+  MAE 0.00/255, run after all three tasks. No golden file modified.
+
+### Residuals
+
+- **The `.pill-ic` pair imbalance above is open** — reported, deliberately not
+  acted on, since only the logo was in scope.
+- **The resting pair sits a pitch higher than the column's did**, because the
+  cluster anchors on the button rather than on the current mark. Deliberate
+  (it balances the open block on the viewport centre) but it is a visible
+  change to the closed instrument, not only to the hover state.
+- **The mid-rotation frame is loose by nature.** For ~420 ms the marks are at
+  non-cell positions and the block reads less like a cluster than it does at
+  either end. Nothing is wrong with it; it is simply the honest cost of
+  animating a rotation rather than snapping, and it is the part most worth a
+  second opinion on screen.
+- **`?p=` places somewhere the scroll surface will not hold.** Not new, and
+  harmless for QA, but it makes any measurement taken through that flag near a
+  chapter rest untrustworthy unless the settle is checked — as it was here,
+  twice, before the reading was believed.
