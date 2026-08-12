@@ -57,30 +57,81 @@ function azDelta(a, b) {
   return d > Math.PI ? d - 2 * Math.PI : d < -Math.PI ? d + 2 * Math.PI : d;
 }
 
+/** The signed azimuth a -> b taken deliberately THE OTHER WAY: the same
+ *  landing, reached by continuing in `turn`'s rotational sense instead of
+ *  doubling back. |result| is then >= PI, and result - azDelta is exactly one
+ *  whole turn, so a path built on it arrives at the identical pose. Only the
+ *  loop's wrap asks for this (see WRAP_TURN in directJumpTo). */
+function azTurn(a, b, turn) {
+  const d = azDelta(a, b);
+  if (turn > 0 && d < 0) return d + 2 * Math.PI;
+  if (turn < 0 && d > 0) return d - 2 * Math.PI;
+  return d;
+}
+
 /** a -> b at ease e, interpolated AROUND the axis: azimuth the short way,
  *  horizontal radius and height lerped independently. Two properties fall
  *  straight out and are the whole reason for the form — the path's radius is
  *  never below min(|a|, |b|) horizontally, and its height never leaves
  *  [a.y, b.y]. A move between two poses that both clear the organism
- *  therefore clears it the entire way, with no corrective arc to add. */
-function arcLerp(a, b, e, out) {
+ *  therefore clears it the entire way, with no corrective arc to add.
+ *
+ *  `az1` overrides the swept azimuth (the loop's wrap sweeps the long way
+ *  round); `bow` and `rise` add a symmetric sin(PI e) swell to the radius and
+ *  the height. Both swells are driven by the SAME ease the position is on, so
+ *  their velocity is zero at both ends — the 2026-08-04 "weird little jump"
+ *  was a lift running on linear f under a position running on smootherstep,
+ *  and that shape is unreachable here. A positive `bow` only ever moves the
+ *  path further from the axis, so the clearance guarantee above survives it. */
+function arcLerp(a, b, e, out, az1, bow, rise) {
   const rA = radOf(a), rB = radOf(b);
+  const d = az1 === undefined || az1 === null ? azDelta(a, b) : az1;
   // A pose ON the axis has no azimuth of its own; borrow the other end's, so
   // the move degrades to a pure radial one instead of to NaN. No shipped
   // pose is nearer the axis than r = 0.5 (the Owned rest), but the camera is
   // free geometry and this costs one comparison.
-  const az = rA < 1e-3 ? azOf(b) : rB < 1e-3 ? azOf(a) : azOf(a) + azDelta(a, b) * e;
-  const r = rA + (rB - rA) * e;
-  return out.set(Math.sin(az) * r, a.y + (b.y - a.y) * e, Math.cos(az) * r);
+  const az = rA < 1e-3 ? azOf(b) : rB < 1e-3 ? azOf(a) : azOf(a) + d * e;
+  const swell = bow || rise ? Math.sin(Math.PI * e) : 0;
+  const r = rA + (rB - rA) * e + (bow || 0) * swell;
+  const y = a.y + (b.y - a.y) * e + (rise || 0) * swell;
+  return out.set(Math.sin(az) * r, y, Math.cos(az) * r);
 }
 
 /** Length of that path — what a jump's duration is measured against. The
  *  swept arc is taken at the mean radius, which is exact for a pure orbit and
  *  within a few percent of the true spiral otherwise. */
-function arcLength(a, b) {
+function arcLength(a, b, az1) {
   const rA = radOf(a), rB = radOf(b);
-  return Math.hypot(Math.abs(azDelta(a, b)) * 0.5 * (rA + rB), rB - rA, b.y - a.y);
+  const d = az1 === undefined || az1 === null ? azDelta(a, b) : az1;
+  return Math.hypot(Math.abs(d) * 0.5 * (rA + rB), rB - rA, b.y - a.y);
 }
+
+/* The wrap path's three authored numbers (see directJumpTo's WAY HOME block).
+   `let`, and reachable through window.journey.wrapTuning, only so the path can
+   be swept and re-rendered without a reload — the shipped values are these. */
+let WRAP_BOW = 3.2;      // world units of extra radius at mid-lap: r peaks
+                         // 16.6 against 15.0 at the Final rest and 11.5 at the
+                         // hero. 6.0 was tried and rejected — at r 19.3 the
+                         // organism is a speck on an empty field and the move
+                         // reads as backing away from the subject, not
+                         // circling it.
+let WRAP_RISE = 1.9;     // world units of extra height at mid-lap: y peaks 4.4,
+                         // just over the cap top (4.37), so the lap gains
+                         // elevation while the cap stays silhouetted against
+                         // the dark. 3.6 was tried and rejected — at y 6.1 the
+                         // horizon leaves frame and the shot becomes a plan
+                         // view of the ground network.
+let WRAP_EXTRA_S = 2.8;  // seconds added on top of the ordinary duration law,
+                         // giving the wrap 4.00 s. NOT a licence to be slow —
+                         // the arc is 68 units against 15.6 for the longest
+                         // ordinary jump, so this runs it at 17 units/s against
+                         // that jump's 13: the same tempo over a longer path.
+                         // At the shipped cap it would have been 1.20 s, i.e.
+                         // 57 units/s — 4x every other transition on the site.
+let WRAP_TURN = 0;       // 0 = the authored sense (continue the ride's own
+                         // rotation, closing to a full turn). +/-1 forces a
+                         // rotational sense — how the shipped path was chosen
+                         // against the short way, and how it can be re-judged.
 
 let started = false;
 
@@ -173,6 +224,17 @@ export function boot(opts = {}) {
       closeDetail();
       return false;
     },
+    /* THE LOOP CLOSES HERE. The model recognises "past the last rest" and
+       "before the first" as wrapping and hands the direction over; the wrap
+       itself is the ordinary nav jump, to the chapter on the other side of the
+       seam, with its path authored (directJumpTo's WAY HOME block). Because it
+       IS that jump, everything the jump already owns comes free: the state
+       snaps to the destination this tick, so `chapterAt(p)` — and therefore the
+       rail — moves once, directly, with no intermediate chapter to flicker
+       through; the destination copy is keyed off the arrival (d1ecc23); the
+       destination chapter is suppressed for the blend (a8d4518); and the URL is
+       not written (239d6c7). */
+    onWrap: (dir) => { navigateTo(dir > 0 ? 'mission' : 'final', dir); },
   });
   scroll.attach();
   scroll.enabled = true;
@@ -256,9 +318,9 @@ export function boot(opts = {}) {
     return nodeId;
   }
 
-  function navigateTo(chapterId) {
+  function navigateTo(chapterId, wrap = 0) {
     closeDetail();
-    directJumpTo(chapterId);
+    directJumpTo(chapterId, wrap);
   }
 
   /* Nav = a DIRECT jump (ride-through #2, Hannah): clicking a chapter must not
@@ -304,7 +366,7 @@ export function boot(opts = {}) {
   const _dstPos = sceneApi.camera.position.clone();
   const _dstTgt = sceneApi.controls.target.clone();
 
-  function directJumpTo(chapterId) {
+  function directJumpTo(chapterId, wrap = 0) {
     const targetP = restProgress(chapterId);
     if (Math.abs(targetP - journey.progress) < 1e-4) return;
     const cam = sceneApi.camera, ctl = sceneApi.controls;
@@ -324,7 +386,35 @@ export function boot(opts = {}) {
     // the journey's state and the camera agree again. This is the WebGL half
     // of what ui.armCopyEntry already does for the copy layer.
     placeAt(targetP, { snap: false });
-    const dur = 0.85 + 0.35 * Math.min(arcLength(pos0, cam.position) / 20, 1);
+    /* THE WAY HOME (2026-08-12 — the loop). A wrap is the same transition as
+       every other nav jump; only its PATH is authored, because the shortest
+       one says the wrong thing. Measured on the shipped route, the ride's own
+       azimuths are Mission -13.8deg, Inspire +115.0, Connect +61.8, Owned
+       +72.1, Final -79.6 — a NET -65.8deg from first rest to last. Final ->
+       Mission the short way is therefore +65.8deg: numerically minimal, and it
+       reads as the ride's net rotation being UNDONE, which is precisely the
+       rewind the brief rules out. Continuing instead in the sense the ride was
+       last travelling (Owned -> Final is -151.7deg, the largest leg on the
+       route) costs -294.2deg and brings the total to exactly -360: the camera
+       arrives at the hero pose having gone around the organism ONCE. That is
+       what closing the circle means here, and it is a property of the route's
+       own numbers rather than a taste call.
+         `bow` swings the lap wide before it draws in — the ride ends far out
+       (r 14.97) and begins close (r 11.53), so a plain lerp would tighten
+       monotonically the whole way and the return would read as an approach
+       rather than a lap. `rise` lifts it over the cap and sets it back down.
+       Both are sin(PI e) on the position's own ease, so both start and end at
+       zero velocity (see arcLerp).
+         The duration is the same law, with the same 0.85 s floor, given the
+       reach it needs: the wrap's arc is ~68 units against ~15.6 for the
+       longest ordinary jump, so the shipped cap would run it 4x faster than
+       any other transition — a whip, not a considered move. */
+    const az1 = wrap ? azTurn(pos0, cam.position, WRAP_TURN || -wrap) : null;
+    const bow = wrap ? WRAP_BOW : 0, rise = wrap ? WRAP_RISE : 0;
+    const len = arcLength(pos0, cam.position, az1);
+    const dur = wrap
+      ? 0.85 + 0.35 * Math.min(len / 20, 1) + WRAP_EXTRA_S * Math.min(len / 68, 1)
+      : 0.85 + 0.35 * Math.min(len / 20, 1);
     // THE FOG TRAVELS WITH THE CAMERA (2026-08-09). The director keys fog off
     // p, so a jump threw the whole world's depth to the destination's ramp on
     // the click frame while the camera still stood at the origin: measured on
@@ -337,7 +427,8 @@ export function boot(opts = {}) {
     // constant, and reading it live would feed the blend back into itself at
     // p = 0 exactly as the position once did (the M4 stuck camera).
     const fogN1 = fog ? fog.near : 0, fogF1 = fog ? fog.far : 0;
-    camBlend = { t: 0, dur, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1 };
+    camBlend = { t: 0, dur, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
+      az1, bow, rise };
     setBlending(true);
     // The destination's copy is timed against THIS move, not against the click
     // (Hannah, 2026-08-07 — "the text for the new section INSTANTLY appears").
@@ -558,7 +649,8 @@ export function boot(opts = {}) {
     _dstPos.copy(cam.position);
     _dstTgt.copy(ctl.target);
     const fv = camBlend.fov0 * (1 - e) + cam.fov * e;
-    arcLerp(camBlend.pos0, _dstPos, e, cam.position);
+    arcLerp(camBlend.pos0, _dstPos, e, cam.position,
+      camBlend.az1, camBlend.bow, camBlend.rise);
     ctl.target.lerpVectors(camBlend.tgt0, _dstTgt, e);
     // ONE pose travels. Re-aim from where the camera actually IS — without
     // this the frame keeps the destination's orientation over a start-pose
@@ -707,6 +799,21 @@ export function boot(opts = {}) {
      *  with the camera blend). The name predates the flight system's removal
      *  and is kept so existing QA scripts still run. */
     flyTo(id) { navigateTo(id); },
+    /** QA: fire a wrap by hand (+1 = past the end to Mission, -1 = before the
+     *  start to Final) — the same call the scroll model's onWrap makes. */
+    wrap(dir) { navigateTo(dir > 0 ? 'mission' : 'final', dir > 0 ? 1 : -1); },
+    /** QA: the wrap path's three authored numbers, so a sweep can re-render
+     *  without a reload. Shipped values live at the head of this module. */
+    get wrapTuning() {
+      return { bow: WRAP_BOW, rise: WRAP_RISE, extra: WRAP_EXTRA_S, turn: WRAP_TURN };
+    },
+    set wrapTuning(o) {
+      if (!o) return;
+      if (typeof o.bow === 'number') WRAP_BOW = o.bow;
+      if (typeof o.rise === 'number') WRAP_RISE = o.rise;
+      if (typeof o.extra === 'number') WRAP_EXTRA_S = o.extra;
+      if (typeof o.turn === 'number') WRAP_TURN = o.turn;
+    },
     /** QA: a chapter's build-time counts (segments, points, bodies, draws
      *  per body), or null. The budget A/Bs read this rather than counting
      *  scene children by hand. */
