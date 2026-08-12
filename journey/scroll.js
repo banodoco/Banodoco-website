@@ -21,7 +21,7 @@
 import { CHAPTERS, SEGMENTS, REST_STOPS, TERMINAL_P } from './route.js';
 import { NOSNAP } from '../flags.js';
 import {
-  SNAP_ENGAGE_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
+  SNAP_ENGAGE_MS, ARRIVAL_HOLD_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
   COMMIT_THRESHOLD, COMMIT_CARRY_RATE, COMMIT_GLIDE_RATE, COMMIT_BLEND_K,
   COMMIT_STREAM_GAP_MS, COMMIT_STREAM_MIN, COMMIT_CRUISE_MAX,
   WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K,
@@ -251,11 +251,16 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
                         // which is why it was intermittent.
                         //
                         // So the anchor a gesture is answered at becomes a WALL
-                        // on the surface for the REST OF THAT GESTURE, and the
-                        // gesture cannot be credited with a flick again until
-                        // it ends. `newGesture()` — a 160 ms gap, a reversal, a
-                        // placement — is the model's own definition of "an
-                        // additional scroll", so it is exactly what clears it.
+                        // on the surface until the visitor moves again, and the
+                        // gesture cannot be credited with a flick until they
+                        // do. What counts as moving again is a PAUSE of
+                        // ARRIVAL_HOLD_MS, a reversal, or a placement. That
+                        // pause was SNAP_ENGAGE_MS (160 ms) as first shipped
+                        // and is now 90 ms (2026-08-12, Hannah: "the current
+                        // pause is too noticeable... it should feel like a
+                        // subtle interaction threshold"); the constant carries
+                        // the measurement that sets the floor, and dropWall()
+                        // carries why only the wall may come down that early.
                         // Distance already scrolled is not banked against the
                         // next section: the driven landing has always absorbed
                         // its surplus this way (`ns` clamped, then folded), and
@@ -417,11 +422,35 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   /** Begin a fresh gesture: forget everything measured about the last one. */
   function newGesture() {
     gapEma = 0; gCount = 0; gPeak = 0; inRate = 0; gSerial++;
-    // ...and the wall the LAST gesture was answered at. This is the only place
-    // it is released, which is what makes "an additional scroll" the exact
-    // condition Hannah asked for: a 160 ms gap, a reversal, or a placement.
-    answeredP = null; answeredDir = 0;
+    // ...and the wall, which a reversal or a placement always clears outright.
+    // A PAUSE clears it far sooner than this — see dropWall().
+    dropWall();
   }
+
+  /** RELEASE THE ARRIVAL WALL. Split out of newGesture() on 2026-08-12: the
+   *  wall was being held for SNAP_ENGAGE_MS because that was the only idle
+   *  constant in the model, and 160 ms of enforced stillness reads as the site
+   *  having stopped responding rather than as a threshold. The wall's whole
+   *  duty is to tell a gesture that never stopped from one that did, and
+   *  ARRIVAL_HOLD_MS is the measured floor for that and nothing else.
+   *
+   *  Deliberately the ONLY thing the short window touches. gPeak, the stream
+   *  measurement and gSerial keep their SNAP_ENGAGE_MS semantics, which is
+   *  what makes this safe rather than merely shorter:
+   *    · gPeak is not retired here, so an in-flight resolution's speed FLOOR
+   *      (`Math.abs(gPeak) * slope`, re-stated every frame while `live`) cannot
+   *      collapse to zero under a delta that arrives in the 90-160 ms window
+   *      and stall a transition mid-flight. At 160 ms that could never happen,
+   *      because the cruise had already latched by the time such a delta
+   *      arrived; a naive lowering of the one constant reintroduces it.
+   *    · gSerial is not advanced here, so a resolution still in the air is
+   *      still ANSWERED by the gesture that armed it when it lands (b0227bd
+   *      part 3) and puts the wall straight back up. A frame hitch therefore
+   *      lowers the wall for an instant instead of disarming the arrival.
+   *  The surplus the wall absorbed stays absorbed: it lives in `carry` as a
+   *  negative offset against v, so releasing the clamp moves nothing on its
+   *  own — there is still nothing banked to jump. */
+  function dropWall() { answeredP = null; answeredDir = 0; }
 
   function push(dpx, kind) {
     if (!enabled) return;
@@ -430,6 +459,13 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     if (onIntent && onIntent(kind) === false) { lastInput = performance.now(); return; }
     const now = performance.now();
     const gapMs = now - lastInput;
+    // THE INTERACTION THRESHOLD. A pause this long is the "additional scroll"
+    // the arrival is waiting for: the visitor has stopped and started again,
+    // which is the one thing a gesture that never stopped cannot fake. It is
+    // checked BEFORE the gesture test below and independently of it, because
+    // it is a much shorter window and answers a different question — see
+    // dropWall() for why the other measurements must NOT come down with it.
+    if (gapMs > ARRIVAL_HOLD_MS) dropWall();
     // Deltas further apart than SNAP_ENGAGE_MS are not one gesture by the
     // model's own definition of idle: start the measurement over rather than
     // average across the pause, so a flick is only ever as strong, and only
@@ -1011,7 +1047,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         // finding: gPeak is drawn from `inRate`, which a still-running gesture
         // does not reset, so a momentum tail refilled it the very next frame
         // (measured 0 -> 1875 px/s in 17 ms). The gesture has to be RETIRED,
-        // not just de-rated — hence the wall, which holds until newGesture().
+        // not just de-rated — hence the wall, which holds until dropWall().
         //
         // ONLY IF THIS RESOLUTION ACTUALLY DELIVERED A TRANSITION. A resolution
         // can be armed to an anchor the visitor is already standing on:
@@ -1100,7 +1136,8 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     get resolving() { return !!intent; },
     /** QA: the anchor this gesture has already been answered at — the wall its
         remaining deltas cannot pass, released only by an additional scroll
-        (newGesture). null while the gesture still has a transition to spend. */
+        (dropWall: an ARRIVAL_HOLD_MS pause, a reversal, or a placement). null
+        while the gesture still has a transition to spend. */
     get answeredAt() { return answeredP; },
     /** QA: the latched resolution's speed FLOOR (p/s) right now — the gesture's
         own peak while the gesture is live, easing to the latched cruise once it
