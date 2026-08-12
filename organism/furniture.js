@@ -119,30 +119,24 @@ export function createHighlights(ctx) {
 // for it: main.js's equip tracker no longer sets the flag. Any future tracker
 // that genuinely wants to ride the stalk can still say so.
 export function registerTrackers(ctx) {
-  const { trackers, camera, swayGroup, addAnimator } = ctx;
+  const { trackers, swayGroup, addAnimator, steadyProject } = ctx;
   const _trackV = new THREE.Vector3();
-  // The camera's projection with TAA's sub-pixel jitter taken back out.
-  // Rebuilt per frame because a ?free=1 orbit or a setView() fov ease can
-  // change the real projection at any time — this must track those, and
-  // ONLY reject the jitter.
-  const _clean = new THREE.Matrix4();
   addAnimator('trackers', () => {
-    // elements[8] / [9] are the frustum's x/y skew. taaFrame() ADDS the
-    // Halton offset into exactly these two, and this camera never sets a
-    // view offset or film offset, so their true value is 0 in every frame.
-    // Zeroing them is therefore an exact undo, not an approximation.
-    _clean.copy(camera.projectionMatrix);
-    _clean.elements[8] = 0;
-    _clean.elements[9] = 0;
     for (const tr of trackers) {
       _trackV.set(tr.pos[0], tr.pos[1], tr.pos[2]);
       // sway:true pins the point to the mushroom itself, so it rides the
       // breeze. No tracker on this page asks for it any more (see above).
       if (tr.sway) _trackV.applyMatrix4(swayGroup.matrixWorld);
-      // This is Vector3.project() with the clean matrix substituted:
-      // matrixWorldInverse is affine (w stays 1), and the second
-      // applyMatrix4 does the perspective divide, exactly as project() does.
-      _trackV.applyMatrix4(camera.matrixWorldInverse).applyMatrix4(_clean);
+      // The jitter-undo for (2) above. It used to be reconstructed here by
+      // zeroing elements[8]/[9]; it now goes through the scene's own
+      // steadyProject(), which projects through the matrix taaFrame() actually
+      // snapshotted one line before jittering it. Same result for this camera
+      // (which sets no view offset, so the true value of both elements IS 0),
+      // one owner instead of two, and the genuine article rather than a
+      // reconstruction. 2026-08-12: the journey's chips had the identical bug
+      // and had NOT had it undone — that is what promoted the undo to scene
+      // API. See organism.js's STEADY PROJECTION note.
+      steadyProject(_trackV);
       const sx = (_trackV.x * 0.5 + 0.5) * innerWidth;
       const sy = (-_trackV.y * 0.5 + 0.5) * innerHeight;
       tr.el.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px)`;

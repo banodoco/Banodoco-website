@@ -171,7 +171,20 @@ function bandOpacity(p, band) {
   return a * a * (3 - 2 * a);
 }
 
-export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
+/** `project` is the scene's `steadyProject` — a `Vector3.project(camera)` that
+ *  has the renderer's per-frame TAA jitter taken back out. Every world-to-
+ *  screen step in here goes through it rather than through `project()`: this
+ *  module PINS DOM to world points, and it runs during the animator phase,
+ *  which is a frame before taaFrame() rewrites the offset. Reading the raw
+ *  matrix therefore fed a stale sub-pixel Halton offset straight into the chip
+ *  transforms — measured 0.650 x 0.622 px of period-8 tremor on a bit-static
+ *  camera, which is Hannah's "shuddering/shivering in place" (2026-08-12).
+ *  Optional so an isolated harness can still construct the UI; without it the
+ *  chips fall back to the jittering projection they had before. */
+export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
+  const projectStable = project
+    ? (v) => project(v)                 // scene-owned, jitter-free
+    : (v, cam) => v.project(cam);       // harness fallback: THREE's own
   /* ---------------- the side navigator ---------------- */
   // Hannah, 2026-08-07 / redux 2026-08-09: the chapter list left the hero's
   // <nav> row and became a side rail with a site-map panel behind it — now on
@@ -1538,7 +1551,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
       let sx = 0, sy = 0;
       h.hitRaw = 0;
       if (w) {
-        const v = w.clone().project(camera);
+        const v = projectStable(w.clone(), camera);
         // Behind the camera, or too near the frame edge to be placeable.
         // A chip with a HIT PAD gets the wider bound: the old 0.92/0.90 was
         // sized for a pill that had to carry a readable label from its dot,
@@ -1705,7 +1718,26 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen }) {
     }
 
     /* HOVER ZONES: scene-owned hover targets with no chip (report C). Same
-       projection, same gate, none of the chip machinery. */
+       gate, none of the chip machinery — and deliberately NOT the steady
+       projection the chips above use.
+
+       2026-08-12: a zone is a pointer target with no pixels (`.j-hotzone` sets
+       geometry, visibility and pointer-events, and paints nothing at all), so
+       taking the TAA jitter out of it buys nothing anyone can see — while
+       measurably costing a frozen golden. Owned's crown zone is a 203.8 px
+       circle in `.j-hotzones`, a position:fixed inset:0 layer stacked over the
+       canvas; steadying it moved that layer's child by 0.2 px
+       (translate(113px, -5.1px) -> -4.9px) and shifted owned@430x932 by MAE
+       0.13/255 spread over the WHOLE frame — a compositor rounding artifact,
+       not a scene change (camera matrices, fog, pose and every lens uniform
+       were dumped in both builds and are bit-identical). Bisected to exactly
+       this line: chips steady + zones raw restores all ten goldens to 0.00.
+
+       So the zone keeps the raw projection and keeps its sub-pixel tremor. It
+       is a 0.65 px wobble on a 204 px target, which cannot flicker a hover in
+       practice, and it is invisible by construction. If a zone ever grows
+       something that paints, this is the line that has to change — and the
+       golden it moves is the reason it did not change today. */
     for (const z of hoverZones) {
       const gate = eased[z.chapter] || 0;
       let live = gate > 0.72 && !detail;
