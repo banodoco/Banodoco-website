@@ -1925,85 +1925,126 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
 
   /* ============================================================
-     THE RING — THE BUBBLE PEELS OFF THE BUTTON (Hannah, 2026-08-13)
+     THE RING GOES AROUND THE BUTTON (Hannah, 2026-08-13 later)
 
-       "The menu control should feel attached to the right edge of
-        the viewport … There should be a small circular current-
-        section icon associated with the menu button … The key rule
-        is that the current section must always end up immediately
-        to the left of the menu button. (1) The current section icon
-        should first move smoothly out to the left of the menu
-        button. (2) Once it reaches that position, the other section
-        icons should emerge from around/below it … (3) arrange
-        themselves around the current item in a loose circular or
-        ring-like structure, flowing above and below it. (4) As the
-        user scrolls, this ring should rotate/update smoothly, while
-        the current section continues to occupy the fixed position
-        immediately left of the menu."
+       "The ring thing around the menu button is crap right now.
+        Basically, we should remove the little circle version that
+        shows … it's obviously crap. I want the current one to show
+        just to the LEFT of it, then the previous one to show ABOVE
+        it, and the one before that to the RIGHT of that. So it's
+        like a ring AROUND the menu button — whereas right now it
+        seems like a ring to the LEFT. The ring should be around the
+        menu button. So make it so that the five items wrap around
+        the menu button, with the first one on the left … And let's
+        just remove that other thing entirely — the little circle.
+        The menu button should just come from below the menu button
+        left."
 
-     THIS SUPERSEDES THE L-SHAPED CLUSTER of 2026-08-12 (e5bdc69),
-     which hung the sections off the button in a 3x3 block with the
-     active one directly above it. Nothing of that geometry is kept.
-     What IS kept is everything outside geometry — the 120ms dwell,
+     TWO CHANGES, and the first is arithmetic. The pass before this
+     one drew the circle whose RIGHTMOST POINT is the slot, which
+     puts its centre one radius left of the slot and TWO radii left
+     of the button: measured at 1440x900, centre (1284, 450) against
+     a button at (1410, 450), i.e. the button 126px outside its own
+     ring. "A ring to the left" is the correct reading of that
+     drawing. The centre is now the button, and nothing else about
+     the ring changes: same polar placement, same one animated
+     quantity, same unwrapped angles, same `.at`, same dwell.
+
+     The second is a deletion. The resting BUBBLE — the small
+     circled current-section badge on the button's shoulder — and
+     the PEEL that staged the opening as that badge travelling to
+     the slot are both gone. At rest there is the button and nothing
+     else. The staging survives, with stage 1 given two new jobs
+     that are the same gesture: the control STEPS IN off the frame
+     (see THE EDGE) while the current mark comes OUT OF THE BUTTON
+     to the slot. "The menu button should just come from below the
+     menu button left."
+
+     What is kept is everything outside geometry — the 120ms dwell,
      the pointerdown menu, the a11y model, the reticle, the names,
-     the pointer floor — and the column, which still ships for touch
-     ("On touch devices, where hover does not exist, keep the
-     current behaviour"): this whole block is an override under
+     `.at`, the pointer floor — and the column, which still ships
+     for touch ("On touch devices, where hover does not exist, keep
+     the current behaviour"): this whole block is an override under
      `(hover: hover)`, that query's own definition, negated.
 
-     `:not(.j-rail-column)` is the manifest guard, now derived from
-     the radius rather than from a cell count — rail.js widens the
-     circle as chapters are added and only falls back past the point
-     where the ring would be wider than a phone (eleven chapters).
+     `:not(.j-rail-column)` is the manifest guard, derived from the
+     radius — rail.js widens the circle as chapters are added and
+     only falls back past the point where the ring would be wider
+     than a phone (eleven chapters).
 
      ---- THE CIRCLE ----
-     One circle, and the whole component is two numbers on it.
+     One circle, and its centre is the button.
 
-       the hub    is the button, pinned to the right edge. It does
-                  not move in any state.
-       the slot   is the fixed position immediately left of the hub.
-                  It is a POSITION, not an item: whichever chapter
-                  is current occupies it (`--cl-cur` out from the
-                  anchor), and a chapter change is the ring turning
-                  underneath it.
-       the ring   is the circle whose RIGHTMOST POINT is that slot.
-                  So `--ang: 0` is the slot, and the others sit at
-                  multiples of 360/n around the same circle — two
-                  above and two below at five chapters, curving away
-                  to the left. Nothing is ever placed to the right of
-                  the current item, which is what keeps the circle
-                  clear of the hub and the hub clear of the edge.
+       the hub    is the button, and it is the RING'S CENTRE. The
+                  ring is drawn AROUND it. It holds still through a
+                  chapter change — the case that matters — and steps
+                  in off the frame as the control opens (THE EDGE).
+       the slot   is the ring's LEFTMOST point, immediately left of
+                  the hub. It is a POSITION, not an item: whichever
+                  chapter is current occupies it, and a chapter
+                  change is the ring turning underneath it.
+       the ring   is the circle of radius `--cl-rad` about the hub.
+                  `--ang: 0` is the slot and the others sit at
+                  multiples of 360/n around it, so at five chapters
+                  the marks land LEFT / ABOVE / UPPER-RIGHT / LOWER-
+                  RIGHT / BELOW — "the five items wrap around the
+                  menu button, with the first one on the left".
 
-         x = rad * cos(ang) - rad        relative to the slot
-         y = rad * sin(ang)              positive is DOWN
+         x = -rad * cos(ang)             relative to the HUB
+         y =  rad * sin(ang)             positive is DOWN
+
+     ---- THE EDGE, and how the ring is allowed to have a right ----
+     A circle around a button 2px from the frame puts its right-hand
+     arc off screen: the rightmost marks sit 0.809*rad = 51px right
+     of the hub and carry 24px of tile, so the open control needs
+     75px to the right of centre and an edge-hugging button has 30.
+     No radius fixes it (the geometric floor is 58 and still needs
+     71), and no squashing fixes it either — the same radius that
+     clears the hub on the LEFT is the one that puts the right pair
+     out. So the button cannot be at 2px in both states, and it must
+     be at 2px in one of them, because that is a thing Hannah asked
+     for in as many words.
+
+     It therefore hugs the edge CLOSED and STEPS IN as it opens, by
+     `--cl-shift` = (rightmost mark + tile/2) - hub/2, which is
+     exactly the room the ring needs and not a pixel more. The open
+     ring's rightmost tile edge lands where the closed button's box
+     edge was: THE CONTROL HUGS THE FRAME IN BOTH STATES — closed it
+     is the button that touches the wall, open it is the ring — and
+     the right-hand marks inherit the same 14px glyph-to-frame
+     gutter the button's own glyph has, by the same arithmetic.
 
      ---- THE STAGING IS THE POINT (1 -> 2 -> 3) ----
-     Two fold quantities, not one, and they run in series:
+     Two quantities, and they run in series:
 
-       --t   THE PEEL. 0 puts a slot at the resting bubble, on the
-             button's upper-left shoulder; 1 puts it at the slot.
-             Every slot carries it, so the whole navigation travels
-             out of the bubble — but only the current one is visible
-             while it does, which is what makes it read as the
-             bubble itself moving.
-       --u   THE UNFURL. Scales the ring offset, so 0 leaves every
-             slot stacked AT the slot position and 1 puts it on its
-             own point of the circle. It is delayed by exactly the
-             peel's duration (`--cl-travel`), so "once it reaches
-             that position" is structural rather than a number tuned
-             to look like it: change the travel and the emergence
-             follows it. A further `--step * 55ms` walks the pair
-             either side of the slot out before the pair beyond
-             them, so the ring unfurls rather than appearing.
+       --t   THE EMERGENCE. 0 puts every slot AT THE HUB — inside
+             the button, invisible; 1 puts it out on the ring. It
+             scales the whole polar offset, so at 0 there is nothing
+             but the button and the marks come out of it. The
+             control's own step-in rides the same clock and the same
+             curve, so the button leaning off the wall and the
+             current mark coming out of it are one gesture.
+       --u   THE UNFURL. Scales the ANGLE, so 0 leaves every slot at
+             angle 0 — stacked at the slot, immediately left of the
+             button, where the current one stays — and 1 puts each
+             on its own point of the circle. It is delayed by
+             exactly the emergence's duration (`--cl-travel`), so
+             "once it reaches that position" is structural rather
+             than a number tuned to look like it: change the travel
+             and the sweep follows it. A further `--step * 50ms`
+             walks the pair either side of the slot out before the
+             pair beyond them, so the ring unfurls rather than
+             appearing.
 
-     The active item's angle is 0, so `rad*cos(0) - rad` and
-     `rad*sin(0)` are both zero: it is the transform's fixed point
-     and does not move on unfurl, on fold, or on a chapter change.
-     Point 4 falls out of the geometry rather than being enforced.
+     The current item's angle is 0, so `-rad*cos(0)` is `-rad` and
+     `rad*sin(0)` is 0: it is at the slot for every value of `--u`,
+     the fixed point of the unfurl and of every chapter change, and
+     it is not special-cased anywhere.
 
      Folding is the same two quantities backwards, and the closed
      rule carries its own delays: `--u` collapses the ring into the
-     slot first, then `--t` walks the bubble home.
+     slot first, then `--t` draws the marks back into the button as
+     the button settles against the wall.
      ============================================================ */
   @property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
   @property --t { syntax: "<number>"; inherits: false; initial-value: 0; }
@@ -2024,32 +2065,36 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
          shipped with, now carried by a bigger control. It reads as attached
          rather than as floating. */
       --cl-edge: 2px;
-      --cl-gap: 6px;              /* the hub's box to the current slot's box */
-      --cl-rad: 68px;             /* fallback; rail.js derives and writes it */
-      /* THE RESTING BUBBLE: up and to the LEFT of the hub's centre, so it
-         overlaps the button's upper-left shoulder and already points the way
-         it will travel.
-         Shot 2026-08-13 at (0,27) — the inherited value, dead above the
-         button — and at (16,22), (22,18), (10,30). Dead above reads as a
-         STACK: two right-aligned marks in a column, with the badge sitting on
-         top of the control rather than on it, and the peel then leaves
-         diagonally (left 58, down 27) when the brief says "out to the LEFT".
-         On the shoulder the pair reads as one object with an indicator
-         attached, and the travel flattens to left 74 / down 22 — the same
-         landing, arrived at along the axis the sentence names. (22,18) is the
-         same idea gone far enough to read as two things side by side; (10,30)
-         reads as (0,27) with a mistake in it. */
-      --cl-bx: 16px;
-      --cl-by: 22px;
-      --cl-bub: 0.64;             /* its mark, as a fraction of full size */
-      --cl-cur: calc(var(--cl-hub) / 2 + var(--cl-gap) + var(--cl-tile) / 2);
+      --cl-rad: 62.95px;          /* fallback; rail.js derives and writes it */
+      /* the room the ring needs to the right of its own centre, so the button
+         can lean off the wall by exactly that and no more. rail.js derives it
+         from the same points it derives the radius from; this is the n = 5
+         value, kept honest as a fallback only. */
+      --cl-shift: 46.92px;
+      /* the marks' scale while still INSIDE the button. They grow as they come
+         out of it, which is the whole of what "emerge from the button" can
+         mean for a drawing that has no thickness. */
+      --cl-emit: 0.62;
       --cl-travel: 0.3s;          /* stage 1, and therefore stage 2's delay */
     }
-    /* The anchor becomes the BUTTON'S CENTRE — the one point in this geometry
-       that never moves — rather than a 52px box hanging off the frame. */
+    /* The anchor is the BUTTON'S CENTRE — the ring's centre, and the point
+       every slot is placed from — rather than a 52px box hanging off the
+       frame. Closed it stands `--cl-edge` off the wall. */
     .j-rail:not(.j-rail-column) .j-rail-inner {
       width: 0;
       margin-right: calc(var(--cl-edge) + var(--cl-hub) / 2);
+      /* THE STEP-IN (see THE EDGE). The whole control moves, because the ring
+         is centred on the button and the two travel together by definition.
+         `transform` and not `margin`: it is composited, it cannot reflow the
+         flex row it sits in, and it shares a curve and a duration with the
+         marks coming out of the button so the two read as one gesture. */
+      transform: translateX(0);
+      transition: transform var(--cl-travel) cubic-bezier(0.36, 0.02, 0.22, 1) 0.17s;
+    }
+    .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+      .j-rail-inner {
+      transform: translateX(calc(-1 * var(--cl-shift)));
+      transition-delay: 0s;
     }
 
     /* ---- the tiles ----
@@ -2069,31 +2114,39 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       --ang: var(--ang-to, 0deg);
       --t: 0;
       --u: 0;
-      /* THE UNFURL TRAVELS THE CIRCLE, NOT THE CHORD. `--u` scales the ANGLE
-         rather than the offset, so at 0 every slot is at angle 0 — stacked on
-         the current one, where the brief says they emerge from — and on the
-         way out each one sweeps ROUND the orbit to its own point instead of
-         flying straight at it. That is the difference between a fan popping
-         open and something unfolding: the marks are on the ring for the whole
-         of the journey, and the drawn orbit is the path they took. */
+      /* THE POLAR POSITION, ABOUT THE HUB. Two scalars ride it and neither
+         touches the other's job:
+
+           --u  THE UNFURL TRAVELS THE CIRCLE, NOT THE CHORD. It scales the
+                ANGLE rather than the offset, so at 0 every slot is at angle 0
+                — stacked at the slot, immediately left of the button — and on
+                the way out each one sweeps ROUND the orbit to its own point
+                instead of flying straight at it. That is the difference
+                between a fan popping open and something unfolding: the marks
+                are on the ring for the whole journey, and the drawn orbit is
+                the path they took.
+           --t  THE EMERGENCE scales the RADIUS, from 0 (dead centre — inside
+                the button) to full. So the closed state is not "a stack
+                hidden behind a badge" any more, it is "nothing has come out
+                of the control yet", which is what the resting picture now
+                shows: a button, and no other drawing. */
       --ae: calc(var(--u) * var(--ang));
-      --rx: calc(var(--cl-rad) * cos(var(--ae)) - var(--cl-rad));
-      --ry: calc(var(--cl-rad) * sin(var(--ae)));
       transform: translate(
-        calc((1 - var(--t)) * -1 * var(--cl-bx)
-             + var(--t) * -1 * var(--cl-cur)
-             + var(--rx)),
-        calc((1 - var(--t)) * -1 * var(--cl-by)
-             + var(--ry)));
+        calc(-1 * var(--t) * var(--cl-rad) * cos(var(--ae))),
+        calc(var(--t) * var(--cl-rad) * sin(var(--ae))));
       /* `transform` is deliberately NOT in this list: it is a pure function of
          the three registered properties, and transitioning it as well would
          interpolate a matrix towards a moving target. */
       transition-property: --ang, --t, --u, opacity;
       /* FOLD durations and delays (this is the closed state's own rule, and a
          transition runs with the values of the state it is going TO): the ring
-         collapses into the slot, and only then does the bubble walk home. */
+         collapses into the slot, and only then are the marks drawn back into
+         the button. The opacity delay is `0.17s` for the CURRENT mark and 0
+         for the rest — the four that are only ever seen on the ring go out as
+         it collapses, and the one walking home stays lit for the walk. */
       transition-duration: 0.46s, var(--cl-travel), 0.26s, 0.2s;
-      transition-delay: 0s, 0.17s, 0s, 0s;
+      transition-delay:
+        0s, 0.17s, 0s, calc((1 - min(var(--step, 0), 1)) * 0.17s);
       /* The turn must not use the house ease. Measured on the cluster pass and
          still true: at 1/6 of the duration the front-loaded `0.22, 1, 0.36, 1`
          had already carried a rotating mark 55% of the way round, and the eye
@@ -2108,10 +2161,20 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
         cubic-bezier(0.22, 1, 0.36, 1),
         ease;
     }
+    /* ---- AT REST THERE IS NO MARK AT ALL ----
+       The column lights its current tile at rest (`.j-rail-slot.now`) and the
+       previous ring wore that tile as a badge on the button's shoulder. Both
+       are withdrawn here: "let's just remove that other thing entirely — the
+       little circle". Every slot is dark and dimensionless inside the button
+       until the control opens. This has to out-weigh `.j-rail-slot.now` (0,2,0)
+       and to LOSE to the open rule below, so it is written at the same weight
+       as that rule and placed before it. */
+    .j-rail:not(.j-rail-column) .j-rail-slot.now { opacity: 0; }
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
       .j-rail-slot {
       --t: 1;
       --u: 1;
+      opacity: 1;
       /* THE UNFURL IS PAID FOR BY DISTANCE. The pair either side of the slot
          sweeps 72deg and the pair beyond them 144deg; at one shared duration
          the far pair simply moves twice as fast and arrives level with its own
@@ -2122,50 +2185,50 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
          the slot outwards. */
       transition-duration:
         0.46s, var(--cl-travel), calc(0.3s + var(--step, 0) * 0.08s), 0.24s;
-      /* STAGE 2 IS STAGE 1's DURATION. */
+      /* STAGE 2 IS STAGE 1's DURATION — except for the CURRENT mark's own
+         opacity, which belongs to stage 1 and has to be lit for it. It used to
+         be exempt for free, because the mark it lit was already on screen as
+         the resting badge; with the badge gone it starts at zero like the rest
+         and would otherwise travel out of the button invisible and arrive by
+         popping on. `min(--step, 1)` is the "is this the current one" test the
+         cascade cannot otherwise ask: 0 for the slot, 1 for all four others. */
       transition-delay:
         0s,
         0s,
         calc(var(--cl-travel) + var(--step, 0) * 0.05s),
-        calc(var(--cl-travel) + var(--step, 0) * 0.05s);
+        calc(min(var(--step, 0), 1) * var(--cl-travel)
+             + var(--step, 0) * 0.05s);
+    }
+    /* THE KEYBOARD DOES NOT WAIT FOR THE STAGING. The first Tab into the rail
+       opens it and lands on a mark that is, for the length of stage 1, still
+       inside the button at opacity 0 — a focus ring on nothing, which was a
+       standing residual of the previous pass. Focus is not a dwell and has no
+       transit to guard against, so the focused mark is simply lit from the
+       first frame and travels out already visible. Position is untouched: it
+       still rides the same staging as its neighbours. */
+    .j-rail:not(.j-rail-column) .j-rail-slot:has(:focus-visible) {
+      opacity: 1;
+      transition-delay: 0s, 0s, calc(var(--cl-travel) + var(--step, 0) * 0.05s), 0s;
     }
 
-    /* ---- the bubble: small and circled at rest, full-size on the ring ----
+    /* ---- the marks grow as they come out of the button ----
        The mark scales, not the tile: the box stays 48px in every state, so a
-       ring item is never a sub-minimum target, and the resting bubble is a
-       drawing rather than a control (it is not hit-testable at all while the
-       control is closed — see the pointer model below). */
+       ring item is never a sub-minimum target. `--cl-emit` is the size a mark
+       has while it is still inside the control; it reaches full size as it
+       arrives on the ring, which is the only way a flat drawing can be said to
+       come out of something. (The BUBBLE this replaces was a 32px hairline
+       circle carrying the current mark at 0.64 on the button's shoulder, plus
+       a peel that walked it to the slot. Both are deleted — Hannah, "let's
+       just remove that other thing entirely — the little circle" — and with
+       them `--cl-bx`, `--cl-by`, `--cl-bub` and `.j-rail-item::before`.) */
     .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark {
-      transform: scale(var(--cl-bub));
+      transform: scale(var(--cl-emit));
       transition: transform var(--cl-travel) cubic-bezier(0.36, 0.02, 0.22, 1) 0.17s;
     }
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
       .j-rail-slot .j-rail-mark { transform: scale(1); transition-delay: 0s; }
-    /* the circle itself — "a small circular current-section icon". It is the
-       resting chrome only: it fades out inside the peel, handing the job of
-       marking the current section to the reticle the open ring already uses,
-       so the two never draw at once. */
-    .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-item::before {
-      content: "";
-      position: absolute;
-      top: 50%; left: 50%;
-      width: 32px; height: 32px;
-      margin: -16px 0 0 -16px;
-      border: 1px solid rgba(217, 164, 65, 0.32);
-      border-radius: 50%;
-      background: rgba(9, 6, 2, 0.66);
-      opacity: 0;
-      pointer-events: none;
-      /* it fades across the WHOLE peel, not ahead of it: the bubble should
-         still read as a bubble while it is travelling, and stop being one
-         exactly as it lands */
-      transition: opacity var(--cl-travel) ease 0.14s;
-    }
-    .j-rail:not(.j-rail-column) .j-rail-slot.now .j-rail-item::before { opacity: 1; }
-    .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-      .j-rail-slot .j-rail-item::before { opacity: 0; transition-delay: 0s; }
 
-    /* ---- the hub: it holds still, and it leads ---- */
+    /* ---- the hub: the ring's centre, and it leads ---- */
     .j-rail:not(.j-rail-column) .j-rail-menu,
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
       .j-rail-menu {
@@ -2209,36 +2272,55 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
       .j-rail-slot.active .j-rck.bl { transition-delay: calc(var(--cl-travel) + 0.15s); }
 
-    /* THE COMPACT CONTROL IS ONE TARGET. The hairline that used to separate
-       "sections above" from "the site below" has no sentence left — closed,
-       there is no file, just a button wearing a badge — so `::before` is
-       repurposed as the pad that makes the closed pair answer as the button:
-       it reaches up and left far enough to enclose the resting bubble, so
-       pressing what you can see opens the menu and hovering it opens the ring.
-       Live only while CLOSED: open, the current item stands in that space and
-       the pad would sit on top of it (the button paints after the list). */
+    /* THE BUTTON KEEPS ITS FOOTPRINT AT THE WALL.
+       The hairline that used to separate "sections above" from "the site
+       below" has no sentence left — closed, there is no file, just a button —
+       so `::before` is repurposed as the pad that answers for the button in
+       the place the button used to stand.
+
+       WHY IT IS NEEDED. `48b7795` was a real bug: the fan slid the button and
+       a press aimed at it landed on nothing. That fix (open on `pointerdown`)
+       covers a press made BEFORE or DURING the step-in, but not one made after
+       — a visitor who arrived, watched it open and then pressed where they had
+       been aiming would press air. So the button's hit area stays behind: the
+       pad spans from the button's own right edge to the frame, `--cl-shift`
+       wide plus the 2px of edge, at the button's own height. Closed it is
+       0-wide and costs nothing.
+
+       It is UNDER the marks, not over them: the two right-hand tiles occupy
+       most of this span, and they are given `z-index: 1` below so they win
+       every point they cover. What is left exposed is the 26px band on the
+       button's own row between them — which is exactly where an aim at the
+       closed button lands, and it is a redundancy for a 56px target sitting
+       47px away, not a target of its own. */
     .j-rail:not(.j-rail-column) .j-rail-menu::before {
-      top: auto; left: auto;
-      right: 0; bottom: 0;
-      width: calc(var(--cl-hub) / 2 + var(--cl-bx) + 18px);
-      height: calc(var(--cl-hub) / 2 + var(--cl-by) + 18px);
-      transform: none;
+      top: 50%; left: auto;
+      right: calc(-1 * var(--cl-shift) - var(--cl-edge));
+      width: calc(var(--cl-shift) + var(--cl-edge));
+      height: var(--cl-hub);
+      transform: translateY(-50%);
       background: none;
     }
+    .j-rail:not(.j-rail-column):not(.j-rail-hot):not(.j-rail-open):not(:has(:focus-visible))
+      .j-rail-menu::before { width: 0; right: 0; }
+    /* …and the ring paints over it. The list is authored before the button, so
+       without this the button (and its pad) sit on top of every mark. */
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-      .j-rail-menu::before { display: none; }
+      .j-rail-slot { z-index: 1; }
     /* the column's 8px hit bridge has no gap left to bridge */
     .j-rail:not(.j-rail-column) .j-rail-menu::after { display: none; }
 
     /* ---- the orbit ----
        One hairline circle on the path the sections sit on, blooming under
-       them as they arrive. Its right edge IS the current slot's centre, which
-       is the whole geometry stated once in the drawing. Very faint: it should
-       be read as the thing the marks are arranged on, not as a dial. */
+       them as they arrive. It is CONCENTRIC WITH THE BUTTON — the drawing
+       states the geometry, and the whole of Hannah's correction is visible in
+       this one rule: the circle used to stand off to the left of the anchor
+       (`right: var(--cl-cur)`) and now it is centred on it. Very faint: it
+       should read as the thing the marks are arranged on, not as a dial. */
     .j-rail:not(.j-rail-column) .j-rail-list::after {
       content: "";
       position: absolute;
-      right: var(--cl-cur);
+      right: calc(-1 * var(--cl-rad));
       top: calc(-1 * var(--cl-rad));
       width: calc(2 * var(--cl-rad));
       height: calc(2 * var(--cl-rad));
@@ -2263,14 +2345,21 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        plus the hub, on the LIST, live only while the control is open — the
        6903c4a hit model exactly: nothing full-frame, nothing hit-testable
        while closed. Sized off the full circle rather than off the occupied
-       points, so it stays right as the manifest changes. */
+       points, so it stays right as the manifest changes.
+
+       IT ALSO COVERS THE GROUND THE BUTTON LEFT. The control steps in by
+       `--cl-shift` = 46.9px as it opens, so a pointer that was resting on the
+       closed button finds itself 46.9px right of the new centre — well inside
+       this pad's own half-width (rad + tile/2 = 87px), which is what stops the
+       control folding out from under a stationary pointer and oscillating
+       against its own step-in. Measured: no fold at any point on the ring, the
+       vacated ground included. */
     .j-rail:not(.j-rail-column) .j-rail-list::before {
       content: "";
       position: absolute;
-      right: calc(-0.5 * var(--cl-hub));
+      right: calc(-1 * (var(--cl-rad) + var(--cl-tile) / 2));
       top: calc(-1 * (var(--cl-rad) + var(--cl-tile) / 2));
-      width: calc(var(--cl-cur) + 2 * var(--cl-rad)
-                  + var(--cl-tile) / 2 + var(--cl-hub) / 2);
+      width: calc(2 * var(--cl-rad) + var(--cl-tile));
       height: calc(2 * var(--cl-rad) + var(--cl-tile));
       pointer-events: none;
     }
@@ -2279,26 +2368,27 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 
     /* ---- THE CLOSED CONTROL HAS NO SECTION TARGETS ----
        The column keeps its current mark live at rest and the touch arming
-       depends on that, so this is written for the ring only. Here the resting
-       bubble is 58% of a mark sitting under the button's own pad: leaving it
-       hit-testable would put a sub-minimum target under a full-size one and
-       make a press on the visible badge navigate to the section the visitor is
-       already in, instead of opening the navigation they were reaching for.
-       So the closed instrument is exactly one 56px button, and the five links
-       become live (at 48px each) the moment it opens — which, on a pointer, is
-       before a click can be aimed at any of them. Focusability is untouched:
-       `pointer-events` is not the tab order, and a Tab into the rail opens it. */
+       depends on that, so this is written for the ring only. Here the five
+       marks are stacked at zero size INSIDE the button while closed; leaving
+       them hit-testable would put five invisible tiles on top of the one
+       control that is meant to be there, and a press on the button would
+       navigate to the section the visitor is already in. So the closed
+       instrument is exactly one 56px button — which is now the whole of the
+       resting picture as well — and the five links become live (at 48px each)
+       the moment it opens, which on a pointer is before a click can be aimed
+       at any of them. Focusability is untouched: `pointer-events` is not the
+       tab order, and a Tab into the rail opens it. */
     .j-rail:not(.j-rail-column):not(.j-rail-hot):not(.j-rail-open):not(:has(:focus-visible))
       .j-rail-slot { pointer-events: none; }
 
-    /* ---- the names line up, except the one that should not ----
+    /* ---- the names all line up, and now that costs nothing ----
        `--pillx` (rail.js, PILLX) is how far this point is to the RIGHT of the
        circle's leftmost point, in px, so every pill is held off by exactly
        that and they all land on one vertical line — a list of names rather
-       than five labels following a curve. The current item's is zero on
-       purpose: nothing on the ring shares its row (RAD_MIN is sized for that),
-       and pushed out to the ring's edge it read as floating in the frame
-       rather than as belonging to its own drawing.
+       than five labels following a curve, and no label over a drawing.
+       THE CURRENT ITEM'S EXEMPTION IS GONE and nothing changed: with the
+       circle centred on the button, its leftmost point IS the slot, so
+       `PILLX[0]` is 0 by arithmetic. One rule where there were two.
        0.72rem past the box, not the column's 0.1: the current tile is the one
        that WEARS THINGS — the reticle at inset -5px, a focus ring at the
        shared 3px offset — and at 0.3rem the pill's edge and the bracket were
@@ -2307,33 +2397,53 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       .j-rail-name {
       margin-right: calc(var(--pillx, 0px) + 0.72rem);
     }
-    /* THE HUB'S OWN PILL GOES UNDER THE BUTTON WHEN THE RING IS OPEN.
-       Closed it behaves like every other name — off the left, cleared past the
-       bubble sitting in that span. Open, that same place is the INSIDE OF THE
-       CIRCLE: shot 2026-08-13, "MENU" drew straight across the middle of the
-       ring, legible, colliding with nothing, and reading as a caption for the
-       whole instrument rather than as a label on the button. Below the button
-       is the one direction the ring never occupies (its lowest point is 65px
-       down and 105px out), and right-aligned rather than centred because this
-       control is 2px from the frame. */
+    /* THE HUB'S OWN PILL GOES UNDER THE WHOLE INSTRUMENT.
+       Closed there is no ring to clear and it hangs off the button's left like
+       any label on any control. Open, it cannot: shot both ways, and the name
+       line is wrong for it. Held off to the circle's leftmost point with the
+       sections (the tidy answer), "MENU" lands 145px from its own button with
+       the CURRENT SECTION'S MARK standing between the two — and every reading
+       of that picture has the pill labelling the mark, not the button. Hung
+       off the button directly (the naive answer) it draws straight across the
+       inside of the ring and through the mark below it.
+       So it drops below the circle, right-aligned to the same 2px of frame the
+       ring's own rightmost tiles hold. Nothing is under the ring, the pill is
+       the widest thing on the flank, and read there it captions the instrument
+       — which is what a menu button's label is. `--cl-rad + tile/2` is the
+       circle's own bottom rather than the lowest MARK's, so the clearance
+       cannot go stale if the manifest changes the angles.
+
+       IT IS BELOW THE BUTTON IN BOTH STATES, and only the clearance changes.
+       Hung off the left while closed and dropped below on open, it JUMPED at
+       the 120ms dwell — the pill is already up (a hover reveals it at once)
+       when the ring decides to open under it. Below in both states, the same
+       label simply steps down to make room, on the same travel clock as the
+       ring it is stepping aside for. Right-aligned to the frame's own 2px in
+       both states too, which is why `right` carries the shift: the label holds
+       the wall exactly as the button and then the ring do. */
     .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-name {
-      margin-right: calc(var(--cl-cur) + var(--cl-tile) / 2
-                         - var(--cl-hub) / 2 + 0.4rem);
-    }
-    .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-      .j-rail-menu .j-rail-name {
       right: 0;
       top: 100%;
       transform: none;
-      margin: 0.5rem 0 0 0;
+      margin: 0.4rem 0 0 0;
+      transition: opacity 0.24s ease, letter-spacing 0.24s ease,
+                  margin-top var(--cl-travel) cubic-bezier(0.36, 0.02, 0.22, 1),
+                  right var(--cl-travel) cubic-bezier(0.36, 0.02, 0.22, 1);
+    }
+    .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+      .j-rail-menu .j-rail-name {
+      right: calc(-1 * var(--cl-shift));
+      margin-top: calc(var(--cl-rad) + var(--cl-tile) / 2
+                       - var(--cl-hub) / 2 + 0.4rem);
     }
     /* A SECTION'S NAME FOLLOWS `.at`, NOT `:hover`.
        Every mark on this ring is placed by `transform`, and a transform-only
        move does not make Chrome re-run its hit test — so after a rotation
        under a stationary pointer, `:hover` is still on the mark that TRAVELLED
-       AWAY. Measured 2026-08-13: Connect -> Owned with the pointer parked on
-       the slot left "CONNECT" drawn against a mark 80px up the ring while
-       Owned, genuinely under the cursor, showed nothing. `.at` is rail.js
+       AWAY. RE-MEASURED on the button-centred ring, 2026-08-13 (later): with
+       the pointer parked on the slot (1300, 450) and the ring turned one step
+       by a pure transform write, `:hover` stayed on CONNECT while
+       `elementFromPoint(1300, 450)` returned OWNED. `.at` is rail.js
        resolving `elementFromPoint` from the real pointer position (see THE
        POINTER'S OWN TRUTH); it agrees with `:hover` on every pointer move and
        is right in the one case `:hover` is not. So the ring reveals on `.at`
@@ -2381,14 +2491,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     /* ---- the scrims, re-cut for a ring ----
        Same job and same recipe as the column's (the frame darkening where the
        instrument is, never a docked panel), but a band down the flank is the
-       wrong shape twice over: the closed control is a 62x68 corner piece and
-       the open one is a circle 184px across. So both go radial and each is
-       centred on what it actually covers — the resting one on the compact
-       pair, the expanded one on the circle's own centre, which is what
-       `right: calc(--cl-cur + --cl-rad - half)` says.
-       The resting halo does NOT fade out when the ring opens here, unlike the
-       column's: the hub stays exactly where it was and still needs its own
-       ground, and the ring's scrim is centred 126px away from it. */
+       wrong shape twice over: the closed control is one 56px button and the
+       open one is a circle 174px across. So both go radial — and BOTH ARE NOW
+       CENTRED ON THE ANCHOR, because with the ring around the button the
+       button IS the centre of everything this component draws. Two rules that
+       used to carry an offset each (the bubble's midpoint, the circle's centre
+       one radius out) are now the same `-half the box` in each axis, and they
+       stay centred through the step-in for free: they ride `.j-rail-inner`,
+       which is the thing that steps.
+       The resting halo still does not fade out when the ring opens, unlike the
+       column's: the hub keeps needing its own ground, and the two are now
+       concentric rather than fighting. */
     .j-rail:not(.j-rail-column) .j-rail-inner::before,
     .j-rail:not(.j-rail-column) .j-rail-inner::after {
       -webkit-mask-image: none;
@@ -2409,22 +2522,21 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail:not(.j-rail-column) .j-rail-inner::before {
       --w: calc(2 * var(--cl-rad) + 210px);
       --h: var(--w);
-      right: calc(var(--cl-cur) + var(--cl-rad) - var(--w) / 2);
+      right: calc(-0.5 * var(--w));
       top: calc(-0.5 * var(--h));
       width: var(--w);
       height: var(--h);
       background: radial-gradient(ellipse at 50% 50%,
         rgba(9, 6, 2, 0.8) 0 34%, rgba(9, 6, 2, 0.42) 62%, rgba(9, 6, 2, 0) 100%);
     }
-    /* …and the resting halo is centred on the RESTING PAIR, derived from the
-       bubble's own offset so it follows it: the midpoint of the bubble's
-       centre and the hub's centre is (-bx/2, -by/2) from the anchor. Written
-       out, it was 26px left and 14px below the pair it is supposed to sit
-       under — a mis-centring inherited from when the bubble was dead above the
-       button, and one that got worse the moment the bubble moved. */
+    /* …and the resting halo is centred on THE BUTTON, which is now the whole
+       of the resting picture. The previous pass had to derive this from the
+       bubble's own offset so the halo followed the badge around the button's
+       shoulder; with the badge gone there is one mark to sit under and it is
+       at the anchor. */
     .j-rail:not(.j-rail-column) .j-rail-inner::after {
-      right: calc(-110px + var(--cl-bx) / 2);
-      top: calc(-110px - var(--cl-by) / 2);
+      right: -110px;
+      top: -110px;
       width: 220px;
       height: 220px;
       background: radial-gradient(ellipse at 50% 50%,
@@ -2468,13 +2580,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        round. Restated at matching weight, they land on the frame. Everything
        the ring animates ends at its own resting style — `--ang` at the slot's
        point on the circle, `--t` and `--u` at 1 while open and 0 while shut,
-       the mark at its own scale, the bubble's circle drawn at rest and gone
-       when open — so switching all of it off leaves both states intact and
-       instant, the STAGING included: with no durations there is nothing left
-       for stage 2's delay to wait for, and the ring simply is where it lands. */
+       the mark at its own scale, the control against the wall when shut and
+       `--cl-shift` in when open — so switching all of it off leaves both
+       states intact and instant, the STAGING included: with no durations there
+       is nothing left for stage 2's delay to wait for, and the ring simply is
+       where it lands. The step-in is named here for the same reason the slots
+       are: it out-ranks the blanket `.j-rail-inner::before/after` reset above,
+       which never covered the element itself. */
+    .j-rail:not(.j-rail-column) .j-rail-inner,
     .j-rail:not(.j-rail-column) .j-rail-slot,
     .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark,
-    .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-item::before,
+    .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-name,
     .j-rail:not(.j-rail-column) .j-rail-list::after,
     .j-rail:not(.j-rail-column) .j-rail-menu::before,
     .j-rail:not(.j-rail-column) .j-rail-menu::after {

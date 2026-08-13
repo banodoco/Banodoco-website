@@ -33,24 +33,28 @@
 // ===========================================================================
 // THE THREE STATES
 // ===========================================================================
-// RESTING — ONE control, hugging the right edge: the menu button, wearing the
-//   current section as a small circular bubble on its upper-left shoulder.
-//   "When the navigation is not being hovered, the control should remain very
-//   compact. There should be a small circular current-section icon associated
-//   with the menu button ... so there is still some indication of the current
-//   section without exposing the whole navigation." The bubble is that
-//   indication and nothing more: in ring geometry it is not a pointer target,
-//   and the compact control answers a pointer as one 56px button.
+// RESTING — ONE control, hugging the right edge, and it is ONE THING: the menu
+//   button. Nothing else is drawn, nothing else is hit-testable.
+//   "We should remove the little circle version that shows — the one at the
+//   opening of both the menu and the top left — it's obviously crap ... let's
+//   just remove that other thing entirely — the little circle." (Hannah,
+//   2026-08-13, later.) The resting current-section BUBBLE of the pass before
+//   this one is retired: the compact state is the button and nothing else, and
+//   the current section is stated the moment the control opens rather than by a
+//   badge riding on it. What that costs — a resting read of where you are — is
+//   named in the residuals and was hers to spend.
 //
 // EXPANDED — hover anywhere on the control, keyboard focus, or a first touch.
 //   IT IS A SEQUENCE, NOT AN EXPAND (the brief is explicit about the order):
 //
-//     1. the bubble PEELS AWAY to the left, growing to full size as it goes,
-//        and lands in the one position it will hold from then on — the slot
-//        immediately left of the button;
-//     2. only ONCE IT HAS ARRIVED do the others emerge from it, fading up as
-//        they travel out of the spot it now occupies;
-//     3. they settle around it on a loose circle, curving above and below.
+//     1. the button STEPS IN off the frame by exactly the room its ring needs
+//        (see THE EDGE, below) and the current section's mark comes OUT OF THE
+//        BUTTON, growing as it goes, to the slot immediately left of it —
+//        "the menu button should just come from below the menu button left";
+//     2. only ONCE IT HAS ARRIVED do the others emerge from that same point,
+//        fading up as they travel;
+//     3. they sweep round onto a circle CENTRED ON THE BUTTON, two above and
+//        two below, so the five marks wrap around the control.
 //
 //   The stages are one clock: stage 2 is stage 1's duration written as a
 //   transition-delay (site.css), so "once it reaches that position" is a
@@ -110,45 +114,57 @@ import { claimInput, releaseInput } from './scroll.js';
 const SHOW_P = 0.004;
 
 /* ===========================================================================
-   THE RING (Hannah, 2026-08-13) — the current section is a SLOT, not an item
+   THE RING IS CENTRED ON THE BUTTON (Hannah, 2026-08-13 later)
    ===========================================================================
-   "The current section must always end up immediately to the left of the menu
-    button ... the current section icon should first move smoothly out to the
-    left of the menu button. Once it reaches that position, the other section
-    icons should emerge from around/below it ... Previous/upcoming sections
-    should then arrange themselves around the current item in a loose circular
-    or ring-like structure, flowing above and below it. As the user scrolls
-    through sections, this ring should rotate/update smoothly, while the
-    current section continues to occupy the fixed position immediately left of
-    the menu."
+   "I want the current one to show just to the LEFT of it, then the previous
+    one to show ABOVE it, and the one before that to the RIGHT of that. So it's
+    like a ring AROUND the menu button — whereas right now it seems like a ring
+    to the LEFT. The ring should be around the menu button. So make it so that
+    the five items wrap around the menu button, with the first one on the left."
 
-   This SUPERSEDES the L-shaped cluster of 2026-08-12 (`e5bdc69`): that
-   geometry hung the sections off the button in a 3x3 block, and the active
-   one sat directly ABOVE the button. Here the active one sits immediately
-   LEFT of it and never moves again — everything else turns around it.
+   This CORRECTS the ring of `f53fab3`, which was right about everything except
+   where it put its centre. That build drew the circle whose RIGHTMOST point is
+   the slot, so the circle's centre landed one radius LEFT of the slot and two
+   radii left of the button: measured at 1440x900, ring centre (1284, 450),
+   button centre (1410, 450) — the button 126px OUTSIDE its own ring, which is
+   exactly why it read as "a ring to the left". Everything else about that pass
+   survives; only the centre moves.
 
-   THE GEOMETRY IS ONE CIRCLE, and the whole component is two numbers on it.
+   THE GEOMETRY IS ONE CIRCLE, and its centre is the button.
 
-     the hub      is the menu button, pinned to the right edge of the
-                  viewport. It does not move in any state — not on unfold,
-                  not on fold, not on a chapter change.
+     the hub      is the menu button. It is the RING'S CENTRE — the ring is
+                  drawn around it, not beside it. (It is no longer motionless:
+                  see THE EDGE below. It holds still through a chapter change,
+                  which is the case that ever mattered.)
 
-     the slot     is the fixed position immediately left of the hub. It is a
-                  POSITION, not an item: whichever chapter is current occupies
-                  it, and a chapter change is the ring turning underneath it.
+     the slot     is the ring's LEFTMOST point, i.e. immediately left of the
+                  hub. It is a POSITION, not an item: whichever chapter is
+                  current occupies it, and a chapter change is the ring turning
+                  underneath it.
 
-     the ring     is the circle whose RIGHTMOST POINT IS THAT SLOT — i.e. its
-                  centre is one radius further left. So `angle 0` is the slot,
-                  and every other section sits at a multiple of 360/n around
-                  the same circle: at five chapters, +-72deg and +-144deg,
-                  which reads as two above and two below, curving away to the
-                  left. Nothing is ever placed to the RIGHT of the current
-                  item, which is what keeps the ring clear of the hub.
+     the ring     is the circle of radius `rad` about the hub. The slot is at
+                  angle 0 and the others at multiples of 360/n around it, so at
+                  five chapters the marks land LEFT / ABOVE / UPPER-RIGHT /
+                  LOWER-RIGHT / BELOW and the control is wrapped.
 
-   Positions are therefore polar and the ONE animated quantity is the angle:
+   Positions are polar about the HUB, and the ONE animated quantity is still
+   the angle. Writing them relative to the hub (positive y is DOWN):
 
-     x = rad * cos(ang) - rad     relative to the slot (so ang 0 -> x 0)
-     y = rad * sin(ang)           positive is DOWN
+     x = -rad * cos(ang)          ang 0 -> -rad, i.e. the slot
+     y =  rad * sin(ang)
+
+   so the five points at n = 5, in units of rad, are
+
+     ang    0deg   -> (-1.000,  0.000)   the SLOT, immediately left
+     ang  -72deg   -> (-0.309, -0.951)   ABOVE the button
+     ang -144deg   -> (+0.809, -0.588)   UPPER RIGHT — "to the RIGHT of that"
+     ang +144deg   -> (+0.809, +0.588)   lower right
+     ang  +72deg   -> (-0.309, +0.951)   below
+
+   Negative angles are the sections BEHIND you and positive ones those ahead
+   (`signedRing`), so the order Hannah names — current left, previous above,
+   the one before that to its right — is the negative sweep, and it reads
+   round the circle without a special case.
 
    Advancing a chapter subtracts one step from every item's angle, so the ring
    turns as one body: the upcoming section rises from below into the slot and
@@ -167,46 +183,90 @@ const STEP = 360 / N;
  *  around the circle rather than as a one-way queue. */
 function signedRing(k) { return k > N / 2 ? k - N : k; }
 
-/* ---- the radius, derived from the tile and the manifest --------------------
+/* ---- the radius, derived from the tile, the manifest and the hub -----------
    Neighbours on the ring are `2 rad sin(180/n)` apart, so the radius that
    keeps a given amount of air between two tiles falls straight out of the
    chapter count. AIR is generous on purpose — "a LOOSE circular or ring-like
-   structure" — and RAD_MIN is the floor the five-chapter ring actually ships
-   at, chosen by eye (see 25-navigation-redux.md) and not by this formula:
-   at n = 5 the formula asks for 63px and the ring reads better at 68.
+   structure".
 
-   RAD_MIN is also load-bearing for the NAMES. The current item's pill hangs
-   directly off its own mark (see PILLX), and the tiles nearest its row are
-   the +-2 ones at `sin(144deg) * rad` above and below; the pill is ~11px
-   half-height and the tile 24px, so the pill only clears them while
-   `0.588 * rad > 35`, i.e. rad > 60. Shrinking the ring below that would
-   silently put the label the visitor sees most back on top of a drawing. */
+   RAD_MIN IS NOW A GEOMETRIC FLOOR, not an eyeball one. With the circle drawn
+   around the button, the slot is one radius from the button's centre, so the
+   radius is also the distance between the two boxes: `HUB/2 + GAP + TILE/2`
+   is the smallest circle on which the current mark is not sitting on the
+   control. That is 28 + 6 + 24 = 58, and it replaces the 68 the previous pass
+   chose by eye — 68 was free when the ring hung off to the left, and it is not
+   free now: every pixel of radius costs 0.81px of frame retreat (see SHIFT).
+   At n = 5 the AIR formula asks for 62.95 and wins anyway; the floor only ever
+   binds a two- or three-chapter manifest.
+
+   The pill clearance RAD_MIN used to buy is now unconditional: every pill,
+   the current one included, is held off to the ring's own leftmost point,
+   which IS the current mark's column (see PILLX). No pill crosses any mark at
+   any radius. */
 const TILE = 48;
 const AIR = 26;
-const RAD_MIN = 68;
+const HUB = 56;           // the button's box — site.css `--cl-hub`
+const GAP = 6;            // hub box to slot box, at the floor
+const RAD_MIN = HUB / 2 + GAP + TILE / 2;
 const RAD_MAX = 120;      // past this the ring is wider than a phone: fall back
 const RAD = Math.max(RAD_MIN, (TILE + AIR) / (2 * Math.sin(Math.PI / N)));
 
-/** A ring index's x, relative to the current slot (0 for the current one). */
+/** A ring index's x RELATIVE TO THE HUB (the ring's centre). `-rad` is the
+ *  slot, and the largest value is the rightmost mark on the circle. */
 function ringX(k) {
-  return RAD * Math.cos(signedRing(k) * STEP * Math.PI / 180) - RAD;
+  return -RAD * Math.cos(signedRing(k) * STEP * Math.PI / 180);
 }
+
+/* ---- THE EDGE, and the one real problem this geometry creates --------------
+   A circle drawn around a button that is 2px from the frame puts its right-
+   hand arc off the screen. At the shipped numbers the rightmost marks sit
+   `0.809 * rad` = 51px right of the button's centre and carry 24px of tile, so
+   the open control needs 75px to the right of the hub — and an edge-hugging
+   button has 30px. No radius fixes this: the floor is 58, and even there the
+   overhang is 71px. Squashing the circle does not either, because the same
+   radius that clears the hub on the left is what puts the right pair out.
+
+   The button therefore CANNOT stay at 2px in both states — and it must stay at
+   2px in one of them, because 2px is itself a thing Hannah asked for ("move it
+   over so it hugs the edge of the screen", 2026-08-12, said about a control
+   standing 50px in). So it hugs the edge CLOSED, which is the state it is in
+   almost always, and STEPS IN as it opens, by exactly the room the ring needs
+   and not a pixel more:
+
+     shift = (rightmost mark + TILE/2) - HUB/2
+
+   With that shift the open ring's rightmost tile edge lands exactly where the
+   closed button's box edge was, i.e. the control hugs the frame in BOTH
+   states — closed it is the button that touches the wall, open it is the ring.
+   The marks keep the same 14px optical gutter from glyph to frame that the
+   button's own 28px glyph has, because the arithmetic is the same arithmetic.
+
+   The step-in is stage 1 of the opening, on the same clock as the mark coming
+   out of the button (site.css `--cl-travel`), so it reads as one gesture: the
+   instrument leans off the wall to unfold, and settles back against it to
+   close. Two things make it safe rather than a moving target — the menu opens
+   on `pointerdown` (48b7795), so a press that lands before the step cannot be
+   lost by it; and the pointer floor, sized off the whole circle, covers the
+   place the pointer was standing when the button left it, so the control
+   cannot fold out from under a stationary pointer and oscillate. Both are
+   measured in 25-navigation-redux.md. */
+const SHIFT = Math.max(...CHAPTERS.map((_, k) => ringX(k))) + TILE / 2 - HUB / 2;
 
 /* ---- how far each NAME PILL has to be held off -----------------------------
    A pill hangs off the LEFT of the tile it names, so on a ring it would be
-   drawn straight over whatever sits further round. Two rules, and the second
-   is the one the 2026-08-12 pass paid for:
+   drawn straight over whatever sits further round — measured here: the
+   upper-right mark's pill crosses both the mark above the button and the
+   button itself. So every pill is held off to the circle's own LEFTMOST point
+   and they all land on one vertical line: a list of names, which is what they
+   are, each on its own mark's row.
 
-     every other item   is held off to the ring's own left edge, so the pills
-                        land on ONE vertical line rather than following the
-                        curve — a list of names, which is what they are.
-
-     the current item   is NOT, because nothing on the ring shares its row
-                        (that is what RAD_MIN buys) and it is the pill a
-                        visitor sees most: it is the active section, and it is
-                        the mark the pointer is nearest when the ring opens.
-                        Pushed out to the ring edge it read as floating in the
-                        frame rather than as belonging to its own drawing.
+   THE CURRENT ITEM'S EXCEPTION IS GONE, and it went for free. The previous
+   pass exempted it (offset 0) so its pill hung off its own mark instead of
+   floating out at a ring edge two radii away. With the circle centred on the
+   button, the ring's leftmost point IS the slot — so the exemption and the
+   rule now name the same column, and `PILLX[0]` comes out 0 by arithmetic
+   rather than by clause. One line, no special case, and nothing on the ring is
+   ever under a label.
 
    In px, and derived, so a sixth chapter needs no edit here. */
 const PILLX = (() => {
@@ -258,6 +318,10 @@ export function createRail({ onNav } = {}) {
   // ring wider than a phone falls back to the column the component already
   // knows how to be. At the shipped tile and air that is eleven chapters.
   root.style.setProperty('--cl-rad', RAD.toFixed(2) + 'px');
+  // The step-in that buys the ring its right-hand arc (see THE EDGE). Derived
+  // from the same points, so it tracks the radius and the manifest and can
+  // never be left stale behind a geometry change.
+  root.style.setProperty('--cl-shift', SHIFT.toFixed(2) + 'px');
   if (RAD > RAD_MAX) root.classList.add('j-rail-column');
   const isColumn = root.classList.contains('j-rail-column');
 
@@ -463,13 +527,23 @@ export function createRail({ onNav } = {}) {
                  trigger existed because the opening fan slid the menu button
                  down to hold the foot of the stack, and a pointer transiting
                  the current mark on its way to the button moved the button
-                 out from under the aimed click (measured 2026-08-09). In ring
-                 geometry the button is the hub and does not move in any
-                 state, so that failure cannot happen and the separation has
-                 no job left — while the brief asks for the broader reading,
-                 "when the navigation is not being HOVERED". Leaving the whole
-                 control closes; an open ring survives the pointer travelling
-                 anywhere across it, the button included.
+                 out from under the aimed click (measured 2026-08-09). Closed,
+                 the ring's whole control IS the button, so a list-only
+                 trigger would have nothing to open from — and the brief asks
+                 for the broader reading anyway, "when the navigation is not
+                 being HOVERED". Leaving the whole control closes; an open
+                 ring survives the pointer travelling anywhere across it, the
+                 button included.
+                 THE BUTTON DOES MOVE AGAIN (2026-08-13 later): the ring is
+                 centred on it, so opening steps it in off the frame by
+                 `SHIFT` (see THE EDGE). That is the same shape of hazard the
+                 2026-08-09 measurement found, and it is answered twice over
+                 rather than assumed away — `pointerdown` catches any press
+                 made before or during the step, and the button's hit pad
+                 (site.css, THE BUTTON KEEPS ITS FOOTPRINT AT THE WALL) stays
+                 behind in the place it left, so a press aimed at where it
+                 stood still opens the menu. Both are measured in
+                 25-navigation-redux.md.
                  On the COLUMN fallback the old trigger is kept verbatim: that
                  geometry still slides its button, so it still needs it.
        keyboard  the root's `:has(:focus-visible)`, in CSS. NOT
@@ -504,7 +578,7 @@ export function createRail({ onNav } = {}) {
      It was touch-only because the geometry it was written for was a 52px
      column, which at a phone width is the only way the rail is ever open —
      hover does not exist there. The ring changed that: a hover-capable window
-     at 375 opens a 184px circle straight across the frame, and shot at that
+     at 375 opens a 174px circle straight across the frame, and shot at that
      size the chapter copy and the action row ran right through it. (That row
      was the Learn-more / Remix pair when this was written; Remix left the
      copy for the crown on 2026-08-13 — the row is still there and the rule
@@ -588,18 +662,25 @@ export function createRail({ onNav } = {}) {
      element that has travelled AWAY and never lands on the one that has
      arrived.
 
-     MEASURED 2026-08-13, pointer parked on the slot at (1352, 450), Connect
-     -> Owned, no mouse movement at any point:
+     RE-MEASURED 2026-08-13 (later) ON THE RING CENTRED ON THE BUTTON, whose
+     slot is at (1300, 450) at 1440x900. Pointer parked on the slot, the ring
+     turned ONE STEP by writing `--ang-to` and nothing else — a pure transform
+     move, no scroll, no reflow, no pointer event of any kind:
 
-       before   connect  now=1  hover=1  at (1352,450)   pill 1.00
-       after    connect  now=0  hover=1  at (1305,385)   pill 1.00   <- 80px away
-                owned    now=1  hover=0  at (1352,450)   pill 0.00   <- under the cursor
-       elementFromPoint(1352, 450) === owned
+       before   connect  hover=1  .at=1  pill 1.00
+       after    connect  hover=1                      <- STALE: it left the slot
+                owned                                 <- genuinely under the cursor
+       elementFromPoint(1300, 450) === owned
 
-     i.e. the label CONNECT is drawn on a mark the pointer is nowhere near,
-     while the mark it is actually on has none — and it stays that way until
-     the pointer moves (a 1px nudge corrects it instantly: hover -> owned,
-     pill 1.00).
+     So the premise survives the new geometry unchanged: Chrome does not
+     re-hit-test a stationary pointer when the layout under it moves by
+     transform, and `:hover` alone would draw CONNECT against a mark 80px up
+     the ring while the one under the cursor went unlabelled.
+
+     (On the REAL chapter-change path this Chrome was additionally seen to
+     correct `:hover` on its own — the navigation does more than move the
+     marks. That is not something this component controls or can rely on, and
+     the isolated measurement above is what the rule is written against.)
 
      THIS CORRECTS THE RECORD. The 2026-08-12 cluster pass wrote the opposite
      down as a measured finding ("Chrome does re-hit-test :hover when the
