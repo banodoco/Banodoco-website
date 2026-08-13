@@ -77,9 +77,92 @@ import { INSPIRE } from '../inspire/camera.js';
 const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
-/* --- CONNECT rest: mushroom upper-LEFT and now CROPPED BY THE TOP EDGE, copy
-   upper-RIGHT (ui.js CHAPTER_POSITION.connect = 'pos-topright'), the ground
-   plane and its three hubs spread through the diagonal band between them.
+/* --- CONNECT rest: mushroom upper-LEFT and WHOLE IN FRAME, copy upper-RIGHT
+   (ui.js CHAPTER_POSITION.connect = 'pos-topright'), the ground plane and its
+   three hubs spread through the diagonal band between them.
+
+   RE-BALANCED AGAIN 2026-08-13 (Hannah: "the mushroom currently sits
+   noticeably too high in the viewport. Push the whole mushroom composition
+   lower so that it feels properly balanced against the text again. This seems
+   to have shifted accidentally during an earlier change"). It did, and the
+   change was the one below: aiming DOWN is what pushes the subject UP, so the
+   2026-08-12 pass bought its full frame at the cost of the cap. At the shipped
+   -0.7 the cap's apex projected ABOVE y 0 of 900 — the dome was cut off by the
+   top edge and the spore plume above it was gone entirely. (Exact figures and
+   the geometry they are measured on are in the MEASURED block below.)
+
+   THE TENSION IS REAL AND IT IS MEASURABLE. At fixed eye, radius and fov the
+   two complaints ride ONE axis: the aim is a pure rotation, so a degree of
+   pitch moves the mushroom and the ground's far edge by the same angle. Over
+   the whole ladder (1440x900) the exchange rate is flat at
+
+       ~1.27 px of void under the copy per 1 px the mushroom comes down.
+
+   | tgt.y            | -0.70 | -0.45 | -0.20 | -0.02 | +0.20 | +1.03 (pre) |
+   |------------------|-------|-------|-------|-------|-------|-------------|
+   | cap apex, y      |     5 |    28 |    50 |    68 |    85 |         166 |
+   | void under copy  |   115 |   132 |   149 |   163 |   177 |         242 |
+   | widest ribbon    |  7.62 |  7.68 |  7.74 |  7.29 |  7.33 |        6.49 |
+
+   -0.0246 is `groundY(1.827, -4.067)` — the soil directly under the aim point.
+   The gaze now RESTS ON THE GROUND it is looking at, instead of 0.7 units
+   under it, which is both the number and the reason for it. It buys back 63 px
+   of the 161 px the last pass took, leaving the cap whole with real headroom
+   and the plume readable, while the band under the copy stays populated: 163
+   px against the 242 that drew the "feels empty" complaint, i.e. it gives back
+   38% of that void to recover 39% of the mushroom.
+
+   WHY NOTHING CHEAPER WORKS. The exchange rate above is only flat for levers
+   that ROTATE the frame. Levers that scale it radially about the frame centre
+   are ~20x cheaper on paper, because the void's boundary sits 31 px from the
+   centre and the cap sits 445 px from it — and both were tried and both are
+   rejected on measurement, not taste:
+
+     fov   the cheapest of all (+33 px of drop for +2 px of void at fov 66) and
+           it reopens the root-ribbon corner at EVERY aim depth, not just the
+           one the last pass sampled: 14.91 / 15.17 / 12.42 px at fov 66 for
+           tgt.y -0.70 / -0.45 / -0.20, and fov 70 and 74 are no better. fov
+           stays 62.
+     dolly  free on the void (115 -> 116 px at radius x1.20) but it guts the
+           gesture: A1.r is derived from this key, so radius x1.20 turns the
+           leg's close from 11 -> 9.01 into 11 -> 10.81 and there is no dolly
+           left in the movement. Even x1.05 trips the corner (13.68 px, 2 over
+           10) — the ribbon landscape is lumpy in the frustum's footprint and
+           the shipped radius sits in a clean pocket.
+
+   So the aim is the only lever that moves the mushroom and leaves the corner
+   alone, and it leaves it alone for a reason: rotating the eye UP sweeps the
+   near ground DOWN and out of the bottom of the frame. The widest ribbon is
+   7.29 px here against the shipped pose's 7.62, with ZERO over 10 px — the
+   corner is strictly better than what it replaces.
+
+   MEASURED at 1440x900 (the void is the dark gap between the copy block's
+   bottom edge and the first row inside the copy's own x-span carrying scene
+   content — >= 20 px at or above 55/255, against a fog floor of 17-28; the
+   cap's screen position is the topmost projected vertex of the cap DOME MESH,
+   which is `groups.mushroom`'s first uWin child — the group as a whole also
+   carries the long aerial hyphae out to r ~5.9, which are not the silhouette
+   anyone means by "the cap"):
+
+     void under the copy   116 px (12.9% of frame height) -> 163 px (18.1%)
+     cap dome apex, y      -9 -> +52   (it was CLIPPED by the top edge; it now
+                                        sits 52 px inside it, plume readable)
+     cap dome centre       116 px -> 60 px above the copy block's own centre
+     under-copy lit fill   0.0602 -> 0.0526   (copy x-span, its bottom edge to
+                                        the frame bottom — the trade, paid)
+     widest root ribbon    7.62 px -> 7.28 px, none over 10 px either side
+
+   The apex row is re-measured on the definition spelled out above; an earlier
+   draft of this block recorded 5 -> 68 on an unstated one, ~14 px lower. The
+   MOVEMENT — which is what the trade turns on — agrees either way (+62 px
+   there, +61.7 px here), and the void and ribbon rows agree exactly. The
+   ladder's -0.02 column above was shot at tgt.y 0.00, worth ~2 px of apex.
+
+   The eye, the radius and the fov are all untouched, so the height channel is
+   still the constant the last pass made it and the leg is still a swing, a
+   close and a gaze that walks down — the gaze just stops 0.7 units higher.
+
+   ---- the previous pass, kept for the record ----
 
    REBALANCED 2026-08-12 (Hannah: "the area below the 'Connected Community'
    text feels empty and the composition is unbalanced. Fix by moving the
@@ -123,7 +206,8 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const REST_KEY = {
   t: 0.65,
   pos: V(7.943, 2.0, 4.256),
-  tgt: V(1.827, -0.7, -4.067),
+  // groundY(1.827, -4.067) — the gaze rests ON the soil under the aim point.
+  tgt: V(1.827, -0.0246, -4.067),
   fov: 62,
   hold: true,
   note: 'connect-rest',
@@ -180,7 +264,30 @@ const A1 = {
 // the `amount` ramp there is eased in TIME, so a first draw that creeps back
 // toward 0.32 would turn the arm into a visible fade. 1.65 keeps 0.029 of p
 // between the arm and the first draw — the shipped tree's own 0.031.
-const PIN2 = V(1.0, 1.65, -1.8);
+//
+// 1.65 -> 1.50 (2026-08-13, with the rest re-balance above) FOR THE SAME
+// REASON IN THE SAME DIRECTION. Raising the rest's aim raises the bezier's far
+// endpoint, so the mid-leg look is shallower again and the resolve's first
+// draw slid 0.3488 -> 0.3551, cutting the lead to 0.0309 — back under the
+// 0.035 floor. LIGHT_LO is still the one thing that may not move (six requests
+// for "slower"), so PIN2 pays again. Measured against LIGHT_LO's fixed
+// p 0.3860, at the new rest aim:
+//
+//     PIN2.y   1.65     1.55*    1.50     1.45     1.30     1.15
+//     first    0.3551   0.3520   0.3486   0.3466   0.3408   0.3358
+//     lead     0.0309   0.0340   0.0374   0.0394   0.0452   0.0502
+//                                (*interpolated; 1.50 and 1.45 were shot)
+//
+// 1.50 is the shallowest that clears BOTH bounds — the 0.035 floor and the
+// shipped tree's own 0.0372 — and it lands the whole reveal schedule back
+// within 0.0002 p of where it shipped: lead 0.0374 against 0.0372, arm-to-
+// first-draw 0.0286 against 0.0288. Going to 1.45 buys 0.002 more lead and
+// costs it in the binding direction: PORTRAIT is where the arm window is
+// tight, and its margin in fwd.y at p 0.32 falls 0.01504 -> 0.01234 (1.50) ->
+// 0.01068 (1.45) against the handheld layer's whole 0.0059 peak wander. 1.50
+// keeps that at 2.1x the wander; 1.45 keeps 1.8x. Resolve is still EXACTLY 0
+// at the hero pose, at the Inspire rest and at the arm edge, both aspects.
+const PIN2 = V(1.0, 1.50, -1.8);
 
 function smooth01(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
 
@@ -245,6 +352,6 @@ export const CAMERA = {
     // (Hannah: "3 movements but it should be 1.5"), which derives its u = 0
     // endpoint from THIS key. The director never evaluates the keyed spline
     // between the two rests.
-    REST_KEY,                                                                                                         // p 0.5230  pitch -8.91 yaw -143.69  (hold)
+    REST_KEY,                                                                                                         // p 0.5230  pitch -11.09 yaw -143.69  (hold)
   ],
 };
