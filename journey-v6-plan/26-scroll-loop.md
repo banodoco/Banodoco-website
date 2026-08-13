@@ -452,3 +452,199 @@ for the same reason it already restores `lastDir` there.
 **0.00/255**. `W2`'s crossing is unchanged (holds to ~50 ms of measured idle,
 moves by ~90 once the closing frame is counted), which is the point: the
 threshold did not move, only the accounting of what counts as idle.
+
+---
+
+# 13. The lap was never reachable (2026-08-14)
+
+> Hannah: "Sorry, you got it completely wrong on the loop — it still just jumps
+> DIRECTLY when I scroll up from the top, or down from the bottom. The camera
+> should move like normal, as if it's a normal transition."
+
+She is right, and both previous passes were wrong about the same thing in the
+same way. **On a real wheel-driven wrap the camera blend ran exactly ZERO
+frames.** The camera stood where `placeAt`'s director pass had put it — the
+destination — and never moved again. §8's opening claim, "THE PATH IS
+UNTOUCHED… it was already doing its job", was true of the code and false of
+the site: the 4 s lap existed, was correct, and no visitor could reach it.
+
+## 13.1 What the trace says
+
+A per-frame camera trace of a **real wheel flick** (12–14 deltas of 120 px, one
+per rAF, dispatched at the shipped `window` listener), sampled from an animator
+registered last so it reads the pose the frame actually renders:
+
+| | before | before |
+|---|---|---|
+| | forward (Final→Mission) | backward (Mission→Final) |
+| frames that moved after the wrap | **1** | **1** |
+| biggest single-frame camera move | **14.6643** | **14.6636** |
+| path length | 14.6643 | 14.6636 |
+| chord (pre-wrap pose → final pose) | 14.6644 | 14.6636 |
+| duration of travel | **0 ms** | **0 ms** |
+
+Path length equals the chord to four decimals, which is the definition of a
+teleport. The camera then held that pose, unchanged to 3 dp, for the **next
+5.5 s** of trace.
+
+## 13.2 Why two passes measured it as working
+
+Both gated the wrap through `window.journey.wrap(dir)` — the QA hook, which is
+`navigateTo()` with **no wheel event anywhere near it**. Traced side by side,
+same call, same destination, same build:
+
+| | QA hook `journey.wrap(1)` | real wheel flick |
+|---|---|---|
+| frames that moved | 178 | **1** |
+| path length | 76.4223 | **14.6643** |
+| travel | 3815 ms | **0 ms** |
+| `scroll.sinceInput` at the wrap frame | ~1e9 | **1.3 ms** |
+
+That last row is the whole defect. §9's frame strip was shot down the hook and
+is a truthful picture of a path the site never took.
+
+**The lesson is a rule, not an anecdote: a wrap may never be gated from a
+script that does not deliver the input that causes it.** The hook exercises
+`directJumpTo`; only a wheel exercises the wrap.
+
+## 13.3 The cause
+
+`stepCamBlend` opens with `if (scroll.sinceInput < 50) endCamBlend()` — manual
+input drops the blend. It was written for a jump asked for by a **click**,
+where a scroll afterwards is unambiguously the visitor taking the camera back.
+
+A wrap is asked for by the scroll itself. It is armed inside `scroll.update()`,
+which `boot()` calls one line before `applyFrame()` **in the same frame**. So
+`sinceInput` on the blend's own first frame is the age of the wheel delta that
+just caused the wrap — measured, **1.3 ms forward and 7.1 ms back**. The test
+fired immediately, every time, in both directions.
+
+`6f23d90` §12 made it deterministic rather than merely likely: the wrap now
+restarts the idle clock at the end of its own placement (`lastInput =
+performance.now()`, correctly, to stop charging the visitor for the wrap's own
+frame). That is right for the arrival wall and it also guarantees `sinceInput`
+is ~0 on the very next frame. The two fixes were each correct and together
+they closed the blend out completely.
+
+The brief's own suspicion — "the wrap may be reaching the destination by a
+state placement rather than the blend" — is half right: `placeAt` **is** what
+puts the camera on the destination, exactly as designed, and the blend is what
+was supposed to pull it back off again. The blend was armed and then cancelled
+0 frames later, so the placement was all that was left.
+
+## 13.4 The fix
+
+**A blend is cancelled by input the model ACTS ON.** Input the model is
+currently *refusing* is not the visitor taking control — it is the gesture that
+asked for this move still finishing.
+
+`scroll.answeredAt` is exactly that refusal already, with no new state: it is
+the arrival wall, raised by the wrap at the end of its own placement, and while
+it stands `carrying()` refuses every remaining delta of the same gesture. Those
+deltas buy nothing and move nothing, so cancelling on them could only strand
+the camera mid-lap. One line:
+
+```js
+if (scroll.sinceInput < 50 && scroll.answeredAt === null) {
+```
+
+It comes down — and the camera goes back to the visitor — on exactly the three
+events that already mean *the visitor is asking for something new*: an
+`ARRIVAL_HOLD_MS` (90 ms) pause, a reversal, or a placement (`dropWall`).
+Tying the camera hand-back to that threshold is the point rather than a
+coincidence: **the instant a visitor has earned another section is the instant
+they have earned the camera back.**
+
+The click jump's contract is untouched. `directJumpTo → placeAt → setProgress →
+newGesture → dropWall` means the wall is DOWN on every frame of a click blend,
+so the first stray delta still cancels it within one frame. (`answeredAt` can
+legitimately be `0` — the Mission anchor — so this must be a null test and
+never a truthiness test; `scroll.js`'s getter now says so.)
+
+## 13.5 After
+
+Same probe, same flick, same build:
+
+| | after, forward | after, backward |
+|---|---|---|
+| frames that moved after the wrap | **177** | **190** |
+| biggest single-frame camera move | 1.1846 | 1.0418 |
+| **path length** | **76.4208** | **76.4233** |
+| chord | 14.6644 | 14.6636 |
+| duration of travel | **3837 ms** | **3791 ms** |
+
+The wheel-driven path length now matches the QA hook's 76.42 to four
+significant figures in both directions: the visitor gets the authored lap, and
+gets the *same* lap the hook has been reporting since `2c22844`.
+
+## 13.6 How it reads
+
+**Forward (Final → Mission).** The colony holds while the camera lifts off it
+and the Final sentence releases with the pull; the lap swings wide and rises
+until the organism is small and far below; then it draws back in and the hero
+mushroom grows into frame with its sentence settling last. It reads as one
+continuous move that goes *around* the thing rather than through it.
+
+**Backward (Mission → Final).** The exact mirror — the hero copy releases into
+the swing, the camera goes out and over, and the field of the colony comes up
+to meet it as it arrives. Neither direction has a frame where anything is
+switched on or off in open view.
+
+**Honest note on length.** At ~3.8 s this is three to four times any other
+transition on the site, and around t≈1.8 s the composition is briefly very
+empty — the organism small, far, and low in frame. That is a real consequence
+of the authored `-294.2°` lap, whose reasoning (§4) is sound and which I have
+deliberately **not** changed in this pass: Hannah has never actually seen it,
+so changing the travel and the path in one go would leave her unable to say
+which part she is reacting to. If she wants it shorter, `WRAP_EXTRA_S` is the
+one number to move, and the path is otherwise independent of it.
+
+# 14. Gates (2026-08-14)
+
+* **The defect, before and after** — §13.1 and §13.5, a real wheel-driven wrap
+  in both directions, plus the QA-hook control in §13.2 that isolates the cause
+  to the input clock and nothing else.
+* **Frame strips** — `before` shows the destination pose in the first frame
+  after the wrap and *identically* in all eight subsequent frames
+  (`cam -2.2 2.2 10.4 fov 38` throughout); `after` shows the lap.
+* **`b0227bd`, one gesture one section, through the wrap** — R5
+  `fling past last -> 0.000000` (want 0.000000), `fling before first ->
+  0.970000` (want 0.970000), `notches past last -> 1.0000` (the end-hold, which
+  a notch reader must still reach). R6 `off-anchor stops: none`.
+* **`f2bd1cd`, the 90 ms threshold, swept through the wrap** — wrap, pause,
+  flick again: holds at 0 and 30 ms of wall-clock pause, buys a second section
+  from 60 ms. The crossing is unmoved (§12's "holds to ~50 ms of measured idle,
+  moves by ~90 once the closing frame is counted") — 60 ms of wall clock plus
+  the flick's own closing frame is the same ~90 ms of measured gap.
+* **`6f23d90`'s seam continuity survives, and is strengthened.** Grade, chapter
+  retire and copy all ride the blend's ease; the cancel branch that this fix
+  stops taking is also the branch that called `ui.cancelCopyEntry()` and
+  `cancelHeroEntry()`, so before this change the copy envelope and the hero
+  furniture entry were being killed on the wrap frame too. They now run for the
+  move they were armed against — which is what §8 intended.
+* Rest of the battery unmoved: E1 `-3.45e-4`, E2/E3 `1.0000`, R1 settles
+  `0.260000`, R2 control back next frame, R3a/R3b unchanged, R4 overshoot
+  `0.00e+0`.
+* **Console** over three laps forward and two back by gesture — 28 legs, **6
+  wraps** — 2 entries, both the ordinary boot `info` lines; **0 warnings, 0
+  errors**. URL clean throughout (`hash=''`).
+* **Deep links** `?p=0.5 -> 0.5230 connect`, `?pose=final -> (-14.72, 2.73,
+  2.70) fov 45.5` (the frozen pose exactly), `?capture=inspire -> 0.2600`.
+* **`capture.py --check` PASS, worst MAE 0.00/255** over all ten frozen
+  references — no placement path is touched.
+
+# 15. Residuals (2026-08-14)
+
+* **Taking the camera back mid-lap still ends in a step, and it is now
+  reachable.** Cancelling the blend drops it, and the next frame the director
+  writes the pose for the live `p` — the same hard hand-back every click jump
+  has always had. Measured across the wrap by pausing then scrolling on at
+  300/900/1800 ms: the biggest single-frame move after the hand-back is
+  **0.25–3.37 world units**, which is inside the frame-to-frame motion of an
+  ordinary hard scrub and an order of magnitude below the 14.66-unit teleport
+  that was the defect. Left alone deliberately; a soft hand-back would be new
+  machinery on a contract that is shared with every other jump.
+* §11's residuals stand: the draw-call cliff, and the notch reader still
+  cannot wrap.
+* `WRAP_BOW`/`WRAP_RISE`/`WRAP_EXTRA_S`/`WRAP_TURN` remain untouched — see the
+  honest note in §13.6.

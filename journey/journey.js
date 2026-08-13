@@ -775,15 +775,66 @@ export function boot(opts = {}) {
    *  after the director has written the destination pose and before anything
    *  reads the camera — see the frame-order block above applyFrame. State is
    *  already AT the destination; the camera glides straight from where it was
-   *  onto that pose. Any manual input drops the blend instantly. */
+   *  onto that pose. Manual input the model ACTS ON drops the blend instantly. */
   function stepCamBlend(dt) {
-    // Manual input drops the blend — and with it the arrival the copy was
-    // being timed against. Handing the copy back to the scroll rule here
-    // (rather than letting the envelope play out over a camera that is no
-    // longer travelling) is what keeps the two from fighting: the scroll
-    // rule picks the block up at exactly the opacity the envelope had
-    // reached, so there is no step and no second animation.
-    if (scroll.sinceInput < 50) {
+    /* THE GESTURE THAT BOUGHT THE MOVE IS NOT THE VISITOR CANCELLING IT
+       (2026-08-14 — Hannah: "it still just jumps DIRECTLY when I scroll up
+       from the top, or down from the bottom").
+
+       Manual input drops the blend — and with it the arrival the copy was
+       being timed against. Handing the copy back to the scroll rule here
+       (rather than letting the envelope play out over a camera that is no
+       longer travelling) is what keeps the two from fighting: the scroll
+       rule picks the block up at exactly the opacity the envelope had
+       reached, so there is no step and no second animation.
+
+       That rule was written for a jump the visitor asks for with a CLICK,
+       where any scroll afterwards is unambiguously them taking the camera
+       back. A WRAP is asked for with the scroll itself, and it is armed from
+       inside scroll.update() — one line before applyFrame() runs in the very
+       same frame (see the tick order in boot()). `sinceInput` at that moment
+       is the age of the wheel delta that just caused the wrap: measured on a
+       real wheel-driven wrap, 1.3 ms forward and 7.1 ms back. So the test
+       below fired on the blend's OWN FIRST FRAME and every wrap ran exactly
+       ZERO blend frames — the camera stood where placeAt's director pass had
+       put it, which is the destination. Measured before this change: the
+       camera moved 14.6643 world units in ONE frame and did not move again
+       for the next 5 s. A teleport, in both directions, on every wrap.
+
+       Two passes missed it because both measured the wrap through
+       `journey.wrap(dir)`, the QA hook — which is navigateTo() with no wheel
+       event anywhere near it, so `sinceInput` is ~1e9 and the blend runs in
+       full. Same call, same destination, traced side by side: the QA hook
+       travels 76.42 units over 3.8 s across 178 frames; the wheel does 14.66
+       units in one frame. `2c22844`'s authored 4 s lap and its frame strip
+       were real — and unreachable by any visitor. The lesson is that a wrap
+       must never be gated from a script that does not deliver the input that
+       causes it.
+
+       THE RULE IS NOW: a blend is cancelled by input the model ACTS ON.
+       Input the model is currently refusing is not the visitor taking
+       control — it is the gesture that asked for this move still finishing.
+       `scroll.answeredAt` is exactly that refusal: the arrival wall, which
+       the wrap raises at the end of its own placement (scroll.js) and which
+       makes `carrying()` refuse every remaining delta of the same gesture.
+       While it stands, the tail of the flick buys nothing and moves nothing,
+       so cancelling on it could only strand the camera mid-lap.
+
+       It comes down — and the camera goes back to the visitor — on exactly
+       the three events that already mean "the visitor is asking for
+       something new": an ARRIVAL_HOLD_MS (90 ms) pause, a reversal, or a
+       placement (dropWall). Tying the camera hand-back to that same
+       threshold is the point rather than a coincidence: the instant a
+       visitor has earned another section is the instant they have earned the
+       camera back.
+
+       Safe for the click jump it was written for, whose contract is
+       unchanged: directJumpTo -> placeAt -> setProgress -> newGesture ->
+       dropWall, so the wall is DOWN on every frame of a click blend and the
+       first stray delta still cancels it within one frame. (`answeredAt` can
+       be 0 — the Mission anchor — so this must be a null test, never a
+       truthiness test.) */
+    if (scroll.sinceInput < 50 && scroll.answeredAt === null) {
       endCamBlend();
       guarded('ui', () => ui.cancelCopyEntry());
       cancelHeroEntry();
