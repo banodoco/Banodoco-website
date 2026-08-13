@@ -2278,3 +2278,298 @@ cluster pass and was not re-measured here — the curve it justifies is unchange
   next of either. No such route exists on this page today.
 * The §7/§9 residuals stand (the placeholder tokens in the panel, the five
   Tier-3 drift errors, the missing external URLs).
+
+---
+
+## 2026-08-13 (later) — The ring goes AROUND the button: the centre moves, the bubble goes
+
+> "The ring thing around the menu button is crap right now. Basically, we
+> should remove the little circle version that shows — the one at the opening
+> of both the menu and the top left — it's obviously crap. Basically, I want
+> the current one to show just to the LEFT of it, then the previous one to
+> show ABOVE it, and the one before that to the RIGHT of that. So it's like a
+> ring AROUND the menu button — whereas right now it seems like a ring to the
+> LEFT. The ring should be around the menu button. So make it so that the five
+> items wrap around the menu button, with the first one on the left, instead
+> of the way it is now. And let's just remove that other thing entirely — the
+> little circle. The menu button should just come from below the menu button
+> left." — Hannah
+
+**Files:** `journey/rail.js`, `journey/site.css`. Nothing else. (`symbols.js`
+was read and not touched: the five marks are unchanged, only where they sit.)
+
+She is right, and the first half is arithmetic rather than taste. `f53fab3`
+drew *the circle whose rightmost point is the slot*, which puts the centre one
+radius left of the slot and **two** radii left of the button. Measured on the
+shipped build at 1440×900: ring centre **(1284, 450)**, button centre
+**(1410, 450)** — the button **126 px outside its own ring**. "A ring to the
+left" is the correct reading of that drawing, not a misreading of it.
+
+### The geometry, as shipped (measured at 1440×900)
+
+One circle, and its centre is the button.
+
+| | |
+|---|---|
+| the hub | the menu button, 56 px. **Closed** its centre is (1410, 450), box 1382…1438, `--cl-edge` 2 px off the frame. **Open** it is (1363.1, 450), box 1335…1391 — see THE EDGE |
+| the ring | the circle of radius `--cl-rad` **about the hub**. 62.95 px, derived `(TILE 48 + AIR 26) / 2 sin(180/n)`; floored at `RAD_MIN` = `HUB/2 + GAP + TILE/2` = 58 |
+| the slot | the ring's LEFTMOST point, (1300, 450). A POSITION, not an item |
+| placement | `x = −rad·cos(ang)`, `y = rad·sin(ang)`, both about the hub; `ang 0` is the slot |
+| the five points (at Connect) | connect **(1300, 450) LEFT** · inspire **(1344, 390) ABOVE** · mission **(1414, 413) UPPER RIGHT** · final (1414, 487) lower right · owned (1344, 510) below |
+| the same, hub-relative | (−63, 0) · (−19.5, −59.9) · (+51.0, −37.0) · (+51.0, +37.0) · (−19.5, +59.9) |
+| tiles | 48×48 sections, 56×56 hub. Neighbours 74.1 px apart → 26.1 px of tile air; hub box to slot box, 11 px |
+
+**Her sentence is the negative sweep, and it holds at every chapter** — verified
+at all five: the current one at the slot, the **previous** one above, **the one
+before that** upper-right, then lower-right and below for the two upcoming,
+wrapping. At Final: owned above, connect upper-right, inspire lower-right,
+mission below.
+
+`signedRing`, `writeAngles`, the unwrapped angles and the turn direction are
+untouched. The only line of placement that changed sign is `--rx`.
+
+### THE EDGE — the one real problem, and how it is solved
+
+A circle around a button 2 px from the frame **cannot fit**, and no choice of
+radius or squashing makes it fit:
+
+* the rightmost marks sit at `rad·cos 36°` = 51 px right of the hub and carry
+  24 px of tile, so the open control needs **75 px** to the right of its centre;
+* an edge-hugging button has **30 px** (`--cl-edge` 2 + `--cl-hub`/2 28);
+* the floor radius 58 still needs 71 px, so shrinking does not reach;
+* an ellipse does not either — the same horizontal radius that clears the hub
+  on the LEFT is the one that throws the right-hand pair out.
+
+Standing the button ~48 px in permanently was rejected outright: that is
+approximately where the 2026-08-12 cluster stood it, and *"it sits slightly too
+far inward … move it over so it hugs the edge of the screen"* is the sentence
+that moved it to 2 px in the first place. Undoing a request while answering a
+different one is not a trade, it is a regression.
+
+**So the control hugs the edge CLOSED and steps in as it opens**, by
+
+```
+--cl-shift = (rightmost mark + TILE/2) − HUB/2 = 0.809·rad + 24 − 28 = 46.93 px
+```
+
+— exactly the room the ring needs and not a pixel more. The consequence is the
+part worth stating: with that shift **the open ring's rightmost tile edge lands
+exactly where the closed button's box edge was**, so the control hugs the frame
+in *both* states. Closed it is the button that touches the wall; open it is the
+ring. Measured, at all three sizes:
+
+| | closed hub box right | open rightmost tile right | frame |
+|---|---|---|---|
+| 1440×900 | 1438 | **1438** | 1440 |
+| 1280×800 | 1278 | **1278** | 1280 |
+| 375×812 | 373 | **373** | 375 |
+
+and the right-hand marks inherit the button's own **14 px** glyph-to-frame
+optical gutter by the same arithmetic (glyph 1402…1426 against a 1440 frame).
+The step-in is derived in rail.js from the same points as the radius, so it
+cannot go stale behind a manifest change.
+
+**The step-in is stage 1 of the opening**, on the same clock and curve as the
+current mark coming out of the button, so it reads as one gesture: the
+instrument leans off the wall to unfold and settles back against it to close.
+
+**A moving button is a known hazard here** (`48b7795`: the fan used to slide the
+button and a press aimed at it landed on nothing), so it is answered twice
+rather than assumed away:
+
+1. the menu still opens on **`pointerdown`**, so a press made before or during
+   the step cannot be lost — measured: `menuOpen` true after `mousePressed`
+   alone;
+2. **the button keeps its footprint at the wall.** `.j-rail-menu::before` is
+   re-purposed as a pad spanning from the open button's right edge to the
+   frame, at the button's own height, live only while open, and given
+   `z-index` below the two right-hand tiles so they win every point they cover.
+   **Measured: with the ring open, a press at (1410, 450) — where the closed
+   button stood — resolves to `.j-rail-menu` and opens the panel.**
+   What is exposed is the 26 px band on the button's own row between the two
+   right marks; it is a redundancy for a 56 px target 47 px away, not a target
+   of its own, and is not claimed as a 44 px hit area.
+
+And the fold-under-a-stationary-pointer hazard is covered by the pointer floor,
+which is sized off the whole circle (half-width `rad + tile/2` = 87 px) and so
+covers the 46.9 px of ground the button vacates.
+
+### What replaced the bubble and the peel
+
+The resting **bubble** (a 32 px hairline circle carrying the current mark at
+0.64 on the button's upper-left shoulder) and the **peel** that staged the
+opening as that badge travelling to the slot are both deleted, with
+`--cl-bx`, `--cl-by`, `--cl-bub` and `.j-rail-item::before`. **At rest there is
+the button and nothing else** — measured: all five slots at opacity 0, stacked
+at the hub, and `pointer-events: none`, so the closed instrument is exactly one
+56 px button in the picture *and* in the hit model.
+
+The staging survives, and `--t` simply changed jobs — it is now **the
+emergence**, and it scales the *radius*:
+
+```
+transform: translate(−t·rad·cos(u·ang), t·rad·sin(u·ang))
+
+  t = 0            every slot at the HUB — inside the button
+  t = 1, u = 0     every slot at the SLOT — immediately left of it
+  t = 1, u = 1     each on its own point of the circle
+```
+
+which is both simpler than the two-term lerp it replaces (the bubble offset is
+gone from the expression entirely) and a better answer to *"the menu button
+should just come from below the menu button left"*: the marks come **out of the
+control**, not out of a separate badge. `--u` still scales the ANGLE, so the
+marks are on the ring for the whole journey and the drawn orbit is the path
+they took. The current item is still the fixed point by construction —
+`−rad·cos 0` is `−rad` for every value of `u`.
+
+**Traced per frame at 1440×900 through a real pointer dwell** (0.1× playback via
+CDP's Animation domain, times given at 1×):
+
+| t | what the frame shows |
+|---|---|
+| 0…120 ms | the dwell. Nothing moves |
+| 120 ms | `.j-rail-hot`. The control leaves the wall and the current mark leaves the button together |
+| ~270 ms | mid-stage-1: step-in 33.7 of 46.93 px, the current mark out at opacity 0.86 and growing from `--cl-emit`, the other four still at zero |
+| **~420 ms** | **stage 1 complete.** Transform −46.93, the current mark exactly at the slot (1300, 450), opacity 1. Nothing else has appeared |
+| ~670 ms | the other four are up and sweeping ROUND the orbit; the ±1 pair leads the ±2 pair |
+| ~970 ms | settled on their own points |
+
+One deletion had to be paid for in the opacity delays: the current mark used to
+be exempt from stage 2's wait *for free*, because it was already on screen as
+the badge. Starting from zero it would have travelled out of the button
+invisible and popped on at the end, so the delay is now
+`min(--step, 1) · --cl-travel` — the "is this the current one" test the cascade
+cannot otherwise ask. The fold is the mirror: the four that only ever exist on
+the ring go out as it collapses, the one walking home stays lit for the walk.
+
+### What I refined by eye, and why
+
+1. **The radius, 68 → the derived 62.95.** Shot at **54 / 58 / 62.95 / 68 / 74**
+   at 1440×900. 68 was chosen by eye in the previous pass and was *free* there,
+   because the ring hung off to the left; centred on the button every pixel of
+   radius costs 0.81 px of frame retreat, so it has to earn itself. At **54**
+   (2 px between hub box and slot box) the current mark's reticle brackets sit
+   on the button's glyph and the ring reads cramped. At **74** the opposite
+   failure: the button stops being *held* by the ring and reads as a lone dot in
+   a large circle, and the shift grows to 55.9. **62.95** is where the reticle
+   clears the button (11 px of box air) and the ring still closes around it —
+   and it is the value the AIR formula asks for, so `RAD_MIN` could be demoted
+   from an eyeball number to a **geometric floor** (`HUB/2 + GAP + TILE/2`), the
+   smallest circle on which the current mark is not sitting on the control.
+
+2. **The MENU pill moved twice.** Held off to the circle's leftmost point with
+   the section names — the tidy answer, one line of names — "MENU" lands 145 px
+   from its own button **with the current section's mark standing between the
+   two**, and every reading of that picture has the pill labelling the mark.
+   Hung off the button directly, it draws across the inside of the ring and
+   through the mark below it. It now drops **below the whole circle**,
+   right-aligned to the same 2 px of frame the ring's rightmost tiles hold:
+   nothing is under the ring, it is the widest thing on the flank, and read
+   there it captions the instrument, which is what a menu button's label is.
+   Cleared by `--cl-rad + tile/2` — the circle's own bottom, not the lowest
+   mark's — so it cannot go stale if the manifest changes the angles.
+
+3. **…and then it had to be below in BOTH states.** Hung off the left while
+   closed and dropped below on open, it **jumped at the 120 ms dwell**: a hover
+   reveals the pill at once, and the ring then decides to open underneath it.
+   Below in both states, the same label simply steps down to make room, on the
+   travel's own clock and curve. Its `right` carries the shift too, so the label
+   holds the wall exactly as the button and then the ring do.
+
+4. **Both scrims are now centred on the anchor**, and that is a deletion rather
+   than a tuning: the expanded one used to carry `--cl-cur + --cl-rad − w/2` to
+   reach the ring's offset centre, and the resting halo carried `(−bx/2, −by/2)`
+   to sit under the bubble-plus-button pair. With the circle around the button
+   both are `−half the box` in each axis. Coverage was checked, not assumed:
+   every mark sits at 37.5 % of the scrim's half-width (it was 39 % at r 68), so
+   the isotropy the previous pass measured its way to is preserved and the
+   recipe is untouched. Verified over the two frames where it shows — Owned's
+   colony and Final's lit field — marks legible, no slab edge, and the resting
+   halo still lifts the closed button off the epilogue's lattice.
+
+5. **The keyboard's first Tab no longer lands on nothing.** A standing residual
+   of the previous pass: the staging means the marks do not exist until stage 1
+   has run, so the first Tab into the rail put a focus ring on a mark at
+   opacity 0 for ~300 ms. Focus is not a dwell and has no transit to guard
+   against, so a slot holding `:focus-visible` is lit from the first frame and
+   travels out already visible. **Measured: 50 ms after the first Tab onto
+   Mission, opacity 0.47 at x 1387 — moving and visible, where it was 0.**
+   Position is untouched; it still rides the same staging as its neighbours.
+
+**Checked and deliberately left alone:** `--cl-emit`, the scale a mark has while
+still inside the button. Shot at **0.40 / 0.62 / 0.85** at the frame where it
+should read most strongly, and the difference is under 2 px of a 24 px glyph —
+the scale transition carries no delay while the position does, so by the time
+the mark is clear of the button it is nearly full size whatever it started at.
+It is a grace note, not a load-bearing number, and it is recorded here as one.
+
+### The hard-won behaviours, re-verified under the new geometry
+
+* **The 120 ms dwell** — verbatim, untouched.
+* **The menu opens on `pointerdown`** (`48b7795`) — and is now load-bearing
+  again, because the button moves again. See THE EDGE.
+* **`.at` beats `:hover`, and the premise was re-measured, not inherited.**
+  With the pointer parked on the slot (1300, 450) and the ring turned one step
+  **by a pure transform write — no scroll, no reflow, no pointer event** —
+  `:hover` stayed on CONNECT while `elementFromPoint(1300, 450)` returned
+  OWNED. Chrome does not re-hit-test a stationary pointer when the layout under
+  it moves by transform, exactly as `f53fab3` found, and the new geometry moves
+  every mark. (Worth recording: on the *real* chapter-change path this Chrome
+  was additionally seen to correct `:hover` on its own — navigation does more
+  than move the marks. That is not something this component controls, so the
+  isolated measurement is what the rule is written against.)
+* **Name pills clear the occupied positions** — and the previous pass's
+  exemption for the current item disappeared *for free*: with the circle
+  centred on the button its leftmost point IS the slot, so `PILLX[0]` comes out
+  0 by arithmetic rather than by clause. One rule where there were two, and no
+  pill crosses any mark at any chapter or size.
+* **Touch keeps the current behaviour** — the whole ring is still written under
+  `(hover: hover)`. Measured at 375×812 with `hover: none` / `pointer: coarse`:
+  the shipped column, single file at x 323…375, 44 px pitch, 52×44 tiles, the
+  current mark lit at rest, arming tap brings all six names, second tap acts.
+
+### Gate results
+
+| Gate | Result |
+|---|---|
+| References | **PASS.** `python3 tools/capture.py --check`: **10/10 at MAE 0.00/255, 0.0 % px > 8**. No golden modified — `git status` clean but for the two source files. |
+| Screenshots | Resting (no bubble) / emerging / fully unfolded / mid-rotation at **1440×900, 1280×800 and 375×812**, mid-transition frames over CDP's Animation domain at 0.1×. Plus the ring open at all five chapters, and the before/after pair that shows the button moving from outside its ring to its centre. |
+| Ring order | **PASS**, all five chapters: current at the slot, previous ABOVE, the one before that UPPER RIGHT, the two upcoming below and lower-right, wrapping. |
+| Edge | **PASS.** Open rightmost tile edge 1438/1440, 1278/1280, 373/375 — the same 2 px the closed button's box holds. Glyph gutter 14 px. |
+| `.at` | **PASS. 25/25** parked-position × turn combinations (five ring positions × five targets): exactly one `.at`, exactly one pill, on the slot `elementFromPoint` actually returns; no stale `:hover` ever produced a pill. |
+| Pointer floor | **PASS.** 108 points walked round the whole ring **including the ground the button vacates** and the hub: **0 folds, 0 points that left the control.** |
+| Button pad | **PASS.** Ring open, press at (1410, 450) — the closed button's own spot — resolves to `.j-rail-menu`, `aria-expanded` true. |
+| Keyboard | **PASS.** Tab order `logo → Discord → mission → inspire → connect → owned → final → Menu → hotspots`; `:has(:focus-visible)` opens the ring with every slot at its ring point and `aria-current` on the active one; the focused mark is lit from the first frame (see refinement 5); Enter on Owned → `journey.chapter === 'owned'`; Enter on the button opens the panel with focus on Close; the trap holds through 18 Tabs; Escape closes and returns focus to the button. |
+| Reduced motion | **PASS** (emulated). 50 ms after the dwell the control is fully stepped in (−46.93) with all five slots on their own points at opacity 1; 60 ms after a chapter change every slot is at its new cell; 100 ms after leaving, the hub is back at 1410 and all five are at opacity 0. The staging included — with no durations there is nothing for stage 2's delay to wait for. |
+| Touch | **PASS**, unchanged — see above. |
+| Hit model (`6903c4a`) | **PASS.** Closed, 104 of 108 sampled points resolve to `CANVAS` (the other four are the hero header and the rail button); the only elements ≥ 12 % of the viewport with live pointer-events are the stage `div` and the `CANVAS`; a `pointerdown` at (700, 600) reaches the canvas — the poke works. |
+| Overflow | **PASS.** `scrollWidth === innerWidth` at rest, open and mid-turn, at 1440 and 375. |
+| Console | **CLEAN** over a cold load, a full wheel ride and back to p = 0 with the hero pose exact (−2.25, 2.25, 10.4), the ring opened and traversed, the menu opened and closed, plus the keyboard, reduced-motion and touch passes. Error/warn/uncaught/rejection trapped from document start. URL never left `/index.html`. |
+| Both tiers | Tier 3 is on the COLUMN and was not touched — its documented divergence (§5, 23 §8). Drift guard: **5 problems — the same 5 that were already there** (4 `chapters.owned.claims.*`, 1 `chapters.final.heading`) across 145 strings and 11 symbols. **No sixth.** |
+| Not undone | `d46e6bb`, `a3ba9fd`, `961b2d1` and `8987500` are untouched — the diff is confined to `rail.js` and to `site.css`'s ring block and its reduced-motion reset. |
+
+### Residuals
+
+* **At rest the navigator no longer says which section you are in.** That is
+  the deletion Hannah asked for, not an oversight: the badge was the only
+  resting reading of position, and it went with the circle. The reading returns
+  the moment the control is hovered, focused or tapped. Named here because it
+  is a real thing spent, and it was hers to spend.
+* **Mid-turn one mark passes the circle's rightmost point**, at which its glyph
+  reaches x 1438 of 1440 — on screen, with the same 2 px every box holds, but
+  it is the tightest the composition ever gets. Its 48 px tile overhangs the
+  frame by 10 px for that moment; measured to cause no horizontal overflow
+  (`.j-rail` is `position: fixed`). Transient, once per chapter change.
+* **At the Mission pose there is still no navigator at all** — the reveal latch
+  (`SHOW_P`, 23 §9) is what keeps `mission@*` byte-identical. Pre-existing,
+  unchanged, still worth a decision of its own.
+* **A hover-capable window at 375 still gives the ring a third of the frame.**
+  The copy and chips step back under it (`body.j-rail-on`), real phones get the
+  column. Unchanged.
+* **`.at` is resolved from the last pointer position**, so a route that moves
+  the ring without being either a chapter turn or a pointer move leaves it
+  stale. Unchanged, and now demonstrated: the isolated pure-transform test above
+  is exactly such a route and reproduces it. No such route exists on this page.
+* The **five pre-existing Tier-3 drift errors**, the placeholder tokens in the
+  panel and the missing external URLs all stand.
