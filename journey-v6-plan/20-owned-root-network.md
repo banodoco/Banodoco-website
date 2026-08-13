@@ -1724,3 +1724,219 @@ out-of-visibility clock are untouched — only the control that pulls them.
    `pointerenter` from below it. It gets the light, as it always did; whether
    it also commits depends on whether it stops there, which is the same rule
    as everywhere else. Left as the honest reading.
+
+---
+
+# 2026-08-13 (later) — the card stops being furniture on the far flank
+
+> "When clicking a contributor in Owned by the Ecosystem, the associated
+> information box currently appears far off to the right. Instead, the box
+> should feel spatially connected to the person the user clicked. Position it
+> directly above or very close to that specific contributor, with sensible
+> collision handling where necessary so it stays readable and onscreen. The
+> user should immediately understand which contributor the information belongs
+> to without having to visually connect two distant parts of the screen."
+> — Hannah
+
+`.j-card` was pinned at `right: 3.4vw; top: 50%` — a 400 px slab on the far
+flank with no relationship to the face that opened it. On this chapter that is
+not a nicety. **Every one of the sixteen cards is headed "Contributor"** —
+nobody has completed the consent pipeline (CO-1.4 / OW-4.4), so the heading,
+the role and the blurb are the same placeholder for four people at a time.
+Position was the only thing on screen that could say *which* of the sixteen
+you were reading, and it was saying nothing.
+
+## J — this is placePop's job, not a new one
+
+`e20f7ff` already solved *anchor a panel beside a world-tracked thing, flip
+rather than clip, never cover the thing it belongs to*. `placeCard()` is that
+function's shape. Three differences, each forced by what a card is:
+
+1. **It anchors to the NODE, not to the chip's box.** A popover hangs off a
+   live chip rect. While a card is open every chip is faded and non-placeable
+   by design (`want = gate > 0.72 && !detail` — "the frame belongs to the
+   detail"), so there is no rect to read; and the pill was never the right
+   anchor anyway — `696e95d` measured it as a 300 px bar lying beside an
+   18-50 px disc, 116 px from the thing it stood for. So the card is placed
+   against the node's own projection and its **drawn radius**, taken through
+   `steadyProject`. Measured over 40 consecutive frames at the Owned rest:
+
+       raw   v.project(camera)   x spread 0.650 px   y spread 0.622 px
+       steadyProject             x spread 0.000 px   y spread 0.000 px
+       transforms the card wrote across those 40 frames:  ONE
+
+   That 0.650 x 0.622 is exactly the period-8 TAA tremor `d46e6bb` named as
+   Hannah's "shivering". A card pinned through the raw matrix would have
+   inherited it whole.
+2. **Above is preferred, not beside.** Hannah asked for above; it is also
+   right for a 400 px panel over an arc that spreads horizontally — a card
+   beside an edge face has nowhere to go, a card above one usually does.
+3. **The ladder is four deep**: `above → below → right → left`, each admitted
+   only if the whole box fits, then one last resort that takes the roomier of
+   above/below and clamps. The first four are **disjoint from the node's disc
+   by construction**, so the clamp on the other axis can never slide the card
+   over its own subject — the same argument that makes the popover's two side
+   placements safe.
+
+Measured, all four rungs and the last resort are reachable and correct:
+
+| viewport | what it forces | sides chosen |
+|---|---|---|
+| 1440x900, 1280x800 | the shipping case | **above** ×10 / ×10 |
+| 1440x470 | no room above the upper arc | above ×4, **below** ×2 |
+| 900x420 | no room above *or* below for some | above ×3, below ×2, **left** ×1 |
+| 1180x300 | wide and very short | **right** ×5, above ×1 |
+
+Across every one of those: `coversNode` **false** and `onScreen` **true**,
+on all 34 placements. Node-to-card gap at the shipping sizes runs **35–71 px**
+(`CARD_GAP` 16 past a hit-pad-scale radius), against the ~600–1100 px the old
+flank position put between a left-hand face and its card.
+
+## K — the filament, and what it is for
+
+`--j-card-fx` / `--j-card-fy` publish where the node sits **inside the card's
+own box**, so the contact filament is a 68 px segment pointing at the person
+rather than a rule along the whole edge. This is not decoration; it is the
+answer to the one case the edge would get wrong. When a face near a frame edge
+pushes its card sideways, the card's centre is no longer over its subject:
+
+    contributor-13  node x 63.3   card clamped to x 12   filament at fx 51.3
+    contributor-2   node x 84.4   card clamped to x 12   filament at fx 72.4
+    contributor-3   node x 1271.6 card clamped right     filament at fx 243.6
+
+The filament stays on the node's column in every one.
+
+The entry is the popover's motion family (`e20f7ff` / `d1ecc23`), verbatim in
+structure: `j-card-lamp` brings the panel up out of the dark while
+`j-card-unfurl` walks its edge out from the side the node is on, plus the
+filament's own strike. **`clip-path`, never transform** — for exactly the
+reason the popover states it: transform is the placement channel here too.
+Sampled mid-flight, the card's rect is `[683, 292, 400]` at 0.04 s, 0.12 s,
+0.30 s and 0.75 s — **it cannot walk while it opens**, so the hit target it
+presents at 40 ms is the one it presents at rest.
+
+A **retarget** (one contributor straight to the next) re-arms the entry,
+because that is a fresh subject and the card has just travelled across the
+frame to a different person.
+
+## L — what is deliberately unchanged
+
+**The whole modal contract**, verified end to end after the move:
+`role="dialog"` + `aria-modal="true"`, focus moved to the close control on
+open, the focus trap holding (Tab ×4 stays on `.j-card-x`, the card's only
+focusable), Escape closing, `aria-expanded` **true on the open chip and false
+on the one it retargeted away from**, the polite live region announcing a
+retarget, and `claimInput(card, { modal: true })` so the card scrolls natively
+instead of being scrubbed. Placement is a transform; none of that knows or
+cares where the box is.
+
+**The hit pads.** Measured before an open and after a close: every live pad
+answers at its own centre (15/15, then 9/9 as the stagger refills). While the
+card is open there is nothing to steal — the chips are faded out by the
+pre-existing detail rule — and `.j-card:not(.open) { pointer-events: none }`
+is new belt-and-braces so the 0.34 s closing fade is never a hit surface over
+a face that has already come back.
+
+**The bottom sheet (PL-1.3).** On a coarse pointer or a viewport ≤ 720 px the
+card is still a sheet from the bottom edge, with its 44 px grab handle, its
+drag-to-dismiss and its internal scroll; `placeCard()` declines outright while
+`.sheet` is set, and the entry is not armed for it. That is a decision, not an
+omission. A sheet on a phone is already unambiguous — it fills the bottom
+third the instant you tap, and there is no "far off to the right" there to
+fix. Hannah's report is about the desktop side card, and so is the fix.
+Re-forming across the 720 px line with a card open now hands the transform
+back, or the sheet would arrive wearing the side card's translate (inline
+style out-ranks `.j-card.sheet { transform: none }`).
+
+At 375x812 the anchored geometry was measured anyway, with the sheet class
+lifted by the probe, to show it would be correct if PL-1.3 ever wanted it:
+315 px wide, `above`, gap 36-42 px, never covering, always on-screen —
+including `contributor-10` at node x **−100.9**, off the left edge, whose card
+clamps to x 12 with the filament at fx 28.5 pointing left.
+
+**Off-frame and behind-the-lens.** A node that projects outside the frame is
+not abandoned: the anchor point is **clamped to the frame edge**, so the card
+meets the visitor at the edge the person is beyond. Only a node *behind the
+lens* has no honest direction, and that falls back to the pre-2026-08-13 flank
+position with no filament — measured at x 991 on a 1440 frame, which is
+`right: 3.4vw` to the pixel. Measured across all four rest poses × 16 nodes,
+**no contributor is ever behind the lens**, so that branch is defensive; it
+was exercised by stubbing `nodeWorld` from the probe (z 1.035 → `side=flank`,
+on-screen, `content: none` on the filament).
+
+And the card is **never hidden when its subject leaves the frame**, unlike the
+popover. A popover is an annotation with nothing to annotate; a card is a
+modal disclosure with a focus trap and a route state behind it, and taking it
+out from under a visitor's keyboard because the camera drifted would be a far
+worse fault than a card that has run out of things to point at.
+
+## Gates
+
+    anchored            34 placements over 4 viewports x 10 contributors:
+                        coversNode FALSE and onScreen TRUE on every one
+    ladder              above / below / right / left and the last resort all
+                        reached and correct (table above)
+    proximity           node-to-card gap 35-71 px at 1440x900 and 1280x800,
+                        29-40 px on the squeezed viewports (was 600-1100 px
+                        for a left-hand face against the old flank pin)
+    edges               contributor-2 / -13 (left), -1 / -3 (right),
+                        -13 / -15 (bottom), -0 / -1 (top) all shot at
+                        1440x900 and 1280x800; every clamped card keeps its
+                        filament on the node's column
+    jitter-free         steadyProject spread 0.000 x 0.000 px over 40 frames
+                        against raw project's 0.650 x 0.622; the card wrote
+                        ONE transform across those 40 frames
+    entry               unfurl + lamp + filament, clip-path only; the card's
+                        rect is identical at 0.04 / 0.12 / 0.30 / 0.75 s
+    reduced motion      animation none, clip-path none, filament opacity 0,
+                        transition 0s — and the PLACEMENT still applied
+                        (contributor-13: side above, gap 60.5, covers false)
+    a11y contract       dialog/aria-modal true; focus to .j-card-x on open;
+                        trap holds (Tab x4 -> .j-card-x); Escape closes;
+                        aria-expanded true on the open chip, false on the
+                        retargeted-away one, all false after close; live
+                        region speaks on retarget; claimInput modal held
+    hit pads            every live pad answers at its own centre before the
+                        open (15/15) and after the close (9/9); a closing
+                        card is pointer-events:none for its whole fade
+    375x812             PL-1.3 sheet intact and unchanged (44 px grip, no
+                        transform written); anchored geometry measured
+                        separately at that width and correct
+    other chapters      Inspire and Connect still disclose through the
+                        POPOVER, not the card — #/inspire/arca and
+                        #/connect/discord pin their popovers beside their
+                        chips with cardOpen false
+    console             full wheel ride mission -> inspire -> connect ->
+                        owned -> final and all the way back, plus a crown
+                        re-deal, a card open and an Escape mid-ride:
+                        0 errors, 0 warnings
+    goldens             capture.py --check PASS, all ten MAE 0.00/255. The
+                        card is `hidden` at rest AND in HIDE_SELECTORS, so
+                        it cannot reach a frozen frame either way.
+
+## Residuals
+
+1. **Escape does not restore focus to the chip — and did not before this
+   pass.** `closeCard()` calls `returnFocus.focus()` on the tick, while the
+   chip is still `visibility: hidden` from the detail-open fade, so focus
+   lands on `<body>`. **Verified identical at `961b2d1` and on this tree** by
+   stashing and re-running the same probe: same result, both times, for
+   Escape and for the ✕. Long-standing, orthogonal to placement, and left
+   alone rather than folded into a placement commit — but it is a real
+   keyboard hole and should be fixed next.
+2. **The contact filament sits at inset 0, not −1 px like the popover's.**
+   `.j-card` is an `overflow-y: auto` box and anything outside the padding box
+   is clipped. A card long enough to scroll would scroll its filament away.
+   No contributor card is anywhere near that (200-223 px against a 74vh cap),
+   so it is a latent case, not a live one.
+3. **`max-height` is still a flat 74vh, not the room actually available above
+   the node.** The ladder's last resort handles the overflow correctly by
+   clamping, but a genuinely tall card in a short frame would sit over its own
+   subject rather than shrink. Contributor cards are 200-223 px; if real
+   consented copy makes them much taller, this is the line to revisit.
+4. **375x812 still shows 2-4 of 16 faces** (§9.4, unchanged). Anchoring makes
+   the placed ones unambiguous; it does not reach the twelve that are not
+   placed, and the sheet is still the vessel there.
+5. **The flank fallback is unexercised in the shipping build.** No pose puts a
+   contributor behind the lens. It exists so that a future camera cannot make
+   the card jump to a meaningless corner.

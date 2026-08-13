@@ -1104,7 +1104,84 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     return z;
   }
 
-  /* ---------------- detail card ---------------- */
+  /* ==========================================================================
+     THE DETAIL CARD (W3-A) — ANCHORED TO ITS NODE (Hannah, 2026-08-13)
+
+     "When clicking a contributor in Owned by the Ecosystem, the associated
+      information box currently appears far off to the right. Instead, the box
+      should feel spatially connected to the person the user clicked ...
+      directly above or very close to that specific contributor, with sensible
+      collision handling ... The user should immediately understand which
+      contributor the information belongs to without having to visually
+      connect two distant parts of the screen."
+
+     The card was pinned at `right: 3.4vw; top: 50%` — a fixed slab on the far
+     flank, 400 px wide, with no relationship to the face that opened it. On a
+     field of SIXTEEN people whose card headings all read "Contributor" (every
+     one anonymous until the consent pipeline lands, CO-1.4 / OW-4.4),
+     position was never a nicety: it is the ONLY thing on screen that says
+     which of the sixteen you are reading about.
+
+     ---- this is placePop's job, not a new one ----
+
+     e20f7ff already solved "anchor a panel beside a world-tracked chip,
+     flip rather than clip, never cover the thing it belongs to" for the
+     popover. `placeCard()` below is that function's shape with three
+     differences, each forced by what a card is:
+
+       1. IT ANCHORS TO THE NODE, NOT TO THE CHIP'S BOX. A popover hangs off a
+          live chip rect. While a card is open every chip is faded out and
+          non-placeable by design ("the frame belongs to the detail"), so
+          there is no rect to read — and the pill's box was never the right
+          anchor anyway (696e95d: the pill is a 300 px bar lying beside an
+          18-50 px disc). So the card is placed against the NODE'S OWN
+          PROJECTION and its drawn radius, through `steadyProject` — the
+          jitter-free projection the chips use (851c77a / 7e256aa / d46e6bb),
+          because anything pinned to a node that reads the raw matrix inherits
+          a 0.65 px period-8 tremor.
+       2. ABOVE IS PREFERRED, NOT BESIDE. Hannah asked for above; it is also
+          the right default for a 400 px panel over a face in an arc that
+          spreads horizontally — a card beside an edge face has nowhere to go,
+          a card above one usually does.
+       3. THE FALLBACK LADDER IS FOUR DEEP, not three: above -> below ->
+          right -> left, each admitted only if it FITS whole, then a last
+          resort that takes the roomier of above/below and clamps. Every one
+          of the first four is disjoint from the node's disc by construction,
+          so the "never covers its own subject" guarantee survives the clamp
+          exactly as it does for the popover.
+
+     ---- what is NOT changed ----
+
+     Everything that makes this a modal disclosure: `role="dialog"` +
+     `aria-modal`, the focus trap, focus moved in on open and RETURNED to the
+     trigger on close, Escape, `aria-expanded` on the chip, the polite live
+     region, and `claimInput(card, { modal: true })` so the sheet scrolls
+     natively instead of being scrubbed. Placement is a transform; none of it
+     knows or cares where the box is.
+
+     And the BOTTOM SHEET (PL-1.3) is untouched. On a coarse pointer or a
+     narrow viewport the card is still a sheet from the bottom edge with a
+     grab handle, and `placeCard()` declines outright when `.sheet` is set.
+     That is not an omission: a sheet on a phone is already unambiguous —
+     it fills the frame's bottom third the instant you tap, there is no "far
+     off to the right" to fix — and it carries the drag-to-dismiss gesture,
+     the 44 px handle and the internal scroll that a 315 px floating panel
+     would have to give up. Hannah's report is about the desktop side card,
+     and so is the fix.
+     ========================================================================== */
+  /** Clearance between the node's own disc and the card's box. Wider than
+   *  POP_GAP (12) because the thing being cleared here is a lit face with an
+   *  ember ring and a fray, not a 9 px dot. */
+  const CARD_GAP = 16;
+  /** Hard minimum from any viewport edge. */
+  const CARD_MARGIN = 12;
+  /** The entry runs while `.j-card-enter` is set and no longer — same
+   *  reasoning as POP_ENTER_MS: `data-side` is re-decided every frame from
+   *  live geometry, and a card drifting across a flip threshold with the
+   *  class still on would replay the whole wipe at rest. Covers the 0.62 s
+   *  filament with air. */
+  const CARD_ENTER_MS = 700;
+
   // A real modal dialog: role + aria-modal + a title that labels it, focus
   // moved in on open, TRAPPED while open, and returned to the trigger on close
   // (PL-2.2). aria-modal only tells the truth if the trap exists, which is why
@@ -1286,6 +1363,137 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     return true;
   }
 
+  /* ---------------- the card's anchor ----------------
+     `frameGeom` is the one thing placeCard() cannot work out for itself: the
+     camera and the frame's projection scale. update() owns both and rewrites
+     this closure every frame, which also means the card is placed from
+     EXACTLY the geometry the chips were placed from on the same frame — one
+     source of truth, no second projection path to drift out of step.
+     openCard() can therefore place the card on the tick it opens, before the
+     first paint, using the last frame's geometry (sub-pixel stale at worst,
+     and the next frame corrects it). */
+  let frameGeom = null;
+  let cardAnchor = null;        // the hotspot whose node the card belongs to
+  let cardEnterTimer = null;
+
+  /** Where the card's subject is on screen this frame, and how big it draws.
+   *  null when there is no anchor at all; `behind` when the node is on the
+   *  far side of the lens, which is the one case with no honest direction to
+   *  point in. Off-frame but in front is NOT null — the point is clamped to
+   *  the frame edge, so the card meets the visitor at the edge the person is
+   *  beyond rather than jumping back to a corner that means nothing. */
+  function anchorPoint() {
+    if (!cardAnchor || !frameGeom || typeof cardAnchor.world !== 'function') return null;
+    const w = cardAnchor.world();
+    if (!w) return null;
+    const g = frameGeom;
+    const v = projectStable(w.clone(), g.camera);
+    if (v.z > 1) return { behind: true };
+    let r = 24;
+    if (cardAnchor.radius) {
+      const wr = cardAnchor.radius() || 0;
+      if (wr > 0) r = wr * (window.innerHeight * 0.5) / (Math.max(0.05, g.viewDepth(w)) * g.tanHalf);
+    }
+    // The same ceiling the hit pads take: a foreground face that fills a
+    // sixth of the frame does not get to push the card a sixth of the frame
+    // away from itself.
+    r = Math.max(14, Math.min(56, r));
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const x = (v.x * 0.5 + 0.5) * vw;
+    const y = (-v.y * 0.5 + 0.5) * vh;
+    const cx = Math.min(Math.max(x, CARD_MARGIN + r), Math.max(CARD_MARGIN + r, vw - CARD_MARGIN - r));
+    const cy = Math.min(Math.max(y, CARD_MARGIN + r), Math.max(CARD_MARGIN + r, vh - CARD_MARGIN - r));
+    return { x: cx, y: cy, r, offFrame: cx !== x || cy !== y };
+  }
+
+  /** Place the card against its node. A no-op for the sheet, which owns its
+   *  own geometry (PL-1.3), and for a card with no anchor to speak of, which
+   *  keeps the pre-2026-08-13 flank position as its honest fallback. */
+  function placeCard() {
+    if (!cardIsOpen || card.classList.contains('sheet')) return;
+    const a = anchorPoint();
+    if (!a || a.behind) {
+      // No direction to point in. Sit on the flank exactly where the card sat
+      // before this pass — a deep link to a node the current pose does not
+      // show has nothing to be near, and pretending otherwise would put the
+      // card at an arbitrary edge.
+      const p0 = card.getBoundingClientRect();
+      card.dataset.side = 'flank';
+      card.style.transform = `translate(${Math.round(window.innerWidth * 0.966 - p0.width)}px, ${Math.round((window.innerHeight - p0.height) / 2)}px)`;
+      card.style.removeProperty('--j-card-fx');
+      card.style.removeProperty('--j-card-fy');
+      return;
+    }
+    const p = card.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+    const xCentred = clamp(a.x - p.width / 2, CARD_MARGIN,
+      Math.max(CARD_MARGIN, vw - CARD_MARGIN - p.width));
+    const yCentred = clamp(a.y - p.height / 2, CARD_MARGIN,
+      Math.max(CARD_MARGIN, vh - CARD_MARGIN - p.height));
+
+    // The ladder. Each rung is admitted only if the whole box fits, and each
+    // of the four is DISJOINT from the node's disc by construction — so the
+    // clamp on the other axis can never slide the card over its own subject.
+    const aboveY = a.y - a.r - CARD_GAP - p.height;
+    const belowY = a.y + a.r + CARD_GAP;
+    const rightX = a.x + a.r + CARD_GAP;
+    const leftX = a.x - a.r - CARD_GAP - p.width;
+    let side, x, y;
+    if (aboveY >= CARD_MARGIN) {
+      side = 'above'; x = xCentred; y = aboveY;
+    } else if (belowY + p.height <= vh - CARD_MARGIN) {
+      side = 'below'; x = xCentred; y = belowY;
+    } else if (rightX + p.width <= vw - CARD_MARGIN) {
+      side = 'right'; x = rightX; y = yCentred;
+    } else if (leftX >= CARD_MARGIN) {
+      side = 'left'; x = leftX; y = yCentred;
+    } else {
+      // Nowhere fits whole — a card taller than the room above AND below and
+      // wider than the room either side. Take the roomier of above/below and
+      // clamp into the frame: staying READABLE and on-screen outranks staying
+      // clear, and this is the only rung that can overlap.
+      const roomAbove = a.y - a.r, roomBelow = vh - (a.y + a.r);
+      side = roomAbove >= roomBelow ? 'above' : 'below';
+      x = xCentred;
+      y = clamp(side === 'above' ? aboveY : belowY, CARD_MARGIN,
+        Math.max(CARD_MARGIN, vh - CARD_MARGIN - p.height));
+    }
+
+    card.dataset.side = side;
+    card.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    // Where the node is IN THE CARD'S OWN BOX, so the contact filament can be
+    // a short segment pointing at the person rather than a rule along the
+    // whole edge. It matters most in exactly the case the edge rule would
+    // fail: a node near a frame edge whose card has been clamped sideways, so
+    // the card's centre is no longer over its subject.
+    card.style.setProperty('--j-card-fx', `${clamp(a.x - x, 12, Math.max(12, p.width - 12)).toFixed(1)}px`);
+    card.style.setProperty('--j-card-fy', `${clamp(a.y - y, 12, Math.max(12, p.height - 12)).toFixed(1)}px`);
+  }
+
+  /** The entry, in the popover's motion family (e20f7ff / d1ecc23): the
+   *  vessel's LIGHT and its EXTENT as two statements, plus the contact
+   *  filament on the edge that faces the node. Armed only on a FRESH open —
+   *  a retarget from one contributor straight to the next re-arms it,
+   *  because that IS a fresh subject. */
+  function runCardEntry() {
+    if (cardEnterTimer) clearTimeout(cardEnterTimer);
+    if (card.classList.contains('j-card-enter')) {
+      card.classList.remove('j-card-enter');
+      void card.offsetWidth;
+    }
+    card.classList.add('j-card-enter');
+    cardEnterTimer = setTimeout(() => {
+      cardEnterTimer = null;
+      card.classList.remove('j-card-enter');
+    }, CARD_ENTER_MS);
+  }
+
+  function stopCardEntry() {
+    if (cardEnterTimer) { clearTimeout(cardEnterTimer); cardEnterTimer = null; }
+    card.classList.remove('j-card-enter');
+  }
+
   function openCard(nodeId, trigger) {
     // Nodes that carry a popover are disclosed BESIDE their chip, never in the
     // card — see the POPOVER block above for why the card is not also offered.
@@ -1326,6 +1534,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     card.hidden = false;
     card.inert = false;
     cardIsOpen = true;
+    // WHOSE card this is, for placeCard(). A node with no hotspot (a deep
+    // link into a chapter that is not the current one) anchors to nothing and
+    // takes the flank fallback.
+    cardAnchor = hotspots.find(x => x.id === nodeId) || null;
+    // Place BEFORE the flush and before `.open`, exactly as showPop() places
+    // before arming its entry: the unfurl's direction comes from `data-side`,
+    // so the side has to be decided while the animation is still absent, or
+    // the first frame wipes the wrong way and corrects itself.
+    placeCard();
     // A card arriving from `hidden` (display:none) has no rendered start state
     // for the opacity transition to run FROM. Force ONE synchronous style
     // flush, then add `.open` in the same tick — deferring to rAF instead
@@ -1333,6 +1550,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // throttled or background tab would open a dialog that never paints.
     void card.offsetHeight;
     card.classList.add('open');
+    // A retarget is a fresh SUBJECT, so it gets a fresh entry: the card has
+    // just travelled across the frame to a different person, and arriving
+    // silently at the new one is the thing this pass exists to prevent.
+    // NOT for the sheet — its entry is the shipped PL-1.3 one, and an unfurl
+    // with a contact filament on a panel that is anchored to the bottom edge
+    // rather than to a face would be pointing at nothing.
+    if (!card.classList.contains('sheet')) runCardEntry();
     // While it is open the card owns its own wheel, touch and travel keys:
     // internal scrolling works despite scroll.js's window-capture
     // preventDefault, a finger on the sheet can never scrub the journey, and
@@ -1371,6 +1595,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     if (cardIsOpen) return;                 // reopened mid-fade: leave it alone
     card.hidden = true;
     card.style.transform = '';
+    card.style.removeProperty('--j-card-fx');
+    card.style.removeProperty('--j-card-fy');
+    card.removeAttribute('data-side');
     card.classList.remove('sheet', 'dragging');
   }
 
@@ -1398,6 +1625,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     unpinPop();
     if (!cardIsOpen) return;
     cardIsOpen = false;
+    // The entry is dropped BEFORE `.open`, so the animation is never holding
+    // opacity down when the close transition needs to take it — the same
+    // ordering hidePop() keeps for the popover.
+    stopCardEntry();
+    cardAnchor = null;
     card.classList.remove('open');
     releaseInput(card);
     if (drag) { drag = null; card.classList.remove('dragging'); }
@@ -1648,6 +1880,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     const cpx = cm[12], cpy = cm[13], cpz = cm[14];
     const fx = -cm[8], fy = -cm[9], fz = -cm[10];
     const viewDepth = (v) => (v.x - cpx) * fx + (v.y - cpy) * fy + (v.z - cpz) * fz;
+    // Published for placeCard(), which pins a DOM box to a world point and so
+    // must read the SAME camera and the same projection scale the chips read
+    // on this frame, through the same jitter-free projection.
+    frameGeom = { camera, tanHalf, viewDepth };
     for (const h of hotspots) {
       const gate = eased[h.chapter] || 0;
       let want = gate > 0.72 && !detail;
@@ -1886,6 +2122,18 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       if (!popNode.btn.classList.contains('vis')) hidePop();
       else placePop();
     }
+
+    // The card is anchored to a node that is itself world-tracked, so it is
+    // re-placed every frame for the same reason the popover is: the organism
+    // sways, and a box pinned to a face has to sway with it or the two come
+    // apart. Unlike the popover it is NEVER hidden when its subject leaves
+    // the frame — the card is a modal disclosure with a focus trap and a
+    // route state behind it, and taking it away from under a visitor's
+    // keyboard because the camera drifted would be a far worse fault than a
+    // card that has run out of things to point at. anchorPoint() clamps to
+    // the frame edge instead, and falls back to the flank only when the node
+    // is behind the lens entirely.
+    if (cardIsOpen) placeCard();
   }
 
   // An orientation change or a window resize across the 720px line while a
@@ -1893,7 +2141,19 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   // phone-width viewport until the next open.
   if (typeof sheetQuery.addEventListener === 'function') {
     sheetQuery.addEventListener('change', () => {
-      if (cardIsOpen) card.classList.toggle('sheet', sheetQuery.matches);
+      if (!cardIsOpen) return;
+      card.classList.toggle('sheet', sheetQuery.matches);
+      // The anchored form writes its placement as an INLINE transform, which
+      // outranks `.j-card.sheet { transform: none }`. Re-forming into a sheet
+      // therefore has to hand the transform back, or the sheet arrives
+      // wearing the side card's translate. (The other direction needs
+      // nothing: the next frame's placeCard() writes one.)
+      if (sheetQuery.matches) {
+        card.style.transform = '';
+        card.style.removeProperty('--j-card-fx');
+        card.style.removeProperty('--j-card-fy');
+        card.removeAttribute('data-side');
+      }
     });
   }
 
