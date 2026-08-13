@@ -1760,7 +1760,22 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     const lead = blendDur * COPY_JUMP_LEAD;
     const dur = blendDur + COPY_JUMP_TAIL_S - lead;
     endArrive();                                   // a jump can overtake a jump
-    arrive = { id, t: 0, lead, dur, own: true };
+    // THE DEPARTURE IS TIMED AGAINST THE MOVE TOO (2026-08-13 — the loop's
+    // seam). The arrival has been placed inside the blend since d1ecc23; the
+    // release was left on the ordinary COPY_OUT_K scrub rate, which is
+    // proportionate to an ordinary 1.2 s jump and is not proportionate to the
+    // wrap's 4.00 s lap: measured, the Final block was at 0 by 530 ms, with
+    // the camera 0.3 units into a 68-unit move — the words evaporated off a
+    // frame that had not moved, and 2.1 s of empty copy layer followed before
+    // the hero's arrived. `from` is the last TRAVELLED frame's opacity, and
+    // the block now releases across `lead` — the same window the incoming one
+    // spends waiting — so the two are one handover rather than two animations
+    // with a hole between them. It ends at 0, which is the value the scroll
+    // rule is already heading for, so the hand-back is a no-op exactly as the
+    // entry's is.
+    const from = {};
+    for (const k in easedPrev) if (k !== id) from[k] = easedPrev[k];
+    arrive = { id, t: 0, lead, dur, own: true, from };
     const b = blocks[id];
     if (b) {
       // The parts inside the block run on the CSS clock, started here so they
@@ -1832,16 +1847,26 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     }
     // The camera blend runs on smootherstep (journey.js); the copy uses the
     // same C2 ease so the two read as one movement rather than two.
-    let arriveE = 0;
+    let arriveE = 0, leaveE = 0;
     if (arrive && arrive.own) {
       const f = clamp01((arrive.t - arrive.lead) / arrive.dur);
       arriveE = f * f * f * (f * (f * 6 - 15) + 10);
+      // the release runs across the lead — same C2 ease, same clock
+      const g = clamp01(arrive.t / Math.max(arrive.lead, 1e-6));
+      leaveE = g * g * g * (g * (g * 6 - 15) + 10);
     }
 
     for (const id in eased) {
       const target = bandOpacity(p, COPY_BANDS[id]) * travelHold;
       let s = eased[id];
       if (arrive && arrive.own && id === arrive.id) s = target * arriveE;
+      // a block the jump is LEAVING: released on the move's clock, but only
+      // while it is still above where the scroll rule would have it — so this
+      // can lower a block and never raise one, and a block whose band is
+      // already open (the destination's neighbours during a scrub-interrupted
+      // jump) is untouched.
+      else if (arrive && arrive.own && arrive.from[id] > 0 &&
+               arrive.from[id] * (1 - leaveE) > target) s = arrive.from[id] * (1 - leaveE);
       else if (dt === 0) s = target;
       else if (target < s) s += (target - s) * Math.min(1, dt * COPY_OUT_K);
       else s += (target - s) * Math.min(1, dt * COPY_IN_K * settled);

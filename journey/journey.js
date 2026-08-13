@@ -525,6 +525,10 @@ export function boot(opts = {}) {
     const fog = sceneApi.scene.fog;
     const pos0 = cam.position.clone(), tgt0 = ctl.target.clone(), fov0 = cam.fov;
     const fogN0 = fog ? fog.near : 0, fogF0 = fog ? fog.far : 0;
+    // the LIVE grade, not lookOf(origin p) — a jump overtaking a jump starts
+    // from a graded frame that is mid-blend and belongs to no p at all, which
+    // is the same reason pos0 above is read off the camera rather than the route
+    const look0 = { ...lens.look };
     // A jump overtakes a jump: drop the old blend BEFORE placing, so the
     // placement's own dt = 0 frames are not stepped by it (the blend now runs
     // inside applyFrame — see the frame-order block there). The new blend
@@ -579,8 +583,14 @@ export function boot(opts = {}) {
     // constant, and reading it live would feed the blend back into itself at
     // p = 0 exactly as the position once did (the M4 stuck camera).
     const fogN1 = fog ? fog.near : 0, fogF1 = fog ? fog.far : 0;
+    // ...and so does THE GRADE, for exactly the same reason and read at
+    // exactly the same two moments (2026-08-13 — the loop's seam; see the
+    // `override` block in lens.js). look0 is captured above, before placeAt,
+    // because it is what is on screen; look1 is read here, after placeAt has
+    // let lens.update() write the destination's per-leg curve.
+    const look1 = lens.lookOf(journey.progress);
     camBlend = { t: 0, dur, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
-      az1, bow, rise };
+      az1, bow, rise, look0, look1, look: { ...look1 } };
     setBlending(true);
     // The destination's copy is timed against THIS move, not against the click
     // (Hannah, 2026-08-07 — "the text for the new section INSTANTLY appears").
@@ -815,6 +825,14 @@ export function boot(opts = {}) {
       camBlend.fog.near = camBlend.fogN0 + (camBlend.fogN1 - camBlend.fogN0) * e;
       camBlend.fog.far = camBlend.fogF0 + (camBlend.fogF1 - camBlend.fogF0) * e;
     }
+    // ...and so does the grade. Written BEFORE lens.update(p) runs (it is
+    // further down applyFrame), so the override is in place by the time the
+    // lens reads it and there is never a frame of the destination's look on a
+    // camera that has not arrived.
+    for (const k in camBlend.look) {
+      camBlend.look[k] = camBlend.look0[k] + (camBlend.look1[k] - camBlend.look0[k]) * e;
+    }
+    guarded('lens', () => lens.setLookOverride(camBlend.look));
     if (f >= 1) endCamBlend();
   }
 
@@ -824,6 +842,10 @@ export function boot(opts = {}) {
    *  the frame a deep link to the same chapter would have placed. */
   function endCamBlend() {
     camBlend = null;
+    // The grade goes back to being a pure function of p. The last override
+    // written was look1 — lookOf(destination p) — so the hand-back is a no-op
+    // by construction, exactly as the copy envelope's is (d1ecc23).
+    guarded('lens', () => lens.setLookOverride(null));
     setBlending(false);
     snapChapters();
   }
