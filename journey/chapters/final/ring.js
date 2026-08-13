@@ -817,7 +817,27 @@ export function createFinalRing(sceneApi, uniforms) {
     {
       const xr = makeRng(0x1EF7ED6E);          // 'left edge'
       const xg = () => gaussOf(xr);
-      const WANT = 16;
+      /* 16 -> 30 (2026-08-13, Hannah: "the area to the left of the text...
+         feels under-composed... there should be enough visual material to
+         prevent that side of the composition feeling unfinished").
+         The BAND is unchanged and cannot change — rel [-0.72, -0.55] is
+         still every metre of kept soil on this side, as the cutVal table
+         above says. What was a taste choice, and is the thing she is
+         actually reporting, is how much of it was used: 16 bodies across
+         that whole band left the left arm reading as a thin picket against
+         the right's mass (measured lit density in the outer 120 px of the
+         body band, 1728x980: left 0.263 against right 0.422, and the
+         2026-08-12 pass called that "the authored composition"). It is not
+         authored any more.
+         The count is bounded by the same 1.15-unit spacing test against
+         `placed`, so this cannot crowd: it fills the band it was already
+         given, at the density the right side has always had. Every added
+         body still lands at dist >= CLONE_DIST, so they are all T4, the T3
+         clone rung and its fifteen-slot FIELD_LADDER stay untouched, and
+         they join the same by-depth [REV_KNEE, REV_HI] tail. Same rng, and
+         the draw order is unchanged, so the first 16 are bit-identical to
+         d39b35b's. */
+      const WANT = 30;
       const cand = [];
       let g2 = 0;
       while (cand.length < WANT && g2++ < 4000) {
@@ -862,7 +882,7 @@ export function createFinalRing(sceneApi, uniforms) {
       // and the horizon behind them: the hint rung stops at rel -0.50, so
       // the far haze has the same edge the bodies did. Same band, same rung.
       let g3 = 0;
-      while ((fieldStats.leftHints || 0) < 6 && g3++ < 2000) {
+      while ((fieldStats.leftHints || 0) < 12 && g3++ < 2000) {   // 6 -> 12, same band
         const rel = -0.55 - xr() * 0.17;
         const dist = 34 + xr() * 12;
         const th = REST_CAM.head + rel;

@@ -2222,3 +2222,200 @@ read MAE 0.00/255.
 - **Narrow widths unbroken**: 1024x768 and the 375x812 portrait re-shot and
   compared — the composition is what it was, and the left edge there still
   bleeds as it always did.
+
+---
+
+# 2026-08-13 — the left of the frame is the CUT, not an empty field
+
+**Requested:** Hannah. **Built:** same day.
+**Files:** `journey/chapters/final/terrain.js` (§3b, the section trailing into
+the cut; a second bank of colony glow pools), `journey/chapters/final/ring.js`
+(the left band's population). No camera key, no rest pose, no new draw call.
+
+> "In the final section, the area to the left of the text currently contains a
+> large amount of empty black space and feels under-composed. Add more
+> environmental detail there… extending the fairy ring further into this area;
+> additional ground-level elements; visible mycelial/network structures; subtle
+> organic details that connect back to the rest of the mushroom system. It
+> doesn't need to become busy, but there should be enough visual material to
+> prevent that side of the composition feeling unfinished."
+
+## 1. Where the emptiness actually is — and why the last pass could not reach it
+
+`d39b35b` extended the ring's left arm and measured the result as left 0.263
+against right 0.422, calling that "the authored composition". Hannah is now
+reporting that imbalance itself, so the verdict is superseded — but the
+interesting part is *why* that pass could not have fixed it.
+
+Unprojecting the rest frame at 1728x980 and reading `cutVal` at the ground
+plane under each pixel:
+
+| screen | ground (x, z) | dist | cutVal | |
+|---|---|---|---|---|
+| (80, 700) | (−9.34, −5.46) | 10.2 | **−2.62** | removed |
+| (250, 760) | (−9.72, −3.37) | 8.3 | **−2.05** | removed |
+| (420, 830) | (−10.12, −1.68) | 6.9 | **−1.88** | removed |
+| (150, 900) | (−11.18, −2.32) | 6.7 | **−3.08** | removed |
+| (700, 760) | (−8.69, −0.79) | 7.5 | −0.27 | removed |
+| (300, 500) | (−1.96, −11.34) | 19.2 | +1.53 | KEPT |
+| (80, 460) | (0.09, −19.05) | 26.5 | +2.91 | KEPT |
+
+**The whole lower half of the frame is the removed side.** It is not an
+under-populated field — it is the excavation, and there is no ground there to
+stand anything on. Kept soil only begins around screen y 460–500, out at
+dist 19–26: the horizon band, which is exactly and only where `d39b35b` could
+put bodies. The dead area was never reachable from the ring.
+
+So the thing that belongs in the pit is **the section itself**, which is
+also the first two items on Hannah's own list.
+
+## 2. The section trails off into the cut (terrain.js §3b)
+
+§3 already exposes the colony in the void near the face and then deliberately
+stops: *"survival beyond the cut face now decays with distance (none past
+~2.6 units)… so the removed side fades to true absence instead of stranding
+bright floaters in open black (the rest frame's lower-left)."* That is the
+authored emptiness, and the note names the real hazard exactly: **floaters**.
+
+The answer is not to relax the decay and scatter loose strokes into the black —
+that is the countable-dash carpet the declutter round removed, and the first
+cut of this block proved it: 210 filaments all leaning off the same wall
+rendered as a **combed hatch**, visibly worse than the emptiness. What ships
+gives the void strands an **anchor** and a **curve**:
+
+* every filament **starts on the cut face** — on the lip or down the section
+  wall — and travels out into the removed side, so what fills the pit is
+  visibly the severed network trailing out of the wall, not debris in front
+  of it. Same vocabulary the file already speaks: §2's rootlets leave the lip,
+  §3's filaments travel with momentum, §4's cords are cut at the face. This is
+  those cut ends *continuing*.
+* turning is a **persistent curl** — a signed turn rate carried for the
+  strand's whole length — rather than per-step noise, over twice as many
+  half-length steps. A hypha bends; it does not zigzag and it does not rule a
+  line. The heading starts on the face **tangent** with a random sign and only
+  drifts outward, so strands run along the wall and across each other instead
+  of all raking away from it.
+* tone dies continuously with how far the strand has left the wall, so it
+  dissolves into the dark rather than ending at a countable point.
+* **weighted to frame-left, which is the low-s end.** With the rest lens at
+  (−14.72, 2.70) and the cut running s −14..+10, `cutEdgePoint(−14)` is
+  (−2.75, −15.81) — 22.0 units out and 12.8 to the *left* of the view axis —
+  while `cutEdgePoint(+10)` is (−10.69, 6.85), 5.8 out and 5.4 to the *right*.
+  The right end is the near corner the lip's own `nearK` taper already holds
+  down; the left end is the far wall across the empty pit.
+
+A second bank of **22 colony glow pools** is set deeper into the cut and
+further out from the wall on the same weighting. The twelve that existed sit
+within ~2 units of the lip; the pit itself had no atmosphere at all, so the
+strands would have been the only thing in it and would have read as strokes on
+black. The pools give the pit a floor of light to sit against.
+
+Both use a fresh rng and run after every existing draw into their batch, so
+not one shipped stroke moves.
+
+## 3. The left band's population (ring.js)
+
+`WANT` 16 → **30** bodies, far hints 6 → **12**. The **band is unchanged and
+cannot change** — rel [−0.72, −0.55] is still every metre of kept soil on that
+side, as `d39b35b`'s `cutVal` table says. What was a taste choice is how much
+of it was used: 16 bodies across that whole band left the left arm reading as a
+thin picket against the right's mass. The count is still bounded by the same
+1.15-unit spacing test against `placed`, so it fills the band it was already
+given rather than crowding it, and the same rng in the same draw order means
+the first 16 are bit-identical to `d39b35b`'s.
+
+Every added body still lands at `dist >= CLONE_DIST`, so they are all T4: the
+T3 clone rung and its fifteen-slot `FIELD_LADDER` are untouched, `clones.bodies`
+stays 24 and `clones.dropped` 0.
+
+## 4. Measurements
+
+**Lit density** — fraction of pixels above luma 32 (the fogged black floor),
+sampled every 2nd pixel. "outer" is the outer 120 px column (60 on the phone)
+over the body band, y 0.42–0.82 h; "L3/R3" are the outer thirds; "copyQ" is the
+bottom-left quadrant the copy sits in.
+
+| viewport | outer L | outer R | L3 | R3 | copyQ |
+|---|---|---|---|---|---|
+| 1440x900 | 0.339 → **0.421** | 0.759 → 0.762 | 0.350 → 0.373 | 0.528 → 0.529 | 0.232 → 0.255 |
+| 1512x860 | 0.255 → **0.404** | 0.700 → 0.703 | 0.345 → 0.377 | 0.526 → 0.530 | 0.237 → 0.270 |
+| 1728x980 | 0.209 → **0.347** | 0.623 → 0.618 | 0.311 → 0.340 | 0.474 → 0.478 | 0.198 → 0.229 |
+| 375x812 | 0.319 → 0.322 | 0.293 → 0.265 | 0.295 → 0.305 | 0.371 → 0.369 | 0.140 → 0.155 |
+
+The left band is up **58–66%** at the two aspects Hannah reviews at, and the
+**right side does not move** at any width — this is a left-side fill, not a
+general brightening. At 1728 the left is now 56% of the right's density where
+it was 34%. It does not reach parity and should not: the right legitimately
+carries the two big near bodies. The phone is unchanged, as it must be — no
+added body is in that frustum.
+
+**Budget at the Final rest, 1728x980, frozen, per frame:**
+
+| | before | after |
+|---|---|---|
+| draw calls | 430 | **430** |
+| triangles | 278,183 | 278,183 |
+| line primitives | 451,908 | 455,967 (+0.90%) |
+| points | 85,535 | 85,663 (+0.15%) |
+| geometries | 73 | 73 |
+| frame ms p50 / p90 | 26.5 / 29.9 | 25.5 / 28.5 |
+| hyphSegs | 1,800 | 3,523 |
+| aggrPts | 256 | 278 |
+| ringSegs | 6,840 | 9,060 |
+| field | left 16, leftHints 6, t4 44 | left 30, leftHints 12, t4 58 |
+
+**Draw calls do not move** — every addition merges into a batch that was
+already being drawn. Frame time is unchanged within the headless cadence's own
+spread (it measures marginally *faster* after, which is noise, not a win).
+
+**Canopy attachment:** nodes 191 → **211**, bodies 95 → **115**, edges 456 →
+**505**, hubs 8, **`canopyDropped: 0`** — every added body is seated as a node
+of the one spanning tree rooted at the hero, exactly like every other body. The
+§3b strands are not bodies and correctly enter neither the canopy nor the
+bodies' `uPull` ladder; they are face detail and light with the face.
+
+**The arrival ladder**, frozen clock (booted through `?capture=`, so the
+organism clock is pinned and any difference is real):
+
+* **reverse-retracting:** forward vs reverse at p = 0.80 / 0.83 / 0.86 / 0.89 /
+  0.91 / 0.93 / 0.95 / 0.97 — **MAE 0.0000/255 at every one**. Perfect mirror.
+* **fully arrived by the rest:** rest (0.97) vs end-hold (1.0) MAE
+  **0.1532/255**, which is the authored fog move 14.3/60.9 → 15/62 and nothing
+  else. Everything is lit by the rest.
+* **dark at arm:** the chapter arms at p 0.80. Mean frame luma steps +3.22
+  there — but it stepped **+3.00 on the pre-change tree**, so the step is
+  pre-existing and this pass contributes 0.22 of it. (The sweep places with
+  `scrollTo`, which snaps the eased state; a real scrub eases through the arm
+  and spreads it.)
+
+## 5. Gates
+
+* `capture.py --check` **PASS**, worst MAE **0.00/255** across all ten.
+* References: `final@*` re-shot in this commit. Against the previous goldens
+  the desktop frame moved **1.435/255** (5.86% of px > 8) and the phone
+  **1.740/255** (6.53%). The phone moves although no added body is in its
+  frustum — the canopy samples its waypoints with a min-separation test against
+  every node placed so far, so 20 new nodes re-lay the graph. Same cause and
+  same magnitude as `d39b35b`'s 1.78, and the same reasoning applies: freezing
+  those edges would give these bodies a different kind of attachment from every
+  other body's.
+* Scroll battery unchanged: `E1 −3.66e−4`, `E2/E3 1.0000`, `R4 0.00e+0`,
+  `R5 0.000000 / 0.970000 / notches 1.0000`, `R6 off-anchor stops: none`.
+* Ride: three laps forward and two back by gesture — five wraps, 30 legs —
+  every leg on an anchor, URL clean, **console 0 entries**.
+* Deep links unchanged: `?pose=final` lands (−14.72, 2.73, 2.70) fov 45.5.
+* Copy legibility checked at 1440x900 and 1728x980 with the block visible: the
+  added material is dim orange filament against which the cream heading holds
+  full contrast, and nothing new crosses the sub-copy's line.
+
+## 6. Residuals
+
+* The left cannot reach the right's density and should not — the right carries
+  the two large near bodies, and matching it would mean inventing ground the
+  cutaway removed.
+* §3b is face detail, so it lights on the chapter's camera-pure rise (`aReveal`
+  −1, the batch default every other stroke on that face carries) rather than on
+  the bodies' `uPull` ladder. That is the same law, not a second one, but it
+  does mean the pit fills with the rise rather than kindling body by body.
+* The pre-existing +3.0 luma step at the p 0.80 arm is untouched and worth its
+  own pass.
