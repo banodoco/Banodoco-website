@@ -45,27 +45,37 @@
 //   named in the residuals and was hers to spend.
 //
 // EXPANDED — hover anywhere on the control, keyboard focus, or a first touch.
-//   IT IS A SEQUENCE, NOT AN EXPAND (the brief is explicit about the order):
+//   THE HALF MOON FORMS AROUND THE BUTTON. It is ONE gesture, cascaded by
+//   distance along the arc, and nothing about it is staged in series:
 //
-//     1. the button STEPS IN off the frame by exactly the room its ring needs
-//        (see THE EDGE, below) and the current section's mark comes OUT OF THE
-//        BUTTON, growing as it goes, to the slot immediately left of it —
-//        "the menu button should just come from below the menu button left";
-//     2. only ONCE IT HAS ARRIVED do the others emerge from that same point,
-//        fading up as they travel;
-//     3. they sweep round onto a circle CENTRED ON THE BUTTON, two above and
-//        two below, so the five marks wrap around the control.
+//     · every mark leaves the BUTTON on a single curved path and lands on its
+//       own point of the arc, growing as it goes — the radius and the angle
+//       are scaled by one clock with one duration, so a mark travels out and
+//       round in one movement rather than walking to a slot and then setting
+//       off from it;
+//     · the paths are offset by `--step`, the mark's distance along the arc
+//       from the current section: the apex goes first, its neighbours a
+//       cascade later, the tips a cascade after that. The moon opens OUTWARD
+//       FROM WHERE THE VISITOR IS;
+//     · and the arc itself DRAWS, two arms from the apex, so the line the
+//       marks sit on comes into being with them rather than fading up under
+//       them.
 //
-//   The stages are one clock: stage 2 is stage 1's duration written as a
-//   transition-delay (site.css), so "once it reaches that position" is a
-//   structural fact rather than a number tuned to look like one.
+//   "The entry animation right now is a little bit janky ... we should have a
+//   more elegant version of that. So it's just like the half moon kind of
+//   forms around it." (Hannah, 2026-08-13, later still.) What was janky was
+//   two-stage-plus-a-lurch: the control stepped sideways off the wall, the
+//   current mark walked out, and only THEN — after a wait as long as the walk
+//   — did anything else move. The lurch is gone with the step (THE EDGE) and
+//   the wait is gone with the serial staging; what is kept is the ORDER,
+//   which is the part that carried the meaning.
 //
-//   The ring OPENS FROM THE WHOLE CONTROL's hover, after a dwell. The first
-//   build opened from the list alone, because the fan used to slide the menu
-//   button down to hold the foot of a stack and pointing at the button moved
-//   it out from under its own click. Nothing slides the button any more — it
-//   is the fixed hub — so the separation has no job left, and the brief asks
-//   for the broader trigger ("when the navigation is not being HOVERED").
+//   It OPENS FROM THE WHOLE CONTROL's hover, after a dwell. The first build
+//   opened from the list alone, because the fan used to slide the menu button
+//   down to hold the foot of a stack and pointing at the button moved it out
+//   from under its own click. Nothing slides the button any more — it is the
+//   fixed hub — so the separation has no job left, and the brief asks for the
+//   broader trigger ("when the navigation is not being HOVERED").
 //   The 120ms dwell is kept: it is what stops a pointer merely crossing the
 //   flank from unfolding anything.
 //
@@ -114,166 +124,174 @@ import { claimInput, releaseInput } from './scroll.js';
 const SHOW_P = 0.004;
 
 /* ===========================================================================
-   THE RING IS CENTRED ON THE BUTTON (Hannah, 2026-08-13 later)
+   THE HALF MOON (Hannah, 2026-08-13 later still)
    ===========================================================================
-   "I want the current one to show just to the LEFT of it, then the previous
-    one to show ABOVE it, and the one before that to the RIGHT of that. So it's
-    like a ring AROUND the menu button — whereas right now it seems like a ring
-    to the LEFT. The ring should be around the menu button. So make it so that
-    the five items wrap around the menu button, with the first one on the left."
+   "Can you switch the right side navigator to be more like this — a half moon.
+    You may have to rethink how the entry animation and how it moves. It should
+    stay in the side on hover. And it should be like a half moon ... so it's
+    just like the half moon kind of forms around it, with the current one
+    highlighted on the left side."
 
-   This CORRECTS the ring of `f53fab3`, which was right about everything except
-   where it put its centre. That build drew the circle whose RIGHTMOST point is
-   the slot, so the circle's centre landed one radius LEFT of the slot and two
-   radii left of the button: measured at 1440x900, ring centre (1284, 450),
-   button centre (1410, 450) — the button 126px OUTSIDE its own ring, which is
-   exactly why it read as "a ring to the left". Everything else about that pass
-   survives; only the centre moves.
+   This SUPERSEDES the full ring of `d9da652`. That build drew the whole circle
+   around the button, and a whole circle around a button 2px from the frame
+   does not fit: its right-hand arc is off screen, so the control had to STEP
+   IN off the wall by 46.93px every time it opened and settle back when it
+   closed. That step is the thing "it should stay in the side on hover"
+   forbids, and it is also the largest single movement in the old entry — the
+   whole instrument lurching sideways before anything else happened.
 
-   THE GEOMETRY IS ONE CIRCLE, and its centre is the button.
+   A HALF MOON REMOVES THE PROBLEM RATHER THAN MANAGING IT. Keep the same
+   circle and the same centre, and put the marks on its LEFT HALF only: the
+   extreme marks then sit directly above and below the button, at the button's
+   own x, and the open control's rightmost tile edge (hub + tile/2) lands
+   INSIDE the closed button's own box. Measured at 1440x900: open extent
+   1434 against a closed button box of 1382..1438. So the control does not
+   move, in any state, ever again — no step-in, no pad to answer for a vacated
+   footprint, and nothing for a press to fall through.
 
-     the hub      is the menu button. It is the RING'S CENTRE — the ring is
-                  drawn around it, not beside it. (It is no longer motionless:
-                  see THE EDGE below. It holds still through a chapter change,
-                  which is the case that ever mattered.)
+   THE GEOMETRY IS ONE CIRCLE, ITS CENTRE IS THE BUTTON, AND ONLY ITS LEFT
+   HALF IS INHABITED.
 
-     the slot     is the ring's LEFTMOST point, i.e. immediately left of the
-                  hub. It is a POSITION, not an item: whichever chapter is
-                  current occupies it, and a chapter change is the ring turning
-                  underneath it.
+     the hub      is the menu button. It is the moon's centre and it is
+                  MOTIONLESS in every state — at rest, through the formation,
+                  and through a chapter change.
 
-     the ring     is the circle of radius `rad` about the hub. The slot is at
-                  angle 0 and the others at multiples of 360/n around it, so at
-                  five chapters the marks land LEFT / ABOVE / UPPER-RIGHT /
-                  LOWER-RIGHT / BELOW and the control is wrapped.
+     the slot     is the circle's LEFTMOST point: the apex of the moon,
+                  pointing into the frame. It is a POSITION, not an item —
+                  whichever chapter is current occupies it, and a chapter
+                  change is the moon turning underneath it. "The current one
+                  highlighted on the left side."
 
-   Positions are polar about the HUB, and the ONE animated quantity is still
-   the angle. Writing them relative to the hub (positive y is DOWN):
+     the moon     is the 180deg arc of radius `rad` about the hub, from
+                  straight up, through the apex, to straight down. The five
+                  marks sit on it at a pitch of 180/(n-1), so at five chapters
+                  they land ABOVE / upper-left / APEX / lower-left / BELOW and
+                  read top-to-bottom in manifest order with "you are here" at
+                  the point.
 
-     x = -rad * cos(ang)          ang 0 -> -rad, i.e. the slot
+   Positions are polar about the HUB and the ONE animated quantity is still
+   the angle. Relative to the hub (positive y is DOWN):
+
+     x = -rad * cos(ang)          ang 0 -> -rad, i.e. the apex
      y =  rad * sin(ang)
 
    so the five points at n = 5, in units of rad, are
 
-     ang    0deg   -> (-1.000,  0.000)   the SLOT, immediately left
-     ang  -72deg   -> (-0.309, -0.951)   ABOVE the button
-     ang -144deg   -> (+0.809, -0.588)   UPPER RIGHT — "to the RIGHT of that"
-     ang +144deg   -> (+0.809, +0.588)   lower right
-     ang  +72deg   -> (-0.309, +0.951)   below
+     ang  -90deg   -> ( 0.000, -1.000)   straight ABOVE the button
+     ang  -45deg   -> (-0.707, -0.707)   upper left
+     ang    0deg   -> (-1.000,  0.000)   THE APEX — the current section
+     ang  +45deg   -> (-0.707, +0.707)   lower left
+     ang  +90deg   -> ( 0.000, +1.000)   straight BELOW the button
 
-   Negative angles are the sections BEHIND you and positive ones those ahead
-   (`signedRing`), so the order Hannah names — current left, previous above,
-   the one before that to its right — is the negative sweep, and it reads
-   round the circle without a special case.
+   Every x is <= 0: nothing is ever drawn to the right of the button's centre,
+   which is the whole of why the moon fits where the ring could not.
 
-   Advancing a chapter subtracts one step from every item's angle, so the ring
-   turns as one body: the upcoming section rises from below into the slot and
-   the outgoing one lifts away above it — the same direction of travel as the
-   scroll that caused it. The item at the slot has angle 0 and is the turn's
-   fixed point by construction; it is not special-cased anywhere.
-
-   The angles rail.js writes are UNWRAPPED (see `writeAngles`), which is what
-   makes each step take the short way round instead of unwinding across the
-   middle of the ring. */
+   THE WINDOW, AND THE ONE ITEM THAT LEAVES IT. A full ring is a cycle and
+   wraps invisibly; an arc is a WINDOW onto that cycle, and on every chapter
+   change one item runs off the end of it. It does not cut across the face of
+   the moon to get back: it keeps turning THE SAME WAY as everything else, out
+   past the tip, round the hidden half of the circle — which is behind the
+   frame's own edge — and back in at the other tip. Advancing a chapter turns
+   every mark 45deg towards the top (the upcoming section rises from below into
+   the apex, the same direction of travel as the scroll that caused it), and
+   the mark leaving the top tip keeps going, 180deg through the back, to arrive
+   at the bottom tip. One rotation, one direction, nothing crossing the middle.
+   `writeAngles` is what makes that true — see THE DIRECTION IS NOT A SHORTEST
+   PATH there. */
 const N = CHAPTERS.length;
-const STEP = 360 / N;
+/* The arc the marks inhabit. 180deg is the half moon itself, and it is the
+   number the whole geometry is derived from: the pitch, the radius and the
+   fact that the extreme marks land on the button's own x are all consequences
+   of it. */
+const ARC = 180;
+const STEP = ARC / (N - 1);
 
-/** The signed ring offset of the slot `k` places past the current one:
- *  0, +-1, +-2 ... so the manifest's order reads as "two before, two after"
- *  around the circle rather than as a one-way queue. */
+/** The signed offset of the slot `k` places past the current one: 0, +-1,
+ *  +-2 ... so the manifest's order reads as "two before, two after" along the
+ *  arc — top to bottom — rather than as a one-way queue. */
 function signedRing(k) { return k > N / 2 ? k - N : k; }
 
-/* ---- the radius, derived from the tile, the manifest and the hub -----------
-   Neighbours on the ring are `2 rad sin(180/n)` apart, so the radius that
+/* ---- the radius, derived from the tile, the manifest and the arc -----------
+   Neighbours on the moon are `2 rad sin(STEP/2)` apart, so the radius that
    keeps a given amount of air between two tiles falls straight out of the
-   chapter count. AIR is generous on purpose — "a LOOSE circular or ring-like
-   structure".
+   chapter count and the arc. AIR is generous on purpose — the marks should
+   read as arranged on a curve, not as a chain of touching boxes.
 
-   RAD_MIN IS NOW A GEOMETRIC FLOOR, not an eyeball one. With the circle drawn
-   around the button, the slot is one radius from the button's centre, so the
-   radius is also the distance between the two boxes: `HUB/2 + GAP + TILE/2`
-   is the smallest circle on which the current mark is not sitting on the
-   control. That is 28 + 6 + 24 = 58, and it replaces the 68 the previous pass
-   chose by eye — 68 was free when the ring hung off to the left, and it is not
-   free now: every pixel of radius costs 0.81px of frame retreat (see SHIFT).
-   At n = 5 the AIR formula asks for 62.95 and wins anyway; the floor only ever
-   binds a two- or three-chapter manifest.
+   A HALF MOON IS A LOOSER PACKING THAN A RING, and the radius says so: five
+   marks over 180deg sit at a 45deg pitch where five over 360deg sat at 72deg,
+   so the same 74px chord now asks for 96.70px instead of 62.95. The moon is
+   the bigger drawing vertically and the SMALLER one horizontally — it reaches
+   `rad + TILE/2` = 120.7px into the frame where the ring reached its own
+   120.7 PLUS the 46.93px it had to step in to get it, which is the whole of
+   why this one can stay at the wall.
 
-   The pill clearance RAD_MIN used to buy is now unconditional: every pill,
-   the current one included, is held off to the ring's own leftmost point,
-   which IS the current mark's column (see PILLX). No pill crosses any mark at
-   any radius. */
+   RAD_MIN is the same geometric floor as before: `HUB/2 + GAP + TILE/2` = 58
+   is the smallest circle on which the apex mark is not sitting on the button.
+   At n = 5 the AIR formula asks for 96.70 and wins.
+
+   RAD_MAX is a real ceiling now rather than a formality. The moon's HEIGHT is
+   `2 rad + TILE`, so 120 caps it at 288px — past six chapters the arc would be
+   taller than a small laptop's flank and the component falls back to the
+   column it already knows how to be (n = 6 asks 119.7 and just fits; n = 7
+   asks 142.9 and does not). The ring fell back at eleven; a half moon spends
+   its circle twice as fast, and that is the honest cost of the shape. */
 const TILE = 48;
 const AIR = 26;
 const HUB = 56;           // the button's box — site.css `--cl-hub`
-const GAP = 6;            // hub box to slot box, at the floor
+const GAP = 6;            // hub box to apex box, at the floor
 const RAD_MIN = HUB / 2 + GAP + TILE / 2;
-const RAD_MAX = 120;      // past this the ring is wider than a phone: fall back
-const RAD = Math.max(RAD_MIN, (TILE + AIR) / (2 * Math.sin(Math.PI / N)));
+const RAD_MAX = 120;      // past this the moon is taller than the flank: fall back
+const RAD = Math.max(RAD_MIN, (TILE + AIR) / (2 * Math.sin(Math.PI / 180 * STEP / 2)));
 
-/** A ring index's x RELATIVE TO THE HUB (the ring's centre). `-rad` is the
- *  slot, and the largest value is the rightmost mark on the circle. */
+/** A slot's x RELATIVE TO THE HUB (the moon's centre). `-rad` is the apex and
+ *  0 — the button's own x — is the most either tip ever reaches. */
 function ringX(k) {
   return -RAD * Math.cos(signedRing(k) * STEP * Math.PI / 180);
 }
 
-/* ---- THE EDGE, and the one real problem this geometry creates --------------
-   A circle drawn around a button that is 2px from the frame puts its right-
-   hand arc off the screen. At the shipped numbers the rightmost marks sit
-   `0.809 * rad` = 51px right of the button's centre and carry 24px of tile, so
-   the open control needs 75px to the right of the hub — and an edge-hugging
-   button has 30px. No radius fixes this: the floor is 58, and even there the
-   overhang is 71px. Squashing the circle does not either, because the same
-   radius that clears the hub on the left is what puts the right pair out.
+/* ---- THE EDGE — and why the half moon simply does not have this problem ----
+   The ring this replaces could not fit: its rightmost marks sat `0.809 * rad`
+   = 51px right of the button and carried 24px of tile, so the open control
+   needed 75px to the right of the hub where an edge-hugging button has 30. No
+   radius fixed it and no squashing fixed it, so `d9da652` bought the room by
+   STEPPING THE WHOLE CONTROL IN off the wall by 46.93px as it opened.
 
-   The button therefore CANNOT stay at 2px in both states — and it must stay at
-   2px in one of them, because 2px is itself a thing Hannah asked for ("move it
-   over so it hugs the edge of the screen", 2026-08-12, said about a control
-   standing 50px in). So it hugs the edge CLOSED, which is the state it is in
-   almost always, and STEPS IN as it opens, by exactly the room the ring needs
-   and not a pixel more:
+   Hannah: "It should stay in the side on hover." The step is exactly what that
+   forbids, and the half moon does not need it. Every inhabited angle has
+   `cos(ang) >= 0`, so every mark's x is `<= 0` relative to the hub, and the
+   two extreme marks — straight above and straight below — sit at the hub's own
+   x. The open control's rightmost tile edge is therefore `HUB/2`... no:
+   `TILE/2` = 24px right of the hub centre, against the closed button's own
+   28px half-box. THE OPEN CONTROL IS NARROWER THAN THE CLOSED BUTTON, so it
+   fits inside the footprint it already had, at any radius, for any manifest.
 
-     shift = (rightmost mark + TILE/2) - HUB/2
-
-   With that shift the open ring's rightmost tile edge lands exactly where the
-   closed button's box edge was, i.e. the control hugs the frame in BOTH
-   states — closed it is the button that touches the wall, open it is the ring.
-   The marks keep the same 14px optical gutter from glyph to frame that the
-   button's own 28px glyph has, because the arithmetic is the same arithmetic.
-
-   The step-in is stage 1 of the opening, on the same clock as the mark coming
-   out of the button (site.css `--cl-travel`), so it reads as one gesture: the
-   instrument leans off the wall to unfold, and settles back against it to
-   close. Two things make it safe rather than a moving target — the menu opens
-   on `pointerdown` (48b7795), so a press that lands before the step cannot be
-   lost by it; and the pointer floor, sized off the whole circle, covers the
-   place the pointer was standing when the button left it, so the control
-   cannot fold out from under a stationary pointer and oscillate. Both are
-   measured in 25-navigation-redux.md. */
-const SHIFT = Math.max(...CHAPTERS.map((_, k) => ringX(k))) + TILE / 2 - HUB / 2;
+   What that deletes, rather than manages: `--cl-shift` and every rule that
+   carried it; `.j-rail-menu::before`, the pad that existed only to answer for
+   the footprint the stepping button vacated; and the ~47px lurch that opened
+   and closed every interaction. The button is now motionless in every state,
+   which is also the strongest possible form of `48b7795`'s guarantee — a
+   press cannot be lost by a control that never moves. (The `pointerdown`
+   opening stays regardless: it is the right behaviour for a menu button and it
+   costs nothing.) */
 
 /* ---- how far each NAME PILL has to be held off -----------------------------
-   A pill hangs off the LEFT of the tile it names, so on a ring it would be
-   drawn straight over whatever sits further round — measured here: the
-   upper-right mark's pill crosses both the mark above the button and the
-   button itself. So every pill is held off to the circle's own LEFTMOST point
-   and they all land on one vertical line: a list of names, which is what they
-   are, each on its own mark's row.
+   A pill hangs off the LEFT of the tile it names, so on a curve it would be
+   drawn straight over whatever sits further round. So every pill is held off
+   to the moon's own leftmost point — the apex — and they all land on one
+   vertical line: a list of names, which is what they are, each on its own
+   mark's row.
 
-   THE CURRENT ITEM'S EXCEPTION IS GONE, and it went for free. The previous
-   pass exempted it (offset 0) so its pill hung off its own mark instead of
-   floating out at a ring edge two radii away. With the circle centred on the
-   button, the ring's leftmost point IS the slot — so the exemption and the
-   rule now name the same column, and `PILLX[0]` comes out 0 by arithmetic
-   rather than by clause. One line, no special case, and nothing on the ring is
-   ever under a label.
+   The apex's own offset is 0 by arithmetic rather than by clause, since the
+   apex IS the leftmost point. The tips (straight above and below the button)
+   are held off by a full radius, which is what puts their labels clear of the
+   button instead of across it.
 
    In px, and derived, so a sixth chapter needs no edit here. */
 const PILLX = (() => {
   const xs = [];
   for (let k = 0; k < N; k++) xs.push(ringX(k));
   const xMin = Math.min(...xs);
-  return xs.map((x, k) => (k === 0 ? 0 : x - xMin));
+  return xs.map((x) => x - xMin);
 })();
 
 function el(tag, cls, text) {
@@ -312,16 +330,13 @@ export function createRail({ onNav } = {}) {
   // anchor, so the whole choreography lives in the stylesheet and JS only
   // states where the visitor is.
   root.style.setProperty('--n', String(CHAPTERS.length));
-  // ...and the RING geometry is the same statement in polar form. The radius
-  // is derived from the chapter count (see RAD), so a sixth chapter widens the
-  // circle rather than crowding it, and only a manifest big enough to make the
-  // ring wider than a phone falls back to the column the component already
-  // knows how to be. At the shipped tile and air that is eleven chapters.
+  // ...and the HALF MOON's geometry is the same statement in polar form. The
+  // radius is derived from the chapter count and the 180deg arc (see RAD), so a
+  // sixth chapter widens the moon rather than crowding it, and only a manifest
+  // big enough to make the arc taller than the flank falls back to the column
+  // the component already knows how to be. At the shipped tile and air that is
+  // seven chapters.
   root.style.setProperty('--cl-rad', RAD.toFixed(2) + 'px');
-  // The step-in that buys the ring its right-hand arc (see THE EDGE). Derived
-  // from the same points, so it tracks the radius and the manifest and can
-  // never be left stale behind a geometry change.
-  root.style.setProperty('--cl-shift', SHIFT.toFixed(2) + 'px');
   if (RAD > RAD_MAX) root.classList.add('j-rail-column');
   const isColumn = root.classList.contains('j-rail-column');
 
@@ -330,6 +345,45 @@ export function createRail({ onNav } = {}) {
 
   const list = el('ul', 'j-rail-list');
   inner.appendChild(list);
+
+  /* ---- THE MOON ITSELF, and it DRAWS -----------------------------------
+     "It's just like the half moon kind of forms around it."
+
+     The ring this replaces stated its geometry with a `border-radius: 50%`
+     div that faded and scaled up — a circle that ARRIVED. A half moon can do
+     better than arrive, because this site already has a vocabulary for a line
+     coming into being: `lead-draw`, the hero callouts' leaders and the menu
+     mark's own filaments, a stroke revealed by walking its dash offset to
+     zero. So the moon is a real arc, and it draws itself.
+
+     TWO ARMS, BOTH STARTING AT THE APEX. The upper arm runs from the apex to
+     straight-above and the lower one from the apex to straight-below, so the
+     drawing front leaves the current section in both directions at once and
+     the moon closes around the button symmetrically. That is the whole
+     sentence — "the half moon forms around it, with the current one
+     highlighted on the left side" — stated as geometry rather than as a fade.
+
+     `pathLength="100"` normalises both arms, exactly as the hero's leaders do,
+     so the dash geometry in site.css is a percentage and cannot go stale
+     behind a radius change. The marks ride the same clock: each one arrives as
+     the front passes its own angle (site.css, THE FORMATION). */
+  const R = RAD;
+  const arc = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  arc.setAttribute('class', 'j-rail-arc');
+  arc.setAttribute('aria-hidden', 'true');
+  arc.setAttribute('focusable', 'false');
+  arc.setAttribute('viewBox', `${-R - 1} ${-R - 1} ${2 * (R + 1)} ${2 * (R + 1)}`);
+  for (const [cls, d] of [
+    ['up', `M ${-R} 0 A ${R} ${R} 0 0 1 0 ${-R}`],
+    ['dn', `M ${-R} 0 A ${R} ${R} 0 0 0 0 ${R}`],
+  ]) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('class', `j-rail-arc-${cls}`);
+    p.setAttribute('d', d);
+    p.setAttribute('pathLength', '100');
+    arc.appendChild(p);
+  }
+  inner.appendChild(arc);
 
   const slots = [];      // { id, li, item }
   const links = {};      // chapterId -> <a> — all five; see THE EPILOGUE
@@ -534,16 +588,16 @@ export function createRail({ onNav } = {}) {
                  being HOVERED". Leaving the whole control closes; an open
                  ring survives the pointer travelling anywhere across it, the
                  button included.
-                 THE BUTTON DOES MOVE AGAIN (2026-08-13 later): the ring is
-                 centred on it, so opening steps it in off the frame by
-                 `SHIFT` (see THE EDGE). That is the same shape of hazard the
-                 2026-08-09 measurement found, and it is answered twice over
-                 rather than assumed away — `pointerdown` catches any press
-                 made before or during the step, and the button's hit pad
-                 (site.css, THE BUTTON KEEPS ITS FOOTPRINT AT THE WALL) stays
-                 behind in the place it left, so a press aimed at where it
-                 stood still opens the menu. Both are measured in
-                 25-navigation-redux.md.
+                 AND THE BUTTON DOES NOT MOVE AT ALL any more (2026-08-13
+                 later still). `d9da652`'s ring had to step the whole control
+                 in off the frame to fit its right-hand arc, which brought the
+                 2026-08-09 hazard back and needed a hit pad left behind in the
+                 vacated footprint to answer it. The half moon puts nothing to
+                 the right of the button, so nothing steps, the pad is gone,
+                 and the hazard is absent rather than defended — measured
+                 open-vs-closed, the button's box is identical to the pixel.
+                 (`pointerdown` stays: it is simply the right behaviour for a
+                 menu button.)
                  On the COLUMN fallback the old trigger is kept verbatim: that
                  geometry still slides its button, so it still needs it.
        keyboard  the root's `:has(:focus-visible)`, in CSS. NOT
@@ -870,37 +924,56 @@ export function createRail({ onNav } = {}) {
   let activeId = null;
   let dimmed = null;
 
-  /* ---- the ring's angles ---------------------------------------------------
+  /* ---- the moon's angles ---------------------------------------------------
      One UNWRAPPED angle per slot, in degrees. Unwrapped is the whole point:
      the stylesheet interpolates `--ang` linearly, so the number written here
-     is what decides WHICH WAY ROUND THE CIRCLE an item travels, and a value
-     folded back into (-180, 180] every time would make that choice for us —
-     and make it wrong exactly once per rotation, sending the item that leaves
-     the bottom of the ring back up across the face of it instead of on round.
+     is what decides WHICH WAY ROUND THE CIRCLE an item travels.
 
-     Each step takes the SHORT way, which for a chapter change is also the
-     consistent way: every item's ring index drops by one, so every item turns
-     by exactly one step (72deg at five chapters) in the same direction, and
-     the one wrapping from the tail to the head keeps going the same way. One
-     rotation, nothing crossing the middle.
+     THE DIRECTION IS NOT A SHORTEST PATH, and on an arc it cannot be.
+     A full ring is a cycle: every item steps one pitch the same way and the
+     wrap is invisible, so "shortest" and "consistent" happen to agree and the
+     old code could take the short way and be right. A HALF MOON IS A WINDOW
+     onto that cycle, and on every chapter change exactly one mark runs off the
+     end of it — from the top tip to the bottom tip, or back. Between those two
+     points the short way is 180deg STRAIGHT ACROSS THE FACE OF THE MOON,
+     through every other mark and over the button. That is the one path this
+     shape must never take.
 
-     The direction is not arbitrary. Advancing a chapter turns the ring so
-     that the UPCOMING section rises from below into the slot and the outgoing
-     one lifts away above it — the same direction of travel as the scroll that
-     caused it, so the instrument agrees with the hand that moved it. */
+     So the direction is chosen by the ROTATION, not by the distance: whichever
+     way the moon is turning, every mark turns that way, and the one leaving
+     the window simply has further to go — 180deg, out past the tip, round the
+     hidden half of the circle (which is behind the frame's own edge, see the
+     geometry note at the top of this file) and back in at the other tip. Four
+     marks move one pitch, one moves four, all five move the same way round.
+
+     `dir` is that rotation, in signed steps, read off the chapter change
+     itself: advancing turns the moon so the UPCOMING section rises from below
+     into the apex and the outgoing one lifts away above it — the same
+     direction of travel as the scroll that caused it, so the instrument agrees
+     with the hand that moved it. Going back runs it the other way. */
   const angleOf = CHAPTERS.map(() => 0);
   let curIndex = 0;
+  let prevCur = null;
   let turnTimer = 0;
 
   function writeAngles(cur) {
     curIndex = cur;
     const n = CHAPTERS.length;
     const live = expanded();
+    /* Which way the moon turns for THIS change, in signed steps. Advancing a
+       chapter (dir < 0) lifts every mark towards the top tip. On the very
+       first write there is no previous chapter and nothing is on screen yet,
+       so the angles are simply stated (`dir === 0` takes the plain shortest
+       representative, which from a standing start is the value itself). */
+    const dir = prevCur === null ? 0 : -signedRing(((cur - prevCur) % n + n) % n);
+    prevCur = cur;
     slots.forEach((s, i) => {
       const k = ((i - cur) % n + n) % n;
       const to = signedRing(k) * STEP;
       let d = (to - angleOf[i]) % 360;
-      if (d > 180) d -= 360;
+      if (dir < 0) { if (d > 0) d -= 360; }
+      else if (dir > 0) { if (d < 0) d += 360; }
+      else if (d > 180) d -= 360;
       else if (d <= -180) d += 360;
       angleOf[i] += d;
       s.li.style.setProperty('--ang-to', angleOf[i].toFixed(2) + 'deg');

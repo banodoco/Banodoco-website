@@ -174,6 +174,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 
   .j-rail-list { display: block; margin: 0; padding: 0; list-style: none; }
 
+  /* THE MOON'S ARC IS OFF BY DEFAULT, and that is a fail-closed rule rather
+     than tidiness. rail.js builds the `<svg class="j-rail-arc">` for every
+     rail, because the element cannot know which geometry the media query will
+     hand it; every rule that gives it a stroke, a size and its dash lives
+     inside the half-moon block, under `(hover: hover)`. Outside that block the
+     two paths are an unstyled inline SVG — `fill: rgb(0,0,0)`, `stroke: none`
+     — and MEASURED at 375x812 with touch emulation on, that is exactly what
+     they painted: a solid black wedge, 52x52, sitting on the column beside the
+     marks. Hidden here, shown by the geometry that owns it. */
+  .j-rail-arc { display: none; }
+
   /* ---- the fan ----
      Collapsed, every slot sits AT the anchor, stacked behind the current one
      (opacity 0, hit area off). Expanded, each slides to (--i - --cur) tiles
@@ -1925,126 +1936,127 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
 
   /* ============================================================
-     THE RING GOES AROUND THE BUTTON (Hannah, 2026-08-13 later)
+     THE HALF MOON (Hannah, 2026-08-13 later still)
 
-       "The ring thing around the menu button is crap right now.
-        Basically, we should remove the little circle version that
-        shows … it's obviously crap. I want the current one to show
-        just to the LEFT of it, then the previous one to show ABOVE
-        it, and the one before that to the RIGHT of that. So it's
-        like a ring AROUND the menu button — whereas right now it
-        seems like a ring to the LEFT. The ring should be around the
-        menu button. So make it so that the five items wrap around
-        the menu button, with the first one on the left … And let's
-        just remove that other thing entirely — the little circle.
-        The menu button should just come from below the menu button
-        left."
+       "Can you switch the right side navigator to be more like
+        this — a half moon. You may have to rethink how the entry
+        animation and how it moves. It should stay in the side on
+        hover. And it should be like a half moon. The entry
+        animation right now is a little bit janky or something — we
+        should have a more elegant version of that. So it's just
+        like the half moon kind of forms around it, with the
+        current one highlighted on the left side. And currently
+        there's like a black background that appears on hover, but
+        it feels really janky and weird … It looks like maybe
+        there's multiple layers of black boxes, like a bigger one
+        and a smaller one … This should be really subtle and should
+        fade in and out nicely — if we even have anything."
 
-     TWO CHANGES, and the first is arithmetic. The pass before this
-     one drew the circle whose RIGHTMOST POINT is the slot, which
-     puts its centre one radius left of the slot and TWO radii left
-     of the button: measured at 1440x900, centre (1284, 450) against
-     a button at (1410, 450), i.e. the button 126px outside its own
-     ring. "A ring to the left" is the correct reading of that
-     drawing. The centre is now the button, and nothing else about
-     the ring changes: same polar placement, same one animated
-     quantity, same unwrapped angles, same `.at`, same dwell.
+     THREE CHANGES, and the first one pays for the second.
 
-     The second is a deletion. The resting BUBBLE — the small
-     circled current-section badge on the button's shoulder — and
-     the PEEL that staged the opening as that badge travelling to
-     the slot are both gone. At rest there is the button and nothing
-     else. The staging survives, with stage 1 given two new jobs
-     that are the same gesture: the control STEPS IN off the frame
-     (see THE EDGE) while the current mark comes OUT OF THE BUTTON
-     to the slot. "The menu button should just come from below the
-     menu button left."
+     ---- 1. THE SHAPE: A HALF MOON, AND IT STAYS AT THE WALL ----
+     `d9da652` drew the WHOLE circle around the button. A whole
+     circle around a button 2px from the frame does not fit — its
+     right-hand arc is off screen — so that build bought the room
+     by STEPPING THE WHOLE CONTROL IN off the wall by 46.93px on
+     every open and settling it back on every close. "It should
+     stay in the side on hover" is exactly what that forbids.
 
-     What is kept is everything outside geometry — the 120ms dwell,
-     the pointerdown menu, the a11y model, the reticle, the names,
-     `.at`, the pointer floor — and the column, which still ships
-     for touch ("On touch devices, where hover does not exist, keep
-     the current behaviour"): this whole block is an override under
-     `(hover: hover)`, that query's own definition, negated.
+     Keep the circle and the centre; inhabit only its LEFT HALF.
+     Every angle the marks occupy has `cos(ang) >= 0`, so every x
+     is `<= 0` relative to the hub and the two extreme marks sit at
+     the button's OWN x, straight above and straight below it. The
+     open control's rightmost tile edge is then `TILE/2` = 24px
+     right of the hub against the closed button's own 28px half-box:
+     THE OPEN MOON IS NARROWER THAN THE CLOSED BUTTON. It fits
+     inside the footprint it already had, at any radius, for any
+     manifest, and the control never moves again in any state.
 
-     `:not(.j-rail-column)` is the manifest guard, derived from the
-     radius — rail.js widens the circle as chapters are added and
-     only falls back past the point where the ring would be wider
-     than a phone (eleven chapters).
+     Deleted with the step, rather than managed: `--cl-shift` and
+     every rule that carried it, and `.j-rail-menu::before`, the pad
+     that existed only to answer for the footprint the stepping
+     button vacated. A press cannot be lost by a control that does
+     not move — which is `48b7795`'s guarantee held structurally
+     rather than defended. (The `pointerdown` opening stays anyway:
+     it is simply the right behaviour for a menu button.)
 
-     ---- THE CIRCLE ----
-     One circle, and its centre is the button.
+       the hub    the menu button, 56px, `--cl-edge` off the frame.
+                  The moon's CENTRE, and motionless in every state.
+       the apex   the circle's LEFTMOST point — the tip of the moon,
+                  pointing into the frame. A POSITION, not an item:
+                  whichever chapter is current occupies it. "The
+                  current one highlighted on the left side."
+       the moon   the 180deg arc about the hub, from straight up
+                  through the apex to straight down. Marks sit on it
+                  at a pitch of 180/(n-1) and read top-to-bottom in
+                  manifest order.
 
-       the hub    is the button, and it is the RING'S CENTRE. The
-                  ring is drawn AROUND it. It holds still through a
-                  chapter change — the case that matters — and steps
-                  in off the frame as the control opens (THE EDGE).
-       the slot   is the ring's LEFTMOST point, immediately left of
-                  the hub. It is a POSITION, not an item: whichever
-                  chapter is current occupies it, and a chapter
-                  change is the ring turning underneath it.
-       the ring   is the circle of radius `--cl-rad` about the hub.
-                  `--ang: 0` is the slot and the others sit at
-                  multiples of 360/n around it, so at five chapters
-                  the marks land LEFT / ABOVE / UPPER-RIGHT / LOWER-
-                  RIGHT / BELOW — "the five items wrap around the
-                  menu button, with the first one on the left".
+         x = -rad * cos(ang)      ang 0 -> -rad, the apex
+         y =  rad * sin(ang)      positive is DOWN
 
-         x = -rad * cos(ang)             relative to the HUB
-         y =  rad * sin(ang)             positive is DOWN
+     ---- 2. THE FORMATION: ONE GESTURE, NOT TWO STAGES ----
+     The old entry was serial — the control lurched in off the wall
+     and the current mark walked out to its slot (0.30s), and only
+     THEN did the others begin (a further 0.55s). Two bursts with a
+     pause between them, on top of a sideways lurch: that is the
+     jank, and none of it was rescuable by tuning.
 
-     ---- THE EDGE, and how the ring is allowed to have a right ----
-     A circle around a button 2px from the frame puts its right-hand
-     arc off screen: the rightmost marks sit 0.809*rad = 51px right
-     of the hub and carry 24px of tile, so the open control needs
-     75px to the right of centre and an edge-hugging button has 30.
-     No radius fixes it (the geometric floor is 58 and still needs
-     71), and no squashing fixes it either — the same radius that
-     clears the hub on the LEFT is the one that puts the right pair
-     out. So the button cannot be at 2px in both states, and it must
-     be at 2px in one of them, because that is a thing Hannah asked
-     for in as many words.
+     The moon FORMS instead. `--t` (the radius) and `--u` (the
+     angle) run on ONE clock with ONE duration, so each mark leaves
+     the button on a single curved path that lands on its own point
+     of the arc — and the paths are staggered by DISTANCE ALONG THE
+     ARC (`--step`: 0 for the apex, 1 for its neighbours, 2 for the
+     tips), so the moon opens outward from the current section
+     instead of appearing all at once.
 
-     It therefore hugs the edge CLOSED and STEPS IN as it opens, by
-     `--cl-shift` = (rightmost mark + tile/2) - hub/2, which is
-     exactly the room the ring needs and not a pixel more. The open
-     ring's rightmost tile edge lands where the closed button's box
-     edge was: THE CONTROL HUGS THE FRAME IN BOTH STATES — closed it
-     is the button that touches the wall, open it is the ring — and
-     the right-hand marks inherit the same 14px glyph-to-frame
-     gutter the button's own glyph has, by the same arithmetic.
+     And the arc DRAWS. `.j-rail-arc` is two real paths, both
+     starting at the apex, walked open by `stroke-dashoffset` — the
+     hero's own `lead-draw` vocabulary, the same one the menu mark's
+     filaments use. The drawing front leaves the current section in
+     both directions and the marks arrive as it reaches them, so
+     "the half moon kind of forms around it" is what the frames
+     actually show rather than a description of a fade.
 
-     ---- THE STAGING IS THE POINT (1 -> 2 -> 3) ----
-     Two quantities, and they run in series:
+     One clock, one direction, no pause: `--cl-travel` is a mark's
+     own journey and `--cl-cascade` is what one step of arc distance
+     costs. The whole formation is `travel + 2 * cascade`.
 
-       --t   THE EMERGENCE. 0 puts every slot AT THE HUB — inside
-             the button, invisible; 1 puts it out on the ring. It
-             scales the whole polar offset, so at 0 there is nothing
-             but the button and the marks come out of it. The
-             control's own step-in rides the same clock and the same
-             curve, so the button leaning off the wall and the
-             current mark coming out of it are one gesture.
-       --u   THE UNFURL. Scales the ANGLE, so 0 leaves every slot at
-             angle 0 — stacked at the slot, immediately left of the
-             button, where the current one stays — and 1 puts each
-             on its own point of the circle. It is delayed by
-             exactly the emergence's duration (`--cl-travel`), so
-             "once it reaches that position" is structural rather
-             than a number tuned to look like it: change the travel
-             and the sweep follows it. A further `--step * 50ms`
-             walks the pair either side of the slot out before the
-             pair beyond them, so the ring unfurls rather than
-             appearing.
+     ---- 3. THE BACKING: ONE SURFACE, OR NONE ----
+     What she was looking at was THREE dark surfaces at once —
+     `.j-rail-inner::before` (a 336px radial at 0.80) and
+     `::after` (a 220px radial at 0.62) both live and SUMMING to
+     0.92 at the core over two different falloffs, plus every name
+     pill's `rgba(9,6,2,0.85)` rectangle with a 2px radius. "A
+     bigger one and a smaller one" is a literal reading of the two
+     radials; "a hard line" is the pill.
 
-     The current item's angle is 0, so `-rad*cos(0)` is `-rad` and
-     `rad*sin(0)` is 0: it is at the slot for every value of `--u`,
-     the fixed point of the unfurl and of every chapter change, and
-     it is not special-cased anywhere.
+     There is now exactly ONE surface on this flank, `::after`, and
+     it is the same surface in both states — it simply GROWS with
+     the control it protects, from the button's own footprint to the
+     moon's, on the formation's clock. `::before` is gone (the ring
+     block's job was to be the second one). The stops are a smooth
+     falloff to zero rather than a flat core and two straight
+     segments, so there is no radius at which the eye finds an edge.
 
-     Folding is the same two quantities backwards, and the closed
-     rule carries its own delays: `--u` collapses the ring into the
-     slot first, then `--t` draws the marks back into the button as
-     the button settles against the wall.
+     It is needed: the ride runs from a near-black sky to a lit
+     ground network, and 25-navigation-redux.md §11(4) records the
+     current mark disappearing outright on the epilogue's field. The
+     measurement for THIS treatment is in the same file's half-moon
+     entry — the glyphs' own dark rims (`.j-sym`'s stacked drop
+     shadows) carry the stroke, and the surface only has to calm the
+     field behind them, which is why it can be this quiet.
+
+     The name pills lose their rectangle for the same reason and
+     keep their legibility the same way: a soft elliptical wash that
+     reaches zero at the box edge, so a label has a ground without
+     having a box.
+
+     ---- WHAT IS UNCHANGED ----
+     The 120ms dwell, the `pointerdown` menu, `.at` beating
+     `:hover`, the pointer floor, the reticle, the a11y model, and
+     the COLUMN — this whole block is an override under
+     `(hover: hover)`, that query's own definition negated, so touch
+     keeps the behaviour it has.
      ============================================================ */
   @property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
   @property --t { syntax: "<number>"; inherits: false; initial-value: 0; }
@@ -2054,59 +2066,43 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail:not(.j-rail-column) {
       --cl-tile: 48px;            /* a section's box — 44px is the floor */
       --cl-hub: 56px;             /* the button, and it leads the pair */
-      /* THE EDGE HUG. "It sits slightly too far inward. Move it over so it
-         hugs the edge of the screen." The cluster stood the button 50px in,
-         because it needed a whole column of cells to the RIGHT of it; the
-         ring puts nothing to the right of the current item, so the button can
-         go back to the frame — and further than the original column ever was.
-         Measured at 1440, 1280 and 375: 2px of box puts the button's box at
-         x 1382..1438 and its 28px glyph at 1398..1426, i.e. 14px of air from
-         the glyph to the frame — the SAME optical gutter the 52px column
-         shipped with, now carried by a bigger control. It reads as attached
-         rather than as floating. */
+      /* THE EDGE HUG, and now it is unconditional. 2px of box puts the
+         button at x 1382..1438 of 1440 and its 28px glyph at 1398..1426,
+         i.e. 14px of air from glyph to frame. Nothing takes it off this
+         mark any more — the open moon is narrower than the closed button. */
       --cl-edge: 2px;
-      --cl-rad: 62.95px;          /* fallback; rail.js derives and writes it */
-      /* the room the ring needs to the right of its own centre, so the button
-         can lean off the wall by exactly that and no more. rail.js derives it
-         from the same points it derives the radius from; this is the n = 5
-         value, kept honest as a fallback only. */
-      --cl-shift: 46.92px;
-      /* the marks' scale while still INSIDE the button. They grow as they come
-         out of it, which is the whole of what "emerge from the button" can
-         mean for a drawing that has no thickness. */
+      --cl-rad: 96.70px;          /* fallback; rail.js derives and writes it */
+      /* the marks' scale while still INSIDE the button. They grow as they
+         come out of it, which is the whole of what "emerge from the button"
+         can mean for a drawing that has no thickness. */
       --cl-emit: 0.62;
-      --cl-travel: 0.3s;          /* stage 1, and therefore stage 2's delay */
+      /* ONE mark's own journey out of the button and onto its point... */
+      --cl-travel: 0.40s;
+      /* ...and what one step of distance along the arc costs it. The apex
+         goes first, its neighbours a cascade later, the tips a cascade after
+         that, so the moon opens outward from where the visitor is. Shot at
+         0.09 and 0.13 against the same travel: at 0.09 the three beats overlap
+         enough that the tips are already leaving while the neighbours are
+         mid-flight, and the eye reads one bloom rather than an unrolling.
+         0.13 separates them — each pair visibly follows the one in front —
+         and costs 80ms on a formation that still settles inside 0.66s. */
+      --cl-cascade: 0.13s;
     }
-    /* The anchor is the BUTTON'S CENTRE — the ring's centre, and the point
-       every slot is placed from — rather than a 52px box hanging off the
-       frame. Closed it stands `--cl-edge` off the wall. */
+    /* The anchor is the BUTTON'S CENTRE — the moon's centre, and the point
+       every slot is placed from. It stands `--cl-edge` off the wall and it
+       STAYS THERE: no transform, no transition, nothing to lurch. */
     .j-rail:not(.j-rail-column) .j-rail-inner {
       width: 0;
       margin-right: calc(var(--cl-edge) + var(--cl-hub) / 2);
-      /* THE STEP-IN (see THE EDGE). The whole control moves, because the ring
-         is centred on the button and the two travel together by definition.
-         `transform` and not `margin`: it is composited, it cannot reflow the
-         flex row it sits in, and it shares a curve and a duration with the
-         marks coming out of the button so the two read as one gesture. */
-      transform: translateX(0);
-      transition: transform var(--cl-travel) cubic-bezier(0.36, 0.02, 0.22, 1) 0.17s;
-    }
-    .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-      .j-rail-inner {
-      transform: translateX(calc(-1 * var(--cl-shift)));
-      transition-delay: 0s;
     }
 
     /* ---- the tiles ----
        48px square, centred on the anchor and moved only by the transform
-       below. Square and 48 rather than 44 for the reason the cluster found
-       (PL-1.4's touch minimum should be a floor a control clears, not one it
-       meets) — but the cluster's other reason, that the block had to TILE so
-       a pointer crossing it was never over a gap, does not survive into a
-       circle: points on a ring have air between them by definition. What that
+       below. Square and 48 rather than 44 because PL-1.4's touch minimum
+       should be a floor a control clears, not one it meets. Points on an arc
+       have air between them by definition, so what the cluster's tiling
        promise actually protected — an open control must not fold because the
-       pointer crossed a seam — is kept by the pointer floor below, which
-       covers the whole circle while it is open. */
+       pointer crossed a seam — is kept by the pointer floor below. */
     .j-rail:not(.j-rail-column) .j-rail-item { width: var(--cl-tile); height: var(--cl-tile); }
     .j-rail:not(.j-rail-column) .j-rail-slot {
       top: calc(var(--cl-tile) / -2);
@@ -2114,121 +2110,121 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       --ang: var(--ang-to, 0deg);
       --t: 0;
       --u: 0;
-      /* THE POLAR POSITION, ABOUT THE HUB. Two scalars ride it and neither
-         touches the other's job:
+      /* THE POLAR POSITION, ABOUT THE HUB. Two scalars ride it:
 
-           --u  THE UNFURL TRAVELS THE CIRCLE, NOT THE CHORD. It scales the
-                ANGLE rather than the offset, so at 0 every slot is at angle 0
-                — stacked at the slot, immediately left of the button — and on
-                the way out each one sweeps ROUND the orbit to its own point
-                instead of flying straight at it. That is the difference
-                between a fan popping open and something unfolding: the marks
-                are on the ring for the whole journey, and the drawn orbit is
-                the path they took.
-           --t  THE EMERGENCE scales the RADIUS, from 0 (dead centre — inside
-                the button) to full. So the closed state is not "a stack
-                hidden behind a badge" any more, it is "nothing has come out
-                of the control yet", which is what the resting picture now
-                shows: a button, and no other drawing. */
+           --t  THE EMERGENCE scales the RADIUS, 0 (dead centre, inside the
+                button) to full. At rest every mark is inside the control and
+                the resting picture is one button, nothing else.
+           --u  THE UNFURL scales the ANGLE, so 0 leaves every slot at angle
+                0 — at the apex, where the current one stays — and 1 puts
+                each on its own point of the arc.
+
+         Running them on ONE clock is the change: a mark leaves the button
+         and lands on its point along a single curved path, rather than
+         walking out to the apex and then, after a wait, setting off round.
+         The current item's angle is 0, so `-rad*cos(0)` is `-rad` for every
+         value of `--u`: it is the fixed point of the formation and of every
+         chapter change, and it is not special-cased anywhere. */
       --ae: calc(var(--u) * var(--ang));
       transform: translate(
         calc(-1 * var(--t) * var(--cl-rad) * cos(var(--ae))),
         calc(var(--t) * var(--cl-rad) * sin(var(--ae))));
       /* `transform` is deliberately NOT in this list: it is a pure function of
-         the three registered properties, and transitioning it as well would
+         the registered properties, and transitioning it as well would
          interpolate a matrix towards a moving target. */
       transition-property: --ang, --t, --u, opacity;
-      /* FOLD durations and delays (this is the closed state's own rule, and a
-         transition runs with the values of the state it is going TO): the ring
-         collapses into the slot, and only then are the marks drawn back into
-         the button. The opacity delay is `0.17s` for the CURRENT mark and 0
-         for the rest — the four that are only ever seen on the ring go out as
-         it collapses, and the one walking home stays lit for the walk. */
-      transition-duration: 0.46s, var(--cl-travel), 0.26s, 0.2s;
+      /* THE FOLD is the formation backwards, and it closes from the TIPS IN:
+         `(2 - step)` reverses the cascade, so the far marks retract first and
+         the current one is the last thing to go home — the mirror of the moon
+         opening outward from it. */
+      transition-duration:
+        0.46s, var(--cl-travel), var(--cl-travel), 0.24s;
       transition-delay:
-        0s, 0.17s, 0s, calc((1 - min(var(--step, 0), 1)) * 0.17s);
-      /* The turn must not use the house ease. Measured on the cluster pass and
-         still true: at 1/6 of the duration the front-loaded `0.22, 1, 0.36, 1`
-         had already carried a rotating mark 55% of the way round, and the eye
-         reads that as the whole turn having happened at once and then
-         settling. A gentle ease-in, so the ring is SEEN to start turning, with
-         the same soft landing, is what makes it a rotation. The peel takes the
-         same reading — it is a deliberate travel, not an arrival — and only
-         the unfurl, which genuinely is an arrival, keeps the house curve. */
+        0s,
+        calc((2 - min(var(--step, 0), 2)) * var(--cl-cascade)),
+        calc((2 - min(var(--step, 0), 2)) * var(--cl-cascade)),
+        calc((2 - min(var(--step, 0), 2)) * var(--cl-cascade));
+      /* NEITHER THE TURN NOR THE FORMATION MAY USE THE HOUSE EASE, and the
+         second half of that is this pass's finding. `0.22, 1, 0.36, 1` is an
+         ARRIVAL curve — it spends 90% of the distance in the first quarter of
+         the time — which is right for a thing that should already be there and
+         wrong for a thing that should be seen to happen. Shot at both
+         (candidates F1 and F2): on the house curve the whole moon is
+         effectively formed by 240ms of a 600ms transition and the remaining
+         360ms is a settle nobody can see, which is precisely the "happened at
+         once" reading the cluster pass recorded for the turn. On a real
+         ease-in-out every mark is caught mid-flight in the frames between,
+         and the formation occupies the time it is given.
+         The turn keeps its own slightly softer entry for the same reason it
+         always had one. */
       transition-timing-function:
         cubic-bezier(0.42, 0.02, 0.22, 1),
-        cubic-bezier(0.36, 0.02, 0.22, 1),
-        cubic-bezier(0.22, 1, 0.36, 1),
+        cubic-bezier(0.38, 0.04, 0.24, 1),
+        cubic-bezier(0.38, 0.04, 0.24, 1),
         ease;
     }
     /* ---- AT REST THERE IS NO MARK AT ALL ----
-       The column lights its current tile at rest (`.j-rail-slot.now`) and the
-       previous ring wore that tile as a badge on the button's shoulder. Both
-       are withdrawn here: "let's just remove that other thing entirely — the
-       little circle". Every slot is dark and dimensionless inside the button
-       until the control opens. This has to out-weigh `.j-rail-slot.now` (0,2,0)
-       and to LOSE to the open rule below, so it is written at the same weight
-       as that rule and placed before it. */
+       The column lights its current tile at rest; here every slot is dark and
+       dimensionless inside the button until the control opens. This has to
+       out-weigh `.j-rail-slot.now` (0,2,0) and to LOSE to the open rule below,
+       so it is written at the same weight as that rule and placed before it. */
     .j-rail:not(.j-rail-column) .j-rail-slot.now { opacity: 0; }
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
       .j-rail-slot {
       --t: 1;
       --u: 1;
       opacity: 1;
-      /* THE UNFURL IS PAID FOR BY DISTANCE. The pair either side of the slot
-         sweeps 72deg and the pair beyond them 144deg; at one shared duration
-         the far pair simply moves twice as fast and arrives level with its own
-         neighbour, which reads as four marks appearing rather than as a chain
-         unrolling. Shot 2026-08-13 at five points through the sweep: with the
-         duration growing by 80ms a step, and a 50ms stagger on top, each mark
-         is visibly following the one in front of it and the ring closes from
-         the slot outwards. */
       transition-duration:
-        0.46s, var(--cl-travel), calc(0.3s + var(--step, 0) * 0.08s), 0.24s;
-      /* STAGE 2 IS STAGE 1's DURATION — except for the CURRENT mark's own
-         opacity, which belongs to stage 1 and has to be lit for it. It used to
-         be exempt for free, because the mark it lit was already on screen as
-         the resting badge; with the badge gone it starts at zero like the rest
-         and would otherwise travel out of the button invisible and arrive by
-         popping on. `min(--step, 1)` is the "is this the current one" test the
-         cascade cannot otherwise ask: 0 for the slot, 1 for all four others. */
+        0.46s, var(--cl-travel), var(--cl-travel), 0.26s;
+      /* THE MOON OPENS OUTWARD FROM THE CURRENT SECTION. One delay, shared by
+         the position and the opacity, so a mark fades up exactly as it starts
+         to travel and there is no mark visible anywhere it is not going. */
       transition-delay:
         0s,
-        0s,
-        calc(var(--cl-travel) + var(--step, 0) * 0.05s),
-        calc(min(var(--step, 0), 1) * var(--cl-travel)
-             + var(--step, 0) * 0.05s);
+        calc(min(var(--step, 0), 2) * var(--cl-cascade)),
+        calc(min(var(--step, 0), 2) * var(--cl-cascade)),
+        calc(min(var(--step, 0), 2) * var(--cl-cascade));
     }
-    /* THE KEYBOARD DOES NOT WAIT FOR THE STAGING. The first Tab into the rail
-       opens it and lands on a mark that is, for the length of stage 1, still
-       inside the button at opacity 0 — a focus ring on nothing, which was a
-       standing residual of the previous pass. Focus is not a dwell and has no
-       transit to guard against, so the focused mark is simply lit from the
-       first frame and travels out already visible. Position is untouched: it
-       still rides the same staging as its neighbours. */
+    /* THE KEYBOARD DOES NOT WAIT FOR THE CASCADE. The first Tab into the rail
+       opens it and lands on a mark that is, for the length of its own delay,
+       still inside the button at opacity 0 — a focus ring on nothing. Focus is
+       not a dwell and has no transit to guard against, so the focused mark is
+       lit from the first frame and travels out already visible. Position is
+       untouched: it still rides the same cascade as its neighbours. */
     .j-rail:not(.j-rail-column) .j-rail-slot:has(:focus-visible) {
       opacity: 1;
-      transition-delay: 0s, 0s, calc(var(--cl-travel) + var(--step, 0) * 0.05s), 0s;
+      /* …and it has to be lit FAST, not merely undelayed. Zeroing the delay
+         alone still left the mark ramping up a 0.26s fade: measured 50ms after
+         the first Tab, opacity 0.051 at the hub — undelayed and still nothing
+         on screen. The focused mark takes the short fade instead, which puts
+         it at ~0.5 by the time the eye arrives. */
+      transition-duration:
+        0.46s, var(--cl-travel), var(--cl-travel), 0.1s;
+      transition-delay:
+        0s,
+        calc(min(var(--step, 0), 2) * var(--cl-cascade)),
+        calc(min(var(--step, 0), 2) * var(--cl-cascade)),
+        0s;
     }
 
     /* ---- the marks grow as they come out of the button ----
        The mark scales, not the tile: the box stays 48px in every state, so a
-       ring item is never a sub-minimum target. `--cl-emit` is the size a mark
-       has while it is still inside the control; it reaches full size as it
-       arrives on the ring, which is the only way a flat drawing can be said to
-       come out of something. (The BUBBLE this replaces was a 32px hairline
-       circle carrying the current mark at 0.64 on the button's shoulder, plus
-       a peel that walked it to the slot. Both are deleted — Hannah, "let's
-       just remove that other thing entirely — the little circle" — and with
-       them `--cl-bx`, `--cl-by`, `--cl-bub` and `.j-rail-item::before`.) */
+       slot is never a sub-minimum target. `--cl-emit` is the size a mark has
+       while it is still inside the control; it reaches full size as it arrives
+       on the arc, which is the only way a flat drawing can be said to come out
+       of something. It rides the same cascade as the travel it belongs to. */
     .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark {
       transform: scale(var(--cl-emit));
-      transition: transform var(--cl-travel) cubic-bezier(0.36, 0.02, 0.22, 1) 0.17s;
+      transition: transform var(--cl-travel) cubic-bezier(0.38, 0.04, 0.24, 1)
+                  calc((2 - min(var(--step, 0), 2)) * var(--cl-cascade));
     }
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-      .j-rail-slot .j-rail-mark { transform: scale(1); transition-delay: 0s; }
+      .j-rail-slot .j-rail-mark {
+      transform: scale(1);
+      transition-delay: calc(min(var(--step, 0), 2) * var(--cl-cascade));
+    }
 
-    /* ---- the hub: the ring's centre, and it leads ---- */
+    /* ---- the hub: the moon's centre, and it leads ---- */
     .j-rail:not(.j-rail-column) .j-rail-menu,
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
       .j-rail-menu {
@@ -2238,29 +2234,22 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       height: var(--cl-hub);
       transform: none;
     }
-    /* "It may also benefit from being slightly larger" — the button's box and
-       its glyph both, so the pair reads as one instrument with a lead mark
-       rather than as two equal symbols. The sections stay at 24px: they are a
-       list, and the thing you press is not.
-       Shot 2026-08-13 at 24 / 26 / 28 / 30 px in the real row, against the
-       resting bubble's 15.4px mark. At 24 and 26 the list glyph is visibly
-       SUBORDINATE to the badge riding on it — the indicator outweighs the
-       control, which is the wrong way round for the one thing on this flank a
-       visitor presses. At 30 the bullets coarsen against a page drawn in
-       hairlines and the circle's lower arc runs into the glyph. 28 is where
-       the button leads: bigger than the 24px section marks, bigger than the
-       badge, and still a drawing. */
+    /* The button's box and its glyph both lead the pair: it is one instrument
+       with a control at its centre, not a list with a sixth item. The sections
+       stay at 24px — they are a list, and the thing you press is not.
+       Shot 2026-08-13 at 24 / 26 / 28 / 30px in the real row: at 24 and 26 the
+       list glyph is subordinate to the marks around it, which is backwards for
+       the one thing on this flank a visitor presses; at 30 the bullets coarsen
+       against a page drawn in hairlines. 28 is where the button leads and is
+       still a drawing. */
     .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-mark,
     .j-rail:not(.j-rail-column) .j-rail-menu .j-sym { width: 28px; height: 28px; }
 
     /* THE RETICLE WAITS FOR THE LANDING. It says "this is the one you are on",
-       and a mark still in flight is not on anything yet — shot 2026-08-13 with
-       the column's `--d * 0.035 + 0.1s` inherited, the brackets locked around
-       the bubble halfway through the peel and travelled with it, which read as
-       a box being dragged rather than as a mark being claimed. Held until the
-       travel is done, the resting circle and the reticle become a clean
-       handoff: the circle fades out as the bubble leaves, the brackets close
-       on it as it arrives, and the current section is marked throughout. */
+       and a mark still in flight is not on anything yet. The apex mark's own
+       travel is `--cl-travel` with no cascade (it is step 0), so that is
+       exactly how long the brackets hold off: they close on the mark as it
+       arrives, which reads as the mark being CLAIMED rather than dragged. */
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
       .j-rail-slot.active .j-rck {
       transition-delay: var(--cl-travel);
@@ -2272,88 +2261,82 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
       .j-rail-slot.active .j-rck.bl { transition-delay: calc(var(--cl-travel) + 0.15s); }
 
-    /* THE BUTTON KEEPS ITS FOOTPRINT AT THE WALL.
-       The hairline that used to separate "sections above" from "the site
-       below" has no sentence left — closed, there is no file, just a button —
-       so `::before` is repurposed as the pad that answers for the button in
-       the place the button used to stand.
-
-       WHY IT IS NEEDED. `48b7795` was a real bug: the fan slid the button and
-       a press aimed at it landed on nothing. That fix (open on `pointerdown`)
-       covers a press made BEFORE or DURING the step-in, but not one made after
-       — a visitor who arrived, watched it open and then pressed where they had
-       been aiming would press air. So the button's hit area stays behind: the
-       pad spans from the button's own right edge to the frame, `--cl-shift`
-       wide plus the 2px of edge, at the button's own height. Closed it is
-       0-wide and costs nothing.
-
-       It is UNDER the marks, not over them: the two right-hand tiles occupy
-       most of this span, and they are given `z-index: 1` below so they win
-       every point they cover. What is left exposed is the 26px band on the
-       button's own row between them — which is exactly where an aim at the
-       closed button lands, and it is a redundancy for a 56px target sitting
-       47px away, not a target of its own. */
-    .j-rail:not(.j-rail-column) .j-rail-menu::before {
-      top: 50%; left: auto;
-      right: calc(-1 * var(--cl-shift) - var(--cl-edge));
-      width: calc(var(--cl-shift) + var(--cl-edge));
-      height: var(--cl-hub);
-      transform: translateY(-50%);
-      background: none;
-    }
-    .j-rail:not(.j-rail-column):not(.j-rail-hot):not(.j-rail-open):not(:has(:focus-visible))
-      .j-rail-menu::before { width: 0; right: 0; }
-    /* …and the ring paints over it. The list is authored before the button, so
-       without this the button (and its pad) sit on top of every mark. */
+    /* THE BUTTON'S HAIRLINE AND ITS HIT BRIDGE BOTH HAVE NO JOB LEFT.
+       The hairline separated "sections above" from "the site below" in a
+       column that no longer exists here; the 8px bridge spanned a gap the arc
+       does not have; and the pad `d9da652` made of `::before` answered for a
+       footprint the button vacated when it stepped in — it does not step in
+       any more, so there is nothing to answer for. */
+    .j-rail:not(.j-rail-column) .j-rail-menu::before,
+    .j-rail:not(.j-rail-column) .j-rail-menu::after { display: none; }
+    /* …and the moon paints over the button. The list is authored before the
+       button, so without this the button sits on top of every mark. */
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
       .j-rail-slot { z-index: 1; }
-    /* the column's 8px hit bridge has no gap left to bridge */
-    .j-rail:not(.j-rail-column) .j-rail-menu::after { display: none; }
 
-    /* ---- the orbit ----
-       One hairline circle on the path the sections sit on, blooming under
-       them as they arrive. It is CONCENTRIC WITH THE BUTTON — the drawing
-       states the geometry, and the whole of Hannah's correction is visible in
-       this one rule: the circle used to stand off to the left of the anchor
-       (`right: var(--cl-cur)`) and now it is centred on it. Very faint: it
-       should read as the thing the marks are arranged on, not as a dial. */
-    .j-rail:not(.j-rail-column) .j-rail-list::after {
-      content: "";
+    /* ---- THE MOON ITSELF, AND IT DRAWS ----
+       Two real paths (rail.js), both starting at the APEX: one walking up to
+       the top tip, one down to the bottom. `pathLength="100"` normalises them,
+       so `stroke-dasharray: 100` is the whole arm and `stroke-dashoffset: 100`
+       is an arm not yet drawn — the hero's `lead-draw`, which is also how the
+       menu mark's own filaments arrive.
+
+       The front runs `travel + 2 * cascade`, i.e. the whole formation, so it
+       reaches each mark's angle about when the mark does and the moon reads as
+       being drawn around the button rather than as a circle fading up under
+       it. Very faint: it is the thing the marks are arranged on, not a dial.
+
+       Closing, the arms retract the way they came — the delay is what holds
+       the line under the marks until they are back inside the button. */
+    .j-rail:not(.j-rail-column) .j-rail-arc {
+      display: block;
       position: absolute;
-      right: calc(-1 * var(--cl-rad));
-      top: calc(-1 * var(--cl-rad));
-      width: calc(2 * var(--cl-rad));
-      height: calc(2 * var(--cl-rad));
-      border: 1px solid rgba(217, 164, 65, 0.13);
-      border-radius: 50%;
+      right: calc(-1 * (var(--cl-rad) + 1px));
+      top: calc(-1 * (var(--cl-rad) + 1px));
+      width: calc(2 * (var(--cl-rad) + 1px));
+      height: calc(2 * (var(--cl-rad) + 1px));
       z-index: -1;
-      opacity: 0;
-      transform: scale(0.82);
+      overflow: visible;
       pointer-events: none;
-      transition: opacity 0.3s ease, transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .j-rail:not(.j-rail-column) .j-rail-arc path {
+      fill: none;
+      stroke: rgba(217, 164, 65, 0.22);
+      stroke-width: 1;
+      stroke-linecap: round;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      transition: stroke-dashoffset var(--cl-travel) cubic-bezier(0.22, 1, 0.36, 1)
+                    calc(2 * var(--cl-cascade));
     }
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-      .j-rail-list::after {
-      opacity: 1;
-      transform: scale(1);
-      transition-delay: var(--cl-travel);
+      .j-rail-arc path {
+      stroke-dashoffset: 0;
+      transition-duration: calc(var(--cl-travel) + 2 * var(--cl-cascade));
+      /* THE FRONT TRAVELS AT A NEARLY CONSTANT ANGULAR SPEED, which is the one
+         thing a drawn line has to do to read as being drawn. Every curve in
+         this file's usual vocabulary ends `…, 1`, which pins the tail flat and
+         front-loads everything; solved numerically against a straight line
+         over seven samples, `0.45, 0.45, 0.72, 1` is the closest of the family
+         (max deviation 0.12 against the house arrival curve's 0.25) while
+         still landing softly. Shot as candidate F4 with a fast front: the arc
+         completes as an EMPTY semicircle a beat before its own tip marks
+         arrive, and a line that gets somewhere before the things it carries
+         reads as two separate events. */
+      transition-timing-function: cubic-bezier(0.45, 0.45, 0.72, 1);
+      transition-delay: 0s;
     }
 
     /* ---- the pointer floor ----
-       Points on a ring have air between them, and an open control must not
+       Points on an arc have air between them, and an open control must not
        fold because the pointer crossed it. A pad the size of the whole circle
-       plus the hub, on the LIST, live only while the control is open — the
+       plus a tile, on the LIST, live only while the control is open — the
        6903c4a hit model exactly: nothing full-frame, nothing hit-testable
        while closed. Sized off the full circle rather than off the occupied
-       points, so it stays right as the manifest changes.
-
-       IT ALSO COVERS THE GROUND THE BUTTON LEFT. The control steps in by
-       `--cl-shift` = 46.9px as it opens, so a pointer that was resting on the
-       closed button finds itself 46.9px right of the new centre — well inside
-       this pad's own half-width (rad + tile/2 = 87px), which is what stops the
-       control folding out from under a stationary pointer and oscillating
-       against its own step-in. Measured: no fold at any point on the ring, the
-       vacated ground included. */
+       points, so it stays right as the manifest changes. (Its right-hand half
+       lies over the frame's own edge and is clipped by it; the moon has
+       nothing there, and a pad cannot be smaller than the circle it guards
+       without opening a seam at the tips.) */
     .j-rail:not(.j-rail-column) .j-rail-list::before {
       content: "";
       position: absolute;
@@ -2367,13 +2350,11 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       .j-rail-list::before { pointer-events: auto; }
 
     /* ---- THE CLOSED CONTROL HAS NO SECTION TARGETS ----
-       The column keeps its current mark live at rest and the touch arming
-       depends on that, so this is written for the ring only. Here the five
-       marks are stacked at zero size INSIDE the button while closed; leaving
-       them hit-testable would put five invisible tiles on top of the one
-       control that is meant to be there, and a press on the button would
+       The five marks are stacked at zero size INSIDE the button while closed;
+       leaving them hit-testable would put five invisible tiles on top of the
+       one control that is meant to be there, and a press on the button would
        navigate to the section the visitor is already in. So the closed
-       instrument is exactly one 56px button — which is now the whole of the
+       instrument is exactly one 56px button — which is the whole of the
        resting picture as well — and the five links become live (at 48px each)
        the moment it opens, which on a pointer is before a click can be aimed
        at any of them. Focusability is untouched: `pointer-events` is not the
@@ -2381,14 +2362,14 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail:not(.j-rail-column):not(.j-rail-hot):not(.j-rail-open):not(:has(:focus-visible))
       .j-rail-slot { pointer-events: none; }
 
-    /* ---- the names all line up, and now that costs nothing ----
+    /* ---- the names all line up ----
        `--pillx` (rail.js, PILLX) is how far this point is to the RIGHT of the
-       circle's leftmost point, in px, so every pill is held off by exactly
-       that and they all land on one vertical line — a list of names rather
-       than five labels following a curve, and no label over a drawing.
-       THE CURRENT ITEM'S EXEMPTION IS GONE and nothing changed: with the
-       circle centred on the button, its leftmost point IS the slot, so
-       `PILLX[0]` is 0 by arithmetic. One rule where there were two.
+       moon's leftmost point, in px, so every pill is held off by exactly that
+       and they all land on one vertical line — a list of names rather than
+       five labels following a curve, and no label over a drawing. The apex's
+       own offset is 0 by arithmetic (it IS the leftmost point) and the tips'
+       is a full radius, which is what carries their labels clear of the button
+       instead of across it.
        0.72rem past the box, not the column's 0.1: the current tile is the one
        that WEARS THINGS — the reticle at inset -5px, a focus ring at the
        shared 3px offset — and at 0.3rem the pill's edge and the bracket were
@@ -2398,58 +2379,48 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       margin-right: calc(var(--pillx, 0px) + 0.72rem);
     }
     /* THE HUB'S OWN PILL GOES UNDER THE WHOLE INSTRUMENT.
-       Closed there is no ring to clear and it hangs off the button's left like
-       any label on any control. Open, it cannot: shot both ways, and the name
-       line is wrong for it. Held off to the circle's leftmost point with the
-       sections (the tidy answer), "MENU" lands 145px from its own button with
-       the CURRENT SECTION'S MARK standing between the two — and every reading
-       of that picture has the pill labelling the mark, not the button. Hung
-       off the button directly (the naive answer) it draws straight across the
-       inside of the ring and through the mark below it.
-       So it drops below the circle, right-aligned to the same 2px of frame the
-       ring's own rightmost tiles hold. Nothing is under the ring, the pill is
-       the widest thing on the flank, and read there it captions the instrument
-       — which is what a menu button's label is. `--cl-rad + tile/2` is the
-       circle's own bottom rather than the lowest MARK's, so the clearance
+       Held off to the moon's leftmost point with the sections, "MENU" lands
+       two radii from its own button with the current section's mark standing
+       between the two, and every reading of that picture has the pill
+       labelling the mark. Hung off the button directly it draws straight
+       across the inside of the moon. So it drops below the arc, right-aligned
+       to the same 2px of frame the button holds: nothing is under the moon, it
+       is the widest thing on the flank, and read there it captions the
+       instrument — which is what a menu button's label is.
+       `--cl-rad + tile/2` is the circle's own bottom, which on a half moon is
+       also the bottom mark's own tile edge, so the clearance is exact and
        cannot go stale if the manifest changes the angles.
-
-       IT IS BELOW THE BUTTON IN BOTH STATES, and only the clearance changes.
-       Hung off the left while closed and dropped below on open, it JUMPED at
-       the 120ms dwell — the pill is already up (a hover reveals it at once)
-       when the ring decides to open under it. Below in both states, the same
-       label simply steps down to make room, on the same travel clock as the
-       ring it is stepping aside for. Right-aligned to the frame's own 2px in
-       both states too, which is why `right` carries the shift: the label holds
-       the wall exactly as the button and then the ring do. */
+       IT IS BELOW THE BUTTON IN BOTH STATES and only the clearance changes:
+       hung off the left while closed and dropped below on open, it JUMPED at
+       the 120ms dwell, because a hover reveals the pill at once and the moon
+       then decides to open under it. Below in both states, the same label
+       simply steps down to make room, on the formation's own clock. */
     .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-name {
       right: 0;
       top: 100%;
       transform: none;
       margin: 0.4rem 0 0 0;
       transition: opacity 0.24s ease, letter-spacing 0.24s ease,
-                  margin-top var(--cl-travel) cubic-bezier(0.36, 0.02, 0.22, 1),
-                  right var(--cl-travel) cubic-bezier(0.36, 0.02, 0.22, 1);
+                  margin-top var(--cl-travel) cubic-bezier(0.22, 1, 0.36, 1);
     }
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
       .j-rail-menu .j-rail-name {
-      right: calc(-1 * var(--cl-shift));
       margin-top: calc(var(--cl-rad) + var(--cl-tile) / 2
                        - var(--cl-hub) / 2 + 0.4rem);
     }
     /* A SECTION'S NAME FOLLOWS `.at`, NOT `:hover`.
-       Every mark on this ring is placed by `transform`, and a transform-only
+       Every mark on this arc is placed by `transform`, and a transform-only
        move does not make Chrome re-run its hit test — so after a rotation
        under a stationary pointer, `:hover` is still on the mark that TRAVELLED
-       AWAY. RE-MEASURED on the button-centred ring, 2026-08-13 (later): with
-       the pointer parked on the slot (1300, 450) and the ring turned one step
-       by a pure transform write, `:hover` stayed on CONNECT while
-       `elementFromPoint(1300, 450)` returned OWNED. `.at` is rail.js
-       resolving `elementFromPoint` from the real pointer position (see THE
-       POINTER'S OWN TRUTH); it agrees with `:hover` on every pointer move and
-       is right in the one case `:hover` is not. So the ring reveals on `.at`
-       and a stale `:hover` on any other slot is put back down.
-       `:focus-visible` is untouched by all of this — focus follows the
-       element, not the point, so a rotation cannot strand it. */
+       AWAY. RE-MEASURED on the half moon (2026-08-13 later still): pointer
+       parked on the apex, the moon turned one step by a pure transform write,
+       `:hover` stayed on the departing mark while `elementFromPoint` returned
+       the arriving one. `.at` is rail.js resolving `elementFromPoint` from the
+       real pointer position (see THE POINTER'S OWN TRUTH); it agrees with
+       `:hover` on every pointer move and is right in the one case `:hover` is
+       not. So the moon reveals on `.at` and a stale `:hover` on any other slot
+       is put back down. `:focus-visible` is untouched by all of this — focus
+       follows the element, not the point, so a rotation cannot strand it. */
     .j-rail:not(.j-rail-column) .j-rail-slot:not(.at) .j-rail-item:hover .j-rail-name {
       opacity: 0;
       letter-spacing: 0.3em;
@@ -2459,7 +2430,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       opacity: 1;
       letter-spacing: 0.24em;
     }
-    /* …and the names go out entirely while the ring turns (rail.js, THE NAMES
+    /* …and the names go out entirely while the moon turns (rail.js, THE NAMES
        SIT OUT THE TURN). Not a fade: it is a label that has stopped being
        true — and, for the length of the turn, one that cannot be recomputed
        either, since nothing is anywhere in particular. */
@@ -2470,13 +2441,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     /* ONE PILL AT A TIME, AND WHY THE COLUMN'S RULE CANNOT COME ALONG.
        `.j-rail-open .j-rail-name` (the touch arming) reveals EVERY name at
        once, which a single file can do because its tiles are a file: the pills
-       stack down the flank and never meet. A ring stacks five points into
-       three effective rows, and measured 2026-08-12 on a hover-capable touch
-       device — a 2-in-1, the one class of machine that matches
-       `(hover: hover)` and can still set `.j-rail-open` — the co-planar pills
-       drew in one heap. So here the blanket reveal is withdrawn and the ACTIVE
-       section's name stands in for it: one pill, on the one row nothing else
-       occupies. Pointing and keyboard focus are untouched and still name
+       stack down the flank and never meet. An arc stacks five points into
+       fewer effective rows, and measured on a hover-capable touch device — a
+       2-in-1, the one class of machine that matches `(hover: hover)` and can
+       still set `.j-rail-open` — the co-planar pills drew in one heap. So here
+       the blanket reveal is withdrawn and the ACTIVE section's name stands in
+       for it. Pointing and keyboard focus are untouched and still name
        whatever they are on. */
     .j-rail:not(.j-rail-column).j-rail-open .j-rail-name { opacity: 0; }
     .j-rail:not(.j-rail-column).j-rail-open .j-rail-slot.active .j-rail-name {
@@ -2488,62 +2458,90 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       opacity: 1;
     }
 
-    /* ---- the scrims, re-cut for a ring ----
-       Same job and same recipe as the column's (the frame darkening where the
-       instrument is, never a docked panel), but a band down the flank is the
-       wrong shape twice over: the closed control is one 56px button and the
-       open one is a circle 174px across. So both go radial — and BOTH ARE NOW
-       CENTRED ON THE ANCHOR, because with the ring around the button the
-       button IS the centre of everything this component draws. Two rules that
-       used to carry an offset each (the bubble's midpoint, the circle's centre
-       one radius out) are now the same `-half the box` in each axis, and they
-       stay centred through the step-in for free: they ride `.j-rail-inner`,
-       which is the thing that steps.
-       The resting halo still does not fade out when the ring opens, unlike the
-       column's: the hub keeps needing its own ground, and the two are now
-       concentric rather than fighting. */
-    .j-rail:not(.j-rail-column) .j-rail-inner::before,
+    /* ---- THE ONE SURFACE ----
+       "There's like a black background that appears on hover, but it feels
+        really janky and weird … multiple layers of black boxes, like a bigger
+        one and a smaller one … This should be really subtle and should fade in
+        and out nicely."
+
+       She was reading two radials summing (0.80 core over 0.62 core = 0.92)
+       across two different falloffs, which is exactly what "a bigger one and a
+       smaller one" describes. There is now ONE, and it is the SAME one in both
+       states — it grows from the button's footprint to the moon's on the
+       formation's clock, so the darkening follows the instrument instead of a
+       second surface arriving under the first.
+
+       `::before` is switched off rather than re-tuned: its whole job in the
+       ring block was to be the second surface.
+
+       THE STOPS ARE A FALLOFF, NOT A CORE PLUS TWO SEGMENTS. The old recipe
+       held a FLAT alpha to 34% and then ran two straight ramps, and a straight
+       ramp between two stops has a discontinuous derivative at each end —
+       which is the "hard line" that reads as an edge even when no edge is
+       drawn. Five stops on a curve reach zero smoothly and there is no radius
+       at which the eye finds a boundary. */
+    .j-rail:not(.j-rail-column) .j-rail-inner::before { display: none; }
     .j-rail:not(.j-rail-column) .j-rail-inner::after {
+      --s: calc(2 * (var(--cl-rad) + var(--cl-tile)));
       -webkit-mask-image: none;
       mask-image: none;
+      right: calc(-0.5 * var(--s));
+      top: calc(-0.5 * var(--s));
+      width: var(--s);
+      height: var(--s);
+      background: radial-gradient(closest-side circle at 50% 50%,
+        rgba(9, 6, 2, 0.52) 0%,
+        rgba(9, 6, 2, 0.44) 22%,
+        rgba(9, 6, 2, 0.28) 44%,
+        rgba(9, 6, 2, 0.12) 66%,
+        rgba(9, 6, 2, 0.03) 84%,
+        rgba(9, 6, 2, 0) 100%);
+      /* CLOSED it is sized to TWICE THE BUTTON — the one glyph on the flank
+         plus a glyph's worth of falloff around it. The transform is what grows
+         it, so the surface is one paint that scales rather than two that
+         cross-fade: there is never a frame with two grounds in it, which is
+         the whole of what she was looking at. */
+      transform: scale(calc(2 * var(--cl-hub) / var(--s)));
+      opacity: 0;
+      transition: opacity 0.4s ease,
+                  transform calc(var(--cl-travel) + 2 * var(--cl-cascade))
+                    cubic-bezier(0.22, 1, 0.36, 1);
     }
-    /* THE EXPANDED SCRIM IS ISOTROPIC, because the thing it protects is.
-       Inherited it was 2r+210 wide by 2r+140 tall — an ellipse over a circle,
-       so the four marks did not get the same cover: at r = 68 the left/right
-       pair sat at 39% of the box's half-width and the top/bottom pair at 49%
-       of its half-height, i.e. further down the same falloff. Measured over
-       Final's lit field, where it shows: the top and bottom marks were the two
-       that read soft, and they are exactly the two the ellipse under-served.
-       Same alphas, same stops, same recipe — only the box is now round, which
-       puts every mark at the same 39% and hands the ring one ground instead of
-       four different ones. (Shot against 200/0.86 and 240/0.80 as well: the
-       first starts to read as a disc over Owned's colony, the second gives the
-       top mark back to the field.) */
-    .j-rail:not(.j-rail-column) .j-rail-inner::before {
-      --w: calc(2 * var(--cl-rad) + 210px);
-      --h: var(--w);
-      right: calc(-0.5 * var(--w));
-      top: calc(-0.5 * var(--h));
-      width: var(--w);
-      height: var(--h);
-      background: radial-gradient(ellipse at 50% 50%,
-        rgba(9, 6, 2, 0.8) 0 34%, rgba(9, 6, 2, 0.42) 62%, rgba(9, 6, 2, 0) 100%);
+    .j-rail:not(.j-rail-column).on .j-rail-inner::after { opacity: 1; }
+    .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+      .j-rail-inner::after { opacity: 1; transform: scale(1); }
+
+    /* ---- and the pills lose their rectangle ----
+       `rgba(9,6,2,0.85)` with a 2px radius is a hard-edged black box, and on
+       the flank it is the hardest edge in the whole composition — the one
+       thing in her report that is a LINE rather than a wash. A label still
+       needs a ground over a lit chapter, so it keeps one and stops having a
+       box: an ellipse that reaches zero before the edge, plus the room to fade
+       in. The type itself carries the same dark rim the glyphs do, which is
+       what holds the letterforms where the wash is already thin. */
+    .j-rail:not(.j-rail-column) .j-rail-name {
+      /* THE ELLIPSE IS INSCRIBED IN THE BOX — `50% 50%` are radii measured
+         against the box's own half-width and half-height, so the wash reaches
+         zero EXACTLY at all four edges and the corners are already clear.
+         (The first cut of this used `62% 108%`, which puts the vertical radius
+         outside the box: the gradient was then clipped by the padding box at
+         alpha 0.65 and drew the very hard top and bottom edges it was meant to
+         remove. Caught by shooting it, not by reading it.)
+         The stops are flat across the middle and spend their whole falloff in
+         the outer third, so the letters sit on a real ground and the edge is
+         nowhere. Padding is what buys that falloff its room. */
+      background: radial-gradient(ellipse 50% 50% at 50% 50%,
+        rgba(9, 6, 2, 0.8) 0%,
+        rgba(9, 6, 2, 0.78) 46%,
+        rgba(9, 6, 2, 0.58) 68%,
+        rgba(9, 6, 2, 0.24) 86%,
+        rgba(9, 6, 2, 0) 100%);
+      border-radius: 0;
+      padding: 0.52rem 1.5rem;
+      /* and the type carries its own rim, exactly as the glyphs do — which is
+         what holds the first and last letters where the wash is thinnest */
+      text-shadow: 0 0 2px rgba(9, 6, 2, 0.95), 0 0 5px rgba(9, 6, 2, 0.7);
     }
-    /* …and the resting halo is centred on THE BUTTON, which is now the whole
-       of the resting picture. The previous pass had to derive this from the
-       bubble's own offset so the halo followed the badge around the button's
-       shoulder; with the badge gone there is one mark to sit under and it is
-       at the anchor. */
-    .j-rail:not(.j-rail-column) .j-rail-inner::after {
-      right: -110px;
-      top: -110px;
-      width: 220px;
-      height: 220px;
-      background: radial-gradient(ellipse at 50% 50%,
-        rgba(9, 6, 2, 0.62) 0 22%, rgba(9, 6, 2, 0.3) 46%, rgba(9, 6, 2, 0) 100%);
-    }
-    .j-rail:not(.j-rail-column).on:is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-      .j-rail-inner::after { opacity: 1; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -2571,29 +2569,29 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       transition-delay: 0s;
     }
     .j-rck { transition: none; }
-    /* THE RING'S OWN RESET, and why the blanket one above cannot reach it.
-       That rule is `.j-rail-slot` — one class. The ring's geometry has to
+    /* THE MOON'S OWN RESET, and why the blanket one above cannot reach it.
+       That rule is `.j-rail-slot` — one class. The moon's geometry has to
        out-rank the column's, so it is written `.j-rail:not(.j-rail-column)
        .j-rail-slot`, three; a `transition: none` at one class loses to a
        `transition-duration` at three, and MEASURED (2026-08-12) it did: two
        frames after a chapter change the marks were still a third of the way
        round. Restated at matching weight, they land on the frame. Everything
-       the ring animates ends at its own resting style — `--ang` at the slot's
-       point on the circle, `--t` and `--u` at 1 while open and 0 while shut,
-       the mark at its own scale, the control against the wall when shut and
-       `--cl-shift` in when open — so switching all of it off leaves both
-       states intact and instant, the STAGING included: with no durations there
-       is nothing left for stage 2's delay to wait for, and the ring simply is
-       where it lands. The step-in is named here for the same reason the slots
-       are: it out-ranks the blanket `.j-rail-inner::before/after` reset above,
-       which never covered the element itself. */
-    .j-rail:not(.j-rail-column) .j-rail-inner,
+       the moon animates ends at its own resting style — `--ang` at the slot's
+       point on the arc, `--t` and `--u` at 1 while open and 0 while shut, the
+       mark at its own scale, the arc's arms drawn while open and undrawn while
+       shut, the one surface at its open size — so switching all of it off
+       leaves both states intact and instant, THE FORMATION'S CASCADE included:
+       with no durations there is nothing left for the per-step delays to
+       stagger, and the moon simply is where it lands.
+       `.j-rail-arc path` and `.j-rail-inner::after` are named here for the
+       same reason the slots are: they out-rank the blanket
+       `.j-rail-inner::before/after` reset above, which is written at one
+       class and never covered the arc at all. */
     .j-rail:not(.j-rail-column) .j-rail-slot,
     .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark,
     .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-name,
-    .j-rail:not(.j-rail-column) .j-rail-list::after,
-    .j-rail:not(.j-rail-column) .j-rail-menu::before,
-    .j-rail:not(.j-rail-column) .j-rail-menu::after {
+    .j-rail:not(.j-rail-column) .j-rail-arc path,
+    .j-rail:not(.j-rail-column) .j-rail-inner::after {
       transition: none;
       transition-delay: 0s;
     }
