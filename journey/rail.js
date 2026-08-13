@@ -661,17 +661,21 @@ export function createRail({ onNav } = {}) {
     announceOpen();
   }
 
-  /* THE FOLD NEEDS NO RE-CANONICALISATION any more, and that is a property of
-     the ring rather than an omission. The cluster pinned every folded slot's
-     angle to 0 (they stacked behind one mark, where an angle had no meaning),
-     so an accumulated turn had to be spent on the fold or the next unfold
-     would animate through whole revolutions the visitor never saw wound up.
-     Here the angle is never pinned: it is multiplied by `--u`, the unfold
-     amount, so at rest it is simply not in the picture, and it is already
-     correct when `--u` leaves zero. Unfolding therefore animates ONE thing —
-     the travel and the unfurl — with the ring already reading true, and
-     `writeAngles` is free to keep accumulating for as long as the page lives.
-     (Deleted with it: `foldedSync`, and the focusout tick it needed.) */
+  /* THE FOLD STILL NEEDS RE-CANONICALISATION — CORRECTED 2026-08-14.
+     What stood here was: "the angle is never pinned: it is multiplied by
+     `--u`, the unfold amount, so at rest it is simply not in the picture, and
+     it is already correct when `--u` leaves zero… `writeAngles` is free to
+     keep accumulating for as long as the page lives." The first clause is
+     true and the conclusion is the exact opposite of what follows from it.
+     Multiplying by `--u` does not take the angle out of the picture; it makes
+     the FORMATION traverse the whole of it, from 0 to whatever is stored. So
+     an accumulated -405deg is not a harmless alias for -45deg, it is a mark
+     spiralling one and an eighth turns across the face of the moon on its way
+     out. The cluster's `foldedSync` was solving the same problem from the
+     other side, and deleting it brought the problem back.
+     It is reinstated as `atRest` + `j-rail-recentre`; the reasoning, the
+     measurement and the reason the fold's own frames must NOT be treated as
+     "home" are in the block above `writeAngles`. */
 
   // The whole control opens the ring — but only the list does on the column
   // fallback, whose button still slides. See EXPANSION above.
@@ -955,7 +959,75 @@ export function createRail({ onNav } = {}) {
   let curIndex = 0;
   let prevCur = null;
   let turnTimer = 0;
+  /* IS THE MOON HOME? Not `!expanded()` — that is already true on the first
+     frame of a fold, with every mark still out on the arc and still owed its
+     unwrapped angle to travel back along. This is the stricter statement:
+     folded, AND the fold has finished, so `--u` is 0 and nothing the angle
+     controls is on screen. See the block above writeAngles. */
+  let atRest = true;
+  let wasOpen = false;
+  let restTimer = 0;
+  /* The fold's own length: the tips-in cascade (2 * `--cl-cascade`) plus one
+     mark's travel (`--cl-travel`) is 0.66s, and this is that with a frame of
+     margin. Deliberately a constant rather than a `transitionend` listener —
+     the fold ends in five separate transitions on four properties, and the
+     question being asked is "has the picture settled", not "did that one
+     property finish". */
+  const FOLD_HOME_MS = 700;
 
+  /* THE TURN NEEDS AN UNWRAPPED ANGLE; THE FORMATION NEEDS A CANONICAL ONE
+     (2026-08-14 — Hannah: "when I'm down at the bottom sections, the intro
+     animation feels weird and overlapping, like things go to the wrong place
+     to start. When I'm at the top it's effectively perfect").
+
+     Both are true at once because `--ae` is `--u * --ang`, and the two states
+     move DIFFERENT variables:
+
+       · a TURN happens with the moon open. `--u` is pinned at 1 and `--ang`
+         transitions from its old value to its new one. The unwrapped number
+         is what carries the direction rule — four marks one pitch, one mark
+         four, all the same way round behind the frame's edge. It must stay.
+       · a FORMATION happens with the moon home. `--ang` is fixed and `--u`
+         runs 0 -> 1, so the mark sweeps from angle ZERO to whatever number is
+         stored. It walks the WHOLE of it.
+
+     So a stored angle of -405deg renders identically to -45deg at rest and is
+     a mark spiralling one and an eighth turns on the way out. The angles
+     accumulate one pitch per chapter change, which is why this was invisible
+     at the top and got monotonically worse going down. Measured on the live
+     page, riding down section by section and then opening the moon — the five
+     `--ang-to` values, and how many of them sweep more than the moon's own
+     90deg half-width:
+
+       mission  0 / 45 / 90 / -90 / -45           0 marks the long way
+       inspire  -45 / 0 / 45 / -270 / -90         1
+       connect  -90 / -45 / 0 / -315 / -270       2
+       owned    -270 / -90 / -45 / -360 / -315    3
+       final    -315 / -270 / -90 / -405 / -360   4
+
+     — against an on-screen path of up to 3.63x the straight-line distance to
+     the mark's own resting point, and lit marks passing within 0.2px of each
+     other mid-formation. That is exactly "things go to the wrong place to
+     start", and exactly "at the top it's effectively perfect".
+
+     THE DELETED RE-CANONICALISATION WAS LOAD-BEARING. The half-moon pass
+     removed the cluster's `foldedSync` on the reasoning that "the angle is
+     never pinned: it is multiplied by `--u`, so at rest it is simply not in
+     the picture, and it is already correct when `--u` leaves zero". The first
+     half is right and the second does not follow — multiplying by `--u` does
+     not take the angle out of the picture, it makes the formation TRAVERSE
+     it. The cluster pinned folded slots to 0 and therefore had to spend the
+     accumulated turn on the fold; this shape does not pin, and therefore has
+     to spend it too, just for a different reason.
+
+     WHEN THE MOON IS HOME THE ANGLE IS A FACT, NOT AN ANIMATION. `atRest`
+     below is "folded AND the fold has finished" — not merely "not expanded",
+     which is also true for the whole 0.66s of a fold with every mark still on
+     screen and still needing its unwrapped value to get home. While it holds,
+     the angle is written canonically and with the transition switched off for
+     the frame (`j-rail-recentre`), because there is nothing on screen for a
+     460ms interpolation to show and a visitor who opens the moon mid-way
+     through one would catch the angle between two values. */
   function writeAngles(cur) {
     curIndex = cur;
     const n = CHAPTERS.length;
@@ -967,15 +1039,22 @@ export function createRail({ onNav } = {}) {
        representative, which from a standing start is the value itself). */
     const dir = prevCur === null ? 0 : -signedRing(((cur - prevCur) % n + n) % n);
     prevCur = cur;
+    if (atRest) root.classList.add('j-rail-recentre');
     slots.forEach((s, i) => {
       const k = ((i - cur) % n + n) % n;
       const to = signedRing(k) * STEP;
-      let d = (to - angleOf[i]) % 360;
-      if (dir < 0) { if (d > 0) d -= 360; }
-      else if (dir > 0) { if (d < 0) d += 360; }
-      else if (d > 180) d -= 360;
-      else if (d <= -180) d += 360;
-      angleOf[i] += d;
+      if (atRest) {
+        // Home: state the angle. There is no motion here to be continuous
+        // with, and the next formation starts from exactly this number.
+        angleOf[i] = to;
+      } else {
+        let d = (to - angleOf[i]) % 360;
+        if (dir < 0) { if (d > 0) d -= 360; }
+        else if (dir > 0) { if (d < 0) d += 360; }
+        else if (d > 180) d -= 360;
+        else if (d <= -180) d += 360;
+        angleOf[i] += d;
+      }
       s.li.style.setProperty('--ang-to', angleOf[i].toFixed(2) + 'deg');
       s.li.style.setProperty('--ring', String(k));
       // Distance along the ring from the current item, for the stagger: the
@@ -983,6 +1062,13 @@ export function createRail({ onNav } = {}) {
       s.li.style.setProperty('--step', String(Math.abs(signedRing(k))));
       s.li.style.setProperty('--pillx', PILLX[k].toFixed(1) + 'px');
     });
+    if (atRest) {
+      // Land the new values with the transition still off, then give it back
+      // on the next frame — so the angle is simply true from here, and the
+      // formation that opens next starts where it means to.
+      void root.offsetWidth;
+      requestAnimationFrame(() => root.classList.remove('j-rail-recentre'));
+    }
 
     /* THE NAMES SIT OUT THE TURN. A pill names the mark it hangs off, and for
        the length of a rotation no mark is anywhere in particular — every one
@@ -1018,6 +1104,25 @@ export function createRail({ onNav } = {}) {
 
     const show = revealed;
     if (show !== shown) { root.classList.toggle('on', show); shown = show; }
+
+    /* THE MOON GOING HOME IS THE MOMENT TO RESTATE ITS ANGLES. Watched here,
+       per frame, off `expanded()` itself rather than hooked onto each of the
+       ways it can close — the dwell, a pointerleave, a touch collapse,
+       Escape, focus leaving the control — because `expanded()` is already the
+       one authority on the question and a new listener per path is a new path
+       to miss. Opening again before the fold has finished cancels it: those
+       marks never went home, so their angles are still the ones they are
+       travelling on. */
+    const openNow = expanded();
+    if (openNow !== wasOpen) {
+      wasOpen = openNow;
+      clearTimeout(restTimer);
+      if (openNow) atRest = false;
+      else restTimer = setTimeout(() => {
+        atRest = true;
+        writeAngles(curIndex);   // canonical, and with no transition to show
+      }, FOLD_HOME_MS);
+    }
 
     // Which scene is on screen (the resting symbol, and the fan's anchor) and
     // which nav entry reads current (the marked one). They differ only in a
