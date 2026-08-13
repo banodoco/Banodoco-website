@@ -2027,3 +2027,254 @@ appear.
   from a 2 mm/frame motion threshold and can read late on long flights. Every
   before/after comparison above is drawn from the same detector, so the
   deltas are sound; the absolute landings are ±1 frame at best.
+
+---
+
+## 2026-08-13 — The bubble peels off the button: the current section becomes a SLOT
+
+> "The menu control should feel attached to the right edge of the viewport.
+> Right now it sits slightly too far inward … It may also benefit from being
+> slightly larger … When the navigation is not being hovered, the control
+> should remain very compact. There should be a small circular current-section
+> icon associated with the menu button … The key rule is that the current
+> section must always end up immediately to the left of the menu button …
+> (1) The current section icon should first move smoothly out to the left …
+> (2) Once it reaches that position, the other section icons should emerge from
+> around/below it … (3) arrange themselves around the current item in a loose
+> circular or ring-like structure … (4) As the user scrolls through sections,
+> this ring should rotate/update smoothly, while the current section continues
+> to occupy the fixed position immediately left of the menu." — Hannah,
+> "the biggest refinement"
+
+**Files:** `journey/rail.js`, `journey/site.css`. Nothing else.
+
+**This supersedes the L-shaped cluster of 2026-08-12 (`e5bdc69` / §"The fan
+wraps the button").** That geometry hung the sections off the button in a 3×3
+block with the active one directly ABOVE it. Here the active one sits
+immediately LEFT of the button and never moves again; everything else turns
+around it.
+
+### Provenance
+
+This pass began with an unclean tree: `rail.js` and `site.css` carried 602
+uncommitted lines from a session cut off by a network error before it could
+verify or commit. That work implements the geometry and the staging above and
+its reasoning is sound; it was **inherited and kept**, and every empirical
+claim in its comments was re-measured rather than trusted. Two did not survive
+(below). What follows is the shipped state, not the inherited one.
+
+### The geometry, as shipped (measured at 1440×900)
+
+One circle, two numbers on it.
+
+| | |
+|---|---|
+| anchor | (1410, 450) — the button's centre, `--cl-edge` 2px off the frame |
+| **the hub** | the menu button. Box 1382…1438 × 422…478 (56px). It does not move in ANY state — not on unfold, not on fold, not on a chapter change |
+| hub glyph | 28px at 1398…1426 → **14px of air to the viewport edge** |
+| **the bubble** | centre (1394, 428) — `--cl-bx` 16 / `--cl-by` 22 up and left of the hub's centre, overlapping its shoulder. A 32px hairline circle on a 0.66 ground, mark at `--cl-bub` 0.64 (15.4px) |
+| **the slot** | (1352, 450). `--cl-cur` = 58px left of the hub centre, 6px box-to-box. A POSITION, not an item |
+| **the ring** | the circle whose RIGHTMOST POINT is the slot: centre (1284, 450), radius **68px**. `x = r·cos a − r`, `y = r·sin a`, `a = 0` at the slot |
+| the five points | 0, ±72°, ±144°. At Connect: inspire (1305, 385), mission (1229, 410), owned (1305, 515), final (1229, 490) |
+| tiles | 48×48 sections, 56×56 hub — PL-1.4's 44px is a floor both clear, not one they meet |
+
+`--cl-rad` is derived in rail.js from the chapter count (`(TILE + AIR) /
+2 sin(180/n)`, floored at `RAD_MIN` 68) and only falls back to the column past
+eleven chapters. Verified: at n = 5 the formula asks for **62.95px** and 68
+ships — the inherited comment's "63px" is right.
+
+**Point 4 falls out of the geometry rather than being enforced.** The item at
+the slot has angle 0, so `r·cos 0 − r` and `r·sin 0` are both zero: it is the
+transform's fixed point and is not special-cased anywhere.
+
+**The ring order is a cycle, verified at every chapter**: the two PREVIOUS
+sections sit above (nearest at upper-right), the two UPCOMING below (nearest at
+lower-right), wrapping. At Final: owned and connect above, inspire and mission
+below.
+
+### The staging is real, and it is one clock
+
+`--t` is the peel, `--u` the unfurl, and `--u` is delayed by exactly the peel's
+duration (`--cl-travel`), so "once it reaches that position" is structural.
+Traced per frame at 1440×900 through a real pointer dwell:
+
+| t | what the frame shows |
+|---|---|
+| 0…150 ms | the 120 ms dwell. Nothing moves |
+| 150 ms | `.j-rail-hot`; the bubble leaves the shoulder |
+| 150…540 ms | it travels to the slot, growing to full size, its circle fading out across the whole trip. Every slot carries the peel, but only the current one is visible while it does — which is what makes it read as the bubble itself moving |
+| **541 ms** | **arrival.** (1352, 450), exactly the slot. The reticle begins to close on it |
+| 608 ms | the others first appear (opacity 0.16) and start out of the spot it now occupies |
+| 675…941 ms | they sweep ROUND the orbit — `--u` scales the ANGLE, not the offset, so the marks are on the ring for the whole journey and the drawn circle is the path they took. The ±1 pair leads, the ±2 pair follows |
+| 1075 ms | settled |
+
+The fold is the same two quantities backwards, the ring collapsing into the
+slot before the bubble walks home.
+
+### What I refined by eye, and why
+
+1. **The bubble moved onto the button's shoulder** — `--cl-bx` 0 → 16,
+   `--cl-by` 27 → 22. Shot at (0,27), (16,22), (22,18), (10,30) at rest and
+   mid-travel. Dead above — the inherited value — reads as a **stack**: two
+   right-aligned marks in a column, the badge sitting *on top of* the control
+   rather than *on* it, and the peel then leaves diagonally (left 58, down 27)
+   where the brief says "out to the LEFT". On the shoulder the pair reads as
+   one object with an indicator attached and the travel flattens to left 74 /
+   down 22 — the same landing, arrived at along the axis the sentence names.
+   (22,18) goes far enough to read as two things side by side; (10,30) reads as
+   (0,27) with a mistake in it. The `::before` hit pad is sized off `--cl-bx`
+   and `--cl-by`, so it followed the bubble without an edit.
+
+2. **The hub glyph 26 → 28px.** Shot at 24 / 26 / 28 / 30 in the real row
+   against the bubble's 15.4px mark. At 24 and 26 the list glyph is visibly
+   SUBORDINATE to the badge riding on it — the indicator outweighs the control,
+   which is backwards for the one thing on this flank a visitor presses. At 30
+   the bullets coarsen against a page drawn in hairlines and the circle's lower
+   arc runs into the glyph. **28** is where the button leads: bigger than the
+   24px section marks, bigger than the badge, still a drawing. This is the
+   brief's "slightly larger", and with it the 2px box gives the glyph the same
+   **14px** optical gutter the 52px column shipped with.
+
+3. **The expanded scrim is now isotropic.** It was 2r+210 wide by 2r+140 tall —
+   an ellipse over a circle — so the four marks did not get the same cover: the
+   left/right pair sat at 39% of the box's half-width and the top/bottom pair at
+   49% of its half-height, i.e. further down the same falloff. Measured over
+   Final's lit field, where it shows: **the top and bottom marks were the two
+   that read soft, and they are exactly the two the ellipse under-served.** Same
+   alphas, same stops, same recipe; only the box is round now, which puts every
+   mark at the same 39%. Shot against 200/0.86 (starts to read as a disc over
+   Owned's colony) and 240/0.80 (gives the top mark back to the field).
+
+4. **The resting halo is centred on the resting pair**, derived as
+   `(−bx/2, −by/2)` from the anchor so it follows the bubble. Written out it was
+   26px left and 14px below the pair it is supposed to sit under — inherited
+   from when the bubble was dead above the button, and worse the moment it moved.
+
+5. **The narrow-window step-back.** `body.j-rail-on` — the 2026-08-07 mobile
+   pass's 0.14 step-back for the chapter copy and the hotspot chips — was
+   TOUCH-ONLY, because the geometry it was written for is a 52px column and at a
+   phone width hover does not exist. The ring changed that: a hover-capable
+   window at 375 opens a 184px circle straight across the frame, and shot at
+   that size the chapter copy and the Learn-more / Remix pills ran right through
+   it. The class now tracks BOTH states JS owns. The rule lives inside
+   `@media (pointer: coarse), (max-width: 720px)`, so **nothing on a desktop
+   moves.**
+
+**Checked and deliberately left alone:** the reticle's `--cl-travel` delay. Shot
+frame by frame through a turn at 0.1× — the brackets ghost in at +380 ms on a
+mark that is 90% arrived and decelerating, and close at +500. It reads as the
+mark being *claimed*, not *dragged*, which is what that delay was for.
+
+### Two inherited claims did not survive measurement
+
+**(1) "THE RESTING BUBBLE: up and to the left of the hub's centre."** False as
+shipped: `--cl-bx` was `0px` and the bubble sat dead above the button, measured
+at (1410, 423) against a hub centre of (1410, 450). Corrected by making the
+comment true rather than by weakening it — see refinement 1.
+
+**(2) "Chrome does re-hit-test `:hover` when the layout moves under a stationary
+pointer."** **False**, and this one was a live defect. Every mark on this ring is
+placed by `transform`, and a transform-only move produces no pointer event, so
+Chrome never re-runs the hit test. Measured at 1440×900, pointer parked on the
+slot at (1352, 450), Connect → Owned, no mouse movement at any point:
+
+| | now | `:hover` | position | name pill |
+|---|---|---|---|---|
+| before — connect | 1 | **1** | (1352, 450) | **1.00** |
+| after — connect | 0 | **1** | (1305, 385) | **1.00** |
+| after — owned | 1 | 0 | (1352, 450) | **0.00** |
+
+`elementFromPoint(1352, 450)` returned **owned**. So the label "CONNECT" was
+drawn against a mark 80px up the ring while the mark genuinely under the cursor
+had none — and it stayed that way until the pointer moved (a 1px nudge corrected
+it instantly). This is the *second* time the claim has been recorded backwards:
+the 2026-08-12 cluster pass wrote it down as a measured finding ("the pill went
+out, and came back reading OWNED"). What that measurement caught was the `.now`
+CLASS moving to Owned — a JS write, so `.j-rail-slot.now .j-rail-name` really
+did read "Owned" — and not the pill being revealed. Its opacity was 0.
+
+**The fix — `.at`.** The pointer's position is a fact JS can read, so JS reads
+it: `rail.js` tracks the last pointer position and resolves the slot under it
+with `elementFromPoint`, publishing `.at`; the stylesheet drives the ring's name
+reveal from `.at` and puts a stale `:hover` on any other slot back down. It is
+re-resolved on every pointer move (where it simply agrees with `:hover`) and
+once more when a turn settles (where it does not) — which is exactly when the
+names are allowed back. `:focus-visible` is untouched: focus follows the
+element, not the point, so a rotation cannot strand it. The column is untouched.
+
+**Claims that DID survive**: the derived radius (62.95 asked, 68 shipped); the
+`RAD_MIN > 60` argument for the current pill clearing the ±2 marks (they sit
+±40px away and no pill collides with any mark at any chapter or size); the
+"lowest occupied point is 65px down and 105px out" that places the MENU pill;
+the staging being one clock; and the 48/56px targets. The "front-loaded curve
+carries a mark 55% round in 1/6 of the duration" reading is inherited from the
+cluster pass and was not re-measured here — the curve it justifies is unchanged.
+
+### What the hard-won behaviours became
+
+- **The 120 ms dwell survives verbatim.** Measured: a 50 ms transit leaves
+  `hot = false`; a 400 ms dwell opens; leaving folds.
+- **The menu still opens on `pointerdown`** (`48b7795`). Measured: `menuOpen`
+  is true after `mousePressed` alone, before any release.
+- **Pitch-square tiles are gone, and replaced by something better.** A ring
+  cannot tile — points on a circle have air between them by definition. What
+  the square cells actually protected was "an open control must not fold
+  because the pointer crossed a seam", and that is now the **pointer floor**
+  (`.j-rail-list::before`), sized off the full circle and live only while open.
+  Measured: **156 sampled points** walking the whole ring slot → inspire →
+  mission → final → owned → slot → hub — **zero folds, and not one point where
+  the control lost the pointer to the canvas.** The column keeps its abutting
+  tiles unchanged.
+- **Name pills clear the occupied cells, not the whole cluster** — restated for
+  a ring as `--pillx`: every non-current pill is held off to the circle's own
+  leftmost point so they land on ONE vertical line (x = 1193.5 at 1440), while
+  the current item's is zero and hangs directly off its own mark. Derived; no
+  collisions measured at 1440, 1280 or 375.
+- **Touch keeps the current behaviour.** The whole ring is written under
+  `(hover: hover)`. Measured at 375×812 with `hover: none`: the shipped column,
+  single file at x 323…375, 44px pitch, 52×44 tiles, all six names on the arming
+  tap, second tap acts, first tap on the menu mark opens the panel.
+- **The epilogue** keeps its real link and its quieter voice, and the rail shows
+  its own symbol at rest — verified: at the Final rest the bubble carries the
+  epilogue's glyph and the open ring marks it current with the reticle.
+
+### Gate results
+
+| Gate | Result |
+|---|---|
+| References | **PASS.** `python3 tools/capture.py --check`: **10/10 at MAE 0.00/255, 0.0% px > 8** — all ten frozen frames byte-identical, `mission@*` included. No golden file modified (`git status` clean but for the two source files). |
+| Screenshots | Resting / bubble mid-travel / the moment it arrives / the others emerging / fully unfolded / the ring mid-rotation, at **1440×900, 1280×800 and 375×812**, mid-transition frames shot over CDP's Animation domain at 0.1× playback. Plus rest + open at all five chapters, and the turn frame by frame at +0/120/240/380/500/700 ms. |
+| Keyboard | **PASS.** Tab order `skip → logo → Discord → mission → inspire → connect → owned → final → Menu → hotspots`. Every tile 48×48 and the button 56×56, each `:focus-visible`, each revealing its own name; `:has(:focus-visible)` holds the ring open with the slots at their ring positions; `aria-current` on the active one; Enter on Owned → `journey.chapter === 'owned'`; Enter on the button opens the panel with focus on Close; the trap cycles 16 focusables and Shift+Tab wraps; Escape closes and returns focus to the button. |
+| Reduced motion | **PASS** (emulated). 50 ms after the dwell the ring is fully deployed with every slot at its own point and opacity 1; 60 ms after a chapter change every slot is at its new cell; 100 ms after leaving all five are back at the bubble with only the current one visible; the menu is at opacity 1 within 120 ms of the press and `closeMenu` skips its fade timeout. The staging included: with no durations there is nothing for stage 2's delay to wait for. |
+| Touch | **PASS**, unchanged — see above. |
+| Hit model (`6903c4a`) | **PASS.** Closed, 63/63 sampled points across the frame resolve to `CANVAS`; the only elements covering ≥12% of the viewport with live pointer-events are the stage `div` and the `CANVAS`. A `pointerdown` at (700, 600) reaches the canvas — the poke works. |
+| Pointer floor | **PASS.** 156 points, zero folds — see above. |
+| `.at` | **PASS.** One `.at` and exactly one pill per mark, the right one, at all five ring positions and the slot; none over open air inside the ring; MENU on the hub; cleared on leave; the turn resolves to the mark actually under the cursor. |
+| Console | **CLEAN** over a full wheel ride (p 0 → 0.970, all five chapters crossed) and back to p = 0 with the hero pose exact (−2.25, 2.25, 10.4), plus the ring opened and traversed, the menu opened and closed, the reduced-motion pass and the touch pass. Error/warn/uncaught/rejection trapped from document start. URL never left `/index.html`. |
+| Both tiers | Tier 3 is on the COLUMN and was not touched — its documented divergence (§5, 23 §8): it has no hover-driven ring and ships expanded under no-JS, so the column is its correct geometry for the same reason touch keeps it. Drift guard: **5 problems — the same 5 that were already there** (4 `chapters.owned.claims.*`, 1 `chapters.final.heading`) across 145 strings and 11 symbols. **No sixth.** |
+| Not undone | `d46e6bb` (jitter-free projection) and `a3ba9fd` (the hero furniture's single visibility condition) are untouched — the diff is confined to `rail.js` and to `site.css` lines 1821–2373, i.e. the ring block and its reduced-motion reset. |
+
+### Residuals
+
+* **At the Mission pose there is still no navigator at all.** The reveal latches
+  on the first travel (`SHOW_P`, 23 §9) and is what keeps `mission@*` byte-
+  identical, so it stays — but it means the landing frame has no way in but the
+  keyboard until the visitor scrolls. Pre-existing, unchanged, and worth a
+  decision of its own.
+* **A hover-capable window at 375 still gives the ring a third of the frame.**
+  The copy and chips now step back under it, which is what made it unreadable,
+  but the circle is sized for a desktop flank. Real phones get the column
+  (`hover: none`), so this is only a deliberately-narrowed desktop window; a
+  radius that tracked the viewport was considered and left alone rather than
+  add a third geometry for a case nobody reaches.
+* **The keyboard's first Tab into the rail lands on an invisible tile** for the
+  ~300 ms of the peel, because the staging is the staging: the others do not
+  exist until the bubble has arrived. It resolves correctly and reduced motion
+  makes it instant, but the first thing a keyboard visitor focuses is briefly
+  not on screen.
+* **`.at` is resolved from the last pointer position, not from a live pointer.**
+  If the page scrolls or reflows under a stationary pointer by some route that
+  is neither a chapter turn nor a pointer move, `.at` will be stale until the
+  next of either. No such route exists on this page today.
+* The §7/§9 residuals stand (the placeholder tokens in the panel, the five
+  Tier-3 drift errors, the missing external URLs).

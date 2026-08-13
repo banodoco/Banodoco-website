@@ -33,25 +33,37 @@
 // ===========================================================================
 // THE THREE STATES
 // ===========================================================================
-// RESTING — two symbols on the right flank, vertically centred: the mark for
-//   `chapterAt(p)` (the scene actually on screen), and the menu mark directly
-//   below it. The current mark is ALWAYS at the same place — the fan is
-//   anchored on it, not on the top of a fixed stack — so the control is a
-//   persistent instrument, not a cursor wandering down a band.
+// RESTING — ONE control, hugging the right edge: the menu button, wearing the
+//   current section as a small circular bubble on its upper-left shoulder.
+//   "When the navigation is not being hovered, the control should remain very
+//   compact. There should be a small circular current-section icon associated
+//   with the menu button ... so there is still some indication of the current
+//   section without exposing the whole navigation." The bubble is that
+//   indication and nothing more: in ring geometry it is not a pointer target,
+//   and the compact control answers a pointer as one 56px button.
 //
-// EXPANDED — hover on the section symbol, keyboard focus, or a first touch.
-//   The other sections' marks fan OUT from behind the current one to their
-//   manifest positions (section i sits at (i - current) tiles from the
-//   anchor), and the menu mark slides down to hold the foot of the stack.
-//   The mark the visitor was pointing at does not move by a pixel — the
-//   expansion happens around it. Hovering (or focusing) an individual mark
-//   reveals that section's name on a small scrim pill to its left; the
-//   current one wears the reticle brackets the hero's callouts use.
+// EXPANDED — hover anywhere on the control, keyboard focus, or a first touch.
+//   IT IS A SEQUENCE, NOT AN EXPAND (the brief is explicit about the order):
 //
-//   The fan opens from the LIST's hover only — the menu mark is a separate
-//   control and pointing at it must not unfold the sections. Once open, the
-//   fan stays open while the pointer is anywhere over the control (so a
-//   pointer can travel the stack), and folds back when it leaves.
+//     1. the bubble PEELS AWAY to the left, growing to full size as it goes,
+//        and lands in the one position it will hold from then on — the slot
+//        immediately left of the button;
+//     2. only ONCE IT HAS ARRIVED do the others emerge from it, fading up as
+//        they travel out of the spot it now occupies;
+//     3. they settle around it on a loose circle, curving above and below.
+//
+//   The stages are one clock: stage 2 is stage 1's duration written as a
+//   transition-delay (site.css), so "once it reaches that position" is a
+//   structural fact rather than a number tuned to look like one.
+//
+//   The ring OPENS FROM THE WHOLE CONTROL's hover, after a dwell. The first
+//   build opened from the list alone, because the fan used to slide the menu
+//   button down to hold the foot of a stack and pointing at the button moved
+//   it out from under its own click. Nothing slides the button any more — it
+//   is the fixed hub — so the separation has no job left, and the brief asks
+//   for the broader trigger ("when the navigation is not being HOVERED").
+//   The 120ms dwell is kept: it is what stops a pointer merely crossing the
+//   flank from unfolding anything.
 //
 // MENU OPEN — a real modal dialog sliding in from the right: the site map.
 //   Every section with its heading, every section's nodes with their one-line
@@ -98,82 +110,111 @@ import { claimInput, releaseInput } from './scroll.js';
 const SHOW_P = 0.004;
 
 /* ===========================================================================
-   THE CLUSTER (Hannah, 2026-08-12) — the fan stops being a column
+   THE RING (Hannah, 2026-08-13) — the current section is a SLOT, not an item
    ===========================================================================
-   "the items should wrap around the menu button in an L shape. Slot order,
-    following a continuous path around the button: (1) directly above the
-    button — always the active section; (2) to the left; (3) bottom-left
-    diagonal; (4) directly below; (5) bottom-right diagonal ... If there are
-    more sections than slots, continue the path clockwise past slot 5 to the
-    right and top-right positions."
+   "The current section must always end up immediately to the left of the menu
+    button ... the current section icon should first move smoothly out to the
+    left of the menu button. Once it reaches that position, the other section
+    icons should emerge from around/below it ... Previous/upcoming sections
+    should then arrange themselves around the current item in a loose circular
+    or ring-like structure, flowing above and below it. As the user scrolls
+    through sections, this ring should rotate/update smoothly, while the
+    current section continues to occupy the fixed position immediately left of
+    the menu."
 
-   The seven named positions are the eight cells of a 3x3 grid around the
-   button, minus the top-left one — which the path never rests in and only
-   ever passes THROUGH (see the leg from slot 1 to slot 2). Written here as
-   polar coordinates rather than as a (col, row) table, because the geometry
-   the brief describes is a RING and everything the component has to do with
-   it — unfurl, rotate, fold — is an angle:
+   This SUPERSEDES the L-shaped cluster of 2026-08-12 (`e5bdc69`): that
+   geometry hung the sections off the button in a 3x3 block, and the active
+   one sat directly ABOVE the button. Here the active one sits immediately
+   LEFT of it and never moves again — everything else turns around it.
 
-     angle   0deg is straight up from the button; it increases clockwise, the
-             convention CSS's own `ray()` and conic gradients use. The path
-             the brief names therefore runs NEGATIVE, and the whole ring is
-             one monotone sweep: 0, -90, -135, -180, -225, -270, -315, and
-             -360 is slot 1 again. Any two consecutive slots are one step
-             apart on that sweep, so "shifts along the path" is a subtraction.
+   THE GEOMETRY IS ONE CIRCLE, and the whole component is two numbers on it.
 
-     radius   is NOT stored: it is derived in the stylesheet from the angle by
-             the square law (see `--rad` in site.css), which is what puts the
-             axis cells one pitch out and the diagonal cells a pitch and a
-             half — and, more importantly, makes travel between any two cells
-             follow the SQUARE'S OWN PERIMETER. An item shifting more than one
-             slot therefore tracks through the cells in between instead of
-             cutting the chord across the button.
+     the hub      is the menu button, pinned to the right edge of the
+                  viewport. It does not move in any state — not on unfold,
+                  not on fold, not on a chapter change.
 
-   `col`/`row` are carried only so the name pills can clear their neighbours;
-   nothing positions a tile with them. */
-const RING = [
-  // [col, row, angle]         slot  position
-  [0, -1, 0],                // 1    directly above the button — the active one
-  [-1, 0, -90],              // 2    to the left
-  [-1, 1, -135],             // 3    bottom-left diagonal
-  [0, 1, -180],              // 4    directly below
-  [1, 1, -225],              // 5    bottom-right diagonal
-  [1, 0, -270],              // 6    right          } the overflow continuation,
-  [1, -1, -315],             // 7    top-right      } unused at five chapters
-];
+     the slot     is the fixed position immediately left of the hub. It is a
+                  POSITION, not an item: whichever chapter is current occupies
+                  it, and a chapter change is the ring turning underneath it.
 
-/* ---- how far each cell's NAME PILL has to be held off ---------------------
-   A pill hangs off the LEFT of the tile it names, so in a block three cells
-   wide it would be drawn straight over whatever shares its row. The first
-   cluster build paid for that with one flat offset — every pill pushed out to
-   the cluster's left edge — which cleared the collision and cost slot 1, the
-   pill a visitor sees most (it is the active section, and it is the mark the
-   pointer is on when the cluster opens), a whole empty cell of separation from
-   its own mark. Shot 2026-08-12 at 1440 and at 375: the label read as floating
-   in the frame rather than as belonging to the drawing beside it.
+     the ring     is the circle whose RIGHTMOST POINT IS THAT SLOT — i.e. its
+                  centre is one radius further left. So `angle 0` is the slot,
+                  and every other section sits at a multiple of 360/n around
+                  the same circle: at five chapters, +-72deg and +-144deg,
+                  which reads as two above and two below, curving away to the
+                  left. Nothing is ever placed to the RIGHT of the current
+                  item, which is what keeps the ring clear of the hub.
 
-   The real constraint is per ROW, not per cluster: a pill only has to clear
-   what is actually to its left in its own row. The top row's left cell is the
-   one the path never rests in — always empty, at five chapters or at seven —
-   so slot 1's pill can sit directly against its mark, and every other pill
-   still lands on the cluster's left edge because their rows really are full.
+   Positions are therefore polar and the ONE animated quantity is the angle:
 
-   Derived, so it stays true if the manifest grows: `pill` counts the cells
-   between this one and the leftmost OCCUPIED cell of its row (the button
-   included — it occupies the middle of row 0). At five chapters this is
-   [0, 0, 0, 1, 2] and the menu's is 1; at seven, slots 6 and 7 come out 2 and
-   1, each clearing exactly the neighbours it has grown. */
-function pillClearance(n) {
-  const cells = RING.slice(0, Math.min(n, RING.length));
-  const minCol = new Map([[0, 0]]);          // the button: row 0, col 0
-  for (const [c, r] of cells) {
-    minCol.set(r, Math.min(minCol.has(r) ? minCol.get(r) : c, c));
-  }
-  return {
-    slot: RING.map(([c, r]) => c - (minCol.has(r) ? minCol.get(r) : c)),
-    menu: 0 - minCol.get(0),
-  };
+     x = rad * cos(ang) - rad     relative to the slot (so ang 0 -> x 0)
+     y = rad * sin(ang)           positive is DOWN
+
+   Advancing a chapter subtracts one step from every item's angle, so the ring
+   turns as one body: the upcoming section rises from below into the slot and
+   the outgoing one lifts away above it — the same direction of travel as the
+   scroll that caused it. The item at the slot has angle 0 and is the turn's
+   fixed point by construction; it is not special-cased anywhere.
+
+   The angles rail.js writes are UNWRAPPED (see `writeAngles`), which is what
+   makes each step take the short way round instead of unwinding across the
+   middle of the ring. */
+const N = CHAPTERS.length;
+const STEP = 360 / N;
+
+/** The signed ring offset of the slot `k` places past the current one:
+ *  0, +-1, +-2 ... so the manifest's order reads as "two before, two after"
+ *  around the circle rather than as a one-way queue. */
+function signedRing(k) { return k > N / 2 ? k - N : k; }
+
+/* ---- the radius, derived from the tile and the manifest --------------------
+   Neighbours on the ring are `2 rad sin(180/n)` apart, so the radius that
+   keeps a given amount of air between two tiles falls straight out of the
+   chapter count. AIR is generous on purpose — "a LOOSE circular or ring-like
+   structure" — and RAD_MIN is the floor the five-chapter ring actually ships
+   at, chosen by eye (see 25-navigation-redux.md) and not by this formula:
+   at n = 5 the formula asks for 63px and the ring reads better at 68.
+
+   RAD_MIN is also load-bearing for the NAMES. The current item's pill hangs
+   directly off its own mark (see PILLX), and the tiles nearest its row are
+   the +-2 ones at `sin(144deg) * rad` above and below; the pill is ~11px
+   half-height and the tile 24px, so the pill only clears them while
+   `0.588 * rad > 35`, i.e. rad > 60. Shrinking the ring below that would
+   silently put the label the visitor sees most back on top of a drawing. */
+const TILE = 48;
+const AIR = 26;
+const RAD_MIN = 68;
+const RAD_MAX = 120;      // past this the ring is wider than a phone: fall back
+const RAD = Math.max(RAD_MIN, (TILE + AIR) / (2 * Math.sin(Math.PI / N)));
+
+/** A ring index's x, relative to the current slot (0 for the current one). */
+function ringX(k) {
+  return RAD * Math.cos(signedRing(k) * STEP * Math.PI / 180) - RAD;
 }
+
+/* ---- how far each NAME PILL has to be held off -----------------------------
+   A pill hangs off the LEFT of the tile it names, so on a ring it would be
+   drawn straight over whatever sits further round. Two rules, and the second
+   is the one the 2026-08-12 pass paid for:
+
+     every other item   is held off to the ring's own left edge, so the pills
+                        land on ONE vertical line rather than following the
+                        curve — a list of names, which is what they are.
+
+     the current item   is NOT, because nothing on the ring shares its row
+                        (that is what RAD_MIN buys) and it is the pill a
+                        visitor sees most: it is the active section, and it is
+                        the mark the pointer is nearest when the ring opens.
+                        Pushed out to the ring edge it read as floating in the
+                        frame rather than as belonging to its own drawing.
+
+   In px, and derived, so a sixth chapter needs no edit here. */
+const PILLX = (() => {
+  const xs = [];
+  for (let k = 0; k < N; k++) xs.push(ringX(k));
+  const xMin = Math.min(...xs);
+  return xs.map((x, k) => (k === 0 ? 0 : x - xMin));
+})();
 
 function el(tag, cls, text) {
   const n = document.createElement(tag);
@@ -211,12 +252,14 @@ export function createRail({ onNav } = {}) {
   // anchor, so the whole choreography lives in the stylesheet and JS only
   // states where the visitor is.
   root.style.setProperty('--n', String(CHAPTERS.length));
-  // ...and the CLUSTER geometry is the same statement in polar form. The ring
-  // holds seven cells; a manifest that outgrew it would have two chapters
-  // resting in one cell, so the component says so and the stylesheet keeps the
-  // column for every context. Derived, like everything else here — a sixth
-  // chapter needs no edit, an eighth needs no bug report.
-  if (CHAPTERS.length > RING.length) root.classList.add('j-rail-column');
+  // ...and the RING geometry is the same statement in polar form. The radius
+  // is derived from the chapter count (see RAD), so a sixth chapter widens the
+  // circle rather than crowding it, and only a manifest big enough to make the
+  // ring wider than a phone falls back to the column the component already
+  // knows how to be. At the shipped tile and air that is eleven chapters.
+  root.style.setProperty('--cl-rad', RAD.toFixed(2) + 'px');
+  if (RAD > RAD_MAX) root.classList.add('j-rail-column');
+  const isColumn = root.classList.contains('j-rail-column');
 
   const inner = el('div', 'j-rail-inner');
   root.appendChild(inner);
@@ -410,18 +453,25 @@ export function createRail({ onNav } = {}) {
   /* ------------------------------------------------------------------ */
   /* Three ways in, one state out:
 
-       hover     JS-managed (`.j-rail-hot`), NOT the container's `:hover`,
-                 because the brief separates the two resting controls: the fan
-                 opens from the SECTION symbol, and pointing at the menu mark
-                 must not unfold the sections. A bare :hover on the root could
-                 not tell them apart. Entering the list opens — after a short
-                 DWELL (HOT_INTENT_MS): the fan slides the menu mark down to
-                 hold the foot of the stack, so a pointer merely TRANSITING
-                 the current mark on its way to the menu must not unfold it
-                 (measured 2026-08-09: the transit expansion moved the menu
-                 out from under the aimed click). Leaving the whole control
-                 closes — an open fan survives the pointer travelling across
-                 it, including down to the menu mark.
+       hover     JS-managed (`.j-rail-hot`), not the container's `:hover`,
+                 because the DWELL is the point: entering opens only after
+                 HOT_INTENT_MS, so a pointer merely crossing the flank on its
+                 way somewhere else never unfolds anything. That guard is
+                 kept exactly as it shipped.
+                 WHAT CHANGED (2026-08-13): the trigger is the whole control
+                 (`.j-rail-inner`), not the section list alone. The list-only
+                 trigger existed because the opening fan slid the menu button
+                 down to hold the foot of the stack, and a pointer transiting
+                 the current mark on its way to the button moved the button
+                 out from under the aimed click (measured 2026-08-09). In ring
+                 geometry the button is the hub and does not move in any
+                 state, so that failure cannot happen and the separation has
+                 no job left — while the brief asks for the broader reading,
+                 "when the navigation is not being HOVERED". Leaving the whole
+                 control closes; an open ring survives the pointer travelling
+                 anywhere across it, the button included.
+                 On the COLUMN fallback the old trigger is kept verbatim: that
+                 geometry still slides its button, so it still needs it.
        keyboard  the root's `:has(:focus-visible)`, in CSS. NOT
                  `:focus-within`: a mouse click focuses what it presses, and
                  that focus must neither expand the fan (it moved the menu
@@ -444,19 +494,30 @@ export function createRail({ onNav } = {}) {
     return touchOpen || hotOpen || !!root.querySelector(':focus-visible');
   }
 
-  /* The touch-expanded rail is announced on <body> (2026-08-07 mobile pass):
-     journey/site.css steps the chapter copy back while the rail is held open
-     over it at phone widths. Touch path only — hover and keyboard focus on a
-     desktop are completely unaffected. */
-  function announceOpen(on) {
-    document.body.classList.toggle('j-rail-on', on);
+  /* The expanded rail is announced on <body> (2026-08-07 mobile pass):
+     journey/site.css steps the chapter copy and the hotspot chips back while
+     the rail is held open over them — and that rule lives inside
+     `@media (pointer: coarse), (max-width: 720px)`, so it can only ever fire
+     on a frame narrow enough for the control to be standing on the copy.
+
+     IT NOW FOLLOWS THE HOVER STATE AS WELL AS THE TOUCH ONE (2026-08-13).
+     It was touch-only because the geometry it was written for was a 52px
+     column, which at a phone width is the only way the rail is ever open —
+     hover does not exist there. The ring changed that: a hover-capable window
+     at 375 opens a 184px circle straight across the frame, and shot at that
+     size the chapter copy and the Learn-more / Remix pills ran right through
+     it. Same mechanism, same 0.14, same transition; the only change is that
+     the class now tracks BOTH the states JS owns. Above 720px there is no
+     rule for it to reach, so nothing on a desktop moves. */
+  function announceOpen() {
+    document.body.classList.toggle('j-rail-on', touchOpen || hotOpen);
   }
 
   function collapseTouch() {
     if (!touchOpen) return;
     touchOpen = false;
     root.classList.remove('j-rail-open');
-    announceOpen(false);
+    announceOpen();
   }
 
   function collapse() {
@@ -466,50 +527,115 @@ export function createRail({ onNav } = {}) {
       hotOpen = false;
       root.classList.remove('j-rail-hot');
     }
-    foldedSync();
+    announceOpen();
   }
 
-  /* A folded cluster has no angles — the stylesheet stacks every slot behind
-     the current mark and stops reading `--ang-to` at all — so the moment the
-     control folds, the accumulated turn is spent and the ring goes back to its
-     canonical reading. Without this a cluster that had been rotated would
-     unfurl the way it last turned rather than the way it always unfurls: the
-     same picture, arrived at backwards. Cheap, and it only runs on a fold. */
-  function foldedSync() {
-    if (!expanded()) writeAngles(curIndex);
-  }
+  /* THE FOLD NEEDS NO RE-CANONICALISATION any more, and that is a property of
+     the ring rather than an omission. The cluster pinned every folded slot's
+     angle to 0 (they stacked behind one mark, where an angle had no meaning),
+     so an accumulated turn had to be spent on the fold or the next unfold
+     would animate through whole revolutions the visitor never saw wound up.
+     Here the angle is never pinned: it is multiplied by `--u`, the unfold
+     amount, so at rest it is simply not in the picture, and it is already
+     correct when `--u` leaves zero. Unfolding therefore animates ONE thing —
+     the travel and the unfurl — with the ring already reading true, and
+     `writeAngles` is free to keep accumulating for as long as the page lives.
+     (Deleted with it: `foldedSync`, and the focusout tick it needed.) */
 
-  list.addEventListener('pointerenter', (e) => {
+  // The whole control opens the ring — but only the list does on the column
+  // fallback, whose button still slides. See EXPANSION above.
+  const hotZone = isColumn ? list : inner;
+  hotZone.addEventListener('pointerenter', (e) => {
     if (e.pointerType === 'touch' || hotOpen) return;
     // Dwell before unfolding — see the header note. A pointer that is only
-    // passing through the current mark on its way to the menu mark is gone
-    // well inside HOT_INTENT_MS, and the menu stays where it was aimed at.
+    // crossing the flank is gone well inside HOT_INTENT_MS.
     clearTimeout(hotTimer);
     hotTimer = setTimeout(() => {
       hotOpen = true;
       root.classList.add('j-rail-hot');
+      announceOpen();
     }, HOT_INTENT_MS);
   });
-  // Leaving the LIST cancels a pending unfold (the pointer went on to the
-  // menu mark, or away); leaving the whole CONTROL folds an open fan.
-  list.addEventListener('pointerleave', (e) => {
+  hotZone.addEventListener('pointerleave', (e) => {
     if (e.pointerType === 'touch') return;
     clearTimeout(hotTimer);
   });
+  // Leaving the whole control folds an open ring. (On the column fallback this
+  // is the second listener it has always had: the list cancels a pending
+  // unfold, the control folds an open one.)
   inner.addEventListener('pointerleave', (e) => {
     if (e.pointerType === 'touch') return;
     clearTimeout(hotTimer);
+    lastPt = null;
+    syncAt();
     if (!hotOpen) return;
     hotOpen = false;
     root.classList.remove('j-rail-hot');
-    foldedSync();
+    announceOpen();
   });
-  // The keyboard's own fold: `:has(:focus-visible)` holds the cluster open in
-  // CSS with nothing for JS to clear, so the ring is re-read when focus leaves
-  // the control. Deferred one tick because focusout fires BEFORE the focus has
-  // landed anywhere, and a Tab from one tile to the next would otherwise look
-  // like a fold.
-  root.addEventListener('focusout', () => { setTimeout(foldedSync, 0); });
+
+  /* ===================================================================== */
+  /* THE POINTER'S OWN TRUTH — `.at`                                        */
+  /* ===================================================================== */
+  /* `:hover` CANNOT BE TRUSTED IN THIS GEOMETRY, and that is a property of
+     the ring, not a browser bug. Every mark is placed by `transform`, and a
+     transform-only move does not make Chrome re-run its hit test: the hover
+     state is recomputed from a pointer EVENT, and a rotation produces none.
+     So when the ring turns under a stationary pointer, `:hover` stays on the
+     element that has travelled AWAY and never lands on the one that has
+     arrived.
+
+     MEASURED 2026-08-13, pointer parked on the slot at (1352, 450), Connect
+     -> Owned, no mouse movement at any point:
+
+       before   connect  now=1  hover=1  at (1352,450)   pill 1.00
+       after    connect  now=0  hover=1  at (1305,385)   pill 1.00   <- 80px away
+                owned    now=1  hover=0  at (1352,450)   pill 0.00   <- under the cursor
+       elementFromPoint(1352, 450) === owned
+
+     i.e. the label CONNECT is drawn on a mark the pointer is nowhere near,
+     while the mark it is actually on has none — and it stays that way until
+     the pointer moves (a 1px nudge corrects it instantly: hover -> owned,
+     pill 1.00).
+
+     THIS CORRECTS THE RECORD. The 2026-08-12 cluster pass wrote the opposite
+     down as a measured finding ("Chrome does re-hit-test :hover when the
+     layout moves under a stationary pointer ... the pill went out, and came
+     back reading OWNED"). What that measurement actually caught was the `.now`
+     CLASS moving to Owned — a JS write, so `.j-rail-slot.now .j-rail-name`
+     did read "Owned" — and not the pill being revealed. Its opacity was 0.
+     The suppression that pass kept as "cosmetic cover for the transit" was
+     therefore covering a real fault, not decorating one.
+
+     THE FIX: the position of the pointer is a fact JS can read, so JS reads
+     it. `.at` marks the slot the pointer is genuinely over, resolved by
+     `elementFromPoint` from the last pointer position, and the stylesheet
+     drives the name from `.at` rather than from `:hover` for the ring. It is
+     re-resolved on every pointer move (where it simply agrees with `:hover`)
+     and once more when a turn settles (where it does not). Nothing else about
+     the hover model changes, and the column — whose `:hover` the touch path
+     never consults — is untouched. */
+  let lastPt = null;
+  let atSlot = null;
+
+  function syncAt() {
+    let want = null;
+    if (lastPt && expanded()) {
+      const hit = document.elementFromPoint(lastPt.x, lastPt.y);
+      const li = hit instanceof Element ? hit.closest('.j-rail-slot') : null;
+      if (li && root.contains(li)) want = li;
+    }
+    if (want === atSlot) return;
+    if (atSlot) atSlot.classList.remove('at');
+    atSlot = want;
+    if (atSlot) atSlot.classList.add('at');
+  }
+
+  inner.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch') return;
+    lastPt = { x: e.clientX, y: e.clientY };
+    syncAt();
+  });
 
   root.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch' || touchOpen) return;
@@ -520,7 +646,7 @@ export function createRail({ onNav } = {}) {
     if (e.target instanceof Node && menuBtn.contains(e.target)) return;
     touchOpen = true;
     root.classList.add('j-rail-open');
-    announceOpen(true);
+    announceOpen();
     // The tap that opened the rail must not also follow the link under it.
     swallowClick = true;
     setTimeout(() => { swallowClick = false; }, 500);
@@ -660,32 +786,25 @@ export function createRail({ onNav } = {}) {
   let activeId = null;
   let dimmed = null;
 
-  /* ---- the cluster's angles ----------------------------------------------
+  /* ---- the ring's angles ---------------------------------------------------
      One UNWRAPPED angle per slot, in degrees. Unwrapped is the whole point:
      the stylesheet interpolates `--ang` linearly, so the number written here
-     is what decides WHICH WAY ROUND THE BUTTON an item travels, and a value
-     folded back into [-360, 0) every time would make that choice for us — and
-     make it wrong exactly once per rotation, sending the slot that leaves the
-     head of the path back across the button instead of on round it.
+     is what decides WHICH WAY ROUND THE CIRCLE an item travels, and a value
+     folded back into (-180, 180] every time would make that choice for us —
+     and make it wrong exactly once per rotation, sending the item that leaves
+     the bottom of the ring back up across the face of it instead of on round.
 
-     Each shift takes the SHORT way to the new cell, which is also the
-     consistent way: when the active section advances by one, every item's
-     ring index drops by one, so slot 2 -> slot 1 is +90, every other
-     neighbour step is +45, and the item leaving slot 1 wraps to the tail —
-     +135 through the two overflow cells, clockwise, the same direction as
-     everything else. One rotation, no item crossing the middle.
+     Each step takes the SHORT way, which for a chapter change is also the
+     consistent way: every item's ring index drops by one, so every item turns
+     by exactly one step (72deg at five chapters) in the same direction, and
+     the one wrapping from the tail to the head keeps going the same way. One
+     rotation, nothing crossing the middle.
 
-     While the cluster is FOLDED the stylesheet pins `--ang` to 0 for every
-     slot (they are all stacked behind the current mark, where an angle has no
-     meaning), so the value written here is invisible and is re-canonicalised
-     instead of accumulated. That is what keeps an unfold from spinning
-     through whole revolutions a visitor never saw wound up. */
+     The direction is not arbitrary. Advancing a chapter turns the ring so
+     that the UPCOMING section rises from below into the slot and the outgoing
+     one lifts away above it — the same direction of travel as the scroll that
+     caused it, so the instrument agrees with the hand that moved it. */
   const angleOf = CHAPTERS.map(() => 0);
-  const PILL = pillClearance(CHAPTERS.length);
-  // The button sits in the middle of row 0 and its own pill has to clear
-  // whatever grew to its left, exactly as a slot's does. Constant — the hub is
-  // the one cell that never changes row — so it is written once.
-  menuBtn.style.setProperty('--pill', String(PILL.menu));
   let curIndex = 0;
   let turnTimer = 0;
 
@@ -695,38 +814,45 @@ export function createRail({ onNav } = {}) {
     const live = expanded();
     slots.forEach((s, i) => {
       const k = ((i - cur) % n + n) % n;
-      const cell = RING[k] || RING[RING.length - 1];
-      if (!live) angleOf[i] = cell[2];
-      else {
-        let d = (cell[2] - angleOf[i]) % 360;
-        if (d > 180) d -= 360;
-        else if (d <= -180) d += 360;
-        angleOf[i] += d;
-      }
-      s.li.style.setProperty('--ang-to', angleOf[i] + 'deg');
+      const to = signedRing(k) * STEP;
+      let d = (to - angleOf[i]) % 360;
+      if (d > 180) d -= 360;
+      else if (d <= -180) d += 360;
+      angleOf[i] += d;
+      s.li.style.setProperty('--ang-to', angleOf[i].toFixed(2) + 'deg');
       s.li.style.setProperty('--ring', String(k));
-      s.li.style.setProperty('--col', String(cell[0]));
-      s.li.style.setProperty('--row', String(cell[1]));
-      s.li.style.setProperty('--pill', String(PILL.slot[k] || 0));
+      // Distance along the ring from the current item, for the stagger: the
+      // pair either side of the slot emerges first, the pair beyond it next.
+      s.li.style.setProperty('--step', String(Math.abs(signedRing(k))));
+      s.li.style.setProperty('--pillx', PILLX[k].toFixed(1) + 'px');
     });
 
     /* THE NAMES SIT OUT THE TURN. A pill names the mark it hangs off, and for
        the length of a rotation no mark is anywhere in particular — every one
-       of them is mid-flight between two cells, and a label tracking a glyph
-       across the face of the button is reading out a position rather than
+       of them is mid-flight around the circle, and a label tracking a glyph
+       across the face of the ring is reading out a position rather than
        naming a thing. So the pills are simply out while the ring turns.
        What this is NOT (measured 2026-08-12, and worth recording because the
        first build claimed the opposite): Chrome does re-hit-test :hover when
        the layout moves under a stationary pointer. Held still on slot 1
-       through connect -> owned, the pill went out, and came back reading
-       OWNED — the section that had arrived under the cursor — not a stale
-       CONNECT carried round to the far side. The suppression is therefore
-       cosmetic, covering the transit, not a correctness fix; the 460ms is
-       sized to outlast the 420ms angle transition and nothing more. */
+       through connect -> owned, the pill went out and came back reading a
+       stale CONNECT — carried round to the far side of the ring, 80px from
+       the pointer, while the mark that had arrived under the cursor showed
+       nothing. See THE POINTER'S OWN TRUTH above for the measurement that
+       corrects the 2026-08-12 record. The suppression is therefore covering a
+       real fault and not merely the transit: it holds the labels off for the
+       whole turn, and `syncAt()` re-resolves which mark the pointer is on at
+       the moment they are allowed back. The 500ms is sized to outlast the
+       460ms angle transition and nothing more. */
     if (live) {
       root.classList.add('j-rail-turn');
       clearTimeout(turnTimer);
-      turnTimer = setTimeout(() => root.classList.remove('j-rail-turn'), 460);
+      turnTimer = setTimeout(() => {
+        root.classList.remove('j-rail-turn');
+        // The marks have finished moving; the pointer has not. Re-read which
+        // one it is over before the names are allowed back on screen.
+        syncAt();
+      }, 500);
     }
   }
 
