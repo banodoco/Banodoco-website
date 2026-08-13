@@ -165,6 +165,43 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   let v = 0;            // virtual scroll position, px — the visitor's own
                         // surface: the exact running sum of their deltas.
   let lastInput = -1e9; // performance.now() of the last manual input
+  /* TIME THE MAIN THREAD WAS BLOCKED SINCE THE LAST DELTA (2026-08-13).
+     A FRAME THE SITE SPENT RENDERING IS NOT THE VISITOR PAUSING, and the
+     idle constants cannot tell the two apart on their own: Chrome coalesces
+     wheel events to about one per frame for a non-passive listener, so — as
+     ARRIVAL_HOLD_MS's own derivation says — "the delivered spacing of a
+     continuous gesture is the SITE'S OWN FRAME TIME, whatever the device
+     emits". The constant is therefore a statement about frame time, and when
+     frame time spikes the delivered gap spikes with it and a gesture that
+     never stopped is read as one that did.
+       f2bd1cd measured that as a 0.055% tail and accepted it. The scroll loop
+     then made it systematic: the wrap's own frame is the most expensive on
+     the site (placeAt's two dt = 0 applyFrame passes, every seam re-armed,
+     the destination chapter's geometry touched, a 4 s blend armed, and then
+     that frame still has to render the destination world), so the flick that
+     wrapped reliably had its NEXT delta land outside the window — dropping
+     the arrival wall and buying a second section with the same gesture.
+     Measured on R5, the battery's hardest flick (18 frames x 240 px):
+     `fling past last -> 0.259988` instead of `0.000000` on roughly half of
+     runs, i.e. Final -> Mission -> Inspire on one gesture. b0227bd's
+     guarantee, lost to the site's own cost.
+       So the idle clock stops while the thread is blocked. Only the EXCESS
+     over a generous frame budget is discounted, so an ordinary frame
+     contributes exactly nothing and every measured constant keeps its
+     meaning; a visitor who genuinely stops still crosses ARRIVAL_HOLD_MS and
+     SNAP_ENGAGE_MS at exactly the same wall-clock moment, because no time
+     is discounted unless a frame actually overran.
+       MEASURED ON THE FRAME IN FLIGHT, not banked from the last one. Input is
+     dispatched before rAF, so the delta that lands after an expensive frame
+     arrives BEFORE that frame's duration has been reported to update() —
+     banking it a frame late would miss exactly the case this exists for.
+     `lastFrameAt` is the start of the most recent update(), so the overrun of
+     the frame currently in flight is known at push() time, which is when it
+     is needed. Wheel events coalesce to about one per frame, so a gap spans
+     one frame and there is nothing earlier left to account for. */
+  let lastFrameAt = -1e9;
+  const STALL_FRAME_MS = 34;   // ~2 frames at 60 Hz; above this a frame overran
+  const STALL_MAX_MS = 400;    // ...and past this it is a stopped tab, not a frame
   let lastDir = 0;      // sign of the last manual delta (+1 fwd / -1 back / 0 none)
   let enabled = false;
 
@@ -452,13 +489,30 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  own — there is still nothing banked to jump. */
   function dropWall() { answeredP = null; answeredDir = 0; }
 
+  /** How much of the interval ending at `now` was the main thread overrunning
+   *  a frame rather than the visitor waiting (see lastFrameAt). */
+  function stallOf(now) {
+    const inFlight = now - lastFrameAt;
+    if (inFlight <= STALL_FRAME_MS) return 0;
+    // CAPPED, because "no frame has ticked for a while" has a second cause:
+    // a backgrounded tab stops rAF entirely, and forgiving that would let a
+    // visitor return after a minute and have their first delta counted as the
+    // continuation of the gesture they left with — wall still up, gesture
+    // still spent. A frame that overruns by more than STALL_MAX_MS is not a
+    // frame the visitor waited through, so nothing past it is discounted.
+    return Math.min(inFlight - STALL_FRAME_MS, STALL_MAX_MS);
+  }
+
   function push(dpx, kind) {
     if (!enabled) return;
     // An open detail state consumes the first scroll intent: travel resumes
     // only once the frame is clear (GB-3.6).
     if (onIntent && onIntent(kind) === false) { lastInput = performance.now(); return; }
     const now = performance.now();
-    const gapMs = now - lastInput;
+    // ...discounting whatever of that interval the main thread spent blocked
+    // in a frame that overran (see lastFrameAt). Exactly zero whenever the
+    // frame in flight is inside its budget, which is every ordinary frame.
+    const gapMs = Math.max(0, now - lastInput - stallOf(now));
     // THE INTERACTION THRESHOLD. A pause this long is the "additional scroll"
     // the arrival is waiting for: the visitor has stopped and started again,
     // which is the one thing a gesture that never stopped cannot fake. It is
@@ -828,7 +882,9 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   function update(dt) {
     if (!enabled || total <= 0) return null;
     if (dt <= 0) return p;
-    const idle = performance.now() - lastInput;
+    const nowF = performance.now();
+    const idle = Math.max(0, nowF - lastInput - stallOf(nowF));
+    lastFrameAt = nowF;
     // A gesture is over once its deltas have stopped for SNAP_ENGAGE_MS. This
     // no longer freezes anything — it only decides when the gesture's own peak
     // stops being the speed floor and the latched cruise takes over.
@@ -915,6 +971,33 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
             // set: measured, one flick wrapped 0 -> 0.97 and then carried
             // straight on to the Owned rest.
             lastDir = dir;
+            /* ...AND THE TIME THE WRAP ITSELF TOOK IS NOT THE VISITOR BEING
+               IDLE (2026-08-13). Same sentence as the one above, applied to
+               the other clock. `lastInput` is the timestamp of the last
+               DELIVERED delta, and push() drops the wall whenever the next
+               one arrives more than ARRIVAL_HOLD_MS after it. The wrap runs
+               inside update(), and the frame it runs on is the most
+               expensive frame on the site: placeAt's two dt = 0 applyFrame
+               passes, every seam re-armed, the destination chapter's
+               geometry touched and a 4 s blend armed. When that frame costs
+               more than 90 ms — which it does under load, and Task B's added
+               field geometry made it do so far more often — the NEXT delta of
+               the very same flick reads as a pause, drops the wall, and the
+               remainder of the gesture buys a second section.
+                 Measured on the R5 gate (18 frames of 240 px, the hardest
+               flick in the battery): intermittent, `fling past last ->
+               0.259988` instead of `0.000000` on roughly half of runs, i.e.
+               one gesture buying Final -> Mission -> Inspire. b0227bd's
+               guarantee, lost to the wrap's own cost. A gentler flick never
+               showed it, which is why it survived 2c22844's gates and the
+               loop's residual note recorded only the symptom ("after a wrap
+               the visitor must pause before the next section change").
+                 Charging the visitor for the frame we spent is the bug. The
+               idle clock restarts at the END of the placement, so a real
+               pause after a wrap still drops the wall on its own merits at
+               exactly the same 90 ms — only the wrap's own execution is
+               excluded from it. */
+            lastInput = performance.now();
             answeredP = p; answeredDir = dir;
             return clamp01(p);
           }

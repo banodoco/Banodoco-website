@@ -255,8 +255,20 @@ export function createFinal(sceneApi) {
   let blending = false;
 
   sceneApi.addAnimator('journey-final', (t, dt) => {
-    amount += (amountTarget - amount) * Math.min(1, dt * 2.2);
-    if (amount < 0.004 && amountTarget === 0) amount = 0;
+    // THE EASE HOLDS WHILE THE STATE AND THE CAMERA DISAGREE (2026-08-13 —
+    // the loop's seam). `amount` is state-derived: it starts falling on the
+    // frame a jump snaps p to the destination, i.e. seconds before the camera
+    // leaves. `eff` below is already camera-pure across a blend, but the
+    // visibility gate still reads `amount`, so a long enough move retires the
+    // chapter on the WALL CLOCK rather than on the lens — at 2.2/s the gate
+    // drops at 2.64 s, and the wrap's move is 4.00 s. It survived only
+    // because `rise` happened to cross first (measured 1.49 s). Frozen here,
+    // the gate cannot be the thing that retires anything; placeAt's deferred
+    // snap lands it at endCamBlend exactly as it always did.
+    if (!blending) {
+      amount += (amountTarget - amount) * Math.min(1, dt * 2.2);
+      if (amount < 0.004 && amountTarget === 0) amount = 0;
+    }
     // The soil slab's `buried` dissolve is written EVERY frame, before the
     // visibility gate and outside setAmount — it is one float, and it is the
     // only way the term is genuinely stateless. Written inside the gate it

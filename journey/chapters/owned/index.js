@@ -371,6 +371,10 @@ export function createOwned(sceneApi, content) {
      Chapter state + per-frame
      ================================================================ */
   let amount = 0, amountTarget = 0;
+  // set by journey.js for the length of a nav jump's camera blend — the
+  // window in which the journey's state has already arrived and the camera
+  // has not (see setBlending there, and the ease-hold in the animator below)
+  let blending = false;
   const _w = new THREE.Vector3();
 
   sceneApi.addAnimator('journey-owned', (t, dt) => {
@@ -390,9 +394,28 @@ export function createOwned(sceneApi, content) {
     // amount is ≥0.99 by the earliest pierce a jump blend can make
     // (0.85 s dur), and the landing step is sub-1% — under the frame's own
     // twinkle amplitude.
-    const k = Math.min(1, dt * 6.0);
+    //   ...and it HOLDS while the state and the camera disagree (2026-08-13 —
+    // the loop's seam). The paragraph above is right that a scrub never shows
+    // this ease and that a jump INTO Owned is covered by its speed. What it
+    // does not cover is a jump AWAY from a chapter this one is still visible
+    // through: the forward wrap disarms Owned on the frame p snaps 0.97 -> 0,
+    // and at 6.0/s the colony under the Final cutaway was gone 0.87 s later —
+    // measured at camera x -15.01, r 15.42, i.e. with the camera still
+    // standing at the Final rest, 0.3 units into a 68-unit move. The colony
+    // dimmed to nothing on a frame that had not moved. That is the cut.
+    //   Backward the same chapter behaves correctly, because there `arrival`
+    // (camera-pure) is the binding term and it opens at x -4.86 as the lap
+    // comes round. Freezing the ease makes the two directions the same
+    // statement — the reveal is the camera's, in both — and `snap()` at
+    // endCamBlend lands the state exactly where placeAt always meant it to.
+    const k = blending ? 0 : Math.min(1, dt * 6.0);
     amount += (amountTarget - amount) * k;
     if (amount < 0.004 && amountTarget === 0) amount = 0;
+    // Inside a blend the chapter may trust only its camera-pure terms
+    // (journey.js setBlending) — so PRESENCE is the arm, not the ease, and
+    // every mask below is the camera's alone. Identical to `amount`
+    // everywhere else, because outside a blend the ease IS the arm settled.
+    const amt = blending ? ((amountTarget > 0 || amount > 0.003) ? 1 : 0) : amount;
     const pNow = window.journey ? window.journey.p : 0;
     // arrival mask (see SINK_D above): everything the chapter draws is scaled
     // by amount * arrival, and arrival is a pure function of the CAMERA — the
@@ -405,10 +428,10 @@ export function createOwned(sceneApi, content) {
     const sink = smooth01(depth / SINK_D);
     const keep = smooth01((-cp.x - KEEP_X0) / KEEP_XW);
     const arrival = Math.max(sink, keep);
-    const eff = amount * arrival;
+    const eff = amt * arrival;
     // The soil horizon rides its own two depth terms (see LID_D / PASS_* ),
     // both 0 above ground, so they can only ADD inside the crossing.
-    const lidA = amount * smooth01(depth / LID_D);
+    const lidA = amt * smooth01(depth / LID_D);
     // REACH also widens the PASSAGE BAND, for the same reason and with the
     // same guarantee. Near the crown the band must close under the rest depth
     // (0.987 portrait / 1.207 landscape) or it shows in a frozen composition;
@@ -421,7 +444,7 @@ export function createOwned(sceneApi, content) {
     const reach = smooth01((cp.distanceTo(leg.CROWN) - REACH_R0) / REACH_RW);
     const passHold = PASS_HOLD + (PASS_HOLD_FAR - PASS_HOLD) * reach;
     const passHi = PASS_HI + (PASS_HI_FAR - PASS_HI) * reach;
-    const passA = amount * smooth01(depth / PASS_ON)
+    const passA = amt * smooth01(depth / PASS_ON)
                 * (1 - smooth01((depth - passHold) / (passHi - passHold)));
     group.visible = Math.max(eff, lidA, passA) > 0.003;
     if (!group.visible) {
@@ -528,6 +551,13 @@ export function createOwned(sceneApi, content) {
     /** T3 streaming seam. */
     setArmed(on) { amountTarget = on ? 1 : 0; },
     get armed() { return amountTarget > 0; },
+
+    /** journey.js: the journey's state and the camera currently DISAGREE.
+     *  This chapter owns the distinction because it is visible from the leg
+     *  AFTER its own — the colony reads through the Final cutaway — so the
+     *  frame a jump leaves Final is a frame in which Owned is still fully on
+     *  screen. See the ease-hold in the animator. */
+    setBlending(on) { blending = !!on; },
 
     /** Jump the eased seam state to its target (journey.js placeAt calls this
      *  on every chapter that has it: deep links and hidden-tab / frozen

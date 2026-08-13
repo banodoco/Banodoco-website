@@ -250,3 +250,205 @@ for the settle fix this pass sits on):
 * `WRAP_TURN` ships at 0 (the authored sense). It exists so the short way can be
   re-rendered and the choice re-judged, alongside `WRAP_BOW`/`WRAP_RISE`/
   `WRAP_EXTRA_S`, through `window.journey.wrapTuning`.
+
+---
+
+# 2026-08-13 — the seam, not the path
+
+**Requested:** Hannah. **Built:** same day.
+**Files:** `journey/lens.js`, `journey/journey.js`, `journey/chapters/owned/index.js`,
+`journey/chapters/final/index.js`, `journey/ui.js`. No route file, no camera key,
+no p-value, no golden moves, no change to the path.
+
+> "The page is intended to behave as a continuous loop… Right now, these can feel
+> like a cut or reset. Neither direction should ever feel like the page is
+> teleporting. Both loop transitions should instead be implemented as continuous
+> camera movements, consistent with the spatial transitions used throughout the
+> rest of the site."
+
+## 8. The path was not the problem
+
+The lap above is a genuine 4.00 s camera move and it was already doing its job.
+What read as a cut was everything *else* that crossed the seam in one frame
+while the camera was still standing still. A wrap calls `directJumpTo`, which
+snaps journey state to the destination in a single tick — and three separate
+systems were keyed to that state rather than to the camera.
+
+Measured frame by frame on the live page, sampling inside the render loop
+(every rendered frame, both directions, 440 frames each):
+
+| what | before | after |
+|---|---|---|
+| lens `warm` at the snap frame | **0.3012 → 0.0000 in one frame** | 0.0000 step; max **0.0034**/frame across the whole move |
+| lens `lift` / `hal` / `gain` / `vig` | **0.1808 / 0.2481 / 0.1394 / 0.0497, all one frame** | 0.0000 step; max 0.0021 / 0.0028 / 0.0016 / 0.0006 |
+| Owned retires (forward) | **ms +867, camera x −15.01, r 15.42** | ms +1483, camera x −4.18 |
+| Final retires (forward) | ms +1486, camera x −4.21 | ms +1483, camera x −4.18 |
+| Owned + Final arm (backward) | ms +2400, camera x −4.86 | ms +2400, camera x −4.86 |
+| outgoing copy | snaps to 0.88 on the snap frame, **0 by 516 ms** | holds 1.00 at the snap, 0 by **1848 ms** |
+| fog | already travelled (`a8d4518`) | unchanged |
+
+### 8.1 The grade stepped; only the fog had been fixed
+
+`a8d4518` made fog ride the blend because "fog is distance from the lens".
+The *grade* is the same kind of statement and was left keyed to `p`, so on the
+snap frame the entire frame re-graded at an unmoved camera — `warm` 0.301 → 0,
+`hal` 1.248 → 1.000. That is every pixel changing at once, and it is the
+loudest discontinuity in the wrap.
+
+`lens.js` gains an `override`; `directJumpTo` captures the **live** look (not
+`lookOf(origin p)` — a jump overtaking a jump starts from a graded frame that
+belongs to no `p` at all, the same reason `pos0` is read off the camera) and
+`lookOf(destination p)` after `placeAt`, and `stepCamBlend` lerps between them
+on the position's own ease, written before `lens.update(p)` runs. `endCamBlend`
+hands it back, and because the last value written is `lookOf(destination p)`
+the hand-back is a no-op by construction — measured **0.0e+0** grade landing
+error on all 20 ordered chapter pairs.
+
+### 8.2 The chapter you leave retired on the wall clock
+
+The forward wrap disarms Owned on the frame `p` snaps 0.97 → 0. Owned's ease
+runs at 6.0/s, so the colony under the Final cutaway was **gone 0.87 s later —
+with the camera still at the Final rest**, 0.3 units into a 68-unit move. The
+colony dimmed to nothing on a frame that had not moved. That is the cut.
+
+Backward the same chapter behaved correctly, because there the binding term is
+`arrival = max(sink, keep)`, which is camera-pure, and it opens at x −4.86 as
+the lap comes round. **The two directions were not mirrors**, and the one that
+read worse was the one the state-derived ease governed.
+
+The fix is the law `a8d4518` already wrote for Final, applied where it was
+missing: inside a blend a chapter may trust only its camera-pure terms. Owned
+gains `setBlending`; both chapters **hold their eased `amount`** for the length
+of the blend (`placeAt`'s deferred snap, applied to the ease itself) and let the
+camera decide. Final needed only the hold: its `eff` was already camera-pure,
+but its visibility gate still read `amount`, which at 2.2/s drops at 2.64 s
+against a 4.00 s move — it survived only because `rise` happened to cross first
+at 1.49 s. Luck, not a rule.
+
+After: Owned and Final retire on **the same frame, at the same camera x**, and
+that x is where they arm coming the other way. The lap is now an exact mirror in
+what is on screen as well as in azimuth.
+
+A useful consequence: no wall-clock term survives inside a blend, so the wrap's
+appearance is a pure function of its ease and can be inspected at any clock —
+which is what makes the stretched-clock frame strips below faithful.
+
+### 8.3 The words left on the scrub's clock, not the move's
+
+`d1ecc23` placed the *arrival* inside the blend and left the *release* on
+`COPY_OUT_K` (~0.15 s). Proportionate to an ordinary 1.2 s jump; not to a 4.00 s
+lap — the Final block was at 0 by 516 ms with the camera 0.3 units into the
+move, and 2.1 s of empty copy layer followed before the hero's arrived. The
+departure now runs across `lead` (the same window the incoming block spends
+waiting), so the two are one handover rather than two animations with a hole
+between them. It ends at 0 — the value the scroll rule is already heading for —
+so the hand-back is a no-op exactly as the entry's is, and it may only ever
+*lower* a block, never raise one.
+
+## 9. Frame strips
+
+Shot on the live page at 1440x900, one wrap per direction, 16 shutters across
+the move (`wrapTuning.extra` stretched; see 8.2 for why that is faithful).
+Camera x, forward: −14.78 −15.05 −15.17 −13.83 −9.06 −0.24 +9.45 +14.83 +13.57
++8.40 +3.27 −0.13 −1.76 −2.23 −2.25. Backward, the same list reversed to within
+the shutter's own jitter. `warm` runs 0.300 → 0.000 forward and 0.000 → 0.301
+backward, monotonically, on both.
+
+**How it reads.** Forward: the field holds while the camera pulls back off it,
+the words releasing with the pull rather than ahead of it; the lap swings wide
+and lifts, the colony sinking away below and behind rather than being switched
+off; the cap stays silhouetted; then the camera draws in and the hero sentence
+is the last thing to settle. Backward: the hero copy releases into the same
+swing, the camera goes out and round, and the field comes **up** to meet it as
+it arrives — the world repopulating on the way home — with the Final sentence
+last. Neither direction has a frame where something is switched on or off in
+open view. The one remaining single-frame event is a **draw-call** step (344 →
+56 forward, 42 → 329 backward) at the moment both chapters cross their
+camera-pure 0.003 visibility threshold — the site's own dark-at-arm bound, the
+same one Final used before this pass, and now the same frame for both.
+
+## 10. Gates
+
+* Frame-by-frame trace, both directions, before and after — the table in §8.
+* `capture.py --check`: **PASS**, worst MAE **0.00/255** across all ten frozen
+  references. Nothing here touches a placement path.
+* All 20 ordered chapter pairs: landing error **0.0e+0**, grade landing error
+  **0.0e+0**. Worst single-frame grade step 0.045 under the headless cadence
+  (which drops during a jump); on the wrap, sampled in the render loop, 0.0034.
+* Scroll battery unchanged: `E1 −3.24e−4` (resolution live), `E2/E3 1.0000`,
+  `R4 overshoot 0.00e+0`, `R5 fling past last → 0.000000 | fling before first →
+  0.970000 | notches past last → 1.0000`, `R6 off-anchor stops: none`.
+  `?nosnap=1`: `E1 0.00e+0`, `E2/E3 1.0000`, `N1 parks at 0.3600`.
+* **One gesture, one section, across the seam** (`b0227bd`): a single 30-frame
+  flick past the last rest lands `0.000000` and stops — 0.260 would be two.
+  Backward, `0.970000` — 0.725 would be two. Out and back: `0.97 → 0.000000 →
+  0.970000`.
+* **The 90 ms threshold** (`f2bd1cd`) through the wrap: sweeping the pause
+  between the wrapping flick and the next one, the landing holds at 25/48/54/56
+  ms of measured inter-dispatch idle and releases at 81 ms (forward); backward,
+  holds at 31 and releases at 56. A dispatched wheel is read on the following
+  frame, so the delivered gap is the measurement plus one frame (~22 ms): the
+  crossing brackets **90 ms**, the same beat the rest of the route gets.
+  **This supersedes the 160 ms in §7** — that residual was written four hours
+  before `f2bd1cd` moved the wall off `SNAP_ENGAGE_MS`.
+* Deep links: `?p=0.36 → 0.2679` (Inspire), `?p=0.72 → 0.7250`, `?pose=owned →
+  (1.73, −1.18, 0.56) fov 58`, `?pose=final → (−14.72, 2.73, 2.70) fov 45.5` —
+  the frozen poses exactly. `?capture=` exercised by `capture.py --check`.
+* Ride: three laps forward and two back by gesture — **five wraps**, 30 legs —
+  every leg lands on an anchor, URL clean (no hash written), **console 0
+  entries**.
+
+## 11. Residuals
+
+* The draw-call cliff in §9 is cost, not light: both chapters cross the 0.003
+  bound together and the frame before it carries 0.3% of full reveal. It could
+  be spread by fading the *cost* out over a few frames, but that would add a
+  term the reveal laws do not have.
+* The notch-by-notch residual in §7 stands: notches still walk to the end-hold.
+* `WRAP_BOW`/`WRAP_RISE`/`WRAP_EXTRA_S`/`WRAP_TURN` are untouched — the path
+  shipped in `2c22844` is the path that ships now.
+
+## 12. …and the wrap was spending the gesture that made it
+
+Found while gating the above, on the tree that already had every fix in §8:
+**R5 failed intermittently** — `fling past last -> 0.259988` where it wants
+`0.000000`, i.e. one flick buying Final → Mission → **Inspire**. Roughly one
+run in two, and never reproducible with a gentler flick, which is why it
+survived `2c22844`'s gates: R5 uses the hardest gesture in the battery
+(18 frames × 240 px) and `b0227bd`'s guarantee only broke under it.
+
+**The cause is the wrap's own cost, charged to the visitor.** `push()` drops
+the arrival wall whenever a delta arrives more than `ARRIVAL_HOLD_MS` after
+the last one. The wrap runs inside `update()`, and its frame is the most
+expensive frame on the site: `placeAt`'s two `dt = 0` `applyFrame` passes,
+every seam re-armed, the destination chapter's geometry touched, a 4 s blend
+armed — and then that frame still has to render the destination world. When it
+overran 90 ms, the **next delta of the very same flick** read as a pause,
+dropped the wall, and the rest of the gesture bought a second section.
+
+`f2bd1cd` had already named this hazard and measured it as a 0.055% tail of
+">200 ms frame hitches"; the loop turned it from a tail into a mechanism,
+because the wrap *causes* the hitch every single time. Its own residual note
+recorded only the symptom ("after a wrap the visitor must pause before the
+next section change") without reaching the cause.
+
+**The fix is that a frame the site spent rendering is not the visitor
+pausing.** `ARRIVAL_HOLD_MS`'s own derivation says the delivered spacing of a
+continuous gesture *is* the site's own frame time — so when frame time spikes,
+the gap spikes with it and means nothing about the visitor. The idle clock now
+discounts the overrun of the frame in flight (`stallOf`, measured from
+`lastFrameAt` rather than banked from the last `dt`, because input is
+dispatched before rAF and banking it a frame late would miss exactly this
+case). Only the **excess** over a 34 ms budget is discounted, so an ordinary
+frame contributes exactly zero and every measured constant keeps its meaning;
+and the discount is capped at 400 ms, because "no frame has ticked for a
+while" also describes a backgrounded tab, which must still break the gesture.
+The wrap additionally restarts the idle clock at the end of its own placement,
+for the same reason it already restores `lastDir` there.
+
+**After: R5 `0.000000` on 4 runs of 4**, and the rest of the battery unmoved —
+`E1 −3.33e−4`, `E2/E3 1.0000`, `R4 0.00e+0`, `R6 off-anchor stops: none`,
+`?nosnap=1` `E1 0.00e+0` / `N1 0.3600`, `capture.py --check` worst MAE
+**0.00/255**. `W2`'s crossing is unchanged (holds to ~50 ms of measured idle,
+moves by ~90 once the closing frame is counted), which is the point: the
+threshold did not move, only the accounting of what counts as idle.

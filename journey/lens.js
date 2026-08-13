@@ -224,13 +224,16 @@ const LIFT_WARM = new THREE.Vector3(0.0068, 0.0034, 0.0009); // same order of ma
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 
+// the six interpolable channels — `tier` is an identity, not a grade value
+const LOOK_CHANNELS = ['gain', 'lift', 'warm', 'hal', 'vig', 'grain'];
+
 function lookAt(p, out) {
   let a = LOOK_KEYS[0], b = LOOK_KEYS[LOOK_KEYS.length - 1];
   for (let i = 0; i < LOOK_KEYS.length - 1; i++) {
     if (p >= LOOK_KEYS[i].p && p <= LOOK_KEYS[i + 1].p) { a = LOOK_KEYS[i]; b = LOOK_KEYS[i + 1]; break; }
   }
   const t = smooth01((p - a.p) / Math.max(b.p - a.p, 1e-6));
-  for (const k of ['gain', 'lift', 'warm', 'hal', 'vig', 'grain']) out[k] = a[k] + (b[k] - a[k]) * t;
+  for (const k of LOOK_CHANNELS) out[k] = a[k] + (b[k] - a[k]) * t;
   // T2/T3 crossings: the same pure-in-p bells the director's fog dips use.
   // Richer, not darker-only: grain + lift warmth + vignette deepen briefly.
   for (const d of SEAM_FOG_DIPS) {
@@ -317,6 +320,21 @@ export function createLens(sceneApi) {
   const look = { ...LOOK_BASE };
   let progress = 0;
 
+  /* THE GRADE TRAVELS WITH THE CAMERA (2026-08-13 — the loop's seam).
+     `look` is a pure function of p, and a nav jump snaps p to the destination
+     in one tick while the camera takes seconds to get there. So the whole
+     frame re-graded on the click frame, at an unmoved camera: measured across
+     the wrap, warm 0.301 -> 0.000, lift 1.181 -> 1.000, hal 1.248 -> 1.000,
+     gain 1.139 -> 1.000, vig 0.290 -> 0.340, ALL in a single frame. That is
+     every pixel in the frame stepping while nothing has moved — the loudest
+     single discontinuity in the wrap, and the exact fault a8d4518 fixed for
+     fog in the one other parameter that is not geometry.
+     `override` is the blend's own lerped look, written by journey.js's
+     stepCamBlend on the same ease the position, target, fov and fog ride, and
+     cleared at the landing. Null everywhere else, so a rest, a scrub, a deep
+     link and ?capture= are all bit-identical to before. */
+  let override = null;
+
   let focusWorld = null;
   const _fv = new THREE.Vector3();
   sceneApi.addAnimator('journey-lens', (t) => {
@@ -359,11 +377,18 @@ export function createLens(sceneApi) {
     /** Per-frame: journey progress -> the per-leg finishing curve. */
     update(p) {
       progress = p;
-      lookAt(p, look);
+      if (override) for (const k of LOOK_CHANNELS) look[k] = override[k];
+      else lookAt(p, look);
       applyLook();
     },
     get progress() { return progress; },
     get look() { return { ...look, tier }; },
+    /** The look at an arbitrary p, without touching the live grade — the two
+     *  ends a jump's blend interpolates between (see `override` above). */
+    lookOf(p) { return lookAt(p, {}); },
+    /** journey.js's camera blend takes the grade for the length of the move.
+     *  `o` is a plain channel object, or null to hand it back. */
+    setLookOverride(o) { override = o || null; },
     /** 0..1 crossfade to the untouched frame (QA affordance; the unified
      *  grade holds this at 1 across the whole journey). */
     setAmount(a) {
