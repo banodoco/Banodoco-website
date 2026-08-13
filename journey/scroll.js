@@ -1217,10 +1217,16 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     get streaming() { return gCount >= COMMIT_STREAM_MIN && !!gapEma && gapEma <= COMMIT_STREAM_GAP_MS; },
     /** QA: is a resolution latched and driving? */
     get resolving() { return !!intent; },
-    /** QA: the anchor this gesture has already been answered at — the wall its
+    /** The anchor this gesture has already been answered at — the wall its
         remaining deltas cannot pass, released only by an additional scroll
         (dropWall: an ARRIVAL_HOLD_MS pause, a reversal, or a placement). null
-        while the gesture still has a transition to spend. */
+        while the gesture still has a transition to spend.
+
+        NOT QA-only as of 2026-08-14: journey.js's stepCamBlend reads this to
+        tell input the model ACTS ON from input it is refusing, which is what
+        stops a wrap cancelling the very camera blend its own gesture just
+        armed. Note it can legitimately be 0 (the Mission anchor) — every
+        reader must test it against null, never for truthiness. */
     get answeredAt() { return answeredP; },
     /** QA: the latched resolution's speed FLOOR (p/s) right now — the gesture's
         own peak while the gesture is live, easing to the latched cruise once it
