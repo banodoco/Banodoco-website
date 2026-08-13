@@ -739,6 +739,233 @@ export function buildTendrils(group, U) {
     }
   }
 
+  /* ---- FAR FIELD: the network does not stop at the hubs ------------------
+
+     2026-08-13, Hannah's THIRD report on this frame ("it still feels too high
+     on the page tbh"). The mushroom had to come down a long way, and at fixed
+     eye/radius/fov the aim is a pure rotation: every degree that lowers the
+     subject sweeps the ground's far edge down with it and reopens the empty
+     band under the copy — which is the complaint the pass before it was
+     fixing. Two passes traded along that one axis in opposite directions and
+     each re-opened the other's report. This is the thing that breaks it.
+
+     THE BAND WAS NEVER FILLABLE BY AIMING, AND THE REASON IS MEASURABLE.
+     Unprojected onto the ground at the rest pose (1440x900), the dark band
+     under the copy lands between radius ~6 and ~20 — screen rows 460..540 map
+     to 10.6..20.5 and 6.1..14.2 world units from the origin. THE NETWORK
+     STOPPED AT 11.5: the farthest tendril vertex there was, measured, against
+     a scene fog that does not close until 20. So the outer half of every frame
+     this chapter has ever shot was bare soil, and the band read as a hole
+     however the camera was pointed at it. Aiming down hid the hole by filling
+     the frame with near ground and pushed the subject up and out of it (the
+     f31a0a9 report); aiming up recovered the subject and showed the hole again
+     (the 330d3a1 report). Neither pass could win because the ground the camera
+     was being asked to point at was not there.
+
+     So it is built. The chapter already says it should be — "strands
+     continuing past the hubs and past the frame edges", "the larger, living
+     ecosystem" — this carries that reach out to ~17 units, into the arc the
+     band actually occupies (az -1.78..-0.82, the far side past Hivemind and
+     Discord). The subject can then come down 84 px for 6 px of band, instead
+     of the 107 px the measured exchange rate charges.
+
+     WHAT IT MAY NOT DISTURB, and how each is held:
+       · maxAlong / routeReach / uLitMax — untouched. The along values here are
+         mapped into the 0.82..0.995 tail EXPLICITLY rather than accumulated
+         from world arc, so no vertex reaches past the 0.995 clamp the existing
+         continuations already sit on. The lighting schedule, its order and its
+         pacing are arithmetically identical.
+       · The pulse machinery — tier 3 everywhere on the runners, which is the
+         gate the 2026-08-04 ghost-pulse audit installed (`tier > 2.5` zeroes
+         pulse). Far-field geometry on tier 1 would have flashed the whole
+         outer arc at full brightness as a base-departing pulse crossed its
+         rAlong: the exact bug that audit fixed. The mat is route 3, which
+         reaches no pulse branch at all.
+       · Every other generator's RNG stream — this block draws from its OWN
+         `frnd`. It is appended after all of them, and drawing from `rnd` would
+         re-seed the particle field downstream and move geometry this pass has
+         no business moving.
+
+     Density, not brightness, does the work: at 12-18 units the scene fog is
+     already taking 60-85%, and a far strand cranked bright enough to punch
+     through would read as inverse aerial perspective. The blend is additive,
+     so a thin patchy MAT resolves where a bright line would only look wrong.
+     It thins outward by falling density, the `patchOf` philosophy the rest of
+     the file uses, rather than by per-strand taper. ---- */
+  {
+    const frnd = makeRng(240813);
+    const fg = () => gaussOf(frnd);
+
+    const AZ0 = -1.78, AZ1 = -0.82;      // the arc the band unprojects onto
+    const R_IN = 7.4, R_OUT = 17.2;      // inner edge sits on the hub ring
+
+    // Which route owns a piece of far field: nearest hub in azimuth, so the
+    // outer web kindles with the hub it grows out of and not as one sheet.
+    const hubAz = HUB_IDS.map(id => Math.atan2(HUBS[id].pos.z, HUBS[id].pos.x));
+    const ownerOf = (x, z) => {
+      const a = Math.atan2(z, x);
+      let best = 0, bd = Infinity;
+      for (let i = 0; i < hubAz.length; i++) {
+        let d = Math.abs(a - hubAz[i]);
+        if (d > Math.PI) d = TAU - d;
+        if (d < bd) { bd = d; best = i; }
+      }
+      return best;
+    };
+
+    // The far field lights AFTER its hub, travelling outward — spread across
+    // the tail of the route's own front rather than saturating in one step,
+    // which is what keeps it a continuing growth and not a sheet switching on.
+    //
+    // THE CEILING IS EACH ROUTE'S OWN EXISTING REACH, snapshotted here before
+    // a single far segment is pushed, and never exceeded. This is not
+    // decoration: `pushSeg` raises `routeReach[lr]` for any vertex that runs
+    // past it, `uLitMax` is built from those three numbers, and uLitMax is the
+    // along-distance each front must cover to saturate — i.e. the SCHEDULE.
+    // A first cut mapped into a flat 0.82..0.995 instead and moved Hivemind's
+    // reach 1.141805 -> 1.325, which would have re-timed the middle of the
+    // Hivemind -> Discord -> ADOS arrival (6afd508) and slowed the one channel
+    // six separate requests have already asked to be slower. Held this way the
+    // three uLitMax values are bit-identical to HEAD's, verified, not assumed.
+    const reachSnap = routeReach.slice();
+    const farAlong = (x, z, r) => {
+      const u = (Math.hypot(x, z) - R_IN) / (R_OUT - R_IN);
+      return reachSnap[r] * (0.84 + 0.16 * (u < 0 ? 0 : u > 1 ? 1 : u));
+    };
+
+    /* 1. RUNNERS — the primaries' own meander carried outward: low-frequency
+          wander, no straight runs, thinning to nothing off-stage. */
+    const N_RUN = 15;
+    const runners = [];
+    for (let k = 0; k < N_RUN; k++) {
+      const az = AZ0 + (AZ1 - AZ0) * ((k + 0.5) / N_RUN) + fg() * 0.05;
+      const r0 = R_IN + frnd() * 1.6;
+      let x = Math.cos(az) * r0, z = Math.sin(az) * r0;
+      let a = az + fg() * 0.22;                 // heading starts radially out
+      const seed = frnd();
+      const bright = 0.62 + frnd() * 0.30;
+      const poly = [];
+      // low-frequency wander PLUS a secondary ripple, the same two-scale
+      // curvature the primaries get from sampleRoute: one alone still reads
+      // as a ray once the fog has taken the strand's own detail away.
+      const rip = 0.16 + frnd() * 0.14, fq = 2.2 + frnd() * 1.8, ph = frnd() * TAU;
+      for (let s = 0; s < 14; s++) {
+        poly.push(new V3(x, 0, z));
+        a += fg() * 0.30 + Math.cos(s * fq * 0.5 + ph) * rip;
+        const step = 0.66 + frnd() * 0.48;
+        const nx = x + Math.cos(a) * step, nz = z + Math.sin(a) * step;
+        if (Math.hypot(nx, nz) > R_OUT) break;
+        x = nx; z = nz;
+      }
+      if (poly.length < 4) continue;
+      let prev = null;
+      for (let i = 0; i < poly.length; i++) {
+        const p = poly[i];
+        p.y = gy(p.x, p.z, LIFT_LO + 0.02 * frnd());
+        if (prev) {
+          const t0 = (i - 1) / (poly.length - 1), t1 = i / (poly.length - 1);
+          const own = ownerOf(p.x, p.z);
+          // rAlong is compressed into 0.12..0.74 rather than run 0..1: the
+          // tier-3 taper reaches 47% at the tip instead of 15%, which is the
+          // difference between a strand that recedes and one the fog erases.
+          pushSeg(prev, p, farAlong(prev.x, prev.z, own), farAlong(p.x, p.z, own),
+            0.12 + 0.62 * t0, 0.12 + 0.62 * t1,
+            own, 3, seed, bright * (1 - 0.25 * t0), bright * (1 - 0.25 * t1));
+          counts.contSegs++;
+        }
+        prev = p;
+      }
+      runners.push(poly);
+      if (frnd() < 0.45) {
+        const P = poly[Math.floor(poly.length * (0.3 + frnd() * 0.5))];
+        const own = ownerOf(P.x, P.z);
+        pushGlint(P, farAlong(P.x, P.z, own), 0.22 + frnd() * 0.22, own);
+      }
+    }
+
+    /* 2. ANASTOMOSIS — neighbouring runners reconnect, so the field reads as
+          a web receding rather than a starburst radiating. Fungal, not
+          dendritic (the anatomy note at the head of this file). The link
+          WANDERS across rather than ruling a line: a straight chord between
+          two runners is the "no straight runs, no right angles" violation in
+          its purest form, and at this distance the eye reads a dozen of them
+          as hatching before it reads them as a web. */
+    for (let k = 0; k + 1 < runners.length; k++) {
+      if (frnd() < 0.32) continue;              // not every neighbour pair
+      const A = runners[k], B = runners[k + 1];
+      const P0 = A[2 + Math.floor(frnd() * (A.length - 3))];
+      const P1 = B[2 + Math.floor(frnd() * (B.length - 3))];
+      if (!P0 || !P1) continue;
+      const span = P0.distanceTo(P1);
+      if (span > 4.2 || span < 0.5) continue;
+      const perp = new V3(-(P1.z - P0.z), 0, P1.x - P0.x).normalize();
+      const bow = (frnd() - 0.5) * 1.4;         // a real arc, not a nudge
+      const seed = frnd();
+      const rip = 0.10 + frnd() * 0.12;         // secondary curvature
+      const fq = 4 + frnd() * 3;
+      const SEG = 9;
+      let prev = null;
+      for (let i = 0; i <= SEG; i++) {
+        const t = i / SEG;
+        const p = P0.clone().lerp(P1, t).addScaledVector(perp,
+          Math.sin(Math.PI * t) * bow + Math.sin(t * fq + seed * 20) * rip * Math.sin(Math.PI * t));
+        p.y = gy(p.x, p.z, LIFT_LO + 0.015 * frnd());
+        if (prev) {
+          const own = ownerOf(p.x, p.z);
+          pushSeg(prev, p, farAlong(prev.x, prev.z, own), farAlong(p.x, p.z, own), 0.30, 0.34,
+            own, 3, seed, 0.42, 0.42);
+          counts.contSegs++;
+        }
+        prev = p;
+      }
+    }
+
+    /* 3. THE MAT — patchy hairline knitting the outer arc together. This is
+          what actually resolves in the band: additive, so density reads where
+          a single strand at 20% transmission does not.
+
+          It grows OFF THE RUNNERS, the way the near-field hairline grows off
+          the route corridors, and each sprig WANDERS from its own heading
+          instead of being a chord between two points. The first cut scattered
+          straight segments through the annulus on a mostly-tangential heading:
+          they came out as a field of parallel straws — hatching, the exact
+          circuit-board read the anatomy note at the head of this file forbids,
+          and dead obvious at 2x on the shipped frame. Short, curved, anchored
+          and patchy is what makes a mat instead. */
+    const N_MAT = 300;
+    for (let i = 0; i < N_MAT && runners.length; i++) {
+      const R = runners[Math.floor(frnd() * runners.length)];
+      const anchor = R[1 + Math.floor(frnd() * (R.length - 1))];
+      // scatter into the corridor around the runner (hairline precedent)
+      const oa = frnd() * TAU;
+      const off = 0.28 + Math.pow(frnd(), 1.3) * 2.1;
+      let x = anchor.x + Math.cos(oa) * off, z = anchor.z + Math.sin(oa) * off;
+      const rr = Math.hypot(x, z);
+      if (rr < R_IN - 0.8 || rr > R_OUT + 0.4) continue;
+      if (patchOf(x, z) < 0.66 && frnd() < 0.78) continue;   // dark pockets survive
+      // thin again with distance, so the field recedes by density, not by dimming
+      if (frnd() < (rr - R_IN) / (R_OUT - R_IN) * 0.55) continue;
+      const owner = ownerOf(x, z);
+      const seed = frnd();
+      const SEG = 5;
+      const step = 0.15 + frnd() * 0.19;
+      let a = frnd() * TAU;
+      let prev = null;
+      for (let s = 0; s <= SEG; s++) {
+        const p = new V3(x, gy(x, z, LIFT_LO + frnd() * 0.012), z);
+        if (prev) {
+          pushSeg(prev, p, farAlong(prev.x, prev.z, owner), farAlong(p.x, p.z, owner), 0.5, 0.5,
+            3, 2, seed, 0.7 + frnd() * 0.3, 0.7 + frnd() * 0.3, owner);
+          counts.hairSegs++;
+        }
+        prev = p;
+        a += fg() * 0.62;                       // wanders as it goes
+        x += Math.cos(a) * step; z += Math.sin(a) * step;
+      }
+      if (frnd() < 0.10) pushGlint(prev, farAlong(prev.x, prev.z, owner), 0.18 + frnd() * 0.2, owner);
+    }
+  }
+
   /* ---- build the strand mesh ---- */
   const strandMat = makeStrandMat(U);
   {

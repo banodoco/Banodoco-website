@@ -2593,3 +2593,44 @@ pass, which touches no part of the schedule.
   logged here so the next pass does not read it as new.
 - E2 read 1.3155 once under headless contention and 1.0000 on two clean
   re-runs and at HEAD. Noise, not a regression.
+
+---
+
+## 2026-08-13 — the third pass: break the trade, don't ride it
+
+Hannah, after two passes that each re-opened the other's complaint: *"it still
+feels too high on the page tbh."*
+
+**Why the first two under-delivered.** At fixed eye, radius and fov the aim is
+a pure rotation, so a degree of pitch moves the mushroom and the ground's far
+edge by the same angle. Measured exchange rate: **~1.27 px of void under the
+copy per 1 px the mushroom comes down.** `f31a0a9` aimed down to fill the void
+and clipped the cap on the top edge; `330d3a1` aimed back up and re-opened the
+band. Continuing to tune the aim walks between her two complaints forever.
+
+**What this pass did instead — three levers, not one.**
+
+1. **The aim goes much further out.** The gaze still rests ON the ground, but
+   the ray now meets the terrain 14.89 units along itself (world −0.79, 0,
+   −7.63; radius 7.68 from the stipe) against the previous 10.33 units at
+   radius 4.4. Pitch −7.719 deg. The subject comes down 54 px.
+2. **The band gets content rather than camera.** `tendrils.js` grows detail
+   into the strip the copy sits over, so the void stops being empty ground and
+   starts being network — the same answer this chapter already gave for "the
+   stuff just appears" (`f9e8317`) and the same one Hannah has asked for in the
+   Final section's dead left field.
+3. **The copy block drops** `15vh → 19vh` (`site.css`, `.j-block.pos-topright`),
+   so the band it must clear is smaller to begin with.
+
+Only (1) is on the old trade axis; (2) and (3) are what let it be spent.
+
+**Gate:** `capture.py --check` PASS, worst MAE 0.00/255, all ten frozen
+references within threshold. `connect@*` re-shot deliberately (the rest frame
+legitimately moved); the other eight byte-identical, including `owned@*` —
+`REST_KEY.pos` is untouched, so the polyline `owned/leg.js` samples to place
+the colony is unchanged and the colony did not regrow.
+
+**Provenance note:** the authoring agent completed the code, the re-shoot and
+the in-file reasoning, then was cut off by a network error before writing this
+section or committing. The orchestrator verified the gate independently and
+landed it.
