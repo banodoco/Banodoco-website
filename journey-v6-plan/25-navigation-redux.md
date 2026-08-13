@@ -2863,3 +2863,181 @@ cannot inherit the same hole.
   such route exists on this page.
 * The **five pre-existing Tier-3 drift errors**, the placeholder tokens in the
   panel and the missing external URLs all stand.
+
+---
+
+## 2026-08-14 — The formation went the long way round: the angle at rest was never restated
+
+> Hannah: "The wheel thing that appears for navigation — when I'm down at the
+> bottom sections, the intro animation feels weird and overlapping, like
+> things go to the wrong place to start. When I'm at the top it's effectively
+> perfect."
+
+### 1. Two states, two different variables, one number
+
+`--ae` is `calc(var(--u) * var(--ang))`, and the moon's two motions move
+different halves of it:
+
+* a **TURN** happens with the moon OPEN. `--u` is pinned at 1 and `--ang`
+  transitions old → new. The number must be **unwrapped**: that is what
+  carries `fbd864a`'s direction rule — four marks one pitch, one mark four,
+  all the same way round *behind the frame's edge* rather than 180° straight
+  across the moon's face.
+* a **FORMATION** happens with the moon HOME. `--ang` is fixed and `--u` runs
+  0 → 1, so each mark sweeps from angle **zero** to whatever is stored. It
+  walks the whole of it.
+
+So a stored `-405deg` renders identically to `-45deg` at rest and is a mark
+spiralling one and an eighth turns on the way out. The angles accumulate one
+pitch per chapter change, which is exactly why this was invisible at the top
+and got monotonically worse going down.
+
+### 2. Measured, at every chapter
+
+Riding down section by section on the live page the way a visitor does (real
+wheel flicks) and then opening the moon with a real pointer, the five
+`--ang-to` values, and how many of them sweep past the moon's own 90° half
+width:
+
+| at | `--ang-to` | marks going the long way | worst on-screen path ÷ chord |
+|---|---|---|---|
+| mission | 0 / 45 / 90 / −90 / −45 | **0** | 1.32 |
+| inspire | −45 / 0 / 45 / **−270** / −90 | **1** | 2.61 |
+| connect | −90 / −45 / 0 / **−315** / **−270** | **2** | 2.94 |
+| owned | **−270** / −90 / −45 / **−360** / **−315** | **3** | 3.30 |
+| final | **−315** / **−270** / −90 / **−405** / **−360** | **4** | 3.63 |
+
+"At the top it's effectively perfect" and "down at the bottom … weird and
+overlapping", in the site's own numbers.
+
+**And the fixed point stopped being fixed.** site.css says of the current
+mark: "The current item's angle is 0, so `-rad*cos(0)` is `-rad` for every
+value of `--u`: it is the fixed point of the formation and of every chapter
+change, and it is not special-cased anywhere." At **owned** and **final** the
+current slot's own angle was **−360°** — so the one mark the whole cascade
+opens outward *from*, the mark that must simply sit at the apex, was spinning
+a complete revolution on its way out. It is visible in the strips: at final
++360 ms the gold mark is below the apex and still travelling.
+
+### 3. The deleted re-canonicalisation was load-bearing
+
+`fbd864a` removed the cluster's `foldedSync` with this reasoning:
+
+> "the angle is never pinned: it is multiplied by `--u`, the unfold amount, so
+> at rest it is simply not in the picture, and it is already correct when
+> `--u` leaves zero … `writeAngles` is free to keep accumulating for as long
+> as the page lives."
+
+The first clause is true; the conclusion is its opposite. Multiplying by `--u`
+does not take the angle out of the picture — **it makes the formation traverse
+it.** The cluster pinned folded slots to 0 and therefore had to spend the
+accumulated turn on the fold; this shape does not pin, and therefore has to
+spend it too, just for a different reason. The brief's suspicion (that a
+direction rule keyed on the chapter index would be right at 0 and wrong later)
+points at the right function for the right reason — but the fault is not in
+how `writeAngles` picks a direction. That rule is correct and is untouched.
+The fault is that nothing ever **restates** the number once the moon is home.
+
+### 4. The fix — while the moon is home, the angle is a fact, not an animation
+
+* `atRest` is "folded **and** the fold has finished". Deliberately not
+  `!expanded()`, which is already true on the first frame of a fold with every
+  mark still on screen and still owed its unwrapped angle to travel home on.
+  It is watched per frame in `update()` off `expanded()` itself rather than
+  hooked onto each way the moon can close (dwell, pointerleave, touch
+  collapse, Escape, focus leaving) — `expanded()` is already the one authority
+  and a listener per path is a path to miss. Re-opening inside `FOLD_HOME_MS`
+  (700 ms, the 0.26 s tips-in cascade plus the 0.40 s travel, plus margin)
+  cancels it: those marks never went home.
+* While `atRest`, `writeAngles` **states** the canonical angle
+  (`signedRing(k) * STEP`) instead of accumulating, and the fold's settle
+  re-runs `writeAngles(curIndex)` so a turn taken while open cannot poison the
+  next formation.
+* Both writes happen under a one-frame `j-rail-recentre` class that zeroes the
+  slot transitions, because a 0.46 s `--ang` interpolation with nothing on
+  screen to show it is pure hazard: a visitor opening the moon inside that
+  window would catch the angle between two values.
+* Cost of watching `expanded()` per frame, measured: **3.26 µs/call, 0.0196%
+  of a 60 fps frame.**
+
+### 5. After
+
+Every chapter's `--ang-to` is now a clean rotation of {0, ±45, ±90} — the
+chapter-0 pattern, permuted:
+
+| at | `--ang-to` | long-way marks | path ÷ chord (all five marks) |
+|---|---|---|---|
+| mission | 0 / 45 / 90 / −90 / −45 | 0 | 1.00 1.09 1.32 1.32 1.09 |
+| inspire | −45 / 0 / 45 / 90 / −90 | 0 | 1.09 1.00 1.09 1.32 1.32 |
+| connect | −90 / −45 / 0 / 45 / 90 | 0 | 1.32 1.09 1.00 1.09 1.32 |
+| owned | 90 / −90 / −45 / 0 / 45 | 0 | 1.32 1.32 1.09 1.00 1.09 |
+| final | 45 / 90 / −90 / −45 / 0 | 0 | 1.09 1.32 1.32 1.09 1.00 |
+
+The path/chord **multiset is identical at all five** — {1.00, 1.09, 1.09,
+1.32, 1.32} — which is the gate stated numerically: the formation reads the
+same wherever the visitor is. The current mark's angle is `0.00deg` at every
+chapter, so the fixed point is fixed again.
+
+The strips (shot at 1/16 playback through CDP's Animation domain, because the
+formation settles in 0.66 s and a screenshot round trip cannot catch it; the
+canvas is hidden for the shutter only, as `capture.py` already does for the
+page chrome) show all five rows forming the same shape: the gold mark lit at
+the apex with its reticle, the arc drawing open from it, and the other four
+arriving on their points — **no mark ever appearing on the right of the
+button**, which is where the long-way marks used to be caught.
+
+### 6. Gates
+
+* **The formation, frame by frame at all five chapters, before and after** —
+  §2 and §5.
+* **The turn's direction rule is untouched and still unwrapped.** With the
+  moon open, a chapter change still leaves exactly **one** mark past 90°
+  (measured `270.00deg`) — it still goes the long way round behind the
+  frame's edge rather than across the moon's face. Only the *resting* number
+  is restated.
+* **`j-rail-recentre` does not leak, and the formation still animates.**
+  After a fold and its settle the class is absent and the angles are
+  canonical; the next formation, sampled per frame in-page, runs **571 ms
+  with 20 mid-flight frames**, cascade intact and visible (apex first at
+  `--u` 0.914, its neighbours at 0.468, the tips at 0.002). The first attempt
+  at this gate read it as a snap — that was CDP round-trip latency, not the
+  page.
+* **The 120 ms dwell** — hot=False at ~70 ms, hot=True at ~420 ms.
+* **The menu opens on `pointerdown`** — panel open before `mouseup`.
+* **The reveal resolves against the real pointer, not `:hover`.** Pointer held
+  *still* on the apex through a turn: `.at` moves 3 → 2, matching
+  `elementFromPoint` and the slot whose angle is now 0, with the moon still
+  open. (Marks are placed by `transform`, so the browser does not re-hit-test
+  under a stationary pointer; `syncAt()` at the end of the turn suppression is
+  what makes this true.)
+* **A11y** — Tab reaches `.j-rail-item`, `:focus-visible` matches, the moon
+  opens on focus, and the indicator is a real `solid 2px rgb(240,200,119)`
+  outline. `prefers-reduced-motion: reduce` lands the moon instantly and
+  correctly (`--u` all 1 within the dwell, angles canonical).
+* **Touch targets** 48×48 marks and a 56×56 menu button, both clear of the
+  44 px floor.
+* **The touch column is untouched by construction**, not merely by
+  observation: `--ang` is referenced at exactly one place in the whole
+  stylesheet (site.css:2128), inside `@media (hover: hover)` and under
+  `:not(.j-rail-column)`, and the new rule sits in the same block with the
+  same scoping. The column reads neither the angle nor the rule.
+  (`j-rail-column` itself is a CHAPTER-COUNT fallback — `RAD > RAD_MAX` — not
+  a viewport one, so at five chapters it is never on; the touch path is the
+  `(hover: hover)` block simply not applying.)
+* **`6903c4a` re-verified** — `inputgates.js` G1 canvas owns the frame at rest
+  (25 sample points), G2 still inert with `hidden` stripped, G3 poke fires for
+  body and ground on mouse and touch, G4/G5 overlay hit model closed-inert /
+  open-live / restored. All PASS.
+* **Console** clean — 2 entries, both the ordinary boot `info` lines, 0
+  warnings, 0 errors.
+* **`capture.py --check` PASS, worst MAE 0.00/255** over all ten frozen
+  references.
+
+### 7. Residuals
+
+* The 460 ms `--ang` transition still runs on a chapter change taken while the
+  moon is OPEN — that is the turn, and it is meant to.
+* `FOLD_HOME_MS` is a constant rather than a `transitionend` listener. The
+  fold ends in five transitions across four properties and the question being
+  asked is "has the picture settled", not "did that one property finish"; if
+  `--cl-travel` or `--cl-cascade` ever move, this constant moves with them.

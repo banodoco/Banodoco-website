@@ -2185,6 +2185,22 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
         calc(min(var(--step, 0), 2) * var(--cl-cascade)),
         calc(min(var(--step, 0), 2) * var(--cl-cascade));
     }
+    /* ---- RESTATING THE ANGLE IS NOT A MOVE ----
+       rail.js re-canonicalises `--ang-to` while the moon is HOME — folded and
+       finished folding, so `--u` is 0, `--ae` is 0 whatever the angle says,
+       and nothing this property controls is on screen. Without this the
+       restatement would still run the 0.46s `--ang` transition, and a visitor
+       who opened the moon inside that window would catch the angle between
+       two values and see the mark set off for a point it was already leaving.
+       Held for exactly one frame by the class, so the turn keeps its
+       transition in the only state that can show it: open.
+       (`--ang` is first in the duration list; the rest are named too because
+       at rest they are all already at their resting values, so zeroing them
+       for a frame can have no effect — and listing them keeps this rule from
+       silently depending on the order of that list.) */
+    .j-rail:not(.j-rail-column).j-rail-recentre .j-rail-slot {
+      transition-duration: 0s;
+    }
     /* THE KEYBOARD DOES NOT WAIT FOR THE CASCADE. The first Tab into the rail
        opens it and lands on a mark that is, for the length of its own delay,
        still inside the button at opacity 0 — a focus ring on nothing. Focus is
