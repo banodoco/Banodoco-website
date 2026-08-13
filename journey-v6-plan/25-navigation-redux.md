@@ -2573,3 +2573,293 @@ It is a grace note, not a load-bearing number, and it is recorded here as one.
   is exactly such a route and reproduces it. No such route exists on this page.
 * The **five pre-existing Tier-3 drift errors**, the placeholder tokens in the
   panel and the missing external URLs all stand.
+
+---
+
+## 2026-08-13 (later still) — The half moon: the arc hugs the side, the moon forms, and the black boxes go
+
+> "Can you switch the right side navigator to be more like this — a half moon.
+> You may have to rethink how the entry animation and how it moves. It should
+> stay in the side on hover. And it should be like a half moon.
+> The entry animation right now is a little bit janky or something — we should
+> have a more elegant version of that. So it's just like the half moon kind of
+> forms around it, with the current one highlighted on the left side.
+> And currently there's like a black background that appears on hover, but it
+> feels really janky and weird … It feels like it's a hard line. It looks like
+> maybe there's multiple layers of black boxes, like a bigger one and a smaller
+> one. Looks really weird. This should be really subtle and should fade in and
+> out nicely — if we even have anything. If we do need this kind of
+> underwrapping, it probably should be very subtle, with a nice fade out to
+> it." — Hannah, with a screenshot
+
+**Files:** `journey/rail.js`, `journey/site.css`. Nothing else. (`symbols.js`
+read and not touched: the five marks are unchanged, only where they sit.)
+
+**This supersedes the full ring of `d9da652`.** Tree was clean at `6ba7b3f`
+before anything was changed — no inherited work this time.
+
+### The three complaints, reproduced first
+
+Shot on the shipped build at 1440×900 over Connect before a line was edited.
+All three are real and the third is more literal than it reads:
+
+| | measured on `6ba7b3f` |
+|---|---|
+| the ring is a whole circle | centre = the button, radius 62.95, marks at 0/±72/±144° — a closed ring |
+| it does not stay at the side | opening translates `.j-rail-inner` by `--cl-shift` = **46.93px**; the button's box leaves the wall and comes back on every interaction |
+| "multiple layers of black boxes" | **three** dark surfaces at once: `.j-rail-inner::before` (336px radial, core α 0.80) and `::after` (220px radial, core α 0.62), both live while open and **summing to α 0.92**, plus every `.j-rail-name`'s `rgba(9,6,2,0.85)` rectangle at `border-radius: 2px` |
+| "it feels like it's a hard line" | both radials are `radial-gradient(ellipse at 50% 50%, …)`, i.e. **`farthest-corner` sizing**: the gradient reaches zero only at the box's CORNERS, so along its edges it is still substantially opaque and **the element's own rectangle is drawn**. Visible as a straight vertical edge in the Final-rest shot |
+
+The third row is the whole of her report: not a tuning problem, a sizing bug in
+the gradient plus a second surface stacked on it plus a hard-edged pill.
+
+### 1. The geometry — a half moon, and it never leaves the wall
+
+Same circle, same centre, **left half only**.
+
+| | measured at 1440×900 |
+|---|---|
+| the hub | the menu button, 56px, `--cl-edge` 2px off the frame. The moon's CENTRE, and **motionless in every state** — measured open and closed: box `1382, 422` both times, identical |
+| the apex | the circle's LEFTMOST point, (1313, 450). A POSITION, not an item — "the current one highlighted on the left side" |
+| the moon | the 180° arc about the hub. `ARC = 180`, pitch `180/(n-1)` = **45°** at five chapters |
+| radius | **96.70px**, derived `(TILE 48 + AIR 26) / 2 sin(STEP/2)`; floor `RAD_MIN` = `HUB/2 + GAP + TILE/2` = 58 |
+| the five points (at Connect) | mission **(1410, 353) ABOVE** · inspire (1342, 382) · connect **(1313, 450) APEX** · owned (1342, 518) · final **(1410, 547) BELOW** |
+| tiles | 48×48 sections, 56×56 hub — PL-1.4's 44px is a floor both clear |
+
+**THE EDGE PROBLEM IS DELETED, NOT MANAGED.** Every inhabited angle has
+`cos(ang) ≥ 0`, so every mark's x is `≤ 0` relative to the hub and the two
+extreme marks sit at the button's own x. The open control's rightmost tile edge
+is `TILE/2` = 24px right of centre against the closed button's 28px half-box:
+**the open moon is narrower than the closed button.** Measured at all three
+sizes, open rightmost vs closed hub right: **1434 / 1438**, **1274 / 1278**,
+**369 / 373** — inside, every time, with no horizontal overflow
+(`scrollWidth === innerWidth` at rest, open and mid-turn).
+
+So `--cl-shift` is gone, and with it `.j-rail-menu::before` — the hit pad that
+existed only to answer for the footprint the stepping button vacated. That is
+`48b7795`'s guarantee held **structurally**: a press cannot be lost by a control
+that does not move. (The `pointerdown` opening stays anyway; it is simply right
+for a menu button, and it is still measured true — `menuOpen` after
+`mousePressed` alone, both viewports.)
+
+**The marks did not get further apart.** Neighbour chord on the moon is
+`2 × 96.70 × sin 22.5°` = **74.0px**; on the shipped ring it was
+`2 × 62.95 × sin 36°` = **74.0px**. Identical rhythm, re-laid on a half circle —
+which is why the radius has to grow by 1.54×, and why it is derived rather than
+picked. Shot at **76 / 86 / 96.70 / 108** anyway: 76 crowds the apex reticle
+against the button, 108 stops reading as a circle *holding* the button and
+becomes a large empty one with a dot in it.
+
+**Ring order, verified at all five chapters:** the two previous sections above
+(nearest just above), the two upcoming below, wrapping — so the arc reads
+top-to-bottom in manifest order with "you are here" at the point. At Connect:
+mission, inspire, **connect**, owned, final.
+
+**THE WINDOW, AND THE ONE MARK THAT LEAVES IT.** A full ring is a cycle and
+wraps invisibly. An arc is a WINDOW onto that cycle, and on every chapter change
+one mark runs off the end of it — and between the two tips **the shortest path
+is 180° straight across the face of the moon**, through every other mark and
+over the button. The old `writeAngles` took the short way and was right only
+because a cycle made short and consistent the same thing.
+
+So the direction is now chosen by the ROTATION, not by the distance: `dir` is
+read off the chapter change itself, every mark turns that way, and the one
+leaving the window simply has further to go — 180°, out past the tip, round the
+hidden half of the circle (which is behind the frame's own edge) and back in at
+the other tip. Four marks move one pitch, one moves four, all five move the same
+way round; nothing crosses the middle.
+
+### 2. The formation — one gesture, cascaded, with the arc drawing
+
+The old entry was **two stages plus a lurch**: the control stepped 46.93px
+sideways while the current mark walked to its slot (0.30s), and only then — after
+a wait as long as the walk — did anything else begin (a further 0.55s). The
+lurch went with the step. The wait went with the staging.
+
+Now `--t` (the radius) and `--u` (the angle) run on ONE clock with ONE duration,
+so each mark leaves the button on a single curved path that lands on its own
+point; the paths are offset by `--step`, distance along the arc from the current
+section. And `.j-rail-arc` is two real paths, both starting at the apex,
+`pathLength="100"`, walked open by `stroke-dashoffset` — the hero's own
+`lead-draw`, the vocabulary the menu mark's filaments already use. The moon is
+**drawn around the button** rather than faded up under it.
+
+Traced per frame at 1440×900 through a real pointer dwell, over CDP's Animation
+domain at 0.08× (times at 1×):
+
+| t | what the frame shows |
+|---|---|
+| 0…120 ms | the dwell. Nothing moves, and the button is at the wall |
+| 132 ms | the apex mark is out of the button; both arc arms have left the apex |
+| 264 ms | apex placed; the ±1 pair mid-flight; the arc about half drawn |
+| 396 ms | the ±1 pair landing; the tips leaving the button; MENU stepping down |
+| 528 ms | the tips travelling out; the arc closing; the reticle claiming the apex |
+| **660 ms** | settled |
+
+**Four candidates, shot at the same six times and compared side by side.**
+
+* **F1 — the house arrival curve** (`0.22, 1, 0.36, 1`, what everything else in
+  this file uses). **Rejected.** It is an ARRIVAL curve: it spends 90% of the
+  distance in the first quarter of the time. The whole moon is effectively
+  formed by 240 ms of a 600 ms transition and the remaining 360 ms is a settle
+  nobody can see — precisely the "reads as having happened at once" the cluster
+  pass recorded for the *turn*, now found in the *formation* too.
+* **F2 — a real ease-in-out on the travel** (`0.38, 0.04, 0.24, 1`). Every mark
+  is caught mid-flight in the frames between; the formation occupies the time it
+  is given.
+* **F3 — F2 with the cascade widened** 0.09 → **0.13s** (travel 0.40s).
+  **CHOSEN.** At 0.09 the three beats overlap enough that the tips are already
+  leaving while the neighbours are mid-flight, and the eye reads one bloom; at
+  0.13 each pair visibly follows the one in front and the moon *unrolls* from
+  the current section. Costs 80 ms on a formation that still settles in 0.66s —
+  shorter than the 0.97s it replaces.
+* **F4 — the arc leads** (cascade 0.17, travel 0.30, fast front). **Rejected on
+  the frames.** At 360 ms the arc is a COMPLETE, EMPTY semicircle and its tip
+  marks have not arrived. A line that gets somewhere before the things it
+  carries reads as two events, not one.
+
+**The arc's own curve was solved, not chosen.** A drawn line has to travel at a
+roughly constant angular speed or it stops reading as being drawn, and every
+curve in this file's vocabulary ends `…, 1`, which pins the tail flat and
+front-loads everything. Sampled at seven points against a straight line:
+
+| curve | max deviation from linear |
+|---|---|
+| `0.40, 0.06, 0.28, 1` (the ring's) | 0.252 |
+| `0.38, 0.04, 0.24, 1` (the marks') | 0.266 |
+| **`0.45, 0.45, 0.72, 1`** — shipped | **0.123** |
+
+### 3. The backing — one surface, and the measurement that sized it
+
+**The mechanism of her complaint, named:** `radial-gradient(ellipse at 50% 50%,
+…)` defaults to `farthest-corner`, so it only reaches zero at the box's corners
+and paints the box's own edges. Two such surfaces, of different sizes, summing.
+Plus a pill with a literal rectangle.
+
+**What ships is ONE surface**, `.j-rail-inner::after`, and it is the same
+surface in both states: `closest-side circle` (zero at every edge, by
+construction), six stops that fall off smoothly rather than a flat core plus two
+straight ramps, and it **grows** from twice the button's footprint to the moon's
+on the formation's clock — so the darkening follows the instrument instead of a
+second surface arriving under the first. `::before` is switched off for this
+geometry rather than re-tuned; its whole job in the ring block was to be the
+second one.
+
+**Is any of it needed? Measured, not judged.** Three frames per candidate per
+chapter — the component visible, the component with only its INK removed, and
+the field bare — so the backing's own darkening is never mistaken for a drawn
+stroke. (The first cut of this measured `ink vs non-ink` and got the rim
+*backwards*: a glyph's dark rim IS ink, so strengthening it pulled the "stroke"
+mean down and reported a better rim as worse. The rim is not the line; it is the
+ground the line is given.) Inside each mark's box the component's pixels are
+split at their own median — bright half the LINE, dark half the RIM it sits on:
+
+**Worst line-vs-rim contrast across all five marks, per chapter, moon open:**
+
+| | Connect | Owned | Final | Mission | Inspire |
+|---|---|---|---|---|---|
+| no surface at all | 42 | 31 | 43 | 38 | 31 |
+| **one subtle surface (shipped)** | 42 | 32 | 44 | 40 | 31 |
+| a heavier version of it | 42 | 32 | 44 | 40 | 31 |
+| the old two-layer stack | 43 | 35 | 42 | 43 | 32 |
+
+**The glyphs' own dark rims are doing essentially all of the work.** Across the
+brightest frames on the ride — the epilogue's lit field runs to luminance **147**
+under one mark — the surface is worth 0–3 points out of 31–44, and the heavy
+stack she objected to is worth 1–4. That is the honest finding, and it is the
+opposite of what §11(4) concluded by eye.
+
+**So why keep one at all?** Because §11(4)'s reported failure was a RESTING one
+("sometimes the side menu thing is invisible … it's on top of a similarly
+coloured mushroom"), and at rest there is no arc and exactly ONE glyph on the
+flank. Measured at the Final rest, the button's own box:
+
+| | field | ground under the glyph | line |
+|---|---|---|---|
+| no surface | 49.4 | **49.4** | 91.7 |
+| one subtle surface | 49.4 | **32.4** | 89.6 |
+
+—and shot side by side, the surface visibly settles the button onto the
+epilogue's lattice while showing **no edge and no box anywhere**. It is kept at
+the level where it costs nothing and earns the resting case: her own clause,
+"if we do need this kind of underwrapping, it probably should be very subtle,
+with a nice fade out to it".
+
+**The pills lose their rectangle.** `rgba(9,6,2,0.85)` at `border-radius: 2px`
+is the hardest edge in the whole composition — the one thing in her report that
+is a LINE rather than a wash. It is now an ellipse **inscribed in the box**
+(`50% 50%` are radii against the box's own half-width and half-height), so the
+wash reaches zero at all four edges and the corners are already clear, with the
+falloff spent in the outer third and the padding widened to buy it room. The
+type carries the same dark rim the glyphs do, which holds the first and last
+letters where the wash is thinnest.
+
+*(Caught by shooting, not by reading: the first cut of this used
+`ellipse 62% 108%`, which puts the vertical radius OUTSIDE the box — the
+gradient was clipped by the padding box at α 0.65 and drew the very hard top and
+bottom edges it was meant to remove.)*
+
+### One real bug found on the way
+
+`.j-rail-arc` is built by rail.js for every rail, because the element cannot
+know which geometry the media query will hand it, and every rule that gives it a
+stroke, a size and its dash lives inside the half-moon block under
+`(hover: hover)`. Outside that block it is an unstyled inline SVG —
+`fill: rgb(0,0,0)`, `stroke: none` — and **measured at 375×812 with touch
+emulation on, that is exactly what it painted: a solid black wedge, 52×52,
+sitting on the column beside the marks.** A black box on every phone, in a pass
+about removing black boxes. It is now `display: none` in the base rules and
+turned on by the geometry that owns it — fail-closed, so the next geometry
+cannot inherit the same hole.
+
+### Gate results
+
+| Gate | Result |
+|---|---|
+| References | **PASS.** `python3 tools/capture.py --check`: **10/10 at MAE 0.00/255, 0.0 % px > 8** — all ten frozen frames byte-identical. No golden modified; `git status` clean but for the two source files. |
+| Screenshots | Rest / six points through the formation / the formed moon / the arc mid-rotation, at **1440×900, 1280×800 and 375×812**, mid-transition frames over CDP's Animation domain at 0.08×. Plus the four formation candidates at the same six times, four radii side by side, the three backing candidates over the brightest and darkest frames, and the before/after against `d9da652`. |
+| Stays at the side | **PASS.** The hub's box is **identical open and closed** (1382, 422) at 1440; open rightmost tile edge inside the closed button's box at all three sizes (1434/1438, 1274/1278, 369/373); no horizontal overflow at rest, open or mid-turn. |
+| Ring order | **PASS**, all five chapters: two previous above, current at the apex, two upcoming below, wrapping — manifest order top to bottom. |
+| Stale pointer (`.at`) | **PASS.** Premise RE-MEASURED under the new geometry: pointer parked on a mark, the moon turned one step by a pure transform write, `:hover` stayed on the mark that travelled away while `elementFromPoint` returned the one that arrived — 5/5 park positions. And on the REAL chapter-change path with the pointer never moving: **5/5** — names out for the whole turn, and afterwards exactly one `.at` and exactly one pill, on the slot `elementFromPoint` actually returns. |
+| Pointer floor | **PASS. 105 points** walked round the whole arc, apex → hub, and the full vertical diameter: **0 folds, 0 points that left the control.** |
+| Hit model (`6903c4a`) | **PASS.** Closed, 159/160 sampled points at 1440×900 resolve to `CANVAS` (the one other is a hotspot chip, which is meant to be on top); the only elements ≥ 12 % of the viewport with live pointer-events are `HTML`, `BODY`, the stage `div` and the `CANVAS`. **The poke fires at both viewports.** |
+| Menu press | **PASS.** `menuOpen` true after `mousePressed` alone, 1440 and 375 — `48b7795` intact, and now unloseable by construction. |
+| Keyboard | **PASS.** Tab order `skip → logo → Discord → mission → inspire → connect → owned → final → Menu → hotspots` (manifest order). Tiles 48×48, hub 56×56. `:has(:focus-visible)` opens the moon with every slot on its own point and `aria-current` on the active one; each of the five focuses visibly and reveals its own name; Enter on Owned → `journey.chapter === 'owned'`; Enter on the button opens the panel with focus on Close; Escape closes and returns focus to the button. |
+| First Tab lands on something | **PASS**, and it needed a fix. Zeroing the focused mark's delay was not enough — measured 50 ms after the first Tab, opacity **0.051**, undelayed and still nothing on screen. The focused slot now takes a short 0.1s fade: **0.263 at 50 ms**, moving and visible. |
+| Reduced motion | **PASS** (emulated). 80 ms after the dwell — inside every duration — all five slots are on their exact arc points at opacity 1, **both arc arms fully drawn** (`stroke-dashoffset: 0px`) and the surface at its open scale. 300 ms after a chapter change every slot is at its new point. On leaving, all five at opacity 0 and the hub back at 1382. The cascade included: with no durations there is nothing for the per-step delays to stagger. |
+| Touch | **PASS, unchanged.** With the media features genuinely flipped (`hover: none`, `pointer: coarse` — via touch emulation; `Emulation.setEmulatedMedia` does NOT carry them, measured), the rail is the shipped **column**: tiles 52×44 single-file at x 323, hub 52×44 below, current mark lit at rest, **the arc `display: none`**, first tap arms (`j-rail-open` + `body.j-rail-on` + all six names), second tap navigates. |
+| Console | **CLEAN — 0 entries** at 1440×900 and 375×812 (error/warn/uncaught/rejection trapped from document start): a real wheel ride out and back, all five chapters by `flyTo` with the moon opened and traversed at each, the menu opened by a real press and closed by Escape, plus the keyboard, reduced-motion and touch passes. The ride returns to **p = 0** with the hero pose exact (−2.25, 2.25, 10.4), fog 7/20, hash empty. |
+| Both tiers | Tier 3 is on the COLUMN and was not touched — its documented divergence (§5, 23 §8). Drift guard: **5 problems — the same 5 that were already there** (4 `chapters.owned.claims.*`, 1 `chapters.final.heading`) across 145 strings and 11 symbols. **No sixth.** |
+| Not undone | `d46e6bb`, `a3ba9fd`, `961b2d1`, `8987500` and `6f23d90` are untouched — the diff is confined to `rail.js` and to `site.css`'s half-moon block, its base `.j-rail-arc` rule and its reduced-motion reset. |
+
+### Residuals
+
+* **The moon is the taller drawing.** `2 rad + TILE` = 241px against the ring's
+  174px, because the same 74px neighbour spacing over 180° instead of 360° needs
+  1.54× the radius. It is the *narrower* one — 120.7px into the frame against
+  the ring's 120.7 **plus** its 46.93px step-in — which is the trade that buys
+  "it should stay in the side", but the flank is taller than it was.
+* **The manifest ceiling came down with it.** A half moon spends its circle
+  twice as fast, so `RAD_MAX` = 120 now falls back to the column past **seven**
+  chapters where the ring managed eleven (n = 6 asks 119.7 and just fits; n = 7
+  asks 142.9 and does not). Derived, so it cannot go stale — but it is a real
+  reduction in headroom.
+* **A chapter jump of 3 turns the moon "backwards".** With five marks on a
+  five-cycle, +3 and −2 are the same rotation and the geometry cannot tell them
+  apart; the moon takes the two-pitch turn. Inherent to a cyclic window, present
+  in the ring too, and only reachable from a nav press rather than from a scroll.
+* **At rest the navigator still does not say which section you are in.** That is
+  `d9da652`'s deletion, which Hannah asked for and which this pass keeps; the
+  reading returns the moment the control is hovered, focused or tapped.
+* **At the Mission pose there is still no navigator at all** — the reveal latch
+  (`SHOW_P`, 23 §9) is what keeps `mission@*` byte-identical. Pre-existing,
+  unchanged, still worth a decision of its own.
+* **A hover-capable window at 375 gives the moon a third of the frame** (145px
+  of 375). The copy and chips step back under it (`body.j-rail-on`); real phones
+  get the column. Unchanged.
+* **`.at` is still resolved from the last pointer position**, so a route that
+  moves the marks without being either a chapter turn or a pointer move leaves
+  it stale — demonstrated again by the isolated pure-transform probe above. No
+  such route exists on this page.
+* The **five pre-existing Tier-3 drift errors**, the placeholder tokens in the
+  panel and the missing external URLs all stand.
