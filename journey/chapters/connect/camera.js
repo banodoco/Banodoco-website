@@ -81,6 +81,52 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
    (ui.js CHAPTER_POSITION.connect = 'pos-topright'), the ground plane and its
    three hubs spread through the diagonal band between them.
 
+   ---- 2026-08-13, THE THIRD REPORT: "it still feels too high on the page" ----
+
+   Two passes had now traded along ONE axis in opposite directions, and each
+   one re-opened the other's complaint. The ladder below is real and its
+   exchange rate (~1.27px of band per 1px the subject comes down) is real, so a
+   third trip along it would only have produced a fourth report. What that
+   ladder does NOT say — because nobody had measured it — is WHY the band under
+   the copy could not be filled:
+
+       THE NETWORK STOPPED AT RADIUS 11.5, and the band starts at 6 and runs
+       out past 20. The far half of every frame this chapter ever shot was
+       BARE SOIL under fog.
+
+   That is the whole story. Aiming down hid the hole by filling the frame with
+   near ground, and pushed the subject up and out (f31a0a9's report). Aiming up
+   recovered the subject and showed the hole again (330d3a1's report). Neither
+   could win, because the ground the camera was being asked to look at was not
+   there. The fix is in tendrils.js, not here: the network now runs out to 17.2
+   and the band has ground in it. See that file's FAR FIELD block.
+
+   With the band populated, this key does three things at once instead of
+   trading (1440x900, and 1280x800 agrees):
+
+       cap dome apex     60.2 -> 114.6 px      (the subject, 54.4px LOWER)
+       band under copy    162 ->  101 px      (61px SMALLER, not 69 BIGGER)
+       lit fill in band  0.0553 -> 0.0624     (13% MORE content, not less)
+
+   The aim carries 54.4px of that drop; site.css's copy block carries the rest
+   of the band (15vh -> 19vh, and the rail sets that ceiling — see the note
+   there). The aim stops at +0.60 for a reason that is not compositional: the
+   pre-existence lead runs out first. That bound, and the +0.95 frame it cost,
+   are written up at PIN2 below.
+
+   Rejected on measurement, again and freshly: FOV. The note below rejects it
+   on the old pose; re-shot on THIS one (where the near ground has swept out of
+   the bottom of the frame and the corner should have eased) it is still the
+   same failure — fov 68 buys 37px of drop for 19px of band and puts the widest
+   root ribbon at 12.62px with 2 over 10, fov 72 at 14.70px. fov stays 62.
+   Rejected likewise: raising the EYE at constant pitch, which does drop the
+   subject 213px and NARROWS the ribbons (7.28 -> 6.40) — but ground content
+   moves down with it, so the band went 162 -> 320px. It is not a trade-break,
+   it is the same trade at a better rate, and it would have moved REST_KEY.pos
+   and with it the colony, the soil crossing and owned@*.
+
+   ---- the 2026-08-13 rebalance that preceded it, kept for the record ----
+
    RE-BALANCED AGAIN 2026-08-13 (Hannah: "the mushroom currently sits
    noticeably too high in the viewport. Push the whole mushroom composition
    lower so that it feels properly balanced against the text again. This seems
@@ -206,8 +252,13 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const REST_KEY = {
   t: 0.65,
   pos: V(7.943, 2.0, 4.256),
-  // groundY(1.827, -4.067) — the gaze rests ON the soil under the aim point.
-  tgt: V(1.827, -0.0246, -4.067),
+  // The gaze still rests ON THE GROUND — just much further out. Measured on
+  // the live camera: pitch -7.719 deg, and the aim ray meets the terrain
+  // 14.89 units along itself at world (-0.79, 0, -7.63), radius 7.68 from the
+  // stipe. The old value put the same ray down at 10.33 units and radius 4.4,
+  // which is why the subject sat where it did. Bounded ABOVE at 0.60 by the
+  // pre-existence lead, not by the frame: see the PIN2 note below.
+  tgt: V(1.827, 0.60, -4.067),
   fov: 62,
   hold: true,
   note: 'connect-rest',
@@ -287,7 +338,35 @@ const A1 = {
 // 0.01068 (1.45) against the handheld layer's whole 0.0059 peak wander. 1.50
 // keeps that at 2.1x the wander; 1.45 keeps 1.8x. Resolve is still EXACTLY 0
 // at the hero pose, at the Inspire rest and at the arm edge, both aspects.
-const PIN2 = V(1.0, 1.50, -1.8);
+//
+// 1.50 -> 1.40 (2026-08-13, with the rest aim going to +0.60). Same mechanism
+// a third time, one notch further: raising the rest's aim makes the whole late
+// leg a shallower look, the camera-pure resolve fires later, and the lead goes
+// under its floor unless PIN2 pays. Measured on this tree, both aspects:
+//
+//     tgt.y 0.60, PIN2.y   1.50     1.42     1.40     1.35
+//     lead, landscape      0.0287   0.0350   0.0360   0.0371
+//     lead, portrait       0.0432   0.0495   0.0505   0.0516
+//     fwd.y margin at arm  0.0154   0.0119   0.0113   0.0102
+//
+// AND THE ARM BAR IS NOW MEASURED RATHER THAN INHERITED. The note above
+// carries the handheld wander as "0.0059 peak"; parked at p 0.32 with time
+// RUNNING and fwd.y watched for 900 frames, the layer's actual peak-to-peak is
+// 0.008779 — so what matters is the WORST-CASE margin, fwd.y_min - GAZE_HI,
+// and the shipped tree's own is 0.0082 (0.01256 static, 0.0044 eaten by the
+// drift's lower half). 1.40 holds 0.0069 of that worst case with ZERO ignited
+// frames over 900; 1.35 holds 0.0059 and also never ignites, but it is 72% of
+// the shipped tree's safety for 0.001 of lead, which is not a trade worth
+// making on a reveal law.
+//
+// THIS PAIR IS ALSO WHAT BOUNDS THE REST AIM, and it is the reason the aim
+// stops at +0.60 rather than the +0.95 the frame would otherwise have taken
+// (that aim measured 84.0px of subject drop against 0.60's 54.4px, and a band
+// SMALLER than the shipped one either way once the far field was in). At +0.95
+// no PIN2.y clears both bars at once: 1.35 gives lead 0.0345, still under the
+// floor, while already spending the arm margin down to 72%. The lead is a D16
+// guarantee and the frame is a preference, so the frame yielded.
+const PIN2 = V(1.0, 1.40, -1.8);
 
 function smooth01(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
 

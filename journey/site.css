@@ -901,8 +901,38 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      and the tendril network spreads through the gap between them. Mirror of
      pos-upperleft — the block hangs off the right margin and its type sets
      right-ragged, so the ragged edge faces the open ground instead of the
-     frame edge. The local scrim's ellipse mirrors with it (60%, not 40%). */
-  .j-block.pos-topright   { right: 5.2vw; top: 15vh; text-align: right; }
+     frame edge. The local scrim's ellipse mirrors with it (60%, not 40%).
+
+     15vh -> 19vh (2026-08-13, Hannah's third report on this frame: "it still
+     feels too high on the page tbh"). The subject came down 54px in the same
+     pass, and at fixed eye/radius/fov that is a pure rotation which sweeps the
+     ground's far edge down by the same angle — so the band under this block
+     reopens exactly as far as the mushroom drops. Two previous passes traded
+     along that axis in opposite directions and each re-opened the other's
+     complaint.
+
+     This block's own height is the third term nobody had moved. The band is
+     measured from the block's BOTTOM EDGE to the first scene content below it,
+     so every vh of drop comes off the band for nothing — no camera move, no
+     exchange rate. Measured at 1440x900 with this pass's far field in, at the
+     shipped aim: the band runs 173px at 15vh, 137px at 19vh, 104px at 22vh.
+
+     19vh IS A CEILING SET BY THE RAIL, and 1280x800 sets it, not 1440x900 —
+     which is why it is worth writing down. `.j-rail`'s items are 48px tall and
+     sit in the right 98px of the frame at every width, while this block's
+     right edge sits 5.2vw in, so the two ALWAYS overlap horizontally (23px at
+     1440, 31px at 1280) and have only ever cleared each other VERTICALLY. The
+     rail's first item starts at y 378 of 900 but at y 328 of 800, while this
+     block is ~163px tall at both — so the shorter viewport is the binding one
+     by 50px. 22vh clears 1440x900 by 12px and OVERLAPS 1280x800 by 11px; 19vh
+     clears both (38px and 13px). 26vh and 34vh were also shot and both put the
+     sub's last line straight through the rail glyphs at 1440 as well.
+
+     The <=900px override below is deliberately left at 11vh: that layout puts
+     the copy top-centre over a portrait frame whose band already measures
+     0px, so it has nothing to buy and a drop there would only crowd the rail
+     (7px of clearance as it stands). */
+  .j-block.pos-topright   { right: 5.2vw; top: 19vh; text-align: right; }
   .j-block.pos-topright .j-sub { margin-left: auto; }
   .j-block.pos-topright::before {
     background: radial-gradient(ellipse 62% 68% at 60% 50%, rgba(12, 8, 3, 0.66), transparent 72%);
