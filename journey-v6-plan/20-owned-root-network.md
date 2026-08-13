@@ -1505,3 +1505,222 @@ it, hiding any single child does not — and `organism/*` is read-only for
 journey work. It is above ground, so the soil horizon cannot reach it. Named
 here for whoever owns the hero: it is the most literal instance of Hannah's
 "the edges are kind of visible" still on this leg.
+
+---
+
+# 2026-08-13 — the crown takes the re-deal, and Remix stops being a button
+
+> "In Owned by the Ecosystem, remove the visible Remix button. There is
+> already an interaction where hovering over the top causes a light/flash
+> effect. That existing interaction should take over the Remix behaviour. In
+> other words, when that light-flash interaction is triggered, it should also
+> switch/remix to a different contributor/person, exactly as the Remix button
+> currently does. This should make the interaction feel integrated into the
+> scene rather than exposed as a separate UI control."
+> — Hannah
+
+Two things this chapter already had, joined: the **crown hover zone**
+(`696e95d`, report C above — the one hover entitled to light the whole root
+network) and the **re-deal** (`eea3ffe` — an arrangement index that
+re-derives all sixteen nodes' source image, mirror, exposure, warmth and
+grain seed, played as a 1250 ms wave out from the crown). The pill that
+pulled the second one is gone. The thing the wave already came out of pulls
+it now.
+
+## G — the commit model, and why it is not `pointerenter`
+
+The literal reading is one line: fire the re-deal from the zone's
+`pointerenter`, next to the light. It was measured and rejected.
+
+The crown zone is a **246 px circle pinned to the top-centre of the frame** —
+`x 597..843, y -87..159` at 1440x900, `y -4..173` at 375x812. That is the
+band a pointer crosses on the way to the wordmark, to the browser chrome, or
+across the top of the picture on its way anywhere. A 1250 ms sixteen-face
+swap fired by every idle pass over the top of the page is a page that will
+not sit still, and the *reason* report C moved this response off the prose
+line was precisely that it kept answering pointers that were only passing
+through. Re-deals fired the same way would repeat that mistake with a much
+louder response.
+
+So the light and the commit are **separated in time, not in place**:
+
+| | what fires | when |
+|---|---|---|
+| pointer enters | the colony surge (`setHot`, amp 1.0) | immediately, unchanged |
+| pointer **comes to rest** on the crown | the re-deal | ≥ `ZONE_DWELL_MS` 380 since entry **and** ≥ `ZONE_STILL_MS` 260 with no movement past 3 px |
+| pointer **presses** | the re-deal | at once; the dwell is cancelled |
+| finger **taps** | the surge **and** the re-deal | at once — a finger has no hover, so the tap is entry and commit in one |
+| **Enter / Space** | the re-deal | at once; focus lights the colony exactly as hover does |
+
+"Still", not "dwelled". A bare dwell timer is beaten by a slow traveller; a
+pointer that has *stopped* has chosen the thing under it. Measured, a
+250 px sweep across the zone at ~1600 px/s produces **zero** re-deals, and a
+pointer parked at the centre commits at **0.48 s**.
+
+**One commit per visit.** After a re-deal the zone will not fire again until
+the pointer leaves and returns (or the visitor presses). Measured: a pointer
+parked on the crown for 2.5 s after its re-deal lands gets exactly one.
+A finger has no visit to spend, so consecutive taps each fire — and a tap
+landing *inside* the running swap is refused by the chapter (`remix()`
+returns null while `swap` is live) and by `busyMs` above it: measured
+`2 → 3 → 3`.
+
+## H — the crown became a control, so it took a control's obligations
+
+The retired pill was the only keyboard and touch route to the re-deal. The
+crown had neither — residual 1 of the 2026-08-06 pass reads "the crown is now
+the one part of the composition that answers a mouse and not a keyboard."
+That was defensible while it carried **no information**; it is not defensible
+now that it carries a behaviour. **The residual is retired.**
+
+`addHoverZone` therefore has two shapes. A zone with no `action` is what it
+always was: an `<i aria-hidden>` that paints nothing and is invisible to
+everything except a pointer. A zone that declares an `action` is a real
+`<button type="button">` with an accessible name — *"Re-deal the contributor
+portraits"* — and it inherits the trigger contract wholesale from the pill:
+`{ announce, busyMs }`, `aria-disabled` rather than `disabled` (a real
+`disabled` blurs the element mid-press and throws a keyboard visitor back to
+`<body>`), and the polite live region, because a field of sixteen faces
+turning over with no focus move is otherwise silent.
+
+Hannah asked for the **visible** button to go. This one is not visible: the
+crown paints nothing and neither does its button. What it has instead is the
+scene's own answer — focusing it lights the whole colony, exactly as hovering
+does — plus a real ring on the circle the crown occupies, because a scene
+response is not a focus indicator a conformance test can see. Measured,
+`:focus-visible` → `2px solid rgb(240,200,119)`, offset −2, plus a 22 px
+glow.
+
+**Tab order.** The zone host moves ahead of the hotspot host in the DOM so the
+crown lands **exactly where the Remix pill landed**: after the copy it
+belongs to, ahead of the sixteen people. Stacking is by explicit z-index (0
+for zones, 1 for chips), not DOM order, so nothing about what paints over
+what — or what out-hit-tests what — changes. Measured tab walk:
+
+    … Owned, Epilogue, Menu, Learn more, [CROWN], contributor-0 … contributor-13
+
+`visibility: hidden` is doing double duty and it is worth naming: it is what
+already made an off-chapter zone untouchable by a pointer, and it is *also*
+what keeps the button out of the tab order, by spec, with no roving
+`tabIndex`. The one gate ui.js already flipped for the pointer is the gate
+for the keyboard.
+
+## I — what was removed, and what was deliberately not re-homed
+
+`content/content.js` loses the `owned-remix` action. With it goes the whole
+`kind: 'button'` limb of the action row:
+
+- `ui.js`: `nodesGlyph()`, the button branch of `buildActions`, and the
+  busy/announce plumbing — which is not deleted so much as **moved**, to
+  `addHoverZone`, where it now has its only client. `NS_SVG` went with the
+  glyph (grep: no other user).
+- `site.css`: `.j-act-explore` and its hover/busy states, `.j-act-glyph`,
+  `.j-act-link`, `.j-act-node`, `@keyframes j-act-lit`, `@keyframes
+  j-act-spark`, `.j-act[aria-disabled]`, the `:nth-child(2)` entry offsets,
+  and the three reduced-motion entries that named them.
+
+Nothing of it is re-homed onto the crown, and that is the point: the pill
+needed **artwork** to say it was alive, because a pill is a rectangle with a
+word in it. The crown is a lit knot of roots that already answers you. What
+it inherited is behaviour, not decoration — the whole of its CSS is a cursor,
+a busy cursor and a focus ring.
+
+`kind: 'button'` support went with its only client rather than staying as an
+unreachable branch. Content declaring one now renders nothing, by the
+explicit `continue` in `buildActions`, and the next chapter that wants an
+in-copy button re-adds six lines. That is cheaper than a second, clientless
+copy of a contract that already lives in `addHoverZone`.
+
+**Learn more, alone.** `eea3ffe` designed the two as a pair, so the survivor
+was measured rather than assumed. Its box is **unchanged to the pixel** —
+`117.7 x 36.7` at 1440x900 and 1280x800, `104.7 x 44` at 375x812 (PL-1.4's
+min-height) — and `pos-topcentre`'s `justify-content: center` was already
+centring the *row*, so a row of one is centred on the block to **0.0 px** at
+all three sizes, where a row of two was centred as a pair. The 24 px gap
+under the sub is the row's own margin and did not move. It needed no
+adjustment, and the reason is that the silhouette it borrows (the hero
+`.pill`) was always a lone-destination shape; the pair was the special case.
+The entry timing is likewise untouched, because it was always the FIRST pill
+that carried the 0.40 → 0.92 numbers d1ecc23's contract is written against.
+
+## Gates
+
+    button gone         grep 'owned-remix|j-act-explore|j-act-glyph|
+                        j-act-node|j-act-link|nodesGlyph|kind: .button' -> 0
+                        hits anywhere in the build. `remix` survives ONLY as
+                        the mechanism it always named — trigger
+                        'remixPortraits', portraits.remix(), the zone's
+                        `action` — plus dated history in comments; grep
+                        -i remix over journey/ + content/ returns 43 lines,
+                        every one of them a comment or one of those three.
+                        TIER 3: `grep -iE 'remix|j-act' static/` -> 0 (it
+                        never carried the control). Live DOM at the Owned
+                        rest: ONE control in the row, `<a>` "Learn more".
+    swap is real        ATLAS CELLS CHANGED 16/16 on every route — dwell,
+                        press, tap, Enter, Space — sampled per node from the
+                        live uMapA canvas (32x32 FNV at each of the 16 cells)
+                        before and after
+    pass-through        250 px sweep across the zone at ~1600 px/s:
+                        arrangement 0 -> 0, cells 0/16
+    dwell               parked pointer commits at 0.48 s; parked a further
+                        2.5 s commits nothing more (one per visit)
+    press               arrangement +1 inside 250 ms, cells 16/16
+    touch               375x812, mobile emulation, pointer:coarse — tap fires
+                        surge + re-deal, 16/16, announced; second tap 16/16;
+                        tap mid-swap refused (2 -> 3 -> 3); zone 177x178 px,
+                        clears the 44 px minimum by 4x (floor added at
+                        r 22 under the sheet query — measured never binding:
+                        r 123 / 109 / 89 / 140 at the four sizes)
+    keyboard            Tab #11 reaches the crown, straight after Learn more
+                        and before contributor-0; :focus-visible true, 2px
+                        gold ring + 22px glow; Enter and Space both fire,
+                        16/16, and FOCUS SURVIVES the swap (aria-disabled,
+                        not disabled)
+    reduced motion      swap 357 ms wall clock (not 1250), 16/16 cells, live
+                        region announced, pill at its resting style
+                        (opacity 1 / transform none / animation none /
+                        transition 0s)
+    hit model           all 16 hit pads still answer at their own centres
+                        (16/16); wordmark and Discord pill hit-test to
+                        themselves; the canvas still takes the poke; the only
+                        full-viewport hit-testable elements are #stage and
+                        the canvas, exactly as before (6903c4a)
+    console             full wheel ride mission -> owned -> final -> owned
+                        (crown re-deal, then LEAVE mid-swap) -> card open ->
+                        Escape -> mission: 0 errors, 0 warnings. The swap
+                        left mid-flight still landed (arrangement 2, not
+                        swapping) — eea3ffe's out-of-gate clock intact.
+    goldens             capture.py --check PASS, all ten MAE 0.00/255,
+                        0.0% px>8. NOTHING re-shot.
+
+The `<i>` → `<button>` swap is the one change that could have touched a
+frozen frame — the zone is `.vis` in the Owned goldens — so every UA button
+default is explicitly reset (`appearance`, `background`, `border`, `padding`,
+`color`, `font`). Measured: owned@1440x900 and owned@430x932 both 0.00.
+
+No camera key moved, no scene geometry moved, no placement changed. `f53fab3`,
+`d46e6bb`, `a3ba9fd`, `f2bd1cd`, `696e95d`, `45f600b` and the reveal laws are
+untouched; `eea3ffe`'s swap, wave, epicentre, reduced-motion path and
+out-of-visibility clock are untouched — only the control that pulls them.
+
+## Residuals
+
+1. **The re-deal is now discoverable only by doing it.** The pill said
+   "Remix"; the crown says nothing, and its resting affordance is a cursor.
+   That is the trade Hannah asked for — an interaction that belongs to the
+   scene instead of sitting beside it — but it is a trade, and it is the one
+   thing here a visitor could miss entirely. The light on hover is the whole
+   invitation.
+2. **Still one image set.** Unchanged from `eea3ffe` residual 1: the re-deal
+   is a re-deal, not a second cast, `assets/test-portraits` is look-dev only
+   and the pre-deploy deletion rule stands. Moving the control changed
+   nothing about what it deals.
+3. **Arrangements still cycle** with period 7 on the small pool (`eea3ffe`
+   residual 3), and a crown that is easier to reach than a pill will reach
+   the repeat sooner.
+4. **`kind: 'button'` is gone from the action row**, so a future chapter that
+   wants an in-copy button re-adds the branch. Deliberate — see §I.
+5. **A pointer entering the window from above** lands in the zone with no
+   `pointerenter` from below it. It gets the light, as it always did; whether
+   it also commits depends on whether it stops there, which is the same rule
+   as everywhere else. Left as the honest reading.

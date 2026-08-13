@@ -505,8 +505,11 @@ export function createRail({ onNav } = {}) {
      column, which at a phone width is the only way the rail is ever open —
      hover does not exist there. The ring changed that: a hover-capable window
      at 375 opens a 184px circle straight across the frame, and shot at that
-     size the chapter copy and the Learn-more / Remix pills ran right through
-     it. Same mechanism, same 0.14, same transition; the only change is that
+     size the chapter copy and the action row ran right through it. (That row
+     was the Learn-more / Remix pair when this was written; Remix left the
+     copy for the crown on 2026-08-13 — the row is still there and the rule
+     still reaches it.) Same mechanism, same 0.14, same transition; the only
+     change is that
      the class now tracks BOTH the states JS owns. Above 720px there is no
      rule for it to reach, so nothing on a desktop moves. */
   function announceOpen() {

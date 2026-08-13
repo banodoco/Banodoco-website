@@ -132,20 +132,27 @@ export const CONTENT = {
       // whole-colony wave ('claimPrimary'); the two localized secondary pulses
       // retired with the list they belonged to.
       sub: 'Banodoco is 100% shared with the people who build it — ownership granted 1% per month, split between artists, core engineers, and knowledge creators.',
-      // ACTIONS — the chapter's own control pair (Hannah, 2026-08-07).
+      // ACTIONS — the chapter's copy-level controls (Hannah, 2026-08-07;
+      // reduced to one, 2026-08-13).
       //
       // Declared as CONTENT, not as markup, because journey/ui.js must not
-      // know that "owned" is the chapter with buttons — the same rule the
-      // label policy and the popover eligibility already keep. Any chapter
-      // that grows an `actions` array gets a pair; every chapter that does
-      // not is untouched.
+      // know which chapter has controls — the same rule the label policy and
+      // the popover eligibility already keep. Any chapter that grows an
+      // `actions` array gets a row; every chapter that does not is untouched.
       //
       //   kind   'link'   -> a real <a href>      (a destination)
-      //   kind   'button' -> a real <button>      (an in-page behaviour)
-      //   weight 'primary' | 'explore'            -> the two visual weights
-      //   action                                  -> chapter contract trigger()
+      //   weight 'primary'                        -> the visual weight
       //
-      // Order is TAB order and reading order: the destination first.
+      // REMIX IS NO LONGER HERE (Hannah, 2026-08-13): "remove the visible
+      // Remix button ... the [crown] light-flash interaction should take over
+      // the Remix behaviour ... integrated into the scene rather than exposed
+      // as a separate UI control." The re-deal is now the CROWN's own commit —
+      // see `hoverZones()` in chapters/owned/index.js, which carries the
+      // `action`/`label`/`announce` fields this entry used to. The chapter's
+      // `trigger('remixPortraits')` contract is unchanged; only the control
+      // that pulls it moved, out of the copy and onto the thing it describes.
+      //
+      // Order is TAB order and reading order.
       actions: [
         {
           id: 'owned-learn',
@@ -158,19 +165,6 @@ export const CONTENT = {
           // launch. Same convention as the spotlight links above: '#' plus this
           // note. No URL is confirmed, so none is invented here; the donor
           // build's https://banodoco.ai guess is NOT a confirmation.
-        },
-        {
-          id: 'owned-remix',
-          kind: 'button',
-          weight: 'explore',
-          label: 'Remix',
-          glyph: 'nodes',
-          // Chapter-contract trigger name (chapters/owned/index.js trigger()).
-          action: 'remixPortraits',
-          // Fallback live-region text. The chapter's trigger() returns its own
-          // sentence (it knows which arrangement it landed on); this is only
-          // used if it returns nothing.
-          announce: 'Contributor portraits remixed.',
         },
       ],
     },
