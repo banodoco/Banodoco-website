@@ -92,8 +92,6 @@ const CHAPTER_POSITION = {
    today. */
 const CHAPTER_SUB_PULSE = {};
 
-const NS_SVG = 'http://www.w3.org/2000/svg';
-
 function el(tag, cls, text) {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -247,119 +245,61 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   const heroBlock = document.querySelector('.ui .hero');
 
   /* ==========================================================================
-     THE CHAPTER ACTION PAIR (Hannah, 2026-08-07)
+     THE CHAPTER ACTION ROW (Hannah, 2026-08-07; halved 2026-08-13)
 
      "there should be a button that says 'Learn more', and then next to it
       there should be like a remix button ... make them work nicely together"
+                                                            — 2026-08-07
 
-     A chapter that declares `actions` in content/content.js gets a row of
-     controls under its copy. Nothing here names a chapter or an action: the
-     content says WHAT the controls are, this says HOW they are built and
-     wired, journey/site.css says how they look, and the chapter module's
-     `trigger(name)` says what a button DOES. Same separation the label policy
-     and the popover eligibility already keep — a second chapter can grow a
-     pair tomorrow without touching this file.
+     "remove the visible Remix button ... that existing [crown light-flash]
+      interaction should take over the Remix behaviour ... integrated into the
+      scene rather than exposed as a separate UI control."
+                                                            — 2026-08-13
+
+     So the row that shipped as a PAIR is a row of one. What went is the whole
+     `kind: 'button'` limb: the in-copy button, its three-node glyph, and the
+     busy/announce plumbing that served it. None of it is orphaned here — the
+     trigger contract it was written around moved WHOLESALE to addHoverZone
+     below, which is now the only thing in the build that pulls a chapter's
+     `trigger()` from a control. Keeping a second, clientless copy of it in
+     this function would be dead code pretending to be generality.
+
+     What remains: a chapter that declares `actions` in content/content.js
+     gets a row of destinations under its copy. Nothing here names a chapter:
+     the content says WHAT the controls are, this says HOW they are built,
+     journey/site.css says how they look.
 
      ---- semantics ----
 
-     `kind: 'link'` is a real <a href>, `kind: 'button'` a real <button
-     type="button">. Both, never a div: the link must offer "open in new tab"
-     and the button must answer Space as well as Enter, and neither behaviour
-     is worth re-implementing. They sit in the DOM in the order content
-     declares, which is therefore the tab order, and they are inside the copy
-     block so Tab reaches them straight after the prose they belong to and
-     before the hotspot layer that follows the block in the DOM.
+     A spec is a real <a href>, never a div, so "open in new tab" comes for
+     free. They sit in the DOM in the order content declares, which is
+     therefore the tab order, and they are inside the copy block so Tab
+     reaches them straight after the prose they belong to and before the
+     scene's own controls (the crown zone, then the hotspot layer) that follow
+     the block in the DOM.
 
      ---- reachability ----
 
      `.j-copy` is pointer-events:none wholesale, so the row opts back in — and
-     only the PILLS do, not the row's box, which is why the gap between them
+     only the PILLS do, not the row's box, which is why the space around them
      is not a live surface sitting over the portrait field. The row is also
      `inert` unless its block is more than half faded in (see paintCopy): a
      block at opacity 0.08 mid-travel must not be clickable or tabbable, and
      `visibility:hidden` alone only covers the last 0.2% of that fade.
-
-     ---- the trigger contract ----
-
-     `mod.trigger(name)` may return nothing (every pre-existing caller does),
-     or an object:  { announce?: string, busyMs?: number }.
-     `announce` goes to the polite live region — a scene change with no focus
-     move is otherwise silent to a screen reader. `busyMs` holds the control
-     disabled and lit for the length of the response, so the button cannot be
-     re-fired into the middle of its own transition.
      ========================================================================== */
-
-  /** The 'nodes' glyph: three points and the filament joining them — the
-   *  smallest possible drawing of the thing a remix rearranges. Presentational
-   *  (the button's text is its accessible name), so aria-hidden. */
-  function nodesGlyph() {
-    const svg = document.createElementNS(NS_SVG, 'svg');
-    svg.setAttribute('class', 'j-act-glyph');
-    svg.setAttribute('viewBox', '0 0 14 14');
-    svg.setAttribute('aria-hidden', 'true');
-    svg.setAttribute('focusable', 'false');
-    const link = document.createElementNS(NS_SVG, 'path');
-    link.setAttribute('class', 'j-act-link');
-    link.setAttribute('d', 'M2.5 10.2 L7 3.4 L11.5 9.2');
-    svg.appendChild(link);
-    [[2.5, 10.2], [7, 3.4], [11.5, 9.2]].forEach(([cx, cy], k) => {
-      const c = document.createElementNS(NS_SVG, 'circle');
-      c.setAttribute('class', `j-act-node n${k + 1}`);
-      c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', '1.55');
-      svg.appendChild(c);
-    });
-    return svg;
-  }
 
   function buildActions(chapterId, specs) {
     const row = el('div', 'j-actions');
-    // The row is furniture around two named controls, not a landmark and not a
+    // The row is furniture around named controls, not a landmark and not a
     // list — it carries no role. Its children carry the whole meaning.
     for (const spec of specs) {
-      const isLink = spec.kind === 'link';
-      const node = el(isLink ? 'a' : 'button', `j-act j-act-${spec.weight || 'primary'}`);
-      if (isLink) {
-        node.href = spec.href || '#';
-      } else {
-        node.type = 'button';
-      }
+      // Anything that is not a destination belongs in the SCENE now, not in
+      // the copy — see the 2026-08-13 section of 20-owned-root-network.md.
+      if (spec.kind !== 'link') continue;
+      const node = el('a', `j-act j-act-${spec.weight || 'primary'}`);
+      node.href = spec.href || '#';
       if (spec.id) node.dataset.action = spec.id;
-      if (spec.glyph === 'nodes') node.appendChild(nodesGlyph());
       node.appendChild(el('span', 'j-act-t', spec.label));
-      if (!isLink && spec.action) {
-        let busyUntil = 0;
-        let busyTimer = null;
-        node.addEventListener('click', () => {
-          if (performance.now() < busyUntil) return;
-          const mod = window.journey && window.journey.chapters
-            && window.journey.chapters[chapterId];
-          const res = (mod && typeof mod.trigger === 'function')
-            ? mod.trigger(spec.action) : null;
-          const msg = (res && typeof res.announce === 'string') ? res.announce : spec.announce;
-          if (msg) announce(msg);
-          // The busy window is the SCENE's, reported by the chapter — the
-          // button's own lit state is the visitor's receipt that the thing
-          // they asked for is happening out in the field.
-          const ms = (res && typeof res.busyMs === 'number') ? res.busyMs : 0;
-          if (ms > 0) {
-            busyUntil = performance.now() + ms;
-            node.classList.add('busy');
-            // aria-disabled, NOT the `disabled` attribute. A real `disabled`
-            // blurs the element the instant it is set, so a keyboard visitor
-            // who pressed Enter would be thrown back to <body> and have to
-            // Tab in again for a second go. This keeps focus exactly where the
-            // visitor put it, announces the control as unavailable, and the
-            // guard above is what actually refuses the second press.
-            node.setAttribute('aria-disabled', 'true');
-            if (busyTimer) clearTimeout(busyTimer);
-            busyTimer = setTimeout(() => {
-              busyTimer = null;
-              node.classList.remove('busy');
-              node.removeAttribute('aria-disabled');
-            }, ms);
-          }
-        });
-      }
       row.appendChild(node);
     }
     return row;
@@ -955,42 +895,211 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     return h.holdOff.clone().add(live);
   }
 
-  /* ---------------- hover zones (report C) ----------------
-     A piece of the SCENE that answers a pointer, with no chip, no label, no
-     card and no tab stop. The crown of Owned's root network is the first and
-     only one: hovering it runs the wave through the whole system, which is
-     the response that used to fire off a prose line in the middle of the
-     frame every time a pointer crossed it on the way somewhere else.
+  /* ==========================================================================
+     HOVER ZONES (report C, 2026-08-06) — and the crown's COMMIT (2026-08-13)
 
-     Deliberately not a hotspot. A hotspot is a named node with content behind
-     it and a place in the tab order; a zone carries no information at all, so
-     it earns neither. It is pointer-only by the same reasoning that made the
-     prose-line pulse pointer-only, and it replaces that, so nothing regresses
-     for a keyboard: there was never anything there to reach. */
-  /* Zones live in their OWN fixed host, at z-index 0, deliberately BELOW the
-     hero's `.ui` layer (z-index 1) — and therefore below the chapter nav.
-     The chips' host is also z-index 1 but later in the DOM, so a chip still
-     wins a tie with the nav exactly as it always has. This matters: the crown
-     zone is 246 px across at 1440x900 and the chapter nav sits inside it. In
-     the hotspot host it swallowed every nav link (measured — elementFromPoint
-     over "Connect" returned the zone). A zone is scenery; anything the page
-     actually offers you outranks it. */
+     A piece of the SCENE that answers the visitor directly, with no chip and
+     no label. The crown of Owned's root network is the first and only one:
+     hovering it runs the wave through the whole system, which is the response
+     that used to fire off a prose line in the middle of the frame every time
+     a pointer crossed it on the way somewhere else.
+
+     Still not a hotspot: a hotspot is a named node with a card behind it and
+     a place in the narrative registration order. A zone is a place.
+
+     ---- WHAT CHANGED, AND WHY THE MODEL IS WHAT IT IS -------------------
+
+     Hannah, 2026-08-13: "remove the visible Remix button ... that existing
+     [light-flash] interaction should take over the Remix behaviour ... so it
+     feels integrated into the scene rather than exposed as a separate UI
+     control."
+
+     A zone may now declare an `action`. When it does it is a real control and
+     gets three things it did not have: a <button> element, an accessible
+     name, and the trigger contract the retired copy-level button used —
+     `{ announce?, busyMs? }`, where `announce` goes to the polite live region
+     (a scene change with no focus move is otherwise silent) and `busyMs`
+     refuses a second commit for exactly as long as the field is turning over.
+
+     THE LIGHT AND THE COMMIT ARE NOT THE SAME EVENT, and that is the one real
+     judgement in here. The literal reading — re-deal on `pointerenter` — was
+     measured and rejected: the crown zone is a 246 px circle pinned to the
+     TOP-CENTRE of the frame (y -87..159 at 1440x900), i.e. exactly the band a
+     pointer crosses on its way to the window chrome, the wordmark, or the
+     rail, and a 1250 ms sixteen-face swap fired by every idle pass over the
+     top of the page is a page that will not sit still. So:
+
+       · ENTER lights the colony immediately, unchanged. That is the answer
+         to the hover and it stays instant and free.
+       · COMING TO REST on the crown commits the re-deal. Not a bare dwell —
+         `ZONE_STILL_MS` of no meaningful pointer movement, on top of a
+         `ZONE_DWELL_MS` floor since entry. A pointer travelling through is
+         never still; a pointer that stopped on the crown has chosen it.
+       · A PRESS commits it at once, and that is the whole touch story: there
+         is no hover on a finger, so a tap is enter+commit in one gesture —
+         it fires the colony light itself and then the swap. The retired pill
+         was the only route on touch; the crown replaces it one-for-one.
+       · ENTER / SPACE commit it from the keyboard, for free, because it is a
+         real <button>. Focus lights the colony exactly as hover does, so the
+         keyboard's feedback is the pointer's feedback.
+
+     ONE COMMIT PER VISIT. After a re-deal the zone will not fire again until
+     the pointer leaves and returns (or the visitor presses). A pointer parked
+     on the crown watching the wave land must not be handed a second wave.
+
+     ---- stacking ----
+
+     Zones live in their OWN fixed host, at z-index 0, deliberately BELOW the
+     hero's `.ui` layer (z-index 1). The chips' host is also z-index 1, so a
+     chip still outranks the zone. This matters: the crown zone is 246 px
+     across at 1440x900 and page furniture sits inside it. In the hotspot host
+     it swallowed the links it covered (measured — elementFromPoint over
+     "Connect" returned the zone). Anything the page offers you outranks the
+     scenery, and that is still true now that the scenery has a job.
+
+     ---- tab order ----
+
+     The host is inserted BEFORE the hotspot host so the crown lands where the
+     Remix pill landed: after the chapter copy it belongs to, ahead of the
+     sixteen contributors. Stacking is by explicit z-index, not DOM order, so
+     moving it changes nothing about what paints over what.
+     ========================================================================== */
+  /** Floor on time-inside before a resting pointer may commit. */
+  const ZONE_DWELL_MS = 380;
+  /** How long the pointer must have been STILL. A pass-through is never
+   *  still; 3 px of slack absorbs a hand that is merely resting on a mouse. */
+  const ZONE_STILL_MS = 260;
+  const ZONE_STILL_PX = 3;
   const zoneHost = el('div', 'j-hotzones');
-  document.body.appendChild(zoneHost);
+  document.body.insertBefore(zoneHost, hotHost);
   const hoverZones = [];
-  function addHoverZone({ id, chapter, world, radius, onHot }) {
-    const zEl = el('i', 'j-hotzone');
-    zEl.setAttribute('aria-hidden', 'true');
+  function addHoverZone({ id, chapter, world, radius, onHot, action, label, announce: fallback }) {
+    const act = typeof action === 'function' ? action : null;
+    const zEl = el(act ? 'button' : 'i', 'j-hotzone');
+    if (act) {
+      zEl.type = 'button';
+      zEl.setAttribute('aria-label', label || id);
+    } else {
+      // scenery: never in the a11y tree, never in the tab order
+      zEl.setAttribute('aria-hidden', 'true');
+    }
     zoneHost.appendChild(zEl);
     const z = { id, chapter, world, radius: radius || 0.3, onHot, el: zEl, live: false, hot: false, r: 0 };
-    zEl.addEventListener('pointerenter', (e) => {
-      if (e.pointerType === 'touch' || z.hot) return;
-      z.hot = true; z.onHot(true);
-    });
-    zEl.addEventListener('pointerleave', (e) => {
-      if (e.pointerType === 'touch' || !z.hot) return;
-      z.hot = false; z.onHot(false);
-    });
+
+    /** The light. Idempotent per visit — `hot` is the latch. */
+    function light(on) {
+      if (z.hot === on) return;
+      z.hot = on;
+      z.onHot(on);
+    }
+
+    if (act) {
+      let busyUntil = 0;
+      let busyTimer = null;
+      let dwellTimer = null;
+      let enteredAt = 0;
+      let stillSince = 0;
+      let lastX = 0, lastY = 0;
+      let spent = false;              // one commit per visit — see above
+      let lastPointerType = '';
+
+      const stopDwell = () => {
+        if (dwellTimer) { clearTimeout(dwellTimer); dwellTimer = null; }
+      };
+
+      function fire() {
+        stopDwell();
+        spent = true;
+        if (performance.now() < busyUntil) return;
+        const res = act();
+        // The chapter refuses while its own transition is running; that is
+        // its call to make, and it is not an error.
+        if (!res) return;
+        const msg = (res && typeof res.announce === 'string') ? res.announce : fallback;
+        if (msg) announce(msg);
+        const ms = (res && typeof res.busyMs === 'number') ? res.busyMs : 0;
+        if (ms > 0) {
+          busyUntil = performance.now() + ms;
+          // aria-disabled, NOT the `disabled` attribute. A real `disabled`
+          // blurs the element the instant it is set, so a keyboard visitor
+          // who pressed Enter would be thrown back to <body>. This keeps
+          // focus where the visitor put it and says "not now" to AT; the
+          // guard above is what actually refuses the second commit.
+          zEl.setAttribute('aria-disabled', 'true');
+          if (busyTimer) clearTimeout(busyTimer);
+          busyTimer = setTimeout(() => {
+            busyTimer = null;
+            zEl.removeAttribute('aria-disabled');
+          }, ms);
+        }
+      }
+
+      /** Poll rather than one timer: "still for N ms" is a moving deadline,
+       *  and re-arming a timeout on every pointermove would be a timer per
+       *  mouse event. 90 ms is far below the windows it is testing. */
+      function watch() {
+        dwellTimer = null;
+        if (!z.hot || spent) return;
+        const now = performance.now();
+        if (now - enteredAt >= ZONE_DWELL_MS && now - stillSince >= ZONE_STILL_MS) {
+          fire();
+          return;
+        }
+        dwellTimer = setTimeout(watch, 90);
+      }
+
+      zEl.addEventListener('pointerenter', (e) => {
+        if (e.pointerType === 'touch') return;
+        light(true);
+        enteredAt = stillSince = performance.now();
+        lastX = e.clientX; lastY = e.clientY;
+        spent = false;
+        stopDwell();
+        dwellTimer = setTimeout(watch, 90);
+      });
+      zEl.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'touch' || !z.hot) return;
+        if (Math.abs(e.clientX - lastX) + Math.abs(e.clientY - lastY) < ZONE_STILL_PX) return;
+        lastX = e.clientX; lastY = e.clientY;
+        stillSince = performance.now();
+      });
+      zEl.addEventListener('pointerleave', (e) => {
+        if (e.pointerType === 'touch') return;
+        stopDwell();
+        spent = false;                   // leaving re-arms the next visit
+        light(false);
+      });
+      zEl.addEventListener('pointerdown', (e) => { lastPointerType = e.pointerType; });
+      // click covers mouse, pen, tap AND Enter/Space on the <button>.
+      zEl.addEventListener('click', () => {
+        // A finger has no hover, so the tap has to bring the light with it —
+        // and the crown's own response is a one-shot wave, so firing it here
+        // is exactly the gesture a mouse gets on entry. Keyboard gets its
+        // light from focus (below), so only touch needs this.
+        if (lastPointerType === 'touch') { z.hot = false; light(true); }
+        lastPointerType = '';
+        fire();
+      });
+      // Focus is hover's equal (PL-2.2): the colony lights for a keyboard
+      // exactly as it does for a pointer, which is also this control's
+      // visible focus response out in the scene. The ring on the zone itself
+      // (journey/site.css) is the DOM half of the same statement.
+      zEl.addEventListener('focus', () => { light(true); });
+      zEl.addEventListener('blur', () => { stopDwell(); spent = false; light(false); });
+      // A zone that goes off-frame or off-chapter mid-commit must not leave a
+      // timer running against an element nobody can reach.
+      z.dismiss = () => { stopDwell(); spent = false; };
+    } else {
+      zEl.addEventListener('pointerenter', (e) => {
+        if (e.pointerType === 'touch') return;
+        light(true);
+      });
+      zEl.addEventListener('pointerleave', (e) => {
+        if (e.pointerType === 'touch') return;
+        light(false);
+      });
+    }
+
     hoverZones.push(z);
     return z;
   }
@@ -1743,7 +1852,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         if (!v || v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) live = false;
         else {
           const d = Math.max(0.05, viewDepth(w));
-          const r = Math.max(18, Math.min(140, z.radius * (window.innerHeight * 0.5) / (d * tanHalf)));
+          // The floor carries PL-1.4's 44 px touch minimum under the same
+          // media query the hit pads use, now that a zone can be pressed.
+          // Measured, it never binds: the crown projects to r 123 (1440x900),
+          // 109 (1280x800), 89 (375x812) and the 140 cap (430x932).
+          const zFloor = sheetQuery.matches ? 22 : 18;
+          const r = Math.max(zFloor, Math.min(140, z.radius * (window.innerHeight * 0.5) / (d * tanHalf)));
           const zx = (v.x * 0.5 + 0.5) * window.innerWidth;
           const zy = (-v.y * 0.5 + 0.5) * window.innerHeight;
           z.el.style.transform = `translate(${(zx - r).toFixed(1)}px, ${(zy - r).toFixed(1)}px)`;
@@ -1754,7 +1868,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       if (live !== z.live) {
         z.live = live;
         z.el.classList.toggle('vis', live);
-        if (!live && z.hot) { z.hot = false; z.onHot(false); }
+        if (!live) {
+          // A zone leaving the frame takes its commit state with it: no timer
+          // left running against an element nobody can reach, and no half-
+          // spent visit waiting for a pointer that has gone.
+          if (z.dismiss) z.dismiss();
+          if (z.hot) { z.hot = false; z.onHot(false); }
+        }
       }
     }
 

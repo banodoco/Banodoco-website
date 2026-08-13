@@ -682,44 +682,50 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-sub.j-pulse { pointer-events: auto; }
 
   /* ============================================================
-     THE ACTION PAIR (Hannah, 2026-08-07)
+     THE ACTION ROW (Hannah, 2026-08-07; halved 2026-08-13)
 
      "a button that says 'Learn more', and then next to it ... a
       remix button ... make them work nicely together visually."
+                                                    — 2026-08-07
+     "remove the visible Remix button ... [the crown light-flash]
+      interaction should take over the Remix behaviour ...
+      integrated into the scene rather than exposed as a separate
+      UI control."                                  — 2026-08-13
 
-     ONE SILHOUETTE, TWO WEIGHTS. Both controls are the hero nav's
-     `.pill` — same height, same 999px radius, same 0.78rem/0.04em
-     type, same 0.5rem/1.35rem box, same 0.7rem gap the `.nav-cta`
-     pair uses. That is what makes them read as one object: the
-     site already has a button and this is it, twice.
+     So the pair is a row of one, and everything that was here to
+     tell the second pill apart from the first has gone with it:
+     the `.j-act-explore` weight, the three-node glyph and its
+     filament, the hover-sequence and the swap spark, and the
+     `aria-disabled` cursor the busy state needed. None of it is
+     re-homed — the crown paints nothing, so it needs no artwork;
+     what it inherited is BEHAVIOUR, not decoration. The whole of
+     the crown's own CSS is a focus ring, down in the hotspot
+     block (`.j-hotzone`).
 
-     What separates them is not shape or size but LIGHT, and the
-     split is deliberate about which kind each one gets:
+     What is left is the hero nav's `.pill`, once: same height,
+     same 999px radius, same 0.78rem/0.04em type, same
+     0.5rem/1.35rem box, same 0.7rem gap the `.nav-cta` pair uses.
+     A lone destination is exactly what that silhouette was
+     already for, so nothing about it needed re-tuning when its
+     neighbour left — measured at 1440x900, 1280x800 and 375x812,
+     the pill's box is unchanged to the pixel.
 
-       · Learn more  — the conventional action, so it carries
-         CONTRAST. Parchment hairline at full strength plus a 4.5%
-         parchment wash, i.e. the hero `.pill` with its interior
-         lit. First in the row, so it is first in reading order and
-         first in the tab order too.
+     Learn more carries CONTRAST: parchment hairline at full
+     strength plus a 4.5% parchment wash, i.e. the hero `.pill`
+     with its interior lit.
 
-       · Remix       — the exploratory one, so it carries
-         BEHAVIOUR. Gold hairline at 0.34 and gold ink at 0.82:
-         measurably quieter at rest, and the only one of the two
-         that is alive — a three-node glyph whose filament draws
-         and whose points light in sequence on hover, and which
-         runs a travelling spark while the field is actually
-         swapping. It earns attention by moving, not by shouting.
-
-     Neither is a SOLID fill, and that is a composition decision
+     It is NOT a solid fill, and that is a composition decision
      rather than a taste one: this chapter is staged so the crown
      is the brightest point in the frame (chapters/owned/index.js
      EXPOSURE_PLANES note). A filled parchment button dropped at
-     top-centre would take that job away from the scene.
+     top-centre would take that job away from the scene — and now
+     that the crown is also where the interaction lives, competing
+     with it would be worse than a look problem.
 
      MOTION belongs to the hero's `.co` "instrument powering on"
-     family — sequenced parts, each keyframe ending at the resting
-     style, so the reduced-motion rule at the foot of this file is
-     just `animation: none`.
+     family — each keyframe ends at the resting style, so the
+     reduced-motion rule at the foot of this file is just
+     `animation: none`.
      ============================================================ */
   .j-actions {
     display: flex;
@@ -765,82 +771,19 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     border-color: var(--parchment);
     background: rgba(242, 237, 225, 0.10);
   }
-  .j-act-explore {
-    color: rgba(217, 164, 65, 0.82);
-    border: 1px solid rgba(217, 164, 65, 0.34);
-    text-shadow: 0 1px 14px rgba(10, 6, 2, 0.9);
-  }
-  .j-act-explore:is(:hover, :focus-visible) {
-    color: var(--gold-bright);
-    border-color: rgba(240, 200, 119, 0.68);
-    background: rgba(217, 164, 65, 0.07);
-  }
-  /* Held while the scene is answering (ui.js `busyMs` from the chapter's
-     trigger). aria-disabled, not `disabled` — see ui.js — so the cursor and
-     the ink have to say "not now" on their own. */
-  .j-act[aria-disabled="true"] { cursor: default; }
-  .j-act-explore.busy {
-    color: var(--gold-bright);
-    border-color: rgba(240, 200, 119, 0.68);
-    background: rgba(217, 164, 65, 0.07);
-  }
-
-  /* --- the remix glyph: three points and the filament between them --- */
-  .j-act-glyph { width: 13px; height: 13px; flex: none; overflow: visible; }
-  .j-act-link {
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: 0.42;
-    stroke-dasharray: 22;
-    stroke-dashoffset: 22;         /* unlit at rest, like `.co .lit` */
-    transition: stroke-dashoffset 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s;
-  }
-  .j-act-node {
-    fill: currentColor;
-    opacity: 0.5;
-    transform-box: fill-box;
-    transform-origin: center;
-    transition: opacity 0.28s;
-  }
-  .j-act-explore:is(:hover, :focus-visible) .j-act-link { stroke-dashoffset: 0; opacity: 0.7; }
-  .j-act-explore:is(:hover, :focus-visible) .j-act-node { opacity: 1; }
-  /* the points light 1 -> 2 -> 3 along the filament, the callout boot's
-     numbered order at glyph scale */
-  .j-act-explore:is(:hover, :focus-visible) .j-act-node { animation: j-act-lit 0.34s ease both; }
-  .j-act-explore:is(:hover, :focus-visible) .n2 { animation-delay: 0.08s; }
-  .j-act-explore:is(:hover, :focus-visible) .n3 { animation-delay: 0.16s; }
-  @keyframes j-act-lit {
-    from { opacity: 0.5; transform: scale(0.55); }
-    to   { opacity: 1;   transform: scale(1); }
-  }
-  /* …and while the field is swapping, the same three points carry a spark
-     round the glyph, once per node-wave, for as long as the wave runs. */
-  .j-act-explore.busy .j-act-link { stroke-dashoffset: 0; opacity: 0.7; }
-  .j-act-explore.busy .j-act-node { animation: j-act-spark 0.62s ease-in-out infinite; }
-  .j-act-explore.busy .n2 { animation-delay: 0.12s; }
-  .j-act-explore.busy .n3 { animation-delay: 0.24s; }
-  @keyframes j-act-spark {
-    0%   { opacity: 0.45; transform: scale(0.8); }
-    40%  { opacity: 1;    transform: scale(1.35); }
-    100% { opacity: 0.45; transform: scale(0.8); }
-  }
-
-  /* --- entry: the pair is the LAST part of the arriving copy ------------
+  /* --- entry: the row is the LAST part of the arriving copy -------------
      Same envelope as the heading and the sub above (`--j-in-wait` +
      fractions of `--j-in`), so a longer flight stretches it with
-     everything else. The two pills START in hierarchy order — primary,
-     then explore — and are timed to SETTLE together on the same frame, at
-     92% of the envelope, which is exactly where the sub lands. They arrive
-     as one object that assembled in order, which is what they are. */
+     everything else. It starts at 0.40 and settles at 0.92 of the
+     envelope, which is exactly where the sub lands — d1ecc23's contract
+     ("the last part lands at 92%, leaving the final beat as a pure
+     settle") is kept, and it was the FIRST pill that always carried those
+     numbers, so losing the second one leaves the timing untouched. */
   .j-block.j-arrive .j-act {
     animation: j-line-in calc(var(--j-in) * var(--j-act-dur, 0.52))
                cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: calc(var(--j-in-wait) + var(--j-in) * var(--j-act-lead, 0.40));
   }
-  .j-block.j-arrive .j-act:nth-child(2) { --j-act-lead: 0.47; --j-act-dur: 0.45; }
 
   /* ============================================================
      ARRIVING COPY (Hannah, 2026-08-07) — the nav-jump entry.
@@ -1131,18 +1074,59 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      the label and on to the popover exactly as before. */
   .j-hot.label-hover.vis { pointer-events: none; }
   .j-hot.label-hover.vis:is(:hover, .hot, :focus-visible) { pointer-events: auto; }
-  /* A hover zone is a hover target that is part of the scene, not the UI:
-     no chip, no label, no tab stop, nothing drawn. See ui.addHoverZone. */
+  /* A hover zone is a target that is part of the scene, not the UI: no chip,
+     no label, NOTHING DRAWN. See ui.addHoverZone.
+
+     2026-08-13: a zone that declares an `action` is built as a <button> so
+     the crown's re-deal is keyboard-operable, which means every UA button
+     default has to be taken back off — a zone that painted so much as a
+     border would be a grey disc parked on the brightest point in the frame,
+     and would move a frozen golden. The rules below are written for both
+     element types at once, so `<i>` and `<button>` render identically:
+     nothing.
+
+     `visibility: hidden` is doing two jobs here and both matter. It is what
+     makes an off-chapter zone untouchable, and it is ALSO what keeps a
+     <button> zone out of the tab order without a roving tabIndex — a
+     visibility:hidden element is not focusable, by the spec. So the same
+     one-word gate that ui.js already flips for the pointer is the gate for
+     the keyboard. */
   .j-hotzones { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
   .j-hotzone {
     position: absolute;
     top: 0; left: 0;
     border-radius: 50%;
     margin: 0;
+    padding: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
     visibility: hidden;
     pointer-events: none;
   }
   .j-hotzone.vis { visibility: visible; pointer-events: auto; }
+  /* A zone built as a <button> is pressable, so it says so. The zone paints
+     nothing, so the cursor is the ONLY resting affordance it can offer — the
+     light response on hover is the rest of the invitation. */
+  button.j-hotzone { cursor: pointer; }
+  /* Busy: the chapter is still answering the last press (ui.js `busyMs`).
+     aria-disabled rather than `disabled`, so focus survives the swap. */
+  button.j-hotzone[aria-disabled="true"] { cursor: default; }
+  /* THE FOCUS RING. The crown's real focus response is out in the scene —
+     focusing it lights the whole colony, exactly as hovering it does — but a
+     scene response is not a focus indicator a conformance test can see, so
+     the zone draws its own: a ring on the circle the crown actually occupies,
+     which is also the shape of the hit pads a Tab press moves on to next.
+     Never visible at rest, so no golden can see it. */
+  button.j-hotzone:focus { outline: none; }
+  button.j-hotzone:focus-visible {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: -2px;
+    box-shadow: 0 0 22px rgba(240, 200, 119, 0.35);
+  }
   /* Right-edge chips run their pill LEFT of the dot instead of off the frame
      (ui.js measures and sets `.flip` + a compensating translate, so the dot
      stays exactly on its node either way). Added for the Owned root-network
@@ -2377,7 +2361,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail-slot, .j-rail-menu { transition-delay: 0s; }
     .j-rail.on .j-rail-menu .j-sym path,
     .j-rail:focus-within .j-rail-menu .j-sym path { transition-delay: 0s; }
-    .j-act, .j-act-link, .j-act-node { transition: none; }
+    .j-act { transition: none; }
     /* The two 2026-08-07 entries. Both are authored so that every keyframe
        ENDS at the element's resting style (hero.css's `.co` boot keeps the
        same contract), so switching the animations off is the whole of the
@@ -2389,16 +2373,14 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-block.j-arrive::before,
     .j-block.j-arrive .j-h,
     .j-block.j-arrive .j-sub,
-    /* The action pair, 2026-08-07. Its entry keeps the same contract (every
+    /* The action row, 2026-08-07. Its entry keeps the same contract (every
        keyframe ends at the resting style), so switching it off leaves the
-       pills already arrived. The glyph's hover sequence does too — the static
-       hover rule above it already states opacity 1 at scale 1. The `.busy`
-       spark is an infinite loop with no resting end and is simply removed,
-       exactly as hero.css removes `.co`'s `co-pulse`; the button still says
-       it is working through its held colour. */
+       pill already arrived. (The glyph sequence and the `.busy` spark that
+       used to be named here left with the Remix pill on 2026-08-13 — the
+       crown that took its job paints nothing, so it animates nothing, and
+       the re-deal's OWN reduced-motion path is in the scene: span 1, flare
+       0, 320 ms, same start and end state. See chapters/owned/portraits.js.) */
     .j-block.j-arrive .j-act,
-    .j-act-explore:is(:hover, :focus-visible) .j-act-node,
-    .j-act-explore.busy .j-act-node,
     .j-pop.j-pop-enter,
     .j-pop.j-pop-enter::before,
     .j-pop.j-pop-enter .j-pop-t,

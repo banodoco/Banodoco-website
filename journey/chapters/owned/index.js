@@ -710,20 +710,51 @@ export function createOwned(sceneApi, content) {
       return portraits.radiusOf(id);
     },
 
-    /** HOVER ZONES (core/ui.js, 2026-08-06 — report C).
+    /** HOVER ZONES (core/ui.js, 2026-08-06 — report C; given the remix
+     *  2026-08-13).
      *
-     *  A zone is a hover target with no chip, no label, no card and no tab
-     *  stop: a piece of the SCENE that answers a pointer. The crown is one —
+     *  A zone is a target with no chip, no label and no card: a piece of the
+     *  SCENE that answers the visitor directly. The crown is the only one —
      *  "the top root thing", in Hannah's words — and it is the only thing
      *  entitled to light the whole network.
      *
-     *  It is deliberately not a hotspot: a hotspot is a named node with a
-     *  card behind it, and the crown is not a contributor, has no content and
-     *  must not enter the tab order ahead of the sixteen people who do. Like
-     *  the prose-line pulse it replaces, it is a pointer-only flourish; the
-     *  information it carries is nil, so nothing is lost to a keyboard. */
+     *  It is still not a hotspot: a hotspot is a named node with a card
+     *  behind it, and the crown is not a contributor and has no content.
+     *
+     *  THE CROWN NOW CARRIES THE RE-DEAL (Hannah, 2026-08-13): "remove the
+     *  visible Remix button ... that existing [light-flash] interaction
+     *  should take over the Remix behaviour ... integrated into the scene
+     *  rather than exposed as a separate UI control." So the zone declares
+     *  the same chapter-contract trigger the retired pill declared, and
+     *  core/ui.js gives it the commit model (dwell, press, tap, Enter/Space)
+     *  and the announce/busy contract. The LIGHT is unchanged and still fires
+     *  on the bare hover — see setHot above; the re-deal is the commit.
+     *
+     *  Because it now DOES something it is also a real control: ui.js builds
+     *  it as a <button> with this accessible name, so the crown is finally
+     *  reachable from a keyboard. That retires residual 1 of the 2026-08-06
+     *  pass ("the crown is the one part of the composition that answers a
+     *  mouse and not a keyboard") — it took on information, so it took on the
+     *  obligations that come with information. It sits in the tab order
+     *  exactly where the Remix pill sat: after the chapter copy, ahead of the
+     *  sixteen people. */
     hoverZones() {
-      return [{ id: CROWN_ZONE_ID, world: () => leg.CROWN.clone(), radius: CROWN_ZONE_R }];
+      return [{
+        id: CROWN_ZONE_ID,
+        world: () => leg.CROWN.clone(),
+        radius: CROWN_ZONE_R,
+        // Chapter-contract trigger name — the same one the pill pulled.
+        action: 'remixPortraits',
+        // The accessible name of the crown as a CONTROL. It says what the
+        // press does, not what the thing is: the light response is the
+        // pointer's own answer and carries no information, so there is
+        // nothing else here for a screen reader to be told about.
+        label: 'Re-deal the contributor portraits',
+        // Fallback live-region text. trigger() returns its own sentence (it
+        // knows which arrangement it landed on); this is only used if it
+        // returns nothing.
+        announce: 'Contributor portraits remixed.',
+      }];
     },
 
     /** 'procedural' | 'photo' | 'anonymous' — anonymous is one call away. */

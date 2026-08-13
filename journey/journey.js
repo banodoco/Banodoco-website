@@ -283,6 +283,16 @@ export function boot(opts = {}) {
       ui.addHoverZone({
         id: z.id, chapter: chapterId, world: z.world, radius: z.radius,
         onHot: (on) => mod.setHot && mod.setHot(z.id, on),
+        // A zone that declares an `action` is a real control, not scenery:
+        // ui.js builds it as a <button> and gives it the same trigger
+        // contract the chapter's copy-level buttons use ({announce, busyMs}).
+        // The chapter module is in hand here, so the call is direct rather
+        // than going back out through window.journey.
+        label: z.label,
+        announce: z.announce,
+        action: z.action && mod.trigger
+          ? () => mod.trigger(z.action)
+          : null,
       });
     }
   }
