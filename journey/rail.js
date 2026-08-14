@@ -274,24 +274,79 @@ function ringX(k) {
    opening stays regardless: it is the right behaviour for a menu button and it
    costs nothing.) */
 
-/* ---- how far each NAME PILL has to be held off -----------------------------
-   A pill hangs off the LEFT of the tile it names, so on a curve it would be
-   drawn straight over whatever sits further round. So every pill is held off
-   to the moon's own leftmost point — the apex — and they all land on one
-   vertical line: a list of names, which is what they are, each on its own
-   mark's row.
+/** A slot's y RELATIVE TO THE HUB. Negative is up the frame, matching the
+ *  `translate(…, t·rad·sin(ae))` the stylesheet places the mark with. */
+function ringY(k) {
+  return RAD * Math.sin(signedRing(k) * STEP * Math.PI / 180);
+}
 
-   The apex's own offset is 0 by arithmetic rather than by clause, since the
-   apex IS the leftmost point. The tips (straight above and below the button)
-   are held off by a full radius, which is what puts their labels clear of the
-   button instead of across it.
+/* ---- WHICH SIDE OF ITS OWN MARK EACH NAME PILL SITS ON — 2026-08-14 --------
+   "See the buttons that are at the top and bottom — they show to the left.
+    They should just show above or below, because there's space right there for
+    them. And all the buttons should in general probably hug their current
+    setting a little bit more." — Hannah
 
-   In px, and derived, so a sixth chapter needs no edit here. */
-const PILLX = (() => {
-  const xs = [];
-  for (let k = 0; k < N; k++) xs.push(ringX(k));
-  const xMin = Math.min(...xs);
-  return xs.map((x) => x - xMin);
+   WHAT WAS HERE, AND WHY IT WENT. Every pill was held off to the moon's own
+   leftmost point — the apex — so they all landed on one vertical line. That is
+   the tidy picture, and it is bought by moving four of the five pills AWAY from
+   the things they name: measured on `b079f84` at 1440x900 with the moon open,
+   the apex's pill sits 23.5px from its mark, the two at +-45deg sit 51.8px
+   away, and the two tips sit **120.2px** away — a fifth of the viewport's
+   width, out over open scene, labelling a mark at the far end of a long empty
+   gap. Her two sentences are one observation: a label belongs to its mark, and
+   these had been arranged into a list instead.
+
+   THE RULE IS KEPT AND ITS MEASURE IS TIGHTENED. The holdoff was never
+   decoration — a pill hangs off the LEFT of its tile, so on a curve it can be
+   drawn straight over whatever sits further round, and `d9da652` refined the
+   rule from "clear the whole cluster" to "clear the OCCUPIED CELLS". This is
+   the same refinement taken one step further: a pill is held off nothing at
+   all, and the one case where that would put it over a neighbour is answered
+   by taking the pill OUT OF THE ROW rather than by pushing every pill out of
+   the drawing. So the rule now reads:
+
+     a pill hangs left of its own tile, unless another occupied tile shares
+     its row and reaches into the corridor left of it — in which case it
+     leaves the row, going ABOVE its mark in the arc's upper half and BELOW
+     in the lower.
+
+   Which is exactly Hannah's "there's space right there for them", derived
+   rather than asserted: the marks that fail the row test on a half moon are
+   the two tips, because the tips are the only marks sitting at the HUB's own
+   x, where anything hanging left must clear a full radius to get past the
+   +-45deg pair — and they are also the two marks with nothing beyond them, so
+   the row above and the row below are free.
+
+   Measured at n = 5 (1440x900, all five chapters): apex and the +-45deg pair
+   pass the row test and hang left at the hug; the two tips fail it against
+   their +-45deg neighbour (rows 28.3px apart against 24 + 14 of tile and pill)
+   and go above and below. No position needs a holdoff, so none is written —
+   `--pillx` and its `margin-right` arithmetic are gone with it.
+
+   PILL_H is the pill's own box (0.34rem of padding either side of a 0.6rem
+   line = 27.63px measured, at both font sizes — the padding, not the type, is
+   what sets it). It is the ROW WIDTH for the test and nothing else, and the
+   test is not delicate in it: at n = 5 the tips fail on 9.5px of overlap and
+   would keep failing anywhere down to ~11px of pill height. */
+const PILL_H = 28;
+const HUG = 9;                             // site.css `--cl-hug`, 0.56rem
+
+const PILL_SIDE = (() => {
+  const out = [];
+  for (let k = 0; k < N; k++) {
+    const x = ringX(k), y = ringY(k);
+    // where this pill's own right edge would land if it hung left
+    const edge = x - TILE / 2 - HUG;
+    let crowded = false;
+    for (let j = 0; j < N && !crowded; j++) {
+      if (j === k) continue;
+      const sharesRow = Math.abs(ringY(j) - y) < TILE / 2 + PILL_H / 2;
+      const reachesIn = ringX(j) - TILE / 2 < edge;
+      crowded = sharesRow && reachesIn;
+    }
+    out.push(crowded ? (y <= 0 ? 'up' : 'dn') : null);
+  }
+  return out;
 })();
 
 function el(tag, cls, text) {
@@ -1132,7 +1187,12 @@ export function createRail({ onNav } = {}) {
       // Distance along the ring from the current item, for the stagger: the
       // pair either side of the slot emerges first, the pair beyond it next.
       s.li.style.setProperty('--step', String(Math.abs(signedRing(k))));
-      s.li.style.setProperty('--pillx', PILLX[k].toFixed(1) + 'px');
+      // …and which side of its own mark this slot's name hangs on, which is a
+      // property of the RING POSITION and so is restated with the angle (see
+      // WHICH SIDE OF ITS OWN MARK). The switch is invisible: a slot only
+      // changes position by turning, and the names sit out the turn.
+      s.li.classList.toggle('j-pill-up', PILL_SIDE[k] === 'up');
+      s.li.classList.toggle('j-pill-dn', PILL_SIDE[k] === 'dn');
     });
     if (atRest) {
       // Land the new values with the transition still off, then give it back
