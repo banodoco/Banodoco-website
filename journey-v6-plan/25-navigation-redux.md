@@ -3429,3 +3429,188 @@ a focus ring is already a visible affordance and does not need a second one.
   waved away, because `48b7795` is exactly the guarantee it would falsify.
 * **The five pre-existing Tier-3 drift errors** and the `mission`-pose reveal
   latch (no navigator at all at `p = 0`) stand, unchanged.
+
+---
+
+## 2026-08-14 (later still) — The names stop lining up and start hugging; the two at the ends go above and below
+
+> "See the buttons that are at the top and bottom — they show to the left. They
+> should just show above or below, because there's space right there for them.
+> And all the buttons should in general probably hug their current setting a
+> little bit more." — Hannah
+
+**Files:** `journey/rail.js`, `journey/site.css`. Nothing else. Built on top of
+the MENU-pill deletion above (`692ab89`), and **that ordering is load-bearing** —
+see §3.
+
+### 1. What was there, measured before anything was edited
+
+Every pill was held off to the moon's own leftmost point (`PILLX = x − xMin`),
+so all five landed on one vertical line: "a list of names, which is what they
+are". That is a tidy picture, and the measurement of what it costs is the whole
+of her report. At 1440×900, moon open, edge of the pill's box to edge of the
+mark's:
+
+| pill | on `b079f84` | side |
+|---|---|---|
+| the apex (the current section) | **23.5 px** | left |
+| the ±45° pair | **51.8 px** | left |
+| the two tips (top and bottom) | **120.2 px** | left |
+
+The tips' labels sit a fifth of the viewport's width from the marks they name,
+out over open scene, with a long empty gap between label and mark. Identical at
+1280×800 and 375×812 (the geometry is not viewport-dependent; only the type
+size is).
+
+Her two sentences are one observation: **a label belongs to its mark, and these
+had been arranged into a list instead.**
+
+### 2. The rule is kept and its measure is tightened
+
+The holdoff was never decoration. A pill hangs off the LEFT of its tile, so on
+a curve it can be drawn straight over whatever sits further round, and
+`d9da652` had already refined the rule once — from "clear the whole cluster" to
+"clear the OCCUPIED CELLS". This is that same refinement taken one step
+further, and it is worth stating as a progression rather than as a replacement:
+
+* **clear the cluster** → every pill goes as far left as the widest thing;
+* **clear the occupied cells** → every pill goes as far left as the leftmost
+  *inhabited* point;
+* **clear your own row** → a pill is held off nothing at all, and the one case
+  where that would put it over a neighbour is answered by taking THAT PILL out
+  of the row, rather than by pushing all five out of the drawing.
+
+Written out, and this is the derivation in `rail.js`:
+
+> a pill hangs left of its own tile, unless another occupied tile shares its
+> row and reaches into the corridor left of it — in which case it leaves the
+> row, going ABOVE its mark in the arc's upper half and BELOW in the lower.
+
+**Which is exactly her "there's space right there for them", derived rather
+than asserted.** The marks that fail the row test on a half moon are the two
+tips, and for two reasons that are the same reason: the tips are the only marks
+sitting at the HUB's own x, so anything hanging left of one must clear a full
+radius to get past its ±45° neighbour — and they are also the only two marks
+with nothing beyond them, so the row above and the row below are free.
+
+Worked at n = 5 (rows 28.3 px apart at the tips, against `TILE/2 + PILL_H/2` =
+38): the apex and the ±45° pair pass and hang left; the two tips fail against
+their ±45° neighbour by **9.5 px of row overlap** and leave. **No position
+needs a holdoff, so none is written** — `--pillx` and its `margin-right`
+arithmetic are deleted rather than left computing zero.
+
+**It is a row test, not a `±90°` test, and that is deliberate.** On an even
+manifest the window is asymmetric (n = 6 spans −72°…+108°) and **two marks
+share a row** — 72° and 108° both sit at y = 113.8. A hardcoded "the extreme
+positions go vertical" would leave 108°'s pill drawn straight over 72°'s mark;
+the row test sends 108° below and leaves 72° hanging left, which is correct.
+The rule outlives the manifest it was measured on.
+
+`PILL_H` = 28 is the pill's own box (0.34rem of padding either side of a 0.6rem
+line — measured 27.63 px at *both* font sizes, since the padding and not the
+type is what sets it). It is the row width for the test and nothing else, and
+the test is not delicate in it: at n = 5 the tips would keep failing anywhere
+down to a pill ~11 px tall.
+
+### 3. Why this had to come after the MENU pill went
+
+**The bottom tip's pill lands exactly where the MENU pill used to be.** The
+MENU pill was cleared by `--cl-rad + tile/2` — "the circle's own bottom, which
+on a half moon is also the bottom mark's own tile edge" — so a pill hung below
+the bottom tip at the hug distance and the MENU pill below the arc occupy the
+same row, right-aligned to the same edge. They can both be visible at once
+(`.j-rail-open` reveals the active section's name while the hub's own pill
+answers to hover or focus — the 2-in-1 case §"the half moon" already had to
+account for). Had this pass landed first it would have shipped a collision and
+failed its own gate. The MENU pill went for its own reasons; this is the second
+thing its going bought.
+
+### 4. What I refined by eye
+
+**The hug itself, 0.72rem → 0.56rem.** The row rule fixes four pills and leaves
+the fifth — the apex — at the distance it already had, and "ALL the buttons
+should in general probably hug their current setting a little bit more" is a
+sentence about all five. So the one number they now share was shot against the
+thing it has to clear: the reticle the current tile wears. Pill box edge to
+bracket edge, at 1440×900:
+
+| `--cl-hug` | air to the bracket | on the frames |
+|---|---|---|
+| 0.90rem | 20.5 px | the label reads as floating beside the mark, not belonging to it |
+| 0.72rem | 18.5 px | the shipped setting of the line rule; fine, and not tight |
+| **0.56rem** | **16 px** | **chosen** — visibly closer on every pill, still plainly air |
+| 0.44rem | 14 px | the word is crowding the bracket |
+
+Every pill is now **21.0 px** from its own mark — the same distance on all
+five, differing only in direction, where the best case before was 23.5 and the
+worst 120.2.
+
+**Right-aligned, not centred, for the two that went vertical.** A pill is
+94–121 px wide against a 48 px tile, so centring one on its mark would hang
+~35 px past the frame. `(tile − hub) / 2` = −4 px carries its right edge out to
+the same 2 px of frame the closed button holds — the alignment the whole flank
+is built on — and it reaches left from there, into the frame, under nothing.
+
+**No state gate on the hug.** The old rule only applied `--pillx` once the moon
+was open, because a holdoff of up to a full radius is absurd on marks still
+stacked inside the button. A hug is the same number in both states, so the gate
+is deleted — and one fewer thing changing at the 120 ms dwell is one fewer
+thing that can be caught jumping, which is exactly how the hub's own pill went
+wrong three placements ago.
+
+### 5. Two things the measurement corrected
+
+* **The reticle bracket is inset +7 px, not −5.** The 2026-08-13 note reasoned
+  about the hug against "the reticle at inset −5px". Measured on the real
+  element, `.j-rck.tl`'s left edge sits 7 px INSIDE the tile's left edge, so
+  the air at 0.72rem was 18.5 px rather than the ~6.5 the note implies. The
+  clearance was never as tight as it was recorded to be, which is why 0.56 has
+  room to exist. Recorded here rather than corrected in place, per this file's
+  habit.
+* **Pills over the hotspot chips are pre-existing, and this pass reduces
+  them.** Chips are scene-anchored and drift with the camera, so they can land
+  under the flank. Measured across 3 viewports × 4 chapters, before and after:
+  **9 chip overlaps worst 23.2 px → 5 overlaps worst 15.4 px.** Pills that hug
+  their marks intrude less into the field than pills held out to a common line.
+  Not fixed, not new, and now smaller.
+
+### Gate results
+
+| Gate | Result |
+|---|---|
+| References | **PASS.** `python3 tools/capture.py --check`: **10/10 at MAE 0.00/255, 0.0 % px > 8**. No golden modified. |
+| Screenshots | Every pill's placement at **1440×900, 1280×800 and 375×812** — a composite with all five revealed at once, plus each of the five pointed at individually (the real single-pill state), plus the four `--cl-hug` candidates side by side. |
+| Measured gap, before → after | apex **23.5 → 21.0**, the ±45° pair **51.8 → 21.0**, the two tips **120.2 → 21.0** and from LEFT to **ABOVE / BELOW**. Identical at all three viewports. |
+| No collisions | **PASS. 480 checks** (3 viewports × 4 chapters × 5 pills × 8 tests): **0** against any mark, any other pill, the arc, the button or the frame. Worst-case clearances: **20.7 px** to the arc, **2.0 px** to the frame (the vertical pills' right edge, which is the button's own 2 px by construction). |
+| Stale pointer (`.at`) | **PASS.** Real chapter-change path, pointer parked and never moved, all five park positions: **5/5** — names out for the whole turn, and afterwards exactly one `.at` and exactly one pill, on the slot `elementFromPoint` actually returns, **and on the correct side for its new ring position**. The premise re-measured on the pure-transform probe: an arrival occurred at 3 of 5 parks and `:hover` failed to report it in **3/3** — twice stale on the mark that travelled away, once cleared to nothing. (`.at` not updating under a raw style write is the standing residual of `d9da652`, not this gate's subject: it is re-resolved on pointer moves and turn settles, and a synthetic write is neither.) |
+| Pointer floor | **PASS. 113 points** walked round the whole arc, apex → hub and the full vertical diameter: **0 folds, 0 points that left the control.** |
+| Keyboard | **PASS.** All five slots take `:focus-visible`, each reveals **its own name at opacity 1.00**, on the correct side, at **21.0 px** — including the two that now sit above and below. `aria-current` on the active slot, the moon opens under `:has(:focus-visible)`, Enter navigates (`journey.chapter === 'owned'`). |
+| Reduced motion | **PASS** (emulated). 80 ms after the dwell — inside every duration — all five marks are on their exact arc points (0,−97 · −68,−68 · −97,0 · −68,68 · 0,97) with their pills placed against them. The up/down assignment is restated on a chapter change (300 ms after: `mission` up→down, `inspire` left→up) and every pill is still **21.0 px** from its own mark. |
+| Touch | **PASS, unchanged.** `hover: false`, `pointer: coarse` at 375×812: every pill is at the column's own **1.6 px** left offset, tiles 52×44. The `j-pill-up` / `j-pill-dn` classes are written on the slots in both tiers, but **every rule that reads them is inside `(hover: hover)`**, so the column cannot see them — the same fail-closed shape the arc's own `display: none` uses. |
+| Menu press (`48b7795`) | **PASS**, unchanged by this pass — see `692ab89`'s stress run. |
+| Console | **CLEAN — 0 entries** at 1440×900 and 375×812 over a full ride: wheel out and back, all five chapters by `flyTo` with the moon opened and the arc traversed at each, a dwell on the button at every chapter, the menu by press and Escape. Returns to **p = 0**, chapter `mission`, hash empty, hero pose exact (−2.25, 2.25, 10.4). |
+| Both tiers | Tier 3 untouched. Drift guard: **5 problems — the same 5** (4 `chapters.owned.claims.*`, 1 `chapters.final.heading`) across 145 strings and 11 symbols. **No sixth.** |
+
+### Residuals
+
+* **The names no longer line up, and that was a real property.** Five labels on
+  one vertical line read as a list; five labels each on their own mark read as
+  labels. The second is what she asked for and is the better answer for a
+  control where only ONE pill is visible at a time — but on the composite (all
+  five forced on, which no visitor ever sees) the old picture was tidier. The
+  trade is recorded, not hidden.
+* **Pills still cross hotspot chips at some camera poses.** Pre-existing,
+  measurably reduced (9 → 5 overlaps), untouched otherwise. A real fix would
+  have to make the chips yield to the flank, which is the scene's business and
+  not the navigator's.
+* **`PILL_H` is a constant, not a measurement.** It could be read off the live
+  element, but only once the geometry is active and laid out, which is a
+  worse dependency than a number with a 17 px margin of error. If the pill's
+  padding ever changes, this is the line to change with it.
+* **The row test assumes the vertical escape is free.** True on a half moon,
+  where the marks that fail it are at the ends of the arc. A geometry whose
+  crowded rows are in the MIDDLE would send a pill above its mark and into the
+  arc's own interior. There is no such geometry here, and the fallback to the
+  column arrives first for any manifest large enough to be interesting.
+* The **five pre-existing Tier-3 drift errors**, the `mission`-pose reveal latch
+  and the occasional unseen first press of a fresh session (`692ab89`) stand.

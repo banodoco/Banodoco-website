@@ -2167,6 +2167,20 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
          mark any more — the open moon is narrower than the closed button. */
       --cl-edge: 2px;
       --cl-rad: 96.70px;          /* fallback; rail.js derives and writes it */
+      /* how close a name pill sits to the tile it names, on whichever side of
+         it the pill sits (EVERY NAME SITS ON ITS OWN MARK, below). rail.js
+         knows this number as HUG, and uses it to work out which pills fit
+         beside their marks and which have to leave the row.
+         0.56rem, down from the 0.72 the one-vertical-line rule used. "All the
+         buttons should in general probably hug their current setting a little
+         bit more" is a sentence about EVERY pill, and the apex's distance is
+         the one the row rule alone does not change — so it is changed here.
+         Shot at 0.90 / 0.72 / 0.56 / 0.44 against the reticle the current tile
+         wears, measuring the pill box's edge to the bracket: 20.5 / 18.5 / 16
+         / 14 px. At 0.90 the label reads as floating beside the mark rather
+         than belonging to it; at 0.44 the word is visibly crowding the
+         bracket. 0.56 is the tightest setting that still reads as air. */
+      --cl-hug: 0.56rem;
       /* the marks' scale while still INSIDE the button. They grow as they
          come out of it, which is the whole of what "emerge from the button"
          can mean for a drawing that has no thickness. */
@@ -2473,21 +2487,67 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail:not(.j-rail-column):not(.j-rail-hot):not(.j-rail-open):not(:has(:focus-visible))
       .j-rail-slot { pointer-events: none; }
 
-    /* ---- the names all line up ----
-       `--pillx` (rail.js, PILLX) is how far this point is to the RIGHT of the
-       moon's leftmost point, in px, so every pill is held off by exactly that
-       and they all land on one vertical line — a list of names rather than
-       five labels following a curve, and no label over a drawing. The apex's
-       own offset is 0 by arithmetic (it IS the leftmost point) and the tips'
-       is a full radius, which is what carries their labels clear of the button
-       instead of across it.
-       0.72rem past the box, not the column's 0.1: the current tile is the one
-       that WEARS THINGS — the reticle at inset -5px, a focus ring at the
-       shared 3px offset — and at 0.3rem the pill's edge and the bracket were
-       touching. 0.72rem (11.5px) puts ~6px of air past it. */
-    .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-      .j-rail-name {
-      margin-right: calc(var(--pillx, 0px) + 0.72rem);
+    /* ---- EVERY NAME SITS ON ITS OWN MARK — 2026-08-14 ----
+       "See the buttons that are at the top and bottom — they show to the left.
+        They should just show above or below, because there's space right there
+        for them. And all the buttons should in general probably hug their
+        current setting a little bit more." — Hannah
+
+       What stood here held every pill off to the moon's leftmost point via
+       `--pillx`, so the five landed on one vertical line. That is a tidy
+       picture bought by moving four of the five labels away from what they
+       name — measured on `b079f84`, 23.5px for the apex, 51.8 for the +-45deg
+       pair and 120.2 for the two tips. The rule and the reasoning are now in
+       rail.js (WHICH SIDE OF ITS OWN MARK EACH NAME PILL SITS ON); this is
+       what it writes.
+
+       `--cl-hug` IS THE ONLY DISTANCE LEFT, and every pill on the moon is
+       exactly it from its own tile, on whichever side it sits — so the five
+       names are the same distance from their marks and differ only in
+       direction — 23.5px on `b079f84` for the one pill that was already
+       hugging, 21.0px for all five now. Its value and the four settings it
+       was shot against are at `--cl-hug` above.
+
+       No state gate. The old rule only applied `--pillx` once the moon was
+       open, because a holdoff of up to a full radius is absurd on marks still
+       stacked inside the button; a hug is the same number in both states, and
+       one fewer thing changing at the 120ms dwell is one fewer thing that can
+       be caught jumping (which is exactly how the hub's own pill went wrong,
+       three placements ago). */
+    .j-rail:not(.j-rail-column) .j-rail-name { margin-right: var(--cl-hug); }
+
+    /* ---- …and the two at the ends of the arc go above and below ----
+       "There's space right there for them." The tips are the only marks
+       sitting at the HUB's own x, so a label hanging left of one has to clear
+       a full radius to get past its +-45deg neighbour — and they are also the
+       only two marks with nothing beyond them. rail.js derives which positions
+       these are (it is a row-occupancy test, not a hardcoded +-90deg) and puts
+       `j-pill-up` / `j-pill-dn` on the slot.
+
+       RIGHT-ALIGNED TO THE BUTTON'S OWN EDGE, not centred on the mark. A pill
+       is 94-121px wide against a 48px tile, so centring it would hang ~35px
+       past the frame; `(tile - hub) / 2` = -4px carries its right edge out to
+       the same 2px of frame the closed button holds, which is the alignment
+       the whole flank is built on. It reaches LEFT from there, into the frame,
+       under nothing.
+       `top`/`bottom` and the base rule's `translateY(-50%)` are all restated
+       rather than left to cascade: the base places a pill against the vertical
+       MIDDLE of its tile, and these two are placed against its edges. */
+    .j-rail:not(.j-rail-column) .j-rail-slot.j-pill-up .j-rail-name,
+    .j-rail:not(.j-rail-column) .j-rail-slot.j-pill-dn .j-rail-name {
+      right: calc((var(--cl-tile) - var(--cl-hub)) / 2);
+      transform: none;
+      margin-right: 0;
+    }
+    .j-rail:not(.j-rail-column) .j-rail-slot.j-pill-up .j-rail-name {
+      top: auto;
+      bottom: 100%;
+      margin-bottom: var(--cl-hug);
+    }
+    .j-rail:not(.j-rail-column) .j-rail-slot.j-pill-dn .j-rail-name {
+      top: 100%;
+      bottom: auto;
+      margin-top: var(--cl-hug);
     }
     /* THE HUB HAS NO PILL — 2026-08-14.
        "Let's remove the MENU text that shows when you hover over the actual
