@@ -3794,3 +3794,178 @@ is drawn regardless.
   what changed in the bottom of the frame and overstate it at the horizon.
 * The pre-existing forward/reverse asymmetry at the p 0.80 arm (`60c7370` §8)
   is untouched and still wants its own pass.
+
+---
+
+# 2026-08-14 — the light sticks in the distance were Owned's exit corridor
+
+**Requested:** Hannah. **Built:** same day.
+**Files:** `journey/chapters/owned/index.js` only. No Final file, no route file,
+no camera key, no threshold, no ladder rung.
+(The fault is in Owned; it is recorded here because Final is where it is seen,
+and because it is the fifth member of the family this doc's `a8d4518` entry
+opened. `20-owned-root-network.md` owns the chapter itself.)
+
+> "When I jump from underground using the side toggle to jump to the epilogue,
+> these little light sticks appear in the distance as soon as the transition
+> starts, which don't appear when I scroll between those two sections. It looks
+> like they're deep on the ground in the distance. Can you understand what they
+> could be and why they appear in this circumstance but not when I scroll
+> directly in?"
+
+## The system, named
+
+They are **the Owned chapter's exit-corridor growth front** — the fan of
+strands that grows up out of the lit deep field toward the soil, drawn by
+`frontMat` and feathered by `substrate.js`'s `uGrow` tip term. About twenty
+thin, near-vertical filaments standing on the ground away to frame left: sticks,
+deep on the ground, in the distance.
+
+None of the candidates in the brief were involved. `sky.js`'s conifers, the far
+T4 body band, the T5 hint rung, the terrain strata, the lip rootlets and the
+canopy edges are all in the *Final* chapter, which is suppressed for the whole
+blend (`a8d4518`) — the thing that lights up is in the chapter being **left**.
+
+### How it was identified
+
+A scene-graph diff across the click found **nothing** that became visible and,
+with only the usual named uniforms sampled, nothing that moved. Widening the
+snapshot to *every* numeric uniform found it in one row: `uGrow` **0 → 1.150**
+in a single tick, on the one `uGrow` material that is a direct child of
+`journey-owned`.
+
+Then isolated exactly, by rendering the **same frame three times** — twice
+unchanged (that pair is the TAA-jitter noise floor the composer advances per
+render) and once with `uGrow` forced to 0. The excess over the noise floor is
+the fan and nothing else:
+
+| path | fan px above noise, first 1000 ms | peak | camera |
+|---|---|---|---|
+| **jump Owned → Final, before** | 1528 / **9608** / 9198 / 8847 / 8332 / 336 | **+164/255** | **x 1.746 — the Owned rest** |
+| jump Owned → Final, after | 0 / 0 / 0 / 0 / 0 / 0 | — | — |
+| jump Mission / Inspire / Connect → Final | 0, before and after | — | — |
+| scroll Owned → Final | 0, before and after | — | — |
+| both wraps | 0, before and after | — | — |
+
+## Why the jump and not the scroll
+
+The window was
+
+```js
+const fg = smooth01((pNow - 0.775) / 0.035);
+frontMat.uniforms.uGrow.value = fg * 1.15;
+```
+
+justified in its own comment as *"gated on p: invisible at the rest, arriving
+through the drift (0.775-0.81) as the camera commits to the rise"*. On a nav
+jump `placeAt` snaps p to 0.9700 in one tick while the camera blends, so `fg`
+goes 0 → 1 on the click frame and the fan is fully grown at x 1.730 — the Owned
+rest, unmoved. Traced per presented frame:
+
+| | shipped | after |
+|---|---|---|
+| click frame (x 1.730) | `uGrow` **1.150** | `uGrow` **0.000** |
+| x 1.786 | 1.150 | 0.000 |
+| x 2.881 | 1.150 | 0.000 |
+| x −9.666 | 1.150 | 1.150 |
+
+On a **scroll** the same fan stays at 0 until the lens has travelled to
+x −1.331 and only reaches full at x −5.988 — which is the behaviour the comment
+describes and the behaviour a visitor has always seen on that leg.
+
+This is the exact class fixed four times already — `a8d4518` (Final's
+geometry), `d1ecc23` (the section copy), `a3ba9fd` (the hero callouts),
+`783729b` (the ownership orbs). `783729b`'s comment calls its own term "THE LAST
+TERM IN THIS CHAPTER THAT WAS STILL KEYED TO p", and it was wrong by these three
+lines.
+
+## The fix: the axis `keep` already uses
+
+`fg` is restated on **`-cp.x`** — the axis this chapter's `keep` mask already
+means "far enough along the leg" on, and the thing the p-window was a proxy for.
+Measured at 1e-3 steps along the leg, the shipped window p 0.775 → 0.810 **is**
+camera x −0.40 → −4.33, so:
+
+```js
+const FRONT_X0 = 0.40, FRONT_XW = 3.93;
+const fg = smooth01((-cp.x - FRONT_X0) / FRONT_XW);
+```
+
+Fitted to that map, this reproduces the shipped growth to within **0.0133** over
+the whole ramp — under the feathered tip's own width — and is bit-identical at
+both ends, which is what keeps all four affected goldens untouched.
+
+**Depth cannot do this job**, and that is worth recording because depth is what
+`783729b` used: through this stretch the lens travels almost horizontally and
+`depth` moves only 1.231 → 1.073. It carries no window at all. This is the one
+mask in the chapter that is about *travel*, not about the soil.
+
+The **OW-5 exit pulse** in the same block moved with it, for the same reason and
+onto the same axis — it fired on the click too (measured across the jump:
+`uSurge` 0 → 0.964, `uWaveAmt` 0 → 0.750, camera unmoved). Its shipped triggers
+p > 0.795 / re-arm p < 0.765 are camera x −2.634 / +0.235 on the same map.
+
+### The mirror, which nobody had reported
+
+At the Final rest the fan is fully grown — it is part of the section the cutaway
+exposes. On the **down-wrap** p snaps 0.97 → 0 while `keep` still holds the
+chapter open at the Final rest, so the fan **blinked out** on a frame the camera
+had not left. Traced:
+
+| | shipped | after |
+|---|---|---|
+| 2 frames before the snap, x −14.720 | 1.150 | 1.150 |
+| the snap frame, x −14.720, group still visible | **0.000** | **1.150** |
+| x −14.835, still visible | 0.000 | 1.150 |
+| x −15.156, `keep` closed | 0.000 (uFade 0) | 1.150 (uFade 0) |
+
+Honest note: on the wrap the fan's own pixel contribution is below the TAA noise
+floor in **both** builds — at the Final rest it is far away and small — so this
+is a state fault removed rather than a picture changed. It is fixed because it
+is the same statement, not because it was visible.
+
+### And the chapter no longer reads the journey's progress at all
+
+`const pNow = window.journey.p` was the only remaining use, and it is gone. That
+is the whole point: "a nav jump reveals exactly what a scrub does" is now
+checkable by inspection for this chapter rather than hopeful. If that line ever
+comes back, the reason it comes back is the bug.
+
+## Gates
+
+* **First-frame diffs of the jump path against the scroll path**, at matched
+  progress, before and after — the table above, three-render isolation so TAA
+  jitter cancels. `0` excess on every path after, against **9,608 px / +164** on
+  the jump before.
+* **The same check for a jump into Final from every other section** —
+  Mission, Inspire, Connect: 0 excess before and after (their rests are above
+  ground, where `sink` and `keep` both close the chapter).
+* Scroll Owned → Final and Final → Owned, and both wraps: 0 excess, before and
+  after.
+* `capture.py --check` **PASS, worst MAE 0.00/255** over all ten frozen
+  references — `owned@1440x900`, `owned@430x932` and both Final goldens
+  included.
+* `revealgates.js` **G1 0.00e+0 over 425 scrub frames, G2 0.00e+0 over 10
+  placements**; G4/G5/G6 restated over real in-page wraps — nothing fades in
+  over open view (worst 0), worst single-frame driver step 0.0389/0.0631 against
+  0.16, final lag 0.
+* Scroll battery unchanged: `E1 −3.30e−4`, `E2/E3 1.0000`, `R1 0.260000`,
+  `R4 overshoot 0.00e+0`, `R5 0.000000 / 0.970000 / 1.0000`, `R6 off-anchor
+  stops: none`.
+* **Full gestured ride**: 35 legs — four wraps, nine nav jumps and an
+  interrupted lap — every leg on an anchor, **console 0 entries**.
+
+## Residuals
+
+* **`-cp.x` is monotone on this leg, and that is a premise.** It is the same
+  premise `keep` already runs on, and it is a geometric fact of the authored
+  route rather than of the scroll model — but if the Owned → Final leg is ever
+  re-keyed to double back in x, this window doubles back with it.
+* **The 0.0133 ramp difference is a real change to the scrub**, spent entirely
+  in the middle of the growth and zero at both ends. It is under the feathered
+  tip's own width and no golden sees it, but it is not nought.
+* **The exit pulse can still be spent unseen.** On a jump that reaches
+  x −2.634 with the chapter closed (Mission → Final, for instance) the pulse
+  fires where nothing is drawn and does not play again on arrival. That is the
+  shipped behaviour too — p 0 → 0.97 crossed the old trigger on the click frame,
+  equally unseen — so it is carried forward, not introduced.
