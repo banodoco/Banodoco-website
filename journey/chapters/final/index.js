@@ -34,7 +34,7 @@
 import * as THREE from 'three';
 import {
   makeUniforms, pullOf, pullRawOf, makeRng, TAU, RING_C, HERO_AZ, MEMBERS,
-  groundY, REVEAL_W,
+  groundY, REVEAL_W, PULL_MAX,
 } from './world.js';
 import { createFinalRing } from './ring.js';
 import { createFinalTerrain } from './terrain.js';
@@ -353,15 +353,119 @@ export function createFinal(sceneApi) {
     return r < RATE_MIN ? RATE_MIN : r > BLEND_REVEAL_RATE ? BLEND_REVEAL_RATE : r;
   }
 
+  /* THE DEPARTURE HAS TO RIDE THE MOVE, AND ONLY THE ARRIVAL EVER DID
+     (2026-08-14 — Hannah: "when I scroll down from the final section to loop
+     back to the first one, all the lights switch off before the actual loop
+     starts — before the motion properly starts. Could you make all the other
+     mushrooms switch off as I'm going... maybe they should be turning off
+     throughout the whole duration of the thing. The motion the other way is
+     perfect — it's the bottom-to-top that feels not good.")
+
+     THE ASYMMETRY IS THE CEILING, and it is one-sided BY DESIGN. `slewPull`
+     clamps the driver to `max(pure, held)` — "may hold light the lens has
+     earned, never create light it has not". Coming IN that clamp binds every
+     frame: the camera leads and the driver follows it. Going OUT it is a
+     no-op (`pure < held` makes the ceiling `held`), so the retire free-runs on
+     the ladder clock with no camera term in it at all.
+
+     Measured through real in-page rAF-timed wheel wraps, tracer registered
+     last so every row is the presented frame:
+
+       up-wrap    bodies cross 2576 -> 3684 ms of a 3839 ms move — 67% .. 96%,
+                  landing with the camera. Driver 0.509 against a camera-pure
+                  1.073 at 2874 ms: it lags the lens the whole way in.
+       down-wrap  bodies cross 122 -> 1245 ms of a 3867 ms move — 3% .. 32%.
+                  The 94-body field is COMPLETELY OUT at 926 ms, at which
+                  point the camera has moved 0.24 of x and pullOf(camera.x) is
+                  still exactly 1.120 — SATURATED. Not one light that went out
+                  in the first second was asked for by the lens.
+
+     So it is (a) and (b) at once, and worse than either: the extinguish
+     starts on the blend's FIRST frame and finishes before a third of the move
+     is spent, entirely inside a window where the camera-pure driver has not
+     moved. That is Hannah's "before the motion properly starts", exactly.
+
+     WHY THE CAMERA CANNOT PACE IT. `pullOf` reads camera X, which is the
+     FINAL LEG's own coordinate. The lap is an ORBIT: x runs -14.72 -> -15.2
+     (deeper, and clamped away by PULL_MAX) for a second, then cliffs -14 ->
+     -8 in 409 ms as the swing crosses, then means nothing at all. The
+     driver's whole dynamic range is spent in the first 1.4 s of a 3.87 s move
+     because a leg coordinate is being read on a path that does not travel
+     along it. `rise` (uAmount) is keyed the same way and closes the chapter at
+     1519 ms for the same reason — measured, 61% of the lap has no epilogue in
+     it whatsoever, and a frame strip with the chapter held composed shows the
+     colony is still well inside frame at 1.2-2.0 s, filling the emptiness
+     §13.6 flagged.
+
+     THE FIX IS THE WINDOW, AND THE SHAPE IS UNTOUCHED. A move that is leaving
+     tells the chapter how long it has (journey.js hands `dur` to setBlending
+     for the same reason it already hands `dstCamX`). The retire then spends
+     RETIRE_SPAN of that move instead of spending the ladder's own clock:
+
+         retireScale = min(1, BAND_S / (RETIRE_SPAN * dur))
+         rate(u)     = blendRate(u) * retireScale
+
+     · ONE SCALAR ON e1e8381's CURVE. Every rung keeps its relative time, so
+       the accelerando's re-shaped distribution, the half-reveal-width lookup
+       and the RATE_MIN guard all survive intact; only the tempo moves.
+     · IT CAN ONLY EVER SLOW. `min(1, ...)` leaves a move with less room than
+       the ladder needs bit-for-bit as it ships. The ordinary jump's duration
+       law tops out at 1.20 s, whose window is 0.74 s — under BAND_S — so NO
+       NON-WRAP BLEND CAN REACH THIS CODE, and the rail click out of the
+       epilogue is unchanged by arithmetic rather than by hope. Today only the
+       wrap's 4.00 s lap clears the bar: window 2.48 s, retireScale 0.526.
+     · BAND_S IS INTEGRATED FROM THE BUILD, not restated: the time the shipped
+       blend clock takes to cross the whole PULL_MAX band, integral du/rate(u).
+       Doc 18 §13.4's standing hazard is "the ladder constants bake the camera
+       curve"; a second copy of the cost table would be a second copy of it.
+
+     AND THE CHAPTER'S OWN FADE HAS TO WAIT FOR ITS LIGHTS. On the LEG the
+     ordering is free: `pull` reaches 0 at x -8 and `rise` only starts falling
+     at x -7.4, so the reveal is FINISHED before the fade begins. On the lap
+     that ordering held only by luck (retire done 1245 ms, fade 1440 ms) and a
+     stretched retire breaks it — `rise` would snuff a 60%-lit field in 79 ms,
+     which is the same complaint moved to the end of the move. While a
+     stretched retire runs, the chapter therefore fades on ITS OWN LAST LIGHT
+     instead of on a leg coordinate the lap does not travel along: eff eases
+     out across [0, LADDER[0]] — exactly the dead road below the first rung,
+     where `blendRate` already knows nothing is kindling. No light is ever cut
+     (eff is 1 for every pull at or above the lowest threshold), the two
+     reach 0 together, and the interval is read from the ladder rather than
+     invented. It is latched monotone so the visibility gate — which reads
+     `eff`, and which resets `shownPull` to the camera-pure value the moment it
+     closes — cannot oscillate.
+
+     RETIRE_SPAN 0.62 is measured, not chosen: past ~2.4 s of the lap the
+     colony has left frame (a forced-composed strip diffs to the shipped frame
+     by less than the terrain it would add), and the epilogue's own terrain
+     must be gone well before the Mission rest it would otherwise paint over.
+
+     NOTHING HERE IS REACHABLE OFF A BLEND. `blending` is false on the scrub,
+     `?p=`, `?pose=` and the frozen `?capture=` path, and `retiring` is false
+     on every arriving move — so the up-wrap, every jump INTO the epilogue and
+     all ten goldens are unchanged by construction, not by measurement. */
+  const RETIRE_SPAN = 0.62;   // of the move, for a departure that has room
+  /** Seconds the SHIPPED blend clock takes to cross the whole band. Integrated
+   *  off `blendRate` so it can never disagree with it. */
+  const BAND_S = (() => {
+    const N = 4096, du = PULL_MAX / N;
+    let s = 0;
+    for (let i = 0; i < N; i++) s += du / blendRate((i + 0.5) * du);
+    return s;
+  })();
+
   // null = "adopt the camera-pure value on the next tick" (boot).
   let shownPull = null;
   let blendPull = 0;                // pull at the blend's destination pose
   let lagging = false;              // armed by a blend; cleared on convergence
+  let retiring = false;             // this blend is LEAVING the epilogue
+  let retireScale = 1;              // 1 = the shipped clock, exactly
+  let retireEff = 1;                // monotone fade, latched while retiring
   /** One step toward `target`, capped at the rate, then held under the
    *  invariant above — `pure` is this frame's camera-pure value and `held` is
    *  last frame's shown value. One place, so the law has one implementation. */
   function slewPull(held, target, pure, dt) {
-    const step = blendRate(held) * dt;
+    const step = blendRate(held) * retireScale * dt;
     const d = target - held;
     const v = held + (Math.abs(d) <= step ? d : (d > 0 ? step : -step));
     const ceil = pure > held ? pure : held;
@@ -558,7 +662,24 @@ export function createFinal(sceneApi) {
     // measures zero and the audit means what it says.
     canopy.setPresence(surfacedOf(sceneApi.camera.position));
     const rise = riseOf(sceneApi.camera.position.x);
-    const eff = blending ? rise : 1 - (1 - amount) * (1 - rise);   // amount OR rise
+    // A STRETCHED RETIRE FADES ON ITS OWN LAST LIGHT, not on `rise`. See the
+    // RETIRE_SPAN block: on the leg the reveal always finishes before the fade
+    // starts, and on the lap `rise` is a leg coordinate read off an orbit, so
+    // it would close the chapter with the field still 60% lit. The band is
+    // [0, LADDER[0]] — the dead road below the first rung — so eff is 1 for
+    // every pull that still owns a light, and the last light and the fade
+    // reach 0 together. Latched monotone: the visibility gate below reads
+    // `eff` and resets `shownPull` to the camera-pure value the moment it
+    // closes, which without the latch could re-open it.
+    if (blending && retiring && retireScale < 1) {
+      const u = LADDER.length && shownPull !== null
+        ? Math.max(0, Math.min(1, shownPull / LADDER[0])) : 1;
+      const s = u * u * (3 - 2 * u);
+      if (s < retireEff) retireEff = s;
+    }
+    const eff = blending
+      ? (retiring && retireScale < 1 ? retireEff : rise)
+      : 1 - (1 - amount) * (1 - rise);   // amount OR rise
     // Still gated by the arm — `rise` says where the lens is, not which
     // chapter owns the frame, and the lens is below the onset on every other
     // leg anyway. `amountTarget > 0` keeps an arriving jump live before the
@@ -649,8 +770,20 @@ export function createFinal(sceneApi) {
     // front of it, and adding it moves the draw front by the same amount
     // either way. Off a blend it is exactly 0 and this is
     // `pullRawOf(camera.x)` bit for bit.
-    uniforms.uPullRaw.value =
-      pullRawOf(sceneApi.camera.position.x) + (pull - pure);
+    // ...and while the retire is riding the move, the raw twin is read at the
+    // DRIVER rather than at the camera, for the same reason `eff` is (see
+    // RETIRE_SPAN). `pullRawOf` is the Final LEG's coordinate; on the lap the
+    // lens runs to x +15, so the offset above lands the draw front three whole
+    // pull units below the pierce while bodies are still lit — the exact
+    // "un-draw bodies that are still lit" the offset exists to prevent, just
+    // arrived at from the other side. Above the pierce the raw and clamped
+    // drivers ARE the same number, so this is what the line already computes
+    // wherever it is reachable today: with `pure` in range the offset cancels
+    // to `pull` identically, and at `pull` 0 every clone threshold is above the
+    // front either way. Only the window this pass opened differs.
+    uniforms.uPullRaw.value = (blending && retiring && retireScale < 1)
+      ? pull
+      : pullRawOf(sceneApi.camera.position.x) + (pull - pure);
     uniforms.uTime.value = t;
     if (sceneApi.scene.fog) {
       uniforms.uFogNear.value = sceneApi.scene.fog.near;
@@ -782,9 +915,23 @@ export function createFinal(sceneApi) {
      *  read by journey.js after placeAt has written the destination — it is
      *  the reveal's target for the length of the move (see BLEND_REVEAL_RATE).
      *  Absent (an older caller, or the `false` edge) it is simply not used. */
-    setBlending(on, dstCamX) {
+    setBlending(on, dstCamX, durS) {
       blending = !!on;
-      if (blending && typeof dstCamX === 'number') blendPull = pullOf(dstCamX);
+      if (!blending) { retiring = false; retireScale = 1; retireEff = 1; return; }
+      if (typeof dstCamX === 'number') blendPull = pullOf(dstCamX);
+      /* A DEPARTURE IS A MOVE WHOSE DESTINATION IS DARKER THAN THIS FRAME, and
+         it is the only kind that needs the move's length: an arrival is
+         clamped by the camera on the way up (slewPull's ceiling) and so is
+         already paced by the landing. `shownPull` is null only at boot, before
+         anything is lit, which is not a departure. See RETIRE_SPAN. */
+      const here = shownPull === null ? pullOf(sceneApi.camera.position.x) : shownPull;
+      retiring = blendPull < here - 1e-4;
+      retireEff = 1;
+      retireScale = 1;
+      if (retiring && typeof durS === 'number' && durS > 0) {
+        const window = RETIRE_SPAN * durS;
+        if (window > BAND_S) retireScale = BAND_S / window;
+      }
     },
     /** Deep-link / frozen-capture snap (journey.js placeAt contract): jump
      *  the eased arm state to its target so a dt=0 ride sees the finished

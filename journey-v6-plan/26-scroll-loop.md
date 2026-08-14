@@ -1013,3 +1013,229 @@ still stepping 4 → 3 at 1422 ms.
 * T4 haze and the T5 cap-rim hints still arrive as weather inside whichever
   ladder gap they fall in. 29 hints inside one 40 ms gap is by design; they are
   texture, not events.
+
+# 2026-08-14 — the down-wrap stops switching off and starts leaving
+
+**Requested:** Hannah. **Built:** same day.
+**Files:** `journey/chapters/final/index.js` (the departure's clock and the
+chapter's own fade), `journey/journey.js` (the move tells the chapter how long
+it has). No ladder rung, no threshold, no route file, no camera key, no
+p-value.
+
+> "Right now, when I scroll down from the final section to loop back to the
+> first one, all the lights switch off before the actual loop starts — before
+> the motion properly starts. Could you make all the other mushrooms switch off
+> as I'm going, and make sure that's a nice elegant motion with them switching
+> off as it goes? Maybe they should be turning off throughout the whole
+> duration of the thing. The motion the other way is perfect — it's the
+> bottom-to-top that feels not good."
+
+## 26. The asymmetry is the ceiling, and it is one-sided by design
+
+`§21`–`§25` re-shaped the *distribution* of the blend reveal and left its
+*anchor* alone. The anchor is where the two directions differ, and it is one
+line: `slewPull`'s
+
+```
+ceil = max(pure, held)     //  "may HOLD light the lens has earned,
+                           //   never CREATE light it has not"
+```
+
+Coming **in**, that clamp binds on every frame — `pure` leads and the driver
+follows it, so the reveal cannot start before the lens has arrived. Going
+**out**, `pure < held` makes the ceiling `held`, which is a no-op: the retire
+free-runs on the ladder clock with **no camera term in it at all**.
+
+### 26.1 Measured, before
+
+Real in-page rAF-timed `WheelEvent`s (CDP `Input.*` cannot stream inside the
+model's 45 ms threshold); a tracer animator registered last, so every row is
+the presented frame. `journey.wrap()` was not used anywhere in this pass.
+
+| | up-wrap (in) | down-wrap (out) |
+|---|---|---|
+| move | 3839 ms | 3867 ms |
+| first body crosses | 2576 ms (**67%**) | 122 ms (**3%**) |
+| last body crosses | 3684 ms (**96%**) | 1245 ms (**32%**) |
+| the 94-body field | 2874 → 3656 ms | 145 → **926 ms** |
+| chapter on screen | 2402 → landing | 0 → **1519 ms** |
+
+The row that names the fault is the camera's, not the field's: **at 926 ms,
+with every one of the 94 field bodies already dark, `pullOf(camera.x)` is still
+exactly 1.120 — saturated.** The camera has moved 0.24 of x. Not one light that
+went out in the first second was asked for by the lens. So it is (a) *and* (b)
+together, and worse than either: the extinguish starts on the blend's **first
+frame** and finishes inside a window where the camera-pure driver has not moved
+at all. That is "before the motion properly starts", exactly.
+
+### 26.2 Why the camera cannot pace it either
+
+`pullOf` reads camera **x**, which is the Final **leg's** own coordinate. The
+lap is an **orbit**. Traced:
+
+| | camera x | `pullOf(x)` |
+|---|---|---|
+| 0 → 926 ms | −14.72 → −14.96 (via −15.21) | 1.120, **clamped flat** |
+| 926 → 1413 ms | −14.96 → −8.0 | 1.120 → **0**, a 409 ms cliff |
+| 1413 → 3867 ms | −8.0 → +15.09 → −2.25 | 0, and meaningless |
+
+The driver's whole dynamic range is spent in the first 1.4 s of a 3.87 s move
+because a leg coordinate is being read on a path that does not travel along it.
+`rise` (uAmount) is keyed the same way and closes the chapter at 1519 ms for the
+same reason: **61% of the lap has no epilogue in it whatsoever.** A frame strip
+with the chapter held composed shows the colony still well inside frame at
+1.2–2.0 s — filling precisely the emptiness §13.6 flagged at t≈1.8 s.
+
+## 27. The fix is the window; the shape is untouched
+
+A move that is **leaving** now tells the chapter how long it has —
+`setBlending(true, dstCamX, dur)`, for the same reason it already hands over
+`dstCamX`. The retire then spends `RETIRE_SPAN` of the move instead of spending
+the ladder's own clock:
+
+```
+retireScale = min(1, BAND_S / (RETIRE_SPAN * dur))
+rate(u)     = blendRate(u) * retireScale
+```
+
+* **One scalar on `e1e8381`'s curve.** Every rung keeps its *relative* time, so
+  the re-shaped accelerando, the half-reveal-width lookup and the `RATE_MIN`
+  guard all survive intact. Only the tempo moves.
+* **It can only ever slow.** `min(1, …)` leaves a move with less room than the
+  ladder needs bit-for-bit as it ships. The longest ordinary jump's duration law
+  tops out at 1.20 s, whose window is 0.74 s — under `BAND_S` — so **no
+  non-wrap blend can reach this code**, and the rail click out of the epilogue
+  is unchanged by arithmetic rather than by hope. Today only the wrap's 4.00 s
+  lap clears the bar: window 2.48 s, `retireScale` **0.526**.
+* **`BAND_S` is integrated off `blendRate`, not restated** — 1.3048 s, ∫du/rate
+  over the whole `PULL_MAX` band. Doc 18 §13.4's standing hazard is "the ladder
+  constants bake the camera curve"; a second cost table would be a second copy
+  of it.
+* **`retiring` is `blendPull < shownPull`** and nothing else. An arrival is
+  already paced by its landing (the ceiling above), so it never arms.
+
+### 27.1 …and the chapter's own fade has to wait for its lights
+
+On the **leg** the ordering is free: `pull` reaches 0 at x −8 and `rise` only
+begins falling at x −7.4, so **the reveal is finished before the fade begins**.
+On the lap that held by luck (retire done 1245 ms, fade 1440 ms) and a stretched
+retire breaks it — `rise` would snuff a 60%-lit field in 79 ms, which is the
+same complaint moved to the end of the move.
+
+While a stretched retire runs, the chapter therefore fades on **its own last
+light** rather than on a leg coordinate the lap does not travel along: `eff`
+eases out across `[0, LADDER[0]]` — exactly the dead road below the first rung,
+where `blendRate` already knows nothing is kindling. No light is ever cut (`eff`
+is 1 for every pull at or above the lowest threshold, 0.0966), the last light
+and the fade reach 0 together, and the interval is *read from the ladder* rather
+than invented. It is latched monotone, because the visibility gate reads `eff`
+and resets `shownPull` to the camera-pure value the moment it closes — without
+the latch that is an oscillator.
+
+The same sentence covers the third leg-coordinate term. `uPullRaw` — the clone
+entry-draw front — is `pullRawOf(camera.x) + (pull − pure)`, which on the lap
+puts the draw front **three whole pull units below the pierce while bodies are
+still lit**: the exact "un-draw bodies that are still lit" the offset exists to
+prevent, arrived at from the other side. Above the pierce the raw and clamped
+drivers are the same number, so reading it at the driver is what the line
+already computes wherever it is reachable today; only the window this pass
+opened differs.
+
+### 27.2 `RETIRE_SPAN` = 0.62 is measured
+
+Each shutter renders the **same frame twice** — once with the epilogue held
+composed and the whole field alight, once with its driver at 0 — so sway, spore
+drift, twinkle and TAA cancel and the difference is the colony's light and
+nothing else:
+
+| into the lap | colony light, as a share of frame luma |
+|---|---|
+| 0 – 2000 ms | 1.6% → 2.7% (receding behind the lens) |
+| 2200 ms | 4.1% |
+| 2400 ms | 4.6% |
+| 3000 ms | 6.3% |
+| 3600 ms | **8.7%** |
+
+The curve **turns upward** after ~2.2 s: past there the lap is bringing the
+colony back into view *from the Mission side*, so a retire that ran later would
+be putting lights out in a distance the visitor is approaching — lighting the
+epilogue up on the way to the hero rather than leaving it behind. 0.62 of a
+4.00 s move lands the last light at 2.27 s with 1.5 s of margin before the rest,
+and the epilogue's terrain gone at 2.44 s, long before the Mission pose it would
+otherwise paint over.
+
+## 28. After
+
+| | before | after |
+|---|---|---|
+| **down-wrap**, first body | 122 ms (3% of move) | 154 ms (**4%**) |
+| **down-wrap**, last body | 1245 ms (32%) | **2267 ms (59%)** |
+| **down-wrap**, span | 1123 ms | **2113 ms** |
+| the 94-body field | 145 → 926 ms (781 ms) | 204 → 1696 ms (**1492 ms**) |
+| tightest ring gap, out | 23 ms | **66 ms** |
+| chapter on screen | 0 → 1519 ms | 0 → **2439 ms** |
+| **up-wrap**, first/last body | 2576 / 3684 ms (67% / 96%) | 2554 / 3685 ms (**67% / 97%**) |
+| **up-wrap**, field span | 782 ms | 778 ms |
+
+The up-wrap rows are the same measurement on the same input path, and they are
+unchanged because `retiring` is false on every arriving move — the new code is
+not merely inert there, it is unreachable.
+
+**How it reads.** The colony holds while the camera turns off the rest, then
+empties around and behind the lens as the lap swings out: at 1.6 s a receding
+row of lit caps trails the hero, at 2.0 s four, at 2.4 s the last one goes and
+the ground network is all that is left. The lights leave with the distance
+instead of being switched off in place.
+
+## 29. Gates
+
+* **Per-body extinguish times, both directions, before and after** — §26.1 and
+  §28. Every reading through real in-page rAF-timed `WheelEvent`s off an
+  animator registered last. **Frame strips of both**, shuttered in-page off the
+  drawing buffer immediately after `composer.render()`.
+  · *Harness note:* the shutter costs 15–30 ms and may not arrive before the
+  wrap does — shuttering from the flick's first frame stalls rAF enough that the
+  **up**-fling reads as notches and no wrap fires at all. The strip's t0 is the
+  wrap's own frame for that reason.
+* **`revealgates.js` G1/G2 bit-exact**, driven by an in-page rAF wheel supplied
+  as `opts.wheel`: `G1 scrub |uPull − pullOf(camera.x)| max over 473 frames:
+  0.00e+0`, `G2 placement, 10 poses: 0.00e+0`. G3–G6 are **not** taken from that
+  file: it asserts `e.isTrusted`, and its step counts are tuned to a driver that
+  moves progress far faster than a wheel. Calibrated here: **0.00095 of progress
+  per 40 px delta** on the in-page rAF driver.
+* **G4/G5/G6 restated over real in-page wraps.** G4 worst
+  `shown − max(pure, held)`: **0** both directions. G5 worst single-frame driver
+  step **0.0456** (down) / **0.0888** (up) against the 0.16 limit. G6 final lag
+  **0** both directions.
+* **The interrupted lap** (`a937444`), flick-and-reverse at 400/900/1400/2000/
+  2600 ms into the down-lap, counting only frames the group is actually drawn
+  on: worst `uAmount` step **0.757** against the shipped build's **0.760**,
+  worst driver step **0.104** against **0.120**, and all five settle on the
+  Final rest (x −14.720, p 0.97). Same class as shipped, no regression.
+* **Scroll battery unchanged:** `E1 −3.80e−4`, `E2/E3 1.0000`, `R1 0.260000`,
+  `R4 overshoot 0.00e+0`, `R5 0.000000 / 0.970000 / 1.0000`, `R6 off-anchor
+  stops: none`.
+* `capture.py --check` **PASS, worst MAE 0.00/255** over all ten frozen
+  references.
+* **Full gestured ride**: 35 legs — four wraps, nine nav jumps including four
+  into and four out of the epilogue, and an interrupted lap — every leg on an
+  anchor, **console 0 entries**.
+
+## 30. Residuals
+
+* **Only a departure with room is re-paced.** A scrub, a placement, an arrival
+  and every non-wrap jump are byte-identical by construction. If the wrap's
+  duration law ever drops below ~2.1 s, `retireScale` saturates at 1 and this
+  whole pass silently becomes a no-op — `RETIRE_SPAN` is the dial, and
+  `WRAP_EXTRA_S` is the number that would move it.
+* **T4 haze and the T5 cap-rim hints still do not pace anything.** 79 of the 103
+  drawn bodies are texture by §22's decision, so the middle of the retire is
+  still denser than its ends. Stretched to 2.48 s that now reads as a thinning
+  rather than a dump, but the ladder's own 24 rungs are what carry the shape,
+  and re-authoring the other 79 belongs to `18-one-species.md`.
+* **The last 1.5 s of the down-lap has no epilogue in it.** That is deliberate
+  (§27.2's contribution curve turns upward) and it is the one part of "turning
+  off throughout the whole duration" not delivered literally.
+* **An interrupted lap can still drop `uAmount` by ~0.75 on a drawn frame.**
+  Pre-existing and measured on the shipped build at the same magnitude; it is
+  the visibility gate toggling, not this pass's clock.
