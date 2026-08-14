@@ -712,6 +712,9 @@ export function createFinal(sceneApi) {
      ?p= and the frozen ?capture= path never blend, so every golden is
      untouched by construction. */
   let blending = false;
+  // Set every frame from scroll.gliding — true only while the commit
+  // resolution is actually carrying the picture, never during a live gesture.
+  let gliding = false;
 
   sceneApi.addAnimator('journey-final', (t, dt) => {
     // THE EASE HOLDS WHILE THE STATE AND THE CAMERA DISAGREE (2026-08-13 —
@@ -836,6 +839,29 @@ export function createFinal(sceneApi) {
     if (shownPull === null) { shownPull = pure; lagging = false; }
     if (blending && dt > 0) {
       shownPull = slewPull(shownPull, blendPull, pure, dt);
+      lagging = shownPull !== pure;
+    } else if (gliding && dt > 0) {
+      // ...AND BY A COMMIT GLIDE (2026-08-14). Hannah asked for the transit
+      // from Owned to this chapter and back to be FASTER (route.js TRANSIT_S),
+      // and the reveal is camera-pure, so a quicker transit would have run the
+      // ladder quicker for exactly the reason a blend does: the visitor is not
+      // metering this motion with their hand, the machine is. That is the same
+      // fault BLEND_REVEAL_RATE was built for, arriving through the other
+      // machine-driven path, so it gets the same answer rather than a second
+      // one.
+      //
+      // THE TARGET IS `pure`, NOT A DESTINATION POSE. A blend teleports the
+      // camera and has to be told where it lands; a glide moves the camera
+      // continuously along the real path, so the camera-pure value IS the
+      // truth and all this branch does is refuse to let the ladder be dragged
+      // through faster than its own clock. The invariant is untouched —
+      // slewPull still holds `shownPull <= max(pure, held)` — so this can only
+      // ever SLOW a light-up, never create light the lens has not earned.
+      // That is what decouples travel speed from kindle speed: TRANSIT_S may
+      // now be set for the travel alone, and requests 61/77/107 (the field
+      // must light SLOWLY) are protected by construction rather than by
+      // choosing a transit that happens not to hurt them.
+      shownPull = slewPull(shownPull, pure, pure, dt);
       lagging = shownPull !== pure;
     } else if (lagging && dt > 0) {
       // The blend has landed (or was cancelled) and the reveal has not caught
@@ -1024,6 +1050,11 @@ export function createFinal(sceneApi) {
      *  read by journey.js after placeAt has written the destination — it is
      *  the reveal's target for the length of the move (see BLEND_REVEAL_RATE).
      *  Absent (an older caller, or the `false` edge) it is simply not used. */
+    /** Told every frame whether the commit glide is carrying the picture.
+     *  Cheap and idempotent by design — journey.js calls it unconditionally in
+     *  the frame loop rather than on edges, so there is no state to get out of
+     *  step with scroll.js. See the `gliding` branch in the animator. */
+    setGliding(on) { gliding = !!on; },
     setBlending(on, dstCamX, durS) {
       blending = !!on;
       if (!blending) { retiring = false; retireScale = 1; retireEff = 1; return; }

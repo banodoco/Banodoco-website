@@ -18,7 +18,7 @@
 // constants.js. Every input is a delta on v; nothing is ever a discrete step
 // to a chapter, so the path is reversible at any point and at any speed.
 
-import { CHAPTERS, SEGMENTS, REST_STOPS, TERMINAL_P } from './route.js';
+import { CHAPTERS, SEGMENTS, REST_STOPS, TERMINAL_P, transitSeconds } from './route.js';
 import { NOSNAP } from '../flags.js';
 import {
   SNAP_ENGAGE_MS, ARRIVAL_HOLD_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
@@ -214,6 +214,14 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
      screen decayed to zero on its own. Here the rate IS state, so nothing
      about stopping the input can make it collapse. */
   let p = 0;            // displayed progress
+  // Is the RESOLUTION the thing moving the picture this frame — i.e. is the
+  // machine carrying the visitor rather than the visitor's own finger? True
+  // only when the glide's drive term actually beats the servo, which is the
+  // distinction a chapter with a camera-paced reveal needs: an intent EXISTS
+  // through most of a live gesture, so `resolving` would arm a reveal limiter
+  // over ordinary brisk scrolling (chapters/final/index.js says what that cost
+  // the first time it was tried). See the `gliding` getter.
+  let driving = false;
   let vel = 0;          // p/s, the rate on screen this frame. It is not
                         // integrated and never needs to be: it is the max of
                         // two CONTINUOUS terms (the scrub servo and the
@@ -823,6 +831,16 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  longer than a transition. */
   function glideBand(lo, hi) {
     const spanPx = Math.abs(scrollFor(hi) - scrollFor(lo));
+    // A DECLARED TRANSIT wins outright (route.js TRANSIT_S): this span is
+    // authored to take a stated number of seconds rest to rest, so its nominal
+    // IS that speed rather than the global floor. The ceiling still allows a
+    // hard fling to beat it — a declared transit is the natural velocity, not a
+    // speed limit — but every ordinary released gesture lands on the number.
+    const declared = transitSeconds(lo, hi);
+    if (declared) {
+      const rate = spanPx / declared;
+      return { nominal: rate, ceil: Math.max(COMMIT_CRUISE_MAX_PX, rate) };
+    }
     const fit = spanPx / COMMIT_GLIDE_MAX_S;
     return { nominal: Math.max(COMMIT_GLIDE_PX, fit),
              ceil: Math.max(COMMIT_CRUISE_MAX_PX, fit) };
@@ -1094,6 +1112,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
 
     /* 3. ONE DESIRED RATE. */
     let rate = servo;
+    driving = false;
     if (intent) {
       if (intent.cruisePx !== null) {
         // The only ramp in the model, and it only ever runs UP: from the speed
@@ -1112,7 +1131,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       // rest, which is what makes the arrival asymptotic and overshoot-free.
       const brake = Math.abs(intent.target - p) * SNAP_K;
       const drive = intent.dir * Math.min(floorP, brake);
-      if (drive * intent.dir > servo * intent.dir) rate = drive;
+      if (drive * intent.dir > servo * intent.dir) { rate = drive; driving = true; }
     }
     vel = clampRate(rate);
 
@@ -1253,6 +1272,17 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     get streaming() { return gCount >= COMMIT_STREAM_MIN && !!gapEma && gapEma <= COMMIT_STREAM_GAP_MS; },
     /** QA: is a resolution latched and driving? */
     get resolving() { return !!intent; },
+    /** Is the commit glide ACTUALLY carrying the picture this frame — the
+     *  resolution's drive term beating the visitor's own servo?
+     *
+     *  NOT QA-only: chapters whose reveal is PACED by the camera rather than
+     *  merely gated by it read this to know the motion is machine-driven, the
+     *  same way they already read a camera blend. A glide and a blend are the
+     *  same kind of thing from a reveal's point of view — the visitor is not
+     *  metering this motion with their hand — and a reveal that is honest
+     *  about one should be honest about the other. `resolving` is deliberately
+     *  NOT that test: an intent is latched through most of a live gesture. */
+    get gliding() { return driving; },
     /** The anchor this gesture has already been answered at — the wall its
         remaining deltas cannot pass, released only by an additional scroll
         (dropWall: an ARRIVAL_HOLD_MS pause, a reversal, or a placement). null
