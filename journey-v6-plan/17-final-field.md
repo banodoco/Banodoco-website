@@ -3119,3 +3119,392 @@ gesture-separated streams to walk to the end and then one more off it.
   −14) — measured through a real wrap in both directions, the worst per-frame step
   it contributes is 0.00000, so it adds no pop of its own; it simply arrives with
   the chapter rather than after it.
+
+---
+
+# 2026-08-14 — the ring gets a hierarchy: fewer lines, more relationships
+
+**Requested:** Hannah, a written art-direction brief on the fairy-ring scene,
+plus a separate note with a screenshot of the frame-left mushroom.
+**Built:** same day.
+**Files:** `journey/chapters/final/canopy.js` (the hierarchy, the arteries, the
+arcs), `journey/chapters/final/terrain.js` (§1, §2 and §3b thinning masks),
+`journey/chapters/final/sky.js` (the frame-left conifer thin). No camera key,
+no rest pose, no new draw call, no new program, no shader edit.
+
+> "Reduce maybe 20–30% of the miscellaneous angular lines, particularly in the
+> very bottom foreground and immediately around/behind the copy. Redistribute
+> some of that detail between the mushroom bases. Have subtle strands visibly
+> originate underneath one mushroom, branch, disappear into the terrain, and
+> resurface near another. Give the fairy ring 2–3 partially visible sweeping
+> arcs underneath it. Not an obvious glowing circle, but enough curved
+> connectivity that your brain subconsciously understands that these mushrooms
+> belong to one organism/network. Introduce hierarchy in brightness. Maybe ~70%
+> extremely faint hairline mycelium, ~20% slightly brighter secondary routes,
+> and only ~10% genuinely luminous strands/nodes. Make the brighter routes
+> organic and directional rather than random. Little Y-shaped branches,
+> convergences, and occasional glowing nodes will work much better than more
+> line density. Keep a relatively quiet pool behind the text. […] I'd not make
+> the fairy-ring scene denser. I'd actually make it slightly cleaner overall,
+> while making maybe 5–8 specific connections between mushrooms more legible.
+> That would make it feel richer and more 3D while paradoxically using fewer
+> lines."
+
+> "The background behind this leftmost mushroom on the final section also still
+> feels quite busy — clean that up until it feels populated but not crowded."
+
+## 1. How "busy" was judged, and why it needed a third metric
+
+`60c7370` established that **density is a coverage metric and crowding is not a
+coverage property**, and measured its own case on occlusion (whether a sky notch
+between two caps was open or closed). That finding holds and is the reason this
+pass did not simply repeat lit density — but the occlusion test does not
+generalise to this complaint either. Hannah is not reporting that two silhouettes
+have merged; she is reporting that the frame contains too many separate,
+directionless marks, and asking for the survivors to be organised into levels.
+
+So the metric this pass reports is **countable marks**: the number of
+8-connected components above luma 60, minimum 8 px, in a region. It is a
+direct proxy for how many separate things the eye has to resolve, which is what
+both of her notes are actually about. Lit density is reported beside it,
+unchanged in method from `6ba7b3f`/`60c7370` so the series stays comparable, and
+the pair is what makes the result legible: **marks fall 17–34% while lit density
+does not fall at all.** That signature — fewer figures, same light — is
+"paradoxically using fewer lines" as a measurement.
+
+| region (1440x900 / 1512x860 / 1728x980) | marks before → after | change |
+|---|---|---|
+| bottom foreground (y 0.72–1.0) | 100→78 / 106→78 / 107→77 | **−22 / −26 / −28%** |
+| the copy's quadrant | 61→46 / 62→49 / 71→53 | **−25 / −21 / −25%** |
+| the frame-left mushroom + its sky | 46→38 / 50→36 / 62→49 | **−17 / −28 / −21%** |
+| the kept mid-ground floor | 114→75 / 106→73 / 139→104 | **−34 / −31 / −25%** |
+| the pit, whole | 146→110 / 156→113 / 176→131 | −25 / −28 / −26% |
+| **whole frame** | **455→375 / 479→387 / 556→448** | **−18 / −19 / −19%** |
+
+Lit density over the same frames: 0.398→0.402, 0.404→0.408, 0.361→0.365 — flat
+to three decimal places, i.e. **nothing was emptied.** The one region that moves
+is the mid-ground floor, where lit density goes *up* 16% (0.554→0.642 at 1440)
+while its marks go *down* 34%: forty scattered chords replaced by eight arteries
+and three arcs is more light in fewer objects, which is the whole brief in one
+row. And the copy's quadrant is the one place both numbers fall together
+(lit 0.143→0.125, marks 61→46) — the quiet pool got quieter.
+
+## 2. What was cut, and the one implementation rule behind all of it
+
+Four populations, all of them undirected by construction, all cut with a
+**mask rather than a smaller loop count**:
+
+| population | file | before | after | |
+|---|---|---|---|---|
+| surface strokes (`const d = rand() * TAU`) | terrain §1 | 140 | **105** | −25% |
+| lip rootlets | terrain §2 | 60 | **46** | −23% |
+| lip strata | terrain §2 | 54 | **42** | −22% |
+| pit filaments | terrain §3b | 80 | **53** | −34% |
+| frame-left conifers | sky §2 | 26 | **23** | + a tone taper |
+
+**Why a mask.** Every one of these blocks reads from an rng that later blocks in
+the same function also read from — §1, §2, §4 and §3 share `terrain.js`'s single
+`rand`. Reducing a loop bound therefore re-lays everything downstream of it: the
+cut face, the rhizomorph cords and the entire underground colony would all have
+moved in order to delete eighteen dashes. So each iteration still runs and still
+draws every `rand()` it drew before, and only the **emission** is gated, on a
+decision taken from a separate rng. Two inline `rand()` calls inside §1's emit
+arguments had to be hoisted for this to hold. The consequence is that every
+surviving stroke in all four populations is byte-identical to the one that
+shipped, and nothing that was not cut moved at all.
+
+**That claim is measured, not reasoned.** Forcing all three `terrain.js` masks
+to keep-everything and restoring `canopy.js` and `sky.js` to HEAD, the chapter
+reports HEAD's exact counts back — `surfaceSegs` 280, `cutSegs` 454, `hyphSegs`
+2,720, `treeSegs` 240 — and the frozen rest frame diffs against HEAD's own at
+**MAE 0.000001/255** over a 190x147 px bbox, i.e. about four subpixels differing
+by one level out of 3.9 million. (The two `rand()` draws hoisted out of §1's emit
+arguments are the only expression reordering in the diff, and this is its total
+cost.) The masks are therefore a pure subtraction: what remains is what shipped.
+
+**Where the cut is spent, and it is not uniform.** `60c7370`'s lesson — a rule
+that bounds things on the ground says nothing about what the lens sees — is
+applied forward here as the mask's own weighting. §1 and §3b are masked on
+**distance to the rest lens**, because a filament six units out paints roughly
+sixteen times the pixels of one twenty-four units out and lands them in the
+bottom of the frame where nothing competes; the lip curtain is masked along
+**s**, whose low end §3b's header already measures as the far wall at
+frame-left. Both weightings put the cut in the two places she named (the bottom
+foreground, and behind the frame-left mushroom) and keep it away from the far
+wall across the pit, which is the "large amount of empty black space" `6ba7b3f`
+was built to answer. The two reports are only compatible along this axis; a
+uniform thin would have had to trade one against the other.
+
+**The frame-left mushroom was not a ground problem.** Cropping the rest still to
+her screenshot's framing, the busiest thing in it is `sky.js`'s conifer picket —
+eight or nine trunks with four chevron pairs each, standing in a regular lattice
+directly behind and between the caps at a tone the caps have to compete with.
+"Populated but not crowded" needs both knobs and gets both: every third tree in
+the left sector is skipped (a deterministic stride, placed before any `rand()`
+of the loop body, so survivors are byte-identical) and the survivors there take
+a tone taper easing to 0.60 at the frame edge. The declutter round's 48 → 26 was
+the same direction; this is 26 → 23 plus the levels.
+
+## 3. What the budget was spent on
+
+### The hierarchy (canopy.js)
+
+Three tiers, and the load-bearing decision is **what the top tier is allowed to
+be made of.**
+
+The middle tier is drawn from a quantity the graph already had. Prim's walk is
+rooted at the hero, so every tree edge has a **load**: the number of fruiting
+bodies in the subtree hanging off it, i.e. how many mushrooms' paths back to the
+hero run through that strand. Sorting by load makes the secondary tier read as
+flow, and the Y-shaped confluences she asks for appear on their own, because
+that is what a rooted tree does at every branch point.
+
+**The obvious extension of that idea is wrong, and it was built before it was
+rejected.** The first candidate filled the luminous 10% with the highest-load
+tree edges. Rendered with the two faint tiers muted, that top tier reads as a
+bright triangulation across the floor — because a graph edge is a *chord*, a
+point-to-point run with a modest bow, so lighting the busiest of them puts the
+brightest strokes in the frame on the most angular geometry in the file. That is
+precisely the "miscellaneous angular lines" the brief opens by asking to remove,
+re-emitted at four times the tone. **Load says which strands matter; it says
+nothing about which are worth looking at.** The luminous tier is therefore spent
+only on geometry authored to deserve it, and the graph's own contribution stops
+at secondary.
+
+| tier | tone (pre-distance) | distance floor | what is in it | segments | share |
+|---|---|---|---|---|---|
+| **hairline** | 0.050–0.082 | 0.00 | every cross-link, every hairline offshoot, every low-load twig of the tree | **2,703** | **71.5%** |
+| **secondary** | 0.146–0.205 | 0.38 | the top of the load order, the ten body-to-body links, the hub spokes, the arcs' ordinary passages, converging branches | **770** | **20.4%** |
+| **luminous** | 0.440–0.555 | 0.55 | the eight arteries and their twin strokes, one window of each arc | **307** | **8.1%** |
+
+Plus **68 luminous nodes** of 304 canopy points. Counting points with segments,
+the top tier is 375 of 4,084 = **9.2%**, against a `canopyLumTarget` of 378
+reported beside it in `journey.counts('final')` so the miss is visible rather
+than asserted. The shares are honoured by a budget loop for the secondary tier
+(which cannot miss) and by sizing the organs for the luminous one (which can),
+which is why that one is the number reported as achieved-vs-target.
+
+Two details carry the hierarchy further than the three constants do:
+
+* **The distance floor is tiered.** A hairline takes `lumOf()` raw and vanishes
+  into the fog as it should; a luminous artery keeps 45% of its tone at any
+  distance and stays legible to the horizon. Near and far read as the same three
+  levels instead of collapsing into one at depth.
+* **The junction glints split with the strands.** Two hundred glints at one
+  level is two hundred nodes and therefore no nodes — "occasional glowing nodes"
+  only reads if most junctions are not one. An ordinary junction is now a little
+  under half its old tone in both luminance *and* size; only the nodes an artery
+  or an arc actually runs through keep the top tier. The luminous band's ceiling
+  is the terrain lip's own 0.55, this composition's brightest ground feature:
+  the ground may have a few bright routes in it, and nothing on the floor
+  outranks the soil-line.
+
+### The arteries — 8 legible base-to-base connections
+
+Her sentence asks for connections between bases to be **more legible**, and the
+canopy already ran a strand between every pair of neighbouring feet — §2's
+body-to-body pass is exactly that, and it was not legible, because it was drawn
+at the same level as the eight hundred strands around it. Legibility here is not
+a connection that exists, it is a connection that outranks its surroundings.
+
+**Selection is measured in the frame, not in plan** — `60c7370`'s finding again.
+A body pair is a candidate only if it is *across* the view (|sin| of the run
+against the sight line ≥ 0.42; a route pointing at the lens foreshortens to a
+dot however long it is), 2.6–8.6 units apart, both feet at a readable depth and
+inside the frame's bearing, standing on soil with room to submerge, and **not
+already wired by the graph** — so an artery is never a second stroke over an
+existing one and the connectivity is genuinely added rather than doubled. The
+picks are then spread: no two arteries may share a bearing and a depth, so the
+eight land across the composition instead of stacking in the sector that scores
+best. Projected into the rest frame at 1440x900, the eight foot-pairs are:
+
+| | foot → foot (screen px) | |
+|---|---|---|
+| A1 | (931,486) → (1543,567) | runs off the right edge — partially visible |
+| A2 | (931,486) → (272,518) | the long sweep across the frame |
+| A3 | (1219,510) → (632,471) | |
+| A4 | (924,442) → (1156,455) | |
+| A5 | (339,472) → (632,471) | |
+| A6 | (619,442) → (924,442) | |
+| A7 | (46,447) → (531,427) | into the frame-left mushroom she flagged |
+| A8 | (1219,510) → (1874,828) | the near-right pair, off-frame at 1440 |
+
+Every one of the sixteen endpoints sits on a stipe base, and all eight lie in
+the band y 427–567 — above the copy block, which starts at y 620.
+
+**The dip is the point.** A strand that runs unbroken foot to foot is a line on
+a plane; one that leaves a mushroom, sinks out of sight and comes back up near
+another states that the ground has a volume and the network is inside it. The
+eye supplies the buried middle for free, and supplying it is what makes the
+frame read as one organism rather than one drawing. Two mechanisms carry the
+sink, deliberately both: the strand descends behind terrain.js's §0 soil slab
+(opaque, depth-written, drawn first) so it is genuinely occluded, **and** its
+tone independently tapers to nothing over the last 0.11 of that descent, so the
+disappearance is right even on the metres where the slab's coarse depth rows
+interpolate under the true ground. Both surface breaks are marked with a node.
+
+**The twin stroke is what made them legible at all.** Seven single polylines at
+the top tier were findable only if you already knew where to look. `terrain.js`
+§4 solved the same problem for the rhizomorph cords, and this borrows its answer
+whole: a companion stroke a breathing gap to one side at 0.70 of the tone, the
+gap running on two incommensurate harmonics so the pair never resolves into two
+machined rails. What the eye gets is one cord with a lit core — an **artery**,
+which is a different *kind* of object from the hairlines around it rather than a
+brighter one. That is also why they can be legible without being loud, which
+matters in a composition whose whole brief is "quieter".
+
+Each artery also throws one **Y-branch**, placed clear of the submerged passage.
+All eight found a third body within reach and **converge on it** — eight
+three-body confluences, with a luminous node at the fork.
+
+### The arcs — 3 partial sweeps, and why they are not a circle
+
+Everything else in the file is a chord, and a hundred chords between scattered
+nodes read as mesh, which is a texture rather than a body. A fairy ring is the
+visible rim of an organism that grew outward from one point, and the only mark
+that says so is curvature that agrees with the ring. Three arcs concentric with
+`RING_C` at r 5.65 / 7.70 / 9.85 — inside the member band, through it, outside
+it — give the eye three samples of one circle, which is enough to infer it
+without drawing it. **146 segments total.**
+
+She rules out "an obvious glowing circle" and it is avoided in four separate
+ways: each arc covers only the azimuth span that is actually in frame at the
+rest (found by scanning for the longest contiguous run that is on kept soil, at
+a readable depth and inside the bearing — never authored, so it survives a
+reseed of the field); each is broken by two or three submerged wells on the
+arteries' own dip mechanism, so it surfaces in three or four separate passages;
+its radius wobbles on two incommensurate harmonics, because `world.js`'s own
+ring header says fairy rings are never true circles; and only one window of each
+is luminous, with both ends fading out rather than stopping. Where an arc passes
+within 1.15 of a fruiting body's seat it **takes that body as a node** (2 of
+them do), so it visibly runs through the mushrooms rather than past them.
+
+## 4. Everything joins the ladder it already had
+
+The arteries and the arcs are drawn into the canopy's own two batches with the
+`ALWAYS_LIT` sentinel, after the graph is complete, on a fresh rng — so they
+inherit `bce9eb9`'s law exactly rather than getting a second one, and the graph
+itself is bit-identical (200 nodes, 104 bodies, 479 edges, 10 body links, 8 hubs,
+`canopyDropped: 0`, unchanged). Read off the live GPU buffers:
+
+* the canopy line batch is **7,560 vertices, 100% sentinel**, and its point
+  batch 304, 100% sentinel — nothing added kindles independently;
+* terrain's face batches carry the counts the cuts predict — `hyph` 4,814 verts
+  = 2,407 segs, `cut` 772 = 386, `surface` 420 = 210, `trees` 432 = 216.
+
+Driven through **real wheel events** across Owned → Final and back (260 samples
+each way, no `scrollTo` in the drive):
+
+| p | cam y | canopy uOpacity | uPull | uAmount | |
+|---|---|---|---|---|---|
+| 0.801 (the arm) | −1.080 | **0.00000** | 0.0000 | 0.0367 | **dark at arm** |
+| 0.830 | −0.758 | 0.22622 | 0.0000 | 0.8032 | still buried |
+| 0.849 | −0.257 | **0.62000** | 0.0067 | 1.0000 | **whole, still under the soil** |
+| 0.855 (the pierce) | −0.019 | 0.62000 | 0.0807 | 1.0000 | |
+| 0.970 (the rest) | +2.730 | 0.62000 | 1.1200 | 1.0000 | saturated |
+
+0.62 is `STRAND_OP`, the authored constant — so the network including every new
+artery and arc is complete **before the ground is visible at all**, which is
+`bce9eb9` preserved rather than merely not broken. Forward vs reverse worst
+divergence in canopy opacity is **0.007613**, and it occurs at p 0.8461, the
+steepest point of the `surfacedOf` ramp, where the two legs' camera-depth
+sampling is coarsest — interpolation error, not hysteresis; everywhere off the
+ramp it is 0. **0 non-monotone steps in 260 forward samples**: no self-ignition.
+Frozen rest (0.97) vs end-hold (1.0) MAE **0.1936/255**, the authored fog move
+and nothing else — nothing is still arriving at the rest. Mean frame luma at the
+arm 26.7 against 41.2 at the rest.
+
+## 5. Budget
+
+At the Final rest, 1728x980, frozen, `renderer.info` with `autoReset` off and
+one manual reset per frame:
+
+| | before | after | |
+|---|---|---|---|
+| **draw calls** | **430** | **430** | unchanged |
+| triangles | 278,183 | 278,183 | unchanged |
+| **line primitives** | 453,789 | **453,785** | **−4** |
+| points | 85,606 | 85,648 | +42 |
+| geometries / textures / programs | 73 / 27 / 92 | 73 / 27 / 92 | unchanged |
+| canopy segments | 3,309 | 3,780 | +471 (arteries 325, arcs 146) |
+| terrain: surface / cut / hyphae | 280 / 454 / 2,720 | 210 / 386 / 2,407 | −451 |
+| sky: trees | 240 | 216 | −24 |
+
+Fewer lines, as asked — though only just: the 471 segments spent on arteries and
+arcs are paid for almost exactly by the 475 cut from the four scatter
+populations, and the net is four primitives out of 453,789. The honest reading
+is that the *count* is flat and the *composition* is 18–19% less countable,
+which is the trade the brief describes. No draw call is added or removed,
+because every addition and every cut merges into a batch that is drawn either
+way.
+
+**Frame time is not reportable from this session and that is worth recording.**
+An interleaved after/before/after run — three measurements of each build,
+alternated, on the same probe — produced p50s of 32.0/33.8/40.7 (after),
+38.8/46.2/50.3 (before), 53.7/52.5/46.5 (after). The series climbs monotonically
+across the whole sequence regardless of which build is loaded: the machine was
+thermally throttling and the drift is several times any plausible signal. On a
+cold machine earlier in the same session the two builds measured 28.3–30.5
+(before) and 28.0–30.0 (after) p50, i.e. the same class. Given that draw calls
+and triangles are identical and line primitives differ by four, there is no
+mechanism by which frame time could move, and the interleaved run should be read
+as a measurement of the laptop rather than of the change.
+
+## 6. Gates
+
+* **`capture.py --check`: PASS**, worst MAE **0.00/255** across all ten goldens
+  after the re-shoot. Before it, exactly the two intended files were in the
+  FAIL band (`final@1440x900` 1.37/255, 4.1% px > 8; `final@430x932` 1.64/255,
+  4.7%) and the other eight read **0.00** — `mission@*`, `inspire@*`,
+  `connect@*` and `owned@*` are byte-identical on disk and not in the diff.
+  `final@*` re-shot in this commit with the reason in `manifest.json`.
+* **The phone moves and improves for free.** No selection rule in this pass
+  reads the viewport: the arteries and arcs are chosen against world geometry
+  and the rest camera, and the masks against world distance. At 430x932 the pit
+  thins, the conifer picket recedes and one arc sweeps behind the bases, with
+  nothing authored for portrait.
+* **Console over a full ride: 0 entries.** Three legs by real `WheelEvent`
+  through the page's own listeners — forward past the end into a wrap, back, and
+  forward into a second wrap — plus per-leg sweeps of every material uniform and
+  the camera: **0 console entries, 0 non-finite values**, ends on an anchor
+  (p 0.2600, `inspire`) with a clean URL.
+* **Arrival ladder:** §4 above — dark at arm, whole before the pierce, saturated
+  at the rest, reverse divergence 5.1e−3 at the ramp's steepest point and 0
+  elsewhere, 0 self-ignition, `canopyDropped` 0 so every body is still a node of
+  the one spanning tree rooted at the hero.
+* **The quiet pool behind the copy is quieter**, checked with the block visible
+  at all three widths: lit density 0.143→0.125 / 0.160→0.141 / 0.131→0.114 and
+  marks 61→46 / 62→49 / 71→53. Nothing new is drawn there and nothing could be —
+  the copy sits over the cutaway void, and every canopy vertex is tested against
+  `cutVal()` at the bodies' own 0.40 margin.
+* **No regression** to `e1e8381` (the ring's sweep — `ring.js` is not in the
+  diff), `1825393`, `bce9eb9` (the depth key is untouched and re-measured
+  above), `60c7370` (its four constants are untouched; this pass masks, and the
+  left band is still 22 bodies / 9 hints), `783729b` or `a937444`.
+
+## 7. Residuals
+
+* **The luminous tier lands at 8.1% of segments (9.2% counting nodes) against a
+  10% target.** Closing it exactly would need eleven or so arteries — past the
+  5–8 she named — or arcs long enough to start reading as the circle she ruled
+  out. Under-shooting "only ~10%" is the right way to miss, but the gap is real
+  and `canopyLumTarget` is reported beside `canopyLum` so a future pass can see
+  it without re-deriving it.
+* **All eight arteries run roughly across the frame**, by construction: the
+  `across >= 0.42` test rejects routes pointing at the lens because they
+  foreshorten. The eight are at different depths and each is broken by its own
+  dip, so they do not read as banding — but a route running *into* depth would
+  state the ground's volume even more strongly than the dip does, and there is
+  no candidate for one under the current rule.
+* **The arcs take only 2 body seats as nodes.** The three radii are authored
+  against the ring band and the bodies that happen to fall within 1.15 of them
+  are whatever the field placed; a pass that wanted every arc to visibly thread
+  three or four mushrooms would have to solve for the radii instead of choosing
+  them, which is a different and much less robust construction.
+* **`terrain.js`'s masks make its counts non-obvious from its loop bounds.**
+  `for (let i = 0; i < 80; i++)` now draws 53. Every masked block reports its
+  achieved count (`surfaceStrokes`, `lipRootlets`, `lipStrata`, `pitStrands`)
+  for exactly this reason, but the loop bound is no longer the answer to "how
+  many are there" and a future reader will have to notice that.
+* The pre-existing forward/reverse asymmetry at the p 0.80 arm (`60c7370` §8)
+  is untouched and still wants its own pass.

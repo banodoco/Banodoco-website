@@ -179,8 +179,37 @@ export function createFinalTerrain(sceneApi, uniforms) {
   // countable-line carpet over the whole floor ("messy lines... along the
   // forest floor"). Surface density is now carried by the members' ground
   // glow pools (final-ring) + the band glow below, not by strokes.
+  //
+  /* 2026-08-14 — thinned again, and this block is the literal referent of
+     Hannah's phrase. "Reduce maybe 20-30% of the MISCELLANEOUS ANGULAR LINES":
+     these strokes are drawn at `const d = rand() * TAU`, a uniformly random
+     heading on the ground with no relation to anything else in the frame, and
+     there is nothing else in the chapter that fits the description better. The
+     canopy's strands go between two nodes; the cords radiate; the rootlets
+     leave the lip; §3b's filaments trail out of the cut face. These point
+     nowhere, which is exactly their job as texture and exactly the problem
+     once the frame has real routes in it to read instead.
+
+     Masked, not re-counted, for the same reason the lip curtain is (see §2):
+     §2, §4 and §3 all read further down this same rng, so a smaller loop would
+     re-lay the entire cut face and underground colony. Every surviving stroke
+     is byte-identical, including the two rand() draws that used to sit inline
+     in the emit calls and are hoisted here so a masked stroke still consumes
+     them.
+
+     Weighted by DISTANCE TO THE REST LENS, the same rule §3b's mask uses —
+     near strokes are large in the frame and land in the foreground band she
+     named; far ones are the horizon texture that answers the opposite
+     complaint. One metric for both cuts. */
   const surface = makeBatch();
   {
+    const surfThin = makeRng(0x5F4CE1);
+    const surfKeep = (x, z) => {
+      const d = Math.hypot(x + 14.72, z - 2.70);
+      const t = Math.max(0, Math.min(1, (d - 7) / 13));
+      return 0.55 + 0.40 * t * t * (3 - 2 * t);
+    };
+    let kept = 0;
     let placed = 0, guard = 0;
     while (placed < 140 && guard++ < 4000) {
       const a = rand() * TAU;
@@ -198,12 +227,19 @@ export function createFinalTerrain(sceneApi, uniforms) {
       const dx = Math.cos(d) * len, dz = Math.sin(d) * len;
       const tone = 0.11 + rand() * 0.11 + (r > 9 ? -0.05 : 0);
       const mx = x + dx * 0.5, mz = z + dz * 0.5;
-      surface.seg(x, y + 0.02, z, mx, groundY(mx, mz) + 0.03 + rand() * 0.02, mz,
-        tone, tone * 1.1, { tw: rand() * TAU, boost: 0.25, arc: arcOf(x, z) });
-      surface.seg(mx, groundY(mx, mz) + 0.03, mz, x + dx, groundY(x + dx, z + dz) + 0.02, z + dz,
-        tone * 1.1, tone * 0.8, { tw: rand() * TAU, boost: 0.25, arc: arcOf(x, z) });
+      // hoisted so the mask cannot change the stream (see the header above)
+      const yJit = rand() * 0.02;
+      const tw1 = rand() * TAU, tw2 = rand() * TAU;
+      if (surfThin() < surfKeep(x, z)) {
+        surface.seg(x, y + 0.02, z, mx, groundY(mx, mz) + 0.03 + yJit, mz,
+          tone, tone * 1.1, { tw: tw1, boost: 0.25, arc: arcOf(x, z) });
+        surface.seg(mx, groundY(mx, mz) + 0.03, mz, x + dx, groundY(x + dx, z + dz) + 0.02, z + dz,
+          tone * 1.1, tone * 0.8, { tw: tw2, boost: 0.25, arc: arcOf(x, z) });
+        kept++;
+      }
       placed++;
     }
+    counts.surfaceStrokes = kept;
   }
   const surfMat = makeStrandMat(uniforms, 0.5);
   const surfLines = new THREE.LineSegments(surface.geo(), surfMat);
@@ -263,6 +299,41 @@ export function createFinalTerrain(sceneApi, uniforms) {
     // tip, and ends with a dim oblique root-tip flick — the strand ends by
     // TURNING and dissolving, never by stopping mid-air. Depth is biased
     // short; only a few reach past a unit.
+    //
+    /* THE THINNING MASK (2026-08-14, Hannah's fairy-ring brief: "reduce maybe
+       20-30% of the miscellaneous angular lines, particularly in the very
+       bottom foreground and immediately around/behind the copy", and her
+       separate note on the frame-left mushroom: "the background behind this
+       leftmost mushroom still feels quite busy — clean that up until it feels
+       populated but not crowded").
+
+       This curtain is the largest single contributor to that second report.
+       Sixty rootlets and fifty-four strata along the lip read from the rest as
+       a picket of short countable dashes directly behind the frame-left caps —
+       the exact region of her screenshot.
+
+       IT IS A MASK, NOT A SMALLER LOOP, and that is the whole of the
+       implementation note. Every iteration still runs and still draws every
+       rand() it drew before; only the EMISSION is gated, on a decision taken
+       from a separate rng. So the rootlets that survive are byte-identical to
+       the ones that shipped, and §3's hyphae and §4's cords — which read from
+       the same stream further down this function — do not move by a
+       millimetre. A smaller loop count would have re-laid the entire
+       underground colony in order to remove eighteen dashes.
+
+       WEIGHTED ALONG THE LIP. s runs CUT_S_MIN..CUT_S_MAX, and §3b's own
+       header measures what that means in the frame: the low-s end is the far
+       wall across the pit at frame-LEFT (22 units out, 12.8 to the left of
+       the view axis) and the high-s end is the near right corner. Her crowded
+       region is the low end, so the mask bites there and lets the near corner
+       — already held down by the lip's own nearK taper — through nearly
+       untouched. */
+    const thin = makeRng(0x7417ED);
+    const lipKeep = (s) => {
+      const u = (s - CUT_S_MIN) / (CUT_S_MAX - CUT_S_MIN);   // 0 = frame-left
+      return 0.56 + 0.38 * u;
+    };
+    let rootKept = 0, strataKept = 0;
     for (let i = 0; i < 60; i++) {
       const s = CUT_S_MIN + rand() * (CUT_S_MAX - CUT_S_MIN);
       const p = cutEdgePoint(s);
@@ -274,6 +345,8 @@ export function createFinalTerrain(sceneApi, uniforms) {
       const swayS = gauss() * 0.26;                 // along the lip tangent
       const hugN = -(0.08 + rand() * 0.18);         // back toward the face
       const SEG = 3;
+      const keep = thin() < lipKeep(s);
+      if (keep) rootKept++;
       let px = x, py = y0, pz = z;
       for (let k = 1; k <= SEG; k++) {
         const f = k / SEG;
@@ -281,16 +354,15 @@ export function createFinalTerrain(sceneApi, uniforms) {
         const nx = x + (-CUT_N.z) * swayS * f + CUT_N.x * hugN * f * f + gauss() * 0.05;
         const nz = z + CUT_N.x * swayS * f + CUT_N.z * hugN * f * f + gauss() * 0.05;
         const ny = y0 - depth * ease;
-        cut.seg(px, py, pz, nx, ny, nz,
+        if (keep) cut.seg(px, py, pz, nx, ny, nz,
           t0 * (1 - ((k - 1) / SEG) * 0.85), t0 * (1 - f * 0.85), { tw });
         px = nx; py = ny; pz = nz;
       }
       // root-tip flick: a last dim oblique turn, dying out
-      cut.seg(px, py, pz,
-        px + gauss() * 0.16 + CUT_N.x * hugN * 0.4,
-        py - 0.05 - rand() * 0.10,
-        pz + gauss() * 0.16 + CUT_N.z * hugN * 0.4,
-        t0 * 0.15, 0.02, { tw });
+      const fx = px + gauss() * 0.16 + CUT_N.x * hugN * 0.4;
+      const fy = py - 0.05 - rand() * 0.10;
+      const fz = pz + gauss() * 0.16 + CUT_N.z * hugN * 0.4;
+      if (keep) cut.seg(px, py, pz, fx, fy, fz, t0 * 0.15, 0.02, { tw });
     }
     // horizontal strata: broken layer lines a little below the lip. Transit
     // pass: a few more, biased shallower, so the rootlet curtain reads as
@@ -304,10 +376,18 @@ export function createFinalTerrain(sceneApi, uniforms) {
       const t0 = (0.34 + rand() * 0.16) * (1 - d * 0.28);
       const dirS = rand() < 0.5 ? -1 : 1;
       const q = cutEdgePoint(s + dirS * len);
-      cut.seg(p.x + gauss() * 0.1, y, p.z + gauss() * 0.1,
-        q.x + gauss() * 0.1, y + gauss() * 0.1, q.z + gauss() * 0.1,
-        t0, t0 * 0.6, { tw: rand() * TAU });
+      const ax = p.x + gauss() * 0.1, az = p.z + gauss() * 0.1;
+      const bx = q.x + gauss() * 0.1, by = y + gauss() * 0.1, bz = q.z + gauss() * 0.1;
+      const tws = rand() * TAU;
+      // same mask, same reasoning (see the rootlets above) — the strata are
+      // the other half of the picket behind the frame-left caps
+      if (thin() < lipKeep(s)) {
+        cut.seg(ax, y, az, bx, by, bz, t0, t0 * 0.6, { tw: tws });
+        strataKept++;
+      }
     }
+    counts.lipRootlets = rootKept;
+    counts.lipStrata = strataKept;
   }
   const cutMat = makeStrandMat(uniforms, 0.72);
   const cutLines = new THREE.LineSegments(cut.geo(), cutMat);
@@ -661,10 +741,44 @@ export function createFinalTerrain(sceneApi, uniforms) {
        "empty black space" directly while contributing nothing to "busy".
        Cutting strokes and keeping light is the whole trade; cutting both
        would land back on the emptiness this block was built to fill. */
+    /* 2026-08-14 (Hannah's fairy-ring brief): "reduce maybe 20-30% of the
+       miscellaneous angular lines, PARTICULARLY IN THE VERY BOTTOM FOREGROUND
+       and immediately around/behind the copy."
+
+       The bottom foreground of this frame is this block, and the previous pass
+       (60c7370) already argued its count down 150 -> 80 on a whole-frame
+       judgement. What it did not do — because its own finding had not been
+       written down yet — is spend the cut where the frame actually pays for
+       it. Its lesson was: A RULE THAT BOUNDS THINGS ON THE GROUND SAYS NOTHING
+       ABOUT WHAT THE LENS SEES, and a uniform count cut is exactly such a
+       rule. Every strand costs the same one of eighty either way, but a strand
+       starting six units from the lens paints something like sixteen times the
+       pixels of one starting twenty-four units out, and lands them in the
+       bottom of the frame at full size where nothing else is competing.
+
+       So the mask is a function of DISTANCE TO THE REST LENS, not of index:
+       near strands are mostly dropped and far ones mostly kept. That takes the
+       cut out of the very bottom foreground she named, and leaves it where
+       6ba7b3f put it for a reason — the far wall across the pit, which is the
+       "large amount of empty black space" this block exists to answer. The two
+       reports are only compatible along this axis; a uniform thin would have
+       had to trade one against the other.
+
+       Emission is gated and the vr() stream is not, so every surviving strand
+       is byte-identical to the one that shipped. */
+    const pitThin = makeRng(0x9174B1);
+    const pitKeep = (x, z) => {
+      const d = Math.hypot(x + 14.72, z - 2.70);            // dist to rest cam
+      const t = Math.max(0, Math.min(1, (d - 6.5) / 14.5));
+      return 0.34 + 0.62 * t * t * (3 - 2 * t);
+    };
+    let pitKept = 0;
     for (let i = 0; i < 80; i++) {
       // s weighted to the low (frame-left, far) end: pow > 1 crowds toward 0
       const s = S_LO + Math.pow(vr(), 1.9) * S_SPAN;
       const p = cutEdgePoint(s);
+      const keep = pitThin() < pitKeep(p.x, p.z);
+      if (keep) pitKept++;
       // start somewhere on the wall: at the lip, or down the section
       const y0 = groundY(p.x, p.z) - Math.pow(vr(), 1.5) * 3.4;
       // a little proud of the face, on the removed side, so the opaque
@@ -717,11 +831,12 @@ export function createFinalTerrain(sceneApi, uniforms) {
         // dissolves into the dark instead of ending at a countable point
         const f0 = Math.max(0, 1 - run / REACH);
         const f1 = Math.max(0, 1 - (run + step) / REACH);
-        hyph.seg(px, py, pz, nx, ny, nz,
+        if (keep) hyph.seg(px, py, pz, nx, ny, nz,
           tone * f0 * f0, tone * f1 * f1, { tw, boost: 0.22, arc });
         px = nx; py = ny; pz = nz;
       }
     }
+    counts.pitStrands = pitKept;
   }
 
   const hyphMat = makeStrandMat(uniforms, 0.62);
