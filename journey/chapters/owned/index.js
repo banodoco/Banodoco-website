@@ -322,6 +322,57 @@ export function createOwned(sceneApi, content) {
   // deliberately not a second number.
   const FACE_D0 = 0.38, FACE_D1 = SINK_D;
 
+  /* THE GROWTH FRONT'S OWN WINDOW, ON THE SAME AXIS `keep` ALREADY USES
+     (2026-08-14 — Hannah: "when I jump from underground using the side toggle
+     to jump to the epilogue, these little light sticks appear in the distance
+     as soon as the transition starts, which don't appear when I scroll between
+     those two sections. It looks like they're deep on the ground in the
+     distance.")
+
+     The sticks are THIS chapter's exit-corridor growth front — the fan of
+     strands that grows up out of the deep field toward the soil (see the
+     animator, and substrate.js's `uGrow` feathered-tip term). Isolated by
+     rendering the same frame twice, once with uGrow forced to 0, so scene
+     noise cancels exactly: on the click frame of an Owned -> Final navigator
+     jump it is worth 9,880 lit pixels rising to 13,352 by 66 ms, peaks +161/255
+     — with the camera still standing at x 1.730, the Owned rest. On the scroll
+     it is worth ZERO at every matched point until the lens has travelled to
+     x -1.371, and it only reaches full at x -6.016.
+
+     The cause is the fault this chapter has now been through four times: the
+     window was `smooth01((p - 0.775) / 0.035)`, justified — like the shipped
+     `keep`, like `783729b`'s `faceVis` before it — by "p and the camera are a
+     bijection on the leg". True on the leg; false the instant a jump snaps p
+     while the camera has not moved. The comment on `faceVis` calls itself "THE
+     LAST TERM IN THIS CHAPTER THAT WAS STILL KEYED TO p" and it was wrong by
+     exactly these three lines.
+
+     Restated on `-cp.x`, which is the axis `keep` already means "far enough
+     along the leg" on, and which is what the p-window was a proxy for: the
+     shipped window p 0.775 -> 0.810 IS camera x -0.40 -> -4.33, measured at
+     1e-3 steps along the leg. FRONT_X0/XW are fitted to that map and reproduce
+     the shipped growth to within 0.0133 over the whole ramp — under the
+     feathered tip's own width, and bit-identical at both ends, which is what
+     keeps `owned@1440x900`, `owned@430x932` and both Final goldens untouched.
+     Depth cannot do this job: through this stretch the lens travels almost
+     horizontally and `depth` moves only 1.231 -> 1.073, so it carries no
+     window at all — this is the one mask here that is about travel, not about
+     the soil.
+
+     It also fixes the mirror, which nobody had reported: at the Final rest the
+     fan is fully grown (it is part of the section the cutaway exposes), and on
+     the DOWN-wrap p snaps 0.97 -> 0 while `keep` still holds the chapter open
+     at the Final rest — so the fan blinked OUT on a frame the camera had not
+     left. One statement, both directions, and it mirrors on a reverse scrub by
+     construction. */
+  const FRONT_X0 = 0.40, FRONT_XW = 3.93;
+  // The OW-5 exit pulse is the same three lines' other half and moves with
+  // them: it fired ON THE CLICK for the same reason (measured across an
+  // Owned -> Final jump: uSurge 0 -> 0.964, uWaveAmt 0 -> 0.750, camera
+  // unmoved). The shipped triggers p > 0.795 / re-arm p < 0.765 are camera
+  // x -2.634 / +0.235 on the same measured map.
+  const FRONT_FIRE_X = 2.634, FRONT_ARM_X = -0.235;   // both on -cp.x
+
   // ...AND `keep` NEEDS THE OTHER HALF OF ITS OWN PREMISE (2026-08-14 —
   // Hannah: "a visual glitch sometimes when I scroll up to the end — a little
   // bit below the main mushroom, something kind of flashes up."
@@ -479,7 +530,14 @@ export function createOwned(sceneApi, content) {
     // every mask below is the camera's alone. Identical to `amount`
     // everywhere else, because outside a blend the ease IS the arm settled.
     const amt = blending ? ((amountTarget > 0 || amount > 0.003) ? 1 : 0) : amount;
-    const pNow = window.journey ? window.journey.p : 0;
+    // AND THE JOURNEY'S PROGRESS IS NOT READ IN THIS ANIMATOR AT ALL. It was
+    // `const pNow = window.journey.p`, and it survived fc1e151, 873246f and
+    // 783729b — each of which retired one more p-keyed mask and each of which
+    // left the growth front behind. With the front and its exit pulse on the
+    // camera too (FRONT_X0), nothing here has any term but the pose, which is
+    // the only claim that makes "a nav jump reveals exactly what a scrub does"
+    // checkable rather than hopeful: if this line ever comes back, the reason
+    // it comes back is the bug.
     // arrival mask (see SINK_D above): everything the chapter draws is scaled
     // by amount * arrival, and arrival is a pure function of the CAMERA — the
     // soil murk on the way under, the Final cutaway's territory above — so
@@ -606,14 +664,16 @@ export function createOwned(sceneApi, content) {
 
     // growth front: slow upward travelling wave, uneven, never a loop you
     // can count — plus the OW-5 exit pulse when the rise commits. The fan
-    // sits straight down the rest gaze (the exit corridor IS the gaze), so
-    // it is gated on p: invisible at the rest, arriving through the drift
-    // (0.775-0.81) as the camera commits to the rise. Pure in p — reverse
-    // scrubbing restores the rest frame exactly. M5 ignition audit (D16):
-    // the arrival is a DRAW-ON, not a fade — uGrow extends each strand from
-    // its aAlong=0 root in the lit deep field up toward the soil, so the fan
-    // is visibly grown out of the colony instead of igniting in view.
-    const fg = smooth01((pNow - 0.775) / 0.035);
+    // sits straight down the rest gaze (the exit corridor IS the gaze), so it
+    // is gated on how far the lens has TRAVELLED out along that corridor:
+    // absent at the rest, arriving through the drift as the camera commits to
+    // the rise. Pure in the camera — reverse scrubbing restores the rest frame
+    // exactly, and a nav jump can no longer grow it over a pose the lens has
+    // not left (see FRONT_X0). M5 ignition audit (D16): the arrival is a
+    // DRAW-ON, not a fade — uGrow extends each strand from its aAlong=0 root
+    // in the lit deep field up toward the soil, so the fan is visibly grown
+    // out of the colony instead of igniting in view.
+    const fg = smooth01((-cp.x - FRONT_X0) / FRONT_XW);
     frontMat.uniforms.uFade.value = eff;
     frontMat.uniforms.uGrow.value = fg * 1.15;
     frontMat.uniforms.uTime.value = t;
@@ -622,13 +682,16 @@ export function createOwned(sceneApi, content) {
     frontMat.uniforms.uPulse.value = frontP;
     frontMat.uniforms.uPulseOn.value = 0.45;
 
-    const p = pNow;
-    if (risePulseArmed && p > 0.795) {
+    // ...and the exit pulse commits on the same axis, for the same reason
+    // (FRONT_FIRE_X). It used to fire the instant p snapped, which on a jump
+    // out of Owned rolled the wave across a frame the lens had not left.
+    const out = -cp.x;
+    if (risePulseArmed && out > FRONT_FIRE_X) {
       risePulseArmed = false;
       frontP = -0.05;                       // the front fires...
       portraits.wavePulse(exitC, { speed: 5.0, width: 2.4, maxR: 13, amp: 0.75 });
       substrate.surge();                    // ...and the colony answers behind it
-    } else if (!risePulseArmed && p < 0.765) {
+    } else if (!risePulseArmed && out < FRONT_ARM_X) {
       risePulseArmed = true;                // re-arm on the way back
     }
   });
