@@ -591,7 +591,13 @@ export function boot(opts = {}) {
     const look1 = lens.lookOf(journey.progress);
     camBlend = { t: 0, dur, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
       az1, bow, rise, look0, look1, look: { ...look1 } };
-    setBlending(true);
+    // cam.position is the DESTINATION pose here — placeAt above let the
+    // director write it, and az1/len are already measured against it. A
+    // chapter whose reveal is paced (not merely gated) by the camera needs to
+    // know where the move ENDS, not only that a move is running: see Final's
+    // BLEND_REVEAL_RATE, which spends the reveal over the move instead of over
+    // whatever fraction of it the path happens to spend crossing the band.
+    setBlending(true, cam.position.x);
     // The destination's copy is timed against THIS move, not against the click
     // (Hannah, 2026-08-07 — "the text for the new section INSTANTLY appears").
     // The duration is only knowable here, after placeAt has let the director
@@ -908,10 +914,10 @@ export function boot(opts = {}) {
    *  whose reveal is a product of camera-pure factors (Connect's
    *  `amount * resolve`, Inspire's `master(az) * arr(az)`) self-corrects on
    *  the first blend frame and does not implement this. */
-  function setBlending(on) {
+  function setBlending(on, dstCamX) {
     for (const id in chapters) {
       const mod = chapters[id];
-      if (mod.setBlending) guarded(`chapter:${id}.setBlending`, () => mod.setBlending(on));
+      if (mod.setBlending) guarded(`chapter:${id}.setBlending`, () => mod.setBlending(on, dstCamX));
     }
   }
 

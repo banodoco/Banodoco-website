@@ -2334,3 +2334,236 @@ new output alone:
    is meant to be a fraction of the road you are on; it now measures the
    segment. N1 restored to 0.3600, and nosnap E1 tightened from 0.00e+0 to
    -5.6e-17.
+
+---
+
+# §19 — the field lights at the speed of whatever is moving the camera
+## 2026-08-14
+
+> "When I go into the bottom section, the mushrooms light up far too quickly.
+> It should feel more slow and gradual. This happens when I scroll into it from
+> the previous section, but it's also particularly true when I scroll down and
+> then back up — or down from the bottom to the top, or up from the top to the
+> bottom." — Hannah
+
+## 1. The measurement, before anything was changed
+
+Every row below is through the **real input path**: trusted wheel at a 60 Hz
+cadence via CDP `Input.dispatchMouseEvent`, or a real pointer press on the
+rail (which is hover-collapsed, so the harness opens it first). `journey.wrap()`
+and `journey.flyTo()` are **not** the input path and produced no number here —
+the two passes this codebase lost to them are the reason. `journey.scrollTo()`
+appears only to PLACE the camera before a measured stretch, never to perform
+one, and every scenario runs on its own cold page load.
+
+Two metrics, both read off the shown reveal driver (`uPull`) by **linear
+interpolation between the bracketing frames**, never by binning: a rung is lit
+when the driver passes its smoothstep midpoint (`aReveal + REVEAL_W/2`), and
+its kindle spans `aReveal → aReveal + REVEAL_W`. Interpolation is not
+fastidiousness — at 60 Hz the shipped wrap moved the driver 0.17 in a single
+frame, more than a whole reveal width, so several rungs share one frame and a
+binned reading reports the FRAME's duration rather than the body's. The ladder
+is the merged 24 (`world.js RING_LADDER` + `ring.js FIELD_LADDER`).
+
+Median of three, 1440x900, shipped `f40b66c`:
+
+| transition | path | sweep | bodies/s | kindle |
+|---|---|---|---|---|
+| forward firm (2400 px/s) | scrub | 0.860 s | 27.9 | 190 ms |
+| forward flick (9000 px/s) | scrub | 0.689 s | 34.8 | 136 ms |
+| reverse firm (2400 px/s) | scrub | 1.247 s | 19.3 | 370 ms |
+| reverse flick (9000 px/s) | scrub | 0.581 s | 41.3 | 134 ms |
+| arrive, then scroll back up | scrub | 0.718 s | 33.5 | 166 ms |
+| **wrap DOWN** (bottom → top) | **blend** | **0.279 s** | **86.1** | **64 ms** |
+| **wrap UP** (top → bottom) | **blend** | **0.372 s** | **64.5** | **75 ms** |
+| **rail click Epilogue → Mission** | **blend** | **0.311 s** | **77.2** | **71 ms** |
+| **rail click Owned → Epilogue** | **blend** | **0.307 s** | **81.6** | **62 ms** |
+
+**The scrub is not the fault, in either direction.** This is the one place the
+inherited diagnosis and the brief both need correcting: reverse *straddles*
+forward rather than beating it — slower at a firm read (370 ms against 190),
+19% quicker at a hard flick (134 against 136) — and an arrive-then-back-up sits
+inside the forward band at 166 ms. What is uniformly wrong is every **camera
+blend**: four of them, 2.3x to 3.1x faster than the tuned forward path, and no
+blend anywhere near the band.
+
+That also explains the shape of Hannah's report. She named the two wraps as the
+worst ("particularly true"), and they are; "scroll down and then back up" is the
+one case in her list that measures fine, and the two rail clicks she did not
+name are as bad as the wraps.
+
+## 2. Why, exactly
+
+The reveal is camera-pure — `pullOf(camera.x)`, `world.js` — and six passes have
+paced it (`6282080`'s 1.99x arrival, `a51aab8`'s ladder, `a94267c`'s allocation,
+`22ce47d`'s half tempo). **Every one of those paced the scroll → progress →
+camera chain, and a camera-pure driver never consults it.** It runs the kindling
+at whatever speed the camera happens to be moving. The scroll model moves the
+camera on a road that has been tuned nine ways; a camera blend moves it on a
+smootherstep over a duration derived from arc length, which knows nothing about
+any of it. The wrap's 3.8 s lap crosses the whole reveal band (x −8 → −14.72) in
+0.45 s of that — the entire 24-rung ladder inside seventeen frames.
+
+## 3. The law
+
+While a camera blend is in flight, and through the convergence that follows it,
+the driver travels toward the pull at the blend's **destination** pose, at no
+more than `BLEND_REVEAL_RATE`, under one invariant:
+
+```
+shown_t  <=  max( pullOf(camera.x)_t , shown_{t-1} )
+```
+
+*The limiter may hold light the lens has already earned; it may never create
+light the lens has not.* That is "nothing fades in over open view" and "dark at
+arm" restated as a property of every frame rather than of the ends.
+
+Note what it does **not** say. It does not say `shown <= pure`. The inherited
+build asserted exactly that, and it is wrong twice over:
+
+1. It makes the limiter **one-sided** — it can only ever slow a light-up. Two of
+   the four bad rows (wrap DOWN, click out) are *retires*, and it would leave
+   them exactly as they are.
+2. It is not even safe in that direction: it slams `shown` to 0 on the frame the
+   camera passes x −8. On the rail click out, that is a **0.56 one-frame drop to
+   black** where the shipped build has none.
+
+Letting a retire lag is safe instead, because the chapter's own `rise` (which
+drives `uAmount`) fades it out continuously across x −8 → −4.6, so there is
+nothing left to pop.
+
+Taking the **destination** pull as the target is what lets the leaving direction
+begin retiring during the second the wrap spends bowing out of the rest — the
+camera is genuinely moving there (r 14.97 → 16.3 and rising), so this is the
+retire riding the move, `6f23d90`'s rule, rather than a chapter dimming on a
+frame that has not moved.
+
+## 4. The rate, derived
+
+`BLEND_REVEAL_RATE = 1.0` pull/s is not a taste call — it is the value at which
+the limiter reproduces the shipped forward arrival:
+
+* per body `REVEAL_W / 1.0` = **160 ms**, between the forward flick's 136 and
+  the forward firm read's 190;
+* the 24 rungs' midpoints span 0.8545 of pull, so the sweep is **0.854 s at 28.1
+  bodies/s** — the forward firm read's own 0.860 s / 27.9;
+* the whole `PULL_MAX` band is spent in **1.12 s**, and measured on real
+  wheel-driven wraps that fits both windows the move actually gives it: the wrap
+  DOWN is on screen for **1.384 s** from the move's first frame (0.264 s in
+  hand), and the wrap UP has **1.472 s** between `rise` opening and the lap
+  landing (0.352 s in hand). Neither is cropped mid-retire; neither needs a tail.
+
+The inherited 0.75 does not fit: it needs 1.493 s against the wrap DOWN's real
+1.384 s window. The 1.68 s it was chosen against was measured from the **flick**
+rather than from the **move**, and the wrap's own placement takes ~250 ms of
+that before the limiter is armed at all.
+
+## 5. Off a blend, nothing changed — by construction
+
+`blending` is false and the lag is zero from boot, so `pull` is
+`pullOf(camera.x)` **by assignment**, every frame: forward scrub, reverse scrub,
+`?p=`, `?pose=`, and the frozen `?capture=` path every reference is shot
+through. Gate **G1** asserts it bit-exactly over every frame of three scrubs
+(`0.00e+0` over 348 frames), and **G2** over ten placements. The forward pacing
+is not "preserved by measurement"; there is no code path by which it could move.
+
+## 6. After
+
+Median of three, same harness, same input paths:
+
+| transition | before (sweep / bodies-s / kindle) | after |
+|---|---|---|
+| forward firm | 0.860 / 27.9 / 190 | 0.889 / 27.0 / 192 |
+| forward flick | 0.689 / 34.8 / 136 | 0.724 / 33.1 / 153 |
+| reverse firm | 1.247 / 19.3 / 370 | 1.245 / 19.3 / 372 |
+| reverse flick | 0.581 / 41.3 / 134 | 0.568 / 42.2 / 131 |
+| arrive-then-back-up | 0.718 / 33.5 / 166 | 0.788 / 30.5 / 182 |
+| wrap DOWN | 0.279 / 86.1 / **64** | 0.851 / 28.2 / **160** |
+| wrap UP | 0.372 / 64.5 / **75** | 0.917 / 26.2 / **160** |
+| click Owned → Epilogue | 0.307 / 81.6 / **62** | 0.942 / 25.5 / **160** |
+| click Epilogue → Mission | 0.311 / 77.2 / **71** | 0.674 / 35.6 / **159** |
+
+The scrub rows move a little run to run in both columns because the scroll
+model's servo is dt-driven and these medians are load-sensitive; the claim that
+they are *unchanged* rests on G1's bit-exact equality, not on this table. All
+four blend rows now sit at ~160 ms a body, inside the forward band.
+
+The click out is the one blend that finishes short of 0.854 s (0.674 s): its
+window from the move's start to x −8 is only 0.557 s, so the last of its retire
+is carried by `rise`'s own fade as the camera climbs away. Per body it is still
+159 ms — the kindling is paced, and what shortens the sweep is the chapter
+receding, not the ladder hurrying.
+
+## 7. The gates — `tools/revealgates.js` (new, QA-only, nothing imports it)
+
+Driven by `gates.py`, which feeds it real trusted wheel and a real pointer
+through callbacks rather than letting it dispatch synthetic events (a synthetic
+`WheelEvent` is not the input path, and a gate that passes on one is a false
+pass; the file asserts it saw `e.isTrusted`).
+
+| | after | shipped `f40b66c` |
+|---|---|---|
+| G1 scrub is camera-pure, every frame | `0.00e+0` PASS | `0.00e+0` PASS |
+| G2 placement is camera-pure | `0.00e+0` PASS | `0.00e+0` PASS |
+| G3 wrap DOWN kindle vs forward firm | 160 ms = **0.85x** PASS | 73 ms = **0.38x** FAIL |
+| G3 wrap UP | 161 ms = **0.85x** PASS | 71 ms = **0.37x** FAIL |
+| G4 `shown <= max(pure, previous)` | `0.00e+0` PASS | `0.00e+0` PASS |
+| G5 largest one-frame step ≤ REVEAL_W | 0.049 PASS | 0.159 PASS |
+| G6 converges to camera-pure | `0.00e+0` PASS | `0.00e+0` PASS |
+| G7 rail click, kindle and pop | 160 ms, 0.044 PASS | — |
+
+**G3 is a ratio to the forward firm read measured in the same session, not an
+absolute millisecond bar.** The forward flick's own kindle moves with frame rate
+(136 ms on an unloaded page, 178 ms with the gate's recorder running) because
+the scroll servo is dt-driven, so an absolute threshold would pass or fail on
+machine load rather than on behaviour. The firm read is stable across both
+(190 / 189 ms) and is the reference.
+
+**G3's binning was the thing to fix in the inherited gate**, and the fix is the
+interpolation described in §1: the first build counted lit rungs per frame and
+divided, which reports the bin width whenever a frame crosses more than one
+rung — precisely the condition being measured. Interpolated crossings also let a
+rung crossed inside a single frame report a kindle *shorter than a frame*, which
+is the fault itself and which binning can never see.
+
+**G7 is the gate that caught this pass's own first build.** A rail click Owned →
+Epilogue is a ~1.2 s blend that spends most of itself approaching, so the camera
+crosses the band late and the limiter is still behind when the blend lands. With
+`snap()` resetting the driver at `endCamBlend` — which the inherited work did —
+that click moved `uPull` **0.80 in one frame**: the whole 24-rung ladder at once,
+5–8 ms a body, 123 bodies/s, measurably **worse than the shipped state it
+replaced**. Neither wrap sees it, because a 3.8 s lap gives the limiter room to
+converge before it lands, which is why reading the code was not enough to find
+it and why the gate exists.
+
+## 8. Verification
+
+* `python3 tools/capture.py --check` — **PASS**, worst MAE **0.00/255** across
+  all ten frozen references. Nothing re-shot.
+* `?p=0.86`, `?p=0.97`, `?pose=final`, `?pose=owned`, `?capture=final`,
+  `?capture=0.9` — each a fresh cold load, each landing on its pose, console
+  clean.
+* One page load: cold, nine forward flicks to the end, **two wraps down and two
+  up**, a rail click each way, then nine flicks back. **Console 0 errors, 0
+  warnings.**
+* Both wraps re-verified as genuine travel through real wheel (`e4df4b0` not
+  regressed): biggest one-frame camera-x step 1.58 / 1.69 world units over a
+  3.8 s lap, against 12.5+ for the teleport that commit fixed.
+
+## 9. Residuals
+
+* **The wrap's blend is still cancellable by its own gesture under load, and
+  this is pre-existing.** In a long-running page (nine forward flicks first) the
+  wrap's placement frame can exceed `ARRIVAL_HOLD_MS`, `push()` drops the
+  arrival wall, and the next delta of the same flick cancels the blend — leaving
+  the camera parked mid-lap at x ≈ −15 with p = 0. Measured identically on
+  shipped `f40b66c` (−15.20) and on this build (−14.84), so it is not a
+  regression here, but it is the same class `e4df4b0` addressed and it wants its
+  own pass. Nothing re-asserts a pose afterwards, because at p = 0 the director
+  is not owned and its hero restore is a one-shot.
+* The reverse firm read is *slow* (370 ms a body) rather than fast. Nobody has
+  complained, and it is the tuned road being traversed gently, but it is the one
+  row outside the band in the other direction.
+* `BLEND_REVEAL_RATE` is duplicated as a comment in the gate file's G3 note. It
+  is not read from the module (the module exports nothing new on purpose), so a
+  future change to the constant should re-derive §4's three lines.
