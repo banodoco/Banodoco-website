@@ -149,6 +149,7 @@ const smoothstep = (e0, e1, x) => {
   const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
   return t * t * (3 - 2 * t);
 };
+const wrapPi = (d) => Math.atan2(Math.sin(d), Math.cos(d));
 
 // THE CANOPY DOES NOT KINDLE ON uPull ANY MORE (2026-08-14). Every vertex is
 // authored ALWAYS-LIT — world.js's own `aReveal < -0.5` escape hatch — and the
@@ -161,6 +162,88 @@ const ALWAYS_LIT = -1;
 // so it needs a longer ramp than a body does, and a deeper floor: a far
 // strand is a suggestion of continuation, not a stroke.
 const lumOf = (d) => 1 - 0.66 * smoothstep(5, 34, d);
+
+/* ================================================================
+   THE BRIGHTNESS HIERARCHY (2026-08-14, Hannah's fairy-ring brief)
+   ================================================================
+   > "Introduce hierarchy in brightness. Maybe ~70% extremely faint hairline
+   >  mycelium, ~20% slightly brighter secondary routes, and only ~10%
+   >  genuinely luminous strands/nodes. Make the brighter routes organic and
+   >  directional rather than random."
+
+   Before this pass the canopy had two levels and they were assigned by
+   GRAPH ROLE: every spanning-tree edge got 0.20-0.30, every cross-link got
+   0.115-0.17. That is a two-tier ramp with ~45% of the segments in the top
+   one, and — the part that matters for "random" — a tree edge out at the
+   hint band was lit exactly like the artery running into the hero's foot.
+   The eye had no way to tell which strokes were carrying the network.
+
+   The fix for the SECONDARY tier is not a third constant, it is a QUANTITY
+   THE GRAPH ALREADY HAS. Prim's walk is rooted at the hero, so the tree is a
+   rooted tree, and every edge has a LOAD: the number of fruiting bodies in
+   the subtree hanging off it. Load is how many mushrooms' paths back to the
+   hero run through this strand. Sort by it and the middle tier becomes FLOW —
+   faint everywhere in the capillaries, brighter where routes merge — and the
+   Y-shaped confluences she asks for happen on their own, because that is what
+   a rooted tree does at every branch point. Nothing is random and nothing is
+   authored per-strand.
+
+   THE LUMINOUS TIER IS NOT DRAWN FROM THE GRAPH AT ALL, and finding that out
+   cost this pass its first candidate. Filling the top 10% with the highest-
+   load tree edges is the obvious extension of the idea and it is wrong on the
+   frame: a graph edge is a CHORD — a point-to-point run with a modest bow —
+   so lighting the busiest of them puts the brightest strokes in the frame on
+   the most angular geometry in the file. Rendered with the two faint tiers
+   muted, that candidate's top tier read as a bright triangulation across the
+   floor: precisely the "miscellaneous angular lines" the brief opens by
+   asking to remove, re-emitted at four times the tone. Load says which
+   strands MATTER; it says nothing about which are worth looking at.
+
+   So the top tier is spent only on geometry authored to deserve it — the
+   arteries (§3b) and the arcs (§3c), both of them long, curved, directional
+   and going somewhere — plus the nodes. The graph's own contribution stops at
+   SECONDARY. Her sentence says this outright and it is worth reading twice:
+   "Little Y-shaped branches, convergences, and occasional glowing nodes will
+   work much better than more line density."
+
+   The two lower tiers are then filled to her fractions by BUDGET rather than
+   by a threshold guess: the top of the load ordering is taken until the
+   secondary tier reaches SEC_SHARE of the whole canopy's segment count, and
+   everything left — every cross-link, every hairline, every low-load twig of
+   the tree — is hairline. The budget counts the arteries and the arcs, so
+   they spend out of the same total rather than sitting on top of it.
+
+   The distance-luminance floor is also tiered, and this is what stops the
+   hierarchy dissolving with depth: a hairline takes lumOf() raw and so
+   vanishes into the fog as it should, while a luminous artery keeps 45% of
+   its tone at any distance and stays legible to the horizon. Near and far
+   read as the same three levels. */
+const T_HAIR = 0, T_SEC = 1, T_LUM = 2;
+const LUM_SHARE = 0.10, SEC_SHARE = 0.20;
+// tone bands, pre-distance. The old spine band (0.20-0.30) now sits between
+// SEC and LUM: the bulk of the network dropped about two thirds, and only the
+// trunks went up.
+const TONE = [
+  { lo: 0.050, hi: 0.082, floor: 0.00 },   // T_HAIR — extremely faint
+  { lo: 0.146, hi: 0.205, floor: 0.38 },   // T_SEC  — slightly brighter
+  { lo: 0.440, hi: 0.555, floor: 0.55 },   // T_LUM  — genuinely luminous
+];
+// The luminous band's ceiling is the terrain LIP's own tone (0.55), which is
+// this composition's brightest ground feature and the line the whole frame
+// hangs on. An artery is allowed to reach it and never to pass it: the ground
+// may have a few bright routes running through it, but nothing on the floor
+// outranks the soil-line, and nothing on the floor comes near the caps. The
+// first cut of this tier stopped at 0.425 and measured well while reading as
+// nothing in particular — at 12-25 units, against caps four times brighter,
+// that is simply below the frame's threshold for "unmistakable".
+const toneOf = (tier, r, lum) => {
+  const b = TONE[tier];
+  return (b.lo + (b.hi - b.lo) * r) * (b.floor + (1 - b.floor) * lum);
+};
+// the front pulse / CTA wave respect the same hierarchy, so an interaction
+// cannot flatten it back out
+const BOOST = [0.16, 0.40, 0.58];
+const WAVE = [0, 0.30, 0.45];
 
 // Terrain law, one place.
 const LIFT_MIN = 0.020, LIFT_SPAN = 0.030;
@@ -266,16 +349,24 @@ export function createFinalCanopy(uniforms, seats) {
     const dx = nodes[a].x - nodes[b].x, dz = nodes[a].z - nodes[b].z;
     return dx * dx + dz * dz;
   };
-  const edges = [];                    // { a, b, spine }
+  const edges = [];                    // { a, b, spine, kind }
   const seen = new Set();
   const key = (a, b) => (a < b ? `${a}_${b}` : `${b}_${a}`);
-  const addEdge = (a, b, spine) => {
+  // `kind` distinguishes the three passes below. It carries no geometry — it
+  // is what the load hierarchy reads: only a TREE edge has a parent/child
+  // orientation and therefore a load, and b is always the child.
+  const addEdge = (a, b, spine, kind) => {
     const k = key(a, b);
     if (a === b || seen.has(k)) return false;
     seen.add(k);
-    edges.push({ a, b, spine });
+    edges.push({ a, b, spine, kind });
     return true;
   };
+  // the rooted tree, recorded as Prim's lays it: parent[] and the insertion
+  // order, which is all a subtree accumulation needs (a reverse walk of the
+  // insertion order visits every child before its parent, by construction).
+  const parent = new Int32Array(N).fill(-1);
+  const order = [];
 
   // ---- Prim's, from the hero. O(N^2) on ~180 nodes: 32k comparisons at
   // build, once. What it buys is the only structural guarantee this file
@@ -292,7 +383,9 @@ export function createFinalCanopy(uniforms, seats) {
       for (let j = 0; j < N; j++) if (!inTree[j] && best[j] < pd) { pd = best[j]; pick = j; }
       if (pick < 0) break;
       inTree[pick] = 1;
-      addEdge(from[pick], pick, true);
+      parent[pick] = from[pick];
+      order.push(pick);
+      addEdge(from[pick], pick, true, 'tree');
       for (let j = 0; j < N; j++) {
         if (inTree[j]) continue;
         const d = d2Of(pick, j);
@@ -316,7 +409,7 @@ export function createFinalCanopy(uniforms, seats) {
     near.sort((a, b) => a.d - b.d);
     const want = 1 + (rand() < 0.42 ? 1 : 0);
     for (let k = 0, made = 0; k < near.length && made < want; k++) {
-      if (addEdge(i, near[k].j, false)) made++;
+      if (addEdge(i, near[k].j, false, 'cross')) made++;
     }
   }
 
@@ -334,7 +427,16 @@ export function createFinalCanopy(uniforms, seats) {
       const d = d2Of(i, j);
       if (d < bd) { bd = d; bj = j; }
     }
-    if (bj >= 0 && addEdge(i, bj, true)) bodyLinks++;
+    if (bj >= 0 && addEdge(i, bj, true, 'body')) bodyLinks++;
+  }
+
+  /* ---- LOAD: how many fruiting bodies route through each tree edge.
+     One reverse walk of Prim's insertion order. No rand(), no geometry. ---- */
+  const load = new Float64Array(N);
+  for (let i = 0; i < N; i++) if (nodes[i].body) load[i] = 1;
+  for (let k = order.length - 1; k >= 0; k--) {
+    const v = order[k], p = parent[v];
+    if (p >= 0) load[p] += load[v];
   }
 
   /* ================================================================
@@ -346,12 +448,18 @@ export function createFinalCanopy(uniforms, seats) {
   // is the whole failure this file exists to avoid), every vertex on the
   // terrain law, every sample tested against the cutaway.
   const degree = new Int32Array(N);
+  const lumNode = new Uint8Array(N);   // this node has a luminous strand on it
+  const tierSegs = [0, 0, 0];          // the reported hierarchy, counted as built
   let dropped = 0;
-  function strand(e) {
+  /** The trimmed run of an edge — pulled out of strand() so the tier
+   *  pre-pass can size every edge in segments WITHOUT drawing it, and
+   *  without touching the rng. Returns null for an edge too short to draw,
+   *  which is exactly strand()'s own two early returns. */
+  function trimOf(e) {
     const A = nodes[e.a], B = nodes[e.b];
     const dx = B.x - A.x, dz = B.z - A.z;
     const d = Math.hypot(dx, dz);
-    if (d < 0.25) return;
+    if (d < 0.25) return null;
     const ux = dx / d, uz = dz / d;
     // leave each node at its own seat radius, so a strand starts at the edge
     // of the stipe's footprint and not inside the flesh
@@ -360,8 +468,13 @@ export function createFinalCanopy(uniforms, seats) {
     const bx = B.x - ux * s1, bz = B.z - uz * s1;
     const ex = bx - ax, ez = bz - az;
     const len = Math.hypot(ex, ez);
-    if (len < 0.18) return;
-    const SEG = Math.max(4, Math.min(14, Math.round(len / 0.46)));
+    if (len < 0.18) return null;
+    return { ax, az, ex, ez, len, SEG: Math.max(4, Math.min(14, Math.round(len / 0.46))) };
+  }
+  function strand(e, tier) {
+    const t = trimOf(e);
+    if (!t) return;
+    const { ax, az, ex, ez, len, SEG } = t;
     const px = -ez / len, pz = ex / len;
     // WANDER. The first cut of this file used a third of this amplitude and
     // one harmonic, and the result was legible but wrong: at the rest the
@@ -398,21 +511,28 @@ export function createFinalCanopy(uniforms, seats) {
     degree[e.a]++; degree[e.b]++;
     const mid = sample(0.5, amp);
     const lum = lumOf(dCam(mid[0], mid[1]));
-    // spine strands (the tree, and every foot-to-foot run) carry the canopy;
-    // cross-links are the fabric between them and sit under
-    const t0 = (e.spine ? 0.20 + rand() * 0.10 : 0.115 + rand() * 0.055) * lum;
+    // TONE IS THE TIER (see §HIERARCHY at the head of the file). This used to
+    // be `e.spine ? 0.20 + rand()*0.10 : 0.115 + rand()*0.055`, i.e. graph
+    // role. It is load rank now — but it still draws EXACTLY ONE rand(), in
+    // exactly this position, so the rng stream and therefore every vertex
+    // position in the graph is bit-identical to the shipped canopy. This pass
+    // moves levels, not geometry.
+    const t0 = toneOf(tier, rand(), lum);
+    tierSegs[tier] += SEG;
     const tw = rand() * TAU;
     const arc = arcOf(mid[0], mid[1]);
     const meta = {
       arc, tw,
       // the growth-front pulse and the CTA wave breathe through the ground
       // as well as through the bodies — this IS the colony, and terrain.js's
-      // own front carriers already established the reading
-      boost: e.spine ? 0.45 : 0.22,
+      // own front carriers already established the reading. Tiered, so an
+      // interaction cannot flatten the hierarchy back out.
+      boost: BOOST[tier],
       // rhizomorph cords carry slow outward waves (terrain.js §4). A spine
       // strand is the same organ at the surface, so it carries the same.
-      wave: e.spine ? 0.40 : 0,
+      wave: WAVE[tier],
     };
+    if (tier === T_LUM) { lumNode[e.a] = 1; lumNode[e.b] = 1; }
     // There used to be a TRAVELLING FRONT here: one threshold per segment,
     // lerped along the A->B run, so light ran down a strand from the body that
     // kindled first to the one that had not. The strand is simply present now
@@ -439,7 +559,14 @@ export function createFinalCanopy(uniforms, seats) {
        or three short offshoots leaving a spine at an oblique angle and dying
        out are what stop the canopy reading as a wireframe of itself, and they
        are the cheapest density in the file — three segments each, on the same
-       batch, at a third of the tone. ---- */
+       batch, at a third of the tone.
+
+       HIERARCHY: a hairline is ALWAYS the faint tier, whatever it grows off.
+       It used to be a fraction of its parent's tone, which meant a hairline
+       leaving a trunk was brighter than a whole cross-link elsewhere and the
+       three levels smeared together at every junction. It keeps a small
+       parent bonus (a thread off an artery is a touch warmer than one off a
+       capillary) and nothing more. ---- */
     if (!e.spine || len < 1.2) return;
     const nH = rand() < 0.55 ? 2 : 1;
     for (let h = 0; h < nH; h++) {
@@ -452,7 +579,9 @@ export function createFinalCanopy(uniforms, seats) {
       let hy = groundY(hx, hz) + LIFT_MIN;
       const HS = 3;
       const hl = 0.34 + rand() * 0.95;
-      const tone = t0 * (0.42 + rand() * 0.22);
+      // one rand(), same position in the stream as the old
+      // `t0 * (0.42 + rand()*0.22)` — the hairline's geometry is untouched.
+      const tone = toneOf(T_HAIR, rand(), lum) * (1 + 0.16 * tier);
       for (let k = 0; k < HS; k++) {
         a += gauss() * 0.42;
         const step = hl / HS;
@@ -462,12 +591,460 @@ export function createFinalCanopy(uniforms, seats) {
         const f0 = 1 - k / HS, f1 = 1 - (k + 1) / HS;
         lines.seg(hx, hy, hz, qx, qy, qz,
           Math.min(0.9, tone * f0), Math.min(0.9, tone * f1),
-          { arc: meta.arc, reveal: ALWAYS_LIT, tw: rand() * TAU, boost: 0.18 });
+          { arc: meta.arc, reveal: ALWAYS_LIT, tw: rand() * TAU, boost: BOOST[T_HAIR] });
+        tierSegs[T_HAIR]++;
         hx = qx; hy = qy; hz = qz;
       }
     }
   }
-  for (const e of edges) strand(e);
+  /* ================================================================
+     3b. THE ARTERIES — the connections you are meant to actually see
+     ================================================================
+     > "Redistribute some of that detail between the mushroom bases. Have
+     >  subtle strands visibly originate underneath one mushroom, branch,
+     >  disappear into the terrain, and resurface near another."
+     >  ... "I'd make maybe 5-8 specific connections between mushrooms more
+     >  legible. That would make it feel richer and more 3D while
+     >  paradoxically using fewer lines."
+
+     The canopy already ran a strand between every pair of neighbouring feet
+     — §2's body-to-body pass is exactly that — and it was not legible,
+     because it was drawn at the same level as the eight hundred other
+     strands around it. Legibility here is not a connection that EXISTS, it
+     is a connection that OUTRANKS its surroundings. So an artery is not new
+     connectivity dressed up; it is the same organ given the top tier, a
+     branch, and a passage under the soil.
+
+     THE DIP IS THE WHOLE POINT, and it is what makes the frame read as 3D
+     rather than as a floor plan. A strand that runs unbroken from foot to
+     foot is a line on a plane. A strand that leaves one mushroom, sinks out
+     of sight, and comes back up near another states that the ground has a
+     volume and that the network is inside it — the eye supplies the buried
+     middle for free, and supplying it is what makes it feel like one
+     organism rather than one drawing. Two mechanisms carry the sink,
+     deliberately both: the strand descends BEHIND terrain.js's §0 soil slab
+     (opaque, depth-written, drawn first) so it is genuinely occluded, and
+     its tone independently tapers to nothing over the last 0.11 of that
+     descent so the disappearance is right even on the metres where the
+     slab's coarse depth rows interpolate under the true ground.
+
+     SELECTION IS MEASURED IN THE FRAME, NOT IN PLAN. This is 60c7370's
+     finding applied forward: a rule that bounds things on the ground says
+     nothing about what the lens sees. A pair is a candidate only if it is
+     ACROSS the view (|sin| of the run against the sight line >= 0.42 — a
+     route pointing at the lens foreshortens to a dot however long it is),
+     inside the frame's bearing, at a readable depth, and standing on soil
+     with room to submerge. Then the picks are spread: no two arteries may
+     share a bearing and a depth, so the seven land across the composition
+     instead of stacking in the one sector that scores best.
+
+     PAIRS THE GRAPH HAS NOT ALREADY WIRED are preferred (`seen`), so an
+     artery is never a second stroke laid over an existing one — no rails,
+     and the connectivity is genuinely added rather than doubled.
+
+     A FRESH RNG, and this block draws into the same two batches AFTER the
+     graph is complete but BEFORE the strand loop, so it costs no draw call,
+     changes no node, and does not touch the main rng stream: every vertex
+     of the shipped canopy is where it was. */
+  const arteries = [];
+  {
+    const cand = [];
+    for (let i = 0; i < nBody; i++) {
+      const A = nodes[i];
+      const dA = dCam(A.x, A.z);
+      if (dA < 6.5 || dA > 27) continue;
+      for (let j = i + 1; j < nBody; j++) {
+        const B = nodes[j];
+        const dB = dCam(B.x, B.z);
+        if (dB < 6.5 || dB > 27) continue;
+        const dx = B.x - A.x, dz = B.z - A.z;
+        const d = Math.hypot(dx, dz);
+        // long enough to be a journey, short enough to be a strand
+        if (d < 2.6 || d > 8.6) continue;
+        if (seen.has(key(i, j))) continue;
+        const mx = (A.x + B.x) / 2, mz = (A.z + B.z) / 2;
+        if (cutVal(mx, mz) < 1.2) continue;         // room to submerge
+        const vx = mx - REST_CAM.x, vz = mz - REST_CAM.z;
+        const dm = Math.hypot(vx, vz);
+        // ACROSS the view, not along it
+        const across = Math.abs((dx / d) * (vz / dm) - (dz / d) * (vx / dm));
+        if (across < 0.42) continue;
+        const rel = wrapPi(Math.atan2(vz, vx) - REST_CAM.head);
+        if (Math.abs(rel) > 0.62) continue;          // inside the frame
+        const size = Math.min(A.r, B.r);
+        if (size < 0.09) continue;                   // two real mushrooms
+        cand.push({ i, j, mx, mz, rel, dm,
+                    score: across * (1 + size * 2.2) * (1 - dm / 40) });
+      }
+    }
+    cand.sort((a, b) => b.score - a.score);
+    const ROUTES = 8;   // the top of her stated 5-8, and what lands the
+                        // luminous tier on its share (see canopyLumTarget)
+    for (const c of cand) {
+      if (arteries.length >= ROUTES) break;
+      let ok = true;
+      for (const p of arteries) {
+        if (Math.abs(p.rel - c.rel) < 0.115 && Math.abs(p.dm - c.dm) < 9) { ok = false; break; }
+        if (Math.hypot(p.mx - c.mx, p.mz - c.mz) < 3.2) { ok = false; break; }
+      }
+      if (ok) arteries.push(c);
+    }
+  }
+
+  let artSegs = 0, artNodes = 0, artBranches = 0, artConverge = 0;
+  {
+    const ar = makeRng(0x0A47E71E);          // 'artery'
+    for (const c of arteries) {
+      const A = nodes[c.i], B = nodes[c.j];
+      degree[c.i]++; degree[c.j]++;
+      lumNode[c.i] = 1; lumNode[c.j] = 1;
+      const dx = B.x - A.x, dz = B.z - A.z, d = Math.hypot(dx, dz);
+      const ux = dx / d, uz = dz / d;
+      const s0 = Math.min(A.r, d * 0.26), s1 = Math.min(B.r, d * 0.26);
+      const ax = A.x + ux * s0, az = A.z + uz * s0;
+      const ex = (B.x - ux * s1) - ax, ez = (B.z - uz * s1) - az;
+      const len = Math.hypot(ex, ez);
+      if (len < 1.0) continue;
+      const px = -ez / len, pz = ex / len;
+      // one confident bow, not the graph strand's two-harmonic meander: an
+      // artery is a route, and a route has a direction
+      const amp = Math.min(2.0, len * 0.24) * (0.70 + ar() * 0.60) * (ar() < 0.5 ? -1 : 1);
+      const k2 = 0.28 + ar() * 0.46, ph = ar() * TAU;
+      const sample = (t) => {
+        const w = Math.sin(Math.PI * t);
+        const off = amp * w * (1 + k2 * Math.sin(TAU * t + ph));
+        return [ax + ex * t + px * off, az + ez * t + pz * off];
+      };
+      // the submerged passage: a fast dive, a flat floor, a fast rise
+      const t1 = 0.30 + ar() * 0.09, t2 = 0.60 + ar() * 0.12;
+      const DEEP = 0.75 + ar() * 0.55;
+      const dipOf = (t) => {
+        if (t <= t1 || t >= t2) return 0;
+        const u = (t - t1) / (t2 - t1);
+        return -DEEP * smoothstep(0, 0.26, u) * smoothstep(0, 0.26, 1 - u);
+      };
+      const SEG = Math.max(14, Math.min(52, Math.round(len / 0.28)));
+      const lum = lumOf(c.dm);
+      const t0 = toneOf(T_LUM, ar(), lum);
+      const arc = arcOf(c.mx, c.mz);
+      const meta = { arc, tw: ar() * TAU, boost: BOOST[T_LUM], wave: WAVE[T_LUM],
+                     reveal: ALWAYS_LIT };
+
+      /* THE TWIN STROKE. A single polyline at any tone is a THREAD, and the
+         first cut of this block proved it: seven of them at the top tier were
+         legible only if you already knew where to look. terrain.js §4 solved
+         the same problem for the rhizomorph cords and this borrows its answer
+         whole — a companion stroke a breathing gap to one side at 0.62 of the
+         tone, the gap running on two incommensurate harmonics so the pair
+         never resolves into two machined rails. What the eye gets is one cord
+         with a lit core: an ARTERY, which is a different kind of object from
+         the hairlines around it rather than a brighter one. It is also why
+         these can be legible without being loud — the reading is carried by
+         the doubling, not by luminance, which is what keeps them inside a
+         composition whose whole brief is "quieter". */
+      const gapPh = ar() * TAU, gapPh2 = ar() * TAU;
+      const gapAt = (t) => 0.030 + 0.021 * Math.sin(TAU * 1.7 * t + gapPh)
+                                 + 0.014 * Math.sin(TAU * 3.1 * t + gapPh2);
+      const meta2 = { ...meta, tw: ar() * TAU };
+      let prev = null, prevF = 0, prevShade = 0, prevC = null;
+      let sank = null, rose = null;
+      for (let j = 0; j <= SEG; j++) {
+        const t = j / SEG;
+        const p = sample(t);
+        const dip = dipOf(t);
+        const y = groundY(p[0], p[1]) + LIFT_MIN + 0.014 + dip;
+        // dissolve into the soil over the last 0.11 of the descent
+        const f = Math.max(0, Math.min(1, 1 + dip / 0.11));
+        const shade = (0.70 + 0.30 * Math.abs(2 * t - 1)) * f;
+        const on = f > 0.02 && cutVal(p[0], p[1]) >= KEPT * 0.75;
+        const g = gapAt(t) * 1.6;
+        const cx = p[0] + px * g, cz = p[1] + pz * g;
+        const cy = groundY(cx, cz) + LIFT_MIN + 0.010 + dip;
+        if (prev && (on || prevF > 0.02)) {
+          lines.seg(prev[0], prev[1], prev[2], p[0], y, p[1],
+            Math.min(0.9, t0 * prevShade), Math.min(0.9, t0 * shade), meta);
+          lines.seg(prevC[0], prevC[1], prevC[2], cx, cy, cz,
+            Math.min(0.9, t0 * 0.70 * prevShade), Math.min(0.9, t0 * 0.70 * shade), meta2);
+          artSegs += 2; tierSegs[T_LUM] += 2;
+        }
+        if (prevF > 0.02 && !on && !sank) sank = prev;      // the surface break
+        if (prevF <= 0.02 && on && sank && !rose) rose = [p[0], y, p[1]];
+        prev = [p[0], y, p[1]]; prevF = on ? f : 0; prevShade = shade;
+        prevC = [cx, cy, cz];
+      }
+
+      /* THE Y-BRANCH. A route that forks and whose fork ARRIVES SOMEWHERE is
+         the difference between a network and a diagram — she asks for "little
+         Y-shaped branches, convergences" by name. The fork is placed clear of
+         the submerged passage (a branch nobody can see is not a branch), and
+         if a third mushroom stands within reach the fork goes to ITS foot,
+         which is a three-body convergence for the price of one strand. */
+      const tb = ar() < 0.5 ? 0.10 + ar() * (t1 - 0.16)
+                            : t2 + 0.06 + ar() * (0.86 - t2);
+      const rp = sample(tb);
+      let tgt = -1, td2 = 4.4 * 4.4;
+      for (let n = 0; n < nBody; n++) {
+        if (n === c.i || n === c.j) continue;
+        const q = nodes[n];
+        const q2 = (q.x - rp[0]) ** 2 + (q.z - rp[1]) ** 2;
+        if (q2 < td2 && q2 > 0.6) { td2 = q2; tgt = n; }
+      }
+      {
+        const conv = tgt >= 0;
+        let gx, gz;
+        if (conv) {
+          const q = nodes[tgt];
+          const bl = Math.hypot(q.x - rp[0], q.z - rp[1]);
+          gx = q.x - ((q.x - rp[0]) / bl) * Math.min(q.r, bl * 0.3);
+          gz = q.z - ((q.z - rp[1]) / bl) * Math.min(q.r, bl * 0.3);
+          artConverge++;
+        } else {
+          // oblique off the parent, never square — the file's own branch rule
+          const bang = Math.atan2(ez, ex) + (ar() < 0.5 ? 1 : -1) * (0.55 + ar() * 0.55);
+          const bl = 1.3 + ar() * 1.5;
+          gx = rp[0] + Math.cos(bang) * bl; gz = rp[1] + Math.sin(bang) * bl;
+        }
+        const bex = gx - rp[0], bez = gz - rp[1];
+        const blen = Math.hypot(bex, bez);
+        const bpx = -bez / blen, bpz = bex / blen;
+        const bamp = Math.min(0.75, blen * 0.20) * (ar() < 0.5 ? -1 : 1);
+        const BS = Math.max(4, Math.min(20, Math.round(blen / 0.30)));
+        const bt = toneOf(conv ? T_SEC : T_HAIR, ar(), lum) * (conv ? 1.25 : 1.5);
+        const bmeta = { arc, tw: ar() * TAU, boost: BOOST[conv ? T_SEC : T_HAIR],
+                        wave: WAVE[conv ? T_SEC : T_HAIR], reveal: ALWAYS_LIT };
+        let bp = null, bpt = 0;
+        let bOk = true;
+        for (let j = 0; j <= BS; j++) {
+          const t = j / BS;
+          const w = Math.sin(Math.PI * t);
+          const qx = rp[0] + bex * t + bpx * bamp * w;
+          const qz = rp[1] + bez * t + bpz * bamp * w;
+          if (cutVal(qx, qz) < KEPT * 0.75) { bOk = false; break; }
+          const qy = groundY(qx, qz) + LIFT_MIN + 0.010;
+          // a fork that converges holds its level; one that does not dies out
+          const sh = conv ? (0.72 + 0.28 * t) : Math.max(0, 1 - t) ** 1.3;
+          if (bp) {
+            lines.seg(bp[0], bp[1], bp[2], qx, qy, qz,
+              Math.min(0.9, bt * bpt), Math.min(0.9, bt * sh), bmeta);
+            artSegs++; tierSegs[conv ? T_SEC : T_HAIR]++;
+          }
+          bp = [qx, qy, qz]; bpt = sh;
+        }
+        if (bOk && bp) {
+          artBranches++;
+          // the fork itself is a node — the confluence the eye looks for
+          glows.pt(rp[0], groundY(rp[0], rp[1]) + 0.045, rp[1],
+            Math.min(0.9, toneOf(T_LUM, 0.35, lum) * 0.92), 0.085 + ar() * 0.045,
+            { arc, reveal: ALWAYS_LIT, tw: ar() * TAU, boost: 0.7 });
+          artNodes++;
+          if (conv) {
+            degree[tgt]++; lumNode[tgt] = 1;
+          }
+        }
+      }
+
+      // NODES. Both feet, and the two places the strand meets the soil line —
+      // the surface breaks are marked, so "it went under here and came up
+      // there" is stated rather than left to be noticed.
+      for (const [nx, nz, sz] of [[A.x, A.z, 0.15], [B.x, B.z, 0.15]]) {
+        glows.pt(nx, groundY(nx, nz) + 0.048, nz,
+          Math.min(0.9, toneOf(T_LUM, 0.85, lumOf(dCam(nx, nz)))),
+          sz + ar() * 0.055,
+          { arc, reveal: ALWAYS_LIT, tw: ar() * TAU, boost: 0.9 });
+        artNodes++;
+      }
+      for (const q of [sank, rose]) {
+        if (!q) continue;
+        glows.pt(q[0], groundY(q[0], q[2]) + 0.038, q[2],
+          Math.min(0.9, toneOf(T_LUM, 0.20, lum) * 0.80), 0.070 + ar() * 0.030,
+          { arc, reveal: ALWAYS_LIT, tw: ar() * TAU, boost: 0.55 });
+        artNodes++;
+      }
+    }
+  }
+
+  /* ================================================================
+     3c. THE SWEEPING ARCS — one organism, stated as a curve
+     ================================================================
+     > "Give the fairy ring 2-3 partially visible sweeping arcs underneath it.
+     >  Not an obvious glowing circle, but enough curved connectivity that
+     >  your brain subconsciously understands that these mushrooms belong to
+     >  one organism/network."
+
+     Everything else in this file is a CHORD: the graph's edges run point to
+     point, and a hundred chords between scattered nodes read as a mesh, which
+     is a texture, not a body. A fairy ring is the visible rim of an organism
+     that grew outward from one point, and the only mark that says so is
+     curvature that agrees with the ring. Three arcs concentric with RING_C —
+     one inside the member band, one through it, one outside — give the eye
+     three samples of the same circle, and three samples are enough to infer
+     the circle without ever drawing it.
+
+     WHY IT IS NOT A GLOWING CIRCLE, which she rules out explicitly, in four
+     separate ways:
+       · each arc covers only the azimuth span that is actually IN FRAME at
+         the rest, found by scanning for the longest contiguous run that is on
+         kept soil, at a readable depth and inside the bearing — never
+         authored, so it survives any reseed of the field;
+       · each is broken by two or three SUBMERGED wells on the arteries' own
+         dip mechanism, so it surfaces in three or four separate passages;
+       · its radius wobbles on two incommensurate harmonics, because world.js
+         says it in the ring's own header — "fairy rings are never true
+         circles";
+       · only ONE window of each arc is luminous. The rest is the secondary
+         tier, and the two ends fade out rather than stopping.
+
+     ATTACHMENT: an arc is not floating furniture. It is drawn on the terrain
+     law like every other vertex here, and wherever it passes within 1.15 of a
+     fruiting body's seat it takes that body as a node — a luminous glint on
+     the foot, and the body's degree goes up. That is the arc visibly running
+     THROUGH the mushrooms rather than past them, which is the reading the
+     brief is asking for. */
+  let arcSegs = 0, arcNodes = 0, arcsMade = 0, arcTouch = 0;
+  {
+    const rr = makeRng(0x5717A2C5);          // 'arcs'
+    for (const r0 of [5.65, 7.70, 9.85]) {
+      const p1 = rr() * TAU, p2 = rr() * TAU;
+      const at = (a) => {
+        const r = r0 * (1 + 0.050 * Math.sin(3 * a + p1) + 0.032 * Math.sin(5.3 * a + p2));
+        return [RING_C.x + Math.cos(a) * r, RING_C.z + Math.sin(a) * r];
+      };
+      const okAt = (a) => {
+        const p = at(a);
+        if (cutVal(p[0], p[1]) < KEPT) return false;
+        const dm = dCam(p[0], p[1]);
+        if (dm < 5.5 || dm > 27) return false;
+        return Math.abs(wrapPi(Math.atan2(p[1] - REST_CAM.z, p[0] - REST_CAM.x)
+          - REST_CAM.head)) < 0.66;
+      };
+      // longest contiguous frame-valid run, scanned twice round so a run that
+      // straddles a = 0 is not split by the seam
+      const STEPS = 360;
+      let bestA = 0, bestN = 0, curA = 0, curN = 0;
+      for (let k = 0; k < STEPS * 2; k++) {
+        const a = ((k % STEPS) / STEPS) * TAU;
+        if (okAt(a)) {
+          if (curN === 0) curA = a;
+          curN++;
+          if (curN > bestN && curN <= STEPS) { bestN = curN; bestA = curA; }
+        } else curN = 0;
+      }
+      if (bestN < 26) continue;                       // nothing worth drawing
+      const run = (bestN / STEPS) * TAU;
+      // a SWEEP, not a segment: the span takes as much of the frame-valid run
+      // as it can get. The first cut capped it at 1.55 rad and the arcs were
+      // not findable in the frame at all — too short to read as curvature,
+      // which is the only thing they are here to supply.
+      const span = Math.min(run * 0.90, 2.30);
+      const a0 = bestA + (run - span) * 0.5;
+      const NS = Math.max(10, Math.min(150, Math.round((r0 * span) / 0.24)));
+
+      // two or three submerged wells
+      const wells = 2 + ((rr() * 2) | 0);
+      const W = [];
+      for (let w = 0; w < wells; w++)
+        W.push({ c: (w + 0.5 + (rr() - 0.5) * 0.55) / wells,
+                 hw: 0.055 + rr() * 0.075, d: 0.70 + rr() * 0.60 });
+      const dipAt = (u) => {
+        let y = 0;
+        for (const w of W) {
+          const t = Math.abs(u - w.c) / w.hw;
+          if (t < 1) y -= w.d * smoothstep(0, 1, 1 - t);
+        }
+        return y;
+      };
+      const lumC = 0.18 + rr() * 0.60, lumHw = 0.10 + rr() * 0.08;
+      const rBase = rr(), tw = rr() * TAU;
+
+      let prev = null, prevF = 0, prevTone = 0, drew = 0;
+      for (let k = 0; k <= NS; k++) {
+        const u = k / NS;
+        const a = a0 + span * u;
+        const p = at(a);
+        const dip = dipAt(u);
+        const y = groundY(p[0], p[1]) + LIFT_MIN + 0.012 + dip;
+        const f = Math.max(0, Math.min(1, 1 + dip / 0.11));
+        // ends fade out rather than stopping dead
+        const endF = smoothstep(0, 0.12, u) * smoothstep(0, 0.12, 1 - u);
+        const tier = Math.abs(u - lumC) < lumHw ? T_LUM : T_SEC;
+        const lum = lumOf(dCam(p[0], p[1]));
+        const tone = toneOf(tier, rBase, lum) * f * endF;
+        const on = f > 0.02 && endF > 0.02 && cutVal(p[0], p[1]) >= KEPT * 0.75;
+        if (prev && (on || prevF > 0.02)) {
+          lines.seg(prev[0], prev[1], prev[2], p[0], y, p[1],
+            Math.min(0.9, prevTone), Math.min(0.9, tone),
+            { arc: arcOf(p[0], p[1]), reveal: ALWAYS_LIT, tw,
+              boost: BOOST[tier], wave: WAVE[tier] });
+          arcSegs++; tierSegs[tier]++; drew++;
+        }
+        // the arc takes any foot it runs through as a node
+        if (on) {
+          for (let n = 0; n < nBody; n++) {
+            const q = nodes[n];
+            if (Math.hypot(q.x - p[0], q.z - p[1]) > 1.15) continue;
+            if (lumNode[n]) continue;
+            lumNode[n] = 1; degree[n]++; arcTouch++;
+            glows.pt(q.x, q.gy + 0.046, q.z,
+              Math.min(0.9, toneOf(T_LUM, 0.55, lumOf(dCam(q.x, q.z))) * 0.9),
+              0.10 + rr() * 0.05,
+              { arc: arcOf(q.x, q.z), reveal: ALWAYS_LIT, tw: rr() * TAU, boost: 0.75 });
+            arcNodes++;
+            break;
+          }
+        }
+        prev = [p[0], y, p[1]]; prevF = on ? f : 0; prevTone = tone;
+      }
+      if (drew) arcsMade++;
+    }
+  }
+
+  /* ================================================================
+     3d. THE TIER BUDGET — filling her three fractions from the load order
+     ================================================================
+     Sized against the WHOLE canopy, arteries and arcs included, so those
+     spend out of the luminous 10% instead of sitting on top of it. The
+     estimate for the graph's own segments is exact (trimOf is deterministic
+     and SEG draws no rand); the hairline term is the expected value of the
+     `rand() < 0.55 ? 2 : 1` draw, which is the only approximate figure here
+     and is worth ~1% of the total. The achieved counts are measured as built
+     and reported in `counts` — the budget aims, the counter tells the truth. */
+  const edgeTier = new Uint8Array(edges.length);
+  {
+    const segEst = new Int32Array(edges.length);
+    let edgeTotal = 0, hairEst = 0;
+    for (let i = 0; i < edges.length; i++) {
+      const t = trimOf(edges[i]);
+      if (!t) continue;
+      segEst[i] = t.SEG;
+      edgeTotal += t.SEG;
+      if (edges[i].spine && t.len >= 1.2) hairEst += 3 * 1.55;
+    }
+    const HUB_EST = 8 * 9;                       // hub spokes — SECONDARY
+    const TOTAL = edgeTotal + hairEst + artSegs + arcSegs + HUB_EST;
+    // The luminous tier is already spent — the arteries and the arcs ARE it.
+    // Nothing here can promote a graph edge into it (see §HIERARCHY: that
+    // candidate was built, rendered and rejected). LUM_SHARE is therefore a
+    // TARGET THE ORGANS ARE SIZED AGAINST, not a budget this loop fills, and
+    // the achieved figure is reported from the counter either way.
+    let secLeft = SEC_SHARE * TOTAL - tierSegs[T_SEC] - HUB_EST;
+
+    const rank = [];
+    for (let i = 0; i < edges.length; i++) {
+      if (!segEst[i]) continue;
+      const e = edges[i];
+      if (e.kind === 'tree') rank.push({ i, load: load[e.b] });
+      else if (e.kind === 'body') { edgeTier[i] = T_SEC; secLeft -= segEst[i]; }
+      // cross-links are the fabric and stay hairline by definition
+    }
+    // BRIGHTNESS FOLLOWS FLOW: most bodies behind this edge first.
+    rank.sort((a, b) => b.load - a.load || a.i - b.i);
+    for (const r of rank) {
+      if (secLeft <= 0) break;
+      edgeTier[r.i] = T_SEC; secLeft -= segEst[r.i];
+    }
+  }
+
+  for (let i = 0; i < edges.length; i++) strand(edges[i], edgeTier[i]);
 
   /* ================================================================
      4. JUNCTIONS — glints, hubs, and the pools that carry the mass
@@ -475,16 +1052,26 @@ export function createFinalCanopy(uniforms, seats) {
   // Junction glints: "many small bright nodes where threads cross" (OWNED's
   // reference, CONNECT's bead points). One per node that actually got wired,
   // sized by how much of the network passes through it.
-  let hubs = 0;
+  let hubs = 0, lumPts = 0;
   for (let i = 0; i < N; i++) {
     const n = nodes[i];
     if (!degree[i]) continue;
     const lum = lumOf(dCam(n.x, n.z));
     const hot = Math.min(1, (degree[i] - 1) / 4);
+    // HIERARCHY, on the points as well as the lines. Two hundred glints all
+    // at one level is two hundred nodes and therefore no nodes: "occasional
+    // glowing nodes" only reads if most junctions are NOT one. An ordinary
+    // junction is now a little under half its old tone — present, uncountable
+    // — and the ones an artery or an arc actually runs through keep the top
+    // tier. The size channel carries the same split, so the difference is
+    // there at a glance and not only in the luminance.
+    const isLum = !!lumNode[i];
     glows.pt(n.x, n.gy + 0.035, n.z,
-      Math.min(0.9, (0.24 + 0.20 * hot) * lum),
-      (0.045 + 0.055 * hot) * (0.6 + 0.6 * lum),
-      { arc: arcOf(n.x, n.z), reveal: ALWAYS_LIT, tw: rand() * TAU, boost: 0.4 });
+      Math.min(0.9, (isLum ? 0.30 + 0.24 * hot : 0.105 + 0.085 * hot) * lum),
+      (isLum ? 0.075 + 0.075 * hot : 0.038 + 0.040 * hot) * (0.6 + 0.6 * lum),
+      { arc: arcOf(n.x, n.z), reveal: ALWAYS_LIT, tw: rand() * TAU,
+        boost: isLum ? 0.6 : 0.28 });
+    if (isLum) lumPts++;
 
     // CONVERGENCE HUBS — the house's hub grammar (CONNECT's radial spokes
     // into a bright core, OWNED's starbursts), kept RARE: only where the
@@ -498,12 +1085,18 @@ export function createFinalCanopy(uniforms, seats) {
         const rr = 0.28 + rand() * 0.42;
         const qx = n.x + Math.cos(a) * rr, qz = n.z + Math.sin(a) * rr;
         if (cutVal(qx, qz) < KEPT * 0.75) continue;
+        // a hub's spokes are a quarter of a unit long — they are a mark, not
+        // a route, so they sit at SECONDARY and let the hub's own glint carry
+        // the punctuation. (They were briefly luminous; eight starbursts at
+        // the top tone competed with the seven arteries for the same job.)
         lines.seg(n.x, n.gy + 0.03, n.z, qx, groundY(qx, qz) + 0.025, qz,
-          Math.min(0.9, 0.34 * lum), Math.min(0.9, 0.10 * lum),
+          Math.min(0.9, toneOf(T_SEC, 0.85, lum)), Math.min(0.9, 0.10 * lum),
           { arc: arcOf(n.x, n.z), reveal: ALWAYS_LIT, tw: rand() * TAU, boost: 0.8 });
+        tierSegs[T_SEC]++;
       }
       glows.pt(n.x, n.gy + 0.05, n.z, Math.min(0.9, 0.52 * lum), 0.22 + rand() * 0.10,
         { arc: arcOf(n.x, n.z), reveal: ALWAYS_LIT, tw: rand() * TAU, boost: 1 });
+      lumPts++;
     }
   }
 
@@ -569,6 +1162,38 @@ export function createFinalCanopy(uniforms, seats) {
   counts.canopyHubs = hubs;
   counts.canopySegs = lines.segCount;
   counts.canopyPts = glows.ptCount;
+  // THE HIERARCHY, MEASURED AS BUILT (not as budgeted). Every segment this
+  // file emits is counted into exactly one tier at the moment it is emitted,
+  // so these three numbers are the frame's own answer to "70 / 20 / 10" and
+  // not a restatement of the constants above.
+  counts.canopyHair = tierSegs[T_HAIR];
+  counts.canopySec = tierSegs[T_SEC];
+  counts.canopyLum = tierSegs[T_LUM];
+  // What the arteries and the arcs were SIZED against, reported beside what
+  // they achieved. The secondary tier is filled to its share by a budget loop
+  // and cannot miss; the luminous tier is a fixed amount of authored geometry,
+  // so this is the one number in the hierarchy that has to be checked rather
+  // than assumed — if a future pass changes the route count or the arc spans,
+  // this pair is where it will show.
+  counts.canopyLumTarget = Math.round(
+    LUM_SHARE * (tierSegs[T_HAIR] + tierSegs[T_SEC] + tierSegs[T_LUM]));
+  counts.canopyLumPts = lumPts + artNodes + arcNodes;
+  counts.arteries = arteries.length;
+  // The routes themselves, as world-space foot pairs. Reported because "5-8
+  // specific connections between mushrooms, more legible" is a claim about the
+  // FRAME, and a claim about the frame has to be checkable in the frame — this
+  // is what a review pass projects to find them. Compact: two points each.
+  counts.arteryLinks = arteries.map(c => [
+    +nodes[c.i].x.toFixed(2), +nodes[c.i].z.toFixed(2),
+    +nodes[c.j].x.toFixed(2), +nodes[c.j].z.toFixed(2),
+  ]);
+  counts.arterySegs = artSegs;
+  counts.arteryNodes = artNodes;
+  counts.arteryBranches = artBranches;
+  counts.arteryConverge = artConverge;
+  counts.ringArcs = arcsMade;
+  counts.ringArcSegs = arcSegs;
+  counts.ringArcTouch = arcTouch;
 
   return { group, counts, setPresence };
 }

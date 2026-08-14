@@ -409,7 +409,7 @@ export function createFinalSky(sceneApi, uniforms) {
   const trees = makeBatch();
   {
     const head = (REST.headingDeg * Math.PI) / 180;
-    for (const [band, distLo, distHi, n, tone] of [
+    for (const [band, distLo, distHi, n, toneB] of [
       [0, 26, 34, 11, 0.17], [1, 36, 46, 15, 0.125],
     ]) {
       for (let i = 0; i < n; i++) {
@@ -417,6 +417,35 @@ export function createFinalSky(sceneApi, uniforms) {
         // block owns the upper-left negative space
         const rel = (-0.62 + (i / (n - 1)) * 1.5 + gauss() * 0.05);   // radians off gaze
         if (rel > 0.08 && rel < 0.32) continue;   // keep the hero's sky clean
+        /* THE FRAME-LEFT THIN (2026-08-14). Hannah, with a screenshot of the
+           leftmost mushroom: "the background behind this leftmost mushroom on
+           the final section also still feels quite busy — clean that up until
+           it feels populated but not crowded."
+
+           Measured on the frame rather than assumed: cropping the rest still
+           to that mushroom and its sky, the busiest thing in the crop is not
+           ground detail at all — it is THIS. Eight or nine trunks with four
+           chevron pairs each stand in a regular picket directly behind and
+           between the frame-left caps, at a tone the caps have to compete
+           with. The declutter round already took this population 48 -> 26 and
+           called what was left "whispers behind the mist"; frame-left it is
+           not whispering, because that is where the trees are nearest the
+           gaze axis AND where the two big caps leave the most sky showing.
+
+           "POPULATED BUT NOT CROWDED" IS TWO KNOBS, and it needs both. Cutting
+           the count alone empties a horizon she has separately asked twice to
+           keep filled (d39b35b, 6ba7b3f); dimming alone leaves the same
+           regular picket, just greyer. So every third tree in the left sector
+           goes — a deterministic stride, no rng, so nothing else moves — and
+           the survivors there take a tone taper that eases in across the
+           sector rather than switching at its edge. The horizon keeps its
+           depth; the lattice stops reading as a lattice.
+
+           This `continue` is placed with the hero-sky one, BEFORE any rand()
+           of the loop body, so a skipped tree consumes nothing and every
+           surviving tree in both bands is byte-identical to the shipped one. */
+        if (rel < -0.24 && i % 3 === 1) continue;
+        const leftDim = 0.60 + 0.40 * Math.min(1, Math.max(0, (rel + 0.46) / 0.30));
         const th = head + rel;
         const dist = distLo + rand() * (distHi - distLo);
         const x = REST.x + Math.cos(th) * dist;
@@ -425,6 +454,7 @@ export function createFinalSky(sceneApi, uniforms) {
         const h = (rel < -0.30 ? 2.6 : 4.0) + rand() * (band ? 4.5 : 3.0);
         const tw = rand() * TAU;
         const meta = { tw, reveal: -1 };
+        const tone = toneB * leftDim;
         // trunk
         trees.seg(x, gy, z, x + gauss() * 0.1, gy + h, z + gauss() * 0.1, tone, tone * 1.3, meta);
         // conifer chevrons: symmetric drooping bough PAIRS, wide at the base
