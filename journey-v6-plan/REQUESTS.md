@@ -146,6 +146,7 @@ Status: **done** (shipped, gated) · **open** (not started) · **running**
 ### Process
 | Request | Outcome |
 |---|---|
+| 73 | **"Do we have some concept of the terminal velocity — the natural velocity to go from one section to another? Could you make the velocity from Owned to Final and back be faster."** | Yes, and it is now named and per-leg declarable: `TRANSIT_S` in route.js, in SECONDS rest-to-rest. Owned<->Final 3.27/3.44 s baseline (7.01/7.54 as mis-shipped by `3daac2e`) -> **2.60 / 3.01 s**. Field kindle went SLOWER (1.04/1.16 -> 1.31/1.27) — travel and kindle decoupled by arming the Final reveal limiter on glides. Per-leg transit table in 26-scroll-loop.md §37. |
 | 64 | Connect ground lighting at ~a third of current speed | `0701653` (road), superseded/completed by the glide-unit fix below |
 | 72 | **Connect ground lines "even slower, one at a time elegantly — they still appear rapidly and manically"; "roots growing out, not lights turning on"; Hivemind into ADOS, getting slower as they go.** SIXTH pass. | Root cause was NOT in this chapter: the commit glide was denominated in p/s, so every `scrollVh` raise the five earlier passes bought was discarded for any visitor who scrolled and released. Arrival 1.70 s -> 5.54 s (3.26x), windows 1.05/2.25/3.21 s decelerating. |
 | Structural audit of the codebase | Delivered. Verdict: the architecture has held; debt is absolute-p leakage in two files, four camera↔geometry couplings, and a decision log frozen at D16. An 8-item cleanup plan exists; **items 1–5 are not yet done.** |

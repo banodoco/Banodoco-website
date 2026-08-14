@@ -764,6 +764,14 @@ export function boot(opts = {}) {
     for (const id in chapters) {
       const mod = chapters[id];
       if (mod.drive) guarded(`chapter:${id}.drive`, () => mod.drive(p));
+      // ...and any chapter whose reveal is PACED by the camera (rather than
+      // merely gated by it) is told whether this frame's motion is the
+      // visitor's own hand or the machine's. A commit glide is the machine, in
+      // the same sense a camera blend is, so a chapter that rate-limits its
+      // reveal on a blend gets the chance to do the same here. Set every frame,
+      // never on edges: there is no state to drift.
+      if (mod.setGliding)
+        guarded(`chapter:${id}.setGliding`, () => mod.setGliding(scroll.gliding));
     }
 
     // Optics (W5): ONE finishing language across the whole journey. The lens

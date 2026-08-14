@@ -293,6 +293,63 @@ export const ROUTE = [
 export const TERMINAL_P = 1;
 
 /* ------------------------------------------------------------------ */
+/* TRANSIT — the natural velocity from one section to the next          */
+/* ------------------------------------------------------------------ */
+/* Hannah, 2026-08-14: "do we have some concept of, like, the terminal
+   velocity? You know, the natural velocity to go from one section to another.
+   If so, could you make the velocity from the owned by the contributors to the
+   final section and back be faster than it currently is."
+ *
+ * We do, and this is it. When a gesture ends, the commit resolution glides the
+ * rest of the way to the next rest at a speed denominated in SCROLL PIXELS per
+ * second (constants.js COMMIT_GLIDE_PX / COMMIT_CRUISE_MAX_PX). A leg's transit
+ * TIME is therefore its road divided by that speed — which is why a leg that
+ * owns a lot of road takes a long time to autoplay even though nothing about
+ * its camera changed.
+ *
+ * This table overrides that for one span, in the unit Hannah actually asked in:
+ * SECONDS from rest to rest. Seconds is the right unit and not a convenience —
+ * a leg's road is measured in viewport heights, so `spanPx / seconds` re-derives
+ * the correct px/s at every viewport size on its own, and the transition takes
+ * the same time on a laptop and on a phone.
+ *
+ * WHY A VELOCITY AND NOT AN ALLOCATION. The obvious way to speed this leg up is
+ * to give it less road. It is also the wrong way, twice over: `owned` seg 1
+ * holds 7.00 vh because request 83 ("one motion, not two speeds") needed its
+ * mean density to land near the Final arrival's pinned handover at p 0.85, and
+ * `final` seg 0 holds 17.0 vh because requests 61/77/107 want the field's
+ * kindle SLOW. Moving either re-opens a shipped complaint. Declaring a velocity
+ * moves NO road at all, so the density profile request 83 fixed is untouched by
+ * construction, and the kindle keeps its share of whatever budget is set — it
+ * owns 74% of this leg's road, so it still gets 74% of the seconds.
+ *
+ * Keys are `'<from>><to>'` in route order; the same entry serves both
+ * directions, which is what "and back" asks for. An absent entry means the leg
+ * uses the global band, which is what every other leg does today. */
+export const TRANSIT_S = {
+  // 1.5 s rest to rest, both ways. Measured live: 7.01 s forward / 7.54 s back
+  // on the shipped tree, and 3.27 / 3.44 before the glide-unit fix (3daac2e)
+  // handed this leg the 24 vh of road it owns. Hannah's baseline when she asked
+  // is the 3.27 / 3.44, and she asked for faster than that.
+  // The declared time is the CRUISE; the landing brake adds its own tail on top
+  // (SNAP_K is denominated in p, so the tail differs by direction — see the
+  // residual in 26-scroll-loop.md, 2026-08-14).
+  'owned>final': 1.5,
+};
+
+/** The declared transit time for the span between two rests, or null if the
+ *  span has no entry (then scroll.js uses the global band). Order-insensitive:
+ *  one declaration governs both directions. */
+export function transitSeconds(lo, hi) {
+  const i = REST_STOPS.findIndex(v => Math.abs(v - lo) < 1e-9);
+  const k = REST_STOPS.findIndex(v => Math.abs(v - hi) < 1e-9);
+  if (i < 0 || k < 0) return null;
+  const a = REST_OWNER[Math.min(i, k)], b = REST_OWNER[Math.max(i, k)];
+  const v = TRANSIT_S[`${a}>${b}`];
+  return v > 0 ? v : null;
+}
+
+/* ------------------------------------------------------------------ */
 /* Derivation — the ONLY place p-ranges are computed                    */
 /* ------------------------------------------------------------------ */
 const TOTAL = ROUTE.reduce((a, c) => a + c.span, 0);
@@ -363,6 +420,12 @@ export const SEGMENTS = CHAPTERS.flatMap((c) => {
  *  zeros and nav landings all read THIS list (plus TERMINAL_P where the
  *  end-hold counts). */
 export const REST_STOPS = CHAPTERS.flatMap((c) => c.stops);
+
+/** The chapter id owning each entry of REST_STOPS, index for index. Used by
+ *  transitSeconds() so a transit can be declared by name ('owned>final')
+ *  rather than by a pair of p-literals that would silently mean something else
+ *  the next time a span or a stop moves. */
+export const REST_OWNER = CHAPTERS.flatMap((c) => c.stops.map(() => c.id));
 
 export function chapterAt(p) {
   for (const c of CHAPTERS) if (p <= c.end) return c;

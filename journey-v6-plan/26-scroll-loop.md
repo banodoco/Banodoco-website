@@ -1502,3 +1502,206 @@ animator registered last, so every row is the presented frame. `journey.wrap()`,
   wrap's duration ever drops below ~2.1 s both `retireScale` and `bedSpread`
   silently become no-ops.
 * §11's notch-reader residual stands.
+
+---
+
+## 37. Transit velocity: the leg gets faster, the field keeps its clock
+
+Hannah, 2026-08-14: *"And do we have some concept of, like, the terminal
+velocity? You know, the natural velocity to go from one section to another. If
+so, could you make the velocity from the... owned by the contributors to the
+final section and back be faster than it currently is."*
+
+### 37.1 The answer to the question she asked
+
+Yes, there is such a concept, and until this pass it was implicit. Naming it is
+half the value of this section, because she is trying to acquire the vocabulary
+to ask for this precisely.
+
+**Two different things move the picture.** While your finger is on the trackpad,
+progress follows the SURFACE — you are metering it yourself. When the gesture
+ends, a *commit resolution* takes over and glides the rest of the way to the
+next rest. That glide has a speed, and that speed is the "natural velocity"
+she is describing.
+
+**It is denominated in scroll pixels per second** (`3daac2e`; before that it was
+in progress-per-second, which is the bug that pass fixed). So:
+
+    transit time  =  the leg's ROAD  /  the transit velocity
+
+A leg's road is its `scrollVh` allocation — how much wheel it costs. That is why
+a leg can feel slow to travel without anything about its camera being slow: the
+Owned -> Final leg owns **23.99 vh**, 44% of the whole route's road, because the
+Final field's kindle was deliberately given room (`61`/`77`/`107`).
+
+**The three numbers that set it** (`journey/constants.js`):
+
+| name | value | what it does |
+|---|---|---|
+| `COMMIT_GLIDE_PX` | 1500 px/s | floor — the slowest an ordinary released gesture will ever glide |
+| `COMMIT_CRUISE_MAX_PX` | 2200 px/s | ceiling — the fastest, so a fling still reads as travel and not a cut |
+| `COMMIT_GLIDE_MAX_S` | 7.5 s | no single transition autoplays longer than this |
+
+...and, new in this pass, **`TRANSIT_S` in `journey/route.js`** — a per-leg
+override declared in **seconds, rest to rest**, which is the unit Hannah asked
+in. Seconds rather than px/s is not a convenience: road is measured in viewport
+heights, so `roadPx / seconds` re-derives the right px/s at every viewport size,
+and the transition takes the same time on a laptop and on a phone.
+
+**The per-leg table as it now stands** (900 px viewport; "cruise" excludes the
+landing brake's tail, which adds ~0.9-1.5 s depending on direction):
+
+| leg | road | transit velocity | cruise | set by |
+|---|---|---|---|---|
+| Mission -> Inspire | 7.00 vh | 2200 px/s | 2.86 s | ceiling |
+| Inspire -> Connect | 17.90 vh | 2200 px/s | 7.32 s | ceiling |
+| Connect -> Owned | 5.12 vh | 2200 px/s | 2.09 s | ceiling |
+| **Owned -> Final** | **23.99 vh** | **14396 px/s** | **1.50 s** | **`TRANSIT_S` declared** |
+| Final -> end-hold | 0.61 vh | 2200 px/s | 0.25 s | ceiling |
+
+To make any leg faster or slower from here, the knob is one line in `TRANSIT_S`
+and the unit is seconds.
+
+### 37.2 What was wrong, and my part in it
+
+`3daac2e` fixed a real unit error — the glide was denominated in progress, so
+every `scrollVh` raise five Connect passes had bought was discarded whenever a
+visitor scrolled and released. Road-denominating it was correct and stays.
+
+But that same change handed this leg the 24 vh it owns, and took it from
+**3.27 s forward / 3.44 s back to 7.01 / 7.54** — measured live, both. That was
+an uncommissioned side-effect, and it was justified in that commit by pointing
+at request 61. **That justification was wrong.** Request 61 is about the field's
+KINDLE — how the mushrooms light — and this is the leg's TRAVEL. They are
+separable, and Hannah has consistently asked for them in opposite directions:
+lighting slower, travel faster. So the leg shipped 2.25x away from what she
+wanted rather than closer to it.
+
+### 37.3 The fix, and why it is a velocity and not an allocation
+
+The obvious way to speed this leg up is to give it less road. It is the wrong
+way, twice:
+
+* `owned` seg 1 holds 7.00 vh because **request 83** ("one motion, not two
+  speeds") needed its mean density to land near the Final arrival's pinned
+  handover at p 0.85. That fault WAS a 7.08x scroll-density step on this exact
+  leg.
+* `final` seg 0 holds 17.0 vh because **requests 61/77/107** want the kindle
+  slow.
+
+Declaring a velocity instead **moves no road at all**, so request 83's density
+profile is preserved *by construction* rather than by re-measurement, and every
+p-value, span, stop and golden is untouched.
+
+### 37.4 Decoupling travel from kindle — the part that made it possible
+
+Speeding the transit alone would have run the ladder faster, because the field's
+reveal is **camera-pure** (`pullOf(camera.x)`) and a faster glide sweeps the
+camera faster. That is the same fault `BLEND_REVEAL_RATE` already exists for,
+arriving through a different door: on a camera BLEND the reveal is rate-limited,
+because the visitor is not metering that motion — the machine is.
+
+**A commit glide is the machine too.** So it gets the same answer rather than a
+second one: the limiter is now armed by a glide as well as by a blend
+(`chapters/final/index.js`, the new `gliding` branch), targeting the camera-pure
+value rather than a destination pose — a glide moves the camera continuously
+along the real path, so `pure` IS the truth and all the branch does is refuse to
+let the ladder be dragged through faster than its own clock. The invariant is
+untouched:
+
+    shown_t  <=  max( pullOf(camera.x)_t , shown_{t-1} )
+
+so it can only ever SLOW a light-up, never create light the lens has not earned.
+**Requests 61/77/107 are therefore protected by construction**, not by choosing
+a transit that happens not to hurt them.
+
+**The flag is `scroll.gliding`, not `scroll.resolving`.** An intent is latched
+through most of a live gesture, so `resolving` would rate-limit ordinary brisk
+scrolling — the exact failure `final/index.js` records from the first build of
+the blend limiter (caught by G1). `gliding` is true only on frames where the
+resolution's drive term actually beats the visitor's own servo.
+
+### 37.5 Measured — real wheel path, trusted rig
+
+All timings on a quiet machine at **37.7 fps with `simRatio` exactly 1.000**
+(max frame gap 34.5 ms, under the 50 ms `dt` clamp), so these are wall-clock.
+The previous pass's numbers were sim-seconds at ~11 fps; where both exist they
+agree to ~1%, so nothing moved materially.
+
+    OWNED <-> FINAL, rest to rest        forward    backward
+      baseline (before 3daac2e)           3.272 s    3.442 s
+      shipped by 3daac2e                  7.011      7.542
+      THIS PASS                           2.603      3.012
+      vs baseline                         -20.4%     -12.5%
+      vs shipped                          -62.9%     -60.1%
+
+    THE FIELD'S KINDLE (uPull sweep, 5% -> 95% of PULL_MAX)
+      baseline (before 3daac2e)           1.041 s    1.163 s
+      shipped by 3daac2e                  3.434      —
+      THIS PASS                           1.312      1.274
+      vs baseline                         +26%       +10%   (SLOWER, as required)
+
+So the transit is 20% / 12.5% faster than the state Hannah was riding when she
+wrote the note, and the kindle is *slower* than that same state in both
+directions. That is the decoupling working: the two numbers moved in opposite
+directions from one change.
+
+    CONNECT'S GROUND ARRIVAL — re-verified unchanged (it is hers now, request 72)
+      arrival            5.54 s shipped  ->  5.49 s here   (~1%, gesture variance)
+      windows H/D/A      1.05/2.25/3.21  ->  1.01/2.27/3.22
+      departs            0.88/1.60/3.20  ->  0.84/1.52/3.12
+      order + deceleration Hivemind -> Discord -> ADOS, each longer than the last
+
+### 37.6 Gates
+
+1. **Both directions faster than baseline** on the real wheel path: 2.603 /
+   3.012 against 3.272 / 3.442. Every gesture landed exactly on its anchor.
+2. **Kindle not sped up:** 1.312 / 1.274 s against the baseline 1.041 / 1.163 —
+   slower in both directions, and bounded above by `BLEND_REVEAL_RATE` now that
+   the limiter is armed on glides.
+3. **Connect unchanged:** 5.49 s, same order, same deceleration, and nothing
+   drawn below `LIGHT_LO`.
+4. **No density step (request 83):** no road moved — `owned` segVh, `final`
+   segVh and both `shape` declarations are byte-identical. Preserved by
+   construction.
+5. **Mirror:** full gestured ride 0 -> 1 -> wrap -> 0, Connect's light window
+   sampled 392 forward / 175 reverse: **max |delta uLit| 0.0016** at p 0.3875 —
+   tighter than the 0.0069 the previous pass measured, because the rig now
+   samples at 37.7 fps instead of 11. **No self-ignition: over 1515 frames
+   below `LIGHT_LO`, `group.visible` is false on every frame where uLit > 0.001
+   — `framesLitAndVisible` = 0.** (`uLit` and `uAmount` DO read stale below the
+   window on a ride that wraps: the animator early-returns before writing them
+   while the chapter is retired, so they hold their last value. `group.visible`
+   is the draw gate and the only honest test — a uniform read alone would have
+   reported a false positive here, and did on the first probe.)
+6. **`capture.py --check`: PASS, worst MAE 0.00/255, all ten frozen references
+   byte-identical.** No golden re-shot. Nothing here touches a p-value, a camera
+   key or a frozen frame — the glide and the limiter are both inert at dt = 0.
+7. **Console:** 0 entries across the measurement rides and a full 0 -> 1 -> 0
+   gestured ride.
+8. **Rests and spans unchanged:** `[0, 0.26, 0.523, 0.725, 0.97]`.
+
+### 37.7 Residuals
+
+- **The two directions are not equal: 2.603 s forward against 3.012 s back, a
+  15.7% gap where the baseline's was 5.2%.** Both are faster than baseline in
+  absolute terms — the slower direction here still beats the baseline's *faster*
+  one — but the RATIO got worse, and this leg carries request 72 ("Final back to
+  Owned scrolls much slower than forward") so it is worth naming precisely.
+  The cause is the one unit the glide fix did not reach: `SNAP_K` is denominated
+  in p, so `brake = |target - p| * SNAP_K` gives a landing tail whose length
+  depends on the local road density. At the Final end the road is dense and the
+  tail is ~1.10 s; at the Owned end it is sparse and the tail is ~1.51 s. The
+  cruise is now perfectly symmetric (it is road-denominated); only the tail is
+  not. **The fix is to road-denominate the brake too** — `brake` computed on
+  scroll distance with a road dead-zone — which would make the whole motion a
+  pure function of road and therefore exactly symmetric in both directions by
+  construction. It was NOT taken in this pass: `SNAP_K` governs the landing at
+  every rest on the route, and shortening the brake zone at road-dense places
+  would land on the tail of Connect's ground arrival, which this pass is
+  explicitly required to leave alone. It wants its own pass with its own
+  Connect re-verification.
+- `COMMIT_GLIDE_PX` (1500) still never binds on any leg.
+- The declared transit is the CRUISE; the felt transition is cruise + tail. If
+  Hannah asks for a specific number of seconds end to end, the tail has to come
+  out of the declaration or out of the brake.
