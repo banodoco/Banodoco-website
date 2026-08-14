@@ -416,6 +416,52 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   .j-rail.on .j-rail-menu .j-sym path,
   .j-rail:focus-within .j-rail-menu .j-sym path { stroke-dashoffset: 0; }
+  /* ---- …and it says so again when someone stops on it ----
+     The MENU pill is gone from the half moon (THE HUB HAS NO PILL, below) and
+     this stands in for it: after a second of dwell the three filaments draw
+     themselves a second time. Same element, same property, same 12 units of
+     dash as the arrival directly above — the gesture and the entry are one
+     drawing, not two.
+
+     IT RETRACTS FIRST, AND THAT IS THE WHOLE DIFFERENCE FROM A REPLAY. The
+     entry runs 12 -> 0 because it begins from a glyph that is not there yet.
+     Replaying it on a glyph that IS there has to put the dash back to 12 to
+     start, and `from` is instantaneous: shot at 0.05x, the first frame of that
+     candidate is an already-erased mark. That is a BLINK — the exact shape
+     `b079f84` went and removed from the popover — so the wind-up is animated
+     instead. Nothing on screen ever jumps: the filaments withdraw towards
+     their nodes and write back out, and the mark begins and ends drawn.
+
+     RETRACTS TO 8 OF THE 12, NOT ALL OF IT. Shot side by side at 0.05x: at a
+     full retract the mark spends ~0.15s as three bare dots and reads as the
+     icon having blinked out; at 8 it never stops being a list of three lines
+     and the motion still plainly reads as the lines being redrawn. Her word
+     is "gently", and that is the difference between the two frames.
+
+     THE STAGGER IS DOING MORE WORK THAN THE DEPTH. Shot with and without:
+     drawn together the three lines read as the whole glyph breathing — a
+     pulse, and a pulse is a thing asking for attention. Drawn 0.07s apart
+     they read as an INDEX being written line by line, which is what the mark
+     is (three filaments leaving three nodes, symbols.js). The nodes do not
+     move: they are lit points, lit before the gesture and after it, and
+     flickering them would be the second gesture on one control that the
+     popover pass had to go and unpick.
+
+     The keyframe BEGINS AND ENDS at the resting style — dashoffset 0, the
+     drawn glyph — which is this file's contract for anything animated, and is
+     why the reduced-motion path is a switch-off rather than a rewrite. rail.js
+     arms it after a 1s dwell (THE BUTTON SAYS IT IS A BUTTON) and drops the
+     class on animationend, so a fresh hover is what re-arms it. */
+  @keyframes j-menu-rewrite {
+    0%   { stroke-dashoffset: 0; }
+    38%  { stroke-dashoffset: 8; }
+    100% { stroke-dashoffset: 0; }
+  }
+  .j-rail-menu.j-rail-nudge .j-sym path {
+    animation: j-menu-rewrite 0.62s ease both;
+  }
+  .j-rail-menu.j-rail-nudge .j-sym path:nth-of-type(2) { animation-delay: 0.07s; }
+  .j-rail-menu.j-rail-nudge .j-sym path:nth-of-type(3) { animation-delay: 0.14s; }
 
   /* ============================================================
      THE SITE-MAP PANEL — the whole site as a page, from the right.
@@ -2443,36 +2489,36 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       .j-rail-name {
       margin-right: calc(var(--pillx, 0px) + 0.72rem);
     }
-    /* THE HUB'S OWN PILL GOES UNDER THE WHOLE INSTRUMENT.
-       Held off to the moon's leftmost point with the sections, "MENU" lands
-       two radii from its own button with the current section's mark standing
-       between the two, and every reading of that picture has the pill
-       labelling the mark. Hung off the button directly it draws straight
-       across the inside of the moon. So it drops below the arc, right-aligned
-       to the same 2px of frame the button holds: nothing is under the moon, it
-       is the widest thing on the flank, and read there it captions the
-       instrument — which is what a menu button's label is.
-       `--cl-rad + tile/2` is the circle's own bottom, which on a half moon is
-       also the bottom mark's own tile edge, so the clearance is exact and
-       cannot go stale if the manifest changes the angles.
-       IT IS BELOW THE BUTTON IN BOTH STATES and only the clearance changes:
-       hung off the left while closed and dropped below on open, it JUMPED at
-       the 120ms dwell, because a hover reveals the pill at once and the moon
-       then decides to open under it. Below in both states, the same label
-       simply steps down to make room, on the formation's own clock. */
-    .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-name {
-      right: 0;
-      top: 100%;
-      transform: none;
-      margin: 0.4rem 0 0 0;
-      transition: opacity 0.24s ease, letter-spacing 0.24s ease,
-                  margin-top var(--cl-travel) cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-      .j-rail-menu .j-rail-name {
-      margin-top: calc(var(--cl-rad) + var(--cl-tile) / 2
-                       - var(--cl-hub) / 2 + 0.4rem);
-    }
+    /* THE HUB HAS NO PILL — 2026-08-14.
+       "Let's remove the MENU text that shows when you hover over the actual
+        menu button, because it just doesn't really fit in." — Hannah
+
+       What stood here was the whole apparatus for placing it: held off to the
+       moon's leftmost point it landed two radii from its own button with a
+       section's mark standing between the two, so every reading of that
+       picture had the pill labelling the MARK; hung off the button it drew
+       across the inside of the moon; dropped below the arc it cleared both,
+       and had to be below in the closed state too or it jumped at the 120ms
+       dwell. Three placements, each fixing the last, and her verdict on the
+       result is that it does not fit — which is the honest reading of a label
+       that has to be exiled below the entire instrument to be legible at all.
+       The five section names sit ON their marks; this one could not, because
+       the thing it names is the thing the moon is drawn around.
+
+       So it goes, and the affordance it was carrying is restated as motion
+       instead — see the dwell gesture on `.j-rail-menu .j-sym path` above.
+       `display: none` (not opacity) so it costs no box on a flank where the
+       marks now place themselves against real neighbours, and so no rule
+       further down can reveal an element that has no position of its own left.
+       THE NAME DOES NOT GO WITH IT: `display: none` takes an element out of
+       the accessibility tree, so rail.js now puts `aria-label="Menu"` on the
+       button itself, where a control's name belongs.
+       THE COLUMN KEEPS ITS LABEL. This rule is inside `(hover: hover)` and
+       reads `:not(.j-rail-column)`, so it cannot reach the touch tier — where
+       there is no hover to have complained about, where the arming tap is the
+       only thing that ever reveals a name, and where six names in a single
+       file is the list it has always been. */
+    .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-name { display: none; }
     /* A SECTION'S NAME FOLLOWS `.at`, NOT `:hover`.
        Every mark on this arc is placed by `transform`, and a transform-only
        move does not make Chrome re-run its hit test — so after a rotation
@@ -2518,8 +2564,9 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       opacity: 1;
       letter-spacing: 0.24em;
     }
-    .j-rail:not(.j-rail-column).j-rail-open .j-rail-item:is(:hover, :focus-visible) .j-rail-name,
-    .j-rail:not(.j-rail-column).j-rail-open .j-rail-menu:is(:hover, :focus-visible) .j-rail-name {
+    /* (the hub's half of this pair went with the hub's pill — an `opacity`
+       for an element this geometry no longer gives a box to) */
+    .j-rail:not(.j-rail-column).j-rail-open .j-rail-item:is(:hover, :focus-visible) .j-rail-name {
       opacity: 1;
     }
 
@@ -2654,13 +2701,19 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        class and never covered the arc at all. */
     .j-rail:not(.j-rail-column) .j-rail-slot,
     .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark,
-    .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-name,
     .j-rail:not(.j-rail-column) .j-rail-arc path,
     .j-rail:not(.j-rail-column) .j-rail-inner::after {
       transition: none;
       transition-delay: 0s;
     }
     .j-rail-slot, .j-rail-menu { transition-delay: 0s; }
+    /* The dwell gesture is switched off rather than shortened, on the same
+       contract as everything above it: `j-menu-rewrite` ends at the drawn
+       glyph, which is the button's resting state, so with the animation gone
+       the mark is simply already written. rail.js does not arm the timer under
+       reduced motion either — this is the stylesheet holding its own end up,
+       not a duplicate of that guard. */
+    .j-rail-menu.j-rail-nudge .j-sym path { animation: none; }
     .j-rail.on .j-rail-menu .j-sym path,
     .j-rail:focus-within .j-rail-menu .j-sym path { transition-delay: 0s; }
     .j-act { transition: none; }
