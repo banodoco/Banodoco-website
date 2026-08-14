@@ -124,7 +124,7 @@ Status: **done** (shipped, gated) · **open** (not started) · **running**
 | — | Stopping mid-loop leaves the hero mushroom permanently displaced | `a937444` |
 | — | The fairy ring lights up / down "all in one go"; wants it one piece at a time | `e1e8381` |
 | — | Down-wrap switches the field off before the motion starts; wants them going off as it goes | `027f969` |
-| 68 | **The ground lights up and darkens very suddenly in both loop directions; make it incremental.** | `<this commit>` — the Final terrain and root canopy were the only things in the chapter with no ladder, so their whole brightness was the one fade scalar, and on a lap that scalar is a step at both ends. They now ride the field's own driver: 2.8% → 59.7% of the lap going out, 2.6% → 32.9% coming in. See `26-scroll-loop.md` §31–36. |
+| 68 | **The ground lights up and darkens very suddenly in both loop directions; make it incremental.** | `9865e86` — the Final terrain and root canopy were the only things in the chapter with no ladder, so their whole brightness was the one fade scalar, and on a lap that scalar is a step at both ends. They now ride the field's own driver: 2.8% → 59.7% of the lap going out, 2.6% → 32.9% coming in. See `26-scroll-loop.md` §31–36. |
 
 ### Interface and content
 | # | Request | Landed |
