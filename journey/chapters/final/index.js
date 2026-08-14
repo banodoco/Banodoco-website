@@ -75,7 +75,17 @@ export function createFinal(sceneApi) {
   const bedUniforms = Object.assign({}, uniforms, { uAmount: { value: 0 } });
   const ring = createFinalRing(sceneApi, uniforms);
   const terrain = createFinalTerrain(sceneApi, bedUniforms);
-  const sky = createFinalSky(sceneApi, uniforms);
+  /** THE HORIZON IS FAR, AND FAR LEAVES LAST (§39). The sky — this chapter's
+   *  own spore cloud, the horizon trees and the mist sprites — has the same
+   *  fault as the bed and takes the same cure, but not the same curve: sharing
+   *  one scalar with the floor makes every non-body pixel of the epilogue scale
+   *  by a single number, which is a sheet, not a world. It gets its own float
+   *  and reaches full a third of the band early (SKY_FULL), so the horizon is
+   *  whole before the floor is on the way in and still standing after the floor
+   *  has begun to go on the way out. Both curves are the same smoothstep on the
+   *  same driver and meet exactly at 0 and 1, so the seams stay no-ops. */
+  const skyUniforms = Object.assign({}, uniforms, { uAmount: { value: 0 } });
+  const sky = createFinalSky(sceneApi, skyUniforms);
   // THE ROOT CANOPY (2026-08-07). Built after the ring because it is built
   // FROM it: ring.seats is where every fruiting body in the chapter stands,
   // and canopy.js lays one connected network over the lot, rooted at the
@@ -531,6 +541,10 @@ export function createFinal(sceneApi) {
      NO non-wrap blend can reach this code and the rail click into or out of
      the epilogue is unchanged by arithmetic rather than by hope. Off a blend
      `bed` is assigned `eff` outright. */
+  /** The driver value at which the HORIZON is whole, against PULL_MAX = 1.12
+   *  for the floor (§39). 0.80 puts the two curves at most 0.28 apart, around
+   *  the middle of the band, and exactly together at both ends. */
+  const SKY_FULL = 0.80;
   let bedSpread = false;
 
   /** Seconds the SHIPPED blend clock takes to cross the whole band. Integrated
@@ -789,10 +803,12 @@ export function createFinal(sceneApi) {
     // and nothing else, and the tail hands back to `eff` — which is what the
     // landing is for, and costs nothing because the lag at a wrap's landing is
     // 0.0000 in both directions (G6).
-    let bed = eff;
+    let bed = eff, skyv = eff;
     if (bedSpread && blending && shownPull !== null) {
       const b = Math.max(0, Math.min(1, shownPull / PULL_MAX));
       bed = b * b * (3 - 2 * b);
+      const s = Math.max(0, Math.min(1, shownPull / SKY_FULL));
+      skyv = s * s * (3 - 2 * s);
     }
     // Still gated by the arm — `rise` says where the lens is, not which
     // chapter owns the frame, and the lens is below the onset on every other
@@ -804,7 +820,7 @@ export function createFinal(sceneApi) {
     // move — but a gate that reads only `eff` is a gate that can cut a lit bed,
     // and the bed is now the one thing in the chapter `eff` does not govern.
     group.visible = blending
-      ? (amountTarget > 0 || amount > 0.003) && Math.max(eff, bed) > 0.003
+      ? (amountTarget > 0 || amount > 0.003) && Math.max(eff, bed, skyv) > 0.003
       : amount > 0.003;
     if (!group.visible) {
       lastPull = pullOf(sceneApi.camera.position.x);
@@ -825,6 +841,7 @@ export function createFinal(sceneApi) {
         wasVisible = false;
         uniforms.uAmount.value = eff;
         bedUniforms.uAmount.value = bed;
+        skyUniforms.uAmount.value = skyv;
         uniforms.uPull.value = pullOf(sceneApi.camera.position.x);
         uniforms.uPullRaw.value = pullRawOf(sceneApi.camera.position.x);
         ring.update(t, dt, false);
@@ -901,6 +918,7 @@ export function createFinal(sceneApi) {
     applyShedFog(reach);
     uniforms.uAmount.value = eff;
     bedUniforms.uAmount.value = bed;
+    skyUniforms.uAmount.value = skyv;
     uniforms.uPull.value = pull;
     // the unclamped twin, for the clone entry-draw front (clones.js part B).
     // It carries the SAME OFFSET, with sign: the entry draw runs a reveal-width
@@ -1009,7 +1027,9 @@ export function createFinal(sceneApi) {
     // the same float by hand. Off a blend `bed` IS `eff`, so this line is the
     // line it has always been.
     terrain.setAmount(bed);
-    sky.update(t, eff);
+    // ...and so are the mist sprites, which sit outside the shared uniforms and
+    // take the float by hand for the same reason terrain's haze does (§37).
+    sky.update(t, skyv);
   });
 
   /* ---- growth-front world position (lens halation focus hint) ----
