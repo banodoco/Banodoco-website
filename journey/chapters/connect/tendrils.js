@@ -116,7 +116,38 @@ const tmpC = new THREE.Color();
 // and the slower front already holds it on screen longer, so widening it as
 // well turned an accent into a cold streak. The trail is the SOFT ramp's job;
 // the tip is only the glint that says where the light is right now.
-export const FRONT_SOFT = 0.32;
+// 0.32 -> 0.23 (2026-08-14, Hannah's SIXTH report, and the first one that names
+// the CHARACTER rather than the speed: "make them feel like roots growing out,
+// not lights turning on").
+//
+// The model was never the problem — the reveal is already a growth front, not a
+// brightness envelope: `litMask = 1 - smoothstep(head - uSoft, head + 0.004,
+// along)` is a tip travelling along aAlong over paths that already exist at
+// uQuiet, which is a root advancing and not a lamp being switched. What made it
+// read as a lamp was that at 1.70 s for the whole network (the measured shipped
+// arrival — see constants.js COMMIT_GLIDE_PX) nothing had time to read as
+// travel at all.
+//
+// With the road bought back, this ramp is re-narrowed, and the direction is the
+// opposite of the last four passes' instinct for a reason. 0.32 was chosen when
+// the front was FAST, where a wide ramp is the only way to avoid a hard edge
+// crawling across the ground. A wide ramp on a SLOW front is the other failure:
+// a third of the route swelling together reads as a region brightening — a lamp
+// — instead of a tip with a trail behind it. Narrowing sharpens the tip while
+// the per-patch lift still gets much longer in wall-clock, because the head is
+// now so much slower. Measured, quiet->lit for ONE patch of ground (this ramp
+// against each route's own head speed, at the released-gesture glide):
+//
+//     route      shipped   here     |  the ramp narrowed 0.72x on all three
+//     Hivemind    0.14 s   0.20 s   |  and the lift still got longer, because
+//     Discord     0.15 s   0.39 s   |  the head slowed by more than that
+//     ADOS        0.23 s   0.60 s   |
+//
+// Hivemind gains least (1.4x) because it is the opener and this pass
+// deliberately spends the least road there — see route.js `shape`. Still
+// comfortably under ADOS's 0.42 along-unit run, so the kindle floor in index.js
+// binds on exactly the route it was written for and nothing else changed.
+export const FRONT_SOFT = 0.23;
 export const FRONT_TIP = 0.032;
 
 function smooth01(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); }

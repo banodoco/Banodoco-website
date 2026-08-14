@@ -15,7 +15,6 @@ Status: **done** (shipped, gated) · **open** (not started) · **running**
 | # | Request | Notes |
 |---|---|---|
 | 62 | **Inspire→Connect should be ONE dramatic movement.** Reads as two separate movements, feels stilted; wants the character of the hero→Inspire arrival. | The leg has been worked twice (`6acceac` monotone zoom-out, `e95820a` composed-frame stall). This is a new complaint: it reads as two gestures, not one. |
-| 64 | **Connect ground lighting at ~a third of current speed.** | FOURTH request on this pacing. `c77fb00` reported Connect's schedule fully spent (0.1021 p is the whole distance from first-draw to the frozen rest), so this needs more road — a route/rest change. |
 | 65 | **Owned portraits: put colour back in.** Too much has been sapped out. | Keep them integrated with the warm palette. |
 | 59 | **Three glowing lines still visible after Inspire**, clearly in the Epilogue. | Strong suspicion: `d42c9a8`'s three lee filaments are permanent by design (that permanence is what made crossings motionless), so any lighting reveals the lanes everywhere. Resolving it must not regress the motionless boundary. |
 | 60 | **Epilogue tap still drops sparkles off the body.** | **Refutes** the previous pass's "already gone" verdict. Look wider than the shed — the clones carry the main model's five point layers, and its tap ripple makes motes glint. |
@@ -147,6 +146,8 @@ Status: **done** (shipped, gated) · **open** (not started) · **running**
 ### Process
 | Request | Outcome |
 |---|---|
+| 64 | Connect ground lighting at ~a third of current speed | `0701653` (road), superseded/completed by the glide-unit fix below |
+| 72 | **Connect ground lines "even slower, one at a time elegantly — they still appear rapidly and manically"; "roots growing out, not lights turning on"; Hivemind into ADOS, getting slower as they go.** SIXTH pass. | Root cause was NOT in this chapter: the commit glide was denominated in p/s, so every `scrollVh` raise the five earlier passes bought was discarded for any visitor who scrolled and released. Arrival 1.70 s -> 5.54 s (3.26x), windows 1.05/2.25/3.21 s decelerating. |
 | Structural audit of the codebase | Delivered. Verdict: the architecture has held; debt is absolute-p leakage in two files, four camera↔geometry couplings, and a decision log frozen at D16. An 8-item cleanup plan exists; **items 1–5 are not yet done.** |
 | Keep a structured register of requests | This file. |
 
