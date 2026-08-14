@@ -442,22 +442,52 @@ export function createConnect(sceneApi) {
      Node anchors — the hub cores. The group parents to the scene root,
      so hub positions ARE world positions (no matrix walk needed; kept
      through a clone so callers can't mutate the anchors).
-     Discord's chip anchors per orientation (hiveAnchorPort precedent):
-     in landscape it sits on the hub; in portrait the hub is ~25 deg
-     outside the narrow frustum, so the chip rides the route's mid
-     stretch — the only part of Discord's run that is in-frame there.
+     Every hub is its own anchor, in BOTH orientations — no node here has a
+     per-orientation position any more. See the two retirement notes below
+     (ADOS 2026-08-04, Discord 2026-08-14) for why each exception existed and
+     what made it expire.
      ================================================================ */
   const NODES = {};
   for (const hm of net.hubMeta) NODES[hm.id] = hm.pos.clone();
-  const discordPort = net.hubMeta[2].portAnchor.clone();
-  Object.defineProperty(NODES, 'discord', {
-    get() { return sceneApi.camera.aspect < 1 ? discordPort : net.hubMeta[2].pos; },
-  });
   // ADOS's per-orientation anchor RETIRED with the top-left/top-right restage
   // (2026-08-04): the portrait pose now clears the copy block off the whole
   // organism, so the ADOS hub itself is in-frame with room for its pill in
   // both orientations. nodeWorld('ados') is therefore the hub in every
   // orientation again — which is also what the lens focal handoff wants.
+  // ...AND DISCORD'S RETIRES HERE (2026-08-14 — Hannah: "in the Connect the
+  // community section on mobile, when I hover, the Discord button isn't
+  // aligned with the thing that appears for it — the flashing thing").
+  //
+  // It was the last one, and it was the whole complaint. In portrait this
+  // getter handed the chip `portAnchor` — route-t 0.25, a point on the middle
+  // of Discord's run — while the thing that answers a hover is the HUB: its
+  // core brightens (0.58 -> 1.0) and scales +18%, and its route pulse fires
+  // from there. So on a phone the control and its own response were two
+  // different places on the ground. Measured at the Connect rest, chip dot
+  // against the projected hub: 375x812 **267 px** apart, 430x932 **306 px**
+  // apart, 5.686 world units. ADOS and Hivemind measured 0 px at both, and
+  // all three measured 0 px at 1440x900 — a mobile-only fault on exactly one
+  // hub, which is what Hannah reported.
+  //
+  // The exception's own justification is what has expired. It reads: "at
+  // 375x812 all three hub cores are inside the frame, but Discord's sits 10 px
+  // from the right edge, so its pill (99 px, drawn to the right of the dot)
+  // would run off." Two things have since made that false. The chip layer
+  // learned to EDGE-FLIP (`ui.js`: mirror the pill about the dot and
+  // compensate the translate so the DOT stays exactly on its node), so a pill
+  // with no room on the right is placed on the left with the anchor unmoved —
+  // which is precisely this case and is why ADOS could come home in 2026-08-04.
+  // And `a6f027a` moved the hub itself: measured after it, Discord's core
+  // projects 27 px from the right edge at 375x812, not 10.
+  //   Verified rather than assumed — measured with the anchor on the hub:
+  // the pill flips left and lands fully on frame at both sizes, the dot sits
+  // on the hub to 0 px, and chip-chip clearance IMPROVES at both (the worst
+  // portrait pair was hivemind/discord, and Discord is moving away from it).
+  //
+  // `portAnchor` goes with it: this was its only reader, so tendrils.js no
+  // longer computes one. Nothing else in the build asks a node for a
+  // per-orientation position — all three hubs are now their own anchor in
+  // both orientations, which is the state this file kept trying to reach.
   const NODE_IDS = [...HUB_IDS];          // narrative order = reveal order = tab order
   const _nw = new THREE.Vector3();
 
