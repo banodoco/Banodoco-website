@@ -2788,3 +2788,334 @@ same selection `d39b35b` used). 1,169 sampled vertices in the band:
 * The projection-vs-plan finding generalises and is not written down anywhere
   the other bands can see it. Any future "add more bodies to a band" request in
   this chapter has the same ceiling, and the spacing test will keep saying yes.
+
+---
+
+# 2026-08-14 — the network is not there until you are halfway to it
+
+> "When I scroll from Owned by the ecosystem to the final section there's this
+> kind of network or web thing visible halfway through, but it only appears when
+> I'm halfway there. Can you make it so it's always there and we just zoom into
+> it?" — Hannah
+
+**Built:** same day. **Files:** `journey/chapters/final/canopy.js` (the reveal
+law), `journey/chapters/final/index.js` (the term that drives it). No camera key,
+no rest pose, no route allocation, no geometry, no shader edit, no new draw call.
+
+Third time this complaint has been made about this site, third time the answer is
+the same: the thing does not *arrive*, it is *already there*, and the fault was
+making its presence a function of the reveal instead of a function of where the
+lens is. `f9e8317` did it for CONNECT's ground paths, `fc1e151` for OWNED's
+colony. This one is closest to `fc1e151` — the fix is to hand the reveal to the
+soil.
+
+## 1. The system, and the number behind "halfway"
+
+The "network or web thing" is `chapters/final/canopy.js`: the chapter's one
+connected graph over every fruiting body, which the file itself calls "a WEB, not
+a tree". It is **not** the Owned colony (behind the visitor by then), not the
+section trailing off the cut face, not the crossing's soil horizon. Attributed by
+toggling each of the Final group's four subgroups off and on against a **frozen**
+frame at twelve poses, each parked by real wheel (MAE/255, whole 1440x900 frame):
+
+| p | cam y | **canopy** | ring | terrain | sky |
+|---|---|---|---|---|---|
+| 0.8454 | −0.396 | 0.0001 | 0.0001 | 4.21 | 0.015 |
+| 0.8536 | −0.064 | 0.0587 | 0.0193 | 3.75 | 0.439 |
+| 0.8709 | +0.745 | **0.3008** | 0.0419 | 4.94 | 0.630 |
+| 0.8877 | +1.388 | **0.8041** | 1.0373 | 4.44 | 0.819 |
+| 0.9086 | +1.921 | **0.9038** | 2.4566 | 4.25 | 1.052 |
+| 0.9700 | +2.730 | **1.1684** | — | — | — |
+
+The frozen control — the same pose shot twice with no toggle — is **0.00000** at
+every row, so each column is that subgroup's own pixels and nothing else's. The
+canopy column is the complaint: zero for the first half of the leg, then a steady
+climb in open view. (The terrain column is much larger throughout and is *not*
+what she is describing: it is the underground colony, which is present the whole
+time and never appears.)
+
+The mechanism is one line of `world.js`: `pullRawOf(camX) = (−camX − 8.0) / 6.0`.
+Every canopy vertex carried `aReveal` on `uPull`, and `uPull` is **exactly zero
+until the lens passes x = −8.0**. Measured through real wheel events, with the
+page's own wheel listener tapped as an odometer so the fraction is in DELIVERED
+WHEEL PIXELS and not in frames (frame index is only a proxy for scroll distance
+if the drive rate is perfectly constant, and a poll loop between bursts breaks
+that). The transit costs **16,200 px** of wheel:
+
+| | p | cam x | % of the transit's wheel |
+|---|---|---|---|
+| **uPull leaves 0** | **0.8549** | **−8.49** | **44.4%** |
+| uPull = 0.5 | 0.8931 | −11.48 | 61.1% |
+| uPull = 1.0 | 0.9403 | −14.04 | 83.3% |
+
+**44.4%.** "Halfway" is not an impression, it is the number. x = −8.0 is the soil
+pierce: the canopy's onset was welded to the moment the lens leaves the ground,
+and it then spent the next 40% of the wheel drawing itself in front of the
+visitor. (An independent frame-indexed ride put the same three events at 45.3% /
+62.1% / 85.3% — same story, ±3% of harness variation.)
+
+## 2. The soil was already doing the work
+
+Starting the fade earlier only moves a fade. `fc1e151`'s move was to key the
+reveal to the camera's depth relative to the soil so the GROUND does the hiding —
+at which point it is not a fade at all, it is an occlusion, and no jump or fling
+can outrun it.
+
+Whether that was available here had to be measured, because this chapter
+*dissolves its own soil slab while the lens is buried* (`bc5a89f` — the slab was a
+section wall standing in front of a buried camera), so there is a hole to see
+through. Forcing `uPull` to its ceiling and A/B-toggling the canopy at the same
+frozen poses:
+
+| lens depth | canopy contribution, FULLY LIT |
+|---|---|
+| 1.12 under | 0.0032 |
+| 1.03 under | 0.1388 |
+| 0.77 under | 0.1091 |
+| 0.40 under | 0.1139 |
+| **0.06 under (the pierce)** | **1.7991** |
+| 0.21 above | 1.9754 |
+| 2.73 above (the rest) | 1.1548 |
+
+**A ~17x step across the soil line.** Below it, fog, grazing angle and what soil
+remains hold a fully lit network to a tenth of a grey level. The world was already
+occluding it; the reveal was doing work the geometry had done for free.
+
+## 3. What changed
+
+**`canopy.js`** — every vertex is authored `ALWAYS_LIT` (world.js's own
+`aReveal < −0.5` escape hatch). Nothing in the file kindles. The node thresholds,
+`CANOPY_LEAD`, the waypoint inverse-distance blend and the per-segment travelling
+front go with them. **None of them called `rand()`**, so the graph is
+bit-identical: 200 nodes, 104 bodies, 479 edges, 10 body links, 8 hubs, 3,309
+segments, 262 points, before and after (read off `journey.counts('final')` on both
+trees).
+
+**`index.js`** — one camera-pure scalar beside `buriedOf`, on the same axis:
+
+```js
+const CANOPY_D0 = -1.10;    // dark at and below this depth
+const CANOPY_D1 = -0.30;    // whole here — still under the soil
+function surfacedOf(pos) {
+  const cy = pos.y - groundY(pos.x, pos.z);
+  const t = clamp01((cy - CANOPY_D0) / (CANOPY_D1 - CANOPY_D0));
+  return t * t * (3 - 2 * t);
+}
+```
+
+written every frame onto the canopy's own two materials' `uOpacity`.
+`makeStrandMat`/`makePointsMat` build `uOpacity` as a fresh object per material
+and merge the chapter's shared set *around* it, so the write provably reaches the
+canopy's two batches and nothing else — no new uniform, no shader edit. It is
+written **before the visibility gate**, for the reason `terrain.setBuried` is:
+inside it, it would latch at whatever the lens was doing when the chapter last
+ticked, and a forward/reverse sweep would then report hysteresis that was really a
+stale write.
+
+Measured live through the real wheel path, 1440x900:
+
+| p | cam y | surfacedOf |
+|---|---|---|
+| 0.8004 (the arm) | −1.072 | **0.000** |
+| 0.8313 | −0.736 | 0.416 |
+| 0.8449 | −0.396 | 0.971 |
+| **0.8490** | **−0.268** | **1.000** |
+| 0.8531 (the pierce) | −0.096 | 1.000 |
+| 0.9700 (the rest) | +2.730 | 1.000 |
+
+The ramp is spent entirely between 1.10 and 0.30 under the soil — the band §2
+measured at ≤ 0.139 MAE — and saturates at p 0.849, which is where the old onset
+*began*. **Where the network used to start appearing, it is now already
+complete.** On the wheel odometer: it starts lighting at 31.6% of the transit,
+buried, and is whole at 47.4%, coincident with the lens clearing the soil.
+Everything after that is approach — the visitor zooms into a world that was
+already there, which is the sentence in the brief.
+
+### Keying to DEPTH is what makes portrait right for free
+
+The portrait camera rides higher and pierces the soil ~0.024 of p earlier; a
+camera-x key cannot know that, and a p key would need a second constant. At
+375x812 the term saturates at p 0.822 against a pierce at p ~0.832 — still
+finished underground, with no portrait-specific number anywhere. Its ramp does
+open earlier in p (0.564 already at the arm), so the same A/B was run there rather
+than assumed:
+
+| p (375x812) | cam y | surf | canopy MAE |
+|---|---|---|---|
+| 0.80 (the arm) | −0.600 | 0.564 | **0.0613** |
+| 0.82 | −0.294 | 0.990 | 0.0666 |
+| 0.83 | −0.078 | 1.000 | 0.0496 |
+| **0.84** | **+0.204** | 1.000 | **3.3114** |
+
+A **67x step** at the soil line, and the whole ramp under 0.087 MAE — six
+hundredths of one grey level. "Dark at arm" holds in the only sense that matters.
+
+## 4. Before / after
+
+Paired diff at **bit-exact matched poses** (`?capture=<p>`, the frozen placement,
+used here and only here because a paired pixel diff needs both trees at an
+identical pose — a real-wheel ride lands within a tolerance and the camera carries
+its own drift). The camera pose at every row is identical between the two builds
+to 4 dp, so the diff is the change and nothing else.
+
+| p | cam y | 1440x900 | 375x812 |
+|---|---|---|---|
+| 0.725 (Owned rest) | −1.18 | **0.0000** | **0.0000** |
+| 0.78 | −1.11 | 0.0000 | 0.0000 |
+| 0.80 (the arm) | −1.07 | 0.0002 | 0.0624 |
+| 0.83 | −0.74 | 0.0458 | 0.0540 |
+| 0.845 | −0.39 | 0.1072 | — |
+| 0.853 | −0.09 | 0.0455 | — |
+| **0.86** | +0.24 | **1.8648** | 2.7865 |
+| 0.88 | +1.14 | 1.1607 | 1.8520 |
+| 0.91 | +1.95 | 0.5501 | 0.4416 |
+| 0.94 | +2.49 | 0.0427 | 0.0000 |
+| 0.97 (Final rest) | +2.73 | **0.0000** | **0.0000** |
+
+**Both rests are byte-identical**, the whole underground ramp is under 0.12, and
+the change is concentrated exactly where the complaint was — peaking just past the
+pierce, where the network is now whole and used to be a third drawn. It converges
+back to zero by p 0.94 because that is where the old build finally finished
+kindling.
+
+Dense real-wheel frame strips of the transit, one continuous gesture, frames
+grabbed in-page by a rAF hook chained after `composer.render()` so no CDP
+round-trip stalls the ride: 46 frames at each of 1440x900 and 375x812, before and
+after. Before, the visitor surfaces onto a bright horizon line with a dark field
+behind it and watches the ground knit itself together over the next third of the
+scroll. After, the surface breaks onto a complete network running to the fog, and
+the only thing that changes from there is that the mushrooms light up along it —
+their ladder untouched.
+
+## 5. Budget
+
+Real wheel; both rests on the shipped snap, the two mid-transit points held with
+`?nosnap=1` (which disables only the commit magnet). Draw counts are whole-frame
+across every composer pass — `renderer.info.autoReset` disabled with one manual
+reset per frame, because a read after `composer.render()` otherwise reports only
+the final fullscreen blit and says `calls: 1`. `submit` is the CPU cost of
+`composer.render()`, bracketed between the last animator and the post-render hook;
+the rAF interval is vsync-locked and is not a cost measure.
+
+| point | p | draws | triangles | lines | points | submit ms |
+|---|---|---|---|---|---|---|
+| Owned rest | 0.725 | 55 → **55** | 4,753 → **4,753** | 70,813 → **70,813** | 18,096 → **18,096** | 0.9 → **0.9** |
+| mid-transit A (pierce) | 0.852 | 248 → **248** | 18,043 → **18,043** | 331,162 → **331,162** | 69,870 → **69,870** | 1.8 → **1.8** |
+| mid-transit B (approach) | 0.904 | 329 → **329** | 50,179 → **50,179** | 421,805 → **421,805** | 80,480 → **80,480** | 2.3 → **2.3** |
+| Final rest | 0.970 | 427 → **427** | 278,181 → **278,181** | 453,789 → **453,789** | 85,446 → **85,446** | 2.4 → **2.4** |
+
+**Identical in every cell.** "Always there" cost nothing because it was never a
+cost question: both canopy batches are `frustumCulled = false` and were already
+drawn every frame the chapter is visible — dark, but drawn. The change moves a
+multiply, not a draw call. This is `fc1e151`'s point again: the reveal may gate
+COST, but here the reveal was gating only LIGHT, and light is free.
+
+## 6. Method — a trap worth recording
+
+**CDP `Input.dispatchMouseEvent` cannot deliver a gesture STREAM on this
+machine.** Measured, the page's own wheel listener sees deltas a mean **57.6 ms**
+apart at `gap=0` and **69.2 ms** at `gap=14 ms`. `scroll.js` requires a mean
+spacing at or below `COMMIT_STREAM_GAP_MS = 45` before a gesture counts as a
+stream, and `carrying()` — which every commit resolution and the wrap itself go
+through — returns false without one. So CDP dispatch is structurally a **notch
+reader**: it scrubs, and it can never fire a wrap however hard it pushes. Two
+attempts at the wrap gate reported "did not wrap" for exactly this reason.
+
+That is the right regime for every reveal question in this pass (Hannah is
+describing a scrub), and it is what §1–§4 used. For the wrap, the stream was
+driven the way this file's own earlier mirror gate drove it: `WheelEvent`s
+dispatched at `window` from a rAF loop — **18.6 ms** spacing, through the same
+capture listener a hardware wheel reaches (`scroll.js` registers it with a plain
+`addEventListener('wheel', …, {capture:true})` and never tests `isTrusted`). And
+because one gesture buys one section change by design, a wrap needs
+gesture-separated streams to walk to the end and then one more off it.
+`journey.wrap()` was not used anywhere in this pass.
+
+## 7. Gates
+
+* **`capture.py --check`: PASS**, worst MAE **0.00/255** across all ten goldens,
+  0.0% px > 8 on every one. **No re-shoot** — and that is a prediction of the
+  design, not luck: at both rests every canopy vertex was already fully revealed
+  on the old build (all authored thresholds ≤ ~0.91 against `uPull` 1.12 at the
+  rest), so `mix(0.07, 1.0, reveal)` was already 1.0 there and `ALWAYS_LIT` × a
+  saturated `surfacedOf` is the same float. `final@*` and `owned@*` did **not**
+  move. The baseline was confirmed clean at `a6f027a` before the change (all ten
+  0.00) so any drift would have been this pass's.
+* **Mirror scrub, REAL WHEEL, both directions.** One continuous scrub down the
+  transit and one back up, sampling the canopy's presence every rendered frame
+  (353 forward / 448 reverse). Forward frames where presence **decreased: 0**.
+  Reverse frames where it **increased: 0**. At the **32 poses both rides
+  genuinely visit** (camera x,y matched to 1e−2) the two agree to
+  **0.000e+00** — exact mirroring.
+  Binned against camera **Y**, the axis the term reads, worst |fwd − rev| is
+  **2.14e−3**; binned against camera **X** it is 1.64e−2, and that residual is
+  **not hysteresis, it is the camera**: at the worst bin the two rides' own
+  camera y differs by 0.0104 (the shipped handheld drift), which through the
+  smoothstep's derivative at that point predicts 0.0171 of presence against
+  0.0164 measured — a 4% match. The term is a pure function of the pose it is
+  handed.
+* **No self-ignition.** Parked mid-ramp with `?nosnap=1` so the lens genuinely
+  holds still, then eight seconds of no input, five poses, ~380 frames each.
+  **Above ground the presence is pinned at exactly 1.0, span 0.000000** — while
+  `uPull` itself breathes 0.0019–0.0025 over the same idle, as it always has.
+  The pre-change canopy was a direct function of `uPull` and inherited that
+  breathing **in open view**; it no longer can. Underground the term does move
+  with the drift (span ≤ 0.0404 at p 0.830), which is worth ≤ 0.006 MAE at §2's
+  measured occlusion — see residuals.
+* **A real wrap, both directions**, fired by a 60 Hz in-page gesture stream off
+  the end of the route (p 0.8796 → 0, and 0 → 0.97 the other way).
+  **Worst per-frame step in the canopy's presence, over every frame the chapter
+  is drawn: 0.00000**, presence a constant 1.0000 across all 96 drawn frames. The
+  chapter still retires on `rise` exactly as before; the canopy adds no step of
+  its own to a blend.
+* **Console: 0 entries** — errors, warnings, `onerror` and unhandled rejections
+  all trapped — over a full ride, the reverse ride, five parked idles, nine
+  gesture-separated section changes and both wraps.
+* **`?p=`, `?pose=`, `?capture=` all still work**: `?pose=final` → p 0.96999,
+  `?capture=final` → 0.97, `?capture=owned` → 0.725, `?capture=0.86` → 0.86 with
+  the term saturated, `?p=0.90&nosnap=1` → exactly 0.9000. (Bare `?p=` resolving
+  to the nearest anchor is the shipped snap magnet, unchanged — `?nosnap=1` is its
+  documented companion for arbitrary parking.)
+
+## 8. Residuals
+
+* **The travelling front down a strand is gone, deliberately.** Light no longer
+  runs from the body that kindled first to the one that has not; there are no
+  thresholds left to run between. That reading was the file's own and it was
+  good, but it is the exact mechanism Hannah asked to remove, and `CANOPY_LEAD`'s
+  claim ("the ground under a mushroom is already alight when the mushroom comes
+  up") is now total rather than 0.04 of `uPull` — a stronger form of the same
+  sentence. If the front is ever wanted back it belongs on a driver that is
+  already whole when the visitor can first see it, not on the arrival.
+* **The term reads `camera.y`, which carries the shipped handheld drift**, so it
+  breathes while the ramp is open (≤ 0.0404 of presence over 8 s idle at p 0.830).
+  This is entirely underground, where §2 measures a fully lit canopy at ≤ 0.139
+  MAE, so the visible amplitude is ≤ 0.006 MAE — but it is real, and it is the
+  same exposure `buriedOf` already has for the soil slab's dissolve. Above ground
+  the term is saturated and the breathing is exactly zero, which is strictly
+  better than the state this pass replaced.
+* **Portrait opens its ramp earlier relative to the chapter's arm** (0.564 at
+  p 0.80 against desktop's 0.000) because the portrait camera rides ~0.47 units
+  higher there. Measured invisible (0.0613 MAE) and it still completes before the
+  pierce, so it passes — but it is a narrower margin than landscape's, and it is
+  the number to re-measure if the portrait camera's y is ever lowered or
+  `riseOf`'s window moves. The band that would break it is a lens sitting less
+  than ~0.3 under the soil while the chapter is armed and the slab is dissolved.
+* **The two mid-transit budget points needed `?nosnap=1` to be held still**, so
+  they are the shipped composition at a held pose rather than a frame from a
+  moving ride. The draw counts cannot differ (geometry and visibility are
+  identical either way) but `submit` on a truly moving frame was not measured.
+* **The term is OPEN (1.0) at every above-ground pose on the route**, including
+  Mission's — `surfacedOf` asks only "is the lens above the soil", and at p = 0
+  the lens is at y 2.25. `uPull` was 0 there instead. Nothing renders either way:
+  off this leg the chapter's group is invisible and `uAmount` is 0 (`rise` is 0 at
+  every other chapter's camera x, all of which are above −4.6), so the canopy is
+  multiplied to black by the same gate that always held it. But the canopy's own
+  term no longer carries that guarantee by itself, and a future edit that loosened
+  the visibility gate or `rise` would surface the canopy first. Verified on a cold
+  load: p = 0, group not visible, `uAmount` 0, console clean. The consequence on a
+  nav-jump blend INTO Final is that the canopy now composes on `rise` (camera x
+  −4.6 → −7.4) where it used to compose on the rate-limited `shownPull` (x −8 →
+  −14) — measured through a real wrap in both directions, the worst per-frame step
+  it contributes is 0.00000, so it adds no pop of its own; it simply arrives with
+  the chapter rather than after it.
