@@ -651,25 +651,20 @@ export function buildTendrils(group, U) {
   }
 
   /* ---- hubs: radial convergence + ground-knot + continuations ---- */
-  const hubMeta = [];   // { id, pos, along, portAnchor } — index.js drives ignition
+  const hubMeta = [];   // { id, pos, along, route } — index.js drives ignition
   routes.forEach((R, ri) => {
     const h = HUBS[R.id];
     const hubAlong = AL(R.len);
-    // Portrait label anchor (the hiveAnchorLand/Port precedent, doc §3): the
-    // narrow portrait frustum cannot always hold the hub itself, so a chip
-    // may ride its route's in-frame stretch instead. The network is one
-    // world-space build; only the ANCHOR is per-orientation.
-    // TOP-LEFT/TOP-RIGHT RESTAGE (2026-08-04): only DISCORD still needs one.
-    // At 375x812 all three hub cores are inside the frame, but Discord's sits
-    // 10 px from the right edge, so its pill (99 px, drawn to the right of the
-    // dot) would run off. Its chip rides route-t 0.25 instead — the stretch of
-    // Discord's own run that sits in the open lower-middle band, 24 px clear
-    // of the ADOS chip and 66 px clear of Hivemind's. ADOS and Hivemind anchor
-    // on their hubs in BOTH orientations now (t 1.00 = the route's hub end).
-    const PORT_T = { ados: 1.00, hivemind: 1.00, discord: 0.25 };
-    const portAnchor = polyAt(R.poly, R.arcs, PORT_T[R.id]);
-    portAnchor.y = gy(portAnchor.x, portAnchor.z, 0.04);
-    hubMeta.push({ id: R.id, pos: h.pos.clone(), along: hubAlong, route: ri, portAnchor });
+    // THE PORTRAIT LABEL ANCHOR IS GONE (2026-08-14). This used to also carry
+    // a `portAnchor` — a point on the route the chip could ride when the
+    // narrow portrait frustum could not hold the hub itself (the
+    // hiveAnchorLand/Port precedent, doc §3). By 2026-08-04 only Discord still
+    // used one; it is now retired too, and with no reader left the anchor is
+    // no longer computed. A hub's chip is anchored on the hub, in both
+    // orientations, full stop — see index.js's node-anchor block for the
+    // measurement and for what made the exception expire (the chip layer's
+    // edge-flip, which keeps the DOT on its node and mirrors only the pill).
+    hubMeta.push({ id: R.id, pos: h.pos.clone(), along: hubAlong, route: ri });
 
     // radial convergence spokes
     for (let s = 0; s < h.spokes; s++) {

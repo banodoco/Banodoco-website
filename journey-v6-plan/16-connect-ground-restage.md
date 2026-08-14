@@ -2861,3 +2861,106 @@ open view.
 * ADOS's halo bleeds off the bottom-left corner by design. If the copy block or
   the rail ever grow downward on the left, that is the element they will meet
   first.
+
+---
+
+# 2026-08-14 — the Discord control and its own flash were two different places
+
+**Requested:** Hannah. **Built:** same day.
+**Files:** `journey/chapters/connect/index.js` (the node-anchor block),
+`journey/chapters/connect/tendrils.js` (the anchor is no longer computed).
+No geometry, no route, no camera key, no hub moved.
+
+> "In the Connect the community section on mobile, when I hover, the Discord
+> button isn't aligned with the thing that appears for it — the flashing thing."
+
+## The suspect, and why it was the wrong one
+
+`a6f027a` moved two hubs eight hours earlier by ray-marching desktop screen
+targets back onto the terrain, so a mobile-specific offset introduced there was
+the obvious first guess. **It is not the cause**, and the measurement says so
+directly: at 1440x900 all three hubs are aligned to **0 px** after `a6f027a`,
+and the two hubs it moved are *also* aligned to 0 px on both phones. The only
+misaligned thing on the site is the one hub `a6f027a` did not author a mobile
+anchor for.
+
+What it actually is: `NODES.discord` was a **per-orientation getter**. In
+portrait it returned `portAnchor` — route-t 0.25, a point on the middle of
+Discord's own run — while the thing that answers a hover is the **hub**: its
+core brightens (0.58 → 1.0), scales +18%, and its route pulse fires from there.
+So on a phone the control and its own response were two different places on the
+ground, and on desktop they were the same place, which is exactly the shape of
+what Hannah reported.
+
+### Measured, at the Connect rest, all three hubs
+
+Chip **dot** (the box's leading edge + the 11 px `.j-hot` margin, flip-aware)
+against the projected hub core. `a6f027a`'s own tree, before this change:
+
+| viewport | ADOS | Hivemind | **Discord** |
+|---|---|---|---|
+| 1440x900 | 0.2 px | 0.2 px | **0.2 px** |
+| 430x932 | 0.3 px | 0.3 px | **306.2 px** |
+| 375x812 | 0.2 px | 7.9 px | **266.5 px** |
+
+5.686 world units, on one hub, on phones only. (Hivemind's 7.9 px at 375x812
+is the documentary handheld's sway between the projection sample and the DOM
+write, and it reads 1.8 px on the next sample — noise, not an offset.)
+
+## What made the exception expire
+
+The exception's own comment justifies it: *"at 375x812 all three hub cores are
+inside the frame, but Discord's sits 10 px from the right edge, so its pill
+(99 px, drawn to the right of the dot) would run off."* Two things have since
+made that false, and neither was noticed because nothing re-derived it.
+
+1. **The chip layer learned to edge-flip.** `ui.js` mirrors the pill about the
+   dot and compensates the translate so **the dot stays exactly on its node**,
+   with 14 px of hysteresis against sway chatter. A pill with no room on the
+   right is placed on the left, anchor unmoved. That is precisely this case —
+   and it is why ADOS's own portrait anchor could be retired in 2026-08-04.
+2. **`a6f027a` moved the hub.** Measured after it, Discord's core projects
+   **27 px** from the right edge at 375x812, not 10.
+
+So the fix is a deletion: `NODES.discord` is the hub in both orientations, like
+the other two, and `portAnchor` — whose only reader this was — is no longer
+computed in `tendrils.js`. No node in the build has a per-orientation position
+any more.
+
+## Gates
+
+| viewport | ADOS | Hivemind | Discord | worst chip-chip | worst chip-copy |
+|---|---|---|---|---|---|
+| 1440x900 before | 0.2 | 0.2 | 0.2 | 275.3 (hive/disc) | 187.8 |
+| 1440x900 **after** | 0.4 | 0.4 | **0.4** | **275.3** | **187.8** |
+| 430x932 before | 0.3 | 0.3 | **306.2** | 48.4 (ados/disc) | 252.3 |
+| 430x932 **after** | 0.4 | 0.4 | **1.1** | **49.9** | **252.3** |
+| 375x812 before | 0.2 | 7.9 | **266.5** | 3.8 (hive/disc) | 158.0 |
+| 375x812 **after** | 0.3 | 1.8 | **1.5** | **40.5** | **165.5** |
+
+* **Desktop is untouched.** Every chip rect at 1440x900 is identical before and
+  after — Discord's is `[1209, 709, 99, 23]` in both.
+* **Every pill lands on frame**, all three hubs, all three viewports:
+  `overflow 0 px`. Discord flips left on both phones and sits at
+  `[259 … 358]` of 375 and `[310 … 409]` of 430.
+* **Chip-chip clearance improves at both phone sizes** — and the residual this
+  doc has carried since `a6f027a` ("the portrait Hivemind/Discord chip pair
+  remains at 4 px") is **resolved**: measured 3.8 px, now **40.5 px**, because
+  the pair was only that tight while Discord's chip was parked on the middle
+  of its run next to Hivemind's.
+* **Screenshots**, 375x812 and 430x932, hover live on each of the three hubs,
+  before and after. Before: the DISCORD label sits mid-frame on a bare stretch
+  of path while the flaring hub blazes at the right edge. After: the label is
+  immediately left of its own hub, fully on frame.
+* `capture.py --check` **PASS, worst MAE 0.00/255** across all ten frozen
+  references. The chips are DOM and are not in a capture; the change is
+  build-identical besides (neither `polyAt` nor `gy` draws from the rng, so
+  dropping the anchor's two calls cannot move the network).
+* **Full gestured ride**, 23 legs across four laps with four wraps, at
+  1440x900 **and** at 430x932: every leg on an anchor, **console 0 entries**.
+
+## Residuals
+
+* The 4 px portrait chip pair residual above is retired.
+* The `amount * resolve` mirror residual on the hub cores stands, untouched.
+* ADOS's halo still bleeds off the bottom-left corner by design.
