@@ -220,24 +220,57 @@ const lumOf = (d) => 1 - 0.66 * smoothstep(5, 34, d);
    read as the same three levels. */
 const T_HAIR = 0, T_SEC = 1, T_LUM = 2;
 const LUM_SHARE = 0.10, SEC_SHARE = 0.20;
-// tone bands, pre-distance. The old spine band (0.20-0.30) now sits between
-// SEC and LUM: the bulk of the network dropped about two thirds, and only the
-// trunks went up.
+
+/* WEIGHT IS NOT A TIER (2026-08-14, later — Hannah: "the final scene redesign
+   seems to have added these really thick lines that are way too thick coming
+   out of each mushroom. Could you make them a lot thinner, similar to the
+   other lines? Right now they stand out like a sore thumb.")
+
+   The first cut of this tier read as THICK, and the reason is one number that
+   does not live in this file: organism.js's UnrealBloomPass runs at threshold
+   0.1. A strand's contribution to the frame is its tone times the batch's
+   STRAND_OP (0.62), so the three tiers landed either side of that knee —
+
+       hairline   0.050-0.082  ->  0.031-0.051   BELOW the knee: no halo at all
+       secondary  0.146-0.205  ->  0.091-0.127   at the knee: a trace
+       luminous   0.440-0.555  ->  0.273-0.344   2.7-3.4x the knee: a wide halo
+
+   — so the top tier was not a brighter line, it was a line wearing a bloom
+   skirt, and a skirt is WIDTH. Measured on the rest frame at 1440x900, the
+   floor's own lines never cleared luma 90 at all (median peak 69) while an
+   artery presented 3-14 px of continuous >90 band with a peak of 135-178.
+   That is the sore thumb, stated as pixels: it was the only thing on the
+   floor thick enough to be measured as a band rather than as a stroke.
+
+   So the STRAND band comes down to sit just past the knee — the old spine
+   band this pass had retired, which is a weight this composition already
+   knows how to hold — and the luminous claim moves to the channel that can
+   carry it without width. A GLINT IS A POINT: it has an authored size, it
+   does not run anywhere, and a halo on it reads as a node rather than as a
+   thicker route. That is Hannah's own brief taken literally — "little
+   Y-shaped branches, convergences, and occasional glowing nodes will work
+   much better than more line density" — with the corollary this pass had
+   missed, that it works much better than more line WEIGHT too. */
 const TONE = [
   { lo: 0.050, hi: 0.082, floor: 0.00 },   // T_HAIR — extremely faint
   { lo: 0.146, hi: 0.205, floor: 0.38 },   // T_SEC  — slightly brighter
-  { lo: 0.440, hi: 0.555, floor: 0.55 },   // T_LUM  — genuinely luminous
+  { lo: 0.225, hi: 0.295, floor: 0.55 },   // T_LUM  — the routes, not the ribbons
 ];
-// The luminous band's ceiling is the terrain LIP's own tone (0.55), which is
-// this composition's brightest ground feature and the line the whole frame
-// hangs on. An artery is allowed to reach it and never to pass it: the ground
-// may have a few bright routes running through it, but nothing on the floor
-// outranks the soil-line, and nothing on the floor comes near the caps. The
-// first cut of this tier stopped at 0.425 and measured well while reading as
-// nothing in particular — at 12-25 units, against caps four times brighter,
-// that is simply below the frame's threshold for "unmistakable".
+// THE NODES keep the band the strands have given up. The ceiling is still the
+// terrain LIP's own tone (0.55), this composition's brightest ground feature
+// and the line the whole frame hangs on: a node may reach it and never pass
+// it, so nothing on the floor outranks the soil-line and nothing on the floor
+// comes near the caps. Split out of TONE because it is no longer a tier of
+// the same quantity — the strands are graded on WEIGHT and the nodes on
+// PUNCTUATION, and holding both on one row is what let a 3x tone step turn
+// into a 3-14 px band without anything in the file saying so.
+const TONE_NODE = { lo: 0.440, hi: 0.555, floor: 0.55 };
 const toneOf = (tier, r, lum) => {
   const b = TONE[tier];
+  return (b.lo + (b.hi - b.lo) * r) * (b.floor + (1 - b.floor) * lum);
+};
+const nodeToneOf = (r, lum) => {
+  const b = TONE_NODE;
   return (b.lo + (b.hi - b.lo) * r) * (b.floor + (1 - b.floor) * lum);
 };
 // the front pulse / CTA wave respect the same hierarchy, so an interaction
@@ -694,6 +727,8 @@ export function createFinalCanopy(uniforms, seats) {
   let artSegs = 0, artNodes = 0, artBranches = 0, artConverge = 0;
   {
     const ar = makeRng(0x0A47E71E);          // 'artery'
+    const ar2 = makeRng(0x0A47E72E);         // the second fork's own stream
+    const ar3 = makeRng(0x0A47E73E);         // the arrival glints', for the same reason
     for (const c of arteries) {
       const A = nodes[c.i], B = nodes[c.j];
       degree[c.i]++; degree[c.j]++;
@@ -730,23 +765,38 @@ export function createFinalCanopy(uniforms, seats) {
       const meta = { arc, tw: ar() * TAU, boost: BOOST[T_LUM], wave: WAVE[T_LUM],
                      reveal: ALWAYS_LIT };
 
-      /* THE TWIN STROKE. A single polyline at any tone is a THREAD, and the
-         first cut of this block proved it: seven of them at the top tier were
-         legible only if you already knew where to look. terrain.js §4 solved
-         the same problem for the rhizomorph cords and this borrows its answer
-         whole — a companion stroke a breathing gap to one side at 0.62 of the
-         tone, the gap running on two incommensurate harmonics so the pair
-         never resolves into two machined rails. What the eye gets is one cord
-         with a lit core: an ARTERY, which is a different kind of object from
-         the hairlines around it rather than a brighter one. It is also why
-         these can be legible without being loud — the reading is carried by
-         the doubling, not by luminance, which is what keeps them inside a
-         composition whose whole brief is "quieter". */
-      const gapPh = ar() * TAU, gapPh2 = ar() * TAU;
-      const gapAt = (t) => 0.030 + 0.021 * Math.sin(TAU * 1.7 * t + gapPh)
-                                 + 0.014 * Math.sin(TAU * 3.1 * t + gapPh2);
-      const meta2 = { ...meta, tw: ar() * TAU };
-      let prev = null, prevF = 0, prevShade = 0, prevC = null;
+      /* THE TWIN STROKE IS GONE, and it is the other half of the thickness.
+
+         It ran a companion stroke a breathing gap to one side at 0.70 of the
+         tone, borrowed from terrain.js §4's rhizomorph cords, so that what
+         the eye got was "one cord with a lit core" rather than one bright
+         thread. That was the right answer to the question this block was
+         asked first — seven single polylines were findable only if you knew
+         where to look — but the question has changed, and re-read now the
+         device is a WIDTH device by construction: two lit strokes a fraction
+         of a unit apart, each already wearing a bloom skirt, merge into a lit
+         BAND at any depth where the gap projects to less than the two skirts
+         together. The near arteries are exactly where that happens, which is
+         why A5 and A7 measured 8 and 14 px of >90 band against A3 and A6's 3.
+         "Coming out of each mushroom" is the near ones, and the near ones are
+         the doubled ones.
+
+         So an artery is one stroke again. What replaces the doubling as the
+         thing that makes it a different KIND of object is not luminance and
+         not weight — it is the branching below, which the single stroke can
+         now afford twice over. Curvature, a fork, a convergence and a node
+         are all statements a one-pixel line can make.
+
+         THE RNG DRAWS STAY. `ar` is one stream shared by all eight routes, so
+         deleting three draws here would re-lay every artery downstream of the
+         first — a different eight connections, dressed up as a tone change.
+         The three are still drawn, in the same order, and only the emission
+         is gone: every artery is the same route, the same bow and the same
+         dip it was, and the diff is provably a subtraction. (terrain.js's
+         masks are the same discipline; this is that rule applied to a
+         deletion rather than to a thinning.) */
+      ar(); ar(); ar();          // was: gapPh, gapPh2, the companion's own tw
+      let prev = null, prevF = 0, prevShade = 0;
       let sank = null, rose = null;
       for (let j = 0; j <= SEG; j++) {
         const t = j / SEG;
@@ -757,20 +807,14 @@ export function createFinalCanopy(uniforms, seats) {
         const f = Math.max(0, Math.min(1, 1 + dip / 0.11));
         const shade = (0.70 + 0.30 * Math.abs(2 * t - 1)) * f;
         const on = f > 0.02 && cutVal(p[0], p[1]) >= KEPT * 0.75;
-        const g = gapAt(t) * 1.6;
-        const cx = p[0] + px * g, cz = p[1] + pz * g;
-        const cy = groundY(cx, cz) + LIFT_MIN + 0.010 + dip;
         if (prev && (on || prevF > 0.02)) {
           lines.seg(prev[0], prev[1], prev[2], p[0], y, p[1],
             Math.min(0.9, t0 * prevShade), Math.min(0.9, t0 * shade), meta);
-          lines.seg(prevC[0], prevC[1], prevC[2], cx, cy, cz,
-            Math.min(0.9, t0 * 0.70 * prevShade), Math.min(0.9, t0 * 0.70 * shade), meta2);
-          artSegs += 2; tierSegs[T_LUM] += 2;
+          artSegs++; tierSegs[T_LUM]++;
         }
         if (prevF > 0.02 && !on && !sank) sank = prev;      // the surface break
         if (prevF <= 0.02 && on && sank && !rose) rose = [p[0], y, p[1]];
         prev = [p[0], y, p[1]]; prevF = on ? f : 0; prevShade = shade;
-        prevC = [cx, cy, cz];
       }
 
       /* THE Y-BRANCH. A route that forks and whose fork ARRIVES SOMEWHERE is
@@ -779,17 +823,47 @@ export function createFinalCanopy(uniforms, seats) {
          the submerged passage (a branch nobody can see is not a branch), and
          if a third mushroom stands within reach the fork goes to ITS foot,
          which is a three-body convergence for the price of one strand. */
-      const tb = ar() < 0.5 ? 0.10 + ar() * (t1 - 0.16)
-                            : t2 + 0.06 + ar() * (0.86 - t2);
-      const rp = sample(tb);
-      let tgt = -1, td2 = 4.4 * 4.4;
-      for (let n = 0; n < nBody; n++) {
-        if (n === c.i || n === c.j) continue;
-        const q = nodes[n];
-        const q2 = (q.x - rp[0]) ** 2 + (q.z - rp[1]) ** 2;
-        if (q2 < td2 && q2 > 0.6) { td2 = q2; tgt = n; }
-      }
-      {
+      /* TWO of them now, one either side of the submerged passage, and that
+         is where the legibility the twin stroke used to buy comes from
+         instead. A fork is the structural device Hannah's brief names, it
+         costs a tenth of what a doubled trunk costs, and — the part that
+         matters here — it adds no weight anywhere: a Y is read from its
+         SHAPE, so a one-pixel fork states "this route goes somewhere and
+         something joins it" exactly as well as a four-pixel one. Two forks
+         also say it on both sides of the dip, so the passage under the soil
+         is bracketed by structure rather than only by its two break nodes.
+
+         The pair is forced onto opposite sides rather than drawn twice: two
+         forks off the same short stretch is a feather, not a confluence.
+
+         THE SECOND FORK DRAWS FROM ITS OWN STREAM. `ar` is shared by all
+         eight routes in sequence, so spending draws on a second fork inside
+         it would re-lay every artery after the first — new bows, new dips,
+         new routes — and the tone change would arrive wearing a field
+         reshuffle. `ar2` keeps `ar`'s sequence untouched: every artery, every
+         bow, every dip and every first fork is bit-identical to the build
+         above this comment, and the diff is the second fork and nothing
+         else. (§3b's own header makes the same argument for `ar` itself.)
+
+         TIER. A converging fork is now LUMINOUS — the same band as its
+         parent — because with the trunk down at route weight the two are the
+         same object and grading them apart made the Y die out at depth: the
+         old T_SEC carried a 0.38 distance floor against the artery's 0.55, so
+         a far fork faded off a route that did not. One that finds nothing to
+         converge on stays a level down and still dies out along its own run,
+         which is the difference between a branch and a stub. */
+      const forkAt = (rng, forceSide) => {
+        const side = forceSide === undefined ? (rng() < 0.5 ? 0 : 1) : forceSide;
+        const tb = side === 0 ? 0.10 + rng() * (t1 - 0.16)
+                              : t2 + 0.06 + rng() * (0.86 - t2);
+        const rp = sample(tb);
+        let tgt = -1, td2 = 4.4 * 4.4;
+        for (let n = 0; n < nBody; n++) {
+          if (n === c.i || n === c.j) continue;
+          const q = nodes[n];
+          const q2 = (q.x - rp[0]) ** 2 + (q.z - rp[1]) ** 2;
+          if (q2 < td2 && q2 > 0.6) { td2 = q2; tgt = n; }
+        }
         const conv = tgt >= 0;
         let gx, gz;
         if (conv) {
@@ -797,23 +871,24 @@ export function createFinalCanopy(uniforms, seats) {
           const bl = Math.hypot(q.x - rp[0], q.z - rp[1]);
           gx = q.x - ((q.x - rp[0]) / bl) * Math.min(q.r, bl * 0.3);
           gz = q.z - ((q.z - rp[1]) / bl) * Math.min(q.r, bl * 0.3);
-          artConverge++;
         } else {
           // oblique off the parent, never square — the file's own branch rule
-          const bang = Math.atan2(ez, ex) + (ar() < 0.5 ? 1 : -1) * (0.55 + ar() * 0.55);
-          const bl = 1.3 + ar() * 1.5;
+          const bang = Math.atan2(ez, ex) + (rng() < 0.5 ? 1 : -1) * (0.55 + rng() * 0.55);
+          const bl = 1.3 + rng() * 1.5;
           gx = rp[0] + Math.cos(bang) * bl; gz = rp[1] + Math.sin(bang) * bl;
         }
         const bex = gx - rp[0], bez = gz - rp[1];
         const blen = Math.hypot(bex, bez);
         const bpx = -bez / blen, bpz = bex / blen;
-        const bamp = Math.min(0.75, blen * 0.20) * (ar() < 0.5 ? -1 : 1);
+        const bamp = Math.min(0.75, blen * 0.20) * (rng() < 0.5 ? -1 : 1);
         const BS = Math.max(4, Math.min(20, Math.round(blen / 0.30)));
-        const bt = toneOf(conv ? T_SEC : T_HAIR, ar(), lum) * (conv ? 1.25 : 1.5);
-        const bmeta = { arc, tw: ar() * TAU, boost: BOOST[conv ? T_SEC : T_HAIR],
-                        wave: WAVE[conv ? T_SEC : T_HAIR], reveal: ALWAYS_LIT };
+        const btier = conv ? T_LUM : T_SEC;
+        const bt = toneOf(btier, rng(), lum);
+        const bmeta = { arc, tw: rng() * TAU, boost: BOOST[btier],
+                        wave: WAVE[btier], reveal: ALWAYS_LIT };
         let bp = null, bpt = 0;
         let bOk = true;
+        const emitted = [];
         for (let j = 0; j <= BS; j++) {
           const t = j / BS;
           const w = Math.sin(Math.PI * t);
@@ -823,32 +898,55 @@ export function createFinalCanopy(uniforms, seats) {
           const qy = groundY(qx, qz) + LIFT_MIN + 0.010;
           // a fork that converges holds its level; one that does not dies out
           const sh = conv ? (0.72 + 0.28 * t) : Math.max(0, 1 - t) ** 1.3;
-          if (bp) {
-            lines.seg(bp[0], bp[1], bp[2], qx, qy, qz,
-              Math.min(0.9, bt * bpt), Math.min(0.9, bt * sh), bmeta);
-            artSegs++; tierSegs[conv ? T_SEC : T_HAIR]++;
-          }
+          if (bp) emitted.push([bp[0], bp[1], bp[2], qx, qy, qz,
+                                Math.min(0.9, bt * bpt), Math.min(0.9, bt * sh)]);
           bp = [qx, qy, qz]; bpt = sh;
         }
+        // A run that leaves the soil is abandoned WHOLE. Emitting the part
+        // drawn before the cut left a stub hanging off the trunk pointing at
+        // nothing, which is the one thing a fork must never look like.
         if (bOk && bp) {
+          for (const s of emitted) {
+            lines.seg(s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7], bmeta);
+            artSegs++; tierSegs[btier]++;
+          }
           artBranches++;
+          if (conv) artConverge++;
           // the fork itself is a node — the confluence the eye looks for
           glows.pt(rp[0], groundY(rp[0], rp[1]) + 0.045, rp[1],
-            Math.min(0.9, toneOf(T_LUM, 0.35, lum) * 0.92), 0.085 + ar() * 0.045,
-            { arc, reveal: ALWAYS_LIT, tw: ar() * TAU, boost: 0.7 });
+            Math.min(0.9, nodeToneOf(0.35, lum) * 0.92), 0.085 + rng() * 0.045,
+            { arc, reveal: ALWAYS_LIT, tw: rng() * TAU, boost: 0.7 });
           artNodes++;
           if (conv) {
             degree[tgt]++; lumNode[tgt] = 1;
+            /* AND THE ARRIVAL IS MARKED TOO. A fork used to light where it
+               LEFT and say nothing about where it landed, so the third body
+               of a three-body confluence was the only one of the three whose
+               foot carried no glint. Marking it closes the figure: the eye
+               gets a lit foot, a route, a lit fork, a route and a lit foot,
+               which is a connection stated entirely in punctuation and
+               direction. This is the trade Hannah's brief asks for, made
+               once more — the strand gave up its weight and the arrival got
+               a node instead. */
+            const q = nodes[tgt];
+            glows.pt(q.x, groundY(q.x, q.z) + 0.048, q.z,
+              Math.min(0.9, nodeToneOf(0.70, lumOf(dCam(q.x, q.z))) * 0.88),
+              0.115 + ar3() * 0.045,
+              { arc: arcOf(q.x, q.z), reveal: ALWAYS_LIT, tw: ar3() * TAU, boost: 0.8 });
+            artNodes++;
           }
         }
-      }
+        return side;
+      };
+      const side1 = forkAt(ar);
+      forkAt(ar2, side1 === 0 ? 1 : 0);
 
       // NODES. Both feet, and the two places the strand meets the soil line —
       // the surface breaks are marked, so "it went under here and came up
       // there" is stated rather than left to be noticed.
       for (const [nx, nz, sz] of [[A.x, A.z, 0.15], [B.x, B.z, 0.15]]) {
         glows.pt(nx, groundY(nx, nz) + 0.048, nz,
-          Math.min(0.9, toneOf(T_LUM, 0.85, lumOf(dCam(nx, nz)))),
+          Math.min(0.9, nodeToneOf(0.85, lumOf(dCam(nx, nz)))),
           sz + ar() * 0.055,
           { arc, reveal: ALWAYS_LIT, tw: ar() * TAU, boost: 0.9 });
         artNodes++;
@@ -856,7 +954,7 @@ export function createFinalCanopy(uniforms, seats) {
       for (const q of [sank, rose]) {
         if (!q) continue;
         glows.pt(q[0], groundY(q[0], q[2]) + 0.038, q[2],
-          Math.min(0.9, toneOf(T_LUM, 0.20, lum) * 0.80), 0.070 + ar() * 0.030,
+          Math.min(0.9, nodeToneOf(0.20, lum) * 0.80), 0.070 + ar() * 0.030,
           { arc, reveal: ALWAYS_LIT, tw: ar() * TAU, boost: 0.55 });
         artNodes++;
       }
@@ -985,7 +1083,7 @@ export function createFinalCanopy(uniforms, seats) {
             if (lumNode[n]) continue;
             lumNode[n] = 1; degree[n]++; arcTouch++;
             glows.pt(q.x, q.gy + 0.046, q.z,
-              Math.min(0.9, toneOf(T_LUM, 0.55, lumOf(dCam(q.x, q.z))) * 0.9),
+              Math.min(0.9, nodeToneOf(0.55, lumOf(dCam(q.x, q.z))) * 0.9),
               0.10 + rr() * 0.05,
               { arc: arcOf(q.x, q.z), reveal: ALWAYS_LIT, tw: rr() * TAU, boost: 0.75 });
             arcNodes++;

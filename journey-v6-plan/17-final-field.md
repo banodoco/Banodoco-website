@@ -3508,3 +3508,289 @@ as a measurement of the laptop rather than of the change.
   many are there" and a future reader will have to notice that.
 * The pre-existing forward/reverse asymmetry at the p 0.80 arm (`60c7370` §8)
   is untouched and still wants its own pass.
+
+---
+
+# 2026-08-14 (later) — the arteries stop being ribbons: weight was never a tier
+
+**Requested:** Hannah, on the pass above — *"The final scene redesign seems to
+have added these really thick lines that are way too thick coming out of each
+mushroom. Could you make them a lot thinner, similar to the other lines? Right
+now they stand out like a sore thumb."*
+**Built:** same day.
+**Files:** `journey/chapters/final/canopy.js` only. No camera key, no rest pose,
+no new draw call, no new program, no shader edit, no change to the reveal.
+
+## 1. The number that made them thick lives in another file
+
+The pass above graded the canopy into three tiers by TONE and reported the
+result as a brightness hierarchy. It is not only a brightness hierarchy, and
+the reason is one constant this file never mentions: `organism.js` builds its
+`UnrealBloomPass` at **threshold 0.1**. A strand's contribution to the frame is
+its tone times the batch's `STRAND_OP` (0.62), so the three tiers landed either
+side of that knee:
+
+| tier | authored tone | x STRAND_OP | against the bloom knee |
+|---|---|---|---|
+| hairline | 0.050–0.082 | 0.031–0.051 | **below** — no halo at all |
+| secondary | 0.146–0.205 | 0.091–0.127 | at the knee — a trace |
+| luminous | 0.440–0.555 | **0.273–0.344** | **2.7–3.4x** — a wide skirt |
+
+A bloom skirt is WIDTH. So the top tier was not a brighter line, it was a line
+wearing a halo, and the step from secondary to luminous was not one step in
+brightness but a step across the knee — the difference between a stroke and a
+band. Hannah's word for it is "thick", and she is describing the mechanism
+correctly.
+
+**The second half of the thickness was authored on purpose.** Each artery was
+drawn as a TWIN STROKE — a companion polyline a breathing gap to one side at
+0.70 of the tone, borrowed from `terrain.js` §4's rhizomorph cords — so that
+"what the eye gets is one cord with a lit core". That is a width device by
+construction: two lit strokes a fraction of a unit apart, each already wearing
+a skirt, merge into a lit BAND wherever the gap projects to less than the two
+skirts together, which is exactly the near ground. It was the right answer to
+the question §3b was asked first (seven single polylines at the top tier were
+findable only if you knew where to look) and the wrong answer to the one in
+front of it now.
+
+**Measured before touching anything**, at the rest, 1440x900, with tier
+membership read off the GPU's own `aBoost` attribute rather than guessed from
+the picture, and only ISOLATED strokes profiled (a canopy of 3,800 segments
+piles up in screen space, and a profile across a strand lying over three others
+measures the pile):
+
+| | hairline | secondary | **luminous** |
+|---|---|---|---|
+| peak luma, median | 53 | 72 | **121** |
+| strokes clearing luma 90 | 27.2% | 57.1% | **88.5%** |
+| lit width above luma 90, median / p90 | 0 / 3 px | 1 / 3 px | **2 / 4 px** |
+
+The floor's own lines never cleared luma 90 at all. The arteries were the only
+thing on the ground that did, at nine times out of ten. Sampled along the
+routes with a band search instead — which finds the widest lit run rather than
+the nearest — the near arteries presented **3–14 px** of continuous >90 band at
+peaks of 135–178, and the widest were A5 and A7, the two nearest the lens.
+"Coming out of each mushroom" is the near ones, and the near ones are the
+doubled ones.
+
+## 2. What changed, and the rule it is written from
+
+Her original brief already contained the answer, in the sentence the pass above
+quoted and then only half-applied:
+
+> "Little Y-shaped branches, convergences, and occasional glowing nodes will
+> work much better than more line density."
+
+The pass above read that as an argument against DENSITY. It is equally an
+argument against WEIGHT, and this one reads it that way.
+
+**The strand band comes down to 0.225–0.295** — 0.140–0.183 past `STRAND_OP`,
+so 1.4–1.8x the bloom knee instead of 2.7–3.4x. That is the old spine band the
+pass above had retired, i.e. a weight this composition already knows how to
+hold, and it puts the arteries in the same family as the secondary routes
+rather than a knee-crossing above them.
+
+**The luminous claim moves to the channel that can carry it without width.**
+`TONE_NODE` is split out of `TONE` and keeps the band the strands gave up
+(0.440–0.555, ceiling still the terrain lip's own 0.55). A GLINT IS A POINT: it
+has an authored size, it does not run anywhere, and a halo on it reads as a
+node rather than as a thicker route. Splitting the constant is the substantive
+part — strands are graded on weight and nodes on punctuation, and holding both
+on one row is what let a 3x tone step turn into a 3–14 px band with nothing in
+the file saying so.
+
+**The twin stroke is deleted.** An artery is one stroke again.
+
+**The legibility is bought back with structure, which is what she asked for.**
+
+* **Two Y-branches per artery instead of one**, forced onto opposite sides of
+  the submerged passage — two forks off the same short stretch is a feather,
+  not a confluence — so the buried passage is bracketed by structure rather
+  than only by its two break nodes. Forks **8 -> 16**, convergences **8 -> 16**:
+  every one of the sixteen found a third body within reach.
+* **A converging fork now takes its parent's tier.** With the trunk down at
+  route weight the two are the same object, and grading them apart made the Y
+  die out at depth: the old `T_SEC` carries a 0.38 distance floor against the
+  artery's 0.55, so a far fork faded off a route that did not. One that finds
+  nothing to converge on sits a level down and still dies along its own run,
+  which is the difference between a branch and a stub.
+* **The arrival is marked.** A fork used to light where it LEFT and say nothing
+  about where it landed, so the third body of a three-body confluence was the
+  only one of the three whose foot carried no glint. It gets one now. Artery
+  nodes **40 -> 64**, luminous points **68 -> 93**. What the eye is offered is
+  a lit foot, a route, a lit fork, a route and a lit foot — a connection stated
+  entirely in punctuation and direction.
+* **A fork that leaves the soil is abandoned WHOLE.** The run used to emit the
+  part drawn before the cut, which leaves a stub hanging off the trunk pointing
+  at nothing — the one thing a fork must never look like. With sixteen of them
+  the odds of hitting it doubled, so the segments are buffered and committed
+  only if the whole run survives.
+
+**THE ROUTES DID NOT MOVE, and that is enforced rather than hoped for.** The
+eight foot-pairs are selected with no rng at all (a deterministic scan, sort and
+spread), so they are the same eight in the table above. The second fork draws
+from `ar2` and the arrival glints from `ar3`, both their own streams, so `ar`'s
+sequence is untouched and every artery's bow, dip, `SEG` count and first fork is
+bit-identical to the build this section replaces. The diff is the tone, the
+deleted companion, and the additions — not a reshuffled field wearing a tone
+change. (§3b's own header makes this argument for `ar` itself; this is the same
+rule applied to a second stream, and `terrain.js`'s masks are the same
+discipline applied to a deletion.)
+
+## 3. Before / after
+
+**Weight**, same method as §1, 1440x900, isolated strokes:
+
+| | hairline | secondary | **luminous** |
+|---|---|---|---|
+| peak luma, median | 53 -> **53** | 72 -> **65** | **121 -> 89** |
+| strokes clearing luma 90 | 27.2 -> **23.2%** | 57.1 -> **43.8%** | **88.5 -> 57.1%** |
+
+The luminous tier's peak falls 26% and the share of it presenting a visible
+bright band falls by a third; with the companion gone, the lit footprint per
+route is roughly halved again on top of that. The two lower tiers barely move,
+which is the point — nothing else in the frame was asked to change.
+
+**Legibility**, which is the thing that could have been broken. `canopy.js`'s
+own definition is "not a connection that EXISTS, it is a connection that
+OUTRANKS its surroundings", so that is what is measured: a corridor is drawn
+around each foot-to-foot chord, every canopy segment falling in it is attributed
+to its tier from `aBoost`, and the connection's own strokes are compared with
+the hairline floor sharing the same corridor — isolated profiles on both sides,
+so like is compared with like.
+
+| | A1 | A2 | A3 | A4 | A5 | A6 | A7 | A8 |
+|---|---|---|---|---|---|---|---|---|
+| before | 2.43x | 2.19x | 2.25x | – | 2.30x | 2.12x | 1.74x | – |
+| **after** | **1.49x** | **1.65x** | **1.63x** | (1.53x) | **1.59x** | **1.51x** | **1.39x** | – |
+
+Every connection that can be measured still outranks its own local floor, by
+1.39–1.65x against 1.74–2.43x. A4 and A8 are unmeasurable in BOTH builds and
+for the same reason — A4 is short and crosses a dense sector, A8 runs off the
+frame at 1440 — so they yield one or two clean profiles, not zero contrast;
+A4's two samples read 1.53x. **6 of 8 clear the 1.25x bar on 3+ clean samples,
+before and after, and it is the same 6.**
+
+**Counts and shares**, from `journey.counts('final')`, measured as built:
+
+| | before | after | |
+|---|---|---|---|
+| hairline / secondary / **luminous** | 2,703 / 770 / **307** | 2,664 / 750 / **284** | |
+| shares | 71.5 / 20.4 / **8.1%** | 72.0 / 20.3 / **7.7%** | `canopyLumTarget` 378 -> 370 |
+| artery segments | 325 | **243** | −25% |
+| artery nodes / forks / convergences | 40 / 8 / 8 | **64 / 16 / 16** | |
+| luminous points | 68 | **93** | |
+| arcs / arc segments | 3 / 146 | 3 / 146 | unchanged |
+| canopy segments / points | 3,780 / 304 | **3,698 / 327** | |
+
+The hierarchy holds its shape: 72.0 / 20.3 / 7.7 against 71.5 / 20.4 / 8.1. The
+hairline and secondary counts move by tens because the §3d budget is sized
+against the WHOLE canopy and the arteries now spend fewer segments out of it —
+the budget loop rebalancing, not a re-tiering.
+
+## 4. Budget
+
+At the Final rest, 1728x980, frozen. `renderer.info` with `autoReset` off,
+sampled by DIFFING consecutive rAF reads rather than by resetting and waiting —
+a reset-then-wait-two-frames form counts two frames and reports 854 calls,
+which is how this was nearly mis-reported.
+
+| | before | after | |
+|---|---|---|---|
+| **draw calls** | **430** | **430** | unchanged |
+| triangles | 278,183 | 278,183 | unchanged |
+| **line primitives** | 453,785 | **453,703** | **−82** |
+| points | 85,648 | 85,671 | +23 |
+| geometries / textures / programs | 117 / 27 / 92 | 117 / 27 / 92 | unchanged |
+
+Cheaper, as required: the deleted companion is worth 133 segments and the
+second forks cost 51, so the net is −82 primitives, +23 points, and not one
+draw call either way — every addition and every deletion is inside a batch that
+is drawn regardless.
+
+## 5. Gates
+
+* **`capture.py --check`: PASS, worst 0.00/255** across all ten goldens after
+  the re-shoot. Before it, the two `final@*` files read 0.66 and 0.83 — the
+  WARN band, under the 1.00 fail bar, so the gate would have passed without a
+  re-shoot; they are re-shot anyway because the change is intended and a golden
+  that is merely within tolerance of the shipped frame is not the shipped
+  frame. The other eight read **0.00** and are byte-identical on disk. Reason
+  recorded in `manifest.json`. No `SKIP_SCENE_CHECK`.
+* **Reveal laws, `tools/revealgates.js` run as shipped with a TRUSTED wheel
+  driver** (CDP `Input.dispatchMouseEvent`, since the harness refuses to
+  produce its wrap rows for a synthetic event):
+  * **G1 camera-pure off a blend: 0.00e+0 over 1,138 frames — bit-exact PASS.**
+  * **G2 a placement is camera-pure: 0.00e+0 over 10 poses — bit-exact PASS.**
+  * **G4** driver never exceeds `max(pure, previous)`: 0.00e+0 **PASS**.
+  * **G5** largest one-frame `uPull` step over both wraps: 0.0000 **PASS**.
+  * **G6** settled after each wrap: 0.00e+0 **bit-exact PASS**.
+  * G3's forward reference rows are produced (firm 2.034 s / 11.80 bodies/s /
+    209.6 ms; flick 0.865 s / 27.76 / 206.2 ms) but its two WRAP rows report
+    "ladder not traversed" — see §6.
+* **The arrival ladder, driven by trusted wheels through the arm and back:**
+
+| p | cam y | canopy uOpacity (strand / glow) | uPull | |
+|---|---|---|---|---|
+| 0.8002 (the arm) | −1.079 | **0.00000 / 0.00000** | 0 | **dark at arm** |
+| 0.8333 | −0.694 | 0.31270 / 0.42871 | 0 | still buried |
+| 0.8440 | −0.432 | 0.58414 / 0.80083 | 0 | **still under the soil** |
+| 0.8541 (the pierce) | −0.053 | **0.62000 / 0.85000** | 0.0714 | whole |
+| 0.9700 (the rest) | +2.730 | 0.62000 / 0.85000 | 1.12 | saturated |
+
+  0.62 / 0.85 are `STRAND_OP` / `GLOW_OP`, the authored constants, so the
+  network including every new fork and arrival glint is complete before the
+  ground is visible — `bce9eb9` preserved, not merely unbroken.
+  **Forward vs reverse worst divergence in canopy opacity: 0.000000.**
+  **0 non-monotone steps over 130 forward samples.** `canopyDropped` **0**, so
+  every body is still a node of the one spanning tree rooted at the hero.
+* **Console over a full ride: 0 entries.** Forward past the end into a wrap,
+  back, and forward into a second wrap, all on trusted wheels through the page's
+  own listeners, plus the two probe passes above: **0 errors, 0 warnings, 0
+  logs, 0 unhandled rejections.**
+* **Screenshots** at 1440x900, 1512x860 and 1728x980, plus 2x before/after
+  crops on a mushroom base and across the mid-ground floor.
+* **No regression** to `787e599` (the cut, the arcs and the three-tier structure
+  are intact and re-measured above; `terrain.js` and `sky.js` are not in the
+  diff), `b1674b4` (`capfigure.js` untouched), `e1e8381`, `1825393`, `bce9eb9`
+  (re-measured above), `60c7370`, `d46e6bb`.
+
+## 6. Residuals
+
+* **The luminous tier is 7.7% of segments against a 10% target**, slightly
+  further from it than the 8.1% it replaces. The gap is now the right one to
+  have: closing it with line would mean putting weight back, and
+  `canopyLumTarget` is still reported beside `canopyLum` so the miss stays
+  visible. Counting the 93 luminous points with the 284 segments gives 9.5% of
+  4,025 — nearer the mark than before (9.2%), because this pass moved the claim
+  onto the points on purpose.
+* **The arcs now take 1 body seat as a node, down from 2.** Nothing about the
+  arcs changed: an arc skips a body that is already a luminous node
+  (`if (lumNode[n]) continue`), and one of the two it used to claim is now
+  claimed first by an artery convergence. The foot is still lit — by the
+  artery's glint instead of the arc's — so the frame is unchanged and only the
+  attribution moved. `ringArcTouch` reports it either way.
+* **G3's WRAP rows are not produced by this driver.** A trusted CDP mouseWheel
+  and a synthetic `WheelEvent` deliver the same `deltaY` sum to the page's
+  listener (1600 for 40 x 40, measured) but move progress 0.0136 against 0.0690
+  — the scroll model's servo reads a RATE, and the two drivers present the same
+  total at different rates. The harness's step counts were tuned against the
+  faster reading, so at 1x a trusted scrub never reaches the `uPull` ladder and
+  `pace()` returns null, which is the `TypeError: reading 'sweep'` its reference
+  row throws. Scaling the driver 5x recovers the reference rows and G4–G6, and
+  is legitimate because G3's bar is explicitly a ratio to a reference taken in
+  the same session — but the wrap rows still report an untraversed ladder, and
+  G4/G5 therefore pass over a trace in which `uPull` did not move, which is a
+  weak pass rather than a strong one. This is a harness-fidelity gap, it
+  pre-dates this change, and nothing in this diff touches the reveal driver, the
+  blend or any camera key. It wants its own pass, and the fix belongs in
+  `revealgates.js` — a driver-calibration step that measures progress-per-delta
+  once and sizes its own steps from it, instead of hard-coding counts.
+* **The near/far split in what got thinner is not uniform**, and it should not
+  be: the twin stroke merged into a band only where the gap projected small, so
+  deleting it took most width off the NEAR arteries and almost none off the far
+  ones, while the tone drop is uniform. That is the right shape — the near ones
+  were the complaint — but it means the tier's own weight statistics understate
+  what changed in the bottom of the frame and overstate it at the horizon.
+* The pre-existing forward/reverse asymmetry at the p 0.80 arm (`60c7370` §8)
+  is untouched and still wants its own pass.
