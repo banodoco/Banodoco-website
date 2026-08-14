@@ -149,12 +149,18 @@ function ensureLabelPolicyStyles() {
   // ONE object on the same 0.3s the rest of the hotspot uses; the button box
   // itself keeps its size and hit area, so a hover target never moves or
   // resizes as its label arrives.
+  // `:not(.bare)` throughout (2026-08-14): a BARE chip has no label to reveal
+  // and no pill to light — ui.js has deleted both from the DOM. Without the
+  // guard the lit-background rule still applies to it, and only fails to paint
+  // because the box happens to be empty; that is a rule waiting to reappear the
+  // first time anything is put back inside the button. The chip is bare here
+  // too, not merely bare in the stylesheet.
   s.textContent = [
     '.j-hot.label-hover { background: transparent; }',
-    '.j-hot.label-hover > * { opacity: 0; transition: opacity 0.3s; }',
-    '.j-hot.label-hover:is(:hover, .hot, :focus-visible) { background: rgba(18, 12, 4, 0.6); }',
-    '.j-hot.label-hover:is(:hover, .hot, :focus-visible) > * { opacity: 1; }',
-    '@media (prefers-reduced-motion: reduce) { .j-hot.label-hover > * { transition: none; } }',
+    '.j-hot.label-hover:not(.bare) > * { opacity: 0; transition: opacity 0.3s; }',
+    '.j-hot.label-hover:not(.bare):is(:hover, .hot, :focus-visible) { background: rgba(18, 12, 4, 0.6); }',
+    '.j-hot.label-hover:not(.bare):is(:hover, .hot, :focus-visible) > * { opacity: 1; }',
+    '@media (prefers-reduced-motion: reduce) { .j-hot.label-hover:not(.bare) > * { transition: none; } }',
   ].join('\n');
   document.head.appendChild(s);
 }
@@ -680,9 +686,42 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     if (!pol) return;
     if (typeof pol.label === 'string' && pol.label) {
       h.label = pol.label;
-      h.labelEl.textContent = pol.label;
+      if (h.labelEl) h.labelEl.textContent = pol.label;
     }
-    h.labelOnHover = !!pol.labelOnHover;
+    /* `chip: 'none'` — THE CHIP PAINTS NOTHING, EVER (2026-08-14, Hannah:
+       "there are now two things that show on the orbs upon hover, can you
+       please delete the smaller ones, we should only keep the black one
+       above").
+
+       The smaller of the two was this chip: a dark pill carrying a gold dot
+       and "CONTRIBUTOR · RESEARCHER", revealed on hover by `labelOnHover`.
+       It long predates the card's transient tier — it is the label policy this
+       function has always applied — but the two only ever showed TOGETHER as
+       of 2026-08-14, and the panel says both of the things the pill did.
+
+       DELETED, not hidden: the label and the dot come out of the DOM, so there
+       is no invisible text left in the a11y tree and no element left painting
+       zero pixels. What stays is everything that was never visible in the
+       first place — the button (the tab stop), its `aria-label` (the whole
+       accessible name, which never depended on the label being drawn), and the
+       hit pad, which IS the target and always was (696e95d). The chip is now
+       what a hover zone is: a control with no pixels of its own, answering for
+       a thing the scene draws.
+
+       Per-node, through the policy a chapter already owns, so this is an
+       OWNED-ONLY removal: Inspire's and Connect's chips declare no policy at
+       all, keep their resting pills, and are untouched — verified by their
+       label boxes still measuring their full width. */
+    if (pol.chip === 'none') {
+      h.chipBare = true;
+      h.btn.classList.add('bare');
+      if (h.labelEl) { h.labelEl.remove(); h.labelEl = null; }
+      if (h.dotEl) { h.dotEl.remove(); h.dotEl = null; }
+    }
+    // A bare chip draws nothing at rest either, so it is `labelOnHover` in
+    // every sense the rest of this file uses the flag for — the collision
+    // dodge skips it, and the arrival stagger does not queue it.
+    h.labelOnHover = !!pol.labelOnHover || h.chipBare;
     h.btn.classList.toggle('label-hover', h.labelOnHover);
     // AT parity (the whole point): the chip may be invisible for most of its
     // life, the ACCESSIBLE NAME never is. A screen reader hears the same
@@ -731,7 +770,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // must say whether that card is currently showing. Set here so the state
     // exists from the first render, not only after the first open.
     btn.setAttribute('aria-expanded', 'false');
-    btn.appendChild(el('i', 'j-hot-dot'));
+    const dotEl = el('i', 'j-hot-dot');
+    btn.appendChild(dotEl);
     const labelEl = el('span', 'j-hot-label', label);
     btn.appendChild(labelEl);
     // THE HIT PAD (2026-08-06, report A). A round hit surface the size of the
@@ -749,7 +789,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     const h = {
       id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false,
       radius: typeof radius === 'function' ? radius : null,
-      hitEl, hitR: 0, padLast: 0,
+      hitEl, hitR: 0, padLast: 0, dotEl, chipBare: false,
       holdAt: null,       // world anchor held still while hot — see holdAnchor()
       holdOff: null,      // ...decaying back to zero once it goes cold
       pendX: 0,           // this frame's resolved translate-x, written post-loop

@@ -2396,3 +2396,275 @@ Left for its own commit rather than folded into an interaction change.
    the reason a pinned card is never taken away is that it holds focus, owns
    input and is route state, and a transient reveal is none of those. It IS an
    annotation, so it goes when its subject does.
+
+---
+
+# 2026-08-14 (later still) — one reveal, and the hover stops bleaching the face
+
+**Requested:** Hannah, on `b3dc34b`. **Built:** same day.
+**Files:** `journey/ui.js`, `journey/site.css`,
+`journey/chapters/owned/{index.js,portraits.js}`. No camera key, no geometry,
+no placement, no route file, no golden move.
+
+> "see in ownership, there are now two things that show on the orbs upon hover,
+> can you please delete the smaller ones, we should only keep the black one
+> above. And upon hover can you greatly reduce the sepia effect on the image"
+
+## 32. What the two reveals were
+
+Shot and read off the live DOM before anything moved:
+
+| | what it is | since |
+|---|---|---|
+| the black panel above | `.j-card`, transient tier — heading "Contributor", role, blurb | `b3dc34b`, today |
+| **the smaller one** | `.j-hot`, the chip: a dark pill carrying a gold dot and "CONTRIBUTOR · RESEARCHER" | the chapter's original `labelPolicy` — it long predates today |
+
+**The smaller one is not something this week added.** It is the hover-only chip
+the label policy has always applied (`labelOnHover`, described in `696e95d`),
+and it has been revealing that pill on hover since the restage. What changed on
+`b3dc34b` is that the card started opening on the same gesture, so for the first
+time the two showed *together*. Worth stating plainly: the second thing was
+pre-existing, and the request is a consequence of the previous commit rather
+than a defect in it.
+
+It was also the only place the popover could have been implicated, so that was
+checked and excluded: `popOpen` is `false` on every hover of a contributor.
+Contributors have no `short` line, so `previewFor()` returns null and they were
+never popover-eligible — the two reveals really were only ever the chip and the
+card.
+
+### Nothing it said is lost
+
+The pill's text is `[name, role].join(' · ')` — built from the same two fields
+the card's heading and first line are built from. So "Contributor" and
+"Researcher" are still on screen, in the panel, and nothing had to be moved
+there. The **accessible** name is untouched for the same reason: `label` stays
+in the policy and `ui.js` still writes it to the button's `aria-label`, which is
+where a screen reader was always reading it from. The chapter's own policy
+comment already said so — "The accessible name carries the same string whether
+or not the chip is drawn."
+
+## 33. Deleted, not hidden — and Owned-only
+
+`chip: 'none'`, a new field on the label policy a chapter already owns. When it
+is set, `applyLabelPolicy` **removes the label and the dot from the DOM**
+(`.remove()`, and the references are nulled), and adds `.bare`. What is left is
+everything that was never visible: the `<button>` (the tab stop), its
+`aria-label`, and the hit pad — which IS the target and has been since
+`696e95d`. The chip becomes what a hover zone is: a control with no pixels of
+its own, answering for something the scene draws.
+
+**This is per-node, through the chapter's own contract, so it cannot reach
+another chapter.** Inspire's and Connect's chips declare no policy at all and
+keep their resting pills. Measured, all six of them, after the change:
+
+    artcompute  label 1 dot 1  label box 94.3px      arca      1 / 1  131.9px
+    tworp       1 / 1  26.7px                        ados      1 / 1   38.3px
+    hivemind    1 / 1  69.3px                        discord   1 / 1   62.6px
+
+and all sixteen Owned chips: **label elements 0, dot elements 0, hit pads 16,
+`.bare` 16, box 0 x 0 px, 16 tabbable.**
+
+Two smaller consequences, both improvements:
+
+- **The pill nudge is gone with the pill.** `696e95d` recorded that at 375
+  contributor-12's dot sat 21 px off its node because a 232 px label had to be
+  nudged onto the frame. With no label there is nothing to nudge: `pillW` is 0,
+  the flip never fires, and `tx === sx` exactly. Hit-centre error measured
+  **0.05 px** worst of sixteen.
+- **The focus ring had to move, and the reason is not cosmetic.** The shared
+  journey ring draws on `.j-hot`, which is now a 0x0 box — a ring nobody could
+  see, on the only control a keyboard visitor has for a face. It is drawn on the
+  **pad** instead and made round to match it (`border-radius: 50%`), which is
+  the same decision the crown's `<button>` zone took on 2026-08-13: a scene
+  response is not a focus indicator a conformance test can see. Measured on a
+  focused chip: `:focus-visible` true, pad outline `2px`, radius `50%`.
+
+The label policy's injected stylesheet also gained `:not(.bare)` throughout. Its
+lit-background rule still matched a bare chip and only failed to paint because
+the box happens to be empty — a rule waiting to reappear the first time anything
+is put back inside the button.
+
+## 34. The sepia: measurement moved the diagnosis
+
+The obvious reading is that this is `PHOTO_GRADE` — the bake `45f600b` tuned
+against a cast:variation ratio — and the first build of this pass was exactly
+that: a shader-side **partial inverse of step 2**, the amber multiply that F.2
+measured as dropping within-face hue variance 20-70x on its own. Step 2 is a
+multiply by a constant colour, so it has an inverse; dividing by the same factor
+brings the photograph's own chroma back up out of the cast, which is the right
+operation because F.2's finding is that the colour is *swamped*, not removed. It
+is deliberately not a desaturation — that would take colour away, and what she
+is asking to see is the colour underneath.
+
+**Measured, it barely moved the picture.** Rendered frame, nearest contributor,
+test photos loaded: cast 33.4 -> 30.8 across the whole 0 -> 1 sweep, and side by
+side the hovered face was indistinguishable. So the diagnosis was wrong, and the
+rig said where to look next.
+
+**What Hannah is looking at is the HOVER RESPONSE, not the bake.** Two terms in
+the portrait fragment shader quadruple over a face on hover:
+
+    image term    1.12 -> 1.42     (0.30 * boost)
+    CORE          0.07 -> 0.31     (0.24 * boost), uCore = goldBright,
+                                   exp(-r*r*8) — straight over the middle of
+                                   the head
+
+and then UnrealBloom works on the result. The photograph that reads clearly at
+rest — hair, eyes, beard, a white shirt — becomes an amber lamp. The bake was
+never the dominant term in what she was reacting to; the hover was.
+
+So the pullback is applied where the amber actually arrives, and all three terms
+are multiplied by `uPhoto * vH`:
+
+| | | |
+|---|---|---|
+| `hoverDeSepia` | **1.0** | full inverse of the bake's step-2 multiply, luminance-preserving |
+| `hoverCoreMute` | **1.0** | the core's hover growth is removed entirely on a photo |
+| `hoverImgMute` | **0.70** | the image term's hover growth is cut to 30% |
+
+**The RIM is deliberately untouched.** It still runs 0.20 -> 1.00 on hover, it
+sits at r ~ 0.72 — the disc's EDGE, not the face — and it is the whole of
+`45f600b` §F.3's "these discs read as lit nodes in the network rather than as
+photographs laid over it", which that pass refused to trade away. The node still
+answers, and answers as hard as it did; it just stops answering *on the person's
+face*. The localised strands, the halo, the centred scale and the card all still
+fire, so the hover is not quieter — it is differently placed.
+
+**The resting frame cannot move**: every one of the three is multiplied by `vH`,
+which is 0 at rest, and by `uPhoto`, which is 0 on the procedural busts the
+frozen goldens render. The still `45f600b` was approved against holds by
+construction, and `capture.py --check` agrees (§36).
+
+### The numbers, and why the doc's own instrument is the wrong one here
+
+Nearest contributor at the Owned rest (p 0.725), 1440x900, test photos loaded,
+**averaged over 5 frames** — the field flickers per face (±14%, two
+incommensurate rates) and TAA jitters, so a single frame carries several dE of
+noise:
+
+| | cast | variation | cast:variation | mean hue | **dE76 from REST** |
+|---|---|---|---|---|---|
+| **REST** (the `45f600b` read) | 43.2 | 6.24 | 6.92 | 70.9° | 0 — *noise floor 3.05* |
+| **HOVER, before** | 34.4 | 6.76 | **5.09** | 82.1° | **23.99** |
+| **HOVER, after** | 35.7 | 5.79 | **6.17** | 78.8° | **16.16** |
+
+**`cast:variation` is confounded for this change and must not be read the way
+F.5 reads it.** It was built for the BAKE, where the image is the only thing in
+the pixel. On a rendered *hovered* frame, washing toward white removes chroma —
+so "more bleached" scores *better*. That is why the shipped hover posts 5.09
+against the resting grade's own 6.92: not because it is more photographic, but
+because it is closer to white. The honest reading of the row is the opposite one:
+**the new hover sits at 6.17, near the resting grade's 6.92, instead of
+departing from it.**
+
+So the headline figure is **dE76 from the resting face**, because the approved
+photographic read *is* the target: the hovered face has come **33% of the way
+back** to it, 23.99 -> 16.16 against a measured 3.05 noise floor. Mean hue
+returns 82.1° -> 78.8° of the 11.2° the hover had added.
+
+By eye, which is what picked the three numbers: hair reads as dark hair instead
+of as light, eyes and beard separate from the skin again, and the shirt reads
+white rather than cream — while the disc is still obviously the lit one.
+
+## 35. De-hover, keyboard, and touch
+
+**De-hover is a state change, not a snap**, and the two halves are deliberately
+different speeds. Traced per presented frame at 1440x900:
+
+    card closes            on the leave frame          (immediate, as b3dc34b)
+    hoverAmt at that frame 0.919      selAmt 0.9466
+    largest single-frame step   hoverAmt 0.0726, selAmt 0.0507
+    settles below 0.02          hoverAmt 749 ms, selAmt 1179 ms
+
+The panel goes at once; the grade releases on `hoverAmt`/`selAmt`'s existing
+first-order eases (k 5.0 and 3.2), so the face warms back over about
+three-quarters of a second with no step above 7%. "Immediately" is the reveal,
+not the light.
+
+**Keyboard.** Focusing a chip opens the same transient panel a pointer does
+(`cardOpen` true, `cardPinned` false) and lights the same grade, because both
+run off `vH`. Escape closes it. The ring is the round one on the pad (§33).
+
+**Touch — and the grade DOES apply there.** There is no hover on a coarse
+pointer, and there is no transient tier at 375 either way (`sheetQuery` covers
+`max-width: 720px`, so a narrow desktop window is in the same case). A tap on an
+orb shows **the committed card as the PL-1.3 bottom sheet** — one tap, exactly
+as `b3dc34b` left it — and measured at 375x812 under mobile emulation:
+`cardPinned` true, `cardIsSheet` true, `hoverAmt` **0**, `selAmt` **0.986**.
+`vH = max(h, s * 0.88)`, so a tapped face gets the hover grade at 0.88 of full
+through the SELECTED term. The tap both opens the panel and de-sepias the face;
+what a phone does not get is the un-committed preview, which it never had.
+
+## 36. Gates
+
+    two reveals -> one   16/16 Owned chips `.bare`; label elements 0, dot
+                         elements 0 (DELETED from the DOM, not hidden); box
+                         0 x 0 px; on hover the only child left is .j-hot-hit
+                         and the only thing drawn is the card. popOpen false.
+    Owned-only           all 6 Inspire/Connect chips keep label + dot with
+                         real label boxes (26.7-131.9 px). `.bare` 0/6.
+    nothing lost         card heading + first line carry the pill's two
+                         fields; aria-label still "Contributor · Artist"
+    grade                dE76 from the resting face 23.99 -> 16.16 (noise
+                         floor 3.05); cast:variation 5.09 -> 6.17 against
+                         REST's 6.92; mean hue 82.1° -> 78.8° (REST 70.9°).
+                         5-frame averages, nearest contributor, p 0.725.
+    resting frame        untouched by construction (every term x vH x uPhoto)
+    de-hover             card on the leave frame; grade releases with a
+                         largest step of 0.073 and settles in 749/1179 ms
+    edges                contributor-13 (node x 63.3) hovers and opens its
+                         card `above` with one reveal; shot at 1440x900
+    hit pads             16/16 chips, 208/208 sample points answer their own
+                         face, 16/16 faces answer across their whole disc,
+                         worst hit-centre error 0.05 px (696e95d intact)
+    localised root hover uOwner 15 / uOwnerAmt 0.992 on, -1 / 0.04 off —
+                         still the face's own strands and not the network
+    keyboard             focus opens the transient panel, Escape closes;
+                         :focus-visible true with a 2px round ring ON THE PAD
+    touch                375x812 coarse: tap -> pinned sheet, selAmt 0.986,
+                         so the grade applies; Escape closes
+    console              0 errors / 0 warnings over six nav jumps, a 60-tick
+                         wheel ride down and 60 back, hover, click, Escape,
+                         keyboard focus, Escape
+    goldens              capture.py --check PASS, all ten MAE 0.00/255,
+                         0.0% px>8 — run with THREE agents' uncommitted work
+                         in the tree, so no stash-test was needed. Nothing
+                         re-shot.
+
+Measured against the route as read fresh at measurement time: spans
+14/24/22/25/15, Owned carrying no `stops` and so taking the 0.5 default —
+rests **0 / 0.26 / 0.523 / 0.725 / 0.97**, unchanged. Every number above was
+taken at the Owned rest reached by `flyTo`, never by scrolling, so none of it
+depends on a span another agent may be moving.
+
+`696e95d` (hit pads, localised root hover, no toward-camera motion), `961b2d1`,
+`8987500`'s anchoring / ladder / filament, `783729b`, `046e024`, `d46e6bb`'s
+`steadyProject` and `b3dc34b`'s arm-immediately behaviour are all intact.
+
+## 37. Residuals
+
+1. **A face is now marked only by the scene.** With the chip painting nothing,
+   nothing in the DOM says "there is a control here" until you are on it — the
+   affordance is the drawn face and its light. That is the same trade the crown
+   took on 2026-08-13 and it is the one thing here a visitor could miss; the
+   difference is that a face at least *looks* like a thing to point at, which a
+   knot of roots did not.
+2. **`hoverImgMute` is a taste number and the only one of the three that is.**
+   `hoverDeSepia` and `hoverCoreMute` are both 1.0 — full inverse, full removal
+   of a hover growth — so they are structural. 0.70 was chosen by eye off a
+   six-tile sweep and is the value to move if the hover reads as too flat.
+3. **`cast:variation` is now a two-context instrument.** It means one thing on
+   the bake (F.5) and something else on a rendered hovered frame, where
+   bleaching flatters it. Either it gets a stated context every time it is
+   quoted, or the hover work needs its own figure; dE-from-rest is proposed
+   above and has exactly one data point.
+4. **The per-node warmth is approximated.** The shader divides by step 2's
+   multiply at the midpoint of the warmth ramp, where the real factor moves G by
+   ±11 and B by ±10 out of 255 per node. An order of magnitude under the
+   correction; the alternative is a per-vertex warmth attribute through three
+   shaders.
+5. **The de-sepia is a small part of what shipped.** Measured alone it moved the
+   rendered frame by ~3 cast; the core and image pullbacks did the visible work.
+   It is kept because it is the only term that recovers the photograph's own
+   *hue* rather than just taking light off it, and it is free.

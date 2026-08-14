@@ -199,7 +199,65 @@ const PHOTO_GRADE = Object.freeze({
   amber: 0.64,
   unify: 0.16,
   burnMute: 0.70,
+  /* THE HOVER GRADE (2026-08-14, Hannah: "upon hover can you greatly reduce
+     the sepia effect on the image").
+
+     This is a HOVER state, not a retune. Everything above is the resting grade
+     `45f600b` was approved against and not one of those four numbers moves —
+     the resting frame, and the still it was signed off on, are untouched by
+     construction, because this term is multiplied by the node's own `vH` and
+     `vH` is 0 at rest.
+
+     WHAT IT DOES, and why it is not a desaturation. F.2 of
+     20-owned-root-network.md instrumented the bake stage by stage and found
+     the collapse is not diffuse: STEP 2, the amber multiply, drops within-face
+     hue variance 20-70x on its own, and it does it by SWAMPING rather than by
+     removing — "It induces roughly 25-35 chroma of its own in one fixed
+     direction, on top of source images that only carry 11-22. Everything the
+     photograph had to say about colour is still in there, drowned."
+
+     Still in there is the operative phrase. Step 2 is a multiply by a constant
+     colour, so it has an inverse: divide by the same factor and the
+     photograph's own chroma comes back up out of the cast. That is what this
+     does, weighted by hover — a partial inverse of the ONE named term, not a
+     saturation slider. Desaturating would take colour AWAY, and what she is
+     asking to see is the colour the multiply is sitting on top of.
+
+     Luminance is preserved through it (the shader rescales the result to the
+     texel's own Rec.709 luma), so a hovered face changes HUE and not
+     brightness — brightness on hover is already spoken for by the 0.30 * boost
+     on the image term two hundred lines below, and doubling up there is how a
+     near face blooms into a featureless orb under UnrealBloom (see the levels
+     note in the fragment shader).
+
+     PHOTOS ONLY. It is applied to `tP` before the bust/photo/glyph mix, on
+     exactly F.4's reasoning: the procedural busts are painted in the palette
+     already, there is no photograph underneath them to recover, and they are
+     what the frozen goldens render. */
+  hoverDeSepia: 1.0,
+  /* THE OTHER HALF, and the bigger one — see the `pg` block in the portrait
+     fragment shader. These pull back the amber the HOVER RESPONSE adds over a
+     photographed face, which measurement showed is where most of the sepia she
+     is reacting to actually comes from: the core lamp goes 0.07 -> 0.31 and the
+     image term 1.12 -> 1.42 on hover, before UnrealBloom. Both are multiplied
+     by `uPhoto * vH`, so the resting frame, the frozen goldens and the
+     procedural busts are all untouched by construction.
+     1 = the hover growth of that term is removed entirely on a photo. */
+  hoverCoreMute: 1.0,
+  hoverImgMute: 0.70,
 });
+
+/* Step 2's multiply colour, at the MIDPOINT of the per-node warmth ramp —
+   `rgba(226, 150 + warmth*22, 86 + warmth*20, amber)` in drawPhotoCell below,
+   evaluated at warmth 0.5. The shader needs the same factor to divide by, and
+   this is the one place it is written down so the two cannot drift.
+
+   Per-node warmth moves G by ±11 and B by ±10 out of 255 around this, which is
+   an order of magnitude under the correction itself (the inverse lifts blue by
+   ~66% relative to red) — so the midpoint is used rather than plumbing a
+   per-vertex warmth attribute through three shaders for a residual nobody can
+   see. If warmth's range ever widens, that trade is the line to revisit. */
+const PHOTO_AMBER_MUL = Object.freeze([226 / 255, 161 / 255, 96 / 255]);
 
 // Real-photo treatment (LOOK-DEV ONLY; assets/test-portraits, never ship).
 // Spike-calibrated pipeline: desaturation -> amber multiply -> warm-black
@@ -902,6 +960,14 @@ export function buildPortraitField({
       uHaze: { value: new THREE.Color(P.deepGold) },
       uHoverIdx: { value: -999 }, uHoverAmt: { value: 0 },
       uSelIdx: { value: -999 }, uSelAmt: { value: 0 },
+      // THE HOVER GRADE (2026-08-14) — see PHOTO_GRADE.hoverDeSepia. uAmberMul
+      // and uAmberA are step 2 of drawPhotoCell's bake, handed to the shader so
+      // it can divide by exactly what the bake multiplied by.
+      uDeSepia: { value: PHOTO_GRADE.hoverDeSepia },
+      uAmberMul: { value: new THREE.Vector3(PHOTO_AMBER_MUL[0], PHOTO_AMBER_MUL[1], PHOTO_AMBER_MUL[2]) },
+      uAmberA: { value: PHOTO_GRADE.amber },
+      uCoreMute: { value: PHOTO_GRADE.hoverCoreMute },
+      uImgMute: { value: PHOTO_GRADE.hoverImgMute },
       uOpacity: { value: 0 },       // == chapter fade
       uExposure: { value: exposure },
       uWaveC: { value: new THREE.Vector3(0, 0, 0) },
@@ -993,6 +1059,9 @@ export function buildPortraitField({
       uniform sampler2D uMapA, uMapP, uMapB, uMapA2, uMapP2;
       uniform vec3 uRim, uCore, uHaze;
       uniform float uTime, uOpacity, uAnon, uPhoto, uExposure;
+      uniform float uDeSepia, uAmberA, uCoreMute, uImgMute;
+      uniform vec3 uAmberMul;
+      const vec3 LUMA709 = vec3(0.2126, 0.7152, 0.0722);
       varying vec2 vUvA, vUvB;
       varying vec2 vQ;
       varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF, vSwap, vFlare;
@@ -1012,6 +1081,22 @@ export function buildPortraitField({
         float anon = max(uAnon, vAnonF);
         vec4 tA = mix(texture2D(uMapA, vUvA, slod), texture2D(uMapA2, vUvA, slod), vSwap);
         vec4 tP = mix(texture2D(uMapP, vUvA, slod), texture2D(uMapP2, vUvA, slod), vSwap);
+        // THE HOVER GRADE (2026-08-14) — a partial inverse of the bake's step-2
+        // amber multiply, so a hovered face comes back toward the photograph.
+        // See PHOTO_GRADE.hoverDeSepia for why this is an inverse and not a
+        // desaturation. PHOTOS ONLY: applied to tP before the mix, so the
+        // procedural busts (which the frozen goldens render) never see it.
+        // Rides vH, which is 0 at rest and eased in both directions by
+        // hoverAmt/selAmt — so this cannot pop on the way in or out.
+        {
+          vec3 f = mix(vec3(1.0), uAmberMul, uAmberA);
+          vec3 unc = tP.rgb / max(f, vec3(1e-3));
+          // rescale to the texel's own luma: hue moves, brightness does not
+          float y0 = dot(tP.rgb, LUMA709);
+          float y1 = dot(unc, LUMA709);
+          unc *= y1 > 1e-4 ? y0 / y1 : 1.0;
+          tP.rgb = mix(tP.rgb, clamp(unc, 0.0, 1.0), uDeSepia * vH);
+        }
         vec4 tAP = mix(tA, tP, uPhoto);
         // the anonymous glyph is identity, not arrangement — a remix never
         // touches it, so it keeps the plain lod
@@ -1045,9 +1130,30 @@ export function buildPortraitField({
         // UnrealBloom: exactly the failure EXPOSURE_PLANES was tuned against
         // (see index.js). The RING is what should carry a swap anyway — the
         // face has to stay a face while it is being exchanged.
-        vec3 col = t.rgb * (1.12 + 0.30 * boost + 0.55 * vWv + 0.10 * vFlare)
+        // THE HOVER GRADE, second half (2026-08-14). pg is "this is a
+        // photograph AND it is hovered" — 0 at rest and 0 on a bust, so the
+        // resting frame and the procedural path are untouched by construction.
+        //
+        // What Hannah is looking at when she says the hovered image is sepia is
+        // NOT mostly the bake: it is the two terms below that quadruple over a
+        // face on hover. Measured at the Owned rest with the test photos loaded,
+        // hovering the nearest contributor takes the CORE — uCore is goldBright,
+        // and exp(-r*r*8) puts it straight over the middle of the head — from
+        // 0.07 to 0.31, and the image term from 1.12 to 1.42, and then
+        // UnrealBloom works on the result. The photograph that reads clearly at
+        // rest becomes an amber lamp. So the pullback is applied where the amber
+        // is actually arriving.
+        //
+        // THE RIM IS DELIBERATELY NOT TOUCHED. It still runs 0.20 -> 1.00 on
+        // hover, it sits at r ~ 0.72 (the disc's EDGE, not the face), and it is
+        // the whole of the "these discs read as lit nodes in the network rather
+        // than as photographs laid over it" contract that 45f600b's §F.3 refused
+        // to trade away. The node still answers, and answers as hard as it did;
+        // it just stops answering ON the person's face.
+        float pg = uPhoto * vH;
+        vec3 col = t.rgb * (1.12 + 0.30 * boost * (1.0 - uImgMute * pg) + 0.55 * vWv + 0.10 * vFlare)
           + uRim * rim * (0.20 + 0.80 * boost + 0.60 * vWv + 0.62 * vFlare) * (1.0 - vSoft * 0.85)
-          + uCore * exp(-r * r * 8.0) * (0.07 + 0.24 * boost + 0.30 * vWv + 0.15 * vFlare);
+          + uCore * exp(-r * r * 8.0) * (0.07 + 0.24 * boost * (1.0 - uCoreMute * pg) + 0.30 * vWv + 0.15 * vFlare);
         // distant nodes emerge from amber haze rather than vanishing to black
         float haze = exp(-0.00135 * vDepth * vDepth);
         col = mix(uHaze * 0.38, col, clamp(haze + 0.14, 0.0, 1.0)) * flick;
