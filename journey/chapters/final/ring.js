@@ -817,27 +817,55 @@ export function createFinalRing(sceneApi, uniforms) {
     {
       const xr = makeRng(0x1EF7ED6E);          // 'left edge'
       const xg = () => gaussOf(xr);
-      /* 16 -> 30 (2026-08-13, Hannah: "the area to the left of the text...
-         feels under-composed... there should be enough visual material to
-         prevent that side of the composition feeling unfinished").
-         The BAND is unchanged and cannot change — rel [-0.72, -0.55] is
-         still every metre of kept soil on this side, as the cutVal table
-         above says. What was a taste choice, and is the thing she is
-         actually reporting, is how much of it was used: 16 bodies across
-         that whole band left the left arm reading as a thin picket against
-         the right's mass (measured lit density in the outer 120 px of the
-         body band, 1728x980: left 0.263 against right 0.422, and the
-         2026-08-12 pass called that "the authored composition"). It is not
-         authored any more.
-         The count is bounded by the same 1.15-unit spacing test against
-         `placed`, so this cannot crowd: it fills the band it was already
-         given, at the density the right side has always had. Every added
-         body still lands at dist >= CLONE_DIST, so they are all T4, the T3
-         clone rung and its fifteen-slot FIELD_LADDER stay untouched, and
-         they join the same by-depth [REV_KNEE, REV_HI] tail. Same rng, and
-         the draw order is unchanged, so the first 16 are bit-identical to
-         d39b35b's. */
-      const WANT = 30;
+      /* 16 -> 30 -> 22. The middle number was an overshoot and this is the
+         correction (2026-08-14, Hannah: "the back left looks a little bit
+         too crowded").
+
+         The history in one line: d39b35b put 16 bodies here and she said the
+         side was still empty; 6ba7b3f took it to 30 and she now says it is
+         crowded. So the answer is between, and the useful part is WHY the
+         30 read as crowded when the spacing test says it cannot overlap in
+         PLAN.
+
+         It cannot, and that was the error: the test is a 1.15-unit
+         separation on the GROUND, and what the frame shows is the caps in
+         PROJECTION. These bodies all stand in one narrow angular band (rel
+         [-0.72, -0.55]) at one narrow depth (the near-weighted dist rule
+         below puts most of them at 24-30), so on screen they sit at nearly
+         the same size in nearly the same horizontal run. Two bodies 1.2
+         units apart in plan but 25 units away are ~90 px apart on screen
+         with ~200 px caps: legally separated on the ground, overlapping
+         silhouettes in the frame. Adding bodies to a band that was already
+         at its projected limit does not spread them, it stacks their
+         outlines — and past roughly two dozen the cap rims stop reading as
+         individual mushrooms and merge into one continuous lit ridge with
+         no sky notches left between them.
+
+         MEASURED, at the rest, 1728x980. The deep notch of dark sky between
+         the big frame-left cap and the one behind it is open at 16, 18, 20
+         and 22 bodies and CLOSED at 30 — the two silhouettes have become
+         one — and a third rim runs across the gap beside it. 22 is the last
+         count at which every cap in the band still resolves as its own
+         body, and it is well clear of the thin picket 16 read as.
+
+         Note that lit density did NOT catch this and is a weak metric here:
+         the outer-120px band goes 0.215 (16) -> 0.303 (22) -> 0.359 (30) at
+         1728x980, a smooth ramp with nothing at the point where the caps
+         merge. Crowding is an occlusion property, not a coverage one. The
+         density number is kept because it is the honest guard against the
+         OTHER complaint (empty black), and 22 sits ~60% of the way from the
+         under-composed state to the overshoot, which is where it belongs.
+
+         Everything structural is unchanged: the BAND cannot change (rel
+         [-0.72, -0.55] is every metre of kept soil on this side, per the
+         cutVal table above), the same 1.15-unit spacing test against
+         `placed` still bounds the draw, every body still lands at
+         dist >= CLONE_DIST so they are all T4, the T3 clone rung and its
+         fifteen-slot FIELD_LADDER stay untouched, and they join the same
+         by-depth [REV_KNEE, REV_HI] tail. Same rng in the same draw order,
+         so these 22 are the first 22 of the 30 — the eight removed are the
+         eight that were drawn last, and no surviving body moves. */
+      const WANT = 22;
       const cand = [];
       let g2 = 0;
       while (cand.length < WANT && g2++ < 4000) {
@@ -882,7 +910,17 @@ export function createFinalRing(sceneApi, uniforms) {
       // and the horizon behind them: the hint rung stops at rel -0.50, so
       // the far haze has the same edge the bodies did. Same band, same rung.
       let g3 = 0;
-      while ((fieldStats.leftHints || 0) < 12 && g3++ < 2000) {   // 6 -> 12, same band
+      /* 6 -> 12 -> 9. Held near the fill pass's number, deliberately, and
+         it is worth saying why the crowding correction above did not take
+         the hints down with it. A/B at 6 against 9 with everything else
+         fixed is visually inert at all three review widths — these are
+         T_HINT schematic outlines at dist 34-46, behind and above the body
+         band, and they neither occlude a cap nor stack a silhouette. What
+         they do carry is the horizon haze, which is the thing that answers
+         the OTHER complaint: cutting them is a straight move back toward
+         the empty black without buying any calm. 9 keeps the haze and
+         tracks the body count down proportionally. */
+      while ((fieldStats.leftHints || 0) < 9 && g3++ < 2000) {   // 6 -> 12 -> 9, same band
         const rel = -0.55 - xr() * 0.17;
         const dist = 34 + xr() * 12;
         const th = REST_CAM.head + rel;

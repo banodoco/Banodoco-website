@@ -372,7 +372,13 @@ export function createFinalTerrain(sceneApi, uniforms) {
      weighting: they give the pit a floor of light to sit against, which is
      what makes the strands read as depth rather than as debris.
      Fresh rng, appended after every existing `aggr` draw, so no shipped
-     point moves; same boost/arc grammar, same camera-pure rise. */
+     point moves; same boost/arc grammar, same camera-pure rise.
+
+     KEPT WHOLE at 22 through the 2026-08-14 crowding correction, while the
+     §3b strand count came down 150 -> 80. These have no edges to count:
+     they are broad, dim, sub-lip light. They carry the "not empty black"
+     half of the brief at zero cost to the "not busy" half, which is exactly
+     what let the strand count fall as far as it did. */
   {
     const pr = makeRng(0x9001C001);            // 'pool'
     const pg = () => gaussOf(pr);
@@ -627,7 +633,35 @@ export function createFinalTerrain(sceneApi, uniforms) {
     // the face's own tangent, so a strand can run ALONG the wall as
     // readily as away from it (see the CURL note below)
     const TGx = -CUT_N.z, TGz = CUT_N.x;
-    for (let i = 0; i < 150; i++) {
+    /* 150 -> 80 (2026-08-14, Hannah: "the back left looks a little bit too
+       crowded"). This block is the larger half of that report, and the
+       failure mode is the one the header above names and then walks into.
+
+       The header is right that a persistent curl beats per-step noise, and
+       it does — each strand on its own is a smooth arc. What it does not
+       account for is how many arcs the frame can hold before the arcs stop
+       being the unit you read. At 150 strands x ~11.5 segments the pit
+       carried 1,723 line segments in the lower-left third, and at that
+       count the eye stops resolving individual strands and integrates them
+       into a MAT: a field of crossing strokes with no figure, which is the
+       countable-dash carpet by another route. The declutter round's lesson
+       was about stroke count, and the curl fixed the character of each
+       stroke without touching the count.
+
+       80 is where the strands are still countable as strands. Compared at
+       0 / 60 / 80 / 100 / 150 on the frame: the pit reads as severed
+       network trailing out of the wall up to about 80, begins to hatch at
+       100, and is a mat at 150.
+
+       WHAT IS NOT CUT, and this is the load-bearing half of the fix: the
+       22 second-bank colony glow pools below stay at 22. They are the
+       reason this count could come down as far as it did. The pools are
+       ATMOSPHERE — broad, dim, sub-lip light with no edges — so they add
+       floor to the pit without adding anything to count, and they answer
+       "empty black space" directly while contributing nothing to "busy".
+       Cutting strokes and keeping light is the whole trade; cutting both
+       would land back on the emptiness this block was built to fill. */
+    for (let i = 0; i < 80; i++) {
       // s weighted to the low (frame-left, far) end: pow > 1 crowds toward 0
       const s = S_LO + Math.pow(vr(), 1.9) * S_SPAN;
       const p = cutEdgePoint(s);
