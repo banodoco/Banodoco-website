@@ -1235,15 +1235,21 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 
        hero `core-pop`    the node flares as it lands
        hero `ring-ping`   a ring pings once and ends at nothing
-         here            a one-pixel FILAMENT on the contact edge lights,
-                         draws to full height, and goes out again — the
-                         connection to the chip, stated once. It ends at
-                         opacity 0, exactly as `ring-ping` does.
+         here            a one-pixel FILAMENT on the contact edge draws to
+                         full height, and goes out again — the connection to
+                         the chip, stated once. ONE monotone rise and one
+                         monotone fall, which is what `ring-ping` is; see the
+                         note at `j-pop-filament` for the 2026-08-14 correction
+                         and why the first cut was not that.
 
        hero `no-flicker`  the small `01` gutters alive in hard steps
          here            the link — the same typographic species, 0.66rem
-                         uppercase gold at 0.18em — takes the same
-                         `steps(1, end)` flicker, last of all.
+                         uppercase gold at 0.18em — switches on in hard steps,
+                         last of all. It does NOT gutter: see the note at
+                         `j-pop-strike` for why the borrowed keyframe's
+                         down-stops do not survive the move from a numeral
+                         that boots once to a control that boots on every
+                         hover.
 
        hero `tag-in`      the label fades in as its number flickers
          here            title then short line, staggered, opacity only.
@@ -1277,26 +1283,43 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      ever ran on the way OUT. It still does, and hidePop() drops
      `.j-pop-enter` before it drops `.open` so the animation is never holding
      opacity down when the transition needs to take it. */
+  /* DIRECTION IS A VALUE, NOT AN ANIMATION (Hannah, 2026-08-14: the left edge
+     flickers on hover).
+
+     There used to be three unfurls — `j-pop-unfurl`, `-l` and `-d` — selected
+     by `animation-name` off `[data-side]`. Changing `animation-name` on a
+     RUNNING animation cancels it and starts the replacement from zero, and
+     `placePop()` rewrites `data-side` EVERY FRAME from live geometry, so a
+     single frame's disagreement in the side decision replayed the whole wipe
+     from its leading edge. Measured: forcing a flip 121 ms into the entry
+     produced `animationcancel` + `animationstart` on the unfurl at 216 ms —
+     the left edge wiping itself open a second time, mid-open.
+     `POP_ENTER_MS` bounds how long that window lasts; it does not close it.
+
+     One animation whose starting clip comes from three custom properties
+     closes it. A custom property is re-substituted into the running
+     keyframes, so a side change now moves the interpolation's own endpoint on
+     the next frame with no cancel, no restart and no name change — and at
+     rest, where `.j-pop-enter` is absent, these properties are not read at
+     all. Same for the filament below, so the entry as a whole is now immune
+     to the flip rather than merely fenced off from it. */
+  .j-pop {
+    --unf-r: 100%; --unf-b: -70px; --unf-l: -70px;   /* opens rightward */
+    --fil-x0: 1;   --fil-y0: 0.12;                   /* filament draws its height */
+  }
+  .j-pop[data-side="left"]  { --unf-r: -70px; --unf-l: 100%; }
+  .j-pop[data-side="below"] { --unf-r: -70px; --unf-b: 100%; }
+  .j-pop[data-side="below"] { --fil-x0: 0.12; --fil-y0: 1; }
   .j-pop.j-pop-enter {
     animation:
       j-pop-unfurl 0.4s cubic-bezier(0.22, 1, 0.36, 1) both,
       j-pop-lamp 0.26s ease both;
   }
   @keyframes j-pop-unfurl {
-    from { clip-path: inset(-70px 100% -70px -70px); }
+    from { clip-path: inset(-70px var(--unf-r) var(--unf-b) var(--unf-l)); }
     to   { clip-path: inset(-70px -70px -70px -70px); }
   }
   @keyframes j-pop-lamp { from { opacity: 0; } to { opacity: 1; } }
-  .j-pop.j-pop-enter[data-side="left"] { animation-name: j-pop-unfurl-l, j-pop-lamp; }
-  @keyframes j-pop-unfurl-l {
-    from { clip-path: inset(-70px -70px -70px 100%); }
-    to   { clip-path: inset(-70px -70px -70px -70px); }
-  }
-  .j-pop.j-pop-enter[data-side="below"] { animation-name: j-pop-unfurl-d, j-pop-lamp; }
-  @keyframes j-pop-unfurl-d {
-    from { clip-path: inset(-70px -70px 100% -70px); }
-    to   { clip-path: inset(-70px -70px -70px -70px); }
-  }
 
   /* the contact filament — lit at rest is NOTHING, so opacity 0 both ends */
   .j-pop::before {
@@ -1319,36 +1342,62 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       transparent, rgba(255, 216, 140, 0.95) 24%,
       rgba(255, 216, 140, 0.95) 76%, transparent);
   }
+  /* THE FILAMENT PINGS ONCE, which is what it always said it did.
+
+     Its stated reference is hero.css's `ring-ping`, and the commit that
+     introduced it describes it as "lit once ... it ends at opacity 0, exactly
+     as ring-ping does". But `ring-ping` is one monotone fall — 0.9 -> 0, one
+     stop to the next, nothing in between — and what was built here went
+     0 -> 0.95 -> 0.35 -> 1 -> 0. That is a GUTTER, and a gutter is
+     `no-flicker`'s gesture, not `ring-ping`'s. The filament was wearing the
+     wrong reference's shape under the right reference's name: the contact
+     edge lit, went half out, came back brighter and then faded, all in
+     620 ms, on the one-pixel line the visitor's eye is already on because it
+     is the edge nearest the chip they just pointed at.
+
+     Rise, then out. One ping, stated once, exactly as claimed. The direction
+     comes from --fil-x0/--fil-y0 rather than a second animation-name, for the
+     reason given at the unfurl above. */
   .j-pop.j-pop-enter::before { animation: j-pop-filament 0.62s ease-out both; }
   @keyframes j-pop-filament {
-    0%   { opacity: 0;    transform: scaleY(0.12); }
-    18%  { opacity: 0.95; transform: scaleY(0.72); }
-    30%  { opacity: 0.35; }
-    42%  { opacity: 1;    transform: scaleY(1); }
-    100% { opacity: 0;    transform: scaleY(1); }
-  }
-  .j-pop.j-pop-enter[data-side="below"]::before { animation-name: j-pop-filament-h; }
-  @keyframes j-pop-filament-h {
-    0%   { opacity: 0;    transform: scaleX(0.12); }
-    18%  { opacity: 0.95; transform: scaleX(0.72); }
-    30%  { opacity: 0.35; }
-    42%  { opacity: 1;    transform: scaleX(1); }
-    100% { opacity: 0;    transform: scaleX(1); }
+    0%   { opacity: 0;    transform: scale(var(--fil-x0), var(--fil-y0)); }
+    30%  { opacity: 0.95; transform: scale(1, 1); }
+    100% { opacity: 0;    transform: scale(1, 1); }
   }
 
   .j-pop.j-pop-enter .j-pop-t { animation: j-pop-word 0.34s ease both; animation-delay: 0.10s; }
   .j-pop.j-pop-enter .j-pop-s { animation: j-pop-word 0.34s ease both; animation-delay: 0.17s; }
   @keyframes j-pop-word { from { opacity: 0; } to { opacity: 1; } }
+  /* THE LINK POWERS ON; IT NO LONGER GUTTERS.
+
+     `j-pop-strike` was hero.css's `no-flicker` copied stop for stop —
+     0 -> 1 -> 0.35 -> 1 in hard `steps(1, end)` — and taken together with the
+     filament above it is the other half of what Hannah reported: two gutters
+     inside 0.5 s in one small panel, the edge first and the link second, with
+     their dips 190 ms apart.
+
+     Keeping the borrowed gesture here was the mistake, and the reason is not
+     taste. `no-flicker` lights a NUMERAL on a diagram — a mark with no
+     function to lose while it is dark — and the hero's callouts boot ONCE,
+     on arrival at the top of the page. The last thing to arrive in this panel
+     is a LINK: the only control it has, and the thing the visitor is on their
+     way to click. A control that blanks and then half-lights reads as a
+     fault rather than as a flourish, and it does it on EVERY hover, which on
+     this page is the most repeated gesture there is. The same keyframe at a
+     different repetition rate, on an element that can be broken rather than
+     merely unlit, is a different gesture.
+
+     So the character is kept and the gutter is removed: three hard steps up
+     to full, monotone. It still arrives last, on the same delay, and it still
+     switches on rather than fading in — `steps()` is what carries the
+     instrument reading, and the down-stops were never what carried it. */
   .j-pop.j-pop-enter .j-pop-link {
-    animation: j-pop-strike 0.44s steps(1, end) both;
+    animation: j-pop-strike 0.30s steps(3, end) both;
     animation-delay: 0.24s;
   }
   @keyframes j-pop-strike {
-    0%   { opacity: 0; }
-    30%  { opacity: 1; }
-    45%  { opacity: 0.35; }
-    60%  { opacity: 1; }
-    100% { opacity: 1; }
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
   .j-pop-t {
     font-family: "Didot", "Playfair Display", Georgia, serif;
