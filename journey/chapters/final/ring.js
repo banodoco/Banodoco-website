@@ -430,6 +430,7 @@ export function createFinalRing(sceneApi, uniforms) {
         tw0: P.tw0, phase: P.swayPhase, amp: P.swayAmp,
         lum: cloneLum(dist),
         vary: P.V,                                    // this body's own shape
+        seed: P.seed,                                 // ...and its own cap figure
       });
     } else {
       buildMushroom(spec);
@@ -1244,7 +1245,7 @@ export function createFinalRing(sceneApi, uniforms) {
      *  field is scene-parented), so this is a build product, not state. */
     seats,
     setDwell(s) { primUniforms.uDwell.value = s; },
-    dispose() { picker.dispose(); },
+    dispose() { picker.dispose(); clones.disposeFigures(); },
     counts: {
       ringSegs: lines.segCount, glowPts: glows.ptCount,
       primordia: primSize.length, ringMembers: memberStats,
