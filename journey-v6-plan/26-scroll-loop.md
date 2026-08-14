@@ -1770,3 +1770,160 @@ condition reads *another* module's flag has taken a dependency on that flag's
 MEANING, not just its value — and meanings are not covered by any gate here. A
 condition scoped to the thing that armed it (`blending`) cannot acquire a second
 armer behind its back.
+
+---
+
+# 2026-08-14 — the horizon joins the ground, but not on the same curve
+
+**Requested:** Hannah's §31 report, second half — the sky was named as a
+residual there (§36) and is now landed. **Files:**
+`journey/chapters/final/index.js`. No route file, no camera key, no p-value, no
+ladder rung, nothing in `organism/`.
+
+## 39. It is the chapter's own sky, not the organism's spores
+
+Established before touching anything, because the two have different owners.
+`sky.js` builds ten children into one group:
+
+| child | what | how it fades |
+|---|---|---|
+| 0 | this chapter's **own** GPU spore cloud | `uPull` + `uAmount` |
+| 1 | the horizon trees | `makeStrandMat` → `uOpacity × uAmount` |
+| 2–9 | eight mist sprites | `update(t, amount)` on `material.opacity` |
+
+All three ride the chapter's single `uAmount` — §32's scalar, §32's step.
+
+**`organism/*` is not implicated, and that is measured, not argued.** The
+organism's shed (`sceneApi.groups.spores`) carries `uOpacity`, `fogNear` and
+`fogFar` and **no `uAmount` at all**: the chapter never scales it, it only lerps
+its fog through `applyShedFog`. Traced across both laps, before and after, the
+shed's emitted scale is **constant at 2.4000 on every presented frame**. Nothing
+was steered through `organism`'s API because nothing needed to be.
+
+## 40. The offset, and why there is one
+
+The one-line change — hand `sky.js` the bed's uniform set — would have put the
+horizon on the floor's exact curve. That is the flat-sheet case by construction:
+every non-body pixel of the epilogue scaling by one number.
+
+Shot both ways, real speed, same shutters, same lap: **the no-offset strip is
+visibly flatter.** At `bed ≈ 0.41` (down, ~2.6 s) the offset frame still has the
+spore trail bright and distant caps and verticals standing on the right, while
+the no-offset frame at the same floor brightness has gone sparse and empty. The
+floor is identical in both; only the distance differs. That is the whole
+argument for spending a second float.
+
+So the sky gets its own, on the **same driver and the same smoothstep**, but
+whole a third of the band early:
+
+```
+bed = smoothstep(shownPull / PULL_MAX)     PULL_MAX = 1.12
+sky = smoothstep(shownPull / SKY_FULL)     SKY_FULL = 0.80
+```
+
+`sky ≥ bed` at every driver value, and the two meet **exactly** at 0 and 1, so
+the seams stay the no-ops §33 established and the hand-back at a landing is
+still by construction. The sense is the physical one: **far leads on arrival and
+trails on departure.** Going out, the floor starts dimming while the horizon
+holds; coming in, the horizon resolves before the floor fills in. Maximum
+separation is 0.28, around the middle of the band.
+
+That shows up directly in the measured windows rather than only in the frames —
+down, the sky starts moving at **1488 ms** against the ground's **294 ms**; up,
+the sky finishes at **3437 ms** against the ground's **4010 ms**.
+
+## 41. Measured, before and after
+
+Matched runs, real in-page rAF-timed `WheelEvent`s, tracer animator registered
+last, **28/29 fps** on a contended rig (both figures from the same window; every
+headline is normalised by the surface's own range so the sampling rate does not
+enter). Both laps **76.40–76.41 units**.
+
+| | before | after |
+|---|---|---|
+| **down-wrap**, spread | 2447–2533 ms = **2.2%** of the lap | 1488–2820 ms = **31.1%** |
+| **down-wrap**, max single-frame step | **62%** of range | **5%** |
+| **down-wrap**, worst 100 ms window | **100%** of range | **10%** |
+| **up-wrap**, spread | 2362–2477 ms = **2.9%** | 2599–3437 ms = **20.7%** |
+| **up-wrap**, max single-frame step | **49%** of range | **13%** |
+| **up-wrap**, worst 100 ms window | **91%** of range | **20%** |
+
+Per layer, absolute max single-frame step:
+
+| layer | down before → after | up before → after |
+|---|---|---|
+| spore cloud | 0.6220 → **0.0536** | 0.4918 → **0.1259** |
+| horizon trees | 0.4354 → **0.0375** | 0.3443 → **0.0882** |
+| mist sprites | 0.0244 → **0.0021** | 0.0193 → **0.0049** |
+
+Controls on the same frames: the organism's shed **constant 2.4000**; the ring
+and the hero's ground network within run-to-run variance of before.
+
+**B1 restated for the sky** — the horizon may never be brighter than the lens
+has earned, `sky ≤ smoothstep(max(pure, held) / SKY_FULL)`, worst over every
+presented frame of a real wrap:
+
+| | before | after |
+|---|---|---|
+| down-wrap | **+0.9495** | **+0.0000** |
+| up-wrap | **+1.0000** | **+0.0000** |
+
+The bed's own B1 is **+0.0000** in both directions before and after — untouched.
+
+### 41.1 One pixel measurement that did not work, reported as such
+
+The intended sky-region pixel trace (upper third of the frame, `readPixels`
+straight after `composer.render()`) came out **7% → 7%** down and **12% → 11%**
+up, i.e. showing nothing. That is a bad instrument, not a null result: at these
+camera poses the epilogue's horizon and mist sit near **mid-frame**, not in the
+top third, so the band is dominated by background and by the hero's own cap and
+spore trail. The isolating measurement — double-rendering each shutter with the
+sky group suppressed — could not be completed either: seven renders per shutter
+stalled rAF hard enough that the lap did not travel (camera parked at the hero
+pose from 900 ms). The claim therefore rests on the driver trace, which is exact
+and which these materials multiply directly into `gl_FragColor`, plus the frame
+strips. **A properly-banded or single-key contribution measurement is the one
+thing this section is short of.**
+
+## 42. Gates
+
+* **Matched before/after driver traces, both directions, all three sky layers** —
+  §41, real wheel path, tracer registered last.
+* **B1 for the sky**, both directions — §41.
+* **Frame strips both ways, offset against no-offset**, nine shutters each,
+  shot in-page off the drawing buffer immediately after `composer.render()` —
+  the basis for §40's decision.
+* **Nav jumps into and out of the epilogue** by a real pointer press on the
+  shipped rail anchor, 160 frames: worst `|bed − eff|` **0.000e+00** and worst
+  `|sky − eff|` **0.000e+00** — no ordinary jump has room, so both are the
+  shipped scalar bit for bit — and **0 frames** with either lit while the camera
+  is above x −4.6.
+* **Scroll battery:** `E1 −4.60e−4`, `E2 1.0000`, `E3 1.0320`, `R1 0.260000`,
+  `R4 overshoot 0.00e+0`, `R5 0.000000 / 0.970000 / 1.0000`,
+  `R6 off-anchor stops: none`. (`E3` is a time-sampled drag and reads 1.0000 on a
+  quiet rig; 1.0320 is the 28 fps window, not this change — nothing here can
+  affect scroll distance accounting.)
+* **Console: 0 entries, 0 warnings, 0 errors** over a twelve-leg gestured ride
+  containing **both wraps** (`0.97 → 0` and `0 → 0.97`). Two legs under-shot
+  their rest at 28 fps; `R6` on its own driver reports `off-anchor stops: none`,
+  which is where that property is actually gated.
+* **`capture.py --check` PASS, worst MAE 0.00/255** across all ten frozen
+  references.
+* **The lap has not moved under `a0a89f8`'s new denomination** — 76.40–76.42
+  units over 3881–3974 ms against §31–36's 76.42 u / ~3.86 s. The wrap's camera
+  motion is a `directJumpTo` blend on `WRAP_EXTRA_S`, not a commit glide, so the
+  px/s work does not reach it. **Every number in §31–36 therefore stands as
+  published**; none is re-baselined.
+
+## 43. Residuals
+
+* **`revealgates.js` G1 and G2 FAIL on `a0a89f8`, before this change and not
+  because of it.** Measured on clean HEAD: `G1 3.06e-1`, `G2 8.27e-1` against a
+  bit-exact requirement; with this change present, `3.15e-1` / `8.88e-1` — the
+  same numbers to run-to-run variance. G1's premise is what moved (a scrub now
+  contains a glide, during which the driver legitimately lags), but **G2 is the
+  PLACEMENT gate** covering `?p=`, `?pose=` and deep links, and it wants a real
+  answer rather than a restatement. Raised separately; not touched here.
+* §41.1's missing pixel isolation.
+* The bed and the sky are one frame behind the bodies (§36) — unchanged.
+* §36's other residuals stand.

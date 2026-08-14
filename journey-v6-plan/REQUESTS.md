@@ -127,6 +127,7 @@ Status: **done** (shipped, gated) · **open** (not started) · **running**
 | — | The fairy ring lights up / down "all in one go"; wants it one piece at a time | `e1e8381` |
 | — | Down-wrap switches the field off before the motion starts; wants them going off as it goes | `027f969` |
 | 68 | **The ground lights up and darkens very suddenly in both loop directions; make it incremental.** | `9865e86` — the Final terrain and root canopy were the only things in the chapter with no ladder, so their whole brightness was the one fade scalar, and on a lap that scalar is a step at both ends. They now ride the field's own driver: 2.8% → 59.7% of the lap going out, 2.6% → 32.9% coming in. See `26-scroll-loop.md` §31–36. |
+| 68b | **…and the sky behind it, which stepped on the same frame.** Landed as part of the same complaint rather than left as a residual. | `ba09f49` (a regression fix the sky work uncovered — a latched flag put the wrap's spread on ordinary scrolling after `a0a89f8`), then `<this commit>` — the chapter's own spore cloud, horizon trees and mist sprites all rode the single `uAmount`; they now ride the same driver as the ground but on their own curve (`SKY_FULL` 0.80 against `PULL_MAX` 1.12), so the horizon leads on arrival and trails on departure instead of the lap reading as one flat sheet. 2.2% → 31.1% of the lap going out, 2.9% → 20.7% coming in. `organism/*` is not implicated: the shed carries no `uAmount` and measures constant across both laps. See `26-scroll-loop.md` §39–43. |
 
 ### Interface and content
 | # | Request | Landed |
@@ -165,9 +166,11 @@ Nothing currently. Items she has explicitly parked would be listed here.
   envelope, which moves an approved rest frame.
 - The audit's cleanup items 1–5 (docs, absolute-p derivation, sheet-drag
   dedupe, dead code, gate hardening) are queued but unstarted.
-- **The Epilogue's sky still switches on the loop.** Request 68 fixed the
-  ground; the spore cloud and mist horizon on the same frames still change
-  their whole brightness inside 100 ms in both directions. Left alone
-  deliberately — it is the air, not the floor, and it carries 82% of the
-  particulate light in frame, so re-timing it is a composition decision.
-  `26-scroll-loop.md` §36 has the one-line change if she wants it.
+- **`tools/revealgates.js` G1 and G2 are RED on `a0a89f8`**, before and
+  independently of request 68b (measured on clean HEAD: `G1 3.06e-1`,
+  `G2 8.27e-1` against a bit-exact requirement). G1's premise moved when the
+  reveal limiter was armed on commit glides — a scrub now contains a glide, so
+  the driver legitimately lags — but **G2 is the placement gate**, covering
+  `?p=`, `?pose=` and deep links, and needs a real answer rather than a
+  restatement. `capture.py --check` still passes at MAE 0.00, so the frozen
+  path is fine; it is the live placement path that is unverified.
