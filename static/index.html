@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Banodoco — helping the open-source AI art ecosystem thrive</title>
-<meta name="description" content="Banodoco builds tools, spaces, and shared infrastructure for the open-source AI art ecosystem. Static journey.">
+<meta name="description" content="Banodoco builds tools, spaces, and initiatives for open-source AI art. Static journey.">
 <!-- ==============================================================
      TIER 3 — THE COMPLETE STATIC JOURNEY
      12-platforms.md PL-2.4 / PL-3.3 / PL-3.4, ADR AR-4 (D5).
@@ -18,7 +18,7 @@
          whole point of ADR D5. Regenerate, never repaint.
        · Every string in ../content/content.js, as real HTML: chapter
          headings and support copy, the three Inspire spotlights, the
-         three Connect cards, the three ownership claims and their pod
+         three Connect cards, the ownership line and the pod
          explanations, the complete 16-person contributor index, and
          the site links / social / legal line (in the site-map menu).
        · The same #/<chapter>[/<node>] routes as the live journey, so
@@ -784,13 +784,6 @@
     color: var(--muted);
   }
 
-  /* ---------- ownership claims (locked copy — do not paraphrase) ---------- */
-  .claims { margin: 0 0 2rem; padding: 0; list-style: none; }
-  .claims li { margin: 0 0 0.7rem; }
-  .claim-t { font-size: 1.15rem; letter-spacing: 0.02em; color: var(--gold-bright); }
-  .claims li.primary .claim-t { font-size: 1.6rem; }
-  .claim-d { display: block; font-size: 0.9rem; color: var(--muted); }
-
   /* ---------- node list + detail panels ---------- */
   .nodes { margin: 0; padding: 0; list-style: none; }
   .node {
@@ -1091,7 +1084,7 @@
       <h2 class="menu-h">Banodoco</h2>
       <!-- The overview line is chapters.mission.sub — this site's own one-line
            summary of itself, which is also this page's <meta description>. -->
-      <p class="menu-lede" data-src="chapters.mission.sub">Banodoco builds tools, spaces, and shared infrastructure for the open-source AI art ecosystem.</p>
+      <p class="menu-lede" data-src="chapters.mission.sub">Banodoco builds tools, spaces, and initiatives for open-source AI art.</p>
       <nav class="menu-nav" aria-label="All sections">
         <ol class="menu-list">
           <li><a class="menu-item" href="#/mission" data-menu="mission">
@@ -1100,7 +1093,7 @@
           </a></li>
           <li><a class="menu-item" href="#/inspire" data-menu="inspire">
             <span class="menu-mark"><svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="6.6" cy="10.4" r="0.95"/><circle cx="4.8" cy="8.8" r="0.82"/><circle cx="6.6" cy="7.4" r="0.68"/><circle cx="4" cy="6" r="0.7"/><circle cx="5.8" cy="4.2" r="0.58"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">02</span><span class="menu-name">Inspire</span><span class="menu-line" data-src="chapters.inspire.heading">Inspire and empower.</span></span>
+            <span class="menu-txt"><span class="menu-no">02</span><span class="menu-name">Inspire</span><span class="menu-line" data-src="chapters.inspire.heading">Inspire the movement.</span></span>
           </a>
           <!-- The section's contents: item — one sentence → primary link.
                Same derivation as Tier 1 (nodes grouped by their `chapter`
@@ -1121,7 +1114,7 @@
           </ul></li>
           <li><a class="menu-item" href="#/owned" data-menu="owned">
             <span class="menu-mark"><svg class="sym" data-sym="owned" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle cx="11" cy="3.6" r="1.35"/><path d="M11 3.6 L3.4 15.6"/><path d="M11 3.6 L8.2 17.8"/><path d="M11 3.6 L13.8 17.8"/><path d="M11 3.6 L18.6 15.6"/><circle cx="3.4" cy="15.6" r="0.9"/><circle cx="8.2" cy="17.8" r="1.05"/><circle cx="13.8" cy="17.8" r="1.05"/><circle cx="18.6" cy="15.6" r="0.9"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">04</span><span class="menu-name">Owned</span><span class="menu-line" data-src="chapters.owned.heading">Owned by the ecosystem</span></span>
+            <span class="menu-txt"><span class="menu-no">04</span><span class="menu-name">Owned</span><span class="menu-line" data-src="chapters.owned.heading">Owned by contributors</span></span>
           </a>
           <ul class="menu-sub">
             <li class="menu-row"><span class="menu-il" data-src="nodes.pod-shared.label">100% shared</span><span class="menu-is" data-src="nodes.pod-shared.short">The dominant principle.</span></li>
@@ -1164,7 +1157,7 @@
     <div class="inner">
       <p class="eyebrow">Chapter 01 — Mission</p>
       <h1 id="h-mission" data-src="chapters.mission.heading">We’re working to help the open-source AI art ecosystem thrive.</h1>
-      <p class="sub" data-src="chapters.mission.sub">Banodoco builds tools, spaces, and shared infrastructure for the open-source AI art ecosystem.</p>
+      <p class="sub" data-src="chapters.mission.sub">Banodoco builds tools, spaces, and initiatives for open-source AI art.</p>
     </div>
   </section>
 
@@ -1172,8 +1165,8 @@
   <section class="chapter" id="ch-inspire" data-chapter="inspire" aria-labelledby="h-inspire" tabindex="-1">
     <div class="inner">
       <p class="eyebrow">Chapter 02 — Inspire</p>
-      <h2 id="h-inspire" data-src="chapters.inspire.heading">Inspire and empower.</h2>
-      <p class="sub" data-src="chapters.inspire.sub">Banodoco helps people push open models beyond their expected limits through challenges, compute, and rigorous research, turning breakthrough ideas into a thriving commons.</p>
+      <h2 id="h-inspire" data-src="chapters.inspire.heading">Inspire the movement.</h2>
+      <p class="sub" data-src="chapters.inspire.sub">Banodoco launches and stewards initiatives that inspire more people to care about open-source AI art.</p>
 
       <ul class="nodes">
         <li class="node" id="node-arca">
@@ -1278,18 +1271,24 @@
   <section class="chapter" id="ch-owned" data-chapter="owned" aria-labelledby="h-owned" tabindex="-1">
     <div class="inner">
       <p class="eyebrow">Chapter 04 — Owned</p>
-      <h2 id="h-owned" data-src="chapters.owned.heading">Owned by the ecosystem</h2>
+      <h2 id="h-owned" data-src="chapters.owned.heading">Owned by contributors</h2>
 
-      <!-- The three claims are LOCKED COPY (13-content-ops.md "Owned claims").
-           Do not paraphrase, reorder, or soften them. -->
-      <ul class="claims">
-        <li class="primary"><span class="claim-t" data-src="chapters.owned.claims.0.text">100% shared</span></li>
-        <li><span class="claim-t" data-src="chapters.owned.claims.1.text">Granted 1% per month</span></li>
-        <li>
-          <span class="claim-t" data-src="chapters.owned.claims.2.text">Split between different groups</span>
-          <span class="claim-d" data-src="chapters.owned.claims.2.detail">artists, core engineers, and knowledge creators</span>
-        </li>
-      </ul>
+      <!-- The claims LIST retired on 2026-08-05, when Hannah turned the three
+           locked claim strings into one prose line ("turn this stuff below the
+           header into prose subtext like the other sections"). The live tier
+           took that change at the time — `CONTENT.chapters.owned.claims` was
+           deleted outright, and ui.js's `.j-claims` renderer and site.css's
+           `.j-claim*` rules went with it rather than staying as an unreachable
+           branch — but this twin was left behind, still bound to four paths
+           that no longer exist. Those four were four of the five standing
+           drift errors on this page.
+
+           Brought into line here because the string it should have been
+           carrying is one Hannah changed again on 2026-08-14: this section
+           cannot mirror `chapters.owned.sub` while it is rendering the list
+           that sub replaced. Same element and same class as every other
+           chapter's sub, which is what the live tier draws too. -->
+      <p class="sub" data-src="chapters.owned.sub">Banodoco is 100% shared with the people who contribute to the open-source AI art ecosystem — granted 1% per month, split between artists, engineers, and knowledge creators.</p>
 
       <h3 class="eyebrow" style="margin-top:0.4rem">How ownership works</h3>
       <ul class="nodes">
