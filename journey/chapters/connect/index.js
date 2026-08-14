@@ -188,7 +188,19 @@ function pulseDriver(dur) {
    are untouched — this is a re-time, not a re-choreography. */
 const LIGHT_LO = 0.0273;   // leg-t — p 0.3860, the first route's light leaves the base
 const LIGHT_HI = 0.637;    // leg-t — p 0.5201, the last route's farthest tip saturates
-const LIGHT_OVERLAP = 0.30;
+/* 0.30 -> 0.22 (2026-08-14, Hannah's sixth report: "one at a time elegantly").
+   She has now asked for "one at a time" twice, three passes apart, so the 0.30
+   the 2026-08-06 pass chose is simply too generous: at 0.30 the next route
+   departs the base while the previous one is still a third of the way from its
+   hub, and with all three fronts overlapping that much the eye reads the ground
+   as generally busy rather than as three deliberate events. 0.22 keeps the
+   property that overlap exists for — the network is never dead between beats,
+   which is what stops it stuttering into three separate switches at 0 — while
+   giving each route clear air around its own hub landing. The cost is arithmetic
+   and tiny: the three windows share a slightly larger normaliser, so each comes
+   out 6.3% shorter in p. Against the 3.2x of road this pass buys, that is
+   nothing, and it is spent on separation, which is what was asked for. */
+const LIGHT_OVERLAP = 0.22;
 
 /* ADOS LAST (2026-08-11, Hannah: "the ADOS item and line seems to come in
    right away, but it should be sequenced after the other two — talking about

@@ -2964,3 +2964,236 @@ any more.
 * The 4 px portrait chip pair residual above is retired.
 * The `amount * resolve` mirror residual on the hub cores stands, untouched.
 * ADOS's halo still bleeds off the bottom-left corner by design.
+
+---
+
+## 2026-08-14 — the sixth pass: the road was being thrown away at the door
+
+Hannah, for the sixth time on this arrival: *"could you make the lines that
+appear on the ground in the connect the community section appear even slower,
+one at a time elegantly, they still appear rapidly and manically"* — and,
+earlier in the same thread, the same complaint with the character named:
+*"make them feel like roots growing out, not lights turning on ... they should
+start with Hivemind, going into ADOS, and they should get slower as they go."*
+
+### It reproduces, and not for any reason inside this chapter
+
+Measured on the shipped tree at 1440x900, one ordinary trackpad gesture from
+the Inspire rest into Connect (peak 3258 px/s, stream detected), then release:
+**the whole three-hub arrival ran in 1.70 seconds.** Hivemind departed at
+0.65 s, Discord at 1.02 s, ADOS at 1.46 s.
+
+Five passes had each raised `scrollVh` and each measured a large slowdown, and
+every one of those measurements was taken under a **continuous scrub** —
+"a deliberate 600 px/s", which is arithmetic on the scroll spline, not an input
+anybody performs. Run as a control on the shipped tree, a continuous scrub does
+reproduce their numbers, and `resolveCruise` **never latches**: a scrub is the
+one input that never engages the commit glide.
+
+The glide was the whole story. `COMMIT_GLIDE_RATE` was **0.10 p/s** and
+`COMMIT_CRUISE_MAX` **0.315 p/s** — denominated in *progress*, not in *road*.
+The moment a gesture ends, the resolution drives p at a fixed rate in p, so it
+crosses a chapter in a time proportional to its **span** and blind to its
+**scroll allocation**. Connect's arrival is 0.1341 of p; it therefore played in
+~1.3-1.7 s no matter what. Connect's `scrollVh` had gone 4.5 -> 10.0 -> 10.15
+across two passes, +5.65 vh of page bought explicitly to slow this arrival, and
+for a visitor who scrolls and lets go it bought **exactly zero**. That is why
+each pass shipped a real measurement and she reported again a day later.
+
+This was verified rather than argued: an offline integration of the glide ODE
+(SNAP_K brake, COMMIT_BLEND_K ramp, dt 1/60) predicts **1.72 s** for the
+shipped arrival against the **1.70 s** measured live — 1% agreement — so the
+model is trustworthy and every candidate below was calibrated on it before
+being built.
+
+### It was already a growth front — the model was never the problem
+
+Worth stating plainly, because the brief asked and because a re-model would
+have been the expensive wrong answer. `tendrils.js`:
+
+    litMask = 1.0 - smoothstep(head - uSoft, head + 0.004, along)
+
+That is a **tip advancing along `aAlong`** with a soft trailing ramp behind it,
+over paths that already exist at `uQuiet` 0.22 (`f9e8317`). It is not a
+brightness envelope over a shape that is already there in full. What made it
+read as "lights turning on" is that at 1.70 s for the whole network nothing had
+time to read as travel at all. The fix is pace, and the character follows.
+
+### What changed
+
+**1 — The glide is denominated in road** (`constants.js`, `scroll.js`). The
+resolution's floor and cruise are carried in **px/s** and converted to p/s at
+the spline's **local** gain every frame. `COMMIT_GLIDE_RATE 0.10 p/s` ->
+`COMMIT_GLIDE_PX 1500 px/s`; `COMMIT_CRUISE_MAX 0.315 p/s` ->
+`COMMIT_CRUISE_MAX_PX 2200 px/s`; new `COMMIT_GLIDE_MAX_S 7.5` bounds any one
+transition's autoplay. `gPeak` is already px/s, so it now needs no conversion
+at all and `spanSlope` leaves the rate path entirely — which also removes, by
+construction, the direction asymmetry this file recorded as a residual on
+2026-08-11 (2.50 s forward against 2.90 s backward, caused by exactly that
+mean-slope conversion).
+
+**2 — Connect's arrival gets real road, shaped to decelerate** (`route.js`).
+`connect` scrollVh 10.15 -> 17.55, segVh [7.30, 2.85] -> [14.70, 2.85], and
+seg 0's `shape` declared at **k [2.15, 0.80]**. `inspire` seg 1 2.1 -> 3.2 vh so
+the pinned knot is not a cliff. **No `span` and no `stops` moved on any
+chapter** — every p-value on the route is the double it has always been, rests
+still `[0, 0.26, 0.523, 0.725, 0.97]`.
+
+The `shape` is the answer to "they should get slower as they go". The three
+light windows are near-equal in p (0.0546 / 0.0591 / 0.0546), so a deceleration
+authored as per-route duration weights would have to take p from the early
+routes to give it to the late ones — precisely the trade `0b7ce1c` built,
+measured and rejected here. Authored as **road** it costs nothing and it
+decelerates the camera and the chips along with the light.
+
+**3 — Character** (`tendrils.js`, `index.js`). `FRONT_SOFT` 0.32 -> 0.23 and
+`LIGHT_OVERLAP` 0.30 -> 0.22. The ramp NARROWS, against four passes' instinct:
+0.32 was chosen when the front was fast, where a wide ramp is the only way to
+avoid a hard edge crawling; a wide ramp on a slow front is the other failure
+mode, a third of the route swelling together, which is a lamp. Narrowing
+sharpens the tip while the per-patch lift still gets much longer, because the
+head is now so much slower.
+
+### The budget, stated explicitly so the seventh report need not rediscover it
+
+**The p-window did not move and did not need to.** LIGHT_LO p 0.386006 ->
+LIGHT_HI p 0.520140 = **0.1341 of p, unchanged.** What changed is the road
+underneath it: **7.014 -> 14.028 vh, exactly 2.0x** — and, for the first time,
+a glide that spends it. The lesson for anyone here next: on this arrival p is
+*not* the budget and never was. **Road is the budget, and before this pass the
+glide was refusing to spend it.**
+
+### Measured — before and after, at 1440x900, in SIM-SECONDS
+
+Sim-seconds are the clamped `dt` the animators integrate (organism.js caps dt at
+0.05), so they equal wall-clock on any machine above 20 fps. Stated because the
+measuring rig here ran at ~11 fps under load; wheel deltas were dispatched on a
+**16 ms wall timer, not rAF**, so gesture-stream detection saw a genuine stream
+(`streaming` true, cruise latched) regardless of render rate.
+
+    ONE ORDINARY GESTURE, RELEASED        before      after     factor
+      whole arrival                       1.70 s      5.54 s     3.26x
+      Hivemind departs                    0.65        0.88
+      Discord  departs                    1.02        1.60
+      ADOS     departs                    1.46        3.20
+      depart-to-depart gaps               0.37/0.44   0.72/1.60
+      dot-to-dot gaps                     0.42/0.73   1.92/2.57
+      window: Hivemind                    0.55        1.05       1.9x
+      window: Discord                     0.60        2.25       3.8x
+      window: ADOS                        0.89        3.21       3.6x
+      per-strand lift, Hivemind           0.14        0.20       1.4x
+      per-strand lift, Discord            0.15        0.39       2.7x
+      per-strand lift, ADOS               0.23        0.60       2.6x
+      latched cruise                      0.10 p/s    2200 px/s
+
+    THE DECELERATION IS NOW LEGIBLE. Before, the three windows were
+    0.55 / 0.60 / 0.89 and the p-durations were 0.0546 / 0.0591 / 0.0546 —
+    i.e. flat to within 8%, which is under the threshold where anyone can
+    perceive an ordering at all, and ADOS (the finale) was the SHORTEST in p.
+    After: 1.05 -> 2.25 -> 3.21, steps of 2.14x and 1.43x, Hivemind into
+    Discord into ADOS, each one visibly longer than the one before.
+
+    ROAD                                  before      after
+      light stretch LIGHT_LO..LIGHT_HI    7.014 vh    14.028 vh   2.0x
+      light stretch in p                  0.1341      0.1341      kept
+      connect seg 0                       7.30 vh     14.70 vh
+      connect seg 0 tangents k            [1.964,     [2.15,
+                                           1.188]      0.80]
+      inspire seg 1                       2.10 vh     3.20 vh
+      whole page                          46.12 vh    54.62 vh    +8.50
+
+### What it cost downstream — measured, not assumed
+
+Per-leg autoplay for one released gesture (sim-s, 900 px viewport):
+
+    leg                     before   after   note
+      mission -> inspire      2.58    2.86   +11%
+      inspire -> connect      3.17    7.20   the request
+      connect -> owned        2.08    2.09   unchanged
+      owned   -> final        3.12    7.03   2.25x, bounded by COMMIT_GLIDE_MAX_S
+      final   -> end          0.87    0.25   a 545 px hold; imperceptible
+
+**Owned -> Final is the one uncommissioned change and it is deliberate.** That
+leg owns 24 vh — 44% of the route's road for 24.5% of its p — because the Final
+arrival was slowed on purpose across two passes (`route.js`, 2026-08-10/11). It
+was suffering the *same* defect as Connect: released gestures crossed it in
+3.12 s and threw the 17 vh away. Road-denominating the glide necessarily hands
+that road back. `COMMIT_GLIDE_MAX_S` bounds the result at 7.5 s so one gesture
+still buys a transition rather than a ride. This is aligned with request 61
+(Final field at ~quarter speed, still open) rather than against it, and it
+cannot make anything feel sluggish, because the glide is a **floor under the
+servo** — a visitor who keeps scrolling always overrides it.
+
+### Why this should be the last pass on this pacing
+
+Five passes redistributed a budget the glide was discarding at the door, so
+each one shipped an honest measurement of a slowdown no visitor could
+experience. The unit error is now fixed at its source: **road bought is road
+spent, in both input modes, for every chapter.** A future "still too fast" here
+is a taste question answerable with one number — `segVh` on `connect` seg 0 —
+and it will convert one-for-one instead of evaporating. The thing to check
+FIRST if it is reported again is `journey.scroll.resolveCruise` during a real
+released gesture: it should read px/s in the low thousands, and the arrival's
+duration should equal (light vh x viewport px) / that number.
+
+### Gates
+
+1. **Complaint reproduced on the shipped tree before anything was changed:**
+   1.70 s for the whole arrival under a real released gesture; continuous-scrub
+   control confirmed the previous passes' numbers and confirmed the glide never
+   latches under a scrub.
+2. **`capture.py --check`: PASS, worst MAE 0.00/255, all ten frozen references
+   byte-identical.** No golden re-shot and none needed — no p-value moved and
+   the rest is fully lit either way. `connect@1440x900` and `connect@430x932`
+   both 0.00.
+3. **Mirror.** Real wheel path, forward 0 -> 0.26 -> 0.523 across the whole
+   arrival and back, 200 forward / 179 reverse samples inside the light window:
+   **max |delta uLit| 0.0069** at p 0.3878 (the grid-pairing residual at the
+   steepest knee, sampled at 11 fps — coarser sampling than earlier passes, same
+   class). **Max uLit below LIGHT_LO is exactly 0 in both directions**, and the
+   group is never visible there: no self-ignition, nothing fades in over open
+   view. `drive(p)` remains a pure function of p — no clock, no accumulator.
+4. **Growth strip, 12 shutters, tip position in world along-units** (uLit x
+   uLitMax per route), sampled during a real glide:
+
+        s=2.32  p=0.3872   0.013 / 0     / 0       head hive 0.07
+        s=3.46  p=0.4409   1.136 / 0.273 / 0       head disc 0.42
+        s=4.60  p=0.4694   1.136 / 1.035 / 0.003   head disc 0.36
+        s=5.75  p=0.4891   1.136 / 1.235 / 0.412   head ados 0.52
+        s=6.90  p=0.5058   1.136 / 1.235 / 0.869   head ados 0.43
+        s=8.06  p=0.5226   1.136 / 1.235 / 1.134   home
+
+   Monotone advance, one route at a time, the head glow handing off between
+   routes — a tip travelling, not a region brightening.
+5. **Order and deceleration:** Hivemind -> Discord -> ADOS, departs
+   0.88 / 1.60 / 3.20, windows 1.05 / 2.25 / 3.21 — each longer than the one
+   before, at both aspects.
+6. **Rail click into Connect does not outrun the camera.** From the hero pose,
+   clicking the Connect rail item lands exactly p 0.523; for the first 0.47 s
+   `group.visible` is false and `uAmount` 0.0013 — the network is not submitted
+   at all — and it appears only as the camera-pure resolve rises, arriving
+   already lit. The p-keyed schedule never shows ahead of the camera.
+7. **Portrait 375x812:** arrival 4.93 s, windows 0.89 / 2.01 / 2.93, same order
+   and deceleration, max uLit below LIGHT_LO 0, `armed [connect]`, hotspots
+   [ados, hivemind, discord], lands p 0.523. 0 console entries.
+8. **Full gestured ride**, 1440x900, forward to the end, wrap, and all the way
+   back: every gesture landed on an anchor (0.26 / 0.523 / 0.725 / 0.97 / 0 and
+   back down), nothing parked off-anchor, **console 0 entries**.
+9. **Route integrity:** `REST_STOPS [0, 0.26, 0.523, 0.725, 0.97]`, monotone;
+   starts/ends bit-identical to the shipped table; route.js's LEGACY assert
+   silent.
+
+### Residuals
+
+- Owned -> Final autoplay 3.12 -> 7.03 s, as above. Deliberate and bounded,
+  but it is a change to a leg nobody asked about in this thread.
+- Hivemind's own window (1.05 s) is the least-improved of the three at 1.9x.
+  That is what `shape` k0 2.15 buys the other two, and it is the right way
+  round given she named ADOS as the one that should be slowest — but it is the
+  knob to turn if the opener now reads as the quick one.
+- The measuring rig held only ~11 fps under load, so all timings are in
+  sim-seconds and the mirror residual (0.0069) is sampling-coarse rather than
+  a real drift. A 60 fps re-measure would tighten it, not move it.
+- `COMMIT_GLIDE_PX` (1500) never binds on any current leg — every leg's ceil
+  (2200) or its MAX_S fit is higher. It is there as the floor for a future
+  short leg, and it is untested by anything shipped today.

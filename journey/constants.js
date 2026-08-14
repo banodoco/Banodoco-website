@@ -189,18 +189,44 @@ export const COMMIT_STREAM_GAP_MS = 45; // mean inter-delta spacing at or below
                                         // 100-250 ms. ~2.5x margin either side.
 export const COMMIT_STREAM_MIN = 4;     // events. Below this there is no stream
                                         // to measure and no gesture to carry.
-export const COMMIT_GLIDE_RATE = 0.10; // p/s NOMINAL cruise — ~2x a calm read
-                                       // scroll, ~4.5x under MAX_SCRUB_RATE, so
-                                       // the transition is assured but never a
-                                       // fling. It is a FLOOR, not the speed: a
-                                       // resolution that runs with the visitor
-                                       // cruises at max(the gesture's own peak
-                                       // rate, this), so it can only ever speed
-                                       // a gentle gesture UP to nominal, never
-                                       // brake a brisk one down. It is the flat
-                                       // cruise only for a reversal and a
-                                       // standing start, where there is no
-                                       // motion to continue.
+// THE GLIDE IS DENOMINATED IN ROAD, NOT IN p (2026-08-14). It used to be
+// `COMMIT_GLIDE_RATE = 0.10` p/s, and that one unit is the whole reason five
+// consecutive passes on the Connect ground lighting bought nothing.
+//
+// The defect. `scrollVh`/`segVh` exist so a chapter can buy WALL-CLOCK: more
+// scroll for the same p means the same progression takes longer to read
+// (route.js). That contract holds while the visitor is scrubbing — the servo
+// tracks the surface, and the surface is denominated in px. It did NOT hold
+// the moment the gesture ended: the commit glide drove p at a fixed rate in
+// p/s, so it crossed a chapter in a time proportional to its SPAN and utterly
+// blind to its ROAD. Connect's ground-lighting arrival is 0.1341 of p, so it
+// played in ~1.3 s however much road it owned — measured on the shipped tree,
+// one ordinary trackpad gesture from the Inspire rest ran the whole three-hub
+// arrival in 1.70 s. Connect's scrollVh had been raised 4.5 -> 10.0 -> 10.15
+// across two passes (+5.65 vh of page) explicitly to slow that arrival, and
+// for a visitor who scrolls and lets go it bought EXACTLY ZERO. Every pass
+// that verified the slowdown verified it under a continuous 600 px/s scrub —
+// the one input that never engages the glide (measured control: the cruise
+// never latches, and the same arrival runs 2.5-3x longer).
+//
+// The fix. The glide's speed is now px of scroll per second, converted to p at
+// the LOCAL slope of the scroll spline every frame. Road bought is road spent,
+// in both input modes, for every chapter — and the arithmetic gets simpler,
+// because `gPeak` is already px/s and no longer needs converting through a
+// span's mean slope at all. That conversion is also what made the same finger
+// worth different amounts of p at the two ends of a leg (the direction
+// asymmetry recorded as a residual in 16-connect-ground-restage.md,
+// 2026-08-11: 2.50 s forward against 2.90 s backward on one span); it is gone
+// by construction, not by tuning.
+export const COMMIT_GLIDE_PX   = 1500; // px/s NOMINAL cruise. FLOOR, not speed:
+                                       // a resolution running with the visitor
+                                       // cruises at max(the gesture's own peak,
+                                       // this), so it only ever speeds a gentle
+                                       // gesture UP, never brakes a brisk one.
+                                       // It is the flat cruise only for a
+                                       // reversal and a standing start, where
+                                       // there is no motion to continue.
+                                       // ~1.7 vh/s at a 900 px viewport.
 export const COMMIT_BLEND_K    = 6.0;  // 1/s — how fast the resolution's speed
                                        // FLOOR eases from the gesture's own
                                        // peak rate up to the latched cruise,
@@ -219,13 +245,38 @@ export const COMMIT_BLEND_K    = 6.0;  // 1/s — how fast the resolution's spee
 // Full journey minimum traverse ~= 2.2 s.
 export const MAX_SCRUB_RATE   = 0.45;  // p units per second
 
-// Ceiling on a resolution's latched cruise (scroll.js, intent.cruise). A
-// transition that carries a fling must keep that speed, not brake to nominal —
-// but it must not inherit the whole scrub limiter either, or a hard fling
-// would cross a whole leg at teleport speed with no sense of travel. 0.7 x the
-// limiter leaves visible headroom under it, so a flung transition still reads
-// as the fast end of scrolling rather than as a cut.
-export const COMMIT_CRUISE_MAX = 0.7 * MAX_SCRUB_RATE;   // 0.315 p/s
+// Ceiling on a resolution's latched cruise (scroll.js, intent.cruise), in the
+// same px/s the glide is now denominated in. A transition that carries a fling
+// must keep that speed, not brake to nominal — but it must not inherit the
+// whole scrub limiter either, or a hard fling would cross a whole leg at
+// teleport speed with no sense of travel.
+//
+// It matters far more than it used to, and that is deliberate. Under the old
+// p/s denomination this ceiling was ~10,000 px/s on the Inspire->Connect leg
+// and ~28,000 on Owned->Final — so high that it never bound, and what actually
+// governed every released gesture was the FLOOR. Now the ceiling is the thing
+// that decides how fast a reveal may be autoplayed past the visitor, which is
+// exactly the decision that was being made by accident before. 2200 px/s is
+// ~2.4 vh/s: the fast end of comfortable reading, and still ~3.7x a deliberate
+// scrub. It cannot make the site feel sluggish, because the glide is a FLOOR
+// under the servo — a visitor who keeps scrolling always overrides it.
+//
+// Chosen against the legs rather than in the abstract. At a 900 px viewport it
+// leaves Connect->Owned at 2.09 s of autoplay against the shipped 2.08 and
+// Mission->Inspire at 2.86 against 2.58, i.e. the transitions nobody has
+// complained about stay where they were; the two that move are Inspire->
+// Connect (the ground lighting, which is the request) and Owned->Final (which
+// owns 24 vh and is now bounded by COMMIT_GLIDE_MAX_S below).
+export const COMMIT_CRUISE_MAX_PX = 2200;   // px/s
+
+// No single resolution autoplays for longer than this. The glide is road-
+// denominated now, so a leg that owns a lot of road would otherwise commit the
+// visitor to a very long ride from one flick — Owned->Final is 24 vh and would
+// run 11 s at nominal. One gesture buys one transition, and a transition has to
+// stay a transition: above this duration the leg's own rate scales up to fit.
+// Legs shorter than CRUISE_MAX x this are unaffected, which today is every leg
+// except Owned->Final.
+export const COMMIT_GLIDE_MAX_S = 7.5;      // seconds
 
 // Absolute-p windows in which each chapter's DOM copy is shown. Authored as
 // offsets from each chapter's REST (route.js) — the copy belongs to the rest

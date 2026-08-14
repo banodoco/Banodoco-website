@@ -88,7 +88,20 @@ export const ROUTE = [
   // 0.74. The ground lighting itself (LIGHT_LO..LIGHT_HI, p 0.3860 ->
   // 0.5201 — connect/index.js) measures 6.94 -> 7.01 vh, 1.011x: kept.
   // (16-connect-ground-restage.md, 2026-08-11.)
-  { id: 'inspire', span: 24, nav: 'Inspire', scrollVh: 5.6, segVh: [3.5, 2.1] },
+  // seg 1 2.1 -> 3.2 vh (2026-08-14, the SIXTH pass on the Connect ground
+  // lighting). Not a change of heart about the 2026-08-11 trim above: that
+  // trim was denominated in scroll, and the glide that a released gesture
+  // actually rides is now denominated in scroll too (constants.js
+  // COMMIT_GLIDE_PX), so this tail is FASTER to a real visitor than the 2.1 vh
+  // version was — it used to be spent at a flat p/s, i.e. 48% of the leg's
+  // glide time for 24% of its road, and it now costs what it is worth.
+  // The 1.1 vh buys the join: Connect's seg 0 below declares a `shape`, and a
+  // pinned knot is shared with the segment before it (see the note at the top
+  // of this file), so this segment's own mean slope has to land near the pin or
+  // it collapses into the join. At 3.2 vh its mean is 3.81e-5 p/px against the
+  // pinned 2.31e-5 — a 0.61x handover instead of the 0.36x cliff that leaving
+  // it at 2.1 would have forced.
+  { id: 'inspire', span: 24, nav: 'Inspire', scrollVh: 6.7, segVh: [3.5, 3.2] },
   // stops [0.65], not the DEFAULT_STOP, and scrollVh 4.5 -> 10.0 (2026-08-10,
   // Hannah's brief items 1-2 — the FIFTH pass on the ground-lighting pace, and
   // the light schedule was reported FULLY SPENT at the fourth (c77fb00):
@@ -116,8 +129,32 @@ export const ROUTE = [
   //   shipped spline gave it; seg 1 (0.5230..0.60, the Connect -> Owned
   //   dive, 86883b9's one arc) takes 2.85 so the dive measures 5.12 vh
   //   against its shipped 5.15 — 0.993x, i.e. unchanged.
-  { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 10.15,
-    segVh: [7.30, 2.85] },
+  //   scrollVh 10.15 -> 17.55, segVh [7.30, 2.85] -> [14.70, 2.85], and seg 0's
+  //   `shape` DECLARED (2026-08-14, Hannah's SIXTH request on this pace: "make
+  //   the lines that appear on the ground in the connect the community section
+  //   appear even slower, one at a time elegantly, they still appear rapidly
+  //   and manically"). Every previous pass on this arrival raised scrollVh and
+  //   measured the slowdown under a continuous scrub. Measured this time under
+  //   a real released gesture, the shipped arrival ran in 1.70 s, because the
+  //   commit glide was denominated in p/s and threw the road away — the whole
+  //   story is in constants.js COMMIT_GLIDE_PX. With the glide road-denominated
+  //   this chapter's scroll finally converts, so it is worth buying, and seg 0
+  //   (the arrival Hannah keeps reporting) takes all of it.
+  //   `shape` k [2.15, 0.80] is the OTHER half of her ask — "they should get
+  //   slower as they go", Hivemind into Discord into ADOS. The three light
+  //   windows are near-equal in p (0.0546 / 0.0591 / 0.0546, duration
+  //   proportional to each front's reach — connect/index.js), so a deceleration
+  //   authored as per-route weights would have to take p from the early routes
+  //   to give it to the late ones, which is precisely the trade 0b7ce1c built,
+  //   measured and rejected in this chapter for good reasons. Authored as ROAD
+  //   it costs nothing: the gain starts at 2.15x this segment's mean and ends
+  //   at 0.80x, so early p is cheap and late p is expensive, and the whole
+  //   arrival — light, camera and chips together — relaxes as it runs. The
+  //   shipped tangents here were [1.964, 1.188], measured on the live spline,
+  //   so this is a steepening of a curve that already decelerated, not a new
+  //   gesture. Page 46.12 -> 54.62 vh, +8.50.
+  { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 17.55,
+    segVh: [14.70, 2.85], shape: { seg: 0, k: [2.15, 0.80] } },
   // scrollVh 5.0 -> 9.27, declared as segVh [2.27, 7.00] with the POST-REST
   // sub-segment's shape pinned (2026-08-12, Hannah: "the move currently reads
   // as two motions, or one motion with two speeds. It feels jilted rather than

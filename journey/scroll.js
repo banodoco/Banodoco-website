@@ -22,8 +22,9 @@ import { CHAPTERS, SEGMENTS, REST_STOPS, TERMINAL_P } from './route.js';
 import { NOSNAP } from '../flags.js';
 import {
   SNAP_ENGAGE_MS, ARRIVAL_HOLD_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
-  COMMIT_THRESHOLD, COMMIT_CARRY_RATE, COMMIT_GLIDE_RATE, COMMIT_BLEND_K,
-  COMMIT_STREAM_GAP_MS, COMMIT_STREAM_MIN, COMMIT_CRUISE_MAX,
+  COMMIT_THRESHOLD, COMMIT_CARRY_RATE, COMMIT_GLIDE_PX, COMMIT_BLEND_K,
+  COMMIT_STREAM_GAP_MS, COMMIT_STREAM_MIN, COMMIT_CRUISE_MAX_PX,
+  COMMIT_GLIDE_MAX_S,
   WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K,
 } from './constants.js';
 
@@ -685,10 +686,12 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     const dir = target > p ? 1 : target < p ? -1 : 0;
     // floor stays nominal: the servo is at the limiter and outruns it the whole
     // way, so this only ever supplies the SNAP_K landing.
-    intent = dir === 0 ? null : {
-      target, dir, from: p, g: gSerial, cruise: COMMIT_GLIDE_RATE, floor: COMMIT_GLIDE_RATE,
-      lo: Math.min(p, target), hi: Math.max(p, target),
-    };
+    intent = dir === 0 ? null : (() => {
+      const lo = Math.min(p, target), hi = Math.max(p, target);
+      const band = glideBand(lo, hi);
+      return { target, dir, from: p, g: gSerial, band,
+        cruisePx: band.nominal, floorPx: band.nominal, lo, hi };
+    })();
   }
 
   /* ================= RESOLUTION + MOTION: ONE CONTROLLER =================
@@ -796,6 +799,33 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   function spanSlope(lo, hi) {
     const d = scrollFor(hi) - scrollFor(lo);
     return d > 1e-6 ? (hi - lo) / d : 0;
+  }
+
+  /** dp/dpx where the visitor actually IS — the spline's LOCAL gain, not a
+   *  span average. This is what makes the glide road-denominated: a px/s cruise
+   *  converts to p/s here, every frame, so the rate follows the road the way a
+   *  scrubbing finger already does. A span average would re-introduce exactly
+   *  the defect this replaces at one level up, because the whole point of
+   *  `segVh`/`shape` is that the gain is deliberately NOT uniform across a leg
+   *  (route.js). Two-sided difference so the value is centred on the sample;
+   *  8 px is well inside the inverse table's resolution and comfortably above
+   *  its quantisation. */
+  function slopeAtP(q) {
+    const x = scrollFor(q), h = 8;
+    const a = Math.max(0, x - h), b = Math.min(total, x + h);
+    return b - a > 1e-6 ? (pAt(b) - pAt(a)) / (b - a) : 0;
+  }
+
+  /** The px/s band a resolution across [lo, hi] may cruise in.
+   *  `nominal` is the floor a gentle gesture is lifted to, `ceil` the cap a
+   *  fling is held under — both raised, if necessary, to the rate that finishes
+   *  this leg inside COMMIT_GLIDE_MAX_S, so one gesture can never buy a ride
+   *  longer than a transition. */
+  function glideBand(lo, hi) {
+    const spanPx = Math.abs(scrollFor(hi) - scrollFor(lo));
+    const fit = spanPx / COMMIT_GLIDE_MAX_S;
+    return { nominal: Math.max(COMMIT_GLIDE_PX, fit),
+             ceil: Math.max(COMMIT_CRUISE_MAX_PX, fit) };
   }
 
   /** Is the visitor's current gesture a STREAM going somewhere — i.e. a thing
@@ -1025,39 +1055,38 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         const dir = target > p ? 1 : target < p ? -1 : 0;
         const onward = dir !== 0 && dir === lastDir;
         if (onward) {
-          // With the motion: arm NOW, floored at the gesture's own peak —
-          // the px peak, spent at this span's own slope (see spanSlope) —
-          // so the floor is under the motion before the momentum tail
-          // decays.
-          const sl = spanSlope(lo, hi);
-          intent = { target, lo, hi, dir, from: p, g: gSerial, slope: sl,
-            floor: Math.abs(gPeak) * sl, cruise: null };
+          // With the motion: arm NOW, floored at the gesture's own peak — which
+          // is ALREADY px/s and needs no conversion at all now that the glide
+          // is road-denominated — so the floor is under the motion before the
+          // momentum tail decays.
+          intent = { target, lo, hi, dir, from: p, g: gSerial, band: glideBand(lo, hi),
+            floorPx: Math.abs(gPeak), cruisePx: null };
         } else if (!live && dir !== 0) {
           // Against the motion (or from a placement): nothing to continue, so
           // this one does wait out the idle window and starts from rest at the
           // flat nominal cruise. Decelerating through zero is the one place
           // where slowing down IS the correct motion.
-          intent = { target, lo, hi, dir, from: p, g: gSerial, slope: spanSlope(lo, hi),
-            floor: 0, cruise: COMMIT_GLIDE_RATE };
+          const band = glideBand(lo, hi);
+          intent = { target, lo, hi, dir, from: p, g: gSerial, band,
+            floorPx: 0, cruisePx: band.nominal };
           gPeak = 0;
         }
       }
-      if (intent && intent.cruise === null) {
+      if (intent && intent.cruisePx === null) {
         if (live) {
-          // Still going: the floor tracks the gesture's peak (converted at
-          // the span's slope), so it can never exceed what one finger's
-          // strength is worth on this road and can never run away.
-          intent.floor = Math.abs(gPeak) * intent.slope;
+          // Still going: the floor tracks the gesture's peak, so it can never
+          // exceed what one finger's strength is worth and can never run away.
+          intent.floorPx = Math.abs(gPeak);
         } else {
           // THE GESTURE IS OVER. Its peak becomes the transition's cruise: at
           // least nominal, so a gentle gesture still completes the move at a
-          // readable speed; at most COMMIT_CRUISE_MAX, so a fling still reads
+          // readable speed; at most the leg's ceil, so a fling still reads
           // as travel. Spending gPeak here is what keeps one gesture worth
           // exactly one transition — a velocity rule is not self-stabilising
           // at a rest the way a position rule is, so the velocity has to be
           // consumed where it is used, or one flick buys the whole route.
-          intent.cruise = Math.min(
-            Math.max(Math.abs(gPeak) * intent.slope, COMMIT_GLIDE_RATE), COMMIT_CRUISE_MAX);
+          intent.cruisePx = Math.min(
+            Math.max(Math.abs(gPeak), intent.band.nominal), intent.band.ceil);
           gPeak = 0;
         }
       }
@@ -1066,16 +1095,23 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     /* 3. ONE DESIRED RATE. */
     let rate = servo;
     if (intent) {
-      if (intent.cruise !== null) {
+      if (intent.cruisePx !== null) {
         // The only ramp in the model, and it only ever runs UP: from the speed
         // already on screen toward the latched cruise. It can add speed and it
-        // cannot take any away, so it cannot make a trough.
-        intent.floor += (intent.cruise - intent.floor) * Math.min(1, dt * COMMIT_BLEND_K);
+        // cannot take any away, so it cannot make a trough. Ramping in px/s
+        // rather than p/s is what keeps that true across a shaped segment —
+        // ramping in p would fight the spline's own gain curve.
+        intent.floorPx += (intent.cruisePx - intent.floorPx) * Math.min(1, dt * COMMIT_BLEND_K);
       }
+      // ROAD -> p, at the local gain. This one multiply is the whole change:
+      // the glide now spends the scroll a chapter actually owns, so `scrollVh`
+      // and `segVh`/`shape` mean the same thing to a released gesture that they
+      // already meant to a scrubbing finger.
+      const floorP = intent.floorPx * slopeAtP(p);
       // The landing: never faster than the critically-damped pull toward the
       // rest, which is what makes the arrival asymptotic and overshoot-free.
       const brake = Math.abs(intent.target - p) * SNAP_K;
-      const drive = intent.dir * Math.min(intent.floor, brake);
+      const drive = intent.dir * Math.min(floorP, brake);
       if (drive * intent.dir > servo * intent.dir) rate = drive;
     }
     vel = clampRate(rate);
@@ -1232,12 +1268,18 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         own peak while the gesture is live, easing to the latched cruise once it
         is over. The SNAP_K landing brake begins about floor/SNAP_K before the
         rest. 0 when nothing is resolving. */
-    get resolveFloor() { return intent ? intent.floor : 0; },
-    /** QA: the cruise (p/s) this resolution latched when the gesture ended —
-        the gesture's own peak rate clamped to [COMMIT_GLIDE_RATE,
-        COMMIT_CRUISE_MAX], or flat nominal for a reversal / standing start.
-        null while the gesture is still running. */
-    get resolveCruise() { return intent ? intent.cruise : 0; },
+    get resolveFloor() { return intent ? intent.floorPx * slopeAtP(p) : 0; },
+    /** QA: the resolution's speed floor in the units it is now CARRIED in —
+        px of scroll per second. `resolveFloor` is the same quantity converted
+        to p/s at the local gain, i.e. what the visitor's progress actually
+        does this frame; the two differ by the spline, which is the point. */
+    get resolveFloorPx() { return intent ? intent.floorPx : 0; },
+    /** QA: the cruise (px/s) this resolution latched when the gesture ended —
+        the gesture's own peak clamped to the leg's [nominal, ceil] band
+        (COMMIT_GLIDE_PX / COMMIT_CRUISE_MAX_PX, both raised if needed to finish
+        inside COMMIT_GLIDE_MAX_S), or flat nominal for a reversal / standing
+        start. null while the gesture is still running. */
+    get resolveCruise() { return intent ? intent.cruisePx : 0; },
     /** QA: where the latched resolution is going (null if none). */
     get resolveTarget() { return intent ? intent.target : null; },
     /** QA: is a registered modal owner (dialog card / bottom sheet) holding
