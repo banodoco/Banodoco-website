@@ -2544,3 +2544,247 @@ Neither fix touches the other's code, so they are two commits.
   camera-pure gates. `keep` was found by a reported symptom; Connect's and
   Inspire's masks have not been swept over the lap's poses the way §3 sweeps
   this one over the ride's.
+
+---
+
+# 2026-08-14 — the back left is too crowded: density was the wrong metric
+
+**Requested:** Hannah — *"The back left looks a little bit too crowded"*, with a
+screenshot of the Final frame's left side showing dense overlapping wireframe
+bodies and lines. **Built:** same day.
+**Files:** `journey/chapters/final/ring.js` (the left band's population),
+`journey/chapters/final/terrain.js` (§3b's strand count). No camera key, no rest
+pose, no new draw call, no geometry redesign — four constants.
+
+This is a correction to work that was asked for and then overshot, and the
+sequence matters:
+
+| | left band | far hints | §3b strands | pit glow pools | outer-L density @1728 |
+|---|---|---|---|---|---|
+| `d39b35b` | 16 | 6 | — | — | 0.215 |
+| `6ba7b3f` | 30 | 12 | 150 | 22 | 0.359 |
+| **this** | **22** | **9** | **80** | **22** (kept) | **0.303** |
+
+She called `d39b35b`'s state "a large amount of empty black space", and she is
+now calling `6ba7b3f`'s state crowded. The target is between, and the whole of
+the interesting content is *why the previous pass could not see it coming*.
+
+## 1. Density is a coverage metric and crowding is an occlusion property
+
+`6ba7b3f` used lit density as its metric and reported the fill as a 58–66% lift
+on the left. That number was real, and it was measuring the wrong thing. Lit
+density counts pixels above a floor. Crowding is not about how many pixels are
+lit — it is about whether the lit pixels still resolve into separable objects.
+
+Measured across the whole candidate range at 1728x980, outer-120px column over
+the body band:
+
+| left band bodies | 16 | 18 | 20 | 22 | 24 | 30 |
+|---|---|---|---|---|---|---|
+| outer-L density | 0.215 | 0.286 | 0.302 | 0.303 | 0.321 | 0.359 |
+| sky notch between the two frame-left caps | open | open | open | **open** | closing | **closed** |
+
+The density column is a smooth monotone ramp with nothing whatsoever happening
+at the point where the composition breaks. The notch column is the thing the eye
+is actually reporting, and it is a step.
+
+**The mechanism.** The band's spacing test is a 1.15-unit separation on the
+GROUND, and the frame shows the caps in PROJECTION. Every body in this band
+stands in one narrow angular sector (rel [−0.72, −0.55]) at one narrow depth
+(the near-weighted `dist` rule puts most of them at 24–30), so they all land at
+nearly the same size in nearly the same horizontal run of the frame. Two bodies
+1.2 units apart in plan at 25 units out are ~90 px apart on screen carrying
+~200 px caps: legally separated on the ground, overlapping silhouettes in the
+frame. Adding bodies to a band already at its projected limit does not spread
+them, it stacks their outlines — and past roughly two dozen the cap rims stop
+reading as individual mushrooms and merge into one continuous lit ridge.
+
+That is why `6ba7b3f`'s own note — *"the count is bounded by the same 1.15-unit
+spacing test against `placed`, so this cannot crowd"* — was wrong on its face.
+The test it cites cannot crowd in plan. Nothing was checking projection.
+
+## 2. The pit is the larger half, and it is the declutter round again
+
+The screenshot says "bodies **and lines**", and the lines are the bigger
+contributor. §3b put 150 filaments into the pit at ~11.5 segments each: 1,723
+line segments in the lower-left third of the frame, which is the one region of
+the composition that has nothing else in it to look at.
+
+§3b's header is right that a persistent curl beats per-step noise, and it does —
+each strand on its own is a smooth arc rather than a zigzag or a ruled line. What
+it does not account for is how many arcs the frame can hold before the arc stops
+being the unit you read. At 150 the eye stops resolving strands and integrates
+them into a **mat**: a field of crossing strokes with no figure. That is the
+countable-dash carpet the declutter round deleted, reached by a different route.
+The declutter round's lesson was about stroke COUNT; the curl fixed the
+CHARACTER of each stroke and left the count to grow.
+
+Compared on the frame at 0 / 60 / 80 / 100 / 150 strands, everything else fixed:
+the pit reads as severed network trailing out of the wall up to about 80, begins
+to hatch at 100, and is a mat at 150. **80 ships.**
+
+## 3. What was deliberately NOT cut
+
+**The 22 second-bank colony glow pools stay at 22, whole.** They are the reason
+the strand count could come down as far as it did. The pools are atmosphere —
+broad, dim, sub-lip light with no edges — so they add floor to the pit without
+adding anything to count. They answer "empty black space" directly and
+contribute nothing to "busy". Cutting strokes and keeping light is the entire
+trade; cutting both lands back on the emptiness §3b was built to fill.
+
+**The far hints only track down, 12 → 9.** A/B at 6 against 9 with everything
+else fixed is visually inert at all three review widths: these are `T_HINT`
+schematic outlines at dist 34–46, behind and above the body band, and they
+neither occlude a cap nor stack a silhouette. What they do carry is the horizon
+haze, which is the other complaint's material. Cutting them to 6 would be a
+straight move back toward the empty black for no calm at all.
+
+**The band itself is untouched and still cannot change** — rel [−0.72, −0.55] is
+every metre of kept soil on that side, per `d39b35b`'s `cutVal` table. Same rng
+in the same draw order, so the 22 that ship are the first 22 of the 30: the eight
+removed are the eight drawn last, and no surviving body moves.
+
+## 4. Candidates compared
+
+All at 1728x980, 1512x860 and 1440x900, frozen `?capture=final`, sources rewritten
+from a pristine copy for each candidate so edits never compound.
+
+| | bodies | hints | strands | pools | outer-L @1728 | visual read |
+|---|---|---|---|---|---|---|
+| `prev` (`d39b35b`) | 16 | 6 | 0 | 0 | 0.215 | the state she called empty; thin picket |
+| `c1` | 20 | 8 | 80 | 22 | 0.302 | good; marginally light in the band |
+| `c2` | 24 | 10 | 100 | 22 | 0.321 | caps beginning to merge, pit hatching |
+| `c3` | 22 | 9 | 60 | 22 | 0.292 | caps right, pit a touch thin |
+| `e1` | 22 | 6 | 80 | 22 | 0.304 | indistinguishable from `e2`; horizon poorer |
+| `e3` | 18 | 8 | 80 | 22 | 0.286 | caps right, band reading sparse again |
+| **`e2` SHIPPED** | **22** | **9** | **80** | **22** | **0.303** | **caps separate, pit reads as network** |
+| `before` (`6ba7b3f`) | 30 | 12 | 150 | 22 | 0.359 | the reported state |
+
+## 5. Measurements
+
+**Lit density**, same method as `6ba7b3f` §4 (fraction above luma 32, every 2nd
+pixel; outer = outer 120 px column, 60 on the phone, over y 0.42–0.82 h).
+
+| viewport | outer L | outer R | L3 | copyQ |
+|---|---|---|---|---|
+| 1440x900 | 0.430 → **0.393** | 0.770 → 0.770 | 0.539 → 0.519 | 0.264 → 0.254 |
+| 1512x860 | 0.414 → **0.358** | 0.712 → 0.705 | 0.553 → 0.524 | 0.280 → 0.266 |
+| 1728x980 | 0.359 → **0.303** | 0.631 → 0.632 | 0.499 → 0.472 | 0.238 → 0.224 |
+| 1512x982 | 0.418 → 0.387 | 0.782 → 0.781 | 0.511 → 0.493 | 0.238 → 0.228 |
+| 1728x1117 | 0.402 → 0.376 | 0.731 → 0.732 | 0.482 → 0.467 | 0.211 → 0.202 |
+| 375x812 | 0.331 → 0.329 | 0.272 → 0.283 | 0.310 → 0.307 | 0.161 → 0.166 |
+
+**The right side does not move at any width** — this is a left-side thin, exactly
+as `6ba7b3f` was a left-side fill. At the three review widths the result sits
+**55% / 62% / 61%** of the way from the under-composed state to the overshoot,
+which is where "between the two" should land.
+
+**The dead column stays closed.** First lit column from the left edge in the body
+band is **0 at every width, before and after** — `d39b35b`'s accidental-crop fix
+is not regressed by the thinning. That was the risk of cutting the band and it
+did not materialise, because the reach (rel −0.72) is untouched and only the
+population inside it changed.
+
+**Budget at the Final rest, 1728x980, frozen** (`renderer.info` with `autoReset`
+off, reset then one `composer.render()`; frame ms from 60 timed `composer.render()`
+calls each followed by a 1-px `readPixels` to force the GPU to finish):
+
+| | before | after | |
+|---|---|---|---|
+| **draw calls** | **430** | **430** | unchanged |
+| triangles | 278,183 | 278,183 | unchanged |
+| line primitives | 455,967 | **453,789** | −2,178 (−0.48%) |
+| points | 85,663 | **85,606** | −57 |
+| geometries / textures / programs | 73 / 27 / 92 | 73 / 27 / 92 | unchanged |
+| ringSegs | 9,060 | 7,775 | |
+| hyphSegs | 3,523 | 2,720 | §3b's 150 → 80 |
+| aggrPts | 278 | 278 | **the pools are untouched** |
+| glowPts | 421 | 375 | |
+| field | left 30, hints 12, t4 58 | left 22, hints 9, t4 50 | |
+| clone bodies | 24 | 24 | no clone touched, `dropped` 0 |
+| frame ms p50 (3 runs) | 28.4 / 29.7 / 30.0 | 29.8 / 29.8 / 28.8 | within the headless cadence's spread |
+| frame ms p90 (3 runs) | 33.4 / 32.9 / 33.2 | 34.0 / 33.7 / 32.7 | |
+
+Removing material does not remove a draw call for the same reason adding it did
+not add one: every body and strand here merges into a batch that is drawn either
+way. The saving is real but small and it is in primitives, not calls.
+
+**Canopy attachment.** nodes 211 → 200, bodies 115 → **104**, edges 505 → 479,
+hubs 8, **`canopyDropped: 0`**. 115 − 104 = 11 = the 8 bodies plus the 3 hints
+removed, exactly — every body that remains is still a node of the one spanning
+tree rooted at the hero, and nothing was orphaned by the cut.
+
+## 6. The arrival ladder, read off the GPU buffers
+
+Rather than recover thresholds by inverting frozen frames, this pass walks the
+drawn geometries and reads the `aReveal` attribute together with `position`,
+computes each vertex's `rel` against `REST_CAM`, and selects the left band
+(rel ≤ −0.549 — the extension plus the pre-existing bodies in the overlap, the
+same selection `d39b35b` used). 1,169 sampled vertices in the band:
+
+| | value |
+|---|---|
+| left-band `aReveal` min / median / p90 / max | 0.682 / 0.824 / 0.922 / **0.937** |
+| `uPull` at the arm (p 0.80) | **0** |
+| `uPull` at p 0.96 | 1.105 |
+| `uPull` at the rest (p 0.97) and the end-hold (p 1.0) | **1.12** = `PULL_MAX` |
+
+* **Dark at arm:** the lowest threshold in the band is 0.682 and `uPull` is
+  exactly 0 at the arm, so every stroke in the band is dark there.
+* **Fully arrived at the rest:** the highest threshold is 0.937 against `uPull`
+  1.105 at p 0.96 — the band finishes a full tenth of the leg *before* the rest,
+  with 0.18 of headroom to `PULL_MAX`.
+* **Rest vs end-hold** MAE **0.1765/255**, which is the authored fog move and
+  nothing else. Nothing is still arriving at p 0.97.
+* 1,204 sampled vertices carry the `aReveal` −1 sentinel — the face detail,
+  including §3b, which lights with the rise mask as §3b's header says.
+
+## 7. Gates
+
+* **`capture.py --check`: PASS**, worst MAE **0.00/255** across all ten goldens
+  after the re-shoot. Before it, exactly the two intended files were in the
+  FAIL band (`final@1440x900` 1.25/255, 5.1% px > 8; `final@430x932` 1.48/255,
+  5.7%) and the other eight read **0.00**. `final@*` re-shot in this commit with
+  the reason in `manifest.json`. The phone moves although no changed body is in
+  its frustum, for the third pass running and for the same reason: `canopy.js`
+  samples its waypoints against every node placed so far, so removing 11 nodes
+  re-lays the graph.
+* **Mirror scrub, REAL INPUT PATH** — `WheelEvent`s dispatched through the page's
+  own capture listeners across Owned → Final and back, 4,000 frames each way, no
+  `scrollTo`/`flyTo` in the drive. Recording `uPull` against p, forward vs
+  reverse: worst divergence **5.8e−4** at the ladder's sample points, against a
+  camera-x sampling granularity of 0.003 at the same points — i.e. it is
+  interpolation error, not hysteresis. Forward `uPull` non-monotonic in 2 frames
+  of 4,000 (3 of 4,000 on the pre-change tree): no self-ignition.
+* **`tools/scrollgates.js`**: E1 −3.79e−4, E2/E3 **1.0000**, R1 settles
+  0.260000, R4 overshoot **0.00e+0**, R5 loop 0.000000 / 0.970000 / end-hold
+  1.0000, R6 ride up `0.2599 0.5229 0.7249 0.97 0` down `0.97 0.725 0.5231 0.26
+  0`, **off-anchor stops: none**.
+* **Console over a full ride**: a real-gesture lap (ten notches, settle, a
+  reader's beat, twelve legs each way) plus all five nav jumps — 3,946 frames,
+  **0 console entries**.
+* **Copy clearance** unchanged: the thinning only removes material, and the band
+  the extension's feet occupy (screen y 350–491) is the same band it was.
+
+## 8. Residuals
+
+* **A pre-existing forward/reverse asymmetry at the p 0.80 arm, which the frozen
+  method could not see and this pass's real-input probe did.** At p 0.80 the
+  lens is at x −3.23, above `rise`'s −4.6 onset, so `rise` is 0 and `eff` is
+  entirely `amount` — which is state-derived and eased at `dt * 2.2`. Forward it
+  is ramping up (`uAmount` 0.043); reverse it is decaying down (`uAmount` 0.965).
+  So on the way out the epilogue's face detail is composed at ~96% at a p where
+  on the way in it is at ~4%. **Measured on the pre-change tree at 0.029 / 0.946
+  — same magnitude, same sign — so it is untouched by this pass**, but it is
+  worth naming precisely because the previous two passes both reported "forward
+  vs reverse MAE 0.0000/255" and were both right about what they measured:
+  `?capture=` is a PLACEMENT, it never blends, and `amount` snaps. The frozen
+  path cannot observe this class of asymmetry at all. The bodies are unaffected
+  either way — `uPull` is 0 in both directions at the arm — so "dark at arm"
+  holds; what lingers is the terrain batch. Its own pass.
+* The left still does not reach the right's density (0.303 against 0.632 at
+  1728) and still should not, for `6ba7b3f`'s reason: the right carries the two
+  large near bodies and the near-left ground is cut away.
+* The projection-vs-plan finding generalises and is not written down anywhere
+  the other bands can see it. Any future "add more bodies to a band" request in
+  this chapter has the same ceiling, and the spacing test will keep saying yes.
