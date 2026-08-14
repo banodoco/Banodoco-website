@@ -2419,3 +2419,128 @@ organism clock is pinned and any difference is real):
   does mean the pit fills with the rise rather than kindling body by body.
 * The pre-existing +3.0 luma step at the p 0.80 arm is untouched and worth its
   own pass.
+
+---
+
+# The flash under the hero on the way back to the end
+## 2026-08-14
+
+> "There also seems to be a visual glitch sometimes when I scroll up to the end
+> — a little bit below the main mushroom, something kind of flashes up."
+> — Hannah
+
+## 1. Reproduction
+
+Scrolling **up** from the top wraps to the end, so "scroll up to the end" is the
+**wrap UP**, and the flash is on its arrival. Reproduced through a real
+trusted-wheel wrap (18 × −110 px at 60 Hz via CDP `Input.dispatchMouseEvent`;
+`journey.wrap()` is not the input path and was not used), 1440x900, frames read
+off the canvas immediately after `composer.render()`:
+
+| camera x | what is on screen |
+|---|---|
+| −3.26 | clean |
+| **−5.29** | **the hero's root crown drawn as a bright fan under the stem, in mid-air over the open crater** |
+| −8.32 | clean again |
+
+Two frames, ~85 ms. Intermittent for the visitor because it needs a **blend** —
+it is unreachable by scrubbing.
+
+## 2. The system: Owned's `keep`, and a window it shares with Final
+
+`chapters/owned/index.js` composes the colony on `arrival = max(sink, keep)`,
+both camera-pure (`fc1e151`). `keep` is the Final-cutaway hold, a half-space in
+camera x whose stated justification is that it is "0 at every other chapter's
+rest **and along every jump arc between them**, measured x ≥ −2.25".
+
+**That premise was true when it was measured and `e4df4b0` made it false.** The
+loop's wrap stopped being a one-frame teleport and became a real 3.8 s lap (bow
+3.2, rise 1.9), which runs the camera out to x +15 and brings it back to the
+Final rest **above ground**, at y ≈ 4.0–4.4 and z ≈ −15. It therefore crosses
+the whole of `keep` at poses the ride never occupies.
+
+What is exposed is sharper than "the lap crosses `keep`", and naming it is the
+point:
+
+* `keep` opens over **0.8 units** of camera x (x −4.6 → −5.4);
+* Final's own `rise` — the mask that brings in the soil slab and terrain
+  standing in front of these roots — takes **2.8 units** (x −4.6 → −7.4).
+
+So across ~2 units of x the colony is up and the thing that occludes it is not
+yet there. Measured at the flash frame: `keep` **0.945** against `rise`
+**0.156**. On the **ride** that window is passed underground (measured camera
+depth 0 … 1.05 through it), so the soil lid hides it and nothing is wrong. On
+the **lap** it is passed four units in the air with the crater open below.
+
+Confirmed by suppressing this chapter's group for the same wrap: the fan is gone
+and nothing else on the lap changes.
+
+## 3. The axis that separates the ride from the lap
+
+Not height, which is the obvious guess: the portrait Final rest stands at
+**y 4.242** and the lap's flyover peaks at **y 4.396** — they overlap to within
+0.15, so any y threshold that killed the flash would also have emptied the
+epilogue on mobile. Depth below soil fails for the same reason: both are above
+ground.
+
+**z is the one axis on which the two do not overlap.** Swept over p 0.60–1.0 at
+0.002 steps [placement sweep] on all three shipped viewports, the camera's z
+wherever `keep` is live (x ≤ −4.6):
+
+| viewport | z range |
+|---|---|
+| 1440x900 | 2.695 … 3.099 |
+| 430x932 | 3.066 … 3.475 |
+| 375x812 | 3.066 … 3.475 |
+
+against the lap, which is at z ≈ −15 as it crosses the exposure window and
+returns to z > 0 only over the last half second as it draws into the rest.
+
+So `keep *= smooth01((z + 2.0) / 2.0)` is:
+
+* exactly **1** at every sampled ride pose at every aspect (2.695 of margin at
+  the tightest);
+* exactly **0** across the whole flash (13 of margin);
+* and it opens over the lap's **final approach** — measured after the change,
+  the colony comes up as z runs −2.1 → 0.3 in the last ~600 ms of the lap, so it
+  **arrives on the move** as the lap lands (`6f23d90`'s rule) rather than being
+  cut in.
+
+It cannot touch a reference, and the reason is that sweep rather than an
+argument about `sink`: the factor evaluates to **1.000000** at every ride pose
+where `keep` is live, at all three aspects, so `keep` — and therefore
+`max(sink, keep)` — is bit-identical on every path a reference is shot through.
+`capture.py --check` agrees: worst MAE **0.00/255** across all ten.
+
+## 4. Before / after
+
+Same wrap, same input path, matched by camera x:
+
+* before, x −5.29: bright root fan under the stem;
+* after, x −6.37 (deeper into the same window): clean.
+
+Owned's `group.visible` through the lap, after: **0** across x −5.49 → −15.2
+while z runs −15 → −2.1, then 1 from z ≈ −0.8 as the lap draws in. Before it was
+**1** from x −7.02 (z −14.56) onward.
+
+## 5. Is it the same root cause as the reveal's pacing?
+
+**Related family, different cause, and they are fixed separately.** Both are
+camera-pure terms authored against the poses the *ride* visits, meeting a camera
+path the ride never takes. But the reveal's fault is a **rate** — the right
+values arriving far too fast — while this one is a **gate reading true** at
+poses where its premise does not hold, and it would still be wrong at any speed.
+Neither fix touches the other's code, so they are two commits.
+
+## 6. Residuals
+
+* The `keep` / `rise` width mismatch (0.8 against 2.8) is still there; the z
+  factor closes the only path that reaches it above ground. A blend arc between
+  two mid-route rests that happened to pass through x −4.6…−7.4 above ground and
+  at z > 0 would reopen it. No shipped jump does — the ordinary Owned → Final
+  arc sits at z ≈ 1.3–2.7 but underground through that stretch — but the width
+  mismatch, not the z factor, is the durable statement of the hazard.
+* The lap's own camera path remains untested against the other chapters'
+  camera-pure gates. `keep` was found by a reported symptom; Connect's and
+  Inspire's masks have not been swept over the lap's poses the way §3 sweeps
+  this one over the ride's.

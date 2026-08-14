@@ -318,6 +318,65 @@ export function createOwned(sceneApi, content) {
   const SINK_D = 0.94;
   const KEEP_X0 = 4.6, KEEP_XW = 0.8;
 
+  // ...AND `keep` NEEDS THE OTHER HALF OF ITS OWN PREMISE (2026-08-14 —
+  // Hannah: "a visual glitch sometimes when I scroll up to the end — a little
+  // bit below the main mushroom, something kind of flashes up."
+  // 17-final-field.md, the 2026-08-14 section.)
+  //
+  // `keep` is written above as a half-space in camera x, and its stated
+  // justification is the parenthesis: onset x -4.6, "0 at every other
+  // chapter's rest AND ALONG EVERY JUMP ARC BETWEEN THEM, MEASURED x >= -2.25".
+  // That premise was true when it was measured and e4df4b0 made it false. The
+  // loop's wrap stopped being a one-frame teleport and became a real 3.8 s LAP
+  // — bow 3.2, rise 1.9 — which runs the camera out to x +15 and brings it
+  // back to the Final rest ABOVE GROUND, at y ~4.0-4.4 and z ~-15. It
+  // therefore crosses the whole of `keep` at poses the ride never occupies.
+  //
+  // WHAT IS EXPOSED is a window this chapter shares with Final, and naming it
+  // is the point: `keep` opens over 0.8 units of camera x (x -4.6 -> -5.4)
+  // while the epilogue's own `rise` — the mask that brings in the soil slab
+  // and terrain standing in front of these roots — takes 2.8 units (x -4.6 ->
+  // -7.4). So across ~2 units of x the colony is up and the thing that
+  // occludes it is not yet there. On the RIDE that window is passed
+  // UNDERGROUND (measured camera depth 0 .. 1.05 through it), so the soil lid
+  // hides it and nothing is wrong. On the LAP it is passed four units in the
+  // air with the crater open below.
+  //   Reproduced through a real trusted-wheel wrap UP (18 x -110 px at 60 Hz;
+  // journey.wrap() is not the input path and was not used), 1440x900: at
+  // camera x -3.26 the colony is off; ONE FRAME LATER at x -5.29 `keep` is
+  // 0.945 against Final's `rise` of 0.156, and the hero's root crown is drawn
+  // as a bright fan under the stem in mid-air; by x -8.32 the epilogue's slab
+  // has arrived and covers it. Two frames, ~85 ms — "something flashes up".
+  // Suppressing this chapter's group removes it and changes nothing else.
+  //
+  // The half-space that closes it is z, and z is not a taste call — it is the
+  // one axis on which the ride and the lap do not overlap. MEASURED over
+  // p 0.60-1.0 at 0.002 steps [placement sweep] on all three shipped
+  // viewports, the camera's z wherever `keep` is non-zero (x <= -4.6):
+  //
+  //     1440x900   z 2.695 .. 3.099        430x932   z 3.066 .. 3.475
+  //     375x812    z 3.066 .. 3.475
+  //
+  // against the lap, which is at z ~-15 as it crosses the exposure window and
+  // returns to z > 0 only over the last half second as it draws into the rest.
+  // So [-2.0, 0.0] is exactly 1 on every sampled ride pose at every aspect
+  // (2.695 of margin at the tightest) and exactly 0 across the whole flash
+  // (13 of margin), and it opens over the lap's final approach — the colony
+  // arrives ON THE MOVE as the lap lands, 6f23d90's rule, rather than cut in.
+  //
+  // NOT HEIGHT, which is the obvious guess and is wrong by more than it looks:
+  // the portrait Final rest stands at y 4.242 and the lap's flyover peaks at
+  // y 4.396, so the two overlap to within 0.15 and any y threshold that killed
+  // the flash would also have emptied the epilogue on mobile. Depth below soil
+  // fails for the same reason — both are above ground.
+  //
+  // It cannot touch a golden, and the reason is that sweep rather than an
+  // argument about `sink`: the factor evaluates to exactly 1.000000 at every
+  // ride pose where `keep` is live, at all three aspects, so `keep` — and
+  // therefore max(sink, keep) — is bit-identical on every path a reference is
+  // shot through.
+  const KEEP_Z0 = -2.0, KEEP_ZW = 2.0;
+
   // THE SOIL HORIZON'S TWO CAMERA-PURE TERMS (2026-08-11 — Hannah, on the
   // Connect -> Owned crossing: "the ground should be RICHER as we're going
   // into it"). Both are functions of camera DEPTH BELOW SOIL alone, exactly
@@ -426,7 +485,10 @@ export function createOwned(sceneApi, content) {
     const cp = sceneApi.camera.position;
     const depth = leg.groundY(cp.x, cp.z) - cp.y;
     const sink = smooth01(depth / SINK_D);
-    const keep = smooth01((-cp.x - KEEP_X0) / KEEP_XW);
+    // Both halves of the Final-cutaway hold: far enough along the leg AND on
+    // the side of the ring the epilogue's section is read from (see KEEP_Z0).
+    const keep = smooth01((-cp.x - KEEP_X0) / KEEP_XW)
+               * smooth01((cp.z - KEEP_Z0) / KEEP_ZW);
     const arrival = Math.max(sink, keep);
     const eff = amt * arrival;
     // The soil horizon rides its own two depth terms (see LID_D / PASS_* ),
