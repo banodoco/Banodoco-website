@@ -357,29 +357,71 @@ export function createDirector(sceneApi, { steady = false } = {}) {
     camera.lookAt(heroSnapshot.target);
   }
 
+  /** THE WHOLE un-owned composition — the camera pose AND the world depth that
+   *  goes with it. This is the body of setOwned(false)'s hand-back, lifted out
+   *  so it can be called again.
+   *
+   *  It needed lifting because setOwned's restore is a ONE-SHOT on the
+   *  TRANSITION, and the transition is not the only moment the camera can end
+   *  up somewhere the hero did not put it. A camera blend composes onto an
+   *  un-owned camera for as long as it runs (stepCamBlend), and if it is
+   *  cancelled it simply stops — leaving the camera mid-flight with `owned`
+   *  still false, so nothing writes the pose again and the strand is permanent
+   *  (Hannah, 2026-08-14: "the hero mushroom can end up displaced... and it
+   *  stays permanently stuck"). Whoever ends such a blend has to hand the hero
+   *  back the way the transition would have, which is what this is.
+   *
+   *  Note the fog: the blend lerps scene.fog too, so a cancelled blend strands
+   *  the world's DEPTH by the same argument. Restoring the pose without the
+   *  fog would fix the framing and leave the landing lit for a p it is no
+   *  longer at. */
+  function restoreHero() {
+    // Hand back exactly what the hero had: no tween, no re-frame, no drift.
+    if (pendingView) { rawSetView(pendingView, 0); pendingView = null; }
+    else applyHeroPose();
+    if (scene.fog) { scene.fog.near = baseFogNear; scene.fog.far = baseFogFar; }
+  }
+
   function setOwned(on) {
     on = !!on;
     if (on === owned) return;
+    /* THE LIVE CAPTURE TRUSTS THE CAMERA (2026-08-14). captureHero(null) reads
+       the pose off the camera, which is right — the visitor may have orbited
+       the hero before scrolling, and the journey must start from what they can
+       see. It is right only because the un-owned camera IS the hero's. The
+       moment that stopped being true (a stranded blend, above) this line baked
+       the strand into `hero` itself, and every later return to p = 0 landed on
+       it: measured on a real wheel-driven wrap, one interrupting delta moved
+       the LANDING composition 16.11-24.98 world units, permanently, and with
+       it the wrap's own destination — see the ledger in journey.js's
+       endCamBlend. The cure is upstream — nothing may leave the camera off
+       the hero pose while un-owned — which is what restoreHero() exists to
+       guarantee. */
     if (on) captureHero(pendingView);          // freeze the composition we start from
     owned = on;
     controls.enabled = !on;
-    if (!on) {
-      // Hand back exactly what the hero had: no tween, no re-frame, no drift.
-      if (pendingView) { rawSetView(pendingView, 0); pendingView = null; }
-      else applyHeroPose();
-      if (scene.fog) { scene.fog.near = baseFogNear; scene.fog.far = baseFogFar; }
-    }
+    if (!on) restoreHero();
   }
 
   captureHero(null);
 
   return {
-    apply, setOwned, applyHeroPose,
+    apply, setOwned, applyHeroPose, restoreHero,
     poseAt: (p, out, aspect) => poseAt(p, out, hero, aspect),
     get owned() { return owned; },
     get pose() { return pose; },
     get heroPose() { return hero; },
-    /** Re-apply the hero composition exactly (returning to p = 0). */
-    releaseToHero() { setOwned(false); },
+    /** Re-apply the hero composition exactly (returning to p = 0), whether or
+     *  not the director currently owns the camera. setOwned(false) alone is
+     *  not enough — it no-ops when already un-owned, which is the exact shape
+     *  of the bug above — and calling BOTH is not either: setOwned's hand-back
+     *  already runs restoreHero(), and restoreHero() SPENDS `pendingView`
+     *  (rawSetView, which also refreshes camera.aspect and runs
+     *  controls.update()). A second call would find pendingView null and fall
+     *  to applyHeroPose(), which writes the same three numbers but neither of
+     *  those two side effects — so the doubled form silently downgrades a
+     *  breakpoint replay to a bare pose write. Exactly one restore, either
+     *  way. */
+    releaseToHero() { if (owned) setOwned(false); else restoreHero(); },
   };
 }

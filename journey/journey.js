@@ -711,6 +711,27 @@ export function boot(opts = {}) {
      drops it before placing), so deep links, ?p=, ?pose= and the frozen
      ?capture= path are untouched — they place, and this block does nothing. */
   function applyFrame(p, dt) {
+    /* A CANCELLED BLEND DIES BEFORE OWNERSHIP IS DECIDED (2026-08-14 —
+       Hannah's stuck hero). The cancellation test used to live at the top of
+       stepCamBlend, i.e. AFTER director.setOwned() and director.apply() had
+       already run for this frame. That is one line too late in exactly one
+       case, and it is the case that bites: when the delta that cancels the
+       blend is also the delta that carries p across the 0.0008 ownership
+       threshold, setOwned(true) ran first and captured `hero` from a camera
+       the dying blend still had mid-lap. Measured on a real wheel-driven
+       down-wrap (in-page rAF-timed WheelEvents, ~17 ms apart, one case per
+       fresh page) interrupted by a single 500 px delta at 1800 ms: that delta
+       buys p = 0.0224, twenty-eight times the threshold, and ONE FRAME later
+       `hero` was already 25.68 units and 3.76 deg of fov from the composition
+       the page booted with — and stayed there for the rest of the session. A
+       120 px delta at 1000 ms (p = 0.0053) does it too: 22.44 units, 6.30 deg.
+       Deciding it here costs nothing (same frame, same values, so
+       "control returns within one frame" is untouched) and means the camera
+       is always the hero's before anyone reads it. The blend that SURVIVES is
+       still stepped below, after the director has written the destination
+       pose, so the composition order the frame-order block describes is
+       unchanged. */
+    if (camBlend && blendCancelled()) dropCamBlend();
     const owned = p > 0.0008;
     director.setOwned(owned);
     if (owned) guarded('director', () => director.apply(p, dt));
@@ -777,12 +798,10 @@ export function boot(opts = {}) {
        opinion about the URL. Nothing replaces this block. */
   }
 
-  /** One step of the direct-jump camera blend. Runs INSIDE applyFrame, right
-   *  after the director has written the destination pose and before anything
-   *  reads the camera — see the frame-order block above applyFrame. State is
-   *  already AT the destination; the camera glides straight from where it was
-   *  onto that pose. Manual input the model ACTS ON drops the blend instantly. */
-  function stepCamBlend(dt) {
+  /** Has manual input taken the camera back? Read once per frame, at the TOP
+   *  of applyFrame — see the block there for why the answer must be acted on
+   *  before the director decides ownership. */
+  function blendCancelled() {
     /* THE GESTURE THAT BOUGHT THE MOVE IS NOT THE VISITOR CANCELLING IT
        (2026-08-14 — Hannah: "it still just jumps DIRECTLY when I scroll up
        from the top, or down from the bottom").
@@ -840,12 +859,25 @@ export function boot(opts = {}) {
        first stray delta still cancels it within one frame. (`answeredAt` can
        be 0 — the Mission anchor — so this must be a null test, never a
        truthiness test.) */
-    if (scroll.sinceInput < 50 && scroll.answeredAt === null) {
-      endCamBlend();
-      guarded('ui', () => ui.cancelCopyEntry());
-      cancelHeroEntry();
-      return;
-    }
+    return scroll.sinceInput < 50 && scroll.answeredAt === null;
+  }
+
+  /** Cancelled: end the blend and hand back everything it was carrying — the
+   *  copy envelope to its scroll rule, the hero furniture's arrival term, and
+   *  (inside endCamBlend) the camera itself. */
+  function dropCamBlend() {
+    endCamBlend();
+    guarded('ui', () => ui.cancelCopyEntry());
+    cancelHeroEntry();
+  }
+
+  /** One step of the direct-jump camera blend. Runs INSIDE applyFrame, right
+   *  after the director has written the destination pose and before anything
+   *  reads the camera — see the frame-order block above applyFrame. State is
+   *  already AT the destination; the camera glides straight from where it was
+   *  onto that pose. A blend manual input has cancelled never reaches here:
+   *  applyFrame drops it at the top of the frame. */
+  function stepCamBlend(dt) {
     camBlend.t += dt;
     const f = Math.min(camBlend.t / camBlend.dur, 1);
     const e = f * f * f * (f * (f * 6 - 15) + 10);   // smootherstep, C2 ends
@@ -899,6 +931,56 @@ export function boot(opts = {}) {
    *  the frame a deep link to the same chapter would have placed. */
   function endCamBlend() {
     camBlend = null;
+    /* AND THE CAMERA GOES BACK TO THE POSE p IMPLIES (2026-08-14 — Hannah:
+       "halfway through the loop I stop the scroll, the hero mushroom can end
+       up displaced... and it stays permanently stuck").
+
+       "The camera and the journey's state agree again from here" was true of
+       the two endings this comment was written for. It was not true of the
+       third. A blend that LANDS has just written the destination pose itself;
+       a blend that is cancelled while the director OWNS the camera is
+       corrected on the very next line of applyFrame, by director.apply(p) —
+       measured on a real wheel-driven UP-wrap interrupted at
+       400/1200/2000/3200 ms, the camera is on pose(0.97) within one frame and
+       stays there, 0.0000 units of disagreement at all four. But a blend
+       cancelled while the director is UN-OWNED — the down-wrap, whose
+       destination is p = 0 — had no such writer. setOwned(false)'s restore is
+       a one-shot that fired at the start of the lap, applyHeroPose() only ran
+       from inside the blend, and the blend is what just stopped. So the camera
+       simply stayed wherever the lap had reached: measured 16.11, 24.98, 22.29
+       and 1.07 world units from the hero pose (fov out by 7.30, 5.73, 2.97 and
+       0.14 deg) at those same four moments, and it never moved again — 5 s of
+       trace past the cut, drift 0.0000 on every frame of every case. That is
+       the "permanently", and the reason the state was one no scroll position
+       described.
+
+       It does not stop at the frame, either. The strand is what the NEXT
+       setOwned(true) hands to captureHero(), so `hero` inherits it, and the
+       wrap's own destination is `hero`: re-fired from the same page, the lap
+       covered 7.97 / 22.84 / 53.77 / 75.67 units over 0.98 / 1.97 / 3.14 /
+       3.88 s against the clean 76.43 units over 3.86 s. One interruption
+       therefore un-does `e4df4b0` — "the wrap genuinely travels" — for the
+       rest of the session, which is the loudest thing the strand costs and
+       the reason this is not merely a framing blemish.
+
+       The cure is to make the un-owned half do what the owned half already
+       does, rather than to invent a third behaviour for it. p = 0's pose is
+       the hero composition, so that is what gets written. Three candidates
+       were weighed and this is the only one that keeps the model's contract
+       that state is a pure function of scroll position: leaving the camera
+       where it is and letting the next gesture take over from there makes the
+       view a function of HISTORY (the same class of fault as the M4 stuck
+       camera); refusing to be cancelled past some point of the lap would trade
+       a bug for a 3.8 s lockout and break "manual input takes control back
+       within a frame". A hard hand-back is a step — but it is the step every
+       cancelled jump on this site has always made (§15's residual), and it is
+       now the SAME step in both directions instead of a step in one and a
+       stranding in the other.
+
+       Ordering: this runs while `owned` still reflects the frame's p, before
+       director.apply() would write anything, and the assertion is skipped when
+       the director owns the camera precisely so it can never fight it. */
+    if (!director.owned) guarded('director', () => director.restoreHero());
     // The grade goes back to being a pure function of p. The last override
     // written was look1 — lookOf(destination p) — so the hand-back is a no-op
     // by construction, exactly as the copy envelope's is (d1ecc23).

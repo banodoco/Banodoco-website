@@ -648,3 +648,184 @@ one number to move, and the path is otherwise independent of it.
   cannot wrap.
 * `WRAP_BOW`/`WRAP_RISE`/`WRAP_EXTRA_S`/`WRAP_TURN` remain untouched — see the
   honest note in §13.6.
+
+---
+
+# 2026-08-14 — the interrupted lap left the hero behind
+
+**Requested:** Hannah. **Built:** same day (inherited from a session cut off
+mid-gating; every empirical claim in the inherited comments was re-measured
+before it was kept — see §19).
+**Files:** `journey/journey.js`, `journey/director.js`. No route file, no
+camera key, no p-value, no golden move, no change to the path.
+
+> "If halfway through the loop I stop the scroll, the hero mushroom can end up
+> displaced, stuck in the wrong position, and it stays permanently stuck."
+
+## 16. What was actually stuck
+
+A wrap arms a camera blend and snaps journey state to the destination in the
+same tick. A genuinely new gesture — 90 ms of stillness and then one delta,
+which is `dropWall()`'s own definition — cancels that blend within a frame,
+**by design**: `b0227bd`'s contract is that manual input takes the camera back
+immediately. So far so good, and in one direction that is the whole story.
+
+The two directions were not the same story, because the two destinations are
+not on the same side of the ownership threshold.
+
+| | up-wrap | down-wrap |
+|---|---|---|
+| destination | Final rest, `p 0.97` | Mission, `p 0` |
+| director at the destination | **owns** the camera | **un-owned** (`p > 0.0008` is false) |
+| who writes the pose after the cancel | `director.apply(p)`, the very next line of `applyFrame`, every frame | **nobody** |
+
+At `p = 0` the hero composition is restored by a **one-shot inside
+`setOwned(false)`** — which fired at the *start* of the lap, four seconds
+earlier — and re-asserted per frame only from *inside* `stepCamBlend`, which
+is precisely the thing that just stopped. So the camera simply stayed wherever
+the lap had got to, and nothing ever wrote it again.
+
+### Measured, before
+
+Real in-page rAF-timed `WheelEvent`s at ~15–22 ms spacing (the only path that
+can fire a wrap at all — CDP `Input.dispatchMouseEvent` cannot beat the 45 ms
+same-gesture threshold on this machine, and `journey.wrap()` bypasses the wheel
+path entirely). One case per **fresh page**, because the fault poisons the page
+and contaminates any later case sharing it. The lap is interrupted at four
+points; the trace then runs 5 s past the cut.
+
+| cut at | camera off the hero pose | fov off | drift over the next 5 s |
+|---|---|---|---|
+| 400 ms | **16.11** | 7.30° | **0.0000** |
+| 1200 ms | **24.98** | 5.73° | **0.0000** |
+| 2000 ms | **22.29** | 2.97° | **0.0000** |
+| 3200 ms | 1.07 | 0.14° | **0.0000** |
+
+Drift `0.0000` on every frame of every case *is* the "permanently". The
+up-wrap, same four points, same input: **0.0000 units of disagreement**, within
+one frame, at all four. The asymmetry is exactly the ownership column above.
+
+### It does not stop at the framing
+
+The strand is what the **next** `setOwned(true)` hands to `captureHero()`,
+which reads the live camera — correctly, because a visitor may have orbited the
+hero before scrolling. That is right only while the un-owned camera IS the
+hero's. Once it is not, the strand is baked into `hero` itself, and `hero` is
+the wrap's own destination. Re-firing a clean wrap on the same page afterwards:
+
+| after a cut at | lap arc | lap duration |
+|---|---|---|
+| 400 ms | **7.97** units | 0.98 s |
+| 1200 ms | **22.84** units | 1.97 s |
+| 2000 ms | **53.77** units | 3.14 s |
+| 3200 ms | 75.67 units | 3.88 s |
+| *(clean page)* | *76.43 units* | *3.86 s* |
+
+So one interruption silently un-does **`e4df4b0`** — "the wrap genuinely
+travels" — for the rest of the session, turning a 294° lap into a 16° nudge.
+That is the loudest thing the strand costs, and it is why this was not a
+framing blemish.
+
+### And one frame earlier than that
+
+The cancellation test used to live at the top of `stepCamBlend`, i.e. *after*
+`setOwned()` and `director.apply()` had already run for that frame. One line
+too late in exactly one case: when the delta that cancels the blend is also the
+delta that carries `p` past `0.0008`, `setOwned(true)` runs **first** and
+captures `hero` off a camera the dying blend still has mid-lap. Measured: a
+single 500 px delta at 1800 ms (worth `p = 0.0224`, twenty-eight times the
+threshold) poisoned `hero` by **25.68 units / 3.76°** one frame after the cut;
+a 120 px delta at 1000 ms by **22.44 units / 6.30°**.
+
+## 17. The cure
+
+Three lines, each the smallest statement of one of the three faults.
+
+1. **`director.restoreHero()`** — `setOwned(false)`'s hand-back body, lifted
+   out so it can be called again. The camera pose *and* the fog, because the
+   blend lerps `scene.fog` too and restoring one without the other leaves the
+   landing lit for a `p` it is no longer at.
+2. **`endCamBlend()` calls it when the director is un-owned.** The un-owned
+   half now does what the owned half already did, rather than getting a third
+   behaviour invented for it. Skipped when the director owns the camera, so it
+   can never fight `director.apply()`.
+3. **The cancellation is decided at the TOP of `applyFrame`**, before ownership
+   is. Same frame, same values — "control returns within one frame" is
+   untouched — but the camera is now always the hero's before anyone reads it.
+
+Weighed and rejected: leaving the camera where it is and letting the next
+gesture take over makes the view a function of *history*, which is the M4 stuck
+camera again; refusing cancellation past some point of the lap trades a bug for
+a 3.8 s lockout and breaks `b0227bd`.
+
+`releaseToHero()` was also made exact. It has no callers today, but the
+inherited form called `setOwned(false)` **and** `restoreHero()` — and
+`restoreHero()` *spends* `pendingView` via `rawSetView`, which refreshes
+`camera.aspect` and runs `controls.update()`. The second call would find
+`pendingView` null, fall to `applyHeroPose()`, and write the same three numbers
+without either side effect: a breakpoint replay silently downgraded to a bare
+pose write. It is now exactly one restore either way.
+
+## 18. Gates
+
+Every measurement below is through **real in-page rAF-timed `WheelEvent`s**
+unless it says otherwise. Nothing here was gated through `journey.wrap()`.
+
+* **The strand and its permanence, before and after, both directions, four
+  interruption points each** — the tables in §16, and after the fix: camera
+  error **0.0000** and fov error **0.000** at all eight, drift `0.0000` over
+  the following 5 s, `hero` drift **0.0000** including after a further
+  `setOwned(true)`.
+* **The lap still travels** (`e4df4b0`): re-fired after every one of the eight
+  interruptions, **76.43 units over ~3.90 s**, the clean figure, in every case.
+* **The ordering case**: a 500 px and a 120 px interrupting delta, both of
+  which cross the ownership threshold — `hero` drift **0.0000** one frame after
+  the cut and at the end of the trace, against 25.68 and 22.44 units before.
+  Both settle on an anchor (`p 0.00000` / `p 0.97000`).
+* **A full ride** — four laps (two forward, two backward), **twenty legs**,
+  four wraps of which **two were interrupted mid-lap and then scrolled on
+  from**: every leg lands on an anchor, no off-anchor stop, camera-vs-`p`
+  error `0.0000` at every landing, `hero` drift `0.0000`, URL clean (no hash
+  written), **console 0 entries**.
+* Scroll battery, live: `E1 −3.38e−4` (resolution live), `E2/E3 1.0000`,
+  `R1 0.260000`, `R4 overshoot 0.00e+0`, `R5 fling past last → 0.000000 |
+  fling before first → 0.970000 | notches past last → 1.0000`,
+  `R6 off-anchor stops: none`.
+* Deep links: `?p=0.36 → 0.2676 inspire`, `?p=0.72 → 0.7250`,
+  `?pose=owned → (1.73, −1.18, 0.56) fov 58`, `?pose=final → (−14.72, 2.73,
+  2.70) fov 45.5` — the frozen poses exactly. Cold load → `p 0`,
+  `(−2.25, 2.25, 10.40)` fov 38.
+* `capture.py --check` **PASS, worst MAE 0.00/255** across all ten frozen
+  references. No placement path is touched.
+
+## 19. Which inherited claims survived
+
+The uncommitted work this pass inherited was re-measured claim by claim, on the
+grounds that three earlier inherited-work cases on this codebase each carried a
+false one.
+
+| inherited claim | verdict |
+|---|---|
+| the down-wrap strands at `p = 0` because the director is un-owned there | **confirmed** — 16.11–24.98 units, drift 0.0000 |
+| the up-wrap does not, because `director.apply(p)` re-asserts it | **confirmed** — 0.0000 at all four points |
+| `captureHero()` then bakes the strand into `hero` | **confirmed** — 0.0000 at the cut, 16.11–24.98 after the next `setOwned(true)` |
+| the cancellation test was one line too late for a threshold-crossing delta | **confirmed** — 25.68 / 22.44 units, one frame after the cut |
+| all ten frozen references at MAE 0.00 | **confirmed** |
+| `restoreHero()` must carry the fog as well as the pose | **kept** — the blend does lerp `scene.fog`; not independently exercised by a gate here |
+| the quoted figures 26.62 / 16.47 / 26.62 / 4.47 units at 600/1800/3000 ms | **replaced.** Not re-measured at those sample points; the comments now carry this pass's own figures at its own points, so no number in either file is unverified. |
+| `releaseToHero() { setOwned(false); restoreHero(); }` | **corrected** — see §17; the doubled call downgrades the `pendingView` path |
+
+## 20. Residuals
+
+* **§15's residual is corrected.** It reported the hand-back step as "0.25–3.37
+  world units"; that is the largest frame-to-frame move *after* the hand-back,
+  not the hand-back itself. Measured properly — the single frame in which the
+  camera returns to the pose `p` implies — the step is **15.40 / 24.78 / 23.13
+  / 1.94** units forward and **16.15 / 27.01 / 25.81 / 1.74** units backward at
+  400/1200/2000/3200 ms. The backward figures are what the site has shipped
+  since `e4df4b0`; this pass gives the forward direction the same step instead
+  of a permanent strand, so the two are now genuinely mirrors. A step of that
+  size is still a step: softening it would be new machinery on a contract
+  shared with every other jump, and is deliberately not attempted here.
+* §11's residuals stand: the draw-call cliff, and the notch reader still cannot
+  wrap.
