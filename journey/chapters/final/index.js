@@ -34,7 +34,7 @@
 import * as THREE from 'three';
 import {
   makeUniforms, pullOf, pullRawOf, makeRng, TAU, RING_C, HERO_AZ, MEMBERS,
-  groundY,
+  groundY, REVEAL_W,
 } from './world.js';
 import { createFinalRing } from './ring.js';
 import { createFinalTerrain } from './terrain.js';
@@ -224,6 +224,135 @@ export function createFinal(sceneApi) {
      shipped forward arrival does too — its last rungs finish as the camera
      settles into the rest. */
   const BLEND_REVEAL_RATE = 1.0;    // pull units per second, blends only
+
+  /* THE RATE WAS RIGHT AND THE DISTRIBUTION WAS NOT (2026-08-14 — Hannah:
+     "when I'm going from the end to the beginning in the loop, or the
+     beginning to the end, the whole fairy ring kind of just lights up all in
+     one go, or lights down all in one go. Could you make that a lot more
+     gradual and progressive... maybe one piece at a time, so the ring goes and
+     then all the mushrooms come in or go away after that. So it feels like the
+     lights are going off somewhere.")
+
+     `1825393` fixed the chapter's AVERAGE pace on a blend — 62-75 ms/body up
+     to ~160 ms — and that number is still right. What it could not fix, and
+     did not claim to, is the SHAPE. The 24-rung ladder (18-one-species.md
+     §13.2) is an ACCELERANDO: gaps of 7.5 millip at the head tightening to 1.2
+     at the tail, "each one its own event" opening and "the gaps tighten as the
+     town fills" closing. That shape was authored for the forward SCRUB, where
+     the scroll model's own landing brake decelerates into the rest and stretches
+     the tail back out. A blend has no landing brake — it slews at a CONSTANT
+     rate — so the ladder's threshold spacing maps straight onto the clock and
+     the tail is delivered raw.
+
+     Measured on real wheel-driven wraps (in-page rAF-timed deltas; a tracer
+     animator registered last, so every reading is the presented frame), the
+     nine ring members crossing lit/unlit:
+
+       down-wrap, gaps between members  50, 32, 34, 333, 186, 83, 83, 82 ms
+       up-wrap,   gaps between members  83, 83, 84, 200, 316, 50, 17, 50 ms
+
+     Four of the nine inside 116 ms going out, four inside 117 ms coming in,
+     with a 17 ms gap in there — and, on the same frames, the field collapsing
+     103 -> 17 bodies in 200 ms. That is "all in one go", and it is the ladder's
+     own tail, played at constant speed.
+
+     THE FIX IS THE CLOCK, NOT THE LADDER. Nothing here re-authors a rung: the
+     order — which is what carries Hannah's staging, see below — is untouched,
+     and so is every threshold, so the scrub, `?p=`, `?pose=` and the frozen
+     `?capture=` path are bit-identical by construction (`blending` is false on
+     all of them and `shownPull` is assigned `pure` outright). What changes is
+     that on a BLEND the driver spends the same TIME on each rung instead of
+     the same PULL on each rung:
+
+         rate(u) = clamp( gapAround(u) / LADDER_GAP_S, RATE_MIN, RATE_MAX )
+
+     · A gap WIDER than LADDER_GAP_S is already slower than the target, so the
+       ceiling `RATE_MAX = BLEND_REVEAL_RATE` leaves it exactly as it ships.
+       The sparse head is therefore untouched, per-body kindling included —
+       which matters, because REVEAL_W / rate IS the kindle time and the
+       shipped 160 ms was derived to sit between the forward flick's 136 and
+       the forward firm read's 190. Going faster there would buy a pop.
+     · A gap NARROWER than it is stretched to take LADDER_GAP_S. That is the
+       whole of the complaint: today's tightest ladder gap is 0.0137 of pull
+       (13.7 ms at rate 1.0) and it becomes 45 ms.
+     · `RATE_MIN` is a guard, not a shaper: the tightest gap today needs 0.304
+       and the floor is 0.30, so it does not bind on this ladder. It exists so
+       that a future rung pair landing on top of each other cannot drive the
+       rate to zero and stall the reveal inside a move.
+     · BELOW the first rung nothing is kindling at all — every threshold is
+       above — so the driver runs at RATE_FAST there. That dead road (0.0966 of
+       pull, 97 ms at the shipped rate) is what pays for part of the stretch.
+       ABOVE the last rung is NOT dead and the first cut of this treated it as
+       though it were: a rung's light runs from its threshold to threshold +
+       REVEAL_W, so the top of the band is where the last rungs are actually
+       kindling. Running it fast collapsed the closers to 17 ms apart —
+       measured, worse than the fault — so [last rung, PULL_MAX] holds
+       BLEND_REVEAL_RATE, which is exactly the 160 ms per body `1825393`
+       derived.
+
+     THE BUDGET, MEASURED, because it is the binding constraint. The down-wrap
+     gives the chapter 1.384 s from the move's first frame to the frame its own
+     `rise` starts fading it out (uAmount leaves 1.0 at 1452 ms, reaches 0 at
+     1535 ms; the reveal today finishes at ~1168 ms). The up-wrap gives 1.450 s
+     between the chapter becoming visible and the lap landing, with the
+     convergence tail legal after that. The seven gaps already wider than the
+     target keep their shipped cost (0.502 s), the sixteen narrower ones cost
+     LADDER_GAP_S each, the run below the first rung costs 40 ms at RATE_FAST,
+     and the run above the last rung 169 ms at the shipped rate. At
+     LADDER_GAP_S = 0.040 that totals 1.351 s — inside the tighter of the two
+     windows with ~33 ms in hand. At 0.045 it is 1.431 s and does not fit.
+     Measured, not guessed.
+
+     AND THE STAGING IS ALREADY IN THE ORDER. Hannah asks for "the ring goes
+     and then all the mushrooms come in or go away after that", and the ladder
+     says exactly that once its gaps stop hiding it. The four lowest rungs are
+     ring members (0.0966, 0.1833, 0.2638, 0.3406) and the field's first body
+     is at 0.4118 — so coming in, FOUR RING MEMBERS OPEN ALONE, one at a time,
+     before a single mushroom of the field arrives; going out, the same four
+     are the last lights left, one at a time, after the field has emptied. That
+     reading was always authored; at 32-34 ms apart it was unreadable. Nothing
+     needed inventing — it needed time. */
+  const LADDER_GAP_S = 0.040;   // seconds per ladder rung, blends only
+  const RATE_MIN = 0.30;        // guard against a degenerate (near-zero) gap
+  const RATE_FAST = 2.4;        // below every threshold — nothing is kindling
+  // The rungs are read from the BUILD, not restated as constants — doc 18
+  // §13.4 lists "the ladder constants bake the measured camera curve" as a
+  // standing hazard, and a pacing table that had to be re-derived alongside
+  // them would be a second copy of the same hazard. Tiers 0-2 are the nine
+  // ring members and tier 3 the fifteen field clones: the same twenty-four
+  // bodies the ladder is authored over. T4 haze and the T5 cap-rim hints are
+  // texture ("haze may arrive as weather") and deliberately do not pace it.
+  const LADDER = ring.seats.filter(s => s.tier <= 3).map(s => s.reveal)
+    .sort((a, b) => a - b);
+  /** Pull units per second for the blend driver at `u`.
+   *
+   *  THE LOOKUP IS HALF A REVEAL WIDTH BEHIND THE DRIVER, and that is not a
+   *  detail. A rung's light runs from its threshold to threshold + REVEAL_W,
+   *  so what the eye reads as its ARRIVAL is the half-way point — the driver
+   *  is at `reveal + REVEAL_W/2` when the body reads as on. Pacing on
+   *  `gapAround(u)` therefore paces the wrong instant, and it fails exactly
+   *  where it matters: the ladder's top three rungs all arrive ABOVE the last
+   *  rung, off the end of the table, where the first cut of this had a flat
+   *  rate. Measured on a real wheel-driven wrap with the un-shifted lookup,
+   *  the ring's last three members crossed 0 ms, 42 ms and 46 ms apart going
+   *  out and 85, 23, 24 coming in — the clump intact, just moved. Shifting the
+   *  lookup by REVEAL_W/2 asks "whose arrival is happening now?", which is the
+   *  question the rate is answering.
+   *
+   *  Below the first rung nothing has begun. Past the last arrival there is
+   *  only the final body's own tail to finish, at the rate derived for it. */
+  function blendRate(u) {
+    const n = LADDER.length;
+    if (!n) return BLEND_REVEAL_RATE;
+    const a = u - REVEAL_W * 0.5;          // the rung arriving at this driver value
+    if (a <= LADDER[0]) return RATE_FAST;
+    if (a >= LADDER[n - 1]) return BLEND_REVEAL_RATE;
+    let lo = 0, hi = n - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (LADDER[m] <= a) lo = m; else hi = m; }
+    const r = (LADDER[hi] - LADDER[lo]) / LADDER_GAP_S;
+    return r < RATE_MIN ? RATE_MIN : r > BLEND_REVEAL_RATE ? BLEND_REVEAL_RATE : r;
+  }
+
   // null = "adopt the camera-pure value on the next tick" (boot).
   let shownPull = null;
   let blendPull = 0;                // pull at the blend's destination pose
@@ -232,7 +361,7 @@ export function createFinal(sceneApi) {
    *  invariant above — `pure` is this frame's camera-pure value and `held` is
    *  last frame's shown value. One place, so the law has one implementation. */
   function slewPull(held, target, pure, dt) {
-    const step = BLEND_REVEAL_RATE * dt;
+    const step = blendRate(held) * dt;
     const d = target - held;
     const v = held + (Math.abs(d) <= step ? d : (d > 0 ? step : -step));
     const ceil = pure > held ? pure : held;

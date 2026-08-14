@@ -829,3 +829,187 @@ false one.
   shared with every other jump, and is deliberately not attempted here.
 * §11's residuals stand: the draw-call cliff, and the notch reader still cannot
   wrap.
+
+---
+
+# 2026-08-14 — the ring stops switching and starts going out
+
+**Requested:** Hannah. **Built:** same day.
+**Files:** `journey/chapters/final/index.js` (the blend driver's rate). No
+ladder rung, no threshold, no route file, no camera key, no p-value.
+
+> "When I'm going from the end to the beginning in the loop, or the beginning
+> to the end, the whole fairy ring kind of just lights up all in one go, or
+> lights down all in one go. Could you make that a lot more gradual and
+> progressive, so it looks more elegant — maybe one piece at a time, so the
+> ring goes and then all the mushrooms come in or go away after that. So it
+> feels like the lights are going off somewhere."
+
+## 21. The rate was right; the distribution was not
+
+`1825393` paced the Final field's reveal over the camera move instead of over
+the move's speed, taking per-body kindling from 62–75 ms to ~160 ms. That
+number is still right, and this pass does not change it. What it could not fix
+— and never claimed to — is the **shape**.
+
+The chapter's 24-rung arrival ladder (`18-one-species.md` §13.2) is an
+**accelerando**: gaps of 7.5 millip at the head tightening to 1.2 at the tail,
+authored so the openers are "each one its own event" and the closers land "as
+the town fills". That shape was designed for the forward **scrub**, where the
+scroll model's own landing brake decelerates into the rest and stretches the
+tail back out in time. A blend has no landing brake — `1825393` slews at a
+**constant** 1.0 pull/s — so the ladder's threshold spacing maps straight onto
+the clock and the tail is delivered raw.
+
+### Measured, before
+
+Real in-page rAF-timed `WheelEvent`s; a tracer animator registered last, so
+every reading is the **presented** frame. `journey.wrap()` was not used.
+Gaps between consecutive ring members crossing lit/unlit:
+
+| | member-to-member gaps (ms) | tightest |
+|---|---|---|
+| down-wrap (end → beginning) | 50, 32, 34, 333, 186, 83, 83, 82 | **32 ms** |
+| up-wrap (beginning → end) | 83, 83, 84, 200, 316, 50, 17, 50 | **17 ms** |
+
+Four of the nine inside 116 ms going out; four inside 117 ms coming in, one
+pair 17 ms apart. On the same frames the field collapsed **103 → 17 bodies in
+200 ms**. That is "all in one go", and it is the ladder's own tail played at
+constant speed.
+
+The threshold table says why, once you look at it as a histogram rather than a
+list — 79 of the 103 drawn bodies live in the top band and 29 of those inside
+0.036 of pull, which at 1.0 pull/s is **36 ms**:
+
+| tier | n | threshold range |
+|---|---|---|
+| 0–2 (ring members) | 9 | 0.0966 … 0.9511 |
+| 3 (field clones) | 15 | 0.4118 … 0.9046 |
+| 4 (far batch) | 50 | 0.7204 … 0.9375 |
+| 5 (cap-rim hints) | 29 | 0.8024 … **0.8384** |
+
+## 22. The fix is the clock, not the ladder
+
+Nothing here re-authors a rung. Every threshold, and the **order**, is
+untouched — which matters, because the order is what carries Hannah's staging
+(§23). What changes is that on a blend the driver spends the same **time** per
+rung instead of the same **pull** per rung:
+
+```
+rate(u) = clamp( gapAround(u − REVEAL_W/2) / LADDER_GAP_S,
+                 RATE_MIN, BLEND_REVEAL_RATE )
+```
+
+* **The ceiling is the shipped rate.** A gap already wider than the target is
+  left exactly as it ships — so the sparse head is unchanged, per-body kindling
+  included. `REVEAL_W / rate` *is* the kindle time, and `1825393` derived 160 ms
+  to sit between the forward flick's 136 and the forward firm read's 190; going
+  faster there would buy a pop.
+* **Narrow gaps are stretched** to `LADDER_GAP_S`. The tightest ladder gap today
+  is 0.0137 of pull — 13.7 ms at the shipped rate, now 40 ms.
+* **The lookup is half a reveal width behind the driver**, and that is not a
+  detail. A rung's light runs from its threshold to threshold + `REVEAL_W`, so
+  what reads as its *arrival* is the half-way point. The first cut paced on
+  `gapAround(u)` and failed exactly where it mattered: the top three rungs all
+  arrive **above** the last rung, off the end of the table. Measured with the
+  un-shifted lookup, the last three members crossed **0, 42 and 46 ms** apart
+  going out and **85, 23, 24** coming in — the clump intact, just moved.
+* **`RATE_MIN` is a guard, not a shaper.** Today's tightest gap needs 0.304 and
+  the floor is 0.30, so it never binds; it exists so a future pair of rungs
+  landing on top of each other cannot stall the reveal inside a move.
+* **Below the first rung nothing is kindling**, so the driver runs at
+  `RATE_FAST` there. That dead road pays for part of the stretch.
+* **The rungs are read from the build**, not restated as constants —
+  `18-one-species.md` §13.4 lists "the ladder constants bake the measured camera
+  curve" as a standing hazard, and a second table to keep in step would be a
+  second copy of it. Tiers 0–3 are exactly the 24 authored bodies; T4 haze and
+  T5 hints are texture and deliberately do not pace anything.
+
+**The budget is the binding constraint, and it is measured.** The down-wrap
+gives the chapter **1.384 s** from the move's first frame to the frame its own
+`rise` begins fading it (`uAmount` leaves 1.0 at 1452 ms, reaches 0 at 1535 ms).
+The up-wrap gives **1.450 s** between the chapter becoming visible and the lap
+landing. At `LADDER_GAP_S = 0.040` the whole band costs **1.351 s**; at 0.045 it
+is 1.431 s and does not fit.
+
+## 23. The staging was already in the order — it needed time
+
+Hannah asks for "the ring goes and then all the mushrooms come in or go away
+after that". The ladder already says that: the four lowest rungs are ring
+members (0.0966, 0.1833, 0.2638, 0.3406) and the field's first body is at
+0.4118. At 32–34 ms apart it was unreadable. From the real-time frame strip
+(captured in-page off the drawing buffer immediately after `composer.render()`,
+because a screenshot costs 750 ms and the whole reveal is 1.2 s — and because
+the stretched-clock method that is faithful for geometry is **not** faithful
+here, the blend pacing being rate-limited in wall clock):
+
+**Coming in** — four ring members arrive alone, one at a time, before a single
+field body:
+
+| ms | camera x | pull | ring | field |
+|---|---|---|---|---|
+| 2630 | −8.28 | 0.037 | 0/9 | 0 |
+| 2748 | −10.59 | 0.215 | **1/9** | 0 |
+| 2863 | −12.40 | 0.310 | **2/9** | 0 |
+| 2986 | −13.75 | 0.411 | **3/9** | 0 |
+| 3098 | −14.62 | 0.519 | **4/9** | 1 |
+| 3448 | −15.20 | 0.781 | 5/9 | 5 |
+| 3681 | −15.03 | 0.897 | 5/9 | 46 |
+| 3798 | −14.90 | 0.943 | 5/9 | 74 |
+
+**Going out** — the field empties, then the last ring members go out one at a
+time: field 94 → 20 over 466 ms (it was 234 ms), 0 by 1303 ms, and the ring
+still stepping 4 → 3 at 1422 ms.
+
+## 24. Gates
+
+* **Frame strip, both directions, before and after**, real speed, 13 shutters
+  at 110 ms — the tables above.
+* **Member-to-member gaps**, every presented frame:
+
+  | | before | after |
+  |---|---|---|
+  | down-wrap tightest | **32 ms** | **49 ms** |
+  | up-wrap tightest | **17 ms** | **66 ms** |
+  | down-wrap ring transition | 966 ms | 1218 ms |
+  | up-wrap ring transition | 967 ms | 1200 ms |
+  | field 103 → ~20 | 200 ms | **466 ms** |
+
+* **`revealgates.js` G1 and G2 bit-exact**: `G1 scrub |uPull − pullOf(camera.x)|
+  max over 246 frames: 0.00e+0`, `G2 placement, 10 poses: 0.00e+0`. Off a blend
+  this file is what it was — the scrub, `?p=`, `?pose=` and the frozen
+  `?capture=` path are camera-pure by assignment, not by measurement.
+* **G3–G6 restated over the reachable input path.** `revealgates.js` refuses to
+  produce them from a synthetic event (it asserts `e.isTrusted`), and CDP cannot
+  deliver a trusted stream inside the model's 45 ms same-gesture threshold on
+  this machine — so the wrap it wants to gate is unreachable through it. Asserted
+  here over real in-page wheel wraps instead:
+  * **G4, nothing fades in over open view** — worst `shown − max(pure, held)`:
+    **0** in both directions.
+  * **G5, the landing does not pop** — worst single-frame driver step
+    **0.0749** (down) and **0.0662** (up) against the 0.16 limit.
+  * **G6, it converges** — final lag **0** in both directions; no lag is latched
+    into the next ride.
+* `capture.py --check` **PASS, worst MAE 0.00/255** over all ten frozen
+  references.
+* Scroll battery unchanged: `E1 −2.60e−4`, `E2/E3 1.0000`, `R1 0.260000`,
+  `R4 overshoot 0.00e+0`, `R5 0.000000 / 0.970000 / 1.0000`, `R6 off-anchor
+  stops: none`.
+* **Full gestured ride**: 23 legs, four laps, four wraps including two
+  interrupted mid-lap — every leg on an anchor, `hero` drift 0.0000,
+  **console 0 entries**.
+
+## 25. Residuals
+
+* **Only a blend is re-paced.** A forward or reverse scrub still plays the
+  accelerando, tight tail and all, which is what it was authored for and what
+  Hannah has accepted twice. If the tail ever reads as a clump on a *scrub*,
+  that is the ladder's own shape and belongs to `18-one-species.md`.
+* **The down-wrap has ~33 ms of budget left.** Anything that lengthens the
+  reveal, shortens the lap, or moves the Final rest again will make the retire
+  overrun into `uAmount`'s fade. That overrun is graceful — a continuous fade
+  over an unfinished retire, not a pop — but the margin is real and small, and
+  `LADDER_GAP_S` is the dial.
+* T4 haze and the T5 cap-rim hints still arrive as weather inside whichever
+  ladder gap they fall in. 29 hints inside one 40 ms gap is by design; they are
+  texture, not events.
