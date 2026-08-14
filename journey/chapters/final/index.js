@@ -37,6 +37,7 @@ import {
   groundY, REVEAL_W, PULL_MAX,
 } from './world.js';
 import { createFinalRing } from './ring.js';
+import { drawWOf } from './clones.js';
 import { createFinalTerrain } from './terrain.js';
 import { createFinalSky } from './sky.js';
 import { createFinalCanopy } from './canopy.js';
@@ -346,6 +347,92 @@ export function createFinal(sceneApi) {
   const LADDER_GAP_S = 0.040;   // seconds per ladder rung, blends only
   const RATE_MIN = 0.30;        // guard against a degenerate (near-zero) gap
   const RATE_FAST = 2.4;        // below every threshold — nothing is kindling
+
+  /* ---- §41. AN ARRIVAL AND A DEPARTURE DO NOT HAVE THE SAME ROOM ---------
+     (2026-08-14, Hannah's FIFTH request on this arrival, verbatim: "could you
+     make the INDIVIDUAL MUSHROOMS AT THE END LIGHT UP SLOWER AND MORE
+     STAGGERED". Two knobs, and she has said before what she is after: a town
+     where the houses light one at a time, "like a town of Christmas trees".)
+
+     WHY FOUR PASSES BOUGHT A FACTOR AND SHE ASKED AGAIN. Every one of them
+     scaled the whole arrival uniformly — `route.js` scrollVh 3.5 -> 6 -> 12 ->
+     17.6, `clones.js` DRAW_W 0.16 -> 0.28 -> 0.32 -> 0.50. A uniform scale
+     cannot touch the SHAPE, and the shape is the complaint: the 24-rung ladder
+     is an accelerando whose gaps run 0.0867 of pull at the head down to 0.0137
+     at the tail, a 6.3x tightening, and the camera accelerates into the rest on
+     top of it. Measured on this tree at 2400 px/s on the real wheel path, the
+     first eleven rungs arrive 96-179 ms apart and the last thirteen arrive
+     21-45 ms apart. Whatever the overall tempo, the town's far half always
+     lights at once, because the tightening survives every scale factor applied
+     to it.
+
+     AND THE PULL AXIS IS EXHAUSTED. The ladder occupies [0.0966, 0.9511] of a
+     band whose top is pinned by `PULL_MAX` = 1.12 (the rest's own camera x)
+     and whose bottom is the surface pierce; evening the gaps out in pull would
+     have to take the road from the head, which is the half that already reads
+     correctly. So the stagger cannot be bought in pull. It has to be bought in
+     TIME — which is exactly what this limiter is, and what `a0a89f8` made
+     reachable tonight by arming it on commit glides as well as on blends.
+     Before that commit a gestured arrival — the way a visitor actually reaches
+     this chapter — was not rate-limited at all, and these two constants could
+     not touch it. That is the binding constraint moving, and it is why this
+     pass is not a fifth application of the previous four levers.
+
+     THE SPLIT. A RETIRE and an ARRIVAL have different budgets, and conflating
+     them is what pinned `LADDER_GAP_S` at 0.040:
+
+     · A retire on the lap has a HARD window. `RETIRE_SPAN` 0.62 of the wrap's
+       4.00 s is 2.48 s, and it is measured, not chosen — past ~2.4 s of the lap
+       the colony has left frame, so a light that goes out after that goes out
+       where nobody can see it. `retireScale` already fits the retire into that
+       window and `bedSpread` arms off the same comparison, both against
+       `BAND_S`. The retire is therefore AT its ceiling already and cannot be
+       slowed; measured, the down-wrap spends 2.33 s of a 2.48 s window.
+     · An ARRIVAL has no window at all. Its lights may finish after the camera
+       lands — the shipped forward arrival already does exactly that ("its last
+       rungs finish as the camera settles into the rest"), and the convergence
+       tail below is the machinery that lets them. A town you are walking into
+       may go on lighting while you stand still; a town you are leaving may not
+       go on darkening after it is out of sight.
+
+     So the arrival gets its own clock and the departure keeps the shipped one.
+     `BAND_S` still integrates `blendRate` and nothing else, so `retireScale`,
+     `bedSpread` and every departure — the lap out, the rail click out — are
+     bit-for-bit what they were: unchanged by construction, not by measurement
+     (this is the `ba09f49` hazard, a flag taking a dependency on another
+     flag's meaning, and the way to not repeat it is to not touch the flag).
+
+     IT STAYS ONE-SIDED, which `a0a89f8` requires of anything routed through
+     here. `ARRIVE_GAP_S > LADDER_GAP_S` and `ARRIVE_RATE < BLEND_REVEAL_RATE`
+     make `arriveRate(u) <= blendRate(u)` at every u, and `slewPull`'s ceiling
+     `max(pure, held)` is untouched — so this can only ever SLOW a light-up,
+     never speed one and never invent light the lens has not earned.
+
+     THE TWO KNOBS, SEPARATELY, and both denominated in the unit Hannah is
+     describing rather than in pull:
+
+     · ARRIVE_GAP_S is the stagger — seconds between one body starting and the
+       next. 0.040 -> 0.130, x3.25. It is a floor, not a schedule: a gap
+       already wider than it is left exactly as it is by the `ARRIVE_RATE`
+       ceiling, so the head — the eleven rungs that already read one at a time
+       — does not move, and only the collapsed tail is stretched. That is what
+       flattens the accelerando in time without taking anything from the head:
+       measured after, the ladder runs 176 ms at the head to 138 ms at the tail
+       instead of 176 ms to 32 ms.
+     · ARRIVE_RATE is the individual light-up — one body's own window `drawW`
+       divided by this rate IS its kindle time. 1.0 -> 0.42, x2.38.
+
+     Derived against the same real-wheel measurements the shipped pair was:
+     `BLEND_REVEAL_RATE` 1.0 was set to sit between the forward flick's 136 ms
+     per body and the forward firm read's 190 ms. This is deliberately BELOW
+     that band, because the band is the thing being complained about. */
+  const ARRIVE_GAP_S = 0.130;   // seconds per rung, arrivals — the STAGGER
+  const ARRIVE_RATE = 0.42;     // pull/s ceiling, arrivals — the KINDLE
+  const ARRIVE_RATE_MIN = 0.09; // the same guard as RATE_MIN, on this clock's
+                                // scale: the tightest gap today needs 0.105, so
+                                // it does not bind — it exists only so a future
+                                // rung pair landing on top of each other cannot
+                                // drive the rate to zero and stall the reveal.
   // The rungs are read from the BUILD, not restated as constants — doc 18
   // §13.4 lists "the ladder constants bake the measured camera curve" as a
   // standing hazard, and a pacing table that had to be re-derived alongside
@@ -372,17 +459,24 @@ export function createFinal(sceneApi) {
    *
    *  Below the first rung nothing has begun. Past the last arrival there is
    *  only the final body's own tail to finish, at the rate derived for it. */
-  function blendRate(u) {
+  function paceRate(u, gapS, rateMax, rateMin) {
     const n = LADDER.length;
-    if (!n) return BLEND_REVEAL_RATE;
+    if (!n) return rateMax;
     const a = u - REVEAL_W * 0.5;          // the rung arriving at this driver value
     if (a <= LADDER[0]) return RATE_FAST;
-    if (a >= LADDER[n - 1]) return BLEND_REVEAL_RATE;
+    if (a >= LADDER[n - 1]) return rateMax;
     let lo = 0, hi = n - 1;
     while (hi - lo > 1) { const m = (lo + hi) >> 1; if (LADDER[m] <= a) lo = m; else hi = m; }
-    const r = (LADDER[hi] - LADDER[lo]) / LADDER_GAP_S;
-    return r < RATE_MIN ? RATE_MIN : r > BLEND_REVEAL_RATE ? BLEND_REVEAL_RATE : r;
+    const r = (LADDER[hi] - LADDER[lo]) / gapS;
+    return r < rateMin ? rateMin : r > rateMax ? rateMax : r;
   }
+  /** The DEPARTURE clock — the shipped one, unchanged, and the only one
+   *  `BAND_S` is integrated from. */
+  const blendRate = (u) => paceRate(u, LADDER_GAP_S, BLEND_REVEAL_RATE, RATE_MIN);
+  /** The ARRIVAL clock (§41). Slower than `blendRate` at every u by
+   *  construction — `ARRIVE_GAP_S` is larger and `ARRIVE_RATE` smaller — which
+   *  is what keeps the limiter one-sided. */
+  const arriveRate = (u) => paceRate(u, ARRIVE_GAP_S, ARRIVE_RATE, ARRIVE_RATE_MIN);
 
   /* THE DEPARTURE HAS TO RIDE THE MOVE, AND ONLY THE ARRIVAL EVER DID
      (2026-08-14 — Hannah: "when I scroll down from the final section to loop
@@ -567,8 +661,18 @@ export function createFinal(sceneApi) {
    *  invariant above — `pure` is this frame's camera-pure value and `held` is
    *  last frame's shown value. One place, so the law has one implementation. */
   function slewPull(held, target, pure, dt) {
-    const step = blendRate(held) * retireScale * dt;
+    /* WHICH CLOCK (§41). Lighting up and going out do not have the same room,
+       so they do not run on the same clock: an arrival may finish after the
+       camera lands, a retire on the lap may not — it has `RETIRE_SPAN` of the
+       move and then the colony is out of frame. The direction is read off the
+       step itself rather than off a flag, so there is no second piece of state
+       to fall out of sync with `retiring` (the `ba09f49` failure), and it
+       cannot chatter: within `step` of the target the branch is not taken at
+       all, `d` is consumed whole either way.
+       `retireScale` is a departure's own fitting term and is 1 on every
+       arriving move, so naming it only on this side changes nothing it did. */
     const d = target - held;
+    const step = (d > 0 ? arriveRate(held) : blendRate(held) * retireScale) * dt;
     const v = held + (Math.abs(d) <= step ? d : (d > 0 ? step : -step));
     const ceil = pure > held ? pure : held;
     return v > ceil ? ceil : v;
@@ -1134,6 +1238,26 @@ export function createFinal(sceneApi) {
      *  assigns `shownPull = pure` outright, so deep links, ?p=, ?pose= and
      *  the frozen ?capture= path stay camera-pure through the branch that was
      *  always going to run anyway (gate G2). */
+    /** QA-ONLY PACING READOUT — the arrival ladder, in the units it is
+     *  authored in. Five passes on this arrival's pacing have each had to
+     *  re-derive the same two numbers by reading constants out of two files
+     *  and replicating `drawWOf` in a probe, which is a second copy of the
+     *  math in exactly the place doc 18 §13.4 names as a standing hazard.
+     *  It is a getter over a build product: no per-frame cost, no state, and
+     *  nothing rendered reads it.
+     *
+     *  Per rung: `reveal` is the body's threshold (the START of its light,
+     *  the gap between consecutive ones IS the stagger) and `drawW` its own
+     *  window (its light runs s = (pullRaw − reveal)/drawW from 0 to 1, so
+     *  drawW IS the per-body kindle). Both in pull units; divide by the
+     *  driver's pull/s to get seconds. Tiers 0–2 are the nine ring members,
+     *  tier 3 the fifteen field clones — the twenty-four bodies the ladder
+     *  is authored over. */
+    get pacing() {
+      return ring.seats.filter(s => s.tier <= 3)
+        .map(s => ({ tier: s.tier, reveal: s.reveal, drawW: drawWOf(s.reveal) }))
+        .sort((a, b) => a.reveal - b.reveal);
+    },
     snap() { amount = amountTarget; },
     setHot() {},
     nodeWorld() { return null; },

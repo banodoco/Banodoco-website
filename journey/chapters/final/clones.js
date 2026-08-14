@@ -301,7 +301,7 @@ const DRAW_LO = 0.296, DRAW_HI = 0.893;
 const DRAW_W_HI = 0.50;        // the opening singles' kindling width
 const DRAW_W_LO = 0.16;        // the closing fills' — narrower in uPull, LONGER in wheel
 const REST_MARGIN = 0.004;     // s = 1 must land this far under PULL_MAX
-const drawWOf = (reveal) => {
+export const drawWOf = (reveal) => {
   const t = Math.min(1, Math.max(0, (reveal - 0.10) / (0.96 - 0.10)));
   const w = DRAW_W_HI - (DRAW_W_HI - DRAW_W_LO) * t;
   return Math.min(w, PULL_MAX - REST_MARGIN - reveal);
