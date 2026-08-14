@@ -422,6 +422,18 @@ export function createRail({ onNav } = {}) {
   /* ---- the menu control: the second resting symbol ---- */
   const menuBtn = el('button', 'j-rail-menu');
   menuBtn.type = 'button';
+  /* THE BUTTON CARRIES ITS OWN NAME. Until 2026-08-14 it had none: the
+     accessible name came entirely from the "Menu" span below, which is a
+     VISIBLE label and therefore a thing a geometry is allowed to hide. The
+     half moon now does hide it (see THE HUB HAS NO PILL, site.css), and
+     `display: none` takes an element out of the accessibility tree as well as
+     out of the picture — so without this the button would have been an unnamed
+     button on every hover-capable machine. Stated here rather than in the
+     stylesheet's gift: the name is a property of the control, not of the
+     geometry it happens to be drawn in. (With `aria-label` set, the span is
+     purely visual in BOTH tiers — the column's own label is now decoration
+     over a named button, which is the correct relationship.) */
+  menuBtn.setAttribute('aria-label', 'Menu');
   menuBtn.setAttribute('aria-haspopup', 'dialog');
   menuBtn.setAttribute('aria-expanded', 'false');
   menuBtn.setAttribute('aria-controls', 'j-menu');
@@ -891,9 +903,69 @@ export function createRail({ onNav } = {}) {
      against running twice. */
   menuBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    // A press is an answer, so the question stops being asked. This also
+    // guarantees the gesture can never run under an opening panel.
+    clearTimeout(nudgeTimer);
     openMenu(menuBtn);
   });
   menuBtn.addEventListener('click', () => openMenu(menuBtn));
+
+  /* ===================================================================== */
+  /* THE BUTTON SAYS IT IS A BUTTON — the dwell gesture                     */
+  /* ===================================================================== */
+  /* "Remove the MENU text that shows when you hover over the actual menu
+      button, because it just doesn't really fit in. But can you make it so
+      that when you hover over that button, it gently suggests that it's
+      clickable? Maybe something like its entry animation — maybe if you hover
+      over it for over a second, it does that again." — Hannah, 2026-08-14
+
+     The label is gone from this geometry (site.css, THE HUB HAS NO PILL) and
+     this is what stands in for it. It is NOT a borrowed keyframe: the button
+     already has an entry of its own — `.j-rail-menu .j-sym path` carries
+     `stroke-dasharray: 12` and is drawn to `stroke-dashoffset: 0` when the
+     rail powers on, which is the hero's `lead-draw` in transition form. The
+     gesture replays THAT, on the button's own glyph, in the shape it already
+     arrived in. (`b079f84` retired a keyframe that was wearing one reference's
+     name over another's shape; the check that matters is the drawing, and the
+     drawing here is the same three filaments writing themselves in.)
+
+     WHY A SECOND, AND WHY IT CANNOT FIRE ON TRANSIT. The rail's own 120ms
+     dwell exists precisely because a pointer crossing the flank must not open
+     anything; a gesture that answers "is this clickable?" is a reply to a
+     question only a pointer that has STOPPED can be asking. NUDGE_MS is an
+     order of magnitude past the crossing time, and the timer is armed on
+     `pointerenter` of the button alone and cleared on `pointerleave`, on a
+     press, and on touch — where there is no hover to read intent from.
+
+     ONCE PER ARRIVAL, not on a loop. A repeat every second is a control
+     asking for attention rather than answering for itself, and the whole of
+     the brief is "gently". The class is dropped on `animationend` so the next
+     arrival can re-arm it, and re-arming is what a fresh hover means. */
+  const NUDGE_MS = 1000;
+  let nudgeTimer = null;
+
+  menuBtn.addEventListener('pointerenter', (e) => {
+    if (e.pointerType === 'touch' || menuIsOpen) return;
+    // Reduced motion has no gesture to give: the glyph's resting state IS the
+    // drawn one, so replaying the draw would be motion for its own sake. The
+    // hover colour lift (`.j-rail-menu:hover`) carries the affordance there,
+    // and it is not motion.
+    if (reduceMotion.matches) return;
+    clearTimeout(nudgeTimer);
+    nudgeTimer = setTimeout(() => {
+      if (menuIsOpen) return;
+      menuBtn.classList.remove('j-rail-nudge');
+      void menuBtn.offsetWidth;               // restart, not merely re-assert
+      menuBtn.classList.add('j-rail-nudge');
+    }, NUDGE_MS);
+  });
+  menuBtn.addEventListener('pointerleave', (e) => {
+    if (e.pointerType === 'touch') return;
+    clearTimeout(nudgeTimer);
+  });
+  menuBtn.addEventListener('animationend', (e) => {
+    if (e.animationName === 'j-menu-rewrite') menuBtn.classList.remove('j-rail-nudge');
+  });
   menuClose.addEventListener('click', () => closeMenu());
   scrim.addEventListener('click', () => closeMenu());
 

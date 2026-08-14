@@ -3252,3 +3252,180 @@ the side is a value everywhere instead of a selector.
   exactly on a `.5` boundary would still see the rounded transform alternate
   between two integers while the scene moves. Not observed at any rest (span
   0.0000 px), and 1 px over a whole scrub.
+
+---
+
+## 2026-08-14 (later) — The MENU label goes, and the button answers for itself
+
+> "Let's remove the MENU text that shows when you hover over the actual menu
+> button, because it just doesn't really fit in. But can you make it so that
+> when you hover over that button, it gently suggests that it's clickable?
+> Maybe something like its entry animation — maybe if you hover over it for
+> over a second, it does that again to suggest it is clickable. Something like
+> that." — Hannah
+
+**Files:** `journey/rail.js`, `journey/site.css`. Nothing else. Tree was clean
+at `b079f84` before anything was changed.
+
+### 1. Why the label had run out of places to stand
+
+The pill's placement history is three attempts, each fixing the last (recorded
+2026-08-13, §"the half moon" and before it): held off to the moon's leftmost
+point it landed two radii from its own button **with a section's mark standing
+between the two**, so every reading of the picture had the pill labelling the
+MARK; hung off the button it drew straight across the inside of the moon;
+dropped below the whole arc it cleared both, and then had to be below in the
+CLOSED state as well or it jumped at the 120 ms dwell.
+
+Measured on `b079f84` at 1440×900, moon open, before a line was edited: the
+five section pills sit **23.5–120.2 px** from their own marks, and the MENU
+pill sits **99.1 px below its own button** — the widest, lowest, most exiled
+thing on the flank. That is the honest reading of her "doesn't really fit in":
+the five section names sit ON their marks, and this one could not, because the
+thing it names is the thing the moon is drawn around.
+
+So it goes. `display: none`, not `opacity: 0` — it should cost no box on a
+flank whose pills are about to be placed against real neighbours (the pass
+below), and no rule further down should be able to reveal an element that has
+no position of its own left. The two rules that existed only to place and
+reveal it went with it, and the `.j-rail-open` hover/focus pair lost its hub
+half.
+
+**THE COLUMN KEEPS ITS LABEL.** The deletion is written inside `(hover: hover)`
+and reads `:not(.j-rail-column)`, so it cannot reach the touch tier — where
+there is no hover to have complained about, where the arming tap is the only
+thing that ever reveals a name, and where six names in a single file is the
+list it has always been. Verified at 375×812 with the media features genuinely
+flipped: `hover: false`, `pointer: coarse`, and the arming tap still brings
+**all six names at opacity 1.00**, "Menu" among them, on 52×44 tiles.
+
+### 2. The button had no name of its own, and now it does
+
+**Checked, and it was carrying it.** `menuBtn` had `aria-haspopup`,
+`aria-expanded` and `aria-controls` and **no `aria-label`**; its `.j-sym` is
+`aria-hidden="true"` (symbols.js), so the accessible name came **entirely from
+the "Menu" span**. And `display: none` takes an element out of the
+accessibility tree as well as out of the picture — so the deletion above, on
+its own, would have left an **unnamed button** on every hover-capable machine.
+
+`aria-label="Menu"` now sits on the button, stated in rail.js rather than left
+in the stylesheet's gift: the name is a property of the control, not of the
+geometry it happens to be drawn in. Measured over CDP's Accessibility domain
+after the change: `role: button`, `name: "Menu"`, **sourced from `attribute`**.
+With the label set, the span is purely visual in *both* tiers — the column's
+own label is now decoration over an already-named button, which is the correct
+relationship and not the one that shipped.
+
+### 3. The gesture — her suggestion, tried first, and then corrected
+
+**Her suggestion is right about the vocabulary and the trigger, and it needed
+one correction about the shape.**
+
+The vocabulary was already there and did not have to be borrowed. The button
+has an entry of its own: `.j-rail-menu .j-sym path` carries
+`stroke-dasharray: 12` and is drawn to `stroke-dashoffset: 0` when the rail
+powers on — the hero's `lead-draw` in transition form, "the instrument powering
+on". `b079f84` had just finished retiring a keyframe that was wearing one
+reference's name over another's shape, so the check that matters is the
+drawing: this is the same three filaments writing themselves in, on the same
+element, on the same property. Nothing is borrowed at all.
+
+**Six candidates, shot at matched animation times at 0.05× over CDP's Animation
+domain, cropped to the button.**
+
+| | what the frames show |
+|---|---|
+| **B1 — the entry, replayed** (`12 → 0`, 0.4 s) | **Rejected, and it is the one her words describe.** `from` is instantaneous: the first frame is an **already-erased mark**. The glyph blinks out and rewrites. That is a flicker, and it is the exact shape `b079f84` went and removed from the popover. |
+| **B2 — half the dash** (`6 → 0`) | **Rejected.** Same instantaneous cut, and now so small that across twelve frames the row is very nearly static. It buys nothing and still jumps. |
+| **B4 — retract, then write** (`0 → 12 → 0`, 0.62 s) | The cut is gone: the filaments withdraw towards their nodes and write back out, and nothing on screen ever jumps. The right shape. |
+| **B5 — the same, slower** (0.8 s, wind-up at 30 %) | **Rejected.** 0.94 s with the stagger. A gentle suggestion should not outlast the sentence describing it. |
+| **B7 — partial retract, no stagger** | **Rejected.** The three lines move as one and the glyph reads as *breathing* — a pulse, and a pulse is a control asking for attention. |
+| **B8 — full retract, no stagger** | **Rejected, the worst of the six.** All three lines reach bare dots on the same frame: the mark disappears as a unit, which is B1's blink arrived at slowly. |
+
+**SHIPPED: a retract to 8 of the 12, 0.62 s ease, cascaded 0.07 s per
+filament.** Two findings decided it, and both came off the frames rather than
+out of the description:
+
+* **The retract is animated, not asserted.** This is the whole difference
+  between the gesture and a replay, and it is why "do the entry animation
+  again" cannot be taken literally: the entry runs 12 → 0 because it starts
+  from a glyph that is not there yet. On a glyph that IS there, the same
+  keyframe has to put the dash back first, and `from` does that in zero time.
+* **It retracts to 8, not to 12.** At a full retract the mark spends ~0.15 s as
+  three bare dots and reads as the icon having blinked out. At 8 it never stops
+  being a list of three lines, and the motion still plainly reads as the lines
+  being redrawn. Her word is "gently", and that is the difference.
+* **The stagger is doing more work than the depth.** It is what makes the mark
+  read as an INDEX being written line by line — which is what the mark is
+  (three filaments leaving three nodes, symbols.js) — rather than as the whole
+  glyph pulsing. The nodes themselves do not move: they are lit points, lit
+  before the gesture and after it, and flickering them would be the second
+  gesture on one control that the popover pass had to go and unpick.
+
+Traced per filament at 0.06× (times at 1×):
+
+| t | filament 1 / 2 / 3 stroke-dashoffset |
+|---|---|
+| 50 ms | 2.43 / 0 / 0 — only the first has begun |
+| 139 ms | 6.98 / 3.85 / 0 |
+| 221 ms | **7.98** / 7.27 / 4.69 — the first is at its deepest and turning |
+| 324 ms | 5.14 / 7.77 / **7.75** — the first is writing back while the third is still withdrawing |
+| 481 ms | 0.74 / 1.98 / 4.36 |
+| **627 ms** | 0 / 0 / 0 — rested, drawn, class dropped on `animationend` |
+
+**ONCE PER ARRIVAL, not on a loop.** A repeat every second is a control asking
+for attention rather than answering for itself, and the whole of the brief is
+"gently". The class is dropped on `animationend` so a fresh hover is what
+re-arms it.
+
+### 4. What guards it
+
+**`NUDGE_MS` = 1000, armed on the button's own `pointerenter` and cleared on
+`pointerleave`, on a press, and on touch.** The rail's own 120 ms dwell exists
+precisely because a pointer crossing the flank must not open anything; a
+gesture that answers "is this clickable?" is a reply to a question only a
+pointer that has STOPPED can be asking, so the threshold is an order of
+magnitude past the crossing time rather than a tuned value.
+
+**Proof it does not fire on transit**, measured: a **12-step sweep straight
+down across the button** and away, then 1.4 s of waiting — class list still
+bare `j-rail-menu`. And a crossing that **pauses for 600 ms** — under the
+threshold — then leaves: nothing at 600 ms, nothing after. Focus alone does not
+fire it either (measured with the button focused: no class), which is correct —
+a focus ring is already a visible affordance and does not need a second one.
+
+### Gate results
+
+| Gate | Result |
+|---|---|
+| References | **PASS.** `python3 tools/capture.py --check`: **10/10 at MAE 0.00/255, 0.0 % px > 8** — all ten frozen frames byte-identical. No golden modified. |
+| Frame sequence | 16 crops of the shipped gesture at 0.06× plus four-row candidate sheets at 0.05× (B1/B2/B4/B5 and B4/B6/B7/B8), all at 1440×900. |
+| Does not fire on transit | **PASS.** 12-step sweep across + 1.4 s: no class. 600 ms pause then leave: no class, before or after. Focus alone: no class. |
+| Accessible name | **PASS.** CDP Accessibility domain: `role: button`, `name: "Menu"`, from `attribute`. It had **none** before this pass — the span was carrying it. |
+| Menu press (`48b7795`) | **PASS.** `menuOpen` after `mousePressed` alone at 1440 and 375, and stress-tested **45 presses** at dwells 0.30 / 1.30 / 2.20 s (i.e. before, during and after the gesture): **15/15, 15/15** and 14/15. The single miss is the first press of a fresh session and it reproduces **identically on `b079f84` with the same iteration index** — measured by stashing the change and re-running. Pre-existing and harness-side; see residuals. |
+| Keyboard | **PASS.** Tab order unchanged: `skip → logo → Discord → mission → inspire → connect → owned → final → Menu → hotspots`. The button reports "Menu", takes a visible `:focus-visible` ring (2 px solid `rgb(240,200,119)` at 3 px offset), opens the moon via `:has(:focus-visible)`, Enter opens the panel with focus on Close, Escape closes and returns focus to the button. |
+| Reduced motion | **PASS** (emulated). The timer is never armed, so a 1.6 s dwell leaves the class list bare; the glyph rests **drawn** (`stroke-dashoffset: 0px` on all three filaments); and with the class forced on by hand `animation-name` computes to **`none`**. The stylesheet holds its own end up rather than relying on the JS guard. |
+| Touch | **PASS, unchanged.** `hover: false`, `pointer: coarse` at 375×812: the column, 52×44 tiles, arming tap brings **all six** names at opacity 1.00 including "Menu", and the gesture cannot arm (`pointerType === 'touch'` returns). |
+| Hit model (`6903c4a`) | **PASS.** Closed at 1440×900, **270/270** sampled points resolve to `CANVAS`; the only elements ≥ 12 % of the viewport with live pointer-events are `HTML`, `BODY`, the stage `div` and the `CANVAS`. The poke fires — 3 pointer events reached the canvas from one click. |
+| Console | **CLEAN — 0 entries** at 1440×900 and 375×812 (error/warn/uncaught/rejection trapped from document start): a real wheel ride out and back, all five chapters by `flyTo` with the moon opened and the arc traversed at each, a 1.3 s dwell on the button at every chapter so the gesture ran five times per viewport, the menu opened by a real press and closed by Escape. The ride returns to **p = 0**, chapter `mission`, hash empty, hero pose exact (−2.25, 2.25, 10.4). |
+| Both tiers | Tier 3 untouched. Drift guard: **5 problems — the same 5 that were already there** (4 `chapters.owned.claims.*`, 1 `chapters.final.heading`) across 145 strings and 11 symbols. **No sixth.** |
+
+### Residuals
+
+* **The hub's pill still exists in the DOM and on the column.** That is
+  deliberate (the touch tier's list of six), but it does mean one element now
+  has two very different jobs across the two geometries. It is only safe
+  because the button carries its own `aria-label`; without that the span would
+  be load-bearing in one tier and hidden in the other, which is precisely the
+  trap this pass walked into.
+* **The gesture fires once per arrival and never repeats.** Someone who rests
+  on the button for ten seconds is told once. Judged right for "gently"; worth
+  revisiting only if she reports the affordance being missed.
+* **A first press in a fresh session is occasionally not seen.** 1 in 45 here,
+  always the first iteration, and **reproduced identically on `b079f84`** with
+  the change stashed. It is not this pass's, and the evidence points at the
+  harness (CDP's first `mousePressed` after a navigate racing the compositor's
+  hit-test data) rather than at the page — but it is written down rather than
+  waved away, because `48b7795` is exactly the guarantee it would falsify.
+* **The five pre-existing Tier-3 drift errors** and the `mission`-pose reveal
+  latch (no navigator at all at `p = 0`) stand, unchanged.
