@@ -3969,3 +3969,338 @@ comes back, the reason it comes back is the bug.
   fires where nothing is drawn and does not play again on arrival. That is the
   shipped behaviour too — p 0 → 0.97 crossed the old trigger on the click frame,
   equally unseen — so it is carried forward, not introduced.
+
+---
+
+# 2026-08-14 (later) — the stagger was never a tempo: five passes scaled a shape that needed flattening
+
+**Status: SHIPPED (all ten goldens byte-identical — nothing built moved).**
+Hannah, verbatim: *"and could you make the INDIVIDUAL MUSHROOMS AT THE END
+LIGHT UP SLOWER AND MORE STAGGERED"*. Her capitals. Two knobs, and her
+standing image for the scene is a town whose houses light one at a time —
+"like a town of Christmas trees".
+
+This is the FIFTH pacing request on this arrival (requests 40, 48, 61, 77,
+107). The previous four are `6282080`, `a51aab8` / `22ce47d`, the 2026-08-10
+brief item 3, and the 2026-08-10 fifth pass. Every one of them delivered a
+real factor and she came back.
+
+## 1. Why four passes bought a factor and she asked again
+
+Every previous pass scaled the whole arrival **uniformly**: `route.js`
+`scrollVh` 3.5 → 6 → 12 → 17.6, `clones.js` `DRAW_W` 0.16 → 0.28 → 0.32 →
+0.50. A uniform scale cannot touch a SHAPE, and the shape is the complaint.
+
+The 24-rung ladder is an **accelerando**. Its gaps, in pull:
+
+    0.0867 0.0805 0.0768 0.0712 0.0673 0.0610 0.0584 0.0404 0.0363 0.0308
+    0.0250 0.0193 0.0254 0.0173 0.0228 0.0177 0.0206 0.0137 0.0217 0.0151
+    0.0146 0.0161 0.0158
+
+A **6.3x tightening** from head to tail, authored deliberately ("opens sparse
+— each one its own event — and tightens as the town fills toward the rest",
+2026-08-09 §13) and with the camera's own acceleration into the rest on top
+of it. Measured on this tree, forward, real wheel path at 2400 px/s: the
+first eleven rungs arrive **96–179 ms** apart and the last thirteen arrive
+**21–45 ms** apart. Multiply the tempo by anything you like and the far half
+of the town still lights at once, because the ratio survives every scale
+factor applied to it. That is what "more staggered" has been asking for
+through five requests: not a slower tempo, a flatter one.
+
+**And the pull axis is exhausted.** The ladder occupies [0.0966, 0.9511] of a
+band whose top is pinned by `PULL_MAX` = 1.12 — the Final rest's own camera x
+— and whose bottom is the surface pierce. Evening the gaps out in pull would
+have to take road from the head, which is the half that already reads
+correctly, and she explicitly must not be given one knob at the other's
+expense. So the stagger cannot be bought in pull. It has to be bought in
+**time**.
+
+## 2. The binding constraint had already moved tonight — twice
+
+Both answers are yes, and neither was true this morning.
+
+**(a) `a0a89f8` armed the limiter on commit glides.** Before it, the reveal's
+speed limit ran on camera BLENDS only. A gestured arrival — the way a visitor
+actually reaches this chapter — was not rate-limited at all, so
+`BLEND_REVEAL_RATE` and `LADDER_GAP_S` could not touch it and the only levers
+left were `scrollVh` and `DRAW_W`. That is exactly what the previous four
+passes reached for, correctly, at the time. Measured on this tree, forward,
+the limiter now binds over the last nine rungs (lag −0.008 → −0.072) and the
+commit glide covers 104–140 of the arrival's ~190 frames. **The two knobs
+denominated in seconds now reach the real arrival for the first time.**
+
+**(b) `TRANSIT_S` took `scrollVh` out of the arrival's pacing.** With
+`'owned>final': 1.5` declaring the leg's cruise in SECONDS, a glided transit
+crosses the leg in a declared time regardless of how much road the chapter
+owns. `scrollVh` — the lever that bought passes 2, 3 and 4 their factors —
+now buys wall-clock only while the visitor is actively dragging. Raising it
+again would have bought this request almost nothing, at +vh of page, on a leg
+Hannah has separately asked to travel FASTER.
+
+So this pass does not divide the old constants. It adds the one thing the
+ladder never had: a clock of its own on the arriving side.
+
+## 3. What changed — three constants and a direction test
+
+**An arrival and a departure do not have the same room, and conflating them
+is what pinned `LADDER_GAP_S` at 0.040.**
+
+- A **retire on the lap has a hard window**. `RETIRE_SPAN` 0.62 of the wrap's
+  4.00 s is 2.48 s, and it is measured: past ~2.4 s of the lap the colony has
+  left frame. `retireScale` already fits the retire into it and `bedSpread`
+  arms off the same `BAND_S` comparison. Measured, the down-wrap spends
+  2.33 s of that 2.48 s — **the retire is at its ceiling already**.
+- An **arrival has no window at all**. Its lights may finish after the camera
+  lands; the shipped forward arrival already does exactly that, and the
+  convergence tail is the machinery that lets them. A town you walk into may
+  go on lighting while you stand still. A town you are leaving may not go on
+  darkening after it is out of sight.
+
+So `journey/chapters/final/index.js` gains an **arrival clock**, and the
+departure keeps the shipped one:
+
+| | departure (shipped) | arrival (new) | |
+|---|---|---|---|
+| seconds per rung — **the stagger** | `LADDER_GAP_S` 0.040 | `ARRIVE_GAP_S` **0.130** | **x3.25** |
+| pull/s ceiling — **the kindle** (a body's `drawW` / this IS its light-up) | `BLEND_REVEAL_RATE` 1.0 | `ARRIVE_RATE` **0.42** | **x2.38** |
+| degenerate-gap guard | `RATE_MIN` 0.30 | `ARRIVE_RATE_MIN` **0.09** | (does not bind: the tightest gap needs 0.105) |
+
+`blendRate` and `arriveRate` are now two bindings of one `paceRate(u, gapS,
+rateMax, rateMin)` — one implementation of the law, two calibrations of it —
+and `slewPull` picks between them on the sign of its own step:
+
+```js
+const d = target - held;
+const step = (d > 0 ? arriveRate(held) : blendRate(held) * retireScale) * dt;
+```
+
+Read off the step rather than off a flag, so there is no second piece of state
+to fall out of sync with `retiring` — which is the `ba09f49` failure exactly —
+and it cannot chatter, because within `step` of the target `d` is consumed
+whole either way.
+
+**Four things are unchanged by construction, not by measurement:**
+
+- **`BAND_S` still integrates `blendRate` and nothing else**, so `retireScale`
+  and `bedSpread` arm on exactly the arithmetic they armed on this morning.
+  `9865e86`, `027f969` and `ba09f49` are untouched because the flag they
+  depend on is untouched.
+- **Every departure keeps the shipped clock** — the lap out, the rail click
+  out, and a gestured reverse leg. Measured below: reverse is bit-unchanged.
+- **The limiter stays one-sided.** `ARRIVE_GAP_S > LADDER_GAP_S` and
+  `ARRIVE_RATE < BLEND_REVEAL_RATE` make `arriveRate(u) <= blendRate(u)` at
+  every u, and `slewPull`'s ceiling `max(pure, held)` is untouched. It can
+  only ever SLOW a light-up, never speed one, and never create light the lens
+  has not earned.
+- **No threshold, `drawW`, camera key, p-value or route allocation moves.**
+  Off a blend and off a glide the driver is `pullOf(camera.x)` bit for bit, so
+  the scrub, `?p=`, `?pose=` and the frozen `?capture=` path are the shipped
+  ones by assignment. All ten goldens are byte-identical.
+
+`clones.js` exports `drawWOf` and `index.js` publishes a **`pacing` getter**
+(the ladder with each rung's threshold and its own window). Five passes have
+each re-derived those two numbers by copying constants out of two files into
+a probe, which is a second copy of the math in the place doc 18 §13.4 names
+as a standing hazard. It is a getter over a build product: no per-frame cost,
+no state, nothing rendered reads it.
+
+## 4. Measured — before and after, real wheel path
+
+Method: `tools/fieldpace.js` (new, QA-only, nothing imports it). In-page
+rAF-timed `WheelEvent`s ~18.6 ms apart, released at 72% of the leg so the
+**commit glide** runs and lands on the anchor — a measurement that stops at
+the release measures the wrong half of the gesture. The ladder is read from
+`journey.chapters.final.pacing`, never restated. Every instant is
+**interpolated on the traced driver**, never binned by frame (revealgates G3
+records the ladder being reported a whole rung out by a binned version).
+`journey.wrap()` / `flyTo()` / `scrollTo()` are used for PLACEMENT only, and
+the placement is asserted settled on p, the scroll model and the driver's
+convergence before anything is recorded. 1440x900, 27–31 fps,
+**`simRatio` 0.993–0.999** (frames past the 50 ms `dt` clamp are counted and
+reported, so the seconds below are wall-clock).
+
+**Per-body kindle** — the time one body's own light takes to go 0 → 1
+(`s = (pullRaw − reveal)/drawW` over 0..1), seconds, min / median / max:
+
+| path | before | after | median |
+|---|---|---|---|
+| forward Owned→Final | 0.330 / 0.466 / 1.099 | **0.847 / 1.276 / 1.541** | **x2.74** |
+| wrap UP (arrive) | 0.257 / 0.439 / 0.575 | **0.830 / 1.314 / 1.543** | **x2.99** |
+| reverse Final→Owned | 1.063 / 1.517 / 2.694 | 1.063 / 1.513 / 2.695 | x1.00 |
+| wrap DOWN (retire) | 0.494 / 0.795 / 0.890 | 0.467 / 0.790 / 0.889 | x0.99 |
+
+**Inter-body start gap** — one body starting to the next starting, seconds,
+min / median / max:
+
+| path | before | after | median |
+|---|---|---|---|
+| forward | 0.024 / 0.048 / 0.179 | **0.072 / 0.106 / 0.192** | **x2.24** |
+| wrap UP | 0.013 / 0.031 / 0.071 | **0.039 / 0.102 / 0.258** | **x3.29** |
+| reverse | 0.078 / 0.114 / 0.179 | 0.079 / 0.116 / 0.179 | x1.02 |
+| wrap DOWN | 0.044 / 0.068 / 0.149 | 0.040 / 0.065 / 0.151 | x0.96 |
+
+**Total sweep**, 5%..95% of `PULL_MAX` (the number
+`26-scroll-loop.md` §37.5 reports) and first-start → last-finish:
+
+| path | before | after |
+|---|---|---|
+| forward | 2.237 / 2.350 s | **3.608 / 3.651 s** |
+| wrap UP | 1.176 / 1.234 | **3.376 / 3.486** |
+| reverse | 4.117 / 5.489 | 4.117 / 5.506 |
+| wrap DOWN | 2.264 / 2.327 | 2.247 / 2.310 |
+
+**The two knobs, separately, as authored and as measured.** They are separable
+because they are two constants: `ARRIVE_GAP_S` sets seconds per rung and
+`ARRIVE_RATE` sets `drawW`/rate.
+
+- **Knob A — the individual light-up: authored x2.38** (rate ceiling 1.0 →
+  0.42). Measured x2.74 (forward median), x2.99 (wrap-up median); the fastest
+  body in the field went 0.330 → 0.847 s, **x2.57**.
+- **Knob B — the stagger: authored x3.25** (0.040 → 0.130 s per rung).
+  Measured x2.24 (forward median), x3.29 (wrap-up median); in the collapsed
+  tail, where the complaint lives, the last thirteen rungs went 21–45 ms →
+  71–136 ms, **x3.0 to x4.3**.
+
+**Neither was traded for the other.** No path's minimum kindle and no path's
+minimum gap fell; every departure number is inside gesture variance of its
+own before.
+
+**Order: unchanged, and that was the point.** 24 rungs, thresholds 0.0966 →
+0.9511, tier sequence 2,1,1,0 — four ring members opening alone, one at a
+time, before a single field body — then field and ring interleaved, closing
+on three ring members. Reverse and the down-wrap walk the same ladder
+top-down. Not one threshold moved; the staging Hannah asked for in request 48
+was always authored and only needed time, and now it has three times as much
+of it.
+
+## 5. The accelerando, flattened
+
+The forward ladder's head-to-tail gap ratio:
+
+| | head gap | tail gap | ratio |
+|---|---|---|---|
+| before | 0.176 s | 0.032 s | **5.5 : 1** |
+| after | 0.178 s | 0.136 s | **1.3 : 1** |
+
+The head did not move. The tail came up to meet it. That is `ARRIVE_GAP_S`
+being a **floor and not a schedule**: a gap already wider than it is left
+exactly as it is by the `ARRIVE_RATE` ceiling, so only the collapsed end is
+stretched.
+
+## 6. The frame strip — bodies lighting individually, not in clumps
+
+A **fixed 200 ms shutter** (not a fixed number of shutters: a strip whose
+shutter scales with the sweep reports the same picture for a slow arrival and
+a fast one, by construction). A/B on the same tree with only the two constants
+differing. `started` is bodies beginning their light-up inside that shutter;
+`taking` is bodies inside the committed part of the curve (clones.js §14 puts
+the visible lighting at `s` 0.58–0.88).
+
+    BEFORE  ms      0  200  400  600  800 1000 1200 1400 1600 1800 2000 2200 2400
+            started 0    1    1    1    1    2    1    2    4    6    4    0    0
+            taking  0    0    0    0    2    2    2    3    3    3    5    1    0
+            13 shutters, sweep 2350 ms, MAX 6 BODIES STARTING IN ONE SHUTTER
+
+    AFTER   ms      0  200  400  600  800 1000 1200 1400 1600 1800 2000 2200 2400 2600 2800 3000 3200 3400 3600 3800
+            started 0    1    1    1    1    1    2    2    2    3    1    2    2    2    1    1    0    0    0    0
+            taking  0    0    0    0    1    3    2    2    2    2    2    3    3    4    4    6    7    5    0    0
+            20 shutters, sweep 3670 ms, MAX 3 BODIES STARTING IN ONE SHUTTER
+
+The **4 / 6 / 4 burst is gone** and the profile is flat at 1–3 across the
+whole arrival. `taking` rises to 7 at the end because each take is now 2.7x
+longer in wall-clock and they therefore overlap more — the honest reading is
+that the number of *events per shutter* halved, which is what reads as
+clumping, while each event got longer, which is what she asked for second.
+
+## 7. The mirror
+
+Gap medians, seconds, across the four paths:
+
+| | forward | reverse | wrap UP | wrap DOWN | spread |
+|---|---|---|---|---|---|
+| before | 0.048 | 0.114 | 0.031 | 0.068 | **3.7x** |
+| after | 0.106 | 0.116 | 0.102 | 0.065 | **1.8x** |
+
+The three paths with no window now read within 14% of each other. Before this
+pass, arriving was 2.4–3.7x quicker than leaving — request 107's complaint,
+still half-true. The wrap DOWN is the one outlier and it is pinned by
+physics, not by taste: the colony leaves frame 2.4 s into the lap, so a
+retire spread past that goes out where nobody can see it. It is documented
+here rather than fixed, because fixing it means a longer lap.
+
+## 8. Gates
+
+- **`python3 tools/capture.py --check`: PASS, worst MAE 0.00/255, all ten**,
+  both sizes. **No capture file is in the diff** — the frozen path never
+  reaches the limiter (`blending` and `gliding` are both false and
+  `shownPull` is assigned `pure` outright), so this is unchanged by
+  construction. `SKIP_SCENE_CHECK` was never set.
+- **`tools/revealgates.js`: G1 bit-exact PASS** (`|uPull − pullOf(camera.x)|`
+  max **0.00e+0** over 167 frames of three scrubs) — ordinary scrolling is
+  not rate-limited. **G2 FAIL 8.83e-1: pre-existing.** Verified in the same
+  session by stashing this change and re-running on clean `f83ad1f`, which
+  reads **9.15e-1** (and G1 bit-exact there too). G3 SKIPs for want of a
+  trusted-wheel driver; `fieldpace.js` covers that ground with the rAF-timed
+  in-page stream the brief prescribes.
+- **Rail click into Final does not outrun the camera.** Placed at Mission
+  (p 0), real pointer sequence on the Epilogue rail item, 191 frames traced:
+  landed p 0.97, **max(shown − pure) = 0 exactly**, max invariant breach
+  `shown > max(pure, held)` = **0**, and **0 frames lit while the camera-pure
+  driver was still 0**. The repeat bug class (`a8d4518`, `d1ecc23`,
+  `a3ba9fd`, `783729b`, `046e024`) cannot reach this: nothing here reads `p`.
+- **Console: info-only** over a 1610-frame gestured ride 0 → 1 → forward wrap
+  → back-wrap → 0. 0 warnings, 0 errors, **0 non-finite** camera components
+  or progress values.
+- **Compositions** checked at 1440x900 and 375x812; the Final rest frame is
+  the shipped frame at both (every body past `s` = 1, which the golden gate
+  proves byte-for-byte).
+- **`prefers-reduced-motion`**: honoured by not touching it. This chapter has
+  no reduced-motion branch and this pass adds no animation — it lowers a rate
+  ceiling on machine-driven moves. The site's handling (`rail.js`, `lens.js`,
+  `ui.js`) is not in the diff.
+
+## 9. Why this should be the last pass on the machine-paced arrival
+
+Because it is the first one that changed the right thing. Four passes moved
+the tempo and this one moved the **shape**, and the shape was the complaint:
+the ladder's 5.5:1 head-to-tail collapse is now 1.3:1, the burst of six
+simultaneous arrivals is a flat one-to-three, and both of her knobs moved
+together (x2.4–3.0 kindle, x2.2–4.3 stagger) with neither bought from the
+other. The two constants are now denominated in the units of her sentence —
+seconds per body, seconds between bodies — so a sixth request, if it comes,
+is a one-line edit against a measured table rather than another search for a
+lever.
+
+## 10. Residuals
+
+- **375x812 keeps a ~200 ms tail burst, and this pass slightly enlarges its
+  membership.** Measured, 4 runs, reproducible (not variance): mobile kindle
+  median 0.596 → 0.716 s (x1.20), kindle min 0.220 → 0.452 (**x2.05**), gap
+  median 0.062 → 0.085 (x1.37), sweep 1.92 → 2.50 s. But the last rungs still
+  arrive 19–33 ms apart, and because the head stretched while that tail did
+  not, the fixed-shutter clump count went **5 → 8**. The burst window itself
+  is the same length before and after (~0.20 s); it simply now contains eight
+  rungs instead of six. Diagnosis: the limiter is armed by `scroll.gliding`,
+  and on the shorter page more of the tail is crossed while the gesture is
+  still live, where the limiter is off **by design** — arming it on
+  `resolving` instead is the exact change `final/index.js` records being
+  caught by G1 for rate-limiting ordinary brisk scrolling. So this is a real,
+  separately-diagnosed item and **not** covered by the claim in §9, which is
+  about the machine-paced arrival. The next pass on it should start here and
+  not from these constants.
+- **The down-wrap cannot be slowed** while the lap is 4.00 s: `RETIRE_SPAN` x
+  4.00 = 2.48 s and the measured sweep is 2.31 s. If Hannah ever reads the
+  lap's extinguish as quick next to the new arrival, the lever is the wrap's
+  own duration in `journey.js`, not these constants — and request 72 is live
+  on that path, so it should not be moved speculatively.
+- **A longer arrival means a longer `lagging` window**, so there is more
+  wall-clock in which a visitor who starts scrubbing again is riding the
+  convergence tail rather than the camera. The invariant makes that safe (it
+  can only hold light back, never invent it) and G6 convergence is unchanged,
+  but it is a larger window than it was and worth knowing.
+- **The half-reveal-width lookup shift uses `REVEAL_W`/2 for every rung**,
+  which is right for the batch shader but not for the clones, whose window is
+  their own `drawW` (0.50 at the head down to 0.16). The first ladder
+  interval is therefore paced partly by `RATE_FAST`. It shows as the wrap-up's
+  39 ms opening gap against its own 102 ms median. Pre-existing, untouched,
+  and only visible on the one rung.
