@@ -2567,3 +2567,310 @@ it and why the gate exists.
 * `BLEND_REVEAL_RATE` is duplicated as a comment in the gate file's G3 note. It
   is not read from the module (the module exports nothing new on purpose), so a
   future change to the constant should re-derive §4's three lines.
+
+# §20 — the figure is not the tissue
+## 2026-08-14
+
+> "In the final scene there's a mushroom in the right foreground where you can
+> really make out the details — the squiggles at the top. But those squiggles
+> match the main mushroom's. The same patterns. Could you change it so they're
+> completely different? Right now it looks lazy. And same with some of the other
+> mushrooms as well — they have the same patterns on them. Could you randomise
+> all the other mushrooms — the triangles on them, the squiggles, the things that
+> basically make the cap feel unique? They should all be unique per mushroom, so
+> people can't look at the others and see the same design on each of them,
+> because that just feels lazy." — Hannah
+
+She is right, she has named one layer precisely, and the body she names is
+**member 4** — the nearest clone at 6.2 units, whose cap is 368 px wide at the
+rest and the only one in the frame you can read a stroke on.
+
+## 20.1 Which layer she is actually pointing at
+
+organism.js §5 draws three things on the dome. A fine 26x110 crumpled
+**lattice** (11,946 verts); a sparse bright **overlay network** — 190 nodes,
+each wired to its two nearest neighbours, 760 verts; and a **point cloud** —
+those same 190 nodes as dots plus 420 speckles, 610 verts.
+
+Only the network makes a *figure*. Its two-nearest rule closes triangles and
+strings long zigzags, and at 2x on the rest frame those chevrons are the most
+legible marks on any near cap: a distinctive arrow near the centre-left, a
+triangle mid-dome, one long squiggle running to the rim. Cropped side by side,
+the hero and member 4 wear **the same three motifs in the same order round the
+dome**. The lattice is a regular grid and reads as tissue; the network reads as
+a drawing, and a drawing repeated twenty-five times is the thing the eye
+catches. "The triangles on them, the squiggles" is that layer, named exactly.
+
+## 20.2 Why six passes of variation could not have fixed it
+
+`66d1bed` (§10) gives every body its own `crumpLobes` 3-9, `crumpPhase`,
+`crumpAmp`, its own rim harmonic, its own proportions — and it is a
+**deformation of shared vertices**, evaluated in the vertex shader. That is the
+first approach the brief lists, already shipped, already at full strength.
+
+A deformation moves where the figure sits. It cannot change which node is wired
+to which. Warp a chevron and it is a warped chevron: same node count, same
+adjacency, same triangles, in the same order round the dome. The measurement
+says so without appeal to the eye — on the shipped tree, with every one of §10's
+axes live, the pairwise symmetric **chamfer distance between the node sets of
+all 25 bodies is 0.0000 for all 300 pairs**, because there is one buffer and
+twenty-five references to it.
+
+So pushing the existing axes harder was never addressing this, and §10.2's own
+ceiling says why it could not be made to: those harmonics are deliberately
+low-frequency (3-9 lobes) because a high harmonic on a cap this size reads as
+noise on the mesh rather than as the shape of the mushroom. There is no setting
+of a smooth low-order warp that redraws a graph.
+
+## 20.3 The split: figure and tissue
+
+New module, `journey/chapters/final/capfigure.js`. It draws one line through the
+cap's layers:
+
+| | what its identity is | what re-patterns it | so |
+|---|---|---|---|
+| **figure** — overlay net, node dots | its **adjacency** | nothing a warp can do | rebuilt per body, real geometry |
+| **tissue** — fine lattice, beads, gills, rim, stem mesh and fibres, shells | *what surface am I flowing over* | a deformation, genuinely | stays **shared** |
+
+The split is also where the money is, measured off the live buffers: one body's
+fine lattice is **606.6 KB**, its overlay net **20.8 KB**, its cap points
+**23.8 KB**. Re-figuring the two small layers for all 24 clones costs
+**+1,071 KB** on the scene's 8,708 KB. Re-building the lattice too would cost
+**+14.6 MB (+167%)** to re-pattern the layer that reads as texture — and would
+spend exactly the bargain `9493fcc` bought, since the tissue being literally the
+hero's buffers is what makes these read as the right creature at all.
+
+The beads are a third case worth recording, because they look like a candidate
+and are not one: `beadM()` plants them *on lattice vertices*
+(`if (rand() < 0.3)` inside the grid loop), so re-seeding beads without
+re-seeding the lattice would float 1,200 bright dots off the mesh they belong
+to. They are tissue by construction, not by budget.
+
+## 20.4 Why a re-seeded figure is still one species
+
+This is the part that had to be argued rather than hoped, since `d0ff2b3` made
+the silhouette the invariant and `9493fcc` made the tissue the identity.
+
+A rebuilt figure is **not a second parameterisation of the cap**. It is the
+hero's own construction, run again: the nodes are sampled from `capTopPt` —
+anatomy.js's byte-faithful mirror of organism.js §4 — so every node lands on the
+hero's own dome, under the hero's own rim line and margin droop; the wiring rule
+is the hero's, so node degree, triangle statistics and stroke-length
+distribution are the hero's; the colours are `heat()` over the hero's own
+brightness draws; and the counts are **read off the hero's live buffers**
+(`analyseHeroFigure` recovers 190 and 420 rather than being told them), so a
+future re-densification of organism's cap carries the clones with it.
+
+And `makeRng` in anatomy.js is bit-for-bit organism.js's own LCG — same
+multiplier 1664525, same increment 1013904223, same 2^32. **The hero's figure IS
+a draw from this generator.** So the hero's cap and every clone's cap are
+samples from one distribution under one construction, differing in seed alone,
+which is what "the same kind of thing" means when the thing is generated.
+
+Measured across the 25 bodies, the family statistics hold and the drawings do
+not: node count 190 and edge count 380 on every body *exactly*; mean edge length
+0.202-0.218 (an 8% band); p95 edge 0.378-0.412; node radius max 2.547-2.642;
+apex y 4.362-4.383. One species; twenty-five drawings.
+
+## 20.5 The consistency law, inherited
+
+§10.4's law — every layer of a body sees the same map — has a direct analogue
+here, and it is load-bearing. The net and the node dots are built from **one
+node array** in organism.js: `pp.push(n.x, n.y, n.z)` walks the very nodes the
+net was wired from. Rebuild one without the other and a body wears 190 bright
+dots floating off the network they are supposed to be the vertices of.
+
+So `analyseHeroFigure()` refuses to identify one without the other, and it does
+it by **construction signature rather than by child index** (that child list is
+not ours — `chapters/inspire` parents its own group onto `mushroom`). Three
+signatures, each a fact about how §5 builds the pair:
+
+1. the net is the only `LineSegments` under `mushroom` on a stock material;
+2. its buffer is groups of four vertices `[n, m1, n, m2]`, so vertex 4k and 4k+2
+   are **bitwise equal for every k** — which both proves the two-nearest rule and
+   hands back the node count;
+3. the point cloud is the `Points` layer whose first 190 positions are bitwise
+   those same node coordinates — the shared-node fact the law depends on,
+   asserted rather than assumed.
+
+One guard for the whole set, taken before the first body is built, exactly as
+`probeVary()` does: if any signature fails, `figSpec` is null and every clone
+shares the hero's cap buffers as before. A field where some caps are re-figured
+and some are not is not a degraded outcome, it is the original complaint with
+extra steps.
+
+Two channels are **copied** from the source buffers rather than redrawn, both
+because they are not part of the figure. `aDraw` is the per-vertex entry-draw
+order (`drawAttr`, i/(n-1)); the vertex count and build order are identical, so
+the hero's own array is exactly right, and copying it makes the swap *provably*
+invisible to §8.7's draw-on rather than merely equivalent to it. `pdist` is the
+network-distance channel, all zero on a cap layer. `pseed` **is** redrawn — at
+the frozen clock it sets each mote's resting brightness
+(`0.85 + 0.15 sin(pseed*7)`), so it is part of how an individual's dome sparkles.
+
+## 20.6 What was rejected
+
+- **A per-body seeded domain warp in the vertex shader.** The cheapest option
+  and the brief's first suggestion — and it is already shipped as `66d1bed`,
+  at full strength, which is why the frame Hannah is looking at has it. §20.2's
+  chamfer of 0.0000 over 300 pairs is the measurement that it does not touch
+  the figure. A warp moves a drawing; it cannot redraw it.
+- **Pushing the crumple/rim lobe counts and phases further.** Same reason, and
+  §10.2's low-frequency ceiling bounds it independently.
+- **Rebuilding the fine lattice per clone.** Rejected on the numbers: +14.6 MB
+  for the layer that reads as texture, against +1.07 MB for the layer that reads
+  as a figure — and it is the one thing `9493fcc` is not willing to spend.
+- **Re-figuring only the nearest N.** Measured first: at the rest, **22 of the
+  24 clone caps present at least 40 px of width** on screen, so a cutoff that
+  actually saved anything would have to fall inside the band that reads. And
+  §3 spent two screenshot judgements moving a construction seam out of a depth
+  band where it showed; introducing a *pattern* seam in the same field would
+  re-open exactly that. At +12% for all of them, N = 24 was the cheapest
+  correct answer, not a generous one.
+
+## 20.7 The far band was already right, and now the rule is one rule
+
+`species.js` builds each T4 body's overlay net from its own `makeRng(o.seed)`
+stream, and `ring.js` seeds every member `0x5eed + m.i * 7919` — distinct by
+arithmetic across all 72. So the **far parametric bodies have always had their
+own figures**; it was only the near clones, the ones the eye can resolve, that
+shared one. That is the shape of the complaint, and it is why it survived six
+passes: the half of the field that varied was the half nobody could see.
+
+The rule is now uniform across the whole field: **every body's cap figure is its
+own draw from the hero's construction**, whether it is drawn as a clone or
+emitted into the batch.
+
+## 20.8 Budget
+
+Measured at the Final rest, 1440x900 dpr 1, `?capture=final`.
+
+| | before | after | delta |
+|---|---|---|---|
+| draw calls | 427 | **427** | 0 |
+| line segments | 453,785 | **453,785** | 0 |
+| points | 85,488 | **85,488** | 0 |
+| triangles | 278,181 | **278,181** | 0 |
+| drawables | 471 | **471** | 0 |
+| shader programs | 92 | **92** | 0 |
+| geometries | 77 | **125** | +48 |
+| vertex memory | 8,708.4 KB | **9,779.4 KB** | +1,071 KB (+12.3%) |
+
+**Nothing the frame submits changed** — same materials, same counts, same
+programs; only which buffer two layers per body bind. The +48 geometries are two
+per clone and the +1,071 KB is their contents.
+
+Frame time was measured **interleaved in one session against itself**, swapping
+all 48 bindings between the clones' own figures and the hero's shared pair
+between rounds (§5's method, §10.6's discipline). This machine was loaded
+throughout — load average 10.2, medians 26-31 ms — so only the minimum is
+robust, since contention can only add:
+
+    12 interleaved rounds       best min    median min
+      own figures (shipped)      1.775 ms     28.68 ms
+      shared control             8.150 ms     28.58 ms
+
+The shipped arm reached a **lower floor than the control**, which is the
+measurement telling you the difference is below what this machine can resolve.
+Submitted counts were asserted identical in both arms of the same session. The
+honest statement is: the cost is 48 buffer objects and 1.07 MB, and no
+measurable frame time.
+
+## 20.9 How difference was measured
+
+Not by eye and not by pixels. Each body's figure is reduced to its **node set in
+the body-local frame** — which is the right comparison, because it asks "is the
+drawing on the dome the same drawing?" independently of where the body stands,
+its scale, its facing, and (deliberately) its §10 deformation, since the
+deformation is applied downstream in the shader. If the figures were identical
+pre-deform, the complaint stands however different the shapes are; that is
+precisely the situation this pass began in.
+
+Two statistics over all 25 bodies (hero + 24 clones):
+
+| | before (`787e599`) | after |
+|---|---|---|
+| distinct net geometries | **1** | **25** |
+| distinct buffer content hashes (FNV-1a over the whole position array) | **1** | **25** |
+| pairs with an identical figure | **300 of 300** | **0 of 300** |
+| pairwise symmetric chamfer, min / mean / max | **0.0000 / 0.0000 / 0.0000** | **0.1507 / 0.1712 / 0.1890** |
+| hero vs each clone | **0.0000** ×24 | 0.169 - 0.182 |
+
+No pair is near zero and none is an outlier: the band is tight because 300
+independent draws from one distribution are all about equally far apart, which
+is the same fact as §20.4's species coherence seen from the other side.
+
+## 20.10 Gates
+
+- **Six bodies plus the hero, cropped side by side** at the rest and scaled to a
+  common width (`panel-before.png` / `panel-after.png`): hero, **member 4 (the
+  right foreground one she named)**, 5, 6, 0, 7, 14. Before, the hero's three
+  motifs are findable on every one of them. After, no two caps share a figure and
+  none matches the hero's — and **the hero's tile is identical between the two
+  panels**, which is the untouched-hero claim in the same image as the change.
+- **The hero is untouched, three ways.** Structurally: all **30** hero drawables
+  compared attribute-by-attribute across the two trees — **0 buffers
+  byte-changed, 0 material/vertex-count moves, 0 carrying a `uVar*` uniform or a
+  patched shader source**, layer set identical. In pixels: with the field group
+  hidden and the temporal history flushed inside one JS task, the hero's cap box
+  is **bit-identical** (hash `89519fd3`, mean 48.022115, both trees). And in the
+  goldens: `mission` / `inspire` / `connect` / `owned` at **0.00/255**.
+- **Clone accounting**: clone drawables binding a hero buffer **374 → 326
+  (−48)**, on their own buffer **17 → 65 (+48)** — two per body, twenty-four
+  bodies, and not one more.
+- **Arrival ladder**, frozen `?capture=<p>` rungs: p 0.845 → 24 undrawn / 0
+  shells / maxOp 0.044-0.070 (the ember whisper — dark at arm); 0.860 → 23
+  undrawn; 0.880 → 20 undrawn, 2 shells; 0.905 → 4 drawn, 25 shells; 0.940 → 16
+  drawn, 0 undrawn, 82 shells; **0.970 (rest) → 24/24 fully arrived, uProg parked
+  at 2 on every body, 96 shells**. Compared against the shipped tree at the two
+  mid-arrival rungs: **worst `uProg` delta 0.0, worst `uOpacity` delta 0.0**,
+  same camera x, same shell counts, same 103 canopy seats.
+- **Poke**, dispatched as a real pointer press/release at the near body's
+  projected aim (1233, 572): `uPulseC` **(−9.263, 1.405, 3.129)** — a point on
+  that body's own cap, and §8.8's own recorded hit point to three decimals.
+  Run on both trees, the answer is **identical**, `uPulseP` (0.544, 3.86, 1.2)
+  either way.
+- **Retract**: after the reverse ride every body is back to `uProg` **0.296**
+  (`DRAW_LO`, fully un-inked), **0 non-finite values**.
+- **Console clean over a full ride including both wraps.** Trap installed
+  through `Page.addScriptToEvaluateOnNewDocument`, i.e. before the app loads.
+  Cold load → 120 forward wheel notches to p 1.0 → a poke at the rest → wrap
+  down → wrap up → 140 reverse notches. **2,179 frames: 0 errors, 0 warnings,
+  0 rejections.** The shipped tree's control run is the same.
+- **`python3 tools/capture.py --check`: PASS, worst MAE 0.00/255** across all ten
+  frozen references after the re-shoot. The control matters here and was taken
+  first: run on the **unmodified** tree at the head of this pass, all ten were
+  **0.00/255**, so this machine had no frozen-frame noise today and any movement
+  is ours. Before the re-shoot, `final@1440x900` measured **0.72** and
+  `final@430x932` **0.35** — the intended change, and the only two that moved.
+  `final@*` re-shot in this commit with manifest provenance; the rest pose is
+  bit-identical (camera −14.72 / 2.73 / 2.700, fov 45.5, p 0.97) and only the
+  caps' figures differ.
+
+## 20.11 Residuals
+
+- **The lattice is still shared, by choice.** Two bodies seen at 2x share the
+  same fine grid flowing over differently-crumpled domes. It reads as tissue and
+  §20.3 records the price of changing that (+14.6 MB). If a future pass ever
+  wants it, the cheap half-step is to re-seed only the lattice's *stroke
+  selection* — the three `rand()` gates at 0.4 / 0.85 / 0.25 that decide which
+  edges exist — which changes the mesh's texture at zero geometry cost only if
+  the buffer is rebuilt anyway, so it is not actually cheaper. There is no free
+  version of this one.
+- **`capfigure.js` owns geometry, which nothing in this chapter did before.**
+  `clones.disposeFigures()` exists and `ring.js`'s `dispose()` calls it, but
+  nothing in the journey calls `dispose()` — chapters are built once for the
+  page's life. The cleanup is there so the exception carries its own, not
+  because a path reaches it today.
+- **The figure build is O(N²) per body** — 190 nodes, ~36k distance tests, 24
+  bodies, under a million operations once at chapter construction. The hero pays
+  the identical cost at page boot. It has never been near the budget, but anyone
+  raising organism's node count should know the clones now pay it 24 times.
+- **A probe-path curiosity, investigated and benign.** With the field group
+  hidden — a path no golden shoots — the two trees differ by a whole-frame mean
+  luminance of **1.2e-5**, confined to a few ground cells in the lower right, at
+  1 LSB. Reproducible (the same tree gives the same hash twice), so not noise:
+  it is additive-blend draw-order tiebreaks moving when 48 objects are added to
+  the scene, and float addition is not associative. It does not appear in any
+  shipped path — the four non-Final goldens are 0.00/255 and the hero's own cap
+  box is bit-identical.

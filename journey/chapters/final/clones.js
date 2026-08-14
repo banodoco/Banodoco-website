@@ -14,9 +14,18 @@
 //
 // SHARING RULES (the whole file is these rules)
 // ---------------------------------------------
-//   geometry   ALWAYS shared. A clone adds zero vertex memory; the caps,
-//              gills, rim, stem lattice and bead clouds are the hero's own
-//              buffers re-drawn under another matrix.
+//   geometry   shared, with ONE named exception (capfigure.js, 2026-08-14).
+//              The tissue — fine cap lattice, gills, rim, stem lattice and
+//              fibres, bead clouds, occlusion shells — is ALWAYS the hero's
+//              own buffers re-drawn under another matrix, which is the whole
+//              bargain: 24 bodies for one body's tissue. The two FIGURE
+//              layers are not tissue and are rebuilt per body: the cap's
+//              sparse overlay network and the node dots that are its
+//              vertices. A network's identity is its adjacency, and no
+//              deformation of shared vertices can change which node wires to
+//              which — so twenty-five caps wore one drawing. See
+//              capfigure.js for the split, the cost (+1.05 MB on 8.7) and
+//              the argument that a re-seeded figure is still one species.
 //   materials  cloned SHALLOWLY per clone, in three classes:
 //              - opaque occlusion shells + stem core (MeshBasicMaterial):
 //                shared outright — they carry no per-clone state. They are
@@ -67,6 +76,7 @@
 import * as THREE from 'three';
 import { heroPulse, PULL_MAX } from './world.js';
 import { VARY_GLSL, varyUniforms, IDENTITY } from './variation.js';
+import { analyseHeroFigure, buildCapFigure } from './capfigure.js';
 
 /* ---- NO POINTER GLOW. THE PARITY FACT (2026-08-05, Hannah: "when I hover
    over the mushrooms at the bottom they still light up") -------------------
@@ -768,11 +778,42 @@ export function createClones(sceneApi) {
   }
   const varyOk = probeVary();
 
+  /* ---- THE CAP FIGURE (capfigure.js) --------------------------------
+     ONE guard for the whole set, taken before the first body is built —
+     probeVary's discipline, for the same reason. `analyseHeroFigure`
+     identifies the overlay net and its node dots by construction signature
+     and refuses to name one without the other; the count check inside
+     `buildCapFigure` is a property of the SPEC rather than of a seed, so
+     taking it once here with a throwaway seed makes "every body or no body"
+     structural instead of a coincidence of 24 bodies each reaching the same
+     conclusion. If either refuses, `figSpec` is null and every clone shares
+     the hero's cap buffers exactly as it did before this module existed —
+     a field where some caps are re-figured and some are not is not a
+     degraded outcome, it is the original complaint with extra steps. */
+  let figSpec = analyseHeroFigure(sceneApi.groups.mushroom);
+  if (figSpec && !buildCapFigure(figSpec, 1)) figSpec = null;
+  let figures = 0;
+  const ownedGeos = [];
+
+  /** This body's geometry for one source layer: its OWN cap figure for the
+   *  two figure layers, the hero's shared buffer for everything else. The
+   *  identity test is against the SOURCE geometry object, so it cannot be
+   *  fooled by child order or by a foreign layer that happens to look alike. */
+  function geoFor(g, own) {
+    if (!own.fig) return g;
+    if (g === figSpec.netGeo) return own.fig.net;
+    if (g === figSpec.ptsGeo) return own.fig.pts;
+    return g;
+  }
+
   /** Walk one root of the hero's graph and build this clone's copy of it.
-   *  EVERY layer is kept — the beads, the speckles and the overlay net are
-   *  the tissue this whole step-back is about, and the measured budget
-   *  (18-one-species.md's draw-call table) says they fit. The only thing
-   *  that is ever dropped is a layer this file cannot copy FAITHFULLY: a
+   *  EVERY layer is kept — the beads and the speckles are the tissue this
+   *  whole step-back is about, and the measured budget (18-one-species.md's
+   *  draw-call table) says they fit. Two of them are DRAWN FROM the hero
+   *  rather than shared with it (geoFor, above): the overlay net and its node
+   *  dots are a figure, not tissue, and a figure that repeats is what §20 was
+   *  asked to fix. The only thing that is ever dropped is a layer this file
+   *  cannot copy FAITHFULLY: a
    *  point shader whose size expression has drifted out from under the
    *  uScl patch (see clonePointsMat). Better a missing layer than a body
    *  wearing full-size sprites. */
@@ -797,14 +838,14 @@ export function createClones(sceneApi) {
       if (!pm) return null;
       mats.push({ u: pm.uniforms.uOpacity, base: m.uniforms.uOpacity.value });
       ownedMats++;
-      c = new THREE.Points(o.geometry, pm);
+      c = new THREE.Points(geoFor(o.geometry, own), pm);
       if (count) drawsPerBody++;
     } else if (o.isLineSegments || o.isLine) {
       if (m.isShaderMaterial) {
         const dm = cloneDenseMat(m, fogU, own, fr, varyOk);
         mats.push({ u: dm.uniforms.uOpacity, base: m.uniforms.uOpacity.value });
         ownedMats++;
-        c = new THREE.LineSegments(o.geometry, dm);
+        c = new THREE.LineSegments(geoFor(o.geometry, own), dm);
       } else {
         const bm = new THREE.LineBasicMaterial({
           vertexColors: true, blending: THREE.AdditiveBlending,
@@ -818,7 +859,7 @@ export function createClones(sceneApi) {
         }
         mats.push({ m: bm, base: m.opacity });
         ownedMats++;
-        c = new THREE.LineSegments(o.geometry, bm);
+        c = new THREE.LineSegments(geoFor(o.geometry, own), bm);
       }
       if (count) drawsPerBody++;
     } else if (o.isMesh) {
@@ -858,7 +899,7 @@ export function createClones(sceneApi) {
    *  memberParams — the same seeded stream the species build drew from, so
    *  a member keeps its shipped facing, lean and size. */
   function add({ x, z, gy, s, azFacing, leanDir, leanAmt,
-                 arc, reveal, boost, tw0, phase, amp, lum, vary }) {
+                 arc, reveal, boost, tw0, phase, amp, lum, vary, seed }) {
     const mats = [];
     // two shell groups, because they arrive at two different moments of the
     // draw (STEM_SHELL_LO..HI / CAP_SHELL_LO..HI). The split is free: cloneNode is
@@ -887,6 +928,14 @@ export function createClones(sceneApi) {
       shellMats: new Map(),
       ...varyUniforms(varyOk ? (vary || IDENTITY) : IDENTITY),
     };
+    // THIS BODY'S CAP FIGURE (capfigure.js). The one thing a clone owns
+    // geometry for: the sparse overlay network on the dome and the node dots
+    // that are its vertices, rebuilt from this body's own seed on the hero's
+    // own construction. Built BEFORE the walk, because cloneNode's geoFor()
+    // reads it. A body with no seed (or a set whose guard refused) shares the
+    // hero's buffers, and geoFor() is then the identity.
+    own.fig = (figSpec && seed !== undefined) ? buildCapFigure(figSpec, seed) : null;
+    if (own.fig) { figures++; ownedGeos.push(own.fig.net, own.fig.pts); }
     const F0 = rootFrame();
     const stemC = cloneNode(stemSrc, mats, stemShells, s, count, true, own, F0);
     const capBendC = cloneNode(capBendSrc, mats, capShells, s, count, true, own, F0);
@@ -1103,6 +1152,15 @@ export function createClones(sceneApi) {
 
   return {
     group, add, update, cool, poke, ringing,
+    /** The only buffers this module owns (two per body — see capfigure.js).
+     *  Everything else it draws is the hero's and is not ours to free. The
+     *  chapter is built once for the page's life so this is never reached
+     *  today; it exists so that the exception to "geometry is shared" carries
+     *  its own cleanup rather than leaving the next teardown to discover it. */
+    disposeFigures() {
+      for (const g of ownedGeos) g.dispose();
+      ownedGeos.length = 0;
+    },
     /** Whether per-body variation survived the guard. ring.js reads it so the
      *  species band varies exactly when the clone band does — one field, one
      *  answer, never a near half that varies and a far half that does not. */
@@ -1111,6 +1169,11 @@ export function createClones(sceneApi) {
       return {
         bodies: list.length, ownedMats, shellMeshes, shellMats,
         drawsPerBody, dropped: dropped.length, foreign, varyOk,
+        // the cap-figure exception: how many bodies own one, and the two
+        // counts the rebuild was sized from (read off the hero, not authored)
+        figures, figOk: !!figSpec,
+        figNodes: figSpec ? figSpec.nodes : 0,
+        figSpeckles: figSpec ? figSpec.speckles : 0,
       };
     },
   };
