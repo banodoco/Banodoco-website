@@ -2634,3 +2634,230 @@ the colony is unchanged and the colony did not regrow.
 the in-file reasoning, then was cut off by a network error before writing this
 section or committing. The orchestrator verified the gate independently and
 landed it.
+
+---
+
+## 2026-08-14 — the fourth pass moves the furniture, not the camera
+
+Hannah, first: *"Can you also push the mushroom down on the Connect the
+ecosystem page? It's still too high in the page, there's too much dead space at
+the bottom."* Then, immediately, superseding it: *"Actually on this one instead,
+we should try pushing the ADOS one down a bunch and the Discord one down a bit,
+and then visually understand if it feels visually balanced."*
+
+**Files:** `journey/chapters/connect/tendrils.js`, two entries in `HUBS`. No
+camera key, no rest pose, no copy-block change, no shader change.
+
+### Why the correction to her own instruction is the right one
+
+The three passes above have already established what the camera costs here. At
+fixed eye, radius and fov the aim is a pure rotation, so a degree of pitch moves
+the mushroom and the ground's far edge by the same angle — a measured **~1.27 px
+of void under the copy per 1 px the subject comes down**. `f31a0a9` spent it and
+clipped the cap; `330d3a1` gave it back and re-opened the band; the third pass
+broke the trade by adding two levers that were not the aim, and spent what was
+left. There is no fourth degree of pitch available that does not re-open a
+complaint she has already made twice.
+
+The hubs have no such exchange rate. They are furniture standing on ground that
+is already in frame, and the empty part of the frame is the part with no
+furniture in it. Moving them into it costs nothing anywhere else — which is why
+her second instruction is better than her first, and why this pass does exactly
+what it says and touches neither the camera nor the mushroom.
+
+### Authored in the frame, not in world space
+
+A world-space translation is the wrong tool. Walking a hub along the
+ground-projected camera axis moves it down-screen **and** hard to the right, and
+for Discord that runs it off the right edge before it has come down 60 px:
+measured, at −1.0 units Discord sits at screen x 1339 of 1440 with a 100 px chip
+still to its right.
+
+So each target was picked as a **screen position** at the 1440x900 rest and
+ray-marched back onto the terrain — cast from the lens through the target pixel,
+bisect where the ray crosses `groundY`. The solutions re-project to their targets
+exactly (checked: every solved point projects back to the requested pixel).
+
+| hub | world before | world after | screen before | screen after | Δ screen y |
+|---|---|---|---|---|---|
+| **ADOS** | (3.40, 2.60) | **(4.61, 3.06)** | (248, 701) | **(254, 820)** | **+119 px** |
+| **Discord** | (7.80, −1.80) | **(7.86, −0.58)** | (1221, 641) | **(1220, 720)** | **+79 px** |
+| Hivemind | (5.00, −2.60) | unchanged | (890, 538) | (890, 538) | 0 |
+
+"A bunch" and "a bit" as a **1.5:1 ratio in screen pixels**, which is what the
+two phrases have to mean standing side by side. Candidates at 90/50, 119/79 and
+149/109 px were compared on the frame: the first leaves a visible strip of
+unoccupied ground under ADOS; the third pushes ADOS's halo hard against the
+bottom edge and tightens the portrait hivemind/discord chip pair from 4 px to
+3 px. The middle one ships.
+
+Note what the screen-space authoring produced in world terms, because it was not
+aimed for and it matters below: ADOS's move is largely **radial** (r 4.28 →
+5.53) while Discord's is very nearly a **pure azimuth rotation** at constant
+radius (r 8.01 → 7.89).
+
+### Is it balanced — the verdict she asked for
+
+Yes, and the change is larger than the numbers suggest. Before, all three hubs
+sat inside a band across the middle third and the bottom ~22% of the frame was
+lit ground with nothing standing on it — a floor with no furniture, which is
+exactly what "dead space at the bottom" names. After, the three occupy the lower
+two-thirds as a spread triangle: Hivemind holds the centre at y 538, Discord
+anchors the lower right at 720, ADOS anchors the lower left at 820. Against the
+mushroom in the upper left and the copy in the upper right, the frame's four
+quadrants now each carry weight, and the eye has somewhere to go at the bottom
+instead of running out of picture.
+
+Two judgement calls worth naming rather than burying. ADOS is now the largest
+and brightest thing in the lower frame — it moved 1.25 units closer to the lens
+as well as down — and its spoke burst bleeds off the bottom and left edges. Both
+are deliberate: the bleed reads as the network continuing past the frame rather
+than as a cropped object, and ADOS being the biggest of the three is what
+`6afd508`'s ADOS-LAST reasoning already asserts it should be ("the event itself,
+nearest the eye and the largest of the three on screen"). This pass makes the
+frame agree with the schedule.
+
+### Chip clearances, all three sizes
+
+Rectangle gap, worst pair. Nothing regresses anywhere.
+
+| | chip-chip before | after | chip-copy before | after |
+|---|---|---|---|---|
+| 1440x900 | 239.7 | **275.5** | 188.0 | 188.0 |
+| 1280x800 | 200.9 | **234.0** | 152.0 | 152.0 |
+| 375x812 | 4.0 | **4.0** | 156.0 | **158.0** |
+
+Chip-chip **improves** at both landscape sizes, because the worst pair is
+Hivemind/Discord and Discord is moving away from Hivemind down the frame.
+Chip-copy is unchanged at both landscape sizes for a structural reason: the
+nearest chip to the copy block is **Hivemind's**, and Hivemind did not move.
+The two chips that did move both moved *away* from the copy.
+
+The 4.0 px portrait Hivemind/Discord pair is **identical before and after**. It
+is the same pre-existing tightness the third pass reported at 3.8 px, it comes
+from the portrait's own per-orientation chip anchors rather than from hub
+placement, and it is the one number the 149/109 candidate made worse — which is
+part of why that candidate was rejected.
+
+Chip rects at 1440x900 for the two that moved: ADOS [237, 690, 312, 713] →
+[243, 809, 317, 832]; Discord [1210, 630, 1309, 653] → [1209, 709, 1308, 732].
+Both sit clear of the 900 px bottom edge with 68 px of margin.
+
+### The hubs still meet the ground
+
+`h.pos.y = gy(h.pos.x, h.pos.z, 0.03)` runs at build for all three, so this is a
+check that the new coordinates land on real terrain rather than an assertion:
+
+| hub | y | groundY | lift |
+|---|---|---|---|
+| ADOS | 0.0167 | −0.0133 | **0.0300** |
+| Hivemind | 0.1293 | 0.0993 | **0.0300** |
+| Discord | −0.0572 | −0.0872 | **0.0300** |
+
+Exactly the authored lift on all three. The routes are re-sampled base → hub
+with the terrain law applied to the centre-line, so they follow the new ground
+too.
+
+### Route lengths, and what they did to the schedule
+
+This is the knock-on that mattered. `maxAlong` normalises the whole lighting
+schedule and it is the longest route plus 3.2, so a hub move re-scales
+everything. Measured at build:
+
+| route | arc length before | after | |
+|---|---|---|---|
+| ADOS | 4.2891 | **5.7872** | +34.9% — the radial move |
+| Hivemind | 6.0635 | **6.0635** | bit-identical, it did not move |
+| Discord | 8.3812 | **8.2352** | −1.7% — the rotation is nearly length-neutral |
+| **maxAlong** | **11.5812** | **11.4352** | −1.26%, and still Discord-driven |
+
+Per-route reach (`uLitMax`) 1.0796 / 1.1418 / 1.3250 → **1.2239 / 1.2258 /
+1.3250**. Two of those need explaining and neither is a fault:
+
+* **Discord's is pinned at 1.3250** rather than tracking its shorter arc,
+  because the third pass's added detail runners map their along values into the
+  0.82..0.995 tail *explicitly* rather than accumulating them from world arc.
+  Discord's reach is set by those runners, not by its own geometry.
+* **Hivemind's moved although Hivemind did not.** Its reach is the max `along`
+  over every vertex *lit by* that route, which includes the rng-seeded hairline
+  fill and continuations scattered around it — and the build shares one `rnd`
+  stream, so changing an earlier route re-rolls the later scatter. Its primary
+  polyline is bit-identical (6.0635 above); only the decoration moved.
+
+**And the visible schedule barely moves at all**, which is precisely what the
+normalisation is for — `uLit` runs a clean 0..1 per route however long the route
+is, so a reach change cancels in the timing. Measured on both trees with the
+same instrument (per-route `uLit` for the front, and each hub core sprite's own
+material opacity for the dot, sampled only on frames the group is drawn):
+
+| route | depart | dot 0% | saturate | window |
+|---|---|---|---|---|
+| **Hivemind** | 0.3880 → **0.3880** | 0.4030 → **0.4030** | 0.4420 → **0.4420** | 0.0540 → 0.0540 |
+| **Discord** | 0.4255 → **0.4255** | 0.4480 → **0.4465** | 0.4870 → **0.4840** | 0.0615 → 0.0585 |
+| **ADOS** | 0.4690 → **0.4660** | 0.4810 → **0.4810** | 0.5200 → **0.5200** | 0.0510 → 0.0540 |
+
+* **The order still reads: HIVEMIND → DISCORD → ADOS**, by both departure and
+  kindle, and ADOS is still last. `6afd508` is intact.
+* **ADOS's light still visibly travels before its dot kindles — and travels
+  longer.** Depart → dot 0% goes **0.0120 → 0.0150 of p, +25%**, because the
+  radial move lengthened its run. The one property `6afd508` exists to protect
+  is strictly better after this pass, not merely preserved.
+* Every window stays within 0.006 of p of where it was, and the whole arrival
+  still spans p 0.388 → 0.520.
+
+### The paths still pre-exist quietly
+
+`f9e8317`'s law is that the network is already there, quietly, before any light
+runs — it must not appear with the light. Sampled on frozen frames between the
+camera-pure resolve (p 0.350) and the first departure:
+
+| p | group drawn | uQuiet | uLit (all routes) | hub cores |
+|---|---|---|---|---|
+| 0.3550 | **true** | 0.22 | 0 / 0 / 0 | 0 / 0 / 0 |
+| 0.3700 | **true** | 0.22 | 0 / 0 / 0 | 0 / 0 / 0 |
+| 0.3850 | **true** | 0.22 | 0 / 0 / 0 | 0 / 0 / 0 |
+| 0.4000 | true | 0.22 | 0 / **0.205** / 0 | 0 / 0 / 0 |
+
+Drawn and quiet for the whole approach, with every core dark; the first front
+appears at 0.400 and the cores are still dark then. Nothing fades in over an
+open view.
+
+### Gates
+
+* **`capture.py --check`: PASS**, worst MAE **0.00/255** across all ten after
+  the re-shoot. Before it, exactly the two intended files were in the FAIL band
+  (`connect@1440x900` 5.91/255, 14.2% px > 8; `connect@430x932` 3.13/255, 7.6%)
+  and the other eight read **0.00** — including `final@*`, re-shot in this
+  session's preceding commit and undisturbed by this one. `connect@*` re-shot
+  here with the reason in `manifest.json`; the rest pose legitimately moved.
+* **Mirror scrub, REAL INPUT PATH** — `WheelEvent`s through the page's own
+  capture listeners across the Connect leg and back, no `scrollTo`/`flyTo` in
+  the drive. Per-route `uLit` — the reveal driver, and the sole input to the
+  hub kindle — mirrors forward against reverse to **1.1e−5 … 7.7e−5** at every
+  sample. Forward `uLit` non-monotonic in **0 frames of 4,000**: no
+  self-ignition.
+* **`tools/scrollgates.js`**: E1 −3.59e−4, E2/E3 **1.0000**, R1 settles
+  0.260000, R4 overshoot **0.00e+0**, R5 loop 0.000000 / 0.970000 / end-hold
+  1.0000, R6 ride up `0.2599 0.523 0.7249 0.9699 0` down `0.97 0.7251 0.523
+  0.2601 0`, **off-anchor stops: none**.
+* **Console over a full ride**: a real-gesture lap plus all five nav jumps —
+  3,045 frames, **0 console entries**.
+
+### Residuals
+
+* **A pre-existing forward/reverse residual in the hub cores' opacity, not in
+  the reveal.** The mirror scrub reads **1.6e−2** worst on `core.*` against
+  1e−5 on `uLit`. The cause is the `amount * resolve` factor in the core's
+  opacity — a time-based ease, so at a given p it depends on how fast you got
+  there. Measured on the untouched tree at **1.4e−2**, same class, same
+  magnitude, and it **flips sign between runs** (Hivemind at p 0.42 reads
+  fwd 0.4040 / rev 0.3958 before and fwd 0.4050 / rev 0.4212 after), which is
+  the signature of a speed artifact rather than a directional latch. `hubIgnite`
+  itself is a pure function of `uLit` and mirrors with it. Untouched by this
+  pass; worth its own if anyone wants the ease to be scrub-invariant.
+* The portrait Hivemind/Discord chip pair remains at 4 px. It is a property of
+  the per-orientation chip anchors and is now the binding constraint on any
+  further downward move of Discord.
+* ADOS's halo bleeds off the bottom-left corner by design. If the copy block or
+  the rail ever grow downward on the left, that is the element they will meet
+  first.

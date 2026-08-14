@@ -151,10 +151,59 @@ const sm = (a, b, x) => smooth01((x - a) / (b - a));
 // and never run as a bundle; the hubs land at world radius 4.3 / 5.6 / 8.0 —
 // near / mid / far, exactly the narrative order (ADOS the flagship nearest the
 // base, Discord the far everyday door).
+// THE TWO NEAR HUBS COME DOWN THE FRAME (2026-08-14, Hannah): "we should try
+// pushing the ADOS one down a bunch and the Discord one down a bit, and then
+// visually understand if it feels visually balanced." This supersedes her own
+// preceding instruction to push the MUSHROOM down again; the complaint under
+// both is the same — dead space along the bottom of the Connect frame — and
+// the three passes above (f31a0a9, 330d3a1, the third pass) have established
+// that the camera cannot spend any more on it. At fixed eye, radius and fov
+// the aim is a pure rotation, so every pixel the subject comes down costs
+// ~1.27 px of void under the copy. This lever has no such exchange rate: the
+// hubs are the furniture, and moving furniture into an empty corner of the
+// room does not move anything else.
+//
+// AUTHORED IN THE FRAME, not in world space (doc §3: "the frame is the spec").
+// A world-space translation is the wrong tool here — walking a hub along the
+// ground-projected camera axis moves it down-screen AND hard to the right, and
+// for Discord that runs it off the right edge before it has come down 60 px
+// (measured: at −1.0 units it is at screen x 1339 of 1440, with a 100 px chip
+// still to its right). Instead each target was picked as a SCREEN position at
+// the 1440x900 rest and ray-marched back onto the terrain — cast from the lens
+// through the target pixel, bisect where the ray crosses groundY. The world
+// values below are that solution, and they re-project to their targets exactly.
+//
+//   ADOS      screen (248, 701) -> (254, 820)   down 119 px   world r 4.28 -> 5.53
+//   Discord   screen (1221, 641) -> (1220, 720)  down  79 px   world r 8.01 -> 7.89
+//   Hivemind  untouched
+//
+// "A bunch" and "a bit" as a 1.5:1 ratio in screen pixels, which is what the
+// two phrases have to mean side by side. Candidates at 90/50, 119/79 and
+// 149/109 px were compared on the frame: the first leaves a visible strip of
+// unoccupied ground under ADOS, the third pushes ADOS's halo hard against the
+// bottom edge and tightens the (pre-existing, already 4 px) portrait
+// hivemind/discord chip pair to 3 px. The middle one ships.
+//
+// WHAT THIS DOES TO THE ROUTES, because they are not free. The route is
+// re-sampled base -> hub, so its length changes, and `maxAlong` normalises the
+// whole lighting schedule: ADOS's run lengthens with its radius (4.28 -> 5.53)
+// and Discord's is very nearly a pure azimuth rotation at constant radius
+// (8.01 -> 7.89), which is exactly the asymmetry the screen-space authoring
+// produced and not a thing that was aimed for. The consequence is measured and
+// reported in 16-connect-ground-restage.md: the HIVEMIND -> DISCORD -> ADOS
+// order of `6afd508` still holds, ADOS is still last, and its light still
+// visibly travels before its dot kindles.
+//
+// DEPARTURE AZIMUTHS ARE DELIBERATELY NOT RE-AIMED. The 37 / -27 / -8 deg fan
+// out of the stipe base is what keeps the three primaries from leaving as a
+// bundle, and it is a property of the BASE, not of where each route ends. ADOS's
+// hub azimuth moves 3.9 deg and Discord's 8.8 deg, both small enough that the
+// existing bow constants absorb them; re-aiming `az` to chase the hubs would
+// narrow the fan for no gain.
 export const HUBS = {
-  ados:     { pos: new V3(3.40, 0, 2.60), az: 0.65, spokes: 13, coreScale: 0.46 },
+  ados:     { pos: new V3(4.61, 0, 3.06), az: 0.65, spokes: 13, coreScale: 0.46 },
   hivemind: { pos: new V3(5.00, 0, -2.60), az: -0.48, spokes: 11, coreScale: 0.40 },
-  discord:  { pos: new V3(7.80, 0, -1.80), az: -0.15, spokes: 9,  coreScale: 0.36 },
+  discord:  { pos: new V3(7.86, 0, -0.58), az: -0.15, spokes: 9,  coreScale: 0.36 },
 };
 export const HUB_IDS = ['ados', 'hivemind', 'discord'];
 
