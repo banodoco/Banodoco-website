@@ -1516,6 +1516,30 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      braces for 696e95d: a fading card is never a hit surface over a face. */
   .j-card:not(.open) { pointer-events: none; }
 
+  /* --- THE TRANSIENT TIER (2026-08-14) ---------------------------------
+     The card as a HOVER reveal rather than a committed dialog (ui.js, THE
+     CARD'S TWO TIERS). Two rules, and both of them are load-bearing:
+
+     1. `pointer-events: none`. A panel that opens because a pointer is on a
+        face must never become the thing that pointer is on — it would take
+        the hover off the chip that is holding it open, the chip would go
+        cold, the panel would close, the pointer would land back on the face,
+        and the pair would oscillate at frame rate. It is also what lets a
+        pointer travel STRAIGHT from one contributor to the next through the
+        space a card happens to occupy. (The popover needs the opposite —
+        POP_HIDE_MS exists so a pointer can walk onto it and reach its link —
+        because a popover HAS a link. This panel has no controls at all while
+        it is transient, which is rule 2.)
+     2. No controls. The ✕ closes a card the visitor opened; de-hover closes
+        this one, so the button would be an affordance for something that has
+        already happened. Hiding it is also what makes the transient panel
+        genuinely focus-free, which is what earns the right to drop
+        `role="dialog"`/`aria-modal` in ui.js: there is nothing inside to trap.
+        The grab handle goes with it — a sheet is a committed form only. */
+  .j-card.transient { pointer-events: none; }
+  .j-card.transient .j-card-x,
+  .j-card.transient .j-card-grip { display: none; }
+
   /* --- the entry, in the popover's motion family (e20f7ff / d1ecc23) ---
      Two animations, because the vessel's LIGHT and its EXTENT are separate
      statements — `j-card-lamp` brings the panel up out of the dark while

@@ -448,6 +448,21 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     return best;
   }
 
+  /** hottest()'s twin for the CARD (2026-08-14). Same tie-break — the
+   *  visitor's last action is the one they are waiting on — and the same
+   *  content-derived eligibility, read the other way round: a chip with no
+   *  `short` line has no popover to show, so what it discloses is its card.
+   *  That selects Owned's sixteen contributors and nothing else in this build,
+   *  without naming a chapter or a node id. */
+  function hottestCard() {
+    let best = null;
+    for (const h of hotspots) {
+      if (!h.hot || h.preview) continue;
+      if (!best || h.hotSeq > best.hotSeq) best = h;
+    }
+    return best;
+  }
+
   /** The popover's content for a node, or null if this node doesn't get one.
    *  `short` is the qualifier — see the eligibility note above. */
   function previewFor(nodeId) {
@@ -734,7 +749,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     const h = {
       id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false,
       radius: typeof radius === 'function' ? radius : null,
-      hitEl, hitR: 0,
+      hitEl, hitR: 0, padLast: 0,
       holdAt: null,       // world anchor held still while hot — see holdAnchor()
       holdOff: null,      // ...decaying back to zero once it goes cold
       pendX: 0,           // this frame's resolved translate-x, written post-loop
@@ -763,16 +778,42 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       // Leaving the chip re-arms a popover Escape dismissed, so the next hover
       // works again — the dismissal is of that one reveal, not of the node.
       if (!on && popDismissed === h.id) popDismissed = null;
+      // ...and the same for the card's own dismissal (2026-08-14). A close is
+      // of that one reveal, not of the person. A dismissal the POINTER is
+      // parked on is exempt — it is re-armed by a real pointer move off the
+      // chip instead; see cardDismissBtn.
+      if (!on && cardDismissed === h.id && !cardDismissBtn) cardDismissed = null;
       // The popover keys off the SAME `hot` state that lights the chip, which
       // is what buys hover / keyboard-focus / touch-armed parity for free.
       syncPop();
+      // The card now does too. Which of the two answers is decided by content
+      // (a `short` line or not), never by chapter — see hottestCard().
+      syncCard();
     };
 
     btn.addEventListener('pointerdown', (e) => { h.pointer = e.pointerType || 'mouse'; });
     btn.addEventListener('click', () => {
       const via = h.pointer;
       h.pointer = null;
-      if (via === 'touch' && armed !== h) {
+      /* THE FIRST TAP, and what it is for (amended 2026-08-14).
+
+         The arm-then-commit dance exists to give a finger the transient reveal
+         a mouse gets from hovering: tap once to SEE the popover, tap again to
+         commit it. That is worth two taps when the first one shows you
+         something you could otherwise never see.
+
+         A CARD chip's transient tier is now the hover tier (see THE CARD'S TWO
+         TIERS above), and it is switched off on a coarse pointer — so on touch
+         the first tap would arm a state with nothing to show, and the panel
+         would still cost a second tap. Worse, the committed card is a bottom
+         sheet on a phone: it fills the lower third, and on a 375-wide frame
+         where only two to four faces are placed at all, the sheet can land
+         over the very chip you would have to tap again.
+
+         So a tap on a card chip goes STRAIGHT to the commit. Popover chips
+         keep the two-tap model exactly as shipped — their first tap still
+         earns its keep. */
+      if (via === 'touch' && armed !== h && h.preview) {
         // first tap: take the focus state, show it, and stop.
         clearArmed(h);
         armed = h;
@@ -1208,6 +1249,92 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   let cardIsOpen = false;       // the TRUTH; `card.hidden` lags it by one fade
   let fadeTimer = null;
 
+  /* ==========================================================================
+     THE CARD'S TWO TIERS (2026-08-14, Hannah)
+     ==========================================================================
+     > "Remove the current separate hover state. The existing click state
+     >  should become the hover state instead… available immediately when
+     >  entering the section… On de-hover, return immediately to the default
+     >  state. Clicking should no longer be required to reveal this state."
+
+     The card was a single, MODAL tier: click to open, focus moved in and
+     TRAPPED, `claimInput(card, { modal: true })`, and journey.js's `detail`
+     state faded every chip out ("the frame belongs to the detail"). None of
+     that can survive contact with a pointer: a panel that steals focus every
+     time a mouse crosses a face is unusable, and a reveal that hides the
+     sixteen chips would hide the very chip holding it open — the hover would
+     destroy its own cause, one frame later, forever.
+
+     So the card grows exactly the two tiers the POPOVER has had since e20f7ff,
+     and for the same reasons. Nothing here is a new idea; it is the popover's
+     contract applied one vessel up.
+
+       TRANSIENT — pointer hover or keyboard focus. Driven by the same `hot`
+       state that lights the chip, through syncCard(), so hover and focus get
+       the identical reveal with nothing said about pointer type. It is NOT a
+       dialog and does not claim to be one: `role`/`aria-modal`/`aria-labelledby`
+       come off, the chip points at the panel's prose with `aria-describedby`
+       (the popover's own mechanism), the box is `pointer-events: none` so it
+       can never be the thing you are hovering, and it carries no controls at
+       all — the ✕ is hidden, because de-hover is the close. Focus does not
+       move. Input is not claimed, so the wheel still scrubs the journey
+       underneath it. `journey.detail` is NOT set, which is what keeps the
+       chips alive and the field hoverable.
+
+       PINNED — click / Enter / Space / a deep link / an inbound route. The
+       shipped modal contract, unchanged to the letter: `role="dialog"` +
+       `aria-modal="true"`, focus to the ✕, the trap, `claimInput` modal,
+       `aria-expanded` true on its chip, Escape closing and returning focus.
+
+     WHICH NODES get the card at all is decided by CONTENT, not by id — the
+     same split previewFor() already draws. A node with a `short` line
+     discloses BESIDE its chip in the popover; a node without one (Owned's
+     sixteen contributors, whose whole content is a name, a role and a blurb)
+     discloses in the card. No chapter or node id appears in this file.
+
+     WHAT DID NOT MOVE ONTO HOVER, and why:
+
+       · `journey.detail` / `modalDetail`. See above — it is self-cancelling,
+         and "the frame belongs to the detail" is a statement a transient
+         reveal has no business making.
+       · The focus trap, the focus move and the modal input claim. A trap with
+         no deliberate act behind it is a trap the visitor never asked for and
+         cannot predict; and a hover that claimed input would stop the page
+         scrolling under a resting mouse.
+       · `aria-expanded`. It tracks the COMMITTED state only (see pinnedNode
+         below), exactly as it does for the popover — a hover reveal is not a
+         disclosure the visitor has opened.
+
+     WHAT DID move onto hover, beyond the panel itself: the chapter's own
+     SELECTED treatment (notifySelect -> portraits.setSelected, the ember-rim
+     and strand response). Hannah asked for "the full current click-state
+     treatment", and that light is part of it. It is the visual half of
+     selection, so it rides the visual tier; `aria-expanded` is the semantic
+     half, so it rides the committed one. */
+  let cardPinned = false;       // committed, vs. a transient hover/focus reveal
+  let cardNodeId = null;        // whose content is rendered in the box
+  let cardDismissed = null;     // node whose card Escape (or a close) took away
+  let cardDescIds = '';         // the prose ids the chip points `aria-describedby` at
+  /* WHAT RE-ARMS A DISMISSED CARD, and why it is not simply "the chip goes
+     cold" (which is the whole of the popover's rule).
+
+     Closing a PINNED card hands the sixteen chips back on the same tick — they
+     were `visibility: hidden` while the dialog owned the frame. Chrome
+     recomputes pointer boundary events after that, so a pointer resting on the
+     face it just closed receives a synthetic `pointerleave` + `pointerenter`
+     pair with no movement behind it. Under the popover's rule that leave reads
+     as "the visitor left the chip", clears the dismissal, and the enter one
+     frame later puts the panel straight back: Escape closes a dialog and a
+     hover reveal appears in its place, which is the same "Escape that visibly
+     does nothing" popDismissed exists to prevent. The popover never meets this
+     because its chips are never hidden.
+
+     So a POINTER dismissal is re-armed by the pointer actually leaving the
+     chip — tested against live hit geometry on a real `pointermove`, which a
+     visibility change does not produce. A KEYBOARD dismissal has no pointer to
+     test and is re-armed by the chip going cold, exactly as the popover's is. */
+  let cardDismissBtn = null;    // the chip a POINTER dismissal is parked on, or null
+
   /* a11y debt #5: a polite live region. Retargeting an open card (one hotspot
      straight to the next) replaces the dialog's contents while focus is
      already inside it — no focus move, so nothing is announced and a screen
@@ -1230,7 +1357,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   // so Tab cycles inside it instead of walking out into a nav the dialog has
   // just declared inert. Shift+Tab wraps the other way.
   card.addEventListener('keydown', (e) => {
-    if (e.key !== 'Tab' || !cardIsOpen) return;
+    // Only a COMMITTED card traps. A transient reveal holds no focus and has
+    // no controls to cycle, so there is nothing here to trap and trapping it
+    // would strand a keyboard visitor inside a panel they never opened.
+    if (e.key !== 'Tab' || !cardIsOpen || !cardPinned) return;
     const items = [...card.querySelectorAll('a[href], button:not([disabled])')]
       .filter(n => n.offsetParent !== null || n === cardClose);
     if (!items.length) return;
@@ -1304,6 +1434,14 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
      because journey.js is read-only in this lane and does not pass them to
      createUI(). */
   let selectedNode = null;
+  /* The COMMITTED disclosure — a pinned popover or a pinned card — as opposed
+     to `selectedNode`, which is the node currently wearing the chapter's
+     selected LIGHT and is set by a transient hover reveal too. The two were
+     one variable until the card grew its transient tier (2026-08-14): the
+     visual selection follows the reveal, `aria-expanded` follows the commit,
+     and conflating them would have announced every passing mouse as an opened
+     disclosure. */
+  let pinnedNode = null;
 
   function chapterModuleFor(nodeId) {
     const h = hotspots.find(x => x.id === nodeId);
@@ -1327,12 +1465,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     }
   }
 
-  /** a11y debt #5: exactly the hotspot whose card is showing reports expanded.
-   *  Driven off `selectedNode`, so it is correct for every open path — click,
-   *  key, deep link, inbound route — not just the ones that pass a trigger. */
+  /** a11y debt #5: exactly the hotspot whose disclosure is COMMITTED reports
+   *  expanded. Driven off `pinnedNode`, so it is correct for every commit path
+   *  — click, key, deep link, inbound route — and stays false through a
+   *  transient hover/focus reveal, which is not a disclosure the visitor has
+   *  opened. (It read `selectedNode` until 2026-08-14, when that variable
+   *  became the visual selection and started following hover.) */
   function syncExpanded() {
     for (const h of hotspots) {
-      h.btn.setAttribute('aria-expanded', h.id === selectedNode ? 'true' : 'false');
+      h.btn.setAttribute('aria-expanded', h.id === pinnedNode ? 'true' : 'false');
     }
   }
 
@@ -1350,6 +1491,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     clearArmed();
     if (selectedNode && selectedNode !== h.id) notifySelect(selectedNode, false);
     selectedNode = h.id;
+    pinnedNode = h.id;
     notifySelect(h.id, true);
     syncExpanded();
     returnFocus = trigger || returnFocus;
@@ -1494,50 +1636,113 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     card.classList.remove('j-card-enter');
   }
 
-  function openCard(nodeId, trigger) {
+  /** Set the panel's ARIA and its controls to match the tier it is currently
+   *  showing in. One place, so the two tiers cannot disagree — and so the
+   *  downgrade path (a pinned card released while its chip is still hot, which
+   *  leaves a transient reveal behind) is the same code as a fresh reveal. */
+  function applyCardTier() {
+    card.classList.toggle('transient', !cardPinned);
+    if (cardPinned) {
+      card.setAttribute('role', 'dialog');
+      card.setAttribute('aria-modal', 'true');
+      if (cardBody.querySelector('#j-card-h')) card.setAttribute('aria-labelledby', 'j-card-h');
+    } else {
+      // A transient panel is an annotation, not a dialog, and saying otherwise
+      // would be a lie to AT — the same statement `.j-pop` makes by having no
+      // role at all and describing its chip instead.
+      card.removeAttribute('role');
+      card.removeAttribute('aria-modal');
+      card.removeAttribute('aria-labelledby');
+    }
+    // A transient card carries no controls: the ✕ is hidden by CSS (de-hover
+    // is the close), and a link — which no contributor has, but a deep-linked
+    // node without a `short` could — leaves the tab order exactly as the
+    // popover's does until the visitor commits.
+    const link = cardBody.querySelector('.j-card-link');
+    if (link) link.tabIndex = cardPinned ? 0 : -1;
+    // The chip describes itself with the panel's prose while that panel is
+    // transient — popShort's mechanism, one vessel up. Guarded by value so it
+    // can never clobber the popover's own describedby on some other chip.
+    for (const h of hotspots) {
+      const want = !cardPinned && cardIsOpen && h.id === cardNodeId && cardDescIds;
+      if (want) h.btn.setAttribute('aria-describedby', cardDescIds);
+      else if (h.btn.getAttribute('aria-describedby') === cardDescIds) h.btn.removeAttribute('aria-describedby');
+    }
+  }
+
+  /** Show the card for `nodeId` in the given tier. `openCard` (pinned) and
+   *  `revealCard` (transient) are the two doors; everything they share is
+   *  here, so a hover reveal and a click open are the same box, the same
+   *  placement, the same entry and the same content by construction. */
+  function mountCard(nodeId, { pinned, trigger }) {
     // Nodes that carry a popover are disclosed BESIDE their chip, never in the
     // card — see the POPOVER block above for why the card is not also offered.
     const ph = hotspots.find(x => x.id === nodeId && x.preview);
-    if (ph) return pinPop(ph, trigger);
+    if (ph) return pinned ? pinPop(ph, trigger) : false;
     // anything still using the card (contributor profiles) takes the frame back
-    if (popPinned) unpinPop({ restoreFocus: false });
+    if (pinned && popPinned) unpinPop({ restoreFocus: false });
     const node = CONTENT.nodes[nodeId]
       || CONTENT.contributors.find(c => c.id === nodeId);
     if (!node) return false;
-    const retarget = cardIsOpen;
+    const retarget = cardIsOpen && cardNodeId !== nodeId;
+    // A reveal is FRESH when the box is landing on a node it was not already
+    // showing, or when it was shut — showPop()'s own test, so a tier change on
+    // the same subject (hover, then click to pin) re-uses the panel in place
+    // instead of replaying the unfurl at rest.
+    const fresh = !cardIsOpen || cardNodeId !== nodeId;
     const d = node.spotlight || node.card
       // contributor rows have no card block: everyone is the anonymous ember
       // fallback until the consent pipeline lands (CO-1.4 / OW-4.4)
       || (node.role ? { title: node.name, body: [node.role, node.blurb] } : null)
       || { title: node.label, body: [node.short] };
-    cardBody.textContent = '';
-    const h = el('h3', 'j-card-h', d.title || node.label);
-    h.id = 'j-card-h';
-    cardBody.appendChild(h);
-    card.setAttribute('aria-labelledby', 'j-card-h');
-    if (d.claim) cardBody.appendChild(el('p', 'j-card-claim', d.claim + (d.claimDetail ? ' — ' + d.claimDetail : '')));
-    for (const para of (d.body || [])) cardBody.appendChild(el('p', 'j-card-p', para));
-    if (d.status) cardBody.appendChild(el('p', 'j-card-status', d.status));
-    if (d.link) {
-      const a = el('a', 'j-card-link', d.link.label);
-      a.href = d.link.href || '#';
-      cardBody.appendChild(a);
+    if (fresh) {
+      cardBody.textContent = '';
+      const h = el('h3', 'j-card-h', d.title || node.label);
+      h.id = 'j-card-h';
+      cardBody.appendChild(h);
+      // The prose, and only the prose, is what the chip points at while the
+      // panel is transient: the title duplicates the chip's own accessible
+      // name, exactly the reason `.j-pop`'s description is its short line
+      // alone. Ids are assigned here so the set is rebuilt with the content.
+      const ids = [];
+      const addProse = (cls, text) => {
+        const p = el('p', cls, text);
+        p.id = `j-card-d${ids.length}`;
+        ids.push(p.id);
+        cardBody.appendChild(p);
+      };
+      if (d.claim) addProse('j-card-claim', d.claim + (d.claimDetail ? ' — ' + d.claimDetail : ''));
+      for (const para of (d.body || [])) addProse('j-card-p', para);
+      if (d.status) addProse('j-card-status', d.status);
+      cardDescIds = ids.join(' ');
+      if (d.link) {
+        const a = el('a', 'j-card-link', d.link.label);
+        a.href = d.link.href || '#';
+        cardBody.appendChild(a);
+      }
+      cardNodeId = nodeId;
     }
     // A close that is still fading owns neither the DOM nor the input.
     if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
     // The bottom-sheet decision is taken per OPEN, from the live pointer /
     // viewport condition — the same per-interaction rule as the touch model.
-    card.classList.toggle('sheet', sheetQuery.matches);
+    // Only a PINNED card can be a sheet: the transient tier is hover-and-focus
+    // only and never reached on a coarse pointer (see cardTarget), so a sheet
+    // form for it would be an unreachable state.
+    card.classList.toggle('sheet', pinned && sheetQuery.matches);
     card.classList.remove('dragging');
-    card.style.transform = '';
-    if (cardBody.scrollTop) cardBody.scrollTop = 0;
+    if (fresh) card.style.transform = '';
+    if (fresh && cardBody.scrollTop) cardBody.scrollTop = 0;
     card.hidden = false;
     card.inert = false;
     cardIsOpen = true;
+    cardPinned = pinned;
+    cardDismissBtn = null;
     // WHOSE card this is, for placeCard(). A node with no hotspot (a deep
     // link into a chapter that is not the current one) anchors to nothing and
     // takes the flank fallback.
     cardAnchor = hotspots.find(x => x.id === nodeId) || null;
+    applyCardTier();
     // Place BEFORE the flush and before `.open`, exactly as showPop() places
     // before arming its entry: the unfurl's direction comes from `data-side`,
     // so the side has to be decided while the animation is still absent, or
@@ -1556,7 +1761,18 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // NOT for the sheet — its entry is the shipped PL-1.3 one, and an unfurl
     // with a contact filament on a panel that is anchored to the bottom edge
     // rather than to a face would be pointing at nothing.
-    if (!card.classList.contains('sheet')) runCardEntry();
+    if (fresh && !card.classList.contains('sheet')) runCardEntry();
+    // retargeting an open card (one hotspot straight to the next) must release
+    // the previous node before lighting the new one. BOTH tiers do this: the
+    // chapter's selected light is the visual half of the reveal, and Hannah
+    // asked for the full click-state treatment on hover.
+    if (selectedNode && selectedNode !== nodeId) notifySelect(selectedNode, false);
+    selectedNode = nodeId;
+    notifySelect(nodeId, true);
+    pinnedNode = pinned ? nodeId : null;
+    syncExpanded();
+    if (!pinned) return true;
+    // ---- everything below is the COMMITTED tier only ----
     // While it is open the card owns its own wheel, touch and travel keys:
     // internal scrolling works despite scroll.js's window-capture
     // preventDefault, a finger on the sheet can never scrub the journey, and
@@ -1564,12 +1780,6 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     claimInput(card, { modal: true });
     // a touch-armed hotspot has been acted on; the frame belongs to the card
     clearArmed();
-    // retargeting an open card (one hotspot straight to the next) must release
-    // the previous node before lighting the new one
-    if (selectedNode && selectedNode !== nodeId) notifySelect(selectedNode, false);
-    selectedNode = nodeId;
-    notifySelect(nodeId, true);
-    syncExpanded();
     // a retarget keeps the ORIGINAL trigger as the focus return only if the
     // new open supplied none (a deep link / hashchange); an explicit trigger
     // always wins, so Escape lands on the control the visitor last used.
@@ -1580,6 +1790,83 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // announces itself. Say what is now showing (a11y debt #5).
     if (retarget || !trigger) announce(`${d.title || node.label}. Details.`);
     return true;
+  }
+
+  /** The committed open. journey.js's only door, unchanged in signature and
+   *  in everything it promises. */
+  function openCard(nodeId, trigger) {
+    return mountCard(nodeId, { pinned: true, trigger });
+  }
+
+  /** The single place that decides what the TRANSIENT card shows —
+   *  popTarget()/syncPop() folded into one, because this tier has only one
+   *  question to ask and no deferred hide to re-ask it after.
+   *
+   *  Deliberately WITHOUT the popover's POP_HIDE_MS: that delay exists so a
+   *  pointer can cross the POP_GAP from chip to popover and reach its link,
+   *  and a transient card has no link to reach and is `pointer-events: none`.
+   *  The answer here is immediate in both directions, which is what "available
+   *  immediately… return immediately to the default state" asks for. */
+  /** Remember that THIS reveal was dismissed, and what has to happen before
+   *  the node may reveal again.
+   *
+   *  The question is "what is still holding this panel open?", and there are
+   *  exactly three answers. A POINTER on the face: park the dismissal on that
+   *  chip, re-armed by a real move off it. KEYBOARD focus on the chip: re-armed
+   *  by the chip going cold, which is the popover's rule. NEITHER — Escape on a
+   *  card that was opened by Enter and moved focus into the dialog — and then
+   *  there is nothing to suppress at all, because the reveal's own cause is
+   *  already gone; recording a dismissal there would strand the node, since the
+   *  cold transition that clears it has already been and gone.
+   *
+   *  The pointer test is GEOMETRY, not `h.hover` and not `elementFromPoint`:
+   *  while a pinned card is open its chip is `visibility: hidden`, so the hover
+   *  flag has already been dropped by a synthetic leave and the element is not
+   *  hit-testable — yet the pointer is physically still on the face and will
+   *  get a synthetic enter the moment the chips come back. `sx`/`sy` hold the
+   *  last placed position and `padLast` the last live pad radius, so the pad
+   *  the visitor is aiming at answers even while nothing is drawn there. */
+  function dismissCard() {
+    cardDismissBtn = null;
+    cardDismissed = null;
+    if (!cardNodeId) return;
+    const h = hotspots.find(x => x.id === cardNodeId);
+    if (!h) return;
+    const onIt = !!(lastPointer && h.padLast > 0
+      && Math.hypot(lastPointer.x - h.sx, lastPointer.y - h.sy) <= h.padLast);
+    if (!onIt && !h.focused) return;
+    cardDismissed = cardNodeId;
+    cardDismissBtn = onIt ? h.btn : null;
+  }
+
+  /* The pointer half of that re-arm. A `pointermove` is the one signal a
+     visibility change cannot fake, and the test is the live hit model itself —
+     `elementFromPoint`, so the chip's own hit pad decides, exactly as it does
+     for every other pointer question in this file. */
+  let lastPointer = null;
+  document.addEventListener('pointermove', (e) => {
+    lastPointer = { x: e.clientX, y: e.clientY };
+    if (!cardDismissBtn) return;
+    const at = document.elementFromPoint(e.clientX, e.clientY);
+    if (at && cardDismissBtn.contains(at)) return;
+    cardDismissBtn = null;
+    cardDismissed = null;
+    syncCard();
+  }, { passive: true });
+
+  function syncCard() {
+    // A COMMITMENT is never re-asserted, and never taken away, by a hover. The
+    // guard is not just precedence: re-running the committed mount would take
+    // focus and re-announce the dialog every time a pointer moved.
+    if (cardPinned) return;
+    // TOUCH HAS NO HOVER. On a coarse pointer or a phone-width viewport there
+    // is no transient tier at all — a tap goes straight to the committed card
+    // (the PL-1.3 bottom sheet). See the click handler in addHotspot().
+    const hot = sheetQuery.matches ? null : hottestCard();
+    // A dismissed reveal stays dismissed while its chip is still hot; leaving
+    // the chip re-arms it (refresh()).
+    if (hot && cardDismissed !== hot.id) { mountCard(hot.id, { pinned: false }); return; }
+    if (cardIsOpen) hideCard();
   }
 
   /* a11y debt #4: closeCard used to remove `.open` and set `hidden` in the
@@ -1609,6 +1896,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     popPinned = false;
     popLink.tabIndex = -1;
     if (selectedNode) { notifySelect(selectedNode, false); selectedNode = null; }
+    if (pinnedNode && popNode && pinnedNode === popNode.id) pinnedNode = null;
     syncExpanded();
     // A card opening right behind this one is about to take focus itself, so
     // handing it back to the chip first would be a visible flicker to nowhere.
@@ -1619,12 +1907,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     syncPop();
   }
 
-  function closeCard() {
-    // journey.js closes "the detail" without caring which vessel it was; this
-    // is the popover's half of that one call.
-    unpinPop();
+  /** Take the box away, in whichever tier it is showing. The VISUAL close —
+   *  it says nothing about who dismissed it or where focus should land, which
+   *  is what lets the transient tier reuse it wholesale. */
+  function hideCard() {
     if (!cardIsOpen) return;
     cardIsOpen = false;
+    cardPinned = false;
     // The entry is dropped BEFORE `.open`, so the animation is never holding
     // opacity down when the close transition needs to take it — the same
     // ordering hidePop() keeps for the popover.
@@ -1634,20 +1923,54 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     releaseInput(card);
     if (drag) { drag = null; card.classList.remove('dragging'); }
     if (selectedNode) { notifySelect(selectedNode, false); selectedNode = null; }
+    pinnedNode = null;
     syncExpanded();
-    // inert BEFORE the focus return: a fading card is out of the tab order and
-    // out of the a11y tree from the first frame of the fade.
-    card.inert = true;
-    if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
-    returnFocus = null;
+    applyCardTier();            // drops the chip's aria-describedby with it
+    cardNodeId = null;
+    cardDescIds = '';
     // Reduced motion has no fade to protect (journey/site.css drops the transition),
     // so it closes on the tick, exactly as before.
     if (reduceMotion.matches) finishClose();
     else fadeTimer = setTimeout(finishClose, CARD_FADE_MS);
   }
 
+  function closeCard() {
+    // journey.js closes "the detail" without caring which vessel it was; this
+    // is the popover's half of that one call.
+    unpinPop();
+    if (!cardIsOpen) return;
+    const wasPinned = cardPinned;
+    /* A deliberate close must not be undone by a pointer that never left the
+       face. Without this, Escape (or the ✕, or a press outside) would drop the
+       card and syncCard would put it straight back as a hover reveal on the
+       very next call — "an Escape that visibly does nothing", the exact fault
+       popDismissed was added to prevent. Cleared when the chip goes cold, so
+       moving off the face and back works again; see refresh(). */
+    dismissCard();
+    // inert BEFORE the focus return: a fading card is out of the tab order and
+    // out of the a11y tree from the first frame of the fade.
+    card.inert = true;
+    hideCard();
+    // Only a committed card ever took focus, so only a committed card has any
+    // to give back.
+    if (wasPinned) {
+      if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
+      returnFocus = null;
+    }
+  }
+
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    // A TRANSIENT card is nobody's route state, exactly as a transient popover
+    // is not: Escape takes the reveal away without unwinding journey.js's
+    // detail (there is none), and remembers not to re-show it while the chip
+    // stays hot. Leaving the chip re-arms it.
+    if (cardIsOpen && !cardPinned) {
+      e.preventDefault();
+      dismissCard();
+      hideCard();
+      return;
+    }
     if (cardIsOpen) { e.preventDefault(); onClose(); return; }
     // A PINNED popover unwinds through journey.js like the card does, so the
     // detail state stays consistent. Escape must also suppress the TRANSIENT
@@ -1955,7 +2278,38 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       // everything perfectly well.
       h.placeable = want;
       if (want) {
-        if (h.armAt === null) h.armAt = now + h.stagger * HOTSPOT_STAGGER_MS;
+        /* THE ARRIVAL STAGGER, and why a hover-only chip is not in it
+           (2026-08-14, Hannah: "no ~5-second delay before it becomes active").
+
+           The stagger is a REVEAL choreography: the chapter's labels arrive one
+           per HOTSPOT_STAGGER_MS in narrative order, so a frame does not gain
+           five pills at once. It is authored for chips that DRAW something at
+           rest — Inspire's three, Connect's three — and for those it is exactly
+           right and is untouched below.
+
+           A `labelOnHover` chip draws NOTHING at rest. The injected label-policy
+           rule is `.j-hot.label-hover > * { opacity: 0 }` — dot, label and pad
+           alike — so for Owned's sixteen faces the staggered `h.a` ramp is an
+           opacity envelope on an object with nothing visible inside it. What it
+           does have is consequences: `h.a` gates `.vis` (visibility and
+           pointer-events), the hit pad's SIZE (the second pass below skips any
+           chip at a <= 0.015), and `tabIndex`. So on this chapter the stagger
+           was choreographing nothing and delaying everything.
+
+           Measured before, nav jump into Owned at 1440x900: first chip live at
+           996 ms (the copy gate, which is the chapter's arrival and is correct),
+           LAST chip live at 3253 ms — 15 x 150 ms of stagger on top, and longer
+           on a scroll entry, which is the delay Hannah is describing. It was
+           harmless while hover only lit a node; it is the difference between
+           a live section and a dead one now that hover is the disclosure.
+
+           So the fix is not to the constant — 150 ms is right for the chips it
+           was written for — but to WHO IS IN THE QUEUE. A chip with no resting
+           mark has no arrival to stage, so it arms on the frame it becomes
+           placeable. Owned's sixteen come up together, which is also what the
+           picture already does: the sixteen FACES are drawn by the chapter's
+           own fade, all at once, and never were staggered. */
+        if (h.armAt === null) h.armAt = now + (h.labelOnHover ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
         if (dt === 0) h.a = 1;
         else if (now >= h.armAt) h.a += (1 - h.a) * Math.min(1, dt * HOTSPOT_IN_K);
         // Edge flip: the pill normally runs RIGHT of the dot, so a node near
@@ -2076,6 +2430,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         cap = Math.min(cap, Math.hypot(o.sx - h.sx, o.sy - h.sy) * 0.48);
       }
       h.hitR = Math.max(padFloor, Math.min(h.hitRaw, cap));
+      // The last LIVE pad radius, kept after the pad is torn down. dismissCard()
+      // needs to ask "is the pointer on that face?" while the chip is hidden
+      // under a pinned card, which is exactly when `hitR` has been zeroed.
+      h.padLast = h.hitR;
       h.hitEl.style.setProperty('--j-hit', `${(h.hitR * 2).toFixed(1)}px`);
     }
     for (const h of hotspots) {
@@ -2158,7 +2516,20 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // card that has run out of things to point at. anchorPoint() clamps to
     // the frame edge instead, and falls back to the flank only when the node
     // is behind the lens entirely.
-    if (cardIsOpen) placeCard();
+    //
+    // A TRANSIENT card is the exception, and for the popover's reason rather
+    // than against it (2026-08-14): it holds no focus, owns no input and is
+    // nobody's route state, so it IS an annotation, and an annotation whose
+    // subject has left the frame has nothing to annotate. A chip that goes
+    // non-`.vis` mid-hover — travel, suppression behind the copy block, a
+    // chapter change — does not reliably fire `pointerleave` on the way out,
+    // so without this the panel could outlive the face it points at.
+    if (cardIsOpen) {
+      if (!cardPinned && cardAnchor && !cardAnchor.btn.classList.contains('vis')) {
+        if (cardAnchor.hot) { cardAnchor.hover = false; cardAnchor.refresh(); }
+        else hideCard();
+      } else placeCard();
+    }
   }
 
   // An orientation change or a window resize across the 720px line while a
@@ -2167,6 +2538,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   if (typeof sheetQuery.addEventListener === 'function') {
     sheetQuery.addEventListener('change', () => {
       if (!cardIsOpen) return;
+      // A transient card has no sheet form to re-form INTO — the tier is
+      // switched off on a coarse pointer / narrow viewport — so crossing the
+      // line simply takes the reveal away. The next hover on the wider side
+      // brings it back.
+      if (!cardPinned) { if (sheetQuery.matches) hideCard(); return; }
       card.classList.toggle('sheet', sheetQuery.matches);
       // The anchored form writes its placement as an INLINE transform, which
       // outranks `.j-card.sheet { transform: none }`. Re-forming into a sheet
@@ -2188,6 +2564,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     /** QA: the chapter whose copy is mid-entry, or null. */
     get arrivingChapter() { return arrive ? arrive.id : null; },
     get cardOpen() { return cardIsOpen; },
+    /** QA: is that card COMMITTED (click / key / route), or a transient
+     *  hover-and-focus reveal? — the card's half of `popPinned`. */
+    get cardPinned() { return cardPinned; },
+    /** QA: whose card the box is currently showing, or null. */
+    get cardNode() { return cardIsOpen ? cardNodeId : null; },
     /** QA: is the card currently in its bottom-sheet form? */
     get cardIsSheet() { return card.classList.contains('sheet'); },
     /** QA: the touch-armed (first-tap) hotspot id, or null. */
