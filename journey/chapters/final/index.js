@@ -773,12 +773,24 @@ export function createFinal(sceneApi) {
       : 1 - (1 - amount) * (1 - rise);   // amount OR rise
     // THE BED'S OWN FADE (§31). Read off `shownPull` — last frame's value, the
     // same one `retireEff` above is read from and for the same reason: this
-    // block runs before the visibility gate, and the gate has to see it. The
-    // spread survives the convergence tail (`lagging`) so the hand-back at the
-    // landing is a no-op: there the driver has reached the destination pull and
-    // the smoothstep is already the value `eff` is about to take.
+    // block runs before the visibility gate, and the gate has to see it.
+    //
+    // THE SPREAD BELONGS TO THE BLEND AND ENDS WITH IT (§38). It used to also
+    // run through `lagging`, to carry the blend's own convergence tail. That
+    // was true of `lagging` when it was written and stopped being true at
+    // `a0a89f8`, which armed the limiter — and therefore `lagging` — off a
+    // COMMIT GLIDE as well. `lagging` no longer means "this blend has not
+    // converged"; it means "the driver is behind the camera", which an ordinary
+    // gestured leg now causes. With `bedSpread` latched by an earlier wrap that
+    // put the wrap's spread on a SCRUB: measured on the real wheel path, a
+    // gestured Owned -> Final leg after one wrap drew the ground at bed 0.0614
+    // against eff 1.0000 — worst |bed - eff| 0.9386 over 140 drawn frames.
+    // `bedSpread` is now cleared with the blend, so the condition is the blend
+    // and nothing else, and the tail hands back to `eff` — which is what the
+    // landing is for, and costs nothing because the lag at a wrap's landing is
+    // 0.0000 in both directions (G6).
     let bed = eff;
-    if (bedSpread && (blending || lagging) && shownPull !== null) {
+    if (bedSpread && blending && shownPull !== null) {
       const b = Math.max(0, Math.min(1, shownPull / PULL_MAX));
       bed = b * b * (3 - 2 * b);
     }
@@ -1057,7 +1069,9 @@ export function createFinal(sceneApi) {
     setGliding(on) { gliding = !!on; },
     setBlending(on, dstCamX, durS) {
       blending = !!on;
-      if (!blending) { retiring = false; retireScale = 1; retireEff = 1; return; }
+      if (!blending) {
+        retiring = false; retireScale = 1; retireEff = 1; bedSpread = false; return;
+      }
       if (typeof dstCamX === 'number') blendPull = pullOf(dstCamX);
       /* A DEPARTURE IS A MOVE WHOSE DESTINATION IS DARKER THAN THIS FRAME, and
          it is the only kind that needs the move's length: an arrival is
@@ -1071,9 +1085,9 @@ export function createFinal(sceneApi) {
       /* THE BED'S SPREAD IS ARMED BY THE MOVE'S LENGTH AND NOTHING ELSE (§31)
          — the same "has it room" arithmetic the retire uses, and deliberately
          NOT gated on `retiring`, because the bed steps in both directions.
-         Not cleared on the `false` edge above: the convergence tail after a
-         landing must keep the pacing it was armed with, and the next blend
-         re-answers the question here. */
+         Cleared with the blend on the `false` edge above (§38): a latched
+         `bedSpread` outlived its blend and, once `a0a89f8` gave `lagging` a
+         second armer, put the wrap's spread on an ordinary gestured leg. */
       bedSpread = typeof durS === 'number' && durS > 0
         && RETIRE_SPAN * durS > BAND_S;
       if (retiring && typeof durS === 'number' && durS > 0) {

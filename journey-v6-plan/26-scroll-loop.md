@@ -1705,3 +1705,68 @@ directions from one change.
 - The declared transit is the CRUISE; the felt transition is cruise + tail. If
   Hannah asks for a specific number of seconds end to end, the tail has to come
   out of the declaration or out of the brake.
+
+---
+
+# 2026-08-14 — the wrap's spread stopped following the visitor around
+
+**Requested:** found while re-measuring the sky residual (§36) on top of
+`a0a89f8`. **Files:** `journey/chapters/final/index.js`. No route file, no
+camera key, no p-value, no ladder rung.
+
+## 38. Two correct commits, one wrong interaction
+
+`9865e86` gave the bed a spread armed by `bedSpread`, and deliberately did NOT
+clear it on the blend's `false` edge. The reasoning was written down:
+
+> *Not cleared on the `false` edge above: the convergence tail after a landing
+> must keep the pacing it was armed with, and the next blend re-answers the
+> question here.*
+
+That reasoning depended on what `lagging` meant — "this blend has not converged
+yet" — and `lagging` had exactly one armer, the blend. **`a0a89f8` gave it a
+second.** To decouple the Owned→Final transit speed from the field's kindle it
+armed the same limiter on a COMMIT GLIDE (`scroll.gliding`), which is right, and
+that branch also sets `lagging`. From that commit onward `lagging` means "the
+driver is behind the camera" — something an ordinary gestured leg now causes
+every time.
+
+So `bedSpread && (blending || lagging)` became true on a **scrub**. Neither
+commit is wrong on its own; the latched flag is wrong the moment the other flag
+it leans on acquires a second meaning.
+
+### 38.1 Measured, before
+
+Real in-page rAF-timed `WheelEvent`s, one gesture per leg, **no nav jump
+anywhere** — a nav jump calls `setBlending` and re-answers `bedSpread`, which
+hides the fault. From the Final rest: flick down (the wrap, which latches
+`bedSpread`), then four gestured legs Mission → Inspire → Connect → Owned →
+Final. `|bed − eff|` on every presented frame the chapter is drawn on:
+
+| leg | drawn frames | gliding frames | worst `\|bed − eff\|` |
+|---|---|---|---|
+| 0 — the wrap itself | 62 | 0 | 0.9739 *(the intended spread)* |
+| 1–3 — chapter off screen | 0 | 143 / 199 / 94 | 0.0000 |
+| **4 — Owned → Final, gestured** | **140** | 103 | **0.9386** |
+
+On that last leg, at `p 0.8724` / camera x −9.78, the epilogue's ground drew at
+**`bed` 0.0614 against `eff` 1.0000** — a near-black floor under a fully
+composed chapter, on an ordinary scroll, for the rest of the session after a
+single wrap. It was live on `a0a89f8`.
+
+## 38.2 The cure
+
+The spread belongs to the blend and ends with it: `bedSpread = false` on the
+`false` edge, and the condition is `bedSpread && blending` — the blend and
+nothing else. The convergence tail hands back to `eff`, which is what a landing
+is for, and it costs nothing because the lag at a wrap's landing is **0.0000 in
+both directions** (G6, measured again here).
+
+After, same sequence, same input: **leg 4 worst `|bed − eff|` 0.0000 over 139
+drawn frames**, with the wrap's own spread intact at 0.9764.
+
+**The lesson is narrower than "don't latch flags".** It is that a flag whose
+condition reads *another* module's flag has taken a dependency on that flag's
+MEANING, not just its value — and meanings are not covered by any gate here. A
+condition scoped to the thing that armed it (`blending`) cannot acquire a second
+armer behind its back.
