@@ -39,16 +39,130 @@ export const CONTENT = {
       // Locked verbatim — 13-content-ops.md locked copy table, "Mission H1" / "Mission sub".
       // Also the do-not-touch DOM copy in 06-mission-preservation.md.
       heading: 'We’re working to help the open-source AI art ecosystem thrive.',
-      sub: 'Banodoco builds tools, spaces, and shared infrastructure for the open-source AI art ecosystem.',
+      // LOCK OVERRIDE — Hannah, 2026-08-14. The HEADING above is untouched and
+      // is still the locked string; the SUB below is not.
+      //
+      // Direction, transcribed from voice: the hero description "should come
+      // down to TWO lines — it is three now and that looks awkward", with a
+      // sketch — "Banodoco builds tools, spaces, and initiatives for the
+      // open-source AI art ecosystem" — and an explicit invitation to find a
+      // better phrasing.
+      //
+      // PROVENANCE, kept deliberately rather than deleted. The previous sub,
+      // locked verbatim by 13-content-ops.md's "Mission sub" row (and named as
+      // do-not-touch DOM copy in 06-mission-preservation.md), was:
+      //
+      //     'Banodoco builds tools, spaces, and shared infrastructure for the
+      //      open-source AI art ecosystem.'
+      //
+      // Hannah owns this copy and overrode that lock knowingly.
+      //
+      // TWO CHANGES, and only one of them is hers.
+      //
+      // 1. "shared infrastructure" -> "initiatives" is hers, and it is better
+      //    than a synonym swap: the site has three chapters, and "tools,
+      //    spaces, and initiatives" names them — Inspire's initiatives,
+      //    Connect's spaces, the tools throughout. "shared infrastructure"
+      //    named nothing on the page.
+      //
+      // 2. "for the open-source AI art ecosystem" -> "for open-source AI art"
+      //    is the two-line promise, and it is drafted rather than dictated.
+      //    Her sketch renders at 2 / 2 / **3** lines (1440x900 / 1280x800 /
+      //    375x812) against a 24rem (384px) measure — the desktop ask met, the
+      //    phone unchanged at the three she called awkward. Dropping four words
+      //    takes the natural line 635.5px -> 520.2px and renders **2 / 2 / 2**:
+      //    two lines at every size, with no font step-down and no fallback to
+      //    explain. COPY GAVE WAY; THE TYPE SCALE DID NOT — the principle the
+      //    Final heading set on 2026-08-07 and the Final sub followed on
+      //    2026-08-11, and the first time on this site that it has bought the
+      //    promise at ALL THREE sizes rather than desktop-only.
+      //
+      //    The four words were also the weakest on the page. The H1 directly
+      //    above this line ENDS with "open-source AI art ecosystem thrive." —
+      //    so the sub was repeating its neighbour's closing phrase verbatim,
+      //    one line down. "ecosystem" is still the site's word: it survives in
+      //    that H1, in the Owned sub and in the Final sub.
+      //
+      // This string is mirrored in the Tier-1 DOM (`index.html`, the hero's own
+      // `<p class="sub">` — Mission's copy is the hero block, not a `.j-block`)
+      // and in the Tier-3 twin (`static/index.html`, twice, plus its
+      // `<meta name="description">`). All four moved together.
+      sub: 'Banodoco builds tools, spaces, and initiatives for open-source AI art.',
     },
     inspire: {
       nav: 'Inspire',
-      // Locked verbatim — 13-content-ops.md locked copy table, "Inspire H".
-      heading: 'Inspire and empower.',
-      // Locked verbatim — 07-chapter-inspire.md "Copy (locked)" support line, and
-      // explicitly called out as approved-in-handoff text to include per the
-      // W1-D task brief. Not a placeholder.
-      sub: 'Banodoco helps people push open models beyond their expected limits through challenges, compute, and rigorous research, turning breakthrough ideas into a thriving commons.',
+      // LOCK OVERRIDE — Hannah, 2026-08-14: the Inspire heading "becomes
+      // 'Inspire the movement'".
+      //
+      // PROVENANCE, kept deliberately rather than deleted. The previous
+      // heading, locked verbatim by 13-content-ops.md's "Inspire H" row, was:
+      //
+      //     'Inspire and empower.'
+      //
+      // Hannah owns this copy and overrode that lock knowingly.
+      //
+      // THE FULL STOP IS KEPT, on exactly the 2026-08-11 Connect precedent and
+      // not by transcription. The direction arrived as voice, which cannot
+      // carry a trailing period, and she named a TITLE rather than dictating a
+      // string — where the 2026-08-05 Final override did dictate its string and
+      // so got its unhyphenated "open source" and numeral "2nd" respected. The
+      // slot's own retired string closed with a stop, and so do its siblings in
+      // that family (Mission's H1, Connect's "Connect the community."), so
+      // dropping it would be a second, unasked-for change to the one string she
+      // named. Owned's heading below takes the opposite decision for the same
+      // reason: ITS retired string carried no stop, so its replacement carries
+      // none either. The rule is the slot's own precedent, not a house comma.
+      //
+      // Line count is unmoved: 1 / 1 / 2 at 1440x900 / 1280x800 / 375x812,
+      // which is what 'Inspire and empower.' rendered. Natural width 436.9px ->
+      // 455.3px at 1440, inside the measure the block already owned; no CSS.
+      heading: 'Inspire the movement.',
+      // LOCK OVERRIDE — Hannah, 2026-08-14, same direction. This sub was
+      // "approved-in-handoff text" per the W1-D brief and locked by
+      // 07-chapter-inspire.md's "Copy (locked)" support line. It is not now.
+      //
+      // PROVENANCE, kept deliberately rather than deleted. The previous sub was:
+      //
+      //     'Banodoco helps people push open models beyond their expected
+      //      limits through challenges, compute, and rigorous research,
+      //      turning breakthrough ideas into a thriving commons.'
+      //
+      // Her direction, transcribed from voice and explicitly approximate: "We
+      // aim to launch and steward initiatives that inspire more people to care
+      // about the open-source AI art ecosystem."
+      //
+      // DRAFTED, not transcribed — she gave the sense and asked for it to be
+      // written properly, the same standing she gave the 2026-08-11 Final sub.
+      // Two things moved, and both were measured before they were chosen:
+      //
+      // 1. "We aim to" -> "Banodoco". The register split on this site is
+      //    deliberate and visible: HEADINGS speak as "we" (Mission's H1, "We're
+      //    working to help…"), SUBS speak as "Banodoco" — all four of them,
+      //    including this chapter's neighbours. A first-person sub among three
+      //    third-person ones reads as an inconsistency rather than a choice.
+      //    The hedge goes with it, and costs nothing it was carrying: the
+      //    initiatives are not aspirational — they are the three nodes of this
+      //    very chapter (Arca Gidan Prize, ArtCompute, 2RP). What is
+      //    aspirational is inspiring people to care, and that survives intact
+      //    as the purpose clause.
+      //
+      // 2. "the open-source AI art ecosystem" -> "open-source AI art", the same
+      //    four words the Mission sub above gave up, for the same reason and to
+      //    the same effect, and here it is what PAYS for change 1. Measured
+      //    against the block's 26rem (416px) measure: her sketch renders
+      //    2 / 2 / 4 lines, but the third-person form of her exact sentence
+      //    renders 3 / 3 / 4 — at 115 characters its natural line is 850.7px,
+      //    against the 832px two lines of this measure can hold. Dropping the
+      //    four words takes it to 740.5px and 2 / 2 / 3: two lines at both
+      //    desktop sizes, and one line FEWER than her own sketch on a phone.
+      //    So the third person is not paid for in layout; it is bought.
+      //
+      // Every load-bearing term survives in her order: launch/steward ·
+      // initiatives · inspire · more people to care · open-source AI art. The
+      // echo of the heading's "inspire" is hers and is deliberately kept.
+      //
+      // 171 characters -> 101. Rendered 4 / 4 / 6 lines -> 2 / 2 / 3.
+      sub: 'Banodoco launches and stewards initiatives that inspire more people to care about open-source AI art.',
     },
     connect: {
       nav: 'Connect',
@@ -92,10 +206,36 @@ export const CONTENT = {
     },
     owned: {
       nav: 'Owned',
-      // Locked verbatim — 09-chapter-owned.md "Copy and claims (locked, literal, final)".
-      // The locked copy table in 13 only carries the claims line; the heading
-      // itself is locked in the chapter doc, so it is sourced from there.
-      heading: 'Owned by the ecosystem',
+      // LOCK OVERRIDE — Hannah, 2026-08-14: "the Owned section becomes 'Owned
+      // by contributors'".
+      //
+      // PROVENANCE, kept deliberately rather than deleted. The previous
+      // heading, locked verbatim by 09-chapter-owned.md's "Copy and claims
+      // (locked, literal, final)" — the locked copy table in 13 carries only
+      // the claims line, so this string's lock lived in the chapter doc — was:
+      //
+      //     'Owned by the ecosystem'
+      //
+      // Hannah owns this copy and overrode that lock knowingly.
+      //
+      // NO FULL STOP, and that is the same judgement the Inspire heading above
+      // makes in the other direction: the rule is the slot's own precedent, and
+      // this slot's retired string carried none. (Final's carries none either;
+      // Mission, Inspire and Connect all close with a stop. The site is not
+      // uniform on this and never was — the long headings run open, the short
+      // ones close.)
+      //
+      // It also names the section better than the string it replaces. Every
+      // interactive thing in this chapter is a CONTRIBUTOR — sixteen faces,
+      // sixteen `contributor-N` ids, one card each — and the sub below now says
+      // "the people who contribute". The heading was the only part still
+      // pointing at an abstraction.
+      //
+      // Rendered 2 / 1 / 2 lines -> 1 / 1 / 2 (1440x900 / 1280x800 / 375x812):
+      // 'Owned by the ecosystem' set 499.4px against a 480px column at 1440 and
+      // broke in two by 19px. This one sets 468px and does not. The measure did
+      // not move — the copy came in under it.
+      heading: 'Owned by contributors',
       // LOCK OVERRIDE — Hannah, 2026-08-05, direction: "in Owned by the
       // ecosystem, turn this stuff below the header into prose subtext like the
       // other sections."
@@ -131,7 +271,67 @@ export const CONTENT = {
       // journey/ui.js. The whole sentence is now the claim, so it fires the
       // whole-colony wave ('claimPrimary'); the two localized secondary pulses
       // retired with the list they belonged to.
-      sub: 'Banodoco is 100% shared with the people who build it — ownership granted 1% per month, split between artists, core engineers, and knowledge creators.',
+      //
+      // SECOND OVERRIDE — Hannah, 2026-08-14. Everything above is the record of
+      // the first one and is kept; this is the record of the second, which goes
+      // further than it did.
+      //
+      // Direction, transcribed from voice: copy "along the lines of — 'Banodoco
+      // is 100% shared with the people who contribute to the open-source AI art
+      // ecosystem — granted 1% per month, between artists, engineers, and
+      // knowledge creators.'"
+      //
+      // The string retired today, which is the one the 2026-08-05 block above
+      // describes building, was:
+      //
+      //     'Banodoco is 100% shared with the people who build it — ownership
+      //      granted 1% per month, split between artists, core engineers, and
+      //      knowledge creators.'
+      //
+      // WHAT THIS COSTS THE LOCKED CLAIMS, stated plainly, because it is more
+      // than the 2026-08-05 override cost. That override preserved all three
+      // claims intact and said so. This one does not:
+      //
+      //   · "core engineers" -> "engineers". This MOVES a locked claim —
+      //     13-content-ops.md's "Owned claims" row names the three groups as
+      //     "artists, core engineers, knowledge creators", and core engineers
+      //     are a subset of engineers, so the circle is genuinely wider. It is
+      //     kept as she said it, and read as deliberate rather than as a
+      //     transcription slip, because the sentence's OTHER change moves the
+      //     same way: "the people who build it" -> "the people who contribute
+      //     to the open-source AI art ecosystem" widens who is included by
+      //     exactly the same gesture. Two widenings in one sentence is an
+      //     intent, not a slip.
+      //   · "ownership" is dropped, and not restored. 2026-08-05 added that
+      //     word because "granted 1% per month" had no antecedent in a run-on
+      //     sentence. It has one now: the sentence's own subject is the
+      //     sharing, so the em-dash clause reads as a reduced relative on the
+      //     100% share. Her tightening stands.
+      //
+      // ONE WORD IS RESTORED AGAINST HER TRANSCRIPT: "split". Voice can carry
+      // "granted 1% per month, between artists…" as an ellipsis; print cannot —
+      // "between" is left with no verb to hang on, and the reader has to supply
+      // "divided". "split" is also one of the locked claim strings ("Split
+      // between different groups"), so restoring it repairs the grammar and
+      // returns a locked word in the same move, at zero cost to her sense. Same
+      // class of judgement as keeping Connect's full stop on 2026-08-11: she
+      // gave a direction, not a dictation, and this is the one word where
+      // following the transcript exactly would have printed something she did
+      // not mean.
+      //
+      // NOT CHANGED, deliberately: `nodes.pod-split` and `site.legal` below
+      // still read "core engineers". The pod cards are not rendered in this
+      // build (Owned registers the sixteen `contributor-N` hotspots, not pods)
+      // and the legal line is explicitly placeholder pending Legal/Peter
+      // sign-off — editing a legal sentence off the back of a voice note about
+      // a heading would be worse than the inconsistency. Flagged rather than
+      // fixed; it wants Legal's own pass.
+      //
+      // Rendered 3 / 3 / 5 lines -> 4 / 4 / 5 (1440x900 / 1280x800 / 375x812).
+      // No line count was asked for here and none is promised; the sentence
+      // grew by 23 characters and took a fourth line at desktop for them. Three
+      // lines would need it under ~1248px of natural width and it sets 1290.6.
+      sub: 'Banodoco is 100% shared with the people who contribute to the open-source AI art ecosystem — granted 1% per month, split between artists, engineers, and knowledge creators.',
       // ACTIONS — the chapter's copy-level controls (Hannah, 2026-08-07;
       // reduced to one, 2026-08-13).
       //
