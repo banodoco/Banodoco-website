@@ -1927,3 +1927,124 @@ thing this section is short of.**
 * §41.1's missing pixel isolation.
 * The bed and the sky are one frame behind the bodies (§36) — unchanged.
 * §36's other residuals stand.
+
+---
+
+# 2026-08-14 — the forward-wrap flicker: does not reproduce
+
+**Requested:** Hannah, transcription partly garbled; the reliable core is
+"scrolling FORWARD off the last section cuts back to the first with a flicker",
+and that she reads it as a bug rather than a pacing complaint.
+**Files:** none. Nothing was changed.
+
+## 44. Eight forward wraps, and no flicker in anything instrumented
+
+`e4df4b0`'s history is the right shape to have in mind — the lap once teleported
+14.66 units in a single frame because the blend cancelled itself on frame one —
+and the working hypothesis was **a single frame rendered at the destination
+before the traversal starts**, which every gate here is blind to because
+`?capture=` is a placement that never blends. So this was measured per
+**presented** frame, off a tracer animator registered last, with the wrap fired
+by an in-page rAF-timed `WheelEvent` stream. `journey.wrap()` was not used.
+
+Eight forward wraps, each on a fresh page, across every start state that can be
+constructed:
+
+| start state | runs |
+|---|---|
+| Final rest, reached by `?p=0.97` (a placement) | 4 |
+| **end-hold `p = 1.0`**, walked into with notches — where a visitor who keeps scrolling forward actually ends up | 2 |
+| Final rest, reached by **riding the whole route in by gesture** | 1 |
+| the same, on the **real page with the intro played** (no `?nointro=1`) | 1 |
+
+Every one landed exactly on `p 0.000000`.
+
+### 44.1 The hypothesis, tested and rejected
+
+**There is no destination frame.** Across the seam, the three consecutive
+presented frames either side of the `p` snap:
+
+```
+frame -1   p 0.97558   cam (-14.719  2.730  2.703)  fov 45.50
+frame  0   p 0.00000   cam (-14.719  2.730  2.702)  fov 45.50   <- the wrap
+frame +1   p 0.00000   cam (-14.720  2.730  2.698)  fov 45.50
+```
+
+The camera is the same pose to three decimals on the frame `p` jumps, and it
+leaves continuously afterwards. `e4df4b0`'s fault is not back, and the shape I
+went looking for is not there.
+
+**The newly-armed glide limiter is not it either.** `scroll.gliding` is `false`
+on every frame across the seam (checked frames −2 … +9), so `a0a89f8`'s new
+branch never arms on the wrap — and correspondingly `eff` and `sky` have a worst
+single-frame jump of **0.0000** in all eight runs.
+
+### 44.2 What else was continuous, with numbers
+
+Worst single-frame discontinuity within 400 ms of the seam, across all eight
+runs:
+
+| quantity | worst |
+|---|---|
+| camera position | **0.098 – 0.226 u** (ordinary lap motion; the lap's own biggest step is ~1.96 u mid-swing) |
+| `fov` | 0.022 |
+| fog far / near | 0.121 / 0.015 |
+| `eff` (the chapter arm) | **0.0000** |
+| `sky` | **0.0000** |
+| `bed` | 0.0080 |
+| chapter draw gates (`vFin`/`vOwn`/`vIns`/`vCon`) | **no toggle at all** |
+
+The **DOM copy layer** was traced separately, per presented frame, because a
+flicker need not be in the scene: every `.j-block`'s inline opacity is
+continuous across the seam (`o_final` 1.0000 → 0.9999 → 0.9995 → …), worst
+single-frame jump anywhere in the trace **0.0419**.
+
+And the direct measurement — **whole-frame luma, every presented frame**, read
+with `readPixels` straight after `composer.render()`: biggest single-frame step
+across the entire forward lap **2.534/255**, with the worst 100 ms window
+carrying **9%** of everything the lap changes. There is no outlier frame.
+
+## 45. One real finding, which is not a flicker
+
+**The Inspire chapter is drawn for 60 frames in the middle of the forward lap**
+— `+725 ms` to `+3125 ms`, switching on at camera `(−15.19, 2.95, −0.38)` and
+off at `(0.97, 2.62, 11.43)`. That is correct behaviour rather than a defect:
+the chapters arm on the camera, the lap sweeps −294° around the organism, and
+that path passes through Inspire's own territory. It is worth recording because
+the epilogue-to-hero move briefly composes a **third** chapter and nothing said
+so before.
+
+It is not what Hannah is seeing. Measured by double-rendering each shutter with
+the Inspire group suppressed, its contribution to the frame runs **0.0156 →
+0.1770 → 0.2378 → 0.3516 → 0.5582** luma against a base of 32–46 — a smooth
+monotone ramp peaking at **0.56/255**, comparable to Owned's 0.15 and an order
+of magnitude under the ground's several luma. It fades in; it does not pop.
+
+## 46. What this does and does not license
+
+**It does not license "there is no bug".** It licenses "it does not reproduce
+here, and these five candidate mechanisms are ruled out with numbers." The
+honest gap is the input: a real trackpad delivers a decaying momentum stream,
+and the only wheel this rig can generate inside the model's 45 ms same-gesture
+threshold is a uniform 120 px per rAF (CDP `Input.dispatchMouseEvent` cannot
+beat the threshold at all). Frame rate is the other: this rig ran 25–45 fps
+against her likely 60 — which should make a one-frame artefact **more** visible
+here, not less, so it is a weak explanation, but a timing-dependent race would
+not respect that argument.
+
+**Nothing was changed**, deliberately: the brief was to reproduce first, and a
+speculative fix against an unreproduced report on this particular seam is how
+`2c22844` and `6f23d90` both shipped a lap no visitor could reach.
+
+What would settle it, cheapest first:
+
+1. **The rest of the sentence.** The transcription lost everything except
+   "forward", "flicker" and "cut". Whether the flicker is *before* the movement,
+   *during* it, or *at the landing* discriminates between every remaining
+   candidate in one word.
+2. Whether it happens **every time** or occasionally — §12 records this exact
+   wrap failing roughly one run in two under the hardest gesture, so an
+   intermittent report is entirely credible and would point at the gesture's
+   strength rather than at the seam.
+3. A **screen recording**, or the same ride with `?nointro=1` to rule the intro
+   in or out on her machine rather than on this one.
