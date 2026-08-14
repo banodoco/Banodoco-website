@@ -869,7 +869,24 @@ export function createOwned(sceneApi, content) {
       const c = contributors.find(x => x.id === id);
       if (!c) return null;                 // pods (and anything else): default
       const text = [c.name, c.role].filter(Boolean).join(' · ');
-      return { labelOnHover: true, label: text || id };
+      /* `chip: 'none'` — 2026-08-14, Hannah: "there are now two things that
+         show on the orbs upon hover, can you please delete the smaller ones,
+         we should only keep the black one above."
+         The two were this chip (a dark pill with a gold dot and
+         "CONTRIBUTOR · RESEARCHER") and the contributor card, which since
+         b3dc34b opens on hover instead of on click. The pill is the smaller,
+         and everything it said the card already says — `name` is the card's
+         heading and `role` is its first line, from these same two fields. So
+         it is deleted rather than duplicated.
+         `label` STAYS, and is the whole point of keeping this policy: ui.js
+         writes it to the button's `aria-label`, so the accessible name is
+         "Contributor · Researcher" exactly as before. Nothing was drawn for a
+         screen reader in the first place, and nothing is taken from one now.
+         `labelOnHover` is still declared, and still true — there is no resting
+         label — because the collision dodge and the arrival stagger both read
+         it, and a chip that paints nothing at all is the strongest possible
+         case of "nothing to stage". */
+      return { labelOnHover: true, chip: 'none', label: text || id };
     },
 
     nodeWorld(id) {

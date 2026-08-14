@@ -1131,6 +1131,33 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      the label and on to the popover exactly as before. */
   .j-hot.label-hover.vis { pointer-events: none; }
   .j-hot.label-hover.vis:is(:hover, .hot, :focus-visible) { pointer-events: auto; }
+
+  /* --- A BARE CHIP: a control with no pixels of its own (2026-08-14) -------
+     Owned's sixteen contributors, per `chip: 'none'` in their label policy.
+     ui.js has already DELETED the dot and the label from the DOM by the time
+     this applies, so these rules only take away the box those two sat in — the
+     pill's padding and its lit background. What remains is a zero-size button
+     wrapping a face-sized hit pad: the same arrangement `.j-hotzone` already
+     ships for the crown, which paints nothing and answers everything.
+
+     The face is not unmarked by this. It is drawn by the scene, and hovering
+     it lights the node, its ember rim and its own local strands — that is the
+     marker, and it is the one the reference asked for. */
+  .j-hot.bare,
+  .j-hot.bare:is(:hover, .hot, :focus-visible) { padding: 0; background: transparent; }
+  /* THE FOCUS RING MOVES TO THE PAD, and has to. The shared journey ring below
+     draws on `.j-hot`, which for a bare chip is a 0x0 box at the node's centre
+     — a ring nobody could see, on a control a keyboard visitor has no other
+     way to locate. The pad is the face-sized circle they are actually on, so
+     the ring is drawn there and made round to match it. Same decision the
+     crown's `<button>` zone took on 2026-08-13: a scene response is not a
+     focus indicator a conformance test can see. */
+  .j-hot.bare:focus-visible { outline: none; }
+  .j-hot.bare:focus-visible .j-hot-hit {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 3px;
+    border-radius: 50%;
+  }
   /* A hover zone is a target that is part of the scene, not the UI: no chip,
      no label, NOTHING DRAWN. See ui.addHoverZone.
 
