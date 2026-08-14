@@ -3041,3 +3041,214 @@ button**, which is where the long-way marks used to be caught.
   fold ends in five transitions across four properties and the question being
   asked is "has the picture settled", not "did that one property finish"; if
   `--cl-travel` or `--cl-cascade` ever move, this constant moves with them.
+
+## 2026-08-14 — The popover's left edge stops flickering: two gutters, and only one of them was ever authored
+
+**Reported:** Hannah — *"When I hover over the section signposts (ArtCompute,
+2RP, etc.) the link and the colour on the left side of the popup thing flicker
+weirdly. Can you understand this and fix it?"*
+**Files:** `journey/site.css` only. No JS, no placement change, no geometry.
+
+### 1. What it is not
+
+Three candidates were measured out before anything was changed, because the
+obvious suspect in this codebase is sub-pixel instability and `d46e6bb` is
+recent enough to be the first thing to check.
+
+Per-frame trace of the popover, held open under a real trusted pointer for
+5 s at 1440x900, reading the live box, `data-side`, the computed `clip-path`,
+the link's computed colour and opacity, and the `::before` filament's opacity
+and transform:
+
+| | popover L | popover T | popover W | popover H | chip L | chip R |
+|---|---|---|---|---|---|---|
+| span over 189 frames | **0.0000 px** | **0.0000 px** | **0.0000 px** | **0.0000 px** | **0.0000 px** | **0.0000 px** |
+
+`data-side` held ONE value. The link's computed colour held ONE value
+(`rgb(240, 200, 119)`) and so did its border colour. So:
+
+* **It is not a sub-pixel instability.** The box does not move at all.
+* **It is not the raw projection.** `placePop()` anchors off
+  `popNode.btn.getBoundingClientRect()`, and the chip is placed through the
+  scene's `steadyProject` (`journey.js` hands `sceneApi.steadyProject` to
+  `ui.js` as `project`), so `d46e6bb`'s undo already covers this element by
+  inheritance. Held through a real scrub the chip moves 0.249–0.408 px of
+  genuine scene motion and `placePop()`'s `Math.round` absorbs it to 0–1 px
+  across the whole leg. There is no 8-frame period here and nothing to find.
+* **It is not the flip logic oscillating.** The decision boundary was located
+  exactly rather than argued about: the side flips when
+  `chip.right + POP_GAP + popWidth` crosses `vw - POP_MARGIN`, and walking the
+  viewport in 1 px steps puts Connect's `discord` chip at **+0.1 px of slack at
+  1828 px wide (side `left`) and −0.4 px at 1829 px (side `right`)**. Held on
+  both sides of that, and at every width from 1822 to 1840 — i.e. parked a
+  tenth of a pixel from flipping — there were **0 per-frame side changes**
+  across 19 widths. It cannot oscillate, because the two inputs are both
+  steady: the chip's rect is bit-identical frame to frame and the panel's width
+  is fixed at 304 px by `max-width: min(19rem, 62vw)` with `width: max-content`.
+
+### 2. What it is: two gutters in one small panel, 190 ms apart
+
+The only thing that varies during a hover is the ENTRY, and it contains **two
+independent flicker gestures that overlap in time**.
+
+A GUTTER is the shape worth naming: a local minimum strictly between two local
+maxima — the element lights, goes dim, and lights again. A monotone rise is a
+power-on and a monotone fall is a fade; neither reads as a fault. A gutter
+does. Measured on EFFECTIVE on-screen opacity (the panel's own opacity times
+the element's, because while `j-pop-lamp` is still bringing the panel up out of
+the dark the link's own opacity is invisible and counting it would score the
+`both` fill taking hold as a flicker):
+
+| chip | element | before | after |
+|---|---|---|---|
+| Inspire `2RP` | link | **1 gutter**, dips to 0.35 | **0** |
+| Inspire `2RP` | contact filament | **1 gutter**, dip 0.21 | **0** |
+| Inspire `Arca Gidan Prize` | link | **1 gutter**, dips to 0.35 | **0** |
+| Inspire `Arca Gidan Prize` | contact filament | **1 gutter**, dip 0.16 | **0** |
+| Connect `Discord` (flips to `left`) | link | **1 gutter**, dips to 0.35 | **0** |
+| Connect `Discord` | contact filament | **1 gutter**, dip 0.17 | **0** |
+| Connect `ADOS` (no link) | contact filament | **1 gutter**, dip 0.28 | **0** |
+
+Traced trajectories, Inspire `2RP`:
+
+```
+link      before   0 -> 1 -> 0.35 -> 1                (steps(1, end), hard)
+          after    0 -> 0.333 -> 0.667 -> 1           (steps(3, end), monotone)
+
+filament  before   0 -> .31 -> .62 -> .65 -> .45 -> .33 -> .54 -> .88 -> .98 -> fade
+          after    0 -> .21 -> .68 -> .85 -> .90 -> .82 -> .73 -> .62 -> .52 -> fade
+```
+
+**The link.** `j-pop-strike` was `hero.css`'s `no-flicker` copied stop for stop
+— 0 / 30% / 45% / 60% / 100% at 0 / 1 / 0.35 / 1 / 1, `steps(1, end)`.
+
+**The contact filament.** `j-pop-filament` names `ring-ping` as its reference,
+and `d1ecc23` describes it as "lit once … it ends at opacity 0, exactly as
+`ring-ping` does". But `ring-ping` is ONE monotone fall — `0.9 -> 0`, one stop
+to the next, nothing in between — and what was built went
+`0 -> 0.95 -> 0.35 -> 1 -> 0`. That is a gutter, which is `no-flicker`'s
+gesture, not `ring-ping`'s. **The filament was wearing the wrong reference's
+shape under the right reference's name**, and nothing in the file caught it
+because the name was right.
+
+So the entry fired the flicker gesture TWICE, on a panel about 300 px wide: the
+filament's dip at ~186 ms on the contact edge, and the link's at ~372 ms, both
+inside the half second after the pointer lands. "The link and the colour on the
+left side" is an exact description of the two elements involved, and "flicker
+weirdly" is an exact description of two hard gutters 190 ms apart. And the edge
+she names is the right one: the contact edge is the edge FACING the chip, so
+for the default `right` placement — every chip except those near the right
+frame edge — the filament and the unfurl's leading edge are both on the LEFT.
+
+### 3. The fix
+
+**The filament pings once.** `0 -> 0.95 at 30% -> 0`, one rise and one fall.
+This is not a taste change; it is the mis-copy corrected to what the code's own
+comment already claimed it did.
+
+**The link powers on and no longer gutters.** `steps(3, end)` from 0 to 1:
+three hard steps up, monotone, same 0.24 s delay so it still arrives last.
+
+The reasoning for not simply keeping the borrowed keyframe is structural rather
+than aesthetic, and it is worth writing down because the borrow was defensible
+when it was made:
+
+* `no-flicker` lights a NUMERAL on a diagram — a mark with no function to lose
+  while it is dark. The last thing to arrive in this panel is a LINK: the only
+  control it has, and the thing the visitor is on their way to click. A control
+  that blanks and then half-lights reads as a fault, not as a flourish.
+* The hero's callouts boot ONCE, on arrival at the top of the page. The popover
+  boots on EVERY HOVER, which on this page is the most repeated gesture there
+  is. The same keyframe at a different repetition rate is a different gesture.
+
+`steps()` is kept because `steps()` is what carries the instrument reading. The
+down-stops were never what carried it.
+
+**And the direction stops being an animation-name.** This is the flip-logic
+candidate, fixed at the source even though it is not what Hannah saw.
+`placePop()` rewrites `data-side` EVERY FRAME from live geometry, and the entry
+selected its unfurl and its filament by `animation-name` per side
+(`j-pop-unfurl` / `-l` / `-d`, `j-pop-filament` / `-h`). Changing
+`animation-name` on a running animation cancels it and starts the replacement
+from zero. **Measured: forcing a side change 121 ms into the entry produced
+`animationcancel` + `animationstart` on the unfurl at 216 ms** — the left edge
+wiping itself open a second time, mid-open. `POP_ENTER_MS` bounds how long that
+window lasts; it does not close it, and its own comment says as much.
+
+One animation whose starting clip comes from three custom properties closes it.
+A custom property is re-substituted into the running keyframes, so a side
+change now moves the interpolation's own endpoint on the next frame with no
+cancel, no restart and no name change. Same device for the filament's axis
+(`--fil-x0` / `--fil-y0` in one `scale()`), which retires `j-pop-filament-h`
+as well. **After: the same forced flip at 125 ms produces no cancel and no
+restart** — the unfurl runs once, 70 -> 477 ms, and the filament once,
+70 -> 692 ms. At rest, where `.j-pop-enter` is absent, these properties are not
+read at all.
+
+Three keyframe blocks go with it (`j-pop-unfurl-l`, `j-pop-unfurl-d`,
+`j-pop-filament-h`), so the entry is now five animations rather than eight and
+the side is a value everywhere instead of a selector.
+
+### 4. Gates
+
+* **Per-frame traces, before and after, at four chips across two chapters**,
+  each a 5 s hold under real trusted pointer input with the trace started
+  BEFORE the hover (a trace that starts after the popover is open measures the
+  rest and misses the defect entirely — the first cut of this measurement did).
+  Gutters **7 -> 0**, table in §2.
+* **A chip near a frame edge, with the flip exercised**: Connect's `discord`
+  places to the LEFT at 1440x900, so its contact edge and filament are on the
+  right and its unfurl runs right-to-left — the mirrored path, traced and
+  fixed identically. The decision boundary itself walked in 1 px steps,
+  **0 side changes at ±0.1 px of slack across 19 widths** (§1).
+* **Dynamic pointer, after**: an approach path plus 40 wiggles on the chip
+  (1 entry, monotone link, 0 unexpected replays); chip -> across the 12 px gap
+  into the popover -> back (1 entry, popover box span 0.0000 px, so
+  `e20f7ff`'s hover-out deferral still holds the panel under the pointer);
+  chip-to-chip hops (entry replays per hop, by design); and a hover held
+  through a real scrub (chip moves 0.408 px of genuine scene motion, popover
+  transform moves 1 px, no side change).
+* **Reduced motion: PASS.** With `prefers-reduced-motion: reduce` emulated the
+  popover opens and settles at `clip-path: inset(-70px)`, opacity 1, link
+  opacity 1, filament opacity 0, `animation-name: none` — every keyframe still
+  ends at its resting style, which is the contract `hero.css`'s `.co` keeps and
+  the whole of the reduced-motion path here.
+* **Behaviour unchanged**, verified with real input: hover opens with the link
+  out of the tab order (`tabIndex -1`); click PINS it (`tabIndex 0`,
+  `aria-expanded` on the chip, route detail set); Escape dismisses and unwinds
+  both; the pointer leaving keeps it shut. `e20f7ff` and `d1ecc23` intact.
+* **Console over a full ride: 0 entries.** All five chapters, every popover
+  chip hovered, clicked and dismissed on each, then a 300-step trusted-wheel
+  scrub through two wraps: 0 errors, 0 warnings, 0 logs, 0 unhandled rejections.
+* **`capture.py --check`: PASS, worst 0.00/255**, all ten goldens
+  byte-identical — the popover lives inside `.j-hotspots`, which is in
+  `capture.py`'s `HIDE_SELECTORS`, so a CSS-only change here cannot move a
+  frozen frame and measurably does not. No `SKIP_SCENE_CHECK`.
+* **No regression** to `e20f7ff` (placement, flip, self-cover, pinning, a11y),
+  `d1ecc23` (the entry still unfurls from the contact edge, the filament still
+  lights on it, the link still arrives last), `6d37205` (a hovered chip's
+  transform is bit-identical across the hold), `696e95d` (no transform, no
+  scale, no size change on `.j-pop` — the box took exactly one size in every
+  trace), `d46e6bb` (chip rect span 0.0000 px at rest).
+
+### 5. Residuals
+
+* **`.j-pop-enter` can be dropped while the 0.62 s filament is still running.**
+  `POP_ENTER_MS` is 700 ms, so the margin is 80 ms, and under load the
+  filament's animation can start late enough to be cancelled by the class
+  removal — observed on 9 of 55 opens during the boundary sweep, always as
+  `animationcancel: j-pop-filament`. It is currently harmless because the
+  filament is already at opacity 0 by 620 ms, so what is cancelled is a
+  finished animation still nominally running. It becomes visible the moment
+  anyone lengthens the filament or shortens the window, and the robust form is
+  to drop the class on the last `animationend` rather than on a timer.
+* **The link's three steps are `steps(3, end)` over 0.30 s**, i.e. 100 ms a
+  step. That is deliberate — slow enough to read as switching on rather than as
+  a fade — but it is a number chosen by eye against the traces, not derived,
+  and it is the one value here a future pass might want to move.
+* **`placePop()` writes `data-side` and a rounded transform on every frame
+  whether or not they changed.** Both are now cheap and neither restarts
+  anything, so this is no longer a correctness matter — but a chip parked
+  exactly on a `.5` boundary would still see the rounded transform alternate
+  between two integers while the scene moves. Not observed at any rest (span
+  0.0000 px), and 1 px over a whole scrub.
