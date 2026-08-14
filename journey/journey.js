@@ -597,7 +597,14 @@ export function boot(opts = {}) {
     // know where the move ENDS, not only that a move is running: see Final's
     // BLEND_REVEAL_RATE, which spends the reveal over the move instead of over
     // whatever fraction of it the path happens to spend crossing the band.
-    setBlending(true, cam.position.x);
+    // ...and HOW LONG it has to get there. `dstCamX` alone answers "where does
+    // this move end", which is enough to pace an ARRIVAL: the arriving chapter
+    // is clamped by the camera on its way up, so the move's own landing sets
+    // the deadline. A DEPARTURE has no such clamp — the leaving chapter is
+    // free-running downward — so without the duration it can only guess, and
+    // the guess it has been making is the ladder's own clock, which spends the
+    // whole field in the first third of the lap (26-scroll-loop.md §26).
+    setBlending(true, cam.position.x, dur);
     // The destination's copy is timed against THIS move, not against the click
     // (Hannah, 2026-08-07 — "the text for the new section INSTANTLY appears").
     // The duration is only knowable here, after placeAt has let the director
@@ -996,10 +1003,11 @@ export function boot(opts = {}) {
    *  whose reveal is a product of camera-pure factors (Connect's
    *  `amount * resolve`, Inspire's `master(az) * arr(az)`) self-corrects on
    *  the first blend frame and does not implement this. */
-  function setBlending(on, dstCamX) {
+  function setBlending(on, dstCamX, durS) {
     for (const id in chapters) {
       const mod = chapters[id];
-      if (mod.setBlending) guarded(`chapter:${id}.setBlending`, () => mod.setBlending(on, dstCamX));
+      if (mod.setBlending)
+        guarded(`chapter:${id}.setBlending`, () => mod.setBlending(on, dstCamX, durS));
     }
   }
 
