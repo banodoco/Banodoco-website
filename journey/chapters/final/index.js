@@ -52,8 +52,29 @@ export function createFinal(sceneApi) {
   // materials, so a poke anywhere in this chapter plants the same wave the
   // hero answers (world.js heroPulse).
   const uniforms = makeUniforms(sceneApi);
+  /** THE BED'S OWN FADE (2026-08-14, Hannah: "in the loop from bottom to top
+   *  and vice versa, the ground lights up and darkens in a very sudden way.
+   *  Can you make sure this is all more incremental").
+   *
+   *  The chapter draws two kinds of thing. The BODIES have a 24-rung ladder on
+   *  `uPull` and are therefore spread over the move by their own driver — that
+   *  is what `e1e8381` shaped and `027f969` paced. The BED they stand on — the
+   *  terrain cutaway and the root canopy lying across it — has no ladder at
+   *  all, so its entire brightness is the chapter's single fade scalar
+   *  `uAmount`, and on a lap that scalar is a step (§31).
+   *
+   *  So the bed gets its own `uAmount`, and nothing else does. `Object.assign`
+   *  copies the shared uniform OBJECTS by reference, so uPull, uTime, uFront,
+   *  uCta and the fog pair stay the one shared set — the bed still breathes
+   *  with the growth front and answers the same tap wave. Exactly one float in
+   *  the chapter is duplicated, and the animator writes both every frame from
+   *  the same place. Off a blend the two carry the same number by assignment
+   *  (see `bed` in the animator), so the scrub, `?p=`, `?pose=` and the frozen
+   *  `?capture=` path are byte-identical by construction rather than by
+   *  measurement. */
+  const bedUniforms = Object.assign({}, uniforms, { uAmount: { value: 0 } });
   const ring = createFinalRing(sceneApi, uniforms);
-  const terrain = createFinalTerrain(sceneApi, uniforms);
+  const terrain = createFinalTerrain(sceneApi, bedUniforms);
   const sky = createFinalSky(sceneApi, uniforms);
   // THE ROOT CANOPY (2026-08-07). Built after the ring because it is built
   // FROM it: ring.seats is where every fruiting body in the chapter stands,
@@ -68,7 +89,7 @@ export function createFinal(sceneApi) {
   // on the canopy's own two materials. It still breathes with the growth
   // front and the CTA wave through the shared uniforms, and still costs the
   // frame nothing per-frame.
-  const canopy = createFinalCanopy(uniforms, ring.seats);
+  const canopy = createFinalCanopy(bedUniforms, ring.seats);
   group.add(canopy.group, ring.group, terrain.group, sky.group);
 
   /* ---- growth-front cycle: randomized duration + rest, one direction ---- */
@@ -445,6 +466,73 @@ export function createFinal(sceneApi) {
      on every arriving move — so the up-wrap, every jump INTO the epilogue and
      all ten goldens are unchanged by construction, not by measurement. */
   const RETIRE_SPAN = 0.62;   // of the move, for a departure that has room
+
+  /* ---- §31. THE BED HAD NO DRIVER OF ITS OWN --------------------------
+     (2026-08-14, Hannah: "in the loop from bottom to top and vice versa, the
+     ground lights up and darkens in a very sudden way. Can you make sure this
+     is all more incremental." 26-scroll-loop.md §31.)
+
+     `027f969` above spread the BODIES' retire across the move and said, in as
+     many words, that it touched nothing else. The bed underneath them — the
+     terrain cutaway and the root canopy across it — is the nothing else, and
+     it had the same fault in BOTH directions at once, because its whole
+     brightness is `eff` and `eff` is a step on a lap:
+
+       leaving   eff = retireEff, a smoothstep over the DEAD ROAD below the
+                 lowest rung, [0, LADDER[0]] = 0.0966 of pull, crossed at
+                 RATE_FAST x retireScale = 1.26 pull/s  ->  77 ms
+       arriving  eff = rise = riseOf(camera.x), a smoothstep over 2.8 units of
+                 the Final LEG's camera x (-4.6 -> -7.4), which an ORBIT
+                 crosses at ~35 units/s                 ->  81 ms
+
+     Measured on the real wheel path (in-page rAF-timed WheelEvents, a tracer
+     animator registered last, so every reading is the presented frame): the
+     bed's whole transition takes 109 ms of a 3867 ms lap going out (2.8%) and
+     101 ms of 3877 ms coming in (2.6%) — and 99% of it lands inside a single
+     100 ms window in both directions — against the 63.6% and 36.0% of the lap
+     the bodies standing on it already spend. It is §26.2's diagnosis exactly,
+     a leg coordinate read on a path that does not travel along it, arrived at
+     from the two sides `027f969` did not have to touch.
+
+     THE BED RIDES THE DRIVER THE FIELD ALREADY RIDES. `bed` is the chapter's
+     own reveal driver mapped over its whole band rather than over a 0.0966
+     tail of it:
+
+         bed = smoothstep( shownPull / PULL_MAX )
+
+     · It costs no new pacing and no new clock. `shownPull` is already spread
+       across 62% of a departing move (RETIRE_SPAN, above) and across the
+       ladder on an arriving one, both measured, both mirrored — so the ground
+       is carried by the same spread that carries the lights, and the two stop
+       being separate events. "The lights are going off somewhere" gets the
+       floor they are going off on.
+     · IT IS CAMERA-KEYED THROUGH slewPull's OWN CEILING, not through a second
+       invariant. `shownPull <= max(pure, held)` means the bed can never be
+       brighter than the lens has earned, so a nav jump into the epilogue
+       cannot light the ground at the click while the camera is still at
+       Mission — the failure class a8d4518 / d1ecc23 / a3ba9fd / 783729b /
+       046e024 were all instances of. Nothing here reads `p`.
+     · IT IS THE SAME FUNCTION IN BOTH DIRECTIONS, so the two wraps are one
+       event run forwards and backwards by construction.
+     · ORDERING IS FREE. Going out the bed reaches 0 on the same driver value
+       as the last light (both at pull 0), so it is already dark by the time
+       `eff` starts its own fade — the retire never has a lit floor snuffed
+       under it, which is the hazard §27.1 had to argue for. Coming in the bed
+       and the field rise together from the pierce.
+     · THE OCCLUDER GOES WITH IT. terrain.setAmount() drives the soil slab's
+       dissolve as well as the haze, and that stays coherent: everything the
+       slab exists to hide (the underground cords, hyphae and front) is the
+       bed's own geometry and fades with it, so there is never a frame with
+       strokes to hide and no slab to hide them.
+
+     WHEN IT ARMS. Only a move with room, by exactly the arithmetic `027f969`
+     already established — `RETIRE_SPAN * dur > BAND_S`. The longest ordinary
+     jump's duration law tops out at 1.20 s (window 0.74 s, under BAND_S), so
+     NO non-wrap blend can reach this code and the rail click into or out of
+     the epilogue is unchanged by arithmetic rather than by hope. Off a blend
+     `bed` is assigned `eff` outright. */
+  let bedSpread = false;
+
   /** Seconds the SHIPPED blend clock takes to cross the whole band. Integrated
    *  off `blendRate` so it can never disagree with it. */
   const BAND_S = (() => {
@@ -680,13 +768,28 @@ export function createFinal(sceneApi) {
     const eff = blending
       ? (retiring && retireScale < 1 ? retireEff : rise)
       : 1 - (1 - amount) * (1 - rise);   // amount OR rise
+    // THE BED'S OWN FADE (§31). Read off `shownPull` — last frame's value, the
+    // same one `retireEff` above is read from and for the same reason: this
+    // block runs before the visibility gate, and the gate has to see it. The
+    // spread survives the convergence tail (`lagging`) so the hand-back at the
+    // landing is a no-op: there the driver has reached the destination pull and
+    // the smoothstep is already the value `eff` is about to take.
+    let bed = eff;
+    if (bedSpread && (blending || lagging) && shownPull !== null) {
+      const b = Math.max(0, Math.min(1, shownPull / PULL_MAX));
+      bed = b * b * (3 - 2 * b);
+    }
     // Still gated by the arm — `rise` says where the lens is, not which
     // chapter owns the frame, and the lens is below the onset on every other
     // leg anyway. `amountTarget > 0` keeps an arriving jump live before the
     // ease has moved; `amount > 0.003` keeps a departing one live while it
     // retires on the camera.
+    // The gate takes the BRIGHTER of the two fades (§31). On today's lap it is
+    // `eff` at every frame in both directions, so the draw-call edge does not
+    // move — but a gate that reads only `eff` is a gate that can cut a lit bed,
+    // and the bed is now the one thing in the chapter `eff` does not govern.
     group.visible = blending
-      ? (amountTarget > 0 || amount > 0.003) && eff > 0.003
+      ? (amountTarget > 0 || amount > 0.003) && Math.max(eff, bed) > 0.003
       : amount > 0.003;
     if (!group.visible) {
       lastPull = pullOf(sceneApi.camera.position.x);
@@ -706,6 +809,7 @@ export function createFinal(sceneApi) {
         // entirely — the epilogue costs nothing for the rest of the ride.
         wasVisible = false;
         uniforms.uAmount.value = eff;
+        bedUniforms.uAmount.value = bed;
         uniforms.uPull.value = pullOf(sceneApi.camera.position.x);
         uniforms.uPullRaw.value = pullRawOf(sceneApi.camera.position.x);
         ring.update(t, dt, false);
@@ -758,6 +862,7 @@ export function createFinal(sceneApi) {
     applyHeroDim(reach);
     applyShedFog(reach);
     uniforms.uAmount.value = eff;
+    bedUniforms.uAmount.value = bed;
     uniforms.uPull.value = pull;
     // the unclamped twin, for the clone entry-draw front (clones.js part B).
     // It carries the SAME OFFSET, with sign: the entry draw runs a reveal-width
@@ -861,7 +966,11 @@ export function createFinal(sceneApi) {
     // surfaces, because above ground is where it does its job (stopping
     // underground strokes reading as lines on the floor). Camera-pure, so
     // reverse rides retrace it exactly.
-    terrain.setAmount(eff);
+    // The haze sprites and the soil slab's dissolve are the bed's, not the
+    // chapter arm's (§31) — they cannot share the shader uniform, so they take
+    // the same float by hand. Off a blend `bed` IS `eff`, so this line is the
+    // line it has always been.
+    terrain.setAmount(bed);
     sky.update(t, eff);
   });
 
@@ -928,6 +1037,14 @@ export function createFinal(sceneApi) {
       retiring = blendPull < here - 1e-4;
       retireEff = 1;
       retireScale = 1;
+      /* THE BED'S SPREAD IS ARMED BY THE MOVE'S LENGTH AND NOTHING ELSE (§31)
+         — the same "has it room" arithmetic the retire uses, and deliberately
+         NOT gated on `retiring`, because the bed steps in both directions.
+         Not cleared on the `false` edge above: the convergence tail after a
+         landing must keep the pacing it was armed with, and the next blend
+         re-answers the question here. */
+      bedSpread = typeof durS === 'number' && durS > 0
+        && RETIRE_SPAN * durS > BAND_S;
       if (retiring && typeof durS === 'number' && durS > 0) {
         const window = RETIRE_SPAN * durS;
         if (window > BAND_S) retireScale = BAND_S / window;

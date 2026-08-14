@@ -115,6 +115,17 @@ Status: **done** (shipped, gated) · **open** (not started) · **running**
 | 40 | Bodies arrive slower, one at a time | `0965a73` |
 | 51 | Dense world through the transit, no half-built edges | `45a6628` |
 
+### The scroll loop
+| # | Request | Landed |
+|---|---|---|
+| — | Scrolling past either end wraps to the other, on the same gesture threshold, by a considered camera path | `2c22844` |
+| — | Neither loop direction may feel like a cut or a teleport | `6f23d90` |
+| — | "It still just jumps DIRECTLY" — the lap was armed and cancelled on its own gesture, so no visitor ever saw it | `e4df4b0` |
+| — | Stopping mid-loop leaves the hero mushroom permanently displaced | `a937444` |
+| — | The fairy ring lights up / down "all in one go"; wants it one piece at a time | `e1e8381` |
+| — | Down-wrap switches the field off before the motion starts; wants them going off as it goes | `027f969` |
+| 68 | **The ground lights up and darkens very suddenly in both loop directions; make it incremental.** | `<this commit>` — the Final terrain and root canopy were the only things in the chapter with no ladder, so their whole brightness was the one fade scalar, and on a lap that scalar is a step at both ends. They now ride the field's own driver: 2.8% → 59.7% of the lap going out, 2.6% → 32.9% coming in. See `26-scroll-loop.md` §31–36. |
+
 ### Interface and content
 | # | Request | Landed |
 |---|---|---|
@@ -149,3 +160,9 @@ Nothing currently. Items she has explicitly parked would be listed here.
   envelope, which moves an approved rest frame.
 - The audit's cleanup items 1–5 (docs, absolute-p derivation, sheet-drag
   dedupe, dead code, gate hardening) are queued but unstarted.
+- **The Epilogue's sky still switches on the loop.** Request 68 fixed the
+  ground; the spore cloud and mist horizon on the same frames still change
+  their whole brightness inside 100 ms in both directions. Left alone
+  deliberately — it is the air, not the floor, and it carries 82% of the
+  particulate light in frame, so re-timing it is a composition decision.
+  `26-scroll-loop.md` §36 has the one-line change if she wants it.

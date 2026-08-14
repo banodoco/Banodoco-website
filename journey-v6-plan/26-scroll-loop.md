@@ -1239,3 +1239,266 @@ instead of being switched off in place.
 * **An interrupted lap can still drop `uAmount` by ~0.75 on a drawn frame.**
   Pre-existing and measured on the shipped build at the same magnitude; it is
   the visibility gate toggling, not this pass's clock.
+
+---
+
+# 2026-08-14 — the ground stops switching and starts leaving with the lights
+
+**Requested:** Hannah. **Built:** same day.
+**Files:** `journey/chapters/final/index.js` (the bed's own fade). No ladder
+rung, no threshold, no route file, no camera key, no p-value, no change to the
+path, no change to the bodies.
+
+> "in the loop from bottom to top and vice versa, the ground lights up and
+> darkens in a very sudden way. Can you make sure this is all more
+> incremental"
+
+## 31. Which surface "the ground" is
+
+Third report on the wrap's lighting, second on it being abrupt, and the first
+job was to find out what she is looking at. "The ground" is not one thing in
+this scene, so every candidate was traced per **presented** frame across a real
+wheel-driven lap in both directions — in-page rAF-timed `WheelEvent`s, a tracer
+animator registered last. `journey.wrap()` was not used anywhere in this pass.
+
+| candidate | what it is | verdict |
+|---|---|---|
+| **Final `terrain`** | the cutaway / soil ground plane, 9 materials | **it is this** |
+| **Final `canopy`** | the root network lying across that plane | **and this** |
+| Final `ring` | the fruiting bodies | control — already spread (`027f969`) |
+| Final `sky` | GPU spore cloud + mist horizon | steps on the same frame; it is the **air**, not the floor — §33 |
+| Owned's root network | `20-owned-root-network.md`'s "ground network" | toggles, but is worth 0.15/255 — §33 |
+| `sceneApi.groups.ground` | the **hero's own** ground network | already gradual (20.8% / 12.0% of the lap), untouched |
+
+**The two that step are the two with no ladder.** The chapter draws bodies,
+which have a 24-rung ladder on `uPull` and are therefore carried across the
+move by their own driver — that is what `e1e8381` shaped and `027f969` paced.
+Everything else it draws is multiplied by one scalar, `uAmount`, and nothing
+else. The terrain and the canopy ARE that scalar, so whatever `uAmount` does,
+the ground does.
+
+### 31.1 Measured, before
+
+Matched runs, same harness, same frame rate (44–45 fps on the down lap, 54 fps
+on the up), both laps 76.42 units over ~3.86 s. `worst100` is the most of its
+own range a surface moves inside any 100 ms window — the frame-rate-independent
+companion to the single-frame step.
+
+| | before: spread / max frame step / worst100 |
+|---|---|
+| canopy, **down**-wrap | 2350–2459 ms = **2.8%** of the lap · 0.3792 · **99%** |
+| terrain, **down**-wrap | 2350–2459 ms = **2.8%** · 0.3302 · **99%** |
+| canopy, **up**-wrap | 2376–2477 ms = **2.6%** · 0.1996 · **99%** |
+| terrain, **up**-wrap | 2376–2477 ms = **2.6%** · 0.1738 · **99%** |
+| *(ring, the same frames)* | *63.6% down, 36.0% up* |
+
+Ninety-nine per cent of the ground's entire brightness change, in both
+directions, inside one tenth of a second of a 3.9 second move — while the
+bodies standing on it spend a third to two thirds of the lap. That is the
+report, in numbers.
+
+In pixels, over the **ground region** (lower third of frame, read with
+`readPixels` straight after `composer.render()`; `toDataURL` returns a stale
+buffer): the biggest single-frame luma step of the whole down-lap is
+**3.017/255 at 2472 ms**, and of the up-lap **6.486/255 at 2516 ms** with
+4.046 on the frame before it. The worst 100 ms window of the up-lap carries
+**13.277 luma, 48% of everything that changes across the entire lap.**
+
+## 32. The mechanism: one scalar, two leg coordinates, one orbit
+
+`eff` is the chapter's only fade, and on a lap it is a step at both ends for
+two *different* reasons that are the same reason:
+
+```
+leaving    eff = retireEff = smoothstep(shownPull / LADDER[0])
+           — the DEAD ROAD below the lowest rung, 0.0966 of pull, crossed at
+             RATE_FAST (2.4) x retireScale (0.526) = 1.26 pull/s  ->  77 ms
+
+arriving   eff = rise = riseOf(camera.x)
+           — a smoothstep over 2.8 units of the Final LEG's camera x
+             (-4.6 -> -7.4), which an ORBIT crosses at ~35 units/s  ->  81 ms
+```
+
+§26.2 already wrote the diagnosis for the retire: *"`pullOf` reads camera x,
+which is the Final leg's own coordinate. The lap is an orbit."* It named `rise`
+in the same breath — *"`rise` (uAmount) is keyed the same way"* — and then
+`027f969` fixed the bodies and, in as many words, touched nothing else. The bed
+is the nothing else. `027f969` moved the retire OFF `rise` and onto
+`retireEff`, which is correct for ordering (§27.1) and which relocated the step
+from 1519 ms to 2459 ms without making it any less of a step: the dead road is
+2.5% of the pull band, so a fade confined to it is a fade confined to 2.5% of
+the move.
+
+**And the arriving direction was never touched at all.** Both directions were
+therefore equally sudden — 2.8% and 2.6% — which is exactly what Hannah
+reported and is the one place this pass differs from the last two: there is no
+"good direction" to copy here.
+
+## 33. The fix: the bed rides the driver the field already rides
+
+```js
+const bedUniforms = Object.assign({}, uniforms, { uAmount: { value: 0 } });
+...
+bed = bedSpread && (blending || lagging)
+    ? smoothstep(shownPull / PULL_MAX)
+    : eff;
+```
+
+The terrain and the canopy get their **own** `uAmount` and nothing else does.
+`Object.assign` copies the shared uniform objects by reference, so `uPull`,
+`uTime`, `uFront`, `uCta` and the fog pair stay the one shared set — the bed
+still breathes with the growth front and answers the same tap wave. Exactly one
+float in the chapter is duplicated.
+
+What it buys, and why it is this quantity and not a new one:
+
+* **No new clock and no new pacing.** `shownPull` is already spread across 62%
+  of a departing move (`027f969`'s `RETIRE_SPAN`) and across the ladder on an
+  arriving one — both measured, both mirrored. The ground is now carried by the
+  same spread that carries the lights, so the floor and the lamps standing on it
+  stop being two separate events.
+* **It is camera-keyed through `slewPull`'s own ceiling**, not through a second
+  invariant: `shownPull <= max(pure, held)` means the bed can never be brighter
+  than the lens has earned. This is the repeat bug class on this project
+  (`a8d4518`, `d1ecc23`, `a3ba9fd`, `783729b`, `046e024`) and it is closed here
+  by inheritance rather than by a new rule. Gate B1 below measures it.
+* **It is the same function in both directions**, so the two wraps are one
+  event run forwards and backwards by construction rather than by tuning.
+* **Ordering is free.** Going out, the bed reaches 0 on the same driver value as
+  the last light (both at pull 0), so it is already dark before `eff` begins its
+  own fade — the retire never has a lit floor snuffed under it, which is the
+  hazard §27.1 had to argue its way around. Coming in, bed and field rise
+  together from the pierce.
+* **The occluder goes with it.** `terrain.setAmount()` drives the soil slab's
+  stipple dissolve as well as the haze sprites, and that stays coherent:
+  everything the slab exists to hide (the underground cords, hyphae and front)
+  is the bed's own geometry and fades with it, so there is never a frame with
+  strokes to hide and no slab to hide them.
+* **It arms on the move's length and nothing else** — `RETIRE_SPAN * dur >
+  BAND_S`, the arithmetic `027f969` already established, and deliberately NOT
+  gated on `retiring`, because the bed steps in both directions. The longest
+  ordinary jump's duration law tops out at 1.20 s (window 0.74 s, under
+  `BAND_S` = 1.305 s), so **no non-wrap blend can reach this code**: the rail
+  click into and out of the epilogue is unchanged by arithmetic, and gate N
+  below confirms it empirically at 0.000e+00. Off a blend, `bed` is assigned
+  `eff` outright, so the scrub, `?p=`, `?pose=` and the frozen `?capture=` path
+  are byte-identical by construction.
+
+The visibility gate now reads `max(eff, bed)`. On today's lap that is `eff` on
+every frame in both directions, so the draw-call edge does not move — but a gate
+reading only `eff` is a gate that can cut a lit bed, and the bed is now the one
+thing in the chapter `eff` does not govern.
+
+**Two surfaces were deliberately left alone, and both are named here rather
+than left for a fourth report.** `sky` — the GPU spore cloud and the mist
+horizon — steps on the same frame (2.1–2.6% of the lap, max step 0.48/0.23) and
+is not changed: it is the air, not the floor, and 82% of the particulate light
+in frame belongs to it, so re-timing it is a separate decision about the
+composition rather than a fix to the ground. Owned's root network toggles its
+group in one frame at a mirror-image pose in both directions (camera x −15.18),
+which is §11's draw-call cliff, and it is worth **0.15/255 of the whole frame
+and 0.45/255 of the ground region** by direct double-render measurement — below
+anything the eye can be reporting.
+
+## 34. After
+
+| | before | after |
+|---|---|---|
+| **canopy, down** | 2.8% of lap · 0.3792 · 99% in 100 ms | **59.7%** · **0.0172** · **7%** |
+| **terrain, down** | 2.8% · 0.3302 · 99% | **59.7%** · **0.0150** · **7%** |
+| **canopy, up** | 2.6% · 0.1996 · 99% | **32.9%** · **0.0469** · **17%** |
+| **terrain, up** | 2.6% · 0.1738 · 99% | **32.9%** · **0.0409** · **17%** |
+| the bed's own driver, worst frame step, down | 0.5159 | **0.0235** |
+| the bed's own driver, worst frame step, up | 0.2716 | **0.0639** |
+| *ring (untouched control), down / up* | *63.6% / 36.0%* | *64.0% / 36.4%* |
+
+In pixels, ground region, matched runs:
+
+| | before | after |
+|---|---|---|
+| **down**, biggest single-frame luma step | **3.017 @2472 ms** | the 2.4 s step is **gone**; the largest step left in the whole lap is a pre-existing 2.28 @663 ms (2.14 before) |
+| **down**, worst 100 ms window | 4.174 (22% of range) | 4.831 (**20%**) |
+| **up**, biggest single-frame luma step | **6.486 @2516 ms** (4.046 the frame before) | **3.172 @3189 ms** |
+| **up**, worst 100 ms window | 13.277 (**48%** of range) | 8.215 (**29%**) |
+
+The terrain's own contribution to the ground region across the up-lap, measured
+by rendering each shutter twice — once as-is, once with the surface suppressed,
+so sway, spores, twinkle and TAA cancel: **0 → 2.50 → 3.53 → 3.74 → 4.19 →
+4.70 → 5.23 → 5.49** over 2907–3807 ms. Before this pass that whole climb
+happened inside one 100 ms window.
+
+**How it reads.** Going out, the ground dims as the camera lifts off it: at
+0.7 s it is full, at 1.3 s it is three quarters, at 1.9 s a third with the field
+already gone, at 2.3 s the last tenth, and the hero's own floor network has come
+up underneath by the time the epilogue's has gone. Coming in, the mirror — the
+hero's floor hands over, then the epilogue's ground comes up under the first
+bodies rather than arriving whole a fifth of a second before them. Neither
+direction has a frame where the floor is switched.
+
+## 35. Gates
+
+Every reading through **real in-page rAF-timed `WheelEvent`s** off a tracer
+animator registered last, so every row is the presented frame. `journey.wrap()`,
+`flyTo()` and `scrollTo()` were not used to produce any claim in this section.
+
+* **The measurement itself** — §31.1 and §34, both directions, before and
+  after, matched runs at matched frame rates, plus the ground-region luma trace
+  and the double-render contribution curve.
+* **B1, the new invariant: the bed may never be brighter than the lens has
+  earned** — `bed − smoothstep(max(pure, held) / PULL_MAX)`, worst over every
+  frame of a real wrap: **before 0.9674 (down) / 1.0000 (up)** — a total
+  violation, the ground composed at full over a lens that had earned nothing —
+  **after 0.0000 / 0.0000.**
+* **N, nav jumps into and out of the Final chapter** (the camera-keying check),
+  by a real pointer press on the shipped rail anchor, traced over 296 frames:
+  worst `|bed − eff|` **0.000e+00** — no ordinary jump has room, so the bed is
+  the shipped scalar bit for bit — and **0 frames** with the bed lit while the
+  camera is above x −4.6.
+* **`revealgates.js` G1/G2 bit-exact**, driven by an in-page rAF wheel:
+  `G1 scrub |uPull − pullOf(camera.x)| max over 392 frames: 0.00e+0`,
+  `G2 placement, 10 poses: 0.00e+0`. G3–G6 are still not takeable from that
+  file (it asserts `e.isTrusted`; §29), so restated over real in-page wraps:
+  **G4 worst `shown − max(pure, held)` 0.0000** both directions, **G5 worst
+  driver step 0.0420 (down) / 0.0540 (up)** against the 0.16 limit, **G6 final
+  lag 0.0000** both — all unchanged from before this pass, which is the point:
+  the bodies are untouched.
+* **Frame strips**, both directions, 9 shutters each, shot in-page off the
+  drawing buffer immediately after `composer.render()`. Down: `bed` 0.9887,
+  0.9184, 0.7310, 0.3237, 0.0966, 0 while `eff` holds 1.0000 throughout. Up:
+  0, 0, 0, 0, 0, 0, 0.3913, 0.8905, 0.9992.
+* **Scroll battery unchanged:** `E1 −6.26e−4` (resolution live), `E2/E3
+  1.0000`, `R1 0.260000`, `R4 overshoot 0.00e+0`, `R5 fling past last →
+  0.000000 | fling before first → 0.970000 | notches past last → 1.0000`,
+  `R6 off-anchor stops: none`.
+* **Full gestured ride, 12 legs including both wraps** —
+  `0.2600 0.5230 0.7250 0.9700 0.0000 0.2600 0.0000 0.9700 0.7250 0.5230
+  0.2600 0.0000` — every leg on an anchor, off-anchor stops none, **console 0
+  entries, 0 warnings, 0 errors.**
+* **`capture.py --check` PASS, worst MAE 0.00/255** across all ten frozen
+  references. No placement path is touched: `blending` is false on every one of
+  them and `bed` is assigned `eff`.
+* **`prefers-reduced-motion: reduce`** — the wrap still lands `p 0` and the bed
+  still spreads. The change only ever makes an existing brightness change
+  slower, so it is the friendlier value under that setting, not the riskier one.
+
+## 36. Residuals
+
+* **The sky still steps, and it is the loudest thing left on that frame.**
+  2.1% (down) / 2.6% (up) of the lap, max single-frame step 0.4845 / 0.2313 of
+  its own range, 100% inside one 100 ms window. It is deliberately out of scope
+  — spore cloud and mist horizon are the air — but it is the one surface that
+  would make a fourth report on this frame reasonable. Putting it on the bed is
+  one argument (`createFinalSky(sceneApi, bedUniforms)` and
+  `sky.update(t, bed)`), and the reason not to do it blind is that the spore
+  cloud carries 82% of the particulate light in frame, so the mid-lap
+  composition is a real judgement rather than a measurement.
+* **Owned's root network still toggles in one frame**, at a mirror pose in both
+  directions. §11's draw-call cliff, unchanged, and measured here at 0.15/255 of
+  the frame and 0.45/255 of the ground region.
+* **The bed is one frame behind the bodies.** `bed` is read off the previous
+  frame's `shownPull`, because it must be known before the visibility gate —
+  exactly as `retireEff` already is, and for the same reason.
+* §30's residuals stand: only a departure with room is re-paced, and if the
+  wrap's duration ever drops below ~2.1 s both `retireScale` and `bedSpread`
+  silently become no-ops.
+* §11's notch-reader residual stands.
