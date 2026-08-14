@@ -58,10 +58,16 @@ export function createFinal(sceneApi) {
   // THE ROOT CANOPY (2026-08-07). Built after the ring because it is built
   // FROM it: ring.seats is where every fruiting body in the chapter stands,
   // and canopy.js lays one connected network over the lot, rooted at the
-  // hero's own foot. It carries no state and no update() — every vertex is
-  // on the chapter's shared aReveal/uPull law, so the whole thing kindles,
-  // breathes with the growth front and retracts on a reverse scrub through
-  // the same two uniforms the bodies use, with no per-frame cost at all.
+  // hero's own foot. It carries no state and no update().
+  //
+  // It does NOT kindle on uPull (2026-08-14 — it did until this pass, and
+  // that was the fault: uPull is 0 until the lens passes x −8.0, so the
+  // network was absent for the first 45% of the Owned -> Final transit and
+  // then drew itself in over open view). Every vertex is now always-lit and
+  // the whole network is gated by surfacedOf() below — one camera-pure float
+  // on the canopy's own two materials. It still breathes with the growth
+  // front and the CTA wave through the shared uniforms, and still costs the
+  // frame nothing per-frame.
   const canopy = createFinalCanopy(uniforms, ring.seats);
   group.add(canopy.group, ring.group, terrain.group, sky.group);
 
@@ -92,6 +98,34 @@ export function createFinal(sceneApi) {
     const cy = pos.y - groundY(pos.x, pos.z);
     const b = Math.max(0, Math.min(1, -cy / 0.25));
     return b * b * (3 - 2 * b);
+  }
+
+  /** THE ROOT CANOPY'S PRESENCE (2026-08-14, Hannah: "there's this kind of
+   *  network or web thing visible halfway through, but it only appears when
+   *  I'm halfway there. Can you make it so it's always there and we just zoom
+   *  into it?"). canopy.js §REVEAL carries the whole argument; this is the
+   *  scalar it is gated by.
+   *
+   *  The SAME AXIS as buriedOf above — depth of the lens relative to the soil
+   *  it is climbing through — and deliberately so: OWNED's colony was fixed by
+   *  keying its reveal to exactly this quantity (fc1e151), and the canopy is
+   *  that fix seen from the other side of the surface. It runs 0 -> 1 over the
+   *  lens's last stretch of buried travel and SATURATES 0.30 UNDER THE SOIL,
+   *  so it is finished before the pierce: measured, a fully lit canopy is
+   *  worth MAE <= 0.139 to the frame anywhere below the line and MAE 1.5-2.0
+   *  above it, so the whole ramp is spent where it cannot be seen and the
+   *  visitor's first sight of the ground is of a network already whole.
+   *
+   *  Pure in the pose, with no state and no clock: a reverse ride re-descends
+   *  through the identical values, and a nav jump lands on the honest one
+   *  rather than composing a lit field over a camera that has not arrived —
+   *  the failure 25-navigation-redux.md named and `rise` already guards. */
+  const CANOPY_D0 = -1.10;    // dark at and below this depth
+  const CANOPY_D1 = -0.30;    // whole here — still under the soil
+  function surfacedOf(pos) {
+    const cy = pos.y - groundY(pos.x, pos.z);
+    const t = Math.max(0, Math.min(1, (cy - CANOPY_D0) / (CANOPY_D1 - CANOPY_D0)));
+    return t * t * (3 - 2 * t);
   }
 
   /* ---- primordia dwell: settled time at the Final rest ---- */
@@ -385,6 +419,15 @@ export function createFinal(sceneApi) {
     // mismatch that cannot be told apart from real hysteresis. Written here,
     // the sweep measures 0.000e+00 and the audit means what it says.
     terrain.setBuried(buriedOf(sceneApi.camera.position));
+    // The canopy's presence is written on the SAME terms as the slab's
+    // dissolve and for the same reason: one float, camera-pure, written every
+    // frame BEFORE the visibility gate and outside setAmount. Written inside
+    // the gate it would latch at whatever the lens was doing when the chapter
+    // last ticked — a reverse ride retires the epilogue at p ~0.80 with the
+    // lens still buried — and a forward/reverse uniform sweep would then
+    // report hysteresis that is really a stale write. Written here, the sweep
+    // measures zero and the audit means what it says.
+    canopy.setPresence(surfacedOf(sceneApi.camera.position));
     const rise = riseOf(sceneApi.camera.position.x);
     const eff = blending ? rise : 1 - (1 - amount) * (1 - rise);   // amount OR rise
     // Still gated by the arm — `rise` says where the lens is, not which

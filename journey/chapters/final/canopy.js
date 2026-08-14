@@ -55,17 +55,63 @@
 // adjustment. And every vertex is tested against cutVal(): the cutaway wedge
 // stays void, exactly as the soil, the surface strokes and the bodies do.
 //
-// REVEAL (D16, absolute). Every vertex carries aReveal on the SAME uPull the
-// bodies kindle on, so the canopy is camera-pure: dark at arm, growing with
-// the pullback, retracting stroke-for-stroke on a reverse scrub, nothing
-// fading in over open view. A node's threshold is its own body's, LESS a
-// small lead (CANOPY_LEAD) so the ground under a mushroom is already alight
-// when the mushroom itself comes up — the canopy puts the body there, not the
-// other way round. Waypoint nodes take an inverse-distance blend of the
-// nearest seats, and an edge's vertices LERP between its two endpoints. So
-// the light does not switch on along a strand: it travels down it, from the
-// body that kindled first to the one that has not yet, which is the front the
-// bodies already use, seen in the ground.
+// REVEAL (D16, absolute) — RE-KEYED TO THE SOIL LINE, 2026-08-14.
+//
+// Hannah, on the Owned -> Final transit: "there's this kind of network or web
+// thing visible halfway through, but it only appears when I'm halfway there.
+// Can you make it so it's always there and we just zoom into it?"
+//
+// She is describing THIS FILE, and "halfway" is not an impression — it is the
+// number. The canopy used to carry aReveal on the SAME uPull the bodies kindle
+// on, and uPull is pullOf(camera.x) = (-x - 8)/6: exactly zero until the lens
+// passes x -8.0. Measured on the shipped build through REAL WHEEL EVENTS
+// (17-final-field.md, 2026-08-14): the camera reaches x -8.09 at p 0.8497,
+// which is 45.3% of the transit's wheel — the network is absent for the whole
+// first half of the leg and then DRAWS ITSELF IN over open view across the
+// next 40%, finishing at p 0.940 (85.3%). That is the fade-in-over-open-view
+// this project has now removed three times: CONNECT's ground paths (f9e8317)
+// and OWNED's colony (fc1e151) are the same fault and the same fix.
+//
+// WHAT THE WORLD ALREADY DOES FOR US. The fix OWNED found was not to fade
+// earlier, it was to hand the reveal to GEOMETRY: key it to the camera's
+// depth relative to the soil, so the ground itself does the hiding and no
+// nav jump can outrun it. That is available here, and it was measured before
+// it was used. Forcing the canopy fully lit and A/B-toggling it against the
+// frozen frame, its contribution is:
+//
+//     lens 0.4-1.1 units UNDER the soil    MAE 0.003 - 0.139  (max 86)
+//     lens at or above the soil line       MAE 1.50 - 1.98    (max 211)
+//
+// — a ~17x step across the surface, because the soil, the fog and the grazing
+// angle occlude it from below. So the canopy can be brought to FULL PRESENCE
+// while the lens is still buried and the visitor cannot see it happen.
+//
+// THE LAW. Every vertex is ALWAYS_LIT, so nothing in this file kindles at all.
+// The network's presence is one camera-pure scalar — surfacedOf(camera) in
+// index.js, a smoothstep on (camera.y - groundY) that is 0 at 1.10 under the
+// soil and 1 at 0.30 under it — multiplied into the two materials' own
+// uOpacity. Consequences, all of them the reveal laws:
+//   · DARK AT ARM. The chapter arms at p 0.800 with the lens 1.08 under; the
+//     term is 0.002 there. Nothing is lit at the arm.
+//   · COMPLETE BEFORE IT CAN BE SEEN. The term saturates at 0.30 under the
+//     soil (p ~0.848), BEFORE the pierce at p 0.8536 — so by the time the
+//     ground is visible at all, the network is already whole, to the horizon.
+//     Everything after that is approach: the visitor zooms into a world that
+//     was already there, which is the sentence at the top of this block.
+//   · REVERSE MIRRORS EXACTLY. It is a pure function of the pose, with no
+//     state and no clock, so a reverse scrub retires it through the identical
+//     values and a jump lands on the honest one.
+//   · IT COSTS NOTHING. Both batches are frustumCulled = false and were
+//     already drawn every frame the chapter is visible — dark, but drawn. The
+//     change moves a multiply, not a draw call. (fc1e151 made the same point.)
+//
+// WHAT WAS GIVEN UP, deliberately: the light no longer TRAVELS down a strand
+// from the body that kindled first, and CANOPY_LEAD's "the ground under a
+// mushroom is already alight when the mushroom comes up" is no longer a lead
+// of 0.04 — it is total. The canopy is simply there first, always, which is a
+// stronger form of the same claim ("the canopy has bodies"), and the bodies'
+// own arrival ladder is untouched: they still kindle one at a time on uPull,
+// out of ground that is already lit.
 //
 // LEVELS. The field's bodies stay the subject. The canopy is authored a good
 // stop under the terrain lip (its brightest strand tone is 0.30 against the
@@ -104,11 +150,11 @@ const smoothstep = (e0, e1, x) => {
   return t * t * (3 - 2 * t);
 };
 
-// How far AHEAD of its own body a seat kindles. Small on purpose: at 0.04 of
-// uPull the ground under a member lights roughly a fifth of a reveal width
-// before the member does, which reads as the body rising out of lit soil. Any
-// larger and the canopy arrives as its own separate event.
-const CANOPY_LEAD = 0.04;
+// THE CANOPY DOES NOT KINDLE ON uPull ANY MORE (2026-08-14). Every vertex is
+// authored ALWAYS-LIT — world.js's own `aReveal < -0.5` escape hatch — and the
+// whole network is gated instead by ONE camera-pure term, SURFACING, written
+// on the two materials' own uOpacity by index.js. See §REVEAL below.
+const ALWAYS_LIT = -1;
 
 // Distance luminance — ring.js's cloneLum device, re-banded for the floor.
 // The canopy runs from the hero's own foot out to the hint band at 46 units,
@@ -149,15 +195,17 @@ export function createFinalCanopy(uniforms, seats) {
   // node 0 IS THE HERO. Everything Prim's walk lays hangs off this one, which
   // is the whole of "an extension of the one that surrounds the main
   // mushroom" expressed as a data structure rather than as a resemblance.
-  // Its threshold is under every member's, so the canopy leaves the hero's
-  // own foot first and travels outward from there.
-  nodes.push({ x: 0, z: 0, gy: groundY(0, 0), rev: 0.02, body: true, r: 0.62 });
+  //
+  // Nodes no longer carry a `rev` threshold: the network does not kindle, it
+  // is gated whole (see §REVEAL). Nothing else read the field, and dropping it
+  // touches no rand() call, so the graph — every node, every edge, every
+  // wander — is bit-identical to the shipped one.
+  nodes.push({ x: 0, z: 0, gy: groundY(0, 0), body: true, r: 0.62 });
 
   // every other fruiting body in the chapter, seated exactly where it stands
   for (const s of seats) {
     nodes.push({
       x: s.x, z: s.z, gy: s.gy,
-      rev: Math.max(0.03, (s.reveal ?? 0.5) - CANOPY_LEAD),
       body: true,
       // the strand leaves the stipe's own footprint rather than starting
       // inside the flesh — the same seat rule ring.js's §8 stubs obey
@@ -201,28 +249,14 @@ export function createFinalCanopy(uniforms, seats) {
         if (dx * dx + dz * dz < WAY_SEP * WAY_SEP) { ok = false; break; }
       }
       if (!ok) continue;
-      nodes.push({ x, z, gy: groundY(x, z), rev: 0, body: false, r: 0 });
+      nodes.push({ x, z, gy: groundY(x, z), body: false, r: 0 });
     }
   }
 
-  // a waypoint kindles with its neighbourhood: an inverse-distance blend of
-  // the three nearest SEATS. That keeps the front one front — the ground
-  // between two members lights as those members light, not on a clock.
-  for (let i = nBody; i < nodes.length; i++) {
-    const n = nodes[i];
-    const near = [];
-    for (let j = 0; j < nBody; j++) {
-      const dx = nodes[j].x - n.x, dz = nodes[j].z - n.z;
-      near.push({ d2: dx * dx + dz * dz, rev: nodes[j].rev });
-    }
-    near.sort((a, b) => a.d2 - b.d2);
-    let w = 0, acc = 0;
-    for (let k = 0; k < Math.min(3, near.length); k++) {
-      const wt = 1 / (0.6 + Math.sqrt(near[k].d2));
-      w += wt; acc += wt * near[k].rev;
-    }
-    n.rev = Math.max(0.03, acc / w - 0.02);
-  }
+  // (A waypoint used to take an inverse-distance blend of the three nearest
+  // seats' thresholds, so the ground between two members lit as those members
+  // lit. There are no thresholds now — the network is whole before the lens
+  // clears the soil — so the blend is gone with them. It called no rand().)
 
   /* ================================================================
      2. THE GRAPH — spanning tree first, then the web
@@ -379,14 +413,10 @@ export function createFinalCanopy(uniforms, seats) {
       // strand is the same organ at the surface, so it carries the same.
       wave: e.spine ? 0.40 : 0,
     };
-    // THE FRONT, TRAVELLING. makeBatch carries ONE meta per segment, so the
-    // threshold is per-SEGMENT rather than per-vertex — evaluated at each
-    // segment's own midpoint of the A->B lerp. At ~0.58 world units a segment
-    // that is a step of at most (|revB - revA| / SEG) of uPull, against the
-    // shader's own 0.16 reveal width: the ramp is fifteen to thirty times
-    // wider than the step, so what a viewer sees is a soft front running down
-    // the strand, not twelve panels switching. Pure in uPull either way, so a
-    // reverse scrub un-lights it exactly as it lit (D16).
+    // There used to be a TRAVELLING FRONT here: one threshold per segment,
+    // lerped along the A->B run, so light ran down a strand from the body that
+    // kindled first to the one that had not. The strand is simply present now
+    // (§REVEAL), so every segment is ALWAYS_LIT and the run appears whole.
     let prev = null, prevT = 0;
     for (let j = 0; j <= SEG; j++) {
       const t = j / SEG;
@@ -395,10 +425,9 @@ export function createFinalCanopy(uniforms, seats) {
       // a taper: brightest at the two feet, thinnest in the middle of the run
       const shade = 0.62 + 0.38 * Math.abs(2 * t - 1);
       if (prev) {
-        const rm = A.rev + (B.rev - A.rev) * (t - 0.5 / SEG);
         lines.seg(prev[0], prev[1], prev[2], p[0], y, p[1],
           Math.min(0.9, t0 * prevT), Math.min(0.9, t0 * shade),
-          { ...meta, reveal: rm });
+          { ...meta, reveal: ALWAYS_LIT });
       }
       prev = [p[0], y, p[1]];
       prevT = shade;
@@ -410,9 +439,7 @@ export function createFinalCanopy(uniforms, seats) {
        or three short offshoots leaving a spine at an oblique angle and dying
        out are what stop the canopy reading as a wireframe of itself, and they
        are the cheapest density in the file — three segments each, on the same
-       batch, at a third of the tone. They inherit the strand's own threshold
-       at the point they leave it, so they arrive with the run they belong to
-       and retract with it. ---- */
+       batch, at a third of the tone. ---- */
     if (!e.spine || len < 1.2) return;
     const nH = rand() < 0.55 ? 2 : 1;
     for (let h = 0; h < nH; h++) {
@@ -425,7 +452,6 @@ export function createFinalCanopy(uniforms, seats) {
       let hy = groundY(hx, hz) + LIFT_MIN;
       const HS = 3;
       const hl = 0.34 + rand() * 0.95;
-      const rev = A.rev + (B.rev - A.rev) * t;
       const tone = t0 * (0.42 + rand() * 0.22);
       for (let k = 0; k < HS; k++) {
         a += gauss() * 0.42;
@@ -436,7 +462,7 @@ export function createFinalCanopy(uniforms, seats) {
         const f0 = 1 - k / HS, f1 = 1 - (k + 1) / HS;
         lines.seg(hx, hy, hz, qx, qy, qz,
           Math.min(0.9, tone * f0), Math.min(0.9, tone * f1),
-          { arc: meta.arc, reveal: rev, tw: rand() * TAU, boost: 0.18 });
+          { arc: meta.arc, reveal: ALWAYS_LIT, tw: rand() * TAU, boost: 0.18 });
         hx = qx; hy = qy; hz = qz;
       }
     }
@@ -458,7 +484,7 @@ export function createFinalCanopy(uniforms, seats) {
     glows.pt(n.x, n.gy + 0.035, n.z,
       Math.min(0.9, (0.24 + 0.20 * hot) * lum),
       (0.045 + 0.055 * hot) * (0.6 + 0.6 * lum),
-      { arc: arcOf(n.x, n.z), reveal: n.rev, tw: rand() * TAU, boost: 0.4 });
+      { arc: arcOf(n.x, n.z), reveal: ALWAYS_LIT, tw: rand() * TAU, boost: 0.4 });
 
     // CONVERGENCE HUBS — the house's hub grammar (CONNECT's radial spokes
     // into a bright core, OWNED's starbursts), kept RARE: only where the
@@ -474,10 +500,10 @@ export function createFinalCanopy(uniforms, seats) {
         if (cutVal(qx, qz) < KEPT * 0.75) continue;
         lines.seg(n.x, n.gy + 0.03, n.z, qx, groundY(qx, qz) + 0.025, qz,
           Math.min(0.9, 0.34 * lum), Math.min(0.9, 0.10 * lum),
-          { arc: arcOf(n.x, n.z), reveal: n.rev, tw: rand() * TAU, boost: 0.8 });
+          { arc: arcOf(n.x, n.z), reveal: ALWAYS_LIT, tw: rand() * TAU, boost: 0.8 });
       }
       glows.pt(n.x, n.gy + 0.05, n.z, Math.min(0.9, 0.52 * lum), 0.22 + rand() * 0.10,
-        { arc: arcOf(n.x, n.z), reveal: n.rev, tw: rand() * TAU, boost: 1 });
+        { arc: arcOf(n.x, n.z), reveal: ALWAYS_LIT, tw: rand() * TAU, boost: 1 });
     }
   }
 
@@ -499,7 +525,7 @@ export function createFinalCanopy(uniforms, seats) {
       glows.pt(n.x + gauss() * 0.25, n.gy + 0.03, n.z + gauss() * 0.25,
         Math.min(0.9, (0.16 + rand() * 0.09) * lum),
         0.85 + rand() * 1.35,
-        { arc: arcOf(n.x, n.z), reveal: n.rev, tw: rand() * TAU, boost: 0.3 });
+        { arc: arcOf(n.x, n.z), reveal: ALWAYS_LIT, tw: rand() * TAU, boost: 0.3 });
       placed++;
     }
     counts.pools = placed;
@@ -510,15 +536,30 @@ export function createFinalCanopy(uniforms, seats) {
      ================================================================ */
   // Strand opacity 0.62 against the lip's 0.72 and the ring's 1.15: the
   // canopy is the ground the subject stands on, and it is levelled to say so.
-  const strandMat = makeStrandMat(uniforms, 0.62);
+  const STRAND_OP = 0.62, GLOW_OP = 0.85;
+  const strandMat = makeStrandMat(uniforms, STRAND_OP);
   const strandLines = new THREE.LineSegments(lines.geo(), strandMat);
   strandLines.frustumCulled = false;
   group.add(strandLines);
 
-  const glowMat = makePointsMat(uniforms, 0.85, makeGlowTexture());
+  const glowMat = makePointsMat(uniforms, GLOW_OP, makeGlowTexture());
   const glowPts = new THREE.Points(glows.geo(true), glowMat);
   glowPts.frustumCulled = false;
   group.add(glowPts);
+
+  /** THE ONE GATE (§REVEAL). `v` is index.js's camera-pure surfacedOf().
+   *
+   *  It rides uOpacity and not a new shared uniform on purpose: makeStrandMat/
+   *  makePointsMat build uOpacity as each material's OWN object and merge the
+   *  chapter's shared set around it, so writing here reaches the canopy's two
+   *  batches and provably nothing else — no other system in the chapter can
+   *  see this value. At v = 1 both materials hold the authored constants
+   *  above, so the resting composition is the shipped one exactly. */
+  function setPresence(v) {
+    strandMat.uniforms.uOpacity.value = STRAND_OP * v;
+    glowMat.uniforms.uOpacity.value = GLOW_OP * v;
+  }
+  setPresence(0);          // dark until the orchestrator says otherwise
 
   counts.canopyNodes = N;
   counts.canopyBodies = nBody;
@@ -529,5 +570,5 @@ export function createFinalCanopy(uniforms, seats) {
   counts.canopySegs = lines.segCount;
   counts.canopyPts = glows.ptCount;
 
-  return { group, counts };
+  return { group, counts, setPresence };
 }
