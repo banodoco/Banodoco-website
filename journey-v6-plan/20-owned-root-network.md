@@ -1940,3 +1940,134 @@ worse fault than a card that has run out of things to point at.
 5. **The flank fallback is unexercised in the shipping build.** No pose puts a
    contributor behind the lens. It exists so that a future camera cannot make
    the card jump to a meaningless corner.
+
+---
+
+# 2026-08-14 — the last term that was still keyed to p
+
+**Requested:** Hannah. **Built:** same day.
+**Files:** `journey/chapters/owned/index.js`. One mask. No geometry, no route
+file, no camera key, no golden move.
+
+> "When I'm starting the loop from the last to the first — the end-to-beginning
+> loop — the ownership orbs are visible in that. They shouldn't become visible
+> when I'm above ground; they should only be visible when I'm below ground, and
+> become invisible when I go above ground."
+
+## 21. Which of the two possibilities it was
+
+The brief allowed two: either the orbs were never brought onto `fc1e151`'s
+camera-depth rule, or the wrap's camera path defeats it. **Neither, exactly** —
+and the third answer is more useful than either.
+
+The orbs are the contributor nodes' cores and halos in `portraits.js`, and they
+ride `portraits.setFade()`, which index.js writes as `eff * faceVis`. `eff` is
+`amt * max(sink, keep)` — fully on the camera-depth rule, exactly as `fc1e151`
+left it. The defect is the **second factor**. `faceVis` is the Final-surface
+mask added by `17-final-field.md`, and it was written
+
+```js
+const faceVis = 1 - smooth01((pNow - 0.815) / 0.030);
+```
+
+— a pure function of **p**, justified in its own comment with the sentence "p
+and the camera are a bijection on the leg". That is the same premise `keep`
+was written on, and `873246f` retired it four hours earlier for the same
+reason: it is true on the leg and false the instant a jump snaps `p` while the
+camera has not moved. `fc1e151` cleared this premise out of the whole chapter;
+this one term was added afterwards and inherited it.
+
+### Measured, before
+
+Real in-page rAF-timed `WheelEvent`s at ~15–20 ms spacing, 1440x900, tracing
+every **presented** frame (a tracer animator registered last, so it runs
+immediately before `composer.render()`). `journey.wrap()` was not used
+anywhere.
+
+| | down-wrap (last → first) | up-wrap (first → last) |
+|---|---|---|
+| orb frames lit **above ground** | **36** | 0 |
+| peak orb fade above ground | **1.0000** | 0 |
+| span | **778 ms** | — |
+
+The step itself, frame by frame: at the Final rest `faceVis` is 0 and the orbs
+are dark — which is why `final@*` and the epilogue were always clean and why
+this was only ever visible on the loop. **One frame later** `p` has snapped
+0.97 → 0, the camera has not moved (x −14.72 → −14.72, depth −2.68 both
+frames), and the mask steps **0 → 1**. The whole contributor field — orbs and
+busts — ignites at full strength over an open above-ground view and holds there
+until `keep`'s own z term happens to close at z ≈ −0.8, 778 ms later.
+
+The up-wrap showed nothing, because its destination `p` is 0.97, where the mask
+is 0. **The two directions were not mirrors, and the one that broke is the one
+Hannah named.**
+
+## 22. The restatement
+
+```js
+const faceVis = smooth01((depth - FACE_D0) / (FACE_D1 - FACE_D0));
+```
+
+`depth` is the same `leg.groundY(cp.x, cp.z) - cp.y` the chapter's `sink`
+already uses, so this joins the language the rest of the file speaks and the
+soil governs the orbs whatever path the lens took.
+
+* **`FACE_D1 = SINK_D` (0.94)** — deliberately not a second number. The faces
+  are full exactly when the chapter already declares the colony arrived, and
+  both rests clear it by measurement (landscape depth **1.207**, portrait
+  **0.987**), which is what keeps `owned@1440x900` and `owned@430x932`
+  bit-identical.
+* **`FACE_D0 = 0.38`** — the shipped window's *own* completion depth, measured
+  on the leg at the reference aspect: `p 0.845 → depth 0.3849`. So the fade
+  still finishes while the lens is climbing through the colony's dark upper
+  reaches, and still **completes before the pierce** (`p 0.8555`), which was
+  `17-final-field.md`'s whole point.
+
+### It is also a fix on mobile
+
+The p-window was calibrated at desktop and was never right at the other aspect.
+Measured on the leg:
+
+| aspect | depth at p 0.815 | depth at p 0.845 | soil pierce |
+|---|---|---|---|
+| 1.60 (1440x900) | 1.023 | 0.385 | **p 0.8555** |
+| 0.461 (430x932) | 0.464 | **−0.379** | **p 0.834** |
+
+At 430x932 the shipped window was still fading the faces out at `p 0.845` with
+the camera already **0.379 units above ground**. A depth mask cannot make that
+mistake at any aspect, which is the same argument `fc1e151` made for `sink`.
+
+## 23. Gates
+
+* **Frames through the wrap, before and after** — real wheel-driven down-wrap,
+  blend clock stretched (§8.2 of `26-scroll-loop.md`: no wall-clock term
+  survives inside a blend, so the appearance is a pure function of the ease).
+  Before, shot 1: `p 0`, camera (−14.91, 2.79, 1.86), **depth −2.727**, orb
+  fade **1.0000** — the ground plane is covered in lit orbs and a contributor
+  bust reads bottom-left. After, the same shot: orb fade **0.0000**, and orb
+  fade is **0.0000 at all nine shots of the lap**, every one of them above
+  ground (depth −2.68 … −4.32). The substrate network is unchanged in both,
+  which is `keep`'s designed epilogue exposure and not what was reported.
+* **Above-ground orb frames**: 36 → **0** on the down-wrap, 0 → 0 on the
+  up-wrap. Peak above-ground orb fade 1.0000 → **0.0000**.
+* **Reverse scrubs mirror exactly.** Forward and reverse sweeps of `p`
+  0.70–0.90 under `?nosnap=1`, both shipped aspects: max forward-vs-reverse
+  delta **0** — bit-identical — under `?steady=1`. With the documentary
+  handheld live it is 0.019/0.024, which is the handheld's own wobble entering
+  a camera-pure mask; `sink` and `keep` have had exactly that property since
+  `fc1e151` and it is not new here.
+* **Nothing lit above open view**: across both sweeps and both aspects, orb
+  frames with `depth ≤ 0` and fade > 0.003: **0**.
+* **`capture.py --check` PASS, worst MAE 0.00/255** across all ten frozen
+  references — `owned@*` included, which is the point of pinning `FACE_D1` to
+  `SINK_D`.
+* **Full ride**: four laps, twenty-three legs, four wraps (two interrupted
+  mid-lap and scrolled on from) — every leg on an anchor, camera-vs-`p` error
+  0.0000, **console 0 entries**, URL clean.
+
+## 24. Residual
+
+* The mask now inherits the documentary handheld, so the faces' fade wobbles
+  by ~0.02 where the handheld is live. Below the eye and below the 0.003
+  visibility threshold's own resolution; the alternative is a p-keyed term,
+  which is the defect.

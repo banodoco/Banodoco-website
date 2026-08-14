@@ -317,6 +317,10 @@ export function createOwned(sceneApi, content) {
   //          the colony up through the murk instead of on the click.
   const SINK_D = 0.94;
   const KEEP_X0 = 4.6, KEEP_XW = 0.8;
+  // The contributor faces' own depth window — see the Final-surface mask in
+  // the animator for the derivation and the measurement. FACE_D1 is SINK_D,
+  // deliberately not a second number.
+  const FACE_D0 = 0.38, FACE_D1 = SINK_D;
 
   // ...AND `keep` NEEDS THE OTHER HALF OF ITS OWN PREMISE (2026-08-14 —
   // Hannah: "a visual glitch sometimes when I scroll up to the end — a little
@@ -528,15 +532,48 @@ export function createOwned(sceneApi, content) {
     // must not read inside the epilogue frame (they were surfacing as bright
     // portrait blobs in the wedge corner). The substrate keeps its glow (the
     // network below the lip is the composition's designed underground light);
-    // only the portrait field retires. Pure in p — p and the camera are a
-    // bijection on the leg, so this is a camera-keyed fade, not a timed one:
-    // it runs 0.815→0.845 and COMPLETES BEFORE the surface pierce (~0.850),
-    // i.e. while the lens is still climbing through the colony's dark upper
-    // reaches — measured: at 0.845 the old window still showed readable
-    // faces bottom-right of the surfacing frame. Reverse rides restore the
-    // faces through the same corridor as the camera re-enters the colony.
-    // Zero effect at the Owned rest (p 0.725 → mask 1) and on its golden.
-    const faceVis = 1 - smooth01((pNow - 0.815) / 0.030);
+    // only the portrait field retires.
+    //
+    // THE LAST TERM IN THIS CHAPTER THAT WAS STILL KEYED TO p (2026-08-14 —
+    // Hannah: "when I'm starting the loop from the last to the first the
+    // ownership orbs are visible in that. They shouldn't become visible when
+    // I'm above ground"). It was written as `1 - smooth01((p - 0.815)/0.030)`
+    // and justified exactly as the shipped `keep` was: "p and the camera are a
+    // bijection on the leg". True on the leg; false the moment a jump snaps p
+    // while the camera has not moved. fc1e151 retired that premise for the
+    // whole rest of this chapter and 873246f retired it for `keep`; this one
+    // term was left behind, and the wrap is where it shows.
+    //   Measured through a real wheel-driven DOWN-wrap (in-page rAF-timed
+    // deltas; journey.wrap() is not the input path), 1440x900: at the Final
+    // rest the mask is 0 and the orbs are dark — which is why the golden and
+    // the epilogue are clean and why this was only ever visible on the loop.
+    // One frame later p has snapped 0.97 -> 0, the camera has NOT moved
+    // (x -14.72, depth -2.68 both frames), and the mask STEPS 0 -> 1: the
+    // whole contributor field ignites at full strength over an open
+    // above-ground view and stays there for 36 frames / 778 ms, until `keep`'s
+    // z term happens to close at z ~ -0.8. The up-wrap showed nothing, because
+    // its destination p is 0.97 where the mask is 0 — the two directions were
+    // not mirrors, and the one that broke is the one Hannah named.
+    //
+    // Restated in the camera's own terms, which is what the rest of the
+    // chapter already speaks: the faces are full while the lens is properly
+    // under the soil and out before it pierces. FACE_D1 is SINK_D itself —
+    // the depth at which this chapter already declares the colony fully
+    // arrived — so the faces are full exactly when the colony is, and both
+    // rests clear it (landscape depth 1.207, portrait 0.987, measured), which
+    // is what keeps `owned@1440x900` and `owned@430x932` bit-identical.
+    // FACE_D0 0.38 is the shipped window's own completion depth, measured on
+    // the leg at the reference aspect (p 0.845 -> depth 0.3849), so the fade
+    // still finishes while the lens is climbing through the colony's dark
+    // upper reaches and still COMPLETES BEFORE the pierce (p 0.8555).
+    //   It is also a fix on mobile, where the p-window was never right: at
+    // aspect 0.461 the leg pierces at p 0.834, so the shipped window was still
+    // fading the faces out at p 0.845 with the camera already 0.379 units
+    // ABOVE ground. Depth cannot make that mistake at any aspect.
+    // Reverse rides restore the faces through the same corridor, exactly, for
+    // the same reason every other mask here mirrors: it is a pure function of
+    // the camera.
+    const faceVis = smooth01((depth - FACE_D0) / (FACE_D1 - FACE_D0));
     portraits.setFade(eff * faceVis);
     substrate.update(dt, t);
     portraits.update(dt, t);
