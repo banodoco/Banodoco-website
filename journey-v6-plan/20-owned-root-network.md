@@ -2071,3 +2071,328 @@ mistake at any aspect, which is the same argument `fc1e151` made for `sink`.
   by ~0.02 where the handheld is live. Below the eye and below the 0.003
   visibility threshold's own resolution; the alternative is a p-keyed term,
   which is the defect.
+
+---
+
+# 2026-08-14 (later) — the click state becomes the hover state
+
+**Requested:** Hannah. **Built:** same day.
+**Files:** `journey/ui.js` (the card's two tiers, the arrival stagger),
+`journey/site.css` (the transient tier). No content, no scene, no camera key,
+no placement, no golden move.
+
+> "For the Ownership section: remove the current separate hover state. The
+> existing click state should become the hover state instead. This hover
+> interaction should be available immediately when entering the section — no
+> ~5-second delay before it becomes active. On hover, show the full current
+> click-state treatment. On de-hover, return immediately to the default state.
+> Clicking should no longer be required to reveal this state."
+
+## 25. What the click actually revealed, measured before anything moved
+
+"The click state" is not one thing, so the first job was to enumerate it.
+Measured at the Owned rest, 1440x900, clicking `contributor-12`:
+
+| what the click did | evidence |
+|---|---|
+| opened the anchored card | `.j-card` `open`, `data-side="above"`, rect `484,425 400x199.7`, filament `--j-card-fx 200.0px` |
+| declared it a modal dialog | `role="dialog"`, `aria-modal="true"`, `aria-labelledby="j-card-h"` |
+| moved focus into it, and trapped it | `document.activeElement` → `.j-card-x`; Tab ×4 → still `.j-card-x` |
+| claimed input | `claimInput(card, { modal: true })` |
+| marked the chip expanded | `aria-expanded="true"` on `contributor-12`, false on the other fifteen |
+| lit the chapter's SELECTED treatment | `uSelIdx 12 / uSelAmt → 1` (portraits.js's ember-rim + strand response) |
+| **faded every chip out** | visible chips **16 → 0**, tabbable **16 → 0** (`modalDetail`, "the frame belongs to the detail") |
+| set journey.detail | `journey.detail = 'contributor-12'` |
+
+(It writes nothing to the URL — the ride stopped doing that on 2026-08-11.
+The hash was `''` before and after, verified rather than assumed.)
+
+The hover state it sat next to was `696e95d`'s: the face lights, its own
+6–55 local filaments light with it (`uOwner 12 / uOwnerAmt 0.99`), the pill
+label appears, and nothing else happens.
+
+### Which of those eight belong on hover, and which cannot
+
+Three of them **cannot** move, and the third is not a preference:
+
+- **The chip fade is self-cancelling.** A hover that hides all sixteen chips
+  hides the chip holding it open. `pointerleave` fires, the reveal closes, the
+  chips come back, the pointer is on the face again, and the pair oscillates at
+  frame rate. The reveal would destroy its own cause, forever.
+- **The focus trap and the focus move.** A panel that takes the keyboard every
+  time a mouse crosses a face is not a disclosure, it is an ambush; and a trap
+  with no deliberate act behind it is one the visitor cannot predict their way
+  out of.
+- **The modal input claim.** A hover that claimed input would stop the page
+  scrolling under a resting mouse.
+
+`aria-expanded` stays with the commit for the same reason the popover keeps it
+there: a pointer passing over a face has not opened anything.
+
+Everything else moves: **the card, anchored exactly as `8987500` anchors it,
+and the chapter's selected light.** Hannah asked for "the full current
+click-state treatment", and that light is part of the treatment rather than
+part of the plumbing.
+
+## 26. So the card grows the popover's two tiers
+
+Nothing here is a new idea. `e20f7ff` already had to answer "the same panel,
+revealed transiently by a pointer and committed by a click" for `.j-pop`, and
+the card is that contract one vessel up.
+
+| | TRANSIENT (hover / focus) | PINNED (click / Enter / Space / route) |
+|---|---|---|
+| what opens it | the chip's own `hot` state, via `syncCard()` | `openCard()`, unchanged |
+| role | none — it is an annotation | `dialog` + `aria-modal="true"` |
+| how AT reaches it | `aria-describedby` on the chip → the panel's prose ids | the dialog itself, focus moved in |
+| focus | never moves | to `.j-card-x`, trapped |
+| input | not claimed | `claimInput(card, { modal: true })` |
+| `aria-expanded` | false | true |
+| `journey.detail` | **not set** — the sixteen chips stay live | set |
+| controls | none: the ✕ and the grab handle are `display: none` | ✕, grab handle, link |
+| pointer-events | **none** | auto |
+| Escape | drops the reveal, remembers not to re-show it | closes, returns focus |
+
+**`pointer-events: none` on the transient panel is load-bearing, not tidiness.**
+It is what stops the card becoming the thing the pointer is on — the second
+form of the oscillation above — and it is what lets a pointer travel straight
+from one contributor to the next through the space a card happens to occupy.
+The popover needs the opposite (`POP_HIDE_MS` exists so a pointer can walk onto
+it and reach its link) because a popover *has* a link. This panel has no
+controls at all while it is transient, which is why it can afford to have no
+grace period either: **`syncCard()` is immediate in both directions**, which is
+what "return immediately to the default state" asks for.
+
+**Which nodes get a card is still decided by CONTENT.** `hottestCard()` is
+`hottest()` read the other way round — a chip with no `short` line has no
+popover to show, so what it discloses is its card. That selects Owned's sixteen
+contributors and nothing else in this build, and no chapter or node id appears
+in `ui.js` for it, which is the rule `previewFor()` already keeps.
+
+### The re-arm rule, which is NOT simply the popover's
+
+`popDismissed` is cleared when the chip goes cold. That is wrong here, and the
+difference is worth recording because it cost a real defect.
+
+Closing a **pinned** card hands the sixteen chips back on the same tick — they
+were `visibility: hidden` while the dialog owned the frame. Chrome recomputes
+pointer boundary events after that, so a pointer resting on the face it just
+closed receives a synthetic `pointerleave` + `pointerenter` pair **with no
+movement behind it**. Under the popover's rule the leave reads as "the visitor
+left the chip", clears the dismissal, and the enter one frame later puts the
+panel straight back. Measured on the first build of this pass: Escape on a
+pinned card left `ui.cardOpen === true`. That is exactly the "Escape that
+visibly does nothing" `popDismissed` exists to prevent, and the popover never
+meets it because its own chips are never hidden.
+
+So `dismissCard()` asks what is actually holding the panel open, and there are
+three answers:
+
+- **a pointer on the face** — park the dismissal on that chip; only a real
+  `pointermove` off it re-arms (tested with `elementFromPoint`, so the chip's
+  own hit pad decides). A visibility change produces no `pointermove`.
+- **keyboard focus on the chip** — re-armed by the chip going cold, the
+  popover's rule.
+- **neither** — Escape on a card opened by Enter, whose focus is inside the
+  dialog. Then there is *nothing to suppress*: the reveal's cause is already
+  gone, and recording a dismissal would strand the node, because the cold
+  transition that clears it has already been and gone. (This was the second
+  defect of the pass: `contributor-12` became permanently un-hoverable after
+  one Enter-then-Escape.)
+
+The pointer test is **geometry**, not `h.hover` and not `elementFromPoint`:
+while a pinned card is open its chip is `visibility: hidden`, so the hover flag
+has already been dropped by that same synthetic leave and the element is not
+hit-testable — yet the pointer is physically still on the face. `sx`/`sy` hold
+the last placed position and the new `padLast` holds the last live pad radius,
+so the pad the visitor is aiming at can still answer while nothing is drawn
+there.
+
+## 27. The "~5-second delay" — what it was, and why the constant is innocent
+
+It is `HOTSPOT_STAGGER_MS`, and the fault is not its value.
+
+The stagger is a **reveal choreography**: a chapter's labels arrive one per
+150 ms in narrative order so a frame does not gain five pills at once. For the
+chips it was written for — Inspire's three, Connect's three, all of which draw
+a resting pill — it is right, and it is untouched.
+
+**Owned's chips draw nothing at rest.** The injected label-policy rule is
+`.j-hot.label-hover > * { opacity: 0 }` — dot, label and pad alike — so the
+staggered `h.a` ramp is an opacity envelope on an object with nothing visible
+inside it. What it does have is consequences: `h.a` gates `.vis`
+(visibility *and* pointer-events), the hit pad's SIZE (the sizing pass skips any
+chip at `a <= 0.015`), and `tabIndex`. On this chapter the stagger was
+choreographing nothing and delaying everything.
+
+It was harmless while hover only lit a node. It is the difference between a
+live section and a dead one now that hover is the disclosure — which is why
+Hannah met it as a symptom of this request and not before.
+
+So the fix is to **who is in the queue**, not to how long the queue is: a chip
+with no resting mark has no arrival to stage, and arms on the frame it becomes
+placeable. That also matches what the picture already does — the sixteen
+*faces* are drawn by the chapter's own fade, all at once, and never were
+staggered.
+
+### Measured, both entry paths, 1440x900
+
+| | before (`046e024`) | after |
+|---|---|---|
+| **nav jump**, first chip hoverable | 987 ms | 1052 ms |
+| **nav jump**, LAST chip hoverable | **3251 ms** | **1052 ms** |
+| nav jump, stagger tail | **2263 ms** | **0** |
+| nav jump, all sixteen tabbable | 3251 ms | 1052 ms |
+| **wheel ride in**, first hoverable (from chapter arrival) | 0 ms | 205 ms |
+| **wheel ride in**, LAST hoverable | **1999 ms** | **205 ms** |
+| wheel ride, stagger tail | **1999 ms** | **0** |
+
+The residual ~1.05 s on a nav jump is the copy-arrival gate (`gate > 0.72`),
+which is the chapter's own arrival and is correct: the camera is still most of
+a second from its destination at that point, and a chip live over a frame that
+is not yet the composition would be `2026-08-11`'s fault in a different
+costume. **All sixteen now arm on the same frame**, which is the number that
+matters — there is no longer a chip that is live later than its neighbours.
+
+## 28. Touch — what a tap does now
+
+**Touch has no hover, so it gets no transient tier**: `syncCard()` returns null
+outright under `sheetQuery` (coarse pointer or ≤ 720 px), which also means a
+mouse-emulated hover on a hybrid machine can never raise a transient sheet.
+
+A tap on a contributor now **goes straight to the committed card** — one tap,
+the PL-1.3 bottom sheet, `role="dialog"`, focus on the ✕. It used to take two:
+the first armed the chip, the second opened the sheet.
+
+That two-tap dance is kept **for popover chips and removed only for card
+chips**, and the reason is what the first tap is *for*. It exists to give a
+finger the transient reveal a mouse gets from hovering, which is worth a tap
+when the first one shows you something you could otherwise never see. A card
+chip's transient tier is now the hover tier and is switched off on touch, so
+the first tap would arm a state with nothing in it — and the committed card is
+a bottom sheet that fills the lower third, which on a 375-wide frame where only
+two to four faces are placed can land over the very chip you would have to tap
+again.
+
+Measured at 375x812 under mobile emulation (`pointer: coarse`, touch events):
+one tap on `contributor-15` → `cardOpen true`, `cardPinned true`,
+`cardIsSheet true`, `detail contributor-15`, focus on `.j-card-x`,
+`ui.armedNode null` (no arm was spent). Escape closes it; a second tap opens it
+again. The two placed chips carry pads of **52.0 px and 80.4 px** diameter,
+both past the 44 px minimum.
+
+**The section is no worse on a phone than it was, and one tap better.** It is
+not *fixed* there: §9.4's debt is untouched — 375x812 still places 2 of 16
+faces, and the other fourteen are still reachable only by deep link. This pass
+did not reopen that, and the 2026-08-11 proposal (fold the roster into the
+"Learn more" card) still stands as the fix.
+
+## 29. Gates
+
+    click state         documented before (§25, eight behaviours measured) and
+                        after (the two-tier table, §26)
+    hover = the card    1440x900 and 1280x800: hovering a contributor opens the
+                        anchored card, side `above`, cardPinned FALSE,
+                        journey.detail NULL, 16/16 chips still visible and
+                        tabbable, 16/16 pads still live, modalInput FALSE
+    full treatment      uSelIdx/uSelAmt reach the hovered node on hover
+                        (12 / 0.953) — the selected light the click used to
+                        carry — alongside uOwner 12 / uOwnerAmt 0.993
+    immediate           stagger tail 2263 ms -> 0 (nav jump), 1999 ms -> 0
+                        (wheel entry); all sixteen arm on ONE frame (§27)
+    de-hover            immediate: ui.cardOpen false on the same tick the
+                        pointer leaves (round trip 9.4 ms at 1440, 17.3 at
+                        1280); opacity back to 0 after the 0.3 s house fade
+    edges               contributor-13 (node x 63.3) card clamps to x 12 with
+                        the filament at fx 51.3; contributor-14 (x 1361) clamps
+                        to right 1428. onScreen TRUE and coversNode FALSE on
+                        every shot, all sizes. 8987500's ladder untouched.
+    retarget            sweeping face -> face retargets the panel with NO click
+                        (contributor-13 -> contributor-9), cardPinned false
+                        throughout
+    click still pins    role dialog + aria-modal true, focus .j-card-x, trap
+                        holds (Tab x4 -> .j-card-x), modalInput true,
+                        aria-expanded true on its chip, chips 16 -> 0
+    keyboard            focusing a chip reveals the panel (cardPinned false,
+                        aria-expanded stays FALSE, chip gains
+                        aria-describedby); Enter pins it (dialog, focus moves,
+                        expanded true); Escape closes and leaves detail null
+    Escape, transient   drops the reveal; stays dropped while the pointer sits
+                        on the same face; re-arms on leaving and returning
+    Escape, pinned      closes; chips return 0 -> 16; does NOT spring back as
+                        a hover reveal (§26's re-arm rule)
+    scroll not stolen   with a transient card open, a 40-tick wheel ride
+                        advances p 0.725 -> 0.970, dp 0.245 — IDENTICAL to the
+                        no-card control (0.245). modalInput false throughout.
+    touch               375x812: one tap -> committed sheet, armedNode null,
+                        Escape closes, tap again reopens; pads 52.0 / 80.4 px
+    hit pads intact     16/16 chips, 208/208 sample points answer their own
+                        face, 16/16 faces answer across their whole disc,
+                        worst hit-centre error 0.05 px (696e95d)
+    localised root      hovering a face: uOwner 12 / uOwnerAmt 0.99, released
+                        to -1 / 0.03 on leaving. The crown still owns the
+                        whole-network wave. 696e95d intact.
+    reduced motion      animation none, transition 0s, clip-path none,
+                        opacity 1 — and the PLACEMENT still applied (side
+                        `above`, 400 px wide); de-hover still closes
+    console             0 errors / 0 warnings over a full ride: six nav jumps
+                        (inspire, connect, owned, final, mission, owned), a
+                        60-tick wheel ride down and 60 back, hovers, a pinned
+                        open, Escape. Also 0 across every probe above.
+    goldens             capture.py --check PASS, all ten MAE 0.00/255,
+                        0.0% px>8. NOTHING re-shot. The card is `hidden` at
+                        rest and in HIDE_SELECTORS, so neither tier can reach
+                        a frozen frame.
+
+No camera key moved, no scene geometry moved, no placement changed. `696e95d`
+(hit pads, localised root hover, no toward-camera motion), `961b2d1`,
+`8987500`'s anchoring / collision ladder / filament, `783729b`, `45f600b`,
+`046e024`, `027f969`, `d46e6bb`'s `steadyProject`, `6d37205` and `d1ecc23` are
+all untouched — the card is placed by the same `placeCard()` through the same
+`frameGeom`, in both tiers.
+
+## 30. A pre-existing fault found on the way, and NOT fixed here
+
+`journey/scroll.js`'s `ownerOf(node)` calls `el.contains(node)` without
+checking that `node` is a Node, and `onWheel` passes `e.target`, which is
+`window` for a wheel dispatched via `window.dispatchEvent`. With any input
+owner registered — i.e. whenever the card is pinned — that throws
+`TypeError: parameter 1 is not of type 'Node'`, once per wheel event.
+
+**Verified pre-existing** by stashing this change and re-running the same
+probe against `046e024`: identical stack, identical count (10 events for 10
+wheels), both trees. It is unreachable from a real mouse (a genuine wheel
+targets an Element) but it fires on every synthetic wheel, which is how this
+project's own console gates ride the page — so it can mask real errors in QA.
+Every ride above therefore dispatches on the canvas rather than on `window`.
+
+Left for its own commit rather than folded into an interaction change.
+
+## 31. Residuals
+
+1. **The reveal is now much cheaper to trigger, and that is the trade.** A
+   pointer crossing the arc on its way somewhere else will raise and drop
+   several cards. The crown's own commit (`2026-08-13`, §G) refused exactly
+   this for the re-deal and bought a dwell instead — but a re-deal is a
+   1250 ms sixteen-face swap and a card is a 400 px panel that costs nothing
+   to be wrong about, and Hannah asked for "immediately" in as many words.
+   If it reads as busy, `ZONE_DWELL_MS`'s "still, not dwelled" model is the
+   instrument already in this file.
+2. **The entry replays on every fresh reveal**, ~0.62 s of unfurl + lamp +
+   filament, which a sweep across the arc will restart per face. It is
+   `showPop()`'s own `fresh` test, so this is the house behaviour rather than
+   a new one, and a tier change on the same subject (hover, then click) does
+   NOT replay it. A sweep is still the loudest thing this chapter does.
+3. **Escape still does not restore focus to the chip.** Residual 1 of
+   `2026-08-13` is unchanged and was not folded in: `closeCard()` calls
+   `returnFocus.focus()` while the chip is still `visibility: hidden` from the
+   detail fade, so focus lands on `<body>`. Re-verified on this tree. Note it
+   is now *load-bearing* for §26's third dismissal case, which is why that case
+   exists — fixing the focus return will want that branch re-tested.
+4. **375x812 still places 2 of 16 faces** (§9.4). One tap is better than two;
+   it is not a roster.
+5. **A transient card whose subject leaves the frame is hidden**, unlike the
+   pinned one, which is `2026-08-13`'s stated rule inverted — and deliberately:
+   the reason a pinned card is never taken away is that it holds focus, owns
+   input and is route state, and a transient reveal is none of those. It IS an
+   annotation, so it goes when its subject does.
