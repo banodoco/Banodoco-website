@@ -98,6 +98,18 @@ export const ASPECT = (() => {
 export const T_QA_ACTIVE = _qs.has('t'); // boolean
 export const T_QS_VALUE = _qs.get('t'); // string | null
 
+/** ?debug=1 — render collected page errors on screen (the deduped set the
+ *  window error listeners keep) via the scene-note element. Field/QA-only:
+ *  venue staff load /?debug=1 to read failures without devtools. Read by:
+ *  main.js. */
+export const DEBUG_OVERLAY = _qs.get('debug') === '1'; // boolean
+
+/** ?photos=1 — promote the Owned portrait field to photo mode once the set
+ *  loads. QA-only until the real, consented portrait set replaces the
+ *  look-dev placeholders (assets/test-portraits: stock faces, never ship) —
+ *  the shipped path stays procedural. Read by: journey/chapters/owned/index.js. */
+export const PHOTOS = _qs.get('photos') === '1'; // boolean
+
 /** ?steady=1 — kill the documentary handheld camera layer, for QA that
  *  needs pose sampling to be reproducible frame-to-frame (no seeded
  *  jitter). Read by: journey/journey.js (passed into createDirector).

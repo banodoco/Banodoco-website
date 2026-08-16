@@ -31,6 +31,7 @@ import * as THREE from 'three';
 import { buildLeg } from './leg.js';
 import { buildSubstrate, makeFadePulseMat } from './substrate.js';
 import { buildPortraitField } from './portraits.js';
+import { PHOTOS } from '../../../flags.js';
 import * as H from '../../lib/helpers.js';
 
 const PAL = {
@@ -96,10 +97,15 @@ export function createOwned(sceneApi, content) {
   // mesh can work out which of its filaments belong to whom. Build-time, once
   // — see substrate.assignOwners for how ownership is derived.
   substrate.assignOwners(portraits.nodes.map(n => ({ pos: n.pos, anchors: n.anchors })));
-  // photos are the default read once the look-dev set lands (never blocks
-  // boot; a failed load leaves the procedural busts, and anonymous stays one
-  // call away — setPortraitMode('anonymous'))
-  portraits.photosReady.then((ok) => { if (ok) portraits.setMode('photo'); });
+  // SHIP STATE (2026-08-16): the field ships PROCEDURAL. The look-dev photo
+  // set is randomuser.me/pravatar stock faces (assets/test-portraits/README:
+  // "never ship") — auto-promoting it would present strangers as Banodoco
+  // contributors. The whole photo pipeline stays warm behind ?photos=1 for
+  // QA and for the day the real, consented portrait set lands: restore the
+  // unconditional promotion then, alongside the consent wiring.
+  if (PHOTOS) {
+    portraits.photosReady.then((ok) => { if (ok) portraits.setMode('photo'); });
+  }
 
   // The colony's centre of gravity IS the crown now — every root leaves it,
   // so a wave launched there is the one wave that reaches the whole field.
