@@ -2874,3 +2874,100 @@ is the same fact as §20.4's species coherence seen from the other side.
   the scene, and float addition is not associative. It does not appear in any
   shipped path — the four non-Final goldens are 0.00/255 and the hero's own cap
   box is bit-identical.
+
+# §21 — The even ladder (2026-08-16): the seventh pass, and the first asking for less
+
+Hannah, verbatim intent: the Final scene's layout has mushrooms that "feel a
+bit cluttered and overlapping"; the entry light-up "feels a little bit uneven
+and lasts too long"; it "should be the same entry animation as the first
+landing view and its startup sequence at the end should feel slick and
+elegant"; the layout "should feel balanced but somewhat chaotic."
+
+Six passes bought this arrival road and width. This pass is the first to
+observe that the road was being spent unevenly, and to give some of it back.
+
+## 21.1 What was measured, before
+
+- **Distribution, not tempo, was the fault.** On the composed scroll→pull
+  curve (sampled live through `director.poseAt` + `scroll.scrollFor`), the
+  24-rung ladder occupied 44% of the leg's road: a sparse head (four singles
+  over ~2.3k px), a compressed middle, and then ~6.5k px — more than half the
+  leg — in which no body started and the k1 = 0.451 landing brake stretched
+  the closers' charge curves into a crawl. "Uneven and lasts too long" is
+  that shape, named.
+- **The kindles overlapped into murk.** DRAW_W_HI 0.50 put an opener's
+  charge across more than half the pull band: measured on the gestured path,
+  per-body kindle median **1.29 s** with 4-6 bodies perpetually mid-charge —
+  the landing intro never has more than 2-3 layers drawing at once.
+- **Layout.** At the rest pose (seats projected through the rest camera), the
+  far-lip ring trio stood at screen-x 22.0/26.2/31.6% — three mature caps in
+  one blob — and the field's flat 1.15-unit separation floor allowed a
+  4-body same-depth-band pileup inside 2% of frame width.
+
+## 21.2 The three levers
+
+1. **Route** (`route.js`): segVh [17.0, 0.6] → [10.0, 0.6]; k1 0.451 → 0.70
+   (the crawl zone stops eating a third of the leg); k0 2.219 → 1.305, which
+   is not taste — it holds the p 0.85 knot's absolute slope at the 15.66
+   mp/vh the Owned handover was levelled against (request 83 survives by
+   construction). Page 41.85 → 34.85 vh.
+2. **Ladder** (`world.js` RING_LADDER, `ring.js` FIELD_LADDER): the merged 24
+   rungs re-authored EVEN IN SCROLL over pull [0.0966, 0.95] through the
+   re-measured curve — one body per beat, no accelerando, same slot
+   interleave (ring opens with four singles, field fills, ring closes), same
+   PERM scatter, same first rung (dark at arm is a fact of the pierce).
+   T4's weather tail REV_HI 0.94 → 0.90 so the haze finishes while the frame
+   still moves. `drawWOf` re-derived on the same curve for a constant-time
+   kindle of ~3.5 beats: HI 0.17, LO 0.076.
+3. **Placement** (`world.js` MEMBER_SPEC, `ring.js`): az 279 → 273 and
+   303 → 311 spread the far-lip trio to ~17/26/38% of frame (arc order, and
+   so the CCW reveal order, unchanged); the field's separation rule is now
+   depth-band aware and TIERED — two drawn (T3) bodies in one 3.5-unit depth
+   band need 3.0 units of plan separation, haze (T4) needs 2.0, everything
+   keeps the 1.3 floor — so a near cap may still overlap a far one, which
+   reads as depth, and that is the chaos the frame wants. The placement
+   guard 6000 → 30000 (the stricter rule rejects more; an exhausted guard
+   under-fills the ladder — it now also degrades loudly instead of dying).
+
+## 21.3 Measured, after
+
+Same probe (`tools/fieldpace.js`), same firm 2400 px/s read, same machine,
+run headless through capture.py's own CDP Chrome (the desktop pane was
+occluded; rAF does not tick there):
+
+|                        | shipped     | this pass  |
+|------------------------|-------------|------------|
+| per-body kindle median | 1.295 s     | **0.442 s** |
+| stagger gap median     | 0.110 s     | 0.125 s    |
+| gap min/max            | 70/335 ms   | 82 ms / one 1.05 s frame-stall outlier (simRatio 0.84 run) |
+| full sweep             | 3.74 s      | 4.53 s     |
+| bodies timed           | 24/24       | 24/24, 0 unfinished |
+
+The strip: 1-2 bodies newly starting per 200 ms shutter, 3-4 mid-kindle, 1-3
+mid-take — the whole arrival, start to finish. On the deliberate-scrub path
+(which the probe's release-glide does not exercise) the evenness is by
+construction: even-in-scroll thresholds cross an even-in-scroll wheel.
+Stills at p 0.87/0.895/0.905/0.92/0.945: 1 → 5 → 8 → 12 → all, against the
+shipped 1 → 3 → 5 → 12-at-once → all.
+
+Neither limiter guard binds on the new ladder (tightest gap 0.023 pull needs
+0.575 against RATE_MIN 0.30, 0.177 against ARRIVE_RATE_MIN 0.09), and the
+wrap retire budget re-sums to ~1.21 s against the 1.384 s window.
+
+## 21.4 Gates
+
+- `python3 tools/capture.py` re-shot all ten goldens (poses confirmed, none
+  black); `--check` PASS at worst MAE 0.00/255 after.
+- Boot clean: the one fault found during the pass (under-filled t3 indexing
+  `undefined.jit`) is now impossible — the rank pass guards and degrades.
+
+## 21.5 Residuals
+
+- §40/§41's prose in `chapters/final/index.js` describes the accelerando
+  this pass removed; a NOTE above the LADDER read points there. The limiter
+  machinery itself is untouched and still paces blends/glides in time.
+- The probe run was headless at 28 fps, simRatio 0.84 — absolute seconds are
+  ~16% inflated both sides of the table; the comparison is like-for-like.
+- The end of the leg (last ~25% of road) is now settle + T4 haze only, by
+  design: the town is fully lit while the camera is still visibly gliding,
+  and the rest arrives as a resolution rather than a wait.

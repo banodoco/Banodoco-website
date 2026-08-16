@@ -440,6 +440,15 @@ export function createFinal(sceneApi) {
   // ring members and tier 3 the fifteen field clones: the same twenty-four
   // bodies the ladder is authored over. T4 haze and the T5 cap-rim hints are
   // texture ("haze may arrive as weather") and deliberately do not pace it.
+  // NOTE 2026-08-16: the ladder these rungs come from is no longer the
+  // accelerando §40/§41 describe — it was re-authored EVEN IN SCROLL
+  // (world.js RING_LADDER / ring.js FIELD_LADDER, Hannah's seventh pass:
+  // "uneven and lasts too long"), so the tail-collapse those sections were
+  // built to contain no longer exists on the scrub path either. Both
+  // limiters stay: they are what pace a BLEND/GLIDE arrival in time, and
+  // reading the rungs from the build is what let them survive the re-cut
+  // unchanged. Neither RATE_MIN nor ARRIVE_RATE_MIN binds on the new
+  // ladder (tightest gap 0.023 pull needs 0.575 and 0.177 respectively).
   const LADDER = ring.seats.filter(s => s.tier <= 3).map(s => s.reveal)
     .sort((a, b) => a - b);
   /** Pull units per second for the blend driver at `u`.

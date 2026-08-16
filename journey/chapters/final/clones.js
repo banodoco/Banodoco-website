@@ -298,8 +298,23 @@ const DRAW_LO = 0.296, DRAW_HI = 0.893;
 // ~+18 vh more for this one chapter, and the per-body tail is pinned by
 // the frozen rest — this pass delivers ~1.9x overall and ~2.1-2.7x per
 // body, and says so rather than spending the page on it.
-const DRAW_W_HI = 0.50;        // the opening singles' kindling width
-const DRAW_W_LO = 0.16;        // the closing fills' — narrower in uPull, LONGER in wheel
+// HI 0.50 -> 0.17, LO 0.16 -> 0.076 (2026-08-16, the even-ladder re-cut —
+// world.js RING_LADDER for the full story. Hannah's seventh pass, the first
+// asking for LESS: "uneven and lasts too long... slick and elegant" like the
+// landing page's own startup). The width is re-derived on the same measured
+// curve as the new rungs, for the same target at every rung: kindle = ~3.5
+// arrival beats in WHEEL px (≈660 ms at a deliberate read — charge ~410 ms,
+// take ~200 ms, the hero core-pop's own tempo), instead of the shipped
+// head-heavy spread where an opener charged for ~1.6 s while seven
+// neighbours were mid-charge with it and the field read murky. 2-3 bodies
+// are now mid-kindle at any instant — the landing intro's own overlap. The
+// taper direction survives because it was always the camera curve's shape:
+// pull-per-px falls ~2.2x across the re-shaped leg, so an even-time kindle
+// is wide at the head and narrow at the tail. The last body still finishes
+// at pull ~1.03, inside PULL_MAX 1.12 with room to spare (the REST_MARGIN
+// clamp stays structural).
+const DRAW_W_HI = 0.17;        // the opening singles' kindling width
+const DRAW_W_LO = 0.076;       // the closing fills' — narrower in uPull, even in wheel
 const REST_MARGIN = 0.004;     // s = 1 must land this far under PULL_MAX
 export const drawWOf = (reveal) => {
   const t = Math.min(1, Math.max(0, (reveal - 0.10) / (0.96 - 0.10)));
