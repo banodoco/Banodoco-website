@@ -81,9 +81,20 @@ import {
   makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, REVEAL_W,
 } from './world.js';
 import { makeGlowTexture } from '../../anatomy.js';
+import { CAMERA } from './camera.js';
 
-// Final rest camera (build-time composition anchor, mirrors director key).
-const REST = { x: -13.9, y: 3.4, z: 2.55, headingDeg: -22.7 };
+// Final rest camera (build-time composition anchor). Read from the chapter's
+// own camera leg — the 'final-rest' hold key — so it mirrors the director's
+// pose BY CONSTRUCTION and can never drift from it (2026-08-16; the declutter
+// round's stale -13.9/2.55 mirror of these numbers was exactly this bug class,
+// the one ring.js and canopy.js already named when they stopped mirroring it).
+const REST = (() => {
+  const k = CAMERA.keys.find(k => k.note === 'final-rest');
+  return {
+    x: k.pos.x, y: k.pos.y, z: k.pos.z,
+    headingDeg: Math.atan2(k.tgt.z - k.pos.z, k.tgt.x - k.pos.x) * 180 / Math.PI,
+  };
+})();
 
 // THE ONE WIND — organism/spores.js §10's own BZX/BZY/BZZ, normalized here
 // (the same three numbers final/shed.js already mirrors for the poke's puff).
@@ -305,7 +316,7 @@ export function createFinalSky(sceneApi, uniforms) {
         // well before the town had half-kindled — which front-loaded the
         // sky and made the whole arrival read abrupt. It now forms across
         // the entire kindle ladder and finishes with the last bodies
-        // (REV_HI 0.94), still saturated well before the rest's 1.12, so
+        // (REV_HI 0.90), still saturated well before the rest's 1.12, so
         // the rest frame (and final@* goldens) are untouched.
         float bandGate = mode > 0.5 ? smoothstep(0.34, 0.96, uPull) : 1.0;
         float t = fract(uTime / aCycle.x + aCycle.y);

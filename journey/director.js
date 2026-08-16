@@ -41,6 +41,12 @@ import { ASPECT } from '../flags.js';
 const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
+// The documentary handheld layer is parallax-class motion — the class
+// prefers-reduced-motion exists for — so it is gated off here. The ambient
+// scene (sway, drift) deliberately stays: it is ambience, not motion.
+const REDUCED_MOTION = typeof matchMedia === 'function'
+  && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 /* ================================================================
    1. The composed base path
    ================================================================ */
@@ -201,7 +207,13 @@ export function createDirector(sceneApi, { steady = false } = {}) {
   const rawSetView = sceneApi.setView;
   let pendingView = null;
   sceneApi.setView = (v, secs) => {
-    if (owned) { pendingView = v; captureHero(v); return; }
+    if (owned) {
+      // A deferred view kept the stale aspect: the skipped rawSetView is what
+      // refreshed it (camera.aspect = innerWidth/innerHeight). Replay exactly that.
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      pendingView = v; captureHero(v); return;
+    }
     return rawSetView(v, secs);
   };
 
@@ -276,7 +288,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
    *  itself are untouched. Gated to exactly zero at rest anchors and under
    *  fast scrub; disabled entirely by ?steady=1. */
   function applyHandheld(out, p, dt) {
-    if (steady) return;
+    if (steady || REDUCED_MOTION) return;
     if (dt > 0) {
       hhT += dt;
       const inst = Math.abs(p - hhLastP) / dt;

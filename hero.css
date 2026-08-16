@@ -134,6 +134,12 @@
      the act of tabbing to it (always keyboard-driven) reveals it. */
   .skip-link:focus { top: 1rem; }
 
+  /* Reduced-motion door: a quiet link to the static tier. Hidden for everyone
+     whose device does not ask for reduced motion — the reveal lives in the
+     @media (prefers-reduced-motion: reduce) block below, so the static tier's
+     only door is not buried in the rail menu for the visitors who need it. */
+  .static-door { display: none; }
+
   /* --- UI overlay: clicks fall through to the canvas except on controls --- */
   .ui {
     position: fixed;
@@ -994,6 +1000,34 @@
        joined this list when it stopped being a word and started carrying the
        same colour+filter lift its neighbour does. */
     .pill-ic, .logo { transition: none; }
+  }
+
+  /* The static tier is the reduced-motion escape hatch. Its only other door is
+     inside the rail's menu panel, so a reduced-motion visitor needs a visible
+     one in the tab order. Fixed to the bottom-left corner — clear of the
+     callouts and the CTA at every breakpoint — in the page's own quiet
+     parchment furniture (small tracked type, .pill's hairline border). */
+  @media (prefers-reduced-motion: reduce) {
+    .static-door {
+      display: block;
+      position: fixed;
+      left: 1rem;
+      bottom: 1rem;
+      z-index: 100;
+      padding: 0.5rem 1rem;
+      color: var(--muted);
+      background: var(--bg);
+      border: 1px solid rgba(242, 237, 225, 0.58);
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-decoration: none;
+    }
+    .static-door:is(:hover, :focus-visible) {
+      color: var(--gold-bright);
+      border-color: var(--gold);
+    }
   }
 
 /* --- intro fast-forward (scroll during the entry choreography): the CSS

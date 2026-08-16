@@ -362,7 +362,6 @@ export function createLens(sceneApi) {
 
   function syncEnabled() {
     pass.enabled = userEnabled && amount > 0.002;
-    document.body.classList.toggle('graded', pass.enabled);
   }
   syncEnabled();
 
