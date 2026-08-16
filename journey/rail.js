@@ -906,7 +906,6 @@ export function createRail({ onNav } = {}) {
     void menu.offsetHeight;
     menu.classList.add('open');
     scrim.classList.add('open');
-    document.body.classList.add('j-menu-on');
     // The panel is tall and scrolls. Registering it means wheel and touch
     // inside it are never travel and are never preventDefault()ed, so it
     // scrolls natively; `modal` additionally takes the travel KEYS off the
@@ -924,7 +923,6 @@ export function createRail({ onNav } = {}) {
     menuIsOpen = false;
     menu.classList.remove('open');
     scrim.classList.remove('open');
-    document.body.classList.remove('j-menu-on');
     releaseInput(menu);
     menuBtn.setAttribute('aria-expanded', 'false');
     // inert BEFORE the focus return: a fading panel is out of the tab order

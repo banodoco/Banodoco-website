@@ -52,7 +52,7 @@ import { NOTAA, NOFADE, DBG } from '../flags.js';
  *        Elliptical world-space zone where the ground web is dimmed, so UI text over it stays readable.
  * @param {number} [opts.bg=0x000000]    Background/fog color.
  * @param {number} [opts.fov=38]         Initial camera vertical field of view.
- * @param {Array<{pos:[number,number,number], el:HTMLElement, sway?:boolean}>} [opts.trackers=[]]
+ * @param {Array<{pos:[number,number,number], el:HTMLElement}>} [opts.trackers=[]]
  *        HUD annotations: each frame the world point is projected to screen space and `el` gets
  *        `translate(sx, sy)`, so annotations stay glued to the mushroom through orbit/zoom.
  * @param {number} [opts.intro=0]        Seconds for the entry reveal: the organism grows out of the

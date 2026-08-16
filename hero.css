@@ -569,27 +569,9 @@
     border-radius: 999px;
   }
 
-  /* --- the ink family: page elements are DRAWN like the specimen ---
-     Nothing slides. Text wipes in left-to-right (the direction it is read,
-     the direction the leaders draw), arriving as a soft ink-bleed that
-     settles sharp. Wipes end on clip-path:none so held end states never
-     clip text-shadows or hover glows. */
   @keyframes fade-on {
     from { opacity: 0; }
     to   { opacity: 1; }
-  }
-  @keyframes ink {
-    0%   { opacity: 0; clip-path: inset(-30% 105% -40% -5%); filter: blur(5px); }
-    25%  { opacity: 1; }
-    88%  { clip-path: inset(-30% -12% -40% -5%); filter: blur(0px); }
-    100% { opacity: 1; clip-path: none; filter: none; }
-  }
-  @keyframes cta-ink {
-    0%   { opacity: 0; clip-path: inset(-8px 105% -8px -8px round 999px); }
-    30%  { opacity: 1; }
-    62%  { clip-path: inset(-8px -8px -8px -8px round 999px); box-shadow: none; }
-    78%  { box-shadow: 0 0 30px rgba(230, 175, 70, 0.4), inset 0 0 14px rgba(230, 175, 70, 0.14); }
-    100% { clip-path: none; box-shadow: none; }
   }
 
   /* --- HUD callouts: world-tracked annotations on the specimen ---

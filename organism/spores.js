@@ -548,8 +548,9 @@ export function createSpores(ctx) {
   //                      streams — and the knot-pearl cadence travels along
   //                      the lane as a wave of light, not of matter.
   //   dim              — the color/size pass, applying the per-dot feed +
-  //                      any region/global channels. Byte-exact restore
-  //                      from the one base copy (colors AND sizes).
+  //                      region channels (the whole-shed hand-over retired
+  //                      2026-08-06). Byte-exact restore from the one base
+  //                      copy (colors AND sizes).
   //
   // WHAT THIS BUYS, STATED AS INVARIANTS:
   //   · Positions are a pure function of (time, wind, taps) — NEVER of
@@ -1024,13 +1025,13 @@ export function createSpores(ctx) {
 
   /** regions: [{ a, b, r0, r1, k }] — world-space capsule from a to b, full
    *  dim inside r0, feathered to untouched at r1, strength k (0..1, already
-   *  scaled by the driver's reveal x taste). globalK: whole-shed hand-over.
+   *  scaled by the driver's reveal x taste).
    *  grad: { sx,sy,sz, d0,d1, k } distance-graded history dissolve. The
    *  per-dot exchange rides the emphasis feed:  F = f * (1 - cv) + pw
    *  — an emphasized dot swaps its ambient look for its plume look; the dim
    *  channels apply to the unemphasized share only. Sizes ride feed.sz the
    *  same way. All channels ~0 restores the base colors AND sizes byte-exact. */
-  function dim(regions, globalK, grad) {
+  function dim(regions, grad) {
     const tk = feed;
     let n = 0;
     if (regions) for (const rg of regions) {
@@ -1044,7 +1045,7 @@ export function createSpores(ctx) {
     }
     const gradOn = grad && grad.k > 0.004;
     const tkOn = tk && tk.any && tk.cv;
-    if (n === 0 && globalK <= 0.004 && !gradOn && !tkOn) { if (dimActive) restoreBase(); return; }
+    if (n === 0 && !gradOn && !tkOn) { if (dimActive) restoreBase(); return; }
     if (!colorBase) colorBase = sporePts.geometry.attributes.color.array.slice(); // the ONE base copy
     if (!sizeBase) sizeBase = sporePts.geometry.attributes.psize.array.slice();
     dimActive = true;
@@ -1072,10 +1073,7 @@ export function createSpores(ctx) {
         }
       }
       if (dimV > MAX_TOTAL_DIM) dimV = MAX_TOTAL_DIM;
-      // the global hand-over may exceed the capsule cap: at full reveal the
-      // old curtain is gone (0.97) — retired to 0 by the chapter since
-      // 2026-08-06, kept as an API for any future driver
-      let g = globalK * 0.97;
+      let g = 0;
       if (gradOn) {
         const hx = x - grad.sx, hy = y - grad.sy, hz = z - grad.sz;
         const hd = Math.sqrt(hx * hx + hy * hy + hz * hz);
@@ -1122,11 +1120,11 @@ export function createSpores(ctx) {
    *  its per-dot feed — same frame, one call. */
   const seat = {
     drive({ eff, time, matrixWorld, leanScale = 1, transform = 1,
-            regions = null, globalK = 0, grad = null }) {
+            regions = null, grad = null }) {
       if (!system.driver) return;   // released seat: the handle is inert
       lastDriveFrame = frameNo;
       if (eff) emphasize(eff, time, matrixWorld, leanScale, transform);
-      dim(regions, globalK, grad);
+      dim(regions, grad);
     },
     /** Warm-up (D25, kept): allocate the per-dot emphasis state at page
      *  load instead of on the first mid-scroll frame that needs it. Pure
