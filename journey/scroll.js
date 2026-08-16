@@ -623,6 +623,11 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   let touchY = null;
   let touchOwned = false;   // this gesture began inside a registered owner
   function onTouchStart(e) {
+    // A second finger joining the surface is a pinch, not a scrub: touchstart
+    // fires once per new touch, so e.touches.length counts the whole gesture.
+    // Leave both ownership and touchY alone — the browser owns the zoom, and
+    // multi-finger deltas never feed the ride.
+    if (e.touches.length > 1) return;
     touchOwned = !!ownerOf(e.target);
     // Ownership is decided ONCE per gesture, at touchstart: a drag that began
     // inside a sheet stays the sheet's for its whole life even if the finger
@@ -632,6 +637,10 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   }
   function onTouchMove(e) {
     if (!enabled || touchOwned || touchY === null || !e.touches[0]) return;
+    // Multi-finger = pinch-zoom. Return without preventDefault (the browser
+    // keeps the pinch) and without touching touchY, so the zoom never leaks
+    // a delta into the ride.
+    if (e.touches.length > 1) return;
     const y = e.touches[0].clientY;
     const d = (touchY - y) * TOUCH_GAIN;
     touchY = y;
@@ -1293,6 +1302,22 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         armed. Note it can legitimately be 0 (the Mission anchor) — every
         reader must test it against null, never for truthiness. */
     get answeredAt() { return answeredP; },
+    /** Journey-side (journey.js steerWrapBlend — the wrap lap follows the
+     *  scroll): re-raise the wall at the displayed position. The input that
+     *  REDIRECTS a wrap in flight has been answered — by the lap itself
+     *  changing play direction — so it gets the same retirement the wrap
+     *  performs when it fires (the wrap block in update()): its remaining
+     *  deltas buy nothing — carrying() refuses them, and blendCancelled()
+     *  stops reading them as the visitor taking the camera back — until the
+     *  visitor genuinely starts again (dropWall's three events). Without
+     *  this, the tail of the reversing gesture cancels on the very next
+     *  frame the rewind it just asked for. */
+    retire(dir) {
+      if (!dir) return;
+      answeredP = p;
+      answeredDir = dir > 0 ? 1 : -1;
+      gPeak = 0;
+    },
     /** QA: the cruise (px/s) this resolution latched when the gesture ended —
         the gesture's own peak clamped to the leg's [nominal, ceil] band
         (COMMIT_GLIDE_PX / COMMIT_CRUISE_MAX_PX, both raised if needed to finish
