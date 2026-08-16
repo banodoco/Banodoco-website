@@ -12,6 +12,57 @@
 import { createScene } from './organism/organism.js?v=1785427900';
 import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF, FREE_CAM } from './flags.js';
 
+// --- failure story ---
+// Three ways this page used to die mid-boot — WebGL missing, the journey
+// import failing, or the GPU context being lost on a mobile tab — each left
+// a dead or inert page with only a console.error: body is overflow:hidden
+// so there is no scroll, and the static tier's only link is built by the
+// journey rail at boot. showSceneNote() is the visitor-facing fallback: one
+// fixed note built lazily, so the happy path never touches it.
+let _sceneNote = null;
+function showSceneNote(html) {
+  if (!_sceneNote) {
+    _sceneNote = document.createElement('div');
+    _sceneNote.setAttribute('role', 'status');
+    _sceneNote.setAttribute('aria-live', 'polite');
+    const s = _sceneNote.style;
+    s.position = 'fixed';
+    s.left = '50%';
+    s.bottom = '1.5rem';
+    s.transform = 'translateX(-50%)';
+    s.maxWidth = '44ch';
+    s.padding = '0.75rem 1.15rem';
+    s.background = 'rgba(12, 9, 4, 0.86)';
+    s.color = 'var(--parchment, #f2ebdd)';
+    s.fontSize = '0.85rem';
+    s.lineHeight = '1.5';
+    s.borderRadius = '10px';
+    s.zIndex = '10';
+    s.textAlign = 'center';
+    document.body.appendChild(_sceneNote);
+  }
+  _sceneNote.style.display = '';
+  _sceneNote.innerHTML = html;
+  return _sceneNote;
+}
+function hideSceneNote() {
+  if (_sceneNote) _sceneNote.style.display = 'none';
+}
+
+// QA reads __pageErrors; the visitor-facing story is the specific handlers above.
+const _seenErrors = new Set();
+addEventListener('error', (e) => {
+  window.__pageErrors = (window.__pageErrors || 0) + 1;
+  const msg = String((e && e.message) || 'window error');
+  if (!_seenErrors.has(msg)) { _seenErrors.add(msg); console.error(msg); }
+});
+addEventListener('unhandledrejection', (e) => {
+  window.__pageErrors = (window.__pageErrors || 0) + 1;
+  const r = e && e.reason;
+  const msg = String((r && r.message) || r || 'unhandled rejection');
+  if (!_seenErrors.has(msg)) { _seenErrors.add(msg); console.error(msg); }
+});
+
 // --- a11y: skip link (M5) ---
 // The journey owns the ENTIRE hash namespace, and as of 2026-08-11 it owns it
 // by EMPTYING it: any hash that arrives is read once and stripped
@@ -144,49 +195,76 @@ if (introAt !== null) {
   });
 }
 
-const sceneApi = createScene({
-  ...viewFor(currentMode),
-  container: document.getElementById('stage'),
-  tiltX: -0.14,
-  bg: 0x1c160b,
-  quiet: { x: -5.2, z: 4.2, rx: 4.8, rz: 3.4, strength: 0.7 },
-  trackers: [TRACKS.connect, TRACKS.inspire, TRACKS.equip],
-  intro: skipIntro ? 0 : INTRO_S,
-});
+let sceneApi = null;
+try {
+  sceneApi = createScene({
+    ...viewFor(currentMode),
+    container: document.getElementById('stage'),
+    tiltX: -0.14,
+    bg: 0x1c160b,
+    quiet: { x: -5.2, z: 4.2, rx: 4.8, rz: 3.4, strength: 0.7 },
+    trackers: [TRACKS.connect, TRACKS.inspire, TRACKS.equip],
+    intro: skipIntro ? 0 : INTRO_S,
+  });
+} catch (err) {
+  console.error('[glowshroom] scene failed to start', err);
+  showSceneNote(`This page's live scene could not start on this browser. <a href="./static/" style="color: inherit; text-decoration: underline;">The static journey</a> carries every chapter and link.`);
+}
+
+if (sceneApi) {
+  // A mobile tab can drop its WebGL context without warning and never restore
+  // it (mobile Safari especially). Hold the fallback note behind a 2.5s grace
+  // window: a restore inside it is invisible; a loss that outlives it gets the
+  // static-tier fallback.
+  const canvas = sceneApi.renderer.domElement;
+  let restoreTimer = null;
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault(); // tell the browser it should attempt a restore
+    restoreTimer = setTimeout(() => {
+      showSceneNote(`The scene's graphics context was lost. <a href="./static/" style="color: inherit; text-decoration: underline;">The static journey</a> carries every chapter — or reload to restart the scene.`);
+    }, 2500);
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    clearTimeout(restoreTimer);
+    hideSceneNote();
+  });
+}
 
 document.body.classList.add('mode-' + currentMode);
 
-// ?capture=<p> (M5): freeze the organism's shared clock at the t = 0 phase
-// before the journey boots — every time-driven system (sway, drift, shimmer,
-// TAA jitter) parks deterministically so capture.py gets pixel-stable
-// frames. The journey half (jumping to exactly p) is in journey.js.
-if (captureQ !== null) sceneApi.freezeTime(0);
+if (sceneApi) {
+  // ?capture=<p> (M5): freeze the organism's shared clock at the t = 0 phase
+  // before the journey boots — every time-driven system (sway, drift, shimmer,
+  // TAA jitter) parks deterministically so capture.py gets pixel-stable
+  // frames. The journey half (jumping to exactly p) is in journey.js.
+  if (captureQ !== null) sceneApi.freezeTime(0);
 
-// --- mode switching: re-frame the camera and re-anchor the trackers on breakpoint change ---
-function applyMode(mode) {
-  sceneApi.setView(viewFor(mode), 0.6); // ease the camera between breakpoints instead of snapping
-  for (const key of ['inspire', 'equip', 'connect']) {
-    const a = ANCHORS[mode][key];
-    TRACKS[key].pos[0] = a[0];
-    TRACKS[key].pos[1] = a[1];
-    TRACKS[key].pos[2] = a[2];
-  }
-  document.body.classList.remove('mode-desktop', 'mode-tablet', 'mode-mobile', 'mode-compact', 'mode-deskNarrow');
-  document.body.classList.add('mode-' + mode);
-}
-
-let resizeTimer;
-addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    const mode = getMode();
-    if ((mode === 'deskNarrow' || mode === 'mobile') && mode === currentMode) sceneApi.setView(viewFor(mode), 0.6);
-    if (mode !== currentMode) {
-      currentMode = mode;
-      applyMode(mode);
+  // --- mode switching: re-frame the camera and re-anchor the trackers on breakpoint change ---
+  function applyMode(mode) {
+    sceneApi.setView(viewFor(mode), 0.6); // ease the camera between breakpoints instead of snapping
+    for (const key of ['inspire', 'equip', 'connect']) {
+      const a = ANCHORS[mode][key];
+      TRACKS[key].pos[0] = a[0];
+      TRACKS[key].pos[1] = a[1];
+      TRACKS[key].pos[2] = a[2];
     }
-  }, 150);
-});
+    document.body.classList.remove('mode-desktop', 'mode-tablet', 'mode-mobile', 'mode-compact', 'mode-deskNarrow');
+    document.body.classList.add('mode-' + mode);
+  }
+
+  let resizeTimer;
+  addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const mode = getMode();
+      if ((mode === 'deskNarrow' || mode === 'mobile') && mode === currentMode) sceneApi.setView(viewFor(mode), 0.6);
+      if (mode !== currentMode) {
+        currentMode = mode;
+        applyMode(mode);
+      }
+    }, 150);
+  });
+}
 
 // A hero callout pressed before the journey module has booted. The browser
 // used to record this intent for us — the tag was a plain `#/<chapter>` link,
@@ -244,62 +322,64 @@ if (logoLink) {
 }
 
 // hovering a callout gently lights its region of the specimen
-const isTouch = matchMedia('(hover: none)').matches;
-for (const [id, region] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co-connect', 'ground']]) {
-  const el = document.getElementById(id);
-  el.addEventListener('mouseenter', () => sceneApi.setHighlight(region, true));
-  el.addEventListener('mouseleave', () => sceneApi.setHighlight(region, false));
+if (sceneApi) {
+  const isTouch = matchMedia('(hover: none)').matches;
+  for (const [id, region] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co-connect', 'ground']]) {
+    const el = document.getElementById(id);
+    el.addEventListener('mouseenter', () => sceneApi.setHighlight(region, true));
+    el.addEventListener('mouseleave', () => sceneApi.setHighlight(region, false));
 
-  // EQUIP has no chapter yet (deferred) — its tag keeps the "coming soon"
-  // reveal but must never navigate.
-  if (id === 'co-equip') {
-    el.querySelector('.tag').addEventListener('click', (e) => e.preventDefault());
+    // EQUIP has no chapter yet (deferred) — its tag keeps the "coming soon"
+    // reveal but must never navigate.
+    if (id === 'co-equip') {
+      el.querySelector('.tag').addEventListener('click', (e) => e.preventDefault());
+    }
+
+    // INSPIRE / CONNECT enter the journey at that chapter. Until 2026-08-11 the
+    // NAVIGATION WAS THE HREF: these two tags were made real `#/<chapter>` links
+    // in a089e40 and the hash router picked the resulting hashchange up — which
+    // is precisely the URL write Hannah asked to remove. They navigate through
+    // the journey's own handle now, exactly as the rail's tiles do (a direct
+    // camera jump, not a placement), and the href stays in the markup: it costs
+    // nothing, it keeps the control a real link for the keyboard and for
+    // "open in new tab", and a tab opened that way arrives as an inbound deep
+    // link — placed on arrival, then cleaned.
+    if (!isTouch && (id === 'co-inspire' || id === 'co-connect')) {
+      const chapter = id.slice(3);
+      el.querySelector('.tag').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (window.journey) window.journey.flyTo(chapter);
+        else pendingEntry = chapter;
+      });
+    }
+
+    if (isTouch) {
+      const co = el.querySelector('.co');
+      const tag = el.querySelector('.tag');
+      tag.addEventListener('click', (e) => {
+        e.preventDefault();
+        const willForce = !co.classList.contains('force');
+        for (const other of document.querySelectorAll('.co')) other.classList.remove('force');
+        for (const [oid, oregion] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co-connect', 'ground']]) {
+          sceneApi.setHighlight(oregion, oid === id && willForce);
+        }
+        if (willForce) co.classList.add('force');
+      });
+    }
   }
 
-  // INSPIRE / CONNECT enter the journey at that chapter. Until 2026-08-11 the
-  // NAVIGATION WAS THE HREF: these two tags were made real `#/<chapter>` links
-  // in a089e40 and the hash router picked the resulting hashchange up — which
-  // is precisely the URL write Hannah asked to remove. They navigate through
-  // the journey's own handle now, exactly as the rail's tiles do (a direct
-  // camera jump, not a placement), and the href stays in the markup: it costs
-  // nothing, it keeps the control a real link for the keyboard and for
-  // "open in new tab", and a tab opened that way arrives as an inbound deep
-  // link — placed on arrival, then cleaned.
-  if (!isTouch && (id === 'co-inspire' || id === 'co-connect')) {
-    const chapter = id.slice(3);
-    el.querySelector('.tag').addEventListener('click', (e) => {
-      e.preventDefault();
-      if (window.journey) window.journey.flyTo(chapter);
-      else pendingEntry = chapter;
-    });
-  }
+  // --- design-review / QA query params ---
+  // ?hl=spores|stem|ground forces a region highlight (design review / QA)
+  const hlq = HL;
+  if (hlq) sceneApi.setHighlight(hlq, true);
 
-  if (isTouch) {
-    const co = el.querySelector('.co');
-    const tag = el.querySelector('.tag');
-    tag.addEventListener('click', (e) => {
-      e.preventDefault();
-      const willForce = !co.classList.contains('force');
-      for (const other of document.querySelectorAll('.co')) other.classList.remove('force');
-      for (const [oid, oregion] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co-connect', 'ground']]) {
-        sceneApi.setHighlight(oregion, oid === id && willForce);
-      }
-      if (willForce) co.classList.add('force');
-    });
-  }
+  // The journey extension needs the scene handle (groups, consts, addAnimator,
+  // setView) — adr-d3 section 2. Promoting the hero's ?dbg=1 hook to an
+  // unconditional one is visually inert and applies to THIS PAGE only; the
+  // archived archive/golden-mushroom-page.html (frozen, non-runnable — see
+  // tag v6-prepromote for the last runnable copy) keeps the ?dbg gate.
+  window.sceneApi = sceneApi;
 }
-
-// --- design-review / QA query params ---
-// ?hl=spores|stem|ground forces a region highlight (design review / QA)
-const hlq = HL;
-if (hlq) sceneApi.setHighlight(hlq, true);
-
-// The journey extension needs the scene handle (groups, consts, addAnimator,
-// setView) — adr-d3 section 2. Promoting the hero's ?dbg=1 hook to an
-// unconditional one is visually inert and applies to THIS PAGE only; the
-// archived archive/golden-mushroom-page.html (frozen, non-runnable — see
-// tag v6-prepromote for the last runnable copy) keeps the ?dbg gate.
-window.sceneApi = sceneApi;
 
 // ?lit=1 forces all callouts into their hover state (design review / QA);
 // transitions are snapped so the forced state renders instantly
@@ -335,56 +415,65 @@ addEventListener('keydown', (e) => {
 // reach the organism's own tap handler; DOM links/nav are untouched.
 // ?free=1 keeps the hero's fully interactive camera (and the grab cursor,
 // via body.free-cam in journey/site.css).
-const freeCam = FREE_CAM;
-if (freeCam) document.body.classList.add('free-cam');
-else sceneApi.setInputPolicy('journey');
+if (sceneApi) {
+  const freeCam = FREE_CAM;
+  if (freeCam) document.body.classList.add('free-cam');
+  else sceneApi.setInputPolicy('journey');
 
-const HERO_INTRO_MS = 7600; // scene 5.4s + the three callouts settling
-// (skipIntro is computed in the scene-init section above and already
-// includes ?nointro, ?capture and reduced motion.)
-const frozen = introAt !== null;
+  const HERO_INTRO_MS = 7600; // scene 5.4s + the three callouts settling
+  // (skipIntro is computed in the scene-init section above and already
+  // includes ?nointro, ?capture and reduced motion.)
+  const frozen = introAt !== null;
 
-function loadJourney() {
-  import('./journey/journey.js')
-    .then(m => m.boot({ heroIntroSkipped: !!skipIntro, heroFrozen: frozen, entry: pendingEntry }))
-    .catch(err => console.error('[journey-v6] failed to load', err));
-}
+  function loadJourney() {
+    import('./journey/journey.js')
+      .then(m => m.boot({ heroIntroSkipped: !!skipIntro, heroFrozen: frozen, entry: pendingEntry }))
+      .catch(err => {
+        console.error('[journey-v6] failed to load', err);
+        // the hero scene is still live but was left holding the journey's
+        // input policy (set above) — hand the orbit camera back and point the
+        // visitor at the static tier.
+        if (sceneApi) sceneApi.setInputPolicy('free');
+        showSceneNote(`The interactive journey could not load. The hero scene above is still live, and <a href="./static/" style="color: inherit; text-decoration: underline;">the static journey</a> carries every chapter.`);
+      });
+  }
 
-const delay = skipIntro || frozen ? 0 : HERO_INTRO_MS;
-const bootTimer = setTimeout(() => {
-  if (typeof requestIdleCallback === 'function') requestIdleCallback(loadJourney, { timeout: 1200 });
-  else loadJourney();
-}, delay);
+  const delay = skipIntro || frozen ? 0 : HERO_INTRO_MS;
+  const bootTimer = setTimeout(() => {
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(loadJourney, { timeout: 1200 });
+    else loadJourney();
+  }, delay);
 
-/* ============================================================
-   INTRO FAST-FORWARD (ride-through #4, Hannah): scrolling during
-   the entry choreography must never be a locked door. The
-   clock-skew that fast-forwards the scene's grow-in through its
-   own real math is the intro's own API now — organism/intro.js
-   accelerate() (M5 shell move). This block only wires the
-   trigger events, compresses the page's CSS half (body.intro-fast
-   in hero.css keeps a quick 1-2-3 callout sequence), and boots
-   journey.js immediately so the scroll takes over the moment the
-   ramp ends.
-   ============================================================ */
-if (!skipIntro && !frozen) {
-  let armed = true;
-  const fastForward = () => {
-    if (!armed) return;
-    armed = false;
-    for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, onInput, true);
-    // false = nothing to accelerate (< 200 ms left: intro basically done
-    // anyway) — then the CSS half must not compress and the normal boot
-    // timer stands, exactly as shipped.
-    if (!sceneApi.intro.accelerate({ totalMs: HERO_INTRO_MS + 900 })) return;
-    document.body.classList.add('intro-fast');
-    clearTimeout(bootTimer);
-    loadJourney();                                   // scroll model takes over now
-  };
-  const onInput = (e) => {
-    if (e.type === 'keydown' && !['ArrowDown', 'PageDown', ' '].includes(e.key)) return;
-    fastForward();
-  };
-  for (const t of ['wheel', 'touchmove', 'keydown']) addEventListener(t, onInput, { capture: true, passive: true });
-  setTimeout(() => { armed = false; for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, onInput, true); }, HERO_INTRO_MS);
+  /* ============================================================
+     INTRO FAST-FORWARD (ride-through #4, Hannah): scrolling during
+     the entry choreography must never be a locked door. The
+     clock-skew that fast-forwards the scene's grow-in through its
+     own real math is the intro's own API now — organism/intro.js
+     accelerate() (M5 shell move). This block only wires the
+     trigger events, compresses the page's CSS half (body.intro-fast
+     in hero.css keeps a quick 1-2-3 callout sequence), and boots
+     journey.js immediately so the scroll takes over the moment the
+     ramp ends.
+     ============================================================ */
+  if (!skipIntro && !frozen) {
+    let armed = true;
+    const fastForward = () => {
+      if (!armed) return;
+      armed = false;
+      for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, onInput, true);
+      // false = nothing to accelerate (< 200 ms left: intro basically done
+      // anyway) — then the CSS half must not compress and the normal boot
+      // timer stands, exactly as shipped.
+      if (!sceneApi.intro.accelerate({ totalMs: HERO_INTRO_MS + 900 })) return;
+      document.body.classList.add('intro-fast');
+      clearTimeout(bootTimer);
+      loadJourney();                                   // scroll model takes over now
+    };
+    const onInput = (e) => {
+      if (e.type === 'keydown' && !['ArrowDown', 'PageDown', ' '].includes(e.key)) return;
+      fastForward();
+    };
+    for (const t of ['wheel', 'touchmove', 'keydown']) addEventListener(t, onInput, { capture: true, passive: true });
+    setTimeout(() => { armed = false; for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, onInput, true); }, HERO_INTRO_MS);
+  }
 }
