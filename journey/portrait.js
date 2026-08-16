@@ -61,7 +61,7 @@ export function portraitWeight(aspect) {
 // keep the travel honest (the slip-under must still slip UNDER the rim, the
 // stipe descent must stay outside the stipe — clearance there is ~0.5 world
 // units, so those legs run the field near zero and let it bloom at the rest).
-// p values reference director.js: ORBIT_P0 0.040, rests 0.26 / 0.49 / 0.725 /
+// p values reference director.js: ORBIT_P0 0.040, rests 0.26 / 0.5230 / 0.725 /
 // restProgress('final') (0.97 since §14), descent keys 0.622–0.718.
 const ZERO = { back: 1, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 0 };
 
@@ -87,7 +87,7 @@ const KEYS = [
   // ~5% of frame width). The copy block starts at y 484; the plumes end at 455
   // and the lowest chip at 394.
   //
-  // back stays at 1.50, deliberately close to the 1.55 of the p 0.410 key
+  // back stays at 1.50, deliberately close to the 1.55 of the p 0.4315 key
   // below: portrait subject-distance is roughly landscape-distance x back, so
   // a bigger dolly here would make the portrait travel ZOOM IN toward Connect
   // while the landscape widened. 1.50 -> 1.55 keeps it growing (12.7 -> 13.6),
@@ -156,7 +156,7 @@ const KEYS = [
   // absolute-p violation of route.js's ownership, and for these two keys it
   // no longer is. The mid-leg key keeps its authored position IN LEG TERMS —
   // 0.652 of the way from the Inspire rest to the Connect rest, exactly the
-  // fraction (0.410 - 0.26) / (0.49 - 0.26) the shipped literal encoded.
+  // fraction (0.4315 - 0.26) / (0.5230 - 0.26) the shipped literal encoded.
   { p: restProgress('inspire') + 0.652 * (restProgress('connect') - restProgress('inspire')),
     back: 1.55, rise: 0.28, truck: 0, tgtUp: 0.30, tgtRight: -0.12, fov: 11 },
 

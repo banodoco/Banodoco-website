@@ -13,7 +13,7 @@
 //
 // The reveal driver is the CAMERA, not journey progress: uPull is derived
 // from camera.position.x, which is strictly monotonic along the re-keyed
-// Final leg (x -3.3 -> -17.0). That keeps the reveal a pure function of the
+// Final leg (x -10.2 -> -14.72). That keeps the reveal a pure function of the
 // pose — ?p= sampling, reverse scrubbing and nav flights all agree — without
 // this module ever reading journey state.
 

@@ -387,7 +387,7 @@ export const TERMINAL_P = 1;
 export const TRANSIT_S = {
   // 1.5 s rest to rest, both ways. Measured live: 7.01 s forward / 7.54 s back
   // on the shipped tree, and 3.27 / 3.44 before the glide-unit fix (3daac2e)
-  // handed this leg the 24 vh of road it owns. Hannah's baseline when she asked
+  // handed this leg the 17.0 vh of road it owns. Hannah's baseline when she asked
   // is the 3.27 / 3.44, and she asked for faster than that.
   // The declared time is the CRUISE; the landing brake adds its own tail on top
   // (SNAP_K is denominated in p, so the tail differs by direction — see the

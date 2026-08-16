@@ -3,7 +3,7 @@
 // The soil is SLICED along the irregular cut line in final-world.js: the
 // kept (far) side carries the surface the ring stands on; the near side is
 // removed, exposing the colony in section. The Final camera leg lives
-// entirely on the removed side, so the frame always reads: surface + ring
+// on the removed side at the rest and on approach, so the frame always reads: surface + ring
 // above the lip, cut face falling away below it, living colony beneath —
 // the diagonal soil-line of the approved still.
 //
@@ -555,7 +555,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
         interior AND exposed in the void the cut opens — the pre-
         existing wider organism the fruiting bodies emerge from.
      ================================================================ */
-  // Declutter round: 850 -> 380 scribbles, dimmer and pushed DEEPER — under
+  // Declutter round: 850 -> 300 scribbles, dimmer and pushed DEEPER — under
   // additive blending every underground stroke reads THROUGH the soil as a
   // stray line lying on the floor, so the fine-hyphae texture is halved and
   // sunk while the cords + colony glow pools carry the network reading.

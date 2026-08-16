@@ -25,7 +25,7 @@ import {
   COMMIT_THRESHOLD, COMMIT_CARRY_RATE, COMMIT_GLIDE_PX, COMMIT_BLEND_K,
   COMMIT_STREAM_GAP_MS, COMMIT_STREAM_MIN, COMMIT_CRUISE_MAX_PX,
   COMMIT_GLIDE_MAX_S,
-  WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K,
+  WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K, STALL_FRAME_MS, STALL_MAX_MS,
 } from './constants.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -199,8 +199,6 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
      is needed. Wheel events coalesce to about one per frame, so a gap spans
      one frame and there is nothing earlier left to account for. */
   let lastFrameAt = -1e9;
-  const STALL_FRAME_MS = 34;   // ~2 frames at 60 Hz; above this a frame overran
-  const STALL_MAX_MS = 400;    // ...and past this it is a stopped tab, not a frame
   let lastDir = 0;      // sign of the last manual delta (+1 fwd / -1 back / 0 none)
   let enabled = false;
 
