@@ -29,12 +29,18 @@
 // https://banodoco.ai/ownership). Where this file paraphrases rather than
 // quotes, it is to fit a measure — the claims are theirs.
 //
-// TWO THINGS ARE STILL UNBUILT, and say so on the page rather than pretending
-// otherwise: `tworp` (Hannah, 2026-08-16: "2RP is an art and tech publication
-// that aims to highlight the best of the ecosystem. COMING SOON") and
-// `hivemind`, which has no counterpart on banodoco.ai at all. Both carry a
-// "Coming soon" status and NO outbound link, which is the honest state — an
-// unbuilt thing gets a sentence, not a door. See COPY-TABLE.md.
+// BANODOCO.AI IS NOT THE WHOLE ORGANISATION, which this file learned the hard
+// way: `hivemind` was written up as unbuilt because it appears nowhere on that
+// site, its repository or its bundle — and it turned out to have a substantial
+// repository of its own (github.com/banodoco/hivemind), which Hannah supplied
+// the same day. Before declaring anything here missing, look past the
+// marketing site.
+//
+// ONE THING IS STILL UNBUILT and says so rather than pretending: `tworp`
+// (Hannah, 2026-08-16: "2RP is an art and tech publication that aims to
+// highlight the best of the ecosystem. COMING SOON"). It carries a "Coming
+// soon" status and NO outbound link, which is the honest state — an unbuilt
+// thing gets a sentence, not a door. See COPY-TABLE.md.
 //
 // Equip/PYPE/Arnold/Astrid are deferred out of this active build — their
 // donor content is preserved in ./content-archive-deferred.js, not
@@ -581,28 +587,28 @@ export const CONTENT = {
     hivemind: {
       chapter: 'connect',
       label: 'Hivemind',
-      short: 'Persistent shared memory. Coming soon.',
+      short: 'The ecosystem’s collective intelligence.',
       card: {
         title: 'Hivemind',
-        // THE ONE NODE WITH NO EXTERNAL SOURCE. Hivemind is named as a Connect
-        // hub by this project's own brief (16-connect-ground-restage.md §0/§2)
-        // and has the geometry to prove it — the braided route lower-right,
-        // five strands and memory points (BUDGETS.md). But it appears nowhere
-        // on banodoco.ai, in that site's repository, or in its shipped bundle:
-        // searched 2026-08-16, zero hits for "Hivemind" in any of the three.
+        // RESOLVED — Hannah supplied the source, 2026-08-16:
+        // github.com/banodoco/hivemind. This node shipped "Coming soon" for
+        // half a day because Hivemind appears nowhere on banodoco.ai, in that
+        // site's repository, or in its bundle (searched: zero hits in all
+        // three). It was never missing — it simply lives in a repository of its
+        // own rather than on the marketing site. Worth remembering the next
+        // time this file cannot find something: banodoco.ai is not the whole
+        // organisation.
         //
-        // So the copy below is drawn from the brief that named it, not
-        // invented here and not borrowed from a different project. The nearest
-        // real thing on banodoco.ai is BNDC (github.com/banodoco/brain-of-bndc,
-        // "a friendly robot who helps out around the community") — plausibly
-        // the same idea under another name, but a guess, and this file does not
-        // ship guesses. Flagged for Hannah/Peter: if Hivemind IS BNDC, the fix
-        // is this node's two lines plus a link to that repository.
+        // Copy below is that repository's own README and description. The
+        // brief's original one-liner for this hub — "persistent shared memory"
+        // (16-connect-ground-restage.md, and the braided route with memory
+        // points in BUDGETS.md) — turns out to have been exactly right, which
+        // is why the geometry still fits the thing it is labelling.
         body: [
-          'Hivemind is a persistent shared memory for the community.',
-          'What the network learns, it keeps.',
+          'Hivemind is the open-source AI art ecosystem’s collective intelligence: a searchable corpus of what the community has already worked out.',
+          'It drops into a coding agent and opens up the Banodoco Discord’s accumulated practice — messages, resources, and curated answers that cite their sources. Every question researched becomes a permanent entry for the next person.',
         ],
-        status: 'Coming soon.',
+        link: { label: 'View on GitHub', href: 'https://github.com/banodoco/hivemind' },
       },
     },
     discord: {
