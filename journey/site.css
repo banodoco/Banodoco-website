@@ -794,9 +794,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        side of them, stay transparent to the portrait field's hit pads. */
     pointer-events: none;
   }
-  .j-block.pos-topcentre .j-actions,
-  .j-block.pos-bottom    .j-actions { justify-content: center; }
-  .j-block.pos-topright  .j-actions { justify-content: flex-end; }
+  .j-block.pos-topcentre .j-actions { justify-content: center; }
 
   .j-act {
     pointer-events: auto;
@@ -895,13 +893,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   /* Owned's sub is centred prose now rather than a centred list, so it needs
      the same auto margins the other centred position gives its sub. */
   .j-block.pos-topcentre .j-sub { margin: 0 auto; }
-  .j-block.pos-upperleft  { left: 6vw; top: 16vh; }
   /* Connect restage (16-connect-ground-restage.md, Hannah): the chapter's copy
      claims the TOP-RIGHT of the frame while the mushroom claims the top-left
-     and the tendril network spreads through the gap between them. Mirror of
-     pos-upperleft — the block hangs off the right margin and its type sets
-     right-ragged, so the ragged edge faces the open ground instead of the
-     frame edge. The local scrim's ellipse mirrors with it (60%, not 40%).
+     and the tendril network spreads through the gap between them. The block
+     hangs off the right margin and its type sets right-ragged, so the ragged
+     edge faces the open ground instead of the frame edge. The local scrim's
+     ellipse mirrors with it (60%, not 40%).
 
      15vh -> 19vh (2026-08-13, Hannah's third report on this frame: "it still
      feels too high on the page tbh"). The subject came down 54px in the same
@@ -1826,7 +1823,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        as the hero's pill rather than as two slabs. */
     .j-act { min-height: 44px; }
     .j-block { max-width: none; width: 88vw; }
-    .j-block.pos-left, .j-block.pos-upperleft { left: 6vw; }
+    .j-block.pos-left { left: 6vw; }
     .j-block.pos-bottomleft { left: 6vw; bottom: 11vh; }
     .j-block.pos-topright   { right: 6vw; top: 11vh; }
     .j-block.pos-bottom, .j-block.pos-topcentre { left: 50%; }

@@ -113,20 +113,15 @@ export function createHighlights(ctx) {
 // rubber-banding against the wind reads worse than holding still.
 // =====================================================================
 //
-// `sway` itself stays SUPPORTED below — it is the organism's documented
-// tracker option (see createScene's JSDoc) and this module does not get to
-// retire another module's API. What changed is that the PAGE stopped asking
-// for it: main.js's equip tracker no longer sets the flag. Any future tracker
-// that genuinely wants to ride the stalk can still say so.
+// `sway` tracker support retired (2026-08-16): the equip restage dropped
+// the flag, the organism's tracker JSDoc no longer documents it, and no
+// page tracker sets it.
 export function registerTrackers(ctx) {
-  const { trackers, swayGroup, addAnimator, steadyProject } = ctx;
+  const { trackers, addAnimator, steadyProject } = ctx;
   const _trackV = new THREE.Vector3();
   addAnimator('trackers', () => {
     for (const tr of trackers) {
       _trackV.set(tr.pos[0], tr.pos[1], tr.pos[2]);
-      // sway:true pins the point to the mushroom itself, so it rides the
-      // breeze. No tracker on this page asks for it any more (see above).
-      if (tr.sway) _trackV.applyMatrix4(swayGroup.matrixWorld);
       // The jitter-undo for (2) above. It used to be reconstructed here by
       // zeroing elements[8]/[9]; it now goes through the scene's own
       // steadyProject(), which projects through the matrix taaFrame() actually
