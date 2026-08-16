@@ -71,7 +71,7 @@
 // on the shipped route; global p in comments) — never in global p, so
 // re-timing or inserting chapters never invalidates them (merge doc §5).
 import * as THREE from 'three';
-import { ORBIT_BREATH } from '../../constants.js';
+import { smooth01, trapEase, azEase, quadBezier } from '../../lib/ease.js';
 import { INSPIRE } from '../inspire/camera.js';
 
 const DEG = Math.PI / 180;
@@ -368,31 +368,6 @@ const A1 = {
 // guarantee and the frame is a preference, so the frame yielded.
 const PIN2 = V(1.0, 1.40, -1.8);
 
-function smooth01(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
-
-// The arrival's trapezoidal velocity profile, verbatim (inspire/camera.js):
-// smoothstep ramps at both ends, CONSTANT rate through the middle, peak
-// 1/(1 - RAMP) = ~1.22x the mean. One profile, every channel.
-const RAMP = 0.18;
-function trapEase(s) {
-  s = s < 0 ? 0 : s > 1 ? 1 : s;
-  const norm = 1 - RAMP;
-  const ramp = (u) => RAMP * (u * u * u - (u * u * u * u) / 2);   // integral of smoothstep
-  if (s < RAMP) return ramp(s / RAMP) / norm;
-  if (s > 1 - RAMP) return 1 - ramp((1 - s) / RAMP) / norm;
-  return (RAMP / 2 + (s - RAMP)) / norm;
-}
-
-// The plateau breathes (W3-B gap b), exactly as the arrival's does: windowed
-// to zero (value AND derivative) inside both ramps, azimuth strictly
-// monotonic, the ends and both rest poses untouched.
-function azEase(s) {
-  s = s < 0 ? 0 : s > 1 ? 1 : s;
-  const w = smooth01(s / RAMP) * smooth01((1 - s) / RAMP);
-  return trapEase(s)
-    + ORBIT_BREATH.amp * Math.sin(2 * Math.PI * ORBIT_BREATH.cycles * s) * w;
-}
-
 /** The Inspire -> Connect gesture. `u` is gesture-local (0 = the Inspire
  *  rest, 1 = the Connect rest); the composer maps global p over
  *  [restProgress('inspire') .. restProgress('connect')] onto u. */
@@ -406,12 +381,7 @@ function approach(u, out) {
   // Gaze: quadratic bezier INSPIRE.target -> REST_KEY.tgt bowed through PIN2
   // — C1-continuous, endpoints exact, the organism framed mid-swing while
   // the aim walks down the stem to the ground.
-  const w0 = (1 - m) * (1 - m), w1 = 2 * m * (1 - m), w2 = m * m;
-  out.target.set(
-    w0 * INSPIRE.target.x + w1 * PIN2.x + w2 * REST_KEY.tgt.x,
-    w0 * INSPIRE.target.y + w1 * PIN2.y + w2 * REST_KEY.tgt.y,
-    w0 * INSPIRE.target.z + w1 * PIN2.z + w2 * REST_KEY.tgt.z,
-  );
+  quadBezier(m, INSPIRE.target, PIN2, REST_KEY.tgt, out.target);
   out.fov = INSPIRE.fov + (A1.fov - INSPIRE.fov) * m;
   return out;
 }

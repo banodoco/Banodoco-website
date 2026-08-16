@@ -34,6 +34,8 @@ import { CAMERA as INSPIRE_CAM } from './chapters/inspire/camera.js';
 import { CAMERA as CONNECT_CAM } from './chapters/connect/camera.js';
 import { CAMERA as OWNED_CAM } from './chapters/owned/camera.js';
 import { CAMERA as FINAL_CAM } from './chapters/final/camera.js';
+import { makeRng } from './anatomy.js';
+import { smooth01 } from './lib/ease.js';
 import { ASPECT } from '../flags.js';
 
 const DEG = Math.PI / 180;
@@ -139,8 +141,7 @@ function keyedPose(p, out) {
 // shake or sway-lag. Purely additive on the analytic pose — no springs, no
 // history — so it can never lag the path or overshoot it.
 const HH_BANK = (() => {
-  let s = 1337 >>> 0;
-  const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const rnd = makeRng(1337);
   const mk = (fLo, fHi) => [0, 1, 2].map(i => ({
     f: (fLo + ((fHi - fLo) * (i + 0.25 + rnd() * 0.5)) / 3) * 2 * Math.PI,
     ph: rnd() * 2 * Math.PI,
@@ -240,8 +241,6 @@ export function createDirector(sceneApi, { steady = false } = {}) {
   // exact aspect; ?aspect=landscape pins the landscape path on a phone).
   // (parsed once, in ../flags.js — THE flag registry)
   const forcedAspect = ASPECT;
-
-  const smooth01 = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
 
   /** Fog re-parameterisation for the Final pullback (adr-d3 seam T4), plus
    *  the W3-B seam dips (gap d). Everything here is pure in p, so reverse
