@@ -428,7 +428,8 @@ HIDE_JS = """
   st.id = '__capture_hide__';
   st.textContent = sel.map(s => s + '{opacity:0 !important;visibility:hidden !important;}').join('\\n');
   document.head.appendChild(st);
-  return sel.length;
+  const unmatched = sel.filter(s => !document.querySelector(s));
+  return { matched: sel.length - unmatched.length, unmatched };
 })()
 """
 
@@ -468,7 +469,13 @@ def capture_one(cdp, pose, size_key, hide_chrome, settle_s, verbose, quantize=Fa
         print("      readiness: %s" % state)
 
     if hide_chrome:
-        cdp.eval(HIDE_JS % json.dumps(HIDE_SELECTORS))
+        hide = cdp.eval(HIDE_JS % json.dumps(HIDE_SELECTORS)) or {}
+        # A renamed class would silently stop being hidden and bake chrome into
+        # the golden — warn (never fail) so the drift surfaces.
+        if hide.get("unmatched"):
+            print("  WARNING: chrome-hide selector(s) matched nothing — chrome may "
+                  "have been baked into the golden: %s"
+                  % ", ".join(hide["unmatched"]))
 
     # Settle: in frozen mode this only needs to cover one paint after the
     # freeze + chrome-hide land (see SETTLE_S_FROZEN's comment); in --live
@@ -583,9 +590,11 @@ def main():
     except Exception as e:
         sys.exit(
             "cannot reach %s (%s)\n"
-            "start the static server first:\n"
-            "  python3 -m http.server 8137 --directory "
-            "/Users/hannahomalley/nigel/ados-paris/glowshroom" % (BASE_URL, e)
+            "start the static server first — run this from the glowshroom directory:\n"
+            "  python3 serve.py\n"
+            "  (serve.py sends no-store headers; plain http.server serves stale\n"
+            "   cached ES modules — the exact trap those headers exist to prevent)"
+            % (BASE_URL, e)
         )
 
     os.makedirs(out_dir, exist_ok=True)
