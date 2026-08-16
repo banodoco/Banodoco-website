@@ -14,10 +14,10 @@
 //                       stratification, 3.0-unit camera-path clearance
 //
 // This file owns the chapter contract the grey-box established (group /
-// nodeIds / setArmed / setHot / nodeWorld), the three ownership pods and
-// their claim-pulse behaviours (OW-3), and the growth-front exit gesture
-// (OW-5). Parented to `scene`, a sibling of groundGroup, per adr-d3: soil
-// does not sway, and a swaying substrate would shear the descent.
+// nodeIds / setArmed / setHot / nodeWorld) and the growth-front exit gesture
+// (OW-5). The three ownership pods and their claim pulses (OW-3) are retired
+// (Ride-through #2). Parented to `scene`, a sibling of groundGroup, per
+// adr-d3: soil does not sway, and a swaying substrate would shear the descent.
 //
 // COLOUR-PIPELINE NOTE for the grade-unification pass: Spike B calibrated
 // its additive opacities with NO OutputPass (raw display-space sum). The
@@ -55,12 +55,6 @@ const EXPOSURE_LINES = 0.30;
 // the crown. (0.76 was measurably too far: the three nearest faces bloomed
 // into featureless orbs under UnrealBloom. 0.56 keeps the features.)
 const EXPOSURE_PLANES = 0.50;
-
-// W4-E: how far a pod's nexus lifts while its card is OPEN, as a fraction of
-// the full hover emphasis. Deliberately short of 1 — selection is a held
-// "you are reading this one", not the hover's arrival gesture, and the pod
-// has to sit under a card without competing with it.
-const POD_SEL_LEVEL = 0.55;
 
 // The crown hover zone (report C). Its world radius is small because the
 // crown is NEAR — 1.85 units from the lens at the rest — so 0.25 units
@@ -106,125 +100,6 @@ export function createOwned(sceneApi, content) {
   // call away — setPortraitMode('anonymous'))
   portraits.photosReady.then((ok) => { if (ok) portraits.setMode('photo'); });
 
-  /* ================================================================
-     Ownership pods (OW-3): three mycelial nexuses carrying the locked
-     claims. Authored in the REST frame — primary below the top-centre
-     copy block's suppression zone, secondaries lower/outer — then
-     clearance-pushed off the polyline so no pod swallows a travel frame.
-     ================================================================ */
-  const rf = leg.restFrame;
-  const TANV = Math.tan(0.5 * rf.fov * Math.PI / 180);
-  function restPlace(cx, cy, depth) {
-    const p = rf.pos.clone()
-      .addScaledVector(rf.fwd, depth)
-      .addScaledVector(rf.right, cx * TANV * 1.55 * depth)
-      .addScaledVector(rf.up, cy * TANV * depth);
-    leg.clampUnder(p, 0.8);
-    for (let it = 0; it < 4; it++) {
-      const cd = leg.camDist(p.x, p.y, p.z);
-      if (cd >= 2.6) break;
-      const nearest = leg.nearestCamPt(p);
-      const away = p.clone().sub(nearest);
-      if (away.lengthSq() < 0.001) away.set(0, -1, 0);
-      away.normalize();
-      if (away.y > 0) away.y *= 0.3;
-      p.addScaledVector(away.normalize(), 2.65 - cd);
-      leg.clampUnder(p, 0.8);
-    }
-    return p;
-  }
-  // Visual hierarchy per the approved still: 100% shared clearly primary
-  // (centre of the colony, largest, nearest) but not overwhelming the
-  // network; secondaries smaller/lower, legible.
-  // Ride-through #2 (Hannah): the claims live ONCE, as page copy under the
-  // "Owned by the ecosystem" heading — the in-scene pod nexuses ("bulbs") and
-  // their chips are removed. POD_SPEC is intentionally empty: no geometry, no
-  // hotspots, no chips; the claim pulses survive via trigger() below, fired
-  // from the DOM claim blocks on hover.
-  const POD_SPEC = [];
-  // Claim-pulse epicentres, re-aimed onto the new composition: the primary
-  // claim answers from the CROWN (the wave then runs out along the roots, so
-  // "100% shared" reads as light leaving the root and reaching everyone),
-  // and the two secondaries answer locally, low-left and low-right, inside
-  // the portrait arc.
-  const CLAIM_CENTRES = {
-    primary: leg.CROWN.clone(),
-    monthly: restPlace(-0.58, -0.52, 6.6),
-    split: restPlace(0.56, -0.50, 6.4),
-  };
-  const glowTex = H.glowSprite(PAL.ember, 64);
-  const coreTex = H.softDisc(64);
-  const pods = POD_SPEC.map((spec, pi) => {
-    const rand = H.rng((9500 + pi * 311) >>> 0);
-    // nexus: converging strand bundle — a knot the network thickens into,
-    // not a UI badge. One pulse-mat per pod so hover state is per-pod.
-    const mat = makeFadePulseMat(spec.primary ? PAL.goldBright : PAL.gold, {
-      baseOpacity: (spec.primary ? 0.30 : 0.24) * EXPOSURE_LINES,
-      pulseColor: PAL.goldBright, pulseWidth: 0.14, twinkle: 0.30, fogDensity: 0.014,
-    });
-    const R = spec.scale;
-    const res = H.strandLines({
-      count: spec.primary ? 30 : 22, seed: 9700 + pi * 77,
-      generator: (i, rnd) => {
-        const a = rnd() * Math.PI * 2;
-        const b = (rnd() - 0.5) * Math.PI * 0.9;
-        const rr = R * (2.2 + rnd() * 2.4);
-        const start = new THREE.Vector3(
-          spec.pos.x + Math.cos(a) * Math.cos(b) * rr,
-          spec.pos.y + Math.sin(b) * rr * 0.7,
-          spec.pos.z + Math.sin(a) * Math.cos(b) * rr,
-        );
-        leg.clampUnder(start, 0.25);
-        const end = spec.pos.clone().add(new THREE.Vector3(
-          (rnd() - 0.5) * R * 0.5, (rnd() - 0.5) * R * 0.4, (rnd() - 0.5) * R * 0.5));
-        const pts = [];
-        for (let j = 0; j <= 4; j++) {
-          const t = j / 4;
-          const e = H.easings.smooth(t);
-          const p = start.clone().lerp(end, e);
-          const hump = Math.sin(Math.PI * t);
-          p.x += H.fbm3(i * 1.3, t * 2.8 + pi, 0.6, 2) * 0.5 * hump;
-          p.y += H.fbm3(2.2, i * 0.9, t * 2.5 + pi, 2) * 0.4 * hump;
-          p.z += H.fbm3(t * 2.6 + pi, 1.1, i * 1.7, 2) * 0.5 * hump;
-          leg.clampUnder(p, 0.2);
-          pts.push(p);
-        }
-        return pts;
-      },
-    });
-    const lines = new THREE.LineSegments(res.geometry, mat);
-    lines.frustumCulled = false;
-    group.add(lines);
-    // warm heart of the knot
-    const coreMat = new THREE.SpriteMaterial({
-      map: coreTex, color: new THREE.Color(spec.primary ? PAL.goldBright : PAL.ember),
-      transparent: true, opacity: 0, depthWrite: false,
-      blending: THREE.AdditiveBlending, fog: false,
-    });
-    const core = new THREE.Sprite(coreMat);
-    core.position.copy(spec.pos);
-    core.scale.setScalar(spec.scale * 0.9);
-    group.add(core);
-    const haloMat = new THREE.SpriteMaterial({
-      map: glowTex, color: new THREE.Color(PAL.ember),
-      transparent: true, opacity: 0, depthWrite: false,
-      blending: THREE.AdditiveBlending, fog: false,
-    });
-    const halo = new THREE.Sprite(haloMat);
-    halo.position.copy(spec.pos);
-    halo.scale.setScalar(spec.scale * 3.2);
-    group.add(halo);
-    return {
-      ...spec, mat, coreMat, haloMat, core, halo,
-      // `target` is the HOVER channel, `sel` the SELECTION channel (W4-E).
-      // They are held apart so a pointer leaving a pod whose card is open
-      // cannot drop the held emphasis — see the emphasis blend in the
-      // animator and setSelected below.
-      hot: 0, target: 0, sel: 0, pulseP: rand(),
-      baseCore: (spec.primary ? 0.34 : 0.26) * EXPOSURE_LINES,
-      baseHalo: (spec.primary ? 0.16 : 0.11) * EXPOSURE_LINES,
-    };
-  });
   // The colony's centre of gravity IS the crown now — every root leaves it,
   // so a wave launched there is the one wave that reaches the whole field.
   const colonyCentre = leg.CROWN.clone();
@@ -541,7 +416,6 @@ export function createOwned(sceneApi, content) {
   // path that needs exactness (boot, ?capture=, deep links) starts from the
   // initial 1; after a blend the ease below brings it home.
   let keepGate = 1;
-  const _w = new THREE.Vector3();
 
   sceneApi.addAnimator('journey-owned', (t, dt) => {
     // The remix swap advances AHEAD of the visibility gate below (see
@@ -642,7 +516,6 @@ export function createOwned(sceneApi, content) {
       substrate.setPassage(0);
       portraits.setFade(0);
       frontMat.uniforms.uFade.value = 0;
-      for (const pd of pods) { pd.mat.uniforms.uFade.value = 0; }
       return;
     }
 
@@ -706,27 +579,6 @@ export function createOwned(sceneApi, content) {
     // retires the local lighting with the faces it belongs to.
     substrate.setActiveNode(portraits.activeIdx, portraits.activeAmt * faceVis);
 
-    // pods: hover ease + per-pod inward pulse when hot. Hover and selection
-    // are separate channels blended by max(), so an open card holds the nexus
-    // at POD_SEL_LEVEL no matter where the pointer goes, and hovering the
-    // selected pod still takes it all the way to 1.
-    for (const pd of pods) {
-      const want = Math.max(pd.target, pd.sel * POD_SEL_LEVEL);
-      pd.hot += (want - pd.hot) * Math.min(1, dt * 6);
-      pd.mat.uniforms.uFade.value = eff;
-      pd.mat.uniforms.uTime.value = t;
-      pd.pulseP += dt * (0.10 + pd.hot * 0.55);
-      if (pd.pulseP > 1.3) pd.pulseP = -0.25;
-      pd.mat.uniforms.uPulse.value = pd.pulseP;
-      pd.mat.uniforms.uPulseOn.value = 0.30 + pd.hot * 0.9;
-      pd.coreMat.opacity = eff * pd.baseCore * (1 + 1.4 * pd.hot)
-        * (0.9 + 0.1 * Math.sin(t * 0.7 + pd.pos.x));
-      pd.haloMat.opacity = eff * pd.baseHalo * (1 + 1.6 * pd.hot);
-      const sc = pd.scale * 0.9 * (1 + 0.22 * pd.hot);
-      pd.core.scale.setScalar(sc);
-      pd.halo.scale.setScalar(pd.scale * 3.2 * (1 + 0.30 * pd.hot));
-    }
-
     // growth front: slow upward travelling wave, uneven, never a loop you
     // can count — plus the OW-5 exit pulse when the rise commits. The fan
     // sits straight down the rest gaze (the exit corridor IS the gaze), so it
@@ -770,10 +622,9 @@ export function createOwned(sceneApi, content) {
     group,
     substrate, portraits, leg,          // QA / debug access
     counts: { substrate: substrate.counts, portraits: portraits.counts },
-    // pods first (the claims are the chapter's message), then the full
-    // routable contributor set — this fixes the grey-box reachability gap
+    // the routable contributor set — this fixes the grey-box reachability gap
     // where only 4 of 16 contributors were registered.
-    nodeIds: [...POD_SPEC.map(s => s.id), ...routableIds],
+    nodeIds: [...routableIds],
 
     /** T3 streaming seam. */
     setArmed(on) { amountTarget = on ? 1 : 0; },
@@ -820,21 +671,6 @@ export function createOwned(sceneApi, content) {
         }
         return;
       }
-      const pd = pods.find(p => p.id === id);
-      if (pd) {
-        pd.target = on ? 1 : 0;
-        if (on) {
-          if (pd.primary) {
-            // one broad, slow pulse through the FULL colony
-            portraits.wavePulse(colonyCentre, { speed: 3.4, width: 3.2, maxR: 30, amp: 1.0 });
-            substrate.surge();
-          } else {
-            // smaller, localized response
-            portraits.wavePulse(pd.pos, { speed: 3.2, width: 2.0, maxR: 6.5, amp: 0.85 });
-          }
-        }
-        return;
-      }
       const idx = portraits.indexOf(id);
       if (idx < 0) return;
       if (on) portraits.setHover(idx);
@@ -849,24 +685,13 @@ export function createOwned(sceneApi, content) {
      *
      *  Contributors take the same route the bridge took — indexOf(id) into
      *  the portrait field's index-based selection, which drives the ember rim
-     *  (uSelIdx / uSelAmt). Pods hold their nexus at POD_SEL_LEVEL.
+     *  (uSelIdx / uSelAmt).
      *
-     *  Selection deliberately fires NO claim pulse: the colony-wide wave and
-     *  the localized secondary wave are ARRIVAL gestures and stay in setHot.
+     *  Selection deliberately fires NO claim pulse: the colony-wide wave is an
+     *  ARRIVAL gesture and stays in setHot.
      *  A card that is open for a minute must not sit on a pulsing colony. */
-    /** Claim pulses (handoff OW-3 behaviour, re-hosted on the DOM claim blocks
-     *  after the in-scene pods were removed): 'claimPrimary' = one broad slow
-     *  wave through the full colony; 'claimMonthly' / 'claimSplit' = smaller
-     *  localized responses at their old nexus centres. */
     trigger(name) {
-      if (name === 'claimPrimary') {
-        portraits.wavePulse(colonyCentre, { speed: 3.4, width: 3.2, maxR: 30, amp: 1.0 });
-        substrate.surge();
-      } else if (name === 'claimMonthly') {
-        portraits.wavePulse(CLAIM_CENTRES.monthly, { speed: 3.2, width: 2.0, maxR: 6.5, amp: 0.85 });
-      } else if (name === 'claimSplit') {
-        portraits.wavePulse(CLAIM_CENTRES.split, { speed: 3.2, width: 2.0, maxR: 6.5, amp: 0.85 });
-      } else if (name === 'remixPortraits') {
+      if (name === 'remixPortraits') {
         /* REMIX (Hannah, 2026-08-07) — the copy block's second button.
            The field re-deals its faces (portraits.remix()) and the COLONY
            answers along with it: a wave launched from the same epicentre the
@@ -900,8 +725,6 @@ export function createOwned(sceneApi, content) {
     },
 
     setSelected(id, on) {
-      const pd = pods.find(p => p.id === id);
-      if (pd) { pd.sel = on ? 1 : 0; return; }
       const idx = portraits.indexOf(id);
       if (idx < 0) return;
       // Guarded release, exactly like setHot: a stale close arriving after a
@@ -912,10 +735,8 @@ export function createOwned(sceneApi, content) {
 
     /** LABEL POLICY (core/ui.js registration contract).
      *
-     *  The three ownership pods keep the default chip: their claims are the
-     *  chapter's message and belong to the resting composition — page
-     *  furniture, always readable. Returning nothing for them leaves them
-     *  exactly as they were.
+     *  The ownership pods are retired (Ride-through #2): no in-scene pod chip
+     *  remains, and nothing here returns a resting label for them.
      *
      *  The sixteen contributors do not. Sixteen role tags standing over
      *  sixteen faces reads as a tag cloud and buries the thing the chapter
@@ -932,7 +753,7 @@ export function createOwned(sceneApi, content) {
      */
     labelPolicy(id) {
       const c = contributors.find(x => x.id === id);
-      if (!c) return null;                 // pods (and anything else): default
+      if (!c) return null;                 // anything else: default
       const text = [c.name, c.role].filter(Boolean).join(' · ');
       /* `chip: 'none'` — 2026-08-14, Hannah: "there are now two things that
          show on the orbs upon hover, can you please delete the smaller ones,
@@ -955,8 +776,6 @@ export function createOwned(sceneApi, content) {
     },
 
     nodeWorld(id) {
-      const pd = pods.find(p => p.id === id);
-      if (pd) return _w.copy(pd.pos).clone();
       if (id === CROWN_ZONE_ID) return leg.CROWN.clone();
       return portraits.worldOf(id);
     },
