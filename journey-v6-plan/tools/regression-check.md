@@ -1,3 +1,4 @@
+> **HISTORICAL (2026-08-16):** every command below is dead — root `mushroom-scene.js` and the pre-stub `golden-mushroom-page.html` are gone (M1/M2 renames). Kept as process history; the live gate is `tools/capture.py --check`.
 # Hero regression check — repeatable procedure
 
 Re-runs the W1-A baseline comparison against `BASELINE.md`. **Mandatory at every gate and before every merge into the extended build** (risk #1 in the master plan: the hero "may not silently regress merely because later chapters exist").
