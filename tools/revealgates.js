@@ -114,10 +114,14 @@ window.__revealGates = async function (opts) {
              + `${g2.toExponential(2)}  ${g2 === 0 ? 'PASS (bit-exact)' : 'FAIL'}`);
 
     // ---- the ladder, for G3 ----------------------------------------------
-    const RING = [0.0966, 0.1833, 0.2638, 0.3406, 0.5401, 0.8678, 0.9192, 0.9353, 0.9511];
-    const FIELD = [0.4116, 0.4789, 0.5937, 0.6383, 0.6748, 0.7042, 0.7277, 0.7495,
-                   0.7708, 0.7914, 0.8112, 0.8306, 0.8495, 0.8856, 0.9027];
-    const LADDER = RING.concat(FIELD).sort((a, b) => a - b);
+    /* THE LADDER COMES FROM THE BUILD (`journey.chapters.final.pacing`), not
+       from constants copied into the probe — fieldpace.js rule 2, applied
+       here too after the 2026-08-16 re-cut left this file's baked copy
+       gating a ladder that no longer shipped. pacing is already sorted by
+       reveal and covers exactly the T1-T3 rungs G3-G7 pace. */
+    const pacing = J.chapters.final.pacing;
+    if (!pacing || !pacing.length) throw new Error('chapters.final.pacing is empty');
+    const LADDER = pacing.map((b) => b.reveal);
     /* CROSSINGS BY INTERPOLATION, NOT BY BINNING. The first build of this gate
        counted, per frame, how many rungs were lit and divided by the frame's
        duration. At 60 Hz a hard wrap moves the driver 0.17 in a frame — more
