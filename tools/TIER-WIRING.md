@@ -1,13 +1,18 @@
-# TIER-WIRING — what the next pass must connect
+# TIER-WIRING — HISTORICAL (integration landed differently)
 
 **Task:** W4-F (platforms), second half. **Written:** 2026-08-02.
-**Status of this half:** the Tier-3 *pipeline* and the Tier-3 *page* exist and
-are verified. **Nothing in the live build routes to them yet** — by design. The
-live page (`index.html`, `journey.js`, `core/`) was owned by a
-parallel motion pass while this was written, so not one byte of it was touched.
+**Status (2026-08-16):** superseded. The static tier was linked from the
+rail's site-map panel instead of the capability-redirect design below
+(decision D11: a link a person chooses, not a reduced-motion redirect —
+journey/rail.js), and the failure doors this doc specified were built in
+the 2026-08-16 resilience pass (main.js: createScene guard, journey-import
+recovery, context-loss note — each pointing at `static/`). The `?tier=`
+flag was never created. The capture pipeline and Tier-3 page sections
+below remain accurate; the wiring sections are kept as design history
+only. File references to `mushroom-scene.js` and `core/` predate the
+M2/M4 renames.
 
-This document is the handover: the exact edits the integrator makes, in the
-files they own, once the motion pass has landed.
+Original handover text follows, unedited:
 
 | Built this pass | Path |
 |---|---|
