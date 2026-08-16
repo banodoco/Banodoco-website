@@ -78,7 +78,7 @@
 import * as THREE from 'three';
 import {
   TAU, RING_C, SPORE_SOURCES,
-  makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, makePointsMat,
+  makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, makePointsMat, REVEAL_W,
 } from './world.js';
 import { makeGlowTexture } from '../../anatomy.js';
 
@@ -298,7 +298,7 @@ export function createFinalSky(sceneApi, uniforms) {
       void main() {
         float mode = aGate.y;
         float reveal = aGate.x < -0.5 ? 1.0
-                     : smoothstep(aGate.x, aGate.x + 0.16, uPull);
+                     : smoothstep(aGate.x, aGate.x + ${REVEAL_W.toFixed(2)}, uPull);
         // the broad band forms as the sky opens
         // band window 0.30-0.72 -> 0.34-0.96 (2026-08-10, Hannah's brief
         // item 3): the broad band used to be fully formed by uPull 0.72 —

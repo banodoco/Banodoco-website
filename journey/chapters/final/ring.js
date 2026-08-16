@@ -83,7 +83,7 @@
 import * as THREE from 'three';
 import {
   TAU, MEMBERS, RING_C, arcOf, cutVal, WOB_IDLE, sweepReveal,
-  makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat,
+  makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat, REVEAL_W,
 } from './world.js';
 import { makeGlowTexture, CAP_Y, CAP_R } from '../../anatomy.js';
 import {
@@ -221,7 +221,7 @@ const MUL = (() => {
 //
 // The T4 band and the hint rung stay species, and always will: they are
 // where the detail ladder is supposed to be doing its job.
-const CLONE_DIST = 24;
+const CLONE_DIST = 24;                  // the T3/T4 seam: clones are nearer than this
 
 /** A clone's distance luminance. The clone set rides the CHAPTER's fog ramp
  *  (clones.js, FOG) — 15 -> 62 at the rest, which barely dims anything
@@ -589,7 +589,6 @@ export function createFinalRing(sceneApi, uniforms) {
        lengthened arrival instead of finishing while the drawn bodies were
        still opening. Last T4 threshold 0.94 − jit finishes its light at
        ~1.10, inside the rest's 1.12. */
-    const CLONE_DIST = 24;               // the T3/T4 seam: clones are nearer than this
     // REV_HI 0.94 -> 0.90 (2026-08-16, the even-ladder re-cut — world.js
     // RING_LADDER has the full story): the weather tail's last threshold
     // now completes its light at pull ~1.06, while the frame still moves,
@@ -1083,7 +1082,7 @@ export function createFinalRing(sceneApi, uniforms) {
       varying float vFog;
       varying float vShrink;
       void main() {
-        float grow = smoothstep(0.0, 1.0, (uDwell - ${'6.0'} - aDelay) / ${'9.0'});
+        float grow = smoothstep(0.0, 1.0, (uDwell - ${PRIM_DELAY.toFixed(1)} - aDelay) / ${PRIM_GROW.toFixed(1)});
         vA = grow * (0.55 + 0.30 * sin(uTime * 0.35 + aTw * 1.7));
         vColor = color;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -1145,7 +1144,7 @@ export function createFinalRing(sceneApi, uniforms) {
   // visibly part of the scene. Batched bodies keep the shader-law gate.
   const lit = (ref, pull) => ref.drawW
     ? (uniforms.uPullRaw.value - ref.reveal) / ref.drawW > 0.5
-    : (pull - ref.reveal) / 0.16 > REVEAL_LIT;
+    : (pull - ref.reveal) / REVEAL_W > REVEAL_LIT;
   let wasOn = false, pickOn = false;
 
   /* ---- THE POKE, ANSWERED (18-one-species.md, this revision) -------------
