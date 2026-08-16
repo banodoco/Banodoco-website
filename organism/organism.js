@@ -371,7 +371,13 @@ const PULSE_GLSL = `
       float pulseAt(vec3 wp) {
         float d = distance(wp, uPulseC);
         float w = uPulseP.x * (0.15 + 0.21 * uPulseT);
-        float ring = exp(-pow((d - uPulseP.x * uPulseT) / w, 2.0));
+        // rb*rb, never pow(rb, 2.0): the base goes negative on every vertex
+        // once the ring has passed (and permanently at the parked rest), and
+        // pow() with a negative base is undefined GLSL — Metal folds it to
+        // rb*rb so the Mac never sees it, but D3D11/Mali may return NaN,
+        // which the TAA sanitise would then flush to black every frame.
+        float rb = (d - uPulseP.x * uPulseT) / w;
+        float ring = exp(-(rb * rb));
         return 1.0 + uPulseP.z * ring * exp(-1.15 * uPulseT) * exp(-d * uPulseP.y);
       }
 `;

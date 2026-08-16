@@ -398,7 +398,10 @@ function injectCloneDraw(mat, uProg, uWin, pulse, own, frame, vary) {
         'float pulseAt(vec3 wp) {\n' +
         '  float d = distance(wp, uPulseC);\n' +
         '  float w = uPulseP.x * (0.15 + 0.21 * uPulseT);\n' +
-        '  float ring = exp(-pow((d - uPulseP.x * uPulseT) / w, 2.0));\n' +
+        // rb*rb, never pow(rb, 2.0) — negative base is undefined GLSL (see
+        // organism.js's PULSE_GLSL note; Metal hides it, D3D11/Mali may not)
+        '  float rb = (d - uPulseP.x * uPulseT) / w;\n' +
+        '  float ring = exp(-(rb * rb));\n' +
         '  return 1.0 + uPulseP.z * ring * exp(-1.15 * uPulseT) * exp(-d * uPulseP.y);\n' +
         '}')
       .replace('#include <begin_vertex>',
