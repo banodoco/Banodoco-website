@@ -416,14 +416,8 @@ function approach(u, out) {
   return out;
 }
 
-/** QA: a human-readable name for a gesture-local u (composer's poseNameAt). */
-function approachName(u) {
-  return `approach s=${Math.max(0, Math.min(1, u)).toFixed(2)}`;
-}
-
 export const CAMERA = {
   approach,
-  approachName,
   keys: [
     // The travel OUT of this rest — the old drift + exit keys (t 0.77/0.91,
     // the 2026-08-04 "one continuous dive") — was retired 2026-08-11: the

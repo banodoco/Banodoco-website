@@ -1224,7 +1224,6 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
 
   return {
     attach,
-    measure,
     get enabled() { return enabled; },
     set enabled(on) { enabled = !!on; },
     /** The DISPLAYED progress — smoothed and speed-limited here, once. */
@@ -1259,8 +1258,6 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       const [lo, hi] = bracketAt(p);
       return gPeak * spanSlope(lo, hi);
     },
-    /** QA: the same high-water mark in the gesture's own unit, surface px/s. */
-    get gesturePeakPx() { return gPeak; },
     /** QA: is this gesture a delta STREAM (a trackpad/drag/spun wheel rather
         than discrete notches)? The flick-carry test. */
     get streaming() { return gCount >= COMMIT_STREAM_MIN && !!gapEma && gapEma <= COMMIT_STREAM_GAP_MS; },
@@ -1288,16 +1285,6 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         armed. Note it can legitimately be 0 (the Mission anchor) — every
         reader must test it against null, never for truthiness. */
     get answeredAt() { return answeredP; },
-    /** QA: the latched resolution's speed FLOOR (p/s) right now — the gesture's
-        own peak while the gesture is live, easing to the latched cruise once it
-        is over. The SNAP_K landing brake begins about floor/SNAP_K before the
-        rest. 0 when nothing is resolving. */
-    get resolveFloor() { return intent ? intent.floorPx * slopeAtP(p) : 0; },
-    /** QA: the resolution's speed floor in the units it is now CARRIED in —
-        px of scroll per second. `resolveFloor` is the same quantity converted
-        to p/s at the local gain, i.e. what the visitor's progress actually
-        does this frame; the two differ by the spline, which is the point. */
-    get resolveFloorPx() { return intent ? intent.floorPx : 0; },
     /** QA: the cruise (px/s) this resolution latched when the gesture ended —
         the gesture's own peak clamped to the leg's [nominal, ceil] band
         (COMMIT_GLIDE_PX / COMMIT_CRUISE_MAX_PX, both raised if needed to finish
@@ -1306,11 +1293,6 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     get resolveCruise() { return intent ? intent.cruisePx : 0; },
     /** QA: where the latched resolution is going (null if none). */
     get resolveTarget() { return intent ? intent.target : null; },
-    /** QA: is a registered modal owner (dialog card / bottom sheet) holding
-        the travel keys? */
-    get modalInput() { return modalLive(); },
-    /** QA: how many DOM regions currently own their own input. */
-    get inputOwners() { return inputOwners.size; },
     get nosnap() { return NOSNAP; },
     update,
     pAt,

@@ -448,18 +448,7 @@ export const FOG_RAMP = {
   near: 15, nearFromP: startOf('final') - 0.015,  nearToP: restProgress('final') + 0.03,
 };
 
-/* ------------------------------------------------------------------ */
-/* Streaming seams (adr-d3-world-layout.md section 4)                  */
-/* ------------------------------------------------------------------ */
-// Predicates are evaluated against the HERO's coordinate space. The world
-// measurements themselves are never duplicated here - they are read at
-// runtime from sceneApi.consts, because mushroom-scene.js owns them.
-export const THRESHOLDS = [
-  { id: 'rear-cap',      arms: 'inspire', kind: 'azimuth', deltaDeg: 100 },
-  { id: 'connect-window', arms: 'connect', kind: 'p-window' },   // D16 restage: pure p-window, no camera predicate
-  { id: 'soil-line',     arms: 'owned',   kind: 'below-ground' },
-  { id: 'rise-cutaway',  arms: 'final',   kind: 'above-ground-outbound', minP: startOf('final') },
-];
+// Streaming seam windows live in seams.js — the single source.
 
 // Hysteresis so a shaky scrub cannot strobe the streamer.
 export const THRESHOLD_HYSTERESIS_WORLD = 0.15;  // world units

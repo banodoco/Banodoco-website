@@ -30,9 +30,8 @@
 // origin at the soil point, +y up, hero units — the frame the root node's
 // scale converts to world), and every consumer applies THAT function to its
 // own vertices. The GLSL and the JS below are line-for-line the same
-// function; `invariants()` at the bottom is the assertion that the map keeps
-// the two fixed points the whole design rests on (the soil seat and the rim
-// plane), for every individual, to 1e-10.
+// function. The map keeps the two fixed points the whole design rests on —
+// the soil seat and the rim plane — for every individual, to 1e-10.
 //
 // WHAT IT MUST NOT BECOME
 // -----------------------
@@ -301,29 +300,3 @@ export const heightK = (V) => (CAP_Y * V.stemH + CAP_H * V.capH) / (CAP_Y + CAP_
 /** Radius factor at the soil line — where the ground-merge stubs seat. */
 export const baseRadiusK = (V) => V.stemW + V.flare;
 
-/* ================================================================== */
-/* 4. SELF TEST                                                        */
-/* ================================================================== */
-/** Parity check between the two halves, run from the console (or by a QA
- *  hook) with a live GL context: evaluates varyPoint() in JS and the GLSL
- *  varyPt() through a 1x1 float render target, and reports the worst
- *  disagreement. Kept here beside the two functions it compares.
- *
- *  Also asserts the two invariants the map is designed around, purely in JS:
- *  the soil point is fixed, and the rim plane is fixed under any mask value. */
-export function invariants(V) {
-  const o = [0, 0, 0];
-  varyPoint(V, 0, 0, 0, o);
-  const base = Math.hypot(o[0], o[1], o[2]);
-  // rim height must be CAP_Y*stemH at every azimuth, whatever the masks do
-  let rimErr = 0;
-  for (let k = 0; k < 16; k++) {
-    const a = (k / 16) * TAU;
-    varyPoint(V, CAP_R * Math.cos(a), CAP_Y, CAP_R * Math.sin(a), o);
-    // the rim wave is allowed to move it; the STEM/CAP BLEND is not
-    const wav = Math.sin(V.rimLobes * a + V.rimPhase);
-    const want = CAP_Y * V.stemH + CAP_H * V.rimDrop * wav;
-    rimErr = Math.max(rimErr, Math.abs(o[1] - want));
-  }
-  return { baseOffset: base, rimPinErr: rimErr };
-}

@@ -19,7 +19,7 @@
 // It owns no DOM, creates no elements, and starts no frame loop.
 
 import {
-  CHAPTERS, CHAPTER_IDS, chapterAt, localProgress, restProgress,
+  CHAPTER_IDS, chapterAt,
 } from './route.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -93,8 +93,6 @@ export function createJourneyState({ onNavigate = null } = {}) {
   /** Place progress with no travel at all (deep links: place, never replay). */
   function snapTo(v) { rawP = clamp01(v); p = rawP; }
 
-  function jumpToChapter(id) { snapTo(restProgress(id)); }
-
   /* SMOOTHING LIVES IN ONE PLACE, AND IT IS NOT HERE.
      This file used to run every scrubbed frame through a first-order lag on
      top of the scroll model's own — and that second filter is exactly what
@@ -118,12 +116,8 @@ export function createJourneyState({ onNavigate = null } = {}) {
     update,
     get progress() { return p; },
     get raw() { return rawP; },
-    get chapters() { return CHAPTERS; },
-    chapterAt: () => chapterAt(p),
-    localProgress: () => localProgress(p, chapterAt(p)),
     setProgress,
     snapTo,
-    jumpToChapter,
     parseHash,
     clearRoute,
   };

@@ -180,14 +180,8 @@ function dive(u, out) {
   return out;
 }
 
-/** QA: a human-readable name for a gesture-local u (composer's poseNameAt). */
-function diveName(u) {
-  return `dive s=${Math.max(0, Math.min(1, u)).toFixed(2)}`;
-}
-
 export const CAMERA = {
   dive,
-  diveName,
   keys: [
     // --- ROOT-WORLD RESTAGE (2026-08-06, 20-owned-root-network.md; Hannah's
     //     reference: the mushroom's BASE enters the top of the frame, a wide

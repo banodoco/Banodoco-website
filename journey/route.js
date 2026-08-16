@@ -506,16 +506,6 @@ export function restProgress(id) {
   return c ? c.stops[0] : 0;
 }
 
-/** The nav entry that should read active at progress p: the chapter itself,
- *  or — for a nav-less chapter like the Final epilogue — the nearest earlier
- *  chapter that has one. Derived, so inserting or renaming chapters never
- *  edits nav code. */
-export function navChapterAt(p) {
-  const i = CHAPTERS.indexOf(chapterAt(p));
-  for (let j = i; j >= 0; j--) if (CHAPTERS[j].nav) return CHAPTERS[j].id;
-  return CHAPTERS[0].id;
-}
-
 /* ------------------------------------------------------------------ */
 /* Shipped-value assert (merge doc M4 gate)                            */
 /* ------------------------------------------------------------------ */

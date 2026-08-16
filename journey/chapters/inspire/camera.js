@@ -214,15 +214,8 @@ function arrival(u, out, hero) {
   return out;
 }
 
-/** QA: a human-readable name for a gesture-local u (composer's poseNameAt). */
-function arrivalName(u) {
-  if (u <= ARRIVAL_DEAD) return 'mission-rest (hero pose, exact)';
-  return `orbit s=${((u - ARRIVAL_DEAD) / (1 - ARRIVAL_DEAD)).toFixed(2)}`;
-}
-
 export const CAMERA = {
   arrival,
-  arrivalName,
   // --- INSPIRE rest, the drift that holds it, and the exit that hands off ---
   //
   // The rest key MUST equal INSPIRE exactly: the arrival gesture owns p below
