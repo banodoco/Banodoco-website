@@ -450,7 +450,7 @@ const STRAND_VERT = /* glsl */ `
   varying float vFog;
   void main() {
     float reveal = aReveal < -0.5 ? 1.0
-                 : smoothstep(aReveal, aReveal + ${'0.16'}, uPull);
+                 : smoothstep(aReveal, aReveal + ${REVEAL_W.toFixed(2)}, uPull);
     // unlit bodies keep a 7% ember whisper — "they were always there"
     float b = mix(0.07, 1.0, reveal);
     // the growth-front pulse travelling the arc (narrow: ~one member wide)
@@ -514,7 +514,7 @@ const POINT_VERT = /* glsl */ `
   varying float vShrink;
   void main() {
     float reveal = aReveal < -0.5 ? 1.0
-                 : smoothstep(aReveal, aReveal + 0.16, uPull);
+                 : smoothstep(aReveal, aReveal + ${REVEAL_W.toFixed(2)}, uPull);
     float b = mix(0.05, 1.0, reveal);
     float df = aArc - uFront;
     b += aBoost * uFrontOn * exp(-df * df * 260.0) * (0.30 + 0.60 * reveal);

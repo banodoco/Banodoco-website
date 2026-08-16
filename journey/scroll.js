@@ -159,9 +159,7 @@ function targetOwnsKey(e) {
 }
 
 export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
-  let lens = [];        // px allocated per chapter (snap band, lengthAtP)
   let segLens = [];     // px allocated per route SEGMENT — the spline's knots
-  let edges = [];       // cumulative px at each chapter boundary
   let total = 0;
   let v = 0;            // virtual scroll position, px — the visitor's own
                         // surface: the exact running sum of their deltas.
@@ -435,13 +433,11 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     const h = Math.max(320, window.innerHeight);
     const keepP = total > 0 ? clamp01(pAt(v) + carry) : 0;
     carry = 0;
-    lens = CHAPTERS.map(c => (c.scrollVh || 2) * h);   // allocations live in route.js
+    const lens = CHAPTERS.map(c => (c.scrollVh || 2) * h);   // px per chapter, only needed to size total — allocations live in route.js
     // ...and the spline's own knots are the SUB-segment allocations, which for
     // a chapter that declares no `segVh` is just that same one number.
     segLens = SEGMENTS.map(s => (s.vh || 2) * h);
     total = lens.reduce((a, b) => a + b, 0);
-    edges = [0];
-    for (const L of lens) edges.push(edges[edges.length - 1] + L);
     buildSpline();
     v = scrollFor(keepP);
   }
