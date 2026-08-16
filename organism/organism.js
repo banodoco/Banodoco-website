@@ -1857,6 +1857,19 @@ function setInputPolicy(mode) {
   controls.enableRotate = free;
   controls.enableZoom = free;
   controls.enablePan = free;
+  // OrbitControls sets `touch-action: none` on the canvas at construction.
+  // In journey mode its gesture handlers (rotate/zoom/pan) are disabled
+  // anyway, so that `none` was doing nothing except blocking the browser's
+  // pinch-zoom — an accessibility violation (WCAG 1.4.4). Restore one-finger
+  // vertical panning plus pinch-zoom here; in free mode OrbitControls owns
+  // the gestures again, so `none` returns.
+  //
+  // `pan-y pinch-zoom` deliberately leaves double-tap-to-zoom off: it is a
+  // non-standard gesture outside the pan/pinch allowlist, so it stays
+  // suppressed under any non-`auto` value (only `auto` — or Safari's
+  // non-standard `double-tap-zoom` keyword — re-enables it; `manipulation`
+  // suppresses it too). The canvas tap handler is therefore unaffected.
+  renderer.domElement.style.touchAction = free ? 'none' : 'pan-y pinch-zoom';
 }
 
 // ---- easing used by the view tween below ----
