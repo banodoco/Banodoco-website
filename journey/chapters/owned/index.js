@@ -97,19 +97,27 @@ export function createOwned(sceneApi, content) {
   // mesh can work out which of its filaments belong to whom. Build-time, once
   // — see substrate.assignOwners for how ownership is derived.
   substrate.assignOwners(portraits.nodes.map(n => ({ pos: n.pos, anchors: n.anchors })));
-  // SHIP STATE (2026-08-16): the field ships PROCEDURAL. The look-dev photo
-  // set is randomuser.me/pravatar stock faces (assets/test-portraits/README:
-  // "never ship") — auto-promoting it would present strangers as Banodoco
-  // contributors. The whole photo pipeline stays warm behind ?photos=1 for
-  // QA and for the day the real, consented portrait set lands: restore the
-  // unconditional promotion then, alongside the consent wiring.
+  // SHIP STATE (2026-08-16, revised the same day): the field ships PHOTOS —
+  // each contributor's own avatar, as published by Banodoco on its own front
+  // page (assets/contributor-portraits/manifest.js has the provenance).
+  //
+  // This promotion was conditional for exactly one reason: the only images in
+  // the repo were stock faces, and showing them would have presented strangers
+  // as contributors. Real pictures of the real people retire that objection, so
+  // the promotion is unconditional again — `?photos=0` now holds the field on
+  // the procedural busts, rather than `?photos=1` releasing it.
+  //
+  // Still async and still failure-tolerant: until the set resolves the field
+  // renders procedural, and if every image fails it stays that way. Nothing
+  // here blocks the chapter's build.
   if (PHOTOS) {
     portraits.photosReady.then((ok) => { if (ok) portraits.setMode('photo'); });
   }
 
-  // The colony's centre of gravity IS the crown now — every root leaves it,
-  // so a wave launched there is the one wave that reaches the whole field.
-  const colonyCentre = leg.CROWN.clone();
+  // (The colony centre constant that used to live here was the epicentre of
+  // the crown's entry pulse. That pulse was removed 2026-08-16 — see setHot —
+  // and the one remaining wave takes its epicentre from remix() instead, so
+  // nothing read this any more.)
 
   /* ================================================================
      Growth front (OW-5): the live rising edge the Final exit follows —
@@ -672,10 +680,26 @@ export function createOwned(sceneApi, content) {
       // to the structure it describes. Every root leaves the crown, so a wave
       // launched there is the only one that legitimately reaches everyone.
       if (id === CROWN_ZONE_ID) {
-        if (on) {
-          portraits.wavePulse(colonyCentre, { speed: 3.4, width: 3.2, maxR: 30, amp: 1.0 });
-          substrate.surge();
-        }
+        // THE CROWN NO LONGER PULSES ON ENTRY (Hannah, 2026-08-16: "there's
+        // still a weird double pulse, and the profile switches immediately,
+        // there should be a delay so it happens when the light hits").
+        //
+        // It used to launch a full colony wave here, the instant the pointer
+        // arrived — and then the commit 340 ms later launched a SECOND wave,
+        // the one that actually carries the re-deal. Two waves from one
+        // gesture is the double pulse; and because the first wave was the one
+        // the eye read as "the light", the faces appeared to turn over on
+        // their own afterwards, unrelated to it.
+        //
+        // Now there is exactly one wave, launched at the commit by
+        // trigger('remixPortraits'), and the swap is phase-locked to it — its
+        // speed is derived from the swap's own duration so each face crosses
+        // over as the front reaches it (see remix() in portraits.js). The
+        // light and the switch are the same event, which is what she is
+        // describing, and the dwell before it is the delay.
+        //
+        // Hovering therefore has no immediate scene response, deliberately.
+        // The answer to the hover is the wave that follows it.
         return;
       }
       const idx = portraits.indexOf(id);
@@ -715,10 +739,15 @@ export function createOwned(sceneApi, content) {
            actually turning over. */
         const r = portraits.remix();
         if (!r) return null;               // a swap is already running
-        // amp 0.62, not the crown hover's 1.0. That gesture is the wave ALONE;
-        // this one lands on the same pixels as the per-node swap flare, and
-        // shot at 375x812 the two together washed the near faces out. The
-        // crown's own response is unchanged — this is the remix's dose.
+        // amp 0.62. THIS IS NOW THE ONLY WAVE the crown produces — the
+        // entry pulse it used to be measured against was removed 2026-08-16
+        // (see setHot) — but the 0.62 is KEPT, because the reason for it never
+        // had anything to do with that pulse: this wave lands on the same
+        // pixels as the per-node swap flare, and at 375x812 the two together
+        // at 1.0 washed the near faces out. Those two still co-occur, so the
+        // measurement still holds. If the single light now reads too faint on
+        // a big screen, this is the number to raise — and 375x812 is the shot
+        // that has to be re-checked when it moves.
         portraits.wavePulse(r.epicentre, {
           speed: r.speed, width: 3.0, maxR: r.maxR + 4, amp: 0.62,
         });

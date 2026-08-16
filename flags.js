@@ -104,11 +104,20 @@ export const T_QS_VALUE = _qs.get('t'); // string | null
  *  main.js. */
 export const DEBUG_OVERLAY = _qs.get('debug') === '1'; // boolean
 
-/** ?photos=1 — promote the Owned portrait field to photo mode once the set
- *  loads. QA-only until the real, consented portrait set replaces the
- *  look-dev placeholders (assets/test-portraits: stock faces, never ship) —
- *  the shipped path stays procedural. Read by: journey/chapters/owned/index.js. */
-export const PHOTOS = _qs.get('photos') === '1'; // boolean
+/** ?photos=0 — hold the Owned portrait field on its procedural busts instead
+ *  of promoting it to the real contributor photographs.
+ *
+ *  THE DEFAULT INVERTED 2026-08-16, and the flag's whole reason for existing
+ *  changed with it. It was an opt-IN (`?photos=1`) because the only image set
+ *  in the repo was randomuser.me/pravatar stock faces marked "never ship" —
+ *  auto-promoting those would have presented strangers as Banodoco
+ *  contributors. That set is gone; the field now loads each contributor's own
+ *  avatar from Banodoco's published sprite (assets/contributor-portraits).
+ *  Real faces are the shipped state, so the flag is now an opt-OUT, kept for
+ *  A/B against the procedural look and for a fast answer to "is that the
+ *  photos or the scene?" in the field. Read by:
+ *  journey/chapters/owned/index.js. */
+export const PHOTOS = _qs.get('photos') !== '0'; // boolean
 
 /** ?steady=1 — kill the documentary handheld camera layer, for QA that
  *  needs pose sampling to be reproducible frame-to-frame (no seeded

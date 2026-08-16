@@ -14,10 +14,12 @@ content/content.js
 vendor/three/                   (three.module.js + addons/)
 static/                         (index.html + captures/*.png — NOT captures/_check/)
 assets/brand/mark-b-mask-{48,64,96}.png
-assets/test-portraits/manifest.js   (hard module dependency of portraits.js;
-                                     the .jpg files are QA-only — the shipped
-                                     path is procedural, photos gated behind
-                                     ?photos=1 — but the import must resolve)
+content/contributors.js         (the 120-person portrait pool)
+assets/contributor-portraits/   (manifest.js + profile-sprite.jpg, 384 KB —
+                                 BOTH are hard dependencies of portraits.js
+                                 and the field ships photos by default now.
+                                 The old assets/test-portraits/ stock set is
+                                 deleted; nothing imports it.)
 robots.txt  sitemap.xml
 ```
 
@@ -56,7 +58,14 @@ Load the site with `?debug=1` to render collected page errors on screen
 
 ## Known shipping placeholders (accepted for launch, tracked)
 
-- All outbound links are `href="#"` and 56 `[PLACEHOLDER]` tokens render,
-  pending the confirmed URL list (Peter).
-- The Owned portrait field ships procedural (anonymous busts); the photo
-  pipeline is behind `?photos=1` until a consented portrait set exists.
+- ~~All outbound links are `href="#"` and 56 `[PLACEHOLDER]` tokens render~~ —
+  **resolved 2026-08-16.** Every destination is now one banodoco.ai itself
+  uses, and no placeholder token ships. Two nodes deliberately have no link
+  and say "Coming soon": `tworp` and `hivemind`.
+- ~~The Owned portrait field ships procedural~~ — **resolved 2026-08-16.** It
+  ships real contributor photographs from Banodoco's own published sprite,
+  sixteen dealt at random out of 120 per load. `?photos=0` forces the old
+  procedural look if a venue machine struggles with the atlas bake.
+- `hivemind` has no counterpart anywhere on banodoco.ai. Its copy comes from
+  this project's own brief and it is flagged for Peter — it may simply be
+  BNDC (github.com/banodoco/brain-of-bndc) under another name.

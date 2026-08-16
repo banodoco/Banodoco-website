@@ -27,11 +27,13 @@
 //   - uFade on every layer for the T3 streaming seam;
 //   - consent hook: aAnon per-node attribute forces the anonymous glyph for
 //     any contributor with consent !== true when enforcement is on. Photos
-//     here are the LOOK-DEV ONLY test set (assets/test-portraits, never
-//     ship); anonymous mode stays one call away (setMode('anonymous')).
+//     here are real contributors' own avatars, dealt at random out of
+//     assets/contributor-portraits/ (see content/contributors.js);
+//     anonymous mode stays one call away (setMode('anonymous')).
 import * as THREE from 'three';
 import * as H from '../../lib/helpers.js';
-import { TEST_PORTRAITS } from '../../../assets/test-portraits/manifest.js';
+import { PORTRAIT_SPRITE } from '../../../assets/contributor-portraits/manifest.js';
+import { CONTRIBUTOR_POOL, ROLE_BLURB } from '../../../content/contributors.js';
 import { REST_P } from './leg.js';
 
 const TAU = Math.PI * 2;
@@ -245,6 +247,26 @@ const PHOTO_GRADE = Object.freeze({
      1 = the hover growth of that term is removed entirely on a photo. */
   hoverCoreMute: 1.0,
   hoverImgMute: 0.70,
+  /* THE THIRD HALF (2026-08-16, Hannah: "when you hover it makes it so the
+     actual colour of the profile picture becomes way more clear").
+
+     `hoverDeSepia` above divides the amber multiply back out, which recovers
+     the picture's HUE — but the resting grade also spends `unify` (0.16)
+     collapsing every cell toward one colour, and that term is baked into the
+     atlas by canvas compositing, so no shader inverse exists for it. Undoing
+     the amber alone therefore lands on the right hue at the wrong strength:
+     correct, and still washed.
+
+     So the hover additionally EXPANDS chroma about the texel's own luma. At 1.0
+     the hovered face carries twice the chroma the graded cell holds, which is
+     roughly where these avatars — flat, saturated, mostly illustration rather
+     than photography — read as themselves again. Luma is the pivot, so like
+     every other term here it moves colour and not brightness.
+
+     Multiplied by `uPhoto * vH` in the shader, so: zero at rest, zero on the
+     procedural busts, zero in the frozen goldens. Turn it to 0 to get exactly
+     the 2026-08-14 hover back. */
+  hoverSat: 1.0,
 });
 
 /* Step 2's multiply colour, at the MIDPOINT of the per-node warmth ramp —
@@ -259,12 +281,16 @@ const PHOTO_GRADE = Object.freeze({
    see. If warmth's range ever widens, that trade is the line to revisit. */
 const PHOTO_AMBER_MUL = Object.freeze([226 / 255, 161 / 255, 96 / 255]);
 
-// Real-photo treatment (LOOK-DEV ONLY; assets/test-portraits, never ship).
+// Real-photo treatment (assets/contributor-portraits — contributors' own
+// avatars out of Banodoco's published sprite; this is the SHIPPED path).
 // Spike-calibrated pipeline: desaturation -> amber multiply -> warm-black
 // lift -> edge burn -> unify/grain -> mask feather 0.76 -> edge. The four
 // grade strengths live in PHOTO_GRADE above.
 function drawPhotoCell(g, ox, oy, CELL, spec) {
   const { img, mirror, exposure, warmth, seed } = spec;
+  // No sheet (it failed to load): draw the slot's procedural bust into the
+  // photo cell instead, so the atlas stays complete and correctly indexed.
+  if (!img) return drawBust(g, ox, oy, CELL, spec.bustSeed);
   const r = H.rng(((seed * 3319 + 811) | 0) >>> 0);
   const cx = ox + CELL / 2, cy = oy + CELL / 2;
   const R = CELL * 0.36;
@@ -277,7 +303,11 @@ function drawPhotoCell(g, ox, oy, CELL, spec) {
   g.save();
   g.translate(cx, cy);
   if (mirror) g.scale(-1, 1);
-  g.drawImage(img, -D / 2, -D / 2, D, D);
+  // One tile out of the published sheet. The 96px source is drawn straight to
+  // the cell's disc diameter rather than being pre-upscaled: the grade below
+  // (desaturate, amber, edge burn, grain) is doing far more to legibility than
+  // the resample would, and the discs are small on screen at the rest pose.
+  g.drawImage(img, spec.sx, spec.sy, spec.sw, spec.sh, -D / 2, -D / 2, D, D);
   g.restore();
 
   // 1. partial desaturation — kill the cool studio colour cast
@@ -964,6 +994,7 @@ export function buildPortraitField({
       // and uAmberA are step 2 of drawPhotoCell's bake, handed to the shader so
       // it can divide by exactly what the bake multiplied by.
       uDeSepia: { value: PHOTO_GRADE.hoverDeSepia },
+      uHovSat: { value: PHOTO_GRADE.hoverSat },
       uAmberMul: { value: new THREE.Vector3(PHOTO_AMBER_MUL[0], PHOTO_AMBER_MUL[1], PHOTO_AMBER_MUL[2]) },
       uAmberA: { value: PHOTO_GRADE.amber },
       uCoreMute: { value: PHOTO_GRADE.hoverCoreMute },
@@ -1059,7 +1090,7 @@ export function buildPortraitField({
       uniform sampler2D uMapA, uMapP, uMapB, uMapA2, uMapP2;
       uniform vec3 uRim, uCore, uHaze;
       uniform float uTime, uOpacity, uAnon, uPhoto, uExposure;
-      uniform float uDeSepia, uAmberA, uCoreMute, uImgMute;
+      uniform float uDeSepia, uAmberA, uCoreMute, uImgMute, uHovSat;
       uniform vec3 uAmberMul;
       const vec3 LUMA709 = vec3(0.2126, 0.7152, 0.0722);
       varying vec2 vUvA, vUvB;
@@ -1096,6 +1127,14 @@ export function buildPortraitField({
           float y1 = dot(unc, LUMA709);
           unc *= y1 > 1e-4 ? y0 / y1 : 1.0;
           tP.rgb = mix(tP.rgb, clamp(unc, 0.0, 1.0), uDeSepia * vH);
+          // ...then open the chroma back up around the same luma pivot. The
+          // amber is gone by here but the baked unify collapse is not, and
+          // cannot be inverted — this is the term that makes the picture read
+          // as its own colour rather than merely the right hue. See
+          // PHOTO_GRADE.hoverSat. (No backticks in this block: the whole
+          // shader is a JS template literal.)
+          float yh = dot(tP.rgb, LUMA709);
+          tP.rgb = clamp(mix(vec3(yh), tP.rgb, 1.0 + uHovSat * vH), 0.0, 1.0);
         }
         vec4 tAP = mix(tA, tP, uPhoto);
         // the anonymous glyph is identity, not arrangement — a remix never
@@ -1448,44 +1487,52 @@ export function buildPortraitField({
   const cores = makeGlowPoints(H.softDisc(64), P.goldBright, 0.5, 0.085, 0.30, 3);
   const halos = makeGlowPoints(H.glowSprite(P.ember, 64), P.ember, 2.7, 0.058, 0.18, -2);
 
-  /* ---------------- LOOK-DEV photo pipeline (async; never blocks boot) ---
-     Photos are the test set in assets/test-portraits (README: never ship).
-     Resolved against import.meta.url so the chapter works from the journey
-     page's own base. On success the photo atlas is baked through the spike
-     treatment and photo mode becomes available; on failure the field simply
-     stays procedural. (`photosAvailable` / `photoSet` and the arrangement
-     bakers live just below, with the remix machinery they belong to.) */
-  async function loadPhotos() {
-    const base = new URL(TEST_PORTRAITS.base, import.meta.url);
-    const load = (name) => new Promise((res, rej) => {
+  /* ---------------- photo pipeline (async; never blocks boot) -------------
+     REAL CONTRIBUTORS since 2026-08-16. This used to load assets/test-portraits
+     — randomuser.me/pravatar stock faces, marked LOOK-DEV ONLY and barred from
+     shipping. It now loads each contributor's OWN avatar, as published by
+     Banodoco on its own front page; see assets/contributor-portraits/
+     manifest.js for provenance.
+
+     ONE PORTRAIT PER PERSON, BY IDENTITY. The old loader fetched a POOL of 26
+     images and dealt them to nodes by a stride permutation, because with
+     anonymous placeholder rows it did not matter which face landed where. It
+     matters completely now: the popover beside a face prints that node's
+     `content.name`, so a mis-dealt image captions a real person with someone
+     else's name. Each node therefore loads the file named by its own row's
+     `avatar` field and no other, and the deal is gone rather than reseeded.
+
+     A MISSING FILE IS SURVIVABLE, per node. One failed image no longer rejects
+     the whole set (the old Promise.all did, dropping the entire field back to
+     procedural over a single 404) — that node keeps its procedural bust and the
+     other fifteen still show. Only a wholesale failure leaves the field as it
+     was, which is the same graceful outcome as before. */
+  function loadPhotos() {
+    return new Promise((res, rej) => {
       const im = new Image();
-      im.onload = () => res([name, im]);
-      im.onerror = () => rej(new Error('photo failed: ' + name));
-      im.src = new URL(name, base).href;
+      im.onload = () => res({ sheet: im });
+      im.onerror = () => rej(new Error('portrait sprite failed to load'));
+      im.src = PORTRAIT_SPRITE.url;
     });
-    const entries = await Promise.all(
-      [...TEST_PORTRAITS.small, ...TEST_PORTRAITS.large].map(load));
-    return {
-      images: Object.fromEntries(entries),
-      small: TEST_PORTRAITS.small,
-      large: TEST_PORTRAITS.large,
-    };
   }
   /* ---------------- ARRANGEMENTS: what a remix actually re-deals ----------
      REMIX (Hannah, 2026-08-07) — see 20-owned-root-network.md.
 
-     THE PORTRAIT-SET SITUATION, stated where the code lives. There is exactly
-     ONE image set in this repo: assets/test-portraits, 20 small + 6 large,
-     LOOK-DEV ONLY, with a standing pre-deploy rule that it is deleted before
-     any public deploy (its README, and the snap() note above). No second set
-     of real likenesses may be added to satisfy a remix button, and none has
-     been. So the mechanism below is built GENERAL — an arrangement index that
-     re-derives every node's source image and its whole treatment — and driven,
-     for now, from the one set there is. Point `variantSpecs` at a second
-     manifest the day a consented set exists and the button gains real new
-     faces with no other change. It genuinely swaps: 16 nodes drawn from 26
-     images, so an arrangement moves most of the field to a different face and
-     re-lights all of it.
+     THE PORTRAIT-SET SITUATION, stated where the code lives — and resolved
+     2026-08-16. This block used to record a constraint: the repo's only image
+     set was 26 stock faces barred from shipping, so a remix could re-light the
+     field but never honestly re-cast it. That is over. The set is now
+     Banodoco's own published avatar sheet and the pool is 120 real people
+     (content/contributors.js), so a re-deal genuinely changes WHO is in the
+     field — sixteen out of 120, which is what the mechanism was always built
+     general for.
+
+     The prediction in the retired note was right about the shape and wrong
+     about the seam: it expected a second manifest to be swapped in behind
+     `variantSpecs`. What actually changed is that the arrangement index now
+     selects PEOPLE as well as treatment, because identity turned out to be
+     the thing that has to move — and the thing that has to move atomically
+     with the name beside it.
 
      Arrangement 0 is byte-identical to what shipped before this feature (the
      stride/offset pair at v=0 is the old `i * 7 + 3`, and every other term
@@ -1498,26 +1545,76 @@ export function buildPortraitField({
   const V_OFFSET = [3, 11, 5, 17, 2, 13, 8];
 
   let photosAvailable = false;
-  let photoSet = null;        // { images, small, large } once loaded
-  let largeRank = null;       // node index -> rank among the nearest, or absent
+  let photoSet = null;        // { images, wanted } once loaded
+
+  /* WHO IS IN THE FIELD, AND WHAT A RE-DEAL ACTUALLY CHANGES.
+
+     Sixteen positions, 120 people (content/contributors.js). An arrangement `v`
+     deals sixteen DISTINCT people into the sixteen slots and writes each one's
+     name, role and blurb onto that slot's content row, so the popover, the
+     hotspot's accessible name and the face are the same person by construction
+     — there is no path that moves one without the others.
+
+     THE DEAL IS SEEDED, THE SESSION IS NOT. `dealFor(v)` is a pure function of
+     v and `dealSalt`, so the same arrangement always re-bakes identically (the
+     atlas is baked more than once — the prepare-ahead path in schedulePrepare
+     re-derives v before the visitor ever sees it, and it must not produce a
+     different sixteen the second time). `dealSalt` is randomised ONCE per page
+     load, which is what makes two visitors see different people while keeping
+     any single visit self-consistent.
+
+     A Fisher-Yates prefix, not sixteen independent draws: with 120 people and
+     sixteen slots, independent draws collide about 65% of the time, and one
+     face appearing twice in a field of sixteen is the single most obvious way
+     this could look broken.
+
+     MIRRORING IS GONE, not merely unused. It existed to stop a small pool of
+     stock faces from looking repeated, and it is actively wrong here: these
+     avatars include wordmarks and lettering (THE DOR BROTHERS, Kosinkadink's
+     JK), which a horizontal flip renders backwards.
+
+     Everything that is not identity still varies with `v` — exposure, warmth,
+     grain seed — so a re-deal re-lights the field as well as re-casting it.
+     V_STRIDE/V_OFFSET survive as generators for those. */
+  const dealSalt = (Math.random() * 0x7fffffff) | 0;
+
+  function dealFor(v) {
+    const rnd = H.rng((((v + 1) * 2654435761) ^ dealSalt) >>> 0);
+    const order = CONTRIBUTOR_POOL.map((_, i) => i);
+    for (let i = 0; i < NODE_COUNT && i < order.length; i++) {
+      const j = i + Math.floor(rnd() * (order.length - i));
+      const t = order[i]; order[i] = order[j]; order[j] = t;
+    }
+    return order.slice(0, NODE_COUNT).map((i) => CONTRIBUTOR_POOL[i]);
+  }
+
+  /** Move the dealt people onto the slots. Name, role, blurb and face travel
+   *  together, in one assignment, for the reason in content/content.js. */
+  function seatPeople(people) {
+    nodes.forEach((nd, i) => {
+      const p = people[i % people.length];
+      if (!p) return;
+      nd.content.name = p[0];
+      nd.content.role = p[1];
+      nd.content.blurb = ROLE_BLURB[p[1]] || nd.content.blurb;
+    });
+  }
 
   function photoSpecs(v) {
     const st = V_STRIDE[v % V_STRIDE.length];
     const of = V_OFFSET[v % V_OFFSET.length];
+    const people = dealFor(v);
+    const T = PORTRAIT_SPRITE.tile;
     return nodes.map((nd, i) => {
-      const lr = largeRank.get(i);
       const k = i * st + of;
-      // large 512-source photos stay on the nodes nearest the camera path (a
-      // 256px source on a foreground plane reads soft); which of the large
-      // images each of them gets rotates with the arrangement.
-      const img = lr != null
-        ? photoSet.images[photoSet.large[(lr + v) % photoSet.large.length]]
-        : photoSet.images[photoSet.small[k % photoSet.small.length]];
-      const pass = lr != null ? 0 : Math.floor(k / photoSet.small.length);
+      const p = people[i % people.length];
       return {
-        img,
-        mirror: (pass + v + ((i * 13 + v * 5) % 7 < 3 ? 1 : 0)) % 2 === 1,
-        exposure: 0.90 + ((i * 29 + v * 7) % 13) / 13 * 0.26,
+        img: photoSet.sheet,
+        // the person's own tile in the published sheet
+        sx: p[2] * T, sy: p[3] * T, sw: T, sh: T,
+        bustSeed: (nd.content.seed ?? i + 1) * 131 + i * 7 + v * 9973,
+        mirror: false,
+        exposure: 0.90 + ((i * 29 + v * 7 + k) % 13) / 13 * 0.26,
         warmth: ((i * 17 + v * 3) % 11) / 11,
         seed: 5000 + i * 37 + v * 911,
       };
@@ -1535,11 +1632,15 @@ export function buildPortraitField({
 
   const photosReady = loadPhotos().then((photos) => {
     photoSet = photos;
-    const byNearness = nodes
-      .map((nd) => ({ i: nd.i, gd: camDist(nd.pos.x, nd.pos.y, nd.pos.z) }))
-      .sort((a, b) => a.gd - b.gd);
-    largeRank = new Map();
-    byNearness.slice(0, photos.large.length).forEach((e, rank) => largeRank.set(e.i, rank));
+    // The nearest-node/large-source ranking retired with the mixed-resolution
+    // stock pool: every tile in the published sheet is the same 96px, so there
+    // is no sharper variant to reserve for the faces closest to camera.
+    //
+    // Seat arrangement 0's people at the same moment its atlas becomes the
+    // resting one. Until this line the rows still carry their opening
+    // occupants from content.js, which is the correct thing to show while the
+    // sheet is in flight.
+    seatPeople(dealFor(0));
     portraitMat.uniforms.uMapP.value = bakePhotos(0);
     photosAvailable = true;
     // and start the NEXT arrangement warming while nothing is happening, so
@@ -1608,6 +1709,14 @@ export function buildPortraitField({
   /** The incoming arrangement becomes the resting one. */
   function promoteSwap() {
     const u = portraitMat.uniforms;
+    // NAMES CHANGE HERE, not when the incoming atlas was baked. prepareNext()
+    // bakes the next arrangement minutes ahead, while the visitor is still
+    // looking at the current one — reseating on bake would rename sixteen
+    // people under faces that have not turned over yet, and a popover opened
+    // in that window would caption the wrong person. The swap wave is the
+    // moment the field genuinely becomes the new cast, so it is the moment the
+    // rows do too.
+    seatPeople(dealFor(variant));
     const oldBust = u.uMapA.value, oldPhoto = u.uMapP.value;
     u.uMapA.value = u.uMapA2.value;
     u.uMapP.value = u.uMapP2.value;
@@ -1767,13 +1876,29 @@ export function buildPortraitField({
      *
      *  uPhoto is DELIBERATELY not snapped. Under freezeTime(0) the photo
      *  crossfade never advances, so the frozen captures render the PROCEDURAL
-     *  painted busts — and that is the behaviour we want to keep, not a bug to
-     *  fix: assets/test-portraits is a placeholder set that must never ship,
-     *  and static/captures/*.png is committed to the repo. Snapping it here
-     *  would bake real likenesses into a checked-in image. The live page still
-     *  crossfades to photos the moment they load, which is where they belong.
-     *  (The pre-deploy checklist item — delete the test portraits before any
-     *  public deploy — stands regardless.) */
+     *  painted busts. That is kept on purpose — but the ORIGINAL reason for it
+     *  expired on 2026-08-16 and the real one is different, so it is written
+     *  out here rather than left to be re-derived.
+     *
+     *  It used to be a consent argument: the only images were stock faces that
+     *  must never ship, and static/captures/*.png is committed, so snapping
+     *  would have baked strangers' likenesses into checked-in files. The
+     *  portraits are now contributors' own published avatars and that argument
+     *  is gone.
+     *
+     *  What replaces it is DETERMINISM. The gate's whole value is that a
+     *  frozen pose renders byte-identically every run; the photo path depends
+     *  on a 384 KB network fetch, a canvas bake and a timed crossfade, none of
+     *  which are frame-deterministic, and the field now deals a RANDOM sixteen
+     *  out of 120 people per load, which is not deterministic by design. A
+     *  golden that included any of that would flake for reasons unrelated to
+     *  the scene, and the first response to a flaky gate is to stop trusting
+     *  it. The busts are a stable baseline that still exercises the geometry,
+     *  the lighting and the substrate.
+     *
+     *  THE COST, stated plainly: the ten goldens do not cover the photo
+     *  pipeline. Changes to the grade, the atlas bake or the deal have to be
+     *  checked by eye on the live page. */
     snap() {
       const u = portraitMat.uniforms;
       u.uAnon.value = anonTarget;
