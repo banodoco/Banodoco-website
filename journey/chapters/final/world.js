@@ -63,14 +63,18 @@ const MEMBER_SPEC = [
   // these two reading as lit cups from above.
   { az: 104, r: 7.3, h: 2.0, m: 0.55 },
   { az: 123, r: 7.9, h: 1.85, m: 0.40 },  // near-right, on the lip
-  { az: 279, r: 8.3, h: 2.5, m: 0.95 },   // mature — stands on the far lip
-  // az 291 -> 297 (17-final-field.md): from the rest camera the 291 body sat
-  // on the SAME ray as the 279 one (plan angles −44.3 vs −44.7 deg) — two
-  // mature caps in one screen column summed into a single over-wide white
-  // "pancake", the worst of the lamp reads. Six degrees along the arc
-  // separates the silhouettes into a staggered pair; the ring stays a ring.
+  // az 279 -> 273 and az 303 -> 311 (2026-08-16, Hannah: "some of the
+  // mushrooms feel a bit cluttered and overlapping"). The 17-final-field
+  // pass separated 291 from 279 by six degrees and the SAME pancake
+  // re-formed one neighbour over: measured at the rest pose, the far-lip
+  // trio stood at screen-x 22.0 / 26.2 / 31.6 (% of frame) with caps
+  // ~9% wide each — three mature silhouettes summing into one blob on
+  // the frame-left band. Widening the trio to ~17 / 26 / 38 gives each
+  // cap its own column; arc order (and so the CCW reveal order) is
+  // unchanged, and the walk-in guard still owns the soil margin.
+  { az: 273, r: 8.3, h: 2.5, m: 0.95 },   // mature — stands on the far lip
   { az: 297, r: 8.6, h: 2.6, m: 0.90 },   // mature
-  { az: 303, r: 7.4, h: 2.2, m: 0.80 },
+  { az: 311, r: 7.4, h: 2.2, m: 0.80 },
   { az: 327, r: 6.6, h: 1.3, m: 0.35 },   // young, closes the ring by the hero
 ];
 
@@ -195,8 +199,26 @@ export const MEMBERS = MEMBER_SPEC.flatMap((s, i) => {
    arc-keyed pool still kindles exactly between the members it sits
    between. Piecewise-linear and monotone in arc: cord vertices between two
    members still light strictly member-to-member, only on the new clock. */
-const RING_LADDER = [0.0966, 0.1833, 0.2638, 0.3406, 0.5401,
-                     0.8678, 0.9192, 0.9353, 0.9511];
+/* RE-CUT EVEN IN SCROLL (2026-08-16, Hannah's SEVENTH pass, the first
+   asking for LESS: "uneven and lasts too long... slick and elegant" like
+   the landing view's own startup). The accelerando is gone. The shipped
+   24-slot ladder was even in neither axis — gaps 0.0867 pull at the head
+   to 0.0137 at the tail, played over a camera that accelerates into the
+   rest — so the town opened at 176 ms a body and closed at 32 ms, and all
+   24 arrivals fit inside 44% of the leg's road while the last kindles
+   crawled through the rest of it. The new rungs are authored EVEN IN
+   SCROLL: 24 slots equally spaced in wheel px between the first rung
+   (0.0966, unchanged — dark at arm is a fact of the pierce, not of
+   taste) and 0.95, converted to pull through the §14-style measured
+   curve of the RE-SHORTENED leg (route.js segVh [10.0, 0.6], k1 0.70 —
+   same commit). One body every ~190 px-normalised beat, start to finish,
+   the same interleave of slots as before: members keep slots 0-3 (the
+   four opening singles), 6, and the four closers 18/21/22/23; the field
+   keeps the other fifteen (ring.js FIELD_LADDER, same PERM scatter). The
+   last rung finishes its light at pull ~1.03, while the frame still
+   visibly moves — never in the old post-brake crawl. */
+const RING_LADDER = [0.0966, 0.1445, 0.1909, 0.2365, 0.3728,
+                     0.8290, 0.9042, 0.9276, 0.9500];
 // The guard: the ladder is authored against today's nine members. If the
 // build ever drops one (the inward-walk can), the rank map would silently
 // hand every later member the wrong rung — so the whole sweep, members and

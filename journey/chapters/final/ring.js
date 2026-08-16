@@ -590,20 +590,33 @@ export function createFinalRing(sceneApi, uniforms) {
        still opening. Last T4 threshold 0.94 − jit finishes its light at
        ~1.10, inside the rest's 1.12. */
     const CLONE_DIST = 24;               // the T3/T4 seam: clones are nearer than this
-    const REV_KNEE = 0.72, REV_HI = 0.94;
+    // REV_HI 0.94 -> 0.90 (2026-08-16, the even-ladder re-cut — world.js
+    // RING_LADDER has the full story): the weather tail's last threshold
+    // now completes its light at pull ~1.06, while the frame still moves,
+    // instead of at 1.10 deep inside the old landing-brake crawl. The
+    // haze still fills in behind the town across the whole arrival.
+    const REV_KNEE = 0.72, REV_HI = 0.90;
     const REV_JIT = 0.005;               // keeps the ladder off a metronome
     // The fifteen field slots of the merged 24-slot ladder, in arrival
-    // order (starts p 0.884 → 0.931 on the §14 leg; the ring's nine take
-    // the other slots — four opening singles, one mid, four closing).
-    // RE-DERIVED 2026-08-09 §14 with the rest at p 0.97: same slot
-    // structure, same PERM, re-laid in p across the won road and converted
-    // through the §14 measured camera curve.
-    const FIELD_LADDER = [0.4116, 0.4789, 0.5937, 0.6383, 0.6748,
-                          0.7042, 0.7277, 0.7495, 0.7708, 0.7914,
-                          0.8112, 0.8306, 0.8495, 0.8856, 0.9027];
+    // order (the ring's nine take the other slots — four opening singles,
+    // one mid, four closing; same slot structure, same PERM, since §12).
+    // RE-CUT EVEN IN SCROLL 2026-08-16 (Hannah's seventh pass: "uneven and
+    // lasts too long"): the merged 24 rungs are now equally spaced in
+    // wheel px across the re-shortened leg (route.js, same commit) and
+    // converted to pull through the measured curve — one body per ~190
+    // px-normalised beat from first light to last, no accelerando. The
+    // derivation and the guarantees live at world.js RING_LADDER.
+    const FIELD_LADDER = [0.2817, 0.3270, 0.4211, 0.4714, 0.5220,
+                          0.5711, 0.6170, 0.6585, 0.6941, 0.7228,
+                          0.7494, 0.7762, 0.8027, 0.8548, 0.8799];
     const cand = [];                     // placements, held for the rank pass
     let idx = 0, guard = 0;
-    while ((fieldStats.t3 < want.t3 || fieldStats.t4 < want.t4) && guard++ < 6000) {
+    // guard 6000 -> 30000 (2026-08-16): the depth-band separation rule
+    // rejects far more candidates than the flat floor did, and a guard that
+    // exhausts mid-fill leaves the rank pass indexing seats that were never
+    // placed (measured: a boot-killing t3[r] === undefined at 6000). The
+    // loop is build-time-once; 30k rejections cost ~1 ms.
+    while ((fieldStats.t3 < want.t3 || fieldStats.t4 < want.t4) && guard++ < 30000) {
       const right = fr() < 0.66;
       const rel = right ? 0.03 + Math.pow(fr(), 0.9) * 0.60
                         : -0.03 - Math.pow(fr(), 0.9) * 0.55;
@@ -618,9 +631,31 @@ export function createFinalRing(sceneApi, uniforms) {
       if (Math.hypot(x, z) < 4.0) continue;           // hero clearance
       // the hero's sky sector stays airy (the trees leave the same gap)
       if (rel > 0.10 && rel < 0.30 && dist > 24 && fr() < 0.5) continue;
+      /* SEPARATION IS DEPTH-BAND AWARE (2026-08-16, Hannah: "some of the
+         mushrooms feel a bit cluttered and overlapping... balanced but
+         somewhat chaotic"). The flat 1.15-unit floor allowed what the eye
+         actually objects to: two bodies at nearly the SAME distance from
+         the rest camera standing a cap-width apart, which reads as one
+         smeared silhouette (measured at the rest: a 4-body pileup inside
+         2% of frame width, all in the 19-23-unit band). Bodies in the
+         same depth band now need real plan separation; bodies in
+         DIFFERENT bands may still stand nearly in line — a near cap
+         overlapping a far one is depth, and depth is the chaos the frame
+         wants. Deterministic as before: the rule only rejects candidates,
+         the stream is consumed per candidate either way. */
+      // The rule is TIERED, because the fault is tiered: two DRAWN bodies
+      // (T3, dist < 24 — big, fully-stroked caps) merging in one depth band
+      // is the smear; two fog-dimmed T4 embers doing the same is texture.
+      // A single 3.3-unit rule was measured to cap the T3 band at 11 of its
+      // 15 seats (the moat + cutaway leave it ~110 usable sq units), so the
+      // drawn band packs at 3.0 and the haze at 2.0.
       let ok = true;
-      for (const q of placed)
-        if (Math.hypot(x - q[0], z - q[1]) < 1.15) { ok = false; break; }
+      for (const q of placed) {
+        const sep = Math.hypot(x - q[0], z - q[1]);
+        if (sep < 1.3) { ok = false; break; }
+        if (Math.abs(dist - q[2]) < 3.5 &&
+            sep < (dist < CLONE_DIST && q[2] < CLONE_DIST ? 3.0 : 2.0)) { ok = false; break; }
+      }
       if (!ok) continue;
       const tier = dist < CLONE_DIST ? 3 : 4;
       if (tier === 3 && fieldStats.t3 >= want.t3) continue;
@@ -637,7 +672,7 @@ export function createFinalRing(sceneApi, uniforms) {
       // golden — is bit-for-bit what it was. Only what the number is used for
       // has changed (see the rank pass below).
       const jit = fr() * REV_JIT;
-      placed.push([x, z]);
+      placed.push([x, z, dist]);
       cand.push({
         i: 100 + idx++,
         x, z,
@@ -685,10 +720,18 @@ export function createFinalRing(sceneApi, uniforms) {
     {
       const t3 = cand.filter(c => c.tier === 3).sort((a, b) => a.dist - b.dist);
       const PERM = [0, 14, 7, 3, 11, 5, 13, 1, 9, 4, 12, 2, 10, 6, 8];
+      // The same guard RING_LADDER carries: the ladder is authored against
+      // fifteen drawn bodies, and an under-filled build (the placement
+      // guard CAN exhaust) must degrade to a sparse-but-lit field, never
+      // die indexing a body that was not placed.
+      if (t3.length < FIELD_LADDER.length)
+        console.error('[final-ring] field under-filled:', t3.length, 'of',
+          FIELD_LADDER.length, 'drawn bodies — ladder assigned to the placed ones only.');
       FIELD_LADDER.forEach((rv, k) => {
         const r = PERM[k];
-        t3[r].reveal = rv + t3[r].jit;
+        if (t3[r]) t3[r].reveal = rv + t3[r].jit;
       });
+      for (const c of t3) if (c.reveal == null) c.reveal = REV_KNEE + c.jit;
       const t4 = cand.filter(c => c.tier === 4).sort((a, b) => a.dist - b.dist);
       t4.forEach((c, k) => {
         c.reveal = REV_KNEE + (REV_HI - REV_JIT - REV_KNEE)

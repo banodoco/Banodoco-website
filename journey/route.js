@@ -153,8 +153,41 @@ export const ROUTE = [
   //   shipped tangents here were [1.964, 1.188], measured on the live spline,
   //   so this is a steepening of a curve that already decelerated, not a new
   //   gesture. Page 46.12 -> 54.62 vh, +8.50.
-  { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 17.55,
-    segVh: [14.70, 2.85], shape: { seg: 0, k: [2.15, 0.80] } },
+  //   scrollVh 17.55 -> 14.35, segVh [14.70, 2.85] -> [11.50, 2.85], shape k
+  //   [2.15, 0.80] -> [1.60, 0.95] (2026-08-16, Hannah's SEVENTH pass on this
+  //   arrival, and — exactly as on Final's seventh — the first asking for
+  //   LESS: "the 3 ground lights animation feels like it stalls the actual
+  //   motion from continuing"). The fault is where the road sat, not the
+  //   light schedule. ADOS's finale window (p ~0.4726..0.5201) plays entirely
+  //   inside the camera's own landing ramp (connect/camera.js trapEase, ramp
+  //   from p ~0.4757 to the rest), and the k1 = 0.80 tail made exactly that
+  //   stretch the most expensive scroll in the leg: the last third of seg 0's
+  //   p — camera braking to zero, particles and pulses still gated on full
+  //   arrival, one light line the only motion — held ~45% of 14.70 vh. Scroll
+  //   stopped converting into anything, which is the stall as reported.
+  //   Three coordinated edits, of which this is the road half (the other
+  //   half is the chips: connect/index.js nodeReveal now lands each label
+  //   with its own light, so the tail owns a narrative beat instead of
+  //   trailing one):
+  //   · seg 0 14.70 -> 11.50 vh. Six passes of "slower" are respected — the
+  //     light schedule (LIGHT_LO/HI, OVERLAP, order, one head speed) does not
+  //     move, and at the glide floor the arrival still reads ~6.9 s against
+  //     the shipped ~8.9 — but the fraction of that road parked on a
+  //     near-static frame stops being the plurality of it.
+  //   · k1 0.80 -> 0.95 releases the parking brake: the finale converts
+  //     scroll to light-motion near the leg's mean instead of at 0.62x of
+  //     it, while staying under 1 so the rest is still approached, not hit.
+  //   · k0 2.15 -> 1.60 spends what the tail gave back on the HEAD, where
+  //     the camera is at full trapezoid speed — the swing into the chapter
+  //     stops racing past its own best motion. The declared head slope
+  //     lands at 19.9 mp/vh against the shipped 20.9, so the Inspire seg-1
+  //     handover the 2026-08-14 note levelled holds at 0.58x against its
+  //     shipped 0.61x — same class, no new cliff.
+  //   The mild decelerando of the sixth pass ("slower as they go") survives
+  //   in shape — 1.60 down to 0.95 still relaxes as it runs — it just no
+  //   longer ends at a wall. Page 54.62 -> 51.42 vh, -3.20.
+  { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 14.35,
+    segVh: [11.50, 2.85], shape: { seg: 0, k: [1.60, 0.95] } },
   // scrollVh 5.0 -> 9.27, declared as segVh [2.27, 7.00] with the POST-REST
   // sub-segment's shape pinned (2026-08-12, Hannah: "the move currently reads
   // as two motions, or one motion with two speeds. It feels jilted rather than
@@ -281,8 +314,33 @@ export const ROUTE = [
   // preserved exactly rather than traded against a wider kindling window.
   // Page 38.00 -> 41.85 vh, +3.85, of which 1.9 is paid for by the Inspire
   // trim above.
-  { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 17.6,
-    segVh: [17.0, 0.6], shape: { seg: 0, k: [2.219, 0.451] } },
+  // scrollVh 17.6 -> 10.6, segVh [17.0, 0.6] -> [10.0, 0.6], shape k
+  // [2.219, 0.451] -> [1.305, 0.70] (2026-08-16, Hannah's SEVENTH pass on
+  // this arrival, and the first one asking for LESS: "the entry light up...
+  // feels a little bit uneven and lasts too long... its startup sequence at
+  // the end should feel slick and elegant", like the landing view's own
+  // 5.4 s intro). Measured on the shipped tree, the fault was distribution,
+  // not tempo: the 24 rungs occupied scroll 26.9k..32.4k of the leg's
+  // 26.7k..38.9k px — 44% of the road — and the k1 = 0.451 landing brake
+  // stretched the LAST pull units over ~6.5k px, so the closers' charge
+  // curves crawled through half a chapter of near-static settle. Two of the
+  // three axes of that fix live here:
+  //   · seg 0 17.0 -> 10.0 vh. Six passes gained road; with the ladder now
+  //     re-authored EVEN in scroll (world.js / ring.js, this commit) the
+  //     road is finally spent evenly, so less of it reads as more: a
+  //     deliberate ~1200 px/s read crosses the arrival in ~5.5 s — the
+  //     landing intro's own scale — instead of ~10 s of which half was tail.
+  //   · k1 0.451 -> 0.70 softens the landing brake: the crawl zone (pull
+  //     1.0 -> 1.12) stops eating a third of the leg, which is what let the
+  //     re-authored ladder finish its last kindle at pull ~1.05 with the
+  //     frame still visibly moving. k0 2.219 -> 1.305 is NOT a taste change:
+  //     it keeps the p 0.85 knot's ABSOLUTE slope at the 15.66 mp/vh the
+  //     Owned handover was levelled against (k0 x 120/segVh0 = 15.66 —
+  //     request 83's "one motion, not two speeds" survives by construction;
+  //     owned's own k1 = 0.877 still asks for exactly this value).
+  // Page 41.85 -> 34.85 vh, -7.0.
+  { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 10.6,
+    segVh: [10.0, 0.6], shape: { seg: 0, k: [1.305, 0.70] } },
 ];
 
 // The authored end-hold: p = 1 is a resolution anchor of its own (a fling to
