@@ -431,6 +431,49 @@ export function createOwned(sceneApi, content) {
   // therefore max(sink, keep) — is bit-identical on every path a reference is
   // shot through.
   const KEEP_Z0 = -2.0, KEEP_ZW = 2.0;
+  // ...AND A BLEND NEEDS A TIGHTER ONE THAN THE RIDE (2026-08-16 — Hannah,
+  // the SAME flash one window later: "the root of the main mushroom shows
+  // when I scroll from the top section backwards into the first one"). The
+  // half-space above closed the exposure where it was measured — mid-lap,
+  // z ~-15 — and left the LANDING open: the lap's last half second runs
+  // z -1.6 -> +2.70, and from those poses the cutaway lip does not yet stand
+  // between the lens and the colony's crown. Screencast through a
+  // wheel-driven wrap (every composited frame, none skipped): the hero's
+  // root crown flares as a bright fan under the stem while `keep` fades up
+  // across the approach, and vanishes only as the pose closes on the rest —
+  // the settled frame is clean, which is why both Final goldens never caught
+  // it. Same A/B as the first fix: with this chapter's group suppressed the
+  // landing is flat (lower-frame luminance 29-33 against 41 with it on).
+  //
+  // A single window cannot hold both truths: the exposure persists ALL THE
+  // WAY TO THE REST (measured live by Hannah after a first cut opened a
+  // tight window across z 2.55 -> 2.68: "still pops up for a moment before
+  // it settles" — at 60 fps even the last 0.1 of z shows the fan fading up
+  // over a still-open sightline). No camera threshold separates the exposed
+  // poses from the rest pose, because the rest pose is their limit. So the
+  // colony does not arrive DURING a blend at all — it arrives AFTER the
+  // landing, which is the arrival law this codebase already has: "an
+  // ARRIVAL has no window... a town you are walking into may go on lighting
+  // while you stand still" (final/index.js §41). The construction is a
+  // ONE-SIDED LATCH plus a settle ease:
+  //   · while a blend is in flight, `keepGate` may only FALL — it latches
+  //     min(itself, the tight window's read of the pose). A DEPARTURE from
+  //     the Final rest therefore keeps its colony on the unmoved frame
+  //     (tight window = 1 there) and retires it over the bow's first beat,
+  //     riding the move — while an ARRIVAL (whose blend began where keep
+  //     is 0) holds the colony dark through every exposed landing pose, at
+  //     any frame rate, by construction rather than by threshold.
+  //   · off a blend, `keepGate` eases back to 1 at the chapter's own 6.0/s
+  //     — the underground glow warms up through the cutaway over the first
+  //     ~half second AFTER the camera has settled, at the one pose whose
+  //     lip actually occludes the crown. The reveal law allows exactly
+  //     this: the limiter may HOLD light the lens has earned, never create
+  //     light it has not.
+  //   · scrubs, deep links, `?p=`, the frozen `?capture=` path and both
+  //     goldens never blend, so `keepGate` never leaves 1 and `keep` is
+  //     bit-identical to the shipped term. snap() deliberately leaves the
+  //     gate alone — see its declaration for the endCamBlend pop it avoids.
+  const KEEP_Z0_BLEND = 2.55, KEEP_ZW_BLEND = 0.13;
 
   // THE SOIL HORIZON'S TWO CAMERA-PURE TERMS (2026-08-11 — Hannah, on the
   // Connect -> Owned crossing: "the ground should be RICHER as we're going
@@ -489,6 +532,15 @@ export function createOwned(sceneApi, content) {
   // window in which the journey's state has already arrived and the camera
   // has not (see setBlending there, and the ease-hold in the animator below)
   let blending = false;
+  // The Final-cutaway hold's blend latch (see KEEP_Z0_BLEND): 1 everywhere a
+  // blend has not touched; may only fall while one is in flight; eases home
+  // after the landing. DELIBERATELY NOT reset by snap(): snapChapters fires
+  // on every blend landing (endCamBlend) as well as on placements, and a
+  // reset there would pop the colony on the landing frame — the exact
+  // shownPull trap final/index.js's snap comment records. Every placement
+  // path that needs exactness (boot, ?capture=, deep links) starts from the
+  // initial 1; after a blend the ease below brings it home.
+  let keepGate = 1;
   const _w = new THREE.Vector3();
 
   sceneApi.addAnimator('journey-owned', (t, dt) => {
@@ -549,8 +601,21 @@ export function createOwned(sceneApi, content) {
     const sink = smooth01(depth / SINK_D);
     // Both halves of the Final-cutaway hold: far enough along the leg AND on
     // the side of the ring the epilogue's section is read from (see KEEP_Z0).
-    const keep = smooth01((-cp.x - KEEP_X0) / KEEP_XW)
-               * smooth01((cp.z - KEEP_Z0) / KEEP_ZW);
+    // `keepGate` is the blend latch (KEEP_Z0_BLEND's comment has the
+    // measurement and the law): during a blend it may only fall — a
+    // departure keeps its colony and retires it on the move, an arrival
+    // holds it dark through every exposed landing pose — and after the
+    // landing it eases home at the chapter's own rate, so the underground
+    // glow warms up through the cutaway once the camera has settled.
+    const xHalf = smooth01((-cp.x - KEEP_X0) / KEEP_XW);
+    if (blending) {
+      keepGate = Math.min(keepGate,
+        xHalf * smooth01((cp.z - KEEP_Z0_BLEND) / KEEP_ZW_BLEND));
+    } else {
+      keepGate += (1 - keepGate) * Math.min(1, dt * 6.0);
+      if (keepGate > 0.996) keepGate = 1;
+    }
+    const keep = xHalf * smooth01((cp.z - KEEP_Z0) / KEEP_ZW) * keepGate;
     const arrival = Math.max(sink, keep);
     const eff = amt * arrival;
     // The soil horizon rides its own two depth terms (see LID_D / PASS_* ),
