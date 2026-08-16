@@ -18,7 +18,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      cards, hotspot proxies.
 
      NONE of these elements exist until journey.js boots (after the
-     hero entry choreography); core/ui.js builds them. So the hero's
+     hero entry choreography); journey/ui.js builds them. So the hero's
      first paint, TTI and Mission screenshot are untouched by
      construction, and every rule below is dead CSS until then.
      Everything starts at opacity 0 and is driven by journey
@@ -1696,7 +1696,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     border-bottom: 1px solid rgba(217, 164, 65, 0.5);
   }
 
-  /* The polite live region (core/ui.js) — announced, never seen. `clip-path`
+  /* The polite live region (journey/ui.js) — announced, never seen. `clip-path`
      rather than display:none or visibility:hidden, both of which would take it
      out of the a11y tree along with the announcement. */
   .j-live {
@@ -1719,8 +1719,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      while the body moves under them — which is also what makes the
      drag-to-dismiss gesture unambiguous (the handle never scrolls away).
 
-     core/ui.js adds `.sheet` at open time from the live pointer/viewport
-     condition, and registers the card with core/scroll.js's input-owner
+     journey/ui.js adds `.sheet` at open time from the live pointer/viewport
+     condition, and registers the card with journey/scroll.js's input-owner
      registry so the journey's window-capture preventDefault leaves this
      subtree alone and the native scroll below actually runs.
      ============================================================ */
@@ -1845,7 +1845,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      given a hit area larger than itself, which would steal presses from
      whatever sits next to it.
 
-     Same media condition as the bottom sheet (core/ui.js `sheetQuery`), so
+     Same media condition as the bottom sheet (journey/ui.js `sheetQuery`), so
      the touch form and the touch targets are never out of step.
      ============================================================ */
   @media (pointer: coarse), (max-width: 720px) {

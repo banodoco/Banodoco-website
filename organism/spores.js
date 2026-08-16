@@ -335,8 +335,8 @@ export function createSpores(ctx) {
   }
 
   // ---- mouse wind + the drift integrator ----
-  // Called by organism.js at the exact position the inline block held in
-  // mushroom-scene.js. ORDERING CONSTRAINT (load-bearing): 'spore-drift'
+  // Called by organism.js at the exact position the inline block held
+  // before the M2 split. ORDERING CONSTRAINT (load-bearing): 'spore-drift'
   // must be registered AFTER 'breeze' (it reads ctx.swayCos/swaySin written
   // by 'breeze' earlier in the same frame) and BEFORE any journey-layer
   // animator — the seated driver's lighting (seat.drive, called from the

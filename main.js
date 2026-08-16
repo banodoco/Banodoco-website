@@ -120,7 +120,7 @@ const TRACKS = {
 
 // --- scene init ---
 // The entry choreography (see the ENTRY comment in hero.css) hangs off the
-// scene's 3.4s grow-in; honor reduced-motion, and let ?nointro=1 skip the
+// scene's 5.4s grow-in; honor reduced-motion, and let ?nointro=1 skip the
 // whole sequence for design-review screenshots of the settled page.
 // ?capture=<p> (M5) implies nointro: a frozen still has no choreography.
 const captureQ = CAPTURE;
@@ -136,9 +136,10 @@ if (skipIntro) {
 // ?introat=P freezes the page half of the choreography at progress P (0..1);
 // the scene half freezes itself off the same param (see introStateAt)
 const introAt = INTROAT;
+const INTRO_S = 5.4; // the hero entry choreography length; the ?introat freeze maps 0..1 onto it
 if (introAt !== null) {
   addEventListener('load', () => {
-    const ms = Math.min(1, Math.max(0, parseFloat(introAt) || 0)) * 5400;
+    const ms = Math.min(1, Math.max(0, parseFloat(introAt) || 0)) * INTRO_S * 1000;
     for (const a of document.getAnimations()) { a.currentTime = ms; a.pause(); }
   });
 }
@@ -150,7 +151,7 @@ const sceneApi = createScene({
   bg: 0x1c160b,
   quiet: { x: -5.2, z: 4.2, rx: 4.8, rz: 3.4, strength: 0.7 },
   trackers: [TRACKS.connect, TRACKS.inspire, TRACKS.equip],
-  intro: skipIntro ? 0 : 5.4,
+  intro: skipIntro ? 0 : INTRO_S,
 });
 
 document.body.classList.add('mode-' + currentMode);

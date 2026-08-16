@@ -62,7 +62,7 @@
 // both rest keys are holds).
 //
 // THE RETIRED KEYS: connect's two travel keys (t 0.77/0.91) and this file's
-// five descent keys (t 0.0/0.088/0.18/0.272/0.36/0.40/0.44/0.472). Their
+// eight descent keys (t 0.0/0.088/0.18/0.272/0.36/0.40/0.44/0.472). Their
 // corridor — the close stipe-hugging crawl — is replaced by the gesture's
 // wider single arc, so owned/leg.js's sampled window (p 0.660-0.872; the
 // 0.660-0.723 half of it) DELIBERATELY regrows the colony around the new

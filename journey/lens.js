@@ -203,7 +203,7 @@ const GradeShader = {
 const LOOK_BASE = { gain: 1.0, lift: 1.0, warm: 0.0, hal: 1.0, vig: 0.34, grain: 0.030 };
 // Key positions are route-relative (M4): each look belongs to a LEG, so a
 // re-timed route carries the grade with it. Shipped p-values unchanged
-// (0.00 / 0.38 / 0.44 / 0.60 / 0.68 / 0.85 / 0.93 / 1.00).
+// (0.00 / 0.38 / 0.44 / 0.60 / 0.68 / 0.85 / 0.975 / 1.00).
 const LOOK_KEYS = [
   { p: 0.00, ...LOOK_BASE },                                    // Mission (G2a)
   { p: endOf('inspire'), ...LOOK_BASE },                        // Inspire leg end (G2a)

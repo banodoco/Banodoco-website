@@ -106,6 +106,8 @@ export const SNAP_DEAD_P      = 0.0015;// closer than this, settle exactly
 export const WHEEL_LINE_PX    = 16;    // deltaMode 1 -> px
 export const TOUCH_GAIN       = 1.35;  // touch drag feels shorter than wheel
 export const KEY_STEP_PX      = 110;   // arrow keys
+export const STALL_FRAME_MS   = 34;    // ~2 frames at 60 Hz; above this a frame overran
+export const STALL_MAX_MS     = 400;   // ...and past this it is a stopped tab, not a frame
 // Commit resolution (G3 motion note): idling anywhere must resolve to a rest —
 // there is no p where stopping leaves you parked between chapters. A gesture
 // that is going somewhere arms its resolution WHILE IT IS STILL RUNNING, so
@@ -266,13 +268,13 @@ export const MAX_SCRUB_RATE   = 0.45;  // p units per second
 // Mission->Inspire at 2.86 against 2.58, i.e. the transitions nobody has
 // complained about stay where they were; the two that move are Inspire->
 // Connect (the ground lighting, which is the request) and Owned->Final (which
-// owns 24 vh and is now bounded by COMMIT_GLIDE_MAX_S below).
+// owns 17.0 vh and is now bounded by COMMIT_GLIDE_MAX_S below).
 export const COMMIT_CRUISE_MAX_PX = 2200;   // px/s
 
 // No single resolution autoplays for longer than this. The glide is road-
 // denominated now, so a leg that owns a lot of road would otherwise commit the
-// visitor to a very long ride from one flick — Owned->Final is 24 vh and would
-// run 11 s at nominal. One gesture buys one transition, and a transition has to
+// visitor to a very long ride from one flick — Owned->Final is 17.0 vh and would
+// run 7.8 s at nominal. One gesture buys one transition, and a transition has to
 // stay a transition: above this duration the leg's own rate scales up to fit.
 // Legs shorter than CRUISE_MAX x this are unaffected, which today is every leg
 // except Owned->Final.
