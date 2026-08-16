@@ -506,7 +506,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     return Math.min(inFlight - STALL_FRAME_MS, STALL_MAX_MS);
   }
 
-  function push(dpx, kind) {
+  function push(dpx, kind, repeat = false) {
     if (!enabled) return;
     // An open detail state consumes the first scroll intent: travel resumes
     // only once the frame is clear (GB-3.6).
@@ -564,7 +564,15 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
          SPENT (the cruise clamp, the brake, and the final clampRate on
          vel), and the carry test only asks "at least", where an outlier
          high reading is indistinguishable from a hard fling. */
-      if (gCount > 1 && gapMs > 0) {
+      // A held key auto-repeats as DISCRETE STEPS, not a delta stream. The
+      // ~30-50 ms repeat gap is far under the gesture gap, so the OS repeat
+      // clock would otherwise read as a stream and build gPeak fling-class
+      // strength, tripping commit-carry like a fling. A lone step contributes
+      // zero flick credit (the first-delta skip below), so zeroing the peak —
+      // and the EMA it is drawn from — keeps a held key judged purely by
+      // position, exactly like a notch-by-notch reader.
+      if (repeat) { gPeak = 0; inRate = 0; }
+      else if (gCount > 1 && gapMs > 0) {
         const gs = Math.min(gapMs, SNAP_ENGAGE_MS) / 1000;
         /* THE RAW DELTA, NOT THE APPLIED ONE (2026-08-12, the loop). This read
            the APPLIED delta — clamped at v = 0 and v = total — so that leaning
@@ -662,7 +670,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     const big = e.key === 'PageDown' || e.key === 'PageUp'
       || e.key === ' ' || e.key === 'Spacebar';
     e.preventDefault();
-    push(k * (big ? window.innerHeight * 0.78 : KEY_STEP_PX), 'key');
+    push(k * (big ? window.innerHeight * 0.78 : KEY_STEP_PX), 'key', e.repeat);
   }
 
   /** Home / End: TRAVEL to a named anchor (not placement — the picture rides

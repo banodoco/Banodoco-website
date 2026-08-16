@@ -53,7 +53,8 @@ const EXPOSURE_LINES = 0.30;
 // the reference's warm-lit faces. This is the level at which a face reads as
 // a face at every one of the three review sizes and still never competes with
 // the crown. (0.76 was measurably too far: the three nearest faces bloomed
-// into featureless orbs under UnrealBloom. 0.56 keeps the features.)
+// into featureless orbs under UnrealBloom. The shipped 0.50 is the level
+// that keeps faces reading as faces without competing with the crown.)
 const EXPOSURE_PLANES = 0.50;
 
 // The crown hover zone (report C). Its world radius is small because the
