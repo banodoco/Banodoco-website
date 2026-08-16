@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import {
   TAU, RING_C, MEMBERS, arcOf, cutVal, cutEdgePoint, CUT_N, CUT_S_MIN, CUT_S_MAX,
-  makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, makePointsMat, makeUniforms,
+  makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, makePointsMat,
 } from './world.js';
 import { makeGlowTexture } from '../../anatomy.js';
 

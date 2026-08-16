@@ -284,5 +284,3 @@ export function applyPortrait(pose, p, aspect) {
   return pose;
 }
 
-/** QA hook: the raw field at p (a copy), for the audit tooling. */
-export function portraitOffsetAt(p) { return { ...offsetAt(p) }; }

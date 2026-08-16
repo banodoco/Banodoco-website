@@ -78,7 +78,7 @@
 import * as THREE from 'three';
 import {
   TAU, RING_C, SPORE_SOURCES,
-  makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, makePointsMat, REVEAL_W,
+  makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, REVEAL_W,
 } from './world.js';
 import { makeGlowTexture } from '../../anatomy.js';
 

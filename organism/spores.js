@@ -1131,14 +1131,10 @@ export function createSpores(ctx) {
      *  allocation + deterministic RNG draws; a no-op if already
      *  initialized. */
     prime() { if (!inited) initEmphasis(); },
-    /** QA: the per-dot emphasis/brightness feed (?tkdbg adds perf probes). */
-    feed,
-    get active() { return wasActive; },
-    get n() { return N; },
   };
 
   const system = {
-    sporePts, sporeOrigin, sporeAge, sporeVel, BREEZE_DIR,
+    sporePts,
     shedSpores, registerDrift,
     // ---- driver seat (merge doc §3) ----
     // ONE driver at a time claims the seat with its static exit geometry and

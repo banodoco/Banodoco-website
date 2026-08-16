@@ -1928,7 +1928,7 @@ return {
   groups: { mushroom, stem: stemGroup, sway: swayGroup, ground: groundGroup, spores: sporePts },
   /** Key measurements of the cap/stem geometry (world units), useful for framing a camera move
    *  against the specimen's actual shape rather than guessed constants. */
-  consts: { CAP_Y, CAP_R, CAP_H, STEM_TOP, FOG_NEAR, FOG_FAR },
+  consts: { CAP_Y, CAP_R },
   /** Ease a highlighted region ('spores' | 'stem' | 'ground') toward on/off; unknown names are ignored. */
   setHighlight: highlights.setHighlight,
   /** Recompose the camera (panX/camY/camZ/targetY/fov). seconds=0 snaps; seconds>0 eases via a

@@ -318,7 +318,6 @@ export function createLens(sceneApi) {
   let userEnabled = true;            // [g] raw toggle
   let amount = 1;                    // master crossfade (QA / future scoping)
   const look = { ...LOOK_BASE };
-  let progress = 0;
 
   /* THE GRADE TRAVELS WITH THE CAMERA (2026-08-13 — the loop's seam).
      `look` is a pure function of p, and a nav jump snaps p to the destination
@@ -369,19 +368,15 @@ export function createLens(sceneApi) {
   syncEnabled();
 
   return {
-    pass,
-    taaHardened,
     /** [g]: raw (pre-grade, post-bloom hero baseline) vs finished. */
     setEnabled(on) { userEnabled = !!on; syncEnabled(); },
     get enabled() { return pass.enabled; },
     /** Per-frame: journey progress -> the per-leg finishing curve. */
     update(p) {
-      progress = p;
       if (override) for (const k of LOOK_CHANNELS) look[k] = override[k];
       else lookAt(p, look);
       applyLook();
     },
-    get progress() { return progress; },
     get look() { return { ...look, tier }; },
     /** The look at an arbitrary p, without touching the live grade — the two
      *  ends a jump's blend interpolates between (see `override` above). */
@@ -389,18 +384,7 @@ export function createLens(sceneApi) {
     /** journey.js's camera blend takes the grade for the length of the move.
      *  `o` is a plain channel object, or null to hand it back. */
     setLookOverride(o) { override = o || null; },
-    /** 0..1 crossfade to the untouched frame (QA affordance; the unified
-     *  grade holds this at 1 across the whole journey). */
-    setAmount(a) {
-      amount = a < 0 ? 0 : a > 1 ? 1 : a;
-      pass.uniforms.uAmount.value = amount;
-      syncEnabled();
-    },
     get amount() { return amount; },
-    /** Tier identity: 2 keeps LUT/lift/roll-off/grain/vignette, drops
-     *  aberration + halation (streak-class effects are Tier-1 only). */
-    setTier(t) { tier = t; applyLook(); },
-    get tier() { return tier; },
     /** Warm halation bias toward the active focal source (world pos or null). */
     setFocusHint(pos) {
       if (!pos) { focusWorld = null; return; }

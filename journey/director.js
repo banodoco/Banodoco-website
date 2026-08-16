@@ -186,20 +186,6 @@ export function poseAt(p, out = _pose, hero = HERO, aspect = 1.6) {
   return applyPortrait(out, p, aspect);
 }
 
-/** Name of the nearest authored key - used by the QA audit, not by rendering. */
-export function poseNameAt(p) {
-  if (p < ARRIVAL_END) return INSPIRE_CAM.arrivalName(p / ARRIVAL_END);
-  if (p < APPROACH_END) {
-    return CONNECT_CAM.approachName((p - ARRIVAL_END) / (APPROACH_END - ARRIVAL_END));
-  }
-  if (p < DIVE_END) {
-    return OWNED_CAM.diveName((p - APPROACH_END) / (DIVE_END - APPROACH_END));
-  }
-  let best = KEYS[0], d = Infinity;
-  for (const k of KEYS) { const dd = Math.abs(k.p - p); if (dd < d) { d = dd; best = k; } }
-  return `${best.note || 'travel'} (nearest key p=${best.p})`;
-}
-
 export function createDirector(sceneApi, { steady = false } = {}) {
   const { camera, controls, scene } = sceneApi;
   const baseFogNear = scene.fog ? scene.fog.near : 7;
@@ -407,21 +393,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
 
   return {
     apply, setOwned, applyHeroPose, restoreHero,
-    poseAt: (p, out, aspect) => poseAt(p, out, hero, aspect),
     get owned() { return owned; },
-    get pose() { return pose; },
     get heroPose() { return hero; },
-    /** Re-apply the hero composition exactly (returning to p = 0), whether or
-     *  not the director currently owns the camera. setOwned(false) alone is
-     *  not enough — it no-ops when already un-owned, which is the exact shape
-     *  of the bug above — and calling BOTH is not either: setOwned's hand-back
-     *  already runs restoreHero(), and restoreHero() SPENDS `pendingView`
-     *  (rawSetView, which also refreshes camera.aspect and runs
-     *  controls.update()). A second call would find pendingView null and fall
-     *  to applyHeroPose(), which writes the same three numbers but neither of
-     *  those two side effects — so the doubled form silently downgrades a
-     *  breakpoint replay to a bare pose write. Exactly one restore, either
-     *  way. */
-    releaseToHero() { if (owned) setOwned(false); else restoreHero(); },
   };
 }

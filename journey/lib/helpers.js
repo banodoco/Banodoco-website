@@ -4,8 +4,8 @@
 // it does not fight the hero's own scene code. Copied rather than imported so
 // journey-v6 has no dependency on the frozen donor tree.
 //
-// rng / noise3 / fbm3 / easings / glowSprite / softDisc / catmull / tubeFrom /
-// ribbon / strandLines / makePulseMat / pulseDriver
+// rng / noise3 / fbm3 / easings / glowSprite / softDisc / catmull /
+// strandLines / pulseDriver
 import * as THREE from 'three';
 
 /* ---------------- deterministic randomness ---------------- */
@@ -109,60 +109,6 @@ export function catmull(points) {
   return new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
 }
 
-export function tubeFrom(points, { radius = 0.1, radialSegments = 6, taper = 1, tubularSegments } = {}) {
-  const curve = catmull(points);
-  const segs = tubularSegments || Math.max(8, points.length * 4);
-  const geo = new THREE.TubeGeometry(curve, segs, radius, radialSegments, false);
-  if (taper !== 1) {
-    // taper radius along length: scale ring vertices toward spine
-    const pos = geo.attributes.position;
-    const frames = curve.computeFrenetFrames(segs, false);
-    const ringVerts = radialSegments + 1;
-    const tmp = new THREE.Vector3();
-    for (let i = 0; i <= segs; i++) {
-      const t = i / segs;
-      const s = 1 + (taper - 1) * t;
-      const center = curve.getPointAt(t);
-      for (let j = 0; j < ringVerts; j++) {
-        const idx = i * ringVerts + j;
-        tmp.fromBufferAttribute(pos, idx).sub(center).multiplyScalar(s).add(center);
-        pos.setXYZ(idx, tmp.x, tmp.y, tmp.z);
-      }
-    }
-    pos.needsUpdate = true;
-    geo.computeVertexNormals();
-  }
-  return geo;
-}
-
-export function ribbon(points, width = 0.2) {
-  const curve = catmull(points);
-  const segs = Math.max(8, points.length * 4);
-  const positions = [], uvs = [], indices = [];
-  const up = new THREE.Vector3(0, 1, 0);
-  for (let i = 0; i <= segs; i++) {
-    const t = i / segs;
-    const p = curve.getPointAt(t);
-    const tan = curve.getTangentAt(t);
-    const side = new THREE.Vector3().crossVectors(tan, up).normalize();
-    if (side.lengthSq() < 0.01) side.set(1, 0, 0);
-    const w = width * 0.5;
-    positions.push(p.x - side.x * w, p.y - side.y * w, p.z - side.z * w);
-    positions.push(p.x + side.x * w, p.y + side.y * w, p.z + side.z * w);
-    uvs.push(0, t, 1, t);
-    if (i < segs) {
-      const a = i * 2;
-      indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
-    }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  geo.setIndex(indices);
-  geo.computeVertexNormals();
-  return geo;
-}
-
 /*
  strandLines: build a single BufferGeometry of many polyline strands as line
  segments, with attributes:
@@ -194,62 +140,6 @@ export function strandLines({ count = 100, seed = 1, generator }) {
   geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
   geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
   return { geometry: geo, count };
-}
-
-/*
- makePulseMat: additive line material with ambient twinkle + one travelling pulse.
- uniforms: uTime, uPulse (0..1 position of pulse front), uPulseOn (0/1 amount),
-           uBase (base opacity), uColor, uPulseColor, uPhaseScale
- Requires attributes aAlong, aStrand (strandLines provides them).
-*/
-export function makePulseMat(baseColor = 0xd9a441, opts = {}) {
-  const uniforms = {
-    uTime: { value: 0 },
-    uPulse: { value: 0 },
-    uPulseOn: { value: 0 },
-    uBase: { value: opts.baseOpacity ?? 0.35 },
-    uColor: { value: new THREE.Color(baseColor) },
-    uPulseColor: { value: new THREE.Color(opts.pulseColor ?? 0xf0c877) },
-    uPulseWidth: { value: opts.pulseWidth ?? 0.12 },
-    uTwinkle: { value: opts.twinkle ?? 0.35 },
-    uFogDensity: { value: opts.fogDensity ?? 0.0 },
-  };
-  const mat = new THREE.ShaderMaterial({
-    uniforms,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    vertexShader: /* glsl */`
-      attribute float aAlong;
-      attribute float aStrand;
-      varying float vAlong;
-      varying float vStrand;
-      varying float vFogDepth;
-      void main() {
-        vAlong = aAlong;
-        vStrand = aStrand;
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        vFogDepth = -mv.z;
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: /* glsl */`
-      uniform float uTime, uPulse, uPulseOn, uBase, uPulseWidth, uTwinkle, uFogDensity;
-      uniform vec3 uColor, uPulseColor;
-      varying float vAlong, vStrand, vFogDepth;
-      void main() {
-        // asynchronous ambient twinkle, randomized per strand
-        float tw = 0.5 + 0.5 * sin(uTime * (0.6 + vStrand * 1.7) + vStrand * 43.7);
-        float amb = uBase * (1.0 - uTwinkle + uTwinkle * tw);
-        // travelling pulse
-        float d = abs(vAlong - uPulse);
-        float pulse = uPulseOn * exp(-d * d / (uPulseWidth * uPulseWidth)) ;
-        vec3 col = uColor * amb + uPulseColor * pulse;
-        float fogF = 1.0 - exp(-uFogDensity * uFogDensity * vFogDepth * vFogDepth);
-        col *= 1.0 - clamp(fogF, 0.0, 1.0); // additive: depth fades to black
-        gl_FragColor = vec4(col, 1.0);
-      }`,
-  });
-  return mat;
 }
 
 /* one-shot pulse driver: call .fire(), pass .update(dt) each frame, read .value */
