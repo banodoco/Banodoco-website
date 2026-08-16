@@ -10,7 +10,11 @@
 // journey/site.css. Zero behaviour change intended anywhere in this move.
 
 import { createScene } from './organism/organism.js?v=1785427900';
-import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF, FREE_CAM } from './flags.js';
+import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF, FREE_CAM, DEBUG_OVERLAY } from './flags.js';
+// The journey fetch warms during the intro; boot still waits for its cue
+// (loadJourney() below consumes this promise at HERO_INTRO_MS).
+const journeyModuleP = import('./journey/journey.js');
+journeyModuleP.catch(() => {}); // absorb a pre-boot rejection -> no unhandledrejection during the intro
 
 // --- failure story ---
 // Three ways this page used to die mid-boot — WebGL missing, the journey
@@ -51,16 +55,27 @@ function hideSceneNote() {
 
 // QA reads __pageErrors; the visitor-facing story is the specific handlers above.
 const _seenErrors = new Set();
+
+// ?debug=1 field overlay: venue staff load /?debug=1 and read failures on
+// screen (registered in flags.js like every other flag).
+function renderErrorOverlay() {
+  if (!DEBUG_OVERLAY) return;
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  showSceneNote([..._seenErrors].map(esc).join('<br>'));
+}
+
 addEventListener('error', (e) => {
   window.__pageErrors = (window.__pageErrors || 0) + 1;
   const msg = String((e && e.message) || 'window error');
   if (!_seenErrors.has(msg)) { _seenErrors.add(msg); console.error(msg); }
+  renderErrorOverlay();
 });
 addEventListener('unhandledrejection', (e) => {
   window.__pageErrors = (window.__pageErrors || 0) + 1;
   const r = e && e.reason;
   const msg = String((r && r.message) || r || 'unhandled rejection');
   if (!_seenErrors.has(msg)) { _seenErrors.add(msg); console.error(msg); }
+  renderErrorOverlay();
 });
 
 // --- a11y: skip link (M5) ---
@@ -403,10 +418,12 @@ addEventListener('keydown', (e) => {
 });
 /* ============================================================
    JOURNEY BOOTSTRAP — additive, and deliberately inert at p = 0.
-   Loads ./journey/journey.js only AFTER the hero entry
+   Boots ./journey/journey.js only AFTER the hero entry
    choreography has finished (scene grow-in 5.4s, callouts boot
    through ~7.55s — see the ENTRY comment in hero.css), so the
-   journey can never compete with the intro for frame time.
+   journey can never compete with the intro for frame time. The
+   fetch itself is hoisted to module scope (journeyModuleP) so it
+   warms during the intro.
    ============================================================ */
 
 // Input policy: the journey owns scroll and pointer gestures, so user
@@ -426,7 +443,7 @@ if (sceneApi) {
   const frozen = introAt !== null;
 
   function loadJourney() {
-    import('./journey/journey.js')
+    journeyModuleP
       .then(m => m.boot({ heroIntroSkipped: !!skipIntro, heroFrozen: frozen, entry: pendingEntry }))
       .catch(err => {
         console.error('[journey-v6] failed to load', err);

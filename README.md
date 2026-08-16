@@ -28,11 +28,13 @@ in the console, or a hand test).
 
 ## Pre-deploy checklist (standing)
 
-- [ ] `assets/test-portraits/` must not ship (plan-doc mandate). It is
-      look-dev placeholder data, but `journey/chapters/owned/portraits.js`
-      STATICALLY imports its `manifest.js` and the Owned goldens currently
-      render its photos — replacing it is a content + code change (real
-      portraits, or manifest import made dynamic + goldens re-shot), not a
-      bare deletion.
+- [ ] `assets/test-portraits/` .jpg files must not ship (plan-doc mandate —
+      they are randomuser.me/pravatar stock faces). The shipped path is
+      procedural since 2026-08-16 (photo promotion is behind ?photos=1), and
+      the frozen goldens never rendered photos (verified MAE 0.0000), but
+      `journey/chapters/owned/portraits.js` STATICALLY imports the
+      `manifest.js`, so that one file must deploy even when the images do
+      not. Real portraits = new asset set + consent wiring + restoring the
+      unconditional promotion.
 - [ ] The 11 `TODO(Banodoco)` destination URLs in `content/content.js` and
       the 56 `[PLACEHOLDER]` tokens ship visitor-visible until confirmed.
