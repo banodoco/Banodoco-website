@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Relative locs are non-standard; replace ORIGIN at deploy time with the
+     real origin+basepath (one sed line, noted in DEPLOY.md). -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>ORIGIN/</loc></url>
+  <url><loc>ORIGIN/static/</loc></url>
+</urlset>

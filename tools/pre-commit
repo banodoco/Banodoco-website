@@ -12,6 +12,29 @@
 # emergencies — never for code.
 
 STAGED=$(git diff --cached --name-only)
+
+# Hand-synced twins: content/content.js (the content model — CO-2.2's single
+# source of truth) and static/index.html (its Tier-3 twin, which duplicates
+# the hero copy and the meta description by hand). Nothing but a console
+# check at /static/ guards the pair, so a split commit silently drifts them.
+# Warn loudly; never block — staging order is the author's call.
+if echo "$STAGED" | grep -q "glowshroom/content/content.js" \
+   && ! echo "$STAGED" | grep -q "glowshroom/static/index.html"; then
+  MISSING_TWIN="static/index.html"
+elif echo "$STAGED" | grep -q "glowshroom/static/index.html" \
+   && ! echo "$STAGED" | grep -q "glowshroom/content/content.js"; then
+  MISSING_TWIN="content/content.js"
+else
+  MISSING_TWIN=""
+fi
+
+if [ -n "$MISSING_TWIN" ]; then
+  echo "pre-commit: WARNING — content/content.js and static/index.html are hand-synced" >&2
+  echo "  twins (hero copy + meta description duplicated by hand, guarded only by a" >&2
+  echo "  console check at /static/), and $MISSING_TWIN is NOT staged with its twin." >&2
+  echo "  If the staged twin changed, the other likely must too. Not blocking." >&2
+fi
+
 echo "$STAGED" | grep -q "glowshroom/organism/\|glowshroom/journey/" || exit 0
 
 if [ -n "$SKIP_SCENE_CHECK" ]; then
