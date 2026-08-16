@@ -58,6 +58,7 @@ import * as THREE from 'three';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { startOf, endOf, restProgress } from './route.js';
 import { SEAM_FOG_DIPS } from './constants.js';
+import { smooth01 } from './lib/ease.js';
 
 const GradeShader = {
   name: 'SpikeGradePass',
@@ -221,8 +222,6 @@ const LOOK_KEYS = [
 ];
 const LIFT_BASE = new THREE.Vector3(0.0060, 0.0037, 0.0017);
 const LIFT_WARM = new THREE.Vector3(0.0068, 0.0034, 0.0009); // same order of magnitude, redder ratio
-
-const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 
 // the six interpolable channels — `tier` is an identity, not a grade value
 const LOOK_CHANNELS = ['gain', 'lift', 'warm', 'hal', 'vig', 'grain'];

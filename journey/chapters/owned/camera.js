@@ -77,6 +77,7 @@
 // re-timing or inserting chapters never invalidates them (merge doc §5).
 import * as THREE from 'three';
 import { CAMERA as CONNECT_CAM } from '../connect/camera.js';
+import { quadBezier } from '../../lib/ease.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -170,12 +171,7 @@ function dive(u, out) {
   // Gaze: bezier C0.tgt -> REST_KEY.tgt through PIN3, eased by the mean of
   // the dolly and the sink so the aim walks with both.
   const g = (e + h) / 2;
-  const w0 = (1 - g) * (1 - g), w1 = 2 * g * (1 - g), w2 = g * g;
-  out.target.set(
-    w0 * C0.tgt.x + w1 * PIN3.x + w2 * REST_KEY.tgt.x,
-    w0 * C0.tgt.y + w1 * PIN3.y + w2 * REST_KEY.tgt.y,
-    w0 * C0.tgt.z + w1 * PIN3.z + w2 * REST_KEY.tgt.z,
-  );
+  quadBezier(g, C0.tgt, PIN3, REST_KEY.tgt, out.target);
   out.fov = D0.fov + (D1.fov - D0.fov) * h;
   return out;
 }

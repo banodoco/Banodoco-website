@@ -38,8 +38,7 @@
 // either orientation from any window (?aspect=portrait, wired in director).
 
 import { restProgress } from './route.js';
-
-const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
+import { smooth01 } from './lib/ease.js';
 
 /* ------------------------------------------------------------------ */
 /* Aspect weight                                                       */
