@@ -60,12 +60,12 @@ Load the site with `?debug=1` to render collected page errors on screen
 
 - ~~All outbound links are `href="#"` and 56 `[PLACEHOLDER]` tokens render~~ —
   **resolved 2026-08-16.** Every destination is now one banodoco.ai itself
-  uses, and no placeholder token ships. Two nodes deliberately have no link
-  and say "Coming soon": `tworp` and `hivemind`.
+  uses, and no placeholder token ships. One node deliberately has no link and
+  says "Coming soon": `tworp`.
 - ~~The Owned portrait field ships procedural~~ — **resolved 2026-08-16.** It
   ships real contributor photographs from Banodoco's own published sprite,
   sixteen dealt at random out of 120 per load. `?photos=0` forces the old
   procedural look if a venue machine struggles with the atlas bake.
-- `hivemind` has no counterpart anywhere on banodoco.ai. Its copy comes from
-  this project's own brief and it is flagged for Peter — it may simply be
-  BNDC (github.com/banodoco/brain-of-bndc) under another name.
+- `hivemind` is wired to github.com/banodoco/hivemind. It is absent from
+  banodoco.ai entirely, which is why it briefly shipped as "Coming soon" —
+  the project lives in its own repository. Only `tworp` is still unbuilt.

@@ -52,6 +52,8 @@ atlas bake, the deal or the crown has to be checked by eye on the live page.
       tokens were resolved 2026-08-16 against banodoco.ai and its repository;
       `grep -rn PLACEHOLDER content/ static/` should stay empty, and no
       `href="#"` should return in `content/content.js`.
-- [ ] Two nodes ship as "Coming soon" with no outbound link, on purpose:
-      `tworp` (the publication is unbuilt) and `hivemind` (no counterpart on
-      banodoco.ai at all — flagged for Peter).
+- [ ] One node ships as "Coming soon" with no outbound link, on purpose:
+      `tworp` — the publication is unbuilt. Everything else has a real
+      destination. (`hivemind` briefly shipped this way too; it turned out to
+      live at github.com/banodoco/hivemind, not on banodoco.ai. When a node
+      looks missing, look past the marketing site.)
