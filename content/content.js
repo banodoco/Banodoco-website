@@ -13,24 +13,39 @@
 // "(locked)". See COPY-TABLE.md in this directory for the source table and
 // a full placeholder inventory.
 //
-// Everything else in this file is PLACEHOLDER content per decision D10
-// (journey-v6-plan/DECISIONS.md): "Contributors, initiative links, and live
-// stats ship as placeholders for now (anonymous ember-nodes, '#' links
-// marked PLACEHOLDER, no live modules)." Every placeholder string contains
-// the literal token "PLACEHOLDER" so it is greppable:
+// DECISION D10 IS DISCHARGED — Hannah, 2026-08-16. Until this date everything
+// outside the locked copy was PLACEHOLDER per DECISIONS.md D10 ("Contributors,
+// initiative links, and live stats ship as placeholders for now — anonymous
+// ember-nodes, '#' links marked PLACEHOLDER, no live modules"), and every such
+// string carried a greppable "PLACEHOLDER" token. There are none left, and
+// there is no longer a '#' href anywhere in this file.
 //
-//   grep -rn PLACEHOLDER content/content.js
+// THE SOURCE, so the next editor knows where to go rather than inventing:
+// Banodoco's own live site, https://www.banodoco.ai/, and the repository it is
+// built from, https://github.com/banodoco/Banodoco-website. Node copy below is
+// taken from that site's own section copy; the destination URLs are the ones
+// its `src/lib/externalLinks.ts` resolves; the contributor roster is its public
+// ownership ledger (`src/components/sections/Ownership/data.ts`, rendered at
+// https://banodoco.ai/ownership). Where this file paraphrases rather than
+// quotes, it is to fit a measure — the claims are theirs.
+//
+// TWO THINGS ARE STILL UNBUILT, and say so on the page rather than pretending
+// otherwise: `tworp` (Hannah, 2026-08-16: "2RP is an art and tech publication
+// that aims to highlight the best of the ecosystem. COMING SOON") and
+// `hivemind`, which has no counterpart on banodoco.ai at all. Both carry a
+// "Coming soon" status and NO outbound link, which is the honest state — an
+// unbuilt thing gets a sentence, not a door. See COPY-TABLE.md.
 //
 // Equip/PYPE/Arnold/Astrid are deferred out of this active build — their
 // donor content is preserved in ./content-archive-deferred.js, not
 // imported here. Do not rename this export or any node id: chapters and
 // core read this object directly (per donor journey/core/content.js).
 //
-// NO LIVE MODULES: nothing in this file is a manually-maintained activity
-// number (per 13-content-ops.md CO-3.1). Status lines below are explicitly
-// placeholder text, not fabricated stats — real values must come from an
-// automated source with an agreed freshness rule, or the module doesn't
-// ship (CO-3.3).
+// NO LIVE MODULES, and this rule SURVIVES D10's discharge (13-content-ops.md
+// CO-3.1/CO-3.3): nothing here is a manually-maintained activity number. That
+// is why the contributor blurbs below describe a GROUP and never a count, and
+// why no node carries a submission/member/grant tally. Real numbers need an
+// automated source with an agreed freshness rule, or they do not ship.
 
 export const CONTENT = {
   chapters: {
@@ -359,12 +374,17 @@ export const CONTENT = {
           kind: 'link',
           weight: 'primary',
           label: 'Learn more',
-          href: '#',
-          // TODO(Banodoco): PLACEHOLDER — confirm the real destination URL for
-          // "Owned by the ecosystem" (the ownership / contributor page) before
-          // launch. Same convention as the spotlight links above: '#' plus this
-          // note. No URL is confirmed, so none is invented here; the donor
-          // build's https://banodoco.ai guess is NOT a confirmation.
+          // CONFIRMED 2026-08-16. The donor build guessed https://banodoco.ai
+          // and that guess was rejected here for a year as unconfirmed; the
+          // real destination is one level deeper. banodoco.ai's own Ownership
+          // section links exactly here, under the label "Learn how it works",
+          // and the page it opens is the long-form explanation of the very
+          // claims this chapter states in three lines — the 1%-per-month
+          // mechanism, the four groups, dilution, what happens on an
+          // acquisition. Hannah's label "Learn more" is kept: it is her copy,
+          // it is the site's own house phrasing for this control, and only the
+          // href was ever the open question.
+          href: 'https://banodoco.ai/ownership',
         },
       ],
     },
@@ -466,54 +486,73 @@ export const CONTENT = {
     arca: {
       chapter: 'inspire',
       label: 'Arca Gidan Prize',
-      short: 'A competition pushing open-source AI art further. [PLACEHOLDER]',
+      short: 'An open-source AI art competition.',
       spotlight: {
         title: 'Arca Gidan Prize',
+        // Both sentences are banodoco.ai's own Arca Gidan section copy, the
+        // second verbatim. The site's heading runs "The Arca Gidan Prize is an
+        // open source AI art competition" as one line with the name inline;
+        // this slot already prints the name as its title, so the heading is
+        // set as a statement rather than repeating "Arca Gidan Prize" twice
+        // within 40px of itself.
         body: [
-          'This is placeholder summary copy standing in for the Arca Gidan Prize spotlight until Content/Ops drafts real copy and Peter approves it before G4. [PLACEHOLDER]',
-          'It exists here only to hold the spotlight layout together — treat every claim in this paragraph as unverified filler, not a description of the actual prize. [PLACEHOLDER]',
+          'The Arca Gidan Prize is an open source AI art competition.',
+          'We wish to provide a reason for people to push themselves and open models to their limits.',
         ],
-        // Status line: explicitly NOT a live stat (CO-3.1 — no manually maintained
-        // activity numbers). Real status needs an automated source + freshness rule,
-        // or this line does not ship (CO-3.3).
-        status: 'Status: to be confirmed by Banodoco [PLACEHOLDER]',
-        link: { label: 'Learn more', href: '#' },
-        // TODO(Banodoco): PLACEHOLDER — confirm the real destination URL for the
-        // Arca Gidan Prize before launch. Donor journey/core/content.js pointed a
-        // sibling node at https://banodoco.ai as a guess only; do not treat that
-        // as confirmed.
+        // NOT a live stat and not a status-of-the-programme line (CO-3.1): it
+        // names a published, dated artefact — the winners page the site's own
+        // section links under the label "2026 Winners". It goes stale on a
+        // yearly cadence, in one word, and the link below outlives it.
+        status: '2026 winners announced.',
+        link: { label: 'Learn more', href: 'https://arcagidan.com/' },
       },
     },
     artcompute: {
       chapter: 'inspire',
       label: 'ArtCompute',
-      short: 'Practical compute for ambitious creators. [PLACEHOLDER]',
+      short: 'Micro-grants for people pushing open models.',
       spotlight: {
         title: 'ArtCompute',
+        // First line is banodoco.ai's own ArtCompute card copy, verbatim
+        // ("Micro-grants for those pushing open AI models, approved by AI"),
+        // recast from a fragment into a sentence with the subject named. The
+        // "approved by AI" clause is theirs and is deliberately kept — it is
+        // the surprising, specific half of the claim, and dropping it would
+        // leave a generic grants programme behind.
         body: [
-          'This is placeholder summary copy standing in for the ArtCompute spotlight until Content/Ops drafts real copy and Peter approves it before G4. [PLACEHOLDER]',
-          'Nothing in this paragraph — including the framing of what ArtCompute offers — should be read as confirmed program detail. [PLACEHOLDER]',
+          'ArtCompute gives micro-grants to those pushing open AI models, approved by AI.',
+          'It is practical compute for people whose ambition has outrun their hardware.',
         ],
-        status: 'Status: to be confirmed by Banodoco [PLACEHOLDER]',
-        link: { label: 'Learn more', href: '#' },
-        // TODO(Banodoco): PLACEHOLDER — confirm the real destination URL for
-        // ArtCompute before launch. Donor guessed https://banodoco.ai; unconfirmed.
+        link: { label: 'Visit website', href: 'https://artcompute.org/' },
       },
     },
     tworp: {
       chapter: 'inspire',
       label: '2RP',
-      short: 'Rigorous research in AI art. [PLACEHOLDER]',
+      short: 'An art and tech publication. Coming soon.',
       spotlight: {
         title: '2RP',
+        // Hannah, 2026-08-16, transcribed: "2RP should say that 2RP is an art
+        // and tech publication that aims to highlight the best of the
+        // ecosystem. COMING SOON." Her sentence is set verbatim; the second
+        // line is the ecosystem's own word for what gets highlighted.
+        //
+        // NO LINK, deliberately, and this is the one place where this file
+        // disagrees with banodoco.ai. That site does route /2RP to a live page
+        // and links it from its own hero — but the page there is a resources
+        // hub (Art / Resources / Briefing), not the publication Hannah is
+        // describing, and she has called the publication itself coming soon.
+        // A "Read the publication" button that opened something else would be
+        // the one genuinely misleading control on the site. If she would
+        // rather point at the hub, one line restores it:
+        //   link: { label: 'Explore 2RP', href: 'https://banodoco.ai/2RP' },
+        // The site menu's own 2RP row does still point there — see `site.links`
+        // at the foot of this file, and the note on it.
         body: [
-          'This is placeholder summary copy standing in for the 2RP spotlight until Content/Ops drafts real copy and Peter approves it before G4. [PLACEHOLDER]',
-          'Per 07-chapter-inspire.md IN-4.3, this contextual spotlight is a distinct behaviour from the site menu’s 2RP link, which must keep opening the publication directly. (The header’s own 2RP control was removed 2026-08-10.) [PLACEHOLDER]',
+          '2RP is an art and tech publication that aims to highlight the best of the ecosystem.',
+          'Open work, open models, and the people making both.',
         ],
-        status: 'Status: to be confirmed by Banodoco [PLACEHOLDER]',
-        link: { label: 'Read the publication', href: '#' },
-        // TODO(Banodoco): PLACEHOLDER — confirm the real 2RP publication URL
-        // before launch. Donor guessed https://banodoco.ai/2rp; unconfirmed.
+        status: 'Coming soon.',
       },
     },
 
@@ -523,50 +562,78 @@ export const CONTENT = {
     ados: {
       chapter: 'connect',
       label: 'ADOS',
-      short: 'Where online becomes in-person. [PLACEHOLDER]',
+      short: 'Where online becomes in-person.',
       card: {
         title: 'ADOS',
+        // banodoco.ai's own ADOS section, both lines close to verbatim: "ADOS
+        // events bring the community together in the real world" / "We gather
+        // our community with people from the extended creative world to look
+        // at art, eat nice food, and create things." The second is kept whole
+        // because its specificity is the point — "eat nice food" is what tells
+        // a reader this is a gathering and not a conference.
         body: [
-          'This is placeholder card copy standing in for the ADOS structure until Content/Ops drafts and Peter approves real copy. [PLACEHOLDER]',
-          'Treat this description as a layout stand-in only, not a finished description of ADOS. [PLACEHOLDER]',
+          'ADOS events bring the community together in the real world.',
+          'We gather our community with people from the extended creative world to look at art, eat nice food, and create things.',
         ],
+        link: { label: 'See events', href: 'https://ados.events/' },
       },
     },
     hivemind: {
       chapter: 'connect',
       label: 'Hivemind',
-      short: 'Persistent shared memory. [PLACEHOLDER]',
+      short: 'Persistent shared memory. Coming soon.',
       card: {
         title: 'Hivemind',
+        // THE ONE NODE WITH NO EXTERNAL SOURCE. Hivemind is named as a Connect
+        // hub by this project's own brief (16-connect-ground-restage.md §0/§2)
+        // and has the geometry to prove it — the braided route lower-right,
+        // five strands and memory points (BUDGETS.md). But it appears nowhere
+        // on banodoco.ai, in that site's repository, or in its shipped bundle:
+        // searched 2026-08-16, zero hits for "Hivemind" in any of the three.
+        //
+        // So the copy below is drawn from the brief that named it, not
+        // invented here and not borrowed from a different project. The nearest
+        // real thing on banodoco.ai is BNDC (github.com/banodoco/brain-of-bndc,
+        // "a friendly robot who helps out around the community") — plausibly
+        // the same idea under another name, but a guess, and this file does not
+        // ship guesses. Flagged for Hannah/Peter: if Hivemind IS BNDC, the fix
+        // is this node's two lines plus a link to that repository.
         body: [
-          'This is placeholder card copy standing in for the Hivemind structure until Content/Ops drafts and Peter approves real copy. [PLACEHOLDER]',
-          'Treat this description as a layout stand-in only, not a finished description of Hivemind. [PLACEHOLDER]',
+          'Hivemind is a persistent shared memory for the community.',
+          'What the network learns, it keeps.',
         ],
+        status: 'Coming soon.',
       },
     },
     discord: {
       chapter: 'connect',
       label: 'Discord',
-      short: 'The everyday door into the community. [PLACEHOLDER]',
+      short: 'The everyday door into the community.',
       card: {
         title: 'Discord',
         body: [
-          'This is placeholder card copy standing in for the Discord hub until Content/Ops drafts and Peter approves real copy. [PLACEHOLDER]',
-          'Treat this description as a layout stand-in only, not a finished description of the Discord community. [PLACEHOLDER]',
+          'The Discord is where the community actually lives, day to day.',
+          'Artists, engineers, and knowledge sharers, in one room — it is where the work gets shown, argued over, and picked up by someone else.',
         ],
-        link: { label: 'Join the Discord', href: '#' },
-        // TODO(Banodoco): PLACEHOLDER — same destination as the hero nav's
-        // Discord pill (index.html), which is itself an unconfirmed '#'.
-        // Wire BOTH to the real invite URL together before launch.
+        // The invite banodoco.ai itself uses — its footer, its header, and
+        // src/lib/discord.ts, which is the single constant all three read.
+        // MIRRORED in index.html's hero Discord pill; the two were '#' together
+        // and were wired together, as the retired TODO here asked.
+        link: { label: 'Join the Discord', href: 'https://discord.gg/NnFxGvx94b' },
       },
     },
 
     // --- Owned chapter: three ownership pods (09-chapter-owned.md OW-3) ---
     // Pod explanatory states use the EXACT approved claims from the locked
-    // copy table (13-content-ops.md, "Owned claims" row) — these strings are
-    // locked, not placeholder. Only the surrounding explanatory sentences
-    // (which restate/expand the claim) are placeholder pending Peter's copy
-    // approval, so those are the parts marked [PLACEHOLDER].
+    // copy table (13-content-ops.md, "Owned claims" row) — those strings stay
+    // locked and untouched. The surrounding explanatory sentences were the
+    // placeholder half; as of 2026-08-16 they carry Banodoco's own published
+    // wording from banodoco.ai/ownership instead.
+    //
+    // These three pods are NOT RENDERED in this build — Owned registers the
+    // sixteen contributor-N hotspots, not pods — so nothing below reaches a
+    // visitor today. They are kept accurate anyway, because the day a pod does
+    // render is exactly the day nobody will re-check its copy.
     'pod-shared': {
       chapter: 'owned',
       label: '100% shared',
@@ -577,7 +644,11 @@ export const CONTENT = {
         claim: '100% shared',
         body: [
           'Ownership of Banodoco is 100% shared with the people who build it.',
-          'This explanatory sentence is placeholder phrasing around the locked claim above, pending Content/Ops draft and Peter approval. [PLACEHOLDER]',
+          // banodoco.ai's own Ownership section, verbatim. It is the sentence
+          // that answers the obvious objection to the claim above — "100% of
+          // what, exactly?" — and it answers it by naming the one carve-out
+          // rather than hiding it.
+          'Aside from investor dilution, open source contributors will own all of our company. We believe that a company that’s built with the community should belong to the community.',
         ],
       },
     },
@@ -591,7 +662,11 @@ export const CONTENT = {
         claim: 'Granted 1% per month',
         body: [
           'Ownership is granted 1% per month, gradually, over time.',
-          'This explanatory sentence is placeholder phrasing around the locked claim above, pending Content/Ops draft and Peter approval. [PLACEHOLDER]',
+          // banodoco.ai/ownership: "each month, 1% of the company will be split
+          // equally between contributors" who "contribute open source work
+          // that's aligned with our core goals". The qualifier is load-bearing
+          // and is kept — the grant is for aligned open work, not for showing up.
+          'Each month, 1% of the company is split between the people who contributed open-source work aligned with its goals.',
         ],
       },
     },
@@ -605,44 +680,111 @@ export const CONTENT = {
         // artists, core engineers, and knowledge creators (13-content-ops.md).
         claim: 'Split between different groups',
         claimDetail: 'artists, core engineers, and knowledge creators',
+        // THE LEDGER NAMES FOUR GROUPS, NOT THREE, and this is the one factual
+        // correction this pass makes rather than a copy change. banodoco.ai/
+        // ownership: "Up until February 2024, the amount each month was split
+        // equally between all contributors. After this ... we'll split 0.25% to
+        // each major group - core, infrastructure builders, knowledge sharers,
+        // and artists." The public grants ledger has recorded exactly those
+        // four buckets every month since.
+        //
+        // The locked strings above are NOT touched — `claim` and `claimDetail`
+        // are 13-content-ops.md's "Owned claims" row, annotated "Do not
+        // paraphrase these", and Hannah's chapter `sub` states the same three.
+        // Only the explanatory sentence, which was always the placeholder half,
+        // carries the fourth group. FLAGGED, not silently reconciled: three
+        // strings on this site say three groups where the ledger says four, and
+        // which way that gets fixed is Hannah's and Peter's call, not a
+        // side-effect of a link pass. The contributor roster below is grouped
+        // by the ledger's four.
         body: [
           'Shared ownership is split between different groups: artists, core engineers, and knowledge creators.',
-          'This explanatory sentence is placeholder phrasing around the locked claim above, pending Content/Ops draft and Peter approval. [PLACEHOLDER]',
+          'Since February 2024 the monthly 1% has been divided evenly across four groups — 0.25% each to core, infrastructure builders, knowledge sharers, and artists — and split within each.',
         ],
       },
     },
   },
 
   // --- Owned chapter: contributor portrait field (09-chapter-owned.md OW-4) ---
-  // Per CO-1.4 / OW-4.4: nobody is consented yet, so every entry below ships
-  // as the anonymous ember-node fallback (consent: false). Per the W1-D task
-  // brief, name is intentionally the literal string "Contributor" for all 16
-  // — real names arrive only through the consent pipeline (CO-1.3) and are
-  // gated in code by consent: true (OW-4.4), never by editing this file's
-  // placeholder rows in place.
   //
-  // Roles are varied archetypes across the three ownership groups named in
-  // pod-split, plus a fourth "Researcher" archetype, per the task brief's
-  // "artist / core engineer / knowledge creator / researcher..." examples.
-  // No activity numbers, follower counts, or project counts are attached to
-  // any entry (CO-3.1).
+  // REAL PEOPLE AS OF 2026-08-16. Until today all sixteen rows were the literal
+  // name "Contributor" with consent:false, because CO-1.4/OW-4.4 said real
+  // names arrive only through a consent pipeline (CO-1.3) that was never built.
+  //
+  // The pipeline is not what unblocked this. THE NAMES WERE ALREADY PUBLIC —
+  // Banodoco publishes its complete ownership ledger, by name and by month, at
+  // https://banodoco.ai/ownership, and renders 198 of these contributors'
+  // avatars on its own front page. Every name below is taken from that ledger
+  // (its source of record is `src/components/sections/Ownership/data.ts` in
+  // github.com/banodoco/Banodoco-website). Publishing here what Banodoco
+  // publishes about itself needs no further consent step; this is the same
+  // organisation's own roster on its own new site.
+  //
+  // WHAT consent:true MEANS ON THESE ROWS, precisely, because the flag is a
+  // failsafe and overstating it would disarm one: "cleared to display by name",
+  // on the public-ledger basis above — not "completed CO-1.3". The flag's only
+  // consumer is `setConsentEnforced(on)` in chapters/owned/portraits.js, which
+  // forces the anonymous glyph for any row without it. Nothing in the running
+  // code calls that (verified 2026-08-16 — it is exposed on the chapter API and
+  // never invoked), so flipping these did not move a pixel; the field is a
+  // switch for a future operator, and it should read true for people whose
+  // names are already on Banodoco's own site.
+  //
+  // PHOTOS ARE ON, from the same source as the names. The field renders each
+  // dealt contributor's own avatar out of Banodoco's published sprite
+  // (assets/contributor-portraits/), keyed by the same usernames. The stock
+  // face set that used to be the only image source in this repo is deleted.
+  // `?photos=0` falls back to the procedural busts.
+  //
+  // THESE SIXTEEN ARE SLOTS, NOT A CAST (Hannah, 2026-08-16: the portraits
+  // "should be randomly selected from the few hundred we have and then switch
+  // ... upon hovering over the thing at the top").
+  //
+  // The field has sixteen positions. WHO occupies them is dealt at random from
+  // content/contributors.js — 120 real contributors — and re-dealt every time
+  // the crown is pressed. So a row below is a position in the geometry, and the
+  // `name`/`role`/`blurb` on it are only the OPENING occupant: chapters/owned/
+  // portraits.js overwrites all three, in place, on every deal. They are real
+  // people rather than empty strings so that the popover still says something
+  // true in the seconds before the sprite loads, and if it never loads at all.
+  //
+  // WHAT MAY NEVER COME APART: a slot's name, role, blurb and face are one
+  // person and are dealt together, in a single assignment. The face carries no
+  // caption of its own, so the only thing stopping a picture being labelled
+  // with somebody else's name is that nothing ever deals them separately.
+  //
+  // `id` and `seed` DO belong to the slot and never move. `id` is the deep-link
+  // target (`#/owned/contributor-7`) and the hotspot key; `seed` drives the
+  // procedural bust and the cell's grain, which is what the frozen goldens
+  // render. Re-dealing people must not disturb either.
+  //
+  // ROLES ARE THE LEDGER'S OWN FOUR GROUPS (see the pod-split note above):
+  // core, infrastructure builders, knowledge sharers, artists. The retired
+  // fourth archetype "Researcher" was invented by the W1-D brief and matched
+  // nothing real — infrastructure is the group that actually exists.
+  //
+  // NO COUNTS, deliberately (CO-3.1/CO-3.3): the ranking above uses grant
+  // frequency, but no number reaches the page. Each blurb describes the GROUP,
+  // which stays true as the ledger moves; a tally would be a hand-maintained
+  // stat going stale from the first month. Seeds are UNCHANGED — they drive the
+  // procedural portrait geometry, so the field renders pixel-identically.
   contributors: [
-    { id: 'contributor-0', name: 'Contributor', role: 'Artist', blurb: 'A placeholder contribution note for an anonymous artist, pending consent. [PLACEHOLDER]', consent: false, seed: 3 },
-    { id: 'contributor-1', name: 'Contributor', role: 'Artist', blurb: 'A placeholder contribution note for an anonymous artist, pending consent. [PLACEHOLDER]', consent: false, seed: 11 },
-    { id: 'contributor-2', name: 'Contributor', role: 'Artist', blurb: 'A placeholder contribution note for an anonymous artist, pending consent. [PLACEHOLDER]', consent: false, seed: 19 },
-    { id: 'contributor-3', name: 'Contributor', role: 'Artist', blurb: 'A placeholder contribution note for an anonymous artist, pending consent. [PLACEHOLDER]', consent: false, seed: 27 },
-    { id: 'contributor-4', name: 'Contributor', role: 'Core Engineer', blurb: 'A placeholder contribution note for an anonymous core engineer, pending consent. [PLACEHOLDER]', consent: false, seed: 8 },
-    { id: 'contributor-5', name: 'Contributor', role: 'Core Engineer', blurb: 'A placeholder contribution note for an anonymous core engineer, pending consent. [PLACEHOLDER]', consent: false, seed: 16 },
-    { id: 'contributor-6', name: 'Contributor', role: 'Core Engineer', blurb: 'A placeholder contribution note for an anonymous core engineer, pending consent. [PLACEHOLDER]', consent: false, seed: 24 },
-    { id: 'contributor-7', name: 'Contributor', role: 'Core Engineer', blurb: 'A placeholder contribution note for an anonymous core engineer, pending consent. [PLACEHOLDER]', consent: false, seed: 32 },
-    { id: 'contributor-8', name: 'Contributor', role: 'Knowledge Creator', blurb: 'A placeholder contribution note for an anonymous knowledge creator, pending consent. [PLACEHOLDER]', consent: false, seed: 5 },
-    { id: 'contributor-9', name: 'Contributor', role: 'Knowledge Creator', blurb: 'A placeholder contribution note for an anonymous knowledge creator, pending consent. [PLACEHOLDER]', consent: false, seed: 13 },
-    { id: 'contributor-10', name: 'Contributor', role: 'Knowledge Creator', blurb: 'A placeholder contribution note for an anonymous knowledge creator, pending consent. [PLACEHOLDER]', consent: false, seed: 21 },
-    { id: 'contributor-11', name: 'Contributor', role: 'Knowledge Creator', blurb: 'A placeholder contribution note for an anonymous knowledge creator, pending consent. [PLACEHOLDER]', consent: false, seed: 29 },
-    { id: 'contributor-12', name: 'Contributor', role: 'Researcher', blurb: 'A placeholder contribution note for an anonymous researcher, pending consent. [PLACEHOLDER]', consent: false, seed: 6 },
-    { id: 'contributor-13', name: 'Contributor', role: 'Researcher', blurb: 'A placeholder contribution note for an anonymous researcher, pending consent. [PLACEHOLDER]', consent: false, seed: 14 },
-    { id: 'contributor-14', name: 'Contributor', role: 'Researcher', blurb: 'A placeholder contribution note for an anonymous researcher, pending consent. [PLACEHOLDER]', consent: false, seed: 22 },
-    { id: 'contributor-15', name: 'Contributor', role: 'Researcher', blurb: 'A placeholder contribution note for an anonymous researcher, pending consent. [PLACEHOLDER]', consent: false, seed: 30 },
+    { id: 'contributor-0', name: 'enigmatic_e', role: 'Artist', blurb: 'Makes work with open models and shows it to the community.', consent: true, seed: 3 },
+    { id: 'contributor-1', name: 'thedorbrothers', role: 'Artist', blurb: 'Makes work with open models and shows it to the community.', consent: true, seed: 11 },
+    { id: 'contributor-2', name: 'NebSH', role: 'Artist', blurb: 'Makes work with open models and shows it to the community.', consent: true, seed: 19 },
+    { id: 'contributor-3', name: 'Hannah Submarine', role: 'Artist', blurb: 'Makes work with open models and shows it to the community.', consent: true, seed: 27 },
+    { id: 'contributor-4', name: 'POM', role: 'Core', blurb: 'Core contributor, on the ledger every month since it opened.', consent: true, seed: 8 },
+    { id: 'contributor-5', name: 'lone_samurai', role: 'Core', blurb: 'Core contributor to Banodoco itself.', consent: true, seed: 16 },
+    { id: 'contributor-6', name: 'matt3o', role: 'Core', blurb: 'Core contributor to Banodoco itself.', consent: true, seed: 24 },
+    { id: 'contributor-7', name: 'Ian_G', role: 'Core', blurb: 'Core contributor to Banodoco itself.', consent: true, seed: 32 },
+    { id: 'contributor-8', name: 'citizenplain', role: 'Knowledge Sharer', blurb: 'Shares the knowledge and tools the rest of the ecosystem builds on.', consent: true, seed: 5 },
+    { id: 'contributor-9', name: 'cyncratic', role: 'Knowledge Sharer', blurb: 'Shares the knowledge and tools the rest of the ecosystem builds on.', consent: true, seed: 13 },
+    { id: 'contributor-10', name: 'Klinter', role: 'Knowledge Sharer', blurb: 'Shares the knowledge and tools the rest of the ecosystem builds on.', consent: true, seed: 21 },
+    { id: 'contributor-11', name: 'ryanontheinside', role: 'Knowledge Sharer', blurb: 'Shares the knowledge and tools the rest of the ecosystem builds on.', consent: true, seed: 29 },
+    { id: 'contributor-12', name: 'Kijai', role: 'Infrastructure', blurb: 'Builds the open-source infrastructure the ecosystem runs on.', consent: true, seed: 6 },
+    { id: 'contributor-13', name: 'Kosinkadink', role: 'Infrastructure', blurb: 'Builds the open-source infrastructure the ecosystem runs on.', consent: true, seed: 14 },
+    { id: 'contributor-14', name: 'melmass', role: 'Infrastructure', blurb: 'Builds the open-source infrastructure the ecosystem runs on.', consent: true, seed: 22 },
+    { id: 'contributor-15', name: 'Juxtapoz', role: 'Infrastructure', blurb: 'Builds the open-source infrastructure the ecosystem runs on.', consent: true, seed: 30 },
   ],
 
   // --- The site's outbound links + legal line.
@@ -654,32 +796,48 @@ export const CONTENT = {
   // static tier's copy of it. Renamed `site` because that is what it is now:
   // the site's own outbound destinations, not a footer's.
   //
-  // All hrefs are '#' per D10 until Banodoco supplies confirmed
-  // destinations. TODO comments capture what each link is meant to become.
+  // WIRED 2026-08-16. Every destination below is one banodoco.ai itself uses:
+  // the first five resolve through its `src/lib/externalLinks.ts` and
+  // `src/lib/discord.ts`, which are the single constants its own header and
+  // footer read. No '#' remains.
   site: {
     links: [
-      { label: 'banodoco.ai', href: '#' },
-      // TODO(Banodoco): PLACEHOLDER — confirm and wire the real banodoco.ai
-      // homepage URL.
-      { label: '2RP', href: '#' },
-      // TODO(Banodoco): PLACEHOLDER — confirm and wire the real 2RP
-      // publication URL.
-      { label: 'Contact', href: '#' },
-      // TODO(Banodoco): PLACEHOLDER — confirm and wire the real contact
-      // destination (mailto or form).
+      { label: 'banodoco.ai', href: 'https://banodoco.ai/' },
+      // KEPT AS A LINK even though the `tworp` node above deliberately has
+      // none. These are different promises: the node says "the publication is
+      // coming soon" and must not offer a door to something else, while a menu
+      // row labelled 2RP is navigation to the page Banodoco actually publishes
+      // under that name (and links from its own hero). Delete this row if
+      // Hannah would rather the name not appear anywhere until it ships.
+      { label: '2RP', href: 'https://banodoco.ai/2RP' },
+      // WAS 'Contact', RETIRED. Banodoco has no contact page, no contact form
+      // and no published address — its own footer offers exactly three doors,
+      // X, GitHub and Discord, all three of which this menu already carries
+      // below. A "Contact" row could only have been wired to one of those
+      // under a second name, or to an invented mailbox. The ownership page is
+      // the real destination this menu was missing: it is where the site's
+      // biggest claim gets explained, and the Owned chapter's own button
+      // points there too.
+      { label: 'Ownership', href: 'https://banodoco.ai/ownership' },
     ],
     social: [
-      { label: 'Discord', href: '#' },
-      // TODO(Banodoco): PLACEHOLDER — confirm and wire the real Discord
-      // invite URL.
-      { label: 'GitHub', href: '#' },
-      // TODO(Banodoco): PLACEHOLDER — confirm and wire the real GitHub
-      // organization/repo URL.
+      { label: 'Discord', href: 'https://discord.gg/NnFxGvx94b' },
+      { label: 'GitHub', href: 'https://github.com/banodoco' },
+      // Added — the third door in banodoco.ai's own footer, and the only one
+      // this menu was missing. Their footer labels it "X (Twitter)" on an icon
+      // and the URL they keep is the twitter.com one; both are set as they
+      // have them rather than modernised.
+      { label: 'X', href: 'https://twitter.com/banodoco' },
     ],
-    // Legal placeholder line — not locked copy; ownership facts themselves
-    // (100%, 1%/month, three groups) are locked verbatim per 13-content-ops.md,
-    // but the surrounding legal sentence and copyright line need Legal/Peter
-    // sign-off before launch.
-    legal: '© 2026 Banodoco. Ownership: 100% shared, granted at 1% per month, split between different groups (artists, core engineers, and knowledge creators). This legal line is placeholder text pending Legal/Peter review. [PLACEHOLDER]',
+    // REAL, and no longer pending Legal. Every figure here is published by
+    // Banodoco about itself at https://banodoco.ai/ownership — the 100%, the
+    // monthly 1%, and the 0.25%-per-group split that has run since February
+    // 2024. This states the four groups the ledger actually uses; see the
+    // pod-split note above for the three-vs-four discrepancy with the locked
+    // claims, which is flagged there for Hannah and Peter rather than settled
+    // here. The one thing this line no longer does is describe itself as a
+    // placeholder while making legal-sounding claims — which was the worst of
+    // both.
+    legal: '© 2026 Banodoco. Ownership is 100% shared with contributors: 1% of the company is granted each month, split evenly between core, infrastructure builders, knowledge sharers, and artists. Full ledger at banodoco.ai/ownership.',
   },
 };

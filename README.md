@@ -26,15 +26,32 @@ The gate sees only the frozen rests with UI chrome hidden. Travel frames,
 DOM/UI work, and interactions need their own verification (`tools/*gates.js`
 in the console, or a hand test).
 
+## Contributor portraits
+
+The Owned field shows real people. `assets/contributor-portraits/
+profile-sprite.jpg` is Banodoco's own published avatar sheet (20x10 tiles of
+96px, taken unmodified from banodoco.ai), and `content/contributors.js` says
+who is at which tile — 120 contributors joined from the public ownership
+ledger at banodoco.ai/ownership. The stock-face set that used to live in
+`assets/test-portraits/` is gone, and with it the standing rule against
+shipping it.
+
+Sixteen of the 120 are dealt at random per page load, and the crown re-deals
+them on hover. Name, role, blurb and face are dealt in one assignment and must
+never be separated — that is the only thing stopping a picture being captioned
+with someone else's name.
+
+**The goldens do not cover any of this.** Under `?capture` the photo crossfade
+never advances, so the frozen frames render the procedural busts (deliberately
+— see the `snap()` note in `portraits.js`). Anything touching the grade, the
+atlas bake, the deal or the crown has to be checked by eye on the live page.
+
 ## Pre-deploy checklist (standing)
 
-- [ ] `assets/test-portraits/` .jpg files must not ship (plan-doc mandate —
-      they are randomuser.me/pravatar stock faces). The shipped path is
-      procedural since 2026-08-16 (photo promotion is behind ?photos=1), and
-      the frozen goldens never rendered photos (verified MAE 0.0000), but
-      `journey/chapters/owned/portraits.js` STATICALLY imports the
-      `manifest.js`, so that one file must deploy even when the images do
-      not. Real portraits = new asset set + consent wiring + restoring the
-      unconditional promotion.
-- [ ] The 11 `TODO(Banodoco)` destination URLs in `content/content.js` and
-      the 56 `[PLACEHOLDER]` tokens ship visitor-visible until confirmed.
+- [ ] Nothing outstanding. The 11 `TODO(Banodoco)` URLs and 56 `[PLACEHOLDER]`
+      tokens were resolved 2026-08-16 against banodoco.ai and its repository;
+      `grep -rn PLACEHOLDER content/ static/` should stay empty, and no
+      `href="#"` should return in `content/content.js`.
+- [ ] Two nodes ship as "Coming soon" with no outbound link, on purpose:
+      `tworp` (the publication is unbuilt) and `hivemind` (no counterpart on
+      banodoco.ai at all — flagged for Peter).
