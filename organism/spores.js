@@ -102,7 +102,14 @@ export function createSpores(ctx) {
   // decoherence is integrated in closed form over each dot's own climb),
   // so the frozen landing stays at the live wind's stationary shape.
   const FIL_FADE0 = 0.34, FIL_FADE1 = 0.60; // catch release window, in s/sMax
-  const DISP_RATE = 0.016;                  // u/s upper-air lateral drift
+  const DISP_RATE = 0.012;                  // u/s upper-air lateral drift
+                                          // 0.016 -> 0.012 (2026-08-17, the
+                                          // same balance pass as D30 below:
+                                          // under the tree's brighter tone
+                                          // the full-rate decoherence read as
+                                          // a broad even canopy; the bulk now
+                                          // hugs the braid while the D30
+                                          // cohort carries the far strays)
   const DISP_Y0 = 4.2, DISP_Y1 = 5.6;       // world-y gate (above the lit lanes)
   const FIL_SEED_T = [0.75, 0.55, 1.60]; // per-filament seed-transit scale, re-calibrated to the D29 live equilibrium (see D27/D29)
   let filPX, filPY, filPZ, filSMax;        // built with the seed block below
@@ -138,8 +145,37 @@ export function createSpores(ctx) {
       const e1 = new THREE.Vector3(0, 1, 0).cross(BREEZE_DIR).normalize();
       const e2 = new THREE.Vector3().crossVectors(BREEZE_DIR, e1).normalize();
       dispDir = new Float32Array(4200 * 3);
+      // D30 STRAGGLER COHORT (2026-08-17, Hannah's Inspire balance pass): a
+      // hashed ~16% of dots carry a LONGER upper-air throw biased along +e1
+      // (the horizontal ⊥ of the wind, world (0.17, 0, -0.99)) with a lift of
+      // e2 — at the Inspire rest that direction projects toward the upper-
+      // RIGHT of the frame (alignment +0.82 with view-right), so a thin
+      // scatter of strays softens the plume's empty flank without touching
+      // its asymmetric mass; on the hero framing the same vector is nearly
+      // depth-parallel (alignment -0.06 with view-right), so the landing
+      // composition barely feels it. Mechanically this is ONLY a reshape of
+      // each cohort dot's fixed decoherence vector (direction + magnitude —
+      // the vector is deliberately non-unit): both the seed block's closed
+      // form and the live integrator multiply the same dispDir entries, so
+      // the frozen landing and the running wind still agree by construction,
+      // and the other ~84% of dots keep bit-identical vectors. Consumes no
+      // RNG draws (hash-derived, like the base directions).
+      const COHORT_F = 0.16, COHORT_BOOST0 = 1.7, COHORT_BOOST1 = 2.9;
       for (let i = 0; i < 4200; i++) {
         const ph = i * 2.3999632297;
+        const h1 = (i * 0.61803398875) % 1;
+        const h2 = (i * 0.75487766625) % 1;
+        if (h1 < COHORT_F) {
+          // stray: mostly +e1, lifted a touch along e2, thrown 1.7-2.9x
+          const lift = 0.18 + 0.38 * h2;
+          const inv = 1 / Math.hypot(1, lift);
+          const boost = COHORT_BOOST0 + (COHORT_BOOST1 - COHORT_BOOST0) * h2;
+          const g = inv * boost;
+          dispDir[i * 3]     = (e1.x + lift * e2.x) * g;
+          dispDir[i * 3 + 1] = (e1.y + lift * e2.y) * g;
+          dispDir[i * 3 + 2] = (e1.z + lift * e2.z) * g;
+          continue;
+        }
         const c = Math.cos(ph), s = Math.sin(ph);
         dispDir[i * 3]     = c * e1.x + s * e2.x;
         dispDir[i * 3 + 1] = c * e1.y + s * e2.y;

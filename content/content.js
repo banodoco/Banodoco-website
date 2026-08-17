@@ -390,7 +390,14 @@ export const CONTENT = {
           // acquisition. Hannah's label "Learn more" is kept: it is her copy,
           // it is the site's own house phrasing for this control, and only the
           // href was ever the open question.
-          href: 'https://banodoco.ai/ownership',
+          //
+          // RE-POINTED 2026-08-17 (Hannah): the site now carries its OWN
+          // ownership page (ownership/), the same explanation and the same
+          // ledger mirrored from banodoco.ai/ownership's own sources
+          // (Banodoco-website data.ts + ownership.json), dressed in this
+          // site's design language. The visitor stays in the world; the
+          // page's footer still credits and links the source of record.
+          href: './ownership/',
         },
       ],
     },
@@ -824,7 +831,10 @@ export const CONTENT = {
       // the real destination this menu was missing: it is where the site's
       // biggest claim gets explained, and the Owned chapter's own button
       // points there too.
-      { label: 'Ownership', href: 'https://banodoco.ai/ownership' },
+      // Points at the site's own ownership page since 2026-08-17 (Hannah) —
+      // same ledger, this site's dress. The Owned chapter's "Learn more"
+      // moved with it; the two must stay in step.
+      { label: 'Ownership', href: './ownership/' },
     ],
     social: [
       { label: 'Discord', href: 'https://discord.gg/NnFxGvx94b' },

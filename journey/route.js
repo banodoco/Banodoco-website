@@ -381,10 +381,38 @@ export const TERMINAL_P = 1;
  * construction, and the kindle keeps its share of whatever budget is set — it
  * owns 74% of this leg's road, so it still gets 74% of the seconds.
  *
- * Keys are `'<from>><to>'` in route order; the same entry serves both
- * directions, which is what "and back" asks for. An absent entry means the leg
+ * Keys are `'<from>><to>'` in route order. A NUMBER serves both directions,
+ * which is what "and back" asks for. An OBJECT `{ fwd, back }` declares the
+ * two directions separately (2026-08-17, Hannah — the Inspire<->Connect leg
+ * wants them different, see the entry below). An absent entry means the leg
  * uses the global band, which is what every other leg does today. */
 export const TRANSIT_S = {
+  // 2.5 s rest to rest, both ways. History: this leg had no declared transit,
+  // so its nominal came from the COMMIT_GLIDE_MAX_S cap — at ~14.7 vh it is
+  // the route's biggest road (six passes of ground-lighting slowdown bought
+  // it), so the fit rate pinned it to the full 7.5 s while every other leg
+  // autoplays in 1.5-2.9 s. 2026-08-16 ("sometimes the scroll is really,
+  // really slow") declared 4.0 to lift the released-gesture floor while
+  // keeping this the slowest leg; 2026-08-17 ("the terminal speed... feels
+  // too slow, it should *want* to go faster") says a floor that merely
+  // un-sticks the leg is not enough — the glide should be eager. 2.5 puts it
+  // at the top of the band the rest of the route lives in, so it no longer
+  // reads as the outlier. Declaring the transit still moves NO road: the
+  // light schedule, the shape and a scrubbing finger keep their pacing
+  // exactly; only the released-gesture glide changes.
+  //
+  // SPLIT BY DIRECTION 2026-08-17 (Hannah, same day, after the backward glide
+  // went gesture-paced in scroll.js: "scroll backwards from the connect the
+  // ecosystem section into inspire the movement still feels REALLY slow").
+  // The forward 2.5 is content pacing — the ground-light arrival rides it —
+  // and she likes it ("its actually nice going INTO the section"), so it does
+  // not move. Backward there is no content to breathe for: the lights un-play
+  // by position wherever the camera happens to be, and the ride is just the
+  // approach swing run in reverse. 1.6 puts its cruise in the same visual
+  // class as the Connect -> Owned dive next door (measured vis ~20 against
+  // the dive's ~32 peak, from ~13 at the shared 2.5), which is the punchy
+  // departure she keeps contrasting it with.
+  'inspire>connect': { fwd: 2.5, back: 1.6 },
   // 1.5 s rest to rest, both ways. Measured live: 7.01 s forward / 7.54 s back
   // on the shipped tree, and 3.27 / 3.44 before the glide-unit fix (3daac2e)
   // handed this leg the 17.0 vh of road it owns. Hannah's baseline when she asked
@@ -396,14 +424,17 @@ export const TRANSIT_S = {
 };
 
 /** The declared transit time for the span between two rests, or null if the
- *  span has no entry (then scroll.js uses the global band). Order-insensitive:
- *  one declaration governs both directions. */
-export function transitSeconds(lo, hi) {
+ *  span has no entry (then scroll.js uses the global band). `dir` is the
+ *  travel direction in p (+1 toward hi, -1 toward lo); a plain-number entry
+ *  ignores it, an `{ fwd, back }` entry picks its side by it. Callers that
+ *  do not know the direction (or pass 0) get the forward figure. */
+export function transitSeconds(lo, hi, dir = 0) {
   const i = REST_STOPS.findIndex(v => Math.abs(v - lo) < 1e-9);
   const k = REST_STOPS.findIndex(v => Math.abs(v - hi) < 1e-9);
   if (i < 0 || k < 0) return null;
   const a = REST_OWNER[Math.min(i, k)], b = REST_OWNER[Math.max(i, k)];
-  const v = TRANSIT_S[`${a}>${b}`];
+  let v = TRANSIT_S[`${a}>${b}`];
+  if (v && typeof v === 'object') v = dir < 0 ? v.back : v.fwd;
   return v > 0 ? v : null;
 }
 
