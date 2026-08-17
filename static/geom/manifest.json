@@ -1,0 +1,2630 @@
+{
+  "version": 1,
+  "chapters": {
+    "owned": {
+      "file": "owned.bin",
+      "sha256": "2cb0499303a5010d266e338e80683871bcce41ba846ac5a0574253d38094a157",
+      "keys": [
+        {
+          "key": "owned/fan",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 0,
+              "byteLength": 224208,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 224208,
+              "byteLength": 74736,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 298944,
+              "byteLength": 74736,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/hair",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 373680,
+              "byteLength": 277920,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 651600,
+              "byteLength": 92640,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 744240,
+              "byteLength": 92640,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/web",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 836880,
+              "byteLength": 172440,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 1009320,
+              "byteLength": 57480,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 1066800,
+              "byteLength": 57480,
+              "kind": "f32"
+            },
+            {
+              "name": "aOwner",
+              "itemSize": 1,
+              "byteOffset": 1124280,
+              "byteLength": 57480,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/glints",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1181760,
+              "byteLength": 6612,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 1188372,
+              "byteLength": 2204,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 1190576,
+              "byteLength": 2204,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/crown",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1192780,
+              "byteLength": 8496,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 1201276,
+              "byteLength": 2832,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 1204108,
+              "byteLength": 2832,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/hubs",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1206940,
+              "byteLength": 14040,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 1220980,
+              "byteLength": 4680,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 1225660,
+              "byteLength": 4680,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/hubCores",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1230340,
+              "byteLength": 72,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 1230412,
+              "byteLength": 24,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 1230436,
+              "byteLength": 24,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/hubHalos",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1230460,
+              "byteLength": 72,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 1230532,
+              "byteLength": 24,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 1230556,
+              "byteLength": 24,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/ceiling",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1230580,
+              "byteLength": 24300,
+              "kind": "f32"
+            },
+            {
+              "name": "index",
+              "itemSize": 1,
+              "byteOffset": 1254880,
+              "byteLength": 46464,
+              "kind": "u32"
+            }
+          ]
+        },
+        {
+          "key": "owned/lid",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1301344,
+              "byteLength": 89280,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 1390624,
+              "byteLength": 29760,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 1420384,
+              "byteLength": 29760,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/felt",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1450144,
+              "byteLength": 236448,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 1686592,
+              "byteLength": 78816,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 1765408,
+              "byteLength": 78816,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/grain",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1844224,
+              "byteLength": 50400,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/fill",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1894624,
+              "byteLength": 191952,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 2086576,
+              "byteLength": 63984,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 2150560,
+              "byteLength": 63984,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/aggregateFar",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2214544,
+              "byteLength": 672,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/aggregateNear",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2215216,
+              "byteLength": 936,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/planes",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2216152,
+              "byteLength": 768,
+              "kind": "f32"
+            },
+            {
+              "name": "aCorner",
+              "itemSize": 2,
+              "byteOffset": 2216920,
+              "byteLength": 512,
+              "kind": "f32"
+            },
+            {
+              "name": "aCellA",
+              "itemSize": 2,
+              "byteOffset": 2217432,
+              "byteLength": 512,
+              "kind": "f32"
+            },
+            {
+              "name": "aCellB",
+              "itemSize": 2,
+              "byteOffset": 2217944,
+              "byteLength": 512,
+              "kind": "f32"
+            },
+            {
+              "name": "aNode",
+              "itemSize": 1,
+              "byteOffset": 2218456,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 2218712,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 2218968,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aTilt",
+              "itemSize": 1,
+              "byteOffset": 2219224,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aAnonF",
+              "itemSize": 1,
+              "byteOffset": 2219480,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "aSwapD",
+              "itemSize": 1,
+              "byteOffset": 2219736,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "index",
+              "itemSize": 1,
+              "byteOffset": 2219992,
+              "byteLength": 384,
+              "kind": "u32"
+            }
+          ]
+        },
+        {
+          "key": "owned/rim",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2220376,
+              "byteLength": 13824,
+              "kind": "f32"
+            },
+            {
+              "name": "aOff",
+              "itemSize": 2,
+              "byteOffset": 2234200,
+              "byteLength": 9216,
+              "kind": "f32"
+            },
+            {
+              "name": "aNode",
+              "itemSize": 1,
+              "byteOffset": 2243416,
+              "byteLength": 4608,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 2248024,
+              "byteLength": 4608,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 2252632,
+              "byteLength": 4608,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/cores",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2257240,
+              "byteLength": 192,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 2257432,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 2257496,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aNode",
+              "itemSize": 1,
+              "byteOffset": 2257560,
+              "byteLength": 64,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/halos",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2257624,
+              "byteLength": 192,
+              "kind": "f32"
+            },
+            {
+              "name": "aSize",
+              "itemSize": 1,
+              "byteOffset": 2257816,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 2257880,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aNode",
+              "itemSize": 1,
+              "byteOffset": 2257944,
+              "byteLength": 64,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/strands",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2258008,
+              "byteLength": 20352,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 2278360,
+              "byteLength": 6784,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 2285144,
+              "byteLength": 6784,
+              "kind": "f32"
+            },
+            {
+              "name": "aNode",
+              "itemSize": 1,
+              "byteOffset": 2291928,
+              "byteLength": 6784,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "owned/front",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2298712,
+              "byteLength": 5760,
+              "kind": "f32"
+            },
+            {
+              "name": "aAlong",
+              "itemSize": 1,
+              "byteOffset": 2304472,
+              "byteLength": 1920,
+              "kind": "f32"
+            },
+            {
+              "name": "aStrand",
+              "itemSize": 1,
+              "byteOffset": 2306392,
+              "byteLength": 1920,
+              "kind": "f32"
+            }
+          ]
+        }
+      ],
+      "payload": {
+        "substrate": {
+          "primaries": 66,
+          "skirt": 340,
+          "secondaries": 292,
+          "netNodes": 430,
+          "netLinks": 1437,
+          "hubs": 5,
+          "voids": 5
+        },
+        "portraits": {
+          "nodeIds": [
+            "contributor-0",
+            "contributor-1",
+            "contributor-2",
+            "contributor-3",
+            "contributor-4",
+            "contributor-5",
+            "contributor-6",
+            "contributor-7",
+            "contributor-8",
+            "contributor-9",
+            "contributor-10",
+            "contributor-11",
+            "contributor-12",
+            "contributor-13",
+            "contributor-14",
+            "contributor-15"
+          ],
+          "nodeRoutable": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "nodeContentKeys": [
+            "contributor-0",
+            "contributor-1",
+            "contributor-2",
+            "contributor-3",
+            "contributor-4",
+            "contributor-5",
+            "contributor-6",
+            "contributor-7",
+            "contributor-8",
+            "contributor-9",
+            "contributor-10",
+            "contributor-11",
+            "contributor-12",
+            "contributor-13",
+            "contributor-14",
+            "contributor-15"
+          ],
+          "nodePos": [
+            -12.101143374249306,
+            -0.9338969877444225,
+            4.061662563848048,
+            -7.073939830690958,
+            -0.9093474835286086,
+            -9.117194403489838,
+            -11.1061711038728,
+            -2.837203891323855,
+            5.553392106271358,
+            -5.804763198088192,
+            -3.0724208675965343,
+            -9,
+            -11.139883583597031,
+            -2.073472500860375,
+            2.656385768226343,
+            -7.540934438278795,
+            -2.401836699123758,
+            -7.902784267738305,
+            -7.998287299638127,
+            -3.8652946729994637,
+            3.495309644126802,
+            -4.5421685630349815,
+            -3.8660236553725746,
+            -7.531227604226852,
+            -7.845740051589067,
+            -3.577674593744633,
+            -0.2511614465920258,
+            -6.514961891122042,
+            -3.7444737058683075,
+            -3.9786489488675025,
+            -5.697578926644359,
+            -3.8669131870900735,
+            1.7620882792774404,
+            -3.9803932743744834,
+            -3.993684179090709,
+            -4.615648891973361,
+            -5.760759410519142,
+            -4.539519686556779,
+            -1.3696335606745729,
+            -5.400985281789611,
+            -4.6557236917003175,
+            3.707392933476445,
+            -2.0487660191157495,
+            -4.04384359235321,
+            -5.300338734166723,
+            -2.874465868739448,
+            -4.235533925468394,
+            -2.234096215548988
+          ],
+          "nodeSize": [
+            0.4043334458893165,
+            0.388655570108816,
+            0.4207673757115379,
+            0.38201893211267896,
+            0.3596476433597505,
+            0.36122551736831665,
+            0.4280792990136892,
+            0.43673028491400184,
+            0.3872185136303306,
+            0.38921177778281274,
+            0.4127591939896345,
+            0.4648245849750936,
+            0.43157770260926337,
+            0.43286796935815364,
+            0.4334269504917786,
+            0.47494916087538
+          ],
+          "nodeAnchors": [
+            [],
+            [
+              [
+                -5.277919052551314,
+                -6.8281555057503285,
+                -8.1478756908218
+              ],
+              [
+                -5.344132211325504,
+                -6.7001328652724625,
+                -8.012648337044064
+              ],
+              [
+                -4.957268547765724,
+                -6.797989402525126,
+                -8.24917374398863
+              ]
+            ],
+            [
+              [
+                -9.30261549841583,
+                -6.67074721455574,
+                4.91418912073693
+              ],
+              [
+                -8.959953645933124,
+                -6.602020998671651,
+                4.897916096477795
+              ]
+            ],
+            [
+              [
+                -5.321816096697748,
+                -6.960592422541231,
+                -8.250736849488002
+              ],
+              [
+                -4.953349508378468,
+                -6.747455563396215,
+                -7.997462525720019
+              ]
+            ],
+            [
+              [
+                -9.351680072364102,
+                -6.735673543531448,
+                4.881571103218969
+              ],
+              [
+                -9.093770767668898,
+                -6.997737054992467,
+                4.608444902213316
+              ]
+            ],
+            [
+              [
+                -5.596599352780688,
+                -6.906476489920169,
+                -7.114837660633065
+              ],
+              [
+                -5.646459743498783,
+                -6.646808698493987,
+                -7.190423235359639
+              ]
+            ],
+            [
+              [
+                -8.088615973900518,
+                -6.967328759655357,
+                3.6781094640554874
+              ],
+              [
+                -7.9251735434648385,
+                -6.908385377842933,
+                3.853645658406058
+              ],
+              [
+                -8.043587517995833,
+                -6.609473922103644,
+                3.6807843195801615
+              ]
+            ],
+            [
+              [
+                -4.921771281665005,
+                -6.819143853150308,
+                -7.866728865064923
+              ],
+              [
+                -5.320264343438484,
+                -6.6287323529832065,
+                -8.17657998773573
+              ]
+            ],
+            [
+              [
+                -6.964303927667265,
+                -6.764410877041518,
+                0.13507824421132697
+              ]
+            ],
+            [
+              [
+                -5.498962243397714,
+                -6.607770825456828,
+                -4.18862761534322
+              ],
+              [
+                -5.517268549611786,
+                -6.6027194946073,
+                -4.2040263772992414
+              ]
+            ],
+            [
+              [
+                -3.6963042060988966,
+                -4.821303905746037,
+                1.6559210522047745
+              ],
+              [
+                -3.378178516696674,
+                -4.669405753364854,
+                1.4474313679331483
+              ]
+            ],
+            [],
+            [
+              [
+                -5.984652401650825,
+                -6.960344418790191,
+                -1.4917129117647905
+              ],
+              [
+                -5.960459734433831,
+                -6.857683729380369,
+                -1.3764254622046623
+              ]
+            ],
+            [
+              [
+                -5.208409388810736,
+                -6.859076252952218,
+                3.435921466123971
+              ],
+              [
+                -5.171387082110499,
+                -6.710800990089774,
+                3.313441988459515
+              ]
+            ],
+            [
+              [
+                -1.3446022497729984,
+                -4.637322618268385,
+                -4.1757016099987725
+              ],
+              [
+                -1.4654580706039098,
+                -4.730694999467537,
+                -4.112234962126071
+              ],
+              [
+                -1.1177714908036989,
+                -4.566863500807389,
+                -4.088407698622736
+              ]
+            ],
+            [
+              [
+                -2.522440920355657,
+                -4.324131585038324,
+                -1.9140481777792728
+              ],
+              [
+                -2.2382161809410173,
+                -4.038285907111187,
+                -1.9573122264189577
+              ],
+              [
+                -2.2769501669145393,
+                -4.2614664569823635,
+                -1.887886688935191
+              ]
+            ]
+          ],
+          "swapMaxR": 12.809057281139973,
+          "strandCurves": 106
+        }
+      }
+    },
+    "final": {
+      "file": "final.bin",
+      "sha256": "0e68c09aaa550a43d4d8b86e951501bb73f86cc118e0db77230d0f3155e2079e",
+      "keys": [
+        {
+          "key": "final/ringLines",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 0,
+              "byteLength": 202416,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 202416,
+              "byteLength": 202416,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 404832,
+              "byteLength": 67472,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 472304,
+              "byteLength": 67472,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 539776,
+              "byteLength": 67472,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 607248,
+              "byteLength": 67472,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 674720,
+              "byteLength": 67472,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 742192,
+              "byteLength": 67472,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 809664,
+              "byteLength": 67472,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/ringGlows",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 877136,
+              "byteLength": 5004,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 882140,
+              "byteLength": 5004,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 887144,
+              "byteLength": 1668,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 888812,
+              "byteLength": 1668,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 890480,
+              "byteLength": 1668,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 892148,
+              "byteLength": 1668,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 893816,
+              "byteLength": 1668,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 895484,
+              "byteLength": 1668,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 897152,
+              "byteLength": 1668,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 898820,
+              "byteLength": 1668,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/primordia",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 900488,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 900536,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aDelay",
+              "itemSize": 1,
+              "byteOffset": 900584,
+              "byteLength": 16,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 900600,
+              "byteLength": 16,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 900616,
+              "byteLength": 16,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/soil",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 900632,
+              "byteLength": 9060,
+              "kind": "f32"
+            },
+            {
+              "name": "index",
+              "itemSize": 1,
+              "byteOffset": 909692,
+              "byteLength": 15264,
+              "kind": "u32"
+            }
+          ]
+        },
+        {
+          "key": "final/surface",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 924956,
+              "byteLength": 5040,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 929996,
+              "byteLength": 5040,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 935036,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 936716,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 938396,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 940076,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 941756,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 943436,
+              "byteLength": 1680,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 945116,
+              "byteLength": 1680,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/cut",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 946796,
+              "byteLength": 9264,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 956060,
+              "byteLength": 9264,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 965324,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 968412,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 971500,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 974588,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 977676,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 980764,
+              "byteLength": 3088,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 983852,
+              "byteLength": 3088,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/aggr",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 986940,
+              "byteLength": 3336,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 990276,
+              "byteLength": 3336,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 993612,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 994724,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 995836,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 996948,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 998060,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 999172,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 1000284,
+              "byteLength": 1112,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 1001396,
+              "byteLength": 1112,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/cords",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1002508,
+              "byteLength": 5280,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 1007788,
+              "byteLength": 5280,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 1013068,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 1014828,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 1016588,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 1018348,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 1020108,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 1021868,
+              "byteLength": 1760,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 1023628,
+              "byteLength": 1760,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/hyph",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1025388,
+              "byteLength": 57768,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 1083156,
+              "byteLength": 57768,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 1140924,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 1160180,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 1179436,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 1198692,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 1217948,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 1237204,
+              "byteLength": 19256,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 1256460,
+              "byteLength": 19256,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/ends",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1275716,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 1275860,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 1276004,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 1276052,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 1276100,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 1276148,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 1276196,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 1276244,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 1276292,
+              "byteLength": 48,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 1276340,
+              "byteLength": 48,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/front",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1276388,
+              "byteLength": 3456,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 1279844,
+              "byteLength": 3456,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 1283300,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 1284452,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 1285604,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 1286756,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 1287908,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 1289060,
+              "byteLength": 1152,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 1290212,
+              "byteLength": 1152,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/conn",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1291364,
+              "byteLength": 432,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 1291796,
+              "byteLength": 432,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 1292228,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 1292372,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 1292516,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 1292660,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 1292804,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 1292948,
+              "byteLength": 144,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 1293092,
+              "byteLength": 144,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/spores",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1293236,
+              "byteLength": 93600,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 1386836,
+              "byteLength": 93600,
+              "kind": "f32"
+            },
+            {
+              "name": "aSeed",
+              "itemSize": 1,
+              "byteOffset": 1480436,
+              "byteLength": 31200,
+              "kind": "f32"
+            },
+            {
+              "name": "aCycle",
+              "itemSize": 4,
+              "byteOffset": 1511636,
+              "byteLength": 124800,
+              "kind": "f32"
+            },
+            {
+              "name": "aClump",
+              "itemSize": 2,
+              "byteOffset": 1636436,
+              "byteLength": 62400,
+              "kind": "f32"
+            },
+            {
+              "name": "aGate",
+              "itemSize": 3,
+              "byteOffset": 1698836,
+              "byteLength": 93600,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/trees",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1792436,
+              "byteLength": 5184,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 1797620,
+              "byteLength": 5184,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 1802804,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 1804532,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 1806260,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 1807988,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 1809716,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 1811444,
+              "byteLength": 1728,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 1813172,
+              "byteLength": 1728,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/canopyLines",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 1814900,
+              "byteLength": 90192,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 1905092,
+              "byteLength": 90192,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 1995284,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2025348,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2055412,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2085476,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2115540,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2145604,
+              "byteLength": 30064,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2175668,
+              "byteLength": 30064,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "final/canopyGlows",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 2205732,
+              "byteLength": 3912,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 2209644,
+              "byteLength": 3912,
+              "kind": "f32"
+            },
+            {
+              "name": "aArc",
+              "itemSize": 1,
+              "byteOffset": 2213556,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aReveal",
+              "itemSize": 1,
+              "byteOffset": 2214860,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aRevealIn",
+              "itemSize": 1,
+              "byteOffset": 2216164,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aTw",
+              "itemSize": 1,
+              "byteOffset": 2217468,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aBoost",
+              "itemSize": 1,
+              "byteOffset": 2218772,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aWave",
+              "itemSize": 1,
+              "byteOffset": 2220076,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "aBody",
+              "itemSize": 1,
+              "byteOffset": 2221380,
+              "byteLength": 1304,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 2222684,
+              "byteLength": 1304,
+              "kind": "f32"
+            }
+          ]
+        }
+      ],
+      "payload": {
+        "ring": {
+          "ringSegs": 8434,
+          "glowPts": 417,
+          "primordia": 4,
+          "memberSegsPts": [
+            {
+              "i": 0,
+              "segs": 2,
+              "pts": 4
+            },
+            {
+              "i": 1,
+              "segs": 6,
+              "pts": 5
+            },
+            {
+              "i": 2,
+              "segs": 6,
+              "pts": 5
+            },
+            {
+              "i": 3,
+              "segs": 6,
+              "pts": 5
+            },
+            {
+              "i": 4,
+              "segs": 3,
+              "pts": 2
+            },
+            {
+              "i": 5,
+              "segs": 3,
+              "pts": 5
+            },
+            {
+              "i": 6,
+              "segs": 2,
+              "pts": 4
+            },
+            {
+              "i": 7,
+              "segs": 2,
+              "pts": 4
+            },
+            {
+              "i": 8,
+              "segs": 2,
+              "pts": 2
+            },
+            {
+              "i": 100,
+              "segs": 151,
+              "pts": 4
+            },
+            {
+              "i": 101,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 102,
+              "segs": 152,
+              "pts": 4
+            },
+            {
+              "i": 103,
+              "segs": 148,
+              "pts": 4
+            },
+            {
+              "i": 104,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 105,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 106,
+              "segs": 138,
+              "pts": 4
+            },
+            {
+              "i": 107,
+              "segs": 159,
+              "pts": 5
+            },
+            {
+              "i": 108,
+              "segs": 132,
+              "pts": 4
+            },
+            {
+              "i": 109,
+              "segs": 144,
+              "pts": 5
+            },
+            {
+              "i": 110,
+              "segs": 176,
+              "pts": 6
+            },
+            {
+              "i": 111,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 112,
+              "segs": 155,
+              "pts": 5
+            },
+            {
+              "i": 113,
+              "segs": 142,
+              "pts": 5
+            },
+            {
+              "i": 114,
+              "segs": 149,
+              "pts": 5
+            },
+            {
+              "i": 115,
+              "segs": 149,
+              "pts": 4
+            },
+            {
+              "i": 116,
+              "segs": 159,
+              "pts": 6
+            },
+            {
+              "i": 117,
+              "segs": 147,
+              "pts": 6
+            },
+            {
+              "i": 118,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 119,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 120,
+              "segs": 143,
+              "pts": 4
+            },
+            {
+              "i": 121,
+              "segs": 146,
+              "pts": 6
+            },
+            {
+              "i": 122,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 123,
+              "segs": 183,
+              "pts": 6
+            },
+            {
+              "i": 124,
+              "segs": 151,
+              "pts": 6
+            },
+            {
+              "i": 125,
+              "segs": 147,
+              "pts": 6
+            },
+            {
+              "i": 126,
+              "segs": 139,
+              "pts": 5
+            },
+            {
+              "i": 127,
+              "segs": 149,
+              "pts": 5
+            },
+            {
+              "i": 128,
+              "segs": 146,
+              "pts": 5
+            },
+            {
+              "i": 129,
+              "segs": 170,
+              "pts": 5
+            },
+            {
+              "i": 130,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 131,
+              "segs": 172,
+              "pts": 5
+            },
+            {
+              "i": 132,
+              "segs": 163,
+              "pts": 5
+            },
+            {
+              "i": 133,
+              "segs": 152,
+              "pts": 5
+            },
+            {
+              "i": 134,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 135,
+              "segs": 175,
+              "pts": 6
+            },
+            {
+              "i": 136,
+              "segs": 162,
+              "pts": 4
+            },
+            {
+              "i": 137,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 138,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 139,
+              "segs": 490,
+              "pts": 43
+            },
+            {
+              "i": 140,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 141,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 142,
+              "segs": 0,
+              "pts": 2
+            },
+            {
+              "i": 900,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 901,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 902,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 903,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 904,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 905,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 906,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 907,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 908,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 909,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 910,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 911,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 912,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 913,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 914,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 915,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 916,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 917,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 918,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 919,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 706,
+              "segs": 154,
+              "pts": 4
+            },
+            {
+              "i": 702,
+              "segs": 148,
+              "pts": 7
+            },
+            {
+              "i": 712,
+              "segs": 160,
+              "pts": 5
+            },
+            {
+              "i": 705,
+              "segs": 157,
+              "pts": 5
+            },
+            {
+              "i": 719,
+              "segs": 153,
+              "pts": 7
+            },
+            {
+              "i": 701,
+              "segs": 137,
+              "pts": 4
+            },
+            {
+              "i": 720,
+              "segs": 182,
+              "pts": 7
+            },
+            {
+              "i": 703,
+              "segs": 174,
+              "pts": 4
+            },
+            {
+              "i": 710,
+              "segs": 153,
+              "pts": 6
+            },
+            {
+              "i": 714,
+              "segs": 134,
+              "pts": 5
+            },
+            {
+              "i": 700,
+              "segs": 145,
+              "pts": 6
+            },
+            {
+              "i": 717,
+              "segs": 138,
+              "pts": 7
+            },
+            {
+              "i": 713,
+              "segs": 143,
+              "pts": 4
+            },
+            {
+              "i": 716,
+              "segs": 152,
+              "pts": 4
+            },
+            {
+              "i": 721,
+              "segs": 146,
+              "pts": 5
+            },
+            {
+              "i": 709,
+              "segs": 155,
+              "pts": 4
+            },
+            {
+              "i": 708,
+              "segs": 149,
+              "pts": 4
+            },
+            {
+              "i": 704,
+              "segs": 173,
+              "pts": 4
+            },
+            {
+              "i": 711,
+              "segs": 178,
+              "pts": 5
+            },
+            {
+              "i": 715,
+              "segs": 156,
+              "pts": 4
+            },
+            {
+              "i": 707,
+              "segs": 154,
+              "pts": 5
+            },
+            {
+              "i": 718,
+              "segs": 140,
+              "pts": 4
+            },
+            {
+              "i": 960,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 961,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 962,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 963,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 964,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 965,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 966,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 967,
+              "segs": 8,
+              "pts": 2
+            },
+            {
+              "i": 968,
+              "segs": 8,
+              "pts": 2
+            }
+          ]
+        },
+        "terrain": {
+          "soilTris": 1272,
+          "surfaceStrokes": 105,
+          "surfaceSegs": 210,
+          "lipRootlets": 46,
+          "lipStrata": 42,
+          "cutSegs": 386,
+          "aggrPts": 278,
+          "cordSegs": 220,
+          "hyphSegs": 2407,
+          "pitStrands": 53,
+          "frontSegs": 144,
+          "connSegs": 18,
+          "haze": [
+            {
+              "tone": 0.3177565350662917,
+              "base": 0.06643036362109705
+            },
+            {
+              "tone": 0.3554540999233723,
+              "base": 0.07504198467219249
+            },
+            {
+              "tone": 0.3760453481692821,
+              "base": 0.06348901973804459
+            },
+            {
+              "tone": 0.38078620033338667,
+              "base": 0.07821768009709194
+            },
+            {
+              "tone": 0.3598050334956497,
+              "base": 0.0833369515906088
+            },
+            {
+              "tone": 0.3842720614746213,
+              "base": 0.07888122508535161
+            }
+          ]
+        },
+        "sky": {
+          "spores": 7800,
+          "treeSegs": 216,
+          "sprites": [
+            {
+              "y": 2.043240296840668,
+              "drift": 4.389748880192327
+            },
+            {
+              "y": 1.618611647747457,
+              "drift": 3.331388849557465
+            },
+            {
+              "y": 1.6568210389465095,
+              "drift": 5.88071590326201
+            },
+            {
+              "y": 1.7144654529169203,
+              "drift": 4.6668259593934085
+            },
+            {
+              "y": 1.9,
+              "drift": 3.454789943811218
+            },
+            {
+              "y": 2.3,
+              "drift": 0.8930499848536305
+            },
+            {
+              "y": 4.5,
+              "drift": 4.396583532517315
+            },
+            {
+              "y": 3.6,
+              "drift": 3.9817056164896893
+            }
+          ]
+        },
+        "canopy": {
+          "canopyNodes": 200,
+          "canopyBodies": 104,
+          "canopyEdges": 482,
+          "canopyBodyLinks": 18,
+          "canopyDropped": 0,
+          "canopyHubs": 8,
+          "canopySegs": 3758,
+          "canopyPts": 326,
+          "canopyHair": 2716,
+          "canopySec": 765,
+          "canopyLum": 277,
+          "canopyLumTarget": 376,
+          "canopyLumPts": 91,
+          "arteries": 8,
+          "arteryLinks": [
+            [
+              0,
+              0,
+              -2.15,
+              6.44
+            ],
+            [
+              0,
+              0,
+              -5.74,
+              -5.79
+            ],
+            [
+              -0.33,
+              3.63,
+              -0.46,
+              -4.39
+            ],
+            [
+              -2.1,
+              -8.46,
+              -0.46,
+              -4.39
+            ],
+            [
+              4.25,
+              -0.92,
+              3.13,
+              3.3
+            ],
+            [
+              -1.15,
+              -6.38,
+              -2.51,
+              -13.05
+            ],
+            [
+              9.08,
+              6.8,
+              7.25,
+              0.23
+            ],
+            [
+              8.61,
+              -2.82,
+              5.71,
+              -8.42
+            ]
+          ],
+          "arterySegs": 242,
+          "arteryNodes": 63,
+          "arteryBranches": 16,
+          "arteryConverge": 15,
+          "ringArcs": 3,
+          "ringArcSegs": 146,
+          "ringArcTouch": 1,
+          "pools": 54
+        }
+      }
+    }
+  }
+}

@@ -13,6 +13,14 @@ journey/                        (*.js, lib/, chapters/, site.css, index.html stu
 content/content.js
 vendor/three/                   (three.module.js + addons/)
 static/                         (index.html + captures/*.png — NOT captures/_check/)
+static/geom/                    (manifest.json + *.bin — the committed geometry
+                                 bake. Named explicitly so nobody trims it: the
+                                 page falls back to live builders without it,
+                                 which works but re-introduces the load-time
+                                 build cost the bake exists to remove. Always
+                                 fresh by construction: tools/pre-commit
+                                 byte-gates it, so whatever is committed IS
+                                 what the builders would compute.)
 assets/brand/mark-b-mask-{48,64,96}.png
 content/contributors.js         (the 120-person portrait pool)
 assets/contributor-portraits/   (manifest.js + profile-sprite.jpg, 384 KB —

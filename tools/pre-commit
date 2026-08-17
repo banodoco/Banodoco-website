@@ -8,8 +8,11 @@
 # non-advisory gate — see tools/capture.py's header comment) must pass:
 # every golden/size pair within FAIL_MAE_FROZEN of the on-disk goldens at
 # static/captures/ (threshold + how it was measured: journey-v6-plan/
-# EXECUTION.md's M6 entry). Skip with SKIP_SCENE_CHECK=1 for doc-only
-# emergencies — never for code.
+# EXECUTION.md's M6 entry). Scene commits carry a second gate, also
+# non-advisory: bake-geom.py --check re-derives the chapter .bins in the
+# same headless Chrome and byte-diffs them against static/geom/ — a seed
+# change that didn't regenerate the bake fails the commit. Skip with
+# SKIP_SCENE_CHECK=1 for doc-only emergencies — never for code.
 
 STAGED=$(git diff --cached --name-only)
 
@@ -50,10 +53,17 @@ fi
 # `git rev-parse --show-toplevel` instead, which is symlink-proof.
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 CAPTURE_PY="$REPO_ROOT/ados-paris/glowshroom/tools/capture.py"
+BAKE_PY="$REPO_ROOT/ados-paris/glowshroom/tools/bake-geom.py"
 
 if [ ! -f "$CAPTURE_PY" ]; then
   echo "pre-commit: expected capture.py at $CAPTURE_PY — not found." >&2
   echo "  (repo layout changed? update tools/pre-commit's CAPTURE_PY path.)" >&2
+  exit 1
+fi
+
+if [ ! -f "$BAKE_PY" ]; then
+  echo "pre-commit: expected bake-geom.py at $BAKE_PY — not found." >&2
+  echo "  (repo layout changed? update tools/pre-commit's BAKE_PY path.)" >&2
   exit 1
 fi
 
@@ -66,5 +76,11 @@ fi
 
 python3 "$CAPTURE_PY" --check || {
   echo "pre-commit: capture regression failed — see output above." >&2
+  exit 1
+}
+
+python3 "$BAKE_PY" --check || {
+  echo "pre-commit: geometry bake is stale — see output above." >&2
+  echo "  Re-bake it:  python3 tools/bake-geom.py, then git add static/geom" >&2
   exit 1
 }

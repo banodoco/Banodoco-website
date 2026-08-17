@@ -136,6 +136,30 @@ export const P = _qs.get('p'); // string | null
  *  QA/deep-link tooling. */
 export const POSE = _qs.get('pose'); // string | null
 
+/** ?livebuild=1 — force the journey to build its chapter geometry from
+ *  the live procedural builders, skipping the baked-geometry fetch (see
+ *  journey/lib/baked.js). The bake is the shipped fast path; livebuild is
+ *  the tuning/QA path AND the automatic fallback whenever the bake is
+ *  missing or stale. Read by: journey/lib/baked.js. QA/tooling-only — a
+ *  real visitor never sets this. */
+export const LIVEBUILD = _qs.get('livebuild') === '1'; // boolean
+
+/** ?bakedump=1 — record the live builders' output instead of reading a
+ *  bake: every registerGeometry/registerPayload call writes the chapter's
+ *  geometry attributes and metadata into window.__bake.chapters, for the
+ *  commit-time bake tool (tools/bake-geom.py) to harvest. Read by:
+ *  journey/lib/baked.js. Capture-tooling-only — a real visitor never
+ *  sets this. */
+export const BAKEDUMP = _qs.get('bakedump') === '1'; // boolean
+
+/** ?pr=<number> — pin the renderer's pixel ratio and disable the adaptive
+ *  governor entirely (no calibration step, no catastrophic backstop). The
+ *  discriminator for "did the resolution system cause what I just saw":
+ *  ?pr=2 holds full retina forever; if an artifact survives it, the governor
+ *  is innocent. Read by: organism/organism.js. QA-only. */
+const _pr = parseFloat(_qs.get('pr'));
+export const PIN_PR = Number.isFinite(_pr) && _pr > 0 ? Math.min(_pr, 3) : null; // number | null
+
 /** ?notaa=<truthy, substring match> — disable the TAA accumulation pass,
  *  for A/B measuring its cost/quality. Read by: organism/organism.js.
  *  QA-only. SUBSTRING MATCH, not a parsed key (see note at bottom). */
