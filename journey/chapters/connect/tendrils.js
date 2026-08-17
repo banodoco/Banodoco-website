@@ -79,6 +79,7 @@
 // invisible, the Final chapter's "dark at arm" law, now camera-keyed.
 import * as THREE from 'three';
 import { makeRng, gaussOf, heat, groundY, makeGlowTexture } from '../../anatomy.js';
+import { isBaked, geometry, payload } from '../../lib/baked.js';
 
 const TAU = Math.PI * 2;
 const V3 = THREE.Vector3;
@@ -551,16 +552,73 @@ export function buildTendrils(group, U) {
     counts.glints++;
   }
 
+  /* ---- baked read path (2026-08-17) -----------------------------------
+     The whole emission block below is ONE skip unit, never split: pushGlint
+     interleaves with pushSeg across the shared streams B and C, so the two
+     geometries cannot be skipped independently. When the manifest + this
+     chapter's bin are present we rebuild both meshes from static/geom bytes
+     and pull routes / hubMeta / counts / uLitMax from the payload. partData
+     ROUND-TRIPS — it is NEVER recomputed here, because recomputing it after
+     skipping the geometry loops would re-run stream B out of sync and drift
+     the particle field against the goldens. ONE try/catch wraps the WHOLE
+     read: any missing key or shape mismatch throws and the chapter falls
+     back to the live builders in full, never a half-baked mix. */
+  const baked = (() => {
+    if (!isBaked('connect')) return null;
+    try {
+      const P = payload('connect');
+      if (!P || !P.counts || typeof P.counts.totalSegs !== 'number'
+          || !Array.isArray(P.routes) || !Array.isArray(P.hubMeta)
+          || !Array.isArray(P.particles) || !Array.isArray(P.uLitMax)) {
+        throw new Error('connect payload mismatch');
+      }
+      const routes = P.routes.map((r) => ({
+        id: r.id,
+        poly: r.poly.map((q) => new V3(q[0], q[1], q[2])),
+        arcs: r.arcs.slice(),
+        len: r.len,
+      }));
+      return {
+        routes,
+        hubMeta: P.hubMeta.map((hm) => ({
+          id: hm.id,
+          pos: new V3(hm.pos[0], hm.pos[1], hm.pos[2]),
+          along: hm.along,
+          route: hm.route,
+        })),
+        counts: P.counts,
+        particles: P.particles.map((p) => ({
+          route: p.route, phase: p.phase, speed: p.speed, seed: p.seed,
+        })),
+        uLitMax: P.uLitMax.slice(),
+        strands: geometry('connect/strands', [['position', 3], ['aA', 4], ['aB', 4]]),
+        points: geometry('connect/points', [['position', 3], ['aP', 4], ['aR', 1], ['aLife', 1]]),
+      };
+    } catch (e) {
+      return null;
+    }
+  })();
+
+
   /* ---- ground the hub positions ---- */
   for (const id of HUB_IDS) {
     const h = HUBS[id];
     h.pos.y = gy(h.pos.x, h.pos.z, 0.03);
   }
 
+  let routes, hubMeta, maxAlong, partData;
+
+  if (baked) {
+    routes = baked.routes;
+    hubMeta = baked.hubMeta;
+    partData = baked.particles;
+    maxAlong = Math.max(...routes.map((r) => r.len)) + 3.2;
+    Object.assign(counts, baked.counts);
+  } else {
   /* ---- primary routes: base -> hub, braided ---- */
-  const routes = [];   // { id, poly, arcs, len }
+  routes = [];   // { id, poly, arcs, len }
   const bows = { ados: 1, hivemind: -1, discord: 1 };
-  let maxAlong = 0;
+  maxAlong = 0;
 
   HUB_IDS.forEach((id, ri) => {
     const h = HUBS[id];
@@ -694,7 +752,7 @@ export function buildTendrils(group, U) {
   }
 
   /* ---- hubs: radial convergence + ground-knot + continuations ---- */
-  const hubMeta = [];   // { id, pos, along, route } — index.js drives ignition
+  hubMeta = [];   // { id, pos, along, route } — index.js drives ignition
   routes.forEach((R, ri) => {
     const h = HUBS[R.id];
     const hubAlong = AL(R.len);
@@ -1051,16 +1109,22 @@ export function buildTendrils(group, U) {
       }
       if (frnd() < 0.10) pushGlint(prev, farAlong(prev.x, prev.z, owner), 0.18 + frnd() * 0.2, owner);
     }
-  }
+  }   // close the far-field block
+  }   // close the else (live-emission) block
 
   /* ---- build the strand mesh ---- */
   const strandMat = makeStrandMat(U);
+  let strandsGeo;
+  if (baked) {
+    strandsGeo = baked.strands;
+  } else {
+    strandsGeo = new THREE.BufferGeometry();
+    strandsGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
+    strandsGeo.setAttribute('aA', new THREE.Float32BufferAttribute(sA, 4));
+    strandsGeo.setAttribute('aB', new THREE.Float32BufferAttribute(sB, 4));
+  }
   {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
-    g.setAttribute('aA', new THREE.Float32BufferAttribute(sA, 4));
-    g.setAttribute('aB', new THREE.Float32BufferAttribute(sB, 4));
-    const lines = new THREE.LineSegments(g, strandMat);
+    const lines = new THREE.LineSegments(strandsGeo, strandMat);
     lines.frustumCulled = false;
     group.add(lines);
   }
@@ -1085,8 +1149,10 @@ export function buildTendrils(group, U) {
 
   /* ---- particles: sparse, slow, drifting along the primaries ---- */
   const N_PART = 108;
-  const partData = [];
-  {
+  if (baked) {
+    partData = baked.particles;            // round-trips via payload, NEVER recomputed
+  } else {
+    partData = [];
     for (let i = 0; i < N_PART; i++) {
       const ri = Math.floor(rnd() * routes.length);
       partData.push({
@@ -1102,12 +1168,17 @@ export function buildTendrils(group, U) {
     counts.particles = N_PART;
   }
 
-  const pointGeo = new THREE.BufferGeometry();
-  pointGeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
-  pointGeo.setAttribute('aP', new THREE.Float32BufferAttribute(gP, 4));
-  pointGeo.setAttribute('aR', new THREE.Float32BufferAttribute(gR, 1));
-  const lifeArr = new Float32Array(gp.length / 3).fill(1);
-  pointGeo.setAttribute('aLife', new THREE.BufferAttribute(lifeArr, 1));
+  let pointGeo;
+  if (baked) {
+    pointGeo = baked.points;
+  } else {
+    pointGeo = new THREE.BufferGeometry();
+    pointGeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
+    pointGeo.setAttribute('aP', new THREE.Float32BufferAttribute(gP, 4));
+    pointGeo.setAttribute('aR', new THREE.Float32BufferAttribute(gR, 1));
+    const lifeArr = new Float32Array(gp.length / 3).fill(1);
+    pointGeo.setAttribute('aLife', new THREE.BufferAttribute(lifeArr, 1));
+  }
   const pointMat = makePointMat(U, glowTex);
   const points = new THREE.Points(pointGeo, pointMat);
   points.frustumCulled = false;
@@ -1150,16 +1221,30 @@ export function buildTendrils(group, U) {
      route's uLit is a clean 0..1 whatever its length, and the hub kindle in
      index.js can be keyed off `uLit * uLitMax` — the head's own position —
      which is what makes the kindle land exactly as its trail's light arrives. */
-  U.uLitMax.value.set(
-    routeReach[0] + FRONT_SOFT + 0.01,
-    routeReach[1] + FRONT_SOFT + 0.01,
-    routeReach[2] + FRONT_SOFT + 0.01,
-  );
+  if (baked) {
+    U.uLitMax.value.set(baked.uLitMax[0], baked.uLitMax[1], baked.uLitMax[2]);
+  } else {
+    U.uLitMax.value.set(
+      routeReach[0] + FRONT_SOFT + 0.01,
+      routeReach[1] + FRONT_SOFT + 0.01,
+      routeReach[2] + FRONT_SOFT + 0.01,
+    );
+  }
 
   return {
     counts: { ...counts, totalSegs, points: counts.glints + counts.particles },
     strandMat, pointMat,
     routes, hubMeta, cores,
     updateParticles,
+    // Bake surfaces (read by connect/index.js's recording site; no-ops on the
+    // shipped path). Keys match baked.js geometry() keys.
+    geometries: { strands: strandsGeo, points: pointGeo },
+    bakePayload: {
+      counts: { ...counts, totalSegs, points: counts.glints + counts.particles },
+      uLitMax: [U.uLitMax.value.x, U.uLitMax.value.y, U.uLitMax.value.z],
+      hubMeta: hubMeta.map((hm) => ({ id: hm.id, pos: [hm.pos.x, hm.pos.y, hm.pos.z], along: hm.along, route: hm.route })),
+      routes: routes.map((r) => ({ id: r.id, poly: r.poly.map((p) => [p.x, p.y, p.z]), arcs: r.arcs.slice(), len: r.len })),
+      particles: partData.map((p) => ({ route: p.route, phase: p.phase, speed: p.speed, seed: p.seed })),
+    },
   };
 }

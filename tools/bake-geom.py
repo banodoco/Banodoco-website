@@ -97,7 +97,7 @@ BASE_URL = capture_mod.BASE_URL            # http://localhost:8137/index.html
 # runs the live builders.
 BAKE_URL = BASE_URL + "?bakedump=1&nointro=1&livebuild=1"
 
-DEFAULT_CHAPTERS = ["owned", "final"]
+DEFAULT_CHAPTERS = ["owned", "final", "connect"]
 POLL_INTERVAL_S = 0.5
 BAKE_TIMEOUT_S = 90.0                      # how long to wait for a chapter's .done
 
