@@ -4442,6 +4442,306 @@
           }
         ]
       }
+    },
+    "inspire": {
+      "file": "inspire.bin",
+      "sha256": "604e3855456819136e7e24dd34021cb6a11f77895fdc2a4cfa8c5641a59e05e9",
+      "keys": [
+        {
+          "key": "inspire/srcFil0",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 0,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 6720,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 13440,
+              "byteLength": 2240,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/srcBeads0",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 15680,
+              "byteLength": 324,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 16004,
+              "byteLength": 324,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 16328,
+              "byteLength": 108,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/srcFil1",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 16436,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 23156,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 29876,
+              "byteLength": 2240,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/srcBeads1",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 32116,
+              "byteLength": 384,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 32500,
+              "byteLength": 384,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 32884,
+              "byteLength": 128,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/srcFil2",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 33012,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 39732,
+              "byteLength": 6720,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 46452,
+              "byteLength": 2240,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/srcBeads2",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 48692,
+              "byteLength": 288,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 48980,
+              "byteLength": 288,
+              "kind": "f32"
+            },
+            {
+              "name": "psize",
+              "itemSize": 1,
+              "byteOffset": 49268,
+              "byteLength": 96,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/wisps0",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 49364,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 52244,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 55124,
+              "byteLength": 960,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/wisps1",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 56084,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 58964,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 61844,
+              "byteLength": 960,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/wisps2",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 62804,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 65684,
+              "byteLength": 2880,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 68564,
+              "byteLength": 960,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/rimCurrents0",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 69524,
+              "byteLength": 2448,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 71972,
+              "byteLength": 2448,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 74420,
+              "byteLength": 816,
+              "kind": "f32"
+            }
+          ]
+        },
+        {
+          "key": "inspire/rimCurrents1",
+          "attrs": [
+            {
+              "name": "position",
+              "itemSize": 3,
+              "byteOffset": 75236,
+              "byteLength": 2448,
+              "kind": "f32"
+            },
+            {
+              "name": "color",
+              "itemSize": 3,
+              "byteOffset": 77684,
+              "byteLength": 2448,
+              "kind": "f32"
+            },
+            {
+              "name": "aProg",
+              "itemSize": 1,
+              "byteOffset": 80132,
+              "byteLength": 816,
+              "kind": "f32"
+            }
+          ]
+        }
+      ],
+      "payload": {
+        "counts": {
+          "sourceSegs": 840,
+          "wispSegs": 360,
+          "beads": 83,
+          "rimSegs": 204
+        }
+      }
     }
   }
 }
