@@ -327,9 +327,21 @@ function makeStrandMat(U) {
         // 0 past the hub — without this gate a base-departing pulse lit them
         // simultaneously at the FAR side of the stage (and the pulse term is
         // deliberately not tierBase-scaled, so it showed at full brightness).
-        // Pulses live on the route proper: primaries, spokes, knots (tier 0)
-        // and the fork-spill on secondaries (tier 1).
-        if (tier > 2.5) pulse = 0.0;
+        // Pulses live on the route proper: primaries (tier 0) and the
+        // fork-spill on secondaries (tier 1).
+        // ...AND NOT ON THE HUB CONVERGENCE (2026-08-17, Hannah: "weird white
+        // flash in the right bg sometimes"). Every spoke and knot segment
+        // carries rAlong = 1.0 exactly, so a landing pulse lit the WHOLE
+        // starburst simultaneously — dozens of overlapping additive segments
+        // at the hubs' raised brightness (1.5/1.6) through near-white uColHot,
+        // clamping and blooming into a white flash at the hub (measured at the
+        // Connect rest: right-bg px>200 count 307 -> 815 on the frame the
+        // Discord pulse landed). It is also the other half of the 2026-08-11
+        // "destinations hold STABLE" law: that pass held the core sprite
+        // still; the starburst now holds still with it. The travelling light
+        // on the strand remains the life, and it still visibly reaches the
+        // hub — the primaries' own braid runs to rAlong 1.0.
+        if (tier > 2.5 || tier < -0.5) pulse = 0.0;
 
         /* ---- exit convergence: energy drains home into the root ---- */
         float nearBase = exp(-along * 5.5);

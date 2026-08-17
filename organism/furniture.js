@@ -132,8 +132,21 @@ export function registerTrackers(ctx) {
       // and had NOT had it undone — that is what promoted the undo to scene
       // API. See organism.js's STEADY PROJECTION note.
       steadyProject(_trackV);
-      const sx = (_trackV.x * 0.5 + 0.5) * innerWidth;
-      const sy = (-_trackV.y * 0.5 + 0.5) * innerHeight;
+      let sx = (_trackV.x * 0.5 + 0.5) * innerWidth;
+      let sy = (-_trackV.y * 0.5 + 0.5) * innerHeight;
+      /* THE ARROW POINTS ON SCREEN AT EVERY SIZE (2026-08-17, Hannah).
+         The anchors are tuned per breakpoint MODE, but a mode covers a
+         RANGE of aspects and the plume anchors deliberately ride near the
+         frame's edge — at an aspect nobody sampled, a projected node (and
+         the ring that marks it) could slip past it. 14px = the ring's 11px
+         radius plus a breath, so the full ring stays visible. A no-op at
+         every tuned size (measured margins 22-59px); it exists for the
+         sizes nobody measured. The leader and tag re-derive from this same
+         transform (main.js railApply parses it), so the whole annotation
+         follows the clamped dot — nothing detaches. */
+      const m = 14;
+      if (sx > innerWidth - m) sx = innerWidth - m; else if (sx < m) sx = m;
+      if (sy > innerHeight - m) sy = innerHeight - m; else if (sy < m) sy = m;
       tr.el.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px)`;
       tr.el.style.visibility = _trackV.z < 1 ? 'visible' : 'hidden';
     }

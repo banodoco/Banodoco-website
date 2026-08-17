@@ -76,7 +76,7 @@ import {
   makeGlowTexture, makeStreakTexture,
 } from '../../anatomy.js';
 import { EXITS } from './anatomy.js';
-import { endOf, restProgress } from '../../route.js';
+import { endOf } from '../../route.js';
 import { createDial } from '../../dial.js';
 import { T_QA_ACTIVE, T_QS_VALUE, getTransformStorage, setTransformStorage } from '../../../flags.js';
 
@@ -109,7 +109,6 @@ const tmpC = new THREE.Color();
        rim-walks scale, never sever)         organism/spores.js (steer)
      - core-cohort scatter tightening (x T)  organism/spores.js (steer)
      - pearl brightness gain (x T, floored)  organism/spores.js (steer)
-     - core-ribbon opacity (x ribScaleOf(T): effectively gone < ~0.2)
      - furniture (source filaments, beads, wisps, rim currents) x T
      - shed hand-over dims (capsules / global / history) x T
      - residual coherence x T; streak x (STREAK_FLOOR + rest * T) — the
@@ -175,25 +174,8 @@ const T_STEP = 0.05;
 // streams' legibility lives in the lighting radii/gains in
 // organism/spores.js.)
 const STREAK_FLOOR = 0.25;
-// CORE RIBBONS — RETIRED (Hannah, 2026-08-06: "it looks like ARROWS ... the
-// arrows don't look like organic particles"). They were 648 drawn LineSegments
-// threading each braid at 0.53 opacity, and in the inspire golden they were the
-// long pale strokes arcing over the cap — the single loudest non-particulate
-// form in the frame, and a different substance from the warm dust the opening
-// view sheds. A continuous line cannot read as dust at any opacity, so this is
-// zero rather than a smaller number. The braid is carried by the dots alone,
-// which is what §3's one-population claim always said it was.
-const CORE_OPACITY = 0.0;
 // clamping/grid-snap now lives in ../../dial.js (createDial), which this
 // module's tDial instance owns — see the master TRANSFORM state block below.
-// ribbons: x T with an extra low-end gate so they are effectively gone below
-// ~0.2 (a designed continuous core is the strongest "different thing" read).
-// ribScaleOf(1) = 1 exactly; >= 0.3 it is plain T.
-const ribScaleOf = (t) => {
-  let x = (t - 0.08) / 0.22;
-  x = x < 0 ? 0 : x > 1 ? 1 : x;
-  return t * x * x * (3 - 2 * x);
-};
 
 // ---------- shared faint-line material (sources / wisps / cap flow) ----------
 function makeStrandMat(opacity, flow) {
@@ -303,7 +285,7 @@ export function createInspire(sceneApi) {
   const streakTex = makeStreakTexture();
   // counts.spores is gone with the GPU layer (final unification): the
   // chapter adds no particles of its own — the hero's 4,200 dots are it.
-  const counts = { sourceSegs: 0, wispSegs: 0, beads: 0, coreSegs: 0, rimSegs: 0 };
+  const counts = { sourceSegs: 0, wispSegs: 0, beads: 0, rimSegs: 0 };
 
   /* ---- master TRANSFORM state (see the block comment at module scope).
      Re-implemented on the taste-dial registry (../../dial.js, M5): SHIPPED
@@ -662,202 +644,8 @@ export function createInspire(sceneApi) {
         faint flow" idea is deferred until it can be stream-fed.
      ================================================================ */
 
-  /* ================================================================
-     4. (DELETED, final unification — Hannah, 2026-08-03 evening): the
-        5,100-spore GPU detail layer is GONE from the live path. Even
-        gated to the last ~2 degrees before the rest, its fade-in was
-        still a swap: the hero's real stream (4,200 takeover-steered
-        dots) crossfading into a second, visibly different stream —
-        different size cohorts, uHeatA/uHeatB palette, its own
-        knot-pearl cadence and sheath. "It stays in the same spot, but
-        it switches to a completely different stream." Per the merge
-        plan (15-merge-and-architecture.md section 3) the hero's own
-        dots now carry the stream from Mission through the rest,
-        permanently; the rest-pose richness is achieved by DECORATING
-        those same dots — the knot-pearl cadence rides the spore
-        system's per-dot brightness feed (organism/spores.js, full
-        strength, core cohort included) — never by replacing them.
-        The rest frame reads slightly sparser (4,200 vs 5,100):
-        sanctioned; compensated by pearl brightness and the ribbons.
-        The core ribbons (4b) STAY — they draw on visibly and swap
-        nothing — so the uniforms the two materials used to share are
-        now owned here, standalone.
-     ================================================================ */
   const uLean = { value: 1.0 };
-  const uRev = { value: new THREE.Vector3(0, 0, 0) };
   const uCoh = { value: new THREE.Vector3(0, 0, 0) };
-  const uDet = { value: new THREE.Vector3(0, 0, 0) };
-  const uKnot = { value: new THREE.Vector3(EXITS[0].knot, EXITS[1].knot, EXITS[2].knot) };
-  const uHeatA = { value: heat(0.55, new THREE.Color()).clone() };
-  const uHeatB = { value: heat(0.92, new THREE.Color()).clone() };
-
-  /* ================================================================
-     4b. CORE RIBBONS (W4-A gap a) — one live polyline per winding core
-         (3 strands x 3 plumes), evaluated in the vertex shader with the
-         SAME braid math and phases as the spores, so the line threads
-         exactly through its own particle strand. This is what closes
-         the definition gap to the approved still: a continuous sinuous
-         hot core with travelling knot pearls, inside the loose sheath.
-         One draw call; nothing touches the cap top.
-     ================================================================ */
-  const coreMat = new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: { value: 0 },
-      uLean,      // shared with the takeover's CPU port via setLeanScale,
-                  // or ribbon and converted-dot braid would split
-      // taste dial: driven per-frame as CORE_OPACITY * ribScaleOf(T)
-      uOpacity: { value: CORE_OPACITY },
-      uRev,       // reveal drives ribbon draw-on
-      uCoh,       // hover coherence
-      // D16 + final unification: uDet is the rest-proximity condensation
-      // gate. A continuous hot core igniting mid-orbit was self-ignition
-      // (the converted hero dots carry the braid alone through the orbit);
-      // det-gating makes the ribbon condense on the final approach as a
-      // sharpening of the already-visible, still-lit converted-dot braid —
-      // a growth, never a swap. (The GPU detail layer that used to fade in
-      // on this same gate is deleted; the ribbons are all uDet drives now.)
-      uDet,
-      uKnot,
-      // D17 re-axis: all three plumes ride the one breeze axis at full
-      // strength (1,1,1 = the mean of the dots' per-particle leanA jitter);
-      // spec.lean no longer scales the rise axis anywhere.
-      uLeanP: { value: new THREE.Vector3(1, 1, 1) },
-      uToneP: { value: new THREE.Vector3(EXITS[0].tone, EXITS[1].tone, EXITS[2].tone) },
-      uTrace: { value: 9.0 },
-      uTraceAmp: { value: new THREE.Vector3(0, 0, 0) },
-      uHeatA,
-      uHeatB,
-      fogNear: { value: FOG_NEAR },
-      fogFar: { value: FOG_FAR },
-    },
-    vertexShader: `
-      attribute float aH;     // 0..1 along the rise
-      attribute vec4 aCoreP;  // curl, strandPhase, plume, rise
-      attribute vec3 aRimC;   // rimR, rimY, az0
-      uniform float uTime;
-      uniform float uLean;
-      uniform vec3 uRev;
-      uniform vec3 uCoh;
-      uniform vec3 uDet;
-      uniform vec3 uKnot;
-      uniform vec3 uLeanP;
-      uniform vec3 uToneP;
-      uniform float uTrace;
-      uniform vec3 uTraceAmp;
-      varying float vBright;
-      varying float vTone;
-      varying float vFogDepth;
-      varying float vNear;
-      void main() {
-        float curl = aCoreP.x, sp = aCoreP.y, plume = aCoreP.z, rise = aCoreP.w;
-        float rimR = aRimC.x, rimY = aRimC.y, az0 = aRimC.z;
-        float rev  = plume < 0.5 ? uRev.x  : (plume < 1.5 ? uRev.y  : uRev.z);
-        float coh  = plume < 0.5 ? uCoh.x  : (plume < 1.5 ? uCoh.y  : uCoh.z);
-        float det  = plume < 0.5 ? uDet.x  : (plume < 1.5 ? uDet.y  : uDet.z);
-        float kg   = plume < 0.5 ? uKnot.x : (plume < 1.5 ? uKnot.y : uKnot.z);
-        float lnP  = plume < 0.5 ? uLeanP.x: (plume < 1.5 ? uLeanP.y: uLeanP.z);
-        float tone = plume < 0.5 ? uToneP.x: (plume < 1.5 ? uToneP.y: uToneP.z);
-        float tAmp = plume < 0.5 ? uTraceAmp.x : (plume < 1.5 ? uTraceAmp.y : uTraceAmp.z);
-        float settle = 1.0 - 0.4 * coh;
-        float h = aH;
-        // EXACT spore braid math (rise stage), time terms included, so the
-        // ribbon threads through its own particle strand frame by frame
-        float az = az0 + curl
-                 + (0.13 * sin(h * 5.1 + sp) + 0.07 * sin(h * 9.7 + sp * 2.3 + uTime * 0.21)) * settle;
-        float r = rimR + 0.05
-                + (0.10 * sin(h * 4.3 + sp * 1.7) + 0.05 * sin(uTime * 0.17 + sp * 2.3)) * settle
-                + h * 0.14;
-        float y = rimY + 0.10 + h * rise;
-        // D17 re-axis: linear in h along the breeze ratios — the ribbon
-        // threads the LEANED braid (same law as the converted dots)
-        float xL = uLean * lnP * h * rise * 1.6129;
-        float zL = uLean * lnP * h * rise * 0.27419;
-        vec3 p = vec3(cos(az) * r + xL, y, sin(az) * r + zL);
-        // knot cadence (same phase as the spores) + rise envelope
-        float kn = pow(0.5 + 0.5 * sin(h * 7.3 + sp * 1.9 - uTime * 0.55), 4.0) * kg;
-        float env = smoothstep(0.0, 0.05, h) * (1.0 - smoothstep(0.62, 1.0, pow(h, 1.18)));
-        // hover trace-back band, sweeping the core top -> rim
-        float band = exp(-pow((h - (1.0 - uTrace)) * 9.0, 2.0));
-        // one-population handoff: the continuous winding core is the MOST
-        // organized structure in the plume, so it condenses last — only once
-        // the reveal's second half has gathered the drift onto the braid.
-        // And it condenses as a draw-on GROWING UP from the rim (ride-through
-        // #2): a full-length ribbon fading in reads as a new spore source.
-        // Delta retime: on the MIGRATING plumes (Arca, 2RP) the ribbon starts
-        // condensing only at rev 0.62 — after their rim current has arrived
-        // (front completes at rev 0.55) — so no structure ever precedes the
-        // spores that feed it. At rev = 1 both gates are exactly 1 (approved
-        // rest look untouched).
-        float grow = smoothstep(mix(0.5, 0.62, step(0.5, plume)), 1.0, rev);
-        float lead = grow * 1.12;
-        float mg = grow * (1.0 - smoothstep(max(lead - 0.10, 0.0), lead + 0.001, h));
-        // det gate (D16): the ribbon exists only as part of the co-located
-        // rest-detail layer — exactly 1 at the settled rest, 0 mid-orbit.
-        vBright = env * rev * det * mg * ((0.30 + 0.85 * kn) * (1.0 + 0.6 * coh) + tAmp * band);
-        vTone = min(1.0, tone + 0.12 + 0.30 * kn);
-        vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        vFogDepth = -mv.z;
-        vNear = smoothstep(0.9, 1.9, length(mv.xyz));
-        gl_Position = projectionMatrix * mv;
-      }
-    `,
-    fragmentShader: `
-      uniform float uOpacity;
-      uniform float fogNear;
-      uniform float fogFar;
-      uniform vec3 uHeatA;
-      uniform vec3 uHeatB;
-      varying float vBright;
-      varying float vTone;
-      varying float vFogDepth;
-      varying float vNear;
-      void main() {
-        float fogF = clamp((fogFar - vFogDepth) / (fogFar - fogNear), 0.0, 1.0);
-        vec3 col = mix(uHeatA, uHeatB, vTone);
-        gl_FragColor = vec4(col * vBright * uOpacity * fogF * vNear, 1.0);
-      }
-    `,
-    blending: THREE.AdditiveBlending,
-    transparent: true,
-    depthWrite: false,
-  });
-  const coreLines = (() => {
-    const SEG = 72;
-    const hArr = [], cArr = [], rArr = [], pArr = [];
-    for (let pi = 0; pi < 3; pi++) {
-      const spec = EXITS[pi];
-      const rise = (spec.riseMin + spec.riseMax) / 2;
-      const rimR = rimRad(spec.az) + 0.08;               // mean of the spores' +0.03..0.13
-      const rimY = capUnderPt(1.0, spec.az).y + 0.01;    // mean of -0.02..+0.04
-      for (let s = 0; s < 3; s++) {
-        const curl = (s - 1) * 0.30;                     // quantized, like the spores
-        const sp = s * 2.094;
-        for (let i = 0; i < SEG; i++) {
-          for (const hh of [i / SEG, (i + 1) / SEG]) {
-            hArr.push(hh);
-            cArr.push(curl, sp, pi, rise);
-            rArr.push(rimR, rimY, spec.az);
-            pArr.push(0, 0, 0);                          // computed in-shader
-          }
-          counts.coreSegs = (counts.coreSegs || 0) + 1;
-        }
-      }
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pArr, 3));
-    g.setAttribute('aH', new THREE.Float32BufferAttribute(hArr, 1));
-    g.setAttribute('aCoreP', new THREE.Float32BufferAttribute(cArr, 4));
-    g.setAttribute('aRimC', new THREE.Float32BufferAttribute(rArr, 3));
-    const l = new THREE.LineSegments(g, coreMat);
-    l.frustumCulled = false;                             // positions live in the shader
-    // RETIRED with CORE_OPACITY (see its note): kept built but never drawn, so
-    // the trace-back uniform writes below stay valid and the ribbon is one
-    // constant away from returning if the dots ever need help again. Marking it
-    // invisible — not just transparent — is what actually drops the draw call.
-    l.visible = false;
-    group.add(l);
-    return l;
-  })();
 
   /* ================================================================
      5. ANAMORPHIC STREAK — ONE active exit only ([e] cycles)
@@ -943,6 +731,11 @@ export function createInspire(sceneApi) {
          on their own clocks — the marker is the one thing that holds.
          lipHolder mirrors group.visible every frame (animators still run
          under freezeTime), so the seam gate keeps working.
+         2026-08-16: the REVEAL paragraph above gained a third factor —
+         the ember is now furnOf x the landing cascade (5c below), so it
+         ignites at the landing, in the cascade's order, rather than
+         riding the orbit's furniture ramp alone. furnOf keeps its duty:
+         no ember before the current that feeds it.
      ================================================================ */
   const lipHolder = new THREE.Group();
   lipHolder.visible = false;
@@ -962,6 +755,68 @@ export function createInspire(sceneApi) {
     lipHolder.add(s);
     return { sprite: s, mat };
   });
+
+  /* ================================================================
+     5c. THE LANDING CASCADE (2026-08-16, Hannah: the three labels
+         "show up one at a time from left to right once the things
+         land", and the light edges "turn up one at a time in that
+         order too", timed with the intro).
+         WHAT: once the streams have landed AND the chapter's copy is
+         re-anchoring (the intro), the three lip embers ignite one at
+         a time in SCREEN order at the rest — Arca (left rim), then
+         ArtCompute (centre), then 2RP (right rim) — and each label
+         stands up with its own ember via nodeReveal below, exactly
+         the architecture Connect's chips got the same day ("the
+         labels should show up as soon as each light line
+         progresses"): the scene owns the cadence, the chips ride it,
+         and ui.js skips its 150 ms queue for reveal chips because
+         this cascade IS the stagger.
+         THE GATE is the chapter's eased copy opacity, bound by
+         journey.js (bindLandingGate -> ui.copyEase('inspire')) — the
+         one signal that already means "the intro is playing": it
+         waits for the camera to settle on a scroll arrival, rides
+         the armCopyEntry envelope on a nav jump, and releases the
+         moment travel begins, so the embers leave with the heading
+         rather than lingering on a moving frame. Unbound (QA
+         harnesses that build the chapter alone) it defaults to 1 and
+         the embers ride furnOf exactly as before this note.
+         WALL-CLOCK, DELIBERATELY — like the chips' own arrival
+         stagger and unlike every stream channel: the reveal-is-a-
+         position rule protects the TRANSFORMATION (per-dot state
+         that corrupts across direction reversals); the ember is a
+         stateless marker whose feed gate (furnOf, kept as a factor
+         below) is still pure in position, so no ember can ever light
+         before the current that feeds it arrives — lighting LATER
+         than the feed is the one direction no-self-ignition permits.
+         dt = 0 (placeAt / ?p= / captures) snaps a to its target like
+         the chips' h.a, so every frozen still is the settled frame.
+     ================================================================ */
+  const LAND_ORDER = [1, 0, 2];      // screen left -> right at the rest:
+                                     // Arca 6.98 (left rim), ArtCompute 5.83,
+                                     // 2RP 4.68 (right rim) — anatomy.js
+  const LAND_STAGGER_S = 0.38;       // one ember at a time, still one gesture
+  const LAND_IN_K = 5.0;             // ~0.2 s to 63% — an ignition, not a pop
+  const LAND_OUT_K = 9.0;            // leave with the copy (HOTSPOT_OUT_K pace)
+  const LAND_ON = 0.60;              // gate threshold: first ember ignites
+                                     // while the heading is still resolving —
+                                     // overlap reads as one intro, not a queue
+  const land = exits.map(() => ({ a: 0, at: null }));
+  let landGate = null;               // bound by journey.js; null = QA default 1
+  function driveLand(t, dt) {
+    const g = landGate ? landGate() : 1;
+    for (let s = 0; s < 3; s++) {
+      const L = land[LAND_ORDER[s]];
+      if (g > LAND_ON) {
+        if (L.at === null) L.at = t + s * LAND_STAGGER_S;
+        if (dt === 0) L.a = 1;
+        else if (t >= L.at) L.a += (1 - L.a) * Math.min(1, dt * LAND_IN_K);
+      } else {
+        L.at = null;
+        if (dt === 0) L.a = 0;
+        else { L.a += (0 - L.a) * Math.min(1, dt * LAND_OUT_K); if (L.a < 0.02) L.a = 0; }
+      }
+    }
+  }
 
   let active = -1;   // HOVER channel: set by the journey's hotspot proxies
   let selected = -1; // SELECTION channel (W4-E): the exit whose card is open
@@ -1029,24 +884,6 @@ export function createInspire(sceneApi) {
   // Hannah reported as "a lot of jankiness" (measured; the rest of that
   // hitch was first-use shader compilation, warmed in journey.js boot).
   if (sporeSeat.prime) sporeSeat.prime();
-  // Per-exit DETAIL fade — FINAL UNIFICATION (Hannah, 2026-08-03 evening):
-  // the 5,100-spore GPU layer this gate used to open is DELETED. Even with
-  // the rest-proximity gating the layer's late fade-in was a swap — the
-  // hero's real stream crossfading into a second, visibly different stream
-  // at the same spot. det survives as the CORE RIBBONS' condensation gate
-  // only: eff-saturation (resident by 0.80, migrants by 0.55) x rest
-  // proximity, so the ribbons sharpen the still-lit converted-dot braid on
-  // the final approach, growing bottom-up, and hand back first in reverse.
-  // The converted dots NO LONGER dim against det — they ARE the rest.
-  const det = [0, 0, 0];
-  let restProx = 0;
-  function computeDet() {
-    for (let i = 0; i < 3; i++) {
-      let x = (eff[i] - 0.85) / 0.145;
-      x = x < 0 ? 0 : x > 1 ? 1 : x;
-      det[i] = x * x * (3 - 2 * x) * restProx;
-    }
-  }
   // scratch for the history-dissolve gradient (ride-through #5)
   const _capC = new THREE.Vector3();
   const _grad = { sx: 0, sy: 0, sz: 0, d0: 1, d1: 3, k: 0 };
@@ -1286,12 +1123,6 @@ export function createInspire(sceneApi) {
       const m = Math.max(a, b, c, band);
       exits[0].target = m; exits[1].target = m; exits[2].target = m;
     },
-    /** Rest proximity 0..1 (pure in journey progress, set by driveInspire).
-     *  Final unification: with the GPU detail layer deleted this now gates
-     *  ONLY the core ribbons' condensation (uDet) — kept, not no-oped,
-     *  because the ribbons' draw-on belongs to the final approach exactly
-     *  as audited; journey.js's call site is unchanged. */
-    setRestProx(v) { restProx = v < 0 ? 0 : v > 1 ? 1 : v; },
     /** Jump the eased fades straight to their targets (review + QA helper —
      *  a hidden tab only runs frames during capture bursts). W4-A: also snaps
      *  coherence and the streak so a ?p= capture sees the settled frame. */
@@ -1301,6 +1132,13 @@ export function createInspire(sceneApi) {
       effActive = resolveActive();
       const T = tDial.value;        // taste dial: same scalings as the animator
       const stkScale = STREAK_FLOOR + (1 - STREAK_FLOOR) * T;
+      // landing cascade (5c): a frozen capture is a settled frame — every
+      // ember stands at its gate's own resolution, no clocks mid-flight
+      // (the animator's dt = 0 branch says the same thing).
+      {
+        const g = landGate ? landGate() : 1;
+        for (const L of land) { L.a = g > LAND_ON ? 1 : 0; L.at = null; }
+      }
       const c = uCoh.value;
       for (let i = 0; i < 3; i++) {
         c.setComponent(i, ((i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0)) * T);
@@ -1311,10 +1149,11 @@ export function createInspire(sceneApi) {
         // easing, so a law that lives in both places has to be changed in both.
         st.o = ((i === active || i === selected) ? 0.42 : 0) * furnOf(i) * stkScale;
         st.sprite.visible = st.o > 0.01;
-        // release-lip glow (5b): the SAME pure law as the animator — since
+        // release-lip glow (5b): the SAME law as the animator — since
         // 2026-08-11 literally the same expression (the animator's breathing
-        // multiplier is gone; the ember holds one level, see 5b).
-        const lo = 0.22 * furnOf(i) * T;
+        // multiplier is gone; the ember holds one level, see 5b). x land (5c):
+        // the ember belongs to the landing cascade now.
+        const lo = 0.22 * furnOf(i) * land[i].a * T;
         lipGlows[i].sprite.visible = lo > 0.01;
         lipGlows[i].mat.opacity = lo;
         for (const m of exits[i].mats) {
@@ -1331,10 +1170,6 @@ export function createInspire(sceneApi) {
       rimLinks[0].mat.uniforms.uFade.value = fA;
       rimLinks[1].mat.uniforms.uFade.value = fB;
       for (const l of rimLinks) l.mat.uniforms.uOpacity.value = l.mat.userData.baseOpacity * T;
-      coreMat.uniforms.uOpacity.value = CORE_OPACITY * ribScaleOf(T);
-      uRev.value.set(eff[0], eff[1], eff[2]);
-      computeDet();
-      uDet.value.set(det[0], det[1], det[2]);
       // takeover positions are pure in (eff, time): the next pumped frame's
       // animator applies them with no temporal easing, so a ?p= capture sees
       // the settled conversion.
@@ -1414,21 +1249,42 @@ export function createInspire(sceneApi) {
       exits[0].target = m * out0;
       exits[1].target = m * out1;
       exits[2].target = m * out2;
-      // Swarm isolation fix (2026-08-03): detail may only sharpen on the
-      // final approach to the rest (rest-0.025 -> rest-0.007, shipped
-      // 0.235->0.253) — through the whole orbit the hero's own converted
-      // dots carry the braids alone. Pure in p; reverse drops detail first,
-      // handing the braids back to the dots. Rides the SOURCE envelope
-      // (out0, the widest) now that the retire is per-exit.
-      api.setRestProx(smz((p - (restProgress('inspire') - 0.025)) / 0.018) * out0);
     },
     /** Node id -> world position of its label anchor: the lit release lip
      *  (the ce91bc2 ember), at its REST pose so the chip never rides the
-     *  wind — see the mushroomRestMatrix block above. */
+     *  wind — see the mushroomRestMatrix block above.
+     *
+     *  D22 CONSTELLATION NUDGE (2026-08-17, Hannah): 2RP's chip sat at the
+     *  outermost rim point, at the same screen height as the rail glyph —
+     *  it read as drifting toward the navigation rather than riding the
+     *  cap. Its LABEL anchor (chip + dot only — the ember, the streak and
+     *  the plume keep the true lip) pulls a step inward along the cap's
+     *  own curvature (horizontal shrink toward the stem axis, slight lift),
+     *  which keeps the dot inside the ember's ~90 px glow — the same
+     *  numbers game the rest-pose hold played (a ~25 px offset against a
+     *  bloom that size still reads as "on the lit edge"). The other two
+     *  chips are untouched: the constellation stays an organic arc, not a
+     *  re-arranged line. */
     nodeWorld(id) {
       const i = EXITS.findIndex(e => e.id === id || (id === 'tworp' && e.id === '2rp'));
       if (i < 0) return null;
-      return streaks[i].localPos.clone().applyMatrix4(mushroomRestMatrix());
+      const p = streaks[i].localPos.clone();
+      if (EXITS[i].id === '2rp') { p.x *= 0.90; p.z *= 0.90; p.y += 0.10; }
+      return p.applyMatrix4(mushroomRestMatrix());
+    },
+    /** The landing cascade's intro gate (5c). journey.js binds the chapter's
+     *  eased copy opacity here so the embers and labels arrive WITH the
+     *  intro; unbound, the cascade runs open (QA harnesses). */
+    bindLandingGate(fn) { landGate = typeof fn === 'function' ? fn : null; },
+    /** Per-node chip gate (5c) — the same product the node's own ember
+     *  rides (land x furnOf, both 0..1), so a label can never outrun the
+     *  lit edge it names: each chip stands up as its ember finishes
+     *  igniting, in the cascade's left-to-right order, and ui.js skips its
+     *  arrival stagger for reveal chips because this cadence IS the
+     *  stagger (the Connect precedent, 2026-08-16). */
+    nodeReveal(id) {
+      const i = EXITS.findIndex(e => e.id === id || (id === 'tworp' && e.id === '2rp'));
+      return i < 0 ? 0 : Math.min(land[i].a, furnOf(i));
     },
     /** Damp the breeze lean (1 = full). Spike A's director called this but
      *  plumes.js never exported it - a live TypeError in spike-a/, fixed here
@@ -1524,9 +1380,10 @@ export function createInspire(sceneApi) {
     // lagging behind it.
     for (const ex of exits) ex.fade = ex.target;
     // effective reveals: seam-gated fade x scroll-locked arrival ramp — the
-    // single value every visual channel (mats, uRev/morph, shed dim, streaks,
+    // single value every visual channel (mats, shed dim, streaks,
     // auto-active) reads from, so the whole handoff is continuous in p
     computeEff();
+    driveLand(t, dt);              // landing cascade clocks (5c)
     let anyVisible = false;
     effActive = resolveActive();
     // rim delta currents: guide strands extend with the walking spore front
@@ -1592,8 +1449,9 @@ export function createInspire(sceneApi) {
     // The 2026-08-06 trough (total luminance −30% mid-approach — "the
     // particles that are there before kind of disappear") came from dims
     // that LED the emphasis. These LAG it: k rides eff² x T, so the recede
-    // arrives after the lanes are already carrying light. globalK and grad
-    // stay 0. All channels are pure in (eff, T) — exactly reversible.
+    // arrives after the lanes are already carrying light. The whole-shed
+    // hand-over retired (2026-08-06); grad stays 0. All channels are pure
+    // in (eff, T) — exactly reversible.
     const mw = sceneApi.groups.mushroom.matrixWorld;
     // D27: with the release arc feeding all three corridors, the valleys
     // between the lit lanes are ambient dust at its own 0.6-0.9 luminance —
@@ -1619,7 +1477,6 @@ export function createInspire(sceneApi) {
       const smzl = ee < 0.55 ? 0 : ((ee - 0.55) / 0.45);
       rg.k = DIM_ROLE[rg.role] * (smzl * smzl * (3 - 2 * smzl)) * ee * T;
     }
-    const gk = 0;
     _capC.set(0, sceneApi.consts.CAP_Y, 0).applyMatrix4(mw);
     _grad.sx = _capC.x; _grad.sy = _capC.y; _grad.sz = _capC.z;
     _grad.d0 = sceneApi.consts.CAP_R * 1.2;
@@ -1636,22 +1493,15 @@ export function createInspire(sceneApi) {
     // system steers its own dots first, then its color pass reads the
     // per-dot feed. This animator runs after the organism's 'spore-drift',
     // which is the ordering the steering blend depends on.
-    computeDet();
-    uDet.value.set(det[0], det[1], det[2]);
     sporeSeat.drive({
       eff, time: t, matrixWorld: mw, leanScale: uLean.value, transform: T,
-      regions: shedRegions, globalK: gk, grad: _grad,
+      regions: shedRegions, grad: _grad,
     });
 
     group.visible = anyVisible;
     lipHolder.visible = anyVisible;   // the embers live outside the swaying
                                       // group (5b, held still) but keep its gate
     if (!anyVisible) return;
-    coreMat.uniforms.uTime.value = t;
-    // taste dial: ribbon opacity — effectively gone below T ~0.2, exactly
-    // the authored CORE_OPACITY at T = 1 (draw-on/det staging untouched)
-    coreMat.uniforms.uOpacity.value = CORE_OPACITY * ribScaleOf(T);
-    uRev.value.set(eff[0], eff[1], eff[2]);
     const c = uCoh.value;
     c.x += (cohTarget[0] - c.x) * k;
     c.y += (cohTarget[1] - c.y) * k;
@@ -1664,8 +1514,6 @@ export function createInspire(sceneApi) {
     if (active !== lastHover) { lastHover = active; traceStart = t; }
     const traceP = active >= 0 ? ((t - traceStart) % 2.6) / 1.7 : 9.0;
     const cohArr = [c.x, c.y, c.z];
-    const coreAmp = coreMat.uniforms.uTraceAmp.value;
-    coreMat.uniforms.uTrace.value = Math.min(traceP / 0.55, 9.0);
     for (let i = 0; i < 3; i++) {
       const on = i === active && traceP <= 1.0 + 0.35;
       const amp = on ? 2.2 * cohArr[i] : 0;
@@ -1677,7 +1525,6 @@ export function createInspire(sceneApi) {
         exits[i].srcMat.uniforms.uTrace.value = (traceP - 0.40) / 0.60;
         exits[i].srcMat.uniforms.uTraceAmp.value = amp;
       }
-      coreAmp.setComponent(i, on ? 1.6 * cohArr[i] : 0);
     }
 
     for (let i = 0; i < 3; i++) {
@@ -1701,17 +1548,18 @@ export function createInspire(sceneApi) {
       st.sprite.visible = st.o > 0.01;
       const w = 2.1 * (1 + 0.06 * Math.sin(t * 2.7 + i));
       st.sprite.scale.set(w, 0.17, 1);
-      // RELEASE-LIP GLOW (5b) — the three lit points on the edge. PURE in
-      // (eff, T), assigned directly: no first-order lag anywhere in this
-      // law, so the reverse scrub mirrors the forward one exactly (the
-      // reveal-is-a-position rule above). MUST stay identical to snap()'s
-      // copy of it — snap() is the frozen-capture / ?p= path. HELD STILL
-      // (2026-08-11): the old x(0.9 + 0.1 sin) breathing is gone — the
-      // ember is the marker and the marker holds one level; the shimmer
-      // stays with the braids and streams around it. Animator and snap()
-      // now compute the identical value.
+      // RELEASE-LIP GLOW (5b) — the three lit points on the edge. The
+      // position half of the law (furnOf) stays pure and lag-free, so the
+      // reverse scrub mirrors the forward one exactly (the reveal-is-a-
+      // position rule above); x land (5c) is the one sanctioned clock — the
+      // landing cascade, eased like the chips' own arrival and snapped at
+      // dt = 0. MUST stay identical to snap()'s copy of it — snap() is the
+      // frozen-capture / ?p= path. HELD STILL (2026-08-11): the old
+      // x(0.9 + 0.1 sin) breathing is gone — the ember is the marker and
+      // the marker holds one level; the shimmer stays with the braids and
+      // streams around it. Animator and snap() compute the identical value.
       const lg = lipGlows[i];
-      const lo = 0.22 * furnOf(i) * T;
+      const lo = 0.22 * furnOf(i) * land[i].a * T;
       lg.sprite.visible = lo > 0.01;
       lg.mat.opacity = lo;
     }

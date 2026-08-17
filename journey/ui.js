@@ -754,7 +754,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
    *  `labelOnHover` (optional) opts this node into the hover-only chip — see
    *  the LABEL POLICY note above; a chapter can set the same flag per node
    *  through its own `labelPolicy(id)`. */
-  function addHotspot({ id, chapter, label, world, labelOnHover, radius }) {
+  function addHotspot({ id, chapter, label, world, labelOnHover, radius, reveal }) {
     const stagger = hotspots.filter(h => h.chapter === chapter).length;
     const btn = el('button', 'j-hot');
     btn.type = 'button';
@@ -789,6 +789,16 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     const h = {
       id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false,
       radius: typeof radius === 'function' ? radius : null,
+      // Per-node scene gate (2026-08-16): when a chapter supplies one, this
+      // chip arrives with what the scene DRAWS for its node (Connect: the
+      // hub's own light landing) instead of with the chapter's eased copy.
+      // The copy band keeps only its close edge for these — see the gate in
+      // the placement loop.
+      reveal: typeof reveal === 'function' ? reveal : null,
+      // ...and the band that close edge is read from, built once — the
+      // placement loop runs per frame and COPY_BANDS never moves after load.
+      revealBand: COPY_BANDS[chapter]
+        ? { lo: -1, hi: COPY_BANDS[chapter].hi } : { lo: -1, hi: 2 },
       hitEl, hitR: 0, padLast: 0, dotEl, chipBare: false,
       holdAt: null,       // world anchor held still while hot — see holdAnchor()
       holdOff: null,      // ...decaying back to zero once it goes cold
@@ -1012,10 +1022,19 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
 
        · ENTER lights the colony immediately, unchanged. That is the answer
          to the hover and it stays instant and free.
-       · COMING TO REST on the crown commits the re-deal. Not a bare dwell —
-         `ZONE_STILL_MS` of no meaningful pointer movement, on top of a
-         `ZONE_DWELL_MS` floor since entry. A pointer travelling through is
-         never still; a pointer that stopped on the crown has chosen it.
+       · STAYING commits the re-deal, after `ZONE_DWELL_MS` inside the zone.
+         A pointer crossing the top of the page is gone long before that; a
+         pointer still on the crown has chosen it.
+
+         THE STILLNESS TEST WAS REMOVED (Hannah, 2026-08-16: the switcher
+         "doesn't seem to work consistently ... it should just be one hover per
+         switch"). It required 260 ms with under 3 px of movement, and 3 px is
+         less than a resting hand — so whether a hover committed depended on
+         how steady the visitor's grip was, which is exactly the inconsistency
+         she is describing. Worse, it fails SILENTLY: an unsteady pointer sits
+         on a lit crown while nothing happens, so the light says yes and the
+         field says no. A dwell floor alone rejects pass-throughs just as well
+         and has one outcome per visit that the visitor can predict.
        · A PRESS commits it at once, and that is the whole touch story: there
          is no hover on a finger, so a tap is enter+commit in one gesture —
          it fires the colony light itself and then the swap. The retired pill
@@ -1045,12 +1064,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
      sixteen contributors. Stacking is by explicit z-index, not DOM order, so
      moving it changes nothing about what paints over what.
      ========================================================================== */
-  /** Floor on time-inside before a resting pointer may commit. */
-  const ZONE_DWELL_MS = 380;
-  /** How long the pointer must have been STILL. A pass-through is never
-   *  still; 3 px of slack absorbs a hand that is merely resting on a mouse. */
-  const ZONE_STILL_MS = 260;
-  const ZONE_STILL_PX = 3;
+  /** Time inside the zone before a hover commits. The only test there is:
+   *  340 ms is longer than a pointer crossing the top of the frame on its way
+   *  somewhere else, and short enough that a visitor who meant it does not
+   *  wonder whether the control is broken. (Was 380 ms plus a stillness test;
+   *  see the note above for why the stillness half is gone.) */
+  const ZONE_DWELL_MS = 340;
   const zoneHost = el('div', 'j-hotzones');
   document.body.insertBefore(zoneHost, hotHost);
   const hoverZones = [];
@@ -1079,8 +1098,6 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       let busyTimer = null;
       let dwellTimer = null;
       let enteredAt = 0;
-      let stillSince = 0;
-      let lastX = 0, lastY = 0;
       let spent = false;              // one commit per visit — see above
       let lastPointerType = '';
 
@@ -1090,8 +1107,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
 
       function fire() {
         stopDwell();
-        spent = true;
+        // BUSY IS CHECKED BEFORE THE VISIT IS SPENT (2026-08-16). It used to
+        // spend first, so a hover arriving during the 1250 ms swap burned the
+        // visit and did nothing — the visitor then had to leave and come back
+        // to get any response at all, which read as the control ignoring them
+        // at random. Refusing without spending means the gesture simply has no
+        // effect while a swap is already running, which is the truth: a switch
+        // is in flight. Nothing reschedules, so this cannot fire late either.
         if (performance.now() < busyUntil) return;
+        spent = true;
         const res = act();
         // The chapter refuses while its own transition is running; that is
         // its call to make, and it is not an error.
@@ -1121,8 +1145,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       function watch() {
         dwellTimer = null;
         if (!z.hot || spent) return;
-        const now = performance.now();
-        if (now - enteredAt >= ZONE_DWELL_MS && now - stillSince >= ZONE_STILL_MS) {
+        if (performance.now() - enteredAt >= ZONE_DWELL_MS) {
           fire();
           return;
         }
@@ -1132,17 +1155,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       zEl.addEventListener('pointerenter', (e) => {
         if (e.pointerType === 'touch') return;
         light(true);
-        enteredAt = stillSince = performance.now();
-        lastX = e.clientX; lastY = e.clientY;
+        enteredAt = performance.now();
         spent = false;
         stopDwell();
         dwellTimer = setTimeout(watch, 90);
-      });
-      zEl.addEventListener('pointermove', (e) => {
-        if (e.pointerType === 'touch' || !z.hot) return;
-        if (Math.abs(e.clientX - lastX) + Math.abs(e.clientY - lastY) < ZONE_STILL_PX) return;
-        lastX = e.clientX; lastY = e.clientY;
-        stillSince = performance.now();
       });
       zEl.addEventListener('pointerleave', (e) => {
         if (e.pointerType === 'touch') return;
@@ -1159,6 +1175,14 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         // light from focus (below), so only touch needs this.
         if (lastPointerType === 'touch') { z.hot = false; light(true); }
         lastPointerType = '';
+        // ONE COMMIT PER VISIT INCLUDES THE CLICK (2026-08-16). This used to
+        // call fire() unconditionally, so a mouse visitor whose hover had
+        // already committed got a SECOND re-deal the moment they clicked the
+        // thing they were looking at — two swaps from one gesture, the
+        // "contradictory effects" in Hannah's report. `spent` is false on
+        // touch (no hover ever happened) and false for a keyboard press that
+        // did not dwell, so both of those still commit exactly once.
+        if (spent) return;
         fire();
       });
       // Focus is hover's equal (PL-2.2): the colony lights for a keyboard
@@ -2138,7 +2162,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // entry's is.
     const from = {};
     for (const k in easedPrev) if (k !== id) from[k] = easedPrev[k];
-    arrive = { id, t: 0, lead, dur, own: true, from };
+    arrive = { id, t: 0, lead, dur, own: true, from, play: 1 };
     const b = blocks[id];
     if (b) {
       // The parts inside the block run on the CSS clock, started here so they
@@ -2161,6 +2185,21 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
    *  are left to finish, because every one of them ends at its resting style
    *  and cutting them short is the only way to make them visible as a cut. */
   function cancelCopyEntry() { if (arrive) arrive.own = false; }
+
+  /** The wrap's lap has been steered (journey.js steerWrapBlend): the entry
+   *  runs on the same clock as the lap — armed on its frame, stepped by its
+   *  same dt — so it REVERSES with it rather than being dropped. Backwards,
+   *  the one envelope plays the whole handover in reverse: the arriving
+   *  block backs out along its own curve, the departed blocks rise home
+   *  along theirs, and both reach exactly the pre-wrap frame as the rewound
+   *  lap lands (the two clocks hit zero together, so the landing snap is a
+   *  no-op). Dropping it instead (cancelCopyEntry) hands opacity to the
+   *  scroll rule, and the scroll rule reads p — which a wrap parks at the
+   *  DESTINATION for the whole lap — so it painted the copy of the section
+   *  the camera was flying AWAY from and held it up through the entire
+   *  retrace (Hannah, 2026-08-16: "the text shows up even before I've
+   *  actually scrolled to that section, and then it stays"). */
+  function setCopyEntryPlay(play) { if (arrive) arrive.play = play < 0 ? -1 : 1; }
 
   /** The entry is over — spent, abandoned, or overtaken. Drops the class as
    *  well as the state: `both` fill means a stale `.j-arrive` would leave
@@ -2204,8 +2243,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     if (arrive) {
       if (dt === 0 || (chapterId !== arrive.id && arrive.own)) endArrive();
       else {
-        arrive.t += dt;
+        arrive.t += dt * (arrive.play || 1);
         if (arrive.t >= arrive.lead + arrive.dur) endArrive();
+        // ...or rewound past its own start (a steered wrap): the handover has
+        // fully unwound and the from-state is back on screen, so it retires
+        // there exactly as it retires at the other end.
+        else if (arrive.t <= 0) endArrive();
       }
     }
     // The camera blend runs on smootherstep (journey.js); the copy uses the
@@ -2273,7 +2316,21 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // on this frame, through the same jitter-free projection.
     frameGeom = { camera, tanHalf, viewDepth };
     for (const h of hotspots) {
-      const gate = eased[h.chapter] || 0;
+      /* A chip with its own `reveal` follows the SCENE, not the copy: the
+         chapter reports 0..1 for this node (Connect: the hub's own ignition,
+         pure in p, so a reverse scrub withdraws the label with its light) and
+         the chip stands up with it — mid-band, mid-scrub, long before the
+         copy re-anchors, which is exactly what the eased-copy gate exists to
+         prevent for resting-composition chips and exactly wrong for a label
+         naming an event the visitor is watching. The copy band keeps one
+         duty: its CLOSE edge (lo opened to the -1 sentinel) still takes the
+         chip down into the next chapter, so departure matches the copy-gated
+         chips' byte for byte. travelHold is deliberately absent from this
+         path — a label that waits for the wheel to stop has already missed
+         its light. */
+      const gate = h.reveal
+        ? Math.min(h.reveal(), bandOpacity(p, h.revealBand))
+        : (eased[h.chapter] || 0);
       let want = gate > 0.72 && !detail;
       let w = want ? h.world() : null;
       w = holdAnchor(h, w, dt);
@@ -2349,7 +2406,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
            placeable. Owned's sixteen come up together, which is also what the
            picture already does: the sixteen FACES are drawn by the chapter's
            own fade, all at once, and never were staggered. */
-        if (h.armAt === null) h.armAt = now + (h.labelOnHover ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
+        // A `reveal` chip is likewise not in the queue: its cadence is the
+        // scene's own (Connect's lights land seconds apart), and 150 ms of
+        // stagger on top of that is noise — worse, it is ORDERED by
+        // registration (importance), which is not the order the lights land.
+        if (h.armAt === null) h.armAt = now + ((h.labelOnHover || h.reveal) ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
         if (dt === 0) h.a = 1;
         else if (now >= h.armAt) h.a += (1 - h.a) * Math.min(1, dt * HOTSPOT_IN_K);
         // Edge flip: the pill normally runs RIGHT of the dot, so a node near
@@ -2600,7 +2661,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
 
   return {
     update, addHotspot, addHoverZone, openCard, closeCard, rail,
-    armCopyEntry, cancelCopyEntry,
+    armCopyEntry, cancelCopyEntry, setCopyEntryPlay,
+    /** A chapter's live eased copy opacity (0..1) — the one signal that
+     *  means "the intro is playing": settle-gated on a scroll arrival, the
+     *  armCopyEntry envelope on a nav jump, fast release when travel
+     *  begins. Read by journey.js as Inspire's landing-cascade gate (the
+     *  chapter's 5c block), never written from outside. */
+    copyEase: (id) => eased[id] || 0,
     /** QA: the chapter whose copy is mid-entry, or null. */
     get arrivingChapter() { return arrive ? arrive.id : null; },
     get cardOpen() { return cardIsOpen; },

@@ -139,7 +139,19 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // DOWN the frame: 463.3 -> 511.7 at 1440x900, recovering 48 of the 170 px D19
 // spent, and the lower-band mean luminance falls 24.80 -> 24.62. Light lost
 // off the top edge falls with it (mean of rows 0-3: 18.39 -> 16.63).
-export const INSPIRE = { az: 115 * DEG, r: 11, y: 2, target: V(2.3371, 2.4199, -1.1052), fov: 40 };
+// D22 OFF-AXIS REST (2026-08-17, Hannah's balance pass): the cap comes off the
+// copy's centreline by ~2% of frame width — enough that the mushroom and the
+// centred type stop reading as one machined stack, not enough to register as
+// an offset. Same lever as D19/D21 (gaze only; az/r/y and every reveal input
+// untouched): the target pans LEFT along view-right by 0.196 u, which is
+// 2% of the frame's width at the subject's depth (width = 2 d tan(hfov/2) =
+// 9.81 u, d 8.43, fov 40, aspect 1.6), so the subject slides RIGHT by the
+// same fraction. view-right at this pose is (-0.4211, 0, -0.9070).
+// Portrait does NOT inherit this: the phone poses were centred by measure
+// (the D19/D21 balance solves), so portrait.js's inspire key adds the same
+// 0.196 back along view-right (tgtRight 0.258 -> 0.454) and the tall frames
+// keep their solved centring.
+export const INSPIRE = { az: 115 * DEG, r: 11, y: 2, target: V(2.4196, 2.4199, -0.9274), fov: 40 };
 
 // The gaze's mid-swing waypoint (was the old "early pin" target): the cap,
 // biased a touch toward the stream side so the visible plume never leaves
@@ -347,6 +359,6 @@ export const CAMERA = {
   // and the gesture's departure, and any disagreement between the three
   // parameterisations is a hard cut at the seam (the D18 lesson above).
   keys: [
-    { t: 0.5,                pos: V(9.9694, 2.0000, -4.6488), tgt: V(2.3371, 2.4199, -1.1052), fov: 40,    hold: true, note: 'inspire-rest' },  // p 0.260  az 115.0  d 8.43  dx  -0.10  dy +3.11
+    { t: 0.5,                pos: V(9.9694, 2.0000, -4.6488), tgt: V(2.4196, 2.4199, -0.9274), fov: 40,    hold: true, note: 'inspire-rest' },  // p 0.260  az 115.0  d 8.43  D22 gaze (must equal INSPIRE.target — the D18 seam lesson)
   ],
 };

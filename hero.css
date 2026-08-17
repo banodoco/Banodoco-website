@@ -655,7 +655,8 @@
     width: 5px; height: 5px;
     margin: -2.5px 0 0 -2.5px;
     border-radius: 50%;
-    background: rgba(240, 200, 119, 0.55);
+    background: rgba(240, 200, 119, 0.72);
+    box-shadow: 0 0 6px rgba(240, 190, 90, 0.35);
     transition: background 0.3s, box-shadow 0.45s;
   }
   .co .ring {
@@ -668,7 +669,6 @@
     transform: scale(0.4);
     transition: opacity 0.35s, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .co svg.alt, .co svg.tall { display: none; }
   .co svg {
     position: absolute;
     top: 0; left: 0;
@@ -677,7 +677,7 @@
   }
   .co .lead {
     fill: none;
-    stroke: rgba(217, 164, 65, 0.30);
+    stroke: rgba(226, 178, 84, 0.48);
     stroke-width: 1;
     transition: stroke 0.45s;
   }
@@ -690,11 +690,16 @@
     filter: drop-shadow(0 0 4px rgba(240, 190, 90, 0.8));
     transition: stroke-dashoffset 0.45s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  /* Tags are ONE typographic system (2026-08-16): right-aligned rows on a
+     shared right rail (layoutRail() in main.js pins every tag's right edge
+     to the nav content inset). No visible box — a localized dark vignette
+     (::before) sits behind each label so it stays legible over particles
+     and the bright root network without reading as UI chrome. */
   .co .tag {
     position: absolute;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: flex-end;
     pointer-events: auto;
     padding: 0.5rem 0.7rem;
     text-decoration: none;
@@ -702,11 +707,24 @@
     font-weight: 600;
     letter-spacing: 0.3em;
     white-space: nowrap;
-    color: rgba(201, 191, 168, 0.48);
-    background: rgba(12, 8, 3, 0.22);
+    color: rgba(206, 196, 172, 0.62);
     border-radius: 2px;
     text-shadow: 0 1px 10px rgba(10, 6, 2, 0.9);
     transition: color 0.4s, letter-spacing 0.4s, text-shadow 0.4s;
+  }
+  .co .tag::before {
+    content: '';
+    position: absolute;
+    inset: -30px -44px;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(closest-side,
+      rgba(9, 6, 2, 0.62),
+      rgba(9, 6, 2, 0.34) 55%,
+      transparent 100%);
+    opacity: 0.75;
+    transition: opacity 0.4s;
   }
   .co .tag .row {
     display: flex;
@@ -754,10 +772,10 @@
   .co:is(:hover, .force) .lead { stroke: rgba(217, 164, 65, 0.5); }
   .co:is(:hover, .force) .tag {
     color: var(--gold-bright);
-    background: rgba(18, 12, 4, 0.55);
     letter-spacing: 0.34em;
     text-shadow: 0 0 12px rgba(240, 190, 90, 0.55);
   }
+  .co:is(:hover, .force) .tag::before { opacity: 1; }
   .co:is(:hover, .force) .tag .no { color: rgba(240, 200, 119, 0.85); }
   .co:is(:hover, .force) .ck {
     opacity: 1;
@@ -790,31 +808,16 @@
     transition-delay: 0.1s;
   }
 
-  /* per-callout leader geometry: where the tag sits relative to the node.
-     The set hangs down the RIGHT side of the frame (Hannah, 2026-08-11) —
-     one descending column: 01 at the plume, 02 off the stem, 03 at the
-     ground, every leader an elbow in the old drawn-instrument language
-     (short diagonal off the node, then a horizontal run into the tag).
-     EQUIP and CONNECT read right-out of their nodes; INSPIRE's node
-     already sits at the frame's right edge, so its elbow reaches back
-     inward — same vocabulary, and the tag stays inside the rail's band.
-     EQUIP is TOP-anchored (no translateY) so its "coming soon" reveal
-     drops below the row instead of shoving the label off the leader.
-     Base shapes are the SMALL-frame ones (mobile portrait + compact
-     landscape); the desktop block below swaps INSPIRE's longer reach. */
-  #co-connect .tag { left: 76px;  top: -24px; transform: translateY(-50%); }
-  #co-inspire .tag { left: -76px; top: -70px; transform: translate(-100%, -50%); }
-  #co-equip   .tag { left: 146px; top: -28px; }
-
-  /* desktop has the headroom for a longer reach, which lifts the INSPIRE
-     label clear of the cap rim while its node stays out in the plume.
-     AFTER the base rules on purpose: same specificity, source order is
-     what lets this one win. */
-  @media (min-width: 901px) and (min-height: 561px) {
-    #co-inspire svg.std { display: none; }
-    #co-inspire svg.tall { display: block; }
-    #co-inspire .tag { left: -106px; top: -52px; } /* 6px shy of the leader's reach */
-  }
+  /* per-callout leader geometry RETIRED (2026-08-16): the tag offsets and
+     the std/alt/tall leader variants that used to live here (and in the
+     mobile / short-height blocks below) were hand-tuned per breakpoint,
+     which is exactly why the three labels never shared an edge or a
+     rhythm. layoutRail() in main.js now owns ALL of it — it pins every
+     tag's right edge to one shared rail (the nav content inset), floats
+     each label into the dark band above its node, and routes each leader
+     node -> 45° diagonal -> horizontal run into the label. The hero
+     camera is bit-exact static (see organism/furniture.js), so this is a
+     resize-time computation, not a per-frame one. */
 
   /* --- touch affordance: no hover on touch devices, so idle state gets a
      visibility boost and taps toggle the lit state via JS (.force class) --- */
@@ -830,7 +833,11 @@
   @media (max-width: 900px) and (orientation: portrait) {
     .hero {
       justify-content: flex-start;
-      padding: 6vh 7vw 0;
+      /* 6vh -> 4vh (2026-08-17, Hannah's label-visibility pass): at 768x1024
+         the CTA's right end kissed the cap's left rim. ~20px of lift clears
+         it; the phone block below still owns its own 5vh, so only the tablet
+         band moves. */
+      padding: 4vh 7vw 0;
       max-width: none;
     }
     h1 { font-size: clamp(2.1rem, 6.2vw, 3.4rem); }
@@ -851,6 +858,26 @@
       background: radial-gradient(ellipse 90% 50% at 50% 62%, rgba(255, 190, 95, 0.07), transparent 70%);
     }
     nav { padding: 1.6rem 7vw; }
+    /* THE CTA LEAVES EVERY PORTRAIT FRAME (2026-08-17, Hannah: "the way on
+       mobile we hide the main button and centre align the mushroom with the
+       labels — do the same on tablet"). Same reasoning as the phone pass:
+       the journey keeps three doors (scroll, the rail's tiles, the callout
+       tags' tap-to-travel in main.js), and the freed band lets the
+       specimen+labels ensemble centre as one composition (VIEWS.tablet /
+       RAIL.tablet in main.js carry the tablet half of that pass). */
+    .cta { display: none; }
+    .cta-full { display: none; }
+    .cta-short { display: inline; }
+    /* THE COPY JOINS THE AXIS (2026-08-17, Hannah: "what about centreing the
+       text?"): with the specimen+labels ensemble centred and the CTA gone,
+       the left-set copy was the last asymmetric element on a symmetric
+       frame. Centring it puts headline, sub, cap, stem and root glow on one
+       vertical axis — the four-line headline rags symmetrically and the
+       italic "thrive." closes the block. Portrait frames only: desktop and
+       landscape keep the side-by-side composition, where left-set text IS
+       the design. */
+    .hero { text-align: center; }
+    h1, .sub { margin-left: auto; margin-right: auto; }
   }
 
   /* ============================================================
@@ -883,36 +910,32 @@
     .pill-ic { width: 22px; height: 28.44px; padding: 0; }
     .pill-ic svg { width: 22px; }
     .pill-ic svg path { stroke-width: 0.9; }
-    .hero { padding: 5vh 7vw 0; }
+    /* 5vh -> 7vh (2026-08-17, Hannah's vertical rebalance): with the CTA
+       gone the copy ended ~100px above the cap while sitting only ~40px
+       under the nav. The copy drops ~16px and the camera lifts the specimen
+       ~20px (viewFor in main.js), which splits the frame's air roughly
+       evenly above and below the text block. */
+    .hero { padding: 7vh 7vw 0; }
     h1 { font-size: clamp(1.7rem, 7.2vw, 2.5rem); margin-bottom: 1.1rem; }
     .sub { font-size: 0.98rem; margin-bottom: 1.8rem; }
-    .cta { font-size: 0.74rem; padding: 0.9rem 1.5rem; }
-    .cta-full { display: none; }
-    .cta-short { display: inline; }
+    /* THE CTA LEAVES THE PHONE FRAME (2026-08-17, Hannah: "just remove the
+       explore button on mobile"; later the same day the tablet joined it —
+       the hide now lives in the ≤900 portrait block above, which covers
+       this one too). */
 
     .co { transform: scale(0.88); transform-origin: 0 0; }
     .co .tag { font-size: 0.6rem; }
-
-    /* CONNECT and EQUIP swap to shorter elbows here — same right-hanging
-       pattern as the base rules, compressed so neither tag leaves the
-       frame or wanders into the rail's band on a 375px screen */
-    #co-connect svg.std { display: none; }
-    #co-connect svg.alt { display: block; }
-    #co-connect .tag { left: 54px; top: -16px; }
-    #co-equip svg.std { display: none; }
-    #co-equip svg.alt { display: block; }
-    #co-equip .tag { left: 46px; top: -43px; }
+    /* leader/tag geometry: layoutRail() in main.js (rail rises are
+       per-mode there; it divides out this 0.88 scale) */
 
     /* small or short phones: tighten the text stack */
     @media (max-height: 700px) {
       nav { padding: 1rem 6vw; }
-      .hero { padding-top: 3vh; }
+      /* 3vh -> 4.5vh: the same rebalance, scaled for the short frame */
+      .hero { padding-top: 4.5vh; }
       h1 { font-size: clamp(1.45rem, 6.6vw, 2rem); margin-bottom: 0.85rem; }
       .sub { font-size: 0.88rem; margin-bottom: 1.3rem; line-height: 1.5; }
-      .cta { font-size: 0.7rem; padding: 0.75rem 1.25rem; }
     }
-
-    /* INSPIRE already carries the small-frame steep elbow (see base rule) */
   }
 
   /* ============================================================
@@ -925,18 +948,9 @@
     .sub { margin-bottom: 1.3rem; font-size: 0.95rem; }
     .cta { padding: 0.8rem 1.4rem; }
     .hero { padding-bottom: 5vh; }
-
-    /* EQUIP's and CONNECT's nodes sit only ~40px apart in this squashed
-       frame, so the full-reach elbows stack their tags into one accidental
-       two-row block. Swap both to the short elbows — EQUIP's rises, CONNECT's
-       stays low — so the pair separates vertically (and EQUIP's "coming
-       soon" reveal has room to drop without touching CONNECT). */
-    #co-equip svg.std { display: none; }
-    #co-equip svg.alt { display: block; }
-    #co-equip .tag { left: 46px; top: -44px; }
-    #co-connect svg.std { display: none; }
-    #co-connect svg.alt { display: block; }
-    #co-connect .tag { left: 54px; top: -16px; }
+    /* leader/tag geometry: layoutRail() in main.js (compact rises are
+       shorter there so EQUIP and CONNECT — whose nodes sit only ~40px
+       apart in this squashed frame — still separate vertically) */
   }
 
   /* ============================================================
@@ -978,6 +992,24 @@
        simply enforced in one place instead of two. */
     .pill, .cta { position: relative; }
     .pill::before, .cta::before {
+      content: "";
+      position: absolute;
+      left: 50%; top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+      background: none;          /* hit area only: it must never paint */
+      pointer-events: auto;
+    }
+    /* THE CALLOUT TAGS JOIN PL-1.4 (2026-08-17, Hannah's tap-gesture pass):
+       the three world-tracked tags were never brought under the rule — a
+       ~24px-tall box on the control that now carries tap-to-light and
+       tap-again-to-travel (main.js). ::before is taken by the tag's
+       legibility vignette, so the pad rides ::after. Same recipe otherwise:
+       centred, sized to max(box, 44px), paints nothing, moves no layout
+       edge — the leader geometry (layoutRail) reads the tag's own box and
+       cannot see this. */
+    .co .tag::after {
       content: "";
       position: absolute;
       left: 50%; top: 50%;

@@ -108,11 +108,15 @@
 // p = 0 AND THE MISSION REFERENCE
 // ===========================================================================
 // The rail is invisible at the Mission pose and fades in with the first
-// travel, so static/captures/mission@* does not move. The reveal LATCHES
-// (returning to p = 0 keeps the rail), and the rail is NOT inert at p = 0 —
-// its own `:focus-within` brings it up, so the first Tab lands on something
-// that is on screen by the time it is focused. Both decisions carried over
-// from the first build; the reasoning lives in 23-side-navigator.md §9.
+// travel, so static/captures/mission@* does not move. The reveal used to
+// LATCH (returning to p = 0 kept the rail); since 2026-08-17 it RELEASES
+// instead — riding back into the Mission pose puts the rail out again,
+// UNLESS the pointer is on the control, the fan is open, or the menu is up
+// (Hannah: "make it so that disappears when I reenter the top section unless
+// I'm hovering over it"). The rail is still NOT inert at p = 0 — its own
+// `:focus-within` brings it up, so the first Tab lands on something that is
+// on screen by the time it is focused (23-side-navigator.md §9), and
+// `expanded()` covers that focus in the release rule too.
 
 import { CONTENT } from '../content/content.js';
 import { CHAPTERS, chapterAt } from './route.js';
@@ -684,6 +688,13 @@ export function createRail({ onNav } = {}) {
   let swallowClick = false;
   let hotOpen = false;
   let hotTimer = 0;
+  /* The pointer is ON the control right now — tracked on the same enter/leave
+     pair that arms and folds the fan, so its truth is the fan's own. It is
+     wider than `hotOpen` (true through the dwell, and on the resting button
+     with no fan up at all) and it is what the reveal's release rule reads:
+     a rail the visitor is touching must not go out under their hand. */
+  let hovering = false;
+  let formTimer = 0;
 
   function expanded() {
     return touchOpen || hotOpen || !!root.querySelector(':focus-visible');
@@ -747,6 +758,15 @@ export function createRail({ onNav } = {}) {
   // The whole control opens the ring — but only the list does on the column
   // fallback, whose button still slides. See EXPANSION above.
   const hotZone = isColumn ? list : inner;
+  // Entering the CONTROL (not just the hot zone — on the column the two
+  // differ) marks the pointer as on it, and seeds `lastPt`: the dwell can
+  // open the fan without a single further pointermove, and syncAt needs a
+  // position to resolve from when it does.
+  inner.addEventListener('pointerenter', (e) => {
+    if (e.pointerType === 'touch') return;
+    hovering = true;
+    lastPt = { x: e.clientX, y: e.clientY };
+  });
   hotZone.addEventListener('pointerenter', (e) => {
     if (e.pointerType === 'touch' || hotOpen) return;
     // Dwell before unfolding — see the header note. A pointer that is only
@@ -756,6 +776,20 @@ export function createRail({ onNav } = {}) {
       hotOpen = true;
       root.classList.add('j-rail-hot');
       announceOpen();
+      /* THE FAN HAS OPENED UNDER A POINTER THAT MAY NEVER MOVE AGAIN. The
+         dwell is a timer, not an event: nothing re-resolves `.at` when it
+         fires, and `:hover` is not re-hit-tested for marks that arrive by
+         transform (THE POINTER'S OWN TRUTH below). So a mark the visitor had
+         moved onto mid-formation showed no hovered state until the mouse
+         moved again (Hannah, 2026-08-17). Resolve it when the formation has
+         landed — the same settle the turn already performs; the formation is
+         the fold run forward, so it shares the fold's length. NOT on the
+         open's first frame: every mark is still stacked on the hub there,
+         and elementFromPoint would tag whichever of them is topmost under a
+         pointer that is actually on the button (measured — the Epilogue's
+         pill flashed on every dwell). */
+      clearTimeout(formTimer);
+      formTimer = setTimeout(syncAt, FOLD_HOME_MS);
     }, HOT_INTENT_MS);
   });
   hotZone.addEventListener('pointerleave', (e) => {
@@ -767,7 +801,9 @@ export function createRail({ onNav } = {}) {
   // unfold, the control folds an open one.)
   inner.addEventListener('pointerleave', (e) => {
     if (e.pointerType === 'touch') return;
+    hovering = false;
     clearTimeout(hotTimer);
+    clearTimeout(formTimer);
     lastPt = null;
     syncAt();
     if (!hotOpen) return;
@@ -1047,7 +1083,7 @@ export function createRail({ onNav } = {}) {
   /* ------------------------------------------------------------------ */
   /* PER FRAME                                                           */
   /* ------------------------------------------------------------------ */
-  let revealed = false;          // the one-way latch — see the header note
+  let revealed = false;          // the releasing reveal — see the header note
   let shown = null;
   let nowId = null;
   let activeId = null;
@@ -1231,6 +1267,12 @@ export function createRail({ onNav } = {}) {
 
   function update(p, { modalDetail = false } = {}) {
     if (p > SHOW_P) revealed = true;
+    /* …and the Mission pose takes it back (Hannah, 2026-08-17 — see the
+       header note). Not while anything holds the control live: the pointer
+       on it, the fan open, focus inside it (`expanded()` carries all three),
+       or the menu standing in front of it. Read per frame, so letting go of
+       the rail at the top is itself the moment it goes out. */
+    else if (revealed && !hovering && !expanded() && !menuIsOpen) revealed = false;
 
     const show = revealed;
     if (show !== shown) { root.classList.toggle('on', show); shown = show; }

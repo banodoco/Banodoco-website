@@ -889,6 +889,29 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-block.pos-left       { left: 5.2vw; top: 50%; transform: translateY(-50%); }
   .j-block.pos-bottom     { left: 50%; bottom: 8vh; transform: translateX(-50%); text-align: center; }
   .j-block.pos-bottom .j-sub { margin: 0 auto; }
+  /* D22 (2026-08-17, Hannah's balance pass): the Inspire copy steps up out of
+     the ground network's brightest band — the block used to sit with the
+     headline right where the floor detail begins to read. ~40px on desktop
+     (judged on the rendered 1440x900 frame, not computed), and further on a
+     portrait tablet, where the same pass drops the mushroom ~46px and grows
+     it ~13% (portrait.js tablet band) so the stack closes from both ends:
+     mushroom -> headline -> body -> ground. PHONES ARE EXEMPT on purpose —
+     the D19/D21 phone poses balanced the cap against the copy band midpoint
+     by measure, and a raise here would silently un-solve them; hence the
+     min-width guards. The short-landscape override later in this file
+     (max-height 520) still wins for squat windows: same specificity, later
+     rule. */
+  @media (min-width: 901px) {
+    .j-block.pos-bottom { bottom: calc(8vh + 40px); }
+  }
+  @media (min-width: 600px) and (max-width: 900px) and (orientation: portrait) {
+    .j-block.pos-bottom { bottom: calc(8vh + 88px); }
+    /* the same tablet pass grows the mushroom ~13%; the initiative chips keep
+       pace so the constellation reads as one ring of callouts rather than
+       three small floating tags (Hannah's tablet note E). The pill measures
+       itself at runtime (ui.js pillW), so a media-scoped size is safe. */
+    .j-hot { font-size: 0.7rem; }
+  }
   .j-block.pos-topcentre  { left: 50%; top: 15vh; transform: translateX(-50%); text-align: center; }
   /* Owned's sub is centred prose now rather than a centred list, so it needs
      the same auto margins the other centred position gives its sub. */
@@ -1224,6 +1247,21 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        puts it back, visually, without touching the layout. */
     transform: translateY(var(--j-dot-dy, 0px));
     transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
+  }
+  /* SMALL-FRAME CONTRAST (2026-08-17, Hannah's label-visibility pass): on
+     phones — both orientations — the cap fills most of the frame, so the
+     Inspire exit labels (Arca Gidan Prize / ArtCompute) land ON the bright
+     cap wireframe instead of against dark sky as at desktop. The rest tint
+     and wash below were tuned against the sky; over the lattice they go
+     thin. Deeper wash + brighter ink only where the framing forces the
+     overlap; the desktop cascade is untouched. Same phone conditions as the
+     PL-1.4 touch block (max-width) plus the short-landscape frame hero.css
+     compresses (max-height). */
+  @media (max-width: 720px), (max-height: 560px) {
+    .j-hot {
+      background: rgba(12, 8, 3, 0.55);
+      color: rgba(216, 207, 185, 0.92);
+    }
   }
   .j-hot:is(:hover, .hot, :focus-visible) { color: var(--gold-bright); background: rgba(18, 12, 4, 0.6); }
   .j-hot:is(:hover, .hot, :focus-visible) .j-hot-dot {
@@ -2648,6 +2686,22 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       .j-rail-slot.at .j-rail-item .j-rail-name {
       opacity: 1;
       letter-spacing: 0.24em;
+    }
+    /* …AND SO DOES THE COLOUR LIFT (Hannah, 2026-08-17: "it doesn't go into
+       proper hovered mode until I move the mouse"). The lift lived on
+       `:hover` alone, and `:hover` has the exact fault the name rules above
+       are built around: it is only recomputed from a pointer EVENT, so a
+       mark arriving under a stationary cursor — the dwell opening the fan,
+       a turn settling — stayed unlit until the mouse moved. `.at` is the
+       resolved truth of the same question, so the lift follows it with the
+       same values as the `:hover` rules at PL-2.2 above. Echo included: it
+       answers `.at` exactly as it answers a hover, because it takes a click. */
+    .j-rail:not(.j-rail-column) .j-rail-slot.at .j-rail-item { color: var(--parchment); }
+    .j-rail:not(.j-rail-column) .j-rail-slot.at:is(.active, .now) .j-rail-item {
+      color: var(--gold-bright);
+    }
+    .j-rail:not(.j-rail-column) .j-rail-echo.at:not(.now) .j-rail-item {
+      color: var(--parchment);
     }
     /* …and the names go out entirely while the moon turns (rail.js, THE NAMES
        SIT OUT THE TURN). Not a fade: it is a label that has stopped being

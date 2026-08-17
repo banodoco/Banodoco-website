@@ -115,6 +115,24 @@ export const STALL_MAX_MS     = 400;   // ...and past this it is a stopped tab, 
 // gesture's momentum tail decays; a resolution that opposes the visitor waits
 // out SNAP_ENGAGE_MS, because a reversal has nothing to continue. Scrubbing
 // itself is untouched and stays exact. See scroll.js `update`.
+// Travelling BACKWARD, the position rule's 35%-of-the-road ask is additionally
+// capped at this many viewport heights of absolute scrolling (2026-08-17,
+// Hannah: "it waits for those 3 animations (the ground ones) to play out
+// before going properly"). The fraction is already direction-fair in px
+// (pickTarget, 2026-08-11) — but fair shares of a huge road are still huge:
+// the Inspire<->Connect leg owns ~14.7 vh, so 35% asked ~4,600 px of wheel,
+// and a measured ten-notch backward ride from the Connect rest (1,200 px of
+// deliberate scrolling, the three ground lights un-playing one by one) was
+// still answered with a glide BACK to Connect. Forward that road is the
+// content being read — the ground-light reveal plays under the finger, and a
+// real departure is a flick the stream rule carries anyway. Backward nothing
+// plays (lights un-play by position wherever the camera is), so past a firm
+// pull's worth of road the grind measures nothing but patience. ~0.9 of a
+// viewport — six-to-eight wheel notches, half a trackpad swipe — is a
+// deliberate act no stray notch fakes, and legs whose 35% is already smaller
+// than it (every leg but this one) are untouched by construction.
+export const COMMIT_BACK_CAP_VH = 0.9;  // viewport heights
+
 export const COMMIT_THRESHOLD  = 0.35; // fraction of the inter-rest span,
                                        // measured from the rest being LEFT (in
                                        // the direction of travel), past which
@@ -279,6 +297,20 @@ export const COMMIT_CRUISE_MAX_PX = 2200;   // px/s
 // Legs shorter than CRUISE_MAX x this are unaffected, which today is every leg
 // except Owned->Final.
 export const COMMIT_GLIDE_MAX_S = 7.5;      // seconds
+
+// The landing-brake tail budget for a BACKWARD glide. The brake
+// (|target - p| * SNAP_K, scroll.js) is an exponential creep whose duration is
+// ~ln(engage/dead)/K — a CONSTANT ~0.7-0.9 s regardless of how fast the leg
+// cruises, because SNAP_K is global. Forward that constant hides inside the
+// arrival's own content (the camera ramp and the ground lights are still
+// playing through it); backward there is no arrival content — the leg is
+// gesture-paced (scroll.js spanSlope drive, 2026-08-17) — so the tail is pure
+// dead time and reads as the ride going mushy at the end. Backward glides
+// solve their brake constant so the tail fits this budget (never softer than
+// SNAP_K). 0.35 s keeps the ease visible — the camera trapezoid is already
+// below 40% slope everywhere the brake operates, so the firmer pull never
+// shows as a hit.
+export const COMMIT_BRAKE_TAIL_S = 0.35;    // seconds
 
 // Absolute-p windows in which each chapter's DOM copy is shown. Authored as
 // offsets from each chapter's REST (route.js) — the copy belongs to the rest

@@ -133,7 +133,12 @@ const KEYS = [
   // frame-fraction terms (0.358 vs 0.403) than their copy tops did (0.564 vs
   // 0.674). tgtRight is untouched: the horizontal never moved, and the cap is
   // still 187.17 / 214.62 against frame centres 187.5 / 215.
-  { p: 0.260, back: 1.50, rise: -0.50, truck: -0.30, tgtUp: -0.856, tgtRight: 0.258, fov: 13 },
+  // D22 (2026-08-17, Hannah's balance pass): the LANDSCAPE rest gaze panned
+  // 0.196 u left along view-right so the desktop cap sits ~2% right of the
+  // centred copy (inspire/camera.js). The phone poses were centred by
+  // measure and must not inherit it, so the same 0.196 comes straight back
+  // here: tgtRight 0.258 -> 0.454. Nothing else about the phone pose moves.
+  { p: 0.260, back: 1.50, rise: -0.50, truck: -0.30, tgtUp: -0.856, tgtRight: 0.454, fov: 13 },
 
   // Ground-descent approach (D16 restage; retuned 2026-08-04 for the
   // monotone Inspire->Connect zoom-out): the landscape leg no longer pushes
@@ -223,20 +228,61 @@ const KEYS = [
   { p: 1.000, back: 1.08, rise: 1.35, truck: 0, tgtUp: -0.45, tgtRight: -0.35, fov: 8 },
 ];
 
+/* ------------------------------------------------------------------ */
+/* The tablet band (2026-08-17, Hannah's tablet feedback on Inspire)   */
+/* ------------------------------------------------------------------ */
+// One portrait pose cannot serve a phone AND a portrait tablet: the Inspire
+// key above is balanced across 375x812 / 430x932 (aspect ~0.46), but at
+// 768x1024 (aspect 0.75) the same pose leaves the mushroom "a touch too
+// delicate" with a dead band between cap and headline (Hannah, 2026-08-17).
+// The two form factors are cleanly separated in aspect — phones <= ~0.47,
+// portrait tablets ~0.66-0.80 — so a second, DELTA field rides on top of the
+// portrait field, weighted by a band ramp that is zero through every phone
+// and full across the tablet range. It composes multiplicatively with
+// portraitWeight (which itself fades to zero by aspect 1.0), so landscape
+// remains bit-identical and phones remain bit-identical BY CONSTRUCTION.
+//
+// Inspire tablet intent (both judged on the rendered 768x1024 frame):
+//   back  -0.18   1.50 -> 1.32: subject-distance 12.6 -> 11.1, the mushroom
+//                 reads ~13% larger — portrait height can carry the weight.
+//   tgtUp +0.50   aims higher, so the subject sits ~46 px LOWER in the tall
+//                 frame (0.0108 u/px at the tablet's distance and fov) —
+//                 closing the dead band between stem and headline from the
+//                 top while the copy block's tablet raise closes it from
+//                 below (site.css pos-bottom tablet rule, same date).
+// The deltas bloom at the Inspire rest and are gone by the mid-leg key —
+// the travel legs and every other rest are untouched until they earn their
+// own tablet pass.
+const TABLET_FULL_ASPECT = 0.66;   // at or above (to portraitWeight's fade): full
+const TABLET_ZERO_ASPECT = 0.52;   // at or below: exactly zero (phones)
+function tabletBand(aspect) {
+  if (!(aspect > TABLET_ZERO_ASPECT)) return 0;
+  return smooth01((aspect - TABLET_ZERO_ASPECT) / (TABLET_FULL_ASPECT - TABLET_ZERO_ASPECT));
+}
+const TZERO = { back: 0, rise: 0, truck: 0, tgtUp: 0, tgtRight: 0, fov: 0 };
+const TAB_KEYS = [
+  { p: 0.040, ...TZERO },
+  { p: restProgress('inspire'), back: -0.18, rise: 0, truck: 0, tgtUp: 0.50, tgtRight: 0, fov: 0 },
+  { p: restProgress('inspire') + 0.652 * (restProgress('connect') - restProgress('inspire')), ...TZERO },
+];
+
 const FIELDS = ['back', 'rise', 'truck', 'tgtUp', 'tgtRight', 'fov'];
 const _off = { ...ZERO };
+const _toff = { ...TZERO };
 
-function offsetAt(p) {
-  if (p <= KEYS[0].p) { Object.assign(_off, KEYS[0]); return _off; }
-  const last = KEYS[KEYS.length - 1];
-  if (p >= last.p) { Object.assign(_off, last); return _off; }
+function fieldAt(p, keys, out) {
+  if (p <= keys[0].p) { Object.assign(out, keys[0]); return out; }
+  const last = keys[keys.length - 1];
+  if (p >= last.p) { Object.assign(out, last); return out; }
   let i = 0;
-  while (i < KEYS.length - 2 && p > KEYS[i + 1].p) i++;
-  const a = KEYS[i], b = KEYS[i + 1];
+  while (i < keys.length - 2 && p > keys[i + 1].p) i++;
+  const a = keys[i], b = keys[i + 1];
   const t = smooth01((p - a.p) / (b.p - a.p));   // zero slope at every key
-  for (const f of FIELDS) _off[f] = a[f] + (b[f] - a[f]) * t;
-  return _off;
+  for (const f of FIELDS) out[f] = a[f] + (b[f] - a[f]) * t;
+  return out;
 }
+
+function offsetAt(p) { return fieldAt(p, KEYS, _off); }
 
 /* ------------------------------------------------------------------ */
 /* Application                                                         */
@@ -251,6 +297,19 @@ export function applyPortrait(pose, p, aspect) {
   const w = portraitWeight(aspect);
   if (w <= 0) return pose;
   const o = offsetAt(p);
+  // tablet band: fold the delta field straight into this frame's offsets so
+  // the application below stays one code path. tw is 0 for every phone and
+  // rides w, so it inherits portraitWeight's fade toward landscape.
+  const tw = tabletBand(aspect);
+  if (tw > 0) {
+    const t2 = fieldAt(p, TAB_KEYS, _toff);
+    o.back += t2.back * tw;
+    o.rise += t2.rise * tw;
+    o.truck += t2.truck * tw;
+    o.tgtUp += t2.tgtUp * tw;
+    o.tgtRight += t2.tgtRight * tw;
+    o.fov += t2.fov * tw;
+  }
 
   // view frame of the LANDSCAPE pose
   _fwd.x = pose.target.x - pose.pos.x;

@@ -299,7 +299,27 @@ const LIGHT_OVERLAP = 0.22;
    importance (ADOS is the event this page exists for, and it must lead the
    tab order); the light's order is geography and cadence. Read together they
    hand off rather than contradict: the last hub the light reaches is the
-   first one the page names. */
+   first one the page names.
+
+   ...AND THE CHIPS NOW DO FOLLOW — the ARRIVAL half of them (2026-08-16,
+   Hannah's seventh pass on this arrival: "the labels should show up as soon
+   as each light line progresses"). The paragraph above kept the chips out of
+   the light's sequence to protect the copy-anchored resting composition, and
+   what that bought was measured on screen as the complaint: the whole band
+   plays with three anonymous hubs, then the copy re-anchors at p 0.516 and
+   all three names pop inside 300 ms — a caption card after the film, not
+   labels on the thing happening. So each chip now rides ITS OWN hub's
+   ignition (`nodeReveal` below — amount * resolve * hubIgnite, the same
+   product the hub core's own opacity rides, so the name can never outrun the
+   dot it names). The reveal ORDER therefore becomes the light's order by
+   construction, and the ui.js arrival stagger is skipped for these chips —
+   the light's cadence, seconds apart, IS the stagger, and 150 ms of queue on
+   top of it is noise. Pure in p end to end: scrub back and each label
+   withdraws with its own light. NODE_IDS still leads with ADOS — tab order
+   and deep-link order are importance, untouched; only WHEN each chip stands
+   up moved. The copy keeps exactly one duty here: its band's CLOSE edge
+   still takes the chips down into the Owned dive (ui.js), so departure is
+   byte-identical to the copy-gated era. */
 const LIGHT_ORDER = [1, 2, 0];       // hivemind, discord, ados
 
 /* THE FRONT'S OWN PACE INSIDE ITS WINDOW (2026-08-07, with the above).
@@ -511,9 +531,20 @@ export function createConnect(sceneApi) {
   const amt = { ados: 0, hivemind: 0, discord: 0 };
   const refire = { ados: 0, hivemind: 0, discord: 0 };
 
+  // THE PULSE RUNS PAST THE HUB AND FADES (2026-08-17, with the tendrils.js
+  // hub-convergence pulse gate — Hannah's "weird white flash in the right bg").
+  // The driver used to deactivate the instant its head reached rAlong 1.0,
+  // which is exactly where the gaussian peaks on the route's hub-end
+  // vertices: the landing built to maximum brightness and then cut to zero
+  // in ONE frame — a flash by construction. The head now overruns to 1.4
+  // (gaussian sigma is 1/9 of rAlong, so at 1.4 the nearest route vertex is
+  // 3.6 sigma behind it, ~2e-6 of amp) and each driver's duration is scaled
+  // by the same factor, so the speed ON the route is unchanged and the pulse
+  // simply dissolves into the hub over ~0.35 s instead of snapping off.
+  const PULSE_OVERRUN = 1.4;
   const pulses = HUB_IDS.map((id, i) => ({
     id, i,
-    driver: pulseDriver(2.6 + net.routes[i].len * 0.28),   // longer routes take longer
+    driver: pulseDriver((2.6 + net.routes[i].len * 0.28) * PULSE_OVERRUN),   // longer routes take longer
     clock: 4 + rnd() * 8,                                  // staggered first fires
     focus: 0,                                              // 1 while the pulse is hover-focused
   }));
@@ -640,14 +671,23 @@ export function createConnect(sceneApi) {
       // network breathes while its destinations hold.
     }
     U.uPulseHead.value.set(
-      pulses[0].driver.active ? pulses[0].driver.value : -2,
-      pulses[1].driver.active ? pulses[1].driver.value : -2,
-      pulses[2].driver.active ? pulses[2].driver.value : -2,
+      pulses[0].driver.active ? pulses[0].driver.value * PULSE_OVERRUN : -2,
+      pulses[1].driver.active ? pulses[1].driver.value * PULSE_OVERRUN : -2,
+      pulses[2].driver.active ? pulses[2].driver.value * PULSE_OVERRUN : -2,
     );
+    // Ambient amp 0.9 -> 0.45 (2026-08-17, the other half of Hannah's "weird
+    // white flash in the right bg"). The pulse rides uColHot (near-white) ON
+    // TOP of a fully-lit strand, so at 0.9 the sweep clamped to pure white
+    // along a long stretch of braid — the HEAD_PEAK 1.0 -> 0.55 lesson
+    // replayed on the ambient breath (measured: right-bg px>200 count still
+    // doubled on every Discord pulse after the hub-landing fix alone). 0.45
+    // is a warm brightening that says where the light is; the hover sum is
+    // unchanged at 2.0 — a held chip still answers at full strength, because
+    // that one is the visitor's own hand.
     U.uPulseAmp.value.set(
-      pulses[0].driver.active ? 0.9 + 1.1 * (pulses[0].focus || amt.ados) : 0,
-      pulses[1].driver.active ? 0.9 + 1.1 * (pulses[1].focus || amt.hivemind) : 0,
-      pulses[2].driver.active ? 0.9 + 1.1 * (pulses[2].focus || amt.discord) : 0,
+      pulses[0].driver.active ? 0.45 + 1.55 * (pulses[0].focus || amt.ados) : 0,
+      pulses[1].driver.active ? 0.45 + 1.55 * (pulses[1].focus || amt.hivemind) : 0,
+      pulses[2].driver.active ? 0.45 + 1.55 * (pulses[2].focus || amt.discord) : 0,
     );
 
     /* ---- hover: hub + route lift, unrelated routes dim to ~0.55 ---- */
@@ -739,6 +779,18 @@ export function createConnect(sceneApi) {
     nodeWorld(id) {
       const n = NODES[id];
       return n ? _nw.copy(n).clone() : null;
+    },
+    /** Per-node chip gate (2026-08-16 — see the CHIPS NOW DO FOLLOW note at
+     *  LIGHT_ORDER). The exact product the hub core's opacity rides
+     *  (animator, `core.mat.opacity`), minus the hover term: the label stands
+     *  up as its own dot kindles and never before the network is drawn at
+     *  all. hubIgnite is written by the animator only while the group is
+     *  visible, but the product is still safe on every hidden frame — a
+     *  frozen hubIgnite is multiplied by an amount/resolve pair that IS
+     *  current, and both are 0 exactly when the scene has nothing up. */
+    nodeReveal(id) {
+      const i = HUB_IDS.indexOf(id);
+      return i < 0 ? 0 : amount * resolve * hubIgnite[i];
     },
     /** The travelling light — pure in p, so scrubs reverse exactly.
      *  Forward: light leaves the stipe base and runs out along paths that are

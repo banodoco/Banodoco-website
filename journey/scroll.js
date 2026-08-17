@@ -24,7 +24,7 @@ import {
   SNAP_ENGAGE_MS, ARRIVAL_HOLD_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
   COMMIT_THRESHOLD, COMMIT_CARRY_RATE, COMMIT_GLIDE_PX, COMMIT_BLEND_K,
   COMMIT_STREAM_GAP_MS, COMMIT_STREAM_MIN, COMMIT_CRUISE_MAX_PX,
-  COMMIT_GLIDE_MAX_S,
+  COMMIT_GLIDE_MAX_S, COMMIT_BRAKE_TAIL_S, COMMIT_BACK_CAP_VH,
   WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K, STALL_FRAME_MS, STALL_MAX_MS,
 } from './constants.js';
 
@@ -707,9 +707,10 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     // way, so this only ever supplies the SNAP_K landing.
     intent = dir === 0 ? null : (() => {
       const lo = Math.min(p, target), hi = Math.max(p, target);
-      const band = glideBand(lo, hi);
+      const band = glideBand(lo, hi, dir);
       return { target, dir, from: p, g: gSerial, band,
-        cruisePx: band.nominal, floorPx: band.nominal, lo, hi };
+        cruisePx: band.nominal, floorPx: band.nominal, lo, hi,
+        snapK: brakeK(band, lo, hi, dir) };
     })();
   }
 
@@ -840,14 +841,16 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  fling is held under — both raised, if necessary, to the rate that finishes
    *  this leg inside COMMIT_GLIDE_MAX_S, so one gesture can never buy a ride
    *  longer than a transition. */
-  function glideBand(lo, hi) {
+  function glideBand(lo, hi, dir = 0) {
     const spanPx = Math.abs(scrollFor(hi) - scrollFor(lo));
     // A DECLARED TRANSIT wins outright (route.js TRANSIT_S): this span is
     // authored to take a stated number of seconds rest to rest, so its nominal
     // IS that speed rather than the global floor. The ceiling still allows a
     // hard fling to beat it — a declared transit is the natural velocity, not a
     // speed limit — but every ordinary released gesture lands on the number.
-    const declared = transitSeconds(lo, hi);
+    // `dir` is the travel direction in p: a transit declared as {fwd, back}
+    // (route.js, 2026-08-17) answers differently by direction.
+    const declared = transitSeconds(lo, hi, dir);
     if (declared) {
       const rate = spanPx / declared;
       return { nominal: rate, ceil: Math.max(COMMIT_CRUISE_MAX_PX, rate) };
@@ -855,6 +858,24 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     const fit = spanPx / COMMIT_GLIDE_MAX_S;
     return { nominal: Math.max(COMMIT_GLIDE_PX, fit),
              ceil: Math.max(COMMIT_CRUISE_MAX_PX, fit) };
+  }
+
+  /** The landing-brake constant for a resolution across [lo, hi] heading in
+   *  `dir`. Forward keeps the global SNAP_K: the brake window sits inside the
+   *  arrival's own content (camera ramp, ground lights), which is exactly what
+   *  the gentle creep breathes for. Backward the leg is gesture-paced (the
+   *  spanSlope drive below) and nothing plays under the brake, so the creep's
+   *  ~constant ln(engage/dead)/K duration is pure dead time — measured 2026-08-17,
+   *  0.5-0.9 s of visually-stopped ride on the Connect -> Inspire leg. Solve K
+   *  so the tail fits COMMIT_BRAKE_TAIL_S instead: one fixed-point iteration
+   *  from SNAP_K (the log is flat, a second changes nothing), never softer
+   *  than SNAP_K, and still overshoot-free by the same construction — the rate
+   *  goes to zero at the anchor and the integrator is position-capped there. */
+  function brakeK(band, lo, hi, dir) {
+    if (dir >= 0) return SNAP_K;
+    const pRate = band.nominal * spanSlope(lo, hi);
+    const engage = Math.max(pRate / SNAP_K, SNAP_DEAD_P * Math.E);
+    return Math.max(SNAP_K, Math.log(engage / SNAP_DEAD_P) / COMMIT_BRAKE_TAIL_S);
   }
 
   /** Is the visitor's current gesture a STREAM going somewhere — i.e. a thing
@@ -909,7 +930,15 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     const f = span > 1e-6 ? (scrollFor(q) - pxLo) / span : 0.5;
     const flick = carrying(span > 1e-6 ? (hi - lo) / span : 0);
     if (lastDir > 0) return (flick || f >= COMMIT_THRESHOLD) ? hi : lo;
-    if (lastDir < 0) return (flick || (1 - f) >= COMMIT_THRESHOLD) ? lo : hi;
+    if (lastDir < 0) {
+      // Backward the fractional ask is capped in absolute road
+      // (COMMIT_BACK_CAP_VH — see the constant's note): a fair share of a
+      // huge leg is still a grind, and backward there is no content under
+      // the finger to make the road worth reading.
+      const need = Math.min(COMMIT_THRESHOLD * span,
+        COMMIT_BACK_CAP_VH * Math.max(320, window.innerHeight));
+      return (flick || pxHi - scrollFor(q) >= need) ? lo : hi;
+    }
     return f >= 0.5 ? hi : lo;               // placed, never scrolled: nearest
   }
 
@@ -1088,16 +1117,19 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
           // is ALREADY px/s and needs no conversion at all now that the glide
           // is road-denominated — so the floor is under the motion before the
           // momentum tail decays.
-          intent = { target, lo, hi, dir, from: p, g: gSerial, band: glideBand(lo, hi),
-            floorPx: Math.abs(gPeak), cruisePx: null };
+          const band = glideBand(lo, hi, dir);
+          intent = { target, lo, hi, dir, from: p, g: gSerial, band,
+            floorPx: Math.abs(gPeak), cruisePx: null,
+            snapK: brakeK(band, lo, hi, dir) };
         } else if (!live && dir !== 0) {
           // Against the motion (or from a placement): nothing to continue, so
           // this one does wait out the idle window and starts from rest at the
           // flat nominal cruise. Decelerating through zero is the one place
           // where slowing down IS the correct motion.
-          const band = glideBand(lo, hi);
+          const band = glideBand(lo, hi, dir);
           intent = { target, lo, hi, dir, from: p, g: gSerial, band,
-            floorPx: 0, cruisePx: band.nominal };
+            floorPx: 0, cruisePx: band.nominal,
+            snapK: brakeK(band, lo, hi, dir) };
           gPeak = 0;
         }
       }
@@ -1137,10 +1169,33 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       // the glide now spends the scroll a chapter actually owns, so `scrollVh`
       // and `segVh`/`shape` mean the same thing to a released gesture that they
       // already meant to a scrubbing finger.
-      const floorP = intent.floorPx * slopeAtP(p);
+      //
+      // FORWARD ONLY (2026-08-17, Hannah: "its actually nice going INTO the
+      // section but feels super sluggish going out"). Road allocation is
+      // authored for the ROUTE ORDER — the dense stretch into a rest is where
+      // the chapter's content plays (ground lights, kindle), so a forward
+      // glide riding the local gain is content pacing. A BACKWARD glide rides
+      // the same profile mirror-imaged: it departs the rest through the dense
+      // road (crawl, exactly where the eye expects acceleration) and crosses
+      // the light road at the far end in one burst. Measured leaving Connect
+      // for Inspire: 1.35 s after release to reach HALF its eventual visual
+      // speed, then the whole swing in ~0.4 s — a wind-up, not a departure —
+      // while the forward dive out of the same rest reads 50% of peak in one
+      // frame. So a backward resolution converts at the span's MEAN slope
+      // (spanSlope — the same fix carrying()'s thresholds already needed for
+      // the same reason): total ride time is untouched (the integral is the
+      // same spanPx at the same cruise), the brake still lands it, and the
+      // visual profile falls to the camera gesture's own trapezoid, which is
+      // the "one motion" every leg was built to read as. Content un-plays
+      // by POSITION when scrubbing back, exactly as before — this touches
+      // only what a released gesture's clock does with the road.
+      const floorP = intent.floorPx *
+        (intent.dir < 0 ? spanSlope(intent.lo, intent.hi) : slopeAtP(p));
       // The landing: never faster than the critically-damped pull toward the
       // rest, which is what makes the arrival asymptotic and overshoot-free.
-      const brake = Math.abs(intent.target - p) * SNAP_K;
+      // The constant is per-intent (brakeK above): global SNAP_K forward,
+      // solved to the COMMIT_BRAKE_TAIL_S budget backward.
+      const brake = Math.abs(intent.target - p) * (intent.snapK || SNAP_K);
       const drive = intent.dir * Math.min(floorP, brake);
       if (drive * intent.dir > servo * intent.dir) { rate = drive; driving = true; }
     }
