@@ -131,8 +131,10 @@ import * as THREE from 'three';
 import {
   TAU, RING_C, arcOf, cutVal,
   makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat,
+  BATCH_LINE, BATCH_POINT,
 } from './world.js';
 import { makeGlowTexture } from '../../anatomy.js';
+import { isBaked, geometry, payload } from '../../lib/baked.js';
 import { CAMERA } from './camera.js';
 
 // The rest camera, read from the chapter's own leg (never mirrored — the
@@ -297,9 +299,39 @@ export function createFinalCanopy(uniforms, seats) {
   const group = new THREE.Group();
   const counts = {};
 
+  // ---- baked-read wiring (2026-08-17) --------------------------------
+  // The shipped path skips the ENTIRE graph build below (nodes, waypoints,
+  // Prim's + web + body links, strands/hairlines, arteries, arcs, junctions,
+  // hubs, pools) and rebuilds the two merged batches from static/geom bytes.
+  // The two materials, the always-lit shader language and the setPresence
+  // closure stay live either way — the network is gated whole by one
+  // camera-pure uOpacity, never kindled per-vertex. ONE try/catch wraps the
+  // WHOLE read: any missing key or shape mismatch throws and the chapter
+  // falls back to the live builders in full, never a half-baked mix.
+  const baked = (() => {
+    if (!isBaked('final')) return null;
+    try {
+      const C = payload('final')?.canopy;
+      if (!C || typeof C.canopyNodes !== 'number' || typeof C.canopySegs !== 'number'
+          || !Array.isArray(C.arteryLinks)) {
+        throw new Error('final canopy payload mismatch');
+      }
+      return {
+        g: {
+          canopyLines: geometry('final/canopyLines', BATCH_LINE),
+          canopyGlows: geometry('final/canopyGlows', BATCH_POINT),
+        },
+        counts: C,
+      };
+    } catch (e) {
+      return null;
+    }
+  })();
+
   const lines = makeBatch();
   const glows = makeBatch();
 
+  if (!baked) {
   const dCam = (x, z) => Math.hypot(x - REST_CAM.x, z - REST_CAM.z);
 
   /* ================================================================
@@ -1222,6 +1254,52 @@ export function createFinalCanopy(uniforms, seats) {
     counts.pools = placed;
   }
 
+    counts.canopyNodes = N;
+    counts.canopyBodies = nBody;
+    counts.canopyEdges = edges.length;
+    counts.canopyBodyLinks = bodyLinks;
+    counts.canopyDropped = dropped;
+    counts.canopyHubs = hubs;
+    counts.canopySegs = lines.segCount;
+    counts.canopyPts = glows.ptCount;
+    // THE HIERARCHY, MEASURED AS BUILT (not as budgeted). Every segment this
+    // file emits is counted into exactly one tier at the moment it is emitted,
+    // so these three numbers are the frame's own answer to "70 / 20 / 10" and
+    // not a restatement of the constants above.
+    counts.canopyHair = tierSegs[T_HAIR];
+    counts.canopySec = tierSegs[T_SEC];
+    counts.canopyLum = tierSegs[T_LUM];
+    // What the arteries and the arcs were SIZED against, reported beside what
+    // they achieved. The secondary tier is filled to its share by a budget loop
+    // and cannot miss; the luminous tier is a fixed amount of authored geometry,
+    // so this is the one number in the hierarchy that has to be checked rather
+    // than assumed — if a future pass changes the route count or the arc spans,
+    // this pair is where it will show.
+    counts.canopyLumTarget = Math.round(
+      LUM_SHARE * (tierSegs[T_HAIR] + tierSegs[T_SEC] + tierSegs[T_LUM]));
+    counts.canopyLumPts = lumPts + artNodes + arcNodes;
+    counts.arteries = arteries.length;
+    // The routes themselves, as world-space foot pairs. Reported because "5-8
+    // specific connections between mushrooms, more legible" is a claim about the
+    // FRAME, and a claim about the frame has to be checkable in the frame — this
+    // is what a review pass projects to find them. Compact: two points each.
+    counts.arteryLinks = arteries.map(c => [
+      +nodes[c.i].x.toFixed(2), +nodes[c.i].z.toFixed(2),
+      +nodes[c.j].x.toFixed(2), +nodes[c.j].z.toFixed(2),
+    ]);
+    counts.arterySegs = artSegs;
+    counts.arteryNodes = artNodes;
+    counts.arteryBranches = artBranches;
+    counts.arteryConverge = artConverge;
+    counts.ringArcs = arcsMade;
+    counts.ringArcSegs = arcSegs;
+    counts.ringArcTouch = arcTouch;
+  } else {
+    // Baked: the graph build never ran, so every count (including the
+    // world-space arteryLinks pairs) round-trips from the payload (2026-08-17).
+    Object.assign(counts, baked.counts);
+  }
+
   /* ================================================================
      5. TWO DRAWS
      ================================================================ */
@@ -1229,12 +1307,12 @@ export function createFinalCanopy(uniforms, seats) {
   // canopy is the ground the subject stands on, and it is levelled to say so.
   const STRAND_OP = 0.62, GLOW_OP = 0.85;
   const strandMat = makeStrandMat(uniforms, STRAND_OP);
-  const strandLines = new THREE.LineSegments(lines.geo(), strandMat);
+  const strandLines = new THREE.LineSegments(baked ? baked.g.canopyLines : lines.geo(), strandMat);
   strandLines.frustumCulled = false;
   group.add(strandLines);
 
   const glowMat = makePointsMat(uniforms, GLOW_OP, makeGlowTexture());
-  const glowPts = new THREE.Points(glows.geo(true), glowMat);
+  const glowPts = new THREE.Points(baked ? baked.g.canopyGlows : glows.geo(true), glowMat);
   glowPts.frustumCulled = false;
   group.add(glowPts);
 
@@ -1252,46 +1330,39 @@ export function createFinalCanopy(uniforms, seats) {
   }
   setPresence(0);          // dark until the orchestrator says otherwise
 
-  counts.canopyNodes = N;
-  counts.canopyBodies = nBody;
-  counts.canopyEdges = edges.length;
-  counts.canopyBodyLinks = bodyLinks;
-  counts.canopyDropped = dropped;
-  counts.canopyHubs = hubs;
-  counts.canopySegs = lines.segCount;
-  counts.canopyPts = glows.ptCount;
-  // THE HIERARCHY, MEASURED AS BUILT (not as budgeted). Every segment this
-  // file emits is counted into exactly one tier at the moment it is emitted,
-  // so these three numbers are the frame's own answer to "70 / 20 / 10" and
-  // not a restatement of the constants above.
-  counts.canopyHair = tierSegs[T_HAIR];
-  counts.canopySec = tierSegs[T_SEC];
-  counts.canopyLum = tierSegs[T_LUM];
-  // What the arteries and the arcs were SIZED against, reported beside what
-  // they achieved. The secondary tier is filled to its share by a budget loop
-  // and cannot miss; the luminous tier is a fixed amount of authored geometry,
-  // so this is the one number in the hierarchy that has to be checked rather
-  // than assumed — if a future pass changes the route count or the arc spans,
-  // this pair is where it will show.
-  counts.canopyLumTarget = Math.round(
-    LUM_SHARE * (tierSegs[T_HAIR] + tierSegs[T_SEC] + tierSegs[T_LUM]));
-  counts.canopyLumPts = lumPts + artNodes + arcNodes;
-  counts.arteries = arteries.length;
-  // The routes themselves, as world-space foot pairs. Reported because "5-8
-  // specific connections between mushrooms, more legible" is a claim about the
-  // FRAME, and a claim about the frame has to be checkable in the frame — this
-  // is what a review pass projects to find them. Compact: two points each.
-  counts.arteryLinks = arteries.map(c => [
-    +nodes[c.i].x.toFixed(2), +nodes[c.i].z.toFixed(2),
-    +nodes[c.j].x.toFixed(2), +nodes[c.j].z.toFixed(2),
-  ]);
-  counts.arterySegs = artSegs;
-  counts.arteryNodes = artNodes;
-  counts.arteryBranches = artBranches;
-  counts.arteryConverge = artConverge;
-  counts.ringArcs = arcsMade;
-  counts.ringArcSegs = arcSegs;
-  counts.ringArcTouch = arcTouch;
 
-  return { group, counts, setPresence };
+  return {
+    group, counts, setPresence,
+    // The bake recording site (final/index.js) reads these AFTER every
+    // cross-module write is final. Keys match baked.js geometry() keys.
+    geometries: {
+      canopyLines: strandLines.geometry,
+      canopyGlows: glowPts.geometry,
+    },
+    bakePayload: {
+      canopyNodes: counts.canopyNodes,
+      canopyBodies: counts.canopyBodies,
+      canopyEdges: counts.canopyEdges,
+      canopyBodyLinks: counts.canopyBodyLinks,
+      canopyDropped: counts.canopyDropped,
+      canopyHubs: counts.canopyHubs,
+      canopySegs: counts.canopySegs,
+      canopyPts: counts.canopyPts,
+      canopyHair: counts.canopyHair,
+      canopySec: counts.canopySec,
+      canopyLum: counts.canopyLum,
+      canopyLumTarget: counts.canopyLumTarget,
+      canopyLumPts: counts.canopyLumPts,
+      arteries: counts.arteries,
+      arteryLinks: counts.arteryLinks,
+      arterySegs: counts.arterySegs,
+      arteryNodes: counts.arteryNodes,
+      arteryBranches: counts.arteryBranches,
+      arteryConverge: counts.arteryConverge,
+      ringArcs: counts.ringArcs,
+      ringArcSegs: counts.ringArcSegs,
+      ringArcTouch: counts.ringArcTouch,
+      pools: counts.pools,
+    },
+  };
 }

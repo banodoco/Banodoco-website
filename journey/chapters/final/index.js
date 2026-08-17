@@ -42,6 +42,7 @@ import { createFinalTerrain } from './terrain.js';
 import { createFinalSky } from './sky.js';
 import { createFinalCanopy } from './canopy.js';
 import { CAMERA } from './camera.js';
+import { registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
 
 export function createFinal(sceneApi) {
   const group = new THREE.Group();
@@ -102,6 +103,30 @@ export function createFinal(sceneApi) {
   // frame nothing per-frame.
   const canopy = createFinalCanopy(bedUniforms, ring.seats);
   group.add(canopy.group, ring.group, terrain.group, sky.group);
+
+  /* ---- bake recording site (2026-08-17) -------------------------------
+     Final is baked ATOMICALLY. Every cross-module write is final here:
+     ring.js's ladder pass wrote m.revealIn onto the MEMBERS objects and the
+     field candidates in place, terrain.js and sky.js read it through those
+     same references, and canopy.js consumed ring.seats. By the time canopy
+     returns, every geometry in the chapter is final, so this is the one
+     place the dump records — exactly mirroring Owned's site after
+     substrate.assignOwners. Under ?bakedump=1 each registerGeometry copies
+     the live-built attributes into window.__bake; on the shipped path these
+     are no-ops. The read paths (ring.js / terrain.js / sky.js / canopy.js)
+     rebuild from static/geom bytes and skip the math — see journey/lib/baked.js
+     and tools/bake-geom.py for the harvest. */
+  for (const [site, geo] of Object.entries(ring.geometries)) registerGeometry(`final/${site}`, geo);
+  for (const [site, geo] of Object.entries(terrain.geometries)) registerGeometry(`final/${site}`, geo);
+  for (const [site, geo] of Object.entries(sky.geometries)) registerGeometry(`final/${site}`, geo);
+  for (const [site, geo] of Object.entries(canopy.geometries)) registerGeometry(`final/${site}`, geo);
+  registerPayload('final', {
+    ring: ring.bakePayload,
+    terrain: terrain.bakePayload,
+    sky: sky.bakePayload,
+    canopy: canopy.bakePayload,
+  });
+  bakeDumpDone('final');
 
   /* ---- growth-front cycle: randomized duration + rest, one direction ---- */
   const cycleRand = makeRng(9182);
@@ -666,6 +691,34 @@ export function createFinal(sceneApi) {
   let retiring = false;             // this blend is LEAVING the epilogue
   let retireScale = 1;              // 1 = the shipped clock, exactly
   let retireEff = 1;                // monotone fade, latched while retiring
+
+  /* ---- WHICH DEAL THE REVEAL READS (2026-08-16, Hannah's eighth pass:
+     the entry "should feel like starting from the front and working
+     backwards, in terms of the mushrooms turning on"; the leaving sequence
+     "is perfect as it is"). Every body carries TWO thresholds over the SAME
+     rung values — aRevealIn deals them by depth from the rest camera,
+     aReveal keeps the authored deal — and uRevIn says which one is live.
+     Because the values are one multiset, LADDER above, both pacing clocks
+     and BAND_S are identical under either deal by construction.
+
+     THE LATCH ONLY MOVES WHERE THE DEALS AGREE. Below the first rung every
+     body is dark under both; at the last rung's full light every body is lit
+     under both — so a flip at either end cannot move a pixel on the frame it
+     happens, and between them the flag is held, never computed. That is what
+     keeps every monotone pass pure in (pull, deal): an arrival out of the
+     dark always plays near-first, a departure from the rest always plays the
+     authored sequence, and a mid-band reversal retracts exactly the lights
+     it lit, in reverse — never a re-shuffle mid-flight. Boot value 1 is the
+     dark state's own; a boot AT the rest latches 0 on its first tick, before
+     anything renders. */
+  let revealIn = true;
+  const REV_DARK = LADDER.length ? LADDER[0] : 0;
+  const REV_LIT = LADDER.length ? LADDER[LADDER.length - 1] + REVEAL_W : 0;
+  function latchRevIn(pull) {
+    if (pull <= REV_DARK) revealIn = true;
+    else if (pull >= REV_LIT) revealIn = false;
+    uniforms.uRevIn.value = revealIn ? 1 : 0;
+  }
   /** One step toward `target`, capped at the rate, then held under the
    *  invariant above — `pure` is this frame's camera-pure value and `held` is
    *  last frame's shown value. One place, so the law has one implementation. */
@@ -957,6 +1010,7 @@ export function createFinal(sceneApi) {
         skyUniforms.uAmount.value = skyv;
         uniforms.uPull.value = pullOf(sceneApi.camera.position.x);
         uniforms.uPullRaw.value = pullRawOf(sceneApi.camera.position.x);
+        latchRevIn(uniforms.uPull.value);
         ring.update(t, dt, false);
       }
       return;
@@ -1033,6 +1087,10 @@ export function createFinal(sceneApi) {
     bedUniforms.uAmount.value = bed;
     skyUniforms.uAmount.value = skyv;
     uniforms.uPull.value = pull;
+    // ...and which deal that driver is read against (the latch's own comment
+    // has the law). On the SHOWN value, not the camera-pure one: the deal
+    // must agree with what the shaders render this frame.
+    latchRevIn(pull);
     // the unclamped twin, for the clone entry-draw front (clones.js part B).
     // It carries the SAME OFFSET, with sign: the entry draw runs a reveal-width
     // ahead of the kindle (clones.js DRAW_W_HI/LO) and the two must stay

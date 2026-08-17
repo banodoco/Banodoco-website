@@ -32,6 +32,7 @@
 //     anonymous mode stays one call away (setMode('anonymous')).
 import * as THREE from 'three';
 import * as H from '../../lib/helpers.js';
+import { isBaked, geometry, payload } from '../../lib/baked.js';
 import { PORTRAIT_SPRITE } from '../../../assets/contributor-portraits/manifest.js';
 import { CONTRIBUTOR_POOL, ROLE_BLURB } from '../../../content/contributors.js';
 import { REST_P } from './leg.js';
@@ -671,8 +672,55 @@ export function buildPortraitField({
   const NODE_COUNT = nodeCount;
   const C_COUNT = contributors.length;          // routable, hoverable nodes
   group.name = 'owned-portraits-' + NODE_COUNT;
-  const { camDist, nearestCamPt, restFrame, projectInto, clampUnder, groundY } = leg;
+  const {
+    camDist, nearestCamPt, restFrame, projectInto, clampUnder, groundY,
+    portraitField, portraitAspect, restFramePortrait,
+  } = leg;
   const { nearestCordPoint, inVoid } = substrate;
+
+  // ---- baked-read wiring (2026-08-17) --------------------------------
+  // The shipped path skips placement and the strand/plane/rim/core/halo
+  // geometry math below, rebuilding every BufferGeometry from static/geom
+  // bytes (baked once at commit time in the goldens' own headless Chrome; see
+  // journey/lib/baked.js). Materials, uniforms, the two atlases, the photo /
+  // remix machinery and the runtime closures all stay computed on both paths
+  // — only placement and geometry are skipped. ONE try/catch wraps the WHOLE
+  // read: any missing key or shape mismatch throws and the field falls back
+  // to the live builders in full, never a half-baked mix.
+  const baked = (() => {
+    // Portrait builds place the field from their own authored table (see
+    // REST_SITES_PORTRAIT below); the bake is harvested in a landscape
+    // window, so its bytes ARE the landscape arc and a portrait build must
+    // rebuild live. leg.js decides the predicate once, at build time.
+    if (portraitField) return null;
+    if (!isBaked('owned')) return null;
+    try {
+      const p = payload('owned');
+      const P = p && p.portraits;
+      if (!P || !Array.isArray(P.nodeIds) || !Array.isArray(P.nodePos)
+          || !Array.isArray(P.nodeContentKeys) || !Array.isArray(P.nodeRoutable)
+          || !Array.isArray(P.nodeSize) || !Array.isArray(P.nodeAnchors)
+          || typeof P.swapMaxR !== 'number' || typeof P.strandCurves !== 'number') {
+        return null;
+      }
+      return {
+        g: {
+          planes: geometry('owned/planes', [
+            ['position', 3], ['aCorner', 2], ['aCellA', 2], ['aCellB', 2],
+            ['aNode', 1], ['aSeed', 1], ['aSize', 1], ['aTilt', 1],
+            ['aAnonF', 1], ['aSwapD', 1],
+          ]),
+          rim: geometry('owned/rim', [['position', 3], ['aOff', 2], ['aNode', 1], ['aSeed', 1], ['aAlong', 1]]),
+          cores: geometry('owned/cores', [['position', 3], ['aSize', 1], ['aSeed', 1], ['aNode', 1]]),
+          halos: geometry('owned/halos', [['position', 3], ['aSize', 1], ['aSeed', 1], ['aNode', 1]]),
+          strands: geometry('owned/strands', [['position', 3], ['aAlong', 1], ['aStrand', 1], ['aNode', 1]]),
+        },
+        portraits: p.portraits,
+      };
+    } catch (e) {
+      return null;
+    }
+  })();
 
   /* ---------------- placement: AUTHORED IN THE REST FRAME ----------------
      ROOT-NETWORK RESTAGE (2026-08-06, 20-owned-root-network.md).
@@ -729,94 +777,65 @@ export function buildPortraitField({
     [0.28, -0.76, 5.6, 0.47],
   ];
 
-  const nodes = Array.from({ length: NODE_COUNT }, (_, i) => {
-    const c = contributors[i % C_COUNT];
-    const routable = i < C_COUNT;
-    const rand = H.rng((((c.seed ?? (i + 1)) * 7919 + 17 + i * 977) | 0) >>> 0);
-    const site = REST_SITES[i % REST_SITES.length];
-    const f = restFrame;
-    const TANV = Math.tan(0.5 * f.fov * Math.PI / 180);
-    const ASPECT = 1.6;
-    // a hair of authored-position jitter so the arc never reads as a plotted
-    // curve, small enough that the composition above is what ships
-    const cx = site[0] + (rand() - 0.5) * 0.045;
-    const cy = site[1] + (rand() - 0.5) * 0.040;
-    const d = site[2] * (0.96 + rand() * 0.08);
-    const pos = f.pos.clone()
-      .addScaledVector(f.fwd, d)
-      .addScaledVector(f.right, cx * TANV * ASPECT * d)
-      .addScaledVector(f.up, cy * TANV * d);
-    pos.x = clamp(pos.x, -16.5, 5.0);
-    pos.z = clamp(pos.z, -9.0, 9.0);
-    clampUnder(pos, 0.9);
-    // a site that lands in an authored void is nudged SIDEWAYS out of it,
-    // never re-rolled and never dropped: the arc is the composition and the
-    // void is only seasoning. (The first pass pushed down 0.45 per iteration
-    // and moved two nodes half a frame south of where they were authored —
-    // measured NDC y -0.45 -> -0.88. Lateral, small, and capped.)
-    for (let guard = 0; guard < 4 && inVoid(pos.x, pos.y, pos.z); guard++) {
-      // INWARD, toward frame centre — an outward nudge walks edge sites off
-      // the frame (measured: authored 0.78 -> 0.96 ndc, past the chip layer's
-      // placeable margin).
-      pos.addScaledVector(f.right, (cx >= 0 ? -1 : 1) * 0.34)
-         .addScaledVector(f.up, -0.10);
-      clampUnder(pos, 0.9);
-    }
-    return {
-      id: routable ? c.id : null, i, pos, content: c, routable, homeP: REST_P,
-      // size/spacing jitter (rev-2 rule, kept): a spread wide enough that
-      // density never reads as a "row of coins". The base size now comes
-      // from the authored table so scale tracks the arc.
-      size: site[3] * (0.92 + rand() * 0.20),
-      seed: rand(),
-      tilt: (rand() - 0.5) * 0.16,
-      strandCount: 4 + Math.floor(rand() * 3),
-      rand,
-    };
-  });
+  /* PORTRAIT ARC (2026-08-17; revised the same day). The table above is the
+     landscape picture, and a ~0.46-aspect phone sees barely a fifth of its
+     width: only the four central sites projected into the tall frame, and
+     the chapter read as five faces and a lot of dark. This is the SAME
+     sixteen slots authored again for the tall frame — in the PORTRAIT rest
+     frame (leg.js restFramePortrait: the portrait.js re-composed pose,
+     fov 64) at the BUILD aspect, so a tablet's wider tall frame spreads the
+     same NDC picture across its own width instead of inheriting a
+     phone-squeezed middle (the first cut fixed the aspect at 430/932 and
+     tablets read as a cluttered centre column).
 
-  // gentle separation pass — per-pair jittered minimum so spacing never
-  // settles into an even chain. The authored arc already spaces them; this
-  // only catches the jitter's worst case.
-  for (let pass = 0; pass < 3; pass++) {
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const a = nodes[i].pos, b = nodes[j].pos;
-        const d = a.distanceTo(b);
-        const min = 1.7 + ((i * 31 + j * 17) % 7) * 0.07;
-        if (d < min && d > 0.001) {
-          const push = a.clone().sub(b).normalize().multiplyScalar((min - d) * 0.5);
-          a.add(push); b.sub(push);
-          clampUnder(a, 0.9); clampUnder(b, 0.9);
-        }
-      }
-    }
-  }
+     The first cut also ran the arc too high: two flankers at ndcY +0.30 sat
+     BEHIND the paragraph, and the top rank at -0.04 crowded the button. The
+     revision is one intention — THE COPY OWNS THE TOP, THE NETWORK RISES TO
+     MEET IT AND STOPS:
 
-  // HARD RULE (rev 2, verbatim): every portrait node keeps >=3.0 world units
-  // of clearance from ANY point of the camera path — descent and rise
-  // included — or its defocused plane can swallow the whole frame on a
-  // different pass. If the push breaches the soil, it is redirected along
-  // the horizontal component.
-  function enforceClearance(nd) {
-    for (let it = 0; it < 4; it++) {
-      const cd = camDist(nd.pos.x, nd.pos.y, nd.pos.z);
-      if (cd >= 3.0) return;
-      const nearest = nearestCamPt(nd.pos);
-      const away = nd.pos.clone().sub(nearest);
-      if (away.lengthSq() < 0.001) away.set(0, -1, 0);
-      away.normalize();
-      const lid = groundY(nd.pos.x, nd.pos.z) - (0.35 + nd.size);
-      if (nd.pos.y + away.y * (3.0 - cd) > lid) {
-        away.y = Math.min(away.y, 0);
-        if (away.lengthSq() < 0.05) away.set(0, -1, 0);
-        away.normalize();
-      }
-      nd.pos.addScaledVector(away, 3.05 - cd);
-      clampUnder(nd.pos, 0.35 + nd.size);
-    }
-  }
-  for (const nd of nodes) enforceClearance(nd);
+       · the crown holds the top edge, the copy block runs to ndcY ~ +0.05;
+       · a clear dark band (~0.16 of frame height) separates the button from
+         the first face — the composition breathes where the eye enters;
+       · two flankers peek in AT THE BUTTON LINE from the far edges
+         (y ~ +0.10, |x| ~0.83, depth 13+): beside the button the edges are
+         empty at every review size, so they read as the network continuing
+         past the frame, not as glow behind the words;
+       · four ranks descend from there — 3 / 4 / 3 / 4, alternating so no
+         face sits directly above another — with rank gaps of ~0.20 frame
+         heights and depth falling 11.8 -> 5.5, so lower IS nearer and the
+         size hierarchy (0.34 far, 0.47 near) does the de-cluttering: the
+         far ranks recede to accents, the near rank carries the weight.
+
+     Nothing sits inside the copy's box (|ndcX| < 0.75, ndcY in
+     +0.14..+0.85) at either phone size or at 768x1024. */
+  const REST_SITES_PORTRAIT = [
+    // ndcX, ndcY, depth, size
+    [-0.82, 0.12, 13.6, 0.34],
+    [0.84, 0.08, 13.2, 0.34],
+    [-0.55, -0.20, 11.8, 0.37],
+    [0.02, -0.26, 11.4, 0.37],
+    [0.60, -0.21, 11.0, 0.37],
+    [-0.85, -0.44, 9.6, 0.40],
+    [-0.30, -0.47, 9.2, 0.41],
+    [0.36, -0.48, 9.0, 0.41],
+    [0.87, -0.43, 9.4, 0.40],
+    [-0.58, -0.64, 7.4, 0.43],
+    [0.04, -0.68, 7.0, 0.44],
+    [0.62, -0.65, 7.2, 0.43],
+    [-0.84, -0.80, 6.0, 0.45],
+    [-0.28, -0.87, 5.6, 0.46],
+    [0.32, -0.84, 5.5, 0.47],
+    [0.82, -0.79, 5.9, 0.45],
+  ];
+
+  // The frame, aspect and table every placement read below composes against.
+  // One trio, chosen once — a landscape build is bit-identical to what this
+  // file always produced (siteFrame IS restFrame), and a portrait build is
+  // the authored tall-frame arc through the same placement law, separation
+  // pass, clearance rule and repair loop.
+  const SITES = portraitField ? REST_SITES_PORTRAIT : REST_SITES;
+  const siteFrame = portraitField ? restFramePortrait : restFrame;
+  const siteAspect = portraitField ? portraitAspect : 1.6;
 
   // Rest reachability repair (the grey-box gap, fixed by construction and
   // then VERIFIED here): every routable node must project into the rest
@@ -825,28 +844,142 @@ export function buildPortraitField({
   // still fully placeable because ui.js flips the pill inboard) at a workable
   // depth. A failure is pulled straight back toward its authored site along
   // the rest gaze rather than re-rolled somewhere else: the arc is authored,
-  // so the repair must preserve it.
+  // so the repair must preserve it. `restOk` stays defined on both paths: it
+  // is also the runtime `restVisible()` QA gate.
   function restOk(nd) {
-    const pr = projectInto(restFrame, nd.pos, 1.6);
+    const pr = projectInto(siteFrame, nd.pos, siteAspect);
     return pr.z > 2.6 && pr.z < 16.5 && Math.abs(pr.x) <= 0.97 && Math.abs(pr.y) <= 0.90;
   }
-  for (const nd of nodes) {
-    if (!nd.routable || restOk(nd)) continue;
-    const site = REST_SITES[nd.i % REST_SITES.length];
-    const TANV_R = Math.tan(0.5 * restFrame.fov * Math.PI / 180);
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const shrink = 1 - attempt * 0.06;
-      const d = site[2] * (1 - attempt * 0.05);
-      const p = restFrame.pos.clone()
-        .addScaledVector(restFrame.fwd, d)
-        .addScaledVector(restFrame.right, site[0] * shrink * TANV_R * 1.6 * d)
-        .addScaledVector(restFrame.up, site[1] * shrink * TANV_R * d);
-      clampUnder(p, 0.35 + nd.size);
-      if (camDist(p.x, p.y, p.z) < 3.0) continue;
-      nd.pos.copy(p);
-      if (restOk(nd)) break;
+
+  // Baked read path: reconstruct the runtime-read node fields from the
+  // payload in index order, and re-resolve each content reference through
+  // the SAME `contributors` array the live placement read (store the id, not
+  // the object — see baked.js). seed/tilt/strandCount/rand are bake-time only
+  // and already folded into the baked attributes, so they are inert here;
+  // anchors are restored for completeness (the commit pipeline's assignOwners
+  // is their only reader, and it is skipped on the baked path).
+  let nodes;
+  if (baked) {
+    const P = baked.portraits;
+    nodes = Array.from({ length: NODE_COUNT }, (_, i) => ({
+      id: P.nodeIds[i] ?? null,
+      i,
+      pos: new V3(P.nodePos[i * 3], P.nodePos[i * 3 + 1], P.nodePos[i * 3 + 2]),
+      content: contributors.find(c => c.id === P.nodeContentKeys[i]) || contributors[i % C_COUNT],
+      routable: !!P.nodeRoutable[i],
+      homeP: REST_P,
+      size: P.nodeSize[i],
+      seed: 0, tilt: 0, strandCount: 0, rand: null,
+      anchors: (P.nodeAnchors[i] || []).map(([x, y, z]) => new V3(x, y, z)),
+    }));
+  } else {
+    nodes = Array.from({ length: NODE_COUNT }, (_, i) => {
+      const c = contributors[i % C_COUNT];
+      const routable = i < C_COUNT;
+      const rand = H.rng((((c.seed ?? (i + 1)) * 7919 + 17 + i * 977) | 0) >>> 0);
+      const site = SITES[i % SITES.length];
+      const f = siteFrame;
+      const TANV = Math.tan(0.5 * f.fov * Math.PI / 180);
+      const ASPECT = siteAspect;
+      // a hair of authored-position jitter so the arc never reads as a plotted
+      // curve, small enough that the composition above is what ships
+      const cx = site[0] + (rand() - 0.5) * 0.045;
+      const cy = site[1] + (rand() - 0.5) * 0.040;
+      const d = site[2] * (0.96 + rand() * 0.08);
+      const pos = f.pos.clone()
+        .addScaledVector(f.fwd, d)
+        .addScaledVector(f.right, cx * TANV * ASPECT * d)
+        .addScaledVector(f.up, cy * TANV * d);
+      pos.x = clamp(pos.x, -16.5, 5.0);
+      pos.z = clamp(pos.z, -9.0, 9.0);
+      clampUnder(pos, 0.9);
+      // a site that lands in an authored void is nudged SIDEWAYS out of it,
+      // never re-rolled and never dropped: the arc is the composition and the
+      // void is only seasoning. (The first pass pushed down 0.45 per iteration
+      // and moved two nodes half a frame south of where they were authored —
+      // measured NDC y -0.45 -> -0.88. Lateral, small, and capped.)
+      for (let guard = 0; guard < 4 && inVoid(pos.x, pos.y, pos.z); guard++) {
+        // INWARD, toward frame centre — an outward nudge walks edge sites off
+        // the frame (measured: authored 0.78 -> 0.96 ndc, past the chip layer's
+        // placeable margin).
+        pos.addScaledVector(f.right, (cx >= 0 ? -1 : 1) * 0.34)
+           .addScaledVector(f.up, -0.10);
+        clampUnder(pos, 0.9);
+      }
+      return {
+        id: routable ? c.id : null, i, pos, content: c, routable, homeP: REST_P,
+        // size/spacing jitter (rev-2 rule, kept): a spread wide enough that
+        // density never reads as a "row of coins". The base size now comes
+        // from the authored table so scale tracks the arc.
+        size: site[3] * (0.92 + rand() * 0.20),
+        seed: rand(),
+        tilt: (rand() - 0.5) * 0.16,
+        strandCount: 4 + Math.floor(rand() * 3),
+        rand,
+      };
+    });
+
+    // gentle separation pass — per-pair jittered minimum so spacing never
+    // settles into an even chain. The authored arc already spaces them; this
+    // only catches the jitter's worst case.
+    for (let pass = 0; pass < 3; pass++) {
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const a = nodes[i].pos, b = nodes[j].pos;
+          const d = a.distanceTo(b);
+          const min = 1.7 + ((i * 31 + j * 17) % 7) * 0.07;
+          if (d < min && d > 0.001) {
+            const push = a.clone().sub(b).normalize().multiplyScalar((min - d) * 0.5);
+            a.add(push); b.sub(push);
+            clampUnder(a, 0.9); clampUnder(b, 0.9);
+          }
+        }
+      }
     }
-    enforceClearance(nd);
+
+    // HARD RULE (rev 2, verbatim): every portrait node keeps >=3.0 world units
+    // of clearance from ANY point of the camera path — descent and rise
+    // included — or its defocused plane can swallow the whole frame on a
+    // different pass. If the push breaches the soil, it is redirected along
+    // the horizontal component.
+    function enforceClearance(nd) {
+      for (let it = 0; it < 4; it++) {
+        const cd = camDist(nd.pos.x, nd.pos.y, nd.pos.z);
+        if (cd >= 3.0) return;
+        const nearest = nearestCamPt(nd.pos);
+        const away = nd.pos.clone().sub(nearest);
+        if (away.lengthSq() < 0.001) away.set(0, -1, 0);
+        away.normalize();
+        const lid = groundY(nd.pos.x, nd.pos.z) - (0.35 + nd.size);
+        if (nd.pos.y + away.y * (3.0 - cd) > lid) {
+          away.y = Math.min(away.y, 0);
+          if (away.lengthSq() < 0.05) away.set(0, -1, 0);
+          away.normalize();
+        }
+        nd.pos.addScaledVector(away, 3.05 - cd);
+        clampUnder(nd.pos, 0.35 + nd.size);
+      }
+    }
+    for (const nd of nodes) enforceClearance(nd);
+
+    for (const nd of nodes) {
+      if (!nd.routable || restOk(nd)) continue;
+      const site = SITES[nd.i % SITES.length];
+      const TANV_R = Math.tan(0.5 * siteFrame.fov * Math.PI / 180);
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const shrink = 1 - attempt * 0.06;
+        const d = site[2] * (1 - attempt * 0.05);
+        const p = siteFrame.pos.clone()
+          .addScaledVector(siteFrame.fwd, d)
+          .addScaledVector(siteFrame.right, site[0] * shrink * TANV_R * siteAspect * d)
+          .addScaledVector(siteFrame.up, site[1] * shrink * TANV_R * d);
+        clampUnder(p, 0.35 + nd.size);
+        if (camDist(p.x, p.y, p.z) < 3.0) continue;
+        nd.pos.copy(p);
+        if (restOk(nd)) break;
+      }
+      enforceClearance(nd);
+    }
   }
 
   /* ---------------- atlases (8 columns; flipY-correct cell coords) ------ */
@@ -862,98 +995,107 @@ export function buildPortraitField({
   const atlasB = makeAtlas(4, 2, CELL, drawAnonGlyph, anonSeeds);
 
   /* ---------------- local strands that TERMINATE at each node ----------- */
-  const nodeStrandSpecs = [];
-  function addStrandCurve(startPt, target, nodeIdx, strandVal, seedA, seedB, amp) {
-    const segs = 5;
-    const pts = [];
-    for (let j = 0; j <= segs; j++) {
-      const t = j / segs;
-      const e = H.easings.smooth(t);
-      const p = startPt.clone().lerp(target, e);
-      const hump = Math.sin(Math.PI * t);
-      p.x += H.fbm3(seedA * 2.3, t * 3.3, 1.7, 3) * amp * hump;
-      p.y += H.fbm3(3.9, t * 3.1 + seedA * 1.4, seedB * 0.0005, 3) * amp * 0.75 * hump;
-      p.z += H.fbm3(1.1, 2.6, t * 2.8 + seedA * 1.9, 3) * amp * hump;
-      clampUnder(p, 0.16);
-      pts.push(p);
-    }
-    pts[segs].copy(target);   // terminate exactly at the node
-    nodeStrandSpecs.push({ pts, node: nodeIdx, strand: strandVal });
-  }
-  function addLocalStrands(target, nodeIdx, count, seed, minLen, maxLen, cordBias, anchors) {
-    const rand = H.rng(seed >>> 0);
-    for (let k = 0; k < count; k++) {
-      let start = null;
-      if (rand() < cordBias) start = nearestCordPoint(target, rand);
-      // WHERE THIS FACE IS WIRED INTO THE ROOT WORLD (2026-08-06, report C).
-      // `nearestCordPoint` returns a point ON the substrate's own root pool —
-      // i.e. this strand does not merely end near a root, it starts on one.
-      // Recording those points is what lets substrate.assignOwners() find the
-      // face's LOCAL filaments by walking the network graph out from them,
-      // instead of guessing by distance. Strands that rolled a free-space
-      // start (55% of them) are not anchors and are not recorded.
-      if (start && anchors) anchors.push(start.clone());
-      if (!start) {
-        const a = rand() * TAU;
-        const b = (rand() - 0.5) * Math.PI * 0.85;
-        const rr = minLen + rand() * (maxLen - minLen);
-        start = V(
-          target.x + Math.cos(a) * Math.cos(b) * rr,
-          target.y + Math.sin(b) * rr * 0.75,
-          target.z + Math.sin(a) * Math.cos(b) * rr,
-        );
-        clampUnder(start, 0.16);
+  const nodeStrandSpecs = [];   // empty on the baked path; strandCurves comes from the payload
+  if (!baked) {
+    function addStrandCurve(startPt, target, nodeIdx, strandVal, seedA, seedB, amp) {
+      const segs = 5;
+      const pts = [];
+      for (let j = 0; j <= segs; j++) {
+        const t = j / segs;
+        const e = H.easings.smooth(t);
+        const p = startPt.clone().lerp(target, e);
+        const hump = Math.sin(Math.PI * t);
+        p.x += H.fbm3(seedA * 2.3, t * 3.3, 1.7, 3) * amp * hump;
+        p.y += H.fbm3(3.9, t * 3.1 + seedA * 1.4, seedB * 0.0005, 3) * amp * 0.75 * hump;
+        p.z += H.fbm3(1.1, 2.6, t * 2.8 + seedA * 1.9, 3) * amp * hump;
+        clampUnder(p, 0.16);
+        pts.push(p);
       }
-      addStrandCurve(start, target, nodeIdx, (k + 1) / (count + 1), k + seed * 0.0007, seed, 0.95);
+      pts[segs].copy(target);   // terminate exactly at the node
+      nodeStrandSpecs.push({ pts, node: nodeIdx, strand: strandVal });
     }
-  }
-  for (const n of nodes) {
-    n.anchors = [];
-    addLocalStrands(n.pos, n.i, n.strandCount, 8100 + n.i * 173, 1.7, 4.2, 0.45, n.anchors);
-  }
-  // node-to-node links: people are woven into EACH OTHER's networks —
-  // each node reaches its nearest neighbour(s), endpoints exact at both.
-  for (const n of nodes) {
-    const byDist = nodes
-      .filter(m => m.i !== n.i)
-      .sort((a, b) => a.pos.distanceToSquared(n.pos) - b.pos.distanceToSquared(n.pos));
-    const linkCount = n.rand() < 0.45 ? 2 : 1;
-    for (let k = 0; k < linkCount; k++) {
-      const m = byDist[k];
-      if (!m || m.pos.distanceTo(n.pos) > 8.5) continue;
-      addStrandCurve(m.pos.clone(), n.pos, n.i, 0.9 - k * 0.25, n.i * 1.7 + k * 3.1, 7700 + n.i, 1.35);
+    function addLocalStrands(target, nodeIdx, count, seed, minLen, maxLen, cordBias, anchors) {
+      const rand = H.rng(seed >>> 0);
+      for (let k = 0; k < count; k++) {
+        let start = null;
+        if (rand() < cordBias) start = nearestCordPoint(target, rand);
+        // WHERE THIS FACE IS WIRED INTO THE ROOT WORLD (2026-08-06, report C).
+        // `nearestCordPoint` returns a point ON the substrate's own root pool —
+        // i.e. this strand does not merely end near a root, it starts on one.
+        // Recording those points is what lets substrate.assignOwners() find the
+        // face's LOCAL filaments by walking the network graph out from them,
+        // instead of guessing by distance. Strands that rolled a free-space
+        // start (55% of them) are not anchors and are not recorded.
+        if (start && anchors) anchors.push(start.clone());
+        if (!start) {
+          const a = rand() * TAU;
+          const b = (rand() - 0.5) * Math.PI * 0.85;
+          const rr = minLen + rand() * (maxLen - minLen);
+          start = V(
+            target.x + Math.cos(a) * Math.cos(b) * rr,
+            target.y + Math.sin(b) * rr * 0.75,
+            target.z + Math.sin(a) * Math.cos(b) * rr,
+          );
+          clampUnder(start, 0.16);
+        }
+        addStrandCurve(start, target, nodeIdx, (k + 1) / (count + 1), k + seed * 0.0007, seed, 0.95);
+      }
+    }
+    for (const n of nodes) {
+      n.anchors = [];
+      addLocalStrands(n.pos, n.i, n.strandCount, 8100 + n.i * 173, 1.7, 4.2, 0.45, n.anchors);
+    }
+    // node-to-node links: people are woven into EACH OTHER's networks —
+    // each node reaches its nearest neighbour(s), endpoints exact at both.
+    for (const n of nodes) {
+      const byDist = nodes
+        .filter(m => m.i !== n.i)
+        .sort((a, b) => a.pos.distanceToSquared(n.pos) - b.pos.distanceToSquared(n.pos));
+      const linkCount = n.rand() < 0.45 ? 2 : 1;
+      for (let k = 0; k < linkCount; k++) {
+        const m = byDist[k];
+        if (!m || m.pos.distanceTo(n.pos) > 8.5) continue;
+        addStrandCurve(m.pos.clone(), n.pos, n.i, 0.9 - k * 0.25, n.i * 1.7 + k * 3.1, 7700 + n.i, 1.35);
+      }
     }
   }
 
   const nodeStrands = (() => {
-    const pos = [], along = [], strand = [], nodeA = [];
-    const N = 8;
-    for (const s of nodeStrandSpecs) {
-      const curve = H.catmull(s.pts);
-      let prev = curve.getPointAt(0);
-      for (let j = 1; j <= N; j++) {
-        const t = j / N;
-        const p = curve.getPointAt(t);
-        pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-        along.push((j - 1) / N, t);
-        strand.push(s.strand, s.strand);
-        nodeA.push(s.node, s.node);
-        prev = p;
-      }
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
-    geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
-    geo.setAttribute('aNode', new THREE.Float32BufferAttribute(nodeA, 1));
     const mat = makeNodeStrandMat(P.gold, P.goldBright, {
       baseOpacity: 0.14 * exposure, pulseWidth: 0.13, fogDensity: 0.016,
     });
+    let geo, verts;
+    if (baked) {
+      geo = baked.g.strands;
+      verts = geo.attributes.position.count;
+    } else {
+      const pos = [], along = [], strand = [], nodeA = [];
+      const N = 8;
+      for (const s of nodeStrandSpecs) {
+        const curve = H.catmull(s.pts);
+        let prev = curve.getPointAt(0);
+        for (let j = 1; j <= N; j++) {
+          const t = j / N;
+          const p = curve.getPointAt(t);
+          pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+          along.push((j - 1) / N, t);
+          strand.push(s.strand, s.strand);
+          nodeA.push(s.node, s.node);
+          prev = p;
+        }
+      }
+      geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
+      geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
+      geo.setAttribute('aNode', new THREE.Float32BufferAttribute(nodeA, 1));
+      verts = pos.length / 3;
+    }
     const lines = new THREE.LineSegments(geo, mat);
     lines.frustumCulled = false;
     lines.renderOrder = -3;
     group.add(lines);
-    return { lines, mat, geo, driver: H.pulseDriver(1.35), verts: pos.length / 3 };
+    return { lines, mat, geo, driver: H.pulseDriver(1.35), verts };
   })();
 
   /* ---------------- portrait planes (one draw call) ---------------- */
@@ -1228,13 +1370,13 @@ export function buildPortraitField({
      near-equidistant nodes turn over a beat apart, so the field reads as
      thinking rather than counting. */
   const swapEpicentre = (leg.CROWN ? leg.CROWN.clone() : nodes[0].pos.clone());
-  const swapDelays = (() => {
-    const crownNdc = projectInto(restFrame, swapEpicentre, 1.6);
+  const swapDelays = baked ? null : (() => {
+    const crownNdc = projectInto(siteFrame, swapEpicentre, siteAspect);
     const d = nodes.map((nd) => {
-      const p = projectInto(restFrame, nd.pos, 1.6);
-      // x by the same 1.6 the placement table uses, so "distance" is the
+      const p = projectInto(siteFrame, nd.pos, siteAspect);
+      // x by the same aspect the placement table uses, so "distance" is the
       // distance the eye sees rather than the one the NDC cube reports
-      return Math.hypot((p.x - crownNdc.x) * 1.6, p.y - crownNdc.y);
+      return Math.hypot((p.x - crownNdc.x) * siteAspect, p.y - crownNdc.y);
     });
     const lo = Math.min(...d), hi = Math.max(...d);
     const spread = (hi - lo) || 1;
@@ -1242,57 +1384,62 @@ export function buildPortraitField({
   })();
   // World radius for the colony wave index.js fires alongside the swap — that
   // one IS a spherical wave in the world, so it keeps world units.
-  const swapMaxR = Math.max(...nodes.map(nd => nd.pos.distanceTo(swapEpicentre)));
+  const swapMaxR = baked ? baked.portraits.swapMaxR : Math.max(...nodes.map(nd => nd.pos.distanceTo(swapEpicentre)));
 
   const portraits = (() => {
-    const n = NODE_COUNT;
-    const pos = new Float32Array(n * 4 * 3);
-    const corner = new Float32Array(n * 4 * 2);
-    const cellA = new Float32Array(n * 4 * 2);
-    const cellB = new Float32Array(n * 4 * 2);
-    const nodeA = new Float32Array(n * 4);
-    const seedA = new Float32Array(n * 4);
-    const sizeA = new Float32Array(n * 4);
-    const tiltA = new Float32Array(n * 4);
-    const anonF = new Float32Array(n * 4);
-    const swapD = new Float32Array(n * 4);
-    const idx = new Uint16Array(n * 6);
-    const CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
-    nodes.forEach((nd, i) => {
-      const [ax, ay] = cellUV(i);
-      const bcell = i % 4;
-      const bx = (bcell % 2) * 0.5, by = 1 - (Math.floor(bcell / 2) + 1) * 0.5;
-      for (let k = 0; k < 4; k++) {
-        const v = i * 4 + k;
-        pos[v * 3 + 0] = nd.pos.x; pos[v * 3 + 1] = nd.pos.y; pos[v * 3 + 2] = nd.pos.z;
-        corner[v * 2 + 0] = CORNERS[k][0]; corner[v * 2 + 1] = CORNERS[k][1];
-        cellA[v * 2 + 0] = ax; cellA[v * 2 + 1] = ay;
-        cellB[v * 2 + 0] = bx; cellB[v * 2 + 1] = by;
-        nodeA[v] = i; seedA[v] = nd.seed * 9.7 + i * 1.31;
-        sizeA[v] = nd.size; tiltA[v] = nd.tilt;
-        anonF[v] = 0;    // consent enforcement writes 1s via setConsentEnforced
-        swapD[v] = swapDelays[i];
-      }
-      const o = i * 4;
-      idx.set([o, o + 1, o + 2, o, o + 2, o + 3], i * 6);
-    });
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('aCorner', new THREE.BufferAttribute(corner, 2));
-    geo.setAttribute('aCellA', new THREE.BufferAttribute(cellA, 2));
-    geo.setAttribute('aCellB', new THREE.BufferAttribute(cellB, 2));
-    geo.setAttribute('aNode', new THREE.BufferAttribute(nodeA, 1));
-    geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
-    geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
-    geo.setAttribute('aTilt', new THREE.BufferAttribute(tiltA, 1));
-    geo.setAttribute('aAnonF', new THREE.BufferAttribute(anonF, 1));
-    geo.setAttribute('aSwapD', new THREE.BufferAttribute(swapD, 1));
-    geo.setIndex(new THREE.BufferAttribute(idx, 1));
+    let geo;
+    if (baked) {
+      geo = baked.g.planes;
+    } else {
+      const n = NODE_COUNT;
+      const pos = new Float32Array(n * 4 * 3);
+      const corner = new Float32Array(n * 4 * 2);
+      const cellA = new Float32Array(n * 4 * 2);
+      const cellB = new Float32Array(n * 4 * 2);
+      const nodeA = new Float32Array(n * 4);
+      const seedA = new Float32Array(n * 4);
+      const sizeA = new Float32Array(n * 4);
+      const tiltA = new Float32Array(n * 4);
+      const anonF = new Float32Array(n * 4);
+      const swapD = new Float32Array(n * 4);
+      const idx = new Uint16Array(n * 6);
+      const CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+      nodes.forEach((nd, i) => {
+        const [ax, ay] = cellUV(i);
+        const bcell = i % 4;
+        const bx = (bcell % 2) * 0.5, by = 1 - (Math.floor(bcell / 2) + 1) * 0.5;
+        for (let k = 0; k < 4; k++) {
+          const v = i * 4 + k;
+          pos[v * 3 + 0] = nd.pos.x; pos[v * 3 + 1] = nd.pos.y; pos[v * 3 + 2] = nd.pos.z;
+          corner[v * 2 + 0] = CORNERS[k][0]; corner[v * 2 + 1] = CORNERS[k][1];
+          cellA[v * 2 + 0] = ax; cellA[v * 2 + 1] = ay;
+          cellB[v * 2 + 0] = bx; cellB[v * 2 + 1] = by;
+          nodeA[v] = i; seedA[v] = nd.seed * 9.7 + i * 1.31;
+          sizeA[v] = nd.size; tiltA[v] = nd.tilt;
+          anonF[v] = 0;    // consent enforcement writes 1s via setConsentEnforced
+          swapD[v] = swapDelays[i];
+        }
+        const o = i * 4;
+        idx.set([o, o + 1, o + 2, o, o + 2, o + 3], i * 6);
+      });
+      geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('aCorner', new THREE.BufferAttribute(corner, 2));
+      geo.setAttribute('aCellA', new THREE.BufferAttribute(cellA, 2));
+      geo.setAttribute('aCellB', new THREE.BufferAttribute(cellB, 2));
+      geo.setAttribute('aNode', new THREE.BufferAttribute(nodeA, 1));
+      geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
+      geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
+      geo.setAttribute('aTilt', new THREE.BufferAttribute(tiltA, 1));
+      geo.setAttribute('aAnonF', new THREE.BufferAttribute(anonF, 1));
+      geo.setAttribute('aSwapD', new THREE.BufferAttribute(swapD, 1));
+      geo.setIndex(new THREE.BufferAttribute(idx, 1));
+    }
     const mesh = new THREE.Mesh(geo, portraitMat);
     mesh.frustumCulled = false;
     mesh.renderOrder = 2;
     group.add(mesh);
-    return { mesh, geo, planes: n };
+    return { mesh, geo, planes: NODE_COUNT };
   })();
 
   /* ---------------- real 3D fibre rim: strands radiating off each disc --- */
@@ -1358,55 +1505,62 @@ export function buildPortraitField({
   });
 
   const rimFibres = (() => {
-    const SEGS = 3;
-    const total = NODE_COUNT * RIM_FIBRES * SEGS * 2;
-    const pos = new Float32Array(total * 3);
-    const off = new Float32Array(total * 2);
-    const nodeA = new Float32Array(total);
-    const seedA = new Float32Array(total);
-    const alongA = new Float32Array(total);
-    let w = 0;
-    nodes.forEach((nd, i) => {
-      const rand = H.rng((3300 + i * 97) >>> 0);
-      for (let f = 0; f < RIM_FIBRES; f++) {
-        const a0 = (f / RIM_FIBRES) * TAU + (rand() - 0.5) * 0.42;
-        const r0 = nd.size * (0.66 + rand() * 0.10);
-        const len = nd.size * (0.34 + rand() * 0.72);
-        const bend = (rand() - 0.5) * 0.9;
-        const sd = rand();
-        const pts = [];
-        for (let s = 0; s <= SEGS; s++) {
-          const t = s / SEGS;
-          const a = a0 + bend * t * t;
-          const rr = r0 + len * t;
-          const jit = (H.noise3(i * 2.1 + f * 0.7, t * 4.0, sd * 9.0)) * nd.size * 0.10 * t;
-          pts.push([Math.cos(a) * rr + jit, Math.sin(a) * rr - jit * 0.6, t]);
-        }
-        for (let s = 0; s < SEGS; s++) {
-          for (const q of [pts[s], pts[s + 1]]) {
-            pos[w * 3 + 0] = nd.pos.x; pos[w * 3 + 1] = nd.pos.y; pos[w * 3 + 2] = nd.pos.z;
-            off[w * 2 + 0] = q[0]; off[w * 2 + 1] = q[1];
-            nodeA[w] = i; seedA[w] = sd * 7.3 + f * 0.53; alongA[w] = q[2];
-            w++;
+    let geo, verts;
+    if (baked) {
+      geo = baked.g.rim;
+      verts = geo.attributes.position.count;
+    } else {
+      const SEGS = 3;
+      const total = NODE_COUNT * RIM_FIBRES * SEGS * 2;
+      const pos = new Float32Array(total * 3);
+      const off = new Float32Array(total * 2);
+      const nodeA = new Float32Array(total);
+      const seedA = new Float32Array(total);
+      const alongA = new Float32Array(total);
+      let w = 0;
+      nodes.forEach((nd, i) => {
+        const rand = H.rng((3300 + i * 97) >>> 0);
+        for (let f = 0; f < RIM_FIBRES; f++) {
+          const a0 = (f / RIM_FIBRES) * TAU + (rand() - 0.5) * 0.42;
+          const r0 = nd.size * (0.66 + rand() * 0.10);
+          const len = nd.size * (0.34 + rand() * 0.72);
+          const bend = (rand() - 0.5) * 0.9;
+          const sd = rand();
+          const pts = [];
+          for (let s = 0; s <= SEGS; s++) {
+            const t = s / SEGS;
+            const a = a0 + bend * t * t;
+            const rr = r0 + len * t;
+            const jit = (H.noise3(i * 2.1 + f * 0.7, t * 4.0, sd * 9.0)) * nd.size * 0.10 * t;
+            pts.push([Math.cos(a) * rr + jit, Math.sin(a) * rr - jit * 0.6, t]);
+          }
+          for (let s = 0; s < SEGS; s++) {
+            for (const q of [pts[s], pts[s + 1]]) {
+              pos[w * 3 + 0] = nd.pos.x; pos[w * 3 + 1] = nd.pos.y; pos[w * 3 + 2] = nd.pos.z;
+              off[w * 2 + 0] = q[0]; off[w * 2 + 1] = q[1];
+              nodeA[w] = i; seedA[w] = sd * 7.3 + f * 0.53; alongA[w] = q[2];
+              w++;
+            }
           }
         }
-      }
-    });
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('aOff', new THREE.BufferAttribute(off, 2));
-    geo.setAttribute('aNode', new THREE.BufferAttribute(nodeA, 1));
-    geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
-    geo.setAttribute('aAlong', new THREE.BufferAttribute(alongA, 1));
+      });
+      geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('aOff', new THREE.BufferAttribute(off, 2));
+      geo.setAttribute('aNode', new THREE.BufferAttribute(nodeA, 1));
+      geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
+      geo.setAttribute('aAlong', new THREE.BufferAttribute(alongA, 1));
+      verts = total;
+    }
     const lines = new THREE.LineSegments(geo, rimMat);
     lines.frustumCulled = false;
     lines.renderOrder = 1;
     group.add(lines);
-    return { lines, geo, verts: total };
+    return { lines, geo, verts };
   })();
 
   /* ---------------- ember cores + broad halos (Points, 2 draws) --------- */
-  function makeGlowPoints(map, color, sizeMul, baseA, hoverA, order) {
+  function makeGlowPoints(map, color, sizeMul, baseA, hoverA, order, bakedGeo) {
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uMap: { value: map },
@@ -1461,31 +1615,34 @@ export function buildPortraitField({
           gl_FragColor = vec4(uColor, clamp(a * uFade, 0.0, 1.0));
         }`,
     });
-    const n = NODE_COUNT;
-    const pos = new Float32Array(n * 3);
-    const sizeA = new Float32Array(n);
-    const seedA = new Float32Array(n);
-    const nodeA = new Float32Array(n);
-    nodes.forEach((nd, i) => {
-      pos[i * 3] = nd.pos.x; pos[i * 3 + 1] = nd.pos.y; pos[i * 3 + 2] = nd.pos.z;
-      sizeA[i] = nd.size * sizeMul;
-      seedA[i] = nd.seed * 11.3 + i * 0.77;
-      nodeA[i] = i;
-    });
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
-    geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
-    geo.setAttribute('aNode', new THREE.BufferAttribute(nodeA, 1));
+    let geo = bakedGeo || null;
+    if (!geo) {
+      const n = NODE_COUNT;
+      const pos = new Float32Array(n * 3);
+      const sizeA = new Float32Array(n);
+      const seedA = new Float32Array(n);
+      const nodeA = new Float32Array(n);
+      nodes.forEach((nd, i) => {
+        pos[i * 3] = nd.pos.x; pos[i * 3 + 1] = nd.pos.y; pos[i * 3 + 2] = nd.pos.z;
+        sizeA[i] = nd.size * sizeMul;
+        seedA[i] = nd.seed * 11.3 + i * 0.77;
+        nodeA[i] = i;
+      });
+      geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
+      geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
+      geo.setAttribute('aNode', new THREE.BufferAttribute(nodeA, 1));
+    }
     const pts = new THREE.Points(geo, mat);
     pts.frustumCulled = false;
     pts.renderOrder = order;
     group.add(pts);
-    return { pts, mat };
+    return { pts, mat, geo };
   }
   // the halo each face sits inside; the core is the ember at its centre
-  const cores = makeGlowPoints(H.softDisc(64), P.goldBright, 0.5, 0.085, 0.30, 3);
-  const halos = makeGlowPoints(H.glowSprite(P.ember, 64), P.ember, 2.7, 0.058, 0.18, -2);
+  const cores = makeGlowPoints(H.softDisc(64), P.goldBright, 0.5, 0.085, 0.30, 3, baked?.g.cores);
+  const halos = makeGlowPoints(H.glowSprite(P.ember, 64), P.ember, 2.7, 0.058, 0.18, -2, baked?.g.halos);
 
   /* ---------------- photo pipeline (async; never blocks boot) -------------
      REAL CONTRIBUTORS since 2026-08-16. This used to load assets/test-portraits
@@ -1643,9 +1800,21 @@ export function buildPortraitField({
     seatPeople(dealFor(0));
     portraitMat.uniforms.uMapP.value = bakePhotos(0);
     photosAvailable = true;
-    // and start the NEXT arrangement warming while nothing is happening, so
-    // the first press of Remix is a swap and not a bake (see prepareNext).
-    schedulePrepare();
+    // and start the NEXT arrangement warming — but NOT in the load window
+    // (2026-08-16, the post-settle stall hunt): this bake is two 2048x512
+    // canvas atlases (~tens of ms of shadowBlur + grain loops) whose only
+    // purpose is to precede a REMIX PRESS, an interaction unreachable until
+    // the visitor has scrolled all the way down into Owned. Scheduled from
+    // here it landed ~10s in, on the settled hero, stacking with the shader
+    // warm slices into the one stall Hannah kept seeing. First input is the
+    // earliest moment the press can even start approaching; the idle
+    // scheduler then finds a quiet beat (a scroll rest) long before Owned,
+    // and remix() still bakes inline if the visitor somehow outruns it.
+    const armPrepare = () => {
+      for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, armPrepare, true);
+      schedulePrepare();
+    };
+    for (const t of ['wheel', 'touchmove', 'keydown']) addEventListener(t, armPrepare, { capture: true, passive: true });
     return true;
   }).catch((e) => {
     console.warn('[owned] test photos unavailable — staying procedural:', e.message);
@@ -1747,8 +1916,31 @@ export function buildPortraitField({
       planes: portraits.planes,
       strandVerts: nodeStrands.verts,
       rimVerts: rimFibres.verts,
-      strandCurves: nodeStrandSpecs.length,
+      strandCurves: baked ? baked.portraits.strandCurves : nodeStrandSpecs.length,
       atlasPx: `${atlasA.image.width}x${atlasA.image.height} ×2 + ${atlasB.image.width}x${atlasB.image.height}`,
+    },
+    // The bake recording site (owned/index.js) reads these AFTER assignOwners
+    // so the substrate's aOwner is final. Keys match baked.js geometry() keys;
+    // the payload is the runtime-read node data the baked path rebuilds
+    // (content round-trips as its id and is re-resolved against `contributors`).
+    geometries: {
+      planes: portraits.geo,
+      rim: rimFibres.geo,
+      cores: cores.geo,
+      halos: halos.geo,
+      strands: nodeStrands.geo,
+    },
+    bakePayload: {
+      portraits: {
+        nodeIds: nodes.map(n => n.id),
+        nodeRoutable: nodes.map(n => n.routable),
+        nodeContentKeys: nodes.map(n => (n.content ? n.content.id : null)),
+        nodePos: nodes.flatMap(n => [n.pos.x, n.pos.y, n.pos.z]),
+        nodeSize: nodes.map(n => n.size),
+        nodeAnchors: nodes.map(n => n.anchors.map(a => [a.x, a.y, a.z])),
+        swapMaxR,
+        strandCurves: nodeStrandSpecs.length,
+      },
     },
 
     indexOf(id) {

@@ -138,6 +138,41 @@ let WRAP_TURN = 0;       // 0 = the authored sense (continue the ride's own
 
 let started = false;
 
+/* THE CHAPTERS BUILD ONE PER SLICE (2026-08-16 — Hannah: "still a little
+   stagger once it's fully loaded"). boot() used to construct all four
+   chapters in its own single task: measured as a 0.35 s frame freeze warm
+   (1.6 s with cold GPU shader caches) landing ~10 s in, right as the settled
+   hero was breathing — the visible stagger. The module is fetched and
+   evaluated during the intro (main.js journeyModuleP), so the only cost left
+   at boot WAS this geometry build; prepareChapter() lets the loader spend it
+   one chapter per idle slice, with frames rendering in between, and boot()
+   picks up whatever was prebuilt. Ordering note: chapter constructors
+   register animators, and the frame-order contract is spine first — the
+   loader (main.js) parks a placeholder 'journey' animator before anything
+   else registers, and boot's real registration replaces it IN PLACE
+   (organism.js addAnimator's documented semantics), so prebuilt chapters
+   still run after the spine. A caller that skips prepareChapter entirely
+   (flush paths, direct boot) gets the old synchronous build inside boot(). */
+const CHAPTER_BUILDERS = {
+  inspire: (s) => createInspire(s),
+  connect: (s) => createConnect(s),
+  owned: (s) => createOwned(s, CONTENT),
+  final: (s) => createFinal(s),
+};
+const _preparedChapters = {};
+
+/** Build the next not-yet-built chapter; returns how many remain. Idempotent
+ *  per chapter and safe to interleave from racing loader chains. */
+export function prepareChapter(sceneApi) {
+  for (const id of Object.keys(CHAPTER_BUILDERS)) {
+    if (!_preparedChapters[id]) {
+      _preparedChapters[id] = CHAPTER_BUILDERS[id](sceneApi);
+      break;
+    }
+  }
+  return Object.keys(CHAPTER_BUILDERS).filter((id) => !_preparedChapters[id]).length;
+}
+
 export function boot(opts = {}) {
   if (started) return window.journey;
   started = true;
@@ -199,12 +234,13 @@ export function boot(opts = {}) {
     lens.setEnabled(!lens.enabled);
   });
 
-  const chapters = {
-    inspire: createInspire(sceneApi),
-    connect: createConnect(sceneApi),
-    owned: createOwned(sceneApi, CONTENT),
-    final: createFinal(sceneApi),
-  };
+  // One chapter per idle slice (prepareChapter below) when the loader had
+  // time; anything not prebuilt lands here synchronously, so boot's contract
+  // — chapters exist when it returns — is unchanged on every path.
+  const chapters = {};
+  for (const id of Object.keys(CHAPTER_BUILDERS)) {
+    chapters[id] = _preparedChapters[id] || CHAPTER_BUILDERS[id](sceneApi);
+  }
 
   const seams = createSeams({
     camera: sceneApi.camera,
@@ -237,7 +273,27 @@ export function boot(opts = {}) {
        through; the destination copy is keyed off the arrival (d1ecc23); the
        destination chapter is suppressed for the blend (a8d4518); and the URL is
        not written (239d6c7). */
-    onWrap: (dir) => { navigateTo(dir > 0 ? 'mission' : 'final', dir); },
+    onWrap: (dir) => {
+      /* A WRAP ASKED FOR AGAINST A WRAP STILL IN FLIGHT is the same ask the
+         steering block answers (applyFrame): follow the scroll. It can only
+         be the OPPOSING direction — the lap's own destination anchor is the
+         only place the position gate passes while the lap flies — and it
+         reaches here rather than the steering block only when a whole
+         reversal STREAM lands inside one frame (a synthetic burst, or input
+         faster than the steering's once-per-frame look), because the model's
+         wrap fires from inside scroll.update(), one line before the steering
+         runs. Navigating would be the harsh path with the stuck-hero bug on
+         top: directJumpTo -> placeAt -> setOwned(true) captures `hero` from
+         a camera the first lap still has mid-flight. Steering the live lap
+         instead is exactly what the visitor meant, and the wrap block that
+         called us raises the wall itself, so the gesture is retired the same
+         way either branch. */
+      if (camBlend && camBlend.wrapDir && dir === -camBlend.wrapDir) {
+        steerWrapBlend(dir);
+        return;
+      }
+      navigateTo(dir > 0 ? 'mission' : 'final', dir);
+    },
   });
   scroll.attach();
   scroll.enabled = true;
@@ -272,6 +328,12 @@ export function boot(opts = {}) {
         // the label pill beside it. A chapter that does not implement
         // nodeRadius keeps the pill-only hit model unchanged.
         radius: typeof mod.nodeRadius === 'function' ? () => mod.nodeRadius(id) : undefined,
+        // Optional (2026-08-16): a per-node scene gate. A chapter that
+        // implements nodeReveal ties each chip's arrival to what the scene
+        // draws for that node (Connect: each hub's own light landing) instead
+        // of to the chapter's copy block; one that does not keeps the
+        // copy-gated arrival unchanged.
+        reveal: typeof mod.nodeReveal === 'function' ? () => mod.nodeReveal(id) : undefined,
       });
       h.onHot = (on) => mod.setHot && mod.setHot(id, on);
     }
@@ -296,15 +358,22 @@ export function boot(opts = {}) {
       });
     }
   }
-  // registration order = narrative reveal order (ArtCompute -> Arca -> 2RP,
-  // per Plate II) — it drives both the tab order and the W3-B label stagger
+  // registration order = importance (ArtCompute -> Arca -> 2RP, per Plate II)
+  // and still drives the tab order. WHEN each chip stands up moved to the
+  // chapter's landing cascade (2026-08-16, the Connect precedent): nodeReveal
+  // ties each label to its own lip ember, so the three arrive one at a time
+  // in SCREEN order (Arca left, ArtCompute centre, 2RP right) as the embers
+  // ignite — chapters/inspire/index.js 5c. The gate bound below is ui's eased
+  // copy value, so ember + label land timed with the intro.
   registerHotspots('inspire', ['artcompute', 'arca', 'tworp'], {
     nodeWorld: (id) => chapters.inspire.nodeWorld(id),
+    nodeReveal: (id) => chapters.inspire.nodeReveal(id),
     setHot: (id, on) => {
       const order = { artcompute: 0, arca: 1, tworp: 2 };
       chapters.inspire.setActive(on ? order[id] : -1);
     },
   });
+  chapters.inspire.bindLandingGate(() => ui.copyEase('inspire'));
   registerHotspots('connect', chapters.connect.nodeIds, chapters.connect);
   registerHotspots('owned', chapters.owned.nodeIds, chapters.owned);
   for (const id of ['inspire', 'connect', 'owned', 'final']) {
@@ -383,11 +452,35 @@ export function boot(opts = {}) {
 
   let heroEntry = null;   // { t, lead, dur } while a jump is flying INTO the hero
   let heroGate = 1;       // the eased arrival term; 1 = the hero is ours to show
+  /* ...AND A DEPARTURE TERM TO MATCH (2026-08-16 — Hannah, the up-wrap:
+     "there's a similar flash when I scroll UP from the top section [to] the
+     last section"). A jump AWAY from the hero snapped this furniture to
+     opacity 0 on the click frame — p jumps to the destination, presence reads
+     0, and the repaint below shipped it before the camera had moved an inch.
+     The scrim is the heavy member of the set: a 0.55-alpha dark gradient over
+     exactly the bottom-left where the ground web's brightest filaments live,
+     so its one-frame removal UNVEILED them all at once and the grade's
+     halation flared around the newly-hot cores (measured: bottom-left region
+     +4.3/255 in one frame; pinning the furniture removes the flash entirely,
+     +0.06). Departures were the one member of the a8d4518 family — fog
+     (2026-08-09), grade (2026-08-13), chapter geometry — still stepping on
+     the click frame. `heroExit` retires the furniture over the blend's
+     opening beat instead: armed only by jumps (scroll-driven presence is
+     pure in p and untouched), snapped by placements (dt === 0, so deep
+     links, ?capture= and the goldens are bit-identical), and composed with
+     max() so a lap steered back into the hero hands over cleanly. */
+  let heroExit = null;    // { from, t, dur } while a jump is flying OUT of the hero
+  let heroShown = 1;      // last painted value — the exit fades from what is actually up
 
   const heroPresence = (p) => 1 - smooth01((p - 0.006) / 0.05);
 
   /** The ONE place the hero furniture's visibility reaches the DOM. */
   function paintHeroFurniture(a) {
+    heroShown = a;
+    // A departing set leaves the hit tree on the CLICK frame, not at the 0.05
+    // threshold — the fade is for the eye; a callout must not keep arming
+    // region highlights while the lap lifts off through it.
+    const inert = a < 0.05 || !!heroExit;
     for (const f of heroFurniture) {
       f.style.opacity = a;
       // Swarm census finding (2026-08-03): opacity-0 elements are still
@@ -396,13 +489,13 @@ export function boot(opts = {}) {
       // bindings, flaring the old curtain up to ~2x with a breathing pulse at
       // exactly the moment it should cede. Faded furniture must leave the hit
       // tree, not just the eye.
-      f.style.pointerEvents = a < 0.05 ? 'none' : '';
+      f.style.pointerEvents = inert ? 'none' : '';
     }
     // ...and the tab order says the same thing, from the same number. It used
     // to be a second threshold on raw `p` over in ui.js, which is how three
     // invisible links stayed tabbable through a whole jump.
     if (calloutsEl) {
-      const live = a >= 0.05;
+      const live = !inert;
       if (calloutsEl.inert === live) calloutsEl.inert = !live;
     }
   }
@@ -416,14 +509,34 @@ export function boot(opts = {}) {
    *  is sitting at full opacity right now; leaving the correction to the next
    *  animator frame ships one rendered frame of exactly the flash this exists
    *  to remove. Same reasoning, same shape, as ui.js's armCopyEntry. */
+  /** Arm the DEPARTURE term (see heroExit above). Called from directJumpTo
+   *  BEFORE placeAt — the two dt = 0 placement passes inside placeAt are what
+   *  used to ship the snap, so arming afterwards (in armHeroEntry, where the
+   *  arrival is armed) is exactly one placement too late. `holdSnaps` lets
+   *  the term survive those two passes and nothing else: a REAL placement
+   *  (deep link, ?capture=, QA scrollTo) never has an exit armed, and one
+   *  that lands mid-fade spends the two held snaps and then kills it, which
+   *  is the snap a placement is owed. */
+  function armHeroExit(wrap) {
+    if (heroShown <= 0.05) return;
+    // 0.35 s reads as a fade on the shortest jumps; the wrap's 4 s lap gets
+    // 0.6 s so the furniture is gone before the camera swings through it.
+    heroExit = { from: heroShown, t: 0, dur: wrap ? 0.6 : 0.35, holdSnaps: 2 };
+  }
+
   function armHeroEntry(chapterId, blendDur) {
     if (chapterId !== 'mission') { heroEntry = null; heroGate = 1; }
     else {
+      heroExit = null;
       const lead = blendDur * COPY_JUMP_LEAD;
-      heroEntry = { t: 0, lead, dur: blendDur + COPY_JUMP_TAIL_S - lead };
+      heroEntry = { t: 0, lead, dur: blendDur + COPY_JUMP_TAIL_S - lead, play: 1 };
       heroGate = 0;
     }
-    paintHeroFurniture(heroPresence(journey.progress) * heroGate);
+    // The departure repaint deliberately paints the UNCHANGED value (the click
+    // frame moves nothing); the arrival repaint still snaps to 0 — see the
+    // "repaint is not optional" note above.
+    paintHeroFurniture(Math.max(heroPresence(journey.progress) * heroGate,
+      heroExit ? heroExit.from : 0));
   }
 
   /** The visitor took the wheel: the arrival this was timed against is not
@@ -434,16 +547,47 @@ export function boot(opts = {}) {
    *  second rule to hand back to, so the relaxation is the handback.) */
   function cancelHeroEntry() { heroEntry = null; }
 
+  /** A steered wrap (steerWrapBlend): the arrival term runs on the lap's own
+   *  clock, so it reverses with the lap rather than being cancelled — the
+   *  furniture backs out along the same curve it entered on, and the gate is
+   *  shut again the frame the rewound lap lands. Same statement the copy
+   *  layer makes in ui.setCopyEntryPlay. */
+  function setHeroEntryPlay(play) { if (heroEntry) heroEntry.play = play < 0 ? -1 : 1; }
+
+  /** One step of the departure term (see heroExit above): the current value
+   *  eased to 0 over the blend's opening beat, 0 whenever no jump is leaving.
+   *  Composed with the presence product via max() at the paint site, so a lap
+   *  steered back into the hero (presence rising) takes over seamlessly. */
+  function stepHeroExit(dt) {
+    if (!heroExit) return 0;
+    // The jump's own two placement passes are held (see armHeroExit); any
+    // further dt === 0 is a real placement and snaps, exactly as the arrival
+    // term does.
+    if (dt === 0) {
+      if (heroExit.holdSnaps > 0) { heroExit.holdSnaps--; return heroExit.from; }
+      heroExit = null; return 0;
+    }
+    heroExit.t += dt;
+    const f = clamp01(heroExit.t / heroExit.dur);
+    const e = f * f * f * (f * (f * 6 - 15) + 10);   // the blend's own C2 ease
+    const v = heroExit.from * (1 - e);
+    if (f >= 1) heroExit = null;
+    return v;
+  }
+
   /** One step of the arrival term. */
   function stepHeroEntry(dt) {
     // A placement is not an arrival: a deep link, a ?capture= still or a QA
     // scrollTo must snap, exactly as the copy's entry dies on dt === 0.
     if (dt === 0) { heroEntry = null; heroGate = 1; return heroGate; }
     if (heroEntry) {
-      heroEntry.t += dt;
+      heroEntry.t += dt * (heroEntry.play || 1);
       const f = clamp01((heroEntry.t - heroEntry.lead) / heroEntry.dur);
       heroGate = f * f * f * (f * (f * 6 - 15) + 10);   // the blend's own C2 ease
       if (heroEntry.t >= heroEntry.lead + heroEntry.dur) { heroEntry = null; heroGate = 1; }
+      // ...or rewound past its own start (a steered wrap): the arrival is not
+      // happening, so the gate is shut exactly as it was before the lap.
+      else if (heroEntry.t <= 0) { heroEntry = null; heroGate = 0; }
     } else if (heroGate < 1) {
       heroGate += (1 - heroGate) * Math.min(1, dt * COPY_IN_K);
       if (heroGate > 0.999) heroGate = 1;
@@ -521,6 +665,10 @@ export function boot(opts = {}) {
   function directJumpTo(chapterId, wrap = 0) {
     const targetP = restProgress(chapterId);
     if (Math.abs(targetP - journey.progress) < 1e-4) return;
+    // The rest this move DEPARTS — read before placeAt moves the state. Only
+    // the wrap spends it: a rewound lap lands back on this rest
+    // (steerWrapBlend / landWrapHome below).
+    const fromP = journey.progress;
     const cam = sceneApi.camera, ctl = sceneApi.controls;
     const fog = sceneApi.scene.fog;
     const pos0 = cam.position.clone(), tgt0 = ctl.target.clone(), fov0 = cam.fov;
@@ -535,6 +683,17 @@ export function boot(opts = {}) {
     // starts from where the old one had actually reached, which pos0 above
     // has already captured.
     camBlend = null;
+    // ...and a jump AWAY from the hero arms its furniture DEPARTURE here,
+    // before placeAt's dt = 0 passes can snap the scrim off on the click
+    // frame — the up-wrap flash (2026-08-16; see heroExit).
+    if (chapterId !== 'mission') armHeroExit(!!wrap);
+    // pos0 is banked, so assert the un-owned invariant before placing: if the
+    // director is un-owned the camera may be MID-LAP (a nav click over a
+    // flying down-wrap — the blend just dropped without restoring), and
+    // placeAt is about to hand the director the camera, whose capture must
+    // see the hero pose (director.js captureHero). Idempotent when the
+    // camera already is the hero's, which is every ordinary un-owned jump.
+    if (!director.owned) guarded('director', () => director.applyHeroPose());
     // Place, arm, never replay — but WITHOUT the eased-state snap. A jump is
     // not a placement: the camera is about to travel, so the chapters' eased
     // arm states must not be thrown to their destination values while it does.
@@ -589,8 +748,15 @@ export function boot(opts = {}) {
     // because it is what is on screen; look1 is read here, after placeAt has
     // let lens.update() write the destination's per-leg curve.
     const look1 = lens.lookOf(journey.progress);
-    camBlend = { t: 0, dur, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
-      az1, bow, rise, look0, look1, look: { ...look1 } };
+    camBlend = { t: 0, dur, play: 1, pos0, tgt0, fov0, fog, fogN0, fogF0, fogN1, fogF1,
+      az1, bow, rise, look0, look1, look: { ...look1 },
+      // The lap's reverse gear (wrap only): the scroll direction that asked
+      // for this move, the rest it departed — where a rewound lap places the
+      // journey when it gets back (steerWrapBlend / landWrapHome) — and the
+      // destination pose's camera x, kept so a steer can re-announce the
+      // chapters' blend contract with whichever end the lap now lands at.
+      wrapDir: wrap, homeP: wrap ? restProgress(chapterAt(fromP).id) : 0,
+      dstX: cam.position.x };
     // cam.position is the DESTINATION pose here — placeAt above let the
     // director write it, and az1/len are already measured against it. A
     // chapter whose reveal is paced (not merely gated) by the camera needs to
@@ -738,7 +904,51 @@ export function boot(opts = {}) {
        still stepped below, after the director has written the destination
        pose, so the composition order the frame-order block describes is
        unchanged. */
-    if (camBlend && blendCancelled()) dropCamBlend();
+    /* A WRAP FOLLOWS THE SCROLL (2026-08-16 — Hannah: reversing mid-wrap
+       "just does a harsh reset... it just goes straight to the other area
+       instead of just following the direction of my scroll"). Cancelling a
+       CLICK jump hands the camera back with a step, and for a click that step
+       is small and earned: any scroll after a click is unambiguously the
+       visitor taking over. Cancelling the wrap's lap the same way teleported
+       the camera to the destination pose — up to the lap's whole 68-unit arc
+       in one frame — because the state was placed at the destination the
+       moment the wrap fired. So a wrap blend is never dropped by scroll input
+       at all: it is STEERED. Input the model acts on sets the lap's play
+       direction to the scroll's own — with the wrap, keep flying; against it,
+       retrace the same authored path backwards — and the gesture is retired
+       (scroll.retire) exactly as the wrap itself retires the gesture that
+       fired it, so the tail of the steering flick cannot re-steer or cancel.
+       A rewound lap that reaches its own first frame lands the journey back
+       on the rest it departed (landWrapHome, top of spineFrame), and the
+       visitor's continued reverse scroll simply carries on from there. */
+    if (camBlend && blendCancelled()) {
+      if (camBlend.wrapDir && scroll.lastDir) {
+        steerWrapBlend(scroll.lastDir);
+        // The steering gesture is retired on the spot — the same retirement
+        // the wrap gives the gesture that fires it — so the rest of the same
+        // flick cannot re-enter this block, cancel the lap, or buy a wrap of
+        // its own while the lap flies. (The onWrap steering path skips this:
+        // the wrap block that calls it raises the wall itself.)
+        scroll.retire(scroll.lastDir);
+      } else dropCamBlend();
+    }
+    /* OWNERSHIP MAY NOT BE TAKEN FROM A CAMERA A BLEND HOLDS MID-LAP
+       (2026-08-16). setOwned(true) captures the hero composition from the
+       LIVE camera, which is right only while the un-owned camera IS the
+       hero's (director.js captureHero). A steered wrap keeps its blend alive
+       through input that also moves p: a pause and a fresh same-way delta at
+       the down-wrap's destination drop the wall for one frame, p crosses the
+       threshold with the camera still mid-lap, and the capture bakes that lap
+       frame into `hero` for the rest of the session — measured az -1.390,
+       r 14.97 (the Final rest's own radius), fov 45.5 landing as the "hero"
+       pose. The cancellation path never met this because dropCamBlend()
+       restores the hero BEFORE ownership is decided; the steering path keeps
+       the blend, so the restore has to happen here. Synchronous, and both the
+       director's apply() and the surviving blend overwrite the camera later
+       this same frame, so nothing of the re-asserted pose ever renders. */
+    if (camBlend && !director.owned && p > 0.0008) {
+      guarded('director', () => director.applyHeroPose());
+    }
     const owned = p > 0.0008;
     director.setOwned(owned);
     if (owned) guarded('director', () => director.apply(p, dt));
@@ -799,8 +1009,11 @@ export function boot(opts = {}) {
     const ch = chapterAt(p);
     // Hero furniture releases as the journey leaves the Mission composition,
     // and comes back only once the camera has actually got here. PRESENCE x
-    // ARRIVAL, one writer — see THE HERO FURNITURE block in boot().
-    paintHeroFurniture(heroPresence(p) * stepHeroEntry(dt));
+    // ARRIVAL, one writer — see THE HERO FURNITURE block in boot(). max()ed
+    // with the DEPARTURE term (heroExit): a jump out of the hero fades what
+    // is up over the blend's opening beat instead of stepping it on the
+    // click frame — the up-wrap scrim flash (2026-08-16).
+    paintHeroFurniture(Math.max(heroPresence(p) * stepHeroEntry(dt), stepHeroExit(dt)));
 
     guarded('ui', () => ui.update(p, ch.id, sceneApi.camera, dt));
 
@@ -886,6 +1099,78 @@ export function boot(opts = {}) {
     cancelHeroEntry();
   }
 
+  /** Steer the wrap's lap to the scroll's own direction (see the block at the
+   *  top of applyFrame). With the wrap: keep flying — a second same-way
+   *  gesture is spent on the ride already under way, never answered with a
+   *  teleport. Against it: the lap retraces its own path (stepCamBlend runs t
+   *  backwards, so bow, rise and the authored turn all unwind exactly as they
+   *  wound). Either caller retires the steering gesture — the applyFrame
+   *  block via scroll.retire, the onWrap path via the wrap block's own wall —
+   *  so the rest of the same flick buys nothing further. */
+  function steerWrapBlend(dir) {
+    const play = dir === camBlend.wrapDir ? 1 : -1;
+    if (play === camBlend.play) return;
+    camBlend.play = play;
+    // The copy envelope and the hero furniture's arrival term were armed on
+    // this lap's own frame and step by its same dt, so they reverse with it
+    // and unwind to exactly the pre-wrap frame as the rewound lap lands.
+    // Cancelling them here instead handed the copy to the scroll rule, which
+    // reads a p the wrap parks at the DESTINATION — it painted the copy of
+    // the section the camera was flying away from, and held it up through
+    // the whole retrace (Hannah, 2026-08-16).
+    guarded('ui', () => ui.setCopyEntryPlay(play));
+    setHeroEntryPlay(play);
+    /* AND THE CHAPTERS ARE TOLD THE MOVE'S NEW LANDING (2026-08-16 — Hannah:
+       "weirdness with how the group mushrooms show... some kind of
+       glitchiness in when and how that appears"). The Final chapter paces its
+       whole reveal against the blend contract — destination pull, direction
+       (retire vs arrive), and the move's remaining room (setBlending there).
+       A steered lap changes all three: a down-wrap that rewinds is no longer
+       a departure from the field, it is an arrival back INTO it, and left
+       un-announced the driver kept retiring toward the hero's pull — with
+       the monotone fade latch holding the chapter dark — while the camera
+       flew back to a field that should have been relighting, and the whole
+       thing popped on at the landing instead. Same re-announcement a jump
+       overtaking a jump already makes; setBlending is written to be
+       recomputed from the new arguments. */
+    setBlending(true,
+      play > 0 ? camBlend.dstX : camBlend.pos0.x,
+      Math.max(0.05, play > 0 ? camBlend.dur - camBlend.t : camBlend.t));
+  }
+
+  /** A rewound lap has reached its own first frame: the camera stands where
+   *  the wrap departed, so place the journey back on that rest and the two
+   *  agree again — the same contract endCamBlend keeps for a landing, at the
+   *  other end of the path. Runs at the TOP of spineFrame, never from inside
+   *  stepCamBlend: placeAt composes a full frame at the home rest, and
+   *  landing mid-applyFrame would let the remainder of that frame re-drive
+   *  every reader at the stale destination p (exactly the mixed-frame class
+   *  the frame-order block above applyFrame exists to rule out). */
+  function landWrapHome() {
+    const homeP = camBlend.homeP;
+    camBlend = null;
+    guarded('lens', () => lens.setLookOverride(null));
+    setBlending(false);
+    /* Capture hygiene, same invariant restoreHero() guards for endCamBlend:
+       placeAt is about to decide ownership, and setOwned(true) captures the
+       hero composition from the LIVE camera — which, un-owned mid-rewind,
+       holds the lap's first frame rather than the hero's pose. Re-assert the
+       hero first (synchronous, placeAt overwrites it in the same tick, so
+       nothing of it renders) so the capture can never bake a lap frame into
+       `hero`. */
+    if (!director.owned) guarded('director', () => director.restoreHero());
+    placeAt(homeP);
+    // The hero furniture cannot ride the reversed envelope home the way the
+    // copy does: an up-wrap ARMS no entry (its destination is not the hero),
+    // and presence is keyed to p, which the lap parked at the far end — so a
+    // rewound lap would land on the hero with the callouts popping on at
+    // full. A zero-length arm gives the landing the COPY_JUMP_TAIL_S breathe
+    // the copy's own envelope already ends on; for a non-hero home it clears
+    // the term, which is a no-op. (The copy needs nothing here: its envelope
+    // unwound to exactly this frame, so placeAt's snap painted it already.)
+    armHeroEntry(chapterAt(homeP).id, 0);
+  }
+
   /** One step of the direct-jump camera blend. Runs INSIDE applyFrame, right
    *  after the director has written the destination pose and before anything
    *  reads the camera — see the frame-order block above applyFrame. State is
@@ -893,7 +1178,11 @@ export function boot(opts = {}) {
    *  onto that pose. A blend manual input has cancelled never reaches here:
    *  applyFrame drops it at the top of the frame. */
   function stepCamBlend(dt) {
-    camBlend.t += dt;
+    // Signed time: a steered wrap plays its lap backwards (play = -1) along
+    // the identical path. Clamped at zero so this frame still composes the
+    // lap's first pose; landWrapHome takes it from the top of the next frame.
+    camBlend.t += dt * camBlend.play;
+    if (camBlend.t < 0) camBlend.t = 0;
     const f = Math.min(camBlend.t / camBlend.dur, 1);
     const e = f * f * f * (f * (f * 6 - 15) + 10);   // smootherstep, C2 ends
     const cam = sceneApi.camera, ctl = sceneApi.controls;
@@ -1027,6 +1316,10 @@ export function boot(opts = {}) {
   }
 
   function spineFrame(t, dt) {
+    // A fully rewound wrap lands before anything else runs, so the whole
+    // frame — scroll, state, readers — composes at the home rest (see
+    // landWrapHome for why it must not happen mid-applyFrame).
+    if (camBlend && camBlend.play < 0 && camBlend.t <= 0) landWrapHome();
     scroll.update(dt);
     journey.setProgress(scroll.progress);
     const p = journey.update(dt);
@@ -1209,18 +1502,47 @@ export function boot(opts = {}) {
     const warmNext = () => {
       const id = queue.shift();
       if (!id) return;
+      // The restores live in `finally` (2026-08-16 swarm audit): a throw out
+      // of render() used to skip them, leaving the renderer's current target
+      // pinned to the disposed 64x64 warm target — every later
+      // composer.render() then drew offscreen and the visible canvas froze on
+      // the last good frame until reload. "Failure at any step is harmless"
+      // (the header's contract) only holds if failure cannot strand state.
+      const g = chapters[id] && chapters[id].group;
+      const wasVisible = g ? g.visible : true;
+      // THE WARM DRAWS THE CHAPTER, NOT THE WORLD (2026-08-16, the post-settle
+      // stall hunt): rendering the whole scene here paid the settled hero's
+      // full draw list per slice on top of the chapter's one-time first-draw
+      // cost — for three of the four chapters the hero re-render WAS the
+      // slice. Hiding every scene root that does not contain the chapter
+      // (projectObject prunes invisible subtrees at the root, O(1) each)
+      // leaves exactly the chapter's own upload + first-draw state, which is
+      // all this warm ever existed to pay. Frustum semantics are unchanged —
+      // the same hero camera culls the same chapter content either way.
+      // Inspire's group lives INSIDE the hero's mushroom root, so its slice
+      // keeps that one root visible and still skips the rest of the hero.
+      const roots = [];
+      if (g) {
+        let anchor = g;
+        while (anchor.parent && anchor.parent !== sceneApi.scene) anchor = anchor.parent;
+        for (const root of sceneApi.scene.children) {
+          if (root !== anchor) roots.push([root, root.visible]);
+        }
+      }
+      const rt = new THREE.WebGLRenderTarget(64, 64);
+      const prev = r.getRenderTarget();
       try {
-        const g = chapters[id] && chapters[id].group;
-        const wasVisible = g ? g.visible : true;
         if (g) g.visible = true;
-        const rt = new THREE.WebGLRenderTarget(64, 64);
-        const prev = r.getRenderTarget();
+        for (const [root] of roots) root.visible = false;
         r.setRenderTarget(rt);
         r.render(sceneApi.scene, sceneApi.camera);
+      } catch (e) { /* lazy first-draw remains the fallback */ }
+      finally {
         r.setRenderTarget(prev);
         rt.dispose();
+        for (const [root, vis] of roots) root.visible = vis;
         if (g) g.visible = wasVisible;
-      } catch (e) { /* lazy first-draw remains the fallback */ }
+      }
       if (queue.length) idle(warmNext);
     };
     try {

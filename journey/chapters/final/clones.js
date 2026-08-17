@@ -917,7 +917,7 @@ export function createClones(sceneApi) {
    *  memberParams — the same seeded stream the species build drew from, so
    *  a member keeps its shipped facing, lean and size. */
   function add({ x, z, gy, s, azFacing, leanDir, leanAmt,
-                 arc, reveal, boost, tw0, phase, amp, lum, vary, seed }) {
+                 arc, reveal, revealIn, boost, tw0, phase, amp, lum, vary, seed }) {
     const mats = [];
     // two shell groups, because they arrive at two different moments of the
     // draw (STEM_SHELL_LO..HI / CAP_SHELL_LO..HI). The split is free: cloneNode is
@@ -980,8 +980,11 @@ export function createClones(sceneApi) {
       stemShells, capShells, stemShellMats, capShellMats, ownShells,
       shells: stemShells.concat(capShells),           // interact.js's narrow phase
       x, z, gy, s,
-      arc, reveal, boost, tw0, phase, amp, lum: lum ?? 1,
+      arc, reveal, revealIn: revealIn ?? reveal, boost, tw0, phase, amp, lum: lum ?? 1,
       drawW: drawWOf(reveal),                         // this body's own kindling width
+      // ...and the ARRIVAL pair (world.js uRevIn): the depth-dealt rung and
+      // the width derived for it, read while the field kindles out of the dark
+      drawWIn: drawWOf(revealIn ?? reveal),
       tx: 0, tz: 0, tvx: 0, tvz: 0,                   // tap ring-down (stepTap)
       uProg: own.uProg, prog: -1,                     // entry draw (part B)
       v: -1, ks: -1, kc: -1,
@@ -1037,13 +1040,17 @@ export function createClones(sceneApi) {
     fogU[1].value = uniforms.uFogFar.value;
     const fr = uniforms.uFront.value, frOn = uniforms.uFrontOn.value;
     const ct = uniforms.uCta.value, ctOn = uniforms.uCtaOn.value;
+    // Which deal is live (world.js uRevIn): the depth-dealt arrival rungs
+    // while kindling out of the dark, the authored rungs on every departure.
+    const revIn = uniforms.uRevIn.value > 0.5;
     for (const c of list) {
       // ---- this body's own arrival clock (§14: charge, take, settle) ----
       // s is pure in the pose: the camera-pure front, on this body's own
       // window. Everything below is a function of s (plus the shared
       // twinkle carrier the resting field already runs on), so a reverse
       // scrub runs the whole arrival backwards mirror-exact (D16).
-      const s = (pullRaw - c.reveal) / c.drawW;
+      const s = revIn ? (pullRaw - c.revealIn) / c.drawWIn
+                      : (pullRaw - c.reveal) / c.drawW;
       // ---- part B: this body draws ITSELF on as the front reaches it ----
       // The ink spans the window and completes at INK_SPAN — the last
       // strokes land inside the take, the tip ember riding into the flare

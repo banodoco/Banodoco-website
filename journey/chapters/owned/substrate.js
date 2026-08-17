@@ -60,6 +60,7 @@
 // composer (UnrealBloom -> TAA -> OutputPass/ACES), via index.js's EXPOSURE_*.
 import * as THREE from 'three';
 import * as H from '../../lib/helpers.js';
+import { isBaked, geometry, payload } from '../../lib/baked.js';
 
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;
@@ -172,6 +173,60 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     CROWN, restFrame,
   } = leg;
 
+  // ---- baked-read wiring (2026-08-17) --------------------------------
+  // The shipped path skips the geometry math below and rebuilds every
+  // BufferGeometry from static/geom bytes (baked once at commit time in the
+  // goldens' own headless Chrome; see journey/lib/baked.js). Materials,
+  // uniforms, closures and the live `rndA` ambient stream stay computed on
+  // both paths — only geometry is skipped. ONE try/catch wraps the WHOLE
+  // read: any missing key or shape mismatch throws and the chapter falls
+  // back to the live builders in full, never a half-baked mix.
+  const baked = (() => {
+    // Portrait builds rebuild live (leg.portraitField — see portraits.js's
+    // REST_SITES_PORTRAIT): the substrate's own geometry is aspect-blind and
+    // would re-derive bit-identically, but the web's baked aOwner encodes the
+    // LANDSCAPE faces' positions, and assignOwners() can only re-walk it on
+    // the live path where the graph arrays exist. Half-baked mixes are the
+    // one thing this wiring promises never to ship.
+    if (leg.portraitField) return null;
+    if (!isBaked('owned')) return null;
+    try {
+      const line = [['position', 3], ['aAlong', 1], ['aStrand', 1]];
+      const point = [['position', 3], ['aSize', 1], ['aSeed', 1]];
+      const pos = [['position', 3]];
+      return {
+        g: {
+          fan: geometry('owned/fan', line),
+          hair: geometry('owned/hair', line),
+          web: geometry('owned/web', [['position', 3], ['aAlong', 1], ['aStrand', 1], ['aOwner', 1]]),
+          glints: geometry('owned/glints', point),
+          crown: geometry('owned/crown', line),
+          hubs: geometry('owned/hubs', line),
+          hubCores: geometry('owned/hubCores', point),
+          hubHalos: geometry('owned/hubHalos', point),
+          ceiling: geometry('owned/ceiling', pos),
+          lid: geometry('owned/lid', line),
+          felt: geometry('owned/felt', line),
+          grain: geometry('owned/grain', pos),
+          fill: geometry('owned/fill', line),
+          aggregateFar: geometry('owned/aggregateFar', pos),
+          aggregateNear: geometry('owned/aggregateNear', pos),
+        },
+        counts: (() => {
+          const s = payload('owned')?.substrate;
+          if (!s || typeof s.primaries !== 'number' || typeof s.netNodes !== 'number'
+              || typeof s.netLinks !== 'number' || typeof s.hubs !== 'number'
+              || typeof s.voids !== 'number') {
+            throw new Error('owned substrate payload mismatch');
+          }
+          return s;
+        })(),
+      };
+    } catch (e) {
+      return null;
+    }
+  })();
+
   // World envelope. The root world hangs from the crown near the origin and
   // trails -X along the glide, so the box is asymmetric: plenty of room in
   // front of the rest camera, only a little behind it.
@@ -200,7 +255,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
      clusters. Voids are placed on the flanks and under the floor of the
      rest frame, never on the crown axis, and push-cleared off the polyline. */
   const VOIDS = [];
-  {
+  if (!baked) {
     // Sized and placed to miss the authored portrait arc (portraits.js
     // REST_SITES): the arc's sites sit 5.5-12.5 units down the rest gaze and
     // within ~7 units of it laterally, so the voids live further out and
@@ -283,7 +338,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   const N_PRIMARY = 66;
   const N_SKIRT = 150;
   const N_MID = 190;
-  {
+  if (!baked) {
     const rnd = H.rng(4801);
     const GOLD = Math.PI * (3 - Math.sqrt(5));
     // duck the depth-axis roots: 1 when a root heads straight at the lens or
@@ -346,22 +401,20 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
           side.multiplyScalar((rnd() - 0.5) * 0.34)),
       });
     }
-  }
-  {
-    const rnd = H.rng(5209);
+    const rnd2 = H.rng(5209);
     primaries.forEach((pr, pi) => {
-      const n = 3 + Math.floor(rnd() * 4);
+      const n = 3 + Math.floor(rnd2() * 4);
       for (let k = 0; k < n; k++) {
-        const t = 0.24 + rnd() * 0.62;
+        const t = 0.24 + rnd2() * 0.62;
         const j = clamp(Math.round(t * (pr.pts.length - 1)), 1, pr.pts.length - 2);
         const base = pr.pts[j];
         if (base.y > -1.0) continue;
         const tang = pr.pts[j + 1].clone().sub(pr.pts[j - 1]).normalize();
         const side = V(-tang.z, 0, tang.x).normalize();
         const dir0 = tang.clone()
-          .addScaledVector(side, (rnd() < 0.5 ? -1 : 1) * (0.7 + rnd() * 0.9))
-          .add(V(0, -(0.25 + rnd() * 0.5), 0));
-        const len = 1.4 + rnd() * 3.6;
+          .addScaledVector(side, (rnd2() < 0.5 ? -1 : 1) * (0.7 + rnd2() * 0.9))
+          .add(V(0, -(0.25 + rnd2() * 0.5), 0));
+        const len = 1.4 + rnd2() * 3.6;
         const pts = growRoot(base, dir0, len, 8, 3300 + pi * 71 + k * 13, 0.34);
         secondaries.push({ pts, parent: pi });
       }
@@ -377,8 +430,33 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     pulseColor: P.goldBright, fogDensity: 0.042, nearFade: [0.55, 1.35],
     alongTaper: 0.22,
   });
-  {
-    const pos = [], along = [], strand = [];
+  // 2026-08-16: fan, web, crown, hub, grain and aggregate all used to build
+  // vertices in plain JS arrays and hand them to Float32BufferAttribute, which
+  // copies into a typed array anyway — the per-vertex push + the final copy
+  // were the chapter's dominant GC source. A growable float cursor stores
+  // straight into a Float32Array (f32[i] = x rounds identically to the old
+  // wrap) and hands the shader an exact-size slice: same bits, no churn.
+  const f32Cursor = (cap = 512) => {
+    let a = new Float32Array(cap);
+    let n = 0;
+    return {
+      put: (...v) => {
+        if (n + v.length > a.length) {
+          const b = new Float32Array(a.length * 2);
+          b.set(a);
+          a = b;
+        }
+        for (let i = 0; i < v.length; i++) a[n++] = v[i];
+      },
+      get n() { return n; },
+      slice: () => a.slice(0, n),
+    };
+  };
+  let fanGeo;
+  if (baked) {
+    fanGeo = baked.g.fan;
+  } else {
+    const pos = f32Cursor(), along = f32Cursor(), strand = f32Cursor();
     const push = (list, sv, headroom) => {
       list.forEach((r, ri) => {
         const curve = H.catmull(r.pts);
@@ -387,9 +465,9 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         for (let j = 1; j <= N; j++) {
           const t = j / N;
           const p = curve.getPointAt(t);
-          pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-          along.push(headroom + (1 - headroom) * (j - 1) / N, headroom + (1 - headroom) * t);
-          strand.push(sv(ri), sv(ri));
+          pos.put(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+          along.put(headroom + (1 - headroom) * (j - 1) / N, headroom + (1 - headroom) * t);
+          strand.put(sv(ri), sv(ri));
           prev = p;
         }
       });
@@ -399,17 +477,17 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     // the taper leaves it bright: it IS the "dense and bright" end
     push(skirt, (ri) => (ri % 23) / 23, 0);
     push(secondaries, (ri) => 0.5 + (ri % 17) / 34, 0.30);
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
-    geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
-    const lines = new THREE.LineSegments(geo, fanMat);
-    lines.frustumCulled = false;
-    lines.renderOrder = -4;
-    group.add(lines);
-    timeMats.push(fanMat);
-    fanVerts = pos.length / 3;
+    fanGeo = new THREE.BufferGeometry();
+    fanGeo.setAttribute('position', new THREE.BufferAttribute(pos.slice(), 3));
+    fanGeo.setAttribute('aAlong', new THREE.BufferAttribute(along.slice(), 1));
+    fanGeo.setAttribute('aStrand', new THREE.BufferAttribute(strand.slice(), 1));
   }
+  const fanLines = new THREE.LineSegments(fanGeo, fanMat);
+  fanLines.frustumCulled = false;
+  fanLines.renderOrder = -4;
+  group.add(fanLines);
+  timeMats.push(fanMat);
+  fanVerts = fanGeo.attributes.position.count;
 
   /* ---------------- hairs: the fine thread density ---------------- */
   // Short filaments hanging off the secondaries. They carry most of the
@@ -420,7 +498,10 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     baseOpacity: 0.30 * exposure, twinkle: 0.60, pulseWidth: 0.10,
     pulseColor: P.ember, fogDensity: 0.042, nearFade: [0.7, 1.8],
   });
-  {
+  let hairGeo;
+  if (baked) {
+    hairGeo = baked.g.hair;
+  } else {
     const src = [...secondaries, ...primaries];
     const res = H.strandLines({
       count: 2400, seed: 7717,
@@ -438,13 +519,14 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         return growRoot(base, dir0, 0.5 + rnd() * 1.5, 4, 9000 + i * 7);
       },
     });
-    const lines = new THREE.LineSegments(res.geometry, hairMat);
-    lines.frustumCulled = false;
-    lines.renderOrder = -5;
-    group.add(lines);
-    timeMats.push(hairMat);
-    hairVerts = res.geometry.attributes.position.count;
+    hairGeo = res.geometry;
   }
+  const hairLines = new THREE.LineSegments(hairGeo, hairMat);
+  hairLines.frustumCulled = false;
+  hairLines.renderOrder = -5;
+  group.add(hairLines);
+  timeMats.push(hairMat);
+  hairVerts = hairGeo.attributes.position.count;
 
   /* ================================================================
      THE WEB — cross-links between different roots
@@ -485,7 +567,9 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   let ownedLinkCount = [];    // per face: how many web links it owns
   let ownedExtent = [];       // per face: world radius of the lit set
   const rootPool = [];        // { p, key } sample points eligible for linking
-  {
+  if (baked) {
+    webGeo = baked.g.web;
+  } else {
     const add = (list, tag) => list.forEach((r, ri) => {
       for (let j = 1; j < r.pts.length; j++) {
         const p = r.pts[j];
@@ -538,12 +622,12 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
       netNodes.push(p);
     }
 
-    const pos = [], along = [], strand = [];
+    const pos = f32Cursor(), along = f32Cursor(), strand = f32Cursor();
     const seen = new Set();
     const link = (a, b, sv, sag, ia = -1, ib = -1) => {
       const d = a.distanceTo(b);
       const SEG = 5;
-      const v0 = pos.length / 3;
+      const v0 = pos.n / 3;
       const bow = V((rnd() - 0.5) * d * 0.22, -(sag * d * (0.05 + rnd() * 0.22)), (rnd() - 0.5) * d * 0.22);
       let prev = null;
       for (let j = 0; j <= SEG; j++) {
@@ -551,14 +635,14 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         const p = a.clone().lerp(b, t).addScaledVector(bow, Math.sin(Math.PI * t));
         clampUnder(p, 0.12);
         if (prev) {
-          pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-          along.push((j - 1) / SEG, t);
-          strand.push(sv, sv);
+          pos.put(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+          along.put((j - 1) / SEG, t);
+          strand.put(sv, sv);
         }
         prev = p;
       }
       webLinkMeta.push({
-        v0, vN: pos.length / 3, a: ia, b: ib,
+        v0, vN: pos.n / 3, a: ia, b: ib,
         mid: a.clone().lerp(b, 0.5),
         // a link with a free end (a root sample reaching into the mesh) keeps
         // that end's world point: it is where the fan meets the network, and
@@ -608,38 +692,24 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
       if (rnd() < 0.30) linkNodes.push(a.clone());
     }
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
-    geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
-    webOwner = new Float32Array(pos.length / 3).fill(-1);
+    geo.setAttribute('position', new THREE.BufferAttribute(pos.slice(), 3));
+    geo.setAttribute('aAlong', new THREE.BufferAttribute(along.slice(), 1));
+    geo.setAttribute('aStrand', new THREE.BufferAttribute(strand.slice(), 1));
+    webOwner = new Float32Array(pos.n / 3).fill(-1);
     geo.setAttribute('aOwner', new THREE.BufferAttribute(webOwner, 1));
-    const lines = new THREE.LineSegments(geo, webMat);
-    lines.frustumCulled = false;
-    lines.renderOrder = -4;
-    group.add(lines);
-    timeMats.push(webMat);
-    webVerts = pos.length / 3;
     webGeo = geo;
   }
+  const webLines = new THREE.LineSegments(webGeo, webMat);
+  webLines.frustumCulled = false;
+  webLines.renderOrder = -4;
+  group.add(webLines);
+  timeMats.push(webMat);
+  webVerts = webGeo.attributes.position.count;
 
   /* ---------------- junction glints ---------------- */
   // "Many small bright nodes where threads cross." One Points draw, per-point
   // twinkle on incommensurate frequencies so nothing beats in unison.
   const glints = (() => {
-    const rnd = H.rng(8123);
-    const keep = linkNodes.filter(() => rnd() < 0.88);
-    const pos = new Float32Array(keep.length * 3);
-    const sizeA = new Float32Array(keep.length);
-    const seedA = new Float32Array(keep.length);
-    keep.forEach((p, i) => {
-      pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
-      sizeA[i] = 0.075 + rnd() * 0.155;
-      seedA[i] = rnd() * 31.7;
-    });
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
-    geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 }, uFade: { value: 0 },
@@ -671,11 +741,32 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
           gl_FragColor = vec4(uColor, clamp(a * uFade, 0.0, 1.0));
         }`,
     });
+    let geo, count;
+    if (baked) {
+      geo = baked.g.glints;
+      count = geo.attributes.position.count;
+    } else {
+      const rnd = H.rng(8123);
+      const keep = linkNodes.filter(() => rnd() < 0.88);
+      const pos = new Float32Array(keep.length * 3);
+      const sizeA = new Float32Array(keep.length);
+      const seedA = new Float32Array(keep.length);
+      keep.forEach((p, i) => {
+        pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
+        sizeA[i] = 0.075 + rnd() * 0.155;
+        seedA[i] = rnd() * 31.7;
+      });
+      geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
+      geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
+      count = keep.length;
+    }
     const pts = new THREE.Points(geo, mat);
     pts.frustumCulled = false;
     pts.renderOrder = -3;
     group.add(pts);
-    return { pts, mat, count: keep.length };
+    return { pts, mat, geo, count };
   })();
 
   /* ================================================================
@@ -689,12 +780,15 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     pulseColor: 0xfff0d0, fogDensity: 0.010, nearFade: [0.35, 0.95],
   });
   let crownVerts = 0;
-  {
+  let crownGeo;
+  if (baked) {
+    crownGeo = baked.g.crown;
+  } else {
     const rnd = H.rng(2711);
-    const pos = [], along = [], strand = [];
+    const pos = f32Cursor(), along = f32Cursor(), strand = f32Cursor();
     const seg = (a, b, t0, t1, sv) => {
-      pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
-      along.push(t0, t1); strand.push(sv, sv);
+      pos.put(a.x, a.y, a.z, b.x, b.y, b.z);
+      along.put(t0, t1); strand.put(sv, sv);
     };
     // (a) the gathering: fibres rising from the crown to the stem's foot,
     //     converging as they climb. The lid crops them; the top of the frame
@@ -739,17 +833,17 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         prev = p;
       }
     }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
-    geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
-    const lines = new THREE.LineSegments(geo, crownMat);
-    lines.frustumCulled = false;
-    lines.renderOrder = -2;
-    group.add(lines);
-    timeMats.push(crownMat);
-    crownVerts = pos.length / 3;
+    crownGeo = new THREE.BufferGeometry();
+    crownGeo.setAttribute('position', new THREE.BufferAttribute(pos.slice(), 3));
+    crownGeo.setAttribute('aAlong', new THREE.BufferAttribute(along.slice(), 1));
+    crownGeo.setAttribute('aStrand', new THREE.BufferAttribute(strand.slice(), 1));
   }
+  const crownLines = new THREE.LineSegments(crownGeo, crownMat);
+  crownLines.frustumCulled = false;
+  crownLines.renderOrder = -2;
+  group.add(crownLines);
+  timeMats.push(crownMat);
+  crownVerts = crownGeo.attributes.position.count;
 
   /* ================================================================
      STARBURST HUBS — the reference's brighter convergence points
@@ -765,7 +859,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     [-0.68, 0.16, 13.4, 0.66],
   ];
   const hubPos = [];
-  {
+  if (!baked) {
     const rf = restFrame;
     const TANV = Math.tan(0.5 * rf.fov * Math.PI / 180);
     for (const [cx, cy, depth, sc] of HUB_SITES) {
@@ -792,9 +886,12 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     pulseColor: 0xffe0ae, fogDensity: 0.022, nearFade: [0.7, 1.8],
   });
   let hubVerts = 0;
-  {
+  let hubsGeo;
+  if (baked) {
+    hubsGeo = baked.g.hubs;
+  } else {
     const rnd = H.rng(3391);
-    const pos = [], along = [], strand = [];
+    const pos = f32Cursor(), along = f32Cursor(), strand = f32Cursor();
     hubPos.forEach((h, hi) => {
       const R = 0.55 * h.sc;
       // radial convergence spokes (CONNECT's hub grammar, in 3D)
@@ -814,8 +911,8 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         for (let j = 1; j <= N; j++) {
           const t = j / N;
           const p = start.clone().lerp(h.p, H.easings.smooth(t));
-          pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-          along.push((j - 1) / N, t); strand.push(sv, sv);
+          pos.put(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+          along.put((j - 1) / N, t); strand.put(sv, sv);
           prev = p;
         }
       }
@@ -835,40 +932,42 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
             h.p.z + Math.sin(a) * Rk,
           );
           if (prev) {
-            pos.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-            along.push((j - 1) / N, t); strand.push(sv, sv);
+            pos.put(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+            along.put((j - 1) / N, t); strand.put(sv, sv);
           }
           prev = p;
         }
       }
     });
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
-    geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
-    const lines = new THREE.LineSegments(geo, hubMat);
-    lines.frustumCulled = false;
-    lines.renderOrder = -2;
-    group.add(lines);
-    timeMats.push(hubMat);
-    hubVerts = pos.length / 3;
+    hubsGeo = new THREE.BufferGeometry();
+    hubsGeo.setAttribute('position', new THREE.BufferAttribute(pos.slice(), 3));
+    hubsGeo.setAttribute('aAlong', new THREE.BufferAttribute(along.slice(), 1));
+    hubsGeo.setAttribute('aStrand', new THREE.BufferAttribute(strand.slice(), 1));
   }
-
+  const hubsLines = new THREE.LineSegments(hubsGeo, hubMat);
+  hubsLines.frustumCulled = false;
+  hubsLines.renderOrder = -2;
+  group.add(hubsLines);
+  timeMats.push(hubMat);
+  hubVerts = hubsGeo.attributes.position.count;
   /* ---------------- cores + halos: crown and hubs, 2 Points draws ------- */
-  function coreLayer(map, color, mul, baseA, order) {
-    const list = [{ p: CROWN, sc: 1.9 }, ...hubPos];
-    const pos = new Float32Array(list.length * 3);
-    const sizeA = new Float32Array(list.length);
-    const seedA = new Float32Array(list.length);
-    list.forEach((h, i) => {
-      pos[i * 3] = h.p.x; pos[i * 3 + 1] = h.p.y; pos[i * 3 + 2] = h.p.z;
-      sizeA[i] = h.sc * mul;
-      seedA[i] = i * 3.7 + 1.1;
-    });
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
-    geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
+  function coreLayer(map, color, mul, baseA, order, bakedGeo) {
+    let geo = bakedGeo || null;
+    if (!geo) {
+      const list = [{ p: CROWN, sc: 1.9 }, ...hubPos];
+      const pos = new Float32Array(list.length * 3);
+      const sizeA = new Float32Array(list.length);
+      const seedA = new Float32Array(list.length);
+      list.forEach((h, i) => {
+        pos[i * 3] = h.p.x; pos[i * 3 + 1] = h.p.y; pos[i * 3 + 2] = h.p.z;
+        sizeA[i] = h.sc * mul;
+        seedA[i] = i * 3.7 + 1.1;
+      });
+      geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('aSize', new THREE.BufferAttribute(sizeA, 1));
+      geo.setAttribute('aSeed', new THREE.BufferAttribute(seedA, 1));
+    }
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 }, uFade: { value: 0 }, uSurge: { value: 0 },
@@ -902,10 +1001,10 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     pts.frustumCulled = false;
     pts.renderOrder = order;
     group.add(pts);
-    return { pts, mat };
+    return { pts, mat, geo };
   }
-  const cores = coreLayer(H.softDisc(64), 0xffe9c4, 0.30, 0.55, -1);
-  const halos = coreLayer(H.glowSprite(P.ember, 64), P.ember, 1.55, 0.26, -6);
+  const cores = coreLayer(H.softDisc(64), 0xffe9c4, 0.30, 0.55, -1, baked?.g.hubCores);
+  const halos = coreLayer(H.glowSprite(P.ember, 64), P.ember, 1.55, 0.26, -6, baked?.g.hubHalos);
 
   /* ================================================================
      THE SOIL CEILING — the frame's darkness, and the reason the crown
@@ -935,16 +1034,21 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   // fade, so it arrives and retires inside the same murk window as everything
   // else and reverse scrubs identically.
   const ceiling = (() => {
-    const SEG = 44, SPAN = 78;
-    const geo = new THREE.PlaneGeometry(SPAN, SPAN, SEG, SEG);
-    geo.rotateX(Math.PI / 2);                 // normal -> -Y (visible from below)
-    const pa = geo.attributes.position;
-    for (let i = 0; i < pa.count; i++) {
-      pa.setY(i, groundY(pa.getX(i), pa.getZ(i)) - 0.07);
+    let geo;
+    if (baked) {
+      geo = baked.g.ceiling;
+    } else {
+      const SEG = 44, SPAN = 78;
+      geo = new THREE.PlaneGeometry(SPAN, SPAN, SEG, SEG);
+      geo.rotateX(Math.PI / 2);                 // normal -> -Y (visible from below)
+      const pa = geo.attributes.position;
+      for (let i = 0; i < pa.count; i++) {
+        pa.setY(i, groundY(pa.getX(i), pa.getZ(i)) - 0.07);
+      }
+      pa.needsUpdate = true;
+      geo.deleteAttribute('normal');
+      geo.deleteAttribute('uv');
     }
-    pa.needsUpdate = true;
-    geo.deleteAttribute('normal');
-    geo.deleteAttribute('uv');
     // The ceiling's colour has to DISSOLVE with distance or it draws a hard
     // horizontal rule across the frame: the soil plane's vanishing line is
     // where its depth goes to infinity, so the strip just above the line is
@@ -1060,7 +1164,7 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     mesh.renderOrder = -30;
     mesh.frustumCulled = false;
     group.add(mesh);
-    return { mesh, mat };
+    return { mesh, mat, geo };
   })();
 
   /* ---------------- soil-underside root mat ----------------
@@ -1070,7 +1174,14 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
      seams reading as thresholds — and at the rest it is the band the crown
      pierces. */
   let lidVerts = 0;
-  {
+  const lidMat = makeFadePulseMat(P.deepGold, {
+    baseOpacity: 0.20 * exposure, twinkle: 0.30, pulseWidth: 0.10,
+    pulseColor: P.ember, fogDensity: 0.026,
+  });
+  let lidGeo;
+  if (baked) {
+    lidGeo = baked.g.lid;
+  } else {
     const rand = H.rng(6633);
     const gauss = () => (rand() + rand() + rand() + rand() - 2) / 2;
     const res = H.strandLines({
@@ -1092,17 +1203,14 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         return pts;
       },
     });
-    const mat = makeFadePulseMat(P.deepGold, {
-      baseOpacity: 0.20 * exposure, twinkle: 0.30, pulseWidth: 0.10,
-      pulseColor: P.ember, fogDensity: 0.026,
-    });
-    const lines = new THREE.LineSegments(res.geometry, mat);
-    lines.frustumCulled = false;
-    lines.renderOrder = -6;
-    group.add(lines);
-    timeMats.push(mat);
-    lidVerts = res.geometry.attributes.position.count;
+    lidGeo = res.geometry;
   }
+  const lidLines = new THREE.LineSegments(lidGeo, lidMat);
+  lidLines.frustumCulled = false;
+  lidLines.renderOrder = -6;
+  group.add(lidLines);
+  timeMats.push(lidMat);
+  lidVerts = lidGeo.attributes.position.count;
 
   /* ================================================================
      THE SOIL HORIZON — the metre of earth the lens passes THROUGH
@@ -1166,7 +1274,14 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   const horizonMats = [];        // shader mats driven by `passage`
   const horizonObjs = [];        // ...and the objects they belong to
   const horizonSprites = [];     // {mat, base} plain materials driven by it
-  {
+  const feltMat = makeFadePulseMat(P.deepGold, {
+    baseOpacity: 0.95 * exposure, twinkle: 0.42, pulseWidth: 0.10,
+    pulseColor: P.ember, fogDensity: 0.155, nearFade: [0.22, 0.80],
+  });
+  let feltGeo;
+  if (baked) {
+    feltGeo = baked.g.felt;
+  } else {
     const rand = H.rng(41207);
     const gauss = () => (rand() + rand() + rand() + rand() - 2) / 2;
     const res = H.strandLines({
@@ -1227,97 +1342,100 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         return pts;
       },
     });
-    const mat = makeFadePulseMat(P.deepGold, {
-      baseOpacity: 0.95 * exposure, twinkle: 0.42, pulseWidth: 0.10,
-      pulseColor: P.ember, fogDensity: 0.155, nearFade: [0.22, 0.80],
-    });
-    const lines = new THREE.LineSegments(res.geometry, mat);
-    lines.frustumCulled = false;
-    lines.renderOrder = -6;
-    group.add(lines);
-    horizonMats.push(mat);
-    horizonObjs.push(lines);
-    feltVerts = res.geometry.attributes.position.count;
+    feltGeo = res.geometry;
   }
-  {
+  const feltLines = new THREE.LineSegments(feltGeo, feltMat);
+  feltLines.frustumCulled = false;
+  feltLines.renderOrder = -6;
+  group.add(feltLines);
+  horizonMats.push(feltMat);
+  horizonObjs.push(feltLines);
+  feltVerts = feltGeo.attributes.position.count;
+  let grainGeo;
+  if (baked) {
+    grainGeo = baked.g.grain;
+  } else {
     const rand = H.rng(41309);
-    const pos = [];
+    const pos = f32Cursor();
     let guard = 0;
-    while (pos.length / 3 < 4200 && guard++ < 4200 * 60) {
+    while (pos.n / 3 < 4200 && guard++ < 4200 * 60) {
       const x = BX[0] + rand() * (BX[1] - BX[0]);
       const z = BZ[0] + rand() * (BZ[1] - BZ[0]);
       const u = rand() * rand();
       const y = groundY(x, z) - (HORIZON_D0 + u * (HORIZON_D1 - HORIZON_D0));
       if (!horizonKeep(x, y, z, rand)) continue;
       if (inVoid(x, y, z)) continue;
-      pos.push(x, y, z);
+      pos.put(x, y, z);
     }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    // GRAIN WANTS ITS OWN SHADER, not PointsMaterial. Measured on the first
-    // build: a size-attenuated soft disc passed at contact range balloons —
-    // a grain 0.25 units off the lens drew a 60 px disc, and the crossing
-    // read as bokeh, champagne bubbles in front of the network, rather than
-    // as earth. Three things fix it and none is available on PointsMaterial:
-    // a HARD CEILING on the projected size (grain never gets bigger than a
-    // speck, however close it passes), a near-fade so the ones that graze the
-    // lens dissolve instead of flaring (the same law every line layer here
-    // uses), and a distance fog so the volume ends in murk. Same soft-disc
-    // sprite and same single draw as the aggregate layers.
-    const mat = new THREE.ShaderMaterial({
-      uniforms: {
-        uMap: { value: H.softDisc(64) },
-        uColor: { value: new THREE.Color(0xb98a46) },
-        uFade: { value: 0 },
-        uSize: { value: 26.0 },
-        uTime: { value: 0 },
-      },
-      transparent: true, depthWrite: false, fog: false,
-      blending: THREE.AdditiveBlending,
-      vertexShader: /* glsl */`
-        uniform float uSize;
-        varying float vD, vJ;
-        void main() {
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          vD = -mv.z;
-          vJ = fract(sin(dot(position.xz, vec2(41.3, 289.1))) * 21313.7);
-          gl_Position = projectionMatrix * mv;
-          // attenuate, then CLAMP: a speck stays a speck at any range
-          gl_PointSize = clamp(uSize / max(vD, 0.05), 1.0, 4.5);
-        }`,
-      fragmentShader: /* glsl */`
-        uniform sampler2D uMap;
-        uniform vec3 uColor;
-        uniform float uFade, uTime;
-        varying float vD, vJ;
-        void main() {
-          float a = texture2D(uMap, gl_PointCoord).a;
-          // near-fade + fog: the medium resolves at contact range and is
-          // swallowed a few units off, exactly like the felt beside it
-          a *= smoothstep(0.18, 0.70, vD);
-          a *= exp(-0.055 * vD * vD);
-          a *= 0.72 + 0.28 * sin(uTime * (0.5 + vJ * 1.4) + vJ * 51.0);
-          gl_FragColor = vec4(uColor * a * uFade, 1.0);
-        }`,
-    });
-    const pts = new THREE.Points(geo, mat);
-    pts.frustumCulled = false;
-    pts.renderOrder = -6;
-    group.add(pts);
-    horizonMats.push(mat);          // uFade + uTime, same drive as the felt
-    horizonObjs.push(pts);
-    grainPoints = pos.length / 3;
+    grainGeo = new THREE.BufferGeometry();
+    grainGeo.setAttribute('position', new THREE.BufferAttribute(pos.slice(), 3));
   }
+  // GRAIN WANTS ITS OWN SHADER, not PointsMaterial. Measured on the first
+  // build: a size-attenuated soft disc passed at contact range balloons —
+  // a grain 0.25 units off the lens drew a 60 px disc, and the crossing
+  // read as bokeh, champagne bubbles in front of the network, rather than
+  // as earth. Three things fix it and none is available on PointsMaterial:
+  // a HARD CEILING on the projected size (grain never gets bigger than a
+  // speck, however close it passes), a near-fade so the ones that graze the
+  // lens dissolve instead of flaring (the same law every line layer here
+  // uses), and a distance fog so the volume ends in murk. Same soft-disc
+  // sprite and same single draw as the aggregate layers.
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uMap: { value: H.softDisc(64) },
+      uColor: { value: new THREE.Color(0xb98a46) },
+      uFade: { value: 0 },
+      uSize: { value: 26.0 },
+      uTime: { value: 0 },
+    },
+    transparent: true, depthWrite: false, fog: false,
+    blending: THREE.AdditiveBlending,
+    vertexShader: /* glsl */`
+      uniform float uSize;
+      varying float vD, vJ;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vD = -mv.z;
+        vJ = fract(sin(dot(position.xz, vec2(41.3, 289.1))) * 21313.7);
+        gl_Position = projectionMatrix * mv;
+        // attenuate, then CLAMP: a speck stays a speck at any range
+        gl_PointSize = clamp(uSize / max(vD, 0.05), 1.0, 4.5);
+      }`,
+    fragmentShader: /* glsl */`
+      uniform sampler2D uMap;
+      uniform vec3 uColor;
+      uniform float uFade, uTime;
+      varying float vD, vJ;
+      void main() {
+        float a = texture2D(uMap, gl_PointCoord).a;
+        // near-fade + fog: the medium resolves at contact range and is
+        // swallowed a few units off, exactly like the felt beside it
+        a *= smoothstep(0.18, 0.70, vD);
+        a *= exp(-0.055 * vD * vD);
+        a *= 0.72 + 0.28 * sin(uTime * (0.5 + vJ * 1.4) + vJ * 51.0);
+        gl_FragColor = vec4(uColor * a * uFade, 1.0);
+      }`,
+  });
+  const pts = new THREE.Points(grainGeo, mat);
+  pts.frustumCulled = false;
+  pts.renderOrder = -6;
+  group.add(pts);
+  horizonMats.push(mat);          // uFade + uTime, same drive as the felt
+  horizonObjs.push(pts);
+  grainPoints = grainGeo.attributes.position.count;
 
   /* ---------------- far filler: the volume behind the network ---------- */
   // Very dim, very fogged short strands scattered through the slab so the
   // deep field is warm-textured rather than flat black behind the web.
   let fillVerts = 0;
-  {
-    const mat = makeFadePulseMat(P.deepGold, {
-      baseOpacity: 0.15 * exposure, twinkle: 0.66, pulseWidth: 0.10,
-      pulseColor: P.ember, fogDensity: 0.038, nearFade: [1.4, 3.4],
-    });
+  const fillMat = makeFadePulseMat(P.deepGold, {
+    baseOpacity: 0.15 * exposure, twinkle: 0.66, pulseWidth: 0.10,
+    pulseColor: P.ember, fogDensity: 0.038, nearFade: [1.4, 3.4],
+  });
+  let fillGeo;
+  if (baked) {
+    fillGeo = baked.g.fill;
+  } else {
     const res = H.strandLines({
       count: 2000, seed: 2201,
       generator: (i, rand) => {
@@ -1334,13 +1452,14 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
         return growRoot(V(x, yy, z), dir0, 1.6 + rand() * 3.6, 5, 12000 + i * 3);
       },
     });
-    const lines = new THREE.LineSegments(res.geometry, mat);
-    lines.frustumCulled = false;
-    lines.renderOrder = -7;
-    group.add(lines);
-    timeMats.push(mat);
-    fillVerts = res.geometry.attributes.position.count;
+    fillGeo = res.geometry;
   }
+  const lines = new THREE.LineSegments(fillGeo, fillMat);
+  lines.frustumCulled = false;
+  lines.renderOrder = -7;
+  group.add(lines);
+  timeMats.push(fillMat);
+  fillVerts = fillGeo.attributes.position.count;
 
   /* ---------------- root lookup for portrait strand roots -------------- */
   function nearestCordPoint(p, rand) {
@@ -1357,24 +1476,27 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
 
   /* ---------------- soil aggregates: dim clumps ---------------- */
   let aggPoints = 0;
-  function aggregateLayer(seed, count, size, opacity, color, nearOnly) {
-    const rand = H.rng(seed);
-    const pos = [];
-    let guard = 0;
-    while (pos.length / 3 < count && guard++ < count * 24) {
-      const x = BX[0] + rand() * (BX[1] - BX[0]);
-      const y = BY[0] + rand() * (BY[1] - BY[0]);
-      const z = BZ[0] + rand() * (BZ[1] - BZ[0]);
-      if (y > groundY(x, z) - 0.25) continue;
-      if (inVoid(x, y, z)) continue;
-      const gd = camDist(x, y, z);
-      if (nearOnly && gd > 6.0) continue;
-      if (!nearOnly && gd < 4.5) continue;
-      if (substrate(x, y, z) < 0.12) continue;
-      pos.push(x, y, z);
+  function aggregateLayer(seed, count, size, opacity, color, nearOnly, bakedGeo) {
+    let geo = bakedGeo || null;
+    if (!geo) {
+      const rand = H.rng(seed);
+      const pos = f32Cursor();
+      let guard = 0;
+      while (pos.n / 3 < count && guard++ < count * 24) {
+        const x = BX[0] + rand() * (BX[1] - BX[0]);
+        const y = BY[0] + rand() * (BY[1] - BY[0]);
+        const z = BZ[0] + rand() * (BZ[1] - BZ[0]);
+        if (y > groundY(x, z) - 0.25) continue;
+        if (inVoid(x, y, z)) continue;
+        const gd = camDist(x, y, z);
+        if (nearOnly && gd > 6.0) continue;
+        if (!nearOnly && gd < 4.5) continue;
+        if (substrate(x, y, z) < 0.12) continue;
+        pos.put(x, y, z);
+      }
+      geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos.slice(), 3));
     }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     const mat = new THREE.PointsMaterial({
       map: H.softDisc(64), color: new THREE.Color(color), size,
       sizeAttenuation: true, transparent: true, opacity: opacity * exposure,
@@ -1384,12 +1506,12 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     pts.frustumCulled = false;
     pts.renderOrder = -7;
     group.add(pts);
-    aggPoints += pos.length / 3;
+    aggPoints += geo.attributes.position.count;
     fadeSprites.push({ mat, base: opacity * exposure });
-    return { pts, mat, baseOp: opacity * exposure };
+    return { pts, mat, geo, baseOp: opacity * exposure };
   }
-  const aggFar = aggregateLayer(7701, 56, 0.95, 0.055, P.deepGold, false);
-  const aggNear = aggregateLayer(7803, 78, 0.32, 0.085, 0x8a6a34, true);
+  const aggFar = aggregateLayer(7701, 56, 0.95, 0.055, P.deepGold, false, baked?.g.aggregateFar);
+  const aggNear = aggregateLayer(7803, 78, 0.32, 0.085, 0x8a6a34, true, baked?.g.aggregateNear);
 
   /* ---------------- amber haze backdrop ----------------
      Very large, very dim ember glows deep in the volume: distant structure
@@ -1491,6 +1613,10 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
   const OWN_MAX_LINKS = 55;
 
   function assignOwners(faces) {
+    // Baked read path: the web's aOwner was captured AFTER assignOwners ran at
+    // commit time, so re-running the walk here would only wipe it (the graph
+    // arrays are empty on this path). The baked attribute IS the result.
+    if (baked) return;
     if (!webGeo || !faces.length) return;
     const N = netNodes.length;
     const owner = new Int32Array(N).fill(-1);
@@ -1668,23 +1794,49 @@ export function buildSubstrate({ leg, palette: P, exposure = 1 }) {
     aggFar.mat.opacity = aggFar.baseOp * fade * (0.85 + 0.15 * (0.5 + 0.5 * Math.sin(time * 0.09)));
     aggNear.mat.opacity = aggNear.baseOp * fade * (0.82 + 0.18 * (0.5 + 0.5 * Math.sin(time * 0.063 + 1.7)));
   }
+  // Population counts are NOT derivable from geometry attribute lengths (the
+  // fan bakes primaries+skirt+secondaries into one buffer, the web folds its
+  // graph into aOwner, etc.), so on the baked path they come from the payload;
+  // live they are the arrays the builders just filled. Vertex counts ARE
+  // derivable and are recomputed from each baked attribute's .count.
+  const popCounts = baked
+    ? (baked.counts || { primaries: 0, skirt: 0, secondaries: 0, netNodes: 0, netLinks: 0, hubs: 0, voids: 0 })
+    : {
+        primaries: primaries.length,
+        skirt: skirt.length,
+        secondaries: secondaries.length,
+        netNodes: netNodes.length,
+        netLinks,
+        hubs: hubPos.length,
+        voids: VOIDS.length,
+      };
 
   return {
     group, update, surge, setFade, setLid, setPassage, nearestCordPoint, inVoid,
     assignOwners, setActiveNode, ownershipStats,
     CROWN, hubs: hubPos.map(h => h.p.clone()),
+    // The bake recording site (owned/index.js) reads these AFTER assignOwners
+    // so the web's aOwner is final. Keys match the baked.js geometry() keys.
+    geometries: {
+      fan: fanGeo, hair: hairGeo, web: webGeo, glints: glints.geo,
+      crown: crownGeo, hubs: hubsGeo,
+      hubCores: cores.geo, hubHalos: halos.geo,
+      ceiling: ceiling.geo, lid: lidGeo, felt: feltGeo, grain: grainGeo,
+      fill: fillGeo, aggregateFar: aggFar.geo, aggregateNear: aggNear.geo,
+    },
+    bakePayload: popCounts,
     counts: {
-      primaries: primaries.length,
-      skirt: skirt.length,
-      secondaries: secondaries.length,
+      primaries: popCounts.primaries,
+      skirt: popCounts.skirt,
+      secondaries: popCounts.secondaries,
       fanVerts, hairVerts, webVerts, crownVerts, hubVerts, lidVerts, fillVerts,
       feltVerts, grainPoints,
       glints: glints.count,
-      netNodes: netNodes.length,
-      netLinks,
-      hubs: hubPos.length,
+      netNodes: popCounts.netNodes,
+      netLinks: popCounts.netLinks,
+      hubs: popCounts.hubs,
       aggPoints,
-      voids: VOIDS.length,
+      voids: popCounts.voids,
     },
   };
 }
