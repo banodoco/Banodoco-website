@@ -1,0 +1,30 @@
+{
+ "capturedAt": "2026-08-17",
+ "topics": [
+  {
+   "title": "H3 Tooling Week: Timeline Director, Studio Node Pack, and a Training Adapter Land",
+   "text": "seesee75-commits dropped ComfyUI-MiniMaxH3-Director, a proper timeline editor for MiniMax H3 inside ComfyUI \u2014 storyboard prompts, first/last keyframes, image/video/audio references, joint audio, live sampling preview, retakes, and shot chaining. Where most H3 workflows are single-shot prompt runs, this makes a full film-editing pass over the model's output, a genuinely bigger step than the usual node tweak. Built: a cadence normalizer that interpolates only the fractional frames \u2014 huddadudd's custom node auto-normalizes generation speed (Speed Curve \u2192 Apply Time Map + Audio \u2192 GIMM-VFI Interpolate), so it evens out the uneven pacing H3 often produces.",
+   "subs": [
+    "ostris' Ali Song published the ref2va training adapter v1 on HuggingFace (minimax_h3_training_adapter), so ref2va models can now be trained/finetuned against this adapter instead of rolling it ad hoc. It landed in the training channel as a direct safetensors link, gathering quick community pickup. If you run the AI Toolkit, you can slot the adapter in through the interface or declare it in your yaml via `assistant_lora_path: \"/data/models/minimax-h3/minimax_h3_training_adapter_v1.safetensors\"`. Ali Song paired it with a headswap training recipe (`train_h3_headswap_r64_g2_automagic3.yaml`), so there's a ready r64 config for character-head swaps on H3."
+   ],
+   "channel": "daily_summaries",
+   "date": "2026-08-17"
+  },
+  {
+   "title": "H3 Sampler Wars: Ralston 2S Wins, ddim_uniform Kills Motion, Multi-Stage Emerges",
+   "text": "Illynir brute-forced H3 samplers and **Ralston 2S** won \u2014 a 2S sampler that halves your step budget (4 steps with turbo LoRA = 8), with ETA 0.5 via the RES4LYF node; same-scene A/Bs were called \"night and day\" over the er_sde/beta default. Meanwhile, **ddim_uniform** is actively hurting renders: it kills motion and ignores reference images, with **seeds_2** as the quality pick \u2014 nacho.money dropped turbo LoRAs and the spectrum sampler entirely, blaming them for most quality issues.",
+   "subs": [
+    "FL13 runs a two-stage rig: **DPM for 2-3 steps** (better composition), then **Euler** for the remainder (avoids DPM's over-spicy detail), treating turbo LoRA as a brightness slider at 8-12 steps. rishappi cautions the split only reflects the base model \u2014 distilled LoRAs force convergence in 4-8 steps and swallow sampler effects, so A/B on full steps first."
+   ],
+   "channel": "daily_summaries",
+   "date": "2026-08-17"
+  },
+  {
+   "title": "UtilsCollection H3 Cache Node Hard-Crashes Samplers \u2014 Bypass or Avoid It",
+   "text": "Ethanfel's immediate fix is to bypass the UtilsCollection MiniMax H3 Cache node. LukeG89's blunt advice is stronger \u2014 just don't use that cache node at all, and if you genuinely need a cache node, the T8 is still the best of the lot.",
+   "subs": [],
+   "channel": "daily_summaries",
+   "date": "2026-08-17"
+  }
+ ]
+}
