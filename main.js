@@ -417,23 +417,53 @@ function railRefresh() {
   // the nav content inset is the CEILING for the rail, not its home — see
   // railApply: the rail itself derives from the plume node
   _rail.navRight = cta ? cta.getBoundingClientRect().right : innerWidth - 54;
-  _rail.tags = {};
-  for (const key of ['inspire', 'equip', 'connect']) {
-    const co = TRACKS[key].el.querySelector('.co');
-    const tag = co.querySelector('.tag');
-    const row = tag.querySelector('.row');
-    // mobile scales .co 0.88 (hero.css) — work in the pre-scale space
-    const t = getComputedStyle(co).transform;
-    _rail.tags[key] = {
-      tag,
-      paths: co.querySelectorAll('path'),
-      s: t && t !== 'none' ? new DOMMatrix(t).a : 1,
-      padR: parseFloat(getComputedStyle(tag).paddingRight) || 0,
-      padL: parseFloat(getComputedStyle(tag).paddingLeft) || 0,
-      w: tag.offsetWidth,
-      h: tag.offsetHeight, // the column tuck's room guard reads it (railApply)
-      rowMid: row.offsetTop + row.offsetHeight / 2,
-    };
+  /* MEASURE THE SETTLED TRUTH, NEVER THE ENTRANCE (2026-08-18 — Hannah: "a
+     stutter and then they shift to the left a little bit"). The callout
+     entrance animates letter-spacing (measured 4.224px -> 3.168px), so a
+     boot-time measure catches the tags ~7px WIDER than they will rest, the
+     rail seats everything against that lie, and the post-intro re-measure —
+     a setTimeout that a busy main thread can stretch from 7.7s to 12s+ —
+     then corrects it in plain view: the reported stutter-and-shift, landing
+     in dead stillness. Measuring the live elements with animations
+     suppressed is not safe either (toggling animation-name RESTARTS a CSS
+     animation — a timer/resize refresh would replay the entrance). So the
+     metrics come from a hidden CLONE of .callouts: same classes, so every
+     stylesheet rule applies; inline `animation/transition: none` on every
+     cloned node beats the entrance keyframes, so the clone stands in its
+     resting geometry no matter when this runs; removed the same tick, never
+     painted. The live elements keep their choreography untouched — and
+     because boot now measures the same numbers the post-intro pass will,
+     that pass becomes the no-op it was always meant to be. */
+  const ghost = document.querySelector('.callouts').cloneNode(true);
+  ghost.style.cssText = 'position:absolute; visibility:hidden; pointer-events:none; inset:0;';
+  for (const el of ghost.querySelectorAll('*')) {
+    el.style.animation = 'none';
+    el.style.transition = 'none';
+    el.style.opacity = '';        // entrance may have inlined mid-fade values
+  }
+  document.body.appendChild(ghost);
+  try {
+    _rail.tags = {};
+    for (const key of ['inspire', 'equip', 'connect']) {
+      const liveCo = TRACKS[key].el.querySelector('.co');
+      const gCo = ghost.querySelector('#' + TRACKS[key].el.id + ' .co') || liveCo;
+      const gTag = gCo.querySelector('.tag');
+      const gRow = gTag.querySelector('.row');
+      // mobile scales .co 0.88 (hero.css) — work in the pre-scale space
+      const t = getComputedStyle(gCo).transform;
+      _rail.tags[key] = {
+        tag: liveCo.querySelector('.tag'),           // railApply writes the LIVE tag
+        paths: liveCo.querySelectorAll('path'),
+        s: t && t !== 'none' ? new DOMMatrix(t).a : 1,
+        padR: parseFloat(getComputedStyle(gTag).paddingRight) || 0,
+        padL: parseFloat(getComputedStyle(gTag).paddingLeft) || 0,
+        w: gTag.offsetWidth,
+        h: gTag.offsetHeight, // the column tuck's room guard reads it (railApply)
+        rowMid: gRow.offsetTop + gRow.offsetHeight / 2,
+      };
+    }
+  } finally {
+    ghost.remove();
   }
   _rail.last = ''; // force a rewrite on the next frame
 }

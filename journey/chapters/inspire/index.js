@@ -77,6 +77,7 @@ import {
 } from '../../anatomy.js';
 import { EXITS } from './anatomy.js';
 import { endOf } from '../../route.js';
+import { isBaked, geometry, payload, registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
 import { createDial } from '../../dial.js';
 import { T_QA_ACTIVE, T_QS_VALUE, getTransformStorage, setTransformStorage } from '../../../flags.js';
 
@@ -314,16 +315,57 @@ export function createInspire(sceneApi) {
   // sparse middle and the no-self-ignition principle bans the element.
   const exits = EXITS.map((spec) => ({ spec, fade: 0, target: 0, mats: [] }));
 
+  // ---- baked read path (2026-08-17) -----------------------------------
+  // Inspire's 11 static line/point buffers are baked under 'inspire/<site>'
+  // (§1 srcFil/srcBeads per exit, §2 wisps per exit, §2b rimCurrents per
+  // link). One isBaked check, one try/catch: any missing key or shape
+  // mismatch throws and falls back to the live builders below — never a
+  // half-baked mix. Everything else — materials, group.add, ex.mats/
+  // srcMat/wispMat, rimLinks[{mat}], the spore seat, shedRegions, sprites,
+  // reveal state and the animator — stays live on BOTH paths; only the
+  // geometry math (and the seeded RNG draws it consumes) is skipped. counts
+  // round-trips via payload: the loop increments are what draw the two seed
+  // streams, so recomputing after skipping them would mis-sync the RNG.
+  const geometries = {};
+  const baked = (() => {
+    if (!isBaked('inspire')) return null;
+    try {
+      const P = payload('inspire');
+      if (!P || !P.counts
+          || typeof P.counts.sourceSegs !== 'number'
+          || typeof P.counts.wispSegs !== 'number'
+          || typeof P.counts.beads !== 'number'
+          || typeof P.counts.rimSegs !== 'number') {
+        throw new Error('inspire counts payload mismatch');
+      }
+      const STRAND = [['position', 3], ['color', 3], ['aProg', 1]];
+      const BEADS = [['position', 3], ['color', 3], ['psize', 1]];
+      return {
+        counts: P.counts,
+        g: {
+          srcFil: [0, 1, 2].map((n) => geometry(`inspire/srcFil${n}`, STRAND)),
+          srcBeads: [0, 1, 2].map((n) => geometry(`inspire/srcBeads${n}`, BEADS)),
+          wisps: [0, 1, 2].map((n) => geometry(`inspire/wisps${n}`, STRAND)),
+          rimCurrents: [0, 1].map((n) => geometry(`inspire/rimCurrents${n}`, STRAND)),
+        },
+      };
+    } catch (e) {
+      return null;
+    }
+  })();
+  if (baked) Object.assign(counts, baked.counts);
+
   /* ================================================================
      1. UNDER-RIM SOURCE GEOMETRY — brightened gill filaments + embers
         in each exit sector (hidden until orbit; front view untouched)
      ================================================================ */
-  for (const ex of exits) {
+  for (let i = 0; i < exits.length; i++) {
+    const ex = exits[i];
     const { az } = ex.spec;
     const lp = [], lc = [], lg = [];
     const bp = [], bc = [], bs = [];
     const N_FIL = 56;
-    for (let f = 0; f < N_FIL; f++) {
+    for (let f = 0; !baked && f < N_FIL; f++) {
       // snap to a real gill channel so the light sits BETWEEN lamellae
       const lane = Math.round((gauss() * 0.30) / CHANNEL) * CHANNEL
                  + (rand() - 0.5) * CHANNEL * 0.35;
@@ -366,13 +408,18 @@ export function createInspire(sceneApi) {
     if (ex !== exits[0]) mat.uniforms.uFrom.value = 1;
     ex.mats.push(mat);
     ex.srcMat = mat;                     // trace-back target (rim -> inner gills)
-    group.add(new THREE.LineSegments(strandGeo(lp, lc, lg), mat));
+    const filGeo = baked ? baked.g.srcFil[i] : strandGeo(lp, lc, lg);
+    if (!baked) geometries['srcFil' + i] = filGeo;
+    group.add(new THREE.LineSegments(filGeo, mat));
 
     // beads: small additive points with the same fade
-    const bGeo = new THREE.BufferGeometry();
-    bGeo.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3));
-    bGeo.setAttribute('color', new THREE.Float32BufferAttribute(bc, 3));
-    bGeo.setAttribute('psize', new THREE.Float32BufferAttribute(bs, 1));
+    const bGeo = baked ? baked.g.srcBeads[i] : new THREE.BufferGeometry();
+    if (!baked) {
+      bGeo.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3));
+      bGeo.setAttribute('color', new THREE.Float32BufferAttribute(bc, 3));
+      bGeo.setAttribute('psize', new THREE.Float32BufferAttribute(bs, 1));
+      geometries['srcBeads' + i] = bGeo;
+    }
     const bMat = makeBeadMat();
     ex.mats.push(bMat);
     group.add(new THREE.Points(bGeo, bMat));
@@ -444,13 +491,14 @@ export function createInspire(sceneApi) {
         so when they draw on (tip tracking the live current) every
         centimetre of new line grows out of the stream.
      ================================================================ */
-  for (const ex of exits) {
+  for (let i = 0; i < exits.length; i++) {
+    const ex = exits[i];
     const { az, riseMin, riseMax } = ex.spec;   // spec.lean retired by D17
     const isMig = ex !== exits[0];
     const azSrcBase = EXITS[0].az;
     const lp = [], lc = [], lg = [];
     const N_WISP = 4;
-    for (let w = 0; w < N_WISP; w++) {
+    for (let w = 0; !baked && w < N_WISP; w++) {
       const a0 = az + gauss() * 0.16;
       const aS = isMig ? azSrcBase + gauss() * 0.14 : a0;   // where it is BORN
       const u0 = 0.55 + rand() * 0.18;
@@ -565,10 +613,12 @@ export function createInspire(sceneApi) {
         counts.wispSegs++;
       }
     }
+    const wispGeo = baked ? baked.g.wisps[i] : strandGeo(lp, lc, lg);
+    if (!baked) geometries['wisps' + i] = wispGeo;
     const mat = makeStrandMat(0.15, 1.0);
     ex.mats.push(mat);
     ex.wispMat = mat;                    // trace-back target (full path, plume -> gills)
-    group.add(new THREE.LineSegments(strandGeo(lp, lc, lg), mat));
+    group.add(new THREE.LineSegments(wispGeo, mat));
   }
 
   /* ================================================================
@@ -591,9 +641,10 @@ export function createInspire(sceneApi) {
       { from: EXITS[0].az, to: EXITS[1].az },   // source -> Arca (rearward)
       { from: EXITS[0].az, to: EXITS[2].az },   // source -> 2RP (frontward)
     ];
-    for (const lk of linkSpecs) {
+    for (let i = 0; i < linkSpecs.length; i++) {
+      const lk = linkSpecs[i];
       const lp = [], lc = [], lg = [];
-      for (let l = 0; l < N_LINE; l++) {
+      for (let l = 0; !baked && l < N_LINE; l++) {
         const offR = 0.04 + l * 0.05 + rand2() * 0.03;
         const offY = -0.02 + l * 0.045 + rand2() * 0.02;
         const ph = rand2() * TAU;
@@ -619,11 +670,32 @@ export function createInspire(sceneApi) {
           prev = p; prevT = tt;
         }
       }
+      const linkGeo = baked ? baked.g.rimCurrents[i] : strandGeo(lp, lc, lg);
+      if (!baked) geometries['rimCurrents' + i] = linkGeo;
       const mat = makeStrandMat(0.12, 1.0);
-      group.add(new THREE.LineSegments(strandGeo(lp, lc, lg), mat));
+      group.add(new THREE.LineSegments(linkGeo, mat));
       rimLinks.push({ mat });
     }
   }
+
+  // ---- bake recording site (2026-08-17) -------------------------------
+  // Inspire bakes ATOMICALLY: the 11 static line/point buffers (§1 source
+  // filaments + beads, §2 wisps, §2b rim currents) are final the instant the
+  // loops above return — there is no cross-module post-pass (Owned needed
+  // substrate.assignOwners to finalise aOwner; Inspire has no analogue). The
+  // spore seat, shedRegions, every ShaderMaterial + its uniforms, the streak
+  // and lip-glow sprites, the reveal state and the animator are all runtime
+  // steering and stay live on BOTH paths — only the geometry math (and the
+  // seeded RNG draws it consumes) is skipped on the baked read path. counts
+  // round-trips via payload: recomputing after skipping the loops would
+  // mis-sync the two seed streams. Under ?bakedump=1 each registerGeometry
+  // copies the live-built attributes into window.__bake; on the shipped path
+  // these are no-ops.
+  for (const [site, geo] of Object.entries(geometries)) {
+    registerGeometry(`inspire/${site}`, geo);
+  }
+  registerPayload('inspire', { counts });
+  bakeDumpDone('inspire');
   // The strands' draw-on follows each branch's own walking front (mig mirrors
   // the shader's smoothstep(0, 0.55, rev)); the two branches are independent
   // now that the delta forks both ways from the source (D16).
