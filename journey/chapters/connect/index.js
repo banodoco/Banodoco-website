@@ -40,6 +40,7 @@ import * as THREE from 'three';
 import { makeRng } from '../../anatomy.js';
 import { startOf, endOf } from '../../route.js';
 import { buildTendrils, HUB_IDS, FRONT_SOFT } from './tendrils.js';
+import { registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const sm = (a, b, x) => smooth01((x - a) / (b - a));
@@ -446,6 +447,24 @@ export function createConnect(sceneApi) {
   };
 
   const net = buildTendrils(group, U);
+
+  /* ---- bake recording site (2026-08-17) -------------------------------
+     Connect is baked ATOMICALLY. buildTendrils is the chapter's single
+     geometry producer and its output is final the instant it returns — there
+     is no cross-module post-pass (Owned needed substrate.assignOwners to
+     finalise aOwner; Connect has no analogue). Under ?bakedump=1 each
+     registerGeometry copies the live-built attributes into window.__bake; on
+     the shipped path these are no-ops. The read path (buildTendrils's baked
+     IIFE) rebuilds from static/geom bytes and skips the emission — see
+     journey/lib/baked.js and tools/bake-geom.py for the harvest. partData
+     ROUND-TRIPS via payload: it is never recomputed on the baked path
+     (recomputing after skipping the geometry loops mis-syncs stream B). */
+  for (const [site, geo] of Object.entries(net.geometries)) {
+    registerGeometry(`connect/${site}`, geo);
+  }
+  registerPayload('connect', net.bakePayload);
+  bakeDumpDone('connect');
+
   const counts = net.counts;
 
   /* ---- lay the three windows end to end in LIGHT_ORDER (see THE ARRIVAL
