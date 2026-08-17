@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ownership — Banodoco</title>
+<meta name="description" content="Banodoco shares 100% of its ownership with the people who build the open-source AI art ecosystem — the full ledger of grants, transfers, and ownership to date.">
+<!-- The page owns its styles: ownership.css, not hero.css. Tables and the
+     ledger are built by ownership.js from data.js (built separately); this
+     file is the markup, the copy, and the atmosphere layers. -->
+<link rel="stylesheet" href="./ownership.css">
+</head>
+<body>
+  <!-- a11y: first focusable element; skips the fixed nav and the atmosphere
+       layers straight to the content. -->
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- Atmosphere, fixed behind the document. #mycelium holds two canvases —
+       the net grows once and is never repainted; the fork nodes breathe on
+       the second one — see mycelium.js for why. -->
+  <div id="mycelium" aria-hidden="true">
+    <canvas id="myc-net"></canvas>
+    <canvas id="myc-nodes"></canvas>
+  </div>
+  <div class="spill" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- Fixed nav, matching the homepage: the wordmark-as-mark on the left
+       (a raster mask painted in currentColor — see .logo in ownership.css),
+       the outline-only Discord mark on the right. -->
+  <nav aria-label="Primary">
+    <a class="logo" href="../index.html#/mission" aria-label="Banodoco"><i class="mark" aria-hidden="true"></i></a>
+    <div class="nav-cta">
+      <a class="pill-ic" href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer" aria-label="Discord">
+        <svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
+      </a>
+    </div>
+  </nav>
+
+  <main id="main">
+    <!-- HERO -->
+    <section class="hero-sec">
+      <p class="kicker">OWNERSHIP</p>
+      <h1>Explanation, disclaimers &amp; <em>grants</em> to&nbsp;date</h1>
+      <p class="standfirst">Ownership of Banodoco is 100% shared with the people who build it.</p>
+    </section>
+
+    <hr class="rule">
+
+    <!-- INTRO -->
+    <section>
+      <div class="prose">
+        <figure class="plate-frame plate-right">
+          <div class="plate"><img src="https://banodoco.s3.amazonaws.com/images/typical_startup_equity.webp" alt="Typical Startup Equity" loading="lazy"></div>
+          <figcaption>TYPICAL STARTUP EQUITY</figcaption>
+        </figure>
+        <figure class="plate-frame plate-right">
+          <div class="plate"><img src="https://banodoco.s3.amazonaws.com/images/open_source_native.webp" alt="Open Source Native" loading="lazy"></div>
+          <figcaption>OPEN SOURCE NATIVE</figcaption>
+        </figure>
+
+        <p>Our goal is to build Banodoco into a successful business that can help support the development of the open source AI art ecosystem. To do this, we're creating a commercial entity that aims to be an extremely attractive investment for those who believe in our mission and open source. You can read more about our plan <a href="https://banodoco.ai/">here</a>.</p>
+
+        <p>Most startups give out 90% of their ownership to founders and 10% to early employees.</p>
+
+        <p>However, if you believe as we do that we're in a space that will relentlessly evolve over the coming decades and that this evolution will be driven by open source ingenuity, this incentive structure doesn't reflect where the value will be created - or incentivise the right kinds of contributions.</p>
+
+        <p>Instead, we're choosing a structure that aims to incentivise and inspire open source ingenuity in a cohesive direction throughout a far longer period - by sharing 100% of our equity with contributors over the first 8.5 years.</p>
+
+        <p>Practically, as per the illustration, this means that we'll split 1% per month between people who contribute open source work that's aligned with our core goals.</p>
+
+        <p>How this is distributed will constantly evolve as we figure out the best model - but we hope to arrive at a consistent approach over the first 2 years that is fair and inspires the right kind of contributions.</p>
+
+        <div class="clearfix"></div>
+      </div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- DISCLAIMERS -->
+    <section>
+      <div class="prose">
+        <h2>Six disclaimers</h2>
+        <div class="acc-list">
+          <details>
+            <summary>1) We haven't set this up legally yet</summary>
+            <div class="acc-body">
+              <p>Doing this will be costly and time-consuming - it'll become a priority as soon as we have the resources to do so - which will also hopefully be when people start to actually care!</p>
+              <figure class="plate-frame plate-left">
+                <div class="plate"><img src="https://banodoco.s3.amazonaws.com/plan/structure.png" alt="Corporate Structure Example" loading="lazy"></div>
+                <figcaption>EXAMPLE CORPORATE STRUCTURE</figcaption>
+              </figure>
+              <p>To achieve this, we'll likely have an entity that owns the "founder's" stock on behalf of the community and distributes realised gains at pre-agreed points - with investors investing into the LLC that the foundation starts with owning entirely. This will allow us to be an attractive investment due to having a conventional underlying corporate structure, while allowing us to distribute gains via the foundation in a way that's fair and transparent to everyone in the community.</p>
+              <p>While the actual implementation of this is uncertain, below is an example of what it might look like from a corporate structure perspective:</p>
+              <div class="clearfix"></div>
+            </div>
+          </details>
+          <details>
+            <summary>2) Startup equity is highly-speculative</summary>
+            <div class="acc-body">
+              <p>Our goal is that we'll be worth a lot someday - and in this world, even 0.05% will probably be a decent amount of money - but that is <em>objectively</em> unlikely. Given this, don't do anything because you want to get rich. Maybe you will, but really you should do it because you love what it can be and what you're working on - and feel good that - if our collected efforts to create something valuable - you may share in that.</p>
+            </div>
+          </details>
+          <details>
+            <summary>3) Grants will be biased towards core contributors and people who do things that are aligned with our goals</summary>
+            <div class="acc-body">
+              <p>While we would like to reward people who contribute to everything, we're also trying to build a business that is successful. As such, we'll likely be biased towards rewarding people who are core to the business and who are contributing things that are most aligned with our goals.</p>
+            </div>
+          </details>
+          <details>
+            <summary>4) Figuring this out will be an ever-evolving process - and we will make mistakes</summary>
+            <div class="acc-body">
+              <p>I believe that this fundamental approach makes sense but figuring out how to actually implement it will take time. We'll also make mistakes along the way - if you feel we've made a mistake, please let me know. I will always want to hear if you feel anything isn't right.</p>
+            </div>
+          </details>
+          <details>
+            <summary>5) How the 'ownership' will be structured is unclear &amp; lots of stuff is TBD</summary>
+            <div class="acc-body">
+              <p>For example, it may not literally be ownership, but possibly an agreement that the grantee can buy equity from us at a price of 0.01c when the equity becomes liquid. However, whatever way it's structured, my goal is that it means that the realisable gains from it are exactly proportional to the percentage of ownership - say, if the company is valued at 1b USD, and you have 1% equity, that will be worth exactly 1% of that (pre-tax of course).</p>
+            </div>
+          </details>
+          <details>
+            <summary>6) Ownership will get diluted as we take on investment, or as we allocate more equity for contributors</summary>
+            <div class="acc-body">
+              <p>Say, for example, we get an investment of 5m USD at a 50m USD valuation. That means that the ownership pool for contributors (including me) will be diluted. In the case of the above example, it would mean that what was once 0.1% of the whole entity, would now be 0.091%. However, this would mostly be offset by the actual value increasing as the percentage decreases. We may also allocate more ownership to contributors - which would have the same effect. While things may change, I can only promise that every change that impacts owners will impact me equally.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- GRANTS / TRANSFERS / OWNERSHIP -->
+    <section class="ledger-sec">
+      <div class="prose">
+        <h2>Grants, transfers, and ownership to date</h2>
+        <p>As per the above, each month, 1% of the company will be split equally between contributors. Up until February 2024, the amount each month was split equally between all contributors. After this, instead of it being split equally, we'll split 0.25% to each major group - core, infrastructure builders, knowledge sharers, and artists. That means all the people listed in that group will get that 0.25% split between them.</p>
+        <p>How this is distributed will constantly evolve as we figure out the best model - but we hope to arrive at a consistent approach over the first 2 years that is fair and inspires the right kind of contributions.</p>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Ownership data">
+        <button class="tab-btn" id="tab-grants" role="tab" aria-selected="true" aria-controls="panel-grants" type="button">
+          <b class="ck tl"></b><b class="ck tr"></b><b class="ck br"></b><b class="ck bl"></b>
+          Grants &amp; transfers
+        </button>
+        <button class="tab-btn" id="tab-ownership" role="tab" aria-selected="false" aria-controls="panel-ownership" type="button" tabindex="-1">
+          <b class="ck tl"></b><b class="ck tr"></b><b class="ck br"></b><b class="ck bl"></b>
+          Ownership to date
+        </button>
+      </div>
+
+      <div class="note"><strong>Note:</strong> There may be minor issues in this data. The ground source of truth for this will be the original announcements on Discord.</div>
+
+      <div class="tab-panel" id="panel-grants" role="tabpanel" aria-labelledby="tab-grants">
+        <div class="prose">
+          <p>Below are the grants and transfers to date:</p>
+        </div>
+        <div class="table-frame">
+          <table class="grants-table">
+            <caption class="visually-hidden">Grants to contributors by month</caption>
+            <thead>
+              <tr><th scope="col">Month</th><th scope="col">Grants</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="table-actions">
+          <button class="btn" id="grants-more" type="button"><b class="ck tl"></b><b class="ck tr"></b><b class="ck br"></b><b class="ck bl"></b><span id="grants-more-label">Show more</span></button>
+        </div>
+        <div class="prose">
+          <h3>Additional transfers</h3>
+          <p>In addition to the above, holders may transfer equity to contributors at their discretion. This is subject to approval by POM. The below table shows the transfers to date:</p>
+        </div>
+        <div class="table-frame">
+          <table class="transfers-table">
+            <caption class="visually-hidden">Additional transfers of equity</caption>
+            <thead>
+              <tr><th scope="col">From</th><th scope="col">To</th><th scope="col">Amount</th><th scope="col">Date</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-ownership" role="tabpanel" aria-labelledby="tab-ownership" hidden>
+        <div class="prose">
+          <p>Below is the current breakdown of equity distribution among all contributors:</p>
+        </div>
+        <div class="filter-frame">
+          <b class="ck tl"></b><b class="ck tr"></b><b class="ck br"></b><b class="ck bl"></b>
+          <input type="text" id="ownership-filter" placeholder="Filter by username…" autocomplete="off">
+        </div>
+        <p class="row-count" id="ownership-count" aria-live="polite"></p>
+        <div class="table-frame">
+          <table class="ownership-table">
+            <caption class="visually-hidden">Ownership distribution among contributors</caption>
+            <thead>
+              <tr>
+                <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="username">Contributor <span class="arrow" aria-hidden="true">↓</span></button></th>
+                <th scope="col" aria-sort="descending"><button type="button" class="sort-btn" data-key="granted">% of granted <span class="arrow" aria-hidden="true">↓</span></button></th>
+                <th scope="col" aria-sort="none"><button type="button" class="sort-btn" data-key="total">% of total <span class="arrow" aria-hidden="true">↓</span></button></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="table-actions">
+          <button class="btn" id="ownership-more" type="button"><b class="ck tl"></b><b class="ck tr"></b><b class="ck br"></b><b class="ck bl"></b><span id="ownership-more-label">Show all contributors</span></button>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- FAQ -->
+    <section>
+      <div class="prose">
+        <h2>Frequently asked questions</h2>
+        <div class="acc-list">
+          <details>
+            <summary>What's your plan to make this actually valuable?</summary>
+            <div class="acc-body">
+              <p>You can read more about what we're up to <a href="https://banodoco.ai/">here</a> - more coming soon.</p>
+            </div>
+          </details>
+          <details>
+            <summary>Why should I trust you?</summary>
+            <div class="acc-body">
+              <p>I think that this is a very fair question. I could in theory go back on this when the company is valuable. In fact, there are loads of ways people screw others in all kinds of equity arrangements. While I do hope to get wealthy enough to not have to worry about money, that's not strictly my goal. My goal is actually to do stuff like this for the rest of my life and doing anything that would make me untrustworthy in the eyes of the types of people I want to collaborate with would be stupid and short-sighted.</p>
+            </div>
+          </details>
+          <details>
+            <summary>If the equity becomes valuable, how will I be able to sell it?</summary>
+            <div class="acc-body">
+              <p>This is TBC but many private startups like SpaceX offer equity holders the opportunity to sell at pre-determined times and we'll probably do something similar. What we don't want is for our equity to become like a token that's speculatively bought and sold, so will put constraints to avoid this - probably time-bound.</p>
+            </div>
+          </details>
+          <details>
+            <summary>What about crypto?</summary>
+            <div class="acc-body">
+              <p>While I dislike a lot of the association crypto currently has, it could in theory be possible to implement this using crypto - if you have any ideas on how to achieve this in a way that isn't bullshitty and aligns with the above goals, please get in touch.</p>
+            </div>
+          </details>
+          <details>
+            <summary>What about tax?</summary>
+            <div class="acc-body">
+              <p>We'll try to set it up in a way that tax is only due upon actual gains actually being realised - meaning, you'd only pay based on actual money you make. Again, I'll need to hire fancy lawyers and accountants to figure this out so have no clue what this means right now.</p>
+            </div>
+          </details>
+          <details>
+            <summary>What if I don't want it?</summary>
+            <div class="acc-body">
+              <p>If you don't want it, your equity will be redistributed to other contributors proportionally.</p>
+            </div>
+          </details>
+          <details>
+            <summary>What happens if the company is sold before the equity is allocated?</summary>
+            <div class="acc-body">
+              <p>Firstly, our intention is to build this into a self-sustaining entity for the long-term. However, if we do get purchased by another company, equity will be distributed proportionally based on the allocations made to date. For example, if someone holds 1% of the equity and 33.3% of the total equity has been allocated, they would receive 3% of the purchase price.</p>
+            </div>
+          </details>
+          <details>
+            <summary>I have another question</summary>
+            <div class="acc-body">
+              <p>DM me on <a href="https://discord.gg/NnFxGvx94b">our Discord</a>!</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="return-link" href="../index.html#/owned">RETURN TO THE JOURNEY</a>
+    <p class="footer-line">Source of record: the original announcements on Discord · mirrored from <a href="https://banodoco.ai/ownership">banodoco.ai/ownership</a></p>
+  </footer>
+
+  <script type="module" src="./ownership.js"></script>
+</body>
+</html>
