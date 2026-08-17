@@ -10,6 +10,7 @@
 // preservation.md), so this module fades that block rather than duplicating it.
 
 import { CONTENT } from '../content/content.js';
+import { CARD_BUILDERS } from './cards/index.js';
 import { createRail } from './rail.js';
 import { claimInput, releaseInput } from './scroll.js';
 import { CHAPTERS } from './route.js';
@@ -413,6 +414,48 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   const POP_ENTER_MS = 700;
 
   const pop = el('aside', 'j-pop');
+  /* ---- rich stages (2026-08-17, "show, don't tell" previews) ----------
+     Six nodes carry a builder in journey/cards/ that fills a media stage
+     with that project's own assets and motion. The stage is built lazily,
+     ONCE per node, and cached here — switching nodes swaps stage elements
+     rather than rebuilding, so a hover replays instantly. Everything else
+     about the popover (shell, entry, placement, a11y) is untouched; a node
+     without a builder renders exactly the pre-2026-08-17 popover.
+     NB 2026-08-18: this block was lost once to a concurrent session's
+     ui.js write — if the cards ever render as plain popovers again, check
+     that this wiring (import, this block, the showPop/hidePop hooks, and
+     index.html's cards.css link) is still present before debugging cards/. */
+  const stageCache = new Map();   // nodeId -> { el, builder }
+  let activeStage = null;         // the { el, builder } currently in the pop
+
+  function stageFor(nodeId) {
+    if (stageCache.has(nodeId)) return stageCache.get(nodeId);
+    const builder = CARD_BUILDERS[nodeId];
+    if (!builder) { stageCache.set(nodeId, null); return null; }
+    const stageEl = el('div', 'j-pop-stage');
+    builder.build(stageEl, CONTENT.nodes[nodeId]);
+    const entry = { el: stageEl, builder };
+    stageCache.set(nodeId, entry);
+    return entry;
+  }
+
+  function setStage(nodeId) {
+    const next = stageFor(nodeId);
+    if (activeStage === next) return;
+    if (activeStage) {
+      activeStage.builder.deactivate();
+      activeStage.el.remove();
+    }
+    activeStage = next;
+    if (next) {
+      pop.prepend(next.el);
+      pop.classList.add('j-pop-rich');
+      pop.dataset.node = nodeId;
+    } else {
+      pop.classList.remove('j-pop-rich');
+      delete pop.dataset.node;
+    }
+  }
   const popTitle = el('strong', 'j-pop-t');
   // The description is the SHORT LINE only, not the whole popover: the title
   // duplicates the chip's accessible name and the link is a control, and
@@ -555,7 +598,14 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // touch arm all arrive here through the same `hot` state, so all three
     // get the identical entry with nothing said about pointer type.
     const fresh = popNode !== h || !pop.classList.contains('open');
+    // a reveal mid-exit cancels the exit and takes the panel back live
+    if (popExitTimer) {
+      clearTimeout(popExitTimer);
+      popExitTimer = null;
+      pop.classList.remove('j-pop-exit');
+    }
     if (popNode !== h) {
+      setStage(h.id);
       popTitle.textContent = d.title;
       popShort.textContent = d.short;
       if (d.link) {
@@ -577,21 +627,54 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // a transient popover's link is reachable by pointer but stays out of the
     // tab order — Tab belongs to the chips until the visitor commits
     popLink.tabIndex = popPinned ? 0 : -1;
+    // same rule for any controls a rich stage carries (ADOS's event toggle):
+    // pointer-reachable while transient, tabbable only once pinned
+    if (activeStage) {
+      const ti = popPinned ? 0 : -1;
+      for (const b of activeStage.el.querySelectorAll('button, a')) b.tabIndex = ti;
+    }
     // Place BEFORE arming the entry: the unfurl's direction comes from
     // `data-side`, so the side has to be decided while the animation is still
     // absent, or the first frame wipes the wrong way and corrects itself.
     placePop();
     if (fresh) runPopEntry();
+    // fresh reveal -> let the stage run its motion (no-op when reduced)
+    if (fresh && activeStage) activeStage.builder.activate();
   }
 
-  function hidePop() {
-    cancelPopHide();
-    stopPopEntry();
+  /* The exit is choreographed, not cut (Hannah, 2026-08-18: "a nice exit
+     animation for when we dehover") — `.j-pop-exit` plays the interiors'
+     settle (cards.css) over POP_EXIT_MS while `.open` keeps the panel on
+     screen, and only then does the real teardown run. A pointer that comes
+     back mid-exit is caught at the top of showPop, which cancels the timer
+     and simply re-opens — the panel never blinks. Reduced motion tears
+     down immediately, as before. */
+  const POP_EXIT_MS = 230;
+  let popExitTimer = null;
+
+  function teardownPop() {
+    if (activeStage) activeStage.builder.deactivate();
     pop.classList.remove('open');
     popLink.tabIndex = -1;
     if (popNode) popNode.btn.removeAttribute('aria-describedby');
     popNode = null;
     popHover = false;
+  }
+
+  function hidePop() {
+    cancelPopHide();
+    stopPopEntry();
+    if (popExitTimer) return;   // exit already playing; teardown will land
+    if (!pop.classList.contains('open') || reduceMotion.matches) {
+      teardownPop();
+      return;
+    }
+    pop.classList.add('j-pop-exit');
+    popExitTimer = setTimeout(() => {
+      popExitTimer = null;
+      pop.classList.remove('j-pop-exit');
+      teardownPop();
+    }, POP_EXIT_MS);
   }
 
   /** Which hotspot the popover SHOULD be showing, or null for none.

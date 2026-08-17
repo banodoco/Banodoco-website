@@ -1,0 +1,848 @@
+/* journey/cards — the six windows' interiors (see cards/index.js for the
+   contract and the one-building/six-worlds split).
+
+   Loaded after site.css. Everything here scopes under .j-pop-rich or a
+   card's own namespace (.ag- Arca, .ac- ArtCompute, .rp- 2RP, .ad- ADOS,
+   .hm- Hivemind, .dc- Discord) so a node without a builder renders exactly
+   yesterday's popover. The shell frame itself — panel, hairline, radius,
+   unfurl, filament — is site.css's and is deliberately not restated here. */
+
+/* ---- shell extension ------------------------------------------------- */
+
+/* Above the side rail (site.css z 4) — at phone widths the 86vw card runs
+   under the rail's menu button, which read as the menu floating ON the
+   card (Hannah, 2026-08-17). Still under the menu scrim/panel (6/7), so an
+   OPEN menu covers an open card, which is the right order. */
+.j-pop { z-index: 5; }
+
+.j-pop.j-pop-rich {
+  max-width: min(21.5rem, 86vw);
+  width: min(21.5rem, 86vw); /* media wants a stable measure, not max-content */
+}
+
+/* The stage bleeds to the panel edge (visual first; the frame reads as a
+   window). Negative margins undo .j-pop's padding; the bottom margin
+   restores the house gap to the title below. */
+.j-pop-stage {
+  position: relative;
+  width: calc(100% + 2rem);
+  margin: -0.85rem -1rem 0.35rem;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(217, 164, 65, 0.18);
+}
+
+/* Keep the contact filament above stage media. */
+.j-pop.j-pop-rich::before { z-index: 2; }
+
+/* The stage joins the entry choreography between the panel lamp (0.26s)
+   and the title (0.10s delay) — media is the first thing the unfurl shows. */
+.j-pop.j-pop-enter .j-pop-stage { animation: j-pop-word 0.34s ease both; animation-delay: 0.06s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .j-pop-stage, .j-pop-stage * { animation: none !important; transition: none !important; }
+}
+
+/* ---- arca — arcagidan.com's hero, miniaturized ------------------------ */
+/* Its own faces, self-hosted subsets (assets/cards/PROVENANCE.md). */
+@font-face {
+  font-family: 'Eubergine';
+  src: url('../../assets/cards/arca/eubergine-sub.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geosans Light';
+  src: url('../../assets/cards/arca/geosans-sub.woff2') format('woff2');
+  font-display: swap;
+}
+
+/* The whole approach is the site's own hero (Hannah, 2026-08-17: "copy the
+   whole approach from the website"): four full-color posters, one ARCA GIDAN
+   line across them, THE/PRIZE eyebrows, and a spotlight-on-hover — the
+   non-hovered panels drop into darkness (their duration-300 crossfade), the
+   hovered syllable goes #7b0b0b at scale 1.1 (their duration-500). */
+
+.j-pop-stage.ag { background: #1a1a1a; }   /* their dark-section ink */
+
+.ag-panels {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);   /* their hero grid */
+  height: 196px;                           /* full stage: the info line overlays */
+}
+.ag-panel { position: relative; margin: 0; overflow: hidden; }
+.ag-panel img,
+.ag-video {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  /* REST IS VIBRANT, exactly as the site's hero is — dimming is what
+     HOVER does to everyone else (their bg-black/70-style drop) */
+  transition: filter 0.3s ease;            /* their duration-300 */
+}
+/* the figure's video panel surfaces only once frames are rendering —
+   hover-streamed from the site itself, the poster beneath is the fallback */
+.ag-video { opacity: 0; transition: opacity 0.3s ease; }
+.ag-video.playing { opacity: 1; }
+.ag.ag-hovering .ag-panel:not(.lit) img,
+.ag.ag-hovering .ag-panel:not(.lit) .ag-video { filter: brightness(0.28) saturate(0.5); }
+
+.ag-word {
+  position: absolute;
+  inset: 0 0 30px 0;                       /* optically centred above the
+                                              info microline's scrim */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  pointer-events: none;
+  color: #f5f0eb;                          /* their cream */
+  /* heavier than the site needs at 160px: at card scale the letters cross
+     bright artwork, so the halo does the legibility work */
+  text-shadow:
+    0 1px 14px rgba(0, 0, 0, 0.9),
+    0 0 6px rgba(0, 0, 0, 0.85),
+    0 0 2px rgba(0, 0, 0, 1);
+}
+.ag-eyebrow {
+  font-family: 'Eubergine', 'Didot', Georgia, serif;
+  font-size: 0.5rem;
+  letter-spacing: 0.5em;                   /* their tracking-[0.5em] */
+  padding-left: 0.5em;                     /* their trailing-tracking comp */
+  transition: opacity 0.3s ease;
+}
+/* their "The"/"Prize" step aside while a figure holds the light */
+.ag.ag-hovering .ag-eyebrow { opacity: 0; }
+
+.ag-title {
+  font-family: 'Eubergine', 'Didot', Georgia, serif;  /* their h1 face */
+  font-size: 2.05rem;
+  letter-spacing: 0.12em;                  /* their tracking-[0.12em] */
+  line-height: 0.9;                        /* their lineHeight .9 */
+  white-space: nowrap;
+}
+.ag-syl {
+  pointer-events: auto;                    /* the syllables ARE the hover zones */
+  transition: color 0.5s ease, transform 0.5s ease;   /* their duration-500 */
+  display: inline-block;
+}
+.ag-syl:nth-child(3) { margin-left: 0.3em; }  /* their w-[0.3em] word gap */
+.ag-syl.lit { color: #7b0b0b; transform: scale(1.1); }  /* their hover state */
+
+/* the edition line lives IN the art (Hannah, 2026-08-17), a bottom
+   microline over its own soft scrim — the 2RP cover's grammar */
+.ag-info {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  margin: 0;
+  padding: 1.1rem 0.5rem 0.42rem;
+  font-family: 'Geosans Light', 'Inter', sans-serif;  /* their body face */
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: rgba(245, 240, 235, 0.85);
+  background: linear-gradient(to top, rgba(10, 10, 10, 0.72), rgba(10, 10, 10, 0));
+  pointer-events: none;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* ---- entry choreography (Hannah, 2026-08-17: "make sure every card has a
+   nice little entry animation") ----------------------------------------
+   Each stage's internals arrive in that card's own vocabulary, keyed to the
+   shell's `.j-pop-enter` window (0.7s, ui.js POP_ENTER_MS) so the unfurl,
+   the filament, and the interior land as one gesture. The global REDUCE
+   kill-switch above silences all of it. */
+@keyframes card-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes card-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* arca — the site's own fade-in-up, panel by panel, wordmark last */
+.j-pop-enter .ag-panel { animation: card-rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.j-pop-enter .ag-panel:nth-child(2) { animation-delay: 0.07s; }
+.j-pop-enter .ag-panel:nth-child(3) { animation-delay: 0.14s; }
+.j-pop-enter .ag-panel:nth-child(4) { animation-delay: 0.21s; }
+.j-pop-enter .ag-word  { animation: card-fade 0.4s ease both; animation-delay: 0.3s; }
+.j-pop-enter .ag-info  { animation: card-fade 0.4s ease both; animation-delay: 0.38s; }
+
+/* artcompute — a terminal painting itself in, band by band, with the same
+   steps() flicker the house link-strike uses */
+.j-pop-enter .ac-header { animation: card-fade 0.24s steps(2, end) both; }
+.j-pop-enter .ac-grid   { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.12s; }
+.j-pop-enter .ac-badges { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.26s; }
+.j-pop-enter .ac-ledger { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.4s; }
+
+/* ados — the window fades up, the wordmark rises, the walker follows */
+.j-pop-enter .ad-media { animation: card-fade 0.5s ease both; }
+.j-pop-enter .ad-word  { animation: card-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: 0.15s; }
+.j-pop-enter .ad-bar   { animation: card-rise 0.4s ease both; animation-delay: 0.3s; }
+
+/* tworp — the cover fades, the masthead stamps down like a printed cover */
+@keyframes rp-stamp { from { opacity: 0; transform: scale(1.12); } to { opacity: 1; transform: scale(1); } }
+.j-pop-enter .rp-cover { animation: card-fade 0.5s ease both; }
+.j-pop-enter .rp-head  { animation: rp-stamp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: 0.12s; }
+.j-pop-enter .rp-soon  { animation: card-fade 0.4s ease both; animation-delay: 0.34s; }
+
+/* hivemind — the console lamp comes up (the typing itself is the real
+   entrance, started by activate()), the stat footer after */
+.j-pop-enter .hm-console { animation: card-fade 0.35s ease both; animation-delay: 0.05s; }
+.j-pop-enter .hm-foot    { animation: card-fade 0.4s ease both; animation-delay: 0.25s; }
+
+/* discord — header dot first, the topic rises, dots last */
+.j-pop-enter .dc-head { animation: card-fade 0.3s ease both; }
+.j-pop-enter .dc-body { animation: card-rise 0.4s ease both; animation-delay: 0.12s; }
+.j-pop-enter .dc-dots { animation: card-fade 0.35s ease both; animation-delay: 0.3s; }
+
+/* ---- exit choreography (Hannah, 2026-08-18: "a nice exit animation for
+   when we dehover") ----------------------------------------------------
+   The mirror of the entry, quicker and quieter — the interior settles a
+   breath before the panel goes, so the card exhales instead of cutting.
+   ui.js holds `.open` through POP_EXIT_MS (230ms) while this plays; a
+   pointer returning mid-exit cancels it and the panel never blinks.
+   Durations stay inside the window so nothing is caught mid-move. */
+@keyframes card-settle {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(5px); }
+}
+.j-pop-exit { animation: j-pop-lamp 0.22s ease reverse both; }   /* the panel dims */
+.j-pop-exit .j-pop-stage { animation: card-settle 0.2s ease-in both; }
+.j-pop-exit .j-pop-t,
+.j-pop-exit .j-pop-s   { animation: card-fade 0.16s ease-in reverse both; }
+.j-pop-exit .j-pop-link { animation: card-fade 0.12s ease-in reverse both; }
+
+/* ---- artcompute — artcompute.org's terminal ledger, miniaturized ----- */
+/* Its own language: a hard-edged monospace terminal under scanlines. System
+   mono matches their JetBrains Mono at card scale, so no webfont is loaded.
+   Colors verified from its live CSS/bundle 2026-08-17:
+     #0a0a0a                 their ground
+     #c8c8c8                 their body text
+     #39ff14                 neon green (primary accent)
+     #a78bfa                 violet (secondary)
+     #38bdf8                 sky (tertiary)
+     rgba(255,255,255,0.08)  their hairline border
+   No border-radius anywhere in the stage: their aesthetic is square. */
+
+.j-pop-stage.ac {
+  background: #0a0a0a;                                              /* their ground */
+  color: #c8c8c8;                                                   /* their body text */
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;    /* their JetBrains Mono */
+}
+
+/* Their scanlines overlay, exact gradient, above content, inert. */
+.j-pop-stage.ac::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+    transparent, transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px, rgba(0, 0, 0, 0.03) 4px);
+  pointer-events: none;
+}
+
+/* ---- band 1: header ---- */
+.ac-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.85rem 0.6rem;
+}
+.ac-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.25em;              /* their wide micro-label */
+  color: rgba(255, 255, 255, 0.5);
+}
+.ac-dot {
+  width: 6px; height: 6px;
+  background: #39ff14;                 /* steady; no pulse = no fake liveness */
+}
+
+/* ---- band 2: stat grid (their gap-px hairline grid) ---- */
+.ac-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;                            /* hairline shows through */
+  background: rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ac-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.7rem 0.85rem 0.65rem;
+  background: #0a0a0a;
+}
+.ac-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(57, 255, 20, 0.4);       /* green micro-label, #39ff14 at 40% */
+}
+.ac-value {
+  font-size: 20px;
+  line-height: 1.1;
+  color: rgba(255, 255, 255, 0.85);    /* white/85 */
+}
+.ac-sub {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.4);     /* white/40 */
+}
+
+/* ---- band 3a: grant badges (their badge pill, translated) ---- */
+.ac-badges {
+  display: flex;
+  flex-wrap: wrap;                     /* 62vw phones wrap, don't clip */
+  gap: 6px;
+  padding: 0.6rem 0.85rem 0.5rem;
+}
+.ac-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border: 1px solid;
+}
+/* palette: border accent/20, background accent/5, color accent/60 */
+.ac-badge--green  { border-color: rgba(57, 255, 20, 0.2);  background: rgba(57, 255, 20, 0.05);  color: rgba(57, 255, 20, 0.6); }
+.ac-badge--violet { border-color: rgba(167, 139, 250, 0.2); background: rgba(167, 139, 250, 0.05); color: rgba(167, 139, 250, 0.6); }
+.ac-badge--sky    { border-color: rgba(56, 189, 248, 0.2);  background: rgba(56, 189, 248, 0.05);  color: rgba(56, 189, 248, 0.6); }
+
+/* ---- band 3b: cycling ledger ---- */
+.ac-ledger {
+  position: relative;
+  height: 22px;
+  margin: 0.15rem 0.85rem 0.75rem;
+}
+.ac-ledger-row {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(-5px);
+  /* the shuffle: the settled row slips up and out on this transition... */
+  transition: opacity 170ms ease-in, transform 170ms ease-in;
+}
+/* ...and the next one rises in from below on this animation — a ledger
+   advancing a line, not a crossfade */
+.ac-ledger-row.on {
+  opacity: 1;
+  transform: none;
+  animation: ac-row-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 130ms;              /* let the old row clear first */
+}
+@keyframes ac-row-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: none; }
+}
+.ac-avatar {
+  width: 14px; height: 14px;
+  flex: none;
+  object-fit: cover;                   /* 56px source; no radius — their aesthetic */
+}
+.ac-ledger-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;             /* 62vw phones truncate the project text */
+  font-size: 9px;
+  color: #c8c8c8;
+}
+.ac-chip {
+  flex: none;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 1px 5px;
+  border: 1px solid rgba(57, 255, 20, 0.2);
+  background: rgba(57, 255, 20, 0.05);
+  color: rgba(57, 255, 20, 0.6);       /* green PAID chip, their accent */
+}
+
+/* ---- ados — ados.events' hero, miniaturized ---------------------------- */
+/* Its own face, self-hosted subset (assets/cards/PROVENANCE.md). */
+@font-face {
+  font-family: 'Pilowlava';
+  src: url('../../assets/cards/ados/pilowlava-sub.woff2') format('woff2');
+  font-display: swap;
+}
+
+.j-pop-stage.ad {
+  height: 185px;
+  background: #0a0a0a;   /* their theme-color ground */
+}
+
+/* Full-bleed event-media window: poster underneath, animated preview over. */
+.ad-media,
+.ad-media img,
+.ad-scrim {
+  position: absolute;
+  inset: 0;
+}
+.ad-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* the animated preview crossfades in over the poster — their opacity 500ms */
+.ad-preview {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.ad-preview.on { opacity: 1; }
+
+/* their event-media scrim: linear-gradient(to top, black, rgba(0,0,0,.4),
+   rgba(0,0,0,.15)) */
+.ad-scrim {
+  background: linear-gradient(to top, #000, rgba(0,0,0,0.4), rgba(0,0,0,0.15));
+  pointer-events: none;
+}
+
+/* Wordmark block — upper third, centred, over the scrim. */
+.ad-word {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 34%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-top: 8px;
+  text-align: center;
+  pointer-events: none;
+}
+.ad-mark {
+  font-family: 'Pilowlava', 'Arial Black', sans-serif;  /* their hero face */
+  font-size: 2rem;
+  line-height: 1;
+  color: #fff;
+}
+.ad-eyebrow {
+  font-size: 8px;
+  letter-spacing: 0.35em;          /* their tracking-[0.35em] subtitle */
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);    /* their white/70 */
+}
+/* the scrim is lightest at the top, so a halo keeps the mark legible over
+   arbitrary poster art — same reasoning as arca's word shadow */
+.ad-mark,
+.ad-eyebrow {
+  text-shadow: 0 1px 10px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.7);
+}
+
+/* Bottom bar: ‹ › walker hugging the caption line, centred over the scrim.
+   Centred (not edge-flanked) so neither button ever sits under the journey's
+   right-edge rail at phone widths, where the popover spans 86vw. */
+.ad-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+/* At phone widths the 86vw popover's right edge runs under the journey's
+   rail; the right inset keeps › clickable there. Asymmetric on purpose —
+   an equal left inset starves the caption into its ellipsis. */
+@media (max-width: 720px) {
+  .ad-bar { padding-right: 38px; }
+}
+.ad-nav {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.7);  /* their hairline, white/70 */
+  border-radius: 2px;
+  color: rgba(255,255,255,0.7);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ad-nav:hover,
+.ad-nav:focus-visible {
+  color: #fff;
+  border-color: #fff;
+}
+.ad-center {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* the caption shuffles with its event — a small rise under the media
+   crossfade so the two read as one gesture (re-armed per swap in ados.js) */
+.ad-center.ad-swap { animation: ad-cap-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes ad-cap-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.ad-line {
+  font-size: 10px;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;   /* the narrowest panes trim, never underlap */
+}
+.ad-tag {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.2);  /* their white/20 hairline */
+  border-radius: 999px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+/* ---- tworp — "2RP" editorial cover, miniaturized ----------------------- */
+/* Its own faces, self-hosted subsets (assets/cards/PROVENANCE.md) — the
+   wordmark rotates per session across these three display faces, which IS
+   the site's identity. */
+@font-face {
+  font-family: 'Monoton';
+  src: url('../../assets/cards/tworp/monoton-sub.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Sixtyfour';
+  src: url('../../assets/cards/tworp/sixtyfour-sub.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Rubik Glitch';
+  src: url('../../assets/cards/tworp/rubikglitch-sub.woff2') format('woff2');
+  font-display: swap;
+}
+
+.j-pop-stage.rp {
+  height: 200px;
+  background: #000;   /* fallback behind the cover art */
+}
+
+.rp-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.0);
+}
+/* Ken Burns drift — scale 1.0 -> 1.06 over 9s, alternate; runs only while the
+   stage is live (REDUCE stays static, plus the global REDUCE kill-switch in
+   cards.css) */
+.j-pop-stage.rp.rp-live .rp-cover {
+  animation: rp-drift 9s ease-in-out alternate infinite;
+}
+@keyframes rp-drift {
+  from { transform: scale(1.0); }
+  to   { transform: scale(1.06); }
+}
+
+/* warm dark scrim, bottom half */
+.rp-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(26,16,8,0.82),
+    rgba(26,16,8,0.4) 50%,
+    rgba(26,16,8,0) 100%
+  );
+  pointer-events: none;
+}
+
+/* masthead + eyebrow, centred */
+.rp-head {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-bottom: 8px;    /* a breath above true centre — cover-mast
+                             optics, now that the stat microline is gone */
+  text-align: center;
+  pointer-events: none;
+}
+.rp-eyebrow {
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);   /* their white/70 */
+}
+.rp-masthead {
+  font-size: 2.6rem;
+  line-height: 0.9;
+  color: #fff;
+  /* the face rotates per session (set inline in build); the halo keeps the
+     white mark legible over arbitrary cover art */
+  text-shadow:
+    0 1px 14px rgba(0,0,0,0.85),
+    0 0 4px rgba(0,0,0,0.7);
+}
+
+/* COMING SOON — the popover renders only title/short/link, never the card's
+   status line, so the cover carries the promise itself */
+.rp-soon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.25);  /* hairline */
+  border-radius: 2px;
+  padding: 3px 7px;
+}
+
+/* ---- hivemind — a replayed query, in the house's own light ------------ */
+/* Hivemind has no brand color; the card wears site.css's house gold
+   (#d9a441) on the house-dark ground, and a terminal mono face. Ground is
+   the brief's house-dark rgba(10,7,3,…) (#0a0703), kept at 0.94 so the
+   transcript reads as a dim console against the panel. */
+
+.j-pop-stage.hm {
+  position: relative;
+  height: 170px;   /* the settled transcript + foot, without dead air */
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 7, 3, 0.94);   /* house-dark ground #0a0703 */
+}
+
+.hm-console {
+  flex: 1 1 auto;
+  padding: 0.7rem 1rem 0.2rem;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: rgba(233, 221, 201, 0.82);
+}
+
+.hm-line {
+  margin: 0 0 0.26rem;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.hm-line.on { opacity: 1; transform: none; }
+
+.hm-query { opacity: 1; transform: none; }   /* prompt always present */
+.hm-query .hm-prompt { color: #d9a441; }     /* house gold */
+.hm-query .hm-typed { color: rgba(233, 221, 201, 0.92); }
+
+.hm-search { color: rgba(217, 164, 65, 0.55); }   /* muted amber */
+.hm-spinner {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin-right: 0.4em;
+  vertical-align: -0.05em;
+  border: 1px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: hm-spin 0.7s linear infinite;
+}
+.hm-search.done .hm-spinner {
+  animation: none;
+  opacity: 0.35;
+  border-top-color: currentColor;   /* search settled: a still full ring */
+}
+@keyframes hm-spin { to { transform: rotate(1turn); } }
+
+.hm-hit { color: #d9a441; }                     /* house gold: the land */
+
+.hm-ans {
+  color: rgba(233, 221, 201, 0.78);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hm-foot {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  min-height: 44px;                 /* clears the mascot's 44px */
+  border-top: 1px solid rgba(217, 164, 65, 0.15);
+}
+
+.hm-stats {
+  margin: 0;
+  padding: 0.5rem 3.2rem 0.5rem 1rem;   /* right pad clears the mascot */
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  line-height: 1.5;                     /* wraps to two console lines on
+                                           narrow panes — never truncates
+                                           the corpus out of its own stat */
+  color: rgba(217, 164, 65, 0.6);       /* house gold, dimmed */
+}
+
+.hm-mascot {
+  position: absolute;
+  right: 0.65rem;
+  bottom: 0;
+  height: 44px;
+  width: auto;
+  image-rendering: pixelated;
+  opacity: 0.9;
+}
+
+/* ---- discord — banodoco.ai's own Community feed, miniaturized ---------- */
+/* Live data is the site's own Supabase table daily_summaries (discord.js);
+   colors below borrow its TopicCard language:
+     parchment #f4e4c1  — the community section's warm text tone
+     emerald   #10b981  — the pulsing "live" dot on its TopicCard (dot only)
+     blurple   #5865F2  — Discord's brand blue, as a 2px left-rule nod
+   Ground stays the house-dark panel (rgba(10,7,3,…) #0a0703). */
+
+.j-pop-stage.dc {
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 7, 3, 0.94);   /* house-dark ground #0a0703 */
+}
+
+.dc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem 0.15rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(244, 228, 193, 0.55);   /* parchment, dimmed */
+}
+
+.dc-beacon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;                /* emerald, their live dot */
+  animation: dc-pulse 2s ease-in-out infinite;
+}
+.dc-fallback .dc-beacon { display: none; }   /* fallback: no live dot */
+
+@keyframes dc-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50%      { opacity: 0.5; box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+}
+
+.dc-body {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 1rem 0.35rem 1.1rem;
+}
+
+.dc-topic {
+  border-left: 2px solid #5865F2;    /* blurple, a nod not a theme */
+  padding-left: 0.7rem;
+}
+
+/* the shuffle: out through the top, in from below — two beats, eased so
+   the swap reads as one motion (durations paired with discord.js LEAVE_MS) */
+.dc-leave { animation: dc-out 190ms ease-in both; }
+.dc-enter { animation: dc-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes dc-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(-7px); }
+}
+@keyframes dc-in {
+  from { opacity: 0; transform: translateY(9px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.dc-title {
+  margin: 0 0 0.3rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #f4e4c1;                     /* parchment */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dc-text {
+  margin: 0 0 0.35rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 10px;
+  line-height: 1.45;
+  color: rgba(244, 228, 193, 0.55);   /* parchment, muted */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dc-meta {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(244, 228, 193, 0.4);
+}
+
+.dc-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 0 0.6rem;
+}
+
+.dc-dot {
+  position: relative;
+  width: 4px;
+  height: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(244, 228, 193, 0.25);
+  cursor: pointer;
+  overflow: hidden;
+  transition: width 0.25s ease;
+}
+/* the active dot stretches into a pill whose fill IS the load state for
+   the next item — banodoco.ai's own progress grammar (its MediaGallery
+   bars and EventSelector pills). Fill duration = discord.js CYCLE_MS. */
+.dc-dot.is-on { width: 16px; background: rgba(88, 101, 242, 0.28); }
+.dc-dot.is-on::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #5865F2;               /* blurple fill */
+  transform: translateX(-100%);
+}
+.dc-live .dc-dot.is-on.dc-filling::after {
+  animation: dc-fill 7s linear both; /* = CYCLE_MS */
+}
+@keyframes dc-fill { from { transform: translateX(-100%); } to { transform: none; } }
+/* no cycle running (single topic, REDUCE, fallback): the pill reads full */
+.dc-dot.is-on:not(.dc-filling)::after { transform: none; }
