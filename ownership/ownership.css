@@ -1,0 +1,645 @@
+/* ownership.css — the ownership page's own stylesheet. The page is a
+   normally-scrolling document (the homepage is overflow:hidden) but shares
+   the homepage's tokens, atmosphere, corner-tick frames, and nav marks —
+   the design language is imported by hand because the page owns its styles
+   and must not link hero.css. */
+:root {
+  --gold:        #d9a441;
+  --gold-bright: #f0c877;
+  --parchment:   #f2ebdd;
+  --ink:         #f2ebdd;
+  --muted:       #c9bfa8;
+  --bg:          #141008;
+  --hairline:    rgba(217, 164, 65, 0.22);
+  --panel:       rgba(242, 235, 221, 0.035);
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  background: var(--bg);
+  color: rgba(242, 235, 221, 0.86);
+  font-family: "EB Garamond", Garamond, "Iowan Old Style", Georgia, serif;
+  font-size: 1.08rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* --- display type --- */
+h1, h2 {
+  font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-weight: normal;
+  line-height: 1.1;
+}
+h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); margin: 0 0 1.6rem; text-wrap: balance; }
+h2 { font-size: clamp(1.8rem, 3.6vw, 2.6rem); margin: 0 0 2.2rem; text-wrap: balance; }
+h1 em, h2 em { font-style: italic; color: var(--gold-bright); }
+h3 {
+  font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-weight: normal;
+  font-size: 1.35rem;
+  color: var(--parchment);
+  margin: 2.6rem 0 1.2rem;
+}
+
+/* ============================================================
+   ATMOSPHERE — fixed, non-interactive, behind the document.
+   The grain data-URI and the vignette stops are the homepage's
+   own (hero.css), the vignette centered rather than biased
+   toward a specimen; the spill is one warm bloom at the top so
+   the hero glows faintly. ============================================================ */
+#mycelium, .spill, .vignette, .grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+#mycelium { z-index: 0; will-change: transform; }
+#mycelium canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.spill {
+  z-index: 0;
+  background: radial-gradient(ellipse 90% 46% at 50% 0%, rgba(255, 190, 95, 0.06), transparent 70%);
+}
+.vignette {
+  z-index: 0;
+  background: radial-gradient(ellipse 120% 105% at 50% 50%,
+    transparent 42%,
+    rgba(8, 5, 1, 0.28) 76%,
+    rgba(6, 4, 1, 0.52) 100%);
+}
+.grain {
+  z-index: 20;   /* paper texture over everything, nav included */
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 280px 280px;
+}
+
+/* ============================================================
+   ACCESSIBILITY — skip link first in tab order; every interactive
+   gets the gold family ring so a focused element reads as clearly
+   as a hovered one against this near-black ground. ============================================================ */
+.skip-link {
+  position: fixed;
+  top: -4rem;
+  left: 1rem;
+  z-index: 100;
+  padding: 0.7rem 1.3rem;
+  background: var(--bg);
+  color: var(--gold-bright);
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+/* :focus, not :focus-visible — a skip link is only ever revealed by
+   the tab key, so :focus-visible would be the same thing with extra
+   risk of a browser quirk hiding it. */
+.skip-link:focus { top: 1rem; }
+
+a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ============================================================
+   NAV — fixed, matches the homepage. The B is a raster MASK painted
+   with currentColor (the alpha channel carries the drawing's glow,
+   and the colour can lift on hover); the Discord mark is the same
+   official path, left unfilled and stroked — no disc, no fill.
+   Both are transcribed from hero.css, whose notes carry the why. ============================================================ */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2.1rem 3.4rem;
+  /* the document scrolls under the nav where the homepage had a scene,
+     so the row fades softly into the background instead of floating
+     over hard text edges */
+  background: linear-gradient(to bottom, rgba(20, 16, 8, 0.92), rgba(20, 16, 8, 0));
+}
+.nav-cta { display: flex; gap: 0.7rem; }
+
+.logo {
+  --mark-h: 40px;
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  height: 33px;
+  color: #e6bd6e;   /* the mark's rest tone — gold, a step under --gold-bright */
+  text-decoration: none;
+  transition: color 0.25s, filter 0.25s;
+}
+/* 44px hit pad sized to the INK (the mark overflows its 33px box):
+   without it the visible overhang would not be hoverable. */
+.logo::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: max(100%, 44px);
+  height: max(var(--mark-h), 44px);
+  transform: translate(-50%, -50%);
+  background: none;
+  pointer-events: auto;
+}
+.logo .mark {
+  display: block;
+  width: calc(var(--mark-h) * 0.732);
+  height: var(--mark-h);
+  background: currentColor;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center;  mask-position: center;
+  -webkit-mask-size: contain;     mask-size: contain;
+  /* Plain url() first, image-set second: if image-set cannot parse the
+     whole declaration is dropped and the url() still masks — otherwise
+     the element would paint as a solid rectangle. */
+  -webkit-mask-image: url("../assets/brand/mark-b-mask-48.png");
+  mask-image: url("../assets/brand/mark-b-mask-48.png");
+  -webkit-mask-image: -webkit-image-set(
+    url("../assets/brand/mark-b-mask-48.png") 1x,
+    url("../assets/brand/mark-b-mask-64.png") 2x,
+    url("../assets/brand/mark-b-mask-96.png") 3x);
+  mask-image: image-set(
+    url("../assets/brand/mark-b-mask-48.png") 1x,
+    url("../assets/brand/mark-b-mask-64.png") 2x,
+    url("../assets/brand/mark-b-mask-96.png") 3x);
+}
+/* Deepens by saturation rather than dimming, lit by the glow that comes up
+   around it — the homepage's two tones, kept verbatim. */
+.logo:is(:hover, :focus-visible) {
+  color: #e0a838;
+  filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.55));
+}
+/* The ring cannot sit on the link (33px box under 40px of ink) nor on the
+   mask (mask clips its own outline), so a pseudo-element sized to the ink
+   carries it — same treatment hero.css gives the B. */
+.logo:focus-visible { outline: none; }
+.logo:focus-visible::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: calc(var(--mark-h) * 0.732);
+  height: var(--mark-h);
+  transform: translate(-50%, -50%);
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.pill-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 26px;
+  height: 33px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgba(242, 237, 225, 0.74);   /* rest: a quiet hairline beside the B */
+  text-decoration: none;
+  transition: color 0.25s, filter 0.25s;
+}
+.pill-ic svg { width: 26px; height: auto; display: block; overflow: visible; }
+.pill-ic svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+.pill-ic:is(:hover, :focus-visible) {
+  background: none;
+  color: var(--gold-bright);
+  filter: drop-shadow(0 0 5px rgba(240, 190, 90, 0.55));
+}
+.pill-ic:focus-visible { outline: none; }
+.pill-ic:focus-visible svg {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ============================================================
+   LAYOUT — the content column is 46rem of prose; tables may
+   stretch to 62rem, so the document column is the wide one and
+   the prose centres inside it. Sections breathe ~7rem apart,
+   divided by a full-column-width hairline. ============================================================ */
+main, footer {
+  position: relative;
+  z-index: 1;
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+section { padding-top: 7rem; }
+.hero-sec {
+  padding: clamp(7.5rem, 16vh, 11rem) 0 7rem;
+  max-width: 46rem;
+  margin: 0 auto;
+}
+main > section:last-of-type { padding-bottom: 7rem; }
+.rule {
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  max-width: 46rem;
+  margin: 0 auto;
+}
+.prose { max-width: 46rem; margin: 0 auto; }
+.prose p { margin: 0 0 1.4em; }
+.prose a {
+  color: var(--gold-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+.prose a:hover { color: #f7d68f; }
+
+.kicker {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-size: 0.7rem;
+  color: var(--gold);
+  margin: 0 0 1.5rem;
+}
+.standfirst {
+  font-size: 1.22rem;
+  color: rgba(242, 235, 221, 0.9);
+  margin: 0;
+}
+.clearfix { clear: both; }
+
+/* --- plate cards: the diagrams sit on parchment, floated beside the
+   text on desktop and stacked full-width on mobile --- */
+.plate-frame {
+  float: right;
+  clear: right;
+  max-width: 45%;
+  margin: 0.5rem 0 1.5rem 1.5rem;
+}
+.plate-frame.plate-left {
+  float: left;
+  clear: left;
+  margin: 0.5rem 1.5rem 1.5rem 0;
+}
+.plate {
+  background: var(--parchment);
+  padding: 1rem;
+  border-radius: 2px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+.plate img { display: block; max-width: 100%; height: auto; }
+.plate-frame figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+
+/* ============================================================
+   ACCORDIONS — native details/summary. The + marker on the right
+   rotates 45° to read as × when open; each item gets a hairline
+   underneath. Quiet, editorial — no boxes. ============================================================ */
+.acc-list details { border-bottom: 1px solid var(--hairline); }
+.acc-list details:first-child { border-top: 1px solid var(--hairline); }
+.acc-list summary {
+  list-style: none;
+  cursor: pointer;
+  font-family: "EB Garamond", Garamond, "Iowan Old Style", Georgia, serif;
+  font-size: 1.05rem;
+  color: var(--parchment);
+  padding: 1rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
+  transition: color 0.2s;
+}
+.acc-list summary::-webkit-details-marker { display: none; }
+.acc-list summary:hover { color: var(--gold-bright); }
+.acc-list summary::after {
+  content: "+";
+  flex: none;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--gold);
+  transition: transform 0.25s ease;
+}
+.acc-list details[open] summary::after { transform: rotate(45deg); }
+.acc-list .acc-body {
+  padding: 0 0 1.5rem;
+  color: rgba(242, 235, 221, 0.72);
+}
+.acc-list .acc-body p { margin: 0 0 1em; }
+.acc-list .acc-body p:last-child { margin: 0; }
+
+/* ============================================================
+   TABS — two corner-tick buttons in a row over a hairline; the
+   active tab lifts to gold with a 2px underline segment. Real
+   buttons, role=tablist/tab/tabpanel, arrows move focus (JS). ============================================================ */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2rem;
+  border-bottom: 1px solid var(--hairline);
+  margin-top: 2.6rem;
+  /* the hairline runs the full wide column (the tables' zone), but the
+     buttons themselves start on the prose column's left edge */
+  padding-left: max(0px, calc((100% - 46rem) / 2));
+}
+.tab-btn {
+  position: relative;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-variant: small-caps;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  padding: 0.9rem 1.4rem 0.8rem;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+.tab-btn:hover { color: var(--gold); }
+.tab-btn[aria-selected="true"] {
+  color: var(--gold);
+  text-shadow: 0 0 12px rgba(240, 200, 119, 0.35);
+}
+.tab-btn[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--gold);
+}
+
+/* --- corner-tick frame: 7px L-brackets, two outer borders each --- */
+.ck {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  pointer-events: none;
+  opacity: 0.55;
+}
+.ck.tl { top: 0;    left: 0;  border-top: 1px solid currentColor;   border-left: 1px solid currentColor; }
+.ck.tr { top: 0;    right: 0; border-top: 1px solid currentColor;   border-right: 1px solid currentColor; }
+.ck.br { bottom: 0; right: 0; border-bottom: 1px solid currentColor; border-right: 1px solid currentColor; }
+.ck.bl { bottom: 0; left: 0;  border-bottom: 1px solid currentColor; border-left: 1px solid currentColor; }
+.tab-btn[aria-selected="true"] .ck { opacity: 1; }
+.btn:hover .ck, .filter-frame:hover .ck { opacity: 0.95; }
+
+.note {
+  max-width: 46rem;
+  margin: 2rem auto 0;
+  border: 1px solid var(--hairline);
+  background: rgba(217, 164, 65, 0.05);
+  padding: 1rem 1.25rem;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.85rem;
+  color: rgba(242, 235, 221, 0.78);
+}
+.note strong { color: var(--gold); font-weight: 600; }
+
+.tab-panel { margin-top: 2.6rem; }
+
+/* ============================================================
+   BUTTONS — corner-tick frames, transparent, small-caps gold. ============================================================ */
+.btn {
+  position: relative;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-variant: small-caps;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  padding: 0.7rem 1.6rem;
+  transition: color 0.2s;
+}
+.btn:hover { color: var(--gold-bright); }
+.table-actions { margin: 1.8rem 0 0; text-align: center; }
+
+/* --- ownership filter: corner-tick frame over a transparent input --- */
+.filter-frame {
+  position: relative;
+  display: inline-block;
+  margin-top: 1.6rem;
+}
+.filter-frame input {
+  background: transparent;
+  border: 0;
+  padding: 0.7rem 1.3rem;
+  width: 18rem;
+  max-width: 100%;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.85rem;
+  color: var(--parchment);
+}
+.filter-frame input::placeholder { color: var(--muted); }
+.filter-frame input:focus { outline: none; }
+.filter-frame input:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+}
+.row-count {
+  margin: 0.6rem 0 1.6rem;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-variant: small-caps;
+  letter-spacing: 0.16em;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+/* ============================================================
+   TABLES — no cell borders; a gold hairline under the header,
+   faint hairlines between rows, hover wash. Numerals tabular. ============================================================ */
+.table-frame { margin-top: 1.8rem; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.85rem;
+}
+thead th {
+  text-align: left;
+  font-variant: small-caps;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  font-size: 0.68rem;
+  color: var(--gold);
+  padding: 0 1rem 0.75rem;
+  border-bottom: 1px solid var(--hairline);
+}
+tbody td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(242, 235, 221, 0.08);
+  vertical-align: top;
+}
+tbody tr:hover { background: rgba(240, 200, 119, 0.045); }
+
+/* grants: month in display serif, group chips + name runs built by JS.
+   fixed layout — the name runs would otherwise blow the auto table out
+   past the column; the cells wrap instead. */
+.grants-table { table-layout: fixed; }
+.grants-table th:first-child { width: 22%; }
+.grants-table td.grants { overflow-wrap: anywhere; }
+.grants-table td.month {
+  font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+  color: var(--parchment);
+  white-space: nowrap;
+}
+.grant-seg { margin-bottom: 0.4rem; }
+.grant-seg:last-child { margin-bottom: 0; }
+.grant-group {
+  display: block;
+  font-variant: small-caps;
+  letter-spacing: 0.14em;
+  font-size: 0.62rem;
+  color: var(--gold);
+  margin-bottom: 0.15rem;
+}
+.grant-name { font-size: 0.85rem; color: rgba(242, 235, 221, 0.75); }
+.grant-sep { color: var(--muted); margin: 0 0.45em; }
+
+/* transfers: amount in gold tabular numerals */
+.transfers-table td.amount {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ownership: three short columns, sortable headers, micro-bars */
+.ownership-table td { font-variant-numeric: tabular-nums; }
+.ownership-table td.contributor { color: var(--parchment); }
+.ownership-table th:nth-child(2), .ownership-table th:nth-child(3),
+.ownership-table td:nth-child(2), .ownership-table td:nth-child(3) {
+  text-align: right;
+}
+.sort-btn {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+.sort-btn .arrow { color: var(--gold); font-size: 0.8em; line-height: 1; }
+th[aria-sort="none"] .arrow { opacity: 0.3; }
+/* the granted column's micro-bar: granted/max(granted) as gold fill on a
+   faint track — the mycelium metaphor made quantitative */
+.microbar {
+  display: block;
+  height: 3px;
+  max-width: 160px;      /* full cell width reads as a row divider */
+  margin: 0.45rem 0 0 auto;
+  background: rgba(242, 235, 221, 0.07);
+  border-radius: 1.5px;
+  overflow: hidden;
+}
+.microbar i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  border-radius: 1.5px;
+}
+
+/* ============================================================
+   FOOTER — quiet, centered: the return link in tracked gold
+   small-caps, a muted source-of-record line beneath. ============================================================ */
+footer {
+  padding: 7rem 2rem 3.5rem;
+  text-align: center;
+}
+.return-link {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-variant: small-caps;
+  letter-spacing: 0.24em;
+  font-size: 0.75rem;
+  color: var(--gold);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.return-link:hover { color: var(--gold-bright); }
+.footer-line {
+  margin: 1.1rem 0 0;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.footer-line a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.footer-line a:hover { color: var(--gold-bright); }
+
+/* ============================================================
+   RESPONSIVE — ≤720px: tighter gutters, plates stop floating,
+   grants rows stack (month above names), tabs wrap, H1 steps
+   down. The ownership table keeps its three short columns —
+   at 375px it still fits without horizontal scroll. ============================================================ */
+@media (max-width: 720px) {
+  nav { padding: 1.3rem 1.25rem; }
+  .logo { --mark-h: 34px; height: 28.44px; }
+  main, footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+  h1 { font-size: 2.4rem; }
+  .plate-frame, .plate-frame.plate-left {
+    float: none;
+    clear: both;
+    max-width: 100%;
+    margin: 0 0 1.5rem;
+  }
+  .tabs { gap: 0 0.5rem; }
+  .tab-btn { padding: 0.8rem 0.9rem 0.75rem; }
+  .grants-table thead { display: none; }
+  .grants-table, .grants-table tbody, .grants-table tr, .grants-table td {
+    display: block;
+    width: 100%;
+  }
+  .grants-table tr { padding: 0.85rem 0; border-bottom: 1px solid rgba(242, 235, 221, 0.08); }
+  .grants-table td { border: 0; padding: 0; }
+  .grants-table td.month { margin-bottom: 0.45rem; }
+  .ownership-table th, .ownership-table td { padding-left: 0.6rem; padding-right: 0.6rem; }
+  .filter-frame { display: block; }
+  .filter-frame input { width: 100%; }
+}
+
+/* Reduced motion: no transitions, and mycelium.js skips its whole
+   animation (instant net, no pulses, no parallax). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+[hidden] { display: none !important; }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
