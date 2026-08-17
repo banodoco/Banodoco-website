@@ -33,6 +33,7 @@ import { buildSubstrate, makeFadePulseMat } from './substrate.js';
 import { buildPortraitField } from './portraits.js';
 import { PHOTOS } from '../../../flags.js';
 import * as H from '../../lib/helpers.js';
+import { isBaked, geometry, registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
 
 const PAL = {
   gold: 0xd9a441,
@@ -131,7 +132,20 @@ export function createOwned(sceneApi, content) {
     pulseWidth: 0.16, twinkle: 0.34, fogDensity: 0.026,
     growGate: true,   // M5 (D16): the fan draws on from its roots, see below
   });
-  {
+  let frontGeo = null;
+  // Baked read path (2026-08-17): the growth front's strands are baked under
+  // 'owned/front' like every other geometry the chapter renders. One try/catch
+  // — any missing key or shape mismatch falls back to the live strandLines
+  // below, never a half-baked mix. frontMat/frontP/the noise3 animator stay
+  // live either way; only the geometry math is skipped.
+  if (isBaked('owned')) {
+    try {
+      frontGeo = geometry('owned/front', [['position', 3], ['aAlong', 1], ['aStrand', 1]]);
+    } catch (e) {
+      frontGeo = null;
+    }
+  }
+  if (!frontGeo) {
     const res = H.strandLines({
       count: 40, seed: 8811,
       generator: (i, rnd) => {
@@ -160,10 +174,31 @@ export function createOwned(sceneApi, content) {
         return pts;
       },
     });
-    const lines = new THREE.LineSegments(res.geometry, frontMat);
-    lines.frustumCulled = false;
-    group.add(lines);
+    frontGeo = res.geometry;
   }
+  const frontLines = new THREE.LineSegments(frontGeo, frontMat);
+  frontLines.frustumCulled = false;
+  group.add(frontLines);
+
+  // ---- bake recording site (2026-08-17) ------------------------------
+  // Substrate and portraits are baked ATOMICALLY. assignOwners wrote the
+  // web's aOwner attribute (substrate.geometries.web) AFTER buildPortraitField
+  // returned and after this call, so this is the one place every geometry is
+  // final. Under ?bakedump=1 each registerGeometry records a COPY of the
+  // live-built attributes into window.__bake; on the shipped path these are
+  // no-ops. The read path (substrate.js / portraits.js) rebuilds from
+  // static/geom bytes and skips the math — see journey/lib/baked.js, and
+  // tools/bake-geom.py for the harvest.
+  for (const [site, geo] of Object.entries(substrate.geometries)) {
+    registerGeometry(`owned/${site}`, geo);
+  }
+  for (const [site, geo] of Object.entries(portraits.geometries)) {
+    registerGeometry(`owned/${site}`, geo);
+  }
+  registerGeometry('owned/front', frontGeo);
+  registerPayload('owned', { substrate: substrate.bakePayload, ...portraits.bakePayload });
+  bakeDumpDone('owned');
+
   let frontP = 0;
   let risePulseArmed = true;
 

@@ -16,7 +16,9 @@
 // bit-exact by the rest key's hold.)
 import * as THREE from 'three';
 import { poseAt } from '../../director.js';
+import { portraitWeight } from '../../portrait.js';
 import { groundY, stemAxis } from '../../anatomy.js';
+import { ASPECT } from '../../../flags.js';
 
 const clamp = THREE.MathUtils.clamp;
 
@@ -86,15 +88,45 @@ export function buildLeg() {
   }
 
   /** Full camera basis at journey progress p — frame-cell placement composes
-   *  against this (the REAL pose, not a design stand-in). */
-  function frameAt(p) {
-    poseAt(p, pose);
+   *  against this (the REAL pose, not a design stand-in). `aspect` defaults to
+   *  the landscape design aspect, so every existing caller is bit-identical;
+   *  pass one to compose against the portrait.js re-composed pose instead. */
+  function frameAt(p, aspect = 1.6) {
+    poseAt(p, pose, undefined, aspect);
     const fwd = pose.target.clone().sub(pose.pos).normalize();
     const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
     const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
     return { pos: pose.pos.clone(), fwd, right, up, fov: pose.fov };
   }
   const restFrame = frameAt(REST_P);
+
+  // ---- portrait build (2026-08-17, the sparse-phone-field fix) ----------
+  // The portrait field's rest arc is authored in rest-frame NDC at the
+  // landscape design aspect, so on a ~0.46-aspect phone only the four most
+  // central of the sixteen sites projected into frame — the chapter read as
+  // five faces and a lot of dark. A tall frame needs its own authored arc,
+  // and that arc must be composed against the pose the device actually
+  // shows: the portrait.js re-composed rest, at the BUILD aspect.
+  //
+  // The build aspect, not a fixed phone constant (revised same day): a
+  // fixed 430/932 design aspect squeezed the whole arc into the middle 60%
+  // of a 0.75-aspect tablet — cluttered centre, empty margins. Composing at
+  // the true aspect spreads the arc across whatever tall frame the visitor
+  // has; both review phones sit within 0.0004 of each other (430/932 vs
+  // 375/812), so the owned@430x932 golden still pins the phone placement.
+  // The clamp only fences QA extremes (?aspect=0.1) off the placement math.
+  //
+  // The predicate is decided ONCE, at build time, from the same effective
+  // aspect the director composes with (?aspect QA override first, viewport
+  // otherwise) — portraitWeight >= 0.5 is the midpoint of portrait.js's blend
+  // band. Rotating a phone after load keeps the built placement: chapters
+  // never rebuild on resize, and the camera's own portrait blend still tracks
+  // the live aspect continuously.
+  const buildAspect = ASPECT
+    ?? (typeof window !== 'undefined' ? window.innerWidth / Math.max(1, window.innerHeight) : 1.6);
+  const portraitField = portraitWeight(buildAspect) >= 0.5;
+  const portraitAspect = clamp(buildAspect, 0.40, 0.875);
+  const restFramePortrait = frameAt(REST_P, portraitAspect);
 
   /** NDC-space projection into an authored frame (aspect = design 1.55). */
   function projectInto(f, v, aspect = 1.55) {
@@ -155,6 +187,7 @@ export function buildLeg() {
 
   return {
     camPts, camPs, camDist, nearestCamPt, frameAt, restFrame, projectInto,
+    portraitField, portraitAspect, restFramePortrait,
     SA, SB, SD, SLEN2, SDIR, RIGHT, UPN, spineDist, spineAt, clampUnder,
     exitP, exitPt, groundY, CROWN: crownPoint(),
   };

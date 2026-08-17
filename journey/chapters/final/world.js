@@ -242,6 +242,10 @@ export function sweepReveal(arc) {
   return pts[pts.length - 1][1];
 }
 for (const m of MEMBERS) m.reveal = sweepReveal(m.arc);
+// m.revealIn — the ARRIVAL deal (see ring.js's ladder pass) — is assigned at
+// ring build time, where the field's depths exist: the deal ranks members and
+// drawn field bodies TOGETHER. Ring builds before terrain (index.js), so
+// terrain's member-keyed strands always read the dealt value.
 
 // Members that shed spores (mature bodies only — and NEVER the hero: the hero
 // keeps its own ambient shed, and no stream may read as hero -> others).
@@ -285,9 +289,12 @@ export const REVEAL_W = 0.16;   // smoothstep width used by every shader
 /* ------------------------------------------------------------------ */
 /* Shared shader language                                              */
 /* ------------------------------------------------------------------ */
-// Every lit element carries the same five per-vertex channels:
+// Every lit element carries the same per-vertex channels:
 //   aArc    arc coordinate (or along-cord coordinate for aWave pieces)
 //   aReveal reveal threshold on uPull; < 0 = always lit
+//   aRevealIn  the ARRIVAL threshold (depth deal, near-first) — read instead
+//              of aReveal while uRevIn is 1; emitters that carry no
+//              meta.revealIn fall back to aReveal, so it is always defined
 //   aTw     twinkle phase
 //   aBoost  how strongly the growth-front pulse + CTA wave light this vertex
 //   aWave   cord-wave participation (slow outward traveling wave)
@@ -348,6 +355,13 @@ export function makeUniforms(sceneApi) {
     // per-body uniform write — but it lives here because it is the same
     // camera-pure quantity and belongs beside the one it is derived from.
     uPullRaw: { value: 0 },
+    // Which threshold set the reveal reads: 1 = the ARRIVAL deal (aRevealIn,
+    // nearest bodies first — Hannah's "starting from the front and working
+    // backwards"), 0 = the authored departure deal (aReveal — the leaving
+    // sequence, untouched). Latched by index.js ONLY while the field is all
+    // dark or all lit, where the two deals render identically, so a flip can
+    // never move a pixel on the frame it happens.
+    uRevIn:   { value: 1 },
     uFront:   { value: -1 },    // growth-front pulse phase along arc
     uFrontOn: { value: 0 },
     uCta:     { value: -1 },    // CTA wave phase along arc
@@ -444,16 +458,17 @@ const WOBBLE_GLSL = /* glsl */ `
 // and `viewMatrix * (I * p)` is bit-for-bit `modelViewMatrix * p` — the
 // goldens cannot move on this change alone.
 const STRAND_VERT = /* glsl */ `
-  attribute float aArc, aReveal, aTw, aBoost, aWave;
-  uniform float uPull, uFront, uFrontOn, uCta, uCtaOn, uTime;
+  attribute float aArc, aReveal, aRevealIn, aTw, aBoost, aWave;
+  uniform float uPull, uRevIn, uFront, uFrontOn, uCta, uCtaOn, uTime;
   ${PULSE_GLSL}
   ${WOBBLE_GLSL}
   varying vec3 vColor;
   varying float vB;
   varying float vFog;
   void main() {
+    float th = mix(aReveal, aRevealIn, uRevIn);
     float reveal = aReveal < -0.5 ? 1.0
-                 : smoothstep(aReveal, aReveal + ${REVEAL_W.toFixed(2)}, uPull);
+                 : smoothstep(th, th + ${REVEAL_W.toFixed(2)}, uPull);
     // unlit bodies keep a 7% ember whisper — "they were always there"
     float b = mix(0.07, 1.0, reveal);
     // the growth-front pulse travelling the arc (narrow: ~one member wide)
@@ -507,8 +522,8 @@ export function makeStrandMat(uniforms, opacity) {
 
 const POINT_VERT = /* glsl */ `
   #define MIN_PT 1.7
-  attribute float aArc, aReveal, aTw, aBoost, aWave, psize;
-  uniform float uPull, uFront, uFrontOn, uCta, uCtaOn, uTime;
+  attribute float aArc, aReveal, aRevealIn, aTw, aBoost, aWave, psize;
+  uniform float uPull, uRevIn, uFront, uFrontOn, uCta, uCtaOn, uTime;
   ${PULSE_GLSL}
   ${WOBBLE_GLSL}
   varying vec3 vColor;
@@ -516,8 +531,9 @@ const POINT_VERT = /* glsl */ `
   varying float vFog;
   varying float vShrink;
   void main() {
+    float th = mix(aReveal, aRevealIn, uRevIn);
     float reveal = aReveal < -0.5 ? 1.0
-                 : smoothstep(aReveal, aReveal + ${REVEAL_W.toFixed(2)}, uPull);
+                 : smoothstep(th, th + ${REVEAL_W.toFixed(2)}, uPull);
     float b = mix(0.05, 1.0, reveal);
     float df = aArc - uFront;
     b += aBoost * uFrontOn * exp(-df * df * 260.0) * (0.30 + 0.60 * reveal);
@@ -577,7 +593,7 @@ export function makePointsMat(uniforms, opacity, map) {
  *  D15) without splitting into more draw calls. Callers that omit it are
  *  unchanged. */
 export function makeBatch() {
-  const pos = [], col = [], arc = [], rev = [], tw = [], boost = [], wave = [], size = [];
+  const pos = [], col = [], arc = [], rev = [], revIn = [], tw = [], boost = [], wave = [], size = [];
   const body = [];
   const c = new THREE.Color();
   return {
@@ -589,6 +605,7 @@ export function makeBatch() {
       for (let k = 0; k < 2; k++) {
         arc.push(meta.arc ?? 0);
         rev.push(meta.reveal ?? -1);
+        revIn.push(meta.revealIn ?? meta.reveal ?? -1);
         tw.push(meta.tw ?? 0);
         boost.push(meta.boost ?? 0);
         wave.push(meta.wave ?? 0);
@@ -601,6 +618,7 @@ export function makeBatch() {
       heat(tone, c); col.push(c.r * mul, c.g * mul, c.b * mul);
       arc.push(meta.arc ?? 0);
       rev.push(meta.reveal ?? -1);
+      revIn.push(meta.revealIn ?? meta.reveal ?? -1);
       tw.push(meta.tw ?? 0);
       boost.push(meta.boost ?? 0);
       wave.push(meta.wave ?? 0);
@@ -613,6 +631,7 @@ export function makeBatch() {
       g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
       g.setAttribute('aArc', new THREE.Float32BufferAttribute(arc, 1));
       g.setAttribute('aReveal', new THREE.Float32BufferAttribute(rev, 1));
+      g.setAttribute('aRevealIn', new THREE.Float32BufferAttribute(revIn, 1));
       g.setAttribute('aTw', new THREE.Float32BufferAttribute(tw, 1));
       g.setAttribute('aBoost', new THREE.Float32BufferAttribute(boost, 1));
       g.setAttribute('aWave', new THREE.Float32BufferAttribute(wave, 1));
@@ -627,3 +646,20 @@ export function makeBatch() {
     get ptCount() { return size.length; },
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* Baked-geometry layout assertions (2026-08-17)                       */
+/* ------------------------------------------------------------------ */
+// The attribute shapes makeBatch emits. Every Final bake site asserts one
+// of these against the committed bytes via baked.js geometry(key, layout);
+// a disagreement throws and the chapter falls back to its live builders.
+// Kept beside makeBatch so the layout and the emitter cannot drift apart.
+export const BATCH_LINE = [
+  ['position', 3], ['color', 3], ['aArc', 1], ['aReveal', 1],
+  ['aRevealIn', 1], ['aTw', 1], ['aBoost', 1], ['aWave', 1], ['aBody', 1],
+];
+export const BATCH_POINT = [
+  ['position', 3], ['color', 3], ['aArc', 1], ['aReveal', 1],
+  ['aRevealIn', 1], ['aTw', 1], ['aBoost', 1], ['aWave', 1], ['aBody', 1],
+  ['psize', 1],
+];

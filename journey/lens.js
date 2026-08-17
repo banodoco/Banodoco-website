@@ -285,7 +285,22 @@ function hardenTAA(composer) {
   return true;
 }
 
+/* THE LENS IS A SINGLETON, CREATED AT SCENE INIT (2026-08-16 — Hannah: "a
+   weird shift like a filter has been added after the whole thing loads").
+   The grade used to be born inside journey boot, 7.6s+ after load, because it
+   rode the journey module's deferral — but the deferral exists to keep heavy
+   chapter machinery off the intro's frame budget, and the grade is not heavy
+   machinery, it is THE LOOK OF THE PAGE: every golden is shot with it on, so
+   the raw intro was the anomaly and the boot frame re-graded the entire frame
+   in one step (measured +2.2/255, warm-weighted — the reported "filter pop").
+   main.js now calls createLens() right after createScene(), so the grade
+   covers the first painted frame; boot's own call lands here and receives the
+   same instance. The singleton stays unset if construction throws, so boot's
+   retry keeps the old arrive-with-the-journey path as the fallback. */
+let _lens = null;
+
 export function createLens(sceneApi) {
+  if (_lens) return _lens;
   const { composer, renderer, camera } = sceneApi;
 
   const taaHardened = hardenTAA(composer);
@@ -365,7 +380,7 @@ export function createLens(sceneApi) {
   }
   syncEnabled();
 
-  return {
+  _lens = {
     /** [g]: raw (pre-grade, post-bloom hero baseline) vs finished. */
     setEnabled(on) { userEnabled = !!on; syncEnabled(); },
     get enabled() { return pass.enabled; },
@@ -389,4 +404,5 @@ export function createLens(sceneApi) {
       (focusWorld || (focusWorld = new THREE.Vector3())).copy(pos);
     },
   };
+  return _lens;
 }

@@ -16,8 +16,10 @@ import * as THREE from 'three';
 import {
   TAU, RING_C, MEMBERS, arcOf, cutVal, cutEdgePoint, CUT_N, CUT_S_MIN, CUT_S_MAX,
   makeRng, gaussOf, heat, groundY, makeBatch, makeStrandMat, makePointsMat,
+  BATCH_LINE, BATCH_POINT,
 } from './world.js';
 import { makeGlowTexture } from '../../anatomy.js';
+import { isBaked, geometry, payload } from '../../lib/baked.js';
 
 export function createFinalTerrain(sceneApi, uniforms) {
   const rand = makeRng(41719);
@@ -26,6 +28,52 @@ export function createFinalTerrain(sceneApi, uniforms) {
   const counts = {};
   let soilDissolve = null;   // the slab's uSoilOn uniform (set below)
   let soilBuried = null;     // the slab's uBuried uniform (set below)
+  let soil = null;           // the slab mesh — hoisted like the two uniforms
+                             // above so the bake-dump return (geometries.soil)
+                             // can read it out of §0's block (2026-08-17)
+
+  // ---- baked-read wiring (2026-08-17) --------------------------------
+  // The shipped path skips every emission block below (soil slab, surface,
+  // cut, aggr, cords, hyph, ends, front, conn) and rebuilds each
+  // BufferGeometry from static/geom bytes (baked once at commit time; see
+  // journey/lib/baked.js). Materials, the soil uniforms, the haze sprites
+  // and the setAmount/setBuried closures stay live either way — only
+  // geometry is skipped. ONE try/catch wraps the WHOLE read: any missing
+  // key or shape mismatch throws and the chapter falls back to the live
+  // builders in full, never a half-baked mix.
+  const baked = (() => {
+    if (!isBaked('final')) return null;
+    try {
+      const T = payload('final')?.terrain;
+      if (!T || typeof T.soilTris !== 'number' || typeof T.hyphSegs !== 'number'
+          || !Array.isArray(T.haze)) {
+        throw new Error('final terrain payload mismatch');
+      }
+      return {
+        g: {
+          soil: geometry('final/soil', [['position', 3]]),
+          surface: geometry('final/surface', BATCH_LINE),
+          cut: geometry('final/cut', BATCH_LINE),
+          aggr: geometry('final/aggr', BATCH_POINT),
+          cords: geometry('final/cords', BATCH_LINE),
+          hyph: geometry('final/hyph', BATCH_LINE),
+          ends: geometry('final/ends', BATCH_POINT),
+          front: geometry('final/front', BATCH_LINE),
+          conn: geometry('final/conn', BATCH_LINE),
+        },
+        counts: {
+          soilTris: T.soilTris, surfaceStrokes: T.surfaceStrokes,
+          surfaceSegs: T.surfaceSegs, lipRootlets: T.lipRootlets,
+          lipStrata: T.lipStrata, cutSegs: T.cutSegs, aggrPts: T.aggrPts,
+          cordSegs: T.cordSegs, hyphSegs: T.hyphSegs, frontSegs: T.frontSegs,
+          connSegs: T.connSegs, pitStrands: T.pitStrands,
+        },
+        haze: T.haze,
+      };
+    } catch (e) {
+      return null;
+    }
+  })();
 
   /* ================================================================
      0. SOIL OCCLUDER (declutter round). Under additive blending every
@@ -44,7 +92,11 @@ export function createFinalTerrain(sceneApi, uniforms) {
         The mirror of the hero's own §5 occlusion shells, at 1 draw.
      ================================================================ */
   {
-    const pos = [], idx = [];
+    let g;
+    if (baked) {
+      g = baked.g.soil;
+    } else {
+      const pos = [], idx = [];
     const S_N = 44, S0 = CUT_S_MIN - 8, S1 = CUT_S_MAX + 8;
     // non-uniform depth rows into the kept side: dense at the lip where
     // the silhouette matters, sparse toward the horizon
@@ -80,9 +132,11 @@ export function createFinalTerrain(sceneApi, uniforms) {
         idx.push(a, b, a + 1, b, b + 1, a + 1);
       }
     }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setIndex(idx);
+      g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setIndex(idx);
+      counts.soilTris = idx.length / 3;
+    }
     // M5 ignition audit (D16): the slab used to appear with group.visible —
     // a binary pop that blacked out the still-visible colony the instant the
     // chapter armed, and un-occluded it just as instantly on a reverse ride.
@@ -161,13 +215,14 @@ export function createFinalTerrain(sceneApi, uniforms) {
         }`,
       side: THREE.DoubleSide,
     });
-    const soil = new THREE.Mesh(g, soilMat);
+    soil = new THREE.Mesh(g, soilMat);
     soil.frustumCulled = false;
     soil.renderOrder = -10;          // first among opaques
     group.add(soil);
     soilDissolve = soilMat.uniforms.uSoilOn;
     soilBuried = soilMat.uniforms.uBuried;
-    counts.soilTris = idx.length / 3;
+    // (soilTris is recorded in the live-only branch above — baked reads it
+    // from the payload.)
   }
 
   /* ================================================================
@@ -202,7 +257,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
      named; far ones are the horizon texture that answers the opposite
      complaint. One metric for both cuts. */
   const surface = makeBatch();
-  {
+  if (!baked) {
     const surfThin = makeRng(0x5F4CE1);
     const surfKeep = (x, z) => {
       const d = Math.hypot(x + 14.72, z - 2.70);
@@ -242,7 +297,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
     counts.surfaceStrokes = kept;
   }
   const surfMat = makeStrandMat(uniforms, 0.5);
-  const surfLines = new THREE.LineSegments(surface.geo(), surfMat);
+  const surfLines = new THREE.LineSegments(baked ? baked.g.surface : surface.geo(), surfMat);
   surfLines.frustumCulled = false;
   group.add(surfLines);
   counts.surfaceSegs = surface.segCount;
@@ -251,7 +306,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
      2. The cut: bright broken lip + soil face falling away beneath it
      ================================================================ */
   const cut = makeBatch();
-  {
+  if (!baked) {
     // the lip: a warm, nearly continuous bright edge — the soil-line the
     // whole composition hangs on (the approved still's brightest terrain
     // feature). Two passes: a continuous core + broken overhang ticks.
@@ -390,7 +445,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
     counts.lipStrata = strataKept;
   }
   const cutMat = makeStrandMat(uniforms, 0.72);
-  const cutLines = new THREE.LineSegments(cut.geo(), cutMat);
+  const cutLines = new THREE.LineSegments(baked ? baked.g.cut : cut.geo(), cutMat);
   cutLines.frustumCulled = false;
   group.add(cutLines);
   counts.cutSegs = cut.segCount;
@@ -398,6 +453,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
   // soil aggregates: fine points peppering the lip + face, plus a row of
   // brighter beads ALONG the lip itself (the still's glowing soil-line)
   const aggr = makeBatch();
+  if (!baked) {
   for (let i = 0; i < 130; i++) {
     const s = CUT_S_MIN + rand() * (CUT_S_MAX - CUT_S_MIN);
     const p = cutEdgePoint(s);
@@ -473,10 +529,11 @@ export function createFinalTerrain(sceneApi, uniforms) {
         { tw: pr() * TAU, boost: 0.22, arc: arcOf(x, z) });
     }
   }
+  }
 
   const glowTex = makeGlowTexture();
   const aggrMat = makePointsMat(uniforms, 0.6, glowTex);
-  const aggrPts = new THREE.Points(aggr.geo(true), aggrMat);
+  const aggrPts = new THREE.Points(baked ? baked.g.aggr : aggr.geo(true), aggrMat);
   aggrPts.frustumCulled = false;
   group.add(aggrPts);
   counts.aggrPts = aggr.ptCount;
@@ -503,7 +560,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
   const cordEnds = [];
   const cordNodes = [];   // declutter round: lit junctions along the cords
   const cordPts = [];     // transit pass: samples the hyphal twigs grow from
-  {
+  if (!baked) {
     const CORD_AZ = [12, 68, 118, 195, 250, 310];   // deg about C; 195/250 cross the void
     CORD_AZ.forEach((azDeg, ci) => {
       const a0 = (azDeg * Math.PI) / 180 + gauss() * 0.08;
@@ -545,7 +602,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
     });
   }
   const cordMat = makeStrandMat(uniforms, 0.72);
-  const cordLines = new THREE.LineSegments(cords.geo(), cordMat);
+  const cordLines = new THREE.LineSegments(baked ? baked.g.cords : cords.geo(), cordMat);
   cordLines.frustumCulled = false;
   group.add(cordLines);
   counts.cordSegs = cords.segCount;
@@ -576,7 +633,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
   //     instead of stranding bright floaters in open black (the rest
   //     frame's lower-left).
   const hyph = makeBatch();
-  {
+  if (!baked) {
     let placed = 0, guard = 0;
     while (placed < 300 && guard++ < 9000) {
       const a = rand() * TAU;
@@ -706,7 +763,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
      retracts stroke-for-stroke on a reverse scrub — the same law, not a
      second one. Nothing here is a fruiting body, so nothing enters the
      bodies' uPull ladder or the canopy's node set. */
-  {
+  if (!baked) {
     const vr = makeRng(0x5EC7104E);            // 'section'
     const vg = () => gaussOf(vr);
     const S_LO = CUT_S_MIN, S_SPAN = CUT_S_MAX - CUT_S_MIN;
@@ -840,19 +897,21 @@ export function createFinalTerrain(sceneApi, uniforms) {
   }
 
   const hyphMat = makeStrandMat(uniforms, 0.62);
-  const hyphLines = new THREE.LineSegments(hyph.geo(), hyphMat);
+  const hyphLines = new THREE.LineSegments(baked ? baked.g.hyph : hyph.geo(), hyphMat);
   hyphLines.frustumCulled = false;
   group.add(hyphLines);
   counts.hyphSegs = hyph.segCount;
 
   // bright cut-cord section ends on the face + the lit junctions
   const ends = makeBatch();
-  for (const [x, y, z] of cordEnds) ends.pt(x, y, z, 0.8, 0.09, { tw: rand() * TAU });
-  for (const [x, y, z, b] of cordNodes)
-    ends.pt(x, y, z, Math.min(0.72, b * 1.5), 0.05 + rand() * 0.07,
-      { tw: rand() * TAU, wave: 1, boost: 0.15 });
+  if (!baked) {
+    for (const [x, y, z] of cordEnds) ends.pt(x, y, z, 0.8, 0.09, { tw: rand() * TAU });
+    for (const [x, y, z, b] of cordNodes)
+      ends.pt(x, y, z, Math.min(0.72, b * 1.5), 0.05 + rand() * 0.07,
+        { tw: rand() * TAU, wave: 1, boost: 0.15 });
+  }
   const endMat = makePointsMat(uniforms, 0.9, glowTex);
-  const endPts = new THREE.Points(ends.geo(true), endMat);
+  const endPts = new THREE.Points(baked ? baked.g.ends : ends.geo(true), endMat);
   endPts.frustumCulled = false;
   group.add(endPts);
 
@@ -873,7 +932,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
   // undulating line the rises grow from — "the live edge of the colony" as
   // one edge, and the travelling pulse now runs along an unbroken carrier.
   const front = makeBatch();
-  {
+  if (!baked) {
     const N = 72;
     const feet = [];
     for (let i = 0; i < N; i++) {
@@ -899,7 +958,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
     }
   }
   const frontMat = makeStrandMat(uniforms, 0.66);
-  const frontLines = new THREE.LineSegments(front.geo(), frontMat);
+  const frontLines = new THREE.LineSegments(baked ? baked.g.front : front.geo(), frontMat);
   frontLines.frustumCulled = false;
   group.add(frontLines);
   counts.frontSegs = front.segCount;
@@ -913,7 +972,7 @@ export function createFinalTerrain(sceneApi, uniforms) {
   // enough to sit under the member's ground pool — the tie only truly
   // lights when the CTA / front pulse passes (boost 1).
   const conn = makeBatch();
-  for (const m of MEMBERS) {
+  if (!baked) for (const m of MEMBERS) {
     {
       // rooted OFF-axis (never straight under the stipe): the strand reads
       // as a diagonal tie into the front, not a light pillar under the body
@@ -922,14 +981,15 @@ export function createFinalTerrain(sceneApi, uniforms) {
       const fy = -0.9 - rand() * 0.7;
       const midX = (fx + m.x) / 2 + gauss() * 0.2;
       const midZ = (fz + m.z) / 2 + gauss() * 0.2;
-      const meta = { arc: m.arc, reveal: m.reveal, boost: 1, tw: rand() * TAU };
+      const meta = { arc: m.arc, reveal: m.reveal, revealIn: m.revealIn ?? m.reveal,
+                     boost: 1, tw: rand() * TAU };
       conn.seg(fx, fy, fz, midX, fy * 0.4, midZ, 0.20, 0.28, meta);
       conn.seg(midX, fy * 0.4, midZ, m.x + gauss() * 0.05, m.gy + 0.04, m.z + gauss() * 0.05,
         0.28, 0.38, meta);
     }
   }
   const connMat = makeStrandMat(uniforms, 0.4);
-  const connLines = new THREE.LineSegments(conn.geo(), connMat);
+  const connLines = new THREE.LineSegments(baked ? baked.g.conn : conn.geo(), connMat);
   connLines.frustumCulled = false;
   group.add(connLines);
   counts.connSegs = conn.segCount;
@@ -948,21 +1008,61 @@ export function createFinalTerrain(sceneApi, uniforms) {
     [-4.2, -2.6, 4.4, 3.0], [-1.5, -1.8, -5.2, 2.4],
     [-8.2, -1.9, -6.8, 3.4], [-4.4, -2.1, -8.2, 3.0],
   ];
-  for (const [x, y, z, sc] of hazeSpots) {
+  // Baked read path: the haze tone/base are the LAST draws off this
+  // function's `rand`, so skipping the geometry blocks above would shift
+  // them — they round-trip via the payload instead (2026-08-17). Positions
+  // and scale are authored; only the material's two seeded floats move.
+  for (let i = 0; i < hazeSpots.length; i++) {
+    const [x, y, z, sc] = hazeSpots[i];
+    const tone = baked ? baked.haze[i].tone : (0.30 + rand() * 0.1);
+    const base = baked ? baked.haze[i].base : (0.062 + rand() * 0.022);
     const mat = new THREE.SpriteMaterial({
-      map: glowTex, color: heat(0.30 + rand() * 0.1, new THREE.Color()).clone(),
+      map: glowTex, color: heat(tone, new THREE.Color()).clone(),
       transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending,
     });
     const s = new THREE.Sprite(mat);
     s.position.set(x, y, z);
     s.scale.set(sc, sc * 0.7, 1);
     group.add(s);
-    hazeSprites.push({ mat, base: 0.062 + rand() * 0.022 });
+    hazeSprites.push({ mat, base, tone });
   }
+  // Baked: the emission blocks above never ran, so every count is
+  // reconstructed from the payload — including the "kept" mask counts
+  // (surfaceStrokes / lipRootlets / lipStrata / pitStrands) that are NOT
+  // derivable from the baked attribute counts (2026-08-17).
+  if (baked) Object.assign(counts, baked.counts);
 
   return {
     group,
     counts,
+    // The bake recording site (final/index.js) reads these AFTER every
+    // cross-module write is final. Keys match baked.js geometry() keys.
+    geometries: {
+      soil: soil.geometry,
+      surface: surfLines.geometry,
+      cut: cutLines.geometry,
+      aggr: aggrPts.geometry,
+      cords: cordLines.geometry,
+      hyph: hyphLines.geometry,
+      ends: endPts.geometry,
+      front: frontLines.geometry,
+      conn: connLines.geometry,
+    },
+    bakePayload: {
+      soilTris: counts.soilTris,
+      surfaceStrokes: counts.surfaceStrokes,
+      surfaceSegs: counts.surfaceSegs,
+      lipRootlets: counts.lipRootlets,
+      lipStrata: counts.lipStrata,
+      cutSegs: counts.cutSegs,
+      aggrPts: counts.aggrPts,
+      cordSegs: counts.cordSegs,
+      hyphSegs: counts.hyphSegs,
+      pitStrands: counts.pitStrands,
+      frontSegs: counts.frontSegs,
+      connSegs: counts.connSegs,
+      haze: hazeSprites.map(h => ({ tone: h.tone, base: h.base })),
+    },
     /** haze sprites cannot share the shader uniforms — fade them here; the
      *  soil slab's hashed dissolve rides the same drive (M5, D16).
      *  `buried` (2026-08-11): dissolves the slab away entirely while the lens

@@ -84,6 +84,7 @@ import * as THREE from 'three';
 import {
   TAU, MEMBERS, RING_C, arcOf, cutVal, WOB_IDLE, sweepReveal,
   makeRng, gaussOf, groundY, makeBatch, makeStrandMat, makePointsMat, REVEAL_W,
+  BATCH_LINE, BATCH_POINT,
 } from './world.js';
 import { makeGlowTexture, CAP_Y, CAP_R } from '../../anatomy.js';
 import {
@@ -98,6 +99,7 @@ import {
 } from './variation.js';
 import { createPicker } from './interact.js';
 import { createShed } from './shed.js';
+import { isBaked, geometry, payload } from '../../lib/baked.js';
 import { CAMERA } from './camera.js';
 
 // The Final rest camera, for build-time LOD + occlusion only. M4 dedupe:
@@ -241,6 +243,47 @@ export function createFinalRing(sceneApi, uniforms) {
   const gauss = () => gaussOf(rand);
   const group = new THREE.Group();
 
+  // ---- baked-read wiring (2026-08-17) --------------------------------
+  // The shipped path skips the species-tissue emission below and rebuilds
+  // the two merged batches + primordia from static/geom bytes (baked once at
+  // commit time in the goldens' own headless Chrome; see journey/lib/baked.js).
+  // PLACEMENT stays live either way: clones, picker, seats, pokeMembers and
+  // the §8 ground-merge stubs are runtime-wired and always computed — only
+  // buildMushroom/buildCloneSeat tissue and the batch/primordia emission are
+  // skipped. ONE try/catch wraps the WHOLE read: any missing key or shape
+  // mismatch throws and the chapter falls back to the live builders in full,
+  // never a half-baked mix.
+  const baked = (() => {
+    if (!isBaked('final')) return null;
+    try {
+      const P = payload('final');
+      if (!P || !P.ring || !Array.isArray(P.ring.memberSegsPts)) {
+        throw new Error('final ring payload mismatch');
+      }
+      return {
+        g: {
+          ringLines: geometry('final/ringLines', BATCH_LINE),
+          ringGlows: geometry('final/ringGlows', BATCH_POINT),
+          primordia: geometry('final/primordia',
+            [['position', 3], ['color', 3], ['aDelay', 1], ['aTw', 1], ['psize', 1]]),
+        },
+        counts: {
+          ringSegs: P.ring.ringSegs,
+          glowPts: P.ring.glowPts,
+          primordia: P.ring.primordia,
+          // Per-body emission counts are not recoverable from the merged
+          // batches, so they round-trip keyed by the member index.
+          segsPtsByI: new Map(P.ring.memberSegsPts.map(r => [r.i, r])),
+          // ...and the plain array survives too, so bakePayload below can
+          // re-emit it verbatim on a baked build (counts-mirror, 2026-08-17).
+          memberSegsPts: P.ring.memberSegsPts,
+        },
+      };
+    } catch (e) {
+      return null;
+    }
+  })();
+
   const lines = makeBatch();
   const glows = makeBatch();
   const memberStats = [];   // D15 QA: per-member built density
@@ -307,7 +350,8 @@ export function createFinalRing(sceneApi, uniforms) {
     const bodyId = (!asClone && pickable) ? nextBodyId++ : -1;
     // field members answer the growth-front pulse only faintly (m.boost):
     // the RING is what breathes with the colony; the distance echoes it
-    const meta = { arc: m.arc, reveal: m.reveal, boost: m.boost ?? 1, body: bodyId };
+    const meta = { arc: m.arc, reveal: m.reveal, revealIn: m.revealIn ?? m.reveal,
+                   boost: m.boost ?? 1, body: bodyId };
     // distance damping (field only): additive strokes overlap in screen
     // space as bodies recede, so an undamped far cap sums to WHITE — a lamp
     // wall competing with the hero. lum drops the stroke tone down the heat
@@ -422,20 +466,21 @@ export function createFinalRing(sceneApi, uniforms) {
       // The clone brings no soil with it (the hero's §8 ground network is
       // not in the stem/cap subtree), so the batch still carries this body's
       // ground-merge pools and its shed trail — atmosphere, not tissue.
-      buildCloneSeat(spec);
+      if (!baked) buildCloneSeat(spec);
       body = clones.add({
         x: m.x, z: m.z, gy: m.gy, s,
         azFacing: P.azFacing, leanDir: P.leanDir, leanAmt: P.leanAmt,
-        arc: m.arc, reveal: m.reveal, boost: m.boost ?? 1,
+        arc: m.arc, reveal: m.reveal, revealIn: m.revealIn ?? m.reveal,
+        boost: m.boost ?? 1,
         tw0: P.tw0, phase: P.swayPhase, amp: P.swayAmp,
         lum: cloneLum(dist),
         vary: P.V,                                    // this body's own shape
         seed: P.seed,                                 // ...and its own cap figure
       });
     } else {
-      buildMushroom(spec);
+      if (!baked) buildMushroom(spec);
       body = {
-        bodyId, reveal: m.reveal,
+        bodyId, reveal: m.reveal, revealIn: m.revealIn ?? m.reveal,
         tx: 0, tz: 0, tvx: 0, tvz: 0,                 // tap ring-down (stepTap)
         // where this body stands and how big it is: the wobble pivot, the
         // shed's emission seat and the cap-tap test all need it, and a batched
@@ -466,7 +511,7 @@ export function createFinalRing(sceneApi, uniforms) {
             member. Each body now keeps only C.roots SHORT stubs and the
             ground-merge mass is carried by the soft base glow pools
             species.js emits: atmosphere, not strokes. ==== */
-    {
+    if (!baked) {
       const rs = Math.pow(s, 0.7);
       // the stubs seat against the stipe's soil-line radius, which the
       // variation round widens per body (stemW + flare) — a bulbous-footed
@@ -505,7 +550,12 @@ export function createFinalRing(sceneApi, uniforms) {
       // world anchor at the cap's rim plane — what a pointer aims at, and
       // what the interaction gate projects to place a synthetic tap
       aim: [+m.x.toFixed(3), +(m.gy + s * CAP_Y * P.V.stemH).toFixed(3), +m.z.toFixed(3)],
-      segs: lines.segCount - seg0, pts: glows.ptCount - pt0,
+      // Geometry half of this member's density — skipped with the emission
+      // when baked, so it round-trips from the payload (see the baked IIFE).
+      segs: baked ? (baked.counts.segsPtsByI.get(m.i)?.segs ?? 0)
+                  : (lines.segCount - seg0),
+      pts: baked ? (baked.counts.segsPtsByI.get(m.i)?.pts ?? 0)
+                 : (glows.ptCount - pt0),
     });
   }
 
@@ -513,7 +563,11 @@ export function createFinalRing(sceneApi, uniforms) {
   // back). The hero itself is NOT in MEMBERS — it stands at the origin as the
   // twelfth body and keeps its place on the arc; no clone is ever placed
   // there, and none is built at its scale.
-  for (const m of MEMBERS) placeMushroom(m, null, true);
+  // PLACED inside the ladder pass below, after the field's candidates exist —
+  // the members' emitted strokes carry m.revealIn (the arrival deal), and the
+  // deal ranks members and drawn field bodies TOGETHER by depth, so it cannot
+  // be dealt until both sets have positions. Emission order is unchanged:
+  // members still emit before any field body.
 
   /* ================================================================
      THE FIELD (17-final-field.md, Hannah): "a whole field of smaller,
@@ -731,11 +785,38 @@ export function createFinalRing(sceneApi, uniforms) {
         if (t3[r]) t3[r].reveal = rv + t3[r].jit;
       });
       for (const c of t3) if (c.reveal == null) c.reveal = REV_KNEE + c.jit;
+      /* THE ARRIVAL DEAL (2026-08-16, Hannah's eighth pass: the entry
+         "should feel like starting from the front and working backwards, in
+         terms of the mushrooms turning on"; the leaving sequence "is perfect
+         as it is"). A SECOND threshold per drawn body — revealIn, read only
+         while world.js uRevIn is 1, i.e. while the field is kindling out of
+         the dark — over the SAME twenty-four rung values the authored deal
+         owns: members' RING_LADDER rungs and the field's jittered FIELD_LADDER
+         rungs, one multiset, so index.js's sorted pacing LADDER and BAND_S
+         cannot move under either deal. The deal itself is one global depth
+         rank across members AND drawn field bodies together — nearest body in
+         the composition takes the first rung, farthest the last — NOT a
+         per-group re-deal, which was measured to close the show on the ring's
+         far lip (16 units) AFTER 24-unit field bodies had lit: exactly the
+         back-before-front pop this pass exists to remove. `reveal` above is
+         untouched and still owns every departure. */
+      {
+        const bodies = [
+          ...MEMBERS.map(m => ({ rec: m,
+            d: Math.hypot(m.x - REST_CAM.x, m.z - REST_CAM.z) })),
+          ...t3.map(c => ({ rec: c, d: c.dist })),
+        ].sort((a, b) => a.d - b.d);
+        const rungs = bodies.map(b => b.rec.reveal).sort((a, b) => a - b);
+        bodies.forEach((b, i) => { b.rec.revealIn = rungs[i]; });
+      }
       const t4 = cand.filter(c => c.tier === 4).sort((a, b) => a.dist - b.dist);
       t4.forEach((c, k) => {
         c.reveal = REV_KNEE + (REV_HI - REV_JIT - REV_KNEE)
                  * (t4.length > 1 ? k / (t4.length - 1) : 0) + c.jit;
       });
+      // members first — the emission order the whole build is authored in —
+      // and only now, with the arrival deal in hand for their metas
+      for (const m of MEMBERS) placeMushroom(m, null, true);
       for (const c of cand) placeMushroom(c, c.tier, c.tier === 3);
     }
 
@@ -993,26 +1074,29 @@ export function createFinalRing(sceneApi, uniforms) {
   // beside the hero — countable artifacts, not mushrooms. The sliced arc +
   // the members standing on the far lip already say "the ring continues";
   // two soft ground glows keep a breath of light where the hints stood.
-  for (const [azDeg, r] of [[14, 9.6], [50, 10.4]]) {
-    const a = (azDeg * Math.PI) / 180;
-    const x = RING_C.x + Math.cos(a) * r, z = RING_C.z + Math.sin(a) * r;
-    if (Math.hypot(x, z) < 3.4 || cutVal(x, z) < 0.35) continue;
-    const gy = groundY(x, z);
-    const arc = arcOf(x, z);
-    // sweepReveal: the ring's re-timed CCW ladder (world.js) — the pool
-    // still kindles exactly between the members it stands between.
-    const meta = { arc, reveal: sweepReveal(arc), boost: 0.5, tw: rand() * TAU };
-    glows.pt(x, gy + 0.05, z, 0.34, 0.55, meta);
+  // Baked: these two pools are emitted geometry (not placement), so they are
+  // fetched as part of final/ringGlows and skipped here (2026-08-17).
+  if (!baked) {
+    for (const [azDeg, r] of [[14, 9.6], [50, 10.4]]) {
+      const a = (azDeg * Math.PI) / 180;
+      const x = RING_C.x + Math.cos(a) * r, z = RING_C.z + Math.sin(a) * r;
+      if (Math.hypot(x, z) < 3.4 || cutVal(x, z) < 0.35) continue;
+      const gy = groundY(x, z);
+      const arc = arcOf(x, z);
+      // sweepReveal: the ring's re-timed CCW ladder (world.js) — the pool
+      // still kindles exactly between the members it stands between.
+      const meta = { arc, reveal: sweepReveal(arc), boost: 0.5, tw: rand() * TAU };
+      glows.pt(x, gy + 0.05, z, 0.34, 0.55, meta);
+    }
   }
-
   const strandMat = makeStrandMat(uniforms, 1.15);
-  const ringLines = new THREE.LineSegments(lines.geo(), strandMat);
+  const ringLines = new THREE.LineSegments(baked ? baked.g.ringLines : lines.geo(), strandMat);
   ringLines.frustumCulled = false;
   group.add(ringLines);
 
   const glowTex = makeGlowTexture();
   const glowMat = makePointsMat(uniforms, 1.5, glowTex);
-  const ringGlows = new THREE.Points(glows.geo(true), glowMat);
+  const ringGlows = new THREE.Points(baked ? baked.g.ringGlows : glows.geo(true), glowMat);
   ringGlows.frustumCulled = false;
   group.add(ringGlows);
 
@@ -1040,37 +1124,43 @@ export function createFinalRing(sceneApi, uniforms) {
     uMap: { value: glowTex },
   };
   const primPos = [], primCol = [], primDelay = [], primTw = [], primSize = [];
-  {
-    const c = new THREE.Color();
-    // in the arc gaps and along the lip edge — always on kept soil
-    const spots = [[100, 5.6], [160, 5.2], [300, 5.9], [335, 6.0], [20, 6.4]];
-    let di = 0;
-    for (const [azDeg, r0] of spots) {
-      const a = (azDeg * Math.PI) / 180;
-      let r = r0;
-      let x = RING_C.x + Math.cos(a) * r, z = RING_C.z + Math.sin(a) * r;
-      let guard = 0;
-      while (cutVal(x, z) < 0.4 && guard++ < 30) {
-        r -= 0.15;
-        x = RING_C.x + Math.cos(a) * r; z = RING_C.z + Math.sin(a) * r;
+  let primGeo;
+  if (baked) {
+    // Emission is fetched (final/primordia); only the shader below stays live.
+    primGeo = baked.g.primordia;
+  } else {
+    {
+      const c = new THREE.Color();
+      // in the arc gaps and along the lip edge — always on kept soil
+      const spots = [[100, 5.6], [160, 5.2], [300, 5.9], [335, 6.0], [20, 6.4]];
+      let di = 0;
+      for (const [azDeg, r0] of spots) {
+        const a = (azDeg * Math.PI) / 180;
+        let r = r0;
+        let x = RING_C.x + Math.cos(a) * r, z = RING_C.z + Math.sin(a) * r;
+        let guard = 0;
+        while (cutVal(x, z) < 0.4 && guard++ < 30) {
+          r -= 0.15;
+          x = RING_C.x + Math.cos(a) * r; z = RING_C.z + Math.sin(a) * r;
+        }
+        if (Math.hypot(x, z) < 3.2) continue;
+        primPos.push(x + gauss() * 0.2, groundY(x, z) + 0.05, z + gauss() * 0.2);
+        // warm bud tone
+        c.setRGB(1.0, 0.72, 0.38);
+        primCol.push(c.r, c.g, c.b);
+        primDelay.push(di * 2.2 + rand() * 1.2);
+        primTw.push(rand() * TAU);
+        primSize.push(0.10 + rand() * 0.06);
+        di++;
       }
-      if (Math.hypot(x, z) < 3.2) continue;
-      primPos.push(x + gauss() * 0.2, groundY(x, z) + 0.05, z + gauss() * 0.2);
-      // warm bud tone
-      c.setRGB(1.0, 0.72, 0.38);
-      primCol.push(c.r, c.g, c.b);
-      primDelay.push(di * 2.2 + rand() * 1.2);
-      primTw.push(rand() * TAU);
-      primSize.push(0.10 + rand() * 0.06);
-      di++;
     }
+    primGeo = new THREE.BufferGeometry();
+    primGeo.setAttribute('position', new THREE.Float32BufferAttribute(primPos, 3));
+    primGeo.setAttribute('color', new THREE.Float32BufferAttribute(primCol, 3));
+    primGeo.setAttribute('aDelay', new THREE.Float32BufferAttribute(primDelay, 1));
+    primGeo.setAttribute('aTw', new THREE.Float32BufferAttribute(primTw, 1));
+    primGeo.setAttribute('psize', new THREE.Float32BufferAttribute(primSize, 1));
   }
-  const primGeo = new THREE.BufferGeometry();
-  primGeo.setAttribute('position', new THREE.Float32BufferAttribute(primPos, 3));
-  primGeo.setAttribute('color', new THREE.Float32BufferAttribute(primCol, 3));
-  primGeo.setAttribute('aDelay', new THREE.Float32BufferAttribute(primDelay, 1));
-  primGeo.setAttribute('aTw', new THREE.Float32BufferAttribute(primTw, 1));
-  primGeo.setAttribute('psize', new THREE.Float32BufferAttribute(primSize, 1));
   const primMat = new THREE.ShaderMaterial({
     uniforms: primUniforms,
     vertexShader: /* glsl */ `
@@ -1142,9 +1232,16 @@ export function createFinalRing(sceneApi, uniforms) {
   // charge/take law), so its poke gate reads the same clock: past 0.5 the
   // charge has crested and the take is beginning, which is when a body is
   // visibly part of the scene. Batched bodies keep the shader-law gate.
-  const lit = (ref, pull) => ref.drawW
-    ? (uniforms.uPullRaw.value - ref.reveal) / ref.drawW > 0.5
-    : (pull - ref.reveal) / REVEAL_W > REVEAL_LIT;
+  // The gate reads the SAME threshold the shaders are reading (uRevIn: the
+  // arrival deal while kindling in, the authored deal otherwise), so a body
+  // never answers a pointer before it is visibly lit under the active deal.
+  const lit = (ref, pull) => {
+    const rv = uniforms.uRevIn.value > 0.5 ? (ref.revealIn ?? ref.reveal) : ref.reveal;
+    return ref.drawW
+      ? (uniforms.uPullRaw.value - rv) / (uniforms.uRevIn.value > 0.5
+          ? (ref.drawWIn ?? ref.drawW) : ref.drawW) > 0.5
+      : (pull - rv) / REVEAL_W > REVEAL_LIT;
+  };
   let wasOn = false, pickOn = false;
 
   /* ---- THE POKE, ANSWERED (18-one-species.md, this revision) -------------
@@ -1289,11 +1386,33 @@ export function createFinalRing(sceneApi, uniforms) {
     setDwell(s) { primUniforms.uDwell.value = s; },
     dispose() { picker.dispose(); clones.disposeFigures(); },
     counts: {
-      ringSegs: lines.segCount, glowPts: glows.ptCount,
-      primordia: primSize.length, ringMembers: memberStats,
+      ringSegs: baked ? baked.counts.ringSegs : lines.segCount,
+      glowPts: baked ? baked.counts.glowPts : glows.ptCount,
+      primordia: baked ? baked.counts.primordia : primSize.length,
+      ringMembers: memberStats,
       field: fieldStats,
       clones: clones.counts, pickTargets: picker.count,
       pokeMembers: pokeMembers.length,
+    },
+    // The bake recording site (final/index.js) reads these AFTER every
+    // cross-module write is final. Keys match baked.js geometry() keys.
+    geometries: {
+      ringLines: ringLines.geometry,
+      ringGlows: ringGlows.geometry,
+      primordia: primGeo,
+    },
+    // Mirrors `counts` above (2026-08-17 forensics): on a baked build the raw
+    // counters are zero (the batches never ran), so reading them here wrote a
+    // corrupt payload whenever a re-bake harvested from a baked page. The
+    // livebuild guard in bake-geom.py makes that path unreachable in the
+    // shipped pipeline, but a payload that can never diverge from `counts`
+    // is worth the same three ternaries the counts block already pays.
+    bakePayload: {
+      ringSegs: baked ? baked.counts.ringSegs : lines.segCount,
+      glowPts: baked ? baked.counts.glowPts : glows.ptCount,
+      primordia: baked ? baked.counts.primordia : primSize.length,
+      memberSegsPts: baked ? baked.counts.memberSegsPts
+        : memberStats.map(({ i, segs, pts }) => ({ i, segs, pts })),
     },
     /** LIVE QA (never a `counts` field: index.js SPREADS counts once at
      *  construction, which would freeze these at their boot values). The

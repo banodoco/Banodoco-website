@@ -105,8 +105,128 @@ export function softDisc(size = 64) {
 }
 
 /* ---------------- geometry builders ---------------- */
+/* scratch-backed CatmullRomCurve3: getPoint/getLengths reuse ping-pong
+   Vector3 slots instead of allocating one per sample, reproducing three
+   r169's CatmullRomCurve3.getPoint math bit-for-bit (same expressions, same
+   operation order). (2026-08-16) GC churn: ~200 Vector3 per curve arc-table
+   measured as post-load GC stall. */
+function _cubicPoly() {
+  let c0 = 0, c1 = 0, c2 = 0, c3 = 0;
+  function init(x0, x1, t0, t1) {
+    c0 = x0;
+    c1 = t0;
+    c2 = -3 * x0 + 3 * x1 - 2 * t0 - t1;
+    c3 = 2 * x0 - 2 * x1 + t0 + t1;
+  }
+  return {
+    initCatmullRom(x0, x1, x2, x3, tension) {
+      init(x1, x2, tension * (x2 - x0), tension * (x3 - x1));
+    },
+    calc(t) {
+      const t2 = t * t;
+      const t3 = t2 * t;
+      return c0 + c1 * t + c2 * t2 + c3 * t3;
+    },
+  };
+}
+// ONE extrapolation temp, exactly as r169 (vendor three.module.js:36088 and
+// :36103 share a single module-level `tmp`). On a 2-point strand both ends
+// extrapolate in the same call and the vendor's p3 computation OVERWRITES p0
+// through that shared temp — a quirk, but the quirk is the contract: this
+// subclass exists to be bit-identical to the vendor, aliasing included.
+// (Verified against the vendor source 2026-08-17; a two-temp "fix" was
+// considered and reverted — it would silently change any future 2-point
+// strand against the r169 baseline the goldens were shot on.)
+const _crTmp = new THREE.Vector3();
+const _crPx = _cubicPoly();
+const _crPy = _cubicPoly();
+const _crPz = _cubicPoly();
+// ping-pong scratch slots: two suffice because every caller holds only the
+// immediately-previous point (strandLines 'prev'), never older samples.
+const _crP0 = new THREE.Vector3();
+const _crP1 = new THREE.Vector3();
+let _crPFlip = false;
+const _crL0 = new THREE.Vector3();
+const _crL1 = new THREE.Vector3();
+class _ScratchCatmullRomCurve3 extends THREE.CatmullRomCurve3 {
+  constructor(points) {
+    super(points, false, 'catmullrom', 0.5);
+  }
+  getPoint(t, optionalTarget) {
+    const point = optionalTarget !== undefined
+      ? optionalTarget
+      : (_crPFlip = !_crPFlip, _crPFlip ? _crP1 : _crP0);
+    const points = this.points;
+    const l = points.length;
+    const p = (l - 1) * t;
+    let intPoint = Math.floor(p);
+    let weight = p - intPoint;
+    if (weight === 0 && intPoint === l - 1) {
+      intPoint = l - 2;
+      weight = 1;
+    }
+    let p0, p3;
+    if (intPoint > 0) {
+      p0 = points[(intPoint - 1) % l];
+    } else {
+      // extrapolate first point
+      _crTmp.subVectors(points[0], points[1]).add(points[0]);
+      p0 = _crTmp;
+    }
+    const p1 = points[intPoint % l];
+    const p2 = points[(intPoint + 1) % l];
+    if (intPoint + 2 < l) {
+      p3 = points[(intPoint + 2) % l];
+    } else {
+      // extrapolate last point — same shared temp as p0, as the vendor does
+      // (see the _crTmp note above: the aliasing is part of the contract)
+      _crTmp.subVectors(points[l - 1], points[l - 2]).add(points[l - 1]);
+      p3 = _crTmp;
+    }
+    _crPx.initCatmullRom(p0.x, p1.x, p2.x, p3.x, this.tension);
+    _crPy.initCatmullRom(p0.y, p1.y, p2.y, p3.y, this.tension);
+    _crPz.initCatmullRom(p0.z, p1.z, p2.z, p3.z, this.tension);
+    point.set(_crPx.calc(weight), _crPy.calc(weight), _crPz.calc(weight));
+    return point;
+  }
+  /* Curve.getPoints / getSpacedPoints accumulate EVERY sample, which is
+   * incompatible with the two-slot scratch path (the returned array would be
+   * silently aliased to two vectors). No repo caller uses them on a catmull()
+   * curve today; these overrides keep any future use correct by giving each
+   * sample its own vector — vendor semantics, vendor loop bounds. */
+  getPoints(divisions = 5) {
+    const pts = [];
+    for (let d = 0; d <= divisions; d++) pts.push(this.getPoint(d / divisions, new THREE.Vector3()));
+    return pts;
+  }
+  getSpacedPoints(divisions = 5) {
+    const pts = [];
+    for (let d = 0; d <= divisions; d++) pts.push(this.getPointAt(d / divisions, new THREE.Vector3()));
+    return pts;
+  }
+  getLengths(divisions = this.arcLengthDivisions) {
+    if (this.cacheArcLengths &&
+        (this.cacheArcLengths.length === divisions + 1) &&
+        !this.needsUpdate) {
+      return this.cacheArcLengths;
+    }
+    this.needsUpdate = false;
+    const cache = [];
+    let sum = 0;
+    let last = this.getPoint(0, _crL0);
+    cache.push(0);
+    for (let p = 1; p <= divisions; p++) {
+      const current = this.getPoint(p / divisions, (p & 1) ? _crL1 : _crL0);
+      sum += current.distanceTo(last);
+      cache.push(sum);
+      last = current;
+    }
+    this.cacheArcLengths = cache;
+    return cache;
+  }
+}
 export function catmull(points) {
-  return new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
+  return new _ScratchCatmullRomCurve3(points);
 }
 
 /*
@@ -116,9 +236,22 @@ export function catmull(points) {
  generator(i, rand) → array of THREE.Vector3 (>= 2 points)
  Returns { geometry, count }.
 */
+function _growF32(a) {
+  const b = new Float32Array(a.length * 2);
+  b.set(a);
+  return b;
+}
+
 export function strandLines({ count = 100, seed = 1, generator }) {
   const rand = rng(seed);
-  const positions = [], along = [], strand = [];
+  // Growable typed-array cursors: f32[i] = expr rounds to float32 exactly
+  // like the old push() + Float32BufferAttribute path, but skips the
+  // reallocation churn. (2026-08-16) GC churn: double-array push storms
+  // measured as post-load GC stall.
+  let positions = new Float32Array(1024);
+  let along = new Float32Array(256);
+  let strand = new Float32Array(256);
+  let pn = 0, an = 0, sn = 0;
   for (let i = 0; i < count; i++) {
     const pts = generator(i, rand);
     if (!pts || pts.length < 2) continue;
@@ -129,16 +262,20 @@ export function strandLines({ count = 100, seed = 1, generator }) {
     for (let j = 1; j <= n; j++) {
       const t = j / n;
       const p = curve.getPointAt(t);
-      positions.push(prev.x, prev.y, prev.z, p.x, p.y, p.z);
-      along.push((j - 1) / n, t);
-      strand.push(i / count, i / count);
+      if (pn + 6 > positions.length) positions = _growF32(positions);
+      positions[pn++] = prev.x; positions[pn++] = prev.y; positions[pn++] = prev.z;
+      positions[pn++] = p.x; positions[pn++] = p.y; positions[pn++] = p.z;
+      if (an + 2 > along.length) along = _growF32(along);
+      along[an++] = (j - 1) / n; along[an++] = t;
+      if (sn + 2 > strand.length) strand = _growF32(strand);
+      strand[sn++] = i / count; strand[sn++] = i / count;
       prev = p;
     }
   }
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
-  geo.setAttribute('aStrand', new THREE.Float32BufferAttribute(strand, 1));
+  geo.setAttribute('position', new THREE.BufferAttribute(positions.slice(0, pn), 3));
+  geo.setAttribute('aAlong', new THREE.BufferAttribute(along.slice(0, an), 1));
+  geo.setAttribute('aStrand', new THREE.BufferAttribute(strand.slice(0, sn), 1));
   return { geometry: geo, count };
 }
 

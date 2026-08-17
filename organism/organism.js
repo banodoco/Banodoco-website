@@ -8,7 +8,7 @@ import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { createSpores } from './spores.js';
 import { setupIntro } from './intro.js';
 import { createHighlights, registerTrackers } from './furniture.js';
-import { NOTAA, NOFADE, DBG } from '../flags.js';
+import { NOTAA, NOFADE, DBG, PIN_PR } from '../flags.js';
 
 // =====================================================================
 // TABLE OF CONTENTS (order as they appear below; M2 split the marked
@@ -111,7 +111,35 @@ const camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, 0.1, 1
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// ?pr=<n> pins the ratio and (below) disables the adaptive governor — the
+// QA discriminator for "was that the resolution system?" (flags.js PIN_PR).
+//
+// THE CALIBRATION IS REMEMBERED (2026-08-17 — Hannah, the brightness switch
+// returning after the fluidity retune: a 2 -> 1.5 calibration step at 6.8s
+// reads as "a filter placed on it" — one brighter frame from the TAA flush,
+// then a lasting softening — and no choreography masks a step that size).
+// The decision the governor calibrates to is a property of the MACHINE, not
+// of the visit: once decided, it is stored per-display and applied here, at
+// the first frame of every later load — so the visible switch can happen at
+// most ONCE per machine, on the very first visit, and never again. Storage
+// failures (private mode) simply fall back to calibrate-per-visit.
+const _prStoreKey = (() => {
+  try { return 'gs-pr-cal:' + screen.width + 'x' + screen.height + '@' + devicePixelRatio; }
+  catch { return null; }
+})();
+const _storedPr = (() => {
+  try {
+    const v = parseFloat(localStorage.getItem(_prStoreKey));
+    return Number.isFinite(v) && v >= 1 && v <= 3 ? v : null;
+  } catch { return null; }
+})();
+function _rememberPr(v) {
+  try { localStorage.setItem(_prStoreKey, String(v)); } catch { /* private mode */ }
+}
+renderer.setPixelRatio(
+  PIN_PR !== null ? PIN_PR
+    : _storedPr !== null ? _storedPr
+    : Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 (container || document.body).appendChild(renderer.domElement);
@@ -1283,6 +1311,20 @@ ctx.groundGroup = groundGroup;
     hubs[i].star = true;
     starIdx.push(i);
   }
+  // COMPOSITIONAL COUNTERWEIGHT, part 1 of 2 (2026-08-17, Hannah's Inspire
+  // balance pass): the star the deterministic stream drops at world
+  // (4.29, 0.40) projects to the very bottom-left of the Inspire rest frame
+  // (screen 0.24, 0.95 at 1440x900) and is the single strongest thing on the
+  // floor there — the frame's weight tips into that corner. It steps back
+  // ~15%: a positional dim, applied BEFORE the radial lines / beads / pools
+  // are drawn from hub.h, so everything the node feeds steps back with it.
+  // Gaussian support radius 1.1 u — the nearest other star is 2.4 u away
+  // (factor 0.998 there), so this touches one node and its skirt only.
+  // Consumes no RNG draws; every other hub is bit-identical.
+  for (const hub of hubs) {
+    const dxb = hub.p.x - 4.29, dzb = hub.p.z - 0.40;
+    hub.h *= 1 - 0.15 * Math.exp(-(dxb * dxb + dzb * dzb) / (1.1 * 1.1));
+  }
 
   const lp = [], lc = [];
   function wigglyLine(a, b, ha, hb, segs = 11, amp = 0.09) {
@@ -1532,6 +1574,74 @@ ctx.groundGroup = groundGroup;
 
   // all floor beads in one cloud — they twinkle, pulse outward, and defocus
   groundGroup.add(makePoints(gbP, gbC, gbS, 0.95, gbD));
+  // ------------------------------------------------------------------
+  // THE RECEDING SIDE (2026-08-17, Hannah's Inspire balance pass; replaces
+  // the same-day "counterweight part 2", which ADDED lower-right nodes and
+  // was retired within the hour — the tree's tone pass had already filled
+  // that side, and the note that arrived with the mockup reads "reduce the
+  // amount of visible right-side network by roughly 30-40%... let many of
+  // the right-hand filaments disappear back into darkness").
+  //
+  // WHAT "RIGHT SIDE" IS IN WORLD TERMS. The Inspire rest looks at the web
+  // from az 115 with view-right (-0.4211, 0, -0.9070); the frame's right
+  // half is therefore the HALF-SPACE s > 0 where s is the signed distance
+  // from the gaze foot (2.42, -0.93) along that axis — it is NOT a z wedge:
+  // the two brightest right-of-frame stars sit at (-5.9, -0.9) and
+  // (-8.1, -1.3), far -x and barely -z (s 3.4 and 4.7). Measured anchors:
+  // the strong lower-LEFT star (4.29, 0.40) scores s -2.0 (untouched), the
+  // frame centre scores ~0, the lower-right floor runs s 2.9-3.2.
+  //
+  // This pass walks EVERY groundGroup geometry after the build (beads
+  // included — they are added above) and multiplies vertex colors by a
+  // smooth attenuation of s: nothing below s 0.9, deepening to a 60% cut by
+  // s 3.1 (measured: a 42% linear cut read as only ~19% on screen under the
+  // ACES curve and the additive glow, so the linear cut runs deeper than the
+  // brief's 30-40% to land it visibly), and on to an 80% cut past s ~5 so the outermost strands die into darkness
+  // before the frame edge. Geometry, RNG stream and draw order are all
+  // byte-identical — only colors scale — and strands crossing the axis fade
+  // along their own length, which IS the "disappear into darkness" read.
+  // The two far right stars survive at ~x0.5 as the brief's "2-3 subtle
+  // illuminated nodes". From the hero camera this region is the background
+  // floor left of the stem, where extra depth reads as atmosphere; it does
+  // lean on Connect's screen-right too — checked on a Connect capture, the
+  // same balance argument (left-heavy floor, right side receding) holds
+  // there.
+  {
+    const RSX = -0.4211, RSZ = -0.9070, RCX = 2.42, RCZ = -0.93;
+    for (const child of groundGroup.children) {
+      const pos = child.geometry.getAttribute('position');
+      const col = child.geometry.getAttribute('color');
+      if (!pos || !col) continue;
+      for (let i = 0; i < col.count; i++) {
+        const x = pos.array[i * 3], z = pos.array[i * 3 + 2];
+        const sgn = (x - RCX) * RSX + (z - RCZ) * RSZ;
+        let t = (sgn - 0.9) / 2.2;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        let m = 1 - 0.60 * t * t * (3 - 2 * t);
+        let t2 = (sgn - 3.1) / 2.1;
+        t2 = t2 < 0 ? 0 : t2 > 1 ? 1 : t2;
+        m *= 1 - 0.50 * t2 * t2 * (3 - 2 * t2);
+        // Tablet corner pocket (Hannah's tablet note D): the portrait-tablet
+        // frame reaches further into the near foreground than desktop does,
+        // and a long highway strand crossing world (8.1, -3.2) -> (9.1, -5.0)
+        // ran straight out of its bottom-right corner — "like an arrow
+        // pointing out of the composition". This soft pocket fades it (and
+        // anything else entering that corridor) to die before the corner.
+        // The region sits BELOW the desktop frame's bottom edge at the
+        // Inspire rest (which ends near x ~3.5 on the floor) and behind /
+        // beside the other rests' framings, so desktop composition is
+        // untouched by construction.
+        const pdx = (x - 8.6) / 2.4, pdz = (z + 4.3) / 2.0;
+        m *= 1 - 0.55 * Math.exp(-(pdx * pdx + pdz * pdz));
+        if (m < 1) {
+          col.array[i * 3] *= m;
+          col.array[i * 3 + 1] *= m;
+          col.array[i * 3 + 2] *= m;
+        }
+      }
+    }
+  }
+
 }
 
 // =====================================================================
@@ -1819,18 +1929,128 @@ addEventListener('resize', () => {
 // pixel ratio down a notch and re-check. One-way ratchet — it never steps
 // back up, so there is no visible resolution flicker; on machines that hold
 // 60fps it never engages at all.
-let _perfTime = 0, _perfFrames = 0;
+//
+// ...AND ONE-TIME STALLS ARE NOT GPU LOAD (2026-08-16 — Hannah: "a visual
+// shift and then a lag... smooth other than that", consistently a few seconds
+// after the settled hero). The page's own cold-start work — the journey's
+// chapter-build slices and shader warm renders, each a 100-450 ms main-thread
+// stall landing 8-13 s in — used to pollute exactly the windows this governor
+// judges, so it misread "cold start" as "weak GPU" and stepped the ratchet on
+// a machine that holds 60 fps at steady state: measured at DPR 2, 2 -> 1.75
+// -> 1.5 -> 1.25 across the 10-22 s window, each step a one-frame sharpness
+// snap (syncRenderSizes flushes the TAA history) plus a target-reallocation
+// hitch — the reported shift-then-lag, made PERMANENT by the one-way ratchet.
+// Two guards, both preserving the governor's real job:
+//   · a window containing a FEW clamped frames (dt at the 0.05 ceiling —
+//     stalls, not sustained load) casts no verdict. A genuinely dying GPU is
+//     still caught: sustained sub-20 fps clamps the MAJORITY of its frames,
+//     and that window still counts. Sustained 25-40 fps has no clamped
+//     frames at all and still counts.
+//   · one bad window is a strike, not a verdict — the visible step needs two
+//     CONSECUTIVE bad windows (5 s of genuinely missed budget), so a stray
+//     spike the clamp test misses still cannot trip it.
+// ...AND THE DECISION IS TAKEN ONCE, DURING THE CHOREOGRAPHY (2026-08-17 —
+// Hannah, the third round on the same report: a consistent glitch "5 seconds
+// after the full hero view is done"). Reactive stepping can never win on a
+// machine that genuinely misses budget at full DPR: the cold-start stalls
+// void the intro windows (correctly — they are stalls, not load), so the
+// ratchet's first honest verdict is forced PAST the settle, and with the
+// two-strike guard it lands at exactly settle + ~5 s — a visible sharpness
+// snap on a still frame, every load, at the most attentive moment there is.
+// So the governor no longer reacts its way down. It CALIBRATES: through the
+// intro it samples only clean frames (clamped dt = a one-time stall, skipped),
+// and at `intro + 1.4` s — the callout power-up, the last stretch where the
+// whole frame is still visibly in motion — it computes the pixel ratio the
+// measured budget actually affords (frame cost ~ pr², so pr * sqrt(24/avg),
+// floored to the 0.25 grid — one notch conservative beats a second visible
+// step) and applies the WHOLE drop in one masked adjustment. After that the
+// windowed ratchet remains only as a drift backstop, always two consecutive
+// clean bad windows, so a settled frame is never re-graded on a fluke.
+let _perfTime = 0, _perfFrames = 0, _perfClamped = 0, _perfStrikes = 0;
+// A remembered calibration (applied at init above) IS the calibration: skip
+// the per-visit measurement entirely so no step can occur — only the
+// catastrophic backstop below stays armed, and its steps update the memory.
+let _calSum = 0, _calN = 0, _calDone = _storedPr !== null;
+const _calAt = intro > 0 ? intro + 1.4 : 2.5;   // no-intro loads decide early
+if (PIN_PR === null)                            // ?pr= pins: no governor at all
 addAnimator('perf-governor', (t, dt) => {
+  if (!_calDone) {
+    if (dt > 0 && dt < 0.0499) { _calSum += dt; _calN++; }
+    // A machine where nearly every frame hits the dt clamp (sustained <=20fps)
+    // never fills the clean-sample quota — and is exactly the machine that
+    // needs the drop most. Past a grace deadline, calibrate from the clamp
+    // itself: 50 ms IS the measured floor of what we know.
+    const starved = t >= _calAt + 2.5 && _calN < 30;
+    if ((t < _calAt || _calN < 30) && !starved) return;
+    _calDone = true;
+    /* THE INTRO UNDERESTIMATES THE SETTLED PAGE (2026-08-17 — Hannah, on the
+       stubborn residual: "it flashes a TINY bit lighter and stalls just
+       before it does", still at settle + ~5 s. That pairing is a resolution
+       step at rest: the stall is syncRenderSizes reallocating every target,
+       and the light flash is the TAA history flush — one un-accumulated
+       frame renders the thin bright filaments brighter before the average
+       re-converges. It kept firing because calibration measures the INTRO's
+       workload, and the settled page runs more per frame: the journey spine,
+       four chapter animators and the ui tracker all start at boot. A machine
+       that passes the audition can still miss the budget at the show, and
+       the old post-settle backstop then stepped it — stall plus flash — at
+       the most attentive moment there is. Two changes close it:
+         · the calibration decision projects the measured average forward by
+           1.25x for the journey's post-boot per-frame overhead, so machines
+           near the line take their (masked) step during the choreography;
+         · the post-settle ratchet no longer steps for a missed 24 ms budget
+           AT ALL. Missing 60 fps at rest on this slow ambient scene is
+           invisible; the correction was the only visible artifact. The one
+           post-settle step left is the catastrophic case — a majority of
+           frames at the 50 ms clamp, i.e. the page is at ~20 fps and
+           genuinely unusable — where a one-frame flash is mercy. */
+    /* FLUIDITY OVER THE LAST NOTCH OF SHARPNESS (2026-08-17 — Hannah, A/B on
+       her own retina machine: "?pr=1.5 feels noticeably smoother" than the
+       pr=2 the old 24 ms budget let stand. A machine that misses 60 fps only
+       slightly was being held at full resolution and paid in a permanent
+       light stutter — the wrong trade for a slow ambient scene whose motion
+       is its whole point. The calibration budget is therefore 20 ms (a ~50
+       fps floor with headroom, which reads as smooth on this content) and
+       the post-boot projection 1.35x, both of which only bite machines that
+       were already missing 60: a machine averaging under ~14.8 ms projected
+       still clears 20 and keeps full retina untouched. */
+    const projected = (starved ? 50 : (_calSum / _calN) * 1000) * 1.35;
+    const pr = renderer.getPixelRatio();
+    if (projected > 20 && pr > 1) {
+      const afford = pr * Math.sqrt(20 / projected);
+      const target = Math.max(1, Math.floor(afford / 0.25) * 0.25);
+      if (target < pr) {
+        renderer.setPixelRatio(target);
+        syncRenderSizes();
+      }
+    }
+    // Remember the DECISION either way — a machine that cleared the budget
+    // remembers full ratio, one that stepped remembers its landing — so every
+    // later visit applies it at the first frame and never steps in view.
+    _rememberPr(renderer.getPixelRatio());
+    return;
+  }
   _perfTime += dt;
   _perfFrames++;
+  if (dt >= 0.0499) _perfClamped++;
   if (_perfTime < 2.5) return;
-  const avgMs = (_perfTime / _perfFrames) * 1000;
+  const clampedShare = _perfClamped / _perfFrames;
   _perfTime = 0;
   _perfFrames = 0;
+  _perfClamped = 0;
+  // Post-settle: ONLY the catastrophic escape remains (see the calibration
+  // comment above) — a majority-clamped window is ~20 fps, and even that
+  // needs two consecutive windows so a single seized-up stretch (another
+  // app hogging the GPU for a moment) cannot re-grade a settled frame.
   const pr = renderer.getPixelRatio();
-  if (avgMs > 24 && pr > 1) {
+  if (clampedShare > 0.5 && pr > 1) {
+    if (++_perfStrikes < 2) return;
+    _perfStrikes = 0;
     renderer.setPixelRatio(Math.max(1, pr - 0.25));
     syncRenderSizes();
+    _rememberPr(renderer.getPixelRatio());   // the memory follows the machine
+  } else {
+    _perfStrikes = 0;
   }
 });
 

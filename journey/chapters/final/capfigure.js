@@ -213,14 +213,24 @@ export function buildCapFigure(spec, seed) {
   // O(N^2) at N=190 is ~36k distance tests per body, 24 bodies: under 1 M
   // operations for the whole set, once, at chapter construction. The hero
   // itself pays the identical cost at page boot.
+  // Two-nearest via a linear scan (2026-08-17): the filter/map/sort/slice
+  // form allocated ~N objects + three arrays per node (~862k objects across
+  // the 24 bodies), pure garbage feeding the post-load GC sweep. The scan
+  // keeps the two strictly-smallest distances; strict `<` (never `<=`)
+  // reproduces the stable sort's tie order exactly — among equal distances
+  // the earliest-enumerated node wins, same as before, so the emitted edges
+  // and the per-edge rand() draws are byte-identical in sequence.
   const olp = [], olc = [];
   for (const n of nodes) {
-    const near = nodes
-      .filter(m => m !== n)
-      .map(m => ({ m, d: m.distanceTo(n) }))
-      .sort((a, b) => a.d - b.d)
-      .slice(0, 2);
-    for (const { m } of near) {
+    let m1 = null, d1 = Infinity, m2 = null, d2 = Infinity;
+    for (const m of nodes) {
+      if (m === n) continue;
+      const d = m.distanceTo(n);
+      if (d < d1) { m2 = m1; d2 = d1; m1 = m; d1 = d; }
+      else if (d < d2) { m2 = m; d2 = d; }
+    }
+    for (const m of [m1, m2]) {
+      if (!m) continue;
       olp.push(n.x, n.y, n.z, m.x, m.y, m.z);
       const b = 0.35 + rand() * 0.15;
       pushC(olc, b); pushC(olc, b);
