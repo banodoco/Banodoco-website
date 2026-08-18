@@ -624,6 +624,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     }
     h.btn.setAttribute('aria-describedby', popShort.id);
     pop.classList.add('open');
+    // rich stages reveal their in-world CTA while pinned (cards.css keys
+    // this class alongside :hover and :focus-within)
+    pop.classList.toggle('j-pop-pinned', popPinned);
     // a transient popover's link is reachable by pointer but stays out of the
     // tab order — Tab belongs to the chips until the visitor commits
     popLink.tabIndex = popPinned ? 0 : -1;
@@ -654,7 +657,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
 
   function teardownPop() {
     if (activeStage) activeStage.builder.deactivate();
-    pop.classList.remove('open');
+    pop.classList.remove('open', 'j-pop-pinned');
     popLink.tabIndex = -1;
     if (popNode) popNode.btn.removeAttribute('aria-describedby');
     popNode = null;

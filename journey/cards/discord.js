@@ -32,7 +32,7 @@ const clean = (s) => String(s ?? '')
   .replace(/`([^`]+)`/g, '$1')
   .trim();
 
-let stage, headerLabel, topicEl, titleEl, textEl, metaEl, dotsEl;
+let stage, headerLabel, topicEl, titleEl, textEl, metaEl, dotsEl, thumbEl;
 let dots = [];
 let topics = [];        // normalized { title, text, channel, date }
 let index = 0;
@@ -74,6 +74,24 @@ function metaFor(t) {
   return parts.join(' · ');
 }
 
+/* First showable image for a topic: mainMediaUrls, then the sub-topics'.
+   Images pass through; videos contribute their poster frame. LIVE DATA
+   ONLY — these are expiring Discord CDN links (the site refreshes them
+   server-side), so the baked fallback deliberately ships without media and
+   a dead link simply hides the thumb (img.onerror in renderTopic). */
+function firstImage(t) {
+  const pools = [t.mainMediaUrls, ...(t.subTopics || []).map((s) => s && s.subTopicMediaUrls)];
+  for (const pool of pools) {
+    if (!Array.isArray(pool)) continue;
+    for (const m of pool) {
+      if (!m || typeof m !== 'object') continue;
+      if (m.type === 'image' && m.url) return m.url;
+      if (m.type === 'video' && m.poster_url) return m.poster_url;
+    }
+  }
+  return '';
+}
+
 // Rows → display topics. full_summary is a JSON string; a row whose summary
 // won't parse is skipped (a parse miss, not a network failure).
 function topicsFromRows(rows) {
@@ -92,7 +110,7 @@ function topicsFromRows(rows) {
       const title = clean(t.title);
       const text = clean(t.mainText);
       if (!title && !text) continue;
-      out.push({ title, text, channel, date });
+      out.push({ title, text, channel, date, image: firstImage(t) });
     }
   }
   return out;
@@ -158,6 +176,16 @@ function renderTopic() {
   titleEl.textContent = t.title;
   textEl.textContent = t.text;
   metaEl.textContent = metaFor(t);
+  // the topic's image, very small (Hannah, 2026-08-18) — shown only once
+  // it actually loads; an expired CDN link just leaves the text layout
+  thumbEl.classList.remove('on');
+  if (t.image) {
+    thumbEl.onload = () => thumbEl.classList.add('on');
+    thumbEl.onerror = () => thumbEl.classList.remove('on');
+    thumbEl.src = t.image;
+  } else {
+    thumbEl.removeAttribute('src');
+  }
   // restart the entrance; a reflow lets the same class re-trigger
   topicEl.classList.remove('dc-enter');
   void topicEl.offsetWidth;
@@ -272,7 +300,16 @@ export default {
     headerLabel = document.createElement('span');
     headerLabel.className = 'dc-label';
     headerLabel.textContent = 'LIVE FROM THE DISCORD';
-    head.append(beacon, headerLabel);
+    // the door, right-aligned in the head; revealed on hover/pin by the
+    // shared card-cta rule (margin-left:auto in css)
+    const cta = document.createElement('a');
+    cta.className = 'dc-cta card-cta';
+    cta.href = 'https://discord.gg/NnFxGvx94b';
+    cta.target = '_blank';
+    cta.rel = 'noopener noreferrer';
+    cta.tabIndex = -1;
+    cta.textContent = 'JOIN →';
+    head.append(beacon, headerLabel, cta);
 
     const body = document.createElement('div');
     body.className = 'dc-body';
@@ -284,7 +321,16 @@ export default {
     textEl.className = 'dc-text';
     metaEl = document.createElement('p');
     metaEl.className = 'dc-meta';
-    topicEl.append(titleEl, textEl, metaEl);
+    const copy = document.createElement('div');
+    copy.className = 'dc-copy';
+    copy.append(titleEl, textEl, metaEl);
+    thumbEl = document.createElement('img');
+    thumbEl.className = 'dc-thumb';
+    thumbEl.alt = '';
+    thumbEl.loading = 'lazy';
+    thumbEl.decoding = 'async';
+    thumbEl.referrerPolicy = 'no-referrer';
+    topicEl.append(copy, thumbEl);
     body.appendChild(topicEl);
 
     dotsEl = document.createElement('div');
