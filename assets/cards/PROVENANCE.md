@@ -19,8 +19,13 @@ generated or stock imagery. Re-fetch sources are listed per directory.
 
 ## ados/ — ados.events (Banodoco's events site)
 - {paris-2026,la-2025,paris-2025}-thumb.jpg — its own event posters.
-- *-preview.webp — its own trailer preview GIFs (300px, 28f) re-encoded as
-  animated WebP (q58) from https://ados.events/events/*-preview.gif.
+- *-preview.mp4 — 9-second loops cut straight from its own 720p trailers
+  (https://ados.events/events/{paris-2026-720p,la-2025-video-720p,
+  paris-2025-video-720p}.mp4) with macOS avconvert PresetAppleM4VCellular,
+  2026-08-18, ~300KB each; paris-2025 starts at 35s because banodoco.ai's
+  own EventContent.tsx skips that trailer's leader. These replaced webp
+  re-encodes of the site's 300px preview GIFs — same bytes, far more
+  picture.
 - pilowlava-sub.woff2 — its wordmark face (/fonts/Pilowlava.woff2 — Pilowlava
   is a Velvetyne/SIL-OFL face), subset to caps+digits+en-dash.
 

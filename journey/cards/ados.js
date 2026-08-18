@@ -26,11 +26,11 @@ import { CARD_ASSETS, REDUCE } from './index.js';
 
 const EVENTS = [
   { name: 'Paris',       date: '17–19 April 2026', tag: 'Just wrapped',
-    thumb: 'paris-2026-thumb.jpg', preview: 'paris-2026-preview.webp' },
+    thumb: 'paris-2026-thumb.jpg', preview: 'paris-2026-preview.mp4' },
   { name: 'Los Angeles', date: '7 November 2025',  tag: null,
-    thumb: 'la-2025-thumb.jpg',    preview: 'la-2025-preview.webp' },
+    thumb: 'la-2025-thumb.jpg',    preview: 'la-2025-preview.mp4' },
   { name: 'Paris',       date: '28–29 March 2025', tag: null,
-    thumb: 'paris-2025-thumb.jpg', preview: 'paris-2025-preview.webp' },
+    thumb: 'paris-2025-thumb.jpg', preview: 'paris-2025-preview.mp4' },
 ];
 
 const AUTO_MS = 6000;        // their useEventsAutoAdvance interval
@@ -53,12 +53,12 @@ function caption(i, animate = false) {
   }
 }
 
-/** Load the current event's animated preview and crossfade it in (500ms). */
+/** Point the trailer loop at the current event and crossfade it in (500ms)
+    once frames are actually rendering — the poster holds until then. */
 function setPreview() {
-  previewEl.onload = () => previewEl.classList.add('on');
   previewEl.classList.remove('on');
   previewEl.src = `${CARD_ASSETS}/ados/${EVENTS[idx].preview}`;
-  if (previewEl.complete) previewEl.classList.add('on');
+  previewEl.play().catch(() => {});   // autoplay veto -> the poster stays
 }
 
 function render(i) {
@@ -103,11 +103,14 @@ export default {
     posterEl.alt = '';
     posterEl.loading = 'lazy';
     posterEl.decoding = 'async';
-    previewEl = document.createElement('img');
+    previewEl = document.createElement('video');
     previewEl.className = 'ad-preview';
-    previewEl.alt = '';
-    previewEl.loading = 'lazy';
-    previewEl.decoding = 'async';
+    previewEl.muted = true;
+    previewEl.loop = true;
+    previewEl.playsInline = true;
+    previewEl.preload = 'none';
+    previewEl.setAttribute('aria-hidden', 'true');
+    previewEl.addEventListener('playing', () => previewEl.classList.add('on'));
     media.append(posterEl, previewEl);
 
     const scrim = document.createElement('div');
@@ -199,8 +202,9 @@ export default {
       // matches idx (posters survive deactivate; the preview is dropped below)
       posterEl.src = `${CARD_ASSETS}/ados/${EVENTS[idx].thumb}`;
     }
+    previewEl.pause();
     previewEl.classList.remove('on');
-    previewEl.removeAttribute('src');   // free the animation; keep posters
-    previewEl.onload = null;
+    previewEl.removeAttribute('src');   // free the decoder; keep posters
+    previewEl.load();
   },
 };
