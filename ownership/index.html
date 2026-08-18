@@ -170,6 +170,10 @@
           <b class="ck tl"></b><b class="ck tr"></b><b class="ck br"></b><b class="ck bl"></b>
           Ownership to date
         </button>
+        <button class="tab-btn" id="tab-contributors" role="tab" aria-selected="false" aria-controls="panel-contributors" type="button" tabindex="-1">
+          <b class="ck tl"></b><b class="ck tr"></b><b class="ck br"></b><b class="ck bl"></b>
+          Contributors
+        </button>
       </div>
 
       <div class="note"><strong>Note:</strong> There may be minor issues in this data. The ground source of truth for this will be the original announcements on Discord.</div>
@@ -230,6 +234,18 @@
         <div class="table-actions">
           <button class="btn" id="ownership-more" type="button"><b class="ck tl"></b><b class="ck tr"></b><b class="ck br"></b><b class="ck bl"></b><span id="ownership-more-label">Show all contributors</span></button>
         </div>
+      </div>
+
+      <div class="tab-panel" id="panel-contributors" role="tabpanel" aria-labelledby="tab-contributors" hidden>
+        <div class="prose">
+          <p>What each contributor is known for — from the people who remember their work.</p>
+        </div>
+        <div class="filter-frame">
+          <b class="ck tl"></b><b class="ck tr"></b><b class="ck br"></b><b class="ck bl"></b>
+          <input type="text" id="contributors-filter" placeholder="Filter by name or what they did…" autocomplete="off">
+        </div>
+        <p class="row-count" id="contributors-count" aria-live="polite"></p>
+        <ul class="contributors-list" id="contributors-list"></ul>
       </div>
     </section>
 

@@ -459,8 +459,16 @@
   height: 100%;
   object-fit: cover;
 }
-/* the animated preview crossfades in over the poster — their opacity 500ms */
+/* the animated preview crossfades in over the poster — their opacity 500ms.
+   Same fill/cover as the poster: without these the <video> renders at its
+   intrinsic size, top-left in the frame (Peter, 2026-08-18: "centred within
+   the frame"). */
 .ad-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   opacity: 0;
   transition: opacity 0.5s ease;
 }

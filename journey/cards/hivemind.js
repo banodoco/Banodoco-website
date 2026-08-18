@@ -52,7 +52,8 @@ const STATS = '1,248,240 messages · 2,759 resources & workflows';
 // Loop budget ≈ 7s per query (Hannah, 2026-08-18: the first cut "feels
 // painfully slow" — everything roughly halved; the answer keeps the
 // longest dwell because it is the payoff).
-const CHAR_MS = 32;
+// 2026-08-18: typing 1.5x faster — 32 / 1.5 ≈ 21.
+const CHAR_MS = 21;
 const HOLD_QUERY_MS = 550;
 const SEARCH_MS = 900;
 const HIT_MS = 750;

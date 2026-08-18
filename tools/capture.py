@@ -78,10 +78,12 @@
 # ==============================================================================
 
 import argparse
+import atexit
 import base64
 import json
 import os
 import shutil
+import signal
 import socket
 import struct
 import subprocess
@@ -165,6 +167,15 @@ SETTLE_S_LIVE = 2.5
 SETTLE_S = SETTLE_S_FROZEN   # kept as the default-mode alias other code reads
 
 READY_TIMEOUT_S = 25.0     # how long to wait for window.journey to reach the pose
+# Headless Chrome's GPU process is not ready when /json/version first answers.
+# createScene() in main.js constructs THREE.WebGLRenderer synchronously on
+# module evaluate — if that races a still-spawning (or just-crashed) GPU
+# process, the constructor throws, sceneApi stays null, and the readiness
+# poll sits on 'no-scene' for the rest of READY_TIMEOUT_S. Waiting for a
+# real WebGL context on about:blank BEFORE the first ?capture= navigation
+# is what makes attempt 1 reliable under load. See wait_webgl().
+WEBGL_TIMEOUT_S = 45.0
+CHROME_PORT_TIMEOUT_S = 60.0
 DPR = 1                    # --force-device-scale-factor. See --dpr.
 
 # Elements hidden at capture time so the still is PURE SCENE. Tier 3 renders
@@ -362,6 +373,44 @@ def free_port():
     return p
 
 
+def reap_chrome(proc):
+    """SIGTERM/SIGKILL the whole session, not just the browser PID.
+
+    Chrome on macOS spawns gpu / renderer / utility helpers in the same
+    process group. `proc.terminate()` only signals the browser; if this
+    script is killed before Browser.close, helpers get reparented to
+    launchd (PPID 1) and keep a Metal GPU process alive. The next capture
+    then races that leftover allocator — the ANGLE warning "Trying to load
+    the allocator multiple times" — and createScene throws. start_new_session
+    in launch_chrome makes proc.pid the group leader, so killpg is safe.
+    """
+    if proc is None:
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except Exception:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+    try:
+        proc.wait(timeout=8)
+        return
+    except Exception:
+        pass
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except Exception:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    try:
+        proc.wait(timeout=3)
+    except Exception:
+        pass
+
+
 def launch_chrome(profile_dir, port, verbose=False):
     if not os.path.exists(CHROME):
         sys.exit("Chrome not found at %s" % CHROME)
@@ -372,6 +421,7 @@ def launch_chrome(profile_dir, port, verbose=False):
         "--user-data-dir=%s" % profile_dir,
         "--disable-gpu-sandbox",
         "--use-angle=metal",             # ANGLE Metal — the Tier-1 reference path
+        "--disable-gpu-process-crash-limit",  # GPU helper dies under load; let it come back
         "--hide-scrollbars",
         "--no-first-run",
         "--no-default-browser-check",
@@ -379,6 +429,15 @@ def launch_chrome(profile_dir, port, verbose=False):
         "--disable-background-timer-throttling",
         "--disable-renderer-backgrounding",
         "--disable-backgrounding-occluded-windows",
+        # These do not change GL output. They stop Chrome from spawning
+        # GoogleUpdater / OnDeviceModel / GCM mid-run — observed to collide
+        # with createScene() and leave readiness at 'no-scene'.
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--disable-breakpad",
+        "--mute-audio",
+        "--disable-features=OnDeviceModel,Translate,MediaRouter,OptimizationHints",
         "--force-device-scale-factor=%d" % DPR,
         "about:blank",
     ]
@@ -386,18 +445,76 @@ def launch_chrome(profile_dir, port, verbose=False):
         args,
         stdout=(None if verbose else subprocess.DEVNULL),
         stderr=(None if verbose else subprocess.DEVNULL),
+        start_new_session=True,          # own process group — see reap_chrome()
     )
-    # Wait for the debugging endpoint.
-    deadline = time.time() + 30
+    # Wait for the debugging endpoint. Under load the network-service helper
+    # can crash on spawn ("Network service crashed or was terminated") and
+    # Chrome restarts it; a 1s HTTP timeout also expires before the
+    # scheduler runs the browser process. Stay patient, and do not treat a
+    # single refused connect as "Chrome is dead."
+    deadline = time.time() + CHROME_PORT_TIMEOUT_S
+    last_err = None
     while time.time() < deadline:
+        if proc.poll() is not None:
+            last_err = "chrome exited %s" % proc.returncode
+            break
         try:
-            with urllib.request.urlopen("http://127.0.0.1:%d/json/version" % port, timeout=1) as r:
+            with urllib.request.urlopen(
+                "http://127.0.0.1:%d/json/version" % port, timeout=5
+            ) as r:
                 json.loads(r.read().decode())
                 return proc
-        except Exception:
-            time.sleep(0.15)
-    proc.kill()
-    sys.exit("Chrome did not open a debugging port on %d" % port)
+        except Exception as e:
+            last_err = e
+            time.sleep(0.25)
+    reap_chrome(proc)
+    sys.exit("Chrome did not open a debugging port on %d (%s)" % (port, last_err))
+
+
+WEBGL_JS = """
+(() => {
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl2', {antialias: true, powerPreference: 'high-performance'})
+            || c.getContext('webgl',  {antialias: true, powerPreference: 'high-performance'});
+    if (!gl) return 'no-gl';
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    return renderer || 'ok';
+  } catch (e) {
+    return 'err:' + e.message;
+  }
+})()
+"""
+
+
+def wait_webgl(cdp, timeout_s=WEBGL_TIMEOUT_S, verbose=False):
+    """Block until about:blank can construct the same WebGL context createScene uses.
+
+    The ANGLE Metal line "Trying to load the allocator multiple times" is
+    printed when the GPU process restarts and re-inits the Metal backend.
+    That restart is recoverable — this wait is the recovery. Navigating to
+    ?capture= before it finishes is what produced 'no-scene': main.js
+    catches the thrown WebGLRenderer and never assigns window.sceneApi.
+    """
+    deadline = time.time() + timeout_s
+    state = None
+    t0 = time.time()
+    while time.time() < deadline:
+        try:
+            state = cdp.eval(WEBGL_JS)
+        except Exception as e:
+            state = "eval-error: %s" % e
+        if isinstance(state, str) and state and not state.startswith(
+            ("no-gl", "err:", "eval-error")
+        ):
+            if verbose:
+                print("  webgl   : %s (%.1fs)" % (state, time.time() - t0))
+            return state
+        time.sleep(0.25)
+    if verbose:
+        print("  webgl   : NOT READY (%s) after %.1fs" % (state, time.time() - t0))
+    return None
 
 
 def page_ws_url(port):
@@ -419,6 +536,36 @@ def page_ws_url(port):
 def build_url(pose_id, live=False):
     q = POSE_QUERY(pose_id, live=live)
     return BASE_URL + "?" + "&".join("%s=%s" % (k, v) for k, v in q.items())
+
+
+def navigate_fresh(cdp, url):
+    """Navigate and block until the NEW document is the one we will poll.
+
+    `Page.navigate` only acknowledges the command. The previous document
+    stays live until the next commit, so a readiness poll can read the
+    leftover `window.journey.chapter` — especially on the same-URL size
+    switch (mission desktop → mission mobile). Under load the race window
+    is tens of seconds wide and looks like a WebGL flake: we shutter a
+    page that is still booting (or showing the journey-failed note).
+
+    A per-navigation `_n=` nonce is ignored by the scene (flags.js only
+    reads named keys / the notaa|nofade|dbg|tkdbg substrings) and is the
+    commit signal: when `location.href` contains it, the old JS world is
+    gone. Same-URL navigations also become real loads.
+    """
+    nonce = "_n=%d" % int(time.time() * 1000)
+    target = url + ("&" if "?" in url else "?") + nonce
+    cdp.call("Page.navigate", {"url": target})
+    deadline = time.time() + 15.0
+    while time.time() < deadline:
+        try:
+            href = cdp.eval("location.href") or ""
+        except Exception:
+            href = ""
+        if nonce in href:
+            return target
+        time.sleep(0.05)
+    return target
 
 
 HIDE_JS = """
@@ -444,28 +591,92 @@ READY_JS = """
 """
 
 
+# Set True after any pose in this Chrome session has reached its chapter.
+# Later poses then treat a long 'no-journey' as a hung boot (reload), not a
+# cold module-graph wait — the first pose still gets the full READY_TIMEOUT_S.
+_JOURNEY_SEEN = False
+
+
 def capture_one(cdp, pose, size_key, hide_chrome, settle_s, verbose, quantize=False, live=False):
+    global _JOURNEY_SEEN
     size = SIZES[size_key]
+    # Tear down the previous WebGL document BEFORE changing the viewport.
+    # setDeviceMetricsOverride on a live THREE canvas produces
+    # SharedImage/ProduceOverlay errors; the next createScene then throws
+    # and readiness sits at 'no-scene'. about:blank is cheap and leaves
+    # the GPU process up (wait_webgl confirms).
+    try:
+        cdp.call("Page.navigate", {"url": "about:blank"})
+    except Exception:
+        pass
     cdp.call("Emulation.setDeviceMetricsOverride", {
         "width": size["w"], "height": size["h"],
         "deviceScaleFactor": DPR, "mobile": size["mobile"],
     })
+    wait_webgl(cdp, timeout_s=10.0, verbose=verbose)
     url = build_url(pose["id"], live=live)
-    cdp.call("Page.navigate", {"url": url})
 
     # Readiness: the journey itself declares the pose. No sleep-and-hope.
-    deadline = time.time() + READY_TIMEOUT_S
+    # Attempt 1 MUST navigate — a previous retry loop accidentally left
+    # attempt 1 polling about:blank (or the previous pose) for the full
+    # READY_TIMEOUT_S, which is why "retry usually succeeds" and every
+    # first try burned 25s.
+    #
+    # 'no-scene' after document.complete means createScene() already threw
+    # (WebGL context missing). Polling that document for the rest of the
+    # timeout cannot recover it — give up after 2s and reload. The retry
+    # goes about:blank → wait_webgl → navigate so the GPU process is up
+    # before main.js evaluates again. A pose that boots but still drifts
+    # later fails the gate as before.
     state = None
-    while time.time() < deadline:
-        try:
-            state = cdp.eval(READY_JS)
-        except Exception as e:
-            state = "eval-error: %s" % e
-        if state == pose["chapter"]:
+    last_logged = None
+    for attempt in (1, 2):
+        if attempt == 1:
+            navigate_fresh(cdp, url)
+        else:
+            print("      retrying %s@%s (boot didn't reach %r — attempt 2)"
+                  % (pose["id"], size_key, pose["chapter"]))
+            try:
+                cdp.call("Page.navigate", {"url": "about:blank"})
+                wait_webgl(cdp, timeout_s=15.0, verbose=verbose)
+            except Exception:
+                pass
+            navigate_fresh(cdp, url)
+        deadline = time.time() + READY_TIMEOUT_S
+        no_scene_since = None
+        no_journey_since = None
+        while time.time() < deadline:
+            try:
+                state = cdp.eval(READY_JS)
+            except Exception as e:
+                state = "eval-error: %s" % e
+            if verbose and state != last_logged:
+                print("      readiness: %s (attempt %d)" % (state, attempt))
+                last_logged = state
+            if state == pose["chapter"]:
+                break
+            if state == "no-scene":
+                if no_scene_since is None:
+                    no_scene_since = time.time()
+                elif time.time() - no_scene_since >= 2.0:
+                    break
+            else:
+                no_scene_since = None
+            # After this Chrome has booted the journey once, a later pose
+            # stuck on no-journey is a hung load, not a cold graph.
+            if _JOURNEY_SEEN and state == "no-journey":
+                if no_journey_since is None:
+                    no_journey_since = time.time()
+                elif time.time() - no_journey_since >= 8.0:
+                    break
+            else:
+                no_journey_since = None
+            time.sleep(0.25)
+        ready = state == pose["chapter"]
+        if ready:
+            _JOURNEY_SEEN = True
             break
-        time.sleep(0.25)
-    ready = state == pose["chapter"]
-    if verbose:
+    if verbose and last_logged != state:
         print("      readiness: %s" % state)
 
     if hide_chrome:
@@ -611,11 +822,43 @@ def main():
     if not args.chrome:
         print("  chrome : hidden (pure scene; Tier 3 renders the copy as HTML)")
     proc = launch_chrome(profile, port, args.verbose)
+    atexit.register(reap_chrome, proc)
+    global _JOURNEY_SEEN
+    _JOURNEY_SEEN = False
     results = []
     try:
         cdp = CDP(page_ws_url(port), args.verbose)
         cdp.call("Page.enable")
         cdp.call("Runtime.enable")
+        # Do not navigate to ?capture= until Metal/WebGL actually answers.
+        # createScene() is synchronous; a too-early load is a permanent
+        # no-scene for that document, and READY_TIMEOUT_S cannot recover it.
+        gl = wait_webgl(cdp, verbose=args.verbose)
+        if not gl:
+            print("  webgl never became ready on about:blank — relaunching Chrome once")
+            try:
+                cdp.call("Browser.close", timeout_s=5)
+            except Exception:
+                pass
+            try:
+                cdp.close()
+            except Exception:
+                pass
+            reap_chrome(proc)
+            shutil.rmtree(profile, ignore_errors=True)
+            profile = tempfile.mkdtemp(prefix="capture-chrome-")
+            port = free_port()
+            proc = launch_chrome(profile, port, args.verbose)
+            atexit.register(reap_chrome, proc)
+            _JOURNEY_SEEN = False
+            cdp = CDP(page_ws_url(port), args.verbose)
+            cdp.call("Page.enable")
+            cdp.call("Runtime.enable")
+            gl = wait_webgl(cdp, verbose=args.verbose)
+            if not gl:
+                sys.exit("Chrome WebGL context never became ready (ANGLE Metal). "
+                         "Another headless Chrome may be holding the GPU — "
+                         "reap leftover capture-chrome processes and retry.")
         for pose in poses:
             for size_key in sizes:
                 t0 = time.time()
@@ -640,11 +883,7 @@ def main():
             pass
         cdp.close()
     finally:
-        try:
-            proc.terminate()
-            proc.wait(timeout=8)
-        except Exception:
-            proc.kill()
+        reap_chrome(proc)
         shutil.rmtree(profile, ignore_errors=True)
 
     if args.check:

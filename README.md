@@ -5,6 +5,11 @@ built over it (`journey/`, chapters in `journey/chapters/`). `main.js` is the
 one page entry; `index.html` is markup + links only. The same journey exists
 as plain HTML in `static/` (linked from the rail's site-map panel).
 
+**How to build / run it:** there is no compiler — see **[BUILDING.md](BUILDING.md)**:
+`python3 tools/rebuild.py` regenerates the derived artifacts (fast mode skips
+the capture re-shoot), and `http://localhost:8137/?livebuild=1` runs the site
+from live code instead of the baked geometry.
+
 ## Working on the scene — the regression gate
 
 `tools/capture.py --check` is the gate: it re-shoots 10 frozen stills
