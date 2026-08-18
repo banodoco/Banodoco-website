@@ -526,6 +526,51 @@ tbody tr:hover { background: rgba(240, 200, 119, 0.045); }
 /* ownership: three short columns, sortable headers, micro-bars */
 .ownership-table td { font-variant-numeric: tabular-nums; }
 .ownership-table td.contributor { color: var(--parchment); }
+/* per-owner reason: a gold underline marks describable names; the tooltip
+   itself is a panel in the page's own tokens — panel ground, gold hairline,
+   parchment text, serif voice — so it reads as part of the page rather than
+   a browser chrome. Keyboard: the cell is focusable when it carries a reason. */
+.ownership-table td.contributor.has-reason {
+  position: relative;
+  cursor: help;
+  text-decoration: underline;
+  text-decoration-color: rgba(217, 164, 65, 0.35);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.ownership-table td.contributor.has-reason[tabindex]:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+.ownership-table td.contributor.has-reason::after {
+  content: attr(data-reason);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.55rem);
+  z-index: 30;
+  width: min(26rem, 78vw);
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 0.8rem 2.2rem rgba(6, 4, 1, 0.55);
+  color: var(--parchment);
+  font-family: "EB Garamond", Garamond, Georgia, serif;
+  font-size: 0.92rem;
+  font-weight: normal;
+  letter-spacing: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1.5;
+  padding: 0.8rem 1rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.ownership-table td.contributor.has-reason:hover::after,
+.ownership-table td.contributor.has-reason:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
 .ownership-table th:nth-child(2), .ownership-table th:nth-child(3),
 .ownership-table td:nth-child(2), .ownership-table td:nth-child(3) {
   text-align: right;
