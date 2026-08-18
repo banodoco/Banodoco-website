@@ -2972,22 +2972,26 @@ export const REASONS = Object.freeze({
       { message_id: '1265809650469572618', channel: 'updates', date: '2024-07-24', snippet: "Next, <@378668580822188033> 🧙 animated comic book" },
       { message_id: '1276305161123401879', channel: 'updates', date: '2024-08-22', snippet: "And <@378668580822188033> is taking his animated magazine covers to aanother level!" },
       { message_id: '1273407183652126770', channel: 'updates', date: '2024-08-14', snippet: "And <@378668580822188033> with Machine Learning Magazine 💻" },
+      { message_id: '1158888670825295994', channel: 'art_sharing', date: '2023-10-03', snippet: "I tried this prompt travel experiment today also going for a hand-drawn look like <@378668580822188033>!" },
       { message_id: '1268348844069097606', channel: 'updates', date: '2024-07-31', snippet: "congratulations also to <@186218000343367680>, <@714528038112591962>, <@378668580822188033>..." },
       { message_id: '1299719806370451557', channel: 'art_sharing', date: '2024-10-26', snippet: "A collaboration between myself and <@378668580822188033> ... the workflow that Remy has developed" },
     ],
     aliases: ["Remy", "remycoup", "RemyCoup"],
     confidence: 'high',
-    note: "No authored messages under RemyCoup/remycoup (both eq probes 0). Identity established via Discord user id 378668580822188033 in pom's weekly Art Appreciation Wednesday roundups (Oct 2023, Jul/Aug 2024 x2, Nov 2024), a Banodoco competition winners post (Jul 31 2024), and jboogx.creative's Oct 2024 collaboration crediting 'the workflow that Remy has developed'. Attachment filenames remycoup.mp4/RemyCoup.mp4 in the HF archive export confirm the handle.",
+    note: "No authored messages under RemyCoup/remycoup (both eq probes 0). Identity established via Discord user id 378668580822188033: featured in pom's weekly Art Appreciation Wednesday roundups (Oct 2023, Jul 24 2024, Aug 14 2024, Aug 22 2024, Nov 16 2024) for animated comic book/magazine covers, congratulated among Banodoco art-competition winners (Jul 31 2024), described as a hand-drawn-look reference (Oct 2023), and credited with a developed animation workflow in a collab post (Oct 2024). Attachment filenames remycoup.mp4/RemyCoup.mp4 in the HF archive export confirm the handle.",
   }),
 
   'habibigonemad': Object.freeze({
-    sentence: "Artist whose animation was featured in pom's weekly Art Appreciation Wednesday roundup in October 2024, the month of his grant.",
+    sentence: "Artist who shared AI-generated videos to art_sharing through spring 2024 and had a piece featured in pom's weekly roundup in October 2024.",
     evidence: [
       { message_id: '1295155793103949844', channel: 'updates', date: '2024-10-13', snippet: "First, I have no idea wha this is by <@422827397096931328> but I think I like it:" },
+      { message_id: '1294056604655681557', channel: 'art_sharing', date: '2024-10-10', snippet: "(video attachment post — picked up by pom's Oct 13 roundup)" },
+      { message_id: '1235353641016365157', channel: 'art_sharing', date: '2024-05-01', snippet: "Been a week exploring comfy-ly 👼" },
+      { message_id: '1240157778027479089', channel: 'art_sharing', date: '2024-05-15', snippet: "(video attachment post)" },
     ],
     aliases: ["habibigonemad"],
     confidence: 'medium',
-    note: "Pre-probe shows 10 authored messages under author_name habibigonemad, but the live API repeatedly timed out (57014) on the author eq query under heavy concurrent load, and full-corpus window scans (Sep-Dec 2024 across art_sharing/art_chatter/chatter/all channels, plus 2-week windows across 2023-09..2026-05) did not surface him; the roundup feature (Oct 13 2024, attachment habibigonemad_.mp4 per HF archive) is the concrete archive evidence. Grant Oct 2024 ARTISTS matches.",
+    note: "10 authored messages found under exact author_name habibigonemad (via unified_feed author eq — the message_feed eq route kept timing out under load): all in art_sharing, May 1-Jun 6 2024 (mostly empty attachment posts plus 'Been a week exploring comfy-ly') and Oct 10 2024. The Oct 10 post was featured 3 days later as the opening item of pom's Oct 13 2024 Art Appreciation Wednesday roundup (attachment habibigonemad_.mp4 per HF archive export). Grant Oct 2024 ARTISTS matches this activity window.",
   }),
 
   'pedro_sanchez_86': Object.freeze({
@@ -3000,7 +3004,7 @@ export const REASONS = Object.freeze({
     ],
     aliases: ["Pedro (@LatentSpacer)"],
     confidence: 'high',
-    note: "Batch variants pedro_sanchez_86/Pedro_sanchez_86 have 0 authored rows; found 47 messages under author_name 'Pedro (@LatentSpacer)' in wan_chatter/hunyuanvideo/flux during Feb-Mar 2025 (grant months). Main contribution: converted the full fp32 UMT5-XXL encoder to encoder-only safetensors, shared on HuggingFace, with step-by-step setup help for the community.",
+    note: "Batch variants pedro_sanchez_86/Pedro_sanchez_86 have 0 authored rows; found 47 messages under author_name 'Pedro (@LatentSpacer)' in wan_chatter/hunyuanvideo/flux during Feb-Mar 2025 (grant months Feb+Mar 2025). Main contribution: converted the full fp32 UMT5-XXL encoder to encoder-only safetensors, published on HuggingFace, with step-by-step install help (huggingface-cli download, shard merge scripts, vram tradeoffs at 1280x720) for the community.",
   }),
 
   'scruntee': Object.freeze({
@@ -3013,7 +3017,7 @@ export const REASONS = Object.freeze({
     ],
     aliases: ["Scruntee"],
     confidence: 'high',
-    note: "167 authored messages under exact name Scruntee (30 retrieved live, full 151-message activity map from the HF archive export by author hash). Active from Oct 2023: animatediff/LCM/IPAdapter tinkerer sharing trippy loops, frequent ComfyUI help, Phish at the Sphere / Moment Factory AI content (Apr 2024 grant month), Wan LoRA training via ai-toolkit on Windows 11 (Mar 2025 grant month).",
+    note: "167 authored messages under exact name Scruntee (30 retrieved live; full 151-message activity map recovered from the HF archive export via stable author hash user_fa3dbfa5fb888ffb). Active from Oct 2023: animatediff/LCM/IPAdapter tinkerer sharing trippy loops, frequent ComfyUI help (frame caps, node packs, prompt scheduling). Made AI content for Phish at the Sphere in Las Vegas with Moment Factory (Apr 21 2024, his Apr 2024 grant month) and trained Wan LoRAs with ai-toolkit on Windows 11 (Mar 17 2025, his Mar 2025 grant month).",
   }),
 
   'ajo6268': Object.freeze({
@@ -3026,7 +3030,7 @@ export const REASONS = Object.freeze({
     ],
     aliases: ["AJO"],
     confidence: 'high',
-    note: "Batch variants ajo6268/Ajo6268 have 0 authored rows; his live author_name is 'AJO'. Located 32 of his messages (Feb-May 2025, matching grant months Mar+Apr 2025) via terminal prompts containing his username in the HF archive, then fetched real message_ids through tight message_id snowflake windows. Linux home server 'AJO-AI', RTX 5090, tested Wan 2.1 gradio, HunyuanVideo, HiDream and LTXV locally, frequently posting error logs and fixes.",
+    note: "Batch variants ajo6268/Ajo6268 have 0 authored rows; his live author_name is 'AJO'. Located 32 of his messages (Feb-May 2025, matching grant months Mar+Apr 2025) via terminal prompts containing his username (ajo6268@AJO-AI) in the HF archive export, then fetched real message_ids through tight message_id snowflake windows. Linux home server 'AJO-AI' with RTX 5090; ran Wan 2.1 gradio, HunyuanVideo, HiDream, LTXV locally and frequently posted error logs, fixes and even a self-built Discord bot that solved his ComfyUI output-folder question.",
   }),
 
   '[ai]ndmix': Object.freeze({
@@ -3144,43 +3148,67 @@ export const REASONS = Object.freeze({
   }),
 
   'uehreka': Object.freeze({
-    sentence: "Shared knowledge and practical tools that helped the community get more out of these models.",
-    evidence: [],
-    aliases: [],
-    confidence: 'low',
-    note: "Category fallback — no archive presence found under any name variant; sentence reflects the grant category only.",
+    sentence: "Ran shared Cosmos 16-step benchmarks, stress-tested HunyuanVideo beyond recommended resolutions, and built Comfy-driven art projects — later prototyping a FlashWorld-based 'VR dream' desktop app.",
+    evidence: [
+      { message_id: '1334571193155588127', channel: 'cosmos', date: '2025-01-30', snippet: "OK, 16step benchmark is done, I think this might be the most interesting one. There's a wide range of quality at this step count, so folks can actually use these to figure out..." },
+      { message_id: '1334233983420076194', channel: 'hunyuanvideo', date: '2025-01-29', snippet: "At the very least I can say: This ain't Cosmos, you won't get crash-and-burn results when you go outside the recommended resolutions." },
+      { message_id: '1334760069174399018', channel: 'art_projects', date: '2025-01-31', snippet: "I've decided to use Comfy's HTTP interface instead of WebSockets, it ended up making mo..." },
+      { message_id: '1433325943224799283', channel: 'world-models', date: '2025-10-30', snippet: "I'll post the GitHub link here when I'm done (hopefully in the next day or so with Codex's help). The initial prototype is gonna be just a desktop WASD+mouse experience" },
+    ],
+    aliases: ["Uehreka"],
+    confidence: 'high',
+    note: "697 authored messages. Jan-2025 window shows Cosmos step-count benchmarks shared for the community, HunyuanVideo resolution testing, and a personal Comfy-driven art project; by Oct 2025 (world-models channel) he was prototyping a FlashWorld-based VR desktop app on his 5090.",
   }),
 
   'chancelor.': Object.freeze({
-    sentence: "Shared knowledge and practical tools that helped the community get more out of these models.",
-    evidence: [],
-    aliases: [],
-    confidence: 'low',
-    note: "Category fallback — no archive presence found under any name variant; sentence reflects the grant category only.",
+    sentence: "Shared the clip-chopping training scripts and setup guides the community kept reusing, and got Musubi H3 training running on a 24GB card via block-swap.",
+    evidence: [
+      { message_id: '1535887698949308477', channel: 'live_updates', date: '2025-08-09', snippet: "chancelor got musubi training running on a 24GB card, posting a clean, descending loss curve at ..." },
+      { message_id: '1343983600948744295', channel: 'hunyuanvideo_training', date: '2025-02-25', snippet: "(Re: 33frames) - posted a great script I still use that will chop out 33frame clips from videos placed together in a given folde..." },
+      { message_id: '1325689246274814072', channel: 'hunyuanvideo', date: '2025-01-06', snippet: "I'd recommend upping your python version, I wrote a semi complete guide here, ymmv" },
+      { message_id: '1308160353867272202', channel: 'cogvideox_training', date: '2024-11-18', snippet: "Thanks for the captioning script you shared earlier. I did some modifications that could be helpful for others with 16 GB VRAM" },
+    ],
+    aliases: ["chancelor", "Chancelor", "Chancelors"],
+    confidence: 'high',
+    note: "Zero messages under 'Chancelor.' but author_name 'chancelor' (lowercase, member id 250118360711430144) has many; others repeatedly cite his scripts (33-frame clip chopper, captioning), his setup guide ('reach your post chancelor'), and BNDC's live_updates + daily_summaries (2025-08-09) credit him for Musubi H3 training on a 24GB card via block-swap; he also shared LR-sweep results (AdamW 0.00007/0.00005) in Apr 2026.",
   }),
 
   'g.5940': Object.freeze({
-    sentence: "Shared knowledge and practical tools that helped the community get more out of these models.",
-    evidence: [],
-    aliases: [],
-    confidence: 'low',
-    note: "Category fallback — no archive presence found under any name variant; sentence reflects the grant category only.",
+    sentence: "Built the ComfyUI Minimap extension and comfyui-weaver, a Claude Code–ComfyUI integration, and shared the HunyuanLoom repo — all credited in pom's Knowledge/Tools lists.",
+    evidence: [
+      { message_id: '1404212482586841199', channel: 'posts', date: '2025-08-10', snippet: "Created ComfyUI Minimap UI extension." },
+      { message_id: '1514709354232811654', channel: 'resources', date: '2026-06-11', snippet: "https://github.com/GuusF/comfyui-weaver  What it does: Claude runs your ComfyUI — builds/converts/runs workflows, manages the queue, and looks at its own renders (vision QC: it extracts frames, com..." },
+      { message_id: '1369432510819471410', channel: 'posts', date: '2025-05-06', snippet: "demonstrated Flux>i2v and shared ComfyUI-HunyuanLoom repository" },
+      { message_id: '1405506901113966662', channel: 'Insightface Installer Node', date: '2025-08-14', snippet: "fixed apperance and protable dection if u liek make a gitpull and see if it works for you" },
+    ],
+    aliases: ["Guus", "GuusF"],
+    confidence: 'high',
+    note: "No messages under 'g.5940'/'G.5940' — members table shows member_id 293462558382358528 with username 'g.5940', global_name/nick 'Guus'. Authored 20+ messages as 'Guus' (vibecoding/resources: comfyui-weaver integration for Claude Code + ComfyUI; wan_comfyui help). pom's curated Knowledge/Tools posts explicitly credit him for ComfyUI Minimap UI extension and ComfyUI-HunyuanLoom repo; also contributed to an Insightface Installer Node repo.",
   }),
 
   'aikitoria': Object.freeze({
-    sentence: "Shared knowledge and practical tools that helped the community get more out of these models.",
-    evidence: [],
-    aliases: [],
-    confidence: 'low',
-    note: "Category fallback — no archive presence found under any name variant; sentence reflects the grant category only.",
+    sentence: "Prolific model analyst whose Wan 2.2 frame-rate/length findings and guidance-block optimization comparisons earned explicit credit in the community's Knowledge/Tools lists.",
+    evidence: [
+      { message_id: '1404212482586841199', channel: 'posts', date: '2025-08-10', snippet: "Analysed Wan 2.2 frame-rate/length settings and shared findings." },
+      { message_id: '1369432510819471410', channel: 'posts', date: '2025-05-06', snippet: "shared guidance block optimization comparisons." },
+      { message_id: '1363935635446038529', channel: 'chatter', date: '2025-04-21', snippet: "lets see if they reply https://github.com/SandAI-org/MAGI-1/issues/5" },
+      { message_id: '1400527954177691700', channel: 'wan_chatter', date: '2025-07-31', snippet: "- blackwell server hardware - quantization - step distill" },
+    ],
+    aliases: ["aikitoria"],
+    confidence: 'high',
+    note: "7825 authored messages spanning Nov 2024 (Flux/ComfyUI torch-compile debugging with Kijai) through Aug 2026 (Minimax H3 vs LTX 2.5 comparisons); a deep technical analyst across chatter/flux/wan_chatter, with MAGI-1 teardowns and model-capability probing. pom's curated lists credit her Wan 2.2 frame-rate/length analysis and guidance-block optimization comparisons.",
   }),
 
   'duranovsky': Object.freeze({
-    sentence: "Made art with these tools and shared it with the community.",
-    evidence: [],
-    aliases: [],
-    confidence: 'low',
-    note: "Category fallback — no archive presence found under any name variant; sentence reflects the grant category only.",
+    sentence: "3D artist who piped 3ds Max biped mocap straight into Wan VACE-to-video via an openpose-compliant skinned mesh, skipping DWPose.",
+    evidence: [
+      { message_id: '1393968347665924186', channel: 'wan_gens', date: '2025-07-13', snippet: "Old school 3dsmax biped, an openpose-compliant mesh  skinned to it and direct plug into vace to video... it works" },
+      { message_id: '1394014590572040364', channel: 'wan_gens', date: '2025-07-13', snippet: "Ha, you can do that. I have a Rokoko mocap suit that includes mocap gloves" },
+      { message_id: '1393270061099122739', channel: 'wan_chatter', date: '2025-07-11', snippet: "I used FusionX + 3D viscosity sim to guide the generation" },
+    ],
+    aliases: ["Duranovsky"],
+    confidence: 'high',
+    note: "Only 13 authored messages (Jul 2025), all in wan_chatter/wan_gens, but very distinctive: demonstrated a 3ds Max biped + openpose-compliant mesh workflow driving Wan VACE-to-video directly (always 100% accurate vs DWPose), plus FusionX-driven generations and a Rokoko mocap suit setup.",
   }),
 
   'johannezz': Object.freeze({
