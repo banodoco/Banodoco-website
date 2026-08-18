@@ -525,6 +525,39 @@ tbody tr:hover { background: rgba(240, 200, 119, 0.045); }
 
 /* ownership: three short columns, sortable headers, micro-bars */
 .ownership-table td { font-variant-numeric: tabular-nums; }
+
+/* contributors list — the ledger as readable prose: name in the
+   parchment display voice, the reason line in the body voice, thin
+   gold hairlines between items. One column, no table chrome. */
+.contributors-list {
+  list-style: none;
+  margin: 1.8rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--hairline);
+}
+.contributor-item {
+  padding: 0.9rem 0.25rem;
+  border-bottom: 1px solid rgba(217, 164, 65, 0.14);
+  display: grid;
+  grid-template-columns: minmax(10rem, 16rem) 1fr;
+  gap: 1.2rem;
+  align-items: baseline;
+}
+.contributor-name {
+  font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 0.98rem;
+  color: var(--parchment);
+  overflow-wrap: anywhere;
+}
+.contributor-why {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(242, 235, 221, 0.78);
+}
+@media (max-width: 560px) {
+  .contributor-item { grid-template-columns: 1fr; gap: 0.25rem; }
+}
+
 .ownership-table td.contributor { color: var(--parchment); }
 /* per-owner reason: a gold underline marks describable names; the tooltip
    itself is a panel in the page's own tokens — panel ground, gold hairline,

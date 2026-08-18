@@ -34,7 +34,7 @@ import * as THREE from 'three';
 import * as H from '../../lib/helpers.js';
 import { isBaked, geometry, payload } from '../../lib/baked.js';
 import { PORTRAIT_SPRITE } from '../../../assets/contributor-portraits/manifest.js';
-import { CONTRIBUTOR_POOL, ROLE_BLURB } from '../../../content/contributors.js';
+import { CONTRIBUTOR_POOL } from '../../../content/contributors.js';
 import { REST_P } from './leg.js';
 
 const TAU = Math.PI * 2;
@@ -1848,12 +1848,30 @@ export function buildPortraitField({
   /** Move the dealt people onto the slots. Name, role, blurb and face travel
    *  together, in one assignment, for the reason in content/content.js. */
   function seatPeople(people) {
+    /* The dealt records are PERSON entries (content/contributors.js): name,
+       role, blurb and sprite travel together as one frozen record — the
+       researched reason is already resolved into `blurb` at registry build,
+       so nothing here re-joins sources. ROLE_BLURB fallback also happened
+       there; this assignment only moves the record onto the slot.
+
+       The SAME record is written back into the static `contributors` row
+       (content/content.js describes those rows as the opening occupant,
+       "overwritten in place on every deal"): ui.js reads the chip label and
+       the hover card from CONTENT.contributors, so name, role and blurb on
+       those surfaces must be the dealt person, not the opening seat. Scene,
+       chip and card then agree by construction. */
     nodes.forEach((nd, i) => {
       const p = people[i % people.length];
       if (!p) return;
-      nd.content.name = p[0];
-      nd.content.role = p[1];
-      nd.content.blurb = ROLE_BLURB[p[1]] || nd.content.blurb;
+      nd.content.name = p.name;
+      nd.content.role = p.role;
+      nd.content.blurb = p.blurb;
+      const staticRow = contributors.find(c => c.id === nd.id);
+      if (staticRow) {
+        staticRow.name = p.name;
+        staticRow.role = p.role;
+        staticRow.blurb = p.blurb;
+      }
       // The person's own tile, as a ready-to-render descriptor (2026-08-18,
       // Hannah: the mobile sheet shows the avatar beside the name — ui.js
       // stays chapter-agnostic, so the row carries everything it needs).
@@ -1861,7 +1879,7 @@ export function buildPortraitField({
       // name does: face, name and icon must be the same person or nothing.
       nd.content.avatar = {
         url: PORTRAIT_SPRITE.url,
-        col: p[2], row: p[3],
+        col: p.sprite.col, row: p.sprite.row,
         cols: PORTRAIT_SPRITE.cols, rows: PORTRAIT_SPRITE.rows,
       };
     });
@@ -1878,7 +1896,7 @@ export function buildPortraitField({
       return {
         img: photoSet.sheet,
         // the person's own tile in the published sheet
-        sx: p[2] * T, sy: p[3] * T, sw: T, sh: T,
+        sx: p.sprite.col * T, sy: p.sprite.row * T, sw: T, sh: T,
         bustSeed: (nd.content.seed ?? i + 1) * 131 + i * 7 + v * 9973,
         mirror: false,
         exposure: 0.90 + ((i * 29 + v * 7 + k) % 13) / 13 * 0.26,

@@ -33,10 +33,15 @@ const EVENTS = [
     thumb: 'paris-2025-thumb.jpg', preview: 'paris-2025-preview.mp4' },
 ];
 
-const AUTO_MS = 6000;        // their useEventsAutoAdvance interval
+// One video per event (~10s), played once; when it ends the FINAL FRAME
+// HOLDS on screen (Peter, 2026-08-18: "play like 10 seconds before
+// stopping on the final frame"). No auto-advance — the ‹ › arrows are
+// the only way to move between the three events (retrying auto-advance
+// read as "the old behaviour": a stalled video ended early and the card
+// kept crossfading to the next poster).
 const CROSSFADE_MS = 500;    // their event-media preview crossfade
 
-let idx = 0, timer = null, pending = null;
+let idx = 0, pending = null;
 let posterEl, previewEl, lineEl, tagEl;
 
 function caption(i, animate = false) {
@@ -53,7 +58,7 @@ function caption(i, animate = false) {
   }
 }
 
-/** Point the trailer loop at the current event and crossfade it in (500ms)
+/** Point the preview at the current event and crossfade it in (500ms)
     once frames are actually rendering — the poster holds until then. */
 function setPreview() {
   previewEl.classList.remove('on');
@@ -81,14 +86,8 @@ function render(i) {
   }, CROSSFADE_MS);
 }
 
-function step(delta) {
-  render((idx + delta + EVENTS.length) % EVENTS.length);
-}
-
 function manualStep(delta) {
-  // stop auto for the rest of this reveal
-  if (timer) { clearInterval(timer); timer = null; }
-  step(delta);
+  render((idx + delta + EVENTS.length) % EVENTS.length);
 }
 
 export default {
@@ -106,11 +105,29 @@ export default {
     previewEl = document.createElement('video');
     previewEl.className = 'ad-preview';
     previewEl.muted = true;
-    previewEl.loop = true;
+    // no loop: the preview plays once and HOLDS its final frame (Peter,
+    // 2026-08-18); `ended` needs no handler — a finished video keeps the
+    // last frame on screen by itself
     previewEl.playsInline = true;
-    previewEl.preload = 'none';
+    // preload the whole clip: each file is ~500KB, and Safari's media
+    // loader stalls/finishes early on range-requested progressive
+    // playback, which showed as "plays a second then the poster" — a
+    // single full fetch removes that failure mode entirely
+    previewEl.preload = 'auto';
     previewEl.setAttribute('aria-hidden', 'true');
-    previewEl.addEventListener('playing', () => previewEl.classList.add('on'));
+    previewEl.addEventListener('playing', () => {
+      previewEl.classList.add('on');
+      // once real frames are rendering the poster is DONE for this reveal —
+      // it must never come back over the video (a decoder hiccup or surface
+      // drop otherwise shows the thumbnail through the transparent element)
+      posterEl.style.visibility = 'hidden';
+    });
+    // a real decode/load failure parks on the poster (the autoplay-veto
+    // fallback) — never churn the walker
+    previewEl.addEventListener('error', () => {
+      previewEl.classList.remove('on');
+      posterEl.style.visibility = '';
+    });
     media.append(posterEl, previewEl);
 
     const scrim = document.createElement('div');
@@ -182,19 +199,17 @@ export default {
 
   activate() {
     // every fresh reveal opens on the MOST RECENT event (Hannah,
-    // 2026-08-17) — the walker and auto-advance move on from there
+    // 2026-08-17); the ‹ › walker moves on from there
     if (idx !== 0) {
       idx = 0;
       caption(0);
       posterEl.src = `${CARD_ASSETS}/ados/${EVENTS[0].thumb}`;
     }
-    if (REDUCE.matches || timer) return;   // poster-only; never load the previews
+    if (REDUCE.matches) return;   // poster-only; never load the previews
     setPreview();
-    timer = setInterval(() => { if (!REDUCE.matches) step(1); }, AUTO_MS);
   },
 
   deactivate() {
-    if (timer) { clearInterval(timer); timer = null; }
     if (pending) {
       clearTimeout(pending);
       pending = null;
@@ -206,5 +221,6 @@ export default {
     previewEl.classList.remove('on');
     previewEl.removeAttribute('src');   // free the decoder; keep posters
     previewEl.load();
+    posterEl.style.visibility = '';     // next reveal starts on the poster again
   },
 };

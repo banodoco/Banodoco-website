@@ -2,7 +2,9 @@
 
 There is no build step: the tree deploys as-is, minus everything listed under
 MUST NOT SHIP. Serve `glowshroom/` as the site root (subpaths work — all live
-references are relative).
+references are relative). For regenerating the derived artifacts (geometry
+bake, favicons, captures) BEFORE shipping, see **[BUILDING.md](BUILDING.md)** —
+`python3 tools/rebuild.py` (fast, no captures) or `--with-captures` (full).
 
 ## MUST ship
 

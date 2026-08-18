@@ -3,7 +3,7 @@
    The ledger lives in data.js (built separately) — this module renders it,
    so the tables stay data, not markup. */
 import { GRANTS, TRANSFERS, OWNERSHIP } from './data.js';
-import { REASONS } from './reasons.js';
+import { PERSON } from '../content/contributors.js';
 import { initMycelium } from './mycelium.js';
 
 /* ============================================================
@@ -186,12 +186,12 @@ function renderOwnership() {
     const user = document.createElement('td');
     user.className = 'contributor';
     user.textContent = o.username;
-    const reason = REASONS[o.username.toLowerCase()];
-    if (reason) {
+    const person = PERSON[o.username.toLowerCase()];
+    if (person && person.blurb) {
       user.classList.add('has-reason');
-      user.dataset.reason = reason.sentence;
+      user.dataset.reason = person.blurb;
       user.tabIndex = 0;
-      user.setAttribute('aria-label', `${o.username}: ${reason.sentence}`);
+      user.setAttribute('aria-label', `${o.username}: ${person.blurb}`);
     }
 
     const granted = document.createElement('td');
@@ -247,8 +247,49 @@ ownershipMore.addEventListener('click', () => {
   renderOwnership();
 });
 
+/* ============================================================
+   CONTRIBUTORS — the same ledger as a readable list: every
+   owner alphabetically, name + the reason line (researched or
+   category fallback) as body text, so the descriptions read
+   without hovering. Filter matches name or reason text. ============================================================ */
+const contributorsList = document.getElementById('contributors-list');
+const contributorsFilter = document.getElementById('contributors-filter');
+const contributorsCount = document.getElementById('contributors-count');
+
+function renderContributors() {
+  const q = contributorsFilter.value.toLowerCase();
+  const entries = OWNERSHIP.map((o) => {
+    const person = PERSON[o.username.toLowerCase()];
+    return { name: o.username, reason: person ? person.blurb : null };
+  }).filter((e) => !q || e.name.toLowerCase().includes(q) || (e.reason && e.reason.toLowerCase().includes(q)));
+
+  contributorsList.textContent = '';
+  const frag = document.createDocumentFragment();
+  for (const e of entries) {
+    const li = document.createElement('li');
+    li.className = 'contributor-item';
+    const name = document.createElement('span');
+    name.className = 'contributor-name';
+    name.textContent = e.name;
+    li.appendChild(name);
+    if (e.reason) {
+      const why = document.createElement('span');
+      why.className = 'contributor-why';
+      why.textContent = e.reason;
+      li.appendChild(why);
+    }
+    frag.appendChild(li);
+  }
+  contributorsList.appendChild(frag);
+
+  contributorsCount.textContent = `${entries.length} of ${OWNERSHIP.length} contributors`;
+}
+
+contributorsFilter.addEventListener('input', renderContributors);
+
 /* --- boot --- */
 renderGrants();
 applyGrantsVisibility();
 renderOwnership();
+renderContributors();
 initMycelium();
