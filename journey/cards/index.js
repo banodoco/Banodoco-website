@@ -67,6 +67,54 @@ export const REDUCE = typeof matchMedia === 'function'
 /** Root-relative asset base — index.html is served from glowshroom/. */
 export const CARD_ASSETS = './assets/cards';
 
+/* ---- idle-time warming (Hannah, 2026-08-18: assets "always loaded before
+   we need them but not in a silly way where they'll slow down the site").
+   This module is imported when the journey tier lazily boots — after the
+   hero's first paint, which is the budget that must not move. From there,
+   everything a first hover needs is warmed ONE ASSET PER IDLE SLICE,
+   lightest first: fonts (~60KB, so no swap-flash on first reveal), then
+   the still images (~370KB), then the heavy hover media (ADOS trailer
+   loops, Arca videos — ~1.6MB) last, so they are usually cached before
+   anyone reaches Connect. fetch() primes the HTTP cache (a no-op under
+   the dev server's no-store, real caching in production); fonts warm
+   through document.fonts so the faces are genuinely parsed. Slow
+   connections simply stop warming when hovers start competing — idle
+   slices yield to real work by construction. */
+const WARM_FONTS = ['Eubergine', 'Geosans Light', 'Pilowlava', 'Monoton', 'Sixtyfour', 'Rubik Glitch'];
+const WARM_LIGHT = [
+  'arca/poster-1.jpg', 'arca/poster-2.jpg', 'arca/poster-3.jpg', 'arca/poster-4.jpg',
+  'ados/paris-2026-thumb.jpg', 'ados/la-2025-thumb.jpg', 'ados/paris-2025-thumb.jpg',
+  'artcompute/loreweavr.jpg', 'artcompute/ashmotv.jpg', 'artcompute/persoon.jpg',
+  'tworp/cover.jpg', 'hivemind/mascot.png', 'discord/fallback.json',
+];
+const WARM_HEAVY = [
+  'ados/paris-2026-preview.webp', 'ados/la-2025-preview.webp', 'ados/paris-2025-preview.webp',
+  'arca/video-1.mp4', 'arca/video-2.mp4', 'arca/video-3.mp4', 'arca/video-4.mp4',
+];
+
+function warmCardAssets() {
+  const ric = typeof requestIdleCallback === 'function'
+    ? requestIdleCallback
+    : (fn) => setTimeout(fn, 400);
+  const queue = [
+    () => { for (const f of WARM_FONTS) document.fonts.load(`1em '${f}'`).catch(() => {}); },
+    ...[...WARM_LIGHT, ...WARM_HEAVY].map((path) => () =>
+      fetch(`${CARD_ASSETS}/${path}`).catch(() => {})),
+  ];
+  const step = () => {
+    const job = queue.shift();
+    if (!job) return;
+    job();
+    ric(step);
+  };
+  ric(step);
+}
+
+if (typeof document !== 'undefined') {
+  // let the journey's own boot work land first; warming is strictly surplus
+  setTimeout(warmCardAssets, 1500);
+}
+
 /* Chip glyphs (Hannah, 2026-08-18: "imagine if we had minimalistic icons
    instead [of the white dots], one custom to each … all the same colour and
    elegant but minimalistic"). One hairline pictograph per initiative, all

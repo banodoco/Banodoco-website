@@ -8,6 +8,11 @@ generated or stock imagery. Re-fetch sources are listed per directory.
 - poster-1..4.jpg — the site's own four hero panels (1080×1920 → h520 jpg):
   1 Arnolfo di Cambio · 2 Francesco Petrarca · 3 Giotto di Bondone ·
   4 Jean Buridan, from https://arcagidan.com/{1..4}_*_poster.jpg
+- video-1..4.mp4 — the site's own four hero videos (same figure order as
+  the posters), fetched 2026-08-18 from https://arcagidan.com/{1..4}_*_video.mp4
+  the hour the domain returned from a Railway outage, then transcoded with
+  macOS avconvert (PresetAppleM4VCellular): 640×1138 @ 2-5MB each → ~170-286KB
+  each, indistinguishable at the card's ~90px panel width.
 - eubergine-sub.woff2 — the site's own self-hosted display face
   (https://arcagidan.com/fonts/Eubergine.ttf), subset to caps+space.
 - geosans-sub.woff2 — its body face (GeosansLight.ttf), subset.
