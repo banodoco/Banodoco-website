@@ -40,11 +40,22 @@
 
 import { CARD_ASSETS, REDUCE } from './index.js';
 
+// SELF-HOSTED as of 2026-08-18 (assets/cards/arca/video-{1..4}.mp4,
+// PROVENANCE.md): the site's own hero videos, fetched the hour its domain
+// came back from a day-long Railway outage, transcoded to ~250KB each.
+// Local files also sidestep the stale-DNS window that made the remote
+// URLs fail for cached resolvers.
+//
+// FILENAMES ONLY at module scope: index.js imports this module while its
+// own bindings are still initializing (registry cycle), so touching
+// CARD_ASSETS up here is a TDZ ReferenceError that kills the whole
+// journey (learned live, 2026-08-18). Compose paths at runtime — light()
+// and build() run long after every module is settled.
 const FIGURES = [
-  { syl: 'AR', name: 'Arnolfo di Cambio', video: 'https://arcagidan.com/1_arnolfo_di_cambio_video.mp4' },
-  { syl: 'CA', name: 'Francesco Petrarca', video: 'https://arcagidan.com/2_francesco_petrarca_video.mp4' },
-  { syl: 'GI', name: 'Giotto di Bondone', video: 'https://arcagidan.com/3_giotto_di_bondone_video.mp4' },
-  { syl: 'DAN', name: 'Jean Buridan', video: 'https://arcagidan.com/4_jean_buridan_video.mp4' },
+  { syl: 'AR', name: 'Arnolfo di Cambio', video: 'video-1.mp4' },
+  { syl: 'CA', name: 'Francesco Petrarca', video: 'video-2.mp4' },
+  { syl: 'GI', name: 'Giotto di Bondone', video: 'video-3.mp4' },
+  { syl: 'DAN', name: 'Jean Buridan', video: 'video-4.mp4' },
 ];
 
 let root = null, panels = [], syls = [], videos = [];
@@ -56,8 +67,8 @@ function light(i) {
   syls.forEach((s, k) => s.classList.toggle('lit', k === i));
   videos.forEach((v, k) => {
     if (k === i && !REDUCE.matches) {
-      // hover-streamed: the src attaches on first spotlight, never sooner
-      if (!v.src) v.src = FIGURES[k].video;
+      // the src attaches on first spotlight, never sooner
+      if (!v.src) v.src = `${CARD_ASSETS}/arca/${FIGURES[k].video}`;
       v.play().catch(() => {});     // autoplay veto -> the poster simply stays
     } else if (v.src) {
       v.pause();
