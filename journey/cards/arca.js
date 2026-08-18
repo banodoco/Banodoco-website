@@ -126,15 +126,16 @@ export default {
     info.className = 'ag-info';
     info.textContent = 'Edition II · 198 entries · 7,287 votes · $56.8k paid';
 
-    // the door, in the site's own voice (cream Geosans, its dark-red hover),
-    // revealed on hover/pin by the shared card-cta rule
+    // the door, in the site's own voice — Edition II is OVER (results
+    // announced 2026-04-06), so the door says what a visitor can actually
+    // do: see the winners. The href is the site's own winners route.
     const cta = document.createElement('a');
     cta.className = 'ag-cta card-cta';
-    cta.href = 'https://arcagidan.com/';
+    cta.href = 'https://arcagidan.com/winners/edition-2';
     cta.target = '_blank';
     cta.rel = 'noopener noreferrer';
     cta.tabIndex = -1;
-    cta.textContent = 'ENTER THE PRIZE →';
+    cta.textContent = 'SEE WINNERS →';
     stage.append(row, word, info, cta);
   },
 

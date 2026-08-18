@@ -112,13 +112,23 @@
    hover-streamed from the site itself, the poster beneath is the fallback */
 .ag-video { opacity: 0; transition: opacity 0.3s ease; }
 .ag-video.playing { opacity: 1; }
+/* the spotlit poster DRIFTS while it holds the light — guaranteed motion
+   under the pointer even while (or if) the figure's video never arrives
+   (2026-08-18: arcagidan.com's host began 403ing cross-site media; the
+   video layer stays wired for the day it opens up or the files land in
+   assets/) */
+.ag .ag-panel.lit img { animation: ag-drift 7s ease-in-out infinite alternate; }
+@keyframes ag-drift {
+  from { transform: scale(1.05) translateY(0); }
+  to   { transform: scale(1.14) translateY(-2.5%); }
+}
 .ag.ag-hovering .ag-panel:not(.lit) img,
 .ag.ag-hovering .ag-panel:not(.lit) .ag-video { filter: brightness(0.28) saturate(0.5); }
 
 .ag-word {
   position: absolute;
-  inset: 0 0 30px 0;                       /* optically centred above the
-                                              info microline's scrim */
+  inset: 0 0 22px 0;                       /* true optical centre: half the
+                                              info scrim's height, no more */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -448,11 +458,11 @@
 /* Wordmark block — upper third, centred, over the scrim. */
 .ad-word {
   position: absolute;
-  top: 26px;                  /* below the SEE EVENTS chip's row — the
-                                 wordmark and the door never overlap */
+  top: 26px;                  /* below the SEE EVENTS chip's row */
   left: 0;
   right: 0;
-  height: 34%;
+  bottom: 50px;               /* above the walker bar — the wordmark now
+                                 centres in the window it actually has */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -675,9 +685,34 @@
   background: rgba(10, 7, 3, 0.94);   /* house-dark ground #0a0703 */
 }
 
+/* the console's title bar: name left, what-it-is right */
+.hm-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.55rem 1rem 0.45rem;
+  border-bottom: 1px solid rgba(217, 164, 65, 0.15);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+.hm-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: rgba(217, 164, 65, 0.75);      /* house gold */
+}
+.hm-desc {
+  font-size: 0.58rem;
+  letter-spacing: 0.02em;
+  color: rgba(233, 221, 201, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .hm-console {
   flex: 1 1 auto;
-  padding: 0.7rem 1rem 0.2rem;
+  padding: 0.55rem 1rem 0.2rem;
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   font-size: 0.72rem;
   line-height: 1.55;
@@ -974,3 +1009,31 @@
 }
 .dc-thumb.on { opacity: 1; }
 .dc-thumb:not([src]) { display: none; }
+
+/* ---- chip pictographs (Hannah, 2026-08-18: custom minimal icons in place
+   of the white dots) — same footprint and dodge-pin as the dot they
+   replace, same gold, one hairline drawing per initiative -------------- */
+.j-hot-dot.j-hot-ico {
+  width: 13px; height: 13px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: rgba(240, 200, 119, 0.72);       /* the dot's own gold */
+  filter: drop-shadow(0 0 5px rgba(240, 170, 60, 0.45));
+}
+.j-hot-dot.j-hot-ico svg {
+  display: block;
+  width: 100%; height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* hover/hot/focus brightens the drawing exactly as it brightened the dot */
+.j-hot:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico {
+  background: none;
+  box-shadow: none;
+  color: rgba(255, 228, 170, 0.98);
+  filter: drop-shadow(0 0 7px rgba(240, 170, 60, 0.7));
+}
