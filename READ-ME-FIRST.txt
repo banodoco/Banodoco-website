@@ -1,0 +1,22 @@
+BANODOCO — the website, complete with its history
+=================================================
+
+This is the Banodoco site: a glowing wireframe mushroom you scroll
+through, built by Hannah. The full git history is inside — 235 commits
+with unusually lovely messages. Try:  git log --oneline
+
+TO SEE THE WEBSITE:
+  1. Double-click START-WEBSITE.command
+     (If macOS complains it's from an unidentified developer:
+      right-click it, choose "Open", then "Open" again.)
+  2. Your browser opens at http://localhost:8137 — scroll slowly. Enjoy.
+
+  Double-clicking index.html directly won't work — browsers block the
+  site's JavaScript modules from plain files, so it needs the tiny local
+  server the .command starts. Requires python3 (any Mac has it).
+
+  Also inside: the still version at /static/, the ownership ledger at
+  /ownership/, and a 404 page worth typing a wrong URL for.
+
+A few links read "ORIGIN" — that's a deploy-time placeholder, not a bug.
+The site isn't public yet. You're seeing it early.
