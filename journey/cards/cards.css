@@ -11,9 +11,14 @@
 
 /* Above the side rail (site.css z 4) — at phone widths the 86vw card runs
    under the rail's menu button, which read as the menu floating ON the
-   card (Hannah, 2026-08-17). Still under the menu scrim/panel (6/7), so an
-   OPEN menu covers an open card, which is the right order. */
-.j-pop { z-index: 5; }
+   card (Hannah, 2026-08-17, again 2026-08-18 on mobile). The FIRST fix
+   set z-index on .j-pop itself, which is inert: the popover lives inside
+   .j-hotspots, a fixed z-index:1 stacking context, so against the rail
+   only the CONTAINER's index counts. Raising the layer is the real fix.
+   Still under the menu scrim/panel (6/7), so an OPEN menu covers an open
+   card, which is the right order; the container is pointer-events:none,
+   so nothing new intercepts the rail's own hover. */
+.j-hotspots { z-index: 5; }
 
 .j-pop.j-pop-rich {
   max-width: min(21.5rem, 86vw);
@@ -1035,3 +1040,10 @@
   color: rgba(255, 228, 170, 0.98);
   filter: drop-shadow(0 0 7px rgba(240, 170, 60, 0.7));
 }
+
+/* an icon chip never stacks: glyph and name stay one row at every width
+   (phones were wrapping the torch under a three-word label — Hannah,
+   2026-08-18). Scoped to the six initiative chips; contributor chips keep
+   the shared layout untouched. */
+.j-hot:has(.j-hot-ico) { flex-wrap: nowrap; }
+.j-hot:has(.j-hot-ico) .j-hot-label { white-space: nowrap; }

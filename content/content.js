@@ -498,7 +498,12 @@ export const CONTENT = {
     // --- Inspire chapter: three spore-exit spotlights (07-chapter-inspire.md IN-1.2) ---
     arca: {
       chapter: 'inspire',
-      label: 'Arca Gidan Prize',
+      // 'Arca Gidan Prize' -> 'Arca Gidan' (Hannah, 2026-08-18: "no need
+      // for the prize") — the chip and menu row say the name; the card's
+      // own PRIZE eyebrow and the spotlight title still carry the full
+      // title where there is room for it. Also the practical cure for the
+      // phone-width chip wrapping its icon under a three-word label.
+      label: 'Arca Gidan',
       short: 'An open-source AI art competition.',
       spotlight: {
         title: 'Arca Gidan Prize',
