@@ -88,7 +88,7 @@ const WARM_LIGHT = [
   'tworp/cover.jpg', 'hivemind/mascot.png', 'discord/fallback.json',
 ];
 const WARM_HEAVY = [
-  'ados/paris-2026-preview.webp', 'ados/la-2025-preview.webp', 'ados/paris-2025-preview.webp',
+  'ados/paris-2026-preview.mp4', 'ados/la-2025-preview.mp4', 'ados/paris-2025-preview.mp4',
   'arca/video-1.mp4', 'arca/video-2.mp4', 'arca/video-3.mp4', 'arca/video-4.mp4',
 ];
 
