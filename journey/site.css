@@ -1559,11 +1559,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     position: fixed;
     left: 0;
     top: 0;
-    z-index: 3;
-    width: min(25rem, 84vw);
+    /* 5, not 3 (2026-08-18, Hannah: the card "should appear in front of the
+       menu button"): the rail — hamburger included — sits at 4, so the old 3
+       slid the person's name UNDER the chrome whenever a right-side face put
+       its card on the flank. Above the rail, still under the opened menu's
+       scrim (6) and panel (7): a committed overlay outranks an annotation. */
+    z-index: 5;
+    width: max-content;
+    max-width: min(21rem, 84vw);
     max-height: 74vh;
     overflow-y: auto;
-    padding: 1.9rem 1.9rem 1.7rem;
+    padding: 1.15rem 1.35rem 1.1rem;
     background: rgba(14, 9, 3, 0.9);
     border: 1px solid rgba(217, 164, 65, 0.35);
     border-radius: 3px;
@@ -1711,11 +1717,43 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   .j-card-x:hover { color: var(--gold-bright); }
   .j-card-h {
-    margin: 0 0 0.9rem;
+    margin: 0 0 0.55rem;
     font-family: "Didot", "Playfair Display", Georgia, serif;
     font-weight: 400;
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     color: var(--parchment);
+  }
+  /* The person's avatar, left of the name — SHEET FORM ONLY (2026-08-18,
+     Hannah, mobile): the desktop side card stands beside the real face, so a
+     thumbnail there would say the same thing twice. Sprite tile via
+     background-position, inline styles set per person in ui.js mountCard. */
+  .j-card-ava {
+    display: none;
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: 50%;
+    border: 1px solid rgba(217, 164, 65, 0.4);
+    background-repeat: no-repeat;
+    vertical-align: -0.6rem;
+    margin-right: 0.6rem;
+  }
+  .j-card.sheet .j-card-ava { display: inline-block; }
+
+  /* The role, worn as a TAG (2026-08-18, Hannah) — same pill language as the
+     site's chips: ember border, whisper of fill, tracking caps. It sits tight
+     under the name so name-and-role read as one label beside the face. */
+  .j-card-tag {
+    display: inline-block;
+    margin: 0 0 0.8rem;
+    padding: 0.24em 0.85em 0.26em;
+    border: 1px solid rgba(217, 164, 65, 0.45);
+    border-radius: 999px;
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold-bright);
+    background: rgba(217, 164, 65, 0.08);
   }
   .j-card-claim { margin: 0 0 0.8rem; color: var(--gold-bright); font-size: 1.05rem; }
   .j-card-p { margin: 0 0 0.8rem; font-size: 0.9rem; line-height: 1.6; color: var(--muted); }

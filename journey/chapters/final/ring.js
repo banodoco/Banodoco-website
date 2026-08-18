@@ -801,8 +801,15 @@ export function createFinalRing(sceneApi, uniforms) {
          back-before-front pop this pass exists to remove. `reveal` above is
          untouched and still owns every departure. */
       {
+        // Corridor passers sit out the deal (world.js CORRIDOR): the depth
+        // rank would hand the nearest body the FIRST rung, and the passer is
+        // nearest precisely because it stands in the camera's own corridor —
+        // dealing it early is the pass-by this exception exists to remove.
+        // Excluded, its revealIn falls back to its landing reveal everywhere
+        // (`m.revealIn ?? m.reveal`), and the remaining bodies deal their own
+        // rungs 1:1 as before.
         const bodies = [
-          ...MEMBERS.map(m => ({ rec: m,
+          ...MEMBERS.filter(m => !m.passer).map(m => ({ rec: m,
             d: Math.hypot(m.x - REST_CAM.x, m.z - REST_CAM.z) })),
           ...t3.map(c => ({ rec: c, d: c.dist })),
         ].sort((a, b) => a.d - b.d);

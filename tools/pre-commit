@@ -38,6 +38,21 @@ if [ -n "$MISSING_TWIN" ]; then
   echo "  If the staged twin changed, the other likely must too. Not blocking." >&2
 fi
 
+# Derived identity assets: favicons and og cards are cut from the mark
+# master and the mission/owned captures by build-meta.py (same regenerate-
+# never-repaint contract as the geometry bake). A re-blessed capture that
+# doesn't re-run it silently ships a stale social card, so when a source or
+# the script is staged, byte-check the derivation. Pure PIL — no server.
+if echo "$STAGED" | grep -q \
+  "glowshroom/static/captures/mission@1440x900.png\|glowshroom/static/captures/owned@1440x900.png\|glowshroom/assets/brand/mark-b-source.png\|glowshroom/tools/build-meta.py"; then
+  META_PY="$(git rev-parse --show-toplevel)/ados-paris/glowshroom/tools/build-meta.py"
+  python3 "$META_PY" --check || {
+    echo "pre-commit: derived favicons/og cards are stale vs their sources." >&2
+    echo "  Rebuild:  python3 tools/build-meta.py, then git add favicon.ico assets/brand" >&2
+    exit 1
+  }
+fi
+
 echo "$STAGED" | grep -q "glowshroom/organism/\|glowshroom/journey/" || exit 0
 
 if [ -n "$SKIP_SCENE_CHECK" ]; then

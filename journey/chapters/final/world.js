@@ -247,6 +247,48 @@ for (const m of MEMBERS) m.reveal = sweepReveal(m.arc);
 // drawn field bodies TOGETHER. Ring builds before terrain (index.js), so
 // terrain's member-keyed strands always read the dealt value.
 
+/* ---- THE CORRIDOR PASSER (2026-08-18, Hannah: "a mushroom passes by my
+   view during the camera progression — make it appear just when I land").
+   The az 123 member is authored on the near lip at r 7.9, but the cutaway's
+   walk-in guard stands it at r ~4.9 — about half a unit off the Final leg's
+   travel line (z ~2.8, from the x −8.06 pierce to the −14.72 rest), so the
+   camera drives past its cap at arm's length early in the leg. Both deals
+   made it the FIRST thing alight there: the sweep hands it rung [4] (pull
+   0.373), and the arrival deal ranks by depth from the rest camera, which
+   this body — nearest of all 24, ~6.1 units — wins outright. A lit cap
+   sweeping the frame at close range is the one arrival the corridor cannot
+   afford, so any member standing in the corridor kindles at the LANDING
+   instead — and it LEADS the landing rather than closing it (Hannah's
+   follow-up on the first cut, which parked it at 0.955 after every other
+   body: "it should still be revealed first"). Reveal 0.70 starts its charge
+   at camera x −12.2 — the p 0.905 approach key, where the settle into the
+   rest begins and the cap is a full 3.5 units behind the lens (Spike B's
+   clearance number) — and finishes (drawWOf width 0.104) at pull 0.804,
+   camera x −12.8, ahead of every far-field closer still on the ladder. So
+   the landing beat opens with the front body and works backwards, the
+   eighth-pass deal's own reading, and the body is byte-settled long before
+   the rest's 1.1200 — the rest frame and its golden cannot see this.
+   0.70 + REVEAL_W = 0.86 < PULL_MAX, so the member's strands and pools also
+   finish well before the rest ("fully revealed at the rest is a property of
+   the pose"). Camera-pure like every reveal (D16): a reverse ride
+   un-kindles it while the camera is still 3.5+ units clear of it, long
+   before the lens is back beside the cap, and the down-wrap's retire drops
+   it early in the move.
+   Detection is geometric, not an index — the walk-in guard is what parks it
+   here, and a future member the guard walks into the corridor inherits the
+   same law. ring.js's arrival deal excludes flagged passers from the depth
+   rank (23 bodies over their own 23 rungs, multiset otherwise intact), so
+   revealIn falls back to this value everywhere via `m.revealIn ?? m.reveal`. */
+const CORRIDOR = { z: 2.8, xMin: -15.0, xMax: -7.6, halfW: 2.0 };
+const PASSER_REVEAL = 0.70;
+for (const m of MEMBERS) {
+  if (m.x > CORRIDOR.xMin && m.x < CORRIDOR.xMax &&
+      Math.abs(m.z - CORRIDOR.z) < CORRIDOR.halfW) {
+    m.passer = true;
+    m.reveal = PASSER_REVEAL;
+  }
+}
+
 // Members that shed spores (mature bodies only — and NEVER the hero: the hero
 // keeps its own ambient shed, and no stream may read as hero -> others).
 // Weighted by per-member shed strength via repetition: the sky's uniform

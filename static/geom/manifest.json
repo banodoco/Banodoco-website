@@ -928,7 +928,7 @@
     },
     "final": {
       "file": "final.bin",
-      "sha256": "0e68c09aaa550a43d4d8b86e951501bb73f86cc118e0db77230d0f3155e2079e",
+      "sha256": "f1d4f9d5db73a51e2468ab19fa5a27891d6b46a0e0cb4ac84952460e4978959b",
       "keys": [
         {
           "key": "final/ringLines",
