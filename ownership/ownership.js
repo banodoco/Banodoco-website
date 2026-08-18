@@ -3,6 +3,7 @@
    The ledger lives in data.js (built separately) — this module renders it,
    so the tables stay data, not markup. */
 import { GRANTS, TRANSFERS, OWNERSHIP } from './data.js';
+import { REASONS } from './reasons.js';
 import { initMycelium } from './mycelium.js';
 
 /* ============================================================
@@ -185,6 +186,13 @@ function renderOwnership() {
     const user = document.createElement('td');
     user.className = 'contributor';
     user.textContent = o.username;
+    const reason = REASONS[o.username.toLowerCase()];
+    if (reason) {
+      user.classList.add('has-reason');
+      user.dataset.reason = reason.sentence;
+      user.tabIndex = 0;
+      user.setAttribute('aria-label', `${o.username}: ${reason.sentence}`);
+    }
 
     const granted = document.createElement('td');
     granted.className = 'num';
