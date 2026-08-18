@@ -10,7 +10,7 @@
 // preservation.md), so this module fades that block rather than duplicating it.
 
 import { CONTENT } from '../content/content.js';
-import { CARD_BUILDERS } from './cards/index.js';
+import { CARD_BUILDERS, CARD_ICONS } from './cards/index.js';
 import { createRail } from './rail.js';
 import { claimInput, releaseInput } from './scroll.js';
 import { CHAPTERS } from './route.js';
@@ -857,6 +857,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // exists from the first render, not only after the first open.
     btn.setAttribute('aria-expanded', 'false');
     const dotEl = el('i', 'j-hot-dot');
+    // initiative chips carry their own pictograph in the dot's slot (same
+    // footprint, same --j-dot-dy pin — see cards/index.js CARD_ICONS);
+    // everything else keeps the plain ember dot
+    if (CARD_ICONS[id]) {
+      dotEl.classList.add('j-hot-ico');
+      dotEl.innerHTML = CARD_ICONS[id];
+    }
     btn.appendChild(dotEl);
     const labelEl = el('span', 'j-hot-label', label);
     btn.appendChild(labelEl);

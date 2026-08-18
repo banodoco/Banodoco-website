@@ -46,13 +46,15 @@ const QUERIES = [
 const SEARCH = 'searching 1,248,240 messages…';
 const STATS = '1,248,240 messages · 2,759 resources & workflows';
 
-// Loop budget ≈ 14s: QUERY.length × CHAR_MS type-out + the dwells below.
-const CHAR_MS = 70;
-const HOLD_QUERY_MS = 1400;
-const SEARCH_MS = 2000;
-const HIT_MS = 1500;
-const ANSWER_MS = 6400;
-const FADE_MS = 600;
+// Loop budget ≈ 7s per query (Hannah, 2026-08-18: the first cut "feels
+// painfully slow" — everything roughly halved; the answer keeps the
+// longest dwell because it is the payoff).
+const CHAR_MS = 32;
+const HOLD_QUERY_MS = 550;
+const SEARCH_MS = 900;
+const HIT_MS = 750;
+const ANSWER_MS = 3600;
+const FADE_MS = 350;
 
 let qText, searchEl, hitEl, ansEl;
 let qIdx = 0;          // which of the three replays the next pass plays
@@ -125,6 +127,18 @@ export default {
   build(stage) {
     stage.classList.add('hm');
 
+    // the name at the top (Hannah, 2026-08-18) — a console title bar in the
+    // card's own terminal voice: the project's name, then what it is
+    const head = document.createElement('div');
+    head.className = 'hm-head';
+    const name = document.createElement('span');
+    name.className = 'hm-name';
+    name.textContent = 'HIVEMIND';
+    const desc = document.createElement('span');
+    desc.className = 'hm-desc';
+    desc.textContent = 'the community’s collective memory';
+    head.append(name, desc);
+
     const consoleEl = document.createElement('div');
     consoleEl.className = 'hm-console';
     consoleEl.setAttribute('aria-hidden', 'true');
@@ -175,7 +189,7 @@ export default {
     mascot.decoding = 'async';
     foot.append(stats, cta, mascot);
 
-    stage.append(consoleEl, foot);
+    stage.append(head, consoleEl, foot);
 
     settle();   // parked on the first query's finished transcript
   },
