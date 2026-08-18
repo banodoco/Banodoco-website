@@ -18,7 +18,9 @@ import { CARD_ASSETS, REDUCE } from './index.js';
 const KEY = 'sb_publishable_O38oPBafrBoFrpi_rlWJvA_UJrulFsx';
 const BASE = 'https://ujlwuvkrxlvoswwkerdf.supabase.co/rest/v1/daily_summaries';
 const SELECT = 'full_summary,date,channel_id,discord_channels(channel_name)';
-const CYCLE_MS = 7000;    // one topic per 7s
+const FIRST_MS = 4500;    // the opening topic yields a little sooner
+                          // (Hannah, 2026-08-18) — proof of more behind it
+const CYCLE_MS = 7000;    // then one topic per 7s
 const LEAVE_MS = 190;     // outgoing topic's exit — must match .dc-leave
 const TIMEOUT_MS = 4000;  // fetch timeout guard
 
@@ -252,20 +254,29 @@ function jumpTo(i) {
   restartTimer();   // a click restarts the 7s window
 }
 
-function restartTimer() {
-  if (timer) { clearInterval(timer); timer = null; }
+function restartTimer(firstMs = CYCLE_MS) {
+  if (timer) { clearTimeout(timer); timer = null; }
   // `dc-live` arms the active pill's fill (the load state for the NEXT
-  // item, Hannah 2026-08-17) — its CSS duration must equal CYCLE_MS
+  // item, Hannah 2026-08-17) — the fill's duration rides --dc-cycle so the
+  // pill tells the truth about THIS window, including the shorter opener
   stage.classList.remove('dc-live');
   if (!active || REDUCE.matches || topics.length < 2) return;
+  stage.style.setProperty('--dc-cycle', `${firstMs}ms`);
   stage.classList.add('dc-live');
-  timer = setInterval(() => cycleTo((index + 1) % topics.length), CYCLE_MS);
+  const tick = () => {
+    stage.style.setProperty('--dc-cycle', `${CYCLE_MS}ms`);
+    cycleTo((index + 1) % topics.length);
+    timer = setTimeout(tick, CYCLE_MS);
+  };
+  timer = setTimeout(tick, firstMs);
 }
 
 function present() {
   renderTopic();
   renderDots();
-  restartTimer();
+  // the opening topic yields a little sooner (Hannah, 2026-08-18) — early
+  // proof there is more behind it; the walk then settles into its 7s
+  restartTimer(FIRST_MS);
 }
 
 async function showFallback() {

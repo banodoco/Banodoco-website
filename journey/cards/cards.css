@@ -181,21 +181,26 @@
   padding: 1.15rem 0.5rem 0.4rem;
   font-family: 'Geosans Light', 'Inter', sans-serif;  /* their body face */
   text-align: center;
-  background: linear-gradient(to top, rgba(10, 10, 10, 0.78), rgba(10, 10, 10, 0));
+  /* deep enough that the lines read over ANY of the four artworks
+     (Hannah, 2026-08-18: more readable) — the art still glows through
+     the gradient's upper half */
+  background: linear-gradient(to top,
+    rgba(8, 8, 8, 0.92), rgba(8, 8, 8, 0.55) 55%, rgba(8, 8, 8, 0));
   pointer-events: none;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9);
 }
 .ag-desc {
-  margin: 0 0 1px;
-  font-size: 0.68rem;
+  margin: 0 0 2px;
+  font-size: 0.72rem;
   letter-spacing: 0.09em;
-  color: #f5f0eb;                          /* the descriptor leads */
+  color: #fff;                             /* the descriptor leads */
 }
 .ag-stats {
   margin: 0;
-  font-size: 0.6rem;
+  font-size: 0.64rem;
   letter-spacing: 0.05em;
-  color: rgba(245, 240, 235, 0.66);        /* the record follows, quieter */
+  color: rgba(250, 246, 240, 0.88);        /* the record follows, quieter
+                                              but never squinted at */
 }
 
 /* the door — their cream on ink, hairline plaque, top-right */
@@ -933,7 +938,9 @@
   transform: translateX(-100%);
 }
 .dc-live .dc-dot.is-on.dc-filling::after {
-  animation: dc-fill 7s linear both; /* = CYCLE_MS */
+  /* duration rides --dc-cycle (discord.js sets it per window: a shorter
+     opener, then CYCLE_MS) so the fill never lies about the wait */
+  animation: dc-fill var(--dc-cycle, 7s) linear both;
 }
 @keyframes dc-fill { from { transform: translateX(-100%); } to { transform: none; } }
 /* no cycle running (single topic, REDUCE, fallback): the pill reads full */
