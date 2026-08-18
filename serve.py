@@ -19,7 +19,12 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a):
         pass  # quiet
 
+# :8137 by default (capture.py, pre-commit and the docs all say so), but a
+# $PORT wins — multiple Claude sessions each run their own copy of this
+# server, and only one of them can hold the canonical port.
+PORT = int(os.environ.get('PORT', 8137))
+
 socketserver.TCPServer.allow_reuse_address = True
-with socketserver.TCPServer(('', 8137), NoCacheHandler) as httpd:
-    print('serving glowshroom/ on :8137 with no-store')
+with socketserver.TCPServer(('', PORT), NoCacheHandler) as httpd:
+    print(f'serving glowshroom/ on :{PORT} with no-store')
     httpd.serve_forever()

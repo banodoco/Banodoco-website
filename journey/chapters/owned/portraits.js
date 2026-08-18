@@ -98,19 +98,23 @@ function drawEmbedEdge(g, cx, cy, R, r) {
 // paths. Only the photo cell passes a lower figure (PHOTO_GRADE.unify): a
 // source-atop fill is a straight lerp toward ONE colour, so at 0.33 it is the
 // single largest hue-collapsing term in the photo pipeline. See PHOTO_GRADE.
-function grainAndGrade(g, ox, oy, CELL, cx, cy, R, r, unify = 0.33) {
+function grainAndGrade(g, ox, oy, CELL, cx, cy, R, r, unify = 0.33, veil = 1) {
   // amber unify — everything drawn so far pulls toward the palette
   g.globalCompositeOperation = 'source-atop';
   g.fillStyle = `rgba(196,124,48,${unify})`;
   g.fillRect(ox, oy, CELL, CELL);
-  // upper-left key bloom
-  const bloom = g.createRadialGradient(cx - R * 0.55, cy - R * 0.65, R * 0.05, cx - R * 0.55, cy - R * 0.65, R * 1.4);
-  bloom.addColorStop(0, 'rgba(255,200,140,0.13)');
-  bloom.addColorStop(1, 'rgba(255,200,140,0)');
-  g.fillStyle = bloom;
-  g.fillRect(ox, oy, CELL, CELL);
+  // upper-left key bloom + speckle, scaled by `veil` — the hover cells bake
+  // these at 0 (HOVER_GRADE.veil): gauze over a picture reads as blur, and
+  // the hover cell's whole job is the picture. Busts/glyphs keep the default.
+  if (veil > 0) {
+    const bloom = g.createRadialGradient(cx - R * 0.55, cy - R * 0.65, R * 0.05, cx - R * 0.55, cy - R * 0.65, R * 1.4);
+    bloom.addColorStop(0, `rgba(255,200,140,${(0.13 * veil).toFixed(3)})`);
+    bloom.addColorStop(1, 'rgba(255,200,140,0)');
+    g.fillStyle = bloom;
+    g.fillRect(ox, oy, CELL, CELL);
+  }
   // photographic speckle
-  for (let k = 0; k < 340; k++) {
+  for (let k = 0; k < 340 * veil; k++) {
     const a = r() * TAU, rr = R * Math.sqrt(r());
     const lum = r() < 0.5;
     g.fillStyle = lum
@@ -202,85 +206,117 @@ const PHOTO_GRADE = Object.freeze({
   amber: 0.64,
   unify: 0.16,
   burnMute: 0.70,
-  /* THE HOVER GRADE (2026-08-14, Hannah: "upon hover can you greatly reduce
-     the sepia effect on the image").
+  /* THE HOVER GRADE, third attempt (2026-08-18, Hannah: "when I hover over an
+     individual I want it to GREATLY reduce the sepia effect on their
+     particular image so it shows its proper colours" — the same ask as
+     2026-08-14 and 2026-08-16, still not landing).
 
-     This is a HOVER state, not a retune. Everything above is the resting grade
-     `45f600b` was approved against and not one of those four numbers moves —
-     the resting frame, and the still it was signed off on, are untouched by
-     construction, because this term is multiplied by the node's own `vH` and
-     `vH` is 0 at rest.
+     WHY THE FIRST TWO ATTEMPTS CANCELLED EACH OTHER, measured this time
+     rather than reasoned. A CDP probe (rest vs held hover, same node, each
+     term toggled in isolation, Lab cast = luminance-weighted mean chroma over
+     the face) on a contributor whose real avatar is neutral grey (cast 0.8):
 
-     WHAT IT DOES, and why it is not a desaturation. F.2 of
-     20-owned-root-network.md instrumented the bake stage by stage and found
-     the collapse is not diffuse: STEP 2, the amber multiply, drops within-face
-     hue variance 20-70x on its own, and it does it by SWAMPING rather than by
-     removing — "It induces roughly 25-35 chroma of its own in one fixed
-     direction, on top of source images that only carry 11-22. Everything the
-     photograph had to say about colour is still in there, drowned."
+       rest                              cast 35.4
+       shipped hover (divide + expand)   cast 45.5   MORE sepia than rest
+       divide alone                      cast 25.1   the only state below rest
+       chroma expansion alone            cast 48.1   the saboteur
 
-     Still in there is the operative phrase. Step 2 is a multiply by a constant
-     colour, so it has an inverse: divide by the same factor and the
-     photograph's own chroma comes back up out of the cast. That is what this
-     does, weighted by hover — a partial inverse of the ONE named term, not a
-     saturation slider. Desaturating would take colour AWAY, and what she is
-     asking to see is the colour the multiply is sitting on top of.
+     The 2026-08-14 divide works exactly as designed. But the 2026-08-16
+     chroma expansion pivots each texel about its OWN grey — and after the
+     divide the face still carries the unify wash, the warm-black lift, the
+     burn residue and the baked ember arcs, all amber. Expanding chroma about
+     grey doubles that shared amber remainder along with the picture's own
+     colour: the term amplifies precisely the cast the divide just removed,
+     and nets the hover MORE sepia than doing nothing. Two correct-sounding
+     terms, opposite signs, and the sum was the bug Hannah kept seeing.
 
-     Luminance is preserved through it (the shader rescales the result to the
-     texel's own Rec.709 luma), so a hovered face changes HUE and not
-     brightness — brightness on hover is already spoken for by the 0.30 * boost
-     on the image term two hundred lines below, and doubling up there is how a
-     near face blooms into a featureless orb under UnrealBloom (see the levels
-     note in the fragment shader).
+     WHAT REPLACES BOTH: stop inverting the bake and stop approximating.
+     Every photo arrangement now bakes TWO cells from the same source tile —
+     the resting grade above, and a HOVER_GRADE cell that simply never applies
+     the colour-collapsing steps (no desat fill, amber multiply at a whisper,
+     no unify wash, burn fully hue-muted, lift and key light halved). The
+     shader crossfades the sampled texel to the hover cell by `vH`, so a
+     hovered face shows the photograph's actual colours because those are the
+     bytes in the texture — nothing left to invert, nothing left to expand.
+     `hoverDeSepia` survives as the strength of that crossfade.
 
-     PHOTOS ONLY. It is applied to `tP` before the bust/photo/glyph mix, on
-     exactly F.4's reasoning: the procedural busts are painted in the palette
-     already, there is no photograph underneath them to recover, and they are
-     what the frozen goldens render. */
+     PHOTOS ONLY, unchanged by construction: the crossfade is applied to `tP`
+     before the bust/photo/glyph mix, `vH` is 0 at rest, and the frozen
+     goldens render the procedural busts (uPhoto never advances under
+     freezeTime — see snap()). */
   hoverDeSepia: 1.0,
-  /* THE OTHER HALF, and the bigger one — see the `pg` block in the portrait
-     fragment shader. These pull back the amber the HOVER RESPONSE adds over a
-     photographed face, which measurement showed is where most of the sepia she
-     is reacting to actually comes from: the core lamp goes 0.07 -> 0.31 and the
-     image term 1.12 -> 1.42 on hover, before UnrealBloom. Both are multiplied
-     by `uPhoto * vH`, so the resting frame, the frozen goldens and the
-     procedural busts are all untouched by construction.
-     1 = the hover growth of that term is removed entirely on a photo. */
+  /* The `pg` terms in the fragment shader: pull back the amber the HOVER
+     RESPONSE itself adds over a photographed face — the core lamp used to go
+     0.07 -> 0.31 and the image term 1.12 -> 1.42 on hover, before UnrealBloom
+     got to work on the result. Both are multiplied by `uPhoto * vH`, so the
+     resting frame, the frozen goldens and the procedural busts are untouched.
+     1 = that term's hover growth is removed entirely on a photo. imgMute went
+     0.70 -> 1.0 with the atlas crossfade (2026-08-18): the hover cell is
+     already brighter than the resting one (no amber multiply darkening it),
+     and the probe's no-bloom frame showed the leftover x1.21 growth was
+     feeding the bloom wash that makes a hovered face read as an amber orb.
+     The ember RIM still answers 0.20 -> 1.00, untouched on purpose — it sits
+     at the disc's edge, not on the person, and it is the "lit node in a
+     network" contract 45f600b's F.3 refused to trade away. */
   hoverCoreMute: 1.0,
-  hoverImgMute: 0.70,
-  /* THE THIRD HALF (2026-08-16, Hannah: "when you hover it makes it so the
-     actual colour of the profile picture becomes way more clear").
+  hoverImgMute: 1.0,
+  /* SOLIDITY (2026-08-18, Hannah: hovered faces "still seem blurred and
+     distorted, maybe because they are transparent"). She is right about the
+     cause: the portrait plane blends ADDITIVELY, so a face can only pour
+     light on top of the cords, strands and halos behind it — every one of
+     them keeps shining through the person, and no colour fix can make an
+     image read as an image while the background adds through it.
 
-     `hoverDeSepia` above divides the amber multiply back out, which recovers
-     the picture's HUE — but the resting grade also spends `unify` (0.16)
-     collapsing every cell toward one colour, and that term is baked into the
-     atlas by canvas compositing, so no shader inverse exists for it. Undoing
-     the amber alone therefore lands on the right hue at the wrong strength:
-     correct, and still washed.
-
-     So the hover additionally EXPANDS chroma about the texel's own luma. At 1.0
-     the hovered face carries twice the chroma the graded cell holds, which is
-     roughly where these avatars — flat, saturated, mostly illustration rather
-     than photography — read as themselves again. Luma is the pivot, so like
-     every other term here it moves colour and not brightness.
-
-     Multiplied by `uPhoto * vH` in the shader, so: zero at rest, zero on the
-     procedural busts, zero in the frozen goldens. Turn it to 0 to get exactly
-     the 2026-08-14 hover back. */
-  hoverSat: 1.0,
+     The material therefore blends premultiplied (ONE, ONE_MINUS_SRC_ALPHA),
+     which is bit-identical to the old additive sum wherever the written
+     alpha is 0 — out = rgb*a + dst — and becomes occlusion where it is not.
+     This term is that alpha: how completely a hovered photo face covers
+     what is behind it. It rides `uPhoto * vH * mask`, so the resting frame,
+     the busts, the glyphs and the frozen goldens all still write alpha 0 and
+     remain additive by construction. 1 = the disc fully owns its pixels at
+     full hover. */
+  hoverSolid: 1.0,
 });
 
-/* Step 2's multiply colour, at the MIDPOINT of the per-node warmth ramp —
-   `rgba(226, 150 + warmth*22, 86 + warmth*20, amber)` in drawPhotoCell below,
-   evaluated at warmth 0.5. The shader needs the same factor to divide by, and
-   this is the one place it is written down so the two cannot drift.
-
-   Per-node warmth moves G by ±11 and B by ±10 out of 255 around this, which is
-   an order of magnitude under the correction itself (the inverse lifts blue by
-   ~66% relative to red) — so the midpoint is used rather than plumbing a
-   per-vertex warmth attribute through three shaders for a residual nobody can
-   see. If warmth's range ever widens, that trade is the line to revisit. */
-const PHOTO_AMBER_MUL = Object.freeze([226 / 255, 161 / 255, 96 / 255]);
+/* The bake knobs for the hover cell — same pipeline, run gently. Amber stays
+   faintly on (0.14) so a hovered face is still lit by the room it hangs in
+   rather than cut out of it; the burn keeps its full DARKNESS (vignette) with
+   the hue rotation taken out entirely; lift and face key halve rather than
+   vanish for the same belonging reason. desat/unify are pure colour-collapse
+   with no compositional job, so they go to zero outright. */
+const HOVER_GRADE = Object.freeze({
+  desat: 0,
+  /* 0.14 -> 0 (2026-08-18 round 4, "still quite sepia'd"): the whisper of
+     palette tie was still a visible warm film over neutral avatars. The
+     hovered face's belonging is carried by the ember ring, the burn's
+     vignette and the mask feather — the picture itself now goes untinted. */
+  amber: 0,
+  unify: 0,
+  burnMute: 1.0,
+  lift: 0.2,
+  /* key and veil go to ZERO here where the resting grade keeps them: the face
+     key light, the upper-left key-bloom wash and the speckle are atmosphere
+     laid OVER the picture, and the blur probe showed the hovered face's
+     problem is precisely veiling — a real image under gauze reads as blur.
+     The ring, the burn's darkness and the mask feather still tie the disc
+     into the field. */
+  key: 0,
+  veil: 0,
+  /* 0.76 -> 0.92: the hovered disc keeps only a slim feather. The rest
+     cell's wide fade melts the disc into the substrate — right for a resting
+     node, but under the hover ring's bloom it read as a blurred rim on the
+     photograph itself. A near-hard edge is most of perceived sharpness. */
+  feather: 0.92,
+  /* Luma parity with the resting cell, and it is load-bearing: the resting
+     amber multiply darkens (its factor's Rec.709 luma is 0.786 at alpha
+     0.64; this cell no longer multiplies at all), so an unlevelled hover
+     cell runs ~27% brighter than the one it replaces — and UnrealBloom turns
+     exactly that surplus into the amber orb the first two attempts were
+     blamed for (the probe's no-bloom frame showed a legible face under the
+     wash). The old shader inverse pinned luma per-texel for the same reason.
+     Equal to the resting multiply's own luma factor now that amber is 0. */
+  level: 0.786,
+});
 
 // Real-photo treatment (assets/contributor-portraits — contributors' own
 // avatars out of Banodoco's published sprite; this is the SHIPPED path).
@@ -289,6 +325,10 @@ const PHOTO_AMBER_MUL = Object.freeze([226 / 255, 161 / 255, 96 / 255]);
 // grade strengths live in PHOTO_GRADE above.
 function drawPhotoCell(g, ox, oy, CELL, spec) {
   const { img, mirror, exposure, warmth, seed } = spec;
+  // Which strength set to run — the resting grade, or the gentle HOVER_GRADE
+  // when this cell is being baked for the hover atlas (photoSpecs threads it).
+  const G = spec.grade || PHOTO_GRADE;
+  const liftK = G.lift ?? 1, keyK = G.key ?? 1;
   // No sheet (it failed to load): draw the slot's procedural bust into the
   // photo cell instead, so the atlas stays complete and correctly indexed.
   if (!img) return drawBust(g, ox, oy, CELL, spec.bustSeed);
@@ -314,21 +354,23 @@ function drawPhotoCell(g, ox, oy, CELL, spec) {
   // 1. partial desaturation — kill the cool studio colour cast
   //    (0.62 -> 0.40 at ride-through #2, -> PHOTO_GRADE.desat now)
   g.globalCompositeOperation = 'saturation';
-  g.fillStyle = `rgba(128,128,128,${PHOTO_GRADE.desat})`;
+  g.fillStyle = `rgba(128,128,128,${G.desat})`;
   g.fillRect(ox, oy, CELL, CELL);
   // 2. amber multiply — the main push into the palette
   g.globalCompositeOperation = 'multiply';
-  g.fillStyle = `rgba(226,${(150 + warmth * 22) | 0},${(86 + warmth * 20) | 0},${PHOTO_GRADE.amber})`;
+  g.fillStyle = `rgba(226,${(150 + warmth * 22) | 0},${(86 + warmth * 20) | 0},${G.amber})`;
   g.fillRect(ox, oy, CELL, CELL);
-  // 3. deterministic exposure trim (density variation)
-  if (exposure < 1) {
-    const k = (exposure * 255) | 0;
+  // 3. deterministic exposure trim (density variation), folded together with
+  // the hover grade's luma-parity level (1 for the resting grade)
+  const trim = (exposure < 1 ? exposure : 1) * (G.level ?? 1);
+  if (trim < 1) {
+    const k = (trim * 255) | 0;
     g.fillStyle = `rgb(${k},${k},${k})`;
     g.fillRect(ox, oy, CELL, CELL);
   }
   // 4. warm-black lift — ties the photo's blacks to the field's near-black
   g.globalCompositeOperation = 'lighter';
-  g.fillStyle = `rgba(58,30,12,${exposure > 1 ? 0.26 : 0.16})`;
+  g.fillStyle = `rgba(58,30,12,${((exposure > 1 ? 0.26 : 0.16) * liftK).toFixed(3)})`;
   g.fillRect(ox, oy, CELL, CELL);
   // 5. edge burn — crush bright studio backgrounds so only the person holds
   // light and the disc melts into the dark substrate before the ember arcs.
@@ -348,7 +390,7 @@ function drawPhotoCell(g, ox, oy, CELL, spec) {
   const burn = g.createRadialGradient(cx, cy - R * 0.08, R * 0.30, cx, cy, R);
   const mute = (c) => {
     const y = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-    const k = PHOTO_GRADE.burnMute;
+    const k = G.burnMute;
     return `rgba(${(c[0] + (y - c[0]) * k) | 0},${(c[1] + (y - c[1]) * k) | 0},${(c[2] + (y - c[2]) * k) | 0},1)`;
   };
   burn.addColorStop(0, 'rgba(255,255,255,1)');
@@ -360,15 +402,18 @@ function drawPhotoCell(g, ox, oy, CELL, spec) {
   // and give the face itself back a touch of ember key light
   g.globalCompositeOperation = 'lighter';
   const faceKey = g.createRadialGradient(cx, cy - R * 0.12, R * 0.05, cx, cy - R * 0.08, R * 0.55);
-  faceKey.addColorStop(0, 'rgba(255,196,130,0.16)');
+  faceKey.addColorStop(0, `rgba(255,196,130,${(0.16 * keyK).toFixed(3)})`);
   faceKey.addColorStop(1, 'rgba(255,196,130,0)');
   g.fillStyle = faceKey;
   g.fillRect(ox, oy, CELL, CELL);
   g.globalCompositeOperation = 'source-over';
   g.restore();   // circle clip off
 
-  grainAndGrade(g, ox, oy, CELL, cx, cy, R, r, PHOTO_GRADE.unify);
-  softMask(g, ox, oy, CELL, cx, cy, R, 0.76);   // wider feather than the busts
+  grainAndGrade(g, ox, oy, CELL, cx, cy, R, r, G.unify, G.veil ?? 1);
+  // Wider feather than the busts at rest; the hover cell tightens it (G):
+  // the disc's own edge is the largest edge in the stimulus, and a 12%-wide
+  // fade under the ring's bloom is most of what still read as "blurry".
+  softMask(g, ox, oy, CELL, cx, cy, R, G.feather ?? 0.76);
   drawEmbedEdge(g, cx, cy, R, r);
   g.restore();
 }
@@ -589,6 +634,11 @@ function makeAtlas(cells, cols, CELL, drawFn, seeds) {
   c.width = cols * CELL;
   c.height = Math.ceil(cells / cols) * CELL;
   const g = c.getContext('2d');
+  // 'high', not the default 'low': the photo cells upscale a 96px source
+  // tile, and a bilinear blow-up that then gets resampled again by the GPU is
+  // where measured sharpness went to die (2026-08-18 blur probe). Vector
+  // drawing (busts, glyphs) is untouched by this flag.
+  g.imageSmoothingQuality = 'high';
   g.clearRect(0, 0, c.width, c.height);
   for (let i = 0; i < cells; i++) {
     drawFn(g, (i % cols) * CELL, Math.floor(i / cols) * CELL, CELL, seeds[i]);
@@ -1132,15 +1182,16 @@ export function buildPortraitField({
       uHaze: { value: new THREE.Color(P.deepGold) },
       uHoverIdx: { value: -999 }, uHoverAmt: { value: 0 },
       uSelIdx: { value: -999 }, uSelAmt: { value: 0 },
-      // THE HOVER GRADE (2026-08-14) — see PHOTO_GRADE.hoverDeSepia. uAmberMul
-      // and uAmberA are step 2 of drawPhotoCell's bake, handed to the shader so
-      // it can divide by exactly what the bake multiplied by.
+      // THE HOVER GRADE (2026-08-18) — see PHOTO_GRADE.hoverDeSepia. uMapH /
+      // uMapH2 are the HOVER_GRADE bakes of the same photo arrangements uMapP /
+      // uMapP2 hold; the shader crossfades to them by vH. atlasA stands in
+      // exactly as it does for uMapP until the photos land.
       uDeSepia: { value: PHOTO_GRADE.hoverDeSepia },
-      uHovSat: { value: PHOTO_GRADE.hoverSat },
-      uAmberMul: { value: new THREE.Vector3(PHOTO_AMBER_MUL[0], PHOTO_AMBER_MUL[1], PHOTO_AMBER_MUL[2]) },
-      uAmberA: { value: PHOTO_GRADE.amber },
+      uMapH: { value: atlasA },
+      uMapH2: { value: atlasA },
       uCoreMute: { value: PHOTO_GRADE.hoverCoreMute },
       uImgMute: { value: PHOTO_GRADE.hoverImgMute },
+      uSolid: { value: PHOTO_GRADE.hoverSolid },
       uOpacity: { value: 0 },       // == chapter fade
       uExposure: { value: exposure },
       uWaveC: { value: new THREE.Vector3(0, 0, 0) },
@@ -1150,7 +1201,16 @@ export function buildPortraitField({
     },
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    // Premultiplied, not additive — and identical to additive by construction
+    // wherever the fragment writes alpha 0 (out = rgb*a + dst either way; the
+    // shader premultiplies). Alpha is written ONLY for a hovered photo face
+    // (see PHOTO_GRADE.hoverSolid), which is what lets that one disc occlude
+    // the strands and cords behind it instead of letting them shine through
+    // the person. Rest frame, busts, glyphs, goldens: alpha 0, pure additive.
+    blending: THREE.CustomBlending,
+    blendEquation: THREE.AddEquation,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.OneMinusSrcAlphaFactor,
     fog: false,
     vertexShader: /* glsl */`
       attribute vec2 aCorner;
@@ -1211,30 +1271,40 @@ export function buildPortraitField({
         // node's own local strands. Nothing about hover moves a node.
         float dist = max(-mv.z, 0.05);
         // defocus band (rev-2 retune): only true near passes (< ~5) soften;
-        // the mid field reads crisp like the approved still
-        float nearBlur = (1.0 - smoothstep(2.2, 5.0, dist)) * (1.0 - vH * 0.45);
+        // the mid field reads crisp like the approved still.
+        // A HOVERED face leaves the band ENTIRELY (0.45 -> 1.0, 2026-08-18:
+        // "still blurred upon hover"): vSoft both mips the texture AND cuts
+        // alpha by up to 85%, so the old 55% leftover kept the one face the
+        // visitor is examining milky and half-transparent. The focus pull
+        // rides vH's ease, so it cannot pop.
+        float nb0 = 1.0 - smoothstep(2.2, 5.0, dist);
+        float nearBlur = nb0 * (1.0 - vH);
         vSoft = nearBlur;
-        // grown, not pinned: slight per-node tilt + slow micro-sway + breath
-        float ang = aTilt + sin(uTime * (0.05 + fract(aSeed) * 0.06) + aSeed * 3.0) * 0.02;
+        // grown, not pinned: slight per-node tilt + slow micro-sway + breath.
+        // Both LIVING terms damp out with vH (the static aTilt stays — it is
+        // the pose, not the motion): a face being examined holds still, so
+        // TAA stops smearing the one image the visitor is trying to read.
+        float ang = aTilt + sin(uTime * (0.05 + fract(aSeed) * 0.06) + aSeed * 3.0) * 0.02 * (1.0 - vH);
         float ca = cos(ang), sa = sin(ang);
         vec2 c = vec2(aCorner.x * ca - aCorner.y * sa, aCorner.x * sa + aCorner.y * ca);
-        float breath = 1.0 + 0.010 * sin(uTime * (0.14 + fract(aSeed) * 0.21) + aSeed * 7.0);
+        float breath = 1.0 + 0.010 * sin(uTime * (0.14 + fract(aSeed) * 0.21) + aSeed * 7.0) * (1.0 - vH);
         // 0.13 -> 0.20: the retired depth step bought 8-12% of apparent growth
         // on its own (a node 0.62 nearer at depth 5.6-12.4). Folding that into
         // the CENTRED scale keeps the hover reading as strong as it was while
         // leaving the node's centre exactly where it is drawn at rest.
-        float size = aSize * breath * (1.0 + 0.20 * vH) * (1.0 + nearBlur * 1.0);
+        // The bokeh-spread growth relaxes on the OLD 45% curve even though the
+        // blur itself now leaves fully — condensing the footprint by the whole
+        // spread read as the face shrinking away from the pointer.
+        float size = aSize * breath * (1.0 + 0.20 * vH) * (1.0 + nb0 * (1.0 - vH * 0.45));
         mv.xy += c * size;
         vDepth = dist;
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */`
-      uniform sampler2D uMapA, uMapP, uMapB, uMapA2, uMapP2;
+      uniform sampler2D uMapA, uMapP, uMapB, uMapA2, uMapP2, uMapH, uMapH2;
       uniform vec3 uRim, uCore, uHaze;
       uniform float uTime, uOpacity, uAnon, uPhoto, uExposure;
-      uniform float uDeSepia, uAmberA, uCoreMute, uImgMute, uHovSat;
-      uniform vec3 uAmberMul;
-      const vec3 LUMA709 = vec3(0.2126, 0.7152, 0.0722);
+      uniform float uDeSepia, uCoreMute, uImgMute, uSolid;
       varying vec2 vUvA, vUvB;
       varying vec2 vQ;
       varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF, vSwap, vFlare;
@@ -1254,30 +1324,25 @@ export function buildPortraitField({
         float anon = max(uAnon, vAnonF);
         vec4 tA = mix(texture2D(uMapA, vUvA, slod), texture2D(uMapA2, vUvA, slod), vSwap);
         vec4 tP = mix(texture2D(uMapP, vUvA, slod), texture2D(uMapP2, vUvA, slod), vSwap);
-        // THE HOVER GRADE (2026-08-14) — a partial inverse of the bake's step-2
-        // amber multiply, so a hovered face comes back toward the photograph.
-        // See PHOTO_GRADE.hoverDeSepia for why this is an inverse and not a
-        // desaturation. PHOTOS ONLY: applied to tP before the mix, so the
+        // THE HOVER GRADE (2026-08-18) — a crossfade to the HOVER_GRADE bake
+        // of the same source tile, so a hovered face shows the photograph's
+        // actual colours because those are the bytes in the texture. This
+        // replaced an analytic inverse + chroma expansion whose sum measured
+        // MORE amber than doing nothing — see PHOTO_GRADE.hoverDeSepia for the
+        // numbers. PHOTOS ONLY: applied to tP before the mix, so the
         // procedural busts (which the frozen goldens render) never see it.
         // Rides vH, which is 0 at rest and eased in both directions by
-        // hoverAmt/selAmt — so this cannot pop on the way in or out.
-        {
-          vec3 f = mix(vec3(1.0), uAmberMul, uAmberA);
-          vec3 unc = tP.rgb / max(f, vec3(1e-3));
-          // rescale to the texel's own luma: hue moves, brightness does not
-          float y0 = dot(tP.rgb, LUMA709);
-          float y1 = dot(unc, LUMA709);
-          unc *= y1 > 1e-4 ? y0 / y1 : 1.0;
-          tP.rgb = mix(tP.rgb, clamp(unc, 0.0, 1.0), uDeSepia * vH);
-          // ...then open the chroma back up around the same luma pivot. The
-          // amber is gone by here but the baked unify collapse is not, and
-          // cannot be inverted — this is the term that makes the picture read
-          // as its own colour rather than merely the right hue. See
-          // PHOTO_GRADE.hoverSat. (No backticks in this block: the whole
-          // shader is a JS template literal.)
-          float yh = dot(tP.rgb, LUMA709);
-          tP.rgb = clamp(mix(vec3(yh), tP.rgb, 1.0 + uHovSat * vH), 0.0, 1.0);
-        }
+        // hoverAmt/selAmt — so this cannot pop on the way in or out. The same
+        // vSwap mixes both pairs, so a face mid-remix de-sepias coherently.
+        // The hover cells are double-res, so at typical hover sizes the GPU
+        // is MINIFYING them (~0.6x at dpr 2) and trilinear filtering blends
+        // toward the next mip — re-blurring the face this atlas exists to
+        // sharpen. The negative bias rides vH: a held hover samples the
+        // full-res mip, a distant or fading face keeps enough mip to stay
+        // calm, and at vH 0 the term is multiplied away entirely.
+        float hlod = slod - 1.25 * vH;
+        vec4 tH = mix(texture2D(uMapH, vUvA, hlod), texture2D(uMapH2, vUvA, hlod), vSwap);
+        tP = mix(tP, tH, uDeSepia * vH);
         vec4 tAP = mix(tA, tP, uPhoto);
         // the anonymous glyph is identity, not arrangement — a remix never
         // touches it, so it keeps the plain lod
@@ -1288,7 +1353,14 @@ export function buildPortraitField({
         float flick = 0.86 + 0.14 * (
             0.62 * sin(uTime * (0.29 + vSeed * 0.61) + vSeed * 17.3)
           + 0.38 * sin(uTime * (0.163 + vSeed * 0.37) + vSeed * 5.1));
-        float rq = (r - 0.72) / 0.115;
+        // pg is "this is a photograph AND it is hovered" — defined here
+        // because the ring's width needs it below; 0 at rest and on busts.
+        float pg = uPhoto * vH;
+        // On a hovered photo the ring NARROWS (0.115 -> ~0.063) instead of
+        // fattening under bloom: a fine bright line reads as focus, and the
+        // ring's bloom energy — the gold fog that was washing dark avatars —
+        // scales with its width.
+        float rq = (r - 0.72) / (0.115 * (1.0 - 0.45 * pg));
         float rim = exp(-rq * rq);
         float boost = vH;
         // 0.88 -> 1.12 on the image term and 0.07 -> 0.20 on the resting rim
@@ -1331,16 +1403,44 @@ export function buildPortraitField({
         // than as photographs laid over it" contract that 45f600b's §F.3 refused
         // to trade away. The node still answers, and answers as hard as it did;
         // it just stops answering ON the person's face.
-        float pg = uPhoto * vH;
-        vec3 col = t.rgb * (1.12 + 0.30 * boost * (1.0 - uImgMute * pg) + 0.55 * vWv + 0.10 * vFlare)
-          + uRim * rim * (0.20 + 0.80 * boost + 0.60 * vWv + 0.62 * vFlare) * (1.0 - vSoft * 0.85)
+        // ROUND 4 of the hover grade (2026-08-18, "still quite blurry and
+        // sepia'd"), all of it gated by pg so rest, busts and goldens are
+        // untouched by construction. Four residual warm/blurring terms over a
+        // hovered photo, each pulled back at the source:
+        //   img  x1.12 -> x0.95: a bright face FEEDS UnrealBloom, and the
+        //        returned gold fog was reading as both blur and sepia. A
+        //        slightly dimmer, higher-contrast face beats a brighter one
+        //        under a veil.
+        //   rim  hover growth 0.80 -> 0.52 on photos only: the ring is the
+        //        node's answer and it stays, but at full send its bloom
+        //        spilled a gold rim of fog inward across the person.
+        //   haze the depth fog is amber; a hovered face pulls OUT of it —
+        //        the same focus-pull statement the defocus band now makes.
+        //   flick the living flicker under bloom reads as shimmering glow;
+        //        a face being read holds a steady exposure instead.
+        float flickH = mix(flick, 0.95, pg);
+        vec3 col = t.rgb * (1.12 - 0.17 * pg + 0.30 * boost * (1.0 - uImgMute * pg) + 0.55 * vWv + 0.10 * vFlare)
+          + uRim * rim * (0.20 + 0.80 * boost * (1.0 - 0.35 * pg) + 0.60 * vWv + 0.62 * vFlare) * (1.0 - vSoft * 0.85)
           + uCore * exp(-r * r * 8.0) * (0.07 + 0.24 * boost * (1.0 - uCoreMute * pg) + 0.30 * vWv + 0.15 * vFlare);
         // distant nodes emerge from amber haze rather than vanishing to black
         float haze = exp(-0.00135 * vDepth * vDepth);
-        col = mix(uHaze * 0.38, col, clamp(haze + 0.14, 0.0, 1.0)) * flick;
+        float hazeMix = mix(clamp(haze + 0.14, 0.0, 1.0), 1.0, pg * 0.85);
+        col = mix(uHaze * 0.38, col, hazeMix) * flickH;
         float alpha = mask * (1.0 - vSoft * 0.85) * (0.35 + 0.75 * haze) * uOpacity * uExposure;
         alpha = clamp(alpha * (1.0 + 0.22 * vWv + 0.12 * vFlare), 0.0, 1.0);
-        gl_FragColor = vec4(col, alpha);
+        // SOLIDITY (2026-08-18) — the written alpha under premultiplied
+        // blending: how much this fragment OCCLUDES the layers drawn behind
+        // it. Zero everywhere except a hovered photo face (pg), gated off the
+        // anonymous glyph, and riding uOpacity so the chapter fade dissolves
+        // the cover with the light. See PHOTO_GRADE.hoverSolid.
+        // Shaped by t.a — the cell's own BAKED feathered disc — and NOT by
+        // mask: mask widens with the defocus softening (vSoft), and during
+        // the focus pull that put occlusion out to the quad's discard radius,
+        // where it dimmed the strands in a visible rounded-square edge. The
+        // baked disc ends where the image ends, at every hover amount.
+        // (No backticks anywhere in this shader: it is a JS template literal.)
+        float occ = uSolid * pg * t.a * (1.0 - anon) * uOpacity;
+        gl_FragColor = vec4(col * alpha, occ);
       }`,
   });
 
@@ -1754,10 +1854,20 @@ export function buildPortraitField({
       nd.content.name = p[0];
       nd.content.role = p[1];
       nd.content.blurb = ROLE_BLURB[p[1]] || nd.content.blurb;
+      // The person's own tile, as a ready-to-render descriptor (2026-08-18,
+      // Hannah: the mobile sheet shows the avatar beside the name — ui.js
+      // stays chapter-agnostic, so the row carries everything it needs).
+      // Travels in the same assignment as the name for the same reason the
+      // name does: face, name and icon must be the same person or nothing.
+      nd.content.avatar = {
+        url: PORTRAIT_SPRITE.url,
+        col: p[2], row: p[3],
+        cols: PORTRAIT_SPRITE.cols, rows: PORTRAIT_SPRITE.rows,
+      };
     });
   }
 
-  function photoSpecs(v) {
+  function photoSpecs(v, grade) {
     const st = V_STRIDE[v % V_STRIDE.length];
     const of = V_OFFSET[v % V_OFFSET.length];
     const people = dealFor(v);
@@ -1774,6 +1884,7 @@ export function buildPortraitField({
         exposure: 0.90 + ((i * 29 + v * 7 + k) % 13) / 13 * 0.26,
         warmth: ((i * 17 + v * 3) % 11) / 11,
         seed: 5000 + i * 37 + v * 911,
+        grade,   // undefined -> PHOTO_GRADE; HOVER_GRADE for the hover atlas
       };
     });
   }
@@ -1785,6 +1896,30 @@ export function buildPortraitField({
   }
   function bakePhotos(v) {
     return photoSet ? makeAtlas(NODE_COUNT, COLS, CELL, drawPhotoCell, photoSpecs(v)) : null;
+  }
+  /** The same sixteen tiles, graded gently — what a hovered face crossfades
+   *  to. Baked wherever bakePhotos is, so the pair can never disagree about
+   *  who is in the field.
+   *
+   *  Baked at DOUBLE the cell resolution, deliberately. Measured 2026-08-18
+   *  (blur probe, dpr 2): a hovered near face renders its disc at ~440 device
+   *  px, and the 256-cell's 190px disc — itself a bilinear blow-up of the
+   *  96px source tile — was being magnified a second time by the GPU. Two
+   *  stacked bilinear upscales is exactly the mush Hannah kept calling
+   *  blurred. One high-quality 96 -> 380 resample at bake (see makeAtlas's
+   *  imageSmoothingQuality) plus a ~1.16x GPU step is the sharpest chain the
+   *  96px source can support. Costs ~4x the bake pixels and ~17MB of GPU
+   *  memory for the pair — paid only in photo mode, only for the two hover
+   *  atlases; the resting atlases and the goldens' bust path are untouched. */
+  const HOVER_CELL = CELL * 2;
+  function bakePhotosHover(v) {
+    if (!photoSet) return null;
+    const tex = makeAtlas(NODE_COUNT, COLS, HOVER_CELL, drawPhotoCell, photoSpecs(v, HOVER_GRADE));
+    // The hovered plane tilts and breathes fractionally off-axis; anisotropic
+    // sampling keeps the magnified face from smearing on that slight skew.
+    // Hover atlases only — the resting atlas feeds the goldens untouched.
+    tex.anisotropy = 8;
+    return tex;
   }
 
   const photosReady = loadPhotos().then((photos) => {
@@ -1799,6 +1934,7 @@ export function buildPortraitField({
     // sheet is in flight.
     seatPeople(dealFor(0));
     portraitMat.uniforms.uMapP.value = bakePhotos(0);
+    portraitMat.uniforms.uMapH.value = bakePhotosHover(0);
     photosAvailable = true;
     // and start the NEXT arrangement warming — but NOT in the load window
     // (2026-08-16, the post-settle stall hunt): this bake is two 2048x512
@@ -1852,8 +1988,8 @@ export function buildPortraitField({
   function prepareNext() {
     const v = variant + 1;
     if (pending && pending.v === v && (!photoSet || pending.photo)) return;
-    if (pending) { retire(pending.bust); retire(pending.photo); }
-    pending = { v, bust: bakeBusts(v), photo: bakePhotos(v) };
+    if (pending) { retire(pending.bust); retire(pending.photo); retire(pending.photoHover); }
+    pending = { v, bust: bakeBusts(v), photo: bakePhotos(v), photoHover: bakePhotosHover(v) };
   }
   function schedulePrepare() {
     if (prepareTimer) return;
@@ -1871,7 +2007,8 @@ export function buildPortraitField({
     if (!tex || tex === atlasA || tex === atlasB) return;
     const u = portraitMat.uniforms;
     if (tex === u.uMapA.value || tex === u.uMapP.value
-      || tex === u.uMapA2.value || tex === u.uMapP2.value) return;
+      || tex === u.uMapA2.value || tex === u.uMapP2.value
+      || tex === u.uMapH.value || tex === u.uMapH2.value) return;
     tex.dispose();
   }
 
@@ -1886,14 +2023,16 @@ export function buildPortraitField({
     // moment the field genuinely becomes the new cast, so it is the moment the
     // rows do too.
     seatPeople(dealFor(variant));
-    const oldBust = u.uMapA.value, oldPhoto = u.uMapP.value;
+    const oldBust = u.uMapA.value, oldPhoto = u.uMapP.value, oldHover = u.uMapH.value;
     u.uMapA.value = u.uMapA2.value;
     u.uMapP.value = u.uMapP2.value;
+    u.uMapH.value = u.uMapH2.value;
     u.uSwap.value = 0;
     u.uSwapFlare.value = 0;    // back to an exactly-unlit resting field
     swap = null;
     if (oldBust !== u.uMapA.value) retire(oldBust);
     if (oldPhoto !== u.uMapP.value) retire(oldPhoto);
+    if (oldHover !== u.uMapH.value) retire(oldHover);
     schedulePrepare();
   }
 
@@ -2016,7 +2155,7 @@ export function buildPortraitField({
     remix() {
       if (swap) return null;
       const reduced = !!reduceMotion.matches;
-      if (!pending || pending.v !== variant + 1 || (photoSet && !pending.photo)) {
+      if (!pending || pending.v !== variant + 1 || (photoSet && !(pending.photo && pending.photoHover))) {
         if (prepareTimer) {
           if (typeof cancelIdleCallback === 'function') cancelIdleCallback(prepareTimer);
           else clearTimeout(prepareTimer);
@@ -2030,6 +2169,7 @@ export function buildPortraitField({
       // way they are at boot before the photos land — so a procedural-only
       // build still genuinely remixes (different busts) instead of no-oping.
       u.uMapP2.value = pending.photo || pending.bust;
+      u.uMapH2.value = pending.photoHover || pending.bust;
       u.uSwapSpan.value = reduced ? 1 : SWAP_SPAN;
       u.uSwapFlare.value = reduced ? 0 : 1;
       u.uSwap.value = 0;
@@ -2151,7 +2291,13 @@ export function buildPortraitField({
       const activeIdx = hoverIdx >= 0 ? hoverIdx : selIdx;
       const activeAmt = Math.max(hoverAmt, selAmt * 0.85);
       cores.mat.uniforms.uHoverIdx.value = activeIdx;
-      cores.mat.uniforms.uHoverAmt.value = activeAmt;
+      // The core dot draws AFTER the portrait plane (renderOrder 3 vs 2), so
+      // the hover solidity cannot cover it — and its hover growth is a gold
+      // lamp in the middle of the person's face. Muted in photo mode for the
+      // same reason as the in-shader core term (PHOTO_GRADE.hoverCoreMute);
+      // the procedural busts keep the full answer.
+      cores.mat.uniforms.uHoverAmt.value =
+        activeAmt * (1 - u.uPhoto.value * PHOTO_GRADE.hoverCoreMute);
       halos.mat.uniforms.uHoverIdx.value = activeIdx;
       halos.mat.uniforms.uHoverAmt.value = activeAmt;
 

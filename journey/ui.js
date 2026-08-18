@@ -758,6 +758,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // besides Escape). Routed through onClose() so journey.js unwinds its own
     // detail state with it.
     if (popPinned) onClose();
+    // The pinned CARD closes on a press outside it too (2026-08-18, Hannah —
+    // the mobile sheet had no outside-tap exit; older comments claimed this
+    // path existed, and now it does). Presses INSIDE hotHost never reach
+    // here, so tapping another face retargets the card through that chip's
+    // own handler instead of closing-then-reopening; the grip, the body and
+    // the close button are all card.contains and keep their own semantics.
+    if (cardIsOpen && cardPinned && !card.contains(e.target)) onClose();
     if (e.pointerType !== 'touch' || !armed) return;
     clearArmed();
     if (document.activeElement && hotHost.contains(document.activeElement)) {
@@ -1734,19 +1741,26 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // The ladder. Each rung is admitted only if the whole box fits, and each
     // of the four is DISJOINT from the node's disc by construction — so the
     // clamp on the other axis can never slide the card over its own subject.
+    //
+    // BESIDE-FIRST (2026-08-18, Hannah: "the name should show next to the
+    // image", "make the card feel cohesive with it"). The old ladder tried
+    // above/below first, which floated the label into the copy over the
+    // person's head; a name reads as belonging to a face when it stands
+    // BESIDE it, museum-label fashion. Right before left because the frame's
+    // reading direction is left-to-right: face, then name.
     const aboveY = a.y - a.r - CARD_GAP - p.height;
     const belowY = a.y + a.r + CARD_GAP;
     const rightX = a.x + a.r + CARD_GAP;
     const leftX = a.x - a.r - CARD_GAP - p.width;
     let side, x, y;
-    if (aboveY >= CARD_MARGIN) {
-      side = 'above'; x = xCentred; y = aboveY;
-    } else if (belowY + p.height <= vh - CARD_MARGIN) {
-      side = 'below'; x = xCentred; y = belowY;
-    } else if (rightX + p.width <= vw - CARD_MARGIN) {
+    if (rightX + p.width <= vw - CARD_MARGIN) {
       side = 'right'; x = rightX; y = yCentred;
     } else if (leftX >= CARD_MARGIN) {
       side = 'left'; x = leftX; y = yCentred;
+    } else if (aboveY >= CARD_MARGIN) {
+      side = 'above'; x = xCentred; y = aboveY;
+    } else if (belowY + p.height <= vh - CARD_MARGIN) {
+      side = 'below'; x = xCentred; y = belowY;
     } else {
       // Nowhere fits whole — a card taller than the room above AND below and
       // wider than the room either side. Take the roomier of above/below and
@@ -1848,14 +1862,29 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // instead of replaying the unfurl at rest.
     const fresh = !cardIsOpen || cardNodeId !== nodeId;
     const d = node.spotlight || node.card
-      // contributor rows have no card block: everyone is the anonymous ember
-      // fallback until the consent pipeline lands (CO-1.4 / OW-4.4)
-      || (node.role ? { title: node.name, body: [node.role, node.blurb] } : null)
+      // Contributor rows have no card block; they are label material, not
+      // prose. The role rides as `tag` (2026-08-18, Hannah: "the artist/core
+      // thing should feel more like a tag") — a pill under the name rather
+      // than a paragraph pretending the role is a sentence.
+      || (node.role ? { title: node.name, tag: node.role, avatar: node.avatar, body: [node.blurb].filter(Boolean) } : null)
       || { title: node.label, body: [node.short] };
     if (fresh) {
       cardBody.textContent = '';
       const h = el('h3', 'j-card-h', d.title || node.label);
       h.id = 'j-card-h';
+      // The person's avatar, left of the name (2026-08-18, Hannah — mobile).
+      // Decorative and aria-hidden: the name IS the accessible identity. CSS
+      // shows it only in the sheet form — the side card already stands next
+      // to the real face, so a thumbnail there would say it twice.
+      if (d.avatar && d.avatar.url) {
+        const av = el('i', 'j-card-ava');
+        av.setAttribute('aria-hidden', 'true');
+        av.style.backgroundImage = `url("${d.avatar.url}")`;
+        av.style.backgroundSize = `${d.avatar.cols * 100}% ${d.avatar.rows * 100}%`;
+        av.style.backgroundPosition =
+          `${(d.avatar.col / (d.avatar.cols - 1)) * 100}% ${(d.avatar.row / (d.avatar.rows - 1)) * 100}%`;
+        h.prepend(av);
+      }
       cardBody.appendChild(h);
       // The prose, and only the prose, is what the chip points at while the
       // panel is transient: the title duplicates the chip's own accessible
@@ -1868,6 +1897,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         ids.push(p.id);
         cardBody.appendChild(p);
       };
+      // The role tag, right under the name. It joins the describedby prose —
+      // "Knowledge Sharer" is exactly what a chip's description should open
+      // with — but as a pill, not a paragraph.
+      if (d.tag) {
+        const tg = el('span', 'j-card-tag', d.tag);
+        tg.id = `j-card-d${ids.length}`;
+        ids.push(tg.id);
+        cardBody.appendChild(tg);
+      }
       if (d.claim) addProse('j-card-claim', d.claim + (d.claimDetail ? ' — ' + d.claimDetail : ''));
       for (const para of (d.body || [])) addProse('j-card-p', para);
       if (d.status) addProse('j-card-status', d.status);

@@ -22,6 +22,17 @@ static/geom/                    (manifest.json + *.bin — the committed geometr
                                  byte-gates it, so whatever is committed IS
                                  what the builders would compute.)
 assets/brand/mark-b-mask-{48,64,96}.png
+favicon.ico  site.webmanifest   (site root)
+404.html                        (site root; point the host's 404 handling at
+                                 it — most static hosts pick up /404.html by
+                                 convention)
+assets/brand/favicon-96.png
+assets/brand/apple-touch-icon.png
+assets/brand/icon-{192,512}.png
+assets/brand/og-home.jpg        (1200x630 unfurl cards, referenced from the
+assets/brand/og-ownership.jpg    three page heads; derived by
+                                 tools/build-meta.py — regenerate, never
+                                 repaint, same contract as the mark masks)
 content/contributors.js         (the 120-person portrait pool)
 assets/contributor-portraits/   (manifest.js + profile-sprite.jpg, 384 KB —
                                  BOTH are hard dependencies of portraits.js
@@ -54,10 +65,19 @@ robots.txt  sitemap.xml
 
 ## One deploy-time substitution
 
-`sitemap.xml` (and robots.txt's `Sitemap:` line) use the placeholder
-`ORIGIN` / a relative path — substitute the real origin at deploy:
-`sed -i '' "s|ORIGIN|https://your.host/base|g" sitemap.xml` and set
-`Sitemap: https://your.host/base/sitemap.xml` in robots.txt.
+`sitemap.xml` and the three page heads (`index.html`, `static/index.html`,
+`ownership/index.html` — their `og:url`/`og:image`/canonical, which must be
+absolute, plus the homepage's JSON-LD block) and `404.html` (its home link
+and icon — self-contained otherwise, since hosts serve it at arbitrary
+depths) use the placeholder `ORIGIN`; robots.txt's `Sitemap:` line
+uses a relative path. Substitute the real origin at deploy:
+
+    sed -i '' "s|ORIGIN|https://your.host/base|g" \
+      sitemap.xml index.html static/index.html ownership/index.html
+
+and set `Sitemap: https://your.host/base/sitemap.xml` in robots.txt.
+(Skipping the sed breaks nothing on-page — unfurlers just fall back to a
+card without an image.)
 
 ## Field monitoring
 
