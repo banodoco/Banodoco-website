@@ -157,7 +157,10 @@ export default {
     prev.addEventListener('keydown', onNavKey);
     next.addEventListener('keydown', onNavKey);
 
-    bar.append(prev, center, next);
+    // the walker arrows live on the SIDE EDGES at vertical middle (Hannah,
+    // 2026-08-18: fixed in place, so they never move as captions change);
+    // the bar keeps only the event line, centred at the bottom
+    bar.append(center);
 
     // the door, in the site's own eyebrow voice, top-right like its event
     // tags; revealed on hover/pin by the shared card-cta rule
@@ -169,7 +172,7 @@ export default {
     cta.tabIndex = -1;
     cta.textContent = 'SEE EVENTS →';
 
-    stage.append(media, scrim, word, bar, cta);
+    stage.append(media, scrim, word, bar, prev, next, cta);
 
     caption(0);
   },

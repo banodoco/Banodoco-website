@@ -168,21 +168,29 @@
 .ag-syl:nth-child(3) { margin-left: 0.3em; }  /* their w-[0.3em] word gap */
 .ag-syl.lit { color: #7b0b0b; transform: scale(1.1); }  /* their hover state */
 
-/* the edition line lives IN the art (Hannah, 2026-08-17), a bottom
-   microline over its own soft scrim — the 2RP cover's grammar */
+/* what-it-is over the record, IN the art (Hannah, 2026-08-17/18) — two
+   stacked microlines on one soft scrim, the 2RP cover's grammar */
 .ag-info {
   position: absolute;
   left: 0; right: 0; bottom: 0;
-  margin: 0;
-  padding: 1.1rem 0.5rem 0.42rem;
+  padding: 1.15rem 0.5rem 0.4rem;
   font-family: 'Geosans Light', 'Inter', sans-serif;  /* their body face */
-  font-size: 0.64rem;
-  letter-spacing: 0.06em;
   text-align: center;
-  color: rgba(245, 240, 235, 0.85);
-  background: linear-gradient(to top, rgba(10, 10, 10, 0.72), rgba(10, 10, 10, 0));
+  background: linear-gradient(to top, rgba(10, 10, 10, 0.78), rgba(10, 10, 10, 0));
   pointer-events: none;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+.ag-desc {
+  margin: 0 0 1px;
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  color: #f5f0eb;                          /* the descriptor leads */
+}
+.ag-stats {
+  margin: 0;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+  color: rgba(245, 240, 235, 0.66);        /* the record follows, quieter */
 }
 
 /* the door — their cream on ink, hairline plaque, top-right */
@@ -490,9 +498,10 @@
   text-shadow: 0 1px 10px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.7);
 }
 
-/* Bottom bar: ‹ › walker hugging the caption line, centred over the scrim.
-   Centred (not edge-flanked) so neither button ever sits under the journey's
-   right-edge rail at phone widths, where the popover spans 86vw. */
+/* Bottom bar: the event line alone, centred over the scrim — the walker
+   arrows live on the side edges at vertical middle (Hannah, 2026-08-18),
+   so nothing shifts as captions change. The card sits above the rail
+   (z-index 5), so the right arrow stays clickable at phone widths. */
 .ad-bar {
   position: absolute;
   left: 0;
@@ -504,32 +513,27 @@
   gap: 10px;
   padding: 10px 12px;
 }
-/* At phone widths the 86vw popover's right edge runs under the journey's
-   rail; the right inset keeps › clickable there. Asymmetric on purpose —
-   an equal left inset starves the caption into its ellipsis. */
-@media (max-width: 720px) {
-  .ad-bar { padding-right: 38px; }
-}
 .ad-nav {
-  flex: 0 0 24px;
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);   /* vertical middle of the window — the
+                                    arrows never move as captions change */
+  width: 26px; height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.7);  /* their hairline, white/70 */
-  border-radius: 2px;
-  color: rgba(255,255,255,0.7);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(10, 10, 10, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
   cursor: pointer;
 }
-.ad-nav:hover,
-.ad-nav:focus-visible {
-  color: #fff;
-  border-color: #fff;
-}
+.ad-prev { left: 8px; }
+.ad-next { right: 8px; }
+.ad-nav:is(:hover, :focus-visible) { color: #fff; border-color: rgba(255, 255, 255, 0.55); }
 .ad-center {
   flex: 0 1 auto;
   min-width: 0;
@@ -642,6 +646,12 @@
   text-transform: uppercase;
   color: rgba(255,255,255,0.7);   /* their white/70 */
 }
+.rp-dek {
+  font-size: 7px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.62);
+}
 .rp-masthead {
   font-size: 2.6rem;
   line-height: 0.9;
@@ -685,29 +695,17 @@
   background: rgba(10, 7, 3, 0.94);   /* house-dark ground #0a0703 */
 }
 
-/* the console's title bar: name left, what-it-is right */
+/* the console's title bar: what it is, in one line */
 .hm-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.6rem;
   padding: 0.55rem 1rem 0.45rem;
   border-bottom: 1px solid rgba(217, 164, 65, 0.15);
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
 }
 .hm-name {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.25em;
+  letter-spacing: 0.2em;
   color: rgba(217, 164, 65, 0.75);      /* house gold */
-}
-.hm-desc {
-  font-size: 0.58rem;
-  letter-spacing: 0.02em;
-  color: rgba(233, 221, 201, 0.45);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .hm-console {

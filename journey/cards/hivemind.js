@@ -13,12 +13,15 @@
 // make it show the breadth of what's possible") — each loop pass plays the
 // next query, so a lingering hover sees intent-paraphrase, debugging, and
 // comparison answered in turn. ALL VERBATIM from the repo's golden
-// evaluation set (eval/retrieval/golden/golden-v1.json cases G046, G055,
+// evaluation set (eval/retrieval/golden/golden-v1.json cases G048, G055,
 // G051; answers are those cases' judged best hits' answer_snippets in
-// evidence-v1.json, verified 2026-08-17/18):
-//   G046 "make the motion less jittery"  -> distillation #5, cites Kijai
-//   G055 "ClownShark crash comfyui"      -> distillation #10, 4 cites
-//   G051 "compare two image editors"     -> distillation #8, community
+// evidence-v1.json, verified 2026-08-17/18). G046 ("make the motion less
+// jittery" -> the LightX2V trade-off) was swapped out 2026-08-18 —
+// Hannah: the answer "makes no sense" as a reply to that phrasing; G048's
+// pair answers itself on sight:
+//   G048 "localize edits to just one region" -> distillation #7, 3 cites
+//   G055 "ClownShark crash comfyui"          -> distillation #10, 4 cites
+//   G051 "compare two image editors"         -> distillation #8, community
 // STATS (policy (a), cards/index.js): "1,248,240 messages · 2,759 resources
 //   & workflows" — corpus inventory snapshot 2026-07-28,
 //   docs/hybrid-search/phase0-inventory.json. (The task brief's "~4,000
@@ -28,9 +31,9 @@ import { CARD_ASSETS, REDUCE } from './index.js';
 
 const QUERIES = [
   {
-    query: 'make the motion less jittery',
-    hit: '⤷ distillation #5 · cites Kijai',
-    answer: '"LightX2V is useful on interpolation, but applying it to the global model can suppress most motion…"',
+    query: 'localize edits to just one region',
+    hit: '⤷ distillation #7 · 3 cited sources',
+    answer: '"In the reported Wan VACE setup, white mask areas are regenerated and black areas are protected…"',
   },
   {
     query: 'ClownShark crash comfyui',
@@ -127,17 +130,14 @@ export default {
   build(stage) {
     stage.classList.add('hm');
 
-    // the name at the top (Hannah, 2026-08-18) — a console title bar in the
-    // card's own terminal voice: the project's name, then what it is
+    // the title bar says WHAT IT IS — the chip already says Hivemind
+    // (Hannah, 2026-08-18: short descriptor, no need to repeat the name)
     const head = document.createElement('div');
     head.className = 'hm-head';
     const name = document.createElement('span');
     name.className = 'hm-name';
-    name.textContent = 'HIVEMIND';
-    const desc = document.createElement('span');
-    desc.className = 'hm-desc';
-    desc.textContent = 'the community’s collective memory';
-    head.append(name, desc);
+    name.textContent = 'THE COMMUNITY’S COLLECTIVE MEMORY';
+    head.append(name);
 
     const consoleEl = document.createElement('div');
     consoleEl.className = 'hm-console';

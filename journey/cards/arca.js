@@ -122,9 +122,17 @@ export default {
     prize.textContent = 'PRIZE';
     word.append(the, title, prize);
 
-    const info = document.createElement('p');
+    // what it is, in five words (Hannah, 2026-08-18: every card carries a
+    // short descriptor; the chip already says the name) — then the record
+    const info = document.createElement('div');
     info.className = 'ag-info';
-    info.textContent = 'Edition II · 198 entries · 7,287 votes · $56.8k paid';
+    const desc = document.createElement('p');
+    desc.className = 'ag-desc';
+    desc.textContent = 'Open source AI art competition';
+    const stats = document.createElement('p');
+    stats.className = 'ag-stats';
+    stats.textContent = 'Edition II · 198 entries · 7,287 votes · $56.8k prizes';
+    info.append(desc, stats);
 
     // the door, in the site's own voice — Edition II is OVER (results
     // announced 2026-04-06), so the door says what a visitor can actually

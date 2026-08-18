@@ -51,9 +51,11 @@ export default {
     // a blinking dot would fake liveness their grant page never promises)
     const header = document.createElement('div');
     header.className = 'ac-header';
+    // the header carries WHAT IT IS, not the name — the chip already says
+    // ArtCompute (Hannah, 2026-08-18, wording hers 2026-08-18 too).
     const title = document.createElement('span');
     title.className = 'ac-title';
-    title.textContent = 'ARTCOMPUTE';
+    title.textContent = 'GPU HOURS FOR OPEN RESEARCH';
     const dot = document.createElement('span');
     dot.className = 'ac-dot';
     // the door rides the header between wordmark and dot (flex, so it can
