@@ -55,7 +55,11 @@ export default {
     mastEl = mast;
     // the opening face is a random draw, as the site's is per session
     setFace(Math.floor(Math.random() * FACES.length));
-    head.append(eyebrow, mast);
+    // the five-word dek under the mast (Hannah, 2026-08-18): what 2RP is
+    const dek = document.createElement('span');
+    dek.className = 'rp-dek';
+    dek.textContent = 'AN ART & TECH PUBLICATION';
+    head.append(eyebrow, mast, dek);
 
     // hover = the identity itself: the mark cycles faces while pointed at
     stage.addEventListener('pointerenter', () => {
