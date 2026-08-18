@@ -56,7 +56,17 @@ export default {
     title.textContent = 'ARTCOMPUTE';
     const dot = document.createElement('span');
     dot.className = 'ac-dot';
-    header.append(title, dot);
+    // the door rides the header between wordmark and dot (flex, so it can
+    // never overlap the title at any width); their green CTA treatment,
+    // revealed on hover/pin by the shared card-cta rule
+    const cta = document.createElement('a');
+    cta.className = 'ac-cta card-cta';
+    cta.href = 'https://artcompute.org/';
+    cta.target = '_blank';
+    cta.rel = 'noopener noreferrer';
+    cta.tabIndex = -1;
+    cta.textContent = 'REQUEST COMPUTE →';
+    header.append(title, cta, dot);
 
     // band 2 — stat grid: two cells over a 1px hairline gap
     const grid = document.createElement('div');

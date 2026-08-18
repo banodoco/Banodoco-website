@@ -18,17 +18,46 @@
 .j-pop.j-pop-rich {
   max-width: min(21.5rem, 86vw);
   width: min(21.5rem, 86vw); /* media wants a stable measure, not max-content */
+  /* THE MAT (Hannah, 2026-08-18: "a small border region to make them look
+     consistent") — the house panel shows as a slim, even frame around every
+     stage: one window treatment, six worlds behind it. */
+  padding: 7px;
 }
 
-/* The stage bleeds to the panel edge (visual first; the frame reads as a
-   window). Negative margins undo .j-pop's padding; the bottom margin
-   restores the house gap to the title below. */
+/* THE STAGE IS THE WHOLE CARD (Hannah, 2026-08-18: "we shouldn't have the
+   bottom part … explain everything in the main part") — the house block
+   below is hidden on rich cards and each stage carries its own name, copy
+   and door in its project's voice. The elements stay in the DOM: the short
+   line is still the chip's aria-describedby text, so what a screen reader
+   hears is unchanged. */
+.j-pop-rich .j-pop-t,
+.j-pop-rich .j-pop-s,
+.j-pop-rich .j-pop-link { display: none; }
+
 .j-pop-stage {
   position: relative;
-  width: calc(100% + 2rem);
-  margin: -0.85rem -1rem 0.35rem;
+  width: 100%;
+  margin: 0;
   overflow: hidden;
-  border-bottom: 1px solid rgba(217, 164, 65, 0.18);
+}
+
+/* THE DOOR SHOWS WHEN YOU REACH FOR IT (Hannah, 2026-08-18: "for all we
+   could have a CTA show on hover") — every stage's link starts quiet and
+   rises in when the pointer enters the card, when it is pinned, or when
+   focus lands inside (touch and keyboard see what mouse users see). */
+.card-cta {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  text-decoration: none;
+}
+.j-pop:hover .card-cta,
+.j-pop:focus-within .card-cta,
+.j-pop.j-pop-pinned .card-cta {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
 }
 
 /* Keep the contact filament above stage media. */
@@ -145,6 +174,20 @@
   pointer-events: none;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
+
+/* the door — their cream on ink, hairline plaque, top-right */
+.ag-cta {
+  position: absolute;
+  top: 8px; right: 8px;
+  padding: 3px 7px;
+  font-family: 'Geosans Light', 'Inter', sans-serif;
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  color: #f5f0eb;
+  background: rgba(26, 26, 26, 0.72);
+  border: 1px solid rgba(245, 240, 235, 0.25);
+}
+.ag-cta:is(:hover, :focus-visible) { border-color: rgba(245, 240, 235, 0.6); }
 
 /* ---- entry choreography (Hannah, 2026-08-17: "make sure every card has a
    nice little entry animation") ----------------------------------------
@@ -405,7 +448,8 @@
 /* Wordmark block — upper third, centred, over the scrim. */
 .ad-word {
   position: absolute;
-  top: 0;
+  top: 26px;                  /* below the SEE EVENTS chip's row — the
+                                 wordmark and the door never overlap */
   left: 0;
   right: 0;
   height: 34%;
@@ -414,7 +458,6 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding-top: 8px;
   text-align: center;
   pointer-events: none;
 }
@@ -495,11 +538,11 @@
 }
 .ad-line {
   font-size: 10px;
+  line-height: 1.35;
   color: rgba(255,255,255,0.9);
-  white-space: nowrap;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;   /* the narrowest panes trim, never underlap */
+  max-width: 100%;           /* panes narrower than any real phone wrap to a
+                                second line — a date is never amputated */
+  text-align: center;
 }
 .ad-tag {
   font-size: 8px;
@@ -623,7 +666,10 @@
 
 .j-pop-stage.hm {
   position: relative;
-  height: 170px;   /* the settled transcript + foot, without dead air */
+  height: auto;         /* the transcript sets the height — a narrow pane
+                           wraps lines and the card breathes instead of
+                           clipping its own foot */
+  min-height: 170px;
   display: flex;
   flex-direction: column;
   background: rgba(10, 7, 3, 0.94);   /* house-dark ground #0a0703 */
@@ -683,14 +729,20 @@
   position: relative;
   flex: 0 0 auto;
   display: flex;
-  align-items: center;
+  flex-direction: column;           /* stats over door — a narrow pane
+                                       stacks instead of overflowing the
+                                       stage's fixed height */
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
   min-height: 44px;                 /* clears the mascot's 44px */
+  padding: 0.35rem 0 0.4rem;
   border-top: 1px solid rgba(217, 164, 65, 0.15);
 }
 
 .hm-stats {
   margin: 0;
-  padding: 0.5rem 3.2rem 0.5rem 1rem;   /* right pad clears the mascot */
+  padding: 0 3.2rem 0 1rem;             /* right pad clears the mascot */
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   font-size: 0.62rem;
   letter-spacing: 0.02em;
@@ -719,7 +771,9 @@
    Ground stays the house-dark panel (rgba(10,7,3,…) #0a0703). */
 
 .j-pop-stage.dc {
-  height: 180px;
+  height: auto;         /* topics set the height — clamped copy keeps it
+                           steady; narrow panes breathe instead of clipping */
+  min-height: 176px;
   display: flex;
   flex-direction: column;
   background: rgba(10, 7, 3, 0.94);   /* house-dark ground #0a0703 */
@@ -846,3 +900,77 @@
 @keyframes dc-fill { from { transform: translateX(-100%); } to { transform: none; } }
 /* no cycle running (single topic, REDUCE, fallback): the pill reads full */
 .dc-dot.is-on:not(.dc-filling)::after { transform: none; }
+
+/* ---- the doors and the thumbs (2026-08-18 refactor: no house block —
+   each stage carries its own CTA in its own voice; all reveal via the
+   shared .card-cta rule in the shell section) ------------------------- */
+
+/* artcompute — their green CTA treatment, in the header's flex flow
+   between wordmark and status dot (never overlaps at any width) */
+.ac-cta {
+  flex: none;
+  margin-left: auto;
+  padding: 2px 7px;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  color: #39ff14;
+  background: rgba(57, 255, 20, 0.15);   /* their bg-[#39ff14]/15 */
+  border: 1px solid rgba(57, 255, 20, 0.3);
+}
+.ac-cta:is(:hover, :focus-visible) { background: rgba(57, 255, 20, 0.25); }
+.ac-header { gap: 0.6rem; }              /* title · cta · dot breathing room */
+
+/* ados — its eyebrow voice as a top-right tag, like its event chips */
+.ad-cta {
+  position: absolute;
+  top: 10px; right: 10px;
+  padding: 3px 8px;
+  font-size: 8px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(10, 10, 10, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;                  /* their tag pills are rounded */
+}
+.ad-cta:is(:hover, :focus-visible) { border-color: rgba(255, 255, 255, 0.6); }
+
+/* hivemind — a gold mono door on the foot's second line */
+.hm-link {
+  flex: none;
+  margin-left: 1rem;                     /* aligns under the stats' indent */
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.62rem;
+  color: #d9a441;                        /* house gold */
+}
+.hm-link:is(:hover, :focus-visible) { color: #f0c87a; }
+
+/* discord — a quiet blurple door on the head's right */
+.dc-cta {
+  margin-left: auto;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #5865F2;
+}
+.dc-cta:is(:hover, :focus-visible) { color: #8891f2; }
+
+/* discord — the topic's image, very small, beside the copy (live data
+   only; the baked fallback has no media and an expired link never shows) */
+.dc-topic { display: flex; align-items: flex-start; gap: 0.6rem; }
+.dc-copy { flex: 1 1 auto; min-width: 0; }
+.dc-thumb {
+  flex: none;
+  width: 46px; height: 46px;
+  margin-top: 2px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid rgba(244, 228, 193, 0.15);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.dc-thumb.on { opacity: 1; }
+.dc-thumb:not([src]) { display: none; }

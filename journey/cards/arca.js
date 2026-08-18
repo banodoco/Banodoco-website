@@ -124,8 +124,18 @@ export default {
 
     const info = document.createElement('p');
     info.className = 'ag-info';
-    info.textContent = 'Edition II · 198 entries · 7,287 votes · $56.8k awarded';
-    stage.append(row, word, info);
+    info.textContent = 'Edition II · 198 entries · 7,287 votes · $56.8k paid';
+
+    // the door, in the site's own voice (cream Geosans, its dark-red hover),
+    // revealed on hover/pin by the shared card-cta rule
+    const cta = document.createElement('a');
+    cta.className = 'ag-cta card-cta';
+    cta.href = 'https://arcagidan.com/';
+    cta.target = '_blank';
+    cta.rel = 'noopener noreferrer';
+    cta.tabIndex = -1;
+    cta.textContent = 'ENTER THE PRIZE →';
+    stage.append(row, word, info, cta);
   },
 
   activate() {},                      // hover-driven; nothing to start

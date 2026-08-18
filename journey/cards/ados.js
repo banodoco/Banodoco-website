@@ -158,7 +158,18 @@ export default {
     next.addEventListener('keydown', onNavKey);
 
     bar.append(prev, center, next);
-    stage.append(media, scrim, word, bar);
+
+    // the door, in the site's own eyebrow voice, top-right like its event
+    // tags; revealed on hover/pin by the shared card-cta rule
+    const cta = document.createElement('a');
+    cta.className = 'ad-cta card-cta';
+    cta.href = 'https://ados.events/';
+    cta.target = '_blank';
+    cta.rel = 'noopener noreferrer';
+    cta.tabIndex = -1;
+    cta.textContent = 'SEE EVENTS →';
+
+    stage.append(media, scrim, word, bar, cta);
 
     caption(0);
   },
