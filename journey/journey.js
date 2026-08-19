@@ -689,6 +689,10 @@ export function boot(opts = {}) {
      again. This flag starts before placeAt() because that function renders
      two synchronous destination-progress frames before camBlend exists. */
   let cameraStateDisagree = false;
+  // A wrap parks p at its destination before the four-second lap begins, so
+  // p cannot tell the rail where that visible move is. This small ticket is
+  // created before placeAt's synchronous frames and follows the camera clock.
+  let railWrap = null;          // { dir, homeP, phase } while a wrap is flying
   // Scratch for the live destination pose, read fresh every blend frame.
   const _dstPos = sceneApi.camera.position.clone();
   const _dstTgt = sceneApi.controls.target.clone();
@@ -714,6 +718,7 @@ export function boot(opts = {}) {
     // starts from where the old one had actually reached, which pos0 above
     // has already captured.
     camBlend = null;
+    railWrap = null;
     chapterEntry = null;
     // ...and a jump AWAY from the hero arms its furniture DEPARTURE here,
     // before placeAt's dt = 0 passes can snap the scrim off on the click
@@ -733,6 +738,11 @@ export function boot(opts = {}) {
     // the journey's state and the camera agree again. This is the WebGL half
     // of what ui.armCopyEntry already does for the copy layer.
     cameraStateDisagree = true;
+    railWrap = wrap ? {
+      dir: wrap,
+      homeP: restProgress(chapterAt(fromP).id),
+      phase: 0,
+    } : null;
     // Install before placeAt: its two synchronous dt=0 passes must see the
     // beginning of the entry, not one transient fully-arrived drive(p) state.
     const entryChapter = chapters[chapterId];
@@ -795,7 +805,7 @@ export function boot(opts = {}) {
       // journey when it gets back (steerWrapBlend / landWrapHome) — and the
       // destination pose's camera x, kept so a steer can re-announce the
       // chapters' blend contract with whichever end the lap now lands at.
-      wrapDir: wrap, homeP: wrap ? restProgress(chapterAt(fromP).id) : 0,
+      wrapDir: wrap, homeP: railWrap ? railWrap.homeP : 0,
       dstX: cam.position.x };
     // cam.position is the DESTINATION pose here — placeAt above let the
     // director write it, and az1/len are already measured against it. A
@@ -1085,7 +1095,7 @@ export function boot(opts = {}) {
     paintHeroFurniture(Math.max(heroPresence(p) * stepHeroEntry(dt), stepHeroExit(dt)));
 
     guarded('ui', () => ui.update(p, ch.id, sceneApi.camera, dt,
-      { cameraStateDisagree }));
+      { cameraStateDisagree, railWrap }));
 
     /* THE RIDE WRITES NOTHING (2026-08-11, Hannah's brief). A chapter change
        used to replaceState `#/<chapter>` from right here, every time the
@@ -1219,6 +1229,7 @@ export function boot(opts = {}) {
   function landWrapHome() {
     const homeP = camBlend.homeP;
     camBlend = null;
+    railWrap = null;
     chapterEntry = null;
     cameraStateDisagree = false;
     guarded('lens', () => lens.setLookOverride(null));
@@ -1257,6 +1268,7 @@ export function boot(opts = {}) {
     if (camBlend.t < 0) camBlend.t = 0;
     const f = Math.min(camBlend.t / camBlend.dur, 1);
     const e = f * f * f * (f * (f * 6 - 15) + 10);   // smootherstep, C2 ends
+    if (railWrap) railWrap.phase = e;
     const cam = sceneApi.camera, ctl = sceneApi.controls;
     // The blend composes onto the DESTINATION pose read live from the
     // camera — valid only if something wrote that pose this frame. While
@@ -1307,6 +1319,7 @@ export function boot(opts = {}) {
    *  keep its own visible reveal clock; cancellation/placement clears it. */
   function endCamBlend(keepEntry = false) {
     camBlend = null;
+    railWrap = null;
     if (!keepEntry) chapterEntry = null;
     cameraStateDisagree = false;
     /* AND THE CAMERA GOES BACK TO THE POSE p IMPLIES (2026-08-14 — Hannah:
@@ -1497,13 +1510,20 @@ export function boot(opts = {}) {
     get p() { return journey.progress; },
     get chapter() { return chapterAt(journey.progress).id; },
     get detail() { return detailNode; },
+    /** The navigation can enter during the organism's final settle without
+     *  enabling journey input yet. reveal() is latched, so activate() can
+     *  safely repeat this call for early-input and reduced-motion paths. */
+    revealRail() {
+      if (ui.rail && ui.rail.reveal) ui.rail.reveal();
+      return state;
+    },
     /** Publish and enable the already-prepared journey. Safe to call once the
      *  startup readiness promise has resolved; idempotent for QA callers. */
     activate({ entry: activationEntry = null } = {}) {
       const first = !activated;
       activated = true;
       scroll.enabled = true;
-      if (ui.rail && ui.rail.reveal) ui.rail.reveal();
+      state.revealRail();
       window.journey = state;
       if (first) {
         const target = activationEntry || queuedEntry;

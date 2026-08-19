@@ -869,9 +869,9 @@ export function createInspire(sceneApi) {
   const LAND_STAGGER_S = 0.52;       // clearer one-by-one read, still one gesture
   const LAND_IN_K = 5.0;             // ~0.2 s to 63% — an ignition, not a pop
   const LAND_OUT_K = 9.0;            // leave with the copy (HOTSPOT_OUT_K pace)
-  const LAND_ON = 0.60;              // gate threshold: first ember ignites
-                                     // while the heading is still resolving —
-                                     // overlap reads as one intro, not a queue
+  const LAND_ON = 0.18;              // begin roughly half a beat earlier;
+                                     // the 0.52 s spacing below is unchanged,
+                                     // so only the queue's initial hold moves
   const land = exits.map(() => ({ a: 0, at: null }));
   let landGate = null;               // bound by journey.js; null = QA default 1
   // One envelope owns both halves of each landing event. Keep this free of

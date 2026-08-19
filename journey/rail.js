@@ -15,8 +15,8 @@
 // site-map panel. It replaced the hero-nav `.j-nav` row in the first build;
 // this redux additionally replaces `journey/ui-footer.js` (the bottom "Site
 // Information" band and its epilogue cue) — everything that footer carried is
-// in the PANEL now: the chapter deep links, the outbound links, the static-
-// journey pointer, and the legal line. The static tier carries a hand-
+// in the PANEL now: the chapter deep links, the social links, and the legal
+// line. The static tier carries a hand-
 // authored twin of all of it (static/index.html), checked by its drift guard.
 //
 // ===========================================================================
@@ -81,8 +81,8 @@
 //
 // MENU OPEN — a real modal dialog sliding in from the right: the site map.
 //   Every section with its heading, every section's nodes with their one-line
-//   descriptions and primary links, the outbound links, the static-tier
-//   pointer, the legal line. Someone who opens it understands what the site
+//   descriptions and primary links, the social links, and the legal line.
+//   Someone who opens it understands what the site
 //   contains without riding the journey.
 //
 // ===========================================================================
@@ -122,7 +122,20 @@
 import { CONTENT } from '../content/content.js';
 import { CHAPTERS, chapterAt, restProgress, startOf } from './route.js';
 import { buildSymbol } from './symbols.js';
+import { CARD_ICONS } from './cards/index.js';
+import { installBackdropDismiss } from './backdrop.js';
 import { claimInput, releaseInput } from './scroll.js';
+
+/* The panel reuses the initiative pictographs already drawn for the in-scene
+   chips. Social marks are local to this panel: they replace the former text
+   list while their links retain visible-on-hover titles and accessible names. */
+const SOCIAL_ICONS = {
+  Discord: '<svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>',
+  GitHub: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.77 2.72 1.26 3.38.96.1-.75.4-1.26.74-1.55-2.57-.29-5.27-1.28-5.27-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.75 0c2.19-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.41-2.71 5.38-5.29 5.67.42.36.78 1.07.78 2.16v3.23c0 .31.21.67.79.56A11.5 11.5 0 0 0 12 .7Z"/></svg>',
+  X: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.39L6.48 22H3.36l7.25-8.29L2.97 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.84h1.73L8.43 4.05H6.58L17.8 19.84Z"/></svg>',
+};
+const SOCIAL_ORDER = ['X', 'Discord', 'GitHub'];
+const CLOSE_ICON = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5 5 15"/></svg>';
 
 /* The exact Mission pose stays useful for placements and capture hygiene. */
 const SHOW_P = 0.004;
@@ -386,6 +399,9 @@ export function createRail({ onNav } = {}) {
   const reduceMotion = typeof matchMedia === 'function'
     ? matchMedia('(prefers-reduced-motion: reduce)')
     : { matches: false };
+  const coarsePointer = typeof matchMedia === 'function'
+    ? matchMedia('(pointer: coarse)')
+    : { matches: false };
 
   /* ------------------------------------------------------------------ */
   /* THE RAIL                                                            */
@@ -496,7 +512,7 @@ export function createRail({ onNav } = {}) {
     mark.appendChild(reticle());
     item.appendChild(mark);
     item.appendChild(el('span', 'j-rail-name',
-      (CONTENT.chapters[c.id] || {}).nav || c.nav || 'Epilogue'));
+      (CONTENT.chapters[c.id] || {}).nav || c.nav || 'Purpose'));
 
     li.appendChild(item);
     list.appendChild(li);
@@ -532,23 +548,17 @@ export function createRail({ onNav } = {}) {
   /* ------------------------------------------------------------------ */
   /* THE SITE-MAP PANEL                                                  */
   /* ------------------------------------------------------------------ */
-  /* CONTENT SOURCE. Every string below comes out of content/content.js and
-     nothing is written here:
+  /* CONTENT SOURCE. The section and initiative copy below comes out of
+     content/content.js; only the panel-specific ownership CTA is local:
 
-       lede         chapters.mission.sub — the site's one-line summary of
-                    itself (also static/index.html's <meta description>).
-       section name chapters.<id>.nav (the epilogue: the structural word
-                    "Epilogue", route.js's own word for it — not new copy)
-       section line chapters.<id>.heading — one short statement per section.
+       section name chapters.<id>.nav
+       boundary line chapters.mission/final.heading — retained only at the
+                    beginning and end of the journey
        item title   nodes.<id>.label
        item line    nodes.<id>.short — the same sentence the node's own
                     popover shows, [PLACEHOLDER] tokens and all.
-       item link    nodes.<id>.spotlight.link / .card.link, where one exists.
-                    Every href is '#' per D10 — no external URL on this site
-                    is confirmed yet (including the hero's own Discord
-                    pill). The panel carries the authored labels and waits.
-       elsewhere    site.links + site.social (the renamed footer content)
-       static note  the sentence ui-footer.js shipped, verbatim
+       item link    nodes.<id>.spotlight.link / .card.link, where one exists
+       social       site.social, rendered as accessible icon links
        legal        site.legal */
   const scrim = el('div', 'j-menu-scrim');
   scrim.hidden = true;
@@ -562,15 +572,39 @@ export function createRail({ onNav } = {}) {
   menu.hidden = true;
   menu.inert = true;
 
-  const menuClose = el('button', 'j-menu-x', '✕');
-  menuClose.type = 'button';
-  menuClose.setAttribute('aria-label', 'Close menu');
-  menu.appendChild(menuClose);
-
+  const menuHead = el('div', 'j-menu-head');
   const menuH = el('h2', 'j-menu-h', 'Banodoco');
   menuH.id = 'j-menu-h';
-  menu.appendChild(menuH);
-  menu.appendChild(el('p', 'j-menu-lede', CONTENT.chapters.mission.sub));
+  menuH.tabIndex = -1;
+  menuHead.appendChild(menuH);
+
+  const menuSocial = el('ul', 'j-menu-links');
+  menuSocial.setAttribute('aria-label', 'Social links');
+  for (const label of SOCIAL_ORDER) {
+    const link = CONTENT.site.social.find((item) => item.label === label);
+    if (!link) continue;
+    const li = el('li');
+    const a = el('a');
+    a.href = link.href || '#';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.setAttribute('aria-label', link.label);
+    a.title = link.label;
+    a.innerHTML = SOCIAL_ICONS[link.label] || '';
+    li.appendChild(a);
+    menuSocial.appendChild(li);
+  }
+  menuHead.appendChild(menuSocial);
+
+  const menuCloseZone = el('div', 'j-menu-close-zone');
+  const menuClose = el('button', 'j-menu-x');
+  menuClose.type = 'button';
+  menuClose.setAttribute('aria-label', 'Close menu');
+  menuClose.title = 'Close menu';
+  menuClose.innerHTML = CLOSE_ICON;
+  menuCloseZone.appendChild(menuClose);
+  menuHead.appendChild(menuCloseZone);
+  menu.appendChild(menuHead);
 
   /** A chapter's nodes, in content.js insertion (= narrative) order. */
   function itemsFor(chapterId) {
@@ -599,19 +633,41 @@ export function createRail({ onNav } = {}) {
     // "01 — Mission": the hero callouts number themselves the same way, and so
     // does the static tier's eyebrow. Derived from manifest order.
     txt.appendChild(el('span', 'j-menu-no', String(i + 1).padStart(2, '0')));
-    txt.appendChild(el('span', 'j-menu-name', data.nav || 'Epilogue'));
-    txt.appendChild(el('span', 'j-menu-line', data.heading || ''));
+    txt.appendChild(el('span', 'j-menu-name', data.nav || 'Purpose'));
+    if (c.id === 'mission' || c.id === 'final') {
+      txt.appendChild(el('span', 'j-menu-line', data.heading || ''));
+    }
     a.appendChild(txt);
     a.addEventListener('click', (e) => { e.preventDefault(); closeMenu({ focusBack: false }); onNav(c.id); });
     li.appendChild(a);
 
     // The section's own contents: label — one sentence → primary link.
+    // Owned is intentionally a compact statement instead of the former three
+    // claim rows; the full explanation belongs on the ownership page.
     const items = itemsFor(c.id);
-    if (items.length) {
+    if (c.id === 'owned') {
+      const owned = el('div', 'j-menu-owned');
+      owned.appendChild(el('p', 'j-menu-owned-copy', '100% shared, granted 1% per month.'));
+      const more = el('p', 'j-menu-owned-more');
+      more.appendChild(document.createTextNode('Read more on the '));
+      const ownershipLink = el('a', null, 'ownership page');
+      ownershipLink.href = new URL('../ownership/', import.meta.url).href;
+      more.appendChild(ownershipLink);
+      more.appendChild(document.createTextNode('.'));
+      owned.appendChild(more);
+      li.appendChild(owned);
+    } else if (items.length) {
       const sub = el('ul', 'j-menu-sub');
       for (const it of items) {
         const row = el('li', 'j-menu-row');
-        row.appendChild(el('span', 'j-menu-il', it.label));
+        const label = el('span', 'j-menu-il');
+        if (CARD_ICONS[it.id]) {
+          const icon = el('span', 'j-menu-pict');
+          icon.innerHTML = CARD_ICONS[it.id];
+          label.appendChild(icon);
+        }
+        label.appendChild(document.createTextNode(it.label));
+        row.appendChild(label);
         if (it.short) row.appendChild(el('span', 'j-menu-is', it.short));
         if (it.link) {
           const la = el('a', 'j-menu-ia', it.link.label);
@@ -628,35 +684,6 @@ export function createRail({ onNav } = {}) {
   });
   menuNav.appendChild(menuList);
   menu.appendChild(menuNav);
-
-  const elsewhere = el('div', 'j-menu-else');
-  const eh = el('h3', 'j-menu-eh', 'Elsewhere');
-  eh.id = 'j-menu-eh';
-  elsewhere.appendChild(eh);
-  const eul = el('ul', 'j-menu-links');
-  eul.setAttribute('aria-labelledby', 'j-menu-eh');
-  for (const link of [...CONTENT.site.links, ...CONTENT.site.social]) {
-    const li = el('li');
-    const a = el('a', null, link.label);
-    a.href = link.href || '#';
-    li.appendChild(a);
-    eul.appendChild(li);
-  }
-  elsewhere.appendChild(eul);
-  menu.appendChild(elsewhere);
-
-  // The accessible, crawlable static tier (PS-5.1 / PL-2.1) — the footer's
-  // sentence, verbatim, now living where the site information lives. NOT a
-  // reduced-motion redirect (decision D11): a link a person chooses to follow.
-  const note = el('p', 'j-menu-note');
-  note.appendChild(document.createTextNode('Every chapter, every node and every link on this page also exists as a plain HTML document with no WebGL: '));
-  const staticLink = el('a', null, 'the static journey');
-  // Resolved off import.meta.url so a directory rename cannot break it — the
-  // reasoning is inherited from ui-footer.js (see 25-navigation-redux.md).
-  staticLink.href = new URL('../static/', import.meta.url).href;
-  note.appendChild(staticLink);
-  note.appendChild(document.createTextNode('.'));
-  menu.appendChild(note);
 
   if (CONTENT.site.legal) menu.appendChild(el('p', 'j-menu-legal', CONTENT.site.legal));
 
@@ -723,6 +750,13 @@ export function createRail({ onNav } = {}) {
   let pinnedRevealed = false;
   let followReadyAt = Infinity;
 
+  /** Desktop keeps the authored moon permanently formed. On touch, the one
+   *  current mark remains the trigger and the existing first-tap expansion
+   *  model owns the fixed mobile list. */
+  function keptOpen() {
+    return ALWAYS_OPEN && pinnedRevealed && !coarsePointer.matches;
+  }
+
   /** Release the persistent rail only after the hero intro has landed. Adding
    *  the existing open classes one painted frame after `.on` reuses the moon's
    *  authored line-draw + cascading formation instead of inventing an entry. */
@@ -732,9 +766,11 @@ export function createRail({ onNav } = {}) {
     root.classList.add('on');
     void root.offsetWidth;
     requestAnimationFrame(() => {
-      hotOpen = true;
-      root.classList.add('j-rail-hot');
-      document.body.classList.add('j-rail-on');
+      if (!coarsePointer.matches) {
+        hotOpen = true;
+        root.classList.add('j-rail-hot');
+        document.body.classList.add('j-rail-on');
+      }
       // The longest existing desktop formation is ~660ms. Only after it lands
       // does progress take direct ownership of the rail's angle.
       followReadyAt = reduceMotion.matches ? Date.now() : Date.now() + 720;
@@ -775,7 +811,7 @@ export function createRail({ onNav } = {}) {
   }
 
   function collapse() {
-    if (ALWAYS_OPEN && pinnedRevealed) {
+    if (keptOpen()) {
       collapseTouch();
       hotOpen = true;
       root.classList.add('on', 'j-rail-hot');
@@ -858,7 +894,7 @@ export function createRail({ onNav } = {}) {
     clearTimeout(formTimer);
     lastPt = null;
     syncAt();
-    if (ALWAYS_OPEN && pinnedRevealed) return;
+    if (keptOpen()) return;
     if (!hotOpen) return;
     hotOpen = false;
     root.classList.remove('j-rail-hot');
@@ -936,7 +972,7 @@ export function createRail({ onNav } = {}) {
   });
 
   root.addEventListener('pointerdown', (e) => {
-    if (ALWAYS_OPEN && pinnedRevealed) return;
+    if (keptOpen()) return;
     if (e.pointerType !== 'touch' || touchOpen) return;
     // The menu mark is the OTHER resting control: its first tap opens the
     // panel (see the menu's own pointerdown below), so it must not spend the
@@ -962,7 +998,8 @@ export function createRail({ onNav } = {}) {
     e.stopPropagation();
   }, true);
 
-  // A press anywhere else puts the rail back to two symbols. Passive observer —
+  // A press anywhere else puts the mobile rail back to its current symbol.
+  // Passive observer —
   // it never cancels, so the canvas's own tap handling is untouched.
   document.addEventListener('pointerdown', (e) => {
     if (!touchOpen) return;
@@ -981,7 +1018,7 @@ export function createRail({ onNav } = {}) {
       .filter(n => n.offsetParent !== null || n === menuClose);
   }
 
-  function openMenu(trigger) {
+  function openMenu(trigger, { keyboard = false } = {}) {
     if (menuIsOpen) return;
     menuIsOpen = true;
     menuReturn = trigger || menuBtn;
@@ -1005,7 +1042,10 @@ export function createRail({ onNav } = {}) {
     // The rail is behind the panel and belongs to nobody while it is open.
     root.inert = true;
     collapse();
-    menuClose.focus();
+    // Keyboard entry lands on the explicit close control and keeps its visible
+    // focus ring. Pointer/touch entry lands on the dialog heading instead: it
+    // announces the panel without painting the close control as preselected.
+    (keyboard ? menuClose : menuH).focus({ preventScroll: true });
   }
 
   function closeMenu({ focusBack = true } = {}) {
@@ -1045,13 +1085,14 @@ export function createRail({ onNav } = {}) {
      click with no pointerdown before it, and openMenu() itself is guarded
      against running twice. */
   menuBtn.addEventListener('pointerdown', (e) => {
+    if (e.isPrimary === false || e.button !== 0) return;
     e.preventDefault();
     // A press is an answer, so the question stops being asked. This also
     // guarantees the gesture can never run under an opening panel.
     clearTimeout(nudgeTimer);
-    openMenu(menuBtn);
+    openMenu(menuBtn, { keyboard: false });
   });
-  menuBtn.addEventListener('click', () => openMenu(menuBtn));
+  menuBtn.addEventListener('click', (e) => openMenu(menuBtn, { keyboard: e.detail === 0 }));
 
   /* ===================================================================== */
   /* THE BUTTON SAYS IT IS A BUTTON — the dwell gesture                     */
@@ -1109,8 +1150,18 @@ export function createRail({ onNav } = {}) {
   menuBtn.addEventListener('animationend', (e) => {
     if (e.animationName === 'j-menu-rewrite') menuBtn.classList.remove('j-rail-nudge');
   });
-  menuClose.addEventListener('click', () => closeMenu());
-  scrim.addEventListener('click', () => closeMenu());
+  // Prevent pointer focus from landing on the close button before dismissal;
+  // keyboard/screen-reader activation still arrives as a click with detail 0
+  // and returns focus to the opener.
+  menuClose.addEventListener('pointerdown', (e) => {
+    if (e.isPrimary === false || e.button !== 0) return;
+    e.preventDefault();
+    closeMenu({ focusBack: false });
+  });
+  menuClose.addEventListener('click', (e) => {
+    if (menuIsOpen) closeMenu({ focusBack: e.detail === 0 });
+  });
+  installBackdropDismiss(scrim, menu, () => closeMenu({ focusBack: false }));
 
   // Focus trap. While the dialog is open its own controls are the whole world,
   // so Tab cycles inside it; Shift+Tab wraps the other way.
@@ -1120,8 +1171,9 @@ export function createRail({ onNav } = {}) {
     if (!items.length) return;
     const first = items[0], last = items[items.length - 1];
     const at = document.activeElement;
-    if (e.shiftKey && (at === first || !menu.contains(at))) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && (at === last || !menu.contains(at))) { e.preventDefault(); first.focus(); }
+    const atControl = items.includes(at);
+    if (e.shiftKey && (at === first || !atControl)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (at === last || !atControl)) { e.preventDefault(); first.focus(); }
   });
 
   /* Escape, in priority order: the menu first (it is modal and it is the thing
@@ -1131,7 +1183,7 @@ export function createRail({ onNav } = {}) {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (menuIsOpen) { e.preventDefault(); e.stopPropagation(); closeMenu(); return; }
-    if (!(ALWAYS_OPEN && pinnedRevealed) && (touchOpen || hotOpen)) {
+    if (!keptOpen() && (touchOpen || hotOpen)) {
       e.preventDefault();
       collapse();
     }
@@ -1276,6 +1328,10 @@ export function createRail({ onNav } = {}) {
         angleOf[i] += d;
       }
       s.li.style.setProperty('--ang-to', angleOf[i].toFixed(2) + 'deg');
+      // A direct jump can interrupt a progress-followed edge handoff. Its
+      // authored turn owns the slot from here, so retire that local offset.
+      s.li.classList.remove('j-rail-recycle');
+      s.li.style.setProperty('--rail-recycle-y', '0px');
       s.li.style.setProperty('--ring', String(k));
       // Distance along the ring from the current item, for the stagger: the
       // pair either side of the slot emerges first, the pair beyond it next.
@@ -1340,9 +1396,9 @@ export function createRail({ onNav } = {}) {
   /** During real scroll, put the moon directly on that coordinate. One mark
    *  fades round the hidden back at either tip; the other four move exactly
    *  with p. Direct nav flights retain writeAngles()'s authored timed turn. */
-  function followProgress(p) {
-    const pos = progressIndex(p);
-    const nearest = Math.max(0, Math.min(N - 1, Math.round(pos)));
+  function followCoordinate(pos) {
+    const nearestStep = Math.round(pos);
+    const nearest = ((nearestStep % N) + N) % N;
     curIndex = nearest;
     prevCur = nearest;
     root.style.setProperty('--cur', pos.toFixed(4));
@@ -1352,14 +1408,28 @@ export function createRail({ onNav } = {}) {
       while (d <= -N / 2) d += N;
       const edge = Math.abs(d);
       const opacity = edge <= 2 ? 1 : Math.max(0, (N / 2 - edge) / 0.5);
+      /* THE RECYCLED MARK KEEPS ITS VERTICAL MOMENTUM. The polar path's
+         visible part moves only a couple of pixels vertically before the
+         hidden half takes over, which reads as one glyph vanishing and an
+         unrelated one popping in. Give only that edge handoff an extra drop:
+         the top copy falls as it fades, then the bottom copy begins slightly
+         above its tip and falls into place. Reverse travel mirrors naturally
+         — bottom rises out, top rises in. The mark is fully transparent at
+         the discontinuity, so there is still only one visible copy. */
+      const recycle = reduceMotion.matches
+        ? 0
+        : Math.max(0, Math.min(1, (edge - 2) / 0.5));
+      const recycleY = recycle > 0 ? -Math.sign(d) * recycle * 24 : 0;
       angleOf[i] = d * STEP;
       s.li.style.setProperty('--ang-to', angleOf[i].toFixed(3) + 'deg');
       s.li.style.setProperty('--rail-follow-opacity', opacity.toFixed(3));
+      s.li.style.setProperty('--rail-recycle-y', recycleY.toFixed(2) + 'px');
+      s.li.classList.toggle('j-rail-recycle', recycle > 0);
       const k = ((Math.round(d) % N) + N) % N;
       s.li.classList.toggle('j-pill-up', PILL_SIDE[k] === 'up');
       s.li.classList.toggle('j-pill-dn', PILL_SIDE[k] === 'dn');
     });
-    const between = Math.abs(pos - nearest) > 0.002;
+    const between = Math.abs(pos - nearestStep) > 0.002;
     root.classList.toggle('j-rail-between', between);
     if (between !== wasBetweenRests) {
       wasBetweenRests = between;
@@ -1368,9 +1438,20 @@ export function createRail({ onNav } = {}) {
     }
   }
 
+  function followProgress(p) {
+    followCoordinate(progressIndex(p));
+  }
+
+  /** A wrap is one cyclic step around the moon, paced by the long camera lap
+   *  instead of the destination p that was placed before that lap began. */
+  function followWrapProgress({ dir, phase }) {
+    followCoordinate(dir > 0 ? (N - 1) + phase : -phase);
+  }
+
   function update(p, {
     modalDetail = false,
     cameraStateDisagree = false,
+    railWrap = null,
   } = {}) {
     /* THE HERO OWNS ITS WHOLE ARRIVAL, IN BOTH DIRECTIONS (2026-08-19).
 
@@ -1404,10 +1485,11 @@ export function createRail({ onNav } = {}) {
 
     const jumpStarted = cameraStateDisagree && !wasCameraStateDisagree;
     wasCameraStateDisagree = cameraStateDisagree;
-    const following = pinnedRevealed && Date.now() >= followReadyAt && !cameraStateDisagree;
+    const following = pinnedRevealed && Date.now() >= followReadyAt
+      && (!cameraStateDisagree || (!!railWrap && !isColumn));
     root.classList.toggle('j-rail-following', following);
     let wroteJumpAngles = false;
-    if (jumpStarted) {
+    if (jumpStarted && !(railWrap && !isColumn)) {
       const target = CHAPTERS.findIndex(c => c.id === chapterAt(p).id);
       root.classList.remove('j-rail-between');
       wasBetweenRests = false;
@@ -1459,7 +1541,10 @@ export function createRail({ onNav } = {}) {
         else menuLinks[id].removeAttribute('aria-current');
       }
     }
-    if (following) followProgress(p);
+    if (following) {
+      if (railWrap && !isColumn) followWrapProgress(railWrap);
+      else followProgress(p);
+    }
     // With all five slots linked (THE EPILOGUE), the marked entry and the
     // scene on screen are the same statement: `aria-current` and the reticle
     // follow chapterAt(p) — the rail itself can now say "you are in the

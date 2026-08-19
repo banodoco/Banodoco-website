@@ -504,8 +504,12 @@
     opacity: 0;
     transition: opacity 0.24s ease, letter-spacing 0.24s ease;
   }
-  .rail-item:is(:hover, :focus-visible) .rail-name,
-  .rail-menu:is(:hover, :focus-visible) .rail-name { opacity: 1; letter-spacing: 0.24em; }
+  .rail-item:focus-visible .rail-name,
+  .rail-menu:focus-visible .rail-name { opacity: 1; letter-spacing: 0.24em; }
+  @media (hover: hover) and (pointer: fine) {
+    .rail-item:hover .rail-name,
+    .rail-menu:hover .rail-name { opacity: 1; letter-spacing: 0.24em; }
+  }
 
   /* RESTING: the current mark, lit */
   .rail-slot.now .rail-item { color: rgba(228, 182, 102, 0.82); }
@@ -539,7 +543,8 @@
   .rail-list:hover .rail-echo:not(.now) .rail-item:is(:hover, :focus-visible) { color: var(--parchment); }
 
   /* the reticle on the current entry, exactly Tier 1's */
-  .rail-ret { position: absolute; inset: -5px; display: block; pointer-events: none; }
+  /* Same breathing room as the live rail; still contained by the tile. */
+  .rail-ret { position: absolute; inset: -7px; display: block; pointer-events: none; }
   .rck {
     position: absolute;
     width: 6px; height: 6px;
@@ -617,7 +622,13 @@
     right: 0;
     height: 8px;
   }
-  .rail-menu:is(:hover, :focus-visible) { color: var(--gold-bright); }
+  /* Touch browsers can retain :hover after a tap. Persistent emphasis belongs
+     to keyboard focus; hover is added only where a real hover pointer exists. */
+  .rail-menu:focus-visible { color: var(--gold-bright); }
+  @media (hover: hover) and (pointer: fine) {
+    .rail-menu:hover { color: var(--gold-bright); }
+  }
+  .rail-menu:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 3px; }
 
   /* OPEN: the <details> itself becomes the panel — from the RIGHT — and its
      <summary> becomes the panel's header row, so the control that closes it
@@ -632,7 +643,7 @@
     transform: none;
     z-index: 7;
     width: min(29rem, 92vw);
-    padding: 1.1rem 2.2rem 2.4rem;
+    padding: 1rem 2.2rem 2.4rem;
     overflow-y: auto;
     overscroll-behavior: contain;
     background: #0b0702;
@@ -641,28 +652,58 @@
     pointer-events: auto;
   }
   .rail-menu-wrap[open] .rail-menu {
-    width: auto;
-    margin: 0 0 1.4rem;
-    padding: 0.4rem 0.9rem 0.4rem 1.05rem;
-    border-radius: 999px;
-    border: 1px solid rgba(217, 164, 65, 0.42);
-    justify-content: space-between;
-    gap: 0.85rem;
+    position: absolute;
+    top: 1rem;
+    right: 2.2rem;
+    z-index: 1;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(217, 164, 65, 0.24);
+    background: rgba(217, 164, 65, 0.025);
+    color: var(--muted);
   }
   .rail-menu-wrap[open] .rail-menu::before { display: none; }
-  .rail-menu-wrap[open] .rail-name {
-    position: static;
-    transform: none;
-    background: none;
-    padding: 0;
-    margin: 0;
-    opacity: 1;
-    letter-spacing: 0.24em;
-    font-weight: 700;
+  .rail-menu-wrap[open] .rail-menu:focus-visible {
     color: var(--gold-bright);
+    border-color: rgba(217, 164, 65, 0.62);
+    background: rgba(217, 164, 65, 0.07);
   }
-  .rail-menu-x { display: none; margin-left: auto; font-size: 0.9rem; line-height: 1; }
-  .rail-menu-wrap[open] .rail-menu-x { display: inline; }
+  @media (hover: hover) and (pointer: fine) {
+    .rail-menu-wrap[open] .rail-menu:hover {
+      color: var(--gold-bright);
+      border-color: rgba(217, 164, 65, 0.62);
+      background: rgba(217, 164, 65, 0.07);
+    }
+  }
+  .rail-menu-wrap[open] .rail-menu > .rail-mark,
+  .rail-menu-wrap[open] .rail-menu > .rail-name { display: none; }
+  .rail-menu-x { display: none; }
+  .rail-menu-x svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.35;
+    stroke-linecap: round;
+  }
+  .rail-menu-wrap[open] .rail-menu-x { display: inline-flex; }
+  .rail-menu-close-label { display: none; }
+  .rail-menu-wrap[open] .rail-menu-close-label {
+    position: absolute;
+    display: block;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
   /* the scrim: present only while open, and only useful with JS (which wires
      the click-to-close); with no JS it is simply the dimming behind the panel */
   .menu-scrim {
@@ -671,11 +712,29 @@
     z-index: -1;
     display: none;
     background: rgba(5, 3, 1, 0.62);
+    touch-action: manipulation;
   }
   .rail-menu-wrap[open] .menu-scrim { display: block; }
 
-  .menu-h { margin: 0 0 0.9rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold); }
-  .menu-lede { margin: 0 0 1.7rem; font-size: 0.86rem; line-height: 1.65; color: var(--muted); }
+  .menu-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    margin: 0 0 1.15rem;
+  }
+  .menu-close-space {
+    width: 57px;
+    height: 44px;
+    margin-left: 0.25rem;
+    border-left: 1px solid rgba(217, 164, 65, 0.22);
+  }
+  .menu-h { min-width: 0; margin: 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold); }
+  /* Pointer entry focuses this non-interactive heading for announcement. It
+     remains visually neutral; interactive controls keep their focus rings. */
+  .rail-menu-wrap .menu-h:focus,
+  .rail-menu-wrap .menu-h:focus-visible { outline: none; box-shadow: none; }
   .menu-nav { display: block; }
   .menu-list { margin: 0; padding: 0; list-style: none; }
   .menu-list > li { border-top: 1px solid rgba(217, 164, 65, 0.16); }
@@ -710,7 +769,25 @@
   .menu-sub { margin: 0; padding: 0 0.6rem 0.9rem 2.4rem; list-style: none; }
   .menu-row { margin: 0 0 0.5rem; font-size: 0.8rem; line-height: 1.55; color: var(--muted); }
   .menu-row:last-child { margin-bottom: 0; }
-  .menu-il { color: var(--parchment); font-weight: 600; }
+  .menu-il { display: inline-flex; align-items: center; gap: 0.42rem; color: var(--parchment); font-weight: 600; }
+  .menu-pict {
+    display: inline-flex;
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    color: rgba(240, 200, 119, 0.78);
+    filter: drop-shadow(0 0 4px rgba(240, 170, 60, 0.35));
+  }
+  .menu-pict svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
   .menu-il::after { content: " — "; color: rgba(201, 191, 168, 0.45); font-weight: 400; }
   .menu-ia {
     margin-left: 0.45em;
@@ -722,24 +799,48 @@
   .menu-ia::after { content: " \2192"; }
   .menu-ia:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
 
-  .menu-else { margin-top: 1.7rem; }
-  .menu-eh { margin: 0 0 0.7rem; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(217, 164, 65, 0.75); }
-  .menu-links { display: flex; flex-wrap: wrap; gap: 0.2rem 1.5rem; margin: 0; padding: 0; list-style: none; }
+  .menu-owned { padding: 0 0.6rem 0.9rem 2.4rem; font-size: 0.8rem; line-height: 1.55; }
+  .menu-owned-copy { margin: 0; color: var(--parchment); font-weight: 600; }
+  .menu-owned-more { margin: 0.25rem 0 0; color: var(--muted); }
+  .menu-owned-more a { color: var(--gold-bright); text-decoration: none; border-bottom: 1px solid rgba(217, 164, 65, 0.45); }
+  .menu-owned-more a:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
+
+  .menu-links { display: flex; flex-wrap: nowrap; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
   .menu-links a {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
-    color: var(--parchment);
+    justify-content: center;
+    width: 40px;
+    height: 44px;
+    color: rgba(201, 191, 168, 0.7);
     text-decoration: none;
-    font-size: 0.82rem;
-    border-bottom: 1px solid rgba(217, 164, 65, 0.4);
+    border-radius: 50%;
   }
-  .menu-links a:is(:hover, :focus-visible) { color: var(--gold-bright); border-color: var(--gold-bright); }
+  .menu-links svg { display: block; width: 15px; height: 15px; fill: currentColor; }
+  .menu-links a[aria-label="X"] svg { width: 13px; height: 13px; }
+  .menu-vh {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .menu-links a:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.06); }
 
-  /* the tier note and the legal line — the old footer's last residents */
-  .menu-note { margin: 1.5rem 0 0.7rem; font-size: 0.78rem; line-height: 1.6; color: var(--muted); }
-  .menu-note a { color: var(--gold-bright); }
-  .menu-legal { margin: 0; font-size: 0.7rem; line-height: 1.6; color: rgba(201, 191, 168, 0.6); }
+  .menu-legal { margin: 1rem 0 0; font-size: 0.7rem; line-height: 1.6; color: rgba(201, 191, 168, 0.6); }
+
+  @media (max-width: 420px) {
+    .rail-menu-wrap[open] { padding: 0.9rem 0.8rem 1.8rem; }
+    .rail-menu-wrap[open] .rail-menu { top: 0.9rem; right: 0.8rem; }
+    .menu-head { gap: 0.25rem; }
+    .menu-h { font-size: 0.66rem; letter-spacing: 0.18em; }
+    .menu-links { gap: 0.25rem; }
+    .menu-close-space { width: 53px; margin-left: 0.15rem; }
+  }
 
   /* NO-JS: the honest fallback for a navigator that cannot know where you
      are — permanently expanded, every section visible, named and linked. */
@@ -962,7 +1063,7 @@
        already drawn. Same contract as the live tier's. */
     .rail-slot, .rail-item, .rail-name, .rail-menu, .rail-menu-wrap,
     .rail-inner::before, .rail-inner::after, .rck,
-    .menu-item, .menu-mark, .menu-links a, .menu-ia, .menu-note a { transition: none; }
+    .menu-item, .menu-mark, .menu-links a, .menu-ia { transition: none; }
     /* the Discord mark's warm-up ends at its resting or lit style — off
        leaves both states intact and instant (same contract as the live tier) */
     .pill-ic { transition: none; }
@@ -1030,9 +1131,9 @@
      drift guard at the foot of this file — same arrangement the copy
      has with ../content/content.js.
 
-     FIVE links (2026-08-09 fix): the epilogue is not a peer chapter
-     (content.js chapters.final.nav === null keeps it out of headings
-     and numbering), but its slot is a REAL LINK — the first build's
+     FIVE links (2026-08-09 fix): the final chapter is not a peer chapter
+     (route.js keeps its nav field null, preserving the quieter rail styling),
+     but its slot is a REAL LINK — the first build's
      aria-hidden <span> echo was a 44px dead hole in the fan that a
      pointer fell through and a click could not press (the live tier's
      rail.js, THE EPILOGUE, records the measurement). It keeps the
@@ -1042,7 +1143,7 @@
 <nav class="rail" aria-label="Journey sections">
   <div class="rail-inner">
     <ul class="rail-list">
-      <!-- Mission is authored as `now` so the resting symbol is correct on the
+      <!-- Intro is authored as `now` so the resting symbol is correct on the
            first paint, before the scroll observer has said anything — and so a
            no-JS visitor lands on a rail that is already marked. -->
       <li class="rail-slot now" data-chapter="mission" style="--i:0">
@@ -1051,7 +1152,7 @@
             <svg class="sym" data-sym="mission" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.4 10.6 Q11 2.9 18.6 10.6"/><path d="M3.4 10.6 H18.6"/><path d="M9.8 10.6 V15.9 Q9.8 18.4 7.1 18.9"/><path d="M12.2 10.6 V15.9 Q12.2 18.4 14.9 18.9"/><path d="M2.2 18.9 H19.8"/></svg>
             <i class="rail-ret" aria-hidden="true"><b class="rck tl"></b><b class="rck tr"></b><b class="rck br"></b><b class="rck bl"></b></i>
           </span>
-          <span class="rail-name" data-src="chapters.mission.nav">Mission</span>
+          <span class="rail-name" data-src="chapters.mission.nav">Intro</span>
         </a>
       </li>
       <li class="rail-slot" data-chapter="inspire" style="--i:1">
@@ -1087,7 +1188,7 @@
             <svg class="sym" data-sym="final" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.6 17.2 H20.4"/><path d="M8.2 11.4 Q12.4 6.2 16.6 11.4"/><path d="M8.2 11.4 H16.6"/><path d="M12.4 11.4 V17.2"/><path d="M2.0 13.8 Q4.8 10.6 7.6 13.8"/><path d="M4.8 13.8 V17.2"/><path d="M16.4 14.6 Q18.4 12.4 20.4 14.6"/><path d="M18.4 14.6 V17.2"/></svg>
             <i class="rail-ret" aria-hidden="true"><b class="rck tl"></b><b class="rck tr"></b><b class="rck br"></b><b class="rck bl"></b></i>
           </span>
-          <span class="rail-name">Epilogue</span>
+          <span class="rail-name" data-src="chapters.final.nav">Purpose</span>
         </a>
       </li>
     </ul>
@@ -1098,75 +1199,63 @@
           <svg class="sym" data-sym="menu" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle cx="4.2" cy="6.4" r="0.85"/><path d="M7.6 6.4 H18.4"/><circle cx="4.2" cy="11" r="0.85"/><path d="M7.6 11 H18.4"/><circle cx="4.2" cy="15.6" r="0.85"/><path d="M7.6 15.6 H16.2"/></svg>
         </span>
         <span class="rail-name">Menu</span>
-        <span class="rail-menu-x" aria-hidden="true">&#10005;</span>
+        <span class="rail-menu-x" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 5l10 10M15 5 5 15"/></svg></span>
+        <span class="rail-menu-close-label">Close menu</span>
       </summary>
       <div class="menu-scrim" aria-hidden="true"></div>
-      <h2 class="menu-h">Banodoco</h2>
-      <!-- The overview line is chapters.mission.sub — this site's own one-line
-           summary of itself, which is also this page's <meta description>. -->
-      <p class="menu-lede" data-src="chapters.mission.sub">Banodoco builds spaces, initiatives and tools for the open source AI art community.</p>
+      <div class="menu-head">
+        <h2 class="menu-h" tabindex="-1">Banodoco</h2>
+        <ul class="menu-links" aria-label="Social links">
+          <li><a href="https://twitter.com/banodoco" target="_blank" rel="noopener noreferrer" aria-label="X" title="X"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.39L6.48 22H3.36l7.25-8.29L2.97 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.84h1.73L8.43 4.05H6.58L17.8 19.84Z"/></svg><span class="menu-vh" data-src="site.social.2.label">X</span></a></li>
+          <li><a href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer" aria-label="Discord" title="Discord"><svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg><span class="menu-vh" data-src="site.social.0.label">Discord</span></a></li>
+          <li><a href="https://github.com/banodoco" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.77 2.72 1.26 3.38.96.1-.75.4-1.26.74-1.55-2.57-.29-5.27-1.28-5.27-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.75 0c2.19-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.41-2.71 5.38-5.29 5.67.42.36.78 1.07.78 2.16v3.23c0 .31.21.67.79.56A11.5 11.5 0 0 0 12 .7Z"/></svg><span class="menu-vh" data-src="site.social.1.label">GitHub</span></a></li>
+        </ul>
+        <span class="menu-close-space" aria-hidden="true"></span>
+      </div>
       <nav class="menu-nav" aria-label="All sections">
         <ol class="menu-list">
           <li><a class="menu-item" href="#/mission" data-menu="mission">
             <span class="menu-mark"><svg class="sym" data-sym="mission" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.4 10.6 Q11 2.9 18.6 10.6"/><path d="M3.4 10.6 H18.6"/><path d="M9.8 10.6 V15.9 Q9.8 18.4 7.1 18.9"/><path d="M12.2 10.6 V15.9 Q12.2 18.4 14.9 18.9"/><path d="M2.2 18.9 H19.8"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">01</span><span class="menu-name">Mission</span><span class="menu-line" data-src="chapters.mission.heading">We’re working to help the open-source AI art ecosystem thrive.</span></span>
+            <span class="menu-txt"><span class="menu-no">01</span><span class="menu-name" data-src="chapters.mission.nav">Intro</span><span class="menu-line" data-src="chapters.mission.heading">We’re working to help the open-source AI art ecosystem thrive.</span></span>
           </a></li>
           <li><a class="menu-item" href="#/inspire" data-menu="inspire">
             <span class="menu-mark"><svg class="sym" data-sym="inspire" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="6.6" cy="10.4" r="0.95"/><circle cx="4.8" cy="8.8" r="0.82"/><circle cx="6.6" cy="7.4" r="0.68"/><circle cx="4" cy="6" r="0.7"/><circle cx="5.8" cy="4.2" r="0.58"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">02</span><span class="menu-name">Inspire</span><span class="menu-line" data-src="chapters.inspire.heading">Inspire the movement.</span></span>
+            <span class="menu-txt"><span class="menu-no">02</span><span class="menu-name">Inspire</span></span>
           </a>
           <!-- The section's contents: item — one sentence → primary link.
                Same derivation as Tier 1 (nodes grouped by their `chapter`
                field, insertion order); every string is data-src'd. -->
           <ul class="menu-sub">
-            <li class="menu-row"><span class="menu-il" data-src="nodes.arca.label">Arca Gidan</span><span class="menu-is" data-src="nodes.arca.short">An open-source AI art competition.</span> <a href="https://arcagidan.com/" class="menu-ia" data-src="nodes.arca.spotlight.link.label" target="_blank" rel="noopener noreferrer">Learn more</a></li>
-            <li class="menu-row"><span class="menu-il" data-src="nodes.artcompute.label">ArtCompute</span><span class="menu-is" data-src="nodes.artcompute.short">Micro-grants for people pushing open models.</span> <a href="https://artcompute.org/" class="menu-ia" data-src="nodes.artcompute.spotlight.link.label" target="_blank" rel="noopener noreferrer">Visit website</a></li>
-            <li class="menu-row"><span class="menu-il" data-src="nodes.tworp.label">2RP</span><span class="menu-is" data-src="nodes.tworp.short">An art and tech publication. Coming soon.</span></li>
+            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1c.95 1.25 1.4 2.25 1.4 3.05a1.4 1.4 0 0 1-2.8 0C4.6 3.25 5.05 2.25 6 1Z"/><path d="M4.55 6.2h2.9M6 6.2v4.3"/></svg></span><span data-src="nodes.arca.label">Arca Gidan</span></span><span class="menu-is" data-src="nodes.arca.short">An open-source AI art competition.</span> <a href="https://arcagidan.com/" class="menu-ia" data-src="nodes.arca.spotlight.link.label" target="_blank" rel="noopener noreferrer">Learn more</a></li>
+            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><rect x="3.4" y="3.4" width="5.2" height="5.2" rx="0.8"/><path d="M5 3.4V1.8M7 3.4V1.8M5 10.2V8.6M7 10.2V8.6M3.4 5H1.8M3.4 7H1.8M10.2 5H8.6M10.2 7H8.6"/></svg></span><span data-src="nodes.artcompute.label">ArtCompute</span></span><span class="menu-is" data-src="nodes.artcompute.short">Micro-grants for people pushing open models.</span> <a href="https://artcompute.org/" class="menu-ia" data-src="nodes.artcompute.spotlight.link.label" target="_blank" rel="noopener noreferrer">Visit website</a></li>
+            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 3.1C5.05 2.25 3.75 1.95 2.3 2.05v7.1c1.45-.1 2.75.2 3.7 1.05.95-.85 2.25-1.15 3.7-1.05v-7.1C8.25 1.95 6.95 2.25 6 3.1Z"/><path d="M6 3.1v7.1"/></svg></span><span data-src="nodes.tworp.label">2RP</span></span><span class="menu-is" data-src="nodes.tworp.short">An art and tech publication. Coming soon.</span></li>
           </ul></li>
           <li><a class="menu-item" href="#/connect" data-menu="connect">
             <span class="menu-mark"><svg class="sym" data-sym="connect" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.8 8.4 H20.2"/><path d="M1.6 17.6 L6.2 14.8 L12.4 17.2 L17.8 13.2 L20.4 14.2"/><path d="M6.2 14.8 L9.4 10.0"/><path d="M17.8 13.2 L15.2 9.6"/><circle cx="6.2" cy="14.8" r="1.2"/><circle cx="12.4" cy="17.2" r="1"/><circle cx="17.8" cy="13.2" r="1.15"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">03</span><span class="menu-name">Connect</span><span class="menu-line" data-src="chapters.connect.heading">Connect the community.</span></span>
+            <span class="menu-txt"><span class="menu-no">03</span><span class="menu-name">Connect</span></span>
           </a>
           <ul class="menu-sub">
-            <li class="menu-row"><span class="menu-il" data-src="nodes.ados.label">ADOS</span><span class="menu-is" data-src="nodes.ados.short">Where online becomes in-person.</span> <a class="menu-ia" href="https://ados.events/" target="_blank" rel="noopener noreferrer" data-src="nodes.ados.card.link.label">See events</a></li>
-            <li class="menu-row"><span class="menu-il" data-src="nodes.hivemind.label">Hivemind</span><span class="menu-is" data-src="nodes.hivemind.short">The ecosystem’s collective intelligence.</span> <a class="menu-ia" href="https://github.com/banodoco/hivemind" target="_blank" rel="noopener noreferrer" data-src="nodes.hivemind.card.link.label">View on GitHub</a></li>
-            <li class="menu-row"><span class="menu-il" data-src="nodes.discord.label">Discord</span><span class="menu-is" data-src="nodes.discord.short">The everyday door into the community.</span> <a href="https://discord.gg/NnFxGvx94b" class="menu-ia" data-src="nodes.discord.card.link.label" target="_blank" rel="noopener noreferrer">Join the Discord</a></li>
+            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.7a3.2 3.2 0 0 1 3.2 3.2C9.2 7.1 6 10.3 6 10.3S2.8 7.1 2.8 4.9A3.2 3.2 0 0 1 6 1.7Z"/><circle cx="6" cy="4.9" r="1.05"/></svg></span><span data-src="nodes.ados.label">ADOS</span></span><span class="menu-is" data-src="nodes.ados.short">Where online becomes in-person.</span> <a class="menu-ia" href="https://ados.events/" target="_blank" rel="noopener noreferrer" data-src="nodes.ados.card.link.label">See events</a></li>
+            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.45 9.85 3.7v4.6L6 10.55 2.15 8.3V3.7Z"/><circle cx="6" cy="6" r="1.1"/></svg></span><span data-src="nodes.hivemind.label">Hivemind</span></span><span class="menu-is" data-src="nodes.hivemind.short">The ecosystem’s collective intelligence.</span> <a class="menu-ia" href="https://github.com/banodoco/hivemind" target="_blank" rel="noopener noreferrer" data-src="nodes.hivemind.card.link.label">View on GitHub</a></li>
+            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M2.1 3.5C2.1 2.7 2.75 2.05 3.55 2.05h4.9c.8 0 1.45.65 1.45 1.45v3.2c0 .8-.65 1.45-1.45 1.45H5.7L3.55 9.95V8.15C2.75 8.15 2.1 7.5 2.1 6.7Z"/></svg></span><span data-src="nodes.discord.label">Discord</span></span><span class="menu-is" data-src="nodes.discord.short">The everyday door into the community.</span> <a href="https://discord.gg/NnFxGvx94b" class="menu-ia" data-src="nodes.discord.card.link.label" target="_blank" rel="noopener noreferrer">Join the Discord</a></li>
           </ul></li>
           <li><a class="menu-item" href="#/owned" data-menu="owned">
             <span class="menu-mark"><svg class="sym" data-sym="owned" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle cx="11" cy="3.6" r="1.35"/><path d="M11 3.6 L3.4 15.6"/><path d="M11 3.6 L8.2 17.8"/><path d="M11 3.6 L13.8 17.8"/><path d="M11 3.6 L18.6 15.6"/><circle cx="3.4" cy="15.6" r="0.9"/><circle cx="8.2" cy="17.8" r="1.05"/><circle cx="13.8" cy="17.8" r="1.05"/><circle cx="18.6" cy="15.6" r="0.9"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">04</span><span class="menu-name">Owned</span><span class="menu-line" data-src="chapters.owned.heading">Owned by contributors</span></span>
+            <span class="menu-txt"><span class="menu-no">04</span><span class="menu-name">Owned</span></span>
           </a>
-          <ul class="menu-sub">
-            <li class="menu-row"><span class="menu-il" data-src="nodes.pod-shared.label">100% shared</span><span class="menu-is" data-src="nodes.pod-shared.short">The dominant principle.</span></li>
-            <li class="menu-row"><span class="menu-il" data-src="nodes.pod-monthly.label">Granted 1% per month</span><span class="menu-is" data-src="nodes.pod-monthly.short">Gradual distribution over time.</span></li>
-            <li class="menu-row"><span class="menu-il" data-src="nodes.pod-split.label">Split between groups</span><span class="menu-is" data-src="nodes.pod-split.short">Artists, core engineers, knowledge creators.</span></li>
-          </ul></li>
-          <!-- "Epilogue" is route.js's and 10-chapter-final.md's own structural
-               word for this chapter, used because chapters.final.nav is null BY
-               DESIGN. Its heading and its route are real content. -->
+          <div class="menu-owned">
+            <p class="menu-owned-copy">100% shared, granted 1% per month.</p>
+            <p class="menu-owned-more">Read more on the <a href="../ownership/">ownership page</a>.</p>
+          </div></li>
+          <!-- The final route remains structurally non-peer (`route.js` keeps
+               its nav field null), while CONTENT supplies its visible name. -->
           <li><a class="menu-item" href="#/final" data-menu="final">
             <span class="menu-mark"><svg class="sym" data-sym="final" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.6 17.2 H20.4"/><path d="M8.2 11.4 Q12.4 6.2 16.6 11.4"/><path d="M8.2 11.4 H16.6"/><path d="M12.4 11.4 V17.2"/><path d="M2.0 13.8 Q4.8 10.6 7.6 13.8"/><path d="M4.8 13.8 V17.2"/><path d="M16.4 14.6 Q18.4 12.4 20.4 14.6"/><path d="M18.4 14.6 V17.2"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">05</span><span class="menu-name">Epilogue</span><span class="menu-line" data-src="chapters.final.heading">The open source ecosystem can accelerate a 2nd Renaissance</span></span>
+            <span class="menu-txt"><span class="menu-no">05</span><span class="menu-name" data-src="chapters.final.nav">Purpose</span><span class="menu-line" data-src="chapters.final.heading">The open source ecosystem can accelerate a 2nd Renaissance</span></span>
           </a></li>
         </ol>
       </nav>
-      <div class="menu-else">
-        <h3 class="menu-eh" id="menu-eh">Elsewhere</h3>
-        <ul class="menu-links" aria-labelledby="menu-eh">
-          <li><a href="https://banodoco.ai/" data-src="site.links.0.label" target="_blank" rel="noopener noreferrer">banodoco.ai</a></li>
-          <li><a href="https://banodoco.ai/2RP" data-src="site.links.1.label" target="_blank" rel="noopener noreferrer">2RP</a></li>
-          <li><a href="../ownership/" data-src="site.links.2.label">Ownership</a></li>
-          <li><a href="https://discord.gg/NnFxGvx94b" data-src="site.social.0.label" target="_blank" rel="noopener noreferrer">Discord</a></li>
-          <li><a href="https://github.com/banodoco" data-src="site.social.1.label" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-          <li><a href="https://twitter.com/banodoco" data-src="site.social.2.label" target="_blank" rel="noopener noreferrer">X</a></li>
-        </ul>
-      </div>
-      <p class="menu-note">
-        You are viewing the static journey. It carries the same chapters, the
-        same copy, and the same links as the interactive version, using stills
-        captured from it. <a href="/">Open the interactive journey</a>.
-      </p>
-      <p class="menu-legal" data-src="site.legal">© 2026 Banodoco. Ownership is 100% shared with contributors: 1% of the company is granted each month, split evenly between core, infrastructure builders, knowledge sharers, and artists. Full ledger at banodoco.ai/ownership.</p>
+      <p class="menu-legal" data-src="site.legal">© 2026 Banodoco.</p>
     </details>
   </div>
 </nav>
@@ -1397,7 +1486,7 @@
     <div class="inner">
       <p class="eyebrow">Epilogue</p>
       <h2 id="h-final" data-src="chapters.final.heading">The open source ecosystem can accelerate a 2nd Renaissance</h2>
-      <p class="sub" data-src="chapters.final.sub">When the open AI art ecosystem thrives, humans and artificial intelligence maximise their collective creative potential.</p>
+      <p class="sub" data-src="chapters.final.sub">In a world with a thriving open AI art ecosystem, humans and artificial intelligence will maximize their collective creative potential.</p>
     </div>
   </section>
 </main>
@@ -1660,34 +1749,41 @@
      script adds, and only what script adds:
 
        · Escape closes it, and focus returns to the summary that opened it.
-       · Pressing the scrim closes it.
+       · A true backdrop tap closes it; drags and cross-boundary gestures do
+         not.
        · Following a section link inside it closes it, so the visitor does not
          land on a chapter behind a panel that is still covering it.
-       · The CLOSED summary opens on pointerdown (2026-08-09, mirroring the
-         live tier's menu button): the mark can be sliding to the fan's foot
-         when it is pressed, and a click needs press and release on the same
-         node — any motion in between loses it. The press is the intent.
-         Open, the summary is the panel's header row and keeps its native
-         click toggle; with no script, the native toggle is the whole story.
+       · Pointer/touch toggles the summary on pointerdown (2026-08-09,
+         mirroring the live tier's menu button): the mark can be moving, so
+         the press is the reliable intent. Keyboard activation keeps the
+         native details/summary toggle; with no script, that native toggle is
+         the whole story.
 
      Nothing here is required for the menu to open, be read, or be navigated. */
   var menuWrap = document.getElementById('site-menu');
   if (menuWrap) {
     var menuSummary = menuWrap.querySelector('summary');
-    var openedByPress = 0;
+    var menuHeading = menuWrap.querySelector('.menu-h');
+    var toggledByPress = 0;
     if (menuSummary) {
       menuSummary.addEventListener('pointerdown', function (e) {
-        if (menuWrap.open) return;                  // header row: native toggle
-        e.preventDefault();                         // keep focus for the keyboard
-        menuWrap.open = true;
-        openedByPress = Date.now();
-        menuSummary.focus();
+        if (e.isPrimary === false || e.button !== 0) return;
+        // Pointer/touch toggles on press so the moving compact control cannot
+        // escape the gesture. Preventing the default also keeps neither the
+        // close mark nor the compact opener looking persistently selected.
+        e.preventDefault();
+        if (menuWrap.open) closeMenu(false);
+        else {
+          menuWrap.open = true;
+          if (menuHeading) menuHeading.focus({ preventScroll: true });
+        }
+        toggledByPress = Date.now();
       });
-      // the same press's click would native-toggle the panel straight back
-      // shut — swallow that one click and no other (keyboard activation has
-      // no pointerdown before it and passes untouched)
+      // Swallow only the click synthesized by that pointer press. Keyboard
+      // activation has no preceding pointerdown and keeps native disclosure
+      // focus/semantics.
       menuSummary.addEventListener('click', function (e) {
-        if (Date.now() - openedByPress < 600) { e.preventDefault(); openedByPress = 0; }
+        if (Date.now() - toggledByPress < 600) { e.preventDefault(); toggledByPress = 0; }
       });
     }
     var closeMenu = function (focusBack) {
@@ -1696,7 +1792,35 @@
       if (focusBack && menuSummary) menuSummary.focus();
     };
     var scrimEl = menuWrap.querySelector('.menu-scrim');
-    if (scrimEl) scrimEl.addEventListener('click', function () { closeMenu(false); });
+    if (scrimEl) {
+      var backdropPress = null;
+      var clearBackdropPress = function () { backdropPress = null; };
+      scrimEl.addEventListener('pointerdown', function (e) {
+        backdropPress = e.target === scrimEl && e.isPrimary !== false && e.button === 0
+          ? { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY }
+          : null;
+        if (backdropPress) {
+          // Touch captures implicitly; mouse does not. Explicit capture makes
+          // every outside-start gesture report its release here, even when it
+          // crosses into the panel, so no stale pointerId can survive.
+          try { scrimEl.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+      });
+      scrimEl.addEventListener('pointerup', function (e) {
+        var start = backdropPress;
+        backdropPress = null;
+        if (!start || start.pointerId !== e.pointerId) return;
+        var dx = e.clientX - start.clientX;
+        var dy = e.clientY - start.clientY;
+        if ((dx * dx) + (dy * dy) > 144) return; // 12px tap slop
+        var rect = menuWrap.getBoundingClientRect();
+        var endsOutside = e.clientX < rect.left || e.clientX > rect.right
+          || e.clientY < rect.top || e.clientY > rect.bottom;
+        if (endsOutside) closeMenu(false);
+      });
+      scrimEl.addEventListener('pointercancel', clearBackdropPress);
+      scrimEl.addEventListener('lostpointercapture', clearBackdropPress);
+    }
     Array.prototype.forEach.call(menuWrap.querySelectorAll('.menu-item'), function (a) {
       a.addEventListener('click', function () { closeMenu(false); });
     });
@@ -1769,23 +1893,23 @@ for (const el of document.querySelectorAll('[data-src]')) {
   }
 }
 
-// Coverage: every contributor and every site link must appear in the index.
+// Coverage: every contributor and social label must appear in the index. The
+// panel's social labels are visually hidden behind icons; the general
+// site-link list no longer appears there.
 const rendered = new Set([...document.querySelectorAll('[data-src]')].map(e => e.dataset.src));
 CONTENT.contributors.forEach((c, i) => {
   for (const f of ['name', 'role', 'blurb']) {
     if (!rendered.has(`contributors.${i}.${f}`)) problems.push(`MISSING contributors.${i}.${f} — the Tier-3 index is incomplete`);
   }
 });
-['links', 'social'].forEach((group) => {
-  CONTENT.site[group].forEach((_, i) => {
-    if (!rendered.has(`site.${group}.${i}.label`)) problems.push(`MISSING site.${group}.${i}.label`);
-  });
+CONTENT.site.social.forEach((_, i) => {
+  if (!rendered.has(`site.social.${i}.label`)) problems.push(`MISSING site.social.${i}.label`);
 });
 // ...and every node the site-map menu should list (nodes with a `chapter`)
-// must have its label and short line in the menu, so the panel really is the
-// map of everything (navigation redux, 2026-08-09).
+// must have its label and short line in the menu. Owned deliberately replaces
+// its former three claim rows with one compact sentence and page link.
 for (const [id, n] of Object.entries(CONTENT.nodes)) {
-  if (!n.chapter) continue;
+  if (!n.chapter || n.chapter === 'owned') continue;
   if (!rendered.has(`nodes.${id}.label`)) problems.push(`MISSING nodes.${id}.label — the site-map menu is incomplete`);
   if (n.short && !rendered.has(`nodes.${id}.short`)) problems.push(`MISSING nodes.${id}.short — the site-map menu is incomplete`);
 }

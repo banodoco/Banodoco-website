@@ -434,7 +434,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     if (!builder) { stageCache.set(nodeId, null); return null; }
     const stageEl = el('div', 'j-pop-stage');
     builder.build(stageEl, CONTENT.nodes[nodeId]);
-    const entry = { el: stageEl, builder };
+    // One organism, six interiors: every project keeps complete ownership of
+    // its stage while this shared, non-interactive frame supplies the site's
+    // mycelial edge language around it. The wrapper is cached with the stage,
+    // so switching nodes never rebuilds or re-parents a builder's own DOM.
+    const frameEl = el('div', 'j-pop-frame');
+    frameEl.appendChild(stageEl);
+    const entry = { el: frameEl, stage: stageEl, builder };
     stageCache.set(nodeId, entry);
     return entry;
   }
@@ -2512,7 +2518,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   }
 
   function update(p, chapterId, camera, dt = 0,
-    { cameraStateDisagree = false } = {}) {
+    { cameraStateDisagree = false, railWrap = null } = {}) {
     // one-shot, on the first frame the chapter modules are reachable
     if (policyPending) resolveLabelPolicies();
     // A pinned popover makes journey.js report a detail open — it is route
@@ -2524,7 +2530,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     const modalDetail = detailNow && !popPinned;
     // The side navigator: reveal latch, resting symbol, current entry and the
     // tab-order state, all decided in one place (journey/rail.js).
-    rail.update(p, { modalDetail, cameraStateDisagree });
+    rail.update(p, { modalDetail, cameraStateDisagree, railWrap });
 
     if (dt > 0 && lastP !== null) {
       pSpeed += (Math.abs(p - lastP) / dt - pSpeed) * Math.min(1, dt * 5);

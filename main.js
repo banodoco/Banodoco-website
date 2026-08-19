@@ -919,6 +919,11 @@ if (sceneApi) {
   // 0.7s shell restore. This old page-level duration remains only as a
   // defensive fallback for a suspended/missing animation frame.
   const HERO_INTRO_MS = 7600;
+  const HERO_SCENE_COMPLETE_MS = INTRO_S * 1000 + 700;
+  // Let the navigation form over the mushroom's quiet final settle instead of
+  // waiting until the journey becomes interactive. Input remains gated until
+  // activateJourney(); this changes only the visual entrance.
+  const RAIL_REVEAL_LEAD_MS = 1200;
   // (skipIntro is computed in the scene-init section above and already
   // includes ?nointro, ?capture and reduced motion.)
   const frozen = introAt !== null;
@@ -930,6 +935,7 @@ if (sceneApi) {
   let introReleased = false;
   let fastHandoffStarted = false;
   let activationTimer = null;
+  let railRevealTimer = null;
   let bootInput = null;
   let pendingTouch = null;
   let introCaptureLive = false;
@@ -1076,6 +1082,7 @@ if (sceneApi) {
     if (journeyActive || !readyState) return;
     journeyActive = true;
     clearTimeout(activationTimer);
+    clearTimeout(railRevealTimer);
     const entry = pendingEntry;
     pendingEntry = null;
     readyState.activate({ entry });
@@ -1114,7 +1121,12 @@ if (sceneApi) {
       totalMs: HERO_INTRO_MS + 900,
       rampMs: departMs,
     });
-    document.body.classList.add('intro-depart');
+    // A queued CTA/callout entry is a direct navigation and still benefits
+    // from immediate departure feedback while the journey activates. A wheel,
+    // touch or key gesture is different: its buffered deltas are replayed into
+    // the normal p-driven Mission envelope, which must own the gradual fade.
+    // Applying intro-depart there blanked the copy on the very first sample.
+    if (pendingEntry) document.body.classList.add('intro-depart');
     setTimeout(activateJourney, accelerated ? departMs : 80);
   }
   requestEarlyEntry = beginFastHandoff;
@@ -1155,6 +1167,9 @@ if (sceneApi) {
           beginFastHandoff();
         } else {
           releaseIntro();
+          railRevealTimer = setTimeout(() => {
+            if (readyState && readyState.revealRail) readyState.revealRail();
+          }, Math.max(0, HERO_SCENE_COMPLETE_MS - RAIL_REVEAL_LEAD_MS));
           requestAnimationFrame(activateWhenIntroComplete);
           activationTimer = setTimeout(activateJourney, HERO_INTRO_MS);
         }

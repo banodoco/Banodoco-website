@@ -1100,10 +1100,10 @@ body.intro-fast #co-inspire { --d: 0.30s; }
 body.intro-fast #co-equip   { --d: 0.44s; }
 body.intro-fast #co-connect { --d: 0.58s; }
 
-/* The first scroll is also a departure, even when journey.js is still being
-   fetched/built. A short-lived body class acknowledges that intent now; main
-   holds it until the journey's own p-driven Mission envelope has faded far
-   enough to take over without flashing the copy back on. */
+/* A direct CTA/callout entry can arrive while journey.js is still being
+   prepared. This short-lived class acknowledges that navigation immediately;
+   early wheel/touch/key gestures deliberately do NOT receive it, because the
+   journey's p-driven Mission envelope must fade those with actual travel. */
 body.intro-depart .ui .hero,
 body.intro-depart .callouts {
   opacity: 0 !important;

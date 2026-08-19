@@ -69,7 +69,7 @@
 export const DEFAULT_STOP = 0.5;      // mid-chapter rest (was REST_POSE)
 
 export const ROUTE = [
-  { id: 'mission', span: 14, nav: 'Mission', stops: [0.0], scrollVh: 3.5 },
+  { id: 'mission', span: 14, nav: 'Intro', stops: [0.0], scrollVh: 3.5 },
   // scrollVh 7.5 -> 5.6, ALL of it out of the tail (2026-08-11, Hannah's
   // brief item 2 — "make the speed of the transition from Connect to
   // Inspire be a little bit faster"). That travel is the Inspire rest

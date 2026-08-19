@@ -56,7 +56,7 @@
 export const CONTENT = {
   chapters: {
     mission: {
-      nav: 'Mission',
+      nav: 'Intro',
       // Locked verbatim — 13-content-ops.md locked copy table, "Mission H1" / "Mission sub".
       // Also the do-not-touch DOM copy in 06-mission-preservation.md.
       heading: 'We’re working to help the open-source AI art ecosystem thrive.',
@@ -402,12 +402,10 @@ export const CONTENT = {
       ],
     },
     final: {
-      // Per 10-chapter-final.md: "Not a sixth peer chapter — no nav item, no
-      // deep detail state; Owned remains the active nav chapter through the
-      // epilogue." nav is set to null on purpose — do NOT render a fifth nav
-      // pill from this. Kept here only so this remains the single content
-      // source for the epilogue's heading/sub/document-title text.
-      nav: null,
+      // The route manifest still keeps this chapter's nav field null so it
+      // retains its quieter, non-peer treatment. This content-level name is
+      // the visible label used by the side rail and site-map panel.
+      nav: 'Purpose',
       // Locked verbatim — 13-content-ops.md locked copy table, "Final H" / Final sub".
       // The SUB below is still that locked string. The HEADING is not:
       //
@@ -484,7 +482,10 @@ export const CONTENT = {
       // and this line sets 850px, so two lines is geometrically unreachable
       // without a font step-down that would flatten the hierarchy. It runs to
       // four balanced lines at phone widths instead, under the heading's four.
-      sub: 'When the open AI art ecosystem thrives, humans and artificial intelligence maximise their collective creative potential.',
+      // SUPERSEDED 2026-08-19. The prose and line-measure discussion above
+      // records the retired version; this replacement is supplied verbatim,
+      // including American-spelled "maximize".
+      sub: 'In a world with a thriving open AI art ecosystem, humans and artificial intelligence will maximize their collective creative potential.',
     },
   },
 
@@ -850,15 +851,8 @@ export const CONTENT = {
       // have them rather than modernised.
       { label: 'X', href: 'https://twitter.com/banodoco' },
     ],
-    // REAL, and no longer pending Legal. Every figure here is published by
-    // Banodoco about itself at https://banodoco.ai/ownership — the 100%, the
-    // monthly 1%, and the 0.25%-per-group split that has run since February
-    // 2024. This states the four groups the ledger actually uses; see the
-    // pod-split note above for the three-vs-four discrepancy with the locked
-    // claims, which is flagged there for Hannah and Peter rather than settled
-    // here. The one thing this line no longer does is describe itself as a
-    // placeholder while making legal-sounding claims — which was the worst of
-    // both.
-    legal: '© 2026 Banodoco. Ownership is 100% shared with contributors: 1% of the company is granted each month, split evenly between core, infrastructure builders, knowledge sharers, and artists. Full ledger at banodoco.ai/ownership.',
+    // The detailed ownership statement now lives beside the Owned section's
+    // dedicated page link; the panel footer is copyright only.
+    legal: '© 2026 Banodoco.',
   },
 };
