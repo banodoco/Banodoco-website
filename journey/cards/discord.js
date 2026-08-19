@@ -347,6 +347,33 @@ export default {
     dotsEl = document.createElement('div');
     dotsEl.className = 'dc-dots';
 
+    // horizontal swipe through the topics (2026-08-19): a finger pull steps
+    // the walk — right pulls the previous topic back in, left advances to
+    // the next — with the same semantics as a dot tap (the 7s window
+    // restarts). Only a committed horizontal drag steps.
+    let swipe = null;
+    const SWIPE_MIN_X = 44;   // px of horizontal travel before a swipe commits
+    const onSwipeDown = (e) => {
+      if (e.pointerType !== 'touch') return;
+      swipe = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    };
+    const onSwipeMove = (e) => {
+      if (!swipe || e.pointerId !== swipe.id) return;
+      swipe.dx = e.clientX - swipe.x;
+      swipe.dy = e.clientY - swipe.y;
+    };
+    const onSwipeUp = (e) => {
+      if (!swipe || e.pointerId !== swipe.id) return;
+      const { dx = 0, dy = 0 } = swipe;
+      swipe = null;
+      if (Math.abs(dx) < SWIPE_MIN_X || Math.abs(dx) <= Math.abs(dy)) return;
+      jumpTo(index + (dx < 0 ? 1 : -1));
+    };
+    stage.addEventListener('pointerdown', onSwipeDown, { passive: true });
+    stage.addEventListener('pointermove', onSwipeMove, { passive: true });
+    stage.addEventListener('pointerup', onSwipeUp, { passive: true });
+    stage.addEventListener('pointercancel', () => { swipe = null; });
+
     stage.append(head, body, dotsEl);
   },
 

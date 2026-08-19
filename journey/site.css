@@ -284,10 +284,27 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     opacity: 0;
     transition: opacity 0.24s ease, letter-spacing 0.24s ease;
   }
-  .j-rail-item:is(:hover, :focus-visible) .j-rail-name,
-  .j-rail-menu:is(:hover, :focus-visible) .j-rail-name {
-    opacity: 1;
-    letter-spacing: 0.24em;
+  /* The name reveals on hover or keyboard focus — but only where hover is
+     REAL. A touch tap leaves a STICKY :hover on the tile it pressed
+     (Chrome Android keeps it until another element is tapped), so on a
+     hoverless device this rule would hold the travelled-to tile's label on
+     screen after the fan has collapsed. There the only reveals are the fan
+     (.j-rail-open, the deliberate arming tap) and a keyboard
+     :focus-visible — a hoverless device with a keyboard still names what
+     it focuses (2026-08-19). */
+  @media (hover: hover) {
+    .j-rail-item:is(:hover, :focus-visible) .j-rail-name,
+    .j-rail-menu:is(:hover, :focus-visible) .j-rail-name {
+      opacity: 1;
+      letter-spacing: 0.24em;
+    }
+  }
+  @media (hover: none) {
+    .j-rail-item:focus-visible .j-rail-name,
+    .j-rail-menu:focus-visible .j-rail-name {
+      opacity: 1;
+      letter-spacing: 0.24em;
+    }
   }
   /* Touch has no hover to reveal names one at a time, so the deliberate tap
      that opens the fan brings every name with it. */

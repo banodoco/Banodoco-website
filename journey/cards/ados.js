@@ -105,6 +105,15 @@ export default {
     previewEl = document.createElement('video');
     previewEl.className = 'ad-preview';
     previewEl.muted = true;
+    // NO NATIVE FULLSCREEN (2026-08-19): on a phone the browser's tap-on-
+    // video default opens the full-screen player — this card is a window,
+    // not a cinema, so the media plays inline and a tap on it is inert.
+    // preventDefault on click stops that default; the attributes keep
+    // Chrome from offering PiP / playback-rate chrome over it either.
+    previewEl.controls = false;
+    previewEl.disablePictureInPicture = true;
+    previewEl.setAttribute('controlsList', 'noplaybackrate nodownload noremoteplayback');
+    previewEl.addEventListener('click', (e) => e.preventDefault());
     // no loop: the preview plays once and HOLDS its final frame (Peter,
     // 2026-08-18); `ended` needs no handler — a finished video keeps the
     // last frame on screen by itself
@@ -176,6 +185,33 @@ export default {
     };
     prev.addEventListener('keydown', onNavKey);
     next.addEventListener('keydown', onNavKey);
+
+    // horizontal swipe = the ‹ › walker (2026-08-19): on touch a finger
+    // pull steps the events exactly as the arrows do — right pulls the
+    // previous event in, left the next. Only a committed horizontal drag
+    // steps; a tap on the media stays a tap (the fullscreen guard above).
+    let swipe = null;
+    const SWIPE_MIN_X = 44;   // px of horizontal travel before a swipe commits
+    const onSwipeDown = (e) => {
+      if (e.pointerType !== 'touch') return;
+      swipe = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    };
+    const onSwipeMove = (e) => {
+      if (!swipe || e.pointerId !== swipe.id) return;
+      swipe.dx = e.clientX - swipe.x;
+      swipe.dy = e.clientY - swipe.y;
+    };
+    const onSwipeUp = (e) => {
+      if (!swipe || e.pointerId !== swipe.id) return;
+      const { dx = 0, dy = 0 } = swipe;
+      swipe = null;
+      if (Math.abs(dx) < SWIPE_MIN_X || Math.abs(dx) <= Math.abs(dy)) return;
+      manualStep(dx < 0 ? 1 : -1);
+    };
+    stage.addEventListener('pointerdown', onSwipeDown, { passive: true });
+    stage.addEventListener('pointermove', onSwipeMove, { passive: true });
+    stage.addEventListener('pointerup', onSwipeUp, { passive: true });
+    stage.addEventListener('pointercancel', () => { swipe = null; });
 
     // the walker arrows live on the SIDE EDGES at vertical middle (Hannah,
     // 2026-08-18: fixed in place, so they never move as captions change);

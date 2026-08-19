@@ -185,7 +185,14 @@ const KEYS = [
   // both orientations) and the shipped portrait stack — copy across the top,
   // mushroom in the middle-left band under it, hubs fanned through the lower
   // half. The strong-tgtUp reasoning below is unchanged, only its magnitude.
-  { p: restProgress('connect'), back: 1.62, rise: 1.50, truck: 0, tgtUp: 1.50, tgtRight: -0.30, fov: 8 },
+  //
+  // rise/tgtUp 1.50 -> 2.30 (2026-08-19, portrait taste pass): phones wanted
+  // another ~32-36px of separation below the copy, tablets ~40-46px. Moving
+  // the EYE and TARGET up by the same 0.80 is a pure vertical frame truck:
+  // the mushroom/network move down together while pitch stays bit-identical.
+  // That last property is load-bearing — Connect's reveal is derived from
+  // forward.y, so changing tgtUp alone would leave the ground under-resolved.
+  { p: restProgress('connect'), back: 1.62, rise: 2.30, truck: 0, tgtUp: 2.30, tgtRight: -0.30, fov: 8 },
 
   // The approach to the trunk + the exterior descent (0.575–0.718):
   // near-zero field — clearance to the stipe is small and the leg's whole
@@ -222,11 +229,44 @@ const KEYS = [
   // §14, when the rest moved 0.925 -> 0.97 and a stale literal here would
   // have completed the Final portrait composition mid-approach): this file
   // was one of the two documented absolute-p violations of route.js's
-  // ownership, and for this key it no longer is. The composition VALUES are
-  // unchanged — only where the field lands them follows the route now.
-  { p: restProgress('final'), back: 1.08, rise: 1.35, truck: 0, tgtUp: -0.45, tgtRight: -0.35, fov: 8 },
-  { p: 1.000, back: 1.08, rise: 1.35, truck: 0, tgtUp: -0.45, tgtRight: -0.35, fov: 8 },
+  // ownership, and for this key it no longer is. The key continues to follow
+  // the route; the portrait-only composition values are refined below.
+  // Final portrait taste pass (2026-08-19): the large right-hand mushroom
+  // carried too much weight at the top edge while the lower field went quiet.
+  // +0.45 truck moves the world ~18-26px left, bringing that anchor farther
+  // into frame. The equal +1.00 rise/tgtUp delta lowers the whole field by
+  // ~40-60px without changing pitch and makes the bright bottom-right crop
+  // decisive rather than incidental. The end-hold repeats the same pose so
+  // the composition does not drift after arrival.
+  { p: restProgress('final'), back: 1.08, rise: 2.35, truck: 0.45, tgtUp: 0.55, tgtRight: -0.35, fov: 8 },
+  { p: 1.000, back: 1.08, rise: 2.35, truck: 0.45, tgtUp: 0.55, tgtRight: -0.35, fov: 8 },
 ];
+
+/* Connect -> Owned portrait centring arc (2026-08-19).
+   The narrowing portrait frustum left the mushroom/stipe outside the left
+   edge for most of the visible descent. This is an independent horizontal
+   frame truck so it cannot perturb the authored dolly, sink, fov or gaze:
+   camera and target move together, peaking while the stipe is still visible
+   and relaxing to zero before Owned's centred rest. The remaining rightward
+   drift is intentional — a perfectly pinned subject read as stabilization,
+   not a camera move. Values are projection-tuned at 430x932 and 768x1024. */
+const DESCENT_TRUCK_KEYS = [
+  { p: restProgress('connect'), value: 0 },
+  { p: 0.570, value: -3.50 },
+  { p: 0.600, value: -2.90 },
+  { p: 0.622, value: -2.35 },
+  { p: 0.660, value: -1.10 },
+  { p: 0.700, value: 0 },
+];
+
+function descentTruckAt(p) {
+  if (p <= DESCENT_TRUCK_KEYS[0].p || p >= DESCENT_TRUCK_KEYS[DESCENT_TRUCK_KEYS.length - 1].p) return 0;
+  let i = 0;
+  while (i < DESCENT_TRUCK_KEYS.length - 2 && p > DESCENT_TRUCK_KEYS[i + 1].p) i++;
+  const a = DESCENT_TRUCK_KEYS[i], b = DESCENT_TRUCK_KEYS[i + 1];
+  const t = smooth01((p - a.p) / (b.p - a.p));
+  return a.value + (b.value - a.value) * t;
+}
 
 /* ------------------------------------------------------------------ */
 /* The tablet band (2026-08-17, Hannah's tablet feedback on Inspire)   */
@@ -297,6 +337,7 @@ export function applyPortrait(pose, p, aspect) {
   const w = portraitWeight(aspect);
   if (w <= 0) return pose;
   const o = offsetAt(p);
+  o.truck += descentTruckAt(p);
   // tablet band: fold the delta field straight into this frame's offsets so
   // the application below stays one code path. tw is 0 for every phone and
   // rides w, so it inherits portraitWeight's fade toward landscape.
@@ -341,4 +382,3 @@ export function applyPortrait(pose, p, aspect) {
   pose.fov = Math.min(72, Math.max(24, pose.fov + o.fov * w));
   return pose;
 }
-

@@ -841,7 +841,15 @@
       max-width: none;
     }
     h1 { font-size: clamp(2.1rem, 6.2vw, 3.4rem); }
-    .sub { font-size: 1rem; }
+    /* The supporting line used to take the full 24rem measure, which left a
+       long first line and a short second line on both 430px phones and portrait
+       tablets. A 20rem balanced measure makes the two lines read as one quiet
+       centred thought without hard-coding a breakpoint-specific <br>. */
+    .sub {
+      max-width: 20rem;
+      font-size: 1rem;
+      text-wrap: balance;
+    }
     .scrim {
       background: linear-gradient(180deg,
         rgba(14, 10, 4, 0.6) 0%,
