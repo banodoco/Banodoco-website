@@ -866,7 +866,7 @@ export function createInspire(sceneApi) {
   const LAND_ORDER = [1, 0, 2];      // screen left -> right at the rest:
                                      // Arca 6.98 (left rim), ArtCompute 5.83,
                                      // 2RP 4.68 (right rim) — anatomy.js
-  const LAND_STAGGER_S = 0.38;       // one ember at a time, still one gesture
+  const LAND_STAGGER_S = 0.52;       // clearer one-by-one read, still one gesture
   const LAND_IN_K = 5.0;             // ~0.2 s to 63% — an ignition, not a pop
   const LAND_OUT_K = 9.0;            // leave with the copy (HOTSPOT_OUT_K pace)
   const LAND_ON = 0.60;              // gate threshold: first ember ignites

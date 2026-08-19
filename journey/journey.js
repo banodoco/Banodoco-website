@@ -660,6 +660,14 @@ export function boot(opts = {}) {
      duration law, now measured along the path actually travelled instead of
      along a chord the camera no longer follows. */
   let camBlend = null;
+  /* A nav jump snaps global progress before its camera travels. A progress-
+     authored chapter may opt into a LOCAL arrival with driveEntry(f), plus an
+     optional entryReady()/entryDuration contract. Its clock starts only when
+     the chapter says the travelling camera can actually show it and may finish
+     after the camera lands. Keeping this separate from drive(p) preserves the
+     placement contract: deep links, ?pose/?capture and QA scrollTo never
+     receive a synthetic progress value. */
+  let chapterEntry = null;
   /* A direct jump places journey progress at its destination before the
      camera starts travelling there. Most visual layers have their own blend
      contract for that disagreement; the rail only needs to preserve the
@@ -692,6 +700,7 @@ export function boot(opts = {}) {
     // starts from where the old one had actually reached, which pos0 above
     // has already captured.
     camBlend = null;
+    chapterEntry = null;
     // ...and a jump AWAY from the hero arms its furniture DEPARTURE here,
     // before placeAt's dt = 0 passes can snap the scrim off on the click
     // frame — the up-wrap flash (2026-08-16; see heroExit).
@@ -710,6 +719,13 @@ export function boot(opts = {}) {
     // the journey's state and the camera agree again. This is the WebGL half
     // of what ui.armCopyEntry already does for the copy layer.
     cameraStateDisagree = true;
+    // Install before placeAt: its two synchronous dt=0 passes must see the
+    // beginning of the entry, not one transient fully-arrived drive(p) state.
+    const entryChapter = chapters[chapterId];
+    chapterEntry = entryChapter && typeof entryChapter.driveEntry === 'function'
+      ? { id: chapterId, f: 0, t: 0,
+          dur: Math.max(0.001, Number(entryChapter.entryDuration) || 1) }
+      : null;
     placeAt(targetP, { snap: false });
     /* THE WAY HOME (2026-08-12 — the loop). A wrap is the same transition as
        every other nav jump; only its PATH is authored, because the shortest
@@ -942,6 +958,11 @@ export function boot(opts = {}) {
         scroll.retire(scroll.lastDir);
       } else dropCamBlend();
     }
+    // A visible entry may deliberately outlive its camera flight. The first
+    // real scroll after landing still owns the scene immediately: retire the
+    // synthetic clock so this very frame goes back to the chapter's pure p
+    // drive, just as dropCamBlend does while the flight is active.
+    if (!camBlend && chapterEntry && blendCancelled()) chapterEntry = null;
     /* OWNERSHIP MAY NOT BE TAKEN FROM A CAMERA A BLEND HOLDS MID-LAP
        (2026-08-16). setOwned(true) captures the hero composition from the
        LIVE camera, which is right only while the un-owned camera IS the
@@ -976,6 +997,27 @@ export function boot(opts = {}) {
     }
 
     guarded('seams', () => seams.update(p));
+    /* Advance a navigation-only entry against what is actually visible, not
+       against the camera flight's fraction. Connect is camera-gated: spending
+       this clock while the gaze still hid the ground made its fronts finish in
+       darkness and pop in fully lit at landing. A source pose that already
+       looks down still starts at f=0 because the ticket was installed before
+       placeAt; entryReady merely decides when frame time may begin accruing. */
+    let finishChapterEntry = false;
+    if (chapterEntry) {
+      const entryMod = chapters[chapterEntry.id];
+      let ready = !entryMod || typeof entryMod.entryReady !== 'function';
+      if (entryMod && entryMod.entryReady) {
+        guarded(`chapter:${chapterEntry.id}.entryReady`, () => {
+          ready = !!entryMod.entryReady();
+        });
+      }
+      if (ready) chapterEntry.t += Math.max(0, dt);
+      const ef = Math.min(chapterEntry.t / chapterEntry.dur, 1);
+      chapterEntry.f = ef * ef * ef * (ef * (ef * 6 - 15) + 10);
+      finishChapterEntry = ef >= 1;
+    }
+
     // Chapter-owned choreography (M4): any chapter exposing drive(p) runs it
     // here, after the seams have armed/retired it. Inspire's reveal drive
     // lives in chapters/inspire/index.js now — the spine knows no chapter's
@@ -983,7 +1025,9 @@ export function boot(opts = {}) {
     // dropped, the others keep driving.
     for (const id in chapters) {
       const mod = chapters[id];
-      if (mod.drive) guarded(`chapter:${id}.drive`, () => mod.drive(p));
+      if (chapterEntry && chapterEntry.id === id && mod.driveEntry) {
+        guarded(`chapter:${id}.driveEntry`, () => mod.driveEntry(chapterEntry.f));
+      } else if (mod.drive) guarded(`chapter:${id}.drive`, () => mod.drive(p));
       // ...and any chapter whose reveal is PACED by the camera (rather than
       // merely gated by it) is told whether this frame's motion is the
       // visitor's own hand or the machine's. A commit glide is the machine, in
@@ -993,6 +1037,7 @@ export function boot(opts = {}) {
       if (mod.setGliding)
         guarded(`chapter:${id}.setGliding`, () => mod.setGliding(scroll.gliding));
     }
+    if (finishChapterEntry) chapterEntry = null;
 
     // Optics (W5): ONE finishing language across the whole journey. The lens
     // owns the per-leg parameter curve; the journey supplies progress and the
@@ -1105,7 +1150,7 @@ export function boot(opts = {}) {
    *  copy envelope to its scroll rule, the hero furniture's arrival term, and
    *  (inside endCamBlend) the camera itself. */
   function dropCamBlend() {
-    endCamBlend();
+    endCamBlend(false);
     guarded('ui', () => ui.cancelCopyEntry());
     cancelHeroEntry();
   }
@@ -1160,6 +1205,7 @@ export function boot(opts = {}) {
   function landWrapHome() {
     const homeP = camBlend.homeP;
     camBlend = null;
+    chapterEntry = null;
     cameraStateDisagree = false;
     guarded('lens', () => lens.setLookOverride(null));
     setBlending(false);
@@ -1238,15 +1284,16 @@ export function boot(opts = {}) {
       camBlend.look[k] = camBlend.look0[k] + (camBlend.look1[k] - camBlend.look0[k]) * e;
     }
     guarded('lens', () => lens.setLookOverride(camBlend.look));
-    if (f >= 1) endCamBlend();
+    if (f >= 1) endCamBlend(true);
   }
 
   /** The blend is over — landed, cancelled, or abandoned. The camera and the
-   *  journey's state agree again from here, so this is where the placement
-   *  snap directJumpTo deferred finally happens: the arrival frame is exactly
-   *  the frame a deep link to the same chapter would have placed. */
-  function endCamBlend() {
+   *  journey's state agree again from here, so this is where the eased arming
+   *  snap directJumpTo deferred happens. A naturally landed chapter entry may
+   *  keep its own visible reveal clock; cancellation/placement clears it. */
+  function endCamBlend(keepEntry = false) {
     camBlend = null;
+    if (!keepEntry) chapterEntry = null;
     cameraStateDisagree = false;
     /* AND THE CAMERA GOES BACK TO THE POSE p IMPLIES (2026-08-14 — Hannah:
        "halfway through the loop I stop the scroll, the hero mushroom can end
@@ -1363,6 +1410,10 @@ export function boot(opts = {}) {
    *  Mission camera. directJumpTo hands the snap to endCamBlend instead, so
    *  the landing frame is still exactly the placed one. */
   function placeAt(p, { detail = null, snap = true } = {}) {
+    // A placement is already-arrived by definition. This also keeps a QA
+    // placement issued during a flight deterministic rather than inheriting
+    // that flight's synthetic chapter-entry position.
+    if (snap) chapterEntry = null;
     journey.snapTo(p);
     scroll.setProgress(p);
     // force every seam up to and including the target to arm before anything
@@ -1378,6 +1429,7 @@ export function boot(opts = {}) {
   const qp = P_FLAG;
   const qpose = POSE_FLAG;
   const qcapture = CAPTURE;
+  let queuedEntry = null;
   if (qcapture !== null) {
     // ?capture=<p> (M5): pixel-stable stills for capture.py. The page
     // bootstrap already froze the organism's clock at the t = 0 phase and
@@ -1396,7 +1448,12 @@ export function boot(opts = {}) {
     // that dirtied a clean address bar on purpose.
     placeAt(restProgress(qpose));
   } else if (entry) {
-    placeAt(restProgress(entry));
+    // A hero callout pressed before the delayed journey boot is a queued
+    // interaction, not an inbound placement. Boot the real Mission frame now;
+    // once the public handle exists below, replay it through navigateTo() so
+    // camera, scene and copy all receive their normal arrival choreography.
+    placeAt(0);
+    queuedEntry = entry;
   } else if (route.chapter) {
     placeAt(restProgress(route.chapter), { detail: normaliseNode(route.chapter, route.node) });
   } else {
@@ -1484,6 +1541,7 @@ export function boot(opts = {}) {
     },
   };
   window.journey = state;
+  if (queuedEntry) navigateTo(queuedEntry);
 
   // Warm every chapter's GPU work while the page is idle (D25). The chapter
   // groups build hidden, and their first visible frame used to pay for

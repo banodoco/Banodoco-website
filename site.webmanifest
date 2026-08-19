@@ -1,7 +1,7 @@
 {
   "name": "Banodoco",
   "short_name": "Banodoco",
-  "description": "Banodoco builds tools, spaces, and initiatives for open-source AI art.",
+  "description": "Banodoco builds spaces, initiatives and tools for the open source AI art community.",
   "icons": [
     { "src": "assets/brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "assets/brand/icon-512.png", "sizes": "512x512", "type": "image/png" }

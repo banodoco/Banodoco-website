@@ -720,6 +720,20 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     popHover = false;
     syncPop();
   });
+  /* A first mobile tap leaves the popover in its transient, hotspot-owned
+     state. Pressing one of the popover's own controls then moves focus off
+     that hotspot before `click`, which used to tear the popover down before
+     the control could act. Commit through the normal disclosure path on
+     pointerdown, while the hotspot still owns focus; the ensuing click keeps
+     its native button/link behavior, and the pinned popover retains the
+     standard outside-tap, scroll and Escape exits. */
+  pop.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch' || popPinned || !popNode) return;
+    const control = e.target instanceof Element
+      ? e.target.closest('button, a[href], input, select, textarea')
+      : null;
+    if (control && pop.contains(control)) onOpen(popNode.id, popNode.btn);
+  });
 
   /* ---- the touch model (PL-1.2 / handoff) ----------------------------------
      "On touch, first tap focuses a node and reveals the desktop hover state;
@@ -757,7 +771,13 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // for EVERY pointer type, not just touch (a mouse has no other way out
     // besides Escape). Routed through onClose() so journey.js unwinds its own
     // detail state with it.
-    if (popPinned) onClose();
+    if (popPinned) {
+      // Closing returns focus to the hotspot. Remember the dismissal BEFORE
+      // that focus move, exactly as Escape does below, or syncPop() sees the
+      // newly-hot chip and immediately recreates the transient popover.
+      if (popNode) popDismissed = popNode.id;
+      onClose();
+    }
     // The pinned CARD closes on a press outside it too (2026-08-18, Hannah —
     // the mobile sheet had no outside-tap exit; older comments claimed this
     // path existed, and now it does). Presses INSIDE hotHost never reach
@@ -1569,17 +1589,54 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
      Dismissal is distance OR flick velocity, so a short sharp swipe works and
      a slow drag that changes its mind does not. */
   let drag = null;
+  let dragReleaseTimer = null;
 
   function endDrag(dismiss) {
+    const released = drag;
+    drag = null;
+    if (!released) return;
+
+    if (dismiss) {
+      if (reduceMotion.matches) {
+        card.classList.remove('dragging');
+        card.style.transform = '';
+        onClose();
+        return;
+      }
+      /* Keep the finger's last transform as the transition's FROM value.
+         Removing `.dragging` restores the sheet's authored transform easing;
+         sending the panel one full panel-height down then lets closeCard's
+         simultaneous opacity release finish naturally. Clearing transform
+         first made it spring UP to rest for one frame before closing — the
+         reported bounce. finishClose() owns the eventual inline cleanup. */
+      card.style.transform = `translateY(${released.dy.toFixed(1)}px)`;
+      void card.offsetHeight;
+      card.classList.remove('dragging');
+      card.style.transform = `translateY(${Math.ceil(released.h + 24)}px)`;
+      // Let the transform transition become a rendered release before the
+      // ordinary close path drops `.open`. This tiny task boundary also avoids
+      // WebKit coalescing the finger position, offscreen target and close into
+      // one non-transitioning style change.
+      dragReleaseTimer = setTimeout(() => {
+        dragReleaseTimer = null;
+        if (!cardIsOpen) return;
+        onClose();
+      }, 20);
+      return;
+    }
+
+    // A cancelled drag springs back through the same authored transition.
     card.classList.remove('dragging');
     card.style.transform = '';
-    drag = null;
-    if (dismiss) onClose();
   }
 
   cardGrip.addEventListener('pointerdown', (e) => {
     if (!card.classList.contains('sheet') || !cardIsOpen) return;
     if (e.button != null && e.button > 0) return;
+    if (dragReleaseTimer !== null) {
+      clearTimeout(dragReleaseTimer);
+      dragReleaseTimer = null;
+    }
     drag = {
       id: e.pointerId, y0: e.clientY, dy: 0,
       t0: performance.now(), h: card.getBoundingClientRect().height || 1,
@@ -2131,6 +2188,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
    *  is what lets the transient tier reuse it wholesale. */
   function hideCard() {
     if (!cardIsOpen) return;
+    if (dragReleaseTimer !== null) {
+      clearTimeout(dragReleaseTimer);
+      dragReleaseTimer = null;
+    }
     cardIsOpen = false;
     cardPinned = false;
     // The entry is dropped BEFORE `.open`, so the animation is never holding
@@ -2251,7 +2312,71 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
 
      See COPY_JUMP_LEAD / COPY_JUMP_COPY_TAIL_S for the timing model. */
   const easedPrev = { ...eased };
-  let arrive = null;   // { id, t, lead, dur, own }
+  let arrive = null;   // { id, t, lead, dur, own, started, motions }
+
+  /* The block envelope already owns copy opacity. Giving the heading, body
+     and action row their own opacity keyframes multiplies two fades together:
+     on mobile the authored rise is almost over before the product becomes
+     visible, so the words read as a late pop. Keep one opacity authority and
+     drive only the child rise here, from the SAME capped scene clock as the
+     envelope/camera. Paused WAAPI effects are a compact way to retain the
+     authored easing without allowing CSS wall time to run ahead during a
+     first-draw stall. The pseudo-element's quiet bed-light remains CSS-owned;
+     it carries no text and cannot mask the choreography. */
+  function startArriveMotion(a) {
+    const b = blocks[a.id];
+    if (!b) { a.started = true; return; }
+    void b.offsetWidth; // re-arm a same-section jump after the prior cleanup
+    b.classList.add('j-arrive');
+    a.started = true;
+    a.motions = [];
+    if (reduceMotion.matches || typeof Element.prototype.animate !== 'function') return;
+
+    const specs = [
+      [b.querySelector('.j-h'), 0.12, 0.66],
+      [b.querySelector('.j-sub'), 0.26, 0.66],
+      ...[...b.querySelectorAll('.j-act')].map((el) => [
+        el,
+        parseFloat(getComputedStyle(el).getPropertyValue('--j-act-lead')) || 0.40,
+        parseFloat(getComputedStyle(el).getPropertyValue('--j-act-dur')) || 0.52,
+      ]),
+    ];
+    for (const [el, delayF, durF] of specs) {
+      if (!el) continue;
+      // Suppress the class's opacity+transform CSS animation while preserving
+      // every resting style. The inline declaration exists only for this
+      // arrival and is removed by endArrive().
+      el.style.animation = 'none';
+      const motion = el.animate(
+        [{ transform: 'translateY(0.16em)' }, { transform: 'translateY(0)' }],
+        {
+          delay: a.dur * delayF * 1000,
+          duration: a.dur * durF * 1000,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          fill: 'both',
+        },
+      );
+      motion.pause();
+      motion.currentTime = 0;
+      a.motions.push({ el, motion });
+    }
+  }
+
+  function syncArriveMotion(a) {
+    if (!a.started || !a.motions) return;
+    const phaseMs = Math.max(0, (a.t - a.lead) * 1000);
+    for (const { motion } of a.motions) motion.currentTime = phaseMs;
+  }
+
+  function clearArriveMotion(a) {
+    if (!a) return;
+    for (const { el, motion } of (a.motions || [])) {
+      motion.cancel();
+      el.style.removeProperty('animation');
+    }
+    const b = blocks[a.id];
+    if (b) b.classList.remove('j-arrive');
+  }
 
   /** The one place a copy block's eased opacity reaches the DOM.
       (Until the 2026-08-09 navigation redux this multiplied the epilogue's
@@ -2317,20 +2442,19 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // entry's is.
     const from = {};
     for (const k in easedPrev) if (k !== id) from[k] = easedPrev[k];
-    arrive = { id, t: 0, lead, dur, own: true, from, play: 1 };
+    arrive = { id, t: 0, lead, dur, own: true, from, play: 1, started: false, motions: [] };
     const b = blocks[id];
     if (b) {
-      // The parts inside the block run on the CSS clock, started here so they
-      // share an origin with the envelope instead of chasing it a frame later.
-      // Both delays and durations are expressed against these two customs, so
-      // a longer flight stretches the whole choreography rather than opening a
-      // gap at the end of it.
-      b.style.setProperty('--j-in-wait', `${Math.round(lead * 1000)}ms`);
+      /* The child choreography must not start on CSS wall time while the
+         shared scene-clock envelope is still waiting. Mobile first-draw
+         stalls advance CSS but cap scene dt, which previously let the words
+         finish behind an opacity-zero parent. update() adds `.j-arrive` when
+         the envelope itself crosses `lead`; startArriveMotion then keeps the
+         text rise phase-locked to that same clock. */
+      b.style.setProperty('--j-in-wait', '0ms');
       b.style.setProperty('--j-in', `${Math.round(dur * 1000)}ms`);
-      // restart even when the same block is re-armed mid-entry
+      // Leave it unstarted until the scene clock reaches the visible phase.
       b.classList.remove('j-arrive');
-      void b.offsetWidth;
-      b.classList.add('j-arrive');
     }
   }
 
@@ -2363,7 +2487,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
    *  the whole contract) and still wrong to leave lying around. */
   function endArrive() {
     if (!arrive) return;
-    if (blocks[arrive.id]) blocks[arrive.id].classList.remove('j-arrive');
+    clearArriveMotion(arrive);
     arrive = null;
   }
 
@@ -2407,6 +2531,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         else if (arrive.t <= 0) endArrive();
       }
     }
+    if (arrive && arrive.own && !arrive.started && arrive.play > 0 && arrive.t >= arrive.lead) {
+      startArriveMotion(arrive);
+    }
+    if (arrive) syncArriveMotion(arrive);
     // The camera blend runs on smootherstep (journey.js); the copy uses the
     // same C2 ease so the two read as one movement rather than two.
     let arriveE = 0, leaveE = 0;
@@ -2471,6 +2599,20 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // must read the SAME camera and the same projection scale the chips read
     // on this frame, through the same jitter-free projection.
     frameGeom = { camera, tanHalf, viewDepth };
+    /* Reserve collision space for a chapter's full scene-timed label set
+       before its first label becomes visible. Without this, each later
+       sibling joined the collision pass only when its own reveal crossed the
+       visibility gate, so an already-visible label (notably Arca on mobile)
+       jumped upward to make room. The copy ease starts before any node label
+       is allowed to appear, giving the pass a quiet frame in which to settle
+       the complete layout. Keep the reservation until every sibling has
+       faded out so departure cannot reflow either. */
+    const reservedLabelChapters = new Set();
+    for (const h of hotspots) {
+      if (h.reveal && !detail && ((eased[h.chapter] || 0) > 0.015 || h.a > 0.015)) {
+        reservedLabelChapters.add(h.chapter);
+      }
+    }
     for (const h of hotspots) {
       /* A chip with its own `reveal` follows the SCENE, not the copy: the
          chapter reports 0..1 for this node (Connect: the hub's own ignition,
@@ -2488,8 +2630,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         ? Math.min(h.reveal(), bandOpacity(p, h.revealBand))
         : (eased[h.chapter] || 0);
       let want = gate > 0.72 && !detail;
-      let w = want ? h.world() : null;
-      w = holdAnchor(h, w, dt);
+      const reserveLayout = reservedLabelChapters.has(h.chapter) && !h.labelOnHover;
+      let w = (want || reserveLayout) ? h.world() : null;
+      w = want ? holdAnchor(h, w, dt) : w;
       let sx = 0, sy = 0;
       h.hitRaw = 0;
       if (w) {
@@ -2530,6 +2673,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       // that would have latched an index open on a desktop that places
       // everything perfectly well.
       h.placeable = want;
+      h.layoutPlaceable = (want || reserveLayout) && !!w;
       if (want) {
         /* THE ARRIVAL STAGGER, and why a hover-only chip is not in it
            (2026-08-14, Hannah: "no ~5-second delay before it becomes active").
@@ -2569,6 +2713,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         if (h.armAt === null) h.armAt = now + ((h.labelOnHover || h.reveal) ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
         if (dt === 0) h.a = 1;
         else if (now >= h.armAt) h.a += (1 - h.a) * Math.min(1, dt * HOTSPOT_IN_K);
+      } else {
+        h.armAt = null;
+        if (dt === 0) h.a = 0;
+        else { h.a += (0 - h.a) * Math.min(1, dt * HOTSPOT_OUT_K); if (h.a < 0.02) h.a = 0; }
+      }
+      if (h.layoutPlaceable) {
         let tx;
         if (h.iconTab) {
           /* A centred tab changes the truthful local anchor from x=11 to the
@@ -2612,11 +2762,6 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
           h.hitEl.style.setProperty('--j-hit-x', `${(sx - tx + 11).toFixed(1)}px`);
         }
         h.sx = sx; h.sy = sy;
-      } else {
-        h.hitRaw = 0;
-        h.armAt = null;
-        if (dt === 0) h.a = 0;
-        else { h.a += (0 - h.a) * Math.min(1, dt * HOTSPOT_OUT_K); if (h.a < 0.02) h.a = 0; }
       }
       const vis = h.a > 0.015;
       h.btn.style.opacity = h.a;
@@ -2650,7 +2795,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
        nothing ever shifts under a pointer; labelOnHover chips (Owned's
        faces) carry no resting pill, so they neither dodge nor cause one, and
        cross-chapter pairs never co-place (the copy gate is exclusive). */
-    const placed = hotspots.filter(h => h.placeable && !h.labelOnHover);
+    const placed = hotspots.filter(h => h.layoutPlaceable && !h.labelOnHover);
     placed.sort((a, b) => b.sy - a.sy);          // bottom of the frame first
     const resolved = [];
     for (const h of placed) {

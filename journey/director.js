@@ -180,17 +180,17 @@ const _pose = { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 38 }
  *
  *  `aspect` selects the composition: >= 1 (the default) is the landscape
  *  path, bit-identical to what this function has always returned; < 1 blends
- *  in the authored portrait field (portrait.js, PL-1.1). Passed in, not
- *  read from any global, so capture tooling can request either orientation
- *  from any window. */
-export function poseAt(p, out = _pose, hero = HERO, aspect = 1.6) {
+ *  in the authored portrait field (portrait.js, PL-1.1). `viewportWidth`
+ *  distinguishes the explicit phone field from tablets. Both are passed in,
+ *  not read from globals, so capture tooling can request any composition. */
+export function poseAt(p, out = _pose, hero = HERO, aspect = 1.6, viewportWidth = Infinity) {
   if (p < ARRIVAL_END) INSPIRE_CAM.arrival(p / ARRIVAL_END, out, hero);
   else if (p < APPROACH_END) {
     CONNECT_CAM.approach((p - ARRIVAL_END) / (APPROACH_END - ARRIVAL_END), out);
   } else if (p < DIVE_END) {
     OWNED_CAM.dive((p - APPROACH_END) / (DIVE_END - APPROACH_END), out);
   } else keyedPose(p, out);
-  return applyPortrait(out, p, aspect);
+  return applyPortrait(out, p, aspect, viewportWidth);
 }
 
 export function createDirector(sceneApi, { steady = false } = {}) {
@@ -323,7 +323,7 @@ export function createDirector(sceneApi, { steady = false } = {}) {
    *  animator, so a direct write wins; there is never a frame in which
    *  OrbitControls and the director disagree. */
   function apply(p, dt = 0) {
-    poseAt(p, pose, hero, forcedAspect ?? camera.aspect);
+    poseAt(p, pose, hero, forcedAspect ?? camera.aspect, innerWidth);
     applyHandheld(pose, p, dt);
     camera.position.copy(pose.pos);
     controls.target.copy(pose.target);

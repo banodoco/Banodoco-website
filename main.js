@@ -812,6 +812,41 @@ if (sceneApi) {
     }
   }
 
+  /* THE HERO'S ACTIVATION ENDS WHEN THE HERO LEAVES (2026-08-19).
+     The journey owns the callout container's presence and hit model: on a
+     departure paintHeroFurniture makes `.callouts` inert, and on a return it
+     removes inert once the set is genuinely live again. The touch-only EQUIP
+     affordance above owns a different piece of state, `.force`, plus the
+     corresponding specimen highlight. Neither was cleared by opacity/inert,
+     so a tap made before travelling could survive several chapters and
+     reappear as an already-open "coming soon" label on the next Mission
+     arrival. Mobile Safari can likewise retain focus on an element as an
+     ancestor becomes inert.
+
+     Observe the lifecycle boundary already authored by journey.js rather than
+     infer it from scroll position or animation timing. Clear on departure and
+     again on re-entry (belt-and-braces for a tab restored mid-journey); blur
+     only while becoming inert, so real keyboard focus while the hero is live
+     is untouched. QA's ?lit and ?hl states remain authoritative. */
+  const calloutsEl = document.querySelector('.callouts');
+  const clearHeroCalloutActivation = ({ leaving = false } = {}) => {
+    if (!LIT) {
+      for (const co of calloutsEl.querySelectorAll('.co.force')) co.classList.remove('force');
+    }
+    for (const region of ['spores', 'stem', 'ground']) {
+      sceneApi.setHighlight(region, region === HL);
+    }
+    if (leaving && document.activeElement && calloutsEl.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
+  };
+  if (calloutsEl && typeof MutationObserver === 'function') {
+    new MutationObserver((records) => {
+      if (!records.some((r) => r.attributeName === 'inert')) return;
+      clearHeroCalloutActivation({ leaving: calloutsEl.inert });
+    }).observe(calloutsEl, { attributes: true, attributeFilter: ['inert'] });
+  }
+
   // --- design-review / QA query params ---
   // ?hl=spores|stem|ground forces a region highlight (design review / QA)
   const hlq = HL;

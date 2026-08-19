@@ -38,7 +38,7 @@
 // sit where resolve is 0.
 import * as THREE from 'three';
 import { makeRng } from '../../anatomy.js';
-import { startOf, endOf } from '../../route.js';
+import { startOf, endOf, restProgress } from '../../route.js';
 import { buildTendrils, HUB_IDS, FRONT_SOFT } from './tendrils.js';
 import { registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
 
@@ -392,6 +392,11 @@ const frontEase = (x) => {
    lawful under D16 where a fade-in would not be. */
 const GAZE_HI = -0.0209;   // sin(-1.2 deg) — above this: nothing has resolved
 const GAZE_LO = -0.1253;   // sin(-7.2 deg) — at/below this: fully resolved
+// Navigation gets its own visible replay. The ordinary scroll reaches the first
+// light at about 0.26 camera resolve; using the same floor prevents a jump from
+// spending the replay while the travelling camera still cannot show the soil.
+const ENTRY_CAMERA_READY = 0.24;
+const ENTRY_DURATION_S = 3.2;
 
 export function createConnect(sceneApi) {
   const rnd = makeRng(41417);
@@ -404,7 +409,7 @@ export function createConnect(sceneApi) {
   /* ---- shared uniforms (one write per frame) ---- */
   const U = {
     uTime: { value: 0 },
-    uAmount: { value: 0 },      // arm x camera-pure resolve — the ONLY visibility gate
+    uAmount: { value: 0 },      // arm x camera resolve x navigation-entry reveal
     // ONE FRONT PER ROUTE (2026-08-06): x ADOS, y Hivemind, z Discord. Each is
     // 0..1 and pure in p, so reverse scrubs still mirror exactly and a pause
     // mid-arrival holds a coherent partial network.
@@ -623,6 +628,10 @@ export function createConnect(sceneApi) {
   const litR = [0, 0, 0], headR = [0, 0, 0];
   let litMin = 0, litAvg = 0;
   let resolve = 0;                        // written per frame from the camera
+  // 1 during ordinary scroll/placements. A nav entry alone pulls this to zero
+  // before its first rendered frame, so even a downward-looking SOURCE camera
+  // cannot expose an already-resolved bed while the local light clock resets.
+  let entryReveal = 1;
   const hubIgnite = [0, 0, 0];
   const _fwd = new THREE.Vector3();
 
@@ -644,7 +653,7 @@ export function createConnect(sceneApi) {
     // Inspire leg costs zero draws) AND what keeps the protected frames
     // byte-identical: at the hero pose the network is not merely dark, it is
     // never submitted.
-    group.visible = amount > 0.003 && resolve > 0.0004;
+    group.visible = amount > 0.003 && resolve > 0.0004 && entryReveal > 0.0004;
     if (!group.visible) {
       if (heroDimActive) restoreHeroDim();   // byte-exact hand-back
       return;
@@ -654,10 +663,11 @@ export function createConnect(sceneApi) {
     // lands — so the two webs never sum to double-exposure mush — and hands
     // the hero's own materials back byte-exactly on retire
     collectHeroWeb();
-    applyHeroDim(amount * resolve * (0.30 + 0.70 * sm(0.2, 0.8, litAvg)));
+    const visualAmount = amount * resolve * entryReveal;
+    applyHeroDim(visualAmount * (0.30 + 0.70 * sm(0.2, 0.8, litAvg)));
 
     U.uTime.value = t;
-    U.uAmount.value = amount * resolve;
+    U.uAmount.value = visualAmount;
     U.uLit.value.set(litR[0], litR[1], litR[2]);
     U.uHead.value.set(headR[0], headR[1], headR[2]);
 
@@ -721,7 +731,7 @@ export function createConnect(sceneApi) {
        camera sits at radius ~7; the Connect->Owned join walks it in to ~1.3. ---- */
     const cam = sceneApi.camera.position;
     const camRad = Math.hypot(cam.x, cam.z);
-    U.uExit.value = sm(5.0, 2.4, camRad) * amount * resolve;
+    U.uExit.value = sm(5.0, 2.4, camRad) * visualAmount;
 
     /* ---- particle field: sparse slow drift, gated on full extent ---- */
     U.uPartAmp.value = sm(0.9, 1.0, litMin);
@@ -762,7 +772,7 @@ export function createConnect(sceneApi) {
       // 2026-08-11 (held still — see the pulse loop above): hover is the
       // visitor's own hand and stays; the ambient clock no longer moves
       // the marker.
-      core.mat.opacity = amount * resolve * hubIgnite[i] * Math.min(1.0, 0.58 + 0.4 * a);
+      core.mat.opacity = visualAmount * hubIgnite[i] * Math.min(1.0, 0.58 + 0.4 * a);
       core.sprite.scale.setScalar(core.baseScale * (1 + 0.18 * a));
     }
   });
@@ -771,6 +781,22 @@ export function createConnect(sceneApi) {
      Public API — the chapter contract, verbatim, plus drive(p)/snap()
      ================================================================ */
   const SPAN_LO = startOf('connect'), SPAN_HI = endOf('connect');
+  const REST_P = restProgress('connect');
+
+  /** One writer for the route fronts. Scroll drive(p) and the navigation-only
+   *  entry replay below deliberately share these exact windows and easing. */
+  function driveAt(p) {
+    const legT = (p - SPAN_LO) / (SPAN_HI - SPAN_LO);
+    litMin = 1; litAvg = 0;
+    for (let i = 0; i < 3; i++) {
+      const L = frontEase((legT - LIT_WIN[i][0]) / (LIT_WIN[i][1] - LIT_WIN[i][0]));
+      litR[i] = L;
+      // HEAD_PEAK 0.55: warm emphasis while this route's front travels.
+      headR[i] = L > 0 && L < 1 ? 0.55 * Math.sin(Math.PI * L) ** 0.6 : 0;
+      if (L < litMin) litMin = L;
+      litAvg += L / 3;
+    }
+  }
 
   return {
     group,
@@ -809,7 +835,7 @@ export function createConnect(sceneApi) {
      *  current, and both are 0 exactly when the scene has nothing up. */
     nodeReveal(id) {
       const i = HUB_IDS.indexOf(id);
-      return i < 0 ? 0 : amount * resolve * hubIgnite[i];
+      return i < 0 ? 0 : amount * resolve * entryReveal * hubIgnite[i];
     },
     /** The travelling light — pure in p, so scrubs reverse exactly.
      *  Forward: light leaves the stipe base and runs out along paths that are
@@ -823,25 +849,23 @@ export function createConnect(sceneApi) {
      *  stays fully lit; retire happens behind the Owned soil-crossing murk
      *  exactly as shipped (M5 values). */
     drive(p) {
-      const legT = (p - SPAN_LO) / (SPAN_HI - SPAN_LO);
-      litMin = 1; litAvg = 0;
-      for (let i = 0; i < 3; i++) {
-        // frontEase, not smoothstep: one pace across the run (see EASE_MIX).
-        const L = frontEase((legT - LIT_WIN[i][0]) / (LIT_WIN[i][1] - LIT_WIN[i][0]));
-        litR[i] = L;
-        // The arriving head glows only while THIS route's light is travelling.
-        // HEAD_PEAK 1.0 -> 0.55 with the re-time: the head is multiplied into
-        // uColHot (near-white) at 1.4x in the shader, which on the old fast
-        // front was a flicker you registered as speed and on a front running
-        // at half that speed became a cold white streak swiping across the
-        // ground — the loudest thing in the frame, and the opposite of the
-        // "elegant" this change is for. At 0.55 it is a warm brightening that
-        // says where the light is now, and the trailing SOFT ramp does the
-        // work of reading as a trail.
-        headR[i] = L > 0 && L < 1 ? 0.55 * Math.sin(Math.PI * L) ** 0.6 : 0;
-        if (L < litMin) litMin = L;
-        litAvg += L / 3;
-      }
+      entryReveal = 1;
+      driveAt(p);
+    },
+    /** Navigation has already placed global p at the rest while its camera is
+     *  still arriving. Re-run the normal start->rest progression on a local
+     *  visible clock: the journey does not start it until entryReady() passes,
+     *  and lets it finish after the camera lands. The structural multiplier is
+     *  reset as well as the fronts, so a downward-looking source pose cannot
+     *  leak the resolved network on the click frame. Placement paths never call
+     *  these hooks. */
+    entryDuration: ENTRY_DURATION_S,
+    entryReady() {
+      return resolveNow() >= ENTRY_CAMERA_READY;
+    },
+    driveEntry(f) {
+      entryReveal = sm(0, 0.12, f);
+      driveAt(SPAN_LO + (REST_P - SPAN_LO) * f);
     },
     /** Deep links / capture (placeAt): jump the eased arming to its target so
      *  a dt = 0 placement renders the finished state — the frozen ?capture=

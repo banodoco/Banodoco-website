@@ -107,10 +107,11 @@
 // ===========================================================================
 // p = 0 AND THE MISSION REFERENCE
 // ===========================================================================
-// The rail is invisible at the Mission pose and fades in with the first
-// travel, so static/captures/mission@* does not move. The reveal used to
+// The rail is invisible through Mission's leg and fades in as Inspire begins
+// (or when a direct jump lands), so static/captures/mission@* does not move
+// and the transition itself belongs to the chapter handoff. The reveal used to
 // LATCH (returning to p = 0 kept the rail); since 2026-08-17 it RELEASES
-// instead — riding back into the Mission pose puts the rail out again,
+// instead — riding back toward the Mission pose puts the rail out again,
 // UNLESS the pointer is on the control, the fan is open, or the menu is up
 // (Hannah: "make it so that disappears when I reenter the top section unless
 // I'm hovering over it"). The rail is still NOT inert at p = 0 — its own
@@ -119,13 +120,18 @@
 // `expanded()` covers that focus in the release rule too.
 
 import { CONTENT } from '../content/content.js';
-import { CHAPTERS, chapterAt } from './route.js';
+import { CHAPTERS, chapterAt, startOf } from './route.js';
 import { buildSymbol } from './symbols.js';
 import { claimInput, releaseInput } from './scroll.js';
 
-/* Below this progress the page is the Mission pose and the rail stays dark.
-   Same threshold the old nav used, kept so the fade-in reads identically. */
+/* The exact Mission pose stays useful for placements and capture hygiene. */
 const SHOW_P = 0.004;
+/* The first non-Mission chapter boundary is the handoff while scrolling: the
+   rail should join as Inspire begins, not wait until Inspire's late rest pose.
+   Direct jumps still use cameraStateDisagree below, so they reveal only when
+   their camera has actually landed. Derived from the route so retiming moves
+   the threshold with the chapter. */
+const FIRST_OUTSIDE_P = CHAPTERS[1] ? startOf(CHAPTERS[1].id) : SHOW_P;
 
 /* ===========================================================================
    THE HALF MOON (Hannah, 2026-08-13 later still)
@@ -1284,21 +1290,31 @@ export function createRail({ onNav } = {}) {
     modalDetail = false,
     cameraStateDisagree = false,
   } = {}) {
-    /* A direct jump writes destination progress before its camera blend even
-       exists. During that disagreement, keep the visibility from the section
-       still on screen: a return to Mission must not make the navigator vanish
-       mid-flight, and a departure must not reveal it over the untouched hero.
-       The landing frame clears this guard and applies the ordinary progress
-       rule below. Scrubbing and true placements never set it. */
-    if (!cameraStateDisagree) {
-      if (p > SHOW_P) revealed = true;
-      /* …and the Mission pose takes it back (Hannah, 2026-08-17 — see the
-         header note). Not while anything holds the control live: the pointer
-         on it, the fan open, focus inside it (`expanded()` carries all three),
-         or the menu standing in front of it. Read per frame, so letting go of
-         the rail at the top is itself the moment it goes out. */
-      else if (revealed && !hovering && !expanded() && !menuIsOpen)
-        revealed = false;
+    /* THE HERO OWNS ITS WHOLE ARRIVAL, IN BOTH DIRECTIONS (2026-08-19).
+
+       The old SHOW_P latch was pose-aligned: it stayed visible almost all the
+       way home (until p 0.004), then appeared almost as soon as the camera left
+       (at p 0.004). On a phone that put the journey control over nearly the
+       whole hero transition in both directions — disappearing too late on the
+       way in and returning too early on the way out.
+
+       The first outside chapter boundary is the scrolling handoff. Crossing
+       below it means the camera is heading into the hero, so release; crossing
+       up to it means Inspire has begun, so reveal instead of waiting for its
+       late rest point. A direct jump places p at its destination before the
+       camera travels; cameraStateDisagree therefore delays only a FRESH reveal
+       until that camera arrives, while a rail that was already visible for an
+       outside-to-outside jump stays visible. A jump HOME still hides on its
+       first destination-progress frame, exactly when the travel starts.
+
+       A live control never vanishes under a hand: hover, an open fan, focus
+       (`expanded()` carries it), and the modal menu keep the existing hold.
+       Letting go while inside the hero leg is itself the hide moment. */
+    const held = hovering || expanded() || menuIsOpen;
+    if (p < FIRST_OUTSIDE_P) {
+      if (revealed && !held) revealed = false;
+    } else if (!cameraStateDisagree) {
+      revealed = true;
     }
 
     const show = revealed;

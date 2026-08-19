@@ -255,10 +255,9 @@
 .j-pop-enter .ac-badges { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.26s; }
 .j-pop-enter .ac-ledger { animation: card-fade 0.3s steps(3, end) both; animation-delay: 0.4s; }
 
-/* ados — the window fades up, the wordmark rises, the walker follows */
+/* ados — the window fades up, then the centred identity stack rises */
 .j-pop-enter .ad-media { animation: card-fade 0.5s ease both; }
 .j-pop-enter .ad-word  { animation: card-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: 0.15s; }
-.j-pop-enter .ad-bar   { animation: card-rise 0.4s ease both; animation-delay: 0.3s; }
 
 /* tworp — the cover fades, the masthead stamps down like a printed cover */
 @keyframes rp-stamp { from { opacity: 0; transform: scale(1.12); } to { opacity: 1; transform: scale(1); } }
@@ -273,7 +272,7 @@
 
 /* discord — header dot first, the topic rises, dots last */
 .j-pop-enter .dc-head { animation: card-fade 0.3s ease both; }
-.j-pop-enter .dc-body { animation: card-rise 0.4s ease both; animation-delay: 0.12s; }
+.j-pop-enter .dc-body { animation: card-fade 0.4s ease both; animation-delay: 0.12s; }
 .j-pop-enter .dc-dots { animation: card-fade 0.35s ease both; animation-delay: 0.3s; }
 
 /* ---- exit choreography (Hannah, 2026-08-18: "a nice exit animation for
@@ -499,14 +498,14 @@
   pointer-events: none;
 }
 
-/* Wordmark block — upper third, centred, over the scrim. */
+/* Desktop keeps the existing wordmark-over-footer composition. The DOM is
+   grouped so phones can turn the same pieces into one centred stack below. */
 .ad-word {
   position: absolute;
-  top: 26px;                  /* below the SEE EVENTS chip's row */
-  left: 0;
-  right: 0;
-  bottom: 50px;               /* above the walker bar — the wordmark now
-                                 centres in the window it actually has */
+  top: 26px;
+  left: 38px;
+  right: 38px;
+  bottom: 50px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -534,21 +533,9 @@
   text-shadow: 0 1px 10px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.7);
 }
 
-/* Bottom bar: the event line alone, centred over the scrim — the walker
-   arrows live on the side edges at vertical middle (Hannah, 2026-08-18),
-   so nothing shifts as captions change. The card sits above the rail
-   (z-index 5), so the right arrow stays clickable at phone widths. */
-.ad-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 10px 12px;
-}
+/* The walker arrows stay on the side edges at vertical middle, independent
+   of caption length. The card sits above the rail (z-index 5), so the right
+   arrow stays clickable at phone widths. */
 .ad-nav {
   position: absolute;
   top: 50%;
@@ -571,13 +558,33 @@
 .ad-next { right: 8px; }
 .ad-nav:is(:hover, :focus-visible) { color: #fff; border-color: rgba(255, 255, 255, 0.55); }
 .ad-center {
+  position: absolute;
+  left: -38px;
+  right: -38px;
+  bottom: -50px;
+  min-height: 50px;
   flex: 0 1 auto;
   min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
   gap: 6px;
+}
+.ad-mark { order: 1; }
+.ad-eyebrow { order: 2; }
+.ad-center { order: 3; }
+
+@media (max-width: 620px) and (orientation: portrait) {
+  /* Mobile feedback: location/date above ADOS, AI ART GATHERINGS below, and
+     the three-line identity group centred vertically in the media frame. */
+  .ad-word { inset: 0 38px; }
+  .ad-center {
+    position: static;
+    order: 0;
+    min-height: 0;
+  }
 }
 /* the caption shuffles with its event — a small rise under the media
    crossfade so the two read as one gesture (re-armed per swap in ados.js) */
@@ -871,7 +878,7 @@
   background: #10b981;                /* emerald, their live dot */
   animation: dc-pulse 2s ease-in-out infinite;
 }
-.dc-fallback .dc-beacon { display: none; }   /* fallback: no live dot */
+.dc-fallback .dc-beacon { visibility: hidden; animation: none; } /* reserve the live-dot slot */
 
 @keyframes dc-pulse {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }

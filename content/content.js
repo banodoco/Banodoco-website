@@ -108,7 +108,7 @@ export const CONTENT = {
       // `<p class="sub">` — Mission's copy is the hero block, not a `.j-block`)
       // and in the Tier-3 twin (`static/index.html`, twice, plus its
       // `<meta name="description">`). All four moved together.
-      sub: 'Banodoco builds tools, spaces, and initiatives for open-source AI art.',
+      sub: 'Banodoco builds spaces, initiatives and tools for the open source AI art community.',
     },
     inspire: {
       nav: 'Inspire',

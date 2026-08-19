@@ -25,7 +25,7 @@
 import { CARD_ASSETS, REDUCE } from './index.js';
 
 const EVENTS = [
-  { name: 'Paris',       date: '17–19 April 2026', tag: 'Just wrapped',
+  { name: 'Paris',       date: '17–19 April 2026', tag: null,
     thumb: 'paris-2026-thumb.jpg', preview: 'paris-2026-preview.mp4' },
   { name: 'Los Angeles', date: '7 November 2025',  tag: null,
     thumb: 'la-2025-thumb.jpg',    preview: 'la-2025-preview.mp4' },
@@ -144,17 +144,15 @@ export default {
 
     const word = document.createElement('div');
     word.className = 'ad-word';
-    word.setAttribute('aria-hidden', 'true');   // decorative; the description is the short line
     const mark = document.createElement('span');
     mark.className = 'ad-mark';
+    mark.setAttribute('aria-hidden', 'true');
     mark.textContent = 'ADOS';
     const eyebrow = document.createElement('span');
     eyebrow.className = 'ad-eyebrow';
+    eyebrow.setAttribute('aria-hidden', 'true');
     eyebrow.textContent = 'AI ART GATHERINGS';
-    word.append(mark, eyebrow);
 
-    const bar = document.createElement('div');
-    bar.className = 'ad-bar';
     const prev = document.createElement('button');
     prev.className = 'ad-nav ad-prev';
     prev.type = 'button';
@@ -174,6 +172,10 @@ export default {
     tagEl = document.createElement('span');
     tagEl.className = 'ad-tag';
     center.append(lineEl, tagEl);
+    // One centred identity stack: current gathering, ADOS, then its eyebrow.
+    // Keeping the caption in this group means changing events never changes
+    // the group's optical centre or pushes a separate footer around.
+    word.append(center, mark, eyebrow);
 
     prev.addEventListener('click', () => manualStep(-1));
     next.addEventListener('click', () => manualStep(1));
@@ -214,9 +216,7 @@ export default {
     stage.addEventListener('pointercancel', () => { swipe = null; });
 
     // the walker arrows live on the SIDE EDGES at vertical middle (Hannah,
-    // 2026-08-18: fixed in place, so they never move as captions change);
-    // the bar keeps only the event line, centred at the bottom
-    bar.append(center);
+    // 2026-08-18: fixed in place, so they never move as captions change)
 
     // the door, in the site's own eyebrow voice, top-right like its event
     // tags; revealed on hover/pin by the shared card-cta rule
@@ -228,7 +228,7 @@ export default {
     cta.tabIndex = -1;
     cta.textContent = 'SEE EVENTS →';
 
-    stage.append(media, scrim, word, bar, prev, next, cta);
+    stage.append(media, scrim, word, prev, next, cta);
 
     caption(0);
   },
