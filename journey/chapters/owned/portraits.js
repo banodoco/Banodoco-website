@@ -1954,21 +1954,6 @@ export function buildPortraitField({
     portraitMat.uniforms.uMapP.value = bakePhotos(0);
     portraitMat.uniforms.uMapH.value = bakePhotosHover(0);
     photosAvailable = true;
-    // and start the NEXT arrangement warming — but NOT in the load window
-    // (2026-08-16, the post-settle stall hunt): this bake is two 2048x512
-    // canvas atlases (~tens of ms of shadowBlur + grain loops) whose only
-    // purpose is to precede a REMIX PRESS, an interaction unreachable until
-    // the visitor has scrolled all the way down into Owned. Scheduled from
-    // here it landed ~10s in, on the settled hero, stacking with the shader
-    // warm slices into the one stall Hannah kept seeing. First input is the
-    // earliest moment the press can even start approaching; the idle
-    // scheduler then finds a quiet beat (a scroll rest) long before Owned,
-    // and remix() still bakes inline if the visitor somehow outruns it.
-    const armPrepare = () => {
-      for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, armPrepare, true);
-      schedulePrepare();
-    };
-    for (const t of ['wheel', 'touchmove', 'keydown']) addEventListener(t, armPrepare, { capture: true, passive: true });
     return true;
   }).catch((e) => {
     console.warn('[owned] test photos unavailable — staying procedural:', e.message);
@@ -2066,6 +2051,17 @@ export function buildPortraitField({
   const api = {
     group, nodes,
     photosReady,
+    /** Build and submit the first remix set while startup is still on the
+     *  empty scene. This used to arm on the visitor's first input, which put
+     *  two large Canvas2D atlas bakes back into visible motion. */
+    prepareRemix(renderer) {
+      prepareNext();
+      if (renderer && renderer.initTexture && pending) {
+        for (const tex of [pending.bust, pending.photo, pending.photoHover]) {
+          if (tex) renderer.initTexture(tex);
+        }
+      }
+    },
     get photosAvailable() { return photosAvailable; },
     counts: {
       nodeCount: NODE_COUNT,

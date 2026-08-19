@@ -57,13 +57,15 @@ import { NOTAA, NOFADE, DBG, PIN_PR } from '../flags.js';
  *        `translate(sx, sy)`, so annotations stay glued to the mushroom through orbit/zoom.
  * @param {number} [opts.intro=0]        Seconds for the entry reveal: the organism grows out of the
  *        soil, bottom to top (web -> stalk -> cap -> plume). 0 skips it — the scene starts complete.
+ * @param {boolean} [opts.deferIntro=false] Hold the reveal on its real empty frame until intro.start().
  * @returns {object} See the public API JSDoc near the bottom of this file.
  */
 export function createScene({ panX = 0, container = null,
                               camY = 2.05, camZ = 8.8, targetY = 2.5,
                               tiltX = -0.05, camAzimuth = 0, leanZ = -0.03,
                               quiet = null, bg = 0x000000,
-                              fov = 38, trackers = [], intro = 0 } = {}) {
+                              fov = 38, trackers = [], intro = 0,
+                              deferIntro = false } = {}) {
 
 // =====================================================================
 // 1. RNG / PALETTE UTILS
@@ -666,7 +668,7 @@ const ctx = {
   // LEAN_DIR/CAP_Y are assigned onto ctx right after §4 declares them.)
   rimRad, rimYoff, LEAN_DIR: 0, CAP_Y: 0,
   scene, camera, renderer, controls, steadyProject,
-  tiltX, leanZ, trackers, intro,
+  tiltX, leanZ, trackers, intro, deferIntro,
   swayCos: 1, swaySin: 0,
   // assigned when they come into existence below:
   mushroom: null, stemGroup: null, groundGroup: null, swayGroup: null,
@@ -1861,7 +1863,7 @@ registerTrackers(ctx);
 // destructuring of groundGroup/stemGroup/mushroom/scene children is
 // order-sensitive) and after all animator registrations above, so the
 // 'intro-draw' animator lands last in the hero's registration order.
-// Returns the intro handle ({ accelerate }) exposed on the public API (M5).
+// Returns the intro lifecycle handle exposed on the public API (M5).
 const introApi = setupIntro(ctx);
 
 const clock = new THREE.Clock();
@@ -2179,8 +2181,8 @@ return {
   /** Input policy: 'journey' disables user orbit/zoom/pan at the source (taps and DOM stay
    *  live); 'free' (default) is the fully interactive hero behaviour. See setInputPolicy above. */
   setInputPolicy,
-  /** The entry choreography handle (organism/intro.js): `intro.accelerate({ totalMs })`
-   *  fast-forwards a running intro through its own real math via the clock skew. */
+  /** The entry choreography handle (organism/intro.js). `start()` releases a
+   *  deferred empty frame; `accelerate()` fast-forwards a running intro. */
   intro: introApi,
   /** Freeze the frame loop's shared clock (M5, ?capture=): every animator
    *  sees t = `seconds` and dt = 0 until released, and the TAA jitter holds
