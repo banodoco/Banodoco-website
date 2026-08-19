@@ -71,6 +71,20 @@
     to   { opacity: 1; }
   }
 
+  /* GPU preparation uses the scene's own empty draw state as its cover. The
+     left-hand copy/CTA keep their normal entry; only furniture whose timing
+     belongs to the mushroom waits for intro.start(). Pausing (rather than
+     hiding a second overlay) makes release the exact next frame of the same
+     WebGL scene. */
+  body.scene-preparing .spill,
+  body.scene-preparing .co,
+  body.scene-preparing .co * {
+    animation-play-state: paused !important;
+  }
+  body.scene-preparing .callouts {
+    pointer-events: none;
+  }
+
   /* --- feathered scrim: buys text contrast, survives camera motion --- */
   .scrim {
     position: fixed;

@@ -1752,6 +1752,22 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       stallBank = 0;
       stallClaimed = 0;
     },
+    /** Replay the complete physical wheel stream captured while GPU readiness
+     *  was pending. The first sample uses the cold-boot bridge above; every
+     *  remaining sample is its real delivered delta, in order — no distance
+     *  or event is synthesized. */
+    primeBootWheelStream(samples) {
+      if (!enabled || !Array.isArray(samples) || !samples.length) return false;
+      const first = samples[0];
+      this.primeBootWheel(first.deltaY, first.deltaMode);
+      for (let i = 1; i < samples.length; i++) {
+        let d = samples[i].deltaY;
+        if (samples[i].deltaMode === 1) d *= WHEEL_LINE_PX;
+        else if (samples[i].deltaMode === 2) d *= window.innerHeight;
+        if (d) push(d, 'wheel');
+      }
+      return true;
+    },
     /** Cold intro touch bridge (main.js only). The scroll listeners did not
      *  exist for this contact's touchstart or collected movement, so restore
      *  that one exact physical contact after boot.

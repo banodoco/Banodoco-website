@@ -182,6 +182,8 @@ export function boot(opts = {}) {
     console.error('[journey-v6] no hero scene handle — journey not started');
     return null;
   }
+  const deferActivation = opts.deferActivation === true;
+  let activated = false;
 
   /* ================================================================
      State, scroll, camera
@@ -296,7 +298,7 @@ export function boot(opts = {}) {
     },
   });
   scroll.attach();
-  scroll.enabled = true;
+  scroll.enabled = false;
 
   /* ================================================================
      DOM
@@ -605,7 +607,14 @@ export function boot(opts = {}) {
   // Explore CTA hands off into the journey (GB-1.1): one restrained flow
   // toward the cap, then the orbit. No reset, no reload.
   const cta = document.querySelector('.ui .cta');
-  if (cta) cta.addEventListener('click', (e) => { e.preventDefault(); navigateTo('inspire'); });
+  if (cta) cta.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!activated) {
+      if (typeof opts.onEntry === 'function') opts.onEntry('inspire');
+      return;
+    }
+    navigateTo('inspire');
+  });
 
   /* ================================================================
      Routes (adr-d6-routes.md)
@@ -1488,6 +1497,20 @@ export function boot(opts = {}) {
     get p() { return journey.progress; },
     get chapter() { return chapterAt(journey.progress).id; },
     get detail() { return detailNode; },
+    /** Publish and enable the already-prepared journey. Safe to call once the
+     *  startup readiness promise has resolved; idempotent for QA callers. */
+    activate({ entry: activationEntry = null } = {}) {
+      const first = !activated;
+      activated = true;
+      scroll.enabled = true;
+      window.journey = state;
+      if (first) {
+        const target = activationEntry || queuedEntry;
+        queuedEntry = null;
+        if (target && target !== 'mission') navigateTo(target);
+      }
+      return state;
+    },
     /** QA: jump progress with no travel and no replay. */
     scrollTo(p) { placeAt(clamp01(p)); return journey.progress; },
     /** QA: navigate to a chapter exactly as a nav click does (direct jump
@@ -1545,94 +1568,102 @@ export function boot(opts = {}) {
       };
     },
   };
-  window.journey = state;
-  if (queuedEntry) navigateTo(queuedEntry);
 
-  // Warm every chapter's GPU work while the page is idle (D25). The chapter
-  // groups build hidden, and their first visible frame used to pay for
-  // shader compilation, buffer upload and first-draw state all at once —
-  // which is always mid-scroll, at a chapter seam, and measured 100-400 ms
-  // on a cold page at exactly the Inspire boundary (both directions): the
-  // literal "jankiness" of Hannah's seventh spore report. Two steps:
-  //   1. compileAsync — three walks the WHOLE graph (invisible objects
-  //      included) and rides KHR_parallel_shader_compile, so the driver
-  //      links every program off the critical path;
-  //   2. one warm render to a small offscreen target with the chapter
-  //      groups force-visible — buffers upload and first-draw state runs.
-  //      Safe by construction: every chapter's content is dark at boot
-  //      (fades/reveals all zero, additive materials draw black), the
-  //      target is offscreen, and each chapter's animator recomputes its
-  //      own group.visible every frame, so the forced flags cannot leak.
-  // Failure at any step is harmless — the old lazy path remains — so this
-  // is fire-and-forget.
-  const warmPrograms = () => {
-    const r = sceneApi.renderer;
-    if (!r) return;
-    const idle = (fn) => (typeof requestIdleCallback === 'function'
-      ? requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 250));
-    // one chapter per idle slice: a single all-chapters warm render measured
-    // ~150 ms (it is the first draw of everything at once), which could land
-    // as its own hitch if a ?nointro QA ride started immediately — the very
-    // artifact this exists to remove. Per-chapter slices bound each task.
-    const queue = Object.keys(chapters);
-    const warmNext = () => {
-      const id = queue.shift();
-      if (!id) return;
-      // The restores live in `finally` (2026-08-16 swarm audit): a throw out
-      // of render() used to skip them, leaving the renderer's current target
-      // pinned to the disposed 64x64 warm target — every later
-      // composer.render() then drew offscreen and the visible canvas froze on
-      // the last good frame until reload. "Failure at any step is harmless"
-      // (the header's contract) only holds if failure cannot strand state.
-      const g = chapters[id] && chapters[id].group;
-      const wasVisible = g ? g.visible : true;
-      // THE WARM DRAWS THE CHAPTER, NOT THE WORLD (2026-08-16, the post-settle
-      // stall hunt): rendering the whole scene here paid the settled hero's
-      // full draw list per slice on top of the chapter's one-time first-draw
-      // cost — for three of the four chapters the hero re-render WAS the
-      // slice. Hiding every scene root that does not contain the chapter
-      // (projectObject prunes invisible subtrees at the root, O(1) each)
-      // leaves exactly the chapter's own upload + first-draw state, which is
-      // all this warm ever existed to pay. Frustum semantics are unchanged —
-      // the same hero camera culls the same chapter content either way.
-      // Inspire's group lives INSIDE the hero's mushroom root, so its slice
-      // keeps that one root visible and still skips the rest of the hero.
-      const roots = [];
-      if (g) {
-        let anchor = g;
-        while (anchor.parent && anchor.parent !== sceneApi.scene) anchor = anchor.parent;
-        for (const root of sceneApi.scene.children) {
-          if (root !== anchor) roots.push([root, root.visible]);
+  /** Wait until commands submitted by the warm draws have actually completed.
+   *  Shader compilation alone does not upload buffers/textures or generate
+   *  mipmaps, which is why the old compileAsync-only boundary still hitched. */
+  async function drainGpu(renderer) {
+    const gl = renderer.getContext();
+    if (gl.isContextLost()) throw new Error('WebGL context lost during preparation');
+    if (gl.fenceSync && gl.clientWaitSync) {
+      const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      gl.flush();
+      const startedAt = performance.now();
+      try {
+        for (;;) {
+          const result = gl.clientWaitSync(sync, 0, 0);
+          if (result === gl.ALREADY_SIGNALED || result === gl.CONDITION_SATISFIED) return;
+          if (result === gl.WAIT_FAILED) throw new Error('GPU readiness fence failed');
+          if (performance.now() - startedAt > 8000) throw new Error('GPU readiness fence timed out');
+          await new Promise(resolve => setTimeout(resolve, 8));
         }
+      } finally {
+        gl.deleteSync(sync);
       }
+    }
+    gl.finish();
+  }
+
+  async function prepareGpu() {
+    const r = sceneApi.renderer;
+    if (!r) throw new Error('No WebGL renderer for journey preparation');
+
+    // Image decode plus both initial Canvas2D atlas bakes must finish before
+    // the visible clock starts. Prepare the first remix here too: its old
+    // first-input idle task could otherwise become a new post-intro hitch.
+    const portraits = chapters.owned && chapters.owned.portraits;
+    if (portraits && portraits.photosReady) await portraits.photosReady;
+    if (portraits && portraits.prepareRemix) portraits.prepareRemix(r);
+
+    if (r.compileAsync) {
+      try { await r.compileAsync(sceneApi.scene, sceneApi.camera); }
+      catch (asyncError) {
+        if (!r.compile) throw asyncError;
+        r.compile(sceneApi.scene, sceneApi.camera);
+      }
+    } else if (r.compile) {
+      r.compile(sceneApi.scene, sceneApi.camera);
+    }
+
+    // Submit every chapter's real draw list to a tiny offscreen target. Every
+    // changed scene flag is restored in finally, including descendants that
+    // are normally invisible or outside the hero camera's frustum.
+    for (const id of Object.keys(chapters)) {
+      const g = chapters[id] && chapters[id].group;
+      if (!g) continue;
+      let anchor = g;
+      while (anchor.parent && anchor.parent !== sceneApi.scene) anchor = anchor.parent;
+      const saved = new Map();
+      const remember = (o) => {
+        if (!saved.has(o)) saved.set(o, { visible: o.visible, frustumCulled: o.frustumCulled });
+      };
+      for (const root of sceneApi.scene.children) {
+        remember(root);
+        root.visible = root === anchor;
+      }
+      for (let o = g; o && o !== sceneApi.scene; o = o.parent) {
+        remember(o);
+        o.visible = true;
+      }
+      g.traverse((o) => {
+        remember(o);
+        o.visible = true;
+        if (o.isMesh || o.isLine || o.isLineSegments || o.isPoints || o.isSprite) {
+          o.frustumCulled = false;
+        }
+      });
+
       const rt = new THREE.WebGLRenderTarget(64, 64);
       const prev = r.getRenderTarget();
       try {
-        if (g) g.visible = true;
-        for (const [root] of roots) root.visible = false;
         r.setRenderTarget(rt);
         r.render(sceneApi.scene, sceneApi.camera);
-      } catch (e) { /* lazy first-draw remains the fallback */ }
-      finally {
+      } finally {
         r.setRenderTarget(prev);
         rt.dispose();
-        for (const [root, vis] of roots) root.visible = vis;
-        if (g) g.visible = wasVisible;
+        for (const [o, old] of saved) {
+          o.visible = old.visible;
+          o.frustumCulled = old.frustumCulled;
+        }
       }
-      if (queue.length) idle(warmNext);
-    };
-    try {
-      if (r.compileAsync) {
-        r.compileAsync(sceneApi.scene, sceneApi.camera).then(
-          () => idle(warmNext), () => idle(warmNext));
-      } else {
-        if (r.compile) r.compile(sceneApi.scene, sceneApi.camera);
-        idle(warmNext);
-      }
-    } catch (e) { idle(warmNext); }
-  };
-  if (typeof requestIdleCallback === 'function') requestIdleCallback(warmPrograms, { timeout: 1200 });
-  else setTimeout(warmPrograms, 400);
+    }
+    await drainGpu(r);
+    performance.mark('journey-gpu-ready');
+    return true;
+  }
+
+  state.ready = prepareGpu();
+  if (!deferActivation) state.activate();
 
   console.info(
     '[journey-v6] grey-box ready — %d chapters, p %s, scroll %dpx, route %s',

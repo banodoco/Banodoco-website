@@ -9,7 +9,7 @@ import { INTROAT } from '../flags.js';
 
 export function setupIntro(ctx) {
   const { scene, renderer, mushroom, stemGroup, groundGroup,
-          drawU, drawWin, animators, addAnimator, intro } = ctx;
+          drawU, drawWin, animators, addAnimator, intro, deferIntro } = ctx;
 
   // ---- entry draw: the specimen inks itself in, stroke by stroke ----
   // One master progress sweeps 0..1 over `intro` seconds; every drawable object
@@ -136,13 +136,10 @@ export function setupIntro(ctx) {
   // Wall-clock moment the live intro started; stays null when the intro is
   // skipped or frozen, which is what makes accelerate() a safe no-op there.
   let introT0 = null;
-  if (_introAt !== null) {
-    const p = Math.min(1, Math.max(0, parseFloat(_introAt) || 0));
-    drawU.value = p;
-    shellsAt(p);
-  } else if (intro > 0) {
-    drawU.value = 0; // blank page before the first frame renders
-    shellsAt(0);
+  let completed = false;
+
+  function start() {
+    if (_introAt !== null || intro <= 0 || introT0 !== null || completed) return false;
     // Wall clock, not accumulated rAF dt: the page's CSS choreography runs on
     // the wall clock, and rAF stops entirely in a hidden tab — accumulating dt
     // would let the text finish while the specimen was still being drawn.
@@ -151,12 +148,12 @@ export function setupIntro(ctx) {
       const lived = (performance.now() - introT0) / 1000;
       if (lived >= intro) {
         // Don't snap to the parked value: glide uProg from 1 to 2 over 0.7s
-        // so the stem's buried joint (held dark by the lid while drawing)
-        // FADES in behind the cap instead of popping on in a single frame.
+        // so the stem's buried joint fades in behind the cap.
         const over = (lived - intro) / 0.7;
         if (over >= 1) {
-          drawU.value = 2; // parked: fully drawn, embers and lid released
+          drawU.value = 2;
           shellsRestore();
+          completed = true;
           animators.delete('intro-draw');
           return;
         }
@@ -167,6 +164,26 @@ export function setupIntro(ctx) {
       drawU.value = lived / intro;
       shellsAt(lived / intro);
     });
+    return true;
+  }
+
+  function finish() {
+    if (_introAt !== null) return false;
+    animators.delete('intro-draw');
+    drawU.value = 2;
+    shellsRestore();
+    completed = true;
+    return true;
+  }
+
+  if (_introAt !== null) {
+    const p = Math.min(1, Math.max(0, parseFloat(_introAt) || 0));
+    drawU.value = p;
+    shellsAt(p);
+  } else if (intro > 0) {
+    drawU.value = 0; // blank page before the first frame renders
+    shellsAt(0);
+    if (!deferIntro) start();
   }
 
   /* ---- accelerate(): the intro fast-forward (ride-through #4) -----------
@@ -208,5 +225,11 @@ export function setupIntro(ctx) {
     return true;
   }
 
-  return { accelerate };
+  return {
+    start,
+    finish,
+    accelerate,
+    get started() { return introT0 !== null; },
+    get complete() { return completed; },
+  };
 }
