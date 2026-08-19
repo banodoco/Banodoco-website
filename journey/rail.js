@@ -461,7 +461,22 @@ export function createRail({ onNav } = {}) {
     // The hover fan deliberately stays — the pointer is still on the control,
     // and it folds on pointer-leave (Hannah, 2026-08-09: close on de-hover,
     // not on click-elsewhere).
-    item.addEventListener('click', (e) => { e.preventDefault(); collapseTouch(); onNav(c.id); });
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      // The touch second tap is the one that acts (see the pointerdown
+      // arming below); `touchOpen` is still true at this moment, so it is
+      // the per-interaction touch signal without a pointerType on click.
+      const viaTouch = touchOpen;
+      collapseTouch();
+      onNav(c.id);
+      // A touch tap leaves focus on the tile it travelled with, and the
+      // rail's expanded state keys on :has(:focus-visible) — on devices
+      // where a tapped link matches :focus-visible (Android), the fan and
+      // the name pill persist after arrival even though the arming is
+      // spent. Drop focus on the touch second tap only: keyboard
+      // activation keeps its focus and the deliberate focus-fan.
+      if (viaTouch && document.activeElement === item) item.blur();
+    });
     links[c.id] = item;
     // The nav-less chapter keeps the echo's quieter voice, as a style only.
     if (!c.nav) li.classList.add('j-rail-echo');

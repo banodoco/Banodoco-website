@@ -65,6 +65,20 @@
   pointer-events: auto;
 }
 
+/* ON TOUCH THE DOOR IS ALWAYS OPEN (2026-08-19): a finger has no hover,
+   and pinning is the second tap — so the old reveal made the CTA cost two
+   taps on every phone. Under (hover: none) the door shows the moment its
+   card opens: the transient first-tap reveal IS the open, not a hover to
+   be earned. (The closed popover is visibility:hidden, so this leaks
+   nothing.) */
+@media (hover: none) {
+  .j-pop .card-cta {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+}
+
 /* Keep the contact filament above stage media. */
 .j-pop.j-pop-rich::before { z-index: 2; }
 
@@ -445,6 +459,10 @@
 .j-pop-stage.ad {
   height: 185px;
   background: #0a0a0a;   /* their theme-color ground */
+  /* horizontal swipes are the card's (the ‹ › walker), never the page's:
+     pan-y keeps vertical pans native and leaves horizontal gestures to the
+     swipe listeners in ados.js (2026-08-19) */
+  touch-action: pan-y;
 }
 
 /* Full-bleed event-media window: poster underneath, animated preview over. */
@@ -828,6 +846,10 @@
   display: flex;
   flex-direction: column;
   background: rgba(10, 7, 3, 0.94);   /* house-dark ground #0a0703 */
+  /* horizontal swipes are the card's (the topic walk), never the page's:
+     pan-y keeps vertical pans native and leaves horizontal gestures to the
+     swipe listeners in discord.js (2026-08-19) */
+  touch-action: pan-y;
 }
 
 .dc-head {

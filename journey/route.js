@@ -423,19 +423,64 @@ export const TRANSIT_S = {
   'owned>final': 1.5,
 };
 
+/* Desktop-only FORWARD speed limits for the three opening transitions.
+ *
+ * These are minimum rest-to-rest times, not raw p/s guesses. scroll.js
+ * measures the authored progress span between the two rests, then derives:
+ *
+ *     max displayed speed = rest-to-rest progress / seconds
+ *
+ * That is the relative-distance calculation: a leg twice as long in route
+ * progress gets twice the p/s ceiling for the same minimum time. The cap is
+ * applied to the controller's FINAL displayed rate, so it covers both a live
+ * scrub and a hard released glide; the natural cruise can remain below it.
+ *
+ * The table is deliberately separate from TRANSIT_S. Those values are the
+ * cross-device natural cruises; these are true caps for a fine-pointer
+ * desktop resolution. Touch keeps the shipped band exactly. Only `fwd` is
+ * declared because the request is route-order travel; reverse pacing remains
+ * untouched.
+ *
+ * Relative to the current 0.45 p/s desktop maximum, the resulting minimum
+ * full-span times are:
+ *   mission -> inspire  0.58 s -> 1.80 s  (3.12x calmer)
+ *   inspire -> connect  0.58 s -> 0.75 s  (1.28x calmer)
+ *   connect -> owned    0.45 s -> 1.35 s  (3.01x calmer)
+ *
+ * Those are ceilings, not forced durations: the existing road-denominated
+ * cruises (including Inspire -> Connect's 2.5 s natural transit) remain free
+ * to run more slowly. Camera-path sampling at desktop aspect measured the
+ * legs at 24.03 / 9.50 / 8.68 world units respectively; Hero therefore gets
+ * the longest minimum, while Connect -> Owned keeps a deliberately slower
+ * editorial class despite its similar physical arc. */
+export const DESKTOP_TRANSIT_CAP_S = {
+  'mission>inspire': { fwd: 1.80 },
+  'inspire>connect': { fwd: 0.75 },
+  'connect>owned': { fwd: 1.35 },
+};
+
+function namedTransitSeconds(table, lo, hi, dir = 0) {
+  const i = REST_STOPS.findIndex(v => Math.abs(v - lo) < 1e-9);
+  const k = REST_STOPS.findIndex(v => Math.abs(v - hi) < 1e-9);
+  if (i < 0 || k < 0) return null;
+  const a = REST_OWNER[Math.min(i, k)], b = REST_OWNER[Math.max(i, k)];
+  let v = table[`${a}>${b}`];
+  if (v && typeof v === 'object') v = dir < 0 ? v.back : v.fwd;
+  return v > 0 ? v : null;
+}
+
 /** The declared transit time for the span between two rests, or null if the
  *  span has no entry (then scroll.js uses the global band). `dir` is the
  *  travel direction in p (+1 toward hi, -1 toward lo); a plain-number entry
  *  ignores it, an `{ fwd, back }` entry picks its side by it. Callers that
  *  do not know the direction (or pass 0) get the forward figure. */
 export function transitSeconds(lo, hi, dir = 0) {
-  const i = REST_STOPS.findIndex(v => Math.abs(v - lo) < 1e-9);
-  const k = REST_STOPS.findIndex(v => Math.abs(v - hi) < 1e-9);
-  if (i < 0 || k < 0) return null;
-  const a = REST_OWNER[Math.min(i, k)], b = REST_OWNER[Math.max(i, k)];
-  let v = TRANSIT_S[`${a}>${b}`];
-  if (v && typeof v === 'object') v = dir < 0 ? v.back : v.fwd;
-  return v > 0 ? v : null;
+  return namedTransitSeconds(TRANSIT_S, lo, hi, dir);
+}
+
+/** Desktop-only minimum transit time for a capped span, or null. */
+export function desktopTransitCapSeconds(lo, hi, dir = 0) {
+  return namedTransitSeconds(DESKTOP_TRANSIT_CAP_S, lo, hi, dir);
 }
 
 /* ------------------------------------------------------------------ */

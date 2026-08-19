@@ -202,6 +202,25 @@ export const COMMIT_CARRY_RATE = 0.02;  // p/s, the gesture's PEAK rate (see
                                         // rest they were leaving. At the span
                                         // slope the two directions read one
                                         // finger identically.
+
+// The carry ask, capped in ROAD (2026-08-19). COMMIT_CARRY_RATE converts to
+// px/s at the span's mean slope, so a leg that owns a lot of road asks for
+// an unfair share of a swipe — Owned->Final owns 17.0 vh and demanded
+// ~1,388 px/s per viewport-height of gesture peak (measured through the real
+// listeners at 375x812: the flip sat between 700 and 1,000 px/s) against
+// ~1,118 (Inspire->Connect) and ~0.54/0.51 vh/s on the two short legs. That
+// is the same unfair-share defect the backward side already caps
+// (COMMIT_BACK_CAP_VH above), so it gets the same cure, denominated the same
+// way: a gesture is never asked to peak harder than this many viewport
+// heights per second. 1.17 sits between the next-hardest leg's demand
+// (Inspire->Connect ~1.118 vh/s) and Owned->Final's (~1.388), so ONLY
+// Owned->Final's threshold moves — at EVERY viewport height, which an
+// absolute px cap cannot promise (at a 900 px-tall viewport Owned->Final
+// asks ~1,249 px/s and Inspire->Connect ~1,006, so a 950 px cap would start
+// moving the ground-lighting leg too). The stream test (COMMIT_STREAM_MIN /
+// COMMIT_STREAM_GAP_MS) still excludes notch readers. See scroll.js
+// carrying().
+export const COMMIT_CARRY_PEAK_VH = 1.17;  // vh per second, surface
 export const COMMIT_STREAM_GAP_MS = 45; // mean inter-delta spacing at or below
                                         // which a gesture counts as a stream.
                                         // Trackpads and momentum tails run

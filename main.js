@@ -112,19 +112,27 @@ const VIEWS = {
   desktop: { panX: -2.4, camY: 2.25, camZ: 10.4, targetY: 2.6,  fov: 38 },
   compact: { panX: -2.9, camY: 2.3,  camZ: 11.2, targetY: 2.7,  fov: 38 },  // short landscape (phones)
   deskNarrow: { panX: -2.0, camY: 2.3, camZ: 11.6, targetY: 2.65, fov: 38 }, // landscape aspect < 1.55 (iPads)
-  // panX -0.7 -> +0.33 (2026-08-17, Hannah: "the way on mobile we hide the
+  // panX -0.7 -> +0.45 (2026-08-19, optical centring pass): the earlier
+  // +0.33 landed the ensemble's geometric bounds on centre, but the bright
+  // spore plume and the label column both weight the right side. Another
+  // ~11px of leftward screen travel centres the visible energy of the set,
+  // not merely its outer box. (2026-08-17, Hannah: "the way on mobile we hide the
   // main button and centre align the mushroom with the labels — do the same
   // on tablet"). Same pass as mobile's below: the CTA is gone (hero.css ≤900
   // portrait block), the labels ride runs (RAIL.tablet), and the pan walks
-  // the specimen left until the ENSEMBLE's bounding box centres — measured
+  // the specimen left until the ENSEMBLE reads centred — measured
   // at 768x1024: cap left rim 142, INSPIRE tag right 640, midpoint 391 at
-  // panX 0.25, and ~91.5 px/unit at this framing puts dead centre at 0.33.
-  tablet:  { panX: 0.33,  camY: 2.9, camZ: 12.0, targetY: 4.0,  fov: 50 },
-  // panX -0.15 -> +0.55 (2026-08-17, Hannah: the specimen read centred but
+  // panX 0.25; ~91.5 px/unit at this framing puts the optical centre at 0.45.
+  tablet:  { panX: 0.45,  camY: 2.9, camZ: 12.0, targetY: 4.0,  fov: 50 },
+  // panX -0.15 -> +0.40 (2026-08-19, optical centring pass): the previous
+  // comment described a +0.55 centring target, but the value below had only
+  // moved to +0.20. Closing part of that gap shifts the unified composition
+  // left by roughly the same visible amount as tablet, without making the
+  // cap feel left-biased on narrow phones. (2026-08-17, Hannah: the specimen read centred but
   // specimen+labels together sat right-heavy — "they should be centred
   // together"). The pan walks the mushroom left so the ENSEMBLE's bounding
   // box centres; the labels follow because mobile now carries runs (RAIL).
-  mobile:  { panX: 0.20, camY: 3.2, camZ: 11.5, targetY: 4.75, fov: 64 },
+  mobile:  { panX: 0.40, camY: 3.2, camZ: 11.5, targetY: 4.75, fov: 64 },
 };
 
 // --- per-mode world anchors for the HUD callouts (tuned against screenshots) ---
@@ -379,23 +387,26 @@ const RAIL = {
   // riser threshold on purpose: it LOCKS the label onto its centered
   // vertical riser (the branch it already took), where before the lock the
   // pan would have grown maxRailX past the threshold and bent the leader
-  // toward the nav inset.
-  tablet:     { inspire: 100, connect: 84, sep: 120, runs: { inspire: 8, equip: 176, connect: 123 } },
+  // toward the nav inset. equalSpacing now derives INSPIRE's row from the
+  // live EQUIP -> CONNECT gap, while leaving that riser language intact.
+  tablet:     { inspire: 100, connect: 84, sep: 120, equalSpacing: true, runs: { inspire: 8, equip: 176, connect: 123 } },
   // mobile rebalance (2026-08-17, Hannah: "equip should be mid distance
   // between inspire and connect and inspire maybe should be a tiny bit
   // lower"): one 74px beat through the whole column. connect 66->42 brings
   // its label down to where the midpoint lands on EQUIP's OWN row (the
   // stem node, riseEquip 0 — a clean unbroken rule, no wobble-bend), sep 74
   // is exactly the E->C gap so the crowding guard binds at zero, and
-  // tuckSep 74 hangs INSPIRE the same beat above — measured at 375x812:
-  // row mids 525 / 599 / 673, INSPIRE 8px lower than the first tuck.
+  // INSPIRE used to carry a fixed tuckSep 74. That was exact at 375x812 but
+  // drifted at other phone heights as the projected E->C gap changed.
+  // equalSpacing mirrors the LIVE E->C row-centre gap above EQUIP instead,
+  // so all three rows keep one beat at every portrait size.
   // runs joined mobile with the centring pass (2026-08-17, Hannah: "move the
   // mushrooms/labels so together they feel in the middle horizontally"):
   // railed to the nav inset, the labels were PINNED to the viewport's right
   // edge and the camera pan below could only stretch their leaders. On runs
   // they hang off their own nodes — the measured rail-era offsets, so the
   // layout is unchanged except that the whole ensemble now pans as one.
-  mobile:     { inspire: 60, inspireColumn: true, tuckSep: 74, connect: 22, sep: 74, runs: { equip: 88, connect: 100 } },
+  mobile:     { inspire: 60, inspireColumn: true, connect: 22, sep: 74, equalSpacing: true, runs: { equip: 88, connect: 100 } },
 };
 const RAIL_GAP = 12; // leader end -> tag box left edge
 const RAIL_VGAP = 8; // vertical-drop leader end -> tag box bottom edge
@@ -552,6 +563,10 @@ function railApply() {
      leader is a plain riser dropping into the label's top — the bend with
      nowhere left to bend. */
   const cyEquip = pos.equip[1] - riseEquip * _rail.tags.equip.s;
+  // Portrait rows share one vertical beat. Derive INSPIRE from the actual
+  // projected EQUIP -> CONNECT gap rather than maintaining a second tuned
+  // offset that only agrees at one viewport height.
+  const cyInspire = rises.equalSpacing ? 2 * cyEquip - cyConnect : null;
   const tC = _rail.tags.connect;
   const colRight = pos.connect[0] + Math.min(
     ((rises.runs && rises.runs.connect) ?? Infinity) + RAIL_GAP - tC.padL + tC.w,
@@ -563,7 +578,11 @@ function railApply() {
     const maxRailX = (_rail.navRight - nx) / c.s + c.padR; // box right edge ceiling
     let railX = Math.min(run + RAIL_GAP - c.padL + c.w, maxRailX);
     let endX = railX - c.w - RAIL_GAP + c.padL; // leader end: RAIL_GAP short of the text
-    let rise = key === 'equip' ? riseEquip : rises[key];
+    let rise = key === 'equip'
+      ? riseEquip
+      : key === 'inspire' && cyInspire != null
+        ? (ny - cyInspire) / c.s
+        : rises[key];
     let d;
     /* THE TUCK NEEDS ROOM (2026-08-17): inspireColumn hangs the label BELOW
        its dot, and on squat mobile aspects (360x640: viewFor's zoom-out
@@ -576,16 +595,15 @@ function railApply() {
     let column = key === 'inspire' && rises.inspireColumn;
     let dropPx = 0;
     if (column) {
-      /* Two ways to set the tucked label's height (screen px):
-         - tuckSep (mobile): the label rides EQUIP'S rhythm — its row sits a
-           fixed breath above EQUIP's row — so it lands in the one clear slot
-           under the side rail's column WHEREVER the dot goes. That frees the
-           anchor to sit up in the plume's middle (2026-08-17, Hannah: the tag
-           "should be pointing into the middle of the spores and have a nice
-           angle to it") — the leader's angle is the anchor's to choose.
-         - even-cascade (wide frames): I->E spacing mirrors E->C, unchanged. */
-      dropPx = rises.tuckSep != null
-        ? Math.max(30, cyEquip - rises.tuckSep - ny)
+      /* Three ways to set the tucked label's height (screen px):
+         - equalSpacing (portrait): its row mirrors the live E->C interval.
+         - tuckSep: a legacy fixed-beat option for any future mode that needs
+           the label pinned to a particular furniture slot.
+         - even-cascade (wide frames): I->E mirrors E->C, unchanged. */
+      dropPx = rises.equalSpacing
+        ? cyInspire - ny
+        : rises.tuckSep != null
+          ? Math.max(30, cyEquip - rises.tuckSep - ny)
         : Math.max(30, 2 * cyEquip - cyConnect - ny);
       const tuckBottom = ny + dropPx - c.rowMid * c.s + c.h * c.s;
       const equipTop = cyEquip - (_rail.tags.equip.h * _rail.tags.equip.s) / 2;
@@ -600,9 +618,9 @@ function railApply() {
       // lands up-right of the top centre by ~its drop distance; where a
       // frame bends that, the diagonal keeps 45° and finishes with a short
       // vertical step into the label.
-      // (floor 30 lives in dropPx above: with the dot near the label the
-      // node's hover ring needs ~30px before it stops overlapping the
-      // label's top edge; wide frames compute 90+ and never feel it.)
+      // Non-equal modes retain a 30px floor above. Portrait keeps the exact
+      // row rhythm; its room guard reroutes the leader if that would crowd
+      // EQUIP instead of silently changing the spacing.
       const drop = dropPx / c.s;
       rise = -drop;
       railX = Math.min((colRight - nx) / c.s, maxRailX);
@@ -755,7 +773,15 @@ if (sceneApi) {
     // nothing, it keeps the control a real link for the keyboard and for
     // "open in new tab", and a tab opened that way arrives as an inbound deep
     // link — placed on arrival, then cleaned.
-    if (!isTouch && (id === 'co-inspire' || id === 'co-connect')) {
+    //
+    // ONE TAP ON EVERY DEVICE (2026-08-19): these two used to ride a touch-only
+    // "tap twice to travel" model — the first tap was the hover (light +
+    // reveal via .force), the second the click. That read as two taps where a
+    // tap should act, so INSPIRE/CONNECT now navigate on the FIRST tap exactly
+    // as the desktop click does; no isTouch gate. EQUIP keeps its toggle
+    // below — it has no chapter yet, so its tap has nothing to commit to and
+    // lights + reveals "coming soon" instead.
+    if (id === 'co-inspire' || id === 'co-connect') {
       const chapter = id.slice(3);
       el.querySelector('.tag').addEventListener('click', (e) => {
         e.preventDefault();
@@ -764,26 +790,13 @@ if (sceneApi) {
       });
     }
 
-    if (isTouch) {
+    // EQUIP (touch): no chapter, so a tap toggles the lit state — the only way
+    // a finger reaches the "coming soon" reveal on a hoverless device.
+    if (isTouch && id === 'co-equip') {
       const co = el.querySelector('.co');
       const tag = el.querySelector('.tag');
       tag.addEventListener('click', (e) => {
         e.preventDefault();
-        /* TAP TWICE TO TRAVEL (2026-08-17, Hannah: "make sure that tap
-           gestures work everywhere they should, e.g. on the connect,
-           inspire, etc. tags"): the desktop click handler above is gated
-           !isTouch, so on a phone these tags could LIGHT but never
-           NAVIGATE — there was no touch path into a chapter from the hero
-           callouts at all. Standard touch idiom for a hover-preview
-           control: first tap is the hover (light + reveal), second tap on
-           the lit tag is the click. EQUIP has no chapter and stays
-           toggle-only. */
-        if (co.classList.contains('force') && (id === 'co-inspire' || id === 'co-connect')) {
-          const chapter = id.slice(3);
-          if (window.journey) window.journey.flyTo(chapter);
-          else pendingEntry = chapter;
-          return;
-        }
         const willForce = !co.classList.contains('force');
         for (const other of document.querySelectorAll('.co')) other.classList.remove('force');
         for (const [oid, oregion] of [['co-inspire', 'spores'], ['co-equip', 'stem'], ['co-connect', 'ground']]) {

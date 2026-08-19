@@ -18,17 +18,27 @@
 // constants.js. Every input is a delta on v; nothing is ever a discrete step
 // to a chapter, so the path is reversible at any point and at any speed.
 
-import { CHAPTERS, SEGMENTS, REST_STOPS, TERMINAL_P, transitSeconds } from './route.js';
+import {
+  CHAPTERS, SEGMENTS, REST_STOPS, TERMINAL_P,
+  transitSeconds, desktopTransitCapSeconds,
+} from './route.js';
 import { NOSNAP } from '../flags.js';
 import {
   SNAP_ENGAGE_MS, ARRIVAL_HOLD_MS, SNAP_K, SNAP_BAND, SNAP_DEAD_P,
-  COMMIT_THRESHOLD, COMMIT_CARRY_RATE, COMMIT_GLIDE_PX, COMMIT_BLEND_K,
+  COMMIT_THRESHOLD, COMMIT_CARRY_RATE, COMMIT_CARRY_PEAK_VH, COMMIT_GLIDE_PX, COMMIT_BLEND_K,
   COMMIT_STREAM_GAP_MS, COMMIT_STREAM_MIN, COMMIT_CRUISE_MAX_PX,
   COMMIT_GLIDE_MAX_S, COMMIT_BRAKE_TAIL_S, COMMIT_BACK_CAP_VH,
   WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K, STALL_FRAME_MS, STALL_MAX_MS,
 } from './constants.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+// Capability, not width: an iPad can be wider than a small laptop, but the
+// user explicitly wants touch/mobile pacing left alone. Reading `.matches`
+// when the band is built also follows a convertible changing input mode.
+const DESKTOP_PACING = typeof matchMedia === 'function'
+  ? matchMedia('(hover: hover) and (pointer: fine)')
+  : null;
 
 /* ==========================================================================
    INPUT OWNERSHIP  (a11y debt #1 — root cause, replacing the guard stack)
@@ -905,7 +915,18 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     // The px peak, converted at the span it would be spent on. One finger,
     // one answer, both directions — COMMIT_CARRY_RATE keeps its p/s meaning
     // at the span's own scale.
-    return gPeak * slope * lastDir >= COMMIT_CARRY_RATE;
+    //
+    // THE ASK IS CAPPED IN ROAD (2026-08-19): the p/s floor converts to
+    // px/s at the span's mean slope, so a leg that owns a lot of road asks
+    // for an unfair share of a swipe — Owned->Final (17.0 vh) demanded
+    // ~1,130 px/s of peak against ~410-910 on every other leg, measured.
+    // Same defect the backward side already caps (COMMIT_BACK_CAP_VH), so
+    // the same cure: never ask more than COMMIT_CARRY_PEAK_PX px/s. On
+    // every leg whose slope already meets the floor at or under that peak
+    // the test is bit-identical; only the oversized leg's bar moves.
+    return slope > 0
+      ? gPeak * lastDir >= Math.min(COMMIT_CARRY_RATE / slope, COMMIT_CARRY_PEAK_VH * Math.max(320, window.innerHeight))
+      : false;
   }
 
   /** The rest of [lo, hi] this position must resolve to, per the direction
@@ -947,8 +968,24 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     return pickTarget(q, lo, hi);
   }
 
-  const clampRate = r => (r > MAX_SCRUB_RATE ? MAX_SCRUB_RATE
-    : r < -MAX_SCRUB_RATE ? -MAX_SCRUB_RATE : r);
+  /** The final displayed-rate limit. The global ceiling remains the fallback;
+   *  a fine-pointer desktop moving forward across one of the authored spans
+   *  gets a lower ceiling derived from that span's relative distance and its
+   *  minimum transit time. This is intentionally the final clamp: limiting
+   *  only the released glide still lets a hard live scrub punch through.
+   *  Reverse and touch paths have no declaration and remain bit-identical. */
+  function clampRate(r, q = p) {
+    let limit = MAX_SCRUB_RATE;
+    if (r > 0 && DESKTOP_PACING && DESKTOP_PACING.matches) {
+      // At a shared anchor bracketAt() quite reasonably returns the span that
+      // ENDS there. A forward rate belongs to the one that STARTS there, so
+      // look an epsilon ahead only for this directional pacing lookup.
+      const [lo, hi] = bracketAt(Math.min(TERMINAL_P, q + 1e-9));
+      const seconds = desktopTransitCapSeconds(lo, hi, 1);
+      if (seconds) limit = Math.min(limit, (hi - lo) / seconds);
+    }
+    return r > limit ? limit : r < -limit ? -limit : r;
+  }
 
   /** Legacy W3-A soft snap, for ?nosnap=1 only: band-limited magnetism on the
    *  surface, parking anywhere outside the band, so ?p= deep-scrub QA can sit
@@ -1322,13 +1359,19 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         of the design. */
     get rate() { return vel; },
     /** QA: the SIGNED high-water mark of the rate this gesture has asked for,
-        converted to p/s at the CURRENT bracket's span slope (the unit every
-        threshold is stated in; the raw measurement is surface px/s — see
-        gesturePeakPx). What pickTarget tests, and what becomes the
-        transition's cruise. Zero once a resolution has spent it. */
+        converted to p/s at the CURRENT bracket's span slope, with the same
+        road cap carrying() applies (COMMIT_CARRY_PEAK_VH — the raw
+        conversion can exceed the bar on a leg that owns a lot of road).
+        This is exactly what pickTarget tests. The RAW surface px/s peak is
+        what becomes the transition's cruise floor. Zero once a resolution
+        has spent it. */
     get gesturePeak() {
       const [lo, hi] = bracketAt(p);
-      return gPeak * spanSlope(lo, hi);
+      const slope = spanSlope(lo, hi);
+      const raw = gPeak * slope;
+      if (slope <= 0) return raw;
+      const cap = slope * COMMIT_CARRY_PEAK_VH * Math.max(320, window.innerHeight);
+      return Math.abs(raw) > cap ? Math.sign(raw) * cap : raw;
     },
     /** QA: is this gesture a delta STREAM (a trackpad/drag/spun wheel rather
         than discrete notches)? The flick-carry test. */
@@ -1377,7 +1420,9 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         the gesture's own peak clamped to the leg's [nominal, ceil] band
         (COMMIT_GLIDE_PX / COMMIT_CRUISE_MAX_PX, both raised if needed to finish
         inside COMMIT_GLIDE_MAX_S), or flat nominal for a reversal / standing
-        start. null while the gesture is still running. */
+        start. The final displayed p-rate can be lower on a desktop span with
+        a DESKTOP_TRANSIT_CAP_S declaration. null while the gesture is still
+        running. */
     get resolveCruise() { return intent ? intent.cruisePx : 0; },
     /** QA: where the latched resolution is going (null if none). */
     get resolveTarget() { return intent ? intent.target : null; },
