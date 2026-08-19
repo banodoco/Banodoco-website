@@ -874,6 +874,11 @@ export function createInspire(sceneApi) {
                                      // overlap reads as one intro, not a queue
   const land = exits.map(() => ({ a: 0, at: null }));
   let landGate = null;               // bound by journey.js; null = QA default 1
+  // One envelope owns both halves of each landing event. Keep this free of
+  // the taste multiplier: taste changes brightness, not whether the named
+  // destination exists, while furn x land is the exact temporal/positional
+  // product the lip glow rides in both the live animator and snap().
+  function landingReveal(i) { return furnOf(i) * land[i].a; }
   function driveLand(t, dt) {
     const g = landGate ? landGate() : 1;
     for (let s = 0; s < 3; s++) {
@@ -1225,7 +1230,7 @@ export function createInspire(sceneApi) {
         // 2026-08-11 literally the same expression (the animator's breathing
         // multiplier is gone; the ember holds one level, see 5b). x land (5c):
         // the ember belongs to the landing cascade now.
-        const lo = 0.22 * furnOf(i) * land[i].a * T;
+        const lo = 0.22 * landingReveal(i) * T;
         lipGlows[i].sprite.visible = lo > 0.01;
         lipGlows[i].mat.opacity = lo;
         for (const m of exits[i].mats) {
@@ -1348,15 +1353,12 @@ export function createInspire(sceneApi) {
      *  eased copy opacity here so the embers and labels arrive WITH the
      *  intro; unbound, the cascade runs open (QA harnesses). */
     bindLandingGate(fn) { landGate = typeof fn === 'function' ? fn : null; },
-    /** Per-node chip gate (5c) — the same product the node's own ember
-     *  rides (land x furnOf, both 0..1), so a label can never outrun the
-     *  lit edge it names: each chip stands up as its ember finishes
-     *  igniting, in the cascade's left-to-right order, and ui.js skips its
-     *  arrival stagger for reveal chips because this cadence IS the
-     *  stagger (the Connect precedent, 2026-08-16). */
+    /** Per-node chip gate (5c) — literally the envelope the node's own ember
+     *  rides (land x furnOf, both 0..1), so the UI has no second threshold or
+     *  easing clock to drift behind the lit edge it names. */
     nodeReveal(id) {
       const i = EXITS.findIndex(e => e.id === id || (id === 'tworp' && e.id === '2rp'));
-      return i < 0 ? 0 : Math.min(land[i].a, furnOf(i));
+      return i < 0 ? 0 : landingReveal(i);
     },
     /** Damp the breeze lean (1 = full). Spike A's director called this but
      *  plumes.js never exported it - a live TypeError in spike-a/, fixed here
@@ -1631,7 +1633,7 @@ export function createInspire(sceneApi) {
       // the marker holds one level; the shimmer stays with the braids and
       // streams around it. Animator and snap() compute the identical value.
       const lg = lipGlows[i];
-      const lo = 0.22 * furnOf(i) * land[i].a * T;
+      const lo = 0.22 * landingReveal(i) * T;
       lg.sprite.visible = lo > 0.01;
       lg.mat.opacity = lo;
     }

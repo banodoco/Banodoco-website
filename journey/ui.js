@@ -2629,7 +2629,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       const gate = h.reveal
         ? Math.min(h.reveal(), bandOpacity(p, h.revealBand))
         : (eased[h.chapter] || 0);
-      let want = gate > 0.72 && !detail;
+      // A scene-reveal chip is the annotation half of the scene event, so its
+      // reported 0..1 envelope is authoritative. Resting-composition chips
+      // retain the established 72% copy gate and independent arrival ease.
+      let want = gate > (h.reveal ? 0 : 0.72) && !detail;
       const reserveLayout = reservedLabelChapters.has(h.chapter) && !h.labelOnHover;
       let w = (want || reserveLayout) ? h.world() : null;
       w = want ? holdAnchor(h, w, dt) : w;
@@ -2710,12 +2713,19 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         // scene's own (Connect's lights land seconds apart), and 150 ms of
         // stagger on top of that is noise — worse, it is ORDERED by
         // registration (importance), which is not the order the lights land.
-        if (h.armAt === null) h.armAt = now + ((h.labelOnHover || h.reveal) ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
-        if (dt === 0) h.a = 1;
-        else if (now >= h.armAt) h.a += (1 - h.a) * Math.min(1, dt * HOTSPOT_IN_K);
+        if (h.reveal) {
+          // No UI clock here: Connect/Inspire already own their per-item
+          // cadence. Mirroring the source also keeps reverse scrubs truthful.
+          h.armAt = null;
+          h.a = gate;
+        } else {
+          if (h.armAt === null) h.armAt = now + (h.labelOnHover ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
+          if (dt === 0) h.a = 1;
+          else if (now >= h.armAt) h.a += (1 - h.a) * Math.min(1, dt * HOTSPOT_IN_K);
+        }
       } else {
         h.armAt = null;
-        if (dt === 0) h.a = 0;
+        if (h.reveal || dt === 0) h.a = 0;
         else { h.a += (0 - h.a) * Math.min(1, dt * HOTSPOT_OUT_K); if (h.a < 0.02) h.a = 0; }
       }
       if (h.layoutPlaceable) {
