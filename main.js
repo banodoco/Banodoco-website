@@ -197,6 +197,17 @@ function getMode() {
 // the right-side callouts keep edge clearance all the way down to 4:3 iPads
 function viewFor(mode) {
   const v = { ...VIEWS[mode] };
+  if (mode === 'desktop') {
+    /* 16:9 HERO BALANCE. At 2048x1152 the cap/stalk optical centre sits at
+       ~63.5% of the frame and still has ample air before the right rail.
+       Another -0.48 panX moves the specimen (and its projected furniture)
+       roughly 80px right at this camera distance. Taper the correction away
+       around the widescreen ratio so 16:10 and ultrawide compositions retain
+       their reviewed framing instead of inheriting a global model move. */
+    const aspect = innerWidth / innerHeight;
+    const widescreenMix = Math.max(0, 1 - Math.abs(aspect - 16 / 9) / 0.14);
+    v.panX -= 0.48 * widescreenMix;
+  }
   if (mode === 'deskNarrow') {
     const t = Math.min(1, Math.max(0, (1.55 - innerWidth / innerHeight) / 0.3));
     v.panX = -1.27 + 0.3 * t;
