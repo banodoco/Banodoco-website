@@ -241,32 +241,6 @@ const KEYS = [
   { p: 1.000, back: 1.08, rise: 2.35, truck: 0.45, tgtUp: 0.55, tgtRight: -0.35, fov: 8 },
 ];
 
-/* Connect -> Owned portrait centring arc (2026-08-19).
-   The narrowing portrait frustum left the mushroom/stipe outside the left
-   edge for most of the visible descent. This is an independent horizontal
-   frame truck so it cannot perturb the authored dolly, sink, fov or gaze:
-   camera and target move together, peaking while the stipe is still visible
-   and relaxing to zero before Owned's centred rest. The remaining rightward
-   drift is intentional — a perfectly pinned subject read as stabilization,
-   not a camera move. Values are projection-tuned at 430x932 and 768x1024. */
-const DESCENT_TRUCK_KEYS = [
-  { p: restProgress('connect'), value: 0 },
-  { p: 0.570, value: -3.50 },
-  { p: 0.600, value: -2.90 },
-  { p: 0.622, value: -2.35 },
-  { p: 0.660, value: -1.10 },
-  { p: 0.700, value: 0 },
-];
-
-function descentTruckAt(p) {
-  if (p <= DESCENT_TRUCK_KEYS[0].p || p >= DESCENT_TRUCK_KEYS[DESCENT_TRUCK_KEYS.length - 1].p) return 0;
-  let i = 0;
-  while (i < DESCENT_TRUCK_KEYS.length - 2 && p > DESCENT_TRUCK_KEYS[i + 1].p) i++;
-  const a = DESCENT_TRUCK_KEYS[i], b = DESCENT_TRUCK_KEYS[i + 1];
-  const t = smooth01((p - a.p) / (b.p - a.p));
-  return a.value + (b.value - a.value) * t;
-}
-
 /* ------------------------------------------------------------------ */
 /* The tablet band (2026-08-17, Hannah's tablet feedback on Inspire)   */
 /* ------------------------------------------------------------------ */
@@ -336,7 +310,6 @@ export function applyPortrait(pose, p, aspect) {
   const w = portraitWeight(aspect);
   if (w <= 0) return pose;
   const o = offsetAt(p);
-  o.truck += descentTruckAt(p);
   // tablet band: fold the delta field straight into this frame's offsets so
   // the application below stays one code path. tw is 0 for every phone and
   // rides w, so it inherits portraitWeight's fade toward landscape.

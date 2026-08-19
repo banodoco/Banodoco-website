@@ -109,10 +109,14 @@ if (skipLink) {
 
 // --- responsive camera compositions, keyed by mode ---
 const VIEWS = {
-  desktop: { panX: -2.4, camY: 2.25, camZ: 10.4, targetY: 2.6,  fov: 38 },
-  compact: { panX: -2.9, camY: 2.3,  camZ: 11.2, targetY: 2.7,  fov: 38 },  // short landscape (phones)
-  deskNarrow: { panX: -2.0, camY: 2.3, camZ: 11.6, targetY: 2.65, fov: 38 }, // landscape aspect < 1.55 (iPads)
-  // panX -0.7 -> +0.45 (2026-08-19, optical centring pass): the earlier
+  // Composition restage (2026-08-19): pan the organism + its projected
+  // annotations left by roughly 5-8vw, while the DOM hero copy stays put.
+  // Lowering camera and target together preserves the viewing angle/scale
+  // and lifts the specimen slightly in frame. Anchors remain anatomy-owned.
+  desktop: { panX: -1.65, camY: 2.07, camZ: 10.4, targetY: 2.42, fov: 38 },
+  compact: { panX: -1.82, camY: 2.12, camZ: 11.2, targetY: 2.52, fov: 38 },  // short landscape (phones)
+  deskNarrow: { panX: -1.27, camY: 2.12, camZ: 11.6, targetY: 2.47, fov: 38 }, // landscape aspect < 1.55 (iPads)
+  // Prior optical centring pass (ending at panX +0.45): the earlier
   // +0.33 landed the ensemble's geometric bounds on centre, but the bright
   // spore plume and the label column both weight the right side. Another
   // ~11px of leftward screen travel centres the visible energy of the set,
@@ -123,8 +127,8 @@ const VIEWS = {
   // the specimen left until the ENSEMBLE reads centred — measured
   // at 768x1024: cap left rim 142, INSPIRE tag right 640, midpoint 391 at
   // panX 0.25; ~91.5 px/unit at this framing puts the optical centre at 0.45.
-  tablet:  { panX: 0.45,  camY: 2.9, camZ: 12.0, targetY: 4.0,  fov: 50 },
-  // panX -0.15 -> +0.40 (2026-08-19, optical centring pass): the previous
+  tablet:  { panX: 1.00, camY: 2.72, camZ: 12.0, targetY: 3.82, fov: 50 },
+  // Prior optical centring pass (ending at panX +0.40): the previous
   // comment described a +0.55 centring target, but the value below had only
   // moved to +0.20. Closing part of that gap shifts the unified composition
   // left by roughly the same visible amount as tablet, without making the
@@ -132,7 +136,7 @@ const VIEWS = {
   // specimen+labels together sat right-heavy — "they should be centred
   // together"). The pan walks the mushroom left so the ENSEMBLE's bounding
   // box centres; the labels follow because mobile now carries runs (RAIL).
-  mobile:  { panX: 0.40, camY: 3.2, camZ: 11.5, targetY: 4.75, fov: 64 },
+  mobile:  { panX: 0.83, camY: 2.95, camZ: 11.5, targetY: 4.50, fov: 64 },
 };
 
 // --- per-mode world anchors for the HUD callouts (tuned against screenshots) ---
@@ -196,7 +200,7 @@ function viewFor(mode) {
   const v = { ...VIEWS[mode] };
   if (mode === 'deskNarrow') {
     const t = Math.min(1, Math.max(0, (1.55 - innerWidth / innerHeight) / 0.3));
-    v.panX = -2.0 + 0.3 * t;
+    v.panX = -1.27 + 0.3 * t;
     v.camZ = 11.6 + 0.9 * t;
   }
   if (mode === 'mobile') {
@@ -207,7 +211,7 @@ function viewFor(mode) {
     // is the trap: a higher target renders the scene lower). ~25px of lift
     // meets the copy's ~16px drop (hero.css mobile padding-top), splitting
     // the frame's air roughly evenly above and below the text block.
-    v.targetY = 4.10 + 1.2 * t;
+    v.targetY = 3.85 + 1.2 * t;
     v.camZ = 11.5 + 1.3 * t;
   }
   return v;
@@ -372,11 +376,11 @@ const RAIL = {
   // Compact is deliberately NOT retuned: its bend clamps to 16px of rise
   // whatever this table says (the endX-24 cap in railApply), and measured
   // at 844x390 only the tags' invisible padding boxes cross the tile edge —
-  // every stroke of ink clears. Desktop/deskNarrow are untouched: their
-  // text edge kisses the tile edge by shared-inset design.
-  desktop:    { inspire: -32, inspireColumn: true, connect: 72, sep: 120, runs: { inspire: 96, equip: 190, connect: 150 } },
-  deskNarrow: { inspire: -32, inspireColumn: true, connect: 72, sep: 120, runs: { inspire: 90, equip: 170, connect: 140 } },
-  compact:    { inspire: 56, connect: 44, sep: 84 },
+  // every stroke of ink clears. The current restage adds compact runs and
+  // shortens every mode's reach so annotations sit closer to their anatomy.
+  desktop:    { inspire: -32, inspireColumn: true, connect: 72, sep: 120, runs: { inspire: 76, equip: 150, connect: 120 } },
+  deskNarrow: { inspire: -32, inspireColumn: true, connect: 72, sep: 120, runs: { inspire: 72, equip: 136, connect: 112 } },
+  compact:    { inspire: 56, connect: 44, sep: 84, runs: { inspire: 48, equip: 100, connect: 80 } },
   // tablet runs joined with ITS centring pass (2026-08-17, Hannah: "the way
   // on mobile we hide the main button and centre align the mushroom with the
   // labels — do the same on tablet"): railed to the nav inset the labels were
@@ -389,7 +393,8 @@ const RAIL = {
   // pan would have grown maxRailX past the threshold and bent the leader
   // toward the nav inset. equalSpacing now derives INSPIRE's row from the
   // live EQUIP -> CONNECT gap, while leaving that riser language intact.
-  tablet:     { inspire: 100, connect: 84, sep: 120, equalSpacing: true, runs: { inspire: 8, equip: 176, connect: 123 } },
+  // The current restage preserves the riser and shortens the two side runs.
+  tablet:     { inspire: 100, connect: 84, sep: 120, equalSpacing: true, runs: { inspire: 8, equip: 140, connect: 98 } },
   // mobile rebalance (2026-08-17, Hannah: "equip should be mid distance
   // between inspire and connect and inspire maybe should be a tiny bit
   // lower"): one 74px beat through the whole column. connect 66->42 brings
@@ -405,11 +410,11 @@ const RAIL = {
   // railed to the nav inset, the labels were PINNED to the viewport's right
   // edge and the camera pan below could only stretch their leaders. On runs
   // they hang off their own nodes — the measured rail-era offsets, so the
-  // layout is unchanged except that the whole ensemble now pans as one.
-  mobile:     { inspire: 60, inspireColumn: true, connect: 22, sep: 74, equalSpacing: true, runs: { equip: 88, connect: 100 } },
+  // whole ensemble can pan as one. The current restage shortens those runs.
+  mobile:     { inspire: 60, inspireColumn: true, connect: 22, sep: 74, equalSpacing: true, runs: { equip: 70, connect: 80 } },
 };
-const RAIL_GAP = 12; // leader end -> tag box left edge
-const RAIL_VGAP = 8; // vertical-drop leader end -> tag box bottom edge
+const RAIL_GAP = 8; // leader end -> tag box left edge
+const RAIL_VGAP = 5; // vertical-drop leader end -> tag box bottom edge
 
 // The camera is static AT REST, but the pointer-driven quiet drift moves it a
 // few pixels, and each anchor shifts by a DIFFERENT parallax amount — a

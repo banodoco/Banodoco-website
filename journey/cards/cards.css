@@ -1129,7 +1129,11 @@
   margin: 0;
   border-radius: 0;
   background: transparent;
-  transform: translateY(var(--j-dot-dy, 0px));
+  /* A collision dodge moves this joined marker as ONE object. The generic
+     ember dot is pinned back to its world node, but pinning this tab would
+     tear it away from the capsule (and can put it underneath, as on Arca at
+     430px). --j-dot-dy still keeps the invisible node hit-pad truthful. */
+  transform: none;
 }
 .j-hot--icon-tab .j-hot-dot.j-hot-ico::before {
   content: "";
@@ -1172,7 +1176,7 @@
    so scaling it would split the silhouette; only the drawing breathes. */
 .j-hot--icon-tab:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico {
   background: transparent;
-  transform: translateY(var(--j-dot-dy, 0px));
+  transform: none;
 }
 .j-hot--icon-tab:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico svg {
   transform: scale(1.14);
