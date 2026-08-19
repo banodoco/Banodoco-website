@@ -120,7 +120,7 @@
 // `expanded()` covers that focus in the release rule too.
 
 import { CONTENT } from '../content/content.js';
-import { CHAPTERS, chapterAt, startOf } from './route.js';
+import { CHAPTERS, chapterAt, restProgress, startOf } from './route.js';
 import { buildSymbol } from './symbols.js';
 import { claimInput, releaseInput } from './scroll.js';
 
@@ -209,6 +209,7 @@ const FIRST_OUTSIDE_P = CHAPTERS[1] ? startOf(CHAPTERS[1].id) : SHOW_P;
    `writeAngles` is what makes that true — see THE DIRECTION IS NOT A SHORTEST
    PATH there. */
 const N = CHAPTERS.length;
+const RAIL_RESTS = CHAPTERS.map(c => restProgress(c.id));
 /* The arc the marks inhabit. 180deg is the half moon itself, and it is the
    number the whole geometry is derived from: the pitch, the radius and the
    fact that the extreme marks land on the button's own x are all consequences
@@ -379,6 +380,9 @@ function reticle() {
 }
 
 export function createRail({ onNav } = {}) {
+  // Navigation iteration: make the rail the hero's persistent navigation
+  // surface instead of revealing it only after the first chapter departure.
+  const ALWAYS_OPEN = true;
   const reduceMotion = typeof matchMedia === 'function'
     ? matchMedia('(prefers-reduced-motion: reduce)')
     : { matches: false };
@@ -716,6 +720,26 @@ export function createRail({ onNav } = {}) {
      a rail the visitor is touching must not go out under their hand. */
   let hovering = false;
   let formTimer = 0;
+  let pinnedRevealed = false;
+  let followReadyAt = Infinity;
+
+  /** Release the persistent rail only after the hero intro has landed. Adding
+   *  the existing open classes one painted frame after `.on` reuses the moon's
+   *  authored line-draw + cascading formation instead of inventing an entry. */
+  function reveal() {
+    if (pinnedRevealed) return;
+    pinnedRevealed = true;
+    root.classList.add('on');
+    void root.offsetWidth;
+    requestAnimationFrame(() => {
+      hotOpen = true;
+      root.classList.add('j-rail-hot');
+      document.body.classList.add('j-rail-on');
+      // The longest existing desktop formation is ~660ms. Only after it lands
+      // does progress take direct ownership of the rail's angle.
+      followReadyAt = reduceMotion.matches ? Date.now() : Date.now() + 720;
+    });
+  }
 
   function expanded() {
     return touchOpen || hotOpen || !!root.querySelector(':focus-visible');
@@ -751,6 +775,13 @@ export function createRail({ onNav } = {}) {
   }
 
   function collapse() {
+    if (ALWAYS_OPEN && pinnedRevealed) {
+      collapseTouch();
+      hotOpen = true;
+      root.classList.add('on', 'j-rail-hot');
+      announceOpen();
+      return;
+    }
     collapseTouch();
     clearTimeout(hotTimer);
     if (hotOpen) {
@@ -827,6 +858,7 @@ export function createRail({ onNav } = {}) {
     clearTimeout(formTimer);
     lastPt = null;
     syncAt();
+    if (ALWAYS_OPEN && pinnedRevealed) return;
     if (!hotOpen) return;
     hotOpen = false;
     root.classList.remove('j-rail-hot');
@@ -904,6 +936,7 @@ export function createRail({ onNav } = {}) {
   });
 
   root.addEventListener('pointerdown', (e) => {
+    if (ALWAYS_OPEN && pinnedRevealed) return;
     if (e.pointerType !== 'touch' || touchOpen) return;
     // The menu mark is the OTHER resting control: its first tap opens the
     // panel (see the menu's own pointerdown below), so it must not spend the
@@ -1098,7 +1131,10 @@ export function createRail({ onNav } = {}) {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (menuIsOpen) { e.preventDefault(); e.stopPropagation(); closeMenu(); return; }
-    if (touchOpen || hotOpen) { e.preventDefault(); collapse(); }
+    if (!(ALWAYS_OPEN && pinnedRevealed) && (touchOpen || hotOpen)) {
+      e.preventDefault();
+      collapse();
+    }
   }, true);
 
   /* ------------------------------------------------------------------ */
@@ -1109,6 +1145,8 @@ export function createRail({ onNav } = {}) {
   let nowId = null;
   let activeId = null;
   let dimmed = null;
+  let wasCameraStateDisagree = false;
+  let wasBetweenRests = false;
 
   /* ---- the moon's angles ---------------------------------------------------
      One UNWRAPPED angle per slot, in degrees. Unwrapped is the whole point:
@@ -1286,6 +1324,50 @@ export function createRail({ onNav } = {}) {
     }
   }
 
+  /** A continuous chapter coordinate: integer values are authored chapter
+   *  rests, fractions are the visitor's real progress between them. */
+  function progressIndex(p) {
+    if (p <= RAIL_RESTS[0]) return 0;
+    for (let i = 0; i < RAIL_RESTS.length - 1; i++) {
+      if (p <= RAIL_RESTS[i + 1]) {
+        return i + (p - RAIL_RESTS[i])
+          / Math.max(1e-6, RAIL_RESTS[i + 1] - RAIL_RESTS[i]);
+      }
+    }
+    return RAIL_RESTS.length - 1;
+  }
+
+  /** During real scroll, put the moon directly on that coordinate. One mark
+   *  fades round the hidden back at either tip; the other four move exactly
+   *  with p. Direct nav flights retain writeAngles()'s authored timed turn. */
+  function followProgress(p) {
+    const pos = progressIndex(p);
+    const nearest = Math.max(0, Math.min(N - 1, Math.round(pos)));
+    curIndex = nearest;
+    prevCur = nearest;
+    root.style.setProperty('--cur', pos.toFixed(4));
+    slots.forEach((s, i) => {
+      let d = i - pos;
+      while (d > N / 2) d -= N;
+      while (d <= -N / 2) d += N;
+      const edge = Math.abs(d);
+      const opacity = edge <= 2 ? 1 : Math.max(0, (N / 2 - edge) / 0.5);
+      angleOf[i] = d * STEP;
+      s.li.style.setProperty('--ang-to', angleOf[i].toFixed(3) + 'deg');
+      s.li.style.setProperty('--rail-follow-opacity', opacity.toFixed(3));
+      const k = ((Math.round(d) % N) + N) % N;
+      s.li.classList.toggle('j-pill-up', PILL_SIDE[k] === 'up');
+      s.li.classList.toggle('j-pill-dn', PILL_SIDE[k] === 'dn');
+    });
+    const between = Math.abs(pos - nearest) > 0.002;
+    root.classList.toggle('j-rail-between', between);
+    if (between !== wasBetweenRests) {
+      wasBetweenRests = between;
+      if (between) clearTimeout(turnTimer);
+      else syncAt();
+    }
+  }
+
   function update(p, {
     modalDetail = false,
     cameraStateDisagree = false,
@@ -1317,8 +1399,22 @@ export function createRail({ onNav } = {}) {
       revealed = true;
     }
 
-    const show = revealed;
+    const show = ALWAYS_OPEN ? pinnedRevealed : revealed;
     if (show !== shown) { root.classList.toggle('on', show); shown = show; }
+
+    const jumpStarted = cameraStateDisagree && !wasCameraStateDisagree;
+    wasCameraStateDisagree = cameraStateDisagree;
+    const following = pinnedRevealed && Date.now() >= followReadyAt && !cameraStateDisagree;
+    root.classList.toggle('j-rail-following', following);
+    let wroteJumpAngles = false;
+    if (jumpStarted) {
+      const target = CHAPTERS.findIndex(c => c.id === chapterAt(p).id);
+      root.classList.remove('j-rail-between');
+      wasBetweenRests = false;
+      root.style.setProperty('--cur', String(target));
+      writeAngles(target);
+      wroteJumpAngles = true;
+    }
 
     /* THE MOON GOING HOME IS THE MOMENT TO RESTATE ITS ANGLES. Watched here,
        per frame, off `expanded()` itself rather than hooked onto each of the
@@ -1348,13 +1444,13 @@ export function createRail({ onNav } = {}) {
       const cur = CHAPTERS.findIndex(c => c.id === nowId);
       // The fan is anchored on the current slot: --cur positions every other
       // slot relative to it, --d is each slot's distance for the stagger.
-      root.style.setProperty('--cur', String(cur));
+      if (!following) root.style.setProperty('--cur', String(cur));
       slots.forEach((s, i) => {
         s.li.classList.toggle('now', s.id === nowId);
         s.li.style.setProperty('--d', String(Math.abs(i - cur)));
       });
       // ...and the same move stated as a rotation, for the cluster geometry.
-      writeAngles(cur);
+      if (!following && !wroteJumpAngles) writeAngles(cur);
       // The PANEL's list marks the chapter you are actually in — it follows
       // `now`, not `active`, because it is the one surface that can name the
       // epilogue, and Owned -> Final changes `now` without changing `active`.
@@ -1363,6 +1459,7 @@ export function createRail({ onNav } = {}) {
         else menuLinks[id].removeAttribute('aria-current');
       }
     }
+    if (following) followProgress(p);
     // With all five slots linked (THE EPILOGUE), the marked entry and the
     // scene on screen are the same statement: `aria-current` and the reticle
     // follow chapterAt(p) — the rail itself can now say "you are in the
@@ -1395,7 +1492,7 @@ export function createRail({ onNav } = {}) {
   }
 
   return {
-    root, menu, update,
+    root, menu, update, reveal,
     /** QA */
     get menuOpen() { return menuIsOpen; },
     get expanded() { return expanded(); },
