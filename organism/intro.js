@@ -189,7 +189,7 @@ export function setupIntro(ctx) {
      basically done anyway"), in which case the caller must not compress
      its CSS half either. */
   let accelerated = false;
-  function accelerate({ totalMs = intro * 1000 } = {}) {
+  function accelerate({ totalMs = intro * 1000, rampMs = 480 } = {}) {
     if (accelerated || introT0 === null) return false;
     const orig = performance.now.bind(performance);
     const lived = orig() - introT0;
@@ -198,7 +198,7 @@ export function setupIntro(ctx) {
     accelerated = true;
     let skew = 0;
     performance.now = () => orig() + skew;
-    const RAMP_MS = 480;
+    const RAMP_MS = Math.max(80, rampMs);
     const rampT0 = orig();
     (function ramp() {
       const f = Math.min((orig() - rampT0) / RAMP_MS, 1);

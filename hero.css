@@ -1081,3 +1081,25 @@ body.intro-fast .co { animation-duration: 0.16s !important; }
 body.intro-fast #co-inspire { --d: 0.30s; }
 body.intro-fast #co-equip   { --d: 0.44s; }
 body.intro-fast #co-connect { --d: 0.58s; }
+
+/* The first scroll is also a departure, even when journey.js is still being
+   fetched/built. A short-lived body class acknowledges that intent now; main
+   holds it until the journey's own p-driven Mission envelope has faded far
+   enough to take over without flashing the copy back on. */
+body.intro-depart .ui .hero,
+body.intro-depart .callouts {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.18s ease-out;
+}
+body.intro-depart .ui .hero {
+  transform: translateY(-0.3rem);
+  transition: opacity 0.18s ease-out, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+body.intro-depart.intro-restore .ui .hero,
+body.intro-depart.intro-restore .callouts {
+  opacity: 1 !important;
+}
+body.intro-depart.intro-restore .ui .hero {
+  transform: translateY(0);
+}

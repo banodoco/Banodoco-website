@@ -11,7 +11,7 @@ sends byte ranges for <video> and stalls mid-playback when the server
 answers 200 with the whole body — that was the ADOS preview "freezing"
 after a second (2026-08-18).
 """
-import http.server, socketserver, os, re
+import http.server, os, re, sys
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -84,12 +84,31 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a):
         pass  # quiet
 
+class ParallelHTTPServer(http.server.ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+    # TCPServer defaults to five queued sockets. Chrome can churn through more
+    # than that while expanding the module graph and issuing media ranges.
+    request_queue_size = 128
+
+    def handle_error(self, request, client_address):
+        # A browser cancelling an obsolete image/range request is routine and
+        # should not flood the terminal with a traceback.
+        if isinstance(sys.exc_info()[1], (BrokenPipeError, ConnectionResetError)):
+            return
+        super().handle_error(request, client_address)
+
 # :8137 by default (capture.py, pre-commit and the docs all say so), but a
 # $PORT wins — multiple Claude sessions each run their own copy of this
 # server, and only one of them can hold the canonical port.
 PORT = int(os.environ.get('PORT', 8137))
 
-socketserver.TCPServer.allow_reuse_address = True
-with socketserver.TCPServer(('', PORT), NoCacheHandler) as httpd:
+# Browsers fetch the ES-module graph, images and media in parallel.  A plain
+# TCPServer handles only one request at a time; under Chrome's eager parallel
+# loader its tiny listen backlog can reset a module connection while another
+# response is still being written.  ThreadingHTTPServer exists specifically
+# for browsers that pre-open sockets, and daemon threads keep Ctrl-C/restarts
+# prompt during local development.
+with ParallelHTTPServer(('', PORT), NoCacheHandler) as httpd:
     print(f'serving glowshroom/ on :{PORT} with no-store + range support')
     httpd.serve_forever()

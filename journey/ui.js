@@ -52,9 +52,13 @@ const sheetQuery = typeof matchMedia === 'function'
   ? matchMedia('(pointer: coarse), (max-width: 720px)')
   : { matches: false, addEventListener() {} };
 
-// Must outlast the .j-card opacity transition in journey/site.css (0.3s) so the
-// fade can actually play before the element is pulled out of the box tree.
-const CARD_FADE_MS = 340;
+// The shared detail-surface exit is 170ms. Keep the vessel in the box tree a
+// little longer so its last painted frame lands before teardown.
+const CARD_FADE_MS = 190;
+// A drag-dismissed sheet is also completing its existing 280ms direct-
+// manipulation release. Let that physical slide finish even though the new
+// shell fade has already gone dark.
+const CARD_DRAG_FADE_MS = 320;
 
 const CHAPTER_POSITION = {
   inspire: 'pos-bottom',
@@ -402,15 +406,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
      anything that re-opens cancels it. Long enough to cross 12px, short
      enough not to feel sticky. */
   const POP_HIDE_MS = 160;
-  /* The popover's entry (journey/site.css, POPOVER ENTRY) runs while
-     `.j-pop-enter` is set, and no longer. Scoping it to a class rather than to
-     `.open` is not decoration: the unfurl's direction is selected by
-     `data-side`, and placePop() re-decides that side every frame from live
-     geometry. Left on `.open`, a chip drifting across the flip threshold with
-     its popover pinned would swap animation-name on a finished animation and
-     replay the whole wipe, at rest, for no reason the visitor can see. The
-     class is dropped once the entry is spent, after which a side change is
-     inert. Covers the slowest part (the 0.62 s filament) with a little air. */
+  /* `.j-pop-enter` owns the card-specific interior and filament sequence.
+     The shared shell gesture has its own `.j-detail-enter` lifetime, ended by
+     animationend, so a cold rendering frame cannot spend it offscreen. This
+     timer only covers the slowest interior part (the 0.62 s filament) with a
+     little air. */
   const POP_ENTER_MS = 700;
 
   const pop = el('aside', 'j-pop');
@@ -571,13 +571,17 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
    *  syncPop that re-asserts an already-open popover, must not re-play it. */
   function runPopEntry() {
     if (popEnterTimer) clearTimeout(popEnterTimer);
-    if (pop.classList.contains('j-pop-enter')) {
+    if (pop.classList.contains('j-pop-enter') || pop.classList.contains('j-detail-enter')) {
       // chip-to-chip hop inside the entry window: the keyframes only restart
       // if the class is genuinely absent for a style resolution, so force one
-      pop.classList.remove('j-pop-enter');
+      pop.classList.remove('j-pop-enter', 'j-detail-enter');
       void pop.offsetWidth;
     }
     pop.classList.add('j-pop-enter');
+    // The shell owns its own completion signal. Keeping this separate from
+    // j-pop-enter means a cold WebGL frame cannot let the 700ms interior timer
+    // remove the fast shell animation before Chrome has painted frame one.
+    if (!reduceMotion.matches) pop.classList.add('j-detail-enter');
     popEnterTimer = setTimeout(() => {
       popEnterTimer = null;
       pop.classList.remove('j-pop-enter');
@@ -586,8 +590,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
 
   function stopPopEntry() {
     if (popEnterTimer) { clearTimeout(popEnterTimer); popEnterTimer = null; }
-    pop.classList.remove('j-pop-enter');
+    pop.classList.remove('j-pop-enter', 'j-detail-enter');
   }
+
+  const finishPopShellEntry = (e) => {
+    if (e.target === pop && e.animationName === 'j-detail-arrive') {
+      pop.classList.remove('j-detail-enter');
+    }
+  };
+  pop.addEventListener('animationend', finishPopShellEntry);
 
   /** Point the popover at a hotspot and show it. */
   function showPop(h) {
@@ -636,9 +647,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       const ti = popPinned ? 0 : -1;
       for (const b of activeStage.el.querySelectorAll('button, a')) b.tabIndex = ti;
     }
-    // Place BEFORE arming the entry: the unfurl's direction comes from
-    // `data-side`, so the side has to be decided while the animation is still
-    // absent, or the first frame wipes the wrong way and corrects itself.
+    // Place before arming the entry so the contact filament's side is correct
+    // on its first painted frame.
     placePop();
     if (fresh) runPopEntry();
     // fresh reveal -> let the stage run its motion (no-op when reduced)
@@ -867,7 +877,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
    *  `labelOnHover` (optional) opts this node into the hover-only chip — see
    *  the LABEL POLICY note above; a chapter can set the same flag per node
    *  through its own `labelPolicy(id)`. */
-  function addHotspot({ id, chapter, label, world, labelOnHover, radius, reveal }) {
+  function addHotspot({ id, chapter, label, world, labelOnHover, radius, reveal, revealDirect = false }) {
     const stagger = hotspots.filter(h => h.chapter === chapter).length;
     const btn = el('button', 'j-hot');
     btn.type = 'button';
@@ -923,6 +933,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       // The copy band keeps only its close edge for these — see the gate in
       // the placement loop.
       reveal: typeof reveal === 'function' ? reveal : null,
+      revealDirect: !!revealDirect,
       // ...and the band that close edge is read from, built once — the
       // placement loop runs per frame and COPY_BANDS never moves after load.
       revealBand: COPY_BANDS[chapter]
@@ -1424,11 +1435,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   const CARD_GAP = 16;
   /** Hard minimum from any viewport edge. */
   const CARD_MARGIN = 12;
-  /** The entry runs while `.j-card-enter` is set and no longer — same
-   *  reasoning as POP_ENTER_MS: `data-side` is re-decided every frame from
-   *  live geometry, and a card drifting across a flip threshold with the
-   *  class still on would replay the whole wipe at rest. Covers the 0.62 s
-   *  filament with air. */
+  /** The card-specific words and contact filament run while `.j-card-enter`
+   *  is set. The shared shell's shorter `.j-detail-enter` lifetime ends from
+   *  its own animationend, independently of this 0.62 s filament window. */
   const CARD_ENTER_MS = 700;
 
   // A real modal dialog: role + aria-modal + a title that labels it, focus
@@ -1865,18 +1874,18 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     card.style.setProperty('--j-card-fy', `${clamp(a.y - y, 12, Math.max(12, p.height - 12)).toFixed(1)}px`);
   }
 
-  /** The entry, in the popover's motion family (e20f7ff / d1ecc23): the
-   *  vessel's LIGHT and its EXTENT as two statements, plus the contact
-   *  filament on the edge that faces the node. Armed only on a FRESH open —
+  /** The entry uses the shared shell lamp plus the contact filament on the
+   *  edge that faces the node. Armed only on a FRESH open —
    *  a retarget from one contributor straight to the next re-arms it,
    *  because that IS a fresh subject. */
   function runCardEntry() {
     if (cardEnterTimer) clearTimeout(cardEnterTimer);
-    if (card.classList.contains('j-card-enter')) {
-      card.classList.remove('j-card-enter');
+    if (card.classList.contains('j-card-enter') || card.classList.contains('j-detail-enter')) {
+      card.classList.remove('j-card-enter', 'j-detail-enter');
       void card.offsetWidth;
     }
     card.classList.add('j-card-enter');
+    if (!reduceMotion.matches) card.classList.add('j-detail-enter');
     cardEnterTimer = setTimeout(() => {
       cardEnterTimer = null;
       card.classList.remove('j-card-enter');
@@ -1885,8 +1894,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
 
   function stopCardEntry() {
     if (cardEnterTimer) { clearTimeout(cardEnterTimer); cardEnterTimer = null; }
-    card.classList.remove('j-card-enter');
+    card.classList.remove('j-card-enter', 'j-detail-enter');
   }
+
+  const finishCardShellEntry = (e) => {
+    if (e.target === card && e.animationName === 'j-detail-arrive') {
+      card.classList.remove('j-detail-enter');
+    }
+  };
+  card.addEventListener('animationend', finishCardShellEntry);
 
   /** Set the panel's ARIA and its controls to match the tier it is currently
    *  showing in. One place, so the two tiers cannot disagree — and so the
@@ -1940,7 +1956,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // A reveal is FRESH when the box is landing on a node it was not already
     // showing, or when it was shut — showPop()'s own test, so a tier change on
     // the same subject (hover, then click to pin) re-uses the panel in place
-    // instead of replaying the unfurl at rest.
+    // instead of replaying the shell entry at rest.
     const fresh = !cardIsOpen || cardNodeId !== nodeId;
     const d = node.spotlight || node.card
       // Contributor rows have no card block; they are label material, not
@@ -2000,6 +2016,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     }
     // A close that is still fading owns neither the DOM nor the input.
     if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
+    card.classList.remove('j-card-exit');
     // The bottom-sheet decision is taken per OPEN, from the live pointer /
     // viewport condition — the same per-interaction rule as the touch model.
     // Only a PINNED card can be a sheet: the transient tier is hover-and-focus
@@ -2019,10 +2036,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // takes the flank fallback.
     cardAnchor = hotspots.find(x => x.id === nodeId) || null;
     applyCardTier();
-    // Place BEFORE the flush and before `.open`, exactly as showPop() places
-    // before arming its entry: the unfurl's direction comes from `data-side`,
-    // so the side has to be decided while the animation is still absent, or
-    // the first frame wipes the wrong way and corrects itself.
+    // Place before arming the entry so the contact filament's data-side and
+    // coordinates are correct on its first painted frame.
     placeCard();
     // A card arriving from `hidden` (display:none) has no rendered start state
     // for the opacity transition to run FROM. Force ONE synchronous style
@@ -2034,10 +2049,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // A retarget is a fresh SUBJECT, so it gets a fresh entry: the card has
     // just travelled across the frame to a different person, and arriving
     // silently at the new one is the thing this pass exists to prevent.
-    // NOT for the sheet — its entry is the shipped PL-1.3 one, and an unfurl
-    // with a contact filament on a panel that is anchored to the bottom edge
-    // rather than to a face would be pointing at nothing.
-    if (fresh && !card.classList.contains('sheet')) runCardEntry();
+    // The shared entry never translates the shell, so the bottom sheet can
+    // use it too without fighting its drag-to-dismiss transform. Its contact
+    // filament remains suppressed because a sheet is not node-anchored.
+    if (fresh) runCardEntry();
     // retargeting an open card (one hotspot straight to the next) must release
     // the previous node before lighting the new one. BOTH tiers do this: the
     // chapter's selected light is the visual half of the reveal, and Hannah
@@ -2156,6 +2171,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   function finishClose() {
     fadeTimer = null;
     if (cardIsOpen) return;                 // reopened mid-fade: leave it alone
+    card.classList.remove('open', 'j-card-exit');
     card.hidden = true;
     card.style.transform = '';
     card.style.removeProperty('--j-card-fx');
@@ -2194,12 +2210,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     }
     cardIsOpen = false;
     cardPinned = false;
-    // The entry is dropped BEFORE `.open`, so the animation is never holding
-    // opacity down when the close transition needs to take it — the same
-    // ordering hidePop() keeps for the popover.
+    // The entry is dropped before the shared exit is armed, so the two shell
+    // animations can never compete for opacity or border colour.
     stopCardEntry();
     cardAnchor = null;
-    card.classList.remove('open');
+    card.inert = true;
     releaseInput(card);
     if (drag) { drag = null; card.classList.remove('dragging'); }
     if (selectedNode) { notifySelect(selectedNode, false); selectedNode = null; }
@@ -2211,7 +2226,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // Reduced motion has no fade to protect (journey/site.css drops the transition),
     // so it closes on the tick, exactly as before.
     if (reduceMotion.matches) finishClose();
-    else fadeTimer = setTimeout(finishClose, CARD_FADE_MS);
+    else {
+      card.classList.add('j-card-exit');
+      const closeMs = card.classList.contains('sheet') && card.style.transform
+        ? CARD_DRAG_FADE_MS : CARD_FADE_MS;
+      fadeTimer = setTimeout(finishClose, closeMs);
+    }
   }
 
   function closeCard() {
@@ -2629,10 +2649,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       const gate = h.reveal
         ? Math.min(h.reveal(), bandOpacity(p, h.revealBand))
         : (eased[h.chapter] || 0);
-      // A scene-reveal chip is the annotation half of the scene event, so its
-      // reported 0..1 envelope is authoritative. Resting-composition chips
-      // retain the established 72% copy gate and independent arrival ease.
-      let want = gate > (h.reveal ? 0 : 0.72) && !detail;
+      // Inspire's light envelope is authoritative for its annotation too.
+      // Other scene-reveal chips (notably Connect) retain their shipped 72%
+      // threshold and independent arrival ease.
+      let want = gate > (h.revealDirect ? 0 : 0.72) && !detail;
       const reserveLayout = reservedLabelChapters.has(h.chapter) && !h.labelOnHover;
       let w = (want || reserveLayout) ? h.world() : null;
       w = want ? holdAnchor(h, w, dt) : w;
@@ -2713,19 +2733,19 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         // scene's own (Connect's lights land seconds apart), and 150 ms of
         // stagger on top of that is noise — worse, it is ORDERED by
         // registration (importance), which is not the order the lights land.
-        if (h.reveal) {
-          // No UI clock here: Connect/Inspire already own their per-item
-          // cadence. Mirroring the source also keeps reverse scrubs truthful.
+        if (h.revealDirect) {
+          // No UI clock here: Inspire already owns its per-item cadence.
+          // Mirroring the source also keeps reverse scrubs truthful.
           h.armAt = null;
           h.a = gate;
         } else {
-          if (h.armAt === null) h.armAt = now + (h.labelOnHover ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
+          if (h.armAt === null) h.armAt = now + ((h.labelOnHover || h.reveal) ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
           if (dt === 0) h.a = 1;
           else if (now >= h.armAt) h.a += (1 - h.a) * Math.min(1, dt * HOTSPOT_IN_K);
         }
       } else {
         h.armAt = null;
-        if (h.reveal || dt === 0) h.a = 0;
+        if (h.revealDirect || dt === 0) h.a = 0;
         else { h.a += (0 - h.a) * Math.min(1, dt * HOTSPOT_OUT_K); if (h.a < 0.02) h.a = 0; }
       }
       if (h.layoutPlaceable) {

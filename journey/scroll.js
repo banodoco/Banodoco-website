@@ -267,6 +267,12 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
                         // here
   let gapEma = 0;       // ms, EMA of this gesture's inter-delta spacing
   let gCount = 0;       // deltas in this gesture — with gapEma, the stream test
+  // A touch contact collected before attach has an exact physical boundary
+  // but only one aggregate sample. Its real travel proves the same stream
+  // shape that several delivered touchmoves normally prove; its real elapsed
+  // time still supplies the rate. This flag is boot-handoff-only and retires
+  // with the gesture like every other shape measurement.
+  let bootTouchQualified = false;
   let gSerial = 0;      // WHICH gesture. A resolution is armed by one gesture
                         // and can outlive it: these transitions are seconds
                         // long (a 2500 px/s flick on the Mission span measures
@@ -287,6 +293,14 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   let wheelRise = 0;
   let wheelTail = false;
   let wheelQuiet = false;
+  // The initiating wheel sample replayed after a synchronous intro boot and
+  // Chrome's delayed tail are one physical gesture. While that first ask is
+  // still in flight, do not reinterpret the tail as a rapid repeat merely
+  // because boot/render stalls changed its delivered shape. A real pause,
+  // reversal, or the first landing releases this boot-only guard.
+  let bootGuardDir = 0;
+  let bootGuardSerial = -1;
+  let bootGuardReason = 'inactive';
   let repeatAnchor = null; // target an older same-direction resolution is
                            // already buying; a newer stream may depart from it
   let intent = null;    // the latched resolution:
@@ -486,7 +500,8 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   /* ---------------- input ---------------- */
   /** Begin a fresh gesture: forget everything measured about the last one. */
   function newGesture() {
-    gapEma = 0; gCount = 0; gPeak = 0; inRate = 0; gSerial++;
+    gapEma = 0; gCount = 0; gPeak = 0; inRate = 0;
+    bootTouchQualified = false; gSerial++;
     resetWheelPulse();
     // ...and the wall, which a reversal or a placement always clears outright.
     // A PAUSE clears it far sooner than this — see dropWall().
@@ -518,6 +533,12 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  own — there is still nothing banked to jump. */
   function dropWall() { answeredP = null; answeredDir = 0; }
 
+  function clearBootGuard(reason = 'cleared') {
+    if (bootGuardDir) bootGuardReason = reason;
+    bootGuardDir = 0;
+    bootGuardSerial = -1;
+  }
+
   /** Start another ask without letting unprocessed tail deltas through the wall.
    *  Ordinarily update() has already balanced every refused delta with `carry`.
    *  Two input bursts can, however, arrive inside one render frame. Rebase an
@@ -528,6 +549,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       v = scrollFor(answeredP);
       carry = answeredP - pAt(v);
     }
+    clearBootGuard('new-input-boundary');
     newGesture();
   }
 
@@ -614,7 +636,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     return stallBank;
   }
 
-  function push(dpx, kind, repeat = false) {
+  function push(dpx, kind, repeat = false, { exactContact = false } = {}) {
     if (!enabled) return;
     // An open detail state consumes the first scroll intent: travel resumes
     // only once the frame is clear (GB-3.6).
@@ -640,13 +662,27 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     // checked BEFORE the gesture test below and independently of it, because
     // it is a much shorter window and answers a different question — see
     // dropWall() for why the other measurements must NOT come down with it.
-    if (resumedFromBackground) newGesture();
-    else if (gapMs > ARRIVAL_HOLD_MS) dropWall();
+    /* A boot-flush stall is uniquely dangerous here: Chrome can deliver the
+       initiating sample, spend seconds compiling/building, then deliver the
+       SAME physical wheel tail. The generic idle clock discounts most of that
+       site time, but its residual cannot prove a second physical gesture. A
+       boot-primed stream therefore ignores the time-only boundary until its
+       first landing. Before then, only wheelPulseRestart's quiet + decay +
+       re-acceleration shape (with zero stall discount), an exact touch contact,
+       or a reversal can prove a new ask. */
+    if (resumedFromBackground) {
+      clearBootGuard('background');
+      newGesture();
+    }
+    else if (gapMs > ARRIVAL_HOLD_MS && !bootGuardDir && !exactContact) {
+      dropWall();
+    }
     // Deltas further apart than SNAP_ENGAGE_MS are not one gesture by the
     // model's own definition of idle: start the measurement over rather than
     // average across the pause, so a flick is only ever as strong, and only
     // ever as much of a stream, as ITS OWN deltas make it.
-    if (!resumedFromBackground && gapMs > SNAP_ENGAGE_MS) newGesture();
+    if (!resumedFromBackground && gapMs > SNAP_ENGAGE_MS
+        && !bootGuardDir && !exactContact) newGesture();
     if (kind !== 'wheel') resetWheelPulse();
     gapEma = gapEma ? gapEma + (gapMs - gapEma) * 0.35 : (gCount ? gapMs : 0);
     gCount++;
@@ -655,9 +691,15 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     backgroundGap = false;
     if (dpx) {
       const dir = dpx > 0 ? 1 : -1;
+      if (bootGuardDir && dir !== bootGuardDir) clearBootGuard('reversal');
       // A turn mid-stream is a new gesture: the strength of the half you have
-      // abandoned must not be spent on the half you are now making.
-      if (dir !== lastDir && !resumedFromBackground) { newGesture(); gCount = 1; }
+      // abandoned must not be spent on the half you are now making. The first
+      // delta of a touch contact is exempt because onTouchMove has already
+      // minted that exact physical gesture immediately before calling push().
+      const atTouchBoundary = kind === 'touch' && touchFresh;
+      if (dir !== lastDir && !resumedFromBackground && !atTouchBoundary) {
+        newGesture(); gCount = 1;
+      }
       else if (kind === 'wheel' && !repeat) {
         // There is no standard wheelstart event. Infer only the one shape a
         // passive momentum tail cannot produce: a pronounced re-acceleration
@@ -668,12 +710,20 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         // that full frame. Dividing that larger delta by the discounted/capped
         // interval fabricates the exact acceleration this test is looking for.
         const rate = Math.abs(dpx) / Math.max(8, rawGapMs || 8);
-        if (wheelPulseRestart(rate, gapMs, stallDiscountMs)) {
+        const pulseRestart = wheelPulseRestart(rate, gapMs, stallDiscountMs);
+        // During the cold-boot guard, timing alone is not evidence: require
+        // both the pulse shape and a completely stall-free interval. Outside
+        // boot this is the unchanged desktop repeat rule.
+        const provenBootRepeat = bootGuardDir && pulseRestart
+          && stallDiscountMs === 0;
+        if (pulseRestart && (!bootGuardDir || provenBootRepeat)) {
+          if (bootGuardDir) clearBootGuard('wheel-repeat');
           restartGesture();
           resetWheelPulse(rate);
           gCount = 1;
         }
       }
+      if (atTouchBoundary) touchFresh = false;
       lastDir = dir;
       // Apply the sample only after a fresh-pulse rebase. Otherwise two wheel
       // events delivered inside one rAF would release the first gesture's
@@ -714,7 +764,11 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       // position, exactly like a notch-by-notch reader.
       if (repeat) { gPeak = 0; inRate = 0; }
       else if (gCount > 1 && gapMs > 0) {
-        const gs = Math.min(gapMs, SNAP_ENGAGE_MS) / 1000;
+        // A boot-collected touch delta is an aggregate of one exact contact,
+        // not a callback delivered late. Its full physical duration is the
+        // denominator; capping it to the generic idle window would fabricate
+        // a faster swipe. Ordinary input keeps the shipped cap unchanged.
+        const gs = (exactContact ? gapMs : Math.min(gapMs, SNAP_ENGAGE_MS)) / 1000;
         /* THE RAW DELTA, NOT THE APPLIED ONE (2026-08-12, the loop). This read
            the APPLIED delta — clamped at v = 0 and v = total — so that leaning
            on a dead edge measured zero. With the route closed into a loop
@@ -736,7 +790,8 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       if (intent && dir !== intent.dir) {
         repeatAnchor = null;
         releaseIntent();
-      } else if (intent && intent.g !== gSerial) {
+      } else if (intent && intent.g !== gSerial
+          && !(bootGuardDir && dir === bootGuardDir)) {
         repeatAnchor = intent.target;
       }
     }
@@ -770,36 +825,77 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
 
   let touchY = null;
   let touchOwned = false;   // this gesture began inside a registered owner
+  let touchPending = false; // contact exists, but has not moved yet
+  let touchFresh = false;   // first non-zero delta after the exact boundary
+  let touchTravel = 0;      // delivered surface px in this contact
+  let touchStartedAt = 0;
+  function beginTouchContact(y, startedAt, owned = false) {
+    touchOwned = !!owned;
+    touchY = !touchOwned && Number.isFinite(y) ? y : null;
+    touchPending = touchY !== null;
+    touchFresh = false;
+    touchTravel = 0;
+    touchStartedAt = Number.isFinite(startedAt) ? startedAt : performance.now();
+  }
+
+  function moveTouchContact(y, { exactContact = false } = {}) {
+    if (!enabled || touchOwned || touchY === null || !Number.isFinite(y)) return false;
+    const d = (touchY - y) * TOUCH_GAIN;
+    touchY = y;
+    if (d && touchPending) {
+      // Unlike wheel, touch gives us an exact physical gesture boundary. Do
+      // this on the first MOVE rather than touchstart so a tap cannot retire a
+      // resolution that was already in flight. A quick second swipe is a new
+      // ask even when it starts before either idle window; advancing the serial
+      // here prevents the first arrival from spending the second swipe.
+      const resumedFromBackground = backgroundGap;
+      restartGesture();
+      backgroundGap = false;
+      lastInput = touchStartedAt;
+      if (resumedFromBackground) {
+        lastFrameAt = touchStartedAt;
+        stallBank = 0;
+        stallClaimed = 0;
+      }
+      touchPending = false;
+      touchFresh = true;
+    }
+    touchTravel += Math.abs(d);
+    /* A touch contact is already a physically bounded gesture, so event count
+       is not what distinguishes it from a wheel notch. Under mobile WebGL
+       load Safari/Chrome may coalesce a whole fast swipe into 1-3 touchmoves;
+       requiring COMMIT_STREAM_MIN delivered callbacks then throws away the
+       swipe even though its distance and rate are intact. Once this contact
+       has travelled one discrete-step's worth, credit only the missing SHAPE
+       samples. Distance and rate remain entirely real: a tap/jitter stays
+       below this gate, and one contact still buys only one transition. */
+    if (d && touchTravel >= KEY_STEP_PX && gCount < COMMIT_STREAM_MIN - 1) {
+      gCount = COMMIT_STREAM_MIN - 1;
+      gapEma = 0;
+    }
+    push(d, 'touch', false, { exactContact });
+    if (exactContact && touchTravel >= KEY_STEP_PX) bootTouchQualified = true;
+    return true;
+  }
+
+  function endTouchContact() {
+    touchY = null; touchOwned = false; touchPending = false;
+    touchFresh = false; touchTravel = 0;
+  }
+
   function onTouchStart(e) {
     // A second finger joining the surface is a pinch, not a scrub: touchstart
     // fires once per new touch, so e.touches.length counts the whole gesture.
     // Leave both ownership and touchY alone — the browser owns the zoom, and
     // multi-finger deltas never feed the ride.
     if (e.touches.length > 1) return;
-    touchOwned = !!ownerOf(e.target);
+    const owned = !!ownerOf(e.target);
     // Ownership is decided ONCE per gesture, at touchstart: a drag that began
     // inside a sheet stays the sheet's for its whole life even if the finger
     // leaves the element, which is how native scrolling and drag-to-dismiss
     // behave. Re-testing per touchmove would hand the journey a half-gesture.
-    touchY = !touchOwned && e.touches[0] ? e.touches[0].clientY : null;
-    // Unlike wheel, touch gives us an exact physical gesture boundary. A quick
-    // second contact is a new ask even when it begins before ARRIVAL_HOLD_MS or
-    // while the previous contact's resolution is still landing. Advancing the
-    // serial here prevents that landing from spending the new swipe.
-    const resumedFromBackground = backgroundGap;
-    if (touchY !== null && (answeredP !== null || intent || resumedFromBackground)) {
-      restartGesture();
-      backgroundGap = false;
-      if (resumedFromBackground) {
-        // touchstart itself consumed the visibility boundary. Start the input
-        // clock here so the first move does not mint a second gesture merely
-        // because the finger arrived long after the pre-background delta.
-        lastInput = performance.now();
-        lastFrameAt = lastInput;
-        stallBank = 0;
-        stallClaimed = 0;
-      }
-    }
+    beginTouchContact(e.touches[0] ? e.touches[0].clientY : null,
+      performance.now(), owned);
   }
   function onTouchMove(e) {
     if (!enabled || touchOwned || touchY === null || !e.touches[0]) return;
@@ -808,12 +904,10 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     // a delta into the ride.
     if (e.touches.length > 1) return;
     const y = e.touches[0].clientY;
-    const d = (touchY - y) * TOUCH_GAIN;
-    touchY = y;
     if (e.cancelable) e.preventDefault();
-    push(d, 'touch');
+    moveTouchContact(y);
   }
-  function onTouchEnd() { touchY = null; touchOwned = false; }
+  function onTouchEnd() { endTouchContact(); }
 
   const KEYS = {
     ArrowDown: 1, ArrowUp: -1, PageDown: 1, PageUp: -1,
@@ -867,6 +961,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     lastDir = v > from ? 1 : v < from ? -1 : lastDir;
     carry = 0;
     repeatAnchor = null;
+    clearBootGuard('jump');
     newGesture();
     const now = performance.now();
     bankStall(now); stallBank = 0; lastInput = now;
@@ -1070,7 +1165,12 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     // deltas are a momentum tail, not an ask.
     if (answeredP !== null) return false;
     if (gCount < COMMIT_STREAM_MIN) return false;
-    if (!gapEma || gapEma > COMMIT_STREAM_GAP_MS) return false;
+    // A pre-attach touch is represented by one aggregate sample. The exact
+    // contact boundary plus KEY_STEP_PX of real travel proves its shape; the
+    // ordinary callback-cadence test cannot, because those callbacks happened
+    // before this model existed. Its peak below still comes from real distance
+    // over real contact time.
+    if (!bootTouchQualified && (!gapEma || gapEma > COMMIT_STREAM_GAP_MS)) return false;
     // The px peak, converted at the span it would be spent on. One finger,
     // one answer, both directions — COMMIT_CARRY_RATE keeps its p/s meaning
     // at the span's own scale.
@@ -1509,6 +1609,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
           gPeak = 0;
           answeredP = intent.target; answeredDir = intent.dir;
         }
+        if (bootGuardDir && intent.g === bootGuardSerial) clearBootGuard('landing');
         fold(); intent = null; repeatAnchor = null; vel = 0;
       }
     } else {
@@ -1561,7 +1662,8 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         themselves — deep links / ?p= / ?capture= are not disturbed). */
     setProgress(q) {
       p = clamp01(q); v = scrollFor(p); carry = 0;
-      vel = 0; intent = null; repeatAnchor = null; lastDir = 0; newGesture();
+      vel = 0; intent = null; repeatAnchor = null; lastDir = 0;
+      clearBootGuard('placement'); newGesture();
     },
     /** Milliseconds since the last manual input (QA). */
     get sinceInput() { return performance.now() - lastInput; },
@@ -1590,7 +1692,10 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     },
     /** QA: is this gesture a delta STREAM (a trackpad/drag/spun wheel rather
         than discrete notches)? The flick-carry test. */
-    get streaming() { return gCount >= COMMIT_STREAM_MIN && !!gapEma && gapEma <= COMMIT_STREAM_GAP_MS; },
+    get streaming() {
+      return gCount >= COMMIT_STREAM_MIN
+        && (bootTouchQualified || (!!gapEma && gapEma <= COMMIT_STREAM_GAP_MS));
+    },
     /** QA: is a resolution latched and driving? */
     get resolving() { return !!intent; },
     /** Is the commit glide ACTUALLY carrying the picture this frame — the
@@ -1615,6 +1720,12 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         armed. Note it can legitimately be 0 (the Mission anchor) — every
         reader must test it against null, never for truthiness. */
     get answeredAt() { return answeredP; },
+    /** QA for the cold-intro wheel replay: whether its one-transition guard is
+        still authoritative, plus the most recent arm/release reason. */
+    get bootGuardState() {
+      return { active: !!bootGuardDir, dir: bootGuardDir,
+        serial: bootGuardSerial, reason: bootGuardReason };
+    },
     /** Cold intro bridge (main.js only). Apply the wheel that triggered the
      *  synchronous boot exactly once, then credit the two event opportunities
      *  that boot is known to hide through browser coalescing. This is SHAPE
@@ -1627,7 +1738,11 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       if (deltaMode === 1) d *= WHEEL_LINE_PX;
       else if (deltaMode === 2) d *= window.innerHeight;
       if (!d) return;
+      clearBootGuard('reprime');
       push(d, 'wheel');
+      bootGuardDir = d > 0 ? 1 : -1;
+      bootGuardSerial = gSerial;
+      bootGuardReason = 'armed';
       gCount = Math.max(gCount, COMMIT_STREAM_MIN - 1);
       gapEma = 0;
       // boot() attaches scroll before it finishes the rest of its synchronous
@@ -1636,6 +1751,40 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       lastFrameAt = performance.now();
       stallBank = 0;
       stallClaimed = 0;
+    },
+    /** Cold intro touch bridge (main.js only). The scroll listeners did not
+     *  exist for this contact's touchstart or collected movement, so restore
+     *  that one exact physical contact after boot.
+     *
+     *  Every value is observed by the pre-boot collector: no displacement,
+     *  callback, or rate is synthesized. Absolute event timestamps are
+     *  rebased onto the boot clock while preserving their exact elapsed time;
+     *  otherwise module/build latency would be mistaken for a slow finger.
+     *  An active contact keeps its latest Y so later native touchmoves continue
+     *  the same gesture. A contact that already ended is replayed and closed.
+     *
+     *  @param {{startY:number, latestY:number, startedAt:number,
+     *    latestAt:number, active:boolean}} contact
+     *  @returns {boolean} whether a valid contact was consumed
+     */
+    primeBootTouch(contact) {
+      if (!enabled || !contact || typeof contact.active !== 'boolean') return false;
+      const { startY, latestY, startedAt, latestAt, active } = contact;
+      if (![startY, latestY, startedAt, latestAt].every(Number.isFinite)
+          || latestAt < startedAt) return false;
+      const bootNow = performance.now();
+      const elapsed = latestAt - startedAt;
+      // Establish the replay epoch BEFORE push(): any time since attach/reset
+      // belongs to module/build work, while `elapsed` below is the contact's
+      // measured physical time. Letting bankStall see the former would subtract
+      // it from the latter and erase the swipe's real rate.
+      lastFrameAt = bootNow;
+      stallBank = 0;
+      stallClaimed = 0;
+      beginTouchContact(startY, bootNow - elapsed);
+      moveTouchContact(latestY, { exactContact: true });
+      if (!active) endTouchContact();
+      return true;
     },
     /** Journey-side (journey.js steerWrapBlend — the wrap lap follows the
      *  scroll): re-raise the wall at the displayed position. The input that

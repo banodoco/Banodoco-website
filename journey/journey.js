@@ -142,11 +142,11 @@ let started = false;
    stagger once it's fully loaded"). boot() used to construct all four
    chapters in its own single task: measured as a 0.35 s frame freeze warm
    (1.6 s with cold GPU shader caches) landing ~10 s in, right as the settled
-   hero was breathing — the visible stagger. The module is fetched and
-   evaluated during the intro (main.js journeyModuleP), so the only cost left
-   at boot WAS this geometry build; prepareChapter() lets the loader spend it
-   one chapter per idle slice, with frames rendering in between, and boot()
-   picks up whatever was prebuilt. Ordering note: chapter constructors
+   hero was breathing — the visible stagger. prepareChapter() lets the loader
+   spend geometry construction one chapter per painted slice on the unhurried
+   path; an early input deliberately flushes it only after main.js has painted
+   the short departure handoff. boot() picks up whatever was prebuilt.
+   Ordering note: chapter constructors
    register animators, and the frame-order contract is spine first — the
    loader (main.js) parks a placeholder 'journey' animator before anything
    else registers, and boot's real registration replaces it IN PLACE
@@ -334,6 +334,10 @@ export function boot(opts = {}) {
         // of to the chapter's copy block; one that does not keeps the
         // copy-gated arrival unchanged.
         reveal: typeof mod.nodeReveal === 'function' ? () => mod.nodeReveal(id) : undefined,
+        // Inspire's nodeReveal is also the light's complete opacity envelope,
+        // so its labels mirror it rather than layering on the shared chip
+        // threshold/ease. Other reveal chapters retain their shipped UI law.
+        revealDirect: mod.revealDirect === true,
       });
       h.onHot = (on) => mod.setHot && mod.setHot(id, on);
     }
@@ -366,6 +370,7 @@ export function boot(opts = {}) {
   // ignite — chapters/inspire/index.js 5c. The gate bound below is ui's eased
   // copy value, so ember + label land timed with the intro.
   registerHotspots('inspire', ['artcompute', 'arca', 'tworp'], {
+    revealDirect: true,
     nodeWorld: (id) => chapters.inspire.nodeWorld(id),
     nodeReveal: (id) => chapters.inspire.nodeReveal(id),
     setHot: (id, on) => {
