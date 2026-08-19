@@ -40,8 +40,11 @@ let topics = [];        // normalized { title, text, channel, date }
 let index = 0;
 let timer = null;
 let active = false;     // activate/deactivate re-entrancy guard
-let fetchPromise = null;
 let fallbackData = null;
+let fallbackSnapshot = null;
+let liveSnapshot = null;
+let fallbackPromise = null;
+let livePromise = null;
 
 function iso(d) {
   const y = d.getFullYear();
@@ -172,7 +175,55 @@ async function getFallback() {
   return fallbackData;
 }
 
-function renderTopic() {
+/* Prepare Discord while the visitor is still travelling toward Connect.
+
+   The generic card warmer fetches the JSON into the HTTP cache, but that does
+   not parse it or start the live request, and this builder itself is not built
+   until the first reveal. Previously activate() therefore opened an empty
+   stage, painted the fallback on a later task, then sometimes replaced it
+   with live data while the popover was still entering. That cold hydration
+   was the last intermittent "pop" after the transform animations were
+   removed.
+
+   Preparation is data-only: no card DOM exists yet. A live result becomes the
+   preferred snapshot for the next activation, but never replaces a fallback
+   while the card is visible. Topic-to-topic cycling remains the only path
+   that animates content after open. */
+function prepareFallback() {
+  if (fallbackPromise) return fallbackPromise;
+  dates();
+  fallbackPromise = getFallback().then((fb) => {
+    fallbackSnapshot = {
+      live: false,
+      capturedAt: fb.capturedAt,
+      topics: fb.topics,
+    };
+
+    // A direct deep link can beat even the local JSON. Fill that rare cold
+    // edge as soon as the floor is ready, without waiting for the network.
+    if (active && !topics.length) applySnapshot(fallbackSnapshot);
+    return fallbackSnapshot;
+  });
+  return fallbackPromise;
+}
+
+function prepareLive() {
+  if (livePromise) return livePromise;
+  livePromise = prepareFallback().then(async () => {
+    try {
+      const liveTopics = await loadLive();
+      if (liveTopics.length) {
+        liveSnapshot = { live: true, capturedAt: '', topics: liveTopics };
+      }
+    } catch {
+      // The parsed baked snapshot is already the complete offline result.
+    }
+    return liveSnapshot || fallbackSnapshot;
+  });
+  return livePromise;
+}
+
+function renderTopic(animate = true) {
   const t = topics[index];
   if (!t) return;
   titleEl.textContent = t.title;
@@ -188,10 +239,14 @@ function renderTopic() {
   } else {
     thumbEl.removeAttribute('src');
   }
-  // restart the entrance; a reflow lets the same class re-trigger
-  topicEl.classList.remove('dc-enter');
-  void topicEl.offsetWidth;
-  topicEl.classList.add('dc-enter');
+  // Topic-to-topic changes rise in. Initial paint, reopen and async
+  // fallback->live hydration render directly: the popover already owns that
+  // entrance, and stacking both translations made Discord visibly shuffle.
+  topicEl.classList.remove('dc-enter', 'dc-leave');
+  if (animate && !REDUCE.matches) {
+    void topicEl.offsetWidth;
+    topicEl.classList.add('dc-enter');
+  }
 }
 
 /* The shuffle (Hannah, 2026-08-17: "a nice elegant shuffle"): the standing
@@ -272,28 +327,20 @@ function restartTimer(firstMs = CYCLE_MS) {
 }
 
 function present() {
-  renderTopic();
+  renderTopic(false);
   renderDots();
   // the opening topic yields a little sooner (Hannah, 2026-08-18) — early
   // proof there is more behind it; the walk then settles into its 7s
   restartTimer(FIRST_MS);
 }
 
-async function showFallback() {
-  const fb = await getFallback();
-  topics = fb.topics;
+function applySnapshot(snapshot) {
+  topics = snapshot.topics;
   index = 0;
-  headerLabel.textContent = `FROM THE DISCORD · ${fb.capturedAt}`.trim();
-  stage.classList.add('dc-fallback');
-  buildDots();
-  present();
-}
-
-function showLive(liveTopics) {
-  topics = liveTopics;
-  index = 0;
-  headerLabel.textContent = 'LIVE FROM THE DISCORD';
-  stage.classList.remove('dc-fallback');
+  headerLabel.textContent = snapshot.live
+    ? 'LIVE FROM THE DISCORD'
+    : `FROM THE DISCORD · ${snapshot.capturedAt}`.trim();
+  stage.classList.toggle('dc-fallback', !snapshot.live);
   buildDots();
   present();
 }
@@ -310,7 +357,7 @@ export default {
     beacon.setAttribute('aria-hidden', 'true');
     headerLabel = document.createElement('span');
     headerLabel.className = 'dc-label';
-    headerLabel.textContent = 'LIVE FROM THE DISCORD';
+    headerLabel.textContent = 'FROM THE DISCORD';
     // the door, right-aligned in the head; revealed on hover/pin by the
     // shared card-cta rule (margin-left:auto in css)
     const cta = document.createElement('a');
@@ -332,6 +379,11 @@ export default {
     textEl.className = 'dc-text';
     metaEl = document.createElement('p');
     metaEl.className = 'dc-meta';
+    // Stable cold-edge floor for a direct link that arrives before the
+    // module-level preparation has parsed the bundled snapshot. The stage's
+    // min-height already reserves the final geometry; hydration changes only
+    // these words and never starts the topic shuffle.
+    titleEl.textContent = 'Loading the latest community notes…';
     const copy = document.createElement('div');
     copy.className = 'dc-copy';
     copy.append(titleEl, textEl, metaEl);
@@ -375,21 +427,17 @@ export default {
     stage.addEventListener('pointercancel', () => { swipe = null; });
 
     stage.append(head, body, dotsEl);
+    stage.classList.add('dc-fallback');
   },
 
   activate() {
-    dates();
     active = true;
-    if (topics.length) { present(); return; }   // content already resolved
-    if (fetchPromise) return;                   // fetch in flight; it renders
-    // Paint the baked snapshot as the floor (never an empty stage), then go
-    // live once the fetch settles; on failure the snapshot stays.
-    fetchPromise = (async () => {
-      await showFallback();
-      const live = await loadLive();
-      if (!live.length) throw new Error('zero topics');
-      showLive(live);
-    })().catch(() => showFallback());
+    const ready = liveSnapshot || fallbackSnapshot;
+    if (ready) { applySnapshot(ready); return; }
+    // Usually already running from module boot. A direct deep link can win
+    // the race; prepareFallback installs the baked floor as soon as it parses.
+    prepareFallback();
+    prepareLive();
   },
 
   deactivate() {
@@ -400,8 +448,21 @@ export default {
       clearTimeout(pendingSwap);
       pendingSwap = null;
       topicEl.classList.remove('dc-leave');
-      renderTopic();
+      renderTopic(false);
       renderDots();
     }
   },
 };
+
+// discord.js executes while cards/index.js is still initializing, so defer one
+// task before touching CARD_ASSETS. Parse the tiny local floor immediately;
+// start the remote request only when the opening work yields (or after the
+// timeout), well before a normal journey can reach Connect.
+if (typeof document !== 'undefined') {
+  setTimeout(prepareFallback, 0);
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(prepareLive, { timeout: 1500 });
+  } else {
+    setTimeout(prepareLive, 1200);
+  }
+}

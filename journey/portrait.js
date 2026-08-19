@@ -33,11 +33,12 @@
 // approved Mission portrait composition (Plate II row 1: "portrait — live
 // mobile pose, cam y 3.2, fov 64"). Mission portrait is the hero's, kept.
 //
-// Everything here is a pure function of (p, aspect) — no state, no time, no
-// DOM reads — so reverse scrubbing is exact and capture tooling can request
-// either orientation from any window (?aspect=portrait, wired in director).
+// Everything here is a pure function of (p, aspect, viewportWidth) — no state,
+// no time, no DOM reads — so reverse scrubbing is exact and capture tooling
+// can request either orientation from any window (?aspect=portrait, wired in
+// director).
 
-import { restProgress } from './route.js';
+import { restProgress, startOf } from './route.js';
 import { smooth01 } from './lib/ease.js';
 
 /* ------------------------------------------------------------------ */
@@ -236,7 +237,9 @@ const KEYS = [
   // into frame. The equal +1.00 rise/tgtUp delta lowers the whole field by
   // ~40-60px without changing pitch and makes the bright bottom-right crop
   // decisive rather than incidental. The end-hold repeats the same pose so
-  // the composition does not drift after arrival.
+  // the composition does not drift after arrival. The phone-only lift is
+  // applied separately below, where the width breakpoint cannot be confused
+  // with the tablet aspect band.
   { p: restProgress('final'), back: 1.08, rise: 2.35, truck: 0.45, tgtUp: 0.55, tgtRight: -0.35, fov: 8 },
   { p: 1.000, back: 1.08, rise: 2.35, truck: 0.45, tgtUp: 0.55, tgtRight: -0.35, fov: 8 },
 ];
@@ -305,8 +308,9 @@ function offsetAt(p) { return fieldAt(p, KEYS, _off); }
 const _fwd = { x: 0, y: 0, z: 0 }, _right = { x: 0, y: 0, z: 0 };
 
 /** Blend the authored portrait field over a landscape pose, in place.
- *  Pure in (pose, p, aspect); a no-op (bit-identical pose) for aspect >= 1. */
-export function applyPortrait(pose, p, aspect) {
+ *  Pure in (pose, p, aspect, viewportWidth); a no-op (bit-identical pose) for
+ *  aspect >= 1. */
+export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
   const w = portraitWeight(aspect);
   if (w <= 0) return pose;
   const o = offsetAt(p);
@@ -352,5 +356,22 @@ export function applyPortrait(pose, p, aspect) {
   pose.target.z += _right.z * o.tgtRight * w;
 
   pose.fov = Math.min(72, Math.max(24, pose.fov + o.fov * w));
+
+  // Final's phone composition needs a literal CAMERA move, independent of
+  // the aspect field above. The previous version folded this into KEYS and
+  // then tried to cancel it through the tablet aspect band. That made the
+  // requested lift weak or invisible on short/wide phones as their aspect
+  // entered the tablet ramp. Width is the actual design contract used by the
+  // phone typography (<= 620px), so use it here too. Moving eye and target by
+  // the same amount is a pure vertical truck: foreground + background colony
+  // rise together while pitch, scale, diagonal and reveal drivers stay exact.
+  if (viewportWidth <= 620 && aspect < 1) {
+    const finalW = smooth01(
+      (p - startOf('final')) / (restProgress('final') - startOf('final')),
+    );
+    const lift = 1.45 * finalW;
+    pose.pos.y -= lift;
+    pose.target.y -= lift;
+  }
   return pose;
 }

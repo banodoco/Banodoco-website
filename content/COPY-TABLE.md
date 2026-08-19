@@ -11,7 +11,7 @@ not this file's transcription note.
 | Where | String |
 |---|---|
 | Mission H1 | We're working to help the open-source AI art ecosystem thrive. |
-| Mission sub | Banodoco builds tools, spaces, and shared infrastructure for the open-source AI art ecosystem. |
+| Mission sub | Banodoco builds spaces, initiatives and tools for the open source AI art community. |
 | Inspire H | Inspire and empower. |
 | Connect H | Connect the ecosystem. |
 | Connect sub | Banodoco brings together artists, builders, and shared knowledge to grow a living network for open-source AI art. |

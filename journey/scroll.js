@@ -274,6 +274,17 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
                         // whatever gPeak happens to be current at the arrival
                         // would eat the newer gesture's strength and answer it
                         // with the older gesture's destination.
+  // Wheel/trackpad has no wheelstart event, so remember the SHAPE of its pulse.
+  // A momentum tail falls away from its peak; a second physical push begins a
+  // new acceleration ramp. This is only used to separate a repeat that starts
+  // before the idle clock can see it — it never contributes motion or strength.
+  let wheelPeak = 0;
+  let wheelTrough = Infinity;
+  let wheelPrev = 0;
+  let wheelRise = 0;
+  let wheelTail = false;
+  let repeatAnchor = null; // target an older same-direction resolution is
+                           // already buying; a newer stream may depart from it
   let intent = null;    // the latched resolution:
                         // { target, lo, hi, dir, floor, cruise|null }
   let answeredP = null; // THE ANCHOR THIS GESTURE HAS ALREADY BEEN ANSWERED AT
@@ -472,6 +483,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   /** Begin a fresh gesture: forget everything measured about the last one. */
   function newGesture() {
     gapEma = 0; gCount = 0; gPeak = 0; inRate = 0; gSerial++;
+    resetWheelPulse();
     // ...and the wall, which a reversal or a placement always clears outright.
     // A PAUSE clears it far sooner than this — see dropWall().
     dropWall();
@@ -501,6 +513,63 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  negative offset against v, so releasing the clamp moves nothing on its
    *  own — there is still nothing banked to jump. */
   function dropWall() { answeredP = null; answeredDir = 0; }
+
+  /** Start another ask without letting unprocessed tail deltas through the wall.
+   *  Ordinarily update() has already balanced every refused delta with `carry`.
+   *  Two input bursts can, however, arrive inside one render frame. Rebase an
+   *  answered surface to its wall before releasing it so only the NEW sample
+   *  moves; keep an in-flight resolution as-is because there is no wall yet. */
+  function restartGesture() {
+    if (answeredP !== null) {
+      v = scrollFor(answeredP);
+      carry = answeredP - pAt(v);
+    }
+    newGesture();
+  }
+
+  function resetWheelPulse(rate = 0) {
+    wheelPeak = rate;
+    wheelTrough = rate || Infinity;
+    wheelPrev = rate;
+    wheelRise = 0;
+    wheelTail = false;
+  }
+
+  /** Does this wheel sample begin a second physical pulse before the idle clock
+   *  can separate it from the first one?
+   *
+   *  A single flick is allowed to accelerate once and then decay. Only after
+   *  it has fallen well off its peak do we look for a sustained, substantial
+   *  acceleration ramp. That keeps an uneven momentum tail retired at the
+   *  arrival wall, while a fast repeat gets a new gSerial soon enough that the
+   *  first resolution cannot spend it when it lands. Rate (rather than raw
+   *  delta) makes the test insensitive to frame coalescing. */
+  function wheelPulseRestart(rate) {
+    if (!wheelPeak) { resetWheelPulse(rate); return false; }
+
+    wheelPeak = Math.max(wheelPeak, rate);
+    if (!wheelTail && rate <= wheelPeak * 0.65) {
+      wheelTail = true;
+      wheelTrough = rate;
+      wheelRise = 0;
+    }
+
+    let restart = false;
+    if (wheelTail) {
+      if (rate < wheelTrough) wheelTrough = rate;
+      const rising = rate > wheelPrev * 1.12;
+      wheelRise = rising ? wheelRise + 1 : 0;
+      const gain = rate - wheelTrough;
+      const rebound = rate >= wheelTrough * 1.75 && gain >= 0.35;
+      const decisive = rate >= wheelTrough * 2.5 && gain >= 0.9;
+      const firstAskStillOwnsArrival = answeredP !== null
+        || (intent && intent.g === gSerial);
+      restart = firstAskStillOwnsArrival && rebound
+        && (wheelRise >= 2 || decisive);
+    }
+    wheelPrev = rate;
+    return restart;
+  }
 
   /** How much of the interval ending at `now` was the main thread overrunning
    *  a frame rather than the visitor waiting (see lastFrameAt). */
@@ -538,16 +607,33 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     // average across the pause, so a flick is only ever as strong, and only
     // ever as much of a stream, as ITS OWN deltas make it.
     if (gapMs > SNAP_ENGAGE_MS) newGesture();
+    if (kind !== 'wheel') resetWheelPulse();
     gapEma = gapEma ? gapEma + (gapMs - gapEma) * 0.35 : (gCount ? gapMs : 0);
     gCount++;
     lastInput = now;
-    v = Math.max(0, Math.min(total, v + dpx));
     if (dpx) {
       const dir = dpx > 0 ? 1 : -1;
       // A turn mid-stream is a new gesture: the strength of the half you have
       // abandoned must not be spent on the half you are now making.
       if (dir !== lastDir) { newGesture(); gCount = 1; }
+      else if (kind === 'wheel' && !repeat) {
+        // There is no standard wheelstart event. Infer only the one shape a
+        // passive momentum tail cannot produce: a pronounced re-acceleration
+        // after it has already decayed. This lets a rapid second trackpad push
+        // cross the arrival immediately even when its gap is under 90 ms.
+        const rate = Math.abs(dpx) /
+          Math.max(8, Math.min(gapMs || 8, COMMIT_STREAM_GAP_MS));
+        if (wheelPulseRestart(rate)) {
+          restartGesture();
+          resetWheelPulse(rate);
+          gCount = 1;
+        }
+      }
       lastDir = dir;
+      // Apply the sample only after a fresh-pulse rebase. Otherwise two wheel
+      // events delivered inside one rAF would release the first gesture's
+      // not-yet-clamped tail along with the second physical push.
+      v = Math.max(0, Math.min(total, v + dpx));
       /* THE GESTURE'S OWN RATE, measured HERE — on the input clock, from the
          deltas, and from nothing else.
            * not from the servo or the surface: a running resolution ADDS to
@@ -598,9 +684,16 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         if (inRate * dir > gPeak * dir) gPeak = inRate;
       }
       // CONTROL RETURNS WITHIN ONE FRAME. A delta against a latched resolution
-      // drops it on the spot; the scrub servo owns the position again from the
-      // very next frame, starting from what is currently on screen.
-      if (intent && dir !== intent.dir) releaseIntent();
+      // drops it on the spot. A NEWER gesture going the same way is different:
+      // remember the anchor the old resolution is already buying, then let the
+      // new stream earn departure from THAT anchor below. Re-bracketing from the
+      // current in-flight picture would merely choose the old target again.
+      if (intent && dir !== intent.dir) {
+        repeatAnchor = null;
+        releaseIntent();
+      } else if (intent && intent.g !== gSerial) {
+        repeatAnchor = intent.target;
+      }
     }
   }
 
@@ -644,6 +737,11 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     // leaves the element, which is how native scrolling and drag-to-dismiss
     // behave. Re-testing per touchmove would hand the journey a half-gesture.
     touchY = !touchOwned && e.touches[0] ? e.touches[0].clientY : null;
+    // Unlike wheel, touch gives us an exact physical gesture boundary. A quick
+    // second contact is a new ask even when it begins before ARRIVAL_HOLD_MS or
+    // while the previous contact's resolution is still landing. Advancing the
+    // serial here prevents that landing from spending the new swipe.
+    if (touchY !== null && (answeredP !== null || intent)) restartGesture();
   }
   function onTouchMove(e) {
     if (!enabled || touchOwned || touchY === null || !e.touches[0]) return;
@@ -710,6 +808,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     v = scrollFor(target);
     lastDir = v > from ? 1 : v < from ? -1 : lastDir;
     carry = 0;
+    repeatAnchor = null;
     newGesture();
     lastInput = performance.now();
     const dir = target > p ? 1 : target < p ? -1 : 0;
@@ -1140,9 +1239,38 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       // gesture that is genuinely still delivering deltas re-earns its strength
       // from them within a frame or two, so a long scroll is not slowed by
       // this — it only stops one finished gesture buying a second transition.
-      if (intent && (p < intent.lo - 1e-9 || p > intent.hi + 1e-9)) {
+      const beforeRepeatDeparture = intent && intent.depart !== undefined
+        && (intent.dir > 0 ? p < intent.depart : p > intent.depart);
+      if (intent && !beforeRepeatDeparture
+          && (p < intent.lo - 1e-9 || p > intent.hi + 1e-9)) {
         intent = null;
+        repeatAnchor = null;
         gPeak = 0;
+      }
+
+      // A second same-direction gesture can begin while the first one's
+      // multi-second resolution is still flying. Once that NEW gesture has
+      // independently earned carry, extend the existing continuous motion from
+      // the old target to the following anchor. Waiting to land and bracketing
+      // from sampled p picks the old target again (often by ~3e-5) and consumes
+      // the repeat as a no-op; retargeting here is both immediate and keeps the
+      // one-gesture/one-additional-section rule.
+      if (intent && repeatAnchor !== null && intent.target === repeatAnchor
+          && intent.dir === lastDir) {
+        const i = RESOLVE_P.findIndex(a => Math.abs(a - repeatAnchor) < 1e-6);
+        const j = i + intent.dir;
+        if (i >= 0 && j >= 0 && j < RESOLVE_P.length) {
+          const lo = Math.min(RESOLVE_P[i], RESOLVE_P[j]);
+          const hi = Math.max(RESOLVE_P[i], RESOLVE_P[j]);
+          if (carrying(spanSlope(lo, hi))) {
+            const target = RESOLVE_P[j];
+            const band = glideBand(lo, hi, intent.dir);
+            intent = { target, lo, hi, dir: intent.dir, from: repeatAnchor,
+              g: gSerial, band, floorPx: Math.abs(gPeak), cruisePx: null,
+              snapK: brakeK(band, lo, hi, intent.dir), depart: repeatAnchor };
+            repeatAnchor = null;
+          }
+        }
       }
       if (!intent) {
         const [lo, hi] = bracketAt(p);
@@ -1319,7 +1447,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
           gPeak = 0;
           answeredP = intent.target; answeredDir = intent.dir;
         }
-        fold(); intent = null; vel = 0;
+        fold(); intent = null; repeatAnchor = null; vel = 0;
       }
     } else {
       p = np;
@@ -1354,7 +1482,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         themselves — deep links / ?p= / ?capture= are not disturbed). */
     setProgress(q) {
       p = clamp01(q); v = scrollFor(p); carry = 0;
-      vel = 0; intent = null; lastDir = 0; newGesture();
+      vel = 0; intent = null; repeatAnchor = null; lastDir = 0; newGesture();
     },
     /** Milliseconds since the last manual input (QA). */
     get sinceInput() { return performance.now() - lastInput; },
