@@ -915,7 +915,10 @@ if (sceneApi) {
   if (freeCam) document.body.classList.add('free-cam');
   else sceneApi.setInputPolicy('journey');
 
-  const HERO_INTRO_MS = 7600; // scene 5.4s + the three callouts settling
+  // The organism reports its own real completion after the 5.4s draw and
+  // 0.7s shell restore. This old page-level duration remains only as a
+  // defensive fallback for a suspended/missing animation frame.
+  const HERO_INTRO_MS = 7600;
   // (skipIntro is computed in the scene-init section above and already
   // includes ?nointro, ?capture and reduced motion.)
   const frozen = introAt !== null;
@@ -1087,6 +1090,18 @@ if (sceneApi) {
     }
   }
 
+  /** The specimen, rather than a second page timer, owns the normal handoff.
+   *  This removes the old ~1.5s pause that belonged to hero callouts which
+   *  are no longer part of this navigation iteration. */
+  function activateWhenIntroComplete() {
+    if (journeyActive || !readyState) return;
+    if (sceneApi.intro.complete) {
+      activateJourney();
+      return;
+    }
+    requestAnimationFrame(activateWhenIntroComplete);
+  }
+
   function beginFastHandoff() {
     journeyInputRequested = true;
     if (!readyState || fastHandoffStarted) return;
@@ -1140,6 +1155,7 @@ if (sceneApi) {
           beginFastHandoff();
         } else {
           releaseIntro();
+          requestAnimationFrame(activateWhenIntroComplete);
           activationTimer = setTimeout(activateJourney, HERO_INTRO_MS);
         }
         return state;

@@ -1503,6 +1503,7 @@ export function boot(opts = {}) {
       const first = !activated;
       activated = true;
       scroll.enabled = true;
+      if (ui.rail && ui.rail.reveal) ui.rail.reveal();
       window.journey = state;
       if (first) {
         const target = activationEntry || queuedEntry;

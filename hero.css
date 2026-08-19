@@ -603,6 +603,10 @@
     inset: 0;
     z-index: 1;
     pointer-events: none;
+    /* Navigation iteration: the permanently expanded journey rail replaces
+       these three specimen labels as the hero's navigation surface. Keep the
+       anchor markup for a reversible comparison, but remove it from view. */
+    display: none;
   }
   .callout {
     position: absolute;

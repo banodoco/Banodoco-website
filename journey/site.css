@@ -2399,6 +2399,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
         calc(min(var(--step, 0), 2) * var(--cl-cascade)),
         calc(min(var(--step, 0), 2) * var(--cl-cascade));
     }
+    /* Once the intro formation has landed, the rail becomes a scroll
+       instrument: angle and edge visibility are direct functions of journey
+       progress, not a second time-based animation chasing behind the hand. */
+    .j-rail:not(.j-rail-column).j-rail-following .j-rail-slot {
+      opacity: var(--rail-follow-opacity, 1);
+      transition-duration: 0s;
+      transition-delay: 0s;
+    }
+    .j-rail:not(.j-rail-column).j-rail-between .j-rail-name {
+      opacity: 0 !important;
+    }
     /* ---- RESTATING THE ANGLE IS NOT A MOVE ----
        rail.js re-canonicalises `--ang-to` while the moon is HOME — folded and
        finished folding, so `--u` is 0, `--ae` is 0 whatever the angle says,
@@ -2835,6 +2846,14 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
          what holds the first and last letters where the wash is thinnest */
       text-shadow: 0 0 2px rgba(9, 6, 2, 0.95), 0 0 5px rgba(9, 6, 2, 0.7);
     }
+  }
+
+  /* The coarse-pointer column follows the same continuous `--cur`; remove its
+     340ms transform lag only after the common intro formation has completed. */
+  .j-rail.j-rail-following .j-rail-slot,
+  .j-rail.j-rail-following .j-rail-menu {
+    transition-duration: 0s;
+    transition-delay: 0s;
   }
 
   @media (prefers-reduced-motion: reduce) {
