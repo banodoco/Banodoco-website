@@ -29,6 +29,71 @@
   padding: 7px;
 }
 
+/* THE MYCELIAL BACKPLANE (2026-08-19) — nothing is painted ON the project.
+   One loose network lives behind the opaque stage, extends beyond its box,
+   disappears underneath the content, and re-emerges at unrelated edges. The
+   card therefore stays wholly itself; the surrounding world is what grows.
+
+   Per-node transforms are deterministic rather than freshly random on every
+   hover: each initiative gets a different accidental-looking crop without a
+   line jumping position when the visitor returns to it. */
+.j-pop-frame {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  width: 100%;
+  overflow: visible;
+}
+
+/* Oversized on purpose. The two-layer mask subtracts the ENTIRE card box —
+   stage, 7px mat, and border — from the network. The
+   lines can approach and depart in the surrounding space, but no strand can
+   paint across the edge. They meet the silhouette exactly, so the visible
+   ends read as one network continuing underneath rather than loose decoration. */
+.j-pop-frame::before {
+  content: "";
+  position: absolute;
+  inset: -20px -24px;
+  z-index: 0;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  pointer-events: none;
+  background-image: url('../../assets/cards/mycelial-underlay.svg');
+  background-position:
+    calc(50% + var(--myc-x, 0px))
+    calc(50% + var(--myc-y, 0px));
+  background-size: var(--myc-w, 100%) var(--myc-h, 100%);
+  background-repeat: no-repeat;
+  opacity: 0.6;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+/* Six stable crops of the same underground organism: related, never cloned. */
+.j-pop[data-node="arca"]       { --myc-x: -6px; --myc-y: 2px;  --myc-w: 104%; --myc-h: 98%; }
+.j-pop[data-node="artcompute"] { --myc-x: 6px;  --myc-y: -3px; --myc-w: 98%;  --myc-h: 106%; }
+.j-pop[data-node="tworp"]      { --myc-x: -2px; --myc-y: 5px;  --myc-w: 108%; --myc-h: 102%; }
+.j-pop[data-node="ados"]       { --myc-x: 5px;  --myc-y: 2px;  --myc-w: 102%; --myc-h: 108%; }
+.j-pop[data-node="hivemind"]   { --myc-x: -7px; --myc-y: 0px;  --myc-w: 106%; --myc-h: 96%; }
+.j-pop[data-node="discord"]    { --myc-x: 3px;  --myc-y: -5px; --myc-w: 96%;  --myc-h: 104%; }
+
+/* A light-only wake: the network never moves after it is placed, which keeps
+   the random crop calm and leaves popover measurement completely stable. */
+@keyframes j-mycelium-wake {
+  0%   { opacity: 0; }
+  48%  { opacity: 0.72; }
+  100% { opacity: 0.6; }
+}
+.j-pop.j-pop-enter .j-pop-frame::before {
+  animation: j-mycelium-wake 0.62s ease-out both;
+}
+
 /* THE STAGE IS THE WHOLE CARD (Hannah, 2026-08-18: "we shouldn't have the
    bottom part … explain everything in the main part") — the house block
    below is hidden on rich cards and each stage carries its own name, copy
@@ -41,6 +106,7 @@
 
 .j-pop-stage {
   position: relative;
+  z-index: 2;
   width: 100%;
   margin: 0;
   overflow: hidden;
@@ -87,6 +153,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .j-pop-stage, .j-pop-stage * { animation: none !important; transition: none !important; }
+  .j-pop-frame::before { animation: none !important; }
 }
 
 /* ---- arca — arcagidan.com's hero, miniaturized ------------------------ */

@@ -245,6 +245,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      gold line-work. */
   .j-sym {
     display: block; width: 24px; height: 24px; overflow: visible;
+    transform: scaleX(var(--j-sym-flip, 1));
     filter: drop-shadow(0 0 1px rgba(9, 6, 2, 0.95)) drop-shadow(0 0 3px rgba(9, 6, 2, 0.6));
   }
   .j-sym path {
@@ -258,6 +259,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      crown — is a filled dot here, so the marks read as light on dark rather
      than as outline drawings. */
   .j-sym circle { fill: currentColor; stroke: none; }
+
+  /* The Connect ground-network mark should face into the journey. Mirror only
+     that SVG in the live rail: the tile, reticle, label and menu copy keep
+     their authored orientation. */
+  .j-rail-slot[data-chapter="connect"] .j-rail-mark > .j-sym-connect {
+    --j-sym-flip: -1;
+    transform-origin: center;
+  }
+  .j-rail-slot.j-rail-recycle .j-rail-mark > .j-sym {
+    pointer-events: none;
+  }
 
   /* ---- the names: revealed per mark, to the LEFT of the stack ----
      "Hovering an individual symbol reveals the name of that section." The
@@ -349,7 +361,9 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
 
   /* ---- the reticle: hero.css's `.co .ck`, on the current symbol ---- */
-  .j-rail-ret { position: absolute; inset: -5px; display: block; pointer-events: none; }
+  /* The brackets frame the drawing without grazing its outer strokes. This
+     stays inside the 48px moon tile and changes no hit or layout geometry. */
+  .j-rail-ret { position: absolute; inset: -7px; display: block; pointer-events: none; }
   .j-rck {
     position: absolute;
     width: 6px; height: 6px;
@@ -423,7 +437,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     right: 0;
     height: 8px;
   }
-  .j-rail-menu:is(:hover, :focus-visible) { color: var(--gold-bright); }
+  /* Touch browsers can retain :hover after a tap. Keep persistent emphasis
+     tied to keyboard focus and add hover only for a real hover pointer. */
+  .j-rail-menu:focus-visible { color: var(--gold-bright); }
+  @media (hover: hover) and (pointer: fine) {
+    .j-rail-menu:hover { color: var(--gold-bright); }
+  }
   /* hero `lead-draw`: the contents filaments draw themselves as the rail
      first reveals, then stay drawn — the instrument powering on. */
   .j-rail-menu .j-sym path {
@@ -483,9 +502,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   /* ============================================================
      THE SITE-MAP PANEL — the whole site as a page, from the right.
      Replaces the post-epilogue footer (removed 2026-08-09): chapter
-     deep links, per-section contents, outbound links, the static-
-     tier pointer and the legal line all live here now. Content
-     source: see journey/rail.js.
+     deep links, per-section contents, social links and the legal line all
+     live here now. Content source: see journey/rail.js.
      ============================================================ */
   /* THE HIT MODEL FOR EVERY FULL-FRAME OVERLAY (2026-08-09 — see the poke
      regression note in journey-v6-plan/25-navigation-redux.md).
@@ -512,6 +530,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     z-index: 6;
     opacity: 0;
     pointer-events: none;
+    touch-action: manipulation;
     background: rgba(5, 3, 1, 0.62);
     transition: opacity 0.3s ease;
   }
@@ -525,7 +544,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     right: 0; top: 0; bottom: 0;
     z-index: 7;
     width: min(29rem, 92vw);
-    padding: 2.6rem 2.2rem 2.4rem;
+    padding: 1rem 2.2rem 2.4rem;
     overflow-y: auto;
     overscroll-behavior: contain;
     /* OPAQUE, deliberately. At 0.97 the hero's wordmark ghosted through the
@@ -549,36 +568,74 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-menu.open { opacity: 1; transform: translateX(0); pointer-events: auto; }
   .j-menu[hidden] { display: none; }
 
-  .j-menu-x {
-    position: absolute;
-    top: 0.8rem; right: 0.9rem;
-    padding: 0.4rem 0.5rem;
-    background: none;
-    border: 0;
-    color: var(--muted);
-    font: inherit;
-    font-size: 0.95rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: color 0.3s;
+  .j-menu-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    margin: 0 0 1.15rem;
   }
-  .j-menu-x:is(:hover, :focus-visible) { color: var(--gold-bright); }
+  .j-menu-close-zone {
+    display: flex;
+    align-items: center;
+    margin-left: 0.25rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid rgba(217, 164, 65, 0.22);
+  }
+  .j-menu-x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background: rgba(217, 164, 65, 0.025);
+    border: 1px solid rgba(217, 164, 65, 0.24);
+    border-radius: 50%;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.3s, border-color 0.3s, background 0.3s;
+  }
+  .j-menu-x svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.35;
+    stroke-linecap: round;
+  }
+  .j-menu-x:focus-visible {
+    color: var(--gold-bright);
+    border-color: rgba(217, 164, 65, 0.62);
+    background: rgba(217, 164, 65, 0.07);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .j-menu-x:hover {
+      color: var(--gold-bright);
+      border-color: rgba(217, 164, 65, 0.62);
+      background: rgba(217, 164, 65, 0.07);
+    }
+  }
 
   .j-menu-h {
-    margin: 0 0 0.9rem;
+    min-width: 0;
+    margin: 0;
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.26em;
     text-transform: uppercase;
     color: var(--gold);
   }
-  .j-menu-lede {
-    margin: 0 0 1.7rem;
-    font-size: 0.86rem;
-    line-height: 1.65;
-    color: var(--muted);
+  /* Pointer entry focuses this non-interactive heading so the dialog is
+     announced. It is a neutral focus target, not a control, so it must not
+     inherit a browser or shared-control selection ring. */
+  .j-menu .j-menu-h:focus,
+  .j-menu .j-menu-h:focus-visible {
+    outline: none;
+    box-shadow: none;
   }
-
   /* same bare-`nav` reset the rail takes (hero.css `nav {}`) */
   .j-menu-nav { display: block; padding: 0; animation: none; }
   .j-menu-list { margin: 0; padding: 0; list-style: none; }
@@ -639,8 +696,29 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   .j-menu-row:last-child { margin-bottom: 0; }
   .j-menu-il {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
     color: var(--parchment);
     font-weight: 600;
+  }
+  .j-menu-pict {
+    display: inline-flex;
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    color: rgba(240, 200, 119, 0.78);
+    filter: drop-shadow(0 0 4px rgba(240, 170, 60, 0.35));
+  }
+  .j-menu-pict svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
   .j-menu-il::after { content: " — "; color: rgba(201, 191, 168, 0.45); font-weight: 400; }
   .j-menu-ia {
@@ -654,19 +732,29 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-menu-ia::after { content: " \2192"; }
   .j-menu-ia:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
 
-  .j-menu-else { margin-top: 1.7rem; }
-  .j-menu-eh {
-    margin: 0 0 0.7rem;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: rgba(217, 164, 65, 0.75);
+  .j-menu-owned {
+    padding: 0 0.6rem 0.9rem 2.4rem;
+    font-size: 0.8rem;
+    line-height: 1.55;
   }
+  .j-menu-owned-copy {
+    margin: 0;
+    color: var(--parchment);
+    font-weight: 600;
+  }
+  .j-menu-owned-more { margin: 0.25rem 0 0; color: var(--muted); }
+  .j-menu-owned-more a {
+    color: var(--gold-bright);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.45);
+    transition: border-color 0.3s;
+  }
+  .j-menu-owned-more a:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
+
   .j-menu-links {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.2rem 1.5rem;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -674,35 +762,34 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-menu-links a {
     display: inline-flex;
     align-items: center;
-    min-height: 30px;
-    color: var(--parchment);
+    justify-content: center;
+    width: 40px;
+    height: 44px;
+    color: rgba(201, 191, 168, 0.7);
     text-decoration: none;
-    font-size: 0.82rem;
-    border-bottom: 1px solid rgba(217, 164, 65, 0.4);
-    transition: color 0.3s, border-color 0.3s;
+    border-radius: 50%;
+    transition: color 0.3s, background 0.3s;
   }
-  .j-menu-links a:is(:hover, :focus-visible) { color: var(--gold-bright); border-color: var(--gold-bright); }
-
-  /* the static-tier pointer and the legal line — the footer's last two
-     residents, in the footer's own small muted voice */
-  .j-menu-note {
-    margin: 1.5rem 0 0.7rem;
-    font-size: 0.78rem;
-    line-height: 1.6;
-    color: var(--muted);
-  }
-  .j-menu-note a {
+  .j-menu-links svg { display: block; width: 15px; height: 15px; fill: currentColor; }
+  .j-menu-links a[aria-label="X"] svg { width: 13px; height: 13px; }
+  .j-menu-links a:is(:hover, :focus-visible) {
     color: var(--gold-bright);
-    text-decoration: none;
-    border-bottom: 1px solid rgba(217, 164, 65, 0.5);
-    transition: border-color 0.3s;
+    background: rgba(217, 164, 65, 0.06);
   }
-  .j-menu-note a:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
+
   .j-menu-legal {
-    margin: 0;
+    margin: 1rem 0 0;
     font-size: 0.7rem;
     line-height: 1.6;
     color: rgba(201, 191, 168, 0.6);
+  }
+
+  @media (max-width: 420px) {
+    .j-menu { padding: 0.9rem 0.8rem 1.8rem; }
+    .j-menu-head { gap: 0.25rem; }
+    .j-menu-h { font-size: 0.66rem; letter-spacing: 0.18em; }
+    .j-menu-links { gap: 0.25rem; }
+    .j-menu-close-zone { margin-left: 0.15rem; padding-left: 0.55rem; }
   }
 
   /* --- chapter copy: stable at rests, released during major travel --- */
@@ -1855,6 +1942,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     outline-offset: 3px;
     border-radius: 2px;
   }
+  .j-menu .j-menu-x:focus-visible,
+  .j-menu .j-menu-links a:focus-visible { border-radius: 50%; }
   /* The shared ring above sets `border-radius: 2px`, which is right for the
      square controls it was written for and would flatten a pill. The outline
      follows the element's radius, so the pair states its own. */
@@ -1898,10 +1987,9 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        side navigator's own tiles are 44px tall by construction (see
        .j-rail-item) and need nothing from this block. */
     .j-card-link, .j-pop-link { position: relative; }
-    .j-menu-links a, .j-menu-ia, .j-menu-note a { position: relative; }
+    .j-menu-links a, .j-menu-ia { position: relative; }
     .j-menu-links a::before,
     .j-menu-ia::before,
-    .j-menu-note a::before,
     .j-hot::before,
     .j-card-x::before,
     .j-card-link::before,
@@ -1975,35 +2063,55 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail-item:is(:hover, :focus-visible) .j-rail-name,
     .j-rail-menu:is(:hover, :focus-visible) .j-rail-name,
     .j-rail-open .j-rail-name { letter-spacing: 0.18em; }
-    /* THE COMPOSITION STEPS BACK (2026-08-07 mobile pass).
-
-       The panel above stops the copy reading THROUGH the rail; it does not
-       stop the copy reading AROUND it, and at 375 that is what the band
-       actually looks like — a hard-edged rectangle laid across the middle of
-       five lines of prose, with words chopped at both ends of it. The panel
-       was solving legibility. This solves composition: while the rail is held
-       open, the chapter copy steps back and the navigator has the frame.
-
-       `.j-copy` is the HOST element, which carries no inline opacity — the
-       per-block opacities that journey/ui.js writes every frame are on the
-       `.j-block` children, so this composes with them instead of fighting
-       them, and nothing in the frame loop has to learn about the rail.
-
-       Body class rather than `:has()`: journey/rail.js announces the
-       touch-expanded state on <body> exactly as `openMenu` announces itself,
-       which is this component's own existing idiom. Set from the touch path
-       only, so a desktop hover is untouched. */
     .j-copy { transition: opacity 0.28s ease; }
     body.j-rail-on .j-copy { opacity: 0.14; }
-    /* The chips step back with the copy (2026-08-10, with the band's re-size
-       above): the 6rem panel used to happen to bury any chip pill near the
-       right edge; sized to the icons, the band no longer pretends to solve
-       what the step-back actually solves. Same value, same transition, and
-       the hit model is untouched — while the fan is open a tap outside the
-       rail collapses it first (rail.js's document pointerdown), so a dimmed
-       chip was never reachable under the open fan anyway. */
     .j-hotspots { transition: opacity 0.28s ease; }
     body.j-rail-on .j-hotspots { opacity: 0.14; }
+  }
+
+  /* MOBILE IS A FIXED FILE, NOT A ROTATING INSTRUMENT. At rest its current
+     mark is the centred section-selector trigger, with the separated Menu
+     control directly beneath it. The former fans out the complete manifest-
+     ordered list; the latter opens the site-map sidebar immediately. The
+     rail's full-height flex container centres the expanded file as one stable
+     object. Progress may update --cur for desktop; coarse layout ignores it. */
+  @media (pointer: coarse) {
+    .j-rail-inner {
+      width: 52px;
+      height: calc(var(--n, 5) * 44px + 52px);
+    }
+    .j-rail-slot {
+      top: calc(50% - 22px);
+      transform: none;
+      transition: top 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+                  opacity 0.3s ease;
+    }
+    .j-rail:is(:has(:focus-visible), .j-rail-open) .j-rail-slot {
+      top: calc(var(--i, 0) * 44px);
+      transform: none;
+    }
+    .j-rail-menu {
+      /* Current tile ends at centre + 22px; Menu begins 8px later, with its
+         existing ::before hairline sitting inside that breathing room. */
+      top: calc(50% + 30px);
+      transform: none;
+      opacity: 1;
+      pointer-events: auto !important;
+      transition: top 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+                  opacity 0.22s ease, color 0.3s;
+    }
+    .j-rail:is(:has(:focus-visible), .j-rail-open) .j-rail-menu {
+      top: calc(var(--n, 5) * 44px + 8px);
+      transform: none;
+      opacity: 1;
+    }
+    /* Permanent navigation must not claim or grade the composition. The
+       glyph rims provide local contrast without a black edge panel, and the
+       copy/hotspots retain the opacity their journey envelopes authored. */
+    .j-rail-inner::before,
+    .j-rail-inner::after { display: none; }
+    body.j-rail-on .j-copy,
+    body.j-rail-on .j-hotspots { opacity: 1; }
   }
 
   /* ============================================================
@@ -2407,6 +2515,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       transition-duration: 0s;
       transition-delay: 0s;
     }
+    .j-rail:not(.j-rail-column).j-rail-following
+      .j-rail-slot.j-rail-recycle .j-rail-mark > .j-sym {
+      transform: translateY(var(--rail-recycle-y, 0px)) scaleX(var(--j-sym-flip, 1));
+    }
     .j-rail:not(.j-rail-column).j-rail-between .j-rail-name {
       opacity: 0 !important;
     }
@@ -2793,12 +2905,16 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       top: calc(-0.5 * var(--s));
       width: var(--s);
       height: var(--s);
+      /* The stops are authored at Final strength; ordinary chapters paint
+         this one surface at 58% opacity below, reproducing the old effective
+         values exactly. Raising that opacity in Final deepens the SAME wash,
+         so there is no second layer or edge to appear. */
       background: radial-gradient(closest-side circle at 50% 50%,
-        rgba(9, 6, 2, 0.52) 0%,
-        rgba(9, 6, 2, 0.44) 22%,
-        rgba(9, 6, 2, 0.28) 44%,
-        rgba(9, 6, 2, 0.12) 66%,
-        rgba(9, 6, 2, 0.03) 84%,
+        rgba(9, 6, 2, 0.90) 0%,
+        rgba(9, 6, 2, 0.76) 22%,
+        rgba(9, 6, 2, 0.48) 44%,
+        rgba(9, 6, 2, 0.21) 66%,
+        rgba(9, 6, 2, 0.05) 84%,
         rgba(9, 6, 2, 0) 100%);
       /* CLOSED it is sized to TWICE THE BUTTON — the one glyph on the flank
          plus a glyph's worth of falloff around it. The transform is what grows
@@ -2807,13 +2923,18 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
          the whole of what she was looking at. */
       transform: scale(calc(2 * var(--cl-hub) / var(--s)));
       opacity: 0;
-      transition: opacity 0.4s ease,
+      transition: opacity 0.65s ease,
                   transform calc(var(--cl-travel) + 2 * var(--cl-cascade))
                     cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .j-rail:not(.j-rail-column).on .j-rail-inner::after { opacity: 1; }
+    .j-rail:not(.j-rail-column).on .j-rail-inner::after { opacity: 0.58; }
     .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
-      .j-rail-inner::after { opacity: 1; transform: scale(1); }
+      .j-rail-inner::after { opacity: 0.58; transform: scale(1); }
+    /* Final's lit field needs a little more quiet behind the line work. The
+       current-slot class changes at the chapter boundary; opacity interpolation
+       makes entering, reversing and leaving one continuous grade. */
+    .j-rail:not(.j-rail-column):has(.j-rail-slot[data-chapter="final"].now)
+      .j-rail-inner::after { opacity: 1; }
 
     /* ---- and the pills lose their rectangle ----
        `rgba(9,6,2,0.85)` with a 2px radius is a hard-edged black box, and on
@@ -2848,12 +2969,15 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     }
   }
 
-  /* The coarse-pointer column follows the same continuous `--cur`; remove its
-     340ms transform lag only after the common intro formation has completed. */
-  .j-rail.j-rail-following .j-rail-slot,
-  .j-rail.j-rail-following .j-rail-menu {
-    transition-duration: 0s;
-    transition-delay: 0s;
+  /* A fine-pointer column fallback still follows continuous `--cur`; remove
+     its transform lag once formation lands. Mobile no longer consumes --cur
+     for geometry, so it keeps the tap-open transition authored above. */
+  @media (pointer: fine) {
+    .j-rail.j-rail-following .j-rail-slot,
+    .j-rail.j-rail-following .j-rail-menu {
+      transition-duration: 0s;
+      transition-delay: 0s;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -2871,7 +2995,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail, .j-rail-slot, .j-rail-item, .j-rail-name, .j-rail-menu,
     .j-rail-inner::before, .j-rail-inner::after, .j-rail-menu .j-sym path,
     .j-menu, .j-menu-scrim, .j-menu-x, .j-menu-item, .j-menu-mark,
-    .j-menu-links a, .j-menu-ia, .j-menu-note a { transition: none; }
+    .j-menu-links a, .j-menu-ia { transition: none; }
     /* the reticle's clockwise cascade is delay, not duration — kill both */
     .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck,
     .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck.tr,
@@ -2907,6 +3031,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
       transition-delay: 0s;
     }
     .j-rail-slot, .j-rail-menu { transition-delay: 0s; }
+    .j-rail-slot.j-rail-recycle { --rail-recycle-y: 0px !important; }
     /* The dwell gesture is switched off rather than shortened, on the same
        contract as everything above it: `j-menu-rewrite` ends at the drawn
        glyph, which is the button's resting state, so with the animation gone
