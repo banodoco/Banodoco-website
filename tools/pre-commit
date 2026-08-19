@@ -59,13 +59,14 @@ if [ -n "$MISSING_TWIN" ]; then
   echo "  If the staged twin changed, the other likely must too. Not blocking." >&2
 fi
 
-# Derived identity assets: favicons and og cards are cut from the mark
-# master and the mission/owned captures by build-meta.py (same regenerate-
-# never-repaint contract as the geometry bake). A re-blessed capture that
-# doesn't re-run it silently ships a stale social card, so when a source or
-# the script is staged, byte-check the derivation. Pure PIL — no server.
+# Derived identity assets: favicons are cut from the favicon master, and og
+# cards from the mark master plus mission/owned captures, by build-meta.py
+# (same regenerate-never-repaint contract as the geometry bake). A re-blessed
+# capture that doesn't re-run it silently ships a stale social card, so when a
+# source or the script is staged, byte-check the derivation. Pure PIL — no
+# server.
 if echo "$STAGED" | grep -q \
-  "static/captures/mission@1440x900.png\|static/captures/owned@1440x900.png\|assets/brand/mark-b-source.png\|tools/build-meta.py"; then
+  "static/captures/mission@1440x900.png\|static/captures/owned@1440x900.png\|assets/brand/mark-b-source.png\|assets/brand/favicon-source.png\|tools/build-meta.py"; then
   python3 "$META_PY" --check || {
     echo "pre-commit: derived favicons/og cards are stale vs their sources." >&2
     echo "  Rebuild:  python3 tools/build-meta.py, then git add favicon.ico assets/brand" >&2

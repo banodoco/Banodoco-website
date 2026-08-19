@@ -1078,9 +1078,108 @@
   filter: drop-shadow(0 0 7px rgba(240, 170, 60, 0.7));
 }
 
-/* an icon chip never stacks: glyph and name stay one row at every width
-   (phones were wrapping the torch under a three-word label — Hannah,
-   2026-08-18). Scoped to the six initiative chips; contributor chips keep
-   the shared layout untouched. */
-.j-hot:has(.j-hot-ico) { flex-wrap: nowrap; }
-.j-hot:has(.j-hot-ico) .j-hot-label { white-space: nowrap; }
+/* THE INITIATIVE MARKER IS ONE JOINED SHAPE (2026-08-19). The six custom
+   marks used to read as decorative bullets to the LEFT of each name. Here the
+   pictograph sits in a small tab centred over the word: icon first, label
+   second, one compact spatial marker.
+
+   This is genuinely one optical fill. The first attempt painted translucent
+   backgrounds on both the tab and body and overlapped them by 5px; alpha
+   accumulated at the join and made a dirty shadow seam. The body (`::after`)
+   now begins at y=16 exactly where the tab's own 16px backing ends — adjacent,
+   never overlapping. ui.js separately centres the measured button on its
+   projected world point, so the visual change does not lie about its node. */
+.j-hot.j-hot--icon-tab {
+  --j-chip-bg: rgba(12, 8, 3, 0.48);
+  display: grid;
+  grid-template-columns: max-content;
+  grid-template-rows: 22px auto;
+  justify-items: center;
+  align-items: start;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.j-hot.j-hot--icon-tab::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  /* Four pixels above the label's ink, matching its four-pixel lower pad.
+     Starting at 12px made the capsule look top-heavy and swallowed the tab. */
+  top: 16px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 999px;
+  background: var(--j-chip-bg);
+  pointer-events: none;
+}
+.j-hot.j-hot--icon-tab:is(:hover, .hot, :focus-visible) {
+  --j-chip-bg: rgba(18, 12, 4, 0.72);
+  background: transparent;
+}
+.j-hot--icon-tab .j-hot-dot.j-hot-ico {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  padding: 4.5px;
+  margin: 0;
+  border-radius: 0;
+  background: transparent;
+  transform: translateY(var(--j-dot-dy, 0px));
+}
+.j-hot--icon-tab .j-hot-dot.j-hot-ico::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 16px;
+  border-radius: 5px 5px 0 0;
+  background: var(--j-chip-bg);
+  pointer-events: none;
+}
+.j-hot--icon-tab .j-hot-dot.j-hot-ico svg {
+  position: relative;
+  z-index: 1;
+  width: 13px;
+  height: 13px;
+  transform-origin: center;
+  transition: transform 0.3s ease;
+}
+.j-hot--icon-tab .j-hot-label {
+  position: relative;
+  /* Sit above the single body paint. At z=0 the translucent ::after could
+     composite over the glyphs, making the joined marker look inexplicably
+     muddy even though the geometry itself was correct. */
+  z-index: 1;
+  grid-row: 2;
+  box-sizing: border-box;
+  min-height: 17px;
+  margin-top: -4px;
+  padding: 2px 12px 4px;
+  border-radius: 0;
+  background: transparent;
+  line-height: 1.05;
+  text-align: center;
+  white-space: nowrap;
+}
+/* The generic hotspot hover grows its dot. Here that dot is the TAB itself,
+   so scaling it would split the silhouette; only the drawing breathes. */
+.j-hot--icon-tab:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico {
+  background: transparent;
+  transform: translateY(var(--j-dot-dy, 0px));
+}
+.j-hot--icon-tab:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico svg {
+  transform: scale(1.14);
+}
+@media (max-width: 720px), (max-height: 560px) {
+  .j-hot.j-hot--icon-tab { --j-chip-bg: rgba(12, 8, 3, 0.66); }
+  .j-hot.j-hot--icon-tab:is(:hover, .hot, :focus-visible) {
+    --j-chip-bg: rgba(18, 12, 4, 0.78);
+  }
+}

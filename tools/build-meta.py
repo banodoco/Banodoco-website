@@ -6,20 +6,14 @@
 #   python3 tools/build-meta.py --check    # rebuild to a temp dir and diff
 #
 # Sibling of build-mark.py, same contract: nothing here is hand-authored
-# artwork. The icons are the mark's own alpha (the same channel the shipped
-# masks are cut from) painted in the site's lit gold on the site's background;
-# the social cards are crops of the Tier-3 captures, which tools/capture.py
-# shoots FROM THE LIVE SCENE. Regenerate, never repaint.
+# artwork. The icons are resized from their supplied square master; the social
+# cards are crops of the Tier-3 captures, which tools/capture.py shoots FROM
+# THE LIVE SCENE. Regenerate, never repaint.
 #
-# THE ICONS. Browser tabs and home screens sit on arbitrary chrome, so the
-# mark cannot ship on transparency the way the in-page masks do — it gets the
-# site's own ground (--bg #141008) as a tile, and the B is painted flat in
-# --gold-bright #f0c877, the site's LIT state, not the master's shaded RGB:
-# at 16 px the far-face lighting gradient just reads as mud (same reasoning
-# as build-mark.py's alpha-not-luminance note, one step further). Small sizes
-# get an alpha gain so the hairlines survive resampling instead of fading
-# grey. Tab-sized icons (the .ico and favicon-96) get a soft rounded corner
-# so the tile doesn't sit as a hard slab in light-chrome tabs;
+# THE ICONS. The favicon master is already square, full-bleed artwork on its
+# intended dark ground. Preserve the complete composition and downsample it
+# with Lanczos. Tab-sized icons (the .ico and favicon-96) get a soft rounded
+# corner so the tile doesn't sit as a hard slab in light-chrome tabs;
 # apple-touch-icon ships full-bleed square because iOS rounds it itself.
 #
 # THE CARDS. 1200x630 (the og:image ratio every major unfurler crops to),
@@ -41,50 +35,14 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAND = os.path.join(ROOT, "assets", "brand")
-MASTER = os.path.join(BRAND, "mark-b-source.png")
+MARK_MASTER = os.path.join(BRAND, "mark-b-source.png")
+FAVICON_MASTER = os.path.join(BRAND, "favicon-source.png")
 CAPTURES = os.path.join(ROOT, "static", "captures")
 
-BG = (0x14, 0x10, 0x08)        # hero.css --bg
-GOLD_LIT = (0xF0, 0xC8, 0x77)  # hero.css --gold-bright
-
-# icon size -> (mark height as a fraction of the tile, alpha gain)
-ICON_SIZES = {
-    16: (0.80, 2.2),
-    32: (0.76, 1.8),
-    48: (0.74, 1.5),
-    96: (0.72, 1.25),
-    180: (0.62, 1.0),
-    192: (0.62, 1.0),
-    512: (0.62, 1.0),
-}
-
-
-def mark_alpha():
-    master = Image.open(MASTER)
-    if master.mode != "RGBA":
-        sys.exit("master must be RGBA (it is %s) — the alpha IS the mark" % master.mode)
-    return master, master.getchannel("A")
-
-
-def icon_tile(alpha, size, mark_frac, gain, radius_frac):
-    w0, h0 = alpha.size
-    mh = max(1, round(size * mark_frac))
-    mw = max(1, round(mh * w0 / h0))
-    m = alpha.resize((mw, mh), Image.LANCZOS)
-    if gain != 1.0:
-        m = m.point(lambda v: min(255, round(v * gain)))
-    tile = Image.new("RGBA", (size, size), BG + (255,))
-    ink = Image.new("RGBA", (size, size), GOLD_LIT + (0,))
-    ink.putalpha(Image.new("L", (size, size), 0))
-    pad = Image.new("L", (size, size), 0)
-    pad.paste(m, ((size - mw) // 2, (size - mh) // 2))
-    ink = Image.merge("RGBA", (
-        Image.new("L", (size, size), GOLD_LIT[0]),
-        Image.new("L", (size, size), GOLD_LIT[1]),
-        Image.new("L", (size, size), GOLD_LIT[2]),
-        pad,
-    ))
-    tile = Image.alpha_composite(tile, ink)
+def icon_tile(master, size, radius_frac):
+    if master.width != master.height:
+        sys.exit("favicon master must be square (it is %dx%d)" % master.size)
+    tile = master.convert("RGBA").resize((size, size), Image.LANCZOS)
     if radius_frac:
         # soft rounded corners, drawn 4x and downsampled so the curve is clean
         from PIL import ImageDraw
@@ -115,7 +73,11 @@ def card(capture, y0, mark_master, sign=True):
 
 
 def build(outdir):
-    master, alpha = mark_alpha()
+    mark_master = Image.open(MARK_MASTER)
+    if mark_master.mode != "RGBA":
+        sys.exit("mark master must be RGBA (it is %s) — the alpha IS the mark"
+                 % mark_master.mode)
+    favicon_master = Image.open(FAVICON_MASTER)
     made = []
 
     def save(img, relpath, **kw):
@@ -125,26 +87,27 @@ def build(outdir):
         made.append((relpath, os.path.getsize(path)))
 
     # favicon.ico — 16/32/48, rounded; one file, browsers pick the plane
-    frames = [icon_tile(alpha, s, *ICON_SIZES[s], radius_frac=0.1875) for s in (48, 32, 16)]
+    frames = [icon_tile(favicon_master, s, radius_frac=0.1875)
+              for s in (48, 32, 16)]
     save(frames[0], "favicon.ico", format="ICO",
          append_images=frames[1:], sizes=[(48, 48), (32, 32), (16, 16)])
     # high-dpi tab / search-result icon
-    save(icon_tile(alpha, 96, *ICON_SIZES[96], radius_frac=0.1875),
+    save(icon_tile(favicon_master, 96, radius_frac=0.1875),
          os.path.join("assets", "brand", "favicon-96.png"), optimize=True)
     # iOS home screen — full-bleed, iOS rounds it
-    save(icon_tile(alpha, 180, *ICON_SIZES[180], radius_frac=0).convert("RGB"),
+    save(icon_tile(favicon_master, 180, radius_frac=0).convert("RGB"),
          os.path.join("assets", "brand", "apple-touch-icon.png"), optimize=True)
     # Android home screen / install (site.webmanifest) — full-bleed like the
     # apple icon; launchers apply their own shape mask, so no baked rounding
     for s in (192, 512):
-        save(icon_tile(alpha, s, *ICON_SIZES[s], radius_frac=0).convert("RGB"),
+        save(icon_tile(favicon_master, s, radius_frac=0).convert("RGB"),
              os.path.join("assets", "brand", "icon-%d.png" % s), optimize=True)
 
     # social cards
-    save(card("mission@1440x900.png", 144, master),
+    save(card("mission@1440x900.png", 144, mark_master),
          os.path.join("assets", "brand", "og-home.jpg"),
          quality=88, progressive=True, optimize=True)
-    save(card("owned@1440x900.png", 0, master),
+    save(card("owned@1440x900.png", 0, mark_master),
          os.path.join("assets", "brand", "og-ownership.jpg"),
          quality=88, progressive=True, optimize=True)
     return made

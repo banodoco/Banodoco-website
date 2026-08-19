@@ -867,7 +867,14 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // initiative chips carry their own pictograph in the dot's slot (same
     // footprint, same --j-dot-dy pin — see cards/index.js CARD_ICONS);
     // everything else keeps the plain ember dot
-    if (CARD_ICONS[id]) {
+    const iconTab = !!CARD_ICONS[id];
+    if (iconTab) {
+      // The pictograph is not a bullet beside the name: together they form a
+      // small node marker, with the icon centred in a raised tab and the name
+      // in the joined body below. An explicit class keeps this treatment
+      // scoped to the six initiative labels; plain ember dots and Owned's
+      // invisible contributor controls retain the shared hotspot geometry.
+      btn.classList.add('j-hot--icon-tab');
       dotEl.classList.add('j-hot-ico');
       dotEl.innerHTML = CARD_ICONS[id];
     }
@@ -887,7 +894,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     btn.appendChild(hitEl);
 
     const h = {
-      id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false,
+      id, chapter, btn, world, stagger, a: 0, armAt: null, sup: false, iconTab,
       radius: typeof radius === 'function' ? radius : null,
       // Per-node scene gate (2026-08-16): when a chapter supplies one, this
       // chip arrives with what the scene DRAWS for its node (Connect: the
@@ -2343,7 +2350,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     arrive = null;
   }
 
-  function update(p, chapterId, camera, dt = 0) {
+  function update(p, chapterId, camera, dt = 0,
+    { cameraStateDisagree = false } = {}) {
     // one-shot, on the first frame the chapter modules are reachable
     if (policyPending) resolveLabelPolicies();
     // A pinned popover makes journey.js report a detail open — it is route
@@ -2355,7 +2363,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     const modalDetail = detailNow && !popPinned;
     // The side navigator: reveal latch, resting symbol, current entry and the
     // tab-order state, all decided in one place (journey/rail.js).
-    rail.update(p, { modalDetail });
+    rail.update(p, { modalDetail, cameraStateDisagree });
 
     if (dt > 0 && lastP !== null) {
       pSpeed += (Math.abs(p - lastP) / dt - pSpeed) * Math.min(1, dt * 5);
@@ -2544,16 +2552,26 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         if (h.armAt === null) h.armAt = now + ((h.labelOnHover || h.reveal) ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
         if (dt === 0) h.a = 1;
         else if (now >= h.armAt) h.a += (1 - h.a) * Math.min(1, dt * HOTSPOT_IN_K);
-        // Edge flip: the pill normally runs RIGHT of the dot, so a node near
-        // the right edge would reveal a clipped label on hover (the dot is
-        // placeable long before the label is). Mirror the pill about the dot
-        // when it would overrun, compensating the translate so the DOT stays
-        // exactly on its node. Hysteresis of 14px so a chip drifting on the
-        // organism's sway cannot chatter between the two sides.
-        const over = sx + h.pillW - 11 - (window.innerWidth - 12);
-        const flip = (h.flipped ? over > -14 : over > 0) && sx - h.pillW + 21 > 0;
-        if (flip !== h.flipped) { h.flipped = flip; h.btn.classList.toggle('flip', flip); }
-        let tx = flip ? sx + 21 - h.pillW : sx;
+        let tx;
+        if (h.iconTab) {
+          /* A centred tab changes the truthful local anchor from x=11 to the
+             marker's midpoint. Re-derive translate-x from the measured width
+             so the icon — not merely the button box — still lands exactly on
+             the projected world node. The shape is symmetric, so edge-flip
+             has no visual or geometric job here. */
+          if (h.flipped) {
+            h.flipped = false;
+            h.btn.classList.remove('flip');
+          }
+          tx = sx + 11 - h.pillW * 0.5;
+        } else {
+          // Edge flip: the ordinary pill runs RIGHT of its dot, so a node near
+          // the right edge mirrors the label while leaving the dot on the node.
+          const over = sx + h.pillW - 11 - (window.innerWidth - 12);
+          const flip = (h.flipped ? over > -14 : over > 0) && sx - h.pillW + 21 > 0;
+          if (flip !== h.flipped) { h.flipped = flip; h.btn.classList.toggle('flip', flip); }
+          tx = flip ? sx + 21 - h.pillW : sx;
+        }
         // Narrow viewports can leave a pill that fits on NEITHER side (a
         // 232px label anchored at x 160 of 375). Nudge it in, but never far:
         // past ~26px the dot stops reading as sitting on its node, and a

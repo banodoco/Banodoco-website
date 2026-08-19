@@ -1280,14 +1280,26 @@ export function createRail({ onNav } = {}) {
     }
   }
 
-  function update(p, { modalDetail = false } = {}) {
-    if (p > SHOW_P) revealed = true;
-    /* …and the Mission pose takes it back (Hannah, 2026-08-17 — see the
-       header note). Not while anything holds the control live: the pointer
-       on it, the fan open, focus inside it (`expanded()` carries all three),
-       or the menu standing in front of it. Read per frame, so letting go of
-       the rail at the top is itself the moment it goes out. */
-    else if (revealed && !hovering && !expanded() && !menuIsOpen) revealed = false;
+  function update(p, {
+    modalDetail = false,
+    cameraStateDisagree = false,
+  } = {}) {
+    /* A direct jump writes destination progress before its camera blend even
+       exists. During that disagreement, keep the visibility from the section
+       still on screen: a return to Mission must not make the navigator vanish
+       mid-flight, and a departure must not reveal it over the untouched hero.
+       The landing frame clears this guard and applies the ordinary progress
+       rule below. Scrubbing and true placements never set it. */
+    if (!cameraStateDisagree) {
+      if (p > SHOW_P) revealed = true;
+      /* …and the Mission pose takes it back (Hannah, 2026-08-17 — see the
+         header note). Not while anything holds the control live: the pointer
+         on it, the fan open, focus inside it (`expanded()` carries all three),
+         or the menu standing in front of it. Read per frame, so letting go of
+         the rail at the top is itself the moment it goes out. */
+      else if (revealed && !hovering && !expanded() && !menuIsOpen)
+        revealed = false;
+    }
 
     const show = revealed;
     if (show !== shown) { root.classList.toggle('on', show); shown = show; }

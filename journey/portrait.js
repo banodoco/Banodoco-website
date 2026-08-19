@@ -133,12 +133,11 @@ const KEYS = [
   // frame-fraction terms (0.358 vs 0.403) than their copy tops did (0.564 vs
   // 0.674). tgtRight is untouched: the horizontal never moved, and the cap is
   // still 187.17 / 214.62 against frame centres 187.5 / 215.
-  // D22 (2026-08-17, Hannah's balance pass): the LANDSCAPE rest gaze panned
-  // 0.196 u left along view-right so the desktop cap sits ~2% right of the
-  // centred copy (inspire/camera.js). The phone poses were centred by
-  // measure and must not inherit it, so the same 0.196 comes straight back
-  // here: tgtRight 0.258 -> 0.454. Nothing else about the phone pose moves.
-  { p: 0.260, back: 1.50, rise: -0.50, truck: -0.30, tgtUp: -0.856, tgtRight: 0.454, fov: 13 },
+  // D23 (2026-08-19): desktop retains just 0.038 u of D22's pan to optically
+  // centre the asymmetric stalk rather than its cap transform. Portrait was
+  // already centred by measure, so retain only the matching +0.038 response
+  // here (0.258 -> 0.296); the phone/tablet projection remains unchanged.
+  { p: 0.260, back: 1.50, rise: -0.50, truck: -0.30, tgtUp: -0.856, tgtRight: 0.296, fov: 13 },
 
   // Ground-descent approach (D16 restage; retuned 2026-08-04 for the
   // monotone Inspire->Connect zoom-out): the landscape leg no longer pushes

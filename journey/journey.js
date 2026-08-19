@@ -658,6 +658,13 @@ export function boot(opts = {}) {
      duration law, now measured along the path actually travelled instead of
      along a chord the camera no longer follows. */
   let camBlend = null;
+  /* A direct jump places journey progress at its destination before the
+     camera starts travelling there. Most visual layers have their own blend
+     contract for that disagreement; the rail only needs to preserve the
+     visibility it had at departure until the camera and progress agree
+     again. This flag starts before placeAt() because that function renders
+     two synchronous destination-progress frames before camBlend exists. */
+  let cameraStateDisagree = false;
   // Scratch for the live destination pose, read fresh every blend frame.
   const _dstPos = sceneApi.camera.position.clone();
   const _dstTgt = sceneApi.controls.target.clone();
@@ -700,6 +707,7 @@ export function boot(opts = {}) {
     // The snap is deferred to the landing (endCamBlend), which is the frame
     // the journey's state and the camera agree again. This is the WebGL half
     // of what ui.armCopyEntry already does for the copy layer.
+    cameraStateDisagree = true;
     placeAt(targetP, { snap: false });
     /* THE WAY HOME (2026-08-12 — the loop). A wrap is the same transition as
        every other nav jump; only its PATH is authored, because the shortest
@@ -1015,7 +1023,8 @@ export function boot(opts = {}) {
     // click frame — the up-wrap scrim flash (2026-08-16).
     paintHeroFurniture(Math.max(heroPresence(p) * stepHeroEntry(dt), stepHeroExit(dt)));
 
-    guarded('ui', () => ui.update(p, ch.id, sceneApi.camera, dt));
+    guarded('ui', () => ui.update(p, ch.id, sceneApi.camera, dt,
+      { cameraStateDisagree }));
 
     /* THE RIDE WRITES NOTHING (2026-08-11, Hannah's brief). A chapter change
        used to replaceState `#/<chapter>` from right here, every time the
@@ -1149,6 +1158,7 @@ export function boot(opts = {}) {
   function landWrapHome() {
     const homeP = camBlend.homeP;
     camBlend = null;
+    cameraStateDisagree = false;
     guarded('lens', () => lens.setLookOverride(null));
     setBlending(false);
     /* Capture hygiene, same invariant restoreHero() guards for endCamBlend:
@@ -1235,6 +1245,7 @@ export function boot(opts = {}) {
    *  the frame a deep link to the same chapter would have placed. */
   function endCamBlend() {
     camBlend = null;
+    cameraStateDisagree = false;
     /* AND THE CAMERA GOES BACK TO THE POSE p IMPLIES (2026-08-14 — Hannah:
        "halfway through the loop I stop the scroll, the hero mushroom can end
        up displaced... and it stays permanently stuck").
