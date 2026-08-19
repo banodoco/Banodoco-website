@@ -655,8 +655,8 @@
     width: 5px; height: 5px;
     margin: -2.5px 0 0 -2.5px;
     border-radius: 50%;
-    background: rgba(240, 200, 119, 0.72);
-    box-shadow: 0 0 6px rgba(240, 190, 90, 0.35);
+    background: rgba(240, 200, 119, 0.86);
+    box-shadow: 0 0 7px rgba(240, 190, 90, 0.5);
     transition: background 0.3s, box-shadow 0.45s;
   }
   .co .ring {
@@ -677,8 +677,9 @@
   }
   .co .lead {
     fill: none;
-    stroke: rgba(226, 178, 84, 0.48);
+    stroke: rgba(226, 178, 84, 0.6);
     stroke-width: 1;
+    filter: drop-shadow(0 0 2px rgba(240, 190, 90, 0.35));
     transition: stroke 0.45s;
   }
   .co .lit {
@@ -707,9 +708,9 @@
     font-weight: 600;
     letter-spacing: 0.3em;
     white-space: nowrap;
-    color: rgba(206, 196, 172, 0.62);
+    color: rgba(218, 207, 181, 0.72);
     border-radius: 2px;
-    text-shadow: 0 1px 10px rgba(10, 6, 2, 0.9);
+    text-shadow: 0 1px 10px rgba(10, 6, 2, 0.9), 0 0 7px rgba(230, 178, 82, 0.16);
     transition: color 0.4s, letter-spacing 0.4s, text-shadow 0.4s;
   }
   .co .tag::before {
@@ -736,7 +737,7 @@
     font-size: 0.5rem;
     font-weight: 500;
     letter-spacing: 0.14em;
-    color: rgba(217, 164, 65, 0.4);
+    color: rgba(226, 176, 78, 0.55);
     transition: color 0.4s;
   }
   /* corner brackets: hidden at rest. On hover they LOCK IN clockwise —
@@ -769,7 +770,7 @@
     100% { opacity: 0;    transform: scale(1.45); }
   }
   .co:is(:hover, .force) .lit { stroke-dashoffset: 0; }
-  .co:is(:hover, .force) .lead { stroke: rgba(217, 164, 65, 0.5); }
+  .co:is(:hover, .force) .lead { stroke: rgba(240, 190, 90, 0.76); }
   .co:is(:hover, .force) .tag {
     color: var(--gold-bright);
     letter-spacing: 0.34em;
@@ -822,9 +823,9 @@
   /* --- touch affordance: no hover on touch devices, so idle state gets a
      visibility boost and taps toggle the lit state via JS (.force class) --- */
   @media (hover: none) {
-    .co .tag { color: rgba(201, 191, 168, 0.72); }
-    .co .lead { stroke: rgba(217, 164, 65, 0.45); }
-    .co .core { background: rgba(240, 200, 119, 0.8); }
+    .co .tag { color: rgba(218, 207, 181, 0.78); }
+    .co .lead { stroke: rgba(230, 182, 88, 0.66); }
+    .co .core { background: rgba(248, 211, 132, 0.92); }
   }
 
   /* ============================================================

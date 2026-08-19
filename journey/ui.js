@@ -20,7 +20,7 @@ import {
   COPY_TRAVEL_LO, COPY_TRAVEL_HI,
   HOTSPOT_STAGGER_MS, HOTSPOT_IN_K, HOTSPOT_OUT_K, HOTSPOT_HOLD_HOME_K,
   HOTSPOT_DODGE_GAP, HOTSPOT_DODGE_MAX,
-  COPY_JUMP_LEAD, COPY_JUMP_TAIL_S,
+  COPY_JUMP_LEAD, COPY_JUMP_COPY_TAIL_S,
 } from './constants.js';
 
 /* --------------------------------------------------------------------------
@@ -864,9 +864,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // exists from the first render, not only after the first open.
     btn.setAttribute('aria-expanded', 'false');
     const dotEl = el('i', 'j-hot-dot');
-    // initiative chips carry their own pictograph in the dot's slot (same
-    // footprint, same --j-dot-dy pin — see cards/index.js CARD_ICONS);
-    // everything else keeps the plain ember dot
+    // Initiative chips carry their own pictograph in the dot's slot. Their
+    // joined tab moves with the capsule during a collision dodge; only the
+    // invisible hit pad keeps the generic --j-dot-dy node compensation.
+    // Everything else keeps the plain ember dot and its visual pin.
     const iconTab = !!CARD_ICONS[id];
     if (iconTab) {
       // The pictograph is not a bullet beside the name: together they form a
@@ -910,8 +911,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       holdAt: null,       // world anchor held still while hot — see holdAnchor()
       holdOff: null,      // ...decaying back to zero once it goes cold
       pendX: 0,           // this frame's resolved translate-x, written post-loop
-      dodgeY: 0,          // pill raise from the collision dodge (label only —
-      dodgePrev: 0,       // the dot is pinned back by --j-dot-dy)
+      dodgeY: 0,          // pill raise from the collision dodge
+      dodgePrev: 0,       // plain dots + every hit pad compensate via --j-dot-dy
       hover: false, focused: false, armed: false, hot: false,
       pointer: null,      // pointerType of the gesture in flight
       label, labelEl,
@@ -977,6 +978,22 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         h.armed = true;
         h.refresh();
         btn.focus({ preventScroll: true });
+        return;
+      }
+      /* A mouse/pen click on an ownership orb must not upgrade the card that
+         hover already opened into the committed modal tier. That upgrade is
+         what made the panel survive pointerleave and feel stuck. Keep the
+         pointer reveal transient, and drop the click-acquired button focus so
+         hover remains its only owner; moving away will then close it normally.
+
+         Touch still commits directly because it has no hover tier, and a
+         keyboard activation still commits so the disclosure remains usable
+         without a pointer. Popover nodes keep their existing click-to-pin
+         behaviour because their pinned tier makes the CTA keyboard-reachable. */
+      const clickedOpenHoverCard = (via === 'mouse' || via === 'pen')
+        && h.hover && !h.preview && cardIsOpen && !cardPinned && cardNodeId === h.id;
+      if (clickedOpenHoverCard) {
+        btn.blur();
         return;
       }
       // Enter and Space are a <button>'s NATIVE activation keys — Enter has
@@ -2232,7 +2249,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
      chapter we are leaving at the opacity it actually had. It then releases on
      the ordinary COPY_OUT_K rule (~0.15 s), the same release a scrub gives it.
 
-     See COPY_JUMP_LEAD / COPY_JUMP_TAIL_S for the timing model. */
+     See COPY_JUMP_LEAD / COPY_JUMP_COPY_TAIL_S for the timing model. */
   const easedPrev = { ...eased };
   let arrive = null;   // { id, t, lead, dur, own }
 
@@ -2283,7 +2300,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // back to 0.
     for (const k in eased) paintCopy(k, eased[k]);
     const lead = blendDur * COPY_JUMP_LEAD;
-    const dur = blendDur + COPY_JUMP_TAIL_S - lead;
+    const dur = blendDur + COPY_JUMP_COPY_TAIL_S - lead;
     endArrive();                                   // a jump can overtake a jump
     // THE DEPARTURE IS TIMED AGAINST THE MOVE TOO (2026-08-13 — the loop's
     // seam). The arrival has been placed inside the blend since d1ecc23; the
@@ -2619,12 +2636,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
        resting pills can sit in permanent overlap: at 375x812 Inspire's lip
        anchors project 125 px apart while Arca's pill runs 168 px, so its tail
        lay across ArtCompute's dot (measured 43 x 11 px of rect overlap, the
-       label text passing ~1 px above the dot). The dots are the truth — each
-       marks a lit release lip — so the LABEL is what moves: the upper pill of
-       an overlapping pair is raised just clear of the lower one, and the dot
-       is pinned back onto its node by the compensating --j-dot-dy translate
-       (the same one the hit pad's `top` reads, so pad and dot cannot
-       disagree). Chips are processed bottom-of-frame first, each resolved
+       label text passing ~1 px above the dot). For ordinary ember pills the
+       LABEL moves while the dot is pinned back onto its node by the
+       compensating --j-dot-dy translate. A joined icon-tab is deliberately
+       indivisible: its tab rises with its capsule while the invisible hit pad
+       alone uses --j-dot-dy to remain on the world node. Chips are processed
+       bottom-of-frame first, each resolved
        against the already-final pills below it, which makes the pass exact in
        one sweep for any chain that raises upward. Pure in this frame's
        geometry — no eased state, so dt = 0 places the dodged frame outright

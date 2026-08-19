@@ -426,10 +426,12 @@ export function boot(opts = {}) {
                     exactly as before and scrolling back up returns exactly
                     as before — neither route has a camera that disagrees.
        arrival      the missing half. 0 while a jump is flying INTO the hero,
-                    easing to 1 on the same envelope and the same C2 ease the
-                    destination copy already uses (d1ecc23 / COPY_JUMP_LEAD /
-                    COPY_JUMP_TAIL_S), so the furniture and the sentence it
-                    frames arrive as one movement. 1 at every other moment,
+                    easing to 1 from the same lead and with the same C2 ease
+                    as the destination copy (d1ecc23 / COPY_JUMP_LEAD). The
+                    copy now gets a longer, scroll-paced finish of its own;
+                    the furniture keeps its compact post-camera beat. Both
+                    remain parts of the same arrival rather than click-time
+                    effects. 1 at every other moment,
                     which is why a cold load, a deep link and every ?capture=
                     still are bit-identical to before: none of them has a
                     blend in flight, so this term is not in play.
@@ -784,7 +786,7 @@ export function boot(opts = {}) {
     // The duration is only knowable here, after placeAt has let the director
     // write the destination pose, which is why the hand-off is one call at the
     // end of the jump rather than a constant in ui.js. See the copy-entry
-    // block there, and COPY_JUMP_LEAD / COPY_JUMP_TAIL_S.
+    // block there, and COPY_JUMP_LEAD / COPY_JUMP_COPY_TAIL_S.
     guarded('ui', () => ui.armCopyEntry(chapterId, dur));
     // ...and the hero's own furniture is timed against the same move, for the
     // same reason and on the same envelope. It is the third member of the

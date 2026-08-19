@@ -1163,10 +1163,18 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
           // this one does wait out the idle window and starts from rest at the
           // flat nominal cruise. Decelerating through zero is the one place
           // where slowing down IS the correct motion.
+          //
+          // A rejected gesture is a RETURN, not a committed reverse transit.
+          // Giving it brakeK's abbreviated backward landing tail made a soft
+          // mobile Owned -> Final swipe pause and then jump home in 0.07-0.4 s.
+          // Let that small correction use the ordinary spring. A genuine
+          // onward Final -> Owned transition still receives the authored fast
+          // backward brake in the branch above.
           const band = glideBand(lo, hi, dir);
+          const returning = lastDir !== 0 && dir !== lastDir;
           intent = { target, lo, hi, dir, from: p, g: gSerial, band,
             floorPx: 0, cruisePx: band.nominal,
-            snapK: brakeK(band, lo, hi, dir) };
+            snapK: returning ? SNAP_K : brakeK(band, lo, hi, dir) };
           gPeak = 0;
         }
       }

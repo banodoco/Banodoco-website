@@ -381,16 +381,18 @@ export const COPY_TRAVEL_HI = 0.090; // p/s at which it is fully released
 //                                       the move, so they arrive into a frame
 //                                       that is already recognisably the
 //                                       destination rather than racing it
-//     end   = dur + COPY_JUMP_TAIL      and finish a beat AFTER the camera
-//                                       stops, so the last thing that settles
-//                                       on screen is the sentence
+//     end   = dur + COPY_JUMP_COPY_TAIL and finish with the same unhurried
+//                                       breathe the scroll arrival gets, after
+//                                       the camera has made the negative space
 //
 // The entry's own duration falls out of those two (dur * 0.45 + TAIL, i.e.
-// 0.53 s on the shortest hop and 0.69 s on the longest) — a longer flight
-// buys a longer settle for free, which is what keeps the pair feeling like
-// one movement at both extremes.
+// 0.93 s on the shortest hop and 1.09 s on the longest). That now matches the
+// ordinary COPY_IN_K scroll breathe instead of rushing the heading and body
+// through a half-second flourish. A longer flight still buys a longer settle
+// for free, which keeps the pair feeling like one movement at both extremes.
 export const COPY_JUMP_LEAD   = 0.55;  // fraction of the camera blend spent waiting
-export const COPY_JUMP_TAIL_S = 0.15;  // s after the camera lands that the copy finishes
+export const COPY_JUMP_TAIL_S = 0.15;  // hero furniture's existing post-camera beat
+export const COPY_JUMP_COPY_TAIL_S = 0.55; // copy's scroll-paced post-camera breathe
 
 // Hotspot labels arrive AFTER the copy has re-anchored, one at a time, in the
 // chapter's narrative reveal order — never as a simultaneous pop.
