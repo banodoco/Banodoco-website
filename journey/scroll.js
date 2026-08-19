@@ -28,7 +28,7 @@ import {
   COMMIT_THRESHOLD, COMMIT_CARRY_RATE, COMMIT_CARRY_PEAK_VH, COMMIT_GLIDE_PX, COMMIT_BLEND_K,
   COMMIT_STREAM_GAP_MS, COMMIT_STREAM_MIN, COMMIT_CRUISE_MAX_PX,
   COMMIT_GLIDE_MAX_S, COMMIT_BRAKE_TAIL_S, COMMIT_BACK_CAP_VH,
-  WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K, STALL_FRAME_MS, STALL_MAX_MS,
+  WHEEL_LINE_PX, TOUCH_GAIN, KEY_STEP_PX, MAX_SCRUB_RATE, SMOOTH_K, STALL_FRAME_MS,
 } from './constants.js';
 
 const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -200,15 +200,18 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
      meaning; a visitor who genuinely stops still crosses ARRIVAL_HOLD_MS and
      SNAP_ENGAGE_MS at exactly the same wall-clock moment, because no time
      is discounted unless a frame actually overran.
-       MEASURED ON THE FRAME IN FLIGHT, not banked from the last one. Input is
-     dispatched before rAF, so the delta that lands after an expensive frame
-     arrives BEFORE that frame's duration has been reported to update() —
-     banking it a frame late would miss exactly the case this exists for.
-     `lastFrameAt` is the start of the most recent update(), so the overrun of
-     the frame currently in flight is known at push() time, which is when it
-     is needed. Wheel events coalesce to about one per frame, so a gap spans
-     one frame and there is nothing earlier left to account for. */
+       OBSERVED FROM WHICHEVER CALLBACK RUNS FIRST. Input normally precedes rAF,
+     so push() can see the overrun of the frame in flight. On a cold-load frame,
+     however, Chrome can run rAF first and deliver the coalesced wheel event
+     afterward; overwriting lastFrameAt there used to erase the stall and turn
+     one flick's tail into an apparent pause/new gesture. `stallBank` preserves
+     overruns reported by update() until the next input. `stallClaimed` records
+     how much of the current frame push() already saw, so the following update
+     banks only the remainder rather than counting the same blocked frame twice. */
   let lastFrameAt = -1e9;
+  let stallBank = 0;     // blocked ms observed since the last delivered input
+  let stallClaimed = 0;  // portion of the current frame already banked/consumed
+  let backgroundGap = typeof document !== 'undefined' && document.hidden;
   let lastDir = 0;      // sign of the last manual delta (+1 fwd / -1 back / 0 none)
   let enabled = false;
 
@@ -283,6 +286,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   let wheelPrev = 0;
   let wheelRise = 0;
   let wheelTail = false;
+  let wheelQuiet = false;
   let repeatAnchor = null; // target an older same-direction resolution is
                            // already buying; a newer stream may depart from it
   let intent = null;    // the latched resolution:
@@ -533,6 +537,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     wheelPrev = rate;
     wheelRise = 0;
     wheelTail = false;
+    wheelQuiet = false;
   }
 
   /** Does this wheel sample begin a second physical pulse before the idle clock
@@ -544,7 +549,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  arrival wall, while a fast repeat gets a new gSerial soon enough that the
    *  first resolution cannot spend it when it lands. Rate (rather than raw
    *  delta) makes the test insensitive to frame coalescing. */
-  function wheelPulseRestart(rate) {
+  function wheelPulseRestart(rate, idleGapMs, stallDiscountMs) {
     if (!wheelPeak) { resetWheelPulse(rate); return false; }
 
     wheelPeak = Math.max(wheelPeak, rate);
@@ -559,12 +564,25 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       if (rate < wheelTrough) wheelTrough = rate;
       const rising = rate > wheelPrev * 1.12;
       wheelRise = rising ? wheelRise + 1 : 0;
+      // A second acceleration hump inside one uninterrupted trackpad stream is
+      // still the SAME gesture. Require a short VISITOR quiet beat (after the
+      // frame-stall discount) before the rebound; continued decay without one
+      // clears any older candidate. The threshold is deliberately below
+      // ARRIVAL_HOLD_MS, so a rapid deliberate repeat remains immediate rather
+      // than waiting for the arrival wall.
+      // A coalesced post-stall sample can still leave > one normal frame after
+      // discount, and its raw-gap-normalised rate becomes an artificial trough.
+      // Do not let a site-owned long frame supply the quiet beat as well.
+      const quiet = idleGapMs > STALL_FRAME_MS
+        && stallDiscountMs < STALL_FRAME_MS;
+      if (quiet) wheelQuiet = true;
+      else if (!rising) wheelQuiet = false;
       const gain = rate - wheelTrough;
       const rebound = rate >= wheelTrough * 1.75 && gain >= 0.35;
       const decisive = rate >= wheelTrough * 2.5 && gain >= 0.9;
       const firstAskStillOwnsArrival = answeredP !== null
         || (intent && intent.g === gSerial);
-      restart = firstAskStillOwnsArrival && rebound
+      restart = firstAskStillOwnsArrival && wheelQuiet && rebound
         && (wheelRise >= 2 || decisive);
     }
     wheelPrev = rate;
@@ -574,56 +592,83 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   /** How much of the interval ending at `now` was the main thread overrunning
    *  a frame rather than the visitor waiting (see lastFrameAt). */
   function stallOf(now) {
+    if (lastFrameAt < 0) return 0; // attach has not established a frame epoch
+    // Duration cannot distinguish a long visible compile from a tab that was
+    // suspended. Visibility can: visible frame work is entirely site-owned,
+    // however long it takes; a hidden/resumed interval is genuine gesture idle
+    // and must never be forgiven into a continuation.
+    if (backgroundGap || (typeof document !== 'undefined' && document.hidden)) return 0;
     const inFlight = now - lastFrameAt;
     if (inFlight <= STALL_FRAME_MS) return 0;
-    // CAPPED, because "no frame has ticked for a while" has a second cause:
-    // a backgrounded tab stops rAF entirely, and forgiving that would let a
-    // visitor return after a minute and have their first delta counted as the
-    // continuation of the gesture they left with — wall still up, gesture
-    // still spent. A frame that overruns by more than STALL_MAX_MS is not a
-    // frame the visitor waited through, so nothing past it is discounted.
-    return Math.min(inFlight - STALL_FRAME_MS, STALL_MAX_MS);
+    return inFlight - STALL_FRAME_MS;
+  }
+
+  /** Bank only the newly observed part of this frame's overrun. The bank stays
+   *  live across later ordinary rAFs so both update()'s idle test and the next
+   *  input gap discount the same site-owned time. */
+  function bankStall(now) {
+    const observed = stallOf(now);
+    const fresh = Math.max(0, observed - stallClaimed);
+    stallBank += fresh;
+    stallClaimed = observed;
+    return stallBank;
   }
 
   function push(dpx, kind, repeat = false) {
     if (!enabled) return;
     // An open detail state consumes the first scroll intent: travel resumes
     // only once the frame is clear (GB-3.6).
-    if (onIntent && onIntent(kind) === false) { lastInput = performance.now(); return; }
+    if (onIntent && onIntent(kind) === false) {
+      const consumedAt = performance.now();
+      if (backgroundGap || (typeof document !== 'undefined' && document.hidden)) newGesture();
+      bankStall(consumedAt); stallBank = 0; lastInput = consumedAt;
+      backgroundGap = false;
+      return;
+    }
     const now = performance.now();
+    const resumedFromBackground = backgroundGap
+      || (typeof document !== 'undefined' && document.hidden);
     // ...discounting whatever of that interval the main thread spent blocked
     // in a frame that overran (see lastFrameAt). Exactly zero whenever the
     // frame in flight is inside its budget, which is every ordinary frame.
-    const gapMs = Math.max(0, now - lastInput - stallOf(now));
+    const rawGapMs = Math.max(0, now - lastInput);
+    const stallDiscountMs = bankStall(now);
+    const gapMs = Math.max(0, rawGapMs - stallDiscountMs);
     // THE INTERACTION THRESHOLD. A pause this long is the "additional scroll"
     // the arrival is waiting for: the visitor has stopped and started again,
     // which is the one thing a gesture that never stopped cannot fake. It is
     // checked BEFORE the gesture test below and independently of it, because
     // it is a much shorter window and answers a different question — see
     // dropWall() for why the other measurements must NOT come down with it.
-    if (gapMs > ARRIVAL_HOLD_MS) dropWall();
+    if (resumedFromBackground) newGesture();
+    else if (gapMs > ARRIVAL_HOLD_MS) dropWall();
     // Deltas further apart than SNAP_ENGAGE_MS are not one gesture by the
     // model's own definition of idle: start the measurement over rather than
     // average across the pause, so a flick is only ever as strong, and only
     // ever as much of a stream, as ITS OWN deltas make it.
-    if (gapMs > SNAP_ENGAGE_MS) newGesture();
+    if (!resumedFromBackground && gapMs > SNAP_ENGAGE_MS) newGesture();
     if (kind !== 'wheel') resetWheelPulse();
     gapEma = gapEma ? gapEma + (gapMs - gapEma) * 0.35 : (gCount ? gapMs : 0);
     gCount++;
     lastInput = now;
+    stallBank = 0;
+    backgroundGap = false;
     if (dpx) {
       const dir = dpx > 0 ? 1 : -1;
       // A turn mid-stream is a new gesture: the strength of the half you have
       // abandoned must not be spent on the half you are now making.
-      if (dir !== lastDir) { newGesture(); gCount = 1; }
+      if (dir !== lastDir && !resumedFromBackground) { newGesture(); gCount = 1; }
       else if (kind === 'wheel' && !repeat) {
         // There is no standard wheelstart event. Infer only the one shape a
         // passive momentum tail cannot produce: a pronounced re-acceleration
         // after it has already decayed. This lets a rapid second trackpad push
         // cross the arrival immediately even when its gap is under 90 ms.
-        const rate = Math.abs(dpx) /
-          Math.max(8, Math.min(gapMs || 8, COMMIT_STREAM_GAP_MS));
-        if (wheelPulseRestart(rate)) {
+        // Use the PHYSICAL event gap, uncapped: gapMs deliberately subtracts a
+        // frame stall for the idle model, but Chrome coalesces the delta across
+        // that full frame. Dividing that larger delta by the discounted/capped
+        // interval fabricates the exact acceleration this test is looking for.
+        const rate = Math.abs(dpx) / Math.max(8, rawGapMs || 8);
+        if (wheelPulseRestart(rate, gapMs, stallDiscountMs)) {
           restartGesture();
           resetWheelPulse(rate);
           gCount = 1;
@@ -741,7 +786,20 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     // second contact is a new ask even when it begins before ARRIVAL_HOLD_MS or
     // while the previous contact's resolution is still landing. Advancing the
     // serial here prevents that landing from spending the new swipe.
-    if (touchY !== null && (answeredP !== null || intent)) restartGesture();
+    const resumedFromBackground = backgroundGap;
+    if (touchY !== null && (answeredP !== null || intent || resumedFromBackground)) {
+      restartGesture();
+      backgroundGap = false;
+      if (resumedFromBackground) {
+        // touchstart itself consumed the visibility boundary. Start the input
+        // clock here so the first move does not mint a second gesture merely
+        // because the finger arrived long after the pre-background delta.
+        lastInput = performance.now();
+        lastFrameAt = lastInput;
+        stallBank = 0;
+        stallClaimed = 0;
+      }
+    }
   }
   function onTouchMove(e) {
     if (!enabled || touchOwned || touchY === null || !e.touches[0]) return;
@@ -810,7 +868,9 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     carry = 0;
     repeatAnchor = null;
     newGesture();
-    lastInput = performance.now();
+    const now = performance.now();
+    bankStall(now); stallBank = 0; lastInput = now;
+    backgroundGap = false;
     const dir = target > p ? 1 : target < p ? -1 : 0;
     // floor stays nominal: the servo is at the limiter and outruns it the whole
     // way, so this only ever supplies the SNAP_K landing.
@@ -1107,8 +1167,9 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     if (!enabled || total <= 0) return null;
     if (dt <= 0) return p;
     const nowF = performance.now();
-    const idle = Math.max(0, nowF - lastInput - stallOf(nowF));
+    const idle = Math.max(0, nowF - lastInput - bankStall(nowF));
     lastFrameAt = nowF;
+    stallClaimed = 0;
     // A gesture is over once its deltas have stopped for SNAP_ENGAGE_MS. This
     // no longer freezes anything — it only decides when the gesture's own peak
     // stops being the speed floor and the latched cruise takes over.
@@ -1221,7 +1282,8 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
                pause after a wrap still drops the wall on its own merits at
                exactly the same 90 ms — only the wrap's own execution is
                excluded from it. */
-            lastInput = performance.now();
+            const placedAt = performance.now();
+            bankStall(placedAt); stallBank = 0; lastInput = placedAt;
             answeredP = p; answeredDir = dir;
             return clamp01(p);
           }
@@ -1464,7 +1526,24 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     window.addEventListener('touchend', onTouchEnd, { capture: true, passive: true });
     window.addEventListener('keydown', onKey, { capture: true });
     window.addEventListener('resize', measure);
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('visibilitychange', () => {
+        // Latch through the return-to-visible event. The next actual input
+        // consumes it as a real pause/new gesture, then normal visible-frame
+        // stall accounting resumes from this fresh epoch.
+        backgroundGap = true;
+        stallBank = 0;
+        stallClaimed = 0;
+        lastFrameAt = performance.now();
+      });
+    }
     measure();
+    // Input can arrive before the first journey rAF (notably the wheel that
+    // fast-forwards a cold intro). Give stall accounting a real epoch now;
+    // the -1e9 sentinel must never masquerade as a claimed 400 ms overrun.
+    lastFrameAt = performance.now();
+    stallBank = 0;
+    stallClaimed = 0;
   }
 
   return {
@@ -1536,6 +1615,28 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         armed. Note it can legitimately be 0 (the Mission anchor) — every
         reader must test it against null, never for truthiness. */
     get answeredAt() { return answeredP; },
+    /** Cold intro bridge (main.js only). Apply the wheel that triggered the
+     *  synchronous boot exactly once, then credit the two event opportunities
+     *  that boot is known to hide through browser coalescing. This is SHAPE
+     *  credit only: no extra distance, rate, or gap is invented. With no real
+     *  tail gPeak/gapEma stay zero, so one notch cannot buy a section; one
+     *  coalesced tail sample supplies the fourth event and its own measured
+     *  strength. Normal wheel and all touch input never use this path. */
+    primeBootWheel(deltaY, deltaMode = 0) {
+      let d = deltaY;
+      if (deltaMode === 1) d *= WHEEL_LINE_PX;
+      else if (deltaMode === 2) d *= window.innerHeight;
+      if (!d) return;
+      push(d, 'wheel');
+      gCount = Math.max(gCount, COMMIT_STREAM_MIN - 1);
+      gapEma = 0;
+      // boot() attaches scroll before it finishes the rest of its synchronous
+      // wiring. That work is site time preceding this replay, not part of the
+      // physical gap to the next tail sample; begin the frame epoch here.
+      lastFrameAt = performance.now();
+      stallBank = 0;
+      stallClaimed = 0;
+    },
     /** Journey-side (journey.js steerWrapBlend — the wrap lap follows the
      *  scroll): re-raise the wall at the displayed position. The input that
      *  REDIRECTS a wrap in flight has been answered — by the lap itself

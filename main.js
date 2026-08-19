@@ -916,7 +916,7 @@ if (sceneApi) {
      QA and the capture pipeline want the journey ready deterministically,
      and those pages boot at 0ms where there is no settled hero to stagger. */
   let journeyFlush = skipIntro || frozen;
-  function loadJourney(flush = false) {
+  function loadJourney(flush = false, replayWheel = null) {
     if (flush) journeyFlush = true;
     journeyModuleP
       .then(async m => {
@@ -934,7 +934,26 @@ if (sceneApi) {
         if (!journeyFlush) {
           await Promise.race([bakedGeomReady, new Promise(r => setTimeout(r, 2000))]);
         }
-        const finish = () => m.boot({ heroIntroSkipped: !!skipIntro, heroFrozen: frozen, entry: pendingEntry });
+        const finish = () => {
+          const state = m.boot({ heroIntroSkipped: !!skipIntro, heroFrozen: frozen, entry: pendingEntry });
+          /* THE WHEEL THAT ASKED FOR THIS BOOT IS STILL SCROLL (2026-08-19).
+             The intro capture listener necessarily runs before journey/scroll's
+             listener exists. On the fast path it then flushes the remaining
+             chapter builds, and Chrome may coalesce the rest of that physical
+             flick into only one to three delivered events while the task runs.
+             Dropping the initiating sample therefore turns a real stream into
+             a sub-threshold twitch and leaves the first Mission -> Inspire ask
+             at p = 0. Prime the shipping model with that one desktop sample
+             only after boot has attached it. The boot-only API credits the two
+             delivery opportunities known to be hidden by this synchronous
+             build, but no distance or rate: a lone notch still cannot carry,
+             while one genuinely coalesced tail sample can complete the stream.
+             Touch has an explicit contact boundary in scroll.js and is left
+             alone. */
+          if (replayWheel && state && state.scroll && state.scroll.primeBootWheel) {
+            state.scroll.primeBootWheel(replayWheel.deltaY, replayWheel.deltaMode);
+          }
+        };
         // NOT requestIdleCallback between slices: consecutive rICs can land in
         // the SAME idle period when a slice overruns its deadline, gluing two
         // chapter builds plus boot into one 300ms+ frame freeze (measured) —
@@ -984,7 +1003,7 @@ if (sceneApi) {
      ============================================================ */
   if (!skipIntro && !frozen) {
     let armed = true;
-    const fastForward = () => {
+    const fastForward = (replayWheel = null) => {
       if (!armed) return;
       armed = false;
       for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, onInput, true);
@@ -997,11 +1016,13 @@ if (sceneApi) {
       // flush: the visitor is scrolling — build whatever chapters the idle
       // slices haven't reached yet in one go and boot, so the scroll model
       // owns the wheel the moment the ramp ends.
-      loadJourney(true);                               // scroll model takes over now
+      loadJourney(true, replayWheel);                  // scroll model takes over now
     };
     const onInput = (e) => {
       if (e.type === 'keydown' && !['ArrowDown', 'PageDown', ' '].includes(e.key)) return;
-      fastForward();
+      fastForward(e.type === 'wheel'
+        ? { deltaY: e.deltaY, deltaMode: e.deltaMode }
+        : null);
     };
     for (const t of ['wheel', 'touchmove', 'keydown']) addEventListener(t, onInput, { capture: true, passive: true });
     setTimeout(() => { armed = false; for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, onInput, true); }, HERO_INTRO_MS);
