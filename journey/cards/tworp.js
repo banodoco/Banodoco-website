@@ -46,20 +46,16 @@ export default {
     const head = document.createElement('div');
     head.className = 'rp-head';
     head.setAttribute('aria-hidden', 'true');   // decorative; the description is the short line
-    const eyebrow = document.createElement('span');
-    eyebrow.className = 'rp-eyebrow';
-    eyebrow.textContent = '2ND RENAISSANCE PEOPLE';
     const mast = document.createElement('span');
     mast.className = 'rp-masthead';
     mast.textContent = '2RP';
     mastEl = mast;
     // the opening face is a random draw, as the site's is per session
     setFace(Math.floor(Math.random() * FACES.length));
-    // the five-word dek under the mast (Hannah, 2026-08-18): what 2RP is
+    // Lead with what 2RP is, then let the mark and launch status follow.
     const dek = document.createElement('span');
     dek.className = 'rp-dek';
-    dek.textContent = 'AN ART & TECH PUBLICATION';
-    head.append(eyebrow, mast, dek);
+    dek.textContent = 'AN ART AND TECH PUBLICATION';
 
     // hover = the identity itself: the mark cycles faces while pointed at
     stage.addEventListener('pointerenter', () => {
@@ -78,7 +74,9 @@ export default {
     // "Coming soon.", so keep this decorative rather than double-announcing.
     soon.setAttribute('aria-hidden', 'true');
 
-    stage.append(cover, scrim, head, soon);
+    head.append(dek, mast, soon);
+
+    stage.append(cover, scrim, head);
   },
 
   activate() {

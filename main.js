@@ -13,17 +13,12 @@ import { createScene } from './organism/organism.js?v=1785427900';
 import { CAPTURE, NOINTRO, INTROAT, HL, LIT, BODY_SERIF, FREE_CAM, DEBUG_OVERLAY } from './flags.js';
 // The journey's film grade, created at scene init rather than at journey boot
 // — see THE GRADE IS ON FROM THE FIRST FRAME below. Static import: the module
-// graph behind it (route/constants/ease) is plain JS the warmed journey fetch
-// was already pulling during the intro anyway.
+// graph behind it (route/constants/ease) is small shared infrastructure.
 import { createLens } from './journey/lens.js';
 // The baked-geometry fetch starts the moment this import evaluates — early in
 // the intro, so it has ~7s of runway before the chapter builds could want it.
 // Awaited (bounded) in loadJourney below.
 import { ready as bakedGeomReady } from './journey/lib/baked.js';
-// The journey fetch warms during the intro; boot still waits for its cue
-// (loadJourney() below consumes this promise at HERO_INTRO_MS).
-const journeyModuleP = import('./journey/journey.js');
-journeyModuleP.catch(() => {}); // absorb a pre-boot rejection -> no unhandledrejection during the intro
 
 // --- failure story ---
 // Three ways this page used to die mid-boot — WebGL missing, the journey
@@ -882,12 +877,14 @@ addEventListener('keydown', (e) => {
 });
 /* ============================================================
    JOURNEY BOOTSTRAP — additive, and deliberately inert at p = 0.
-   Boots ./journey/journey.js only AFTER the hero entry
+   Loads and boots ./journey/journey.js only AFTER the hero entry
    choreography has finished (scene grow-in 5.4s, callouts boot
    through ~7.55s — see the ENTRY comment in hero.css), so the
-   journey can never compete with the intro for frame time. The
-   fetch itself is hoisted to module scope (journeyModuleP) so it
-   warms during the intro.
+   journey does not compete with an unhurried intro. Early input first
+   paints a short departure beat, then flushes boot because the visitor
+   has explicitly asked to move. There is one import and one boot promise:
+   a speculative import used to make transient network failures permanent,
+   so warming is limited to the independent baked-geometry fetch above.
    ============================================================ */
 
 // Input policy: the journey owns scroll and pointer gestures, so user
@@ -916,10 +913,141 @@ if (sceneApi) {
      QA and the capture pipeline want the journey ready deterministically,
      and those pages boot at 0ms where there is no settled hero to stagger. */
   let journeyFlush = skipIntro || frozen;
-  function loadJourney(flush = false, replayWheel = null) {
+  let journeyInputRequested = false;
+  let journeyDepartReadyP = null;
+  let journeyLoadP = null;
+  let bootInput = null;
+  let pendingTouch = null;
+  let introCaptureLive = false;
+  let onIntroInput = null;
+  const INTRO_INPUT_EVENTS = ['wheel', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'keydown'];
+
+  function stopIntroInputCapture() {
+    if (!introCaptureLive) return;
+    introCaptureLive = false;
+    for (const type of INTRO_INPUT_EVENTS) removeEventListener(type, onIntroInput, true);
+  }
+
+  function touchById(list, id) {
+    if (!list) return null;
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].identifier === id) return list[i];
+    }
+    return null;
+  }
+
+  /* Buffer input independently from module loading. The journey listeners do
+     not exist while an early gesture is asking the intro to finish, so boot
+     consumes this one observed physical input only after scroll.attach(). */
+  function collectBootInput(e) {
+    // Event timestamps stay on the browser's physical input clock. The intro
+    // deliberately skews performance.now() while fast-forwarding, so using it
+    // after the first move would falsely add several seconds to the finger's
+    // duration and erase the real swipe rate.
+    const now = Number.isFinite(e.timeStamp) ? e.timeStamp : performance.now();
+    if (e.type === 'touchstart') {
+      if (!bootInput && e.touches && e.touches.length === 1) {
+        const touch = e.touches[0];
+        pendingTouch = { identifier: touch.identifier,
+          startY: touch.clientY, latestY: touch.clientY,
+          startedAt: now, latestAt: now, active: true };
+      }
+      return false;
+    }
+    if (e.type === 'touchmove') {
+      if (!pendingTouch || !e.touches || e.touches.length !== 1) return false;
+      const touch = touchById(e.touches, pendingTouch.identifier);
+      if (!touch) return false;
+      pendingTouch.latestY = touch.clientY;
+      pendingTouch.latestAt = now;
+      if (!bootInput) {
+        bootInput = { kind: 'touch', contact: pendingTouch };
+        return true;
+      }
+      return false;
+    }
+    if (e.type === 'touchend' || e.type === 'touchcancel') {
+      if (pendingTouch) {
+        const touch = touchById(e.changedTouches, pendingTouch.identifier);
+        if (touch) pendingTouch.latestY = touch.clientY;
+        pendingTouch.latestAt = now;
+        pendingTouch.active = false;
+      }
+      return false;
+    }
+    if (e.type === 'wheel') {
+      if (!bootInput) {
+        bootInput = { kind: 'wheel', deltaY: e.deltaY, deltaMode: e.deltaMode };
+        return true;
+      }
+      return false;
+    }
+    return e.type === 'keydown';
+  }
+
+  function clearIntroDeparture(restore = false) {
+    if (!document.body.classList.contains('intro-depart')) return;
+    if (restore) {
+      document.body.classList.add('intro-restore');
+      setTimeout(() => {
+        document.body.classList.remove('intro-depart', 'intro-restore');
+      }, 220);
+    } else {
+      document.body.classList.remove('intro-depart', 'intro-restore');
+    }
+  }
+
+  function replayBootInput(scroll) {
+    const input = bootInput;
+    bootInput = null;
+    pendingTouch = null;
+    if (!input || !scroll) {
+      clearIntroDeparture(true);
+      return;
+    }
+    if (input.kind === 'wheel' && scroll.primeBootWheel) {
+      scroll.primeBootWheel(input.deltaY, input.deltaMode);
+    } else if (input.kind === 'touch' && scroll.primeBootTouch) {
+      scroll.primeBootTouch(input.contact);
+    }
+    // Hold the immediate visual acknowledgement only until the journey's own
+    // Mission-copy envelope has genuinely taken over. A jitter that never
+    // earns travel restores the hero instead of leaving it blank.
+    if (document.body.classList.contains('intro-depart')) {
+      const started = Date.now();
+      const handoff = () => {
+        const hero = document.querySelector('.ui .hero');
+        const journeyOpacity = hero ? parseFloat(hero.style.opacity) : NaN;
+        const journeyOwnsExit = scroll.progress > 0
+          && Number.isFinite(journeyOpacity) && journeyOpacity <= 0.02;
+        const stayedHome = Date.now() - started > 900
+          && scroll.progress < 0.002 && !scroll.resolving;
+        if (journeyOwnsExit || stayedHome) {
+          clearIntroDeparture(stayedHome);
+          return;
+        }
+        requestAnimationFrame(handoff);
+      };
+      requestAnimationFrame(handoff);
+    }
+  }
+
+  function loadJourney(flush = false) {
     if (flush) journeyFlush = true;
-    journeyModuleP
-      .then(async m => {
+    if (journeyLoadP) return journeyLoadP;
+    journeyLoadP = (async () => {
+      try {
+        // Begin this short grace beside the module fetch, not after it. It lets
+        // the already-running geometry bytes win without stacking another
+        // pause onto network time.
+        const inputBakeGate = journeyInputRequested
+          ? Promise.race([bakedGeomReady,
+            new Promise(resolve => setTimeout(resolve, 220))])
+          : null;
+        // The only journey import on this page. A failed speculative import is
+        // sticky in the module map; importing only at real boot keeps failure
+        // honest and keeps this promise the one lifecycle boundary.
+        const m = await import('./journey/journey.js');
         /* THE BAKE IS AWAITED, BOUNDED (2026-08-17 — found by the owned-wiring
            agent's verification: nothing awaited baked.js's background fetch,
            so the shipped path RACED it and always fell back to live builders,
@@ -928,65 +1056,68 @@ if (sceneApi) {
            await is normally instant. The 2s bound is the degrade path: a slow
            or offline fetch must delay the journey by at most that before the
            live builders take over — the bake is an optimization, never a
-           gate. Flush loads (scroll during intro, ?capture) skip the wait
-           entirely: the visitor's wheel and the capture pipeline outrank it,
-           and both paths are pinned to live-builder behaviour anyway. */
-        if (!journeyFlush) {
-          await Promise.race([bakedGeomReady, new Promise(r => setTimeout(r, 2000))]);
+           gate. An intro gesture gets only a short grace period: long enough
+           to avoid the expensive live-build cliff on a normal connection,
+           never long enough to feel like a lock. Deterministic ?capture and
+           frozen paths retain their immediate flush. */
+        if (journeyInputRequested) {
+          // Import/fetch can run during the departure, but heavy chapter
+          // preparation may not steal the first painted acknowledgement.
+          await Promise.all([inputBakeGate, journeyDepartReadyP]);
+        } else if (!journeyFlush) {
+          await Promise.race([bakedGeomReady,
+            new Promise(resolve => setTimeout(resolve, 2000))]);
         }
-        const finish = () => {
-          const state = m.boot({ heroIntroSkipped: !!skipIntro, heroFrozen: frozen, entry: pendingEntry });
-          /* THE WHEEL THAT ASKED FOR THIS BOOT IS STILL SCROLL (2026-08-19).
-             The intro capture listener necessarily runs before journey/scroll's
-             listener exists. On the fast path it then flushes the remaining
-             chapter builds, and Chrome may coalesce the rest of that physical
-             flick into only one to three delivered events while the task runs.
-             Dropping the initiating sample therefore turns a real stream into
-             a sub-threshold twitch and leaves the first Mission -> Inspire ask
-             at p = 0. Prime the shipping model with that one desktop sample
-             only after boot has attached it. The boot-only API credits the two
-             delivery opportunities known to be hidden by this synchronous
-             build, but no distance or rate: a lone notch still cannot carry,
-             while one genuinely coalesced tail sample can complete the stream.
-             Touch has an explicit contact boundary in scroll.js and is left
-             alone. */
-          if (replayWheel && state && state.scroll && state.scroll.primeBootWheel) {
-            state.scroll.primeBootWheel(replayWheel.deltaY, replayWheel.deltaMode);
-          }
-        };
         // NOT requestIdleCallback between slices: consecutive rICs can land in
         // the SAME idle period when a slice overruns its deadline, gluing two
         // chapter builds plus boot into one 300ms+ frame freeze (measured) —
         // the very coalescing this exists to prevent. rAF -> setTimeout(0)
         // guarantees a painted frame between every slice, and boot's own
         // wiring gets the same separation from the last build.
-        const nextTask = (fn) => requestAnimationFrame(() => setTimeout(fn, 0));
-        const slice = () => {
-          if (journeyFlush) {
-            let remaining = 1;
-            while (remaining > 0) remaining = m.prepareChapter ? m.prepareChapter(sceneApi) : 0;
-            finish();
-            return;
+        const nextTask = () => new Promise(resolve =>
+          requestAnimationFrame(() => setTimeout(resolve, 0)));
+        if (journeyFlush) {
+          let remaining = 1;
+          while (remaining > 0) remaining = m.prepareChapter ? m.prepareChapter(sceneApi) : 0;
+        } else {
+          let remaining = m.prepareChapter ? m.prepareChapter(sceneApi) : 0;
+          while (remaining > 0 && !journeyFlush) {
+            await nextTask();
+            remaining = m.prepareChapter ? m.prepareChapter(sceneApi) : 0;
           }
-          const remaining = m.prepareChapter ? m.prepareChapter(sceneApi) : 0;
-          if (remaining > 0) nextTask(slice);
-          else nextTask(finish);
-        };
-        slice();
-      })
-      .catch(err => {
+          if (journeyFlush) {
+            while (remaining > 0) remaining = m.prepareChapter ? m.prepareChapter(sceneApi) : 0;
+          } else {
+            await nextTask();
+          }
+        }
+        const state = m.boot({ heroIntroSkipped: !!skipIntro,
+          heroFrozen: frozen, entry: pendingEntry });
+        stopIntroInputCapture();
+        replayBootInput(state && state.scroll);
+        return state;
+      } catch (err) {
+        stopIntroInputCapture();
+        clearIntroDeparture(true);
         console.error('[journey-v6] failed to load', err);
         // the hero scene is still live but was left holding the journey's
         // input policy (set above) — hand the orbit camera back and point the
         // visitor at the static tier.
         if (sceneApi) sceneApi.setInputPolicy('free');
         showSceneNote(`The interactive journey could not load. The hero scene above is still live, and <a href="./static/" style="color: inherit; text-decoration: underline;">the static journey</a> carries every chapter.`);
-      });
+        return null;
+      }
+    })();
+    return journeyLoadP;
   }
 
   const delay = skipIntro || frozen ? 0 : HERO_INTRO_MS;
   const bootTimer = setTimeout(() => {
-    if (typeof requestIdleCallback === 'function') requestIdleCallback(loadJourney, { timeout: 1200 });
+    // Wrap it: requestIdleCallback passes an IdleDeadline argument, which must
+    // never be mistaken for loadJourney's boolean `flush` request.
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(() => loadJourney(), { timeout: 1200 });
+    }
     else loadJourney();
   }, delay);
 
@@ -1003,28 +1134,41 @@ if (sceneApi) {
      ============================================================ */
   if (!skipIntro && !frozen) {
     let armed = true;
-    const fastForward = (replayWheel = null) => {
+    const fastForward = () => {
       if (!armed) return;
       armed = false;
-      for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, onInput, true);
-      // false = nothing to accelerate (< 200 ms left: intro basically done
-      // anyway) — then the CSS half must not compress and the normal boot
-      // timer stands, exactly as shipped.
-      if (!sceneApi.intro.accelerate({ totalMs: HERO_INTRO_MS + 900 })) return;
-      document.body.classList.add('intro-fast');
+      // Even inside the intro's last ~200 ms, the input still requests boot
+      // and is replayed after attach. Only the visual clock compression can be
+      // skipped there; swallowing the gesture would make the page feel locked.
+      const departMs = window.innerWidth <= 620 ? 220 : 480;
+      const accelerated = sceneApi.intro.accelerate({ totalMs: HERO_INTRO_MS + 900,
+        rampMs: departMs });
+      if (accelerated) {
+        document.body.classList.add('intro-fast');
+      }
+      document.body.classList.add('intro-depart');
       clearTimeout(bootTimer);
       // flush: the visitor is scrolling — build whatever chapters the idle
       // slices haven't reached yet in one go and boot, so the scroll model
-      // owns the wheel the moment the ramp ends.
-      loadJourney(true, replayWheel);                  // scroll model takes over now
+      // owns the physical input the moment the ramp ends.
+      journeyInputRequested = true;
+      // Commit the departure class to a frame and let its 180ms exit finish
+      // before any synchronous chapter preparation can occupy the main thread.
+      // Module and baked-byte fetches still run during this short beat.
+      journeyDepartReadyP = new Promise(resolve =>
+        requestAnimationFrame(() => setTimeout(resolve, accelerated ? departMs : 80)));
+      loadJourney(true);
     };
-    const onInput = (e) => {
+    onIntroInput = (e) => {
       if (e.type === 'keydown' && !['ArrowDown', 'PageDown', ' '].includes(e.key)) return;
-      fastForward(e.type === 'wheel'
-        ? { deltaY: e.deltaY, deltaMode: e.deltaMode }
-        : null);
+      if (collectBootInput(e) && armed) fastForward();
     };
-    for (const t of ['wheel', 'touchmove', 'keydown']) addEventListener(t, onInput, { capture: true, passive: true });
-    setTimeout(() => { armed = false; for (const t of ['wheel', 'touchmove', 'keydown']) removeEventListener(t, onInput, true); }, HERO_INTRO_MS);
+    introCaptureLive = true;
+    for (const type of INTRO_INPUT_EVENTS) {
+      addEventListener(type, onIntroInput, { capture: true, passive: true });
+    }
+    // The visual intro is over at this point, but boot may still be importing
+    // or waiting for an idle callback. Keep collecting until scroll attaches.
+    setTimeout(() => { armed = false; }, HERO_INTRO_MS);
   }
 }

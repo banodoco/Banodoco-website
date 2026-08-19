@@ -1325,13 +1325,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     text-align: left;           /* never inherit pos-topright's ragged-right */
     /* the house 0.3s, on opacity only */
     transition: opacity 0.3s ease;
-    /* The resting clip, and the reason it is not `none`: the entry below
-       unfurls the panel with `clip-path`, and an animation ending at
-       `inset(0)` would leave the box-shadow permanently guillotined at the
-       border box. The bleed is wider than the shadow reaches (0 12px 34px),
-       so at rest this clips nothing at all — it exists only to give the
-       keyframes a resting value they can end ON. */
-    clip-path: inset(-70px -70px -70px -70px);
   }
   .j-pop.open { opacity: 1; visibility: visible; pointer-events: auto; }
 
@@ -1347,16 +1340,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      gestures rather than from a generic fade or slide:
 
        hero `lead-draw`   a line that draws itself node -> label
-         here            the panel UNFURLS from the edge that faces its
-                         chip, its own gold border drawing across as the
-                         leading edge of the wipe. Direction is taken
-                         from `data-side`, which ui.js already sets from
-                         the flip-to-fit placement, so the panel always
-                         opens AWAY from the chip it belongs to — and
-                         the region nearest the chip is therefore the
-                         first part to become hittable, which is the
-                         half of this that matters for the pointer
-                         walking chip -> popover (see POP_GAP in ui.js).
+         here            the panel lamps up with a quick gold-edge glint;
+                         the contact filament below carries direction.
 
        hero `core-pop`    the node flares as it lands
        hero `ring-ping`   a ring pings once and ends at nothing
@@ -1396,56 +1381,46 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      off and the popover appears finished (hero.css's `.co` keeps the
      same contract).
      ============================================================ */
-  /* Two animations, because the vessel's LIGHT and its EXTENT are separate
-     statements: `j-pop-lamp` brings the panel up out of the dark over 0.26 s
-     while `j-pop-unfurl` walks its edge out from the chip over 0.4 s.
-     The lamp is not the `transition` above doing its job — it cannot be.
+  /* The lamp is not the `transition` above doing its job — it cannot be.
      showPop() re-parents the popover next to its chip (`h.btn.after(pop)`,
      which is what puts the pinned link in the right place in the tab order),
      and a freshly inserted element has no previous computed style for a
      transition to run FROM. That is why the shipped popover arrived at full
      opacity on frame one with no ceremony at all: the 0.3 s transition only
-     ever ran on the way OUT. It still does, and hidePop() drops
-     `.j-pop-enter` before it drops `.open` so the animation is never holding
-     opacity down when the transition needs to take it. */
-  /* DIRECTION IS A VALUE, NOT AN ANIMATION (Hannah, 2026-08-14: the left edge
-     flickers on hover).
-
-     There used to be three unfurls — `j-pop-unfurl`, `-l` and `-d` — selected
-     by `animation-name` off `[data-side]`. Changing `animation-name` on a
-     RUNNING animation cancels it and starts the replacement from zero, and
-     `placePop()` rewrites `data-side` EVERY FRAME from live geometry, so a
-     single frame's disagreement in the side decision replayed the whole wipe
-     from its leading edge. Measured: forcing a flip 121 ms into the entry
-     produced `animationcancel` + `animationstart` on the unfurl at 216 ms —
-     the left edge wiping itself open a second time, mid-open.
-     `POP_ENTER_MS` bounds how long that window lasts; it does not close it.
-
-     One animation whose starting clip comes from three custom properties
-     closes it. A custom property is re-substituted into the running
-     keyframes, so a side change now moves the interpolation's own endpoint on
-     the next frame with no cancel, no restart and no name change — and at
-     rest, where `.j-pop-enter` is absent, these properties are not read at
-     all. Same for the filament below, so the entry as a whole is now immune
-     to the flip rather than merely fenced off from it. */
+     ever ran on the way out. The explicit shared shell animation below gives
+     every vessel a rendered start state and keeps transform exclusively for
+     placement. Direction remains a value only for the contact filament. */
   .j-pop {
-    --unf-r: 100%; --unf-b: -70px; --unf-l: -70px;   /* opens rightward */
     --fil-x0: 1;   --fil-y0: 0.12;                   /* filament draws its height */
+    --detail-clip-start: inset(-80px 14px -80px -80px);
   }
-  .j-pop[data-side="left"]  { --unf-r: -70px; --unf-l: 100%; }
-  .j-pop[data-side="below"] { --unf-r: -70px; --unf-b: 100%; }
+  .j-pop[data-side="left"] { --detail-clip-start: inset(-80px -80px -80px 14px); }
+  .j-pop[data-side="below"] { --detail-clip-start: inset(-80px -80px 14px -80px); }
   .j-pop[data-side="below"] { --fil-x0: 0.12; --fil-y0: 1; }
-  .j-pop.j-pop-enter {
-    animation:
-      j-pop-unfurl 0.4s cubic-bezier(0.22, 1, 0.36, 1) both,
-      j-pop-lamp 0.26s ease both;
+  /* One fast shell gesture for every journey detail surface. The box itself
+     never translates: ui.js owns transform for live world anchoring (and the
+     mobile sheet owns it for drag-to-dismiss). A quick lamp-up plus a small
+     gold border glint gives popovers and profile cards the same arrival
+     without moving their hit area or stacking a second slide on their own
+     interior choreography. */
+  @keyframes j-detail-arrive {
+    0%   { opacity: 0; clip-path: var(--detail-clip-start); border-color: rgba(217, 164, 65, 0.12); }
+    68%  { opacity: 1; clip-path: inset(-80px); border-color: rgba(255, 226, 160, 0.62); }
+    100% { opacity: 1; clip-path: inset(-80px); border-color: rgba(217, 164, 65, 0.35); }
   }
-  @keyframes j-pop-unfurl {
-    from { clip-path: inset(-70px var(--unf-r) var(--unf-b) var(--unf-l)); }
-    to   { clip-path: inset(-70px -70px -70px -70px); }
+  @keyframes j-detail-depart {
+    0%   { opacity: 1; clip-path: inset(-80px); border-color: rgba(217, 164, 65, 0.35); }
+    32%  { opacity: 0.9; clip-path: inset(-80px); border-color: rgba(255, 226, 160, 0.48); }
+    100% { opacity: 0; clip-path: var(--detail-clip-start); border-color: rgba(217, 164, 65, 0.12); }
   }
-  @keyframes j-pop-lamp { from { opacity: 0; } to { opacity: 1; } }
-
+  .j-pop.j-detail-enter,
+  .j-card.j-detail-enter {
+    animation: j-detail-arrive 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .j-pop.j-pop-exit,
+  .j-card.j-card-exit {
+    animation: j-detail-depart 0.17s cubic-bezier(0.4, 0, 1, 1) both;
+  }
   /* the contact filament — lit at rest is NOTHING, so opacity 0 both ends */
   .j-pop::before {
     content: "";
@@ -1482,7 +1457,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 
      Rise, then out. One ping, stated once, exactly as claimed. The direction
      comes from --fil-x0/--fil-y0 rather than a second animation-name, for the
-     reason given at the unfurl above. */
+     same value-based direction contract used by live placement above. */
   .j-pop.j-pop-enter::before { animation: j-pop-filament 0.62s ease-out both; }
   @keyframes j-pop-filament {
     0%   { opacity: 0;    transform: scale(var(--fil-x0), var(--fil-y0)); }
@@ -1592,8 +1567,15 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     border-radius: 3px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
     opacity: 0;
+    /* Default / above: the near edge is the bottom, so the small shared
+       aperture opens upward from there. Other anchor sides override below. */
+    --detail-clip-start: inset(14px -80px -80px -80px);
     transition: opacity 0.3s ease;
   }
+  .j-card[data-side="below"] { --detail-clip-start: inset(-80px -80px 14px -80px); }
+  .j-card[data-side="right"] { --detail-clip-start: inset(-80px 14px -80px -80px); }
+  .j-card[data-side="left"]  { --detail-clip-start: inset(-80px -80px -80px 14px); }
+  .j-card[data-side="flank"] { --detail-clip-start: inset(5px); }
   .j-card.open { opacity: 1; }
   /* A closing card is out of the a11y tree and out of Tab on the tick
      (ui.js sets `inert`), but it keeps painting for the 0.34 s fade — and
@@ -1625,42 +1607,9 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-card.transient .j-card-x,
   .j-card.transient .j-card-grip { display: none; }
 
-  /* --- the entry, in the popover's motion family (e20f7ff / d1ecc23) ---
-     Two animations, because the vessel's LIGHT and its EXTENT are separate
-     statements — `j-card-lamp` brings the panel up out of the dark while
-     `j-card-unfurl` walks its edge out from the side the node is on. Same
-     clip-path technique as `.j-pop`, and for the same hard reason: transform
-     is the placement channel here too, so the entry may not touch it.
-
-     Every keyframe ends at the resting style, so the reduced-motion rule at
-     the foot of this file is `animation: none` and nothing else. */
-  .j-card.j-card-enter {
-    animation:
-      j-card-unfurl 0.42s cubic-bezier(0.22, 1, 0.36, 1) both,
-      j-card-lamp 0.28s ease both;
-  }
-  @keyframes j-card-lamp { from { opacity: 0; } to { opacity: 1; } }
-  /* default / `above`: the card unfurls up out of its own bottom edge, which
-     is the edge nearest the person it belongs to */
-  @keyframes j-card-unfurl {
-    from { clip-path: inset(100% -80px -80px -80px); }
-    to   { clip-path: inset(-80px -80px -80px -80px); }
-  }
-  .j-card.j-card-enter[data-side="below"] { animation-name: j-card-unfurl-d, j-card-lamp; }
-  @keyframes j-card-unfurl-d {
-    from { clip-path: inset(-80px -80px 100% -80px); }
-    to   { clip-path: inset(-80px -80px -80px -80px); }
-  }
-  .j-card.j-card-enter[data-side="right"] { animation-name: j-card-unfurl-r, j-card-lamp; }
-  @keyframes j-card-unfurl-r {
-    from { clip-path: inset(-80px 100% -80px -80px); }
-    to   { clip-path: inset(-80px -80px -80px -80px); }
-  }
-  .j-card.j-card-enter[data-side="left"] { animation-name: j-card-unfurl-l, j-card-lamp; }
-  @keyframes j-card-unfurl-l {
-    from { clip-path: inset(-80px -80px -80px 100%); }
-    to   { clip-path: inset(-80px -80px -80px -80px); }
-  }
+  /* The card shell uses the same j-detail-arrive/depart contract as the six
+     initiative popovers. Its content and contact filament keep their own
+     card-specific choreography below. */
 
   /* THE CONTACT FILAMENT — a short bright segment on the edge that faces the
      node, centred on the node's own column (`--j-card-fx`) rather than on the
@@ -1837,6 +1786,9 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.6);
     transition: opacity 0.3s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  /* The shared shell motion is safe on sheets, but the node-contact filament
+     is not: a bottom-edge sheet has no single world node to point back to. */
+  .j-card.sheet::before { content: none; }
   /* 1:1 with the pointer while the finger is down — no easing to fight */
   .j-card.sheet.dragging { transition: none; }
 
@@ -2113,7 +2065,19 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        (230px), so widening the left padding from 1rem to 3.2rem leaves 289px
        of column against a 230px longest line. Same four lines, same balance,
        the mark simply has the margin to itself. */
-    .j-block.pos-bottomleft { width: 94vw; padding-left: 3.2rem; padding-right: 1rem; }
+    /* Final's phone composition now belongs decisively to the lower-left.
+       The rail moved to the right in the navigation redux, so the old 3.2rem
+       left gutter was protecting a lane that no longer exists. Reclaim it for
+       the epilogue: the wider measure gives the heading a calmer three-line
+       shape, while the lower anchor leaves the field to curl over the copy
+       instead of leaving both elements stranded around the frame's middle. */
+    .j-block.pos-bottomleft {
+      left: 0;
+      bottom: 6vh;
+      width: 100vw;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
     .j-block.pos-bottomleft .j-h { text-wrap: balance; }
     /* the hero makes the same trim to `.pill` at this width — the pair follows
        its own vocabulary rather than inventing a second phone size */
@@ -2959,10 +2923,14 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        The placement itself is not motion and is deliberately left alone:
        it is where the box IS, not how it got there. */
     .j-card.j-card-enter,
+    .j-card.j-detail-enter,
+    .j-card.j-card-exit,
     .j-card.j-card-enter::before,
     .j-card.j-card-enter .j-card-h,
     .j-card.j-card-enter .j-card-body > :not(.j-card-h),
     .j-pop.j-pop-enter,
+    .j-pop.j-detail-enter,
+    .j-pop.j-pop-exit,
     .j-pop.j-pop-enter::before,
     .j-pop.j-pop-enter .j-pop-t,
     .j-pop.j-pop-enter .j-pop-s,

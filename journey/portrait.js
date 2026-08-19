@@ -365,11 +365,17 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
   // phone typography (<= 620px), so use it here too. Moving eye and target by
   // the same amount is a pure vertical truck: foreground + background colony
   // rise together while pitch, scale, diagonal and reveal drivers stay exact.
+  // The first taste pass lifted the colony 1.45 units, leaving a broad empty
+  // ground band between it and Final's lower-left copy. The epilogue wants the
+  // opposite relationship on phones: the field should settle down over the
+  // heading and loosely wrap its top edge. A small downward camera truck puts
+  // the near stems and the right-hand cap back into that band without changing
+  // their scale, the cutaway diagonal, or any camera-pure reveal threshold.
   if (viewportWidth <= 620 && aspect < 1) {
     const finalW = smooth01(
       (p - startOf('final')) / (restProgress('final') - startOf('final')),
     );
-    const lift = 1.45 * finalW;
+    const lift = -0.35 * finalW;
     pose.pos.y -= lift;
     pose.target.y -= lift;
   }
