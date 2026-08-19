@@ -1,0 +1,4 @@
+# Forces Railpack's python provider so serve.py can run on Railway.
+# serve.py sends no-store, must-revalidate + range support (Caddy's
+# staticfile default sends no Cache-Control, so mobile browsers serve
+# stale module files after deploys).
