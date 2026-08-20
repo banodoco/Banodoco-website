@@ -14,6 +14,12 @@ import { CARD_BUILDERS, CARD_ICONS } from './cards/index.js';
 import { createRail } from './rail.js';
 import { claimInput, releaseInput } from './scroll.js';
 import { CHAPTERS } from './route.js';
+import { JOURNEY_SCHEMA } from './structure.js';
+import { createSheetGesture } from './ui/sheet-gesture.js';
+import { applyHotspotLabelPolicy } from './ui/label-policy.js';
+import { buildActions, createCard, createPopover, el } from './ui/dom.js';
+import { createArrivalMotion } from './ui/arrival-motion.js';
+import { createLiveRegion } from './ui/live-region.js';
 import {
   COPY_BANDS, COPY_FADE_P,
   COPY_OUT_K, COPY_IN_K, COPY_SETTLE_LO, COPY_SETTLE_HI,
@@ -60,7 +66,10 @@ const CARD_FADE_MS = 190;
 // shell fade has already gone dark.
 const CARD_DRAG_FADE_MS = 320;
 
-const CHAPTER_POSITION = {
+const CHAPTER_POSITION = Object.fromEntries(JOURNEY_SCHEMA.chapters
+  .filter(({ copyPosition }) => copyPosition)
+  .map(({ id, copyPosition }) => [id, copyPosition]));
+/*
   inspire: 'pos-bottom',
   // Connect restage (16-connect-ground-restage.md, Hannah 2026-08-04): the
   // mushroom takes the TOP-LEFT, the copy takes the TOP-RIGHT, and the three
@@ -73,7 +82,7 @@ const CHAPTER_POSITION = {
   // bottom-left corner — it floats on the dark cutaway wedge while the upper
   // frame belongs to the fairy ring and the field behind it.
   final: 'pos-bottomleft',
-};
+}; */
 
 /* Chapters whose prose `sub` fires a scene response on hover.
    Ride-through #2 gave the Owned claims list a job beyond copy: each <li>
@@ -96,13 +105,6 @@ const CHAPTER_POSITION = {
    says so here and every other chapter is untouched. Nothing asks for one
    today. */
 const CHAPTER_SUB_PULSE = {};
-
-function el(tag, cls, text) {
-  const n = document.createElement(tag);
-  if (cls) n.className = cls;
-  if (text != null) n.textContent = text;
-  return n;
-}
 
 function smoothA(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); }
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -141,35 +143,6 @@ const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
    focus/touch parity for free — the same rule that lights the dot reveals
    the label.
    -------------------------------------------------------------------------- */
-const LABEL_POLICY_STYLE_ID = 'j-hot-label-policy';
-
-function ensureLabelPolicyStyles() {
-  if (typeof document === 'undefined' || document.getElementById(LABEL_POLICY_STYLE_ID)) return;
-  const s = document.createElement('style');
-  s.id = LABEL_POLICY_STYLE_ID;
-  // Injected rather than authored in the page stylesheet so the behaviour ships with
-  // the contract that defines it. Specificity is one class above the base
-  // `.j-hot:is(:hover, .hot, :focus-visible)` treatment, so the hot state
-  // wins in both directions. The chip's chrome (pill, dot, text) fades as
-  // ONE object on the same 0.3s the rest of the hotspot uses; the button box
-  // itself keeps its size and hit area, so a hover target never moves or
-  // resizes as its label arrives.
-  // `:not(.bare)` throughout (2026-08-14): a BARE chip has no label to reveal
-  // and no pill to light — ui.js has deleted both from the DOM. Without the
-  // guard the lit-background rule still applies to it, and only fails to paint
-  // because the box happens to be empty; that is a rule waiting to reappear the
-  // first time anything is put back inside the button. The chip is bare here
-  // too, not merely bare in the stylesheet.
-  s.textContent = [
-    '.j-hot.label-hover { background: transparent; }',
-    '.j-hot.label-hover:not(.bare) > * { opacity: 0; transition: opacity 0.3s; }',
-    '.j-hot.label-hover:not(.bare):is(:hover, .hot, :focus-visible) { background: rgba(18, 12, 4, 0.6); }',
-    '.j-hot.label-hover:not(.bare):is(:hover, .hot, :focus-visible) > * { opacity: 1; }',
-    '@media (prefers-reduced-motion: reduce) { .j-hot.label-hover:not(.bare) > * { transition: none; } }',
-  ].join('\n');
-  document.head.appendChild(s);
-}
-
 function bandOpacity(p, band) {
   if (!band) return 0;
   const { lo, hi } = band;
@@ -248,7 +221,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       // cached on the element: paintCopy reaches for it every frame, for every
       // chapter, and a per-frame querySelector for a node we already hold is a
       // reflow risk for nothing.
-      actionRows[c.id] = b.appendChild(buildActions(c.id, data.actions));
+      actionRows[c.id] = b.appendChild(buildActions(data.actions));
     }
     copyHost.appendChild(b);
     blocks[c.id] = b;
@@ -298,23 +271,6 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
      block at opacity 0.08 mid-travel must not be clickable or tabbable, and
      `visibility:hidden` alone only covers the last 0.2% of that fade.
      ========================================================================== */
-
-  function buildActions(chapterId, specs) {
-    const row = el('div', 'j-actions');
-    // The row is furniture around named controls, not a landmark and not a
-    // list — it carries no role. Its children carry the whole meaning.
-    for (const spec of specs) {
-      // Anything that is not a destination belongs in the SCENE now, not in
-      // the copy — see the 2026-08-13 section of 20-owned-root-network.md.
-      if (spec.kind !== 'link') continue;
-      const node = el('a', `j-act j-act-${spec.weight || 'primary'}`);
-      node.href = spec.href || '#';
-      if (spec.id) node.dataset.action = spec.id;
-      node.appendChild(el('span', 'j-act-t', spec.label));
-      row.appendChild(node);
-    }
-    return row;
-  }
 
   /* ---------------- hotspot proxies ---------------- */
   const hotHost = el('div', 'j-hotspots');
@@ -413,7 +369,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
      little air. */
   const POP_ENTER_MS = 700;
 
-  const pop = el('aside', 'j-pop');
+  const {
+    pop,
+    title: popTitle,
+    short: popShort,
+    link: popLink,
+  } = createPopover(hotHost);
   /* ---- rich stages (2026-08-17, "show, don't tell" previews) ----------
      Six nodes carry a builder in journey/cards/ that fills a media stage
      with that project's own assets and motion. The stage is built lazily,
@@ -462,20 +423,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       delete pop.dataset.node;
     }
   }
-  const popTitle = el('strong', 'j-pop-t');
   // The description is the SHORT LINE only, not the whole popover: the title
   // duplicates the chip's accessible name and the link is a control, and
   // neither belongs in a description string.
-  const popShort = el('span', 'j-pop-s');
-  popShort.id = 'j-pop-s';
-  const popLink = el('a', 'j-pop-link');
   // Out of the tab order until a popover is actually PINNED — it gains an href
   // on first reveal, and an <a href> is tabbable by default.
-  popLink.tabIndex = -1;
-  pop.appendChild(popTitle);
-  pop.appendChild(popShort);
-  pop.appendChild(popLink);
-  hotHost.appendChild(pop);
 
   let popNode = null;        // the hotspot the popover currently belongs to
   let popPinned = false;     // committed (click / Enter / Space / deep link)
@@ -812,11 +764,6 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   let policyPending = false;
 
   function applyLabelPolicy(h, pol) {
-    if (!pol) return;
-    if (typeof pol.label === 'string' && pol.label) {
-      h.label = pol.label;
-      if (h.labelEl) h.labelEl.textContent = pol.label;
-    }
     /* `chip: 'none'` — THE CHIP PAINTS NOTHING, EVER (2026-08-14, Hannah:
        "there are now two things that show on the orbs upon hover, can you
        please delete the smaller ones, we should only keep the black one
@@ -841,24 +788,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
        OWNED-ONLY removal: Inspire's and Connect's chips declare no policy at
        all, keep their resting pills, and are untouched — verified by their
        label boxes still measuring their full width. */
-    if (pol.chip === 'none') {
-      h.chipBare = true;
-      h.btn.classList.add('bare');
-      if (h.labelEl) { h.labelEl.remove(); h.labelEl = null; }
-      if (h.dotEl) { h.dotEl.remove(); h.dotEl = null; }
-    }
     // A bare chip draws nothing at rest either, so it is `labelOnHover` in
     // every sense the rest of this file uses the flag for — the collision
     // dodge skips it, and the arrival stagger does not queue it.
-    h.labelOnHover = !!pol.labelOnHover || h.chipBare;
-    h.btn.classList.toggle('label-hover', h.labelOnHover);
     // AT parity (the whole point): the chip may be invisible for most of its
     // life, the ACCESSIBLE NAME never is. A screen reader hears the same
     // "Name · Role" a pointer reveals, at rest and while hot alike. Set for
     // every policied node, hover-only or not, so the name is stated rather
     // than inherited from text whose visibility this file is now changing.
-    h.btn.setAttribute('aria-label', h.label);
-    if (h.labelOnHover) ensureLabelPolicyStyles();
+    applyHotspotLabelPolicy(h, pol);
   }
 
   /** Ask each chapter module, once, what it wants for its own nodes.
@@ -1450,23 +1388,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   // moved in on open, TRAPPED while open, and returned to the trigger on close
   // (PL-2.2). aria-modal only tells the truth if the trap exists, which is why
   // W3-A left it 'false'; the trap below is what earns the 'true'.
-  const card = el('aside', 'j-card');
-  card.setAttribute('role', 'dialog');
-  card.setAttribute('aria-modal', 'true');
-  card.hidden = true;
   // The grab handle for the bottom-sheet form (PL-1.3). Purely a pointer
   // affordance — the keyboard's route out is Escape and the close button — so
   // it is hidden from AT rather than announced as a mystery control.
-  const cardGrip = el('div', 'j-card-grip');
-  cardGrip.setAttribute('aria-hidden', 'true');
-  const cardClose = el('button', 'j-card-x', '✕');
-  cardClose.type = 'button';
-  cardClose.setAttribute('aria-label', 'Close');
-  const cardBody = el('div', 'j-card-body');
-  card.appendChild(cardGrip);
-  card.appendChild(cardClose);
-  card.appendChild(cardBody);
-  document.body.appendChild(card);
+  const { card, grip: cardGrip, close: cardClose, body: cardBody } = createCard();
   cardClose.addEventListener('click', () => onClose());
   let returnFocus = null;
   let cardIsOpen = false;       // the TRUTH; `card.hidden` lags it by one fade
@@ -1564,16 +1489,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
      reader user is silently reading the wrong node. This says what happened.
      It is only used for the retarget/no-trigger cases; a normal open moves
      focus into the dialog, which announces itself. */
-  const live = el('div', 'j-live');
-  live.setAttribute('aria-live', 'polite');
-  live.setAttribute('aria-atomic', 'true');
-  document.body.appendChild(live);
-  let liveTimer = null;
-  function announce(msg) {
-    if (liveTimer) clearTimeout(liveTimer);
-    live.textContent = '';           // a repeat of identical text is silent
-    liveTimer = setTimeout(() => { live.textContent = msg; liveTimer = null; }, 60);
-  }
+  const { announce } = createLiveRegion();
 
 
   // Focus trap. The card's own controls are the whole world while it is open,
@@ -1603,77 +1519,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
 
      Dismissal is distance OR flick velocity, so a short sharp swipe works and
      a slow drag that changes its mind does not. */
-  let drag = null;
-  let dragReleaseTimer = null;
-
-  function endDrag(dismiss) {
-    const released = drag;
-    drag = null;
-    if (!released) return;
-
-    if (dismiss) {
-      if (reduceMotion.matches) {
-        card.classList.remove('dragging');
-        card.style.transform = '';
-        onClose();
-        return;
-      }
-      /* Keep the finger's last transform as the transition's FROM value.
-         Removing `.dragging` restores the sheet's authored transform easing;
-         sending the panel one full panel-height down then lets closeCard's
-         simultaneous opacity release finish naturally. Clearing transform
-         first made it spring UP to rest for one frame before closing — the
-         reported bounce. finishClose() owns the eventual inline cleanup. */
-      card.style.transform = `translateY(${released.dy.toFixed(1)}px)`;
-      void card.offsetHeight;
-      card.classList.remove('dragging');
-      card.style.transform = `translateY(${Math.ceil(released.h + 24)}px)`;
-      // Let the transform transition become a rendered release before the
-      // ordinary close path drops `.open`. This tiny task boundary also avoids
-      // WebKit coalescing the finger position, offscreen target and close into
-      // one non-transitioning style change.
-      dragReleaseTimer = setTimeout(() => {
-        dragReleaseTimer = null;
-        if (!cardIsOpen) return;
-        onClose();
-      }, 20);
-      return;
-    }
-
-    // A cancelled drag springs back through the same authored transition.
-    card.classList.remove('dragging');
-    card.style.transform = '';
-  }
-
-  cardGrip.addEventListener('pointerdown', (e) => {
-    if (!card.classList.contains('sheet') || !cardIsOpen) return;
-    if (e.button != null && e.button > 0) return;
-    if (dragReleaseTimer !== null) {
-      clearTimeout(dragReleaseTimer);
-      dragReleaseTimer = null;
-    }
-    drag = {
-      id: e.pointerId, y0: e.clientY, dy: 0,
-      t0: performance.now(), h: card.getBoundingClientRect().height || 1,
-    };
-    card.classList.add('dragging');
-    try { cardGrip.setPointerCapture(e.pointerId); } catch { /* not captured: the window listeners below still see it */ }
-    e.preventDefault();
-  });
-  cardGrip.addEventListener('pointermove', (e) => {
-    if (!drag || e.pointerId !== drag.id) return;
-    drag.dy = Math.max(0, e.clientY - drag.y0);      // downward only
-    card.style.transform = `translateY(${drag.dy.toFixed(1)}px)`;
-  });
-  const finishDrag = (e) => {
-    if (!drag || e.pointerId !== drag.id) return;
-    const dt = Math.max(1, performance.now() - drag.t0);
-    const flick = drag.dy / dt;                       // px per ms
-    endDrag(drag.dy > drag.h * 0.28 || (flick > 0.55 && drag.dy > 44));
-  };
-  cardGrip.addEventListener('pointerup', finishDrag);
-  cardGrip.addEventListener('pointercancel', (e) => {
-    if (drag && e.pointerId === drag.id) endDrag(false);
+  const sheetGesture = createSheetGesture({
+    card,
+    grip: cardGrip,
+    reduceMotion,
+    isOpen: () => cardIsOpen,
+    onClose,
   });
 
   /* ---------------- chapter SELECTION hook (W4-E) ----------------
@@ -2210,10 +2061,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
    *  is what lets the transient tier reuse it wholesale. */
   function hideCard() {
     if (!cardIsOpen) return;
-    if (dragReleaseTimer !== null) {
-      clearTimeout(dragReleaseTimer);
-      dragReleaseTimer = null;
-    }
+    sheetGesture.cancelRelease();
     cardIsOpen = false;
     cardPinned = false;
     // The entry is dropped before the shared exit is armed, so the two shell
@@ -2222,7 +2070,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     cardAnchor = null;
     card.inert = true;
     releaseInput(card);
-    if (drag) { drag = null; card.classList.remove('dragging'); }
+    sheetGesture.reset();
     if (selectedNode) { notifySelect(selectedNode, false); selectedNode = null; }
     pinnedNode = null;
     syncExpanded();
@@ -2339,6 +2187,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
      See COPY_JUMP_LEAD / COPY_JUMP_COPY_TAIL_S for the timing model. */
   const easedPrev = { ...eased };
   let arrive = null;   // { id, t, lead, dur, own, started, motions }
+  const arrivalMotion = createArrivalMotion({ blocks, reduceMotion });
 
   /* The block envelope already owns copy opacity. Giving the heading, body
      and action row their own opacity keyframes multiplies two fades together:
@@ -2350,58 +2199,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
      first-draw stall. The pseudo-element's quiet bed-light remains CSS-owned;
      it carries no text and cannot mask the choreography. */
   function startArriveMotion(a) {
-    const b = blocks[a.id];
-    if (!b) { a.started = true; return; }
-    void b.offsetWidth; // re-arm a same-section jump after the prior cleanup
-    b.classList.add('j-arrive');
-    a.started = true;
-    a.motions = [];
-    if (reduceMotion.matches || typeof Element.prototype.animate !== 'function') return;
-
-    const specs = [
-      [b.querySelector('.j-h'), 0.12, 0.66],
-      [b.querySelector('.j-sub'), 0.26, 0.66],
-      ...[...b.querySelectorAll('.j-act')].map((el) => [
-        el,
-        parseFloat(getComputedStyle(el).getPropertyValue('--j-act-lead')) || 0.40,
-        parseFloat(getComputedStyle(el).getPropertyValue('--j-act-dur')) || 0.52,
-      ]),
-    ];
-    for (const [el, delayF, durF] of specs) {
-      if (!el) continue;
-      // Suppress the class's opacity+transform CSS animation while preserving
-      // every resting style. The inline declaration exists only for this
-      // arrival and is removed by endArrive().
-      el.style.animation = 'none';
-      const motion = el.animate(
-        [{ transform: 'translateY(0.16em)' }, { transform: 'translateY(0)' }],
-        {
-          delay: a.dur * delayF * 1000,
-          duration: a.dur * durF * 1000,
-          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-          fill: 'both',
-        },
-      );
-      motion.pause();
-      motion.currentTime = 0;
-      a.motions.push({ el, motion });
-    }
+    arrivalMotion.start(a);
   }
 
   function syncArriveMotion(a) {
-    if (!a.started || !a.motions) return;
-    const phaseMs = Math.max(0, (a.t - a.lead) * 1000);
-    for (const { motion } of a.motions) motion.currentTime = phaseMs;
+    arrivalMotion.sync(a);
   }
 
   function clearArriveMotion(a) {
-    if (!a) return;
-    for (const { el, motion } of (a.motions || [])) {
-      motion.cancel();
-      el.style.removeProperty('animation');
-    }
-    const b = blocks[a.id];
-    if (b) b.classList.remove('j-arrive');
+    arrivalMotion.clear(a);
   }
 
   /** The one place a copy block's eased opacity reaches the DOM.
@@ -2800,6 +2606,27 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         h.sx = sx; h.sy = sy;
       }
       const vis = h.a > 0.015;
+      if (h.iconTab) {
+        /* THE INITIATIVE MARKER'S INNER ARRIVAL. `h.a` is already the one
+           truthful reveal clock: it begins after this hotspot's existing
+           chapter stagger, follows a scene-supplied reveal when there is one,
+           reverses on departure, and snaps on dt=0 placements. Derive the
+           little shell / pictograph / name sequence from that value rather
+           than starting a CSS animation or timer when `.vis` changes. That
+           keeps hover completely out of the lifecycle (it cannot replay the
+           entry), and leaves the button's transform exclusively available to
+           the world-placement and collision-dodge pass below. */
+        const shellIn = smoothA(clamp01(h.a / 0.68));
+        const iconIn = smoothA(clamp01((h.a - 0.04) / 0.74));
+        const labelIn = smoothA(clamp01((h.a - 0.16) / 0.84));
+        h.btn.style.setProperty('--j-hot-shell-in', shellIn.toFixed(3));
+        h.btn.style.setProperty('--j-hot-shell-y', `${((1 - shellIn) * 2).toFixed(2)}px`);
+        h.btn.style.setProperty('--j-hot-icon-in', iconIn.toFixed(3));
+        h.btn.style.setProperty('--j-hot-icon-y', `${((1 - iconIn) * 4).toFixed(2)}px`);
+        h.btn.style.setProperty('--j-hot-icon-scale', (0.92 + iconIn * 0.08).toFixed(3));
+        h.btn.style.setProperty('--j-hot-label-in', labelIn.toFixed(3));
+        h.btn.style.setProperty('--j-hot-label-y', `${((1 - labelIn) * 3).toFixed(2)}px`);
+      }
       h.btn.style.opacity = h.a;
       h.btn.classList.toggle('vis', vis);
       // Roving tab order: exactly the hotspots of the chapter at rest, in

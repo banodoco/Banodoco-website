@@ -71,7 +71,7 @@ const FOCAL_D = 10.5, FOCAL_R = 14.0;
 const SHED_GAIN = 2.4;
 
 import * as THREE from 'three';
-import { makeGlowTexture, CAP_Y, capUnderPt } from '../../anatomy.js';
+import { makeGlowTexture, capUnderPt } from '../../anatomy.js';
 import { makeRng, gaussOf, heat } from './world.js';
 import { breeze } from './clones.js';
 

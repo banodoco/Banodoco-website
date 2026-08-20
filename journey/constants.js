@@ -18,6 +18,7 @@
 // seam/fog tables below are computed against the manifest so a re-timed
 // route carries them along.
 import { startOf, restProgress } from './route.js';
+import { JOURNEY_SCHEMA } from './structure.js';
 
 // Virtual scroll (no native scroll surface: the hero page stays
 // overflow:hidden, so nothing about hero layout or rendering changes).
@@ -337,13 +338,10 @@ export const COMMIT_BRAKE_TAIL_S = 0.35;    // seconds
 // open-ended sentinels bandOpacity() understands (no fade at that edge).
 // Shipped values unchanged: mission hi 0.042; inspire 0.248..0.338; connect
 // 0.476..0.548; owned 0.716..0.792; final lo 0.914.
-export const COPY_BANDS = {
-  mission: { lo: -1, hi: restProgress('mission') + 0.042 },
-  inspire: { lo: restProgress('inspire') - 0.012, hi: restProgress('inspire') + 0.078 },
-  connect: { lo: restProgress('connect') - 0.014, hi: restProgress('connect') + 0.058 },
-  owned:   { lo: restProgress('owned') - 0.009,   hi: restProgress('owned') + 0.067 },
-  final:   { lo: restProgress('final') - 0.011,   hi: 2 },
-};
+export const COPY_BANDS = Object.fromEntries(JOURNEY_SCHEMA.chapters.map(({ id, copyBand }) => [id, {
+  lo: copyBand.lo === null ? -1 : restProgress(id) + copyBand.lo,
+  hi: copyBand.hi === null ? 2 : restProgress(id) + copyBand.hi,
+}]));
 export const COPY_FADE_P = 0.020;      // fade width at each edge of a band
 
 /* ------------------------------------------------------------------ */

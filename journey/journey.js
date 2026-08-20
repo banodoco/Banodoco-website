@@ -24,11 +24,6 @@ import { createDirector } from './director.js';
 import { createSeams } from './seams.js';
 import { createLens } from './lens.js';
 import { createUI } from './ui.js';
-import { createInspire } from './chapters/inspire/index.js';
-import { createConnect } from './chapters/connect/index.js';
-import { createOwned } from './chapters/owned/index.js';
-import { createFinal } from './chapters/final/index.js';
-import { CONTENT } from '../content/content.js';
 import {
   CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, startOf,
 } from './route.js';
@@ -37,6 +32,18 @@ import {
   COPY_JUMP_LEAD, COPY_JUMP_TAIL_S, COPY_IN_K,
 } from './constants.js';
 import { STEADY, P as P_FLAG, POSE as POSE_FLAG, CAPTURE } from '../flags.js';
+import {
+  startChapterEntry, snapChapterLandings, snapChapterPlacements,
+} from './chapter-entry.js';
+import { registerChapterInteractions } from './chapter-interactions.js';
+import { buildChapters } from './chapter-registry.js';
+import { createFailureGuard } from './failure-guard.js';
+import { arcLength, azTurn } from './camera-path.js';
+import { normaliseNode } from './navigation.js';
+import { createCameraBlendStepper } from './camera-blend.js';
+import { applyChapterFrame } from './frame-application.js';
+
+export { prepareChapter } from './chapter-registry.js';
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -50,28 +57,6 @@ const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
    rimRad / capUnderPt). So "around the mushroom" is nothing more exotic than
    cylindrical coordinates about that axis, and a camera move authored in
    them is geometry-safe by construction rather than by correction. */
-const azOf = (v) => Math.atan2(v.x, v.z);
-const radOf = (v) => Math.hypot(v.x, v.z);
-
-/** Signed azimuth a -> b, always the short way round (|d| <= PI). Both inputs
- *  come from atan2, so their difference is within +/-2PI and one wrap fixes it. */
-function azDelta(a, b) {
-  const d = azOf(b) - azOf(a);
-  return d > Math.PI ? d - 2 * Math.PI : d < -Math.PI ? d + 2 * Math.PI : d;
-}
-
-/** The signed azimuth a -> b taken deliberately THE OTHER WAY: the same
- *  landing, reached by continuing in `turn`'s rotational sense instead of
- *  doubling back. |result| is then >= PI, and result - azDelta is exactly one
- *  whole turn, so a path built on it arrives at the identical pose. Only the
- *  loop's wrap asks for this (see WRAP_TURN in directJumpTo). */
-function azTurn(a, b, turn) {
-  const d = azDelta(a, b);
-  if (turn > 0 && d < 0) return d + 2 * Math.PI;
-  if (turn < 0 && d > 0) return d - 2 * Math.PI;
-  return d;
-}
-
 /** a -> b at ease e, interpolated AROUND the axis: azimuth the short way,
  *  horizontal radius and height lerped independently. Two properties fall
  *  straight out and are the whole reason for the form — the path's radius is
@@ -86,29 +71,9 @@ function azTurn(a, b, turn) {
  *  was a lift running on linear f under a position running on smootherstep,
  *  and that shape is unreachable here. A positive `bow` only ever moves the
  *  path further from the axis, so the clearance guarantee above survives it. */
-function arcLerp(a, b, e, out, az1, bow, rise) {
-  const rA = radOf(a), rB = radOf(b);
-  const d = az1 === undefined || az1 === null ? azDelta(a, b) : az1;
-  // A pose ON the axis has no azimuth of its own; borrow the other end's, so
-  // the move degrades to a pure radial one instead of to NaN. No shipped
-  // pose is nearer the axis than r = 0.5 (the Owned rest), but the camera is
-  // free geometry and this costs one comparison.
-  const az = rA < 1e-3 ? azOf(b) : rB < 1e-3 ? azOf(a) : azOf(a) + d * e;
-  const swell = bow || rise ? Math.sin(Math.PI * e) : 0;
-  const r = rA + (rB - rA) * e + (bow || 0) * swell;
-  const y = a.y + (b.y - a.y) * e + (rise || 0) * swell;
-  return out.set(Math.sin(az) * r, y, Math.cos(az) * r);
-}
-
 /** Length of that path — what a jump's duration is measured against. The
  *  swept arc is taken at the mean radius, which is exact for a pure orbit and
  *  within a few percent of the true spiral otherwise. */
-function arcLength(a, b, az1) {
-  const rA = radOf(a), rB = radOf(b);
-  const d = az1 === undefined || az1 === null ? azDelta(a, b) : az1;
-  return Math.hypot(Math.abs(d) * 0.5 * (rA + rB), rB - rA, b.y - a.y);
-}
-
 /* The wrap path's three authored numbers (see directJumpTo's WAY HOME block).
    `let`, and reachable through window.journey.wrapTuning, only so the path can
    be swept and re-rendered without a reload — the shipped values are these. */
@@ -153,26 +118,6 @@ let started = false;
    (organism.js addAnimator's documented semantics), so prebuilt chapters
    still run after the spine. A caller that skips prepareChapter entirely
    (flush paths, direct boot) gets the old synchronous build inside boot(). */
-const CHAPTER_BUILDERS = {
-  inspire: (s) => createInspire(s),
-  connect: (s) => createConnect(s),
-  owned: (s) => createOwned(s, CONTENT),
-  final: (s) => createFinal(s),
-};
-const _preparedChapters = {};
-
-/** Build the next not-yet-built chapter; returns how many remain. Idempotent
- *  per chapter and safe to interleave from racing loader chains. */
-export function prepareChapter(sceneApi) {
-  for (const id of Object.keys(CHAPTER_BUILDERS)) {
-    if (!_preparedChapters[id]) {
-      _preparedChapters[id] = CHAPTER_BUILDERS[id](sceneApi);
-      break;
-    }
-  }
-  return Object.keys(CHAPTER_BUILDERS).filter((id) => !_preparedChapters[id]).length;
-}
-
 export function boot(opts = {}) {
   if (started) return window.journey;
   started = true;
@@ -239,10 +184,7 @@ export function boot(opts = {}) {
   // One chapter per idle slice (prepareChapter below) when the loader had
   // time; anything not prebuilt lands here synchronously, so boot's contract
   // — chapters exist when it returns — is unchanged on every path.
-  const chapters = {};
-  for (const id of Object.keys(CHAPTER_BUILDERS)) {
-    chapters[id] = _preparedChapters[id] || CHAPTER_BUILDERS[id](sceneApi);
-  }
+  const chapters = buildChapters(sceneApi);
 
   const seams = createSeams({
     camera: sceneApi.camera,
@@ -315,55 +257,6 @@ export function boot(opts = {}) {
   });
 
   // hotspot proxies, one per named node (GB-4.1)
-  const NODE_CHAPTER = {};
-  function registerHotspots(chapterId, ids, mod) {
-    for (const id of ids) {
-      NODE_CHAPTER[id] = chapterId;
-      const label = (CONTENT.nodes[id] && CONTENT.nodes[id].label)
-        || (CONTENT.contributors.find(c => c.id === id) || {}).role
-        || id;
-      const h = ui.addHotspot({
-        id, chapter: chapterId, label,
-        world: () => mod.nodeWorld(id),
-        // Optional (2026-08-06, report A): the world radius of what this node
-        // DRAWS, so its chip's hit target can be the node itself rather than
-        // the label pill beside it. A chapter that does not implement
-        // nodeRadius keeps the pill-only hit model unchanged.
-        radius: typeof mod.nodeRadius === 'function' ? () => mod.nodeRadius(id) : undefined,
-        // Optional (2026-08-16): a per-node scene gate. A chapter that
-        // implements nodeReveal ties each chip's arrival to what the scene
-        // draws for that node (Connect: each hub's own light landing) instead
-        // of to the chapter's copy block; one that does not keeps the
-        // copy-gated arrival unchanged.
-        reveal: typeof mod.nodeReveal === 'function' ? () => mod.nodeReveal(id) : undefined,
-        // Inspire's nodeReveal is also the light's complete opacity envelope,
-        // so its labels mirror it rather than layering on the shared chip
-        // threshold/ease. Other reveal chapters retain their shipped UI law.
-        revealDirect: mod.revealDirect === true,
-      });
-      h.onHot = (on) => mod.setHot && mod.setHot(id, on);
-    }
-  }
-  /** Scene-owned hover targets with no chip — see ui.addHoverZone. */
-  function registerHoverZones(chapterId, mod) {
-    if (typeof mod.hoverZones !== 'function') return;
-    for (const z of mod.hoverZones()) {
-      ui.addHoverZone({
-        id: z.id, chapter: chapterId, world: z.world, radius: z.radius,
-        onHot: (on) => mod.setHot && mod.setHot(z.id, on),
-        // A zone that declares an `action` is a real control, not scenery:
-        // ui.js builds it as a <button> and gives it the same trigger
-        // contract the chapter's copy-level buttons use ({announce, busyMs}).
-        // The chapter module is in hand here, so the call is direct rather
-        // than going back out through window.journey.
-        label: z.label,
-        announce: z.announce,
-        action: z.action && mod.trigger
-          ? () => mod.trigger(z.action)
-          : null,
-      });
-    }
-  }
   // registration order = importance (ArtCompute -> Arca -> 2RP, per Plate II)
   // and still drives the tab order. WHEN each chip stands up moved to the
   // chapter's landing cascade (2026-08-16, the Connect precedent): nodeReveal
@@ -371,21 +264,7 @@ export function boot(opts = {}) {
   // in SCREEN order (Arca left, ArtCompute centre, 2RP right) as the embers
   // ignite — chapters/inspire/index.js 5c. The gate bound below is ui's eased
   // copy value, so ember + label land timed with the intro.
-  registerHotspots('inspire', ['artcompute', 'arca', 'tworp'], {
-    revealDirect: true,
-    nodeWorld: (id) => chapters.inspire.nodeWorld(id),
-    nodeReveal: (id) => chapters.inspire.nodeReveal(id),
-    setHot: (id, on) => {
-      const order = { artcompute: 0, arca: 1, tworp: 2 };
-      chapters.inspire.setActive(on ? order[id] : -1);
-    },
-  });
-  chapters.inspire.bindLandingGate(() => ui.copyEase('inspire'));
-  registerHotspots('connect', chapters.connect.nodeIds, chapters.connect);
-  registerHotspots('owned', chapters.owned.nodeIds, chapters.owned);
-  for (const id of ['inspire', 'connect', 'owned', 'final']) {
-    if (chapters[id]) registerHoverZones(id, chapters[id]);
-  }
+  const NODE_CHAPTER = registerChapterInteractions(ui, chapters);
 
   /* ================================================================
      THE HERO FURNITURE — ONE AUTHORITY
@@ -619,17 +498,6 @@ export function boot(opts = {}) {
   /* ================================================================
      Routes (adr-d6-routes.md)
      ================================================================ */
-  function normaliseNode(chapterId, nodeId) {
-    if (!nodeId) return null;
-    if (nodeId === '2rp') nodeId = 'tworp';
-    if (nodeId === 'community') nodeId = 'discord';  // D16 ground restage: legacy deep links land
-
-    const m = /^person-(\d+)$/.exec(nodeId);        // ADR spells the field person-N
-    if (m) nodeId = `contributor-${m[1]}`;
-    if (chapterId === 'final') return null;         // the epilogue has no detail state
-    return nodeId;
-  }
-
   function navigateTo(chapterId, wrap = 0) {
     closeDetail();
     directJumpTo(chapterId, wrap);
@@ -693,10 +561,6 @@ export function boot(opts = {}) {
   // p cannot tell the rail where that visible move is. This small ticket is
   // created before placeAt's synchronous frames and follows the camera clock.
   let railWrap = null;          // { dir, homeP, phase } while a wrap is flying
-  // Scratch for the live destination pose, read fresh every blend frame.
-  const _dstPos = sceneApi.camera.position.clone();
-  const _dstTgt = sceneApi.controls.target.clone();
-
   function directJumpTo(chapterId, wrap = 0) {
     const targetP = restProgress(chapterId);
     if (Math.abs(targetP - journey.progress) < 1e-4) return;
@@ -734,9 +598,10 @@ export function boot(opts = {}) {
     // Place, arm, never replay — but WITHOUT the eased-state snap. A jump is
     // not a placement: the camera is about to travel, so the chapters' eased
     // arm states must not be thrown to their destination values while it does.
-    // The snap is deferred to the landing (endCamBlend), which is the frame
-    // the journey's state and the camera agree again. This is the WebGL half
-    // of what ui.armCopyEntry already does for the copy layer.
+    // Seam/arming settlement is deferred to the landing (endCamBlend), which
+    // is the frame the journey's state and camera agree again. Visible intro
+    // clocks are deliberately excluded; they may outlive the camera move.
+    // This is the WebGL half of what ui.armCopyEntry does for the copy layer.
     cameraStateDisagree = true;
     railWrap = wrap ? {
       dir: wrap,
@@ -745,11 +610,7 @@ export function boot(opts = {}) {
     } : null;
     // Install before placeAt: its two synchronous dt=0 passes must see the
     // beginning of the entry, not one transient fully-arrived drive(p) state.
-    const entryChapter = chapters[chapterId];
-    chapterEntry = entryChapter && typeof entryChapter.driveEntry === 'function'
-      ? { id: chapterId, f: 0, t: 0,
-          dur: Math.max(0.001, Number(entryChapter.entryDuration) || 1) }
-      : null;
+    chapterEntry = startChapterEntry(chapterId, chapters[chapterId], guarded);
     placeAt(targetP, { snap: false });
     /* THE WAY HOME (2026-08-12 — the loop). A wrap is the same transition as
        every other nav jump; only its PATH is authored, because the shortest
@@ -894,15 +755,8 @@ export function boot(opts = {}) {
   // drive() would otherwise disable scroll, nav and copy along with it.
   // guarded() latches per name: first throw logs the error once and disables
   // that subsystem; every later call is skipped; the rest of the frame runs.
-  const deadSystems = new Set();
-  function guarded(name, fn) {
-    if (deadSystems.has(name)) return;
-    try { fn(); }
-    catch (err) {
-      deadSystems.add(name);
-      console.error(`[journey] '${name}' threw and was disabled — the ride continues without it:`, err);
-    }
-  }
+  const guarded = createFailureGuard();
+  const stepCamBlend = createCameraBlendStepper(sceneApi, director, lens, guarded, endCamBlend);
 
   /* ================================================================
      FRAME ORDER: THE CAMERA IS FINISHED BEFORE ANYTHING READS IT
@@ -1013,7 +867,7 @@ export function boot(opts = {}) {
     // abandons the blend instead — the camera keeps the destination pose the
     // director just wrote, which is where the jump was going anyway.
     if (camBlend) {
-      try { stepCamBlend(dt); }
+      try { stepCamBlend(camBlend, railWrap, dt); }
       catch (err) {
         console.error('[journey] camera blend threw — the jump lands directly:', err);
         endCamBlend();
@@ -1027,41 +881,12 @@ export function boot(opts = {}) {
        darkness and pop in fully lit at landing. A source pose that already
        looks down still starts at f=0 because the ticket was installed before
        placeAt; entryReady merely decides when frame time may begin accruing. */
-    let finishChapterEntry = false;
-    if (chapterEntry) {
-      const entryMod = chapters[chapterEntry.id];
-      let ready = !entryMod || typeof entryMod.entryReady !== 'function';
-      if (entryMod && entryMod.entryReady) {
-        guarded(`chapter:${chapterEntry.id}.entryReady`, () => {
-          ready = !!entryMod.entryReady();
-        });
-      }
-      if (ready) chapterEntry.t += Math.max(0, dt);
-      const ef = Math.min(chapterEntry.t / chapterEntry.dur, 1);
-      chapterEntry.f = ef * ef * ef * (ef * (ef * 6 - 15) + 10);
-      finishChapterEntry = ef >= 1;
-    }
-
     // Chapter-owned choreography (M4): any chapter exposing drive(p) runs it
     // here, after the seams have armed/retired it. Inspire's reveal drive
     // lives in chapters/inspire/index.js now — the spine knows no chapter's
     // internals. Each chapter is guarded individually: one broken chapter is
     // dropped, the others keep driving.
-    for (const id in chapters) {
-      const mod = chapters[id];
-      if (chapterEntry && chapterEntry.id === id && mod.driveEntry) {
-        guarded(`chapter:${id}.driveEntry`, () => mod.driveEntry(chapterEntry.f));
-      } else if (mod.drive) guarded(`chapter:${id}.drive`, () => mod.drive(p));
-      // ...and any chapter whose reveal is PACED by the camera (rather than
-      // merely gated by it) is told whether this frame's motion is the
-      // visitor's own hand or the machine's. A commit glide is the machine, in
-      // the same sense a camera blend is, so a chapter that rate-limits its
-      // reveal on a blend gets the chance to do the same here. Set every frame,
-      // never on edges: there is no state to drift.
-      if (mod.setGliding)
-        guarded(`chapter:${id}.setGliding`, () => mod.setGliding(scroll.gliding));
-    }
-    if (finishChapterEntry) chapterEntry = null;
+    chapterEntry = applyChapterFrame(chapters, chapterEntry, p, dt, scroll.gliding, guarded);
 
     // Optics (W5): ONE finishing language across the whole journey. The lens
     // owns the per-leg parameter curve; the journey supplies progress and the
@@ -1260,58 +1085,6 @@ export function boot(opts = {}) {
    *  already AT the destination; the camera glides straight from where it was
    *  onto that pose. A blend manual input has cancelled never reaches here:
    *  applyFrame drops it at the top of the frame. */
-  function stepCamBlend(dt) {
-    // Signed time: a steered wrap plays its lap backwards (play = -1) along
-    // the identical path. Clamped at zero so this frame still composes the
-    // lap's first pose; landWrapHome takes it from the top of the next frame.
-    camBlend.t += dt * camBlend.play;
-    if (camBlend.t < 0) camBlend.t = 0;
-    const f = Math.min(camBlend.t / camBlend.dur, 1);
-    const e = f * f * f * (f * (f * 6 - 15) + 10);   // smootherstep, C2 ends
-    if (railWrap) railWrap.phase = e;
-    const cam = sceneApi.camera, ctl = sceneApi.controls;
-    // The blend composes onto the DESTINATION pose read live from the
-    // camera — valid only if something wrote that pose this frame. While
-    // the director owns the camera (p past the hero band) its apply()
-    // above did; at p = 0 the hero restore is a ONE-SHOT inside
-    // setOwned(false), so on every later blend frame the camera still
-    // holds the blend's own previous output — lerping toward it fed the
-    // blend back into itself and parked the camera near the jump's
-    // start pose plus the lift arc (the M4-found stuck camera:
-    // end-hold -> Mission froze at ~(-15.9, 16.3, 2.6) fov 44).
-    // Re-assert the completed restore first, so the blend lands ON it
-    // and can never outlive or overwrite it. Composition order is
-    // preserved: destination writer first, blend on top, blend ends.
-    if (!director.owned) director.applyHeroPose();
-    _dstPos.copy(cam.position);
-    _dstTgt.copy(ctl.target);
-    const fv = camBlend.fov0 * (1 - e) + cam.fov * e;
-    arcLerp(camBlend.pos0, _dstPos, e, cam.position,
-      camBlend.az1, camBlend.bow, camBlend.rise);
-    ctl.target.lerpVectors(camBlend.tgt0, _dstTgt, e);
-    // ONE pose travels. Re-aim from where the camera actually IS — without
-    // this the frame keeps the destination's orientation over a start-pose
-    // position, which is the whip described above. Same no-roll write the
-    // director makes, so the composition order is unchanged: destination
-    // writer first, blend on top, blend ends.
-    cam.up.set(0, 1, 0);
-    cam.lookAt(ctl.target);
-    if (fv !== cam.fov) { cam.fov = fv; cam.updateProjectionMatrix(); }
-    // ...and the depth of the world travels on the same ease (see directJumpTo).
-    if (camBlend.fog) {
-      camBlend.fog.near = camBlend.fogN0 + (camBlend.fogN1 - camBlend.fogN0) * e;
-      camBlend.fog.far = camBlend.fogF0 + (camBlend.fogF1 - camBlend.fogF0) * e;
-    }
-    // ...and so does the grade. Written BEFORE lens.update(p) runs (it is
-    // further down applyFrame), so the override is in place by the time the
-    // lens reads it and there is never a frame of the destination's look on a
-    // camera that has not arrived.
-    for (const k in camBlend.look) {
-      camBlend.look[k] = camBlend.look0[k] + (camBlend.look1[k] - camBlend.look0[k]) * e;
-    }
-    guarded('lens', () => lens.setLookOverride(camBlend.look));
-    if (f >= 1) endCamBlend(true);
-  }
 
   /** The blend is over — landed, cancelled, or abandoned. The camera and the
    *  journey's state agree again from here, so this is where the eased arming
@@ -1377,7 +1150,7 @@ export function boot(opts = {}) {
     // by construction, exactly as the copy envelope's is (d1ecc23).
     guarded('lens', () => lens.setLookOverride(null));
     setBlending(false);
-    snapChapters();
+    snapChapterLandings(chapters, guarded);
   }
 
   /** Tell every chapter that owns the distinction whether the journey's state
@@ -1397,9 +1170,7 @@ export function boot(opts = {}) {
 
   /** Jump every chapter's eased state to its target (the placeAt contract). */
   function snapChapters() {
-    for (const id in chapters) {
-      if (chapters[id].snap) guarded(`chapter:${id}.snap`, () => chapters[id].snap());
-    }
+    snapChapterPlacements(chapters, guarded);
   }
 
   function spineFrame(t, dt) {
@@ -1434,8 +1205,8 @@ export function boot(opts = {}) {
    *  frame. A nav JUMP passes snap: false: there the camera is about to
    *  travel for the best part of a second, and throwing the chapters to their
    *  arrived states while it does is what left the epilogue composed over a
-   *  Mission camera. directJumpTo hands the snap to endCamBlend instead, so
-   *  the landing frame is still exactly the placed one. */
+   *  Mission camera. endCamBlend performs only the narrower nav-landing
+   *  reconciliation; the full placement snap remains exclusive to this path. */
   function placeAt(p, { detail = null, snap = true } = {}) {
     // A placement is already-arrived by definition. This also keeps a QA
     // placement issued during a flight deterministic rather than inheriting

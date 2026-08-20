@@ -29,7 +29,7 @@
 //     deactivate()        — hide or node-switch: stop everything started.
 //   }
 //   Builders must be idempotent under activate/deactivate cycling, must park
-//   still under prefers-reduced-motion (REDUCE below is live), and must not
+//   still under prefers-reduced-motion (REDUCE is live), and must not
 //   reach outside their stage.
 //
 // STATS POLICY (amends content/content.js's NO LIVE MODULES note, CO-3.1,
@@ -51,6 +51,11 @@ import tworp from './tworp.js';
 import ados from './ados.js';
 import hivemind from './hivemind.js';
 import discord from './discord.js';
+import { CARD_ASSETS } from './runtime.js';
+
+// Preserve the registry's public configuration exports while builders depend
+// on the acyclic runtime leaf rather than importing back through this module.
+export { CARD_ASSETS, REDUCE } from './runtime.js';
 
 // A module still under construction exports null; a null builder means the
 // node simply keeps the plain popover, so the site is shippable mid-build.
@@ -58,14 +63,6 @@ export const CARD_BUILDERS = Object.fromEntries(
   Object.entries({ arca, artcompute, tworp, ados, hivemind, discord })
     .filter(([, b]) => b),
 );
-
-/** Live reduced-motion query, shared by builders. */
-export const REDUCE = typeof matchMedia === 'function'
-  ? matchMedia('(prefers-reduced-motion: reduce)')
-  : { matches: false, addEventListener() {} };
-
-/** Root-relative asset base — index.html is served from glowshroom/. */
-export const CARD_ASSETS = './assets/cards';
 
 /* ---- idle-time warming (Hannah, 2026-08-18: assets "always loaded before
    we need them but not in a silly way where they'll slow down the site").

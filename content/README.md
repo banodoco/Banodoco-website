@@ -1,23 +1,30 @@
 # Editing content: what changes safely, and what needs code
 
 `content/content.js` is the single source of truth for every string on the
-site (13-content-ops.md CO-2.2: "No duplicated strings"). It has two readers:
-the live journey reads it directly, and `static/index.html` carries a
-**hand-authored twin** of the same copy, asserted by a drift guard at the foot
-of that file (`static/index.html:1729` imports `CONTENT`; any mismatch is a
-`console.error` naming the path, the expected string and the rendered one —
-`static/index.html:1808-1813`). The symbol marks get the same treatment
-(`static/index.html:1782-1815`).
+site (13-content-ops.md CO-2.2: "No duplicated strings"). The live journey
+reads it directly. The no-JavaScript tier is real, committed HTML whose
+`data-src` bindings are deterministically resolved from that model:
+
+```sh
+node tools/build-static-content.mjs          # update static/index.html
+node tools/build-static-content.mjs --check  # fail on drift; write nothing
+```
+
+The browser drift guard remains a diagnostic backstop, while rebuild and
+pre-commit use the non-writing check as a real gate. Symbol marks remain
+authored accessible SVG and are checked against `journey/symbols.js` by that
+browser guard; content generation does not rewrite their geometry.
 
 One extra mirror: the Mission sub is also the hero's own block in the Tier-1
-`index.html` (`index.html:118`). Every other string has exactly two homes.
+`index.html` (`index.html:118`). The static copy is generated output, not a
+second editing surface.
 Read the provenance comment above a string before touching it — the lock
 overrides mark which strings are Hannah's and how they were approved.
 
 ## Safe: strings only
 
-Editing a string in `content/content.js` **and** the matching spot in
-`static/index.html` changes nothing structural:
+Editing a string in `content/content.js`, then running the generator, changes
+nothing structural:
 
 - chapter `nav`, `heading`, `sub`
 - node `label`, `short`, `spotlight` `title`/`body`/`status`/`link.label`/`link.href`
@@ -25,10 +32,11 @@ Editing a string in `content/content.js` **and** the matching spot in
 - contributor `name`/`role`/`blurb`
 - `site.links` / `site.social` `label`/`href`, `site.legal`
 
-Pass condition: load the page and read the console. Green
+Pass condition: `node tools/build-static-content.mjs --check` exits zero. A
+browser load also retains the existing green diagnostic:
 `[tier3] content in sync with ../content/content.js — N strings, N contributors,
-N nodes, N symbols` (`static/index.html:1812`) means both twins agree. Red
-`[tier3] CONTENT DRIFT — N problem(s)` is the mirror you forgot.
+N nodes, N symbols` means the generated output agrees. Red
+`[tier3] CONTENT DRIFT — N problem(s)` is the diagnostic backstop.
 
 ## Structural: silently breaks without code
 

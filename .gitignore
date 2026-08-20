@@ -1,3 +1,6 @@
 # Python caches (tools/*.py)
 __pycache__/
 *.pyc
+
+# Local JavaScript developer dependencies (the site itself is served directly).
+node_modules/

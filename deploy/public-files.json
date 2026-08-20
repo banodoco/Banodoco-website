@@ -1,0 +1,80 @@
+{
+  "files": [
+    "404.html",
+    "favicon.ico",
+    "flags.js",
+    "hero.css",
+    "index.html",
+    "main.js",
+    "robots.txt",
+    "serve.py",
+    "site.webmanifest",
+    "sitemap.xml"
+  ],
+  "trees": [
+    {
+      "path": "assets",
+      "include": ["*.js", "*.json", "*.jpg", "*.mp4", "*.png", "*.svg", "*.woff2"],
+      "exclude": ["brand/favicon-source.png", "brand/mark-b-source.png"]
+    },
+    {
+      "path": "content",
+      "include": ["content.js", "contributors.js"]
+    },
+    {
+      "path": "journey",
+      "include": ["*.css", "*.html", "*.js"]
+    },
+    {
+      "path": "journey-v6",
+      "include": ["index.html"]
+    },
+    {
+      "path": "organism",
+      "include": ["*.js"]
+    },
+    {
+      "path": "ownership",
+      "include": ["*.css", "*.html", "*.js"]
+    },
+    {
+      "path": "static",
+      "include": ["*.bin", "*.html", "*.json", "*.png"],
+      "exclude": ["captures/_check/**", "captures/manifest.json"]
+    },
+    {
+      "path": "vendor/three",
+      "include": ["*.js"]
+    }
+  ],
+  "required": [
+    "index.html",
+    "404.html",
+    "main.js",
+    "release-revision.txt",
+    "serve.py",
+    "static/index.html",
+    "ownership/index.html",
+    "journey/index.html",
+    "journey-v6/index.html",
+    "static/geom/manifest.json",
+    "static/captures/mission@1440x900.png",
+    "assets/cards/discord/fallback.json",
+    "assets/contributor-portraits/manifest.js",
+    "assets/contributor-portraits/profile-sprite.jpg",
+    "vendor/three/three.module.js",
+    "vendor/three/addons/controls/OrbitControls.js",
+    "vendor/three/addons/postprocessing/EffectComposer.js"
+  ],
+  "forbidden": [
+    ".desloppify",
+    ".git",
+    "__pycache__",
+    "archive",
+    "deploy",
+    "docs",
+    "journey-v6-plan",
+    "node_modules",
+    "tools"
+  ]
+}

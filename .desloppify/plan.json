@@ -1,0 +1,666 @@
+{
+  "version": 8,
+  "created": "2026-08-20T08:37:59+00:00",
+  "updated": "2026-08-20T10:05:28+00:00",
+  "queue_order": [
+    "subjective::abstraction_fitness",
+    "subjective::ai_generated_debt",
+    "subjective::api_surface_coherence",
+    "subjective::authorization_consistency",
+    "subjective::contract_coherence",
+    "subjective::convention_outlier",
+    "subjective::cross_module_architecture",
+    "subjective::dependency_health",
+    "subjective::design_coherence",
+    "subjective::error_consistency",
+    "subjective::high_level_elegance",
+    "subjective::incomplete_migration",
+    "subjective::initialization_coupling",
+    "subjective::logic_clarity",
+    "subjective::low_level_elegance",
+    "subjective::mid_level_elegance",
+    "subjective::naming_quality",
+    "subjective::package_organization",
+    "subjective::test_strategy",
+    "subjective::type_safety",
+    "unused::journey/chapters/connect/camera.js::unused_import::74::smooth01",
+    "unused::journey/chapters/final/shed.js::unused_import::74::CAP_Y",
+    "unused::journey/chapters/inspire/camera.js::unused_import::23::smooth01"
+  ],
+  "deferred": [],
+  "skipped": {},
+  "active_cluster": null,
+  "overrides": {
+    "unused::archive/journey/core/main.js::unused_import::4::chapterAt": {
+      "issue_id": "unused::archive/journey/core/main.js::unused_import::4::chapterAt",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "unused::archive/journey/lib/organism.js::unused_import::11::THREE": {
+      "issue_id": "unused::archive/journey/lib/organism.js::unused_import::11::THREE",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "unused::journey/chapters/connect/camera.js::unused_import::74::smooth01": {
+      "issue_id": "unused::journey/chapters/connect/camera.js::unused_import::74::smooth01",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/unused",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "unused::journey/chapters/final/shed.js::unused_import::74::CAP_Y": {
+      "issue_id": "unused::journey/chapters/final/shed.js::unused_import::74::CAP_Y",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/unused",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "unused::journey/chapters/inspire/camera.js::unused_import::23::smooth01": {
+      "issue_id": "unused::journey/chapters/inspire/camera.js::unused_import::23::smooth01",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/unused",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::ownership/reasons.js": {
+      "issue_id": "test_coverage::ownership/reasons.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::content/content.js": {
+      "issue_id": "test_coverage::content/content.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/chapters/final/world.js": {
+      "issue_id": "test_coverage::journey/chapters/final/world.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/route.js": {
+      "issue_id": "test_coverage::journey/route.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/constants.js": {
+      "issue_id": "test_coverage::journey/constants.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/cards/discord.js": {
+      "issue_id": "test_coverage::journey/cards/discord.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::ownership/data.js": {
+      "issue_id": "test_coverage::ownership/data.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/chapters/connect/camera.js": {
+      "issue_id": "test_coverage::journey/chapters/connect/camera.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/portrait.js": {
+      "issue_id": "test_coverage::journey/portrait.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/chapters/inspire/camera.js": {
+      "issue_id": "test_coverage::journey/chapters/inspire/camera.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/journey/core/content.js": {
+      "issue_id": "test_coverage::archive/journey/core/content.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/chapters/owned/camera.js": {
+      "issue_id": "test_coverage::journey/chapters/owned/camera.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::tools/fieldpace.js": {
+      "issue_id": "test_coverage::tools/fieldpace.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_module",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/ui.js": {
+      "issue_id": "test_coverage::journey/ui.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/chapters/owned/portraits.js": {
+      "issue_id": "test_coverage::journey/chapters/owned/portraits.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::organism/organism.js": {
+      "issue_id": "test_coverage::organism/organism.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/mushroom-scene.js": {
+      "issue_id": "test_coverage::archive/mushroom-scene.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/chapters/owned/substrate.js": {
+      "issue_id": "test_coverage::journey/chapters/owned/substrate.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/scroll.js": {
+      "issue_id": "test_coverage::journey/scroll.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/journey.js": {
+      "issue_id": "test_coverage::journey/journey.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/chapters/inspire/index.js": {
+      "issue_id": "test_coverage::journey/chapters/inspire/index.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/rail.js": {
+      "issue_id": "test_coverage::journey/rail.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/chapters/final/ring.js": {
+      "issue_id": "test_coverage::journey/chapters/final/ring.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/journey/chapters/owned.js": {
+      "issue_id": "test_coverage::archive/journey/chapters/owned.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/chapters/final/canopy.js": {
+      "issue_id": "test_coverage::journey/chapters/final/canopy.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/chapters/final/index.js": {
+      "issue_id": "test_coverage::journey/chapters/final/index.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/journey/chapters/connect.js": {
+      "issue_id": "test_coverage::archive/journey/chapters/connect.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/chapters/connect/tendrils.js": {
+      "issue_id": "test_coverage::journey/chapters/connect/tendrils.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::main.js": {
+      "issue_id": "test_coverage::main.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/chapters/final/clones.js": {
+      "issue_id": "test_coverage::journey/chapters/final/clones.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::organism/spores.js": {
+      "issue_id": "test_coverage::organism/spores.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/spike-b/portraits.js": {
+      "issue_id": "test_coverage::archive/spike-b/portraits.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/chapters/final/terrain.js": {
+      "issue_id": "test_coverage::journey/chapters/final/terrain.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/journey/chapters/mission.js": {
+      "issue_id": "test_coverage::archive/journey/chapters/mission.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::archive/journey/deferred/equip.js": {
+      "issue_id": "test_coverage::archive/journey/deferred/equip.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/chapters/owned/index.js": {
+      "issue_id": "test_coverage::journey/chapters/owned/index.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/src/netshroom.js": {
+      "issue_id": "test_coverage::archive/src/netshroom.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/chapters/connect/index.js": {
+      "issue_id": "test_coverage::journey/chapters/connect/index.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/journey/chapters/final.js": {
+      "issue_id": "test_coverage::archive/journey/chapters/final.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/chapters/final/sky.js": {
+      "issue_id": "test_coverage::journey/chapters/final/sky.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/spike-a/plumes.js": {
+      "issue_id": "test_coverage::archive/spike-a/plumes.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::archive/journey/chapters/inspire.js": {
+      "issue_id": "test_coverage::archive/journey/chapters/inspire.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/chapters/final/species.js": {
+      "issue_id": "test_coverage::journey/chapters/final/species.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/src/mushroom.js": {
+      "issue_id": "test_coverage::archive/src/mushroom.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::archive/spike-b/field.js": {
+      "issue_id": "test_coverage::archive/spike-b/field.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/director.js": {
+      "issue_id": "test_coverage::journey/director.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::journey/lens.js": {
+      "issue_id": "test_coverage::journey/lens.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/spike-b/main.js": {
+      "issue_id": "test_coverage::archive/spike-b/main.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "test_coverage::journey/chapters/final/shed.js": {
+      "issue_id": "test_coverage::journey/chapters/final/shed.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/test_coverage-untested_critical",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "test_coverage::archive/journey/core/main.js": {
+      "issue_id": "test_coverage::archive/journey/core/main.js",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": null,
+      "updated_at": "2026-08-20T10:05:28+00:00"
+    },
+    "subjective::abstraction_fitness": {
+      "issue_id": "subjective::abstraction_fitness",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::ai_generated_debt": {
+      "issue_id": "subjective::ai_generated_debt",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::api_surface_coherence": {
+      "issue_id": "subjective::api_surface_coherence",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::authorization_consistency": {
+      "issue_id": "subjective::authorization_consistency",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::contract_coherence": {
+      "issue_id": "subjective::contract_coherence",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::convention_outlier": {
+      "issue_id": "subjective::convention_outlier",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::cross_module_architecture": {
+      "issue_id": "subjective::cross_module_architecture",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::dependency_health": {
+      "issue_id": "subjective::dependency_health",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::design_coherence": {
+      "issue_id": "subjective::design_coherence",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::error_consistency": {
+      "issue_id": "subjective::error_consistency",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::high_level_elegance": {
+      "issue_id": "subjective::high_level_elegance",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::incomplete_migration": {
+      "issue_id": "subjective::incomplete_migration",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::initialization_coupling": {
+      "issue_id": "subjective::initialization_coupling",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::logic_clarity": {
+      "issue_id": "subjective::logic_clarity",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::low_level_elegance": {
+      "issue_id": "subjective::low_level_elegance",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::mid_level_elegance": {
+      "issue_id": "subjective::mid_level_elegance",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::naming_quality": {
+      "issue_id": "subjective::naming_quality",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::package_organization": {
+      "issue_id": "subjective::package_organization",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::test_strategy": {
+      "issue_id": "subjective::test_strategy",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    },
+    "subjective::type_safety": {
+      "issue_id": "subjective::type_safety",
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "cluster": "auto/initial-review",
+      "updated_at": "2026-08-20T08:37:59+00:00"
+    }
+  },
+  "clusters": {
+    "auto/unused": {
+      "name": "auto/unused",
+      "description": "Remove 5 unused issues",
+      "issue_ids": [
+        "unused::journey/chapters/connect/camera.js::unused_import::74::smooth01",
+        "unused::journey/chapters/final/shed.js::unused_import::74::CAP_Y",
+        "unused::journey/chapters/inspire/camera.js::unused_import::23::smooth01"
+      ],
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "updated_at": "2026-08-20T08:37:59+00:00",
+      "auto": true,
+      "cluster_key": "auto::unused",
+      "action": "desloppify autofix unused-imports --dry-run",
+      "execution_status": "active",
+      "user_modified": false,
+      "action_type": "auto_fix",
+      "execution_policy": "ephemeral_autopromote"
+    },
+    "auto/test_coverage-untested_module": {
+      "name": "auto/test_coverage-untested_module",
+      "description": "Fix 13 test coverage issues",
+      "issue_ids": [
+        "test_coverage::ownership/reasons.js",
+        "test_coverage::content/content.js",
+        "test_coverage::journey/chapters/final/world.js",
+        "test_coverage::journey/route.js",
+        "test_coverage::journey/constants.js",
+        "test_coverage::journey/cards/discord.js",
+        "test_coverage::ownership/data.js",
+        "test_coverage::journey/chapters/connect/camera.js",
+        "test_coverage::journey/portrait.js",
+        "test_coverage::journey/chapters/inspire/camera.js",
+        "test_coverage::journey/chapters/owned/camera.js",
+        "test_coverage::tools/fieldpace.js"
+      ],
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "updated_at": "2026-08-20T08:37:59+00:00",
+      "auto": true,
+      "cluster_key": "detector::test_coverage::untested_module",
+      "action": "review test coverage gaps",
+      "execution_status": "review",
+      "user_modified": false,
+      "action_type": "refactor",
+      "execution_policy": "planned_only"
+    },
+    "auto/test_coverage-untested_critical": {
+      "name": "auto/test_coverage-untested_critical",
+      "description": "Fix 37 test coverage issues",
+      "issue_ids": [
+        "test_coverage::journey/ui.js",
+        "test_coverage::journey/chapters/owned/portraits.js",
+        "test_coverage::organism/organism.js",
+        "test_coverage::journey/chapters/owned/substrate.js",
+        "test_coverage::journey/scroll.js",
+        "test_coverage::journey/journey.js",
+        "test_coverage::journey/chapters/inspire/index.js",
+        "test_coverage::journey/rail.js",
+        "test_coverage::journey/chapters/final/ring.js",
+        "test_coverage::journey/chapters/final/canopy.js",
+        "test_coverage::journey/chapters/final/index.js",
+        "test_coverage::journey/chapters/connect/tendrils.js",
+        "test_coverage::main.js",
+        "test_coverage::journey/chapters/final/clones.js",
+        "test_coverage::organism/spores.js",
+        "test_coverage::journey/chapters/final/terrain.js",
+        "test_coverage::journey/chapters/owned/index.js",
+        "test_coverage::journey/chapters/connect/index.js",
+        "test_coverage::journey/chapters/final/sky.js",
+        "test_coverage::journey/chapters/final/species.js",
+        "test_coverage::journey/director.js",
+        "test_coverage::journey/lens.js",
+        "test_coverage::journey/chapters/final/shed.js"
+      ],
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "updated_at": "2026-08-20T08:37:59+00:00",
+      "auto": true,
+      "cluster_key": "detector::test_coverage::untested_critical",
+      "action": "review test coverage gaps",
+      "execution_status": "review",
+      "user_modified": false,
+      "action_type": "refactor",
+      "execution_policy": "planned_only"
+    },
+    "auto/initial-review": {
+      "name": "auto/initial-review",
+      "description": "Initial review of 20 unscored subjective dimensions",
+      "issue_ids": [
+        "subjective::abstraction_fitness",
+        "subjective::ai_generated_debt",
+        "subjective::api_surface_coherence",
+        "subjective::authorization_consistency",
+        "subjective::contract_coherence",
+        "subjective::convention_outlier",
+        "subjective::cross_module_architecture",
+        "subjective::dependency_health",
+        "subjective::design_coherence",
+        "subjective::error_consistency",
+        "subjective::high_level_elegance",
+        "subjective::incomplete_migration",
+        "subjective::initialization_coupling",
+        "subjective::logic_clarity",
+        "subjective::low_level_elegance",
+        "subjective::mid_level_elegance",
+        "subjective::naming_quality",
+        "subjective::package_organization",
+        "subjective::test_strategy",
+        "subjective::type_safety"
+      ],
+      "created_at": "2026-08-20T08:37:59+00:00",
+      "updated_at": "2026-08-20T08:37:59+00:00",
+      "auto": true,
+      "cluster_key": "subjective::unscored",
+      "action": "desloppify review --prepare --dimensions abstraction_fitness,ai_generated_debt,api_surface_coherence,authorization_consistency,contract_coherence,convention_outlier,cross_module_architecture,dependency_health,design_coherence,error_consistency,high_level_elegance,incomplete_migration,initialization_coupling,logic_clarity,low_level_elegance,mid_level_elegance,naming_quality,package_organization,test_strategy,type_safety",
+      "execution_status": "review",
+      "user_modified": false,
+      "action_type": "manual_fix",
+      "execution_policy": "planned_only"
+    }
+  },
+  "superseded": {},
+  "promoted_ids": [],
+  "plan_start_scores": {
+    "strict": 16.7,
+    "overall": 16.7,
+    "objective": 66.7,
+    "verified": 66.7
+  },
+  "refresh_state": {
+    "_subjective_migration_pruned": true,
+    "lifecycle_phase": "plan"
+  },
+  "execution_log": [
+    {
+      "timestamp": "2026-08-20T08:37:59+00:00",
+      "action": "sync_subjective",
+      "issue_ids": [],
+      "cluster_name": null,
+      "actor": "system",
+      "note": null,
+      "detail": {
+        "changes": true
+      }
+    },
+    {
+      "timestamp": "2026-08-20T08:37:59+00:00",
+      "action": "auto_cluster",
+      "issue_ids": [],
+      "cluster_name": null,
+      "actor": "system",
+      "note": null,
+      "detail": {
+        "changes": true
+      }
+    },
+    {
+      "timestamp": "2026-08-20T08:37:59+00:00",
+      "action": "sync_lifecycle_phase",
+      "issue_ids": [],
+      "cluster_name": null,
+      "actor": "system",
+      "note": null,
+      "detail": {
+        "phase": "review_initial"
+      }
+    },
+    {
+      "timestamp": "2026-08-20T08:37:59+00:00",
+      "action": "seed_start_scores",
+      "issue_ids": [],
+      "cluster_name": null,
+      "actor": "system",
+      "note": null,
+      "detail": {}
+    }
+  ],
+  "epic_triage_meta": {},
+  "commit_log": [],
+  "uncommitted_issues": [],
+  "commit_tracking_branch": null,
+  "scan_count_at_plan_start": 1
+}

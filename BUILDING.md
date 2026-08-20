@@ -12,32 +12,54 @@ place that explains it, so nobody has to re-derive it from five docs.
 |---|---|---|---|
 | **Fast (default)** | `python3 tools/rebuild.py` | geometry bake + favicons/og + logo masks | ~30 s |
 | **Full** | `python3 tools/rebuild.py --with-captures` | fast + re-shoot the Tier-3 stills | ~2 min |
-| **Verify only** | `python3 tools/rebuild.py --check` (add `--with-captures` to check the stills too) | every gate, writes nothing | varies |
+| **Verify only** | `tools/check.sh` (`--skip-captures` for bake/meta only) | public artifact + scene drift gates, writes no repository files | varies |
 
-## The deploy pre-flight — one command, end to end
+## Checks, builds, and releases are separate
 
-`tools/preflight.sh` is the single entry point from "working changes" to
-"pushed and deploying on Railway". It runs, in order: preconditions (server
-on :8137, git identity), the full build (`rebuild.py --with-captures`), the
-gates (`rebuild.py --check --with-captures`), the commit (the pre-commit
-hook runs behind it), the history merge (upstream main preserved as a second
-parent — see below), the push, and the deploy verification against
-www.banodoco.ai. Exit 0 only when the new tree is serving.
+Verification is deliberately the default and is safe to run repeatedly:
 
 ```
-python3 tools/preflight.sh          # interactive (confirms commit + push)
-python3 tools/preflight.sh --yes    # auto-confirm
-python3 tools/preflight.sh --no-verify   # skip the URL check (dry run)
+tools/check.sh                  # full read-only drift verification
+tools/preflight.sh              # compatibility alias for tools/check.sh
+tools/check.sh --skip-captures  # read-only bake/meta verification
 ```
+
+Neither check command stages, commits, merges, pushes, deploys, or regenerates
+committed artifacts. The check first packages the deploy allowlist into a
+private temporary directory outside the repository and verifies its exact file
+set and bytes; the directory is removed automatically. See
+**[PUBLIC-DEPLOY.md](PUBLIC-DEPLOY.md)**. To regenerate artifacts explicitly, use
+`tools/build.sh` or `tools/build.sh --with-captures`.
+
+Releasing is a separate, intentionally side-effecting command. It requires an
+explicit reviewed staging set; repeat `--stage` for every changed or untracked
+path intended for the commit. Any remaining unstaged or untracked file aborts
+the release before commit:
+
+```
+tools/release.sh --stage journey/foo.js --stage static/geom/manifest.json
+```
+
+The release command fetches first and aborts rather than discard a divergent
+remote tree. It confirms the overall release, staging, commit, any pre-existing
+local commits, and push. `--yes` is the explicit non-interactive
+authorization. `--no-verify` skips only the post-push URL poll; it is not a
+dry run. `--skip-captures` preserves the former loaded-machine escape hatch.
+After staging, it runs `npm run check` once for lint, cycle, unit, and browser
+contracts, then `tools/check.sh` once for scene drift and the same
+manifest-defined artifact Railway builds after the push. Production
+verification polls `release-revision.txt` for the exact
+pushed commit, so an unchanged homepage cannot make an old deployment pass.
 
 **History policy.** The site ships on `banodoco/Banodoco-website@main`, which
 carried the previous (React) site. Deploys do NOT force-push or discard that
-history: preflight merges upstream main with `-s ours` (glowshroom tree
-wins, old commits stay reachable as the second parent). Both histories are
-preserved on main.
+history: the one-time `-s ours` legacy merge is already part of main
+(`673ef65`), so the release command requires that fetched `origin/main` is an
+ancestor of local main. Both histories remain preserved; future divergence
+fails closed instead of silently discarding remote changes.
 
 **Known flake.** `final@430x932` re-shoots with ~24 MAE drift (chrome bakes
-into the mobile final golden). Preflight and the pre-commit hook treat a
+into the mobile final golden). The check command and pre-commit hook treat a
 SOLE final@430x932 FAIL-band with everything else at 0.00 MAE as the known
 flake — reported loudly, not a blocker. Any other drift fails the run.
 
@@ -70,16 +92,18 @@ http://localhost:8137/?livebuild=1
 use it for edit-reload sessions; bake only when landing (BAKING.md §2).
 Everything else on the site is always live — there is no other bundling.
 
-## Known issue — one golden is nondeterministic
+## Known issue — mission mobile can also drift
 
-`mission@430x932.png` re-shoots with a reproducible ~2.4 MAE drift (whole
+Separately from the release gate's `final@430x932` known-flake exception,
+`mission@430x932.png` has re-shot with a reproducible ~2.4 MAE drift (whole
 frame, ~6 % of pixels), while the other nine stills are pixel-identical
 (MAE 0.00) under the `?capture=` freeze. Suspected: the perf-governor
 pixelRatio ratchet landing differently on a slow mobile frame. It predates
 any card work and is unrelated to DOM/assets. Do not chase it as part of a
 normal build; if it blocks a commit, re-shoot that pose
 (`python3 tools/capture.py --pose mission --size mobile`) and check whether
-it lands within band before touching scene code.
+it lands within band before touching scene code. It is not covered by the
+release gate's sole-final exception.
 
 ## Related
 

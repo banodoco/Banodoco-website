@@ -11,7 +11,7 @@
 // The em-dash, en-dash and middle dot below are the site's own characters,
 // not typo'd hyphens.
 
-import { CARD_ASSETS, REDUCE } from './index.js';
+import { CARD_ASSETS, REDUCE } from './runtime.js';
 
 const CYCLE_MS = 3200;   // one ledger entry per hover; fade is 160ms
 

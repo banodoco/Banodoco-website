@@ -1,4 +1,5 @@
-// journey/route.js — THE route manifest (merge doc §2, M4).
+// journey/route.js — derived route values (merge doc §2, M4).
+import { JOURNEY_SCHEMA } from './structure.js';
 //
 // One ordered list declares the chapters: their RELATIVE durations, their
 // rest stops, their nav anchors, their scroll allocations. Every global
@@ -68,7 +69,8 @@
 
 export const DEFAULT_STOP = 0.5;      // mid-chapter rest (was REST_POSE)
 
-export const ROUTE = [
+/* Historical tuning narrative retained beside the canonical schema.
+const DOCUMENTED_ROUTE = [
   { id: 'mission', span: 14, nav: 'Intro', stops: [0.0], scrollVh: 3.5 },
   // scrollVh 7.5 -> 5.6, ALL of it out of the tail (2026-08-11, Hannah's
   // brief item 2 — "make the speed of the transition from Connect to
@@ -341,7 +343,18 @@ export const ROUTE = [
   // Page 41.85 -> 34.85 vh, -7.0.
   { id: 'final',   span: 15, nav: null,      stops: [0.8], scrollVh: 10.6,
     segVh: [10.0, 0.6], shape: { seg: 0, k: [1.305, 0.70] } },
-];
+]; */
+
+export const ROUTE = JOURNEY_SCHEMA.chapters.map((chapter) => {
+  const route = {
+    id: chapter.id, span: chapter.span, nav: chapter.nav,
+  };
+  if (chapter.stops) route.stops = chapter.stops;
+  route.scrollVh = chapter.scrollVh;
+  if (chapter.segVh) route.segVh = chapter.segVh;
+  if (chapter.shape) route.shape = chapter.shape;
+  return route;
+});
 
 // The authored end-hold: p = 1 is a resolution anchor of its own (a fling to
 // the end settles there, never tugged back to the Final rest) and a handheld

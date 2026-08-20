@@ -22,7 +22,7 @@
 // counter — cards/index.js policy (a) only covers dated COMPLETED artefacts,
 // and "current event" is live navigation state, not a shipped figure.
 
-import { CARD_ASSETS, REDUCE } from './index.js';
+import { CARD_ASSETS, REDUCE } from './runtime.js';
 
 const EVENTS = [
   { name: 'Paris',       date: '17–19 April 2026', tag: null,
