@@ -66,6 +66,61 @@ is never rewritten. Railway supplies `https://www.banodoco.ai`; local artifact
 inspection must pass an explicit origin. Set the final absolute `Sitemap:` URL
 in `robots.txt` if the deployment origin changes.
 
+## Railway operations (practical)
+
+Railway auto-deploys `main` on push (GitHub integration → Railpack → the
+packaging startCommand below). The quick path:
+
+```bash
+# commit everything (PREFLIGHT_DONE=1 skips the capture-gate pre-commit hook)
+PREFLIGHT_DONE=1 git add -A
+PREFLIGHT_DONE=1 git commit -m "deploy"
+git push origin main
+railway status --json        # wait for status: SUCCESS
+curl -s https://www.banodoco.ai/release-revision.txt   # == pushed commit SHA
+```
+
+When scene/content changed, rebuild derived artifacts first (see
+BUILDING.md): `python3 tools/rebuild.py --with-captures`, then
+`python3 tools/build-meta.py` (captures feed the og cards — build-meta
+must run AFTER captures, or the pre-commit hook flags `og-home.jpg
+DRIFTED`; re-add and re-commit).
+
+### railway.toml contract (do not regress)
+
+- **No custom `[build] buildCommand`.** A custom buildCommand makes
+  Railpack skip provider detection (`providers: None` in the deploy
+  metadata) — the build image then has no python3 and the deploy fails at
+  build with zero instances. The current file uses the proven shape: no
+  buildCommand, and `[deploy] startCommand` does the packaging where
+  python IS provisioned:
+  `python3 tools/package-public.py /tmp/public --origin https://www.banodoco.ai
+  --revision ${RAILWAY_GIT_COMMIT_SHA:-unknown} && cd /tmp/public && exec
+  python3 serve.py`
+- The runtime image carries the full repo checkout, so packaging at start
+  is cheap (~1 s) and produces the same allowlisted artifact the local
+  flow verifies.
+- `requirements.txt` must stay at the repo root (it is what makes Railpack
+  detect the python provider).
+
+### Push gotchas
+
+- **"Everything up-to-date" but the remote is old** → you are on a feature
+  branch, not main. `git checkout main && git merge --ff-only <branch> &&
+  git push origin main`.
+- **The 1.1 GB history push is slow** (legacy React history is in main).
+  Let it finish; do not Ctrl-C. A later push of one commit is fast.
+- If `git push` dies silently mid-upload, `git push origin main` again —
+  objects are incremental and the retry is quick.
+
+### Browser cache
+
+The site serves `Cache-Control: no-store, must-revalidate` via serve.py.
+Do NOT switch back to Caddy's default static serving for this repo: with
+no cache-control header, mobile Safari heuristically caches the module
+graph and shows a stale version after deploys. If a phone ever shows an
+old build, hard-refresh once.
+
 ## Field monitoring
 
 Load the site with `?debug=1` to render collected page errors on screen
