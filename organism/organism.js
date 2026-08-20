@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -8,6 +7,10 @@ import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { createSpores } from './spores.js';
 import { setupIntro } from './intro.js';
 import { createHighlights, registerTrackers } from './furniture.js';
+import { createRandomGeometryHelpers } from './random.js';
+import { createAnimationLifecycle } from './animation.js';
+import { DRAW_GLSL, PULSE_GLSL } from './shaders.js';
+import { createRendererSetup } from './renderer.js';
 import { NOTAA, NOFADE, DBG, PIN_PR } from '../flags.js';
 
 // =====================================================================
@@ -71,48 +74,18 @@ export function createScene({ panX = 0, container = null,
 // 1. RNG / PALETTE UTILS
 // =====================================================================
 // ---------- deterministic RNG ----------
-let seed = 1337;
-function rand() {
-  seed = (seed * 1664525 + 1013904223) >>> 0;
-  return seed / 4294967296;
-}
-function randRange(a, b) { return a + (b - a) * rand(); }
-function gauss() { return (rand() + rand() + rand() + rand() - 2) / 2; }
-
-// ---------- palette: deep orange -> amber -> hot near-white ----------
-const C_DARK  = new THREE.Color(0x421c05);
-const C_MID   = new THREE.Color(0xb96b1c);
-const C_AMBER = new THREE.Color(0xf5a63c);
-const C_HOT   = new THREE.Color(0xffdfae);
-const C_WHITE = new THREE.Color(0xfff3e0);
-function heat(t, out) {
-  t = Math.max(0, Math.min(1, t));
-  const c = out || new THREE.Color();
-  if (t < 0.35)      c.lerpColors(C_DARK, C_MID,  t / 0.35);
-  else if (t < 0.65) c.lerpColors(C_MID, C_AMBER, (t - 0.35) / 0.3);
-  else if (t < 0.88) c.lerpColors(C_AMBER, C_HOT, (t - 0.65) / 0.23);
-  else               c.lerpColors(C_HOT, C_WHITE, (t - 0.88) / 0.12);
-  return c;
-}
+const { rand, randRange, gauss, heat } = createRandomGeometryHelpers();
 
 // =====================================================================
 // 2. ENGINE — scene, camera, renderer, composer, controls
 // =====================================================================
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(bg);
+const {
+  scene, camera, renderer, controls, pixelRatioPolicy, FOG_NEAR, FOG_FAR,
+} = createRendererSetup({
+  panX, container, camY, camZ, targetY, camAzimuth, bg, fov, pinPr: PIN_PR,
+});
 // Depth attenuation: glowing geometry dims with distance so near/far reads
 // unambiguously (the far rim, far gills, and deep floor recede properly).
-const FOG_NEAR = 7.0, FOG_FAR = 20;
-scene.fog = new THREE.Fog(bg, FOG_NEAR, FOG_FAR);
-
-const camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, 0.1, 100);
-{
-  const az = camAzimuth * Math.PI / 180;
-  camera.position.set(0.15 + panX + Math.sin(az) * camZ, camY, Math.cos(az) * camZ);
-}
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setSize(innerWidth, innerHeight);
 // ?pr=<n> pins the ratio and (below) disables the adaptive governor — the
 // QA discriminator for "was that the resolution system?" (flags.js PIN_PR).
 //
@@ -125,35 +98,6 @@ renderer.setSize(innerWidth, innerHeight);
 // the first frame of every later load — so the visible switch can happen at
 // most ONCE per machine, on the very first visit, and never again. Storage
 // failures (private mode) simply fall back to calibrate-per-visit.
-const _prStoreKey = (() => {
-  try { return 'gs-pr-cal:' + screen.width + 'x' + screen.height + '@' + devicePixelRatio; }
-  catch { return null; }
-})();
-const _storedPr = (() => {
-  try {
-    const v = parseFloat(localStorage.getItem(_prStoreKey));
-    return Number.isFinite(v) && v >= 1 && v <= 3 ? v : null;
-  } catch { return null; }
-})();
-function _rememberPr(v) {
-  try { localStorage.setItem(_prStoreKey, String(v)); } catch { /* private mode */ }
-}
-renderer.setPixelRatio(
-  PIN_PR !== null ? PIN_PR
-    : _storedPr !== null ? _storedPr
-    : Math.min(devicePixelRatio, 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.95;
-(container || document.body).appendChild(renderer.domElement);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(panX, targetY, 0);
-controls.enableDamping = true;
-controls.dampingFactor = 0.06;
-controls.minDistance = 3.5;
-controls.maxDistance = 18;
-controls.maxPolarAngle = Math.PI * 0.58;
-controls.update();
 
 // EffectComposer renders offscreen, which bypasses the canvas's own antialiasing
 // entirely — so the target has to be multisampled itself. Without this the fine
@@ -255,7 +199,7 @@ function taaFrame() {
   // blends identical frames and converges to a single exact image — pixel-
   // stable across any two shutter times — instead of orbiting the 8-sample
   // Halton cycle forever.
-  const j = _frozenT !== null ? _jitterSeq[0] : _jitterSeq[_jitterI++ % _jitterSeq.length];
+  const j = animationLifecycle.isFrozen() ? _jitterSeq[0] : _jitterSeq[_jitterI++ % _jitterSeq.length];
   // Last look at the clean matrix before it is perturbed — everything that
   // pins DOM to a world point projects through this copy (steadyProject()).
   _steadyProj.copy(camera.projectionMatrix);
@@ -358,24 +302,6 @@ const glowTex = makeGlowTexture();
 // ember riding the stroke tip while it draws. Parked at 2, everything is
 // fully drawn and the ember term is switched off.
 const drawU = { value: 2 };
-const DRAW_GLSL = `
-      uniform float uProg;
-      uniform vec2 uWin;
-      uniform float uClampY;
-      attribute float aDraw;
-      varying float vDraw;
-      float drawAt(vec3 p) {
-        float dp = clamp((uProg - uWin.x) / (uWin.y - uWin.x), 0.0, 1.0);
-        float head = smoothstep(0.0, 0.012, dp - aDraw);
-        float tip = smoothstep(0.03, 0.0, abs(dp - aDraw)) * smoothstep(0.0, 0.01, dp) * (1.0 - step(0.999, dp));
-        // intro-only lid: strokes stop below uClampY while drawing (the artist
-        // doesn't ink what the cap will bury); parked (uProg=2) it lifts, and
-        // by then the shells occlude the joint, so nothing visibly changes
-        vec4 wp = modelMatrix * vec4(p, 1.0);
-        float lid = 1.0 - smoothstep(uClampY - 0.2, uClampY, wp.y) * (1.0 - smoothstep(1.05, 1.6, uProg));
-        return (head + tip * 1.7) * lid;
-      }
-`;
 function drawAttr(geo, n) {
   const a = new Float32Array(n);
   for (let i = 0; i < n; i++) a[i] = i / (n - 1);
@@ -394,23 +320,6 @@ function drawAttr(geo, n) {
 const pulseC = { value: new THREE.Vector3(0, 0, 0) };
 const pulseT = { value: 1e3 };
 const pulseP = { value: new THREE.Vector3(2.6, 0.33, 1.4) };
-const PULSE_GLSL = `
-      uniform vec3 uPulseC;
-      uniform float uPulseT;
-      uniform vec3 uPulseP; // x: wave speed, y: range falloff, z: amplitude
-      float pulseAt(vec3 wp) {
-        float d = distance(wp, uPulseC);
-        float w = uPulseP.x * (0.15 + 0.21 * uPulseT);
-        // rb*rb, never pow(rb, 2.0): the base goes negative on every vertex
-        // once the ring has passed (and permanently at the parked rest), and
-        // pow() with a negative base is undefined GLSL — Metal folds it to
-        // rb*rb so the Mac never sees it, but D3D11/Mali may return NaN,
-        // which the TAA sanitise would then flush to black every frame.
-        float rb = (d - uPulseP.x * uPulseT) / w;
-        float ring = exp(-(rb * rb));
-        return 1.0 + uPulseP.z * ring * exp(-1.15 * uPulseT) * exp(-d * uPulseP.y);
-      }
-`;
 // Handle for setting an object's draw window whether its material is a
 // ShaderMaterial (uniforms live on the material) or a built-in one (uniforms
 // are grafted at compile time, so the shared object lives in userData).
@@ -1789,12 +1698,15 @@ const highlights = createHighlights(ctx);
 // removed from outside without touching this loop. Execution order is the
 // Map's insertion order — behaviors that were in the original monolithic
 // animate() keep the same relative order they always ran in.
-const animators = new Map(); // name -> fn(t, dt)
+const animationLifecycle = createAnimationLifecycle({
+  beforeRender: taaFrame,
+  render: () => composer.render(),
+});
+const { animators, addAnimator } = animationLifecycle;
 /** Register a per-frame callback `fn(t, dt)`, run in insertion order every
  *  frame before the composer renders. Returns a function that removes it —
  *  call that to unregister (e.g. when a scroll-driven effect ends). A
  *  second addAnimator with the same name replaces the callback in place. */
-function addAnimator(name, fn) { animators.set(name, fn); return () => animators.delete(name); }
 ctx.animators = animators;
 ctx.addAnimator = addAnimator;
 
@@ -1866,8 +1778,6 @@ registerTrackers(ctx);
 // Returns the intro lifecycle handle exposed on the public API (M5).
 const introApi = setupIntro(ctx);
 
-const clock = new THREE.Clock();
-let _prevT = 0;
 // Deterministic freeze (M5, ?capture=): while frozen, every animator sees
 // t = the latched value and dt = 0 — one shared clock is the ONLY time
 // source the frame loop hands out, so freezing it freezes every time-driven
@@ -1878,37 +1788,7 @@ let _prevT = 0;
 // taaFrame() additionally holds the Halton jitter on one fixed sample so
 // the temporal accumulation converges to a single exact image instead of
 // cycling through the 8-sample orbit.
-let _frozenT = null;
-// Error isolation (M5): one throwing animator must not take the frame down
-// with it — before this, an exception skipped every later animator AND the
-// composer render, freezing the picture while the error spammed once per
-// frame. A throwing animator is now logged ONCE (by name, with its error)
-// and unregistered, so everything after it — including the journey's own
-// scroll/nav/UI animator — keeps running. Registering the same name again
-// (addAnimator replaces in place) re-arms it.
-const _animFailed = new Set();
-function animate() {
-  requestAnimationFrame(animate);
-  let t = clock.getElapsedTime();
-  let dt = Math.min(0.05, Math.max(0, t - _prevT));
-  _prevT = t;   // tracked on the raw clock, so resuming never produces a dt spike
-  if (_frozenT !== null) { t = _frozenT; dt = 0; }
-
-  for (const [name, fn] of animators) {
-    try { fn(t, dt); }
-    catch (err) {
-      animators.delete(name);   // deleting the CURRENT entry mid-iteration is safe for a Map
-      if (!_animFailed.has(name)) {
-        _animFailed.add(name);
-        console.error(`[organism] animator '${name}' threw and was disabled — the frame loop continues without it:`, err);
-      }
-    }
-  }
-
-  taaFrame(); // jitter last, after controls/tweens have settled the camera
-  composer.render();
-}
-animate();
+animationLifecycle.start();
 
 function syncRenderSizes() {
   renderer.setSize(innerWidth, innerHeight);
@@ -1972,7 +1852,7 @@ let _perfTime = 0, _perfFrames = 0, _perfClamped = 0, _perfStrikes = 0;
 // A remembered calibration (applied at init above) IS the calibration: skip
 // the per-visit measurement entirely so no step can occur — only the
 // catastrophic backstop below stays armed, and its steps update the memory.
-let _calSum = 0, _calN = 0, _calDone = _storedPr !== null;
+let _calSum = 0, _calN = 0, _calDone = pixelRatioPolicy.stored !== null;
 const _calAt = intro > 0 ? intro + 1.4 : 2.5;   // no-intro loads decide early
 if (PIN_PR === null)                            // ?pr= pins: no governor at all
 addAnimator('perf-governor', (t, dt) => {
@@ -2029,7 +1909,7 @@ addAnimator('perf-governor', (t, dt) => {
     // Remember the DECISION either way — a machine that cleared the budget
     // remembers full ratio, one that stepped remembers its landing — so every
     // later visit applies it at the first frame and never steps in view.
-    _rememberPr(renderer.getPixelRatio());
+    pixelRatioPolicy.remember(renderer.getPixelRatio());
     return;
   }
   _perfTime += dt;
@@ -2050,7 +1930,7 @@ addAnimator('perf-governor', (t, dt) => {
     _perfStrikes = 0;
     renderer.setPixelRatio(Math.max(1, pr - 0.25));
     syncRenderSizes();
-    _rememberPr(renderer.getPixelRatio());   // the memory follows the machine
+    pixelRatioPolicy.remember(renderer.getPixelRatio());   // the memory follows the machine
   } else {
     _perfStrikes = 0;
   }
@@ -2190,7 +2070,7 @@ return {
    *  parks at one deterministic phase and renders pixel-stable frames.
    *  `freezeTime(0)` freezes at the t = 0 phase; `freezeTime(null)` resumes
    *  live time (no dt spike — the raw clock keeps being tracked). */
-  freezeTime(seconds = 0) { _frozenT = seconds === null ? null : +seconds || 0; },
+  freezeTime: animationLifecycle.freezeTime,
   /** The spore SYSTEM handle (merge doc §3) — the same dots as
    *  `groups.spores`, plus `shedSpores` and the driver seat: a journey
    *  chapter claims it with `setDriver({ exits })` and passes per-frame

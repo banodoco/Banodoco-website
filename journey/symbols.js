@@ -62,11 +62,13 @@
 // throughout, so a mark's state is set by the colour of the control it sits
 // in and nothing here knows about hover, focus or "current".
 
+import { JOURNEY_SCHEMA, validateJourneyStructure } from './structure.js';
+
 const NS = 'http://www.w3.org/2000/svg';
 
 /** `p` = a hairline path (fill none, stroke currentColor).
  *  `c` = [cx, cy, r], a filled point of light. */
-export const SYMBOLS = {
+const SYMBOL_DEFINITIONS = {
   mission: {
     label: 'the specimen, whole',
     parts: [
@@ -154,6 +156,13 @@ export const SYMBOLS = {
     ],
   },
 };
+
+export const SYMBOLS = Object.fromEntries([
+  ...JOURNEY_SCHEMA.chapters.map(({ symbol }) => [symbol, SYMBOL_DEFINITIONS[symbol]]),
+  [JOURNEY_SCHEMA.menuSymbol, SYMBOL_DEFINITIONS[JOURNEY_SCHEMA.menuSymbol]],
+]);
+
+validateJourneyStructure(JOURNEY_SCHEMA, { symbols: SYMBOLS });
 
 export const VIEW_BOX = '0 0 22 22';
 

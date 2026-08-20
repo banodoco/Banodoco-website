@@ -33,9 +33,11 @@
 import * as THREE from 'three';
 import * as H from '../../lib/helpers.js';
 import { isBaked, geometry, payload } from '../../lib/baked.js';
-import { PORTRAIT_SPRITE } from '../../../assets/contributor-portraits/manifest.js';
-import { CONTRIBUTOR_POOL } from '../../../content/contributors.js';
 import { REST_P } from './leg.js';
+import { createPortraitDealer } from './portrait-deal.js';
+import { makePortraitAtlas } from './portrait-atlas.js';
+import { loadPortraitSprite } from './portrait-photo-loader.js';
+import { createPortraitTextureOwner } from './portrait-textures.js';
 
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;
@@ -629,28 +631,6 @@ function drawAnonGlyph(g, ox, oy, CELL, seed) {
   g.restore();
 }
 
-function makeAtlas(cells, cols, CELL, drawFn, seeds) {
-  const c = document.createElement('canvas');
-  c.width = cols * CELL;
-  c.height = Math.ceil(cells / cols) * CELL;
-  const g = c.getContext('2d');
-  // 'high', not the default 'low': the photo cells upscale a 96px source
-  // tile, and a bilinear blow-up that then gets resampled again by the GPU is
-  // where measured sharpness went to die (2026-08-18 blur probe). Vector
-  // drawing (busts, glyphs) is untouched by this flag.
-  g.imageSmoothingQuality = 'high';
-  g.clearRect(0, 0, c.width, c.height);
-  for (let i = 0; i < cells; i++) {
-    drawFn(g, (i % cols) * CELL, Math.floor(i / cols) * CELL, CELL, seeds[i]);
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.generateMipmaps = true;
-  tex.minFilter = THREE.LinearMipmapLinearFilter;
-  tex.magFilter = THREE.LinearFilter;
-  return tex;
-}
-
 /* ================================================================== */
 /* node-strand material: one draw call for every node's LOCAL strands  */
 /* ================================================================== */
@@ -1040,9 +1020,9 @@ export function buildPortraitField({
 
   // arrangement 0 (`bustSeedsFor` lives with the remix machinery below, so the
   // seed rule has one home and the build-time atlas is simply its first call)
-  const atlasA = makeAtlas(NODE_COUNT, COLS, CELL, drawBust, bustSeedsFor(0));
+  const atlasA = makePortraitAtlas(NODE_COUNT, COLS, CELL, drawBust, bustSeedsFor(0));
   const anonSeeds = [11, 23, 37, 53];
-  const atlasB = makeAtlas(4, 2, CELL, drawAnonGlyph, anonSeeds);
+  const atlasB = makePortraitAtlas(4, 2, CELL, drawAnonGlyph, anonSeeds);
 
   /* ---------------- local strands that TERMINATE at each node ----------- */
   const nodeStrandSpecs = [];   // empty on the baked path; strandCurves comes from the payload
@@ -1443,6 +1423,10 @@ export function buildPortraitField({
         gl_FragColor = vec4(col * alpha, occ);
       }`,
   });
+  const textureOwner = createPortraitTextureOwner({
+    uniforms: portraitMat.uniforms,
+    permanent: [atlasA, atlasB],
+  });
 
   /* ---------------- SWAP ORDER: the wave the remix travels on -------------
      A remix that cut all sixteen faces at once would read as a page reload of
@@ -1764,14 +1748,6 @@ export function buildPortraitField({
      procedural over a single 404) — that node keeps its procedural bust and the
      other fifteen still show. Only a wholesale failure leaves the field as it
      was, which is the same graceful outcome as before. */
-  function loadPhotos() {
-    return new Promise((res, rej) => {
-      const im = new Image();
-      im.onload = () => res({ sheet: im });
-      im.onerror = () => rej(new Error('portrait sprite failed to load'));
-      im.src = PORTRAIT_SPRITE.url;
-    });
-  }
   /* ---------------- ARRANGEMENTS: what a remix actually re-deals ----------
      REMIX (Hannah, 2026-08-07) — see 20-owned-root-network.md.
 
@@ -1798,9 +1774,6 @@ export function buildPortraitField({
 
      Strides are all coprime with the 20-image small pool, so each is a
      different permutation rather than a rotation of the last. */
-  const V_STRIDE = [7, 9, 3, 11, 13, 17, 19];
-  const V_OFFSET = [3, 11, 5, 17, 2, 13, 8];
-
   let photosAvailable = false;
   let photoSet = null;        // { images, wanted } once loaded
 
@@ -1833,87 +1806,20 @@ export function buildPortraitField({
      Everything that is not identity still varies with `v` — exposure, warmth,
      grain seed — so a re-deal re-lights the field as well as re-casting it.
      V_STRIDE/V_OFFSET survive as generators for those. */
-  const dealSalt = (Math.random() * 0x7fffffff) | 0;
-
-  function dealFor(v) {
-    const rnd = H.rng((((v + 1) * 2654435761) ^ dealSalt) >>> 0);
-    const order = CONTRIBUTOR_POOL.map((_, i) => i);
-    for (let i = 0; i < NODE_COUNT && i < order.length; i++) {
-      const j = i + Math.floor(rnd() * (order.length - i));
-      const t = order[i]; order[i] = order[j]; order[j] = t;
-    }
-    return order.slice(0, NODE_COUNT).map((i) => CONTRIBUTOR_POOL[i]);
-  }
-
-  /** Move the dealt people onto the slots. Name, role, blurb and face travel
-   *  together, in one assignment, for the reason in content/content.js. */
-  function seatPeople(people) {
-    /* The dealt records are PERSON entries (content/contributors.js): name,
-       role, blurb and sprite travel together as one frozen record — the
-       researched reason is already resolved into `blurb` at registry build,
-       so nothing here re-joins sources. ROLE_BLURB fallback also happened
-       there; this assignment only moves the record onto the slot.
-
-       The SAME record is written back into the static `contributors` row
-       (content/content.js describes those rows as the opening occupant,
-       "overwritten in place on every deal"): ui.js reads the chip label and
-       the hover card from CONTENT.contributors, so name, role and blurb on
-       those surfaces must be the dealt person, not the opening seat. Scene,
-       chip and card then agree by construction. */
-    nodes.forEach((nd, i) => {
-      const p = people[i % people.length];
-      if (!p) return;
-      nd.content.name = p.name;
-      nd.content.role = p.role;
-      nd.content.blurb = p.blurb;
-      const staticRow = contributors.find(c => c.id === nd.id);
-      if (staticRow) {
-        staticRow.name = p.name;
-        staticRow.role = p.role;
-        staticRow.blurb = p.blurb;
-      }
-      // The person's own tile, as a ready-to-render descriptor (2026-08-18,
-      // Hannah: the mobile sheet shows the avatar beside the name — ui.js
-      // stays chapter-agnostic, so the row carries everything it needs).
-      // Travels in the same assignment as the name for the same reason the
-      // name does: face, name and icon must be the same person or nothing.
-      nd.content.avatar = {
-        url: PORTRAIT_SPRITE.url,
-        col: p.sprite.col, row: p.sprite.row,
-        cols: PORTRAIT_SPRITE.cols, rows: PORTRAIT_SPRITE.rows,
-      };
-    });
-  }
+  const dealer = createPortraitDealer({ nodes, contributors, nodeCount: NODE_COUNT });
+  const { dealFor, seatPeople } = dealer;
 
   function photoSpecs(v, grade) {
-    const st = V_STRIDE[v % V_STRIDE.length];
-    const of = V_OFFSET[v % V_OFFSET.length];
-    const people = dealFor(v);
-    const T = PORTRAIT_SPRITE.tile;
-    return nodes.map((nd, i) => {
-      const k = i * st + of;
-      const p = people[i % people.length];
-      return {
-        img: photoSet.sheet,
-        // the person's own tile in the published sheet
-        sx: p.sprite.col * T, sy: p.sprite.row * T, sw: T, sh: T,
-        bustSeed: (nd.content.seed ?? i + 1) * 131 + i * 7 + v * 9973,
-        mirror: false,
-        exposure: 0.90 + ((i * 29 + v * 7 + k) % 13) / 13 * 0.26,
-        warmth: ((i * 17 + v * 3) % 11) / 11,
-        seed: 5000 + i * 37 + v * 911,
-        grade,   // undefined -> PHOTO_GRADE; HOVER_GRADE for the hover atlas
-      };
-    });
+    return dealer.photoSpecs(v, photoSet.sheet, grade);
   }
   function bustSeedsFor(v) {
     return nodes.map((nd, i) => (nd.content.seed ?? i + 1) * 131 + i * 7 + v * 9973);
   }
   function bakeBusts(v) {
-    return v === 0 ? atlasA : makeAtlas(NODE_COUNT, COLS, CELL, drawBust, bustSeedsFor(v));
+    return v === 0 ? atlasA : makePortraitAtlas(NODE_COUNT, COLS, CELL, drawBust, bustSeedsFor(v));
   }
   function bakePhotos(v) {
-    return photoSet ? makeAtlas(NODE_COUNT, COLS, CELL, drawPhotoCell, photoSpecs(v)) : null;
+    return photoSet ? makePortraitAtlas(NODE_COUNT, COLS, CELL, drawPhotoCell, photoSpecs(v)) : null;
   }
   /** The same sixteen tiles, graded gently — what a hovered face crossfades
    *  to. Baked wherever bakePhotos is, so the pair can never disagree about
@@ -1932,7 +1838,7 @@ export function buildPortraitField({
   const HOVER_CELL = CELL * 2;
   function bakePhotosHover(v) {
     if (!photoSet) return null;
-    const tex = makeAtlas(NODE_COUNT, COLS, HOVER_CELL, drawPhotoCell, photoSpecs(v, HOVER_GRADE));
+    const tex = makePortraitAtlas(NODE_COUNT, COLS, HOVER_CELL, drawPhotoCell, photoSpecs(v, HOVER_GRADE));
     // The hovered plane tilts and breathes fractionally off-axis; anisotropic
     // sampling keeps the magnified face from smearing on that slight skew.
     // Hover atlases only — the resting atlas feeds the goldens untouched.
@@ -1940,7 +1846,9 @@ export function buildPortraitField({
     return tex;
   }
 
-  const photosReady = loadPhotos().then((photos) => {
+  let disposed = false;
+  const photosReady = loadPortraitSprite().then((photos) => {
+    if (disposed) return false;
     photoSet = photos;
     // The nearest-node/large-source ranking retired with the mixed-resolution
     // stock pool: every tile in the published sheet is the same 96px, so there
@@ -1989,13 +1897,14 @@ export function buildPortraitField({
    *  waiting on two canvas atlases; called inline from remix() only if the
    *  visitor got there first. */
   function prepareNext() {
+    if (disposed) return;
     const v = variant + 1;
     if (pending && pending.v === v && (!photoSet || pending.photo)) return;
     if (pending) { retire(pending.bust); retire(pending.photo); retire(pending.photoHover); }
     pending = { v, bust: bakeBusts(v), photo: bakePhotos(v), photoHover: bakePhotosHover(v) };
   }
   function schedulePrepare() {
-    if (prepareTimer) return;
+    if (disposed || prepareTimer) return;
     const run = () => { prepareTimer = null; prepareNext(); };
     prepareTimer = typeof requestIdleCallback === 'function'
       ? requestIdleCallback(run, { timeout: 1500 })
@@ -2007,12 +1916,7 @@ export function buildPortraitField({
    *  is also uMapP's stand-in until the photos land, and atlasB is the
    *  anonymous glyph sheet, which a remix has no business touching. */
   function retire(tex) {
-    if (!tex || tex === atlasA || tex === atlasB) return;
-    const u = portraitMat.uniforms;
-    if (tex === u.uMapA.value || tex === u.uMapP.value
-      || tex === u.uMapA2.value || tex === u.uMapP2.value
-      || tex === u.uMapH.value || tex === u.uMapH2.value) return;
-    tex.dispose();
+    textureOwner.retire(tex);
   }
 
   /** The incoming arrangement becomes the resting one. */
@@ -2055,6 +1959,7 @@ export function buildPortraitField({
      *  empty scene. This used to arm on the visitor's first input, which put
      *  two large Canvas2D atlas bakes back into visible motion. */
     prepareRemix(renderer) {
+      if (disposed) return;
       prepareNext();
       if (renderer && renderer.initTexture && pending) {
         for (const tex of [pending.bust, pending.photo, pending.photoHover]) {
@@ -2063,6 +1968,27 @@ export function buildPortraitField({
       }
     },
     get photosAvailable() { return photosAvailable; },
+    /** Idempotent texture/async teardown for a chapter owner that retires. */
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      photosAvailable = false;
+      if (prepareTimer) {
+        if (typeof cancelIdleCallback === 'function') cancelIdleCallback(prepareTimer);
+        else clearTimeout(prepareTimer);
+        prepareTimer = null;
+      }
+      const u = portraitMat.uniforms;
+      const textures = new Set([
+        atlasA, atlasB,
+        u.uMapA.value, u.uMapP.value, u.uMapA2.value,
+        u.uMapP2.value, u.uMapH.value, u.uMapH2.value,
+        pending && pending.bust, pending && pending.photo,
+        pending && pending.photoHover,
+      ]);
+      pending = null;
+      for (const texture of textures) if (texture && typeof texture.dispose === 'function') texture.dispose();
+    },
     counts: {
       nodeCount: NODE_COUNT,
       routable: C_COUNT,
@@ -2167,7 +2093,7 @@ export function buildPortraitField({
      *  second, with the per-node ember flare off. Same start state, same end
      *  state, no travelling motion. */
     remix() {
-      if (swap) return null;
+      if (disposed || swap) return null;
       const reduced = !!reduceMotion.matches;
       if (!pending || pending.v !== variant + 1 || (photoSet && !(pending.photo && pending.photoHover))) {
         if (prepareTimer) {

@@ -71,7 +71,7 @@
 // on the shipped route; global p in comments) — never in global p, so
 // re-timing or inserting chapters never invalidates them (merge doc §5).
 import * as THREE from 'three';
-import { smooth01, trapEase, azEase, quadBezier } from '../../lib/ease.js';
+import { trapEase, azEase, quadBezier } from '../../lib/ease.js';
 import { INSPIRE } from '../inspire/camera.js';
 
 const DEG = Math.PI / 180;

@@ -34,29 +34,22 @@ TOOLS="$REPO_ROOT/tools"
 CAPTURE_PY="$TOOLS/capture.py"
 BAKE_PY="$TOOLS/bake-geom.py"
 META_PY="$TOOLS/build-meta.py"
+STATIC_CONTENT="$TOOLS/build-static-content.mjs"
 
 STAGED=$(git diff --cached --name-only)
 
-# Hand-synced twins: content/content.js (the content model — CO-2.2's single
-# source of truth) and static/index.html (its Tier-3 twin, which duplicates
-# the hero copy and the meta description by hand). Nothing but a console
-# check at /static/ guards the pair, so a split commit silently drifts them.
-# Warn loudly; never block — staging order is the author's call.
-if echo "$STAGED" | grep -q "content/content.js" \
-   && ! echo "$STAGED" | grep -q "static/index.html"; then
-  MISSING_TWIN="static/index.html"
-elif echo "$STAGED" | grep -q "static/index.html" \
-   && ! echo "$STAGED" | grep -q "content/content.js"; then
-  MISSING_TWIN="content/content.js"
-else
-  MISSING_TWIN=""
-fi
-
-if [ -n "$MISSING_TWIN" ]; then
-  echo "pre-commit: WARNING — content/content.js and static/index.html are hand-synced" >&2
-  echo "  twins (hero copy + meta description duplicated by hand, guarded only by a" >&2
-  echo "  console check at /static/), and $MISSING_TWIN is NOT staged with its twin." >&2
-  echo "  If the staged twin changed, the other likely must too. Not blocking." >&2
+# The static tier is generated HTML, not a hand-maintained twin. Block any
+# content/tool/static commit whose checked-in output is not the deterministic
+# derivation of content/content.js. --check never writes.
+if echo "$STAGED" | grep -q "content/content.js\|static/index.html\|tools/build-static-content.mjs"; then
+  STAGED_TREE=$(mktemp -d /tmp/banodoco-staged-content.XXXXXX) || exit 2
+  trap 'rm -rf "$STAGED_TREE"' EXIT
+  git checkout-index --all --prefix="$STAGED_TREE/" || exit 1
+  node "$STAGED_TREE/tools/build-static-content.mjs" --check || {
+    echo "pre-commit: static content is stale." >&2
+    echo "  Regenerate: node tools/build-static-content.mjs, then stage static/index.html" >&2
+    exit 1
+  }
 fi
 
 # Derived identity assets: favicons are cut from the favicon master, and og
@@ -81,13 +74,12 @@ if [ -n "$SKIP_SCENE_CHECK" ]; then
   exit 0
 fi
 
-# tools/preflight.sh runs the identical gates (rebuild --check) immediately
-# before committing; when it set PREFLIGHT_DONE the gates have just passed
-# on this exact tree, so re-running them here would duplicate ~4 min of
-# headless Chrome for zero signal. Ad-hoc commits (no preflight) still get
-# the full gate.
+# tools/release.sh runs tools/check.sh immediately before committing; when it
+# sets PREFLIGHT_DONE the gates have just passed on this exact staged tree, so
+# re-running them here would duplicate ~4 min of headless Chrome for zero
+# signal. Ad-hoc commits (outside the release flow) still get the full gate.
 if [ -n "${PREFLIGHT_DONE:-}" ]; then
-  echo "pre-commit: gates already run by tools/preflight.sh (PREFLIGHT_DONE) — skipping duplicate run" >&2
+  echo "pre-commit: gates already run by tools/release.sh (PREFLIGHT_DONE) — skipping duplicate run" >&2
   exit 0
 fi
 

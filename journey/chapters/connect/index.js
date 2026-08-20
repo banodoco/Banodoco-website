@@ -860,6 +860,10 @@ export function createConnect(sceneApi) {
      *  leak the resolved network on the click frame. Placement paths never call
      *  these hooks. */
     entryDuration: ENTRY_DURATION_S,
+    beginEntry() {
+      entryReveal = 0;
+      driveAt(SPAN_LO);
+    },
     entryReady() {
       return resolveNow() >= ENTRY_CAMERA_READY;
     },
@@ -874,5 +878,8 @@ export function createConnect(sceneApi) {
       amount = amountTarget;
       for (const id of NODE_IDS) amt[id] = hot[id] ? 1 : 0;
     },
+    // A nav landing reconciles the eased seam arm only. The route fronts and
+    // entryReveal belong to driveEntry and deliberately outlive the camera.
+    snapLanding() { amount = amountTarget; },
   };
 }

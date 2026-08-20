@@ -1174,6 +1174,9 @@
   left: 0;
   border-radius: 999px;
   background: var(--j-chip-bg);
+  opacity: var(--j-hot-shell-in, 1);
+  transform: translateY(var(--j-hot-shell-y, 0));
+  transform-origin: 50% 30%;
   pointer-events: none;
 }
 .j-hot.j-hot--icon-tab:is(:hover, .hot, :focus-visible) {
@@ -1194,7 +1197,9 @@
      ember dot is pinned back to its world node, but pinning this tab would
      tear it away from the capsule (and can put it underneath, as on Arca at
      430px). --j-dot-dy still keeps the invisible node hit-pad truthful. */
-  transform: none;
+  opacity: var(--j-hot-icon-in, 1);
+  transform: translateY(var(--j-hot-icon-y, 0)) scale(var(--j-hot-icon-scale, 1));
+  transform-origin: 50% 75%;
 }
 .j-hot--icon-tab .j-hot-dot.j-hot-ico::before {
   content: "";
@@ -1232,12 +1237,14 @@
   line-height: 1.05;
   text-align: center;
   white-space: nowrap;
+  opacity: var(--j-hot-label-in, 1);
+  transform: translateY(var(--j-hot-label-y, 0));
 }
 /* The generic hotspot hover grows its dot. Here that dot is the TAB itself,
    so scaling it would split the silhouette; only the drawing breathes. */
 .j-hot--icon-tab:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico {
   background: transparent;
-  transform: none;
+  transform: translateY(var(--j-hot-icon-y, 0)) scale(var(--j-hot-icon-scale, 1));
 }
 .j-hot--icon-tab:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico svg {
   transform: scale(1.14);
@@ -1246,5 +1253,23 @@
   .j-hot.j-hot--icon-tab { --j-chip-bg: rgba(12, 8, 3, 0.66); }
   .j-hot.j-hot--icon-tab:is(:hover, .hot, :focus-visible) {
     --j-chip-bg: rgba(18, 12, 4, 0.78);
+  }
+}
+
+/* Keep the initiative entry motion-free when the visitor has asked for less
+   motion. The parent hotspot's visibility still changes, but its joined
+   shell, icon, and name appear in their final positions immediately. */
+@media (prefers-reduced-motion: reduce) {
+  .j-hot.j-hot--icon-tab::after,
+  .j-hot--icon-tab .j-hot-dot.j-hot-ico,
+  .j-hot--icon-tab:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico,
+  .j-hot--icon-tab .j-hot-label {
+    opacity: 1;
+    transform: none;
+  }
+  .j-hot--icon-tab .j-hot-dot.j-hot-ico svg,
+  .j-hot--icon-tab:is(:hover, .hot, :focus-visible) .j-hot-dot.j-hot-ico svg {
+    transform: none;
+    transition: none;
   }
 }

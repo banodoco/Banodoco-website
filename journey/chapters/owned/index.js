@@ -459,12 +459,11 @@ export function createOwned(sceneApi, content) {
   let blending = false;
   // The Final-cutaway hold's blend latch (see KEEP_Z0_BLEND): 1 everywhere a
   // blend has not touched; may only fall while one is in flight; eases home
-  // after the landing. DELIBERATELY NOT reset by snap(): snapChapters fires
-  // on every blend landing (endCamBlend) as well as on placements, and a
-  // reset there would pop the colony on the landing frame — the exact
-  // shownPull trap final/index.js's snap comment records. Every placement
-  // path that needs exactness (boot, ?capture=, deep links) starts from the
-  // initial 1; after a blend the ease below brings it home.
+  // after the landing. DELIBERATELY NOT reset by either lifecycle snap: a
+  // reset would pop the colony on the landing frame — the exact shownPull
+  // trap final/index.js's snap comment records. Every placement path that
+  // needs exactness (boot, ?capture=, deep links) starts from the initial 1;
+  // after a blend the ease below brings it home.
   let keepGate = 1;
 
   sceneApi.addAnimator('journey-owned', (t, dt) => {
@@ -705,6 +704,10 @@ export function createOwned(sceneApi, content) {
      *  skipped, because the on-screen reveal is the camera-pure `arrival`
      *  mask in the animator (sink/keep), not this. */
     snap() { amount = amountTarget; portraits.snap(); },
+    // Navigation landing settles only the seam fade. portraits.snap() is the
+    // stronger placement/capture contract and must not truncate visible entry.
+    snapLanding() { amount = amountTarget; },
+    dispose() { portraits.dispose(); },
 
     setHot(id, on) {
       // THE CROWN — the one hover that answers with the WHOLE root system

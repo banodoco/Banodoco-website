@@ -20,7 +20,7 @@
 //            in global p, so re-timing or inserting chapters never
 //            invalidates them (merge doc §5).
 import * as THREE from 'three';
-import { smooth01, trapEase, azEase, quadBezier } from '../../lib/ease.js';
+import { trapEase, azEase, quadBezier } from '../../lib/ease.js';
 
 const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);

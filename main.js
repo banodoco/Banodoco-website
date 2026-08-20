@@ -197,17 +197,6 @@ function getMode() {
 // the right-side callouts keep edge clearance all the way down to 4:3 iPads
 function viewFor(mode) {
   const v = { ...VIEWS[mode] };
-  if (mode === 'desktop') {
-    /* 16:9 HERO BALANCE. At 2048x1152 the cap/stalk optical centre sits at
-       ~63.5% of the frame and still has ample air before the right rail.
-       Another -0.48 panX moves the specimen (and its projected furniture)
-       roughly 80px right at this camera distance. Taper the correction away
-       around the widescreen ratio so 16:10 and ultrawide compositions retain
-       their reviewed framing instead of inheriting a global model move. */
-    const aspect = innerWidth / innerHeight;
-    const widescreenMix = Math.max(0, 1 - Math.abs(aspect - 16 / 9) / 0.14);
-    v.panX -= 0.48 * widescreenMix;
-  }
   if (mode === 'deskNarrow') {
     const t = Math.min(1, Math.max(0, (1.55 - innerWidth / innerHeight) / 0.3));
     v.panX = -1.27 + 0.3 * t;
@@ -223,6 +212,20 @@ function viewFor(mode) {
     // the frame's air roughly evenly above and below the text block.
     v.targetY = 3.85 + 1.2 * t;
     v.camZ = 11.5 + 1.3 * t;
+  }
+  /* ONE LANDSCAPE HERO BALANCE FIELD. Physical screen inches are not a web
+     layout input: display scaling and window chrome give the same laptop many
+     possible CSS widths. Author the requested rightward composition in screen
+     space instead. It eases from the reviewed 1024px landscape pose to the
+     full 75px correction at 1200px, then holds—no device rectangle, no upper
+     cutoff, and no one-pixel cliff. Converting pixels through the active FOV
+     keeps the visible correction stable while deskNarrow changes distance. */
+  if (innerWidth > innerHeight && mode !== 'compact') {
+    let mix = (innerWidth - 1024) / (1200 - 1024);
+    mix = Math.max(0, Math.min(1, mix));
+    mix = mix * mix * (3 - 2 * mix);
+    const worldPerPixel = 2 * v.camZ * Math.tan(v.fov * Math.PI / 360) / innerHeight;
+    v.panX -= 75 * mix * worldPerPixel;
   }
   return v;
 }
@@ -697,7 +700,9 @@ if (sceneApi) {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       const mode = getMode();
-      if ((mode === 'deskNarrow' || mode === 'mobile') && mode === currentMode) sceneApi.setView(viewFor(mode), 0.6);
+      if ((mode === 'desktop' || mode === 'deskNarrow' || mode === 'mobile') && mode === currentMode) {
+        sceneApi.setView(viewFor(mode), 0.6);
+      }
       if (mode !== currentMode) {
         currentMode = mode;
         applyMode(mode);

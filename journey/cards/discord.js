@@ -13,7 +13,7 @@
 //
 // The publishable key ships in banodoco.ai's public bundle (public by design).
 
-import { CARD_ASSETS, REDUCE } from './index.js';
+import { CARD_ASSETS, REDUCE } from './runtime.js';
 
 const KEY = 'sb_publishable_O38oPBafrBoFrpi_rlWJvA_UJrulFsx';
 const BASE = 'https://ujlwuvkrxlvoswwkerdf.supabase.co/rest/v1/daily_summaries';

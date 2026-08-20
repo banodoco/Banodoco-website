@@ -38,7 +38,7 @@
 // questioned, that API count is the other source, and the discrepancy
 // was flagged to Hannah the day this shipped.
 
-import { CARD_ASSETS, REDUCE } from './index.js';
+import { CARD_ASSETS, REDUCE } from './runtime.js';
 
 // SELF-HOSTED as of 2026-08-18 (assets/cards/arca/video-{1..4}.mp4,
 // PROVENANCE.md): the site's own hero videos, fetched the hour its domain
@@ -46,11 +46,8 @@ import { CARD_ASSETS, REDUCE } from './index.js';
 // Local files also sidestep the stale-DNS window that made the remote
 // URLs fail for cached resolvers.
 //
-// FILENAMES ONLY at module scope: index.js imports this module while its
-// own bindings are still initializing (registry cycle), so touching
-// CARD_ASSETS up here is a TDZ ReferenceError that kills the whole
-// journey (learned live, 2026-08-18). Compose paths at runtime — light()
-// and build() run long after every module is settled.
+// FILENAMES ONLY at module scope: paths are composed at runtime by light()
+// and build(), keeping this inventory independent of the page's asset base.
 const FIGURES = [
   { syl: 'AR', name: 'Arnolfo di Cambio', video: 'video-1.mp4' },
   { syl: 'CA', name: 'Francesco Petrarca', video: 'video-2.mp4' },

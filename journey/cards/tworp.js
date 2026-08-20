@@ -15,7 +15,7 @@
 // identity into a hover you can feel. (Its "104 WEEKS…" hero stat line was
 // tried here and cut the same day, also Hannah.)
 
-import { CARD_ASSETS, REDUCE } from './index.js';
+import { CARD_ASSETS, REDUCE } from './runtime.js';
 
 // the site's own wordmark rotation; subsets cover "2RP" etc.
 const FACES = ['Monoton', 'Sixtyfour', 'Rubik Glitch'];

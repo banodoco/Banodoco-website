@@ -57,10 +57,9 @@
 
      Drift control (13-content-ops.md CO-2.2, "no duplicated strings"):
        every content-bearing element carries data-src="<path in CONTENT>".
-       The guard at the bottom of this file imports ../content/content.js
-       and console.errors on any mismatch. content.js remains the single
-       source of truth; this page is checked against it, not trusted.
-       Run the guard at every gate — see ../tools/TIER-WIRING.md §4.
+       ../tools/build-static-content.mjs resolves those bindings into this
+       real HTML document; --check fails without writing when it has drifted.
+       The browser guard below remains a visitor-safe diagnostic backstop.
 
      Typography and palette are the hero's (../index.html), unchanged,
      so the G5 tier-identity review reads the same place at every tier.

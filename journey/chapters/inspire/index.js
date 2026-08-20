@@ -873,6 +873,11 @@ export function createInspire(sceneApi) {
                                      // the 0.52 s spacing below is unchanged,
                                      // so only the queue's initial hold moves
   const land = exits.map(() => ({ a: 0, at: null }));
+  // A nav entry is armed before placeAt's two dt=0 placement frames. Those
+  // frames must preserve the freshly reset cascade; dt=0 means "settle" for a
+  // real placement/capture, but a nav jump is not a placement. snap() clears
+  // this flag and retains the settled capture contract.
+  let navLandingEntry = false;
   let landGate = null;               // bound by journey.js; null = QA default 1
   // One envelope owns both halves of each landing event. Keep this free of
   // the taste multiplier: taste changes brightness, not whether the named
@@ -885,7 +890,7 @@ export function createInspire(sceneApi) {
       const L = land[LAND_ORDER[s]];
       if (g > LAND_ON) {
         if (L.at === null) L.at = t + s * LAND_STAGGER_S;
-        if (dt === 0) L.a = 1;
+        if (dt === 0) L.a = navLandingEntry ? 0 : 1;
         else if (t >= L.at) L.a += (1 - L.a) * Math.min(1, dt * LAND_IN_K);
       } else {
         L.at = null;
@@ -1204,6 +1209,7 @@ export function createInspire(sceneApi) {
      *  a hidden tab only runs frames during capture bursts). W4-A: also snaps
      *  coherence and the streak so a ?p= capture sees the settled frame. */
     snap() {
+      navLandingEntry = false;
       for (const ex of exits) ex.fade = ex.target;
       computeEff();                 // camera is already placed by placeAt
       effActive = resolveActive();
@@ -1250,6 +1256,15 @@ export function createInspire(sceneApi) {
       // takeover positions are pure in (eff, time): the next pumped frame's
       // animator applies them with no temporal easing, so a ?p= capture sees
       // the settled conversion.
+    },
+    /** A fresh nav visit must earn the landing cascade again. Unlike snap(),
+     *  this is never used by a deep link/capture, which remains immediately
+     *  settled. Reset synchronously before placeAt's destination frames so a
+     *  rapid away/back cannot inherit finished Arca/ArtCompute/2RP markers. */
+    beginEntry() {
+      for (const ex of exits) { ex.target = 1; ex.fade = 1; }
+      for (const L of land) { L.a = 0; L.at = null; }
+      navLandingEntry = true;
     },
     /** T1 streaming seam: arm/retire the whole exit set. */
     setArmed(on) { armed = !!on; if (!on) api.setReveal(0, 0, 0, 0); },

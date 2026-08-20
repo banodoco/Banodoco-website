@@ -1,5 +1,6 @@
 [build]
 builder = "RAILPACK"
+buildCommand = "artifact=$(mktemp -d /tmp/banodoco-public.XXXXXX) && trap 'rm -rf \"$artifact\"' EXIT && revision=${RAILWAY_GIT_COMMIT_SHA:-$(git rev-parse HEAD)} && python3 tools/package-public.py \"$artifact\" --origin https://www.banodoco.ai --revision \"$revision\" && tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C \"$artifact\" -cf public-artifact.tar ."
 
 [deploy]
-startCommand = "python3 serve.py"
+startCommand = "runtime=$(mktemp -d /tmp/banodoco-runtime.XXXXXX) && tar -C \"$runtime\" -xf public-artifact.tar && cd \"$runtime\" && exec python3 serve.py"

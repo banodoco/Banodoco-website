@@ -1,55 +1,42 @@
 # Deploying glowshroom
 
-There is no build step: the tree deploys as-is, minus everything listed under
-MUST NOT SHIP. Serve `glowshroom/` as the site root (subpaths work — all live
-references are relative). For regenerating the derived artifacts (geometry
+There is no compilation step. Deployment packages the explicit public
+allowlist in **[deploy/public-files.json](deploy/public-files.json)**; the
+authoritative boundary and local inspection workflow are documented in
+**[PUBLIC-DEPLOY.md](PUBLIC-DEPLOY.md)**. For regenerating derived artifacts (geometry
 bake, favicons, captures) BEFORE shipping, see **[BUILDING.md](BUILDING.md)** —
-`python3 tools/rebuild.py` (fast, no captures) or `--with-captures` (full).
+`tools/build.sh` (fast, no captures) or `tools/build.sh --with-captures` (full).
 
-## MUST ship
+## Release command
+
+Run `tools/check.sh` for the read-only release gates, including public artifact
+allowlist and byte-roundtrip verification. Deployment is never a
+side effect of checking. The authorized end-to-end release flow is the
+separate `tools/release.sh` command, run from local `main`:
 
 ```
-index.html  main.js  flags.js  hero.css  README.md(optional)
-organism/                       (4 .js)
-journey/                        (*.js, lib/, chapters/, site.css, index.html stub)
-content/content.js
-vendor/three/                   (three.module.js + addons/)
-static/                         (index.html + captures/*.png — NOT captures/_check/)
-static/geom/                    (manifest.json + *.bin — the committed geometry
-                                 bake. Named explicitly so nobody trims it: the
-                                 page falls back to live builders without it,
-                                 which works but re-introduces the load-time
-                                 build cost the bake exists to remove. Always
-                                 fresh by construction: tools/pre-commit
-                                 byte-gates it, so whatever is committed IS
-                                 what the builders would compute.)
-assets/brand/mark-b-mask-{48,64,96}.png
-favicon.ico  site.webmanifest   (site root)
-404.html                        (site root; point the host's 404 handling at
-                                 it — most static hosts pick up /404.html by
-                                 convention)
-assets/brand/favicon-96.png
-assets/brand/apple-touch-icon.png
-assets/brand/icon-{192,512}.png
-assets/brand/og-home.jpg        (1200x630 unfurl cards, referenced from the
-assets/brand/og-ownership.jpg    three page heads; derived by
-                                 tools/build-meta.py — regenerate, never
-                                 repaint, same contract as the mark masks)
-content/contributors.js         (the 120-person portrait pool)
-assets/contributor-portraits/   (manifest.js + profile-sprite.jpg, 384 KB —
-                                 BOTH are hard dependencies of portraits.js
-                                 and the field ships photos by default now.
-                                 The old assets/test-portraits/ stock set is
-                                 deleted; nothing imports it.)
-robots.txt  sitemap.xml
+tools/release.sh --stage PATH [--stage PATH ...]
 ```
 
-## MUST NOT ship
+Every changed or untracked path intended for the release must be named with
+`--stage`; the command aborts if anything remains outside that reviewed set.
+It fetches and requires `origin/main` to be an ancestor (the one-time legacy
+history merge is already in main), then commits, pushes `main`, and polls
+production. Divergence aborts rather than discarding the remote tree. Each
+destructive boundary is confirmed.
+Before committing, it runs `npm run check` (lint, cycles, unit and browser
+contracts) and `tools/check.sh` (scene drift plus deploy artifact) against the
+reviewed tree, and aborts if either the staged diff or `HEAD` changes meanwhile.
+`--yes` authorizes them non-interactively; `--no-verify` skips only the final
+URL poll and does not make the command a dry run. Use `tools/release.sh --help`
+for the complete interface.
 
-`archive/`, `journey-v6-plan/`, `journey-v6/`, `tools/`, `serve.py`,
-`ab.html`, `compare.html`, `golden-mushroom.html`, `golden-mushroom-page.html`,
-`design-reference.png`, `reference.jpg`, `assets/brand/mark-b-source.png`,
-`static/captures/_check/`, `content/content-archive-deferred.js`, `DEPLOY.md`.
+## Public boundary
+
+Do not maintain a second file list here. `deploy/public-files.json` is the
+executable source of truth for included trees/files, required runtime URLs,
+and forbidden repository-only paths. `tools/package-public.py` fails closed
+when that boundary is incomplete or leaks an excluded path.
 
 ## Host configuration
 
@@ -65,21 +52,19 @@ robots.txt  sitemap.xml
 - **CSP**: if any CSP is applied, the inline `<script type="importmap">` in
   index.html needs a nonce or sha-256 hash or the whole site dies.
 
-## One deploy-time substitution
+## Artifact-only origin substitution
 
 `sitemap.xml` and the three page heads (`index.html`, `static/index.html`,
 `ownership/index.html` — their `og:url`/`og:image`/canonical, which must be
 absolute, plus the homepage's JSON-LD block) and `404.html` (its home link
 and icon — self-contained otherwise, since hosts serve it at arbitrary
 depths) use the placeholder `ORIGIN`; robots.txt's `Sitemap:` line
-uses a relative path. Substitute the real origin at deploy:
-
-    sed -i '' "s|ORIGIN|https://your.host/base|g" \
-      sitemap.xml index.html static/index.html ownership/index.html
-
-and set `Sitemap: https://your.host/base/sitemap.xml` in robots.txt.
-(Skipping the sed breaks nothing on-page — unfurlers just fall back to a
-card without an image.)
+uses a relative path. `tools/package-public.py --origin ...` replaces every
+`ORIGIN` occurrence only in the temporary public artifact, covering these
+files and `404.html`, and fails if any placeholder remains. The source checkout
+is never rewritten. Railway supplies `https://www.banodoco.ai`; local artifact
+inspection must pass an explicit origin. Set the final absolute `Sitemap:` URL
+in `robots.txt` if the deployment origin changes.
 
 ## Field monitoring
 

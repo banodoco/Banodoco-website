@@ -38,6 +38,7 @@ PORT = int(os.environ.get("PORT", 8137))
 
 # (tool, args, label, needs_server)
 FAST_STEPS = [
+    ("build-static-content.mjs", [], "static content   static/index.html", False),
     ("bake-geom.py", [], "geometry bake    static/geom/*.bin", True),
     ("build-meta.py", [], "favicons + og    favicon.ico, assets/brand/og-*", False),
     ("build-mark.py", [], "logo masks       assets/brand/mark-b-mask-*.png", False),
@@ -56,7 +57,8 @@ def server_up():
 def run_step(tool, args, label):
     print(f"== {label}")
     r = subprocess.run(
-        [sys.executable, os.path.join(TOOLS, tool)] + args,
+        (["node"] if tool.endswith(".mjs") else [sys.executable])
+        + [os.path.join(TOOLS, tool)] + args,
         cwd=ROOT,
         capture_output=True,
         text=True,

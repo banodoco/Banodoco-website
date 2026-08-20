@@ -1326,6 +1326,7 @@ export function createFinal(sceneApi) {
         .sort((a, b) => a.reveal - b.reveal);
     },
     snap() { amount = amountTarget; },
+    snapLanding() { amount = amountTarget; },
     /** Live growth-front position for the halation focus hint (or null). */
     frontWorld,
     /** The focal source for the lens: the travelling front when it runs,

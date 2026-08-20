@@ -27,7 +27,7 @@
 //   docs/hybrid-search/phase0-inventory.json. (The task brief's "~4,000
 //   workflows" was a synthetic test fixture in that repo — corrected.)
 
-import { CARD_ASSETS, REDUCE } from './index.js';
+import { CARD_ASSETS, REDUCE } from './runtime.js';
 
 const QUERIES = [
   {
