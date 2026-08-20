@@ -205,7 +205,9 @@ An XHARD order is never handed to one Luna with "clean this up." Its protocol is
 4. A different strong agent performs read-only review.
 5. The coordinator personally inspects the contract diff and classifies every
    test/browser result before acceptance.
-6. The relevant wave gate must pass before any dependent order starts.
+6. Same-family slices may advance after focused proof, R1 review, and
+   coordinator acceptance. The relevant wave gate must pass before work outside
+   that family/wave consumes the integrated result.
 
 The XHARD orders in this program are:
 
@@ -217,8 +219,10 @@ The XHARD orders in this program are:
   state are currently interleaved;
 - **J02** — frame ordering is visually and numerically critical even when each
   individual stage looks correct;
-- **J04** — disposal crosses timers, listeners, GPU preparation, registry, UI,
-  chapters, async completion, and compatibility globals;
+- **J04a–J04e family** — disposal crosses state, scroll, UI/rail, dial/chapter
+  hooks, registry/GPU preparation, async completion, facade generations, and
+  compatibility globals; the XHARD decision is the ownership map, while each
+  child implementation remains bounded;
 - **R01** — intro acceleration replaces a global clock while owning a recursive
   RAF independent of the main animation lifecycle;
 - **R03** — GPU resource teardown must preserve renderer/TAA behavior while
@@ -283,7 +287,10 @@ Required stable browser scenario IDs:
 - `static-alias`;
 - `static-input`;
 - `reduced-motion`;
-- `live-journey`.
+- `live-journey`;
+- `live-desktop`;
+- `live-touch`;
+- `live-reduced-motion`.
 
 `test:browser` may report `SKIP(environment)` distinctly. The required variant
 must fail on absence, launch failure, WebGL unavailability, timeout, harness
@@ -361,9 +368,10 @@ ledger like implementation orders:
 
 | Review ID | When | GPT-5.6 Sol reviews | Downstream hold |
 | --- | --- | --- | --- |
+| XR-BASELINE | After G1 evidence, before Wave 2 | Q01–Q05/P01/C01–C04 semantics, capture truthfulness, environment classification, live scenario coverage, deterministic/resource/performance report completeness, and fault-injection validity | Wave 2 cannot start |
 | XR-C-DESIGN | After S01/S02 evidence, before C05 | Root's manifest, chapter capability, registry-instance, navigation, and compatibility migration design | C05/C06/N01 cannot start |
 | XR-C-GATE | At G2 after C05/C06/N01 and focused/browser evidence | Integrated canonical model, dependency direction, adapter debt, and two-instance behavior | J01/J03/R05–R08 cannot start |
-| XR-RUNTIME-DESIGN | Before J01 and before lifecycle XHARD orders J04/R01/R03/R04/R07 | Root's transition/frame state model, disposal graph, async cancellation, clock/RAF, GPU, and page/journey lifetime decisions | Affected XHARD order cannot start |
+| XR-RUNTIME-DESIGN | Before J01 and before lifecycle XHARD orders J04a–J04e/R01/R03/R04/R07 | Root's transition/frame state model, disposal graph, async cancellation, clock/RAF, GPU, rail/UI, and page/journey lifetime decisions | Affected XHARD family/order cannot start |
 | XR-RUNTIME-GATE | At G3 after journey/rendering lifecycle lanes | Integrated frame order, transition semantics, teardown ownership, late async behavior, recreation, and visitor fallbacks | Wave 4 cannot start |
 | XR-VISUAL-DESIGN | Before U05, O02, B03, and B04 | Root's projection/layout, seeded builder, responsive page-layout, and boot-handoff extraction boundaries | Named XHARD order cannot start |
 | XR-VISUAL-GATE | At G4 | Whole UI/organism/chapter/page composition, visual determinism, residual facade cohesion, and abstraction-churn risk | Wave 5 cannot start |
@@ -409,7 +417,7 @@ a narrower exact allowlist and names allowed new files.
 | Q02 | Normalize cache-query imports for dependency analysis and fail on skipped local roots | `package.json`, `madge.webpack.cjs`, one analyzer helper/test | T2 | organism local import analyzed; `playwright-core` explicitly external |
 | Q03 | Add browser modes, stable scenario filtering, machine-readable environment classification, and bounded cleanup | `tools/browser-smoke.mjs`, package scripts/tests | T2 | parser/unit probes; gate owner runs one static scenario only |
 | Q04 | Inventory all current warnings and empty catches; assign an owning order and define error classes | ledger/documentation only | T1 | every warning/catch mapped; no broad source edit |
-| Q05 | Make capture comparison non-mutating by writing fresh output outside the repository | `tools/capture.py`, `tools/check.sh`, focused harness tests/docs | T2 | compare succeeds from a private temp directory; repo capture paths remain byte-identical |
+| Q05 | Make capture comparison non-mutating and truthful: write fresh output outside the repository and remove automatic fail-band success | `tools/capture.py`, `tools/check.sh`, focused harness tests/docs | T2 | repo capture paths remain byte-identical; every fail-band exits nonzero, or an explicit coordinator environment adjudication remains recorded as a blocking non-pass |
 
 Wave 0 is serialized because Q01–Q03 and Q05 share package/test/gate
 infrastructure. Q04 may run after their file boundaries freeze. No capture gate
@@ -421,8 +429,8 @@ runs before Q05 is accepted.
 | --- | --- | --- | --- | --- |
 | P01 | Provision and prove one supported reference browser/WebGL/performance environment before characterization depends on it | external environment plus ledger metadata; no app source | T2 | required WebGL preflight and `live-journey` pass with fixed browser/renderer/viewport/DPR; temp capture path writable |
 | C01 | Characterize hero, direct/wrap transitions, cancellation, landing, and frame-writer order | new journey contract tests; minimal explicit test seam only | T2 | deliberate perturbation makes each assertion fail |
-| C02 | Characterize UI DOM/ARIA, sidebar/nav effect, disclosure, focus, sheet, copy arrival, and reduced motion | new UI/DOM tests; harness scenario definitions | T2 | targeted static-input/reduced-motion scenarios |
-| C03 | Define deterministic rendering report schema and record RNG/order/geometry/resource baselines | new rendering tests/report fixture; read-only probes | T3 | exact deterministic fields repeat twice |
+| C02 | Characterize UI DOM/ARIA, sidebar/nav effect, disclosure, focus, sheet, copy arrival, and reduced motion | new UI/DOM tests; harness scenario definitions | T2 | `live-desktop`, `live-touch`, and `live-reduced-motion` cover normal desktop, mobile sheet/focus, hero/sidebar, copy timing, and reduced motion |
+| C03 | Define deterministic rendering report schema and record RNG/order/geometry/resource/performance baselines | new rendering tests/report fixture; read-only probes | T3 | RNG/geometry/draw ranges, renderer memory/draw calls, listener/RAF/resource counts repeat exactly; environment provenance and soft frame/GPU tolerances recorded |
 | C04 | Characterize portrait deal atomicity, late load/failure, cancellation, and disposal | new portrait contract tests; minimal loader seam only | T2 | fake loader/clock tests fail on post-dispose mutation |
 
 P01 follows Q03/Q05 and precedes C01–C04. If no supported reference environment
@@ -453,12 +461,18 @@ before Luna implements it.
 | J01 | Extract one transition controller for jump/wrap/cancel/reverse/hero/entry state | `journey.js`, transition/path/entry collaborators and tests | T3 / **XHARD** | endpoint, reversal, cancellation, rewind, landing exact |
 | J02 | Declare the fixed frame pipeline once and remove chapter-specific branches | `journey.js`, `frame-application.js`, new pipeline/tests | T3 / **XHARD** | spy event sequence exact; frame output unchanged |
 | J03 | Inject narrow UI runtime capabilities and remove lower-level global/private-shape reads | `ui.js`, `journey.js`, `chapter-interactions.js`, adapter/tests | T2 | no lower `window.journey`/`portraits` access |
-| J04 | Add idempotent journey disposal for timers, listeners, preparation, registry, UI, and global | journey facade/lifecycle modules and tests | T2 / **XHARD** | dispose during prepare/transition/entry; recreate twice |
+| A02 | Freeze `journey/rail.js` page-versus-journey ownership before teardown | `journey/rail.js`, UI/page consumers, read-only responsibility/state map | T1 under **XHARD** lifecycle design | every rail timer/listener/backdrop/disposer has one target owner |
+| J04a | Own and detach journey state/scroll timers, hash/input/resize/visibility listeners | `journey/state.js`, `journey/scroll.js`, narrow lifecycle helpers/tests | T2 under **XHARD** lifecycle design | repeated attach/dispose leaves zero owned work; scroll behavior exact |
+| J04b | Own and detach UI/rail timers, listeners, backdrop, and subordinate teardown | `journey/ui.js`, `journey/rail.js`, UI modules/tests | T2 under **XHARD** lifecycle design | UI/rail destroy is idempotent; sheet/nav/rail behavior exact |
+| J04c | Own and detach dial and chapter-installed global hooks | `journey/dial.js`, exact chapter hook owners, focused tests | T2 under **XHARD** lifecycle design | keys/listeners detach once without changing chapter behavior |
+| J04d | Own registry/preparation cancellation and late async settlement | `chapter-registry.js`, preparation helpers, `journey.js`, tests | T2 under **XHARD** lifecycle design | dispose during `prepareGpu`; no stale registry/late mutation |
+| J04e | Compose facade-generation, journey animator, compatibility-global, and recreation cleanup | `journey.js`, new journey lifecycle owner/tests | T2 under **XHARD** lifecycle design | boot/prepare/activate/dispose/recreate twice; old global cannot affect new instance |
 | J05 | Document and test page-lifetime singleton handlers separately from journey recreation | `main.js` test seam, tests, lifecycle docs | T2 | one install per page module; no journey accumulation |
 
-Run J01 → J02 → J03 → J04 → J05 serially. These orders share the central
-orchestrator and encode root-owned semantics. `XR-RUNTIME-DESIGN` must explicitly
-cover J01/J02 before J01 and J04 before their dispatch.
+Run J01 → J02 → J03 → A02 → J04a → J04b → J04c → J04d → J04e → J05
+serially. Each child has a separate reservation, patch journal, review, and
+rollback seam. `XR-RUNTIME-DESIGN` must explicitly cover J01/J02 and the complete
+J04a–J04e ownership map before their dispatch.
 
 ### Wave 3B — rendering and chapter lifecycle ownership
 
@@ -485,19 +499,26 @@ each starts. R08 waits for all of them.
 
 | ID | Goal | Candidate scope | Risk | Focused proof |
 | --- | --- | --- | --- | --- |
-| U01a | Replace card import timer with explicit start/stop scheduler | `journey/cards/index.js`, runtime/new scheduler/tests | T2 | 1500 ms order, build-once, cancel, idempotence |
+| U01a | Replace card import timer with an explicit start/stop scheduler and wire the UI lifecycle caller | `journey/cards/index.js`, runtime/new scheduler, `journey/ui.js` or narrow card-lifecycle adapter/tests | T2 | UI facade starts preparation at the characterized epoch; 1500 ms/build-once behavior is exact; UI destroy stops it and J04e cascades disposal |
 | U01b | Move builder registry/exports behind one acyclic registry owner | `journey/cards/index.js`, new registry module, builder-contract tests | T1 | builder identity/order/default exports exact |
 | U01c | Move card icon metadata behind one data-only owner | `journey/cards/index.js`, new icon-data module/tests | T1 | icon keys/markup/signatures exact; no warming side effect |
+| U01d | Own Discord card preparation, idle/timer work, remote fetch, late settlement, and cancellation under the same UI lifecycle caller | `journey/cards/discord.js`, narrow preparation helper, UI card-lifecycle adapter/tests | T2 | no import-time async work; UI start/dispose ownership and prepare/deactivate/failure/late-result behavior are exact |
 | U02 | Extract hotspot and hover-zone registry with one state owner | `ui.js`, new UI module/tests | T2 | hover/focus/touch behavior and cleanup exact |
 | U03 | Extract popover/card disclosure controller | `ui.js`, UI/cards adapters/tests; CSS protected | T2 | tiers, Escape, focus return, activation exact |
 | U04 | Extract copy/arrival controller | `ui.js`, arrival/live-region helpers/tests | T2 | timing and reduced-motion exact |
 | U05 | Extract projection/collision/layout engine | `ui.js`, new layout module/tests | T3 / **XHARD** | DOM projection and current captures unchanged |
 | U06 | Make UI facade composition-only and cascade idempotent destroy | UI facade/modules/tests | T2 | zero UI timers/listeners after destroy |
 
-Run U01a → U01b → U01c before U02. Run U02 → U03 → U04 → U05 → U06
+Run U01a → U01b → U01c → U01d before U02. Run U02 → U03 → U04 → U05 → U06
 serially because they converge on `ui.js`. Review after every T2/T3 order and
 batch-review U01b/U01c together; run targeted browser scenarios after U03, U04,
 and U05, not after every extraction.
+
+The root-frozen U01 interface is: the UI facade creates and synchronously starts
+one card-preparation lifecycle at the characterized boot epoch. Its `destroy()`
+stops the scheduler, idle work, fetch/late settlement, and card-specific
+preparation; J04e reaches it only by cascading `ui.destroy()`. Card modules never
+self-start during import, and journey code does not reach into card internals.
 
 ### Wave 4B — organism and large renderer cohesion
 
@@ -513,9 +534,10 @@ and U05, not after every extraction.
 | H06 | Split Final clones on the same rule | `journey/chapters/final/clones.js`, allowed siblings | T3 | byte/schema/capture/lifecycle gates |
 
 O01 precedes O02. H01–H06 are independent packages after Wave 3 disposal
-contracts freeze. The coordinator may run disjoint H-orders concurrently, but
-the browser/capture gate remains serialized. Stop an H-order when its remainder
-is cohesive; line count alone cannot authorize another split.
+contracts freeze, but their writes are not concurrent: complete focused checks,
+R1 review, frozen-source capture, and coordinator acceptance for H01 before H02
+begins, and so on. Stop an H-order when its remainder is cohesive; line count
+alone cannot authorize another split.
 `XR-VISUAL-DESIGN` must explicitly cover O02 before its dispatch.
 
 ### Wave 4C — entry facade and residual-cohesion decisions
@@ -524,14 +546,20 @@ is cohesive; line count alone cannot authorize another split.
 | --- | --- | --- | --- | --- |
 | A01 | Decide whether the remaining portrait facade is cohesive after R04/R06 | `portraits.js`, portrait helpers, contract map; read-only decision artifact | T1 | remaining code is only geometry/material/runtime coordination, or A01a is required before G4 |
 | A01a | Conditional: extract one additional portrait owner found by A01 | exact paths and contract fixed by root from A01 evidence | T3, optionally **XHARD** | focused portrait lifecycle, byte/order, and capture gates |
-| A02 | Decide whether `journey/rail.js` is cohesive and map page-versus-journey ownership | `journey/rail.js`, consumers/tests; read-only decision artifact | T1 | explicit responsibility/state map and exception, or one root-defined extraction is required before B03 |
+| A03 | Decide whether Inspire's remaining facade/build/runtime state is cohesive | `journey/chapters/inspire/index.js`, direct collaborators; read-only decision artifact | T1 | one owner is evidenced, or A03a extraction is required before G4 |
+| A04 | Decide whether Final's remaining facade/build/runtime state is cohesive | `journey/chapters/final/index.js`, direct collaborators; read-only decision artifact | T1 | one owner is evidenced, or A04a extraction is required before G4 |
+| A05 | Decide whether the detachable scroll runtime is cohesive after J04a | `journey/scroll.js`, state/input collaborators; read-only decision artifact | T1 | one owner is evidenced, or A05a extraction is required before G4 |
+| A06 | Decide whether spores is cohesive after listener ownership moves | `organism/spores.js`, input/runtime collaborators; read-only decision artifact | T1 | one owner is evidenced, or A06a extraction is required before G4 |
 | B01 | Freeze the page-bootstrap state model and characterization map | `main.js`, direct collaborators, C01/C02/J05 evidence; test/document only | T2 | every handler/timer/layout/handoff has a named owner and baseline |
 | B02 | Extract page-level failure reporting and singleton global-handler ownership | `main.js`, new bootstrap failure/lifecycle modules/tests | T2 | one install per page load; visitor fallback unchanged |
 | B03 | Extract responsive hero/sidebar/rail layout behind an explicit page-layout owner | `main.js`, `journey/rail.js`, new bootstrap/layout module/tests; CSS protected | T3 / **XHARD** | approved hero/sidebar behavior, breakpoints, rail placement, resize order, captures exact |
 | B04 | Extract boot-input buffering and intro/scene/journey handoff | `main.js`, narrow bootstrap/handoff modules/tests | T3 / **XHARD** | early input, intro skip, lazy prepare, failure, and handoff ordering exact |
 | B05 | Leave `main.js` as entry/composition and documented page-lifetime compatibility facade | `main.js`, bootstrap modules/tests | T2 | facade contains boot/composition only; public entry/import-map behavior exact |
 
-A01 follows R04/R06. A02 precedes B03. B01 follows J05 and the Wave 3 gate;
+A01 follows R04/R06; A03–A06 follow their lifecycle owners. Conditional IDs
+A03a–A06a are root-defined, separately reviewed extraction orders and must be
+accepted before G4 when triggered. A02 already precedes J04b and B03. B01 follows
+J05 and the Wave 3 gate;
 B02 → B03 → B04 → B05 serialize because they touch `main.js`. The coordinator
 defines every B-interface before dispatch and protects the user's current hero
 and sidebar hunks explicitly. `XR-VISUAL-DESIGN` must explicitly cover B03 and
@@ -571,6 +599,8 @@ gate:
   assertions remain in named browser scenarios;
 - capture comparison writes only to a private temporary output directory and
   leaves repository capture paths byte-identical;
+- no named capture fail-band can become a green result; an environment
+  adjudication is visibly `blocked`, never `pass`;
 - an R1 Luna tooling review passes and the coordinator accepts G0.
 
 ### G1 — characterization baseline
@@ -578,12 +608,21 @@ gate:
 After P01 and C01–C04:
 
 - `npm run check` passes;
-- gate owner runs all eight browser scenarios once, with `live-journey` required
+- gate owner runs all eleven browser scenarios once, with `live-journey` required
   in the supported environment;
-- deterministic rendering report repeats;
+- `live-desktop`, `live-touch`, and `live-reduced-motion` pass in their fixed
+  viewport/input/motion configurations;
+- deterministic rendering report repeats exact RNG/order/geometry/draw-range,
+  renderer-memory/draw-call, listener/RAF, and resource-owner fields;
+- the report records browser/renderer/viewport/DPR/flags provenance and accepted
+  soft frame-time/GPU tolerances for later G3/G4 comparison;
 - capture/baseline files are observed, never refreshed;
 - an R1 Luna characterization review confirms tests fail under deliberate
-  invariant perturbations; the coordinator accepts P01/G1 evidence.
+  invariant perturbations;
+- XHARD review `XR-BASELINE` by a fresh GPT-5.6 Sol approves tooling semantics,
+  capture truthfulness, environment classification, scenario coverage, and the
+  deterministic/resource/performance baseline before Wave 2;
+- the coordinator accepts P01/G1/RX evidence.
 
 ### G2 — canonical contract gate
 
@@ -597,10 +636,11 @@ After S01–N01:
 
 ### G3 — lifecycle and orchestration gate
 
-After J01–J05 and R01–R08:
+After J01–J03, A02, J04a–J04e, J05, and R01–R08:
 
 - `npm run check` passes;
-- required `live-journey`, `static-input`, and `reduced-motion` pass;
+- required `live-journey`, `live-desktop`, `live-touch`,
+  `live-reduced-motion`, `static-input`, and `reduced-motion` pass;
 - `python3 tools/rebuild.py --check` passes;
 - capture comparison and reference-environment resource/performance report pass;
 - repeated create/prepare/activate/dispose/recreate proves zero owned work leaks;
@@ -609,8 +649,8 @@ After J01–J05 and R01–R08:
 
 ### G4 — cohesive extraction gate
 
-After U01a–U06, O01–O02, H01–H06, A01/A02 and every required conditional
-extraction, plus B01–B05:
+After U01a–U01d/U02–U06, O01–O02, serialized H01–H06, A01/A03–A06 and every
+required conditional extraction, plus B01–B05:
 
 - focused checks were recorded after every order;
 - `npm run check` and all required browser scenarios pass;
@@ -647,6 +687,13 @@ timing out or skipped.
 Maximum useful execution concurrency is two implementers plus one reviewer/gate
 owner. More agents increase collision risk in this repository.
 
+Browser, capture, WebGL, and performance gates are global source-freeze points,
+not a third concurrent lane. Before a gate, the coordinator reserves the full
+served dependency closure, records exact hashes/status for every served source,
+and pauses all repository writes by agents. The gate owner re-hashes the closure
+afterward. Any source change during the lease invalidates the result, even when
+the changed path was outside the scenario's apparent subsystem.
+
 Never run these concurrently:
 
 - two orders touching `main.js`, `journey/journey.js`, `journey/ui.js`,
@@ -655,6 +702,8 @@ Never run these concurrently:
 - schema producers and consumers migrating from the old schema;
 - chapter contract edits and chapter disposal/extraction;
 - two browser, server, WebGL, capture, or performance runs;
+- any implementation write while a browser/capture/WebGL/performance gate owns
+  the frozen served dependency closure;
 - scanner configuration and source refactoring.
 
 Safe parallel lanes after prerequisites:
@@ -662,13 +711,14 @@ Safe parallel lanes after prerequisites:
 - journey characterization beside rendering characterization;
 - journey runtime ownership beside organism/portrait lifecycle ownership;
 - UI work beside organism/chapter renderer work;
-- disjoint H01–H06 renderer packages, subject to the single gate lane.
+- read-only H01–H06 reconnaissance; renderer writes, review, capture, and
+  acceptance are serialized package-by-package.
 
 ## Browser-lane lease
 
 The coordinator records owner, scenario IDs, port, profile path, server PID,
 browser PID/process group, start time, deadline, viewport, DPR, browser version,
-renderer, and flags. The owner:
+renderer, flags, and the complete pre-gate served-source manifest. The owner:
 
 - starts the server and browser in recorded owned process groups with an
   explicit unique profile path under a private `mktemp` directory;
@@ -677,6 +727,8 @@ renderer, and flags. The owner:
   process groups when needed;
 - verifies the leased port, profile path, server group, browser group, and all
   recorded descendants are gone before releasing the lane;
+- verifies the complete served dependency closure is byte-identical to the
+  pre-gate manifest; a mismatch invalidates all results from that lease;
 - uses a firm per-scenario and outer deadline;
 - reports `pass`, `application-fail`, `environment-blocked`, or `harness-fail`;
 - never retries an application assertion automatically;
@@ -774,13 +826,15 @@ When the user authorizes execution, the coordinator should:
 4. run G0;
 5. run P01 and stop before characterization if the required reference
    browser/WebGL/performance environment is unavailable;
-6. dispatch only work whose parents are accepted and whose exact paths do not
+6. complete C01–C04, run G1, and hold Wave 2 until `XR-BASELINE` and coordinator
+   acceptance confirm that the evidence foundation is truthful and complete;
+7. dispatch only work whose parents are accepted and whose exact paths do not
    collide with active reservations;
-7. update the ledger and external patch journal after every write, handoff,
+8. update the ledger and external patch journal after every write, handoff,
    review, repair, and gate;
-8. provide the user a concise report at each wave seam, not a stream of every
+9. provide the user a concise report at each wave seam, not a stream of every
    subagent tool call;
-9. stop only for a genuine authorization/ownership ambiguity, product decision,
+10. stop only for a genuine authorization/ownership ambiguity, product decision,
    or unrecoverable environment requirement.
 
 This is the point at which the work can be run one piece at a time without
