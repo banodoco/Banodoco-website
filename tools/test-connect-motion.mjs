@@ -32,11 +32,12 @@ const portraitPose = (p) => {
 const mid = portraitPose(midP);
 const rest = portraitPose(connectP);
 
-// D23's +0.80 vertical taste adjustment belongs to the whole movement, not
-// only its final zero-slope segment. Keep the approved rest exact while
-// bounding the amount that can re-accelerate after the interior key.
+// D23's +0.80 vertical taste adjustment and the phone-only Connect pitch-up
+// belong to the whole movement, not only its final zero-slope segment. Keep
+// the approved eye exact and carry the gaze adjustment by the interior key so
+// neither can re-accelerate during the visible landing.
 assert.ok(Math.abs(rest.pos.y - 2.30) < 1e-9);
-assert.ok(Math.abs(rest.target.y - 2.30) < 1e-9);
+assert.ok(Math.abs(rest.target.y - 2.75) < 1e-9);
 assert.ok(rest.pos.y - mid.pos.y <= 1.25,
   'portrait eye must not restart a large truck during the Connect intro');
 assert.ok(rest.target.y - mid.target.y <= 1.25,

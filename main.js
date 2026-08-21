@@ -139,14 +139,14 @@ const VIEWS = {
 };
 
 /* Mission composition truck, in CSS pixels rather than world units. The
-   request is visual (+50px on desktop), while each responsive view uses a
+   visual correction is projection-authored, while each responsive view uses a
    different distance/FOV, so viewFor() converts these values through the
    active projection. Moving panX trucks camera and target together: organism,
    particles, bloom and ground all move as one projection while DOM copy/nav
    remain fixed. Portrait keeps only a restrained nudge so the wide cap and
    stipe do not crowd the phone/tablet edge. */
 const MISSION_RIGHT_PX = Object.freeze({
-  desktop: 50,
+  desktop: 20,
   deskNarrow: 45,
   compact: 36,
   tablet: 26,
