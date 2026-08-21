@@ -2115,7 +2115,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      ordered list; the latter opens the site-map sidebar immediately. The
      rail's full-height flex container centres the expanded file as one stable
      object. Progress may update --cur for desktop; coarse layout ignores it. */
-  @media (pointer: coarse), (max-width: 900px) and (orientation: portrait) {
+  @media (pointer: coarse), (max-width: 900px) {
     .j-rail-inner {
       width: 52px;
       height: calc(var(--n, 5) * 44px + 52px);
@@ -3141,7 +3141,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 /* The first-paint strip did not exist in the historical mobile design. Hide
    it at the same boundary used by rail.js; the live, accessible fixed file
    replaces it as soon as the lightweight journey module mounts. */
-@media (pointer: coarse), (max-width: 900px) and (orientation: portrait) {
+@media (pointer: coarse), (max-width: 900px) {
   .j-rail-preboot { display: none !important; }
 }
 
@@ -3574,4 +3574,184 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-rail .j-rail-name,
   .j-rail .j-rail-menu { transition: none !important; }
 }
+}
+
+/* ========================================================================
+   MOBILE FIXED FILE — final cascade authority
+
+   The historical fixed-file rules live before the later desktop half-moon
+   experiment. On a narrow laptop/devtools viewport `(hover:hover)` still
+   matched that later block, so its zero-width hub, polar transforms, arc SVG
+   and circular pointer floor won even though rail.js had selected the mobile
+   interaction. State and geometry were describing different controls.
+
+   Restate the fixed file after every legacy geometry. This does more than
+   cover the arc: the arc and circular hit floor are removed, polar custom-
+   property motion is neutralised, all boxes return to 52x44 file rows, and
+   the menu returns below them. The one surface below is therefore exactly the
+   expanded file's footprint, never a disguised semicircle.
+   ======================================================================== */
+@media (pointer: coarse), (max-width: 900px) {
+  .j-rail,
+  .j-rail:not(.j-rail-column) {
+    right: 0 !important;
+    z-index: 4;
+    isolation: isolate;
+  }
+
+  /* Scene annotations live in a separate fixed layer whose card stylesheet
+     raises it above the rail. On the mobile file only, restore the intended
+     scene-under-navigation order; modal cards remain on their own z:5 layer. */
+  body .j-hotspots { z-index: 1; }
+  body.j-rail-on .j-hotspots { opacity: 0.24; }
+
+  .j-rail:not(.j-rail-column) .j-rail-inner {
+    width: 52px;
+    height: calc(var(--n, 5) * 44px + 52px);
+    margin-right: 0;
+    isolation: isolate;
+  }
+
+  /* One translucent glass surface protects the complete open file — labels,
+     glyphs and Menu — from chapter annotations underneath. The opaque colour
+     is the blur fallback; supporting engines use the quieter alpha below. */
+  .j-rail .j-rail-inner::before,
+  .j-rail:not(.j-rail-column) .j-rail-inner::before {
+    content: "";
+    display: block !important;
+    position: absolute;
+    top: -12px !important;
+    right: 0;
+    width: min(11.25rem, calc(100vw - 12px));
+    height: calc(100% + 24px) !important;
+    z-index: 0;
+    border: 1px solid rgba(217, 164, 65, 0.12);
+    border-right: 0;
+    border-radius: 18px 0 0 18px;
+    background: rgba(7, 5, 2, 0.88) !important;
+    box-shadow: -14px 0 36px rgba(0, 0, 0, 0.24),
+                inset 1px 0 rgba(242, 237, 225, 0.025);
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+    opacity: 0 !important;
+    transform: translateX(8px) scale(0.985);
+    transform-origin: right center;
+    pointer-events: none;
+    transition: opacity 0.24s ease,
+                transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .j-rail .j-rail-inner::before,
+    .j-rail:not(.j-rail-column) .j-rail-inner::before {
+      background: rgba(7, 5, 2, 0.68) !important;
+      -webkit-backdrop-filter: blur(14px) saturate(0.82);
+      backdrop-filter: blur(14px) saturate(0.82);
+    }
+  }
+  .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-inner::before {
+    opacity: 1 !important;
+    transform: none;
+  }
+  .j-rail .j-rail-inner::after,
+  .j-rail:not(.j-rail-column) .j-rail-inner::after { display: none !important; }
+
+  /* Remove both pieces of the half-moon, including its invisible circular
+     pointer floor. This keeps the mobile hit map the same rectangle it draws. */
+  .j-rail .j-rail-arc,
+  .j-rail:not(.j-rail-column) .j-rail-arc { display: none !important; }
+  .j-rail .j-rail-arc path { stroke: none !important; }
+  .j-rail .j-rail-list::before,
+  .j-rail:not(.j-rail-column) .j-rail-list::before {
+    content: none !important;
+    display: none !important;
+    pointer-events: none !important;
+  }
+
+  .j-rail:not(.j-rail-column) .j-rail-slot,
+  .j-rail:not(.j-rail-column).j-rail-following .j-rail-slot {
+    top: calc(50% - 22px);
+    right: 0;
+    width: auto;
+    height: auto;
+    z-index: 2 !important;
+    --t: 0;
+    --u: 0;
+    transform: none !important;
+    opacity: 0;
+    transition: top 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.3s ease;
+    transition-delay: 0s;
+  }
+  .j-rail:not(.j-rail-column) .j-rail-slot.now {
+    opacity: 1 !important;
+    pointer-events: auto;
+  }
+  .j-rail:not(.j-rail-column):not(.j-rail-open):not(.j-rail-hot):not(:has(:focus-visible))
+    .j-rail-slot:not(.now) { pointer-events: none; }
+  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+    .j-rail-slot {
+    top: calc(var(--i, 0) * 44px);
+    right: 0;
+    --t: 0;
+    --u: 0;
+    transform: none !important;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .j-rail:not(.j-rail-column) .j-rail-item {
+    width: 52px;
+    height: 44px;
+  }
+  .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark {
+    width: 24px;
+    height: 24px;
+    transform: none !important;
+    transition: none;
+  }
+
+  .j-rail:not(.j-rail-column) .j-rail-menu,
+  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+    .j-rail-menu {
+    top: calc(50% + 30px);
+    right: 0;
+    width: 52px;
+    height: 44px;
+    z-index: 2;
+    transform: none !important;
+    opacity: 1;
+    transition: top 0.34s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s;
+  }
+  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+    .j-rail-menu {
+    top: calc(var(--n, 5) * 44px + 8px);
+  }
+  .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-mark,
+  .j-rail:not(.j-rail-column) .j-rail-menu .j-sym {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Half-moon pill placement/hiding must not leak into the fixed file. Every
+     row gets its name to the left, and all five names are present when open. */
+  .j-rail:not(.j-rail-column) .j-rail-slot:is(.j-pill-up, .j-pill-dn) .j-rail-name,
+  .j-rail:not(.j-rail-column) .j-rail-name {
+    display: block;
+    top: 50%;
+    right: 100%;
+    bottom: auto;
+    left: auto;
+    margin: 0 0.1rem 0 0;
+    padding: 0.34rem 0.7rem;
+    transform: translateY(-50%);
+    border-radius: 2px;
+    background: rgba(9, 6, 2, 0.58);
+  }
+  .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-name { display: block; }
+  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+    .j-rail-name,
+  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+    .j-rail-slot.active .j-rail-name {
+    opacity: 1 !important;
+    letter-spacing: 0.18em;
+  }
 }
