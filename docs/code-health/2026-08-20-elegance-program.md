@@ -98,11 +98,9 @@ reconciliation, but every reference there to a dirty or untracked path is a
 historical description of the pre-`4b02a6a` snapshot, not its present custody.
 The worktree and documents continued changing after that commit. X00 must
 discover the current tip and live ownership rather than treating this paragraph
-as current state. At this amendment the tip is
-`6d753e971cc199bb5b9e9599d1da6e2592b266c0` on local `main` and `origin/main`;
-that fact becomes historical as soon as the repository changes. `4b02a6a`
-remains an ancestor, not a claim about the current branch. X00 begins from the
-live checkout plus a fresh snapshot and must not restore any path.
+as current state. Do not embed a current branch tip in this historical note;
+`4b02a6a` remains an ancestor, not a claim about the current branch. X00 begins
+from the live checkout plus a fresh snapshot and must not restore any path.
 
 Moving the protected work into a pushed commit does not promote an elegance
 order to DONE: the frozen contract, focused proof, independent review, and
@@ -135,17 +133,17 @@ order is DONE in this audit. Existing files alone are not completion evidence.
 
 | Work-order family | Reconciled status | Exact repository evidence and remaining contract |
 | --- | --- | --- |
-| X00 | REMAINING | No execution ledger or external patch journal exists; the now-tracked goal explicitly defers ledger creation until execution. Start from pushed baseline `4b02a6a`, then record all later dirty/untracked paths and their owners. |
+| X00 | REMAINING | No execution ledger or external patch journal exists; the now-tracked goal explicitly defers ledger creation until execution. Treat `4b02a6a` as the protected ancestor, then record the live tip plus all tracked/untracked/ignored paths and their owners. |
 | Q01 / Q02 / Q03 / Q04 / Q05 | PARTIAL / PARTIAL / PARTIAL / REMAINING / REMAINING | `package.json:9-13` still couples browser smoke into `test`/`check`; `madge.webpack.cjs:3-11` has aliases but no query-normalizing/fail-on-skipped-local proof; `tools/browser-smoke.mjs:127-139,244-290` silently greens unavailable WebGL and combines touch+reduced motion; no durable warning/catch inventory exists; `tools/check.sh:84-100` still treats the named mobile fail-band as success and `tools/capture.py:847-850,896-904` writes `_check` beneath its output by default. |
 | P01 / C01 / C02 / C03 / C04 | REMAINING / PARTIAL / PARTIAL / REMAINING / PARTIAL | The smoke harness and current `tools/scroll-touch-gates.mjs`/`tools/test-chapter-entry.mjs` are foundations, and `4b02a6a` contains passing delayed-tail, route-gain, and Connect camera-motion regressions, but there is no fixed reference-environment record, separate live desktop/touch/reduced scenarios, fault-injected transition suite, deterministic composed choreography/resource/performance report, or late-loader portrait suite. The historical focused commands below are REVALIDATE inputs; none proves the missing contracts. |
 | S01 / S02 | PARTIAL / PARTIAL | `journey/structure.js:4-51` centralizes values and indexes, but exports mutable objects and `validateJourneyStructure()` at `:57-122` validates only selected caller-supplied references, not all raw totals/bands/stops. `journey/structure.test.mjs:7-59` freezes useful route/copy/key values and passes, but not full symbol DOM/signatures or protected visible/menu ordering. Current `structure.js:24` still says `Owned` while protected `content/content.js` says `Ownership`; this must be reconciled as compatibility evidence, not normalized back. |
-| C05 / C06 / N01 | REMAINING / REMAINING / PARTIAL | Chapters still expose broad ad hoc shapes; `chapter-registry.js:22-41` retains module-global `preparedChapters`; `navigation.js:4-11` only normalizes a string and `chapter-interactions.js` still contains named Inspire/Connect/Owned branches. |
-| J01 / J02 / J03 | PARTIAL / PARTIAL / REMAINING | Camera blend, chapter-entry, and `frame-application.js` are real seams, but transition/hero/entry state remains in `journey.js`; the orchestrator still contains named focus branches around `journey.js:981-995`; `ui.js:214-215,807,1562-1575` still reads `window.journey` and private portraits. The route-faithful navigation committed in `4b02a6a` is protected and must enter C01/C03 before extraction. |
+| C05 / C06 / N01 | REMAINING / REMAINING / PARTIAL | Chapters still expose broad ad hoc shapes; `journey/chapter-registry.js:22-41` retains module-global `preparedChapters`; `journey/navigation.js:4-11` only normalizes a string and `journey/chapter-interactions.js` still contains named Inspire/Connect/Owned branches. |
+| J01 / J02 / J03 | PARTIAL / PARTIAL / REMAINING | Camera blend, chapter-entry, and `journey/frame-application.js` are real seams, but transition/hero/entry state remains in `journey/journey.js`; the orchestrator still contains named focus branches around `journey/journey.js:981-995`; `journey/ui.js:214-215,807,1562-1575` still reads `window.journey` and private portraits. The route-faithful navigation committed in `4b02a6a` is protected and must enter C01/C03 before extraction. |
 | A02 / J04a–J04e / J05 / A05 / A05a | REMAINING | `journey/state.js`, `journey/scroll.js`, `journey/ui.js`, `journey/rail.js`, `journey/dial.js`, the chapter registry, GPU preparation, and page handlers still install anonymous or non-detachable work; `journey/scroll.js` still combines input classification, credit/wall policy, and route mapping; `journey/journey.js:1361-1449` exposes no facade `dispose()`, and `main.js` singleton handlers have no installation-count proof. The new preboot/live rail adoption makes A02 a prerequisite, not completed work; A05 decides whether A05a is required before J01. |
 | R01 / R02 / R03 / R04 | PARTIAL / REMAINING / PARTIAL / PARTIAL | `organism/animation.js:4-48` owns a scheduler but returns no stop handle; intro acceleration owns recursive RAF/global clock mutation; organism/spores listeners remain attached; `organism/renderer.js` and portrait helper files are useful seams but do not compose idempotent resource or async cancellation. |
 | R05 / R06 / R07 / R08 | REMAINING | Connect/Inspire/Owned/Final facades and the module-global registry do not provide the frozen descriptor-wide disposal and two-instance proof. Existing isolated disposers (for example Final interaction/ring helpers) are partial leaves, not facade closure. |
 | U01a / U01b / U01c / U01d | REMAINING / PARTIAL / REMAINING / REMAINING | `journey/cards/index.js:48-65` has an acyclic builder map, but `:67-112` still self-starts warming at import and mixes registry/icons/scheduling; `journey/cards/discord.js:192-220,438-466` still self-starts fallback/live preparation and owns uncancelled idle/timer/fetch settlement. |
-| U02 / U03 / U04 / U05 / U06 | PARTIAL / REMAINING / PARTIAL / PARTIAL / REMAINING | `journey/ui/` contains useful DOM, gesture, arrival, live-region, and label leaves, while the state machines and listeners remain in the 3,044-line facade. Current `ui.js:1635-1655` and `journey/chapters/connect/index.js:502-517` independently measure/query the rail exclusion: U05 must create one policy owner and inject the result into Connect; no pass-through wrapper is warranted. |
+| U02 / U03 / U04 / U05 / U06 | PARTIAL / REMAINING / PARTIAL / PARTIAL / REMAINING | `journey/ui/` contains useful DOM, gesture, arrival, live-region, and label leaves, while the state machines and listeners remain in the 3,044-line facade. Current `journey/ui.js:1635-1655` and `journey/chapters/connect/index.js:502-517` independently measure/query the rail exclusion: U05 must create one policy owner and inject the result into Connect; no pass-through wrapper is warranted. |
 | O01 / O02 | PARTIAL / REMAINING | `organism/renderer.js`, `random.js`, `shaders.js`, and `performance.js` are foundations, but postprocessing/resource composition and cohesive seeded world-builders remain in `organism.js`; there is no byte/order/resource proof for extraction. |
 | H01 / H02 / H03 / H04 / H05 / H06 | REMAINING | `journey/chapters/owned/substrate.js`, `journey/chapters/connect/tendrils.js`, `journey/chapters/final/ring.js`, `journey/chapters/final/canopy.js`, `journey/chapters/final/terrain.js`, and `journey/chapters/final/clones.js` remain 1,082–1,842-line builders. No order has a frozen build/resource/runtime contract plus focused lifecycle, byte, capture, review, and acceptance evidence. H02 must consume the U05 rail-exclusion capability rather than preserve its current direct DOM query. |
 | A01 / A01a / A03 / A04 / A06 and conditionals | REMAINING | No post-lifecycle responsibility/state decision artifacts exist for portraits, Inspire, Final, or spores. Conditional extractions remain untriggered until those evidence-backed decisions; do not pre-create them. Scroll cohesion is decided earlier by A05/A05a. |
@@ -441,6 +439,10 @@ site. Do not introduce a shared runtime error abstraction unless concrete
 duplicate behavior—not merely common terminology—justifies it. Add a final
 closure package for mapped error sites untouched by other work.
 
+Q04 records each site with the enum `optional-fallback`, `expected-probe`, or
+`fatal-visitor-visible`, plus owner, visitor outcome, observability, focused
+test, and closing work-order ID. A site without all fields is unclassified.
+
 Acceptance:
 
 - every warning has an owning package and no package introduces a warning;
@@ -557,13 +559,14 @@ Record a separate direct-navigation Connect trace with readiness history,
 presented camera/route coordinate, entry clock, resolve, route fronts, and the
 landing handoff. Once readiness authorizes entry it cannot regress; established
 ground must precede travelling light; and the final `driveEntry` frame must be
-continuous with `drive(rest)`. If current behavior reproduces the recovered
+continuous with `drive(rest)`. If current behavior reproduces the historical
 level-gate/fixed-clock mismatch, resolve it through a separate corrective brief
 before J01/J02 may consume the behavior. Do not silently redefine the authored
 scroll pacing during structural work.
 
-Preserve the recovered negative performance result too: trusted Chrome traces
-found a warm 10–12 ms Connect onset with no compile, GC, or long-task spike.
+Preserve the historical negative performance result as context only: an earlier
+trusted Chrome trace found a warm 10–12 ms Connect onset with no compile, GC, or
+long-task spike.
 Later work may remove measured frame-loop layout reads, but it must not justify
 shader, particle, or GPU redesign with this incident unless a new supported
 trace first contradicts that evidence.
@@ -1011,7 +1014,8 @@ Run, in order:
 8. desktop/mobile manual checks for hero, sidebar, navigation, cards, chapters,
    reduced motion, rapid navigation, fallback, baked, and live-build modes;
 9. renderer memory, draw-call, listener, RAF, and frame-time comparison;
-10. fresh mechanical scan followed by independent subjective review.
+10. fresh mechanical scan; the independent subjective integrated review is the
+    Fable-owned final loop and is not duplicated here.
 
 The branch is not complete while the live test is merely timing out. That is an
 environment limitation, not an application failure, but a supported environment
@@ -1067,10 +1071,14 @@ judgment, and XHARD review. Each brief must contain:
 Use a different Claude Sonnet session as the one read-only package reviewer for
 every T2/T3 or public-contract package and for batches of at most three related
 low-risk packages. Reviews that reconstruct architecture across state machines
-are XHARD and are owned by Claude Opus. Do not create multi-review churn during
-incremental work: a blocker receives bounded feedback implementation and the
-same review gate is re-evaluated as closure of that one process. At the very
-end, Fable performs an iterative final integrated review/feedback loop, maximum
+are XHARD and are owned by Claude Opus. Assign every bounded order or explicitly
+grouped batch to exactly one incremental review gate: Sonnet for ordinary work
+and Opus for XHARD work. A wave review is the one gate for its declared batch,
+not an additional review over separate package verdicts; coordinator acceptance
+and mechanical tests are not extra review stages. A blocker receives bounded
+feedback implementation and the same review gate is re-evaluated as closure of
+that one process. At the very end, Fable performs the sole final integrated
+review/feedback loop, maximum
 three rounds; each reviewer must be independent of the implementation it
 reviews. Route ordinary feedback fixes to Sonnet and XHARD fixes to Opus. If
 Fable is unavailable specifically because credits are exhausted, record that
@@ -1130,6 +1138,9 @@ The elegance program is complete when:
   invalidation counters agree across the G1, G3/G4, and G5 evidence;
 - an independent subjective review finds no high-confidence ownership,
   coupling, lifecycle, or contract defect;
+- Fable's final integrated review/feedback loop completes within three rounds,
+  with Sonnet ordinary fixes and Opus XHARD fixes; must findings after round
+  three are BLOCKED/NO-GO;
 - residual large files are demonstrably cohesive and documented, not simply
   deferred god objects.
 

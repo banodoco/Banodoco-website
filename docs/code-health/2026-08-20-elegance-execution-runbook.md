@@ -48,8 +48,7 @@ execution. The compact disposition is:
 Post-push custody update: `4b02a6a43df1cac5664990819d45c807149b625d` is the
 protected source-custody ancestor and contains that previously dirty source,
 tests, captures, and all three plan documents. References below to dirty or
-untracked reconciliation inputs are historical provenance. At this amendment
-the current tip is `6d753e971cc199bb5b9e9599d1da6e2592b266c0`; X00 must discover
+untracked reconciliation inputs are historical provenance. X00 must discover
 the live tip and paths, not trust this claim. X00 starts from the live checkout
 plus a fresh then-live worktree snapshot; later protected user edits continued
 across Connect, Inspire, portrait, UI, rail, and `journey/site.css` paths.
@@ -110,18 +109,21 @@ The coordinator:
 - runs or delegates wave gates and interprets failures;
 - accepts, reworks, or stops a package.
 
-### Implementer — GPT-5.6 Luna
+### Implementer — Claude Sonnet
 
 One implementer owns one work order. It may edit only the frozen allowlist and
 allowed new files, runs only the assigned focused checks, and returns a compact
 handoff. It never runs the full suite unless its brief explicitly assigns a
 wave gate.
 
-### Reviewer — different GPT-5.6 Luna
+### Reviewer — independent Claude Sonnet
 
-The reviewer is read-only. It checks the brief, changed hunks, contract,
-ownership, and focused evidence. It classifies findings as blocker, follow-up,
-or acceptable residual. It does not edit or silently redesign.
+The reviewer is read-only and independent of the implementer. It checks the
+brief, changed hunks, contract, ownership, and focused evidence. It classifies
+findings as blocker, follow-up, or acceptable residual. It does not edit or
+silently redesign. There is exactly one incremental review gate per bounded
+order or batch; a blocker receives bounded feedback implementation and the same
+gate is re-evaluated as closure of that review process, not as a second review.
 
 ### Gate owner
 
@@ -134,6 +136,23 @@ that lease. Implementers do not launch competing browser runs.
 Create `docs/code-health/elegance-execution-ledger.md` only when execution
 starts. Keep one row per work order and a detail block for every attempt.
 
+At X00, record this bootstrap manifest before any source write:
+
+```sh
+git rev-parse --show-toplevel
+git rev-parse HEAD
+git branch -vv
+git remote -v
+git status --porcelain=v2 -uall
+git status --ignored --short
+git ls-files --others --exclude-standard
+git ls-files --others --ignored --exclude-standard
+```
+
+Tracked, untracked, and ignored paths are all part of ownership classification;
+ordinary `git status` output is insufficient. The live manifest supersedes the
+historical `4b02a6a` ancestor and every illustrative path list.
+
 Required row fields:
 
 | Field | Meaning |
@@ -141,13 +160,13 @@ Required row fields:
 | ID | Stable work-order ID from this runbook |
 | State | `planned`, `reserved`, `working`, `focused-pass`, `review`, `accepted`, `wave-gated`, `blocked` |
 | Parents | Accepted prerequisite IDs |
-| Owner | Luna task/session and attempt number |
+| Owner | Sonnet/Opus task or session and attempt number |
 | Reservation | Exact paths, lease timestamp, and expiry |
 | Baseline | Base commit plus per-path status, existence, hash, and known owner |
 | Protected | User visual/behavior files or hunks that must not change |
 | Changes | Changed paths, hunk summary, post-hashes, generated/golden flag |
 | Checks | Exact command, exit code, environment, and result classification |
-| Review | R0/R1/R2/RX class, reviewer/session, verdict, findings, repair result, downstream holds |
+| Review | R1/R2/RX class, independent reviewer/session, verdict, findings, repair result, downstream holds |
 | Residual | Known risk that remains for the wave gate |
 | Next | Newly unblocked work orders |
 
@@ -171,6 +190,15 @@ reserved baseline. Before each later patch, it asserts that current bytes match
 its own last recorded post-write manifest. A mismatch stops the order before
 writing. The coordinator communicates the reservation before dispatch; silence
 or a local hash file is not a reservation.
+
+The journal is created fresh (for example with `mktemp -d`) and is never
+silently recovered from a prior session or `/tmp` artifact. A resumed run must
+find the recorded journal and rolling manifest at the recorded path; if either
+is missing, the run is blocked until X00 re-establishes custody. Gate and review
+evidence is stored under `docs/code-health/evidence/<run-id>/` with a
+`manifest.json`, exact artifact paths, and SHA-256 hashes. Private raw input may
+remain outside the repository only when its provenance, path, hash, and
+normalized replay fixture are recorded there.
 
 Rollback is coordinator-only. It may inverse only journalled agent-owned hunks
 after verifying their current context. It never restores a whole file, applies
@@ -257,16 +285,16 @@ multiple lifecycles, the public behavior is difficult to observe completely,
 and a plausible local refactor can still create a subtle global regression.
 Large files are not automatically XHARD.
 
-An XHARD order is never handed to one Luna with "clean this up." Its protocol is:
+An XHARD order is never handed to one Sonnet with "clean this up." Its protocol is:
 
-1. Luna performs bounded reconnaissance or characterization and returns
+1. Claude Sonnet performs bounded reconnaissance or characterization and returns
    evidence only.
 2. The coordinator writes the exact state model, interface, migration sequence,
    and forbidden choices.
-3. The implementation brief covers one root-decided slice. Use GPT-5.6 Luna for
-   mechanical slices; use GPT-5.6 Sol when the slice still requires frontier
-   cross-state reasoning.
-4. A different strong agent performs read-only review.
+3. The implementation brief covers one root-decided slice. Claude Sonnet owns
+   ordinary slices; Claude Opus owns every XHARD implementation and design
+   judgment.
+4. A different agent performs the one read-only incremental review gate.
 5. The coordinator personally inspects the contract diff and classifies every
    test/browser result before acceptance.
 6. Same-family slices may advance after focused proof, R1 review, and
@@ -314,6 +342,16 @@ contract does not contain.
 
 ## Test commands
 
+### Fresh-agent environment bootstrap
+
+From the repository root, verify Node `>=20.19.0` (from `package.json`), Python
+3, and the lockfile, then run `npm ci`. P01 must record the Chromium
+executable/version, WebGL renderer/backend, OS, viewport, DPR, input
+provenance, capture flags, and writable external capture directory under
+`docs/code-health/evidence/<run-id>/p01/`. `playwright-core` does not provision
+Chromium. Missing browser/WebGL/capture output/provenance is
+`environment-blocked`, never a pass.
+
 ### Commands available before Q01–Q03
 
 Use these only where directly relevant:
@@ -344,6 +382,10 @@ npm run test:browser:required -- --scenario <stable-id>
 npm run check
 npm run check:browser
 ```
+
+These are target contracts created by Q01–Q03, not commands assumed to exist
+before those orders are accepted. Before then, use only the preceding focused
+commands; a missing target script is a prerequisite gap, never a pass.
 
 Required stable browser scenario IDs:
 
@@ -403,7 +445,9 @@ its classification, owning subsystem, owning work order, expected visitor
 behavior, and required focused test. A package implements the policy only for
 mapped sites in its own allowlist. F06 closes untouched sites by subsystem; it
 must not create a shared cross-subsystem runtime error module merely to reuse
-terminology.
+terminology. The classification enum is `optional-fallback`, `expected-probe`,
+or `fatal-visitor-visible`; each inventory row also records observability,
+visitor outcome, focused test, and closing work-order ID.
 
 ## Review cadence
 
@@ -415,23 +459,33 @@ because it must reconstruct several interacting state machines.
 
 | Class | Reviewer | When | Authority |
 | --- | --- | --- | --- |
-| R0 | Coordinator | Every package; sole reviewer for ordinary T0 metadata | Accepts/rejects and resolves ownership |
-| R1 | Different GPT-5.6 Luna | Every T2/T3 package and public-contract T1 package | Read-only blocker/follow-up evidence |
-| R2 | Different GPT-5.6 Luna | Batch of at most three related low-risk T1 packages | Detects combined drift, duplication, and adapter clutter |
-| RX | GPT-5.6 Sol, high/xhigh reasoning | Root-defined XHARD design and integrated wave reviews | Read-only big-picture challenge; coordinator still decides |
+| R1 | Independent Claude Sonnet | Every T2/T3 package and public-contract T1 package | Read-only blocker/follow-up evidence |
+| R2 | Independent Claude Sonnet | Batch of at most three related low-risk T1 packages | Detects combined drift, duplication, and adapter clutter |
+| RX | Claude Opus | Root-defined XHARD design and integrated wave reviews | Read-only big-picture challenge; coordinator still decides |
 
-The implementation agent never reviews its own work. A Luna that performed
+The implementation agent never reviews its own work. A Sonnet that performed
 reconnaissance may review facts, but not give the independent package verdict.
-An RX post-implementation reviewer must be a different agent/session from the
-implementer and preferably different from the RX design critic.
+An RX reviewer must be a different agent/session from the implementer. Every
+order is assigned to exactly one review unit: one R1, one R2 batch, or one RX
+batch. An XR wave gate is the single review for the batch it names; it is not a
+second review layered over separate package verdicts. Coordinator acceptance,
+test execution, and evidence validation are not additional review gates. At the
+very end, Fable performs the iterative final integrated review/feedback loop,
+for at most three rounds; each round's reviewer is independent of the code it
+reviews. If Fable is unavailable specifically because credits are exhausted,
+record that evidence and use Opus for the remaining final rounds. Other
+failures do not permit silent substitution. Must findings after round three are
+BLOCKED/NO-GO, never accepted.
 
 ### Normal package and batch reviews
 
-1. Every T2/T3 order and every public-contract T1 order gets an R1 review before
-   coordinator acceptance.
-2. At most three related low-risk T1 orders may share one R2 review.
-3. Every XHARD implementation still gets an immediate R1 review of its bounded
-   brief and hunks. That catches local defects; it does not replace RX.
+1. Every T2/T3 order and every public-contract T1 order gets exactly one R1
+   review unless the runbook explicitly assigns it to one RX batch review.
+2. At most three related low-risk T1 orders may share exactly one R2 review.
+3. An XHARD implementation or design artifact receives exactly one independent
+   post-implementation Opus review gate. A design artifact is the work product,
+   not a pre-review that creates a second post-review stage. Do not add another
+   incremental review gate for the same order or RX batch.
 4. The coordinator inspects every blocker, ownership claim, public-contract
    change, and test classification. Agent verdicts are advisory.
 
@@ -440,7 +494,7 @@ implementer and preferably different from the RX design critic.
 These read-only review tasks are themselves XHARD and are recorded in the
 ledger like implementation orders:
 
-| Review ID | When | GPT-5.6 Sol reviews | Downstream hold |
+| Review ID | When | Claude Opus reviews | Downstream hold |
 | --- | --- | --- | --- |
 | XR-BASELINE | After G1 evidence, before Wave 2 | Q01–Q05/P01/C01–C04 semantics, capture truthfulness, environment classification, physical-input provenance, trace-replay/live-traversal coverage, Connect landscape/phone/tablet choreography and direct-entry continuity, composed-motion/resource/performance report completeness, and fault-injection validity | Wave 2 cannot start |
 | XR-C-DESIGN | After S01/S02 evidence, before C05 | Root's manifest, chapter capability, registry-instance, navigation, and compatibility migration design | C05/C06/N01 cannot start |
@@ -449,12 +503,14 @@ ledger like implementation orders:
 | XR-RUNTIME-GATE | At G3 after journey/rendering lifecycle lanes | Integrated physical-input decisions, final responsive camera snapshot, camera-derived reveal/readiness, direct-entry handoff, composed-motion traces, transition semantics, teardown ownership, late async behavior, recreation, and visitor fallbacks | Wave 4 cannot start |
 | XR-VISUAL-DESIGN | Before U05, O02, H02, B03, and B04 | Root's single rail-measurement owner, Connect screen-to-ground placement authority, shared ADOS destination/delta consumers, seeded builder, rooted-feather and responsive page-layout boundaries; challenge whether an invalidation merely recomputes the same authored destination or silently moves authored world placement | Named XHARD order cannot start |
 | XR-VISUAL-GATE | At G4 | Whole UI/organism/chapter/page composition, visual determinism, rail-layout invalidation evidence, residual facade cohesion, and abstraction-churn risk | Wave 5 cannot start |
-| XR-FINAL | At G5 after all mechanical/browser/capture/performance evidence | Complete diff, cross-wave architecture, physical-input replay/live evidence, composed presentation, residual debt, release risk, and whether the stated end-state was actually reached | No completion/release-readiness claim |
+| XR-FINAL | At G5 after all mechanical/browser/capture/performance evidence | Fable reviews the complete diff, cross-wave architecture, physical-input replay/live evidence, composed presentation, residual debt, release risk, and whether the stated end-state was actually reached; this is the final loop of at most three rounds, not an Opus review followed by Fable | No completion/release-readiness claim |
 
 For `XR-RUNTIME-DESIGN` and `XR-VISUAL-DESIGN`, the coordinator may present
-separate root-authored design notes in one Sol session, but each named XHARD
+separate root-authored design notes in one Opus session, but each named XHARD
 order receives an explicit `approved`, `revise`, or `not covered` result. A
-generic wave-level compliment does not unlock it.
+generic wave-level compliment does not unlock it. A blocker receives bounded
+feedback implementation and the same review gate is re-evaluated as closure of
+the one review process.
 
 ### What big-picture reviewers answer
 
@@ -526,7 +582,7 @@ disjoint.
 S01 precedes S02, C05, and N01. C05 precedes C06. C06 and N01 serialize if
 both need `journey.js` or `main.js`. The coordinator decides the capability
 shape before C05 dispatch; `XR-C-DESIGN` must challenge and cover that decision
-before Luna implements it.
+before Sonnet or Opus implements it.
 
 ### Wave 3A — journey runtime ownership
 
@@ -687,6 +743,14 @@ last; scanner score never drives a behavior change by itself.
 
 ## Wave gates
 
+Each gate writes `docs/code-health/evidence/<run-id>/gates/G0.json` through
+`G5.json` containing gate ID, exact commands, environment versions,
+served-source manifest hash, artifact paths/hashes, and one of
+`PASS`, `APPLICATION-FAIL`, `ENVIRONMENT-BLOCKED`, `HARNESS-FAIL`, or
+`BLOCKED`. A skipped or timed-out required live result is not `PASS`. Each
+review writes a sibling verdict artifact with reviewer identity, independent
+status, findings, downstream holds, and the accepted/NO-GO result.
+
 ### G0 — quality floor
 
 After serialized Q01–Q03 and Q05, with Q04's inventory completed before the
@@ -704,7 +768,7 @@ gate:
   leaves repository capture paths byte-identical;
 - no named capture fail-band can become a green result; an environment
   adjudication is visibly `blocked`, never `pass`;
-- an R1 Luna tooling review passes and the coordinator accepts G0.
+- the independent Sonnet tooling review passes and the coordinator accepts G0.
 
 ### G1 — characterization baseline
 
@@ -729,16 +793,14 @@ After P01 and C01–C04:
   monotone after acceptance, ground is established before light travels, and
   `driveEntry` hands to `drive(rest)` continuously; a reproduced mismatch
   blocks J01/J02 pending a separate corrective brief;
-- the recovered trusted-Chrome negative result (warm 10–12 ms Connect onset,
-  no compile/GC/long-task spike) is recorded so unmeasured renderer redesign
-  cannot masquerade as incident repair;
+- the historical trusted-Chrome negative result (warm 10–12 ms Connect onset,
+  no compile/GC/long-task spike) is recorded as context only; it cannot replace
+  current supported evidence or justify unmeasured renderer redesign;
 - the report records browser/renderer/viewport/DPR/flags provenance and accepted
   live long-task/RAF-gap/style-layout/event-latency evidence plus accepted soft
   frame-time/GPU tolerances for later G3/G4 comparison;
 - capture/baseline files are observed, never refreshed;
-- an R1 Luna characterization review confirms tests fail under deliberate
-  invariant perturbations;
-- XHARD review `XR-BASELINE` by a fresh GPT-5.6 Sol approves tooling semantics,
+- XHARD review `XR-BASELINE` by Claude Opus approves tooling semantics,
   capture truthfulness, environment classification, scenario coverage, and the
   deterministic/resource/performance baseline before Wave 2;
 - the coordinator accepts P01/G1/RX evidence.
@@ -749,7 +811,7 @@ After S01–N01:
 
 - `npm run check` passes;
 - targeted `static-navigation`, `static-alias`, and `live-journey` pass;
-- XHARD review `XR-C-GATE` by a GPT-5.6 Sol approves manifest, capabilities,
+- XHARD review `XR-C-GATE` by Claude Opus approves manifest, capabilities,
   registry, navigation direction, and composed compatibility;
 - compatibility adapters and intended removal wave are recorded.
 
@@ -767,7 +829,7 @@ After J04a, A05/required A05a, J01–J03, A02, J04b–J04e, J05, and R01–R08:
   immutable final-responsive frame snapshot, with monotonic/reversal/landing,
   camera-derived readiness, Connect choreography, and entry-handoff traces exact;
 - repeated create/prepare/activate/dispose/recreate proves zero owned work leaks;
-- XHARD review `XR-RUNTIME-GATE` by a GPT-5.6 Sol approves state ownership,
+- XHARD review `XR-RUNTIME-GATE` by Claude Opus approves state ownership,
   dependency direction, frame/transition semantics, and teardown composition.
 
 ### G4 — cohesive extraction gate
@@ -785,7 +847,7 @@ required conditional extraction, plus B01–B05:
   sole settled-camera screen-to-ground destination/delta, H02 and O02 consume it
   without recomputation, every ADOS visual/DOM/hero-ground layer aligns, and
   rooted geometry does not follow reveal, travelling camera, or rail docking;
-- XHARD review `XR-VISUAL-GATE` by a GPT-5.6 Sol identifies no visual contract
+- XHARD review `XR-VISUAL-GATE` by Claude Opus identifies no visual contract
   drift, pass-through-wrapper churn, or unjustified residual god facade.
 
 ### G5 — final integrated gate
@@ -803,12 +865,18 @@ Run once, not per implementer:
 8. reference-environment memory, draw-call, listener, RAF, and timing comparison;
    this includes physical-input replay/live-traversal agreement, composed-motion
    traces, layout invalidation counts, long tasks, and event-to-frame latency;
-9. fresh mechanical scan and independent subjective review;
+9. fresh mechanical scan; the subjective integrated review belongs exclusively
+   to the Fable-owned `XR-FINAL` loop below;
 10. confirmation that every Q04 error site is classified with subsystem-local
     behavior and a focused test;
-11. XHARD review `XR-FINAL` by a fresh GPT-5.6 Sol of the complete evidence and
-    cross-wave architecture;
-12. root review of the complete diff, RX findings, and residual-debt rationale.
+11. Fable-owned `XR-FINAL`, the final integrated review/feedback loop of at
+    most three rounds, with
+    Sonnet ordinary fixes and Opus XHARD fixes; if Fable is unavailable because
+    credits are exhausted, record that evidence and use Opus for remaining
+    rounds;
+12. coordinator acceptance or rejection from the complete diff, RX findings,
+    Fable verdict, and residual-debt rationale. Must findings after round three
+    are BLOCKED/NO-GO.
 
 No release-readiness claim is allowed while the live browser gate is merely
 timing out or skipped.
@@ -877,14 +945,17 @@ is reported and left untouched.
 Work order and accepted parents:
 Single ownership goal:
 Root-decided target contract/interface:
+Repository root, branch, HEAD, and remote:
 Exact allowed existing files:
 Exact allowed new files:
 Protected files/hunks and current hashes:
 Known pre-existing/concurrent changes:
 External patch-journal path and current rolling manifest:
+Evidence root, manifest path, and artifact hashes:
 Behavioral/numeric/visual invariants:
 Required implementation steps:
 Focused commands only:
+Environment/tool versions and result classifications:
 Independent review required: yes/no
 Stop conditions:
 
@@ -893,7 +964,10 @@ regenerate, refresh goldens, or edit outside the allowlist. Do not decide a new
 architecture when the brief is ambiguous; stop and report the ambiguity.
 
 Handoff: changed paths/hunks, contract preserved, exact checks/results,
-pre/post hashes, generated/golden status, residual risk, and questions.
+pre/post hashes, tracked/untracked/ignored status, generated/golden status,
+evidence/journal links, independent reviewer identity/verdict, residual risk,
+next unblocked order, downstream holds, and questions. A new agent must be able
+to resume from this handoff without prior chat or session logs.
 ```
 
 ## Reviewer brief template
@@ -912,8 +986,8 @@ a GO/NO-GO recommendation. Root makes the decision.
 ## XHARD reviewer brief template
 
 ```text
-Read-only XHARD review <XR-ID>. You are reviewing the root-authored design or
-the integrated result, not implementing it. Reconstruct the relevant state,
+Read-only XHARD review <XR-ID> (Claude Opus). You are reviewing the root-authored
+design or the integrated result, not implementing it. Reconstruct the relevant state,
 resource, dependency, timing, compatibility, and failure model across all named
 packages. Test the composition against user-visible invariants and the recorded
 evidence. Look specifically for locally green packages that disagree globally,
@@ -925,12 +999,20 @@ Return: GO / GO WITH CONDITIONS / NO-GO; blocker/high findings only; exact
 affected contracts/files/evidence; named downstream orders that must remain
 held. Do not edit. Do not redesign implicitly: propose a correction for root to
 decide. The coordinator is the acceptance authority.
+
+At G5, Fable owns the final integrated review/feedback loop for at most three
+rounds. Each round must use a reviewer independent of the implementation it
+reviews. Sonnet implements ordinary feedback; Opus implements XHARD feedback.
+If Fable is unavailable specifically because credits are exhausted, record that
+evidence and substitute Opus for remaining rounds. Must findings after round
+three are BLOCKED/NO-GO.
 ```
 
 ## Repair, retry, and escalation
 
 - A reviewer blocker returns to the same implementer once with a narrow repair
-  brief; no new cleanup scope is added.
+  brief; no new cleanup scope is added. The same independent review gate is
+  re-evaluated as closure of that one review process.
 - A second reproducible failure stops the order. The coordinator re-evaluates
   the contract, splits the order, or assigns a new agent.
 - An environment or harness failure gets one bounded retry only after evidence
@@ -945,16 +1027,18 @@ decide. The coordinator is the acceptance authority.
   implementation; do not substitute a full suite and hope it covers the seam.
 - Every allowed untracked text file is part of the baseline and review evidence
   and must pass the no-index whitespace check; tracked-only diff commands are
-  not sufficient.
+  not sufficient. Ignored paths must also be inventoried and classified before
+  any cleanup or mutation.
 
 ## Start sequence
 
 When the user authorizes execution, the coordinator should:
 
-1. re-read the program reconciliation, create X00 from pushed baseline
-   `4b02a6a` plus a fresh then-live worktree, and record the superseding ownership
-   baseline, including all relevant untracked work and the recovered scroll,
-   responsive-camera, ground-placement, and direct-entry evidence;
+1. re-read the program reconciliation, create X00 from protected ancestor
+   `4b02a6a` plus a fresh then-live worktree, and record the superseding
+   ownership baseline, including tracked, untracked, ignored, and all
+   repository-local evidence; prior sessions and temporary artifacts are not
+   required;
 2. copy every reconciled disposition into the ledger, protect the current
    content/hero/rail/navigation/Connect/UI/CSS/static/capture behavior, and
    resolve any changed ownership before source work;
@@ -974,9 +1058,12 @@ When the user authorizes execution, the coordinator should:
    collide with active reservations;
 9. update the ledger and external patch journal after every write, handoff,
    review, repair, and gate;
-10. provide the user a concise report at each wave seam, not a stream of every
+10. at G5, run the Fable-owned `XR-FINAL` integrated review loop for no more
+    than three rounds; route ordinary fixes to Sonnet and XHARD
+    fixes to Opus, and record `BLOCKED/NO-GO` if must findings remain;
+11. provide the user a concise report at each wave seam, not a stream of every
    subagent tool call;
-11. stop only for a genuine authorization/ownership ambiguity, product decision,
+12. stop only for a genuine authorization/ownership ambiguity, product decision,
    or unrecoverable environment requirement.
 
 This is the point at which the work can be run one piece at a time without
