@@ -80,6 +80,25 @@ the work, then rescan and review at the end.
 
 ### Reconciled execution baseline — 2026-08-20
 
+#### Post-push custody update — 2026-08-21
+
+Commit `4b02a6a43df1cac5664990819d45c807149b625d` is now both `main` and
+`origin/main`. It durably contains the previously uncommitted content,
+hero/rail, navigation/flight, scroll, Connect ground-network placement,
+responsive camera, UI/CSS, test, capture, and all three elegance documents.
+The `16a16d8` inventory below remains the provenance record for that
+reconciliation, but every reference there to a dirty or untracked path is a
+historical description of the pre-`4b02a6a` snapshot, not its present custody.
+The worktree continued changing after that commit; every later user edit is
+again protected, including currently observed Connect, portrait, UI, rail, and
+site-CSS paths. X00 must begin from `4b02a6a` plus a fresh then-live worktree
+snapshot and must not restore any of them.
+
+Moving the protected work into a pushed commit does not promote an elegance
+order to DONE: the frozen contract, focused proof, independent review, and
+coordinator acceptance are still required. It does make the three documents
+durable on GitHub and removes the old untracked-goal ambiguity.
+
 This reconciliation audited commit
 `16a16d8cafc9590f61fb3a6ac5de618d0e2db2d7` plus the complete staged,
 unstaged, and relevant untracked worktree immediately before these plan edits.
@@ -87,7 +106,8 @@ There were no staged changes. The dirty tree contained the current content,
 hero/preboot rail, navigation, Mission/Inspire flight, scroll correction,
 Connect placement, UI/layout, CSS, static-fallback, focused-test, and capture changes, plus
 untracked `.DS_Store`, `.tmp-scroll-investigation/`, and this goal document.
-HEAD advanced from the initial `b3a2ecd1` audit snapshot only through the
+Within that historical reconciliation window, HEAD advanced from the initial
+`b3a2ecd1` audit snapshot only through the
 committed `DEPLOY.md` Railway-operations change; it was re-read and folded into
 F04 below. `journey/scroll.js` and `tools/scroll-touch-gates.mjs` also gained an
 uncommitted answered-wall restart correction and delayed-momentum-tail regression
@@ -105,12 +125,12 @@ order is DONE in this audit. Existing files alone are not completion evidence.
 
 | Work-order family | Reconciled status | Exact repository evidence and remaining contract |
 | --- | --- | --- |
-| X00 | REMAINING | No execution ledger or external patch journal exists; the untracked goal explicitly defers ledger creation until execution. Re-record all live dirty/untracked paths and their owners. |
+| X00 | REMAINING | No execution ledger or external patch journal exists; the now-tracked goal explicitly defers ledger creation until execution. Start from pushed baseline `4b02a6a`, then record all later dirty/untracked paths and their owners. |
 | Q01 / Q02 / Q03 / Q04 / Q05 | PARTIAL / PARTIAL / PARTIAL / REMAINING / REMAINING | `package.json:9-13` still couples browser smoke into `test`/`check`; `madge.webpack.cjs:3-11` has aliases but no query-normalizing/fail-on-skipped-local proof; `tools/browser-smoke.mjs:127-139,244-290` silently greens unavailable WebGL and combines touch+reduced motion; no durable warning/catch inventory exists; `tools/check.sh:84-100` still treats the named mobile fail-band as success and `tools/capture.py:847-850,896-904` writes `_check` beneath its output by default. |
-| P01 / C01 / C02 / C03 / C04 | REMAINING / PARTIAL / PARTIAL / REMAINING / PARTIAL | The smoke harness and current `tools/scroll-touch-gates.mjs`/`tools/test-chapter-entry.mjs` are foundations, and the dirty answered-wall restart now has a passing delayed-tail regression, but there is no fixed reference-environment record, separate live desktop/touch/reduced scenarios, fault-injected transition suite, deterministic resource/performance report, or late-loader portrait suite. The focused commands recorded below pass on this dirty tree; none proves the missing contracts. |
+| P01 / C01 / C02 / C03 / C04 | REMAINING / PARTIAL / PARTIAL / REMAINING / PARTIAL | The smoke harness and current `tools/scroll-touch-gates.mjs`/`tools/test-chapter-entry.mjs` are foundations, and `4b02a6a` contains passing delayed-tail, route-gain, and Connect camera-motion regressions, but there is no fixed reference-environment record, separate live desktop/touch/reduced scenarios, fault-injected transition suite, deterministic composed choreography/resource/performance report, or late-loader portrait suite. The historical focused commands below are REVALIDATE inputs; none proves the missing contracts. |
 | S01 / S02 | PARTIAL / PARTIAL | `journey/structure.js:4-51` centralizes values and indexes, but exports mutable objects and `validateJourneyStructure()` at `:57-122` validates only selected caller-supplied references, not all raw totals/bands/stops. `journey/structure.test.mjs:7-59` freezes useful route/copy/key values and passes, but not full symbol DOM/signatures or protected visible/menu ordering. Current `structure.js:24` still says `Owned` while protected `content/content.js` says `Ownership`; this must be reconciled as compatibility evidence, not normalized back. |
 | C05 / C06 / N01 | REMAINING / REMAINING / PARTIAL | Chapters still expose broad ad hoc shapes; `chapter-registry.js:22-41` retains module-global `preparedChapters`; `navigation.js:4-11` only normalizes a string and `chapter-interactions.js` still contains named Inspire/Connect/Owned branches. |
-| J01 / J02 / J03 | PARTIAL / PARTIAL / REMAINING | Camera blend, chapter-entry, and `frame-application.js` are real seams, but transition/hero/entry state remains in `journey.js`; the orchestrator still contains named focus branches around `journey.js:981-995`; `ui.js:214-215,807,1562-1575` still reads `window.journey` and private portraits. Current dirty route-faithful navigation is protected and must enter C01 before extraction. |
+| J01 / J02 / J03 | PARTIAL / PARTIAL / REMAINING | Camera blend, chapter-entry, and `frame-application.js` are real seams, but transition/hero/entry state remains in `journey.js`; the orchestrator still contains named focus branches around `journey.js:981-995`; `ui.js:214-215,807,1562-1575` still reads `window.journey` and private portraits. The route-faithful navigation committed in `4b02a6a` is protected and must enter C01/C03 before extraction. |
 | A02 / J04a–J04e / J05 / A05 / A05a | REMAINING | `state.js`, `scroll.js`, `ui.js`, `rail.js`, `dial.js`, registry, GPU preparation, and page handlers still install anonymous or non-detachable work; `scroll.js` still combines input classification, credit/wall policy, and route mapping; `journey.js:1361-1449` exposes no facade `dispose()`, and `main.js` singleton handlers have no installation-count proof. The new preboot/live rail adoption makes A02 a prerequisite, not completed work; A05 decides whether A05a is required before J01. |
 | R01 / R02 / R03 / R04 | PARTIAL / REMAINING / PARTIAL / PARTIAL | `organism/animation.js:4-48` owns a scheduler but returns no stop handle; intro acceleration owns recursive RAF/global clock mutation; organism/spores listeners remain attached; `organism/renderer.js` and portrait helper files are useful seams but do not compose idempotent resource or async cancellation. |
 | R05 / R06 / R07 / R08 | REMAINING | Connect/Inspire/Owned/Final facades and the module-global registry do not provide the frozen descriptor-wide disposal and two-instance proof. Existing isolated disposers (for example Final interaction/ring helpers) are partial leaves, not facade closure. |
@@ -119,28 +139,30 @@ order is DONE in this audit. Existing files alone are not completion evidence.
 | O01 / O02 | PARTIAL / REMAINING | `organism/renderer.js`, `random.js`, `shaders.js`, and `performance.js` are foundations, but postprocessing/resource composition and cohesive seeded world-builders remain in `organism.js`; there is no byte/order/resource proof for extraction. |
 | H01 / H02 / H03 / H04 / H05 / H06 | REMAINING | `substrate.js`, `tendrils.js`, `ring.js`, `canopy.js`, `terrain.js`, and `clones.js` remain 1,082–1,842-line builders. No order has a frozen build/resource/runtime contract plus focused lifecycle, byte, capture, review, and acceptance evidence. H02 must consume the U05 rail-exclusion capability rather than preserve its current direct DOM query. |
 | A01 / A01a / A03 / A04 / A06 and conditionals | REMAINING | No post-lifecycle responsibility/state decision artifacts exist for portraits, Inspire, Final, or spores. Conditional extractions remain untriggered until those evidence-backed decisions; do not pre-create them. Scroll cohesion is decided earlier by A05/A05a. |
-| B01 / B02 / B03 / B04 / B05 | REMAINING | `main.js` still owns global failure handlers, responsive layout, early input, async prepare, preboot/live-rail adoption, and activation handoff. Current dirty `index.html`, `hero.css`, `main.js`, `rail.js`, `site.css`, and captures define protected user intent; B03/B04 must preserve, not redesign, it. The removed Explore CTA still has null-tolerant consumers in `main.js` and `journey.js`; B01 must classify them and B04/B05 may remove them only after the new rail handoff contract is frozen. |
+| B01 / B02 / B03 / B04 / B05 | REMAINING | `main.js` still owns global failure handlers, responsive layout, early input, async prepare, preboot/live-rail adoption, and activation handoff. The `4b02a6a` `index.html`, `hero.css`, `main.js`, rail/site CSS, and captures define protected user intent; later dirty `rail.js`/`site.css` work is protected too. B03/B04 must preserve, not redesign, it. The removed Explore CTA still has null-tolerant consumers in `main.js` and `journey.js`; B01 must classify them and B04/B05 may remove them only after the new rail handoff contract is frozen. |
 | F01 / F02 / F03 / F04 / F05 / F06 | PARTIAL / PARTIAL / PARTIAL / PARTIAL / REMAINING / REMAINING | Constants/symbol/route/tooling foundations exist, but competing exports/history remain; current symbol/content/static/preboot-SVG edits require compatibility fixtures; scanner evidence is stale; and the exact catch inventory above has not been classified or closed. Committed `DEPLOY.md:61-92` now advertises a manual `git add -A`/commit/push quick path alongside the earlier exact-path `tools/release.sh` contract; F04 must reconcile the executable truth and documentation without running either release path. |
 | G0 / G1 / G2 / G3 / G4 / G5 | REMAINING | No gate has the required ledger, package reviews, source-freeze served-closure hashes, required live scenarios, resource/performance report, RX verdict, and coordinator acceptance. |
 
-The dirty visual/behavior work is protected user intent, not evidence that an
+The visual/behavior work now committed in `4b02a6a`, plus later user edits, is
+protected user intent, not evidence that an
 elegance order landed. In particular preserve the preboot-to-live rail handoff,
 horizontal rail/menu and hero choreography, route-faithful Mission/Inspire
 flight, copy/arrival behavior, rail collision/exclusion, Connect ADOS placement,
-current content/symbol/static ordering, and all five dirty capture bytes
+current content/symbol/static ordering, and all five protected capture bytes
 (including the large Owned desktop size change). Do not
 refresh, re-bless, or normalize those captures during this program.
 
-The untracked scroll-investigation briefs record a reported intermittent
-continued-travel/overshoot problem. The concurrent dirty answered-wall restart
-and delayed-tail test are protected corrective work, not elegance completion.
+The recovered Codex session and its investigation artifacts record the
+continued-travel/overshoot, Connect stall-then-roll, responsive-camera, and
+ground-network-placement problems. Their corrections and focused tests are now
+part of `4b02a6a`; they are protected corrective work, not elegance completion.
 X00 must coordinate ownership and C01 must independently validate the fixed
 case and reproduce or explicitly clear any remaining symptom before J01. Any
 remaining reproducible defect gets a separate root-approved corrective brief;
 it is not silently frozen as desired behavior or opportunistically fixed by
 structural extraction.
 
-Focused audit evidence on this dirty snapshot: `node
+Historical focused audit evidence on the pre-`4b02a6a` snapshot: `node
 journey/structure.test.mjs`, `node tools/scroll-touch-gates.mjs`, `node
 tools/test-chapter-entry.mjs`, and `node tools/test-static-content.mjs` all
 passed, as did `node --check` for `main.js`, `journey/journey.js`,
@@ -420,6 +442,35 @@ application stalls cannot silently be reclassified as visitor pauses. Numeric
 trace contracts are deterministic; live frame-time thresholds remain soft and
 environment-specific rather than flaky screenshot-speed assertions.
 
+Connect receives an explicit choreography fixture at named progress samples in
+landscape, phone portrait, and portrait-tablet compositions. Each sample records
+`stateP`, `routeP`, `presentedP`, the final post-responsive/post-blend camera
+pose and derivative, camera-derived ground resolve, the three route-front
+positions and hub-ignition states, and projections of the stipe base, all three
+hub cores, route endpoints, and the seeded hero-ground ADOS nexus. The fixture
+freezes the authored distinction: the ground network and its destinations
+pre-exist at their settled responsive placement; only light travels. It must
+fail if route progress is smooth while final screen motion stops and restarts,
+if responsive camera composition moves a rooted landmark during reveal, if the
+Hivemind → Discord → ADOS lighting order or front windows drift, or if the
+Connect hub, strand/point field, node/focus/DOM anchor, and organism ground
+nexus disagree.
+
+Record a separate direct-navigation Connect trace with readiness history,
+presented camera/route coordinate, entry clock, resolve, route fronts, and the
+landing handoff. Once readiness authorizes entry it cannot regress; established
+ground must precede travelling light; and the final `driveEntry` frame must be
+continuous with `drive(rest)`. If current behavior reproduces the recovered
+level-gate/fixed-clock mismatch, resolve it through a separate corrective brief
+before J01/J02 may consume the behavior. Do not silently redefine the authored
+scroll pacing during structural work.
+
+Preserve the recovered negative performance result too: trusted Chrome traces
+found a warm 10–12 ms Connect onset with no compile, GC, or long-task spike.
+Later work may remove measured frame-loop layout reads, but it must not justify
+shader, particle, or GPU redesign with this incident unless a new supported
+trace first contradicts that evidence.
+
 Store these measurements in a small report schema that records the supported
 browser, renderer, viewport, DPR, capture flags, and hardware/software renderer.
 Treat geometry schemas, draw ranges, listener counts, and RAF counts as exact.
@@ -544,15 +595,21 @@ Move camera composition, seam updates, chapter drives, lens focus, and UI
 projection into a pipeline whose order is declared once and tested with spies.
 Remove chapter-specific focus and portrait branches from the orchestrator.
 
-After the camera write, publish one immutable
-`FrameSnapshot { stateP, routeP, presentedP, cameraPose, transitionPhase, dt }`.
-Seams, chapters, lens, rail, hero, and UI consume that same snapshot rather than
-selecting independently among `p`, `travelP`, `frameP`, or mutable camera state.
+After the complete camera write—including responsive portrait/tablet
+composition and any active navigation blend—publish one immutable
+`FrameSnapshot { stateP, routeP, presentedP, cameraPose, viewport,
+aspectProfile, transitionPhase, dt }`. Seams, chapters, lens, rail, hero, and UI
+consume that same snapshot rather than selecting independently among `p`,
+`travelP`, `frameP`, or mutable camera state. A camera-coupled chapter such as
+Connect derives resolve/readiness from `snapshot.cameraPose`; it may not
+re-read `sceneApi.camera` after publication or run a second responsive pose
+calculation.
 
-Acceptance: camera-before-reader order is executable; frame output and visual
-captures do not drift; fixed-`dt` traces prove monotonicity, reversal continuity,
-and landing reconciliation; `journey.js` becomes a boot/public compatibility
-facade.
+Acceptance: final-camera-before-reader order is executable; frame output and
+visual captures do not drift; fixed-`dt` traces prove monotonicity, reversal
+continuity, landing reconciliation, monotone direct-entry readiness, and exact
+Connect ground/front projection across the three responsive compositions;
+`journey.js` becomes a boot/public compatibility facade.
 
 Estimate: 0.75–1 day.
 
@@ -708,6 +765,16 @@ write → measure → publish pass once per invalidation. UI, Connect, and the H
 runtime perform zero rail DOM queries or geometry reads during frame drive;
 fake counters prove this exactly before soft live-performance comparison.
 
+That snapshot is measurement input, not ground-placement authority. Connect
+owns one responsive screen-to-ground placement solver evaluated against the
+settled responsive Connect camera and docked rail rectangle, never the
+travelling camera or rail animation. It publishes one destination/delta before
+the chapter can reveal. Connect's hub core, strand and point materials,
+node/focus/DOM anchor, and the organism's seeded hero-ground ADOS nexus consume
+that same result. The rooted feather back to the undisturbed ground remains
+planted. No consumer recomputes a responsive destination or keeps a second
+placement clock.
+
 Estimate: 2–3 days total.
 
 #### E4.3 — Split organism construction only at ownership seams
@@ -717,8 +784,11 @@ move input behind its owner; group tightly coupled geometry construction in one
 `world-builders` module rather than creating a utility file per primitive.
 
 Acceptance: shader strings, RNG order, geometry bytes, animator order, and draw
-ranges match exactly. Renderer memory and frame timing use the Wave 1 reference
-environment/report schema and documented tolerances.
+ranges match exactly. The seeded hero-ground nexus keeps its exact source,
+attachment weights, and feather topology and consumes Connect's one placement
+delta without a second camera/layout calculation. Renderer memory and frame
+timing use the Wave 1 reference environment/report schema and documented
+tolerances.
 
 Estimate: 1–1.5 days.
 
@@ -734,10 +804,23 @@ where those responsibilities genuinely exist:
 
 Complete, review, capture, and accept one source package before the next renderer
 write begins. Preserve placement ownership across files as an explicit data
-contract. Stop when the remaining file is cohesive, even if it is still long.
+contract. For Connect tendrils this includes authored hub world anchors, route
+topology/order and normalized lengths, lighting windows, the planted root/feather
+weights, and exact landscape/phone/tablet projections at the C03 checkpoints.
+The tendril package consumes Connect's one responsive destination/delta and may
+not own camera, viewport, or rail policy. Stop when the remaining file is
+cohesive, even if it is still long.
+
+The organism world-builder order and Connect tendril order alter opposite ends
+of the same ADOS ground-junction contract. Their read-only reconnaissance may
+overlap, but their implementation, review, deterministic projection proof, and
+acceptance are serialized even when their path allowlists are disjoint.
 
 Acceptance: rebuild byte checks, focused lifecycle tests, performance counters,
-and captures pass after each individual source split.
+and captures pass after each individual source split. Connect additionally
+proves core/strand/point/node/focus/DOM/hero-ground alignment, exact rooted
+feather behavior, placement-before-reveal, and no response to travelling camera
+or rail-docking motion.
 
 Estimate: 3–5 days total. Read-only reconnaissance may parallelize across
 disjoint files; implementation, review, capture, and acceptance remain serial.

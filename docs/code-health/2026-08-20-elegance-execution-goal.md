@@ -5,9 +5,10 @@ Execute the approved website elegance program in
 and gates in `docs/code-health/2026-08-20-elegance-execution-runbook.md`.
 Execute the reconciled plan from X00 through G5, one accepted disposition at a
 time or in the explicitly permitted disjoint lanes. Start from the program's
-**Reconciled execution baseline — 2026-08-20** and supersede it through X00's
-live snapshot; do not redo a partial foundation as though it were absent. This
-goal creates no new Megaplan or epic.
+**Reconciled execution baseline — 2026-08-20**, its post-push
+`4b02a6a43df1cac5664990819d45c807149b625d` custody update, and X00's
+superseding live snapshot; do not redo a partial foundation as though it were
+absent. This goal creates no new Megaplan or epic.
 
 Do not reset, restore, checkout over, stash, clean, broadly format, overwrite,
 stage, commit, or otherwise disturb unrelated user work. Do not edit either
@@ -31,6 +32,10 @@ Produce the architecture described by the program:
 - physical input, gesture decisions, route progress, the immutable frame
   presentation, and perceived screen motion form one replayable diagnostic
   trace rather than several independently green clocks;
+- Connect's settled responsive ground placement, final camera composition,
+  camera-derived resolve, route-front choreography, DOM anchors, and seeded
+  hero-ground nexus form one exact landscape/phone/tablet contract rather than
+  separately plausible visual layers;
 - browser, capture, WebGL, accessibility, fallback, and performance results
   distinguish an environment block from an application pass; and
 - residual large files are cohesive by evidence, not merely left large.
@@ -54,7 +59,7 @@ The runbook is the execution authority when an implementation question is
 already covered there. The root/coordinator records any genuine conflict and
 decides whether work must stop for a product or architecture decision.
 
-The reconciliation audited commit
+The historical reconciliation audited commit
 `16a16d8cafc9590f61fb3a6ac5de618d0e2db2d7` plus the then-complete staged,
 unstaged, and relevant untracked tree. There were no staged changes. The dirty
 tree included current content, hero/preboot rail, navigation/flight, scroll,
@@ -65,12 +70,13 @@ attribute it to an execution agent. Commit/push movement has no semantic
 authority. X00 records the superseding live status, hashes, ownership, exact
 package allowlists, and protected behavior before any source write.
 
-The initial audit snapshot was `b3a2ecd1`; HEAD advanced only through the
-committed `DEPLOY.md` Railway-operations change. Its manual `git add -A`/push
-quick path is F04 reconciliation evidence, not execution authority. Concurrent
-uncommitted `journey/scroll.js` answered-wall restart and delayed-momentum-tail
-test changes also pass; they are protected corrective work and C01 revalidation
-evidence rather than elegance completion.
+Commit `4b02a6a43df1cac5664990819d45c807149b625d` is now both `main` and
+`origin/main`. It contains that previously dirty source, tests, captures, and
+this tracked goal. Later user edits continued across Connect, portrait, UI,
+rail, and site-CSS paths during this amendment; all remain protected. The
+initial audit history and its `DEPLOY.md` quick-path evidence remain relevant
+to F04, but the pushed custody baseline for X00 is `4b02a6a` plus a fresh
+then-live worktree. Commit/push status still does not make any order DONE.
 
 The program/runbook reconciliation maps every order to PARTIAL, REMAINING, or a
 REVALIDATE overlay; none was DONE because no complete frozen contract, focused
@@ -123,6 +129,14 @@ brief must preserve the C01 input-sample→decision trace, the J02 immutable fra
 snapshot, and C03 composed-motion evidence. A synthetic trace cannot stand in
 for the required provenance-recorded real trackpad reference, and a live visual
 impression cannot replace deterministic replay.
+
+For Connect visual work, a route-gain pass or screenshot alone is likewise
+invalid. The brief must preserve the named C03 landscape/phone/tablet samples:
+final responsive camera pose, stable ground projections, camera resolve,
+Hivemind → Discord → ADOS fronts and hub ignition, the one responsive ADOS
+destination/delta, rooted feather, DOM/focus anchor, and seeded hero-ground
+nexus. Direct navigation additionally proves monotone readiness and continuous
+`driveEntry`→`drive(rest)` handoff.
 
 The ordinary protocol is:
 
@@ -182,13 +196,15 @@ Follow the runbook's dependency order exactly. The compact sequence is:
    truthfulness, and the reservation/journal mismatch demonstration pass.
 2. **Wave 1 / G1:** Run P01 first and stop if the required reference
    Chromium/WebGL/performance environment cannot pass its preflight. Then run
-   C01–C04 with only the permitted disjoint parallelism. C01 must independently
-   validate the dirty delayed-tail correction and reproduce or explicitly clear
-   any remaining continued-travel/overshoot symptom before J01; a remaining
+   C01–C04 with only the permitted disjoint parallelism. C01/C03 must independently
+   validate the committed delayed-tail, route-gain, responsive-camera, and
+   Connect choreography corrections and reproduce or explicitly clear any
+   remaining continued-travel/overshoot/stall-restart symptom before J01/J02; a remaining
    reproducible defect requires a separate root-approved corrective brief and is
    not frozen as intended behavior. Its deterministic event/RAF trace matrix,
    real trackpad momentum-tail/two-pulse reference, live rest traversal, and
-   composed-motion baseline must all exist before G1. Complete the G1
+   composed-motion plus landscape/phone/tablet ground/reveal baseline must all
+   exist before G1. Complete the G1
    mechanical/browser evidence, obtain `XR-BASELINE`, and have the coordinator
    accept G1 before Wave 2.
 3. **Wave 2 / G2:** Run S01, then S02; establish the coordinator's settled
@@ -200,17 +216,21 @@ Follow the runbook's dependency order exactly. The compact sequence is:
    J01 → J02 → J03 → A02 → J04b → J04c → J04d → J04e → J05. J04a
    owns the detachable factual-input-sample→semantic-decision boundary while
    keeping heuristic telemetry diagnostic-only; J01 consumes discriminated
-   semantic decisions only; J02 publishes one immutable frame snapshot to all
-   readers. In the rendering lane run R01 → R02 →
+   semantic decisions only; J02 publishes one immutable final-responsive frame
+   snapshot to all readers, and camera-coupled chapters may not re-read mutable
+   camera state after publication. In the rendering lane run R01 → R02 →
    R03, with R04 only in its explicitly disjoint reservation; after the
    contract and portrait prerequisites, run R05–R07 and then R08. Complete the
    G3 evidence, obtain `XR-RUNTIME-GATE`, and have the coordinator accept G3
    before Wave 4.
-5. **Wave 4 / G4:** Obtain `XR-VISUAL-DESIGN` before U05, O02, B03, or B04.
+5. **Wave 4 / G4:** Obtain `XR-VISUAL-DESIGN` before U05, O02, H02, B03, or B04.
    Run U01a → U01b → U01c → U01d, then U02 → U03 → U04 → U05 → U06. Run
    O01 → O02. U05 establishes one immutable rail-exclusion snapshot before H02
    and B03; H02 and B03 may invalidate its sole owner but never measure rail
-   geometry or publish a competing snapshot;
+   geometry or publish a competing snapshot. U05 owns rail measurement;
+   Connect alone owns the settled-camera screen-to-ground destination/delta;
+   H02 and O02 consume it without recomputation and therefore serialize their
+   implementation/review/projection proof even when their files are disjoint;
    no UI, Connect, or H02 frame-drive consumer keeps an independent rail-DOM or
    geometry read. Run
    H01–H06 strictly serially with focused proof, review,
@@ -328,8 +348,9 @@ This goal is complete only when:
   timeouts, and protected visual/behavior files and unrelated user work remain
   unchanged;
 - physical-input reference traces, deterministic replays, live rest traversals,
-  immutable frame snapshots, composed-motion traces, and rail-layout counters
-  agree at G1, G3/G4, and G5; and
+  immutable final-responsive frame snapshots, composed-motion traces,
+  Connect landscape/phone/tablet placement/reveal samples, direct-entry
+  continuity, and rail-layout counters agree at G1, G3/G4, and G5; and
 - no reviewer blocker or unresolved root decision remains; and
 - the root/coordinator has reviewed the complete diff, all wave evidence, Sol's
   final integrated review, and residual-risk rationale, then explicitly

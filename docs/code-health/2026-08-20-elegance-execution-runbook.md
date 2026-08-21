@@ -38,6 +38,15 @@ source-to-order audit for this runbook. It covers commit
 relevant untracked tree; X00 must supersede it with the live snapshot before
 execution. The compact disposition is:
 
+Post-push custody update: `4b02a6a43df1cac5664990819d45c807149b625d`
+is now both `main` and `origin/main` and contains that previously dirty source,
+tests, captures, and all three plan documents. References below to dirty or
+untracked reconciliation inputs are historical provenance. X00 starts from
+`4b02a6a` plus a fresh then-live worktree; later protected user edits continued
+across Connect, portrait, UI, rail, and site-CSS paths during this amendment.
+The commit changes custody, not completion status: no order becomes DONE
+without its required proof, review, and acceptance.
+
 | Status | Work orders |
 | --- | --- |
 | PARTIAL | Q01–Q03, C01, C02, C04, S01, S02, N01, J01, J02, R01, R03, R04, U01b, U02, U04, U05, O01, F01–F04 |
@@ -55,22 +64,25 @@ review, and explicit acceptance are recorded. Otherwise it remains PARTIAL or
 REMAINING. A file's existence, an old commit message, or a broad green check is
 never sufficient.
 
-Current dirty behavior is protected: the preboot/live horizontal rail and menu,
+The behavior committed in `4b02a6a`, plus later user edits, is protected: the
+preboot/live horizontal rail and menu,
 hero/rail choreography, route-faithful Mission/Inspire flight, copy arrival,
 rail collision/exclusion, Connect ADOS placement, content/symbol/static order,
-and dirty captures. The untracked scroll-investigation briefs also report an
-intermittent continued-travel/overshoot symptom; concurrent dirty
-`journey/scroll.js` and focused-test changes now correct and pass one delayed
-momentum-tail case. X00 must classify that protected corrective work, and C01
-must independently validate it and reproduce or explicitly clear any remaining
-symptom before J01. A remaining reproducible application defect is not frozen
-as desired behavior and needs a separate root-approved corrective brief.
+and protected captures. The recovered Codex investigation also records
+continued-travel/overshoot, responsive-camera stall/restart, Connect
+ground-network placement, and direct-entry reveal risks; `4b02a6a` contains
+the corrective source and focused regression foundations. X00 must classify
+that protected work, and C01/C03 must independently validate it and reproduce
+or explicitly clear any remaining symptom before J01/J02. A remaining
+reproducible application defect is not frozen as desired behavior and needs a
+separate root-approved corrective brief.
 
-HEAD advanced from the audit's initial `b3a2ecd1` snapshot through one committed
-`DEPLOY.md` change only. F04 must reconcile its manual `git add -A`/push quick
-path with the exact-path `tools/release.sh` contract without executing either.
-The concurrently added answered-wall restart and delayed-momentum-tail focused
-case passed, but remain C01 revalidation evidence rather than elegance closure.
+The historical audit first advanced from `b3a2ecd1` through the committed
+`DEPLOY.md` change, then the user committed and pushed the full protected tree
+as `4b02a6a`. F04 must still reconcile the manual `git add -A`/push quick path
+with the exact-path `tools/release.sh` contract without executing either. The
+now-committed focused corrections remain C01/C03 revalidation evidence rather
+than elegance closure.
 
 ## Roles
 
@@ -420,12 +432,12 @@ ledger like implementation orders:
 
 | Review ID | When | GPT-5.6 Sol reviews | Downstream hold |
 | --- | --- | --- | --- |
-| XR-BASELINE | After G1 evidence, before Wave 2 | Q01–Q05/P01/C01–C04 semantics, capture truthfulness, environment classification, physical-input provenance, trace-replay/live-traversal coverage, composed-motion/resource/performance report completeness, and fault-injection validity | Wave 2 cannot start |
+| XR-BASELINE | After G1 evidence, before Wave 2 | Q01–Q05/P01/C01–C04 semantics, capture truthfulness, environment classification, physical-input provenance, trace-replay/live-traversal coverage, Connect landscape/phone/tablet choreography and direct-entry continuity, composed-motion/resource/performance report completeness, and fault-injection validity | Wave 2 cannot start |
 | XR-C-DESIGN | After S01/S02 evidence, before C05 | Root's manifest, chapter capability, registry-instance, navigation, and compatibility migration design | C05/C06/N01 cannot start |
 | XR-C-GATE | At G2 after C05/C06/N01 and focused/browser evidence | Integrated canonical model, dependency direction, adapter debt, and two-instance behavior | J04a/A05/A05a/J01–J03/R05–R08 cannot start |
 | XR-RUNTIME-DESIGN | Before J04a/A05a/J01/J02 and before lifecycle XHARD orders J04b–J04e/R01/R03/R04/R07 | Root's factual input-sample/discriminated gesture-decision boundary, diagnostic-only telemetry, transition/frame snapshot model, disposal graph, async cancellation, clock/RAF, GPU, rail/UI, and page/journey lifetime decisions | J04a/A05/A05a/J01/J02 and each affected lifecycle XHARD order cannot start |
-| XR-RUNTIME-GATE | At G3 after journey/rendering lifecycle lanes | Integrated physical-input decisions, single frame snapshot, composed-motion traces, transition semantics, teardown ownership, late async behavior, recreation, and visitor fallbacks | Wave 4 cannot start |
-| XR-VISUAL-DESIGN | Before U05, O02, B03, and B04 | Root's projection/layout, seeded builder, responsive page-layout, and boot-handoff extraction boundaries | Named XHARD order cannot start |
+| XR-RUNTIME-GATE | At G3 after journey/rendering lifecycle lanes | Integrated physical-input decisions, final responsive camera snapshot, camera-derived reveal/readiness, direct-entry handoff, composed-motion traces, transition semantics, teardown ownership, late async behavior, recreation, and visitor fallbacks | Wave 4 cannot start |
+| XR-VISUAL-DESIGN | Before U05, O02, H02, B03, and B04 | Root's single rail-measurement owner, Connect screen-to-ground placement authority, shared ADOS destination/delta consumers, seeded builder, rooted-feather and responsive page-layout boundaries; challenge whether an invalidation merely recomputes the same authored destination or silently moves authored world placement | Named XHARD order cannot start |
 | XR-VISUAL-GATE | At G4 | Whole UI/organism/chapter/page composition, visual determinism, rail-layout invalidation evidence, residual facade cohesion, and abstraction-churn risk | Wave 5 cannot start |
 | XR-FINAL | At G5 after all mechanical/browser/capture/performance evidence | Complete diff, cross-wave architecture, physical-input replay/live evidence, composed presentation, residual debt, release risk, and whether the stated end-state was actually reached | No completion/release-readiness claim |
 
@@ -482,7 +494,7 @@ runs before Q05 is accepted.
 | P01 | Provision and prove one supported reference browser/WebGL/performance environment before characterization depends on it | external environment plus ledger metadata; no app source | T2 | required WebGL preflight and `live-journey` pass with fixed browser/OS/renderer/viewport/DPR/input provenance; temp capture path writable |
 | C01 | Characterize raw input delivery, gesture identity, credit/arrival decisions, hero/direct/wrap transitions, cancellation, landing, and frame-writer order | new journey/input contract tests and trace fixtures; minimal explicit test seam only | T2 / **XHARD evidence foundation** | exact causal traces keep factual samples, discriminated semantic decisions, and heuristic diagnostic telemetry separate; cover delayed/long/coalesced tails, multiple events/RAF orders, long frames/background resume, reversal, touch, rapid repeats, and boot replay; each decision cites a causing sample/frame, samples may yield no decision, one gesture answers at most one new rest, and deliberate perturbation fails |
 | C02 | Characterize UI DOM/ARIA, sidebar/nav effect, disclosure, focus, sheet, copy arrival, reduced motion, and real live travel | new UI/DOM tests; harness scenario definitions; external physical-input reference trace | T2 | `live-desktop`, `live-touch`, and `live-reduced-motion` traverse rests; emit event/frame/decision/route/presentation/arrival traces; cover UI behavior; at least one provenance-recorded real trackpad tail and two-pulse reference supplements synthetic wheel input |
-| C03 | Define deterministic rendering/composed-motion report schema and record RNG/order/geometry/resource/performance baselines | new rendering/motion tests and report fixture; read-only probes | T3 | RNG/geometry/draw ranges, route gain, camera-pose derivative, stable-landmark projection, renderer memory/draw calls, listener/RAF/resource counts repeat exactly; no unintended stop/re-acceleration/reversal; live long-task/RAF/layout/event-latency provenance and soft frame/GPU tolerances recorded |
+| C03 | Define deterministic rendering/composed-motion report schema and record RNG/order/geometry/resource/performance baselines, including Connect choreography | new rendering/motion tests and report fixture; `tools/test-connect-motion.mjs` and the Connect route-gain regression as REVALIDATE inputs; read-only probes | T3 | landscape/phone/tablet samples bind state/route/presented progress to final responsive camera pose/derivative, resolve, route fronts/hub ignition, and stable ground-network projections; pre-existing geometry never travels with light; no unintended stop/re-acceleration/reversal; direct navigation has monotone readiness and continuous `driveEntry`→`drive(rest)` handoff; exact RNG/geometry/draw ranges and listener/RAF/resource counts repeat; live long-task/RAF/layout/event-latency provenance and soft frame/GPU tolerances recorded |
 | C04 | Characterize portrait deal atomicity, late load/failure, cancellation, and disposal | new portrait contract tests; minimal loader seam only | T2 | fake loader/clock tests fail on post-dispose mutation |
 
 P01 follows Q03/Q05 and precedes C01–C04. If no supported reference environment
@@ -514,7 +526,7 @@ before Luna implements it.
 | A05 | Decide whether the detachable scroll runtime is cohesive before transition extraction | `journey/scroll.js`, state/input/route collaborators; read-only decision artifact | T1 under **XHARD** runtime design | one owner is evidenced, or A05a is required before J01 |
 | A05a | Conditional: separate input classifier, credit/arrival controller, and pure pixel↔route mapping when A05 finds shared mutable closure | exact scroll/input/route paths and contract fixed by root from A05 evidence | T3 / **XHARD** | trace replay is exact; each mutable policy has one owner; no timing heuristic leaks to transition code |
 | J01 | Extract one transition controller for jump/wrap/cancel/reverse/hero/entry state; consume only discriminated semantic decision types, never raw samples or diagnostic telemetry | `journey.js`, transition/path/entry collaborators and tests | T3 / **XHARD** | endpoint, reversal, cancellation, rewind, landing exact; no raw `sinceInput`/credit/`answeredAt` or telemetry dependency |
-| J02 | Declare the fixed frame pipeline and one immutable presentation snapshot; remove chapter-specific branches | `journey.js`, `frame-application.js`, new pipeline/snapshot/tests | T3 / **XHARD** | spy event sequence exact; every reader receives one `{stateP,routeP,presentedP,cameraPose,transitionPhase,dt}` snapshot; monotonicity, reversal continuity, landing reconciliation, and frame output exact |
+| J02 | Declare the fixed frame pipeline and one immutable final-presentation snapshot; remove chapter-specific branches and live camera re-reads | `journey.js`, `frame-application.js`, new pipeline/snapshot/tests | T3 / **XHARD** | spy event sequence exact; every reader receives one `{stateP,routeP,presentedP,cameraPose,viewport,aspectProfile,transitionPhase,dt}` snapshot after responsive composition and active blend; Connect derives resolve/readiness only from that pose; monotonicity, reversal continuity, direct-entry readiness/handoff, landing reconciliation, and frame output exact |
 | J03 | Inject narrow UI runtime capabilities and remove lower-level global/private-shape reads | `ui.js`, `journey.js`, `chapter-interactions.js`, adapter/tests | T2 | no lower `window.journey`/`portraits` access |
 | A02 | Freeze `journey/rail.js` page-versus-journey ownership before teardown | `journey/rail.js`, UI/page consumers, read-only responsibility/state map | T1 under **XHARD** lifecycle design | every rail timer/listener/backdrop/disposer has one target owner |
 | J04b | Own and detach UI/rail timers, listeners, backdrop, and subordinate teardown | `journey/ui.js`, `journey/rail.js`, UI modules/tests | T2 under **XHARD** lifecycle design | UI/rail destroy is idempotent; sheet/nav/rail behavior exact |
@@ -563,7 +575,7 @@ each starts. R08 waits for all of them.
 | U02 | Extract hotspot and hover-zone registry with one state owner | `ui.js`, new UI module/tests | T2 | hover/focus/touch behavior and cleanup exact |
 | U03 | Extract popover/card disclosure controller | `ui.js`, UI/cards adapters/tests; CSS protected | T2 | tiers, Escape, focus return, activation exact |
 | U04 | Extract copy/arrival controller | `ui.js`, arrival/live-region helpers/tests | T2 | timing and reduced-motion exact |
-| U05 | Extract projection/collision/layout and one rail-exclusion snapshot owner; inject its measured value into UI and Connect consumers | `ui.js`, `rail.js`, `chapters/connect/index.js`, new layout module/tests | T3 / **XHARD** | immutable `{revision,viewport,rect}` snapshot is published once per invalidation; DOM projection, ADOS/portrait/card exclusion, and captures unchanged; frame-drive consumers perform zero rail DOM/geometry reads |
+| U05 | Extract projection/collision/layout and one rail-exclusion snapshot owner; inject its measured value into UI and Connect while leaving Connect as the sole screen-to-ground placement-policy owner | `ui.js`, `rail.js`, `chapters/connect/index.js`, new layout module/tests | T3 / **XHARD** | immutable `{revision,viewport,rect}` snapshot is published once per invalidation; Connect resolves one destination/delta against the settled responsive camera and docked rail, before reveal; core/strand/point/node/focus/DOM/hero-ground consumers align; rooted feather stays planted; no travelling-camera or rail-animation following; frame-drive consumers perform zero rail DOM/geometry reads; captures unchanged |
 | U06 | Make UI facade composition-only and cascade idempotent destroy | UI facade/modules/tests | T2 | zero UI timers/listeners after destroy |
 
 Run U01a → U01b → U01c → U01d before U02. Run U02 → U03 → U04 → U05 → U06
@@ -577,6 +589,13 @@ policy/measurement; consumers receive the value through the already-settled
 capability direction. Reject a pass-through wrapper. H02 starts only after U05
 freezes that boundary so the tendril split does not preserve or duplicate the
 current Connect-to-rail DOM query.
+
+U05 owns only the docked-rail measurement. Connect owns the responsive
+screen-to-ground solve and publishes one placement destination/delta before any
+ground light is visible. Tendrils and organism consume that result; neither may
+re-run the solve. The C03 fixture is the authority for whether an invalidation
+recomputes the same authored placement versus impermissibly making rooted
+geometry follow a travelling camera or docking rail.
 
 The U05 owner performs write → measure → publish once per layout invalidation.
 Exact fake counters prove that UI, Connect, and H02 never query or measure rail
@@ -593,9 +612,9 @@ self-start during import, and journey code does not reach into card internals.
 | ID | Goal | Candidate scope | Risk | Focused proof |
 | --- | --- | --- | --- | --- |
 | O01 | Finish renderer/postprocessing composition behind its owner | organism facade/renderer/resource modules | T3 | exact shaders/order/draw ranges; memory tolerance |
-| O02 | Extract cohesive world-builders without splitting seeded loops into utilities | organism facade plus one new builder module | T3 / **XHARD** | RNG draws and baked geometry exact |
+| O02 | Extract cohesive world-builders without splitting seeded loops into utilities; preserve the seeded hero-ground ADOS attachment consumer | organism facade plus one new builder module | T3 / **XHARD** | RNG draws and baked geometry exact; source nexus, attachment weights, planted feather topology, and consumption of Connect's one destination/delta remain exact with no local camera/layout solve |
 | H01 | Split Owned substrate into build, resources, and runtime only where real | `journey/chapters/owned/substrate.js`, allowed siblings | T3 | byte/schema/capture/lifecycle gates |
-| H02 | Split Connect tendrils on the same rule | `journey/chapters/connect/tendrils.js`, allowed siblings | T3 | byte/schema/capture/lifecycle gates |
+| H02 | Split Connect tendrils on the same rule while preserving the responsive ground-placement consumer | `journey/chapters/connect/tendrils.js`, allowed siblings | T3 | byte/schema/capture/lifecycle gates plus exact hub anchors, route topology/order/normalized lengths, lighting windows, placement weights, landscape/phone/tablet projections, core/strand/point/node/focus/DOM/hero-ground alignment, and placement-before-reveal |
 | H03 | Split Final ring on the same rule | `journey/chapters/final/ring.js`, allowed siblings | T3 | byte/schema/capture/lifecycle gates |
 | H04 | Split Final canopy on the same rule | `journey/chapters/final/canopy.js`, allowed siblings | T3 | byte/schema/capture/lifecycle gates |
 | H05 | Split Final terrain on the same rule | `journey/chapters/final/terrain.js`, allowed siblings | T3 | byte/schema/capture/lifecycle gates |
@@ -607,6 +626,9 @@ R1 review, frozen-source capture, and coordinator acceptance for H01 before H02
 begins, and so on. Stop an H-order when its remainder is cohesive; line count
 alone cannot authorize another split.
 H02 additionally waits for U05's accepted rail-exclusion capability.
+O02 and H02 alter opposite consumers of the same ADOS placement contract, so
+their reconnaissance may overlap but implementation, review, projection proof,
+and acceptance serialize regardless of disjoint path reservations.
 `XR-VISUAL-DESIGN` must explicitly cover O02 before its dispatch.
 
 ### Wave 4C — entry facade and residual-cohesion decisions
@@ -690,8 +712,16 @@ After P01 and C01–C04:
   visible long frames, background resume, reversal, touch contacts, rapid
   repeats, and boot replay; endpoint-only assertions cannot satisfy G1;
 - deterministic rendering report repeats exact RNG/order/geometry/draw-range,
-  route-gain/camera-derivative/stable-landmark projection,
+  route-gain/final-camera-derivative/stable-landmark projection and the Connect
+  landscape/phone/tablet resolve/front/hub choreography fixture,
   renderer-memory/draw-call, listener/RAF, and resource-owner fields;
+- Connect direct navigation records readiness history and proves readiness is
+  monotone after acceptance, ground is established before light travels, and
+  `driveEntry` hands to `drive(rest)` continuously; a reproduced mismatch
+  blocks J01/J02 pending a separate corrective brief;
+- the recovered trusted-Chrome negative result (warm 10–12 ms Connect onset,
+  no compile/GC/long-task spike) is recorded so unmeasured renderer redesign
+  cannot masquerade as incident repair;
 - the report records browser/renderer/viewport/DPR/flags provenance and accepted
   live long-task/RAF-gap/style-layout/event-latency evidence plus accepted soft
   frame-time/GPU tolerances for later G3/G4 comparison;
@@ -724,7 +754,8 @@ After J04a, A05/required A05a, J01–J03, A02, J04b–J04e, J05, and R01–R08:
 - capture comparison and reference-environment resource/performance report pass;
 - C01 trace replay and genuine live traversal still agree after ownership moves;
   every downstream camera/seam/chapter/lens/rail/hero/UI reader consumes one
-  immutable frame snapshot, with monotonic/reversal/landing traces exact;
+  immutable final-responsive frame snapshot, with monotonic/reversal/landing,
+  camera-derived readiness, Connect choreography, and entry-handoff traces exact;
 - repeated create/prepare/activate/dispose/recreate proves zero owned work leaks;
 - XHARD review `XR-RUNTIME-GATE` by a GPT-5.6 Sol approves state ownership,
   dependency direction, frame/transition semantics, and teardown composition.
@@ -740,6 +771,10 @@ required conditional extraction, plus B01–B05:
   pass in their supported environments;
 - exact layout counters prove one write→measure→publish rail-exclusion snapshot
   per invalidation and zero rail DOM/geometry reads from frame-drive consumers;
+- exact placement evidence proves U05 owns rail measurement, Connect owns the
+  sole settled-camera screen-to-ground destination/delta, H02 and O02 consume it
+  without recomputation, every ADOS visual/DOM/hero-ground layer aligns, and
+  rooted geometry does not follow reveal, travelling camera, or rail docking;
 - XHARD review `XR-VISUAL-GATE` by a GPT-5.6 Sol identifies no visual contract
   drift, pass-through-wrapper churn, or unjustified residual god facade.
 
@@ -906,9 +941,10 @@ decide. The coordinator is the acceptance authority.
 
 When the user authorizes execution, the coordinator should:
 
-1. re-read the program reconciliation, create X00, and record the superseding
-   live dirty-worktree ownership baseline, including all relevant untracked
-   work and the reported scroll investigation;
+1. re-read the program reconciliation, create X00 from pushed baseline
+   `4b02a6a` plus a fresh then-live worktree, and record the superseding ownership
+   baseline, including all relevant untracked work and the recovered scroll,
+   responsive-camera, ground-placement, and direct-entry evidence;
 2. copy every reconciled disposition into the ledger, protect the current
    content/hero/rail/navigation/Connect/UI/CSS/static/capture behavior, and
    resolve any changed ownership before source work;
@@ -919,8 +955,9 @@ When the user authorizes execution, the coordinator should:
 6. run P01 and stop before characterization if the required reference
    browser/WebGL/performance environment is unavailable;
 7. complete C01–C04, including physical-input reference, event/RAF replay,
-   composed-motion evidence, and a disposition for the reported
-   continued-travel/stall-then-roll symptoms; run G1, and hold Wave 2 until
+   composed-motion evidence, exact Connect landscape/phone/tablet placement and
+   reveal choreography, direct-entry continuity, and a disposition for the
+   reported continued-travel/stall-then-roll symptoms; run G1, and hold Wave 2 until
    `XR-BASELINE` and coordinator
    acceptance confirm that the evidence foundation is truthful and complete;
 8. dispatch only work whose parents are accepted and whose exact paths do not
