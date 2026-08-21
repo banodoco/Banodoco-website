@@ -416,7 +416,7 @@ export function createRail({ onNav } = {}) {
      five-section file. Keep this query identical to the stylesheet boundary
      below so interaction and geometry can never disagree. */
   const mobileRail = typeof matchMedia === 'function'
-    ? matchMedia('(pointer: coarse), (max-width: 900px) and (orientation: portrait)')
+    ? matchMedia('(pointer: coarse), (max-width: 900px)')
     : { matches: false };
 
   /* ------------------------------------------------------------------ */
