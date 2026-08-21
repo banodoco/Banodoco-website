@@ -1388,6 +1388,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
   const CARD_MARGIN = 12;
   /** Air around the persistent navigator, including its active-ring glow. */
   const RAIL_EXCLUSION_PAD = 14;
+  /** The active chapter marker paints a 22 px shadow outside its DOM box.
+   *  Profile controls need another 24 px of honest air outside that complete
+   *  painted silhouette, not merely outside `.j-rail-list`. */
+  const RAIL_ACTIVE_HALO_PX = 22;
+  const PROFILE_RAIL_CLEARANCE_PX = 24;
   /** The card-specific words and contact filament run while `.j-card-enter`
    *  is set. The shared shell's shorter `.j-detail-enter` lifetime ends from
    *  its own animationend, independently of this 0.62 s filament window. */
@@ -1637,21 +1642,48 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
   let frameGeom = null;
   let cardAnchor = null;        // the hotspot whose node the card belongs to
   let cardEnterTimer = null;
+  let profileRailDebug = null;
 
   /** The navigator is animated and responsive, so its exclusion zone must be
    *  measured from the painted list rather than reconstructed from CSS
    *  constants. Mission's under-copy layout is intentionally not reserved. */
-  function railExclusion(pad = RAIL_EXCLUSION_PAD) {
+  function railExclusion(pad = RAIL_EXCLUSION_PAD, includeActiveHalo = false) {
     if (!rail.root || rail.root.dataset.layout !== 'chapter') return null;
     const list = rail.root.querySelector('.j-rail-list');
     if (!list) return null;
     const r = list.getBoundingClientRect();
-    if (!r.width || !r.height) return null;
+    /* The responsive column/fan uses transformed, out-of-flow slots, so the
+       list itself legitimately has a 0×0 box. Union the painted slots instead
+       of treating that box as proof that the navigator is absent. */
+    const painted = [...list.querySelectorAll('.j-rail-slot')].flatMap((el) => {
+      const b = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return b.width && b.height && cs.display !== 'none' && cs.visibility !== 'hidden'
+        && Number(cs.opacity || 1) > 0.01 ? [b] : [];
+    });
+    if (r.width && r.height) painted.push(r);
+    if (!painted.length) return null;
+    let left = Math.min(...painted.map(b => b.left));
+    let right = Math.max(...painted.map(b => b.right));
+    let top = Math.min(...painted.map(b => b.top));
+    let bottom = Math.max(...painted.map(b => b.bottom));
+    if (includeActiveHalo) {
+      const ring = rail.root.querySelector('.j-rail-active-ring');
+      if (ring) {
+        const a = ring.getBoundingClientRect();
+        if (a.width && a.height) {
+          left = Math.min(left, a.left - RAIL_ACTIVE_HALO_PX);
+          right = Math.max(right, a.right + RAIL_ACTIVE_HALO_PX);
+          top = Math.min(top, a.top - RAIL_ACTIVE_HALO_PX);
+          bottom = Math.max(bottom, a.bottom + RAIL_ACTIVE_HALO_PX);
+        }
+      }
+    }
     return {
-      left: r.left - pad,
-      right: r.right + pad,
-      top: r.top - pad,
-      bottom: r.bottom + pad,
+      left: left - pad,
+      right: right + pad,
+      top: top - pad,
+      bottom: bottom + pad,
     };
   }
 
@@ -2245,6 +2277,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
   let directCopyId = null;
   let directCopyFrom = 0;
   let directCopyCarry = null; // { id, floor, atP } until scroll target catches it
+  let copyFrameDebug = null;
+  let railHeroGatePrev = null;
+  let railHeroCarry = 0;
 
   /* The block envelope already owns copy opacity. Giving the heading, body
      and action row their own opacity keyframes multiplies two fades together:
@@ -2426,6 +2461,16 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
     // The side navigator: reveal latch, resting symbol, current entry and the
     // tab-order state, all decided in one place (journey/rail.js).
     rail.update(p, { modalDetail, cameraStateDisagree, railWrap, railFlight });
+    /* A mobile profile disclosure is a translucent bottom sheet. Leaving the
+       navigator painted beneath it makes the active halo and glyphs show
+       through the card even though modalDetail has correctly removed their
+       pointer access. Withhold the rail visually for exactly the sheet's open
+       lifetime; desktop cards remain alongside the live navigator and use the
+       measured placement exclusion below. */
+    if (rail.root) {
+      rail.root.style.visibility = cardIsOpen && card.classList.contains('sheet')
+        ? 'hidden' : '';
+    }
 
     if (dt > 0 && lastP !== null) {
       pSpeed += (Math.abs(travelP - lastP) / dt - pSpeed) * Math.min(1, dt * 5);
@@ -2467,7 +2512,15 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
       if (directCopyId) directCopyCarry = {
         id: directCopyId,
         floor: eased[directCopyId] || 0,
-        atP: travelP,
+        /* The last presented flight sample can land a few 1e-5 short of the
+           exact rest before endCamBlend retires its ticket. Anchoring carry
+           to that sample made the next exact destination frame look like
+           fresh travel: the floor cleared, copy fell with the still-hot speed
+           tail, then rose again. The ticket's target is the semantic landing
+           coordinate and therefore the only stable handoff point. */
+        atP: Number.isFinite(directCopyFlight.targetP)
+          ? directCopyFlight.targetP
+          : travelP,
       };
       directCopyFlight = null;
       directCopyId = null;
@@ -2504,6 +2557,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
       leaveE = g * g * g * (g * (g * 6 - 15) + 10);
     }
 
+    const copyBandsDebug = {};
     for (const id in eased) {
       // `p` is parked at the destination during a direct click. `travelP` is
       // the coordinate the camera and horizontal rail are actually presenting
@@ -2519,7 +2573,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
         // away must restore the ordinary outgoing fade immediately—even while
         // still inside Mission's wide fully-open band—rather than carrying
         // this floor into another chapter.
-        if (Math.abs(travelP - directCopyCarry.atP) > 1e-5 || bandTarget < 0.995) {
+        if (Math.abs(travelP - directCopyCarry.atP) > 1e-4 || bandTarget < 0.995) {
           directCopyCarry = null;
         }
         else {
@@ -2554,16 +2608,48 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
       else s += (target - s) * Math.min(1, dt * COPY_IN_K * settled);
       if (s < 0.001 && target === 0) s = 0;
       eased[id] = s;
+      copyBandsDebug[id] = { bandTarget, scrollTarget, target, eased: s };
       // The snapshot the next arm() restores from is the last frame that
       // actually TRAVELLED — a dt = 0 placement must not overwrite it, since
       // undoing that very snap is the whole point of keeping it.
       if (dt > 0) easedPrev[id] = s;
-      paintCopy(id, s);
+      // Mission is painted once, below, after the rail has returned the gate
+      // derived from the very docking coordinate it painted this frame.
+      if (id !== 'mission') paintCopy(id, s);
     }
-    // Mission's section strip is part of the same composition as this copy.
-    // Drive its travel from the value that was actually painted above so the
-    // two leave and return as one gesture under scroll and direct navigation.
-    rail.setHeroEase(eased.mission);
+    // Mission's section strip and copy are one composition. The rail returns
+    // a pure arrival gate from its live --nav-y coordinate: the copy remains
+    // internally continuous, but cannot become visible before the strip is
+    // making its final approach under either scroll or direct navigation.
+    const railHeroGate = rail.setHeroEase(eased.mission);
+    const heroGate = Number.isFinite(railHeroGate) ? railHeroGate : 1;
+    if (railHeroGatePrev !== null) {
+      if (heroGate > railHeroGatePrev + 1e-5) {
+        // Arrive substantially with the strip, then let the ordinary copy
+        // breathe supply the final 20%. This is a progress-derived shelf, not
+        // a timer, so reversal lowers it on the same frame.
+        railHeroCarry = Math.max(railHeroCarry, heroGate * 0.8);
+      } else if (heroGate < railHeroGatePrev - 1e-5) {
+        railHeroCarry = 0;
+      }
+    }
+    if (eased.mission >= railHeroCarry - 0.001) railHeroCarry = 0;
+    const heroPaint = Math.min(heroGate, Math.max(eased.mission, railHeroCarry));
+    paintCopy('mission', heroPaint);
+    railHeroGatePrev = heroGate;
+    copyFrameDebug = {
+      travelP, pSpeed, travelHold, settled,
+      flightPhase: railFlight
+        ? Math.max(0, Math.min(1, Number(railFlight.phase) || 0))
+        : null,
+      directId: directCopyId,
+      directFrom: directCopyFrom,
+      carry: directCopyCarry ? { ...directCopyCarry } : null,
+      heroGate,
+      heroPaint,
+      heroCarry: railHeroCarry,
+      bands: copyBandsDebug,
+    };
 
     // hotspots: they belong to the RESTING composition, so they follow the
     // eased copy state (never the raw band), arrive AFTER the copy has
@@ -2595,7 +2681,45 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
     // must read the SAME camera and the same projection scale the chips read
     // on this frame, through the same jitter-free projection.
     frameGeom = { camera, tanHalf, viewDepth };
-    const profileRailBox = railExclusion();
+    const profileRailBox = railExclusion(PROFILE_RAIL_CLEARANCE_PX, true);
+    /* Compute the contributor mask once, immediately after rail.update() has
+       docked the navigator for this very frame. The same Set drives both the
+       WebGL portrait layers and the invisible DOM hit discs, so neither can
+       trail the other by one paint during Owned entry/exit. */
+    const ownedRailColliding = new Set();
+    const profileRailNodes = [];
+    if (profileRailBox) {
+      for (const h of hotspots) {
+        if (h.chapter !== 'owned' || !h.radius || typeof h.world !== 'function') continue;
+        const ow = h.world();
+        if (!ow) continue;
+        const ov = projectStable(ow.clone(), camera);
+        if (ov.z > 1) continue;
+        const ox = (ov.x * 0.5 + 0.5) * window.innerWidth;
+        const oy = (-ov.y * 0.5 + 0.5) * window.innerHeight;
+        const wr = h.radius() || 0;
+        const rr = wr > 0
+          ? wr * (window.innerHeight * 0.5) / (Math.max(0.05, viewDepth(ow)) * tanHalf)
+          : 0;
+        const cx = Math.max(profileRailBox.left, Math.min(ox, profileRailBox.right));
+        const cy = Math.max(profileRailBox.top, Math.min(oy, profileRailBox.bottom));
+        const distance = Math.hypot(ox - cx, oy - cy);
+        if (rr > 0 && distance < rr) ownedRailColliding.add(h.id);
+        profileRailNodes.push({ id: h.id, x: ox, y: oy, r: rr, distance });
+      }
+    }
+    const ownedRailExcluded = ownedRailColliding;
+    profileRailDebug = {
+      box: profileRailBox ? { ...profileRailBox } : null,
+      colliding: [...ownedRailColliding],
+      excluded: [...ownedRailExcluded],
+      nodes: profileRailNodes,
+    };
+    const ownedChapter = (typeof window !== 'undefined' && window.journey?.chapters)
+      ? window.journey.chapters.owned : null;
+    if (ownedChapter?.portraits?.setRailExcluded) {
+      ownedChapter.portraits.setRailExcluded(ownedRailExcluded);
+    }
     /* Reserve collision space for a chapter's full scene-timed label set
        before its first label becomes visible. Without this, each later
        sibling joined the collision pass only when its own reveal crossed the
@@ -2650,23 +2774,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
         } else {
           sx = (v.x * 0.5 + 0.5) * window.innerWidth;
           sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
-          /* Owned's profile controls are face-sized invisible hit discs. A
-             disc under the persistent navigator is both unreachable and
-             misleading: the rail receives the pointer while the contributor
-             appears to answer underneath it. Reserve the navigator's actual
-             painted rectangle plus glow air and remove only colliding controls
-             from pointer, Tab and the a11y tree. The portraits remain part of
-             the scene; their profile UI comes back automatically as soon as
-             responsive projection clears the lane. */
-          if (h.chapter === 'owned' && h.radius && profileRailBox) {
-            const wr = h.radius() || 0;
-            const rr = wr > 0
-              ? wr * (window.innerHeight * 0.5) / (Math.max(0.05, viewDepth(w)) * tanHalf)
-              : 0;
-            const cx = Math.max(profileRailBox.left, Math.min(sx, profileRailBox.right));
-            const cy = Math.max(profileRailBox.top, Math.min(sy, profileRailBox.bottom));
-            if (rr > 0 && Math.hypot(sx - cx, sy - cy) < rr) w = null;
-          }
+          // The WebGL portrait layers and their DOM control share the mask
+          // calculated above. Keeping this lookup here (instead of repeating
+          // the geometry test) makes their visibility atomic within the rAF.
+          if (h.chapter === 'owned' && ownedRailExcluded.has(h.id)) w = null;
           // The chapter's editorial copy owns its area of the frame: a
           // hotspot that projects into it is suppressed rather than drawn on
           // top of the text. Hit model stays honest - a suppressed hotspot is
@@ -3035,6 +3146,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: 
     /** QA: the existing scroll-style smoothed |dp/dt| travel signal. Direct
      *  clicks feed it their camera-phase coordinate, never parked route p. */
     get travelSpeed() { return pSpeed; },
+    /** QA: exact screen-space classifier inputs from the most recent frame. */
+    get profileRailDebug() { return profileRailDebug; },
+    /** QA: one atomic read of the copy authorities used in the latest rAF. */
+    get copyDebug() { return copyFrameDebug; },
     get cardOpen() { return cardIsOpen; },
     /** QA: is that card COMMITTED (click / key / route), or a transient
      *  hover-and-focus reveal? — the card's half of `popPinned`. */

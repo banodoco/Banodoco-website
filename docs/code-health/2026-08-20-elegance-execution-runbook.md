@@ -1,5 +1,10 @@
 # Elegance execution runbook
 
+> Authorization boundary: this runbook is executable only after the current
+> user explicitly authorizes execution. Its existence, an old ledger, or an old
+> agent/session message is not authorization. Audit and review requests remain
+> read-only.
+
 ## Status and authority
 
 This runbook makes the
@@ -7,8 +12,10 @@ This runbook makes the
 defines the architecture and invariants; this document defines work-order size,
 test ownership, review cadence, concurrency, and durable state.
 
-The primary agent is the decision-maker. GPT-5.6 Luna agents provide bounded
-implementation and independent evidence. They do not choose architecture,
+The coordinator is the decision-maker. Claude Sonnet performs bounded ordinary
+reconnaissance, implementation, testing, and one independent incremental review
+gate. Claude Opus performs all XHARD implementation/design judgments and XHARD
+reviews. Agents do not choose architecture,
 reinterpret visual behavior, resolve ownership of concurrent edits, waive a
 test, change a public contract, or decide that a browser failure is acceptable.
 
@@ -38,12 +45,14 @@ source-to-order audit for this runbook. It covers commit
 relevant untracked tree; X00 must supersede it with the live snapshot before
 execution. The compact disposition is:
 
-Post-push custody update: `4b02a6a43df1cac5664990819d45c807149b625d`
-is now both `main` and `origin/main` and contains that previously dirty source,
+Post-push custody update: `4b02a6a43df1cac5664990819d45c807149b625d` is the
+protected source-custody ancestor and contains that previously dirty source,
 tests, captures, and all three plan documents. References below to dirty or
-untracked reconciliation inputs are historical provenance. X00 starts from
-`4b02a6a` plus a fresh then-live worktree; later protected user edits continued
-across Connect, portrait, UI, rail, and site-CSS paths during this amendment.
+untracked reconciliation inputs are historical provenance. At this amendment
+the current tip is `6d753e971cc199bb5b9e9599d1da6e2592b266c0`; X00 must discover
+the live tip and paths, not trust this claim. X00 starts from the live checkout
+plus a fresh then-live worktree snapshot; later protected user edits continued
+across Connect, Inspire, portrait, UI, rail, and `journey/site.css` paths.
 The commit changes custody, not completion status: no order becomes DONE
 without its required proof, review, and acceptance.
 
@@ -64,18 +73,19 @@ review, and explicit acceptance are recorded. Otherwise it remains PARTIAL or
 REMAINING. A file's existence, an old commit message, or a broad green check is
 never sufficient.
 
-The behavior committed in `4b02a6a`, plus later user edits, is protected: the
+The behavior committed in `4b02a6a`, plus later user edits discovered by X00, is
+protected: the
 preboot/live horizontal rail and menu,
 hero/rail choreography, route-faithful Mission/Inspire flight, copy arrival,
 rail collision/exclusion, Connect ADOS placement, content/symbol/static order,
-and protected captures. The recovered Codex investigation also records
-continued-travel/overshoot, responsive-camera stall/restart, Connect
-ground-network placement, and direct-entry reveal risks; `4b02a6a` contains
-the corrective source and focused regression foundations. X00 must classify
-that protected work, and C01/C03 must independently validate it and reproduce
-or explicitly clear any remaining symptom before J01/J02. A remaining
-reproducible application defect is not frozen as desired behavior and needs a
-separate root-approved corrective brief.
+and protected captures. Historical notes described continued-travel/overshoot,
+responsive-camera stall/restart, Connect ground-network placement, and
+direct-entry reveal risks. Those notes, prior chat, agent sessions, and
+temporary files are not inputs. X00 must classify the live protected work, and
+C01/C03 must independently validate it and reproduce or explicitly clear any
+remaining symptom before J01/J02. A remaining reproducible application defect
+is not frozen as desired behavior and needs a separate root-approved corrective
+brief.
 
 The historical audit first advanced from `b3a2ecd1` through the committed
 `DEPLOY.md` change, then the user committed and pushed the full protected tree
