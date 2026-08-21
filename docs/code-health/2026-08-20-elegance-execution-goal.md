@@ -1,5 +1,10 @@
 # GOAL: Execute the elegance program
 
+> Authorization boundary: this goal is an execution specification, not
+> permission to mutate the repository. Begin only after the current user
+> explicitly authorizes execution. Audit, review, and self-containment requests
+> are read-only; do not infer authority from this file or prior agent context.
+
 Execute the approved website elegance program in
 `docs/code-health/2026-08-20-elegance-program.md` using the bounded work orders
 and gates in `docs/code-health/2026-08-20-elegance-execution-runbook.md`.
@@ -55,9 +60,13 @@ The authoritative inputs are:
    which defines work orders, prerequisites, exact test ownership, review
    cadence, concurrency, browser leases, gates, and escalation.
 
-The runbook is the execution authority when an implementation question is
-already covered there. The root/coordinator records any genuine conflict and
-decides whether work must stop for a product or architecture decision.
+The runbook is the execution authority for mechanics when an implementation
+question is already covered there. Authority precedence is: latest explicit
+user/product brief; X00's live ledger and byte manifests; the program's
+invariants; the runbook's mechanics; and this goal's summary. The
+root/coordinator records any genuine conflict and stops the affected order for
+a product or architecture decision; agents never resolve conflicts from chat
+memory.
 
 The historical reconciliation audited commit
 `16a16d8cafc9590f61fb3a6ac5de618d0e2db2d7` plus the then-complete staged,
@@ -69,14 +78,21 @@ user-owned until the coordinator classifies it; never restore, overwrite, or
 attribute it to an execution agent. Commit/push movement has no semantic
 authority. X00 records the superseding live status, hashes, ownership, exact
 package allowlists, and protected behavior before any source write.
+Those paths are historical examples only; the fresh agent must not read or
+recover them and must inventory ignored paths explicitly at X00.
 
-Commit `4b02a6a43df1cac5664990819d45c807149b625d` is now both `main` and
-`origin/main`. It contains that previously dirty source, tests, captures, and
-this tracked goal. Later user edits continued across Connect, portrait, UI,
-rail, and site-CSS paths during this amendment; all remain protected. The
+Commit `4b02a6a43df1cac5664990819d45c807149b625d` is the protected
+source-custody ancestor. It contains that previously dirty source, tests,
+captures, and
+this tracked goal. X00 must discover the live tip and all tracked, untracked,
+and ignored ownership rather than trust this historical claim. Later user edits
+continued across Connect, Inspire, portrait, UI, rail,
+and `journey/site.css` paths; all remain protected when present in the live
+snapshot. The
 initial audit history and its `DEPLOY.md` quick-path evidence remain relevant
-to F04, but the pushed custody baseline for X00 is `4b02a6a` plus a fresh
-then-live worktree. Commit/push status still does not make any order DONE.
+to F04, but `4b02a6a` is only the protected source ancestor for X00; X00 records
+the current tip and fresh then-live worktree. Commit/push status still does not
+make any order DONE.
 
 The program/runbook reconciliation maps every order to PARTIAL, REMAINING, or a
 REVALIDATE overlay; none was DONE because no complete frozen contract, focused
@@ -95,23 +111,39 @@ and finalizes each precise brief from the settled program/runbook contract.
 Agents do not reinterpret public behavior, resolve competing user edits, waive
 tests, or invent a new ownership boundary.
 
-GPT-5.6 Luna performs as much bounded ordinary work as can be done safely:
+Claude Sonnet performs as much bounded ordinary work as can be done safely:
 reconnaissance, characterization, ordinary implementation, focused validation,
-mechanical checks, narrow repair, and ordinary read-only review. Luna works
+mechanical checks, narrow repair, and ordinary read-only review. Sonnet works
 only within the coordinator's exact allowlist and assigned commands.
 
-An independent GPT-5.6 Sol handles the runbook's XHARD design and review
-points—`XR-BASELINE`, `XR-C-DESIGN`, `XR-C-GATE`, `XR-RUNTIME-DESIGN`,
-`XR-RUNTIME-GATE`, `XR-VISUAL-DESIGN`, `XR-VISUAL-GATE`, and `XR-FINAL`—and
-integrated big-picture review where the runbook requires it. Sol is read-only
-for review, never reviews its own implementation, and never replaces the
-coordinator's acceptance decision. A package implementer never reviews its own
-work; every independent reviewer receives the complete changed contract and
-evidence needed for its assigned review.
+Claude Opus handles all XHARD implementation, design, and incremental review points—
+`XR-BASELINE`, `XR-C-DESIGN`, `XR-C-GATE`, `XR-RUNTIME-DESIGN`,
+`XR-RUNTIME-GATE`, `XR-VISUAL-DESIGN`, and `XR-VISUAL-GATE`—and integrated
+big-picture review where the runbook requires it. `XR-FINAL` is the Fable-owned
+final loop described below, not an additional Opus review. Opus never reviews
+its own implementation, and never replaces the coordinator's acceptance
+decision. A package implementer never reviews its own work; every independent
+reviewer receives the complete changed contract and evidence needed for its
+assigned review. Every bounded order or explicitly declared related batch is
+assigned exactly one independent incremental review gate: Sonnet for ordinary
+work and Opus for XHARD work. An XR wave gate is that batch's single review,
+not another review layered over separate package verdicts. Coordinator
+acceptance and mechanical tests are not extra review gates. A blocker receives
+bounded feedback implementation and the same gate is re-evaluated, not
+duplicated.
 
-This goal uses only the local ledger, reservations, patch journal, test gates,
-and browser-lane protocol defined by the approved runbook. It adds no remote
-push, new worktree, receipt wrapper, model route, or evidence system.
+At G5, Fable performs the final integrated review/feedback loop for at most
+three rounds. Each reviewer is independent of the implementation it reviews;
+Sonnet implements ordinary feedback and Opus implements XHARD feedback. If
+Fable is unavailable specifically because credits are exhausted, record that
+evidence and substitute Opus for the remaining final rounds. Other failures do
+not permit silent substitution. Must findings after round three are
+BLOCKED/NO-GO, never acceptance.
+
+This goal uses only the local ledger, reservations, patch journal, durable
+evidence root, test gates, and browser-lane protocol defined by the approved
+runbook. It adds no remote push, new worktree, receipt wrapper, model route, or
+unrecorded evidence system.
 
 ## Work-order and review-revision protocol
 
@@ -140,22 +172,26 @@ nexus. Direct navigation additionally proves monotone readiness and continuous
 
 The ordinary protocol is:
 
-1. Luna performs one bounded implementation or reconnaissance order and runs
+1. Claude Sonnet performs one bounded implementation or reconnaissance order and runs
    only its assigned focused checks.
-2. A different Luna performs the required read-only R1/R2 review for the order
+2. A different Claude Sonnet performs the one required read-only R1/R2 review for the order
    or permitted low-risk batch. The coordinator inspects blocker findings and
    evidence before acceptance.
-3. An XHARD order first receives a root-authored design and the relevant Sol
-   design review, then a bounded implementation and independent R1 review.
+3. An XHARD order receives a frozen root-authored brief, an Opus implementation,
+   and exactly one independent Opus review gate. When the order itself produces
+   a design artifact, that artifact is the implementation being reviewed; there
+   is no separate pre-review plus post-review sequence.
    After coordinator acceptance, another same-family slice may advance; the
    named wave gate must pass before work outside that family or wave consumes
-   the integrated result. Sol owns the runbook's XHARD design and integrated
-   review points; the coordinator remains the authority.
+   the integrated result. When that gate is the declared review unit for a
+   batch, its members do not also receive separate incremental review gates.
+   Opus owns the runbook's XHARD design and integrated review points; the
+   coordinator remains the authority.
 4. A blocker returns once to the same implementer as a narrow repair order.
    Findings that alter ownership, public behavior, timing, rendering, schema,
-   or scope stop for a coordinator decision and the applicable Sol review.
-5. The original review remains linked to the repair; a repaired order is
-   re-reviewed independently before acceptance. No order advances with an
+   or scope stop for a coordinator decision and the applicable Opus review.
+5. The original review remains linked to the repair; the same review gate is
+   re-evaluated as closure of the one review process. No order advances with an
    unresolved blocker or missing focused proof.
 
 ## Concurrency, source freeze, and browser lease
@@ -241,12 +277,17 @@ Follow the runbook's dependency order exactly. The compact sequence is:
 6. **Wave 5 / G5:** Run F01–F03 in their import-safe serialized order, F04
    after executable behavior freezes, F06 for only its remaining mapped error
    sites, and F05 last for scanner correction and unbiased review. Run the
-   G5 mechanical/browser evidence, obtain `XR-FINAL`, perform root review of
-   the complete diff, evidence, findings, and residual-debt rationale, and
-   explicitly accept or reject G5.
+   G5 mechanical/browser evidence, then run the Fable-owned `XR-FINAL`
+   integrated review/feedback loop for no more than three rounds.
+   Route ordinary feedback fixes to Sonnet and XHARD fixes to Opus. If Fable is
+   unavailable specifically because credits are exhausted, record that evidence
+   and substitute Opus for remaining rounds. Must findings after round three
+   are BLOCKED/NO-GO; otherwise the coordinator explicitly accepts or rejects
+   G5 from the complete diff, evidence, findings, Fable verdict, and
+   residual-debt rationale.
 
-No downstream order starts before its parents, required design review, focused
-review, and coordinator acceptance are recorded. Conditional A03a–A06a and
+No downstream order starts before its parents, assigned single review gate,
+focused proof, and coordinator acceptance are recorded. Conditional A03a–A06a and
 A01a are part of the sequence whenever their decision artifact requires them.
 
 ## Testing economy
@@ -277,6 +318,11 @@ characterization test is a prerequisite gap, not a reason to substitute a
 full-suite run. Every gate records exact command, environment, source hashes,
 result classification, and relevant artifact/path status.
 
+The `test:unit`, `test:contracts`, `test:static`, browser scenario, `check`, and
+`check:browser` commands are target contracts created by Q01–Q03. Before those
+orders are accepted, use only the runbook's pre-Q01 focused commands; a missing
+target script is a prerequisite gap, never a pass.
+
 ## Durable progress record and compaction seam
 
 Create `docs/code-health/elegance-execution-ledger.md` only when execution
@@ -285,6 +331,29 @@ repair, and gate. Record ID/state, parents, owner/attempt, reservation and
 expiry, baseline and path ownership, protected paths, changed paths/hunks and
 post-hashes, generated/golden status, exact checks and results, review class and
 findings, residual risk, and next unblocked work.
+
+X00 runs from the repository root and records:
+
+```sh
+git rev-parse --show-toplevel
+git rev-parse HEAD
+git branch -vv
+git remote -v
+git status --porcelain=v2 -uall
+git status --ignored --short
+git ls-files --others --exclude-standard
+git ls-files --others --ignored --exclude-standard
+```
+
+The live tracked/untracked/ignored manifest supersedes the historical
+`4b02a6a` ancestor and all example path lists. X00 creates a fresh private
+external journal (for example with `mktemp -d`), records its absolute path, run
+ID, owner, and retention policy, and creates the first manifest before any
+source write. Missing journal/manifest on resume is a blocker; no prior chat,
+session, or temporary artifact is an input. Store evidence under
+`docs/code-health/evidence/<run-id>/` with `manifest.json`, exact artifact
+paths, and SHA-256 hashes. Private raw physical-input data requires a recorded
+provenance path/hash and normalized replay fixture.
 
 X00 also creates the private external patch journal required by the runbook.
 For each package it records the pre-write existence/status/SHA-256 manifest and
@@ -332,8 +401,8 @@ This goal is complete only when:
   XHARD design and integrated review points and any triggered conditional
   orders;
 - every order's exact allowlist, focused checks, review, repair chain, and
-  ownership classification are recorded in the durable ledger and patch
-  journal;
+  ownership classification are recorded in the durable ledger, patch journal,
+  and `docs/code-health/evidence/<run-id>/` artifact manifest;
 - the program's facades, ownership boundaries, canonical manifest, lifecycle
   disposal, dependency direction, and residual-cohesion decisions are present
   without behavior drift;
@@ -352,9 +421,10 @@ This goal is complete only when:
   Connect landscape/phone/tablet placement/reveal samples, direct-entry
   continuity, and rail-layout counters agree at G1, G3/G4, and G5; and
 - no reviewer blocker or unresolved root decision remains; and
-- the root/coordinator has reviewed the complete diff, all wave evidence, Sol's
-  final integrated review, and residual-risk rationale, then explicitly
-  accepts the program as complete.
+- the root/coordinator has accepted or rejected the complete diff from all wave
+  evidence, Opus's XHARD reviews, Fable's final integrated verdict, and
+  residual-risk rationale. Must findings
+  remaining after Fable's third round are BLOCKED/NO-GO.
 
 Do not claim completion because agents returned, individual packages are green,
 or a broad check passed. Completion means the behavior-preserving, independently
