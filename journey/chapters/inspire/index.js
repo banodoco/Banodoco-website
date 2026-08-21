@@ -852,51 +852,33 @@ export function createInspire(sceneApi) {
          rather than lingering on a moving frame. Unbound (QA
          harnesses that build the chapter alone) it defaults to 1 and
          the embers ride furnOf exactly as before this note.
-         WALL-CLOCK, DELIBERATELY — like the chips' own arrival
-         stagger and unlike every stream channel: the reveal-is-a-
-         position rule protects the TRANSFORMATION (per-dot state
-         that corrupts across direction reversals); the ember is a
-         stateless marker whose feed gate (furnOf, kept as a factor
-         below) is still pure in position, so no ember can ever light
-         before the current that feeds it arrives — lighting LATER
-         than the feed is the one direction no-self-ignition permits.
-         dt = 0 (placeAt / ?p= / captures) snaps a to its target like
-         the chips' h.a, so every frozen still is the settled frame.
+         ONE POSITION CLOCK. The copy gate is already the visible chapter
+         arrival under scroll and direct navigation. Deriving each ember's
+         stagger from that value prevents a nav landing from ending one
+         clock and starting another: heading, ember and label can no longer
+         appear, reset, then replay. It also makes reversal literal — the
+         same gate walks backward — while dt = 0 placements remain settled
+         because their copy gate is settled.
      ================================================================ */
   const LAND_ORDER = [1, 0, 2];      // screen left -> right at the rest:
                                      // Arca 6.98 (left rim), ArtCompute 5.83,
                                      // 2RP 4.68 (right rim) — anatomy.js
-  const LAND_STAGGER_S = 0.52;       // clearer one-by-one read, still one gesture
-  const LAND_IN_K = 5.0;             // ~0.2 s to 63% — an ignition, not a pop
-  const LAND_OUT_K = 9.0;            // leave with the copy (HOTSPOT_OUT_K pace)
   const LAND_ON = 0.18;              // begin roughly half a beat earlier;
-                                     // the 0.52 s spacing below is unchanged,
-                                     // so only the queue's initial hold moves
-  const land = exits.map(() => ({ a: 0, at: null }));
-  // A nav entry is armed before placeAt's two dt=0 placement frames. Those
-  // frames must preserve the freshly reset cascade; dt=0 means "settle" for a
-  // real placement/capture, but a nav jump is not a placement. snap() clears
-  // this flag and retains the settled capture contract.
-  let navLandingEntry = false;
+  const LAND_GATE_STEP = 0.16;
+  const LAND_GATE_RISE = 0.24;
+  const land = exits.map(() => ({ a: 0 }));
   let landGate = null;               // bound by journey.js; null = QA default 1
   // One envelope owns both halves of each landing event. Keep this free of
   // the taste multiplier: taste changes brightness, not whether the named
   // destination exists, while furn x land is the exact temporal/positional
   // product the lip glow rides in both the live animator and snap().
   function landingReveal(i) { return furnOf(i) * land[i].a; }
-  function driveLand(t, dt) {
+  function driveLand() {
     const g = landGate ? landGate() : 1;
     for (let s = 0; s < 3; s++) {
-      const L = land[LAND_ORDER[s]];
-      if (g > LAND_ON) {
-        if (L.at === null) L.at = t + s * LAND_STAGGER_S;
-        if (dt === 0) L.a = navLandingEntry ? 0 : 1;
-        else if (t >= L.at) L.a += (1 - L.a) * Math.min(1, dt * LAND_IN_K);
-      } else {
-        L.at = null;
-        if (dt === 0) L.a = 0;
-        else { L.a += (0 - L.a) * Math.min(1, dt * LAND_OUT_K); if (L.a < 0.02) L.a = 0; }
-      }
+      const x = Math.max(0, Math.min(1,
+        (g - (LAND_ON + s * LAND_GATE_STEP)) / LAND_GATE_RISE));
+      land[LAND_ORDER[s]].a = x * x * (3 - 2 * x);
     }
   }
 
@@ -1209,7 +1191,6 @@ export function createInspire(sceneApi) {
      *  a hidden tab only runs frames during capture bursts). W4-A: also snaps
      *  coherence and the streak so a ?p= capture sees the settled frame. */
     snap() {
-      navLandingEntry = false;
       for (const ex of exits) ex.fade = ex.target;
       computeEff();                 // camera is already placed by placeAt
       effActive = resolveActive();
@@ -1218,10 +1199,7 @@ export function createInspire(sceneApi) {
       // landing cascade (5c): a frozen capture is a settled frame — every
       // ember stands at its gate's own resolution, no clocks mid-flight
       // (the animator's dt = 0 branch says the same thing).
-      {
-        const g = landGate ? landGate() : 1;
-        for (const L of land) { L.a = g > LAND_ON ? 1 : 0; L.at = null; }
-      }
+      driveLand();
       const c = uCoh.value;
       for (let i = 0; i < 3; i++) {
         c.setComponent(i, ((i === active || i === selected) ? 1 : (i === effActive ? 0.35 : 0)) * T);
@@ -1263,8 +1241,7 @@ export function createInspire(sceneApi) {
      *  rapid away/back cannot inherit finished Arca/ArtCompute/2RP markers. */
     beginEntry() {
       for (const ex of exits) { ex.target = 1; ex.fade = 1; }
-      for (const L of land) { L.a = 0; L.at = null; }
-      navLandingEntry = true;
+      for (const L of land) L.a = 0;
     },
     /** T1 streaming seam: arm/retire the whole exit set. */
     setArmed(on) { armed = !!on; if (!on) api.setReveal(0, 0, 0, 0); },
@@ -1472,7 +1449,7 @@ export function createInspire(sceneApi) {
     // single value every visual channel (mats, shed dim, streaks,
     // auto-active) reads from, so the whole handoff is continuous in p
     computeEff();
-    driveLand(t, dt);              // landing cascade clocks (5c)
+    driveLand();                   // landing cascade from the shared copy gate (5c)
     let anyVisible = false;
     effActive = resolveActive();
     // rim delta currents: guide strands extend with the walking spore front

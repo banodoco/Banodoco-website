@@ -41,6 +41,8 @@ import { makeRng } from '../../anatomy.js';
 import { startOf, endOf, restProgress } from '../../route.js';
 import { buildTendrils, HUB_IDS, FRONT_SOFT } from './tendrils.js';
 import { registerGeometry, registerPayload, bakeDumpDone } from '../../lib/baked.js';
+import { applyPortrait } from '../../portrait.js';
+import { CAMERA as CONNECT_CAMERA } from './camera.js';
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const sm = (a, b, x) => smooth01((x - a) / (b - a));
@@ -483,12 +485,16 @@ export function createConnect(sceneApi) {
   const ADOS_SCREEN_UP_MAX = 96;
   const ADOS_GLOW_RADIUS = 38;
   const RAIL_AIR = 14;
-  // updateAdosExclusion projects through the live render matrix while DOM
-  // anchors use the jitter-free snapshot; allow their measured 8-12px delta.
+  // The settled projection and DOM anchors use slightly different matrix
+  // paths; allow their measured 8-12px delta.
   const PROJECTION_AIR = 12;
   const _adosBase = net.hubMeta.find((h) => h.id === 'ados').pos.clone();
   const _adosPlaced = _adosBase.clone();
   const _adosResolvedShift = new THREE.Vector3();
+  const _placementCamera = new THREE.PerspectiveCamera();
+  const _placementPose = {
+    pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 62,
+  };
   const _screen0 = new THREE.Vector3();
   const _screenX = new THREE.Vector3();
   const _screenZ = new THREE.Vector3();
@@ -496,76 +502,79 @@ export function createConnect(sceneApi) {
   const _probeZ = new THREE.Vector3();
   const _coreLift = new THREE.Vector3(0, 0.05, 0);
   const PROBE = 0.05;
-  let railRoot = null;
-  let railList = null;
-  let railRect = null;
-  let railRectKey = '';
+  const logoMark = document.querySelector('.logo .mark');
+  let placementKey = '';
 
-  /** Apply one placement scalar to every ADOS layer. The resolved collision
-   *  vector is kept separate from the rendered vector so the route, hub,
-   *  DOM anchor and hero-ground junction can travel together as ADOS first
-   *  kindles. On retirement the scalar stays at one until the whole Connect
-   *  group is no longer submitted, avoiding the old one-frame ground snap
-   *  while its label and rays were still visible. */
-  function applyAdosPlacement(factor) {
-    const f = factor < 0 ? 0 : factor > 1 ? 1 : factor;
-    U.uAdosShift.value.copy(_adosResolvedShift).multiplyScalar(f);
+  /** Placement is composition, not arrival choreography. Apply the resolved
+   *  vector whole so the ambient ground, Connect routes, core and DOM anchor
+   *  share one baked destination before any Connect light becomes visible. */
+  function applyAdosPlacement() {
+    U.uAdosShift.value.copy(_adosResolvedShift);
     _adosPlaced.copy(_adosBase).add(U.uAdosShift.value);
     const core = net.cores.find((entry) => entry.id === 'ados');
     if (core) core.sprite.position.copy(_adosPlaced).add(_coreLift);
-    if (f > 0.0001) sceneApi.setGroundAdosTarget?.(_adosPlaced);
-    else sceneApi.setGroundAdosTarget?.(null);
+    sceneApi.setGroundAdosTarget?.(_adosPlaced);
   }
 
-  function toScreen(world, out) {
-    out.copy(world).project(sceneApi.camera);
+  function toScreen(world, out, camera = _placementCamera) {
+    out.copy(world).project(camera);
     out.x = (out.x * 0.5 + 0.5) * innerWidth;
     out.y = (-out.y * 0.5 + 0.5) * innerHeight;
     return out;
   }
 
-  /** The rail only changes box geometry while its responsive dock moves.
-   *  Cache its element and measured rect between those changes: drive() runs
-   *  for every chapter on every frame, so querying and forcing layout here
-   *  made the Connect network tax the entire journey. */
-  function currentRailRect() {
-    if (!railRoot || !railRoot.isConnected) {
-      railRoot = document.querySelector('.j-rail');
-      railList = railRoot && railRoot.querySelector('.j-rail-list');
-      railRect = null;
-      railRectKey = '';
-    }
-    if (!railRoot || !railList || railRoot.dataset.layout !== 'chapter') return null;
-    const style = railRoot.style;
-    const key = [
-      innerWidth, innerHeight, railRoot.dataset.layout,
-      style.left, style.top, style.bottom,
-      style.getPropertyValue('--nav-x'),
-      style.getPropertyValue('--nav-y'),
-      style.getPropertyValue('--nav-gap'),
-      style.getPropertyValue('--nav-scale'),
-    ].join('|');
-    if (key !== railRectKey) {
-      railRect = railList.getBoundingClientRect();
-      railRectKey = key;
-    }
-    return railRect;
+  /** The dock's settled rectangle, derived from the same responsive geometry
+   *  as rail.setHeroEase(). Reading the live rail would make placement follow
+   *  its Mission-to-dock animation—the exact scroll-time warp being removed. */
+  function dockedRailRect(logoRect) {
+    const w = innerWidth, h = innerHeight;
+    const portrait = h > w;
+    const phone = portrait && w <= 620;
+    const tablet = portrait && w <= 900;
+    const scale = phone ? 0.82 : tablet ? 0.84 : 0.86;
+    const fallbackTop = (phone ? 1.3 : tablet ? 1.6 : 2.1) * 16;
+    const fallbackLeft = (phone ? 1.3 : tablet ? 1.6 : 3.4) * 16;
+    const logoTop = logoRect ? logoRect.top : fallbackTop;
+    const logoLeft = logoRect ? logoRect.left : fallbackLeft;
+    const left = logoLeft - 24 * (1 - scale);
+    const top = h - logoTop - 24 * (1 + scale);
+    return { left, right: left + 5 * 48 + 4 * 16, top };
   }
 
-  function updateAdosExclusion() {
-    const camera = sceneApi.camera;
-    camera.updateMatrixWorld(true);
+  function updateAdosExclusion(force = false) {
+    const logoRect = logoMark && logoMark.getBoundingClientRect();
+    const key = [
+      innerWidth, innerHeight,
+      logoRect ? logoRect.left.toFixed(2) : '',
+      logoRect ? logoRect.top.toFixed(2) : '',
+    ].join('|');
+    if (!force && key === placementKey) return;
+    placementKey = key;
+
+    // Solve in the authored resting composition, never the travelling live
+    // camera. This makes the world destination invariant across forward and
+    // reverse scroll while preserving the portrait/tablet composition field.
+    const rest = CONNECT_CAMERA.keys[0];
+    _placementPose.pos.copy(rest.pos);
+    _placementPose.target.copy(rest.tgt);
+    _placementPose.fov = rest.fov;
+    applyPortrait(_placementPose, restProgress('connect'),
+      innerWidth / innerHeight, innerWidth);
+    _placementCamera.aspect = innerWidth / innerHeight;
+    _placementCamera.fov = _placementPose.fov;
+    _placementCamera.position.copy(_placementPose.pos);
+    _placementCamera.lookAt(_placementPose.target);
+    _placementCamera.updateProjectionMatrix();
+    _placementCamera.updateMatrixWorld(true);
     toScreen(_adosBase, _screen0);
 
     let tx = Math.max(ADOS_GLOW_RADIUS + RAIL_AIR, _screen0.x - ADOS_SCREEN_LEFT);
     let ty = _screen0.y - ADOS_SCREEN_UP_MIN;
-    const r = currentRailRect();
-    if (r) {
-      const left = r.left - RAIL_AIR, right = r.right + RAIL_AIR;
-      const top = r.top - RAIL_AIR;
-      const overlapsX = tx + ADOS_GLOW_RADIUS > left && tx - ADOS_GLOW_RADIUS < right;
-      if (overlapsX) ty = Math.min(ty, top - ADOS_GLOW_RADIUS - PROJECTION_AIR);
-    }
+    const r = dockedRailRect(logoRect);
+    const left = r.left - RAIL_AIR, right = r.right + RAIL_AIR;
+    const top = r.top - RAIL_AIR;
+    const overlapsX = tx + ADOS_GLOW_RADIUS > left && tx - ADOS_GLOW_RADIUS < right;
+    if (overlapsX) ty = Math.min(ty, top - ADOS_GLOW_RADIUS - PROJECTION_AIR);
     ty = Math.max(_screen0.y - ADOS_SCREEN_UP_MAX, ty);
 
     // Local screen Jacobian for world x/z at the hub's ground plane.
@@ -580,7 +589,7 @@ export function createConnect(sceneApi) {
     const det = ax * by - bx * ay;
     if (Math.abs(det) < 1e-4) {
       _adosResolvedShift.set(0, 0, 0);
-      applyAdosPlacement(0);
+      applyAdosPlacement();
       return;
     }
     const dxPx = tx - _screen0.x, dyPx = ty - _screen0.y;
@@ -589,7 +598,7 @@ export function createConnect(sceneApi) {
       0,
       (ax * dyPx - dxPx * ay) / det,
     );
-    applyAdosPlacement(adosPlacementFactor());
+    applyAdosPlacement();
   }
 
   /* ---- bake recording site (2026-08-17) -------------------------------
@@ -773,21 +782,6 @@ export function createConnect(sceneApi) {
   let entryReveal = 1;
   const hubIgnite = [0, 0, 0];
   const _fwd = new THREE.Vector3();
-  const adosMeta = net.hubMeta.find((h) => h.id === 'ados');
-
-  /** The same pure route-front envelope used by the ADOS core. Before this
-   *  ignition the collision dodge would move a lone hero-ground star. After
-   *  arrival it remains one through the whole exit leg; only Connect's actual
-   *  rendered visibility can release the shared placement. */
-  function adosPlacementFactor() {
-    if (!adosMeta || amount <= 0.003 || entryReveal <= 0.0004
-        || resolveNow() <= 0.0004) return 0;
-    const headAt = litR[adosMeta.route]
-      * U.uLitMax.value.getComponent(adosMeta.route);
-    return sm(Math.max(adosMeta.along * 0.5, adosMeta.along - FRONT_SOFT),
-      adosMeta.along + 0.03, headAt);
-  }
-
   /** The camera-pure resolve. Pure function of the live camera pose — see the
    *  block at the top of this file for the measured values that make it
    *  exactly zero on the protected frames. */
@@ -807,10 +801,6 @@ export function createConnect(sceneApi) {
     // byte-identical: at the hero pose the network is not merely dark, it is
     // never submitted.
     group.visible = amount > 0.003 && resolve > 0.0004 && entryReveal > 0.0004;
-    // `drive()` solved the responsive destination earlier in this frame.
-    // Re-apply after the eased amount advances so the rendered frame, ground
-    // junction and DOM projection all observe the same current visibility.
-    applyAdosPlacement(group.visible ? adosPlacementFactor() : 0);
     if (!group.visible) {
       if (heroDimActive) restoreHeroDim();   // byte-exact hand-back
       return;
@@ -955,6 +945,11 @@ export function createConnect(sceneApi) {
     }
   }
 
+  // The chapter is prepared before journey activation. Lock the responsive
+  // placement now so entering Connect only reveals light over geometry that
+  // has already occupied its final world position for the whole approach.
+  updateAdosExclusion(true);
+
   return {
     group,
     counts,
@@ -1024,7 +1019,7 @@ export function createConnect(sceneApi) {
       return {
         shift: U.uAdosShift.value.toArray(),
         resolvedShift: _adosResolvedShift.toArray(),
-        placementFactor: adosPlacementFactor(),
+        placementFactor: 1,
         visualAmount: amount * resolve * entryReveal,
         groupVisible: group.visible,
         base: _adosBase.toArray(),

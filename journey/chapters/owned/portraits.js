@@ -661,10 +661,12 @@ function makeNodeStrandMat(baseColor, pulseColor, opts = {}) {
       attribute float aAlong;
       attribute float aStrand;
       attribute float aNode;
+      attribute float aRailVis;
       uniform float uActive, uActiveAmt, uWaveR, uWaveW, uWaveAmt;
       uniform vec3 uWaveC;
-      varying float vA, vS, vSel, vFog, vWv;
+      varying float vA, vS, vSel, vFog, vWv, vRailVis;
       void main() {
+        vRailVis = aRailVis;
         vA = aAlong; vS = aStrand;
         vSel = step(abs(aNode - uActive), 0.5) * uActiveAmt;
         float wd = distance(position, uWaveC) - uWaveR;
@@ -676,7 +678,7 @@ function makeNodeStrandMat(baseColor, pulseColor, opts = {}) {
     fragmentShader: /* glsl */`
       uniform float uTime, uPulse, uPulseOn, uBase, uWidth, uFogDensity, uFade;
       uniform vec3 uColor, uPulseColor;
-      varying float vA, vS, vSel, vFog, vWv;
+      varying float vA, vS, vSel, vFog, vWv, vRailVis;
       void main() {
         float tw = 0.5 + 0.5 * sin(uTime * (0.41 + vS * 1.55) + vS * 51.3);
         float amb = uBase * (0.66 + 0.34 * tw) * (0.65 + 0.55 * vA);
@@ -687,7 +689,7 @@ function makeNodeStrandMat(baseColor, pulseColor, opts = {}) {
           + uPulseColor * (p + trail) * 1.25 + uPulseColor * vWv * amb * 1.4;
         col *= exp(-uFogDensity * uFogDensity * vFog * vFog);
         col *= smoothstep(1.1, 2.9, vFog);    // near-fade (see substrate note)
-        gl_FragColor = vec4(col * uFade, 1.0);
+        gl_FragColor = vec4(col * uFade * vRailVis, vRailVis);
       }`,
   });
 }
@@ -1203,6 +1205,7 @@ export function buildPortraitField({
       attribute float aTilt;
       attribute float aAnonF;
       attribute float aSwapD;
+      attribute float aRailVis;
       uniform float uTime, uHoverIdx, uHoverAmt, uSelIdx, uSelAmt;
       uniform float uWaveR, uWaveW, uWaveAmt;
       uniform float uSwap, uSwapSpan, uSwapFlare;
@@ -1210,8 +1213,9 @@ export function buildPortraitField({
       uniform vec2 uCellAP;
       varying vec2 vUvA, vUvB;
       varying vec2 vQ;
-      varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF, vSwap, vFlare;
+      varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF, vSwap, vFlare, vRailVis;
       void main() {
+        vRailVis = aRailVis;
         vQ = aCorner;
         // THE WAVE. aSwapD is this node's normalised place in the order the
         // swap travels (distance out from the crown, see SWAP ORDER below), so
@@ -1288,7 +1292,7 @@ export function buildPortraitField({
       uniform float uDeSepia, uCoreMute, uImgMute, uSolid;
       varying vec2 vUvA, vUvB;
       varying vec2 vQ;
-      varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF, vSwap, vFlare;
+      varying float vSeed, vH, vSoft, vDepth, vWv, vAnonF, vSwap, vFlare, vRailVis;
       void main() {
         float r = length(vQ);
         if (r > 1.30) discard;
@@ -1421,7 +1425,7 @@ export function buildPortraitField({
         // baked disc ends where the image ends, at every hover amount.
         // (No backticks anywhere in this shader: it is a JS template literal.)
         float occ = uSolid * pg * t.a * (1.0 - anon) * uOpacity;
-        gl_FragColor = vec4(col * alpha, occ);
+        gl_FragColor = vec4(col * alpha * vRailVis, occ * vRailVis);
       }`,
   });
   const textureOwner = createPortraitTextureOwner({
@@ -1552,11 +1556,13 @@ export function buildPortraitField({
       attribute float aNode;
       attribute float aSeed;
       attribute float aAlong;
+      attribute float aRailVis;
       uniform float uTime, uHoverIdx, uHoverAmt, uSelIdx, uSelAmt;
       uniform float uWaveR, uWaveW, uWaveAmt;
       uniform vec3 uWaveC;
-      varying float vA, vSeed, vH, vSoft, vDepth, vWv;
+      varying float vA, vSeed, vH, vSoft, vDepth, vWv, vRailVis;
       void main() {
+        vRailVis = aRailVis;
         vA = aAlong; vSeed = aSeed;
         float h = step(abs(aNode - uHoverIdx), 0.5) * uHoverAmt;
         float s = step(abs(aNode - uSelIdx), 0.5) * uSelAmt;
@@ -1578,14 +1584,14 @@ export function buildPortraitField({
     fragmentShader: /* glsl */`
       uniform vec3 uColor, uHot;
       uniform float uTime, uBase, uFade;
-      varying float vA, vSeed, vH, vSoft, vDepth, vWv;
+      varying float vA, vSeed, vH, vSoft, vDepth, vWv, vRailVis;
       void main() {
         float tw = 0.5 + 0.5 * sin(uTime * (0.37 + vSeed * 0.9) + vSeed * 23.1);
         float fall = 1.0 - vA;                    // hot at the rim, fading outward
         float a = uBase * fall * fall * (0.62 + 0.38 * tw) * (1.0 - vSoft * 0.9);
         a *= exp(-0.0013 * vDepth * vDepth) * (1.0 + 1.5 * vH + 1.7 * vWv);
         vec3 col = mix(uColor, uHot, clamp(vH * 0.7 + 0.15 + vWv * 0.5, 0.0, 1.0));
-        gl_FragColor = vec4(col, clamp(a * uFade, 0.0, 1.0));
+        gl_FragColor = vec4(col * vRailVis, clamp(a * uFade * vRailVis, 0.0, 1.0));
       }`,
   });
 
@@ -1667,11 +1673,13 @@ export function buildPortraitField({
         attribute float aSize;
         attribute float aSeed;
         attribute float aNode;
+        attribute float aRailVis;
         uniform float uHoverIdx, uHoverAmt, uScale;
         uniform float uWaveR, uWaveW, uWaveAmt;
         uniform vec3 uWaveC;
-        varying float vSeed, vH, vWv;
+        varying float vSeed, vH, vWv, vRailVis;
         void main() {
+          vRailVis = aRailVis;
           vSeed = aSeed;
           vH = step(abs(aNode - uHoverIdx), 0.5) * uHoverAmt;
           float wd = distance(position, uWaveC) - uWaveR;
@@ -1686,7 +1694,7 @@ export function buildPortraitField({
         uniform sampler2D uMap;
         uniform vec3 uColor;
         uniform float uBaseA, uHoverA, uFade;
-        varying float vSeed, vH, vWv;
+        varying float vSeed, vH, vWv, vRailVis;
         void main() {
           vec4 t = texture2D(uMap, gl_PointCoord);
           // HELD STILL (2026-08-11): this used to be a live flicker,
@@ -1697,7 +1705,7 @@ export function buildPortraitField({
           // goldens — which always rendered uTime = 0 — are byte-identical).
           float flick = 0.80 + 0.20 * sin(vSeed * 13.7);
           float a = t.a * (uBaseA + uHoverA * vH) * flick * (1.0 + 1.3 * vWv);
-          gl_FragColor = vec4(uColor, clamp(a * uFade, 0.0, 1.0));
+          gl_FragColor = vec4(uColor * vRailVis, clamp(a * uFade * vRailVis, 0.0, 1.0));
         }`,
     });
     let geo = bakedGeo || null;
@@ -1954,6 +1962,19 @@ export function buildPortraitField({
   const timeMats = [portraitMat, rimMat, nodeStrands.mat];
   const waveMats = [portraitMat, rimMat, cores.mat, halos.mat, nodeStrands.mat];   // every node layer answers the wave
 
+  /* A contributor that projects into the live navigator lane must disappear
+     as one object: face, rim, core, halo and its local fibres. Per-vertex
+     visibility attributes keep this to the existing five batched draw calls;
+     setRailExcluded only uploads when the node mask actually changes. */
+  const railBindings = [portraits.geo, rimFibres.geo, cores.geo, halos.geo, nodeStrands.geo]
+    .map((geo) => {
+      const node = geo.getAttribute('aNode');
+      const vis = new THREE.BufferAttribute(new Float32Array(node.count).fill(1), 1);
+      geo.setAttribute('aRailVis', vis);
+      return { node, vis };
+    });
+  let railMaskKey = '';
+
   const api = {
     group, nodes,
     photosReady,
@@ -1975,6 +1996,24 @@ export function buildPortraitField({
       }
     },
     get photosAvailable() { return photosAvailable; },
+    setRailExcluded(ids) {
+      const excluded = ids instanceof Set ? ids : new Set(ids || []);
+      const hidden = new Uint8Array(NODE_COUNT);
+      for (const nd of nodes) if (nd.routable && excluded.has(nd.id)) hidden[nd.i] = 1;
+      const key = Array.from(hidden).join('');
+      if (key === railMaskKey) return;
+      railMaskKey = key;
+      for (const { node, vis } of railBindings) {
+        const dst = vis.array;
+        for (let i = 0; i < dst.length; i++) dst[i] = hidden[Math.round(node.array[i])] ? 0 : 1;
+        vis.needsUpdate = true;
+      }
+    },
+    /** QA: contributor node indices currently withheld from the rail lane. */
+    get railExcludedIndices() {
+      if (!railMaskKey) return [];
+      return Array.from(railMaskKey, (v, i) => v === '0' ? -1 : i).filter(i => i >= 0);
+    },
     /** Idempotent texture/async teardown for a chapter owner that retires. */
     dispose() {
       if (disposed) return;

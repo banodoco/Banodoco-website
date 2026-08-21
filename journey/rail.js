@@ -410,8 +410,13 @@ export function createRail({ onNav } = {}) {
   const reduceMotion = typeof matchMedia === 'function'
     ? matchMedia('(prefers-reduced-motion: reduce)')
     : { matches: false };
-  const coarsePointer = typeof matchMedia === 'function'
-    ? matchMedia('(pointer: coarse)')
+  /* The horizontal map is a desktop instrument. The previous mobile
+     navigator remains the authored touch/portrait model: a fixed current
+     mark, a separate Menu mark, and a deliberate first tap that unfolds the
+     five-section file. Keep this query identical to the stylesheet boundary
+     below so interaction and geometry can never disagree. */
+  const mobileRail = typeof matchMedia === 'function'
+    ? matchMedia('(pointer: coarse), (max-width: 900px) and (orientation: portrait)')
     : { matches: false };
 
   /* ------------------------------------------------------------------ */
@@ -525,7 +530,13 @@ export function createRail({ onNav } = {}) {
     // not on click-elsewhere).
     item.addEventListener('click', (e) => {
       e.preventDefault();
+      const viaTouch = mobileRail.matches && touchOpen;
+      if (viaTouch) collapseTouch();
       navigate(c.id);
+      // Android may leave a tapped link matching :focus-visible. The old
+      // mobile control deliberately returned to its one-symbol rest state
+      // after the acting (second) tap; keyboard focus remains untouched.
+      if (viaTouch && document.activeElement === item) item.blur();
     });
     links[c.id] = item;
     // The nav-less chapter keeps the echo's quieter voice, as a style only.
@@ -778,6 +789,7 @@ export function createRail({ onNav } = {}) {
                  other resting control, and its first tap opens the panel. */
   const HOT_INTENT_MS = 120;
   let touchOpen = false;
+  let swallowClick = false;
   let hotOpen = false;
   let hotTimer = 0;
   /* The pointer is ON the control right now — tracked on the same enter/leave
@@ -794,7 +806,7 @@ export function createRail({ onNav } = {}) {
    *  current mark remains the trigger and the existing first-tap expansion
    *  model owns the fixed mobile list. */
   function keptOpen() {
-    return ALWAYS_OPEN && pinnedRevealed && !coarsePointer.matches;
+    return ALWAYS_OPEN && pinnedRevealed && !mobileRail.matches;
   }
 
   /** Release the persistent rail only after the hero intro has landed. Adding
@@ -806,7 +818,7 @@ export function createRail({ onNav } = {}) {
     root.classList.add('on');
     void root.offsetWidth;
     requestAnimationFrame(() => {
-      if (!coarsePointer.matches) {
+      if (!mobileRail.matches) {
         hotOpen = true;
         root.classList.add('j-rail-hot');
         document.body.classList.add('j-rail-on');
@@ -1011,10 +1023,34 @@ export function createRail({ onNav } = {}) {
     syncAt();
   });
 
-  /* Section links are permanently visible in the horizontal navigator, so a
-     touch press is navigation on its first tap. The former first-tap-to-open
-     handlers belonged to the collapsed side fan and are intentionally gone.
-     The independent menu trigger retains its own pointerdown handling below. */
+  /* Restore the pre-redesign mobile contract verbatim: the first touch on a
+     section mark unfolds the fixed file and is swallowed; the second touch
+     acts. Desktop keeps the horizontal strip's one-click links. */
+  root.addEventListener('pointerdown', (e) => {
+    if (!mobileRail.matches || keptOpen()) return;
+    if (e.pointerType !== 'touch' || touchOpen) return;
+    // Menu is the other resting control and opens its panel on its first tap.
+    if (e.target instanceof Node && menuBtn.contains(e.target)) return;
+    touchOpen = true;
+    root.classList.add('j-rail-open');
+    announceOpen();
+    swallowClick = true;
+    setTimeout(() => { swallowClick = false; }, 500);
+  }, true);
+
+  root.addEventListener('click', (e) => {
+    if (!mobileRail.matches || !swallowClick) return;
+    swallowClick = false;
+    if (e.target instanceof Node && menuBtn.contains(e.target)) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+
+  document.addEventListener('pointerdown', (e) => {
+    if (!mobileRail.matches || !touchOpen) return;
+    if (e.target instanceof Node && root.contains(e.target)) return;
+    collapse();
+  }, { capture: true });
 
   /* ------------------------------------------------------------------ */
   /* THE MENU: open, trap, close                                         */
@@ -1216,6 +1252,8 @@ export function createRail({ onNav } = {}) {
    *  update(). The list moves inside the root because the menu button is a
    *  fixed descendant and must remain pinned to the viewport. */
   function setHeroEase() {
+    // The mobile file is fixed to the right edge and ignores desktop docking.
+    if (mobileRail.matches) return 1;
     let u;
     if (horizontalFlight) {
       /* A non-adjacent click traverses several semantic rail positions in one
@@ -1228,13 +1266,19 @@ export function createRail({ onNav } = {}) {
          when the ticket changes also makes an interrupted/reversed click start
          at the pixel that is already on screen. */
       const phase = Math.max(0, Math.min(1, Number(horizontalFlight.phase) || 0));
-      const travel = reduceMotion.matches ? (phase >= 0.5 ? 1 : 0) : phase;
+      /* Returning to Mission should spend a little more of the camera move in
+         the lower dock, then arrive without a late snap. This is still a pure
+         transform of the camera's authoritative flight phase: interruption
+         captures the pixel already on screen and reversal starts there. */
+      const returnPhase = dockingFlightTarget === 0 ? Math.pow(phase, 1.14) : phase;
+      const travel = reduceMotion.matches ? (phase >= 0.5 ? 1 : 0) : returnPhase;
       u = dockingFlightFrom
         + (dockingFlightTarget - dockingFlightFrom) * travel;
     } else {
-      // Real scrolling remains position-authored: stay attached to Mission
-      // for the first 30%, travel during the middle 40%, then park.
-      const travel = Math.max(0, Math.min(1, (dockingProgress - 0.3) / 0.4));
+      // Real scrolling remains position-authored. A slightly wider interval
+      // makes the return from the lower dock breathe instead of racing the
+      // last part of the Mission camera leg.
+      const travel = Math.max(0, Math.min(1, (dockingProgress - 0.18) / 0.56));
       u = reduceMotion.matches
         ? (travel >= 0.5 ? 1 : 0)
         : travel * travel * (3 - 2 * travel);
@@ -1294,6 +1338,16 @@ export function createRail({ onNav } = {}) {
        replace the seam path with the ordinary linear coordinate later in the
        same frame. */
     paintHorizontalProgress(horizontalPosition, horizontalWrap);
+
+    /* Mission copy may arrive only with the strip's final approach. `u` is
+       the same reversible docking coordinate that just painted --nav-y, so
+       scroll, direct return and an interrupted/reversed flight cannot disagree
+       about which of the pair arrived first. Cold boot is u=0 -> gate=1. */
+    const heroGateX = Math.max(0, Math.min(1, u / 0.05));
+    const heroGate = reduceMotion.matches
+      ? (u <= 0.001 ? 1 : 0)
+      : 1 - heroGateX * heroGateX * (3 - 2 * heroGateX);
+    return heroGate;
   }
 
   /* ---- the moon's angles ---------------------------------------------------
@@ -1644,7 +1698,11 @@ export function createRail({ onNav } = {}) {
     railFlight = null,
   } = {}) {
     let railP = p;
-    if (railWrap) {
+    if (mobileRail.matches) {
+      horizontalFlight = null;
+      horizontalWrap = null;
+      dockingFlight = null;
+    } else if (railWrap) {
       horizontalFlight = null;
       dockingFlight = null;
       const phase = Math.max(0, Math.min(1, Number(railWrap.phase) || 0));
@@ -1803,6 +1861,7 @@ export function createRail({ onNav } = {}) {
     get expanded() { return expanded(); },
     get resting() { return nowId; },
     get current() { return activeId; },
+    get docking() { return dockingU; },
     openMenu, closeMenu, collapse,
   };
 }

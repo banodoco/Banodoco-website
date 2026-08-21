@@ -1,5 +1,11 @@
 # Elegance program
 
+> Execution authorization: this document is an architecture and acceptance
+> specification, not permission to mutate the repository. A fresh agent begins
+> only after the current user explicitly authorizes execution. Audit, review,
+> and self-containment requests are read-only; never infer authority from this
+> file's existence, an old conversation, or an old agent handoff.
+
 ## Purpose
 
 Move the website from "safer and partly decomposed" to an architecture whose
@@ -7,7 +13,7 @@ boundaries are obvious, testable, and difficult to misuse. This is a
 behavior-preserving program. It does not redesign the website, refresh visual
 baselines, or treat smaller files as an end in themselves.
 
-This plan is informed by three independent GPT-5.6 Luna audits covering:
+This plan is informed by three historical independent audits covering:
 
 - journey orchestration, UI, cards, navigation, and schema;
 - organism, portraits, chapter rendering, and resource lifecycle;
@@ -82,17 +88,21 @@ the work, then rescan and review at the end.
 
 #### Post-push custody update — 2026-08-21
 
-Commit `4b02a6a43df1cac5664990819d45c807149b625d` is now both `main` and
-`origin/main`. It durably contains the previously uncommitted content,
+Commit `4b02a6a43df1cac5664990819d45c807149b625d` is the immutable protected
+behavior/source-custody ancestor for this program. It durably contains the
+previously uncommitted content,
 hero/rail, navigation/flight, scroll, Connect ground-network placement,
 responsive camera, UI/CSS, test, capture, and all three elegance documents.
 The `16a16d8` inventory below remains the provenance record for that
 reconciliation, but every reference there to a dirty or untracked path is a
 historical description of the pre-`4b02a6a` snapshot, not its present custody.
-The worktree continued changing after that commit; every later user edit is
-again protected, including currently observed Connect, portrait, UI, rail, and
-site-CSS paths. X00 must begin from `4b02a6a` plus a fresh then-live worktree
-snapshot and must not restore any of them.
+The worktree and documents continued changing after that commit. X00 must
+discover the current tip and live ownership rather than treating this paragraph
+as current state. At this amendment the tip is
+`6d753e971cc199bb5b9e9599d1da6e2592b266c0` on local `main` and `origin/main`;
+that fact becomes historical as soon as the repository changes. `4b02a6a`
+remains an ancestor, not a claim about the current branch. X00 begins from the
+live checkout plus a fresh snapshot and must not restore any path.
 
 Moving the protected work into a pushed commit does not promote an elegance
 order to DONE: the frozen contract, focused proof, independent review, and
@@ -131,15 +141,15 @@ order is DONE in this audit. Existing files alone are not completion evidence.
 | S01 / S02 | PARTIAL / PARTIAL | `journey/structure.js:4-51` centralizes values and indexes, but exports mutable objects and `validateJourneyStructure()` at `:57-122` validates only selected caller-supplied references, not all raw totals/bands/stops. `journey/structure.test.mjs:7-59` freezes useful route/copy/key values and passes, but not full symbol DOM/signatures or protected visible/menu ordering. Current `structure.js:24` still says `Owned` while protected `content/content.js` says `Ownership`; this must be reconciled as compatibility evidence, not normalized back. |
 | C05 / C06 / N01 | REMAINING / REMAINING / PARTIAL | Chapters still expose broad ad hoc shapes; `chapter-registry.js:22-41` retains module-global `preparedChapters`; `navigation.js:4-11` only normalizes a string and `chapter-interactions.js` still contains named Inspire/Connect/Owned branches. |
 | J01 / J02 / J03 | PARTIAL / PARTIAL / REMAINING | Camera blend, chapter-entry, and `frame-application.js` are real seams, but transition/hero/entry state remains in `journey.js`; the orchestrator still contains named focus branches around `journey.js:981-995`; `ui.js:214-215,807,1562-1575` still reads `window.journey` and private portraits. The route-faithful navigation committed in `4b02a6a` is protected and must enter C01/C03 before extraction. |
-| A02 / J04a–J04e / J05 / A05 / A05a | REMAINING | `state.js`, `scroll.js`, `ui.js`, `rail.js`, `dial.js`, registry, GPU preparation, and page handlers still install anonymous or non-detachable work; `scroll.js` still combines input classification, credit/wall policy, and route mapping; `journey.js:1361-1449` exposes no facade `dispose()`, and `main.js` singleton handlers have no installation-count proof. The new preboot/live rail adoption makes A02 a prerequisite, not completed work; A05 decides whether A05a is required before J01. |
+| A02 / J04a–J04e / J05 / A05 / A05a | REMAINING | `journey/state.js`, `journey/scroll.js`, `journey/ui.js`, `journey/rail.js`, `journey/dial.js`, the chapter registry, GPU preparation, and page handlers still install anonymous or non-detachable work; `journey/scroll.js` still combines input classification, credit/wall policy, and route mapping; `journey/journey.js:1361-1449` exposes no facade `dispose()`, and `main.js` singleton handlers have no installation-count proof. The new preboot/live rail adoption makes A02 a prerequisite, not completed work; A05 decides whether A05a is required before J01. |
 | R01 / R02 / R03 / R04 | PARTIAL / REMAINING / PARTIAL / PARTIAL | `organism/animation.js:4-48` owns a scheduler but returns no stop handle; intro acceleration owns recursive RAF/global clock mutation; organism/spores listeners remain attached; `organism/renderer.js` and portrait helper files are useful seams but do not compose idempotent resource or async cancellation. |
 | R05 / R06 / R07 / R08 | REMAINING | Connect/Inspire/Owned/Final facades and the module-global registry do not provide the frozen descriptor-wide disposal and two-instance proof. Existing isolated disposers (for example Final interaction/ring helpers) are partial leaves, not facade closure. |
-| U01a / U01b / U01c / U01d | REMAINING / PARTIAL / REMAINING / REMAINING | `cards/index.js:48-65` has an acyclic builder map, but `:67-112` still self-starts warming at import and mixes registry/icons/scheduling; `cards/discord.js:192-220,438-466` still self-starts fallback/live preparation and owns uncancelled idle/timer/fetch settlement. |
+| U01a / U01b / U01c / U01d | REMAINING / PARTIAL / REMAINING / REMAINING | `journey/cards/index.js:48-65` has an acyclic builder map, but `:67-112` still self-starts warming at import and mixes registry/icons/scheduling; `journey/cards/discord.js:192-220,438-466` still self-starts fallback/live preparation and owns uncancelled idle/timer/fetch settlement. |
 | U02 / U03 / U04 / U05 / U06 | PARTIAL / REMAINING / PARTIAL / PARTIAL / REMAINING | `journey/ui/` contains useful DOM, gesture, arrival, live-region, and label leaves, while the state machines and listeners remain in the 3,044-line facade. Current `ui.js:1635-1655` and `journey/chapters/connect/index.js:502-517` independently measure/query the rail exclusion: U05 must create one policy owner and inject the result into Connect; no pass-through wrapper is warranted. |
 | O01 / O02 | PARTIAL / REMAINING | `organism/renderer.js`, `random.js`, `shaders.js`, and `performance.js` are foundations, but postprocessing/resource composition and cohesive seeded world-builders remain in `organism.js`; there is no byte/order/resource proof for extraction. |
-| H01 / H02 / H03 / H04 / H05 / H06 | REMAINING | `substrate.js`, `tendrils.js`, `ring.js`, `canopy.js`, `terrain.js`, and `clones.js` remain 1,082–1,842-line builders. No order has a frozen build/resource/runtime contract plus focused lifecycle, byte, capture, review, and acceptance evidence. H02 must consume the U05 rail-exclusion capability rather than preserve its current direct DOM query. |
+| H01 / H02 / H03 / H04 / H05 / H06 | REMAINING | `journey/chapters/owned/substrate.js`, `journey/chapters/connect/tendrils.js`, `journey/chapters/final/ring.js`, `journey/chapters/final/canopy.js`, `journey/chapters/final/terrain.js`, and `journey/chapters/final/clones.js` remain 1,082–1,842-line builders. No order has a frozen build/resource/runtime contract plus focused lifecycle, byte, capture, review, and acceptance evidence. H02 must consume the U05 rail-exclusion capability rather than preserve its current direct DOM query. |
 | A01 / A01a / A03 / A04 / A06 and conditionals | REMAINING | No post-lifecycle responsibility/state decision artifacts exist for portraits, Inspire, Final, or spores. Conditional extractions remain untriggered until those evidence-backed decisions; do not pre-create them. Scroll cohesion is decided earlier by A05/A05a. |
-| B01 / B02 / B03 / B04 / B05 | REMAINING | `main.js` still owns global failure handlers, responsive layout, early input, async prepare, preboot/live-rail adoption, and activation handoff. The `4b02a6a` `index.html`, `hero.css`, `main.js`, rail/site CSS, and captures define protected user intent; later dirty `rail.js`/`site.css` work is protected too. B03/B04 must preserve, not redesign, it. The removed Explore CTA still has null-tolerant consumers in `main.js` and `journey.js`; B01 must classify them and B04/B05 may remove them only after the new rail handoff contract is frozen. |
+| B01 / B02 / B03 / B04 / B05 | REMAINING | `main.js` still owns global failure handlers, responsive layout, early input, async prepare, preboot/live-rail adoption, and activation handoff. The `4b02a6a` `index.html`, `hero.css`, `main.js`, `journey/rail.js`, `journey/site.css`, and captures define protected user intent; later dirty `journey/rail.js`/`journey/site.css` work is protected too. B03/B04 must preserve, not redesign, it. The removed Explore CTA still has null-tolerant consumers in `main.js` and `journey/journey.js`; B01 must classify them and B04/B05 may remove them only after the new rail handoff contract is frozen. |
 | F01 / F02 / F03 / F04 / F05 / F06 | PARTIAL / PARTIAL / PARTIAL / PARTIAL / REMAINING / REMAINING | Constants/symbol/route/tooling foundations exist, but competing exports/history remain; current symbol/content/static/preboot-SVG edits require compatibility fixtures; scanner evidence is stale; and the exact catch inventory above has not been classified or closed. Committed `DEPLOY.md:61-92` now advertises a manual `git add -A`/commit/push quick path alongside the earlier exact-path `tools/release.sh` contract; F04 must reconcile the executable truth and documentation without running either release path. |
 | G0 / G1 / G2 / G3 / G4 / G5 | REMAINING | No gate has the required ledger, package reviews, source-freeze served-closure hashes, required live scenarios, resource/performance report, RX verdict, and coordinator acceptance. |
 
@@ -152,15 +162,14 @@ current content/symbol/static ordering, and all five protected capture bytes
 (including the large Owned desktop size change). Do not
 refresh, re-bless, or normalize those captures during this program.
 
-The recovered Codex session and its investigation artifacts record the
-continued-travel/overshoot, Connect stall-then-roll, responsive-camera, and
-ground-network-placement problems. Their corrections and focused tests are now
-part of `4b02a6a`; they are protected corrective work, not elegance completion.
-X00 must coordinate ownership and C01 must independently validate the fixed
-case and reproduce or explicitly clear any remaining symptom before J01. Any
-remaining reproducible defect gets a separate root-approved corrective brief;
-it is not silently frozen as desired behavior or opportunistically fixed by
-structural extraction.
+Historical notes described continued-travel/overshoot, Connect stall-then-roll,
+responsive-camera, and ground-network-placement symptoms. Prior chat, agent
+sessions, and temporary files are not execution inputs. X00 records
+repository-local evidence; C01 independently validates the current case and
+reproduces or explicitly clears any remaining symptom before J01. Any remaining
+reproducible defect gets a separate root-approved corrective brief; it is not
+silently frozen as desired behavior or opportunistically fixed by structural
+extraction.
 
 Historical focused audit evidence on the pre-`4b02a6a` snapshot: `node
 journey/structure.test.mjs`, `node tools/scroll-touch-gates.mjs`, `node
@@ -172,6 +181,43 @@ delayed-momentum-tail case settled, `node tools/scroll-touch-gates.mjs` was
 re-run and all cases passed. Browser/WebGL,
 capture, and full suites were deliberately not run. These results are
 REVALIDATE inputs at X00/G0, not gate acceptance.
+
+### Fresh-agent bootstrap and authority
+
+At X00, run from the repository root and record the output in the ledger:
+
+```sh
+test -n "$(git rev-parse --show-toplevel)"
+git rev-parse --show-toplevel
+git rev-parse HEAD
+git branch -vv
+git remote -v
+git status --porcelain=v2 -uall
+git status --ignored --short
+git ls-files --others --exclude-standard
+git ls-files --others --ignored --exclude-standard
+```
+
+The live checkout, including tracked, untracked, and ignored paths, is the
+ownership authority. The historical `4b02a6a` ancestor and any example path
+list in this document never override the X00 snapshot. Authority order is:
+latest explicit user/product brief; X00's live ledger and byte manifests; this
+program's invariants; the runbook's execution mechanics; and the execution
+goal's summary. A conflict stops the affected order and is recorded; agents do
+not resolve it from chat memory.
+
+X00 creates a fresh private journal outside the repository (for example with
+`mktemp -d`), records its absolute path, run ID, owner, and retention policy in
+the ledger, and writes the first manifest before any source write. A missing
+journal on resume is a blocker; a fresh agent must never depend on a prior
+session, `/tmp` artifact, or unrecorded external file.
+
+All run evidence has the durable root
+`docs/code-health/evidence/<run-id>/`, containing `manifest.json`, gate reports,
+deterministic traces, review verdicts, and SHA-256 references to private raw
+inputs. Raw physical-input data may remain private, but its provenance, path,
+hash, and normalized replay fixture must be recorded. Missing evidence is a
+blocking non-pass.
 
 ## Non-negotiable invariants
 
@@ -202,6 +248,13 @@ overwrite or restore work in the latter two categories.
 Capture comparison must write fresh images outside the repository. A check that
 overwrites tracked `_check` images is mutating even when it does not refresh the
 golden source and is not permitted during this program.
+
+The protected capture set is the ten source images named by
+`static/captures/manifest.json` under `static/captures/`; the `_check/` images
+are comparison outputs and must remain byte-identical during a gate. The
+manifest's historical `commit` field records capture provenance, not the
+current Git tip. X00 records SHA-256 hashes for every protected image and the
+manifest before any package begins.
 
 ## Target architecture
 
@@ -266,6 +319,40 @@ like one continuous hidden machine.
 
 That is the intended elegance: explicit ownership and locally provable behavior,
 not maximal abstraction or the smallest possible files.
+
+## Canonical work-order mapping
+
+The E-item names below are architectural names; the runbook IDs are the only
+dispatch IDs. A fresh agent must use this mapping rather than inventing a
+second order namespace:
+
+| Program | Runbook |
+| --- | --- |
+| E0.1 | X00 |
+| E0.2 | Q01–Q03, Q05 |
+| E0.3 | Q04, F06 |
+| E1.1 | C01–C02 |
+| E1.2 | C03–C04 |
+| E2.1 | S01 |
+| E2.2 | C05–C06 |
+| E2.3 | N01 |
+| E3.A1–A3 | J01–J03 |
+| E3.A4 | J04a–J04e, J05, A02, A05, and triggered A05a |
+| E3.B1–B4 | R01–R08 |
+| E4.1 | U01a–U01d |
+| E4.2 | U02–U06 |
+| E4.3 | O01–O02 |
+| E4.4 | H01–H06 |
+| E4.5 | B01–B05 |
+| E4.6 | A01/A01a/A03/A04/A06 and triggered conditionals |
+| E5.1 | F01–F03 |
+| E5.2 | F04–F05 |
+| E5.3 | G5 |
+
+Conditional A03a, A04a, A05a, A06a, and A01a are allocated only by a recorded
+decision artifact. When triggered, the coordinator adds the exact paths,
+contract, prerequisites, focused proof, and ledger row before dispatch; an
+undocumented conditional ID cannot be implemented.
 
 ## Execution waves
 
@@ -370,6 +457,16 @@ environment with fixed browser version, renderer, viewport, DPR, and capture
 flags. It must pass the required live preflight and provide a writable external
 capture directory. Stop here if that environment is unavailable rather than
 accumulating changes that cannot reach their first visual gate.
+
+P01's bootstrap is repository-independent but reproducible: verify Node
+`>=20.19.0` from `package.json`, Python 3, and the lockfile; run `npm ci` in a
+clean dependency state; record the Chromium executable/version, WebGL renderer
+and backend, OS, viewport, DPR, input provenance, capture flags, and external
+capture directory. `playwright-core` does not provision a browser by itself, so
+the executable and renderer must be supplied and recorded. The preflight
+command, stdout/stderr, and result classification go under
+`docs/code-health/evidence/<run-id>/p01/`. Missing Chromium, WebGL, writable
+capture output, or provenance is `environment-blocked`, never a pass.
 
 #### E1.1 — Journey and UI characterization
 
@@ -953,10 +1050,10 @@ Unsafe parallel work:
 
 ## Agent operating model
 
-Use the main agent as coordinator and GPT-5.6 Luna as the default implementer
-for bounded packages and mechanical slices. XHARD packages follow the runbook's
-root-designed protocol and may use GPT-5.6 Sol for a slice that still requires
-frontier cross-state reasoning. Each brief must contain:
+Use the main agent as coordinator and Claude Sonnet for ordinary reconnaissance,
+implementation, testing, and one independent incremental review gate per
+bounded order or batch. Claude Opus owns every XHARD implementation, design
+judgment, and XHARD review. Each brief must contain:
 
 - exact allowed files and protected paths;
 - one ownership boundary, not a menu of possible refactors;
@@ -967,17 +1064,20 @@ frontier cross-state reasoning. Each brief must contain:
 - a concise handoff containing changed files, preserved contract, tests, residual
   risk, and pre/post hash verification.
 
-Use a different Luna as the read-only package reviewer for every T2/T3 or
-public-contract package and as batch reviewer for at most three related
-low-risk packages. Reviews that require reconstructing the architecture across
-several state machines are themselves XHARD: GPT-5.6 Sol reviews the
-root-authored canonical-contract, runtime/lifecycle, and visual/page designs
-before their named XHARD implementations. A fresh Sol first validates the whole
-evidence foundation after G1, then fresh Sol reviewers assess the integrated
-results at G2, G3, G4, and G5. The runbook names these RX tasks and their
-downstream holds. All reviewers are advisory; the coordinator alone
-accepts work, resolves ownership, classifies regressions, and waives nothing by
-implication.
+Use a different Claude Sonnet session as the one read-only package reviewer for
+every T2/T3 or public-contract package and for batches of at most three related
+low-risk packages. Reviews that reconstruct architecture across state machines
+are XHARD and are owned by Claude Opus. Do not create multi-review churn during
+incremental work: a blocker receives bounded feedback implementation and the
+same review gate is re-evaluated as closure of that one process. At the very
+end, Fable performs an iterative final integrated review/feedback loop, maximum
+three rounds; each reviewer must be independent of the implementation it
+reviews. Route ordinary feedback fixes to Sonnet and XHARD fixes to Opus. If
+Fable is unavailable specifically because credits are exhausted, record that
+evidence and substitute Opus for the remaining final rounds; do not silently
+substitute for another failure. Must findings after round three mean
+BLOCKED/NO-GO, never acceptance. All reviewers are advisory; the coordinator
+alone accepts work and resolves ownership.
 
 Reviewers look for contract drift, new indirection without ownership value,
 hidden globals, unowned lifecycle work, cross-package contradictions, and tests

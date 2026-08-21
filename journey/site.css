@@ -2115,7 +2115,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      ordered list; the latter opens the site-map sidebar immediately. The
      rail's full-height flex container centres the expanded file as one stable
      object. Progress may update --cur for desktop; coarse layout ignores it. */
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (max-width: 900px) and (orientation: portrait) {
     .j-rail-inner {
       width: 52px;
       height: calc(var(--n, 5) * 44px + 52px);
@@ -3138,6 +3138,18 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
    preserving the links, chapter state, menu dialog and focus model built by
    rail.js.
    ======================================================================== */
+/* The first-paint strip did not exist in the historical mobile design. Hide
+   it at the same boundary used by rail.js; the live, accessible fixed file
+   replaces it as soon as the lightweight journey module mounts. */
+@media (pointer: coarse), (max-width: 900px) and (orientation: portrait) {
+  .j-rail-preboot { display: none !important; }
+}
+
+/* The horizontal redesign is desktop-only. All pre-existing rail rules above
+   remain the exact mobile/touch implementation from 4b02a6a^; scoping these
+   late overrides is enough to reveal that implementation again without a
+   parallel DOM or a second source of navigation state. */
+@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
 .j-rail,
 .j-rail:not(.j-rail-column) {
   position: fixed;
@@ -3561,4 +3573,5 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-rail .j-rail-mark,
   .j-rail .j-rail-name,
   .j-rail .j-rail-menu { transition: none !important; }
+}
 }

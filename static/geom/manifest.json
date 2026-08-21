@@ -3,7 +3,7 @@
   "chapters": {
     "owned": {
       "file": "owned.bin",
-      "sha256": "2cb0499303a5010d266e338e80683871bcce41ba846ac5a0574253d38094a157",
+      "sha256": "cfcc6ab864e92c735175281656ebeadc6097d6734f5bdd82ebba2731ec798bbc",
       "keys": [
         {
           "key": "owned/fan",
@@ -427,9 +427,16 @@
               "kind": "f32"
             },
             {
-              "name": "index",
+              "name": "aRailVis",
               "itemSize": 1,
               "byteOffset": 2219992,
+              "byteLength": 256,
+              "kind": "f32"
+            },
+            {
+              "name": "index",
+              "itemSize": 1,
+              "byteOffset": 2220248,
               "byteLength": 384,
               "kind": "u32"
             }
@@ -441,35 +448,42 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 2220376,
+              "byteOffset": 2220632,
               "byteLength": 13824,
               "kind": "f32"
             },
             {
               "name": "aOff",
               "itemSize": 2,
-              "byteOffset": 2234200,
+              "byteOffset": 2234456,
               "byteLength": 9216,
               "kind": "f32"
             },
             {
               "name": "aNode",
               "itemSize": 1,
-              "byteOffset": 2243416,
+              "byteOffset": 2243672,
               "byteLength": 4608,
               "kind": "f32"
             },
             {
               "name": "aSeed",
               "itemSize": 1,
-              "byteOffset": 2248024,
+              "byteOffset": 2248280,
               "byteLength": 4608,
               "kind": "f32"
             },
             {
               "name": "aAlong",
               "itemSize": 1,
-              "byteOffset": 2252632,
+              "byteOffset": 2252888,
+              "byteLength": 4608,
+              "kind": "f32"
+            },
+            {
+              "name": "aRailVis",
+              "itemSize": 1,
+              "byteOffset": 2257496,
               "byteLength": 4608,
               "kind": "f32"
             }
@@ -481,28 +495,35 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 2257240,
+              "byteOffset": 2262104,
               "byteLength": 192,
               "kind": "f32"
             },
             {
               "name": "aSize",
               "itemSize": 1,
-              "byteOffset": 2257432,
+              "byteOffset": 2262296,
               "byteLength": 64,
               "kind": "f32"
             },
             {
               "name": "aSeed",
               "itemSize": 1,
-              "byteOffset": 2257496,
+              "byteOffset": 2262360,
               "byteLength": 64,
               "kind": "f32"
             },
             {
               "name": "aNode",
               "itemSize": 1,
-              "byteOffset": 2257560,
+              "byteOffset": 2262424,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aRailVis",
+              "itemSize": 1,
+              "byteOffset": 2262488,
               "byteLength": 64,
               "kind": "f32"
             }
@@ -514,28 +535,35 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 2257624,
+              "byteOffset": 2262552,
               "byteLength": 192,
               "kind": "f32"
             },
             {
               "name": "aSize",
               "itemSize": 1,
-              "byteOffset": 2257816,
+              "byteOffset": 2262744,
               "byteLength": 64,
               "kind": "f32"
             },
             {
               "name": "aSeed",
               "itemSize": 1,
-              "byteOffset": 2257880,
+              "byteOffset": 2262808,
               "byteLength": 64,
               "kind": "f32"
             },
             {
               "name": "aNode",
               "itemSize": 1,
-              "byteOffset": 2257944,
+              "byteOffset": 2262872,
+              "byteLength": 64,
+              "kind": "f32"
+            },
+            {
+              "name": "aRailVis",
+              "itemSize": 1,
+              "byteOffset": 2262936,
               "byteLength": 64,
               "kind": "f32"
             }
@@ -547,28 +575,35 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 2258008,
+              "byteOffset": 2263000,
               "byteLength": 20352,
               "kind": "f32"
             },
             {
               "name": "aAlong",
               "itemSize": 1,
-              "byteOffset": 2278360,
+              "byteOffset": 2283352,
               "byteLength": 6784,
               "kind": "f32"
             },
             {
               "name": "aStrand",
               "itemSize": 1,
-              "byteOffset": 2285144,
+              "byteOffset": 2290136,
               "byteLength": 6784,
               "kind": "f32"
             },
             {
               "name": "aNode",
               "itemSize": 1,
-              "byteOffset": 2291928,
+              "byteOffset": 2296920,
+              "byteLength": 6784,
+              "kind": "f32"
+            },
+            {
+              "name": "aRailVis",
+              "itemSize": 1,
+              "byteOffset": 2303704,
               "byteLength": 6784,
               "kind": "f32"
             }
@@ -580,21 +615,21 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 2298712,
+              "byteOffset": 2310488,
               "byteLength": 5760,
               "kind": "f32"
             },
             {
               "name": "aAlong",
               "itemSize": 1,
-              "byteOffset": 2304472,
+              "byteOffset": 2316248,
               "byteLength": 1920,
               "kind": "f32"
             },
             {
               "name": "aStrand",
               "itemSize": 1,
-              "byteOffset": 2306392,
+              "byteOffset": 2318168,
               "byteLength": 1920,
               "kind": "f32"
             }
