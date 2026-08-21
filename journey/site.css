@@ -3594,6 +3594,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
 @media (pointer: coarse), (max-width: 900px) {
   .j-rail,
   .j-rail:not(.j-rail-column) {
+    --mobile-veil-width: 10rem;
     right: 0 !important;
     z-index: 4;
     isolation: isolate;
@@ -3612,9 +3613,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     isolation: isolate;
   }
 
-  /* One translucent glass surface protects the complete open file — labels,
-     glyphs and Menu — from chapter annotations underneath. The opaque colour
-     is the blur fallback; supporting engines use the quieter alpha below. */
+  /* A smoked amber edge veil: almost open to the scene at its exposed edge,
+     progressively denser only where the controls need contrast. */
   .j-rail .j-rail-inner::before,
   .j-rail:not(.j-rail-column) .j-rail-inner::before {
     content: "";
@@ -3622,15 +3622,17 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     position: absolute;
     top: -12px !important;
     right: 0;
-    width: min(11.25rem, calc(100vw - 12px));
+    width: min(var(--mobile-veil-width), calc(100vw - 12px));
     height: calc(100% + 24px) !important;
     z-index: 0;
-    border: 1px solid rgba(217, 164, 65, 0.12);
-    border-right: 0;
-    border-radius: 18px 0 0 18px;
-    background: rgba(7, 5, 2, 0.88) !important;
-    box-shadow: -14px 0 36px rgba(0, 0, 0, 0.24),
-                inset 1px 0 rgba(242, 237, 225, 0.025);
+    border: 0;
+    border-left: 1px solid rgba(224, 177, 84, 0.14);
+    border-radius: 11px 0 0 11px;
+    background: linear-gradient(90deg,
+      rgba(8, 5, 2, 0.28) 0%,
+      rgba(8, 5, 2, 0.46) 58%,
+      rgba(8, 5, 2, 0.7) 100%) !important;
+    box-shadow: -10px 0 28px rgba(0, 0, 0, 0.15);
     -webkit-mask-image: none !important;
     mask-image: none !important;
     opacity: 0 !important;
@@ -3643,9 +3645,12 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
     .j-rail .j-rail-inner::before,
     .j-rail:not(.j-rail-column) .j-rail-inner::before {
-      background: rgba(7, 5, 2, 0.68) !important;
-      -webkit-backdrop-filter: blur(14px) saturate(0.82);
-      backdrop-filter: blur(14px) saturate(0.82);
+      background: linear-gradient(90deg,
+        rgba(8, 5, 2, 0.21) 0%,
+        rgba(8, 5, 2, 0.34) 58%,
+        rgba(8, 5, 2, 0.62) 100%) !important;
+      -webkit-backdrop-filter: blur(17px) saturate(0.88) brightness(0.9);
+      backdrop-filter: blur(17px) saturate(0.88) brightness(0.9);
     }
   }
   .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-inner::before {
@@ -3665,6 +3670,33 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     content: none !important;
     display: none !important;
     pointer-events: none !important;
+  }
+  .j-rail:not(.j-rail-column) .j-rail-slot::before,
+  .j-rail:not(.j-rail-column) .j-rail-slot::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  /* Mobile uses one restrained gold ring. Retire both the four-corner debug
+     reticle and the desktop strip's travelling ring in this geometry. */
+  .j-rail .j-rail-ret,
+  .j-rail .j-rail-active-ring { display: none !important; }
+  .j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark::before {
+    content: none;
+  }
+  .j-rail:not(.j-rail-column):not(.j-rail-open):not(.j-rail-hot):not(:has(:focus-visible))
+    .j-rail-slot.now .j-rail-mark::before,
+  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+    .j-rail-slot.active .j-rail-mark::before {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    box-sizing: border-box;
+    border: 1px solid rgba(242, 192, 92, 0.62);
+    border-radius: 50%;
+    background: rgba(217, 164, 65, 0.025);
+    box-shadow: 0 0 8px rgba(238, 181, 73, 0.2);
+    pointer-events: none;
   }
 
   .j-rail:not(.j-rail-column) .j-rail-slot,
@@ -3730,9 +3762,27 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     width: 24px;
     height: 24px;
   }
+  .j-rail:not(.j-rail-column) .j-rail-menu::before {
+    content: none;
+    display: none !important;
+  }
+  .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+    .j-rail-menu::before {
+    content: "";
+    display: block !important;
+    position: absolute;
+    top: -8px;
+    right: 10px;
+    left: auto;
+    width: calc(var(--mobile-veil-width) - 20px);
+    height: 1px;
+    transform: none;
+    background: linear-gradient(90deg,
+      rgba(224, 177, 84, 0.04), rgba(224, 177, 84, 0.2));
+    pointer-events: none;
+  }
 
-  /* Half-moon pill placement/hiding must not leak into the fixed file. Every
-     row gets its name to the left, and all five names are present when open. */
+  /* Plain right-aligned labels sit directly on the veil — no nested pills. */
   .j-rail:not(.j-rail-column) .j-rail-slot:is(.j-pill-up, .j-pill-dn) .j-rail-name,
   .j-rail:not(.j-rail-column) .j-rail-name {
     display: block;
@@ -3740,11 +3790,22 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     right: 100%;
     bottom: auto;
     left: auto;
-    margin: 0 0.1rem 0 0;
-    padding: 0.34rem 0.7rem;
+    margin: 0 0.6rem 0 0;
+    padding: 0 !important;
     transform: translateY(-50%);
-    border-radius: 2px;
-    background: rgba(9, 6, 2, 0.58);
+    border: 0 !important;
+    border-radius: 0;
+    background: none !important;
+    box-shadow: none !important;
+    color: rgba(242, 237, 225, 0.86);
+    font-family: Inter, -apple-system, system-ui, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 0.59rem !important;
+    font-style: normal !important;
+    font-weight: 500 !important;
+    line-height: 1.15 !important;
+    letter-spacing: 0.17em !important;
+    text-align: right;
+    text-shadow: none !important;
   }
   .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-name { display: block; }
   .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
@@ -3752,6 +3813,20 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
     .j-rail-slot.active .j-rail-name {
     opacity: 1 !important;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.17em !important;
+  }
+}
+
+/* Short landscape layouts use the same file with slightly wider tracked
+   labels. Give that real footprint the same ~10px glass inset as portrait. */
+@media (pointer: coarse) and (orientation: landscape),
+       (max-width: 900px) and (orientation: landscape) {
+  .j-rail,
+  .j-rail:not(.j-rail-column) {
+    --mobile-veil-width: 10.75rem;
+  }
+  .j-rail .j-rail-inner::before,
+  .j-rail:not(.j-rail-column) .j-rail-inner::before {
+    width: min(var(--mobile-veil-width), calc(100vw - 12px));
   }
 }

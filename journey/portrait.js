@@ -313,6 +313,26 @@ function offsetAt(p) { return fieldAt(p, KEYS, _off); }
 // trivially testable. pose.pos / pose.target are THREE.Vector3-compatible.
 const _fwd = { x: 0, y: 0, z: 0 }, _right = { x: 0, y: 0, z: 0 };
 
+// Phone-only Connect framing. Keep this as a projection-space camera offset
+// so the live director and Connect's ADOS placement solve consume the
+// same pose. The envelope is zero-slope at the chapter boundaries and peaks
+// at the authored Connect rest, preserving exact reverse scrubbing.
+const PHONE_CONNECT_TARGET_Y = 0.45;
+
+function phoneConnectTargetY(viewportWidth) {
+  return PHONE_CONNECT_TARGET_Y * smooth01((viewportWidth - 320) / 70);
+}
+
+function phoneConnectWeight(p) {
+  const rest = restProgress('connect');
+  const full = restProgress('inspire') + 0.652 * (rest - restProgress('inspire'));
+  if (p <= full) {
+    return smooth01((p - startOf('connect')) / (full - startOf('connect')));
+  }
+  if (p <= rest) return 1;
+  return 1 - smooth01((p - rest) / (startOf('owned') - rest));
+}
+
 /** Blend the authored portrait field over a landscape pose, in place.
  *  Pure in (pose, p, aspect, viewportWidth); a no-op (bit-identical pose) for
  *  aspect >= 1. */
@@ -362,6 +382,12 @@ export function applyPortrait(pose, p, aspect, viewportWidth = Infinity) {
   pose.target.z += _right.z * o.tgtRight * w;
 
   pose.fov = Math.min(72, Math.max(24, pose.fov + o.fov * w));
+
+  if (viewportWidth <= 620 && aspect < 1) {
+    const connectW = phoneConnectWeight(p);
+    const connectTargetY = phoneConnectTargetY(viewportWidth);
+    pose.target.y += connectTargetY * connectW;
+  }
 
   // Final's phone composition needs a literal CAMERA move, independent of
   // the aspect field above. The previous version folded this into KEYS and
