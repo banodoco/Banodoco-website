@@ -24,6 +24,7 @@ import { createDirector } from './director.js';
 import { createSeams } from './seams.js';
 import { createLens } from './lens.js';
 import { createUI } from './ui.js';
+import { createRail } from './rail.js';
 import {
   CHAPTERS, CHAPTER_IDS, chapterAt, restProgress, startOf,
 } from './route.js';
@@ -44,6 +45,7 @@ import { createCameraBlendStepper } from './camera-blend.js';
 import { applyChapterFrame } from './frame-application.js';
 
 export { prepareChapter } from './chapter-registry.js';
+export function prepareRail(onNav) { return createRail({ onNav }); }
 
 const smooth01 = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -245,8 +247,22 @@ export function boot(opts = {}) {
   /* ================================================================
      DOM
      ================================================================ */
+  /** A prepared rail is live before the journey is activated. Keep its click
+   *  on the page's intro-handoff path during that window: main.js owns the
+   *  organism clock skew, buffered intent and activation boundary. Wiring the
+   *  adopted rail straight to navigateTo() made its callback diverge from both
+   *  wheel/touch and the hero CTA as soon as createUI called setOnNav(). */
+  function handleNavIntent(id) {
+    if (!activated && typeof opts.onEntry === 'function') {
+      opts.onEntry(id);
+      return;
+    }
+    navigateTo(id);
+  }
+
   const ui = createUI({
-    onNav: (id) => navigateTo(id),
+    rail: opts.rail || null,
+    onNav: handleNavIntent,
     onOpen: (nodeId, trigger) => openDetail(nodeId, trigger),
     onClose: () => closeDetail(),
     isDetailOpen: () => !!detailNode,
@@ -488,11 +504,7 @@ export function boot(opts = {}) {
   const cta = document.querySelector('.ui .cta');
   if (cta) cta.addEventListener('click', (e) => {
     e.preventDefault();
-    if (!activated) {
-      if (typeof opts.onEntry === 'function') opts.onEntry('inspire');
-      return;
-    }
-    navigateTo('inspire');
+    handleNavIntent('inspire');
   });
 
   /* ================================================================
@@ -561,6 +573,13 @@ export function boot(opts = {}) {
   // p cannot tell the rail where that visible move is. This small ticket is
   // created before placeAt's synchronous frames and follows the camera clock.
   let railWrap = null;          // { dir, homeP, phase } while a wrap is flying
+  // Ordinary clicks have the same destination-progress disagreement. Carry
+  // their visible origin and destination separately so the horizontal rail
+  // can scrub between them on the camera blend's exact eased phase.
+  let railFlight = null;        // { fromP, targetP, phase } for non-wrap clicks
+  let presentedP = journey.progress; // QA/readback: camera-authoritative route coordinate
+  const flightProgress = (flight) => flight.fromP
+    + (flight.targetP - flight.fromP) * flight.phase;
   function directJumpTo(chapterId, wrap = 0) {
     const targetP = restProgress(chapterId);
     if (Math.abs(targetP - journey.progress) < 1e-4) return;
@@ -568,6 +587,26 @@ export function boot(opts = {}) {
     // the wrap spends it: a rewound lap lands back on this rest
     // (steerWrapBlend / landWrapHome below).
     const fromP = journey.progress;
+    // A click may overtake another click. Journey state is already at that
+    // older flight's destination, while the rail is visibly between rests;
+    // start the replacement from the visible coordinate so interruption and
+    // reversal cannot produce a second jump.
+    const railFromP = railFlight ? flightProgress(railFlight) : fromP;
+    const wasRouteFaithful = !!(camBlend && camBlend.routeFaithful);
+    const inspireP = restProgress('inspire');
+    const at = (a, b) => Math.abs(a - b) < 1e-4;
+    const onFirstLeg = railFromP >= -1e-4 && railFromP <= inspireP + 1e-4;
+    /* The adjacent Mission <-> Inspire move is not a jump in the authored
+       ride: it is precisely the first scroll leg. Keep an interrupted return
+       on that same leg too, but never claim a generic/non-adjacent camera as
+       route-faithful merely because its synthetic rail coordinate happens to
+       cross this interval. */
+    const routeFaithful = !wrap && onFirstLeg
+      && (at(targetP, 0) || at(targetP, inspireP))
+      // With no blend, the live camera is director(p); with a first-leg blend,
+      // it is director(presentedP). A generic jump may cross the same numeric
+      // interval but its live pose is not on the route, so never switch it.
+      && (!camBlend || wasRouteFaithful);
     const cam = sceneApi.camera, ctl = sceneApi.controls;
     const fog = sceneApi.scene.fog;
     const pos0 = cam.position.clone(), tgt0 = ctl.target.clone(), fov0 = cam.fov;
@@ -583,11 +622,21 @@ export function boot(opts = {}) {
     // has already captured.
     camBlend = null;
     railWrap = null;
+    railFlight = null;
     chapterEntry = null;
     // ...and a jump AWAY from the hero arms its furniture DEPARTURE here,
     // before placeAt's dt = 0 passes can snap the scrim off on the click
     // frame — the up-wrap flash (2026-08-16; see heroExit).
-    if (chapterId !== 'mission') armHeroExit(!!wrap);
+    if (wrap && chapterId !== 'mission') armHeroExit(true);
+    else if (!wrap) {
+      // An ordinary click now presents a real continuous progress coordinate
+      // over the camera flight. Hero presence can therefore use the same pure
+      // p envelope as scroll; retire the legacy click-only timer so it cannot
+      // race or soften that authoritative signal.
+      heroExit = null;
+      heroEntry = null;
+      heroGate = 1;
+    }
     // pos0 is banked, so assert the un-owned invariant before placing: if the
     // director is un-owned the camera may be MID-LAP (a nav click over a
     // flying down-wrap — the blend just dropped without restoring), and
@@ -608,9 +657,15 @@ export function boot(opts = {}) {
       homeP: restProgress(chapterAt(fromP).id),
       phase: 0,
     } : null;
+    railFlight = wrap ? null : { fromP: railFromP, targetP, phase: 0 };
     // Install before placeAt: its two synchronous dt=0 passes must see the
     // beginning of the entry, not one transient fully-arrived drive(p) state.
-    chapterEntry = startChapterEntry(chapterId, chapters[chapterId], guarded);
+    // This first leg already owns a complete progress-authored arrival. A
+    // second navigation-only chapter clock would make its scene diverge from
+    // an equal-p scroll sample even after the camera path was corrected.
+    chapterEntry = routeFaithful
+      ? null
+      : startChapterEntry(chapterId, chapters[chapterId], guarded);
     placeAt(targetP, { snap: false });
     /* THE WAY HOME (2026-08-12 — the loop). A wrap is the same transition as
        every other nav jump; only its PATH is authored, because the shortest
@@ -667,6 +722,8 @@ export function boot(opts = {}) {
       // destination pose's camera x, kept so a steer can re-announce the
       // chapters' blend contract with whichever end the lap now lands at.
       wrapDir: wrap, homeP: railWrap ? railWrap.homeP : 0,
+      routeFaithful, routeFromP: railFromP, routeTargetP: targetP,
+      presentedP: routeFaithful ? railFromP : null,
       dstX: cam.position.x };
     // cam.position is the DESTINATION pose here — placeAt above let the
     // director write it, and az1/len are already measured against it. A
@@ -681,19 +738,26 @@ export function boot(opts = {}) {
     // free-running downward — so without the duration it can only guess, and
     // the guess it has been making is the ladder's own clock, which spends the
     // whole field in the first third of the lap (26-scroll-loop.md §26).
-    setBlending(true, cam.position.x, dur);
+    // On the route-faithful first leg the chapters already consume frameP,
+    // exactly as they do under scroll. Advertising a destination-parked
+    // camera disagreement here would reintroduce nav-only reveal behaviour.
+    if (!routeFaithful) setBlending(true, cam.position.x, dur);
     // The destination's copy is timed against THIS move, not against the click
     // (Hannah, 2026-08-07 — "the text for the new section INSTANTLY appears").
     // The duration is only knowable here, after placeAt has let the director
     // write the destination pose, which is why the hand-off is one call at the
     // end of the jump rather than a constant in ui.js. See the copy-entry
     // block there, and COPY_JUMP_LEAD / COPY_JUMP_COPY_TAIL_S.
-    guarded('ui', () => ui.armCopyEntry(chapterId, dur));
+    // Ordinary clicks now expose their camera-authored `travelP` to the copy
+    // layer, so its existing scroll bands and speed/settle envelope can own the
+    // whole handoff. A cyclic wrap has no monotone section coordinate across
+    // its hidden seam and therefore keeps the dedicated reversible ticket.
+    if (wrap) guarded('ui', () => ui.armCopyEntry(chapterId, dur));
     // ...and the hero's own furniture is timed against the same move, for the
     // same reason and on the same envelope. It is the third member of the
     // family a8d4518 (chapter geometry) and d1ecc23 (section copy) opened, and
     // the only one that had never been given a ticket.
-    armHeroEntry(chapterId, dur);
+    if (wrap) armHeroEntry(chapterId, dur);
   }
 
   /* THE DETAIL NO LONGER HAS A HISTORY ENTRY (2026-08-11 — the URL is not a
@@ -860,21 +924,41 @@ export function boot(opts = {}) {
     }
     const owned = p > 0.0008;
     director.setOwned(owned);
-    if (owned) guarded('director', () => director.apply(p, dt));
+    // A route-faithful first-leg flight is written below by the compositor at
+    // its continuously presented coordinate. Writing the parked destination
+    // here first would advance handheld state twice and briefly let two camera
+    // clocks disagree inside one frame.
+    const blendThisFrame = camBlend;
+    const routeFaithfulThisFrame = !!(blendThisFrame && blendThisFrame.routeFaithful);
+    if (owned && !routeFaithfulThisFrame) guarded('director', () => director.apply(p, dt));
     // ...and then the jump's blend composes onto that written pose. Not
     // guarded() by name: a latched-dead blend would strand `camBlend` and
     // leave the chapters detached for the rest of the session, so a throw
     // abandons the blend instead — the camera keeps the destination pose the
     // director just wrote, which is where the jump was going anyway.
     if (camBlend) {
-      try { stepCamBlend(camBlend, railWrap, dt); }
+      try { stepCamBlend(camBlend, railWrap || railFlight, dt); }
       catch (err) {
         console.error('[journey] camera blend threw — the jump lands directly:', err);
         endCamBlend();
       }
     }
 
-    guarded('seams', () => seams.update(p));
+    // Route state is parked at the destination throughout a direct click.
+    // Reconstruct the coordinate actually being presented from the camera's
+    // own smootherstep phase. This is the same scalar scroll supplies, so the
+    // hero envelope and UI speed hold accelerate, reverse and settle with the
+    // rail/camera rather than reacting to a destination snap.
+    const travelP = routeFaithfulThisFrame && Number.isFinite(blendThisFrame.presentedP)
+      ? blendThisFrame.presentedP
+      : railFlight ? flightProgress(railFlight) : p;
+    presentedP = travelP;
+    // State remains parked at the clicked destination for routing and active
+    // nav semantics. Only the route-authored adjacent flight presents its
+    // synthetic coordinate to scene/chapter/lens readers, exactly as scroll.
+    const frameP = routeFaithfulThisFrame ? travelP : p;
+
+    guarded('seams', () => seams.update(frameP));
     /* Advance a navigation-only entry against what is actually visible, not
        against the camera flight's fraction. Connect is camera-gated: spending
        this clock while the gaze still hid the ground made its fronts finish in
@@ -886,7 +970,7 @@ export function boot(opts = {}) {
     // lives in chapters/inspire/index.js now — the spine knows no chapter's
     // internals. Each chapter is guarded individually: one broken chapter is
     // dropped, the others keep driving.
-    chapterEntry = applyChapterFrame(chapters, chapterEntry, p, dt, scroll.gliding, guarded);
+    chapterEntry = applyChapterFrame(chapters, chapterEntry, frameP, dt, scroll.gliding, guarded);
 
     // Optics (W5): ONE finishing language across the whole journey. The lens
     // owns the per-leg parameter curve; the journey supplies progress and the
@@ -895,13 +979,13 @@ export function boot(opts = {}) {
     // Final leg the nearest lit ring member — the "selected fairy-ring
     // highlight", since the travelling front has no exposed world position).
     guarded('lens', () => {
-      lens.update(p);
+      lens.update(frameP);
       let focus = null;
       // Focal-source handoff points: shortly (+0.02) after each chapter's range
       // begins, route-derived (M4; shipped values 0.40 / 0.62 / 0.87).
-      if (p < startOf('connect') + 0.02) { if (chapters.inspire.armed) focus = chapters.inspire.activeWorld(); }
-      else if (p < startOf('owned') + 0.02) { if (chapters.connect.armed) focus = chapters.connect.nodeWorld('ados'); }
-      else if (p < startOf('final') + 0.02) { if (chapters.owned.armed) focus = chapters.owned.nodeWorld('pod-shared'); }
+      if (frameP < startOf('connect') + 0.02) { if (chapters.inspire.armed) focus = chapters.inspire.activeWorld(); }
+      else if (frameP < startOf('owned') + 0.02) { if (chapters.connect.armed) focus = chapters.connect.nodeWorld('ados'); }
+      else if (frameP < startOf('final') + 0.02) { if (chapters.owned.armed) focus = chapters.owned.nodeWorld('pod-shared'); }
       else if (chapters.final.armed) {
         // the Final chapter owns its focal anatomy (M4): the travelling
         // growth front while it runs, else its own rest-member hint
@@ -917,10 +1001,10 @@ export function boot(opts = {}) {
     // with the DEPARTURE term (heroExit): a jump out of the hero fades what
     // is up over the blend's opening beat instead of stepping it on the
     // click frame — the up-wrap scrim flash (2026-08-16).
-    paintHeroFurniture(Math.max(heroPresence(p) * stepHeroEntry(dt), stepHeroExit(dt)));
+    paintHeroFurniture(Math.max(heroPresence(travelP) * stepHeroEntry(dt), stepHeroExit(dt)));
 
     guarded('ui', () => ui.update(p, ch.id, sceneApi.camera, dt,
-      { cameraStateDisagree, railWrap }));
+      { cameraStateDisagree, railWrap, railFlight, travelP }));
 
     /* THE RIDE WRITES NOTHING (2026-08-11, Hannah's brief). A chapter change
        used to replaceState `#/<chapter>` from right here, every time the
@@ -1055,6 +1139,7 @@ export function boot(opts = {}) {
     const homeP = camBlend.homeP;
     camBlend = null;
     railWrap = null;
+    railFlight = null;
     chapterEntry = null;
     cameraStateDisagree = false;
     guarded('lens', () => lens.setLookOverride(null));
@@ -1093,6 +1178,7 @@ export function boot(opts = {}) {
   function endCamBlend(keepEntry = false) {
     camBlend = null;
     railWrap = null;
+    railFlight = null;
     if (!keepEntry) chapterEntry = null;
     cameraStateDisagree = false;
     /* AND THE CAMERA GOES BACK TO THE POSE p IMPLIES (2026-08-14 — Hannah:
@@ -1279,6 +1365,7 @@ export function boot(opts = {}) {
     heroIntroSkipped: !!opts.heroIntroSkipped,
     heroIntroMs: HERO_INTRO_MS,
     get p() { return journey.progress; },
+    get travelP() { return presentedP; },
     get chapter() { return chapterAt(journey.progress).id; },
     get detail() { return detailNode; },
     /** The navigation can enter during the organism's final settle without
@@ -1374,9 +1461,17 @@ export function boot(opts = {}) {
       try {
         for (;;) {
           const result = gl.clientWaitSync(sync, 0, 0);
-          if (result === gl.ALREADY_SIGNALED || result === gl.CONDITION_SATISFIED) return;
+          if (result === gl.ALREADY_SIGNALED || result === gl.CONDITION_SATISFIED) return true;
           if (result === gl.WAIT_FAILED) throw new Error('GPU readiness fence failed');
-          if (performance.now() - startedAt > 8000) throw new Error('GPU readiness fence timed out');
+          if (performance.now() - startedAt > 8000) {
+            /* Warmup is an optimisation, not an availability gate. A busy
+               software renderer may keep a valid fence pending well past the
+               startup budget; publishing then is safer than replacing the
+               whole interactive site with the fallback. Context loss and an
+               actual WAIT_FAILED result remain fatal above. */
+            console.warn('[journey-v6] GPU warmup fence exceeded 8s; continuing');
+            return false;
+          }
           await new Promise(resolve => setTimeout(resolve, 8));
         }
       } finally {
@@ -1384,11 +1479,18 @@ export function boot(opts = {}) {
       }
     }
     gl.finish();
+    return true;
   }
 
   async function prepareGpu() {
     const r = sceneApi.renderer;
     if (!r) throw new Error('No WebGL renderer for journey preparation');
+    const gl = r.getContext();
+    const debugInfo = gl.getExtension && gl.getExtension('WEBGL_debug_renderer_info');
+    const rendererName = debugInfo
+      ? String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '')
+      : '';
+    const softwareRenderer = /swiftshader|llvmpipe|software rasterizer/i.test(rendererName);
 
     // Image decode plus both initial Canvas2D atlas bakes must finish before
     // the visible clock starts. Prepare the first remix here too: its old
@@ -1409,8 +1511,11 @@ export function boot(opts = {}) {
 
     // Submit every chapter's real draw list to a tiny offscreen target. Every
     // changed scene flag is restored in finally, including descendants that
-    // are normally invisible or outside the hero camera's frustum.
-    for (const id of Object.keys(chapters)) {
+    // are normally invisible or outside the hero camera's frustum. Software
+    // WebGL can spend minutes synchronously rasterising these hidden warmup
+    // frames; shader compilation above is sufficient there, and avoids making
+    // a performance optimisation an availability gate.
+    if (!softwareRenderer) for (const id of Object.keys(chapters)) {
       const g = chapters[id] && chapters[id].group;
       if (!g) continue;
       let anchor = g;
@@ -1449,7 +1554,8 @@ export function boot(opts = {}) {
         }
       }
     }
-    await drainGpu(r);
+    if (!softwareRenderer) await drainGpu(r);
+    else console.info('[journey-v6] software renderer — hidden GPU warm draws skipped');
     performance.mark('journey-gpu-ready');
     return true;
   }

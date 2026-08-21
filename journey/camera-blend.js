@@ -5,12 +5,29 @@ export function createCameraBlendStepper(sceneApi, director, lens, guarded, onEn
   const dstPos = sceneApi.camera.position.clone();
   const dstTgt = sceneApi.controls.target.clone();
 
-  return function stepCameraBlend(blend, railWrap, dt) {
+  return function stepCameraBlend(blend, railMotion, dt) {
     blend.t += dt * blend.play;
     if (blend.t < 0) blend.t = 0;
     const f = Math.min(blend.t / blend.dur, 1);
     const e = f * f * f * (f * (f * 6 - 15) + 10);
-    if (railWrap) railWrap.phase = e;
+    // The rail consumes the camera's exact eased clock for both ordinary
+    // clicks and cyclic wraps. Journey progress itself is already parked at
+    // the destination during a direct flight, so it cannot supply this phase.
+    if (railMotion) railMotion.phase = e;
+    /* Mission <-> Inspire is already an authored, reversible camera gesture.
+       An adjacent nav click must present that same route coordinate rather
+       than replacing it with the generic jump arc: the mushroom's apparent
+       acceleration on scroll is the arrival camera's dead-band + trap/az
+       easing, not a mesh clock. Publish the exact compositor coordinate so
+       every later frame reader can consume the same value. */
+    if (blend.routeFaithful) {
+      blend.presentedP = blend.routeFromP
+        + (blend.routeTargetP - blend.routeFromP) * e;
+      director.apply(blend.presentedP, dt);
+      guarded('lens', () => lens.setLookOverride(lens.lookOf(blend.presentedP)));
+      if (f >= 1) onEnd(true);
+      return;
+    }
     const cam = sceneApi.camera, ctl = sceneApi.controls;
     if (!director.owned) director.applyHeroPose();
     dstPos.copy(cam.position);

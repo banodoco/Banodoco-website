@@ -26,7 +26,9 @@
 // (p 0.260) to Connect rest (p 0.5230) — is now ONE analytic gesture,
 // approach() below, composed by the director exactly as it composes the
 // arrival (director.js: arrival | approach | keyed spline). All channels
-// ride the arrival's own trapezoid (RAMP 0.18, peak 1.22x mean):
+// ride the arrival's own trapezoid. Connect keeps the same shape with a
+// shorter 0.08 landing ramp, so its camera does not stop while the ground
+// lights are still completing their visible arrival:
 //
 //   az     INSPIRE.az (115 deg) -> the rest's 61.81, on azEase — trapezoid
 //          plus the same windowed orbit-breath the arrival carries, strictly
@@ -72,6 +74,7 @@
 // re-timing or inserting chapters never invalidates them (merge doc §5).
 import * as THREE from 'three';
 import { trapEase, azEase, quadBezier } from '../../lib/ease.js';
+import { CONNECT_APPROACH_RAMP } from '../../constants.js';
 import { INSPIRE } from '../inspire/camera.js';
 
 const DEG = Math.PI / 180;
@@ -372,8 +375,8 @@ const PIN2 = V(1.0, 1.40, -1.8);
  *  rest, 1 = the Connect rest); the composer maps global p over
  *  [restProgress('inspire') .. restProgress('connect')] onto u. */
 function approach(u, out) {
-  const e = azEase(u);
-  const m = trapEase(u);
+  const e = azEase(u, CONNECT_APPROACH_RAMP);
+  const m = trapEase(u, CONNECT_APPROACH_RAMP);
   const az = INSPIRE.az + (A1.az - INSPIRE.az) * e;
   const r = INSPIRE.r + (A1.r - INSPIRE.r) * m;
   const y = INSPIRE.y + (A1.y - INSPIRE.y) * m;

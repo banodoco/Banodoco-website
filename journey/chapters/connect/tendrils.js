@@ -257,6 +257,7 @@ function makeStrandMat(U) {
       uQuiet: U.uQuiet,           // brightness of a path BEFORE the light reaches it
       uQuietTier: U.uQuietTier,   // how far the quiet state flattens the tier contrast
       uRouteAmp: U.uRouteAmp,     // vec3: per-route brightness (hover lift / unrelated dim)
+      uAdosShift: U.uAdosShift,   // responsive ground-plane dodge for ADOS + its authored rays
       uHairAmp: U.uHairAmp,       // hairline fill brightness (mild dim while any hub is hot)
       uPulseHead: U.uPulseHead,   // vec3: travelling pulse head per route (route-along 0..1; -2 parked)
       uPulseAmp: U.uPulseAmp,     // vec3: pulse strengths
@@ -277,9 +278,10 @@ function makeStrandMat(U) {
     vertexShader: /* glsl */`
       attribute vec4 aA;   // along (global 0..1), routeAlong (0..1), route (0,1,2; 3 hairline; 4 continuation), tier (-1 hub convergence, 0 primary, 1 secondary, 2 hairline, 3 faded continuation)
       attribute vec4 aB;   // seed, bright, patch, litRoute (0,1,2 — WHICH FRONT lights this vertex; hairline inherits its parent primary's)
+      attribute float aAdosShiftW;
       uniform float uTime, uAmount, uQuiet, uQuietTier, uBase, uNear, uFar, uHairAmp, uSoft, uTipW;
       uniform vec3 uLit, uHead, uLitMax;
-      uniform vec3 uRouteAmp, uPulseHead, uPulseAmp;
+      uniform vec3 uRouteAmp, uPulseHead, uPulseAmp, uAdosShift;
       uniform float uExit;
       uniform vec4 uWell;
       uniform vec3 uColDeep, uColGold, uColHot;
@@ -287,7 +289,16 @@ function makeStrandMat(U) {
       void main() {
         float along = aA.x, rAlong = aA.y, route = aA.z, tier = aA.w;
         float seed = aB.x, bright = aB.y, pat = aB.z, litRoute = aB.w;
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vec3 placed = position;
+        // ADOS is the near, lower-left destination. Move its route as a
+        // coherent bend: only primary/secondary route geometry feathers from
+        // the planted stipe-side root. Hub/knot/continuation/hair/far-field
+        // geometry translates as one authored ADOS lighting field, matching
+        // its glints, particles and core rather than leaving a second origin.
+        if (litRoute < 0.5) {
+          placed += uAdosShift * aAdosShiftW;
+        }
+        vec4 mv = modelViewMatrix * vec4(placed, 1.0);
         float dist = length(mv.xyz);
 
         /* ---- the travelling light (the arrival) ----
@@ -349,7 +360,7 @@ function makeStrandMat(U) {
         float exit = uExit * (1.9 * nearBase - 0.55 * smoothstep(0.25, 0.7, along));
 
         /* ---- the copy brightness well (in-world calm zone, no overlays) ---- */
-        vec2 dw = position.xz - uWell.xy;
+        vec2 dw = placed.xz - uWell.xy;
         float well = 1.0 - uWell.z * exp(-dot(dw, dw) / (uWell.w * uWell.w));
 
         /* ---- distance shaping: near fade (lens through clean air) + far calm ---- */
@@ -405,6 +416,8 @@ function makePointMat(U, tex) {
     uniforms: {
       uTime: U.uTime, uAmount: U.uAmount, uLit: U.uLit, uQuiet: U.uQuiet,
       uLitMax: U.uLitMax,
+      uAdosShift: U.uAdosShift,
+      uAdosHubAlong: U.uAdosHubAlong,
       uSoft: { value: FRONT_SOFT },
       uPartAmp: U.uPartAmp,      // particle visibility gate (fully lit only)
       uMap: { value: tex },
@@ -419,12 +432,23 @@ function makePointMat(U, tex) {
       attribute vec4 aP;      // along, seed, kind, baseAlpha
       attribute float aR;     // lit route (0,1,2) — which front lights this point
       attribute float aLife;
-      uniform float uTime, uQuiet, uSize, uPartAmp, uSoft;
-      uniform vec3 uLit, uLitMax;
+      attribute float aAdosShiftW;
+      uniform float uTime, uQuiet, uSize, uPartAmp, uSoft, uAdosHubAlong;
+      uniform vec3 uLit, uLitMax, uAdosShift;
       varying vec2 vA;        // alpha, seed
       void main() {
         float along = aP.x, seed = aP.y, kind = aP.z, baseA = aP.w;
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vec3 placed = position;
+        if (aR < 0.5) {
+          // Drifting particles carry a live along coordinate; static glints
+          // carry a CPU-resolved field/route weight. Both therefore match the
+          // strand underneath on every animation frame, not only at rest.
+          float shiftW = kind > 0.5
+            ? smoothstep(0.12, 0.82, along / max(uAdosHubAlong, 0.0001))
+            : aAdosShiftW;
+          placed += uAdosShift * shiftW;
+        }
+        vec4 mv = modelViewMatrix * vec4(placed, 1.0);
         float dist = length(mv.xyz);
         // junction glints follow the strands: quiet until their OWN route's
         // light passes, then full. (Particles ride uPartAmp, which only opens
@@ -1112,6 +1136,30 @@ export function buildTendrils(group, U) {
   }   // close the far-field block
   }   // close the else (live-emission) block
 
+  /** Nearest authored ADOS primary coordinate for attachment weights. The
+   *  secondary branches reconnect to this curve; resolving their weight from
+   *  geometry keeps both ends welded to the same responsive bend without
+   *  repurposing rAlong (which owns the travelling pulse). */
+  const adosRoute = routes[0];
+  function adosRouteCoord(px, pz) {
+    let bestD2 = Infinity, bestF = 1;
+    for (let j = 1; j < adosRoute.poly.length; j++) {
+      const a = adosRoute.poly[j - 1], b = adosRoute.poly[j];
+      const dx = b.x - a.x, dz = b.z - a.z;
+      const d2 = dx * dx + dz * dz;
+      const q = d2 > 1e-8
+        ? Math.max(0, Math.min(1, ((px - a.x) * dx + (pz - a.z) * dz) / d2))
+        : 0;
+      const ex = px - (a.x + dx * q), ez = pz - (a.z + dz * q);
+      const here = ex * ex + ez * ez;
+      if (here < bestD2) {
+        bestD2 = here;
+        bestF = (adosRoute.arcs[j - 1] + Math.sqrt(d2) * q) / adosRoute.len;
+      }
+    }
+    return { d2: bestD2, f: bestF };
+  }
+
   /* ---- build the strand mesh ---- */
   const strandMat = makeStrandMat(U);
   let strandsGeo;
@@ -1122,6 +1170,30 @@ export function buildTendrils(group, U) {
     strandsGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
     strandsGeo.setAttribute('aA', new THREE.Float32BufferAttribute(sA, 4));
     strandsGeo.setAttribute('aB', new THREE.Float32BufferAttribute(sB, 4));
+  }
+  {
+    const position = strandsGeo.attributes.position;
+    const spec = strandsGeo.attributes.aA;
+    const light = strandsGeo.attributes.aB;
+    const shift = new Float32Array(position.count);
+    for (let i = 0; i < position.count; i++) {
+      if (light.getW(i) >= 0.5) continue;
+      const route = spec.getZ(i), tier = spec.getW(i);
+      if (route < 0.5 && tier >= -0.5 && tier < 0.5) {
+        // The primary's own authored route coordinate is exact and cheapest.
+        shift[i] = smooth01((spec.getY(i) - 0.12) / 0.70);
+      } else if (route < 0.5 && tier >= 0.5 && tier < 1.5) {
+        // A secondary may leave and reconnect: project each vertex back to
+        // the primary so both attachment points share its exact bend weight.
+        const q = adosRouteCoord(position.getX(i), position.getZ(i));
+        shift[i] = smooth01((q.f - 0.12) / 0.70);
+      } else {
+        // Hub/knot, continuations, near hair and far field are one translated
+        // ADOS lighting field, with no second stationary bloom underneath.
+        shift[i] = 1;
+      }
+    }
+    strandsGeo.setAttribute('aAdosShiftW', new THREE.BufferAttribute(shift, 1));
   }
   {
     const lines = new THREE.LineSegments(strandsGeo, strandMat);
@@ -1179,12 +1251,32 @@ export function buildTendrils(group, U) {
     const lifeArr = new Float32Array(gp.length / 3).fill(1);
     pointGeo.setAttribute('aLife', new THREE.BufferAttribute(lifeArr, 1));
   }
+  const nGlints = counts.glints;
+  /* Static glints share one Points draw with particles, but their baked data
+     predates the responsive dodge and contains no route-tier attribute. Build
+     a tiny runtime-only weight from the authored geometry: junction glints
+     within the primary corridor inherit its exact planted-root feather;
+     ADOS-owned hair/far-field glints translate with those full-shift layers.
+     The 0.22 world-unit corridor is below hairline fill's authored 0.25-unit
+     minimum offset, so the two classes are separated by construction. */
+  {
+    const position = pointGeo.attributes.position;
+    const litRoute = pointGeo.attributes.aR;
+    const shift = new Float32Array(position.count);
+    const CORRIDOR2 = 0.22 * 0.22;
+    for (let i = 0; i < nGlints; i++) {
+      if (litRoute.getX(i) >= 0.5) continue;
+      const px = position.getX(i), pz = position.getZ(i);
+      const q = adosRouteCoord(px, pz);
+      shift[i] = q.d2 <= CORRIDOR2 ? smooth01((q.f - 0.12) / 0.70) : 1;
+    }
+    pointGeo.setAttribute('aAdosShiftW', new THREE.BufferAttribute(shift, 1));
+  }
   const pointMat = makePointMat(U, glowTex);
   const points = new THREE.Points(pointGeo, pointMat);
   points.frustumCulled = false;
   group.add(points);
 
-  const nGlints = counts.glints;
   const posAttr = pointGeo.attributes.position;
   const pAttr = pointGeo.attributes.aP;
   const lifeAttr = pointGeo.attributes.aLife;

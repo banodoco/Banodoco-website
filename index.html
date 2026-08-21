@@ -60,7 +60,7 @@
 }
 </script>
 </head>
-<body class="scene-preparing">
+<body class="scene-preparing hero-entry-pending">
   <!-- M5 a11y: skip link, first focusable element on the page. The canvas
        is decorative-interactive (see #stage's aria-label below) and the
        three HUD callouts floating over it are page furniture, not content
@@ -129,24 +129,24 @@
            this tier back in step with the static one, whose logo has pointed
            at #/mission and acted as a home control since it shipped. -->
       <a class="logo" href="#/mission" aria-label="Banodoco"><i class="mark" aria-hidden="true"></i></a>
-      <div class="nav-cta">
-        <!-- 2RP left this row 2026-08-10 (Hannah: "remove it from the header,
-             leave it in the Inspire section") — the 2RP node in Inspire and
-             the site menu's outbound 2RP link are unaffected.
-             The word "Discord" became the Discord MARK 2026-08-11 (Hannah),
-             and later the same day an OUTLINE of it (Hannah: "excessively
-             dominant ... make it ELEGANT") — the same official path, simply
-             left UNFILLED and stroked; the disc it sat in is gone. Weight,
-             colour and states are in hero.css (.pill-ic). aria-label carries
-             the name the visible word used to; the svg is decorative to AT.
-             The destination was wired 2026-08-16: the invite banodoco.ai's own
-             header and footer use (src/lib/discord.ts). It is the SAME string
-             as the `discord` node's card link in content/content.js — the two
-             were "#" together and must move together, as that file's retired
-             TODO asked. -->
-        <a class="pill pill-ic" href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer" aria-label="Discord">
-          <svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
-        </a>
+    </nav>
+
+    <!-- First-paint twin of the journey rail. It is visual-only and inert;
+         the live component replaces it in-place as soon as the lightweight
+         journey module arrives. Keeping this tiny shell in the document lets
+         the navigation share the hero copy's actual entry animation instead
+         of appearing after chapter/GPU preparation. -->
+    <nav class="j-rail j-rail-preboot on" data-layout="mission" aria-hidden="true" inert>
+      <div class="j-rail-inner">
+        <ul class="j-rail-list">
+          <li class="j-rail-active-ring" aria-hidden="true"></li>
+          <li class="j-rail-slot now active" style="--glyph-r:240;--glyph-g:200;--glyph-b:119;--glyph-alpha:1;--glyph-scale:1.05;--glyph-glow:.34"><span class="j-rail-item"><span class="j-rail-mark"><svg class="j-sym j-sym-mission" viewBox="0 0 22 22" aria-hidden="true"><path d="M3.4 10.6 Q11 2.9 18.6 10.6"/><path d="M3.4 10.6 H18.6"/><path d="M9.8 10.6 V15.9 Q9.8 18.4 7.1 18.9"/><path d="M12.2 10.6 V15.9 Q12.2 18.4 14.9 18.9"/><path d="M2.2 18.9 H19.8"/></svg></span><span class="j-rail-name">Mission</span></span></li>
+          <li class="j-rail-slot" style="--glyph-r:202;--glyph-g:202;--glyph-b:198;--glyph-alpha:.72;--glyph-scale:1;--glyph-glow:.02"><span class="j-rail-item"><span class="j-rail-mark"><svg class="j-sym j-sym-inspire" viewBox="0 0 22 22" aria-hidden="true"><path d="M3.6 16.4 Q11 1.8 18.4 16.4"/><path d="M3.6 16.4 H18.4"/><circle cx="6.6" cy="10.4" r=".95"/><circle cx="4.8" cy="8.8" r=".82"/><circle cx="6.6" cy="7.4" r=".68"/><circle cx="4" cy="6" r=".7"/><circle cx="5.8" cy="4.2" r=".58"/></svg></span><span class="j-rail-name">Inspire</span></span></li>
+          <li class="j-rail-slot" style="--glyph-r:202;--glyph-g:202;--glyph-b:198;--glyph-alpha:.72;--glyph-scale:1;--glyph-glow:.02"><span class="j-rail-item"><span class="j-rail-mark"><svg class="j-sym j-sym-connect" viewBox="0 0 22 22" aria-hidden="true"><path d="M1.8 8.4 H20.2"/><path d="M1.6 14.2 L4.2 13.2 L9.6 17.2 L15.8 14.8 L20.4 17.6"/><path d="M15.8 14.8 L12.6 10"/><path d="M4.2 13.2 L6.8 9.6"/><circle cx="15.8" cy="14.8" r="1.2"/><circle cx="9.6" cy="17.2" r="1"/><circle cx="4.2" cy="13.2" r="1.15"/></svg></span><span class="j-rail-name">Connect</span></span></li>
+          <li class="j-rail-slot" style="--glyph-r:202;--glyph-g:202;--glyph-b:198;--glyph-alpha:.72;--glyph-scale:1;--glyph-glow:.02"><span class="j-rail-item"><span class="j-rail-mark"><svg class="j-sym j-sym-owned" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="3.6" r="1.35"/><path d="M11 3.6 L3.4 15.6"/><path d="M11 3.6 L8.2 17.8"/><path d="M11 3.6 L13.8 17.8"/><path d="M11 3.6 L18.6 15.6"/><circle cx="3.4" cy="15.6" r=".9"/><circle cx="8.2" cy="17.8" r="1.05"/><circle cx="13.8" cy="17.8" r="1.05"/><circle cx="18.6" cy="15.6" r=".9"/></svg></span><span class="j-rail-name">Ownership</span></span></li>
+          <li class="j-rail-slot" style="--glyph-r:202;--glyph-g:202;--glyph-b:198;--glyph-alpha:.72;--glyph-scale:1;--glyph-glow:.02"><span class="j-rail-item"><span class="j-rail-mark"><svg class="j-sym j-sym-final" viewBox="0 0 22 22" aria-hidden="true"><path d="M1.6 17.2 H20.4"/><path d="M8.2 11.4 Q12.4 6.2 16.6 11.4"/><path d="M8.2 11.4 H16.6"/><path d="M12.4 11.4 V17.2"/><path d="M2 13.8 Q4.8 10.6 7.6 13.8"/><path d="M4.8 13.8 V17.2"/><path d="M16.4 14.6 Q18.4 12.4 20.4 14.6"/><path d="M18.4 14.6 V17.2"/></svg></span><span class="j-rail-name">Purpose</span></span></li>
+        </ul>
+        <button class="j-rail-menu" type="button" tabindex="-1" aria-hidden="true"><span class="j-rail-mark"><svg class="j-sym j-sym-menu" viewBox="0 0 22 22" aria-hidden="true"><circle cx="4.2" cy="6.4" r=".85"/><path d="M7.6 6.4 H18.4"/><circle cx="4.2" cy="11" r=".85"/><path d="M7.6 11 H18.4"/><circle cx="4.2" cy="15.6" r=".85"/><path d="M7.6 15.6 H16.2"/></svg></span></button>
       </div>
     </nav>
 
@@ -164,15 +164,38 @@
            "the … ecosystem" (Hannah: two lines, not three — and it is two at
            1440x900, 1280x800 and 375x812). -->
       <p class="sub">Banodoco builds spaces, initiatives and tools for the open source AI art community.</p>
-      <!-- href is the NO-JS FALLBACK ONLY: journey.js binds this control and
-           calls preventDefault before navigating to Inspire in-scene (GB-1.1).
-           It was '#', which sent a pre-hydration or scripting-disabled click to
-           the top of the page — now it is the same deep link the INSPIRE
-           callout tag above uses, so the click means the same thing whether or
-           not the journey has loaded. -->
-      <a class="cta" href="#/inspire"><span class="cta-full">EXPLORE THE ECOSYSTEM</span><span class="cta-short">EXPLORE</span>&ensp;<span class="arr">&rarr;</span></a>
+      <!-- The journey navigator is injected directly beneath this copy after
+           boot. It replaces the old one-way Explore CTA with all five direct
+           chapter destinations; on later chapters the same landmark moves to
+           the lower-left corner rather than being duplicated. -->
     </div>
   </div>
+
+  <!-- COLD-LOAD ENTRY BARRIER. Linked stylesheets block this parser point, and
+       both the hero copy and all five preboot rail marks are now in the DOM.
+       Release their CSS animations in one rAF/style recalculation so neither
+       can acquire an earlier animation timeline. This deliberately does not
+       wait for main.js, the journey graph, WebGL or card fonts: the visible
+       shell is the readiness boundary. Reduced motion ignores the pending
+       class in CSS and is synchronously visible from first paint. -->
+  <script>
+    (() => {
+      const body = document.body;
+      const hero = document.querySelector('.ui .hero');
+      const rail = document.querySelector('.j-rail-preboot');
+      const ready = hero && rail && rail.querySelectorAll('.j-rail-slot').length === 5;
+      if (!ready) {
+        body.classList.remove('hero-entry-pending');
+        return;
+      }
+      requestAnimationFrame((timestamp) => {
+        body.dataset.heroEntryStart = timestamp.toFixed(2);
+        body.classList.remove('hero-entry-pending');
+        body.classList.add('hero-entry-ready');
+        performance.mark('hero-entry-start');
+      });
+    })();
+  </script>
 
 <script type="module" src="./main.js"></script>
 </body>

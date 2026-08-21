@@ -444,6 +444,13 @@ export const HANDHELD = {
 // rate rises ~39 -> ~42 deg/s; monotonicity is preserved (0.107 << 1.22).
 export const ORBIT_BREATH = { amp: 0.010, cycles: 1.7 };
 
+// Connect's ground lights keep travelling almost to the rest. Giving its
+// camera the shared 18%-of-leg landing ramp made the camera nearly stationary
+// for that whole finale, so the remaining light motion read as a scroll stall
+// followed by a roll-through. It keeps the same trapezoidal movement language,
+// but lands over only the final 8% of this leg.
+export const CONNECT_APPROACH_RAMP = 0.08;
+
 /* ------------------------------------------------------------------ */
 /* Seam crossings read as passing THROUGH something (W3-B, gap d)      */
 /* ------------------------------------------------------------------ */

@@ -40,6 +40,10 @@ The result is elegant when all of the following are true:
    catches, import-time timers, or accidental visitor-visible failure paths.
 8. A new contributor can change one subsystem without understanding unrelated
    closure state or silently changing another subsystem.
+9. One trace can follow a physical input sample through gesture identity,
+   controller decision, route progress, the frame's presented camera state, and
+   screen-space motion; a green endpoint alone cannot conceal disagreement
+   between those layers.
 
 Line count is a diagnostic, not the goal. A large geometry builder may remain
 large when splitting it would obscure construction order or seeded randomness.
@@ -61,16 +65,91 @@ Important foundations already exist:
 
 The remaining architectural centers are still substantial:
 
-- `journey/ui.js`: about 2,865 lines and several UI state machines;
+- `journey/ui.js`: about 3,044 lines and several UI state machines;
 - `organism/organism.js`: about 2,083 lines and incomplete runtime teardown;
 - `journey/chapters/owned/portraits.js`: about 2,253 lines;
-- `journey/journey.js`: about 1,466 lines and transition ownership;
+- `journey/journey.js`: about 1,553 lines and transition ownership;
+- `journey/rail.js`: about 1,790 lines and mixed page/journey/layout lifecycle;
+- `main.js`: about 1,269 lines and mixed page boot/layout/handoff ownership;
 - multiple chapter renderers remain above 1,000 lines.
 
 The current scanner score is not a trustworthy elegance baseline: its config is
 stale, browser/import-map entrypoints create false orphan findings, and
 subjective dimensions are unreviewed. Use evidence and acceptance gates during
 the work, then rescan and review at the end.
+
+### Reconciled execution baseline — 2026-08-20
+
+This reconciliation audited commit
+`16a16d8cafc9590f61fb3a6ac5de618d0e2db2d7` plus the complete staged,
+unstaged, and relevant untracked worktree immediately before these plan edits.
+There were no staged changes. The dirty tree contained the current content,
+hero/preboot rail, navigation, Mission/Inspire flight, scroll correction,
+Connect placement, UI/layout, CSS, static-fallback, focused-test, and capture changes, plus
+untracked `.DS_Store`, `.tmp-scroll-investigation/`, and this goal document.
+HEAD advanced from the initial `b3a2ecd1` audit snapshot only through the
+committed `DEPLOY.md` Railway-operations change; it was re-read and folded into
+F04 below. `journey/scroll.js` and `tools/scroll-touch-gates.mjs` also gained an
+uncommitted answered-wall restart correction and delayed-momentum-tail regression
+while the audit ran; the focused suite passed after both settled.
+Commit/push state is not code semantics: X00 must record the then-live tree
+again, and any later change supersedes this inventory without authorizing a
+restore.
+
+Status meanings: **DONE** requires the frozen work-order contract, focused proof,
+required independent review, and coordinator acceptance; **PARTIAL** means a
+useful seam or proof exists but the order is not closed; **REMAINING** means no
+qualifying implementation/proof exists; **REVALIDATE** means prior evidence must
+be rerun against protected concurrent behavior before it can be consumed. No
+order is DONE in this audit. Existing files alone are not completion evidence.
+
+| Work-order family | Reconciled status | Exact repository evidence and remaining contract |
+| --- | --- | --- |
+| X00 | REMAINING | No execution ledger or external patch journal exists; the untracked goal explicitly defers ledger creation until execution. Re-record all live dirty/untracked paths and their owners. |
+| Q01 / Q02 / Q03 / Q04 / Q05 | PARTIAL / PARTIAL / PARTIAL / REMAINING / REMAINING | `package.json:9-13` still couples browser smoke into `test`/`check`; `madge.webpack.cjs:3-11` has aliases but no query-normalizing/fail-on-skipped-local proof; `tools/browser-smoke.mjs:127-139,244-290` silently greens unavailable WebGL and combines touch+reduced motion; no durable warning/catch inventory exists; `tools/check.sh:84-100` still treats the named mobile fail-band as success and `tools/capture.py:847-850,896-904` writes `_check` beneath its output by default. |
+| P01 / C01 / C02 / C03 / C04 | REMAINING / PARTIAL / PARTIAL / REMAINING / PARTIAL | The smoke harness and current `tools/scroll-touch-gates.mjs`/`tools/test-chapter-entry.mjs` are foundations, and the dirty answered-wall restart now has a passing delayed-tail regression, but there is no fixed reference-environment record, separate live desktop/touch/reduced scenarios, fault-injected transition suite, deterministic resource/performance report, or late-loader portrait suite. The focused commands recorded below pass on this dirty tree; none proves the missing contracts. |
+| S01 / S02 | PARTIAL / PARTIAL | `journey/structure.js:4-51` centralizes values and indexes, but exports mutable objects and `validateJourneyStructure()` at `:57-122` validates only selected caller-supplied references, not all raw totals/bands/stops. `journey/structure.test.mjs:7-59` freezes useful route/copy/key values and passes, but not full symbol DOM/signatures or protected visible/menu ordering. Current `structure.js:24` still says `Owned` while protected `content/content.js` says `Ownership`; this must be reconciled as compatibility evidence, not normalized back. |
+| C05 / C06 / N01 | REMAINING / REMAINING / PARTIAL | Chapters still expose broad ad hoc shapes; `chapter-registry.js:22-41` retains module-global `preparedChapters`; `navigation.js:4-11` only normalizes a string and `chapter-interactions.js` still contains named Inspire/Connect/Owned branches. |
+| J01 / J02 / J03 | PARTIAL / PARTIAL / REMAINING | Camera blend, chapter-entry, and `frame-application.js` are real seams, but transition/hero/entry state remains in `journey.js`; the orchestrator still contains named focus branches around `journey.js:981-995`; `ui.js:214-215,807,1562-1575` still reads `window.journey` and private portraits. Current dirty route-faithful navigation is protected and must enter C01 before extraction. |
+| A02 / J04a–J04e / J05 / A05 / A05a | REMAINING | `state.js`, `scroll.js`, `ui.js`, `rail.js`, `dial.js`, registry, GPU preparation, and page handlers still install anonymous or non-detachable work; `scroll.js` still combines input classification, credit/wall policy, and route mapping; `journey.js:1361-1449` exposes no facade `dispose()`, and `main.js` singleton handlers have no installation-count proof. The new preboot/live rail adoption makes A02 a prerequisite, not completed work; A05 decides whether A05a is required before J01. |
+| R01 / R02 / R03 / R04 | PARTIAL / REMAINING / PARTIAL / PARTIAL | `organism/animation.js:4-48` owns a scheduler but returns no stop handle; intro acceleration owns recursive RAF/global clock mutation; organism/spores listeners remain attached; `organism/renderer.js` and portrait helper files are useful seams but do not compose idempotent resource or async cancellation. |
+| R05 / R06 / R07 / R08 | REMAINING | Connect/Inspire/Owned/Final facades and the module-global registry do not provide the frozen descriptor-wide disposal and two-instance proof. Existing isolated disposers (for example Final interaction/ring helpers) are partial leaves, not facade closure. |
+| U01a / U01b / U01c / U01d | REMAINING / PARTIAL / REMAINING / REMAINING | `cards/index.js:48-65` has an acyclic builder map, but `:67-112` still self-starts warming at import and mixes registry/icons/scheduling; `cards/discord.js:192-220,438-466` still self-starts fallback/live preparation and owns uncancelled idle/timer/fetch settlement. |
+| U02 / U03 / U04 / U05 / U06 | PARTIAL / REMAINING / PARTIAL / PARTIAL / REMAINING | `journey/ui/` contains useful DOM, gesture, arrival, live-region, and label leaves, while the state machines and listeners remain in the 3,044-line facade. Current `ui.js:1635-1655` and `journey/chapters/connect/index.js:502-517` independently measure/query the rail exclusion: U05 must create one policy owner and inject the result into Connect; no pass-through wrapper is warranted. |
+| O01 / O02 | PARTIAL / REMAINING | `organism/renderer.js`, `random.js`, `shaders.js`, and `performance.js` are foundations, but postprocessing/resource composition and cohesive seeded world-builders remain in `organism.js`; there is no byte/order/resource proof for extraction. |
+| H01 / H02 / H03 / H04 / H05 / H06 | REMAINING | `substrate.js`, `tendrils.js`, `ring.js`, `canopy.js`, `terrain.js`, and `clones.js` remain 1,082–1,842-line builders. No order has a frozen build/resource/runtime contract plus focused lifecycle, byte, capture, review, and acceptance evidence. H02 must consume the U05 rail-exclusion capability rather than preserve its current direct DOM query. |
+| A01 / A01a / A03 / A04 / A06 and conditionals | REMAINING | No post-lifecycle responsibility/state decision artifacts exist for portraits, Inspire, Final, or spores. Conditional extractions remain untriggered until those evidence-backed decisions; do not pre-create them. Scroll cohesion is decided earlier by A05/A05a. |
+| B01 / B02 / B03 / B04 / B05 | REMAINING | `main.js` still owns global failure handlers, responsive layout, early input, async prepare, preboot/live-rail adoption, and activation handoff. Current dirty `index.html`, `hero.css`, `main.js`, `rail.js`, `site.css`, and captures define protected user intent; B03/B04 must preserve, not redesign, it. The removed Explore CTA still has null-tolerant consumers in `main.js` and `journey.js`; B01 must classify them and B04/B05 may remove them only after the new rail handoff contract is frozen. |
+| F01 / F02 / F03 / F04 / F05 / F06 | PARTIAL / PARTIAL / PARTIAL / PARTIAL / REMAINING / REMAINING | Constants/symbol/route/tooling foundations exist, but competing exports/history remain; current symbol/content/static/preboot-SVG edits require compatibility fixtures; scanner evidence is stale; and the exact catch inventory above has not been classified or closed. Committed `DEPLOY.md:61-92` now advertises a manual `git add -A`/commit/push quick path alongside the earlier exact-path `tools/release.sh` contract; F04 must reconcile the executable truth and documentation without running either release path. |
+| G0 / G1 / G2 / G3 / G4 / G5 | REMAINING | No gate has the required ledger, package reviews, source-freeze served-closure hashes, required live scenarios, resource/performance report, RX verdict, and coordinator acceptance. |
+
+The dirty visual/behavior work is protected user intent, not evidence that an
+elegance order landed. In particular preserve the preboot-to-live rail handoff,
+horizontal rail/menu and hero choreography, route-faithful Mission/Inspire
+flight, copy/arrival behavior, rail collision/exclusion, Connect ADOS placement,
+current content/symbol/static ordering, and all five dirty capture bytes
+(including the large Owned desktop size change). Do not
+refresh, re-bless, or normalize those captures during this program.
+
+The untracked scroll-investigation briefs record a reported intermittent
+continued-travel/overshoot problem. The concurrent dirty answered-wall restart
+and delayed-tail test are protected corrective work, not elegance completion.
+X00 must coordinate ownership and C01 must independently validate the fixed
+case and reproduce or explicitly clear any remaining symptom before J01. Any
+remaining reproducible defect gets a separate root-approved corrective brief;
+it is not silently frozen as desired behavior or opportunistically fixed by
+structural extraction.
+
+Focused audit evidence on this dirty snapshot: `node
+journey/structure.test.mjs`, `node tools/scroll-touch-gates.mjs`, `node
+tools/test-chapter-entry.mjs`, and `node tools/test-static-content.mjs` all
+passed, as did `node --check` for `main.js`, `journey/journey.js`,
+`journey/ui.js`, `journey/rail.js`, `journey/chapter-registry.js`, and
+`organism/organism.js`. After the concurrent answered-wall restart and its
+delayed-momentum-tail case settled, `node tools/scroll-touch-gates.mjs` was
+re-run and all cases passed. Browser/WebGL,
+capture, and full suites were deliberately not run. These results are
+REVALIDATE inputs at X00/G0, not gate acceptance.
 
 ## Non-negotiable invariants
 
@@ -230,6 +309,9 @@ Acceptance:
 - each script has one clear contract and useful exit status;
 - absent Chromium/WebGL cannot create a false application green;
 - dependency analysis reports no skipped or unresolved production entrypoint;
+- every frozen capture fail-band is a real failure; a coordinator may classify
+  a documented environment exception, but it remains a non-pass that blocks
+  completion and release readiness;
 - no check rewrites source or generated artifacts.
 
 Estimate: 0.5–1 day.
@@ -274,10 +356,49 @@ Add behavior-level tests for:
 - hero entry/exit and the current sidebar/navigation effect;
 - direct navigation, aliases, wrap steering, cancellation, reversal, and
   natural versus forced landing;
-- camera-writer ordering and `dt = 0` placement;
+- raw wheel/touch delivery, physical or inferred gesture boundaries, arrival
+  walls, boot replay, stall attribution, and the rule that one physical gesture
+  may answer at most one new rest while two deliberate pulses may answer two;
+- delayed, long, and coalesced momentum tails; multiple events per frame;
+  RAF-before-event ordering; visible long frames; background resume; reversal;
+  exact touch contacts; and genuine rapid repeats;
+- camera-writer ordering, `dt = 0` placement, and one immutable per-frame
+  presentation snapshot shared by every downstream reader;
 - card/popover tiers, Escape dismissal, focus return, touch sheet thresholds,
   hover/focus parity, copy arrival, and reduced motion;
 - DOM/ARIA order without asserting internal module names.
+
+Freeze three narrow trace contracts during characterization:
+
+- factual input only:
+  `ScrollInputSample { sampleId, kind, sourcePhase, eventTs, deliveryTs,
+  deltaPx, contactId, visibilityEpoch, frameEpoch }`, where `sourcePhase` is a
+  raw event phase and never an inferred gesture boundary;
+- discriminated semantic decisions:
+  `ScrollDecision { type: 'gesture-start' | 'gesture-continue' | 'gesture-end'
+  | 'manual-takeover' | 'arrival' | 'retire', gestureId, causeSampleId,
+  reason, targetP, answeredP, routeP }`;
+- diagnostic telemetry only:
+  `ScrollTelemetry { sampleId, frameEpoch, stallDiscountMs, creditPxPerS,
+  surfacePx, displayedRate }`.
+
+Names may change in the root-authored interface, but the separation may not:
+samples record facts, decisions express semantic state changes, and heuristic
+telemetry cannot authorize a transition or become part of a public decision
+contract. Preserve a causal sample/decision trace rather than forcing a
+decision for every sample: every decision cites its causing
+sample or frame, while a sample may yield no decision and a frame decision may
+be trace-linked. Endpoint-only tests are insufficient; the trace must show why
+a tail was retained, retired, or classified as a new gesture.
+
+Characterize live behavior in three bounded environments: normal-motion desktop,
+touch/mobile including sheet thresholds, and live reduced motion. These run at
+gate seams, not in each implementation package. The normal desktop and touch
+scenarios must actually traverse consecutive rests and emit raw-event,
+event-to-frame, decision, route, presentation, and arrival traces. Record at
+least one real trackpad momentum-tail and deliberate two-pulse reference with
+browser/OS/input provenance; Playwright-generated wheel events alone cannot
+prove physical gesture identity.
 
 #### E1.2 — Rendering and lifecycle characterization
 
@@ -289,6 +410,15 @@ Record and test:
 - renderer memory/draw-call baselines and listener/RAF counts;
 - portrait deal atomicity and late image-load behavior;
 - repeated boot/prepare/dispose cycles.
+
+Also record deterministic composed-motion traces across every route segment:
+route gain, camera-pose derivative, and the screen projection of stable world
+landmarks. Exact traces must contain no unintended interior stop followed by
+re-acceleration and no direction reversal. In the supported live environment,
+record long tasks, RAF gaps, style/layout counts, and event-to-frame latency so
+application stalls cannot silently be reclassified as visitor pauses. Numeric
+trace contracts are deterministic; live frame-time thresholds remain soft and
+environment-specific rather than flaky screenshot-speed assertions.
 
 Store these measurements in a small report schema that records the supported
 browser, renderer, viewport, DPR, capture flags, and hardware/software renderer.
@@ -314,6 +444,11 @@ Make `structure.js` the validated boundary for chapter/node identity, route and
 copy-band ordering, segment totals, hotspot cardinality, navigation uniqueness,
 symbols, and aliases. Export frozen or defensive indexes. Remove validation that
 changes depending on optional caller-supplied reference subsets.
+
+Freeze the current protected visible navigation/menu/content ordering before
+choosing canonical values. The current `Ownership` label and menu ordering must
+not be overwritten by older schema text, and visible menu order must not be
+mistaken for seeded chapter/node build order.
 
 Validate raw manifest segment values and totals before route derivation. Do not
 rely on the current `route.js` console diagnostics as schema enforcement.
@@ -380,11 +515,23 @@ Two lanes can run in parallel after Wave 2.
 
 #### Lane A: journey transition and UI ownership
 
+Before extracting transition orchestration, complete E3.A4's state/scroll input
+slice, then immediately perform the execution runbook's A05 scroll-cohesion
+audit. Record a responsibility/state map for physical or inferred gesture
+classification, credit/arrival-wall policy, and pure pixel-to-route mapping. If
+those responsibilities still share mutable closure, execute the runbook's
+conditional A05a split before E3.A1. This ordering prevents a cleaner transition
+facade from merely depending on the existing temporal god object.
+
 ##### E3.A1 — Transition controller
 
 Extract direct jumps, wrap steering, cancellation, reversal, hero gates, camera
 blend ownership, and chapter-entry tickets into `transition-controller.js`.
-Inject clock/path/entry collaborators. Keep exact timing and formulas.
+Inject clock/path/entry collaborators. Consume semantic `gesture-start`,
+`manual-takeover`, and `arrival` decisions through the characterized scroll
+contract; the transition controller must not read raw timing heuristics such as
+`sinceInput`, gesture-credit counters, or `answeredAt`. Keep exact timing and
+formulas.
 
 Acceptance: endpoint, monotonic path, cancellation, reversal, rewind, natural
 landing, forced placement, and rapid navigation tests all pass.
@@ -397,8 +544,15 @@ Move camera composition, seam updates, chapter drives, lens focus, and UI
 projection into a pipeline whose order is declared once and tested with spies.
 Remove chapter-specific focus and portrait branches from the orchestrator.
 
+After the camera write, publish one immutable
+`FrameSnapshot { stateP, routeP, presentedP, cameraPose, transitionPhase, dt }`.
+Seams, chapters, lens, rail, hero, and UI consume that same snapshot rather than
+selecting independently among `p`, `travelP`, `frameP`, or mutable camera state.
+
 Acceptance: camera-before-reader order is executable; frame output and visual
-captures do not drift; `journey.js` becomes a boot/public compatibility facade.
+captures do not drift; fixed-`dt` traces prove monotonicity, reversal continuity,
+and landing reconciliation; `journey.js` becomes a boot/public compatibility
+facade.
 
 Estimate: 0.75–1 day.
 
@@ -415,10 +569,21 @@ Estimate: 0.5–1 day.
 
 ##### E3.A4 — Journey lifecycle owner
 
-Expose an idempotent journey-level `dispose()` that unregisters the journey
-animator, cancels detail/transition timers and pending `prepareGpu()` work,
-removes document listeners, disposes UI and chapter registry instances, and
-clears the compatibility global only when it still points to that instance.
+Treat journey disposal as an XHARD design family followed by five independently
+reviewable and rollback-safe implementation packages:
+
+1. state and scroll timers/listeners, including anonymous visibility/hash/input
+   ownership, a detachable input owner, and the characterized factual-sample →
+   semantic-decision boundary with diagnostic telemetry kept non-authoritative;
+2. UI and rail timers/listeners/backdrop ownership, after freezing the rail
+   page-versus-journey lifecycle decision;
+3. dial and chapter-owned global hooks;
+4. registry/preparation cancellation, including pending `prepareGpu()` work;
+5. facade generation, journey animator removal, compatibility-global cleanup,
+   and repeated recreation.
+
+The final facade exposes an idempotent journey-level `dispose()` that composes
+those five owners. No child package may silently absorb another child's state.
 
 Treat `main.js` error, rejection, skip-link, resize, keyboard, click, and boot
 timer handlers as explicit page-lifetime singleton infrastructure: they install
@@ -433,7 +598,7 @@ chapter entry. Journey-owned handlers do not accumulate; page-lifetime handlers
 remain singletons. No timer, listener, animator, async callback, or compatibility
 global may mutate the disposed journey instance.
 
-Estimate: 0.75–1 day.
+Estimate: 2–3 days across the five lifecycle packages and integration proof.
 
 #### Lane B: rendering lifecycle ownership
 
@@ -499,8 +664,19 @@ import-time timer with an explicit start/stop scheduler invoked at the same
 activation semantics intact. Give the UI/journey lifecycle owner the scheduler
 stop handle before asserting that destruction clears all timers.
 
+Treat Discord preparation as a separate lifecycle owner: its import-time idle
+work, timers, remote fetch, late settlement, and deactivation cancellation must
+be explicit and testable rather than hidden in module evaluation.
+
+The root-frozen caller contract is that the UI facade creates and synchronously
+starts one card-preparation lifecycle at the characterized boot epoch and owns
+its stop/dispose handle through `ui.destroy()`. J04e may release it only by
+cascading `ui.destroy()`; journey code must not reach into card internals, and
+card modules must never self-start during import.
+
 Acceptance: lazy build-once, warming order/timing, activate/deactivate
-idempotence, and cancellation-on-dispose tests pass.
+idempotence, Discord preparation/failure/late-settlement behavior, and
+cancellation-on-dispose tests pass.
 
 Estimate: 0.75–1.25 days across scheduler, registry, and icon-data packages.
 
@@ -511,7 +687,8 @@ Extract in this order, one package at a time:
 1. hotspot and hover-zone registry;
 2. popover/card disclosure controller;
 3. copy/arrival controller;
-4. projection/collision/layout engine;
+4. projection/collision/layout engine, including one rail-exclusion policy that
+   supplies an injected measured value to UI and Connect consumers;
 5. facade-owned `destroy()` that cascades through all UI collaborators.
 
 Keep `createUI`, current DOM construction, CSS hooks, timing constants, and
@@ -524,6 +701,12 @@ Acceptance after every extraction:
 - no listener or timer survives `destroy()`;
 - hero/sidebar/navigation captures remain at the current user-approved baseline;
 - no extracted module owns state that another module mutates directly.
+
+The layout contract publishes an immutable
+`RailExclusionSnapshot { revision, viewport, rect }`. Its owner performs a
+write → measure → publish pass once per invalidation. UI, Connect, and the H02
+runtime perform zero rail DOM queries or geometry reads during frame drive;
+fake counters prove this exactly before soft live-performance comparison.
 
 Estimate: 2–3 days total.
 
@@ -549,15 +732,15 @@ where those responsibilities genuinely exist:
 - materials and owned resources;
 - runtime update and disposal.
 
-Complete and verify one source package before starting another. Preserve
-placement ownership across files as an explicit data contract. Stop when the
-remaining file is cohesive, even if it is still long.
+Complete, review, capture, and accept one source package before the next renderer
+write begins. Preserve placement ownership across files as an explicit data
+contract. Stop when the remaining file is cohesive, even if it is still long.
 
 Acceptance: rebuild byte checks, focused lifecycle tests, performance counters,
 and captures pass after each individual source split.
 
-Estimate: 3–5 days total, parallelizable only when files and shared contracts do
-not overlap.
+Estimate: 3–5 days total. Read-only reconnaissance may parallelize across
+disjoint files; implementation, review, capture, and acceptance remain serial.
 
 #### E4.5 — Reduce `main.js` to a page bootstrap facade
 
@@ -567,7 +750,8 @@ After journey, UI, and scene lifecycle boundaries stabilize:
    responsive layout calculation, early-input buffer, intro transition, failure
    path, and lazy journey handoff;
 2. extract page-level failure reporting and singleton handler ownership;
-3. extract responsive hero/sidebar/rail layout behind an explicit owner;
+3. extract responsive hero/sidebar layout behind an explicit page-layout owner
+   that invalidates and consumes the sole U05 rail snapshot owner;
 4. extract boot-input buffering and intro/scene/journey handoff;
 5. leave `main.js` as the direct browser entry, composition, and compatibility
    facade.
@@ -575,6 +759,10 @@ After journey, UI, and scene lifecycle boundaries stabilize:
 The responsive-layout and handoff packages are XHARD. Preserve the user's
 current hero/sidebar hunks, entry/import-map behavior, handler installation
 count, early input, intro skip, fallback, prepare order, and all breakpoints.
+The responsive-layout package consumes the already accepted U05
+`RailExclusionSnapshot` as its parent contract. It may invalidate that sole
+snapshot owner after page-layout writes, but it may not measure rail geometry,
+publish a competing snapshot, or create another rail-layout authority.
 
 Acceptance: `main.js` coordinates page boot rather than implementing unrelated
 layout and lifecycle systems; approved hero/sidebar captures and all focused
@@ -582,19 +770,26 @@ handoff/lifecycle/browser tests pass.
 
 Estimate: 2–3 days.
 
-#### E4.6 — Prove residual portrait and rail cohesion
+#### E4.6 — Prove residual runtime cohesion
 
-After portrait lifecycle work, audit the remaining `portraits.js` against its
-intended geometry/material/runtime-coordinator responsibility. After the page
-layout map, audit `journey/rail.js` for page-versus-journey ownership. Record an
-evidence-backed cohesion exception when the remainder has one genuine owner; if
-not, insert one root-defined extraction package before the Wave 4 gate.
+Freeze `journey/rail.js` page-versus-journey lifecycle ownership before the E3.A4
+UI/rail teardown slice. After the relevant lifecycle work, independently audit:
 
-Acceptance: neither large file is accepted merely because it missed the earlier
-queue. Each is cohesive and documented or its remaining independent owner has
-been extracted and verified.
+- the remaining `portraits.js` geometry/material/runtime coordinator;
+- `journey/chapters/inspire/index.js`;
+- `journey/chapters/final/index.js`;
+- `organism/spores.js` after listener ownership moves.
 
-Estimate: 0.5–1.5 days depending on whether either audit triggers extraction.
+For each file, record an evidence-backed responsibility/state map and cohesion
+exception when it has one genuine owner. If unrelated owners remain, insert one
+root-defined extraction package with its own review and rollback seam before the
+Wave 4 gate.
+
+Acceptance: no large runtime is accepted merely because it missed the original
+queue. Each audited file is cohesive and documented or its remaining independent
+owner has been extracted and verified.
+
+Estimate: 1–3 days depending on conditional extractions.
 
 ### Wave 5 — Remove competing sources and prove the result
 
@@ -661,13 +856,16 @@ Safe parallel waves:
 
 - journey characterization and rendering characterization;
 - journey runtime ownership and rendering lifecycle ownership;
-- later, individual chapter renderer packages with disjoint source allowlists.
+- read-only reconnaissance for individual chapter renderers; their writes,
+  capture, and acceptance remain serialized for attribution.
 
 Unsafe parallel work:
 
 - two agents touching `journey/ui.js`, `journey/journey.js`, a shared contract,
   package scripts, or browser infrastructure;
 - any browser/WebGL run while another browser lane is active;
+- any source write while a browser/capture/performance gate owns a frozen served
+  dependency closure;
 - schema changes in parallel with consumers that depend on the old schema.
 
 ## Agent operating model
@@ -691,9 +889,10 @@ public-contract package and as batch reviewer for at most three related
 low-risk packages. Reviews that require reconstructing the architecture across
 several state machines are themselves XHARD: GPT-5.6 Sol reviews the
 root-authored canonical-contract, runtime/lifecycle, and visual/page designs
-before their named XHARD implementations, then a fresh Sol reviews the
-integrated results at G2, G3, G4, and G5. The runbook names these RX tasks and
-their downstream holds. All reviewers are advisory; the coordinator alone
+before their named XHARD implementations. A fresh Sol first validates the whole
+evidence foundation after G1, then fresh Sol reviewers assess the integrated
+results at G2, G3, G4, and G5. The runbook names these RX tasks and their
+downstream holds. All reviewers are advisory; the coordinator alone
 accepts work, resolves ownership, classifies regressions, and waives nothing by
 implication.
 
@@ -743,6 +942,9 @@ The elegance program is complete when:
   all cheap checks are deterministic and non-mutating;
 - live browser, visual, deterministic-byte, accessibility, input, fallback, and
   performance gates genuinely pass;
+- physical-input references, deterministic event/RAF replay, semantic gesture
+  decisions, immutable frame snapshots, composed-motion traces, and layout
+  invalidation counters agree across the G1, G3/G4, and G5 evidence;
 - an independent subjective review finds no high-confidence ownership,
   coupling, lifecycle, or contract defect;
 - residual large files are demonstrably cohesive and documented, not simply
@@ -750,8 +952,19 @@ The elegance program is complete when:
 
 ## Estimated scope
 
-Total: approximately 17–24 focused engineer-days plus access to a supported live
+Total: approximately 25–41 focused engineer-days plus access to a supported live
 WebGL browser environment. With two carefully isolated implementation lanes and
-one review lane, elapsed time is roughly 10–16 working days. The estimate assumes
+one review lane, elapsed time is roughly 15–26 working days. This range is the
+sum of the detailed package estimates and includes the likely conditional A05a
+scroll separation, the required XHARD design/gate reviews, and bounded
+integration evidence. The estimate assumes
 behavior-preserving extraction; any visual redesign or product change must be a
 separate program.
+
+The reconciliation does not reduce this estimate: the program was already
+written against the committed helper-module foundations, and none of the
+remaining orders has its full frozen contract, proof, review, and acceptance.
+The active UI work and recovered scroll incident add revalidation, narrow the
+J04a/A05/J01/J02 and U05/H02/B03 interfaces, and make the existing conditional
+A05a allowance likely. They do not justify another top-level abstraction package
+or a speculative contingency allowance.

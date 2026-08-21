@@ -695,6 +695,7 @@ function makeNodeStrandMat(baseColor, pulseColor, opts = {}) {
 /* ================================================================== */
 export function buildPortraitField({
   leg, contributors, substrate, palette: P, nodeCount = 48, exposure = 1,
+  photosEnabled = true,
 }) {
   const V3 = THREE.Vector3;
   const V = (x, y, z) => new V3(x, y, z);
@@ -1847,7 +1848,8 @@ export function buildPortraitField({
   }
 
   let disposed = false;
-  const photosReady = loadPortraitSprite().then((photos) => {
+  const photosReady = (photosEnabled ? loadPortraitSprite() : Promise.resolve(null)).then((photos) => {
+    if (!photos) return false;
     if (disposed) return false;
     photoSet = photos;
     // The nearest-node/large-source ranking retired with the mixed-resolution
@@ -1962,7 +1964,12 @@ export function buildPortraitField({
       if (disposed) return;
       prepareNext();
       if (renderer && renderer.initTexture && pending) {
-        for (const tex of [pending.bust, pending.photo, pending.photoHover]) {
+        /* Keep the 4096×1024 hover atlas lazy. Chromium's software WebGL path
+           can block indefinitely inside initTexture() for that one upload,
+           preventing journey.ready from ever publishing. The two resting
+           atlases are the visible remix path we need to warm at startup; the
+           hover-only texture is first sampled by an explicit pointer action. */
+        for (const tex of [pending.bust, pending.photo]) {
           if (tex) renderer.initTexture(tex);
         }
       }

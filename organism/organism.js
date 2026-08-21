@@ -320,6 +320,12 @@ function drawAttr(geo, n) {
 const pulseC = { value: new THREE.Vector3(0, 0, 0) };
 const pulseT = { value: 1e3 };
 const pulseP = { value: new THREE.Vector3(2.6, 0.33, 1.4) };
+// Connect's ADOS destination is staged over a deterministic hero-ground
+// junction.  Keep the displacement in one shared uniform so every ground
+// layer (web, node glow, beads and ribbons) deforms around that junction in
+// exactly the same frame. Geometries outside the ground group have no
+// aGroundAdosW attribute, so WebGL's default attribute value leaves them put.
+const groundAdosDelta = { value: new THREE.Vector3() };
 // Handle for setting an object's draw window whether its material is a
 // ShaderMaterial (uniforms live on the material) or a built-in one (uniforms
 // are grafted at compile time, so the shared object lives in userData).
@@ -339,14 +345,17 @@ function injectDraw(mat) {
     sh.uniforms.uPulseC = pulseC;
     sh.uniforms.uPulseT = pulseT;
     sh.uniforms.uPulseP = pulseP;
+    sh.uniforms.uGroundAdosDelta = groundAdosDelta;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>',
         '#include <common>\n' +
         'uniform float uProg;\nuniform vec2 uWin;\n' +
+        'uniform vec3 uGroundAdosDelta;\nattribute float aGroundAdosW;\n' +
         'attribute float aDraw;\nvarying float vDraw;\n' +
         PULSE_GLSL + 'varying float vPulse;')
       .replace('#include <begin_vertex>',
         '#include <begin_vertex>\n' +
+        'transformed += uGroundAdosDelta * aGroundAdosW;\n' +
         '{ float dp = clamp((uProg - uWin.x) / (uWin.y - uWin.x), 0.0, 1.0);\n' +
         '  float head = smoothstep(0.0, 0.012, dp - aDraw);\n' +
         '  float tip = smoothstep(0.03, 0.0, abs(dp - aDraw)) * smoothstep(0.0, 0.01, dp) * (1.0 - step(0.999, dp));\n' +
@@ -357,7 +366,7 @@ function injectDraw(mat) {
       .replace('#include <color_fragment>',
         '#include <color_fragment>\ndiffuseColor.rgb *= vDraw * vPulse;');
   };
-  mat.customProgramCacheKey = () => 'draw-injected';
+  mat.customProgramCacheKey = () => 'draw-injected-ground-ados';
 }
 
 // ---------- point cloud builder (per-point size + color, additive) ----------
@@ -382,6 +391,7 @@ function makePoints(positions, colors, sizes, opacity = 1.0, dists = null) {
       uPulseC: pulseC,
       uPulseT: pulseT,
       uPulseP: pulseP,
+      uGroundAdosDelta: groundAdosDelta,
       fogNear: { value: FOG_NEAR },
       fogFar: { value: FOG_FAR },
     },
@@ -390,17 +400,20 @@ function makePoints(positions, colors, sizes, opacity = 1.0, dists = null) {
       attribute float psize;
       attribute float pseed;
       attribute float pdist;
+      attribute float aGroundAdosW;
       varying vec3 vColor;
       varying float vShrink;
       varying float vTw;
       varying float vFogDepth;
       varying float vBlur;
       uniform float time;
+      uniform vec3 uGroundAdosDelta;
       ${DRAW_GLSL}
       ${PULSE_GLSL}
       void main() {
+        vec3 placed = position + uGroundAdosDelta * aGroundAdosW;
         vColor = color;
-        vDraw = drawAt(position);
+        vDraw = drawAt(placed);
         vTw = 0.85 + 0.15 * sin(time * 1.4 + pseed * 7.0);
         // energy pulses travel outward along the network from the mushroom
         if (pdist > 0.01) {
@@ -408,8 +421,8 @@ function makePoints(positions, colors, sizes, opacity = 1.0, dists = null) {
           vTw *= 1.0 + 0.45 * max(0.0, w) * max(0.0, w);
         }
         // a root tap answers here too: motes glint as the wave passes them
-        vTw *= pulseAt((modelMatrix * vec4(position, 1.0)).xyz);
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vTw *= pulseAt((modelMatrix * vec4(placed, 1.0)).xyz);
+        vec4 mv = modelViewMatrix * vec4(placed, 1.0);
         vFogDepth = -mv.z;
         // fake depth of field: outside the focal band, points grow soft and dim
         vBlur = clamp(abs(vFogDepth - 9.5) / 8.0, 0.0, 1.0);
@@ -1485,6 +1498,36 @@ ctx.groundGroup = groundGroup;
 
   // all floor beads in one cloud — they twinkle, pulse outward, and defocus
   groundGroup.add(makePoints(gbP, gbC, gbS, 0.95, gbD));
+
+  /* Connect / ADOS ground-junction attachment ---------------------------
+     The large polygonal star at this deterministic hub is part of the HERO
+     ground web, not Connect's tendril group. Moving only Connect therefore
+     left the brightest junction and its radiating lines behind. Give every
+     ground layer the same topology-neutral attachment weight: the complete
+     authored star (its spokes reach at most 1.4 world units) translates as a
+     unit, then the surrounding web feathers back over 1.35 units. This keeps
+     the route toward the mushroom planted without a seam or a second bloom.
+
+     The coordinates are the measured source hub in the seeded ground build,
+     not a screen-space screenshot guess. setGroundAdosTarget() below writes
+     one world delta for every attached layer. */
+  const GROUND_ADOS_NEXUS = new THREE.Vector3(6.14188814163208, 0, 2.3650221824645996);
+  const ATTACHED_RADIUS = 1.45;
+  const FEATHER_RADIUS = 2.80;
+  for (const child of groundGroup.children) {
+    const pos = child.geometry && child.geometry.getAttribute('position');
+    if (!pos) continue;
+    const weight = new Float32Array(pos.count);
+    for (let i = 0; i < pos.count; i++) {
+      const d = Math.hypot(pos.getX(i) - GROUND_ADOS_NEXUS.x,
+                           pos.getZ(i) - GROUND_ADOS_NEXUS.z);
+      let t = (d - ATTACHED_RADIUS) / (FEATHER_RADIUS - ATTACHED_RADIUS);
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      weight[i] = 1 - t * t * (3 - 2 * t);
+    }
+    child.geometry.setAttribute('aGroundAdosW', new THREE.BufferAttribute(weight, 1));
+  }
+  ctx.groundAdosNexus = GROUND_ADOS_NEXUS;
   // ------------------------------------------------------------------
   // THE RECEDING SIDE (2026-08-17, Hannah's Inspire balance pass; replaces
   // the same-day "counterweight part 2", which ADDED lower-right nodes and
@@ -2047,6 +2090,26 @@ return {
   /** Top-level scene-graph groups, for anything that wants to target one part of the specimen —
    *  e.g. a scroll-driven dive that moves the camera through `groups.ground` toward the roots. */
   groups: { mushroom, stem: stemGroup, sway: swayGroup, ground: groundGroup, spores: sporePts },
+  /** Place the hero ground's seeded ADOS junction at an x/z world target.
+   *  Passing null restores the undisturbed hero web. The local attachment
+   *  weights keep its full polygon/spokes together and feather only the
+   *  surrounding network back to its planted position. */
+  setGroundAdosTarget(world) {
+    if (!world || !ctx.groundAdosNexus) {
+      groundAdosDelta.value.set(0, 0, 0);
+      return;
+    }
+    groundAdosDelta.value.set(
+      world.x - ctx.groundAdosNexus.x,
+      0,
+      world.z - ctx.groundAdosNexus.z,
+    );
+  },
+  /** Read-only copy used by visual regression probes. */
+  groundAdosPlacement() {
+    const source = ctx.groundAdosNexus;
+    return source && source.clone().add(groundAdosDelta.value);
+  },
   /** Key measurements of the cap/stem geometry (world units), useful for framing a camera move
    *  against the specimen's actual shape rather than guessed constants. */
   consts: { CAP_Y, CAP_R },

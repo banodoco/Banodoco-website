@@ -594,6 +594,24 @@
     to   { opacity: 1; }
   }
 
+  /* COLD-LOAD ENTRY BARRIER. The hero copy and the preboot journey strip are
+     both real first-paint DOM, but CSS animation start times are attached when
+     each element enters the styled tree. On a cold parse those are independent
+     moments, and replacing the preboot shell can make that skew visible. Keep
+     both at their shared fade's first frame until index.html has parsed all
+     five icons, then removing one class instantiates every fade-on animation in
+     the same style recalculation. This is cold-load-only: later Mission returns
+     are inline/p-driven and never see hero-entry-pending. */
+  @media (prefers-reduced-motion: no-preference) {
+    body.hero-entry-pending h1 .hl,
+    body.hero-entry-pending .sub,
+    body.hero-entry-pending .cta,
+    body.hero-entry-pending .j-rail-preboot {
+      opacity: 0;
+      animation: none !important;
+    }
+  }
+
   /* --- HUD callouts: world-tracked annotations on the specimen ---
      idle: barely-there hairlines aligned to the anatomy.
      hover: the leader lights up node→label, the ring pulses, the

@@ -226,7 +226,7 @@ export const CONTENT = {
       sub: 'Banodoco brings together artists, builders, and shared knowledge to grow a living network for open-source AI art.',
     },
     owned: {
-      nav: 'Owned',
+      nav: 'Ownership',
       // LOCK OVERRIDE — Hannah, 2026-08-14: "the Owned section becomes 'Owned
       // by contributors'".
       //
@@ -505,7 +505,7 @@ export const CONTENT = {
       // title where there is room for it. Also the practical cure for the
       // phone-width chip wrapping its icon under a three-word label.
       label: 'Arca Gidan',
-      short: 'An open-source AI art competition.',
+      short: 'Open-source AI art competition',
       spotlight: {
         title: 'Arca Gidan Prize',
         // Both sentences are banodoco.ai's own Arca Gidan section copy, the
@@ -529,7 +529,7 @@ export const CONTENT = {
     artcompute: {
       chapter: 'inspire',
       label: 'ArtCompute',
-      short: 'Micro-grants for people pushing open models.',
+      short: 'Micro-grants for open research',
       spotlight: {
         title: 'ArtCompute',
         // First line is banodoco.ai's own ArtCompute card copy, verbatim
@@ -548,7 +548,10 @@ export const CONTENT = {
     tworp: {
       chapter: 'inspire',
       label: '2RP',
-      short: 'An art and tech publication. Coming soon.',
+      short: 'An art and tech publication',
+      // The "coming soon" promise as a sidebar badge (Hannah, 2026-08-20):
+      // a gold pill on the 2RP row instead of a second sentence in the line.
+      badge: 'Soon',
       spotlight: {
         title: '2RP',
         // Hannah, 2026-08-16, transcribed: "2RP should say that 2RP is an art
@@ -576,12 +579,30 @@ export const CONTENT = {
     },
 
     // --- Connect chapter: the three ground-network hubs (16-connect-ground-
-    // restage.md §2 — ADOS, Hivemind, Discord; `community` retired, with a
-    // legacy deep-link alias community -> discord in journey.js normaliseNode) ---
+    // restage.md §2 — Discord, ADOS, Hivemind (Discord first in the menu,
+    // Hannah 2026-08-20); `community` retired, with a legacy deep-link alias
+    // community -> discord in journey.js normaliseNode) ---
+    discord: {
+      chapter: 'connect',
+      label: 'Discord',
+      short: 'Where we build & create together',
+      card: {
+        title: 'Discord',
+        body: [
+          'The Discord is where the community actually lives, day to day.',
+          'Artists, engineers, and knowledge sharers, in one room — it is where the work gets shown, argued over, and picked up by someone else.',
+        ],
+        // The invite banodoco.ai itself uses — its footer, its header, and
+        // src/lib/discord.ts, which is the single constant all three read.
+        // MIRRORED in index.html's hero Discord pill; the two were '#' together
+        // and were wired together, as the retired TODO here asked.
+        link: { label: 'Join the Discord', href: 'https://discord.gg/NnFxGvx94b' },
+      },
+    },
     ados: {
       chapter: 'connect',
       label: 'ADOS',
-      short: 'Where online becomes in-person.',
+      short: 'Where online becomes in-person',
       card: {
         title: 'ADOS',
         // banodoco.ai's own ADOS section, both lines close to verbatim: "ADOS
@@ -600,7 +621,7 @@ export const CONTENT = {
     hivemind: {
       chapter: 'connect',
       label: 'Hivemind',
-      short: 'The ecosystem’s collective intelligence.',
+      short: 'Community’s collective intelligence',
       card: {
         title: 'Hivemind',
         // RESOLVED — Hannah supplied the source, 2026-08-16:
@@ -624,24 +645,6 @@ export const CONTENT = {
         link: { label: 'View on GitHub', href: 'https://github.com/banodoco/hivemind' },
       },
     },
-    discord: {
-      chapter: 'connect',
-      label: 'Discord',
-      short: 'The everyday door into the community.',
-      card: {
-        title: 'Discord',
-        body: [
-          'The Discord is where the community actually lives, day to day.',
-          'Artists, engineers, and knowledge sharers, in one room — it is where the work gets shown, argued over, and picked up by someone else.',
-        ],
-        // The invite banodoco.ai itself uses — its footer, its header, and
-        // src/lib/discord.ts, which is the single constant all three read.
-        // MIRRORED in index.html's hero Discord pill; the two were '#' together
-        // and were wired together, as the retired TODO here asked.
-        link: { label: 'Join the Discord', href: 'https://discord.gg/NnFxGvx94b' },
-      },
-    },
-
     // --- Owned chapter: three ownership pods (09-chapter-owned.md OW-3) ---
     // Pod explanatory states use the EXACT approved claims from the locked
     // copy table (13-content-ops.md, "Owned claims" row) — those strings stay
@@ -853,6 +856,6 @@ export const CONTENT = {
     ],
     // The detailed ownership statement now lives beside the Owned section's
     // dedicated page link; the panel footer is copyright only.
-    legal: '© 2026 Banodoco.',
+    legal: '© 2026 Banodoco',
   },
 };

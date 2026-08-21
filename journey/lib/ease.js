@@ -11,19 +11,21 @@ export function smooth01(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3
 
 export const RAMP = 0.18;
 
-export function trapEase(s) {
+export function trapEase(s, rampWidth = RAMP) {
   s = s < 0 ? 0 : s > 1 ? 1 : s;
-  const norm = 1 - RAMP;
-  const ramp = (u) => RAMP * (u * u * u - (u * u * u * u) / 2);   // integral of smoothstep
-  if (s < RAMP) return ramp(s / RAMP) / norm;
-  if (s > 1 - RAMP) return 1 - ramp((1 - s) / RAMP) / norm;
-  return (RAMP / 2 + (s - RAMP)) / norm;
+  const r = Math.max(1e-6, Math.min(0.499999, rampWidth));
+  const norm = 1 - r;
+  const ramp = (u) => r * (u * u * u - (u * u * u * u) / 2);   // integral of smoothstep
+  if (s < r) return ramp(s / r) / norm;
+  if (s > 1 - r) return 1 - ramp((1 - s) / r) / norm;
+  return (r / 2 + (s - r)) / norm;
 }
 
-export function azEase(s) {
+export function azEase(s, rampWidth = RAMP) {
   s = s < 0 ? 0 : s > 1 ? 1 : s;
-  const w = smooth01(s / RAMP) * smooth01((1 - s) / RAMP);
-  return trapEase(s)
+  const r = Math.max(1e-6, Math.min(0.499999, rampWidth));
+  const w = smooth01(s / r) * smooth01((1 - s) / r);
+  return trapEase(s, r)
     + ORBIT_BREATH.amp * Math.sin(2 * Math.PI * ORBIT_BREATH.cycles * s) * w;
 }
 

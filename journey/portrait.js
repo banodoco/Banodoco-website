@@ -146,8 +146,8 @@ const KEYS = [
   // PORTRAIT travel re-approach mid-leg while the landscape widened. The
   // back eases 1.60 -> 1.55 -> 1.62 between the two rests so portrait
   // subject-distance and fov grow monotonically with the landscape's; the
-  // tgtUp/tgtRight now lean a third of the way toward the re-composed
-  // Connect rest so the last 0.08 of the leg is a settle, not a lurch.
+  // tgtUp/tgtRight now lean toward the re-composed Connect rest so the last
+  // slice of the leg is a settle, not a second movement.
   // tgtUp 0.55 -> 0.30 with the 2026-08-05 eye lift: the landscape leg now
   // aims ~5-7 deg higher on its own, so the portrait field has to add
   // proportionally less to reach the same portrait composition (and to keep
@@ -161,8 +161,14 @@ const KEYS = [
   // no longer is. The mid-leg key keeps its authored position IN LEG TERMS —
   // 0.652 of the way from the Inspire rest to the Connect rest, exactly the
   // fraction (0.4315 - 0.26) / (0.5230 - 0.26) the shipped literal encoded.
+  // D24 (2026-08-21, repeated stall-then-roll report): D23 added an equal
+  // +0.80 eye/target truck only at the Connect rest. Because every field key
+  // has zero slope, the old 0.28/0.30 mid key made that new truck stop here,
+  // then accelerate through the visible ground-light intro. Carry the same
+  // +0.80 into this travel key: the approved rest stays byte-identical, pitch
+  // stays unchanged, and the reframe is distributed through one movement.
   { p: restProgress('inspire') + 0.652 * (restProgress('connect') - restProgress('inspire')),
-    back: 1.55, rise: 0.28, truck: 0, tgtUp: 0.30, tgtRight: -0.12, fov: 11 },
+    back: 1.55, rise: 1.08, truck: 0, tgtUp: 1.10, tgtRight: -0.12, fov: 11 },
 
   // CONNECT (rest restProgress('connect') — 0.5230 since the 2026-08-10 stop
   // move; ground panorama) — re-authored 2026-08-04 for the

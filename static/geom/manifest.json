@@ -928,7 +928,7 @@
     },
     "final": {
       "file": "final.bin",
-      "sha256": "f1d4f9d5db73a51e2468ab19fa5a27891d6b46a0e0cb4ac84952460e4978959b",
+      "sha256": "c9ababa77505a974d6c641462da5f4ad32d08618e9c6e1ffada910828aba454f",
       "keys": [
         {
           "key": "final/ringLines",
@@ -2628,7 +2628,7 @@
     },
     "connect": {
       "file": "connect.bin",
-      "sha256": "81dba6376fa1002ced9ca7e1ee4b6e865bb5cbfd488b19de401e3a82a08ec5e8",
+      "sha256": "cf610e19cd107a57d3928d875b78e03ab35aa8992ee95c31ddb409e959a9ce29",
       "keys": [
         {
           "key": "connect/strands",
@@ -2653,6 +2653,13 @@
               "byteOffset": 179928,
               "byteLength": 102816,
               "kind": "f32"
+            },
+            {
+              "name": "aAdosShiftW",
+              "itemSize": 1,
+              "byteOffset": 282744,
+              "byteLength": 25704,
+              "kind": "f32"
             }
           ]
         },
@@ -2662,28 +2669,35 @@
             {
               "name": "position",
               "itemSize": 3,
-              "byteOffset": 282744,
+              "byteOffset": 308448,
               "byteLength": 2232,
               "kind": "f32"
             },
             {
               "name": "aP",
               "itemSize": 4,
-              "byteOffset": 284976,
+              "byteOffset": 310680,
               "byteLength": 2976,
               "kind": "f32"
             },
             {
               "name": "aR",
               "itemSize": 1,
-              "byteOffset": 287952,
+              "byteOffset": 313656,
               "byteLength": 744,
               "kind": "f32"
             },
             {
               "name": "aLife",
               "itemSize": 1,
-              "byteOffset": 288696,
+              "byteOffset": 314400,
+              "byteLength": 744,
+              "kind": "f32"
+            },
+            {
+              "name": "aAdosShiftW",
+              "itemSize": 1,
+              "byteOffset": 315144,
               "byteLength": 744,
               "kind": "f32"
             }

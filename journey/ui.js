@@ -163,7 +163,7 @@ function bandOpacity(p, band) {
  *  camera, which is Hannah's "shuddering/shivering in place" (2026-08-12).
  *  Optional so an isolated harness can still construct the UI; without it the
  *  chips fall back to the jittering projection they had before. */
-export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
+export function createUI({ onNav, onOpen, onClose, isDetailOpen, project, rail: preparedRail = null }) {
   const projectStable = project
     ? (v) => project(v)                 // scene-owned, jitter-free
     : (v, cam) => v.project(cam);       // harness fallback: THREE's own
@@ -176,7 +176,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   // update from inside the one update() the frame loop already calls.
   // The hero's own <nav> — wordmark, 2RP, Discord — is no longer touched at
   // all by this module; the rail is a sibling landmark on <body>.
-  const rail = createRail({ onNav });
+  const rail = preparedRail || createRail({ onNav });
+  if (preparedRail && rail.setOnNav) rail.setOnNav(onNav);
 
   // The canvas is presentational: every word it carries also exists in the DOM
   // built by this module (PL-2.1 / PS-5.2). Set at journey boot rather than in
@@ -821,7 +822,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
    *  `labelOnHover` (optional) opts this node into the hover-only chip — see
    *  the LABEL POLICY note above; a chapter can set the same flag per node
    *  through its own `labelPolicy(id)`. */
-  function addHotspot({ id, chapter, label, world, labelOnHover, radius, reveal, revealDirect = false }) {
+  function addHotspot({ id, chapter, label, world, labelOnHover, radius, reveal,
+    revealDirect = false, revealScrub = false }) {
     const stagger = hotspots.filter(h => h.chapter === chapter).length;
     const btn = el('button', 'j-hot');
     btn.type = 'button';
@@ -878,6 +880,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       // the placement loop.
       reveal: typeof reveal === 'function' ? reveal : null,
       revealDirect: !!revealDirect,
+      // Connect keeps its 72% scene-readiness floor, but the visible portion
+      // above that floor is the scene gate itself rather than a second UI
+      // clock. Reverse scrubs therefore withdraw the marker in the same frame
+      // as its core instead of leaving a fading pill behind a moving node.
+      revealScrub: !!revealScrub,
       // ...and the band that close edge is read from, built once — the
       // placement loop runs per frame and COPY_BANDS never moves after load.
       revealBand: COPY_BANDS[chapter]
@@ -1379,6 +1386,8 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   const CARD_GAP = 16;
   /** Hard minimum from any viewport edge. */
   const CARD_MARGIN = 12;
+  /** Air around the persistent navigator, including its active-ring glow. */
+  const RAIL_EXCLUSION_PAD = 14;
   /** The card-specific words and contact filament run while `.j-card-enter`
    *  is set. The shared shell's shorter `.j-detail-enter` lifetime ends from
    *  its own animationend, independently of this 0.62 s filament window. */
@@ -1629,6 +1638,28 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   let cardAnchor = null;        // the hotspot whose node the card belongs to
   let cardEnterTimer = null;
 
+  /** The navigator is animated and responsive, so its exclusion zone must be
+   *  measured from the painted list rather than reconstructed from CSS
+   *  constants. Mission's under-copy layout is intentionally not reserved. */
+  function railExclusion(pad = RAIL_EXCLUSION_PAD) {
+    if (!rail.root || rail.root.dataset.layout !== 'chapter') return null;
+    const list = rail.root.querySelector('.j-rail-list');
+    if (!list) return null;
+    const r = list.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    return {
+      left: r.left - pad,
+      right: r.right + pad,
+      top: r.top - pad,
+      bottom: r.bottom + pad,
+    };
+  }
+
+  function rectHits(a, b) {
+    return !!b && a.right > b.left && a.left < b.right
+      && a.bottom > b.top && a.top < b.bottom;
+  }
+
   /** Where the card's subject is on screen this frame, and how big it draws.
    *  null when there is no anchor at all; `behind` when the node is on the
    *  far side of the lens, which is the one case with no honest direction to
@@ -1679,6 +1710,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     }
     const p = card.getBoundingClientRect();
     const vw = window.innerWidth, vh = window.innerHeight;
+    const railBox = railExclusion();
     const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
     const xCentred = clamp(a.x - p.width / 2, CARD_MARGIN,
       Math.max(CARD_MARGIN, vw - CARD_MARGIN - p.width));
@@ -1699,15 +1731,19 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     const belowY = a.y + a.r + CARD_GAP;
     const rightX = a.x + a.r + CARD_GAP;
     const leftX = a.x - a.r - CARD_GAP - p.width;
+    const fits = (x, y) => x >= CARD_MARGIN && y >= CARD_MARGIN
+      && x + p.width <= vw - CARD_MARGIN && y + p.height <= vh - CARD_MARGIN
+      && !rectHits({ left: x, right: x + p.width, top: y, bottom: y + p.height }, railBox);
+    const choices = [
+      ['right', rightX, yCentred],
+      ['left', leftX, yCentred],
+      ['above', xCentred, aboveY],
+      ['below', xCentred, belowY],
+    ];
+    const fit = choices.find(([, x0, y0]) => fits(x0, y0));
     let side, x, y;
-    if (rightX + p.width <= vw - CARD_MARGIN) {
-      side = 'right'; x = rightX; y = yCentred;
-    } else if (leftX >= CARD_MARGIN) {
-      side = 'left'; x = leftX; y = yCentred;
-    } else if (aboveY >= CARD_MARGIN) {
-      side = 'above'; x = xCentred; y = aboveY;
-    } else if (belowY + p.height <= vh - CARD_MARGIN) {
-      side = 'below'; x = xCentred; y = belowY;
+    if (fit) {
+      [side, x, y] = fit;
     } else {
       // Nowhere fits whole — a card taller than the room above AND below and
       // wider than the room either side. Take the roomier of above/below and
@@ -1718,6 +1754,14 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       x = xCentred;
       y = clamp(side === 'above' ? aboveY : belowY, CARD_MARGIN,
         Math.max(CARD_MARGIN, vh - CARD_MARGIN - p.height));
+      // Last-resort clamping still honours the chrome lane. Prefer lifting
+      // above it; if the card is too tall, move wholly to its right.
+      if (railBox && rectHits({ left: x, right: x + p.width, top: y, bottom: y + p.height }, railBox)) {
+        const lifted = railBox.top - CARD_GAP - p.height;
+        if (lifted >= CARD_MARGIN) y = lifted;
+        else x = Math.min(Math.max(railBox.right + CARD_GAP, CARD_MARGIN),
+          Math.max(CARD_MARGIN, vw - CARD_MARGIN - p.width));
+      }
     }
 
     card.dataset.side = side;
@@ -2165,10 +2209,11 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   let pSpeed = 0;             // smoothed |dp/dt|, p per second
 
   /* ---------------- the nav-jump copy entry (Hannah, 2026-08-07) ----------
-     A jump is invisible to everything above it. journey.js snaps progress in
-     one dt = 0 tick, so |dp/dt| never rises, `settled` reads 1, and the loop
-     below writes the destination's copy at full opacity on the click frame —
-     a whole second before the camera finishes arriving. That is the pop.
+     Route progress still snaps in one dt = 0 tick, but journey.js now passes
+     the camera flight's continuously presented progress as `travelP`, so the
+     ordinary scroll speed/settle rule below sees the flight. The dedicated
+     arrival envelope remains responsible for the destination copy's authored
+     lead and handoff; it is not a substitute travel clock.
 
      The fix is NOT a second opacity channel laid over the first. Two writers
      on one style is exactly how a jump ends up leaving a block half-faded by
@@ -2188,6 +2233,18 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   const easedPrev = { ...eased };
   let arrive = null;   // { id, t, lead, dur, own, started, motions }
   const arrivalMotion = createArrivalMotion({ blocks, reduceMotion });
+
+  // Ordinary click arrivals begin quietly over the final quarter of the
+  // camera's PRESENTED path, then hand to the normal speed/settle breathe.
+  // Both numbers are spatial-phase values, not wall-clock timing.
+  const FLIGHT_COPY_LEAD = 0.76;
+  const FLIGHT_COPY_LAND_OPACITY = 0.38;
+  const FLIGHT_HERO_LEAD = 0.64;
+  const FLIGHT_HERO_LAND_OPACITY = 0.74;
+  let directCopyFlight = null;
+  let directCopyId = null;
+  let directCopyFrom = 0;
+  let directCopyCarry = null; // { id, floor, atP } until scroll target catches it
 
   /* The block envelope already owns copy opacity. Giving the heading, body
      and action row their own opacity keyframes multiplies two fades together:
@@ -2210,6 +2267,32 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     arrivalMotion.clear(a);
   }
 
+  /** Keep the chapter copy's quiet line-rise on the same reversible value as
+   *  its scroll-authored block opacity. This is deliberately not an animation
+   *  clock: a stopped, reversed or interrupted journey freezes/retraces these
+   *  transforms with the opacity that is already on screen. The lead fractions
+   *  are the existing `.j-arrive` order (heading, sub, action); opacity remains
+   *  owned only by the block envelope, so the fades are never multiplied. */
+  const copyRiseNodes = new WeakMap();
+  function paintCopyRise(block, s) {
+    let stages = copyRiseNodes.get(block);
+    if (!stages) {
+      stages = [
+        [block.querySelector('.j-h'), 0.12],
+        [block.querySelector('.j-sub'), 0.26],
+        ...[...block.querySelectorAll('.j-act')].map((node) => [node, 0.40]),
+      ];
+      copyRiseNodes.set(block, stages);
+    }
+    for (const [node, lead] of stages) {
+      if (!node) continue;
+      const phase = smoothA((s - lead) / Math.max(1e-6, 1 - lead));
+      const rise = 0.16 * (1 - phase);
+      if (rise < 0.0005) node.style.removeProperty('transform');
+      else node.style.transform = `translateY(${rise.toFixed(4)}em)`;
+    }
+  }
+
   /** The one place a copy block's eased opacity reaches the DOM.
       (Until the 2026-08-09 navigation redux this multiplied the epilogue's
       block by `epilogueRetire` so it could hand the lower frame to the
@@ -2228,6 +2311,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     } else if (blocks[id]) {
       blocks[id].style.opacity = s;
       blocks[id].style.visibility = s > 0.002 ? 'visible' : 'hidden';
+      paintCopyRise(blocks[id], s);
       // A chapter's action pair is the only INTERACTIVE thing in the copy
       // layer, so it is the only thing for which "mostly faded out" is not
       // good enough. `visibility` above covers the last 0.2% of the fade; a
@@ -2324,7 +2408,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
   }
 
   function update(p, chapterId, camera, dt = 0,
-    { cameraStateDisagree = false, railWrap = null } = {}) {
+    {
+      cameraStateDisagree = false,
+      railWrap = null,
+      railFlight = null,
+      travelP = p,
+    } = {}) {
     // one-shot, on the first frame the chapter modules are reachable
     if (policyPending) resolveLabelPolicies();
     // A pinned popover makes journey.js report a detail open — it is route
@@ -2336,17 +2425,54 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     const modalDetail = detailNow && !popPinned;
     // The side navigator: reveal latch, resting symbol, current entry and the
     // tab-order state, all decided in one place (journey/rail.js).
-    rail.update(p, { modalDetail, cameraStateDisagree, railWrap });
+    rail.update(p, { modalDetail, cameraStateDisagree, railWrap, railFlight });
 
     if (dt > 0 && lastP !== null) {
-      pSpeed += (Math.abs(p - lastP) / dt - pSpeed) * Math.min(1, dt * 5);
-    } else if (dt === 0) {
-      pSpeed = 0;             // placed, not travelled
+      pSpeed += (Math.abs(travelP - lastP) / dt - pSpeed) * Math.min(1, dt * 5);
+    } else if (dt === 0 && !railFlight) {
+      // True placements have no travel. A direct click also performs two
+      // synchronous placement passes, but its railFlight already identifies
+      // the continuous coordinate that the next painted frame will resume;
+      // keep the live speed through an interruption instead of inventing a
+      // one-frame stop between two camera/rail flights.
+      pSpeed = 0;
     }
-    lastP = p;
+    lastP = travelP;
     // moving fast releases copy even inside its band; arriving slow lets it in
     const travelHold = 1 - smoothA((pSpeed - COPY_TRAVEL_LO) / (COPY_TRAVEL_HI - COPY_TRAVEL_LO));
     const settled = 1 - smoothA((pSpeed - COPY_SETTLE_LO) / (COPY_SETTLE_HI - COPY_SETTLE_LO));
+
+    /* Detect the authoritative ticket by identity. A replacement click gets
+       a fresh phase=0 ticket and captures the opacity already painted for its
+       new destination; nothing is reset in the click task. When an ordinary
+       flight lands, retain only its partial-opacity floor until the existing
+       scroll target rises to meet it. That prevents a lead-in from dipping
+       back out while pSpeed's settle tail decays. A Mission ticket means a
+       direct RETURN and gets the stronger hero curve below; boot has no
+       railFlight, so its authored entrance remains entirely untouched. */
+    if (railWrap) {
+      // The cyclic seam has its own reversible copy ticket. A carried floor
+      // from a preceding ordinary click must not hold the wrap's outgoing
+      // chapter above zero.
+      directCopyFlight = null;
+      directCopyId = null;
+      directCopyFrom = 0;
+      directCopyCarry = null;
+    } else if (railFlight && railFlight !== directCopyFlight) {
+      directCopyFlight = railFlight;
+      directCopyId = chapterId;
+      directCopyFrom = directCopyId ? eased[directCopyId] || 0 : 0;
+      directCopyCarry = null;
+    } else if (!railFlight && directCopyFlight) {
+      if (directCopyId) directCopyCarry = {
+        id: directCopyId,
+        floor: eased[directCopyId] || 0,
+        atP: travelP,
+      };
+      directCopyFlight = null;
+      directCopyId = null;
+      directCopyFrom = 0;
+    }
 
     // Advance the jump entry before the loop reads it. It dies on a placement
     // frame (a capture or deep link must still snap), and when the visitor has
@@ -2379,9 +2505,40 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     }
 
     for (const id in eased) {
-      const target = bandOpacity(p, COPY_BANDS[id]) * travelHold;
+      // `p` is parked at the destination during a direct click. `travelP` is
+      // the coordinate the camera and horizontal rail are actually presenting
+      // on this frame, and is identical to p for real scroll and placements.
+      // Reading the bands from it prevents destination copy from appearing on
+      // the click frame and gives click travel the exact same reversible
+      // release/settle choreography as scrolling.
+      const bandTarget = bandOpacity(travelP, COPY_BANDS[id]);
+      const scrollTarget = bandTarget * travelHold;
+      let target = scrollTarget;
+      if (directCopyCarry && directCopyCarry.id === id) {
+        // Hold only while still at the destination composition. Real travel
+        // away must restore the ordinary outgoing fade immediately—even while
+        // still inside Mission's wide fully-open band—rather than carrying
+        // this floor into another chapter.
+        if (Math.abs(travelP - directCopyCarry.atP) > 1e-5 || bandTarget < 0.995) {
+          directCopyCarry = null;
+        }
+        else {
+          target = Math.max(target, directCopyCarry.floor);
+          if (scrollTarget >= directCopyCarry.floor - 0.001) directCopyCarry = null;
+        }
+      }
       let s = eased[id];
-      if (arrive && arrive.own && id === arrive.id) s = target * arriveE;
+      if (railFlight && directCopyId === id) {
+        const phase = Math.max(0, Math.min(1, Number(railFlight.phase) || 0));
+        const isHeroReturn = id === 'mission';
+        const onset = isHeroReturn ? FLIGHT_HERO_LEAD : FLIGHT_COPY_LEAD;
+        const landOpacity = isHeroReturn
+          ? FLIGHT_HERO_LAND_OPACITY
+          : FLIGHT_COPY_LAND_OPACITY;
+        const lead = smoothA((phase - onset) / (1 - onset));
+        const landing = Math.max(directCopyFrom, landOpacity);
+        s = directCopyFrom + (landing - directCopyFrom) * lead;
+      } else if (arrive && arrive.own && id === arrive.id) s = target * arriveE;
       // a block the jump is LEAVING: released on the move's clock, but only
       // while it is still above where the scroll rule would have it — so this
       // can lower a block and never raise one, and a block whose band is
@@ -2389,7 +2546,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       // jump) is untouched.
       else if (arrive && arrive.own && arrive.from[id] > 0 &&
                arrive.from[id] * (1 - leaveE) > target) s = arrive.from[id] * (1 - leaveE);
-      else if (dt === 0) s = target;
+      // A real placement/capture snaps. A nav click also invokes two dt=0
+      // passes, but railFlight means the visible coordinate has not moved;
+      // preserve the opacity/transform already on screen through that task.
+      else if (dt === 0 && !railFlight) s = target;
       else if (target < s) s += (target - s) * Math.min(1, dt * COPY_OUT_K);
       else s += (target - s) * Math.min(1, dt * COPY_IN_K * settled);
       if (s < 0.001 && target === 0) s = 0;
@@ -2400,6 +2560,10 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
       if (dt > 0) easedPrev[id] = s;
       paintCopy(id, s);
     }
+    // Mission's section strip is part of the same composition as this copy.
+    // Drive its travel from the value that was actually painted above so the
+    // two leave and return as one gesture under scroll and direct navigation.
+    rail.setHeroEase(eased.mission);
 
     // hotspots: they belong to the RESTING composition, so they follow the
     // eased copy state (never the raw band), arrive AFTER the copy has
@@ -2431,6 +2595,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     // must read the SAME camera and the same projection scale the chips read
     // on this frame, through the same jitter-free projection.
     frameGeom = { camera, tanHalf, viewDepth };
+    const profileRailBox = railExclusion();
     /* Reserve collision space for a chapter's full scene-timed label set
        before its first label becomes visible. Without this, each later
        sibling joined the collision pass only when its own reveal crossed the
@@ -2463,7 +2628,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         : (eased[h.chapter] || 0);
       // Inspire's light envelope is authoritative for its annotation too.
       // Other scene-reveal chips (notably Connect) retain their shipped 72%
-      // threshold and independent arrival ease.
+      // threshold; Connect maps the remainder directly through revealScrub.
       let want = gate > (h.revealDirect ? 0 : 0.72) && !detail;
       const reserveLayout = reservedLabelChapters.has(h.chapter) && !h.labelOnHover;
       let w = (want || reserveLayout) ? h.world() : null;
@@ -2485,6 +2650,23 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         } else {
           sx = (v.x * 0.5 + 0.5) * window.innerWidth;
           sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
+          /* Owned's profile controls are face-sized invisible hit discs. A
+             disc under the persistent navigator is both unreachable and
+             misleading: the rail receives the pointer while the contributor
+             appears to answer underneath it. Reserve the navigator's actual
+             painted rectangle plus glow air and remove only colliding controls
+             from pointer, Tab and the a11y tree. The portraits remain part of
+             the scene; their profile UI comes back automatically as soon as
+             responsive projection clears the lane. */
+          if (h.chapter === 'owned' && h.radius && profileRailBox) {
+            const wr = h.radius() || 0;
+            const rr = wr > 0
+              ? wr * (window.innerHeight * 0.5) / (Math.max(0.05, viewDepth(w)) * tanHalf)
+              : 0;
+            const cx = Math.max(profileRailBox.left, Math.min(sx, profileRailBox.right));
+            const cy = Math.max(profileRailBox.top, Math.min(sy, profileRailBox.bottom));
+            if (rr > 0 && Math.hypot(sx - cx, sy - cy) < rr) w = null;
+          }
           // The chapter's editorial copy owns its area of the frame: a
           // hotspot that projects into it is suppressed rather than drawn on
           // top of the text. Hit model stays honest - a suppressed hotspot is
@@ -2493,7 +2675,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
           // the organism's ambient sway moves projections a few px per
           // second, and a single margin made borderline labels strobe.
           const cb = blocks[h.chapter];
-          if (cb && cb.style.visibility === 'visible') {
+          if (w && cb && cb.style.visibility === 'visible') {
             const r = cb.getBoundingClientRect();
             const m = h.sup ? 26 : 8;
             h.sup = sx > r.left - m && sx < r.right + m && sy > r.top - m && sy < r.bottom + m;
@@ -2550,6 +2732,12 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
           // Mirroring the source also keeps reverse scrubs truthful.
           h.armAt = null;
           h.a = gate;
+        } else if (h.revealScrub) {
+          // Preserve Connect's authored 72% readiness floor while making the
+          // marker above it a pure function of the same node-light envelope.
+          // No independent dt tail may outlive the core it annotates.
+          h.armAt = null;
+          h.a = smoothA(clamp01((gate - 0.72) / 0.28));
         } else {
           if (h.armAt === null) h.armAt = now + ((h.labelOnHover || h.reveal) ? 0 : h.stagger * HOTSPOT_STAGGER_MS);
           if (dt === 0) h.a = 1;
@@ -2557,7 +2745,7 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
         }
       } else {
         h.armAt = null;
-        if (h.revealDirect || dt === 0) h.a = 0;
+        if (h.revealDirect || h.revealScrub || dt === 0) h.a = 0;
         else { h.a += (0 - h.a) * Math.min(1, dt * HOTSPOT_OUT_K); if (h.a < 0.02) h.a = 0; }
       }
       if (h.layoutPlaceable) {
@@ -2844,6 +3032,9 @@ export function createUI({ onNav, onOpen, onClose, isDetailOpen, project }) {
     copyEase: (id) => eased[id] || 0,
     /** QA: the chapter whose copy is mid-entry, or null. */
     get arrivingChapter() { return arrive ? arrive.id : null; },
+    /** QA: the existing scroll-style smoothed |dp/dt| travel signal. Direct
+     *  clicks feed it their camera-phase coordinate, never parked route p. */
+    get travelSpeed() { return pSpeed; },
     get cardOpen() { return cardIsOpen; },
     /** QA: is that card COMMITTED (click / key / route), or a transient
      *  hover-and-focus reveal? — the card's half of `popPinned`. */

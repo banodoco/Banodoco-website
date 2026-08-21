@@ -245,7 +245,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      gold line-work. */
   .j-sym {
     display: block; width: 24px; height: 24px; overflow: visible;
-    transform: scaleX(var(--j-sym-flip, 1));
     filter: drop-shadow(0 0 1px rgba(9, 6, 2, 0.95)) drop-shadow(0 0 3px rgba(9, 6, 2, 0.6));
   }
   .j-sym path {
@@ -260,13 +259,6 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      than as outline drawings. */
   .j-sym circle { fill: currentColor; stroke: none; }
 
-  /* The Connect ground-network mark should face into the journey. Mirror only
-     that SVG in the live rail: the tile, reticle, label and menu copy keep
-     their authored orientation. */
-  .j-rail-slot[data-chapter="connect"] .j-rail-mark > .j-sym-connect {
-    --j-sym-flip: -1;
-    transform-origin: center;
-  }
   .j-rail-slot.j-rail-recycle .j-rail-mark > .j-sym {
     pointer-events: none;
   }
@@ -486,8 +478,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
      The keyframe BEGINS AND ENDS at the resting style — dashoffset 0, the
      drawn glyph — which is this file's contract for anything animated, and is
      why the reduced-motion path is a switch-off rather than a rewrite. rail.js
-     arms it after a 1s dwell (THE BUTTON SAYS IT IS A BUTTON) and drops the
-     class on animationend, so a fresh hover is what re-arms it. */
+     arms it on the first hover/focus frame and drops the class on
+     animationend, so a fresh arrival is what re-arms it. */
   @keyframes j-menu-rewrite {
     0%   { stroke-dashoffset: 0; }
     38%  { stroke-dashoffset: 8; }
@@ -544,7 +536,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     right: 0; top: 0; bottom: 0;
     z-index: 7;
     width: min(29rem, 92vw);
-    padding: 1rem 2.2rem 2.4rem;
+    padding: 1rem 2.2rem 1.8rem;
     overflow-y: auto;
     overscroll-behavior: contain;
     /* OPAQUE, deliberately. At 0.97 the hero's wordmark ghosted through the
@@ -574,7 +566,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     align-items: center;
     gap: 0.5rem;
     min-height: 44px;
-    margin: 0 0 1.15rem;
+    margin: 0 0 0.9rem;
   }
   .j-menu-close-zone {
     display: flex;
@@ -645,7 +637,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     display: flex;
     align-items: flex-start;
     gap: 1rem;
-    padding: 0.85rem 0.6rem 0.7rem 0;
+    padding: 0.62rem 0.6rem 0.55rem 0.5rem;
     color: var(--parchment);
     text-decoration: none;
     transition: color 0.3s, background 0.3s;
@@ -668,7 +660,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   }
   .j-menu-line {
     display: block;
-    margin-top: 0.3rem;
+    margin-top: 0.22rem;
     font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 1rem;
     line-height: 1.32;
@@ -681,20 +673,52 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
   .j-menu-item[aria-current="true"] .j-menu-no { color: var(--gold-bright); }
 
   /* ---- a section's contents: item — one sentence → primary link ----
-     Indented to the section text's own column (mark 22px + 1rem gap), so the
-     map reads as an outline: section, then what lives inside it. */
+     Indented to the section text's own column (0.5rem + mark 22px + 1rem
+     gap), so the map reads as an outline: section, then what lives inside
+     it. */
   .j-menu-sub {
     margin: 0;
-    padding: 0 0.6rem 0.9rem 2.4rem;
+    padding: 0 0.6rem 0.6rem 2.9rem;
     list-style: none;
   }
   .j-menu-row {
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.32rem;
     font-size: 0.8rem;
     line-height: 1.55;
     color: var(--muted);
   }
   .j-menu-row:last-child { margin-bottom: 0; }
+  /* The whole row is the link (2026-08-20). The tint runs edge-to-edge
+     across the sub's column: the negative margins reach into the list
+     padding and the padding cancels them, so the text never moves. The
+     hover treatment mirrors the section headers' — gold text over the same
+     warm tint. */
+  .j-menu-row-link {
+    display: block;
+    margin: 0 -0.35rem;
+    padding: 0.1rem 0.35rem;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: color 0.3s, background 0.3s;
+  }
+  .j-menu-row-link:is(:hover, :focus-visible) {
+    color: var(--gold-bright);
+    background: rgba(217, 164, 65, 0.05);
+  }
+  .j-menu-row-link:is(:hover, :focus-visible) .j-menu-il { color: var(--gold-bright); }
+  @keyframes j-arrow-nudge {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(2px); }
+  }
+  .j-menu-row-link:is(:hover, :focus-visible) .j-menu-ia,
+  .j-menu-owned:is(:hover, :focus-visible) .j-menu-ia { animation: j-arrow-nudge 1.2s ease-in-out infinite; }
+  /* the SOON badge breathes very gently while its row is hovered */
+  @keyframes j-badge-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  .j-menu-row-link:is(:hover, :focus-visible) .j-menu-badge { animation: j-badge-pulse 5s ease-in-out infinite; }
   .j-menu-il {
     display: inline-flex;
     align-items: center;
@@ -720,36 +744,53 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  .j-menu-il::after { content: " — "; color: rgba(201, 191, 168, 0.45); font-weight: 400; }
+  .j-menu-il::after { content: " \2014"; margin-right: 0.6em; color: rgba(201, 191, 168, 0.45); font-weight: 400; }
   .j-menu-ia {
-    margin-left: 0.45em;
+    display: inline-block;   /* transform (the hover nudge) needs a box */
+    margin-left: 0.65em;
     color: var(--gold-bright);
     text-decoration: none;
     white-space: nowrap;
-    border-bottom: 1px solid rgba(217, 164, 65, 0.4);
-    transition: border-color 0.3s;
   }
-  .j-menu-ia::after { content: " \2192"; }
-  .j-menu-ia:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
+  /* a minor status pill on a row (2RP's "Coming soon"): the same recipe as
+     the cards' accent badges — border accent/20, background accent/5,
+     colour accent/60 — in the site gold, sized for a 0.8rem row. */
+  .j-menu-badge {
+    display: inline-block;
+    margin-left: 0.5em;
+    padding: 0.1em 0.55em;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    vertical-align: 0.1em;
+    color: rgba(240, 200, 119, 0.65);
+    border: 1px solid rgba(217, 164, 65, 0.28);
+    border-radius: 999px;
+    background: rgba(217, 164, 65, 0.06);
+  }
 
   .j-menu-owned {
-    padding: 0 0.6rem 0.9rem 2.4rem;
+    display: block;
+    margin: 0 0 0.6rem -0.35rem;
+    padding: 0.45rem 0.6rem 0.6rem 3.25rem;
     font-size: 0.8rem;
     line-height: 1.55;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: 2px;
+    transition: color 0.3s, background 0.3s;
   }
+  .j-menu-owned:is(:hover, :focus-visible) {
+    color: var(--gold-bright);
+    background: rgba(217, 164, 65, 0.05);
+  }
+  .j-menu-owned:is(:hover, :focus-visible) .j-menu-owned-copy { color: var(--gold-bright); }
   .j-menu-owned-copy {
     margin: 0;
     color: var(--parchment);
     font-weight: 600;
   }
-  .j-menu-owned-more { margin: 0.25rem 0 0; color: var(--muted); }
-  .j-menu-owned-more a {
-    color: var(--gold-bright);
-    text-decoration: none;
-    border-bottom: 1px solid rgba(217, 164, 65, 0.45);
-    transition: border-color 0.3s;
-  }
-  .j-menu-owned-more a:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
 
   .j-menu-links {
     display: flex;
@@ -1987,9 +2028,8 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        side navigator's own tiles are 44px tall by construction (see
        .j-rail-item) and need nothing from this block. */
     .j-card-link, .j-pop-link { position: relative; }
-    .j-menu-links a, .j-menu-ia { position: relative; }
+    .j-menu-links a { position: relative; }
     .j-menu-links a::before,
-    .j-menu-ia::before,
     .j-hot::before,
     .j-card-x::before,
     .j-card-link::before,
@@ -2517,7 +2557,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     }
     .j-rail:not(.j-rail-column).j-rail-following
       .j-rail-slot.j-rail-recycle .j-rail-mark > .j-sym {
-      transform: translateY(var(--rail-recycle-y, 0px)) scaleX(var(--j-sym-flip, 1));
+      transform: translateY(var(--rail-recycle-y, 0px));
     }
     .j-rail:not(.j-rail-column).j-rail-between .j-rail-name {
       opacity: 0 !important;
@@ -2794,7 +2834,7 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        the thing it names is the thing the moon is drawn around.
 
        So it goes, and the affordance it was carrying is restated as motion
-       instead — see the dwell gesture on `.j-rail-menu .j-sym path` above.
+       instead — see the hover/focus gesture on `.j-rail-menu .j-sym path` above.
        `display: none` (not opacity) so it costs no box on a flank where the
        marks now place themselves against real neighbours, and so no rule
        further down can reveal an element that has no position of its own left.
@@ -2995,7 +3035,11 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     .j-rail, .j-rail-slot, .j-rail-item, .j-rail-name, .j-rail-menu,
     .j-rail-inner::before, .j-rail-inner::after, .j-rail-menu .j-sym path,
     .j-menu, .j-menu-scrim, .j-menu-x, .j-menu-item, .j-menu-mark,
-    .j-menu-links a, .j-menu-ia { transition: none; }
+    .j-menu-links a, .j-menu-ia, .j-menu-row-link, .j-menu-owned { transition: none; }
+    /* the row arrow's hover nudge is load-bearing motion — switch it off
+       whole under reduced motion (the panel already arrived instantly) */
+    .j-menu-row-link .j-menu-ia, .j-menu-owned .j-menu-ia { animation: none !important; }
+    .j-menu-row-link .j-menu-badge { animation: none !important; }
     /* the reticle's clockwise cascade is delay, not duration — kill both */
     .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck,
     .j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot.active .j-rck.tr,
@@ -3032,10 +3076,10 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
     }
     .j-rail-slot, .j-rail-menu { transition-delay: 0s; }
     .j-rail-slot.j-rail-recycle { --rail-recycle-y: 0px !important; }
-    /* The dwell gesture is switched off rather than shortened, on the same
+    /* The hover/focus gesture is switched off rather than shortened, on the same
        contract as everything above it: `j-menu-rewrite` ends at the drawn
        glyph, which is the button's resting state, so with the animation gone
-       the mark is simply already written. rail.js does not arm the timer under
+       the mark is simply already written. rail.js does not replay it under
        reduced motion either — this is the stylesheet holding its own end up,
        not a duplicate of that guard. */
     .j-rail-menu.j-rail-nudge .j-sym path { animation: none; }
@@ -3084,3 +3128,437 @@ body:not(.free-cam) #stage canvas:active { cursor: default; }
        (direct manipulation), the release does not animate. */
     .j-card.sheet { transition: none; }
   }
+
+/* ========================================================================
+   HORIZONTAL JOURNEY NAVIGATION — 2026-08-20
+
+   One five-link landmark has two placements: beneath Mission's copy, then at
+   the lower-left for every later chapter. These late rules deliberately retire
+   the old column/half-moon geometry at matching or greater specificity while
+   preserving the links, chapter state, menu dialog and focus model built by
+   rail.js.
+   ======================================================================== */
+.j-rail,
+.j-rail:not(.j-rail-column) {
+  position: fixed;
+  inset: auto;
+  z-index: 4;
+  display: block;
+  width: max-content;
+  height: auto;
+  padding: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+.j-rail.on,
+.j-rail:focus-within { opacity: 1; }
+.j-rail-preboot {
+  animation: fade-on 0.9s ease 0.15s both;
+}
+
+.j-rail[data-layout="mission"] {
+  left: 5.2vw;
+  top: calc(50% + clamp(10rem, 12.5vw, 11.5rem) + 14px);
+}
+.j-rail[data-layout="chapter"] {
+  left: 3.4rem;
+  bottom: 2.1rem;
+}
+
+.j-rail .j-rail-inner,
+.j-rail:not(.j-rail-column) .j-rail-inner {
+  position: relative;
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+.j-rail .j-rail-inner::before,
+.j-rail .j-rail-inner::after,
+.j-rail .j-rail-arc { display: none !important; }
+
+.j-rail .j-rail-list {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nav-gap, clamp(14px, 2.2vw, 32px));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transform: translate3d(var(--nav-x, 0px), var(--nav-y, 0px), 0);
+  transform-origin: left top;
+  will-change: transform;
+}
+.j-rail .j-rail-slot,
+.j-rail:not(.j-rail-column) .j-rail-slot,
+.j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-slot,
+.j-rail:not(.j-rail-column).j-rail-following .j-rail-slot {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  width: 48px;
+  height: 70px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: none !important;
+  transition: none;
+}
+/* The retired half-moon hid its single resting (`.now`) mark inside the menu
+   hub. The horizontal strip has no hub: its current mark is the first, visible
+   destination. Match that old rule's specificity here so Mission is present
+   in both the first-paint shell and the live rail that replaces it. */
+.j-rail:not(.j-rail-column) .j-rail-slot:is(.now, .active) {
+  opacity: 1;
+}
+.j-rail .j-rail-slot::before,
+.j-rail .j-rail-slot::after {
+  content: "";
+  position: absolute;
+  top: 23px;
+  left: calc(100% + 2px);
+  z-index: 0;
+  width: calc(var(--nav-gap, clamp(14px, 2.2vw, 32px)) - 4px);
+  border-top: 2px dotted rgba(217, 164, 65, 0.23);
+  pointer-events: none;
+}
+.j-rail .j-rail-slot::before {
+  z-index: 1;
+  width: var(--connector-fill, 0px);
+  border-color: rgba(230, 178, 82, 0.32);
+  filter: drop-shadow(0 0 2px rgba(255, 190, 90, 0.08));
+  overflow: hidden;
+}
+.j-rail .j-rail-slot:last-child::before,
+.j-rail .j-rail-slot:last-child::after { content: none; }
+
+/* This is the only full ring in the strip. Its warm near-black wash remains
+   translucent enough to belong to the scene rather than reading as a solid
+   button; the gold edge and glow, not the fill, carry the active state. */
+.j-rail .j-rail-active-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(244, 195, 96, 0.98);
+  border-radius: 50%;
+  background: rgba(7, 5, 2, 0.54);
+  box-shadow: 0 0 7px rgba(240, 190, 90, 0.52),
+              0 0 22px rgba(230, 175, 70, 0.2);
+  pointer-events: none;
+  transform: translate3d(var(--active-x, 0px), var(--active-y, 0px), 0)
+             scale(var(--nav-scale, 1));
+  transform-origin: center;
+  will-change: transform;
+}
+
+.j-rail .j-rail-item,
+.j-rail:not(.j-rail-column) .j-rail-item {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 48px;
+  height: 70px;
+  color: rgba(
+    var(--glyph-r, 202),
+    var(--glyph-g, 202),
+    var(--glyph-b, 198),
+    var(--glyph-alpha, 0.72)
+  );
+  text-decoration: none;
+  pointer-events: auto !important;
+  /* Colour is already a continuous, reversible function of the live rail
+     coordinate. The retired fan's 0.3s colour transition made that value
+     chase the ring a second time and visibly lag during click flights. */
+  transition: none;
+}
+.j-rail .j-rail-slot .j-rail-mark,
+.j-rail:not(.j-rail-column) .j-rail-slot .j-rail-mark,
+.j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+  .j-rail-slot .j-rail-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  transform: scale(var(--nav-scale, 1));
+  /* Do not transition inherited colour: the item above owns it directly from
+     journey progress. Keep the independent hover/focus surface treatments. */
+  transition: border-color 0.25s, background 0.25s,
+              box-shadow 0.25s, filter 0.25s;
+}
+.j-rail .j-rail-slot .j-sym {
+  --glyph-optical-x: 0px;
+  --glyph-optical-y: 0px;
+  width: 24px;
+  height: 24px;
+  opacity: 1;
+  filter: drop-shadow(0 0 2px rgba(9, 6, 2, 0.9))
+          drop-shadow(0 0 5px rgba(
+            var(--glyph-r, 202),
+            var(--glyph-g, 202),
+            var(--glyph-b, 198),
+            var(--glyph-glow, 0.02)
+          ));
+  transform: translate3d(
+               var(--glyph-optical-x),
+               var(--glyph-optical-y),
+               0
+             ) scale(var(--glyph-scale, 1)) !important;
+  transform-origin: center;
+  transition: none !important;
+}
+/* Optical, rather than mathematical, parity: the denser network marks need
+   slightly less canvas while the sparse skyline needs a touch more. Vertical
+   offsets center the PAINTED silhouettes, whose authored geometry is
+   intentionally asymmetric inside the shared 22-unit viewBox. */
+.j-rail .j-rail-slot .j-sym-mission {
+  --glyph-optical-y: -2px;
+  width: 23px;
+  height: 23px;
+}
+.j-rail .j-rail-slot .j-sym-inspire { width: 24px; height: 24px; }
+.j-rail .j-rail-slot .j-sym-connect {
+  --glyph-optical-y: -1px;
+  width: 24.5px;
+  height: 24.5px;
+}
+.j-rail .j-rail-slot .j-sym-owned { width: 22.5px; height: 22.5px; }
+.j-rail .j-rail-slot .j-sym-final {
+  --glyph-optical-x: -0.5px;
+  --glyph-optical-y: -2.5px;
+  width: 24.5px;
+  height: 24.5px;
+}
+/* The retired half-moon recycled one off-edge symbol by translating its SVG
+   vertically as chapter progress advanced. The horizontal strip keeps every
+   chapter in a permanent slot, so letting that legacy transform through made
+   a single icon visibly drop and wrap while the other four stayed put. Keep
+   the class/state bookkeeping harmless here while preserving Connect's
+   authored horizontal flip. */
+.j-rail:not(.j-rail-column).j-rail-following
+  .j-rail-slot.j-rail-recycle .j-rail-mark > .j-sym {
+  transform: translate3d(
+               var(--glyph-optical-x),
+               var(--glyph-optical-y),
+               0
+             ) scale(var(--glyph-scale, 1)) !important;
+}
+.j-rail .j-rail-slot:is(.now, .active) .j-rail-item,
+.j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+  .j-rail-slot:is(.now, .active) .j-rail-item {
+  color: rgba(
+    var(--glyph-r, 240),
+    var(--glyph-g, 200),
+    var(--glyph-b, 119),
+    var(--glyph-alpha, 1)
+  );
+}
+/* Final used to be a quieter "echo" in the retired side fan. In the
+   horizontal map it is a peer destination, so that old high-specificity fan
+   colour must not bypass the same continuous neutral-to-gold variables used
+   by every other glyph. */
+.j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+  .j-rail-slot.j-rail-echo:not(.now) .j-rail-item {
+  color: rgba(
+    var(--glyph-r, 202),
+    var(--glyph-g, 202),
+    var(--glyph-b, 198),
+    var(--glyph-alpha, 0.72)
+  );
+}
+.j-rail:is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+  .j-rail-slot.j-rail-echo:not(.now) .j-rail-item:is(:hover, :focus-visible) {
+  color: var(--gold-bright);
+}
+.j-rail .j-rail-slot:is(.now, .active) .j-rail-mark,
+.j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open)
+  .j-rail-slot:is(.now, .active) .j-rail-mark {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.j-rail .j-rail-item:is(:hover, :focus-visible) { color: var(--gold-bright); }
+.j-rail .j-rail-slot:not(.now):not(.active)
+  .j-rail-item:is(:hover, :focus-visible) .j-rail-mark {
+  border-color: rgba(240, 200, 119, 0.26);
+  background: rgba(217, 164, 65, 0.025);
+  box-shadow: 0 0 12px rgba(230, 175, 70, 0.08);
+}
+.j-rail .j-rail-ret { display: none; }
+
+.j-rail .j-rail-name,
+.j-rail:not(.j-rail-column) .j-rail-name {
+  --rail-label-spacing: 0.06em;
+  position: absolute;
+  top: 56px;
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  margin: 0;
+  padding: 0;
+  transform: translateX(-50%);
+  border-radius: 0;
+  background: none;
+  color: var(--parchment);
+  /* Retired half-moon hover/`.at` rules carry much higher specificity and
+     used to widen tracking while the label was visible, then snap it back on
+     dehover — perceived as a font change. Typography is invariant in the
+     horizontal navigator; only its reveal/surface treatment is stateful. */
+  font-family: Inter, -apple-system, system-ui, "Helvetica Neue", Arial, sans-serif !important;
+  font-style: normal !important;
+  font-weight: 600 !important;
+  font-size: 0.62rem !important;
+  line-height: 1 !important;
+  letter-spacing: var(--rail-label-spacing) !important;
+  text-shadow: 0 1px 7px rgba(5, 3, 1, 0.95);
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+.j-rail:not(.j-rail-column)
+  .j-rail-slot:is(.j-pill-up, .j-pill-dn) .j-rail-name {
+  top: 56px;
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
+}
+.j-rail[data-layout="mission"] .j-rail-slot:is(.now, .active) .j-rail-name {
+  color: var(--gold-bright);
+}
+.j-rail .j-rail-item:is(:hover, :focus-visible) .j-rail-name {
+  opacity: 1 !important;
+}
+.j-rail[data-layout="chapter"] .j-rail-name {
+  --rail-label-spacing: 0.12em;
+  top: auto;
+  bottom: 100%;
+  margin-bottom: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 2px;
+  background: rgba(9, 6, 2, 0.88);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.j-rail[data-layout="chapter"]
+  .j-rail-slot:is(.j-pill-up, .j-pill-dn) .j-rail-name {
+  top: auto;
+  bottom: 100%;
+  margin: 0 0 0.45rem;
+}
+.j-rail[data-layout="chapter"] .j-rail-item:is(:hover, :focus-visible) .j-rail-name {
+  opacity: 1 !important;
+}
+
+/* The site-menu control is visually independent of the section strip. Its
+   DOM remains inside the same nav so the existing dialog ownership, inert
+   state and focus return stay unchanged. */
+.j-rail .j-rail-menu,
+.j-rail:not(.j-rail-column) .j-rail-menu,
+.j-rail:not(.j-rail-column):is(.j-rail-hot, :has(:focus-visible), .j-rail-open) .j-rail-menu {
+  position: fixed;
+  top: 2.1rem;
+  right: 3.4rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(217, 164, 65, 0.82);
+  border-radius: 50%;
+  background: rgba(9, 6, 2, 0.2);
+  color: rgba(230, 189, 110, 0.92);
+  opacity: 1;
+  pointer-events: auto !important;
+  transform: none;
+  transition: color 0.25s, border-color 0.25s, background 0.25s,
+              box-shadow 0.25s;
+}
+.j-rail .j-rail-menu::before,
+.j-rail .j-rail-menu::after { display: none; }
+.j-rail .j-rail-menu .j-rail-mark,
+.j-rail:not(.j-rail-column) .j-rail-menu .j-rail-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.j-rail .j-rail-menu .j-sym,
+.j-rail:not(.j-rail-column) .j-rail-menu .j-sym {
+  width: 21px;
+  height: 21px;
+}
+.j-rail .j-rail-menu .j-sym-menu {
+  transform: translateX(0.5px);
+  transform-origin: center;
+}
+.j-rail .j-rail-menu .j-rail-name { display: none; }
+.j-rail .j-rail-menu:is(:hover, :focus-visible) {
+  color: var(--gold-bright);
+  border-color: var(--gold-bright);
+  background: rgba(217, 164, 65, 0.065);
+  box-shadow: 0 0 22px rgba(230, 175, 70, 0.2);
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .j-rail[data-layout="mission"] {
+    --nav-gap: clamp(10px, 3vw, 24px);
+    left: 6vw;
+    top: calc(4vh + 25rem + 14px);
+  }
+  .j-rail[data-layout="chapter"] { left: 6vw; bottom: 1.35rem; }
+}
+
+@media (max-width: 620px) and (orientation: portrait) {
+  .j-rail[data-layout="mission"] {
+    --nav-gap: max(10px, calc((88vw - 240px) / 4));
+    left: 6vw;
+    top: calc(7vh + 20.5rem + 14px);
+  }
+  .j-rail .j-rail-menu,
+  .j-rail:not(.j-rail-column) .j-rail-menu {
+    top: 1.3rem;
+    right: 6vw;
+    width: 44px;
+    height: 44px;
+  }
+  .j-rail .j-rail-menu .j-rail-mark,
+  .j-rail:not(.j-rail-column) .j-rail-menu .j-rail-mark,
+  .j-rail .j-rail-menu .j-sym,
+  .j-rail:not(.j-rail-column) .j-rail-menu .j-sym {
+    width: 20px;
+    height: 20px;
+  }
+  .j-rail .j-rail-menu .j-sym-menu { transform: none; }
+
+  /* The old side-fan treatment dimmed chapter content whenever its expanded
+     state was latched. The replacement strip is deliberately always present,
+     so that class no longer means that content is occluded. */
+  body.j-rail-on .j-copy,
+  body.j-rail-on .j-hotspots { opacity: 1; }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .j-rail,
+  .j-rail .j-rail-mark,
+  .j-rail .j-rail-name,
+  .j-rail .j-rail-menu { transition: none !important; }
+}

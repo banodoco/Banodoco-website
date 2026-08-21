@@ -223,6 +223,16 @@ const FIRST_OUTSIDE_P = CHAPTERS[1] ? startOf(CHAPTERS[1].id) : SHOW_P;
    PATH there. */
 const N = CHAPTERS.length;
 const RAIL_RESTS = CHAPTERS.map(c => restProgress(c.id));
+/* The horizontal map speaks status through colour, continuously: future is a
+   legible neutral grey, completed chapters are a slightly brighter warm grey,
+   and proximity blends either base into the one gold arrival. Keeping these
+   values here also lets the live rail start in the exact state authored by
+   the first-paint shell in index.html. */
+const GLYPH_COLOURS = Object.freeze({
+  future: Object.freeze({ rgb: [202, 202, 198], alpha: 0.72 }),
+  past: Object.freeze({ rgb: [222, 219, 210], alpha: 0.84 }),
+  active: Object.freeze({ rgb: [240, 200, 119], alpha: 1 }),
+});
 /* The arc the marks inhabit. 180deg is the half moon itself, and it is the
    number the whole geometry is derived from: the pitch, the radius and the
    fact that the extreme marks land on the button's own x are all consequences
@@ -393,6 +403,7 @@ function reticle() {
 }
 
 export function createRail({ onNav } = {}) {
+  let navigate = typeof onNav === 'function' ? onNav : () => {};
   // Navigation iteration: make the rail the hero's persistent navigation
   // surface instead of revealing it only after the first chapter departure.
   const ALWAYS_OPEN = true;
@@ -411,6 +422,8 @@ export function createRail({ onNav } = {}) {
   // (2RP left that row 2026-08-10; the Inspire node keeps it).
   const root = el('nav', 'j-rail');
   root.setAttribute('aria-label', 'Journey sections');
+  root.dataset.layout = 'mission';
+  const logoMark = document.querySelector('.logo .mark');
   // The fan geometry: every slot's position is (--i - --cur) tiles from the
   // anchor, so the whole choreography lives in the stylesheet and JS only
   // states where the visitor is.
@@ -430,6 +443,13 @@ export function createRail({ onNav } = {}) {
 
   const list = el('ul', 'j-rail-list');
   inner.appendChild(list);
+
+  // One ring follows the continuous journey coordinate. Keeping it separate
+  // from the links prevents chapter-state class changes from flashing or
+  // restarting an animation mid-scrub.
+  const activeRing = el('li', 'j-rail-active-ring');
+  activeRing.setAttribute('aria-hidden', 'true');
+  list.appendChild(activeRing);
 
   /* ---- THE MOON ITSELF, and it DRAWS -----------------------------------
      "It's just like the half moon kind of forms around it."
@@ -477,31 +497,35 @@ export function createRail({ onNav } = {}) {
     const li = el('li', 'j-rail-slot');
     li.dataset.chapter = c.id;
     li.style.setProperty('--i', String(i));
+    const initialColour = i === 0 ? GLYPH_COLOURS.active : GLYPH_COLOURS.future;
+    li.style.setProperty('--glyph-r', String(initialColour.rgb[0]));
+    li.style.setProperty('--glyph-g', String(initialColour.rgb[1]));
+    li.style.setProperty('--glyph-b', String(initialColour.rgb[2]));
+    li.style.setProperty('--glyph-alpha', String(initialColour.alpha));
+    li.style.setProperty('--glyph-scale', i === 0 ? '1.05' : '1');
+    li.style.setProperty('--glyph-glow', i === 0 ? '0.34' : '0.02');
 
     // Every slot is a real link: every chapter has a route, and a tile a
     // pointer can reach must be a tile a pointer can press (THE EPILOGUE).
     const item = el('a', 'j-rail-item');
     item.href = `#/${c.id}`;
     item.dataset.chapter = c.id;
+    // createRail() is mounted before the journey's first update. Match the
+    // preboot shell's Mission state at construction time so replacing that
+    // shell cannot briefly drop its gold current-state halo. update() remains
+    // the authority as soon as progress exists and will move both classes and
+    // aria-current together for every later chapter.
+    if (c.id === 'mission') {
+      li.classList.add('now', 'active');
+      item.setAttribute('aria-current', 'true');
+    }
     // Collapse the TOUCH state only: a second tap acted, the arming is spent.
     // The hover fan deliberately stays — the pointer is still on the control,
     // and it folds on pointer-leave (Hannah, 2026-08-09: close on de-hover,
     // not on click-elsewhere).
     item.addEventListener('click', (e) => {
       e.preventDefault();
-      // The touch second tap is the one that acts (see the pointerdown
-      // arming below); `touchOpen` is still true at this moment, so it is
-      // the per-interaction touch signal without a pointerType on click.
-      const viaTouch = touchOpen;
-      collapseTouch();
-      onNav(c.id);
-      // A touch tap leaves focus on the tile it travelled with, and the
-      // rail's expanded state keys on :has(:focus-visible) — on devices
-      // where a tapped link matches :focus-visible (Android), the fan and
-      // the name pill persist after arrival even though the arming is
-      // spent. Drop focus on the touch second tap only: keyboard
-      // activation keeps its focus and the deliberate focus-fan.
-      if (viaTouch && document.activeElement === item) item.blur();
+      navigate(c.id);
     });
     links[c.id] = item;
     // The nav-less chapter keeps the echo's quieter voice, as a style only.
@@ -511,8 +535,9 @@ export function createRail({ onNav } = {}) {
     mark.appendChild(buildSymbol(c.id));
     mark.appendChild(reticle());
     item.appendChild(mark);
-    item.appendChild(el('span', 'j-rail-name',
-      (CONTENT.chapters[c.id] || {}).nav || c.nav || 'Purpose'));
+    item.appendChild(el('span', 'j-rail-name', c.id === 'mission'
+      ? 'Mission'
+      : (CONTENT.chapters[c.id] || {}).nav || c.nav || 'Purpose'));
 
     li.appendChild(item);
     list.appendChild(li);
@@ -612,7 +637,7 @@ export function createRail({ onNav } = {}) {
       .filter(([, n]) => n.chapter === chapterId)
       .map(([id, n]) => {
         const d = n.spotlight || n.card || {};
-        return { id, label: n.label, short: n.short || '', link: d.link || null };
+        return { id, label: n.label, short: n.short || '', badge: n.badge || '', link: d.link || null };
       });
   }
 
@@ -638,7 +663,7 @@ export function createRail({ onNav } = {}) {
       txt.appendChild(el('span', 'j-menu-line', data.heading || ''));
     }
     a.appendChild(txt);
-    a.addEventListener('click', (e) => { e.preventDefault(); closeMenu({ focusBack: false }); onNav(c.id); });
+    a.addEventListener('click', (e) => { e.preventDefault(); closeMenu({ focusBack: false }); navigate(c.id); });
     li.appendChild(a);
 
     // The section's own contents: label — one sentence → primary link.
@@ -646,15 +671,14 @@ export function createRail({ onNav } = {}) {
     // claim rows; the full explanation belongs on the ownership page.
     const items = itemsFor(c.id);
     if (c.id === 'owned') {
-      const owned = el('div', 'j-menu-owned');
-      owned.appendChild(el('p', 'j-menu-owned-copy', '100% shared, granted 1% per month.'));
-      const more = el('p', 'j-menu-owned-more');
-      more.appendChild(document.createTextNode('Read more on the '));
-      const ownershipLink = el('a', null, 'ownership page');
-      ownershipLink.href = new URL('../ownership/', import.meta.url).href;
-      more.appendChild(ownershipLink);
-      more.appendChild(document.createTextNode('.'));
-      owned.appendChild(more);
+      const owned = el('a', 'j-menu-owned');
+      owned.href = new URL('../ownership/', import.meta.url).href;
+      const copy = el('p', 'j-menu-owned-copy');
+      copy.appendChild(document.createTextNode('100% shared, granted 1% per month. '));
+      const arrow = el('span', 'j-menu-ia', '→');
+      arrow.setAttribute('aria-hidden', 'true');
+      copy.appendChild(arrow);
+      owned.appendChild(copy);
       li.appendChild(owned);
     } else if (items.length) {
       const sub = el('ul', 'j-menu-sub');
@@ -667,12 +691,29 @@ export function createRail({ onNav } = {}) {
           label.appendChild(icon);
         }
         label.appendChild(document.createTextNode(it.label));
-        row.appendChild(label);
-        if (it.short) row.appendChild(el('span', 'j-menu-is', it.short));
+        // The whole row is the link (Hannah, 2026-08-20): label — line →
+        // arrow, external destinations in a new tab. Rows without a link
+        // (2RP) stay bare: no target, no hover, no arrow.
         if (it.link) {
-          const la = el('a', 'j-menu-ia', it.link.label);
-          la.href = it.link.href || '#';
-          row.appendChild(la);
+          const link = el('a', 'j-menu-row-link');
+          link.href = it.link.href || '#';
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.appendChild(label);
+          if (it.short) link.appendChild(el('span', 'j-menu-is', it.short));
+          const arrow = el('span', 'j-menu-ia', '→');
+          arrow.setAttribute('aria-hidden', 'true');
+          link.appendChild(arrow);
+          row.appendChild(link);
+        } else {
+          // No destination, same hover surface: the row wraps in the same
+          // .j-menu-row-link box (tint + gold label on hover) without being
+          // a link. The badge (2RP's SOON) pulses while the row is hovered.
+          const surface = el('span', 'j-menu-row-link');
+          surface.appendChild(label);
+          if (it.short) surface.appendChild(el('span', 'j-menu-is', it.short));
+          if (it.badge) surface.appendChild(el('span', 'j-menu-badge', it.badge));
+          row.appendChild(surface);
         }
         sub.appendChild(row);
       }
@@ -737,7 +778,6 @@ export function createRail({ onNav } = {}) {
                  other resting control, and its first tap opens the panel. */
   const HOT_INTENT_MS = 120;
   let touchOpen = false;
-  let swallowClick = false;
   let hotOpen = false;
   let hotTimer = 0;
   /* The pointer is ON the control right now — tracked on the same enter/leave
@@ -971,41 +1011,10 @@ export function createRail({ onNav } = {}) {
     syncAt();
   });
 
-  root.addEventListener('pointerdown', (e) => {
-    if (keptOpen()) return;
-    if (e.pointerType !== 'touch' || touchOpen) return;
-    // The menu mark is the OTHER resting control: its first tap opens the
-    // panel (see the menu's own pointerdown below), so it must not spend the
-    // tap on arming the fan — and arming would slide the button out from
-    // under the very tap that pressed it (measured 2026-08-09).
-    if (e.target instanceof Node && menuBtn.contains(e.target)) return;
-    touchOpen = true;
-    root.classList.add('j-rail-open');
-    announceOpen();
-    // The tap that opened the rail must not also follow the link under it.
-    swallowClick = true;
-    setTimeout(() => { swallowClick = false; }, 500);
-  }, true);
-
-  root.addEventListener('click', (e) => {
-    if (!swallowClick) return;
-    swallowClick = false;
-    // The menu mark is live at rest — it is one of the two resting symbols —
-    // so the arming tap swallows section-fan clicks only; a first tap on the
-    // menu button opens the menu, as a persistent control should.
-    if (e.target instanceof Node && menuBtn.contains(e.target)) return;
-    e.preventDefault();
-    e.stopPropagation();
-  }, true);
-
-  // A press anywhere else puts the mobile rail back to its current symbol.
-  // Passive observer —
-  // it never cancels, so the canvas's own tap handling is untouched.
-  document.addEventListener('pointerdown', (e) => {
-    if (!touchOpen) return;
-    if (e.target instanceof Node && root.contains(e.target)) return;
-    collapse();
-  }, { capture: true });
+  /* Section links are permanently visible in the horizontal navigator, so a
+     touch press is navigation on its first tap. The former first-tap-to-open
+     handlers belonged to the collapsed side fan and are intentionally gone.
+     The independent menu trigger retains its own pointerdown handling below. */
 
   /* ------------------------------------------------------------------ */
   /* THE MENU: open, trap, close                                         */
@@ -1087,15 +1096,12 @@ export function createRail({ onNav } = {}) {
   menuBtn.addEventListener('pointerdown', (e) => {
     if (e.isPrimary === false || e.button !== 0) return;
     e.preventDefault();
-    // A press is an answer, so the question stops being asked. This also
-    // guarantees the gesture can never run under an opening panel.
-    clearTimeout(nudgeTimer);
     openMenu(menuBtn, { keyboard: false });
   });
   menuBtn.addEventListener('click', (e) => openMenu(menuBtn, { keyboard: e.detail === 0 }));
 
   /* ===================================================================== */
-  /* THE BUTTON SAYS IT IS A BUTTON — the dwell gesture                     */
+  /* THE BUTTON SAYS IT IS A BUTTON — immediate hover/focus gesture         */
   /* ===================================================================== */
   /* "Remove the MENU text that shows when you hover over the actual menu
       button, because it just doesn't really fit in. But can you make it so
@@ -1113,39 +1119,28 @@ export function createRail({ onNav } = {}) {
      name over another's shape; the check that matters is the drawing, and the
      drawing here is the same three filaments writing themselves in.)
 
-     WHY A SECOND, AND WHY IT CANNOT FIRE ON TRANSIT. The rail's own 120ms
-     dwell exists precisely because a pointer crossing the flank must not open
-     anything; a gesture that answers "is this clickable?" is a reply to a
-     question only a pointer that has STOPPED can be asking. NUDGE_MS is an
-     order of magnitude past the crossing time, and the timer is armed on
-     `pointerenter` of the button alone and cleared on `pointerleave`, on a
-     press, and on touch — where there is no hover to read intent from.
+     The section rail's 120ms dwell still guards its retired expansion state,
+     but this detached top-right button answers for itself on the first hover
+     frame. Touch still does not replay the gesture, and reduced motion keeps
+     the already-drawn resting mark.
 
      ONCE PER ARRIVAL, not on a loop. A repeat every second is a control
      asking for attention rather than answering for itself, and the whole of
      the brief is "gently". The class is dropped on `animationend` so the next
      arrival can re-arm it, and re-arming is what a fresh hover means. */
-  const NUDGE_MS = 1000;
-  let nudgeTimer = null;
+  function replayMenuGlyph() {
+    if (menuIsOpen || reduceMotion.matches) return;
+    menuBtn.classList.remove('j-rail-nudge');
+    void menuBtn.offsetWidth;                 // restart, not merely re-assert
+    menuBtn.classList.add('j-rail-nudge');
+  }
 
   menuBtn.addEventListener('pointerenter', (e) => {
     if (e.pointerType === 'touch' || menuIsOpen) return;
-    // Reduced motion has no gesture to give: the glyph's resting state IS the
-    // drawn one, so replaying the draw would be motion for its own sake. The
-    // hover colour lift (`.j-rail-menu:hover`) carries the affordance there,
-    // and it is not motion.
-    if (reduceMotion.matches) return;
-    clearTimeout(nudgeTimer);
-    nudgeTimer = setTimeout(() => {
-      if (menuIsOpen) return;
-      menuBtn.classList.remove('j-rail-nudge');
-      void menuBtn.offsetWidth;               // restart, not merely re-assert
-      menuBtn.classList.add('j-rail-nudge');
-    }, NUDGE_MS);
+    replayMenuGlyph();
   });
-  menuBtn.addEventListener('pointerleave', (e) => {
-    if (e.pointerType === 'touch') return;
-    clearTimeout(nudgeTimer);
+  menuBtn.addEventListener('focus', () => {
+    if (menuBtn.matches(':focus-visible')) replayMenuGlyph();
   });
   menuBtn.addEventListener('animationend', (e) => {
     if (e.animationName === 'j-menu-rewrite') menuBtn.classList.remove('j-rail-nudge');
@@ -1199,6 +1194,107 @@ export function createRail({ onNav } = {}) {
   let dimmed = null;
   let wasCameraStateDisagree = false;
   let wasBetweenRests = false;
+  let horizontalPosition = 0;
+  let horizontalGap = 32;
+  let horizontalWrap = null;
+  let horizontalFlight = null;
+  let dockingProgress = 0;
+  let dockingU = 0;
+  let dockingFlight = null;
+  let dockingFlightFrom = 0;
+  let dockingFlightTarget = 0;
+  let heroLayoutW = -1;
+  let heroLayoutH = -1;
+  let heroLogoTop = 0;
+  let heroLogoLeft = 0;
+
+  function setInlineStyle(name, value) {
+    if (root.style.getPropertyValue(name) !== value) root.style.setProperty(name, value);
+  }
+
+  /** Dock the strip from the continuous journey coordinate painted by
+   *  update(). The list moves inside the root because the menu button is a
+   *  fixed descendant and must remain pinned to the viewport. */
+  function setHeroEase() {
+    let u;
+    if (horizontalFlight) {
+      /* A non-adjacent click traverses several semantic rail positions in one
+         camera move. Deriving the dock from that coordinate compressed the
+         whole 196px Mission move into the final fraction of a return flight:
+         Final -> Mission visibly moved 72px, then 116px, in two frames. The
+         flight already carries the camera's authoritative smootherstep phase,
+         so interpolate the dock from its currently painted value to the
+         destination dock with that exact phase. Capturing dockingFlightFrom
+         when the ticket changes also makes an interrupted/reversed click start
+         at the pixel that is already on screen. */
+      const phase = Math.max(0, Math.min(1, Number(horizontalFlight.phase) || 0));
+      const travel = reduceMotion.matches ? (phase >= 0.5 ? 1 : 0) : phase;
+      u = dockingFlightFrom
+        + (dockingFlightTarget - dockingFlightFrom) * travel;
+    } else {
+      // Real scrolling remains position-authored: stay attached to Mission
+      // for the first 30%, travel during the middle 40%, then park.
+      const travel = Math.max(0, Math.min(1, (dockingProgress - 0.3) / 0.4));
+      u = reduceMotion.matches
+        ? (travel >= 0.5 ? 1 : 0)
+        : travel * travel * (3 - 2 * travel);
+    }
+    dockingU = u;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const portrait = h > w;
+    const phone = portrait && w <= 620;
+    const tablet = portrait && w <= 900;
+
+    const heroLeft = (tablet ? 0.06 : 0.052) * w;
+    const heroTop = phone
+        ? 0.07 * h + 342
+      : tablet
+        ? 0.04 * h + 414
+        : 0.5 * h + Math.min(184, Math.max(160, 0.125 * w)) + 14;
+    const missionGap = phone
+      ? Math.max(10, (0.88 * w - 240) / 4)
+      : tablet
+        ? Math.min(24, Math.max(10, 0.03 * w))
+        : Math.min(32, Math.max(14, 0.022 * w));
+    // Leave enough air for the travelling ring to pass between neighbouring
+    // glyphs without covering either one at the half-way coordinate.
+    const compactGap = 16;
+    const compactScale = phone ? 0.82 : tablet ? 0.84 : 0.86;
+    // Match the later strip's visible lower edge to the logo's visible upper
+    // edge. The circle scales around its centre, so its bottom is
+    // 24 + 24*scale pixels below the list's top (not the list's 70px box).
+    const fallbackLogoTop = (phone ? 1.3 : tablet ? 1.6 : 2.1) * 16;
+    const fallbackLogoLeft = (phone ? 1.3 : tablet ? 1.6 : 3.4) * 16;
+    if (w !== heroLayoutW || h !== heroLayoutH) {
+      heroLayoutW = w;
+      heroLayoutH = h;
+      const logoRect = logoMark && logoMark.getBoundingClientRect();
+      heroLogoTop = logoRect ? logoRect.top : fallbackLogoTop;
+      heroLogoLeft = logoRect ? logoRect.left : fallbackLogoLeft;
+    }
+    const logoTop = heroLogoTop;
+    // The compact mark scales about its 24px centre. Align its PAINTED 48px
+    // circle edge—not the unscaled list box—to the logo's measured left edge.
+    // Mission keeps heroLeft; interpolation moves only the docked endpoint.
+    const finalLeft = heroLogoLeft - 24 * (1 - compactScale);
+    const finalTop = h - logoTop - 24 * (1 + compactScale);
+
+    setInlineStyle('left', `${heroLeft.toFixed(2)}px`);
+    setInlineStyle('top', `${heroTop.toFixed(2)}px`);
+    setInlineStyle('bottom', 'auto');
+    setInlineStyle('--nav-x', `${((finalLeft - heroLeft) * u).toFixed(2)}px`);
+    setInlineStyle('--nav-y', `${((finalTop - heroTop) * u).toFixed(2)}px`);
+    horizontalGap = missionGap + (compactGap - missionGap) * u;
+    setInlineStyle('--nav-gap', `${horizontalGap.toFixed(2)}px`);
+    setInlineStyle('--nav-scale', (1 + (compactScale - 1) * u).toFixed(4));
+    setInlineStyle('--nav-u', u.toFixed(4));
+    /* Gap/scale changes alter the ring's pixel coordinate. Repaint from the
+       same wrap sample update() just supplied; dropping the wrap here would
+       replace the seam path with the ordinary linear coordinate later in the
+       same frame. */
+    paintHorizontalProgress(horizontalPosition, horizontalWrap);
+  }
 
   /* ---- the moon's angles ---------------------------------------------------
      One UNWRAPPED angle per slot, in degrees. Unwrapped is the whole point:
@@ -1393,6 +1489,99 @@ export function createRail({ onNav } = {}) {
     return RAIL_RESTS.length - 1;
   }
 
+  /** Paint the horizontal strip directly from real journey progress.
+   *  No transition or timer sits between input and output: reverse scrolling
+   *  reverses immediately, and a stopped scrub leaves every pixel frozen. */
+  function paintHorizontalProgress(pos, wrap = null) {
+    const phase = wrap
+      ? Math.max(0, Math.min(1, Number(wrap.phase) || 0))
+      : 0;
+    horizontalPosition = wrap
+      ? (wrap.dir > 0 ? (N - 1) * (1 - phase) : (N - 1) * phase)
+      : Math.max(0, Math.min(N - 1, Number(pos) || 0));
+    const step = 48 + horizontalGap;
+    const connectorLength = Math.max(0, horizontalGap - 4);
+    let ringX = horizontalPosition * step;
+    let ringOpacity = 1;
+    if (wrap) {
+      /* The linear map has a toroidal seam just beyond its two ends. A
+         forward Final -> Mission wrap exits to the RIGHT, resets while one
+         ring-radius-plus-air beyond the visible row, then enters from the
+         LEFT; reverse mirrors that exact path. Keeping the visible legs to
+         the first/last fifth preserves the old travel speed without leaving
+         the compass detached in empty space. The reset is hidden only while
+         both possible coordinates are outside the map, so reversing phase at
+         any point retraces the same pixels immediately. Opacity is another
+         direct function of that same phase: smoothstep fades the compass out
+         over the exit fifth and back in over the entry fifth, with no CSS
+         clock left chasing a reversed scrub. Glyph and connector progress
+         deliberately keep using horizontalPosition above. */
+      const span = (N - 1) * step;
+      const outside = 24 + Math.min(12, horizontalGap / 2);
+      const exitEnd = 0.2;
+      const enterStart = 0.8;
+      if (phase <= exitEnd) {
+        const local = phase / exitEnd;
+        const eased = local * local * (3 - 2 * local);
+        ringOpacity = 1 - eased;
+        ringX = wrap.dir > 0
+          ? span + outside * local
+          : -outside * local;
+      } else if (phase >= enterStart) {
+        const local = (phase - enterStart) / (1 - enterStart);
+        ringOpacity = local * local * (3 - 2 * local);
+        ringX = wrap.dir > 0
+          ? -outside + outside * local
+          : span + outside * (1 - local);
+      } else {
+        ringOpacity = 0;
+        ringX = wrap.dir > 0
+          ? (phase < 0.5 ? span + outside : -outside)
+          : (phase < 0.5 ? -outside : span + outside);
+      }
+    }
+    activeRing.style.setProperty('--active-x', `${ringX.toFixed(3)}px`);
+    activeRing.style.setProperty('--active-y', '0px');
+    activeRing.style.opacity = ringOpacity.toFixed(6);
+    root.style.setProperty('--nav-position', horizontalPosition.toFixed(4));
+    root.classList.toggle('j-rail-wrap-progress', !!wrap);
+
+    slots.forEach((s, i) => {
+      let proximity;
+      let wrapSource = false;
+      if (wrap) {
+        const source = wrap.dir > 0 ? N - 1 : 0;
+        const target = wrap.dir > 0 ? 0 : N - 1;
+        wrapSource = i === source;
+        proximity = i === source ? 1 - phase : i === target ? phase : 0;
+      } else {
+        proximity = Math.max(0, 1 - Math.abs(i - horizontalPosition));
+      }
+      const past = wrap ? wrapSource : i < horizontalPosition - 0.001;
+      const base = past ? GLYPH_COLOURS.past : GLYPH_COLOURS.future;
+      const target = GLYPH_COLOURS.active;
+      const rgb = base.rgb.map((channel, channelIndex) =>
+        channel + (target.rgb[channelIndex] - channel) * proximity);
+      const alpha = base.alpha + (target.alpha - base.alpha) * proximity;
+      const scale = 1 + 0.05 * proximity;
+      const glow = 0.02 + 0.32 * proximity;
+      s.li.style.setProperty('--glyph-r', rgb[0].toFixed(2));
+      s.li.style.setProperty('--glyph-g', rgb[1].toFixed(2));
+      s.li.style.setProperty('--glyph-b', rgb[2].toFixed(2));
+      s.li.style.setProperty('--glyph-alpha', alpha.toFixed(3));
+      s.li.style.setProperty('--glyph-scale', scale.toFixed(4));
+      s.li.style.setProperty('--glyph-glow', glow.toFixed(3));
+
+      if (i < N - 1) {
+        const completed = Math.max(0, Math.min(1, horizontalPosition - i));
+        s.li.style.setProperty(
+          '--connector-fill',
+          `${(connectorLength * completed).toFixed(3)}px`,
+        );
+      }
+    });
+  }
+
   /** During real scroll, put the moon directly on that coordinate. One mark
    *  fades round the hidden back at either tip; the other four move exactly
    *  with p. Direct nav flights retain writeAngles()'s authored timed turn. */
@@ -1452,7 +1641,36 @@ export function createRail({ onNav } = {}) {
     modalDetail = false,
     cameraStateDisagree = false,
     railWrap = null,
+    railFlight = null,
   } = {}) {
+    let railP = p;
+    if (railWrap) {
+      horizontalFlight = null;
+      dockingFlight = null;
+      const phase = Math.max(0, Math.min(1, Number(railWrap.phase) || 0));
+      horizontalWrap = { dir: railWrap.dir, phase };
+      dockingProgress = railWrap.dir > 0 ? 1 - phase : phase;
+      paintHorizontalProgress(0, horizontalWrap);
+    } else {
+      horizontalWrap = null;
+      if (railFlight) {
+        horizontalFlight = railFlight;
+        if (dockingFlight !== railFlight) {
+          dockingFlight = railFlight;
+          dockingFlightFrom = dockingU;
+          dockingFlightTarget = railFlight.targetP < FIRST_OUTSIDE_P ? 0 : 1;
+        }
+        const phase = Math.max(0, Math.min(1, Number(railFlight.phase) || 0));
+        railP = railFlight.fromP
+          + (railFlight.targetP - railFlight.fromP) * phase;
+      } else {
+        horizontalFlight = null;
+        dockingFlight = null;
+      }
+      const position = progressIndex(railP);
+      dockingProgress = Math.min(1, position);
+      paintHorizontalProgress(position);
+    }
     /* THE HERO OWNS ITS WHOLE ARRIVAL, IN BOTH DIRECTIONS (2026-08-19).
 
        The old SHOW_P latch was pose-aligned: it stayed visible almost all the
@@ -1490,7 +1708,7 @@ export function createRail({ onNav } = {}) {
     root.classList.toggle('j-rail-following', following);
     let wroteJumpAngles = false;
     if (jumpStarted && !(railWrap && !isColumn)) {
-      const target = CHAPTERS.findIndex(c => c.id === chapterAt(p).id);
+      const target = CHAPTERS.findIndex(c => c.id === chapterAt(railP).id);
       root.classList.remove('j-rail-between');
       wasBetweenRests = false;
       root.style.setProperty('--cur', String(target));
@@ -1520,9 +1738,10 @@ export function createRail({ onNav } = {}) {
     // Which scene is on screen (the resting symbol, and the fan's anchor) and
     // which nav entry reads current (the marked one). They differ only in a
     // nav-less chapter.
-    const nowNext = chapterAt(p).id;
+    const nowNext = chapterAt(railP).id;
     if (nowNext !== nowId) {
       nowId = nowNext;
+      root.dataset.layout = nowId === 'mission' ? 'mission' : 'chapter';
       const cur = CHAPTERS.findIndex(c => c.id === nowId);
       // The fan is anchored on the current slot: --cur positions every other
       // slot relative to it, --d is each slot's distance for the stagger.
@@ -1577,7 +1796,8 @@ export function createRail({ onNav } = {}) {
   }
 
   return {
-    root, menu, update, reveal,
+    root, menu, update, reveal, setHeroEase,
+    setOnNav(fn) { navigate = typeof fn === 'function' ? fn : () => {}; },
     /** QA */
     get menuOpen() { return menuIsOpen; },
     get expanded() { return expanded(); },
