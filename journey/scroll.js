@@ -20,7 +20,7 @@
 
 import {
   CHAPTERS, SEGMENTS, REST_STOPS, TERMINAL_P,
-  transitSeconds, desktopTransitCapSeconds,
+  transitSeconds, desktopTransitCapSeconds, forwardBrakeTailSeconds,
 } from './route.js';
 import { NOSNAP } from '../flags.js';
 import {
@@ -290,6 +290,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   let wheelPeak = 0;
   let wheelTrough = Infinity;
   let wheelPrev = 0;
+  let wheelPrevDelta = 0;
   let wheelRise = 0;
   let wheelTail = false;
   let wheelQuiet = false;
@@ -515,19 +516,23 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  duty is to tell a gesture that never stopped from one that did, and
    *  ARRIVAL_HOLD_MS is the measured floor for that and nothing else.
    *
-   *  Deliberately the ONLY thing the short window touches. gPeak, the stream
-   *  measurement and gSerial keep their SNAP_ENGAGE_MS semantics, which is
-   *  what makes this safe rather than merely shorter:
-   *    · gPeak is not retired here, so an in-flight resolution's speed FLOOR
-   *      (`Math.abs(gPeak) * slope`, re-stated every frame while `live`) cannot
-   *      collapse to zero under a delta that arrives in the 90-160 ms window
-   *      and stall a transition mid-flight. At 160 ms that could never happen,
-   *      because the cruise had already latched by the time such a delta
-   *      arrived; a naive lowering of the one constant reintroduces it.
-   *    · gSerial is not advanced here, so a resolution still in the air is
-   *      still ANSWERED by the gesture that armed it when it lands (b0227bd
-   *      part 3) and puts the wall straight back up. A frame hitch therefore
-   *      lowers the wall for an instant instead of disarming the arrival.
+   *  Deliberately the ONLY boundary the short window changes. An in-flight
+   *  resolution has no answered wall yet, so its gPeak, stream measurement and
+   *  gSerial keep their SNAP_ENGAGE_MS semantics; its speed floor therefore
+   *  cannot collapse under a delta in the 90-160 ms window. Once the resolution
+   *  HAS landed, however, releasing its wall must also retire that answered
+   *  gesture. Keeping the old gCount/inRate/gPeak there lets a browser-delayed
+   *  momentum tail reuse the first gesture's stream credit and buy the next
+   *  section. The input path therefore calls restartGesture() at an answered
+   *  wall once the input type has proved a fresh ask: it rebases the absorbed
+   *  surface at the visible anchor, clears stale measurements, and applies the
+   *  arriving delta as sample one of the new gesture. Wheel input additionally
+   *  needs a full idle or a genuine raw-delta re-acceleration; a coalesced
+   *  momentum tail cannot prove a second ask on the short pause alone.
+   *    · an in-flight resolution has no wall to release, so the short boundary
+   *      leaves gSerial untouched. It is still ANSWERED by the gesture that
+   *      armed it when it lands (b0227bd part 3); a frame hitch cannot disarm
+   *      the arrival while it is travelling.
    *  The surplus the wall absorbed stays absorbed: it lives in `carry` as a
    *  negative offset against v, so releasing the clamp moves nothing on its
    *  own — there is still nothing banked to jump. */
@@ -553,10 +558,11 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     newGesture();
   }
 
-  function resetWheelPulse(rate = 0) {
+  function resetWheelPulse(rate = 0, delta = 0) {
     wheelPeak = rate;
     wheelTrough = rate || Infinity;
     wheelPrev = rate;
+    wheelPrevDelta = delta;
     wheelRise = 0;
     wheelTail = false;
     wheelQuiet = false;
@@ -569,10 +575,11 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  it has fallen well off its peak do we look for a sustained, substantial
    *  acceleration ramp. That keeps an uneven momentum tail retired at the
    *  arrival wall, while a fast repeat gets a new gSerial soon enough that the
-   *  first resolution cannot spend it when it lands. Rate (rather than raw
-   *  delta) makes the test insensitive to frame coalescing. */
-  function wheelPulseRestart(rate, idleGapMs, stallDiscountMs) {
-    if (!wheelPeak) { resetWheelPulse(rate); return false; }
+   *  first resolution cannot spend it when it lands. Rate makes the strength
+   *  comparison tolerant of timing variation; a matching raw-delta rise keeps
+   *  a post-coalescing tail from impersonating that second pulse. */
+  function wheelPulseRestart(rate, delta, idleGapMs, stallDiscountMs) {
+    if (!wheelPeak) { resetWheelPulse(rate, delta); return false; }
 
     wheelPeak = Math.max(wheelPeak, rate);
     if (!wheelTail && rate <= wheelPeak * 0.65) {
@@ -584,7 +591,12 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     let restart = false;
     if (wheelTail) {
       if (rate < wheelTrough) wheelTrough = rate;
-      const rising = rate > wheelPrev * 1.12;
+      // Require the delivered delta to rise too. After a coalesced quiet gap,
+      // normalising its accumulated sample by the long interval makes the
+      // next ordinary tail sample look like a huge rate rebound even while
+      // its raw deltas are still monotonically decaying. A deliberate second
+      // push ramps in both measures; a momentum tail does not.
+      const rising = rate > wheelPrev * 1.12 && delta > wheelPrevDelta * 1.12;
       wheelRise = rising ? wheelRise + 1 : 0;
       // A second acceleration hump inside one uninterrupted trackpad stream is
       // still the SAME gesture. Require a short VISITOR quiet beat (after the
@@ -608,6 +620,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         && (wheelRise >= 2 || decisive);
     }
     wheelPrev = rate;
+    wheelPrevDelta = delta;
     return restart;
   }
 
@@ -656,12 +669,12 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
     const rawGapMs = Math.max(0, now - lastInput);
     const stallDiscountMs = bankStall(now);
     const gapMs = Math.max(0, rawGapMs - stallDiscountMs);
-    // THE INTERACTION THRESHOLD. A pause this long is the "additional scroll"
-    // the arrival is waiting for: the visitor has stopped and started again,
-    // which is the one thing a gesture that never stopped cannot fake. It is
-    // checked BEFORE the gesture test below and independently of it, because
-    // it is a much shorter window and answers a different question — see
-    // dropWall() for why the other measurements must NOT come down with it.
+    let restartedAtAnsweredWall = false;
+    // THE INTERACTION THRESHOLD. For discrete inputs a pause this long is the
+    // "additional scroll" the arrival is waiting for. A wheel momentum stream
+    // can itself contain that pause after event coalescing, so wheel requires
+    // either the full gesture timeout here or wheelPulseRestart's independent
+    // raw-delta re-acceleration proof below.
     /* A boot-flush stall is uniquely dangerous here: Chrome can deliver the
        initiating sample, spend seconds compiling/building, then deliver the
        SAME physical wheel tail. The generic idle clock discounts most of that
@@ -674,14 +687,19 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
       clearBootGuard('background');
       newGesture();
     }
-    else if (gapMs > ARRIVAL_HOLD_MS && !bootGuardDir && !exactContact) {
-      dropWall();
+    else if (gapMs > ARRIVAL_HOLD_MS && !bootGuardDir && !exactContact
+        && answeredP !== null && (kind !== 'wheel' || gapMs > SNAP_ENGAGE_MS)) {
+      // Rebase before releasing an answered wall so the old gesture's refused
+      // tail and rate cannot leak into the new ask (restartGesture handles both
+      // in that order). Wheel reaches here only after the full idle timeout.
+      restartGesture();
+      restartedAtAnsweredWall = true;
     }
     // Deltas further apart than SNAP_ENGAGE_MS are not one gesture by the
     // model's own definition of idle: start the measurement over rather than
     // average across the pause, so a flick is only ever as strong, and only
     // ever as much of a stream, as ITS OWN deltas make it.
-    if (!resumedFromBackground && gapMs > SNAP_ENGAGE_MS
+    if (!resumedFromBackground && !restartedAtAnsweredWall && gapMs > SNAP_ENGAGE_MS
         && !bootGuardDir && !exactContact) newGesture();
     if (kind !== 'wheel') resetWheelPulse();
     gapEma = gapEma ? gapEma + (gapMs - gapEma) * 0.35 : (gCount ? gapMs : 0);
@@ -710,7 +728,8 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         // that full frame. Dividing that larger delta by the discounted/capped
         // interval fabricates the exact acceleration this test is looking for.
         const rate = Math.abs(dpx) / Math.max(8, rawGapMs || 8);
-        const pulseRestart = wheelPulseRestart(rate, gapMs, stallDiscountMs);
+        const delta = Math.abs(dpx);
+        const pulseRestart = wheelPulseRestart(rate, delta, gapMs, stallDiscountMs);
         // During the cold-boot guard, timing alone is not evidence: require
         // both the pulse shape and a completely stall-free interval. Outside
         // boot this is the unchanged desktop repeat rule.
@@ -719,7 +738,7 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         if (pulseRestart && (!bootGuardDir || provenBootRepeat)) {
           if (bootGuardDir) clearBootGuard('wheel-repeat');
           restartGesture();
-          resetWheelPulse(rate);
+          resetWheelPulse(rate, delta);
           gCount = 1;
         }
       }
@@ -768,7 +787,17 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         // not a callback delivered late. Its full physical duration is the
         // denominator; capping it to the generic idle window would fabricate
         // a faster swipe. Ordinary input keeps the shipped cap unchanged.
-        const gs = (exactContact ? gapMs : Math.min(gapMs, SNAP_ENGAGE_MS)) / 1000;
+        // A wheel callback delivered after a visible frame overrun commonly
+        // coalesces the deltas generated across that WHOLE interval. The idle
+        // model discounts site-owned stall time, but the rate measurement must
+        // not: dividing the aggregate by the discounted sliver fabricates a
+        // fling and lets the post-stall tail roll through another arrival.
+        // This is the same physical-clock rule wheelPulseRestart uses above.
+        const coalescedWheel = kind === 'wheel' && stallDiscountMs > 0;
+        const sampleGapMs = coalescedWheel
+          ? rawGapMs
+          : (exactContact ? gapMs : Math.min(gapMs, SNAP_ENGAGE_MS));
+        const gs = sampleGapMs / 1000;
         /* THE RAW DELTA, NOT THE APPLIED ONE (2026-08-12, the loop). This read
            the APPLIED delta — clamped at v = 0 and v = total — so that leaning
            on a dead edge measured zero. With the route closed into a loop
@@ -1125,9 +1154,10 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
   }
 
   /** The landing-brake constant for a resolution across [lo, hi] heading in
-   *  `dir`. Forward keeps the global SNAP_K: the brake window sits inside the
-   *  arrival's own content (camera ramp, ground lights), which is exactly what
-   *  the gentle creep breathes for. Backward the leg is gesture-paced (the
+   *  `dir`. Forward normally keeps the global SNAP_K: the brake window sits
+   *  inside the arrival's own content (camera ramp, ground lights). A route
+   *  may declare a shorter forward tail where those authored slowdowns stack
+   *  into a visible stall. Backward the leg is gesture-paced (the
    *  spanSlope drive below) and nothing plays under the brake, so the creep's
    *  ~constant ln(engage/dead)/K duration is pure dead time — measured 2026-08-17,
    *  0.5-0.9 s of visually-stopped ride on the Connect -> Inspire leg. Solve K
@@ -1136,10 +1166,13 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
    *  than SNAP_K, and still overshoot-free by the same construction — the rate
    *  goes to zero at the anchor and the integrator is position-capped there. */
   function brakeK(band, lo, hi, dir) {
-    if (dir >= 0) return SNAP_K;
+    const tailS = dir >= 0
+      ? forwardBrakeTailSeconds(lo, hi, dir)
+      : COMMIT_BRAKE_TAIL_S;
+    if (!tailS) return SNAP_K;
     const pRate = band.nominal * spanSlope(lo, hi);
     const engage = Math.max(pRate / SNAP_K, SNAP_DEAD_P * Math.E);
-    return Math.max(SNAP_K, Math.log(engage / SNAP_DEAD_P) / COMMIT_BRAKE_TAIL_S);
+    return Math.max(SNAP_K, Math.log(engage / SNAP_DEAD_P) / tailS);
   }
 
   /** Is the visitor's current gesture a STREAM going somewhere — i.e. a thing
@@ -1427,8 +1460,15 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
           if (carrying(spanSlope(lo, hi))) {
             const target = RESOLVE_P[j];
             const band = glideBand(lo, hi, intent.dir);
+            // The new gesture extends a flight already in motion; its first
+            // few EMA samples are not permission to slow that flight down.
+            // Preserve the old floor and let the new peak raise it only after
+            // it has actually proved stronger. Replacing it outright produced
+            // Connect's repeatable stall-then-roll on a modest second nudge.
+            const previousFloorPx = intent.floorPx;
             intent = { target, lo, hi, dir: intent.dir, from: repeatAnchor,
-              g: gSerial, band, floorPx: Math.abs(gPeak), cruisePx: null,
+              g: gSerial, band,
+              floorPx: Math.max(Math.abs(gPeak), previousFloorPx), cruisePx: null,
               snapK: brakeK(band, lo, hi, intent.dir), depart: repeatAnchor };
             repeatAnchor = null;
           }
@@ -1472,17 +1512,22 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         if (live) {
           // Still going: the floor tracks the gesture's peak, so it can never
           // exceed what one finger's strength is worth and can never run away.
-          intent.floorPx = Math.abs(gPeak);
+          // It is monotone within an in-flight retarget: a young second
+          // gesture may add speed, never erase speed already being delivered.
+          intent.floorPx = Math.max(Math.abs(gPeak), intent.floorPx);
         } else {
-          // THE GESTURE IS OVER. Its peak becomes the transition's cruise: at
-          // least nominal, so a gentle gesture still completes the move at a
-          // readable speed; at most the leg's ceil, so a fling still reads
-          // as travel. Spending gPeak here is what keeps one gesture worth
+          // THE GESTURE IS OVER. Its peak — or the preserved floor of a flight
+          // it extended — becomes the transition's cruise: at least nominal,
+          // so a gentle gesture still completes the move at a readable speed;
+          // at most the leg's ceil, so a fling still reads as travel. Spending
+          // gPeak here is what keeps one gesture worth
           // exactly one transition — a velocity rule is not self-stabilising
           // at a rest the way a position rule is, so the velocity has to be
           // consumed where it is used, or one flick buys the whole route.
           intent.cruisePx = Math.min(
-            Math.max(Math.abs(gPeak), intent.band.nominal), intent.band.ceil);
+            Math.max(Math.abs(gPeak), intent.floorPx, intent.band.nominal),
+            intent.band.ceil,
+          );
           gPeak = 0;
         }
       }
@@ -1528,8 +1573,8 @@ export function createScrollModel({ onIntent = null, onWrap = null } = {}) {
         (intent.dir < 0 ? spanSlope(intent.lo, intent.hi) : slopeAtP(p));
       // The landing: never faster than the critically-damped pull toward the
       // rest, which is what makes the arrival asymptotic and overshoot-free.
-      // The constant is per-intent (brakeK above): global SNAP_K forward,
-      // solved to the COMMIT_BRAKE_TAIL_S budget backward.
+      // The constant is per-intent (brakeK above): normally global SNAP_K
+      // forward, optionally route-budgeted, and always budgeted backward.
       const brake = Math.abs(intent.target - p) * (intent.snapK || SNAP_K);
       const drive = intent.dir * Math.min(floorP, brake);
       if (drive * intent.dir > servo * intent.dir) { rate = drive; driving = true; }

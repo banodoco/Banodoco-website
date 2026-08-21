@@ -138,6 +138,21 @@ const VIEWS = {
   mobile:  { panX: 0.83, camY: 2.95, camZ: 11.5, targetY: 4.50, fov: 64 },
 };
 
+/* Mission composition truck, in CSS pixels rather than world units. The
+   request is visual (+50px on desktop), while each responsive view uses a
+   different distance/FOV, so viewFor() converts these values through the
+   active projection. Moving panX trucks camera and target together: organism,
+   particles, bloom and ground all move as one projection while DOM copy/nav
+   remain fixed. Portrait keeps only a restrained nudge so the wide cap and
+   stipe do not crowd the phone/tablet edge. */
+const MISSION_RIGHT_PX = Object.freeze({
+  desktop: 50,
+  deskNarrow: 45,
+  compact: 36,
+  tablet: 26,
+  mobile: 14,
+});
+
 // --- per-mode world anchors for the HUD callouts (tuned against screenshots) ---
 const ANCHORS = {
   desktop: {
@@ -227,6 +242,14 @@ function viewFor(mode) {
     const worldPerPixel = 2 * v.camZ * Math.tan(v.fov * Math.PI / 360) / innerHeight;
     v.panX -= 75 * mix * worldPerPixel;
   }
+  /* The camera/target truck is the Mission boundary condition captured by the
+     journey director. Consequently scroll and the route-faithful direct-click
+     compositor depart from (and return to) this exact shifted pose, while the
+     analytic Inspire arrival still lands bit-exactly on its existing rest. */
+  const missionShiftPx = MISSION_RIGHT_PX[mode] || 0;
+  const missionWorldPerPixel = 2 * v.camZ * Math.tan(v.fov * Math.PI / 360)
+    / innerHeight;
+  v.panX -= missionShiftPx * missionWorldPerPixel;
   return v;
 }
 
@@ -947,6 +970,7 @@ if (sceneApi) {
   let journeyInputRequested = false;
   let journeyLoadP = null;
   let readyState = null;
+  let earlyRail = null;
   let journeyActive = false;
   let introReleased = false;
   let fastHandoffStarted = false;
@@ -1157,7 +1181,45 @@ if (sceneApi) {
         const nextTask = () => new Promise(resolve =>
           requestAnimationFrame(() => setTimeout(resolve, 0)));
         await nextTask();
-        const [m] = await Promise.all([journeyModuleP, bakedGeomReady]);
+        // Build the lightweight navigation as soon as its module graph is
+        // ready, before chapter geometry/GPU preparation. Its own fade now
+        // shares the hero copy's opening beat instead of arriving after the
+        // mushroom has already finished drawing.
+        const m = await journeyModuleP;
+        earlyRail = m.prepareRail ? m.prepareRail((chapter) => {
+          pendingEntry = chapter;
+          beginFastHandoff();
+        }) : null;
+        if (earlyRail && earlyRail.reveal) {
+          const shell = document.querySelector('.j-rail-preboot');
+          const shellOpacity = shell ? parseFloat(getComputedStyle(shell).opacity) : 0;
+          earlyRail.reveal();
+          if (shell) {
+            // Continue the hero's already-running fade across the DOM swap.
+            // The live rail takes the shell's exact painted opacity, then
+            // completes only the unspent portion of the shared 0.9s beat.
+            const from = Number.isFinite(shellOpacity) ? shellOpacity : 0;
+            earlyRail.root.style.transition = 'none';
+            earlyRail.root.style.opacity = String(from);
+            void earlyRail.root.offsetWidth;
+            shell.remove();
+            const finishWithHero = () => {
+              const heroLine = document.querySelector('h1 .hl');
+              const heroOpacity = heroLine
+                ? parseFloat(getComputedStyle(heroLine).opacity)
+                : 1;
+              earlyRail.root.style.opacity = String(Number.isFinite(heroOpacity) ? heroOpacity : 1);
+              if (heroOpacity < 0.999) {
+                requestAnimationFrame(finishWithHero);
+              } else {
+                earlyRail.root.style.opacity = '1';
+                requestAnimationFrame(() => { earlyRail.root.style.transition = ''; });
+              }
+            };
+            requestAnimationFrame(finishWithHero);
+          }
+        }
+        await bakedGeomReady;
         let remaining = m.prepareChapter ? m.prepareChapter(sceneApi) : 0;
         while (remaining > 0) {
           await nextTask();
@@ -1166,6 +1228,7 @@ if (sceneApi) {
         await nextTask();
         const state = m.boot({ heroIntroSkipped: !!skipIntro,
           heroFrozen: frozen, deferActivation: true,
+          rail: earlyRail,
           onEntry: (chapter) => {
             pendingEntry = chapter;
             beginFastHandoff();

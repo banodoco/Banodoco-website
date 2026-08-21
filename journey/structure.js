@@ -14,8 +14,8 @@ const chapters = [
     hotspots: { kind: 'fixed', cardinality: 3, ids: ['artcompute', 'arca', 'tworp'] },
   },
   {
-    id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 14.35,
-    segVh: [11.50, 2.85], shape: { seg: 0, k: [1.60, 0.95] },
+    id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 10.85,
+    segVh: [8.00, 2.85], shape: { seg: 0, k: [1.10, 1.00] },
     symbol: 'connect', copyPosition: 'pos-topright', runtime: true,
     copyBand: { lo: -0.014, hi: 0.058 },
     hotspots: { kind: 'fixed', cardinality: 3, ids: ['ados', 'hivemind', 'discord'] },

@@ -642,7 +642,7 @@
     transform: none;
     z-index: 7;
     width: min(29rem, 92vw);
-    padding: 1rem 2.2rem 2.4rem;
+    padding: 1rem 2.2rem 1.8rem;
     overflow-y: auto;
     overscroll-behavior: contain;
     background: #0b0702;
@@ -721,7 +721,7 @@
     align-items: center;
     gap: 0.5rem;
     min-height: 44px;
-    margin: 0 0 1.15rem;
+    margin: 0 0 0.9rem;
   }
   .menu-close-space {
     width: 57px;
@@ -742,7 +742,7 @@
     display: flex;
     align-items: flex-start;
     gap: 1rem;
-    padding: 0.85rem 0.6rem 0.7rem 0;
+    padding: 0.62rem 0.6rem 0.55rem 0.5rem;
     color: var(--parchment);
     text-decoration: none;
     transition: color 0.3s, background 0.3s;
@@ -752,7 +752,7 @@
   .menu-name { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; }
   .menu-line {
     display: block;
-    margin-top: 0.3rem;
+    margin-top: 0.22rem;
     font-family: "Didot", "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 1rem;
     line-height: 1.32;
@@ -765,9 +765,31 @@
   .menu-item[aria-current="true"] .menu-no { color: var(--gold-bright); }
 
   /* a section's contents: item — one sentence → primary link */
-  .menu-sub { margin: 0; padding: 0 0.6rem 0.9rem 2.4rem; list-style: none; }
-  .menu-row { margin: 0 0 0.5rem; font-size: 0.8rem; line-height: 1.55; color: var(--muted); }
+  .menu-sub { margin: 0; padding: 0 0.6rem 0.6rem 2.9rem; list-style: none; }
+  .menu-row { margin: 0 0 0.32rem; font-size: 0.8rem; line-height: 1.55; color: var(--muted); }
   .menu-row:last-child { margin-bottom: 0; }
+  .menu-row-link {
+    display: block;
+    margin: 0 -0.35rem;
+    padding: 0.1rem 0.35rem;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: color 0.3s, background 0.3s;
+  }
+  .menu-row-link:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
+  .menu-row-link:is(:hover, :focus-visible) .menu-il { color: var(--gold-bright); }
+  @keyframes menu-arrow-nudge {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(2px); }
+  }
+  .menu-row-link:is(:hover, :focus-visible) .menu-ia,
+  .menu-owned:is(:hover, :focus-visible) .menu-ia { animation: menu-arrow-nudge 1.2s ease-in-out infinite; }
+  @keyframes menu-badge-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  .menu-row-link:is(:hover, :focus-visible) .menu-badge { animation: menu-badge-pulse 5s ease-in-out infinite; }
   .menu-il { display: inline-flex; align-items: center; gap: 0.42rem; color: var(--parchment); font-weight: 600; }
   .menu-pict {
     display: inline-flex;
@@ -787,22 +809,43 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  .menu-il::after { content: " — "; color: rgba(201, 191, 168, 0.45); font-weight: 400; }
+  .menu-il::after { content: " \2014"; margin-right: 0.6em; color: rgba(201, 191, 168, 0.45); font-weight: 400; }
   .menu-ia {
-    margin-left: 0.45em;
+    display: inline-block;   /* transform (the hover nudge) needs a box */
+    margin-left: 0.65em;
     color: var(--gold-bright);
     text-decoration: none;
     white-space: nowrap;
-    border-bottom: 1px solid rgba(217, 164, 65, 0.4);
   }
-  .menu-ia::after { content: " \2192"; }
-  .menu-ia:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
+  .menu-badge {
+    display: inline-block;
+    margin-left: 0.5em;
+    padding: 0.1em 0.55em;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    vertical-align: 0.1em;
+    color: rgba(240, 200, 119, 0.65);
+    border: 1px solid rgba(217, 164, 65, 0.28);
+    border-radius: 999px;
+    background: rgba(217, 164, 65, 0.06);
+  }
 
-  .menu-owned { padding: 0 0.6rem 0.9rem 2.4rem; font-size: 0.8rem; line-height: 1.55; }
+  .menu-owned {
+    display: block;
+    margin: 0 0 0.6rem -0.35rem;
+    padding: 0.45rem 0.6rem 0.6rem 3.25rem;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: 2px;
+    transition: color 0.3s, background 0.3s;
+  }
+  .menu-owned:is(:hover, :focus-visible) { color: var(--gold-bright); background: rgba(217, 164, 65, 0.05); }
+  .menu-owned:is(:hover, :focus-visible) .menu-owned-copy { color: var(--gold-bright); }
   .menu-owned-copy { margin: 0; color: var(--parchment); font-weight: 600; }
-  .menu-owned-more { margin: 0.25rem 0 0; color: var(--muted); }
-  .menu-owned-more a { color: var(--gold-bright); text-decoration: none; border-bottom: 1px solid rgba(217, 164, 65, 0.45); }
-  .menu-owned-more a:is(:hover, :focus-visible) { border-color: var(--gold-bright); }
 
   .menu-links { display: flex; flex-wrap: nowrap; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
   .menu-links a {
@@ -1062,7 +1105,11 @@
        already drawn. Same contract as the live tier's. */
     .rail-slot, .rail-item, .rail-name, .rail-menu, .rail-menu-wrap,
     .rail-inner::before, .rail-inner::after, .rck,
-    .menu-item, .menu-mark, .menu-links a, .menu-ia { transition: none; }
+    .menu-item, .menu-mark, .menu-links a, .menu-ia, .menu-row-link,
+    .menu-owned { transition: none; }
+    /* the row arrow's hover nudge is load-bearing motion — off whole */
+    .menu-row-link .menu-ia, .menu-owned .menu-ia { animation: none !important; }
+    .menu-row-link .menu-badge { animation: none !important; }
     /* the Discord mark's warm-up ends at its resting or lit style — off
        leaves both states intact and instant (same contract as the live tier) */
     .pill-ic { transition: none; }
@@ -1166,7 +1213,7 @@
       <li class="rail-slot" data-chapter="connect" style="--i:2">
         <a class="rail-item" href="#/connect" data-nav="connect">
           <span class="rail-mark">
-            <svg class="sym" data-sym="connect" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.8 8.4 H20.2"/><path d="M1.6 17.6 L6.2 14.8 L12.4 17.2 L17.8 13.2 L20.4 14.2"/><path d="M6.2 14.8 L9.4 10.0"/><path d="M17.8 13.2 L15.2 9.6"/><circle cx="6.2" cy="14.8" r="1.2"/><circle cx="12.4" cy="17.2" r="1"/><circle cx="17.8" cy="13.2" r="1.15"/></svg>
+            <svg class="sym" data-sym="connect" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.8 8.4 H20.2"/><path d="M1.6 14.2 L4.2 13.2 L9.6 17.2 L15.8 14.8 L20.4 17.6"/><path d="M15.8 14.8 L12.6 10.0"/><path d="M4.2 13.2 L6.8 9.6"/><circle cx="15.8" cy="14.8" r="1.2"/><circle cx="9.6" cy="17.2" r="1"/><circle cx="4.2" cy="13.2" r="1.15"/></svg>
             <i class="rail-ret" aria-hidden="true"><b class="rck tl"></b><b class="rck tr"></b><b class="rck br"></b><b class="rck bl"></b></i>
           </span>
           <span class="rail-name" data-src="chapters.connect.nav">Connect</span>
@@ -1178,7 +1225,7 @@
             <svg class="sym" data-sym="owned" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle cx="11" cy="3.6" r="1.35"/><path d="M11 3.6 L3.4 15.6"/><path d="M11 3.6 L8.2 17.8"/><path d="M11 3.6 L13.8 17.8"/><path d="M11 3.6 L18.6 15.6"/><circle cx="3.4" cy="15.6" r="0.9"/><circle cx="8.2" cy="17.8" r="1.05"/><circle cx="13.8" cy="17.8" r="1.05"/><circle cx="18.6" cy="15.6" r="0.9"/></svg>
             <i class="rail-ret" aria-hidden="true"><b class="rck tl"></b><b class="rck tr"></b><b class="rck br"></b><b class="rck bl"></b></i>
           </span>
-          <span class="rail-name" data-src="chapters.owned.nav">Owned</span>
+          <span class="rail-name" data-src="chapters.owned.nav">Ownership</span>
         </a>
       </li>
       <li class="rail-slot rail-echo" data-chapter="final" style="--i:4">
@@ -1225,27 +1272,26 @@
                Same derivation as Tier 1 (nodes grouped by their `chapter`
                field, insertion order); every string is data-src'd. -->
           <ul class="menu-sub">
-            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1c.95 1.25 1.4 2.25 1.4 3.05a1.4 1.4 0 0 1-2.8 0C4.6 3.25 5.05 2.25 6 1Z"/><path d="M4.55 6.2h2.9M6 6.2v4.3"/></svg></span><span data-src="nodes.arca.label">Arca Gidan</span></span><span class="menu-is" data-src="nodes.arca.short">An open-source AI art competition.</span> <a href="https://arcagidan.com/" class="menu-ia" data-src="nodes.arca.spotlight.link.label" target="_blank" rel="noopener noreferrer">Learn more</a></li>
-            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><rect x="3.4" y="3.4" width="5.2" height="5.2" rx="0.8"/><path d="M5 3.4V1.8M7 3.4V1.8M5 10.2V8.6M7 10.2V8.6M3.4 5H1.8M3.4 7H1.8M10.2 5H8.6M10.2 7H8.6"/></svg></span><span data-src="nodes.artcompute.label">ArtCompute</span></span><span class="menu-is" data-src="nodes.artcompute.short">Micro-grants for people pushing open models.</span> <a href="https://artcompute.org/" class="menu-ia" data-src="nodes.artcompute.spotlight.link.label" target="_blank" rel="noopener noreferrer">Visit website</a></li>
-            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 3.1C5.05 2.25 3.75 1.95 2.3 2.05v7.1c1.45-.1 2.75.2 3.7 1.05.95-.85 2.25-1.15 3.7-1.05v-7.1C8.25 1.95 6.95 2.25 6 3.1Z"/><path d="M6 3.1v7.1"/></svg></span><span data-src="nodes.tworp.label">2RP</span></span><span class="menu-is" data-src="nodes.tworp.short">An art and tech publication. Coming soon.</span></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://arcagidan.com/" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1c.95 1.25 1.4 2.25 1.4 3.05a1.4 1.4 0 0 1-2.8 0C4.6 3.25 5.05 2.25 6 1Z"/><path d="M4.55 6.2h2.9M6 6.2v4.3"/></svg></span><span data-src="nodes.arca.label">Arca Gidan</span></span><span class="menu-is" data-src="nodes.arca.short">Open-source AI art competition</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://artcompute.org/" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><rect x="3.4" y="3.4" width="5.2" height="5.2" rx="0.8"/><path d="M5 3.4V1.8M7 3.4V1.8M5 10.2V8.6M7 10.2V8.6M3.4 5H1.8M3.4 7H1.8M10.2 5H8.6M10.2 7H8.6"/></svg></span><span data-src="nodes.artcompute.label">ArtCompute</span></span><span class="menu-is" data-src="nodes.artcompute.short">Micro-grants for open research</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
+            <li class="menu-row"><span class="menu-row-link"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 3.1C5.05 2.25 3.75 1.95 2.3 2.05v7.1c1.45-.1 2.75.2 3.7 1.05.95-.85 2.25-1.15 3.7-1.05v-7.1C8.25 1.95 6.95 2.25 6 3.1Z"/><path d="M6 3.1v7.1"/></svg></span><span data-src="nodes.tworp.label">2RP</span></span><span class="menu-is" data-src="nodes.tworp.short">An art and tech publication</span><span class="menu-badge" data-src="nodes.tworp.badge">Soon</span></span></li>
           </ul></li>
           <li><a class="menu-item" href="#/connect" data-menu="connect">
-            <span class="menu-mark"><svg class="sym" data-sym="connect" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.8 8.4 H20.2"/><path d="M1.6 17.6 L6.2 14.8 L12.4 17.2 L17.8 13.2 L20.4 14.2"/><path d="M6.2 14.8 L9.4 10.0"/><path d="M17.8 13.2 L15.2 9.6"/><circle cx="6.2" cy="14.8" r="1.2"/><circle cx="12.4" cy="17.2" r="1"/><circle cx="17.8" cy="13.2" r="1.15"/></svg></span>
+            <span class="menu-mark"><svg class="sym" data-sym="connect" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M1.8 8.4 H20.2"/><path d="M1.6 14.2 L4.2 13.2 L9.6 17.2 L15.8 14.8 L20.4 17.6"/><path d="M15.8 14.8 L12.6 10.0"/><path d="M4.2 13.2 L6.8 9.6"/><circle cx="15.8" cy="14.8" r="1.2"/><circle cx="9.6" cy="17.2" r="1"/><circle cx="4.2" cy="13.2" r="1.15"/></svg></span>
             <span class="menu-txt"><span class="menu-no">03</span><span class="menu-name">Connect</span></span>
           </a>
           <ul class="menu-sub">
-            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.7a3.2 3.2 0 0 1 3.2 3.2C9.2 7.1 6 10.3 6 10.3S2.8 7.1 2.8 4.9A3.2 3.2 0 0 1 6 1.7Z"/><circle cx="6" cy="4.9" r="1.05"/></svg></span><span data-src="nodes.ados.label">ADOS</span></span><span class="menu-is" data-src="nodes.ados.short">Where online becomes in-person.</span> <a class="menu-ia" href="https://ados.events/" target="_blank" rel="noopener noreferrer" data-src="nodes.ados.card.link.label">See events</a></li>
-            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.45 9.85 3.7v4.6L6 10.55 2.15 8.3V3.7Z"/><circle cx="6" cy="6" r="1.1"/></svg></span><span data-src="nodes.hivemind.label">Hivemind</span></span><span class="menu-is" data-src="nodes.hivemind.short">The ecosystem’s collective intelligence.</span> <a class="menu-ia" href="https://github.com/banodoco/hivemind" target="_blank" rel="noopener noreferrer" data-src="nodes.hivemind.card.link.label">View on GitHub</a></li>
-            <li class="menu-row"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M2.1 3.5C2.1 2.7 2.75 2.05 3.55 2.05h4.9c.8 0 1.45.65 1.45 1.45v3.2c0 .8-.65 1.45-1.45 1.45H5.7L3.55 9.95V8.15C2.75 8.15 2.1 7.5 2.1 6.7Z"/></svg></span><span data-src="nodes.discord.label">Discord</span></span><span class="menu-is" data-src="nodes.discord.short">The everyday door into the community.</span> <a href="https://discord.gg/NnFxGvx94b" class="menu-ia" data-src="nodes.discord.card.link.label" target="_blank" rel="noopener noreferrer">Join the Discord</a></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://discord.gg/NnFxGvx94b" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M2.1 3.5C2.1 2.7 2.75 2.05 3.55 2.05h4.9c.8 0 1.45.65 1.45 1.45v3.2c0 .8-.65 1.45-1.45 1.45H5.7L3.55 9.95V8.15C2.75 8.15 2.1 7.5 2.1 6.7Z"/></svg></span><span data-src="nodes.discord.label">Discord</span></span><span class="menu-is" data-src="nodes.discord.short">Where we build &amp; create together</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://ados.events/" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.7a3.2 3.2 0 0 1 3.2 3.2C9.2 7.1 6 10.3 6 10.3S2.8 7.1 2.8 4.9A3.2 3.2 0 0 1 6 1.7Z"/><circle cx="6" cy="4.9" r="1.05"/></svg></span><span data-src="nodes.ados.label">ADOS</span></span><span class="menu-is" data-src="nodes.ados.short">Where online becomes in-person</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
+            <li class="menu-row"><a class="menu-row-link" href="https://github.com/banodoco/hivemind" target="_blank" rel="noopener noreferrer"><span class="menu-il"><span class="menu-pict" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M6 1.45 9.85 3.7v4.6L6 10.55 2.15 8.3V3.7Z"/><circle cx="6" cy="6" r="1.1"/></svg></span><span data-src="nodes.hivemind.label">Hivemind</span></span><span class="menu-is" data-src="nodes.hivemind.short">Community’s collective intelligence</span><span class="menu-ia" aria-hidden="true">→</span></a></li>
           </ul></li>
           <li><a class="menu-item" href="#/owned" data-menu="owned">
             <span class="menu-mark"><svg class="sym" data-sym="owned" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle cx="11" cy="3.6" r="1.35"/><path d="M11 3.6 L3.4 15.6"/><path d="M11 3.6 L8.2 17.8"/><path d="M11 3.6 L13.8 17.8"/><path d="M11 3.6 L18.6 15.6"/><circle cx="3.4" cy="15.6" r="0.9"/><circle cx="8.2" cy="17.8" r="1.05"/><circle cx="13.8" cy="17.8" r="1.05"/><circle cx="18.6" cy="15.6" r="0.9"/></svg></span>
-            <span class="menu-txt"><span class="menu-no">04</span><span class="menu-name">Owned</span></span>
+            <span class="menu-txt"><span class="menu-no">04</span><span class="menu-name">Ownership</span></span>
           </a>
-          <div class="menu-owned">
-            <p class="menu-owned-copy">100% shared, granted 1% per month.</p>
-            <p class="menu-owned-more">Read more on the <a href="../ownership/">ownership page</a>.</p>
-          </div></li>
+          <a class="menu-owned" href="../ownership/">
+            <p class="menu-owned-copy">100% shared, granted 1% per month. <span class="menu-ia" aria-hidden="true">→</span></p>
+          </a></li>
           <!-- The final route remains structurally non-peer (`route.js` keeps
                its nav field null), while CONTENT supplies its visible name. -->
           <li><a class="menu-item" href="#/final" data-menu="final">
@@ -1254,7 +1300,7 @@
           </a></li>
         </ol>
       </nav>
-      <p class="menu-legal" data-src="site.legal">© 2026 Banodoco.</p>
+      <p class="menu-legal" data-src="site.legal">© 2026 Banodoco</p>
     </details>
   </div>
 </nav>
@@ -1284,7 +1330,7 @@
               <span data-src="nodes.arca.label">Arca Gidan</span><span class="chev" aria-hidden="true">▾</span>
             </button>
           </h3>
-          <p class="node-short" data-src="nodes.arca.short">An open-source AI art competition.</p>
+          <p class="node-short" data-src="nodes.arca.short">Open-source AI art competition</p>
           <div class="node-d" id="d-arca" role="region" aria-labelledby="t-arca" tabindex="-1">
             <p data-src="nodes.arca.spotlight.body.0">The Arca Gidan Prize is an open source AI art competition.</p>
             <p data-src="nodes.arca.spotlight.body.1">We wish to provide a reason for people to push themselves and open models to their limits.</p>
@@ -1299,7 +1345,7 @@
               <span data-src="nodes.artcompute.label">ArtCompute</span><span class="chev" aria-hidden="true">▾</span>
             </button>
           </h3>
-          <p class="node-short" data-src="nodes.artcompute.short">Micro-grants for people pushing open models.</p>
+          <p class="node-short" data-src="nodes.artcompute.short">Micro-grants for open research</p>
           <div class="node-d" id="d-artcompute" role="region" aria-labelledby="t-artcompute" tabindex="-1">
             <p data-src="nodes.artcompute.spotlight.body.0">ArtCompute gives micro-grants to those pushing open AI models, approved by AI.</p>
             <p data-src="nodes.artcompute.spotlight.body.1">It is practical compute for people whose ambition has outrun their hardware.</p>
@@ -1313,7 +1359,7 @@
               <span data-src="nodes.tworp.label">2RP</span><span class="chev" aria-hidden="true">▾</span>
             </button>
           </h3>
-          <p class="node-short" data-src="nodes.tworp.short">An art and tech publication. Coming soon.</p>
+          <p class="node-short" data-src="nodes.tworp.short">An art and tech publication</p>
           <div class="node-d" id="d-tworp" role="region" aria-labelledby="t-tworp" tabindex="-1">
             <p data-src="nodes.tworp.spotlight.body.0">2RP is an art and tech publication that aims to highlight the best of the ecosystem.</p>
             <p data-src="nodes.tworp.spotlight.body.1">Open work, open models, and the people making both.</p>
@@ -1338,7 +1384,7 @@
               <span data-src="nodes.ados.label">ADOS</span><span class="chev" aria-hidden="true">▾</span>
             </button>
           </h3>
-          <p class="node-short" data-src="nodes.ados.short">Where online becomes in-person.</p>
+          <p class="node-short" data-src="nodes.ados.short">Where online becomes in-person</p>
           <div class="node-d" id="d-ados" role="region" aria-labelledby="t-ados" tabindex="-1">
             <p data-src="nodes.ados.card.body.0">ADOS events bring the community together in the real world.</p>
             <p data-src="nodes.ados.card.body.1">We gather our community with people from the extended creative world to look at art, eat nice food, and create things.</p>
@@ -1352,7 +1398,7 @@
               <span data-src="nodes.hivemind.label">Hivemind</span><span class="chev" aria-hidden="true">▾</span>
             </button>
           </h3>
-          <p class="node-short" data-src="nodes.hivemind.short">The ecosystem’s collective intelligence.</p>
+          <p class="node-short" data-src="nodes.hivemind.short">Community’s collective intelligence</p>
           <div class="node-d" id="d-hivemind" role="region" aria-labelledby="t-hivemind" tabindex="-1">
             <p data-src="nodes.hivemind.card.body.0">Hivemind is the open-source AI art ecosystem’s collective intelligence: a searchable corpus of what the community has already worked out.</p>
             <p data-src="nodes.hivemind.card.body.1">It drops into a coding agent and opens up the Banodoco Discord’s accumulated practice — messages, resources, and curated answers that cite their sources. Every question researched becomes a permanent entry for the next person.</p>
@@ -1366,7 +1412,7 @@
               <span data-src="nodes.discord.label">Discord</span><span class="chev" aria-hidden="true">▾</span>
             </button>
           </h3>
-          <p class="node-short" data-src="nodes.discord.short">The everyday door into the community.</p>
+          <p class="node-short" data-src="nodes.discord.short">Where we build &amp; create together</p>
           <div class="node-d" id="d-discord" role="region" aria-labelledby="t-discord" tabindex="-1">
             <p data-src="nodes.discord.card.body.0">The Discord is where the community actually lives, day to day.</p>
             <p data-src="nodes.discord.card.body.1">Artists, engineers, and knowledge sharers, in one room — it is where the work gets shown, argued over, and picked up by someone else.</p>
@@ -1380,7 +1426,7 @@
   <!-- ========================= OWNED ========================= -->
   <section class="chapter" id="ch-owned" data-chapter="owned" aria-labelledby="h-owned" tabindex="-1">
     <div class="inner">
-      <p class="eyebrow">Chapter 04 — Owned</p>
+      <p class="eyebrow">Chapter 04 — Ownership</p>
       <h2 id="h-owned" data-src="chapters.owned.heading">Owned by contributors</h2>
 
       <!-- The claims LIST retired on 2026-08-05, when Hannah turned the three

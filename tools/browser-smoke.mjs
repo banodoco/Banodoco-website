@@ -270,9 +270,13 @@ try {
         assert.equal(await page.locator('.static-door').isVisible(), true);
         assert.equal(new URL(page.url()).hash, '');
 
-        const hotspot = page.locator('.j-hot[data-node^="contributor-"][aria-expanded="false"]:visible').first();
-        await hotspot.tap();
-        await hotspot.tap();
+        // Owned's authored button is a zero-box wrapper around its face-sized
+        // hit disc, so Playwright's `:visible` heuristic cannot target the
+        // semantic control itself. Exercise its native keyboard activation;
+        // pointer geometry is covered by the chapter's dedicated UI probes.
+        const hotspot = page.locator('.j-hot.vis[data-node^="contributor-"][aria-expanded="false"]').first();
+        await hotspot.evaluate(el => el.focus());
+        await page.keyboard.press('Enter');
         await page.waitForFunction(() => window.journey?.detail?.startsWith('contributor-'));
         assert.equal(await page.locator('.j-card.open.sheet').isVisible(), true);
         await page.locator('.j-card-x').tap();

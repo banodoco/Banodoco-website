@@ -92,6 +92,9 @@ export function createOwned(sceneApi, content) {
   const portraits = buildPortraitField({
     leg, contributors, substrate, palette: PAL,
     nodeCount: contributors.length, exposure: EXPOSURE_PLANES,
+    // The opt-out is also a startup/perf contract: do not fetch or bake photo
+    // atlases that this field is explicitly required never to display.
+    photosEnabled: PHOTOS,
   });
   group.add(portraits.group);
   // Report C: hand the substrate each face's real attachment points so the

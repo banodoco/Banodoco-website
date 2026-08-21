@@ -426,6 +426,13 @@ export function createConnect(sceneApi) {
     // the way toward a common value, so a quiet path is web, not a highway.
     uQuietTier: { value: 0.55 },
     uRouteAmp: { value: new THREE.Vector3(1, 1, 1) },
+    // Screen-space collision is solved into one ground-plane world offset.
+    // The strand and point shaders, hub sprite and DOM anchor all read this
+    // same vector, so ADOS never splits into a moved label and an old light.
+    uAdosShift: { value: new THREE.Vector3() },
+    // Filled from buildTendrils' measured route arc. Points use it to apply
+    // exactly the primary strand's root-to-hub feather while they drift.
+    uAdosHubAlong: { value: 1 },
     uHairAmp: { value: 1 },
     uPulseHead: { value: new THREE.Vector3(-2, -2, -2) },
     uPulseAmp: { value: new THREE.Vector3(0, 0, 0) },
@@ -452,6 +459,138 @@ export function createConnect(sceneApi) {
   };
 
   const net = buildTendrils(group, U);
+  U.uAdosHubAlong.value = net.hubMeta.find((h) => h.id === 'ados').along;
+
+  /* ADOS / PERSISTENT-NAV EXCLUSION --------------------------------------
+     ADOS is deliberately the nearest lower-left hub, which became the one
+     place the new horizontal navigator and the scene could occupy together.
+     Solve the requested ~75px left / 50-75px up move in SCREEN space against
+     the live rail rectangle, then convert it to an x/z ground-plane offset by
+     a local projection Jacobian. This works for every camera aspect and keeps
+     the authored route rooted: tendrils.js feathers the shift from zero at
+     the stipe to one at the hub. No fixed world vector can make the same
+     promise across landscape and portrait cameras.
+
+     The glow radius includes the core bloom and convergence rays; the rail
+     rectangle is expanded for its active-ring bloom. The baseline move gives
+     the composition the requested air even before the rectangles intersect;
+     the exclusion solve adds only as much upward travel as a smaller viewport
+     actually needs. */
+  // Projection and the DOM use jitter-free vs live matrices respectively;
+  // these small source margins paint as the requested ~75px / 50-75px move.
+  const ADOS_SCREEN_LEFT = 84;
+  const ADOS_SCREEN_UP_MIN = 66;
+  const ADOS_SCREEN_UP_MAX = 96;
+  const ADOS_GLOW_RADIUS = 38;
+  const RAIL_AIR = 14;
+  // updateAdosExclusion projects through the live render matrix while DOM
+  // anchors use the jitter-free snapshot; allow their measured 8-12px delta.
+  const PROJECTION_AIR = 12;
+  const _adosBase = net.hubMeta.find((h) => h.id === 'ados').pos.clone();
+  const _adosPlaced = _adosBase.clone();
+  const _adosResolvedShift = new THREE.Vector3();
+  const _screen0 = new THREE.Vector3();
+  const _screenX = new THREE.Vector3();
+  const _screenZ = new THREE.Vector3();
+  const _probeX = new THREE.Vector3();
+  const _probeZ = new THREE.Vector3();
+  const _coreLift = new THREE.Vector3(0, 0.05, 0);
+  const PROBE = 0.05;
+  let railRoot = null;
+  let railList = null;
+  let railRect = null;
+  let railRectKey = '';
+
+  /** Apply one placement scalar to every ADOS layer. The resolved collision
+   *  vector is kept separate from the rendered vector so the route, hub,
+   *  DOM anchor and hero-ground junction can travel together as ADOS first
+   *  kindles. On retirement the scalar stays at one until the whole Connect
+   *  group is no longer submitted, avoiding the old one-frame ground snap
+   *  while its label and rays were still visible. */
+  function applyAdosPlacement(factor) {
+    const f = factor < 0 ? 0 : factor > 1 ? 1 : factor;
+    U.uAdosShift.value.copy(_adosResolvedShift).multiplyScalar(f);
+    _adosPlaced.copy(_adosBase).add(U.uAdosShift.value);
+    const core = net.cores.find((entry) => entry.id === 'ados');
+    if (core) core.sprite.position.copy(_adosPlaced).add(_coreLift);
+    if (f > 0.0001) sceneApi.setGroundAdosTarget?.(_adosPlaced);
+    else sceneApi.setGroundAdosTarget?.(null);
+  }
+
+  function toScreen(world, out) {
+    out.copy(world).project(sceneApi.camera);
+    out.x = (out.x * 0.5 + 0.5) * innerWidth;
+    out.y = (-out.y * 0.5 + 0.5) * innerHeight;
+    return out;
+  }
+
+  /** The rail only changes box geometry while its responsive dock moves.
+   *  Cache its element and measured rect between those changes: drive() runs
+   *  for every chapter on every frame, so querying and forcing layout here
+   *  made the Connect network tax the entire journey. */
+  function currentRailRect() {
+    if (!railRoot || !railRoot.isConnected) {
+      railRoot = document.querySelector('.j-rail');
+      railList = railRoot && railRoot.querySelector('.j-rail-list');
+      railRect = null;
+      railRectKey = '';
+    }
+    if (!railRoot || !railList || railRoot.dataset.layout !== 'chapter') return null;
+    const style = railRoot.style;
+    const key = [
+      innerWidth, innerHeight, railRoot.dataset.layout,
+      style.left, style.top, style.bottom,
+      style.getPropertyValue('--nav-x'),
+      style.getPropertyValue('--nav-y'),
+      style.getPropertyValue('--nav-gap'),
+      style.getPropertyValue('--nav-scale'),
+    ].join('|');
+    if (key !== railRectKey) {
+      railRect = railList.getBoundingClientRect();
+      railRectKey = key;
+    }
+    return railRect;
+  }
+
+  function updateAdosExclusion() {
+    const camera = sceneApi.camera;
+    camera.updateMatrixWorld(true);
+    toScreen(_adosBase, _screen0);
+
+    let tx = Math.max(ADOS_GLOW_RADIUS + RAIL_AIR, _screen0.x - ADOS_SCREEN_LEFT);
+    let ty = _screen0.y - ADOS_SCREEN_UP_MIN;
+    const r = currentRailRect();
+    if (r) {
+      const left = r.left - RAIL_AIR, right = r.right + RAIL_AIR;
+      const top = r.top - RAIL_AIR;
+      const overlapsX = tx + ADOS_GLOW_RADIUS > left && tx - ADOS_GLOW_RADIUS < right;
+      if (overlapsX) ty = Math.min(ty, top - ADOS_GLOW_RADIUS - PROJECTION_AIR);
+    }
+    ty = Math.max(_screen0.y - ADOS_SCREEN_UP_MAX, ty);
+
+    // Local screen Jacobian for world x/z at the hub's ground plane.
+    _probeX.copy(_adosBase).x += PROBE;
+    _probeZ.copy(_adosBase).z += PROBE;
+    toScreen(_probeX, _screenX);
+    toScreen(_probeZ, _screenZ);
+    const ax = (_screenX.x - _screen0.x) / PROBE;
+    const ay = (_screenX.y - _screen0.y) / PROBE;
+    const bx = (_screenZ.x - _screen0.x) / PROBE;
+    const by = (_screenZ.y - _screen0.y) / PROBE;
+    const det = ax * by - bx * ay;
+    if (Math.abs(det) < 1e-4) {
+      _adosResolvedShift.set(0, 0, 0);
+      applyAdosPlacement(0);
+      return;
+    }
+    const dxPx = tx - _screen0.x, dyPx = ty - _screen0.y;
+    _adosResolvedShift.set(
+      (dxPx * by - bx * dyPx) / det,
+      0,
+      (ax * dyPx - dxPx * ay) / det,
+    );
+    applyAdosPlacement(adosPlacementFactor());
+  }
 
   /* ---- bake recording site (2026-08-17) -------------------------------
      Connect is baked ATOMICALLY. buildTendrils is the chapter's single
@@ -634,6 +773,20 @@ export function createConnect(sceneApi) {
   let entryReveal = 1;
   const hubIgnite = [0, 0, 0];
   const _fwd = new THREE.Vector3();
+  const adosMeta = net.hubMeta.find((h) => h.id === 'ados');
+
+  /** The same pure route-front envelope used by the ADOS core. Before this
+   *  ignition the collision dodge would move a lone hero-ground star. After
+   *  arrival it remains one through the whole exit leg; only Connect's actual
+   *  rendered visibility can release the shared placement. */
+  function adosPlacementFactor() {
+    if (!adosMeta || amount <= 0.003 || entryReveal <= 0.0004
+        || resolveNow() <= 0.0004) return 0;
+    const headAt = litR[adosMeta.route]
+      * U.uLitMax.value.getComponent(adosMeta.route);
+    return sm(Math.max(adosMeta.along * 0.5, adosMeta.along - FRONT_SOFT),
+      adosMeta.along + 0.03, headAt);
+  }
 
   /** The camera-pure resolve. Pure function of the live camera pose — see the
    *  block at the top of this file for the measured values that make it
@@ -654,6 +807,10 @@ export function createConnect(sceneApi) {
     // byte-identical: at the hero pose the network is not merely dark, it is
     // never submitted.
     group.visible = amount > 0.003 && resolve > 0.0004 && entryReveal > 0.0004;
+    // `drive()` solved the responsive destination earlier in this frame.
+    // Re-apply after the eased amount advances so the rendered frame, ground
+    // junction and DOM projection all observe the same current visibility.
+    applyAdosPlacement(group.visible ? adosPlacementFactor() : 0);
     if (!group.visible) {
       if (heroDimActive) restoreHeroDim();   // byte-exact hand-back
       return;
@@ -802,6 +959,10 @@ export function createConnect(sceneApi) {
     group,
     counts,
     nodeIds: NODE_IDS,
+    // The UI retains its 72% readiness floor but maps the remaining marker
+    // opacity directly from nodeReveal(), so reverse scroll cannot leave a
+    // time-eased label behind the core/ground placement.
+    revealScrub: true,
     /** T2 streaming seam (a pure p-window in seams.js).
      *
      *  ARMING SNAPS, RETIRING EASES. The low edge of the window sits far
@@ -823,7 +984,64 @@ export function createConnect(sceneApi) {
     },
     nodeWorld(id) {
       const n = NODES[id];
-      return n ? _nw.copy(n).clone() : null;
+      if (!n) return null;
+      return _nw.copy(id === 'ados' ? _adosPlaced : n).clone();
+    },
+    /** QA: prove every rendered ADOS layer consumes this chapter's one
+     *  resolved dodge vector. The returned arrays are copies; callers cannot
+     *  mutate live uniforms or scene nodes. */
+    debugAdosAlignment() {
+      const core = net.cores.find((entry) => entry.id === 'ados');
+      const strandSpec = net.geometries.strands.getAttribute('aB');
+      const strandLayout = net.geometries.strands.getAttribute('aA');
+      const strandPosition = net.geometries.strands.getAttribute('position');
+      const strandW = net.geometries.strands.getAttribute('aAdosShiftW');
+      const pointRoute = net.geometries.points.getAttribute('aR');
+      const pointW = net.geometries.points.getAttribute('aAdosShiftW');
+      const weightSummary = (routeAttr, weightAttr, routeComponent = 'getX', limit = weightAttr.count) => {
+        let planted = 0, feathered = 0, translated = 0;
+        for (let i = 0; i < limit; i++) {
+          if (routeAttr[routeComponent](i) >= 0.5) continue;
+          const w = weightAttr.getX(i);
+          if (w <= 0.001) planted++;
+          else if (w >= 0.999) translated++;
+          else feathered++;
+        }
+        return { planted, feathered, translated };
+      };
+      const centroid = (accept) => {
+        let x = 0, y = 0, z = 0, n = 0, minW = 1, maxW = 0;
+        for (let i = 0; i < strandW.count; i++) {
+          if (!accept(i)) continue;
+          const w = strandW.getX(i);
+          x += strandPosition.getX(i) + U.uAdosShift.value.x * w;
+          y += strandPosition.getY(i) + U.uAdosShift.value.y * w;
+          z += strandPosition.getZ(i) + U.uAdosShift.value.z * w;
+          minW = Math.min(minW, w); maxW = Math.max(maxW, w); n++;
+        }
+        return n ? { world: [x / n, y / n, z / n], count: n, minW, maxW } : null;
+      };
+      return {
+        shift: U.uAdosShift.value.toArray(),
+        resolvedShift: _adosResolvedShift.toArray(),
+        placementFactor: adosPlacementFactor(),
+        visualAmount: amount * resolve * entryReveal,
+        groupVisible: group.visible,
+        base: _adosBase.toArray(),
+        placed: _adosPlaced.toArray(),
+        core: core ? core.sprite.position.toArray() : null,
+        hubAlong: U.uAdosHubAlong.value,
+        strandUniformShared: net.strandMat.uniforms.uAdosShift === U.uAdosShift,
+        pointUniformShared: net.pointMat.uniforms.uAdosShift === U.uAdosShift,
+        pointHubAlongShared: net.pointMat.uniforms.uAdosHubAlong === U.uAdosHubAlong,
+        strandWeights: weightSummary(strandSpec, strandW, 'getW'),
+        glintWeights: weightSummary(pointRoute, pointW, 'getX', net.counts.glints),
+        primaryEndpoint: centroid((i) => strandSpec.getW(i) < 0.5
+          && strandLayout.getZ(i) < 0.5 && Math.abs(strandLayout.getW(i)) < 0.5
+          && strandLayout.getY(i) > 0.985),
+        groundNexus: centroid((i) => strandSpec.getW(i) < 0.5
+          && strandLayout.getZ(i) < 0.5 && strandLayout.getW(i) < -0.5),
+      };
     },
     /** Per-node chip gate (2026-08-16 — see the CHIPS NOW DO FOLLOW note at
      *  LIGHT_ORDER). The exact product the hub core's opacity rides
@@ -851,6 +1069,7 @@ export function createConnect(sceneApi) {
     drive(p) {
       entryReveal = 1;
       driveAt(p);
+      updateAdosExclusion();
     },
     /** Navigation has already placed global p at the rest while its camera is
      *  still arriving. Re-run the normal start->rest progression on a local
@@ -863,6 +1082,7 @@ export function createConnect(sceneApi) {
     beginEntry() {
       entryReveal = 0;
       driveAt(SPAN_LO);
+      updateAdosExclusion();
     },
     entryReady() {
       return resolveNow() >= ENTRY_CAMERA_READY;
@@ -870,12 +1090,14 @@ export function createConnect(sceneApi) {
     driveEntry(f) {
       entryReveal = sm(0, 0.12, f);
       driveAt(SPAN_LO + (REST_P - SPAN_LO) * f);
+      updateAdosExclusion();
     },
     /** Deep links / capture (placeAt): jump the eased arming to its target so
      *  a dt = 0 placement renders the finished state — the frozen ?capture=
      *  frame needs this (animators see dt = 0 under freezeTime). */
     snap() {
       amount = amountTarget;
+      updateAdosExclusion();
       for (const id of NODE_IDS) amt[id] = hot[id] ? 1 : 0;
     },
     // A nav landing reconciles the eased seam arm only. The route fronts and

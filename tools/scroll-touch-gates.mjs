@@ -48,6 +48,18 @@ function wheel(deltaY, gap = 16, target = surfaceTarget) {
   scroll.update(gap / 1000);
 }
 
+// Chrome may deliver one aggregate wheel event after a long render frame.
+// Advance the input clock without advancing the scroll frame, then integrate
+// with animation.js's real 50 ms dt ceiling.
+function coalescedAfterStall(deltaY, stallMs = 300, target = surfaceTarget) {
+  now += stallMs;
+  const event = {
+    target, deltaY, deltaMode: 0, cancelable: true, preventDefault() {},
+  };
+  for (const fn of handlers.get('wheel') || []) fn(event);
+  scroll.update(0.05);
+}
+
 function frame(ms = 16) {
   now += ms;
   scroll.update(ms / 1000);
@@ -105,6 +117,66 @@ function near(value, expected, epsilon = 0.002) {
 }
 
 const results = [];
+
+// Connect's first segment used to hide a controller-independent velocity
+// trough: the p-per-pixel gain halved through the intro, then rose at the
+// rest. Sample the actual spline inverse so future pacing edits cannot restore
+// that stall-then-roll profile while endpoint-only tests continue to pass.
+const gainAt = (p) => {
+  const x = scroll.scrollFor(p);
+  return (scroll.pAt(x + 1) - scroll.pAt(x - 1)) / 2;
+};
+const connectGains = [0.40, 0.42, 0.44, 0.46, 0.48, 0.50, 0.52].map(gainAt);
+const connectGainMin = Math.min(...connectGains);
+const connectGainMax = Math.max(...connectGains);
+const connectGainRatio = connectGainMin / connectGainMax;
+results.push({ name: 'Connect road has no stall-then-roll trough',
+  value: connectGainRatio,
+  pass: connectGainRatio >= 0.85
+    && connectGains.at(-1) <= connectGainMin * 1.08,
+  trace: { gains: connectGains.map(v => +v.toFixed(8)) } });
+
+// A frame hitch must not turn the wheel deltas Chrome coalesced across that
+// hitch into a synthetic fling. The 120 px aggregate arrived over 300 ms, so
+// its physical input rate is 400 px/s; on this road that is < 0.01 p/s. The
+// old discounted 34 ms denominator reported ~3,500 px/s instead.
+reset(0.26);
+wheel(40);
+coalescedAfterStall(120);
+const stalledWheelPeak = scroll.gesturePeak;
+results.push({ name: 'coalesced wheel after a frame stall keeps physical rate',
+  value: stalledWheelPeak,
+  pass: stalledWheelPeak > 0 && stalledWheelPeak < 0.012 });
+
+// A same-direction second gesture may extend an in-flight Connect resolution
+// toward Owned, but its immature rate EMA must not replace the speed floor the
+// first gesture is already delivering. That replacement was the controller's
+// exact stall-then-roll shape: collapse during the eight modest deltas, then
+// recovery when their cruise latched.
+reset(0.30);
+for (let i = 0; i < 8; i++) wheel(120);
+for (const delta of [96, 72, 48, 32, 20, 12]) wheel(delta);
+for (let i = 0; i < 80; i++) frame(16);
+const repeatPreRate = Math.abs(scroll.rate);
+const repeatRates = [];
+for (let i = 0; i < 8; i++) {
+  wheel(24);
+  repeatRates.push(Math.abs(scroll.rate));
+}
+for (let i = 0; i < 16; i++) {
+  frame(16);
+  repeatRates.push(Math.abs(scroll.rate));
+}
+const repeatMinRate = Math.min(...repeatRates);
+const repeatTroughRatio = repeatMinRate / repeatPreRate;
+results.push({ name: 'second gesture cannot collapse an in-flight Connect floor',
+  value: repeatTroughRatio,
+  pass: scroll.resolveTarget === 0.725 && repeatTroughRatio >= 0.70,
+  trace: {
+    preRate: +repeatPreRate.toFixed(5),
+    minRate: +repeatMinRate.toFixed(5),
+    target: scroll.resolveTarget,
+  } });
 
 reset();
 swipe();
@@ -221,6 +293,66 @@ for (const delta of [20, 50, 110, 110, 110]) wheel(delta);
 settle(12000);
 results.push({ name: 'genuine post-boot repeat still buys Connect',
   value: scroll.progress, pass: near(scroll.progress, 0.523) });
+
+// A delivered momentum tail can straddle the shorter arrival-wall timeout
+// without crossing the longer gesture timeout. Once the first landing has
+// answered the gesture, that 90-160 ms window must not let one stale sample
+// reuse the old stream/rate credit to buy the following section.
+reset();
+for (let i = 0; i < 10; i++) wheel(120);
+for (let i = 0; i < 500 && scroll.answeredAt === null; i++) wheel(18);
+for (let i = 0; i < 5; i++) frame(16);
+wheel(103, 12);
+wheel(18);
+wheel(10);
+settle(10000);
+results.push({ name: 'delayed momentum tail holds at Inspire',
+  value: scroll.progress, pass: near(scroll.progress, 0.26) });
+
+reset();
+for (let i = 0; i < 10; i++) wheel(120);
+for (let i = 0; i < 500 && scroll.answeredAt === null; i++) wheel(18);
+for (let i = 0; i < 5; i++) frame(16);
+wheel(103, 12);
+for (const delta of [40, 30, 20, 10]) wheel(delta);
+settle(10000);
+results.push({ name: 'coalesced delayed tail holds at Inspire',
+  value: scroll.progress, pass: near(scroll.progress, 0.26) });
+
+reset();
+for (let i = 0; i < 10; i++) wheel(120);
+for (let i = 0; i < 500 && scroll.answeredAt === null; i++) wheel(18);
+for (let i = 0; i < 5; i++) frame(16);
+wheel(103, 12);
+for (const delta of [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]) wheel(delta);
+settle(10000);
+results.push({ name: 'long coalesced momentum tail holds at Inspire',
+  value: scroll.progress, pass: near(scroll.progress, 0.26) });
+
+reset(0.26);
+for (let i = 0; i < 10; i++) wheel(120);
+for (let i = 0; i < 500 && scroll.answeredAt === null; i++) wheel(18);
+for (let i = 0; i < 5; i++) frame(16);
+wheel(103, 12); // 92 ms since the prior delta: > arrival hold, < gesture idle
+wheel(18);
+wheel(10);
+settle(10000);
+results.push({ name: 'delayed momentum tail cannot buy a second section',
+  value: scroll.progress, pass: near(scroll.progress, 0.523) });
+
+// Connect's road, camera and ground-light curves all decelerate over the same
+// final slice. A released gesture must not add the global exponential crawl on
+// top: the route declares a bounded brake tail while retaining its 2.5 s
+// position-authored transit and fully reversible manual scrub.
+reset(0.26);
+for (let i = 0; i < 10; i++) wheel(110);
+const connectReleasedAt = now;
+for (let i = 0; i < 500 && scroll.answeredAt === null; i++) frame(16);
+const connectReleaseMs = now - connectReleasedAt;
+results.push({ name: 'Connect released glide has no near-static landing crawl',
+  value: scroll.progress,
+  pass: near(scroll.progress, 0.523) && connectReleaseMs <= 2700,
+  trace: { releaseToLandingMs: connectReleaseMs } });
 
 for (const result of results) {
   console.log(`${result.pass ? 'PASS' : 'FAIL'} ${result.name}: ${result.value.toFixed(6)}`

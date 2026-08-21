@@ -30,6 +30,48 @@ make intentional edits between packages. Each catalogue row gives the maximum
 candidate scope. The coordinator must narrow it to exact paths and allowed new
 files using the live ownership ledger; an implementer cannot expand it.
 
+## Reconciled dispatch baseline
+
+The program's **Reconciled execution baseline — 2026-08-20** is the durable
+source-to-order audit for this runbook. It covers commit
+`16a16d8cafc9590f61fb3a6ac5de618d0e2db2d7` plus the then-complete dirty and
+relevant untracked tree; X00 must supersede it with the live snapshot before
+execution. The compact disposition is:
+
+| Status | Work orders |
+| --- | --- |
+| PARTIAL | Q01–Q03, C01, C02, C04, S01, S02, N01, J01, J02, R01, R03, R04, U01b, U02, U04, U05, O01, F01–F04 |
+| REMAINING | X00, Q04, Q05, P01, C03, C05, C06, J03, A02, J04a–J04e, J05, A05/A05a, R02, R05–R08, U01a, U01c, U01d, U03, U06, O02, H01–H06, A01/A01a/A03/A04/A06 and conditionals, B01–B05, F05, F06, G0–G5 |
+| REVALIDATE overlay | C01–C03, S01/S02, J01/J02, U02–U05, H02, B01–B04, F02, and every gate that consumes the current content/hero/preboot-rail/navigation/Connect/UI/CSS/static/capture work |
+| DONE | None; no order has its complete frozen contract, focused proof, required review, and coordinator acceptance |
+
+`PARTIAL` does not authorize repeating a completed extraction blindly. The
+brief starts from the named existing seam and implements/tests only the missing
+contract in the program table. `REVALIDATE` means the protected current behavior
+is captured before a consuming write. If later live evidence proves an entire
+order already satisfies its exact contract, the coordinator may disposition it
+without a source edit only after the listed focused proof, required independent
+review, and explicit acceptance are recorded. Otherwise it remains PARTIAL or
+REMAINING. A file's existence, an old commit message, or a broad green check is
+never sufficient.
+
+Current dirty behavior is protected: the preboot/live horizontal rail and menu,
+hero/rail choreography, route-faithful Mission/Inspire flight, copy arrival,
+rail collision/exclusion, Connect ADOS placement, content/symbol/static order,
+and dirty captures. The untracked scroll-investigation briefs also report an
+intermittent continued-travel/overshoot symptom; concurrent dirty
+`journey/scroll.js` and focused-test changes now correct and pass one delayed
+momentum-tail case. X00 must classify that protected corrective work, and C01
+must independently validate it and reproduce or explicitly clear any remaining
+symptom before J01. A remaining reproducible application defect is not frozen
+as desired behavior and needs a separate root-approved corrective brief.
+
+HEAD advanced from the audit's initial `b3a2ecd1` snapshot through one committed
+`DEPLOY.md` change only. F04 must reconcile its manual `git add -A`/push quick
+path with the exact-path `tools/release.sh` contract without executing either.
+The concurrently added answered-wall restart and delayed-momentum-tail focused
+case passed, but remain C01 revalidation evidence rather than elegance closure.
+
 ## Roles
 
 ### Coordinator — primary agent
@@ -223,6 +265,9 @@ The XHARD orders in this program are:
   hooks, registry/GPU preparation, async completion, facade generations, and
   compatibility globals; the XHARD decision is the ownership map, while each
   child implementation remains bounded;
+- **A05a** — separating inferred physical-gesture identity, credit/arrival
+  policy, and pure pixel-to-route mapping can change interaction semantics even
+  when every local extraction appears mechanical;
 - **R01** — intro acceleration replaces a global clock while owning a recursive
   RAF independent of the main animation lifecycle;
 - **R03** — GPU resource teardown must preserve renderer/TAA behavior while
@@ -291,6 +336,13 @@ Required stable browser scenario IDs:
 - `live-desktop`;
 - `live-touch`;
 - `live-reduced-motion`.
+
+`live-desktop` and `live-touch` are not boot-only aliases. Each must traverse
+consecutive rests and export a bounded diagnostic trace containing raw delivery,
+event/RAF order, semantic gesture decision, route progress, immutable frame
+snapshot, and arrival. Synthetic Playwright input proves application behavior;
+it does not substitute for C02's separately recorded real trackpad momentum-tail
+and deliberate two-pulse reference with browser/OS/input provenance.
 
 `test:browser` may report `SKIP(environment)` distinctly. The required variant
 must fail on absence, launch failure, WebGL unavailability, timeout, harness
@@ -368,14 +420,14 @@ ledger like implementation orders:
 
 | Review ID | When | GPT-5.6 Sol reviews | Downstream hold |
 | --- | --- | --- | --- |
-| XR-BASELINE | After G1 evidence, before Wave 2 | Q01–Q05/P01/C01–C04 semantics, capture truthfulness, environment classification, live scenario coverage, deterministic/resource/performance report completeness, and fault-injection validity | Wave 2 cannot start |
+| XR-BASELINE | After G1 evidence, before Wave 2 | Q01–Q05/P01/C01–C04 semantics, capture truthfulness, environment classification, physical-input provenance, trace-replay/live-traversal coverage, composed-motion/resource/performance report completeness, and fault-injection validity | Wave 2 cannot start |
 | XR-C-DESIGN | After S01/S02 evidence, before C05 | Root's manifest, chapter capability, registry-instance, navigation, and compatibility migration design | C05/C06/N01 cannot start |
-| XR-C-GATE | At G2 after C05/C06/N01 and focused/browser evidence | Integrated canonical model, dependency direction, adapter debt, and two-instance behavior | J01/J03/R05–R08 cannot start |
-| XR-RUNTIME-DESIGN | Before J01 and before lifecycle XHARD orders J04a–J04e/R01/R03/R04/R07 | Root's transition/frame state model, disposal graph, async cancellation, clock/RAF, GPU, rail/UI, and page/journey lifetime decisions | Affected XHARD family/order cannot start |
-| XR-RUNTIME-GATE | At G3 after journey/rendering lifecycle lanes | Integrated frame order, transition semantics, teardown ownership, late async behavior, recreation, and visitor fallbacks | Wave 4 cannot start |
+| XR-C-GATE | At G2 after C05/C06/N01 and focused/browser evidence | Integrated canonical model, dependency direction, adapter debt, and two-instance behavior | J04a/A05/A05a/J01–J03/R05–R08 cannot start |
+| XR-RUNTIME-DESIGN | Before J04a/A05a/J01/J02 and before lifecycle XHARD orders J04b–J04e/R01/R03/R04/R07 | Root's factual input-sample/discriminated gesture-decision boundary, diagnostic-only telemetry, transition/frame snapshot model, disposal graph, async cancellation, clock/RAF, GPU, rail/UI, and page/journey lifetime decisions | J04a/A05/A05a/J01/J02 and each affected lifecycle XHARD order cannot start |
+| XR-RUNTIME-GATE | At G3 after journey/rendering lifecycle lanes | Integrated physical-input decisions, single frame snapshot, composed-motion traces, transition semantics, teardown ownership, late async behavior, recreation, and visitor fallbacks | Wave 4 cannot start |
 | XR-VISUAL-DESIGN | Before U05, O02, B03, and B04 | Root's projection/layout, seeded builder, responsive page-layout, and boot-handoff extraction boundaries | Named XHARD order cannot start |
-| XR-VISUAL-GATE | At G4 | Whole UI/organism/chapter/page composition, visual determinism, residual facade cohesion, and abstraction-churn risk | Wave 5 cannot start |
-| XR-FINAL | At G5 after all mechanical/browser/capture/performance evidence | Complete diff, cross-wave architecture, residual debt, release risk, and whether the stated end-state was actually reached | No completion/release-readiness claim |
+| XR-VISUAL-GATE | At G4 | Whole UI/organism/chapter/page composition, visual determinism, rail-layout invalidation evidence, residual facade cohesion, and abstraction-churn risk | Wave 5 cannot start |
+| XR-FINAL | At G5 after all mechanical/browser/capture/performance evidence | Complete diff, cross-wave architecture, physical-input replay/live evidence, composed presentation, residual debt, release risk, and whether the stated end-state was actually reached | No completion/release-readiness claim |
 
 For `XR-RUNTIME-DESIGN` and `XR-VISUAL-DESIGN`, the coordinator may present
 separate root-authored design notes in one Sol session, but each named XHARD
@@ -427,10 +479,10 @@ runs before Q05 is accepted.
 
 | ID | Goal | Candidate scope | Risk | Focused proof |
 | --- | --- | --- | --- | --- |
-| P01 | Provision and prove one supported reference browser/WebGL/performance environment before characterization depends on it | external environment plus ledger metadata; no app source | T2 | required WebGL preflight and `live-journey` pass with fixed browser/renderer/viewport/DPR; temp capture path writable |
-| C01 | Characterize hero, direct/wrap transitions, cancellation, landing, and frame-writer order | new journey contract tests; minimal explicit test seam only | T2 | deliberate perturbation makes each assertion fail |
-| C02 | Characterize UI DOM/ARIA, sidebar/nav effect, disclosure, focus, sheet, copy arrival, and reduced motion | new UI/DOM tests; harness scenario definitions | T2 | `live-desktop`, `live-touch`, and `live-reduced-motion` cover normal desktop, mobile sheet/focus, hero/sidebar, copy timing, and reduced motion |
-| C03 | Define deterministic rendering report schema and record RNG/order/geometry/resource/performance baselines | new rendering tests/report fixture; read-only probes | T3 | RNG/geometry/draw ranges, renderer memory/draw calls, listener/RAF/resource counts repeat exactly; environment provenance and soft frame/GPU tolerances recorded |
+| P01 | Provision and prove one supported reference browser/WebGL/performance environment before characterization depends on it | external environment plus ledger metadata; no app source | T2 | required WebGL preflight and `live-journey` pass with fixed browser/OS/renderer/viewport/DPR/input provenance; temp capture path writable |
+| C01 | Characterize raw input delivery, gesture identity, credit/arrival decisions, hero/direct/wrap transitions, cancellation, landing, and frame-writer order | new journey/input contract tests and trace fixtures; minimal explicit test seam only | T2 / **XHARD evidence foundation** | exact causal traces keep factual samples, discriminated semantic decisions, and heuristic diagnostic telemetry separate; cover delayed/long/coalesced tails, multiple events/RAF orders, long frames/background resume, reversal, touch, rapid repeats, and boot replay; each decision cites a causing sample/frame, samples may yield no decision, one gesture answers at most one new rest, and deliberate perturbation fails |
+| C02 | Characterize UI DOM/ARIA, sidebar/nav effect, disclosure, focus, sheet, copy arrival, reduced motion, and real live travel | new UI/DOM tests; harness scenario definitions; external physical-input reference trace | T2 | `live-desktop`, `live-touch`, and `live-reduced-motion` traverse rests; emit event/frame/decision/route/presentation/arrival traces; cover UI behavior; at least one provenance-recorded real trackpad tail and two-pulse reference supplements synthetic wheel input |
+| C03 | Define deterministic rendering/composed-motion report schema and record RNG/order/geometry/resource/performance baselines | new rendering/motion tests and report fixture; read-only probes | T3 | RNG/geometry/draw ranges, route gain, camera-pose derivative, stable-landmark projection, renderer memory/draw calls, listener/RAF/resource counts repeat exactly; no unintended stop/re-acceleration/reversal; live long-task/RAF/layout/event-latency provenance and soft frame/GPU tolerances recorded |
 | C04 | Characterize portrait deal atomicity, late load/failure, cancellation, and disposal | new portrait contract tests; minimal loader seam only | T2 | fake loader/clock tests fail on post-dispose mutation |
 
 P01 follows Q03/Q05 and precedes C01–C04. If no supported reference environment
@@ -443,7 +495,7 @@ disjoint.
 
 | ID | Goal | Candidate scope | Risk | Focused proof |
 | --- | --- | --- | --- | --- |
-| S01 | Validate raw manifest values/totals and expose immutable indexes | `journey/structure.js`, its tests | T1 | malformed raw inputs fail; current values exact |
+| S01 | Validate raw manifest values/totals and expose immutable indexes without overwriting protected visible/menu order from older schema text | `journey/structure.js`, its tests, read-only current content/menu evidence | T1 | malformed raw inputs fail; current values exact; visible menu order remains distinct from seeded build order |
 | S02 | Add route/copy/symbol compatibility fixtures before removing competing sources | route/symbol/constants tests and fixtures only | T1 | current exported values/signatures exact |
 | C05 | Define narrow core chapter descriptor plus separate focus/interaction/selection/visibility capabilities | new contract/adapters and chapter contract tests | T2 / **XHARD** | per-chapter migration table and fake chapters pass |
 | C06 | Replace module-global prepared cache with one registry instance; migrate prebuild/build atomically | `chapter-registry.js`, `main.js`, `journey.js`, focused tests | T2 / **XHARD** | prebuild, no-prebuild, two instances, dispose isolation |
@@ -458,21 +510,26 @@ before Luna implements it.
 
 | ID | Goal | Candidate scope | Risk | Focused proof |
 | --- | --- | --- | --- | --- |
-| J01 | Extract one transition controller for jump/wrap/cancel/reverse/hero/entry state | `journey.js`, transition/path/entry collaborators and tests | T3 / **XHARD** | endpoint, reversal, cancellation, rewind, landing exact |
-| J02 | Declare the fixed frame pipeline once and remove chapter-specific branches | `journey.js`, `frame-application.js`, new pipeline/tests | T3 / **XHARD** | spy event sequence exact; frame output unchanged |
+| J04a | Own and detach journey state/scroll timers and hash/input/resize/visibility listeners; publish the characterized factual-sample→semantic-decision boundary while keeping heuristic telemetry diagnostic-only | `journey/state.js`, `journey/scroll.js`, narrow input/lifecycle helpers/tests | T2 under **XHARD** lifecycle design | repeated attach/dispose leaves zero owned work; causal traces, exact/inferred gesture boundaries, and replay remain exact; no telemetry field authorizes a transition |
+| A05 | Decide whether the detachable scroll runtime is cohesive before transition extraction | `journey/scroll.js`, state/input/route collaborators; read-only decision artifact | T1 under **XHARD** runtime design | one owner is evidenced, or A05a is required before J01 |
+| A05a | Conditional: separate input classifier, credit/arrival controller, and pure pixel↔route mapping when A05 finds shared mutable closure | exact scroll/input/route paths and contract fixed by root from A05 evidence | T3 / **XHARD** | trace replay is exact; each mutable policy has one owner; no timing heuristic leaks to transition code |
+| J01 | Extract one transition controller for jump/wrap/cancel/reverse/hero/entry state; consume only discriminated semantic decision types, never raw samples or diagnostic telemetry | `journey.js`, transition/path/entry collaborators and tests | T3 / **XHARD** | endpoint, reversal, cancellation, rewind, landing exact; no raw `sinceInput`/credit/`answeredAt` or telemetry dependency |
+| J02 | Declare the fixed frame pipeline and one immutable presentation snapshot; remove chapter-specific branches | `journey.js`, `frame-application.js`, new pipeline/snapshot/tests | T3 / **XHARD** | spy event sequence exact; every reader receives one `{stateP,routeP,presentedP,cameraPose,transitionPhase,dt}` snapshot; monotonicity, reversal continuity, landing reconciliation, and frame output exact |
 | J03 | Inject narrow UI runtime capabilities and remove lower-level global/private-shape reads | `ui.js`, `journey.js`, `chapter-interactions.js`, adapter/tests | T2 | no lower `window.journey`/`portraits` access |
 | A02 | Freeze `journey/rail.js` page-versus-journey ownership before teardown | `journey/rail.js`, UI/page consumers, read-only responsibility/state map | T1 under **XHARD** lifecycle design | every rail timer/listener/backdrop/disposer has one target owner |
-| J04a | Own and detach journey state/scroll timers, hash/input/resize/visibility listeners | `journey/state.js`, `journey/scroll.js`, narrow lifecycle helpers/tests | T2 under **XHARD** lifecycle design | repeated attach/dispose leaves zero owned work; scroll behavior exact |
 | J04b | Own and detach UI/rail timers, listeners, backdrop, and subordinate teardown | `journey/ui.js`, `journey/rail.js`, UI modules/tests | T2 under **XHARD** lifecycle design | UI/rail destroy is idempotent; sheet/nav/rail behavior exact |
 | J04c | Own and detach dial and chapter-installed global hooks | `journey/dial.js`, exact chapter hook owners, focused tests | T2 under **XHARD** lifecycle design | keys/listeners detach once without changing chapter behavior |
 | J04d | Own registry/preparation cancellation and late async settlement | `chapter-registry.js`, preparation helpers, `journey.js`, tests | T2 under **XHARD** lifecycle design | dispose during `prepareGpu`; no stale registry/late mutation |
 | J04e | Compose facade-generation, journey animator, compatibility-global, and recreation cleanup | `journey.js`, new journey lifecycle owner/tests | T2 under **XHARD** lifecycle design | boot/prepare/activate/dispose/recreate twice; old global cannot affect new instance |
 | J05 | Document and test page-lifetime singleton handlers separately from journey recreation | `main.js` test seam, tests, lifecycle docs | T2 | one install per page module; no journey accumulation |
 
-Run J01 → J02 → J03 → A02 → J04a → J04b → J04c → J04d → J04e → J05
-serially. Each child has a separate reservation, patch journal, review, and
-rollback seam. `XR-RUNTIME-DESIGN` must explicitly cover J01/J02 and the complete
-J04a–J04e ownership map before their dispatch.
+Run J04a → A05 → conditional A05a → J01 → J02 → J03 → A02 → J04b → J04c →
+J04d → J04e → J05 serially. Each child has a separate reservation, patch
+journal, review, and rollback seam. A05a is mandatory when classifier,
+credit/arrival-wall policy, and pixel↔route mapping still share mutable closure.
+`XR-RUNTIME-DESIGN` must explicitly cover J04a's input/decision boundary,
+conditional A05a, J01/J02, and the complete J04a–J04e ownership map before
+their dispatch.
 
 ### Wave 3B — rendering and chapter lifecycle ownership
 
@@ -506,13 +563,24 @@ each starts. R08 waits for all of them.
 | U02 | Extract hotspot and hover-zone registry with one state owner | `ui.js`, new UI module/tests | T2 | hover/focus/touch behavior and cleanup exact |
 | U03 | Extract popover/card disclosure controller | `ui.js`, UI/cards adapters/tests; CSS protected | T2 | tiers, Escape, focus return, activation exact |
 | U04 | Extract copy/arrival controller | `ui.js`, arrival/live-region helpers/tests | T2 | timing and reduced-motion exact |
-| U05 | Extract projection/collision/layout engine | `ui.js`, new layout module/tests | T3 / **XHARD** | DOM projection and current captures unchanged |
+| U05 | Extract projection/collision/layout and one rail-exclusion snapshot owner; inject its measured value into UI and Connect consumers | `ui.js`, `rail.js`, `chapters/connect/index.js`, new layout module/tests | T3 / **XHARD** | immutable `{revision,viewport,rect}` snapshot is published once per invalidation; DOM projection, ADOS/portrait/card exclusion, and captures unchanged; frame-drive consumers perform zero rail DOM/geometry reads |
 | U06 | Make UI facade composition-only and cascade idempotent destroy | UI facade/modules/tests | T2 | zero UI timers/listeners after destroy |
 
 Run U01a → U01b → U01c → U01d before U02. Run U02 → U03 → U04 → U05 → U06
 serially because they converge on `ui.js`. Review after every T2/T3 order and
 batch-review U01b/U01c together; run targeted browser scenarios after U03, U04,
 and U05, not after every extraction.
+
+U05 is the only new seam identified by reconciliation, and it extends the
+existing layout order rather than creating another package. The owner computes
+policy/measurement; consumers receive the value through the already-settled
+capability direction. Reject a pass-through wrapper. H02 starts only after U05
+freezes that boundary so the tendril split does not preserve or duplicate the
+current Connect-to-rail DOM query.
+
+The U05 owner performs write → measure → publish once per layout invalidation.
+Exact fake counters prove that UI, Connect, and H02 never query or measure rail
+DOM during frame drive; the live gate retains soft performance comparison.
 
 The root-frozen U01 interface is: the UI facade creates and synchronously starts
 one card-preparation lifecycle at the characterized boot epoch. Its `destroy()`
@@ -538,6 +606,7 @@ contracts freeze, but their writes are not concurrent: complete focused checks,
 R1 review, frozen-source capture, and coordinator acceptance for H01 before H02
 begins, and so on. Stop an H-order when its remainder is cohesive; line count
 alone cannot authorize another split.
+H02 additionally waits for U05's accepted rail-exclusion capability.
 `XR-VISUAL-DESIGN` must explicitly cover O02 before its dispatch.
 
 ### Wave 4C — entry facade and residual-cohesion decisions
@@ -548,18 +617,20 @@ alone cannot authorize another split.
 | A01a | Conditional: extract one additional portrait owner found by A01 | exact paths and contract fixed by root from A01 evidence | T3, optionally **XHARD** | focused portrait lifecycle, byte/order, and capture gates |
 | A03 | Decide whether Inspire's remaining facade/build/runtime state is cohesive | `journey/chapters/inspire/index.js`, direct collaborators; read-only decision artifact | T1 | one owner is evidenced, or A03a extraction is required before G4 |
 | A04 | Decide whether Final's remaining facade/build/runtime state is cohesive | `journey/chapters/final/index.js`, direct collaborators; read-only decision artifact | T1 | one owner is evidenced, or A04a extraction is required before G4 |
-| A05 | Decide whether the detachable scroll runtime is cohesive after J04a | `journey/scroll.js`, state/input collaborators; read-only decision artifact | T1 | one owner is evidenced, or A05a extraction is required before G4 |
 | A06 | Decide whether spores is cohesive after listener ownership moves | `organism/spores.js`, input/runtime collaborators; read-only decision artifact | T1 | one owner is evidenced, or A06a extraction is required before G4 |
 | B01 | Freeze the page-bootstrap state model and characterization map | `main.js`, direct collaborators, C01/C02/J05 evidence; test/document only | T2 | every handler/timer/layout/handoff has a named owner and baseline |
 | B02 | Extract page-level failure reporting and singleton global-handler ownership | `main.js`, new bootstrap failure/lifecycle modules/tests | T2 | one install per page load; visitor fallback unchanged |
-| B03 | Extract responsive hero/sidebar/rail layout behind an explicit page-layout owner | `main.js`, `journey/rail.js`, new bootstrap/layout module/tests; CSS protected | T3 / **XHARD** | approved hero/sidebar behavior, breakpoints, rail placement, resize order, captures exact |
+| B03 | Extract responsive hero/sidebar layout behind an explicit page-layout owner that consumes U05's accepted rail snapshot contract | `main.js`, `journey/rail.js`, new bootstrap/layout module/tests; CSS protected | T3 / **XHARD** | approved hero/sidebar behavior, breakpoints, rail placement, resize order, and captures exact; B03 may invalidate the sole U05 owner but performs zero rail measurement and publishes no competing snapshot |
 | B04 | Extract boot-input buffering and intro/scene/journey handoff | `main.js`, narrow bootstrap/handoff modules/tests | T3 / **XHARD** | early input, intro skip, lazy prepare, failure, and handoff ordering exact |
 | B05 | Leave `main.js` as entry/composition and documented page-lifetime compatibility facade | `main.js`, bootstrap modules/tests | T2 | facade contains boot/composition only; public entry/import-map behavior exact |
 
-A01 follows R04/R06; A03–A06 follow their lifecycle owners. Conditional IDs
-A03a–A06a are root-defined, separately reviewed extraction orders and must be
-accepted before G4 when triggered. A02 already precedes J04b and B03. B01 follows
-J05 and the Wave 3 gate;
+A01 follows R04/R06; A03, A04, and A06 follow their lifecycle owners. A05 and
+conditional A05a run in Wave 3A before J01. Conditional IDs A03a, A04a, and A06a
+are root-defined, separately reviewed extraction orders and must be accepted
+before G4 when triggered. A02 already precedes J04b and B03. B01 follows
+J05 and the Wave 3 gate. B03 additionally requires accepted U05; B03 may
+invalidate the sole snapshot owner after page-layout writes but never measures
+rail geometry or republishes the snapshot.
 B02 → B03 → B04 → B05 serialize because they touch `main.js`. The coordinator
 defines every B-interface before dispatch and protects the user's current hero
 and sidebar hunks explicitly. `XR-VISUAL-DESIGN` must explicitly cover B03 and
@@ -612,10 +683,18 @@ After P01 and C01–C04:
   in the supported environment;
 - `live-desktop`, `live-touch`, and `live-reduced-motion` pass in their fixed
   viewport/input/motion configurations;
+- live desktop/touch traversals and the real-device reference show the same
+  gesture boundaries and rest outcomes when replayed through C01; one physical
+  gesture answers at most one new rest and two deliberate pulses can answer two;
+- deterministic traces cover event/RAF permutations, long/coalesced tails,
+  visible long frames, background resume, reversal, touch contacts, rapid
+  repeats, and boot replay; endpoint-only assertions cannot satisfy G1;
 - deterministic rendering report repeats exact RNG/order/geometry/draw-range,
+  route-gain/camera-derivative/stable-landmark projection,
   renderer-memory/draw-call, listener/RAF, and resource-owner fields;
 - the report records browser/renderer/viewport/DPR/flags provenance and accepted
-  soft frame-time/GPU tolerances for later G3/G4 comparison;
+  live long-task/RAF-gap/style-layout/event-latency evidence plus accepted soft
+  frame-time/GPU tolerances for later G3/G4 comparison;
 - capture/baseline files are observed, never refreshed;
 - an R1 Luna characterization review confirms tests fail under deliberate
   invariant perturbations;
@@ -636,26 +715,31 @@ After S01–N01:
 
 ### G3 — lifecycle and orchestration gate
 
-After J01–J03, A02, J04a–J04e, J05, and R01–R08:
+After J04a, A05/required A05a, J01–J03, A02, J04b–J04e, J05, and R01–R08:
 
 - `npm run check` passes;
 - required `live-journey`, `live-desktop`, `live-touch`,
   `live-reduced-motion`, `static-input`, and `reduced-motion` pass;
 - `python3 tools/rebuild.py --check` passes;
 - capture comparison and reference-environment resource/performance report pass;
+- C01 trace replay and genuine live traversal still agree after ownership moves;
+  every downstream camera/seam/chapter/lens/rail/hero/UI reader consumes one
+  immutable frame snapshot, with monotonic/reversal/landing traces exact;
 - repeated create/prepare/activate/dispose/recreate proves zero owned work leaks;
 - XHARD review `XR-RUNTIME-GATE` by a GPT-5.6 Sol approves state ownership,
   dependency direction, frame/transition semantics, and teardown composition.
 
 ### G4 — cohesive extraction gate
 
-After U01a–U01d/U02–U06, O01–O02, serialized H01–H06, A01/A03–A06 and every
+After U01a–U01d/U02–U06, O01–O02, serialized H01–H06, A01/A03/A04/A06 and every
 required conditional extraction, plus B01–B05:
 
 - focused checks were recorded after every order;
 - `npm run check` and all required browser scenarios pass;
 - deterministic byte, shader, RNG/order, capture, memory, and draw-call gates
   pass in their supported environments;
+- exact layout counters prove one write→measure→publish rail-exclusion snapshot
+  per invalidation and zero rail DOM/geometry reads from frame-drive consumers;
 - XHARD review `XR-VISUAL-GATE` by a GPT-5.6 Sol identifies no visual contract
   drift, pass-through-wrapper churn, or unjustified residual god facade.
 
@@ -672,6 +756,8 @@ Run once, not per implementer:
 7. desktop/mobile manual hero, sidebar, navigation, cards, chapters, fallback,
    reduced-motion, baked, and live-build checks;
 8. reference-environment memory, draw-call, listener, RAF, and timing comparison;
+   this includes physical-input replay/live-traversal agreement, composed-motion
+   traces, layout invalidation counts, long tasks, and event-to-frame latency;
 9. fresh mechanical scan and independent subjective review;
 10. confirmation that every Q04 error site is classified with subsystem-local
     behavior and a focused test;
@@ -820,21 +906,30 @@ decide. The coordinator is the acceptance authority.
 
 When the user authorizes execution, the coordinator should:
 
-1. create X00 and record the live dirty-worktree ownership baseline;
-2. reserve and dispatch Q01 only;
-3. review Q01, then proceed through serialized Wave 0;
-4. run G0;
-5. run P01 and stop before characterization if the required reference
+1. re-read the program reconciliation, create X00, and record the superseding
+   live dirty-worktree ownership baseline, including all relevant untracked
+   work and the reported scroll investigation;
+2. copy every reconciled disposition into the ledger, protect the current
+   content/hero/rail/navigation/Connect/UI/CSS/static/capture behavior, and
+   resolve any changed ownership before source work;
+3. reserve and dispatch Q01 only, narrowed to the missing script contract rather
+   than re-extracting foundations;
+4. review Q01, then proceed through serialized Wave 0;
+5. run G0;
+6. run P01 and stop before characterization if the required reference
    browser/WebGL/performance environment is unavailable;
-6. complete C01–C04, run G1, and hold Wave 2 until `XR-BASELINE` and coordinator
+7. complete C01–C04, including physical-input reference, event/RAF replay,
+   composed-motion evidence, and a disposition for the reported
+   continued-travel/stall-then-roll symptoms; run G1, and hold Wave 2 until
+   `XR-BASELINE` and coordinator
    acceptance confirm that the evidence foundation is truthful and complete;
-7. dispatch only work whose parents are accepted and whose exact paths do not
+8. dispatch only work whose parents are accepted and whose exact paths do not
    collide with active reservations;
-8. update the ledger and external patch journal after every write, handoff,
+9. update the ledger and external patch journal after every write, handoff,
    review, repair, and gate;
-9. provide the user a concise report at each wave seam, not a stream of every
+10. provide the user a concise report at each wave seam, not a stream of every
    subagent tool call;
-10. stop only for a genuine authorization/ownership ambiguity, product decision,
+11. stop only for a genuine authorization/ownership ambiguity, product decision,
    or unrecoverable environment requirement.
 
 This is the point at which the work can be run one piece at a time without

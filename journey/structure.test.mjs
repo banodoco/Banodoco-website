@@ -7,7 +7,7 @@ import { JOURNEY_SCHEMA, validateJourneyStructure } from './structure.js';
 assert.deepEqual(ROUTE, [
   { id: 'mission', span: 14, nav: 'Intro', scrollVh: 3.5, stops: [0] },
   { id: 'inspire', span: 24, nav: 'Inspire', scrollVh: 6.7, segVh: [3.5, 3.2] },
-  { id: 'connect', span: 22, nav: 'Connect', scrollVh: 14.35, stops: [0.65], segVh: [11.5, 2.85], shape: { seg: 0, k: [1.6, 0.95] } },
+  { id: 'connect', span: 22, nav: 'Connect', scrollVh: 10.85, stops: [0.65], segVh: [8, 2.85], shape: { seg: 0, k: [1.1, 1] } },
   { id: 'owned', span: 25, nav: 'Owned', scrollVh: 9.27, segVh: [2.27, 7], shape: { seg: 1, k: [1.6, 0.877] } },
   { id: 'final', span: 15, nav: null, scrollVh: 10.6, stops: [0.8], segVh: [10, 0.6], shape: { seg: 0, k: [1.305, 0.7] } },
 ]);
@@ -19,7 +19,7 @@ assert.deepEqual(CHAPTERS.map(({ start, end, stops }) => [start, end, ...stops])
 assert.deepEqual(REST_STOPS, [0, 0.26, 0.523, 0.725, 0.97]);
 assert.deepEqual(SEGMENTS.map(({ id, end, vh, k }) => [id, end, vh, k]), [
   ['mission', 0.14, 3.5, null], ['inspire', 0.26, 3.5, null], ['inspire', 0.38, 3.2, null],
-  ['connect', 0.523, 11.5, [1.6, 0.95]], ['connect', 0.6, 2.85, null],
+  ['connect', 0.523, 8, [1.1, 1]], ['connect', 0.6, 2.85, null],
   ['owned', 0.725, 2.27, null], ['owned', 0.85, 7, [1.6, 0.877]],
   ['final', 0.97, 10, [1.305, 0.7]], ['final', 1, 0.6, null],
 ]);

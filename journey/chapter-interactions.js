@@ -19,6 +19,7 @@ export function registerChapterInteractions(ui, chapters) {
         radius: typeof mod.nodeRadius === 'function' ? () => mod.nodeRadius(id) : undefined,
         reveal: typeof mod.nodeReveal === 'function' ? () => mod.nodeReveal(id) : undefined,
         revealDirect: mod.revealDirect === true,
+        revealScrub: mod.revealScrub === true,
       });
       h.onHot = (on) => mod.setHot && mod.setHot(id, on);
     }

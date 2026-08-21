@@ -4,3 +4,7 @@ __pycache__/
 
 # Local JavaScript developer dependencies (the site itself is served directly).
 node_modules/
+
+# Local macOS and agent diagnostic byproducts.
+.DS_Store
+.tmp-connect-third-scout/

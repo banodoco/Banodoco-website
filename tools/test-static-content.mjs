@@ -18,7 +18,7 @@ assert.match(html, /^<!DOCTYPE html>\n<html lang="en">/);
 assert.match(html, /<a class="skip" href="#main">Skip to content<\/a>/);
 assert.match(html, /<main id="main">/);
 assert.equal((html.match(/<section class="chapter"/g) ?? []).length, 5);
-assert.equal((html.match(/<[a-z][^>]*\bdata-src="/gi) ?? []).length, 135);
+assert.equal((html.match(/<[a-z][^>]*\bdata-src="/gi) ?? []).length, 131);
 assert.equal((html.match(/<[a-z][^>]*\bdata-sym="/gi) ?? []).length, 11);
 const uncommented = html.replace(/<!--[\s\S]*?-->/g, '');
 assert.doesNotMatch(uncommented, /<canvas\b/i);

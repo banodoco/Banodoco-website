@@ -188,8 +188,16 @@ const DOCUMENTED_ROUTE = [
   //   The mild decelerando of the sixth pass ("slower as they go") survives
   //   in shape — 1.60 down to 0.95 still relaxes as it runs — it just no
   //   longer ends at a wall. Page 54.62 -> 51.42 vh, -3.20.
-  { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 14.35,
-    segVh: [11.50, 2.85], shape: { seg: 0, k: [1.60, 0.95] } },
+  // EIGHTH PASS, 2026-08-21 ("still does a kinda stall going into connect
+  // then ... a roll through"). The measured scroll gain across the visible
+  // arrival fell 0.0198 -> 0.0100 p/vh, then rose to 0.0115 at the rest: the
+  // exact stall-then-roll shape. The declared 2.5 s released transit already
+  // owns total duration, so shorten only the road and flatten its normalised
+  // tangent profile. At [8.00, 2.85] / [1.10, 1.00], the same samples stay
+  // within 0.0196..0.0173 and finish at 0.0178 — no trough/re-acceleration,
+  // while the light schedule, camera path and rest remain position-identical.
+  { id: 'connect', span: 22, nav: 'Connect', stops: [0.65], scrollVh: 10.85,
+    segVh: [8.00, 2.85], shape: { seg: 0, k: [1.10, 1.00] } },
   // scrollVh 5.0 -> 9.27, declared as segVh [2.27, 7.00] with the POST-REST
   // sub-segment's shape pinned (2026-08-12, Hannah: "the move currently reads
   // as two motions, or one motion with two speeds. It feels jilted rather than
@@ -436,6 +444,20 @@ export const TRANSIT_S = {
   'owned>final': 1.5,
 };
 
+/* Optional landing-tail budgets for FORWARD released-gesture glides.
+ *
+ * Most arrivals deliberately keep scroll.js's global SNAP_K brake: their
+ * final camera easing is short enough that the resulting soft tail reads as
+ * part of the settle. Connect is the exception. Its road decelerando, camera
+ * trap-ease ramp and last ground-light pass all occupy the same final slice,
+ * so the global exponential brake adds a second 0.7-0.9 s near-stop exactly
+ * where the chapter is still visibly introducing itself. Keep the authored
+ * 2.5 s cruise and all position-driven light timing; only bound that extra
+ * controller tail to the same proven budget used for reverse glides. */
+export const FORWARD_BRAKE_TAIL_S = {
+  'inspire>connect': 0.35,
+};
+
 /* Desktop-only FORWARD speed limits for the three opening transitions.
  *
  * These are minimum rest-to-rest times, not raw p/s guesses. scroll.js
@@ -489,6 +511,12 @@ function namedTransitSeconds(table, lo, hi, dir = 0) {
  *  do not know the direction (or pass 0) get the forward figure. */
 export function transitSeconds(lo, hi, dir = 0) {
   return namedTransitSeconds(TRANSIT_S, lo, hi, dir);
+}
+
+/** A forward-only landing-tail budget for the span, or null. */
+export function forwardBrakeTailSeconds(lo, hi, dir = 0) {
+  if (dir < 0) return null;
+  return namedTransitSeconds(FORWARD_BRAKE_TAIL_S, lo, hi, dir);
 }
 
 /** Desktop-only minimum transit time for a capped span, or null. */

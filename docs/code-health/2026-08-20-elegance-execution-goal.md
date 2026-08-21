@@ -1,0 +1,340 @@
+# GOAL: Execute the elegance program
+
+Execute the approved website elegance program in
+`docs/code-health/2026-08-20-elegance-program.md` using the bounded work orders
+and gates in `docs/code-health/2026-08-20-elegance-execution-runbook.md`.
+Execute the reconciled plan from X00 through G5, one accepted disposition at a
+time or in the explicitly permitted disjoint lanes. Start from the program's
+**Reconciled execution baseline — 2026-08-20** and supersede it through X00's
+live snapshot; do not redo a partial foundation as though it were absent. This
+goal creates no new Megaplan or epic.
+
+Do not reset, restore, checkout over, stash, clean, broadly format, overwrite,
+stage, commit, or otherwise disturb unrelated user work. Do not edit either
+authoritative source document as part of execution. Structural work is
+behavior-preserving: visual, route, timing, input, accessibility, seeded
+rendering, resource, fallback, and public-entry contracts remain unchanged.
+
+## Outcome
+
+Produce the architecture described by the program:
+
+- facades compose explicit collaborators instead of hiding several state
+  machines;
+- mutable state, timers, listeners, RAF callbacks, async loaders, textures,
+  geometries, and materials each have one named owner and idempotent cleanup;
+- schema and contract leaves point inward, and UI/chapters use validated
+  descriptors and injected capabilities rather than globals or private shapes;
+- the canonical manifest owns chapter identity, routing, aliases, copy bands,
+  symbols, navigation, and interaction metadata;
+- deterministic byte/order/frame contracts and cheap checks are executable;
+- physical input, gesture decisions, route progress, the immutable frame
+  presentation, and perceived screen motion form one replayable diagnostic
+  trace rather than several independently green clocks;
+- browser, capture, WebGL, accessibility, fallback, and performance results
+  distinguish an environment block from an application pass; and
+- residual large files are cohesive by evidence, not merely left large.
+
+The final state must pass G0–G5, preserve the user's current work and protected
+behavior, and satisfy the program's completion criteria. A browser environment
+that is unavailable, skipped, or merely timed out is not a pass or a release
+readiness claim.
+
+## Authoritative inputs and baseline
+
+The authoritative inputs are:
+
+1. [Elegance program](./2026-08-20-elegance-program.md), which defines purpose,
+   invariants, target architecture, waves, and completion criteria.
+2. [Elegance execution runbook](./2026-08-20-elegance-execution-runbook.md),
+   which defines work orders, prerequisites, exact test ownership, review
+   cadence, concurrency, browser leases, gates, and escalation.
+
+The runbook is the execution authority when an implementation question is
+already covered there. The root/coordinator records any genuine conflict and
+decides whether work must stop for a product or architecture decision.
+
+The reconciliation audited commit
+`16a16d8cafc9590f61fb3a6ac5de618d0e2db2d7` plus the then-complete staged,
+unstaged, and relevant untracked tree. There were no staged changes. The dirty
+tree included current content, hero/preboot rail, navigation/flight, scroll,
+Connect, UI, CSS, static-fallback, test, and capture work, plus untracked `.DS_Store`,
+`.tmp-scroll-investigation/`, and this goal. Treat all of it as pre-existing or
+user-owned until the coordinator classifies it; never restore, overwrite, or
+attribute it to an execution agent. Commit/push movement has no semantic
+authority. X00 records the superseding live status, hashes, ownership, exact
+package allowlists, and protected behavior before any source write.
+
+The initial audit snapshot was `b3a2ecd1`; HEAD advanced only through the
+committed `DEPLOY.md` Railway-operations change. Its manual `git add -A`/push
+quick path is F04 reconciliation evidence, not execution authority. Concurrent
+uncommitted `journey/scroll.js` answered-wall restart and delayed-momentum-tail
+test changes also pass; they are protected corrective work and C01 revalidation
+evidence rather than elegance completion.
+
+The program/runbook reconciliation maps every order to PARTIAL, REMAINING, or a
+REVALIDATE overlay; none was DONE because no complete frozen contract, focused
+proof, required independent review, and coordinator acceptance existed. X00
+copies those dispositions into the ledger. Later live evidence may close an
+already-complete order without source edits only after its exact proof, review,
+and coordinator acceptance are recorded. Structural appearance or an old broad
+green check is not enough.
+
+## Operating and model routing
+
+The root/coordinator is the final decision and acceptance authority. It owns
+architecture, ordering, scope, path reservations, ownership classification,
+browser-lane assignment, gate interpretation, and final acceptance. It authors
+and finalizes each precise brief from the settled program/runbook contract.
+Agents do not reinterpret public behavior, resolve competing user edits, waive
+tests, or invent a new ownership boundary.
+
+GPT-5.6 Luna performs as much bounded ordinary work as can be done safely:
+reconnaissance, characterization, ordinary implementation, focused validation,
+mechanical checks, narrow repair, and ordinary read-only review. Luna works
+only within the coordinator's exact allowlist and assigned commands.
+
+An independent GPT-5.6 Sol handles the runbook's XHARD design and review
+points—`XR-BASELINE`, `XR-C-DESIGN`, `XR-C-GATE`, `XR-RUNTIME-DESIGN`,
+`XR-RUNTIME-GATE`, `XR-VISUAL-DESIGN`, `XR-VISUAL-GATE`, and `XR-FINAL`—and
+integrated big-picture review where the runbook requires it. Sol is read-only
+for review, never reviews its own implementation, and never replaces the
+coordinator's acceptance decision. A package implementer never reviews its own
+work; every independent reviewer receives the complete changed contract and
+evidence needed for its assigned review.
+
+This goal uses only the local ledger, reservations, patch journal, test gates,
+and browser-lane protocol defined by the approved runbook. It adds no remote
+push, new worktree, receipt wrapper, model route, or evidence system.
+
+## Work-order and review-revision protocol
+
+Before each order, the coordinator freezes its exact existing and new-file
+allowlist, protected paths/hunks, known user or concurrent changes, baseline
+hashes, prerequisites, focused commands, stop conditions, and rollback seam.
+The brief names one ownership goal and one settled contract; it is not a menu
+of possible refactors. No agent may expand an allowlist or edit a source plan.
+For PARTIAL work, the brief names the existing seam and only the missing
+contract/proof; for REVALIDATE work, characterization of the protected current
+behavior precedes any consuming write.
+
+For scroll, transition, or pacing work, endpoint-only proof is invalid. The
+brief must preserve the C01 input-sample→decision trace, the J02 immutable frame
+snapshot, and C03 composed-motion evidence. A synthetic trace cannot stand in
+for the required provenance-recorded real trackpad reference, and a live visual
+impression cannot replace deterministic replay.
+
+The ordinary protocol is:
+
+1. Luna performs one bounded implementation or reconnaissance order and runs
+   only its assigned focused checks.
+2. A different Luna performs the required read-only R1/R2 review for the order
+   or permitted low-risk batch. The coordinator inspects blocker findings and
+   evidence before acceptance.
+3. An XHARD order first receives a root-authored design and the relevant Sol
+   design review, then a bounded implementation and independent R1 review.
+   After coordinator acceptance, another same-family slice may advance; the
+   named wave gate must pass before work outside that family or wave consumes
+   the integrated result. Sol owns the runbook's XHARD design and integrated
+   review points; the coordinator remains the authority.
+4. A blocker returns once to the same implementer as a narrow repair order.
+   Findings that alter ownership, public behavior, timing, rendering, schema,
+   or scope stop for a coordinator decision and the applicable Sol review.
+5. The original review remains linked to the repair; a repaired order is
+   re-reviewed independently before acceptance. No order advances with an
+   unresolved blocker or missing focused proof.
+
+## Concurrency, source freeze, and browser lease
+
+Use at most two implementation lanes plus one reviewer or gate owner. Parallel
+work is allowed only where the runbook explicitly permits it and exact
+production, test, shared-export, fixture, and generated-file allowances are
+disjoint. Serialize changes to `main.js`, `journey/journey.js`,
+`journey/ui.js`, `organism/organism.js`, `chapter-registry.js`, package scripts,
+the browser harness, and shared contracts. Two implementers may share the dirty
+workspace only under communicated, non-overlapping reservations; no two agents
+may edit the same reserved path, and no implementer reviews its own work.
+
+Browser, capture, WebGL, and performance checks are global source-freeze
+points. The coordinator reserves the complete served dependency closure and
+records its status and hashes before the gate; all repository writes pause
+until the lease ends. A changed served path invalidates that lease's result.
+
+The browser-lane owner records owner, scenarios, port, private temporary
+profile, server/browser process groups, deadline, viewport, DPR, browser and
+renderer provenance, flags, and the complete served-source manifest. It cleans
+only its own processes and temporary paths, verifies they are gone, never
+refreshes goldens, and reports only `pass`, `application-fail`,
+`environment-blocked`, or `harness-fail`. Application assertions are not
+automatically retried; one bounded retry is allowed only for a proven
+environment/harness failure.
+
+## Required execution sequence: X00 through G5
+
+Follow the runbook's dependency order exactly. The compact sequence is:
+
+1. **Wave 0 / G0:** X00 supersedes the reconciliation with the live
+   dirty-worktree ownership baseline, copies all dispositions into the ledger,
+   classifies the active scroll investigation, and freezes exact reservations,
+   protected paths, and the external patch journal. Then run
+   serialized Q01, Q02, Q03, and Q05, with Q04's warning/catch inventory before
+   G0. Accept G0 only after non-browser checks, dependency analysis, capture
+   truthfulness, and the reservation/journal mismatch demonstration pass.
+2. **Wave 1 / G1:** Run P01 first and stop if the required reference
+   Chromium/WebGL/performance environment cannot pass its preflight. Then run
+   C01–C04 with only the permitted disjoint parallelism. C01 must independently
+   validate the dirty delayed-tail correction and reproduce or explicitly clear
+   any remaining continued-travel/overshoot symptom before J01; a remaining
+   reproducible defect requires a separate root-approved corrective brief and is
+   not frozen as intended behavior. Its deterministic event/RAF trace matrix,
+   real trackpad momentum-tail/two-pulse reference, live rest traversal, and
+   composed-motion baseline must all exist before G1. Complete the G1
+   mechanical/browser evidence, obtain `XR-BASELINE`, and have the coordinator
+   accept G1 before Wave 2.
+3. **Wave 2 / G2:** Run S01, then S02; establish the coordinator's settled
+   contract design and obtain `XR-C-DESIGN` before C05. Run C05, C06, and N01
+   in their dependency and collision order. Complete the G2 evidence, obtain
+   `XR-C-GATE`, and have the coordinator accept G2 before Wave 3.
+4. **Wave 3 / G3:** Obtain `XR-RUNTIME-DESIGN` before J04a/A05a/J01/J02 and the lifecycle
+   XHARD family. Run the journey sequence J04a → A05 → A05a when required →
+   J01 → J02 → J03 → A02 → J04b → J04c → J04d → J04e → J05. J04a
+   owns the detachable factual-input-sample→semantic-decision boundary while
+   keeping heuristic telemetry diagnostic-only; J01 consumes discriminated
+   semantic decisions only; J02 publishes one immutable frame snapshot to all
+   readers. In the rendering lane run R01 → R02 →
+   R03, with R04 only in its explicitly disjoint reservation; after the
+   contract and portrait prerequisites, run R05–R07 and then R08. Complete the
+   G3 evidence, obtain `XR-RUNTIME-GATE`, and have the coordinator accept G3
+   before Wave 4.
+5. **Wave 4 / G4:** Obtain `XR-VISUAL-DESIGN` before U05, O02, B03, or B04.
+   Run U01a → U01b → U01c → U01d, then U02 → U03 → U04 → U05 → U06. Run
+   O01 → O02. U05 establishes one immutable rail-exclusion snapshot before H02
+   and B03; H02 and B03 may invalidate its sole owner but never measure rail
+   geometry or publish a competing snapshot;
+   no UI, Connect, or H02 frame-drive consumer keeps an independent rail-DOM or
+   geometry read. Run
+   H01–H06 strictly serially with focused proof, review,
+   source-freeze capture, and acceptance after each. Complete A01, A03, A04,
+   and A06, including any root-defined conditional extraction. Run B01 → B02 → B03 →
+   B04 → B05. Complete the G4 evidence, obtain `XR-VISUAL-GATE`, and have
+   the coordinator accept G4 before Wave 5.
+6. **Wave 5 / G5:** Run F01–F03 in their import-safe serialized order, F04
+   after executable behavior freezes, F06 for only its remaining mapped error
+   sites, and F05 last for scanner correction and unbiased review. Run the
+   G5 mechanical/browser evidence, obtain `XR-FINAL`, perform root review of
+   the complete diff, evidence, findings, and residual-debt rationale, and
+   explicitly accept or reject G5.
+
+No downstream order starts before its parents, required design review, focused
+review, and coordinator acceptance are recorded. Conditional A03a–A06a and
+A01a are part of the sequence whenever their decision artifact requires them.
+
+## Testing economy
+
+Keep implementation feedback cheap and gates authoritative:
+
+- T0 orders run diff/whitespace and direct metadata checks;
+- T1 orders run syntax, warning-free targeted lint, and directly affected
+  deterministic tests;
+- T2 orders run syntax, targeted lint, and relevant unit/contract tests with
+  injected clocks, RAF, DOM, media-query, focus, resource, or loader doubles;
+- scroll/transition orders additionally replay C01's event/RAF permutations and
+  assert decisions and frame snapshots, not only final progress;
+- T3 orders add focused deterministic byte/schema/order checks; browser,
+  capture, memory, draw-call, and performance checks belong to the serial gate;
+- ordinary implementers do not run the full browser suite or broad `check`
+  unless the brief explicitly assigns a gate;
+- gate owners run aggregate checks once at the named wave seam, including the
+  eleven scenarios and required reference environment at G1, required live
+  scenarios and lifecycle/resource gates at G3/G4, and the full ordered proof
+  at G5; and
+- no test writes tracked captures, goldens, source, generated artifacts, or a
+  project/live runtime root. Environment skips and timeouts remain blocking
+  non-passes where the runbook says a required live result is needed.
+
+Focused commands come from the runbook and the frozen brief. A missing
+characterization test is a prerequisite gap, not a reason to substitute a
+full-suite run. Every gate records exact command, environment, source hashes,
+result classification, and relevant artifact/path status.
+
+## Durable progress record and compaction seam
+
+Create `docs/code-health/elegance-execution-ledger.md` only when execution
+starts. Maintain one row and a detail block for every order, attempt, review,
+repair, and gate. Record ID/state, parents, owner/attempt, reservation and
+expiry, baseline and path ownership, protected paths, changed paths/hunks and
+post-hashes, generated/golden status, exact checks and results, review class and
+findings, residual risk, and next unblocked work.
+
+X00 also creates the private external patch journal required by the runbook.
+For each package it records the pre-write existence/status/SHA-256 manifest and
+byte copies, rolling post-write manifests, new-file prior state, agent-owned
+diff/hunk coordinates, and final accepted manifest/review. Before every write,
+the implementer verifies the current bytes against the reserved or last
+agent-written manifest; a mismatch stops the order before mutation.
+
+After every order, review, repair, and gate, update the ledger and journal as
+applicable; at each wave seam, leave the ledger and accepted evidence in a
+durable state before compacting or handing work onward. The ledger is the
+conversation compaction seam: future work resumes from its last accepted
+state, not from unstored chat context.
+
+## Escalation conditions
+
+Stop the affected order and preserve evidence when:
+
+- an allowlisted path changes concurrently, an unexplained path changes, or
+  current bytes do not match the reservation/rolling manifest;
+- the order reveals an ownership, schema, public-contract, route, DOM/ARIA,
+  timing, RNG, shader, geometry, fallback, visual, or product decision absent
+  from its brief;
+- a required characterization or focused proof is missing, a browser/capture
+  lease is contaminated, or a live environment cannot distinguish application
+  failure from environment failure;
+- a reviewer has an unresolved blocker, a repair changes scope, or the same
+  reproducible failure occurs twice;
+- disposal affects a visible/newer instance, async work mutates a disposed
+  instance, a cycle or skipped local production root appears, or a supposedly
+  non-mutating check writes repository artifacts; or
+- a wave gate or required XHARD review does not pass.
+
+The coordinator classifies user/concurrent changes, re-baselines only with
+explicit evidence, and decides whether to narrow, split, re-brief, or stop.
+Agents never restore or merge around a collision. A product, ownership, or
+public-behavior change requires a separate root decision; structural work does
+not absorb it.
+
+## Done when
+
+This goal is complete only when:
+
+- X00 through G5 have explicit accepted dispositions, including all required
+  XHARD design and integrated review points and any triggered conditional
+  orders;
+- every order's exact allowlist, focused checks, review, repair chain, and
+  ownership classification are recorded in the durable ledger and patch
+  journal;
+- the program's facades, ownership boundaries, canonical manifest, lifecycle
+  disposal, dependency direction, and residual-cohesion decisions are present
+  without behavior drift;
+- every reconciliation disposition is superseded by an accepted ledger result;
+  no PARTIAL/REVALIDATE foundation is either blindly reimplemented or waved
+  through on file existence alone;
+- lint has zero warnings, dependency analysis has no skipped local production
+  root, deterministic checks are non-mutating, and the full required unit,
+  contract, static, content, chapter-entry, input, browser, capture, resource,
+  performance, scan, and subjective-review evidence passes;
+- supported live browser results are genuine passes rather than skips or
+  timeouts, and protected visual/behavior files and unrelated user work remain
+  unchanged;
+- physical-input reference traces, deterministic replays, live rest traversals,
+  immutable frame snapshots, composed-motion traces, and rail-layout counters
+  agree at G1, G3/G4, and G5; and
+- no reviewer blocker or unresolved root decision remains; and
+- the root/coordinator has reviewed the complete diff, all wave evidence, Sol's
+  final integrated review, and residual-risk rationale, then explicitly
+  accepts the program as complete.
+
+Do not claim completion because agents returned, individual packages are green,
+or a broad check passed. Completion means the behavior-preserving, independently
+reviewed end state described by the program and runbook is actually proven.

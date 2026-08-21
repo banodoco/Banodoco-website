@@ -104,15 +104,18 @@ const SYMBOL_DEFINITIONS = {
     label: 'the ground network',
     parts: [
       { p: 'M1.8 8.4 H20.2' },                                   // horizon
-      { p: 'M1.6 17.6 L6.2 14.8 L12.4 17.2 L17.8 13.2 L20.4 14.2' }, // strand
+      // Authored in its final, inward-facing orientation. This used to be
+      // mirrored at runtime with CSS, which let the preboot mark paint once
+      // in the opposite direction before the live rail styles took over.
+      { p: 'M1.6 14.2 L4.2 13.2 L9.6 17.2 L15.8 14.8 L20.4 17.6' }, // strand
       // The branches climb almost to the horizon: they are what ties the line
       // at the top to the network below it, so the horizon reads as this
       // ground's own edge rather than as a rule floating over a node graph.
-      { p: 'M6.2 14.8 L9.4 10.0' },                              // branch
-      { p: 'M17.8 13.2 L15.2 9.6' },                             // branch
-      { c: [6.2, 14.8, 1.2] },                                   // the three hubs
-      { c: [12.4, 17.2, 1.0] },
-      { c: [17.8, 13.2, 1.15] },
+      { p: 'M15.8 14.8 L12.6 10.0' },                            // branch
+      { p: 'M4.2 13.2 L6.8 9.6' },                               // branch
+      { c: [15.8, 14.8, 1.2] },                                  // the three hubs
+      { c: [9.6, 17.2, 1.0] },
+      { c: [4.2, 13.2, 1.15] },
     ],
   },
   owned: {
